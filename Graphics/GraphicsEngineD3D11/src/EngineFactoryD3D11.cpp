@@ -234,7 +234,7 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawAlloctor = GetRawAllocator();
         RenderDeviceD3D11Impl *pRenderDeviceD3D11(NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)
-            (RawAlloctor, EngineCI, pd3d11Device, EngineCI.NumDeferredContexts));
+            (RawAlloctor, this, EngineCI, pd3d11Device, EngineCI.NumDeferredContexts));
         pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         RefCntAutoPtr<DeviceContextD3D11Impl> pDeviceContextD3D11(NEW_RC_OBJ(RawAlloctor, "DeviceContextD3D11Impl instance", DeviceContextD3D11Impl)

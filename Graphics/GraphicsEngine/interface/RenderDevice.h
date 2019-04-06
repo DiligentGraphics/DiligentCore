@@ -27,6 +27,7 @@
 /// Definition of the Diligent::IRenderDevice interface and related data structures
 
 #include "../../../Primitives/interface/Object.h"
+#include "EngineFactory.h"
 #include "GraphicsTypes.h"
 #include "DeviceCaps.h"
 #include "Constants.h"
@@ -188,6 +189,12 @@ public:
     ///                             great care only if you are sure the resources are not
     ///                             in use by the GPU (such as when the device has just been idled).
     virtual void ReleaseStaleResources(bool ForceRelease = false) = 0;
+
+
+    /// Returns engine factory this device was created from.
+    /// \remark This method does not increment the reference counter of the returned interface,
+    ///         so the application should not call Release().
+    virtual IEngineFactory* GetEngineFactory() const = 0;
 };
 
 }

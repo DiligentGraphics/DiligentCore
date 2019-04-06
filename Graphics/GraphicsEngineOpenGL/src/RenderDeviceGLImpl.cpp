@@ -49,22 +49,27 @@ namespace Diligent
 
 RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters*        pRefCounters,
                                          IMemoryAllocator&          RawMemAllocator,
+                                         IEngineFactory*            pEngineFactory,
                                          const EngineGLCreateInfo&  InitAttribs,
                                          const SwapChainDesc*       pSCDesc):
     TRenderDeviceBase
     {
         pRefCounters,
         RawMemAllocator,
+        pEngineFactory,
         0,
-        sizeof(TextureBaseGL),
-        sizeof(TextureViewGLImpl),
-        sizeof(BufferGLImpl),
-        sizeof(BufferViewGLImpl),
-        sizeof(ShaderGLImpl),
-        sizeof(SamplerGLImpl),
-        sizeof(PipelineStateGLImpl),
-        sizeof(ShaderResourceBindingGLImpl),
-        sizeof(FenceGLImpl)
+        DeviceObjectSizes
+        {
+            sizeof(TextureBaseGL),
+            sizeof(TextureViewGLImpl),
+            sizeof(BufferGLImpl),
+            sizeof(BufferViewGLImpl),
+            sizeof(ShaderGLImpl),
+            sizeof(SamplerGLImpl),
+            sizeof(PipelineStateGLImpl),
+            sizeof(ShaderResourceBindingGLImpl),
+            sizeof(FenceGLImpl)
+        }
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
     m_GLContext(InitAttribs, m_DeviceCaps, pSCDesc),

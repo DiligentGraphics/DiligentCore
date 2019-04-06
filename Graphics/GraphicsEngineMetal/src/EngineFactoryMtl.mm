@@ -123,7 +123,7 @@ void EngineFactoryMtlImpl::AttachToMtlDevice(void*                       pMtlNat
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto& RawAlloctor = GetRawAllocator();
         RenderDeviceMtlImpl* pRenderDeviceMtl(NEW_RC_OBJ(RawAlloctor, "RenderDeviceMtlImpl instance", RenderDeviceMtlImpl)
-                                                        (RawAlloctor, EngineCI, pMtlNativeDevice));
+                                                        (RawAlloctor, this, EngineCI, pMtlNativeDevice));
         pRenderDeviceMtl->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
         RefCntAutoPtr<DeviceContextMtlImpl> pDeviceContextMtl(NEW_RC_OBJ(RawAlloctor, "DeviceContextMtlImpl instance", DeviceContextMtlImpl)

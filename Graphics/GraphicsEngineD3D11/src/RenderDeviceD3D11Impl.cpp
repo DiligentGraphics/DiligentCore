@@ -42,6 +42,7 @@ namespace Diligent
 
 RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
                                                IMemoryAllocator&            RawMemAllocator,
+                                               IEngineFactory*              pEngineFactory,
                                                const EngineD3D11CreateInfo& EngineAttribs,
                                                ID3D11Device*                pd3d11Device,
                                                Uint32                       NumDeferredContexts) : 
@@ -49,16 +50,20 @@ RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*          pRef
     {
         pRefCounters,
         RawMemAllocator,
+        pEngineFactory,
         NumDeferredContexts,
-        sizeof(TextureBaseD3D11),
-        sizeof(TextureViewD3D11Impl),
-        sizeof(BufferD3D11Impl),
-        sizeof(BufferViewD3D11Impl),
-        sizeof(ShaderD3D11Impl),
-        sizeof(SamplerD3D11Impl),
-        sizeof(PipelineStateD3D11Impl),
-        sizeof(ShaderResourceBindingD3D11Impl),
-        sizeof(FenceD3D11Impl)
+        DeviceObjectSizes
+        {
+            sizeof(TextureBaseD3D11),
+            sizeof(TextureViewD3D11Impl),
+            sizeof(BufferD3D11Impl),
+            sizeof(BufferViewD3D11Impl),
+            sizeof(ShaderD3D11Impl),
+            sizeof(SamplerD3D11Impl),
+            sizeof(PipelineStateD3D11Impl),
+            sizeof(ShaderResourceBindingD3D11Impl),
+            sizeof(FenceD3D11Impl)
+        }
     },
     m_EngineAttribs(EngineAttribs),
     m_pd3d11Device(pd3d11Device)

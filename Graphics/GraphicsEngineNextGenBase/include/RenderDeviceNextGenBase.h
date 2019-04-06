@@ -26,6 +26,7 @@
 #include <vector>
 #include <mutex>
 
+#include "EngineFactory.h"
 #include "Atomics.h"
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"
@@ -43,33 +44,17 @@ template<class TBase, typename CommandQueueType>
 class RenderDeviceNextGenBase : public TBase
 {
 public:
-    RenderDeviceNextGenBase(IReferenceCounters* pRefCounters, 
-                            IMemoryAllocator&   RawMemAllocator, 
-                            size_t              CmdQueueCount,
-                            CommandQueueType**  Queues,
-                            Uint32 NumDeferredContexts,
-                            size_t TextureObjSize, 
-                            size_t TexViewObjSize,
-                            size_t BufferObjSize, 
-                            size_t BuffViewObjSize,
-                            size_t ShaderObjSize, 
-                            size_t SamplerObjSize,
-                            size_t PSOSize,
-                            size_t SRBSize,
-                            size_t FenceSize) :
-        TBase(pRefCounters,
-              RawMemAllocator,
-              NumDeferredContexts,
-              TextureObjSize,
-              TexViewObjSize,
-              BufferObjSize,
-              BuffViewObjSize,
-              ShaderObjSize,
-              SamplerObjSize,
-              PSOSize,
-              SRBSize,
-              FenceSize),
-        m_CmdQueueCount(CmdQueueCount)
+    using typename TBase::DeviceObjectSizes;
+
+    RenderDeviceNextGenBase(IReferenceCounters*      pRefCounters, 
+                            IMemoryAllocator&        RawMemAllocator, 
+                            IEngineFactory*          pEngineFactory,
+                            size_t                   CmdQueueCount,
+                            CommandQueueType**       Queues,
+                            Uint32                   NumDeferredContexts,
+                            const DeviceObjectSizes& ObjectSizes) :
+        TBase           (pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts, ObjectSizes),
+        m_CmdQueueCount (CmdQueueCount)
     {
         m_CommandQueues = reinterpret_cast<CommandQueue*>(ALLOCATE(this->m_RawMemAllocator, "Raw memory for the device command/release queues", sizeof(CommandQueue)*m_CmdQueueCount));
         for(size_t q=0; q < m_CmdQueueCount; ++q)

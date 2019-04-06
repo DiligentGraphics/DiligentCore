@@ -56,6 +56,7 @@ public:
 
     RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                        IMemoryAllocator&         RawMemAllocator,
+                       IEngineFactory*           pEngineFactory,
                        const EngineGLCreateInfo& InitAttribs,
                        const SwapChainDesc*      pSCDesc = nullptr);
     ~RenderDeviceGLImpl();

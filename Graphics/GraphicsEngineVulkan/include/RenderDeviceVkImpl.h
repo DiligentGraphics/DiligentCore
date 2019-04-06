@@ -57,6 +57,7 @@ public:
 
     RenderDeviceVkImpl(IReferenceCounters*        pRefCounters, 
                        IMemoryAllocator&          RawMemAllocator, 
+                       IEngineFactory*            pEngineFactory,
                        const EngineVkCreateInfo&  EngineCI, 
                        size_t                     CommandQueueCount,
                        ICommandQueueVk**          pCmdQueues, 

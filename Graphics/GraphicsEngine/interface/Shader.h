@@ -82,8 +82,12 @@ struct ShaderDesc : DeviceObjectAttribs
 };
 
 
+// {3EA98781-082F-4413-8C30-B9BA6D82DBB7}
+static constexpr INTERFACE_ID IID_IShaderSourceInputStreamFactory =
+{ 0x3ea98781, 0x82f, 0x4413, { 0x8c, 0x30, 0xb9, 0xba, 0x6d, 0x82, 0xdb, 0xb7 } };
+
 /// Shader source stream factory interface
-class IShaderSourceInputStreamFactory
+class IShaderSourceInputStreamFactory : public IObject
 {
 public:
     virtual void CreateInputStream(const Diligent::Char *Name, IFileStream **ppStream) = 0;

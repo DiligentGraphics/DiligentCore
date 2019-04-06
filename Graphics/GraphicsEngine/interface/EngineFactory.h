@@ -32,6 +32,8 @@
 namespace Diligent
 {
 
+class IShaderSourceInputStreamFactory;
+
 // {D932B052-4ED6-4729-A532-F31DEEC100F3}
 static constexpr INTERFACE_ID IID_EngineFactory =
 { 0xd932b052, 0x4ed6, 0x4729, { 0xa5, 0x32, 0xf3, 0x1d, 0xee, 0xc1, 0x0, 0xf3 } };
@@ -43,6 +45,12 @@ class IEngineFactory : public IObject
 public:
     /// Returns API info structure
     virtual const APIInfo& GetAPIInfo() const = 0;
+
+    /// Creates default shader source input stream factory
+    /// \param [in]  SearchDirectories           - Semicolon-seprated list of search directories.
+    /// \param [out] ppShaderSourceStreamFactory - Memory address where pointer to the shader source stream factory will be written.
+    virtual void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories, 
+                                                        IShaderSourceInputStreamFactory** ppShaderSourceFactory)const = 0;
 };
 
 }

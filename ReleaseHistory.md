@@ -11,6 +11,9 @@
 * Added `SWAP_CHAIN_USAGE_FLAGS` enum
 * Replaced overloaded `IPipelineState::GetStaticShaderVariable()` with `IPipelineState::GetStaticVariableByName()` and `IPipelineState::GetStaticVariableByIndex()`
 * Replaced overloaded `IShaderResourceBinding::GetVariable()` with `IShaderResourceBinding::GetVariableByName()` and `IShaderResourceBinding::GetVariableByIndex()`
+* Made `IShaderSourceInputStreamFactory` derived from `IObject`;
+  added `IEngineFactory::CreateDefaultShaderSourceStreamFactory()` method;
+  added `IRenderDevice::GetEngineFactory()` method (API Version 240021)
 
 ## v2.4.b
 

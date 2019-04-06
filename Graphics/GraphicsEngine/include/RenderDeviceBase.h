@@ -184,48 +184,67 @@ public:
     
     using TObjectBase = ObjectBase<BaseInterface>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this render device
-    /// \param RawMemAllocator - allocator that will be used to allocate memory for all device objects (including render device itself)
+    /// Describes the sizes of device objects
+    struct DeviceObjectSizes
+    {
+        /// Size of the texture object (TextureD3D12Impl, TextureVkImpl, etc.), in bytes
+        const size_t TextureObjSize;
+
+        /// Size of the texture view object (TextureViewD3D12Impl, TextureViewVkImpl, etc.), in bytes
+        const size_t TexViewObjSize;
+
+        /// Size of the buffer object (BufferD3D12Impl, BufferVkImpl, etc.), in bytes
+        const size_t BufferObjSize;
+
+        /// Size of the buffer view object (BufferViewD3D12Impl, BufferViewVkImpl, etc.), in bytes
+        const size_t BuffViewObjSize;
+
+        /// Size of the shader object (ShaderD3D12Impl, ShaderVkImpl, etc.), in bytes
+        const size_t ShaderObjSize;
+
+        /// Size of the sampler object (SamplerD3D12Impl, SamplerVkImpl, etc.), in bytes
+        const size_t SamplerObjSize;
+
+        /// Size of the pipeline state object (PipelineStateD3D12Impl, PipelineStateVkImpl, etc.), in bytes
+        const size_t PSOSize;
+
+        /// Size of the shader resource binding object (ShaderResourceBindingD3D12Impl, ShaderResourceBindingVkImpl, etc.), in bytes
+        const size_t SRBSize;
+
+        /// Size of the fence object (FenceD3D12Impl, FenceVkImpl, etc.), in bytes
+        const size_t FenceSize;
+    };
+
+    /// \param pRefCounters        - reference counters object that controls the lifetime of this render device
+    /// \param RawMemAllocator     - allocator that will be used to allocate memory for all device objects (including render device itself)
+    /// \param pEngineFactory      - engine factory that was used to create this device
     /// \param NumDeferredContexts - number of deferred device contexts 
-    /// \param TextureObjSize   - size of the texture object, in bytes
-    /// \param TexViewObjSize   - size of the texture view object, in bytes
-    /// \param BufferObjSize    - size of the buffer object, in bytes
-    /// \param BuffViewObjSize  - size of the buffer view object, in bytes
-    /// \param ShaderObjSize    - size of the shader object, in bytes
-    /// \param SamplerObjSize   - size of the sampler object, in bytes
-    /// \param PSOSize          - size of the pipeline state object, in bytes
-    /// \param SRBSize          - size of the shader resource binding object, in bytes
-    /// \param FenceSize        - size of the fence object, in bytes
+    /// \param ObjectSizes         - device object sizes
+    ///
     /// \remarks Render device uses fixed block allocators (see FixedBlockMemoryAllocator) to allocate memory for
     ///          device objects. The object sizes provided to constructor are used to initialize the allocators.
-    RenderDeviceBase(IReferenceCounters* pRefCounters,
-                     IMemoryAllocator&   RawMemAllocator, 
-                     Uint32 NumDeferredContexts,
-                     size_t TextureObjSize, 
-                     size_t TexViewObjSize,
-                     size_t BufferObjSize, 
-                     size_t BuffViewObjSize,
-                     size_t ShaderObjSize, 
-                     size_t SamplerObjSize,
-                     size_t PSOSize,
-                     size_t SRBSize,
-                     size_t FenceSize) :
+    RenderDeviceBase(IReferenceCounters*      pRefCounters,
+                     IMemoryAllocator&        RawMemAllocator, 
+                     IEngineFactory*          pEngineFactory,
+                     Uint32                   NumDeferredContexts,
+                     const DeviceObjectSizes& ObjectSizes) :
         TObjectBase             (pRefCounters),
+        m_pEngineFactory        (pEngineFactory),
         m_SamplersRegistry      (RawMemAllocator, "sampler"),
         m_TextureFormatsInfo    (TEX_FORMAT_NUM_FORMATS, TextureFormatInfoExt(), STD_ALLOCATOR_RAW_MEM(TextureFormatInfoExt, RawMemAllocator, "Allocator for vector<TextureFormatInfoExt>") ),
         m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>") ),
         m_wpDeferredContexts    (NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
         m_RawMemAllocator       (RawMemAllocator),
-        m_TexObjAllocator       (RawMemAllocator, TextureObjSize,              64),
-        m_TexViewObjAllocator   (RawMemAllocator, TexViewObjSize,              64),
-        m_BufObjAllocator       (RawMemAllocator, BufferObjSize,              128),
-        m_BuffViewObjAllocator  (RawMemAllocator, BuffViewObjSize,            128),
-        m_ShaderObjAllocator    (RawMemAllocator, ShaderObjSize,               32),
-        m_SamplerObjAllocator   (RawMemAllocator, SamplerObjSize,              32),
-        m_PSOAllocator          (RawMemAllocator, PSOSize,                    128),
-        m_SRBAllocator          (RawMemAllocator, SRBSize,                   1024),
-        m_ResMappingAllocator   (RawMemAllocator, sizeof(ResourceMappingImpl), 16),
-        m_FenceAllocator        (RawMemAllocator, FenceSize,                   16)
+        m_TexObjAllocator       (RawMemAllocator, ObjectSizes.TextureObjSize,   64),
+        m_TexViewObjAllocator   (RawMemAllocator, ObjectSizes.TexViewObjSize,   64),
+        m_BufObjAllocator       (RawMemAllocator, ObjectSizes.BufferObjSize,    128),
+        m_BuffViewObjAllocator  (RawMemAllocator, ObjectSizes.BuffViewObjSize,  128),
+        m_ShaderObjAllocator    (RawMemAllocator, ObjectSizes.ShaderObjSize,    32),
+        m_SamplerObjAllocator   (RawMemAllocator, ObjectSizes.SamplerObjSize,   32),
+        m_PSOAllocator          (RawMemAllocator, ObjectSizes.PSOSize,          128),
+        m_SRBAllocator          (RawMemAllocator, ObjectSizes.SRBSize,          1024),
+        m_ResMappingAllocator   (RawMemAllocator, sizeof(ResourceMappingImpl),  16),
+        m_FenceAllocator        (RawMemAllocator, ObjectSizes.FenceSize,        16)
     {
         // Initialize texture format info
         for( Uint32 Fmt = TEX_FORMAT_UNKNOWN; Fmt < TEX_FORMAT_NUM_FORMATS; ++Fmt )
@@ -323,7 +342,12 @@ public:
         return TexFmtInfo;
     }
 
-    void OnCreateDeviceObject( IDeviceObject* pNewObject )
+    virtual IEngineFactory* GetEngineFactory() const override final
+    {
+        return m_pEngineFactory.RawPtr<IEngineFactory>();
+    }
+
+    void OnCreateDeviceObject(IDeviceObject* pNewObject)
     {
     }
 
@@ -363,6 +387,8 @@ protected:
     /// Helper template function to facilitate device object creation
     template<typename TObjectType, typename TObjectDescType, typename TObjectConstructor>
     void CreateDeviceObject( const Char *ObjectTypeName, const TObjectDescType &Desc, TObjectType **ppObject, TObjectConstructor ConstructObject );
+
+    RefCntAutoPtr<IEngineFactory> m_pEngineFactory;
 
     DeviceCaps m_DeviceCaps;
 

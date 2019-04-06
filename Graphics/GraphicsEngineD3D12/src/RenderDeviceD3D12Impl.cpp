@@ -39,6 +39,7 @@ namespace Diligent
 
 RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*           pRefCounters,
                                                IMemoryAllocator&             RawMemAllocator,
+                                               IEngineFactory*               pEngineFactory,
                                                const EngineD3D12CreateInfo&  EngineCI,
                                                ID3D12Device*                 pd3d12Device,
                                                size_t                        CommandQueueCount,
@@ -47,18 +48,22 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*           pRe
     {
         pRefCounters,
         RawMemAllocator,
+        pEngineFactory,
         CommandQueueCount,
         ppCmdQueues,
         EngineCI.NumDeferredContexts,
-        sizeof(TextureD3D12Impl),
-        sizeof(TextureViewD3D12Impl),
-        sizeof(BufferD3D12Impl),
-        sizeof(BufferViewD3D12Impl),
-        sizeof(ShaderD3D12Impl),
-        sizeof(SamplerD3D12Impl),
-        sizeof(PipelineStateD3D12Impl),
-        sizeof(ShaderResourceBindingD3D12Impl),
-        sizeof(FenceD3D12Impl)
+        DeviceObjectSizes
+        {
+            sizeof(TextureD3D12Impl),
+            sizeof(TextureViewD3D12Impl),
+            sizeof(BufferD3D12Impl),
+            sizeof(BufferViewD3D12Impl),
+            sizeof(ShaderD3D12Impl),
+            sizeof(SamplerD3D12Impl),
+            sizeof(PipelineStateD3D12Impl),
+            sizeof(ShaderResourceBindingD3D12Impl),
+            sizeof(FenceD3D12Impl)
+        }
     },
     m_pd3d12Device  (pd3d12Device),
     m_EngineAttribs (EngineCI),

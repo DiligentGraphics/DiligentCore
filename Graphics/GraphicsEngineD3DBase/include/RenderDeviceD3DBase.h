@@ -37,19 +37,12 @@ template<typename BaseInterface>
 class RenderDeviceD3DBase : public RenderDeviceBase<BaseInterface>
 {
 public:
-    RenderDeviceD3DBase(IReferenceCounters *pRefCounters, 
-                        IMemoryAllocator &RawMemAllocator, 
-                        Uint32 NumDeferredContexts,
-                        size_t TextureObjSize, 
-                        size_t TexViewObjSize,
-                        size_t BufferObjSize, 
-                        size_t BuffViewObjSize,
-                        size_t ShaderObjSize, 
-                        size_t SamplerObjSize,
-                        size_t PSOSize,
-                        size_t SRBSize,
-                        size_t FenceSize) : 
-        RenderDeviceBase<BaseInterface>(pRefCounters, RawMemAllocator, NumDeferredContexts, TextureObjSize, TexViewObjSize, BufferObjSize, BuffViewObjSize, ShaderObjSize, SamplerObjSize, PSOSize, SRBSize, FenceSize)
+    RenderDeviceD3DBase(IReferenceCounters*      pRefCounters, 
+                        IMemoryAllocator&        RawMemAllocator, 
+                        IEngineFactory*          pEngineFactory,
+                        Uint32                   NumDeferredContexts,
+                        const DeviceObjectSizes& ObjectSizes) : 
+        RenderDeviceBase<BaseInterface>(pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts, ObjectSizes)
     {
         // Flag texture formats always supported in D3D11 and D3D12
 

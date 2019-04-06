@@ -28,14 +28,11 @@
 
 namespace Diligent
 {
-    class BasicShaderSourceStreamFactory : public IShaderSourceInputStreamFactory
-    {
-    public:
-        BasicShaderSourceStreamFactory( const Char *SearchDirectories = nullptr );
 
-        virtual void CreateInputStream( const Char *Name, IFileStream **ppStream )override;
+/// Creates default shader source stream factory
+/// \param [in]  SearchDirectories           - Semicolon-seprated list of search directories.
+/// \param [out] ppShaderSourceStreamFactory - Memory address where pointer to the shader source stream factory will be written.
+void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories, 
+                                            IShaderSourceInputStreamFactory** ppShaderSourceStreamFactory);
 
-    private:
-        std::vector<String> m_SearchDirectories;
-    };
 }

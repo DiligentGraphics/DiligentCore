@@ -28,6 +28,7 @@
 
 #include "Object.h"
 #include "EngineFactory.h"
+#include "DefaultShaderSourceStreamFactory.h"
 
 namespace Diligent
 {
@@ -82,6 +83,12 @@ public:
     virtual const APIInfo& GetAPIInfo() const override final
     {
         return Diligent::GetAPIInfo();
+    }
+
+    virtual void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories, 
+                                                        IShaderSourceInputStreamFactory** ppShaderSourceFactory)const override final
+    {
+        Diligent::CreateDefaultShaderSourceStreamFactory(SearchDirectories, ppShaderSourceFactory);
     }
 
 private:

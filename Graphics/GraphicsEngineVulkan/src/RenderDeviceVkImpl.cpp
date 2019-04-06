@@ -39,6 +39,7 @@ namespace Diligent
 
 RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                                     pRefCounters, 
                                          IMemoryAllocator&                                       RawMemAllocator, 
+                                         IEngineFactory*                                         pEngineFactory,
                                          const EngineVkCreateInfo&                               EngineCI, 
                                          size_t                                                  CommandQueueCount,
                                          ICommandQueueVk**                                       CmdQueues, 
@@ -49,18 +50,22 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
     {
         pRefCounters,
         RawMemAllocator,
+        pEngineFactory,
         CommandQueueCount,
         CmdQueues,
         EngineCI.NumDeferredContexts,
-        sizeof(TextureVkImpl),
-        sizeof(TextureViewVkImpl),
-        sizeof(BufferVkImpl),
-        sizeof(BufferViewVkImpl),
-        sizeof(ShaderVkImpl),
-        sizeof(SamplerVkImpl),
-        sizeof(PipelineStateVkImpl),
-        sizeof(ShaderResourceBindingVkImpl),
-        sizeof(FenceVkImpl)
+        DeviceObjectSizes
+        {
+            sizeof(TextureVkImpl),
+            sizeof(TextureViewVkImpl),
+            sizeof(BufferVkImpl),
+            sizeof(BufferViewVkImpl),
+            sizeof(ShaderVkImpl),
+            sizeof(SamplerVkImpl),
+            sizeof(PipelineStateVkImpl),
+            sizeof(ShaderResourceBindingVkImpl),
+            sizeof(FenceVkImpl)
+        }
     },
     m_VulkanInstance(Instance),
     m_PhysicalDevice(std::move(PhysicalDevice)),

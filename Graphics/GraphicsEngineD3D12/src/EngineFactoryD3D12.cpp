@@ -300,7 +300,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
         auto d3d12Device = reinterpret_cast<ID3D12Device*>(pd3d12NativeDevice);
-        RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, EngineCI, d3d12Device, CommandQueueCount, ppCommandQueues) );
+        RenderDeviceD3D12Impl *pRenderDeviceD3D12( NEW_RC_OBJ(RawMemAllocator, "RenderDeviceD3D12Impl instance", RenderDeviceD3D12Impl)(RawMemAllocator, this, EngineCI, d3d12Device, CommandQueueCount, ppCommandQueues) );
         pRenderDeviceD3D12->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         RefCntAutoPtr<DeviceContextD3D12Impl> pImmediateCtxD3D12( NEW_RC_OBJ(RawMemAllocator, "DeviceContextD3D12Impl instance", DeviceContextD3D12Impl)(pRenderDeviceD3D12, false, EngineCI, 0, 0) );

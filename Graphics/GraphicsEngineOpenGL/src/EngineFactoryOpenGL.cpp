@@ -126,7 +126,7 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, EngineCI, &SCDesc) );
+        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI, &SCDesc) );
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         DeviceContextGLImpl* pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );
@@ -199,7 +199,7 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
         SetRawAllocator(EngineCI.pRawMemAllocator);
         auto &RawMemAllocator = GetRawAllocator();
 
-        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, EngineCI) );
+        RenderDeviceGLImpl *pRenderDeviceOpenGL( NEW_RC_OBJ(RawMemAllocator, "TRenderDeviceGLImpl instance", TRenderDeviceGLImpl)(RawMemAllocator, this, EngineCI) );
         pRenderDeviceOpenGL->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice) );
 
         DeviceContextGLImpl* pDeviceContextOpenGL( NEW_RC_OBJ(RawMemAllocator, "DeviceContextGLImpl instance", DeviceContextGLImpl)(pRenderDeviceOpenGL, false ) );

@@ -34,7 +34,7 @@
 namespace Diligent
 {
     
-/// Base interface for a file stream
+/// Base interface for a data blob
 class DataBlobImpl : public Diligent::ObjectBase<IDataBlob>
 {
 public:

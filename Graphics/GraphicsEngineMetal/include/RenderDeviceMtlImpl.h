@@ -41,6 +41,7 @@ public:
 
     RenderDeviceMtlImpl( IReferenceCounters*        pRefCounters,
                          IMemoryAllocator&          RawMemAllocator,
+                         IEngineFactory*            pEngineFactory,
                          const EngineMtlCreateInfo& EngineAttribs,
                          void*                      pMtlDevice);
 

@@ -46,7 +46,8 @@ public:
     using TRenderDeviceBase = RenderDeviceNextGenBase< RenderDeviceD3DBase<IRenderDeviceD3D12>, ICommandQueueD3D12 >;
 
     RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters, 
-                          IMemoryAllocator&            RawMemAllocator, 
+                          IMemoryAllocator&            RawMemAllocator,
+                          IEngineFactory*              pEngineFactory,
                           const EngineD3D12CreateInfo& EngineCI, 
                           ID3D12Device*                pD3D12Device, 
                           size_t                       CommandQueueCount,

@@ -41,6 +41,7 @@ public:
 
     RenderDeviceD3D11Impl( IReferenceCounters*          pRefCounters,
                            IMemoryAllocator&            RawMemAllocator,
+                           IEngineFactory*              pEngineFactory,
                            const EngineD3D11CreateInfo& EngineAttribs,
                            ID3D11Device*                pd3d11Device,
                            Uint32                       NumDeferredContexts );

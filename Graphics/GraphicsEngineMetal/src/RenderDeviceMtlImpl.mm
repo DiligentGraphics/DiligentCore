@@ -39,22 +39,27 @@ namespace Diligent
 
 RenderDeviceMtlImpl :: RenderDeviceMtlImpl(IReferenceCounters*        pRefCounters,
                                            IMemoryAllocator&          RawMemAllocator,
+                                           IEngineFactory*            pEngineFactory,
                                            const EngineMtlCreateInfo& EngineAttribs,
                                            void*                      pMtlDevice) : 
     TRenderDeviceBase
     {
         pRefCounters,
         RawMemAllocator,
+        pEngineFactory,
         EngineAttribs.NumDeferredContexts,
-        sizeof(TextureMtlImpl),
-        sizeof(TextureViewMtlImpl),
-        sizeof(BufferMtlImpl),
-        sizeof(BufferViewMtlImpl),
-        sizeof(ShaderMtlImpl),
-        sizeof(SamplerMtlImpl),
-        sizeof(PipelineStateMtlImpl),
-        sizeof(ShaderResourceBindingMtlImpl),
-        sizeof(FenceMtlImpl)
+        DeviceObjectSizes
+        {
+            sizeof(TextureMtlImpl),
+            sizeof(TextureViewMtlImpl),
+            sizeof(BufferMtlImpl),
+            sizeof(BufferViewMtlImpl),
+            sizeof(ShaderMtlImpl),
+            sizeof(SamplerMtlImpl),
+            sizeof(PipelineStateMtlImpl),
+            sizeof(ShaderResourceBindingMtlImpl),
+            sizeof(FenceMtlImpl)
+        }
     },
     m_EngineAttribs(EngineAttribs)
 {

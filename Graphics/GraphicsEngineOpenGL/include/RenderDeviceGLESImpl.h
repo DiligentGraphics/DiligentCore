@@ -33,6 +33,7 @@ class RenderDeviceGLESImpl final : public RenderDeviceGLImpl
 public:
     RenderDeviceGLESImpl( IReferenceCounters*       pRefCounters,
                           IMemoryAllocator&         RawMemAllocator,
+                          IEngineFactory*           pEngineFactory,
                           const EngineGLCreateInfo& InitAttribs,
                           const SwapChainDesc*      pSCDesc = nullptr);
      

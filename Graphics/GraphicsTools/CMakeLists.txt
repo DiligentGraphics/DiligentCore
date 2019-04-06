@@ -3,7 +3,6 @@ cmake_minimum_required (VERSION 3.6)
 project(GraphicsTools CXX)
 
 set(INCLUDE 
-    include/BasicShaderSourceStreamFactory.h
     include/CommonlyUsedStates.h
     include/GraphicsUtilities.h
     include/pch.h
@@ -14,7 +13,6 @@ set(INCLUDE
 )
 
 set(SOURCE 
-    src/BasicShaderSourceStreamFactory.cpp
     src/GraphicsUtilities.cpp
     src/ScreenCapture.cpp
     src/pch.cpp
