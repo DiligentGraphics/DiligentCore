@@ -136,7 +136,7 @@ public:
             }
             VALIDATE_SHADER_TYPE(ComputePipeline.pCS, SHADER_TYPE_COMPUTE, "compute")
 
-            m_pCS = ComputePipeline.pCS;
+            m_pCS          = ComputePipeline.pCS;
             m_ppShaders[0] = ComputePipeline.pCS;
             m_NumShaders = 1;
         }
@@ -162,98 +162,109 @@ public:
             if (GraphicsPipeline.pGS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pGS;
             if (GraphicsPipeline.pHS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pHS;
             if (GraphicsPipeline.pDS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pDS;
-        }
-        VERIFY(m_NumShaders > 0, "There must be at least one shader in the Pipeline State");
+        
+            DEV_CHECK_ERR(m_NumShaders > 0, "There must be at least one shader in the Pipeline State");
 
-        const auto& InputLayout = PSODesc.GraphicsPipeline.InputLayout;
-        LayoutElement* pLayoutElements = nullptr;
-        if (InputLayout.NumElements > 0)
-        {
-            auto* pLayoutElementsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for input layout elements", sizeof(LayoutElement) * InputLayout.NumElements);
-            pLayoutElements = reinterpret_cast<LayoutElement*>(pLayoutElementsRawMem);
-        }
-        this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = pLayoutElements;
-        for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
-            pLayoutElements[Elem] = InputLayout.LayoutElements[Elem];
+            for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(GraphicsPipeline.RTVFormats); ++rt)
+            {
+                auto RTVFmt = GraphicsPipeline.RTVFormats[rt];
+                if (RTVFmt != TEX_FORMAT_UNKNOWN)
+                {
+                    LOG_ERROR_MESSAGE("Render target format (", GetTextureFormatAttribs(RTVFmt).Name, ") of unused slot ", rt,
+                                      " must be set to TEX_FORMAT_UNKNOWN");
+                }
+            }
+
+            const auto& InputLayout = PSODesc.GraphicsPipeline.InputLayout;
+            LayoutElement* pLayoutElements = nullptr;
+            if (InputLayout.NumElements > 0)
+            {
+                auto* pLayoutElementsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for input layout elements", sizeof(LayoutElement) * InputLayout.NumElements);
+                pLayoutElements = reinterpret_cast<LayoutElement*>(pLayoutElementsRawMem);
+            }
+            this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = pLayoutElements;
+            for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
+                pLayoutElements[Elem] = InputLayout.LayoutElements[Elem];
         
 
-        // Correct description and compute offsets and tight strides
-        std::array<Uint32, MaxBufferSlots> Strides, TightStrides = {};
-        // Set all strides to an invalid value because an application may want to use 0 stride
-        for (auto& Stride : Strides)
-            Stride = LayoutElement::AutoStride;
+            // Correct description and compute offsets and tight strides
+            std::array<Uint32, MaxBufferSlots> Strides, TightStrides = {};
+            // Set all strides to an invalid value because an application may want to use 0 stride
+            for (auto& Stride : Strides)
+                Stride = LayoutElement::AutoStride;
 
-        for (Uint32 i=0; i < InputLayout.NumElements; ++i)
-        {
-            auto& LayoutElem = pLayoutElements[i];
-
-            if( LayoutElem.ValueType == VT_FLOAT32 || LayoutElem.ValueType == VT_FLOAT16 )
-                LayoutElem.IsNormalized = false; // Floating point values cannot be normalized
-
-            auto BuffSlot = LayoutElem.BufferSlot;
-            if (BuffSlot >= Strides.size())
+            for (Uint32 i=0; i < InputLayout.NumElements; ++i)
             {
-                UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds maximum allowed value (", Strides.size()-1, ")");
-                continue;
-            }
-            m_BufferSlotsUsed = std::max(m_BufferSlotsUsed, BuffSlot + 1);
+                auto& LayoutElem = pLayoutElements[i];
 
-            auto& CurrAutoStride = TightStrides[BuffSlot];
-            // If offset is not explicitly specified, use current auto stride value
-            if (LayoutElem.RelativeOffset == LayoutElement::AutoOffset)
-            {
-                LayoutElem.RelativeOffset = CurrAutoStride;
-            }
+                if( LayoutElem.ValueType == VT_FLOAT32 || LayoutElem.ValueType == VT_FLOAT16 )
+                    LayoutElem.IsNormalized = false; // Floating point values cannot be normalized
 
-            // If stride is explicitly specified, use it for the current buffer slot
-            if (LayoutElem.Stride != LayoutElement::AutoStride)
-            {
-                // Verify that the value is consistent with the previously specified stride, if any
-                if (Strides[BuffSlot] != LayoutElement::AutoStride && Strides[BuffSlot] != LayoutElem.Stride)
+                auto BuffSlot = LayoutElem.BufferSlot;
+                if (BuffSlot >= Strides.size())
                 {
-                    LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot, ". "
-                                      "Input element at index ", LayoutElem.InputIndex, " explicitly specifies stride ", LayoutElem.Stride, ", "
-                                      "while current value is ", Strides[BuffSlot], ". Specify consistent strides or use "
-                                      "LayoutElement::AutoStride to allow the engine compute strides automatically.");
+                    UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds maximum allowed value (", Strides.size()-1, ")");
+                    continue;
                 }
-                Strides[BuffSlot] = LayoutElem.Stride;
-            }
+                m_BufferSlotsUsed = std::max(m_BufferSlotsUsed, BuffSlot + 1);
 
-            CurrAutoStride = std::max(CurrAutoStride, LayoutElem.RelativeOffset + LayoutElem.NumComponents * GetValueSize(LayoutElem.ValueType));
-        }
-
-        for (Uint32 i=0; i < InputLayout.NumElements; ++i)
-        {
-            auto& LayoutElem = pLayoutElements[i];
-
-            auto BuffSlot = LayoutElem.BufferSlot;
-            // If no input elements explicitly specified stride for this buffer slot, use automatic stride
-            if (Strides[BuffSlot] == LayoutElement::AutoStride)
-            {
-                Strides[BuffSlot] = TightStrides[BuffSlot];
-            }
-            else
-            {
-                if (Strides[BuffSlot] < TightStrides[BuffSlot])
+                auto& CurrAutoStride = TightStrides[BuffSlot];
+                // If offset is not explicitly specified, use current auto stride value
+                if (LayoutElem.RelativeOffset == LayoutElement::AutoOffset)
                 {
-                    LOG_ERROR_MESSAGE("Stride ", Strides[BuffSlot], " explicitly specified for slot ", BuffSlot, " is smaller than the "
-                                      "minimum stride ", TightStrides[BuffSlot], " required to accomodate all input elements.");
+                    LayoutElem.RelativeOffset = CurrAutoStride;
                 }
+
+                // If stride is explicitly specified, use it for the current buffer slot
+                if (LayoutElem.Stride != LayoutElement::AutoStride)
+                {
+                    // Verify that the value is consistent with the previously specified stride, if any
+                    if (Strides[BuffSlot] != LayoutElement::AutoStride && Strides[BuffSlot] != LayoutElem.Stride)
+                    {
+                        LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot, ". "
+                                          "Input element at index ", LayoutElem.InputIndex, " explicitly specifies stride ", LayoutElem.Stride, ", "
+                                          "while current value is ", Strides[BuffSlot], ". Specify consistent strides or use "
+                                          "LayoutElement::AutoStride to allow the engine compute strides automatically.");
+                    }
+                    Strides[BuffSlot] = LayoutElem.Stride;
+                }
+
+                CurrAutoStride = std::max(CurrAutoStride, LayoutElem.RelativeOffset + LayoutElem.NumComponents * GetValueSize(LayoutElem.ValueType));
             }
-            if (LayoutElem.Stride == LayoutElement::AutoStride)
-                LayoutElem.Stride = Strides[BuffSlot];
-        }
 
-        if (m_BufferSlotsUsed > 0)
-        {
-            auto* pStridesRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for buffer strides", sizeof(Uint32) * m_BufferSlotsUsed);
-            m_pStrides = reinterpret_cast<Uint32*>(pStridesRawMem);
-
-            // Set strides for all unused slots to 0
-            for (Uint32 i=0; i < m_BufferSlotsUsed; ++i)
+            for (Uint32 i=0; i < InputLayout.NumElements; ++i)
             {
-                auto Stride = Strides[i];
-                m_pStrides[i] = Stride != LayoutElement::AutoStride ? Stride : 0;
+                auto& LayoutElem = pLayoutElements[i];
+
+                auto BuffSlot = LayoutElem.BufferSlot;
+                // If no input elements explicitly specified stride for this buffer slot, use automatic stride
+                if (Strides[BuffSlot] == LayoutElement::AutoStride)
+                {
+                    Strides[BuffSlot] = TightStrides[BuffSlot];
+                }
+                else
+                {
+                    if (Strides[BuffSlot] < TightStrides[BuffSlot])
+                    {
+                        LOG_ERROR_MESSAGE("Stride ", Strides[BuffSlot], " explicitly specified for slot ", BuffSlot, " is smaller than the "
+                                          "minimum stride ", TightStrides[BuffSlot], " required to accomodate all input elements.");
+                    }
+                }
+                if (LayoutElem.Stride == LayoutElement::AutoStride)
+                    LayoutElem.Stride = Strides[BuffSlot];
+            }
+
+            if (m_BufferSlotsUsed > 0)
+            {
+                auto* pStridesRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for buffer strides", sizeof(Uint32) * m_BufferSlotsUsed);
+                m_pStrides = reinterpret_cast<Uint32*>(pStridesRawMem);
+
+                // Set strides for all unused slots to 0
+                for (Uint32 i=0; i < m_BufferSlotsUsed; ++i)
+                {
+                    auto Stride = Strides[i];
+                    m_pStrides[i] = Stride != LayoutElement::AutoStride ? Stride : 0;
+                }
             }
         }
 
