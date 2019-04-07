@@ -194,12 +194,14 @@ protected:
 
 #ifdef DEVELOPMENT
     bool DvpVerifyDrawArguments(const DrawAttribs& drawAttribs);
+    void DvpVerifyRenderTargets();
     bool DvpVerifyDispatchArguments(const DispatchComputeAttribs &DispatchAttrs);
     void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier);
     bool DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName);
     bool DvpVerifyBufferState (const BufferImplType&  Buffer,  RESOURCE_STATE RequiredState, const char* OperationName);
 #else
 #   define DvpVerifyDrawArguments      (...)[](){return true;}()
+#   define DvpVerifyRenderTargets      (...)[](){return true;}()
 #   define DvpVerifyDispatchArguments  (...)[](){return true;}()
 #   define DvpVerifyStateTransitionDesc(...)do{}while(false)
 #   define DvpVerifyTextureState       (...)[](){return true;}()
@@ -870,13 +872,13 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
 {
     if (!m_pPipelineState)
     {
-        LOG_ERROR("No pipeline state is bound for a draw command");
+        LOG_ERROR_MESSAGE("No pipeline state is bound for a draw command");
         return false;
     }
 
     if (m_pPipelineState->GetDesc().IsComputePipeline)
     {
-        LOG_ERROR("Pipeline state bound for a draw command is a compute pipeline");
+        LOG_ERROR_MESSAGE("Pipeline state bound for a draw command is a compute pipeline");
         return false;
     }
 
@@ -887,25 +889,90 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
 
         if (drawAttribs.NumInstances == 0)
         {
-            LOG_ERROR("Number of instances cannot be 0. Use 1 for a non-instanced draw command.");
+            LOG_ERROR_MESSAGE("Number of instances cannot be 0. Use 1 for a non-instanced draw command.");
             return false;
         }
     }
 
     if (drawAttribs.IsIndexed && drawAttribs.IndexType != VT_UINT16 && drawAttribs.IndexType != VT_UINT32)
     {
-        LOG_ERROR("For an indexed draw command IndexType must be VT_UINT16 or VT_UINT32");
+        LOG_ERROR_MESSAGE("For an indexed draw command IndexType must be VT_UINT16 or VT_UINT32");
         return false;
     }
     
     if (drawAttribs.IsIndexed && !m_pIndexBuffer)
     {
-        LOG_ERROR("No index buffer is bound for indexed draw command");
+        LOG_ERROR_MESSAGE("No index buffer is bound for indexed draw command");
         return false;
     }
 
     return true;
 }
+
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: DvpVerifyRenderTargets()
+{
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR("No pipeline state is bound");
+        return;
+    }
+
+    TEXTURE_FORMAT BoundRTVFormats[8] = {TEX_FORMAT_UNKNOWN};
+    TEXTURE_FORMAT BoundDSVFormat = TEX_FORMAT_UNKNOWN;
+    Uint32 NumBoundRTVs = 0;
+    if (m_IsDefaultFramebufferBound)
+    {
+        if (m_pSwapChain)
+        {
+            BoundRTVFormats[0] = m_pSwapChain->GetDesc().ColorBufferFormat;
+            BoundDSVFormat = m_pSwapChain->GetDesc().DepthBufferFormat;
+            NumBoundRTVs = 1;
+        }
+        else
+        {
+            LOG_WARNING_MESSAGE("Failed to get bound render targets and depth-stencil buffer: swap chain is not initialized in the device context");
+            return;
+        }
+    }
+    else
+    {
+        NumBoundRTVs = m_NumBoundRenderTargets;
+        for (Uint32 rt = 0; rt < NumBoundRTVs; ++rt)
+        {
+            if (auto* pRT = m_pBoundRenderTargets[rt].RawPtr())
+                BoundRTVFormats[rt] = pRT->GetDesc().Format;
+            else
+                BoundRTVFormats[rt] = TEX_FORMAT_UNKNOWN;
+        }
+
+        BoundDSVFormat = m_pBoundDepthStencil ? m_pBoundDepthStencil->GetDesc().Format : TEX_FORMAT_UNKNOWN;
+    }
+
+    const auto& PSODesc = m_pPipelineState->GetDesc();
+    const auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
+    if (GraphicsPipeline.NumRenderTargets != NumBoundRTVs)
+    {
+        LOG_WARNING_MESSAGE("Number of currently bound render targets (", NumBoundRTVs, ") does not match the number of outputs specified by the PSO '", PSODesc.Name, "' (", Uint32{GraphicsPipeline.NumRenderTargets}, ")." );
+    }
+
+    if (BoundDSVFormat != GraphicsPipeline.DSVFormat)
+    {
+        LOG_WARNING_MESSAGE("Currently bound depth-stencil buffer format (", GetTextureFormatAttribs(BoundDSVFormat).Name, ") does not match the DSV format specified by the PSO '", PSODesc.Name, "' (", GetTextureFormatAttribs(GraphicsPipeline.DSVFormat).Name, ")." );
+    }
+        
+    for (Uint32 rt = 0; rt < NumBoundRTVs; ++rt)
+    {
+        auto BoundFmt = BoundRTVFormats[rt];
+        auto PSOFmt = GraphicsPipeline.RTVFormats[rt];
+        if (BoundFmt != PSOFmt)
+        {
+            LOG_WARNING_MESSAGE("Render target bound to slot ", rt, " (", GetTextureFormatAttribs(BoundFmt).Name, ") does not match the RTV format specified by the PSO '", PSODesc.Name, "' (", GetTextureFormatAttribs(PSOFmt).Name, ")." );
+        }
+    }
+}
+
+
 
 template<typename BaseInterface, typename ImplementationTraits>
 inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::

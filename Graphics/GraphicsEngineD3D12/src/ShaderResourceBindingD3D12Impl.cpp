@@ -109,7 +109,8 @@ IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariableByName(SHADE
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "': shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
+        LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "': shader stage ", GetShaderTypeLiteralName(ShaderType),
+                            " is inactive in Pipeline State '", m_pPSO->GetDesc().Name, "'");
         return nullptr;
     }
     return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
@@ -121,7 +122,8 @@ Uint32 ShaderResourceBindingD3D12Impl::GetVariableCount(SHADER_TYPE ShaderType) 
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables: shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
+        LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables: shader stage ", GetShaderTypeLiteralName(ShaderType),
+                            " is inactive in Pipeline State '", m_pPSO->GetDesc().Name, "'");
         return 0;
     }
 
@@ -134,7 +136,8 @@ IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariableByIndex(SHAD
     auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
     if (ResLayoutInd < 0)
     {
-        LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, ": shader stage ", GetShaderTypeLiteralName(ShaderType), " is inactive");
+        LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, ": shader stage ", GetShaderTypeLiteralName(ShaderType),
+                            " is inactive in Pipeline State '", m_pPSO->GetDesc().Name, "'");
         return nullptr;
     }
 

@@ -61,7 +61,16 @@ enum DRAW_FLAGS : Uint8
     /// Verify the sate of index and vertex buffers (if any) used by the draw 
     /// command. State validation is only performed in debug and development builds 
     /// and the flag has no effect in release build.
-    DRAW_FLAG_VERIFY_STATES                   = 0x01
+    DRAW_FLAG_VERIFY_STATES                   = 0x01,
+
+    /// Verify correctness of parameters passed to the draw command.
+    DRAW_FLAG_VERIFY_DRAW_ATTRIBS             = 0x02,
+
+    /// Verify that render targets bound to the context are consistent with the pipeline state.
+    DRAW_FLAG_VERIFY_RENDER_TARGETS           = 0x04,
+
+    /// Perform all state validation checks
+    DRAW_FLAG_VERIFY_ALL                      = DRAW_FLAG_VERIFY_STATES | DRAW_FLAG_VERIFY_DRAW_ATTRIBS | DRAW_FLAG_VERIFY_RENDER_TARGETS
 };
 DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
 

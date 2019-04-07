@@ -733,10 +733,14 @@ namespace Diligent
     void DeviceContextD3D11Impl::Draw( DrawAttribs &drawAttribs )
     {
 #ifdef DEVELOPMENT
-        if (!DvpVerifyDrawArguments(drawAttribs))
+        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0 && !DvpVerifyDrawArguments(drawAttribs))
             return;
+
+        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
+            DvpVerifyRenderTargets();
 #endif
-        const bool VerifyStates = drawAttribs.Flags & DRAW_FLAG_VERIFY_STATES;
+
+        const bool VerifyStates = (drawAttribs.Flags & DRAW_FLAG_VERIFY_STATES) != 0;
         auto* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
         if (pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate)
         {
@@ -786,7 +790,6 @@ namespace Diligent
         if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
         {
             // Verify bindings after all resources are set
-            dbgVerifyRenderTargetFormats();
             dbgVerifyCommittedSRVs();
             dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
             dbgVerifyCommittedSamplers();
@@ -1969,68 +1972,6 @@ namespace Diligent
     }
 
 #ifdef VERIFY_CONTEXT_BINDINGS
-    void DeviceContextD3D11Impl::dbgVerifyRenderTargetFormats()
-    {
-        if (!m_pPipelineState)
-        {
-            LOG_ERROR("No pipeline state is bound");
-            return;
-        }
-
-        TEXTURE_FORMAT BoundRTVFormats[8] = {TEX_FORMAT_UNKNOWN};
-        TEXTURE_FORMAT BoundDSVFormat = TEX_FORMAT_UNKNOWN;
-        Uint32 NumBoundRTVs = 0;
-        if (m_IsDefaultFramebufferBound)
-        {
-            if (m_pSwapChain)
-            {
-                BoundRTVFormats[0] = m_pSwapChain->GetDesc().ColorBufferFormat;
-                BoundDSVFormat = m_pSwapChain->GetDesc().DepthBufferFormat;
-                NumBoundRTVs = 1;
-            }
-            else
-            {
-                LOG_WARNING_MESSAGE("Failed to get bound render targets and depth-stencil buffer: swap chain is not initialized in the device context");
-                return;
-            }
-        }
-        else
-        {
-            NumBoundRTVs = m_NumBoundRenderTargets;
-            for (Uint32 rt = 0; rt < NumBoundRTVs; ++rt)
-            {
-                if (auto* pRT = m_pBoundRenderTargets[rt].RawPtr())
-                    BoundRTVFormats[rt] = pRT->GetDesc().Format;
-                else
-                    BoundRTVFormats[rt] = TEX_FORMAT_UNKNOWN;
-            }
-
-            BoundDSVFormat = m_pBoundDepthStencil ? m_pBoundDepthStencil->GetDesc().Format : TEX_FORMAT_UNKNOWN;
-        }
-
-        const auto &PSODesc = m_pPipelineState->GetDesc();
-        const auto &GraphicsPipeline = PSODesc.GraphicsPipeline;
-        if (GraphicsPipeline.NumRenderTargets != NumBoundRTVs)
-        {
-            LOG_WARNING_MESSAGE("Number of currently bound render targets (", NumBoundRTVs, ") does not match the number of outputs specified by the PSO '", PSODesc.Name, "' (", GraphicsPipeline.NumRenderTargets, "). This is OK on D3D11 device, but will be an issue on Vulkan and D3D12." );
-        }
-
-        if (BoundDSVFormat != GraphicsPipeline.DSVFormat)
-        {
-            LOG_WARNING_MESSAGE("Currently bound depth-stencil buffer format (", GetTextureFormatAttribs(BoundDSVFormat).Name, ") does not match the DSV format specified by the PSO '", PSODesc.Name, "' (", GetTextureFormatAttribs(GraphicsPipeline.DSVFormat).Name, "). This is OK on D3D11 device, but will be an issue on Vulkan and D3D12." );
-        }
-        
-        for (Uint32 rt = 0; rt < NumBoundRTVs; ++rt)
-        {
-            auto BoundFmt = BoundRTVFormats[rt];
-            auto PSOFmt = GraphicsPipeline.RTVFormats[rt];
-            if (BoundFmt != PSOFmt)
-            {
-                LOG_WARNING_MESSAGE("Render target bound to slot ", rt, " (", GetTextureFormatAttribs(BoundFmt).Name, ") does not match the RTV format specified by the PSO '", PSODesc.Name, "' (", GetTextureFormatAttribs(PSOFmt).Name, "). This is OK on D3D11 device, but will be an issue on Vulkan and D3D12." );
-            }
-        }
-    }
-
     DEFINE_D3D11CTX_FUNC_POINTERS(GetCBMethods,      GetConstantBuffers)
     DEFINE_D3D11CTX_FUNC_POINTERS(GetSRVMethods,     GetShaderResources)
     DEFINE_D3D11CTX_FUNC_POINTERS(GetSamplerMethods, GetSamplers)

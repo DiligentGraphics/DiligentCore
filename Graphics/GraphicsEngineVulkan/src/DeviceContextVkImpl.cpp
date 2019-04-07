@@ -391,8 +391,11 @@ namespace Diligent
     void DeviceContextVkImpl::Draw( DrawAttribs& drawAttribs )
     {
 #ifdef DEVELOPMENT
-        if (!DvpVerifyDrawArguments(drawAttribs))
+        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0 && !DvpVerifyDrawArguments(drawAttribs))
             return;
+
+        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
+            DvpVerifyRenderTargets();
 #endif
 
         EnsureVkCmdBuffer();

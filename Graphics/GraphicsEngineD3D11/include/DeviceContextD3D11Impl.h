@@ -297,8 +297,6 @@ private:
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
 #ifdef VERIFY_CONTEXT_BINDINGS
-    /// Verifies that bound render target formats are consistent with the PSO
-    void dbgVerifyRenderTargetFormats();
 
     /// Helper template function used to facilitate context verification
     template<UINT MaxResources, typename TD3D11ResourceType, typename TGetD3D11ResourcesType>

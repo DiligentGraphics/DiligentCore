@@ -14,6 +14,7 @@
 * Made `IShaderSourceInputStreamFactory` derived from `IObject`;
   added `IEngineFactory::CreateDefaultShaderSourceStreamFactory()` method;
   added `IRenderDevice::GetEngineFactory()` method (API Version 240021)
+* Added `DRAW_FLAG_VERIFY_DRAW_ATTRIBS`, `DRAW_FLAG_VERIFY_RENDER_TARGETS`, and `DRAW_FLAG_VERIFY_ALL` flags (API Version 240022)
 
 ## v2.4.b
 

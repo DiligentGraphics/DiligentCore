@@ -362,8 +362,11 @@ namespace Diligent
     void DeviceContextD3D12Impl::Draw( DrawAttribs& drawAttribs )
     {
 #ifdef DEVELOPMENT
-        if (!DvpVerifyDrawArguments(drawAttribs))
+        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0 && !DvpVerifyDrawArguments(drawAttribs))
             return;
+
+        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
+            DvpVerifyRenderTargets();
 #endif
 
         const bool VerifyStates = (drawAttribs.Flags & DRAW_FLAG_VERIFY_STATES) != 0;
