@@ -159,7 +159,8 @@ namespace std
                                     TexViewDesc.NumMipLevels,
                                     TexViewDesc.FirstArraySlice,
                                     TexViewDesc.NumArraySlices,
-                                    TexViewDesc.AccessFlags );
+                                    static_cast<Diligent::Uint32>(TexViewDesc.AccessFlags),
+                                    static_cast<Diligent::Uint32>(TexViewDesc.Flags));
             return Seed;
         }
     };
