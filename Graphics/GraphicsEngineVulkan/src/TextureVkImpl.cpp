@@ -69,9 +69,6 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time: pInitData can't be null");
 
     const auto& FmtAttribs = GetTextureFormatAttribs(m_Desc.Format);
-    if ((m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0 && FmtAttribs.IsTypeless)
-        LOG_ERROR_AND_THROW("Textures created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag can't use typeless formats. The following format was provided: ", FmtAttribs.Name, " when attempting to create texture '", m_Desc.Name, "'");
-
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
 
     if (m_Desc.Usage == USAGE_STATIC || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
@@ -100,28 +97,26 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
             LOG_ERROR_AND_THROW("Unknown texture type");
         }
 
+        TEXTURE_FORMAT InternalTexFmt = m_Desc.Format;
         if (FmtAttribs.IsTypeless)
         {
-            TEXTURE_VIEW_TYPE DefaultTexView;
-            if(m_Desc.BindFlags & BIND_DEPTH_STENCIL)
-                DefaultTexView = TEXTURE_VIEW_DEPTH_STENCIL;
+            TEXTURE_VIEW_TYPE PrimaryViewType;
+            if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
+                PrimaryViewType = TEXTURE_VIEW_DEPTH_STENCIL;
             else if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
-                DefaultTexView = TEXTURE_VIEW_UNORDERED_ACCESS;
+                PrimaryViewType = TEXTURE_VIEW_UNORDERED_ACCESS;
             else if (m_Desc.BindFlags & BIND_RENDER_TARGET)
-                DefaultTexView = TEXTURE_VIEW_RENDER_TARGET;
+                PrimaryViewType = TEXTURE_VIEW_RENDER_TARGET;
             else
-                DefaultTexView = TEXTURE_VIEW_SHADER_RESOURCE;
-            auto DefaultViewFormat = GetDefaultTextureViewFormat(m_Desc, DefaultTexView);
-            ImageCI.format = TexFormatToVkFormat(DefaultViewFormat);
+                PrimaryViewType = TEXTURE_VIEW_SHADER_RESOURCE;
+            InternalTexFmt = GetDefaultTextureViewFormat(m_Desc, PrimaryViewType);
         }
-        else
-        {
-            ImageCI.format = TexFormatToVkFormat(m_Desc.Format);
-        }
+        
+        ImageCI.format = TexFormatToVkFormat(InternalTexFmt);
 
-        ImageCI.extent.width = m_Desc.Width;
+        ImageCI.extent.width  = m_Desc.Width;
         ImageCI.extent.height = (m_Desc.Type == RESOURCE_DIM_TEX_1D || m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? 1 : m_Desc.Height;
-        ImageCI.extent.depth = (m_Desc.Type == RESOURCE_DIM_TEX_3D) ? m_Desc.Depth : 1;
+        ImageCI.extent.depth  = (m_Desc.Type == RESOURCE_DIM_TEX_3D) ? m_Desc.Depth : 1;
     
         ImageCI.mipLevels = m_Desc.MipLevels;
         if (m_Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || 
@@ -146,13 +141,35 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
             // VK_IMAGE_USAGE_TRANSFER_DST_BIT is required for vkCmdClearDepthStencilImage()
             ImageCI.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         }
-        if ((m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS))
+        if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
         {
             ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
         }
         if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
         {
             ImageCI.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+        }
+
+        if (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
+        {
+            if (CheckCSBasedMipGenerationSupport(ImageCI.format))
+            {
+                ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
+                m_bCSBasedMipGenerationSupported = true;
+                // TODO: warm-up generate mips PSO cache
+            }
+            else 
+            {
+                const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
+                auto FmtProperties = PhysicalDevice.GetPhysicalDeviceFormatProperties(ImageCI.format); (void)FmtProperties;
+                DEV_CHECK_ERR((FmtProperties.optimalTilingFeatures & (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT)) == (VK_FORMAT_FEATURE_BLIT_SRC_BIT | VK_FORMAT_FEATURE_BLIT_DST_BIT),
+                              "Texture format ", GetTextureFormatAttribs(InternalTexFmt).Name, " does not support blitting. "
+                              "Automatic mipmap generation can't be done neither by CS nor by blitting.");
+
+                DEV_CHECK_ERR((FmtProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != 0,
+                              "Texture format ", GetTextureFormatAttribs(InternalTexFmt).Name, " does not support linear filtering. "
+                              "Automatic mipmap generation can't be done neither by CS nor by blitting.");
+            }
         }
 
         ImageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -384,60 +401,6 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
             Uint32 QueueIndex = 0;
             pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
         }
-
-
-        if(m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
-        {
-            if (m_Desc.Type != RESOURCE_DIM_TEX_2D && m_Desc.Type != RESOURCE_DIM_TEX_2D_ARRAY)
-            {
-                LOG_ERROR_AND_THROW("Mipmap generation is only supported for 2D textures and texture arrays");
-            }
-
-            m_MipLevelUAV.reserve(m_Desc.MipLevels);
-            for(Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
-            {
-                // Create mip level UAV
-                TextureViewDesc UAVDesc;
-                std::stringstream name_ss;
-                name_ss << "Mip " << MipLevel << " UAV for texture '" << m_Desc.Name << "'";
-                auto name = name_ss.str();
-                UAVDesc.Name = name.c_str();
-                // Always create texture array UAV
-                UAVDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
-                UAVDesc.ViewType = TEXTURE_VIEW_UNORDERED_ACCESS;
-                UAVDesc.FirstArraySlice = 0;
-                UAVDesc.NumArraySlices = m_Desc.ArraySize;
-                UAVDesc.MostDetailedMip = MipLevel;
-                if (m_Desc.Format == TEX_FORMAT_RGBA8_UNORM_SRGB)
-                    UAVDesc.Format = TEX_FORMAT_RGBA8_UNORM;
-                ITextureView* pMipUAV = nullptr;
-                CreateViewInternal( UAVDesc, &pMipUAV, true );
-                m_MipLevelUAV.emplace_back(ValidatedCast<TextureViewVkImpl>(pMipUAV), STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewObjAllocator));
-            }
-            VERIFY_EXPR(m_MipLevelUAV.size() == m_Desc.MipLevels);
-
-            m_MipLevelSRV.reserve(m_Desc.MipLevels);
-            for(Uint32 MipLevel = 0; MipLevel < m_Desc.MipLevels; ++MipLevel)
-            {
-                // Create mip level SRV
-                TextureViewDesc TexArraySRVDesc;
-                std::stringstream name_ss;
-                name_ss << "Mip " << MipLevel << " SRV for texture '" << m_Desc.Name << "'";
-                auto name = name_ss.str();
-                TexArraySRVDesc.Name = name.c_str();
-                // Alaways create texture array view
-                TexArraySRVDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
-                TexArraySRVDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
-                TexArraySRVDesc.FirstArraySlice = 0;
-                TexArraySRVDesc.NumArraySlices = m_Desc.ArraySize;
-                TexArraySRVDesc.MostDetailedMip = MipLevel;
-                TexArraySRVDesc.NumMipLevels = 1;
-                ITextureView* pMipLevelSRV = nullptr;
-                CreateViewInternal( TexArraySRVDesc, &pMipLevelSRV, true );
-                m_MipLevelSRV.emplace_back(ValidatedCast<TextureViewVkImpl>(pMipLevelSRV), STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewObjAllocator));
-            }
-            VERIFY_EXPR(m_MipLevelSRV.size() == m_Desc.MipLevels);
-        }
     }
     else if(m_Desc.Usage == USAGE_STAGING)
     {
@@ -549,7 +512,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*         pRefCounters,
 
 IMPLEMENT_QUERY_INTERFACE( TextureVkImpl, IID_TextureVk, TTextureBase )
 
-void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )
+void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
 {
     VERIFY( ppView != nullptr, "View pointer address is null" );
     if( !ppView )return;
@@ -559,22 +522,71 @@ void TextureVkImpl::CreateViewInternal( const struct TextureViewDesc &ViewDesc, 
 
     try
     {
-        auto &TexViewAllocator = m_pDevice->GetTexViewObjAllocator();
+        auto& TexViewAllocator = m_pDevice->GetTexViewObjAllocator();
         VERIFY( &TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
 
         auto UpdatedViewDesc = ViewDesc;
         CorrectTextureViewDesc( UpdatedViewDesc );
 
         VulkanUtilities::ImageViewWrapper ImgView = CreateImageView(UpdatedViewDesc);
-
         auto pViewVk = NEW_RC_OBJ(TexViewAllocator, "TextureViewVkImpl instance", TextureViewVkImpl, bIsDefaultView ? this : nullptr)
-                                    (GetDevice(), UpdatedViewDesc, this, std::move(ImgView), bIsDefaultView );
+                                 (GetDevice(), UpdatedViewDesc, this, std::move(ImgView), bIsDefaultView);
         VERIFY( pViewVk->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type" );
 
-        if( bIsDefaultView )
+        if (bIsDefaultView)
             *ppView = pViewVk;
         else
             pViewVk->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView) );
+
+
+        if ((UpdatedViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0 && 
+            m_bCSBasedMipGenerationSupported &&
+            CheckCSBasedMipGenerationSupport(TexFormatToVkFormat(pViewVk->GetDesc().Format)))
+        {
+            auto* pMipLevelViewsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for mip level views", sizeof(TextureViewVkImpl::MipLevelViewAutoPtrType) * UpdatedViewDesc.NumMipLevels * 2);
+            auto* pMipLevelViews = reinterpret_cast<TextureViewVkImpl::MipLevelViewAutoPtrType*>(pMipLevelViewsRawMem);
+            for (Uint32 MipLevel = 0; MipLevel < UpdatedViewDesc.NumMipLevels; ++MipLevel)
+            {
+                auto CreateMipLevelView = [&](TEXTURE_VIEW_TYPE ViewType, Uint32 MipLevel, TextureViewVkImpl::MipLevelViewAutoPtrType* ppMipLevelView)
+                {
+                    TextureViewDesc MipLevelViewDesc = pViewVk->GetDesc();
+                    // Always create texture array views
+                    std::stringstream name_ss;
+                    name_ss << "Internal " << (ViewType == TEXTURE_VIEW_SHADER_RESOURCE ? "SRV" : "UAV") 
+                            << " of mip level " << MipLevel << " of texture view '" << pViewVk->GetDesc().Name << "'";
+                    auto name = name_ss.str();
+                    MipLevelViewDesc.Name             = name.c_str();
+                    MipLevelViewDesc.TextureDim       = RESOURCE_DIM_TEX_2D_ARRAY;
+                    MipLevelViewDesc.ViewType         = ViewType;
+                    MipLevelViewDesc.MostDetailedMip += MipLevel;
+                    MipLevelViewDesc.NumMipLevels     = 1;
+
+                    if (ViewType == TEXTURE_VIEW_UNORDERED_ACCESS)
+                    {
+                        if (MipLevelViewDesc.Format == TEX_FORMAT_RGBA8_UNORM_SRGB)
+                            MipLevelViewDesc.Format = TEX_FORMAT_RGBA8_UNORM;
+                    }
+
+                    VulkanUtilities::ImageViewWrapper ImgView = CreateImageView(MipLevelViewDesc);
+                    // Attach to parent view
+                    auto pMipLevelViewVk = NEW_RC_OBJ(TexViewAllocator, "TextureViewVkImpl instance", TextureViewVkImpl, pViewVk)
+                                                     (GetDevice(), MipLevelViewDesc, this, std::move(ImgView), bIsDefaultView);
+                    new (ppMipLevelView) TextureViewVkImpl::MipLevelViewAutoPtrType(pMipLevelViewVk, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewAllocator));
+                };
+
+                if ((MipLevel % 4) == 0)
+                {
+                    // Mip levles are generated 4 at a time, so we only need SRV for every 4-th level
+                    CreateMipLevelView(TEXTURE_VIEW_SHADER_RESOURCE,  MipLevel, &pMipLevelViews[MipLevel * 2]);
+                }
+                else
+                {
+                    new (&pMipLevelViews[MipLevel * 2]) TextureViewVkImpl::MipLevelViewAutoPtrType{};
+                }
+                CreateMipLevelView(TEXTURE_VIEW_UNORDERED_ACCESS, MipLevel, &pMipLevelViews[MipLevel * 2 + 1]);
+            }
+            pViewVk->AssignMipLevelViews(pMipLevelViews);
+        }
     }
     catch( const std::runtime_error & )
     {
@@ -638,11 +650,11 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
             else
             {
                 ImageViewCI.viewType = VK_IMAGE_VIEW_TYPE_3D;
-                Uint32 MipDepth = std::max(m_Desc.Depth >> ViewDesc.MostDetailedMip, 1U);
+                Uint32 MipDepth = std::max(Uint32{m_Desc.Depth} >> Uint32{ViewDesc.MostDetailedMip}, 1U);
                 if (ViewDesc.FirstDepthSlice != 0 || ViewDesc.NumDepthSlices != MipDepth)
                 {
-                    LOG_ERROR("3D texture view '", (ViewDesc.Name ? ViewDesc.Name : ""), "' (most detailed mip: ", ViewDesc.MostDetailedMip,
-                              "; mip levels: ", ViewDesc.NumMipLevels, "; first slice: ", ViewDesc.FirstDepthSlice,
+                    LOG_ERROR("3D texture view '", (ViewDesc.Name ? ViewDesc.Name : ""), "' (most detailed mip: ", Uint32{ViewDesc.MostDetailedMip},
+                              "; mip levels: ", Uint32{ViewDesc.NumMipLevels}, "; first slice: ", ViewDesc.FirstDepthSlice,
                               "; num depth slices: ", ViewDesc.NumDepthSlices, ") of texture '", m_Desc.Name, "' does not references"
                               " all depth slices (", MipDepth, ") in the mip level. 3D texture views in Vulkan must address all depth slices." );
                     ViewDesc.FirstDepthSlice = 0;
@@ -663,7 +675,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
     }
     
     TEXTURE_FORMAT CorrectedViewFormat = ViewDesc.Format;
-    if(m_Desc.BindFlags & BIND_DEPTH_STENCIL)
+    if (m_Desc.BindFlags & BIND_DEPTH_STENCIL)
         CorrectedViewFormat = GetDefaultTextureViewFormat(CorrectedViewFormat, TEXTURE_VIEW_DEPTH_STENCIL, m_Desc.BindFlags);
     ImageViewCI.format = TexFormatToVkFormat(CorrectedViewFormat);
     ImageViewCI.components = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
@@ -734,6 +746,22 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
     ViewName += m_Desc.Name;
     ViewName += '\'';
     return LogicalDevice.CreateImageView(ImageViewCI, ViewName.c_str());
+}
+
+bool TextureVkImpl::CheckCSBasedMipGenerationSupport(VkFormat vkFmt)const
+{
+    VERIFY_EXPR(m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS);
+    if (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY)
+    {
+        const auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+        auto FmtProperties = PhysicalDevice.GetPhysicalDeviceFormatProperties(vkFmt);
+        if ((FmtProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT) != 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void TextureVkImpl::SetLayout(VkImageLayout Layout)

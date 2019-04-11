@@ -37,18 +37,18 @@ D3D12DynamicPage::D3D12DynamicPage(ID3D12Device* pd3d12Device, Uint64 Size)
 	HeapProps.VisibleNodeMask      = 1;
 
 	D3D12_RESOURCE_DESC ResourceDesc;
-	ResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	ResourceDesc.Alignment = 0;
-	ResourceDesc.Height = 1;
-	ResourceDesc.DepthOrArraySize = 1;
-	ResourceDesc.MipLevels = 1;
-	ResourceDesc.Format = DXGI_FORMAT_UNKNOWN;
-	ResourceDesc.SampleDesc.Count = 1;
+	ResourceDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
+	ResourceDesc.Alignment          = 0;
+	ResourceDesc.Height             = 1;
+	ResourceDesc.DepthOrArraySize   = 1;
+	ResourceDesc.MipLevels          = 1;
+	ResourceDesc.Format             = DXGI_FORMAT_UNKNOWN;
+	ResourceDesc.SampleDesc.Count   = 1;
 	ResourceDesc.SampleDesc.Quality = 0;
-	ResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	ResourceDesc.Layout             = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
 	D3D12_RESOURCE_STATES DefaultUsage = D3D12_RESOURCE_STATE_GENERIC_READ;
-	HeapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+	HeapProps.Type     = D3D12_HEAP_TYPE_UPLOAD;
 	ResourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 	DefaultUsage = D3D12_RESOURCE_STATE_GENERIC_READ;
     ResourceDesc.Width = Size;

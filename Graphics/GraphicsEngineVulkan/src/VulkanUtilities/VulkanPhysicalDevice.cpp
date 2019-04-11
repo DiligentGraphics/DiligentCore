@@ -191,4 +191,11 @@ namespace VulkanUtilities
         }
         return InvalidMemoryTypeIndex;
     }
+
+    VkFormatProperties VulkanPhysicalDevice::GetPhysicalDeviceFormatProperties(VkFormat imageFormat)const
+    {
+        VkFormatProperties formatProperties;
+        vkGetPhysicalDeviceFormatProperties(m_VkDevice, imageFormat, &formatProperties);
+        return formatProperties;
+    }
 }

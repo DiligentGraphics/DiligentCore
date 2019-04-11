@@ -26,6 +26,7 @@
 /// \file
 /// Definition of the Diligent::ITextureView interface and related data structures
 
+#include "../../../Primitives/interface/FlagEnum.h"
 #include "DeviceObject.h"
 
 namespace Diligent
@@ -38,7 +39,7 @@ static constexpr INTERFACE_ID IID_TextureView =
 { 0x5b2ea04e, 0x8128, 0x45e4, { 0xaa, 0x4d, 0x6d, 0xc7, 0xe7, 0xd, 0xc4, 0x24 } };
 
 /// Describes allowed unordered access view mode
-enum UAV_ACCESS_FLAG : Int32
+enum UAV_ACCESS_FLAG : Uint8
 {
     /// Access mode is unspecified
     UAV_ACCESS_UNSPECIFIED = 0x00,
@@ -52,6 +53,20 @@ enum UAV_ACCESS_FLAG : Int32
     /// Allow read and write operations on the UAV
     UAV_ACCESS_FLAG_READ_WRITE = UAV_ACCESS_FLAG_READ | UAV_ACCESS_FLAG_WRITE
 };
+DEFINE_FLAG_ENUM_OPERATORS(UAV_ACCESS_FLAG)
+
+/// Texture view flags
+enum TEXTURE_VIEW_FLAGS : Uint8
+{
+    /// No flags
+    TEXTURE_VIEW_FLAG_NONE                      = 0x00,
+
+    /// Allow automatic mipmap generation for this view.
+    /// This flag is only allowed for TEXTURE_VIEW_SHADER_RESOURCE view type.
+    /// The texture must be created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag.
+    TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION = 0x01,
+};
+DEFINE_FLAG_ENUM_OPERATORS(TEXTURE_VIEW_FLAGS)
 
 /// Texture view description
 struct TextureViewDesc : DeviceObjectAttribs
@@ -105,7 +120,10 @@ struct TextureViewDesc : DeviceObjectAttribs
 
     /// For an unordered access view, allowed access flags. See Diligent::UAV_ACCESS_FLAG
     /// for details.
-    Uint32 AccessFlags              = 0;
+    UAV_ACCESS_FLAG     AccessFlags = UAV_ACCESS_UNSPECIFIED;
+    
+    /// Texture view flags, see Diligent::TEXTURE_VIEW_FLAGS.
+    TEXTURE_VIEW_FLAGS  Flags       = TEXTURE_VIEW_FLAG_NONE;
 
     TextureViewDesc()noexcept{}
 
@@ -116,7 +134,8 @@ struct TextureViewDesc : DeviceObjectAttribs
                     Uint32             _NumMipLevels           = TextureViewDesc{}.NumMipLevels,
                     Uint32             _FirstArrayOrDepthSlice = TextureViewDesc{}.FirstArraySlice,
                     Uint32             _NumArrayOrDepthSlices  = TextureViewDesc{}.NumArraySlices,
-                    Uint32             _AccessFlags            = TextureViewDesc{}.AccessFlags)noexcept :
+                    UAV_ACCESS_FLAG    _AccessFlags            = TextureViewDesc{}.AccessFlags,
+                    TEXTURE_VIEW_FLAGS _Flags                  = TextureViewDesc{}.Flags)noexcept :
         ViewType        (_ViewType),
         TextureDim      (_TextureDim),
         Format          (_Format),
@@ -124,7 +143,8 @@ struct TextureViewDesc : DeviceObjectAttribs
         NumMipLevels    (_NumMipLevels),
         FirstArraySlice (_FirstArrayOrDepthSlice),
         NumArraySlices  (_NumArrayOrDepthSlices),
-        AccessFlags     (_AccessFlags)
+        AccessFlags     (_AccessFlags),
+        Flags           (_Flags)
     {}
 
     /// Tests if two structures are equivalent

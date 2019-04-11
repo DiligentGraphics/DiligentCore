@@ -118,14 +118,14 @@ public:
 
 protected:
     /// Strong reference to the sampler
-    Diligent::RefCntAutoPtr<ISampler> m_pSampler;
+    RefCntAutoPtr<ISampler> m_pSampler;
 
     /// Raw pointer to the texture
     ITexture* const m_pTexture;
 
     /// Strong reference to the texture. Used for non-default views
     /// to keep the texture alive
-    Diligent::RefCntAutoPtr<ITexture> m_spTexture;
+    RefCntAutoPtr<ITexture> m_spTexture;
 };
 
 }

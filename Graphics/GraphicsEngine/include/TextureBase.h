@@ -392,6 +392,15 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
         TEX_VIEW_VALIDATION_ERROR( "Texture view format (", GetTextureFormatAttribs(ViewDesc.Format).Name, ") cannot be typeless" );
     }
 
+    if ((ViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0)
+    {
+        if ((this->m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) == 0)
+            TEX_VIEW_VALIDATION_ERROR( "TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION flag can only set if the texture was created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag" );
+
+        if (ViewDesc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
+            TEX_VIEW_VALIDATION_ERROR( "TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION flag can only be used with TEXTURE_VIEW_SHADER_RESOURCE view type" );
+    }
+
 #undef TEX_VIEW_VALIDATION_ERROR
 
     if( ViewDesc.NumMipLevels == 0 || ViewDesc.NumMipLevels == TextureViewDesc::RemainingMipLevels )
@@ -444,6 +453,8 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
         TextureViewDesc ViewDesc;
         ViewDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
         ITextureView *pSRV = nullptr;
+        if ((this->m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0)
+            ViewDesc.Flags |= TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION;
         CreateViewInternal( ViewDesc, &pSRV, true );
         m_pDefaultSRV.reset( static_cast<TTextureViewImpl*>(pSRV) );
         VERIFY( m_pDefaultSRV->GetDesc().ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Unexpected view type" );

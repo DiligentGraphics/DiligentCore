@@ -394,6 +394,24 @@ namespace VulkanUtilities
             vkCmdCopyImageToBuffer(m_VkCmdBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
         }
 
+        void BlitImage(VkImage              srcImage,
+                       VkImageLayout        srcImageLayout,
+                       VkImage              dstImage,
+                       VkImageLayout        dstImageLayout,
+                       uint32_t             regionCount,
+                       const VkImageBlit*   pRegions,
+                       VkFilter             filter)
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            if (m_State.RenderPass  != VK_NULL_HANDLE)
+            {
+                // Blit must be performed outside of render pass.
+                EndRenderPass();
+            }
+
+            vkCmdBlitImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
+        }
+
         void FlushBarriers();
 
         void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)

@@ -861,7 +861,10 @@ inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
     VERIFY(pTexView != nullptr, "pTexView must not be null");
 #ifdef DEVELOPMENT
     const auto& ViewDesc = pTexView->GetDesc();
-    DEV_CHECK_ERR( ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "GenerateMips() is allowed for shader resource views only, ", GetTexViewTypeLiteralName(ViewDesc.ViewType), " is not allowed." );
+    DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Shader resource view '", ViewDesc.Name,
+                  "' can't be used to generate mipmaps because its type is ", GetTexViewTypeLiteralName(ViewDesc.ViewType), ". Required view type: TEXTURE_VIEW_SHADER_RESOURCE." );
+    DEV_CHECK_ERR((ViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0, "Shader resource view '", ViewDesc.Name,
+                  "' was not created with TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION flag and can't be used to generate mipmaps.");
 #endif
 }
 

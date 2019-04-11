@@ -176,8 +176,6 @@ namespace Diligent
 
         FindPSOs(TEX_FORMAT_RGBA8_UNORM);
         FindPSOs(TEX_FORMAT_BGRA8_UNORM);
-        FindPSOs(TEX_FORMAT_RGBA8_UNORM_SRGB);
-        FindPSOs(TEX_FORMAT_BGRA8_UNORM_SRGB);
     }
 
     void GenerateMipsVkHelper::CreateSRB(IShaderResourceBinding** ppSRB)
@@ -196,16 +194,85 @@ namespace Diligent
         return it->second;
     }
 
+    void GenerateMipsVkHelper::WarmUpCache(TEXTURE_FORMAT Fmt)
+    {
+        FindPSOs(Fmt);
+    }
+        
     void GenerateMipsVkHelper::GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB)
     {
         auto* pTexVk = TexView.GetTexture<TextureVkImpl>();
-        const auto& TexDesc = pTexVk->GetDesc();
-
         if (!pTexVk->IsInKnownState())
         {
-            LOG_ERROR_MESSAGE("Unable to generate mips for texture '", TexDesc.Name, "' because the texture state is unknown");
+            LOG_ERROR_MESSAGE("Unable to generate mips for texture '", pTexVk->GetDesc().Name, "' because the texture state is unknown");
             return;
         }
+
+        DEV_CHECK_ERR(TexView.GetDesc().NumMipLevels > 1, "Number of mip levels in the view must be greater than 1");
+
+        const auto OriginalState  = pTexVk->GetState();
+        const auto OriginalLayout = pTexVk->GetLayout();
+        const auto& TexDesc  = pTexVk->GetDesc();
+        const auto& ViewDesc = TexView.GetDesc();
+
+        const auto& FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
+        VkImageSubresourceRange SubresRange = {};
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+            SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+        {
+            // If image has a depth / stencil format with both depth and stencil components, then the 
+            // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and 
+            // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
+            SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+        else
+            SubresRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        SubresRange.baseArrayLayer = ViewDesc.FirstArraySlice;
+        SubresRange.layerCount     = ViewDesc.NumArraySlices;
+        SubresRange.baseMipLevel   = ViewDesc.MostDetailedMip;
+        SubresRange.levelCount     = 1;
+
+        VkImageLayout AffectedMipLevelLayout;
+        if (TexView.HasMipLevelViews())
+        {
+            AffectedMipLevelLayout = GenerateMipsCS(TexView, Ctx, SRB, SubresRange);
+        }
+        else
+        {
+            AffectedMipLevelLayout = GenerateMipsBlit(TexView, Ctx, SRB, SubresRange);
+        }
+
+        // All affected mip levels are now in VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL state
+        if (AffectedMipLevelLayout != OriginalLayout)
+        {
+            bool IsAllSlices = (TexDesc.Type != RESOURCE_DIM_TEX_1D_ARRAY &&
+                                TexDesc.Type != RESOURCE_DIM_TEX_2D_ARRAY &&
+                                TexDesc.Type != RESOURCE_DIM_TEX_CUBE_ARRAY) || 
+                               TexDesc.ArraySize == ViewDesc.NumArraySlices;
+            bool IsAllMips = ViewDesc.NumMipLevels == TexDesc.MipLevels;
+            if (IsAllSlices && IsAllMips)
+            {
+                pTexVk->SetLayout(AffectedMipLevelLayout);
+            }
+            else
+            {
+                SubresRange.baseMipLevel = ViewDesc.MostDetailedMip;
+                SubresRange.levelCount   = ViewDesc.NumMipLevels;
+                // Transition all affected subresources back to original layout
+                Ctx.TransitionImageLayout(*pTexVk, AffectedMipLevelLayout, OriginalLayout, SubresRange);
+                VERIFY_EXPR(pTexVk->GetLayout() == OriginalLayout);
+            }
+        }
+    }
+
+    VkImageLayout GenerateMipsVkHelper::GenerateMipsCS(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange)
+    {
+        auto* pTexVk = TexView.GetTexture<TextureVkImpl>();
+        const auto& TexDesc = pTexVk->GetDesc();
+       
+        VERIFY(TexDesc.Type == RESOURCE_DIM_TEX_2D || TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY,
+               "CS-based mipmap generation is only supported for 2D textures and texture arrays");
 
         const auto& ViewDesc = TexView.GetDesc();
         auto* pSrcMipVar = SRB.GetVariableByName(SHADER_TYPE_COMPUTE, "SrcMip");
@@ -218,41 +285,27 @@ namespace Diligent
         };
 
         auto& PSOs = FindPSOs(ViewDesc.Format);
-
-        const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-        VkImageSubresourceRange SubresRange;
-        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
-            SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-        {
-            // If image has a depth / stencil format with both depth and stencil components, then the 
-            // aspectMask member of subresourceRange must include both VK_IMAGE_ASPECT_DEPTH_BIT and 
-            // VK_IMAGE_ASPECT_STENCIL_BIT (6.7.3)
-            SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-        else
-            SubresRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        SubresRange.baseArrayLayer = 0;
-        SubresRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
         
-        const auto CurrState = pTexVk->GetState();
-        const auto CurrLayout = ResourceStateToVkImageLayout(CurrState);
+        const auto OriginalState  = pTexVk->GetState();
+        const auto OriginalLayout = pTexVk->GetLayout();
 
         // Transition the lowest mip level to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        SubresRange.baseMipLevel = 0;
-        SubresRange.levelCount = 1;
-        if (CurrState != RESOURCE_STATE_SHADER_RESOURCE)
-            Ctx.TransitionTextureState(*pTexVk, CurrState, RESOURCE_STATE_SHADER_RESOURCE, false, &SubresRange);
+        SubresRange.baseMipLevel   = ViewDesc.MostDetailedMip;
+        SubresRange.levelCount     = 1;
+        if (OriginalState != RESOURCE_STATE_SHADER_RESOURCE)
+            Ctx.TransitionTextureState(*pTexVk, OriginalState, RESOURCE_STATE_SHADER_RESOURCE, false /*UpdateTextureState*/, &SubresRange);
         VERIFY_EXPR(ResourceStateToVkImageLayout(RESOURCE_STATE_SHADER_RESOURCE) == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         
-        for (uint32_t TopMip = 0; TopMip < TexDesc.MipLevels - 1; )
+        // Note that mip levels are relative to the view's most detailed mip
+        auto LowestMip = ViewDesc.NumMipLevels - 1;
+        for (uint32_t TopMip = 0; TopMip < LowestMip; )
         {
             // In Vulkan all subresources of a view must be transitioned to the same layout, so
             // we can't bind the entire texture and have to bind single mip level at a time
-            pSrcMipVar->Set(pTexVk->GetMipLevelSRV(TopMip));
+            pSrcMipVar->Set(TexView.GetMipLevelSRV(TopMip));
 
-            uint32_t SrcWidth  = std::max(TexDesc.Width  >> TopMip, 1u);
-            uint32_t SrcHeight = std::max(TexDesc.Height >> TopMip, 1u);
+            uint32_t SrcWidth  = std::max(TexDesc.Width  >> (TopMip + ViewDesc.MostDetailedMip), 1u);
+            uint32_t SrcHeight = std::max(TexDesc.Height >> (TopMip + ViewDesc.MostDetailedMip), 1u);
             uint32_t DstWidth  = std::max(SrcWidth  >> 1, 1u);
             uint32_t DstHeight = std::max(SrcHeight >> 1, 1u);
 
@@ -268,8 +321,8 @@ namespace Diligent
             // in the low bits.  Zeros indicate we can divide by two without truncating.
             uint32_t AdditionalMips = PlatformMisc::GetLSB(DstWidth | DstHeight);
             uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
-            if (TopMip + NumMips > TexDesc.MipLevels - 1)
-                NumMips = TexDesc.MipLevels - 1 - TopMip;
+            if (TopMip + NumMips > LowestMip)
+                NumMips = LowestMip - TopMip;
 
             // These are clamped to 1 after computing additional mips because clamped
             // dimensions should not limit us from downsampling multiple times.  (E.g.
@@ -286,7 +339,7 @@ namespace Diligent
                     Int32 NumMipLevels; // Number of OutMips to write: [1, 4]
                     Int32 ArraySlice;
                     Int32 Dummy;
-                    float TexelSize[2];	    // 1.0 / OutMip1.Dimensions
+                    float TexelSize[2];	// 1.0 / OutMip1.Dimensions
                 };
                 MapHelper<CBData> MappedData(&Ctx, m_ConstantsCB, MAP_WRITE, MAP_FLAG_DISCARD);
                     
@@ -294,8 +347,8 @@ namespace Diligent
                 {
                     static_cast<Int32>(TopMip),
                     static_cast<Int32>(NumMips),
-                    static_cast<Int32>(ViewDesc.FirstArraySlice),
-                    0,
+                    0, // Array slices are relative to the view's first array slice
+                    0, // Unused
                     {1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight)}
                 };
             }
@@ -303,14 +356,14 @@ namespace Diligent
             constexpr const Uint32 MaxMipsHandledByCS = 4; // Max number of mip levels processed by one CS shader invocation
             for (Uint32 u = 0; u < MaxMipsHandledByCS; ++u)
             {
-                auto* MipLevelUAV = pTexVk->GetMipLevelUAV(std::min(TopMip + u + 1, TexDesc.MipLevels - 1));
+                auto* MipLevelUAV = TexView.GetMipLevelUAV(std::min(TopMip + u + 1, LowestMip));
                 pOutMipVar[u]->Set(MipLevelUAV);
             }
 
-            SubresRange.baseMipLevel = TopMip + 1;
-            SubresRange.levelCount = std::min(4u, TexDesc.MipLevels - (TopMip + 1));
-            if (CurrLayout != VK_IMAGE_LAYOUT_GENERAL)
-                Ctx.TransitionImageLayout(*pTexVk, CurrLayout, VK_IMAGE_LAYOUT_GENERAL, SubresRange);
+            SubresRange.baseMipLevel = ViewDesc.MostDetailedMip + TopMip + 1;
+            SubresRange.levelCount   = std::min(4u, LowestMip - TopMip);
+            if (OriginalLayout != VK_IMAGE_LAYOUT_GENERAL)
+                Ctx.TransitionImageLayout(*pTexVk, OriginalLayout, VK_IMAGE_LAYOUT_GENERAL, SubresRange);
 
             Ctx.CommitShaderResources(&SRB, RESOURCE_STATE_TRANSITION_MODE_NONE);
             DispatchComputeAttribs DispatchAttrs((DstWidth + 7) / 8, (DstHeight + 7) / 8, ViewDesc.NumArraySlices);
@@ -321,8 +374,74 @@ namespace Diligent
             TopMip += NumMips;
         }
 
-        // All mip levels are now in VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL state
-        pTexVk->SetState(RESOURCE_STATE_SHADER_RESOURCE);
-        VERIFY_EXPR(pTexVk->GetLayout() == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    }
+
+    VkImageLayout GenerateMipsVkHelper::GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange)
+    {
+        auto* pTexVk = TexView.GetTexture<TextureVkImpl>();
+        const auto& TexDesc = pTexVk->GetDesc();
+        const auto& ViewDesc = TexView.GetDesc();
+        auto vkImage = pTexVk->GetVkImage();
+
+        const auto OriginalState  = pTexVk->GetState();
+        const auto OriginalLayout = ResourceStateToVkImageLayout(OriginalState);
+
+        VkImageBlit BlitRegion = {};
+        BlitRegion.srcSubresource.baseArrayLayer = ViewDesc.FirstArraySlice;
+        BlitRegion.srcSubresource.layerCount     = ViewDesc.NumArraySlices;
+        BlitRegion.srcSubresource.aspectMask     = SubresRange.aspectMask;
+        BlitRegion.dstSubresource.baseArrayLayer = BlitRegion.srcSubresource.baseArrayLayer;
+        BlitRegion.dstSubresource.layerCount     = BlitRegion.srcSubresource.layerCount;
+        BlitRegion.dstSubresource.aspectMask     = BlitRegion.srcSubresource.aspectMask;
+        BlitRegion.srcOffsets[0] = VkOffset3D{0, 0, 0};
+        BlitRegion.dstOffsets[0] = VkOffset3D{0, 0, 0};
+
+        SubresRange.baseMipLevel   = ViewDesc.MostDetailedMip;
+        SubresRange.levelCount     = 1;
+        if (OriginalState != RESOURCE_STATE_COPY_SOURCE)
+            Ctx.TransitionTextureState(*pTexVk, OriginalState, RESOURCE_STATE_COPY_SOURCE, false /*UpdateTextureState*/, &SubresRange);
+
+        auto& CmdBuffer = Ctx.GetCommandBuffer();
+        for (uint32_t mip = ViewDesc.MostDetailedMip + 1; mip < ViewDesc.MostDetailedMip + ViewDesc.NumMipLevels; ++mip)
+        {
+            BlitRegion.srcSubresource.mipLevel = mip-1;
+            BlitRegion.dstSubresource.mipLevel = mip;
+
+            BlitRegion.srcOffsets[1] =
+                VkOffset3D
+                { 
+                    static_cast<int32_t>(std::max(TexDesc.Width  >> (mip-1), 1u)),
+                    static_cast<int32_t>(std::max(TexDesc.Height >> (mip-1), 1u)),
+                    1
+                };
+            BlitRegion.dstOffsets[1] =
+                VkOffset3D
+                {
+                    static_cast<int32_t>(std::max(TexDesc.Width  >> mip, 1u)),
+                    static_cast<int32_t>(std::max(TexDesc.Height >> mip, 1u)),
+                    1
+                };
+            if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
+            {
+                BlitRegion.srcOffsets[1].z = std::max(TexDesc.Depth >> (mip-1), 1u);
+                BlitRegion.dstOffsets[1].z = std::max(TexDesc.Depth >>  mip,    1u);
+            }
+
+            SubresRange.baseMipLevel = mip;
+            if (OriginalLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+                Ctx.TransitionImageLayout(*pTexVk, OriginalLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange);
+
+            CmdBuffer.BlitImage(vkImage, 
+                                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, //  must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL
+                                vkImage,
+                                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //  must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL
+                                1,
+                                &BlitRegion,
+                                VK_FILTER_LINEAR);
+            Ctx.TransitionImageLayout(*pTexVk, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SubresRange);
+        }
+
+        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
     }
 }

@@ -34,14 +34,24 @@ TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters*                 pRefCo
                                       const TextureViewDesc&              ViewDesc, 
                                       ITexture*                           pTexture,
                                       VulkanUtilities::ImageViewWrapper&& ImgView,
-                                      bool bIsDefaultView ) :
+                                      bool                                bIsDefaultView) :
     TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
-    m_ImageView(std::move(ImgView))
+    m_ImageView     (std::move(ImgView))
 {
 }
 
 TextureViewVkImpl::~TextureViewVkImpl()
 {
+    if (m_MipLevelViews != nullptr)
+    {
+        for (Uint32 MipView=0; MipView < m_Desc.NumMipLevels * 2; ++MipView)
+        {
+            m_MipLevelViews[MipView].~MipLevelViewAutoPtrType();
+        }
+        // Memory allocated in TextureVkImpl::CreateViewInternal()
+        GetRawAllocator().Free(m_MipLevelViews);
+    }
+
     if(m_Desc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || m_Desc.ViewType == TEXTURE_VIEW_RENDER_TARGET)
         m_pDevice->GetFramebufferCache().OnDestroyImageView(m_ImageView);
     m_pDevice->SafeReleaseDeviceObject(std::move(m_ImageView), m_pTexture->GetDesc().CommandQueueMask);

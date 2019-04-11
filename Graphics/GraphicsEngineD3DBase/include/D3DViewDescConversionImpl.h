@@ -41,16 +41,16 @@ namespace Diligent
         switch (SRVDesc.TextureDim)
         {
             case RESOURCE_DIM_TEX_1D:
-                d3dSRVDesc.ViewDimension =  D3D_SRV_DIMENSION_TEXTURE1D;
-                d3dSRVDesc.Texture1D.MipLevels = SRVDesc.NumMipLevels;
+                d3dSRVDesc.ViewDimension             = D3D_SRV_DIMENSION_TEXTURE1D;
+                d3dSRVDesc.Texture1D.MipLevels       = SRVDesc.NumMipLevels;
                 d3dSRVDesc.Texture1D.MostDetailedMip = SRVDesc.MostDetailedMip;
             break;
 
             case RESOURCE_DIM_TEX_1D_ARRAY:
-                d3dSRVDesc.ViewDimension =  D3D_SRV_DIMENSION_TEXTURE1DARRAY;
-                d3dSRVDesc.Texture1DArray.ArraySize = SRVDesc.NumArraySlices;
+                d3dSRVDesc.ViewDimension                  = D3D_SRV_DIMENSION_TEXTURE1DARRAY;
+                d3dSRVDesc.Texture1DArray.ArraySize       = SRVDesc.NumArraySlices;
                 d3dSRVDesc.Texture1DArray.FirstArraySlice = SRVDesc.FirstArraySlice;
-                d3dSRVDesc.Texture1DArray.MipLevels = SRVDesc.NumMipLevels;
+                d3dSRVDesc.Texture1DArray.MipLevels       = SRVDesc.NumMipLevels;
                 d3dSRVDesc.Texture1DArray.MostDetailedMip = SRVDesc.MostDetailedMip;
             break;
 
@@ -62,8 +62,8 @@ namespace Diligent
                 }
                 else
                 {
-                    d3dSRVDesc.ViewDimension =  D3D_SRV_DIMENSION_TEXTURE2D;
-                    d3dSRVDesc.Texture2D.MipLevels = SRVDesc.NumMipLevels;
+                    d3dSRVDesc.ViewDimension             =  D3D_SRV_DIMENSION_TEXTURE2D;
+                    d3dSRVDesc.Texture2D.MipLevels       = SRVDesc.NumMipLevels;
                     d3dSRVDesc.Texture2D.MostDetailedMip = SRVDesc.MostDetailedMip;
                 }
             break;
@@ -71,38 +71,38 @@ namespace Diligent
             case RESOURCE_DIM_TEX_2D_ARRAY:
                 if( SampleCount > 1 )
                 {
-                    d3dSRVDesc.ViewDimension =  D3D_SRV_DIMENSION_TEXTURE2DMSARRAY;
-                    d3dSRVDesc.Texture2DMSArray.ArraySize = SRVDesc.NumArraySlices;
+                    d3dSRVDesc.ViewDimension                    =  D3D_SRV_DIMENSION_TEXTURE2DMSARRAY;
+                    d3dSRVDesc.Texture2DMSArray.ArraySize       = SRVDesc.NumArraySlices;
                     d3dSRVDesc.Texture2DMSArray.FirstArraySlice = SRVDesc.FirstArraySlice;
                 }
                 else
                 {
-                    d3dSRVDesc.ViewDimension =  D3D_SRV_DIMENSION_TEXTURE2DARRAY;
-                    d3dSRVDesc.Texture2DArray.ArraySize = SRVDesc.NumArraySlices;
+                    d3dSRVDesc.ViewDimension                  =  D3D_SRV_DIMENSION_TEXTURE2DARRAY;
+                    d3dSRVDesc.Texture2DArray.ArraySize       = SRVDesc.NumArraySlices;
                     d3dSRVDesc.Texture2DArray.FirstArraySlice = SRVDesc.FirstArraySlice;
-                    d3dSRVDesc.Texture2DArray.MipLevels = SRVDesc.NumMipLevels;
+                    d3dSRVDesc.Texture2DArray.MipLevels       = SRVDesc.NumMipLevels;
                     d3dSRVDesc.Texture2DArray.MostDetailedMip = SRVDesc.MostDetailedMip;
                 }
             break;
 
             case RESOURCE_DIM_TEX_3D:
-                d3dSRVDesc.ViewDimension =  D3D_SRV_DIMENSION_TEXTURE3D;
-                d3dSRVDesc.Texture3D.MipLevels = SRVDesc.NumMipLevels;
+                d3dSRVDesc.ViewDimension             =  D3D_SRV_DIMENSION_TEXTURE3D;
+                d3dSRVDesc.Texture3D.MipLevels       = SRVDesc.NumMipLevels;
                 d3dSRVDesc.Texture3D.MostDetailedMip = SRVDesc.MostDetailedMip;
             break;
 
             case RESOURCE_DIM_TEX_CUBE:
-                d3dSRVDesc.ViewDimension =  D3D_SRV_DIMENSION_TEXTURECUBE;
-                d3dSRVDesc.TextureCube.MipLevels = SRVDesc.NumMipLevels;
+                d3dSRVDesc.ViewDimension               =  D3D_SRV_DIMENSION_TEXTURECUBE;
+                d3dSRVDesc.TextureCube.MipLevels       = SRVDesc.NumMipLevels;
                 d3dSRVDesc.TextureCube.MostDetailedMip = SRVDesc.MostDetailedMip;
             break;
 
             case RESOURCE_DIM_TEX_CUBE_ARRAY:
-                d3dSRVDesc.ViewDimension =  D3D_SRV_DIMENSION_TEXTURECUBEARRAY;
-                d3dSRVDesc.TextureCubeArray.MipLevels = SRVDesc.NumMipLevels;
-                d3dSRVDesc.TextureCubeArray.MostDetailedMip = SRVDesc.MostDetailedMip;
+                d3dSRVDesc.ViewDimension                     = D3D_SRV_DIMENSION_TEXTURECUBEARRAY;
+                d3dSRVDesc.TextureCubeArray.MipLevels        = SRVDesc.NumMipLevels;
+                d3dSRVDesc.TextureCubeArray.MostDetailedMip  = SRVDesc.MostDetailedMip;
                 d3dSRVDesc.TextureCubeArray.First2DArrayFace = SRVDesc.FirstArraySlice;
-                d3dSRVDesc.TextureCubeArray.NumCubes = SRVDesc.NumArraySlices / 6;
+                d3dSRVDesc.TextureCubeArray.NumCubes         = SRVDesc.NumArraySlices / 6;
             break;
 
             default:
@@ -119,27 +119,27 @@ namespace Diligent
         switch(RTVDesc.TextureDim)
         {
             case RESOURCE_DIM_TEX_1D:
-                d3dRTVDesc.ViewDimension =  D3D_RTV_DIMENSION_TEXTURE1D;
+                d3dRTVDesc.ViewDimension      = D3D_RTV_DIMENSION_TEXTURE1D;
                 d3dRTVDesc.Texture1D.MipSlice = RTVDesc.MostDetailedMip;
             break;
         
             case RESOURCE_DIM_TEX_1D_ARRAY:
                 d3dRTVDesc.ViewDimension =  D3D_RTV_DIMENSION_TEXTURE1DARRAY;
-                d3dRTVDesc.Texture1DArray.ArraySize = RTVDesc.NumArraySlices;
+                d3dRTVDesc.Texture1DArray.ArraySize       = RTVDesc.NumArraySlices;
                 d3dRTVDesc.Texture1DArray.FirstArraySlice = RTVDesc.FirstArraySlice;
-                d3dRTVDesc.Texture1DArray.MipSlice = RTVDesc.MostDetailedMip;
+                d3dRTVDesc.Texture1DArray.MipSlice        = RTVDesc.MostDetailedMip;
             break;
 
 
             case RESOURCE_DIM_TEX_2D:
                 if( SampleCount > 1 )
                 {
-                    d3dRTVDesc.ViewDimension =  D3D_RTV_DIMENSION_TEXTURE2DMS;
+                    d3dRTVDesc.ViewDimension = D3D_RTV_DIMENSION_TEXTURE2DMS;
                     d3dRTVDesc.Texture2DMS.UnusedField_NothingToDefine = 0;
                 }
                 else
                 {
-                    d3dRTVDesc.ViewDimension =  D3D_RTV_DIMENSION_TEXTURE2D;
+                    d3dRTVDesc.ViewDimension      = D3D_RTV_DIMENSION_TEXTURE2D;
                     d3dRTVDesc.Texture2D.MipSlice = RTVDesc.MostDetailedMip;
                 }
             break;
@@ -153,18 +153,18 @@ namespace Diligent
                 }
                 else
                 {
-                    d3dRTVDesc.ViewDimension =  D3D_RTV_DIMENSION_TEXTURE2DARRAY;
-                    d3dRTVDesc.Texture2DArray.ArraySize = RTVDesc.NumArraySlices;
+                    d3dRTVDesc.ViewDimension                  =  D3D_RTV_DIMENSION_TEXTURE2DARRAY;
+                    d3dRTVDesc.Texture2DArray.ArraySize       = RTVDesc.NumArraySlices;
                     d3dRTVDesc.Texture2DArray.FirstArraySlice = RTVDesc.FirstArraySlice;
-                    d3dRTVDesc.Texture2DArray.MipSlice = RTVDesc.MostDetailedMip;
+                    d3dRTVDesc.Texture2DArray.MipSlice        = RTVDesc.MostDetailedMip;
                 }
             break;
 
             case RESOURCE_DIM_TEX_3D:
-                d3dRTVDesc.ViewDimension =  D3D_RTV_DIMENSION_TEXTURE3D;
+                d3dRTVDesc.ViewDimension         = D3D_RTV_DIMENSION_TEXTURE3D;
                 d3dRTVDesc.Texture3D.FirstWSlice = RTVDesc.FirstDepthSlice;
-                d3dRTVDesc.Texture3D.WSize = RTVDesc.NumDepthSlices;
-                d3dRTVDesc.Texture3D.MipSlice = RTVDesc.MostDetailedMip;
+                d3dRTVDesc.Texture3D.WSize       = RTVDesc.NumDepthSlices;
+                d3dRTVDesc.Texture3D.MipSlice    = RTVDesc.MostDetailedMip;
             break;
 
             default:
@@ -181,27 +181,27 @@ namespace Diligent
         switch(DSVDesc.TextureDim)
         {
             case RESOURCE_DIM_TEX_1D:
-                d3dDSVDesc.ViewDimension =  D3D_DSV_DIMENSION_TEXTURE1D;
+                d3dDSVDesc.ViewDimension      = D3D_DSV_DIMENSION_TEXTURE1D;
                 d3dDSVDesc.Texture1D.MipSlice = DSVDesc.MostDetailedMip;
             break;
 
             case RESOURCE_DIM_TEX_1D_ARRAY:
-                d3dDSVDesc.ViewDimension =  D3D_DSV_DIMENSION_TEXTURE1DARRAY;
-                d3dDSVDesc.Texture1DArray.ArraySize = DSVDesc.NumArraySlices;
+                d3dDSVDesc.ViewDimension                  = D3D_DSV_DIMENSION_TEXTURE1DARRAY;
+                d3dDSVDesc.Texture1DArray.ArraySize       = DSVDesc.NumArraySlices;
                 d3dDSVDesc.Texture1DArray.FirstArraySlice = DSVDesc.FirstArraySlice;
-                d3dDSVDesc.Texture1DArray.MipSlice = DSVDesc.MostDetailedMip;
+                d3dDSVDesc.Texture1DArray.MipSlice        = DSVDesc.MostDetailedMip;
             break;
 
 
             case RESOURCE_DIM_TEX_2D:
                 if( SampleCount > 1 )
                 {
-                    d3dDSVDesc.ViewDimension =  D3D_DSV_DIMENSION_TEXTURE2DMS;
+                    d3dDSVDesc.ViewDimension = D3D_DSV_DIMENSION_TEXTURE2DMS;
                     d3dDSVDesc.Texture2DMS.UnusedField_NothingToDefine = 0;
                 }
                 else
                 {
-                    d3dDSVDesc.ViewDimension =  D3D_DSV_DIMENSION_TEXTURE2D;
+                    d3dDSVDesc.ViewDimension      = D3D_DSV_DIMENSION_TEXTURE2D;
                     d3dDSVDesc.Texture2D.MipSlice = DSVDesc.MostDetailedMip;
                 }
             break;
@@ -209,16 +209,16 @@ namespace Diligent
             case RESOURCE_DIM_TEX_2D_ARRAY:
                 if( SampleCount > 1 )
                 {
-                    d3dDSVDesc.ViewDimension =  D3D_DSV_DIMENSION_TEXTURE2DMSARRAY;
-                    d3dDSVDesc.Texture2DMSArray.ArraySize = DSVDesc.NumArraySlices;
+                    d3dDSVDesc.ViewDimension                    = D3D_DSV_DIMENSION_TEXTURE2DMSARRAY;
+                    d3dDSVDesc.Texture2DMSArray.ArraySize       = DSVDesc.NumArraySlices;
                     d3dDSVDesc.Texture2DMSArray.FirstArraySlice = DSVDesc.FirstArraySlice;
                 }
                 else
                 {
-                    d3dDSVDesc.ViewDimension =  D3D_DSV_DIMENSION_TEXTURE2DARRAY;
-                    d3dDSVDesc.Texture2DArray.ArraySize = DSVDesc.NumArraySlices;
+                    d3dDSVDesc.ViewDimension                  = D3D_DSV_DIMENSION_TEXTURE2DARRAY;
+                    d3dDSVDesc.Texture2DArray.ArraySize       = DSVDesc.NumArraySlices;
                     d3dDSVDesc.Texture2DArray.FirstArraySlice = DSVDesc.FirstArraySlice;
-                    d3dDSVDesc.Texture2DArray.MipSlice = DSVDesc.MostDetailedMip;
+                    d3dDSVDesc.Texture2DArray.MipSlice        = DSVDesc.MostDetailedMip;
                 }
             break;
 
@@ -240,34 +240,34 @@ namespace Diligent
         switch(UAVDesc.TextureDim)
         {
             case RESOURCE_DIM_TEX_1D:
-                d3dUAVDesc.ViewDimension =  D3D_UAV_DIMENSION_TEXTURE1D;
+                d3dUAVDesc.ViewDimension      = D3D_UAV_DIMENSION_TEXTURE1D;
                 d3dUAVDesc.Texture1D.MipSlice = UAVDesc.MostDetailedMip;
             break;
 
             case RESOURCE_DIM_TEX_1D_ARRAY:
-                d3dUAVDesc.ViewDimension =  D3D_UAV_DIMENSION_TEXTURE1DARRAY;
-                d3dUAVDesc.Texture1DArray.ArraySize = UAVDesc.NumArraySlices;
+                d3dUAVDesc.ViewDimension                  = D3D_UAV_DIMENSION_TEXTURE1DARRAY;
+                d3dUAVDesc.Texture1DArray.ArraySize       = UAVDesc.NumArraySlices;
                 d3dUAVDesc.Texture1DArray.FirstArraySlice = UAVDesc.FirstArraySlice;
-                d3dUAVDesc.Texture1DArray.MipSlice = UAVDesc.MostDetailedMip;
+                d3dUAVDesc.Texture1DArray.MipSlice        = UAVDesc.MostDetailedMip;
             break;
 
             case RESOURCE_DIM_TEX_2D:
-                d3dUAVDesc.ViewDimension =  D3D_UAV_DIMENSION_TEXTURE2D;
+                d3dUAVDesc.ViewDimension      = D3D_UAV_DIMENSION_TEXTURE2D;
                 d3dUAVDesc.Texture2D.MipSlice = UAVDesc.MostDetailedMip;
             break;
 
             case RESOURCE_DIM_TEX_2D_ARRAY:
-                d3dUAVDesc.ViewDimension =  D3D_UAV_DIMENSION_TEXTURE2DARRAY;
-                d3dUAVDesc.Texture2DArray.ArraySize = UAVDesc.NumArraySlices;
+                d3dUAVDesc.ViewDimension                  = D3D_UAV_DIMENSION_TEXTURE2DARRAY;
+                d3dUAVDesc.Texture2DArray.ArraySize       = UAVDesc.NumArraySlices;
                 d3dUAVDesc.Texture2DArray.FirstArraySlice = UAVDesc.FirstArraySlice;
-                d3dUAVDesc.Texture2DArray.MipSlice = UAVDesc.MostDetailedMip;
+                d3dUAVDesc.Texture2DArray.MipSlice        = UAVDesc.MostDetailedMip;
             break;
 
             case RESOURCE_DIM_TEX_3D:
-                d3dUAVDesc.ViewDimension =  D3D_UAV_DIMENSION_TEXTURE3D;
+                d3dUAVDesc.ViewDimension         = D3D_UAV_DIMENSION_TEXTURE3D;
                 d3dUAVDesc.Texture3D.FirstWSlice = UAVDesc.FirstDepthSlice;
-                d3dUAVDesc.Texture3D.WSize = UAVDesc.NumDepthSlices;
-                d3dUAVDesc.Texture3D.MipSlice = UAVDesc.MostDetailedMip;
+                d3dUAVDesc.Texture3D.WSize       = UAVDesc.NumDepthSlices;
+                d3dUAVDesc.Texture3D.MipSlice    = UAVDesc.MostDetailedMip;
             break;
 
             default:

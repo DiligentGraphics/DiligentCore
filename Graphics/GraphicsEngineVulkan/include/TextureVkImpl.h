@@ -83,17 +83,6 @@ public:
         return vkImage;
     }
 
-    ITextureView* GetMipLevelSRV(Uint32 MipLevel)
-    {
-        return m_MipLevelSRV[MipLevel].get();
-    }
-
-    ITextureView* GetMipLevelUAV(Uint32 MipLevel)
-    {
-        return m_MipLevelUAV[MipLevel].get();
-    }
-
-    
     void SetLayout(VkImageLayout Layout)override final;
     VkImageLayout GetLayout()const override final;
 
@@ -116,16 +105,15 @@ protected:
     void CreateViewInternal( const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView )override;
     //void PrepareVkInitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<Vk_SUBRESOURCE_DATA> &VkInitData);
     
+    bool CheckCSBasedMipGenerationSupport(VkFormat vkFmt)const;
+
     VulkanUtilities::ImageViewWrapper CreateImageView(TextureViewDesc &ViewDesc);
 
     VulkanUtilities::ImageWrapper           m_VulkanImage;
     VulkanUtilities::BufferWrapper          m_StagingBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
     VkDeviceSize                            m_StagingDataAlignedOffset;
-
-    // Texture views needed for mipmap generation
-    std::vector<std::unique_ptr<TextureViewVkImpl, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator> > > m_MipLevelSRV;
-    std::vector<std::unique_ptr<TextureViewVkImpl, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator> > > m_MipLevelUAV;
+    bool                                    m_bCSBasedMipGenerationSupported = false;
 };
 
 }

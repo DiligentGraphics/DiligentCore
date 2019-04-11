@@ -54,9 +54,36 @@ public:
 
     VkImageView GetVulkanImageView()const override final{return m_ImageView;}
 
+    bool HasMipLevelViews() const
+    {
+        return m_MipLevelViews != nullptr;
+    }
+
+    TextureViewVkImpl* GetMipLevelSRV(Uint32 MipLevel)
+    {
+        VERIFY_EXPR(m_MipLevelViews != nullptr && MipLevel < m_Desc.NumMipLevels);
+        return m_MipLevelViews[MipLevel*2].get();
+    }
+
+    TextureViewVkImpl* GetMipLevelUAV(Uint32 MipLevel)
+    {
+        VERIFY_EXPR(m_MipLevelViews != nullptr && MipLevel < m_Desc.NumMipLevels);
+        return m_MipLevelViews[MipLevel*2 + 1].get();
+    }
+
+    using MipLevelViewAutoPtrType = std::unique_ptr<TextureViewVkImpl, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator> >;
+
+    void AssignMipLevelViews(MipLevelViewAutoPtrType* MipLevelViews)
+    {
+        m_MipLevelViews = MipLevelViews;
+    }
+
 protected:
     /// Vulkan image view descriptor handle
-    VulkanUtilities::ImageViewWrapper m_ImageView;
+    VulkanUtilities::ImageViewWrapper       m_ImageView;
+
+    /// Individual mip level views used for mipmap generation
+    MipLevelViewAutoPtrType*                m_MipLevelViews = nullptr;
 };
 
 }

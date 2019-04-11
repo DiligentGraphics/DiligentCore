@@ -48,6 +48,7 @@ namespace VulkanUtilities
         uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties)const;
         const VkPhysicalDeviceProperties& GetProperties() const {return m_Properties;}
         const VkPhysicalDeviceFeatures&   GetFeatures()   const {return m_Features;  }
+        VkFormatProperties  GetPhysicalDeviceFormatProperties(VkFormat imageFormat)const;
 
     private:
         VulkanPhysicalDevice(VkPhysicalDevice vkDevice);

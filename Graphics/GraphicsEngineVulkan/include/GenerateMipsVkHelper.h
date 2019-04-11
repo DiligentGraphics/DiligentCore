@@ -49,10 +49,14 @@ namespace Diligent
 
         void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB);
         void CreateSRB(IShaderResourceBinding** ppSRB);
+        void WarmUpCache(TEXTURE_FORMAT Fmt);
 
     private:
         std::array<RefCntAutoPtr<IPipelineState>, 4>  CreatePSOs(TEXTURE_FORMAT Fmt);
         std::array<RefCntAutoPtr<IPipelineState>, 4>& FindPSOs  (TEXTURE_FORMAT Fmt);
+
+        VkImageLayout GenerateMipsCS  (TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange);
+        VkImageLayout GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange);
 
         RenderDeviceVkImpl& m_DeviceVkImpl;
 
