@@ -37,6 +37,8 @@ namespace Diligent
     /// Returns raw memory allocator
     IMemoryAllocator& GetRawAllocator();
 
+    IMemoryAllocator& GetStringAllocator();
+
 #define ALLOCATE(Allocator, Desc, Size) (Allocator).Allocate(Size, Desc, __FILE__, __LINE__)
 #define FREE(Allocator, Ptr) Allocator.Free(Ptr)
 

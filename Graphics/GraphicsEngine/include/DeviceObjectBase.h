@@ -26,11 +26,12 @@
 /// \file
 /// Implementation of the Diligent::DeviceObjectBase template class
 
-#include <sstream>
+#include <cstring>
+#include <cstdio>
 #include "RefCntAutoPtr.h"
 #include "ObjectBase.h"
 #include "UniqueIdentifier.h"
-
+#include "EngineMemory.h"
 
 namespace Diligent
 {
@@ -52,13 +53,30 @@ public:
 					  const ObjectDescType& ObjDesc,
 				      bool                  bIsDeviceInternal = false) :
         TBase(pRefCounters),
-		// Do not keep strong reference to the device if the object is an internal device object
-		m_spDevice      (bIsDeviceInternal ? nullptr : pDevice),
-        m_pDevice       (pDevice),
-        m_ObjectNameCopy(ObjDesc.Name ? String{ObjDesc.Name} : ThisToString()),
-        m_Desc          (ObjDesc)
+		m_pDevice          (pDevice),
+        m_Desc             (ObjDesc),
+        m_bIsDeviceInternal(bIsDeviceInternal)
     {
-        m_Desc.Name = m_ObjectNameCopy.c_str();
+        // Do not keep strong reference to the device if the object is an internal device object
+        if (!m_bIsDeviceInternal)
+        {
+            m_pDevice->AddRef();
+        }
+
+        if (ObjDesc.Name != nullptr)
+        {
+            auto size = strlen(ObjDesc.Name) + 1;
+            auto* NameCopy = reinterpret_cast<char*>(ALLOCATE(GetStringAllocator(), "Object name copy", size));
+            memcpy(NameCopy, ObjDesc.Name, size);
+            m_Desc.Name = NameCopy;
+        }
+        else
+        {
+            size_t size = 16 + 2 + 1; // 0x12345678
+            auto* AddressStr = reinterpret_cast<char*>(ALLOCATE(GetStringAllocator(), "Object address string", size));
+            snprintf(AddressStr, size, "0x%llX", static_cast<unsigned long long>(reinterpret_cast<size_t>(this)));
+            m_Desc.Name = AddressStr;
+        }
 
         //                        !!!WARNING!!!
         // We cannot add resource to the hash table from here, because the object
@@ -67,13 +85,19 @@ public:
         //m_pDevice->AddResourceToHash( this ); - ERROR!
     }
 
-    DeviceObjectBase( const DeviceObjectBase&  ) = delete;
-    DeviceObjectBase(       DeviceObjectBase&& ) = delete;
-    DeviceObjectBase& operator = ( const DeviceObjectBase&  ) = delete;
-    DeviceObjectBase& operator = (       DeviceObjectBase&& ) = delete;
+    DeviceObjectBase             (const DeviceObjectBase& ) = delete;
+    DeviceObjectBase             (      DeviceObjectBase&&) = delete;
+    DeviceObjectBase& operator = (const DeviceObjectBase& ) = delete;
+    DeviceObjectBase& operator = (      DeviceObjectBase&&) = delete;
 
     virtual ~DeviceObjectBase()
     {
+        FREE(GetStringAllocator(), const_cast<Char*>(m_Desc.Name));
+
+        if (!m_bIsDeviceInternal)
+        {
+            m_pDevice->Release();
+        }
     }
 
     inline virtual Atomics::Long Release()override final
@@ -85,7 +109,7 @@ public:
         // 
         // 1. A::~A() completes
         // 2. A::~DeviceObjectBase() completes
-        // 3. A::m_spDevice is released
+        // 3. A::m_pDevice is released
         //       Render device is destroyed, all allocators are invalid
         // 4. RefCountersImpl::ObjectWrapperBase::DestroyObject() calls 
         //    m_pAllocator->Free(m_pObject) - crash!
@@ -96,7 +120,10 @@ public:
                         {
                             // We must keep the device alive while the object is being destroyed
                             // Note that internal device objects do not keep strong reference to the device
-                            pDevice = m_spDevice;
+                            if (!m_bIsDeviceInternal)
+                            {
+                                pDevice = m_pDevice;
+                            }
                         }
                       );
     }
@@ -121,20 +148,9 @@ public:
 
 	RenderDeviceImplType* GetDevice()const{return m_pDevice;}
     
-private:
-	/// Strong reference to the device
-	RefCntAutoPtr<RenderDeviceImplType> m_spDevice;
-
 protected:
     /// Pointer to the device
     RenderDeviceImplType* const m_pDevice;
-
-    /// Copy of a device object name.
-
-    /// When new object is created, its description structure is copied
-    /// to m_Desc, the name is copied to m_ObjectNameCopy, and 
-    /// m_Desc.Name pointer is set to m_ObjectNameCopy.c_str().
-    const String m_ObjectNameCopy;
 
 	/// Object description
     ObjectDescType m_Desc;
@@ -142,14 +158,7 @@ protected:
     // Template argument is only used to separate counters for 
     // different groups of objects
     UniqueIdHelper<BaseInterface> m_UniqueID;
-    
-private:
-    String ThisToString()const
-    {
-        std::stringstream ss;
-        ss << this;
-        return ss.str();
-    }
+    const bool                    m_bIsDeviceInternal;
 };
 
 }

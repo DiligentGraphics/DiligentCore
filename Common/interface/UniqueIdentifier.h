@@ -27,7 +27,7 @@
 
 namespace Diligent
 {
-    typedef Atomics::Long UniqueIdentifier;
+    using UniqueIdentifier = Atomics::Long;
 
     // Template switch is used to have distinct counters 
     // for unrelated groups of objects
@@ -36,44 +36,36 @@ namespace Diligent
     {
     public:
         UniqueIdHelper() :
-            m_ID(0),
-            m_bIsInitialized( false )
+            m_ID(0)
         {}
 
-        UniqueIdHelper( UniqueIdHelper&& RHS) : 
-            m_ID( RHS.m_ID ),
-            m_bIsInitialized( RHS.m_bIsInitialized )
+        UniqueIdHelper             (const UniqueIdHelper&) = delete;
+        UniqueIdHelper& operator = (const UniqueIdHelper&) = delete;
+
+        UniqueIdHelper(UniqueIdHelper&& RHS) : 
+            m_ID(RHS.m_ID)
         {
             RHS.m_ID = 0;
-            RHS.m_bIsInitialized = false;
         }
 
         const UniqueIdHelper& operator = (UniqueIdHelper&& RHS)
         {
             m_ID = RHS.m_ID;
-            m_bIsInitialized = RHS.m_bIsInitialized;
             RHS.m_ID = 0;
-            RHS.m_bIsInitialized = false;
-            
             return *this;
         }
 
         UniqueIdentifier GetID()const
         { 
-            if( !m_bIsInitialized )
+            if (m_ID == 0)
             {
                 static Atomics::AtomicLong sm_GlobalCounter;
                 m_ID = Atomics::AtomicIncrement(sm_GlobalCounter);
-                m_bIsInitialized = true;
             }
             return m_ID; 
         }
 
     private:
-        UniqueIdHelper( const UniqueIdHelper& );
-        const UniqueIdHelper& operator = ( const UniqueIdHelper& );
-
         mutable UniqueIdentifier m_ID;
-        mutable bool m_bIsInitialized;
     };
 }

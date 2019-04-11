@@ -48,6 +48,11 @@ IMemoryAllocator& GetRawAllocator()
     return g_pRawAllocator != nullptr ? *g_pRawAllocator : DefaultRawMemoryAllocator::GetAllocator();
 }
 
+IMemoryAllocator& GetStringAllocator()
+{
+    return GetRawAllocator();
+}
+
 }
 #if 0
 
