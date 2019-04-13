@@ -235,6 +235,7 @@ namespace Diligent
                 VERIFY(OriginalState != RESOURCE_STATE_UNDEFINED, "Original layout must not be undefined");
                 // Transition affected subresources back to original layout
                 std::swap(TextureBarrier.NewState, TextureBarrier.OldState);
+                VERIFY_EXPR(TextureBarrier.NewState == TextureState);
                 Ctx.TransitionResource(TextureBarrier);
             }
         }

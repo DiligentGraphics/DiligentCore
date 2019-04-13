@@ -31,6 +31,7 @@
 #include "DeviceObjectBase.h"
 #include "GraphicsAccessories.h"
 #include "STDAllocator.h"
+#include "FormatString.h"
 #include <memory>
 
 namespace Diligent
@@ -448,10 +449,13 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
         return;
     }
 
-    if(this->m_Desc.BindFlags & BIND_SHADER_RESOURCE )
+    if (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE )
     {
         TextureViewDesc ViewDesc;
         ViewDesc.ViewType = TEXTURE_VIEW_SHADER_RESOURCE;
+        auto ViewName = FormatString("Default SRV of texture '", this->m_Desc.Name, "'");
+        ViewDesc.Name = ViewName.c_str();
+        
         ITextureView *pSRV = nullptr;
         if ((this->m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0)
             ViewDesc.Flags |= TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION;
@@ -464,6 +468,9 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
     {
         TextureViewDesc ViewDesc;
         ViewDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
+        auto ViewName = FormatString("Default RTV of texture '", this->m_Desc.Name, "'");
+        ViewDesc.Name = ViewName.c_str();
+
         ITextureView *pRTV = nullptr;
         CreateViewInternal( ViewDesc, &pRTV, true );
         m_pDefaultRTV.reset( static_cast<TTextureViewImpl*>(pRTV) );
@@ -474,6 +481,9 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
     {
         TextureViewDesc ViewDesc;
         ViewDesc.ViewType = TEXTURE_VIEW_DEPTH_STENCIL;
+        auto ViewName = FormatString("Default DSV of texture '", this->m_Desc.Name, "'");
+        ViewDesc.Name = ViewName.c_str();
+        
         ITextureView *pDSV = nullptr;
         CreateViewInternal( ViewDesc, &pDSV, true );
         m_pDefaultDSV.reset( static_cast<TTextureViewImpl*>(pDSV) );
@@ -484,6 +494,9 @@ void TextureBase<BaseInterface, TRenderDeviceImpl, TTextureViewImpl, TTexViewObj
     {
         TextureViewDesc ViewDesc;
         ViewDesc.ViewType = TEXTURE_VIEW_UNORDERED_ACCESS;
+        auto ViewName = FormatString("Default UAV of texture '", this->m_Desc.Name, "'");
+        ViewDesc.Name = ViewName.c_str();
+
         ViewDesc.AccessFlags = UAV_ACCESS_FLAG_READ_WRITE;
         ITextureView *pUAV = nullptr;
         CreateViewInternal( ViewDesc, &pUAV, true );
