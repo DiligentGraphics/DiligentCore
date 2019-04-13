@@ -165,12 +165,12 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
             {
                 m_VkColorFormat = VkReplacementColorFormat;
                 auto NewColorBufferFormat = VkFormatToTexFormat(VkReplacementColorFormat);
-                LOG_INFO_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, " is not supported by the surace and will be replaced with ", GetTextureFormatAttribs(NewColorBufferFormat).Name);
+                LOG_INFO_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, " is not supported by the surface and will be replaced with ", GetTextureFormatAttribs(NewColorBufferFormat).Name);
                 m_SwapChainDesc.ColorBufferFormat = NewColorBufferFormat;
             }
             else
             {
-                LOG_WARNING_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name ,"is not supported by the surace");
+                LOG_WARNING_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name ,"is not supported by the surface");
             }
         }
     }
