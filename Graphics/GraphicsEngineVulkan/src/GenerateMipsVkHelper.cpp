@@ -362,12 +362,12 @@ namespace Diligent
             constexpr const Uint32 MaxMipsHandledByCS = 4; // Max number of mip levels processed by one CS shader invocation
             for (Uint32 u = 0; u < MaxMipsHandledByCS; ++u)
             {
-                auto* MipLevelUAV = TexView.GetMipLevelUAV(std::min(TopMip + u + 1, BottomMip));
+                auto* MipLevelUAV = TexView.GetMipLevelUAV(TopMip + std::min(u + 1, NumMips));
                 pOutMipVar[u]->Set(MipLevelUAV);
             }
 
             SubresRange.baseMipLevel = ViewDesc.MostDetailedMip + TopMip + 1;
-            SubresRange.levelCount   = std::min(4u, BottomMip - TopMip);
+            SubresRange.levelCount   = NumMips;
             if (OriginalLayout != VK_IMAGE_LAYOUT_GENERAL)
                 Ctx.TransitionImageLayout(*pTexVk, OriginalLayout, VK_IMAGE_LAYOUT_GENERAL, SubresRange);
 

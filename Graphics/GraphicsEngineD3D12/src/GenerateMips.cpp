@@ -207,7 +207,7 @@ namespace Diligent
             // So we must populate all 4 slots even though we may actually process less than 4 mip levels
             // Copy top mip level UAV descriptor handle to all unused slots
             for (Uint32 u = 0; u < MaxMipsHandledByCS; ++u)
-                SrcDescriptorRanges[1 + u] = pTexView->GetMipLevelUAV(std::min(TopMip + u + 1, BottomMip));
+                SrcDescriptorRanges[1 + u] = pTexView->GetMipLevelUAV(TopMip + std::min(u + 1, NumMips));
 
             pd3d12Device->CopyDescriptors(1, &DstDescriptorRange, &DstRangeSize, 1 + MaxMipsHandledByCS, SrcDescriptorRanges, SrcRangeSizes, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
