@@ -573,15 +573,7 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
                     new (ppMipLevelView) TextureViewVkImpl::MipLevelViewAutoPtrType(pMipLevelViewVk, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>(TexViewAllocator));
                 };
 
-                if ((MipLevel % 4) == 0)
-                {
-                    // Mip levles are generated 4 at a time, so we only need SRV for every 4-th level
-                    CreateMipLevelView(TEXTURE_VIEW_SHADER_RESOURCE,  MipLevel, &pMipLevelViews[MipLevel * 2]);
-                }
-                else
-                {
-                    new (&pMipLevelViews[MipLevel * 2]) TextureViewVkImpl::MipLevelViewAutoPtrType{};
-                }
+                CreateMipLevelView(TEXTURE_VIEW_SHADER_RESOURCE,  MipLevel, &pMipLevelViews[MipLevel * 2]);
                 CreateMipLevelView(TEXTURE_VIEW_UNORDERED_ACCESS, MipLevel, &pMipLevelViews[MipLevel * 2 + 1]);
             }
             pViewVk->AssignMipLevelViews(pMipLevelViews);

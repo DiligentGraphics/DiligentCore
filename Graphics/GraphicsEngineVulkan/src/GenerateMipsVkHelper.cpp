@@ -304,9 +304,11 @@ namespace Diligent
         auto BottomMip = ViewDesc.NumMipLevels - 1;
         for (uint32_t TopMip = 0; TopMip < BottomMip; )
         {
-            // In Vulkan all subresources of a view must be transitioned to the same layout, so
+            // In Vulkan, all subresources of a view must be transitioned to the same layout, so
             // we can't bind the entire texture and have to bind single mip level at a time
-            pSrcMipVar->Set(TexView.GetMipLevelSRV(TopMip));
+            auto SrcMipLevelSRV = TexView.GetMipLevelSRV(TopMip);
+            VERIFY_EXPR(SrcMipLevelSRV != nullptr);
+            pSrcMipVar->Set(SrcMipLevelSRV);
 
             uint32_t SrcWidth  = std::max(TexDesc.Width  >> (TopMip + ViewDesc.MostDetailedMip), 1u);
             uint32_t SrcHeight = std::max(TexDesc.Height >> (TopMip + ViewDesc.MostDetailedMip), 1u);
