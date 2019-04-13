@@ -70,16 +70,6 @@ public:
 
     virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const override final;
 
-    D3D12_CPU_DESCRIPTOR_HANDLE GetMipLevelUAV(Uint32 Mip)
-    {
-        return m_MipUAVs.GetCpuHandle(Mip);
-    }
-
-    D3D12_CPU_DESCRIPTOR_HANDLE GetTexArraySRV()
-    {
-        return m_TexArraySRV.GetCpuHandle();
-    }
-
     D3D12_RESOURCE_DESC GetD3D12TextureDesc()const;
 
 protected:
@@ -90,11 +80,6 @@ protected:
     void CreateRTV( TextureViewDesc &RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle );
     void CreateDSV( TextureViewDesc &DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle );
     void CreateUAV( TextureViewDesc &UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle );
-
-    // UAVs for every mip level to facilitate mipmap generation
-    DescriptorHeapAllocation m_MipUAVs;
-    // SRV as texture array (even for a non-array texture) required for mipmap generation
-    DescriptorHeapAllocation m_TexArraySRV;
 
     friend class RenderDeviceD3D12Impl;
 };

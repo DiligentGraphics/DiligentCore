@@ -107,25 +107,39 @@ namespace Diligent
     {
         auto& ComputeCtx = Ctx.AsComputeContext();
         ComputeCtx.SetRootSignature(m_pGenerateMipsRS);
-        auto* pTexture = pTexView->GetTexture();
-        auto* pTexD3D12 = ValidatedCast<TextureD3D12Impl>( pTexture );
-        auto& TexDesc = pTexture->GetDesc();
-        auto SRVDescriptorHandle = pTexD3D12->GetTexArraySRV();
+        auto* pTexD3D12 = pTexView->GetTexture<TextureD3D12Impl>();
+        const auto& TexDesc = pTexD3D12->GetDesc();
+        const auto& ViewDesc = pTexView->GetDesc();
+        auto SRVDescriptorHandle = pTexView->GetTexArraySRV();
 
         if (!pTexD3D12->IsInKnownState())
         {
             LOG_ERROR_MESSAGE("Unable to generate mips for texture '", TexDesc.Name, "' because the texture state is unknown");
             return;
         }
-
-        if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-	        Ctx.TransitionResource(pTexD3D12, RESOURCE_STATE_UNORDERED_ACCESS);
-
-        const auto &ViewDesc = pTexView->GetDesc();
-        for (uint32_t TopMip = 0; TopMip < TexDesc.MipLevels - 1; )
+        
+        if (pTexD3D12->GetState() == RESOURCE_STATE_UNDEFINED)
         {
-            uint32_t SrcWidth  = std::max(TexDesc.Width  >> TopMip, 1u);
-            uint32_t SrcHeight = std::max(TexDesc.Height >> TopMip, 1u);
+            // If texture state is undefined, transition it to unordered access state
+            Ctx.TransitionResource(pTexD3D12, RESOURCE_STATE_UNORDERED_ACCESS);
+        }
+
+        const auto OriginalState = pTexD3D12->GetState();
+
+        pTexD3D12->SetState(RESOURCE_STATE_UNKNOWN); // Switch to manual state management
+        StateTransitionDesc TextureBarrier(pTexD3D12, OriginalState, RESOURCE_STATE_UNORDERED_ACCESS, false);
+        TextureBarrier.FirstMipLevel   = ViewDesc.MostDetailedMip;
+        TextureBarrier.MipLevelsCount  = ViewDesc.NumMipLevels;
+        TextureBarrier.FirstArraySlice = ViewDesc.FirstArraySlice;
+        TextureBarrier.ArraySliceCount = ViewDesc.NumArraySlices;
+        if (OriginalState != RESOURCE_STATE_UNORDERED_ACCESS)
+	        Ctx.TransitionResource(TextureBarrier);
+        
+        auto BottomMip = ViewDesc.NumMipLevels - 1;
+        for (uint32_t TopMip = 0; TopMip < BottomMip; )
+        {
+            uint32_t SrcWidth  = std::max(TexDesc.Width  >> (TopMip + ViewDesc.MostDetailedMip), 1u);
+            uint32_t SrcHeight = std::max(TexDesc.Height >> (TopMip + ViewDesc.MostDetailedMip), 1u);
             uint32_t DstWidth  = std::max(SrcWidth  >> 1, 1u);
             uint32_t DstHeight = std::max(SrcHeight >> 1, 1u);
 
@@ -145,8 +159,8 @@ namespace Diligent
             uint32_t AdditionalMips;
             _BitScanForward((unsigned long*)&AdditionalMips, DstWidth | DstHeight);
             uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
-            if (TopMip + NumMips > TexDesc.MipLevels - 1)
-                NumMips = TexDesc.MipLevels - 1 - TopMip;
+            if (TopMip + NumMips > BottomMip)
+                NumMips = BottomMip - TopMip;
 
             // These are clamped to 1 after computing additional mips because clamped
             // dimensions should not limit us from downsampling multiple times.  (E.g.
@@ -169,7 +183,16 @@ namespace Diligent
                 Uint32 FirstArraySlice;
                 Uint32 Dummy;
                 float TexelSize[2];	    // 1.0 / OutMip1.Dimensions
-            }CBData = { TopMip, NumMips, ViewDesc.FirstArraySlice, 0, 1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight) };
+            };
+            RootCBData CBData
+            {
+                TopMip, // Mip levels are relateive to the view's most detailed mip
+                NumMips,
+                0,      // Array slices are relative to the view's first array slice
+                0,
+                1.0f / static_cast<float>(DstWidth), 1.0f / static_cast<float>(DstHeight)
+            };
+
             Ctx.GetCommandList()->SetComputeRoot32BitConstants(0, 6, &CBData, 0);
 
             // TODO: Shouldn't we transition top mip to shader resource state?
@@ -184,7 +207,7 @@ namespace Diligent
             // So we must populate all 4 slots even though we may actually process less than 4 mip levels
             // Copy top mip level UAV descriptor handle to all unused slots
             for (Uint32 u = 0; u < MaxMipsHandledByCS; ++u)
-                SrcDescriptorRanges[1 + u] = pTexD3D12->GetMipLevelUAV(std::min(TopMip + u + 1, TexDesc.MipLevels - 1));
+                SrcDescriptorRanges[1 + u] = pTexView->GetMipLevelUAV(std::min(TopMip + u + 1, BottomMip));
 
             pd3d12Device->CopyDescriptors(1, &DstDescriptorRange, &DstRangeSize, 1 + MaxMipsHandledByCS, SrcDescriptorRanges, SrcRangeSizes, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
@@ -194,5 +217,29 @@ namespace Diligent
 
             TopMip += NumMips;
         }
+
+        RESOURCE_STATE TextureState = OriginalState;
+        if (OriginalState != RESOURCE_STATE_UNORDERED_ACCESS)
+        {
+            bool IsAllSlices = (TexDesc.Type != RESOURCE_DIM_TEX_1D_ARRAY &&
+                                TexDesc.Type != RESOURCE_DIM_TEX_2D_ARRAY &&
+                                TexDesc.Type != RESOURCE_DIM_TEX_CUBE_ARRAY) || 
+                               TexDesc.ArraySize == ViewDesc.NumArraySlices;
+            bool IsAllMips = ViewDesc.NumMipLevels == TexDesc.MipLevels;
+            if (IsAllSlices && IsAllMips)
+            {
+                TextureState = RESOURCE_STATE_UNORDERED_ACCESS;
+            }
+            else
+            {
+                VERIFY(OriginalState != RESOURCE_STATE_UNDEFINED, "Original layout must not be undefined");
+                // Transition affected subresources back to original layout
+                std::swap(TextureBarrier.NewState, TextureBarrier.OldState);
+                Ctx.TransitionResource(TextureBarrier);
+            }
+        }
+
+        // Set state
+        pTexD3D12->SetState(TextureState);
     }
 }

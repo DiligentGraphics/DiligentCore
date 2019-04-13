@@ -208,12 +208,15 @@ namespace Diligent
             return;
         }
 
-        DEV_CHECK_ERR(TexView.GetDesc().NumMipLevels > 1, "Number of mip levels in the view must be greater than 1");
-
         const auto OriginalState  = pTexVk->GetState();
         const auto OriginalLayout = pTexVk->GetLayout();
         const auto& TexDesc  = pTexVk->GetDesc();
         const auto& ViewDesc = TexView.GetDesc();
+
+        DEV_CHECK_ERR(ViewDesc.NumMipLevels > 1, "Number of mip levels in the view must be greater than 1");
+        DEV_CHECK_ERR(OriginalState != RESOURCE_STATE_UNDEFINED,
+                      "Attempting to generate mipmaps for texture '", TexDesc.Name, "' which is in RESOURCE_STATE_UNDEFINED state ."
+                      "This is not expected in Vulkan backend as textures are transition to a defined state when created.");
 
         const auto& FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
         VkImageSubresourceRange SubresRange = {};
@@ -257,6 +260,7 @@ namespace Diligent
             }
             else
             {
+                VERIFY(OriginalLayout != VK_IMAGE_LAYOUT_UNDEFINED, "Original layout must not be undefined");
                 SubresRange.baseMipLevel = ViewDesc.MostDetailedMip;
                 SubresRange.levelCount   = ViewDesc.NumMipLevels;
                 // Transition all affected subresources back to original layout
@@ -345,7 +349,7 @@ namespace Diligent
                     
                 *MappedData = 
                 {
-                    static_cast<Int32>(TopMip),
+                    static_cast<Int32>(TopMip), // Mip levels are relateive to the view's most detailed mip
                     static_cast<Int32>(NumMips),
                     0, // Array slices are relative to the view's first array slice
                     0, // Unused

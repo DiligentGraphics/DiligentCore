@@ -46,16 +46,39 @@ public:
                           RenderDeviceD3D12Impl*     pDevice, 
                           const TextureViewDesc&     ViewDesc, 
                           class ITexture*            pTexture,
-                          DescriptorHeapAllocation&& HandleAlloc,
+                          DescriptorHeapAllocation&& Descriptor,
+                          DescriptorHeapAllocation&& TexArraySRVDescriptor,
+                          DescriptorHeapAllocation&& MipLevelUAVDescriptors,
                           bool                       bIsDefaultView);
+    ~TextureViewD3D12Impl();
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{return m_Descriptor.GetCpuHandle();}
+    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override final
+    {
+        return m_Descriptor.GetCpuHandle();
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE GetMipLevelUAV(Uint32 Mip)
+    {
+        VERIFY_EXPR((m_Desc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0 && m_MipGenerationDescriptors != nullptr && Mip < m_Desc.NumMipLevels );
+        return m_MipGenerationDescriptors[1].GetCpuHandle(Mip);
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE GetTexArraySRV()
+    {
+        VERIFY_EXPR((m_Desc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0 && m_MipGenerationDescriptors != nullptr);
+        return m_MipGenerationDescriptors[0].GetCpuHandle();
+    }
 
 protected:
     /// D3D12 view descriptor handle
     DescriptorHeapAllocation m_Descriptor;
+
+    // Extra descriptors used for mipmap generation
+    // [0] == texture array SRV used for mipmap generation
+    // [1] == mip level UAVs used for mipmap generation
+    DescriptorHeapAllocation* m_MipGenerationDescriptors = nullptr;
 };
 
 }

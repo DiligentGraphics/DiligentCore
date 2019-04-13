@@ -32,17 +32,32 @@ TextureViewD3D12Impl::TextureViewD3D12Impl( IReferenceCounters*        pRefCount
                                             RenderDeviceD3D12Impl*     pDevice, 
                                             const TextureViewDesc&     ViewDesc, 
                                             ITexture*                  pTexture,
-                                            DescriptorHeapAllocation&& HandleAlloc,
-                                            bool                       bIsDefaultView ) :
+                                            DescriptorHeapAllocation&& Descriptor,
+                                            DescriptorHeapAllocation&& TexArraySRVDescriptor,
+                                            DescriptorHeapAllocation&& MipLevelUAVDescriptors,
+                                            bool                       bIsDefaultView) :
     TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
-    m_Descriptor(std::move(HandleAlloc))
+    m_Descriptor(std::move(Descriptor))
 {
+    if (!TexArraySRVDescriptor.IsNull() && !MipLevelUAVDescriptors.IsNull())
+    {
+        m_MipGenerationDescriptors = ALLOCATE(GetRawAllocator(), "Raw memory for DescriptorHeapAllocation", DescriptorHeapAllocation, 2);
+        new (&m_MipGenerationDescriptors[0])DescriptorHeapAllocation(std::move(TexArraySRVDescriptor));
+        new (&m_MipGenerationDescriptors[1])DescriptorHeapAllocation(std::move(MipLevelUAVDescriptors));
+    }
 }
-//
-//ID3D12View* TextureViewD3D12Impl::GetD3D12View()
-//{
-//    return m_pD3D12View;
-//}
+
+TextureViewD3D12Impl::~TextureViewD3D12Impl()
+{
+    if (m_MipGenerationDescriptors != nullptr)
+    {
+        for (Uint32 i = 0; i < 2; ++i)
+        {
+            m_MipGenerationDescriptors[i].~DescriptorHeapAllocation();
+        }
+        FREE(GetRawAllocator(), m_MipGenerationDescriptors);
+    }
+}
 
 IMPLEMENT_QUERY_INTERFACE( TextureViewD3D12Impl, IID_TextureViewD3D12, TTextureViewBase )
 
