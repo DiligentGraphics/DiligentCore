@@ -61,9 +61,9 @@ namespace Diligent
         VERIFY_EXPR(MemorySize == GetRequiredMemorySize(NumTables, TableSizes));
         if(MemorySize > 0)
         {
-            m_pMemory = ALLOCATE( *m_pAllocator, "Memory for shader resource cache data", MemorySize);
-            auto *pTables = reinterpret_cast<RootTable*>(m_pMemory);
-            auto *pCurrResPtr = reinterpret_cast<Resource*>(pTables + m_NumTables);
+            m_pMemory = ALLOCATE_RAW( *m_pAllocator, "Memory for shader resource cache data", MemorySize);
+            auto* pTables = reinterpret_cast<RootTable*>(m_pMemory);
+            auto* pCurrResPtr = reinterpret_cast<Resource*>(pTables + m_NumTables);
             for(Uint32 res=0; res < TotalResources; ++res)
                 new(pCurrResPtr + res) Resource();
 

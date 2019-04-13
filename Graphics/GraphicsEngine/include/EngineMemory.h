@@ -39,7 +39,8 @@ namespace Diligent
 
     IMemoryAllocator& GetStringAllocator();
 
-#define ALLOCATE(Allocator, Desc, Size) (Allocator).Allocate(Size, Desc, __FILE__, __LINE__)
+#define ALLOCATE_RAW(Allocator, Desc, Size) (Allocator).Allocate(Size, Desc, __FILE__, __LINE__)
+#define ALLOCATE(Allocator, Desc, Type, Count) reinterpret_cast<Type*>(ALLOCATE_RAW(Allocator, Desc, sizeof(Type) * Count))
 #define FREE(Allocator, Ptr) Allocator.Free(Ptr)
 
 }

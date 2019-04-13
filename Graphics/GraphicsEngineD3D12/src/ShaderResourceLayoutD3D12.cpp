@@ -99,7 +99,7 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                
     if(MemSize == 0)
         return;
 
-    auto* pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader resource layout resources", MemSize);
+    auto* pRawMem = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader resource layout resources", MemSize);
     m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void> >(pRawMem, Allocator);
 }
 

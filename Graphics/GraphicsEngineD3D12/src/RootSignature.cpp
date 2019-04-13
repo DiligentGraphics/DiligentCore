@@ -56,7 +56,7 @@ D3D12_DESCRIPTOR_RANGE* RootSignature::RootParamsManager::Extend(Uint32 NumExtra
     VERIFY(NumExtraRootTables > 0 || NumExtraRootViews > 0 || NumExtraDescriptorRanges > 0, "At least one root table, root view or descriptor range must be added" );
     auto MemorySize = GetRequiredMemorySize(NumExtraRootTables, NumExtraRootViews, NumExtraDescriptorRanges);
     VERIFY_EXPR(MemorySize > 0);
-    auto *pNewMemory = ALLOCATE(m_MemAllocator, "Memory buffer for root tables, root views & descriptor ranges", MemorySize);
+    auto* pNewMemory = ALLOCATE_RAW(m_MemAllocator, "Memory buffer for root tables, root views & descriptor ranges", MemorySize);
     memset(pNewMemory, 0, MemorySize);
 
     // Note: this order is more efficient than views->tables->ranges

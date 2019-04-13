@@ -137,7 +137,7 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
 
     if (m_MemorySize)
     {
-        auto* pRawMem = ALLOCATE(ResLayoutDataAllocator, "Raw memory buffer for shader resource layout resources", m_MemorySize);
+        auto* pRawMem = ALLOCATE_RAW(ResLayoutDataAllocator, "Raw memory buffer for shader resource layout resources", m_MemorySize);
         m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void> >(pRawMem, ResLayoutDataAllocator);
     }
 

@@ -39,12 +39,9 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounte
 {
     m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaders());
 
-    auto* pResLayoutRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11", m_NumActiveShaders * sizeof(ShaderResourceLayoutD3D11));
-    m_pResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D11*>(pResLayoutRawMem);
-
-    auto* pResCacheRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheD3D11", m_NumActiveShaders * sizeof(ShaderResourceCacheD3D11));
-    m_pBoundResourceCaches = reinterpret_cast<ShaderResourceCacheD3D11*>(pResCacheRawMem);
-    
+    m_pResourceLayouts     = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11", ShaderResourceLayoutD3D11, m_NumActiveShaders);
+    m_pBoundResourceCaches = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheD3D11",  ShaderResourceCacheD3D11,  m_NumActiveShaders);
+   
     const auto& PSODesc = pPSO->GetDesc();
 
     // Reserve memory for resource layouts

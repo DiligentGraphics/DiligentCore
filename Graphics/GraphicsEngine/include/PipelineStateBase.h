@@ -84,7 +84,7 @@ public:
         if (SrcLayout.Variables != nullptr)
         {
             ShaderResourceVariableDesc* Variables =
-                reinterpret_cast<ShaderResourceVariableDesc*>(ALLOCATE(GetRawAllocator(), "Memory for ShaderResourceVariableDesc array", sizeof(ShaderResourceVariableDesc) * SrcLayout.NumVariables));
+                ALLOCATE(GetRawAllocator(), "Memory for ShaderResourceVariableDesc array", ShaderResourceVariableDesc, SrcLayout.NumVariables);
             DstLayout.Variables = Variables;
             for (Uint32 i=0; i < SrcLayout.NumVariables; ++i)
             {
@@ -97,7 +97,7 @@ public:
         if (SrcLayout.StaticSamplers != nullptr)
         {
             StaticSamplerDesc* StaticSamplers =
-                reinterpret_cast<StaticSamplerDesc*>(ALLOCATE(GetRawAllocator(), "Memory for StaticSamplerDesc array", sizeof(StaticSamplerDesc) * SrcLayout.NumStaticSamplers));
+                ALLOCATE(GetRawAllocator(), "Memory for StaticSamplerDesc array", StaticSamplerDesc, SrcLayout.NumStaticSamplers);
             DstLayout.StaticSamplers = StaticSamplers;
             for (Uint32 i=0; i < SrcLayout.NumStaticSamplers; ++i)
             {
@@ -179,8 +179,7 @@ public:
             LayoutElement* pLayoutElements = nullptr;
             if (InputLayout.NumElements > 0)
             {
-                auto* pLayoutElementsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for input layout elements", sizeof(LayoutElement) * InputLayout.NumElements);
-                pLayoutElements = reinterpret_cast<LayoutElement*>(pLayoutElementsRawMem);
+                pLayoutElements = ALLOCATE(GetRawAllocator(), "Raw memory for input layout elements", LayoutElement, InputLayout.NumElements);
             }
             this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = pLayoutElements;
             for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
@@ -256,8 +255,7 @@ public:
 
             if (m_BufferSlotsUsed > 0)
             {
-                auto* pStridesRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for buffer strides", sizeof(Uint32) * m_BufferSlotsUsed);
-                m_pStrides = reinterpret_cast<Uint32*>(pStridesRawMem);
+                m_pStrides = ALLOCATE(GetRawAllocator(), "Raw memory for buffer strides", Uint32, m_BufferSlotsUsed);
 
                 // Set strides for all unused slots to 0
                 for (Uint32 i=0; i < m_BufferSlotsUsed; ++i)

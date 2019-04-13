@@ -156,12 +156,9 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
     auto& ShaderResLayoutAllocator = GetRawAllocator();
     std::array<std::shared_ptr<const SPIRVShaderResources>, MaxShadersInPipeline> ShaderResources;
     std::array<std::vector<uint32_t>,                       MaxShadersInPipeline> ShaderSPIRVs;
-    auto* pResLayoutRawMem      = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", sizeof(ShaderResourceLayoutVk) * m_NumShaders * 2);
-    auto* pStaticResCacheRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheVk", sizeof(ShaderResourceCacheVk) * m_NumShaders);
-    auto* pStaticVarMgrRawMem   = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerVk", sizeof(ShaderVariableManagerVk) * m_NumShaders);
-    m_ShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutVk*>(pResLayoutRawMem);
-    m_StaticResCaches       = reinterpret_cast<ShaderResourceCacheVk*>(pStaticResCacheRawMem);
-    m_StaticVarsMgrs        = reinterpret_cast<ShaderVariableManagerVk*>(pStaticVarMgrRawMem);
+    m_ShaderResourceLayouts = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk",  ShaderResourceLayoutVk,  m_NumShaders * 2);
+    m_StaticResCaches       = ALLOCATE(GetRawAllocator(),        "Raw memory for ShaderResourceCacheVk",   ShaderResourceCacheVk,   m_NumShaders);
+    m_StaticVarsMgrs        = ALLOCATE(GetRawAllocator(),        "Raw memory for ShaderVariableManagerVk", ShaderVariableManagerVk, m_NumShaders);
     for (Uint32 s=0; s < m_NumShaders; ++s)
     {
         new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(LogicalDevice);

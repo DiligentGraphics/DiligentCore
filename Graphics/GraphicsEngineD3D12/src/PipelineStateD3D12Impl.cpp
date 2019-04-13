@@ -72,20 +72,17 @@ PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCo
 
     {
         auto& ShaderResLayoutAllocator = GetRawAllocator();
-        auto* pShaderResLayoutRawMem = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutD3D12", sizeof(ShaderResourceLayoutD3D12) * m_NumShaders * 2);
-        m_pShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D12*>(pShaderResLayoutRawMem);
+        m_pShaderResourceLayouts = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutD3D12", ShaderResourceLayoutD3D12, m_NumShaders * 2);
     }
 
     {
         auto& ShaderResCacheAllocator = GetRawAllocator();
-        auto* pShaderResCacheRawMem = ALLOCATE(ShaderResCacheAllocator, "Raw memory for ShaderResourceCacheD3D12", sizeof(ShaderResourceCacheD3D12) * m_NumShaders);
-        m_pStaticResourceCaches = reinterpret_cast<ShaderResourceCacheD3D12*>(pShaderResCacheRawMem);
+        m_pStaticResourceCaches = ALLOCATE(ShaderResCacheAllocator, "Raw memory for ShaderResourceCacheD3D12", ShaderResourceCacheD3D12, m_NumShaders);
     }
 
     {
         auto& ShaderVarMgrAllocator = GetRawAllocator();
-        auto* pStaticVarsMgrRawMem = ALLOCATE(ShaderVarMgrAllocator, "Raw memory for ShaderVariableManagerD3D12", sizeof(ShaderVariableManagerD3D12) * m_NumShaders);
-        m_pStaticVarManagers = reinterpret_cast<ShaderVariableManagerD3D12*>(pStaticVarsMgrRawMem);
+        m_pStaticVarManagers = ALLOCATE(ShaderVarMgrAllocator, "Raw memory for ShaderVariableManagerD3D12", ShaderVariableManagerD3D12, m_NumShaders);
     }
 
 #ifdef DEVELOPMENT

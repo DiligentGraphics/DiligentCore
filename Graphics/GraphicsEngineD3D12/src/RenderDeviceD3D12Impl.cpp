@@ -236,7 +236,7 @@ RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateComma
     }
 
     auto& CmdCtxAllocator = GetRawAllocator();
-    auto* pRawMem = ALLOCATE(CmdCtxAllocator, "CommandContext instance", sizeof(CommandContext));
+    auto* pRawMem = ALLOCATE(CmdCtxAllocator, "CommandContext instance", CommandContext, 1);
 	auto pCtx = new (pRawMem) CommandContext(m_CmdListManager);
     pCtx->SetID(ID);
 #ifdef DEVELOPMENT

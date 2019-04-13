@@ -155,7 +155,7 @@ void PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::ReserveMem
     size_t RequiredMemory = GetMemorySize(NumBindings);
     if (RequiredMemory > ReservedMemory)
     {
-        void *pNewBindings = ALLOCATE(MemAllocator, "Memory buffer for descriptor set layout bindings", RequiredMemory);
+        void* pNewBindings = ALLOCATE_RAW(MemAllocator, "Memory buffer for descriptor set layout bindings", RequiredMemory);
         if (pBindings != nullptr)
         {
             memcpy(pNewBindings, pBindings, sizeof(VkDescriptorSetLayoutBinding) * NumLayoutBindings);
@@ -341,8 +341,8 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIR
         // If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLER or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, and 
         // descriptorCount is not 0 and pImmutableSamplers is not NULL, pImmutableSamplers must be a valid pointer 
         // to an array of descriptorCount valid VkSampler handles (13.2.1)
-        auto *pImmutableSamplers = reinterpret_cast<VkSampler*>(ALLOCATE(m_MemAllocator, "Memory buffer for immutable samplers", sizeof(VkSampler) * VkBinding.descriptorCount));
-        for(uint32_t s=0; s < VkBinding.descriptorCount; ++s)
+        auto* pImmutableSamplers = ALLOCATE(m_MemAllocator, "Memory buffer for immutable samplers", VkSampler, VkBinding.descriptorCount);
+        for (uint32_t s=0; s < VkBinding.descriptorCount; ++s)
             pImmutableSamplers[s] = vkImmutableSampler;
         VkBinding.pImmutableSamplers = pImmutableSamplers;
     }

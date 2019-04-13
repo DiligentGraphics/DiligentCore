@@ -132,7 +132,7 @@ namespace Diligent
         TotalMemorySize += AlignedStringPoolDataSize * sizeof(Char);
 
         auto& MemAllocator = GetRawAllocator();
-        void* RawMemory = ALLOCATE(MemAllocator, "Memory buffer for GLProgramResources", TotalMemorySize);
+        void* RawMemory = ALLOCATE_RAW(MemAllocator, "Memory buffer for GLProgramResources", TotalMemorySize);
 
         m_UniformBuffers = reinterpret_cast<UniformBufferInfo*>(RawMemory);
         m_Samplers       = reinterpret_cast<SamplerInfo*>     (m_UniformBuffers + m_NumUniformBuffers);

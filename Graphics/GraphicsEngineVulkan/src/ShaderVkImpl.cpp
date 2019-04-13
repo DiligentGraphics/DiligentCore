@@ -83,7 +83,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     
     // Load shader resources
     auto& Allocator = GetRawAllocator();
-    auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", sizeof(SPIRVShaderResources));
+    auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", SPIRVShaderResources, 1);
     bool IsHLSLVertexShader = CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL && m_Desc.ShaderType == SHADER_TYPE_VERTEX;
     auto* pResources = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc, CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr, IsHLSLVertexShader, m_EntryPoint);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));

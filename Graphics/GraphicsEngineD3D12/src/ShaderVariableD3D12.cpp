@@ -70,7 +70,7 @@ ShaderVariableManagerD3D12::ShaderVariableManagerD3D12(IObject&                 
     if(m_NumVariables == 0)
         return;
     
-    auto* pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader variables", MemSize);
+    auto* pRawMem = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variables", MemSize);
     m_pVariables = reinterpret_cast<ShaderVariableD3D12Impl*>(pRawMem);
 
     Uint32 VarInd = 0;

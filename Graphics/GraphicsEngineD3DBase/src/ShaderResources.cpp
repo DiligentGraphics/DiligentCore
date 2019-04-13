@@ -87,7 +87,7 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
 
     if( MemorySize )
     {
-        auto* pRawMem = ALLOCATE(Allocator, "Allocator for shader resources", MemorySize );
+        auto* pRawMem = ALLOCATE_RAW(Allocator, "Allocator for shader resources", MemorySize );
         m_MemoryBuffer = std::unique_ptr< void, STDDeleterRawMem<void> >(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(reinterpret_cast<D3DShaderResourceAttribs*>(pRawMem) + m_TotalResources);
         m_ResourceNames.AssignMemory(NamesPool, ResourceNamesPoolSize);

@@ -34,6 +34,7 @@
 #include "RefCntAutoPtr.h"
 #include "PlatformMisc.h"
 #include "ResourceReleaseQueue.h"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
@@ -56,7 +57,7 @@ public:
         TBase           (pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts, ObjectSizes),
         m_CmdQueueCount (CmdQueueCount)
     {
-        m_CommandQueues = reinterpret_cast<CommandQueue*>(ALLOCATE(this->m_RawMemAllocator, "Raw memory for the device command/release queues", sizeof(CommandQueue)*m_CmdQueueCount));
+        m_CommandQueues = ALLOCATE(this->m_RawMemAllocator, "Raw memory for the device command/release queues", CommandQueue, m_CmdQueueCount);
         for(size_t q=0; q < m_CmdQueueCount; ++q)
             new(m_CommandQueues+q)CommandQueue(RefCntAutoPtr<CommandQueueType>(Queues[q]), this->m_RawMemAllocator);
     }

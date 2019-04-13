@@ -155,7 +155,7 @@ void ShaderResourceLayoutVk::AllocateMemory(std::shared_ptr<const SPIRVShaderRes
     if (MemSize == 0)
         return;
 
-    auto* pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader resource layout resources", MemSize);
+    auto* pRawMem = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader resource layout resources", MemSize);
     m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void> >(pRawMem, Allocator);
     for (Uint32 s=0; s < m_NumImmutableSamplers; ++s)
     {

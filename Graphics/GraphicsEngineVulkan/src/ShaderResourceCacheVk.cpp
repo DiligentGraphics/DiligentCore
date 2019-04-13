@@ -69,7 +69,7 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
 #endif
     if (MemorySize > 0)
     {
-        m_pMemory = ALLOCATE( *m_pAllocator, "Memory for shader resource cache data", MemorySize);
+        m_pMemory = ALLOCATE_RAW( *m_pAllocator, "Memory for shader resource cache data", MemorySize);
         auto* pSets = reinterpret_cast<DescriptorSet*>(m_pMemory);
         auto* pCurrResPtr = reinterpret_cast<Resource*>(pSets + m_NumSets);
         for (Uint32 t = 0; t < NumSets; ++t)

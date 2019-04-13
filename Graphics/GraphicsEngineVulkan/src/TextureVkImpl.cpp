@@ -543,8 +543,7 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
             m_bCSBasedMipGenerationSupported &&
             CheckCSBasedMipGenerationSupport(TexFormatToVkFormat(pViewVk->GetDesc().Format)))
         {
-            auto* pMipLevelViewsRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for mip level views", sizeof(TextureViewVkImpl::MipLevelViewAutoPtrType) * UpdatedViewDesc.NumMipLevels * 2);
-            auto* pMipLevelViews = reinterpret_cast<TextureViewVkImpl::MipLevelViewAutoPtrType*>(pMipLevelViewsRawMem);
+            auto* pMipLevelViews = ALLOCATE(GetRawAllocator(), "Raw memory for mip level views", TextureViewVkImpl::MipLevelViewAutoPtrType, UpdatedViewDesc.NumMipLevels * 2);
             for (Uint32 MipLevel = 0; MipLevel < UpdatedViewDesc.NumMipLevels; ++MipLevel)
             {
                 auto CreateMipLevelView = [&](TEXTURE_VIEW_TYPE ViewType, Uint32 MipLevel, TextureViewVkImpl::MipLevelViewAutoPtrType* ppMipLevelView)

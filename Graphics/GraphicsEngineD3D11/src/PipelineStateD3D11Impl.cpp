@@ -113,11 +113,8 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
         }
     }
 
-    auto* pStaticResLayoutRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11", m_NumShaders * sizeof(ShaderResourceLayoutD3D11));
-    m_pStaticResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D11*>(pStaticResLayoutRawMem);
-
-    auto* pResCacheRawMem = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheD3D11", m_NumShaders * sizeof(ShaderResourceCacheD3D11));
-    m_pStaticResourceCaches = reinterpret_cast<ShaderResourceCacheD3D11*>(pResCacheRawMem);
+    m_pStaticResourceLayouts = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11", ShaderResourceLayoutD3D11, m_NumShaders);
+    m_pStaticResourceCaches  = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheD3D11",  ShaderResourceCacheD3D11,  m_NumShaders);
 
     const auto& ResourceLayout = PipelineDesc.ResourceLayout;
 

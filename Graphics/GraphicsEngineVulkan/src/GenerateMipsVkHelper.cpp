@@ -297,8 +297,8 @@ namespace Diligent
         VERIFY_EXPR(ResourceStateToVkImageLayout(RESOURCE_STATE_SHADER_RESOURCE) == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         
         // Note that mip levels are relative to the view's most detailed mip
-        auto LowestMip = ViewDesc.NumMipLevels - 1;
-        for (uint32_t TopMip = 0; TopMip < LowestMip; )
+        auto BottomMip = ViewDesc.NumMipLevels - 1;
+        for (uint32_t TopMip = 0; TopMip < BottomMip; )
         {
             // In Vulkan all subresources of a view must be transitioned to the same layout, so
             // we can't bind the entire texture and have to bind single mip level at a time
@@ -321,8 +321,8 @@ namespace Diligent
             // in the low bits.  Zeros indicate we can divide by two without truncating.
             uint32_t AdditionalMips = PlatformMisc::GetLSB(DstWidth | DstHeight);
             uint32_t NumMips = 1 + (AdditionalMips > 3 ? 3 : AdditionalMips);
-            if (TopMip + NumMips > LowestMip)
-                NumMips = LowestMip - TopMip;
+            if (TopMip + NumMips > BottomMip)
+                NumMips = BottomMip - TopMip;
 
             // These are clamped to 1 after computing additional mips because clamped
             // dimensions should not limit us from downsampling multiple times.  (E.g.
@@ -356,12 +356,12 @@ namespace Diligent
             constexpr const Uint32 MaxMipsHandledByCS = 4; // Max number of mip levels processed by one CS shader invocation
             for (Uint32 u = 0; u < MaxMipsHandledByCS; ++u)
             {
-                auto* MipLevelUAV = TexView.GetMipLevelUAV(std::min(TopMip + u + 1, LowestMip));
+                auto* MipLevelUAV = TexView.GetMipLevelUAV(std::min(TopMip + u + 1, BottomMip));
                 pOutMipVar[u]->Set(MipLevelUAV);
             }
 
             SubresRange.baseMipLevel = ViewDesc.MostDetailedMip + TopMip + 1;
-            SubresRange.levelCount   = std::min(4u, LowestMip - TopMip);
+            SubresRange.levelCount   = std::min(4u, BottomMip - TopMip);
             if (OriginalLayout != VK_IMAGE_LAYOUT_GENERAL)
                 Ctx.TransitionImageLayout(*pTexVk, OriginalLayout, VK_IMAGE_LAYOUT_GENERAL, SubresRange);
 

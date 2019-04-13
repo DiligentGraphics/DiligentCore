@@ -94,7 +94,7 @@ namespace Diligent
 #endif
         if( BufferSize > 0 )
         {
-            m_pResourceData = reinterpret_cast<Uint8*>(MemAllocator.Allocate(BufferSize, "Shader resource cache data buffer", __FILE__, __LINE__ ));
+            m_pResourceData = ALLOCATE(MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize);
             memset(m_pResourceData, 0, BufferSize);
         }
 

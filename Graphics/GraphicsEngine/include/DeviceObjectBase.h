@@ -44,16 +44,16 @@ public:
     typedef ObjectBase<BaseInterface> TBase;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this device object
-	/// \param pDevice - pointer to the render device.
-	/// \param ObjDesc - object description.
-	/// \param bIsDeviceInternal - flag indicating if the object is an internal device object
-	///							   and must not keep a strong reference to the device.
+    /// \param pDevice - pointer to the render device.
+    /// \param ObjDesc - object description.
+    /// \param bIsDeviceInternal - flag indicating if the object is an internal device object
+    ///							   and must not keep a strong reference to the device.
     DeviceObjectBase( IReferenceCounters*   pRefCounters,
                       RenderDeviceImplType* pDevice,
-					  const ObjectDescType& ObjDesc,
-				      bool                  bIsDeviceInternal = false) :
+                      const ObjectDescType& ObjDesc,
+                      bool                  bIsDeviceInternal = false) :
         TBase(pRefCounters),
-		m_pDevice          (pDevice),
+        m_pDevice          (pDevice),
         m_Desc             (ObjDesc),
         m_bIsDeviceInternal(bIsDeviceInternal)
     {
@@ -66,14 +66,14 @@ public:
         if (ObjDesc.Name != nullptr)
         {
             auto size = strlen(ObjDesc.Name) + 1;
-            auto* NameCopy = reinterpret_cast<char*>(ALLOCATE(GetStringAllocator(), "Object name copy", size));
+            auto* NameCopy = ALLOCATE(GetStringAllocator(), "Object name copy", char, size);
             memcpy(NameCopy, ObjDesc.Name, size);
             m_Desc.Name = NameCopy;
         }
         else
         {
             size_t size = 16 + 2 + 1; // 0x12345678
-            auto* AddressStr = reinterpret_cast<char*>(ALLOCATE(GetStringAllocator(), "Object address string", size));
+            auto* AddressStr = ALLOCATE(GetStringAllocator(), "Object address string", char, size);
             snprintf(AddressStr, size, "0x%llX", static_cast<unsigned long long>(reinterpret_cast<size_t>(this)));
             m_Desc.Name = AddressStr;
         }
@@ -135,10 +135,10 @@ public:
         return m_Desc;
     }
 
-	/// Returns unique identifier
+    /// Returns unique identifier
     UniqueIdentifier GetUniqueID()const
     {
-		/// \note
+        /// \note
         /// This unique ID is used to unambiguously identify device object for
         /// tracking purposes.
         /// Niether GL handle nor pointer could be safely used for this purpose
@@ -146,13 +146,13 @@ public:
         return m_UniqueID.GetID();
     }
 
-	RenderDeviceImplType* GetDevice()const{return m_pDevice;}
+    RenderDeviceImplType* GetDevice()const{return m_pDevice;}
     
 protected:
     /// Pointer to the device
     RenderDeviceImplType* const m_pDevice;
 
-	/// Object description
+    /// Object description
     ObjectDescType m_Desc;
     
     // Template argument is only used to separate counters for 

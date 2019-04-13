@@ -80,7 +80,7 @@ ShaderVariableManagerVk::ShaderVariableManagerVk(IObject&                       
     if(m_NumVariables == 0)
         return;
     
-    auto* pRawMem = ALLOCATE(Allocator, "Raw memory buffer for shader variables", MemSize);
+    auto* pRawMem = ALLOCATE_RAW(Allocator, "Raw memory buffer for shader variables", MemSize);
     m_pVariables = reinterpret_cast<ShaderVariableVkImpl*>(pRawMem);
 
     Uint32 VarInd = 0;
