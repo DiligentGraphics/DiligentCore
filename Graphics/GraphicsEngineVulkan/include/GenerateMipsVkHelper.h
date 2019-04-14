@@ -56,7 +56,7 @@ namespace Diligent
         std::array<RefCntAutoPtr<IPipelineState>, 4>& FindPSOs  (TEXTURE_FORMAT Fmt);
 
         VkImageLayout GenerateMipsCS  (TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange);
-        VkImageLayout GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange);
+        VkImageLayout GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange)const;
 
         RenderDeviceVkImpl& m_DeviceVkImpl;
 

@@ -107,10 +107,10 @@ namespace Diligent
         ShaderCreateInfo CSCreateInfo;
         std::array<RefCntAutoPtr<IPipelineState>, 4> PSOs;
         
-        CSCreateInfo.Source                      = g_GenerateMipsCSSource;
-        CSCreateInfo.EntryPoint                  = "main";
-        CSCreateInfo.SourceLanguage              = SHADER_SOURCE_LANGUAGE_GLSL;
-        CSCreateInfo.Desc.ShaderType             = SHADER_TYPE_COMPUTE;
+        CSCreateInfo.Source          = g_GenerateMipsCSSource;
+        CSCreateInfo.EntryPoint      = "main";
+        CSCreateInfo.SourceLanguage  = SHADER_SOURCE_LANGUAGE_GLSL;
+        CSCreateInfo.Desc.ShaderType = SHADER_TYPE_COMPUTE;
 
         const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
         bool IsGamma = FmtAttribs.ComponentType == COMPONENT_TYPE_UNORM_SRGB;
@@ -167,11 +167,11 @@ namespace Diligent
         m_DeviceVkImpl(DeviceVkImpl)
     {
         BufferDesc ConstantsCBDesc;
-        ConstantsCBDesc.Name = "Constants CB buffer";
-        ConstantsCBDesc.BindFlags = BIND_UNIFORM_BUFFER;
-        ConstantsCBDesc.Usage = USAGE_DYNAMIC;
+        ConstantsCBDesc.Name           = "Constants CB buffer";
+        ConstantsCBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
+        ConstantsCBDesc.Usage          = USAGE_DYNAMIC;
         ConstantsCBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-        ConstantsCBDesc.uiSizeInBytes = 32;
+        ConstantsCBDesc.uiSizeInBytes  = 32;
         DeviceVkImpl.CreateBuffer(ConstantsCBDesc, nullptr, &m_ConstantsCB);
 
         FindPSOs(TEX_FORMAT_RGBA8_UNORM);
@@ -383,7 +383,7 @@ namespace Diligent
         return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     }
 
-    VkImageLayout GenerateMipsVkHelper::GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange)
+    VkImageLayout GenerateMipsVkHelper::GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange)const
     {
         auto* pTexVk = TexView.GetTexture<TextureVkImpl>();
         const auto& TexDesc = pTexVk->GetDesc();

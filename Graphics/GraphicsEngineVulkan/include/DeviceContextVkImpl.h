@@ -247,6 +247,8 @@ public:
     void ResetRenderTargets();
     Int64 GetContextFrameNumber()const{return m_ContextFrameNumber;}
 
+    GenerateMipsVkHelper& GetGenerateMipsHelper(){return *m_GenerateMipsHelper;}
+
 private:
     void TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
     inline void CommitRenderPassAndFramebuffer(bool VerifyStates);

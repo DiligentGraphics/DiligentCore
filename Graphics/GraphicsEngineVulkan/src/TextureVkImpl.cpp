@@ -156,7 +156,6 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
             {
                 ImageCI.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
                 m_bCSBasedMipGenerationSupported = true;
-                // TODO: warm-up generate mips PSO cache
             }
             else 
             {
@@ -576,6 +575,13 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
                 CreateMipLevelView(TEXTURE_VIEW_SHADER_RESOURCE,  MipLevel, &pMipLevelViews[MipLevel * 2]);
                 CreateMipLevelView(TEXTURE_VIEW_UNORDERED_ACCESS, MipLevel, &pMipLevelViews[MipLevel * 2 + 1]);
             }
+
+            if (auto pImmediateCtx = m_pDevice->GetImmediateContext())
+            {
+                auto& GenerateMipsHelper = pImmediateCtx.RawPtr<DeviceContextVkImpl>()->GetGenerateMipsHelper();
+                GenerateMipsHelper.WarmUpCache(pViewVk->GetDesc().Format);
+            }
+
             pViewVk->AssignMipLevelViews(pMipLevelViews);
         }
     }
