@@ -102,10 +102,10 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
     }
     if (m_Desc.BindFlags & BIND_SHADER_RESOURCE)
     {
-        // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        // HLSL buffer SRV are mapped to storge buffers in GLSL, so we need to set both 
-        // VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT flags
-        VkBuffCI.usage |= VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        // VkBuffCI.usage |= m_Desc.Mode == BUFFER_MODE_FORMATTED ? VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT : VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL, so we need to set both 
+        // VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT and VK_BUFFER_USAGE_STORAGE_BUFFER_BIT flags
+        VkBuffCI.usage |= VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
         m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minTexelBufferOffsetAlignment));
         m_DynamicOffsetAlignment = std::max(m_DynamicOffsetAlignment, static_cast<Uint32>(DeviceLimits.minStorageBufferOffsetAlignment));
