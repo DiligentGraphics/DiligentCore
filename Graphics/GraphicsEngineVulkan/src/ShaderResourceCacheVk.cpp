@@ -177,7 +177,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                         RESOURCE_STATE_UNORDERED_ACCESS : RESOURCE_STATE_SHADER_RESOURCE;
 #ifdef _DEBUG
                     const VkAccessFlags  RequiredAccessFlags = (RequiredState == RESOURCE_STATE_SHADER_RESOURCE) ? 
-                        VK_ACCESS_SHADER_READ_BIT : (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);;
+                        VK_ACCESS_SHADER_READ_BIT : (VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
                     VERIFY_EXPR( (ResourceStateFlagsToVkAccessFlags(RequiredState) & RequiredAccessFlags) == RequiredAccessFlags);
 #endif
                     const bool IsInRequiredState = pBufferVk->CheckState(RequiredState);
@@ -331,11 +331,15 @@ VkDescriptorBufferInfo ShaderResourceCacheVk::Resource::GetStorageBufferDescript
                "Expected view type is BUFFER_VIEW_SHADER_RESOURCE. Actual type: ", GetBufferViewTypeLiteralName(ViewDesc.ViewType));
         VERIFY((pBuffVk->GetDesc().BindFlags & BIND_SHADER_RESOURCE) != 0, "Buffer '", pBuffVk->GetDesc().Name, "' being set as read-only storage buffer was not created with BIND_SHADER_RESOURCE flag");
     }
-    else
+    else if (Type == SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer)
     {
         VERIFY(ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Attempting to bind buffer view '", ViewDesc.Name, "' as writable storage buffer. "
                "Expected view type is BUFFER_VIEW_UNORDERED_ACCESS. Actual type: ", GetBufferViewTypeLiteralName(ViewDesc.ViewType));
         VERIFY((pBuffVk->GetDesc().BindFlags & BIND_UNORDERED_ACCESS) != 0, "Buffer '", pBuffVk->GetDesc().Name, "' being set as writable storage buffer was not created with BIND_UNORDERED_ACCESS flag");
+    }
+    else
+    {
+        UNEXPECTED("Unexpected resource type");
     }
 
     VkDescriptorBufferInfo DescrBuffInfo;
