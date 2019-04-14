@@ -66,7 +66,7 @@ namespace Diligent
     class TextureUploaderBase : public ObjectBase<ITextureUploader>
     {
     public:
-        TextureUploaderBase(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, const TextureUploaderDesc Desc) :
+        TextureUploaderBase(IReferenceCounters* pRefCounters, IRenderDevice* pDevice, const TextureUploaderDesc Desc) :
             ObjectBase<ITextureUploader>(pRefCounters),
             m_pDevice(pDevice)
         {}

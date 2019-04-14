@@ -54,6 +54,10 @@ public:
     virtual const FenceDesc& GetDesc()const override = 0;
 
     /// Returns the last completed value signaled by the GPU
+
+    /// \remarks This method is not thread safe (even if the fence object is protected by mutex)
+    ///          and must only be called by the same thread that signals the fence via
+    ///          IDeviceContext::SignalFence().
     virtual Uint64 GetCompletedValue() = 0;
 
     /// Resets the fence to the specified value. 

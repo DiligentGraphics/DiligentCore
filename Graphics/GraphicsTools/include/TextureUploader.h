@@ -30,9 +30,9 @@ namespace Diligent
 {
     struct UploadBufferDesc
     {
-        Uint32 Width = 0;
-        Uint32 Height = 0;
-        Uint32 Depth = 1;
+        Uint32         Width  = 0;
+        Uint32         Height = 0;
+        Uint32         Depth  = 1;
         TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
 
         bool operator == (const UploadBufferDesc &rhs) const
