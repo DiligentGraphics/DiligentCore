@@ -231,6 +231,9 @@ const Char* GetUsageString(USAGE Usage);
 /// Returns the string containing the texture type
 const Char* GetResourceDimString( RESOURCE_DIMENSION TexType );
 
+/// Returns the string containing single bind flag
+const Char* GetBindFlagString( Uint32 BindFlag );
+
 /// Returns the string containing the bind flags
 String GetBindFlagsString( Uint32 BindFlags );
 

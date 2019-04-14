@@ -59,9 +59,10 @@ class ResourceTypeToVkDescriptorType
 public:
     ResourceTypeToVkDescriptorType()
     {
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 9, "Please add corresponding decriptor type");
+        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 10, "Please add corresponding decriptor type");
         m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]      = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageBuffer]      = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer]    = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer]    = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer] = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]       = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;

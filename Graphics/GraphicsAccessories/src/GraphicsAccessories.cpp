@@ -604,7 +604,7 @@ const Char* GetResourceDimString( RESOURCE_DIMENSION TexType )
     }
 }
 
-static const Char* GetSingleBindFlagString( Uint32 BindFlag )
+const Char* GetBindFlagString( Uint32 BindFlag )
 {
     VERIFY( (BindFlag & (BindFlag - 1)) == 0, "More than one bind flag specified" );
     switch( BindFlag )
@@ -635,7 +635,7 @@ String GetBindFlagsString( Uint32 BindFlags )
         {
             if( Str.length() )
                 Str += '|';
-            Str += GetSingleBindFlagString( Flag );
+            Str += GetBindFlagString( Flag );
             BindFlags &= ~Flag;
         }
     }

@@ -464,7 +464,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
             },
             [&](const SPIRVShaderResourceAttribs& SB, Uint32)
             {
-                VERIFY_EXPR(SB.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer);
+                VERIFY_EXPR(SB.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer || SB.Type == SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer);
                 // Skip
             },
             [&](const SPIRVShaderResourceAttribs& Img, Uint32)
@@ -650,7 +650,9 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
                                                             VkDescriptorSet                    vkDescrSet, 
                                                             Uint32                             ArrayInd)const
 {
-    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, "Storage buffer resource is expected");
+    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer || 
+           SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer,
+           "Storage buffer resource is expected");
 
     if( UpdateCachedResource(DstRes, ArrayInd, pBuffer, IID_BufferViewVk, "buffer view") )
     {
@@ -659,9 +661,11 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
         // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
         auto* pBuffViewVk = DstRes.pObject.RawPtr<BufferViewVkImpl>();
         auto* pBuffVk = pBuffViewVk->GetBufferVk(); // Use final type
-        if ((pBuffVk->GetDesc().BindFlags & BIND_UNORDERED_ACCESS) == 0)
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        auto RequiredBindFlag = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer ? BIND_SHADER_RESOURCE : BIND_UNORDERED_ACCESS;
+        if ((pBuffVk->GetDesc().BindFlags & RequiredBindFlag ) == 0)
         {
-            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Buffer was not created with BIND_UNORDERED_ACCESS flag.")
+            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "The buffer was not created with ", GetBindFlagString(RequiredBindFlag), " flags.")
             DstRes.pObject.Release();
             return;
         }
@@ -846,7 +850,8 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject* pObj, Uint3
                 CacheUniformBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
             break;
 
-            case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
+            case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:
+            case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:
                 CacheStorageBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
             break;
 
@@ -1088,7 +1093,8 @@ void ShaderResourceLayoutVk::CommitDynamicResources(const ShaderResourceCacheVk&
                 }
             break;
             
-            case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
+            case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:
+            case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:
                 WriteDescrSetIt->pBufferInfo = &(*DescrBuffIt);
                 while (ArrElem < Res.SpirvAttribs.ArraySize && DescrBuffIt != DescrBuffInfoArr.end())
                 {

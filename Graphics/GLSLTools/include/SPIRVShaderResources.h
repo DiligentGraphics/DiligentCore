@@ -57,7 +57,8 @@ struct SPIRVShaderResourceAttribs
     enum ResourceType : Uint8
     {
         UniformBuffer = 0,
-        StorageBuffer,
+        ROStorageBuffer,
+        RWStorageBuffer,
         UniformTexelBuffer,
         StorageTexelBuffer,
         StorageImage,

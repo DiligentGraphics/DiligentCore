@@ -84,14 +84,20 @@ ShaderResourceDesc SPIRVShaderResourceAttribs::GetResourceDesc() const
     ResourceDesc.Name      = Name;
     ResourceDesc.ArraySize = ArraySize;
 
-    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 9, "Please update switch statement below");
+    static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 10, "Please update switch statement below");
     switch (Type)
     {
         case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
             ResourceDesc.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
         break;
 
-        case SPIRVShaderResourceAttribs::ResourceType::StorageBuffer:
+        case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:
+            // Read-only storage buffers map to buffer SRV
+            // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide#read-write-vs-read-only-resources-for-hlsl
+            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_SRV;
+        break;
+
+        case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:
             ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
         break;
 
@@ -318,11 +324,16 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         Uint32 CurrSB = 0;
         for (const auto& SB : resources.storage_buffers)
         {
+            auto BufferFlags = Compiler.get_buffer_block_flags(SB.id);
+            auto IsReadOnly = BufferFlags.get(spv::DecorationNonWritable);
+            auto ResType = IsReadOnly ? 
+                SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer :
+                SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer;
             new (&GetSB(CurrSB++))
                 SPIRVShaderResourceAttribs(Compiler, 
                                            SB, 
                                            m_ResourceNames.CopyString(SB.name),
-                                           SPIRVShaderResourceAttribs::ResourceType::StorageBuffer);
+                                           ResType);
         }
         VERIFY_EXPR(CurrSB == GetNumSBs());
     }
@@ -582,21 +593,23 @@ std::string SPIRVShaderResources::DumpResources()
         [&](const SPIRVShaderResourceAttribs& UB, Uint32)
         {
             VERIFY(UB.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, "Unexpected resource type");
-            ss << std::endl << std::setw(3) << ResNum << " Uniform Buffer  ";
+            ss << std::endl << std::setw(3) << ResNum << " Uniform Buffer   ";
             DumpResource(UB);
         },
         [&](const SPIRVShaderResourceAttribs& SB, Uint32)
         {
-            VERIFY(SB.Type == SPIRVShaderResourceAttribs::ResourceType::StorageBuffer, "Unexpected resource type");
-            ss << std::endl << std::setw(3) << ResNum << " Storage Buffer  ";
+            VERIFY(SB.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer ||
+                   SB.Type == SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer, "Unexpected resource type");
+            ss << std::endl << std::setw(3) << ResNum
+               << (SB.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer ? " RO Storage Buffer" : " RW Storage Buffer");
             DumpResource(SB);
         },
         [&](const SPIRVShaderResourceAttribs& Img, Uint32)
         {
             if (Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
-                ss << std::endl << std::setw(3) << ResNum << " Storage Image   ";
+                ss << std::endl << std::setw(3) << ResNum << " Storage Image    ";
             else if(Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer)
-                ss << std::endl << std::setw(3) << ResNum << " Storage Txl Buff";
+                ss << std::endl << std::setw(3) << ResNum << " Storage Txl Buff ";
             else
                 UNEXPECTED("Unexpected resource type");
             DumpResource(Img);
@@ -604,9 +617,9 @@ std::string SPIRVShaderResources::DumpResources()
         [&](const SPIRVShaderResourceAttribs& SmplImg, Uint32)
         {
             if (SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage)
-                ss << std::endl << std::setw(3) << ResNum << " Sampled Image   ";
+                ss << std::endl << std::setw(3) << ResNum << " Sampled Image    ";
             else if (SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer)
-                ss << std::endl << std::setw(3) << ResNum << " Uniform Txl Buff";
+                ss << std::endl << std::setw(3) << ResNum << " Uniform Txl Buff ";
             else
                 UNEXPECTED("Unexpected resource type");
             DumpResource(SmplImg);
@@ -614,19 +627,19 @@ std::string SPIRVShaderResources::DumpResources()
         [&](const SPIRVShaderResourceAttribs& AC, Uint32)
         {
             VERIFY(AC.Type == SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, "Unexpected resource type");
-            ss << std::endl << std::setw(3) << ResNum << " Atomic Cntr     ";
+            ss << std::endl << std::setw(3) << ResNum << " Atomic Cntr      ";
             DumpResource(AC);
         },
         [&](const SPIRVShaderResourceAttribs& SepSmpl, Uint32)
         {
             VERIFY(SepSmpl.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Unexpected resource type");
-            ss << std::endl << std::setw(3) << ResNum << " Separate Smpl   ";
+            ss << std::endl << std::setw(3) << ResNum << " Separate Smpl    ";
             DumpResource(SepSmpl);
         },
         [&](const SPIRVShaderResourceAttribs& SepImg, Uint32)
         {
             VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage, "Unexpected resource type");
-            ss << std::endl << std::setw(3) << ResNum << " Separate Img    ";
+            ss << std::endl << std::setw(3) << ResNum << " Separate Img     ";
             DumpResource(SepImg);
         }
     );
