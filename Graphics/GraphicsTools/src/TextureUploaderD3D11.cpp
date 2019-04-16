@@ -183,6 +183,15 @@ TextureUploaderD3D11::TextureUploaderD3D11(IReferenceCounters *pRefCounters, IRe
 
 TextureUploaderD3D11::~TextureUploaderD3D11()
 {
+    auto Stats =  TextureUploaderD3D11::GetStats();
+    if (Stats.NumPendingOperations != 0)
+    {
+        LOG_WARNING_MESSAGE("TextureUploaderD3D11::~TextureUploaderD3D11(): there ", (Stats.NumPendingOperations > 1 ? "are " : "is "),
+                            Stats.NumPendingOperations, (Stats.NumPendingOperations > 1 ? " pending operations" : " pending operation"),
+                            " in the queue. If other threads wait for ", (Stats.NumPendingOperations > 1 ? "these operations" : "this operation"),
+                            ", they may deadlock.");
+    }
+
     for (auto BuffQueueIt : m_pInternalData->m_UploadBufferCache)
     {
         if (BuffQueueIt.second.size())
@@ -338,7 +347,14 @@ TextureUploaderStats TextureUploaderD3D11::GetStats()
 {
     TextureUploaderStats Stats;
     std::lock_guard<std::mutex> QueueLock(m_pInternalData->m_PendingOperationsMtx);
-    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.size());
+    for (auto &OperationInfo : m_pInternalData->m_PendingOperations)
+    {
+        // Do not count MapAndCache operations as they are performed as part of the 
+        // buffer recycling.
+        if (OperationInfo.operation == InternalData::PendingBufferOperation::Map ||
+            OperationInfo.operation == InternalData::PendingBufferOperation::Copy)
+            ++Stats.NumPendingOperations;
+    }
     return Stats;
 }
 

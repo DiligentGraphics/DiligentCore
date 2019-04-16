@@ -266,6 +266,15 @@ TextureUploaderD3D12_Vk::TextureUploaderD3D12_Vk(IReferenceCounters* pRefCounter
 
 TextureUploaderD3D12_Vk::~TextureUploaderD3D12_Vk()
 {
+    auto NumPendingOperations = m_pInternalData->GetNumPendingOperations();
+    if (NumPendingOperations != 0)
+    {
+        LOG_WARNING_MESSAGE("TextureUploaderD3D12_Vk::~TextureUploaderD3D12_Vk(): there ", (NumPendingOperations > 1 ? "are " : "is "),
+                            NumPendingOperations, (NumPendingOperations > 1 ? " pending operations" : " pending operation"),
+                            " in the queue. If other threads wait for ", (NumPendingOperations > 1 ? "these operations" : "this operation"),
+                            ", they may deadlock.");
+
+    }
 }
 
 void TextureUploaderD3D12_Vk::RenderThreadUpdate(IDeviceContext* pContext)

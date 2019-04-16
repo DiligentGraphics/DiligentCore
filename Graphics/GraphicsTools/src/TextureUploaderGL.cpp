@@ -152,6 +152,15 @@ TextureUploaderGL::TextureUploaderGL(IReferenceCounters *pRefCounters, IRenderDe
 
 TextureUploaderGL::~TextureUploaderGL()
 {
+    auto Stats =  TextureUploaderGL::GetStats();
+    if (Stats.NumPendingOperations != 0)
+    {
+        LOG_WARNING_MESSAGE("TextureUploaderGL::~TextureUploaderGL(): there ", (Stats.NumPendingOperations > 1 ? "are " : "is "),
+                            Stats.NumPendingOperations, (Stats.NumPendingOperations > 1 ? " pending operations" : " pending operation"),
+                            " in the queue. If other threads wait for ", (Stats.NumPendingOperations > 1 ? "these operations" : "this operation"),
+                            ", they may deadlock.");
+    }
+
     for (auto BuffQueueIt : m_pInternalData->m_UploadBufferCache)
     {
         if (BuffQueueIt.second.size())
