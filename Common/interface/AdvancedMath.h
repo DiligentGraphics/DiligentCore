@@ -33,7 +33,7 @@ namespace Diligent
 struct Plane3D
 {
     float3 Normal;
-    float Distance; //Distance from the coordinate system origin to the plane along the normal direction
+    float Distance = 0; //Distance from the coordinate system origin to the plane along the normal direction
 };
 
 struct ViewFrustum

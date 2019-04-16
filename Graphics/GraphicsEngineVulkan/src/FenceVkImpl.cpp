@@ -41,10 +41,15 @@ FenceVkImpl :: FenceVkImpl(IReferenceCounters* pRefCounters,
 
 FenceVkImpl :: ~FenceVkImpl()
 {
-    // Do not dispose pending fences as the pool checks that the fence
-    // is signaled, while pending fences may not be.
-    // The pool will be destroyed next anyway, so it makes no difference.
-    m_PendingFences.clear();
+    if (!m_PendingFences.empty())
+    {
+        LOG_INFO_MESSAGE("FenceVkImpl::~FenceVkImpl(): waiting for ", m_PendingFences.size(), " pending Vulkan ",
+                         (m_PendingFences.size() > 1 ? "fences." : "fence."));
+        // Vulkan spec states that all queue submission commands that refer to 
+        // a fence must have completed execution before the fence is destroyed.
+        // (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyFence-fence-01120)
+        Wait();
+    }
 }
 
 Uint64 FenceVkImpl :: GetCompletedValue()

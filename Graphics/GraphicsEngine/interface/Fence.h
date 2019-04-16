@@ -43,7 +43,10 @@ struct FenceDesc : DeviceObjectAttribs
 
 /// Fence interface
 
-/// Fence the methods to manipulate a fence object
+/// Defines the methods to manipulate a fence object
+///
+/// \remarks When a fence that was previously signaled by IDeviceContext::SignalFence() is destroyed,
+///          it may block the GPU until all prior commands have completed execution.
 class IFence : public IDeviceObject
 {
 public:
