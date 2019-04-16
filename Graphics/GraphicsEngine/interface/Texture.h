@@ -229,7 +229,7 @@ struct TextureSubResData
     TextureSubResData()noexcept{}
     
     /// Initializes the structure members to perform copy from the CPU memory
-    TextureSubResData(void *_pData, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
+    TextureSubResData(void* _pData, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
         pData       (_pData),
         pSrcBuffer  (nullptr),
         SrcOffset   (0),
@@ -238,7 +238,7 @@ struct TextureSubResData
     {}
 
     /// Initializes the structure members to perform copy from the GPU buffer
-    TextureSubResData(IBuffer *_pBuffer, Uint32 _SrcOffset, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
+    TextureSubResData(IBuffer* _pBuffer, Uint32 _SrcOffset, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
         pData       (nullptr),
         pSrcBuffer  (_pBuffer),
         SrcOffset   (_SrcOffset),
@@ -252,20 +252,38 @@ struct TextureData
 {
     /// Pointer to the array of the TextureSubResData elements containing
     /// information about each subresource.
-    TextureSubResData* pSubResources = nullptr;
+    TextureSubResData* pSubResources    = nullptr;
 
     /// Number of elements in pSubResources array.
     /// NumSubresources must exactly match the number
     /// of subresources in the texture. Otherwise an error
     /// occurs.
-    Uint32 NumSubresources           = 0;
+    Uint32             NumSubresources  = 0;
+
+    TextureData() noexcept {}
+
+    TextureData(TextureSubResData* _pSubResources,
+                Uint32             _NumSubresources) noexcept :
+        pSubResources   (_pSubResources),
+        NumSubresources (_NumSubresources)
+    {}
 };
 
 struct MappedTextureSubresource
 {
-    PVoid pData        = nullptr;
+    PVoid  pData       = nullptr;
     Uint32 Stride      = 0;
     Uint32 DepthStride = 0;
+
+    MappedTextureSubresource() noexcept {}
+
+    MappedTextureSubresource(PVoid  _pData,
+                             Uint32 _Stride,
+                             Uint32 _DepthStride = 0) noexcept :
+        pData       (_pData),
+        Stride      (_Stride),
+        DepthStride (_DepthStride)
+    {}
 };
 
 /// Texture inteface
