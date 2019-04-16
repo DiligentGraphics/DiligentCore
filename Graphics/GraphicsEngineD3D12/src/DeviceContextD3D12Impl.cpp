@@ -1597,7 +1597,7 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::SignalFence(IFence* pFence, Uint64 Value)
     {
-        VERIFY(!m_bIsDeferred, "Fence can only be signalled from immediate context");
+        VERIFY(!m_bIsDeferred, "Fence can only be signaled from immediate context");
         m_PendingFences.emplace_back(Value, pFence);
     };
 

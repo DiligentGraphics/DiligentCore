@@ -42,7 +42,7 @@ FenceVkImpl :: FenceVkImpl(IReferenceCounters* pRefCounters,
 FenceVkImpl :: ~FenceVkImpl()
 {
     // Do not dispose pending fences as the pool checks that the fence
-    // is signalled, while pending fences may not be.
+    // is signaled, while pending fences may not be.
     // The pool will be destroyed next anyway, so it makes no difference.
     m_PendingFences.clear();
 }

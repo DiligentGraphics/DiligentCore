@@ -37,7 +37,7 @@ class Signal
 public:
     Signal() 
     {
-        m_SignalledValue = 0;
+        m_SignaledValue    = 0;
         m_NumThreadsAwaken = 0;
     }
 
@@ -52,8 +52,8 @@ public:
             // std::condition_variable works only with std::unique_lock<std::mutex>
             std::lock_guard<std::mutex> Lock(m_Mutex);
             VERIFY(SignalValue != 0, "Signal value must not be 0");
-            VERIFY(m_SignalledValue == 0 && m_NumThreadsAwaken == 0, "Not all threads have been awaken since the signal was triggered last time, or the signal has not been reset");
-            m_SignalledValue = SignalValue;
+            VERIFY(m_SignaledValue == 0 && m_NumThreadsAwaken == 0, "Not all threads have been awaken since the signal was triggered last time, or the signal has not been reset");
+            m_SignaledValue = SignalValue;
         }
         // Unlocking is done before notifying, to avoid waking up the waiting 
         // thread only to block again (see notify_one for details)
@@ -79,13 +79,13 @@ public:
         //    the thread is awakened, and the mutex is atomically reacquired: 
         //    - The thread should then check the condition and resume waiting if the wake up was spurious.
         std::unique_lock<std::mutex> Lock(m_Mutex);
-        // It is safe to check m_SignalledValue since we are holding
+        // It is safe to check m_SignaledValue since we are holding
         // the mutex
-        if(m_SignalledValue == 0)
+        if(m_SignaledValue == 0)
         {
-            m_CondVar.wait(Lock, [&] {return m_SignalledValue != 0;} );
+            m_CondVar.wait(Lock, [&] {return m_SignaledValue != 0;} );
         }
-        int SignalledValue = m_SignalledValue;
+        int SignaledValue = m_SignaledValue;
         // Count the number of threads awaken while holding the mutex
         ++m_NumThreadsAwaken;
         if (AutoReset)
@@ -95,27 +95,27 @@ public:
             // thread, it will wait until we release the mutex
             if(m_NumThreadsAwaken == NumThreadsWaiting)
             {
-                m_SignalledValue = 0;
+                m_SignaledValue = 0;
                 m_NumThreadsAwaken = 0;
             }
         }
-        return SignalledValue;
+        return SignaledValue;
     }
 
     void Reset()
     {
         std::lock_guard<std::mutex> Lock(m_Mutex);
-        m_SignalledValue = 0;
+        m_SignaledValue = 0;
         m_NumThreadsAwaken = 0;
     }
 
-    bool IsTriggered()const { return m_SignalledValue != 0; }
+    bool IsTriggered()const { return m_SignaledValue != 0; }
 
 private:
     
     std::mutex m_Mutex;
     std::condition_variable m_CondVar;
-    std::atomic_int m_SignalledValue;
+    std::atomic_int m_SignaledValue;
     std::atomic_int m_NumThreadsAwaken;
     
     Signal(const Signal&) = delete;

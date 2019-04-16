@@ -789,13 +789,13 @@ public:
     /// Tells the GPU to set a fence to a specified value after all previous work has completed.
 
     /// \note The method does not flush the context (an application can do this explcitly if needed)
-    ///       and the fence will be signalled only when the command context is flushed next time.
+    ///       and the fence will be signaled only when the command context is flushed next time.
     ///       If an application needs to wait for the fence in a loop, it must flush the context
     ///       after signalling the fence.
     ///
     /// \param [in] pFence - The fence to signal
     /// \param [in] Value  - The value to set the fence to. This value must be greater than the
-    ///                      previously signalled value on the same fence.
+    ///                      previously signaled value on the same fence.
     virtual void SignalFence(IFence* pFence, Uint64 Value) = 0;
 
 

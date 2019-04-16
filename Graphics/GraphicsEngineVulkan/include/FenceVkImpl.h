@@ -51,7 +51,7 @@ public:
 
     // Note that this method is not thread-safe. The reason is that VulkanFencePool is not thread
     // safe, and DeviceContextVkImpl::SignalFence() adds the fence to the pending fences list that
-    // are signalled later by the command context when it submits the command list. So there is no
+    // are signaled later by the command context when it submits the command list. So there is no
     // guarantee that the fence pool is not accessed simultaneously by multiple threads even if the
     // fence object itself is protected by mutex.
     virtual Uint64 GetCompletedValue()override final;

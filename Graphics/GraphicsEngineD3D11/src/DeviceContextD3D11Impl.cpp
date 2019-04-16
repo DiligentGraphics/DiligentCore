@@ -1746,7 +1746,7 @@ namespace Diligent
        
     void DeviceContextD3D11Impl::SignalFence(IFence* pFence, Uint64 Value)
     {
-        VERIFY(!m_bIsDeferred, "Fence can only be signalled from immediate context");
+        VERIFY(!m_bIsDeferred, "Fence can only be signaled from immediate context");
         auto* pd3d11Device = m_pDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
         D3D11_QUERY_DESC QueryDesc = {};
         QueryDesc.Query = D3D11_QUERY_EVENT; // Determines whether or not the GPU is finished processing commands.
