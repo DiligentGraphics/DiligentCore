@@ -30,13 +30,20 @@ namespace Diligent
     class TextureUploaderD3D11 : public TextureUploaderBase
     {
     public:
-        TextureUploaderD3D11(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, const TextureUploaderDesc Desc);
+        TextureUploaderD3D11(IReferenceCounters*       pRefCounters,
+                             IRenderDevice*            pDevice,
+                             const TextureUploaderDesc Desc);
         ~TextureUploaderD3D11();
-        virtual void RenderThreadUpdate(IDeviceContext *pContext)override final;
+        virtual void RenderThreadUpdate(IDeviceContext* pContext)override final;
 
-        virtual void AllocateUploadBuffer(const UploadBufferDesc& Desc, bool IsRenderThread, IUploadBuffer **ppBuffer)override final;
-        virtual void ScheduleGPUCopy(ITexture *pDstTexture, Uint32 ArraySlice, Uint32 MipLevel, IUploadBuffer *pUploadBuffer)override final;
-        virtual void RecycleBuffer(IUploadBuffer *pUploadBuffer)override final;
+        virtual void AllocateUploadBuffer(const UploadBufferDesc& Desc,
+                                          bool                    IsRenderThread,
+                                          IUploadBuffer**         ppBuffer)override final;
+        virtual void ScheduleGPUCopy(ITexture*      pDstTexture,
+                                     Uint32         ArraySlice,
+                                     Uint32         MipLevel,
+                                     IUploadBuffer* pUploadBuffer)override final;
+        virtual void RecycleBuffer(IUploadBuffer* pUploadBuffer)override final;
 
     private:
         struct InternalData;

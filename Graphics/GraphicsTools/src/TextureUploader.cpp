@@ -23,7 +23,7 @@
 
 #include "pch.h"
 #include "TextureUploaderD3D11.h"
-#include "TextureUploaderD3D12.h"
+#include "TextureUploaderD3D12_Vk.h"
 #include "TextureUploaderGL.h"
 
 namespace Diligent
@@ -38,7 +38,8 @@ namespace Diligent
                 break;
 
             case DeviceType::D3D12:
-                *ppUploader = MakeNewRCObj<TextureUploaderD3D12>()( pDevice, Desc );
+            case DeviceType::Vulkan:
+                *ppUploader = MakeNewRCObj<TextureUploaderD3D12_Vk>()( pDevice, Desc );
                 break;
 
             case DeviceType::OpenGLES:

@@ -27,10 +27,9 @@ if(D3D11_SUPPORTED)
     list(APPEND DEPENDENCIES GraphicsEngineD3D11Interface)
 endif()
 
-if(D3D12_SUPPORTED)
-    list(APPEND SOURCE src/TextureUploaderD3D12.cpp)
-    list(APPEND INCLUDE include/TextureUploaderD3D12.h)
-    list(APPEND DEPENDENCIES GraphicsEngineD3D12Interface)
+if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
+    list(APPEND SOURCE src/TextureUploaderD3D12_Vk.cpp)
+    list(APPEND INCLUDE include/TextureUploaderD3D12_Vk.h)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
