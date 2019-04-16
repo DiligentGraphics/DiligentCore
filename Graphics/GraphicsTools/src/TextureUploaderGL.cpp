@@ -81,7 +81,7 @@ public:
     }
 
 private:
-    friend class TextureUploaderGL;
+    friend TextureUploaderGL;
     ThreadingTools::Signal m_BufferMappedSignal;
     ThreadingTools::Signal m_CopyScheduledSignal;
     RefCntAutoPtr<IBuffer> m_pStagingBuffer;
