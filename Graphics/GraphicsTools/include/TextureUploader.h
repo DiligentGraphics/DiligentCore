@@ -59,14 +59,27 @@ namespace Diligent
 
     };
 
+    struct TextureUploaderStats
+    {
+        Uint32 NumPendingOperations = 0;
+    };
+
     class ITextureUploader : public IObject
     {
     public:
-        virtual void RenderThreadUpdate(IDeviceContext *pContext) = 0;
-        virtual void AllocateUploadBuffer(const UploadBufferDesc& Desc, bool IsRenderThread, IUploadBuffer **ppBuffer) = 0;
-        virtual void ScheduleGPUCopy(ITexture *pDstTexture, Uint32 ArraySlice, Uint32 MipLevel, IUploadBuffer *pUploadBuffer) = 0;
-        virtual void RecycleBuffer(IUploadBuffer *pUploadBuffer) = 0;
+        virtual void RenderThreadUpdate(IDeviceContext* pContext) = 0;
+
+        virtual void AllocateUploadBuffer(const UploadBufferDesc& Desc,
+                                          bool                    IsRenderThread,
+                                          IUploadBuffer**         ppBuffer) = 0;
+        virtual void ScheduleGPUCopy(ITexture*      pDstTexture,
+                                     Uint32         ArraySlice,
+                                     Uint32         MipLevel,
+                                     IUploadBuffer* pUploadBuffer) = 0;
+        virtual void RecycleBuffer(IUploadBuffer* pUploadBuffer) = 0;
+
+        virtual TextureUploaderStats GetStats() = 0;
     };
 
-    void CreateTextureUploader(IRenderDevice *pDevice, const TextureUploaderDesc& Desc, ITextureUploader **ppUploader);
+    void CreateTextureUploader(IRenderDevice* pDevice, const TextureUploaderDesc& Desc, ITextureUploader** ppUploader);
 }

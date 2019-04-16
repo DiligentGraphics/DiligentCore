@@ -278,4 +278,12 @@ void TextureUploaderGL::RecycleBuffer(IUploadBuffer *pUploadBuffer)
     Deque.emplace_back( pUploadBufferGL );
 }
 
+TextureUploaderStats TextureUploaderGL::GetStats()
+{
+    TextureUploaderStats Stats;
+    std::lock_guard<std::mutex> QueueLock(m_pInternalData->m_PendingOperationsMtx);
+    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.size());
+    return Stats;
+}
+
 } // namespace Diligent

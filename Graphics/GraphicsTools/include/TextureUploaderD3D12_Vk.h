@@ -45,6 +45,8 @@ namespace Diligent
                                      IUploadBuffer* pUploadBuffer)override final;
         virtual void RecycleBuffer(IUploadBuffer* pUploadBuffer)override final;
 
+        virtual TextureUploaderStats GetStats()override final;
+
     private:
         struct InternalData;
         std::unique_ptr<InternalData> m_pInternalData;

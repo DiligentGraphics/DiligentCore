@@ -334,4 +334,12 @@ void TextureUploaderD3D11::RecycleBuffer(IUploadBuffer *pUploadBuffer)
     m_pInternalData->EnqueMap(pUploadBufferD3D11, InternalData::PendingBufferOperation::MapAndCache);
 }
 
+TextureUploaderStats TextureUploaderD3D11::GetStats()
+{
+    TextureUploaderStats Stats;
+    std::lock_guard<std::mutex> QueueLock(m_pInternalData->m_PendingOperationsMtx);
+    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.size());
+    return Stats;
+}
+
 } // namespace Diligent

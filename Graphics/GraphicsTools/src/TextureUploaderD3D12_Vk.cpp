@@ -239,6 +239,12 @@ struct TextureUploaderD3D12_Vk::InternalData
         Deque.emplace_back(pUploadTexture);
     }
 
+    Uint32 GetNumPendingOperations()
+    {
+        std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
+        return static_cast<Uint32>(m_PendingOperations.size());
+    }
+
 private:
     std::mutex                          m_PendingOperationsMtx;
     std::vector<PendingBufferOperation> m_PendingOperations;
@@ -267,6 +273,7 @@ void TextureUploaderD3D12_Vk::RenderThreadUpdate(IDeviceContext* pContext)
     auto& InWorkOperations = m_pInternalData->SwapMapQueues();
     if (!InWorkOperations.empty())
     {
+        Uint32 NumCopyOperations = 0;
         for (auto& OperationInfo : InWorkOperations)
         {
             auto& pUploadTex = OperationInfo.pUploadTexture;
@@ -295,19 +302,23 @@ void TextureUploaderD3D12_Vk::RenderThreadUpdate(IDeviceContext* pContext)
                     CopyInfo.DstSlice    = OperationInfo.DstSlice;
                     CopyInfo.DstMipLevel = OperationInfo.DstMip;
                     pContext->CopyTexture(CopyInfo);
+                    ++NumCopyOperations;
                 }
                 break;
             }
         }
 
-        // The buffer may be recycled immediately after the copy scheduled is signaled,
-        // so we must signal the fence first.
-        auto SignaledFenceValue = m_pInternalData->SignalFence(pContext);
-
-        for (auto& OperationInfo : InWorkOperations)
+        if (NumCopyOperations > 0)
         {
-            if (OperationInfo.operation == InternalData::PendingBufferOperation::Copy)
-                OperationInfo.pUploadTexture->SignalCopyScheduled(SignaledFenceValue);
+            // The buffer may be recycled immediately after the copy scheduled is signaled,
+            // so we must signal the fence first.
+            auto SignaledFenceValue = m_pInternalData->SignalFence(pContext);
+
+            for (auto& OperationInfo : InWorkOperations)
+            {
+                if (OperationInfo.operation == InternalData::PendingBufferOperation::Copy)
+                    OperationInfo.pUploadTexture->SignalCopyScheduled(SignaledFenceValue);
+            }
         }
 
         InWorkOperations.clear();
@@ -360,6 +371,13 @@ void TextureUploaderD3D12_Vk::RecycleBuffer(IUploadBuffer* pUploadBuffer)
     VERIFY(pUploadTexture->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
 
     m_pInternalData->RecycleUploadTexture(pUploadTexture);
+}
+
+TextureUploaderStats TextureUploaderD3D12_Vk::GetStats()
+{
+    TextureUploaderStats Stats;
+    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->GetNumPendingOperations());
+    return Stats;
 }
 
 } // namespace Diligent
