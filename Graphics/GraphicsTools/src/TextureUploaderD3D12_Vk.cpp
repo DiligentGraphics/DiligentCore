@@ -21,9 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include "pch.h"
-
-#include <atlbase.h>
 #include <mutex>
 #include <unordered_map>
 #include <deque>
