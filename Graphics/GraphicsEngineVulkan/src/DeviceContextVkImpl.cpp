@@ -1339,7 +1339,8 @@ namespace Diligent
                 FullMipBox.MaxZ = 1;
             pSrcBox = &FullMipBox;
         }
-        const auto& FmtAttribs = GetDevice()->GetTextureFormatInfo(DstTexDesc.Format);
+        const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
+        const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
         if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING)
         {
             VkImageCopy CopyRegion = {};
@@ -1351,9 +1352,9 @@ namespace Diligent
             CopyRegion.extent.depth  = std::max(pSrcBox->MaxZ - pSrcBox->MinZ, 1u);
 
             VkImageAspectFlags aspectMask = 0;
-            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
+            if (DstFmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
                 aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-            else if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            else if (DstFmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
             {
                 aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
             }
@@ -1385,10 +1386,12 @@ namespace Diligent
             auto SrcMipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
             // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
             SrcBufferOffset +=
-                (pSrcBox->MinZ * SrcMipLevelAttribs.Height + pSrcBox->MinY) * SrcMipLevelAttribs.RowSize + 
-                (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED ?
-                    pSrcBox->MinX * FmtAttribs.ComponentSize * FmtAttribs.NumComponents :
-                    pSrcBox->MinX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize);
+                // For compressed-block formats, RowSize is the size of one compressed row.
+                // For non-compressed formats, BlockHeight is 1.
+                (pSrcBox->MinZ * SrcMipLevelAttribs.Height + pSrcBox->MinY) / SrcFmtAttribs.BlockHeight  * SrcMipLevelAttribs.RowSize + 
+                // For compressed-block formats, ComponentSize is the block size and NumComponents is 1.
+                // For non-compressed formats, BlockWidth is 1.
+                (pSrcBox->MinX / SrcFmtAttribs.BlockWidth) * SrcFmtAttribs.ComponentSize * SrcFmtAttribs.NumComponents;
 
             Box DstBox;
             DstBox.MinX = CopyAttribs.DstX;
@@ -1418,10 +1421,12 @@ namespace Diligent
             auto DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
             // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
             DstBufferOffset +=
-                (CopyAttribs.DstZ * DstMipLevelAttribs.Height + CopyAttribs.DstY) * DstMipLevelAttribs.RowSize *
-                (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED ?
-                    CopyAttribs.DstX * FmtAttribs.ComponentSize *  FmtAttribs.NumComponents : 
-                    CopyAttribs.DstX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize);
+                // For compressed-block formats, RowSize is the size of one compressed row.
+                // For non-compressed formats, BlockHeight is 1.
+                (CopyAttribs.DstZ * DstMipLevelAttribs.Height + CopyAttribs.DstY) / DstFmtAttribs.BlockHeight * DstMipLevelAttribs.RowSize *
+                // For compressed-block formats, ComponentSize is the block size and NumComponents is 1.
+                // For non-compressed formats, BlockWidth is 1.
+                (CopyAttribs.DstX / DstFmtAttribs.BlockWidth) * DstFmtAttribs.ComponentSize *  DstFmtAttribs.NumComponents;
 
             CopyTextureToBuffer(
                 *pSrcTexVk,
@@ -1763,10 +1768,12 @@ namespace Diligent
             auto MipLevelAttribs   = GetMipLevelProperties(TexDesc, MipLevel);
             // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
             auto MapStartOffset = SubresourceOffset +
-                (pMapRegion->MinZ * MipLevelAttribs.Height + pMapRegion->MinY) * MipLevelAttribs.RowSize +
-                (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED ?
-                    pMapRegion->MinX * FmtAttribs.ComponentSize * FmtAttribs.NumComponents :
-                    pMapRegion->MinX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize);
+                // For compressed-block formats, RowSize is the size of one compressed row.
+                // For non-compressed formats, BlockHeight is 1.
+                (pMapRegion->MinZ * MipLevelAttribs.Height + pMapRegion->MinY) / FmtAttribs.BlockHeight * MipLevelAttribs.RowSize +
+                // For compressed-block formats, ComponentSize is the block size and NumComponents is 1.
+                // For non-compressed formats, BlockWidth is 1.
+                pMapRegion->MinX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
 
             MappedData.pData = TextureVk.GetStagingDataCPUAddress() + MapStartOffset;
             MappedData.Stride = MipLevelAttribs.RowSize;
@@ -1779,10 +1786,8 @@ namespace Diligent
                 // to make device writes visible to CPU reads
                 VERIFY_EXPR(pMapRegion->MaxZ >= 1 && pMapRegion->MaxY >= 1);
                 auto MapEndOffset = SubresourceOffset +
-                    ((pMapRegion->MaxZ-1) * MipLevelAttribs.Height + (pMapRegion->MaxY-1)) * MipLevelAttribs.RowSize +
-                    (FmtAttribs.ComponentType != COMPONENT_TYPE_COMPRESSED ?
-                        pMapRegion->MaxX * FmtAttribs.ComponentSize * FmtAttribs.NumComponents :
-                        pMapRegion->MaxX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize);
+                    ((pMapRegion->MaxZ-1) * MipLevelAttribs.Height + (pMapRegion->MaxY-FmtAttribs.BlockHeight)) / FmtAttribs.BlockHeight * MipLevelAttribs.RowSize +
+                    (pMapRegion->MaxX / FmtAttribs.BlockWidth) * FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
                 TextureVk.InvalidateStagingRange(MapStartOffset, MapEndOffset - MapStartOffset);
             }
             else if (MapType == MAP_WRITE)
