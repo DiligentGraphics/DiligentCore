@@ -1389,9 +1389,8 @@ namespace Diligent
                 // For compressed-block formats, RowSize is the size of one compressed row.
                 // For non-compressed formats, BlockHeight is 1.
                 (pSrcBox->MinZ * SrcMipLevelAttribs.Height + pSrcBox->MinY) / SrcFmtAttribs.BlockHeight  * SrcMipLevelAttribs.RowSize + 
-                // For compressed-block formats, ComponentSize is the block size and NumComponents is 1.
                 // For non-compressed formats, BlockWidth is 1.
-                (pSrcBox->MinX / SrcFmtAttribs.BlockWidth) * SrcFmtAttribs.ComponentSize * SrcFmtAttribs.NumComponents;
+                (pSrcBox->MinX / SrcFmtAttribs.BlockWidth) * SrcFmtAttribs.GetElementSize();
 
             Box DstBox;
             DstBox.MinX = CopyAttribs.DstX;
@@ -1424,9 +1423,8 @@ namespace Diligent
                 // For compressed-block formats, RowSize is the size of one compressed row.
                 // For non-compressed formats, BlockHeight is 1.
                 (CopyAttribs.DstZ * DstMipLevelAttribs.Height + CopyAttribs.DstY) / DstFmtAttribs.BlockHeight * DstMipLevelAttribs.RowSize *
-                // For compressed-block formats, ComponentSize is the block size and NumComponents is 1.
                 // For non-compressed formats, BlockWidth is 1.
-                (CopyAttribs.DstX / DstFmtAttribs.BlockWidth) * DstFmtAttribs.ComponentSize *  DstFmtAttribs.NumComponents;
+                (CopyAttribs.DstX / DstFmtAttribs.BlockWidth) * DstFmtAttribs.GetElementSize();
 
             CopyTextureToBuffer(
                 *pSrcTexVk,
@@ -1771,9 +1769,8 @@ namespace Diligent
                 // For compressed-block formats, RowSize is the size of one compressed row.
                 // For non-compressed formats, BlockHeight is 1.
                 (pMapRegion->MinZ * MipLevelAttribs.Height + pMapRegion->MinY) / FmtAttribs.BlockHeight * MipLevelAttribs.RowSize +
-                // For compressed-block formats, ComponentSize is the block size and NumComponents is 1.
                 // For non-compressed formats, BlockWidth is 1.
-                pMapRegion->MinX / FmtAttribs.BlockWidth * FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+                pMapRegion->MinX / FmtAttribs.BlockWidth * FmtAttribs.GetElementSize();
 
             MappedData.pData = TextureVk.GetStagingDataCPUAddress() + MapStartOffset;
             MappedData.Stride = MipLevelAttribs.RowSize;
@@ -1787,7 +1784,7 @@ namespace Diligent
                 VERIFY_EXPR(pMapRegion->MaxZ >= 1 && pMapRegion->MaxY >= 1);
                 auto MapEndOffset = SubresourceOffset +
                     ((pMapRegion->MaxZ-1) * MipLevelAttribs.Height + (pMapRegion->MaxY-FmtAttribs.BlockHeight)) / FmtAttribs.BlockHeight * MipLevelAttribs.RowSize +
-                    (pMapRegion->MaxX / FmtAttribs.BlockWidth) * FmtAttribs.ComponentSize * FmtAttribs.NumComponents;
+                    (pMapRegion->MaxX / FmtAttribs.BlockWidth) * FmtAttribs.GetElementSize();
                 TextureVk.InvalidateStagingRange(MapStartOffset, MapEndOffset - MapStartOffset);
             }
             else if (MapType == MAP_WRITE)

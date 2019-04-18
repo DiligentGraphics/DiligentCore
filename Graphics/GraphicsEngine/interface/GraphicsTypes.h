@@ -1622,6 +1622,13 @@ namespace Diligent
         /// For block-compressed formats, compression block height
         Uint8 BlockHeight;
 
+        /// For non-compressed formats, returns the texel size.
+        /// For block-compressed formats, returns the block size.
+        Uint32 GetElementSize() const
+        {
+            return Uint32{ComponentSize} * (ComponentType != COMPONENT_TYPE_COMPRESSED ? Uint32{NumComponents} : Uint32{1});
+        }
+
         /// Initializes the structure
         TextureFormatAttribs( const Char*    _Name,
                               TEXTURE_FORMAT _Format, 

@@ -195,12 +195,8 @@ void TextureUploaderGL::RenderThreadUpdate(IDeviceContext *pContext)
                         BuffDesc.Usage          = USAGE_STAGING;
 
                         const auto &TexFmtInfo = m_pDevice->GetTextureFormatInfo(Desc.Format);
-                        RowStride = Desc.Width * Uint32{TexFmtInfo.ComponentSize} * Uint32{TexFmtInfo.NumComponents};
-                        const Uint32 Alignment = 16;
-                        const Uint32 AlignmentMask = Alignment-1;
-                        RowStride = (RowStride + AlignmentMask) & (~AlignmentMask);
-
-                        BuffDesc.uiSizeInBytes = Desc.Height * RowStride;
+                        RowStride = Desc.Width / Uint32{TexFmtInfo.BlockWidth} * TexFmtInfo.GetElementSize();
+                        BuffDesc.uiSizeInBytes = Desc.Height / Uint32{TexFmtInfo.BlockHeight} * RowStride;
                         RefCntAutoPtr<IBuffer> pStagingBuffer;
                         m_pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer->m_pStagingBuffer);
                     }
