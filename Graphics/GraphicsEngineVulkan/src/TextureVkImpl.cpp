@@ -30,36 +30,10 @@
 #include "VulkanTypeConversions.h"
 #include "EngineMemory.h"
 #include "StringTools.h"
+#include "GraphicsAccessories.h"
 
 namespace Diligent
 {
-
-MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel)
-{
-    MipLevelProperties MipProps;
-    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-
-    MipProps.Width  = std::max(TexDesc.Width  >> MipLevel, 1u);
-    MipProps.Height = std::max(TexDesc.Height >> MipLevel, 1u);
-    MipProps.Depth  = (TexDesc.Type == RESOURCE_DIM_TEX_3D) ? std::max(TexDesc.Depth >> MipLevel, 1u) : 1u;
-    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
-    {
-        VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);
-        VERIFY((FmtAttribs.BlockWidth  & (FmtAttribs.BlockWidth-1))  == 0, "Compressed block widht is expected to be power of 2");
-        VERIFY((FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block widht is expected to be power of 2");
-        // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
-        MipProps.Width   = Align(MipProps.Width, Uint32{FmtAttribs.BlockWidth});
-        MipProps.Height  = Align(MipProps.Height,Uint32{FmtAttribs.BlockHeight});
-        MipProps.RowSize = MipProps.Width / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
-    }
-    else
-    {
-        MipProps.RowSize = MipProps.Width * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
-    }
-    MipProps.MipSize = MipProps.RowSize * MipProps.Height * MipProps.Depth;
-
-    return MipProps;
-}
 
 TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters, 
                                FixedBlockMemoryAllocator&   TexViewObjAllocator,

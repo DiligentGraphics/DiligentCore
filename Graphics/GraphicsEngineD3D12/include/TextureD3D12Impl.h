@@ -72,6 +72,13 @@ public:
 
     D3D12_RESOURCE_DESC GetD3D12TextureDesc()const;
 
+    const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& GetStagingFootprint(Uint32 Subresource)
+    {
+        VERIFY_EXPR(m_StagingFootprints != nullptr);
+        VERIFY_EXPR(Subresource <= (Uint32{m_Desc.MipLevels} * (m_Desc.Type == RESOURCE_DIM_TEX_3D ? 1 : Uint32{m_Desc.ArraySize})));
+        return m_StagingFootprints[Subresource];
+    }
+
 protected:
     void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override final;
     //void PrepareD3D12InitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<D3D12_SUBRESOURCE_DATA> &D3D12InitData);
@@ -80,6 +87,8 @@ protected:
     void CreateRTV( TextureViewDesc &RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle );
     void CreateDSV( TextureViewDesc &DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle );
     void CreateUAV( TextureViewDesc &UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle );
+
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT* m_StagingFootprints = nullptr;
 
     friend class RenderDeviceD3D12Impl;
 };

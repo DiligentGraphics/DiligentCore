@@ -21,9 +21,11 @@
  *  of the possibility of such damages.
  */
 
+#include <algorithm>
+
 #include "GraphicsAccessories.h"
 #include "DebugUtilities.h"
-#include <algorithm>
+#include "Align.h"
 
 namespace Diligent
 {
@@ -932,6 +934,36 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
     }
     
     return true;
+}
+
+MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel)
+{
+    MipLevelProperties MipProps;
+    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+
+    MipProps.Width  = std::max(TexDesc.Width  >> MipLevel, 1u);
+    MipProps.Height = std::max(TexDesc.Height >> MipLevel, 1u);
+    MipProps.Depth  = (TexDesc.Type == RESOURCE_DIM_TEX_3D) ? std::max(TexDesc.Depth >> MipLevel, 1u) : 1u;
+    if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+    {
+        VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);
+        VERIFY((FmtAttribs.BlockWidth  & (FmtAttribs.BlockWidth-1))  == 0, "Compressed block width is expected to be power of 2");
+        VERIFY((FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height is expected to be power of 2");
+        // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
+        MipProps.Width          = Align(MipProps.Width, Uint32{FmtAttribs.BlockWidth});
+        MipProps.Height         = Align(MipProps.Height,Uint32{FmtAttribs.BlockHeight});
+        MipProps.RowSize        = MipProps.Width  / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
+        MipProps.DepthSliceSize = MipProps.Height / Uint32{FmtAttribs.BlockHeight} * MipProps.RowSize;
+        MipProps.MipSize        = MipProps.DepthSliceSize * MipProps.Depth;
+    }
+    else
+    {
+        MipProps.RowSize        = MipProps.Width * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        MipProps.DepthSliceSize = MipProps.RowSize * MipProps.Height;
+        MipProps.MipSize        = MipProps.DepthSliceSize * MipProps.Depth;
+    }
+
+    return MipProps;
 }
 
 }

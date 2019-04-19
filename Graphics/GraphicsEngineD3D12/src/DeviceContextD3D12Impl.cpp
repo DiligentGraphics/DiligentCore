@@ -1139,17 +1139,7 @@ namespace Diligent
         if (pSrcTexture->GetDesc().Usage == USAGE_STAGING)
         {
             SrcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            auto d3d12TexDesc = pSrcTexture->GetD3D12TextureDesc();
-            auto* pd3d12Device = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetD3D12Device();
-            pd3d12Device->GetCopyableFootprints(&d3d12TexDesc,
-              SrcSubResIndex,
-              1, // Num subresources
-              0, // The offset, in bytes, to the resource.
-              &SrcLocation.PlacedFootprint,
-              nullptr,
-              nullptr,
-              nullptr
-            );
+            SrcLocation.PlacedFootprint = pSrcTexture->GetStagingFootprint(SrcSubResIndex);
         }
         else
         {
@@ -1161,17 +1151,7 @@ namespace Diligent
         if (pDstTexture->GetDesc().Usage == USAGE_STAGING)
         {
             DstLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-            auto d3d12TexDesc = pDstTexture->GetD3D12TextureDesc();
-            auto* pd3d12Device = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetD3D12Device();
-            pd3d12Device->GetCopyableFootprints(&d3d12TexDesc,
-              DstSubResIndex,
-              1, // Num subresources
-              0, // The offset, in bytes, to the resource.
-              &DstLocation.PlacedFootprint,
-              nullptr,
-              nullptr,
-              nullptr
-            );
+            DstLocation.PlacedFootprint = pDstTexture->GetStagingFootprint(DstSubResIndex);
         }
         else
         {
@@ -1436,21 +1416,8 @@ namespace Diligent
                                          "access and map texture with MAP_FLAG_DO_NOT_SYNCHRONIZE flag.");
             }
 
-            auto d3d12TexDesc = TextureD3D12.GetD3D12TextureDesc();
-            auto* pd3d12Device = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetD3D12Device();
-            D3D12_PLACED_SUBRESOURCE_FOOTPRINT Footprint = {};
-            UINT64 TotalBytes = 0;
-            UINT NumRows = 0;
-            pd3d12Device->GetCopyableFootprints(&d3d12TexDesc,
-              Subres,
-              1, // Num subresources
-              0, // The offset, in bytes, to the resource.
-              &Footprint,
-              &NumRows,
-              nullptr,
-              &TotalBytes
-            );
-            
+            const auto& Footprint = TextureD3D12.GetStagingFootprint(Subres);
+           
             // It is valid to specify the CPU won't read any data by passing a range where
             // End is less than or equal to Begin.
             // https://docs.microsoft.com/en-us/windows/desktop/api/d3d12/nf-d3d12-id3d12resource-map
@@ -1460,7 +1427,8 @@ namespace Diligent
                 DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");
                 // Resources on D3D12_HEAP_TYPE_READBACK heaps do not support persistent map.
                 InvalidateRange.Begin = static_cast<SIZE_T>(Footprint.Offset);
-                InvalidateRange.End   = static_cast<SIZE_T>(Footprint.Offset + TotalBytes);
+                const auto& NextFootprint = TextureD3D12.GetStagingFootprint(Subres+1);
+                InvalidateRange.End   = static_cast<SIZE_T>(NextFootprint.Offset);
             }
             else if (MapType == MAP_WRITE)
             {
@@ -1473,9 +1441,12 @@ namespace Diligent
 
             // Map() invalidates the CPU cache, when necessary, so that CPU reads to this address
             // reflect any modifications made by the GPU.
-            TextureD3D12.GetD3D12Resource()->Map(0, &InvalidateRange, &MappedData.pData);
+            void* pMappedDataPtr = nullptr;
+            TextureD3D12.GetD3D12Resource()->Map(0, &InvalidateRange, &pMappedDataPtr);
+            MappedData.pData       = reinterpret_cast<Uint8*>(pMappedDataPtr) + Footprint.Offset;
             MappedData.Stride      = static_cast<Uint32>(Footprint.Footprint.RowPitch);
-            MappedData.DepthStride = static_cast<Uint32>(Footprint.Footprint.RowPitch * NumRows);
+            const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+            MappedData.DepthStride = static_cast<Uint32>(Footprint.Footprint.Height / FmtAttribs.BlockHeight * Footprint.Footprint.RowPitch);
         }
         else
         {
@@ -1521,21 +1492,10 @@ namespace Diligent
 
             if (TexDesc.CPUAccessFlags == CPU_ACCESS_WRITE)
             {
-                auto d3d12TexDesc = TextureD3D12.GetD3D12TextureDesc();
-                auto* pd3d12Device = m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->GetD3D12Device();
-                D3D12_PLACED_SUBRESOURCE_FOOTPRINT Footprint = {};
-                UINT64 TotalBytes = 0;
-                pd3d12Device->GetCopyableFootprints(&d3d12TexDesc,
-                  Subres,
-                  1, // Num subresources
-                  0, // The offset, in bytes, to the resource.
-                  &Footprint,
-                  nullptr,
-                  nullptr,
-                  &TotalBytes
-                );
+                const auto& Footprint     = TextureD3D12.GetStagingFootprint(Subres);
+                const auto& NextFootprint = TextureD3D12.GetStagingFootprint(Subres+1);
                 FlushRange.Begin = static_cast<SIZE_T>(Footprint.Offset);
-                FlushRange.End   = static_cast<SIZE_T>(Footprint.Offset + TotalBytes);
+                FlushRange.End   = static_cast<SIZE_T>(NextFootprint.Offset);
             }
 
             // Map and Unmap can be called by multiple threads safely. Nested Map calls are supported 

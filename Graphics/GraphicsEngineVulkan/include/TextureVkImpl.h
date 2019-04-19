@@ -38,16 +38,6 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-struct MipLevelProperties
-{
-    Uint32 Width   = 0;
-    Uint32 Height  = 0;
-    Uint32 Depth   = 1;
-    Uint32 RowSize = 0;
-    Uint32 MipSize = 0;
-};
-
-MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);
 Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel);
 
 /// Base implementation of the Diligent::ITextureVk interface

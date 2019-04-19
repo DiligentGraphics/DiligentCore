@@ -298,7 +298,9 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
 
 	    UINT64 stagingBufferSize = 0;
         Uint32 NumSubresources = Uint32{Desc.MipLevels} * (Desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D ? 1 : Uint32{Desc.DepthOrArraySize});
-        pd3d12Device->GetCopyableFootprints(&Desc, 0, NumSubresources, 0, nullptr, nullptr, nullptr, &stagingBufferSize);
+        m_StagingFootprints = ALLOCATE(GetRawAllocator(), "Memory for staging footprints", D3D12_PLACED_SUBRESOURCE_FOOTPRINT, NumSubresources+1);
+        pd3d12Device->GetCopyableFootprints(&Desc, 0, NumSubresources, 0, m_StagingFootprints, nullptr, nullptr, &stagingBufferSize);
+        m_StagingFootprints[NumSubresources] = D3D12_PLACED_SUBRESOURCE_FOOTPRINT{stagingBufferSize};
 
 	    D3D12_RESOURCE_DESC BufferDesc;
 	    BufferDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -495,6 +497,10 @@ TextureD3D12Impl :: ~TextureD3D12Impl()
     // D3D12 object can only be destroyed when it is no longer used by the GPU
     auto *pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());
     pDeviceD3D12Impl->SafeReleaseDeviceObject(std::move(m_pd3d12Resource), m_Desc.CommandQueueMask);
+    if (m_StagingFootprints != nullptr)
+    {
+        FREE(GetRawAllocator(), m_StagingFootprints);
+    }
 }
 
 void TextureD3D12Impl::CreateSRV( TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle )

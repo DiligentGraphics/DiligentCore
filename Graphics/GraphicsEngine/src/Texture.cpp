@@ -238,18 +238,10 @@ void ValidateCopyTextureParams(const CopyTextureAttribs& CopyAttribs )
     auto pSrcBox = CopyAttribs.pSrcBox;
     if( pSrcBox == nullptr )
     {
-        SrcBox.MaxX = std::max( SrcTexDesc.Width >> CopyAttribs.SrcMipLevel, 1u );
-        if( SrcTexDesc.Type == RESOURCE_DIM_TEX_1D || 
-            SrcTexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY )
-            SrcBox.MaxY = 1;
-        else
-            SrcBox.MaxY = std::max( SrcTexDesc.Height >> CopyAttribs.SrcMipLevel, 1u );
-
-        if( SrcTexDesc.Type == RESOURCE_DIM_TEX_3D )
-            SrcBox.MaxZ = std::max( SrcTexDesc.Depth >> CopyAttribs.SrcMipLevel, 1u );
-        else
-            SrcBox.MaxZ = 1;
-
+        auto MipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
+        SrcBox.MaxX = MipLevelAttribs.Width;
+        SrcBox.MaxY = MipLevelAttribs.Height;
+        SrcBox.MaxZ = MipLevelAttribs.Depth;
         pSrcBox = &SrcBox;
     }
     ValidateTextureRegion(SrcTexDesc, CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, *pSrcBox);

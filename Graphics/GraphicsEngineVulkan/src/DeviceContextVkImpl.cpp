@@ -31,6 +31,7 @@
 #include "BufferVkImpl.h"
 #include "VulkanTypeConversions.h"
 #include "CommandListVkImpl.h"
+#include "GraphicsAccessories.h"
 
 namespace Diligent
 {
@@ -1331,12 +1332,10 @@ namespace Diligent
         Box FullMipBox;
         if (pSrcBox == nullptr)
         {
-            FullMipBox.MaxX = std::max(DstTexDesc.Width  >> CopyAttribs.SrcMipLevel, 1u);
-            FullMipBox.MaxY = std::max(DstTexDesc.Height >> CopyAttribs.SrcMipLevel, 1u);
-            if(DstTexDesc.Type == RESOURCE_DIM_TEX_3D)
-                FullMipBox.MaxZ = std::max(DstTexDesc.Depth >> CopyAttribs.SrcMipLevel, 1u);
-            else
-                FullMipBox.MaxZ = 1;
+            auto MipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
+            FullMipBox.MaxX = MipLevelAttribs.Width;
+            FullMipBox.MaxY = MipLevelAttribs.Height;
+            FullMipBox.MaxZ = MipLevelAttribs.Depth;
             pSrcBox = &FullMipBox;
         }
         const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
@@ -1714,10 +1713,10 @@ namespace Diligent
         Box FullExtentBox;
         if (pMapRegion == nullptr)
         {
-            FullExtentBox.MaxX = std::max(TexDesc.Width  >> MipLevel, 1u);
-            FullExtentBox.MaxY = std::max(TexDesc.Height >> MipLevel, 1u);
-            if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
-                FullExtentBox.MaxZ = std::max(TexDesc.Depth >> MipLevel, 1u);
+            auto MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
+            FullExtentBox.MaxX = MipLevelAttribs.Width;
+            FullExtentBox.MaxY = MipLevelAttribs.Height;
+            FullExtentBox.MaxZ = MipLevelAttribs.Depth;
             pMapRegion = &FullExtentBox;
         }
 
@@ -1774,7 +1773,7 @@ namespace Diligent
 
             MappedData.pData = TextureVk.GetStagingDataCPUAddress() + MapStartOffset;
             MappedData.Stride = MipLevelAttribs.RowSize;
-            MappedData.DepthStride = MipLevelAttribs.RowSize * MipLevelAttribs.Height;
+            MappedData.DepthStride = MipLevelAttribs.DepthSliceSize;
 
             if (MapType == MAP_READ)
             {
