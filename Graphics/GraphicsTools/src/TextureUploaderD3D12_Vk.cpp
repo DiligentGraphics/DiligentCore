@@ -49,7 +49,13 @@ public:
 
     ~UploadTexture()
     {
-        DEV_CHECK_ERR(m_pData == nullptr, "Releasing mapped staging texture");
+        for (Uint32 Slice = 0; Slice < m_Desc.ArraySize; ++Slice)
+        {
+            for (Uint32 Mip = 0; Mip < m_Desc.MipLevels; ++Mip)
+            {
+                DEV_CHECK_ERR(!IsMapped(Mip, Slice), "Releasing mapped staging texture");
+            }
+        }
     }
 
     void WaitForMap()
@@ -68,22 +74,19 @@ public:
         m_CopyScheduledSignal.Trigger();
     }
 
-    void Unmap(IDeviceContext* pDeviceContext)
+    void Unmap(IDeviceContext* pDeviceContext, Uint32 Mip, Uint32 Slice)
     {
-        pDeviceContext->UnmapTextureSubresource(m_pStagingTexture, 0, 0);
-        m_pData       = nullptr;
-        m_RowStride   = 0;
-        m_DepthStride = 0;
+        VERIFY(IsMapped(Mip, Slice), "This subresource is not mapped");
+        pDeviceContext->UnmapTextureSubresource(m_pStagingTexture, Mip, Slice);
+        SetMappedData(Mip, Slice, MappedTextureSubresource{});
     }
 
-    void Map(IDeviceContext* pDeviceContext)
+    void Map(IDeviceContext* pDeviceContext, Uint32 Mip, Uint32 Slice)
     {
-        VERIFY(m_pData == nullptr, "Staging texture is already mapped");
+        VERIFY(!IsMapped(Mip, Slice), "This subresource is already mapped");
         MappedTextureSubresource MappedData;
-        pDeviceContext->MapTextureSubresource(m_pStagingTexture, 0, 0, MAP_WRITE, MAP_FLAG_DO_NOT_SYNCHRONIZE, nullptr, MappedData);
-        m_pData       = MappedData.pData;
-        m_RowStride   = MappedData.Stride;
-        m_DepthStride = MappedData.DepthStride;
+        pDeviceContext->MapTextureSubresource(m_pStagingTexture, Mip, Slice, MAP_WRITE, MAP_FLAG_DO_NOT_SYNCHRONIZE, nullptr, MappedData);
+        SetMappedData(Mip, Slice, MappedData);
     }
 
     void Reset()
@@ -91,6 +94,7 @@ public:
         m_CopyScheduledSignal.Reset();
         m_TextureMappedSignal.Reset();
         m_CopyScheduledFenceValue = 0;
+        UploadBufferBase::Reset();
     }
 
     virtual void WaitForCopyScheduled()override final
@@ -286,12 +290,19 @@ void TextureUploaderD3D12_Vk::RenderThreadUpdate(IDeviceContext* pContext)
         for (auto& OperationInfo : InWorkOperations)
         {
             auto& pUploadTex = OperationInfo.pUploadTexture;
+            const auto& StagingTexDesc = pUploadTex->GetDesc();
 
             switch (OperationInfo.operation)
             {
                 case InternalData::PendingBufferOperation::Map:
                 {
-                    pUploadTex->Map(pContext);
+                    for (Uint32 Slice = 0; Slice < StagingTexDesc.ArraySize; ++Slice)
+                    {
+                        for (Uint32 Mip = 0; Mip < StagingTexDesc.MipLevels; ++Mip)
+                        {
+                            pUploadTex->Map(pContext, Mip, Slice);
+                        }
+                    }
                     pUploadTex->SignalMapped();
                 }
                 break;
@@ -299,18 +310,26 @@ void TextureUploaderD3D12_Vk::RenderThreadUpdate(IDeviceContext* pContext)
                 case InternalData::PendingBufferOperation::Copy:
                 {
                     VERIFY(pUploadTex->DbgIsMapped(), "Upload texture must be copied only after it has been mapped");
-                    pUploadTex->Unmap(pContext);
-
-                    CopyTextureAttribs CopyInfo
+                    for (Uint32 Slice = 0; Slice < StagingTexDesc.ArraySize; ++Slice)
                     {
-                        pUploadTex->GetStagingTexture(),
-                        RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                        OperationInfo.pDstTexture,
-                        RESOURCE_STATE_TRANSITION_MODE_TRANSITION
-                    };
-                    CopyInfo.DstSlice    = OperationInfo.DstSlice;
-                    CopyInfo.DstMipLevel = OperationInfo.DstMip;
-                    pContext->CopyTexture(CopyInfo);
+                        for (Uint32 Mip = 0; Mip < StagingTexDesc.MipLevels; ++Mip)
+                        {
+                            pUploadTex->Unmap(pContext, Mip, Slice);
+
+                            CopyTextureAttribs CopyInfo
+                            {
+                                pUploadTex->GetStagingTexture(),
+                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                                OperationInfo.pDstTexture,
+                                RESOURCE_STATE_TRANSITION_MODE_TRANSITION
+                            };
+                            CopyInfo.SrcMipLevel = Mip;
+                            CopyInfo.SrcSlice    = Slice;
+                            CopyInfo.DstMipLevel = OperationInfo.DstMip   + Mip;
+                            CopyInfo.DstSlice    = OperationInfo.DstSlice + Slice;
+                            pContext->CopyTexture(CopyInfo);
+                        }
+                    }
                     ++NumCopyOperations;
                 }
                 break;
@@ -349,13 +368,15 @@ void TextureUploaderD3D12_Vk::AllocateUploadBuffer(const UploadBufferDesc& Desc,
         StagingTexDesc.Width          = Desc.Width;
         StagingTexDesc.Height         = Desc.Height;
         StagingTexDesc.Format         = Desc.Format;
+        StagingTexDesc.MipLevels      = Desc.MipLevels;
         StagingTexDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
         StagingTexDesc.Usage          = USAGE_STAGING;
 
         RefCntAutoPtr<ITexture> pStagingTexture;
         m_pDevice->CreateTexture(StagingTexDesc, nullptr, &pStagingTexture);
 
-        LOG_INFO_MESSAGE("Created ", Desc.Width, "x", Desc.Height, " ", GetTextureFormatAttribs(Desc.Format).Name, " staging texture");
+        LOG_INFO_MESSAGE("Created ", Desc.Width, "x", Desc.Height, 'x', Desc.Depth, ' ', Desc.MipLevels,  "-mip ",
+                          GetTextureFormatAttribs(Desc.Format).Name, " staging texture");
 
         pUploadTexture = MakeNewRCObj<UploadTexture>()(Desc, pStagingTexture);
     }

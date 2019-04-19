@@ -30,10 +30,12 @@ namespace Diligent
 {
     struct UploadBufferDesc
     {
-        Uint32         Width  = 0;
-        Uint32         Height = 0;
-        Uint32         Depth  = 1;
-        TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
+        Uint32         Width       = 0;
+        Uint32         Height      = 0;
+        Uint32         Depth       = 1;
+        Uint32         MipLevels   = 1;
+        Uint32         ArraySize   = 1;
+        TEXTURE_FORMAT Format      = TEX_FORMAT_UNKNOWN;
 
         bool operator == (const UploadBufferDesc &rhs) const
         {
@@ -48,9 +50,7 @@ namespace Diligent
     {
     public:
         virtual void WaitForCopyScheduled() = 0;
-        virtual void* GetDataPtr() = 0;
-        virtual size_t GetRowStride()  const = 0;
-        virtual size_t GetDepthStride()const = 0;
+        virtual MappedTextureSubresource GetMappedData(Uint32 Mip, Uint32 Slice) = 0;
         virtual const UploadBufferDesc& GetDesc()const = 0;
     };
 
