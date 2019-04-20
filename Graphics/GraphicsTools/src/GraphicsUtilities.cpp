@@ -22,11 +22,13 @@
  */
 
 #include "pch.h"
+#include <algorithm>
+#include <cmath>
+
 #include "GraphicsUtilities.h"
 #include "DebugUtilities.h"
 #include "GraphicsAccessories.h"
-#include <algorithm>
-#include <cmath>
+#include "ColorConversion.h"
 
 #define PI_F 3.1415926f
 
@@ -64,16 +66,6 @@ void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FO
     }
 }
 
-static float LinearToSRGB(float x)
-{
-    // This is exactly the sRGB curve
-    //return x < 0.0031308 ? 12.92 * x : 1.055 * pow(std::abs(x), 1.0 / 2.4) - 0.055;
-
-    // This is cheaper but nearly equivalent
-    return x < 0.0031308f ? 12.92f * x : 1.13005f * sqrtf(std::abs(x - 0.00228f)) - 0.13448f * x + 0.005719f;
-}
-
-
 void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8 *pData, Uint32 StrideInBytes)
 {
     const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
@@ -94,7 +86,7 @@ void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt
         GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
             [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
             {
-                Uint8 uVal = static_cast<Uint8>(  LinearToSRGB(fVal) * 255.f);
+                Uint8 uVal = static_cast<Uint8>(  FastLinearToSRGB(fVal) * 255.f);
                 for (Uint32 c = 0; c < NumComponents; ++c)
                     pDstTexel[c] = uVal;
             });

@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.6)
 project(GraphicsAccessories CXX)
 
 set(INTERFACE 
+    interface/ColorConversion.h
     interface/GraphicsAccessories.h
     interface/ResourceReleaseQueue.h
     interface/RingBuffer.h
@@ -11,7 +12,8 @@ set(INTERFACE
     interface/VariableSizeGPUAllocationsManager.h
 )
 
-set(SOURCE 
+set(SOURCE
+    src/ColorConversion.cpp
     src/SRBMemoryAllocator.cpp
     src/GraphicsAccessories.cpp
 )
