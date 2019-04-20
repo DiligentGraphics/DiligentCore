@@ -32,6 +32,19 @@
 
 namespace Diligent
 {
-void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name, IBuffer **ppBuffer, USAGE Usage = USAGE_DYNAMIC, BIND_FLAGS BindFlag = BIND_UNIFORM_BUFFER, CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_WRITE );
-void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8 *pData, Uint32 StrideInBytes );
+void CreateUniformBuffer(IRenderDevice*    pDevice,
+                         Uint32            Size,
+                         const Char*       Name,
+                         IBuffer**         ppBuffer,
+                         USAGE             Usage          = USAGE_DYNAMIC,
+                         BIND_FLAGS        BindFlag       = BIND_UNIFORM_BUFFER,
+                         CPU_ACCESS_FLAGS  CPUAccessFlags = CPU_ACCESS_WRITE);
+
+void GenerateCheckerBoardPattern(Uint32         Width,
+                                 Uint32         Height,
+                                 TEXTURE_FORMAT Fmt,
+                                 Uint32         HorzCells,
+                                 Uint32         VertCells,
+                                 Uint8*         pData,
+                                 Uint32         StrideInBytes);
 }
