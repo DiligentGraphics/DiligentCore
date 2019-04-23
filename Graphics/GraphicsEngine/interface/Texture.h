@@ -229,7 +229,7 @@ struct TextureSubResData
     TextureSubResData()noexcept{}
     
     /// Initializes the structure members to perform copy from the CPU memory
-    TextureSubResData(void* _pData, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
+    TextureSubResData(const void* _pData, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
         pData       (_pData),
         pSrcBuffer  (nullptr),
         SrcOffset   (0),

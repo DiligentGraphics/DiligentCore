@@ -191,6 +191,16 @@ template <class T> struct Vector2
 
     Vector2() : x(0), y(0) { }
     Vector2(T _x, T _y) : x(_x), y(_y) { }
+
+    template<typename Y>
+    static Vector2 MakeVector(Y it)
+    {
+        return Vector2
+        {
+            static_cast<T>(*it++),
+            static_cast<T>(*it++)
+        };
+    }
 };
 
 template <class T>
@@ -364,6 +374,17 @@ template <class T> struct Vector3
 
     Vector3() : x(0), y(0), z(0) {}
     Vector3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) { }
+
+    template<typename Y>
+    static Vector3 MakeVector(Y it)
+    {
+        return Vector3
+        {
+            static_cast<T>(*it++),
+            static_cast<T>(*it++),
+            static_cast<T>(*it++)
+        };
+    }
 
     operator Vector2<T>()const{return Vector2<T>(x,y);}
 };
@@ -560,6 +581,18 @@ template <class T> struct Vector4
     Vector4(T _x, T _y, T _z, T _w) : x(_x), y(_y), z(_z), w(_w) { }
     Vector4(const Vector3<T>& v3, T _w) :  x(v3.x), y(v3.y), z(v3.z), w(_w) { }
 
+    template<typename Y>
+    static Vector4 MakeVector(Y it)
+    {
+        return Vector4
+        {
+            static_cast<T>(*it++),
+            static_cast<T>(*it++),
+            static_cast<T>(*it++),
+            static_cast<T>(*it++)
+        };
+    }
+
     operator Vector3<T>() const
     {
         return Vector3<T>(x, y, z);
@@ -605,6 +638,16 @@ template <class T> struct Matrix2x2
     {
         _11 = i11; _12 = i12;
         _21 = i21; _22 = i22;
+    }
+
+    template<typename Y>
+    static Matrix2x2 MakeMatrix(Y it)
+    {
+        return Matrix2x2
+        {
+            static_cast<T>(*it++), static_cast<T>(*it++),
+            static_cast<T>(*it++), static_cast<T>(*it++)
+        };
     }
 
     bool operator == (const Matrix2x2 &r)const
@@ -678,6 +721,17 @@ template <class T> struct Matrix3x3
         _11 = i11; _12 = i12; _13 = i13;
         _21 = i21; _22 = i22; _23 = i23;
         _31 = i31; _32 = i32; _33 = i33;
+    }
+
+    template<typename Y>
+    static Matrix3x3 MakeMatrix(Y it)
+    {
+        return Matrix3x3
+        {
+            static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
+            static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
+            static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++)
+        };
     }
 
     bool operator == (const Matrix3x3 &r)const
@@ -756,6 +810,18 @@ template <class T> struct Matrix4x4
         _21 = i21; _22 = i22; _23 = i23; _24 = i24;
         _31 = i31; _32 = i32; _33 = i33; _34 = i34;
         _41 = i41; _42 = i42; _43 = i43; _44 = i44;
+    }
+
+    template<typename Y>
+    static Matrix4x4 MakeMatrix(Y it)
+    {
+        return Matrix4x4
+        {
+            static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
+            static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
+            static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
+            static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++)
+        };
     }
 
     bool operator == (const Matrix4x4 &r)const
@@ -1081,6 +1147,12 @@ inline float4x4 scaleMatrix(float x, float y, float z)
                     0, 0, 0, 1);
 }
 
+inline float4x4 scaleMatrix(const float3 &v)
+{
+    return scaleMatrix(v.x, v.y, v.z);
+}
+
+
 // D3D-style left-handed matrix that rotates a point around the x axis. Angle (in radians)
 // is measured clockwise when looking along the rotation axis toward the origin:
 // (x' y' z' 1) = (x y z 1) * rotationX
@@ -1258,7 +1330,41 @@ inline float4x4 Ortho(float width, float height, float zNear, float zFar, bool b
 
 struct Quaternion
 {
-    float q[4];
+    union
+    {
+        float q[4] = {};
+
+        struct
+        {
+            float x,y,z,w;
+        };
+    };
+
+    bool operator == (const Quaternion& right)const
+    {
+        return q[0] == right.q[0] &&
+               q[1] == right.q[1] &&
+               q[2] == right.q[2] &&
+               q[3] == right.q[3];
+    }
+
+    template<typename Y>
+    static Quaternion MakeQuaternion(Y it)
+    {
+        return Quaternion
+        {
+            static_cast<float>(*it++),
+            static_cast<float>(*it++),
+            static_cast<float>(*it++),
+            static_cast<float>(*it++)
+        };
+    }
+
+    Quaternion(float x, float y, float z, float w) noexcept : 
+        q{x, y, z, w}
+    {
+    }
+    Quaternion() noexcept {}
 };
 
 inline Quaternion RotationFromAxisAngle(const float3& axis, float angle)
@@ -1444,6 +1550,12 @@ inline float4x4 inverseMatrix(const float4x4& m)
     inv *= 1.0f/det;
 
     return inv;
+}
+
+template<typename T>
+T lerp(const T& Left, T& Right, float w)
+{
+    return Left * (1.f - w) + Right * w;
 }
 
 } // namespace Diligent

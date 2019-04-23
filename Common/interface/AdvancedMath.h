@@ -130,8 +130,8 @@ inline void ExtractViewFrustumPlanesFromMatrix(const float4x4 &Matrix, ViewFrust
 
 struct BoundBox
 {
-    // Order must not be changed!
-    float fMinX, fMaxX, fMinY, fMaxY, fMinZ, fMaxZ;
+    float3 Min;
+    float3 Max;
 };
 
 enum class BoxVisibility
@@ -177,9 +177,9 @@ inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const Bo
     const float3& Normal = Plane.Normal;
         
     float3 MaxPoint(
-        (Normal.x > 0) ? Box.fMaxX : Box.fMinX,
-        (Normal.y > 0) ? Box.fMaxY : Box.fMinY,
-        (Normal.z > 0) ? Box.fMaxZ : Box.fMinZ
+        (Normal.x > 0) ? Box.Max.x : Box.Min.x,
+        (Normal.y > 0) ? Box.Max.y : Box.Min.y,
+        (Normal.z > 0) ? Box.Max.z : Box.Min.z
     );
         
     float DMax = dot( MaxPoint, Normal ) + Plane.Distance;
@@ -190,9 +190,9 @@ inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const Bo
     if (TestFullVisibility)
     {
         float3 MinPoint(
-            (Normal.x > 0) ? Box.fMinX : Box.fMaxX,
-            (Normal.y > 0) ? Box.fMinY : Box.fMaxY,
-            (Normal.z > 0) ? Box.fMinZ : Box.fMaxZ
+            (Normal.x > 0) ? Box.Min.x : Box.Max.x,
+            (Normal.y > 0) ? Box.Min.y : Box.Max.y,
+            (Normal.z > 0) ? Box.Min.z : Box.Max.z
         );
 
         float DMin = dot(MinPoint, Normal) + Plane.Distance;
@@ -249,19 +249,26 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustumExt &ViewFrustumExt, cons
     //               ' .   |
     //                   ' .
 
+    // Test all frustum corners against every bound box plane
     for(int iBoundBoxPlane = 0; iBoundBoxPlane < 6; ++iBoundBoxPlane)
     {
         // struct BoundBox
         // {
-        //     float fMinX, fMaxX, fMinY, fMaxY, fMinZ, fMaxZ;
+        //     float3 Min;
+        //     float3 Max;
         // };
         float CurrPlaneCoord = reinterpret_cast<const float*>(&Box)[iBoundBoxPlane];
-        int iCoordOrder = iBoundBoxPlane / 2; // 0, 0, 1, 1, 2, 2
-        float fSign = (iBoundBoxPlane & 0x01) ? +1.f : -1.f;
+        // Bound box normal is one of the axis, so we just need to pick the right coordinate
+        int iCoordOrder = iBoundBoxPlane % 3; // 0, 1, 2, 0, 1, 2
+        // Since plane normal is directed along one of the axis, we only need to select
+        // if it is pointing in the positive (max planes) or negative (min planes) direction
+        float fSign = (iBoundBoxPlane >= 3) ? +1.f : -1.f;
         bool bAllCornersOutside = true;
         for(int iCorner=0; iCorner < 8; iCorner++)
         {
+            // Pick the frustum corner coordinate
             float CurrCornerCoord = ViewFrustumExt.FrustumCorners[iCorner][iCoordOrder];
+            // Dot product is simply the coordinate difference multiplied by the sign
             if( fSign * (CurrPlaneCoord - CurrCornerCoord) > 0)
             {                    
                 bAllCornersOutside = false;
@@ -277,12 +284,12 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustumExt &ViewFrustumExt, cons
 
 inline float GetPointToBoxDistance(const BoundBox &BndBox, const float3 &Pos)
 {
-    VERIFY_EXPR(BndBox.fMaxX >= BndBox.fMinX && 
-                BndBox.fMaxY >= BndBox.fMinY && 
-                BndBox.fMaxZ >= BndBox.fMinZ);
-    float fdX = (Pos.x > BndBox.fMaxX) ? (Pos.x - BndBox.fMaxX) : ( (Pos.x < BndBox.fMinX) ? (BndBox.fMinX - Pos.x) : 0.f );
-    float fdY = (Pos.y > BndBox.fMaxY) ? (Pos.y - BndBox.fMaxY) : ( (Pos.y < BndBox.fMinY) ? (BndBox.fMinY - Pos.y) : 0.f );
-    float fdZ = (Pos.z > BndBox.fMaxZ) ? (Pos.z - BndBox.fMaxZ) : ( (Pos.z < BndBox.fMinZ) ? (BndBox.fMinZ - Pos.z) : 0.f );
+    VERIFY_EXPR(BndBox.Max.x >= BndBox.Min.x && 
+                BndBox.Max.y >= BndBox.Min.y && 
+                BndBox.Max.z >= BndBox.Min.z);
+    float fdX = (Pos.x > BndBox.Max.x) ? (Pos.x - BndBox.Max.x) : ( (Pos.x < BndBox.Min.x) ? (BndBox.Min.x - Pos.x) : 0.f );
+    float fdY = (Pos.y > BndBox.Max.y) ? (Pos.y - BndBox.Max.y) : ( (Pos.y < BndBox.Min.y) ? (BndBox.Min.y - Pos.y) : 0.f );
+    float fdZ = (Pos.z > BndBox.Max.z) ? (Pos.z - BndBox.Max.z) : ( (Pos.z < BndBox.Min.z) ? (BndBox.Min.z - Pos.z) : 0.f );
     VERIFY_EXPR(fdX >= 0 && fdY >= 0 && fdZ >= 0);
 
     float3 RangeVec(fdX, fdY, fdZ);
