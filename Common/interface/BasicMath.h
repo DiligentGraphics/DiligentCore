@@ -1532,41 +1532,27 @@ using float2x2 = Matrix2x2<float>;
 
 struct Quaternion
 {
-    union
-    {
-        float q[4] = {};
+    float4 q;
 
-        struct
-        {
-            float x,y,z,w;
-        };
-    };
-
-    bool operator == (const Quaternion& right)const
-    {
-        return q[0] == right.q[0] &&
-               q[1] == right.q[1] &&
-               q[2] == right.q[2] &&
-               q[3] == right.q[3];
-    }
-
-    template<typename Y>
-    static Quaternion MakeQuaternion(Y it)
-    {
-        return Quaternion
-        {
-            static_cast<float>(*it++),
-            static_cast<float>(*it++),
-            static_cast<float>(*it++),
-            static_cast<float>(*it++)
-        };
-    }
-
+    Quaternion(const float4& _q) noexcept : 
+        q(_q)
+    {}
     Quaternion(float x, float y, float z, float w) noexcept : 
         q{x, y, z, w}
     {
     }
     Quaternion() noexcept {}
+
+    bool operator == (const Quaternion& right)const
+    {
+        return q == right.q;
+    }
+
+    template<typename Y>
+    static Quaternion MakeQuaternion(Y it)
+    {
+        return Quaternion{float4::MakeVector(it)};
+    }
 };
 
 inline Quaternion RotationFromAxisAngle(const float3& axis, float angle)
@@ -1619,6 +1605,64 @@ inline float4x4 QuaternionToMatrix(const Quaternion& quat)
     out[3][3] = 1;
     return out;
 }
+
+inline Quaternion normalize(const Quaternion& q)
+{
+    return Quaternion{normalize(q.q)};
+}
+
+// https://en.wikipedia.org/wiki/Slerp
+inline Quaternion slerp(Quaternion v0, Quaternion v1, float t, bool DoNotNormalize = false)
+{
+    // Only unit quaternions are valid rotations.
+    // Normalize to avoid undefined behavior.
+    if (!DoNotNormalize)
+    {
+        v0 = normalize(v0);
+        v1 = normalize(v1);
+    }
+
+    // Compute the cosine of the angle between the two vectors.
+    auto dp = dot(v0.q, v1.q);
+
+    // If the dot product is negative, slerp won't take
+    // the shorter path. Note that v1 and -v1 are equivalent when
+    // the negation is applied to all four components. Fix by 
+    // reversing one quaternion.
+    if (dp < 0)
+    {
+        v1.q = -v1.q;
+        dp = -dp;
+    }  
+
+    const double DOT_THRESHOLD = 0.9995;
+    if (dp > DOT_THRESHOLD)
+    {
+        // If the inputs are too close for comfort, linearly interpolate
+        // and normalize the result.
+
+        Quaternion result = Quaternion{v0.q + t*(v1.q - v0.q)};
+        result.q = normalize(result.q);
+        return result;
+    }
+
+    // Since dot is in range [0, DOT_THRESHOLD], acos is safe
+    auto theta_0     = std::acos(dp);     // theta_0 = angle between input vectors
+    auto theta       = theta_0*t;         // theta = angle between v0 and result
+    auto sin_theta   = std::sin(theta);   // compute this value only once
+    auto sin_theta_0 = std::sin(theta_0); // compute this value only once
+
+    auto s0 = cos(theta) - dp * sin_theta / sin_theta_0;  // == sin(theta_0 - theta) / sin(theta_0)
+    auto s1 = sin_theta / sin_theta_0;
+
+    auto v = Quaternion{v0.q * s0 + v1.q * s1};
+    if (!DoNotNormalize)
+    {
+        v = normalize(v);
+    }
+    return v;
+}
+
 
 template<typename T>
 T lerp(const T& Left, T& Right, float w)
