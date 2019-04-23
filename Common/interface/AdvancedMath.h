@@ -108,7 +108,7 @@ inline void ExtractViewFrustumPlanesFromMatrix(const float4x4 &Matrix, ViewFrust
     ExtractViewFrustumPlanesFromMatrix(Matrix, static_cast<ViewFrustum&>(FrustumExt), bIsOpenGL);
 
     // Compute frustum corners
-    float4x4 InvMatrix = inverseMatrix(Matrix);
+    float4x4 InvMatrix = Matrix.Inverse();
     
     float nearClipZ = bIsOpenGL ? -1.f : 0.f;
     static const float3 ProjSpaceCorners[] = 
