@@ -120,13 +120,19 @@ public:
     virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) = 0;
 
     /// Returns the shader resource variable type
-    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const = 0;
+    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType() const = 0;
 
     /// Returns shader resource description. See Diligent::ShaderResourceDesc.
-    virtual ShaderResourceDesc GetResourceDesc()const = 0;
+    virtual ShaderResourceDesc GetResourceDesc() const = 0;
 
     /// Returns the variable index that can be used to access the variable.
-    virtual Uint32 GetIndex()const = 0;
+    virtual Uint32 GetIndex() const = 0;
+
+    /// Returns true if non-null resource is bound to this variable.
+
+    /// \param [in] ArrayIndex - Resource array index. Must be 0 for
+    ///                          non-array variables.
+    virtual bool IsBound(Uint32 ArrayIndex) const = 0;
 };
 
 }

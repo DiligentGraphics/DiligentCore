@@ -441,13 +441,6 @@ void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* p
 
 
 
-bool ShaderResourceLayoutD3D11::ConstBuffBindInfo::IsBound(Uint32 ArrayIndex)const
-{
-    VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-    return m_ParentResLayout.m_ResourceCache.IsCBBound(m_Attribs.BindPoint + ArrayIndex);
-}
-
-
 
 #ifdef DEVELOPMENT
 template<typename TResourceViewType, ///< Type of the view (ITextureViewD3D11 or IBufferViewD3D11)
@@ -662,38 +655,6 @@ void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pVi
 #endif
 
     ResourceCache.SetBufUAV(m_Attribs.BindPoint + ArrayIndex, std::move(pViewD3D11));
-}
-
-
-bool ShaderResourceLayoutD3D11::TexSRVBindInfo::IsBound(Uint32 ArrayIndex)const
-{
-    VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-    return m_ParentResLayout.m_ResourceCache.IsSRVBound(m_Attribs.BindPoint + ArrayIndex, true);
-}
-
-
-bool ShaderResourceLayoutD3D11::BuffSRVBindInfo::IsBound(Uint32 ArrayIndex)const
-{
-    VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-    return m_ParentResLayout.m_ResourceCache.IsSRVBound(m_Attribs.BindPoint + ArrayIndex, false);
-}
-
-bool ShaderResourceLayoutD3D11::TexUAVBindInfo::IsBound(Uint32 ArrayIndex)const
-{
-    VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-    return m_ParentResLayout.m_ResourceCache.IsUAVBound(m_Attribs.BindPoint + ArrayIndex, true);
-}
-
-bool ShaderResourceLayoutD3D11::BuffUAVBindInfo::IsBound(Uint32 ArrayIndex)const
-{
-    VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-    return m_ParentResLayout.m_ResourceCache.IsUAVBound(m_Attribs.BindPoint + ArrayIndex, false);
-}
-
-bool ShaderResourceLayoutD3D11::SamplerBindInfo::IsBound(Uint32 ArrayIndex)const
-{
-    VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
-    return m_ParentResLayout.m_ResourceCache.IsSamplerBound(m_Attribs.BindPoint + ArrayIndex);
 }
 
 

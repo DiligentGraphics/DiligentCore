@@ -191,6 +191,11 @@ public:
         return m_ParentManager.GetVariableIndex(*this);
     }
 
+    virtual bool IsBound(Uint32 ArrayIndex) const override final
+    {
+        return m_Resource.IsBound(ArrayIndex, m_ParentManager.m_ResourceCache);
+    }
+
     const ShaderResourceLayoutD3D12::D3D12Resource& GetResource()const
     {
         return m_Resource;

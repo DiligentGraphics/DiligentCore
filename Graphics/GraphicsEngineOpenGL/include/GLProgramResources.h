@@ -128,6 +128,12 @@ namespace Diligent
                 return VariableIndex;
             }
 
+            virtual bool IsBound(Uint32 ArrayIndex) const override final
+            {
+                VERIFY(ArrayIndex < ArraySize, "Array index (", ArrayIndex, ") is out of range");
+                return pResources[ArrayIndex] != nullptr;
+            }
+
             virtual ShaderResourceDesc GetResourceDesc()const override final
             {
                 ShaderResourceDesc ResourceDesc;

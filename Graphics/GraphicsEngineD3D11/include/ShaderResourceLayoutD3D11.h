@@ -87,7 +87,11 @@ public:
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
 
-        __forceinline bool IsBound(Uint32 ArrayIndex)const;
+        virtual bool IsBound(Uint32 ArrayIndex)const override final
+        {
+            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
+            return m_ParentResLayout.m_ResourceCache.IsCBBound(m_Attribs.BindPoint + ArrayIndex);
+        }
     };
     
     struct TexSRVBindInfo final : ShaderVariableD3D11Base
@@ -110,7 +114,12 @@ public:
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
 
-        __forceinline bool IsBound(Uint32 ArrayIndex)const;
+        virtual bool IsBound(Uint32 ArrayIndex)const override final
+        {
+            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
+            return m_ParentResLayout.m_ResourceCache.IsSRVBound(m_Attribs.BindPoint + ArrayIndex, true);
+        }
+
         
         bool ValidSamplerAssigned() const {return SamplerIndex != InvalidSamplerIndex;}
 
@@ -136,7 +145,11 @@ public:
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
 
-        __forceinline bool IsBound(Uint32 ArrayIndex)const;
+        __forceinline virtual bool IsBound(Uint32 ArrayIndex)const override final
+        {
+            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
+            return m_ParentResLayout.m_ResourceCache.IsUAVBound(m_Attribs.BindPoint + ArrayIndex, true);
+        }
     };
 
     struct BuffUAVBindInfo final : ShaderVariableD3D11Base
@@ -157,7 +170,12 @@ public:
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
 
-        __forceinline bool IsBound(Uint32 ArrayIndex)const;
+        virtual bool IsBound(Uint32 ArrayIndex)const override final
+        {
+            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
+            return m_ParentResLayout.m_ResourceCache.IsUAVBound(m_Attribs.BindPoint + ArrayIndex, false);
+        }
+
     };
 
     struct BuffSRVBindInfo final : ShaderVariableD3D11Base
@@ -178,7 +196,11 @@ public:
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
 
-        __forceinline bool IsBound(Uint32 ArrayIndex)const;
+        virtual bool IsBound(Uint32 ArrayIndex)const override final
+        {
+            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
+            return m_ParentResLayout.m_ResourceCache.IsSRVBound(m_Attribs.BindPoint + ArrayIndex, false);
+        }
     };
 
     struct SamplerBindInfo final : ShaderVariableD3D11Base
@@ -199,7 +221,11 @@ public:
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
 
-        __forceinline bool IsBound(Uint32 ArrayIndex)const;
+        virtual bool IsBound(Uint32 ArrayIndex)const override final
+        {
+            VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
+            return m_ParentResLayout.m_ResourceCache.IsSamplerBound(m_Attribs.BindPoint + ArrayIndex);
+        }
     };
 
     // dbgResourceCache is only used for sanity check and as a remainder that the resource cache must be alive
