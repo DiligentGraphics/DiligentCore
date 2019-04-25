@@ -180,7 +180,10 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
     }
     else
     {
-        DEV_CHECK_ERR(Barrier.OldState == RESOURCE_STATE_UNKNOWN || Barrier.OldState == OldState, "Resource state is known (", OldState, ") and does not match OldState (", Barrier.OldState, ") specified in resource barrier. Set OldState member to RESOURCE_STATE_UNKNOWN to make the engine use current resource state");
+        DEV_CHECK_ERR(Barrier.OldState == RESOURCE_STATE_UNKNOWN || Barrier.OldState == OldState,
+                      "Resource state is known (", GetResourceStateString(OldState), ") and does not match the OldState (",
+                      GetResourceStateString(Barrier.OldState), ") specified in the resource barrier. Set OldState member to "
+                      "RESOURCE_STATE_UNKNOWN to make the engine use current resource state");
     }
 
     // Check if required state is already set
