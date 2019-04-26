@@ -1553,58 +1553,60 @@ struct Quaternion
     {
         return Quaternion{float4::MakeVector(it)};
     }
+
+    static Quaternion RotationFromAxisAngle(const float3& axis, float angle)
+    {
+        Quaternion out;
+        float norm = length(axis);
+        float sina2 = sin(0.5f * angle);
+        out.q[0] = sina2 * axis[0] / norm;
+        out.q[1] = sina2 * axis[1] / norm;
+        out.q[2] = sina2 * axis[2] / norm;
+        out.q[3] = cos(0.5f * angle);
+        return out;
+    }
+
+    void GetAxisAngle(float3& outAxis, float& outAngle) const
+    {
+        float sina2 = sqrt(q[0]*q[0] + q[1]*q[1] + q[2]*q[2]);
+        outAngle = 2.0f * atan2(sina2, q[3]);
+        float r = (sina2 > 0) ? (1.0f / sina2) : 0;
+        outAxis[0] = r * q[0];
+        outAxis[1] = r * q[1];
+        outAxis[2] = r * q[2]; 
+    }
+
+    float4x4 ToMatrix() const
+    {
+        float4x4 out;
+        float yy2 = 2.0f * q[1] * q[1];
+        float xy2 = 2.0f * q[0] * q[1];
+        float xz2 = 2.0f * q[0] * q[2];
+        float yz2 = 2.0f * q[1] * q[2];
+        float zz2 = 2.0f * q[2] * q[2];
+        float wz2 = 2.0f * q[3] * q[2];
+        float wy2 = 2.0f * q[3] * q[1];
+        float wx2 = 2.0f * q[3] * q[0];
+        float xx2 = 2.0f * q[0] * q[0];
+        out[0][0] = - yy2 - zz2 + 1.0f;
+        out[0][1] = xy2 + wz2;
+        out[0][2] = xz2 - wy2;
+        out[0][3] = 0;
+        out[1][0] = xy2 - wz2;
+        out[1][1] = - xx2 - zz2 + 1.0f;
+        out[1][2] = yz2 + wx2;
+        out[1][3] = 0;
+        out[2][0] = xz2 + wy2;
+        out[2][1] = yz2 - wx2;
+        out[2][2] = - xx2 - yy2 + 1.0f;
+        out[2][3] = 0;
+        out[3][0] = out[3][1] = out[3][2] = 0;
+        out[3][3] = 1;
+        return out;
+    }
 };
 
-inline Quaternion RotationFromAxisAngle(const float3& axis, float angle)
-{
-    Quaternion out;
-    float norm = length(axis);
-    float sina2 = sin(0.5f * angle);
-    out.q[0] = sina2 * axis[0] / norm;
-    out.q[1] = sina2 * axis[1] / norm;
-    out.q[2] = sina2 * axis[2] / norm;
-    out.q[3] = cos(0.5f * angle);
-    return out;
-}
 
-inline void AxisAngleFromRotation(float3& outAxis, float& outAngle, const Quaternion& quat)
-{
-    float sina2 = sqrt(quat.q[0]*quat.q[0] + quat.q[1]*quat.q[1] + quat.q[2]*quat.q[2]);
-    outAngle = 2.0f * atan2(sina2, quat.q[3]);
-    float r = (sina2 > 0) ? (1.0f / sina2) : 0;
-    outAxis[0] = r * quat.q[0];
-    outAxis[1] = r * quat.q[1];
-    outAxis[2] = r * quat.q[2]; 
-}
-
-inline float4x4 QuaternionToMatrix(const Quaternion& quat)
-{
-    float4x4 out;
-    float yy2 = 2.0f * quat.q[1] * quat.q[1];
-    float xy2 = 2.0f * quat.q[0] * quat.q[1];
-    float xz2 = 2.0f * quat.q[0] * quat.q[2];
-    float yz2 = 2.0f * quat.q[1] * quat.q[2];
-    float zz2 = 2.0f * quat.q[2] * quat.q[2];
-    float wz2 = 2.0f * quat.q[3] * quat.q[2];
-    float wy2 = 2.0f * quat.q[3] * quat.q[1];
-    float wx2 = 2.0f * quat.q[3] * quat.q[0];
-    float xx2 = 2.0f * quat.q[0] * quat.q[0];
-    out[0][0] = - yy2 - zz2 + 1.0f;
-    out[0][1] = xy2 + wz2;
-    out[0][2] = xz2 - wy2;
-    out[0][3] = 0;
-    out[1][0] = xy2 - wz2;
-    out[1][1] = - xx2 - zz2 + 1.0f;
-    out[1][2] = yz2 + wx2;
-    out[1][3] = 0;
-    out[2][0] = xz2 + wy2;
-    out[2][1] = yz2 - wx2;
-    out[2][2] = - xx2 - yy2 + 1.0f;
-    out[2][3] = 0;
-    out[3][0] = out[3][1] = out[3][2] = 0;
-    out[3][3] = 1;
-    return out;
-}
 
 inline Quaternion normalize(const Quaternion& q)
 {
