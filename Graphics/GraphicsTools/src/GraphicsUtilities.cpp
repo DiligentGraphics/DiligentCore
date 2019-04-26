@@ -35,19 +35,33 @@
 namespace Diligent
 {
 
-void CreateUniformBuffer( IRenderDevice *pDevice, Uint32 Size, const Char *Name, IBuffer **ppBuffer, USAGE Usage, BIND_FLAGS BindFlags, CPU_ACCESS_FLAGS CPUAccessFlags)
+void CreateUniformBuffer(IRenderDevice*    pDevice,
+                         Uint32            Size,
+                         const Char*       Name,
+                         IBuffer**         ppBuffer,
+                         USAGE             Usage,
+                         BIND_FLAGS        BindFlags,
+                         CPU_ACCESS_FLAGS  CPUAccessFlags,
+                         void*             pInitialData)
 {
     BufferDesc CBDesc;
-    CBDesc.Name = Name;
-    CBDesc.uiSizeInBytes = Size;
-    CBDesc.Usage = Usage;
-    CBDesc.BindFlags = BindFlags;
-    CBDesc.CPUAccessFlags = CPUAccessFlags;
-    pDevice->CreateBuffer( CBDesc, nullptr, ppBuffer );
+    CBDesc.Name             = Name;
+    CBDesc.uiSizeInBytes    = Size;
+    CBDesc.Usage            = Usage;
+    CBDesc.BindFlags        = BindFlags;
+    CBDesc.CPUAccessFlags   = CPUAccessFlags;
+
+    BufferData InitialData;
+    if (pInitialData != nullptr)
+    {
+        InitialData.pData    = pInitialData;
+        InitialData.DataSize = Size;
+    }
+    pDevice->CreateBuffer( CBDesc, pInitialData != nullptr ? &InitialData : nullptr, ppBuffer );
 }
 
 template<class TConverter>
-void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8 *pData, Uint32 StrideInBytes, TConverter Converter)
+void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8* pData, Uint32 StrideInBytes, TConverter Converter)
 {
     const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
     for (Uint32 y = 0; y < Height; ++y)
@@ -66,7 +80,7 @@ void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FO
     }
 }
 
-void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8 *pData, Uint32 StrideInBytes)
+void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8* pData, Uint32 StrideInBytes)
 {
     const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
     switch (FmtAttribs.ComponentType)

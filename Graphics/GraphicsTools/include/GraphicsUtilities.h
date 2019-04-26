@@ -37,8 +37,9 @@ void CreateUniformBuffer(IRenderDevice*    pDevice,
                          const Char*       Name,
                          IBuffer**         ppBuffer,
                          USAGE             Usage          = USAGE_DYNAMIC,
-                         BIND_FLAGS        BindFlag       = BIND_UNIFORM_BUFFER,
-                         CPU_ACCESS_FLAGS  CPUAccessFlags = CPU_ACCESS_WRITE);
+                         BIND_FLAGS        BindFlags      = BIND_UNIFORM_BUFFER,
+                         CPU_ACCESS_FLAGS  CPUAccessFlags = CPU_ACCESS_WRITE,
+                         void*             pInitialData   = nullptr);
 
 void GenerateCheckerBoardPattern(Uint32         Width,
                                  Uint32         Height,

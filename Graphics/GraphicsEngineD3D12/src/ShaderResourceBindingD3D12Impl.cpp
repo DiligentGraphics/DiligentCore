@@ -194,7 +194,7 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineSt
             auto* pShader = pPSO12->GetShader<ShaderD3D12Impl>(s);
             LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSO12->GetDesc().Name, "' will not be successfully initialized "
                               "because not all static resource bindings in shader '", pShader->GetDesc().Name, "' are valid. "
-                              "Please make sure you bind all static resources to the shader before calling InitializeStaticResources() "
+                              "Please make sure you bind all static resources to PSO before calling InitializeStaticResources() "
                               "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
         }
 #endif
