@@ -682,6 +682,11 @@ template <class T> struct Matrix2x2
         return *this;
     }
 
+    Matrix2x2& operator *= (const Matrix2x2& right)
+    {
+        *this = Mul(*this, right);
+        return *this;
+    }
 
     Matrix2x2 Transpose()const
     {
@@ -804,6 +809,12 @@ template <class T> struct Matrix3x3
         for( int i = 0; i < 9; ++i )
             (reinterpret_cast<T*>(this))[i] *= s;
 
+        return *this;
+    }
+
+    Matrix3x3& operator *= (const Matrix3x3& right)
+    {
+        *this = Mul(*this, right);
         return *this;
     }
 
@@ -941,6 +952,12 @@ template <class T> struct Matrix4x4
         for( int i = 0; i < 16; ++i )
             (reinterpret_cast<T*>(this))[i] *= s;
 
+        return *this;
+    }
+
+    Matrix4x4& operator *= (const Matrix4x4& right)
+    {
+        *this = Mul(*this, right);
         return *this;
     }
 
