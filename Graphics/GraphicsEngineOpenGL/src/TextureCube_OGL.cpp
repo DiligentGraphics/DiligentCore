@@ -242,9 +242,9 @@ void TextureCube_OGL::AttachToFramebuffer( const TextureViewDesc& ViewDesc, GLen
         // GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, 
         // GL_TEXTURE_CUBE_MAP_NEGATIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, 
         // or GL_TEXTURE_2D_MULTISAMPLE.
-        glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, AttachmentPoint, m_GlTexture, CubeMapFaceBindTarget, ViewDesc.MostDetailedMip );
+        glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, AttachmentPoint, CubeMapFaceBindTarget, m_GlTexture, ViewDesc.MostDetailedMip );
         CHECK_GL_ERROR( "Failed to attach texture cube face to draw framebuffer" );
-        glFramebufferTexture2D( GL_READ_FRAMEBUFFER, AttachmentPoint, m_GlTexture, CubeMapFaceBindTarget, ViewDesc.MostDetailedMip );
+        glFramebufferTexture2D( GL_READ_FRAMEBUFFER, AttachmentPoint, CubeMapFaceBindTarget, m_GlTexture, ViewDesc.MostDetailedMip );
         CHECK_GL_ERROR( "Failed to attach texture cube face to read framebuffer" );
     }
     else
