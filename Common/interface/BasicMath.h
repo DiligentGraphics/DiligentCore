@@ -26,6 +26,7 @@
 #include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 #include <cmath>
+#include <algorithm>
 
 #include "HashUtils.h"
 
