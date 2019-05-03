@@ -1037,6 +1037,11 @@ template <class T> struct Matrix4x4
         return Scale(v.x, v.y, v.z);
     }
 
+    static Matrix4x4 Scale(T s)
+    {
+        return Scale(s,s,s);
+    }
+
 
     // D3D-style left-handed matrix that rotates a point around the x axis. Angle (in radians)
     // is measured clockwise when looking along the rotation axis toward the origin:
