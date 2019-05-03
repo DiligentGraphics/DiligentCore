@@ -23,6 +23,27 @@
 
 #pragma once
 
+/// The library uses Direct3D-style math:
+///
+///   - Matrices are multiplied left to right in the order corresponding transforms are applied:
+///     - WorldViewProj = World * View * Proj
+///   - Vectors are row-vectors and multiplied by matrices as v * m:
+///     - ClipPos = WorldPos * WorldViewProj
+///   - Matrices are stored using row-major layout: m = {row0, row1, row2, row3}
+///     - Note that GL-style math libraries use column-vectors and column-major matrix layout.
+///       As a result, matrices that perform similar transforms use exactly the same element 
+///       order. However, matrix multiplication order is reversed: M1_D3D * M2_D3D = M2_GL * M1_GL
+/// 
+///  Diligent Engine shaders always use column-major matrices for the purposes of data storage. This means
+///  that if you use D3D-style math in shaders (ClipPos = mul(WorldPos, WorldViewProj)), you need to
+///  transpose the host-side matrix before writing it to GPU memory.
+///
+///  If you use GL-style math in shaders (ClipPos = mul(WorldViewProj, WorldPos)), you do not need to 
+///  transpose the host-side matrix and should write it to GPU memory as is. Since the matrix rows will
+///  be written to the GPU matrix columns, this will have the effect of transposing the matrix.
+///  Since mul(WorldViewProj, WorldPos) == mul(WorldPos, transpose(WorldViewProj)), the results will
+///  be consistent with D3D case.
+
 #include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 #include <cmath>
@@ -984,7 +1005,7 @@ template <class T> struct Matrix4x4
         };
     }
 
-    static Matrix4x4 TranslationD3D(T x, T y, T z)
+    static Matrix4x4 Translation(T x, T y, T z)
     {
         return Matrix4x4
         {
@@ -995,27 +1016,10 @@ template <class T> struct Matrix4x4
         };
     }
 
-    static Matrix4x4 TranslationGL(T x, T y, T z)
+    static Matrix4x4 Translation(const Vector3<T>& v)
     {
-        return Matrix4x4
-        {
-            1,  0,  0,  x,
-            0,  1,  0,  y,
-            0,  0,  1,  z,
-            0,  0,  0,  1
-        };
+        return Translation(v.x, v.y, v.z);
     }
-
-    static Matrix4x4 TranslationD3D(const Vector3<T>& v)
-    {
-        return TranslationD3D(v.x, v.y, v.z);
-    }
-
-    static Matrix4x4 TranslationGL(const Vector3<T>& v)
-    {
-        return TranslationGL(v.x, v.y, v.z);
-    }
-
 
     static Matrix4x4 Scale(T x, T y, T z)
     {
@@ -1037,7 +1041,7 @@ template <class T> struct Matrix4x4
     // D3D-style left-handed matrix that rotates a point around the x axis. Angle (in radians)
     // is measured clockwise when looking along the rotation axis toward the origin:
     // (x' y' z' 1) = (x y z 1) * RotationX
-    static Matrix4x4 RotationX_D3D(T angleInRadians)
+    static Matrix4x4 RotationX(T angleInRadians)
     {
         auto s = std::sin(angleInRadians);
         auto c = std::cos(angleInRadians);
@@ -1054,7 +1058,7 @@ template <class T> struct Matrix4x4
     // D3D-style left-handed matrix that rotates a point around the y axis. Angle (in radians)
     // is measured clockwise when looking along the rotation axis toward the origin:
     // (x' y' z' 1) = (x y z 1) * RotationY
-    static Matrix4x4 RotationY_D3D(T angleInRadians)
+    static Matrix4x4 RotationY(T angleInRadians)
     {
         auto s = std::sin(angleInRadians);
         auto c = std::cos(angleInRadians);
@@ -1071,7 +1075,7 @@ template <class T> struct Matrix4x4
     // D3D-style left-handed matrix that rotates a point around the z axis. Angle (in radians)
     // is measured clockwise when looking along the rotation axis toward the origin:
     // (x' y' z' 1) = (x y z 1) * RotationZ
-    static Matrix4x4 RotationZ_D3D(T angleInRadians)
+    static Matrix4x4 RotationZ(T angleInRadians)
     {
         auto s = std::sin(angleInRadians);
         auto c = std::cos(angleInRadians);
@@ -1085,32 +1089,10 @@ template <class T> struct Matrix4x4
         };
     }
 
-    // OpenGL-style matrix that rotates a point around the x axis:
-    // (x' y' z' 1) = RotationX * (x y z 1)T
-    static Matrix4x4 RotationX_GL(T angleInRadians)
-    {
-        return RotationX_D3D(angleInRadians).Transpose();
-    }
-
-
-    // OpenGL-style matrix that rotates a point around the y axis:
-    // (x' y' z' 1) = RotationY * (x y z 1)T
-    static Matrix4x4 RotationY_GL(T angleInRadians)
-    {
-        return RotationY_D3D(angleInRadians).Transpose();
-    }
-
-    // OpenGL-style matrix that rotates a point around the z axis:
-    // (x' y' z' 1) = RotationZ * (x y z 1)T
-    static Matrix4x4 RotationZ_GL(T angleInRadians)
-    {
-        return RotationZ_D3D(angleInRadians).Transpose();
-    }
-
     // 3D Rotation matrix for an arbitrary axis specified by x, y and z
-    static Matrix4x4 RotationArbitraryD3D(Vector3<T> axis, T degree)
+    static Matrix4x4 RotationArbitrary(Vector3<T> axis, T degree)
     {
-        LOG_WARNING_MESSAGE_ONCE("RotationArbitraryD3D() is not tested");
+        LOG_WARNING_MESSAGE_ONCE("RotationArbitrary() is not tested");
 
         axis = normalize(axis);
 
@@ -1145,7 +1127,7 @@ template <class T> struct Matrix4x4
         return mOut;
     }
 
-    static Matrix4x4 ViewFromBasisD3D( const Vector3<T>& f3X, const Vector3<T>& f3Y, const Vector3<T>& f3Z )
+    static Matrix4x4 ViewFromBasis( const Vector3<T>& f3X, const Vector3<T>& f3Y, const Vector3<T>& f3Z )
     {
         return Matrix4x4
         {
@@ -1157,7 +1139,7 @@ template <class T> struct Matrix4x4
     }
 
 
-    void SetNearFarClipPlanesD3D(T zNear, T zFar, T bIsGL )
+    void SetNearFarClipPlanes(T zNear, T zFar, T bIsGL )
     {
         if( bIsGL )
         {
@@ -1188,7 +1170,7 @@ template <class T> struct Matrix4x4
         }
     }
 
-    void GetNearFarClipPlanesD3D(T& zNear, T& zFar, bool bIsGL)const
+    void GetNearFarClipPlanes(T& zNear, T& zFar, bool bIsGL)const
     {
         if( bIsGL )
         {
@@ -1202,7 +1184,7 @@ template <class T> struct Matrix4x4
         }
     }
 
-    static Matrix4x4 ProjectionD3D(T fov, T aspectRatio, T zNear, T zFar, bool bIsGL ) // Left-handed projection
+    static Matrix4x4 Projection(T fov, T aspectRatio, T zNear, T zFar, bool bIsGL ) // Left-handed projection
     {
         Matrix4x4 mOut;
         auto yScale = static_cast<T>(1) / std::tan(fov / static_cast<T>(2));
@@ -1210,12 +1192,12 @@ template <class T> struct Matrix4x4
         mOut._11 = xScale;
         mOut._22 = yScale;
 
-        mOut.SetNearFarClipPlanesD3D(zNear, zFar, bIsGL);
+        mOut.SetNearFarClipPlanes(zNear, zFar, bIsGL);
   
         return mOut;
     }
 
-    static Matrix4x4 OrthoOffCenterD3D(T left, T right, T bottom, T top, T zNear, T zFar, bool bIsGL ) // Left-handed ortho projection
+    static Matrix4x4 OrthoOffCenter(T left, T right, T bottom, T top, T zNear, T zFar, bool bIsGL ) // Left-handed ortho projection
     {
         auto _22 = (bIsGL ? 2            : 1     ) / (zFar - zNear);
         auto _32 = (bIsGL ? zNear + zFar : zNear ) / (zNear - zFar);
@@ -1228,9 +1210,9 @@ template <class T> struct Matrix4x4
         };
     }
 
-    static Matrix4x4 OrthoD3D(T width, T height, T zNear, T zFar, bool bIsGL ) // Left-handed ortho projection
+    static Matrix4x4 Ortho(T width, T height, T zNear, T zFar, bool bIsGL ) // Left-handed ortho projection
     {
-        return OrthoOffCenterD3D(
+        return OrthoOffCenter(
             -width  * static_cast<T>(0.5),
             +width  * static_cast<T>(0.5),
             -height * static_cast<T>(0.5),
