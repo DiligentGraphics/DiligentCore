@@ -223,3 +223,21 @@ std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char 
 
     return SearchRes;
 }
+
+std::string WindowsFileSystem::OpenFileDialog(const char* Title, const char* Filter)
+{
+    std::string FileName;
+	char buffer[1024] = {};
+    OPENFILENAMEA ofn = {};
+	ofn.lStructSize = sizeof(ofn);
+	ofn.lpstrFilter = Filter;
+	ofn.lpstrFile   = buffer;
+	ofn.nMaxFile    = _countof(buffer);
+	ofn.lpstrTitle  = Title;
+	ofn.Flags       = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+	if (GetOpenFileNameA(&ofn))
+    {
+		FileName = buffer;
+	}
+    return FileName;
+}

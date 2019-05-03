@@ -47,4 +47,6 @@ public:
     static void ClearDirectory( const Diligent::Char *strPath );
     static void DeleteFile( const Diligent::Char *strPath );
     static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char *SearchPattern);
+    
+    static std::string OpenFileDialog(const char* Title, const char* Filter);
 };

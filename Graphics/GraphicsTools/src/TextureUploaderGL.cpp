@@ -259,7 +259,6 @@ void TextureUploaderGL::RenderThreadUpdate(IDeviceContext *pContext)
                 case InternalData::PendingBufferOperation::Copy:
                 {
                     const auto& TexDesc    = OperationInfo.pDstTexture->GetDesc();
-                    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
                     pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
                     for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
                     {
