@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
             break;
         fputc( '\"', pDstFile );
         auto* CurrChar = Line;
-        while( *CurrChar != 0 && *CurrChar != '\n' )
+        while( *CurrChar != 0 && *CurrChar != '\n' && *CurrChar != '\r' )
         {
             if( strchr( SpecialChars, *CurrChar) )
                 fputc( '\\', pDstFile );
