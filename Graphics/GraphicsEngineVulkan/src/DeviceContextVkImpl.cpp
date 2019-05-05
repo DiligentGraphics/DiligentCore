@@ -207,16 +207,19 @@ namespace Diligent
     }
 
 
-    void DeviceContextVkImpl::SetPipelineState(IPipelineState *pPipelineState)
+    void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     {
+        auto* pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
+        if (PipelineStateVkImpl::IsSameObject(m_pPipelineState, pPipelineStateVk))
+            return;
+
         // Never flush deferred context!
         if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush)
         {
             Flush();
         }
 
-        auto* pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
-        const auto& PSODesc = pPipelineStateVk->GetDesc();
+                const auto& PSODesc = pPipelineStateVk->GetDesc();
 
         bool CommitStates = false;
         bool CommitScissor = false;

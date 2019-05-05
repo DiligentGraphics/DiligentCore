@@ -66,6 +66,9 @@ namespace Diligent
     void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     {
         auto* pPipelineStateGLImpl = ValidatedCast<PipelineStateGLImpl>(pPipelineState);
+        if (PipelineStateGLImpl::IsSameObject(m_pPipelineState, pPipelineStateGLImpl))
+            return;
+
         TDeviceContextBase::SetPipelineState(pPipelineStateGLImpl, 0 /*Dummy*/);
 
         const auto& Desc = pPipelineStateGLImpl->GetDesc();

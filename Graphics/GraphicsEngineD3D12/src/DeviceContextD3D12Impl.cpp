@@ -165,13 +165,16 @@ namespace Diligent
     
     void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
     {
+        auto* pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
+        if (PipelineStateD3D12Impl::IsSameObject(m_pPipelineState, pPipelineStateD3D12))
+            return;
+
         // Never flush deferred context!
         if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush)
         {
             Flush(true);
         }
 
-        auto* pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
         const auto &PSODesc = pPipelineStateD3D12->GetDesc();
 
         bool CommitStates = false;

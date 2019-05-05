@@ -146,6 +146,13 @@ public:
         return m_UniqueID.GetID();
     }
 
+    static bool IsSameObject(DeviceObjectBase* pObj1, DeviceObjectBase* pObj2)
+    {
+        UniqueIdentifier Id1 = (pObj1 != nullptr) ? pObj1->GetUniqueID() : 0;
+        UniqueIdentifier Id2 = (pObj2 != nullptr) ? pObj2->GetUniqueID() : 0;
+        return Id1 == Id2;
+    }
+
     RenderDeviceImplType* GetDevice()const{return m_pDevice;}
     
 protected:
