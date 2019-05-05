@@ -219,7 +219,7 @@ namespace Diligent
             Flush();
         }
 
-                const auto& PSODesc = pPipelineStateVk->GetDesc();
+        const auto& PSODesc = pPipelineStateVk->GetDesc();
 
         bool CommitStates = false;
         bool CommitScissor = false;
