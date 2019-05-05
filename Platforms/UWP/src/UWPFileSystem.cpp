@@ -115,9 +115,19 @@ WindowsStoreFile::~WindowsStoreFile()
 
 bool WindowsStoreFile::Read( void *Data, size_t BufferSize )
 {
-    UNSUPPORTED( "Not implemented" );
+    DWORD BytesRead = 0;
+    if (!ReadFile(
+        m_FileHandle->FH.Get(),
+        Data,
+        static_cast<DWORD>(BufferSize),
+        &BytesRead,
+        nullptr
+        ))
+    {
+        return false;
+    }
     
-    return false;
+    return BytesRead == BufferSize;
 }
 
 size_t WindowsStoreFile::GetSize()
@@ -145,13 +155,7 @@ void WindowsStoreFile::Read( Diligent::IDataBlob *pData )
 {
     pData->Resize( GetSize() );
 
-    if (!ReadFile(
-        m_FileHandle->FH.Get(),
-        pData->GetDataPtr(),
-        static_cast<DWORD>(pData->GetSize()),
-        nullptr,
-        nullptr
-        ))
+    if (!Read(pData->GetDataPtr(), pData->GetSize()))
     {
         LOG_ERROR_AND_THROW( "Failed to read data from file" );
     }
