@@ -117,12 +117,12 @@ namespace Diligent
         std::array<char, 16> GlFmt;
         GetGlImageFormat(FmtAttribs, GlFmt);
 
-        for(Uint32 NonPowOfTwo=0; NonPowOfTwo < 4; ++NonPowOfTwo)
+        for (Int32 NonPowOfTwo=0; NonPowOfTwo < 4; ++NonPowOfTwo)
         {
             ShaderMacroHelper Macros;
             Macros.AddShaderMacro("NON_POWER_OF_TWO", NonPowOfTwo);
-            Macros.AddShaderMacro("CONVERT_TO_SRGB", IsGamma);
-            Macros.AddShaderMacro("IMG_FORMAT", GlFmt.data());
+            Macros.AddShaderMacro("CONVERT_TO_SRGB",  IsGamma);
+            Macros.AddShaderMacro("IMG_FORMAT",       GlFmt.data());
 
             Macros.Finalize();
             CSCreateInfo.Macros = Macros;
