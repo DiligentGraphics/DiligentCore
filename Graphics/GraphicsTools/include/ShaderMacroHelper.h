@@ -130,4 +130,13 @@ inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, float
 	AddShaderMacro<const Diligent::Char*>( Name, ss.str().c_str() );
 }
 
+template<>
+inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, Uint32 Definition )
+{
+    // Make sure that uint constants have the 'u' suffix to avoid problems in GLES.
+	std::ostringstream ss;
+	ss << Definition << 'u';
+	AddShaderMacro<const Diligent::Char*>( Name, ss.str().c_str() );
+}
+
 }
