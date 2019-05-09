@@ -279,10 +279,10 @@ endif()
 
 include(BuildUtils.cmake)
 
+add_subdirectory(External)
 add_subdirectory(Utilities)
 add_subdirectory(Primitives)
 add_subdirectory(Platforms)
-add_subdirectory(External)
 add_subdirectory(Common)
 add_subdirectory(Graphics)
 
