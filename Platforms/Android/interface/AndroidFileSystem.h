@@ -25,6 +25,8 @@
 
 #include <memory>
 #include <vector>
+#include <fstream>
+#include <android/asset_manager.h>
 
 #include "../../Basic/interface/BasicFileSystem.h"
 #include "../../../Primitives/interface/DataBlob.h"
@@ -41,25 +43,31 @@ public:
 
     bool Write( const void *Data, size_t BufferSize );
 
-    size_t GetSize();
+    size_t GetSize() { return m_Size; }
 
     size_t GetPos();
 
     void SetPos(size_t Offset, FilePosOrigin Origin);
 
+    static bool Open(const char* FileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& Size);
+
 private:
-    //FILE *m_pFile;
+    std::ifstream m_IFS;
+    AAsset*       m_AssetFile = nullptr;
+    size_t        m_Size      = 0;
 };
 
 struct AndroidFileSystem : public BasicFileSystem
 {
 public:
+    static void Init(void* Activity, const char* ActivityClassName);
+
     static AndroidFile* OpenFile( const FileOpenAttribs &OpenAttribs );
     static inline Diligent::Char GetSlashSymbol(){ return '/'; }
 
     static bool FileExists( const Diligent::Char *strFilePath );
     static bool PathExists( const Diligent::Char *strPath );
-    
+
     static bool CreateDirectory( const Diligent::Char *strPath );
     static void ClearDirectory( const Diligent::Char *strPath );
     static void DeleteFile( const Diligent::Char *strPath );

@@ -65,7 +65,7 @@ public:
                                             const SwapChainDesc&      SCDesc,
                                             ISwapChain**              ppSwapChain ) = 0;
     virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter**       ppConverter) = 0;
-    
+
     virtual void AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
                                          IRenderDevice**           ppDevice,
                                           IDeviceContext**         ppImmediateContext) = 0;

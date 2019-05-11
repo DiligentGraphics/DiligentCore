@@ -51,6 +51,14 @@ public:
     /// \param [out] ppShaderSourceStreamFactory - Memory address where pointer to the shader source stream factory will be written.
     virtual void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories, 
                                                         IShaderSourceInputStreamFactory** ppShaderSourceFactory)const = 0;
+
+#if PLATFORM_ANDROID
+    /// On Android platform, it is necessary to initialize the file system before
+    /// CreateDefaultShaderSourceStreamFactory() method can be called.
+    /// \param [in] Activity          - Pointer to the activity.
+    /// \param [in] ActivityClassName - Activity class name.
+    virtual void InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const = 0;
+#endif
 };
 
 }

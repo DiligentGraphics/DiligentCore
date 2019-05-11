@@ -31,7 +31,7 @@ target_link_libraries(NDKHelper
 PRIVATE 
 	BuildSettings
 PUBLIC
-	NativeAppGlue
+    native_app_glue
 )
 
 source_group("src" FILES ${SOURCE})

@@ -40,6 +40,7 @@
 
 #if PLATFORM_ANDROID
 #   include "RenderDeviceGLESImpl.h"
+#   include "FileStream.h"
 #endif
 
 namespace Diligent
@@ -85,6 +86,10 @@ public:
     virtual void AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
                                          IRenderDevice**           ppDevice,
                                          IDeviceContext**          ppImmediateContext )override final;
+
+#if PLATFORM_ANDROID
+    virtual void InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const override final;
+#endif
 };
 
 
@@ -250,6 +255,14 @@ void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppC
     HLSL2GLSLConverterObject *pConverter( NEW_RC_OBJ(GetRawAllocator(), "HLSL2GLSLConverterObject instance", HLSL2GLSLConverterObject)() );
     pConverter->QueryInterface( IID_HLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter) );
 }
+
+#if PLATFORM_ANDROID
+void EngineFactoryOpenGLImpl::InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const
+{
+    AndroidFileSystem::Init(Activity, ActivityClassName);
+}
+#endif
+
 
 API_QUALIFIER
 Diligent::IEngineFactoryOpenGL* GetEngineFactoryOpenGL()

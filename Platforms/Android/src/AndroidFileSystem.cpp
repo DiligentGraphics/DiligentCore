@@ -21,36 +21,185 @@
  *  of the possibility of such damages.
  */
 
+#include <string>
+#include <android/native_activity.h>
+
 #include "AndroidFileSystem.h"
 #include "Errors.h"
 #include "DebugUtilities.h"
-#include <JNIHelper.h>
 
-using namespace ndk_helper;
+
+namespace
+{
+
+class JNIMiniHelper
+{
+public:
+    static void Init(ANativeActivity* activity, std::string activity_class_name)
+    {
+        auto& TheHelper = GetInstance();
+        TheHelper.activity_            = activity;
+        TheHelper.activity_class_name_ = std::move(activity_class_name);
+    }
+
+    static JNIMiniHelper& GetInstance()
+    {
+        static JNIMiniHelper helper;
+        return helper;
+    }
+
+
+    bool OpenFile(const char* fileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& FileSize)
+    {
+        if (activity_ == nullptr)
+        {
+            LOG_ERROR_MESSAGE("JNIMiniHelper has not been initialized. Call init() to initialize the helper");
+            return false;
+        }
+
+        // Lock mutex
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        // First, try reading from externalFileDir;
+        std::string ExternalFilesPath;
+        {
+            JNIEnv* env = nullptr;
+            bool DetachThread = AttachCurrentThread(env);
+            if (jstring jstr_path = GetExternalFilesDirJString(env))
+            {
+                const char* path = env->GetStringUTFChars(jstr_path, nullptr);
+                ExternalFilesPath = std::string(path);
+                if (fileName[0] != '/')
+                {
+                    ExternalFilesPath.append("/");
+                }
+                ExternalFilesPath.append(fileName);
+                env->ReleaseStringUTFChars(jstr_path, path);
+                env->DeleteLocalRef(jstr_path);
+            }
+            if (DetachThread)
+                DetachCurrentThread();
+        }
+
+        IFS.open(ExternalFilesPath.c_str(), std::ios::binary);
+        if (IFS)
+        {
+            IFS.seekg(0, std::ifstream::end);
+            FileSize = IFS.tellg();
+            IFS.seekg(0, std::ifstream::beg);
+            return true;
+        }
+        else
+        {
+            // Fallback to assetManager
+            AAssetManager* assetManager = activity_->assetManager;
+            AssetFile = AAssetManager_open(assetManager, fileName, AASSET_MODE_BUFFER);
+            if (!AssetFile)
+            {
+                return false;
+            }
+            uint8_t* data = (uint8_t*)AAsset_getBuffer(AssetFile);
+            if (data == nullptr)
+            {
+                AAsset_close(AssetFile);
+
+                LOG_ERROR_MESSAGE("Failed to open: ", fileName);
+                return false;
+            }
+            FileSize = AAsset_getLength(AssetFile);
+            return true;
+        }
+    }
+
+    /*
+     * Attach current thread
+     * In Android, the thread doesn't have to be 'Detach' current thread
+     * as application process is only killed and VM does not shut down
+     */
+    bool AttachCurrentThread(JNIEnv*& env)
+    {
+        env = nullptr;
+        if (activity_->vm->GetEnv((void**)&env, JNI_VERSION_1_4) == JNI_OK)
+            return false; // Already attached
+        activity_->vm->AttachCurrentThread(&env, nullptr);
+        pthread_key_create((int32_t*)activity_, DetachCurrentThreadDtor);
+        return true;
+    }
+
+    /*
+     * Unregister this thread from the VM
+     */
+    static void DetachCurrentThreadDtor(void* p)
+    {
+        LOG_INFO_MESSAGE("detached current thread");
+        auto* activity = reinterpret_cast<ANativeActivity*>(p);
+        activity->vm->DetachCurrentThread();
+    }
+
+private:
+    JNIMiniHelper()
+    {
+    }
+
+    ~JNIMiniHelper()
+    {
+    }
+
+    JNIMiniHelper           (const JNIMiniHelper&) = delete;
+    JNIMiniHelper& operator=(const JNIMiniHelper&) = delete;
+    JNIMiniHelper           (JNIMiniHelper&&) = delete;
+    JNIMiniHelper& operator=(JNIMiniHelper&&) = delete;
+
+    jstring GetExternalFilesDirJString(JNIEnv* env)
+    {
+        if (activity_ == nullptr)
+        {
+            LOG_ERROR_MESSAGE("JNIHelper has not been initialized. Call init() to initialize the helper");
+            return NULL;
+        }
+
+        jstring obj_Path = nullptr;
+        // Invoking getExternalFilesDir() java API
+        jclass cls_Env   = env->FindClass(activity_class_name_.c_str());
+        jmethodID mid    = env->GetMethodID(cls_Env, "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
+        jobject obj_File = env->CallObjectMethod(activity_->clazz, mid, NULL);
+        if (obj_File)
+        {
+            jclass cls_File       = env->FindClass("java/io/File");
+            jmethodID mid_getPath = env->GetMethodID(cls_File, "getPath", "()Ljava/lang/String;");
+            obj_Path              = (jstring)env->CallObjectMethod(obj_File, mid_getPath);
+        }
+        return obj_Path;
+    }
+
+    void DetachCurrentThread()
+    {
+        activity_->vm->DetachCurrentThread();
+    }
+
+    ANativeActivity*   activity_ = nullptr;
+    std::string        activity_class_name_;
+
+    // mutex for synchronization
+    // This class uses singleton pattern and can be invoked from multiple threads,
+    // each methods locks the mutex for a thread safety
+    mutable             std::mutex mutex_;
+};
+
+
+}
+
+
+bool AndroidFile::Open(const char* FileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& Size)
+{
+    return JNIMiniHelper::GetInstance().OpenFile( FileName, IFS, AssetFile, Size );
+}
 
 AndroidFile::AndroidFile( const FileOpenAttribs &OpenAttribs ) : 
-    BasicFile(OpenAttribs, AndroidFileSystem::GetSlashSymbol())/*,
-    m_pFile(nullptr)*/
+    BasicFile(OpenAttribs, AndroidFileSystem::GetSlashSymbol())
 {
-    //auto OpenModeStr = GetOpenModeStr();
-    //
-    //m_pFile = fopen( FileName, OpenModeStr.c_str());
-    //if( m_pFile != nullptr )
-    //{
-    //    break;
-    //}
-    //else
-    //{
-    //    std::stringstream ErrSS;
-    //    ErrSS<< "Failed to open file" << std::endl << FileName;
-    //    LOG_ERROR_AND_THROW(ErrSS.str().c_str());
-    //}
-
-    // Workaround:
-    // Try to read data from the file to make sure it exists
     auto FullPath = m_OpenAttribs.strFilePath;
-    std::vector<Diligent::Uint8> Data;
-    if( !JNIHelper::GetInstance()->ReadFile( FullPath, &Data ) )
+    if( !Open(FullPath, m_IFS, m_AssetFile, m_Size) )
     {
         LOG_ERROR_AND_THROW( "Failed to open file ", FullPath );
     }
@@ -58,50 +207,38 @@ AndroidFile::AndroidFile( const FileOpenAttribs &OpenAttribs ) :
 
 AndroidFile::~AndroidFile()
 {
-    //if( m_pFile )
-    //{
-    //    fclose( m_pFile );
-    //    m_pFile = nullptr;
-    //}
+    if (m_IFS)
+        m_IFS.close();
+
+    if (m_AssetFile != nullptr)
+        AAsset_close(m_AssetFile);
 }
 
-void AndroidFile::Read( Diligent::IDataBlob *pData )
+void AndroidFile::Read( Diligent::IDataBlob* pData )
 {
-    auto FullPath = m_OpenAttribs.strFilePath;
-    std::vector<Diligent::Uint8> Data;
-    bool b = JNIHelper::GetInstance()->ReadFile( FullPath, &Data );
-    if( b )
-    {
-        pData->Resize( Data.size() );
-        memcpy( pData->GetDataPtr(), Data.data(), Data.size() );
-    }
-    else
-    {
-        LOG_ERROR_MESSAGE( "Unable to open file ", m_OpenAttribs.strFilePath, "\nFull path: ", FullPath );
-    }
-}
-
-size_t AndroidFile::GetSize()
-{
-    UNSUPPORTED( "Not implemented" );
-
-    return 0;
+    pData->Resize( GetSize() );
+    Read(pData->GetDataPtr(), pData->GetSize());
 }
 
 bool AndroidFile::Read( void *Data, size_t BufferSize )
 {
-    UNSUPPORTED( "Not implemented" );
+    VERIFY(BufferSize == m_Size, "Only whole file reads are currently supported");
 
-    //VERIFY( m_pFile, "File not opened" );
-    //auto OrigPos = ftell( m_pFile );
-    //fseek( m_pFile, 0, SEEK_END );
-    //auto FileSize = ftell( m_pFile );
-    //fseek( m_pFile, 0, SEEK_SET );
-    //Data.resize( FileSize );
-    //auto ItemsRead = fread( Data.data(), FileSize, 1, m_pFile );
-    //fseek( m_pFile, OrigPos, SEEK_SET );
-    //return ItemsRead == 1;
-    return false;
+    if (m_IFS)
+    {
+        m_IFS.read((char*)Data, BufferSize);
+        return true;
+    }
+    else if (m_AssetFile != nullptr)
+    {
+        const uint8_t* src_data = (uint8_t*)AAsset_getBuffer(m_AssetFile);
+        memcpy(Data, src_data, BufferSize);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 bool AndroidFile::Write( const void *Data, size_t BufferSize )
@@ -124,6 +261,11 @@ void AndroidFile::SetPos(size_t Offset, FilePosOrigin Origin)
 }
 
 
+void AndroidFileSystem::Init(void *Activity, const char *ActivityClassName)
+{
+    JNIMiniHelper::Init((ANativeActivity*)Activity, ActivityClassName);
+}
+
 AndroidFile* AndroidFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 {
     AndroidFile *pFile = nullptr;
@@ -133,7 +275,6 @@ AndroidFile* AndroidFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
     }
     catch( const std::runtime_error &err )
     {
-
     }
 
     return pFile;
@@ -142,13 +283,21 @@ AndroidFile* AndroidFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 
 bool AndroidFileSystem::FileExists( const Diligent::Char *strFilePath )
 {
+    std::ifstream IFS;
+    AAsset*       AssetFile = nullptr;
+    size_t        Size      = 0;
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
     BasicFile DummyFile( OpenAttribs, AndroidFileSystem::GetSlashSymbol() );
-    const auto& Path = DummyFile.GetPath();
-    std::vector<Diligent::Uint8> Data;
-    bool b = JNIHelper::GetInstance()->ReadFile( Path.c_str(), &Data );
-    return b;
+    const auto& Path = DummyFile.GetPath(); // This is necessary to correct slashes
+    bool Exists = AndroidFile::Open(Path.c_str(), IFS, AssetFile, Size);
+
+    if (IFS)
+        IFS.close();
+    if (AssetFile != nullptr)
+        AAsset_close(AssetFile);
+
+    return Exists;
 }
 
 bool AndroidFileSystem::PathExists( const Diligent::Char *strPath )
@@ -156,7 +305,7 @@ bool AndroidFileSystem::PathExists( const Diligent::Char *strPath )
     UNSUPPORTED( "Not implemented" );
     return false;
 }
-    
+
 bool AndroidFileSystem::CreateDirectory( const Diligent::Char *strPath )
 {
     UNSUPPORTED( "Not implemented" );
@@ -172,7 +321,7 @@ void AndroidFileSystem::DeleteFile( const Diligent::Char *strPath )
 {
     UNSUPPORTED( "Not implemented" );
 }
-    
+
 std::vector<std::unique_ptr<FindFileData>> AndroidFileSystem::Search(const Diligent::Char *SearchPattern)
 {
     UNSUPPORTED( "Not implemented" );
