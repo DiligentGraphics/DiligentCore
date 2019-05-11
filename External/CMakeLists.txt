@@ -11,10 +11,6 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
     endif()
 endif()
 
-if(PLATFORM_ANDROID)
-	add_subdirectory(Android)
-endif()
-
 if(VULKAN_SUPPORTED)
     # We only need to have SPIRV-Headers folder, but we
     # do not really need any target from the project.
@@ -22,7 +18,7 @@ if(VULKAN_SUPPORTED)
     #set_directory_root_folder("SPIRV-Headers" "Core/External/SPIRV-Headers")
 
     option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
-    
+
     set(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers")
     set(SPIRV_SKIP_TESTS ON CACHE BOOL "Skip SPIRV tests")
     set(SPIRV_BUILD_COMPRESSION OFF CACHE BOOL "Do not build SPIRV compressing codec")
