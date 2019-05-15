@@ -1609,9 +1609,34 @@ struct Quaternion
         out[3][3] = 1;
         return out;
     }
+
+    static Quaternion Mul(const Quaternion& q1, const Quaternion& q2)
+    {
+        Quaternion q1_q2;
+        q1_q2.q.x =  q1.q.x * q2.q.w + q1.q.y * q2.q.z - q1.q.z * q2.q.y + q1.q.w * q2.q.x;
+        q1_q2.q.y = -q1.q.x * q2.q.z + q1.q.y * q2.q.w + q1.q.z * q2.q.x + q1.q.w * q2.q.y;
+        q1_q2.q.z =  q1.q.x * q2.q.y - q1.q.y * q2.q.x + q1.q.z * q2.q.w + q1.q.w * q2.q.z;
+        q1_q2.q.w = -q1.q.x * q2.q.x - q1.q.y * q2.q.y - q1.q.z * q2.q.z + q1.q.w * q2.q.w;
+        return q1_q2;
+    }
+
+    Quaternion& operator = (const Quaternion& rhs)
+    {
+        q = rhs.q;
+        return *this;
+    }
+
+    Quaternion& operator*= (const Quaternion& rhs)
+    {
+        *this = Mul(*this, rhs);
+        return *this;
+    }
 };
 
-
+inline Quaternion operator* (const Quaternion& q1, const Quaternion& q2)
+{
+    return Quaternion::Mul(q1, q2);
+}
 
 inline Quaternion normalize(const Quaternion& q)
 {
