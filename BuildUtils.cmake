@@ -108,8 +108,14 @@ function(set_common_target_properties TARGET)
             # error: invalid argument '-std=c++11' not allowed with 'C/ObjC'
             CXX_STANDARD 11
             CXX_STANDARD_REQUIRED ON
-            CXX_EXTENSIONS OFF
         )
+
+        if(NOT MINGW_BUILD)
+            # Do not disable extensions when building with MinGW!
+            set_target_properties(${TARGET} PROPERTIES
+                CXX_EXTENSIONS OFF
+            )
+        endif()
     endif()
     
     if(PLATFORM_IOS)
