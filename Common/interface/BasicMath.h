@@ -221,6 +221,16 @@ template <class T> struct Vector2
             static_cast<T>(*it++)
         };
     }
+
+    template<typename Y>
+    Vector2<Y> Recast()const
+    {
+        return Vector2<Y>
+        {
+            static_cast<Y>(x),
+            static_cast<Y>(y)
+        };
+    }
 };
 
 template <class T>
@@ -403,6 +413,17 @@ template <class T> struct Vector3
             static_cast<T>(*it++),
             static_cast<T>(*it++),
             static_cast<T>(*it++)
+        };
+    }
+
+    template<typename Y>
+    Vector3<Y> Recast()const
+    {
+        return Vector3<Y>
+        {
+            static_cast<Y>(x),
+            static_cast<Y>(y),
+            static_cast<Y>(z)
         };
     }
 
@@ -610,6 +631,18 @@ template <class T> struct Vector4
             static_cast<T>(*it++),
             static_cast<T>(*it++),
             static_cast<T>(*it++)
+        };
+    }
+
+    template<typename Y>
+    Vector4<Y> Recast()const
+    {
+        return Vector4<Y>
+        {
+            static_cast<Y>(x),
+            static_cast<Y>(y),
+            static_cast<Y>(z),
+            static_cast<Y>(w)
         };
     }
 
