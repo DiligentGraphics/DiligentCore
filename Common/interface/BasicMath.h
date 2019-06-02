@@ -1128,13 +1128,9 @@ template <class T> struct Matrix4x4
     }
 
     // 3D Rotation matrix for an arbitrary axis specified by x, y and z
-    static Matrix4x4 RotationArbitrary(Vector3<T> axis, T degree)
+    static Matrix4x4 RotationArbitrary(Vector3<T> axis, T angleInRadians)
     {
-        LOG_WARNING_MESSAGE_ONCE("RotationArbitrary() is not tested");
-
         axis = normalize(axis);
-
-        auto angleInRadians = degree * static_cast<T>(PI / 180.0);
 
         auto sinAngle = std::sin(angleInRadians);
         auto cosAngle = std::cos(angleInRadians);
@@ -1142,25 +1138,25 @@ template <class T> struct Matrix4x4
 
         Matrix4x4 mOut;
 
-        mOut._11 = 1.0f + oneMinusCosAngle * (axis.x * axis.x - 1.0f);
-        mOut._12 = axis.z * sinAngle + oneMinusCosAngle * axis.x * axis.y;
+        mOut._11 =  1 + oneMinusCosAngle * (axis.x * axis.x - 1);
+        mOut._12 =  axis.z * sinAngle + oneMinusCosAngle * axis.x * axis.y;
         mOut._13 = -axis.y * sinAngle + oneMinusCosAngle * axis.x * axis.z;
-        mOut._41 = 0.0f;
+        mOut._41 =  0;
 
         mOut._21 = -axis.z * sinAngle + oneMinusCosAngle * axis.y * axis.x;
-        mOut._22 = 1.0f + oneMinusCosAngle * (axis.y * axis.y - 1.0f);
-        mOut._23 = axis.x * sinAngle + oneMinusCosAngle * axis.y * axis.z;
-        mOut._24 = 0.0f;
+        mOut._22 =  1 + oneMinusCosAngle * (axis.y * axis.y - 1);
+        mOut._23 =  axis.x * sinAngle + oneMinusCosAngle * axis.y * axis.z;
+        mOut._24 =  0;
 
-        mOut._31 = axis.y * sinAngle + oneMinusCosAngle * axis.z * axis.x;
+        mOut._31 =  axis.y * sinAngle + oneMinusCosAngle * axis.z * axis.x;
         mOut._32 = -axis.x * sinAngle + oneMinusCosAngle * axis.z * axis.y;
-        mOut._33 = 1.0f + oneMinusCosAngle * (axis.z * axis.z - 1.0f);
-        mOut._34 = 0.0f;
+        mOut._33 =  1 + oneMinusCosAngle * (axis.z * axis.z - 1);
+        mOut._34 =  0;
 
-        mOut._41 = 0.0f;
-        mOut._42 = 0.0f;
-        mOut._43 = 0.0f;
-        mOut._44 = 1.0f;
+        mOut._41 = 0;
+        mOut._42 = 0;
+        mOut._43 = 0;
+        mOut._44 = 1;
 
         return mOut;
     }
