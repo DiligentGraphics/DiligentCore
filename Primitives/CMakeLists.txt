@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(Primitives CXX)
+project(Diligent-Primitives CXX)
 
 set(SOURCE
     src/DebugOutput.cpp
@@ -23,15 +23,15 @@ set(INTERFACE
 
 # This should be an interface library. However, CMake does not show
 # interface libraries in an IDE, so we have to create a static library instead
-add_library(Primitives STATIC ${INTERFACE} ${SOURCE})
-set_common_target_properties(Primitives)
+add_library(Diligent-Primitives STATIC ${INTERFACE} ${SOURCE})
+set_common_target_properties(Diligent-Primitives)
 
-target_link_libraries(Primitives 
+target_link_libraries(Diligent-Primitives 
 PUBLIC
-    BuildSettings
+    Diligent-BuildSettings
 )
 
-target_include_directories(Primitives
+target_include_directories(Diligent-Primitives
 PUBLIC
     interface
 )
@@ -39,10 +39,10 @@ PUBLIC
 source_group("interface" FILES ${INTERFACE})
 source_group("src" FILES ${SOURCE})
 
-set_target_properties(Primitives PROPERTIES
-    FOLDER Core
+set_target_properties(Diligent-Primitives PROPERTIES
+    FOLDER DiligentCore
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(Primitives)
+    install_core_lib(Diligent-Primitives)
 endif()

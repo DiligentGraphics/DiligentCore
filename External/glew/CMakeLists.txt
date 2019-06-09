@@ -25,7 +25,7 @@ PUBLIC
     include
 )
 
-target_link_libraries(glew-static PRIVATE BuildSettings)
+target_link_libraries(glew-static PRIVATE Diligent-BuildSettings)
 
 if(MSVC)
     target_compile_options(glew-static PRIVATE /wd4456)
@@ -35,5 +35,5 @@ source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 
 set_target_properties(glew-static PROPERTIES
-    FOLDER Core/External
+    FOLDER DiligentCore/External
 )

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 
-project(GraphicsEngineMetal CXX)
+project(Diligent-GraphicsEngineMetal CXX)
 
 
 set(INCLUDE 
@@ -55,34 +55,34 @@ set(SRC
     src/TextureViewMtlImpl.mm
 )
 
-add_library(GraphicsEngineMetalInterface INTERFACE)
-target_include_directories(GraphicsEngineMetalInterface
+add_library(Diligent-GraphicsEngineMetalInterface INTERFACE)
+target_include_directories(Diligent-GraphicsEngineMetalInterface
 INTERFACE
     interface
 )
-target_link_libraries(GraphicsEngineMetalInterface 
+target_link_libraries(Diligent-GraphicsEngineMetalInterface 
 INTERFACE 
-    GraphicsEngineInterface
+    Diligent-GraphicsEngineInterface
 )
 
 
-add_library(GraphicsEngineMetal-static STATIC 
+add_library(Diligent-GraphicsEngineMetal-static STATIC 
     ${SRC} ${INTERFACE} ${INCLUDE}
     readme.md
 )
 
-add_library(GraphicsEngineMetal-shared SHARED 
+add_library(Diligent-GraphicsEngineMetal-shared SHARED 
     readme.md
 )
 
-set_target_properties(GraphicsEngineMetal-shared PROPERTIES
+set_target_properties(Diligent-GraphicsEngineMetal-shared PROPERTIES
     OUTPUT_NAME GraphicsEngineMetal
 )
 
-set_common_target_properties(GraphicsEngineMetal-shared)
-set_common_target_properties(GraphicsEngineMetal-static)
+set_common_target_properties(Diligent-GraphicsEngineMetal-shared)
+set_common_target_properties(Diligent-GraphicsEngineMetal-static)
 
-target_include_directories(GraphicsEngineMetal-static 
+target_include_directories(Diligent-GraphicsEngineMetal-static 
 PRIVATE
     include
 )
@@ -92,32 +92,32 @@ if (NOT METAL_FRAMEWORK)
     message(FATAL_ERROR "Metal framework is not found")
 endif()
 
-target_link_libraries(GraphicsEngineMetal-static
+target_link_libraries(Diligent-GraphicsEngineMetal-static
 PRIVATE
-    BuildSettings 
-    TargetPlatform
-    Common
-    GraphicsEngine
+    Diligent-BuildSettings 
+    Diligent-TargetPlatform
+    Diligent-Common
+    Diligent-GraphicsEngine
     ${METAL_FRAMEWORK}
 PUBLIC
-    GraphicsEngineMetalInterface
+    Diligent-GraphicsEngineMetalInterface
 )
 
-target_link_libraries(GraphicsEngineMetal-shared PUBLIC GraphicsEngineMetal-static)
-target_compile_definitions(GraphicsEngineMetal-shared PUBLIC ENGINE_DLL=1)
+target_link_libraries(Diligent-GraphicsEngineMetal-shared PUBLIC Diligent-GraphicsEngineMetal-static)
+target_compile_definitions(Diligent-GraphicsEngineMetal-shared PUBLIC ENGINE_DLL=1)
 
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" OR 
     CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set_target_properties(GraphicsEngineMetal-shared PROPERTIES CXX_VISIBILITY_PRESET hidden) # -fvisibility=hidden
+    set_target_properties(Diligent-GraphicsEngineMetal-shared PROPERTIES CXX_VISIBILITY_PRESET hidden) # -fvisibility=hidden
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Disable the following clang warning
     #    '<function name>' hides overloaded virtual function
     # as hiding is intended
-    target_compile_options(GraphicsEngineMetal-static PRIVATE -Wno-overloaded-virtual)
-    target_compile_options(GraphicsEngineMetal-shared PRIVATE -Wno-overloaded-virtual)
+    target_compile_options(Diligent-GraphicsEngineMetal-static PRIVATE -Wno-overloaded-virtual)
+    target_compile_options(Diligent-GraphicsEngineMetal-shared PRIVATE -Wno-overloaded-virtual)
 endif()
 
 
@@ -125,11 +125,11 @@ source_group("src" FILES ${SRC} )
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 
-set_target_properties(GraphicsEngineMetal-static PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineMetal-static PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
-set_target_properties(GraphicsEngineMetal-shared PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineMetal-shared PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
 
 set_source_files_properties(
@@ -137,6 +137,6 @@ set_source_files_properties(
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(GraphicsEngineMetal-shared)
-    install_core_lib(GraphicsEngineMetal-static)
+    install_core_lib(Diligent-GraphicsEngineMetal-shared)
+    install_core_lib(Diligent-GraphicsEngineMetal-static)
 endif()

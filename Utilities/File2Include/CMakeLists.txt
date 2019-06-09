@@ -32,7 +32,7 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
     source_group("source" FILES ${SOURCE})
 
     set_target_properties(File2String PROPERTIES
-        FOLDER Core/Utilities
+        FOLDER DiligentCore/Utilities
     )
 
     # When setting RUNTIME_OUTPUT_DIRECTORY_RELEASE to DST_DIR,

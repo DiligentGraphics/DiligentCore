@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 
-project(GraphicsEngineD3DBase CXX)
+project(Diligent-GraphicsEngineD3DBase CXX)
 
 set(INCLUDE 
     include/D3DErrors.h
@@ -27,7 +27,7 @@ set(SOURCE
     src/ShaderResources.cpp
 )
 
-add_library(GraphicsEngineD3DBase STATIC 
+add_library(Diligent-GraphicsEngineD3DBase STATIC 
     ${SOURCE} ${INCLUDE} ${INTERFACE} include/HLSLDefinitions_inc.fxh
 )
 
@@ -37,13 +37,13 @@ set_source_files_properties(
 )
 
 # Create custom target to convert HLSLDefinitions.fxh to HLSLDefinitions_inc.fxh
-add_custom_target(ProcessHLSLDefinitions
+add_custom_target(Diligent-ProcessHLSLDefinitions
 SOURCES
     include/HLSLDefinitions.fxh
 )
 
-add_custom_command(TARGET ProcessHLSLDefinitions 
-                   # Unfortunately it is not possible to set TARGET directly to GraphicsEngineD3DBase
+add_custom_command(TARGET Diligent-ProcessHLSLDefinitions 
+                   # Unfortunately it is not possible to set TARGET directly to Diligent-GraphicsEngineD3DBase
                    # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 
                    # PRE_BUILD is treated as PRE_LINK.
                    COMMAND ${FILE2STRING_PATH} include/HLSLDefinitions.fxh include/HLSLDefinitions_inc.fxh
@@ -52,40 +52,40 @@ add_custom_command(TARGET ProcessHLSLDefinitions
                    VERBATIM
 )
 
-add_dependencies(GraphicsEngineD3DBase ProcessHLSLDefinitions)
+add_dependencies(Diligent-GraphicsEngineD3DBase Diligent-ProcessHLSLDefinitions)
 
-add_library(GraphicsEngineD3DBaseInterface INTERFACE)
-target_link_libraries(GraphicsEngineD3DBaseInterface INTERFACE GraphicsEngineInterface)
-target_include_directories(GraphicsEngineD3DBaseInterface INTERFACE interface)
+add_library(Diligent-GraphicsEngineD3DBaseInterface INTERFACE)
+target_link_libraries(Diligent-GraphicsEngineD3DBaseInterface INTERFACE Diligent-GraphicsEngineInterface)
+target_include_directories(Diligent-GraphicsEngineD3DBaseInterface INTERFACE interface)
 
-target_include_directories(GraphicsEngineD3DBase
+target_include_directories(Diligent-GraphicsEngineD3DBase
 PUBLIC
     include
 )
 
-target_link_libraries(GraphicsEngineD3DBase 
+target_link_libraries(Diligent-GraphicsEngineD3DBase 
 PUBLIC
-    BuildSettings 
-    GraphicsEngine 
-    GraphicsEngineD3DBaseInterface
+    Diligent-BuildSettings 
+    Diligent-GraphicsEngine 
+    Diligent-GraphicsEngineD3DBaseInterface
 )
 if(D3D12_SUPPORTED)
-    target_link_libraries(GraphicsEngineD3DBase PRIVATE D3D12.lib)
+    target_link_libraries(Diligent-GraphicsEngineD3DBase PRIVATE D3D12.lib)
 endif()
-set_common_target_properties(GraphicsEngineD3DBase)
+set_common_target_properties(Diligent-GraphicsEngineD3DBase)
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 source_group("generated" FILES include/HLSLDefinitions_inc.fxh)
 
-set_target_properties(GraphicsEngineD3DBase PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineD3DBase PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
-set_target_properties(ProcessHLSLDefinitions PROPERTIES
-    FOLDER Core/Graphics/Helper
+set_target_properties(Diligent-ProcessHLSLDefinitions PROPERTIES
+    FOLDER DiligentCore/Graphics/Helper
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(GraphicsEngineD3DBase)
+    install_core_lib(Diligent-GraphicsEngineD3DBase)
 endif()

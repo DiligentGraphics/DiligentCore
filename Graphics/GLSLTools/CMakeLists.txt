@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(GLSLTools CXX)
+project(Diligent-GLSLTools CXX)
 
 set(INCLUDE 
     include/GLSLSourceBuilder.h
@@ -28,9 +28,9 @@ if(VULKAN_SUPPORTED)
     endif()
 endif()
 
-add_library(GLSLTools STATIC ${SOURCE} ${INCLUDE})
+add_library(Diligent-GLSLTools STATIC ${SOURCE} ${INCLUDE})
 
-target_include_directories(GLSLTools 
+target_include_directories(Diligent-GLSLTools 
 PUBLIC
     include
 PRIVATE
@@ -38,46 +38,46 @@ PRIVATE
     ../GraphicsEngine/include
 )
 
-target_link_libraries(GLSLTools 
+target_link_libraries(Diligent-GLSLTools 
 PRIVATE 
-    BuildSettings
-    GraphicsAccessories
-    Common
+    Diligent-BuildSettings
+    Diligent-GraphicsAccessories
+    Diligent-Common
 PUBLIC
-    HLSL2GLSLConverterLib
-    GraphicsEngineInterface
+    Diligent-HLSL2GLSLConverterLib
+    Diligent-GraphicsEngineInterface
 )
 
 if(VULKAN_SUPPORTED)
-    target_link_libraries(GLSLTools 
+    target_link_libraries(Diligent-GLSLTools 
     PRIVATE
         spirv-cross-core
     )
 
     if (NOT ${DILIGENT_NO_GLSLANG})
-        target_link_libraries(GLSLTools 
+        target_link_libraries(Diligent-GLSLTools 
         PRIVATE
             glslang
             SPIRV
         )
 
-        target_include_directories(GLSLTools 
+        target_include_directories(Diligent-GLSLTools 
         PRIVATE
             ../../External/glslang
         )
     endif()
 endif()
 
-set_common_target_properties(GLSLTools)
+set_common_target_properties(Diligent-GLSLTools)
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 
-set_target_properties(GLSLTools PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GLSLTools PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(GLSLTools)
+    install_core_lib(Diligent-GLSLTools)
 endif()

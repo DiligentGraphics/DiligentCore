@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(ApplePlatform CXX)
+project(Diligent-ApplePlatform CXX)
 
 set(INTERFACE
     interface/CFObjectWrapper.h
@@ -16,28 +16,28 @@ set(SOURCE
 )
 
 
-add_library(ApplePlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
-set_common_target_properties(ApplePlatform)
+add_library(Diligent-ApplePlatform ${SOURCE} ${INTERFACE} ${PLATFORM_INTERFACE_HEADERS})
+set_common_target_properties(Diligent-ApplePlatform)
 
-target_include_directories(ApplePlatform
+target_include_directories(Diligent-ApplePlatform
 PUBLIC
     interface
 )
 
-target_link_libraries(ApplePlatform
+target_link_libraries(Diligent-ApplePlatform
 PUBLIC
-    BuildSettings 
-    BasicPlatform
-    PlatformInterface
+    Diligent-BuildSettings 
+    Diligent-BasicPlatform
+    Diligent-PlatformInterface
 )
 
 if(PLATFORM_MACOS)
-    target_link_libraries(ApplePlatform
+    target_link_libraries(Diligent-ApplePlatform
     PRIVATE
         ${APP_KIT}
     )
 elseif(PLATFORM_IOS)
-    target_link_libraries(ApplePlatform
+    target_link_libraries(Diligent-ApplePlatform
     PRIVATE
         ${CORE_FOUNDATION}
         ${FOUNDATION}
@@ -48,10 +48,10 @@ source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
 
-set_target_properties(ApplePlatform PROPERTIES
-    FOLDER Core/Platforms
+set_target_properties(Diligent-ApplePlatform PROPERTIES
+    FOLDER DiligentCore/Platforms
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(ApplePlatform)
+    install_core_lib(Diligent-ApplePlatform)
 endif()

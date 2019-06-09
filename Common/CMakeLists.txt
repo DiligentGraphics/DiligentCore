@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(Common CXX)
+project(Diligent-Common CXX)
 
 set(INCLUDE 
     include/pch.h
@@ -41,30 +41,30 @@ set(SOURCE
     src/Timer.cpp
 )
 
-add_library(Common STATIC ${SOURCE} ${INCLUDE} ${INTERFACE})
+add_library(Diligent-Common STATIC ${SOURCE} ${INCLUDE} ${INTERFACE})
 
-target_include_directories(Common 
+target_include_directories(Diligent-Common 
 PRIVATE
     include
 PUBLIC 
     interface
 )
 
-target_link_libraries(Common 
+target_link_libraries(Diligent-Common 
 PUBLIC
-    BuildSettings
-    TargetPlatform 
+    Diligent-BuildSettings
+    Diligent-TargetPlatform 
 )
-set_common_target_properties(Common)
+set_common_target_properties(Diligent-Common)
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 
-set_target_properties(Common PROPERTIES
-    FOLDER Core
+set_target_properties(Diligent-Common PROPERTIES
+    FOLDER DiligentCore
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(Common)
+    install_core_lib(Diligent-Common)
 endif()

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(GraphicsEngineNextGenBase CXX)
+project(Diligent-GraphicsEngineNextGenBase CXX)
 
 set(INCLUDE 
     include/DeviceContextNextGenBase.h
@@ -12,30 +12,30 @@ set(SOURCE
     src/dummy.cpp
 )
 
-add_library(GraphicsEngineNextGenBase STATIC ${SOURCE} ${INCLUDE})
-set_common_target_properties(GraphicsEngineNextGenBase)
+add_library(Diligent-GraphicsEngineNextGenBase STATIC ${SOURCE} ${INCLUDE})
+set_common_target_properties(Diligent-GraphicsEngineNextGenBase)
 
-target_include_directories(GraphicsEngineNextGenBase
+target_include_directories(Diligent-GraphicsEngineNextGenBase
 PUBLIC
     include
 )
 
-target_link_libraries(GraphicsEngineNextGenBase 
+target_link_libraries(Diligent-GraphicsEngineNextGenBase 
 PUBLIC
-    BuildSettings
-    PlatformInterface
-    Common
-    GraphicsAccessories
-    GraphicsEngine
+    Diligent-BuildSettings
+    Diligent-PlatformInterface
+    Diligent-Common
+    Diligent-GraphicsAccessories
+    Diligent-GraphicsEngine
 )
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 
-set_target_properties(GraphicsEngineNextGenBase PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineNextGenBase PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(GraphicsEngineNextGenBase)
+    install_core_lib(Diligent-GraphicsEngineNextGenBase)
 endif()

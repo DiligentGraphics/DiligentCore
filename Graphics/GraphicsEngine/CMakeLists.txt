@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(GraphicsEngine CXX)
+project(Diligent-GraphicsEngine CXX)
 
 set(INCLUDE 
     include/BufferBase.h
@@ -64,31 +64,31 @@ set(SOURCE
     src/Texture.cpp
 )
 
-add_library(GraphicsEngine STATIC ${SOURCE} ${INTERFACE} ${INCLUDE})
-set_common_target_properties(GraphicsEngine)
+add_library(Diligent-GraphicsEngine STATIC ${SOURCE} ${INTERFACE} ${INCLUDE})
+set_common_target_properties(Diligent-GraphicsEngine)
 
-target_include_directories(GraphicsEngine 
+target_include_directories(Diligent-GraphicsEngine 
 PUBLIC
     include
     interface
 )
 
-target_link_libraries(GraphicsEngine 
+target_link_libraries(Diligent-GraphicsEngine 
 PUBLIC
-    BuildSettings 
-    PlatformInterface 
-    Common
-    GraphicsAccessories
+    Diligent-BuildSettings
+    Diligent-PlatformInterface
+    Diligent-Common
+    Diligent-GraphicsAccessories
 )
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 
-set_target_properties(GraphicsEngine PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngine PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(GraphicsEngine)
+    install_core_lib(Diligent-GraphicsEngine)
 endif()

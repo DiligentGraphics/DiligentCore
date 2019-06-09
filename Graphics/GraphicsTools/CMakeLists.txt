@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(GraphicsTools CXX)
+project(Diligent-GraphicsTools CXX)
 
 set(INCLUDE 
     include/CommonlyUsedStates.h
@@ -24,7 +24,7 @@ set(DEPENDENCIES)
 if(D3D11_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderD3D11.cpp)
     list(APPEND INCLUDE include/TextureUploaderD3D11.h)
-    list(APPEND DEPENDENCIES GraphicsEngineD3D11Interface)
+    list(APPEND DEPENDENCIES Diligent-GraphicsEngineD3D11Interface)
 endif()
 
 if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
@@ -35,39 +35,39 @@ endif()
 if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderGL.cpp)
     list(APPEND INCLUDE include/TextureUploaderGL.h)
-    list(APPEND DEPENDENCIES GraphicsEngineOpenGLInterface)
+    list(APPEND DEPENDENCIES Diligent-GraphicsEngineOpenGLInterface)
 endif()
 
-add_library(GraphicsTools STATIC ${SOURCE} ${INCLUDE})
+add_library(Diligent-GraphicsTools STATIC ${SOURCE} ${INCLUDE})
 
-target_include_directories(GraphicsTools 
+target_include_directories(Diligent-GraphicsTools 
 PUBLIC
     include
 PRIVATE
     ../GraphicsEngineD3DBase/include
 )
 
-target_link_libraries(GraphicsTools 
+target_link_libraries(Diligent-GraphicsTools 
 PRIVATE 
-    Common 
-    BuildSettings
-    PlatformInterface
-    GraphicsAccessories
+    Diligent-Common 
+    Diligent-BuildSettings
+    Diligent-PlatformInterface
+    Diligent-GraphicsAccessories
     ${DEPENDENCIES}
 PUBLIC
-    GraphicsEngineInterface
+    Diligent-GraphicsEngineInterface
 )
 
-set_common_target_properties(GraphicsTools)
+set_common_target_properties(Diligent-GraphicsTools)
 
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 
-set_target_properties(GraphicsTools PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsTools PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(GraphicsTools)
+    install_core_lib(Diligent-GraphicsTools)
 endif()

@@ -66,7 +66,7 @@ else()
     endif()
 endif(WIN32)
 
-add_library(BuildSettings INTERFACE)
+add_library(Diligent-BuildSettings INTERFACE)
 
 if(PLATFORM_WIN32)
     if(MSVC)
@@ -85,31 +85,31 @@ if(PLATFORM_WIN32)
 	if(${ARCH} EQUAL 64)
         set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is supported on Win64 platform")
     endif()
-    target_compile_definitions(BuildSettings INTERFACE PLATFORM_WIN32=1)
+    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_WIN32=1)
 elseif(PLATFORM_UNIVERSAL_WINDOWS)
     set(D3D11_SUPPORTED TRUE CACHE INTERNAL "D3D11 is supported on Univeral Windows platform")
 	if(NOT CMAKE_SYSTEM_VERSION STREQUAL "8.1")
 		set(D3D12_SUPPORTED TRUE CACHE INTERNAL "D3D12 is supported on Univeral Windows platform")
 	endif()
-    target_compile_definitions(BuildSettings INTERFACE PLATFORM_UNIVERSAL_WINDOWS=1)
+    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_UNIVERSAL_WINDOWS=1)
 elseif(PLATFORM_ANDROID)
     set(GLES_SUPPORTED TRUE CACHE INTERNAL "OpenGLES is supported on Android platform")
     string(REGEX MATCH [0-9]+ ANDROID_API_LEVEL ${ANDROID_PLATFORM})
     if(${ARCH} EQUAL 64 AND ${ANDROID_API_LEVEL} GREATER 23)
         set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is supported on Android platform")
     endif()
-    target_compile_definitions(BuildSettings INTERFACE PLATFORM_ANDROID=1)
+    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_ANDROID=1)
 elseif(PLATFORM_LINUX)
     set(GL_SUPPORTED TRUE CACHE INTERNAL "OpenGL is supported on Linux platform")
     if(${ARCH} EQUAL 64)
         set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is supported on Linux64 platform")
     endif()
-    target_compile_definitions(BuildSettings INTERFACE PLATFORM_LINUX=1)
+    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_LINUX=1)
 elseif(PLATFORM_MACOS)
     set(GL_SUPPORTED TRUE CACHE INTERNAL "OpenGL is supported on MacOS platform")
     set(METAL_SUPPORTED TRUE CACHE INTERNAL "Metal is supported on MacOS platform")
     set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is enabled through MoltenVK on MacOS platform")
-    target_compile_definitions(BuildSettings INTERFACE PLATFORM_MACOS=1)
+    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_MACOS=1)
 elseif(PLATFORM_IOS)
     set(GLES_SUPPORTED TRUE CACHE INTERNAL "OpenGLES is supported on iOS platform")
     set(METAL_SUPPORTED TRUE CACHE INTERNAL "Metal is supported on iOS platform")
@@ -127,7 +127,7 @@ elseif(PLATFORM_IOS)
     else()
         message("VULKAN_SDK is undefined. Vulkan backend will be disabled.")
     endif()
-    target_compile_definitions(BuildSettings INTERFACE PLATFORM_IOS=1)
+    target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_IOS=1)
 else()
     message(FATAL_ERROR "No PLATFORM_XXX variable defined. Make sure that 'DiligentCore' folder is processed first")
 endif()
@@ -167,7 +167,7 @@ message("GLES_SUPPORTED: " ${GLES_SUPPORTED})
 message("VULKAN_SUPPORTED: " ${VULKAN_SUPPORTED})
 message("METAL_SUPPORTED: " ${METAL_SUPPORTED})
 
-target_compile_definitions(BuildSettings 
+target_compile_definitions(Diligent-BuildSettings 
 INTERFACE 
     D3D11_SUPPORTED=$<BOOL:${D3D11_SUPPORTED}>
     D3D12_SUPPORTED=$<BOOL:${D3D12_SUPPORTED}>
@@ -182,7 +182,7 @@ if(MSVC)
     # For msvc, enable level 4 warnings except for
     # - w4100 - unreferenced formal parameter
     # - w4505 - unreferenced local function has been removed
-    target_compile_options(BuildSettings INTERFACE /W4 /wd4100 /wd4505)
+    target_compile_options(Diligent-BuildSettings INTERFACE /W4 /wd4100 /wd4505)
     # In all release modes also:
     # - disable w4189 - local variable is initialized but not referenced
     # - Enable AVX2 instruction set (/arch:AVX2)
@@ -190,7 +190,7 @@ if(MSVC)
     # - Enable whole program optimization (/GL)
     # - Enable string pooling (/GF)
     set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /arch:AVX2 /wd4189 /GR- /GL /GF)
-    #target_compile_options(BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/arch:AVX2 /wd4189 /Ot")
+    #target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/arch:AVX2 /wd4189 /Ot")
     # In RELEASE mode:
     # - Set favor fast code option (/Ot)
     # - Enable intrinsic functions (/Oi)
@@ -199,27 +199,27 @@ if(MSVC)
     # In MINSIZEREL mode set favor small code option (/Os)
     set(MSVC_MINSIZEREL_COMPILE_OPTIONS ${MSVC_ALL_RELEASE_COMPILE_OPTIONS} /Os)
     set(MSVC_RELWITHDEBINFO_COMPILE_OPTIONS ${MSVC_ALL_RELEASE_COMPILE_OPTIONS} /Ot /Oi /Ob2 /Ox)
-    target_compile_options(BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:${MSVC_RELEASE_COMPILE_OPTIONS}>")
-    target_compile_options(BuildSettings INTERFACE "$<$<CONFIG:MINSIZEREL>:${MSVC_MINSIZEREL_COMPILE_OPTIONS}>")
-    target_compile_options(BuildSettings INTERFACE "$<$<CONFIG:RELWITHDEBINFO>:${MSVC_RELWITHDEBINFO_COMPILE_OPTIONS}>")
+    target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:${MSVC_RELEASE_COMPILE_OPTIONS}>")
+    target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:MINSIZEREL>:${MSVC_MINSIZEREL_COMPILE_OPTIONS}>")
+    target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELWITHDEBINFO>:${MSVC_RELWITHDEBINFO_COMPILE_OPTIONS}>")
     # !!!NOTE!!! For some reason above is the only form of generator expression that works
     # For instance, this way
-    # target_compile_options(BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/Ot>")
+    # target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/Ot>")
     # does not work as expected
 
     set(DEBUG_MACROS DEVELOPMENT)
-    target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DEBUG_MACROS}>")
+    target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DEBUG_MACROS}>")
 else()
 
     set(DEBUG_MACROS _DEBUG DEBUG DEVELOPMENT)
     set(RELEASE_MACROS NDEBUG)
 
     foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
-        target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:${DEBUG_MACROS}>")
+        target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:${DEBUG_MACROS}>")
     endforeach()
 
     foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
-        target_compile_definitions(BuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:${RELEASE_MACROS}>")
+        target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:${RELEASE_MACROS}>")
     endforeach()
 
 endif(MSVC)
@@ -351,7 +351,7 @@ if(INSTALL_DILIGENT_CORE)
                 DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/"
         )
         set_target_properties(DiligentCore-static PROPERTIES
-            FOLDER Core
+            FOLDER DiligentCore
         )
     else()
         message("Unable to find librarian tool. Combined DiligentCore static library will not be produced.")

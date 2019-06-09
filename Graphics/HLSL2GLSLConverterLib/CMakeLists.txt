@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(HLSL2GLSLConverterLib CXX)
+project(Diligent-HLSL2GLSLConverterLib CXX)
 
 set(INCLUDE 
     include/GLSLDefinitions.h
@@ -18,39 +18,39 @@ set(SOURCE
     src/HLSL2GLSLConverterObject.cpp
 )
 
-add_library(HLSL2GLSLConverterLib STATIC ${SOURCE} ${INTERFACE} ${INCLUDE} include/GLSLDefinitions_inc.h)
-set_common_target_properties(HLSL2GLSLConverterLib)
+add_library(Diligent-HLSL2GLSLConverterLib STATIC ${SOURCE} ${INTERFACE} ${INCLUDE} include/GLSLDefinitions_inc.h)
+set_common_target_properties(Diligent-HLSL2GLSLConverterLib)
 
 set_source_files_properties(
     ${CMAKE_CURRENT_SOURCE_DIR}/include/GLSLDefinitions_inc.h
     PROPERTIES GENERATED TRUE
 )
 
-target_include_directories(HLSL2GLSLConverterLib 
+target_include_directories(Diligent-HLSL2GLSLConverterLib 
 PUBLIC 
     interface
 PRIVATE
     include
 )
 
-target_link_libraries(HLSL2GLSLConverterLib 
+target_link_libraries(Diligent-HLSL2GLSLConverterLib 
 PRIVATE 
-    BuildSettings 
-    Common 
-    PlatformInterface 
-    GraphicsEngine
+    Diligent-BuildSettings 
+    Diligent-Common 
+    Diligent-PlatformInterface 
+    Diligent-GraphicsEngine
 PUBLIC
-    GraphicsEngineInterface
+    Diligent-GraphicsEngineInterface
 )
 
 if(NOT FILE2STRING_PATH STREQUAL "")
     # Create custom target to convert GLSLDefinitions.h to GLSLDefinitions_inc.h
-    add_custom_target(ProcessGLSLDefinitions 
+    add_custom_target(Diligent-ProcessGLSLDefinitions 
     SOURCES
         include/GLSLDefinitions.h
     )
 
-    add_custom_command(TARGET ProcessGLSLDefinitions 
+    add_custom_command(TARGET Diligent-ProcessGLSLDefinitions 
                        # Unfortunately it is not possible to set TARGET directly to HLSL2GLSLConverterLib
                        # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 
                        # PRE_BUILD is treated as PRE_LINK.
@@ -60,9 +60,9 @@ if(NOT FILE2STRING_PATH STREQUAL "")
                        VERBATIM
     )
 
-    add_dependencies(HLSL2GLSLConverterLib ProcessGLSLDefinitions)
-    set_target_properties(ProcessGLSLDefinitions PROPERTIES
-        FOLDER Core/Graphics/Helper
+    add_dependencies(Diligent-HLSL2GLSLConverterLib Diligent-ProcessGLSLDefinitions)
+    set_target_properties(Diligent-ProcessGLSLDefinitions PROPERTIES
+        FOLDER DiligentCore/Graphics/Helper
     )
 else()
     message(WARNING "File2String utility is currently unavailable on this host system. This is not an issues unless you modify GLSLDefinitions.h file")
@@ -73,10 +73,10 @@ source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 source_group("generated" FILES include/GLSLDefinitions_inc.h)
 
-set_target_properties(HLSL2GLSLConverterLib PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-HLSL2GLSLConverterLib PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(HLSL2GLSLConverterLib)
+    install_core_lib(Diligent-HLSL2GLSLConverterLib)
 endif()

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 
-project(GraphicsEngineD3D12 CXX)
+project(Diligent-GraphicsEngineD3D12 CXX)
 
 set(INCLUDE 
     include/BufferD3D12Impl.h
@@ -102,62 +102,62 @@ set_source_files_properties(${SHADERS} PROPERTIES
     #VS_SHADER_FLAGS "/O3"
 )
 
-add_library(GraphicsEngineD3D12Interface INTERFACE)
-target_include_directories(GraphicsEngineD3D12Interface
+add_library(Diligent-GraphicsEngineD3D12Interface INTERFACE)
+target_include_directories(Diligent-GraphicsEngineD3D12Interface
 INTERFACE
     interface
 )
-target_link_libraries(GraphicsEngineD3D12Interface 
+target_link_libraries(Diligent-GraphicsEngineD3D12Interface 
 INTERFACE 
-    GraphicsEngineD3DBaseInterface
+    Diligent-GraphicsEngineD3DBaseInterface
 )
 
-add_library(GraphicsEngineD3D12-static STATIC 
+add_library(Diligent-GraphicsEngineD3D12-static STATIC 
     ${SRC} ${INTERFACE} ${INCLUDE} ${SHADERS}
     readme.md
     shaders/GenerateMips/GenerateMipsCS.hlsli
 )
 
-add_library(GraphicsEngineD3D12-shared SHARED 
+add_library(Diligent-GraphicsEngineD3D12-shared SHARED 
     src/DLLMain.cpp
     src/GraphicsEngineD3D12.def
     readme.md
 )
 
-target_include_directories(GraphicsEngineD3D12-static 
+target_include_directories(Diligent-GraphicsEngineD3D12-static 
 PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders
     include
 )
 
-target_link_libraries(GraphicsEngineD3D12-static
+target_link_libraries(Diligent-GraphicsEngineD3D12-static
 PRIVATE
-    BuildSettings 
-    Common 
-    GraphicsEngineD3DBase
-    GraphicsEngineNextGenBase
-    TargetPlatform 
+    Diligent-BuildSettings 
+    Diligent-Common 
+    Diligent-GraphicsEngineD3DBase
+    Diligent-GraphicsEngineNextGenBase
+    Diligent-TargetPlatform 
     dxgi.lib
     D3D12.lib 
     d3dcompiler.lib
 PUBLIC
-    GraphicsEngineD3D12Interface
+    Diligent-GraphicsEngineD3D12Interface
 )
 
-target_link_libraries(GraphicsEngineD3D12-shared
+target_link_libraries(Diligent-GraphicsEngineD3D12-shared
 PRIVATE
-    BuildSettings
-    GraphicsEngineD3D12-static
+    Diligent-BuildSettings
+    Diligent-GraphicsEngineD3D12-static
 PUBLIC
-    GraphicsEngineD3D12Interface
+    Diligent-GraphicsEngineD3D12Interface
 )
-target_compile_definitions(GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL=1)
+target_compile_definitions(Diligent-GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL=1)
 
 # Set output name to GraphicsEngineD3D12_{32|64}{r|d}
-set_dll_output_name(GraphicsEngineD3D12-shared GraphicsEngineD3D12)
+set_dll_output_name(Diligent-GraphicsEngineD3D12-shared GraphicsEngineD3D12)
 
-set_common_target_properties(GraphicsEngineD3D12-shared)
-set_common_target_properties(GraphicsEngineD3D12-static)
+set_common_target_properties(Diligent-GraphicsEngineD3D12-shared)
+set_common_target_properties(Diligent-GraphicsEngineD3D12-static)
 
 source_group("src" FILES ${SRC})
 
@@ -173,11 +173,11 @@ source_group("shaders" FILES
     shaders/GenerateMips/GenerateMipsCS.hlsli
 )
 
-set_target_properties(GraphicsEngineD3D12-static PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineD3D12-static PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
-set_target_properties(GraphicsEngineD3D12-shared PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineD3D12-shared PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
 
 set_source_files_properties(
@@ -185,6 +185,6 @@ set_source_files_properties(
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(GraphicsEngineD3D12-shared)
-    install_core_lib(GraphicsEngineD3D12-static)
+    install_core_lib(Diligent-GraphicsEngineD3D12-shared)
+    install_core_lib(Diligent-GraphicsEngineD3D12-static)
 endif()

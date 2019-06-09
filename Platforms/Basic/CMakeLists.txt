@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.6)
 
-project(BasicPlatform CXX)
+project(Diligent-BasicPlatform CXX)
 
 set(SOURCE 
     src/BasicFileSystem.cpp
@@ -20,31 +20,31 @@ if(PLATFORM_LINUX OR PLATFORM_WIN32 OR PLATFORM_MACOS OR PLATFORM_IOS)
     list(APPEND INTERFACE interface/StandardFile.h)
 endif()
 
-add_library(BasicPlatform STATIC ${SOURCE} ${INTERFACE})
-set_common_target_properties(BasicPlatform)
+add_library(Diligent-BasicPlatform STATIC ${SOURCE} ${INTERFACE})
+set_common_target_properties(Diligent-BasicPlatform)
 
-target_include_directories(BasicPlatform 
+target_include_directories(Diligent-BasicPlatform 
 PUBLIC
     interface
 )
 
-target_link_libraries(BasicPlatform 
+target_link_libraries(Diligent-BasicPlatform 
 PUBLIC
-    BuildSettings 
-    Primitives
+    Diligent-BuildSettings 
+    Diligent-Primitives
 )
 
 source_group("src" FILES ${SOURCE})
 source_group("interface" FILES ${INTERFACE})
 
-set_target_properties(BasicPlatform PROPERTIES
-    FOLDER Core/Platforms
+set_target_properties(Diligent-BasicPlatform PROPERTIES
+    FOLDER DiligentCore/Platforms
 )
 
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(BasicPlatform)
-    get_core_library_relative_dir(BasicPlatform BASIC_PLATFORM_DIR)
+    install_core_lib(Diligent-BasicPlatform)
+    get_core_library_relative_dir(Diligent-BasicPlatform BASIC_PLATFORM_DIR)
     install(DIRECTORY    "../interface"
             DESTINATION  "${DILIGENT_CORE_INSTALL_DIR}/headers/${BASIC_PLATFORM_DIR}/../"
     )

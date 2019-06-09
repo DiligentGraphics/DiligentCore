@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.10)
 
-project(GraphicsEngineVk CXX)
+project(Diligent-GraphicsEngineVk CXX)
 
 set(INCLUDE 
     include/BufferVkImpl.h
@@ -117,13 +117,13 @@ set_source_files_properties(
 )
 
 # Create custom target to convert GenerateMipsCS.csh to GenerateMipsCS_inc.h
-add_custom_target(ProcessGenerateMipsVkShader
+add_custom_target(Diligent-ProcessGenerateMipsVkShader
 SOURCES
     ${GENERATE_MIPS_SHADER}
 )
 
-add_custom_command(TARGET ProcessGenerateMipsVkShader 
-                   # Unfortunately it is not possible to set TARGET directly to GraphicsEngineVk-*
+add_custom_command(TARGET Diligent-ProcessGenerateMipsVkShader 
+                   # Unfortunately it is not possible to set TARGET directly to Diligent-GraphicsEngineVk-*
                    # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 
                    # PRE_BUILD is treated as PRE_LINK.
                    COMMAND ${FILE2STRING_PATH} ${GENERATE_MIPS_SHADER} ${GENERATE_MIPS_SHADER_INC}
@@ -133,46 +133,46 @@ add_custom_command(TARGET ProcessGenerateMipsVkShader
 )
 
 
-add_library(GraphicsEngineVkInterface INTERFACE)
-target_include_directories(GraphicsEngineVkInterface
+add_library(Diligent-GraphicsEngineVkInterface INTERFACE)
+target_include_directories(Diligent-GraphicsEngineVkInterface
 INTERFACE
     interface
 )
-target_link_libraries(GraphicsEngineVkInterface 
+target_link_libraries(Diligent-GraphicsEngineVkInterface 
 INTERFACE 
-    GraphicsEngineInterface
+    Diligent-GraphicsEngineInterface
 )
 
-add_library(GraphicsEngineVk-static STATIC 
+add_library(Diligent-GraphicsEngineVk-static STATIC 
     ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${GENERATE_MIPS_SHADER} ${GENERATE_MIPS_SHADER_INC}
     readme.md
 )
 
-add_library(GraphicsEngineVk-shared SHARED 
+add_library(Diligent-GraphicsEngineVk-shared SHARED 
     readme.md
 )
 
 if(MSVC)
-    target_sources(GraphicsEngineVk-shared PRIVATE
+    target_sources(Diligent-GraphicsEngineVk-shared PRIVATE
         src/DLLMain.cpp
         src/GraphicsEngineVk.def
     )
 endif()
 
-add_dependencies(GraphicsEngineVk-static ProcessGenerateMipsVkShader)
+add_dependencies(Diligent-GraphicsEngineVk-static Diligent-ProcessGenerateMipsVkShader)
 
-target_include_directories(GraphicsEngineVk-static 
+target_include_directories(Diligent-GraphicsEngineVk-static 
 PRIVATE
     include
     ../../External/vulkan
 )
 
 set(PRIVATE_DEPENDENCIES 
-    BuildSettings 
-    Common 
-    TargetPlatform
-    GraphicsEngineNextGenBase
-    GLSLTools
+    Diligent-BuildSettings 
+    Diligent-Common 
+    Diligent-TargetPlatform
+    Diligent-GraphicsEngineNextGenBase
+    Diligent-GLSLTools
     SPIRV-Tools-opt
 )
 
@@ -190,19 +190,19 @@ endif()
 list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 
 set(PUBLIC_DEPENDENCIES 
-    GraphicsEngineVkInterface
+    Diligent-GraphicsEngineVkInterface
 )
 
-target_link_libraries(GraphicsEngineVk-static
+target_link_libraries(Diligent-GraphicsEngineVk-static
 PRIVATE
     ${PRIVATE_DEPENDENCIES}
 PUBLIC
     ${PUBLIC_DEPENDENCIES}
 )
-target_link_libraries(GraphicsEngineVk-shared
+target_link_libraries(Diligent-GraphicsEngineVk-shared
 PRIVATE
-    BuildSettings
-    ${WHOLE_ARCHIVE_FLAG} GraphicsEngineVk-static ${NO_WHOLE_ARCHIVE_FLAG}
+    Diligent-BuildSettings
+    ${WHOLE_ARCHIVE_FLAG} Diligent-GraphicsEngineVk-static ${NO_WHOLE_ARCHIVE_FLAG}
 PUBLIC
     ${PUBLIC_DEPENDENCIES}
 )
@@ -211,8 +211,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Disable the following clang warning
     #    '<function name>' hides overloaded virtual function
     # as hiding is intended
-    target_compile_options(GraphicsEngineVk-static PRIVATE -Wno-overloaded-virtual)
-    target_compile_options(GraphicsEngineVk-shared PRIVATE -Wno-overloaded-virtual)
+    target_compile_options(Diligent-GraphicsEngineVk-static PRIVATE -Wno-overloaded-virtual)
+    target_compile_options(Diligent-GraphicsEngineVk-shared PRIVATE -Wno-overloaded-virtual)
 endif()
 
 if(PLATFORM_WIN32)
@@ -233,32 +233,32 @@ if (${DILIGENT_NO_GLSLANG})
     message("GLSLang is not being built. Vulkan backend will only be able to consume SPIRV byte code.")
 endif()
 
-target_compile_definitions(GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>)
-target_compile_definitions(GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} ENGINE_DLL=1)
+target_compile_definitions(Diligent-GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>)
+target_compile_definitions(Diligent-GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} ENGINE_DLL=1)
 
 if(PLATFORM_WIN32)
 
     # Do not add 'lib' prefix when building with MinGW
-    set_target_properties(GraphicsEngineVk-shared PROPERTIES PREFIX "")
+    set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES PREFIX "")
 
     # Set output name to GraphicsEngineVk_{32|64}{r|d}
-    set_dll_output_name(GraphicsEngineVk-shared GraphicsEngineVk)
+    set_dll_output_name(Diligent-GraphicsEngineVk-shared GraphicsEngineVk)
 
 else()
-    set_target_properties(GraphicsEngineVk-shared PROPERTIES
-        OUTPUT_NAME GraphicsEngineVk
+    set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
+        OUTPUT_NAME Diligent-GraphicsEngineVk
     )
 endif()
 
 if(PLATFORM_LINUX)
     get_filename_component(VULKAN_LIBRARY_PATH ${Vulkan_LIBRARY} DIRECTORY)
-    set_target_properties(GraphicsEngineVk-shared PROPERTIES
+    set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
         INSTALL_RPATH "${VULKAN_LIBRARY_PATH}"
     )
 endif()
 
-set_common_target_properties(GraphicsEngineVk-shared)
-set_common_target_properties(GraphicsEngineVk-static)
+set_common_target_properties(Diligent-GraphicsEngineVk-shared)
+set_common_target_properties(Diligent-GraphicsEngineVk-static)
 
 source_group("src" FILES ${SRC})
 source_group("src\\Vulkan Utilities" FILES ${VULKAN_UTILS_SRC})
@@ -278,22 +278,22 @@ source_group("shaders\\generated" FILES
     ${GENERATE_MIPS_SHADER_INC}
 )
 
-set_target_properties(GraphicsEngineVk-static PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineVk-static PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
-set_target_properties(GraphicsEngineVk-shared PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
 
 set_source_files_properties(
     readme.md PROPERTIES HEADER_FILE_ONLY TRUE
 )
 
-set_target_properties(ProcessGenerateMipsVkShader PROPERTIES
-    FOLDER Core/Graphics/Helper
+set_target_properties(Diligent-ProcessGenerateMipsVkShader PROPERTIES
+    FOLDER DiligentCore/Graphics/Helper
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(GraphicsEngineVk-shared)
-    install_core_lib(GraphicsEngineVk-static)
+    install_core_lib(Diligent-GraphicsEngineVk-shared)
+    install_core_lib(Diligent-GraphicsEngineVk-static)
 endif()

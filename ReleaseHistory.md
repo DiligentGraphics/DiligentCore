@@ -17,6 +17,7 @@
 * Added `DRAW_FLAG_VERIFY_DRAW_ATTRIBS`, `DRAW_FLAG_VERIFY_RENDER_TARGETS`, and `DRAW_FLAG_VERIFY_ALL` flags (API Version 240022)
 * `TEXTURE_VIEW_FLAGS` enum and `Flags` member to `TextureViewDesc` structure (API Version 240023)
 * Added `IShaderResourceVariable::IsBound()` method
+* Added `Diligent-` prefix to project names to avoid name conflicts.
 
 ## v2.4.b
 

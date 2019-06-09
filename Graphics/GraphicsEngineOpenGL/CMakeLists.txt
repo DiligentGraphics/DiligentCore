@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.3)
 
-project(GraphicsEngineOpenGL CXX)
+project(Diligent-GraphicsEngineOpenGL CXX)
 
 set(INCLUDE 
     include/AsyncWritableResource.h
@@ -118,34 +118,34 @@ else()
     message(FATAL_ERROR "Unknown platform")
 endif()
 
-add_library(GraphicsEngineOpenGLInterface INTERFACE)
-target_include_directories(GraphicsEngineOpenGLInterface
+add_library(Diligent-GraphicsEngineOpenGLInterface INTERFACE)
+target_include_directories(Diligent-GraphicsEngineOpenGLInterface
 INTERFACE
     interface
 )
-target_link_libraries(GraphicsEngineOpenGLInterface 
+target_link_libraries(Diligent-GraphicsEngineOpenGLInterface 
 INTERFACE 
-    GraphicsEngineInterface
+    Diligent-GraphicsEngineInterface
 )
 
 
-add_library(GraphicsEngineOpenGL-static STATIC 
+add_library(Diligent-GraphicsEngineOpenGL-static STATIC 
     ${SOURCE} ${INTERFACE} ${INCLUDE}
     readme.md
 )
 
-add_library(GraphicsEngineOpenGL-shared SHARED 
+add_library(Diligent-GraphicsEngineOpenGL-shared SHARED 
     readme.md
 )
 if(MSVC)
-    target_sources(GraphicsEngineOpenGL-shared 
+    target_sources(Diligent-GraphicsEngineOpenGL-shared 
     PRIVATE	
         src/DLLMain.cpp
         src/GraphicsEngineOpenGL.def
     )
 endif()
 
-target_include_directories(GraphicsEngineOpenGL-static
+target_include_directories(Diligent-GraphicsEngineOpenGL-static
 PRIVATE
     include
     ../HLSL2GLSLConverterLib/include
@@ -153,16 +153,16 @@ PRIVATE
 
 
 set(PRIVATE_DEPENDENCIES 
-    BuildSettings 
-    Common 
-    TargetPlatform
-    GraphicsEngine
-    GLSLTools
-    HLSL2GLSLConverterLib
+    Diligent-BuildSettings 
+    Diligent-Common 
+    Diligent-TargetPlatform
+    Diligent-GraphicsEngine
+    Diligent-GLSLTools
+    Diligent-HLSL2GLSLConverterLib
 )
 
 set(PUBLIC_DEPENDENCIES 
-    GraphicsEngineOpenGLInterface
+    Diligent-GraphicsEngineOpenGLInterface
 )
 
 if(PLATFORM_WIN32)
@@ -184,42 +184,42 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # Disable the following clang warning
     #    '<function name>' hides overloaded virtual function
     # as hiding is intended
-    target_compile_options(GraphicsEngineOpenGL-static PRIVATE -Wno-overloaded-virtual)
-    target_compile_options(GraphicsEngineOpenGL-shared PRIVATE -Wno-overloaded-virtual)
+    target_compile_options(Diligent-GraphicsEngineOpenGL-static PRIVATE -Wno-overloaded-virtual)
+    target_compile_options(Diligent-GraphicsEngineOpenGL-shared PRIVATE -Wno-overloaded-virtual)
 endif()
 
-target_link_libraries(GraphicsEngineOpenGL-static
+target_link_libraries(Diligent-GraphicsEngineOpenGL-static
 PRIVATE
     ${PRIVATE_DEPENDENCIES}
 PUBLIC
     ${PUBLIC_DEPENDENCIES}
 )
-target_link_libraries(GraphicsEngineOpenGL-shared
+target_link_libraries(Diligent-GraphicsEngineOpenGL-shared
 PRIVATE
-    BuildSettings
-    ${WHOLE_ARCHIVE_FLAG} GraphicsEngineOpenGL-static ${NO_WHOLE_ARCHIVE_FLAG}
+    Diligent-BuildSettings
+    ${WHOLE_ARCHIVE_FLAG} Diligent-GraphicsEngineOpenGL-static ${NO_WHOLE_ARCHIVE_FLAG}
 PUBLIC
     ${PUBLIC_DEPENDENCIES}
 )
 
-target_compile_definitions(GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1)
+target_compile_definitions(Diligent-GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1)
 
 if(PLATFORM_WIN32)
 
     # Do not add 'lib' prefix when building with MinGW
-    set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES PREFIX "")
+    set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES PREFIX "")
 
     # Set output name to GraphicsEngineOpenGL_{32|64}{r|d}
-    set_dll_output_name(GraphicsEngineOpenGL-shared GraphicsEngineOpenGL)
+    set_dll_output_name(Diligent-GraphicsEngineOpenGL-shared GraphicsEngineOpenGL)
 
 else()
-    set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
+    set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
         OUTPUT_NAME GraphicsEngineOpenGL
     )
 endif()
 
-set_common_target_properties(GraphicsEngineOpenGL-shared)
-set_common_target_properties(GraphicsEngineOpenGL-static)
+set_common_target_properties(Diligent-GraphicsEngineOpenGL-shared)
+set_common_target_properties(Diligent-GraphicsEngineOpenGL-static)
 
 source_group("src" FILES ${SOURCE})
 if(PLATFORM_WIN32)
@@ -232,11 +232,11 @@ endif()
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 
-set_target_properties(GraphicsEngineOpenGL-static PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineOpenGL-static PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
-set_target_properties(GraphicsEngineOpenGL-shared PROPERTIES
-    FOLDER Core/Graphics
+set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
+    FOLDER DiligentCore/Graphics
 )
 
 set_source_files_properties(
@@ -244,6 +244,6 @@ set_source_files_properties(
 )
 
 if(INSTALL_DILIGENT_CORE)
-    install_core_lib(GraphicsEngineOpenGL-shared)
-    install_core_lib(GraphicsEngineOpenGL-static)
+    install_core_lib(Diligent-GraphicsEngineOpenGL-shared)
+    install_core_lib(Diligent-GraphicsEngineOpenGL-static)
 endif()

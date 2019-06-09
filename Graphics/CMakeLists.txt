@@ -3,14 +3,14 @@ cmake_minimum_required (VERSION 3.6)
 set(DLL_REL_SUFFIX _${ARCH}r)
 set(DLL_DBG_SUFFIX _${ARCH}d)
 
-add_library(GraphicsEngineInterface INTERFACE)
-target_include_directories(GraphicsEngineInterface
+add_library(Diligent-GraphicsEngineInterface INTERFACE)
+target_include_directories(Diligent-GraphicsEngineInterface
 INTERFACE
     GraphicsEngine/interface
 )
-target_link_libraries(GraphicsEngineInterface
+target_link_libraries(Diligent-GraphicsEngineInterface
 INTERFACE
-    Primitives
+    Diligent-Primitives
 )
 
 add_subdirectory(GraphicsAccessories)
