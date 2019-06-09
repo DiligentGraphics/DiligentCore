@@ -246,7 +246,7 @@ if(PLATFORM_WIN32)
 
 else()
     set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
-        OUTPUT_NAME Diligent-GraphicsEngineVk
+        OUTPUT_NAME GraphicsEngineVk
     )
 endif()
 
