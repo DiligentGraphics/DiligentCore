@@ -1559,6 +1559,10 @@ using float2 = Vector2<float>;
 using float3 = Vector3<float>;
 using float4 = Vector4<float>;
 
+using double2 = Vector2<double>;
+using double3 = Vector3<double>;
+using double4 = Vector4<double>;
+
 using float4x4 = Matrix4x4<float>;
 using float3x3 = Matrix3x3<float>;
 using float2x2 = Matrix2x2<float>;
