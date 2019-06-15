@@ -1802,6 +1802,68 @@ namespace std
 
 
     template<typename T>
+    Diligent::Vector2<T> floor( const Diligent::Vector2<T>& vec )
+    {
+        return Diligent::Vector2<T>( 
+            std::floor( vec.x ), 
+            std::floor( vec.y )
+            );
+    }
+
+    template<typename T>
+    Diligent::Vector3<T> floor( const Diligent::Vector3<T>& vec )
+    {
+        return Diligent::Vector3<T>( 
+            std::floor( vec.x ), 
+            std::floor( vec.y ),
+            std::floor( vec.z )
+            );
+    }
+
+    template<typename T>
+    Diligent::Vector4<T> floor( const Diligent::Vector4<T>& vec )
+    {
+        return Diligent::Vector4<T>( 
+            std::floor( vec.x ), 
+            std::floor( vec.y ),
+            std::floor( vec.z ),
+            std::floor( vec.w )
+            );
+    }
+
+
+   template<typename T>
+    Diligent::Vector2<T> ceil( const Diligent::Vector2<T>& vec )
+    {
+        return Diligent::Vector2<T>( 
+            std::ceil( vec.x ), 
+            std::ceil( vec.y )
+            );
+    }
+
+    template<typename T>
+    Diligent::Vector3<T> ceil( const Diligent::Vector3<T>& vec )
+    {
+        return Diligent::Vector3<T>( 
+            std::ceil( vec.x ), 
+            std::ceil( vec.y ),
+            std::ceil( vec.z )
+            );
+    }
+
+    template<typename T>
+    Diligent::Vector4<T> ceil( const Diligent::Vector4<T>& vec )
+    {
+        return Diligent::Vector4<T>( 
+            std::ceil( vec.x ), 
+            std::ceil( vec.y ),
+            std::ceil( vec.z ),
+            std::ceil( vec.w )
+            );
+    }
+
+
+    template<typename T>
     struct hash<Diligent::Vector2<T>>
     {
         size_t operator()( const Diligent::Vector2<T> &v2 ) const
