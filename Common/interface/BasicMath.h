@@ -63,6 +63,8 @@ static constexpr double PI   = 3.14159265358979323846;
 static constexpr float  PI_F = 3.1415927f;
 
 // Template Vector & Matrix Classes
+template <class T> struct Matrix2x2;
+template <class T> struct Matrix3x3;
 template <class T> struct Matrix4x4;
 template <class T> struct Vector4;
 
@@ -139,6 +141,14 @@ template <class T> struct Vector2
         x *= s;
         y *= s;
         return *this;
+    }
+
+    Vector2 operator*(const Matrix2x2<T>& m)const
+    {
+        Vector2 out;
+        out[0] = x * m[0][0] + y * m[1][0];
+        out[1] = x * m[0][1] + y * m[1][1];
+        return out;
     }
 
     Vector2 operator/(const Vector2 &right)const
@@ -326,6 +336,15 @@ template <class T> struct Vector3
         y *= right.y;
         z *= right.z;
         return *this;
+    }
+
+    Vector3 operator*(const Matrix3x3<T>& m)const
+    {
+        Vector3 out;
+        out[0] = x * m[0][0] + y * m[1][0] + z * m[2][0];
+        out[1] = x * m[0][1] + y * m[1][1] + z * m[2][1];
+        out[2] = x * m[0][2] + y * m[1][2] + z * m[2][2];
+        return out;
     }
 
     Vector3 operator/ ( T  s)const
@@ -1730,9 +1749,16 @@ inline Quaternion slerp(Quaternion v0, Quaternion v1, float t, bool DoNotNormali
 
 
 template<typename T>
-T lerp(const T& Left, T& Right, float w)
+T lerp(const T& Left, const T& Right, float w)
 {
     return Left * (1.f - w) + Right * w;
+}
+
+template<typename T>
+T SmoothStep(T Left, T Right, T w)
+{
+    auto t = clamp((w - Left) / (Right - Left), static_cast<T>(0), static_cast<T>(1));
+    return t * t * (static_cast<T>(3) - static_cast<T>(2) * t);
 }
 
 } // namespace Diligent
