@@ -796,6 +796,18 @@ template <class T> struct Matrix2x2
         return mOut;
     }
 
+    static Matrix2x2 Rotation(T angleInRadians)
+    {
+        auto s = std::sin(angleInRadians);
+        auto c = std::cos(angleInRadians);
+
+        return Matrix2x2
+        {
+             c,  s,
+            -s,  c
+        };
+    }
+
     T Determinant()const
     {
         return _11*_22 - _12*_21;
