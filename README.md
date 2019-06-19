@@ -695,8 +695,8 @@ This project has some third-party dependencies, each of which may have independe
 * [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross): SPIRV parsing and cross-compilation tools.
 * [SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers): SPIRV header files.
 * [SPIRV-Tools](https://github.com/KhronosGroup/SPIRV-Tools): SPIRV optimization and validation tools.
-* [glslang](https://github.com/KhronosGroup/glslang): Khronos reference compiler and validator for GLSL, ESSL, and HLSL
-* [glew](http://glew.sourceforge.net/): OpenGL Extension Wrangler Library
+* [glslang](https://github.com/KhronosGroup/glslang): Khronos reference compiler and validator for GLSL, ESSL, and HLSL.
+* [glew](http://glew.sourceforge.net/): OpenGL Extension Wrangler Library.
 
 <a name="contributing"></a>
 # Contributing
