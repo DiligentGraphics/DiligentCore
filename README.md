@@ -37,6 +37,7 @@ so it must always be handled first.
 - [Low-level API interoperability](#low_level_api_interoperability)
 - [Repository structure](#repository_structure)
 - [Contributing](#contributing)
+- [License](https://github.com/DiligentGraphics/DiligentCore#license)
 - [References](#references)
 - [Release History](#release_history)
 
@@ -685,13 +686,25 @@ objects. Refer to the following pages for more information:
  | [Platforms/Linux](https://github.com/DiligentGraphics/DiligentCore/tree/master/Platforms/Linux)      | Implementation of platform-specific routines on Linux platform |
  | External | Third-party libraries and modules |
 
+# License
+
+See [Apache 2.0 license](License.txt).
+
+This project has some third-party dependencies, each of which may have independent licensing:
+
+* [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross): SPIRV parsing and cross-compilation tools.
+* [SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers): SPIRV header files.
+* [SPIRV-Tools](https://github.com/KhronosGroup/SPIRV-Tools): SPIRV optimization and validation tools.
+* [glslang](https://github.com/KhronosGroup/glslang): Khronos reference compiler and validator for GLSL, ESSL, and HLSL
+* [glew](http://glew.sourceforge.net/): OpenGL Extension Wrangler Library
+
 <a name="contributing"></a>
 # Contributing
 
 To contribute your code, submit a [Pull Request](https://github.com/DiligentGraphics/DiligentCore/pulls) 
-to this repository. **Diligent Engine** is licensed under the [Apache 2.0 license](License.txt) that guarantees 
+to this repository. **Diligent Engine** is distributed under the [Apache 2.0 license](License.txt) that guarantees 
 that code in the **DiligentCore** repository is free of Intellectual Property encumbrances. In submitting code to
-this repository, you are agreeing that the code is free of any Intellectual Property claims.  
+this repository, you are agreeing that the code is free of any Intellectual Property claims.
 
 <a name="references"></a>
 # References
