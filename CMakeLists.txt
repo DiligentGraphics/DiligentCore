@@ -348,7 +348,7 @@ if(INSTALL_DILIGENT_CORE)
 
     if(TARGET DiligentCore-static)
         install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COMBINED_CORE_LIB_NAME}"
-                DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/"
+                DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/$<CONFIG>"
         )
         set_target_properties(DiligentCore-static PROPERTIES
             FOLDER DiligentCore
