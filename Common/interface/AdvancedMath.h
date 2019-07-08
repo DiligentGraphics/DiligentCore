@@ -324,6 +324,18 @@ inline bool operator == (const ViewFrustumExt &f1, const ViewFrustumExt &f2)
     return true;
 }
 
+template<typename T>
+T HermiteSpline(T f0, // F(0)
+                T f1, // F(1)
+                T t0, // F'(0)
+                T t1, // F'(1)
+                T x)
+{
+    // https://en.wikipedia.org/wiki/Cubic_Hermite_spline
+    auto x2 = x*x;
+    auto x3 = x2*x;
+    return (2*x3 - 3*x2 + 1) * f0 + (x3 - 2*x2 + x) * t0 + (-2*x3 + 3*x2) * f1 + (x3 - x2) * t1;
+}
 
 } // namespace Diligent
 
