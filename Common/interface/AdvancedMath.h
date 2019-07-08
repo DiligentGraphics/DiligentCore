@@ -324,12 +324,12 @@ inline bool operator == (const ViewFrustumExt &f1, const ViewFrustumExt &f2)
     return true;
 }
 
-template<typename T>
+template<typename T, typename Y>
 T HermiteSpline(T f0, // F(0)
                 T f1, // F(1)
                 T t0, // F'(0)
                 T t1, // F'(1)
-                T x)
+                Y x)
 {
     // https://en.wikipedia.org/wiki/Cubic_Hermite_spline
     auto x2 = x*x;
