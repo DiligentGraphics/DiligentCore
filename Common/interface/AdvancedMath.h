@@ -337,6 +337,32 @@ T HermiteSpline(T f0, // F(0)
     return (2*x3 - 3*x2 + 1) * f0 + (x3 - 2*x2 + x) * t0 + (-2*x3 + 3*x2) * f1 + (x3 - x2) * t1;
 }
 
+// Retuns the minimum bounding sphere of a view frustum
+inline void GetFrustumMinimumBoundingSphere(float   Proj_00,   // cot(HorzFOV / 2)
+                                            float   Proj_11,   // cot(VertFOV / 2) == proj_00 / AspectRatio 
+                                            float   NearPlane, // Near clip plane
+                                            float   FarPlane,  // Far clip plane
+                                            float3& Center,    // Sphere center == (0, 0, c)
+                                            float&  Radius     // Sphere radius
+                                            )
+{
+    // https://lxjk.github.io/2017/04/15/Calculate-Minimal-Bounding-Sphere-of-Frustum.html
+    VERIFY_EXPR(FarPlane >= NearPlane);
+    auto k2 = 1.f / (Proj_00 * Proj_00) + 1.f / (Proj_11 * Proj_11);
+    if (k2 > (FarPlane - NearPlane) / (FarPlane + NearPlane))
+    {
+        Center = float3(0, 0, FarPlane);
+        Radius = FarPlane * std::sqrt(k2);
+    }
+    else
+    {
+        Center = float3(0, 0, 0.5f * (FarPlane + NearPlane) * (1 + k2));
+        Radius = 0.5f * std::sqrt(       (FarPlane-NearPlane) * (FarPlane-NearPlane)
+                                   + 2 * (FarPlane*FarPlane + NearPlane*NearPlane) * k2
+                                   +     (FarPlane+NearPlane) * (FarPlane+NearPlane) * k2 * k2 );
+    }
+}
+
 } // namespace Diligent
 
 namespace std
