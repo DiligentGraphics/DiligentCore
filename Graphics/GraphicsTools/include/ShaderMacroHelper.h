@@ -54,11 +54,11 @@ class ShaderMacroHelper
 public:
 
     template<typename DefintionType>
-	void AddShaderMacro( const Diligent::Char* Name, DefintionType Definition )
+	void AddShaderMacro( const Char* Name, DefintionType Definition )
 	{
 		std::ostringstream ss;
 		ss << Definition;
-		AddShaderMacro<const Diligent::Char*>( Name, ss.str().c_str() );
+		AddShaderMacro<const Char*>( Name, ss.str().c_str() );
 	}
 	
     void Finalize()
@@ -94,6 +94,30 @@ public:
         return m_Macros.size() ? m_Macros.data() : nullptr;
 	}
     
+    void RemoveMacro(const Char* Name)
+    {
+        size_t i=0;
+        while (i < m_Macros.size() && m_Macros[i].Definition != nullptr)
+        {
+            if (strcmp(m_Macros[i].Name, Name) == 0)
+            {
+                m_Macros.erase(m_Macros.begin() + i);
+                break;
+            }
+            else
+            {
+                ++i;
+            }
+        }
+    }
+
+    template<typename DefintionType>
+	void UpdateMacro( const Char* Name, DefintionType Definition )
+	{
+        RemoveMacro(Name);
+        AddShaderMacro(Name, Definition);
+    }
+
 private:
 
 	std::vector< ShaderMacro > m_Macros;
@@ -102,7 +126,7 @@ private:
 };
 
 template<>
-inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, const Diligent::Char* Definition )
+inline void ShaderMacroHelper::AddShaderMacro( const Char* Name, const Char* Definition )
 {
     Reopen();
     auto *PooledDefinition = m_DefinitionsPool.insert(Definition).first->c_str();
@@ -110,13 +134,13 @@ inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, const
 }
 
 template<>
-inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, bool Definition )
+inline void ShaderMacroHelper::AddShaderMacro( const Char* Name, bool Definition )
 {
 	AddShaderMacro( Name, Definition ? "1" : "0");
 }
 
 template<>
-inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, float Definition )
+inline void ShaderMacroHelper::AddShaderMacro( const Char* Name, float Definition )
 {
 	std::ostringstream ss;
     
@@ -127,16 +151,16 @@ inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, float
         ss << std::fixed << std::setprecision( 1 );
 
 	ss << Definition;
-	AddShaderMacro<const Diligent::Char*>( Name, ss.str().c_str() );
+	AddShaderMacro<const Char*>( Name, ss.str().c_str() );
 }
 
 template<>
-inline void ShaderMacroHelper::AddShaderMacro( const Diligent::Char* Name, Uint32 Definition )
+inline void ShaderMacroHelper::AddShaderMacro( const Char* Name, Uint32 Definition )
 {
     // Make sure that uint constants have the 'u' suffix to avoid problems in GLES.
 	std::ostringstream ss;
 	ss << Definition << 'u';
-	AddShaderMacro<const Diligent::Char*>( Name, ss.str().c_str() );
+	AddShaderMacro<const Char*>( Name, ss.str().c_str() );
 }
 
 }
