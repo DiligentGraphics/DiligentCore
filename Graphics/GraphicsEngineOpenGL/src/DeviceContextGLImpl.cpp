@@ -88,7 +88,12 @@ namespace Diligent
                 m_ContextState.SetDepthBias( static_cast<Float32>( RasterizerDesc.DepthBias ), RasterizerDesc.SlopeScaledDepthBias );
                 if( RasterizerDesc.DepthBiasClamp != 0 )
                     LOG_WARNING_MESSAGE( "Depth bias clamp is not supported on OpenGL" );
-                m_ContextState.SetDepthClamp( RasterizerDesc.DepthClipEnable );
+
+                // Enabling depth clamping in GL is the same as disabling clipping in Direct3D.
+                // https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_rasterizer_desc
+                // https://www.khronos.org/opengl/wiki/GLAPI/glEnable
+                m_ContextState.SetDepthClamp( !RasterizerDesc.DepthClipEnable );
+
                 m_ContextState.EnableScissorTest( RasterizerDesc.ScissorEnable );
                 if( RasterizerDesc.AntialiasedLineEnable )
                     LOG_WARNING_MESSAGE( "Line antialiasing is not supported on OpenGL" );

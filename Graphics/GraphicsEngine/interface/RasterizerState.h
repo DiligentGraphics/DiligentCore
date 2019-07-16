@@ -104,9 +104,7 @@ struct RasterizerStateDesc
     /// Default value: False.
     Bool      FrontCounterClockwise = False;
 
-    /// Enable clipping based on distance.
-    /// \warning On DirectX this only disables clipping against far clipping plane,
-    ///          while on OpenGL this disables clipping against both far and near clip planes.
+    /// Enable clipping against near and far clip planes.
     /// Default value: True.
     Bool      DepthClipEnable       = True;
 

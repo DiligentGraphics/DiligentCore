@@ -517,6 +517,10 @@ namespace Diligent
         {
             if( bEnableDepthClamp )
             {
+                // Note that enabling depth clamping in GL is the same as
+                // disabling clipping in Direct3D.
+                // https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ns-d3d11-d3d11_rasterizer_desc
+                // https://www.khronos.org/opengl/wiki/GLAPI/glEnable
 #pragma warning(push)
 #pragma warning(disable : 4127)
                 if( GL_DEPTH_CLAMP )
@@ -529,9 +533,6 @@ namespace Diligent
             {
                 if( GL_DEPTH_CLAMP )
                 {
-                    // WARNING: on OpenGL, depth clamping is disabled against
-                    // both far and near clip planes. On DirectX, only clipping
-                    // against far clip plane can be disabled
                     glDisable( GL_DEPTH_CLAMP );
                     CHECK_GL_ERROR( "Failed to disable depth clamp" );
                 }
