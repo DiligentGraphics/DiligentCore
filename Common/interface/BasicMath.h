@@ -44,10 +44,10 @@
 ///  Since mul(WorldViewProj, WorldPos) == mul(WorldPos, transpose(WorldViewProj)), the results will
 ///  be consistent with D3D case.
 
-#include "../../Platforms/Basic/interface/DebugUtilities.h"
-
 #include <cmath>
 #include <algorithm>
+
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 #include "HashUtils.h"
 

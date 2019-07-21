@@ -23,8 +23,10 @@
 
 #pragma once
 
-#include "BasicMath.h"
 #include "../../Platforms/interface/PlatformDefinitions.h"
+#include "../../Primitives/interface/FlagEnum.h"
+
+#include "BasicMath.h"
 
 namespace Diligent
 {
@@ -171,24 +173,26 @@ enum class BoxVisibility
     FullyVisible
 };
 
-inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const BoundBox &Box)
+inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const BoundBox& Box)
 {
     const float3& Normal = Plane.Normal;
         
-    float3 MaxPoint(
+    float3 MaxPoint
+    {
         (Normal.x > 0) ? Box.Max.x : Box.Min.x,
         (Normal.y > 0) ? Box.Max.y : Box.Min.y,
         (Normal.z > 0) ? Box.Max.z : Box.Min.z
-    );
-    float DMax = dot( MaxPoint, Normal ) + Plane.Distance;
+    };
+    float DMax = dot(MaxPoint, Normal) + Plane.Distance;
     if( DMax < 0 )
         return BoxVisibility::Invisible;
 
-    float3 MinPoint(
+    float3 MinPoint
+    {
         (Normal.x > 0) ? Box.Min.x : Box.Max.x,
         (Normal.y > 0) ? Box.Min.y : Box.Max.y,
         (Normal.z > 0) ? Box.Min.z : Box.Max.z
-    );
+    };
     float DMin = dot(MinPoint, Normal) + Plane.Distance;
     if (DMin > 0)
         return BoxVisibility::FullyVisible;
@@ -196,15 +200,48 @@ inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const Bo
     return BoxVisibility::Intersecting;
 }
 
-// Tests if bounding box is visible by the camera
-inline BoxVisibility GetBoxVisibility(const ViewFrustum &ViewFrustum, const BoundBox &Box)
+// Flags must be listed in the same order as planes in the ViewFrustum struct:
+// LeftPlane, RightPlane, BottomPlane, TopPlane, NearPlane, FarPlane
+enum FRUSTUM_PLANE_FLAGS : Uint32
 {
-    const Plane3D *pPlanes = reinterpret_cast<const Plane3D*>(&ViewFrustum);
+    FRUSTUM_PLANE_FLAG_NONE         = 0x00,
+    FRUSTUM_PLANE_FLAG_LEFT_PLANE   = 0x01,
+    FRUSTUM_PLANE_FLAG_RIGHT_PLANE  = 0x02,
+    FRUSTUM_PLANE_FLAG_BOTTOM_PLANE = 0x04,
+    FRUSTUM_PLANE_FLAG_TOP_PLANE    = 0x08,
+    FRUSTUM_PLANE_FLAG_NEAR_PLANE   = 0x10,
+    FRUSTUM_PLANE_FLAG_FAR_PLANE    = 0x20,
+
+    FRUSTUM_PLANE_FLAG_FULL_FRUSTUM = FRUSTUM_PLANE_FLAG_LEFT_PLANE   |
+                                      FRUSTUM_PLANE_FLAG_RIGHT_PLANE  |
+                                      FRUSTUM_PLANE_FLAG_BOTTOM_PLANE |
+                                      FRUSTUM_PLANE_FLAG_TOP_PLANE    |
+                                      FRUSTUM_PLANE_FLAG_NEAR_PLANE   |
+                                      FRUSTUM_PLANE_FLAG_FAR_PLANE,
+
+    FRUSTUM_PLANE_FLAG_OPEN_NEAR    = FRUSTUM_PLANE_FLAG_LEFT_PLANE   |
+                                      FRUSTUM_PLANE_FLAG_RIGHT_PLANE  |
+                                      FRUSTUM_PLANE_FLAG_BOTTOM_PLANE |
+                                      FRUSTUM_PLANE_FLAG_TOP_PLANE    |
+                                      FRUSTUM_PLANE_FLAG_FAR_PLANE
+};
+DEFINE_FLAG_ENUM_OPERATORS(FRUSTUM_PLANE_FLAGS);
+
+// Tests if bounding box is visible by the camera
+inline BoxVisibility GetBoxVisibility(const ViewFrustum&  ViewFrustum,
+                                      const BoundBox&     Box,
+                                      FRUSTUM_PLANE_FLAGS PlaneFlags = FRUSTUM_PLANE_FLAG_FULL_FRUSTUM)
+{
+    const Plane3D* pPlanes = reinterpret_cast<const Plane3D*>(&ViewFrustum);
     
     int NumPlanesInside = 0;
-    for(int iViewFrustumPlane = 0; iViewFrustumPlane < 6; iViewFrustumPlane++)
+    int TotalPlanes = 0;
+    for (int iViewFrustumPlane = 0; iViewFrustumPlane < 6; iViewFrustumPlane++)
     {
-        const Plane3D &CurrPlane = pPlanes[iViewFrustumPlane];
+        if ( (PlaneFlags & (1 << iViewFrustumPlane)) == 0 )
+            continue;
+
+        const Plane3D& CurrPlane = pPlanes[iViewFrustumPlane];
         auto VisibilityAgainstPlane = GetBoxVisibilityAgainstPlane(CurrPlane, Box);
 
         // If bounding box is "behind" one of the planes, it is definitely invisible
@@ -214,59 +251,66 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustum &ViewFrustum, const Boun
         // Count total number of planes the bound box is inside
         if (VisibilityAgainstPlane == BoxVisibility::FullyVisible)
             ++NumPlanesInside;
+
+        ++TotalPlanes;
     }
 
-    return (NumPlanesInside == 6) ? BoxVisibility::FullyVisible : BoxVisibility::Intersecting;
+    return (NumPlanesInside == TotalPlanes) ? BoxVisibility::FullyVisible : BoxVisibility::Intersecting;
 }
 
-inline BoxVisibility GetBoxVisibility(const ViewFrustumExt &ViewFrustumExt, const BoundBox &Box)
+inline BoxVisibility GetBoxVisibility(const ViewFrustumExt& ViewFrustumExt,
+                                      const BoundBox&       Box,
+                                      FRUSTUM_PLANE_FLAGS   PlaneFlags = FRUSTUM_PLANE_FLAG_FULL_FRUSTUM)
 {
-    auto Visibility = GetBoxVisibility(static_cast<const ViewFrustum&>(ViewFrustumExt), Box);
+    auto Visibility = GetBoxVisibility(static_cast<const ViewFrustum&>(ViewFrustumExt), Box, PlaneFlags);
     if (Visibility == BoxVisibility::FullyVisible || Visibility == BoxVisibility::Invisible)
         return Visibility;
 
-    // Additionally test if the whole frustum is outside one of 
-    // the the bounding box planes. This helps in the following situation:
-    //                    
-    //
-    //       .
-    //      /   '  .       .  
-    //     / AABB  /   . ' |
-    //    /       /. '     |
-    //       ' . / |       |
-    //       * .   |       |
-    //           ' .       |
-    //               ' .   |
-    //                   ' .
-
-    // Test all frustum corners against every bound box plane
-    for(int iBoundBoxPlane = 0; iBoundBoxPlane < 6; ++iBoundBoxPlane)
+    if ((PlaneFlags & FRUSTUM_PLANE_FLAG_FULL_FRUSTUM) == FRUSTUM_PLANE_FLAG_FULL_FRUSTUM)
     {
-        // struct BoundBox
-        // {
-        //     float3 Min;
-        //     float3 Max;
-        // };
-        float CurrPlaneCoord = reinterpret_cast<const float*>(&Box)[iBoundBoxPlane];
-        // Bound box normal is one of the axis, so we just need to pick the right coordinate
-        int iCoordOrder = iBoundBoxPlane % 3; // 0, 1, 2, 0, 1, 2
-        // Since plane normal is directed along one of the axis, we only need to select
-        // if it is pointing in the positive (max planes) or negative (min planes) direction
-        float fSign = (iBoundBoxPlane >= 3) ? +1.f : -1.f;
-        bool bAllCornersOutside = true;
-        for(int iCorner=0; iCorner < 8; iCorner++)
+        // Additionally test if the whole frustum is outside one of 
+        // the the bounding box planes. This helps in the following situation:
+        //                    
+        //
+        //       .
+        //      /   '  .       .  
+        //     / AABB  /   . ' |
+        //    /       /. '     |
+        //       ' . / |       |
+        //       * .   |       |
+        //           ' .       |
+        //               ' .   |
+        //                   ' .
+
+        // Test all frustum corners against every bound box plane
+        for (int iBoundBoxPlane = 0; iBoundBoxPlane < 6; ++iBoundBoxPlane)
         {
-            // Pick the frustum corner coordinate
-            float CurrCornerCoord = ViewFrustumExt.FrustumCorners[iCorner][iCoordOrder];
-            // Dot product is simply the coordinate difference multiplied by the sign
-            if( fSign * (CurrPlaneCoord - CurrCornerCoord) > 0)
-            {                    
-                bAllCornersOutside = false;
-                break;
+            // struct BoundBox
+            // {
+            //     float3 Min;
+            //     float3 Max;
+            // };
+            float CurrPlaneCoord = reinterpret_cast<const float*>(&Box)[iBoundBoxPlane];
+            // Bound box normal is one of the axis, so we just need to pick the right coordinate
+            int iCoordOrder = iBoundBoxPlane % 3; // 0, 1, 2, 0, 1, 2
+            // Since plane normal is directed along one of the axis, we only need to select
+            // if it is pointing in the positive (max planes) or negative (min planes) direction
+            float fSign = (iBoundBoxPlane >= 3) ? +1.f : -1.f;
+            bool bAllCornersOutside = true;
+            for (int iCorner=0; iCorner < 8; iCorner++)
+            {
+                // Pick the frustum corner coordinate
+                float CurrCornerCoord = ViewFrustumExt.FrustumCorners[iCorner][iCoordOrder];
+                // Dot product is simply the coordinate difference multiplied by the sign
+                if (fSign * (CurrPlaneCoord - CurrCornerCoord) > 0)
+                {                    
+                    bAllCornersOutside = false;
+                    break;
+                }
             }
+            if (bAllCornersOutside)
+                return BoxVisibility::Invisible;
         }
-        if( bAllCornersOutside )
-            return BoxVisibility::Invisible;
     }
 
     return BoxVisibility::Intersecting;
