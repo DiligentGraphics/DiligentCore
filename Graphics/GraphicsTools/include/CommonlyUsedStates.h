@@ -193,6 +193,18 @@ namespace Diligent
         16    // MaxAnisotropy
     };
 
+    static const SamplerDesc Sam_Aniso4xWrap
+    {
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC,
+        FILTER_TYPE_ANISOTROPIC, 
+        TEXTURE_ADDRESS_WRAP,
+        TEXTURE_ADDRESS_WRAP,
+        TEXTURE_ADDRESS_WRAP,
+        0.f,  // MipLODBias
+        4     // MaxAnisotropy
+    };
+
     static const SamplerDesc Sam_Aniso8xWrap
     {
         FILTER_TYPE_ANISOTROPIC,
