@@ -171,7 +171,6 @@ enum class BoxVisibility
     FullyVisible
 };
 
-template<bool TestFullVisibility>
 inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const BoundBox &Box)
 {
     const float3& Normal = Plane.Normal;
@@ -181,31 +180,23 @@ inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const Bo
         (Normal.y > 0) ? Box.Max.y : Box.Min.y,
         (Normal.z > 0) ? Box.Max.z : Box.Min.z
     );
-        
     float DMax = dot( MaxPoint, Normal ) + Plane.Distance;
-
     if( DMax < 0 )
         return BoxVisibility::Invisible;
 
-    if (TestFullVisibility)
-    {
-        float3 MinPoint(
-            (Normal.x > 0) ? Box.Min.x : Box.Max.x,
-            (Normal.y > 0) ? Box.Min.y : Box.Max.y,
-            (Normal.z > 0) ? Box.Min.z : Box.Max.z
-        );
-
-        float DMin = dot(MinPoint, Normal) + Plane.Distance;
-        
-        if (DMin > 0)
-            return BoxVisibility::FullyVisible;
-    }
+    float3 MinPoint(
+        (Normal.x > 0) ? Box.Min.x : Box.Max.x,
+        (Normal.y > 0) ? Box.Min.y : Box.Max.y,
+        (Normal.z > 0) ? Box.Min.z : Box.Max.z
+    );
+    float DMin = dot(MinPoint, Normal) + Plane.Distance;
+    if (DMin > 0)
+        return BoxVisibility::FullyVisible;
 
     return BoxVisibility::Intersecting;
 }
 
 // Tests if bounding box is visible by the camera
-template<bool TestFullVisibility>
 inline BoxVisibility GetBoxVisibility(const ViewFrustum &ViewFrustum, const BoundBox &Box)
 {
     const Plane3D *pPlanes = reinterpret_cast<const Plane3D*>(&ViewFrustum);
@@ -214,7 +205,7 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustum &ViewFrustum, const Boun
     for(int iViewFrustumPlane = 0; iViewFrustumPlane < 6; iViewFrustumPlane++)
     {
         const Plane3D &CurrPlane = pPlanes[iViewFrustumPlane];
-        auto VisibilityAgainstPlane = GetBoxVisibilityAgainstPlane<TestFullVisibility>(CurrPlane, Box);
+        auto VisibilityAgainstPlane = GetBoxVisibilityAgainstPlane(CurrPlane, Box);
 
         // If bounding box is "behind" one of the planes, it is definitely invisible
         if (VisibilityAgainstPlane == BoxVisibility::Invisible)
@@ -225,13 +216,12 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustum &ViewFrustum, const Boun
             ++NumPlanesInside;
     }
 
-    return (TestFullVisibility && NumPlanesInside == 6) ? BoxVisibility::FullyVisible : BoxVisibility::Intersecting;
+    return (NumPlanesInside == 6) ? BoxVisibility::FullyVisible : BoxVisibility::Intersecting;
 }
 
-template<bool TestFullVisibility>
 inline BoxVisibility GetBoxVisibility(const ViewFrustumExt &ViewFrustumExt, const BoundBox &Box)
 {
-    auto Visibility = GetBoxVisibility<TestFullVisibility>(static_cast<const ViewFrustum&>(ViewFrustumExt), Box);
+    auto Visibility = GetBoxVisibility(static_cast<const ViewFrustum&>(ViewFrustumExt), Box);
     if (Visibility == BoxVisibility::FullyVisible || Visibility == BoxVisibility::Invisible)
         return Visibility;
 
