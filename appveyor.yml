@@ -17,42 +17,49 @@ environment:
       configuration: Debug
       cmake_args: -D CMAKE_INSTALL_PREFIX=install
       platform_name: Windows
+      python: "C:\Python37-64"
 
     # Win32/x64/Release
     - platform: x64
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install
       platform_name: Windows
+      python: "C:\Python37-64"
 
     # UWP/x64/Debug
     - platform: x64
       configuration: Debug
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       platform_name: UWP
+      python: "C:\Python37-64"
 
     # UWP/x64/Release
     - platform: x64
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       platform_name: UWP
+      python: "C:\Python37-64"
 
     # Win32/x86/Release
     - platform: Win32
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install
       platform_name: Windows
+      python: "C:\Python37"
 
     # UWP/x86/Release
     - platform: Win32
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       platform_name: UWP
+      python: "C:\Python37"
 
     # Win32-8.1SDK/x64/Release
     - platform: x64
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_VERSION=8.1
       platform_name: Windows8.1
+      python: "C:\Python37-64"
 
 # clone directory
 clone_folder: c:\projects\DiligentCore
