@@ -17,49 +17,42 @@ environment:
       configuration: Debug
       cmake_args: -D CMAKE_INSTALL_PREFIX=install
       platform_name: Windows
-      python: "C:\\Python37-64"
 
     # Win32/x64/Release
     - platform: x64
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install
       platform_name: Windows
-      python: "C:\\Python37-64"
 
     # UWP/x64/Debug
     - platform: x64
       configuration: Debug
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       platform_name: UWP
-      python: "C:\\Python37-64"
 
     # UWP/x64/Release
     - platform: x64
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       platform_name: UWP
-      python: "C:\\Python37-64"
 
     # Win32/x86/Release
     - platform: Win32
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install
       platform_name: Windows
-      python: "C:\\Python37"
 
     # UWP/x86/Release
     - platform: Win32
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_NAME=WindowsStore -D CMAKE_SYSTEM_VERSION=10.0
       platform_name: UWP
-      python: "C:\\Python37"
 
     # Win32-8.1SDK/x64/Release
     - platform: x64
       configuration: Release
       cmake_args: -D CMAKE_INSTALL_PREFIX=install -D CMAKE_SYSTEM_VERSION=8.1
       platform_name: Windows8.1
-      python: "C:\\Python37-64"
 
 # clone directory
 clone_folder: c:\projects\DiligentCore
@@ -73,8 +66,9 @@ install:
   - appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
   - 7z x cmake.zip -oC:\projects\deps > nul
   - move C:\projects\deps\cmake-* C:\projects\deps\cmake # Move to a version-agnostic directory
-  - set PATH=C:\projects\deps\cmake\bin;%PATH%
+  - set PATH=C:\projects\deps\cmake\bin;C:\Python37;%PATH%
   - cmake --version
+  - python --version
   - echo %PLATFORM%
   - if "%PLATFORM%"=="x64" ( set generator="Visual Studio 15 2017 Win64" ) else ( set generator="Visual Studio 15 2017" )
 
