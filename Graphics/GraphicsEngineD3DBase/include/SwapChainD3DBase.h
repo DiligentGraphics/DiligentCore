@@ -112,8 +112,13 @@ namespace Diligent
             //    ;
 
             swapChainDesc.BufferCount        = m_SwapChainDesc.BufferCount;
-            // DXGI_SCALING_NONE is not supported in Windows 7
-            swapChainDesc.Scaling            = IsWindows8OrGreater() ? DXGI_SCALING_NONE : DXGI_SCALING_STRETCH;
+            swapChainDesc.Scaling            = DXGI_SCALING_NONE;
+
+#if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
+            // DXGI_SCALING_NONE is supported starting with Windows 8
+            if (!IsWindows8OrGreater())
+                swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+#endif
 
             // DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL is the flip presentation model, where the contents of the back 
             // buffer is preserved after the call to Present. This flag cannot be used with multisampling.
