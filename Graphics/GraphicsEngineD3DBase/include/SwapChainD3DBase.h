@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <VersionHelpers.h>
 #include "SwapChainBase.h"
 
 /// \file
@@ -111,7 +112,8 @@ namespace Diligent
             //    ;
 
             swapChainDesc.BufferCount        = m_SwapChainDesc.BufferCount;
-            swapChainDesc.Scaling            = DXGI_SCALING_NONE;
+            // DXGI_SCALING_NONE is not supported in Windows 7
+            swapChainDesc.Scaling            = IsWindows8OrGreater() ? DXGI_SCALING_NONE : DXGI_SCALING_STRETCH;
 
             // DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL is the flip presentation model, where the contents of the back 
             // buffer is preserved after the call to Present. This flag cannot be used with multisampling.
@@ -135,9 +137,9 @@ namespace Diligent
 
             DXGI_SWAP_CHAIN_FULLSCREEN_DESC FullScreenDesc = {};
             FullScreenDesc.Windowed = m_FSDesc.Fullscreen ? FALSE : TRUE;
-            FullScreenDesc.RefreshRate.Numerator = m_FSDesc.RefreshRateNumerator;
+            FullScreenDesc.RefreshRate.Numerator   = m_FSDesc.RefreshRateNumerator;
             FullScreenDesc.RefreshRate.Denominator = m_FSDesc.RefreshRateDenominator;
-            FullScreenDesc.Scaling = static_cast<DXGI_MODE_SCALING>(m_FSDesc.Scaling);
+            FullScreenDesc.Scaling          = static_cast<DXGI_MODE_SCALING>(m_FSDesc.Scaling);
             FullScreenDesc.ScanlineOrdering = static_cast<DXGI_MODE_SCANLINE_ORDER>(m_FSDesc.ScanlineOrder);
             hr = factory->CreateSwapChainForHwnd(pD3D11DeviceOrD3D12CmdQueue, hWnd, &swapChainDesc, &FullScreenDesc, nullptr, &pSwapChain1);
             CHECK_D3D_RESULT_THROW(hr, "Failed to create Swap Chain");
