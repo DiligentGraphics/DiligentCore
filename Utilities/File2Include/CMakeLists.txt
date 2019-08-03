@@ -8,6 +8,7 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
     )
 
     add_executable(File2String ${SOURCE})
+    target_compile_features(File2String PRIVATE cxx_std_11)
 
     if(PLATFORM_WIN32)
         if(MSVC)
@@ -27,7 +28,6 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
         set(DST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bin/Linux/")
     elseif(PLATFORM_MACOS)
         set(DST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/bin/MacOS/")
-        target_compile_features(File2String PRIVATE cxx_std_11)
     endif()
     source_group("source" FILES ${SOURCE})
 
