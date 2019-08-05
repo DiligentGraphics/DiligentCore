@@ -174,12 +174,12 @@ template <class T> struct Vector2
         y /= s;
         return *this;
     }
-    
+
     bool operator == (const Vector2 &right)const
     {
         return x == right.x && y == right.y;
     }
-    
+
     bool operator != (const Vector2 &right)const
     {
         return !(*this == right);
@@ -274,7 +274,7 @@ template <class T> struct Vector3
         };
     };
 
-        
+
     Vector3 operator-( const Vector3 &right )const
     {
         return Vector3(x - right.x, y - right.y, z - right.z);
@@ -284,7 +284,7 @@ template <class T> struct Vector3
     {
         return Vector3(-x, -y, -z);
     }
-    
+
     Vector3& operator-=(const Vector3<T> &right)
     {
         x -= right.x;
@@ -297,7 +297,7 @@ template <class T> struct Vector3
     {
         return Vector3(x + right.x, y + right.y, z + right.z);
     }
-    
+
     Vector3& operator+=(const Vector3<T> &right)
     {
         x += right.x;
@@ -323,7 +323,7 @@ template <class T> struct Vector3
     {
         return Vector3(x * right.x, y * right.y, z * right.z);
     }
-    
+
     Vector3 operator* (const Matrix4x4<T>& m)const
     {
         Vector4<T> out4 = Vector4<T>(x, y, z, 1) * m;
@@ -377,7 +377,7 @@ template <class T> struct Vector3
     {
         return x == right.x && y == right.y && z == right.z;
     }
-    
+
     bool operator != (const Vector3 &right)const
     {
         return !(*this == right);
@@ -569,7 +569,7 @@ template <class T> struct Vector4
     {
         return x == right.x && y == right.y && z == right.z && w == right.w;
     }
-    
+
     bool operator != (const Vector4 &right)const
     {
         return !(*this == right);
@@ -1419,12 +1419,19 @@ template <class T> struct Matrix4x4
             Matrix3x3<T>(_11, _12, _13,
                          _21, _22, _23,
                          _31, _32, _33).Determinant();
-    
+
         auto det = _11 * inv._11 + _12 * inv._12 + _13 * inv._13 + _14 * inv._14;
         inv = inv.Transpose();
         inv *= static_cast<T>(1) / det;
 
         return inv;
+    }
+
+    Matrix4x4 RemoveTranslation()const
+    {
+        Matrix4x4 m(*this);
+        m._41 = m._42 = m._43 = 0;
+        return m;
     }
 };
 
