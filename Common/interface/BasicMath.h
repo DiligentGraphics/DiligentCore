@@ -1429,9 +1429,13 @@ template <class T> struct Matrix4x4
 
     Matrix4x4 RemoveTranslation()const
     {
-        Matrix4x4 m(*this);
-        m._41 = m._42 = m._43 = 0;
-        return m;
+        return Matrix4x4
+        {
+            _11, _12, _13, _14,
+            _21, _22, _23, _24,
+            _31, _32, _33, _34,
+              0,   0,   0, _44
+        };
     }
 };
 
