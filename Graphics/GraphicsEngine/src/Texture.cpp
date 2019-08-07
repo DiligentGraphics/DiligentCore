@@ -239,8 +239,8 @@ void ValidateCopyTextureParams(const CopyTextureAttribs& CopyAttribs )
     if( pSrcBox == nullptr )
     {
         auto MipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
-        SrcBox.MaxX = MipLevelAttribs.Width;
-        SrcBox.MaxY = MipLevelAttribs.Height;
+        SrcBox.MaxX = MipLevelAttribs.LogicalWidth;
+        SrcBox.MaxY = MipLevelAttribs.LogicalHeight;
         SrcBox.MaxZ = MipLevelAttribs.Depth;
         pSrcBox = &SrcBox;
     }

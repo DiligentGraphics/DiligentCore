@@ -243,7 +243,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                     CopyRegion.bufferImageHeight = 0;
                     // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
                     CopyRegion.imageOffset = VkOffset3D{0, 0, 0};
-                    CopyRegion.imageExtent = VkExtent3D{MipInfo.Width, MipInfo.Height, MipInfo.Depth};
+                    CopyRegion.imageExtent = VkExtent3D{MipInfo.LogicalWidth, MipInfo.LogicalHeight, MipInfo.Depth};
 
                     CopyRegion.imageSubresource.aspectMask     = aspectMask;
                     CopyRegion.imageSubresource.mipLevel       = mip;
@@ -252,7 +252,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
 
                     VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipInfo.RowSize, "Stride is too small");
                     // For compressed-block formats, MipInfo.RowSize is the size of one row of blocks
-                    VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= (MipInfo.Height / FmtAttribs.BlockHeight) * MipInfo.RowSize, "Depth stride is too small");
+                    VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= (MipInfo.StorageHeight / FmtAttribs.BlockHeight) * MipInfo.RowSize, "Depth stride is too small");
 
                     // bufferOffset must be a multiple of 4 (18.4)
                     // If the calling command's VkImage parameter is a compressed image, bufferOffset 
@@ -303,19 +303,19 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
 
                     auto MipInfo = GetMipLevelProperties(m_Desc, mip);
 
-                    VERIFY_EXPR(MipInfo.Width  == CopyRegion.imageExtent.width);
-                    VERIFY_EXPR(MipInfo.Height == CopyRegion.imageExtent.height);
-                    VERIFY_EXPR(MipInfo.Depth  == CopyRegion.imageExtent.depth);
+                    VERIFY_EXPR(MipInfo.LogicalWidth  == CopyRegion.imageExtent.width);
+                    VERIFY_EXPR(MipInfo.LogicalHeight == CopyRegion.imageExtent.height);
+                    VERIFY_EXPR(MipInfo.Depth         == CopyRegion.imageExtent.depth);
 
                     VERIFY(SubResData.Stride == 0 || SubResData.Stride >= MipInfo.RowSize, "Stride is too small");
                     // For compressed-block formats, MipInfo.RowSize is the size of one row of blocks
-                    VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= (MipInfo.Height / FmtAttribs.BlockHeight) * MipInfo.RowSize, "Depth stride is too small");
+                    VERIFY(SubResData.DepthStride == 0 || SubResData.DepthStride >= (MipInfo.StorageHeight / FmtAttribs.BlockHeight) * MipInfo.RowSize, "Depth stride is too small");
 
                     for(Uint32 z=0; z < MipInfo.Depth; ++z)
                     {
-                        for(Uint32 y=0; y < MipInfo.Height; y += FmtAttribs.BlockHeight)
+                        for(Uint32 y=0; y < MipInfo.StorageHeight; y += FmtAttribs.BlockHeight)
                         {
-                            memcpy(StagingData + CopyRegion.bufferOffset + ((y + z * MipInfo.Height) / FmtAttribs.BlockHeight) * MipInfo.RowSize,
+                            memcpy(StagingData + CopyRegion.bufferOffset + ((y + z * MipInfo.StorageHeight) / FmtAttribs.BlockHeight) * MipInfo.RowSize,
                                    // SubResData.Stride must be the stride of one row of compressed blocks
                                    reinterpret_cast<const uint8_t*>(SubResData.pData) + (y/FmtAttribs.BlockHeight) * SubResData.Stride + z * SubResData.DepthStride,
                                    MipInfo.RowSize);

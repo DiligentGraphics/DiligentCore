@@ -305,8 +305,10 @@ bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture);
 /// Describes the mip level properties
 struct MipLevelProperties
 {
-    Uint32 Width          = 0;
-    Uint32 Height         = 0;
+    Uint32 LogicalWidth   = 0;
+    Uint32 LogicalHeight  = 0;
+    Uint32 StorageWidth   = 0;
+    Uint32 StorageHeight  = 0;
     Uint32 Depth          = 1;
     Uint32 RowSize        = 0;
     Uint32 DepthSliceSize = 0;

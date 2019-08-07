@@ -941,8 +941,8 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
     MipLevelProperties MipProps;
     const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
-    MipProps.Width  = std::max(TexDesc.Width  >> MipLevel, 1u);
-    MipProps.Height = std::max(TexDesc.Height >> MipLevel, 1u);
+    MipProps.LogicalWidth  = std::max(TexDesc.Width  >> MipLevel, 1u);
+    MipProps.LogicalHeight = std::max(TexDesc.Height >> MipLevel, 1u);
     MipProps.Depth  = (TexDesc.Type == RESOURCE_DIM_TEX_3D) ? std::max(TexDesc.Depth >> MipLevel, 1u) : 1u;
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
@@ -950,16 +950,18 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
         VERIFY((FmtAttribs.BlockWidth  & (FmtAttribs.BlockWidth-1))  == 0, "Compressed block width is expected to be power of 2");
         VERIFY((FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height is expected to be power of 2");
         // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
-        MipProps.Width          = Align(MipProps.Width, Uint32{FmtAttribs.BlockWidth});
-        MipProps.Height         = Align(MipProps.Height,Uint32{FmtAttribs.BlockHeight});
-        MipProps.RowSize        = MipProps.Width  / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
-        MipProps.DepthSliceSize = MipProps.Height / Uint32{FmtAttribs.BlockHeight} * MipProps.RowSize;
+        MipProps.StorageWidth   = Align(MipProps.LogicalWidth, Uint32{FmtAttribs.BlockWidth});
+        MipProps.StorageHeight  = Align(MipProps.LogicalHeight,Uint32{FmtAttribs.BlockHeight});
+        MipProps.RowSize        = MipProps.StorageWidth  / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
+        MipProps.DepthSliceSize = MipProps.StorageHeight / Uint32{FmtAttribs.BlockHeight} * MipProps.RowSize;
         MipProps.MipSize        = MipProps.DepthSliceSize * MipProps.Depth;
     }
     else
     {
-        MipProps.RowSize        = MipProps.Width * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
-        MipProps.DepthSliceSize = MipProps.RowSize * MipProps.Height;
+        MipProps.StorageWidth   = MipProps.LogicalWidth;
+        MipProps.StorageHeight  = MipProps.LogicalHeight;
+        MipProps.RowSize        = MipProps.StorageWidth * Uint32{FmtAttribs.ComponentSize} * Uint32{FmtAttribs.NumComponents};
+        MipProps.DepthSliceSize = MipProps.RowSize * MipProps.StorageHeight;
         MipProps.MipSize        = MipProps.DepthSliceSize * MipProps.Depth;
     }
 

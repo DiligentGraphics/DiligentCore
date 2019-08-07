@@ -269,8 +269,8 @@ void TextureUploaderGL::RenderThreadUpdate(IDeviceContext *pContext)
                             TextureSubResData SubResData(pBuffer->m_pStagingBuffer, SrcOffset, SrcStride);
                             auto MipLevelProps = GetMipLevelProperties(TexDesc, Mip);
                             Box DstBox;
-                            DstBox.MaxX = MipLevelProps.Width;
-                            DstBox.MaxY = MipLevelProps.Height;
+                            DstBox.MaxX = MipLevelProps.LogicalWidth;
+                            DstBox.MaxY = MipLevelProps.LogicalHeight;
                             pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip + Mip, OperationInfo.DstSlice + Slice, DstBox,
                                                     SubResData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
                         }
