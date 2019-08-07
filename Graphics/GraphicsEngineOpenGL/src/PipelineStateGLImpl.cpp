@@ -38,6 +38,19 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
     TPipelineStateBase(pRefCounters, pDeviceGL, PipelineDesc, bIsDeviceInternal),
     m_GLProgram(false)
 {
+    if (!m_Desc.IsComputePipeline && m_pPS == nullptr)
+    {
+        // Some OpenGL implementations fail if fragment shader is not present, so
+        // create a dummy one.
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_GLSL;
+        ShaderCI.Source          = "void main(){}";
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.Desc.Name       = "Dummy fragment shader";
+        pDeviceGL->CreateShader(ShaderCI, &m_pPS);
+        m_Desc.GraphicsPipeline.pPS = m_pPS;
+        m_ppShaders[m_NumShaders++] = m_pPS;
+    }
 
     auto &DeviceCaps = pDeviceGL->GetDeviceCaps();
     VERIFY( DeviceCaps.DevType != DeviceType::Undefined, "Device caps are not initialized" );
