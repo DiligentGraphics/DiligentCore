@@ -173,6 +173,9 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
                     m_SwapChainDesc.Height, SCDes.BufferDesc.Format,
                     SCDes.Flags),
                     "Failed to resize the DXGI swap chain");
+                
+                // Call flush to release resources
+                pImmediateCtxD3D11->Flush();
             }
 
             CreateRTVandDSV();
