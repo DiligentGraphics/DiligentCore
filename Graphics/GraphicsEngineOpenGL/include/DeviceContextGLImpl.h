@@ -48,44 +48,44 @@ class DeviceContextGLImpl final : public DeviceContextBase<IDeviceContextGL, Dev
 public:
     using TDeviceContextBase = DeviceContextBase<IDeviceContextGL, DeviceContextGLImplTraits>;
 
-    DeviceContextGLImpl( IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, bool bIsDeferred );
+    DeviceContextGLImpl(IReferenceCounters* pRefCounters, class RenderDeviceGLImpl* pDeviceGL, bool bIsDeferred);
 
     /// Queries the specific interface, see IObject::QueryInterface() for details.
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
-    virtual void SetPipelineState(IPipelineState *pPipelineState)override final;
+    virtual void SetPipelineState(IPipelineState* pPipelineState)override final;
 
-    virtual void TransitionShaderResources(IPipelineState *pPipelineState, IShaderResourceBinding *pShaderResourceBinding)override final;
+    virtual void TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)override final;
 
-    virtual void CommitShaderResources(IShaderResourceBinding *pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
+    virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void SetStencilRef(Uint32 StencilRef)override final;
 
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
-    virtual void SetVertexBuffers( Uint32                         StartSlot,
-                                   Uint32                         NumBuffersSet,
-                                   IBuffer**                      ppBuffers,
-                                   Uint32*                        pOffsets,
-                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                                   SET_VERTEX_BUFFERS_FLAGS       Flags )override final;
+    virtual void SetVertexBuffers(Uint32                         StartSlot,
+                                  Uint32                         NumBuffersSet,
+                                  IBuffer**                      ppBuffers,
+                                  Uint32*                        pOffsets,
+                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                  SET_VERTEX_BUFFERS_FLAGS       Flags)override final;
     
     virtual void InvalidateState()override final;
 
-    virtual void SetIndexBuffer( IBuffer *pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override final;
+    virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
-    virtual void SetViewports( Uint32 NumViewports, const Viewport *pViewports, Uint32 RTWidth, Uint32 RTHeight )override final;
+    virtual void SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight)override final;
 
-    virtual void SetScissorRects( Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight )override final;
+    virtual void SetScissorRects(Uint32 NumRects, const Rect *pRects, Uint32 RTWidth, Uint32 RTHeight)override final;
 
-    virtual void SetRenderTargets( Uint32                         NumRenderTargets,
-                                   ITextureView*                  ppRenderTargets[],
-                                   ITextureView*                  pDepthStencil,
-                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override final;
+    virtual void SetRenderTargets(Uint32                         NumRenderTargets,
+                                  ITextureView*                  ppRenderTargets[],
+                                  ITextureView*                  pDepthStencil,
+                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
-    virtual void Draw( DrawAttribs &DrawAttribs )override final;
+    virtual void Draw(DrawAttribs& DrawAttribs)override final;
 
-    virtual void DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )override final;
+    virtual void DispatchCompute(const DispatchComputeAttribs& DispatchAttrs)override final;
 
     virtual void ClearDepthStencil(ITextureView*                  pView,
                                    CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
@@ -93,7 +93,7 @@ public:
                                    Uint8                          Stencil,
                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
-    virtual void ClearRenderTarget( ITextureView *pView, const float *RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override final;
+    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
     virtual void Flush()override final;
 
@@ -125,34 +125,34 @@ public:
 
     virtual void CopyTexture(const CopyTextureAttribs& CopyAttribs)override final;
 
-    virtual void MapTextureSubresource( ITexture*                 pTexture,
-                                        Uint32                    MipLevel,
-                                        Uint32                    ArraySlice,
-                                        MAP_TYPE                  MapType,
-                                        MAP_FLAGS                 MapFlags,
-                                        const Box*                pMapRegion,
-                                        MappedTextureSubresource& MappedData )override final;
+    virtual void MapTextureSubresource(ITexture*                 pTexture,
+                                       Uint32                    MipLevel,
+                                       Uint32                    ArraySlice,
+                                       MAP_TYPE                  MapType,
+                                       MAP_FLAGS                 MapFlags,
+                                       const Box*                pMapRegion,
+                                       MappedTextureSubresource& MappedData)override final;
 
 
     virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)override final;
 
     
-    virtual void GenerateMips( ITextureView *pTexView )override;
+    virtual void GenerateMips(ITextureView* pTexView)override;
 
 
     virtual void FinishFrame()override final;
 
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
 
-    virtual void FinishCommandList(class ICommandList **ppCommandList)override final;
+    virtual void FinishCommandList(class ICommandList** ppCommandList)override final;
 
-    virtual void ExecuteCommandList(class ICommandList *pCommandList)override final;
+    virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
 
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
     virtual bool UpdateCurrentGLContext()override final;
 
-    void BindProgramResources( Uint32 &NewMemoryBarriers, IShaderResourceBinding *pResBinding );
+    void BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding);
 
     GLContextState &GetContextState(){return m_ContextState;}
     
@@ -169,7 +169,7 @@ private:
     Uint32 m_CommitedResourcesTentativeBarriers;
 
     std::vector<class TextureBaseGL*> m_BoundWritableTextures;
-    std::vector<class BufferGLImpl*> m_BoundWritableBuffers;
+    std::vector<class BufferGLImpl*>  m_BoundWritableBuffers;
 
     bool m_bVAOIsUpToDate = false;
     GLObjectWrappers::GLFrameBufferObj m_DefaultFBO;
