@@ -338,7 +338,8 @@ void BufferGLImpl::BufferMemoryBarrier( Uint32 RequiredBarriers, GLContextState 
             GL_BUFFER_UPDATE_BARRIER_BIT        |
             GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT |
             GL_SHADER_STORAGE_BARRIER_BIT       |
-            GL_TEXTURE_FETCH_BARRIER_BIT;
+            GL_TEXTURE_FETCH_BARRIER_BIT        |
+            GL_SHADER_IMAGE_ACCESS_BARRIER_BIT;
         VERIFY( (RequiredBarriers & BufferBarriers) !=0,   "At least one buffer memory barrier flag should be set" );
         VERIFY( (RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag" );
     }

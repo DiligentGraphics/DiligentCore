@@ -786,6 +786,11 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
     _TypeConvertStore( NumberOfSamples, 0 );\
 }
 
+#define GetTexBufferDimensions_1(Sampler, Width)\
+{                                                    \
+    _TypeConvertStore( Width, textureSize(Sampler) );\
+}
+
 
 // https://www.opengl.org/sdk/docs/man/html/imageSize.xhtml
 // imageSize returns the dimensions of the image bound to image. The components in the 
@@ -828,6 +833,10 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
     _TypeConvertStore( Depth,  i3Size.z );  \
 }
 
+#define GetRWTexBufferDimensions_1(Tex, Width)\
+{                                               \
+    _TypeConvertStore( Width, imageSize(Tex) ); \
+}
 
 
 // Texture sampling operations
@@ -946,6 +955,7 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 #define LoadTex2DMS_3(Tex, Location, Sample, Offset)texelFetch(Tex, _ToIvec2( (Location).x + (Offset).x, (Location).y + (Offset).y), int(Sample) ) // No texelFetchOffset for texture2DMS
 #define LoadTex2DMSArr_2(Tex, Location, Sample)        texelFetch(Tex, _ToIvec( (Location).xyz), _ToInt(Sample))
 #define LoadTex2DMSArr_3(Tex, Location, Sample, Offset)texelFetch(Tex, _ToIvec3( (Location).x + (Offset).x, (Location).y + (Offset).y, (Location).z), int(Sample)) // No texelFetchOffset for texture2DMSArray
+#define LoadTexBuffer_1(Tex, Location)  texelFetch(Tex, _ToInt(Location))
 
 //https://www.opengl.org/sdk/docs/man/html/imageLoad.xhtml
 #define LoadRWTex1D_1(Tex, Location)    imageLoad(Tex, _ToInt(Location)        )
@@ -953,7 +963,7 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 #define LoadRWTex2D_1(Tex, Location)    imageLoad(Tex, _ToIvec((Location).xy)  )
 #define LoadRWTex2DArr_1(Tex, Location) imageLoad(Tex, _ToIvec((Location).xyz) )
 #define LoadRWTex3D_1(Tex, Location)    imageLoad(Tex, _ToIvec((Location).xyz) )
-
+#define LoadRWTexBuffer_1(Tex, Location)imageLoad(Tex, _ToInt(Location)        )
 
 #define Gather_2(Tex, Sampler, Location)        textureGather      (Tex, _ToVec(Location))
 #define Gather_3(Tex, Sampler, Location, Offset)textureGatherOffset(Tex, _ToVec(Location), Offset)

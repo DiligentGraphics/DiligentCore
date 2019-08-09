@@ -40,7 +40,7 @@ namespace Diligent
         TBuffViewBase(pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
         m_GLTexBuffer(false)
     {
-        if( ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE && 
+        if( (ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) && 
             (pBuffer->GetDesc().Mode == BUFFER_MODE_FORMATTED || pBuffer->GetDesc().Mode == BUFFER_MODE_RAW) )
         {
 #ifdef _MSC_VER

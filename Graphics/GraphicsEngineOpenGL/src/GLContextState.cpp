@@ -261,6 +261,31 @@ namespace Diligent
 #endif
     }
 
+    void GLContextState::BindImage( Uint32 Index, BufferViewGLImpl* pBuffView, GLenum Access, GLenum Format )
+    {
+#if GL_ARB_shader_image_load_store
+        BoundImageInfo NewImageInfo(
+            pBuffView->GetUniqueID(),
+            0,
+            GL_FALSE,
+            0,
+            Access,
+            Format
+            );
+        if( Index >= m_BoundImages.size() )
+            m_BoundImages.resize( Index + 1 );
+        if( !(m_BoundImages[Index] == NewImageInfo) )
+        {
+            m_BoundImages[Index] = NewImageInfo;
+            GLint GLBuffHandle = pBuffView->GetTexBufferHandle();
+            glBindImageTexture( Index, GLBuffHandle, 0, GL_FALSE, 0, Access, Format );
+            CHECK_GL_ERROR( "glBindImageTexture() failed" );
+        }
+#else
+        UNSUPPORTED("GL_ARB_shader_image_load_store is not supported");
+#endif
+    }
+
     void GLContextState::EnsureMemoryBarrier( Uint32 RequiredBarriers, AsyncWritableResource *pRes/* = nullptr */ )
     {
 #if GL_ARB_shader_image_load_store

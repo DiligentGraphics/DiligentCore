@@ -44,6 +44,7 @@ public:
     void BindTexture( Int32 Index, GLenum BindTarget, const GLObjectWrappers::GLTextureObj &Tex);
     void BindSampler( Uint32 Index, const GLObjectWrappers::GLSamplerObj &GLSampler);
     void BindImage( Uint32 Index, class TextureViewGLImpl *pTexView, GLint MipLevel, GLboolean IsLayered, GLint Layer, GLenum Access, GLenum Format );
+    void BindImage( Uint32 Index, class BufferViewGLImpl *pBuffView, GLenum Access, GLenum Format );
     void EnsureMemoryBarrier(Uint32 RequiredBarriers, class AsyncWritableResource *pRes = nullptr);
     void SetPendingMemoryBarriers( Uint32 PendingBarriers );
     

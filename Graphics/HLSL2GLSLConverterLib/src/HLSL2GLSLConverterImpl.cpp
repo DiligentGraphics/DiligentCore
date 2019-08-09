@@ -543,6 +543,8 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
         DEFINE_GET_DIM_STUB( "GetTex2DArrDimensions_3", "samplerCubeArray",  3 ); // GetDimensions( Width, Height, ArrElems )
         DEFINE_GET_DIM_STUB( "GetTex2DArrDimensions_5", "samplerCubeArray",  5 ); // GetDimensions( Mip, Width, Height, ArrElems, NumberOfMips )
 
+        DEFINE_GET_DIM_STUB( "GetTexBufferDimensions_1", "samplerBuffer", 1 ); // GetDimensions( Width )
+
         if( Suff == "" )
         {
             // No shadow samplers for Tex3D, Tex2DMS and Tex2DMSArr
@@ -558,12 +560,14 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
             DEFINE_GET_DIM_STUB( "GetRWTex2DDimensions_2",    "image2D",       2 ); // GetDimensions( Width, Height )
             DEFINE_GET_DIM_STUB( "GetRWTex2DArrDimensions_3", "image2DArray",  3 ); // GetDimensions( Width, Height, ArrElems )
             DEFINE_GET_DIM_STUB( "GetRWTex3DDimensions_3",    "image3D",       3 ); // GetDimensions( Width, Height, Depth )
+            DEFINE_GET_DIM_STUB( "GetRWTexBufferDimensions_1","imageBuffer",   1 ); // GetDimensions( Width )
 
             m_ImageTypes.insert( HashMapStringKey(Pref+"image1D") );
             m_ImageTypes.insert( HashMapStringKey(Pref+"image1DArray") );
             m_ImageTypes.insert( HashMapStringKey(Pref+"image2D") );
             m_ImageTypes.insert( HashMapStringKey(Pref+"image2DArray") );
             m_ImageTypes.insert( HashMapStringKey(Pref+"image3D") );
+            m_ImageTypes.insert( HashMapStringKey(Pref+"imageBuffer") );
         }
 #undef DEFINE_GET_DIM_STUB
     }
@@ -642,11 +646,14 @@ HLSL2GLSLConverterImpl::HLSL2GLSLConverterImpl()
         DEFINE_STUB( "LoadTex2DMS_3",    Pref + "sampler2DMS",      "Load", 3 ); // Load( Location, Sample, Offset )
         DEFINE_STUB( "LoadTex2DMSArr_3", Pref + "sampler2DMSArray", "Load", 3 ); // Load( Location, Sample, Offset )
 
+        DEFINE_STUB( "LoadTexBuffer_1",    Pref + "samplerBuffer",  "Load", 1 ); // Load( Location )
+
         DEFINE_STUB( "LoadRWTex1D_1",      Pref + "image1D",        "Load", 1 ); // Load( Location )
         DEFINE_STUB( "LoadRWTex1DArr_1",   Pref + "image1DArray",   "Load", 1 ); // Load( Location )
         DEFINE_STUB( "LoadRWTex2D_1",      Pref + "image2D",        "Load", 1 ); // Load( Location )
         DEFINE_STUB( "LoadRWTex2DArr_1",   Pref + "image2DArray",   "Load", 1 ); // Load( Location )
         DEFINE_STUB( "LoadRWTex3D_1",      Pref + "image3D",        "Load", 1 ); // Load( Location )
+        DEFINE_STUB( "LoadRWTexBuffer_1",  Pref + "imageBuffer",    "Load", 1 ); // Load( Location )
     }
 
     // SampleCmp() returns float independent of the number of components, so
@@ -1739,7 +1746,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenL
         TextureDim == TokenType::kw_RWTexture1DArray ||
         TextureDim == TokenType::kw_RWTexture2D      ||
         TextureDim == TokenType::kw_RWTexture2DArray ||
-        TextureDim == TokenType::kw_RWTexture3D;
+        TextureDim == TokenType::kw_RWTexture3D      ||
+        TextureDim == TokenType::kw_RWBuffer;
     String ImgFormat;
 
     ++Token;
@@ -1872,6 +1880,10 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenL
         case TokenType::kw_TextureCubeArray:   GLSLSampler += "CubeArray"; break;
         case TokenType::kw_Texture2DMS:        GLSLSampler += "2DMS";      break;
         case TokenType::kw_Texture2DMSArray:   GLSLSampler += "2DMSArray"; break;
+
+        case TokenType::kw_RWBuffer:
+        case TokenType::kw_Buffer:             GLSLSampler += "Buffer";    break;
+
         default: UNEXPECTED("Unexpected texture type");
     }
 
@@ -4656,11 +4668,13 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
                      Token->Type == TokenType::kw_TextureCubeArray ||
                      Token->Type == TokenType::kw_Texture2DMS      ||
                      Token->Type == TokenType::kw_Texture2DMSArray ||
+                     Token->Type == TokenType::kw_Buffer           ||
                      Token->Type == TokenType::kw_RWTexture1D      ||
                      Token->Type == TokenType::kw_RWTexture1DArray ||
                      Token->Type == TokenType::kw_RWTexture2D      ||
                      Token->Type == TokenType::kw_RWTexture2DArray ||
-                     Token->Type == TokenType::kw_RWTexture3D )
+                     Token->Type == TokenType::kw_RWTexture3D      ||
+                     Token->Type == TokenType::kw_RWBuffer)
             {
                 // Process texture declaration, and add it to the top of the
                 // object stack

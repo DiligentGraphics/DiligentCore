@@ -415,9 +415,9 @@ namespace Diligent
                     // glGetProgramResourceLocation( program, GL_UNIFORM, name );
                     // The latter is only available in GL 4.4 and GLES 3.1
 
-                    auto ResourceType = dataType == GL_SAMPLER_BUFFER     || 
-                                        dataType == GL_INT_SAMPLER_BUFFER || 
-                                        dataType == GL_UNSIGNED_INT_SAMPLER_BUFFER ? 
+                    const auto ResourceType = dataType == GL_SAMPLER_BUFFER     || 
+                                              dataType == GL_INT_SAMPLER_BUFFER || 
+                                              dataType == GL_UNSIGNED_INT_SAMPLER_BUFFER ? 
                         SHADER_RESOURCE_TYPE_BUFFER_SRV : SHADER_RESOURCE_TYPE_TEXTURE_SRV;
 
                     RemoveArrayBrackets(Name.data());
@@ -482,11 +482,15 @@ namespace Diligent
 
                     RemoveArrayBrackets(Name.data());
 
+                    const auto ResourceType = dataType == GL_IMAGE_BUFFER     ||
+                                              dataType == GL_INT_IMAGE_BUFFER ||
+                                              dataType == GL_UNSIGNED_INT_IMAGE_BUFFER ?
+                        SHADER_RESOURCE_TYPE_BUFFER_UAV : SHADER_RESOURCE_TYPE_TEXTURE_UAV;
                     Images.emplace_back(
                         Owner,
                         NamesPool.emplace(Name.data()).first->c_str(),
                         SHADER_RESOURCE_VARIABLE_TYPE_STATIC, 
-                        SHADER_RESOURCE_TYPE_TEXTURE_UAV,
+                        ResourceType,
                         Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
                         static_cast<Uint32>(size),
                         nullptr,        // pResources
