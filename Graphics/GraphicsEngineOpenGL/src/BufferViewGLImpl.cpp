@@ -31,17 +31,18 @@
 
 namespace Diligent
 {
-    BufferViewGLImpl::BufferViewGLImpl( IReferenceCounters *pRefCounters,
-                                        RenderDeviceGLImpl *pDevice, 
-                                        IDeviceContext *pContext,
-                                        const BufferViewDesc& ViewDesc, 
-                                        BufferGLImpl* pBuffer,
-                                        bool bIsDefaultView) :
+    BufferViewGLImpl::BufferViewGLImpl( IReferenceCounters*     pRefCounters,
+                                        RenderDeviceGLImpl*     pDevice, 
+                                        IDeviceContext*         pContext,
+                                        const BufferViewDesc&   ViewDesc, 
+                                        BufferGLImpl*           pBuffer,
+                                        bool                    bIsDefaultView) :
         TBuffViewBase(pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
         m_GLTexBuffer(false)
     {
-        if( (ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) && 
-            (pBuffer->GetDesc().Mode == BUFFER_MODE_FORMATTED || pBuffer->GetDesc().Mode == BUFFER_MODE_RAW) )
+        const auto& BuffDesc = pBuffer->GetDesc();
+        if ((ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) && 
+            (BuffDesc.Mode == BUFFER_MODE_FORMATTED || BuffDesc.Mode == BUFFER_MODE_RAW))
         {
 #ifdef _MSC_VER
 #   pragma warning(push)
@@ -52,24 +53,36 @@ namespace Diligent
 #   pragma warning(pop)
 #endif
 
-            auto *pContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
-            auto &ContextState = pContextGL->GetContextState();
+            auto* pContextGL = ValidatedCast<DeviceContextGLImpl>(pContext);
+            auto& ContextState = pContextGL->GetContextState();
 
             m_GLTexBuffer.Create();
-            ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer );
+            ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, m_GLTexBuffer);
 
-            const auto &BuffFmt = ViewDesc.Format;
+            const auto& BuffFmt = ViewDesc.Format;
             GLenum GLFormat = 0;
-            if(pBuffer->GetDesc().Mode == BUFFER_MODE_FORMATTED || BuffFmt.ValueType != VT_UNDEFINED)
+            if (BuffDesc.Mode == BUFFER_MODE_FORMATTED || BuffFmt.ValueType != VT_UNDEFINED)
                 GLFormat = TypeToGLTexFormat( BuffFmt.ValueType, BuffFmt.NumComponents, BuffFmt.IsNormalized );
             else
             {
                 GLFormat = GL_R32UI;
             }
-            glTexBuffer( GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLHandle() );
+
+            if (ViewDesc.ByteOffset == 0 && ViewDesc.ByteWidth == BuffDesc.uiSizeInBytes)
+                glTexBuffer(GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLHandle());
+            else
+            {
+#if GL_ARB_texture_buffer_range
+                glTexBufferRange(GL_TEXTURE_BUFFER, GLFormat, pBuffer->GetGLHandle(), ViewDesc.ByteOffset, ViewDesc.ByteWidth);
+#else
+                LOG_ERROR_AND_THROW("Unable to create view '", ViewDesc.Name, "' for buffer '", BuffDesc.Name,
+                                    "' because GL_ARB_texture_buffer_range extension is not available. "
+                                    "Only full-buffer views can be created on this device.");
+#endif
+            }
             CHECK_GL_ERROR_AND_THROW( "Failed to create texture buffer" );
 
-            ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, GLObjectWrappers::GLTextureObj(false) );
+            ContextState.BindTexture(-1, GL_TEXTURE_BUFFER, GLObjectWrappers::GLTextureObj(false));
         }
     }
 
