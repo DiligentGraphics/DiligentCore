@@ -176,7 +176,7 @@ namespace Diligent
 
             const GLuint UBIndex;
         };
-        static_assert( (sizeof(UniformBufferInfo) % sizeof(void*)) == 0, "sizeof(UniformBufferInfo) must be multiple of sizeof(void*)");
+        static_assert((sizeof(UniformBufferInfo) % sizeof(void*)) == 0, "sizeof(UniformBufferInfo) must be multiple of sizeof(void*)");
 
 
         struct SamplerInfo final : GLProgramVariableBase
@@ -218,7 +218,7 @@ namespace Diligent
             const GLenum                       SamplerType;
             RefCntAutoPtr<class SamplerGLImpl> pStaticSampler;
         };
-        static_assert( (sizeof(SamplerInfo) % sizeof(void*)) == 0, "sizeof(SamplerInfo) must be multiple of sizeof(void*)");
+        static_assert((sizeof(SamplerInfo) % sizeof(void*)) == 0, "sizeof(SamplerInfo) must be multiple of sizeof(void*)");
 
                 
         struct ImageInfo final : GLProgramVariableBase
@@ -235,29 +235,29 @@ namespace Diligent
                       Uint16                          _VariableIndex,
                       Uint32                          _ArraySize,
                       RefCntAutoPtr<IDeviceObject>*   _pResources,
-                      GLint                           _BindingPoint,
+                      GLint                           _Location,
                       GLenum                          _ImageType) :
                 GLProgramVariableBase(_Owner, _Name, _VariableType, _ResourceType, _VariableIndex, _ArraySize, _pResources),
-                BindingPoint(_BindingPoint),
-                ImageType        (_ImageType)
+                Location    (_Location),
+                ImageType   (_ImageType)
             {}
 
             bool IsCompatibleWith(const ImageInfo& II)const
             {
-                return BindingPoint == II.BindingPoint &&
-                       ImageType    == II.ImageType &&
+                return Location  == II.Location &&
+                       ImageType == II.ImageType &&
                        GLProgramVariableBase::IsCompatibleWith(II);
             }
 
             size_t GetHash()const
             {
-                return ComputeHash(BindingPoint, ImageType, GLProgramVariableBase::GetHash());
+                return ComputeHash(Location, ImageType, GLProgramVariableBase::GetHash());
             }
 
-            const GLint  BindingPoint;
+            const GLint  Location;
             const GLenum ImageType;
         };
-        static_assert( (sizeof(ImageInfo) % sizeof(void*)) == 0, "sizeof(ImageInfo) must be multiple of sizeof(void*)");
+        static_assert((sizeof(ImageInfo) % sizeof(void*)) == 0, "sizeof(ImageInfo) must be multiple of sizeof(void*)");
 
 
         struct StorageBlockInfo final : GLProgramVariableBase
@@ -274,23 +274,23 @@ namespace Diligent
                              Uint16                          _VariableIndex,
                              Uint32                          _ArraySize,
                              RefCntAutoPtr<IDeviceObject>*   _pResources,
-                             GLint                           _Binding) :
+                             GLint                           _SBIndex) :
                 GLProgramVariableBase(_Owner, _Name, _VariableType, _ResourceType, _VariableIndex, _ArraySize, _pResources),
-                Binding(_Binding)
+                SBIndex(_SBIndex)
             {}
 
             bool IsCompatibleWith(const StorageBlockInfo& SBI)const
             {
-                return Binding == SBI.Binding &&
+                return SBIndex == SBI.SBIndex &&
                        GLProgramVariableBase::IsCompatibleWith(SBI);
             }
 
             size_t GetHash()const
             {
-                return ComputeHash(Binding, GLProgramVariableBase::GetHash());
+                return ComputeHash(SBIndex, GLProgramVariableBase::GetHash());
             }
 
-            const GLint Binding;
+            const GLint SBIndex;
         };
         static_assert( (sizeof(StorageBlockInfo) % sizeof(void*)) == 0, "sizeof(StorageBlockInfo) must be multiple of sizeof(void*)");
 

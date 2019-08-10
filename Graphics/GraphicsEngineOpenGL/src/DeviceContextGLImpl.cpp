@@ -382,8 +382,10 @@ namespace Diligent
         }
 
         Uint32 NumPrograms = ProgramPipelineSupported ? m_pPipelineState->GetNumShaders() : 1;
-        GLuint UniformBuffBindPoint = 0;
-        GLuint TextureIndex = 0;
+        GLuint UnifromBufferBindSlot = 0;
+        GLuint StorageBufferBindSlot = 0;
+        GLuint TextureBindSlot       = 0;
+        GLuint ImageBindSlot         = 0;
         m_BoundWritableTextures.clear();
         m_BoundWritableBuffers.clear();
         for (Uint32 ProgNum = 0; ProgNum < NumPrograms; ++ProgNum)
@@ -419,22 +421,22 @@ namespace Diligent
                                                        // will reflect data written by shaders prior to the barrier
                                 m_ContextState);
 
-                            glBindBufferBase(GL_UNIFORM_BUFFER, UniformBuffBindPoint, pBufferGL->m_GlBuffer);
+                            glBindBufferBase(GL_UNIFORM_BUFFER, UnifromBufferBindSlot, pBufferGL->m_GlBuffer);
                             CHECK_GL_ERROR("Failed to bind uniform buffer");
                             //glBindBufferRange(GL_UNIFORM_BUFFER, it->Index, pBufferGL->m_GlBuffer, 0, pBufferGL->GetDesc().uiSizeInBytes);
 
-                            glUniformBlockBinding(GLProgID, UB.UBIndex + ArrInd, UniformBuffBindPoint);
+                            glUniformBlockBinding(GLProgID, UB.UBIndex + ArrInd, UnifromBufferBindSlot);
                             CHECK_GL_ERROR("glUniformBlockBinding() failed");
 
-                            ++UniformBuffBindPoint;
+                            ++UnifromBufferBindSlot;
                         }
                         else
                         {
 #define LOG_MISSING_BINDING(VarType, Res, ArrInd)\
-                            do{                                      \
-                                if(Res.ArraySize > 1)         \
+                            do{                       \
+                                if(Res.ArraySize > 1) \
                                     LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res.Name, '[', ArrInd, "]' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
-                                else                                 \
+                                else                  \
                                     LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res.Name, "' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
                             }while(false)
 
@@ -458,8 +460,8 @@ namespace Diligent
                                 auto* pBufViewGL = Resource.RawPtr<BufferViewGLImpl>();
                                 auto* pBuffer = pBufViewGL->GetBuffer();
 
-                                m_ContextState.BindTexture( TextureIndex, GL_TEXTURE_BUFFER, pBufViewGL->GetTexBufferHandle() );
-                                m_ContextState.BindSampler( TextureIndex, GLObjectWrappers::GLSamplerObj(false) ); // Use default texture sampling parameters
+                                m_ContextState.BindTexture(TextureBindSlot, GL_TEXTURE_BUFFER, pBufViewGL->GetTexBufferHandle());
+                                m_ContextState.BindSampler(TextureBindSlot, GLObjectWrappers::GLSamplerObj(false)); // Use default texture sampling parameters
 
                                 ValidatedCast<BufferGLImpl>(pBuffer)->BufferMemoryBarrier(
                                     GL_TEXTURE_FETCH_BARRIER_BIT, // Texture fetches from shaders, including fetches from buffer object 
@@ -470,7 +472,7 @@ namespace Diligent
                             else
                             {
                                 auto* pTexViewGL = Resource.RawPtr<TextureViewGLImpl>();
-                                m_ContextState.BindTexture( TextureIndex, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle() );
+                                m_ContextState.BindTexture(TextureBindSlot, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
 
                                 auto* pTexture = pTexViewGL->GetTexture();
                                 ValidatedCast<TextureBaseGL>(pTexture)->TextureMemoryBarrier(
@@ -490,13 +492,13 @@ namespace Diligent
                                     pSamplerGL = ValidatedCast<SamplerGLImpl>(pSampler);
                                 }
                             
-                                if( pSamplerGL )
+                                if (pSamplerGL)
                                 {
-                                    m_ContextState.BindSampler(TextureIndex, pSamplerGL->GetHandle());
+                                    m_ContextState.BindSampler(TextureBindSlot, pSamplerGL->GetHandle());
                                 }
                                 else
                                 {
-                                    m_ContextState.BindSampler(TextureIndex, GLObjectWrappers::GLSamplerObj(false));
+                                    m_ContextState.BindSampler(TextureBindSlot, GLObjectWrappers::GLSamplerObj(false));
                                 }
                             }
 
@@ -505,16 +507,16 @@ namespace Diligent
                             if (ProgramPipelineSupported)
                             {
                                 // glProgramUniform1i does not require program to be bound to the pipeline
-                                glProgramUniform1i( GLProgramObj, Sam.Location + ArrInd, TextureIndex );
+                                glProgramUniform1i(GLProgramObj, Sam.Location + ArrInd, TextureBindSlot);
                             }
                             else
                             {
                                 // glUniform1i requires program to be bound to the pipeline
-                                glUniform1i(Sam.Location + ArrInd, TextureIndex);
+                                glUniform1i(Sam.Location + ArrInd, TextureBindSlot);
                             }
-                            CHECK_GL_ERROR("Failed to bind sampler uniform to texture slot");
+                            CHECK_GL_ERROR("Failed to set binding point for sampler uniform '", Sam.Name, '\'');
 
-                            ++TextureIndex;
+                            ++TextureBindSlot;
                         }
                         else
                         {
@@ -549,10 +551,11 @@ namespace Diligent
                                                                        // stores, texture fetches, vertex fetches) initiated prior to the barrier 
                                                                        // complete.
                                     m_ContextState);
+
                                 m_BoundWritableBuffers.push_back(pBufferGL);
 
                                 auto GlFormat = TypeToGLTexFormat(ViewDesc.Format.ValueType, ViewDesc.Format.NumComponents, ViewDesc.Format.IsNormalized);
-                                m_ContextState.BindImage(Img.BindingPoint + ArrInd, pBuffViewGL, GL_READ_WRITE, GlFormat);
+                                m_ContextState.BindImage(ImageBindSlot, pBuffViewGL, GL_READ_WRITE, GlFormat);
                             }
                             else
                             {
@@ -602,8 +605,25 @@ namespace Diligent
                                 // That means that if an integer texture is being bound, its 
                                 // GL_TEXTURE_MIN_FILTER and GL_TEXTURE_MAG_FILTER must be NEAREST,
                                 // otherwise it will be incomplete
-                                m_ContextState.BindImage(Img.BindingPoint + ArrInd, pTexViewGL, ViewDesc.MostDetailedMip, Layered, Layer, GLAccess, GlTexFormat);
+                                m_ContextState.BindImage(ImageBindSlot, pTexViewGL, ViewDesc.MostDetailedMip, Layered, Layer, GLAccess, GlTexFormat);
+                                // Do not use binding points from reflection as they may not be initialized
                             }
+
+                            // Image is now bound to binding slot ImageIndex.
+                            // We now need to set the program uniform to use that slot
+                            if (ProgramPipelineSupported)
+                            {
+                                // glProgramUniform1i does not require program to be bound to the pipeline
+                                glProgramUniform1i(GLProgramObj, Img.Location + ArrInd, ImageBindSlot);
+                            }
+                            else
+                            {
+                                // glUniform1i requires program to be bound to the pipeline
+                                glUniform1i(Img.Location + ArrInd, ImageBindSlot);
+                            }
+                            CHECK_GL_ERROR("Failed to set binding point for image uniform '", Img.Name, '\'');
+
+                            ++ImageBindSlot;
                         }
                         else
                         {
@@ -632,8 +652,13 @@ namespace Diligent
                                                               // will reflect writes prior to the barrier
                                 m_ContextState);
 
-                            glBindBufferRange(GL_SHADER_STORAGE_BUFFER, SB.Binding + ArrInd, pBufferGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
+                            glBindBufferRange(GL_SHADER_STORAGE_BUFFER, StorageBufferBindSlot, pBufferGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
                             CHECK_GL_ERROR("Failed to bind shader storage buffer");
+
+                            glShaderStorageBlockBinding(GLProgID, SB.SBIndex + ArrInd, StorageBufferBindSlot);
+                            CHECK_GL_ERROR("glUniformBlockBinding() failed");
+
+                            ++StorageBufferBindSlot;
 
                             if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
                                 m_BoundWritableBuffers.push_back(pBufferGL);
@@ -682,14 +707,15 @@ namespace Diligent
         for (auto* pWritableBuff : m_BoundWritableBuffers)
         {
             Uint32 BufferMemoryBarriers =
-                GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT |
-                GL_ELEMENT_ARRAY_BARRIER_BIT |
-                GL_UNIFORM_BARRIER_BIT |
-                GL_COMMAND_BARRIER_BIT | 
-                GL_BUFFER_UPDATE_BARRIER_BIT |
+                GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT  |
+                GL_ELEMENT_ARRAY_BARRIER_BIT        |
+                GL_UNIFORM_BARRIER_BIT              |
+                GL_COMMAND_BARRIER_BIT              | 
+                GL_BUFFER_UPDATE_BARRIER_BIT        |
                 GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT |
-                GL_SHADER_STORAGE_BARRIER_BIT |
-                GL_TEXTURE_FETCH_BARRIER_BIT;
+                GL_SHADER_STORAGE_BARRIER_BIT       |
+                GL_TEXTURE_FETCH_BARRIER_BIT        |
+                GL_SHADER_IMAGE_ACCESS_BARRIER_BIT;
 
             NewMemoryBarriers |= BufferMemoryBarriers;
             // Set new required barriers for the time when buffer is used next time

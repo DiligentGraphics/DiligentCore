@@ -207,7 +207,7 @@ namespace Diligent
                 VariableIndex++,
                 SrcImg.ArraySize,
                 pCurrResource,
-                SrcImg.BindingPoint,
+                SrcImg.Location,
                 SrcImg.ImageType
             };
             if (pCurrResource != nullptr)
@@ -226,7 +226,7 @@ namespace Diligent
                 VariableIndex++,
                 SrcSB.ArraySize,
                 pCurrResource,
-                SrcSB.Binding
+                SrcSB.SBIndex
             };
 
             if (pCurrResource != nullptr)
@@ -295,17 +295,17 @@ namespace Diligent
         m_ShaderStages = ShaderStages;
 
         GLint numActiveUniforms = 0;
-        glGetProgramiv( GLProgram, GL_ACTIVE_UNIFORMS, &numActiveUniforms );
-        CHECK_GL_ERROR_AND_THROW( "Unable to get number of active uniforms\n" );
+        glGetProgramiv(GLProgram, GL_ACTIVE_UNIFORMS, &numActiveUniforms);
+        CHECK_GL_ERROR_AND_THROW("Unable to get the number of active uniforms\n");
 
         // Query the maximum name length of the active uniform (including null terminator)
         GLint activeUniformMaxLength = 0;
-        glGetProgramiv( GLProgram, GL_ACTIVE_UNIFORM_MAX_LENGTH, &activeUniformMaxLength );
-        CHECK_GL_ERROR_AND_THROW( "Unable to get maximum uniform name length\n" );
+        glGetProgramiv(GLProgram, GL_ACTIVE_UNIFORM_MAX_LENGTH, &activeUniformMaxLength);
+        CHECK_GL_ERROR_AND_THROW("Unable to get the maximum uniform name length\n");
 
         GLint numActiveUniformBlocks = 0;
-        glGetProgramiv( GLProgram, GL_ACTIVE_UNIFORM_BLOCKS, &numActiveUniformBlocks );
-        CHECK_GL_ERROR_AND_THROW( "Unable to get the number of active uniform blocks\n" );
+        glGetProgramiv(GLProgram, GL_ACTIVE_UNIFORM_BLOCKS, &numActiveUniformBlocks);
+        CHECK_GL_ERROR_AND_THROW("Unable to get the number of active uniform blocks\n");
 
         //
         // #### This parameter is currently unsupported by Intel OGL drivers.
@@ -313,47 +313,47 @@ namespace Diligent
         // Query the maximum name length of the active uniform block (including null terminator)
         GLint activeUniformBlockMaxLength = 0;
         // On Intel driver, this call might fail:
-        glGetProgramiv( GLProgram, GL_ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH, &activeUniformBlockMaxLength );
+        glGetProgramiv(GLProgram, GL_ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH, &activeUniformBlockMaxLength);
         //CHECK_GL_ERROR_AND_THROW("Unable to get the maximum uniform block name length\n");
-        if( GL_NO_ERROR != glGetError() )
+        if (glGetError() != GL_NO_ERROR)
         {
             LOG_WARNING_MESSAGE( "Unable to get the maximum uniform block name length. Using 1024 as a workaround\n" );
             activeUniformBlockMaxLength = 1024;
         }
 
-        auto MaxNameLength = std::max( activeUniformMaxLength, activeUniformBlockMaxLength );
+        auto MaxNameLength = std::max(activeUniformMaxLength, activeUniformBlockMaxLength);
 
 #if GL_ARB_program_interface_query
         GLint numActiveShaderStorageBlocks = 0;
-        if(glGetProgramInterfaceiv)
+        if (glGetProgramInterfaceiv)
         {
-            glGetProgramInterfaceiv( GLProgram, GL_SHADER_STORAGE_BLOCK, GL_ACTIVE_RESOURCES, &numActiveShaderStorageBlocks );
+            glGetProgramInterfaceiv(GLProgram, GL_SHADER_STORAGE_BLOCK, GL_ACTIVE_RESOURCES, &numActiveShaderStorageBlocks);
             CHECK_GL_ERROR_AND_THROW( "Unable to get the number of shader storage blocks blocks\n" );
 
             // Query the maximum name length of the active shader storage block (including null terminator)
             GLint MaxShaderStorageBlockNameLen = 0;
-            glGetProgramInterfaceiv( GLProgram, GL_SHADER_STORAGE_BLOCK, GL_MAX_NAME_LENGTH, &MaxShaderStorageBlockNameLen );
+            glGetProgramInterfaceiv(GLProgram, GL_SHADER_STORAGE_BLOCK, GL_MAX_NAME_LENGTH, &MaxShaderStorageBlockNameLen);
             CHECK_GL_ERROR_AND_THROW( "Unable to get the maximum shader storage block name length\n" );
             MaxNameLength = std::max( MaxNameLength, MaxShaderStorageBlockNameLen );
         }
 #endif
 
-        MaxNameLength = std::max( MaxNameLength, 512 );
-        std::vector<GLchar> Name( MaxNameLength + 1 );
-        for( int i = 0; i < numActiveUniforms; i++ ) 
+        MaxNameLength = std::max(MaxNameLength, 512);
+        std::vector<GLchar> Name(MaxNameLength + 1);
+        for (int i = 0; i < numActiveUniforms; i++) 
         {
             GLenum  dataType = 0;
-            GLint   size = 0;
-            GLint NameLen = 0;
-            // If one or more elements of an array are active, the name of the array is returned in name?, 
-            // the type is returned in type?, and the size? parameter returns the highest array element index used, 
+            GLint   size     = 0;
+            GLint   NameLen  = 0;
+            // If one or more elements of an array are active, the name of the array is returned in 'name', 
+            // the type is returned in 'type', and the 'size' parameter returns the highest array element index used, 
             // plus one, as determined by the compiler and/or linker. 
             // Only one active uniform variable will be reported for a uniform array.
             // Uniform variables other than arrays will have a size of 1
-            glGetActiveUniform( GLProgram, i, MaxNameLength, &NameLen, &size, &dataType, Name.data() );
-            CHECK_GL_ERROR_AND_THROW( "Unable to get active uniform\n" );
-            VERIFY( NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen( Name.data() ), "Incorrect uniform name" );
-            VERIFY( size >= 1, "Size is expected to be at least 1" );
+            glGetActiveUniform(GLProgram, i, MaxNameLength, &NameLen, &size, &dataType, Name.data());
+            CHECK_GL_ERROR_AND_THROW("Unable to get active uniform\n");
+            VERIFY(NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen( Name.data() ), "Incorrect uniform name");
+            VERIFY(size >= 1, "Size is expected to be at least 1");
             // Note that 
             // glGetActiveUniform( program, index, bufSize, length, size, type, name );
             //
@@ -366,7 +366,7 @@ namespace Diligent
             //
             // The latter is only available in GL 4.4 and GLES 3.1 
 
-            switch( dataType )
+            switch (dataType)
             {
                 case GL_SAMPLER_1D:
                 case GL_SAMPLER_2D:
@@ -410,9 +410,9 @@ namespace Diligent
                 case GL_INT_SAMPLER_BUFFER:
                 case GL_UNSIGNED_INT_SAMPLER_BUFFER:
                 {
-                    auto UniformLocation = glGetUniformLocation( GLProgram, Name.data() );
+                    auto UniformLocation = glGetUniformLocation(GLProgram, Name.data());
                     // Note that glGetUniformLocation(program, name) is equivalent to 
-                    // glGetProgramResourceLocation( program, GL_UNIFORM, name );
+                    // glGetProgramResourceLocation(program, GL_UNIFORM, name);
                     // The latter is only available in GL 4.4 and GLES 3.1
 
                     const auto ResourceType = dataType == GL_SAMPLER_BUFFER     || 
@@ -473,19 +473,14 @@ namespace Diligent
                 case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY:
                 {
                     auto UniformLocation = glGetUniformLocation( GLProgram, Name.data() );
-                    
-                    GLint BindingPoint = -1;
-                    // The value of an image uniform is an integer specifying the image unit accessed
-                    glGetUniformiv( GLProgram, UniformLocation, &BindingPoint );
-                    CHECK_GL_ERROR_AND_THROW("Failed to get image binding point");
-                    VERIFY( BindingPoint >= 0, "Incorrect binding point" );
-
-                    RemoveArrayBrackets(Name.data());
 
                     const auto ResourceType = dataType == GL_IMAGE_BUFFER     ||
                                               dataType == GL_INT_IMAGE_BUFFER ||
                                               dataType == GL_UNSIGNED_INT_IMAGE_BUFFER ?
                         SHADER_RESOURCE_TYPE_BUFFER_UAV : SHADER_RESOURCE_TYPE_TEXTURE_UAV;
+
+                    RemoveArrayBrackets(Name.data());
+
                     Images.emplace_back(
                         Owner,
                         NamesPool.emplace(Name.data()).first->c_str(),
@@ -494,7 +489,7 @@ namespace Diligent
                         Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
                         static_cast<Uint32>(size),
                         nullptr,        // pResources
-                        BindingPoint,
+                        UniformLocation,
                         dataType );
                     break;
                 }
@@ -505,20 +500,20 @@ namespace Diligent
             }
         }
 
-        for( int i = 0; i < numActiveUniformBlocks; i++ )
+        for (int i = 0; i < numActiveUniformBlocks; i++)
         {
             // In contrast to shader uniforms, every element in uniform block array is enumerated individually
             GLsizei NameLen = 0;
-            glGetActiveUniformBlockName( GLProgram, i, MaxNameLength, &NameLen, Name.data() );
-            CHECK_GL_ERROR_AND_THROW( "Unable to get active uniform block name\n" );
-            VERIFY( NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen( Name.data() ), "Incorrect uniform block name" );
+            glGetActiveUniformBlockName(GLProgram, i, MaxNameLength, &NameLen, Name.data());
+            CHECK_GL_ERROR_AND_THROW("Unable to get active uniform block name\n");
+            VERIFY(NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen( Name.data() ), "Incorrect uniform block name");
 
             // glGetActiveUniformBlockName( program, uniformBlockIndex, bufSize, length, uniformBlockName );
             // is equivalent to
             // glGetProgramResourceName(program, GL_UNIFORM_BLOCK, uniformBlockIndex, bufSize, length, uniformBlockName);
 
-            auto UniformBlockIndex = glGetUniformBlockIndex( GLProgram, Name.data() );
-            CHECK_GL_ERROR_AND_THROW( "Unable to get active uniform block index\n" );
+            auto UniformBlockIndex = glGetUniformBlockIndex(GLProgram, Name.data());
+            CHECK_GL_ERROR_AND_THROW("Unable to get active uniform block index\n");
             // glGetUniformBlockIndex( program, uniformBlockName );
             // is equivalent to
             // glGetProgramResourceIndex( program, GL_UNIFORM_BLOCK, uniformBlockName );
@@ -544,8 +539,8 @@ namespace Diligent
                     else
                     {
 #ifdef _DEBUG
-                        for(const auto& ub : UniformBlocks)
-                            VERIFY( strcmp(ub.Name, Name.data()) != 0, "Uniform block with the name \"", ub.Name, "\" has already been enumerated");
+                        for (const auto& ub : UniformBlocks)
+                            VERIFY(strcmp(ub.Name, Name.data()) != 0, "Uniform block with the name '", ub.Name, "' has already been enumerated");
 #endif
                     }
                 }
@@ -564,24 +559,19 @@ namespace Diligent
         }
 
 #if GL_ARB_shader_storage_buffer_object
-        for( int i = 0; i < numActiveShaderStorageBlocks; ++i )
+        for (int i = 0; i < numActiveShaderStorageBlocks; ++i)
         {
             GLsizei Length = 0;
-            glGetProgramResourceName( GLProgram, GL_SHADER_STORAGE_BLOCK, i, MaxNameLength, &Length, Name.data() );
-            CHECK_GL_ERROR_AND_THROW( "Unable to get shader storage block name\n" );
+            glGetProgramResourceName(GLProgram, GL_SHADER_STORAGE_BLOCK, i, MaxNameLength, &Length, Name.data());
+            CHECK_GL_ERROR_AND_THROW("Unable to get shader storage block name\n");
             VERIFY( Length < MaxNameLength && static_cast<size_t>(Length) == strlen( Name.data() ), "Incorrect shader storage block name" );
 
-            GLenum Props[] = {GL_BUFFER_BINDING};
-            GLint Binding = -1;
-            GLint ValuesWritten = 0;
-            glGetProgramResourceiv( GLProgram, GL_SHADER_STORAGE_BLOCK, i, _countof(Props), Props, 1, &ValuesWritten, &Binding );
-            CHECK_GL_ERROR_AND_THROW( "Unable to get shader storage block binding & array size\n" );
-            VERIFY( ValuesWritten == _countof(Props), "Unexpected number of values written" );
-            VERIFY( Binding >= 0, "Incorrect shader storage block binding" );
+            auto SBIndex = glGetProgramResourceIndex(GLProgram, GL_SHADER_STORAGE_BLOCK, Name.data());
+            CHECK_GL_ERROR_AND_THROW("Unable to get shader storage block index\n");
 
             Int32 ArraySize = 1;
             auto* OpenBacketPtr = strchr(Name.data(), '[');
-            if(OpenBacketPtr != nullptr)
+            if (OpenBacketPtr != nullptr)
             {
                 auto Ind = atoi(OpenBacketPtr+1);
                 ArraySize = std::max(ArraySize, Ind+1);
@@ -593,15 +583,15 @@ namespace Diligent
                     if ( strcmp(LastBlock.Name, Name.data()) == 0)
                     {
                         ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.ArraySize));
-                        VERIFY(Binding == LastBlock.Binding + Ind, "Storage block bindings are expected to be continuous");
+                        VERIFY(SBIndex == LastBlock.SBIndex + Ind, "Storage block indices are expected to be continuous");
                         LastBlock.ArraySize = ArraySize;
                         continue;
                     }
                     else
                     {
 #ifdef _DEBUG
-                        for(const auto& sb : StorageBlocks)
-                            VERIFY( strcmp(sb.Name, Name.data()) != 0, "Storage block with the name \"", sb.Name, "\" has already been enumerated");
+                        for (const auto& sb : StorageBlocks)
+                            VERIFY(strcmp(sb.Name, Name.data()) != 0, "Storage block with the name \"", sb.Name, "\" has already been enumerated");
 #endif
                     }
                 }
@@ -615,7 +605,7 @@ namespace Diligent
                 Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
                 static_cast<Uint32>(ArraySize), 
                 nullptr,        // pResources
-                Binding
+                SBIndex
             );
         }
 #endif
@@ -702,7 +692,7 @@ namespace Diligent
                     Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
                     SrcImg.ArraySize,
                     nullptr,        // pResources
-                    SrcImg.BindingPoint,
+                    SrcImg.Location,
                     SrcImg.ImageType
                 );
             }
@@ -722,7 +712,7 @@ namespace Diligent
                     Uint16{0xFFFF}, // Variable index is assigned by AllocateResources
                     SrcSB.ArraySize,
                     nullptr,        // pResources
-                    SrcSB.Binding
+                    SrcSB.SBIndex
                 );
             }
         }
