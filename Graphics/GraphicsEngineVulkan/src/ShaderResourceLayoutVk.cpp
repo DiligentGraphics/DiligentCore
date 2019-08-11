@@ -489,7 +489,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
             },
             [&](const SPIRVShaderResourceAttribs& SepImg, Uint32)
             {
-                VERIFY_EXPR(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
+                VERIFY_EXPR(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage || SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer);
                 AddResource(s, Layout, Resources, SepImg);
             }
         );

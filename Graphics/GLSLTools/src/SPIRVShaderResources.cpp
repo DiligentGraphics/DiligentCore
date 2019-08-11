@@ -402,6 +402,11 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
         Uint32 CurrSepImg = 0;
         for (const auto& SepImg : resources.separate_images)
         {
+            const auto& type = Compiler.get_type(SepImg.type_id);
+            auto ResType = type.image.dim == spv::DimBuffer ?
+                SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer :
+                SPIRVShaderResourceAttribs::ResourceType::SeparateImage;
+
             Uint32 SamplerInd = SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd;
             if (CombinedSamplerSuffix != nullptr)
             {
@@ -417,14 +422,22 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&      Allocator,
                 }
                 if (SamplerInd == NumSepSmpls)
                     SamplerInd = SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd;
+                else
+                {
+                    if (ResType == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer)
+                    {
+                        LOG_WARNING_MESSAGE("Combined image sampler assigned to uniform texel buffer '", SepImg.name, "' will be ignored");
+                        SamplerInd = SPIRVShaderResourceAttribs::InvalidSepSmplrOrImgInd;
+                    }
+                }
             }
             auto* pNewSepImg = new (&GetSepImg(CurrSepImg++))
                 SPIRVShaderResourceAttribs(Compiler, 
                                            SepImg, 
                                            m_ResourceNames.CopyString(SepImg.name),
-                                           SPIRVShaderResourceAttribs::ResourceType::SeparateImage,
+                                           ResType,
                                            SamplerInd);
-            if (pNewSepImg->IsValidSepSamplerAssigned())
+            if (ResType == SPIRVShaderResourceAttribs::ResourceType::SeparateImage && pNewSepImg->IsValidSepSamplerAssigned())
             {
 #ifdef DEVELOPMENT
                 const auto& SepSmplr = GetSepSmplr(pNewSepImg->GetAssignedSepSamplerInd());
