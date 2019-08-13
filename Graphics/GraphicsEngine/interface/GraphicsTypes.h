@@ -1221,7 +1221,8 @@ namespace Diligent
 
         /// Indicates if this is a primary swap chain. The back buffer and depth-stencil
         /// buffer of the primary swap are set by SetRenderTargets(0, nullptr, nullptr)
-        /// call. There must be only one primary swap chain.
+        /// call. Also, when Present() is called for the primary swap chain, the engine 
+        /// releases stale resources. There must only be one primary swap chain.
         bool  IsPrimary                     = true;
 
         SwapChainDesc()noexcept{}
