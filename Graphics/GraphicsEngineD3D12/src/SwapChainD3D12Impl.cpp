@@ -111,7 +111,7 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
 #endif
 
     auto pDeviceContext = m_wpDeviceContext.Lock();
-    if( !pDeviceContext )
+    if (!pDeviceContext)
     {
         LOG_ERROR_MESSAGE( "Immediate context has been released" );
         return;
@@ -120,18 +120,20 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
     auto* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
 
     auto& CmdCtx = pImmediateCtxD3D12->GetCmdContext();
-    auto* pBackBuffer = ValidatedCast<TextureD3D12Impl>( GetCurrentBackBufferRTV()->GetTexture() );
+    auto* pBackBuffer = ValidatedCast<TextureD3D12Impl>(GetCurrentBackBufferRTV()->GetTexture());
     CmdCtx.TransitionResource(pBackBuffer, RESOURCE_STATE_PRESENT);
 
     pImmediateCtxD3D12->Flush();
 
-    auto *pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>( pImmediateCtxD3D12->GetDevice() );
-    
     auto hr = m_pSwapChain->Present( SyncInterval, 0 );
     VERIFY(SUCCEEDED(hr), "Present failed");
 
-    pImmediateCtxD3D12->FinishFrame();
-    pDeviceD3D12->ReleaseStaleResources();
+    if (m_SwapChainDesc.IsPrimary)
+    {
+        pImmediateCtxD3D12->FinishFrame();
+        auto* pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>( pImmediateCtxD3D12->GetDevice() );
+        pDeviceD3D12->ReleaseStaleResources();
+    }
 
 #if 0
 #if PLATFORM_UNIVERSAL_WINDOWS
@@ -160,10 +162,11 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
 
         try
         {
-            auto *pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
-            bool bIsDefaultFBBound = pImmediateCtxD3D12->IsDefaultFBBound();
-            if(bIsDefaultFBBound)
-                pImmediateCtxD3D12->ResetRenderTargets();
+            auto* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
+            std::vector<ITextureView*> pBackBufferRTVs(m_pBackBufferRTV.size());
+            for(size_t i=0; i < m_pBackBufferRTV.size(); ++i)
+                pBackBufferRTVs[i] = m_pBackBufferRTV[i];
+            bool RebindRenderTargets = UnbindRenderTargets(pImmediateCtxD3D12, pBackBufferRTVs.data(), static_cast<Uint32>(m_pBackBufferRTV.size()), m_pDepthBufferDSV);
 
             // All references to the swap chain must be released before it can be resized
             m_pBackBufferRTV.clear();
@@ -196,7 +199,7 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
 
             InitBuffersAndViews();
 
-            if (bIsDefaultFBBound)
+            if (m_SwapChainDesc.IsPrimary && RebindRenderTargets)
             {
                 // Set default render target and viewport
                 pDeviceContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);

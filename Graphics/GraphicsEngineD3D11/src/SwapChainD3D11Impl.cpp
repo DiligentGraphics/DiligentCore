@@ -21,7 +21,6 @@
  *  of the possibility of such damages.
  */
 
-#include <array>
 #include "pch.h"
 #include "SwapChainD3D11Impl.h"
 #include "RenderDeviceD3D11Impl.h"
@@ -144,38 +143,9 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
     VERIFY(pDeviceContext, "Immediate context has been released");
     if (pDeviceContext)
     {
-        auto *pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
-        bool RebindRenderTargets = false;
-        bool UnbindRenderTargets = false;
-        if (m_SwapChainDesc.IsPrimary)
-        {
-            RebindRenderTargets = UnbindRenderTargets = pImmediateCtxD3D11->IsDefaultFBBound();
-        }
-        else
-        {
-            std::array<ITextureView*, MaxRenderTargets> pOrigRTVs = {};
-            RefCntAutoPtr<ITextureView> pOrigDSV;
-            Uint32 NumRenderTargets = 0;
-            pImmediateCtxD3D11->GetRenderTargets(NumRenderTargets, pOrigRTVs.data(), &pOrigDSV);
-            for (Uint32 i=0; i < NumRenderTargets; ++i)
-            {
-                if (pOrigRTVs[i] == m_pRenderTargetView)
-                    UnbindRenderTargets = true;
-            }
-            if (pOrigDSV == m_pDepthStencilView)
-                UnbindRenderTargets = true;
-
-            RebindRenderTargets = NumRenderTargets == 1 && pOrigRTVs[0] == m_pRenderTargetView && pOrigDSV == m_pDepthStencilView;
-
-            for(auto pRTV : pOrigRTVs)
-            {
-                if (pRTV != nullptr)
-                    pRTV->Release();
-            }
-        }
-
-        if (UnbindRenderTargets)
-            pImmediateCtxD3D11->ResetRenderTargets();
+        auto* pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
+        ITextureView* pBackBufferRTVs[] = {m_pRenderTargetView};
+        bool RebindRenderTargets = UnbindRenderTargets(pImmediateCtxD3D11, pBackBufferRTVs, 1, m_pDepthStencilView);
 
         // Swap chain cannot be resized until all references are released
         m_pRenderTargetView.Release();
@@ -214,19 +184,11 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
 
             CreateRTVandDSV();
 
-            if (RebindRenderTargets)
+            if (m_SwapChainDesc.IsPrimary && RebindRenderTargets)
             {
-                if (m_SwapChainDesc.IsPrimary)
-                {
-                    // Set default render target and viewport
-                    pImmediateCtxD3D11->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-                    pImmediateCtxD3D11->SetViewports(1, nullptr, 0, 0);
-                }
-                else
-                {
-                    ITextureView* pRTVs[] = {GetCurrentBackBufferRTV()};
-                    pImmediateCtxD3D11->SetRenderTargets(1, pRTVs, GetDepthBufferDSV(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-                }
+                // Set default render target and viewport
+                pImmediateCtxD3D11->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                pImmediateCtxD3D11->SetViewports(1, nullptr, 0, 0);
             }
         }
         catch (const std::runtime_error &)

@@ -26,6 +26,8 @@
 /// \file
 /// Implementation of the Diligent::SwapChainBase template class
 
+#include <array>
+
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "SwapChain.h"
@@ -89,13 +91,55 @@ protected:
 
         return false;
     }
-    
+
+    template<typename DeviceContextImplType>
+    bool UnbindRenderTargets(DeviceContextImplType* pImmediateCtx,
+                             ITextureView*          ppBackBufferRTVs[],
+                             Uint32                 NumBackBufferRTVs,
+                             ITextureView*          pDSV)
+    {
+        bool RebindRenderTargets = false; 
+        bool UnbindRenderTargets = false;
+        if (m_SwapChainDesc.IsPrimary)
+        {
+            RebindRenderTargets = UnbindRenderTargets = pImmediateCtx->IsDefaultFBBound();
+        }
+        else
+        {
+            std::array<ITextureView*, MaxRenderTargets> pBoundRTVs = {};
+            RefCntAutoPtr<ITextureView> pBoundDSV;
+            Uint32 NumRenderTargets = 0;
+            pImmediateCtx->GetRenderTargets(NumRenderTargets, pBoundRTVs.data(), &pBoundDSV);
+            for (Uint32 i=0; i < NumRenderTargets; ++i)
+            {
+                for (Uint32 j=0; j < NumBackBufferRTVs; ++j)
+                {
+                    if (pBoundRTVs[i] == ppBackBufferRTVs[j])
+                        UnbindRenderTargets = true;
+                }
+            }
+            if (pBoundDSV == pDSV)
+                UnbindRenderTargets = true;
+
+            for (auto pRTV : pBoundRTVs)
+            {
+                if (pRTV != nullptr)
+                    pRTV->Release();
+            }
+        }
+
+        if (UnbindRenderTargets)
+            pImmediateCtx->ResetRenderTargets();
+
+        return RebindRenderTargets;
+    }
+
     /// Strong reference to the render device
-    Diligent::RefCntAutoPtr<IRenderDevice> m_pRenderDevice;
+    RefCntAutoPtr<IRenderDevice> m_pRenderDevice;
     
     /// Weak references to the immediate device context. The context holds
     /// the strong reference to the swap chain.
-    Diligent::RefCntWeakPtr<IDeviceContext> m_wpDeviceContext;
+    RefCntWeakPtr<IDeviceContext> m_wpDeviceContext;
 
     /// Swap chain description
     SwapChainDesc m_SwapChainDesc;

@@ -315,7 +315,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
         if (pDeviceContextD3D11->GetSwapChain() != nullptr && SCDesc.IsPrimary)
         {
             LOG_ERROR_AND_THROW("Another swap chain labeled as primary has already been created. "
-                                "There must be only one primary swap chain.");
+                                "There must only be one primary swap chain.");
         }
 
         auto* pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator,  "SwapChainD3D11Impl instance", SwapChainD3D11Impl)

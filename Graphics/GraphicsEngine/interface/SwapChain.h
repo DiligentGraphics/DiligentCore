@@ -54,6 +54,9 @@ public:
 
     /// \param [in] NewWidth - New swap chain width, in pixels
     /// \param [in] NewHeight - New swap chain height, in pixels
+    /// 
+    /// \note When resizing non-primary swap chains, the engine unbinds the 
+    ///       swap chain buffers from the output.
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight ) = 0;
 
     /// Sets fullscreen mode (only supported on Win32 platform)
