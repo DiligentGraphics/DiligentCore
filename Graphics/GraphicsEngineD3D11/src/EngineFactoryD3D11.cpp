@@ -228,12 +228,12 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
 
     try
     {
-        ID3D11Device *pd3d11Device = reinterpret_cast<ID3D11Device *>(pd3d11NativeDevice);
-        ID3D11DeviceContext *pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext *>(pd3d11ImmediateContext);
+        ID3D11Device*        pd3d11Device       = reinterpret_cast<ID3D11Device *>(pd3d11NativeDevice);
+        ID3D11DeviceContext* pd3d11ImmediateCtx = reinterpret_cast<ID3D11DeviceContext *>(pd3d11ImmediateContext);
 
         SetRawAllocator(EngineCI.pRawMemAllocator);
-        auto &RawAlloctor = GetRawAllocator();
-        RenderDeviceD3D11Impl *pRenderDeviceD3D11(NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)
+        auto& RawAlloctor = GetRawAllocator();
+        RenderDeviceD3D11Impl* pRenderDeviceD3D11(NEW_RC_OBJ(RawAlloctor, "RenderDeviceD3D11Impl instance", RenderDeviceD3D11Impl)
             (RawAlloctor, this, EngineCI, pd3d11Device, EngineCI.NumDeferredContexts));
         pRenderDeviceD3D11->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
 
@@ -308,33 +308,42 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
 
     try
     {
-        auto *pDeviceD3D11 = ValidatedCast<RenderDeviceD3D11Impl>( pDevice );
-        auto *pDeviceContextD3D11 = ValidatedCast<DeviceContextD3D11Impl>(pImmediateContext);
-        auto &RawMemAllocator = GetRawAllocator();
+        auto* pDeviceD3D11        = ValidatedCast<RenderDeviceD3D11Impl>(pDevice);
+        auto* pDeviceContextD3D11 = ValidatedCast<DeviceContextD3D11Impl>(pImmediateContext);
+        auto& RawMemAllocator     = GetRawAllocator();
 
-        auto *pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator,  "SwapChainD3D11Impl instance", SwapChainD3D11Impl)
+        if (pDeviceContextD3D11->GetSwapChain() != nullptr && SCDesc.IsPrimary)
+        {
+            LOG_ERROR_AND_THROW("Another swap chain labeled as primary has already been created. "
+                                "There must be only one primary swap chain.");
+        }
+
+        auto* pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator,  "SwapChainD3D11Impl instance", SwapChainD3D11Impl)
                                           (SCDesc, FSDesc, pDeviceD3D11, pDeviceContextD3D11, pNativeWndHandle);
         pSwapChainD3D11->QueryInterface( IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 
-        pDeviceContextD3D11->SetSwapChain(pSwapChainD3D11);
-        // Bind default render target
-        pDeviceContextD3D11->SetRenderTargets( 0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
-        // Set default viewport
-        pDeviceContextD3D11->SetViewports( 1, nullptr, 0, 0 );
-
-        auto NumDeferredCtx = pDeviceD3D11->GetNumDeferredContexts();
-        for (size_t ctx = 0; ctx < NumDeferredCtx; ++ctx)
+        if (SCDesc.IsPrimary)
         {
-            if (auto pDeferredCtx = pDeviceD3D11->GetDeferredContext(ctx))
+            pDeviceContextD3D11->SetSwapChain(pSwapChainD3D11);
+            // Bind default render target
+            pDeviceContextD3D11->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+            // Set default viewport
+            pDeviceContextD3D11->SetViewports(1, nullptr, 0, 0);
+
+            auto NumDeferredCtx = pDeviceD3D11->GetNumDeferredContexts();
+            for (size_t ctx = 0; ctx < NumDeferredCtx; ++ctx)
             {
-                auto *pDeferredCtxD3D11 = pDeferredCtx.RawPtr<DeviceContextD3D11Impl>();
-                pDeferredCtxD3D11->SetSwapChain(pSwapChainD3D11);
-                // Do not bind default render target and viewport to be
-                // consistent with D3D12
-                //// Bind default render target
-                //pDeferredCtxD3D11->SetRenderTargets( 0, nullptr, nullptr );
-                //// Set default viewport
-                //pDeferredCtxD3D11->SetViewports( 1, nullptr, 0, 0 );
+                if (auto pDeferredCtx = pDeviceD3D11->GetDeferredContext(ctx))
+                {
+                    auto *pDeferredCtxD3D11 = pDeferredCtx.RawPtr<DeviceContextD3D11Impl>();
+                    pDeferredCtxD3D11->SetSwapChain(pSwapChainD3D11);
+                    // Do not bind default render target and viewport to be
+                    // consistent with D3D12
+                    //// Bind default render target
+                    //pDeferredCtxD3D11->SetRenderTargets( 0, nullptr, nullptr );
+                    //// Set default viewport
+                    //pDeferredCtxD3D11->SetViewports( 1, nullptr, 0, 0 );
+                }
             }
         }
     }

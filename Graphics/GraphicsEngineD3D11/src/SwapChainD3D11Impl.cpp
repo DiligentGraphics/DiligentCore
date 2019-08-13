@@ -21,6 +21,7 @@
  *  of the possibility of such damages.
  */
 
+#include <array>
 #include "pch.h"
 #include "SwapChainD3D11Impl.h"
 #include "RenderDeviceD3D11Impl.h"
@@ -35,7 +36,7 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters*       pRefCounters,
                                        const FullScreenModeDesc& FSDesc,
                                        RenderDeviceD3D11Impl*    pRenderDeviceD3D11, 
                                        DeviceContextD3D11Impl*   pDeviceContextD3D11, 
-                                       void*                     pNativeWndHandle) : 
+                                       void*                     pNativeWndHandle) :
     TSwapChainBase(pRefCounters, pRenderDeviceD3D11, pDeviceContextD3D11, SCDesc, FSDesc, pNativeWndHandle)
 {
     auto *pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
@@ -63,7 +64,7 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
     DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to set back buffer name");
 
     RefCntAutoPtr<ITexture> pBackBuffer;
-    pRenderDeviceD3D11Impl->CreateTextureFromD3DResource(pd3dBackBuffer, RESOURCE_STATE_UNKNOWN, &pBackBuffer);
+    pRenderDeviceD3D11Impl->CreateTextureFromD3DResource(pd3dBackBuffer, RESOURCE_STATE_UNDEFINED, &pBackBuffer);
 
     TextureViewDesc RTVDesc;
     RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
@@ -101,30 +102,35 @@ void SwapChainD3D11Impl::Present(Uint32 SyncInterval)
 #endif
 
     auto pDeviceContext = m_wpDeviceContext.Lock();
-    if( !pDeviceContext )
+    if (!pDeviceContext)
     {
         LOG_ERROR_MESSAGE( "Immediate context has been released" );
         return;
     }
 
-    auto *pImmediateCtx = pDeviceContext.RawPtr();
-    auto *pImmediateCtxD3D11 = ValidatedCast<DeviceContextD3D11Impl>( pImmediateCtx );
-    // Clear the state caches to release all outstanding objects
-    // that are only kept alive by references in the cache
-    // It is better to do this before calling Present() as D3D11
-    // also releases resources during present.
-    pImmediateCtxD3D11->ReleaseCommittedShaderResources();
-    // ReleaseCommittedShaderResources() does not unbind vertex and index buffers
-    // as this can explicitly be done by the user
+    auto* pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
 
+    if (m_SwapChainDesc.IsPrimary)
+    {
+        // Clear the state caches to release all outstanding objects
+        // that are only kept alive by references in the cache
+        // It is better to do this before calling Present() as D3D11
+        // also releases resources during present.
+        pImmediateCtxD3D11->ReleaseCommittedShaderResources();
+        // ReleaseCommittedShaderResources() does not unbind vertex and index buffers
+        // as this can explicitly be done by the user
+    }
 
-    m_pSwapChain->Present( SyncInterval, 0 );
+    m_pSwapChain->Present(SyncInterval, 0);
 
-    // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds 
-    // backbuffer 0 from all GPU writeable bind points.
-    // We need to rebind all render targets to make sure that
-    // the back buffer is not unbound
-    pImmediateCtxD3D11->CommitRenderTargets();
+    if (m_SwapChainDesc.IsPrimary)
+    {
+        // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds 
+        // backbuffer 0 from all GPU writeable bind points.
+        // We need to rebind all render targets to make sure that
+        // the back buffer is not unbound
+        pImmediateCtxD3D11->CommitRenderTargets();
+    }
 }
 
 void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
@@ -139,8 +145,36 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
     if (pDeviceContext)
     {
         auto *pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
-        bool bIsDefaultFBBound = pImmediateCtxD3D11->IsDefaultFBBound();
-        if (bIsDefaultFBBound)
+        bool RebindRenderTargets = false;
+        bool UnbindRenderTargets = false;
+        if (m_SwapChainDesc.IsPrimary)
+        {
+            RebindRenderTargets = UnbindRenderTargets = pImmediateCtxD3D11->IsDefaultFBBound();
+        }
+        else
+        {
+            std::array<ITextureView*, MaxRenderTargets> pOrigRTVs = {};
+            RefCntAutoPtr<ITextureView> pOrigDSV;
+            Uint32 NumRenderTargets = 0;
+            pImmediateCtxD3D11->GetRenderTargets(NumRenderTargets, pOrigRTVs.data(), &pOrigDSV);
+            for (Uint32 i=0; i < NumRenderTargets; ++i)
+            {
+                if (pOrigRTVs[i] == m_pRenderTargetView)
+                    UnbindRenderTargets = true;
+            }
+            if (pOrigDSV == m_pDepthStencilView)
+                UnbindRenderTargets = true;
+
+            RebindRenderTargets = NumRenderTargets == 1 && pOrigRTVs[0] == m_pRenderTargetView && pOrigDSV == m_pDepthStencilView;
+
+            for(auto pRTV : pOrigRTVs)
+            {
+                if (pRTV != nullptr)
+                    pRTV->Release();
+            }
+        }
+
+        if (UnbindRenderTargets)
             pImmediateCtxD3D11->ResetRenderTargets();
 
         // Swap chain cannot be resized until all references are released
@@ -161,7 +195,7 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/ff476425(v=vs.85).aspx#Defer_Issues_with_Flip
                 pImmediateCtxD3D11->Flush();
 
-                auto *pd3d11Device = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
+                auto* pd3d11Device = m_pRenderDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
                 CreateDXGISwapChain(pd3d11Device);
             }
             else
@@ -180,11 +214,19 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
 
             CreateRTVandDSV();
 
-            if (bIsDefaultFBBound)
+            if (RebindRenderTargets)
             {
-                // Set default render target and viewport
-                pImmediateCtxD3D11->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-                pImmediateCtxD3D11->SetViewports(1, nullptr, 0, 0);
+                if (m_SwapChainDesc.IsPrimary)
+                {
+                    // Set default render target and viewport
+                    pImmediateCtxD3D11->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                    pImmediateCtxD3D11->SetViewports(1, nullptr, 0, 0);
+                }
+                else
+                {
+                    ITextureView* pRTVs[] = {GetCurrentBackBufferRTV()};
+                    pImmediateCtxD3D11->SetRenderTargets(1, pRTVs, GetDepthBufferDSV(), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                }
             }
         }
         catch (const std::runtime_error &)

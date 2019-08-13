@@ -83,7 +83,7 @@ protected:
         {
             m_SwapChainDesc.Width = NewWidth;
             m_SwapChainDesc.Height = NewHeight;
-            LOG_INFO_MESSAGE("Changing display resolution to ", m_SwapChainDesc.Width, "x", m_SwapChainDesc.Height);
+            LOG_INFO_MESSAGE("Resizing the swap chain to ", m_SwapChainDesc.Width, "x", m_SwapChainDesc.Height);
             return true;
         }
 

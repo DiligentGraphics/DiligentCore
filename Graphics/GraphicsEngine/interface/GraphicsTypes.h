@@ -1219,6 +1219,11 @@ namespace Diligent
         /// Default stencil value, which is used as optimized stencil clear value in D3D12
         Uint8 DefaultStencilValue           = 0;
 
+        /// Indicates if this is a primary swap chain. The back buffer and depth-stencil
+        /// buffer of the primary swap are set by SetRenderTargets(0, nullptr, nullptr)
+        /// call. There must be only one primary swap chain.
+        bool  IsPrimary                     = true;
+
         SwapChainDesc()noexcept{}
 
         /// Constructor intializes the structure members with default values
@@ -1229,7 +1234,8 @@ namespace Diligent
                       Uint32         _SamplesCount        = SwapChainDesc{}.SamplesCount,
                       Uint32         _BufferCount         = SwapChainDesc{}.BufferCount,
                       Float32        _DefaultDepthValue   = SwapChainDesc{}.DefaultDepthValue,
-                      Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue) :
+                      Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue,
+                      bool           _IsPrimary           = SwapChainDesc{}.IsPrimary) :
             Width               (_Width),
             Height              (_Height),
             ColorBufferFormat   (_ColorBufferFormat),
@@ -1237,7 +1243,8 @@ namespace Diligent
             SamplesCount        (_SamplesCount),
             BufferCount         (_BufferCount),
             DefaultDepthValue   (_DefaultDepthValue),
-            DefaultStencilValue(_DefaultStencilValue)
+            DefaultStencilValue (_DefaultStencilValue),
+            IsPrimary           (_IsPrimary)
         {}
     };
 

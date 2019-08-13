@@ -161,7 +161,7 @@ public:
     virtual void SetSwapChain( ISwapChain* pSwapChain )override final { m_pSwapChain = pSwapChain; }
 
     /// Returns the swap chain
-    ISwapChain *GetSwapChain() { return m_pSwapChain; }
+    ISwapChain* GetSwapChain() { return m_pSwapChain; }
 
     /// Returns true if currently bound frame buffer is the default frame buffer
     inline bool IsDefaultFBBound(){ return m_IsDefaultFramebufferBound; }
