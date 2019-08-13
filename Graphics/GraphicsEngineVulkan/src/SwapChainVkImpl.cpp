@@ -543,8 +543,11 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         }
     }
 
-    pImmediateCtxVk->FinishFrame();
-    pDeviceVk->ReleaseStaleResources();
+    if (m_SwapChainDesc.IsPrimary)
+    {
+        pImmediateCtxVk->FinishFrame();
+        pDeviceVk->ReleaseStaleResources();
+    }
 
     if (!m_IsMinimized)
     {
@@ -561,7 +564,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         }
         DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next swap chain image");
 
-        if (IsDefaultFBBound)
+        if (m_SwapChainDesc.IsPrimary && IsDefaultFBBound)
         {
             // If default framebuffer is bound, we need to call SetRenderTargets()
             // to bind new back buffer RTV
@@ -586,8 +589,10 @@ void SwapChainVkImpl::WaitForImageAcquiredFences()
 
 void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk)
 {
-    if (pImmediateCtxVk->IsDefaultFBBound())
-        pImmediateCtxVk->ResetRenderTargets();
+    std::vector<ITextureView*> pBackBufferRTVs(m_pBackBufferRTV.size());
+    for(size_t i=0; i < m_pBackBufferRTV.size(); ++i)
+        pBackBufferRTVs[i] = m_pBackBufferRTV[i];
+    UnbindRenderTargets(pImmediateCtxVk, pBackBufferRTVs.data(), static_cast<Uint32>(m_pBackBufferRTV.size()), m_pDepthBufferDSV);
 
     RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     
@@ -637,7 +642,7 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
                 auto res = AcquireNextImage(pImmediateCtxVk);
                 DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the just resized swap chain"); (void)res;
 
-                if( bIsDefaultFBBound )
+                if (m_SwapChainDesc.IsPrimary && bIsDefaultFBBound)
                 {
                     // Set default render target and viewport
                     pDeviceContext->SetRenderTargets( 0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);

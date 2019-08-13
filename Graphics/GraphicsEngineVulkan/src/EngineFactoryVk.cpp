@@ -319,29 +319,40 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
 
     try
     {
-        auto *pDeviceVk = ValidatedCast<RenderDeviceVkImpl>( pDevice );
-        auto *pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pImmediateContext);
-        auto &RawMemAllocator = GetRawAllocator();
-        auto *pSwapChainVk = NEW_RC_OBJ(RawMemAllocator, "SwapChainVkImpl instance", SwapChainVkImpl)(SCDesc, pDeviceVk, pDeviceContextVk, pNativeWndHandle);
+        auto* pDeviceVk = ValidatedCast<RenderDeviceVkImpl>( pDevice );
+        auto* pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pImmediateContext);
+        auto& RawMemAllocator = GetRawAllocator();
+
+        if (pDeviceContextVk->GetSwapChain() != nullptr && SCDesc.IsPrimary)
+        {
+            LOG_ERROR_AND_THROW("Another swap chain labeled as primary has already been created. "
+                                "There must only be one primary swap chain.");
+        }
+
+
+        auto* pSwapChainVk = NEW_RC_OBJ(RawMemAllocator, "SwapChainVkImpl instance", SwapChainVkImpl)(SCDesc, pDeviceVk, pDeviceContextVk, pNativeWndHandle);
         pSwapChainVk->QueryInterface( IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 
-        pDeviceContextVk->SetSwapChain(pSwapChainVk);
-        // Bind default render target
-        pDeviceContextVk->SetRenderTargets( 0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
-        // Set default viewport
-        pDeviceContextVk->SetViewports( 1, nullptr, 0, 0 );
-        
-        auto NumDeferredCtx = pDeviceVk->GetNumDeferredContexts();
-        for (size_t ctx = 0; ctx < NumDeferredCtx; ++ctx)
+        if (SCDesc.IsPrimary)
         {
-            if (auto pDeferredCtx = pDeviceVk->GetDeferredContext(ctx))
+            pDeviceContextVk->SetSwapChain(pSwapChainVk);
+            // Bind default render target
+            pDeviceContextVk->SetRenderTargets( 0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
+            // Set default viewport
+            pDeviceContextVk->SetViewports( 1, nullptr, 0, 0 );
+        
+            auto NumDeferredCtx = pDeviceVk->GetNumDeferredContexts();
+            for (size_t ctx = 0; ctx < NumDeferredCtx; ++ctx)
             {
-                auto *pDeferredCtxVk = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
-                pDeferredCtxVk->SetSwapChain(pSwapChainVk);
-                // We cannot bind default render target here because
-                // there is no guarantee that deferred context will be used
-                // in this frame. It is an error to bind 
-                // RTV of an inactive buffer in the swap chain
+                if (auto pDeferredCtx = pDeviceVk->GetDeferredContext(ctx))
+                {
+                    auto *pDeferredCtxVk = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
+                    pDeferredCtxVk->SetSwapChain(pSwapChainVk);
+                    // We cannot bind default render target here because
+                    // there is no guarantee that deferred context will be used
+                    // in this frame. It is an error to bind 
+                    // RTV of an inactive buffer in the swap chain
+                }
             }
         }
     }
