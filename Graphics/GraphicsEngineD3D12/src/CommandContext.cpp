@@ -203,38 +203,46 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
         BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(OldState);
         BarrierDesc.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState);
 
-        if (pTextureD3D12Impl)
+        // Note that RESOURCE_STATE_UNDEFINED != RESOURCE_STATE_PRESENT, but 
+        // D3D12_RESOURCE_STATE_COMMON == D3D12_RESOURCE_STATE_PRESENT
+        if (BarrierDesc.Transition.StateBefore != BarrierDesc.Transition.StateAfter)
         {
-            const auto& TexDesc = pTextureD3D12Impl->GetDesc();
-            VERIFY(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level is out of range");
-            VERIFY(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount <= TexDesc.MipLevels,
-                   "Invalid mip level range ");
-            VERIFY(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice is out of range");
-            VERIFY(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.ArraySize,
-                   "Invalid array slice range ");
+            if (pTextureD3D12Impl)
+            {
+                const auto& TexDesc = pTextureD3D12Impl->GetDesc();
+                VERIFY(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level is out of range");
+                VERIFY(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount <= TexDesc.MipLevels,
+                       "Invalid mip level range ");
+                VERIFY(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice is out of range");
+                VERIFY(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.ArraySize,
+                       "Invalid array slice range ");
 
-            if (Barrier.FirstMipLevel   == 0 && (Barrier.MipLevelsCount  == StateTransitionDesc::RemainingMipLevels   || Barrier.MipLevelsCount  == TexDesc.MipLevels) &&
-                Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.ArraySliceCount == TexDesc.ArraySize))
-            {
-                BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-                m_PendingResourceBarriers.emplace_back(BarrierDesc);
-            }
-            else
-            {
-                Uint32 EndMip   = Barrier.MipLevelsCount  == StateTransitionDesc::RemainingMipLevels   ? TexDesc.MipLevels : Barrier.FirstMipLevel   + Barrier.MipLevelsCount;
-                Uint32 EndSlice = Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices ? TexDesc.ArraySize : Barrier.FirstArraySlice + Barrier.ArraySliceCount;
-                for(Uint32 mip = Barrier.FirstMipLevel; mip < EndMip; ++mip)
+                if (Barrier.FirstMipLevel   == 0 && (Barrier.MipLevelsCount  == StateTransitionDesc::RemainingMipLevels   || Barrier.MipLevelsCount  == TexDesc.MipLevels) &&
+                    Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.ArraySliceCount == TexDesc.ArraySize))
                 {
-                    for(Uint32 slice = Barrier.FirstArraySlice; slice < EndSlice; ++slice)
+                    BarrierDesc.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+                    m_PendingResourceBarriers.emplace_back(BarrierDesc);
+                }
+                else
+                {
+                    Uint32 EndMip   = Barrier.MipLevelsCount  == StateTransitionDesc::RemainingMipLevels   ? TexDesc.MipLevels : Barrier.FirstMipLevel   + Barrier.MipLevelsCount;
+                    Uint32 EndSlice = Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices ? TexDesc.ArraySize : Barrier.FirstArraySlice + Barrier.ArraySliceCount;
+                    for(Uint32 mip = Barrier.FirstMipLevel; mip < EndMip; ++mip)
                     {
-                        BarrierDesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
-                        m_PendingResourceBarriers.emplace_back(BarrierDesc);
+                        for(Uint32 slice = Barrier.FirstArraySlice; slice < EndSlice; ++slice)
+                        {
+                            BarrierDesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
+                            m_PendingResourceBarriers.emplace_back(BarrierDesc);
+                        }
                     }
                 }
             }
+            else
+            {
+                VERIFY_EXPR(pBufferD3D12Impl);
+                m_PendingResourceBarriers.emplace_back(BarrierDesc);
+            }
         }
-        else
-            m_PendingResourceBarriers.emplace_back(BarrierDesc);
 
         if (pTextureD3D12Impl)
         {
