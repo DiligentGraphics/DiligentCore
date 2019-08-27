@@ -173,6 +173,28 @@ enum class BoxVisibility
     FullyVisible
 };
 
+/// Returns the nearest bounding box corner along the given direction
+inline float3 GetBoxNearestCorner(const float3& Direction, const BoundBox& Box)
+{
+    return float3
+    {
+        (Direction.x > 0) ? Box.Min.x : Box.Max.x,
+        (Direction.y > 0) ? Box.Min.y : Box.Max.y,
+        (Direction.z > 0) ? Box.Min.z : Box.Max.z
+    };
+}
+
+/// Returns the farthest bounding box corner along the given direction
+inline float3 GetBoxFarthestCorner(const float3& Direction, const BoundBox& Box)
+{
+    return float3
+    {
+        (Direction.x > 0) ? Box.Max.x : Box.Min.x,
+        (Direction.y > 0) ? Box.Max.y : Box.Min.y,
+        (Direction.z > 0) ? Box.Max.z : Box.Min.z
+    };
+}
+
 inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const BoundBox& Box)
 {
     const float3& Normal = Plane.Normal;
