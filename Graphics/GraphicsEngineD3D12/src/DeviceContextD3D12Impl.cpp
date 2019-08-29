@@ -1629,4 +1629,10 @@ namespace Diligent
         auto& CmdCtx = GetCmdContext();
         CmdCtx.TransitionResource(ValidatedCast<IBufferD3D12>(pBuffer), D3D12ResourceStatesToResourceStateFlags(State));
     }
+
+    ID3D12GraphicsCommandList* DeviceContextD3D12Impl::GetD3D12CommandList()
+    {
+        auto& CmdCtx = GetCmdContext();
+        return CmdCtx.GetCommandList();
+    }
 }

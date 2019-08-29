@@ -18,6 +18,7 @@
 * `TEXTURE_VIEW_FLAGS` enum and `Flags` member to `TextureViewDesc` structure (API Version 240023)
 * Added `IShaderResourceVariable::IsBound()` method
 * Added `Diligent-` prefix to project names to avoid name conflicts.
+* Added `IDeviceContextD3D12::GetD3D12CommandList` method
 
 ## v2.4.b
 

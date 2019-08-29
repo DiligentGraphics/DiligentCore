@@ -51,6 +51,18 @@ public:
     /// \param [in] pBuffer - Buffer to transition
     /// \param [in] State - D3D12 resource state this buffer to transition to
     virtual void TransitionBufferState(IBuffer* pBuffer, D3D12_RESOURCE_STATES State) = 0;
+
+    /// Returns a pointer to Direct3D12 graphics command list that is currently being recorded
+
+    /// \return - a pointer to the current command list
+    ///
+    /// \remarks  Any command on the device context may potentially submit the command list for
+    ///           execution into the command queue and make it invalid. An application should 
+    ///           never cache the pointer and should instead request the command list every time it 
+    ///           needs it.\n
+    ///           The engine manages the lifetimes of all command buffers, so an application must
+    ///           not call AddRef/Release methods on the returned interface.
+    virtual ID3D12GraphicsCommandList* GetD3D12CommandList() = 0;
 };
 
 }

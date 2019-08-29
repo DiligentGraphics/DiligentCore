@@ -158,6 +158,8 @@ public:
 
     virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State)override final;
 
+    virtual ID3D12GraphicsCommandList* GetD3D12CommandList()override final;
+
     ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
     //static constexpr int NumShaderTypes = 6;
 
