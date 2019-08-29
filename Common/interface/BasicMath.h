@@ -1609,6 +1609,10 @@ using float4x4 = Matrix4x4<float>;
 using float3x3 = Matrix3x3<float>;
 using float2x2 = Matrix2x2<float>;
 
+using double4x4 = Matrix4x4<double>;
+using double3x3 = Matrix3x3<double>;
+using double2x2 = Matrix2x2<double>;
+
 
 struct Quaternion
 {
