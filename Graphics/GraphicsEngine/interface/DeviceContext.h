@@ -582,8 +582,8 @@ public:
 
     /// Invalidates the cached context state.
 
-    /// This method should be called by say Unity plugin before (or after)
-    /// issuing draw commands to invalidate cached states.
+    /// This method should be called by an application to invalidate 
+    /// internal cached states.
     virtual void InvalidateState() = 0;
 
 

@@ -59,9 +59,16 @@ public:
     /// \remarks  Any command on the device context may potentially submit the command list for
     ///           execution into the command queue and make it invalid. An application should 
     ///           never cache the pointer and should instead request the command list every time it 
-    ///           needs it.\n
+    ///           needs it.
+    ///
     ///           The engine manages the lifetimes of all command buffers, so an application must
     ///           not call AddRef/Release methods on the returned interface.
+    ///
+    ///           Diligent Engine internally keeps track of all resource state changes (vertex and index 
+    ///           buffers, pipeline states, render targets, etc.). If an application changes any of these
+    ///           states in the command list, it must invalidate the engine's internal state tracking by 
+    ///           calling IDeviceContext::InvalidateState() and then manually restore all required states via
+    ///           appropriate Diligent API calls.
     virtual ID3D12GraphicsCommandList* GetD3D12CommandList() = 0;
 };
 
