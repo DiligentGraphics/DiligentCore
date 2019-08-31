@@ -484,7 +484,9 @@ class RefCountedObject : public Base
 public:
     using CounterValueType = IReferenceCounters::CounterValueType;
 
-    RefCountedObject(IReferenceCounters *pRefCounters)noexcept :
+    template<typename ... BaseCtorArgTypes>
+    RefCountedObject(IReferenceCounters* pRefCounters, BaseCtorArgTypes&& ... BaseCtorArgs)noexcept :
+        Base          ( std::forward<BaseCtorArgTypes>(BaseCtorArgs)... ),
         m_pRefCounters( ValidatedCast<RefCountersImpl>(pRefCounters) )
     {
         // If object is allocated on stack, ref counters will be null
