@@ -16,9 +16,10 @@
   added `IRenderDevice::GetEngineFactory()` method (API Version 240021)
 * Added `DRAW_FLAG_VERIFY_DRAW_ATTRIBS`, `DRAW_FLAG_VERIFY_RENDER_TARGETS`, and `DRAW_FLAG_VERIFY_ALL` flags (API Version 240022)
 * `TEXTURE_VIEW_FLAGS` enum and `Flags` member to `TextureViewDesc` structure (API Version 240023)
-* Added `IShaderResourceVariable::IsBound()` method
+* Added `IShaderResourceVariable::IsBound()` method (API Version 240024)
 * Added `Diligent-` prefix to project names to avoid name conflicts.
 * Added `IDeviceContextD3D12::GetD3D12CommandList` method
+* Added `IDeviceContext::Wait()` method (API Version 240026)
 
 ## v2.4.b
 

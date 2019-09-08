@@ -374,7 +374,15 @@ namespace Diligent
         VERIFY(!m_bIsDeferred, "Fence can only be signalled from immediate context");
 
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::SignalFence() is not implemented");
-    };
+    }
+
+    void DeviceContextD3D11Impl::Wait(IFence* pFence, Uint64 Value)
+    {
+        VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
+        Flush();
+
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::Wait() is not implemented");
+    }
 
     void DeviceContextMtlImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {

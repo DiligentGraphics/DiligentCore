@@ -65,7 +65,7 @@ public:
         m_PendingFences.emplace_back(FenceValue, std::move(vkFence));
     }
 
-    void Wait();
+    void Wait(Uint64 Value);
 
 private:
     VulkanUtilities::VulkanFencePool m_FencePool;

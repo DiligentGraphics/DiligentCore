@@ -1562,7 +1562,15 @@ namespace Diligent
     {
         VERIFY(!m_bIsDeferred, "Fence can only be signaled from immediate context");
         m_PendingFences.emplace_back(Value, pFence);
-    };
+    }
+
+    void DeviceContextD3D12Impl::Wait(IFence* pFence, Uint64 Value)
+    {
+        VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
+        Flush();
+        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->WaitForFence(m_CommandQueueId, pFence, Value);
+    }
+
 
     void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {

@@ -58,6 +58,8 @@ public:
         m_PendingQueries.emplace_back(std::move(pCtx), std::move(pQuery), Value);
     }
 
+    void Wait(Uint64 Value);
+
 private:
     struct PendingFenceData
     {

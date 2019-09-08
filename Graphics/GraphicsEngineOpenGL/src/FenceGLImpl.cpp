@@ -64,6 +64,23 @@ Uint64 FenceGLImpl :: GetCompletedValue()
     return m_LastCompletedFenceValue;
 }
 
+void FenceGLImpl :: Wait(Uint64 Value)
+{
+    while (!m_PendingFences.empty())
+    {
+        auto& val_fence = m_PendingFences.front();  
+        if (val_fence.first > Value)
+            break;
+
+        auto res = glClientWaitSync(val_fence.second, GL_SYNC_FLUSH_COMMANDS_BIT, std::numeric_limits<GLuint64>::max());
+        VERIFY_EXPR(res == GL_ALREADY_SIGNALED || res == GL_CONDITION_SATISFIED);
+
+        if (val_fence.first > m_LastCompletedFenceValue)
+            m_LastCompletedFenceValue = val_fence.first;
+        m_PendingFences.pop_front();
+    }
+}
+
 void FenceGLImpl :: Reset(Uint64 Value)
 {
     DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");

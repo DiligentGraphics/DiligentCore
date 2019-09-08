@@ -56,7 +56,9 @@ public:
 
     virtual Uint64 GetCompletedFenceValue()override final;
 
-    void SignalFence(ID3D12Fence* pFence, Uint64 Value)override final;
+    virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value)override final;
+
+    virtual void Wait(ID3D12Fence* pFence, Uint64 Value)override final;
 
 private:
     // A value that will be signaled by the command queue next

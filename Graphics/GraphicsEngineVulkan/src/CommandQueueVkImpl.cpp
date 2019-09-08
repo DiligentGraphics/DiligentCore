@@ -101,7 +101,7 @@ Uint64 CommandQueueVkImpl::WaitForIdle()
     Atomics::AtomicIncrement(m_NextFenceValue);
     vkQueueWaitIdle(m_VkQueue);
     // For some reason after idling the queue not all fences are signaled
-    m_pFence->Wait();
+    m_pFence->Wait(UINT64_MAX);
     m_pFence->Reset(LastCompletedFenceValue);
     return LastCompletedFenceValue;
 }

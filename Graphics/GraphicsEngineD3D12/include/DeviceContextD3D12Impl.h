@@ -154,6 +154,8 @@ public:
 
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
+    virtual void Wait(IFence* pFence, Uint64 Value)override final;
+
     virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State)override final;
 
     virtual void TransitionBufferState(IBuffer *pBuffer, D3D12_RESOURCE_STATES State)override final;

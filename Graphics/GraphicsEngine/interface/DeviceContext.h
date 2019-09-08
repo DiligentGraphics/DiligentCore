@@ -799,7 +799,31 @@ public:
     virtual void SignalFence(IFence* pFence, Uint64 Value) = 0;
 
 
-    /// Flushes the command buffer.
+    /// Waits until the specified fence reaches or exceeds the specified value.
+
+    /// \note The method blocks the execution of the calling thread until the wait is complete.
+    ///
+    /// \param [in] pFence - The fence to wait.
+    /// \param [in] Value  - The value that the context is waiting for the fence to reach.
+    ///
+    /// \remarks    Wait is only allowed for immediate contexts.\n
+    ///             The method flushes the context before initiating the wait (see IDeviceContext::Flush()),
+    ///             so an application must explicitly reset the PSO and bind all required shader 
+    ///             resources after waiting for a fence.\n
+    ///             The fence can only be waited for from the same context it has
+    ///             previously been signaled.
+    virtual void Wait(IFence* pFence, Uint64 Value) = 0;
+
+
+    /// Submits all pending commands in the context for execution to the command queue.
+
+    /// \remarks    Only immediate contexts can be flushed.\n
+    ///             Internally the method resets the state of the current command list/buffer.
+    ///             When the next draw command is issued, the engine will restore all states 
+    ///             (rebind render targets and depth-stencil buffer as well as index and vertex buffers,
+    ///             restore viewports and scissor rects, etc.) except for the pipeline state and shader resource
+    ///             bindings. An application must explicitly reset the PSO and bind all required shader 
+    ///             resources after flushing the context.
     virtual void Flush() = 0;
 
 

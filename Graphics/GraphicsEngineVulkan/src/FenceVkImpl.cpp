@@ -48,7 +48,7 @@ FenceVkImpl :: ~FenceVkImpl()
         // Vulkan spec states that all queue submission commands that refer to 
         // a fence must have completed execution before the fence is destroyed.
         // (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyFence-fence-01120)
-        Wait();
+        Wait(UINT64_MAX);
     }
 }
 
@@ -83,11 +83,15 @@ void FenceVkImpl :: Reset(Uint64 Value)
 }
 
 
-void FenceVkImpl :: Wait()
+void FenceVkImpl :: Wait(Uint64 Value)
 {
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-    for (auto& val_fence : m_PendingFences)
+    while (!m_PendingFences.empty())
     {
+        auto& val_fence = m_PendingFences.front();
+        if (val_fence.first > Value)
+            break;
+
         auto status = LogicalDevice.GetFenceStatus(val_fence.second);
         if (status == VK_NOT_READY)
         {
@@ -99,8 +103,9 @@ void FenceVkImpl :: Wait()
         if (val_fence.first > m_LastCompletedFenceValue)
             m_LastCompletedFenceValue = val_fence.first;
         m_FencePool.DisposeFence(std::move(val_fence.second));
+
+        m_PendingFences.pop_front();
     }
-    m_PendingFences.clear();
 }
 
 }

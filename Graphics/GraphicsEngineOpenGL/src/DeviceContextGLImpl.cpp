@@ -1073,7 +1073,14 @@ namespace Diligent
         CHECK_GL_ERROR( "Failed to create gl fence" );
         auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
         pFenceGLImpl->AddPendingFence(std::move(GLFence), Value);
-    };
+    }
+
+    void DeviceContextGLImpl::Wait(IFence* pFence, Uint64 Value)
+    {
+        VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
+        auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
+        pFenceGLImpl->Wait(Value);
+    }
 
     bool DeviceContextGLImpl::UpdateCurrentGLContext()
     {

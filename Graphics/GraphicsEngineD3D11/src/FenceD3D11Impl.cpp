@@ -64,6 +64,26 @@ Uint64 FenceD3D11Impl :: GetCompletedValue()
     return m_LastCompletedFenceValue;
 }
 
+void FenceD3D11Impl :: Wait(Uint64 Value)
+{
+    while (!m_PendingQueries.empty())
+    {
+        auto& QueryData = m_PendingQueries.front();
+        if (QueryData.Value > Value)
+            break;
+
+        BOOL Data;
+        while (QueryData.pd3d11Ctx->GetData(QueryData.pd3d11Query, &Data, sizeof(Data), 0) != S_OK)
+            std::this_thread::yield();
+
+        VERIFY_EXPR(Data == TRUE);
+        if (QueryData.Value > m_LastCompletedFenceValue)
+            m_LastCompletedFenceValue = QueryData.Value;
+
+        m_PendingQueries.pop_front();
+    }
+}
+
 void FenceD3D11Impl :: Reset(Uint64 Value)
 {
     DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");

@@ -150,6 +150,8 @@ public:
 
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
+    virtual void Wait(IFence* pFence, Uint64 Value)override final;
+
     virtual bool UpdateCurrentGLContext()override final;
 
     void BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding);

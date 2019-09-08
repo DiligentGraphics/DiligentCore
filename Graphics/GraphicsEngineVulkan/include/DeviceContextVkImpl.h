@@ -159,6 +159,8 @@ public:
 
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
+    virtual void Wait(IFence* pFence, Uint64 Value)override final;
+
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.
     // If OldState == RESOURCE_STATE_UNKNOWN, internal texture state is used as old state.

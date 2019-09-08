@@ -31,6 +31,7 @@
 #include "BufferVkImpl.h"
 #include "VulkanTypeConversions.h"
 #include "CommandListVkImpl.h"
+#include "FenceVkImpl.h"
 #include "GraphicsAccessories.h"
 
 namespace Diligent
@@ -1913,7 +1914,16 @@ namespace Diligent
     {
         VERIFY(!m_bIsDeferred, "Fence can only be signaled from immediate context");
         m_PendingFences.emplace_back( std::make_pair(Value, pFence) );
-    };
+    }
+
+    void DeviceContextVkImpl::Wait(IFence* pFence, Uint64 Value)
+    {
+        VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
+        Flush();
+        auto* pFenceVk = ValidatedCast<FenceVkImpl>(pFence);
+        pFenceVk->Wait(Value);
+    }
+
 
     void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)
     {

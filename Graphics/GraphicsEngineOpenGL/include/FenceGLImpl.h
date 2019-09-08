@@ -59,6 +59,8 @@ public:
         m_PendingFences.emplace_back(Value, std::move(Fence));
     }
 
+    void Wait(Uint64 Value);
+
 private:
     std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj> > m_PendingFences;
     volatile Uint64 m_LastCompletedFenceValue = 0;

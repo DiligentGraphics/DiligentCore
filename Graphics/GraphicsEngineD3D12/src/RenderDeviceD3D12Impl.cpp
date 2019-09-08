@@ -197,6 +197,18 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, P
     return FenceValue;
 }
 
+void RenderDeviceD3D12Impl::WaitForFence(Uint32 QueueIndex, IFence* pFence, Uint64 Value)
+{
+    VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
+    VERIFY_EXPR(pFence != nullptr);
+
+    auto* pFenceD3D12Impl = ValidatedCast<FenceD3D12Impl>(pFence);
+    auto* pd3d12Fence = pFenceD3D12Impl->GetD3D12Fence();
+    m_CommandQueues[QueueIndex].CmdQueue->Wait(pd3d12Fence, Value);
+
+    PurgeReleaseQueue(QueueIndex);
+}
+
 
 void RenderDeviceD3D12Impl::IdleGPU() 
 { 
