@@ -179,14 +179,7 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, P
         auto SubmittedCmdBuffInfo = TRenderDeviceBase::SubmitCommandBuffer(QueueIndex, pCmdList, true);
         FenceValue = SubmittedCmdBuffInfo.FenceValue;
         if (pSignalFences != nullptr)
-        {
-            for (auto& val_fence : *pSignalFences)
-            {
-                auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
-                auto* pd3d12Fence = pFenceD3D12Impl->GetD3D12Fence();
-                m_CommandQueues[QueueIndex].CmdQueue->SignalFence(pd3d12Fence, val_fence.first);
-            }
-        }
+            SignalFences(QueueIndex, *pSignalFences);
     }
 
 	m_CmdListManager.ReleaseAllocator(std::move(pAllocator), QueueIndex, FenceValue);
@@ -195,6 +188,16 @@ Uint64 RenderDeviceD3D12Impl::CloseAndExecuteCommandContext(Uint32 QueueIndex, P
     PurgeReleaseQueue(QueueIndex);
 
     return FenceValue;
+}
+
+void RenderDeviceD3D12Impl::SignalFences(Uint32 QueueIndex, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >& SignalFences)
+{
+    for (auto& val_fence : SignalFences)
+    {
+        auto* pFenceD3D12Impl = val_fence.second.RawPtr<FenceD3D12Impl>();
+        auto* pd3d12Fence = pFenceD3D12Impl->GetD3D12Fence();
+        m_CommandQueues[QueueIndex].CmdQueue->SignalFence(pd3d12Fence, val_fence.first);
+    }
 }
 
 void RenderDeviceD3D12Impl::WaitForFence(Uint32 QueueIndex, IFence* pFence, Uint64 Value)

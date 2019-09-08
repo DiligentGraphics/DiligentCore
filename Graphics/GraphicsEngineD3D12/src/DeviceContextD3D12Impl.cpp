@@ -594,6 +594,13 @@ namespace Diligent
                 pDeviceD3D12Impl->DisposeCommandContext(std::move(m_CurrCmdCtx));
         }
 
+        // If there is no command list to submit, but there are pending fences, we need to signal them now
+        if (!m_PendingFences.empty())
+        {
+            pDeviceD3D12Impl->SignalFences(m_CommandQueueId, m_PendingFences);
+            m_PendingFences.clear();
+        }
+
         if(RequestNewCmdCtx)
             RequestCommandContext(pDeviceD3D12Impl);
 
