@@ -58,7 +58,7 @@ public:
     virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value) = 0;
 
     /// Waits until the specified fence reaches or exceeds the specified value.
-    virtual void Wait(ID3D12Fence* pFence, Uint64 Value) = 0;
+    virtual HRESULT Wait(ID3D12Fence* pFence, Uint64 Value) = 0;
 };
 
 }

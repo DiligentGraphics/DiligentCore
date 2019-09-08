@@ -99,10 +99,10 @@ void CommandQueueD3D12Impl::SignalFence(ID3D12Fence* pFence, Uint64 Value)
     m_pd3d12CmdQueue->Signal(pFence, Value);
 }
 
-void CommandQueueD3D12Impl::Wait(ID3D12Fence* pFence, Uint64 Value)
+HRESULT CommandQueueD3D12Impl::Wait(ID3D12Fence* pFence, Uint64 Value)
 {
     std::lock_guard<std::mutex> Lock(m_QueueMtx);
-    m_pd3d12CmdQueue->Wait(pFence, Value);
+    return m_pd3d12CmdQueue->Wait(pFence, Value);
 }
 
 }

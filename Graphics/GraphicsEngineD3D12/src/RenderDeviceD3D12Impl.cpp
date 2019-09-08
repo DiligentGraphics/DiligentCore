@@ -204,7 +204,8 @@ void RenderDeviceD3D12Impl::WaitForFence(Uint32 QueueIndex, IFence* pFence, Uint
 
     auto* pFenceD3D12Impl = ValidatedCast<FenceD3D12Impl>(pFence);
     auto* pd3d12Fence = pFenceD3D12Impl->GetD3D12Fence();
-    m_CommandQueues[QueueIndex].CmdQueue->Wait(pd3d12Fence, Value);
+    auto res = m_CommandQueues[QueueIndex].CmdQueue->Wait(pd3d12Fence, Value);
+    VERIFY_EXPR(res == S_OK); (void)res;
 
     PurgeReleaseQueue(QueueIndex);
 }
