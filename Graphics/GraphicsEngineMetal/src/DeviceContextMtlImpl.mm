@@ -376,7 +376,7 @@ namespace Diligent
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::SignalFence() is not implemented");
     }
 
-    void DeviceContextD3D11Impl::Wait(IFence* pFence, Uint64 Value)
+    void DeviceContextMtlImpl::Wait(IFence* pFence, Uint64 Value)
     {
         VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
         Flush();
