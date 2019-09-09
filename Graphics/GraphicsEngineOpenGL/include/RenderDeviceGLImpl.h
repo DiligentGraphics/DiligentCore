@@ -85,6 +85,8 @@ public:
 
     virtual void ReleaseStaleResources(bool ForceRelease = false)override final {}
 
+    virtual void IdleGPU()override final;
+
     const GPUInfo& GetGPUInfo(){ return m_GPUInfo; }
 
     FBOCache& GetFBOCache(GLContext::NativeGLContextType Context);

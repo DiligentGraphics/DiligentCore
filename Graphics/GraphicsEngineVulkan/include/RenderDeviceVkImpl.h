@@ -89,7 +89,8 @@ public:
     virtual void CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)override final;
 
     // Idles the GPU
-	void IdleGPU();
+	virtual void IdleGPU()override final;
+
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
     // The method returns fence value associated with the submitted command buffer
     Uint64 ExecuteCommandBuffer(Uint32 QueueIndex, const VkSubmitInfo &SubmitInfo, class DeviceContextVkImpl* pImmediateCtx, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >* pSignalFences);

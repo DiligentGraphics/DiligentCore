@@ -171,4 +171,9 @@ void RenderDeviceMtlImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
     );
 }
 
+void RenderDeviceMtlImpl::IdleGPU()
+{
+    LOG_ERROR_MESSAGE("RenderDeviceMtlImpl::IdleGPU() is not implemented");
+}
+
 }

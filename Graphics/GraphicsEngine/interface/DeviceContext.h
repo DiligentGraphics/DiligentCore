@@ -823,6 +823,8 @@ public:
 
     /// Submits all outstanding commands for execution to the GPU and waits until they are complete.
 
+    /// \note The method blocks the execution of the calling thread until the wait is complete.
+    ///
     /// \remarks    Only immediate contexts can be idled.\n
     ///             The methods implicitly flushes the context (see IDeviceContext::Flush()), so an 
     ///             application must explicitly reset the PSO and bind all required shader resources after 

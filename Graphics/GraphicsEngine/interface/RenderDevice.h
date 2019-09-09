@@ -191,6 +191,17 @@ public:
     virtual void ReleaseStaleResources(bool ForceRelease = false) = 0;
 
 
+    /// Waits until all outstanding operations on the GPU are complete.
+
+    /// \note The method blocks the execution of the calling thread until the GPU is idle.
+    ///
+    /// \remarks The method does not flush immediate contexts, so it will only wait for commands that
+    ///          have been previously submitted for execution. An application should explicitly flush
+    ///          the contexts using IDeviceContext::Flush() if it needs to make sure all recorded commands
+    ///          are complete when the method returns.
+    virtual void IdleGPU() = 0;
+
+
     /// Returns engine factory this device was created from.
     /// \remark This method does not increment the reference counter of the returned interface,
     ///         so the application should not call Release().

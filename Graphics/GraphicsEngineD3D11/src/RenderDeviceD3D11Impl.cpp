@@ -291,4 +291,12 @@ void RenderDeviceD3D11Impl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
     );
 }
 
+void RenderDeviceD3D11Impl::IdleGPU()
+{
+    if (auto pImmediateCtx = m_wpImmediateContext.Lock())
+    {
+        pImmediateCtx->WaitForIdle();
+    }
+}
+
 }

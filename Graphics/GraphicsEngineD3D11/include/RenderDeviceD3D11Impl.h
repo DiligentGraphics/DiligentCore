@@ -68,6 +68,8 @@ public:
 
     virtual void ReleaseStaleResources(bool ForceRelease = false)override final {}
 
+    virtual void IdleGPU()override final;
+
     size_t GetCommandQueueCount()const { return 1; }
     Uint64 GetCommandQueueMask()const { return Uint64{1};}
 

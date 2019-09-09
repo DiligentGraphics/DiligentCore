@@ -765,4 +765,9 @@ void RenderDeviceGLImpl::OnDestroyBuffer(IBuffer *pBuffer)
         VAOCacheIt.second.OnDestroyBuffer(pBuffer);
 }
 
+void RenderDeviceGLImpl::IdleGPU()
+{
+    glFinish();
+}
+
 }
