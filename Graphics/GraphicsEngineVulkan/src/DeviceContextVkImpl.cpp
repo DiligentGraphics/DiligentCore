@@ -1925,6 +1925,12 @@ namespace Diligent
         pFenceVk->Wait(Value);
     }
 
+    void DeviceContextVkImpl::WaitForIdle()
+    {
+        VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
+        Flush();
+        m_pDevice.RawPtr<RenderDeviceVkImpl>()->IdleCommandQueue(m_CommandQueueId, true);
+    }
 
     void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)
     {

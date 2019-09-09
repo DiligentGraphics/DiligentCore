@@ -202,7 +202,7 @@ void RenderDeviceD3D12Impl::SignalFences(Uint32 QueueIndex, std::vector<std::pai
 
 void RenderDeviceD3D12Impl::IdleGPU() 
 { 
-    IdleCommandQueues(true);
+    IdleAllCommandQueues(true);
     ReleaseStaleResources();
 }
 

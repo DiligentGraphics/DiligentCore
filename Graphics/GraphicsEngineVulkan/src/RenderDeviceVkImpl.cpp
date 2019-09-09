@@ -281,7 +281,7 @@ Uint64 RenderDeviceVkImpl::ExecuteCommandBuffer(Uint32 QueueIndex, const VkSubmi
 
 void RenderDeviceVkImpl::IdleGPU() 
 { 
-    IdleCommandQueues(true);
+    IdleAllCommandQueues(true);
     m_LogicalVkDevice->WaitIdle();
     ReleaseStaleResources();
 }

@@ -821,6 +821,15 @@ public:
     virtual void WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext) = 0;
 
 
+    /// Submits all outstanding commands for execution to the GPU and waits until they are complete.
+
+    /// \remarks    Only immediate contexts can be idled.\n
+    ///             The methods implicitly flushes the context (see IDeviceContext::Flush()), so an 
+    ///             application must explicitly reset the PSO and bind all required shader resources after 
+    ///             idling the context.\n
+    virtual void WaitForIdle() = 0;
+
+
     /// Submits all pending commands in the context for execution to the command queue.
 
     /// \remarks    Only immediate contexts can be flushed.\n

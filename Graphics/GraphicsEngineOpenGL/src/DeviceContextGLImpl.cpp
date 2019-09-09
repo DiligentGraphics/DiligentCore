@@ -1082,6 +1082,12 @@ namespace Diligent
         pFenceGLImpl->Wait(Value, FlushContext);
     }
 
+    void DeviceContextGLImpl::WaitForIdle()
+    {
+        VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
+        glFinish();
+    }
+
     bool DeviceContextGLImpl::UpdateCurrentGLContext()
     {
         auto* pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();

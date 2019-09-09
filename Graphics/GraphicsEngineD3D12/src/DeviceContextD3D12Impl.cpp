@@ -1580,6 +1580,12 @@ namespace Diligent
         pFenceD3D12->WaitForCompletion(Value);
     }
 
+    void DeviceContextD3D12Impl::WaitForIdle()
+    {
+        VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
+        Flush();
+        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->IdleCommandQueue(m_CommandQueueId, true);
+    }
 
     void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {

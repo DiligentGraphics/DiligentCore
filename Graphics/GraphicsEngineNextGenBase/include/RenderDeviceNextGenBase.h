@@ -145,35 +145,39 @@ public:
         Queue.ReleaseQueue.Purge(CompletedFenceValue);
     }
 
-    void IdleCommandQueues(bool ReleaseResources)
+    void IdleCommandQueue(size_t QueueIdx, bool ReleaseResources)
     {
-        for(size_t q=0; q < m_CmdQueueCount; ++q)
+        VERIFY_EXPR(QueueIdx < m_CmdQueueCount);
+        auto& Queue = m_CommandQueues[QueueIdx];
+
+        Uint64 CmdBufferNumber = 0;
+        Uint64 FenceValue      = 0;
         {
-            auto& Queue = m_CommandQueues[q];
-
-            Uint64 CmdBufferNumber = 0;
-            Uint64 FenceValue      = 0;
-            {
-                std::lock_guard<std::mutex> Lock(Queue.Mtx);
-
-                if (ReleaseResources)
-                {
-                    // Increment command buffer number before idling the queue.
-                    // This will make sure that any resource released while this function
-                    // is running will be associated with the next command buffer submission.
-                    CmdBufferNumber = static_cast<Uint64>(Queue.NextCmdBufferNumber);
-                    Atomics::AtomicIncrement(Queue.NextCmdBufferNumber);
-                }
-
-                FenceValue = Queue.CmdQueue->WaitForIdle();
-            }
+            std::lock_guard<std::mutex> Lock(Queue.Mtx);
 
             if (ReleaseResources)
             {
-                Queue.ReleaseQueue.DiscardStaleResources(CmdBufferNumber, FenceValue);
-                Queue.ReleaseQueue.Purge(Queue.CmdQueue->GetCompletedFenceValue());
+                // Increment command buffer number before idling the queue.
+                // This will make sure that any resource released while this function
+                // is running will be associated with the next command buffer submission.
+                CmdBufferNumber = static_cast<Uint64>(Queue.NextCmdBufferNumber);
+                Atomics::AtomicIncrement(Queue.NextCmdBufferNumber);
             }
+
+            FenceValue = Queue.CmdQueue->WaitForIdle();
         }
+
+        if (ReleaseResources)
+        {
+            Queue.ReleaseQueue.DiscardStaleResources(CmdBufferNumber, FenceValue);
+            Queue.ReleaseQueue.Purge(Queue.CmdQueue->GetCompletedFenceValue());
+        }
+    }
+
+    void IdleAllCommandQueues(bool ReleaseResources)
+    {
+        for(size_t q=0; q < m_CmdQueueCount; ++q)
+            IdleCommandQueue(q, ReleaseResources);
     }
 
     struct SubmittedCommandBufferInfo

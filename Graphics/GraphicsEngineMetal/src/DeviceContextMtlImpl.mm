@@ -384,6 +384,14 @@ namespace Diligent
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::Wait() is not implemented");
     }
 
+    void DeviceContextMtlImpl::WaitForIdle()
+    {
+        VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
+        Flush();
+
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::WaitForIdle() is not implemented");
+    }
+
     void DeviceContextMtlImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::TransitionResourceStates() is not implemented");

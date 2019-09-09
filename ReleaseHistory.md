@@ -20,6 +20,7 @@
 * Added `Diligent-` prefix to project names to avoid name conflicts.
 * Added `IDeviceContextD3D12::GetD3D12CommandList` method
 * Added `IDeviceContext::WaitForFence()` method (API Version 240027)
+* Added `IDeviceContext::WaitForIdle()` method (API Version 240028)
 
 ## v2.4.b
 

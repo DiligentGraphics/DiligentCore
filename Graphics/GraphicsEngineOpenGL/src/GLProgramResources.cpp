@@ -583,7 +583,7 @@ namespace Diligent
                     if ( strcmp(LastBlock.Name, Name.data()) == 0)
                     {
                         ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.ArraySize));
-                        VERIFY(static_cast<GLuint>(SBIndex) == LastBlock.SBIndex + Ind, "Storage block indices are expected to be continuous");
+                        VERIFY(static_cast<GLint>(SBIndex) == LastBlock.SBIndex + Ind, "Storage block indices are expected to be continuous");
                         LastBlock.ArraySize = ArraySize;
                         continue;
                     }

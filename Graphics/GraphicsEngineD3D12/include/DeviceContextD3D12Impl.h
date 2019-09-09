@@ -104,8 +104,6 @@ public:
 
     virtual void ClearRenderTarget( ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override final;
 
-    virtual void Flush()override final;
-
     virtual void UpdateBuffer(IBuffer*                       pBuffer,
                               Uint32                         Offset,
                               Uint32                         Size,
@@ -155,6 +153,10 @@ public:
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
     virtual void WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)override final;
+
+    virtual void WaitForIdle()override final;
+
+    virtual void Flush()override final;
 
     virtual void TransitionTextureState(ITexture *pTexture, D3D12_RESOURCE_STATES State)override final;
 
