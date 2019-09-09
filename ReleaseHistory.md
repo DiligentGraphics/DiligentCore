@@ -19,7 +19,7 @@
 * Added `IShaderResourceVariable::IsBound()` method (API Version 240024)
 * Added `Diligent-` prefix to project names to avoid name conflicts.
 * Added `IDeviceContextD3D12::GetD3D12CommandList` method
-* Added `IDeviceContext::Wait()` method (API Version 240026)
+* Added `IDeviceContext::WaitForFence()` method (API Version 240027)
 
 ## v2.4.b
 

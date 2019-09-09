@@ -799,20 +799,26 @@ public:
     virtual void SignalFence(IFence* pFence, Uint64 Value) = 0;
 
 
-    /// Waits until the specified fence reaches or exceeds the specified value.
+    /// Waits until the specified fence reaches or exceeds the specified value, on the host.
 
     /// \note The method blocks the execution of the calling thread until the wait is complete.
     ///
-    /// \param [in] pFence - The fence to wait.
-    /// \param [in] Value  - The value that the context is waiting for the fence to reach.
+    /// \param [in] pFence       - The fence to wait.
+    /// \param [in] Value        - The value that the context is waiting for the fence to reach.
+    /// \param [in] FlushContext - Whether to flush the commands in the context before initiating the wait.
     ///
     /// \remarks    Wait is only allowed for immediate contexts.\n
-    ///             The method flushes the context before initiating the wait (see IDeviceContext::Flush()),
-    ///             so an application must explicitly reset the PSO and bind all required shader 
-    ///             resources after waiting for a fence.\n
+    ///             When FlushContext is true, the method flushes the context before initiating the wait 
+    ///             (see IDeviceContext::Flush()), so an application must explicitly reset the PSO and 
+    ///             bind all required shader resources after waiting for the fence.\n
+    ///             If FlushContext is false, the commands preceding the fence (including signaling the fence itself)
+    ///             may not have been submitted to the GPU and the method may never return.  If an application does 
+    ///             not explicitly flush the context, it should typically set FlushContext to true.\n
+    ///             If the value the context is waiting for has never been signaled, the method
+    ///             may never return.\n
     ///             The fence can only be waited for from the same context it has
     ///             previously been signaled.
-    virtual void Wait(IFence* pFence, Uint64 Value) = 0;
+    virtual void WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext) = 0;
 
 
     /// Submits all pending commands in the context for execution to the command queue.

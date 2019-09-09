@@ -54,6 +54,8 @@ public:
 
     ID3D12Fence* GetD3D12Fence()override final{ return m_pd3d12Fence; }
 
+    virtual void WaitForCompletion(Uint64 Value)override final;
+
 private:
     CComPtr<ID3D12Fence> m_pd3d12Fence; ///< D3D12 Fence object
 };

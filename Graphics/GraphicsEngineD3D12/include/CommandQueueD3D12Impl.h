@@ -58,8 +58,6 @@ public:
 
     virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value)override final;
 
-    virtual HRESULT Wait(ID3D12Fence* pFence, Uint64 Value)override final;
-
 private:
     // A value that will be signaled by the command queue next
     Atomics::AtomicInt64 m_NextFenceValue;

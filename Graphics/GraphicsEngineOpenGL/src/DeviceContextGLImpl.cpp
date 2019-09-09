@@ -1075,11 +1075,11 @@ namespace Diligent
         pFenceGLImpl->AddPendingFence(std::move(GLFence), Value);
     }
 
-    void DeviceContextGLImpl::Wait(IFence* pFence, Uint64 Value)
+    void DeviceContextGLImpl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
     {
         VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
         auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
-        pFenceGLImpl->Wait(Value);
+        pFenceGLImpl->Wait(Value, FlushContext);
     }
 
     bool DeviceContextGLImpl::UpdateCurrentGLContext()

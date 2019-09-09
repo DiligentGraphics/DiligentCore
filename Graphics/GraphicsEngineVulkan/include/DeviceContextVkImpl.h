@@ -159,7 +159,7 @@ public:
 
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
-    virtual void Wait(IFence* pFence, Uint64 Value)override final;
+    virtual void WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)override final;
 
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.

@@ -1571,11 +1571,13 @@ namespace Diligent
         m_PendingFences.emplace_back(Value, pFence);
     }
 
-    void DeviceContextD3D12Impl::Wait(IFence* pFence, Uint64 Value)
+    void DeviceContextD3D12Impl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
     {
         VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
-        Flush();
-        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->WaitForFence(m_CommandQueueId, pFence, Value);
+        if (FlushContext)
+            Flush();
+        auto* pFenceD3D12 = ValidatedCast<FenceD3D12Impl>(pFence);
+        pFenceD3D12->WaitForCompletion(Value);
     }
 
 

@@ -88,8 +88,6 @@ public:
 
     void SignalFences(Uint32 QueueIndex, std::vector<std::pair<Uint64, RefCntAutoPtr<IFence> > >& SignalFences);
     
-    void WaitForFence(Uint32 QueueIndex, IFence* pFence, Uint64 Value);
-
     // Disposes an unused command context
     void DisposeCommandContext(PooledCommandContext&& Ctx);
 

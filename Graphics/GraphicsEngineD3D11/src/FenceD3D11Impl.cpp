@@ -64,7 +64,7 @@ Uint64 FenceD3D11Impl :: GetCompletedValue()
     return m_LastCompletedFenceValue;
 }
 
-void FenceD3D11Impl :: Wait(Uint64 Value)
+void FenceD3D11Impl :: Wait(Uint64 Value, bool FlushCommands)
 {
     while (!m_PendingQueries.empty())
     {
@@ -73,7 +73,7 @@ void FenceD3D11Impl :: Wait(Uint64 Value)
             break;
 
         BOOL Data;
-        while (QueryData.pd3d11Ctx->GetData(QueryData.pd3d11Query, &Data, sizeof(Data), 0) != S_OK)
+        while (QueryData.pd3d11Ctx->GetData(QueryData.pd3d11Query, &Data, sizeof(Data), FlushCommands ? 0 : D3D11_ASYNC_GETDATA_DONOTFLUSH) != S_OK)
             std::this_thread::yield();
 
         VERIFY_EXPR(Data == TRUE);

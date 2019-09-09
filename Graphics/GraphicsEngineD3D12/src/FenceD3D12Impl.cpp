@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <thread>
 #include <atlbase.h>
 
 #include "FenceD3D12Impl.h"
@@ -52,6 +53,12 @@ Uint64 FenceD3D12Impl :: GetCompletedValue()
 void FenceD3D12Impl :: Reset(Uint64 Value)
 {
     m_pd3d12Fence->Signal(Value);
+}
+
+void FenceD3D12Impl :: WaitForCompletion(Uint64 Value)
+{
+    while (m_pd3d12Fence->GetCompletedValue() < Value)
+        std::this_thread::yield();
 }
 
 }

@@ -46,6 +46,9 @@ public:
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual ID3D12Fence* GetD3D12Fence() = 0;
+
+    /// Waits until the fence reaches the specified value, on the host.
+    virtual void WaitForCompletion(Uint64 Value) = 0;
 };
 
 }

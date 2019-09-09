@@ -1916,10 +1916,11 @@ namespace Diligent
         m_PendingFences.emplace_back( std::make_pair(Value, pFence) );
     }
 
-    void DeviceContextVkImpl::Wait(IFence* pFence, Uint64 Value)
+    void DeviceContextVkImpl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
     {
         VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
-        Flush();
+        if (FlushContext)
+            Flush();
         auto* pFenceVk = ValidatedCast<FenceVkImpl>(pFence);
         pFenceVk->Wait(Value);
     }

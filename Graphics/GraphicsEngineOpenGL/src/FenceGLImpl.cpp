@@ -64,7 +64,7 @@ Uint64 FenceGLImpl :: GetCompletedValue()
     return m_LastCompletedFenceValue;
 }
 
-void FenceGLImpl :: Wait(Uint64 Value)
+void FenceGLImpl :: Wait(Uint64 Value, bool FlushCommands)
 {
     while (!m_PendingFences.empty())
     {
@@ -72,7 +72,7 @@ void FenceGLImpl :: Wait(Uint64 Value)
         if (val_fence.first > Value)
             break;
 
-        auto res = glClientWaitSync(val_fence.second, GL_SYNC_FLUSH_COMMANDS_BIT, std::numeric_limits<GLuint64>::max());
+        auto res = glClientWaitSync(val_fence.second, FlushCommands ? GL_SYNC_FLUSH_COMMANDS_BIT : 0, std::numeric_limits<GLuint64>::max());
         VERIFY_EXPR(res == GL_ALREADY_SIGNALED || res == GL_CONDITION_SATISFIED);
 
         if (val_fence.first > m_LastCompletedFenceValue)

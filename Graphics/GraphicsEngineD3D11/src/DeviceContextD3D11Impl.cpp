@@ -1766,12 +1766,13 @@ namespace Diligent
         pFenceD3D11Impl->AddPendingQuery(m_pd3d11DeviceContext, std::move(pd3d11Query), Value);
     }
 
-    void DeviceContextD3D11Impl::Wait(IFence* pFence, Uint64 Value)
+    void DeviceContextD3D11Impl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)
     {
         VERIFY(!m_bIsDeferred, "Fence can only be waited from immediate context");
-        Flush();
+        if (FlushContext)
+            Flush();
         auto* pFenceD3D11Impl = ValidatedCast<FenceD3D11Impl>(pFence);
-        pFenceD3D11Impl->Wait(Value);
+        pFenceD3D11Impl->Wait(Value, FlushContext);
     }
 
     void DeviceContextD3D11Impl::ClearStateCache()

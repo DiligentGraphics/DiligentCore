@@ -150,7 +150,7 @@ public:
 
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
-    virtual void Wait(IFence* pFence, Uint64 Value)override final;
+    virtual void WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)override final;
 
     virtual bool UpdateCurrentGLContext()override final;
 

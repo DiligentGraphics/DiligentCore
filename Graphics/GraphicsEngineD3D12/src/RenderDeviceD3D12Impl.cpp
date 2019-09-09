@@ -200,20 +200,6 @@ void RenderDeviceD3D12Impl::SignalFences(Uint32 QueueIndex, std::vector<std::pai
     }
 }
 
-void RenderDeviceD3D12Impl::WaitForFence(Uint32 QueueIndex, IFence* pFence, Uint64 Value)
-{
-    VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-    VERIFY_EXPR(pFence != nullptr);
-
-    auto* pFenceD3D12Impl = ValidatedCast<FenceD3D12Impl>(pFence);
-    auto* pd3d12Fence = pFenceD3D12Impl->GetD3D12Fence();
-    auto res = m_CommandQueues[QueueIndex].CmdQueue->Wait(pd3d12Fence, Value);
-    VERIFY_EXPR(res == S_OK); (void)res;
-
-    PurgeReleaseQueue(QueueIndex);
-}
-
-
 void RenderDeviceD3D12Impl::IdleGPU() 
 { 
     IdleCommandQueues(true);

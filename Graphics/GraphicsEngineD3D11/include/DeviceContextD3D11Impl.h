@@ -156,7 +156,7 @@ public:
 
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
-    virtual void Wait(IFence* pFence, Uint64 Value)override final;
+    virtual void WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)override final;
 
     virtual ID3D11DeviceContext* GetD3D11DeviceContext()override final { return m_pd3d11DeviceContext; }
     
