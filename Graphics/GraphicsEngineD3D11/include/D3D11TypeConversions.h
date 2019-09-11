@@ -90,7 +90,7 @@ inline USAGE D3D11UsageToUsage(D3D11_USAGE D3D11Usage)
     }
 }
 
-inline void MapParamsToD3D11MapParams(MAP_TYPE MapType, Uint32 MapFlags, D3D11_MAP &d3d11MapType, UINT d3d11MapFlags)
+inline void MapParamsToD3D11MapParams(MAP_TYPE MapType, Uint32 MapFlags, D3D11_MAP& d3d11MapType, UINT& d3d11MapFlags)
 { 
     d3d11MapType = static_cast<D3D11_MAP>(0);
     switch(MapType)
