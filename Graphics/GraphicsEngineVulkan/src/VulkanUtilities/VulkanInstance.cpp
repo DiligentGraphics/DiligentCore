@@ -110,8 +110,11 @@ namespace VulkanUtilities
 #endif
         };
 
-        for (uint32_t ext = 0; ext < GlobalExtensionCount; ++ext)
-            GlobalExtensions.push_back(ppGlobalExtensionNames[ext]);
+        if (ppGlobalExtensionNames != nullptr)
+        {
+            for (uint32_t ext = 0; ext < GlobalExtensionCount; ++ext)
+                GlobalExtensions.push_back(ppGlobalExtensionNames[ext]);
+        }
 
         for(const auto* ExtName : GlobalExtensions)
         {
