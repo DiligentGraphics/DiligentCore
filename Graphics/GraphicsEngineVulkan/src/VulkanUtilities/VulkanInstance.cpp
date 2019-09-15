@@ -115,6 +115,12 @@ namespace VulkanUtilities
             for (uint32_t ext = 0; ext < GlobalExtensionCount; ++ext)
                 GlobalExtensions.push_back(ppGlobalExtensionNames[ext]);
         }
+        else
+        {
+            if (GlobalExtensionCount != 0)
+                LOG_ERROR_MESSAGE("Global extensions pointer is null while extensions count is ", GlobalExtensionCount, ". "
+                                  "Please initialize 'ppGlobalExtensionNames' member of EngineVkCreateInfo struct.");
+        }
 
         for(const auto* ExtName : GlobalExtensions)
         {
