@@ -57,6 +57,7 @@ if(VULKAN_SUPPORTED)
     set(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Enable JSON reflection target support.")
     set(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "Enable C API wrapper support in static library.")
     set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Enable util module support.")
+    set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "Skip SPIRV-Cross installation.")
     add_subdirectory(SPIRV-Cross)
     set_directory_root_folder("SPIRV-Cross" "DiligentCore/External/SPIRV-Cross")
 
