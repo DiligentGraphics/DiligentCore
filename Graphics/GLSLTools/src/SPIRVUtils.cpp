@@ -29,6 +29,7 @@
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 #	include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
 #else
+#   define ENABLE_HLSL
 #	include "SPIRV/GlslangToSpv.h"
 #endif
 
@@ -184,19 +185,19 @@ TBuiltInResource InitResources()
     return Resources;
 }
 
-class IoMapResolver : public glslang::TIoMapResolver
+class IoMapResolver final : public glslang::TIoMapResolver
 {
 public:
     // Should return true if the resulting/current binding would be okay.
     // Basic idea is to do aliasing binding checks with this.
-    virtual bool validateBinding(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    virtual bool validateBinding(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
         return true;
     }
 
     // Should return a value >= 0 if the current binding should be overridden.
     // Return -1 if the current binding (including no binding) should be kept.
-    virtual int resolveBinding(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    virtual int resolveBinding(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
         // We do not care about actual binding value here.
         // We only need decoration to be present in SPIRV
@@ -205,7 +206,7 @@ public:
 
     // Should return a value >= 0 if the current set should be overridden.
     // Return -1 if the current set (including no set) should be kept.
-    virtual int resolveSet(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    virtual int resolveSet(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
         // We do not care about actual descriptor set value here.
         // We only need decoration to be present in SPIRV
@@ -214,66 +215,91 @@ public:
 
     // Should return a value >= 0 if the current location should be overridden.
     // Return -1 if the current location (including no location) should be kept.
-    virtual int resolveUniformLocation(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    virtual int resolveUniformLocation(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
         return -1;
     }
 
     // Should return true if the resulting/current setup would be okay.
     // Basic idea is to do aliasing checks and reject invalid semantic names.
-    virtual bool validateInOut(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    virtual bool validateInOut(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
         return true;
     }
 
     // Should return a value >= 0 if the current location should be overridden.
     // Return -1 if the current location (including no location) should be kept.
-    virtual int resolveInOutLocation(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    virtual int resolveInOutLocation(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
         return -1;
     }
 
     // Should return a value >= 0 if the current component index should be overridden.
     // Return -1 if the current component index (including no index) should be kept.
-    virtual int resolveInOutComponent(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    virtual int resolveInOutComponent(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
         return -1;
     }
 
     // Should return a value >= 0 if the current color index should be overridden.
     // Return -1 if the current color index (including no index) should be kept.
-    virtual int resolveInOutIndex(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    virtual int resolveInOutIndex(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
         return -1;
     }
 
     // Notification of a uniform variable
-    virtual void notifyBinding(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
+    virtual void notifyBinding(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
     }
 
     // Notification of a in or out variable
-    virtual void notifyInOut(EShLanguage stage, const char* name, const glslang::TType& type, bool is_live)
-    {
-    }
-
-    // Called by mapIO when it has finished the notify pass
-    virtual void endNotifications(EShLanguage stage)
+    virtual void notifyInOut(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
     {
     }
 
     // Called by mapIO when it starts its notify pass for the given stage
-    virtual void beginNotifications(EShLanguage stage)
+    virtual void beginNotifications(EShLanguage stage)override final
+    {
+    }
+
+    // Called by mapIO when it has finished the notify pass
+    virtual void endNotifications(EShLanguage stage)override final
     {
     }
 
     // Called by mipIO when it starts its resolve pass for the given stage
-    virtual void beginResolve(EShLanguage stage)
+    virtual void beginResolve(EShLanguage stage)override final
     {
     }
 
     // Called by mapIO when it has finished the resolve pass
-    virtual void endResolve(EShLanguage stage)
+    virtual void endResolve(EShLanguage stage)override final
+    {
+    }
+
+    // Called by mapIO when it starts its symbol collect for teh given stage
+    virtual void beginCollect(EShLanguage stage)override final
+    {
+    }
+
+    // Called by mapIO when it has finished the symbol collect
+    virtual void endCollect(EShLanguage stage)override final
+    {
+    }
+
+    // Called by TSlotCollector to resolve storage locations or bindings
+    virtual void reserverStorageSlot(glslang::TVarEntryInfo& ent, TInfoSink& infoSink)override final
+    {
+    }
+
+    // Called by TSlotCollector to resolve resource locations or bindings
+    virtual void reserverResourceSlot(glslang::TVarEntryInfo& ent, TInfoSink& infoSink)override final
+    {
+    }
+
+    // Called by mapIO.addStage to set shader stage mask to mark a stage be added to this pipeline
+    virtual void addStage(EShLanguage stage)override final
     {
     }
 };
