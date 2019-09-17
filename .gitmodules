@@ -1,12 +1,12 @@
-[submodule "External/glslang"]
-	path = External/glslang
-	url = https://github.com/DiligentGraphics/glslang.git
-[submodule "External/SPIRV-Cross"]
-	path = External/SPIRV-Cross
-	url = https://github.com/DiligentGraphics/SPIRV-Cross.git
-[submodule "External/SPIRV-Tools"]
-	path = External/SPIRV-Tools
-	url = https://github.com/DiligentGraphics/SPIRV-Tools.git
-[submodule "External/SPIRV-Headers"]
-	path = External/SPIRV-Headers
-	url = https://github.com/DiligentGraphics/SPIRV-Headers.git
+[submodule "ThirdParty/glslang"]
+	path = ThirdParty/glslang
+	url = https://github.com/DiligentGraphics/glslang
+[submodule "ThirdParty/SPIRV-Cross"]
+	path = ThirdParty/SPIRV-Cross
+	url = https://github.com/DiligentGraphics/SPIRV-Cross
+[submodule "ThirdParty/SPIRV-Tools"]
+	path = ThirdParty/SPIRV-Tools
+	url = https://github.com/DiligentGraphics/SPIRV-Tools
+[submodule "ThirdParty/SPIRV-Headers"]
+	path = ThirdParty/SPIRV-Headers
+	url = https://github.com/DiligentGraphics/SPIRV-Headers

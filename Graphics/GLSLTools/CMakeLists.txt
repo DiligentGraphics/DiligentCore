@@ -63,7 +63,7 @@ if(VULKAN_SUPPORTED)
 
         target_include_directories(Diligent-GLSLTools 
         PRIVATE
-            ../../External/glslang
+            ../../ThirdParty/glslang
         )
     endif()
 endif()

@@ -15,7 +15,7 @@ if(VULKAN_SUPPORTED)
     # We only need to have SPIRV-Headers folder, but we
     # do not really need any target from the project.
     #add_subdirectory(SPIRV-Headers)
-    #set_directory_root_folder("SPIRV-Headers" "DiligentCore/External/SPIRV-Headers")
+    #set_directory_root_folder("SPIRV-Headers" "DiligentCore/ThirdParty/SPIRV-Headers")
 
     option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
 
@@ -27,7 +27,7 @@ if(VULKAN_SUPPORTED)
     set(SPIRV_WERROR OFF CACHE BOOL "Do not enable error on warning")
     set(CMAKE_MACOSX_RPATH TRUE)
     add_subdirectory(SPIRV-Tools)
-    set_directory_root_folder("SPIRV-Tools" "DiligentCore/External/SPIRV-Tools")
+    set_directory_root_folder("SPIRV-Tools" "DiligentCore/ThirdParty/SPIRV-Tools")
     # We only need SPIRV-Tools-opt for glslang that also depends on SPIRV-Tools.
     # Exclude all other targets from build to save build time
     set(SPIRV_TOOLS_EXCLUDE_TARGETS SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared)
@@ -40,7 +40,7 @@ if(VULKAN_SUPPORTED)
         set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Do not build SPIRV remapper")
         set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip glslang installation")
         add_subdirectory(glslang)
-        set_directory_root_folder("glslang" "DiligentCore/External/glslang")
+        set_directory_root_folder("glslang" "DiligentCore/ThirdParty/glslang")
 
         # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
         unset(CMAKE_DEBUG_POSTFIX CACHE)
@@ -59,7 +59,7 @@ if(VULKAN_SUPPORTED)
     set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Enable util module support.")
     set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "Skip SPIRV-Cross installation.")
     add_subdirectory(SPIRV-Cross)
-    set_directory_root_folder("SPIRV-Cross" "DiligentCore/External/SPIRV-Cross")
+    set_directory_root_folder("SPIRV-Cross" "DiligentCore/ThirdParty/SPIRV-Cross")
 
     list(APPEND INSTALL_TARGETS spirv-cross-core)
 

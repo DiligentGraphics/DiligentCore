@@ -281,7 +281,7 @@ endif()
 
 include(BuildUtils.cmake)
 
-add_subdirectory(External)
+add_subdirectory(ThirdParty)
 add_subdirectory(Utilities)
 add_subdirectory(Primitives)
 add_subdirectory(Platforms)

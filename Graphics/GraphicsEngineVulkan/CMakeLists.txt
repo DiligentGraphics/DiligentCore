@@ -164,7 +164,7 @@ add_dependencies(Diligent-GraphicsEngineVk-static Diligent-ProcessGenerateMipsVk
 target_include_directories(Diligent-GraphicsEngineVk-static 
 PRIVATE
     include
-    ../../External/vulkan
+    ../../ThirdParty/vulkan
 )
 
 set(PRIVATE_DEPENDENCIES 
@@ -177,13 +177,13 @@ set(PRIVATE_DEPENDENCIES
 )
 
 if(PLATFORM_WIN32)
-    find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../External/vulkan/libs/windows")
+    find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../ThirdParty/vulkan/libs/windows")
 elseif(PLATFORM_MACOS)
-    find_library(Vulkan_LIBRARY NAMES vulkan.1 vulkan PATHS "../../External/vulkan/libs/macOS")
+    find_library(Vulkan_LIBRARY NAMES vulkan.1 vulkan PATHS "../../ThirdParty/vulkan/libs/macOS")
 elseif(PLATFORM_IOS)
     set(Vulkan_LIBRARY ${MoltenVK_LIBRARY})
 elseif(PLATFORM_LINUX)
-    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../External/vulkan/libs/linux")
+    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../ThirdParty/vulkan/libs/linux")
 else()
     find_library(Vulkan_LIBRARY NAMES vulkan)
 endif()
