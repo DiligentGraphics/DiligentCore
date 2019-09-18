@@ -68,7 +68,7 @@ public:
     ///                          Static buffers (USAGE_STATIC) must be initialized at creation time.
     /// \param [out] ppBuffer  - Address of the memory location where the pointer to the
     ///                          buffer interface will be stored. The function calls AddRef(),
-    ///                          so that the new buffer will contain one refernce and must be
+    ///                          so that the new buffer will contain one reference and must be
     ///                          released by a call to Release().
     ///
     /// \remarks
@@ -85,7 +85,7 @@ public:
     /// \param [out] ppShader - Address of the memory location where the pointer to the
     ///                         shader interface will be stored. 
     ///                         The function calls AddRef(), so that the new object will contain 
-    ///                         one refernce.
+    ///                         one reference.
     virtual void CreateShader(const ShaderCreateInfo& ShaderCI, 
                               IShader**               ppShader) = 0;
     
@@ -99,7 +99,7 @@ public:
     /// \param [out] ppTexture - Address of the memory location where the pointer to the
     ///                          texture interface will be stored. 
     ///                          The function calls AddRef(), so that the new object will contain 
-    ///                          one refernce.
+    ///                          one reference.
     /// \remarks 
     /// To create all mip levels, set the TexDesc.MipLevels to zero.\n
     /// Multisampled resources cannot be initialzed with data when they are created. \n
@@ -121,7 +121,7 @@ public:
     /// \param [out] ppSampler - Address of the memory location where the pointer to the
     ///                          sampler interface will be stored. 
     ///                          The function calls AddRef(), so that the new object will contain 
-    ///                          one refernce.
+    ///                          one reference.
     /// \remark If an application attempts to create a sampler interface with the same attributes 
     ///         as an existing interface, the same interface will be returned.
     /// \note   In D3D11, 4096 unique sampler state objects can be created on a device at a time.        
@@ -134,7 +134,7 @@ public:
     /// \param [out] ppMapping   - Address of the memory location where the pointer to the
     ///                            resource mapping interface will be stored. 
     ///                            The function calls AddRef(), so that the new object will contain 
-    ///                            one refernce.
+    ///                            one reference.
     virtual void CreateResourceMapping( const ResourceMappingDesc& MappingDesc, 
                                         IResourceMapping**         ppMapping ) = 0;
 
@@ -144,7 +144,7 @@ public:
     /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
     ///                                pipeline state interface will be stored. 
     ///                                The function calls AddRef(), so that the new object will contain 
-    ///                                one refernce.
+    ///                                one reference.
     virtual void CreatePipelineState( const PipelineStateDesc& PipelineDesc, 
                                       IPipelineState**         ppPipelineState ) = 0;
 
@@ -155,7 +155,7 @@ public:
     /// \param [out] ppFence - Address of the memory location where the pointer to the
     ///                        fence interface will be stored. 
     ///                        The function calls AddRef(), so that the new object will contain 
-    ///                        one refernce.
+    ///                        one reference.
     virtual void CreateFence( const FenceDesc& Desc, 
                               IFence**         ppFence) = 0;
 

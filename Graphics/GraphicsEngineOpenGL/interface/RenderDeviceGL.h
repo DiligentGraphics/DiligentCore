@@ -51,7 +51,7 @@ public:
     /// \param [out] ppTexture    - Address of the memory location where the pointer to the
     ///                             texture interface will be stored. 
     ///                             The function calls AddRef(), so that the new object will contain 
-    ///                             one refernce.
+    ///                             one reference.
     /// \note  Diligent engine texture object does not take ownership of the GL resource, 
     ///        and the application must not destroy it while it is in use by the engine.
     virtual void CreateTextureFromGLHandle(Uint32             GLHandle,
@@ -69,7 +69,7 @@ public:
     /// \param [out] ppBuffer     - Address of the memory location where the pointer to the
     ///                             texture interface will be stored. 
     ///                             The function calls AddRef(), so that the new object will contain 
-    ///                             one refernce.
+    ///                             one reference.
     /// \note  Diligent engine buffer object does not take ownership of the GL resource, 
     ///        and the application must not destroy it while it is in use by the engine.
     virtual void CreateBufferFromGLHandle(Uint32            GLHandle,

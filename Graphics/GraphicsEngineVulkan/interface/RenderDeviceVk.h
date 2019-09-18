@@ -63,7 +63,7 @@ public:
     /// \param [out] ppTexture    - Address of the memory location where the pointer to the
     ///                             texture interface will be stored. 
     ///                             The function calls AddRef(), so that the new object will contain 
-    ///                             one refernce.
+    ///                             one reference.
     /// \note  Created texture object does not take ownership of the Vulkan image and will not
     ///        destroy it once released. The application must not destroy the image while it is 
     ///        in use by the engine.

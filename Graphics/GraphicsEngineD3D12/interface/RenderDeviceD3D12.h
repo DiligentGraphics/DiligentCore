@@ -62,7 +62,7 @@ public:
     /// \param [out] ppTexture     - Address of the memory location where the pointer to the
     ///                              texture interface will be stored. 
     ///                              The function calls AddRef(), so that the new object will contain 
-    ///                              one refernce.
+    ///                              one reference.
     virtual void CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture,
                                               RESOURCE_STATE  InitialState,
                                               ITexture**      ppTexture) = 0;
