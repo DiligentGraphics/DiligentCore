@@ -9,6 +9,7 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
                 RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin/$<CONFIG>"
         )
     endif()
+    install(FILES glew/LICENSE.txt DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME GLEW-License.txt)
 endif()
 
 if(VULKAN_SUPPORTED)
@@ -16,6 +17,7 @@ if(VULKAN_SUPPORTED)
     # do not really need any target from the project.
     #add_subdirectory(SPIRV-Headers)
     #set_directory_root_folder("SPIRV-Headers" "DiligentCore/ThirdParty/SPIRV-Headers")
+    install(FILES SPIRV-Headers/LICENSE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME SPIRV-Headers-License.txt)
 
     option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
 
@@ -32,8 +34,9 @@ if(VULKAN_SUPPORTED)
     # Exclude all other targets from build to save build time
     set(SPIRV_TOOLS_EXCLUDE_TARGETS SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared)
     set_target_properties(${SPIRV_TOOLS_EXCLUDE_TARGETS} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
-
+        
     set(INSTALL_TARGETS SPIRV-Tools SPIRV-Tools-opt)
+    install(FILES SPIRV-Tools/LICENSE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME SPIRV-Tools-License.txt)
 
     if(NOT ${DILIGENT_NO_GLSLANG})    
         set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Do not build glslang binaries")
@@ -46,6 +49,7 @@ if(VULKAN_SUPPORTED)
         unset(CMAKE_DEBUG_POSTFIX CACHE)
 
         list(APPEND INSTALL_TARGETS glslang OGLCompiler OSDependent SPIRV HLSL)
+        install(FILES glslang/LICENSE.txt DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME GLSLang-License.txt)
     endif()
 
     set(SPIRV_CROSS_CLI OFF CACHE BOOL "Build the CLI binary. Requires SPIRV_CROSS_STATIC.")
@@ -62,6 +66,7 @@ if(VULKAN_SUPPORTED)
     set_directory_root_folder("SPIRV-Cross" "DiligentCore/ThirdParty/SPIRV-Cross")
 
     list(APPEND INSTALL_TARGETS spirv-cross-core)
+    install(FILES SPIRV-Cross/LICENSE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME SPIRV-Cross-License.txt)
 
     if(INSTALL_DILIGENT_CORE)
         install(TARGETS ${INSTALL_TARGETS}
