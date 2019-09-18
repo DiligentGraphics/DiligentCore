@@ -30,14 +30,14 @@
 
 // Windows.h defines CreateDirectory and DeleteFile as macros.
 // So we need to do some tricks to avoid name mess.
-static bool CreateDirectoryImpl( const Diligent::Char *strPath );
-bool WindowsFileSystem::CreateDirectory( const Diligent::Char *strPath )
+static bool CreateDirectoryImpl( const Diligent::Char* strPath );
+bool WindowsFileSystem::CreateDirectory( const Diligent::Char* strPath )
 {
     return CreateDirectoryImpl(strPath);
 }
 
-static void DeleteFileImpl( const Diligent::Char *strPath );
-void WindowsFileSystem::DeleteFile( const Diligent::Char *strPath )
+static void DeleteFileImpl( const Diligent::Char* strPath );
+void WindowsFileSystem::DeleteFile( const Diligent::Char* strPath )
 {
    DeleteFileImpl(strPath);
 }
@@ -58,7 +58,7 @@ static std::vector<wchar_t> UTF8ToUTF16(LPCSTR lpUTF8)
     return wstr;
 }
 
-WindowsFile::WindowsFile( const FileOpenAttribs &OpenAttribs ) : 
+WindowsFile::WindowsFile( const FileOpenAttribs& OpenAttribs ) : 
     StandardFile(OpenAttribs, WindowsFileSystem::GetSlashSymbol())
 {
     VERIFY_EXPR(m_pFile == nullptr );
@@ -91,7 +91,7 @@ WindowsFile::WindowsFile( const FileOpenAttribs &OpenAttribs ) :
     }
 }
 
-WindowsFile* WindowsFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
+WindowsFile* WindowsFileSystem::OpenFile( const FileOpenAttribs& OpenAttribs )
 {
     WindowsFile *pFile = nullptr;
     try
@@ -106,7 +106,7 @@ WindowsFile* WindowsFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
     return pFile;
 }
 
-bool WindowsFileSystem::FileExists( const Char *strFilePath )
+bool WindowsFileSystem::FileExists( const Char* strFilePath )
 {
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
@@ -121,7 +121,7 @@ bool WindowsFileSystem::FileExists( const Char *strFilePath )
     return Exists;
 }
 
-static bool CreateDirectoryImpl( const Char *strPath )
+static bool CreateDirectoryImpl( const Char* strPath )
 {
     // Test all parent directories 
     std::string DirectoryPath = strPath;
@@ -142,9 +142,9 @@ static bool CreateDirectoryImpl( const Char *strPath )
     return true;
 }
 
-void WindowsFileSystem::ClearDirectory( const Char *strPath )
+void WindowsFileSystem::ClearDirectory( const Char* strPath )
 {
-    WIN32_FIND_DATA ffd;
+    WIN32_FIND_DATAA ffd;
     HANDLE hFind = INVALID_HANDLE_VALUE;
 
     // Find the first file in the directory.
@@ -169,16 +169,16 @@ void WindowsFileSystem::ClearDirectory( const Char *strPath )
             DeleteFileImpl( FileName.c_str() );
         }
     }
-    while( FindNextFile(hFind, &ffd) != 0 );
+    while( FindNextFileA(hFind, &ffd) != 0 );
 }
 
 
-static void DeleteFileImpl( const Char *strPath )
+static void DeleteFileImpl( const Char* strPath )
 {
      DeleteFileA(strPath);
 }
 
-bool WindowsFileSystem::PathExists( const Char *strPath )
+bool WindowsFileSystem::PathExists( const Char* strPath )
 {
     return PathFileExistsA(strPath) != FALSE;
 }
@@ -188,16 +188,16 @@ struct WndFindFileData : public FindFileData
     virtual const Char* Name()const override{return ffd.cFileName;}
     virtual bool IsDirectory()const override{return (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;}
 
-    WIN32_FIND_DATA ffd;
+    WIN32_FIND_DATAA ffd;
 
-    WndFindFileData(const WIN32_FIND_DATA& _ffd) : ffd(_ffd){}
+    WndFindFileData(const WIN32_FIND_DATAA& _ffd) : ffd(_ffd){}
 };
 
-std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char *SearchPattern)
+std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char* SearchPattern)
 {
     std::vector<std::unique_ptr<FindFileData>> SearchRes;
 
-    WIN32_FIND_DATA ffd;
+    WIN32_FIND_DATAA ffd;
     // Find the first file in the directory.
     auto hFind = FindFirstFileA( SearchPattern, &ffd);
 
@@ -211,7 +211,7 @@ std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char 
     {
         SearchRes.emplace_back( new WndFindFileData(ffd) );
     }
-    while( FindNextFile(hFind, &ffd) != 0 );
+    while( FindNextFileA(hFind, &ffd) != 0 );
 
     auto dwError = GetLastError();
     if (dwError != ERROR_NO_MORE_FILES) 
