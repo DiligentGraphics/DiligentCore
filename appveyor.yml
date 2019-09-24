@@ -76,7 +76,7 @@ before_build:
   - cd c:\projects\DiligentCore
   - echo %generator%
   - echo %cmake_args%
-  - cmake %cmake_args% -H. -B./cmk_build -G %generator%
+  - cmake %cmake_args% -S . -B ./cmk_build -G %generator%
 
 build:
   project: c:\projects\DiligentCore\cmk_build\INSTALL.vcxproj
