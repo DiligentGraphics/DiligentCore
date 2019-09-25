@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include <memory>
 #include "RenderDeviceBase.h"
 #include "GLContext.h"
 #include "VAOCache.h"
@@ -99,6 +100,8 @@ public:
     size_t GetCommandQueueCount()const { return 1; }
     Uint64 GetCommandQueueMask()const { return Uint64{1};}
 
+    void InitTexRegionRender();
+
 protected:
     friend class DeviceContextGLImpl;
     friend class TextureBaseGL;
@@ -122,7 +125,7 @@ protected:
 
     GPUInfo m_GPUInfo;
 
-    TexRegionRender m_TexRegionRender;
+    std::unique_ptr<TexRegionRender> m_pTexRegionRender;
     
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;

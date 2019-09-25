@@ -140,6 +140,9 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
         pDeviceContextOpenGL->QueryInterface(IID_DeviceContext, reinterpret_cast<IObject**>(ppImmediateContext) );
         pRenderDeviceOpenGL->SetImmediateContext(pDeviceContextOpenGL);
 
+        // Need to create immediate context first
+        pRenderDeviceOpenGL->InitTexRegionRender();
+
         TSwapChain *pSwapChainGL = NEW_RC_OBJ(RawMemAllocator, "SwapChainGLImpl instance", TSwapChain)(EngineCI, SCDesc, pRenderDeviceOpenGL, pDeviceContextOpenGL );
         pSwapChainGL->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
 

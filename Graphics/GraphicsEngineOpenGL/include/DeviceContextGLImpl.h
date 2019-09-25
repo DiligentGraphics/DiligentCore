@@ -162,6 +162,8 @@ public:
     
     void CommitRenderTargets();
 
+    void ResetVAO();
+
 protected:
     friend class BufferGLImpl;
     friend class TextureBaseGL;

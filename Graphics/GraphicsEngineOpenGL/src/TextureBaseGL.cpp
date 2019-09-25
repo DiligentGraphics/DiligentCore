@@ -53,10 +53,9 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*            pRefCounters,
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
 }
 
-static GLenum GetTextureInternalFormat(DeviceContextGLImpl *pDeviceContextGL, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& GLTex, TEXTURE_FORMAT TexFmtFromDesc)
+static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& GLTex, TEXTURE_FORMAT TexFmtFromDesc)
 {
-    auto &ContextState = pDeviceContextGL->GetContextState();
-    ContextState.BindTexture(-1, BindTarget, GLTex);
+    GLState.BindTexture(-1, BindTarget, GLTex);
 
     GLenum QueryBindTarget = BindTarget;
     if (BindTarget == GL_TEXTURE_CUBE_MAP || BindTarget == GL_TEXTURE_CUBE_MAP_ARRAY)
@@ -74,19 +73,17 @@ static GLenum GetTextureInternalFormat(DeviceContextGLImpl *pDeviceContextGL, GL
     else
         UNSUPPORTED("Texture format cannot be queried and must be provided by the texture description");
 #endif
-    ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GLState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
 
     return GlFormat;
 }
 
-static TextureDesc GetTextureDescFromGLHandle(DeviceContextGLImpl *pDeviceContextGL, TextureDesc TexDesc, GLuint GLHandle, GLenum BindTarget)
+static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDesc TexDesc, GLuint GLHandle, GLenum BindTarget)
 {
-    auto &ContextState = pDeviceContextGL->GetContextState();
-    
     VERIFY(BindTarget != GL_TEXTURE_CUBE_MAP_ARRAY, "Cubemap arrays are not currently supported");
 
     GLObjectWrappers::GLTextureObj TmpGLTexWrapper(true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLHandle));
-    ContextState.BindTexture(-1, BindTarget, TmpGLTexWrapper);
+    GLState.BindTexture(-1, BindTarget, TmpGLTexWrapper);
 
     GLenum QueryBindTarget = BindTarget;
     if (BindTarget == GL_TEXTURE_CUBE_MAP)
@@ -162,23 +159,23 @@ static TextureDesc GetTextureDescFromGLHandle(DeviceContextGLImpl *pDeviceContex
         VERIFY(TexDesc.MipLevels != 0, "Unable to query the number of mip levels, so it must be specified by the texture description.");
     }
     
-    ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GLState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
     return TexDesc;
 }
 
-TextureBaseGL::TextureBaseGL(IReferenceCounters *pRefCounters, 
-                             FixedBlockMemoryAllocator& TexViewObjAllocator, 
-                             RenderDeviceGLImpl *pDeviceGL, 
-                             DeviceContextGLImpl *pDeviceContext, 
-                             const TextureDesc& TexDesc, 
-                             GLuint GLTextureHandle,
-                             GLenum BindTarget,
-                             bool bIsDeviceInternal/* = false*/)  : 
-    TTextureBase( pRefCounters, TexViewObjAllocator, pDeviceGL, GetTextureDescFromGLHandle(pDeviceContext, TexDesc, GLTextureHandle, BindTarget), bIsDeviceInternal ),
+TextureBaseGL::TextureBaseGL(IReferenceCounters*            pRefCounters, 
+                             FixedBlockMemoryAllocator&     TexViewObjAllocator, 
+                             RenderDeviceGLImpl*            pDeviceGL, 
+                             GLContextState&                GLState, 
+                             const TextureDesc&             TexDesc, 
+                             GLuint                         GLTextureHandle,
+                             GLenum                         BindTarget,
+                             bool                           bIsDeviceInternal/* = false*/)  : 
+    TTextureBase( pRefCounters, TexViewObjAllocator, pDeviceGL, GetTextureDescFromGLHandle(GLState, TexDesc, GLTextureHandle, BindTarget), bIsDeviceInternal ),
     // Create texture object wrapper, but use external texture handle
     m_GlTexture(true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLTextureHandle)),
     m_BindTarget(BindTarget),
-    m_GLTexFormat( GetTextureInternalFormat(pDeviceContext, BindTarget, m_GlTexture, TexDesc.Format) )
+    m_GLTexFormat( GetTextureInternalFormat(GLState, BindTarget, m_GlTexture, TexDesc.Format) )
 {
 }
 
@@ -363,16 +360,16 @@ void TextureBaseGL::UpdateData(  GLContextState& CtxState,  Uint32 MipLevel, Uin
 //}
 //
 
-void TextureBaseGL :: CopyData(DeviceContextGLImpl *pDeviceCtxGL, 
-                               TextureBaseGL *pSrcTextureGL, 
-                               Uint32 SrcMipLevel,
-                               Uint32 SrcSlice,
-                               const Box *pSrcBox,
-                               Uint32 DstMipLevel,
-                               Uint32 DstSlice,
-                               Uint32 DstX,
-                               Uint32 DstY,
-                               Uint32 DstZ)
+void TextureBaseGL :: CopyData(DeviceContextGLImpl* pDeviceCtxGL, 
+                               TextureBaseGL*       pSrcTextureGL, 
+                               Uint32               SrcMipLevel,
+                               Uint32               SrcSlice,
+                               const Box*           pSrcBox,
+                               Uint32               DstMipLevel,
+                               Uint32               DstSlice,
+                               Uint32               DstX,
+                               Uint32               DstY,
+                               Uint32               DstZ)
 {
     const auto& SrcTexDesc = pSrcTextureGL->GetDesc();
 
@@ -435,7 +432,7 @@ void TextureBaseGL :: CopyData(DeviceContextGLImpl *pDeviceCtxGL,
             VERIFY( &TexViewObjAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
         }
 #endif
-        auto &TexRegionRender = pRenderDeviceGL->m_TexRegionRender;
+        auto& TexRegionRender = *pRenderDeviceGL->m_pTexRegionRender;
         TexRegionRender.SetStates(pDeviceCtxGL);
 
         // Create temporary SRV for the entire source texture

@@ -32,19 +32,17 @@
 namespace Diligent
 {
 
-Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters*         pRefCounters, 
-                                        FixedBlockMemoryAllocator&  TexViewObjAllocator,
-                                        RenderDeviceGLImpl*         pDeviceGL, 
-                                        DeviceContextGLImpl*        pDeviceContext, 
-                                        const TextureDesc&          TexDesc, 
-                                        const TextureData*          pInitData         /*= nullptr*/, 
-									    bool                        bIsDeviceInternal /*= false*/) : 
+Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*         pRefCounters, 
+                                       FixedBlockMemoryAllocator&  TexViewObjAllocator,
+                                       RenderDeviceGLImpl*         pDeviceGL, 
+                                       GLContextState&             GLState,
+                                       const TextureDesc&          TexDesc, 
+                                       const TextureData*          pInitData         /*= nullptr*/, 
+									   bool                        bIsDeviceInternal /*= false*/) : 
     TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc,
                   GL_TEXTURE_1D_ARRAY, pInitData, bIsDeviceInternal)
 {
-    auto &ContextState = pDeviceContext->GetContextState();
-    
-    ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
+    GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
     //                             levels             format          width             height
     glTexStorage2D(m_BindTarget, m_Desc.MipLevels, m_GLTexFormat, m_Desc.Width, m_Desc.ArraySize);
@@ -72,7 +70,7 @@ Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters*         pRefCounters
                     // we will get into TextureBaseGL::UpdateData(), because instance of Texture1DArray_OGL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class: 
-                    Texture1DArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, pInitData->pSubResources[Slice*m_Desc.MipLevels + Mip]);
+                    Texture1DArray_OGL::UpdateData(GLState, Mip, Slice, DstBox, pInitData->pSubResources[Slice*m_Desc.MipLevels + Mip]);
                 }
             }
         }
@@ -82,17 +80,17 @@ Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters*         pRefCounters
         }
     }
 
-    ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj( false ) );
+    GLState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj( false ) );
 }
 
-Texture1DArray_OGL::Texture1DArray_OGL( IReferenceCounters*         pRefCounters, 
-                                        FixedBlockMemoryAllocator&  TexViewObjAllocator,     
-                                        RenderDeviceGLImpl*         pDeviceGL, 
-                                        DeviceContextGLImpl*        pDeviceContext,
-                                        const TextureDesc&          TexDesc, 
-                                        GLuint                      GLTextureHandle,
-                                        bool                        bIsDeviceInternal) :
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, GL_TEXTURE_1D_ARRAY, bIsDeviceInternal)
+Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*         pRefCounters, 
+                                       FixedBlockMemoryAllocator&  TexViewObjAllocator,     
+                                       RenderDeviceGLImpl*         pDeviceGL, 
+                                       GLContextState&             GLState,
+                                       const TextureDesc&          TexDesc, 
+                                       GLuint                      GLTextureHandle,
+                                       bool                        bIsDeviceInternal) :
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, GLState, TexDesc, GLTextureHandle, GL_TEXTURE_1D_ARRAY, bIsDeviceInternal)
 {
 }
 

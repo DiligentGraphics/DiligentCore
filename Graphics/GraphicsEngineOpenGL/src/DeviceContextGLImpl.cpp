@@ -51,10 +51,10 @@ using namespace std;
 namespace Diligent
 {
     DeviceContextGLImpl::DeviceContextGLImpl(IReferenceCounters* pRefCounters, class RenderDeviceGLImpl* pDeviceGL, bool bIsDeferred) : 
-        TDeviceContextBase(pRefCounters, pDeviceGL, bIsDeferred),
-        m_ContextState                      (pDeviceGL),
-        m_CommitedResourcesTentativeBarriers(0),
-        m_DefaultFBO                        (false)
+        TDeviceContextBase                   (pRefCounters, pDeviceGL, bIsDeferred),
+        m_ContextState                       (pDeviceGL),
+        m_CommitedResourcesTentativeBarriers (0),
+        m_DefaultFBO                         (false)
     {
         m_BoundWritableTextures.reserve( 16 );
         m_BoundWritableBuffers.reserve( 16 );
@@ -1108,7 +1108,7 @@ namespace Diligent
         TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
 
         auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
-        pBufferGL->UpdateData(m_ContextState, Offset, Size, pData);
+        pBufferGL->UpdateData(this, Offset, Size, pData);
     }
 
     void DeviceContextGLImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
@@ -1196,5 +1196,11 @@ namespace Diligent
     void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
 
+    }
+
+    void DeviceContextGLImpl::ResetVAO()
+    {
+        m_bVAOIsUpToDate = false;
+        m_ContextState.BindVAO(GLObjectWrappers::GLVertexArrayObj{false});
     }
 }

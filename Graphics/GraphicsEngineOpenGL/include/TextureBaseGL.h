@@ -44,19 +44,19 @@ public:
     using TTextureBase = TextureBase<ITextureGL, RenderDeviceGLImpl, TextureViewGLImpl, FixedBlockMemoryAllocator>;
     using ViewImplType = TextureViewGLImpl;
 
-    TextureBaseGL(IReferenceCounters*           pRefCounters, 
-                  FixedBlockMemoryAllocator&    TexViewObjAllocator, 
-                  RenderDeviceGLImpl*           pDeviceGL, 
-                  const TextureDesc&            TexDesc, 
+    TextureBaseGL(IReferenceCounters*           pRefCounters,
+                  FixedBlockMemoryAllocator&    TexViewObjAllocator,
+                  RenderDeviceGLImpl*           pDeviceGL,
+                  const TextureDesc&            TexDesc,
                   GLenum                        BindTarget,
                   const TextureData*            pInitData         = nullptr, 
                   bool                          bIsDeviceInternal = false);
 
-    TextureBaseGL(IReferenceCounters*           pRefCounters, 
-                  FixedBlockMemoryAllocator&    TexViewObjAllocator, 
-                  class RenderDeviceGLImpl*     pDeviceGL, 
-                  class DeviceContextGLImpl*    pDeviceContext, 
-                  const TextureDesc&            TexDesc, 
+    TextureBaseGL(IReferenceCounters*           pRefCounters,
+                  FixedBlockMemoryAllocator&    TexViewObjAllocator,
+                  RenderDeviceGLImpl*           pDeviceGL,
+                  GLContextState&               GLState,
+                  const TextureDesc&            TexDesc,
                   GLuint                        GLTextureHandle,
                   GLenum                        BindTarget,
                   bool                          bIsDeviceInternal);

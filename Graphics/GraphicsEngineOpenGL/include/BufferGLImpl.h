@@ -45,13 +45,15 @@ public:
 
     BufferGLImpl(IReferenceCounters*        pRefCounters, 
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
-                 RenderDeviceGLImpl*        pDeviceGL, 
+                 RenderDeviceGLImpl*        pDeviceGL,
+                 DeviceContextGLImpl*       pCtxGL,
                  const BufferDesc&          BuffDesc, 
                  const BufferData*          pBuffData,
                  bool                       bIsDeviceInternal);
     BufferGLImpl(IReferenceCounters*        pRefCounters, 
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
-                 class RenderDeviceGLImpl*  pDeviceGL, 
+                 class RenderDeviceGLImpl*  pDeviceGL,
+                 DeviceContextGLImpl*       pCtxGL,
                  const BufferDesc&          BuffDesc, 
                  GLuint                     GLHandle,
                  bool                       bIsDeviceInternal);
@@ -60,7 +62,7 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
 
-    void UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData);
+    void UpdateData(DeviceContextGLImpl* pCtxGL, Uint32 Offset, Uint32 Size, const PVoid pData);
     void CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
     void Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData );
     void Unmap();

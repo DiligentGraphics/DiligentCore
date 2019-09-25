@@ -33,17 +33,16 @@
 namespace Diligent
 {
 
-Texture2D_OGL::Texture2D_OGL( IReferenceCounters*           pRefCounters, 
-                              FixedBlockMemoryAllocator&    TexViewObjAllocator,
-                              RenderDeviceGLImpl*           pDeviceGL, 
-                              DeviceContextGLImpl*          pDeviceContext, 
-                              const TextureDesc&            TexDesc, 
-                              const TextureData*            pInitData         /*= nullptr*/,
-							  bool                          bIsDeviceInternal /*= false*/) : 
+Texture2D_OGL::Texture2D_OGL( IReferenceCounters*          pRefCounters, 
+                              FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                              RenderDeviceGLImpl*          pDeviceGL,
+                              GLContextState&              GLState,
+                              const TextureDesc&           TexDesc,
+                              const TextureData*           pInitData         /*= nullptr*/,
+							  bool                         bIsDeviceInternal /*= false*/) : 
     TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D, pInitData, bIsDeviceInternal)
 {
-    auto &ContextState = pDeviceContext->GetContextState();
-    ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
+    GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
     if( m_Desc.SampleCount > 1 )
     {
@@ -94,7 +93,7 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters*           pRefCounters,
                     // we will get into TextureBaseGL::UpdateData(), because instance of Texture2D_OGL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class: 
-                    Texture2D_OGL::UpdateData( ContextState, Mip, 0, DstBox, pInitData->pSubResources[Mip] );
+                    Texture2D_OGL::UpdateData( GLState, Mip, 0, DstBox, pInitData->pSubResources[Mip] );
                 }
             }
             else
@@ -104,17 +103,17 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters*           pRefCounters,
         }
     }
 
-    ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GLState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }
 
-Texture2D_OGL::Texture2D_OGL( IReferenceCounters *pRefCounters, 
-                              FixedBlockMemoryAllocator& TexViewObjAllocator,     
-                              RenderDeviceGLImpl *pDeviceGL, 
-                              DeviceContextGLImpl *pDeviceContext,
-                              const TextureDesc& TexDesc, 
-                              GLuint GLTextureHandle,
-                              bool bIsDeviceInternal)  : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, 
+Texture2D_OGL::Texture2D_OGL( IReferenceCounters*           pRefCounters,
+                              FixedBlockMemoryAllocator&    TexViewObjAllocator,
+                              RenderDeviceGLImpl*           pDeviceGL,
+                              GLContextState&               GLState,
+                              const TextureDesc&            TexDesc,
+                              GLuint                        GLTextureHandle,
+                              bool                          bIsDeviceInternal) :
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, GLState, TexDesc, GLTextureHandle, 
                   TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D, bIsDeviceInternal)
 {
 }

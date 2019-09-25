@@ -36,14 +36,13 @@ namespace Diligent
 Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters*         pRefCounters, 
                                         FixedBlockMemoryAllocator&  TexViewObjAllocator,
                                         RenderDeviceGLImpl*         pDeviceGL, 
-                                        DeviceContextGLImpl*        pDeviceContext, 
+                                        GLContextState&             GLState,
                                         const TextureDesc&          TexDesc, 
                                         const TextureData*          pInitData         /*= nullptr*/,
 									    bool                        bIsDeviceInternal /*= false*/) : 
     TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY, pInitData, bIsDeviceInternal)
 {
-    auto &ContextState = pDeviceContext->GetContextState();
-    ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
+    GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
     if( m_Desc.SampleCount > 1 )
     {
@@ -90,7 +89,7 @@ Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters*         pRefCounters
                         // we will get into TextureBaseGL::UpdateData(), because instance of Texture2DArray_OGL
                         // is not fully constructed yet.
                         // To call the required function, we need to explicitly specify the class: 
-                        Texture2DArray_OGL::UpdateData(ContextState, Mip, Slice, DstBox, pInitData->pSubResources[Slice*m_Desc.MipLevels + Mip]);
+                        Texture2DArray_OGL::UpdateData(GLState, Mip, Slice, DstBox, pInitData->pSubResources[Slice*m_Desc.MipLevels + Mip]);
                     }
                 }
             }
@@ -101,17 +100,17 @@ Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters*         pRefCounters
         }
     }
 
-    ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GLState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }
 
 Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters*         pRefCounters, 
                                         FixedBlockMemoryAllocator&  TexViewObjAllocator,     
                                         RenderDeviceGLImpl*         pDeviceGL, 
-                                        DeviceContextGLImpl*        pDeviceContext,
+                                        GLContextState&             GLState,
                                         const TextureDesc&          TexDesc, 
                                         GLuint                      GLTextureHandle,
                                         bool                        bIsDeviceInternal) :
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, GLState, TexDesc, GLTextureHandle, 
                   TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY, bIsDeviceInternal)
 {
 }

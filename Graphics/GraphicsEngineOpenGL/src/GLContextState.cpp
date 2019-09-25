@@ -151,7 +151,6 @@ namespace Diligent
         GLuint VAOHandle = 0;
         if( UpdateBoundObject( m_VAOId, VAO, VAOHandle ) )
         {
-            VERIFY( VAOHandle, "VAO Handle is zero" );
             glBindVertexArray( VAOHandle );
             CHECK_GL_ERROR( "Failed to set VAO" );
         }

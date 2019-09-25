@@ -70,6 +70,7 @@ static GLenum GetBufferBindTarget(const BufferDesc& Desc)
 BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters, 
                            FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
                            RenderDeviceGLImpl*          pDeviceGL, 
+                           DeviceContextGLImpl*         pCtxGL,
                            const BufferDesc&            BuffDesc, 
                            const BufferData*            pBuffData /*= nullptr*/,
                            bool                         bIsDeviceInternal) : 
@@ -83,6 +84,13 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
         LOG_ERROR_AND_THROW("Static buffer must be initialized with data at creation time");
 
     auto Target = GetBufferBindTarget(BuffDesc);
+
+    if (Target == GL_ARRAY_BUFFER || Target == GL_ELEMENT_ARRAY_BUFFER)
+    {
+        // We must unbind VAO because otherwise we will break the bindings
+        pCtxGL->ResetVAO();
+    }
+
     // TODO: find out if it affects performance if the buffer is originally bound to one target
     // and then bound to another (such as first to GL_ARRAY_BUFFER and then to GL_UNIFORM_BUFFER)
     glBindBuffer(Target, m_GlBuffer);
@@ -138,11 +146,17 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
     glBindBuffer(Target, 0);
 }
  
-static BufferDesc GetBufferDescFromGLHandle(BufferDesc BuffDesc, GLuint BufferHandle)
+static BufferDesc GetBufferDescFromGLHandle(DeviceContextGLImpl* pCtxGL, BufferDesc BuffDesc, GLuint BufferHandle)
 {
     // NOTE: the operations in this function are merely for debug purposes.
     // If binding a buffer to a target does not work, these operations can be skipped
     GLenum BindTarget = GetBufferBindTarget(BuffDesc);
+
+    if (BindTarget == GL_ARRAY_BUFFER || BindTarget == GL_ELEMENT_ARRAY_BUFFER)
+    {
+        // We must unbind VAO because otherwise we will break the bindings
+        pCtxGL->ResetVAO();
+    }
 
     glBindBuffer(BindTarget, BufferHandle);
     CHECK_GL_ERROR("Failed to bind GL buffer to ", BindTarget, " target");
@@ -162,13 +176,14 @@ static BufferDesc GetBufferDescFromGLHandle(BufferDesc BuffDesc, GLuint BufferHa
     return BuffDesc;
 }
 
-BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters, 
-                           FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
-                           RenderDeviceGLImpl*          pDeviceGL, 
-                           const BufferDesc&            BuffDesc, 
+BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
+                           FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
+                           RenderDeviceGLImpl*          pDeviceGL,
+                           DeviceContextGLImpl*         pCtxGL,
+                           const BufferDesc&            BuffDesc,
                            GLuint                       GLHandle,
                            bool                         bIsDeviceInternal) :
-    TBufferBase( pRefCounters, BuffViewObjMemAllocator, pDeviceGL, GetBufferDescFromGLHandle(BuffDesc, GLHandle), bIsDeviceInternal),
+    TBufferBase( pRefCounters, BuffViewObjMemAllocator, pDeviceGL, GetBufferDescFromGLHandle(pCtxGL, BuffDesc, GLHandle), bIsDeviceInternal),
     // Attach to external buffer handle
     m_GlBuffer(true, GLObjectWrappers::GLBufferObjCreateReleaseHelper(GLHandle)),
     m_uiMapTarget(0),
@@ -184,14 +199,17 @@ BufferGLImpl::~BufferGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE( BufferGLImpl, IID_BufferGL, TBufferBase )
 
-void BufferGLImpl :: UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData)
+void BufferGLImpl :: UpdateData(DeviceContextGLImpl* pCtxGL, Uint32 Offset, Uint32 Size, const PVoid pData)
 {
+    // We must unbind VAO because otherwise we will break the bindings
+    pCtxGL->ResetVAO();
+
     BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT,// Reads or writes to buffer objects via any OpenGL API functions that allow 
                                      // modifying their contents will reflect data written by shaders prior to the barrier. 
                                      // Additionally, writes via these commands issued after the barrier will wait on 
                                      // the completion of any shader writes to the same memory initiated prior to the barrier.
-        CtxState);
+        pCtxGL->GetContextState());
     
     glBindBuffer(GL_ARRAY_BUFFER, m_GlBuffer);
     // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same 

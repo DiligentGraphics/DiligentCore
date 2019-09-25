@@ -31,21 +31,21 @@ namespace Diligent
 class TextureCube_OGL final : public TextureBaseGL
 {
 public:
-    TextureCube_OGL( IReferenceCounters*          pRefCounters, 
-                     FixedBlockMemoryAllocator&   TexViewObjAllocator,
-                     class RenderDeviceGLImpl*    pDeviceGL, 
-                     class DeviceContextGLImpl*   pDeviceContext, 
-                     const TextureDesc&           TexDesc, 
-                     const TextureData*           pInitData         = nullptr, 
-				     bool                         bIsDeviceInternal = false);
+    TextureCube_OGL(IReferenceCounters*          pRefCounters,
+                    FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                    class RenderDeviceGLImpl*    pDeviceGL,
+                    class GLContextState&        GLState,
+                    const TextureDesc&           TexDesc,
+                    const TextureData*           pInitData         = nullptr, 
+				    bool                         bIsDeviceInternal = false);
 
-    TextureCube_OGL( IReferenceCounters*          pRefCounters, 
-                     FixedBlockMemoryAllocator&   TexViewObjAllocator,     
-                     class RenderDeviceGLImpl*    pDeviceGL, 
-                     class DeviceContextGLImpl*   pDeviceContext, 
-                     const TextureDesc&           TexDesc, 
-                     GLuint                       GLTextureHandle,
-				     bool                         bIsDeviceInternal = false);
+    TextureCube_OGL(IReferenceCounters*          pRefCounters,
+                    FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                    class RenderDeviceGLImpl*    pDeviceGL,
+                    class GLContextState&        GLState,
+                    const TextureDesc&           TexDesc,
+                    GLuint                       GLTextureHandle,
+				    bool                         bIsDeviceInternal = false);
     ~TextureCube_OGL();
 
     virtual void UpdateData(class GLContextState&    CtxState,
@@ -54,8 +54,8 @@ public:
                             const Box&               DstBox,
                             const TextureSubResData& SubresData)override final;
 
-    virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc,
-                                      GLenum                        AttachmentPoint )override final;
+    virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
+                                     GLenum                        AttachmentPoint)override final;
 };
 
 }

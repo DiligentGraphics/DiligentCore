@@ -31,21 +31,21 @@ namespace Diligent
 class Texture2D_OGL final : public TextureBaseGL
 {
 public:
-    Texture2D_OGL( IReferenceCounters*          pRefCounters, 
-                   FixedBlockMemoryAllocator&   TexViewObjAllocator,
-                   class RenderDeviceGLImpl*    pDeviceGL, 
-                   class DeviceContextGLImpl*   pDeviceContext, 
-                   const TextureDesc&           TexDesc, 
-                   const TextureData*           pInitData         = nullptr, 
-				   bool                         bIsDeviceInternal = false);
+    Texture2D_OGL(IReferenceCounters*          pRefCounters,
+                  FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                  class RenderDeviceGLImpl*    pDeviceGL,
+                  class GLContextState&        GLState,
+                  const TextureDesc&           TexDesc,
+                  const TextureData*           pInitData         = nullptr, 
+				  bool                         bIsDeviceInternal = false);
 
-    Texture2D_OGL( IReferenceCounters*          pRefCounters, 
-                   FixedBlockMemoryAllocator&   TexViewObjAllocator,     
-                   class RenderDeviceGLImpl*    pDeviceGL, 
-                   class DeviceContextGLImpl*   pDeviceContext, 
-                   const TextureDesc&           TexDesc, 
-                   GLuint                       GLTextureHandle,
-				   bool                         bIsDeviceInternal = false);
+    Texture2D_OGL(IReferenceCounters*          pRefCounters,
+                  FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                  class RenderDeviceGLImpl*    pDeviceGL,
+                  class GLContextState&        GLState,
+                  const TextureDesc&           TexDesc,
+                  GLuint                       GLTextureHandle,
+				  bool                         bIsDeviceInternal = false);
     ~Texture2D_OGL();
 
     virtual void UpdateData( class GLContextState&    CtxState,

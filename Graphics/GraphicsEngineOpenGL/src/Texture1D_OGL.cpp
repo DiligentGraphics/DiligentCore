@@ -35,16 +35,13 @@ namespace Diligent
 Texture1D_OGL::Texture1D_OGL( IReferenceCounters*         pRefCounters, 
                               FixedBlockMemoryAllocator&  TexViewObjAllocator,     
                               RenderDeviceGLImpl*         pDeviceGL, 
-                              DeviceContextGLImpl*        pDeviceContext, 
+                              GLContextState&             GLState,
                               const TextureDesc&          TexDesc, 
                               const TextureData*          pInitData         /*= nullptr*/, 
 							  bool                        bIsDeviceInternal /*= false*/) : 
     TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_1D, pInitData, bIsDeviceInternal)
 {
-    auto *pDeviceContextGL = ValidatedCast<DeviceContextGLImpl>(pDeviceContext);
-    auto &ContextState = pDeviceContextGL->GetContextState();
-    
-    ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
+    GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
     //                             levels             format          width
     glTexStorage1D(m_BindTarget, m_Desc.MipLevels, m_GLTexFormat, m_Desc.Width);
@@ -70,7 +67,7 @@ Texture1D_OGL::Texture1D_OGL( IReferenceCounters*         pRefCounters,
                 // we will get into TextureBaseGL::UpdateData(), because instance of Texture1D_OGL
                 // is not fully constructed yet.
                 // To call the required function, we need to explicitly specify the class: 
-                Texture1D_OGL::UpdateData( ContextState, Mip, 0, DstBox, pInitData->pSubResources[Mip] );
+                Texture1D_OGL::UpdateData( GLState, Mip, 0, DstBox, pInitData->pSubResources[Mip] );
             }
         }
         else
@@ -79,17 +76,17 @@ Texture1D_OGL::Texture1D_OGL( IReferenceCounters*         pRefCounters,
         }
     }
 
-    ContextState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GLState.BindTexture(-1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }
 
 Texture1D_OGL::Texture1D_OGL( IReferenceCounters*           pRefCounters, 
                               FixedBlockMemoryAllocator&    TexViewObjAllocator,     
                               RenderDeviceGLImpl*           pDeviceGL, 
-                              DeviceContextGLImpl*          pDeviceContext,
+                              GLContextState&               GLState,
                               const TextureDesc&            TexDesc,
                               GLuint                        GLTextureHandle,
                               bool                          bIsDeviceInternal)  : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, GL_TEXTURE_1D, bIsDeviceInternal)
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, GLState, TexDesc, GLTextureHandle, GL_TEXTURE_1D, bIsDeviceInternal)
 {
 }
 

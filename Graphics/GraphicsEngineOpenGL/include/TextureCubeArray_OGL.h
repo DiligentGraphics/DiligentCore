@@ -31,19 +31,19 @@ namespace Diligent
 class TextureCubeArray_OGL final : public TextureBaseGL
 {
 public:
-    TextureCubeArray_OGL( IReferenceCounters*          pRefCounters, 
-                          FixedBlockMemoryAllocator&   TexViewObjAllocator,
-                          class RenderDeviceGLImpl*    pDeviceGL, 
-                          class DeviceContextGLImpl*   pDeviceContext, 
-                          const TextureDesc&           TexDesc, 
-                          const TextureData*           pInitData         = nullptr, 
-				          bool                         bIsDeviceInternal = false );
+    TextureCubeArray_OGL(IReferenceCounters*          pRefCounters,
+                         FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                         class RenderDeviceGLImpl*    pDeviceGL,
+                         class GLContextState&        GLState,
+                         const TextureDesc&           TexDesc,
+                         const TextureData*           pInitData         = nullptr, 
+				         bool                         bIsDeviceInternal = false );
 
-    TextureCubeArray_OGL( IReferenceCounters*          pRefCounters, 
-                          FixedBlockMemoryAllocator&   TexViewObjAllocator,     
-                          class RenderDeviceGLImpl*    pDeviceGL, 
-                          class DeviceContextGLImpl*   pDeviceContext, 
-                          const TextureDesc&           TexDesc, 
+    TextureCubeArray_OGL( IReferenceCounters*          pRefCounters,
+                          FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                          class RenderDeviceGLImpl*    pDeviceGL,
+                          class GLContextState&        GLState,
+                          const TextureDesc&           TexDesc,
                           GLuint                       GLTextureHandle,
 				          bool                         bIsDeviceInternal = false);
     ~TextureCubeArray_OGL();

@@ -72,8 +72,7 @@ RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters*        pRefCounters
         }
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
-    m_GLContext(InitAttribs, m_DeviceCaps, pSCDesc),
-    m_TexRegionRender(this)
+    m_GLContext(InitAttribs, m_DeviceCaps, pSCDesc)
 {
     GLint NumExtensions = 0;
     glGetIntegerv( GL_NUM_EXTENSIONS,& NumExtensions );
@@ -110,13 +109,22 @@ RenderDeviceGLImpl :: ~RenderDeviceGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE( RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceBase )
 
+void RenderDeviceGLImpl :: InitTexRegionRender()
+{
+    m_pTexRegionRender.reset(new TexRegionRender(this));
+}
+
 void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer **ppBuffer, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
         [&]()
         {
+            auto spDeviceContext = GetImmediateContext();
+            VERIFY(spDeviceContext, "Immediate device context has been destroyed");
+            auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
+
             BufferGLImpl *pBufferOGL( NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)
-                                                (m_BuffViewObjAllocator, this, BuffDesc, pBuffData, bIsDeviceInternal ) );
+                                                (m_BuffViewObjAllocator, this, pDeviceContextGL, BuffDesc, pBuffData, bIsDeviceInternal ) );
             pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferOGL->CreateDefaultViews();
             OnCreateDeviceObject( pBufferOGL );
@@ -135,8 +143,12 @@ void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const Buffe
     CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
         [&]()
         {
+            auto spDeviceContext = GetImmediateContext();
+            VERIFY(spDeviceContext, "Immediate device context has been destroyed");
+            auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
+
             BufferGLImpl *pBufferOGL( NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)
-                                                (m_BuffViewObjAllocator, this, BuffDesc, GLHandle, false ) );
+                                                (m_BuffViewObjAllocator, this, pDeviceContextGL, BuffDesc, GLHandle, false ) );
             pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferOGL->CreateDefaultViews();
             OnCreateDeviceObject( pBufferOGL );
@@ -170,7 +182,8 @@ void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
         {
             auto spDeviceContext = GetImmediateContext();
             VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-            auto pDeviceContext = spDeviceContext.RawPtr<DeviceContextGLImpl>();
+            auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
+
             const auto& FmtInfo = GetTextureFormatInfo( TexDesc.Format );
             if( !FmtInfo.Supported )
             {
@@ -182,37 +195,37 @@ void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const Textu
             {
                 case RESOURCE_DIM_TEX_1D:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
         
                 case RESOURCE_DIM_TEX_1D_ARRAY:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_2D:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
         
                 case RESOURCE_DIM_TEX_2D_ARRAY:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_3D:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, pData, bIsDeviceInternal);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );
@@ -238,43 +251,44 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const Textur
         {
             auto spDeviceContext = GetImmediateContext();
             VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-            auto pDeviceContext = spDeviceContext.RawPtr<DeviceContextGLImpl>();
+            auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
+
             TextureBaseGL *pTextureOGL = nullptr;
             switch(TexDesc.Type)
             {
                 case RESOURCE_DIM_TEX_1D:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
         
                 case RESOURCE_DIM_TEX_1D_ARRAY:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
                 case RESOURCE_DIM_TEX_2D:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
         
                 case RESOURCE_DIM_TEX_2D_ARRAY:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
                 case RESOURCE_DIM_TEX_3D:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
                     pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)
-                                            (m_TexViewObjAllocator, this, pDeviceContext, TexDesc, GLHandle);
+                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
                 default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );

@@ -33,10 +33,10 @@
 namespace Diligent
 {
 
-TextureCube_OGL::TextureCube_OGL( IReferenceCounters*           pRefCounters, 
+TextureCube_OGL::TextureCube_OGL( IReferenceCounters*           pRefCounters,
                                   FixedBlockMemoryAllocator&    TexViewObjAllocator,
-                                  class RenderDeviceGLImpl*     pDeviceGL, 
-                                  class DeviceContextGLImpl*    pDeviceContext, 
+                                  class RenderDeviceGLImpl*     pDeviceGL,
+                                  GLContextState&               GLState,
                                   const TextureDesc&            TexDesc, 
                                   const TextureData*            pInitData         /*= nullptr*/,
 							      bool                          bIsDeviceInternal /*= false*/) : 
@@ -44,8 +44,7 @@ TextureCube_OGL::TextureCube_OGL( IReferenceCounters*           pRefCounters,
 {
     VERIFY(m_Desc.SampleCount == 1, "Multisampled cubemap textures are not supported");
     
-    auto &ContextState = pDeviceContext->GetContextState();
-    ContextState.BindTexture(-1, m_BindTarget, m_GlTexture);
+    GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
     VERIFY( m_Desc.ArraySize == 6, "Cubemap texture is expected to have 6 slices");
     //                             levels             format          width         height
@@ -77,7 +76,7 @@ TextureCube_OGL::TextureCube_OGL( IReferenceCounters*           pRefCounters,
                     // we will get into TextureBaseGL::UpdateData(), because instance of TextureCube_OGL
                     // is not fully constructed yet.
                     // To call the required function, we need to explicitly specify the class: 
-                    TextureCube_OGL::UpdateData( ContextState, Mip, Face, DstBox, pInitData->pSubResources[Face*m_Desc.MipLevels + Mip] );
+                    TextureCube_OGL::UpdateData( GLState, Mip, Face, DstBox, pInitData->pSubResources[Face*m_Desc.MipLevels + Mip] );
                 }
             }
         }
@@ -87,17 +86,17 @@ TextureCube_OGL::TextureCube_OGL( IReferenceCounters*           pRefCounters,
         }
     }
 
-    ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GLState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
 }
 
-TextureCube_OGL::TextureCube_OGL( IReferenceCounters *pRefCounters, 
-                                  FixedBlockMemoryAllocator& TexViewObjAllocator,     
-                                  RenderDeviceGLImpl *pDeviceGL, 
-                                  DeviceContextGLImpl *pDeviceContext,
-                                  const TextureDesc& TexDesc, 
-                                  GLuint GLTextureHandle,
-                                  bool bIsDeviceInternal)  : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, pDeviceContext, TexDesc, GLTextureHandle, GL_TEXTURE_CUBE_MAP, bIsDeviceInternal)
+TextureCube_OGL::TextureCube_OGL( IReferenceCounters*           pRefCounters,
+                                  FixedBlockMemoryAllocator&    TexViewObjAllocator,
+                                  RenderDeviceGLImpl*           pDeviceGL,
+                                  GLContextState&               GLState,
+                                  const TextureDesc&            TexDesc,
+                                  GLuint                        GLTextureHandle,
+                                  bool                          bIsDeviceInternal)  : 
+    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, GLState, TexDesc, GLTextureHandle, GL_TEXTURE_CUBE_MAP, bIsDeviceInternal)
 {
 }
 
