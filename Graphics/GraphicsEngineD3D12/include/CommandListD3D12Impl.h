@@ -53,7 +53,15 @@ public:
     
     ~CommandListD3D12Impl()
     {
-        DEV_CHECK_ERR(m_pCmdContext == nullptr && m_pDeferredCtx == nullptr, "Destroying a command list that has not been executed");
+        if (m_pCmdContext != nullptr)
+        {
+            LOG_WARNING_MESSAGE("Destroying command list that has not been executed");
+            m_pDevice->DisposeCommandContext(std::move(m_pCmdContext));
+        }
+        else
+        {
+            VERIFY_EXPR(m_pDeferredCtx == nullptr);
+        }
     }
 
     RenderDeviceD3D12Impl::PooledCommandContext Close(RefCntAutoPtr<DeviceContextD3D12Impl>& pDeferredCtx)

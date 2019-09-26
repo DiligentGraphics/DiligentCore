@@ -147,8 +147,8 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
     CComPtr<ID3D12Device> d3d12Device;
     try
     {
-#ifdef DEVELOPMENT
 	    // Enable the D3D12 debug layer.
+        if (EngineCI.EnableDebugLayer)
 	    {
 		    CComPtr<ID3D12Debug> debugController;
 		    if (SUCCEEDED(D3D12GetDebugInterface(__uuidof(debugController), reinterpret_cast<void**>(static_cast<ID3D12Debug**>(&debugController)) )))
@@ -156,7 +156,6 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 			    debugController->EnableDebugLayer();
 		    }
 	    }
-#endif
 
 	    CComPtr<IDXGIFactory4> factory;
         HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)) );
@@ -199,7 +198,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
             CHECK_D3D_RESULT_THROW(hr, "Failed to crate warp device");
         }
 
-#ifdef DEVELOPMENT
+        if (EngineCI.EnableDebugLayer)
         {
 	        CComPtr<ID3D12InfoQueue> pInfoQueue;
             hr = d3d12Device->QueryInterface(__uuidof(pInfoQueue), reinterpret_cast<void**>(static_cast<ID3D12InfoQueue**>(&pInfoQueue)));
@@ -235,7 +234,6 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
                 VERIFY(SUCCEEDED(hr), "Failed to set break on error");
             }
         }
-#endif
 
 #ifndef RELEASE
 	    // Prevent the GPU from overclocking or underclocking to get consistent timings

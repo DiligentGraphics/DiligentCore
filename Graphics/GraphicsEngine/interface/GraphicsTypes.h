@@ -1351,6 +1351,9 @@ namespace Diligent
         /// Id of the hardware adapter the engine should be initialized on
         Uint32 AdapterId = DefaultAdapterId;
 
+        /// Enable Direct3D12 debug layer.
+        bool EnableDebugLayer = false;
+
         /// Size of the CPU descriptor heap allocations for different heap types.
         Uint32 CPUDescriptorHeapAllocationSize[4] = 
         {
@@ -1403,7 +1406,7 @@ namespace Diligent
     /// Attributes specific to Vulkan engine
     struct EngineVkCreateInfo : public EngineCreateInfo
     {
-        /// Enable validation layers. Validation is always enabled in Debug mode
+        /// Enable Vulkan validation layers.
         bool EnableValidation = false;
         
         /// Number of global Vulkan extensions

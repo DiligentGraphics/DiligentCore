@@ -22,6 +22,7 @@
 * Added `IDeviceContext::WaitForFence()` method (API Version 240027)
 * Added `IDeviceContext::WaitForIdle()` method (API Version 240028)
 * Added `IRenderDevice::IdleGPU()` method (API Version 240029)
+* Added `EngineD3D12CreateInfo::EnableDebugLayer` member (API Version 240030)
 
 ## v2.4.b
 

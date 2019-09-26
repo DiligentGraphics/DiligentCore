@@ -606,6 +606,8 @@ namespace Diligent
 
         m_State = State{};
 
+        // Setting pipeline state to null makes sure that render targets and other
+        // states will be restored in the command list next time a PSO is bound.
         m_pPipelineState = nullptr; 
     }
 
