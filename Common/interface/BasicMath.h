@@ -1710,6 +1710,12 @@ struct Quaternion
         *this = Mul(*this, rhs);
         return *this;
     }
+
+    float3 RotateVector(const float3& v)const
+    {
+        const float3 axis(q.x, q.y, q.z);
+        return v + 2.f * cross(axis, cross(axis, v) + q.w * v);
+    }
 };
 
 inline Quaternion operator* (const Quaternion& q1, const Quaternion& q2)
