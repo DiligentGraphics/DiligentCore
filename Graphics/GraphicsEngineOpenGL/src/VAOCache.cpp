@@ -71,27 +71,27 @@ void VAOCache::OnDestroyPSO(IPipelineState *pPSO)
     m_PSOToKey.erase(EqualRange.first, EqualRange.second);
 }
 
-const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO,
-                                                            IBuffer *pIndexBuffer,
+const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState*                pPSO,
+                                                            IBuffer*                       pIndexBuffer,
                                                             VertexStreamInfo<BufferGLImpl> VertexStreams[],
-                                                            Uint32 NumVertexStreams,
-                                                            GLContextState &GLContextState )
+                                                            Uint32                         NumVertexStreams,
+                                                            GLContextState&                GLContextState )
 {
     // Lock the cache
     ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
 
-    IBuffer* VertexBuffers[MaxBufferSlots];
+    BufferGLImpl* VertexBuffers[MaxBufferSlots];
     for (Uint32 s = 0; s < NumVertexStreams; ++s)
         VertexBuffers[s] = nullptr;
     
     // Get layout
-    auto *pPSOGL = ValidatedCast<PipelineStateGLImpl>(pPSO);
-
+    auto* pPSOGL         = ValidatedCast<PipelineStateGLImpl>(pPSO);
+    auto* pIndexBufferGL = ValidatedCast<BufferGLImpl>(pIndexBuffer);
     const auto &InputLayout = pPSOGL->GetDesc().GraphicsPipeline.InputLayout;
     const LayoutElement *LayoutElems =  InputLayout.LayoutElements;
     Uint32 NumElems = InputLayout.NumElements;
     // Construct the key
-    VAOCacheKey Key(pPSO, pIndexBuffer);
+    VAOCacheKey Key(pPSOGL->GetUniqueID(), pIndexBufferGL ? pIndexBufferGL->GetUniqueID() : 0);
     
     {
         auto LayoutIt = LayoutElems;
@@ -113,10 +113,10 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
                 Key.Streams[s] = VAOCacheKey::StreamAttribs{};
             Key.NumUsedSlots = MaxUsedSlot;
 
-            auto &CurrStream = VertexStreams[BuffSlot];
-            auto Stride = pPSOGL->GetBufferStride(BuffSlot);
-            auto &pCurrBuf = VertexBuffers[BuffSlot];
-            auto &CurrStreamKey = Key.Streams[BuffSlot];
+            auto& CurrStream    = VertexStreams[BuffSlot];
+            auto  Stride        = pPSOGL->GetBufferStride(BuffSlot);
+            auto& pCurrBuf      = VertexBuffers[BuffSlot];
+            auto& CurrStreamKey = Key.Streams[BuffSlot];
             if (pCurrBuf == nullptr)
             {
                 pCurrBuf = CurrStream.pBuffer;
@@ -129,23 +129,22 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
                                                        // from the GL_VERTEX_ARRAY_BUFFER_BINDING bindings
                     GLContextState);
 
-                CurrStreamKey.pBuffer = pCurrBuf;
-                CurrStreamKey.Stride = Stride;
-                CurrStreamKey.Offset = CurrStream.Offset;
+                CurrStreamKey.BufferUId = pCurrBuf ? pCurrBuf->GetUniqueID() : 0;
+                CurrStreamKey.Stride    = Stride;
+                CurrStreamKey.Offset    = CurrStream.Offset;
             }
             else
             {
                 VERIFY(pCurrBuf == CurrStream.pBuffer, "Buffer no longer exists");
-                VERIFY(CurrStreamKey.pBuffer == pCurrBuf, "Unexpected buffer");
                 VERIFY(CurrStreamKey.Stride == Stride, "Unexpected buffer stride");
                 VERIFY(CurrStreamKey.Offset == CurrStream.Offset, "Unexpected buffer offset");
             }
         }
     }
 
-    if( pIndexBuffer )
+    if (pIndexBuffer)
     {
-        ValidatedCast<BufferGLImpl>(pIndexBuffer)->BufferMemoryBarrier(
+        pIndexBufferGL->BufferMemoryBarrier(
             GL_ELEMENT_ARRAY_BARRIER_BIT,// Vertex array indices sourced from buffer objects after the barrier 
                                          // will reflect data written by shaders prior to the barrier.
                                          // The buffer objects affected by this bit are derived from the
@@ -215,10 +214,10 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState *pPSO
         auto NewElems = m_Cache.emplace( std::make_pair(Key, std::move(NewVAO)) );
         // New element must be actually inserted
         VERIFY( NewElems.second, "New element was not inserted into the cache" ); 
-        m_PSOToKey.insert( std::make_pair(Key.pPSO, Key) );
+        m_PSOToKey.insert( std::make_pair(pPSO, Key) );
         for(Uint32 Slot = 0; Slot < Key.NumUsedSlots; ++Slot)
         {
-            auto *pCurrBuff = Key.Streams[Slot].pBuffer;
+            auto* pCurrBuff = VertexBuffers[Slot];
             if( pCurrBuff )
                 m_BuffToKey.insert( std::make_pair(pCurrBuff, Key) );
         }

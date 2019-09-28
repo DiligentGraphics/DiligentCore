@@ -62,35 +62,36 @@ private:
     // This structure is used as the key to find VAO
     struct VAOCacheKey
     {
-        VAOCacheKey(const IPipelineState* pso, const IBuffer* indBuffer) : 
-            pPSO(pso),
-            pIndexBuffer(indBuffer),
-            NumUsedSlots(0)
+        VAOCacheKey(UniqueIdentifier pso_id, UniqueIdentifier ib_id) : 
+            PSOUId         (pso_id),
+            IndexBufferUId (ib_id),
+            NumUsedSlots   (0)
         {}
 
-        // Note that the the pointers are used for ordering only
-        // They are not used to access the objects
+        // Note that using pointers is unsafe as they may (and will) be reused:
+        // pBuffer->Release();
+        // pDevice->CreateBuffer(&pBuffer); // Returns same pointer
 
-        // VAO encapsulates both input layout and all bound buffers
+        // VAO encapsulates both input layout and all bound buffers.
         // PSO uniqly defines the layout (attrib pointers, divisors, etc.),
-        // so we do not need to add individual layout elements to the key
-        // The keey needs to contain all bound buffers
-        const IPipelineState* const pPSO;
-        const IBuffer* const pIndexBuffer;
-        Uint32 NumUsedSlots;
+        // so we do not need to add individual layout elements to the key.
+        // The key needs to contain all bound buffers.
+        const UniqueIdentifier PSOUId;
+        const UniqueIdentifier IndexBufferUId;
+        Uint32                 NumUsedSlots;
         struct StreamAttribs
         {
-            const IBuffer* pBuffer;
-            Uint32 Stride;
-            Uint32 Offset;
+            UniqueIdentifier BufferUId;
+            Uint32           Stride;
+            Uint32           Offset;
         }Streams[MaxBufferSlots];
         
         mutable size_t Hash = 0;
 
         bool operator == (const VAOCacheKey &Key)const
         {
-            return pPSO            == Key.pPSO            &&
-                   pIndexBuffer    == Key.pIndexBuffer    &&
+            return PSOUId          == Key.PSOUId          &&
+                   IndexBufferUId  == Key.IndexBufferUId  &&
                    NumUsedSlots    == Key.NumUsedSlots    &&
                    std::memcmp(Streams, Key.Streams, sizeof(StreamAttribs) * NumUsedSlots) == 0;
         }
@@ -103,18 +104,13 @@ private:
             if (Key.Hash == 0)
             {
                 std::size_t Seed = 0;
-                HashCombine(Seed, Key.pPSO, Key.NumUsedSlots);
-                if (Key.pIndexBuffer)
-                    HashCombine(Seed, Key.pIndexBuffer);
+                HashCombine(Seed, Key.PSOUId, Key.IndexBufferUId, Key.NumUsedSlots);
                 for (Uint32 slot = 0; slot < Key.NumUsedSlots; ++slot)
                 {
                     auto &CurrStream = Key.Streams[slot];
-                    if (CurrStream.pBuffer)
-                    {
-                        HashCombine(Seed, CurrStream.pBuffer);
-                        HashCombine(Seed, CurrStream.Offset);
-                        HashCombine(Seed, CurrStream.Stride);
-                    }
+                    HashCombine(Seed, CurrStream.BufferUId);
+                    HashCombine(Seed, CurrStream.Offset);
+                    HashCombine(Seed, CurrStream.Stride);
                 }
                 Key.Hash = Seed;
             }
