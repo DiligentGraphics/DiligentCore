@@ -1640,13 +1640,16 @@ struct Quaternion
 
     static Quaternion RotationFromAxisAngle(const float3& axis, float angle)
     {
-        Quaternion out;
+        Quaternion out{0, 0, 0, 1};
         float norm = length(axis);
-        float sina2 = sin(0.5f * angle);
-        out.q[0] = sina2 * axis[0] / norm;
-        out.q[1] = sina2 * axis[1] / norm;
-        out.q[2] = sina2 * axis[2] / norm;
-        out.q[3] = cos(0.5f * angle);
+        if (norm != 0)
+        {
+            float sina2 = sin(0.5f * angle);
+            out.q[0] = sina2 * axis[0] / norm;
+            out.q[1] = sina2 * axis[1] / norm;
+            out.q[2] = sina2 * axis[2] / norm;
+            out.q[3] = cos(0.5f * angle);
+        }
         return out;
     }
 
