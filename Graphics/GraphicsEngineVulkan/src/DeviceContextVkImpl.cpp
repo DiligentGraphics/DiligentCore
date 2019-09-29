@@ -974,6 +974,9 @@ namespace Diligent
     {
         VERIFY(m_pPipelineState && m_pPipelineState->GetDesc().GraphicsPipeline.RasterizerDesc.ScissorEnable, "Scissor test must be enabled in the graphics pipeline");
 
+        if (m_NumScissorRects == 0)
+            return; // Scissors have not been set in the context yet
+
         VkRect2D VkScissorRects[MaxViewports]; // Do not waste time initializing array with zeroes
         for (Uint32 sr = 0; sr < m_NumScissorRects; ++sr)
         {
