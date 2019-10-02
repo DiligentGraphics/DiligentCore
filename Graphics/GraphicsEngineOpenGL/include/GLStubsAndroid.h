@@ -972,6 +972,10 @@ void UnsupportedGLFunctionStub( const T &Name )
     typedef void (GL_APIENTRY* PFNGLGETPROGRAMRESOURCENAMEPROC) (GLuint program, GLenum programInterface, GLuint index, GLsizei bufSize, GLsizei* length, GLchar *name);
     extern PFNGLGETPROGRAMRESOURCENAMEPROC glGetProgramResourceName;
 
+    #define LOAD_GL_GET_PROGRAM_RESOURCE_INDEX
+    typedef GLuint (GL_APIENTRY* PFNGLGETPROGRAMRESOURCEINDEXPROC) (GLuint program, GLenum programInterface, const GLchar *name);
+    extern PFNGLGETPROGRAMRESOURCEINDEXPROC glGetProgramResourceIndex;
+
     #define LOAD_GL_GET_PROGRAM_RESOURCEIV
     typedef void (GL_APIENTRY* PFNGLGETPROGRAMRESOURCEIVPROC) (GLuint program, GLenum programInterface, GLuint index, GLsizei propCount, const GLenum* props, GLsizei bufSize, GLsizei *length, GLint *params);
     extern PFNGLGETPROGRAMRESOURCEIVPROC glGetProgramResourceiv;
@@ -979,6 +983,10 @@ void UnsupportedGLFunctionStub( const T &Name )
     #define LOAD_GET_TEX_LEVEL_PARAMETER_IV
     typedef void (GL_APIENTRY* PFNGLGETTEXLEVELPARAMETERIVPROC) (GLenum target, GLint level, GLenum pname, GLint *params);
     extern PFNGLGETTEXLEVELPARAMETERIVPROC glGetTexLevelParameteriv;
+
+    #define LOAD_GL_SHADER_STORAGE_BLOCK_BINDING
+    typedef void (GL_APIENTRY* PFNGLSHADERSTORAGEBLOCKBINDINGPROC) (GLuint program, GLuint storageBlockIndex, GLuint storageBlockBinding);
+    extern PFNGLSHADERSTORAGEBLOCKBINDINGPROC glShaderStorageBlockBinding;
 
 #endif //GL_ES_VERSION_3_1
 

@@ -149,7 +149,7 @@ namespace Diligent
             UniformBufferInfo            (const UniformBufferInfo&)  = delete;
             UniformBufferInfo& operator= (const UniformBufferInfo&)  = delete;
             UniformBufferInfo            (      UniformBufferInfo&&) = default;
-            UniformBufferInfo& operator= (      UniformBufferInfo&&) = default;
+            UniformBufferInfo& operator= (      UniformBufferInfo&&) = delete;
 
             UniformBufferInfo(IObject&                        _Owner,
                               const Char*                     _Name, 
@@ -184,7 +184,7 @@ namespace Diligent
             SamplerInfo            (const SamplerInfo&)  = delete;
             SamplerInfo& operator= (const SamplerInfo&)  = delete;
             SamplerInfo            (      SamplerInfo&&) = default;
-            SamplerInfo& operator= (      SamplerInfo&&) = default;
+            SamplerInfo& operator= (      SamplerInfo&&) = delete;
 
             SamplerInfo(IObject&                        _Owner,
                         const Char*                     _Name, 
@@ -226,7 +226,7 @@ namespace Diligent
             ImageInfo            (const ImageInfo&)  = delete;
             ImageInfo& operator= (const ImageInfo&)  = delete;
             ImageInfo            (      ImageInfo&&) = default;
-            ImageInfo& operator= (      ImageInfo&&) = default;
+            ImageInfo& operator= (      ImageInfo&&) = delete;
 
             ImageInfo(IObject&                        _Owner,
                       const Char*                     _Name, 
@@ -265,7 +265,7 @@ namespace Diligent
             StorageBlockInfo            (const StorageBlockInfo&)  = delete;
             StorageBlockInfo& operator= (const StorageBlockInfo&)  = delete;
             StorageBlockInfo            (      StorageBlockInfo&&) = default;
-            StorageBlockInfo& operator= (      StorageBlockInfo&&) = default;
+            StorageBlockInfo& operator= (      StorageBlockInfo&&) = delete;
 
             StorageBlockInfo(IObject&                        _Owner,
                              const Char*                     _Name, 

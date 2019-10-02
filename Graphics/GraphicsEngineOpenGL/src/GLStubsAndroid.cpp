@@ -84,6 +84,15 @@
     DECLARE_GL_FUNCTION( glGetProgramResourceName, PFNGLGETPROGRAMRESOURCENAMEPROC, GLuint program, GLenum programInterface, GLuint index, GLsizei bufSize, GLsizei* length, GLchar *name )
 #endif
 
+#ifdef LOAD_GL_GET_PROGRAM_RESOURCE_INDEX
+    PFNGLGETPROGRAMRESOURCEINDEXPROC glGetProgramResourceIndex = nullptr;
+    GLuint glGetProgramResourceIndexStub(GLuint program, GLenum programInterface, const GLchar *name)
+    {
+        UnsupportedGLFunctionStub("glGetProgramResourceIndex");
+        return 0;
+    }
+#endif
+
 #ifdef LOAD_GL_GET_PROGRAM_RESOURCEIV
     DECLARE_GL_FUNCTION( glGetProgramResourceiv, PFNGLGETPROGRAMRESOURCEIVPROC, GLuint program, GLenum programInterface, GLuint index, GLsizei propCount, const GLenum* props, GLsizei bufSize, GLsizei *length, GLint *params )
 #endif
@@ -150,6 +159,10 @@
 
 #ifdef LOAD_GET_TEX_LEVEL_PARAMETER_IV
     DECLARE_GL_FUNCTION( glGetTexLevelParameteriv, PFNGLGETTEXLEVELPARAMETERIVPROC, GLenum target, GLint level, GLenum pname, GLint *params )
+#endif
+
+#ifdef LOAD_GL_SHADER_STORAGE_BLOCK_BINDING
+    DECLARE_GL_FUNCTION( glShaderStorageBlockBinding, PFNGLSHADERSTORAGEBLOCKBINDINGPROC, GLuint program, GLuint storageBlockIndex, GLuint storageBlockBinding )
 #endif
 
 #ifdef LOAD_GL_TEX_STORAGE_3D_MULTISAMPLE
@@ -240,6 +253,10 @@ Func = (FuncType)eglGetProcAddress( #Func );\
     LOAD_GL_FUNCTION( glGetProgramResourceName, PFNGLGETPROGRAMRESOURCENAMEPROC )
 #endif
 
+#ifdef LOAD_GL_GET_PROGRAM_RESOURCE_INDEX
+    LOAD_GL_FUNCTION( glGetProgramResourceIndex, PFNGLGETPROGRAMRESOURCEINDEXPROC )
+#endif
+
 #ifdef LOAD_GL_GET_PROGRAM_RESOURCEIV
     LOAD_GL_FUNCTION( glGetProgramResourceiv, PFNGLGETPROGRAMRESOURCEIVPROC )
 #endif
@@ -307,6 +324,10 @@ Func = (FuncType)eglGetProcAddress( #Func );\
 
 #ifdef LOAD_GET_TEX_LEVEL_PARAMETER_IV
     LOAD_GL_FUNCTION(glGetTexLevelParameteriv, PFNGLGETTEXLEVELPARAMETERIVPROC)
+#endif
+
+#ifdef LOAD_GL_SHADER_STORAGE_BLOCK_BINDING
+    LOAD_GL_FUNCTION(glShaderStorageBlockBinding, PFNGLSHADERSTORAGEBLOCKBINDINGPROC)
 #endif
 
 #ifdef LOAD_GL_TEX_STORAGE_3D_MULTISAMPLE

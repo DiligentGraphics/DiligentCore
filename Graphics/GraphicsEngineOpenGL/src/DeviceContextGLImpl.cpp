@@ -655,8 +655,18 @@ namespace Diligent
                             glBindBufferRange(GL_SHADER_STORAGE_BUFFER, StorageBufferBindSlot, pBufferGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
                             CHECK_GL_ERROR("Failed to bind shader storage buffer");
 
-                            glShaderStorageBlockBinding(GLProgID, SB.SBIndex + ArrInd, StorageBufferBindSlot);
-                            CHECK_GL_ERROR("glUniformBlockBinding() failed");
+                            if (glShaderStorageBlockBinding)
+                            {
+                                glShaderStorageBlockBinding(GLProgID, SB.SBIndex + ArrInd, StorageBufferBindSlot);
+                                CHECK_GL_ERROR("glShaderStorageBlockBinding() failed");
+                            }
+                            else
+                            {
+                                LOG_WARNING_MESSAGE_ONCE("glShaderStorageBlockBinding is not available on this device and "
+                                                         "the engine is unable to automatically assign shader storage block bindindg points. "
+                                                         "To make shader storage blocks work properly, all binding points must be explicitly assigned "
+                                                         "in the shader starting from 0 and proceeding in the storage block declaration order.");
+                            }
 
                             ++StorageBufferBindSlot;
 
