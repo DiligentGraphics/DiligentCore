@@ -168,7 +168,10 @@ private:
             jclass cls_File       = env->FindClass("java/io/File");
             jmethodID mid_getPath = env->GetMethodID(cls_File, "getPath", "()Ljava/lang/String;");
             obj_Path              = (jstring)env->CallObjectMethod(obj_File, mid_getPath);
+            env->DeleteLocalRef(cls_File);
+            env->DeleteLocalRef(obj_File);
         }
+        env->DeleteLocalRef(cls_Env);
         return obj_Path;
     }
 
