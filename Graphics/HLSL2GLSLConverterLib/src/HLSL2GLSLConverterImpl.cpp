@@ -1423,12 +1423,20 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessConstantBuffer( TokenListT
     }
 }
 
-void HLSL2GLSLConverterImpl::ConversionStream::ProcessStructuredBuffer(TokenListType::iterator &Token)
+void HLSL2GLSLConverterImpl::ConversionStream::ProcessStructuredBuffer(TokenListType::iterator& Token, Uint32& ShaderStorageBlockBinding)
 {
     // StructuredBuffer<DataType> g_Data;
     // ^
     VERIFY_EXPR( Token->Type == TokenType::kw_StructuredBuffer || Token->Type == TokenType::kw_RWStructuredBuffer );
-    Token->Literal = "layout(std140) buffer";
+    if (Token->Type == TokenType::kw_RWStructuredBuffer)
+    {
+        std::stringstream ss;
+        ss << "layout(std140, binding=" << ShaderStorageBlockBinding << ") buffer";
+        Token->Literal = ss.str();
+        ++ShaderStorageBlockBinding;
+    }
+    else
+        Token->Literal = "layout(std140) buffer";
     // buffer<DataType> g_Data;
     // ^
     
@@ -4481,6 +4489,8 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
     m_bUseInOutLocationQualifiers = UseInOutLocationQualifiers;
     TokenListType TokensCopy(m_bPreserveTokens ? m_Tokens : TokenListType());
 
+    Uint32 ShaderStorageBlockBinding = 0;
+
     std::unordered_map<String, bool> SamplersHash;
     auto Token = m_Tokens.begin();
     // Process constant buffers, fix floating point constants and 
@@ -4495,7 +4505,7 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
 
             case TokenType::kw_RWStructuredBuffer:
             case TokenType::kw_StructuredBuffer:
-                ProcessStructuredBuffer( Token );
+                ProcessStructuredBuffer( Token, ShaderStorageBlockBinding );
             break;
                         
             case TokenType::kw_struct:

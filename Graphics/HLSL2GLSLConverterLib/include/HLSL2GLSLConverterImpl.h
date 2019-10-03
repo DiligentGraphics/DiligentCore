@@ -258,7 +258,7 @@ namespace Diligent
             void RegisterStruct(TokenListType::iterator&    Token);
 
             void ProcessConstantBuffer(TokenListType::iterator& Token);
-            void ProcessStructuredBuffer(TokenListType::iterator& Token);
+            void ProcessStructuredBuffer(TokenListType::iterator& Token, Uint32& ShaderStorageBlockBinding);
             void ParseSamplers(TokenListType::iterator& ScopeStart, SamplerHashType& SamplersHash);
             void ProcessTextureDeclaration(TokenListType::iterator& Token, const std::vector<SamplerHashType>& SamplersHash, ObjectsTypeHashType& Objects, const char* SamplerSuffix);
             bool ProcessObjectMethod(TokenListType::iterator& Token, const TokenListType::iterator& ScopeStart, const TokenListType::iterator& ScopeEnd);
