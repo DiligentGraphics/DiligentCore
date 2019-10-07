@@ -45,12 +45,12 @@ class BufferViewGLImpl final : public BufferViewBase<IBufferViewGL, RenderDevice
 public:
     using TBuffViewBase = BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>;
 
-    BufferViewGLImpl( IReferenceCounters *pRefCounters,
-                      RenderDeviceGLImpl *pDevice, 
-                      IDeviceContext *pContext,
+    BufferViewGLImpl( IReferenceCounters*   pRefCounters,
+                      RenderDeviceGLImpl*   pDevice, 
+                      IDeviceContext*       pContext,
                       const BufferViewDesc& ViewDesc, 
-                      BufferGLImpl *pBuffer,
-                      bool bIsDefaultView);
+                      BufferGLImpl*         pBuffer,
+                      bool                  bIsDefaultView);
     
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;

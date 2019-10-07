@@ -33,6 +33,7 @@
 #include "STDAllocator.h"
 #include "PlatformMisc.h"
 #include "EngineMemory.h"
+#include "Align.h"
 
 namespace Diligent
 {
@@ -44,6 +45,8 @@ inline SHADER_TYPE GetShaderTypeFromIndex(Int32 Index)
 
 inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
 {
+    VERIFY(IsPowerOfTwo(Uint32{Type}), "Only single shader stage should be provided");
+
     Int32 ShaderIndex = PlatformMisc::GetLSB(Type);
 
 #ifdef _DEBUG

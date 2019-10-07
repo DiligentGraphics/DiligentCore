@@ -31,6 +31,8 @@
 #include "ShaderResourceBindingBase.h"
 #include "GLProgramResources.h"
 #include "ShaderBase.h"
+#include "GLProgramResourceCache.h"
+#include "GLPipelineResourceLayout.h"
 
 namespace Diligent
 {
@@ -44,7 +46,10 @@ class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<IShad
 public:
     using TBase = ShaderResourceBindingBase<IShaderResourceBindingGL>;
 
-    ShaderResourceBindingGLImpl(IReferenceCounters* pRefCounters, PipelineStateGLImpl* pPSO);
+    ShaderResourceBindingGLImpl(IReferenceCounters*     pRefCounters,
+                                PipelineStateGLImpl*    pPSO,
+                                GLProgramResources*     ProgramResources,
+                                Uint32                  NumPrograms);
     ~ShaderResourceBindingGLImpl();
 
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final;
@@ -59,13 +64,12 @@ public:
 
     virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
 
-    GLProgramResources& GetResources(Uint32 Ind, PipelineStateGLImpl* pdbgPSO);
+    const GLProgramResourceCache& GetResourceCache(PipelineStateGLImpl* pdbgPSO);
 
 private:
-    bool IsUsingSeparatePrograms()const;
-
-    Int8 m_ResourceIndex[6] = {-1, -1, -1, -1, -1, -1};
-    std::vector<GLProgramResources> m_Resources;
+    GLPipelineResourceLayout m_ResourceLayout;
+    GLProgramResourceCache   m_ResourceCache;
+    bool                     m_bIsStaticResourcesBound = false;
 };
 
 }

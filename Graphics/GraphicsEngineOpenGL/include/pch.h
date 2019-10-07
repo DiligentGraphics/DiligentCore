@@ -131,3 +131,9 @@
     if( err != GL_NO_ERROR )            \
         LogError<true>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
 }
+
+#ifdef DEVELOPMENT
+#   define DEV_CHECK_GL_ERROR CHECK_GL_ERROR
+#else
+#   define DEV_CHECK_GL_ERROR(...) do{}while(false)
+#endif

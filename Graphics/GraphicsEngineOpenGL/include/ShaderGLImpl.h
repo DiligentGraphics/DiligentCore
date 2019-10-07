@@ -28,8 +28,8 @@
 #include "ShaderBase.h"
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
-#include "GLProgram.h"
 #include "RenderDeviceGLImpl.h"
+#include "GLProgramResources.h"
 
 namespace Diligent
 {
@@ -70,7 +70,10 @@ class ShaderGLImpl final : public ShaderBase<IShaderGL, RenderDeviceGLImpl>
 public:
     using TShaderBase = ShaderBase<IShaderGL, RenderDeviceGLImpl>;
 
-    ShaderGLImpl( IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const ShaderCreateInfo &ShaderCreateInfo, bool bIsDeviceInternal = false );
+    ShaderGLImpl(IReferenceCounters*        pRefCounters,
+                 RenderDeviceGLImpl*        pDeviceGL,
+                 const ShaderCreateInfo&    ShaderCreateInfo,
+                 bool                       bIsDeviceInternal = false);
     ~ShaderGLImpl();
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
@@ -78,15 +81,11 @@ public:
     virtual Uint32 GetResourceCount()const override final;
     virtual ShaderResourceDesc GetResource(Uint32 Index)const override final;
 
-    GLProgram& GetGlProgram(){return m_GlProgObj;}
+    static GLObjectWrappers::GLProgramObj LinkProgram(IShader** ppShaders, Uint32 NumShaders, bool IsSeparableProgram);
 
 private:
-
-    friend class PipelineStateGLImpl;
-    friend class DeviceContextGLImpl;
-
-    GLProgram m_GlProgObj;                              // Used if program pipeline supported
-    GLObjectWrappers::GLShaderObj m_GLShaderObj;        // Used if program pipelines are not supported
+    GLObjectWrappers::GLShaderObj m_GLShaderObj;
+    GLProgramResources            m_Resources;
 };
 
 }

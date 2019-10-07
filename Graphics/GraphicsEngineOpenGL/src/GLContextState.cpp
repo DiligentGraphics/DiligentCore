@@ -80,7 +80,7 @@ namespace Diligent
         glBindVertexArray( 0 );
         glBindFramebuffer( GL_DRAW_FRAMEBUFFER, 0 );
         glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 );
-        CHECK_GL_ERROR( "Failed to reset GL context state" );
+        DEV_CHECK_GL_ERROR( "Failed to reset GL context state" );
 
         m_GLProgId = -1;
         m_GLPipelineId = -1;
@@ -132,7 +132,7 @@ namespace Diligent
         if( UpdateBoundObject( m_GLProgId, GLProgram, GLProgHandle ) )
         {
             glUseProgram( GLProgHandle );
-            CHECK_GL_ERROR( "Failed to set GL program" );
+            DEV_CHECK_GL_ERROR( "Failed to set GL program" );
         }
     }
 
@@ -142,7 +142,7 @@ namespace Diligent
         if( UpdateBoundObject( m_GLPipelineId, GLPipeline, GLPipelineHandle ) )
         {
             glBindProgramPipeline( GLPipelineHandle );
-            CHECK_GL_ERROR( "Failed to bind program pipeline" );
+            DEV_CHECK_GL_ERROR( "Failed to bind program pipeline" );
         }
     }
 
@@ -152,7 +152,7 @@ namespace Diligent
         if( UpdateBoundObject( m_VAOId, VAO, VAOHandle ) )
         {
             glBindVertexArray( VAOHandle );
-            CHECK_GL_ERROR( "Failed to set VAO" );
+            DEV_CHECK_GL_ERROR( "Failed to set VAO" );
         }
     }
 
@@ -169,9 +169,9 @@ namespace Diligent
             // level is NOT level_base, the texture MUST BE MIPMAP COMPLETE
             // If image is part of a cubemap texture, the texture must also be mipmap cube complete.
             glBindFramebuffer( GL_DRAW_FRAMEBUFFER, FBOHandle );
-            CHECK_GL_ERROR( "Failed to bind FBO as draw framebuffer" );
+            DEV_CHECK_GL_ERROR( "Failed to bind FBO as draw framebuffer" );
             glBindFramebuffer( GL_READ_FRAMEBUFFER, FBOHandle );
-            CHECK_GL_ERROR( "Failed to bind FBO as read framebuffer" );
+            DEV_CHECK_GL_ERROR( "Failed to bind FBO as read framebuffer" );
         }
     }
 
@@ -195,7 +195,7 @@ namespace Diligent
         if( m_iActiveTexture != Index )
         {
             glActiveTexture( GL_TEXTURE0 + Index );
-            CHECK_GL_ERROR( "Failed to activate texture slot ", Index );
+            DEV_CHECK_GL_ERROR( "Failed to activate texture slot ", Index );
             m_iActiveTexture = Index;
         }
     }
@@ -215,7 +215,7 @@ namespace Diligent
         if( UpdateBoundObjectsArr( m_BoundTextures, Index, Tex, GLTexHandle ) )
         {
             glBindTexture( BindTarget, GLTexHandle );
-            CHECK_GL_ERROR( "Failed to bind texture to slot ", Index );
+            DEV_CHECK_GL_ERROR( "Failed to bind texture to slot ", Index );
         }
     }
 
@@ -225,7 +225,7 @@ namespace Diligent
         if( UpdateBoundObjectsArr( m_BoundSamplers, Index, GLSampler, GLSamplerHandle ) )
         {
             glBindSampler( Index, GLSamplerHandle );
-            CHECK_GL_ERROR( "Failed to bind sampler to slot ", Index );
+            DEV_CHECK_GL_ERROR( "Failed to bind sampler to slot ", Index );
         }
     }
 
@@ -253,7 +253,7 @@ namespace Diligent
             m_BoundImages[Index] = NewImageInfo;
             GLint GLTexHandle = pTexView->GetHandle();
             glBindImageTexture( Index, GLTexHandle, MipLevel, IsLayered, Layer, Access, Format );
-            CHECK_GL_ERROR( "glBindImageTexture() failed" );
+            DEV_CHECK_GL_ERROR( "glBindImageTexture() failed" );
         }
 #else
         UNSUPPORTED("GL_ARB_shader_image_load_store is not supported");
@@ -278,7 +278,7 @@ namespace Diligent
             m_BoundImages[Index] = NewImageInfo;
             GLint GLBuffHandle = pBuffView->GetTexBufferHandle();
             glBindImageTexture( Index, GLBuffHandle, 0, GL_FALSE, 0, Access, Format );
-            CHECK_GL_ERROR( "glBindImageTexture() failed" );
+            DEV_CHECK_GL_ERROR( "glBindImageTexture() failed" );
         }
 #else
         UNSUPPORTED("GL_ARB_shader_image_load_store is not supported");
@@ -322,7 +322,7 @@ namespace Diligent
         if( RequiredBarriers )
         {
             glMemoryBarrier( RequiredBarriers );
-            CHECK_GL_ERROR( "glMemoryBarrier() failed" );
+            DEV_CHECK_GL_ERROR( "glMemoryBarrier() failed" );
             m_PendingMemoryBarriers &= ~RequiredBarriers;
         }
 
@@ -346,12 +346,12 @@ namespace Diligent
             if( bEnable )
             {
                 glEnable( GL_DEPTH_TEST );
-                CHECK_GL_ERROR( "Failed to enable detph test" );
+                DEV_CHECK_GL_ERROR( "Failed to enable detph test" );
             }
             else
             {
                 glDisable( GL_DEPTH_TEST );
-                CHECK_GL_ERROR( "Failed to disable detph test" );
+                DEV_CHECK_GL_ERROR( "Failed to disable detph test" );
             }
             m_DSState.m_DepthEnableState = bEnable;
         }
@@ -363,7 +363,7 @@ namespace Diligent
         {
             // If mask is non-zero, the depth buffer is enabled for writing; otherwise, it is disabled.
             glDepthMask( bEnable ? 1 : 0 );
-            CHECK_GL_ERROR( "Failed to enale/disable depth writes" );
+            DEV_CHECK_GL_ERROR( "Failed to enale/disable depth writes" );
             m_DSState.m_DepthWritesEnableState = bEnable;
         }
     }
@@ -374,7 +374,7 @@ namespace Diligent
         {
             auto GlCmpFunc = CompareFuncToGLCompareFunc( CmpFunc );
             glDepthFunc( GlCmpFunc );
-            CHECK_GL_ERROR( "Failed to set GL comparison function" );
+            DEV_CHECK_GL_ERROR( "Failed to set GL comparison function" );
             m_DSState.m_DepthCmpFunc = CmpFunc;
         }
     }
@@ -386,12 +386,12 @@ namespace Diligent
             if( bEnable )
             {
                 glEnable( GL_STENCIL_TEST );
-                CHECK_GL_ERROR( "Failed to enable stencil test" );
+                DEV_CHECK_GL_ERROR( "Failed to enable stencil test" );
             }
             else
             {
                 glDisable( GL_STENCIL_TEST );
-                CHECK_GL_ERROR( "Failed to disable stencil test" );
+                DEV_CHECK_GL_ERROR( "Failed to disable stencil test" );
             }
             m_DSState.m_StencilTestEnableState = bEnable;
         }
@@ -411,7 +411,7 @@ namespace Diligent
         auto& FaceStencilOp = m_DSState.m_StencilOpState[Face == GL_FRONT ? 0 : 1];
         auto GlStencilFunc = CompareFuncToGLCompareFunc( FaceStencilOp.Func );
         glStencilFuncSeparate( Face, GlStencilFunc, Ref, FaceStencilOp.Mask );
-        CHECK_GL_ERROR( "Failed to set stencil function" );
+        DEV_CHECK_GL_ERROR( "Failed to set stencil function" );
     }
 
     void GLContextState::SetStencilFunc( GLenum Face, COMPARISON_FUNCTION Func, Int32 Ref, Uint32 Mask )
@@ -441,7 +441,7 @@ namespace Diligent
             auto dppass = StencilOp2GlStencilOp( StencilPassOp );
 
             glStencilOpSeparate( Face, glsfail, dpfail, dppass );
-            CHECK_GL_ERROR( "Failed to set stencil operation" );
+            DEV_CHECK_GL_ERROR( "Failed to set stencil operation" );
 
             FaceStencilOp.StencilFailOp = StencilFailOp;
             FaceStencilOp.StencilDepthFailOp = StencilDepthFailOp;
@@ -459,7 +459,7 @@ namespace Diligent
                 {
                     auto PolygonMode = FillMode == FILL_MODE_WIREFRAME ? GL_LINE : GL_FILL;
                     glPolygonMode( GL_FRONT_AND_BACK, PolygonMode );
-                    CHECK_GL_ERROR( "Failed to set polygon mode" );
+                    DEV_CHECK_GL_ERROR( "Failed to set polygon mode" );
                 }
                 else
                 {
@@ -484,16 +484,16 @@ namespace Diligent
             if( CullMode == CULL_MODE_NONE )
             {
                 glDisable( GL_CULL_FACE );
-                CHECK_GL_ERROR( "Failed to disable face culling" );
+                DEV_CHECK_GL_ERROR( "Failed to disable face culling" );
             }
             else
             {
                 VERIFY( CullMode == CULL_MODE_FRONT || CullMode == CULL_MODE_BACK, "Unexpected cull mode" );
                 glEnable( GL_CULL_FACE );
-                CHECK_GL_ERROR( "Failed to enable face culling" );
+                DEV_CHECK_GL_ERROR( "Failed to enable face culling" );
                 auto CullFace = CullMode == CULL_MODE_BACK ? GL_BACK : GL_FRONT;
                 glCullFace( CullFace );
-                CHECK_GL_ERROR( "Failed to set cull face" );
+                DEV_CHECK_GL_ERROR( "Failed to set cull face" );
             }
 
             m_RSState.CullMode = CullMode;
@@ -506,7 +506,7 @@ namespace Diligent
         {
             auto FrontFace = FrontCounterClockwise ? GL_CCW : GL_CW;
             glFrontFace( FrontFace );
-            CHECK_GL_ERROR( "Failed to set front face" );
+            DEV_CHECK_GL_ERROR( "Failed to set front face" );
             m_RSState.FrontCounterClockwise = FrontCounterClockwise;
         }
     }
@@ -519,16 +519,16 @@ namespace Diligent
             if( fDepthBias != 0 || fSlopeScaledDepthBias != 0 )
             {
                 glEnable( GL_POLYGON_OFFSET_FILL );
-                CHECK_GL_ERROR( "Failed to enable polygon offset fill" );
+                DEV_CHECK_GL_ERROR( "Failed to enable polygon offset fill" );
             }
             else
             {
                 glDisable( GL_POLYGON_OFFSET_FILL );
-                CHECK_GL_ERROR( "Failed to disable polygon offset fill" );
+                DEV_CHECK_GL_ERROR( "Failed to disable polygon offset fill" );
             }
 
             glPolygonOffset( fSlopeScaledDepthBias, fDepthBias );
-            CHECK_GL_ERROR( "Failed to set polygon offset" );
+            DEV_CHECK_GL_ERROR( "Failed to set polygon offset" );
 
             m_RSState.fDepthBias = fDepthBias;
             m_RSState.fSlopeScaledDepthBias = fSlopeScaledDepthBias;
@@ -550,7 +550,7 @@ namespace Diligent
                 if( GL_DEPTH_CLAMP )
                 {
                     glEnable( GL_DEPTH_CLAMP );
-                    CHECK_GL_ERROR( "Failed to enable depth clamp" );
+                    DEV_CHECK_GL_ERROR( "Failed to enable depth clamp" );
                 }
             }
             else
@@ -558,7 +558,7 @@ namespace Diligent
                 if( GL_DEPTH_CLAMP )
                 {
                     glDisable( GL_DEPTH_CLAMP );
-                    CHECK_GL_ERROR( "Failed to disable depth clamp" );
+                    DEV_CHECK_GL_ERROR( "Failed to disable depth clamp" );
                 }
                 else
                 {
@@ -577,12 +577,12 @@ namespace Diligent
             if( bEnableScissorTest )
             {
                 glEnable( GL_SCISSOR_TEST );
-                CHECK_GL_ERROR( "Failed to enable scissor test" );
+                DEV_CHECK_GL_ERROR( "Failed to enable scissor test" );
             }
             else
             {
                 glDisable( GL_SCISSOR_TEST );
-                CHECK_GL_ERROR( "Failed to disable scissor clamp" );
+                DEV_CHECK_GL_ERROR( "Failed to disable scissor clamp" );
             }
 
             m_RSState.ScissorTestEnable = bEnableScissorTest;
@@ -592,7 +592,7 @@ namespace Diligent
     void GLContextState::SetBlendFactors(const float *BlendFactors)
     {
         glBlendColor( BlendFactors[0], BlendFactors[1], BlendFactors[2], BlendFactors[3] );
-        CHECK_GL_ERROR( "Failed to set blend color" );
+        DEV_CHECK_GL_ERROR( "Failed to set blend color" );
     }
 
     void GLContextState::SetBlendState( const BlendStateDesc &BSDsc, Uint32 SampleMask )
@@ -629,17 +629,17 @@ namespace Diligent
         {
             //  Sets the blend enable flag for ALL color buffers.
             glEnable( GL_BLEND );
-            CHECK_GL_ERROR( "Failed to enable alpha blending" );
+            DEV_CHECK_GL_ERROR( "Failed to enable alpha blending" );
 
             if( BSDsc.AlphaToCoverageEnable )
             {
                 glEnable( GL_SAMPLE_ALPHA_TO_COVERAGE );
-                CHECK_GL_ERROR( "Failed to enable alpha to coverage" );
+                DEV_CHECK_GL_ERROR( "Failed to enable alpha to coverage" );
             }
             else
             {
                 glDisable( GL_SAMPLE_ALPHA_TO_COVERAGE );
-                CHECK_GL_ERROR( "Failed to disable alpha to coverage" );
+                DEV_CHECK_GL_ERROR( "Failed to disable alpha to coverage" );
             }
 
             if( BSDsc.IndependentBlendEnable )
@@ -658,23 +658,23 @@ namespace Diligent
                     if( RT.BlendEnable )
                     {
                         glEnablei( GL_BLEND, i );
-                        CHECK_GL_ERROR( "Failed to enable alpha blending" );
+                        DEV_CHECK_GL_ERROR( "Failed to enable alpha blending" );
 
                         auto srcFactorRGB = BlendFactor2GLBlend( RT.SrcBlend );
                         auto dstFactorRGB = BlendFactor2GLBlend( RT.DestBlend );
                         auto srcFactorAlpha = BlendFactor2GLBlend( RT.SrcBlendAlpha );
                         auto dstFactorAlpha = BlendFactor2GLBlend( RT.DestBlendAlpha );
                         glBlendFuncSeparatei( i, srcFactorRGB, dstFactorRGB, srcFactorAlpha, dstFactorAlpha );
-                        CHECK_GL_ERROR( "Failed to set separate blending factors" );
+                        DEV_CHECK_GL_ERROR( "Failed to set separate blending factors" );
                         auto modeRGB = BlendOperation2GLBlendOp( RT.BlendOp );
                         auto modeAlpha = BlendOperation2GLBlendOp( RT.BlendOpAlpha );
                         glBlendEquationSeparatei( i, modeRGB, modeAlpha );
-                        CHECK_GL_ERROR( "Failed to set separate blending equations" );
+                        DEV_CHECK_GL_ERROR( "Failed to set separate blending equations" );
                     }
                     else
                     {
                         glDisablei( GL_BLEND, i );
-                        CHECK_GL_ERROR( "Failed to disable alpha blending" );
+                        DEV_CHECK_GL_ERROR( "Failed to disable alpha blending" );
                     }
                 }
             }
@@ -686,19 +686,19 @@ namespace Diligent
                 auto srcFactorAlpha = BlendFactor2GLBlend( RT0.SrcBlendAlpha );
                 auto dstFactorAlpha = BlendFactor2GLBlend( RT0.DestBlendAlpha );
                 glBlendFuncSeparate( srcFactorRGB, dstFactorRGB, srcFactorAlpha, dstFactorAlpha );
-                CHECK_GL_ERROR( "Failed to set blending factors" );
+                DEV_CHECK_GL_ERROR( "Failed to set blending factors" );
 
                 auto modeRGB = BlendOperation2GLBlendOp( RT0.BlendOp );
                 auto modeAlpha = BlendOperation2GLBlendOp( RT0.BlendOpAlpha );
                 glBlendEquationSeparate( modeRGB, modeAlpha );
-                CHECK_GL_ERROR( "Failed to set blending equations" );
+                DEV_CHECK_GL_ERROR( "Failed to set blending equations" );
             }
         }
         else
         {
             //  Sets the blend disable flag for ALL color buffers.
             glDisable( GL_BLEND );
-            CHECK_GL_ERROR( "Failed to disable alpha blending" );
+            DEV_CHECK_GL_ERROR( "Failed to disable alpha blending" );
         }
     }
 
@@ -724,7 +724,7 @@ namespace Diligent
                     (WriteMask & COLOR_MASK_GREEN) ? GL_TRUE : GL_FALSE,
                     (WriteMask & COLOR_MASK_BLUE)  ? GL_TRUE : GL_FALSE,
                     (WriteMask & COLOR_MASK_ALPHA) ? GL_TRUE : GL_FALSE );
-                CHECK_GL_ERROR( "Failed to set GL color mask" );
+                DEV_CHECK_GL_ERROR( "Failed to set GL color mask" );
 
                 m_ColorWriteMasks[RTIndex] = WriteMask;
             }
@@ -735,7 +735,7 @@ namespace Diligent
                              (WriteMask & COLOR_MASK_GREEN) ? GL_TRUE : GL_FALSE,
                              (WriteMask & COLOR_MASK_BLUE)  ? GL_TRUE : GL_FALSE,
                              (WriteMask & COLOR_MASK_ALPHA) ? GL_TRUE : GL_FALSE );
-                CHECK_GL_ERROR( "Failed to set GL color mask" );
+                DEV_CHECK_GL_ERROR( "Failed to set GL color mask" );
 
                 for( int rt = 0; rt < _countof( m_ColorWriteMasks ); ++rt )
                     m_ColorWriteMasks[rt] = WriteMask;
@@ -759,7 +759,7 @@ namespace Diligent
         {
             m_NumPatchVertices = NumVertices;
             glPatchParameteri(GL_PATCH_VERTICES, static_cast<GLint>(NumVertices));
-            CHECK_GL_ERROR( "Failed to set the number of patch vertices" );
+            DEV_CHECK_GL_ERROR( "Failed to set the number of patch vertices" );
         }
 #endif
     }

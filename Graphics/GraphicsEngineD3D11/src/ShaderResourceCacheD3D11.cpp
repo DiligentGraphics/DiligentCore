@@ -191,6 +191,7 @@ namespace Diligent
 
             if (m_pResourceData != nullptr)
                 MemAllocator.Free(m_pResourceData);
+            m_pResourceData = nullptr;
         }
     }
 

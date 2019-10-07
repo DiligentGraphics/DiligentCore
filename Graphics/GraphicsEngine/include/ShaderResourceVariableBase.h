@@ -30,6 +30,7 @@
 
 #include "ShaderResourceVariable.h"
 #include "PipelineState.h"
+#include "StringTools.h"
 
 namespace Diligent
 {
@@ -110,52 +111,71 @@ inline Uint32 GetAllowedTypeBits(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVar
     return AllowedTypeBits;
 }
 
-/// Base implementation of a shader variable
-struct ShaderVariableBase : public IShaderResourceVariable
+inline Int32 FindStaticSampler(const StaticSamplerDesc* StaticSamplers,
+                               Uint32                   NumStaticSamplers,
+                               SHADER_TYPE              ShaderType,
+                               const char*              ResourceName,
+                               const char*              SamplerSuffix)
 {
-    ShaderVariableBase(IObject& Owner) : 
-        // Shader variables are always created as part of the shader, or 
-        // shader resource binding, so we must provide owner pointer to 
-        // the base class constructor
-        m_Owner(Owner)
+    for (Uint32 s=0; s < NumStaticSamplers; ++s)
+    {
+        const auto& StSam = StaticSamplers[s];
+        if ( ((StSam.ShaderStages & ShaderType) != 0) && StreqSuff(ResourceName, StSam.SamplerOrTextureName, SamplerSuffix) )
+            return s;
+    }
+
+    return -1;
+}
+
+struct DefaultShaderVariableIDComparator
+{
+    bool operator() (const INTERFACE_ID& IID)const
+    {
+        return IID == IID_ShaderResourceVariable || IID == IID_Unknown;
+    }
+};
+
+/// Base implementation of a shader variable
+template<typename ResourceLayoutType,
+         typename ResourceVariableBaseInterface = IShaderResourceVariable,
+         typename VariableIDComparator          = DefaultShaderVariableIDComparator>
+struct ShaderVariableBase : public ResourceVariableBaseInterface
+{
+    ShaderVariableBase(ResourceLayoutType& ParentResLayout) : 
+        m_ParentResLayout(ParentResLayout)
     {
     }
 
-    IObject& GetOwner()
+    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final
     {
-        return m_Owner;
-    }
-
-    virtual IReferenceCounters* GetReferenceCounters()const override final
-    {
-        return m_Owner.GetReferenceCounters();
-    }
-
-    virtual Atomics::Long AddRef()override final
-    {
-        return m_Owner.AddRef();
-    }
-
-    virtual Atomics::Long Release()override final
-    {
-        return m_Owner.Release();
-    }
-
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final
-    {
-        if( ppInterface == nullptr )
+        if (ppInterface == nullptr)
             return;
 
         *ppInterface = nullptr;
-        if( IID == IID_ShaderResourceVariable || IID == IID_Unknown )
+        if (VariableIDComparator{}(IID))
         {
             *ppInterface = this;
             (*ppInterface)->AddRef();
         }
     }
 
+    virtual Atomics::Long AddRef()override final
+    {
+        return m_ParentResLayout.GetOwner().AddRef();
+    }
+
+    virtual Atomics::Long Release()override final
+    {
+        return m_ParentResLayout.GetOwner().Release();
+    }
+
+    virtual IReferenceCounters* GetReferenceCounters()const override final
+    {
+        return m_ParentResLayout.GetOwner().GetReferenceCounters();
+    }
+
 protected:
-    IObject& m_Owner;
+    ResourceLayoutType& m_ParentResLayout;
 };
 
 }

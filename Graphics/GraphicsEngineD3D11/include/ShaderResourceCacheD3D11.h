@@ -57,7 +57,7 @@ public:
     ShaderResourceCacheD3D11             (ShaderResourceCacheD3D11&&)      = delete;
     ShaderResourceCacheD3D11& operator = (ShaderResourceCacheD3D11&&)      = delete;
 
-    /// Describes resources associated with the cached constant buffer
+    /// Describes a resource associated with a cached constant buffer
     struct CachedCB
     {
         /// Strong reference to the buffer
@@ -68,7 +68,7 @@ public:
         }
     };
 
-    /// Describes resources associated with the cached sampler
+    /// Describes a resource associated with a cached sampler
     struct CachedSampler
     {
         /// Strong reference to the sampler
@@ -79,7 +79,7 @@ public:
         }
     };
 
-    /// Describes resources associated with the cached SRV or UAV
+    /// Describes a resource associated with a cached SRV or a UAV
     struct CachedResource
     {
         /// Wee keep strong reference to the view instead of the reference
@@ -305,13 +305,13 @@ private:
         d3d11ResArr[Slot] = pd3d11Resource;
     }
 
-    static constexpr Uint8 InvalidResourceOffset = 0xFF;
+    static constexpr const Uint16 InvalidResourceOffset = 0xFFFF;
     // Resource limits in D3D11:
     // Max CB count:        14
     // Max SRV count:       128
     // Max Sampler count:   16
     // Max UAV count:       8
-    static constexpr const Uint8 m_CBOffset = 0;
+    static constexpr const Uint16 m_CBOffset = 0;
     Uint16 m_SRVOffset       = InvalidResourceOffset;
     Uint16 m_SamplerOffset   = InvalidResourceOffset;
     Uint16 m_UAVOffset       = InvalidResourceOffset;

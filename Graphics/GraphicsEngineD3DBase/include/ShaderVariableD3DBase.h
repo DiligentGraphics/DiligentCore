@@ -23,6 +23,7 @@
 
 #pragma once
 
+#include "ShaderResourceVariableBase.h"
 #include "ShaderResourceVariableD3D.h"
 
 /// \file
@@ -30,45 +31,27 @@
 
 namespace Diligent
 {
-    template<typename TShaderResourceLayout>
-    struct ShaderVariableD3DBase : public IShaderResourceVariableD3D
+    struct D3DVariableIDComparator
     {
+        bool operator() (const INTERFACE_ID& IID)const
+        {
+            return IID == IID_ShaderResourceVariableD3D || IID == IID_ShaderResourceVariable || IID == IID_Unknown;
+        }
+    };
+
+    template<typename TShaderResourceLayout>
+    struct ShaderVariableD3DBase : public ShaderVariableBase<TShaderResourceLayout, IShaderResourceVariableD3D, D3DVariableIDComparator>
+    {
+        using TBase = ShaderVariableBase<TShaderResourceLayout, IShaderResourceVariableD3D, D3DVariableIDComparator>;
+
         ShaderVariableD3DBase(TShaderResourceLayout&            ParentResLayout,
                               const D3DShaderResourceAttribs&   Attribs,
                               SHADER_RESOURCE_VARIABLE_TYPE     VariableType) : 
-            m_ParentResLayout   (ParentResLayout),
-            m_Attribs           (Attribs),
-            m_VariableType      (VariableType)
+            TBase          {ParentResLayout},
+            m_Attribs      {Attribs        },
+            m_VariableType {VariableType   }
         {
         }
-
-        virtual IReferenceCounters* GetReferenceCounters()const override final
-        {
-            return m_ParentResLayout.GetOwner().GetReferenceCounters();
-        }
-
-        virtual Atomics::Long AddRef()override final
-        {
-            return m_ParentResLayout.GetOwner().AddRef();
-        }
-
-        virtual Atomics::Long Release()override final
-        {
-            return m_ParentResLayout.GetOwner().Release();
-        }
-
-        void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final
-        {
-            if( ppInterface == nullptr )
-                return;
-
-            *ppInterface = nullptr;
-            if( IID == IID_ShaderResourceVariableD3D || IID == IID_ShaderResourceVariable || IID == IID_Unknown )
-            {
-                *ppInterface = this;
-                (*ppInterface)->AddRef();
-            }
-        }        
 
         virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
         {
@@ -93,7 +76,6 @@ namespace Diligent
         const D3DShaderResourceAttribs&     m_Attribs;
 
     protected:
-        TShaderResourceLayout&              m_ParentResLayout;
         const SHADER_RESOURCE_VARIABLE_TYPE m_VariableType;
     };
 }

@@ -1,0 +1,266 @@
+/*     Copyright 2019 Diligent Graphics LLC
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+#pragma once
+
+#include "BufferGLImpl.h"
+#include "TextureBaseGL.h"
+#include "SamplerGLImpl.h"
+
+namespace Diligent
+{
+
+/// The class implements a cache that holds resources bound to a specific GL program
+// All resources are stored in the continuous memory using the following layout:
+//
+//   |        Cached UBs        |     Cached Samplers     |       Cached Images      | Cached Strg Blocks        |
+//   |----------------------------------------------------|--------------------------|---------------------------|
+//   |  0 | 1 | ... | UBCount-1 | 0 | 1 | ...| SmpCount-1 | 0 | 1 | ... | ImgCount-1 | 0 | 1 |  ... | SBOCount-1 |
+//    -----------------------------------------------------------------------------------------------------------
+//
+class GLProgramResourceCache
+{
+public:
+    GLProgramResourceCache()
+    {}
+
+    ~GLProgramResourceCache();
+
+    GLProgramResourceCache             (const GLProgramResourceCache&) = delete;
+    GLProgramResourceCache& operator = (const GLProgramResourceCache&) = delete;
+    GLProgramResourceCache             (GLProgramResourceCache&&)      = delete;
+    GLProgramResourceCache& operator = (GLProgramResourceCache&&)      = delete;
+
+    /// Describes a resource bound to a uniform buffer or a shader storage block slot
+    struct CachedUB
+    {
+        /// Strong reference to the buffer
+        RefCntAutoPtr<BufferGLImpl> pBuffer;
+    };
+
+    /// Describes a resource bound to a sampler or an image slot
+    struct CachedResourceView
+    {
+        /// Wee keep strong reference to the view instead of the reference
+        /// to the texture or buffer because this is more efficient from
+        /// performance point of view: this avoids one pair of 
+        /// AddStrongRef()/ReleaseStrongRef(). The view holds a strong reference 
+        /// to the texture or the buffer, so it makes no difference.
+        RefCntAutoPtr<IDeviceObject> pView;
+        TextureBaseGL*  pTexture = nullptr;
+        union
+        {
+            BufferGLImpl*   pBuffer  = nullptr; // When pTexture == nullptr
+            SamplerGLImpl*  pSampler;           // When pTexture != nullptr
+        };
+        CachedResourceView() noexcept {}
+
+        void Set(RefCntAutoPtr<TextureViewGLImpl>&& pTexView, bool SetSampler)
+        {
+            // Do not null out pSampler as it could've been initialized by PipelineStateGLImpl::InitializeSRBResourceCache!
+            // pSampler = nullptr;
+
+            // Avoid unnecessary virtual function calls
+            pTexture = pTexView ? ValidatedCast<TextureBaseGL>(pTexView->TextureViewGLImpl::GetTexture()) : nullptr;
+            if (pTexView && SetSampler)
+            {
+                pSampler = ValidatedCast<SamplerGLImpl>(pTexView->GetSampler());
+            }
+
+            pView.Attach(pTexView.Detach());
+        }
+
+        void Set(RefCntAutoPtr<BufferViewGLImpl>&& pBufView)
+        {
+            pTexture = nullptr;
+            // Avoid unnecessary virtual function calls
+            pBuffer = pBufView ? ValidatedCast<BufferGLImpl>(pBufView->BufferViewGLImpl::GetBuffer()) : nullptr;
+            pView.Attach(pBufView.Detach());
+        }
+    };
+
+    struct CachedSSBO
+    {
+        /// Strong reference to the buffer
+        RefCntAutoPtr<BufferViewGLImpl> pBufferView;
+    };
+
+
+    static size_t GetRequriedMemorySize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount);
+    void Initialize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount, class IMemoryAllocator& MemAllocator);
+    void Destroy(class IMemoryAllocator& MemAllocator);
+
+    void SetUniformBuffer(Uint32 Binding, RefCntAutoPtr<BufferGLImpl>&& pBuff)
+    {
+        GetUB(Binding).pBuffer = std::move(pBuff);
+    }
+
+    void SetTexSampler(Uint32 Binding, RefCntAutoPtr<TextureViewGLImpl>&& pTexView, bool SetSampler)
+    {
+        GetSampler(Binding).Set(std::move(pTexView), SetSampler);
+    }
+
+    void SetStaticSampler(Uint32 Binding, ISampler* pStaticSampler)
+    {
+        GetSampler(Binding).pSampler = ValidatedCast<SamplerGLImpl>(pStaticSampler);
+    }
+
+    void CopySampler(Uint32 Binding, const CachedResourceView& SrcSam)
+    {
+        GetSampler(Binding) = SrcSam;
+    }
+
+    void SetBufSampler(Uint32 Binding, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
+    {
+        GetSampler(Binding).Set(std::move(pBuffView));
+    }
+
+    void SetTexImage(Uint32 Binding, RefCntAutoPtr<TextureViewGLImpl>&& pTexView)
+    {
+        GetImage(Binding).Set(std::move(pTexView), false);
+    }
+
+    void SetBufImage(Uint32 Binding, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
+    {
+        GetImage(Binding).Set(std::move(pBuffView));
+    }
+
+    void CopyImage(Uint32 Binding, const CachedResourceView& SrcImg)
+    {
+        GetImage(Binding) = SrcImg;
+    }
+
+    void SetSSBO(Uint32 Binding, RefCntAutoPtr<BufferViewGLImpl>&& pBuffView)
+    {
+        GetSSBO(Binding).pBufferView = std::move(pBuffView);
+    }
+
+    bool IsUBBound(Uint32 Binding)const
+    {
+        if (Binding >= GetUBCount())
+            return false;
+
+        const auto& UB = GetUB(Binding);
+        return UB.pBuffer;
+    }
+
+    bool IsSamplerBound(Uint32 Binding, bool dbgIsTextureView)const
+    {
+        if (Binding >= GetSamplerCount())
+            return false;
+
+        const auto& Sampler = GetSampler(Binding);
+        VERIFY_EXPR(dbgIsTextureView || Sampler.pTexture == nullptr);
+        return Sampler.pView;
+    }
+
+    bool IsImageBound(Uint32 Binding, bool dbgIsTextureView)const
+    {
+        if (Binding >= GetImageCount())
+            return false;
+
+        const auto& Image = GetImage(Binding);
+        VERIFY_EXPR(dbgIsTextureView || Image.pTexture == nullptr);
+        return Image.pView;
+    }
+
+    bool IsSSBOBound(Uint32 Binding)const
+    {
+        if (Binding >= GetSSBOCount())
+            return false;
+
+        const auto& SSBO = GetSSBO(Binding);
+        return SSBO.pBufferView;
+    }
+
+    Uint32 GetUBCount()      const { return (m_SmplrsOffset    - m_UBsOffset)    / sizeof(CachedUB);            }
+    Uint32 GetSamplerCount() const { return (m_ImgsOffset      - m_SmplrsOffset) / sizeof(CachedResourceView);  }
+    Uint32 GetImageCount()   const { return (m_SSBOsOffset     - m_ImgsOffset)   / sizeof(CachedResourceView);  }
+    Uint32 GetSSBOCount()    const { return (m_MemoryEndOffset - m_SSBOsOffset)  / sizeof(CachedSSBO);          }
+
+    const CachedUB& GetUB(Uint32 Binding)const
+    {
+        VERIFY(Binding < GetUBCount(), "Uniform buffer binding (", Binding, ") is out of range");
+        return reinterpret_cast<CachedUB*>(m_pResourceData + m_UBsOffset)[Binding];
+    }
+
+    const CachedResourceView& GetSampler(Uint32 Binding)const
+    {
+        VERIFY(Binding < GetSamplerCount(), "Sampler binding (", Binding, ") is out of range");
+        return reinterpret_cast<CachedResourceView*>(m_pResourceData + m_SmplrsOffset)[Binding];
+    }
+
+    const CachedResourceView& GetImage(Uint32 Binding)const
+    {
+        VERIFY(Binding < GetImageCount(), "Image buffer binding (", Binding, ") is out of range");
+        return reinterpret_cast<CachedResourceView*>(m_pResourceData + m_ImgsOffset)[Binding];
+    }
+
+    const CachedSSBO& GetSSBO(Uint32 Binding)const
+    {
+        VERIFY(Binding < GetSSBOCount(), "Shader storage block binding (", Binding, ") is out of range");
+        return reinterpret_cast<CachedSSBO*>(m_pResourceData + m_SSBOsOffset)[Binding];
+    }
+
+    bool IsInitialized()const
+    {
+        return  m_MemoryEndOffset != InvalidResourceOffset;
+    }
+
+private:
+    CachedUB& GetUB(Uint32 Binding)
+    {
+        return const_cast<CachedUB&>(const_cast<const GLProgramResourceCache*>(this)->GetUB(Binding));
+    }
+
+    CachedResourceView& GetSampler(Uint32 Binding)
+    {
+        return const_cast<CachedResourceView&>(const_cast<const GLProgramResourceCache*>(this)->GetSampler(Binding));
+    }
+
+    CachedResourceView& GetImage(Uint32 Binding)
+    {
+        return const_cast<CachedResourceView&>(const_cast<const GLProgramResourceCache*>(this)->GetImage(Binding));
+    }
+
+    CachedSSBO& GetSSBO(Uint32 Binding)
+    {
+        return const_cast<CachedSSBO&>(const_cast<const GLProgramResourceCache*>(this)->GetSSBO(Binding));
+    }
+
+    static constexpr const Uint16 InvalidResourceOffset = 0xFFFF;
+    static constexpr const Uint16 m_UBsOffset = 0;
+    Uint16 m_SmplrsOffset    = InvalidResourceOffset;
+    Uint16 m_ImgsOffset      = InvalidResourceOffset;
+    Uint16 m_SSBOsOffset     = InvalidResourceOffset;
+    Uint16 m_MemoryEndOffset = InvalidResourceOffset;
+
+    Uint8* m_pResourceData = nullptr;
+
+#ifdef _DEBUG
+    IMemoryAllocator* m_pdbgMemoryAllocator = nullptr;
+#endif
+
+};
+
+}

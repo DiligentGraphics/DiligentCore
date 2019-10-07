@@ -353,336 +353,190 @@ namespace Diligent
 
     void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding)
     {
-        auto* pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
         if (!m_pPipelineState)
         {
-            LOG_ERROR("No pipeline state is bound");
+            LOG_ERROR_MESSAGE("No pipeline state is bound");
             return;
         }
+
+        if (pResBinding == nullptr)
+            return;
+
         auto* pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pResBinding);
+        const auto& ResourceCache = pShaderResBindingGL->GetResourceCache(m_pPipelineState);
 
-        const auto& DeviceCaps = pRenderDeviceGL->GetDeviceCaps();
-        auto& Prog = m_pPipelineState->GetGLProgram();
-        auto ProgramPipelineSupported = DeviceCaps.bSeparableProgramSupported;
+        VERIFY_EXPR(m_BoundWritableTextures.empty());
+        VERIFY_EXPR(m_BoundWritableBuffers.empty());
 
-        // WARNING: glUseProgram() overrides glBindProgramPipeline(). That is, if you have a program in use and
-        // a program pipeline bound, all rendering will use the program that is in use, not the pipeline programs!!!
-        // So make sure that glUseProgram(0) has been called if pipeline is in use
-        m_ContextState.SetProgram(Prog);
-        if (ProgramPipelineSupported)
+        for (Uint32 ub = 0; ub < ResourceCache.GetUBCount(); ++ub)
         {
-            VERIFY(Prog == 0, "Program must be null when program pipeline is used");
-            auto& Pipeline = m_pPipelineState->GetGLProgramPipeline( m_ContextState.GetCurrentGLContext() );
-            VERIFY(Pipeline != 0, "Program pipeline must not be null");
-            m_ContextState.SetPipeline( Pipeline );
-        }
-        else
-        {
-            VERIFY(Prog != 0, "Program must not be null");
-        }
-
-        Uint32 NumPrograms = ProgramPipelineSupported ? m_pPipelineState->GetNumShaders() : 1;
-        GLuint UnifromBufferBindSlot = 0;
-        GLuint StorageBufferBindSlot = 0;
-        GLuint TextureBindSlot       = 0;
-        GLuint ImageBindSlot         = 0;
-        m_BoundWritableTextures.clear();
-        m_BoundWritableBuffers.clear();
-        for (Uint32 ProgNum = 0; ProgNum < NumPrograms; ++ProgNum)
-        {
-            auto* pShaderGL = m_pPipelineState->GetShader<ShaderGLImpl>(ProgNum);
-            auto& GLProgramObj = ProgramPipelineSupported ? pShaderGL->m_GlProgObj : Prog;
-
-            GLProgramResources* pSRBResources = pShaderResBindingGL ? &pShaderResBindingGL->GetResources(ProgNum, m_pPipelineState) : nullptr;
-#ifdef VERIFY_RESOURCE_BINDINGS
-            //GLProgramObj.dbgVerifyBindingCompleteness(pDynamicResources, m_pPipelineState);
-#endif
-
-            for (int BindSRBResources = 0; BindSRBResources < (pShaderResBindingGL ? 2 : 1); ++BindSRBResources)
+            const auto& UB = ResourceCache.GetUB(ub);
+            if (auto* pBufferGL = UB.pBuffer.RawPtr<BufferGLImpl>())
             {
-                GLProgramResources& ProgResources = BindSRBResources ? *pSRBResources : m_pPipelineState->GetStaticResources(ProgNum);
+                pBufferGL->BufferMemoryBarrier(
+                    GL_UNIFORM_BARRIER_BIT,// Shader uniforms sourced from buffer objects after the barrier 
+                                            // will reflect data written by shaders prior to the barrier
+                    m_ContextState);
 
-#ifdef VERIFY_RESOURCE_BINDINGS
-                ProgResources.dbgVerifyResourceBindings();
-#endif
-                
-                GLuint GLProgID = GLProgramObj;
-                for (Uint32 ub = 0; ub < ProgResources.GetNumUniformBuffers(); ++ub)
-                {
-                    auto& UB = ProgResources.GetUniformBuffer(ub);
-                    for(Uint32 ArrInd = 0; ArrInd < UB.ArraySize; ++ArrInd)
-                    {
-                        auto& Resource = UB.pResources[ArrInd];
-                        if (Resource)
-                        {
-                            auto* pBufferGL = Resource.RawPtr<BufferGLImpl>();
-                            pBufferGL->BufferMemoryBarrier(
-                                GL_UNIFORM_BARRIER_BIT,// Shader uniforms sourced from buffer objects after the barrier 
-                                                       // will reflect data written by shaders prior to the barrier
-                                m_ContextState);
-
-                            glBindBufferBase(GL_UNIFORM_BUFFER, UnifromBufferBindSlot, pBufferGL->m_GlBuffer);
-                            CHECK_GL_ERROR("Failed to bind uniform buffer");
-                            //glBindBufferRange(GL_UNIFORM_BUFFER, it->Index, pBufferGL->m_GlBuffer, 0, pBufferGL->GetDesc().uiSizeInBytes);
-
-                            glUniformBlockBinding(GLProgID, UB.UBIndex + ArrInd, UnifromBufferBindSlot);
-                            CHECK_GL_ERROR("glUniformBlockBinding() failed");
-
-                            ++UnifromBufferBindSlot;
-                        }
-                        else
-                        {
-#define LOG_MISSING_BINDING(VarType, Res, ArrInd)\
-                            do{                       \
-                                if(Res.ArraySize > 1) \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res.Name, '[', ArrInd, "]' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
-                                else                  \
-                                    LOG_ERROR_MESSAGE( "No ", VarType, " is bound to '", Res.Name, "' variable in shader '", pShaderGL->GetDesc().Name, "'" );\
-                            }while(false)
-
-                            LOG_MISSING_BINDING("uniform buffer", UB, ArrInd);
-                        }
-                    }
-                }
-
-                for (Uint32 sam = 0; sam < ProgResources.GetNumSamplers(); ++sam)
-                {
-                    auto& Sam = ProgResources.GetSampler(sam);
-                    for (Uint32 ArrInd = 0; ArrInd < Sam.ArraySize; ++ArrInd)
-                    {
-                        auto& Resource = Sam.pResources[ArrInd];
-                        if (Resource)
-                        {
-                            if (Sam.SamplerType == GL_SAMPLER_BUFFER ||
-                                Sam.SamplerType == GL_INT_SAMPLER_BUFFER ||
-                                Sam.SamplerType == GL_UNSIGNED_INT_SAMPLER_BUFFER)
-                            {
-                                auto* pBufViewGL = Resource.RawPtr<BufferViewGLImpl>();
-                                auto* pBuffer = pBufViewGL->GetBuffer();
-
-                                m_ContextState.BindTexture(TextureBindSlot, GL_TEXTURE_BUFFER, pBufViewGL->GetTexBufferHandle());
-                                m_ContextState.BindSampler(TextureBindSlot, GLObjectWrappers::GLSamplerObj(false)); // Use default texture sampling parameters
-
-                                ValidatedCast<BufferGLImpl>(pBuffer)->BufferMemoryBarrier(
-                                    GL_TEXTURE_FETCH_BARRIER_BIT, // Texture fetches from shaders, including fetches from buffer object 
-                                                                  // memory via buffer textures, after the barrier will reflect data 
-                                                                  // written by shaders prior to the barrier
-                                    m_ContextState);
-                            }
-                            else
-                            {
-                                auto* pTexViewGL = Resource.RawPtr<TextureViewGLImpl>();
-                                m_ContextState.BindTexture(TextureBindSlot, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
-
-                                auto* pTexture = pTexViewGL->GetTexture();
-                                ValidatedCast<TextureBaseGL>(pTexture)->TextureMemoryBarrier(
-                                    GL_TEXTURE_FETCH_BARRIER_BIT, // Texture fetches from shaders, including fetches from buffer object 
-                                                                  // memory via buffer textures, after the barrier will reflect data 
-                                                                  // written by shaders prior to the barrier
-                                    m_ContextState);
-
-                                SamplerGLImpl* pSamplerGL = nullptr;
-                                if (Sam.pStaticSampler)
-                                {
-                                    pSamplerGL = Sam.pStaticSampler;
-                                }
-                                else
-                                {
-                                    auto pSampler = pTexViewGL->GetSampler();
-                                    pSamplerGL = ValidatedCast<SamplerGLImpl>(pSampler);
-                                }
-                            
-                                if (pSamplerGL)
-                                {
-                                    m_ContextState.BindSampler(TextureBindSlot, pSamplerGL->GetHandle());
-                                }
-                                else
-                                {
-                                    m_ContextState.BindSampler(TextureBindSlot, GLObjectWrappers::GLSamplerObj(false));
-                                }
-                            }
-
-                            // Texture is now bound to texture slot TextureIndex.
-                            // We now need to set the program uniform to use that slot
-                            if (ProgramPipelineSupported)
-                            {
-                                // glProgramUniform1i does not require program to be bound to the pipeline
-                                glProgramUniform1i(GLProgramObj, Sam.Location + ArrInd, TextureBindSlot);
-                            }
-                            else
-                            {
-                                // glUniform1i requires program to be bound to the pipeline
-                                glUniform1i(Sam.Location + ArrInd, TextureBindSlot);
-                            }
-                            CHECK_GL_ERROR("Failed to set binding point for sampler uniform '", Sam.Name, '\'');
-
-                            ++TextureBindSlot;
-                        }
-                        else
-                        {
-                            LOG_MISSING_BINDING("texture sampler", Sam, ArrInd);
-                        }
-                    }
-                }
-
-#if GL_ARB_shader_image_load_store
-                for (Uint32 img = 0; img < ProgResources.GetNumImages(); ++img)
-                {
-                    auto& Img = ProgResources.GetImage(img);
-                    for (Uint32 ArrInd = 0; ArrInd < Img.ArraySize; ++ArrInd)
-                    {
-                        auto& Resource = Img.pResources[ArrInd];
-                        if (Resource)
-                        {
-                            if (Img.ImageType == GL_IMAGE_BUFFER     ||
-                                Img.ImageType == GL_INT_IMAGE_BUFFER ||
-                                Img.ImageType == GL_UNSIGNED_INT_IMAGE_BUFFER)
-                            {
-                                auto* pBuffViewGL = Resource.RawPtr<BufferViewGLImpl>();
-                                const auto& ViewDesc = pBuffViewGL->GetDesc();
-                                VERIFY( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Unexpected buffer view type" );
-
-                                auto* pBufferGL = pBuffViewGL->GetBuffer<BufferGLImpl>();
-                                pBufferGL->BufferMemoryBarrier(
-                                    GL_SHADER_IMAGE_ACCESS_BARRIER_BIT,// Memory accesses using shader image load, store, and atomic built-in 
-                                                                       // functions issued after the barrier will reflect data written by shaders 
-                                                                       // prior to the barrier. Additionally, image stores and atomics issued after 
-                                                                       // the barrier will not execute until all memory accesses (e.g., loads, 
-                                                                       // stores, texture fetches, vertex fetches) initiated prior to the barrier 
-                                                                       // complete.
-                                    m_ContextState);
-
-                                m_BoundWritableBuffers.push_back(pBufferGL);
-
-                                auto GlFormat = TypeToGLTexFormat(ViewDesc.Format.ValueType, ViewDesc.Format.NumComponents, ViewDesc.Format.IsNormalized);
-                                m_ContextState.BindImage(ImageBindSlot, pBuffViewGL, GL_READ_WRITE, GlFormat);
-                            }
-                            else
-                            {
-                                auto* pTexViewGL = Resource.RawPtr<TextureViewGLImpl>();
-                                const auto& ViewDesc = pTexViewGL->GetDesc();
-                                VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Unexpected buffer view type" );
-
-                                if (ViewDesc.AccessFlags & UAV_ACCESS_FLAG_WRITE)
-                                {
-                                    auto* pTexGL = pTexViewGL->GetTexture<TextureBaseGL>();
-                                    pTexGL->TextureMemoryBarrier(
-                                        GL_SHADER_IMAGE_ACCESS_BARRIER_BIT,// Memory accesses using shader image load, store, and atomic built-in 
-                                                                           // functions issued after the barrier will reflect data written by shaders 
-                                                                           // prior to the barrier. Additionally, image stores and atomics issued after 
-                                                                           // the barrier will not execute until all memory accesses (e.g., loads, 
-                                                                           // stores, texture fetches, vertex fetches) initiated prior to the barrier 
-                                                                           // complete.
-                                        m_ContextState);
-                                    // We cannot set pending memory barriers here, because
-                                    // if some texture is bound twice, the logic will fail
-                                    m_BoundWritableTextures.push_back( pTexGL );
-                                }
-
-        #ifdef _DEBUG
-                                // Check that the texure being bound has immutable storage
-                                {
-                                    m_ContextState.BindTexture(-1, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
-                                    GLint IsImmutable = 0;
-                                    glGetTexParameteriv( pTexViewGL->GetBindTarget(), GL_TEXTURE_IMMUTABLE_FORMAT, &IsImmutable );
-                                    CHECK_GL_ERROR( "glGetTexParameteriv() failed" );
-                                    VERIFY( IsImmutable, "Only immutable textures can be bound to pipeline using glBindImageTexture()" );
-                                    m_ContextState.BindTexture( -1, pTexViewGL->GetBindTarget(), GLObjectWrappers::GLTextureObj(false) );
-                                }
-        #endif
-                                auto GlTexFormat = TexFormatToGLInternalTexFormat( ViewDesc.Format );
-                                // Note that if a format qulifier is specified in the shader, the format
-                                // must match it
-
-                                GLboolean Layered = ViewDesc.NumArraySlices > 1 && ViewDesc.FirstArraySlice == 0;
-                                // If "layered" is TRUE, the entire Mip level is bound. Layer parameter is ignored in this
-                                // case. If "layered" is FALSE, only the single layer identified by "layer" will
-                                // be bound. When "layered" is FALSE, the single bound layer is treated as a 2D texture.
-                                GLint Layer = ViewDesc.FirstArraySlice;
-
-                                auto GLAccess = AccessFlags2GLAccess(ViewDesc.AccessFlags);
-                                // WARNING: Texture being bound to the image unit must be complete
-                                // That means that if an integer texture is being bound, its 
-                                // GL_TEXTURE_MIN_FILTER and GL_TEXTURE_MAG_FILTER must be NEAREST,
-                                // otherwise it will be incomplete
-                                m_ContextState.BindImage(ImageBindSlot, pTexViewGL, ViewDesc.MostDetailedMip, Layered, Layer, GLAccess, GlTexFormat);
-                                // Do not use binding points from reflection as they may not be initialized
-                            }
-
-                            // Image is now bound to binding slot ImageIndex.
-                            // We now need to set the program uniform to use that slot
-                            if (ProgramPipelineSupported)
-                            {
-                                // glProgramUniform1i does not require program to be bound to the pipeline
-                                glProgramUniform1i(GLProgramObj, Img.Location + ArrInd, ImageBindSlot);
-                            }
-                            else
-                            {
-                                // glUniform1i requires program to be bound to the pipeline
-                                glUniform1i(Img.Location + ArrInd, ImageBindSlot);
-                            }
-                            CHECK_GL_ERROR("Failed to set binding point for image uniform '", Img.Name, '\'');
-
-                            ++ImageBindSlot;
-                        }
-                        else
-                        {
-                            LOG_MISSING_BINDING("image", Img, ArrInd);
-                        }
-                    }
-                }
-#endif
-
-#if GL_ARB_shader_storage_buffer_object
-                for (Uint32 sb=0; sb < ProgResources.GetNumStorageBlocks(); ++sb)
-                {
-                    auto& SB = ProgResources.GetStorageBlock(sb);
-                    for (Uint32 ArrInd = 0; ArrInd < SB.ArraySize; ++ArrInd)
-                    {
-                        auto& Resource = SB.pResources[ArrInd];
-                        if (Resource)
-                        {
-                            auto* pBufferViewGL = Resource.RawPtr<BufferViewGLImpl>();
-                            const auto& ViewDesc = pBufferViewGL->GetDesc();
-                            VERIFY( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Unexpected buffer view type" );
-
-                            auto* pBufferGL = pBufferViewGL->GetBuffer<BufferGLImpl>();
-                            pBufferGL->BufferMemoryBarrier(
-                                GL_SHADER_STORAGE_BARRIER_BIT,// Accesses to shader storage blocks after the barrier 
-                                                              // will reflect writes prior to the barrier
-                                m_ContextState);
-
-                            glBindBufferRange(GL_SHADER_STORAGE_BUFFER, StorageBufferBindSlot, pBufferGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
-                            CHECK_GL_ERROR("Failed to bind shader storage buffer");
-
-                            if (glShaderStorageBlockBinding)
-                            {
-                                glShaderStorageBlockBinding(GLProgID, SB.SBIndex + ArrInd, StorageBufferBindSlot);
-                                CHECK_GL_ERROR("glShaderStorageBlockBinding() failed");
-                            }
-                            else
-                            {
-                                LOG_WARNING_MESSAGE_ONCE("glShaderStorageBlockBinding is not available on this device and "
-                                                         "the engine is unable to automatically assign shader storage block bindindg points. "
-                                                         "To make shader storage blocks work properly, all binding points must be explicitly assigned "
-                                                         "in the shader starting from 0 and proceeding in the storage block declaration order. "
-                                                         "Note that the binding points are properly assigned by HLSL->GLSL converter.");
-                            }
-
-                            ++StorageBufferBindSlot;
-
-                            if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
-                                m_BoundWritableBuffers.push_back(pBufferGL);
-                        }
-                        else
-                        {
-                            LOG_MISSING_BINDING("shader storage block", SB, ArrInd);
-                        }
-                    }
-                }
-#endif
+                glBindBufferBase(GL_UNIFORM_BUFFER, ub, pBufferGL->m_GlBuffer);
+                DEV_CHECK_GL_ERROR("Failed to bind uniform buffer to slot ", ub);
+                //glBindBufferRange(GL_UNIFORM_BUFFER, it->Index, pBufferGL->m_GlBuffer, 0, pBufferGL->GetDesc().uiSizeInBytes);
             }
         }
+
+        for (Uint32 s = 0; s < ResourceCache.GetSamplerCount(); ++s)
+        {
+            const auto& Sam = ResourceCache.GetSampler(s);
+            // We must check 'pTexture' first as 'pBuffer' is in union with 'pSampler'
+            if (Sam.pTexture != nullptr)
+            {
+                auto* pTexViewGL = Sam.pView.RawPtr<TextureViewGLImpl>();
+                auto* pTextureGL = ValidatedCast<TextureBaseGL>(Sam.pTexture);
+                VERIFY_EXPR(pTextureGL == pTexViewGL->GetTexture());
+                m_ContextState.BindTexture(s, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
+
+                pTextureGL->TextureMemoryBarrier(
+                    GL_TEXTURE_FETCH_BARRIER_BIT, // Texture fetches from shaders, including fetches from buffer object 
+                                                  // memory via buffer textures, after the barrier will reflect data 
+                                                  // written by shaders prior to the barrier
+                    m_ContextState);
+
+                if (Sam.pSampler)
+                {
+                    m_ContextState.BindSampler(s, Sam.pSampler->GetHandle());
+                }
+                else
+                {
+                    m_ContextState.BindSampler(s, GLObjectWrappers::GLSamplerObj(false));
+                }
+            }
+            else if (Sam.pBuffer != nullptr)
+            {
+                auto* pBufViewGL = Sam.pView.RawPtr<BufferViewGLImpl>();
+                auto* pBufferGL = ValidatedCast<BufferGLImpl>(Sam.pBuffer);
+                VERIFY_EXPR(pBufferGL == pBufViewGL->GetBuffer());
+
+                m_ContextState.BindTexture(s, GL_TEXTURE_BUFFER, pBufViewGL->GetTexBufferHandle());
+                m_ContextState.BindSampler(s, GLObjectWrappers::GLSamplerObj(false)); // Use default texture sampling parameters
+
+                pBufferGL->BufferMemoryBarrier(
+                    GL_TEXTURE_FETCH_BARRIER_BIT, // Texture fetches from shaders, including fetches from buffer object 
+                                                  // memory via buffer textures, after the barrier will reflect data 
+                                                  // written by shaders prior to the barrier
+                    m_ContextState);
+            }
+        }
+
+#if GL_ARB_shader_image_load_store
+        for (Uint32 img = 0; img < ResourceCache.GetImageCount(); ++img)
+        {
+            const auto& Img = ResourceCache.GetImage(img);
+            // We must check 'pTexture' first as 'pBuffer' is in union with 'pSampler'
+            if (Img.pTexture != nullptr)
+            {
+                auto* pTexViewGL = Img.pView.RawPtr<TextureViewGLImpl>();
+                auto* pTextureGL = ValidatedCast<TextureBaseGL>(Img.pTexture);
+                VERIFY_EXPR(pTextureGL == pTexViewGL->GetTexture());
+
+                const auto& ViewDesc = pTexViewGL->GetDesc();
+                VERIFY( ViewDesc.ViewType == TEXTURE_VIEW_UNORDERED_ACCESS, "Unexpected buffer view type" );
+
+                if (ViewDesc.AccessFlags & UAV_ACCESS_FLAG_WRITE)
+                {
+                    pTextureGL->TextureMemoryBarrier(
+                        GL_SHADER_IMAGE_ACCESS_BARRIER_BIT,// Memory accesses using shader image load, store, and atomic built-in 
+                                                            // functions issued after the barrier will reflect data written by shaders 
+                                                            // prior to the barrier. Additionally, image stores and atomics issued after 
+                                                            // the barrier will not execute until all memory accesses (e.g., loads, 
+                                                            // stores, texture fetches, vertex fetches) initiated prior to the barrier 
+                                                            // complete.
+                        m_ContextState);
+                    // We cannot set pending memory barriers here, because
+                    // if some texture is bound twice, the logic will fail
+                    m_BoundWritableTextures.push_back( pTextureGL );
+                }
+
+#ifdef _DEBUG
+                // Check that the texure being bound has immutable storage
+                {
+                    m_ContextState.BindTexture(-1, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
+                    GLint IsImmutable = 0;
+                    glGetTexParameteriv( pTexViewGL->GetBindTarget(), GL_TEXTURE_IMMUTABLE_FORMAT, &IsImmutable );
+                    CHECK_GL_ERROR( "glGetTexParameteriv() failed" );
+                    VERIFY( IsImmutable, "Only immutable textures can be bound to pipeline using glBindImageTexture()" );
+                    m_ContextState.BindTexture( -1, pTexViewGL->GetBindTarget(), GLObjectWrappers::GLTextureObj(false) );
+                }
+#endif
+                auto GlTexFormat = TexFormatToGLInternalTexFormat( ViewDesc.Format );
+                // Note that if a format qulifier is specified in the shader, the format
+                // must match it
+
+                GLboolean Layered = ViewDesc.NumArraySlices > 1 && ViewDesc.FirstArraySlice == 0;
+                // If "layered" is TRUE, the entire Mip level is bound. Layer parameter is ignored in this
+                // case. If "layered" is FALSE, only the single layer identified by "layer" will
+                // be bound. When "layered" is FALSE, the single bound layer is treated as a 2D texture.
+                GLint Layer = ViewDesc.FirstArraySlice;
+
+                auto GLAccess = AccessFlags2GLAccess(ViewDesc.AccessFlags);
+                // WARNING: Texture being bound to the image unit must be complete
+                // That means that if an integer texture is being bound, its 
+                // GL_TEXTURE_MIN_FILTER and GL_TEXTURE_MAG_FILTER must be NEAREST,
+                // otherwise it will be incomplete
+                m_ContextState.BindImage(img, pTexViewGL, ViewDesc.MostDetailedMip, Layered, Layer, GLAccess, GlTexFormat);
+                // Do not use binding points from reflection as they may not be initialized
+            }
+            else if (Img.pBuffer != nullptr)
+            {
+                auto* pBuffViewGL = Img.pView.RawPtr<BufferViewGLImpl>();
+                auto* pBufferGL   = ValidatedCast<BufferGLImpl>(Img.pBuffer);
+                VERIFY_EXPR(pBufferGL == pBuffViewGL->GetBuffer());
+
+                const auto& ViewDesc = pBuffViewGL->GetDesc();
+                VERIFY( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS, "Unexpected buffer view type" );
+
+                pBufferGL->BufferMemoryBarrier(
+                    GL_SHADER_IMAGE_ACCESS_BARRIER_BIT,// Memory accesses using shader image load, store, and atomic built-in 
+                                                        // functions issued after the barrier will reflect data written by shaders 
+                                                        // prior to the barrier. Additionally, image stores and atomics issued after 
+                                                        // the barrier will not execute until all memory accesses (e.g., loads, 
+                                                        // stores, texture fetches, vertex fetches) initiated prior to the barrier 
+                                                        // complete.
+                    m_ContextState);
+
+                m_BoundWritableBuffers.push_back(pBufferGL);
+
+                auto GlFormat = TypeToGLTexFormat(ViewDesc.Format.ValueType, ViewDesc.Format.NumComponents, ViewDesc.Format.IsNormalized);
+                m_ContextState.BindImage(img, pBuffViewGL, GL_READ_WRITE, GlFormat);
+            }
+        }
+#endif
+
+
+#if GL_ARB_shader_storage_buffer_object
+        for (Uint32 ssbo = 0; ssbo < ResourceCache.GetSSBOCount(); ++ssbo)
+        {
+            const auto& SSBO = ResourceCache.GetSSBO(ssbo);
+            if (SSBO.pBufferView)
+            {
+                auto* pBufferViewGL = SSBO.pBufferView.RawPtr<BufferViewGLImpl>();
+                const auto& ViewDesc = pBufferViewGL->GetDesc();
+                VERIFY( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Unexpected buffer view type" );
+
+                auto* pBufferGL = pBufferViewGL->GetBuffer<BufferGLImpl>();
+                pBufferGL->BufferMemoryBarrier(
+                    GL_SHADER_STORAGE_BARRIER_BIT,// Accesses to shader storage blocks after the barrier 
+                                                  // will reflect writes prior to the barrier
+                    m_ContextState);
+
+                glBindBufferRange(GL_SHADER_STORAGE_BUFFER, ssbo, pBufferGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
+                DEV_CHECK_GL_ERROR("Failed to bind shader storage buffer");
+
+                if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
+                    m_BoundWritableBuffers.push_back(pBufferGL);
+            }
+        }
+#endif
+
 
 #if GL_ARB_shader_image_load_store
         // Go through the list of textures bound as AUVs and set the required memory barriers
@@ -714,6 +568,7 @@ namespace Diligent
             // Set new required barriers for the time when texture is used next time
             pWritableTex->SetPendingMemoryBarriers(TextureMemBarriers);
         }
+        m_BoundWritableTextures.clear();
 
         for (auto* pWritableBuff : m_BoundWritableBuffers)
         {
@@ -732,6 +587,7 @@ namespace Diligent
             // Set new required barriers for the time when buffer is used next time
             pWritableBuff->SetPendingMemoryBarriers( BufferMemoryBarriers );
         }
+        m_BoundWritableBuffers.clear();
 #endif
     }
 
@@ -744,6 +600,8 @@ namespace Diligent
         if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
             DvpVerifyRenderTargets();
 #endif
+
+        m_pPipelineState->CommitProgram(m_ContextState);
 
         auto* pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
         auto CurrNativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
@@ -829,7 +687,7 @@ namespace Diligent
                 //} DrawElementsIndirectCommand;
                 glDrawElementsIndirect( GlTopology, IndexType, reinterpret_cast<const void*>( static_cast<size_t>(drawAttribs.IndirectDrawArgsOffset) ) );
                 // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
-                CHECK_GL_ERROR( "glDrawElementsIndirect() failed" );
+                DEV_CHECK_GL_ERROR( "glDrawElementsIndirect() failed" );
             }
             else
             {
@@ -841,12 +699,12 @@ namespace Diligent
                 //} DrawArraysIndirectCommand;
                 glDrawArraysIndirect( GlTopology, reinterpret_cast<const void*>( static_cast<size_t>(drawAttribs.IndirectDrawArgsOffset) ) );
                 // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
-                CHECK_GL_ERROR( "glDrawArraysIndirect() failed" );
+                DEV_CHECK_GL_ERROR( "glDrawArraysIndirect() failed" );
             }
 
             glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
 #else
-            UNSUPPORTED("Indirect rendering is not supported");
+            LOG_ERROR_MESSAGE("Indirect rendering is not supported");
 #endif
         }
         else
@@ -890,7 +748,7 @@ namespace Diligent
                 else
                     glDrawArrays(GlTopology, drawAttribs.StartVertexLocation, drawAttribs.NumVertices);
             }
-            CHECK_GL_ERROR( "OpenGL draw command failed" );
+            DEV_CHECK_GL_ERROR( "OpenGL draw command failed" );
         }
 
         // IMPORTANT: new pending memory barriers in the context must be set
@@ -909,6 +767,8 @@ namespace Diligent
 #endif
 
 #if GL_ARB_compute_shader
+        m_pPipelineState->CommitProgram(m_ContextState);
+
         if (DispatchAttrs.pIndirectDispatchAttribs)
         {
             CHECK_DYNAMIC_TYPE( BufferGLImpl, DispatchAttrs.pIndirectDispatchAttribs );

@@ -222,7 +222,7 @@ enum SHADER_RESOURCE_TYPE : Uint8
 struct ShaderResourceDesc
 {
     /// Shader resource name
-    const char* Name               = nullptr;
+    const char*          Name      = nullptr;
 
     /// Shader resource type, see Diligent::SHADER_RESOURCE_TYPE.
     SHADER_RESOURCE_TYPE Type      = SHADER_RESOURCE_TYPE_UNKNOWN;

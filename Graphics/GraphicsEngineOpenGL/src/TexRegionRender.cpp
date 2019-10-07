@@ -145,10 +145,10 @@ namespace Diligent
 
                 pDeviceGL->CreatePipelineState(PSODesc, &m_pPSO[Dim*3 + Fmt], IsInternalDeviceObject);
             }
-            m_pPSO[RESOURCE_DIM_TEX_2D*3]->CreateShaderResourceBinding(&m_pSRB);
-            m_pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "cbConstants")->Set(m_pConstantBuffer);
-            m_pSrcTexVar = m_pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "gSourceTex");
         }
+        m_pPSO[RESOURCE_DIM_TEX_2D*3]->CreateShaderResourceBinding(&m_pSRB);
+        m_pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "cbConstants")->Set(m_pConstantBuffer);
+        m_pSrcTexVar = m_pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "gSourceTex");
     }
 
     void TexRegionRender::SetStates( DeviceContextGLImpl *pCtxGL )

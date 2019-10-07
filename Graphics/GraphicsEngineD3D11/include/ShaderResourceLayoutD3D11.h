@@ -306,7 +306,7 @@ private:
     template<typename ResourceType>
     ResourceType& GetResource(Uint32 ResIndex)
     {
-        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>(), ")");
+        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>()-1, ")");
         auto Offset = GetResourceOffset<ResourceType>();
         return reinterpret_cast<ResourceType*>( reinterpret_cast<Uint8*>(m_ResourceBuffer.get()) + Offset)[ResIndex];
     }
@@ -314,7 +314,7 @@ private:
     template<typename ResourceType>
     const ResourceType& GetConstResource(Uint32 ResIndex)const
     {
-        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>(), ")");
+        VERIFY(ResIndex < GetNumResources<ResourceType>(), "Resource index (", ResIndex, ") exceeds max allowed value (", GetNumResources<ResourceType>()-1, ")");
         auto Offset = GetResourceOffset<ResourceType>();
         return reinterpret_cast<const ResourceType*>( reinterpret_cast<const Uint8*>(m_ResourceBuffer.get()) + Offset)[ResIndex];
     }

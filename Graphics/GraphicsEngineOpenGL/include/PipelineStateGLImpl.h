@@ -27,10 +27,12 @@
 #include "PipelineStateGL.h"
 #include "PipelineStateBase.h"
 #include "RenderDevice.h"
-#include "GLProgram.h"
 #include "GLObjectWrapper.h"
 #include "GLContext.h"
 #include "RenderDeviceGLImpl.h"
+#include "GLProgramResources.h"
+#include "GLPipelineResourceLayout.h"
+#include "GLProgramResourceCache.h"
 
 namespace Diligent
 {
@@ -64,22 +66,33 @@ public:
 
     virtual bool IsCompatibleWith(const IPipelineState* pPSO)const override final;
 
-    GLProgram& GetGLProgram(){return m_GLProgram;}
-    GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
+    void CommitProgram(GLContextState& State);
+    
+    void InitializeSRBResourceCache(GLProgramResourceCache& ResourceCache)const;
 
-    GLProgramResources& GetStaticResources(Uint32 s)
-    {
-        return m_StaticResources[s];
-    }
+    const GLPipelineResourceLayout& GetStaticResourceLayout()const {return m_StaticResourceLayout;}
 
 private:
-    void LinkGLProgram(bool bIsProgramPipelineSupported);
+    GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
+    void InitStaticSamplersInResourceCache(const GLPipelineResourceLayout& ResourceLayout, GLProgramResourceCache& Cache)const;
 
-    GLProgram m_GLProgram;
+    std::vector<GLObjectWrappers::GLProgramObj> m_GLPrograms;
+
     ThreadingTools::LockFlag m_ProgPipelineLockFlag;
     std::vector< std::pair<GLContext::NativeGLContextType, GLObjectWrappers::GLPipelineObj > > m_GLProgPipelines;
-    std::vector<GLProgramResources> m_StaticResources;
-    Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
+
+    GLPipelineResourceLayout m_ResourceLayout;
+    GLPipelineResourceLayout m_StaticResourceLayout;
+    GLProgramResourceCache   m_StaticResourceCache;
+
+    std::vector<GLProgramResources> m_ProgramResources;
+
+    Uint32  m_TotalUniformBufferBindings = 0;   
+    Uint32  m_TotalSamplerBindings       = 0;
+    Uint32  m_TotalImageBindings         = 0;
+    Uint32  m_TotalStorageBufferBindings = 0;
+
+    std::vector<RefCntAutoPtr<ISampler>> m_StaticSamplers;
 };
 
 }

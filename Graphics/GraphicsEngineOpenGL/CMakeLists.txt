@@ -12,7 +12,8 @@ set(INCLUDE
     include/GLContext.h
     include/GLContextState.h
     include/GLObjectWrapper.h
-    include/GLProgram.h
+    include/GLProgramResourceCache.h
+    include/GLPipelineResourceLayout.h
     include/GLProgramResources.h
     include/GLTypeConversions.h
     include/pch.h
@@ -60,7 +61,8 @@ set(SOURCE
     src/FenceGLImpl.cpp
     src/GLContextState.cpp
     src/GLObjectWrapper.cpp
-    src/GLProgram.cpp
+    src/GLProgramResourceCache.cpp
+    src/GLPipelineResourceLayout.cpp
     src/GLProgramResources.cpp
     src/GLTypeConversions.cpp
     src/PipelineStateGLImpl.cpp

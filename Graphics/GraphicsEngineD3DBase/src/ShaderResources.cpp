@@ -117,14 +117,11 @@ Int32 ShaderResources::FindStaticSampler(const D3DShaderResourceAttribs&   Resou
 {
     VERIFY(ResourceAttribs.GetInputType() == D3D_SIT_SAMPLER, "Sampler is expected");
 
-    for (Uint32 s=0; s < ResourceLayoutDesc.NumStaticSamplers; ++s)
-    {
-        const auto& StSam = ResourceLayoutDesc.StaticSamplers[s];
-        if ( ((StSam.ShaderStages & m_ShaderType) != 0) && StreqSuff(ResourceAttribs.Name, StSam.SamplerOrTextureName, m_SamplerSuffix) )
-            return s;
-    }
-
-    return -1;
+    return Diligent::FindStaticSampler(ResourceLayoutDesc.StaticSamplers,
+                                       ResourceLayoutDesc.NumStaticSamplers,
+                                       m_ShaderType,
+                                       ResourceAttribs.Name,
+                                       m_SamplerSuffix);
 }
 
 

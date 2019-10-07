@@ -116,12 +116,12 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
 
     // Initialize offsets
     size_t CurrentOffset = 0;
-    auto AdvanceOffset = [&CurrentOffset](size_t NumResources)
+    auto AdvanceOffset = [&CurrentOffset](size_t NumBytes)
     {
         constexpr size_t MaxOffset = std::numeric_limits<OffsetType>::max();
         VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
         auto Offset = static_cast<OffsetType>(CurrentOffset);
-        CurrentOffset += NumResources;
+        CurrentOffset += NumBytes;
         return Offset;
     };
 
@@ -409,7 +409,7 @@ do{                                                                             
 void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* pBuffer,
                                                                 Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount-1);
     auto& ResourceCache = m_ParentResLayout.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
@@ -472,7 +472,7 @@ bool dbgVerifyViewType( const char*                     ViewTypeName,
 void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pView,
                                                              Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount-1);
     auto& ResourceCache = m_ParentResLayout.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
@@ -536,7 +536,7 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
 void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSampler,
                                                               Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount-1);
     auto& ResourceCache = m_ParentResLayout.m_ResourceCache;
     //VERIFY(!IsStaticSampler, "Cannot bind sampler to a static sampler");
 
@@ -571,7 +571,7 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
 void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pView,
                                                               Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount-1);
     auto& ResourceCache = m_ParentResLayout.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
@@ -601,7 +601,7 @@ void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pVi
 void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pView,
                                                              Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount-1);
     auto& ResourceCache = m_ParentResLayout.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
@@ -631,7 +631,7 @@ void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVie
 void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pView,
                                                               Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount-1);
     auto& ResourceCache = m_ParentResLayout.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the

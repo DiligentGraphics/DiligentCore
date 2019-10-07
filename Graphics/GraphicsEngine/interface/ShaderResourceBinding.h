@@ -67,6 +67,9 @@ public:
     /// \param [in] ShaderType - Type of the shader to look up the variable. 
     ///                          Must be one of Diligent::SHADER_TYPE.
     /// \param [in] Name       - Variable name
+    ///
+    /// \note  This operation may potentially be expensive. If the variable will be used often, it is
+    ///        recommended to store and reuse the pointer as it never changes.
     virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name) = 0;
 
     /// Returns the total variable count for the specific shader stage.
@@ -86,6 +89,9 @@ public:
     ///                          IShaderResourceBinding::GetVariableCount().
     /// \remark Only mutable and dynamic variables can be accessed through this method.
     ///         Static variables are accessed through the Shader object.
+    ///
+    /// \note   This operation may potentially be expensive. If the variable will be used often, it is
+    ///         recommended to store and reuse the pointer as it never changes.
     virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) = 0;
 
 
