@@ -65,8 +65,8 @@ RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*          pRef
             sizeof(FenceD3D11Impl)
         }
     },
-    m_EngineAttribs(EngineAttribs),
-    m_pd3d11Device(pd3d11Device)
+    m_EngineAttribs{EngineAttribs},
+    m_pd3d11Device {pd3d11Device }
 {
     m_DeviceCaps.DevType = DeviceType::D3D11;
     m_DeviceCaps.MajorVersion = 11;

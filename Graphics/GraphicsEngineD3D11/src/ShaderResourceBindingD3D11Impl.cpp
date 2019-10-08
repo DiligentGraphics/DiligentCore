@@ -34,8 +34,13 @@ namespace Diligent
 ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl( IReferenceCounters*     pRefCounters,
                                                                 PipelineStateD3D11Impl* pPSO,
                                                                 bool                    IsInternal) :
-    TBase( pRefCounters, pPSO, IsInternal ),
-    m_bIsStaticResourcesBound(false)
+    TBase
+    {
+        pRefCounters,
+        pPSO,
+        IsInternal
+    },
+    m_bIsStaticResourcesBound{false}
 {
     m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaders());
 

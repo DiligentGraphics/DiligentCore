@@ -34,8 +34,15 @@ TextureViewD3D11Impl::TextureViewD3D11Impl( IReferenceCounters*    pRefCounters,
                                             ITexture*              pTexture,
                                             ID3D11View*            pD3D11View,
                                             bool                   bIsDefaultView ) :
-    TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
-    m_pD3D11View( pD3D11View )
+    TTextureViewBase
+    {
+        pRefCounters,
+        pDevice,
+        ViewDesc,
+        pTexture,
+        bIsDefaultView
+    },
+    m_pD3D11View{pD3D11View}
 {
     if (*m_Desc.Name != 0)
     {

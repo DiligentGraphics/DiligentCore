@@ -47,10 +47,15 @@ namespace Diligent
                                                     ID3D11DeviceContext*                pd3d11DeviceContext,
                                                     const struct EngineD3D11CreateInfo& EngineAttribs,
                                                     bool                                bIsDeferred ) :
-        TDeviceContextBase(pRefCounters, pDevice, bIsDeferred),
-        m_pd3d11DeviceContext( pd3d11DeviceContext ),
-        m_DebugFlags(EngineAttribs.DebugFlags),
-        m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListD3D11Impl), 64)
+        TDeviceContextBase
+        {
+            pRefCounters,
+            pDevice,
+            bIsDeferred
+        },
+        m_pd3d11DeviceContext{pd3d11DeviceContext        },
+        m_DebugFlags         {EngineAttribs.DebugFlags   },
+        m_CmdListAllocator   {GetRawAllocator(), sizeof(CommandListD3D11Impl), 64}
     {
     }
 

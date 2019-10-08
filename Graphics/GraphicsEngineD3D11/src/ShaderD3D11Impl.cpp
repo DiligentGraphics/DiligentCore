@@ -33,8 +33,13 @@ namespace Diligent
 ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                                  RenderDeviceD3D11Impl*       pRenderDeviceD3D11,
                                  const ShaderCreateInfo&      ShaderCI) : 
-    TShaderBase(pRefCounters, pRenderDeviceD3D11, ShaderCI.Desc),
-    ShaderD3DBase(ShaderCI)
+    TShaderBase
+    {
+        pRefCounters,
+        pRenderDeviceD3D11,
+        ShaderCI.Desc
+    },
+    ShaderD3DBase{ShaderCI}
 {
     auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
     switch (ShaderCI.Desc.ShaderType)

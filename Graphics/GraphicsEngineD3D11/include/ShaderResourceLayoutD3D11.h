@@ -45,7 +45,7 @@ class IMemoryAllocator;
 class ShaderResourceLayoutD3D11
 {
 public:
-    ShaderResourceLayoutD3D11(IObject& Owner,
+    ShaderResourceLayoutD3D11(IObject&                                    Owner,
                               std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
                               const PipelineResourceLayoutDesc&           ResourceLayout,
                               const SHADER_RESOURCE_VARIABLE_TYPE*        VarTypes, 

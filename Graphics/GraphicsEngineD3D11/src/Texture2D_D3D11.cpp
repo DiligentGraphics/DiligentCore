@@ -34,7 +34,14 @@ Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters,
                                    RenderDeviceD3D11Impl*     pRenderDeviceD3D11, 
                                    const TextureDesc&         TexDesc, 
                                    const TextureData*         pInitData /*= nullptr*/) : 
-    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, pInitData)
+    TextureBaseD3D11
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pRenderDeviceD3D11,
+        TexDesc,
+        pInitData
+    }
 {
     auto D3D11TexFormat = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
     auto D3D11BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);
@@ -127,7 +134,14 @@ Texture2D_D3D11 :: Texture2D_D3D11(IReferenceCounters*        pRefCounters,
                                    RenderDeviceD3D11Impl*     pDeviceD3D11, 
                                    RESOURCE_STATE             InitialState,
                                    ID3D11Texture2D*           pd3d11Texture) : 
-    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture2D{}(pd3d11Texture), nullptr)
+    TextureBaseD3D11
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceD3D11,
+        TexDescFromD3D11Texture2D{}(pd3d11Texture),
+        nullptr
+    }
 {
     m_pd3d11Texture = pd3d11Texture;
     SetState(InitialState);

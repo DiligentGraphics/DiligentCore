@@ -35,9 +35,14 @@ namespace Diligent
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCounters,
                                                RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
                                                const PipelineStateDesc& PipelineDesc) : 
-    TPipelineStateBase(pRefCounters, pRenderDeviceD3D11, PipelineDesc),
-    m_SRBMemAllocator(GetRawAllocator()),
-    m_StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"))
+    TPipelineStateBase
+    {
+        pRefCounters,
+        pRenderDeviceD3D11,
+        PipelineDesc
+    },
+    m_SRBMemAllocator{GetRawAllocator()},
+    m_StaticSamplers {STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>")}
 {
     if (PipelineDesc.IsComputePipeline)
     {

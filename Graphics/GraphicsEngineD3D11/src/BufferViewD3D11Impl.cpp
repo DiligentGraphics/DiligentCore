@@ -33,8 +33,15 @@ BufferViewD3D11Impl::BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
                                           IBuffer*               pBuffer,
                                           ID3D11View*            pD3D11View,
                                           bool                   bIsDefaultView ) :
-    TBufferViewBase( pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
-    m_pD3D11View( pD3D11View )
+    TBufferViewBase
+    {
+        pRefCounters,
+        pDevice,
+        ViewDesc,
+        pBuffer,
+        bIsDefaultView
+    },
+    m_pD3D11View{pD3D11View}
 {
     if (*m_Desc.Name != 0)
     {

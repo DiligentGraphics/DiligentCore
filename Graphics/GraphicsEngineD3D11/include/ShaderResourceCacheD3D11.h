@@ -92,8 +92,8 @@ public:
         BufferD3D11Impl* pBuffer;
         // There is no need to keep strong reference to D3D11 resource as
         // it is already kept by either pTexture or pBuffer
-        ID3D11Resource *pd3d11Resource;
-        CachedResource()noexcept : pTexture(nullptr), pBuffer(nullptr), pd3d11Resource(nullptr)
+        ID3D11Resource* pd3d11Resource;
+        CachedResource()noexcept : pTexture{nullptr}, pBuffer{nullptr}, pd3d11Resource{nullptr}
         {}
 
         __forceinline void Set(RefCntAutoPtr<TextureViewD3D11Impl>&& pTexView)

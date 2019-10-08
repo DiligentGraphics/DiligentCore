@@ -37,7 +37,13 @@ TextureBaseD3D11 :: TextureBaseD3D11(IReferenceCounters*        pRefCounters,
                                      RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
                                      const TextureDesc&         TexDesc,
                                      const TextureData*         pInitData /*= nullptr*/) : 
-    TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc)
+    TTextureBase
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pRenderDeviceD3D11,
+        TexDesc
+    }
 {
     if (m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
         LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time: pInitData can't be null");

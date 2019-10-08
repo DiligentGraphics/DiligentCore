@@ -101,9 +101,9 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
                                                      ShaderResourceCacheD3D11&                   ResourceCache,
                                                      IMemoryAllocator&                           ResCacheDataAllocator,
                                                      IMemoryAllocator&                           ResLayoutDataAllocator) :
-    m_Owner         (Owner),
-    m_pResources    (std::move(pSrcResources)),
-    m_ResourceCache (ResourceCache)
+    m_Owner         {Owner},
+    m_pResources    {std::move(pSrcResources)},
+    m_ResourceCache {ResourceCache}
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout#Shader-Resource-Layout-Initialization
 

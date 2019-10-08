@@ -34,7 +34,14 @@ Texture1D_D3D11 :: Texture1D_D3D11(IReferenceCounters*        pRefCounters,
                                    RenderDeviceD3D11Impl*     pRenderDeviceD3D11, 
                                    const TextureDesc&         TexDesc, 
                                    const TextureData*         pInitData /*= nullptr*/) : 
-    TextureBaseD3D11(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D11, TexDesc, pInitData)
+    TextureBaseD3D11
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pRenderDeviceD3D11,
+        TexDesc,
+        pInitData
+    }
 {
     auto D3D11TexFormat = TexFormatToDXGI_Format(m_Desc.Format, m_Desc.BindFlags);
     auto D3D11BindFlags = BindFlagsToD3D11BindFlags(m_Desc.BindFlags);

@@ -36,9 +36,17 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters*       pRefCounters,
                                        RenderDeviceD3D11Impl*    pRenderDeviceD3D11, 
                                        DeviceContextD3D11Impl*   pDeviceContextD3D11, 
                                        void*                     pNativeWndHandle) :
-    TSwapChainBase(pRefCounters, pRenderDeviceD3D11, pDeviceContextD3D11, SCDesc, FSDesc, pNativeWndHandle)
+    TSwapChainBase
+    {
+        pRefCounters,
+        pRenderDeviceD3D11,
+        pDeviceContextD3D11,
+        SCDesc,
+        FSDesc,
+        pNativeWndHandle
+    }
 {
-    auto *pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
+    auto* pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
     CreateDXGISwapChain(pd3d11Device);
     CreateRTVandDSV();
 }

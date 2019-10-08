@@ -33,7 +33,7 @@ namespace Diligent
 FenceD3D11Impl :: FenceD3D11Impl(IReferenceCounters*    pRefCounters,
                                  RenderDeviceD3D11Impl* pDevice,
                                  const FenceDesc&       Desc) : 
-    TFenceBase(pRefCounters, pDevice, Desc)
+    TFenceBase{pRefCounters, pDevice, Desc}
 {
 }
 

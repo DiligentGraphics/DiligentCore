@@ -40,7 +40,14 @@ BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*        pRefCounters,
                                    RenderDeviceD3D11Impl*     pRenderDeviceD3D11, 
                                    const BufferDesc&          BuffDesc, 
                                    const BufferData*          pBuffData /*= nullptr*/) : 
-    TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceD3D11, BuffDesc, false)
+    TBufferBase
+    {
+        pRefCounters,
+        BuffViewObjMemAllocator,
+        pRenderDeviceD3D11,
+        BuffDesc,
+        false
+    }
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", m_Desc.Name ? m_Desc.Name : "", "\": ", ##__VA_ARGS__);
 
@@ -166,7 +173,14 @@ BufferD3D11Impl :: BufferD3D11Impl(IReferenceCounters*          pRefCounters,
                                    const BufferDesc&            BuffDesc, 
                                    RESOURCE_STATE               InitialState,
                                    ID3D11Buffer*                pd3d11Buffer) : 
-    TBufferBase(pRefCounters, BuffViewObjMemAllocator, pDeviceD3D11, BuffDescFromD3D11Buffer(pd3d11Buffer, BuffDesc), false)
+    TBufferBase
+    {
+        pRefCounters,
+        BuffViewObjMemAllocator,
+        pDeviceD3D11,
+        BuffDescFromD3D11Buffer(pd3d11Buffer, BuffDesc),
+        false
+    }
 {
     m_pd3d11Buffer = pd3d11Buffer;
     SetState(InitialState);
