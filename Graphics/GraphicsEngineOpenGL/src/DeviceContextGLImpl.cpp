@@ -369,6 +369,9 @@ namespace Diligent
 
         auto* pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pResBinding);
         const auto& ResourceCache = pShaderResBindingGL->GetResourceCache(m_pPipelineState);
+#ifdef DEVELOPMENT
+        m_pPipelineState->GetResourceLayout().dvpVerifyBindings(ResourceCache);
+#endif
 
         VERIFY_EXPR(m_BoundWritableTextures.empty());
         VERIFY_EXPR(m_BoundWritableBuffers.empty());
@@ -376,22 +379,26 @@ namespace Diligent
         for (Uint32 ub = 0; ub < ResourceCache.GetUBCount(); ++ub)
         {
             const auto& UB = ResourceCache.GetUB(ub);
-            if (auto* pBufferGL = UB.pBuffer.RawPtr<BufferGLImpl>())
-            {
-                pBufferGL->BufferMemoryBarrier(
-                    GL_UNIFORM_BARRIER_BIT,// Shader uniforms sourced from buffer objects after the barrier 
-                                            // will reflect data written by shaders prior to the barrier
-                    m_ContextState);
+            if (!UB.pBuffer)
+                continue;
 
-                glBindBufferBase(GL_UNIFORM_BUFFER, ub, pBufferGL->m_GlBuffer);
-                DEV_CHECK_GL_ERROR("Failed to bind uniform buffer to slot ", ub);
-                //glBindBufferRange(GL_UNIFORM_BUFFER, it->Index, pBufferGL->m_GlBuffer, 0, pBufferGL->GetDesc().uiSizeInBytes);
-            }
+            auto* pBufferGL = UB.pBuffer.RawPtr<BufferGLImpl>();
+            pBufferGL->BufferMemoryBarrier(
+                GL_UNIFORM_BARRIER_BIT,// Shader uniforms sourced from buffer objects after the barrier 
+                                        // will reflect data written by shaders prior to the barrier
+                m_ContextState);
+
+            glBindBufferBase(GL_UNIFORM_BUFFER, ub, pBufferGL->m_GlBuffer);
+            DEV_CHECK_GL_ERROR("Failed to bind uniform buffer to slot ", ub);
+            //glBindBufferRange(GL_UNIFORM_BUFFER, it->Index, pBufferGL->m_GlBuffer, 0, pBufferGL->GetDesc().uiSizeInBytes);
         }
 
         for (Uint32 s = 0; s < ResourceCache.GetSamplerCount(); ++s)
         {
             const auto& Sam = ResourceCache.GetSampler(s);
+            if (!Sam.pView)
+                continue;
+
             // We must check 'pTexture' first as 'pBuffer' is in union with 'pSampler'
             if (Sam.pTexture != nullptr)
             {
@@ -436,6 +443,9 @@ namespace Diligent
         for (Uint32 img = 0; img < ResourceCache.GetImageCount(); ++img)
         {
             const auto& Img = ResourceCache.GetImage(img);
+            if (!Img.pView)
+                continue;
+
             // We must check 'pTexture' first as 'pBuffer' is in union with 'pSampler'
             if (Img.pTexture != nullptr)
             {
@@ -521,24 +531,24 @@ namespace Diligent
         for (Uint32 ssbo = 0; ssbo < ResourceCache.GetSSBOCount(); ++ssbo)
         {
             const auto& SSBO = ResourceCache.GetSSBO(ssbo);
-            if (SSBO.pBufferView)
-            {
-                auto* pBufferViewGL = SSBO.pBufferView.RawPtr<BufferViewGLImpl>();
-                const auto& ViewDesc = pBufferViewGL->GetDesc();
-                VERIFY( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Unexpected buffer view type" );
+            if (!SSBO.pBufferView)
+                return;
+            
+            auto* pBufferViewGL = SSBO.pBufferView.RawPtr<BufferViewGLImpl>();
+            const auto& ViewDesc = pBufferViewGL->GetDesc();
+            VERIFY( ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS || ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE, "Unexpected buffer view type" );
 
-                auto* pBufferGL = pBufferViewGL->GetBuffer<BufferGLImpl>();
-                pBufferGL->BufferMemoryBarrier(
-                    GL_SHADER_STORAGE_BARRIER_BIT,// Accesses to shader storage blocks after the barrier 
-                                                  // will reflect writes prior to the barrier
-                    m_ContextState);
+            auto* pBufferGL = pBufferViewGL->GetBuffer<BufferGLImpl>();
+            pBufferGL->BufferMemoryBarrier(
+                GL_SHADER_STORAGE_BARRIER_BIT,// Accesses to shader storage blocks after the barrier 
+                                                // will reflect writes prior to the barrier
+                m_ContextState);
 
-                glBindBufferRange(GL_SHADER_STORAGE_BUFFER, ssbo, pBufferGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
-                DEV_CHECK_GL_ERROR("Failed to bind shader storage buffer");
+            glBindBufferRange(GL_SHADER_STORAGE_BUFFER, ssbo, pBufferGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
+            DEV_CHECK_GL_ERROR("Failed to bind shader storage buffer");
 
-                if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
-                    m_BoundWritableBuffers.push_back(pBufferGL);
-            }
+            if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
+                m_BoundWritableBuffers.push_back(pBufferGL);
         }
 #endif
 

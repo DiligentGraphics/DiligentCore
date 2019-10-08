@@ -107,7 +107,7 @@ void ShaderResourceBindingGLImpl::InitializeStaticResources(const IPipelineState
     const auto& StaticResLayout = pPSOGL->GetStaticResourceLayout();
 
 #ifdef DEVELOPMENT
-    if (!StaticResLayout.dvpVerifyBindings())
+    if (!StaticResLayout.dvpVerifyBindings(pPSOGL->GetStaticResourceCache()))
     {
         LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSOGL->GetDesc().Name, "' will not be successfully initialized "
                           "because not all static resource bindings in shader '", pPSOGL->GetDesc().Name, "' are valid. "

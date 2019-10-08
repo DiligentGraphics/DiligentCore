@@ -222,7 +222,7 @@ public:
     void BindResources(SHADER_TYPE ShaderStage, IResourceMapping* pResourceMapping, Uint32 Flags, const GLProgramResourceCache& dbgResourceCache);
 
 #ifdef DEVELOPMENT
-    bool dvpVerifyBindings()const;
+    bool dvpVerifyBindings(const GLProgramResourceCache& ResourceCache)const;
 #endif
 
     IShaderResourceVariable* GetShaderVariable( SHADER_TYPE ShaderStage, const Char* Name );

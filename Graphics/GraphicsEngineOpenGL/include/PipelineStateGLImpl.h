@@ -70,7 +70,9 @@ public:
     
     void InitializeSRBResourceCache(GLProgramResourceCache& ResourceCache)const;
 
+    const GLPipelineResourceLayout& GetResourceLayout()const {return m_ResourceLayout;}
     const GLPipelineResourceLayout& GetStaticResourceLayout()const {return m_StaticResourceLayout;}
+    const GLProgramResourceCache&   GetStaticResourceCache()const {return m_StaticResourceCache;}
 
 private:
     GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);

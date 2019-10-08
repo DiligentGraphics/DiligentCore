@@ -798,7 +798,7 @@ void GLPipelineResourceLayout::CopyResources(GLProgramResourceCache& DstCache)co
 }
 
 #ifdef DEVELOPMENT
-bool GLPipelineResourceLayout::dvpVerifyBindings()const
+bool GLPipelineResourceLayout::dvpVerifyBindings(const GLProgramResourceCache& ResourceCache)const
 {
 #define LOG_MISSING_BINDING(VarType, BindInfo, BindPt)\
 do{                                                 \
@@ -814,7 +814,7 @@ do{                                                 \
         {
             for (Uint32 BindPoint = ub.m_Attribs.Binding; BindPoint < Uint32{ub.m_Attribs.Binding} + ub.m_Attribs.ArraySize; ++BindPoint)
             {
-                if (!m_pResourceCache->IsUBBound(BindPoint))
+                if (!ResourceCache.IsUBBound(BindPoint))
                 {
                     LOG_MISSING_BINDING("constant buffer", ub, BindPoint);
                     BindingsOK  = false;
@@ -828,14 +828,14 @@ do{                                                 \
             {
                 VERIFY_EXPR(sam.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV ||
                             sam.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV);
-                if (!m_pResourceCache->IsSamplerBound(BindPoint, sam.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV))
+                if (!ResourceCache.IsSamplerBound(BindPoint, sam.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV))
                 {
                     LOG_MISSING_BINDING("texture", sam, BindPoint);
                     BindingsOK  = false;
                 }
                 else
                 {
-                    const auto& CachedSampler = const_cast<const GLProgramResourceCache*>(m_pResourceCache)->GetSampler(BindPoint);
+                    const auto& CachedSampler = ResourceCache.GetSampler(BindPoint);
                     if (sam.m_StaticSamplerIdx >= 0 && CachedSampler.pSampler == nullptr)
                     {
                         LOG_ERROR_MESSAGE("Static sampler is not initialized for texture '", sam.m_Attribs.Name, "'");
@@ -851,7 +851,7 @@ do{                                                 \
             {
                 VERIFY_EXPR(img.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV ||
                             img.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
-                if (!m_pResourceCache->IsImageBound(BindPoint, img.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV))
+                if (!ResourceCache.IsImageBound(BindPoint, img.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV))
                 {
                     LOG_MISSING_BINDING("texture UAV", img, BindPoint);
                     BindingsOK  = false;
@@ -863,7 +863,7 @@ do{                                                 \
         {
             for (Uint32 BindPoint = ssbo.m_Attribs.Binding; BindPoint < Uint32{ssbo.m_Attribs.Binding} + ssbo.m_Attribs.ArraySize; ++BindPoint)
             {
-                if (!m_pResourceCache->IsSSBOBound(BindPoint))
+                if (!ResourceCache.IsSSBOBound(BindPoint))
                 {
                     LOG_MISSING_BINDING("buffer", ssbo, BindPoint);
                     BindingsOK  = false;
