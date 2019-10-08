@@ -238,10 +238,6 @@ public:
     Uint32 GetNumStorageBuffers() const { return (m_VariableEndOffset   - m_StorageBufferOffset) / sizeof(StorageBufferBindInfo);  }
 
     template<typename ResourceType> Uint32 GetNumResources()const;
-    template<> Uint32 GetNumResources<UniformBuffBindInfo>()   const { return GetNumUBs();            }
-    template<> Uint32 GetNumResources<SamplerBindInfo>()       const { return GetNumSamplers();       }
-    template<> Uint32 GetNumResources<ImageBindInfo>()         const { return GetNumImages();         }
-    template<> Uint32 GetNumResources<StorageBufferBindInfo>() const { return GetNumStorageBuffers(); }
 
     template<typename ResourceType>
     const ResourceType& GetConstResource(Uint32 ResIndex)const
@@ -268,15 +264,11 @@ private:
 /*34*/ OffsetType m_ImageOffset         = 0;
 /*36*/ OffsetType m_StorageBufferOffset = 0;
 /*38*/ OffsetType m_VariableEndOffset   = 0;
-/*40*/ std::array<Int8, 6> m_ProgramIndex = {-1, -1, -1, -1, -1, -1};
+/*40*/ std::array<Int8, 6> m_ProgramIndex = {{-1, -1, -1, -1, -1, -1}};
 /*46*/ Uint8      m_NumPrograms         = 0;
 /*48*/
 
     template<typename ResourceType> OffsetType GetResourceOffset()const;
-    template<> OffsetType GetResourceOffset<UniformBuffBindInfo>  () const { return m_UBOffset;            }
-    template<> OffsetType GetResourceOffset<SamplerBindInfo>      () const { return m_SamplerOffset;       }
-    template<> OffsetType GetResourceOffset<ImageBindInfo>        () const { return m_ImageOffset;         }
-    template<> OffsetType GetResourceOffset<StorageBufferBindInfo>() const { return m_StorageBufferOffset; }
 
     template<typename ResourceType>
     ResourceType& GetResource(Uint32 ResIndex)
@@ -348,5 +340,29 @@ private:
     friend class ShaderVariableIndexLocator;
     friend class ShaderVariableLocator;
 };
+
+template<>
+inline Uint32 GLPipelineResourceLayout::GetNumResources<GLPipelineResourceLayout::UniformBuffBindInfo>()const
+{
+    return GetNumUBs();
+}
+
+template<>
+inline Uint32 GLPipelineResourceLayout::GetNumResources<GLPipelineResourceLayout::SamplerBindInfo>()const
+{
+    return GetNumSamplers();
+}
+
+template<>
+inline Uint32 GLPipelineResourceLayout::GetNumResources<GLPipelineResourceLayout::ImageBindInfo>()const
+{
+    return GetNumImages();
+}
+
+template<>
+inline Uint32 GLPipelineResourceLayout::GetNumResources<GLPipelineResourceLayout::StorageBufferBindInfo>()const
+{
+    return GetNumStorageBuffers();
+}
 
 }
