@@ -91,7 +91,7 @@ namespace Diligent
             pDeviceVkImpl->GetDynamicDescriptorPool(),
             GetContextObjectName("Dynamic descriptor set allocator", bIsDeferred, ContextId),
         },
-        m_GenerateMipsHelper(std::move(GenerateMipsHelper))
+        m_GenerateMipsHelper{std::move(GenerateMipsHelper)}
     {
         m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
 

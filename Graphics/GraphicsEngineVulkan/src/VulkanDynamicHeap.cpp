@@ -41,10 +41,10 @@ VulkanDynamicMemoryManager::VulkanDynamicMemoryManager(IMemoryAllocator&   Alloc
                                                        RenderDeviceVkImpl& DeviceVk, 
                                                        Uint32              Size,
                                                        Uint64              CommandQueueMask) :
-    TBase(Allocator, Size),
-    m_DeviceVk(DeviceVk),
-    m_DefaultAlignment(GetDefaultAlignment(DeviceVk.GetPhysicalDevice())),
-    m_CommandQueueMask(CommandQueueMask)
+    TBase             {Allocator, Size},
+    m_DeviceVk        {DeviceVk},
+    m_DefaultAlignment{GetDefaultAlignment(DeviceVk.GetPhysicalDevice())},
+    m_CommandQueueMask{CommandQueueMask}
 {
     VERIFY( (Size & (MasterBlockAlignment-1)) == 0, "Heap size (", Size, " is not aligned by the master block alignment (", Uint32{MasterBlockAlignment}, ")");
     VkBufferCreateInfo VkBuffCI = {};

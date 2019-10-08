@@ -49,10 +49,10 @@ public:
                             VkDescriptorPool        _Pool,
                             Uint64                  _CmdQueueMask,
                             DescriptorSetAllocator& _DescrSetAllocator)noexcept :
-        Set              (_Set),
-        Pool             (_Pool),
-        CmdQueueMask     (_CmdQueueMask),
-        DescrSetAllocator(&_DescrSetAllocator)
+        Set              {_Set               },
+        Pool             {_Pool              },
+        CmdQueueMask     {_CmdQueueMask      },
+        DescrSetAllocator{&_DescrSetAllocator}
     {}
     DescriptorSetAllocation()noexcept{}
 
@@ -60,10 +60,10 @@ public:
     DescriptorSetAllocation& operator = (const DescriptorSetAllocation&) = delete;
 
     DescriptorSetAllocation(DescriptorSetAllocation&& rhs)noexcept : 
-        Set              (rhs.Set),
-        Pool             (rhs.Pool),
-        CmdQueueMask     (rhs.CmdQueueMask),
-        DescrSetAllocator(rhs.DescrSetAllocator)
+        Set              {rhs.Set              },
+        Pool             {rhs.Pool             },
+        CmdQueueMask     {rhs.CmdQueueMask     },
+        DescrSetAllocator{rhs.DescrSetAllocator}
     {
         rhs.Reset();
     }
@@ -131,11 +131,11 @@ public:
                           std::vector<VkDescriptorPoolSize> PoolSizes,
                           uint32_t                          MaxSets,
                           bool                              AllowFreeing) noexcept:
-        m_DeviceVkImpl(DeviceVkImpl),
-        m_PoolName    (std::move(PoolName)),
-        m_PoolSizes   (std::move(PoolSizes)),
-        m_MaxSets     (MaxSets),
-        m_AllowFreeing(AllowFreeing)
+        m_DeviceVkImpl{DeviceVkImpl        },
+        m_PoolName    {std::move(PoolName) },
+        m_PoolSizes   {std::move(PoolSizes)},
+        m_MaxSets     {MaxSets             },
+        m_AllowFreeing{AllowFreeing        }
     {
 #ifdef DEVELOPMENT
         m_AllocatedPoolCounter = 0;
@@ -190,7 +190,14 @@ public:
                            std::vector<VkDescriptorPoolSize> PoolSizes,
                            uint32_t                          MaxSets,
                            bool                              AllowFreeing) noexcept:
-        DescriptorPoolManager(DeviceVkImpl, std::move(PoolName), std::move(PoolSizes), MaxSets, AllowFreeing)
+        DescriptorPoolManager
+        {
+            DeviceVkImpl,
+            std::move(PoolName),
+            std::move(PoolSizes),
+            MaxSets,
+            AllowFreeing
+        }
     {
 #ifdef DEVELOPMENT
         m_AllocatedSetCounter = 0;
@@ -239,8 +246,8 @@ class DynamicDescriptorSetAllocator
 {
 public:
     DynamicDescriptorSetAllocator(DescriptorPoolManager& PoolMgr, std::string Name) : 
-        m_GlobalPoolMgr(PoolMgr),
-        m_Name         (std::move(Name))
+        m_GlobalPoolMgr{PoolMgr        },
+        m_Name         {std::move(Name)}
     {}
     ~DynamicDescriptorSetAllocator();
 

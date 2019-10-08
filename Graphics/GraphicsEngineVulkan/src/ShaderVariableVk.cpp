@@ -67,10 +67,10 @@ ShaderVariableManagerVk::ShaderVariableManagerVk(IObject&                       
                                                  const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
                                                  Uint32                                 NumAllowedTypes, 
                                                  ShaderResourceCacheVk&                 ResourceCache) :
-    m_Owner(Owner),
-    m_ResourceCache(ResourceCache)
+    m_Owner        {Owner        },
+    m_ResourceCache{ResourceCache}
 #ifdef _DEBUG
-  , m_DbgAllocator(Allocator)
+  , m_DbgAllocator {Allocator}
 #endif
 {
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);

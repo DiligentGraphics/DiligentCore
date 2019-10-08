@@ -31,9 +31,9 @@ namespace Diligent
 VulkanUploadHeap::VulkanUploadHeap(RenderDeviceVkImpl& RenderDevice,
                                    std::string         HeapName,
                                    VkDeviceSize        PageSize) :
-    m_RenderDevice (RenderDevice),
-    m_HeapName     (std::move(HeapName)),
-    m_PageSize     (PageSize)
+    m_RenderDevice {RenderDevice       },
+    m_HeapName     {std::move(HeapName)},
+    m_PageSize     {PageSize           }
 {
 }
 

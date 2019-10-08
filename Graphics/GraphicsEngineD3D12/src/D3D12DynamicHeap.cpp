@@ -133,7 +133,7 @@ void D3D12DynamicMemoryManager::ReleasePages(std::vector<D3D12DynamicPage>& Page
         {
             if (Mgr != nullptr)
             {
-                std::lock_guard<std::mutex> Lock(Mgr->m_AvailablePagesMtx);
+                std::lock_guard<std::mutex> Lock{Mgr->m_AvailablePagesMtx};
 #ifdef DEVELOPMENT
                 --Mgr->m_AllocatedPageCounter;
 #endif

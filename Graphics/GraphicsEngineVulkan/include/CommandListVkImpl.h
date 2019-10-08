@@ -43,9 +43,9 @@ public:
                       RenderDeviceVkImpl*  pDevice,
                       IDeviceContext*      pDeferredCtx,
                       VkCommandBuffer      vkCmdBuff) :
-        TCommandListBase     (pRefCounters, pDevice),
-        m_pDeferredCtx       (pDeferredCtx),
-        m_vkCmdBuff          (vkCmdBuff)
+        TCommandListBase {pRefCounters, pDevice},
+        m_pDeferredCtx   {pDeferredCtx},
+        m_vkCmdBuff      {vkCmdBuff   }
     {
     }
     
@@ -57,9 +57,9 @@ public:
     void Close(VkCommandBuffer&               CmdBuff,
                RefCntAutoPtr<IDeviceContext>& pDeferredCtx)
     {
-        CmdBuff               = m_vkCmdBuff;
-        m_vkCmdBuff           = VK_NULL_HANDLE;
-        pDeferredCtx          = std::move(m_pDeferredCtx);
+        CmdBuff       = m_vkCmdBuff;
+        m_vkCmdBuff   = VK_NULL_HANDLE;
+        pDeferredCtx  = std::move(m_pDeferredCtx);
     }
 
 private:

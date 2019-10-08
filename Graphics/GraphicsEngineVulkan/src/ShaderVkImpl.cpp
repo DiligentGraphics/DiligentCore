@@ -40,7 +40,12 @@ namespace Diligent
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceVkImpl*     pRenderDeviceVk,
                            const ShaderCreateInfo& CreationAttribs) : 
-    TShaderBase(pRefCounters, pRenderDeviceVk, CreationAttribs.Desc)
+    TShaderBase
+    {
+        pRefCounters,
+        pRenderDeviceVk,
+        CreationAttribs.Desc
+    }
 {
     if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
     {

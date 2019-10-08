@@ -33,7 +33,7 @@ namespace VulkanUtilities
     VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice,
                                                      uint32_t                                   queueFamilyIndex, 
                                                      VkCommandPoolCreateFlags                   flags) :
-        m_LogicalDevice(std::move(LogicalDevice))
+        m_LogicalDevice{std::move(LogicalDevice)}
     {
         VkCommandPoolCreateInfo CmdPoolCI = {};
         CmdPoolCI.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -58,7 +58,7 @@ namespace VulkanUtilities
         VkCommandBuffer CmdBuffer = VK_NULL_HANDLE;
 
         {
-            std::lock_guard<std::mutex> Lock(m_Mutex);
+            std::lock_guard<std::mutex> Lock{m_Mutex};
 
             if (!m_CmdBuffers.empty())
             {
@@ -103,7 +103,7 @@ namespace VulkanUtilities
 
     void VulkanCommandBufferPool::FreeCommandBuffer(VkCommandBuffer&& CmdBuffer)
     {
-        std::lock_guard<std::mutex> Lock(m_Mutex);
+        std::lock_guard<std::mutex> Lock{m_Mutex};
         m_CmdBuffers.emplace_back(CmdBuffer);
         CmdBuffer = VK_NULL_HANDLE;
 #ifdef DEVELOPMENT

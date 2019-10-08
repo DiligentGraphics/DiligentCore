@@ -67,12 +67,12 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
             sizeof(FenceVkImpl)
         }
     },
-    m_VulkanInstance(Instance),
-    m_PhysicalDevice(std::move(PhysicalDevice)),
-    m_LogicalVkDevice(std::move(LogicalDevice)),
-    m_EngineAttribs(EngineCI),
-    m_FramebufferCache(*this),
-    m_RenderPassCache(*this),
+    m_VulkanInstance    {Instance                 },
+    m_PhysicalDevice    {std::move(PhysicalDevice)},
+    m_LogicalVkDevice   {std::move(LogicalDevice) },
+    m_EngineAttribs     {EngineCI                 },
+    m_FramebufferCache  {*this                    },
+    m_RenderPassCache   {*this                    },
     m_DescriptorSetAllocator
     {
         *this,
@@ -113,8 +113,24 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
         EngineCI.DynamicDescriptorPoolSize.MaxDescriptorSets,
         false // Pools can only be reset
     },
-    m_TransientCmdPoolMgr(*this, "Transient command buffer pool manager", CmdQueues[0]->GetQueueFamilyIndex(), VK_COMMAND_POOL_CREATE_TRANSIENT_BIT),
-    m_MemoryMgr("Global resource memory manager", *m_LogicalVkDevice, *m_PhysicalDevice, GetRawAllocator(), EngineCI.DeviceLocalMemoryPageSize, EngineCI.HostVisibleMemoryPageSize, EngineCI.DeviceLocalMemoryReserveSize, EngineCI.HostVisibleMemoryReserveSize),
+    m_TransientCmdPoolMgr
+    {
+        *this,
+        "Transient command buffer pool manager",
+        CmdQueues[0]->GetQueueFamilyIndex(),
+        VK_COMMAND_POOL_CREATE_TRANSIENT_BIT
+    },
+    m_MemoryMgr
+    {
+        "Global resource memory manager",
+        *m_LogicalVkDevice,
+        *m_PhysicalDevice,
+        GetRawAllocator(),
+        EngineCI.DeviceLocalMemoryPageSize,
+        EngineCI.HostVisibleMemoryPageSize,
+        EngineCI.DeviceLocalMemoryReserveSize,
+        EngineCI.HostVisibleMemoryReserveSize
+    },
     m_DynamicMemoryManager
     {
         GetRawAllocator(),

@@ -49,15 +49,15 @@ struct VulkanMemoryAllocation
     VulkanMemoryAllocation& operator= (const VulkanMemoryAllocation&) = delete;
 
 	VulkanMemoryAllocation(VulkanMemoryPage* _Page, VkDeviceSize _UnalignedOffset, VkDeviceSize _Size)noexcept : 
-        Page           (_Page), 
-        UnalignedOffset(_UnalignedOffset), 
-        Size           (_Size)
+        Page           {_Page           }, 
+        UnalignedOffset{_UnalignedOffset}, 
+        Size           {_Size           }
     {}
     
     VulkanMemoryAllocation(VulkanMemoryAllocation&& rhs)noexcept :
-        Page           (rhs.Page), 
-        UnalignedOffset(rhs.UnalignedOffset),
-        Size           (rhs.Size)
+        Page           {rhs.Page           },
+        UnalignedOffset{rhs.UnalignedOffset},
+        Size           {rhs.Size           }
     {
         rhs.Page            = nullptr;
         rhs.UnalignedOffset = 0;
@@ -96,10 +96,10 @@ public:
     ~VulkanMemoryPage();
 
     VulkanMemoryPage(VulkanMemoryPage&& rhs)noexcept :
-        m_ParentMemoryMgr (rhs.m_ParentMemoryMgr),
-        m_AllocationMgr   (std::move(rhs.m_AllocationMgr)),
-        m_VkMemory        (std::move(rhs.m_VkMemory)),
-        m_CPUMemory       (rhs.m_CPUMemory)
+        m_ParentMemoryMgr {rhs.m_ParentMemoryMgr         },
+        m_AllocationMgr   {std::move(rhs.m_AllocationMgr)},
+        m_VkMemory        {std::move(rhs.m_VkMemory)     },
+        m_CPUMemory       {rhs.m_CPUMemory               }
     {
         rhs.m_CPUMemory = nullptr;
     }
@@ -142,35 +142,35 @@ public:
                         VkDeviceSize                 HostVisiblePageSize,
                         VkDeviceSize                 DeviceLocalReserveSize,
                         VkDeviceSize                 HostVisibleReserveSize) : 
-        m_MgrName            (std::move(MgrName)),
-        m_LogicalDevice      (LogicalDevice),
-        m_PhysicalDevice     (PhysicalDevice),
-        m_Allocator          (Allocator),
-        m_DeviceLocalPageSize(DeviceLocalPageSize),
-        m_HostVisiblePageSize(HostVisiblePageSize),
-        m_DeviceLocalReserveSize(DeviceLocalReserveSize),
-        m_HostVisibleReserveSize(HostVisibleReserveSize)
+        m_MgrName               {std::move(MgrName)    },
+        m_LogicalDevice         {LogicalDevice         },
+        m_PhysicalDevice        {PhysicalDevice        },
+        m_Allocator             {Allocator             },
+        m_DeviceLocalPageSize   {DeviceLocalPageSize   },
+        m_HostVisiblePageSize   {HostVisiblePageSize   },
+        m_DeviceLocalReserveSize{DeviceLocalReserveSize},
+        m_HostVisibleReserveSize{HostVisibleReserveSize}
     {}
 
     // We have to write this constructor because on msvc default
     // constructor is not labeled with noexcept, which makes all
     // std containers use copy instead of move
     VulkanMemoryManager(VulkanMemoryManager&& rhs)noexcept : 
-        m_MgrName         (std::move(rhs.m_MgrName)),
-        m_LogicalDevice   (rhs.m_LogicalDevice),
-        m_PhysicalDevice  (rhs.m_PhysicalDevice),
-        m_Allocator       (rhs.m_Allocator),
-        m_Pages           (std::move(rhs.m_Pages)),
+        m_MgrName         {std::move(rhs.m_MgrName)},
+        m_LogicalDevice   {rhs.m_LogicalDevice     },
+        m_PhysicalDevice  {rhs.m_PhysicalDevice    },
+        m_Allocator       {rhs.m_Allocator         },
+        m_Pages           {std::move(rhs.m_Pages)  },
     
-        m_DeviceLocalPageSize    (rhs.m_DeviceLocalPageSize),
-        m_HostVisiblePageSize    (rhs.m_HostVisiblePageSize),
-        m_DeviceLocalReserveSize (rhs.m_DeviceLocalReserveSize),
-        m_HostVisibleReserveSize (rhs.m_HostVisibleReserveSize),
+        m_DeviceLocalPageSize    {rhs.m_DeviceLocalPageSize   },
+        m_HostVisiblePageSize    {rhs.m_HostVisiblePageSize   },
+        m_DeviceLocalReserveSize {rhs.m_DeviceLocalReserveSize},
+        m_HostVisibleReserveSize {rhs.m_HostVisibleReserveSize},
     
-        //m_CurrUsedSize      (rhs.m_CurrUsedSize),
-        m_PeakUsedSize      (rhs.m_PeakUsedSize),
-        m_CurrAllocatedSize (rhs.m_CurrAllocatedSize),
-        m_PeakAllocatedSize (rhs.m_PeakAllocatedSize)
+        //m_CurrUsedSize      {rhs.m_CurrUsedSize},
+        m_PeakUsedSize      {rhs.m_PeakUsedSize     },
+        m_CurrAllocatedSize {rhs.m_CurrAllocatedSize},
+        m_PeakAllocatedSize {rhs.m_PeakAllocatedSize}
     {
         for(size_t i=0; i < m_CurrUsedSize.size(); ++i)
             m_CurrUsedSize[i].store(rhs.m_CurrUsedSize[i].load());

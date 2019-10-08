@@ -55,18 +55,18 @@ public:
     struct RenderPassCacheKey
     {
         RenderPassCacheKey() : 
-            NumRenderTargets(0),
-            SampleCount     (0),
-            DSVFormat       (TEX_FORMAT_UNKNOWN)
+            NumRenderTargets{0},
+            SampleCount     {0},
+            DSVFormat       {TEX_FORMAT_UNKNOWN}
         {}
 
         RenderPassCacheKey(Uint32               _NumRenderTargets, 
                            Uint32               _SampleCount,
                            const TEXTURE_FORMAT _RTVFormats[],
                            TEXTURE_FORMAT       _DSVFormat) : 
-            NumRenderTargets( static_cast<decltype(NumRenderTargets)>(_NumRenderTargets) ),
-            SampleCount     ( static_cast<decltype(SampleCount)>     (_SampleCount) ),
-            DSVFormat       ( _DSVFormat )
+            NumRenderTargets{static_cast<decltype(NumRenderTargets)>(_NumRenderTargets)},
+            SampleCount     {static_cast<decltype(SampleCount)>     (_SampleCount)     },
+            DSVFormat       {_DSVFormat                                                }
         {
             VERIFY_EXPR(_NumRenderTargets <= std::numeric_limits<decltype(NumRenderTargets)>::max());
             VERIFY_EXPR(_SampleCount <= std::numeric_limits<decltype(SampleCount)>::max());

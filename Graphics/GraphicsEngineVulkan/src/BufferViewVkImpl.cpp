@@ -35,8 +35,15 @@ BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters*                  pRefCou
                                     IBuffer*                             pBuffer,
                                     VulkanUtilities::BufferViewWrapper&& BuffView,
                                     bool                                 bIsDefaultView ) :
-    TBufferViewBase( pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
-    m_BuffView(std::move(BuffView))
+    TBufferViewBase
+    {
+        pRefCounters,
+        pDevice,
+        ViewDesc,
+        pBuffer,
+        bIsDefaultView
+    },
+    m_BuffView{std::move(BuffView)}
 {
 }
 

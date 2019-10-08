@@ -48,20 +48,20 @@ struct VulkanDynamicAllocation
     VulkanDynamicAllocation()noexcept{}
 
     VulkanDynamicAllocation(VulkanDynamicMemoryManager& _DynamicMemMgr, size_t _AlignedOffset, size_t _Size)noexcept :
-        pDynamicMemMgr(&_DynamicMemMgr),
-        AlignedOffset (_AlignedOffset), 
-        Size          (_Size)
+        pDynamicMemMgr{&_DynamicMemMgr},
+        AlignedOffset {_AlignedOffset }, 
+        Size          {_Size          }
     {}
 
     VulkanDynamicAllocation             (const VulkanDynamicAllocation&) = delete;
     VulkanDynamicAllocation& operator = (const VulkanDynamicAllocation&) = delete;
 
     VulkanDynamicAllocation             (VulkanDynamicAllocation&& rhs)noexcept :
-        pDynamicMemMgr(rhs.pDynamicMemMgr),
-        AlignedOffset (rhs.AlignedOffset),
-        Size          (rhs.Size)
+        pDynamicMemMgr{rhs.pDynamicMemMgr},
+        AlignedOffset {rhs.AlignedOffset },
+        Size          {rhs.Size          }
 #ifdef DEVELOPMENT
-        , dvpFrameNumber(rhs.dvpFrameNumber)
+        , dvpFrameNumber{rhs.dvpFrameNumber}
 #endif
     {
         rhs.pDynamicMemMgr = nullptr;

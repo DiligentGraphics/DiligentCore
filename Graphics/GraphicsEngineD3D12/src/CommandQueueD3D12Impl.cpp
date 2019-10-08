@@ -49,7 +49,7 @@ IMPLEMENT_QUERY_INTERFACE( CommandQueueD3D12Impl, IID_CommandQueueD3D12, TBase )
 
 Uint64 CommandQueueD3D12Impl::Submit(ID3D12GraphicsCommandList* commandList)
 {
-    std::lock_guard<std::mutex> Lock(m_QueueMtx);
+    std::lock_guard<std::mutex> Lock{m_QueueMtx};
 
     auto FenceValue = m_NextFenceValue;
     // Increment the value before submitting the list
@@ -69,7 +69,7 @@ Uint64 CommandQueueD3D12Impl::Submit(ID3D12GraphicsCommandList* commandList)
 
 Uint64 CommandQueueD3D12Impl::WaitForIdle()
 {
-    std::lock_guard<std::mutex> Lock(m_QueueMtx);
+    std::lock_guard<std::mutex> Lock{m_QueueMtx};
 
     Uint64 LastSignaledFenceValue = m_NextFenceValue;
     Atomics::AtomicIncrement(m_NextFenceValue);
@@ -95,7 +95,7 @@ Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
 
 void CommandQueueD3D12Impl::SignalFence(ID3D12Fence* pFence, Uint64 Value)
 {
-    std::lock_guard<std::mutex> Lock(m_QueueMtx);
+    std::lock_guard<std::mutex> Lock{m_QueueMtx};
     m_pd3d12CmdQueue->Signal(pFence, Value);
 }
 

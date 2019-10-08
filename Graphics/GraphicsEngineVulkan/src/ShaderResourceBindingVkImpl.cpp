@@ -31,8 +31,13 @@ namespace Diligent
 {
 
 ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters* pRefCounters, PipelineStateVkImpl* pPSO, bool IsPSOInternal) :
-    TBase                (pRefCounters, pPSO, IsPSOInternal),
-    m_ShaderResourceCache(ShaderResourceCacheVk::DbgCacheContentType::SRBResources)
+    TBase
+    {
+        pRefCounters,
+        pPSO,
+        IsPSOInternal
+    },
+    m_ShaderResourceCache{ShaderResourceCacheVk::DbgCacheContentType::SRBResources}
 {
     auto* ppShaders = pPSO->GetShaders();
     m_NumShaders = static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaders());

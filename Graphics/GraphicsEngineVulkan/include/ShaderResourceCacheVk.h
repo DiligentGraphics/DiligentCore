@@ -71,7 +71,7 @@ public:
 
     ShaderResourceCacheVk(DbgCacheContentType dbgContentType)
 #ifdef _DEBUG
-        : m_DbgContentType(dbgContentType)
+        : m_DbgContentType{dbgContentType}
 #endif
     {
     }
@@ -115,8 +115,8 @@ public:
     {
     public:
         DescriptorSet(Uint32 NumResources, Resource *pResources) :
-            m_NumResources  (NumResources),
-            m_pResources    (pResources)
+            m_NumResources  {NumResources},
+            m_pResources    {pResources  }
         {}
 
         DescriptorSet             (const DescriptorSet&) = delete;

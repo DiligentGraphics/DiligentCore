@@ -58,15 +58,15 @@ namespace VulkanUtilities
                                                            const char* const*     ppGlobalExtensionNames,
                                                            VkAllocationCallbacks* pVkAllocator)
     {
-        auto Instance = new VulkanInstance(EnableValidation, GlobalExtensionCount, ppGlobalExtensionNames, pVkAllocator);
-        return std::shared_ptr<VulkanInstance>(Instance);
+        auto Instance = new VulkanInstance{EnableValidation, GlobalExtensionCount, ppGlobalExtensionNames, pVkAllocator};
+        return std::shared_ptr<VulkanInstance>{Instance};
     }
 
     VulkanInstance::VulkanInstance(bool                   EnableValidation, 
                                    uint32_t               GlobalExtensionCount, 
                                    const char* const*     ppGlobalExtensionNames,
                                    VkAllocationCallbacks* pVkAllocator) : 
-        m_pVkAllocator(pVkAllocator)
+        m_pVkAllocator{pVkAllocator}
     {
         {
             // Enumerate available layers

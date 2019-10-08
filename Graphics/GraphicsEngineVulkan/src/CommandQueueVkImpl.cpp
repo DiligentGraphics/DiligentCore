@@ -31,11 +31,11 @@ namespace Diligent
 CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters, 
                                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                                        uint32_t                                              QueueFamilyIndex) :
-    TBase(pRefCounters),
-    m_LogicalDevice    (LogicalDevice),
-    m_VkQueue          (LogicalDevice->GetQueue(QueueFamilyIndex, 0)),
-    m_QueueFamilyIndex (QueueFamilyIndex),
-    m_NextFenceValue   (1)
+    TBase{pRefCounters},
+    m_LogicalDevice    {LogicalDevice},
+    m_VkQueue          {LogicalDevice->GetQueue(QueueFamilyIndex, 0)},
+    m_QueueFamilyIndex {QueueFamilyIndex},
+    m_NextFenceValue   {1}
 {
 }
 
@@ -51,7 +51,7 @@ IMPLEMENT_QUERY_INTERFACE( CommandQueueVkImpl, IID_CommandQueueVk, TBase )
 
 Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
 {
-    std::lock_guard<std::mutex> Lock(m_QueueMutex);
+    std::lock_guard<std::mutex> Lock{m_QueueMutex};
 
     Atomics::Int64 FenceValue = m_NextFenceValue;
     // Increment the value before submitting the buffer to be overly safe
@@ -93,7 +93,7 @@ Uint64 CommandQueueVkImpl::Submit(VkCommandBuffer cmdBuffer)
 
 Uint64 CommandQueueVkImpl::WaitForIdle()
 {
-    std::lock_guard<std::mutex> Lock(m_QueueMutex);
+    std::lock_guard<std::mutex> Lock{m_QueueMutex};
 
     // Update last completed fence value to unlock all waiting events
     Uint64 LastCompletedFenceValue = m_NextFenceValue;
@@ -108,20 +108,20 @@ Uint64 CommandQueueVkImpl::WaitForIdle()
 
 Uint64 CommandQueueVkImpl::GetCompletedFenceValue()
 {
-    std::lock_guard<std::mutex> Lock(m_QueueMutex);
+    std::lock_guard<std::mutex> Lock{m_QueueMutex};
     return m_pFence->GetCompletedValue();
 }
 
 void CommandQueueVkImpl::SignalFence(VkFence vkFence)
 {
-    std::lock_guard<std::mutex> Lock(m_QueueMutex);
+    std::lock_guard<std::mutex> Lock{m_QueueMutex};
     auto err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue"); (void)err;
 }
 
 VkResult CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)
 {
-    std::lock_guard<std::mutex> Lock(m_QueueMutex);
+    std::lock_guard<std::mutex> Lock{m_QueueMutex};
     return vkQueuePresentKHR(m_VkQueue, &PresentInfo);
 }
 

@@ -41,8 +41,15 @@ BufferVkImpl :: BufferVkImpl(IReferenceCounters*        pRefCounters,
                              RenderDeviceVkImpl*        pRenderDeviceVk, 
                              const BufferDesc&          BuffDesc, 
                              const BufferData*          pBuffData /*= nullptr*/) : 
-    TBufferBase(pRefCounters, BuffViewObjMemAllocator, pRenderDeviceVk, BuffDesc, false),
-    m_DynamicAllocations(STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>"))
+    TBufferBase
+    {
+        pRefCounters,
+        BuffViewObjMemAllocator,
+        pRenderDeviceVk,
+        BuffDesc,
+        false
+    },
+    m_DynamicAllocations{STD_ALLOCATOR_RAW_MEM(VulkanDynamicAllocation, GetRawAllocator(), "Allocator for vector<VulkanDynamicAllocation>")}
 {
 #define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__);
 

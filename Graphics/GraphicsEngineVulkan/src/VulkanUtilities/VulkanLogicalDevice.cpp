@@ -33,8 +33,8 @@ namespace VulkanUtilities
                                                                      const VkDeviceCreateInfo&    DeviceCI, 
                                                                      const VkAllocationCallbacks* vkAllocator)
     {
-        auto *LogicalDevice = new VulkanLogicalDevice(vkPhysicalDevice, DeviceCI, vkAllocator);
-        return std::shared_ptr<VulkanLogicalDevice>(LogicalDevice);
+        auto* LogicalDevice = new VulkanLogicalDevice{vkPhysicalDevice, DeviceCI, vkAllocator};
+        return std::shared_ptr<VulkanLogicalDevice>{LogicalDevice};
     }
 
     VulkanLogicalDevice::~VulkanLogicalDevice()
@@ -45,7 +45,7 @@ namespace VulkanUtilities
     VulkanLogicalDevice::VulkanLogicalDevice(VkPhysicalDevice             vkPhysicalDevice, 
                                              const VkDeviceCreateInfo&    DeviceCI, 
                                              const VkAllocationCallbacks* vkAllocator) :
-        m_VkAllocator(vkAllocator)
+        m_VkAllocator{vkAllocator}
     {
         auto res = vkCreateDevice(vkPhysicalDevice, &DeviceCI, vkAllocator, &m_VkDevice);
         CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");

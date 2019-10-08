@@ -32,11 +32,11 @@ CommandPoolManager::CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl,
                                        std::string              Name,
                                        uint32_t                 queueFamilyIndex, 
                                        VkCommandPoolCreateFlags flags)noexcept:
-    m_DeviceVkImpl    (DeviceVkImpl),
-    m_Name            (std::move(Name)),
-    m_QueueFamilyIndex(queueFamilyIndex),
-    m_CmdPoolFlags    (flags),
-    m_CmdPools        (STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>"))
+    m_DeviceVkImpl    {DeviceVkImpl     },
+    m_Name            {std::move(Name)  },
+    m_QueueFamilyIndex{queueFamilyIndex },
+    m_CmdPoolFlags    {flags            },
+    m_CmdPools        {STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>")}
 {
 #ifdef DEVELOPMENT
     m_AllocatedPoolCounter = 0;

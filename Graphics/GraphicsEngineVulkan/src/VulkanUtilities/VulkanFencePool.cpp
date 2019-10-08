@@ -29,7 +29,7 @@
 namespace VulkanUtilities
 {
     VulkanFencePool::VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice)noexcept :
-        m_LogicalDevice(std::move(LogicalDevice))
+        m_LogicalDevice{std::move(LogicalDevice)}
     {}
 
     VulkanFencePool::~VulkanFencePool()

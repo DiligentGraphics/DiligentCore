@@ -30,12 +30,12 @@ namespace VulkanUtilities
 {
     std::unique_ptr<VulkanPhysicalDevice> VulkanPhysicalDevice::Create(VkPhysicalDevice vkDevice)
     {
-        auto *PhysicalDevice = new VulkanPhysicalDevice(vkDevice);
-        return std::unique_ptr<VulkanPhysicalDevice>(PhysicalDevice);
+        auto* PhysicalDevice = new VulkanPhysicalDevice{vkDevice};
+        return std::unique_ptr<VulkanPhysicalDevice>{PhysicalDevice};
     }
 
     VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice vkDevice) :
-        m_VkDevice(vkDevice)
+        m_VkDevice{vkDevice}
     {
         VERIFY_EXPR(m_VkDevice != VK_NULL_HANDLE);
 

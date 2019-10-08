@@ -112,7 +112,7 @@ class ShaderResourceLayoutVk
 {
 public:
     ShaderResourceLayoutVk(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) : 
-            m_LogicalDevice(LogicalDevice)
+        m_LogicalDevice{LogicalDevice}
     {
     }
 
@@ -178,14 +178,14 @@ public:
                    Uint32                               _CacheOffset,
                    Uint32                               _SamplerInd,
                    bool                                 _ImmutableSamplerAssigned = false)noexcept :
-            Binding                  (static_cast<decltype(Binding)>(_Binding)),
-            DescriptorSet            (static_cast<decltype(DescriptorSet)>(_DescriptorSet)),
-            CacheOffset              (_CacheOffset),
-            SamplerInd               (_SamplerInd),
-            VariableType             (_VariableType),
-            ImmutableSamplerAssigned (_ImmutableSamplerAssigned ? 1 : 0),
-            SpirvAttribs             (_SpirvAttribs),
-            ParentResLayout          (_ParentLayout)
+            Binding                  {static_cast<decltype(Binding)>(_Binding)            },
+            DescriptorSet            {static_cast<decltype(DescriptorSet)>(_DescriptorSet)},
+            CacheOffset              {_CacheOffset  },
+            SamplerInd               {_SamplerInd   },
+            VariableType             {_VariableType },
+            ImmutableSamplerAssigned {_ImmutableSamplerAssigned ? 1 : 0},
+            SpirvAttribs             {_SpirvAttribs },
+            ParentResLayout          {_ParentLayout }
         {
             VERIFY(_CacheOffset   < (1 << CacheOffsetBits),                               "Cache offset (", _CacheOffset, ") exceeds max representable value ", (1 << CacheOffsetBits) );
             VERIFY(_SamplerInd    < (1 << SamplerIndBits),                                "Sampler index  (", _SamplerInd, ") exceeds max representable value ", (1 << SamplerIndBits) );

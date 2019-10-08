@@ -51,7 +51,7 @@ public:
 
     using TBase = EngineFactoryBase<IEngineFactoryVk>;
     EngineFactoryVkImpl() :
-        TBase(IID_EngineFactoryVk)
+        TBase{IID_EngineFactoryVk}
     {}
 
     void CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI, 

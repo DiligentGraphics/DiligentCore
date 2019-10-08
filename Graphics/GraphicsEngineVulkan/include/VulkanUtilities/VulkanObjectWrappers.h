@@ -35,18 +35,18 @@ namespace VulkanUtilities
         using VkObjectType = VulkanObjectType;
 
         VulkanObjectWrapper() : 
-            m_pLogicalDevice(nullptr),
-            m_VkObject      (VK_NULL_HANDLE)
+            m_pLogicalDevice{nullptr       },
+            m_VkObject      {VK_NULL_HANDLE}
         {}
         VulkanObjectWrapper(std::shared_ptr<const VulkanLogicalDevice> pLogicalDevice, VulkanObjectType&& vkObject) :
-            m_pLogicalDevice(pLogicalDevice),
-            m_VkObject      (vkObject)
+            m_pLogicalDevice{pLogicalDevice},
+            m_VkObject      {vkObject      }
         {
             vkObject = VK_NULL_HANDLE;
         }
         // This constructor does not take ownership of the vulkan object
         explicit VulkanObjectWrapper(VulkanObjectType vkObject) :
-            m_VkObject      (vkObject)
+            m_VkObject      {vkObject}
         {
         }
 
@@ -54,8 +54,8 @@ namespace VulkanUtilities
         VulkanObjectWrapper& operator = (const VulkanObjectWrapper&) = delete;
 
         VulkanObjectWrapper(VulkanObjectWrapper&& rhs)noexcept : 
-            m_pLogicalDevice(std::move(rhs.m_pLogicalDevice)),
-            m_VkObject      (rhs.m_VkObject)
+            m_pLogicalDevice{std::move(rhs.m_pLogicalDevice)},
+            m_VkObject      {rhs.m_VkObject                 }
         {
             rhs.m_VkObject = VK_NULL_HANDLE;
         }

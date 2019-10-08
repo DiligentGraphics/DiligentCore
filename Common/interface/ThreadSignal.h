@@ -50,7 +50,7 @@ public:
         //  * execute notify_one or notify_all on the std::condition_variable (the lock does not need to be held for notification)        
         {
             // std::condition_variable works only with std::unique_lock<std::mutex>
-            std::lock_guard<std::mutex> Lock(m_Mutex);
+            std::lock_guard<std::mutex> Lock{m_Mutex};
             VERIFY(SignalValue != 0, "Signal value must not be 0");
             VERIFY(m_SignaledValue == 0 && m_NumThreadsAwaken == 0, "Not all threads have been awaken since the signal was triggered last time, or the signal has not been reset");
             m_SignaledValue = SignalValue;
@@ -104,7 +104,7 @@ public:
 
     void Reset()
     {
-        std::lock_guard<std::mutex> Lock(m_Mutex);
+        std::lock_guard<std::mutex> Lock{m_Mutex};
         m_SignaledValue = 0;
         m_NumThreadsAwaken = 0;
     }

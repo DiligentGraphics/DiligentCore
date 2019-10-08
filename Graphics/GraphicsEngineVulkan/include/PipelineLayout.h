@@ -98,8 +98,8 @@ public:
         const PipelineLayout*        pDbgPipelineLayout = nullptr;
 #endif
         DescriptorSetBindInfo() : 
-            vkSets(2),
-            DynamicOffsets(64)
+            vkSets        {2},
+            DynamicOffsets{64}
         {
         }
 

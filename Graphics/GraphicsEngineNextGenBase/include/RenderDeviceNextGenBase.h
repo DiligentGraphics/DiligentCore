@@ -153,7 +153,7 @@ public:
         Uint64 CmdBufferNumber = 0;
         Uint64 FenceValue      = 0;
         {
-            std::lock_guard<std::mutex> Lock(Queue.Mtx);
+            std::lock_guard<std::mutex> Lock{Queue.Mtx};
 
             if (ReleaseResources)
             {
@@ -193,7 +193,7 @@ public:
         auto& Queue = m_CommandQueues[QueueIndex];
 
         {
-            std::lock_guard<std::mutex> Lock(Queue.Mtx);
+            std::lock_guard<std::mutex> Lock{Queue.Mtx};
 
             // Increment command buffer number before submitting the cmd buffer.
             // This will make sure that any resource released while this function
@@ -256,7 +256,7 @@ public:
     {
         VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
         auto& Queue = m_CommandQueues[QueueIndex];
-        std::lock_guard<std::mutex> Lock(Queue.Mtx);
+        std::lock_guard<std::mutex> Lock{Queue.Mtx};
         Action(Queue.CmdQueue);
     }
 

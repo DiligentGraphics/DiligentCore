@@ -37,11 +37,11 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
                                  RenderDeviceVkImpl*    pRenderDeviceVk, 
                                  DeviceContextVkImpl*   pDeviceContextVk, 
                                  void*                  pNativeWndHandle) : 
-    TSwapChainBase               (pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc),
-    m_VulkanInstance             (pRenderDeviceVk->GetVulkanInstance()),
-    m_pBackBufferRTV             (STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")),
-    m_SwapChainImagesInitialized (STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")),
-    m_ImageAcquiredFenceSubmitted(STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
+    TSwapChainBase               {pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc},
+    m_VulkanInstance             {pRenderDeviceVk->GetVulkanInstance()},
+    m_pBackBufferRTV             {STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")},
+    m_SwapChainImagesInitialized {STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")},
+    m_ImageAcquiredFenceSubmitted{STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")}
 {
     // Create OS-specific surface
 #if defined(VK_USE_PLATFORM_WIN32_KHR)

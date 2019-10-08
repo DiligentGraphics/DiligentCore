@@ -62,10 +62,10 @@ struct VulkanUploadAllocation
                            VkDeviceSize _Size,
                            VkDeviceSize _AlignedOffset,
                            VkBuffer     _vkBuffer) noexcept :
-        vkBuffer     (_vkBuffer),
-        CPUAddress   (_CPUAddress),
-        Size         (_Size),
-        AlignedOffset(_AlignedOffset)
+        vkBuffer     {_vkBuffer     },
+        CPUAddress   {_CPUAddress   },
+        Size         {_Size         },
+        AlignedOffset{_AlignedOffset}
     {}
     VulkanUploadAllocation             (const VulkanUploadAllocation&)  = delete;
     VulkanUploadAllocation& operator = (const VulkanUploadAllocation&)  = delete;
@@ -114,9 +114,9 @@ private:
         UploadPageInfo(VulkanUtilities::VulkanMemoryAllocation&& _MemAllocation, 
                        VulkanUtilities::BufferWrapper&&          _Buffer,
                        Uint8*                                    _CPUAddress) :
-            MemAllocation(std::move(_MemAllocation)),
-            Buffer       (std::move(_Buffer)),
-            CPUAddress   (_CPUAddress)
+            MemAllocation{std::move(_MemAllocation)},
+            Buffer       {std::move(_Buffer)       },
+            CPUAddress   {_CPUAddress              }
         {
         }
         VulkanUtilities::VulkanMemoryAllocation MemAllocation;

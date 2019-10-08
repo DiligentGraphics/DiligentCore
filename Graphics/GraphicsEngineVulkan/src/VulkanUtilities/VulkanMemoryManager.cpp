@@ -40,8 +40,8 @@ VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
                                    VkDeviceSize         PageSize, 
                                    uint32_t             MemoryTypeIndex,
                                    bool                 IsHostVisible)noexcept : 
-    m_ParentMemoryMgr(ParentMemoryMgr),
-    m_AllocationMgr(PageSize, ParentMemoryMgr.m_Allocator)
+    m_ParentMemoryMgr{ParentMemoryMgr},
+    m_AllocationMgr  {PageSize, ParentMemoryMgr.m_Allocator}
 {
     VkMemoryAllocateInfo MemAlloc = {};
     MemAlloc.pNext = nullptr;
@@ -76,7 +76,7 @@ VulkanMemoryPage::~VulkanMemoryPage()
 
 VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment)
 {
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock{m_Mutex};
     auto Allocation = m_AllocationMgr.Allocate(size, alignment);
     if (Allocation.IsValid())
     {
@@ -94,7 +94,7 @@ VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSiz
 void VulkanMemoryPage::Free(VulkanMemoryAllocation&& Allocation)
 {
     m_ParentMemoryMgr.OnFreeAllocation(Allocation.Size, m_CPUMemory != nullptr);
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock{m_Mutex};
     m_AllocationMgr.Free(Allocation.UnalignedOffset, Allocation.Size);
     Allocation = VulkanMemoryAllocation{};
 }
@@ -143,7 +143,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
     // allocations. Staging allocations are short-living and will be released when upload is 
     // complete, while GPU-only allocations are expected to be long-living.
     MemoryPageIndex PageIdx{MemoryTypeIndex, HostVisible};
-    std::lock_guard<std::mutex> Lock(m_PagesMtx);
+    std::lock_guard<std::mutex> Lock{m_PagesMtx};
     auto range = m_Pages.equal_range(PageIdx);
     for(auto page_it = range.first; page_it != range.second; ++page_it)
     {
@@ -184,7 +184,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
 
 void VulkanMemoryManager::ShrinkMemory()
 {
-    std::lock_guard<std::mutex> Lock(m_PagesMtx);
+    std::lock_guard<std::mutex> Lock{m_PagesMtx};
     if (m_CurrAllocatedSize[0] <= m_DeviceLocalReserveSize && m_CurrAllocatedSize[1] <= m_HostVisibleReserveSize)
         return;
 

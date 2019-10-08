@@ -40,7 +40,13 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
                                RenderDeviceVkImpl*          pRenderDeviceVk, 
                                const TextureDesc&           TexDesc, 
                                const TextureData*           pInitData /*= nullptr*/) : 
-    TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceVk, TexDesc)
+    TTextureBase
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pRenderDeviceVk,
+        TexDesc
+    }
 {
     if (m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
         LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time: pInitData can't be null");

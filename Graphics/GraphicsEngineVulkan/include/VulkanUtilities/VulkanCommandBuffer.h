@@ -32,7 +32,7 @@ namespace VulkanUtilities
     {
     public:
         VulkanCommandBuffer(VkPipelineStageFlags EnabledGraphicsShaderStages)noexcept : 
-            m_EnabledGraphicsShaderStages(EnabledGraphicsShaderStages)
+            m_EnabledGraphicsShaderStages{EnabledGraphicsShaderStages}
         {}
 
         VulkanCommandBuffer             (const VulkanCommandBuffer&)  = delete;

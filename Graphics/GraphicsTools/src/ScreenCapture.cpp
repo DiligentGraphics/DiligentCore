@@ -44,7 +44,7 @@ void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Ui
     RefCntAutoPtr<ITexture> pStagingTexture;
 
     {
-        std::lock_guard<std::mutex> Lock(m_AvailableTexturesMtx);
+        std::lock_guard<std::mutex> Lock{m_AvailableTexturesMtx};
         while (!m_AvailableTextures.empty() && !pStagingTexture)
         {
             pStagingTexture = std::move(m_AvailableTextures.back());
@@ -77,7 +77,7 @@ void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Ui
     pContext->SignalFence(m_pFence, m_CurrentFenceValue);
 
     {
-        std::lock_guard<std::mutex> Lock(m_PendingTexturesMtx);
+        std::lock_guard<std::mutex> Lock{m_PendingTexturesMtx};
         m_PendingTextures.emplace_back(std::move(pStagingTexture), FrameId, m_CurrentFenceValue);
     }
 
@@ -88,7 +88,7 @@ void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Ui
 ScreenCapture::CaptureInfo ScreenCapture::GetCapture()
 {
     CaptureInfo Capture;
-    std::lock_guard<std::mutex> Lock(m_PendingTexturesMtx);
+    std::lock_guard<std::mutex> Lock{m_PendingTexturesMtx};
     if (!m_PendingTextures.empty())
     {
         auto& OldestCapture = m_PendingTextures.front();
@@ -105,7 +105,7 @@ ScreenCapture::CaptureInfo ScreenCapture::GetCapture()
 
 void ScreenCapture::RecycleStagingTexture(RefCntAutoPtr<ITexture>&& pTexture)
 {
-    std::lock_guard<std::mutex> Lock(m_AvailableTexturesMtx);
+    std::lock_guard<std::mutex> Lock{m_AvailableTexturesMtx};
     m_AvailableTextures.emplace_back(std::move(pTexture));
 }
 

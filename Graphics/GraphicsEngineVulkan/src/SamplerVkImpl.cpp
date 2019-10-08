@@ -31,7 +31,12 @@ namespace Diligent
 {
 
 SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc) : 
-    TSamplerBase(pRefCounters, pRenderDeviceVk, SamplerDesc)
+    TSamplerBase
+    {
+        pRefCounters,
+        pRenderDeviceVk,
+        SamplerDesc
+    }
 {
     const auto &LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
     VkSamplerCreateInfo SamplerCI = {};

@@ -62,7 +62,7 @@ DescriptorPoolManager::~DescriptorPoolManager()
 
 VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::GetPool(const char* DebugName)
 {
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock{m_Mutex};
 #ifdef DEVELOPMENT
     ++m_AllocatedPoolCounter;
 #endif
@@ -118,7 +118,7 @@ void DescriptorPoolManager::DisposePool(VulkanUtilities::DescriptorPoolWrapper&&
 
 void DescriptorPoolManager::FreePool(VulkanUtilities::DescriptorPoolWrapper&& Pool)
 {
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock{m_Mutex};
     m_DeviceVkImpl.GetLogicalDevice().ResetDescriptorPool(Pool);
     m_Pools.emplace_back(std::move(Pool));
 #ifdef DEVELOPMENT
@@ -153,7 +153,7 @@ DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask
 {
     // Descriptor pools are externally synchronized, meaning that the application must not allocate 
     // and/or free descriptor sets from the same pool in multiple threads simultaneously (13.2.3)
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock{m_Mutex};
 
     const auto& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
     // Try all pools starting from the frontmost
@@ -222,7 +222,7 @@ void DescriptorSetAllocator::FreeDescriptorSet(VkDescriptorSet Set, VkDescriptor
         {
             if (Allocator!=nullptr)
             {
-                std::lock_guard<std::mutex> Lock(Allocator->m_Mutex);
+                std::lock_guard<std::mutex> Lock{Allocator->m_Mutex};
                 Allocator->m_DeviceVkImpl.GetLogicalDevice().FreeDescriptorSet(Pool, Set);
 #ifdef DEVELOPMENT
                 --Allocator->m_AllocatedSetCounter;

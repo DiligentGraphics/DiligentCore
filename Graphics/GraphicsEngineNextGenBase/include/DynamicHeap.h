@@ -63,13 +63,13 @@ public:
 
     void DiscardMasterBlocks(std::vector<MasterBlock>& /*Blocks*/, Uint64 FenceValue)
     {
-        std::lock_guard<std::mutex> Lock(m_RingBufferMtx);
+        std::lock_guard<std::mutex> Lock{m_RingBufferMtx};
         m_RingBuffer.FinishCurrentFrame(FenceValue);
     }
 
     void ReleaseStaleBlocks(Uint64 LastCompletedFenceValue)
     {
-        std::lock_guard<std::mutex> Lock(m_RingBufferMtx);
+        std::lock_guard<std::mutex> Lock{m_RingBufferMtx};
         m_RingBuffer.ReleaseCompletedFrames(LastCompletedFenceValue);
     }
 
@@ -79,7 +79,7 @@ public:
 protected:
     MasterBlock AllocateMasterBlock(OffsetType SizeInBytes, OffsetType Alignment)
     {
-        std::lock_guard<std::mutex> Lock(m_RingBufferMtx);
+        std::lock_guard<std::mutex> Lock{m_RingBufferMtx};
         return m_RingBuffer.Allocate(SizeInBytes, Alignment);
     }
 
@@ -144,7 +144,7 @@ public:
             {
                 if (Mgr != nullptr)
                 {
-                    std::lock_guard<std::mutex> Lock(Mgr->m_AllocationsMgrMtx);
+                    std::lock_guard<std::mutex> Lock{Mgr->m_AllocationsMgrMtx};
 #ifdef DEVELOPMENT
                     --Mgr->m_MasterBlockCounter;
 #endif
@@ -169,7 +169,7 @@ public:
 protected:
     MasterBlock AllocateMasterBlock(OffsetType SizeInBytes, OffsetType Alignment)
     {
-        std::lock_guard<std::mutex> Lock(m_AllocationsMgrMtx);
+        std::lock_guard<std::mutex> Lock{m_AllocationsMgrMtx};
         auto NewBlock = m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
 #ifdef DEVELOPMENT
         if (NewBlock.IsValid())

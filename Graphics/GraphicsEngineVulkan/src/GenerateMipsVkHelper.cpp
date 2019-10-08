@@ -187,7 +187,7 @@ namespace Diligent
 
     std::array<RefCntAutoPtr<IPipelineState>, 4>& GenerateMipsVkHelper::FindPSOs(TEXTURE_FORMAT Fmt)
     {
-        std::lock_guard<std::mutex> Lock(m_PSOMutex);
+        std::lock_guard<std::mutex> Lock{m_PSOMutex};
         auto it = m_PSOHash.find(Fmt);
         if(it == m_PSOHash.end())
             it = m_PSOHash.emplace(Fmt, CreatePSOs(Fmt)).first;

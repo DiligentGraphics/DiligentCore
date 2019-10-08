@@ -61,7 +61,7 @@ size_t FramebufferCache::FramebufferCacheKey::GetHash()const
 
 VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, uint32_t width, uint32_t height, uint32_t layers)
 {
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock{m_Mutex};
     auto it = m_Cache.find(Key);
     if (it != m_Cache.end())
     {
@@ -116,7 +116,7 @@ void FramebufferCache::OnDestroyImageView(VkImageView ImgView)
     // all entries in the m_ViewToKeyMap that refer to all keys with
     // that render pass
 
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock{m_Mutex};
     auto equal_range = m_ViewToKeyMap.equal_range(ImgView);
     for (auto it = equal_range.first; it != equal_range.second; ++it)
     {
@@ -137,7 +137,7 @@ void FramebufferCache::OnDestroyRenderPass(VkRenderPass Pass)
     // TODO: when an image view is released, we need to also destroy 
     // all entries in the m_RenderPassToKeyMap that refer to the keys
     // with the same image view
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock{m_Mutex};
     auto equal_range = m_RenderPassToKeyMap.equal_range(Pass);
     for (auto it = equal_range.first; it != equal_range.second; ++it)
     {

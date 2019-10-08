@@ -58,7 +58,7 @@ public:
 
     size_t GetNumPendingCaptures()
     {
-        std::lock_guard<std::mutex> Lock(m_PendingTexturesMtx);
+        std::lock_guard<std::mutex> Lock{m_PendingTexturesMtx};
         return m_PendingTextures.size();
     }
 

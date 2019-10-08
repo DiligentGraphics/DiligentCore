@@ -34,8 +34,14 @@ FenceVkImpl :: FenceVkImpl(IReferenceCounters* pRefCounters,
                            RenderDeviceVkImpl* pRendeDeviceVkImpl,
                            const FenceDesc&    Desc,
                            bool                IsDeviceInternal) : 
-    TFenceBase(pRefCounters, pRendeDeviceVkImpl, Desc, IsDeviceInternal),
-    m_FencePool(pRendeDeviceVkImpl->GetLogicalDevice().GetSharedPtr())
+    TFenceBase
+    {
+        pRefCounters,
+        pRendeDeviceVkImpl,
+        Desc,
+        IsDeviceInternal
+    },
+    m_FencePool{pRendeDeviceVkImpl->GetLogicalDevice().GetSharedPtr()}
 {
 }
 

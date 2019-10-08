@@ -41,7 +41,7 @@ RenderPassCache::~RenderPassCache()
 
 VkRenderPass RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
 {
-    std::lock_guard<std::mutex> Lock(m_Mutex);
+    std::lock_guard<std::mutex> Lock{m_Mutex};
     auto it = m_Cache.find(Key);
     if(it == m_Cache.end())
     {

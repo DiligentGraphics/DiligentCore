@@ -35,8 +35,15 @@ TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters*                 pRefCo
                                       ITexture*                           pTexture,
                                       VulkanUtilities::ImageViewWrapper&& ImgView,
                                       bool                                bIsDefaultView) :
-    TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
-    m_ImageView     (std::move(ImgView))
+    TTextureViewBase
+    {
+        pRefCounters,
+        pDevice,
+        ViewDesc,
+        pTexture,
+        bIsDefaultView
+    },
+    m_ImageView{std::move(ImgView)}
 {
 }
 
