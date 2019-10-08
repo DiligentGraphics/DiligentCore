@@ -36,8 +36,15 @@ TextureViewD3D12Impl::TextureViewD3D12Impl( IReferenceCounters*        pRefCount
                                             DescriptorHeapAllocation&& TexArraySRVDescriptor,
                                             DescriptorHeapAllocation&& MipLevelUAVDescriptors,
                                             bool                       bIsDefaultView) :
-    TTextureViewBase( pRefCounters, pDevice, ViewDesc, pTexture, bIsDefaultView ),
-    m_Descriptor(std::move(Descriptor))
+    TTextureViewBase
+    {
+        pRefCounters,
+        pDevice,
+        ViewDesc,
+        pTexture,
+        bIsDefaultView
+    },
+    m_Descriptor{std::move(Descriptor)}
 {
     if (!TexArraySRVDescriptor.IsNull() && !MipLevelUAVDescriptors.IsNull())
     {

@@ -32,7 +32,7 @@ namespace Diligent
 SamplerD3D12Impl::SamplerD3D12Impl(IReferenceCounters*    pRefCounters,
                                    RenderDeviceD3D12Impl* pRenderDeviceD3D12,
                                    const SamplerDesc&     SamplerDesc) : 
-    TSamplerBase(pRefCounters, pRenderDeviceD3D12, SamplerDesc)
+    TSamplerBase{pRefCounters, pRenderDeviceD3D12, SamplerDesc}
 {
     auto *pD3D12Device = pRenderDeviceD3D12->GetD3D12Device();
     D3D12_SAMPLER_DESC D3D12SamplerDesc = 

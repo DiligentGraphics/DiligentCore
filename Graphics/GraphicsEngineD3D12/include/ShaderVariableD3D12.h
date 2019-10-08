@@ -123,8 +123,8 @@ class ShaderVariableD3D12Impl final : public IShaderResourceVariableD3D
 public:
     ShaderVariableD3D12Impl(ShaderVariableManagerD3D12& ParentManager,
                          const ShaderResourceLayoutD3D12::D3D12Resource& Resource) :
-        m_ParentManager(ParentManager),
-        m_Resource(Resource)
+        m_ParentManager{ParentManager},
+        m_Resource     {Resource     }
     {}
 
     ShaderVariableD3D12Impl            (const ShaderVariableD3D12Impl&) = delete;

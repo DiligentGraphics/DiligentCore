@@ -45,9 +45,13 @@ public:
                          RenderDeviceD3D12Impl*                         pDevice,
                          DeviceContextD3D12Impl*                        pDeferredCtx,
                          RenderDeviceD3D12Impl::PooledCommandContext&&  pCmdContext) :
-        TCommandListBase(pRefCounters, pDevice),
-        m_pDeferredCtx  (pDeferredCtx),
-        m_pCmdContext   (std::move(pCmdContext))
+        TCommandListBase
+        {
+            pRefCounters,
+            pDevice
+        },
+        m_pDeferredCtx  {pDeferredCtx          },
+        m_pCmdContext   {std::move(pCmdContext)}
     {
     }
     
@@ -66,7 +70,7 @@ public:
 
     RenderDeviceD3D12Impl::PooledCommandContext Close(RefCntAutoPtr<DeviceContextD3D12Impl>& pDeferredCtx)
     {
-        pDeferredCtx  = std::move(m_pDeferredCtx);
+        pDeferredCtx = std::move(m_pDeferredCtx);
         return std::move(m_pCmdContext);
     }
 

@@ -169,13 +169,13 @@ public:
                       Uint32                           _RootIndex, 
                       Uint32                           _OffsetFromTableStart, 
                       Uint32                           _SamplerId)noexcept :
-            ParentResLayout     (_ParentLayout),
-            Attribs             (_Attribs),
-            ResourceType        (static_cast<Uint16>(_ResType)),
-            VariableType        (static_cast<Uint16>(_VariableType)),
-            RootIndex           (static_cast<Uint16>(_RootIndex)),
-            SamplerId           (static_cast<Uint16>(_SamplerId)),
-            OffsetFromTableStart( _OffsetFromTableStart )
+            ParentResLayout     {_ParentLayout                     },
+            Attribs             {_Attribs                          },
+            ResourceType        {static_cast<Uint16>(_ResType)     },
+            VariableType        {static_cast<Uint16>(_VariableType)},
+            RootIndex           {static_cast<Uint16>(_RootIndex)   },
+            SamplerId           {static_cast<Uint16>(_SamplerId)   },
+            OffsetFromTableStart{ _OffsetFromTableStart            }
         {
             VERIFY(IsValidOffset(),    "Offset must be valid");
             VERIFY(IsValidRootIndex(), "Root index must be valid");

@@ -46,7 +46,7 @@ Texture2DArray_OGL::Texture2DArray_OGL(IReferenceCounters*         pRefCounters,
         TexViewObjAllocator,
         pDeviceGL,
         TexDesc,
-        TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY,
+        static_cast<GLenum>(TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY),
         pInitData,
         bIsDeviceInternal
     }

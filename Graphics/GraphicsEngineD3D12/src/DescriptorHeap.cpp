@@ -35,13 +35,13 @@ DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocato
                                                                  IDescriptorAllocator&             ParentAllocator,
                                                                  size_t                            ThisManagerId,
                                                                  const D3D12_DESCRIPTOR_HEAP_DESC& HeapDesc) : 
-    m_ParentAllocator            (ParentAllocator),
-    m_DeviceD3D12Impl            (DeviceD3D12Impl),
-    m_ThisManagerId              (ThisManagerId),
-    m_HeapDesc                   (HeapDesc),
-    m_DescriptorSize             (DeviceD3D12Impl.GetD3D12Device()->GetDescriptorHandleIncrementSize(m_HeapDesc.Type)),
-    m_NumDescriptorsInAllocation (HeapDesc.NumDescriptors),
-    m_FreeBlockManager           (HeapDesc.NumDescriptors, Allocator)
+    m_ParentAllocator            {ParentAllocator},
+    m_DeviceD3D12Impl            {DeviceD3D12Impl},
+    m_ThisManagerId              {ThisManagerId  },
+    m_HeapDesc                   {HeapDesc       },
+    m_DescriptorSize             {DeviceD3D12Impl.GetD3D12Device()->GetDescriptorHandleIncrementSize(m_HeapDesc.Type)},
+    m_NumDescriptorsInAllocation {HeapDesc.NumDescriptors},
+    m_FreeBlockManager           {HeapDesc.NumDescriptors, Allocator}
 {
     auto pDevice = DeviceD3D12Impl.GetD3D12Device();
 
@@ -63,14 +63,14 @@ DescriptorHeapAllocationManager::DescriptorHeapAllocationManager(IMemoryAllocato
                                                                  ID3D12DescriptorHeap*  pd3d12DescriptorHeap,
                                                                  Uint32                 FirstDescriptor,
                                                                  Uint32                 NumDescriptors): 
-    m_ParentAllocator            (ParentAllocator),
-    m_DeviceD3D12Impl            (DeviceD3D12Impl),
-    m_ThisManagerId              (ThisManagerId),
-    m_HeapDesc                   (pd3d12DescriptorHeap->GetDesc()),
-    m_DescriptorSize             (DeviceD3D12Impl.GetD3D12Device()->GetDescriptorHandleIncrementSize(m_HeapDesc.Type)),
-    m_NumDescriptorsInAllocation (NumDescriptors),
-    m_FreeBlockManager           (NumDescriptors, Allocator),
-    m_pd3d12DescriptorHeap       (pd3d12DescriptorHeap)
+    m_ParentAllocator            {ParentAllocator},
+    m_DeviceD3D12Impl            {DeviceD3D12Impl},
+    m_ThisManagerId              {ThisManagerId  },
+    m_HeapDesc                   {pd3d12DescriptorHeap->GetDesc()},
+    m_DescriptorSize             {DeviceD3D12Impl.GetD3D12Device()->GetDescriptorHandleIncrementSize(m_HeapDesc.Type)},
+    m_NumDescriptorsInAllocation {NumDescriptors},
+    m_FreeBlockManager           {NumDescriptors, Allocator},
+    m_pd3d12DescriptorHeap       {pd3d12DescriptorHeap}
 {
     m_FirstCPUHandle = pd3d12DescriptorHeap->GetCPUDescriptorHandleForHeapStart();
     m_FirstCPUHandle.ptr += m_DescriptorSize * FirstDescriptor;
@@ -151,10 +151,10 @@ CPUDescriptorHeap::CPUDescriptorHeap(IMemoryAllocator&           Allocator,
                                      Uint32                      NumDescriptorsInHeap,
                                      D3D12_DESCRIPTOR_HEAP_TYPE  Type,
                                      D3D12_DESCRIPTOR_HEAP_FLAGS Flags) : 
-    m_MemAllocator   (Allocator),
-    m_DeviceD3D12Impl(DeviceD3D12Impl),
-    m_HeapPool       (STD_ALLOCATOR_RAW_MEM(DescriptorHeapAllocationManager, GetRawAllocator(), "Allocator for vector<DescriptorHeapAllocationManager>")),
-    m_AvailableHeaps (STD_ALLOCATOR_RAW_MEM(size_t, GetRawAllocator(), "Allocator for unordered_set<size_t>")),
+    m_MemAllocator   {Allocator      },
+    m_DeviceD3D12Impl{DeviceD3D12Impl},
+    m_HeapPool       {STD_ALLOCATOR_RAW_MEM(DescriptorHeapAllocationManager, GetRawAllocator(), "Allocator for vector<DescriptorHeapAllocationManager>")},
+    m_AvailableHeaps {STD_ALLOCATOR_RAW_MEM(size_t, GetRawAllocator(), "Allocator for unordered_set<size_t>")},
     m_HeapDesc
     {
         Type,
@@ -162,7 +162,7 @@ CPUDescriptorHeap::CPUDescriptorHeap(IMemoryAllocator&           Allocator,
         Flags,
         1   // NodeMask
     },
-    m_DescriptorSize(DeviceD3D12Impl.GetD3D12Device()->GetDescriptorHandleIncrementSize(Type))
+    m_DescriptorSize{DeviceD3D12Impl.GetD3D12Device()->GetDescriptorHandleIncrementSize(Type)}
 {
     // Create one pool
     m_HeapPool.emplace_back(m_MemAllocator, m_DeviceD3D12Impl, *this, 0, m_HeapDesc);
@@ -302,7 +302,7 @@ GPUDescriptorHeap::GPUDescriptorHeap(IMemoryAllocator&           Allocator,
                                      Uint32                      NumDynamicDescriptors,
                                      D3D12_DESCRIPTOR_HEAP_TYPE  Type, 
                                      D3D12_DESCRIPTOR_HEAP_FLAGS Flags) :
-    m_DeviceD3D12Impl(Device),
+    m_DeviceD3D12Impl{Device},
     m_HeapDesc
     {
         Type,
@@ -310,17 +310,18 @@ GPUDescriptorHeap::GPUDescriptorHeap(IMemoryAllocator&           Allocator,
         Flags,
         1 // UINT NodeMask;
     },
-    m_pd3d12DescriptorHeap(
+    m_pd3d12DescriptorHeap
+    {
         [&]
         {
               CComPtr<ID3D12DescriptorHeap> pHeap;
               Device.GetD3D12Device()->CreateDescriptorHeap(&m_HeapDesc, __uuidof(pHeap), reinterpret_cast<void**>(&pHeap));
               return pHeap;
         }()
-    ),
-    m_DescriptorSize( Device.GetD3D12Device()->GetDescriptorHandleIncrementSize(Type) ),
-    m_HeapAllocationManager(Allocator, Device, *this, 0, m_pd3d12DescriptorHeap, 0, NumDescriptorsInHeap),
-    m_DynamicAllocationsManager(Allocator, Device, *this, 1, m_pd3d12DescriptorHeap, NumDescriptorsInHeap, NumDynamicDescriptors )
+    },
+    m_DescriptorSize           {Device.GetD3D12Device()->GetDescriptorHandleIncrementSize(Type)},
+    m_HeapAllocationManager    {Allocator, Device, *this, 0, m_pd3d12DescriptorHeap, 0, NumDescriptorsInHeap},
+    m_DynamicAllocationsManager{Allocator, Device, *this, 1, m_pd3d12DescriptorHeap, NumDescriptorsInHeap, NumDynamicDescriptors}
 {
 }
 

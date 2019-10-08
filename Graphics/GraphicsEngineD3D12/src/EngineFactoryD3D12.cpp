@@ -54,7 +54,7 @@ public:
     using TBase = EngineFactoryD3DBase<IEngineFactoryD3D12, DeviceType::D3D12>;
 
     EngineFactoryD3D12Impl() :
-        TBase(IID_EngineFactoryD3D12)
+        TBase{IID_EngineFactoryD3D12}
     {}
 
     void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 
@@ -154,6 +154,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 		    if (SUCCEEDED(D3D12GetDebugInterface(__uuidof(debugController), reinterpret_cast<void**>(static_cast<ID3D12Debug**>(&debugController)) )))
 		    {
 			    debugController->EnableDebugLayer();
+                //static_cast<ID3D12Debug1*>(debugController.p)->SetEnableSynchronizedCommandQueueValidation(FALSE);
 		    }
 	    }
 

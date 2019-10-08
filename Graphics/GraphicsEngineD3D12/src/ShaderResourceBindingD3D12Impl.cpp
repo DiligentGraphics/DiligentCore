@@ -33,9 +33,14 @@ namespace Diligent
 ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounters*     pRefCounters,
                                                                PipelineStateD3D12Impl* pPSO,
                                                                bool                    IsPSOInternal) :
-    TBase( pRefCounters, pPSO, IsPSOInternal ),
-    m_ShaderResourceCache(ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources),
-    m_NumShaders(static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaders()))
+    TBase
+    {
+        pRefCounters,
+        pPSO,
+        IsPSOInternal
+    },
+    m_ShaderResourceCache{ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources},
+    m_NumShaders         {static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaders())}
 {
     auto* ppShaders = pPSO->GetShaders();
 

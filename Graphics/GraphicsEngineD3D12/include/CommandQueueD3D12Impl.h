@@ -39,7 +39,7 @@ class CommandQueueD3D12Impl final : public ObjectBase<ICommandQueueD3D12>
 public:
     using TBase = ObjectBase<ICommandQueueD3D12>;
 
-    CommandQueueD3D12Impl(IReferenceCounters *pRefCounters, ID3D12CommandQueue *pd3d12NativeCmdQueue, ID3D12Fence *pd3d12Fence);
+    CommandQueueD3D12Impl(IReferenceCounters* pRefCounters, ID3D12CommandQueue* pd3d12NativeCmdQueue, ID3D12Fence* pd3d12Fence);
     ~CommandQueueD3D12Impl();
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;

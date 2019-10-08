@@ -35,8 +35,13 @@ namespace Diligent
 ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*       pRefCounters,
                                  RenderDeviceD3D12Impl*    pRenderDeviceD3D12,
                                  const ShaderCreateInfo&   ShaderCI) : 
-    TShaderBase(pRefCounters, pRenderDeviceD3D12, ShaderCI.Desc),
-    ShaderD3DBase(ShaderCI)
+    TShaderBase
+    {
+        pRefCounters,
+        pRenderDeviceD3D12,
+        ShaderCI.Desc
+    },
+    ShaderD3DBase{ShaderCI}
 {
     // Load shader resources
     auto& Allocator = GetRawAllocator();

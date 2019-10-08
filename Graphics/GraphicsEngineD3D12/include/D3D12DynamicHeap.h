@@ -45,11 +45,11 @@ struct D3D12DynamicAllocation
                          , Uint64                    _DvpCtxFrameNumber
 #endif
     )noexcept :
-        pBuffer          (pBuff), 
-        Offset           (_Offset),
-        Size             (_Size),
-        CPUAddress       (_CPUAddress),
-        GPUAddress       (_GPUAddress)
+        pBuffer    {pBuff       }, 
+        Offset     {_Offset     },
+        Size       {_Size       },
+        CPUAddress {_CPUAddress },
+        GPUAddress {_GPUAddress }
 #ifdef DEVELOPMENT
       , DvpCtxFrameNumber(_DvpCtxFrameNumber)
 #endif

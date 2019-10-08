@@ -46,7 +46,7 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters*          pRefCounters,
         TexViewObjAllocator,
         pDeviceGL,
         TexDesc,
-        TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D,
+        static_cast<GLenum>(TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D),
         pInitData,
         bIsDeviceInternal
     }

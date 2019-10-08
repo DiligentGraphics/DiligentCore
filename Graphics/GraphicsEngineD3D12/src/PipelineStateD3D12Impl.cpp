@@ -63,8 +63,8 @@ private:
 PipelineStateD3D12Impl :: PipelineStateD3D12Impl(IReferenceCounters*      pRefCounters,
                                                  RenderDeviceD3D12Impl*   pDeviceD3D12,
                                                  const PipelineStateDesc& PipelineDesc) : 
-    TPipelineStateBase(pRefCounters, pDeviceD3D12, PipelineDesc),
-    m_SRBMemAllocator(GetRawAllocator())
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, PipelineDesc},
+    m_SRBMemAllocator {GetRawAllocator()}
 {
     auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
     const auto& ResourceLayout = m_Desc.ResourceLayout;

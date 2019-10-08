@@ -46,8 +46,8 @@ public:
                   UINT                           RegisterSpace, 
                   D3D12_SHADER_VISIBILITY        Visibility, 
                   SHADER_RESOURCE_VARIABLE_TYPE  VarType)noexcept  : 
-        m_RootIndex    (RootIndex),
-        m_ShaderVarType(VarType)
+        m_RootIndex    {RootIndex},
+        m_ShaderVarType{VarType  }
 	{
         VERIFY(ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV || ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV || ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV, "Unexpected parameter type - verify argument list");
 		m_RootParam.ParameterType             = ParameterType;
@@ -63,8 +63,8 @@ public:
                   UINT                          NumDwords, 
                   D3D12_SHADER_VISIBILITY       Visibility, 
                   SHADER_RESOURCE_VARIABLE_TYPE VarType)noexcept : 
-        m_RootIndex    (RootIndex),
-        m_ShaderVarType(VarType)
+        m_RootIndex    {RootIndex},
+        m_ShaderVarType{VarType  }
 	{
         VERIFY(ParameterType == D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, "Unexpected parameter type - verify argument list");
 		m_RootParam.ParameterType            = ParameterType;
@@ -80,8 +80,8 @@ public:
                   D3D12_DESCRIPTOR_RANGE*        pRanges,
                   D3D12_SHADER_VISIBILITY        Visibility, 
                   SHADER_RESOURCE_VARIABLE_TYPE  VarType)noexcept : 
-        m_RootIndex    (RootIndex),
-        m_ShaderVarType(VarType)
+        m_RootIndex    {RootIndex},
+        m_ShaderVarType{VarType  }
 	{
         VERIFY(ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Unexpected parameter type - verify argument list");
         VERIFY_EXPR(pRanges != nullptr);
@@ -107,24 +107,24 @@ public:
     RootParameter(const RootParameter&    RP, 
                   UINT                    NumRanges, 
                   D3D12_DESCRIPTOR_RANGE* pRanges)noexcept :
-        m_RootParam          (RP.m_RootParam),
-        m_DescriptorTableSize(RP.m_DescriptorTableSize),
-        m_ShaderVarType      (RP.m_ShaderVarType),
-        m_RootIndex          (RP.m_RootIndex)
+        m_RootParam          {RP.m_RootParam          },
+        m_DescriptorTableSize{RP.m_DescriptorTableSize},
+        m_ShaderVarType      {RP.m_ShaderVarType      },
+        m_RootIndex          {RP.m_RootIndex          }
     {
         VERIFY(m_RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Root parameter is expected to be a descriptor table");
         VERIFY(NumRanges >= m_RootParam.DescriptorTable.NumDescriptorRanges, "New table must be larger than source one");
-        auto &DstTbl = m_RootParam.DescriptorTable;
+        auto& DstTbl = m_RootParam.DescriptorTable;
         DstTbl.NumDescriptorRanges = NumRanges;
         DstTbl.pDescriptorRanges   = pRanges;
-        const auto &SrcTbl = RP.m_RootParam.DescriptorTable;
+        const auto& SrcTbl = RP.m_RootParam.DescriptorTable;
         memcpy(pRanges, SrcTbl.pDescriptorRanges, SrcTbl.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE));
 #ifdef _DEBUG
         {
             Uint32 dbgTableSize = 0;
             for (Uint32 r = 0; r < SrcTbl.NumDescriptorRanges; ++r)
             {
-                const auto &Range = SrcTbl.pDescriptorRanges[r];
+                const auto& Range = SrcTbl.pDescriptorRanges[r];
                 dbgTableSize = std::max(dbgTableSize, Range.OffsetInDescriptorsFromTableStart + Range.NumDescriptors);
             }
             VERIFY(dbgTableSize == m_DescriptorTableSize, "Incorrect descriptor table size");
@@ -146,7 +146,7 @@ public:
                             UINT                        OffsetFromTableStart =  D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND)
 	{
         VERIFY(m_RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, "Incorrect parameter table: descriptor table is expected");
-        auto &Tbl = m_RootParam.DescriptorTable;
+        auto& Tbl = m_RootParam.DescriptorTable;
         VERIFY(RangeIndex < Tbl.NumDescriptorRanges, "Invalid descriptor range index");
 		D3D12_DESCRIPTOR_RANGE &range = const_cast<D3D12_DESCRIPTOR_RANGE &>(Tbl.pDescriptorRanges[RangeIndex]);
         VERIFY(range.RangeType == static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(-1), "Descriptor range has already been initialized. m_DescriptorTableSize may be updated incorrectly");
@@ -186,14 +186,14 @@ public:
         {
             case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
             {
-                const auto &tbl0 = m_RootParam.DescriptorTable;
-                const auto &tbl1 = rhs.m_RootParam.DescriptorTable;
+                const auto& tbl0 = m_RootParam.DescriptorTable;
+                const auto& tbl1 = rhs.m_RootParam.DescriptorTable;
                 if(tbl0.NumDescriptorRanges != tbl1.NumDescriptorRanges)
                     return false;
                 for(UINT r=0; r < tbl0.NumDescriptorRanges; ++r)
                 {
-                    const auto &rng0 = tbl0.pDescriptorRanges[r];
-                    const auto &rng1 = tbl1.pDescriptorRanges[r];
+                    const auto& rng0 = tbl0.pDescriptorRanges[r];
+                    const auto& rng1 = tbl1.pDescriptorRanges[r];
                     if( memcmp(&rng0, &rng1, sizeof(rng0)) != 0)
                         return false;
                 }
@@ -202,8 +202,8 @@ public:
 
             case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
             {
-                const auto &cnst0 = m_RootParam.Constants;
-                const auto &cnst1 = rhs.m_RootParam.Constants;
+                const auto& cnst0 = m_RootParam.Constants;
+                const auto& cnst1 = rhs.m_RootParam.Constants;
                 if (memcmp(&cnst0, &cnst1, sizeof(cnst0)) != 0)
                     return false;
             }
@@ -213,8 +213,8 @@ public:
             case D3D12_ROOT_PARAMETER_TYPE_SRV:
             case D3D12_ROOT_PARAMETER_TYPE_UAV:
             {
-                const auto &dscr0 = m_RootParam.Descriptor;
-                const auto &dscr1 = rhs.m_RootParam.Descriptor;
+                const auto& dscr0 = m_RootParam.Descriptor;
+                const auto& dscr1 = rhs.m_RootParam.Descriptor;
                 if (memcmp(&dscr0, &dscr1, sizeof(dscr0)) != 0)
                     return false;
             }
@@ -240,11 +240,11 @@ public:
         {
             case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
             {
-                const auto &tbl = m_RootParam.DescriptorTable;
+                const auto& tbl = m_RootParam.DescriptorTable;
                 HashCombine(hash, tbl.NumDescriptorRanges);
                 for (UINT r = 0; r < tbl.NumDescriptorRanges; ++r)
                 {
-                    const auto &rng = tbl.pDescriptorRanges[r];
+                    const auto& rng = tbl.pDescriptorRanges[r];
                     HashCombine(hash, rng.BaseShaderRegister, rng.NumDescriptors, rng.OffsetInDescriptorsFromTableStart, rng.RangeType, rng.RegisterSpace);
                 }
             }
@@ -252,7 +252,7 @@ public:
 
             case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
             {
-                const auto &cnst = m_RootParam.Constants;
+                const auto& cnst = m_RootParam.Constants;
                 HashCombine(hash, cnst.Num32BitValues, cnst.RegisterSpace, cnst.ShaderRegister);
             }
             break;
@@ -261,7 +261,7 @@ public:
             case D3D12_ROOT_PARAMETER_TYPE_SRV:
             case D3D12_ROOT_PARAMETER_TYPE_UAV:
             {
-                const auto &dscr = m_RootParam.Descriptor;
+                const auto& dscr = m_RootParam.Descriptor;
                 HashCombine(hash, dscr.RegisterSpace, dscr.ShaderRegister);
             }
             break;

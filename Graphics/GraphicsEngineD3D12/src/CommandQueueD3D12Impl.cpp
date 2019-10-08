@@ -30,11 +30,11 @@ namespace Diligent
 CommandQueueD3D12Impl::CommandQueueD3D12Impl(IReferenceCounters*    pRefCounters,
                                              ID3D12CommandQueue*    pd3d12NativeCmdQueue,
                                              ID3D12Fence*           pd3d12Fence) :
-        TBase(pRefCounters),
-        m_pd3d12CmdQueue(pd3d12NativeCmdQueue), 
-        m_d3d12Fence(pd3d12Fence),
-        m_NextFenceValue(1),
-        m_WaitForGPUEventHandle( CreateEvent(nullptr, false, false, nullptr) )
+        TBase{pRefCounters},
+        m_pd3d12CmdQueue       {pd3d12NativeCmdQueue},
+        m_d3d12Fence           {pd3d12Fence         },
+        m_NextFenceValue       {1                   },
+        m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)}
 {
     VERIFY_EXPR(m_WaitForGPUEventHandle != INVALID_HANDLE_VALUE);
     m_d3d12Fence->Signal(0);

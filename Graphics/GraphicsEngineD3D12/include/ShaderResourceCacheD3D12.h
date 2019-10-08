@@ -108,7 +108,7 @@ public:
 
     ShaderResourceCacheD3D12(DbgCacheContentType dbgContentType)
 #ifdef _DEBUG
-        : m_DbgContentType(dbgContentType)
+        : m_DbgContentType{dbgContentType}
 #endif
     {
     }
@@ -138,8 +138,8 @@ public:
     {
     public:
         RootTable(Uint32 NumResources, Resource *pResources)noexcept : 
-            m_NumResources(NumResources),
-            m_pResources  (pResources)
+            m_NumResources{NumResources},
+            m_pResources  {pResources  }
         {}
 
         inline const Resource& GetResource(Uint32                           OffsetFromTableStart, 

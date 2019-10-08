@@ -87,7 +87,7 @@ namespace Diligent
                 GetContextObjectName("SAMPLER     dynamic descriptor allocator", bIsDeferred, ContextId)
             }
         },
-        m_CmdListAllocator(GetRawAllocator(), sizeof(CommandListD3D12Impl), 64 )
+        m_CmdListAllocator{GetRawAllocator(), sizeof(CommandListD3D12Impl), 64}
     {
         RequestCommandContext(pDeviceD3D12Impl);
 

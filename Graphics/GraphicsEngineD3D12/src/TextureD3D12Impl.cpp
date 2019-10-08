@@ -125,7 +125,7 @@ TextureD3D12Impl :: TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                                      RenderDeviceD3D12Impl*     pRenderDeviceD3D12, 
                                      const TextureDesc&         TexDesc, 
                                      const TextureData*         pInitData /*= nullptr*/) : 
-    TTextureBase(pRefCounters, TexViewObjAllocator, pRenderDeviceD3D12, TexDesc)
+    TTextureBase{pRefCounters, TexViewObjAllocator, pRenderDeviceD3D12, TexDesc}
 {
     if (m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
         LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time: pInitData can't be null");
@@ -384,7 +384,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                                    const TextureDesc&         TexDesc, 
                                    RESOURCE_STATE             InitialState,
                                    ID3D12Resource*            pTexture) : 
-    TTextureBase(pRefCounters, TexViewObjAllocator, pDeviceD3D12, InitTexDescFromD3D12Resource(pTexture, TexDesc))
+    TTextureBase{pRefCounters, TexViewObjAllocator, pDeviceD3D12, InitTexDescFromD3D12Resource(pTexture, TexDesc)}
 {
     m_pd3d12Resource = pTexture;
     SetState(InitialState);

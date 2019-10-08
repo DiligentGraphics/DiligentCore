@@ -37,8 +37,8 @@ namespace Diligent
 {
 
 RootSignature::RootParamsManager::RootParamsManager(IMemoryAllocator &MemAllocator):
-    m_MemAllocator(MemAllocator),
-    m_pMemory(nullptr, STDDeleter<void, IMemoryAllocator>(MemAllocator))
+    m_MemAllocator{MemAllocator},
+    m_pMemory{nullptr, STDDeleter<void, IMemoryAllocator>(MemAllocator)}
 {}
 
 size_t RootSignature::RootParamsManager::GetRequiredMemorySize(Uint32 NumExtraRootTables,

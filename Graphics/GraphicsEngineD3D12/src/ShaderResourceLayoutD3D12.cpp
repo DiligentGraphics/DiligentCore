@@ -115,9 +115,9 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
                                                      Uint32                                      NumAllowedTypes, 
                                                      ShaderResourceCacheD3D12*                   pResourceCache,
                                                      RootSignature*                              pRootSig) : 
-    m_Owner        (Owner),
-    m_pd3d12Device (pd3d12Device),
-    m_pResources   (std::move(pSrcResources))
+    m_Owner        {Owner},
+    m_pd3d12Device {pd3d12Device},
+    m_pResources   {std::move(pSrcResources)}
 {
     VERIFY_EXPR( (pResourceCache != nullptr) ^ (pRootSig != nullptr) );
 

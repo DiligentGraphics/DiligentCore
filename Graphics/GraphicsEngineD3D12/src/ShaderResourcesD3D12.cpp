@@ -33,7 +33,7 @@ namespace Diligent
 
 
 ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const ShaderDesc& ShdrDesc, const char* CombinedSamplerSuffix) :
-    ShaderResources(ShdrDesc.ShaderType)
+    ShaderResources{ShdrDesc.ShaderType}
 {
     class NewResourceHandler
     {
