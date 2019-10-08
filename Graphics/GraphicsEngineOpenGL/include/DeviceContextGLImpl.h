@@ -158,7 +158,7 @@ public:
 
     void BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding);
 
-    GLContextState &GetContextState(){return m_ContextState;}
+    GLContextState& GetContextState(){return m_ContextState;}
     
     void CommitRenderTargets();
 

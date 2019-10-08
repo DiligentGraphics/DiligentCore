@@ -48,24 +48,24 @@ public:
     
     
 
-    const GLObjectWrappers::GLVertexArrayObj& GetVAO( IPipelineState *pPSO,
-                                                      IBuffer *pIndexBuffer,
-                                                      VertexStreamInfo<class BufferGLImpl> VertexStreams[],
-                                                      Uint32 NumVertexStreams,
-                                                      class GLContextState &GLContextState);
+    const GLObjectWrappers::GLVertexArrayObj& GetVAO( IPipelineState*                       pPSO,
+                                                      IBuffer*                              pIndexBuffer,
+                                                      VertexStreamInfo<class BufferGLImpl>  VertexStreams[],
+                                                      Uint32                                NumVertexStreams,
+                                                      class GLContextState&                 GLContextState);
     const GLObjectWrappers::GLVertexArrayObj& GetEmptyVAO();
 
-    void OnDestroyBuffer(IBuffer *pBuffer);
-    void OnDestroyPSO(IPipelineState *pPSO);
+    void OnDestroyBuffer(IBuffer* pBuffer);
+    void OnDestroyPSO(IPipelineState* pPSO);
 
 private:
     // This structure is used as the key to find VAO
     struct VAOCacheKey
     {
         VAOCacheKey(UniqueIdentifier pso_id, UniqueIdentifier ib_id) : 
-            PSOUId         (pso_id),
-            IndexBufferUId (ib_id),
-            NumUsedSlots   (0)
+            PSOUId         {pso_id},
+            IndexBufferUId {ib_id },
+            NumUsedSlots   {0     }
         {}
 
         // Note that using pointers is unsafe as they may (and will) be reused:

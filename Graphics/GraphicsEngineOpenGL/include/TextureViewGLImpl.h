@@ -40,12 +40,12 @@ class TextureViewGLImpl final : public TextureViewBase<ITextureViewGL, RenderDev
 public:
     using TTextureViewBase = TextureViewBase<ITextureViewGL, RenderDeviceGLImpl>;
 
-    TextureViewGLImpl(IReferenceCounters *pRefCounters,
-                      RenderDeviceGLImpl *pDevice, 
+    TextureViewGLImpl(IReferenceCounters*           pRefCounters,
+                      RenderDeviceGLImpl*           pDevice, 
                       const struct TextureViewDesc& ViewDesc, 
-                      class TextureBaseGL *pTexture,
-                      bool bCreateGLViewTex,
-                      bool bIsDefaultView );
+                      class TextureBaseGL*          pTexture,
+                      bool                          bCreateGLViewTex,
+                      bool                          bIsDefaultView );
     ~TextureViewGLImpl();
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;

@@ -31,30 +31,6 @@
 namespace Diligent
 {
 
-template<>
-inline GLPipelineResourceLayout::OffsetType GLPipelineResourceLayout::GetResourceOffset<GLPipelineResourceLayout::UniformBuffBindInfo>()const
-{
-    return m_UBOffset;
-}
-
-template<>
-inline GLPipelineResourceLayout::OffsetType GLPipelineResourceLayout::GetResourceOffset<GLPipelineResourceLayout::SamplerBindInfo>()const
-{
-    return m_SamplerOffset;
-}
-
-template<>
-inline GLPipelineResourceLayout::OffsetType GLPipelineResourceLayout::GetResourceOffset<GLPipelineResourceLayout::ImageBindInfo>()const
-{
-    return m_ImageOffset;
-}
-
-template<>
-inline GLPipelineResourceLayout::OffsetType GLPipelineResourceLayout::GetResourceOffset<GLPipelineResourceLayout::StorageBufferBindInfo>()const
-{
-    return m_StorageBufferOffset;
-}
-
 
 size_t GLPipelineResourceLayout::GetRequiredMemorySize(GLProgramResources*                  ProgramResources,
                                                        Uint32                               NumPrograms,

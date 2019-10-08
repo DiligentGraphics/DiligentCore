@@ -87,10 +87,10 @@ public:
     virtual GLuint GetGLTextureHandle()override final { return GetGLHandle(); }
     virtual void* GetNativeHandle()override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLTextureHandle())); }
 
-    virtual void UpdateData( class GLContextState &CtxState, Uint32 MipLevel, Uint32 Slice, const Box &DstBox, const TextureSubResData &SubresData ) = 0;
+    virtual void UpdateData( class GLContextState& CtxState, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData ) = 0;
 
 protected:
-    virtual void CreateViewInternal( const struct TextureViewDesc &ViewDesc, class ITextureView **ppView, bool bIsDefaultView )override;
+    virtual void CreateViewInternal( const struct TextureViewDesc& ViewDesc, class ITextureView** ppView, bool bIsDefaultView )override;
     void SetDefaultGLParameters();
 
     GLObjectWrappers::GLTextureObj m_GlTexture;

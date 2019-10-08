@@ -33,8 +33,8 @@ class GLObjWrapper
 {
 public:
     GLObjWrapper(bool CreateObject, CreateReleaseHelperType CreateReleaseHelper = CreateReleaseHelperType()) : 
-        m_uiHandle(0),
-        m_CreateReleaseHelper(CreateReleaseHelper)
+        m_uiHandle           {0                  },
+        m_CreateReleaseHelper{CreateReleaseHelper}
     {
         if( CreateObject )
         {
@@ -51,10 +51,13 @@ public:
         Release();
     }
     
+    GLObjWrapper             (const GLObjWrapper&) = delete;
+    GLObjWrapper& operator = (const GLObjWrapper&) = delete;
+
     GLObjWrapper(GLObjWrapper&& Wrapper) : 
-        m_uiHandle(Wrapper.m_uiHandle),
-        m_CreateReleaseHelper( std::move( Wrapper.m_CreateReleaseHelper ) ),
-        m_UniqueId( std::move(Wrapper.m_UniqueId) )
+        m_uiHandle           {Wrapper.m_uiHandle                      },
+        m_CreateReleaseHelper{std::move(Wrapper.m_CreateReleaseHelper)},
+        m_UniqueId           {std::move(Wrapper.m_UniqueId)           }
     {
         Wrapper.m_uiHandle = 0;
     }
@@ -62,10 +65,13 @@ public:
     GLObjWrapper& operator = (GLObjWrapper&& Wrapper)
     {
         Release();
-        m_uiHandle = Wrapper.m_uiHandle;
-        Wrapper.m_uiHandle = 0;
-        m_CreateReleaseHelper = std::move( Wrapper.m_CreateReleaseHelper );
-        m_UniqueId = std::move(Wrapper.m_UniqueId);
+
+        m_uiHandle            = Wrapper.m_uiHandle;
+        m_CreateReleaseHelper = std::move(Wrapper.m_CreateReleaseHelper);
+        m_UniqueId            = std::move(Wrapper.m_UniqueId);
+
+        Wrapper.m_uiHandle    = 0;
+
         return *this;
     }
 
@@ -79,7 +85,7 @@ public:
 
     void Release()
     {
-        if( m_uiHandle )
+        if (m_uiHandle)
         {
             m_CreateReleaseHelper.Release(m_uiHandle);
             m_uiHandle = 0;
@@ -98,9 +104,6 @@ public:
     operator GLuint()const{return m_uiHandle;}
 
 private:
-    GLObjWrapper(const GLObjWrapper&);
-    GLObjWrapper& operator = (const GLObjWrapper&);
-
     GLuint m_uiHandle;
     CreateReleaseHelperType m_CreateReleaseHelper;
 

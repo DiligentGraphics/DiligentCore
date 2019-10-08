@@ -64,7 +64,7 @@ public:
 
     void UpdateData(DeviceContextGLImpl* pCtxGL, Uint32 Offset, Uint32 Size, const PVoid pData);
     void CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
-    void Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData );
+    void Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData );
     void Unmap();
 
     void BufferMemoryBarrier( Uint32 RequiredBarriers, class GLContextState &GLContextState );

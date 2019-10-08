@@ -43,11 +43,11 @@ public:
     FBOCache& operator = (const FBOCache&)  = delete;
     FBOCache& operator = (      FBOCache&&) = delete;
 
-    const GLObjectWrappers::GLFrameBufferObj& GetFBO( Uint32 NumRenderTargets, 
-                                                       ITextureView *ppRenderTargets[], 
-                                                       ITextureView *pDepthStencil,
-                                                       class GLContextState &ContextState);
-    void OnReleaseTexture(ITexture *pTexture);
+    const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32                NumRenderTargets, 
+                                                     ITextureView*         ppRenderTargets[], 
+                                                     ITextureView*         pDepthStencil,
+                                                     class GLContextState& ContextState);
+    void OnReleaseTexture(ITexture* pTexture);
 
 private:
     // This structure is used as the key to find FBO
