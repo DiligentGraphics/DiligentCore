@@ -40,7 +40,16 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters*          pRefCounters,
                               const TextureDesc&           TexDesc,
                               const TextureData*           pInitData         /*= nullptr*/,
 							  bool                         bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D, pInitData, bIsDeviceInternal)
+    TextureBaseGL
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        TexDesc,
+        TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D,
+        pInitData,
+        bIsDeviceInternal
+    }
 {
     GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 

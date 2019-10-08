@@ -72,7 +72,7 @@ RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters*        pRefCounters
         }
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
-    m_GLContext(InitAttribs, m_DeviceCaps, pSCDesc)
+    m_GLContext{InitAttribs, m_DeviceCaps, pSCDesc}
 {
     GLint NumExtensions = 0;
     glGetIntegerv( GL_NUM_EXTENSIONS,& NumExtensions );

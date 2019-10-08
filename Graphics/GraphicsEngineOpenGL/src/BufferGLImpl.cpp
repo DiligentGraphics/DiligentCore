@@ -74,11 +74,18 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
                            const BufferDesc&            BuffDesc, 
                            const BufferData*            pBuffData /*= nullptr*/,
                            bool                         bIsDeviceInternal) : 
-    TBufferBase( pRefCounters, BuffViewObjMemAllocator, pDeviceGL, BuffDesc, bIsDeviceInternal),
-    m_GlBuffer(true), // Create buffer immediately
-    m_uiMapTarget(0),
-    m_GLUsageHint(UsageToGLUsage(BuffDesc.Usage)),
-    m_bUseMapWriteDiscardBugWA(GetUseMapWriteDiscardBugWA(pDeviceGL))
+    TBufferBase
+    {
+        pRefCounters,
+        BuffViewObjMemAllocator,
+        pDeviceGL,
+        BuffDesc,
+        bIsDeviceInternal
+    },
+    m_GlBuffer                {true                                 }, // Create buffer immediately
+    m_uiMapTarget             {0                                    },
+    m_GLUsageHint             {UsageToGLUsage(BuffDesc.Usage)       },
+    m_bUseMapWriteDiscardBugWA{GetUseMapWriteDiscardBugWA(pDeviceGL)}
 {
     if( BuffDesc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr) )
         LOG_ERROR_AND_THROW("Static buffer must be initialized with data at creation time");
@@ -183,12 +190,19 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
                            const BufferDesc&            BuffDesc,
                            GLuint                       GLHandle,
                            bool                         bIsDeviceInternal) :
-    TBufferBase( pRefCounters, BuffViewObjMemAllocator, pDeviceGL, GetBufferDescFromGLHandle(pCtxGL, BuffDesc, GLHandle), bIsDeviceInternal),
+    TBufferBase
+    {
+        pRefCounters,
+        BuffViewObjMemAllocator,
+        pDeviceGL,
+        GetBufferDescFromGLHandle(pCtxGL, BuffDesc, GLHandle),
+        bIsDeviceInternal
+    },
     // Attach to external buffer handle
-    m_GlBuffer(true, GLObjectWrappers::GLBufferObjCreateReleaseHelper(GLHandle)),
-    m_uiMapTarget(0),
-    m_GLUsageHint(UsageToGLUsage(BuffDesc.Usage)),
-    m_bUseMapWriteDiscardBugWA(GetUseMapWriteDiscardBugWA(pDeviceGL))
+    m_GlBuffer                {true, GLObjectWrappers::GLBufferObjCreateReleaseHelper(GLHandle)},
+    m_uiMapTarget             {0                                    },
+    m_GLUsageHint             {UsageToGLUsage(BuffDesc.Usage)       },
+    m_bUseMapWriteDiscardBugWA{GetUseMapWriteDiscardBugWA(pDeviceGL)}
 {
 }
 
@@ -197,7 +211,7 @@ BufferGLImpl::~BufferGLImpl()
     static_cast<RenderDeviceGLImpl*>( GetDevice() )->OnDestroyBuffer(this);
 }
 
-IMPLEMENT_QUERY_INTERFACE( BufferGLImpl, IID_BufferGL, TBufferBase )
+IMPLEMENT_QUERY_INTERFACE(BufferGLImpl, IID_BufferGL, TBufferBase)
 
 void BufferGLImpl :: UpdateData(DeviceContextGLImpl* pCtxGL, Uint32 Offset, Uint32 Size, const PVoid pData)
 {
@@ -367,7 +381,7 @@ void BufferGLImpl::BufferMemoryBarrier( Uint32 RequiredBarriers, GLContextState 
 #endif
 }
 
-void BufferGLImpl::CreateViewInternal( const BufferViewDesc &OrigViewDesc, class IBufferView **ppView, bool bIsDefaultView )
+void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, class IBufferView** ppView, bool bIsDefaultView)
 {
     VERIFY( ppView != nullptr, "Buffer view pointer address is null" );
     if( !ppView )return;

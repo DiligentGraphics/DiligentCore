@@ -38,8 +38,14 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*      pRefCounters,
                            RenderDeviceGLImpl*      pDeviceGL,
                            const ShaderCreateInfo&  CreationAttribs,
                            bool                     bIsDeviceInternal) : 
-    TShaderBase( pRefCounters, pDeviceGL, CreationAttribs.Desc, bIsDeviceInternal ),
-    m_GLShaderObj(true, GLObjectWrappers::GLShaderObjCreateReleaseHelper( GetGLShaderType( m_Desc.ShaderType ) ))
+    TShaderBase
+    {
+        pRefCounters,
+        pDeviceGL,
+        CreationAttribs.Desc,
+        bIsDeviceInternal
+    },
+    m_GLShaderObj{true, GLObjectWrappers::GLShaderObjCreateReleaseHelper{GetGLShaderType(m_Desc.ShaderType)}}
 {
     auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pDeviceGL->GetDeviceCaps(), TargetGLSLCompiler::driver);
 

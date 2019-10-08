@@ -37,8 +37,15 @@ namespace Diligent
                                         const BufferViewDesc&   ViewDesc, 
                                         BufferGLImpl*           pBuffer,
                                         bool                    bIsDefaultView) :
-        TBuffViewBase(pRefCounters, pDevice, ViewDesc, pBuffer, bIsDefaultView ),
-        m_GLTexBuffer(false)
+        TBuffViewBase
+        {
+            pRefCounters,
+            pDevice,
+            ViewDesc,
+            pBuffer,
+            bIsDefaultView
+        },
+        m_GLTexBuffer{false}
     {
         const auto& BuffDesc = pBuffer->GetDesc();
         if ((ViewDesc.ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS) && 

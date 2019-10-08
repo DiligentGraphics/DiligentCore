@@ -51,10 +51,15 @@ using namespace std;
 namespace Diligent
 {
     DeviceContextGLImpl::DeviceContextGLImpl(IReferenceCounters* pRefCounters, class RenderDeviceGLImpl* pDeviceGL, bool bIsDeferred) : 
-        TDeviceContextBase                   (pRefCounters, pDeviceGL, bIsDeferred),
-        m_ContextState                       (pDeviceGL),
-        m_CommitedResourcesTentativeBarriers (0),
-        m_DefaultFBO                         (false)
+        TDeviceContextBase
+        {
+            pRefCounters,
+            pDeviceGL,
+            bIsDeferred
+        },
+        m_ContextState                       {pDeviceGL},
+        m_CommitedResourcesTentativeBarriers {0        },
+        m_DefaultFBO                         {false    }
     {
         m_BoundWritableTextures.reserve( 16 );
         m_BoundWritableBuffers.reserve( 16 );

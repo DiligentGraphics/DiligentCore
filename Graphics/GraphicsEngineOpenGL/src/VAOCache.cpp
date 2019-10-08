@@ -35,7 +35,7 @@ namespace Diligent
 {
 
 VAOCache::VAOCache() : 
-    m_EmptyVAO(true)
+    m_EmptyVAO{true}
 {
     m_Cache.max_load_factor(0.5f);
     m_PSOToKey.max_load_factor(0.5f);
@@ -49,7 +49,7 @@ VAOCache::~VAOCache()
     VERIFY(m_BuffToKey.empty(), "BuffToKey hash is not empty");
 }
 
-void VAOCache::OnDestroyBuffer(IBuffer *pBuffer)
+void VAOCache::OnDestroyBuffer(IBuffer* pBuffer)
 {
     ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
     auto EqualRange = m_BuffToKey.equal_range(pBuffer);
@@ -71,14 +71,14 @@ void VAOCache::OnDestroyPSO(IPipelineState *pPSO)
     m_PSOToKey.erase(EqualRange.first, EqualRange.second);
 }
 
-const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO( IPipelineState*                pPSO,
-                                                            IBuffer*                       pIndexBuffer,
-                                                            VertexStreamInfo<BufferGLImpl> VertexStreams[],
-                                                            Uint32                         NumVertexStreams,
-                                                            GLContextState&                GLContextState )
+const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*                pPSO,
+                                                           IBuffer*                       pIndexBuffer,
+                                                           VertexStreamInfo<BufferGLImpl> VertexStreams[],
+                                                           Uint32                         NumVertexStreams,
+                                                           GLContextState&                GLContextState)
 {
     // Lock the cache
-    ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
+    ThreadingTools::LockHelper CacheLock{m_CacheLockFlag};
 
     BufferGLImpl* VertexBuffers[MaxBufferSlots];
     for (Uint32 s = 0; s < NumVertexStreams; ++s)

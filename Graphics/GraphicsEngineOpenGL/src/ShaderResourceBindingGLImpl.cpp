@@ -34,8 +34,12 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters*    
                                                          PipelineStateGLImpl*    pPSO,
                                                          GLProgramResources*     ProgramResources,
                                                          Uint32                  NumPrograms) :
-    TBase  (pRefCounters, pPSO),
-    m_ResourceLayout(*this)
+    TBase
+    {
+        pRefCounters,
+        pPSO
+    },
+    m_ResourceLayout{*this}
 {
     pPSO->InitializeSRBResourceCache(m_ResourceCache);
 

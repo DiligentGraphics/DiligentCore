@@ -36,9 +36,15 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
                                          RenderDeviceGLImpl*      pDeviceGL,
                                          const PipelineStateDesc& PipelineDesc,
                                          bool                     bIsDeviceInternal) : 
-    TPipelineStateBase(pRefCounters, pDeviceGL, PipelineDesc, bIsDeviceInternal),
-    m_ResourceLayout      (*this),
-    m_StaticResourceLayout(*this)
+    TPipelineStateBase
+    {
+        pRefCounters,
+        pDeviceGL,
+        PipelineDesc,
+        bIsDeviceInternal
+    },
+    m_ResourceLayout      {*this},
+    m_StaticResourceLayout{*this}
 {
     if (!m_Desc.IsComputePipeline && m_pPS == nullptr)
     {

@@ -36,9 +36,9 @@ using namespace Diligent;
 
 namespace Diligent
 {
-    GLContextState::GLContextState( RenderDeviceGLImpl *pDeviceGL )
+    GLContextState::GLContextState(RenderDeviceGLImpl* pDeviceGL)
     {
-        const DeviceCaps &DeviceCaps = pDeviceGL->GetDeviceCaps();
+        const DeviceCaps& DeviceCaps = pDeviceGL->GetDeviceCaps();
         m_Caps.bFillModeSelectionSupported = DeviceCaps.bWireframeFillSupported;
 
         {

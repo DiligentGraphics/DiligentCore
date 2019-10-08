@@ -33,14 +33,23 @@
 namespace Diligent
 {
 
-Texture2DArray_OGL::Texture2DArray_OGL( IReferenceCounters*         pRefCounters, 
-                                        FixedBlockMemoryAllocator&  TexViewObjAllocator,
-                                        RenderDeviceGLImpl*         pDeviceGL, 
-                                        GLContextState&             GLState,
-                                        const TextureDesc&          TexDesc, 
-                                        const TextureData*          pInitData         /*= nullptr*/,
-									    bool                        bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY, pInitData, bIsDeviceInternal)
+Texture2DArray_OGL::Texture2DArray_OGL(IReferenceCounters*         pRefCounters, 
+                                       FixedBlockMemoryAllocator&  TexViewObjAllocator,
+                                       RenderDeviceGLImpl*         pDeviceGL, 
+                                       GLContextState&             GLState,
+                                       const TextureDesc&          TexDesc, 
+                                       const TextureData*          pInitData         /*= nullptr*/,
+									   bool                        bIsDeviceInternal /*= false*/) : 
+    TextureBaseGL
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        TexDesc,
+        TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE_ARRAY : GL_TEXTURE_2D_ARRAY,
+        pInitData,
+        bIsDeviceInternal
+    }
 {
     GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 

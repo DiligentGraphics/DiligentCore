@@ -33,7 +33,13 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*        pRefCounters,
                                  const SwapChainDesc&       SCDesc, 
                                  RenderDeviceGLImpl*        pRenderDeviceGL, 
                                  DeviceContextGLImpl*       pImmediateContextGL) : 
-    TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, SCDesc)
+    TSwapChainBase
+    {
+        pRefCounters,
+        pRenderDeviceGL,
+        pImmediateContextGL,
+        SCDesc
+    }
 {
 #if PLATFORM_WIN32
     HWND hWnd = reinterpret_cast<HWND>(InitAttribs.pNativeWndHandle);

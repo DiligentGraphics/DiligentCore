@@ -90,8 +90,8 @@ namespace Diligent
     }
 
     GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCaps, const SwapChainDesc* pSCDesc) :
-		m_Context(0),
-		m_WindowHandleToDeviceContext(0)
+		m_Context                    {0},
+		m_WindowHandleToDeviceContext{0}
     {
 		Int32 MajorVersion = 0, MinorVersion = 0;
 		if(InitAttribs.pNativeWndHandle != nullptr)

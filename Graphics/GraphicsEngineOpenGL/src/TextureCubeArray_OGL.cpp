@@ -33,14 +33,23 @@
 namespace Diligent
 {
 
-TextureCubeArray_OGL::TextureCubeArray_OGL( IReferenceCounters*         pRefCounters, 
-                                            FixedBlockMemoryAllocator&  TexViewObjAllocator,
-                                            RenderDeviceGLImpl*         pDeviceGL, 
-                                            GLContextState&             GLState,
-                                            const TextureDesc&          TexDesc, 
-                                            const TextureData*          pInitData         /*= nullptr*/,
-									        bool                        bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, GL_TEXTURE_CUBE_MAP_ARRAY, pInitData, bIsDeviceInternal)
+TextureCubeArray_OGL::TextureCubeArray_OGL(IReferenceCounters*         pRefCounters, 
+                                           FixedBlockMemoryAllocator&  TexViewObjAllocator,
+                                           RenderDeviceGLImpl*         pDeviceGL, 
+                                           GLContextState&             GLState,
+                                           const TextureDesc&          TexDesc, 
+                                           const TextureData*          pInitData         /*= nullptr*/,
+									       bool                        bIsDeviceInternal /*= false*/) : 
+    TextureBaseGL
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        TexDesc,
+        GL_TEXTURE_CUBE_MAP_ARRAY,
+        pInitData,
+        bIsDeviceInternal
+    }
 {
     VERIFY(m_Desc.SampleCount == 1, "Multisampled texture cube arrays are not supported");
     

@@ -39,8 +39,16 @@ Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*         pRefCounters,
                                        const TextureDesc&          TexDesc, 
                                        const TextureData*          pInitData         /*= nullptr*/, 
 									   bool                        bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc,
-                  GL_TEXTURE_1D_ARRAY, pInitData, bIsDeviceInternal)
+    TextureBaseGL
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        TexDesc,
+        GL_TEXTURE_1D_ARRAY,
+        pInitData,
+        bIsDeviceInternal
+    }
 {
     GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 

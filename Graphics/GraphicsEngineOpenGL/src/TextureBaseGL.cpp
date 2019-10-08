@@ -42,10 +42,17 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*            pRefCounters,
                              GLenum                         BindTarget,
                              const TextureData*             pInitData         /*= nullptr*/,
                              bool                           bIsDeviceInternal /*= false*/) : 
-    TTextureBase( pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc, bIsDeviceInternal ),
-    m_GlTexture(true), // Create Texture immediately
-    m_BindTarget(BindTarget),
-    m_GLTexFormat( TexFormatToGLInternalTexFormat(m_Desc.Format, m_Desc.BindFlags) )
+    TTextureBase
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        TexDesc,
+        bIsDeviceInternal
+    },
+    m_GlTexture     {true       }, // Create Texture immediately
+    m_BindTarget    {BindTarget },
+    m_GLTexFormat   {TexFormatToGLInternalTexFormat(m_Desc.Format, m_Desc.BindFlags)}
     //m_uiMapTarget(0)
 {
     VERIFY( m_GLTexFormat != 0, "Unsupported texture format" );

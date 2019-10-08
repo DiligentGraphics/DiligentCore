@@ -30,8 +30,14 @@ namespace Diligent
 {
 
 SamplerGLImpl::SamplerGLImpl(IReferenceCounters *pRefCounters, class RenderDeviceGLImpl *pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal) : 
-    TSamplerBase( pRefCounters, pDeviceGL, SamplerDesc, bIsDeviceInternal ),
-    m_GlSampler(true)
+    TSamplerBase
+    {
+        pRefCounters,
+        pDeviceGL,
+        SamplerDesc,
+        bIsDeviceInternal
+    },
+    m_GlSampler{true}
 {
     const auto& SamCaps = pDeviceGL->GetDeviceCaps().SamCaps;
 

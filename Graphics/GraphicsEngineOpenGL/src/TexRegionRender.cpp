@@ -56,7 +56,7 @@ namespace Diligent
         "}                                              \n"
     };
 
-    TexRegionRender::TexRegionRender( class RenderDeviceGLImpl *pDeviceGL )
+    TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
     {
         ShaderCreateInfo ShaderAttrs;
         ShaderAttrs.Desc.Name                = "TexRegionRender : Vertex shader";

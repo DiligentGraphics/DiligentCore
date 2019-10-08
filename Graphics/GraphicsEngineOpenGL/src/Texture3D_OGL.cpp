@@ -33,15 +33,23 @@
 namespace Diligent
 {
 
-Texture3D_OGL::Texture3D_OGL( IReferenceCounters*           pRefCounters, 
-                              FixedBlockMemoryAllocator&    TexViewObjAllocator,
-                              RenderDeviceGLImpl*           pDeviceGL, 
-                              GLContextState&               GLState,
-                              const TextureDesc&            TexDesc, 
-                              const TextureData*            pInitData         /*= TextureData()*/,
-						      bool                          bIsDeviceInternal /*= false*/) : 
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, TexDesc,
-                  GL_TEXTURE_3D, pInitData, bIsDeviceInternal)
+Texture3D_OGL::Texture3D_OGL(IReferenceCounters*           pRefCounters, 
+                             FixedBlockMemoryAllocator&    TexViewObjAllocator,
+                             RenderDeviceGLImpl*           pDeviceGL, 
+                             GLContextState&               GLState,
+                             const TextureDesc&            TexDesc, 
+                             const TextureData*            pInitData         /*= TextureData()*/,
+						     bool                          bIsDeviceInternal /*= false*/) : 
+    TextureBaseGL
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        TexDesc,
+        GL_TEXTURE_3D,
+        pInitData,
+        bIsDeviceInternal
+    }
 {
     GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
