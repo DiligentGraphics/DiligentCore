@@ -183,7 +183,7 @@ public:
             CacheOffset              {_CacheOffset  },
             SamplerInd               {_SamplerInd   },
             VariableType             {_VariableType },
-            ImmutableSamplerAssigned {_ImmutableSamplerAssigned ? 1 : 0},
+            ImmutableSamplerAssigned {_ImmutableSamplerAssigned ? 1U : 0U},
             SpirvAttribs             {_SpirvAttribs },
             ParentResLayout          {_ParentLayout }
         {
