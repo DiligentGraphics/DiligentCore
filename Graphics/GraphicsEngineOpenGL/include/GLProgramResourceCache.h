@@ -160,7 +160,7 @@ public:
         if (Binding >= GetUBCount())
             return false;
 
-        const auto& UB = GetUB(Binding);
+        const auto& UB = GetConstUB(Binding);
         return UB.pBuffer;
     }
 
@@ -169,7 +169,7 @@ public:
         if (Binding >= GetSamplerCount())
             return false;
 
-        const auto& Sampler = GetSampler(Binding);
+        const auto& Sampler = GetConstSampler(Binding);
         VERIFY_EXPR(dbgIsTextureView || Sampler.pTexture == nullptr);
         return Sampler.pView;
     }
@@ -179,7 +179,7 @@ public:
         if (Binding >= GetImageCount())
             return false;
 
-        const auto& Image = GetImage(Binding);
+        const auto& Image = GetConstImage(Binding);
         VERIFY_EXPR(dbgIsTextureView || Image.pTexture == nullptr);
         return Image.pView;
     }
@@ -189,7 +189,7 @@ public:
         if (Binding >= GetSSBOCount())
             return false;
 
-        const auto& SSBO = GetSSBO(Binding);
+        const auto& SSBO = GetConstSSBO(Binding);
         return SSBO.pBufferView;
     }
 
@@ -198,25 +198,25 @@ public:
     Uint32 GetImageCount()   const { return (m_SSBOsOffset     - m_ImgsOffset)   / sizeof(CachedResourceView);  }
     Uint32 GetSSBOCount()    const { return (m_MemoryEndOffset - m_SSBOsOffset)  / sizeof(CachedSSBO);          }
 
-    const CachedUB& GetUB(Uint32 Binding)const
+    const CachedUB& GetConstUB(Uint32 Binding)const
     {
         VERIFY(Binding < GetUBCount(), "Uniform buffer binding (", Binding, ") is out of range");
         return reinterpret_cast<CachedUB*>(m_pResourceData + m_UBsOffset)[Binding];
     }
 
-    const CachedResourceView& GetSampler(Uint32 Binding)const
+    const CachedResourceView& GetConstSampler(Uint32 Binding)const
     {
         VERIFY(Binding < GetSamplerCount(), "Sampler binding (", Binding, ") is out of range");
         return reinterpret_cast<CachedResourceView*>(m_pResourceData + m_SmplrsOffset)[Binding];
     }
 
-    const CachedResourceView& GetImage(Uint32 Binding)const
+    const CachedResourceView& GetConstImage(Uint32 Binding)const
     {
         VERIFY(Binding < GetImageCount(), "Image buffer binding (", Binding, ") is out of range");
         return reinterpret_cast<CachedResourceView*>(m_pResourceData + m_ImgsOffset)[Binding];
     }
 
-    const CachedSSBO& GetSSBO(Uint32 Binding)const
+    const CachedSSBO& GetConstSSBO(Uint32 Binding)const
     {
         VERIFY(Binding < GetSSBOCount(), "Shader storage block binding (", Binding, ") is out of range");
         return reinterpret_cast<CachedSSBO*>(m_pResourceData + m_SSBOsOffset)[Binding];
@@ -230,22 +230,22 @@ public:
 private:
     CachedUB& GetUB(Uint32 Binding)
     {
-        return const_cast<CachedUB&>(const_cast<const GLProgramResourceCache*>(this)->GetUB(Binding));
+        return const_cast<CachedUB&>(const_cast<const GLProgramResourceCache*>(this)->GetConstUB(Binding));
     }
 
     CachedResourceView& GetSampler(Uint32 Binding)
     {
-        return const_cast<CachedResourceView&>(const_cast<const GLProgramResourceCache*>(this)->GetSampler(Binding));
+        return const_cast<CachedResourceView&>(const_cast<const GLProgramResourceCache*>(this)->GetConstSampler(Binding));
     }
 
     CachedResourceView& GetImage(Uint32 Binding)
     {
-        return const_cast<CachedResourceView&>(const_cast<const GLProgramResourceCache*>(this)->GetImage(Binding));
+        return const_cast<CachedResourceView&>(const_cast<const GLProgramResourceCache*>(this)->GetConstImage(Binding));
     }
 
     CachedSSBO& GetSSBO(Uint32 Binding)
     {
-        return const_cast<CachedSSBO&>(const_cast<const GLProgramResourceCache*>(this)->GetSSBO(Binding));
+        return const_cast<CachedSSBO&>(const_cast<const GLProgramResourceCache*>(this)->GetConstSSBO(Binding));
     }
 
     static constexpr const Uint16 InvalidResourceOffset = 0xFFFF;

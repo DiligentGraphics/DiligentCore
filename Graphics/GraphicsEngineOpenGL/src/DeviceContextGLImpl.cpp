@@ -378,7 +378,7 @@ namespace Diligent
 
         for (Uint32 ub = 0; ub < ResourceCache.GetUBCount(); ++ub)
         {
-            const auto& UB = ResourceCache.GetUB(ub);
+            const auto& UB = ResourceCache.GetConstUB(ub);
             if (!UB.pBuffer)
                 continue;
 
@@ -395,7 +395,7 @@ namespace Diligent
 
         for (Uint32 s = 0; s < ResourceCache.GetSamplerCount(); ++s)
         {
-            const auto& Sam = ResourceCache.GetSampler(s);
+            const auto& Sam = ResourceCache.GetConstSampler(s);
             if (!Sam.pView)
                 continue;
 
@@ -442,7 +442,7 @@ namespace Diligent
 #if GL_ARB_shader_image_load_store
         for (Uint32 img = 0; img < ResourceCache.GetImageCount(); ++img)
         {
-            const auto& Img = ResourceCache.GetImage(img);
+            const auto& Img = ResourceCache.GetConstImage(img);
             if (!Img.pView)
                 continue;
 
@@ -530,7 +530,7 @@ namespace Diligent
 #if GL_ARB_shader_storage_buffer_object
         for (Uint32 ssbo = 0; ssbo < ResourceCache.GetSSBOCount(); ++ssbo)
         {
-            const auto& SSBO = ResourceCache.GetSSBO(ssbo);
+            const auto& SSBO = ResourceCache.GetConstSSBO(ssbo);
             if (!SSBO.pBufferView)
                 return;
             
