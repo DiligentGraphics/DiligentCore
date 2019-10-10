@@ -23,6 +23,7 @@
 * Added `IDeviceContext::WaitForIdle()` method (API Version 240028)
 * Added `IRenderDevice::IdleGPU()` method (API Version 240029)
 * Added `EngineD3D12CreateInfo::EnableDebugLayer` member (API Version 240030)
+* Added `EngineD3D12CreateInfo::BreakOnError` and `EngineD3D12CreateInfo::BreakOnCorruption` members (API Version 240031)
 
 ## v2.4.b
 

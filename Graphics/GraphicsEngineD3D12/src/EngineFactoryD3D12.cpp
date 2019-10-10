@@ -228,11 +228,17 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 		        hr = pInfoQueue->PushStorageFilter(&NewFilter);
                 VERIFY(SUCCEEDED(hr), "Failed to push storage filter");
 
-                hr = pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
-                VERIFY(SUCCEEDED(hr), "Failed to set break on corruption");
+                if (EngineCI.BreakOnCorruption)
+                {
+                    hr = pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, true);
+                    VERIFY(SUCCEEDED(hr), "Failed to set break on corruption");
+                }
 
-                hr = pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR,      true);
-                VERIFY(SUCCEEDED(hr), "Failed to set break on error");
+                if (EngineCI.BreakOnError)
+                {
+                    hr = pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR,      true);
+                    VERIFY(SUCCEEDED(hr), "Failed to set break on error");
+                }
             }
         }
 

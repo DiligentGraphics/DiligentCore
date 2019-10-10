@@ -1352,7 +1352,15 @@ namespace Diligent
         Uint32 AdapterId = DefaultAdapterId;
 
         /// Enable Direct3D12 debug layer.
-        bool EnableDebugLayer = false;
+        bool EnableDebugLayer  = false;
+
+        /// Whether to break execution when D3D12 debug layer detects an error.
+        /// This flag only has effect if EnableDebugLayer is true.
+        bool BreakOnError      = false;
+
+        /// Whether to break execution when D3D12 debug layer detects a memory corruption.
+        /// This flag only has effect if EnableDebugLayer is true.
+        bool BreakOnCorruption = true;
 
         /// Size of the CPU descriptor heap allocations for different heap types.
         Uint32 CPUDescriptorHeapAllocationSize[4] = 
