@@ -395,79 +395,23 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
     );
 }
 
-#define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, Attribs, ArrayInd, ShaderName, ...)\
-do{                                                                                       \
-    const auto* ResName = pResource->GetDesc().Name;                                      \
-    if (Attribs.BindCount>1)                                                              \
-        LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " '", ResName, "' to variable '", Attribs.Name,\
-                           "[", ArrayInd, "]' in shader '", ShaderName, "'. ", __VA_ARGS__ );         \
-    else                                                                                                 \
-        LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " '", ResName, "' to variable '", Attribs.Name,\
-                           "' in shader '", ShaderName, "'. ", __VA_ARGS__ );                         \
-}while(false)
-
 void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* pBuffer,
                                                                 Uint32         ArrayIndex)
 {
     DEV_CHECK_ERR(ArrayIndex < m_Attribs.BindCount, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.BindCount-1);
-    auto& ResourceCache = m_ParentResLayout.m_ResourceCache;
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl(pBuffer, IID_BufferD3D11);
 #ifdef DEVELOPMENT
-    if (pBuffer && !pBuffD3D11Impl)
-        LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, m_Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorrect resource type: buffer is expected.");
-
-    if (pBuffD3D11Impl && (pBuffD3D11Impl->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) == 0)
     {
-        LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, m_Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Buffer was not created with BIND_UNIFORM_BUFFER flag.");
-        pBuffD3D11Impl.Release();
-    }
-       
-    if (GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-    {
-        auto& CachedCB = ResourceCache.GetCB(m_Attribs.BindPoint + ArrayIndex);
-        if (CachedCB.pBuff != nullptr && CachedCB.pBuff != pBuffD3D11Impl)
-        {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
-            LOG_ERROR_MESSAGE( "Non-null constant buffer is already bound to ", VarTypeStr, " shader variable '", m_Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
-        }
+        auto& CachedCB = m_ParentResLayout.m_ResourceCache.GetCB(m_Attribs.BindPoint + ArrayIndex);
+        VerifyConstantBufferBinding(m_Attribs, GetType(), ArrayIndex, pBuffer, pBuffD3D11Impl.RawPtr(), CachedCB.pBuff.RawPtr(), m_ParentResLayout.GetShaderName());
     }
 #endif
-
-    ResourceCache.SetCB(m_Attribs.BindPoint + ArrayIndex, std::move(pBuffD3D11Impl) );
+    m_ParentResLayout.m_ResourceCache.SetCB(m_Attribs.BindPoint + ArrayIndex, std::move(pBuffD3D11Impl) );
 }
 
-
-
-
-#ifdef DEVELOPMENT
-template<typename TResourceViewType, ///< Type of the view (ITextureViewD3D11 or IBufferViewD3D11)
-         typename TViewTypeEnum>     ///< Type of the expected view enum
-bool dbgVerifyViewType( const char*                     ViewTypeName,
-                        TResourceViewType               pViewD3D11,
-                        const D3DShaderResourceAttribs& Attribs, 
-                        Uint32                          ArrayIndex,
-                        TViewTypeEnum                   dbgExpectedViewType,
-                        const Char*                     ShaderName )
-{
-    const auto& ViewDesc = pViewD3D11->GetDesc();
-    auto ViewType = ViewDesc.ViewType;
-    if (ViewType == dbgExpectedViewType)
-    {
-        return true;
-    }
-    else
-    {
-        const auto *ExpectedViewTypeName = GetViewTypeLiteralName( dbgExpectedViewType );
-        const auto *ActualViewTypeName = GetViewTypeLiteralName( ViewType );
-        LOG_RESOURCE_BINDING_ERROR(ViewTypeName, pViewD3D11, Attribs, ArrayIndex, ShaderName, 
-                                   "Incorrect view type: ", ExpectedViewTypeName, " is expected, ", ActualViewTypeName, " is provided." );
-        return false;
-    }
-}
-#endif
 
 void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pView,
                                                              Uint32         ArrayIndex)
@@ -479,19 +423,9 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
     // resource mapping can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11(pView, IID_TextureViewD3D11);
 #ifdef DEVELOPMENT
-    if (pView && !pViewD3D11)
-        LOG_RESOURCE_BINDING_ERROR("resource", pView, m_Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: texture view is expected.");
-    if (pViewD3D11 && !dbgVerifyViewType("texture view", pViewD3D11.RawPtr(), m_Attribs, ArrayIndex, TEXTURE_VIEW_SHADER_RESOURCE, m_ParentResLayout.GetShaderName()))
-        pViewD3D11.Release();
-
-    if( GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
     {
         auto& CachedSRV = ResourceCache.GetSRV(m_Attribs.BindPoint + ArrayIndex);
-        if (CachedSRV.pView != nullptr && CachedSRV.pView != pViewD3D11)
-        {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
-            LOG_ERROR_MESSAGE( "Non-null texture SRV is already bound to ", VarTypeStr, " shader variable '", m_Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
-        }
+        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE}, CachedSRV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
     }
 #endif
     
@@ -546,7 +480,10 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
 
 #ifdef DEVELOPMENT
     if (pSampler && !pSamplerD3D11)
-        LOG_RESOURCE_BINDING_ERROR("sampler", pSampler, m_Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: sampler is expected.");
+    {
+        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '", m_Attribs.GetPrintName(ArrayIndex),
+                          "' in shader '", m_ParentResLayout.GetShaderName(), "'. Incorect object type: sampler is expected."); 
+    }
 
     if (m_Attribs.IsCombinedWithTexSRV())
     {
@@ -578,22 +515,11 @@ void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pVi
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11(pView, IID_BufferViewD3D11);
 #ifdef DEVELOPMENT
-    if (pView && !pViewD3D11)
-        LOG_RESOURCE_BINDING_ERROR("resource", pView, m_Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: buffer view is expected.");
-    if (pViewD3D11 && !dbgVerifyViewType("buffer view", pViewD3D11.RawPtr(), m_Attribs, ArrayIndex, BUFFER_VIEW_SHADER_RESOURCE, m_ParentResLayout.GetShaderName()))
-        pViewD3D11.Release();
-
-    if (GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
     {
         auto& CachedSRV = ResourceCache.GetSRV(m_Attribs.BindPoint + ArrayIndex);
-        if (CachedSRV.pView != nullptr && CachedSRV.pView != pViewD3D11)
-        {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
-            LOG_ERROR_MESSAGE( "Non-null buffer SRV is already bound to ", VarTypeStr, " shader variable '", m_Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
-        }
+        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE}, CachedSRV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
     }
 #endif
-
     ResourceCache.SetBufSRV(m_Attribs.BindPoint + ArrayIndex, std::move(pViewD3D11));
 }
 
@@ -608,22 +534,11 @@ void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVie
     // resource mapping can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11(pView, IID_TextureViewD3D11);
 #ifdef DEVELOPMENT
-    if (pView && !pViewD3D11)
-        LOG_RESOURCE_BINDING_ERROR("resource", pView, m_Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: texture view is expected.");
-    if (pViewD3D11 && !dbgVerifyViewType("texture view", pViewD3D11.RawPtr(), m_Attribs, ArrayIndex, TEXTURE_VIEW_UNORDERED_ACCESS, m_ParentResLayout.GetShaderName()))
-        pViewD3D11.Release();
-
-    if (GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
     {
         auto& CachedUAV = ResourceCache.GetUAV(m_Attribs.BindPoint + ArrayIndex);
-        if (CachedUAV.pView != nullptr && CachedUAV.pView != pViewD3D11)
-        {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
-            LOG_ERROR_MESSAGE( "Non-null texture UAV is already bound to ", VarTypeStr, " shader variable '", m_Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
-        }
+        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
     }
 #endif
-
     ResourceCache.SetTexUAV(m_Attribs.BindPoint + ArrayIndex, std::move(pViewD3D11));
 }
 
@@ -638,22 +553,11 @@ void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pVi
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11(pView, IID_BufferViewD3D11);
 #ifdef DEVELOPMENT
-    if (pView && !pViewD3D11)
-        LOG_RESOURCE_BINDING_ERROR("resource", pView, m_Attribs, ArrayIndex, m_ParentResLayout.GetShaderName(), "Incorect resource type: buffer view is expected.");
-    if (pViewD3D11 && !dbgVerifyViewType("buffer view", pViewD3D11.RawPtr(), m_Attribs, ArrayIndex, BUFFER_VIEW_UNORDERED_ACCESS, m_ParentResLayout.GetShaderName()) )
-        pViewD3D11.Release();
-
-    if (GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
     {
         auto& CachedUAV = ResourceCache.GetUAV(m_Attribs.BindPoint + ArrayIndex);
-        if (CachedUAV.pView != nullptr && CachedUAV.pView != pViewD3D11)
-        {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
-            LOG_ERROR_MESSAGE( "Non-null buffer UAV is already bound to ", VarTypeStr, " shader variable '", m_Attribs.GetPrintName(ArrayIndex), "' in shader '", m_ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic." );
-        }
+        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
     }
 #endif
-
     ResourceCache.SetBufUAV(m_Attribs.BindPoint + ArrayIndex, std::move(pViewD3D11));
 }
 

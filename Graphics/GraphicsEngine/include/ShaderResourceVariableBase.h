@@ -127,6 +127,185 @@ inline Int32 FindStaticSampler(const StaticSamplerDesc* StaticSamplers,
     return -1;
 }
 
+
+
+
+template<typename ResourceAttribsType,
+         typename BufferImplType>
+bool VerifyConstantBufferBinding(const ResourceAttribsType&       Attribs,
+                                 SHADER_RESOURCE_VARIABLE_TYPE    VarType,
+                                 Uint32                           ArrayIndex,
+                                 const IDeviceObject*             pBuffer,
+                                 const BufferImplType*            pBufferImpl,
+                                 const IDeviceObject*             pCachedBuffer,
+                                 const char*                      ShaderName = nullptr)
+{
+    if (pBuffer != nullptr && pBufferImpl == nullptr)
+    {
+        std::stringstream ss;
+        ss << "Failed to bind resource '" << pBuffer->GetDesc().Name << "' to variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        if (ShaderName != nullptr)
+        {
+            ss << " in shader '" << ShaderName << '\'';
+        }
+        ss << ". Invalid resource type: buffer is expected.";
+        LOG_ERROR_MESSAGE(ss.str());
+        return false;
+    }
+
+    bool BindingOK = true;
+    if (pBufferImpl != nullptr && (pBufferImpl->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) == 0)
+    {
+        std::stringstream ss;
+        ss << "Error binding buffer '" << pBufferImpl->GetDesc().Name << "' to variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        if (ShaderName != nullptr)
+        {
+            ss << " in shader '" << ShaderName << '\'';
+        }
+        ss << ". The buffer was not created with BIND_UNIFORM_BUFFER flag.";
+        LOG_ERROR_MESSAGE(ss.str());
+        BindingOK = false;
+    }
+       
+    if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedBuffer != nullptr && pCachedBuffer != pBufferImpl)
+    {
+        auto VarTypeStr = GetShaderVariableTypeLiteralName(VarType);
+
+        std::stringstream ss;
+        ss << "Non-null constant (uniform) buffer '" << pCachedBuffer->GetDesc().Name << "' is already bound to " << VarTypeStr
+           << " shader variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        if (ShaderName != nullptr)
+        {
+           ss << " in shader '" << ShaderName << '\'';
+        }
+        ss << ". Attempting to bind ";
+        if (pBufferImpl)
+        {
+            ss << "another resource ('" << pBufferImpl->GetDesc().Name << "')";
+        }
+        else
+        {
+            ss << "null";
+        }
+        ss << " is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.";
+        LOG_ERROR_MESSAGE(ss.str());
+
+        BindingOK = false;
+    }
+
+    return BindingOK;
+}
+
+template<typename TViewTypeEnum>
+const char* GetResourceTypeName();
+
+template<>
+inline const char* GetResourceTypeName<TEXTURE_VIEW_TYPE>()
+{
+    return "texture view";
+}
+
+template<>
+inline const char* GetResourceTypeName<BUFFER_VIEW_TYPE>()
+{
+    return "buffer view";
+}
+
+template<typename ResourceAttribsType,
+         typename ResourceViewImplType,
+         typename ViewTypeEnumType>
+bool VerifyResourceViewBinding(const ResourceAttribsType&               Attribs,
+                               SHADER_RESOURCE_VARIABLE_TYPE            VarType,
+                               Uint32                                   ArrayIndex,
+                               const IDeviceObject*                     pView,
+                               const ResourceViewImplType*              pViewImpl,
+                               std::initializer_list<ViewTypeEnumType>  ExpectedViewTypes,
+                               const IDeviceObject*                     pCachedView,
+                               const char*                              ShaderName = nullptr)
+{
+    const char* ExpectedResourceType = GetResourceTypeName<ViewTypeEnumType>();
+    
+    if (pView && !pViewImpl)
+    {
+        std::stringstream ss;
+        ss << "Failed to bind resource '" << pView->GetDesc().Name << "' to variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        if (ShaderName != nullptr)
+        {
+           ss << " in shader '" << ShaderName << '\'';
+        }
+        ss << ". Invalid resource type: " << ExpectedResourceType << " is expected.";
+        LOG_ERROR_MESSAGE(ss.str());
+        return false;
+    }
+
+    bool BindingOK = true;
+    if (pViewImpl)
+    {
+        auto ViewType = pViewImpl->GetDesc().ViewType;
+        bool IsExpectedViewType = false;
+        for(auto ExpectedViewType : ExpectedViewTypes)
+        {
+            if (ExpectedViewType == ViewType)
+                IsExpectedViewType = true;
+        }
+
+        if (!IsExpectedViewType)
+        {
+            std::string ExpectedViewTypeName;
+
+            std::stringstream ss;
+            ss << "Error binding " << ExpectedResourceType << " '" << pViewImpl->GetDesc().Name << "' to variable '"
+               << Attribs.GetPrintName(ArrayIndex) << '\'';
+            if (ShaderName != nullptr)
+            {
+               ss << " in shader '" << ShaderName << '\'';
+            }
+            ss << ". Incorrect view type: ";
+            bool IsFirstViewType = true;
+            for(auto ExpectedViewType : ExpectedViewTypes)
+            {
+                if (!IsFirstViewType)
+                {
+                    ss << " or ";
+                }
+                ss << GetViewTypeLiteralName(ExpectedViewType);
+                IsFirstViewType = false;
+            }
+            ss << " is expected, " << GetViewTypeLiteralName(ViewType) << " is provided.";
+            LOG_ERROR_MESSAGE(ss.str());
+
+            BindingOK = false;
+        }
+    }
+
+    if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedView != nullptr && pCachedView != pViewImpl)
+    {
+        auto VarTypeStr = GetShaderVariableTypeLiteralName(VarType);
+        std::stringstream ss;
+        ss << "Non-null resource '" << pCachedView->GetDesc().Name << "' is already bound to " << VarTypeStr
+           << " shader variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
+        if (ShaderName != nullptr)
+        {
+           ss << " in shader '" << ShaderName << '\'';
+        }
+        ss << ". Attempting to bind ";
+        if (pViewImpl)
+        {
+            ss << "another resource ('" << pViewImpl->GetDesc().Name << "')";
+        }
+        else
+        {
+            ss << "null";
+        }
+        ss << " is an error and may cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.";
+        LOG_ERROR_MESSAGE(ss.str());
+
+        BindingOK = false;
+    }
+    return BindingOK;
+}
+
+
 struct DefaultShaderVariableIDComparator
 {
     bool operator() (const INTERFACE_ID& IID)const

@@ -545,14 +545,6 @@ Uint32 ShaderResourceLayoutVk::FindAssignedSampler(const SPIRVShaderResourceAttr
 }
 
 
-
-#define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, VarName, ShaderName, ...)\
-{                                                                                             \
-    const auto& ResName = pResource->GetDesc().Name;                                          \
-    LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " '", ResName, "' to variable '", VarName, \
-                        "' in shader '", ShaderName, "'. ", __VA_ARGS__ );                    \
-}
-
 void ShaderResourceLayoutVk::VkResource::UpdateDescriptorHandle(VkDescriptorSet                vkDescrSet,
                                                                 uint32_t                       ArrayElement,
                                                                 const VkDescriptorImageInfo*   pImageInfo,
@@ -578,38 +570,26 @@ void ShaderResourceLayoutVk::VkResource::UpdateDescriptorHandle(VkDescriptorSet 
     ParentResLayout.m_LogicalDevice.UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
 }
 
-bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCacheVk::Resource&   DstRes,
-                                                              Uint32                             ArrayInd,
-                                                              IDeviceObject*                     pObject, 
-                                                              INTERFACE_ID                       InterfaceId,
-                                                              const char*                        ResourceName)const
+template<typename ObjectType>
+bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCacheVk::Resource& DstRes,
+                                                              RefCntAutoPtr<ObjectType>&&      pObject)const
 {
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<IDeviceObject> pResource(pObject, InterfaceId);
-    if (pResource)
+    if (pObject)
     {
         if (GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)
         {
-            if (DstRes.pObject != pResource)
-            {
-                auto VarTypeStr = GetShaderVariableTypeLiteralName(GetVariableType());
-                LOG_ERROR_MESSAGE("Non-null resource is already bound to ", VarTypeStr, " shader variable '", SpirvAttribs.GetPrintName(ArrayInd),
-                                  "' in shader '", ParentResLayout.GetShaderName(), "'. Attempring to bind another resource is an error and will be ignored. "
-                                  "Use another shader resource binding instance or label the variable as dynamic.");
-            }
-
             // Do not update resource if one is already bound unless it is dynamic. This may be 
             // dangerous as writing descriptors while they are used by the GPU is an undefined behavior
             return false;
         }
 
-        DstRes.pObject.Attach(pResource.Detach());
+        DstRes.pObject.Attach(pObject.Detach());
         return true;
     }
     else
     {
-        LOG_RESOURCE_BINDING_ERROR(ResourceName, pObject, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Incorrect resource type: ", ResourceName, " is expected.");
         return false;
     }
 }
@@ -620,20 +600,15 @@ void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*      
                                                             Uint32                             ArrayInd)const
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, "Uniform buffer resource is expected");
-
-    if (UpdateCachedResource(DstRes, ArrayInd, pBuffer, IID_BufferVk, "buffer"))
-    {
+    RefCntAutoPtr<BufferVkImpl> pBufferVk(pBuffer, IID_BufferVk);
 #ifdef DEVELOPMENT
+    VerifyConstantBufferBinding(SpirvAttribs, GetVariableType(), ArrayInd, pBuffer, pBufferVk.RawPtr(), DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+#endif
+
+    if (UpdateCachedResource(DstRes, std::move(pBufferVk)))
+    {
         // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
         // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
-        auto* pBuffVk = DstRes.pObject.RawPtr<BufferVkImpl>(); // Use final type
-        if ((pBuffVk->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) == 0)
-        {
-            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Buffer was not created with BIND_UNIFORM_BUFFER flag.")
-            DstRes.pObject.Release();
-            return;
-        }
-#endif
 
         // Do not update descriptor for a dynamic uniform buffer. All dynamic resource 
         // descriptors are updated at once by CommitDynamicResources() when SRB is committed.
@@ -645,7 +620,7 @@ void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*      
     }
 }
 
-void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*                     pBuffer,
+void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*                     pBufferView,
                                                             ShaderResourceCacheVk::Resource&   DstRes, 
                                                             VkDescriptorSet                    vkDescrSet, 
                                                             Uint32                             ArrayInd)const
@@ -654,22 +629,19 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer,
            "Storage buffer resource is expected");
 
-    if( UpdateCachedResource(DstRes, ArrayInd, pBuffer, IID_BufferViewVk, "buffer view") )
-    {
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk(pBufferView, IID_BufferViewVk);
 #ifdef DEVELOPMENT
+    {
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        auto RequiredViewType = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer ? BUFFER_VIEW_SHADER_RESOURCE : BUFFER_VIEW_UNORDERED_ACCESS;
+        VerifyResourceViewBinding(SpirvAttribs, GetVariableType(), ArrayInd, pBufferView, pBufferViewVk.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+    }
+#endif
+
+    if (UpdateCachedResource(DstRes, std::move(pBufferViewVk)))
+    {
         // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type 
         // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
-        auto* pBuffViewVk = DstRes.pObject.RawPtr<BufferViewVkImpl>();
-        auto* pBuffVk = pBuffViewVk->GetBufferVk(); // Use final type
-        // HLSL buffer SRVs are mapped to storge buffers in GLSL
-        auto RequiredBindFlag = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer ? BIND_SHADER_RESOURCE : BIND_UNORDERED_ACCESS;
-        if ((pBuffVk->GetDesc().BindFlags & RequiredBindFlag ) == 0)
-        {
-            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "The buffer was not created with ", GetBindFlagString(RequiredBindFlag), " flags.")
-            DstRes.pObject.Release();
-            return;
-        }
-#endif
 
         // Do not update descriptor for a dynamic storage buffer. All dynamic resource 
         // descriptors are updated at once by CommitDynamicResources() when SRB is committed.
@@ -690,33 +662,26 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer,
            "Uniform or storage buffer resource is expected");
 
-    if (UpdateCachedResource(DstRes, ArrayInd, pBufferView, IID_BufferViewVk, "buffer view"))
-    {
-        auto* pBuffViewVk = DstRes.pObject.RawPtr<BufferViewVkImpl>();
-
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk(pBufferView, IID_BufferViewVk);
 #ifdef DEVELOPMENT
+    {
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        auto RequiredViewType = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer ? BUFFER_VIEW_UNORDERED_ACCESS : BUFFER_VIEW_SHADER_RESOURCE;
+        VerifyResourceViewBinding(SpirvAttribs, GetVariableType(), ArrayInd, pBufferView, pBufferViewVk.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+    }
+#endif
+
+    if (UpdateCachedResource(DstRes, std::move(pBufferViewVk)))
+    {
         // The following bits must have been set at buffer creation time:
         //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
         //  * VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT
-        const auto ViewType = pBuffViewVk->GetDesc().ViewType;
-        const bool IsStorageBuffer = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer;
-        const auto dbgExpectedViewType = IsStorageBuffer ? BUFFER_VIEW_UNORDERED_ACCESS : BUFFER_VIEW_SHADER_RESOURCE;
-        if (ViewType != dbgExpectedViewType)
-        {
-            const auto* ExpectedViewTypeName = GetViewTypeLiteralName(dbgExpectedViewType);
-            const auto* ActualViewTypeName = GetViewTypeLiteralName(ViewType);
-            LOG_RESOURCE_BINDING_ERROR("Texture view", pBuffViewVk, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(),
-                                       "Incorrect view type: ", ExpectedViewTypeName, " is expected, but ", ActualViewTypeName, " is provided.");
-            DstRes.pObject.Release();
-            return;
-        }
-#endif
 
         // Do not update descriptor for a dynamic texel buffer. All dynamic resource descriptors 
         // are updated at once by CommitDynamicResources() when SRB is committed.
         if (vkDescrSet != VK_NULL_HANDLE && GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
         {
-            VkBufferView BuffView = pBuffViewVk->GetVkBufferView();
+            VkBufferView BuffView = DstRes.pObject.RawPtr<BufferViewVkImpl>()->GetVkBufferView();
             UpdateDescriptorHandle(vkDescrSet, ArrayInd, nullptr, nullptr, &BuffView);
         }
     }
@@ -734,29 +699,25 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage,
            "Storage image, separate image or sampled image resource is expected");
 
-    if (UpdateCachedResource(DstRes, ArrayInd, pTexView, IID_TextureViewVk, "texture view") )
+    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0(pTexView, IID_TextureViewVk);
+#ifdef DEVELOPMENT
+    {
+        // HLSL buffer SRVs are mapped to storge buffers in GLSL
+        auto RequiredViewType = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage ? TEXTURE_VIEW_UNORDERED_ACCESS : TEXTURE_VIEW_SHADER_RESOURCE;
+        VerifyResourceViewBinding(SpirvAttribs, GetVariableType(), ArrayInd, pTexView, pTexViewVk0.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+    }
+#endif
+    if (UpdateCachedResource(DstRes, std::move(pTexViewVk0)))
     {
         // We can do RawPtr here safely since UpdateCachedResource() returned true
         auto* pTexViewVk = DstRes.pObject.RawPtr<TextureViewVkImpl>();
 #ifdef DEVELOPMENT
-        const auto ViewType = pTexViewVk->GetDesc().ViewType;
-        const bool IsStorageImage = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage;
-        const auto dbgExpectedViewType = IsStorageImage ? TEXTURE_VIEW_UNORDERED_ACCESS : TEXTURE_VIEW_SHADER_RESOURCE;
-        if (ViewType != dbgExpectedViewType)
-        {
-            const auto* ExpectedViewTypeName = GetViewTypeLiteralName(dbgExpectedViewType);
-            const auto* ActualViewTypeName = GetViewTypeLiteralName(ViewType);
-            LOG_RESOURCE_BINDING_ERROR("Texture view", pTexViewVk, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(),
-                                       "Incorrect view type: ", ExpectedViewTypeName, " is expected, but ", ActualViewTypeName, " is provided.");
-            DstRes.pObject.Release();
-            return;
-        }
-
         if (SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage && !IsImmutableSamplerAssigned())
         {
-            if(pTexViewVk->GetSampler() == nullptr)
+            if (pTexViewVk->GetSampler() == nullptr)
             {
-                LOG_RESOURCE_BINDING_ERROR("resource", pTexView, SpirvAttribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "No sampler is assigned to texture view '", pTexViewVk->GetDesc().Name, "'");
+                LOG_ERROR_MESSAGE("Error binding texture view '", pTexViewVk->GetDesc().Name, "' to variable '", SpirvAttribs.GetPrintName(ArrayInd),
+                                  "' in shader '", ParentResLayout.GetShaderName(), "'. No sampler is assigned to the view");
             }
         }
 #endif
@@ -802,7 +763,22 @@ void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject*    
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Separate sampler resource is expected");
     VERIFY(!IsImmutableSamplerAssigned(), "This separate sampler is assigned an immutable sampler");
 
-    if (UpdateCachedResource(DstRes, ArrayInd, pSampler, IID_Sampler, "sampler"))
+    RefCntAutoPtr<SamplerVkImpl> pSamplerVk(pSampler, IID_Sampler);
+#ifdef DEVELOPMENT
+    if (pSampler != nullptr && pSamplerVk == nullptr)
+    {
+        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '", SpirvAttribs.GetPrintName(ArrayInd),
+                          "' in shader '", ParentResLayout.GetShaderName(), "'. Unexpected object type: sampler is expected");
+    }
+    if (GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr && DstRes.pObject != pSamplerVk)
+    {
+        auto VarTypeStr = GetShaderVariableTypeLiteralName(GetVariableType());
+        LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", SpirvAttribs.GetPrintName(ArrayInd),
+                          "' in shader '", ParentResLayout.GetShaderName(), "'. Attempting to bind another sampler or null is an error and may "
+                          "cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.");
+    }
+#endif
+    if (UpdateCachedResource(DstRes, std::move(pSamplerVk)))
     {
         // Do not update descriptor for a dynamic sampler. All dynamic resource descriptors 
         // are updated at once by CommitDynamicResources() when SRB is committed.

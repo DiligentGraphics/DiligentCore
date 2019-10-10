@@ -354,16 +354,6 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
 }
 
 
-
-#define LOG_RESOURCE_BINDING_ERROR(ResType, pResource, VarName, ShaderName, ...)\
-{                                                                                                   \
-    const auto& ResName = pResource->GetDesc().Name;                                                \
-    LOG_ERROR_MESSAGE( "Failed to bind ", ResType, " '", ResName, "' to variable '", VarName,    \
-                        "' in shader '", ShaderName, "'. ", __VA_ARGS__ );                \
-}
-
-
-
 void ShaderResourceLayoutD3D12::D3D12Resource::CacheCB(IDeviceObject*                      pBuffer,
                                                        ShaderResourceCacheD3D12::Resource& DstRes,
                                                        Uint32                              ArrayInd,
@@ -374,47 +364,33 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheCB(IDeviceObject*           
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12(pBuffer, IID_BufferD3D12);
+#ifdef DEVELOPMENT
+    VerifyConstantBufferBinding(Attribs, GetVariableType(), ArrayInd, pBuffer, pBuffD3D12.RawPtr(), DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+#endif
     if (pBuffD3D12)
     {
-        if (pBuffD3D12->GetDesc().BindFlags & BIND_UNIFORM_BUFFER)
+        if (GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)
         {
-            if (GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)
-            {
-                if (DstRes.pObject != pBuffD3D12)
-                {
-                    auto VarTypeStr = GetShaderVariableTypeLiteralName(GetVariableType());
-                    LOG_ERROR_MESSAGE( "Non-null constant buffer is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayInd), "' in shader '", ParentResLayout.GetShaderName(), "'. Attempting to bind another constant buffer is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic." );
-                }
+            // Do not update resource if one is already bound unless it is dynamic. This may be 
+            // dangerous as CopyDescriptorsSimple() may interfere with GPU reading the same descriptor.
+            return;
+        }
 
-                // Do not update resource if one is already bound unless it is dynamic. This may be 
-                // dangerous as CopyDescriptorsSimple() may interfere with GPU reading the same descriptor.
-                return;
-            }
-
-            DstRes.Type = GetResType();
-            DstRes.CPUDescriptorHandle = pBuffD3D12->GetCBVHandle();
-            VERIFY (DstRes.CPUDescriptorHandle.ptr != 0 || pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC, "No relevant CBV CPU descriptor handle");
+        DstRes.Type = GetResType();
+        DstRes.CPUDescriptorHandle = pBuffD3D12->GetCBVHandle();
+        VERIFY (DstRes.CPUDescriptorHandle.ptr != 0 || pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC, "No relevant CBV CPU descriptor handle");
             
-            if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
-            {
-                // Dynamic resources are assigned descriptor in the GPU-visible heap at every draw call, and
-                // the descriptor is copied by the RootSignature when resources are committed
-                VERIFY(DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
-
-                ID3D12Device* pd3d12Device = ParentResLayout.m_pd3d12Device;
-                pd3d12Device->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-            }
-
-            DstRes.pObject = std::move(pBuffD3D12);
-        }
-        else
+        if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
         {
-            LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, Attribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Buffer was not created with BIND_UNIFORM_BUFFER flag.")
+            // Dynamic resources are assigned descriptor in the GPU-visible heap at every draw call, and
+            // the descriptor is copied by the RootSignature when resources are committed
+            VERIFY(DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
+
+            ID3D12Device* pd3d12Device = ParentResLayout.m_pd3d12Device;
+            pd3d12Device->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
-    }
-    else
-    {
-        LOG_RESOURCE_BINDING_ERROR("buffer", pBuffer, Attribs.GetPrintName(ArrayInd), ParentResLayout.GetShaderName(), "Incorrect resource type: buffer is expected.")
+
+        DstRes.pObject = std::move(pBuffD3D12);
     }
 }
 
@@ -425,19 +401,15 @@ struct ResourceViewTraits{};
 template<>
 struct ResourceViewTraits<ITextureViewD3D12>
 {
-    static const Char *Name;
     static const INTERFACE_ID &IID;
 };
-const Char *ResourceViewTraits<ITextureViewD3D12>::Name = "texture view";
 const INTERFACE_ID& ResourceViewTraits<ITextureViewD3D12>::IID = IID_TextureViewD3D12;
 
 template<>
 struct ResourceViewTraits<IBufferViewD3D12>
 {
-    static const Char *Name;
     static const INTERFACE_ID &IID;
 };
-const Char *ResourceViewTraits<IBufferViewD3D12>::Name = "buffer view";
 const INTERFACE_ID& ResourceViewTraits<IBufferViewD3D12>::IID = IID_BufferViewD3D12;
 
 template<typename TResourceViewType,        ///< ResType of the view (ITextureViewD3D12 or IBufferViewD3D12)
@@ -453,30 +425,13 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheResourceView(IDeviceObject* 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<TResourceViewType> pViewD3D12(pView, ResourceViewTraits<TResourceViewType>::IID);
+#ifdef DEVELOPMENT
+    VerifyResourceViewBinding(Attribs, GetVariableType(), ArrayIndex, pView, pViewD3D12.RawPtr(), {dbgExpectedViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+#endif
     if (pViewD3D12)
     {
-#ifdef DEVELOPMENT
-        const auto& ViewDesc = pViewD3D12->GetDesc();
-        auto ViewType = ViewDesc.ViewType;
-        if (ViewType != dbgExpectedViewType)
-        {
-            const auto* ExpectedViewTypeName = GetViewTypeLiteralName( dbgExpectedViewType );
-            const auto* ActualViewTypeName = GetViewTypeLiteralName( ViewType );
-            LOG_RESOURCE_BINDING_ERROR(ResourceViewTraits<TResourceViewType>::Name, pViewD3D12, Attribs.GetPrintName(ArrayIndex), ParentResLayout.GetShaderName(), 
-                                        "Incorrect view type: ", ExpectedViewTypeName, " is expected, ", ActualViewTypeName, " provided." );
-            return;
-        }
-#endif
         if (GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)
         {
-            if (DstRes.pObject != pViewD3D12)
-            {
-                auto VarTypeStr = GetShaderVariableTypeLiteralName(GetVariableType());
-                LOG_ERROR_MESSAGE( "Non-null resource is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '",
-                                    ParentResLayout.GetShaderName(), "'. Attempting to bind another resource or null is an error and will be "
-                                    "ignored. Use another shader resource binding instance or label the variable as dynamic." );
-            }
-
             // Do not update resource if one is already bound unless it is dynamic. This may be 
             // dangerous as CopyDescriptorsSimple() may interfere with GPU reading the same descriptor.
             return;
@@ -500,10 +455,6 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheResourceView(IDeviceObject* 
 
         DstRes.pObject = std::move(pViewD3D12);
     }
-    else
-    {
-        LOG_RESOURCE_BINDING_ERROR("resource", pView, Attribs.GetPrintName(ArrayIndex), ParentResLayout.GetShaderName(), "Incorect resource type: ", ResourceViewTraits<TResourceViewType>::Name, " is expected.")
-    }   
 }
 
 void ShaderResourceLayoutD3D12::D3D12Resource::CacheSampler(IDeviceObject*                      pSampler,
@@ -522,7 +473,9 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheSampler(IDeviceObject*      
             if (DstSam.pObject != pSampler)
             {
                 auto VarTypeStr = GetShaderVariableTypeLiteralName(GetVariableType());
-                LOG_ERROR_MESSAGE( "Non-null sampler is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex), "' in shader '", ParentResLayout.GetShaderName(), "'. Attempting to bind another sampler is an error and will be ignored. Use another shader resource binding instance or label the variable as dynamic." );
+                LOG_ERROR_MESSAGE("Non-null sampler is already bound to ", VarTypeStr, " shader variable '", Attribs.GetPrintName(ArrayIndex),
+                                  "' in shader '", ParentResLayout.GetShaderName(), "'. Attempting to bind another sampler is an error and will "
+                                  "be ignored. Use another shader resource binding instance or label the variable as dynamic." );
             }
                 
             // Do not update resource if one is already bound unless it is dynamic. This may be 
@@ -549,7 +502,8 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheSampler(IDeviceObject*      
     }
     else
     {
-        LOG_RESOURCE_BINDING_ERROR("Sampler", pSampler, Attribs.GetPrintName(ArrayIndex), ParentResLayout.GetShaderName(), "Incorect resource type: sampler is expected.")
+        LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '", Attribs.GetPrintName(ArrayIndex),
+                          "' in shader '", ParentResLayout.GetShaderName(), "'. Incorect object type: sampler is expected.");
     }
 } 
 

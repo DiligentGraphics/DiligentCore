@@ -248,11 +248,9 @@ public:
                                   VkDescriptorSet                  vkDescrSet,
                                   Uint32                           ArrayInd)const;
 
+        template<typename ObjectType>
         bool UpdateCachedResource(ShaderResourceCacheVk::Resource&   DstRes,
-                                  Uint32                             ArrayInd,
-                                  IDeviceObject*                     pObject, 
-                                  INTERFACE_ID                       InterfaceId,
-                                  const char*                        ResourceName)const;
+                                  RefCntAutoPtr<ObjectType>&&        pObject)const;
     };
 
     // Copies static resources from SrcResourceCache defined by SrcLayout

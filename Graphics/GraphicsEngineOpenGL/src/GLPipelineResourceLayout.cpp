@@ -223,6 +223,7 @@ GLPipelineResourceLayout::~GLPipelineResourceLayout()
     );
 }
 
+
 void GLPipelineResourceLayout::UniformBuffBindInfo::BindResource(IDeviceObject* pBuffer,
                                                                  Uint32         ArrayIndex)
 {
@@ -236,28 +237,9 @@ void GLPipelineResourceLayout::UniformBuffBindInfo::BindResource(IDeviceObject* 
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferGLImpl> pBuffGLImpl(pBuffer, IID_BufferGL);
 #ifdef DEVELOPMENT
-    if (pBuffer && !pBuffGLImpl)
-    {
-         LOG_ERROR_MESSAGE("Failed to bind buffer '", pBuffer->GetDesc().Name, "' to variable '", m_Attribs.GetPrintName(ArrayIndex),
-                           "'. Incorrect resource type: buffer is expected.");
-    }
-
-    if (pBuffGLImpl && (pBuffGLImpl->GetDesc().BindFlags & BIND_UNIFORM_BUFFER) == 0)
-    {
-        LOG_ERROR_MESSAGE("Error binding buffer '", pBuffer->GetDesc().Name, "' to variable '", m_Attribs.GetPrintName(ArrayIndex),
-                          "': the buffer was not created with BIND_UNIFORM_BUFFER flag.");
-    }
-       
-    if (GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
     {
         const auto& CachedUB = ResourceCache.GetConstUB(m_Attribs.Binding + ArrayIndex);
-        if (CachedUB.pBuffer != nullptr && CachedUB.pBuffer != pBuffGLImpl)
-        {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(GetType());
-            LOG_ERROR_MESSAGE("Non-null uniform buffer is already bound to ", VarTypeStr, " shader variable '", m_Attribs.GetPrintName(ArrayIndex), "'. "
-                              "Attempting to bind another resource or null is an error and may cause unpredicted behavior. "
-                              "Use another shader resource binding instance or label the variable as dynamic.");
-        }
+        VerifyConstantBufferBinding(m_Attribs, GetType(), ArrayIndex, pBuffer, pBuffGLImpl.RawPtr(), CachedUB.pBuffer.RawPtr());
     }
 #endif
 
@@ -265,60 +247,6 @@ void GLPipelineResourceLayout::UniformBuffBindInfo::BindResource(IDeviceObject* 
 }
 
 
-template<typename TResourceViewImplType,
-         typename TViewTypeEnum>
-void VerifyResourceView(const GLPipelineResourceLayout::GLVariableBase& Var,
-                        Uint32                                          ArrayIndex,
-                        IDeviceObject*                                  pView,
-                        TResourceViewImplType*                          pViewGLImpl,
-                        const char*                                     ExpectedResourceType,
-                        std::initializer_list<TViewTypeEnum>            ExpectedViewTypes,
-                        const IDeviceObject*                            pCachedView)
-{
-    if (pView && !pViewGLImpl)
-    {
-        LOG_ERROR_MESSAGE("Failed to bind resource '", pView->GetDesc().Name, "' to variable '", Var.m_Attribs.GetPrintName(ArrayIndex),
-                          "'. Incorect resource type: ", ExpectedResourceType, " is expected.");
-        return;
-    }
-
-    if (pViewGLImpl)
-    {
-        auto ViewType = pViewGLImpl->GetDesc().ViewType;
-        bool IsExpectedViewType = false;
-        for(auto ExpectedViewType : ExpectedViewTypes)
-        {
-            if (ExpectedViewType == ViewType)
-                IsExpectedViewType = true;
-        }
-
-        if (!IsExpectedViewType)
-        {
-            std::string ExpectedViewTypeName;
-            for(auto ExpectedViewType : ExpectedViewTypes)
-            {
-                if (!ExpectedViewTypeName.empty())
-                    ExpectedViewTypeName += " or ";
-                ExpectedViewTypeName += GetViewTypeLiteralName(ExpectedViewType);
-            }
-            const auto* ActualViewTypeName = GetViewTypeLiteralName(ViewType);
-            LOG_ERROR_MESSAGE("Error binding ", ExpectedResourceType, " '", pView->GetDesc().Name, "' to variable '", Var.m_Attribs.GetPrintName(ArrayIndex),
-                              "'. Incorrect view type: ", ExpectedViewTypeName, " is expected, ", ActualViewTypeName, " is provided.");
-        }
-    }
-
-    auto VarType = Var.GetType();
-    if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-    {
-        if (pCachedView != nullptr && pCachedView != pViewGLImpl)
-        {
-            auto VarTypeStr = GetShaderVariableTypeLiteralName(VarType);
-            LOG_ERROR_MESSAGE("Non-null resource is already bound to ", VarTypeStr, " shader variable '", Var.m_Attribs.GetPrintName(ArrayIndex), "'. "
-                              "Attempting to bind another resource or null is an error and may cause unpredicted behavior. "
-                              "Use another shader resource binding instance or label the variable as dynamic.");
-        }
-    }
-}
 
 void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pView,
                                                              Uint32         ArrayIndex)
@@ -336,11 +264,13 @@ void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pVie
         // resource mapping can be of wrong type
         RefCntAutoPtr<TextureViewGLImpl> pViewGL(pView, IID_TextureViewGL);
 #ifdef DEVELOPMENT
-        auto& CachedTexSampler = ResourceCache.GetConstSampler(m_Attribs.Binding + ArrayIndex);
-        VerifyResourceView(*this, ArrayIndex, pView, pViewGL.RawPtr(), "texture view", {TEXTURE_VIEW_SHADER_RESOURCE}, CachedTexSampler.pView.RawPtr());
-        if (m_StaticSamplerIdx >= 0)
         {
-            VERIFY(CachedTexSampler.pSampler != nullptr, "Static samplers must be initialized by PipelineStateGLImpl::InitializeSRBResourceCache!");
+            auto& CachedTexSampler = ResourceCache.GetConstSampler(m_Attribs.Binding + ArrayIndex);
+            VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE}, CachedTexSampler.pView.RawPtr());
+            if (m_StaticSamplerIdx >= 0)
+            {
+                VERIFY(CachedTexSampler.pSampler != nullptr, "Static samplers must be initialized by PipelineStateGLImpl::InitializeSRBResourceCache!");
+            }
         }
 #endif
         ResourceCache.SetTexSampler(m_Attribs.Binding + ArrayIndex, std::move(pViewGL), m_StaticSamplerIdx < 0);
@@ -351,8 +281,10 @@ void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pVie
         // resource mapping can be of wrong type
         RefCntAutoPtr<BufferViewGLImpl> pViewGL(pView, IID_BufferViewGL);
 #ifdef DEVELOPMENT
-        auto& CachedBuffSampler = ResourceCache.GetConstSampler(m_Attribs.Binding + ArrayIndex);
-        VerifyResourceView(*this, ArrayIndex, pView, pViewGL.RawPtr(), "buffer view", {BUFFER_VIEW_SHADER_RESOURCE}, CachedBuffSampler.pView.RawPtr());
+        {
+            auto& CachedBuffSampler = ResourceCache.GetConstSampler(m_Attribs.Binding + ArrayIndex);
+            VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE}, CachedBuffSampler.pView.RawPtr());
+        }
 #endif
         ResourceCache.SetBufSampler(m_Attribs.Binding + ArrayIndex, std::move(pViewGL));
     }
@@ -376,8 +308,10 @@ void GLPipelineResourceLayout::ImageBindInfo::BindResource(IDeviceObject* pView,
         // resource mapping can be of wrong type
         RefCntAutoPtr<TextureViewGLImpl> pViewGL(pView, IID_TextureViewGL);
 #ifdef DEVELOPMENT
-        auto& CachedUAV = ResourceCache.GetConstImage(m_Attribs.Binding + ArrayIndex);
-        VerifyResourceView(*this, ArrayIndex, pView, pViewGL.RawPtr(), "texture view", {TEXTURE_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr());
+        {
+            auto& CachedUAV = ResourceCache.GetConstImage(m_Attribs.Binding + ArrayIndex);
+            VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr());
+        }
 #endif
         ResourceCache.SetTexImage(m_Attribs.Binding + ArrayIndex, std::move(pViewGL));
     }
@@ -387,8 +321,10 @@ void GLPipelineResourceLayout::ImageBindInfo::BindResource(IDeviceObject* pView,
         // resource mapping can be of wrong type
         RefCntAutoPtr<BufferViewGLImpl> pViewGL(pView, IID_BufferViewGL);
 #ifdef DEVELOPMENT
-        auto& CachedUAV = ResourceCache.GetConstImage(m_Attribs.Binding + ArrayIndex);
-        VerifyResourceView(*this, ArrayIndex, pView, pViewGL.RawPtr(), "buffer view", {BUFFER_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr());
+        {
+            auto& CachedUAV = ResourceCache.GetConstImage(m_Attribs.Binding + ArrayIndex);
+            VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr());
+        }
 #endif
         ResourceCache.SetBufImage(m_Attribs.Binding + ArrayIndex, std::move(pViewGL));
     }
@@ -412,8 +348,10 @@ void GLPipelineResourceLayout::StorageBufferBindInfo::BindResource(IDeviceObject
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferViewGLImpl> pViewGL(pView, IID_BufferViewGL);
 #ifdef DEVELOPMENT
-    auto& CachedSSBO = ResourceCache.GetConstSSBO(m_Attribs.Binding + ArrayIndex);
-    VerifyResourceView(*this, ArrayIndex, pView, pViewGL.RawPtr(), "buffer view", {BUFFER_VIEW_SHADER_RESOURCE, BUFFER_VIEW_UNORDERED_ACCESS}, CachedSSBO.pBufferView.RawPtr());
+    {
+        auto& CachedSSBO = ResourceCache.GetConstSSBO(m_Attribs.Binding + ArrayIndex);
+        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE, BUFFER_VIEW_UNORDERED_ACCESS}, CachedSSBO.pBufferView.RawPtr());
+    }
 #endif
     ResourceCache.SetSSBO(m_Attribs.Binding + ArrayIndex, std::move(pViewGL));
 }
@@ -425,9 +363,9 @@ class BindResourceHelper
 {
 public:
     BindResourceHelper(IResourceMapping& RM, SHADER_TYPE SS, Uint32 Fl) :
-        ResourceMapping (RM),
-        ShaderStage     (SS),
-        Flags           (Fl)
+        ResourceMapping {RM},
+        ShaderStage     {SS},
+        Flags           {Fl}
     {
     }
 
