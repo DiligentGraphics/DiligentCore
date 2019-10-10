@@ -43,6 +43,7 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters*    
 {
     pPSO->InitializeSRBResourceCache(m_ResourceCache);
 
+    // Copy only mutable and dynamic variables from master resource layout
     const SHADER_RESOURCE_VARIABLE_TYPE SRBVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
     const auto& ResourceLayout = pPSO->GetDesc().ResourceLayout;
     m_ResourceLayout.Initialize(ProgramResources, NumPrograms, ResourceLayout, SRBVarTypes, _countof(SRBVarTypes), &m_ResourceCache);

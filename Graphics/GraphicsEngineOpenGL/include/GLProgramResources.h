@@ -23,6 +23,18 @@
 
 #pragma once
 
+// GLProgramResources class allocates single continuous chunk of memory to store all program resources, as follows:
+//
+//
+//       m_UniformBuffers        m_Samplers                 m_Images                   m_StorageBlocks                      
+//        |                       |                          |                          |                         |                  |
+//        |  UB[0]  ... UB[Nu-1]  |  Sam[0]  ...  Sam[Ns-1]  |  Img[0]  ...  Img[Ni-1]  |  SB[0]  ...  SB[Nsb-1]  |  Resource Names  |
+//
+//  Nu  - number of uniform buffers
+//  Ns  - number of samplers
+//  Ni  - number of images
+//  Nsb - number of storage blocks
+
 #include <vector>
 
 #include "Object.h"
@@ -43,6 +55,7 @@ namespace Diligent
         GLProgramResources& operator = (const GLProgramResources&)  = delete;
         GLProgramResources& operator = (      GLProgramResources&&) = delete;
 
+        /// Loads program uniforms and assigns bindings
         void LoadUniforms(SHADER_TYPE                           ShaderStages,
                           const GLObjectWrappers::GLProgramObj& GLProgram,
                           class GLContextState&                 State,
@@ -361,9 +374,9 @@ namespace Diligent
                                    THandleSampler  HandleSampler,
                                    THandleImg      HandleImg,
                                    THandleSB       HandleSB,
-                                    const PipelineResourceLayoutDesc*    pResourceLayout = nullptr,
-                                    const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes = nullptr,
-                                    Uint32                               NumAllowedTypes = 0)const
+                                   const PipelineResourceLayoutDesc*    pResourceLayout = nullptr,
+                                   const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes = nullptr,
+                                   Uint32                               NumAllowedTypes = 0)const
         {
             const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
             auto CheckResourceType = [&](const char* Name)

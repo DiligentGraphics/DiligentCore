@@ -350,6 +350,7 @@ void GLPipelineResourceLayout::StorageBufferBindInfo::BindResource(IDeviceObject
 #ifdef DEVELOPMENT
     {
         auto& CachedSSBO = ResourceCache.GetConstSSBO(m_Attribs.Binding + ArrayIndex);
+        // HLSL structured buffers are mapped to SSBOs in GLSL
         VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE, BUFFER_VIEW_UNORDERED_ACCESS}, CachedSSBO.pBufferView.RawPtr());
     }
 #endif

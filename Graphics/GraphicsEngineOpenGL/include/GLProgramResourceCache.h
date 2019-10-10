@@ -33,7 +33,7 @@ namespace Diligent
 /// The class implements a cache that holds resources bound to a specific GL program
 // All resources are stored in the continuous memory using the following layout:
 //
-//   |        Cached UBs        |     Cached Samplers     |       Cached Images      | Cached Strg Blocks        |
+//   |        Cached UBs        |     Cached Samplers     |       Cached Images      | Cached Storage Blocks     |
 //   |----------------------------------------------------|--------------------------|---------------------------|
 //   |  0 | 1 | ... | UBCount-1 | 0 | 1 | ...| SmpCount-1 | 0 | 1 | ... | ImgCount-1 | 0 | 1 |  ... | SBOCount-1 |
 //    -----------------------------------------------------------------------------------------------------------
@@ -61,7 +61,7 @@ public:
     /// Describes a resource bound to a sampler or an image slot
     struct CachedResourceView
     {
-        /// Wee keep strong reference to the view instead of the reference
+        /// We keep strong reference to the view instead of the reference
         /// to the texture or buffer because this is more efficient from
         /// performance point of view: this avoids one pair of 
         /// AddStrongRef()/ReleaseStrongRef(). The view holds a strong reference 

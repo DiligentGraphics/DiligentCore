@@ -84,6 +84,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
                 auto* pShaderGL = GetShader<ShaderGLImpl>(i);
                 const auto& ShaderDesc = pShaderGL->GetDesc();
                 m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(&m_ppShaders[i], 1, true));
+                // Load uniforms and assign bindings
                 m_ProgramResources[i].LoadUniforms(ShaderDesc.ShaderType, m_GLPrograms[i], GLState,
                     m_TotalUniformBufferBindings,
                     m_TotalSamplerBindings,
@@ -112,6 +113,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
             m_ShaderResourceLayoutHash = m_ProgramResources[0].GetHash();
         }
 
+        // Initialize master resource layout that keeps all variable types and does not reference a resource cache
         m_ResourceLayout.Initialize(m_ProgramResources.data(), static_cast<Uint32>(m_GLPrograms.size()), m_Desc.ResourceLayout, nullptr, 0, nullptr);
     }
    
@@ -122,6 +124,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
     }
 
     {
+        // Clone only static variables into static resource layout, assign and initialize static resource cache
         const SHADER_RESOURCE_VARIABLE_TYPE StaticVars[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
         m_StaticResourceLayout.Initialize(m_ProgramResources.data(), static_cast<Uint32>(m_GLPrograms.size()), m_Desc.ResourceLayout, StaticVars, _countof(StaticVars), &m_StaticResourceCache);
         InitStaticSamplersInResourceCache(m_StaticResourceLayout, m_StaticResourceCache);

@@ -67,8 +67,12 @@ public:
     const GLProgramResourceCache& GetResourceCache(PipelineStateGLImpl* pdbgPSO);
 
 private:
+    // The resource layout only references mutable and dynamic variables
     GLPipelineResourceLayout m_ResourceLayout;
+
+    // The resource cache holds resource bindings for all variables
     GLProgramResourceCache   m_ResourceCache;
+
     bool                     m_bIsStaticResourcesBound = false;
 };
 

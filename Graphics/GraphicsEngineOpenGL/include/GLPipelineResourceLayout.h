@@ -23,6 +23,46 @@
 
 #pragma once
 
+// GLPipelineResourceLayout class manages resource bindings for all stages in a pipeline
+
+//
+//   
+//                                                      To            program              resource                  cache
+//
+//                                               A          A                  A        A              A           A              A            A
+//                                               |          |                  |        |              |           |              |            |
+//                                            Binding    Binding            Binding   Binding       Binding     Binding        Binding      Binding
+//      ___________________                  ____|__________|__________________|________|______________|___________|______________|____________|____________
+//     |                   |                |          |          |       |        |        |       |        |        |       |          |          |       |
+//     |GLProgramResources |--------------->|   UB[0]  |   UB[1]  |  ...  | Sam[0] | Sam[1] |  ...  | Img[0] | Img[1] |  ...  | SSBOs[0] | SSBOs[1] |  ...  |
+//     |___________________|                |__________|__________|_______|________|________|_______|________|________|_______|__________|__________|_______|
+//                                                A                                    A                        A                            A
+//                                                |                                    |                        |                            |
+//                                               Ref                                  Ref                      Ref                          Ref
+//    .-==========================-.         _____|____________________________________|________________________|____________________________|______________
+//    ||                          ||        |           |           |       |            |            |       |            |         |           |          |
+//  __|| GLPipelineResourceLayout ||------->| UBInfo[0] | UBInfo[1] |  ...  | SamInfo[0] | SamInfo[1] |  ...  | ImgInfo[0] |   ...   |  SSBO[0]  |   ...    |
+// |  ||                          ||        |___________|___________|_______|____________|____________|_______|____________|_________|___________|__________|
+// |  '-==========================-'                     /                                         \
+// |                                                   Ref                                         Ref
+// |                                                  /                                              \
+// |    ___________________                  ________V________________________________________________V_____________________________________________________
+// |   |                   |                |          |          |       |        |        |       |        |        |       |          |          |       |
+// |   |GLProgramResources |--------------->|   UB[0]  |   UB[1]  |  ...  | Sam[0] | Sam[1] |  ...  | Img[0] | Img[1] |  ...  | SSBOs[0] | SSBOs[1] |  ...  |
+// |   |___________________|                |__________|__________|_______|________|________|_______|________|________|_______|__________|__________|_______|
+// |                                             |           |                |         |                |        |                |           |
+// |                                          Binding     Binding          Binding    Binding          Binding  Binding         Binding      Binding
+// |                                             |           |                |         |                |        |                |           |
+// |    _______________________              ____V___________V________________V_________V________________V________V________________V___________V_____________
+// |   |                       |            |                           |                           |                           |                           |
+// '-->|GLProgramResourceCache |----------->|      Uinform Buffers      |          Samplers         |          Images           |       Storge Buffers      |
+//     |_______________________|            |___________________________|___________________________|___________________________|___________________________|
+//
+//
+// Note that GLProgramResources are kept by PipelineStateGLImpl. GLPipelineResourceLayout class is either part of the same PSO class,
+// or part of ShaderResourceBindingGLImpl object that keeps a strong reference to the pipeline. So all references from GLVariableBase
+// are always valid.
+
 #include <array>
 
 #include "Object.h"

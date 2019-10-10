@@ -198,6 +198,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                                       Uint32&                               ImageBinding,
                                       Uint32&                               StorageBufferBinding)
 {
+    // Load uniforms to temporary arrays. We will then pack all variables into a single chunk of memory.
     std::vector<UniformBufferInfo> UniformBlocks;
     std::vector<SamplerInfo>       Samplers;
     std::vector<ImageInfo>         Images;
@@ -421,15 +422,19 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                         {
                             LOG_WARNING_MESSAGE("Failed to set binding for image uniform '", Name.data(), "'[", arr_ind,
                                                 "]. Expected binding: ", ImageBinding, 
-                                                " Make sure that this binding is explicitly assigned in the shader source."
-                                                " Note that bindings are properly assigned by HLSL->GLSL converter.");
+                                                " Make sure that this binding is explicitly assigned in shader source code."
+                                                " Note that if the source code is converted from HLSL and if images are only used"
+                                                " by a single shader stage, then bindings automatically assigned by HLSL->GLSL"
+                                                " converter will work fine.");
                         }
                         else
                         {
                             LOG_WARNING_MESSAGE("Failed to set binding for image uniform '", Name.data(), "'."
                                                 " Expected binding: ", ImageBinding, 
-                                                " Make sure that this binding is explicitly assigned in the shader source."
-                                                " Note that bindings are properly assigned by HLSL->GLSL converter.");
+                                                " Make sure that this binding is explicitly assigned in shader source code."
+                                                " Note that if the source code is converted from HLSL and if images are only used"
+                                                " by a single shader stage, then bindings automatically assigned by HLSL->GLSL"
+                                                " converter will work fine.");
                         }
                     }
                 }
@@ -569,8 +574,10 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
             LOG_WARNING_MESSAGE("glShaderStorageBlockBinding is not available on this device and "
                                 "the engine is unable to automatically assign shader storage block bindindg for '",
                                 Name.data(), "' variable. Expected binding: ", StorageBufferBinding, 
-                                " Make sure that this binding is explicitly assigned in the shader source."
-                                " Note that bindings are properly assigned by HLSL->GLSL converter.");
+                                " Make sure that this binding is explicitly assigned in shader source code."
+                                " Note that if the source code is converted from HLSL and if storage blocks are only used"
+                                " by a single shader stage, then bindings automatically assigned by HLSL->GLSL"
+                                " converter will work fine.");
         }
         ++StorageBufferBinding;
     }
