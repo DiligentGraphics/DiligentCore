@@ -31,6 +31,7 @@
 #include "ShaderResourceVariable.h"
 #include "PipelineState.h"
 #include "StringTools.h"
+#include "GraphicsAccessories.h"
 
 namespace Diligent
 {
