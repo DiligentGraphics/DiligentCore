@@ -1740,10 +1740,11 @@ void ParseImageFormat(const String &Comment, String& ImageFormat)
 //        SamplerState g_Tex2D_sampler;
 //        Texture3D g_Tex3D;                            -> sampler3D g_Tex3D;
 //
-void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenListType::iterator &Token, 
-                                                                          const std::vector<SamplerHashType> &Samplers, 
-                                                                          ObjectsTypeHashType &Objects, 
-                                                                          const char* SamplerSuffix )
+void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration(TokenListType::iterator&            Token, 
+                                                                         const std::vector<SamplerHashType>& Samplers, 
+                                                                         ObjectsTypeHashType&                Objects, 
+                                                                         const char*                         SamplerSuffix,
+                                                                         Uint32&                             ImageBinding)
 {
     auto TexDeclToken = Token;
     auto TextureDim = TexDeclToken->Type;
@@ -1852,7 +1853,9 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration( TokenL
 
             if( ImgFormat.length() != 0 )
             {
-                LayoutQualifier = String("layout(") + ImgFormat + ") ";
+                std::stringstream ss;
+                ss << "layout(" << ImgFormat << ", binding=" << ImageBinding++ << ")";
+                LayoutQualifier = ss.str();
             }
         }
 
@@ -4490,6 +4493,7 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
     TokenListType TokensCopy(m_bPreserveTokens ? m_Tokens : TokenListType());
 
     Uint32 ShaderStorageBlockBinding = 0;
+    Uint32 ImageBinding              = 0;
 
     std::unordered_map<String, bool> SamplersHash;
     auto Token = m_Tokens.begin();
@@ -4688,7 +4692,7 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
             {
                 // Process texture declaration, and add it to the top of the
                 // object stack
-                ProcessTextureDeclaration( Token, Samplers, m_Objects.back(), SamplerSuffix );
+                ProcessTextureDeclaration( Token, Samplers, m_Objects.back(), SamplerSuffix, ImageBinding);
             }
             else
                 ++Token;

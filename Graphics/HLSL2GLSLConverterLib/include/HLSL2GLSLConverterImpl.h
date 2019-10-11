@@ -260,7 +260,13 @@ namespace Diligent
             void ProcessConstantBuffer(TokenListType::iterator& Token);
             void ProcessStructuredBuffer(TokenListType::iterator& Token, Uint32& ShaderStorageBlockBinding);
             void ParseSamplers(TokenListType::iterator& ScopeStart, SamplerHashType& SamplersHash);
-            void ProcessTextureDeclaration(TokenListType::iterator& Token, const std::vector<SamplerHashType>& SamplersHash, ObjectsTypeHashType& Objects, const char* SamplerSuffix);
+
+            void ProcessTextureDeclaration(TokenListType::iterator&            Token,
+                                           const std::vector<SamplerHashType>& SamplersHash,
+                                           ObjectsTypeHashType&                Objects,
+                                           const char*                         SamplerSuffix,
+                                           Uint32&                             ImageBinding);
+
             bool ProcessObjectMethod(TokenListType::iterator& Token, const TokenListType::iterator& ScopeStart, const TokenListType::iterator& ScopeEnd);
             Uint32 CountFunctionArguments(TokenListType::iterator& Token, const TokenListType::iterator& ScopeEnd);
             bool ProcessRWTextureStore(TokenListType::iterator& Token, const TokenListType::iterator& ScopeEnd);
