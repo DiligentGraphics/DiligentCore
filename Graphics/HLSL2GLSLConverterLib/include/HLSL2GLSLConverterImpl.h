@@ -83,25 +83,70 @@ namespace Diligent
 
 namespace Diligent
 {
+    /// HLSL to GLSL shader source code converter implementation
     class HLSL2GLSLConverterImpl
     {
     public:
         static const HLSL2GLSLConverterImpl& GetInstance();
+
+        /// Conversion attributes
         struct ConversionAttribs
         {
+            /// Shader source input stream factory. Used to load shader source when HLSLSource is null as
+            /// well as to load shader includes.
             IShaderSourceInputStreamFactory*    pSourceStreamFactory       = nullptr;
+
+            /// Optional pointer to a conversion stream.
             IHLSL2GLSLConversionStream**        ppConversionStream         = nullptr;
+
+            /// HLSL source code. Can be null, in which case the source code will be loaded from the
+            /// input stream factory (that must not be null in this case) using InputFileName.
             const Char*                         HLSLSource                 = nullptr;
+
+            /// Number of symbols in HLSLSource string. Ignored if HLSLSource is null.
             size_t                              NumSymbols                 = 0;
+
+            /// Shader entry point.
             const Char*                         EntryPoint                 = nullptr;
+
+            /// Shader type. See Diligent::SHADER_TYPE.
             SHADER_TYPE                         ShaderType                 = SHADER_TYPE_UNKNOWN;
+
+            /// Whether to include GLSL definitions supporting HLSL->GLSL conversion.
             bool                                IncludeDefinitions         = false;
+
+            /// Input file name. If HLSLSource is not null, this name will only be used for
+            /// information purposes. If HLSLSource is null, the name will be used to load
+            /// shader source from the input stream factory.
             const Char*                         InputFileName              = nullptr;
+
+            /// Combined texture sampler suffix.
             const Char*                         SamplerSuffix              = "_sampler";
+
+            /// Whether to use in-out location qualifiers. 
+            /// This requires separate shader objects extension:
+            /// https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt
             bool                                UseInOutLocationQualifiers = true;
         };
 
+        /// Converts HLSL source to GLSL
+
+        /// \param [in] Attribs - Conversion attributes.
+        /// \return     Converted GLSL source code.
         String Convert(ConversionAttribs&                  Attribs)const;
+
+        /// Creates a conversion stream
+
+        /// \param [in] InputFileName - Input file name. If HLSLSource is null, this name will be
+        ///                             used to load shader source code from the input stream factory.
+        ///                             If HLSLSource is not null, the name will only be used for information
+        ///                             purposes.
+        /// \param [in] pSourceStreamFactory - Input stream factory that is used to load shader includes as well
+        ///                                    as to load the shader source code if HLSLSource is null.
+        /// \param [in] HLSLSource    - HLSL source code. If this parameter is null, the source will be loaded from
+        ///                             the input stream factory using InputFileName.
+        /// \param [in] NumSymbols    - Number of symbols in the HLSLSource string
+        /// \prarm [out] ppStream     - Memory address where pointer to the created stream will be written
         void CreateStream(const Char*                      InputFileName,
                           IShaderSourceInputStreamFactory* pSourceStreamFactory, 
                           const Char*                      HLSLSource, 
@@ -213,7 +258,23 @@ namespace Diligent
         class ConversionStream : public ObjectBase<IHLSL2GLSLConversionStream>
         {
         public:
-            typedef ObjectBase<IHLSL2GLSLConversionStream> TBase;
+            using TBase = ObjectBase<IHLSL2GLSLConversionStream>;
+
+            /// Conversion stream constructor.
+
+            /// \param [in] pRefCounters  - Pointer to a reference counters object
+            /// \param [in] Converter     - Reference to HLSL2GLSLConverterImpl class instance
+            /// \param [in] InputFileName - Input file name. If HLSLSource is null, this name will be
+            ///                             used to load shader source code from the input stream factory.
+            ///                             If HLSLSource is not null, the name will only be used for information
+            ///                             purposes.
+            /// \param [in] pInputStreamFactory - Input stream factory that is used to load shader includes as well
+            ///                                   as to load the shader source code if HLSLSource is null.
+            /// \param [in] HLSLSource    - HLSL source code. If this parameter is null, the source will be loaded from
+            ///                             the input stream factory using InputFileName.
+            /// \param [in] NumSymbols    - Number of symbols in the HLSLSource string
+            /// \param [in] bPreserveTokens - Whether to preserve original tokens. This must be set to true if the stream
+            ///                               will be used for multiple conversions.
             ConversionStream(IReferenceCounters*              pRefCounters, 
                              const HLSL2GLSLConverterImpl&    Converter, 
                              const char*                      InputFileName,

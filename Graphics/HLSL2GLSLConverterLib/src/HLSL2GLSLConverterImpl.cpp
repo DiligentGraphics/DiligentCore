@@ -4407,6 +4407,26 @@ HLSL2GLSLConverterImpl::ConversionStream::ConversionStream(IReferenceCounters*  
     m_Converter                   (Converter),
     m_InputFileName               (InputFileName != nullptr ? InputFileName : "<Unknown>")
 {
+    RefCntAutoPtr<IDataBlob> pFileData;
+    if (HLSLSource == nullptr)
+    {
+        if (InputFileName == nullptr)
+            LOG_ERROR_AND_THROW("Input file name must not be null when HLSL source code is not provided");
+
+        if (pInputStreamFactory == nullptr)
+            LOG_ERROR_AND_THROW("Input stream factory must not be null when HLSL source code is not provided");
+        
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        pInputStreamFactory->CreateInputStream(InputFileName, &pSourceStream);
+        if (pSourceStream == nullptr)
+            LOG_ERROR_AND_THROW("Failed to open shader source file ", InputFileName);
+
+        pFileData = MakeNewRCObj<DataBlobImpl>()(0);
+        pSourceStream->Read(pFileData);
+        HLSLSource = reinterpret_cast<char*>(pFileData->GetDataPtr());
+        NumSymbols = pFileData->GetSize();
+    }
+
     String Source(HLSLSource, NumSymbols);
 
     InsertIncludes( Source, pInputStreamFactory );
@@ -4419,8 +4439,15 @@ String HLSL2GLSLConverterImpl::Convert(ConversionAttribs& Attribs)const
 {
     if (Attribs.ppConversionStream == nullptr)
     {
-        ConversionStream Stream(nullptr, *this, Attribs.InputFileName, Attribs.pSourceStreamFactory, Attribs.HLSLSource, Attribs.NumSymbols, false);
-        return Stream.Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix, Attribs.UseInOutLocationQualifiers);
+        try
+        {
+            ConversionStream Stream(nullptr, *this, Attribs.InputFileName, Attribs.pSourceStreamFactory, Attribs.HLSLSource, Attribs.NumSymbols, false);
+            return Stream.Convert(Attribs.EntryPoint, Attribs.ShaderType, Attribs.IncludeDefinitions, Attribs.SamplerSuffix, Attribs.UseInOutLocationQualifiers);
+        }
+        catch(std::runtime_error&)
+        {
+            return "";
+        }
     }
     else
     {
@@ -4428,7 +4455,7 @@ String HLSL2GLSLConverterImpl::Convert(ConversionAttribs& Attribs)const
         if (*Attribs.ppConversionStream != nullptr)
         {
             pStream = ValidatedCast<ConversionStream>(*Attribs.ppConversionStream);
-            const auto &FileNameFromStream = pStream->GetInputFileName();
+            const auto& FileNameFromStream = pStream->GetInputFileName();
             if (FileNameFromStream != Attribs.InputFileName)
             {
                 LOG_WARNING_MESSAGE("Input stream was initialized for input file \"", FileNameFromStream, "\" that does not match the name of the file to be converted \"", Attribs.InputFileName, "\". New stream will be created");
