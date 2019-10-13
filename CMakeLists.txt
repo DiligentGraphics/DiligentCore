@@ -268,6 +268,12 @@ else()
     set(INSTALL_DILIGENT_CORE OFF)
 endif()
 
+if(MSVC)
+    option(DILIGENT_INSTALL_PDB "Install PDB files" OFF)
+else()
+    set(DILIGENT_INSTALL_PDB OFF)
+endif()
+
 if(NOT DILIGENT_CORE_INSTALL_DIR)
     set(DILIGENT_CORE_INSTALL_DIR "DiligentCore" CACHE INTERNAL "DiligentCore installation directory")
 endif()

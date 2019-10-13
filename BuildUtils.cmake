@@ -222,6 +222,9 @@ function(install_core_lib _TARGET)
                 LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin/$<CONFIG>"
                 RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin/$<CONFIG>"
         )
+        if (DILIGENT_INSTALL_PDB)
+            install(FILES $<TARGET_PDB_FILE:${_TARGET}> DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin/$<CONFIG>" OPTIONAL)
+        endif()
     endif()
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/interface")
