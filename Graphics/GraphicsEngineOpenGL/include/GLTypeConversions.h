@@ -89,11 +89,16 @@ inline GLenum TypeToGLType(VALUE_TYPE Value)
 inline GLenum UsageToGLUsage(USAGE Usage)
 {
     // http://www.informit.com/articles/article.aspx?p=2033340&seqNum=2
+    // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glBufferData.xml
     switch(Usage)
     {
+        // STATIC: The data store contents will be modified once and used many times.
+        // STREAM: The data store contents will be modified once and used at MOST a few times.
+        // DYNAMIC: The data store contents will be modified repeatedly and used many times.
+
         case USAGE_STATIC:      return GL_STATIC_DRAW;
-        case USAGE_DEFAULT:     return GL_DYNAMIC_DRAW;
-        case USAGE_DYNAMIC:     return GL_STREAM_DRAW;
+        case USAGE_DEFAULT:     return GL_STATIC_DRAW;
+        case USAGE_DYNAMIC:     return GL_DYNAMIC_DRAW;
         case USAGE_STAGING:     return GL_DYNAMIC_READ;
         default: UNEXPECTED( "Unknow usage" ); return 0;
     }

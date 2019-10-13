@@ -124,7 +124,7 @@ void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const Buffer
             auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
 
             BufferGLImpl *pBufferOGL( NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)
-                                                (m_BuffViewObjAllocator, this, pDeviceContextGL, BuffDesc, pBuffData, bIsDeviceInternal ) );
+                                                (m_BuffViewObjAllocator, this, pDeviceContextGL->GetContextState(), BuffDesc, pBuffData, bIsDeviceInternal ) );
             pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferOGL->CreateDefaultViews();
             OnCreateDeviceObject( pBufferOGL );
@@ -148,7 +148,7 @@ void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const Buffe
             auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
 
             BufferGLImpl *pBufferOGL( NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)
-                                                (m_BuffViewObjAllocator, this, pDeviceContextGL, BuffDesc, GLHandle, false ) );
+                                                (m_BuffViewObjAllocator, this, pDeviceContextGL->GetContextState(), BuffDesc, GLHandle, false ) );
             pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
             pBufferOGL->CreateDefaultViews();
             OnCreateDeviceObject( pBufferOGL );

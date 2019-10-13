@@ -36,53 +36,60 @@ class GLContextState
 public:
     GLContextState(class RenderDeviceGLImpl *pDeviceGL);
 
-    void SetProgram( const GLObjectWrappers::GLProgramObj &GLProgram );
-    void SetPipeline( const GLObjectWrappers::GLPipelineObj &GLPipeline );
-    void BindVAO( const GLObjectWrappers::GLVertexArrayObj &VAO );
-    void BindFBO( const GLObjectWrappers::GLFrameBufferObj &FBO );
-    void SetActiveTexture( Int32 Index );
-    void BindTexture( Int32 Index, GLenum BindTarget, const GLObjectWrappers::GLTextureObj &Tex);
-    void BindSampler( Uint32 Index, const GLObjectWrappers::GLSamplerObj &GLSampler);
-    void BindImage( Uint32 Index, class TextureViewGLImpl *pTexView, GLint MipLevel, GLboolean IsLayered, GLint Layer, GLenum Access, GLenum Format );
-    void BindImage( Uint32 Index, class BufferViewGLImpl *pBuffView, GLenum Access, GLenum Format );
+    void SetProgram        (const GLObjectWrappers::GLProgramObj&     GLProgram);
+    void SetPipeline       (const GLObjectWrappers::GLPipelineObj&    GLPipeline);
+    void BindVAO           (const GLObjectWrappers::GLVertexArrayObj& VAO);
+    void BindFBO           (const GLObjectWrappers::GLFrameBufferObj& FBO);
+    void SetActiveTexture  (Int32 Index);
+    void BindTexture       (Int32 Index, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& Tex);
+    void BindUniformBuffer (Int32 Index,       const GLObjectWrappers::GLBufferObj& Buff);
+    void BindBuffer        (GLenum BindTarget, const GLObjectWrappers::GLBufferObj& Buff, bool ResetVAO);
+    void BindSampler       (Uint32 Index,      const GLObjectWrappers::GLSamplerObj& GLSampler);
+    void BindImage         (Uint32 Index, class TextureViewGLImpl* pTexView, GLint MipLevel, GLboolean IsLayered, GLint Layer, GLenum Access, GLenum Format);
+    void BindImage         (Uint32 Index, class BufferViewGLImpl* pBuffView, GLenum Access, GLenum Format);
+    void BindStorageBlock  (Int32 Index, const GLObjectWrappers::GLBufferObj& Buff, GLintptr Offset, GLsizeiptr Size);
+
     void EnsureMemoryBarrier(Uint32 RequiredBarriers, class AsyncWritableResource *pRes = nullptr);
-    void SetPendingMemoryBarriers( Uint32 PendingBarriers );
+    void SetPendingMemoryBarriers(Uint32 PendingBarriers);
     
-    void EnableDepthTest( Bool bEnable );
-    void EnableDepthWrites( Bool bEnable );
-    void SetDepthFunc(COMPARISON_FUNCTION CmpFunc);
-    void EnableStencilTest( Bool bEnable );
-    void SetStencilWriteMask( Uint8 StencilWriteMask );
-    void SetStencilRef( GLenum Face, Int32 Ref );
-    void SetStencilFunc( GLenum Face, COMPARISON_FUNCTION Func, Int32 Ref, Uint32 Mask );
-    void SetStencilOp( GLenum Face, STENCIL_OP StencilFailOp, STENCIL_OP StencilDepthFailOp, STENCIL_OP StencilPassOp );
+    void EnableDepthTest        (bool bEnable);
+    void EnableDepthWrites      (bool bEnable);
+    void SetDepthFunc           (COMPARISON_FUNCTION CmpFunc);
+    void EnableStencilTest      (bool bEnable);
+    void SetStencilWriteMask    (Uint8 StencilWriteMask);
+    void SetStencilRef          (GLenum Face, Int32 Ref);
+    void SetStencilFunc         (GLenum Face, COMPARISON_FUNCTION Func, Int32 Ref, Uint32 Mask);
+    void SetStencilOp           (GLenum Face, STENCIL_OP StencilFailOp, STENCIL_OP StencilDepthFailOp, STENCIL_OP StencilPassOp);
+    void SetFillMode            (FILL_MODE FillMode);
+    void SetCullMode            (CULL_MODE CullMode);
+    void SetFrontFace           (bool FrontCounterClockwise);
+    void SetDepthBias           (float DepthBias, float fSlopeScaledDepthBias);
+    void SetDepthClamp          (bool bEnableDepthClamp);
+    void EnableScissorTest      (bool bEnableScissorTest);
 
-    void SetFillMode( FILL_MODE FillMode );
-    void SetCullMode( CULL_MODE CullMode );
-    void SetFrontFace( Bool FrontCounterClockwise );
-    void SetDepthBias( float DepthBias, float fSlopeScaledDepthBias );
-    void SetDepthClamp( Bool bEnableDepthClamp );
-    void EnableScissorTest( Bool bEnableScissorTest );
-
-    void SetBlendFactors(const float *BlendFactors);
-    void SetBlendState(const BlendStateDesc &BSDsc, Uint32 SampleMask);
+    void SetBlendFactors(const float* BlendFactors);
+    void SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMask);
 
     Bool GetDepthWritesEnabled(){ return m_DSState.m_DepthWritesEnableState; }
     Bool GetScissorTestEnabled(){ return m_RSState.ScissorTestEnable; }
-    void GetColorWriteMask( Uint32 RTIndex, Uint32 &WriteMask, Bool &bIsIndependent );
-    void SetColorWriteMask( Uint32 RTIndex, Uint32 WriteMask, Bool bIsIndependent );
+    void GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& bIsIndependent);
+    void SetColorWriteMask(Uint32 RTIndex, Uint32 WriteMask, Bool bIsIndependent);
 
     void SetNumPatchVertices( Int32 NumVertices);
     void Invalidate();
+
+    void InvalidateVAO(){m_VAOId = -1;}
+    bool IsValidVAOBound()const {return m_VAOId > 0;}
 
     void SetCurrentGLContext(GLContext::NativeGLContextType Context) { m_CurrentGLContext = Context; }
     GLContext::NativeGLContextType GetCurrentGLContext()const { return m_CurrentGLContext; }
 
     struct ContextCaps
     {
-        bool bFillModeSelectionSupported = True;
-        GLint m_iMaxCombinedTexUnits = 0;
-        GLint m_iMaxDrawBuffers = 0;
+        bool bFillModeSelectionSupported  = true;
+        GLint m_iMaxCombinedTexUnits      = 0;
+        GLint m_iMaxDrawBuffers           = 0;
+        GLint m_iMaxUniformBufferBindings = 0;
     };
     const ContextCaps& GetContextCaps(){return m_Caps;}
 
@@ -94,35 +101,37 @@ private:
     // the system can reuse the same address
     // The safest way is to keep global unique ID for all objects
 
-    Diligent::UniqueIdentifier m_GLProgId = -1;
-    Diligent::UniqueIdentifier m_GLPipelineId = -1;
-    Diligent::UniqueIdentifier m_VAOId = -1;
-    Diligent::UniqueIdentifier m_FBOId = -1;
-    std::vector< Diligent::UniqueIdentifier > m_BoundTextures;
-    std::vector< Diligent::UniqueIdentifier > m_BoundSamplers;
+    UniqueIdentifier m_GLProgId     = -1;
+    UniqueIdentifier m_GLPipelineId = -1;
+    UniqueIdentifier m_VAOId        = -1;
+    UniqueIdentifier m_FBOId        = -1;
+    std::vector< UniqueIdentifier > m_BoundTextures;
+    std::vector< UniqueIdentifier > m_BoundSamplers;
+    std::vector< UniqueIdentifier > m_BoundUniformBuffers;
+    
     struct BoundImageInfo
     {
-        Diligent::UniqueIdentifier InterfaceID = -1;
-        GLint MipLevel = 0;
-        GLboolean IsLayered = 0;
-        GLint Layer = 0;
-        GLenum Access = 0;
-        GLenum Format = 0;
+        UniqueIdentifier InterfaceID = -1;
+        GLint       MipLevel    = 0;
+        GLboolean   IsLayered   = 0;
+        GLint       Layer       = 0;
+        GLenum      Access      = 0;
+        GLenum      Format      = 0;
         
         BoundImageInfo() {};
 
-        BoundImageInfo( Diligent::UniqueIdentifier _UniqueID,
+        BoundImageInfo( UniqueIdentifier _UniqueID,
                         GLint _MipLevel,
                         GLboolean _IsLayered,
                         GLint _Layer,
                         GLenum _Access,
                         GLenum _Format) :
-            InterfaceID  (_UniqueID ),
-            MipLevel  (_MipLevel ),
-            IsLayered (_IsLayered),
-            Layer     (_Layer    ),
-            Access    (_Access   ),
-            Format    (_Format   )
+            InterfaceID {_UniqueID },
+            MipLevel    {_MipLevel },
+            IsLayered   {_IsLayered},
+            Layer       {_Layer    },
+            Access      {_Access   },
+            Format      {_Format   }
         {}
 
         bool operator==(const BoundImageInfo &rhs)const
@@ -136,6 +145,29 @@ private:
         }
     };
     std::vector< BoundImageInfo > m_BoundImages;
+
+    struct BoundSSBOInfo
+    {
+        BoundSSBOInfo(){}
+        BoundSSBOInfo(UniqueIdentifier _BufferID,
+                      GLintptr         _Offset ,
+                      GLsizeiptr       _Size) :
+            BufferID{_BufferID},
+            Offset  {_Offset  },
+            Size    {_Size    }
+        {}
+        UniqueIdentifier BufferID = -1;
+	    GLintptr         Offset   = 0;
+ 	    GLsizeiptr       Size     = 0;
+
+        bool operator==(const BoundSSBOInfo &rhs)const
+        {
+            return  BufferID == rhs.BufferID  &&
+                    Offset   == rhs.Offset    &&
+                    Size     == rhs.Size;
+        }
+    };
+    std::vector< BoundSSBOInfo > m_BoundStorageBlocks;
 
     Uint32 m_PendingMemoryBarriers = 0;
 

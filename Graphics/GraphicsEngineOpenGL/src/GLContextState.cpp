@@ -51,11 +51,17 @@ namespace Diligent
             glGetIntegerv( GL_MAX_DRAW_BUFFERS, &m_Caps.m_iMaxDrawBuffers );
             CHECK_GL_ERROR( "Failed to get max draw buffers count" );
             VERIFY_EXPR(m_Caps.m_iMaxDrawBuffers > 0);
+
+            glGetIntegerv( GL_MAX_UNIFORM_BUFFER_BINDINGS, &m_Caps.m_iMaxUniformBufferBindings );
+            CHECK_GL_ERROR( "Failed to get uniform buffers count" );
+            VERIFY_EXPR(m_Caps.m_iMaxUniformBufferBindings > 0);
         }
 
         m_BoundTextures.reserve( m_Caps.m_iMaxCombinedTexUnits );
         m_BoundSamplers.reserve( 32 );
         m_BoundImages.reserve( 32 );
+        m_BoundUniformBuffers.reserve( m_Caps.m_iMaxUniformBufferBindings );
+        m_BoundStorageBlocks.reserve(16);
 
         Invalidate();
 
@@ -82,14 +88,16 @@ namespace Diligent
         glBindFramebuffer( GL_READ_FRAMEBUFFER, 0 );
         DEV_CHECK_GL_ERROR( "Failed to reset GL context state" );
 
-        m_GLProgId = -1;
+        m_GLProgId     = -1;
         m_GLPipelineId = -1;
-        m_VAOId = -1;
-        m_FBOId = -1;
+        m_VAOId        = -1;
+        m_FBOId        = -1;
         
         m_BoundTextures.clear();
         m_BoundSamplers.clear();
         m_BoundImages.clear();
+        m_BoundUniformBuffers.clear();
+        m_BoundStorageBlocks.clear();
 
         m_DSState = DepthStencilGLState();
         m_RSState = RasterizerGLState();
@@ -107,13 +115,9 @@ namespace Diligent
     bool UpdateBoundObject( UniqueIdentifier &CurrentObjectID, const ObjectType &NewObject, GLuint &NewGLHandle )
     {
         NewGLHandle = static_cast<GLuint>(NewObject);
-        UniqueIdentifier NewObjectID = 0;
-        if( NewGLHandle != 0 )
-        {
-            // Only ask for the ID if the object handle is non-zero
-            // to avoid ID generation for null objects
-            NewObjectID = NewObject.GetUniqueID();
-        }
+        // Only ask for the ID if the object handle is non-zero
+        // to avoid ID generation for null objects
+        UniqueIdentifier NewObjectID = (NewGLHandle != 0) ? NewObject.GetUniqueID() : 0;
 
         // It is unsafe to use GL handle to keep track of bound textures
         // When a texture is released, GL is free to reuse its handle for 
@@ -283,6 +287,59 @@ namespace Diligent
 #else
         UNSUPPORTED("GL_ARB_shader_image_load_store is not supported");
 #endif
+    }
+
+    void GLContextState::BindUniformBuffer( Int32 Index, const GLObjectWrappers::GLBufferObj &Buff)
+    {
+        VERIFY( 0 <= Index && Index < m_Caps.m_iMaxUniformBufferBindings, "Uniform buffer index is out of range" );
+
+        GLuint GLBufferHandle = Buff;
+        if( UpdateBoundObjectsArr( m_BoundUniformBuffers, Index, Buff, GLBufferHandle ) )
+        {
+            // In addition to binding buffer to the indexed buffer binding target, glBindBufferBase also binds 
+            // buffer to the generic buffer binding point specified by target.
+            glBindBufferBase(GL_UNIFORM_BUFFER, Index, GLBufferHandle);
+            DEV_CHECK_GL_ERROR("Failed to bind uniform buffer to slot ", Index);
+        }
+    }
+
+    void GLContextState::BindStorageBlock( Int32 Index, const GLObjectWrappers::GLBufferObj& Buff, GLintptr Offset, GLsizeiptr Size)
+    {
+#if GL_ARB_shader_storage_buffer_object
+        BoundSSBOInfo NewSSBOInfo {Buff.GetUniqueID(), Offset, Size};
+        if (Index >= m_BoundStorageBlocks.size())
+            m_BoundStorageBlocks.resize(Index + 1);
+
+        if( !(m_BoundStorageBlocks[Index] == NewSSBOInfo) )
+        {
+            m_BoundStorageBlocks[Index] = NewSSBOInfo;
+            GLuint GLBufferHandle = Buff;
+            // In addition to binding buffer to the indexed buffer binding target, glBindBufferRange also binds 
+            // buffer to the generic buffer binding point specified by target.
+            glBindBufferRange(GL_SHADER_STORAGE_BUFFER, Index, GLBufferHandle, Offset, Size);
+            DEV_CHECK_GL_ERROR("Failed to bind shader storage block to slot ", Index);
+        }
+#else
+        UNSUPPORTED("GL_ARB_shader_image_load_store is not supported");
+#endif
+    }
+
+    void GLContextState::BindBuffer(GLenum BindTarget, const GLObjectWrappers::GLBufferObj& Buff, bool ResetVAO)
+    {
+        // Binding ARRAY_BUFFER or ELEMENT_ARRAY_BUFFER affects currently bound VAO
+        if (ResetVAO && (BindTarget == GL_ARRAY_BUFFER || BindTarget == GL_ELEMENT_ARRAY_BUFFER))
+        {
+            BindVAO(GLVertexArrayObj::Null());
+        }
+
+        // Note that glBindBufferBase, glBindBufferRange etc. also bind the
+        // buffer to the generic buffer binding point specified by target.
+
+        // GL_UNIFORM_BUFFER, GL_ATOMIC_COUNTER_BUFFER and GL_SHADER_STORAGE_BUFFER buffer binding points do not directly affect
+        // uniform buffer, atomic counter buffer or shader storage buffer state, respectively. glBindBufferBase or glBindBufferRange
+        // must be used to bind a buffer to an indexed uniform buffer, atomic counter buffer or shader storage buffer binding point.
+        glBindBuffer(BindTarget, Buff);
+        DEV_CHECK_GL_ERROR("Failed to bind buffer ", static_cast<GLint>(Buff), " to target ", BindTarget);
     }
 
     void GLContextState::EnsureMemoryBarrier( Uint32 RequiredBarriers, AsyncWritableResource *pRes/* = nullptr */ )
@@ -500,7 +557,7 @@ namespace Diligent
         }
     }
 
-    void GLContextState::SetFrontFace( Bool FrontCounterClockwise )
+    void GLContextState::SetFrontFace( bool FrontCounterClockwise )
     {
         if( m_RSState.FrontCounterClockwise != FrontCounterClockwise )
         {
@@ -535,7 +592,7 @@ namespace Diligent
         }
     }
 
-    void GLContextState::SetDepthClamp( Bool bEnableDepthClamp )
+    void GLContextState::SetDepthClamp( bool bEnableDepthClamp )
     {
         if( m_RSState.DepthClampEnable != bEnableDepthClamp )
         {
@@ -570,7 +627,7 @@ namespace Diligent
         }
     }
 
-    void GLContextState::EnableScissorTest( Bool bEnableScissorTest )
+    void GLContextState::EnableScissorTest( bool bEnableScissorTest )
     {
         if( m_RSState.ScissorTestEnable != bEnableScissorTest )
         {

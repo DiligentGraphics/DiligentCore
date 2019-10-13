@@ -97,7 +97,7 @@ TextureCubeArray_OGL::TextureCubeArray_OGL(IReferenceCounters*         pRefCount
         }
     }
 
-    GLState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GLState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null() );
 }
 
 TextureCubeArray_OGL::TextureCubeArray_OGL( IReferenceCounters*         pRefCounters,
@@ -223,7 +223,7 @@ void TextureCubeArray_OGL::UpdateData( GLContextState&           ContextState,
     if(UnpackBuffer != 0)
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-    ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    ContextState.BindTexture( -1, m_BindTarget, GLObjectWrappers::GLTextureObj::Null() );
 }
 
 void TextureCubeArray_OGL::AttachToFramebuffer( const TextureViewDesc& ViewDesc, GLenum AttachmentPoint )

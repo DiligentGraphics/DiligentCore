@@ -80,7 +80,7 @@ static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarge
     else
         UNSUPPORTED("Texture format cannot be queried and must be provided by the texture description");
 #endif
-    GLState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GLState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj::Null() );
 
     return GlFormat;
 }
@@ -166,7 +166,7 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
         VERIFY(TexDesc.MipLevels != 0, "Unable to query the number of mip levels, so it must be specified by the texture description.");
     }
     
-    GLState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GLState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj::Null() );
     return TexDesc;
 }
 

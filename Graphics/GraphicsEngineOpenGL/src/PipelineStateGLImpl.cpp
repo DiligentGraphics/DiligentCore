@@ -183,7 +183,7 @@ void PipelineStateGLImpl::CommitProgram(GLContextState& State)
         // WARNING: glUseProgram() overrides glBindProgramPipeline(). That is, if you have a program in use and
         // a program pipeline bound, all rendering will use the program that is in use, not the pipeline programs!
         // So make sure that glUseProgram(0) has been called if pipeline is in use
-        State.SetProgram(GLObjectWrappers::GLProgramObj{false});
+        State.SetProgram(GLObjectWrappers::GLProgramObj::Null());
         auto& Pipeline = GetGLProgramPipeline(State.GetCurrentGLContext());
         VERIFY(Pipeline != 0, "Program pipeline must not be null");
         State.SetPipeline( Pipeline );

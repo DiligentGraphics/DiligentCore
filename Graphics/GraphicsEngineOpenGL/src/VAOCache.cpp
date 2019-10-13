@@ -75,7 +75,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
                                                            IBuffer*                       pIndexBuffer,
                                                            VertexStreamInfo<BufferGLImpl> VertexStreams[],
                                                            Uint32                         NumVertexStreams,
-                                                           GLContextState&                GLContextState)
+                                                           GLContextState&                GLState)
 {
     // Lock the cache
     ThreadingTools::LockHelper CacheLock{m_CacheLockFlag};
@@ -127,7 +127,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
                                                        // will reflect data written by shaders prior to the barrier.
                                                        // The set of buffer objects affected by this bit is derived 
                                                        // from the GL_VERTEX_ARRAY_BUFFER_BINDING bindings
-                    GLContextState);
+                    GLState);
 
                 CurrStreamKey.BufferUId = pCurrBuf ? pCurrBuf->GetUniqueID() : 0;
                 CurrStreamKey.Stride    = Stride;
@@ -149,7 +149,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
                                          // will reflect data written by shaders prior to the barrier.
                                          // The buffer objects affected by this bit are derived from the
                                          // ELEMENT_ARRAY_BUFFER binding.
-            GLContextState);
+            GLState);
     }
 
     // Try to find VAO in the map
@@ -164,7 +164,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
         GLObjectWrappers::GLVertexArrayObj NewVAO(true);
 
         // Initialize VAO
-        GLContextState.BindVAO( NewVAO );
+        GLState.BindVAO( NewVAO );
         auto LayoutIt = LayoutElems;
         for( size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt )
         {
@@ -182,7 +182,8 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
             VERIFY( pBuff != nullptr, "Vertex buffer is null" );
             const BufferGLImpl *pBufferOGL = static_cast<const BufferGLImpl*>( pBuff );
 
-            glBindBuffer(GL_ARRAY_BUFFER, pBufferOGL->m_GlBuffer);
+            constexpr bool ResetVAO = false;
+            GLState.BindBuffer(GL_ARRAY_BUFFER, pBufferOGL->m_GlBuffer, ResetVAO);
             GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>( static_cast<size_t>( CurrStream.Offset + LayoutIt->RelativeOffset ) );
             auto GlType = TypeToGLType(LayoutIt->ValueType);
             if( !LayoutIt->IsNormalized &&
@@ -208,7 +209,8 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
         if( pIndexBuffer )
         {
             const BufferGLImpl *pIndBufferOGL = static_cast<const BufferGLImpl*>( pIndexBuffer );
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, pIndBufferOGL->m_GlBuffer);
+            constexpr bool ResetVAO = false;
+            GLState.BindBuffer(GL_ELEMENT_ARRAY_BUFFER, pIndBufferOGL->m_GlBuffer, ResetVAO);
         }
             
         auto NewElems = m_Cache.emplace( std::make_pair(Key, std::move(NewVAO)) );

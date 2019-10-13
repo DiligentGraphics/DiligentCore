@@ -134,7 +134,7 @@ namespace Diligent
                     m_ContextState.SetStencilOp( GL_BACK, BackFace.StencilFailOp, BackFace.StencilDepthFailOp, BackFace.StencilPassOp );
                 }
             }
-            m_bVAOIsUpToDate = false;
+            m_ContextState.InvalidateVAO();
         }
     }
 
@@ -182,7 +182,7 @@ namespace Diligent
                                                SET_VERTEX_BUFFERS_FLAGS       Flags)
     {
         TDeviceContextBase::SetVertexBuffers(StartSlot, NumBuffersSet, ppBuffers, pOffsets, StateTransitionMode, Flags);
-        m_bVAOIsUpToDate = false;
+        m_ContextState.InvalidateVAO();
     }
 
     void DeviceContextGLImpl::InvalidateState()
@@ -192,13 +192,12 @@ namespace Diligent
         m_ContextState.Invalidate();
         m_BoundWritableTextures.clear();
         m_BoundWritableBuffers.clear();
-        m_bVAOIsUpToDate = false;
     }
 
     void DeviceContextGLImpl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
         TDeviceContextBase::SetIndexBuffer(pIndexBuffer, ByteOffset, StateTransitionMode);
-        m_bVAOIsUpToDate = false;
+        m_ContextState.InvalidateVAO();
     }
 
     void DeviceContextGLImpl::SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight)
@@ -388,8 +387,7 @@ namespace Diligent
                                         // will reflect data written by shaders prior to the barrier
                 m_ContextState);
 
-            glBindBufferBase(GL_UNIFORM_BUFFER, ub, pBufferGL->m_GlBuffer);
-            DEV_CHECK_GL_ERROR("Failed to bind uniform buffer to slot ", ub);
+            m_ContextState.BindUniformBuffer(ub, pBufferGL->m_GlBuffer);
             //glBindBufferRange(GL_UNIFORM_BUFFER, it->Index, pBufferGL->m_GlBuffer, 0, pBufferGL->GetDesc().uiSizeInBytes);
         }
 
@@ -479,7 +477,7 @@ namespace Diligent
                     glGetTexParameteriv( pTexViewGL->GetBindTarget(), GL_TEXTURE_IMMUTABLE_FORMAT, &IsImmutable );
                     CHECK_GL_ERROR( "glGetTexParameteriv() failed" );
                     VERIFY( IsImmutable, "Only immutable textures can be bound to pipeline using glBindImageTexture()" );
-                    m_ContextState.BindTexture( -1, pTexViewGL->GetBindTarget(), GLObjectWrappers::GLTextureObj(false) );
+                    m_ContextState.BindTexture( -1, pTexViewGL->GetBindTarget(), GLObjectWrappers::GLTextureObj::Null() );
                 }
 #endif
                 auto GlTexFormat = TexFormatToGLInternalTexFormat( ViewDesc.Format );
@@ -541,11 +539,10 @@ namespace Diligent
             auto* pBufferGL = pBufferViewGL->GetBuffer<BufferGLImpl>();
             pBufferGL->BufferMemoryBarrier(
                 GL_SHADER_STORAGE_BARRIER_BIT,// Accesses to shader storage blocks after the barrier 
-                                                // will reflect writes prior to the barrier
+                                              // will reflect writes prior to the barrier
                 m_ContextState);
 
-            glBindBufferRange(GL_SHADER_STORAGE_BUFFER, ssbo, pBufferGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
-            DEV_CHECK_GL_ERROR("Failed to bind shader storage buffer");
+            m_ContextState.BindStorageBlock(ssbo, pBufferGL->m_GlBuffer, ViewDesc.ByteOffset, ViewDesc.ByteWidth);
 
             if (ViewDesc.ViewType == BUFFER_VIEW_UNORDERED_ACCESS)
                 m_BoundWritableBuffers.push_back(pBufferGL);
@@ -621,7 +618,7 @@ namespace Diligent
         auto* pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
         auto CurrNativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
         const auto& PipelineDesc = m_pPipelineState->GetDesc().GraphicsPipeline;
-        if (!m_bVAOIsUpToDate)
+        if (!m_ContextState.IsValidVAOBound())
         {
             auto& VAOCache = pRenderDeviceGL->GetVAOCache(CurrNativeGLContext);
             IBuffer* pIndexBuffer = drawAttribs.IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
@@ -638,7 +635,6 @@ namespace Diligent
                 const auto& VAO = VAOCache.GetEmptyVAO();
                 m_ContextState.BindVAO( VAO );
             }
-            m_bVAOIsUpToDate = true;
         }
 
         GLenum GlTopology;
@@ -688,8 +684,8 @@ namespace Diligent
                                         // objects affected by this bit are derived from the DRAW_INDIRECT_BUFFER 
                                         // and DISPATCH_INDIRECT_BUFFER bindings.
                 m_ContextState);
-
-            glBindBuffer( GL_DRAW_INDIRECT_BUFFER, pIndirectDrawAttribsGL->m_GlBuffer );
+            constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
+            m_ContextState.BindBuffer( GL_DRAW_INDIRECT_BUFFER, pIndirectDrawAttribsGL->m_GlBuffer, ResetVAO);
 
             if (drawAttribs.IsIndexed)
             {
@@ -717,7 +713,7 @@ namespace Diligent
                 DEV_CHECK_GL_ERROR( "glDrawArraysIndirect() failed" );
             }
 
-            glBindBuffer( GL_DRAW_INDIRECT_BUFFER, 0 );
+            m_ContextState.BindBuffer( GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO );
 #else
             LOG_ERROR_MESSAGE("Indirect rendering is not supported");
 #endif
@@ -796,13 +792,14 @@ namespace Diligent
                                        // and DISPATCH_INDIRECT_BUFFER bindings.
                 m_ContextState);
 
-            glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, pBufferGL->m_GlBuffer);
+            constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
+            m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, pBufferGL->m_GlBuffer, ResetVAO);
             CHECK_GL_ERROR( "Failed to bind a buffer for dispatch indirect command" );
 
             glDispatchComputeIndirect(DispatchAttrs.DispatchArgsByteOffset);
             CHECK_GL_ERROR("glDispatchComputeIndirect() failed");
 
-            glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
+            m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
         }
         else
         {
@@ -994,7 +991,7 @@ namespace Diligent
         TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
 
         auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
-        pBufferGL->UpdateData(this, Offset, Size, pData);
+        pBufferGL->UpdateData(m_ContextState, Offset, Size, pData);
     }
 
     void DeviceContextGLImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
@@ -1023,7 +1020,7 @@ namespace Diligent
     {
         TDeviceContextBase::UnmapBuffer(pBuffer, MapType);
         auto* pBufferGL = ValidatedCast<BufferGLImpl>(pBuffer);
-        pBufferGL->Unmap();
+        pBufferGL->Unmap(m_ContextState);
     }
 
     void DeviceContextGLImpl::UpdateTexture(ITexture*                      pTexture,
@@ -1076,17 +1073,11 @@ namespace Diligent
         m_ContextState.BindTexture( -1, BindTarget, pTexViewGL->GetHandle() );
         glGenerateMipmap( BindTarget );
         CHECK_GL_ERROR( "Failed to generate mip maps" );
-        m_ContextState.BindTexture( -1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
+        m_ContextState.BindTexture( -1, BindTarget, GLObjectWrappers::GLTextureObj::Null() );
     }
 
     void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
 
-    }
-
-    void DeviceContextGLImpl::ResetVAO()
-    {
-        m_bVAOIsUpToDate = false;
-        m_ContextState.BindVAO(GLObjectWrappers::GLVertexArrayObj{false});
     }
 }

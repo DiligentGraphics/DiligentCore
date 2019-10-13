@@ -583,7 +583,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
     }
 #endif
 
-    State.SetProgram(GLObjectWrappers::GLProgramObj{false});
+    State.SetProgram(GLObjectWrappers::GLProgramObj::Null());
 
     AllocateResources(UniformBlocks, Samplers, Images, StorageBlocks);
 }

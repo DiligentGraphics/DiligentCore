@@ -32,7 +32,7 @@ template<class CreateReleaseHelperType>
 class GLObjWrapper
 {
 public:
-    GLObjWrapper(bool CreateObject, CreateReleaseHelperType CreateReleaseHelper = CreateReleaseHelperType()) : 
+    explicit GLObjWrapper(bool CreateObject, CreateReleaseHelperType CreateReleaseHelper = CreateReleaseHelperType()) : 
         m_uiHandle           {0                  },
         m_CreateReleaseHelper{CreateReleaseHelper}
     {
@@ -102,6 +102,11 @@ public:
     }
 
     operator GLuint()const{return m_uiHandle;}
+
+    static GLObjWrapper Null()
+    {
+        return GLObjWrapper{false};
+    }
 
 private:
     GLuint m_uiHandle;

@@ -162,8 +162,6 @@ public:
     
     void CommitRenderTargets();
 
-    void ResetVAO();
-
 protected:
     friend class BufferGLImpl;
     friend class TextureBaseGL;
@@ -177,7 +175,6 @@ private:
     std::vector<class TextureBaseGL*> m_BoundWritableTextures;
     std::vector<class BufferGLImpl*>  m_BoundWritableBuffers;
 
-    bool m_bVAOIsUpToDate = false;
     GLObjectWrappers::GLFrameBufferObj m_DefaultFBO;
 };
 

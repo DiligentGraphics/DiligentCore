@@ -46,14 +46,14 @@ public:
     BufferGLImpl(IReferenceCounters*        pRefCounters, 
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                  RenderDeviceGLImpl*        pDeviceGL,
-                 DeviceContextGLImpl*       pCtxGL,
+                 GLContextState&            CtxState,
                  const BufferDesc&          BuffDesc, 
                  const BufferData*          pBuffData,
                  bool                       bIsDeviceInternal);
     BufferGLImpl(IReferenceCounters*        pRefCounters, 
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                  class RenderDeviceGLImpl*  pDeviceGL,
-                 DeviceContextGLImpl*       pCtxGL,
+                 GLContextState&            CtxState,
                  const BufferDesc&          BuffDesc, 
                  GLuint                     GLHandle,
                  bool                       bIsDeviceInternal);
@@ -62,10 +62,10 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
 
-    void UpdateData(DeviceContextGLImpl* pCtxGL, Uint32 Offset, Uint32 Size, const PVoid pData);
+    void UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData);
     void CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
     void Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData );
-    void Unmap();
+    void Unmap(GLContextState& CtxState);
 
     void BufferMemoryBarrier( Uint32 RequiredBarriers, class GLContextState &GLContextState );
 
@@ -81,7 +81,7 @@ private:
     friend class VAOCache;
 
     GLObjectWrappers::GLBufferObj m_GlBuffer;
-    Uint32 m_uiMapTarget;
+    const Uint32 m_BindTarget;
     const GLenum m_GLUsageHint;
     const Bool m_bUseMapWriteDiscardBugWA;
 };
