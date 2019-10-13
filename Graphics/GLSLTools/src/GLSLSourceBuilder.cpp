@@ -143,6 +143,15 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         "precision highp usampler2DArray;\n"
     );
 
+    if (IsES32OrAbove)
+    {
+        GLSLSource.append(
+            "precision highp samplerBuffer;\n"
+            "precision highp isamplerBuffer;\n"
+            "precision highp usamplerBuffer;\n"
+        );
+    }
+
     if (deviceCaps.TexCaps.bCubemapArraysSupported)
     {
         GLSLSource.append(
@@ -180,6 +189,14 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
             "precision highp uimageCube;\n"
             "precision highp uimage2DArray;\n"
         );
+        if (IsES32OrAbove)
+        {
+            GLSLSource.append(
+                "precision highp imageBuffer;\n"
+                "precision highp iimageBuffer;\n"
+                "precision highp uimageBuffer;\n"
+            );
+        }
     }
 
     if (IsES30 && deviceCaps.bSeparableProgramSupported && ShaderType == SHADER_TYPE_VERTEX)

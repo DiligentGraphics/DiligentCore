@@ -415,13 +415,13 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                 {
                     // glUniform1i for image uniforms is not supported in at least GLES3.2.
                     // glProgramUniform1i is not available in GLES3.0
-                    glUniform1i(UniformLocation + arr_ind, ImageBinding++);
+                    glUniform1i(UniformLocation + arr_ind, ImageBinding);
                     if (glGetError() != GL_NO_ERROR)
                     {
                         if (size > 1)
                         {
                             LOG_WARNING_MESSAGE("Failed to set binding for image uniform '", Name.data(), "'[", arr_ind,
-                                                "]. Expected binding: ", ImageBinding, 
+                                                "]. Expected binding: ", ImageBinding, "."
                                                 " Make sure that this binding is explicitly assigned in shader source code."
                                                 " Note that if the source code is converted from HLSL and if images are only used"
                                                 " by a single shader stage, then bindings automatically assigned by HLSL->GLSL"
@@ -430,13 +430,14 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                         else
                         {
                             LOG_WARNING_MESSAGE("Failed to set binding for image uniform '", Name.data(), "'."
-                                                " Expected binding: ", ImageBinding, 
+                                                " Expected binding: ", ImageBinding, "."
                                                 " Make sure that this binding is explicitly assigned in shader source code."
                                                 " Note that if the source code is converted from HLSL and if images are only used"
                                                 " by a single shader stage, then bindings automatically assigned by HLSL->GLSL"
                                                 " converter will work fine.");
                         }
                     }
+                    ++ImageBinding;
                 }
 
                 break;
@@ -573,7 +574,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
         {
             LOG_WARNING_MESSAGE("glShaderStorageBlockBinding is not available on this device and "
                                 "the engine is unable to automatically assign shader storage block bindindg for '",
-                                Name.data(), "' variable. Expected binding: ", StorageBufferBinding, 
+                                Name.data(), "' variable. Expected binding: ", StorageBufferBinding, "."
                                 " Make sure that this binding is explicitly assigned in shader source code."
                                 " Note that if the source code is converted from HLSL and if storage blocks are only used"
                                 " by a single shader stage, then bindings automatically assigned by HLSL->GLSL"
