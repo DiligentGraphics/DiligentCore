@@ -83,7 +83,6 @@ private:
     GLObjectWrappers::GLBufferObj m_GlBuffer;
     const Uint32 m_BindTarget;
     const GLenum m_GLUsageHint;
-    const Bool m_bUseMapWriteDiscardBugWA;
 };
 
 }

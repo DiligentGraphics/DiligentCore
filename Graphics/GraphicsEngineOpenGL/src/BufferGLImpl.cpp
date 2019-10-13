@@ -33,14 +33,6 @@
 namespace Diligent
 {
 
-static bool GetUseMapWriteDiscardBugWA(RenderDeviceGLImpl *pDeviceGL)
-{
-    // On Intel GPUs, mapping buffer with GL_MAP_UNSYNCHRONIZED_BIT does not
-    // work as expected. To workaround this issue, use glBufferData() to
-    // orphan previous buffer storage https://www.opengl.org/wiki/Buffer_Object_Streaming
-    return pDeviceGL->GetGPUInfo().Vendor == GPU_VENDOR::INTEL;
-}
-
 static GLenum GetBufferBindTarget(const BufferDesc& Desc)
 {
     GLenum Target = GL_ARRAY_BUFFER;
@@ -82,10 +74,9 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
         BuffDesc,
         bIsDeviceInternal
     },
-    m_GlBuffer                {true                                 }, // Create buffer immediately
-    m_BindTarget              {GetBufferBindTarget(BuffDesc)        },
-    m_GLUsageHint             {UsageToGLUsage(BuffDesc.Usage)       },
-    m_bUseMapWriteDiscardBugWA{GetUseMapWriteDiscardBugWA(pDeviceGL)}
+    m_GlBuffer                {true                          }, // Create buffer immediately
+    m_BindTarget              {GetBufferBindTarget(BuffDesc) },
+    m_GLUsageHint             {UsageToGLUsage(BuffDesc.Usage)}
 {
     if( BuffDesc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr) )
         LOG_ERROR_AND_THROW("Static buffer must be initialized with data at creation time");
@@ -194,9 +185,8 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
     },
     // Attach to external buffer handle
     m_GlBuffer                {true, GLObjectWrappers::GLBufferObjCreateReleaseHelper(GLHandle)},
-    m_BindTarget              {GetBufferBindTarget(m_Desc)          },
-    m_GLUsageHint             {UsageToGLUsage(BuffDesc.Usage)       },
-    m_bUseMapWriteDiscardBugWA{GetUseMapWriteDiscardBugWA(pDeviceGL)}
+    m_BindTarget              {GetBufferBindTarget(m_Desc)   },
+    m_GLUsageHint             {UsageToGLUsage(BuffDesc.Usage)}
 {
 }
 
@@ -282,32 +272,14 @@ void BufferGLImpl :: Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapF
         
             if (MapFlags & MAP_FLAG_DISCARD)
             {
-                if (m_bUseMapWriteDiscardBugWA)
-                {
-                    // On Intel GPU, mapping buffer with GL_MAP_UNSYNCHRONIZED_BIT does not
-                    // work as expected. To workaround this issue, use glBufferData() to
-                    // orphan previous buffer storage https://www.opengl.org/wiki/Buffer_Object_Streaming
+                // Use GL_MAP_INVALIDATE_BUFFER_BIT flag to discard previous buffer contents
 
-                    // It is important to specify the exact same buffer size and usage to allow the 
-                    // implementation to simply reallocate storage for that buffer object under-the-hood.
-                    // Since NULL is passed, if there wasn't a need for synchronization to begin with, 
-                    // this can be reduced to a no-op.
-                    glBufferData(m_BindTarget, m_Desc.uiSizeInBytes, nullptr, m_GLUsageHint);
-                    CHECK_GL_ERROR("glBufferData() failed");
-                    Access |= GL_MAP_WRITE_BIT;
-                }
-                else
-                {
-                    // Use GL_MAP_INVALIDATE_BUFFER_BIT flag to discard previous buffer contents
-
-                    // If GL_MAP_INVALIDATE_BUFFER_BIT is specified, the entire contents of the buffer may 
-                    // be discarded and considered invalid, regardless of the specified range. Any data 
-                    // lying outside the mapped range of the buffer object becomes undefined,as does any 
-                    // data within the range but not subsequently written by the application.This flag may 
-                    // not be used with GL_MAP_READ_BIT.
-
-                    Access |= GL_MAP_INVALIDATE_BUFFER_BIT;
-                }
+                // If GL_MAP_INVALIDATE_BUFFER_BIT is specified, the entire contents of the buffer may 
+                // be discarded and considered invalid, regardless of the specified range. Any data 
+                // lying outside the mapped range of the buffer object becomes undefined, as does any 
+                // data within the range but not subsequently written by the application.This flag may 
+                // not be used with GL_MAP_READ_BIT.
+                Access |= GL_MAP_INVALIDATE_BUFFER_BIT;
             }
 
             if (MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE)
