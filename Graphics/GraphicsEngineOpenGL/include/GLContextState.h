@@ -78,7 +78,12 @@ public:
     void SetNumPatchVertices( Int32 NumVertices);
     void Invalidate();
 
-    void InvalidateVAO(){m_VAOId = -1;}
+    void InvalidateVAO()
+    {
+        m_VAOId = -1;
+        // Resetting VAO after that with BindVAO(GLVertexArrayObj::Null()) will still have the effect because
+        // null VAO's ID is 0, not -1.
+    }
     bool IsValidVAOBound()const {return m_VAOId > 0;}
 
     void SetCurrentGLContext(GLContext::NativeGLContextType Context) { m_CurrentGLContext = Context; }
