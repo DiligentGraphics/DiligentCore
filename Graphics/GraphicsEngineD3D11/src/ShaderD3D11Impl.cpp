@@ -35,7 +35,9 @@ static const char* GetD3D11ShaderModel(ID3D11Device* pd3d11Device)
     auto d3dDeviceFeatureLevel = pd3d11Device->GetFeatureLevel();
     switch(d3dDeviceFeatureLevel)
     {
-         // ID3D11Device::Create*Shader methods support DXBC only up to 5.0 version
+        // Direct3D11 only supports shader model 5.0 even if the device feature level is
+        // above 11.0 (for example, 11.1 or 12.0).
+        // https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-downlevel-intro#overview-for-each-feature-level
 #if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >=_WIN32_WINNT_WIN10)
         case D3D_FEATURE_LEVEL_12_1:
         case D3D_FEATURE_LEVEL_12_0:

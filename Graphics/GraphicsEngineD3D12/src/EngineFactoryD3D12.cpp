@@ -153,16 +153,19 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)) );
         CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
+        // Direct3D12 does not support feature levels below 11.0
+        const auto MinimumFeatureLevel = EngineCI.MinimumFeatureLevel >= DIRECT3D_FEATURE_LEVEL_11_0 ? EngineCI.MinimumFeatureLevel : DIRECT3D_FEATURE_LEVEL_11_0;
+
 	    CComPtr<IDXGIAdapter1> hardwareAdapter;
         if(EngineCI.AdapterId == EngineD3D12CreateInfo::DefaultAdapterId)
         {
-	        GetHardwareAdapter(factory, &hardwareAdapter, GetD3DFeatureLevel(EngineCI.MinimumFeatureLevel));
+	        GetHardwareAdapter(factory, &hardwareAdapter, GetD3DFeatureLevel(MinimumFeatureLevel));
             if(hardwareAdapter == nullptr)
                 LOG_ERROR_AND_THROW("No suitable hardware adapter found");
         }
         else
         {
-            auto Adapters = FindCompatibleAdapters(EngineCI.MinimumFeatureLevel);
+            auto Adapters = FindCompatibleAdapters(MinimumFeatureLevel);
             if(EngineCI.AdapterId < Adapters.size())
                 hardwareAdapter = Adapters[EngineCI.AdapterId];
             else
@@ -178,7 +181,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         }
 
         constexpr auto MaxFeatureLevel = DIRECT3D_FEATURE_LEVEL_12_1;
-        for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= EngineCI.MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel}-1))
+        for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel}-1))
         {
             auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
             hr = D3D12CreateDevice(hardwareAdapter, d3dFeatureLevel, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
@@ -196,7 +199,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 		    hr = factory->EnumWarpAdapter( __uuidof(warpAdapter),  reinterpret_cast<void**>(static_cast<IDXGIAdapter**>(&warpAdapter)) );
             CHECK_D3D_RESULT_THROW(hr, "Failed to enum warp adapter");
 
-            for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= EngineCI.MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel}-1))
+            for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel}-1))
             {
                 auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
 		        hr = D3D12CreateDevice( warpAdapter, d3dFeatureLevel, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
