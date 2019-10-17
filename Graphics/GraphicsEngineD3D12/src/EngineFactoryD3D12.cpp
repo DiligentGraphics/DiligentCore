@@ -153,7 +153,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&factory)) );
         CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
-        // Direct3D12 does not support feature levels below 11.0
+        // Direct3D12 does not allow feature levels below 11.0 (D3D12CreateDevice fails to create a device).
         const auto MinimumFeatureLevel = EngineCI.MinimumFeatureLevel >= DIRECT3D_FEATURE_LEVEL_11_0 ? EngineCI.MinimumFeatureLevel : DIRECT3D_FEATURE_LEVEL_11_0;
 
 	    CComPtr<IDXGIAdapter1> hardwareAdapter;
