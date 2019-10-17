@@ -50,15 +50,6 @@ enum SHADER_TYPE : Uint32
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
 
-enum SHADER_PROFILE : Uint8
-{
-    SHADER_PROFILE_DEFAULT = 0,
-    SHADER_PROFILE_DX_4_0,
-    SHADER_PROFILE_DX_5_0,
-    SHADER_PROFILE_DX_5_1,
-    SHADER_PROFILE_GL_4_2
-};
-
 /// Describes shader source code language
 enum SHADER_SOURCE_LANGUAGE : Uint32
 {
@@ -77,8 +68,6 @@ struct ShaderDesc : DeviceObjectAttribs
 {
 	/// Shader type. See Diligent::SHADER_TYPE.
     SHADER_TYPE    ShaderType    = SHADER_TYPE_VERTEX;
-
-    SHADER_PROFILE TargetProfile = SHADER_PROFILE_DEFAULT;
 };
 
 

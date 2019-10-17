@@ -32,6 +32,31 @@
 namespace Diligent
 {
 
+static const char* GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice)
+{
+    auto d3dDeviceFeatureLevel = pDevice->GetD3DFeatureLevel();
+    switch(d3dDeviceFeatureLevel)
+    {
+        case D3D_FEATURE_LEVEL_12_1:
+        case D3D_FEATURE_LEVEL_12_0:
+        case D3D_FEATURE_LEVEL_11_1:
+            return "5_1";
+
+        case D3D_FEATURE_LEVEL_11_0:
+            return "5_0";
+
+        case D3D_FEATURE_LEVEL_10_1:
+            return "4_1";
+
+        case D3D_FEATURE_LEVEL_10_0:
+            return "4_0";
+
+        default:
+            UNEXPECTED("Unexpected D3D feature level ", static_cast<Uint32>(d3dDeviceFeatureLevel));
+            return "4_0";
+    }
+}
+
 ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*       pRefCounters,
                                  RenderDeviceD3D12Impl*    pRenderDeviceD3D12,
                                  const ShaderCreateInfo&   ShaderCI) : 
@@ -41,7 +66,7 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*       pRefCounters,
         pRenderDeviceD3D12,
         ShaderCI.Desc
     },
-    ShaderD3DBase{ShaderCI}
+    ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12)}
 {
     // Load shader resources
     auto& Allocator = GetRawAllocator();

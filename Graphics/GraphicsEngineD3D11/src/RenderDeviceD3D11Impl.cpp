@@ -69,8 +69,24 @@ RenderDeviceD3D11Impl :: RenderDeviceD3D11Impl(IReferenceCounters*          pRef
     m_pd3d11Device {pd3d11Device }
 {
     m_DeviceCaps.DevType = DeviceType::D3D11;
-    m_DeviceCaps.MajorVersion = 11;
-    m_DeviceCaps.MinorVersion = 0;
+    auto FeatureLevel = m_pd3d11Device->GetFeatureLevel();
+    switch (FeatureLevel)
+    {
+        case D3D_FEATURE_LEVEL_11_0:
+        case D3D_FEATURE_LEVEL_11_1:
+            m_DeviceCaps.MajorVersion = 11;
+            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_11_1 ? 1 : 0;
+        break;
+        
+        case D3D_FEATURE_LEVEL_10_0:
+        case D3D_FEATURE_LEVEL_10_1:
+            m_DeviceCaps.MajorVersion = 10;
+            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_10_1 ? 1 : 0;
+        break;
+
+        default:
+            UNEXPECTED("Unexpected D3D feature level");
+    }
     m_DeviceCaps.bSeparableProgramSupported = True;
     m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
 }

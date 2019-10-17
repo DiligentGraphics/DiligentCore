@@ -57,9 +57,9 @@ public:
         TBase{IID_EngineFactoryD3D12}
     {}
 
-    void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 
-                                      IRenderDevice**              ppDevice, 
-                                      IDeviceContext**             ppContexts)override final;
+    void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo&  EngineCI, 
+                                      IRenderDevice**               ppDevice, 
+                                      IDeviceContext**              ppContexts)override final;
 
     void AttachToD3D12Device(void*                        pd3d12NativeDevice, 
                              size_t                       CommandQueueCount,
@@ -76,7 +76,7 @@ public:
                                ISwapChain**              ppSwapChain )override final;
 };
 
-static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter)
+static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter, D3D_FEATURE_LEVEL FeatureLevel)
 {
 	CComPtr<IDXGIAdapter1> adapter;
 	*ppAdapter = nullptr;
@@ -94,7 +94,7 @@ static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapte
 
 		// Check to see if the adapter supports Direct3D 12, but don't create the
 		// actual device yet.
-		if (SUCCEEDED(D3D12CreateDevice(adapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr)))
+		if (SUCCEEDED(D3D12CreateDevice(adapter, FeatureLevel, _uuidof(ID3D12Device), nullptr)))
 		{
 			break;
 		}
@@ -103,17 +103,8 @@ static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapte
 	*ppAdapter = adapter.Detach();
 }
 
-/// Creates render device and device contexts for Direct3D12-based engine implementation
-
-/// \param [in] EngineCI - Engine creation attributes.
-/// \param [out] ppDevice - Address of the memory location where pointer to 
-///                         the created device will be written
-/// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Immediate context goes at
-///                           position 0. If EngineCI.NumDeferredContexts > 0,
-///                           pointers to the deferred contexts are written afterwards.
-void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI, 
-                                                          IRenderDevice**              ppDevice, 
+void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI,
+                                                          IRenderDevice**              ppDevice,
                                                           IDeviceContext**             ppContexts)
 {
     if (EngineCI.DebugMessageCallback != nullptr)
@@ -123,7 +114,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
     if( !ppDevice || !ppContexts )
         return;
 
-    for(Uint32 Type=D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
+    for (Uint32 Type=D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV; Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES; ++Type)
     {
         auto CPUHeapAllocSize = EngineCI.CPUDescriptorHeapAllocationSize[Type];
         Uint32 MaxSize = 1 << 20;
@@ -165,13 +156,13 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 	    CComPtr<IDXGIAdapter1> hardwareAdapter;
         if(EngineCI.AdapterId == EngineD3D12CreateInfo::DefaultAdapterId)
         {
-	        GetHardwareAdapter(factory, &hardwareAdapter);
+	        GetHardwareAdapter(factory, &hardwareAdapter, GetD3DFeatureLevel(EngineCI.MinimumFeatureLevel));
             if(hardwareAdapter == nullptr)
                 LOG_ERROR_AND_THROW("No suitable hardware adapter found");
         }
         else
         {
-            auto Adapters = FindCompatibleAdapters();
+            auto Adapters = FindCompatibleAdapters(EngineCI.MinimumFeatureLevel);
             if(EngineCI.AdapterId < Adapters.size())
                 hardwareAdapter = Adapters[EngineCI.AdapterId];
             else
@@ -186,7 +177,17 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
             LOG_INFO_MESSAGE("D3D12-capabale hardware found: ", NarrowString(desc.Description), " (", desc.DedicatedVideoMemory >> 20, " MB)");
         }
 
-        hr = D3D12CreateDevice(hardwareAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
+        constexpr auto MaxFeatureLevel = DIRECT3D_FEATURE_LEVEL_12_1;
+        for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= EngineCI.MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel}-1))
+        {
+            auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+            hr = D3D12CreateDevice(hardwareAdapter, d3dFeatureLevel, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
+            if (SUCCEEDED(hr))
+            {
+                VERIFY_EXPR(d3d12Device);
+                break;
+            }
+        }
         if( FAILED(hr))
         {
             LOG_WARNING_MESSAGE("Failed to create hardware device. Attempting to create WARP device");
@@ -195,7 +196,16 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 		    hr = factory->EnumWarpAdapter( __uuidof(warpAdapter),  reinterpret_cast<void**>(static_cast<IDXGIAdapter**>(&warpAdapter)) );
             CHECK_D3D_RESULT_THROW(hr, "Failed to enum warp adapter");
 
-		    hr = D3D12CreateDevice( warpAdapter, D3D_FEATURE_LEVEL_11_0, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
+            for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= EngineCI.MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel}-1))
+            {
+                auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+		        hr = D3D12CreateDevice( warpAdapter, d3dFeatureLevel, __uuidof(d3d12Device), reinterpret_cast<void**>(static_cast<ID3D12Device**>(&d3d12Device)) );
+                if (SUCCEEDED(hr))
+                {
+                    VERIFY_EXPR(d3d12Device);
+                    break;
+                }
+            }
             CHECK_D3D_RESULT_THROW(hr, "Failed to crate warp device");
         }
 
@@ -277,18 +287,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 }
 
 
-/// Attaches to existing D3D12 device
 
-/// \param [in] pd3d12NativeDevice - pointer to native D3D12 device
-/// \param [in] CommandQueueCount - Number of command queues
-/// \param [in] ppCommandQueues - pointer to the array of command queues
-/// \param [in] EngineCI - Engine creation attributes.
-/// \param [out] ppDevice - Address of the memory location where pointer to 
-///                         the created device will be written
-/// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Immediate context goes at
-///                           position 0. If EngineCI.NumDeferredContexts > 0,
-///                           pointers to the deferred contexts are written afterwards.
 void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd3d12NativeDevice, 
                                                  size_t                       CommandQueueCount,
                                                  ICommandQueueD3D12**         ppCommandQueues,
@@ -349,20 +348,7 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
     }
 }
 
-/// Creates a swap chain for Direct3D12-based engine implementation
 
-/// \param [in] pDevice - Pointer to the render device
-/// \param [in] pImmediateContext - Pointer to the immediate device context
-/// \param [in] SCDesc - Swap chain description
-/// \param [in] FSDesc - Fullscreen mode description
-/// \param [in] pNativeWndHandle - Platform-specific native handle of the window 
-///                                the swap chain will be associated with:
-///                                * On Win32 platform, this should be window handle (HWND)
-///                                * On Universal Windows Platform, this should be reference to the 
-///                                  core window (Windows::UI::Core::CoreWindow)
-///                                
-/// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
-///                               swap chain will be written
 void EngineFactoryD3D12Impl::CreateSwapChainD3D12(IRenderDevice*            pDevice, 
                                                   IDeviceContext*           pImmediateContext, 
                                                   const SwapChainDesc&      SCDesc, 

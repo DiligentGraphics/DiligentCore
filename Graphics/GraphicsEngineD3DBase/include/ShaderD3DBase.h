@@ -36,7 +36,7 @@ namespace Diligent
     class ShaderD3DBase
     {
     public:
-        ShaderD3DBase(const ShaderCreateInfo& ShaderCI);
+        ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* ShaderModel);
 
     protected:
         CComPtr<ID3DBlob> m_pShaderByteCode;

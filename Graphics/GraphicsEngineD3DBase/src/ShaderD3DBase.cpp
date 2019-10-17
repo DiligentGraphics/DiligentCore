@@ -121,19 +121,7 @@ static HRESULT CompileShader(const char*                        Source,
 	return hr;
 }
 
-const char* DXShaderProfileToString(SHADER_PROFILE DXProfile)
-{
-    switch(DXProfile)
-    {
-        case SHADER_PROFILE_DX_4_0: return "4_0";
-        case SHADER_PROFILE_DX_5_0: return "5_0";
-        case SHADER_PROFILE_DX_5_1: return "5_1";
-        //default: UNEXPECTED("Unknown DirectX shader profile" ); return "";
-        default: return "5_0";
-    }
-}
-
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI)
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* ShaderModel)
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
     {
@@ -153,8 +141,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI)
             default: UNEXPECTED( "Unknown shader type" );
         }
         strShaderProfile += "_";
-        auto *pProfileSuffix = DXShaderProfileToString(ShaderCI.Desc.TargetProfile);
-        strShaderProfile += pProfileSuffix;
+        strShaderProfile += ShaderModel;
 
         String ShaderSource(g_HLSLDefinitions);
         if (ShaderCI.Source)

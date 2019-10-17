@@ -1321,13 +1321,39 @@ namespace Diligent
         VerifyCommittedResourceRelevance = 0x02
     };
 
+
+    /// Direct3D11/12 feature level
+    enum DIRECT3D_FEATURE_LEVEL : Uint8
+    {
+        /// Feature level 10.0
+        DIRECT3D_FEATURE_LEVEL_10_0,
+
+        /// Feature level 10.1
+        DIRECT3D_FEATURE_LEVEL_10_1,
+
+        /// Feature level 11.0
+        DIRECT3D_FEATURE_LEVEL_11_0,
+
+        /// Feature level 11.1
+        DIRECT3D_FEATURE_LEVEL_11_1,
+
+        /// Feature level 12.0
+        DIRECT3D_FEATURE_LEVEL_12_0,
+
+        /// Feature level 12.1
+        DIRECT3D_FEATURE_LEVEL_12_1
+    };
+
     /// Attributes specific to D3D11 engine
     struct EngineD3D11CreateInfo : public EngineCreateInfo
     {
         static constexpr Uint32 DefaultAdapterId = 0xFFFFFFFF;
         
-        /// Id of the hardware adapter the engine should be initialized on
+        /// Id of the hardware adapter the engine should be initialized on.
         Uint32 AdapterId = DefaultAdapterId;
+
+        /// Minimum required Direct3D feature level.
+        DIRECT3D_FEATURE_LEVEL MinimumFeatureLevel = DIRECT3D_FEATURE_LEVEL_11_0;
 
         /// Debug flags. See Diligent::EngineD3D11DebugFlags for a list of allowed values.
         ///
@@ -1348,8 +1374,11 @@ namespace Diligent
     {
         static constexpr Uint32 DefaultAdapterId = 0xFFFFFFFF;
 
-        /// Id of the hardware adapter the engine should be initialized on
+        /// Id of the hardware adapter the engine should be initialized on.
         Uint32 AdapterId = DefaultAdapterId;
+
+        /// Minimum required Direct3D feature level.
+        DIRECT3D_FEATURE_LEVEL MinimumFeatureLevel = DIRECT3D_FEATURE_LEVEL_11_0;
 
         /// Enable Direct3D12 debug layer.
         bool EnableDebugLayer  = false;

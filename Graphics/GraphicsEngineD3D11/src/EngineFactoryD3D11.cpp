@@ -54,9 +54,9 @@ public:
         TBase(IID_EngineFactoryD3D11)
     {}
 
-    void CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI, 
-                                      IRenderDevice**              ppDevice, 
-                                      IDeviceContext**             ppContexts)override final;
+    void CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo&  EngineCI, 
+                                      IRenderDevice**               ppDevice, 
+                                      IDeviceContext**              ppContexts)override final;
 
    void CreateSwapChainD3D11(IRenderDevice*            pDevice, 
                              IDeviceContext*           pImmediateContext, 
@@ -94,18 +94,10 @@ inline bool SdkLayersAvailable()
 }
 #endif
 
-/// Creates render device and device contexts for Direct3D11-based engine implementation
 
-/// \param [in] EngineCI - Engine creation attributes.
-/// \param [out] ppDevice - Address of the memory location where pointer to 
-///                         the created device will be written
-/// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Immediate context goes at
-///                           position 0. If EngineCI.NumDeferredContexts > 0,
-///                           pointers to the deferred contexts are written afterwards.
-void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI, 
-                                                          IRenderDevice**              ppDevice, 
-                                                          IDeviceContext**             ppContexts)
+void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo&  EngineCI,
+                                                          IRenderDevice**               ppDevice,
+                                                          IDeviceContext**              ppContexts)
 {
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
@@ -113,6 +105,9 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;
+
+    if (EngineCI.MinimumFeatureLevel >= DIRECT3D_FEATURE_LEVEL_12_0)
+        LOG_ERROR_AND_THROW("DIRECT3D_FEATURE_LEVEL_12_0 and above is not supported by Direct3D11 backend");
 
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
@@ -130,89 +125,77 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
 	}
 #endif
 
-	// This array defines the set of DirectX hardware feature levels this app will support.
-	// Note the ordering should be preserved.
-	// Don't forget to declare your application's minimum required feature level in its
-	// description.  All applications are assumed to support 9.1 unless otherwise stated.
-	D3D_FEATURE_LEVEL featureLevels[] = 
-	{
-#if PLATFORM_UNIVERSAL_WINDOWS
-		D3D_FEATURE_LEVEL_11_1,
-#endif
-		D3D_FEATURE_LEVEL_11_0,
-		D3D_FEATURE_LEVEL_10_1,
-		D3D_FEATURE_LEVEL_10_0,
-		D3D_FEATURE_LEVEL_9_3,
-		D3D_FEATURE_LEVEL_9_2,
-		D3D_FEATURE_LEVEL_9_1
-	};
-
-	// Create the Direct3D 11 API device object and a corresponding context.
-	CComPtr<ID3D11Device> pd3d11Device;
-	CComPtr<ID3D11DeviceContext> pd3d11Context;
-
-    CComPtr<IDXGIAdapter1> hardwareAdapter;
+    CComPtr<IDXGIAdapter1> SpecificAdapter;
     if (EngineCI.AdapterId != EngineD3D11CreateInfo::DefaultAdapterId)
     {
-        auto Adapters = FindCompatibleAdapters();
+        auto Adapters = FindCompatibleAdapters(EngineCI.MinimumFeatureLevel);
         if (EngineCI.AdapterId < Adapters.size())
-            hardwareAdapter = Adapters[EngineCI.AdapterId];
+            SpecificAdapter = Adapters[EngineCI.AdapterId];
         else
         {
             LOG_ERROR_AND_THROW(EngineCI.AdapterId, " is not a valid hardware adapter id. Total number of compatible adapters available on this system: ", Adapters.size());
         }
     }
 
-    D3D_FEATURE_LEVEL d3dFeatureLevel = D3D_FEATURE_LEVEL_11_0;
-	HRESULT hr = D3D11CreateDevice(
-        hardwareAdapter,			// Specify nullptr to use the default adapter.
-        hardwareAdapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE,	// If no adapter specified, request hardware graphics driver.
-		0,							// Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
-		creationFlags,				// Set debug and Direct2D compatibility flags.
-		featureLevels,				// List of feature levels this app can support.
-		ARRAYSIZE(featureLevels),	// Size of the list above.
-		D3D11_SDK_VERSION,			// Always set this to D3D11_SDK_VERSION for Windows Store apps.
-		&pd3d11Device,				// Returns the Direct3D device created.
-		&d3dFeatureLevel,			// Returns feature level of device created.
-		&pd3d11Context				// Returns the device immediate context.
-		);
+	// Create the Direct3D 11 API device object and a corresponding context.
+	CComPtr<ID3D11Device>        pd3d11Device;
+	CComPtr<ID3D11DeviceContext> pd3d11Context;
 
-	if (FAILED(hr))
-	{
-		// If the initialization fails, fall back to the WARP device.
-		// For more information on WARP, see: 
-		// http://go.microsoft.com/fwlink/?LinkId=286690
-		hr = D3D11CreateDevice(
-                nullptr,
-				D3D_DRIVER_TYPE_WARP, // Create a WARP device instead of a hardware device.
-				0,
-				creationFlags,
-				featureLevels,
-				ARRAYSIZE(featureLevels),
-				D3D11_SDK_VERSION,
-				&pd3d11Device,
-				&d3dFeatureLevel,
-				&pd3d11Context
-				);
-        LOG_ERROR("Failed to create D3D11 native device and immediate context");
-        return;
-	}
+    for (int adapterType = 0; adapterType < 2 && !pd3d11Device; ++adapterType)
+    {
+        IDXGIAdapter*   adapter    = nullptr;
+        D3D_DRIVER_TYPE driverType = D3D_DRIVER_TYPE_UNKNOWN;
+        switch(adapterType)
+        {
+            case 0:
+                adapter    = SpecificAdapter;
+                driverType = SpecificAdapter ? D3D_DRIVER_TYPE_UNKNOWN : D3D_DRIVER_TYPE_HARDWARE;
+            break;
+
+            case 1:
+                driverType = D3D_DRIVER_TYPE_WARP;
+            break;
+
+            default:
+                UNEXPECTED("Unexpected adapter type");
+        }
+
+        // This page https://docs.microsoft.com/en-us/windows/win32/api/d3d11/nf-d3d11-d3d11createdevice says the following:
+        //     If you provide a D3D_FEATURE_LEVEL array that contains D3D_FEATURE_LEVEL_11_1 on a computer that doesn't have the Direct3D 11.1
+        //     runtime installed, this function immediately fails with E_INVALIDARG.
+        // To avoid failure in this case we will try one feature level at a time
+        constexpr auto MaxFeatureLevel = DIRECT3D_FEATURE_LEVEL_11_1;
+        for (auto FeatureLevel = MaxFeatureLevel; FeatureLevel >= EngineCI.MinimumFeatureLevel; FeatureLevel = static_cast<DIRECT3D_FEATURE_LEVEL>(Uint8{FeatureLevel}-1))
+        {
+            auto d3dFeatureLevel = GetD3DFeatureLevel(FeatureLevel);
+	        auto hr = D3D11CreateDevice(
+                adapter,			        // Specify nullptr to use the default adapter.
+                driverType,	                // If no adapter specified, request hardware graphics driver.
+		        0,							// Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
+		        creationFlags,				// Set debug and Direct2D compatibility flags.
+		        &d3dFeatureLevel,		    // List of feature levels this app can support.
+		        1,                          // Size of the list above.
+		        D3D11_SDK_VERSION,			// Always set this to D3D11_SDK_VERSION for Windows Store apps.
+		        &pd3d11Device,				// Returns the Direct3D device created.
+		        nullptr,			        // Returns feature level of device created.
+		        &pd3d11Context				// Returns the device immediate context.
+		        );
+
+            if (SUCCEEDED(hr))
+            {
+                VERIFY_EXPR(pd3d11Device && pd3d11Context);
+                break;
+            }
+        }
+    }
+
+    if (!pd3d11Device)
+        LOG_ERROR_AND_THROW("Failed to create d3d11 device and immediate context");
 
     AttachToD3D11Device(pd3d11Device, pd3d11Context, EngineCI, ppDevice, ppContexts);
 }
 
 
-/// Attaches to existing D3D11 render device and immediate context
-
-/// \param [in] pd3d11NativeDevice - pointer to native D3D11 device
-/// \param [in] pd3d11ImmediateContext - pointer to native D3D11 immediate context
-/// \param [in] EngineCI - Engine creation attributes.
-/// \param [out] ppDevice - Address of the memory location where pointer to 
-///                         the created device will be written
-/// \param [out] ppContexts - Address of the memory location where pointers to 
-///                           the contexts will be written. Immediate context goes at
-///                           position 0. If EngineCI.NumDeferredContexts > 0,
-///                           pointers to the deferred contexts are written afterwards.
 void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd3d11NativeDevice, 
                                                  void*                        pd3d11ImmediateContext,
                                                  const EngineD3D11CreateInfo& EngineCI, 
@@ -279,20 +262,6 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
 }
 
 
-/// Creates a swap chain for Direct3D11-based engine implementation
-
-/// \param [in] pDevice - Pointer to the render device
-/// \param [in] pImmediateContext - Pointer to the immediate device context
-/// \param [in] SCDesc - Swap chain description
-/// \param [in] FSDesc - Fullscreen mode description
-/// \param [in] pNativeWndHandle - Platform-specific native handle of the window 
-///                                the swap chain will be associated with:
-///                                * On Win32 platform, this should be window handle (HWND)
-///                                * On Universal Windows Platform, this should be reference to the 
-///                                  core window (Windows::UI::Core::CoreWindow)
-///                                
-/// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
-///                               swap chain will be written
 void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDevice, 
                                                   IDeviceContext*           pImmediateContext, 
                                                   const SwapChainDesc&      SCDesc, 

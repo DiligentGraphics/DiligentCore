@@ -1,3 +1,16 @@
+## Current Progress
+
+### API Changes
+
+* Enabled bindless shader
+* Removed `SHADER_PROFILE` enum (API Version 240032)
+* Added `DIRECT3D_FEATURE_LEVEL` and `DIRECT3D_FEATURE_LEVEL MinimumFeatureLevel` member to 
+  `EngineD3D11CreateInfo` and `EngineD3D12CreateInfo` structs (API Version 240032)
+* Updated `IEngineFactoryD3D11::EnumerateHardwareAdapters`, `IEngineFactoryD3D11::EnumerateDisplayModes`,
+  `IEngineFactoryD3D12::EnumerateHardwareAdapters`, `IEngineFactoryD3D12::EnumerateDisplayModes` 
+  to take minimum feature level. (API Version 240032)
+* Added `bBindlessSupported` member to `DeviceCaps` struct. (API Version 240032)
+
 ## v2.4.c
 
 * Enabled Vulkan on iOS

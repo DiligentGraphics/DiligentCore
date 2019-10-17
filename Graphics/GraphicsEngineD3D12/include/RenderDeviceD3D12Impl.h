@@ -104,6 +104,8 @@ public:
 
     const GenerateMipsHelper& GetMipsGenerator()const {return m_MipsGenerator;}
 
+    D3D_FEATURE_LEVEL GetD3DFeatureLevel()const;
+
 private:
     virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
     void FreeCommandContext(PooledCommandContext&& Ctx);

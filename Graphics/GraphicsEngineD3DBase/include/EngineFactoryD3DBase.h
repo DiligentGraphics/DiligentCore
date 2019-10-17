@@ -42,22 +42,12 @@ public:
         TEngineFactoryBase(FactoryIID)
     {}
 
-    /// Enumerates hardware adapters available on this machine
 
-    /// \param [in,out] NumAdapters - Number of adapters. If Adapters is null, this value
-    ///                               will be overwritten with the number of adapters available
-    ///                               on this system. If Adapters is not null, this value should
-    ///                               contain maximum number of elements reserved in the array 
-    ///                               pointed to by Adapters. In the latter case, this value
-    ///                               is overwritten with the actual number of elements written to
-    ///                               Adapters.
-    /// \param [out]    Adapters - Pointer to the array conataining adapter information. If
-    ///                 null is provided, the number of available adapters is written to 
-    ///                 NumAdapters
-    virtual void EnumerateHardwareAdapters(Uint32 &NumAdapters, 
-                                           HardwareAdapterAttribs *Adapters)override final
+    virtual void EnumerateHardwareAdapters(DIRECT3D_FEATURE_LEVEL   MinFeatureLevel,
+                                           Uint32&                  NumAdapters, 
+                                           HardwareAdapterAttribs*  Adapters)override final
     {
-        auto DXGIAdapters = FindCompatibleAdapters();
+        auto DXGIAdapters = FindCompatibleAdapters(MinFeatureLevel);
 
         if (Adapters == nullptr)
             NumAdapters = static_cast<Uint32>(DXGIAdapters.size());
@@ -89,24 +79,15 @@ public:
         }
     }
 
-    /// Enumerates available display modes for the specified output of the specified adapter
 
-    /// \param [in] AdapterId - Id of the adapter enumerated by EnumerateHardwareAdapters().
-    /// \param [in] OutputId  - Adapter output id
-    /// \param [in] Format    - Display mode format
-    /// \param [in, out] NumDisplayModes - Number of display modes. If DisplayModes is null, this
-    ///                                    value is overwritten with the number of display modes 
-    ///                                    available for this output. If DisplayModes is not null,
-    ///                                    this value should contain the maximum number of elements
-    ///                                    to be written to DisplayModes array. It is overwritten with
-    ///                                    the actual number of display modes written.
-    virtual void EnumerateDisplayModes(Uint32 AdapterId, 
-                                       Uint32 OutputId, 
-                                       TEXTURE_FORMAT Format, 
-                                       Uint32 &NumDisplayModes, 
-                                       DisplayModeAttribs *DisplayModes)override final
+    virtual void EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                       Uint32                 AdapterId, 
+                                       Uint32                 OutputId,
+                                       TEXTURE_FORMAT         Format, 
+                                       Uint32&                NumDisplayModes, 
+                                       DisplayModeAttribs*    DisplayModes)override final
     {
-        auto DXGIAdapters = FindCompatibleAdapters();
+        auto DXGIAdapters = FindCompatibleAdapters(MinFeatureLevel);
         if(AdapterId >= DXGIAdapters.size())
         {
             LOG_ERROR("Incorrect adapter id ", AdapterId);
@@ -156,7 +137,7 @@ public:
     }
 
 
-    std::vector<CComPtr<IDXGIAdapter1>> FindCompatibleAdapters()
+    std::vector<CComPtr<IDXGIAdapter1>> FindCompatibleAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel)
     {
         std::vector<CComPtr<IDXGIAdapter1>> DXGIAdapters;
 
@@ -167,6 +148,7 @@ public:
             return std::move(DXGIAdapters);
         }
 
+        auto d3dFeatureLevel = GetD3DFeatureLevel(MinFeatureLevel);
         CComPtr<IDXGIAdapter1> pDXIAdapter;
         UINT adapter = 0;
         for (; pFactory->EnumAdapters1(adapter, &pDXIAdapter) != DXGI_ERROR_NOT_FOUND; ++adapter, pDXIAdapter.Release())
@@ -179,8 +161,7 @@ public:
                 continue;
             }
 
-            bool IsCompatibleAdapter = CheckAdapterCompatibility<DevType>(pDXIAdapter);
-
+            bool IsCompatibleAdapter = CheckAdapterCompatibility<DevType>(pDXIAdapter, d3dFeatureLevel);
             if (IsCompatibleAdapter)
             {
                 DXGIAdapters.emplace_back(std::move(pDXIAdapter));
@@ -190,21 +171,58 @@ public:
         return std::move(DXGIAdapters);
     }
 
+
+protected:
+
+    static D3D_FEATURE_LEVEL GetD3DFeatureLevel(DIRECT3D_FEATURE_LEVEL FeatureLevel)
+    {
+        switch(FeatureLevel)
+        {
+            case DIRECT3D_FEATURE_LEVEL_10_0: return D3D_FEATURE_LEVEL_10_0;
+            case DIRECT3D_FEATURE_LEVEL_10_1: return D3D_FEATURE_LEVEL_10_1;
+            case DIRECT3D_FEATURE_LEVEL_11_0: return D3D_FEATURE_LEVEL_11_0;
+            case DIRECT3D_FEATURE_LEVEL_11_1: return D3D_FEATURE_LEVEL_11_1;
+#if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >=_WIN32_WINNT_WIN10)
+            case DIRECT3D_FEATURE_LEVEL_12_0: return D3D_FEATURE_LEVEL_12_0;
+            case DIRECT3D_FEATURE_LEVEL_12_1: return D3D_FEATURE_LEVEL_12_1;
+#endif
+
+            default:
+                UNEXPECTED("Unknown DIRECT3D_FEATURE_LEVEL ", static_cast<Uint32>(FeatureLevel));
+                return D3D_FEATURE_LEVEL_11_0;
+        }
+    }
+
 private:
 
     template<DeviceType DevType>
-    bool CheckAdapterCompatibility(IDXGIAdapter1 *pDXGIAdapter);
+    bool CheckAdapterCompatibility(IDXGIAdapter1*    pDXGIAdapter,
+                                   D3D_FEATURE_LEVEL FeatureLevels);
 
     template<>
-    bool CheckAdapterCompatibility<DeviceType::D3D11>(IDXGIAdapter1 *pDXGIAdapter)
+    bool CheckAdapterCompatibility<DeviceType::D3D11>(IDXGIAdapter1*    pDXGIAdapter,
+                                                      D3D_FEATURE_LEVEL FeatureLevel)
     {
-        return true;
+	    auto hr = D3D11CreateDevice(
+		    nullptr,
+		    D3D_DRIVER_TYPE_NULL,       // There is no need to create a real hardware device.
+		    0,
+		    0,                          // Flags.
+		    &FeatureLevel,              // Feature levels.
+		    1,                          // Number of feature levels
+		    D3D11_SDK_VERSION,          // Always set this to D3D11_SDK_VERSION for Windows Store apps.
+		    nullptr,                    // No need to keep the D3D device reference.
+		    nullptr,                    // Feature level of the created adapter.
+		    nullptr                     // No need to keep the D3D device context reference.
+		    );
+	    return SUCCEEDED(hr);
     }
 
     template<>
-    bool CheckAdapterCompatibility<DeviceType::D3D12>(IDXGIAdapter1 *pDXGIAdapter)
+    bool CheckAdapterCompatibility<DeviceType::D3D12>(IDXGIAdapter1*    pDXGIAdapter,
+                                                      D3D_FEATURE_LEVEL FeatureLevel)
     {
-        auto hr = D3D12CreateDevice(pDXGIAdapter, D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr);
+        auto hr = D3D12CreateDevice(pDXGIAdapter, FeatureLevel, _uuidof(ID3D12Device), nullptr);
         return SUCCEEDED(hr);
     }
 };

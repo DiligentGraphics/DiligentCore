@@ -149,6 +149,7 @@ RenderDeviceVkImpl :: RenderDeviceVkImpl(IReferenceCounters*                    
 
     m_DeviceCaps.bGeometryShadersSupported = EngineCI.EnabledFeatures.geometryShader;
     m_DeviceCaps.bTessellationSupported    = EngineCI.EnabledFeatures.tessellationShader;
+    m_DeviceCaps.bBindlessSupported        = True;
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()

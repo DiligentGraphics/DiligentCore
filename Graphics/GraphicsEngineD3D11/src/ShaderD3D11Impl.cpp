@@ -30,6 +30,32 @@
 namespace Diligent
 {
 
+static const char* GetD3D11ShaderModel(ID3D11Device* pd3d11Device)
+{
+    auto d3dDeviceFeatureLevel = pd3d11Device->GetFeatureLevel();
+    switch(d3dDeviceFeatureLevel)
+    {
+         // ID3D11Device::Create*Shader methods support DXBC only up to 5.0 version
+#if defined(_WIN32_WINNT_WIN10) && (_WIN32_WINNT >=_WIN32_WINNT_WIN10)
+        case D3D_FEATURE_LEVEL_12_1:
+        case D3D_FEATURE_LEVEL_12_0:
+#endif
+        case D3D_FEATURE_LEVEL_11_1:
+        case D3D_FEATURE_LEVEL_11_0:
+            return "5_0";
+
+        case D3D_FEATURE_LEVEL_10_1:
+            return "4_1";
+
+        case D3D_FEATURE_LEVEL_10_0:
+            return "4_0";
+
+        default:
+            UNEXPECTED("Unexpected D3D feature level ", static_cast<Uint32>(d3dDeviceFeatureLevel));
+            return "4_0";
+    }
+}
+
 ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
                                  RenderDeviceD3D11Impl*       pRenderDeviceD3D11,
                                  const ShaderCreateInfo&      ShaderCI) : 
@@ -39,7 +65,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*          pRefCounters,
         pRenderDeviceD3D11,
         ShaderCI.Desc
     },
-    ShaderD3DBase{ShaderCI}
+    ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device())}
 {
     auto *pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();
     switch (ShaderCI.Desc.ShaderType)

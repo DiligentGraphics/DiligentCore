@@ -37,6 +37,24 @@
 namespace Diligent
 {
 
+D3D_FEATURE_LEVEL RenderDeviceD3D12Impl :: GetD3DFeatureLevel() const
+{
+    D3D_FEATURE_LEVEL FeatureLevels[] = 
+    {
+        D3D_FEATURE_LEVEL_12_1,
+        D3D_FEATURE_LEVEL_12_0,
+        D3D_FEATURE_LEVEL_11_1,
+        D3D_FEATURE_LEVEL_11_0,
+        D3D_FEATURE_LEVEL_10_1,
+        D3D_FEATURE_LEVEL_10_0
+    };
+    D3D12_FEATURE_DATA_FEATURE_LEVELS FeatureLevelsData = {};
+    FeatureLevelsData.pFeatureLevelsRequested = FeatureLevels;
+    FeatureLevelsData.NumFeatureLevels        = _countof(FeatureLevels);
+    m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &FeatureLevelsData, sizeof(FeatureLevelsData));
+    return FeatureLevelsData.MaxSupportedFeatureLevel;
+}
+
 RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*           pRefCounters,
                                                IMemoryAllocator&             RawMemAllocator,
                                                IEngineFactory*               pEngineFactory,
@@ -85,8 +103,32 @@ RenderDeviceD3D12Impl :: RenderDeviceD3D12Impl(IReferenceCounters*           pRe
     m_MipsGenerator       {pd3d12Device}
 {
     m_DeviceCaps.DevType = DeviceType::D3D12;
-    m_DeviceCaps.MajorVersion = 12;
-    m_DeviceCaps.MinorVersion = 0;
+    auto FeatureLevel = GetD3DFeatureLevel();
+    switch (FeatureLevel)
+    {
+        case D3D_FEATURE_LEVEL_12_0:
+        case D3D_FEATURE_LEVEL_12_1:
+            m_DeviceCaps.MajorVersion = 12;
+            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_12_1 ? 1 : 0;
+            m_DeviceCaps.bBindlessSupported = true;
+        break;
+
+        case D3D_FEATURE_LEVEL_11_0:
+        case D3D_FEATURE_LEVEL_11_1:
+            m_DeviceCaps.MajorVersion = 11;
+            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_11_1 ? 1 : 0;
+            m_DeviceCaps.bBindlessSupported = FeatureLevel == D3D_FEATURE_LEVEL_11_1;
+        break;
+        
+        case D3D_FEATURE_LEVEL_10_0:
+        case D3D_FEATURE_LEVEL_10_1:
+            m_DeviceCaps.MajorVersion = 10;
+            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_10_1 ? 1 : 0;
+        break;
+
+        default:
+            UNEXPECTED("Unexpected D3D feature level");
+    }
     m_DeviceCaps.bSeparableProgramSupported = True;
     m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
 }

@@ -83,12 +83,14 @@ namespace Diligent
         /// Device type. See Diligent::DeviceType.
         DeviceType DevType = DeviceType::Undefined;
 
-        /// Major API revision. For instance, for D3D11.2 this value would be 11,
-        /// and for OpenGL4.3 this value would be 4.
+        /// Major revision of the graphics API supported by the graphics adapter.
+        /// Note that this value indicates the maximum supported feature level, so,
+        /// for example, if the device type is D3D11, this value will be 10 when 
+        /// the maximum supported Direct3D feature level of the graphics adapter is 10.0.
         Int32 MajorVersion = 0;
 
-        /// Major API revision. For instance, for D3D11.2 this value would be 2,
-        /// and for OpenGL4.3 this value would be 3.
+        /// Minor revision of the graphics API supported by the graphics adapter.
+        /// Similar to MajorVersion, this value indicates the maximum supported feature level.
         Int32 MinorVersion = 0;
 
         /// Indicates if device supports separable programs
@@ -112,6 +114,9 @@ namespace Diligent
         /// Indicates if device supports tessellation
         Bool bTessellationSupported = True;
         
+        /// Indicates if device supports bindless resources
+        Bool bBindlessSupported = False;
+
         /// Texture sampling capabilities. See Diligent::SamplerCaps.
         SamplerCaps SamCaps;
 
