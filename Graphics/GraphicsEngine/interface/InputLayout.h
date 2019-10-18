@@ -113,6 +113,25 @@ struct LayoutElement
         Frequency           (_Frequency),
         InstanceDataStepRate(_InstanceDataStepRate)
     {}
+
+    /// Initializes the structure
+    LayoutElement(Uint32     _InputIndex, 
+                  Uint32     _BufferSlot, 
+                  Uint32     _NumComponents, 
+                  VALUE_TYPE _ValueType,
+                  Bool       _IsNormalized, 
+                  FREQUENCY  _Frequency,
+                  Uint32     _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
+        InputIndex          (_InputIndex),
+        BufferSlot          (_BufferSlot),
+        NumComponents       (_NumComponents),
+        ValueType           (_ValueType),
+        IsNormalized        (_IsNormalized),
+        RelativeOffset      (LayoutElement{}.RelativeOffset),
+        Stride              (LayoutElement{}.Stride),
+        Frequency           (_Frequency),
+        InstanceDataStepRate(_InstanceDataStepRate)
+    {}
 };
 
 /// Layout description
