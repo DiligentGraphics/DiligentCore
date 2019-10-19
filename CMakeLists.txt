@@ -212,7 +212,7 @@ if(MSVC)
 else()
 
     set(DEBUG_MACROS _DEBUG DEBUG DEVELOPMENT __forceinline=inline)
-    set(RELEASE_MACROS NDEBUG __forceinline="__attribute__((always_inline))")
+    set(RELEASE_MACROS NDEBUG __forceinline=inline) # Todo: use __attribute__((always_inline)), but it needs to be defined in a header file
 
     foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
         target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:${DEBUG_MACROS}>")
