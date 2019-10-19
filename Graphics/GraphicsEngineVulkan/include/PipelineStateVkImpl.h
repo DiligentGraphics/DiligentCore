@@ -80,10 +80,12 @@ public:
                                             RESOURCE_STATE_TRANSITION_MODE          StateTransitionMode,
                                             PipelineLayout::DescriptorSetBindInfo*  pDescrSetBindInfo)const;
 
-    void BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*                   pCtxVkImpl,
-                                              PipelineLayout::DescriptorSetBindInfo& BindInfo)
+    __forceinline void BindDescriptorSetsWithDynamicOffsets(VulkanUtilities::VulkanCommandBuffer&  CmdBuffer,
+                                                            Uint32                                 CtxId,
+                                                            DeviceContextVkImpl*                   pCtxVkImpl,
+                                                            PipelineLayout::DescriptorSetBindInfo& BindInfo)
     {
-        m_PipelineLayout.BindDescriptorSetsWithDynamicOffsets(pCtxVkImpl, BindInfo);
+        m_PipelineLayout.BindDescriptorSetsWithDynamicOffsets(CmdBuffer, CtxId, pCtxVkImpl, BindInfo);
     }
 
     const PipelineLayout& GetPipelineLayout()const{return m_PipelineLayout;}

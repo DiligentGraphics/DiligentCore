@@ -40,7 +40,7 @@ namespace VulkanUtilities
         VulkanCommandBuffer& operator = (const VulkanCommandBuffer&)  = delete;
         VulkanCommandBuffer& operator = (      VulkanCommandBuffer&&) = delete;
 
-        void ClearColorImage(VkImage Image, const VkClearColorValue& Color, const VkImageSubresourceRange& Subresource)
+        __forceinline void ClearColorImage(VkImage Image, const VkClearColorValue& Color, const VkImageSubresourceRange& Subresource)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdClearColorImage() must be called outside of render pass (17.1)");
@@ -56,7 +56,7 @@ namespace VulkanUtilities
             );
         }
 
-        void ClearDepthStencilImage(VkImage Image, const VkClearDepthStencilValue& DepthStencil, const VkImageSubresourceRange& Subresource)
+        __forceinline void ClearDepthStencilImage(VkImage Image, const VkClearDepthStencilValue& DepthStencil, const VkImageSubresourceRange& Subresource)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdClearDepthStencilImage() must be called outside of render pass (17.1)");
@@ -74,7 +74,7 @@ namespace VulkanUtilities
             );
         }
 
-        void ClearAttachment(const VkClearAttachment& Attachment, const VkClearRect& ClearRect)
+        __forceinline void ClearAttachment(const VkClearAttachment& Attachment, const VkClearRect& ClearRect)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdClearAttachments() must be called inside render pass (17.2)");
@@ -89,7 +89,7 @@ namespace VulkanUtilities
             );
         }
 
-        void Draw(uint32_t VertexCount, uint32_t InstanceCount, uint32_t FirstVertex, uint32_t FirstInstance)
+        __forceinline void Draw(uint32_t VertexCount, uint32_t InstanceCount, uint32_t FirstVertex, uint32_t FirstInstance)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDraw() must be called inside render pass (19.3)");
@@ -98,7 +98,7 @@ namespace VulkanUtilities
             vkCmdDraw(m_VkCmdBuffer, VertexCount, InstanceCount, FirstVertex, FirstInstance);
         }
 
-        void DrawIndexed(uint32_t  IndexCount,uint32_t InstanceCount, uint32_t FirstIndex, int32_t VertexOffset, uint32_t FirstInstance)
+        __forceinline void DrawIndexed(uint32_t  IndexCount,uint32_t InstanceCount, uint32_t FirstIndex, int32_t VertexOffset, uint32_t FirstInstance)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndexed() must be called inside render pass (19.3)");
@@ -108,7 +108,7 @@ namespace VulkanUtilities
             vkCmdDrawIndexed(m_VkCmdBuffer, IndexCount, InstanceCount, FirstIndex, VertexOffset, FirstInstance);
         }
 
-        void DrawIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
+        __forceinline void DrawIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirect() must be called inside render pass (19.3)");
@@ -117,7 +117,7 @@ namespace VulkanUtilities
             vkCmdDrawIndirect(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
         }
 
-        void DrawIndexedIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
+        __forceinline void DrawIndexedIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawIndirect() must be called inside render pass (19.3)");
@@ -127,7 +127,7 @@ namespace VulkanUtilities
             vkCmdDrawIndexedIndirect(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
         }
 
-        void Dispatch(uint32_t GroupCountX, uint32_t GroupCountY, uint32_t GroupCountZ)
+        __forceinline void Dispatch(uint32_t GroupCountX, uint32_t GroupCountY, uint32_t GroupCountZ)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdDispatch() must be called outside of render pass (27)");
@@ -136,7 +136,7 @@ namespace VulkanUtilities
             vkCmdDispatch(m_VkCmdBuffer, GroupCountX, GroupCountY, GroupCountZ);
         }
 
-        void DispatchIndirect(VkBuffer Buffer, VkDeviceSize Offset)
+        __forceinline void DispatchIndirect(VkBuffer Buffer, VkDeviceSize Offset)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "vkCmdDispatchIndirect() must be called outside of render pass (27)");
@@ -145,7 +145,7 @@ namespace VulkanUtilities
             vkCmdDispatchIndirect(m_VkCmdBuffer, Buffer, Offset);
         }
 
-        void BeginRenderPass(VkRenderPass RenderPass, VkFramebuffer Framebuffer, uint32_t FramebufferWidth, uint32_t FramebufferHeight)
+        __forceinline void BeginRenderPass(VkRenderPass RenderPass, VkFramebuffer Framebuffer, uint32_t FramebufferWidth, uint32_t FramebufferHeight)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Current pass has not been ended");
@@ -179,7 +179,7 @@ namespace VulkanUtilities
             }
         }
 
-        void EndRenderPass()
+        __forceinline void EndRenderPass()
         {
             VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "Render pass has not been started");
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
@@ -190,19 +190,19 @@ namespace VulkanUtilities
             m_State.FramebufferHeight = 0;
         }
 
-        void EndCommandBuffer()
+        __forceinline void EndCommandBuffer()
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             vkEndCommandBuffer(m_VkCmdBuffer);
         }
 
-        void Reset()
+        __forceinline void Reset()
         {
             m_VkCmdBuffer = VK_NULL_HANDLE;
             m_State = StateCache{};
         }
 
-        void BindComputePipeline(VkPipeline ComputePipeline)
+        __forceinline void BindComputePipeline(VkPipeline ComputePipeline)
         {
             // 9.8
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
@@ -213,7 +213,7 @@ namespace VulkanUtilities
             }
         }
 
-        void BindGraphicsPipeline(VkPipeline GraphicsPipeline)
+        __forceinline void BindGraphicsPipeline(VkPipeline GraphicsPipeline)
         {
             // 9.8
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
@@ -224,31 +224,31 @@ namespace VulkanUtilities
             }
         }
 
-        void SetViewports(uint32_t FirstViewport, uint32_t ViewportCount, const VkViewport* pViewports)
+        __forceinline void SetViewports(uint32_t FirstViewport, uint32_t ViewportCount, const VkViewport* pViewports)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             vkCmdSetViewport(m_VkCmdBuffer, FirstViewport, ViewportCount, pViewports);
         }
 
-        void SetScissorRects(uint32_t FirstScissor, uint32_t ScissorCount, const VkRect2D* pScissors)
+        __forceinline void SetScissorRects(uint32_t FirstScissor, uint32_t ScissorCount, const VkRect2D* pScissors)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             vkCmdSetScissor(m_VkCmdBuffer, FirstScissor, ScissorCount, pScissors);
         }
 
-        void SetStencilReference(uint32_t Reference)
+        __forceinline void SetStencilReference(uint32_t Reference)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             vkCmdSetStencilReference(m_VkCmdBuffer, VK_STENCIL_FRONT_AND_BACK, Reference);
         }
 
-        void SetBlendConstants(const float BlendConstants[4])
+        __forceinline void SetBlendConstants(const float BlendConstants[4])
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             vkCmdSetBlendConstants(m_VkCmdBuffer, BlendConstants);
         }
 
-        void BindIndexBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkIndexType IndexType)
+        __forceinline void BindIndexBuffer(VkBuffer Buffer, VkDeviceSize Offset, VkIndexType IndexType)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             if (m_State.IndexBuffer       != Buffer ||
@@ -262,7 +262,7 @@ namespace VulkanUtilities
             }
         }
 
-        void BindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets)
+        __forceinline void BindVertexBuffers(uint32_t firstBinding, uint32_t bindingCount, const VkBuffer* pBuffers, const VkDeviceSize* pOffsets)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             vkCmdBindVertexBuffers(m_VkCmdBuffer, firstBinding, bindingCount, pBuffers, pOffsets);
@@ -277,12 +277,12 @@ namespace VulkanUtilities
                                           VkPipelineStageFlags           SrcStages  = 0,
                                           VkPipelineStageFlags           DestStages = 0);
 
-        void TransitionImageLayout(VkImage                        Image, 
-                                   VkImageLayout                  OldLayout,
-                                   VkImageLayout                  NewLayout,
-                                   const VkImageSubresourceRange& SubresRange,
-                                   VkPipelineStageFlags           SrcStages  = 0, 
-                                   VkPipelineStageFlags           DestStages = 0)
+        __forceinline void TransitionImageLayout(VkImage                        Image, 
+                                                 VkImageLayout                  OldLayout,
+                                                 VkImageLayout                  NewLayout,
+                                                 const VkImageSubresourceRange& SubresRange,
+                                                 VkPipelineStageFlags           SrcStages  = 0, 
+                                                 VkPipelineStageFlags           DestStages = 0)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             if (m_State.RenderPass  != VK_NULL_HANDLE)
@@ -303,11 +303,11 @@ namespace VulkanUtilities
                                         VkPipelineStageFlags SrcStages  = 0,
                                         VkPipelineStageFlags DestStages = 0);
 
-        void BufferMemoryBarrier(VkBuffer             Buffer, 
-                                 VkAccessFlags        srcAccessMask,
-                                 VkAccessFlags        dstAccessMask,
-                                 VkPipelineStageFlags SrcStages  = 0,
-                                 VkPipelineStageFlags DestStages = 0)
+        __forceinline void BufferMemoryBarrier(VkBuffer             Buffer, 
+                                               VkAccessFlags        srcAccessMask,
+                                               VkAccessFlags        dstAccessMask,
+                                               VkPipelineStageFlags SrcStages  = 0,
+                                               VkPipelineStageFlags DestStages = 0)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             if (m_State.RenderPass  != VK_NULL_HANDLE)
@@ -319,22 +319,22 @@ namespace VulkanUtilities
             BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, m_EnabledGraphicsShaderStages, SrcStages, DestStages);
         }
 
-        void BindDescriptorSets(VkPipelineBindPoint     pipelineBindPoint,
-                                VkPipelineLayout        layout,
-                                uint32_t                firstSet,
-                                uint32_t                descriptorSetCount,
-                                const VkDescriptorSet*  pDescriptorSets,
-                                uint32_t                dynamicOffsetCount = 0,
-                                const uint32_t*         pDynamicOffsets    = nullptr)
+        __forceinline void BindDescriptorSets(VkPipelineBindPoint     pipelineBindPoint,
+                                              VkPipelineLayout        layout,
+                                              uint32_t                firstSet,
+                                              uint32_t                descriptorSetCount,
+                                              const VkDescriptorSet*  pDescriptorSets,
+                                              uint32_t                dynamicOffsetCount = 0,
+                                              const uint32_t*         pDynamicOffsets    = nullptr)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             vkCmdBindDescriptorSets(m_VkCmdBuffer, pipelineBindPoint, layout, firstSet, descriptorSetCount, pDescriptorSets, dynamicOffsetCount, pDynamicOffsets);
         }
 
-        void CopyBuffer(VkBuffer            srcBuffer,
-                        VkBuffer            dstBuffer,
-                        uint32_t            regionCount,
-                        const VkBufferCopy* pRegions)
+        __forceinline void CopyBuffer(VkBuffer            srcBuffer,
+                                      VkBuffer            dstBuffer,
+                                      uint32_t            regionCount,
+                                      const VkBufferCopy* pRegions)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             if (m_State.RenderPass  != VK_NULL_HANDLE)
@@ -345,12 +345,12 @@ namespace VulkanUtilities
             vkCmdCopyBuffer(m_VkCmdBuffer, srcBuffer, dstBuffer, regionCount, pRegions);
         }
                                           
-        void CopyImage(VkImage            srcImage,
-                       VkImageLayout      srcImageLayout,
-                       VkImage            dstImage,
-                       VkImageLayout      dstImageLayout,
-                       uint32_t           regionCount,
-                       const VkImageCopy* pRegions)
+        __forceinline void CopyImage(VkImage            srcImage,
+                                     VkImageLayout      srcImageLayout,
+                                     VkImage            dstImage,
+                                     VkImageLayout      dstImageLayout,
+                                     uint32_t           regionCount,
+                                     const VkImageCopy* pRegions)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             if (m_State.RenderPass  != VK_NULL_HANDLE)
@@ -362,11 +362,11 @@ namespace VulkanUtilities
             vkCmdCopyImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
         }
 
-        void CopyBufferToImage(VkBuffer                  srcBuffer,
-                               VkImage                   dstImage,
-                               VkImageLayout             dstImageLayout,
-                               uint32_t                  regionCount,
-                               const VkBufferImageCopy*  pRegions)
+        __forceinline void CopyBufferToImage(VkBuffer                  srcBuffer,
+                                             VkImage                   dstImage,
+                                             VkImageLayout             dstImageLayout,
+                                             uint32_t                  regionCount,
+                                             const VkBufferImageCopy*  pRegions)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             if (m_State.RenderPass  != VK_NULL_HANDLE)
@@ -378,11 +378,11 @@ namespace VulkanUtilities
             vkCmdCopyBufferToImage(m_VkCmdBuffer, srcBuffer, dstImage, dstImageLayout, regionCount, pRegions);
         }
 
-        void CopyImageToBuffer(VkImage                   srcImage,
-                               VkImageLayout             srcImageLayout,
-                               VkBuffer                  dstBuffer,
-                               uint32_t                  regionCount,
-                               const VkBufferImageCopy*  pRegions)
+        __forceinline void CopyImageToBuffer(VkImage                   srcImage,
+                                             VkImageLayout             srcImageLayout,
+                                             VkBuffer                  dstBuffer,
+                                             uint32_t                  regionCount,
+                                             const VkBufferImageCopy*  pRegions)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             if (m_State.RenderPass  != VK_NULL_HANDLE)
@@ -394,13 +394,13 @@ namespace VulkanUtilities
             vkCmdCopyImageToBuffer(m_VkCmdBuffer, srcImage, srcImageLayout, dstBuffer, regionCount, pRegions);
         }
 
-        void BlitImage(VkImage              srcImage,
-                       VkImageLayout        srcImageLayout,
-                       VkImage              dstImage,
-                       VkImageLayout        dstImageLayout,
-                       uint32_t             regionCount,
-                       const VkImageBlit*   pRegions,
-                       VkFilter             filter)
+        __forceinline void BlitImage(VkImage              srcImage,
+                                     VkImageLayout        srcImageLayout,
+                                     VkImage              dstImage,
+                                     VkImageLayout        dstImageLayout,
+                                     uint32_t             regionCount,
+                                     const VkImageBlit*   pRegions,
+                                     VkFilter             filter)
         {
             VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
             if (m_State.RenderPass  != VK_NULL_HANDLE)
@@ -414,7 +414,7 @@ namespace VulkanUtilities
 
         void FlushBarriers();
 
-        void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)
+        __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)
         {
             m_VkCmdBuffer = VkCmdBuffer;
         }

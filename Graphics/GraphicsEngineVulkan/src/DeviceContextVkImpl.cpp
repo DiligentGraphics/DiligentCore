@@ -421,7 +421,7 @@ namespace Diligent
 #endif
 
         if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
-            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DescrSetBindInfo);
+            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
 #if 0
 #ifdef _DEBUG
         else
@@ -535,7 +535,7 @@ namespace Diligent
             m_CommandBuffer.EndRenderPass();
 
         if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
-            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(this, m_DescrSetBindInfo);
+            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
 #if 0
 #ifdef _DEBUG
         else

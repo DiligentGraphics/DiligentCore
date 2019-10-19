@@ -233,7 +233,7 @@ public:
 
     size_t GetNumCommandsInCtx()const { return m_State.NumCommands; }
 
-    VulkanUtilities::VulkanCommandBuffer& GetCommandBuffer()
+    __forceinline VulkanUtilities::VulkanCommandBuffer& GetCommandBuffer()
     {
         EnsureVkCmdBuffer();
         return m_CommandBuffer;
@@ -264,17 +264,17 @@ private:
     void CommitViewports();
     void CommitScissorRects();
     
-    inline void TransitionOrVerifyBufferState(BufferVkImpl&                  Buffer,
-                                              RESOURCE_STATE_TRANSITION_MODE TransitionMode,
-                                              RESOURCE_STATE                 RequiredState,
-                                              VkAccessFlagBits               ExpectedAccessFlags,
-                                              const char*                    OperationName);
+    __forceinline void TransitionOrVerifyBufferState(BufferVkImpl&                  Buffer,
+                                                     RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                                     RESOURCE_STATE                 RequiredState,
+                                                     VkAccessFlagBits               ExpectedAccessFlags,
+                                                     const char*                    OperationName);
 
-    inline void TransitionOrVerifyTextureState(TextureVkImpl&                 Texture,
-                                               RESOURCE_STATE_TRANSITION_MODE TransitionMode,
-                                               RESOURCE_STATE                 RequiredState,
-                                               VkImageLayout                  ExpectedLayout,
-                                               const char*                    OperationName);
+    __forceinline void TransitionOrVerifyTextureState(TextureVkImpl&                 Texture,
+                                                      RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                                      RESOURCE_STATE                 RequiredState,
+                                                      VkImageLayout                  ExpectedLayout,
+                                                      const char*                    OperationName);
 
 
     __forceinline void EnsureVkCmdBuffer()

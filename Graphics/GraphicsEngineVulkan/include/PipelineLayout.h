@@ -131,8 +131,10 @@ public:
                                VkDescriptorSet               VkDynamicDescrSet)const;
 
     // Computes dynamic offsets and binds descriptor sets
-    void BindDescriptorSetsWithDynamicOffsets(DeviceContextVkImpl*    pCtxVkImpl,
-                                              DescriptorSetBindInfo&  BindInfo)const;
+    __forceinline void BindDescriptorSetsWithDynamicOffsets(VulkanUtilities::VulkanCommandBuffer& CmdBuffer,
+                                                            Uint32                                CtxId,
+                                                            DeviceContextVkImpl*                  pCtxVkImpl,
+                                                            DescriptorSetBindInfo&                BindInfo)const;
 
 private:
 
@@ -206,5 +208,44 @@ private:
     IMemoryAllocator&          m_MemAllocator;
     DescriptorSetLayoutManager m_LayoutMgr;
 };
+
+
+__forceinline void PipelineLayout::BindDescriptorSetsWithDynamicOffsets(VulkanUtilities::VulkanCommandBuffer& CmdBuffer,
+                                                                        Uint32                                CtxId,
+                                                                        DeviceContextVkImpl*                  pCtxVkImpl,
+                                                                        DescriptorSetBindInfo&                BindInfo)const
+{
+    VERIFY(BindInfo.pDbgPipelineLayout != nullptr, "Pipeline layout is not initialized, which most likely means that CommitShaderResources() has never been called");
+    VERIFY(BindInfo.pDbgPipelineLayout->IsSameAs(*this), "Inconsistent pipeline layout");
+    VERIFY(BindInfo.DynamicOffsetCount > 0, "This function should only be called for pipelines that contain dynamic descriptors");
+
+    VERIFY_EXPR(BindInfo.pResourceCache != nullptr);
+#ifdef _DEBUG
+    Uint32 TotalDynamicDescriptors = 0;
+    for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE; VarType <= SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
+    {
+        const auto &Set = m_LayoutMgr.GetDescriptorSet(VarType);
+        TotalDynamicDescriptors += Set.NumDynamicDescriptors;
+    }
+    VERIFY(BindInfo.DynamicOffsetCount == TotalDynamicDescriptors, "Incosistent dynamic buffer size");
+    VERIFY_EXPR(BindInfo.DynamicOffsets.size() >= BindInfo.DynamicOffsetCount);
+#endif
+
+    auto NumOffsetsWritten = BindInfo.pResourceCache->GetDynamicBufferOffsets(CtxId, pCtxVkImpl, BindInfo.DynamicOffsets);
+    VERIFY_EXPR(NumOffsetsWritten == BindInfo.DynamicOffsetCount); (void)NumOffsetsWritten;
+
+    // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the 
+    // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands 
+    // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously 
+    // applied via these sets are no longer valid (13.2.5)
+    CmdBuffer.BindDescriptorSets(BindInfo.BindPoint,
+                                 m_LayoutMgr.GetVkPipelineLayout(), 
+                                 0, // First set
+                                 BindInfo.SetCout,
+                                 BindInfo.vkSets.data(), // BindInfo.vkSets is never empty
+                                 // dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound (13.2.5)
+                                 BindInfo.DynamicOffsetCount,
+                                 BindInfo.DynamicOffsets.data());
+}
 
 }
