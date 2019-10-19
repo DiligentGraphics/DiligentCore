@@ -100,9 +100,13 @@ public:
                                    ITextureView*                  pDepthStencil,
                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )override final;
 
-    virtual void Draw( DrawAttribs &DrawAttribs )override final;
+    virtual void Draw               (const DrawAttribs& Attribs)override final;
+    virtual void DrawIndexed        (const DrawIndexedAttribs& Attribs)override final;
+    virtual void DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
+    virtual void DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
 
-    virtual void DispatchCompute( const DispatchComputeAttribs& DispatchAttrs )override final;
+    virtual void DispatchCompute(const DispatchComputeAttribs& Attribs)override final;
+    virtual void DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
 
     virtual void ClearDepthStencil(ITextureView*                  pView,
                                    CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
@@ -255,7 +259,7 @@ public:
 
 private:
     void TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
-    inline void CommitRenderPassAndFramebuffer(bool VerifyStates);
+    __forceinline void CommitRenderPassAndFramebuffer(bool VerifyStates);
     void CommitVkVertexBuffers();
     void CommitViewports();
     void CommitScissorRects();
@@ -273,7 +277,7 @@ private:
                                                const char*                    OperationName);
 
 
-    inline void EnsureVkCmdBuffer()
+    __forceinline void EnsureVkCmdBuffer()
     {
         // Make sure that the number of commands in the context is at least one,
         // so that the context cannot be disposed by Flush()
@@ -320,6 +324,10 @@ private:
                              Uint32                         DstBufferOffset,
                              Uint32                         DstBufferRowStrideInTexels);
 
+    __forceinline void PrepareForDraw(DRAW_FLAGS Flags);
+    __forceinline void PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
+    __forceinline BufferVkImpl* PrepareIndirectDrawAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode);
+    __forceinline void PrepareForDispatchCompute();
 
     void DvpLogRenderPass_PSOMismatch();
 

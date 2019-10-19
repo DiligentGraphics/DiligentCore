@@ -738,17 +738,13 @@ namespace Diligent
         m_bCommittedD3D11VBsUpToDate = true;
     }
 
-    void DeviceContextD3D11Impl::Draw( DrawAttribs &drawAttribs )
+    void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
     {
 #ifdef DEVELOPMENT
-        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0 && !DvpVerifyDrawArguments(drawAttribs))
-            return;
-
-        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
+        if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
             DvpVerifyRenderTargets();
 #endif
 
-        const bool VerifyStates = (drawAttribs.Flags & DRAW_FLAG_VERIFY_STATES) != 0;
         auto* pd3d11InputLayout = m_pPipelineState->GetD3D11InputLayout();
         if (pd3d11InputLayout != nullptr && !m_bCommittedD3D11VBsUpToDate)
         {
@@ -757,7 +753,7 @@ namespace Diligent
         }
 
 #ifdef DEVELOPMENT
-        if (VerifyStates)
+        if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
         {
             for (UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot)
             {
@@ -771,30 +767,7 @@ namespace Diligent
                 }
             }
         }
-#endif
-      
-        if (drawAttribs.IsIndexed)
-        {
-            if (m_CommittedIBFormat != drawAttribs.IndexType)
-                m_bCommittedD3D11IBUpToDate = false;
-            if (!m_bCommittedD3D11IBUpToDate)
-            {
-                CommitD3D11IndexBuffer(drawAttribs.IndexType);
-            }
-#ifdef DEVELOPMENT
-            if (VerifyStates)
-            {
-                if (m_pIndexBuffer->IsInKnownState() && m_pIndexBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
-                {
-                    LOG_ERROR_MESSAGE("Buffer '", m_pIndexBuffer->GetDesc().Name, "' used as index buffer is in RESOURCE_STATE_UNORDERED_ACCESS state."
-                                      " Use appropriate state transition mode or explicitly transition the buffer to RESOURCE_STATE_INDEX_BUFFER state.");
 
-                }
-            }
-#endif
-        }
-        
-#ifdef DEVELOPMENT
         if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
         {
             // Verify bindings after all resources are set
@@ -807,42 +780,89 @@ namespace Diligent
             dbgVerifyCommittedShaders();
         }
 #endif
-
-        auto* pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(drawAttribs.pIndirectDrawAttribs);
-        if (pIndirectDrawAttribsD3D11 != nullptr)
-        {
-            ID3D11Buffer* pd3d11ArgsBuff = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
-            if (drawAttribs.IsIndexed)
-                m_pd3d11DeviceContext->DrawIndexedInstancedIndirect( pd3d11ArgsBuff, drawAttribs.IndirectDrawArgsOffset );
-            else
-                m_pd3d11DeviceContext->DrawInstancedIndirect( pd3d11ArgsBuff, drawAttribs.IndirectDrawArgsOffset );
-        }
-        else
-        {
-            if (drawAttribs.NumInstances > 1)
-            {
-                if( drawAttribs.IsIndexed )
-                    m_pd3d11DeviceContext->DrawIndexedInstanced( drawAttribs.NumIndices, drawAttribs.NumInstances, drawAttribs.FirstIndexLocation, drawAttribs.BaseVertex, drawAttribs.FirstInstanceLocation );
-                else
-                    m_pd3d11DeviceContext->DrawInstanced( drawAttribs.NumVertices, drawAttribs.NumInstances, drawAttribs.StartVertexLocation, drawAttribs.FirstInstanceLocation );
-            }
-            else
-            {
-                if (drawAttribs.IsIndexed)
-                    m_pd3d11DeviceContext->DrawIndexed( drawAttribs.NumIndices, drawAttribs.FirstIndexLocation, drawAttribs.BaseVertex );
-                else
-                    m_pd3d11DeviceContext->Draw( drawAttribs.NumVertices, drawAttribs.StartVertexLocation );
-            }
-        }
     }
 
-    void DeviceContextD3D11Impl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
+    void DeviceContextD3D11Impl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType)
     {
+        if (m_CommittedIBFormat != IndexType)
+            m_bCommittedD3D11IBUpToDate = false;
+        if (!m_bCommittedD3D11IBUpToDate)
+        {
+            CommitD3D11IndexBuffer(IndexType);
+        }
 #ifdef DEVELOPMENT
-        if (!DvpVerifyDispatchArguments(DispatchAttrs))
+        if (Flags & DRAW_FLAG_VERIFY_STATES)
+        {
+            if (m_pIndexBuffer->IsInKnownState() && m_pIndexBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
+            {
+                LOG_ERROR_MESSAGE("Buffer '", m_pIndexBuffer->GetDesc().Name, "' used as index buffer is in RESOURCE_STATE_UNORDERED_ACCESS state."
+                                    " Use appropriate state transition mode or explicitly transition the buffer to RESOURCE_STATE_INDEX_BUFFER state.");
+
+            }
+        }
+#endif
+        // We need to commit index buffer first because PrepareForDraw
+        // may verify committed resources.
+        PrepareForDraw(Flags);
+    }
+
+    void DeviceContextD3D11Impl::Draw(const DrawAttribs& Attribs)
+    {
+        if (!DvpVerifyDrawArguments(Attribs))
             return;
 
+        PrepareForDraw(Attribs.Flags);
 
+        if (Attribs.NumInstances > 1)
+            m_pd3d11DeviceContext->DrawInstanced(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
+        else
+            m_pd3d11DeviceContext->Draw(Attribs.NumVertices, Attribs.StartVertexLocation);
+    }
+
+    void DeviceContextD3D11Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
+    {
+        if (!DvpVerifyDrawIndexedArguments(Attribs))
+            return;
+
+        PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+
+        if (Attribs.NumInstances > 1)
+            m_pd3d11DeviceContext->DrawIndexedInstanced(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+        else
+            m_pd3d11DeviceContext->DrawIndexed(Attribs.NumIndices, Attribs.FirstIndexLocation, Attribs.BaseVertex);
+    }
+
+    void DeviceContextD3D11Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+        PrepareForDraw(Attribs.Flags);
+        
+        auto* pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer);
+        ID3D11Buffer* pd3d11ArgsBuff = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
+        m_pd3d11DeviceContext->DrawInstancedIndirect( pd3d11ArgsBuff, Attribs.IndirectDrawArgsOffset );
+    }
+
+
+    void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+        PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+        
+        auto* pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer);
+        ID3D11Buffer* pd3d11ArgsBuff = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
+        m_pd3d11DeviceContext->DrawIndexedInstancedIndirect( pd3d11ArgsBuff, Attribs.IndirectDrawArgsOffset );
+    }
+
+    void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attribs)
+    {
+        if (!DvpVerifyDispatchArguments(Attribs))
+            return;
+
+#ifdef DEVELOPMENT
         if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
         {
             // Verify bindings
@@ -854,14 +874,30 @@ namespace Diligent
         }
 #endif
 
-        if (DispatchAttrs.pIndirectDispatchAttribs)
-        {
-            auto* pd3d11Buff = ValidatedCast<BufferD3D11Impl>(DispatchAttrs.pIndirectDispatchAttribs)->GetD3D11Buffer();
-            m_pd3d11DeviceContext->DispatchIndirect( pd3d11Buff, DispatchAttrs.DispatchArgsByteOffset );
-        }
-        else
-            m_pd3d11DeviceContext->Dispatch( DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ );
+        m_pd3d11DeviceContext->Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
     }
+
+    void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+#ifdef DEVELOPMENT
+        if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+        {
+            // Verify bindings
+            dbgVerifyCommittedSRVs();
+            dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
+            dbgVerifyCommittedSamplers();
+            dbgVerifyCommittedCBs();
+            dbgVerifyCommittedShaders();
+        }
+#endif
+
+        auto* pd3d11Buff = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer)->GetD3D11Buffer();
+        m_pd3d11DeviceContext->DispatchIndirect(pd3d11Buff, Attribs.DispatchArgsByteOffset);
+    }
+
 
     void DeviceContextD3D11Impl::ClearDepthStencil(ITextureView*                  pView,
                                                    CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,

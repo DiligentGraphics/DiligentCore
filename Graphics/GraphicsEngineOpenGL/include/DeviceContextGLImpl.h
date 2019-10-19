@@ -83,9 +83,13 @@ public:
                                   ITextureView*                  pDepthStencil,
                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
-    virtual void Draw(DrawAttribs& DrawAttribs)override final;
+    virtual void Draw               (const DrawAttribs& Attribs)override final;
+    virtual void DrawIndexed        (const DrawIndexedAttribs& Attribs)override final;
+    virtual void DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
+    virtual void DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
 
-    virtual void DispatchCompute(const DispatchComputeAttribs& DispatchAttrs)override final;
+    virtual void DispatchCompute(const DispatchComputeAttribs& Attribs)override final;
+    virtual void DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
 
     virtual void ClearDepthStencil(ITextureView*                  pView,
                                    CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
@@ -170,6 +174,11 @@ protected:
     GLContextState m_ContextState;
 
 private:
+
+    __forceinline void PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenum& GlTopology);
+    __forceinline void PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation,  GLenum& GLIndexType, Uint32& FirstIndexByteOffset);
+    __forceinline void PrepareForIndirectDraw(IBuffer* pAttribsBuffer);
+    __forceinline void PostDraw();
     Uint32 m_CommitedResourcesTentativeBarriers;
 
     std::vector<class TextureBaseGL*> m_BoundWritableTextures;

@@ -211,8 +211,8 @@ if(MSVC)
     target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DEBUG_MACROS}>")
 else()
 
-    set(DEBUG_MACROS _DEBUG DEBUG DEVELOPMENT)
-    set(RELEASE_MACROS NDEBUG)
+    set(DEBUG_MACROS _DEBUG DEBUG DEVELOPMENT __forceinline=inline)
+    set(RELEASE_MACROS NDEBUG __forceinline=__attribute__((always_inline)))
 
     foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
         target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:${DEBUG_MACROS}>")

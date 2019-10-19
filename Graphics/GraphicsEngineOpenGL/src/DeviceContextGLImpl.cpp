@@ -603,13 +603,10 @@ namespace Diligent
 #endif
     }
 
-    void DeviceContextGLImpl::Draw(DrawAttribs &drawAttribs)
+    void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenum& GlTopology)
     {
 #ifdef DEVELOPMENT
-        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0 && !DvpVerifyDrawArguments(drawAttribs))
-            return;
-
-        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
+        if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
             DvpVerifyRenderTargets();
 #endif
 
@@ -621,7 +618,7 @@ namespace Diligent
         if (!m_ContextState.IsValidVAOBound())
         {
             auto& VAOCache = pRenderDeviceGL->GetVAOCache(CurrNativeGLContext);
-            IBuffer* pIndexBuffer = drawAttribs.IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
+            IBuffer* pIndexBuffer = IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
             if (PipelineDesc.InputLayout.NumElements > 0 || pIndexBuffer != nullptr)
             {
                 const auto& VAO = VAOCache.GetVAO( m_pPipelineState, pIndexBuffer, m_VertexStreams, m_NumVertexStreams, m_ContextState );
@@ -637,7 +634,6 @@ namespace Diligent
             }
         }
 
-        GLenum GlTopology;
         auto Topology = PipelineDesc.PrimitiveTopology;
         if (Topology >= PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST)
         {
@@ -653,115 +649,19 @@ namespace Diligent
         {
             GlTopology = PrimitiveTopologyToGLTopology( Topology );
         }
-        GLenum IndexType = 0;
-        Uint32 FirstIndexByteOffset = 0;
-        if (drawAttribs.IsIndexed)
-        {
-            IndexType = TypeToGLType( drawAttribs.IndexType );
-            VERIFY( IndexType == GL_UNSIGNED_BYTE || IndexType == GL_UNSIGNED_SHORT || IndexType == GL_UNSIGNED_INT,
-                    "Unsupported index type" );
-            VERIFY( m_pIndexBuffer, "Index Buffer is not bound to the pipeline" );
-            FirstIndexByteOffset = static_cast<Uint32>(GetValueSize( drawAttribs.IndexType )) * drawAttribs.FirstIndexLocation + m_IndexDataStartOffset;
-        }
+    }
 
-        // NOTE: Base Vertex and Base Instance versions are not supported even in OpenGL ES 3.1
-        // This functionality can be emulated by adjusting stream offsets. This, however may cause
-        // errors in case instance data is read from the same stream as vertex data. Thus handling
-        // such cases is left to the application
+    void DeviceContextGLImpl::PrepareForIndexedDraw(VALUE_TYPE IndexType, Uint32 FirstIndexLocation,  GLenum& GLIndexType, Uint32& FirstIndexByteOffset)
+    {
+        GLIndexType = TypeToGLType( IndexType );
+        VERIFY( GLIndexType == GL_UNSIGNED_BYTE || GLIndexType == GL_UNSIGNED_SHORT || GLIndexType == GL_UNSIGNED_INT,
+                "Unsupported index type" );
+        VERIFY( m_pIndexBuffer, "Index Buffer is not bound to the pipeline" );
+        FirstIndexByteOffset = static_cast<Uint32>(GetValueSize( IndexType )) * FirstIndexLocation + m_IndexDataStartOffset;
+    }
 
-        // http://www.opengl.org/wiki/Vertex_Rendering
-        auto* pIndirectDrawAttribsGL = static_cast<BufferGLImpl*>(drawAttribs.pIndirectDrawAttribs);
-        if (pIndirectDrawAttribsGL != nullptr)
-        {
-#if GL_ARB_draw_indirect
-            // The indirect rendering functions take their data from the buffer currently bound to the 
-            // GL_DRAW_INDIRECT_BUFFER binding. Thus, any of indirect draw functions will fail if no buffer is 
-            // bound to that binding.
-            pIndirectDrawAttribsGL->BufferMemoryBarrier(
-                GL_COMMAND_BARRIER_BIT,// Command data sourced from buffer objects by
-                                        // Draw*Indirect and DispatchComputeIndirect commands after the barrier
-                                        // will reflect data written by shaders prior to the barrier.The buffer 
-                                        // objects affected by this bit are derived from the DRAW_INDIRECT_BUFFER 
-                                        // and DISPATCH_INDIRECT_BUFFER bindings.
-                m_ContextState);
-            constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
-            m_ContextState.BindBuffer( GL_DRAW_INDIRECT_BUFFER, pIndirectDrawAttribsGL->m_GlBuffer, ResetVAO);
-
-            if (drawAttribs.IsIndexed)
-            {
-                //typedef  struct {
-                //    GLuint  count;
-                //    GLuint  instanceCount;
-                //    GLuint  firstIndex;
-                //    GLuint  baseVertex;
-                //    GLuint  baseInstance;
-                //} DrawElementsIndirectCommand;
-                glDrawElementsIndirect( GlTopology, IndexType, reinterpret_cast<const void*>( static_cast<size_t>(drawAttribs.IndirectDrawArgsOffset) ) );
-                // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
-                DEV_CHECK_GL_ERROR( "glDrawElementsIndirect() failed" );
-            }
-            else
-            {
-                //typedef  struct {
-                //   GLuint  count;
-                //   GLuint  instanceCount;
-                //   GLuint  first;
-                //   GLuint  baseInstance;
-                //} DrawArraysIndirectCommand;
-                glDrawArraysIndirect( GlTopology, reinterpret_cast<const void*>( static_cast<size_t>(drawAttribs.IndirectDrawArgsOffset) ) );
-                // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
-                DEV_CHECK_GL_ERROR( "glDrawArraysIndirect() failed" );
-            }
-
-            m_ContextState.BindBuffer( GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO );
-#else
-            LOG_ERROR_MESSAGE("Indirect rendering is not supported");
-#endif
-        }
-        else
-        {
-            if (drawAttribs.NumInstances > 1)
-            {
-                if (drawAttribs.IsIndexed)
-                {
-                    if (drawAttribs.BaseVertex)
-                    {
-                        if (drawAttribs.FirstInstanceLocation)
-                            glDrawElementsInstancedBaseVertexBaseInstance(GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.NumInstances, drawAttribs.BaseVertex, drawAttribs.FirstInstanceLocation);
-                        else
-                            glDrawElementsInstancedBaseVertex(GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.NumInstances, drawAttribs.BaseVertex);
-                    }
-                    else
-                    {
-                        if (drawAttribs.FirstInstanceLocation)
-                            glDrawElementsInstancedBaseInstance(GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.NumInstances, drawAttribs.FirstInstanceLocation);
-                        else
-                            glDrawElementsInstanced(GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.NumInstances);
-                    }
-                }
-                else
-                {
-                    if (drawAttribs.FirstInstanceLocation)
-                        glDrawArraysInstancedBaseInstance(GlTopology, drawAttribs.StartVertexLocation, drawAttribs.NumVertices, drawAttribs.NumInstances, drawAttribs.FirstInstanceLocation);
-                    else
-                        glDrawArraysInstanced(GlTopology, drawAttribs.StartVertexLocation, drawAttribs.NumVertices, drawAttribs.NumInstances);
-                }
-            }
-            else
-            {
-                if (drawAttribs.IsIndexed)
-                {
-                    if (drawAttribs.BaseVertex)
-                        glDrawElementsBaseVertex(GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), drawAttribs.BaseVertex);
-                    else
-                        glDrawElements(GlTopology, drawAttribs.NumIndices, IndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset)));
-                }
-                else
-                    glDrawArrays(GlTopology, drawAttribs.StartVertexLocation, drawAttribs.NumVertices);
-            }
-            DEV_CHECK_GL_ERROR( "OpenGL draw command failed" );
-        }
-
+    void DeviceContextGLImpl::PostDraw()
+    {
         // IMPORTANT: new pending memory barriers in the context must be set
         // after all previous barriers have been executed.
         // m_CommitedResourcesTentativeBarriers contains memory barriers that will be required 
@@ -770,49 +670,204 @@ namespace Diligent
         m_CommitedResourcesTentativeBarriers = 0;
     }
 
-    void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& DispatchAttrs)
+    void DeviceContextGLImpl::Draw(const DrawAttribs& Attribs)
     {
-#ifdef DEVELOPMENT
-        if (!DvpVerifyDispatchArguments(DispatchAttrs))
+        if (!DvpVerifyDrawArguments(Attribs))
             return;
+
+        GLenum GlTopology;
+        PrepareForDraw(Attribs.Flags, false, GlTopology);
+
+        if (Attribs.NumInstances > 1)
+        {
+            if (Attribs.FirstInstanceLocation)
+                glDrawArraysInstancedBaseInstance(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances, Attribs.FirstInstanceLocation);
+            else
+                glDrawArraysInstanced(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances);
+        }
+        else
+        {
+            glDrawArrays(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices);
+        }
+        DEV_CHECK_GL_ERROR( "OpenGL draw command failed" );
+
+        PostDraw();
+    }
+
+    void DeviceContextGLImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
+    {
+        if (!DvpVerifyDrawIndexedArguments(Attribs))
+            return;
+
+        GLenum GlTopology;
+        PrepareForDraw(Attribs.Flags, true, GlTopology);
+        GLenum GLIndexType;
+        Uint32 FirstIndexByteOffset;
+        PrepareForIndexedDraw(Attribs.IndexType, Attribs.FirstIndexLocation, GLIndexType, FirstIndexByteOffset);
+
+        // NOTE: Base Vertex and Base Instance versions are not supported even in OpenGL ES 3.1
+        // This functionality can be emulated by adjusting stream offsets. This, however may cause
+        // errors in case instance data is read from the same stream as vertex data. Thus handling
+        // such cases is left to the application
+
+        if (Attribs.NumInstances > 1)
+        {
+            if (Attribs.BaseVertex > 0)
+            {
+                if (Attribs.FirstInstanceLocation)
+                    glDrawElementsInstancedBaseVertexBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), Attribs.NumInstances, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+                else
+                    glDrawElementsInstancedBaseVertex(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), Attribs.NumInstances, Attribs.BaseVertex);
+            }
+            else
+            {
+                if (Attribs.FirstInstanceLocation)
+                    glDrawElementsInstancedBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), Attribs.NumInstances, Attribs.FirstInstanceLocation);
+                else
+                    glDrawElementsInstanced(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), Attribs.NumInstances);
+            }
+        }
+        else
+        {
+            if (Attribs.BaseVertex > 0)
+                glDrawElementsBaseVertex(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), Attribs.BaseVertex);
+            else
+                glDrawElements(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset)));
+        }
+        DEV_CHECK_GL_ERROR( "OpenGL draw command failed" );
+
+        PostDraw();
+    }
+
+    void  DeviceContextGLImpl::PrepareForIndirectDraw(IBuffer* pAttribsBuffer)
+    {
+#if GL_ARB_draw_indirect
+        auto* pIndirectDrawAttribsGL = ValidatedCast<BufferGLImpl>(pAttribsBuffer);
+        // The indirect rendering functions take their data from the buffer currently bound to the 
+        // GL_DRAW_INDIRECT_BUFFER binding. Thus, any of indirect draw functions will fail if no buffer is 
+        // bound to that binding.
+        pIndirectDrawAttribsGL->BufferMemoryBarrier(
+            GL_COMMAND_BARRIER_BIT,// Command data sourced from buffer objects by
+                                    // Draw*Indirect and DispatchComputeIndirect commands after the barrier
+                                    // will reflect data written by shaders prior to the barrier.The buffer 
+                                    // objects affected by this bit are derived from the DRAW_INDIRECT_BUFFER 
+                                    // and DISPATCH_INDIRECT_BUFFER bindings.
+            m_ContextState);
+        constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
+        m_ContextState.BindBuffer( GL_DRAW_INDIRECT_BUFFER, pIndirectDrawAttribsGL->m_GlBuffer, ResetVAO);
 #endif
+    }
+
+    void DeviceContextGLImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+#if GL_ARB_draw_indirect
+        GLenum GlTopology;
+        PrepareForDraw(Attribs.Flags, true, GlTopology);
+
+        // http://www.opengl.org/wiki/Vertex_Rendering
+        PrepareForIndirectDraw(pAttribsBuffer);
+
+        //typedef  struct {
+        //   GLuint  count;
+        //   GLuint  instanceCount;
+        //   GLuint  first;
+        //   GLuint  baseInstance;
+        //} DrawArraysIndirectCommand;
+        glDrawArraysIndirect( GlTopology, reinterpret_cast<const void*>( static_cast<size_t>(Attribs.IndirectDrawArgsOffset) ) );
+        // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
+        DEV_CHECK_GL_ERROR( "glDrawArraysIndirect() failed" );
+
+        constexpr bool ResetVAO = false; // GL_DRAW_INDIRECT_BUFFER does not affect VAO
+        m_ContextState.BindBuffer( GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO );
+
+        PostDraw();
+#else
+        LOG_ERROR_MESSAGE("Indirect rendering is not supported");
+#endif
+    }
+
+    void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+#if GL_ARB_draw_indirect
+        GLenum GlTopology;
+        PrepareForDraw(Attribs.Flags, true, GlTopology);
+        GLenum GLIndexType;
+        Uint32 FirstIndexByteOffset;
+        PrepareForIndexedDraw(Attribs.IndexType, 0, GLIndexType, FirstIndexByteOffset);
+
+        // http://www.opengl.org/wiki/Vertex_Rendering
+        PrepareForIndirectDraw(pAttribsBuffer);
+
+        //typedef  struct {
+        //    GLuint  count;
+        //    GLuint  instanceCount;
+        //    GLuint  firstIndex;
+        //    GLuint  baseVertex;
+        //    GLuint  baseInstance;
+        //} DrawElementsIndirectCommand;
+        glDrawElementsIndirect( GlTopology, GLIndexType, reinterpret_cast<const void*>( static_cast<size_t>(Attribs.IndirectDrawArgsOffset) ) );
+        // Note that on GLES 3.1, baseInstance is present but reserved and must be zero
+        DEV_CHECK_GL_ERROR( "glDrawElementsIndirect() failed" );
+
+        constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
+        m_ContextState.BindBuffer( GL_DRAW_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO );
+
+        PostDraw();
+#else
+        LOG_ERROR_MESSAGE("Indirect rendering is not supported");
+#endif
+    }
+
+
+    void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
+    {
+        if (!DvpVerifyDispatchArguments(Attribs))
+            return;
+
+#if GL_ARB_compute_shader
+        m_pPipelineState->CommitProgram(m_ContextState);
+        glDispatchCompute(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
+        CHECK_GL_ERROR("glDispatchCompute() failed");
+
+        PostDraw();
+#else
+        UNSUPPORTED("Compute shaders are not supported");
+#endif
+    }
+
+    void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
+            return;
 
 #if GL_ARB_compute_shader
         m_pPipelineState->CommitProgram(m_ContextState);
 
-        if (DispatchAttrs.pIndirectDispatchAttribs)
-        {
-            CHECK_DYNAMIC_TYPE( BufferGLImpl, DispatchAttrs.pIndirectDispatchAttribs );
-            auto* pBufferGL = static_cast<BufferGLImpl*>(DispatchAttrs.pIndirectDispatchAttribs);
-            pBufferGL->BufferMemoryBarrier(
-                GL_COMMAND_BARRIER_BIT,// Command data sourced from buffer objects by
-                                       // Draw*Indirect and DispatchComputeIndirect commands after the barrier
-                                       // will reflect data written by shaders prior to the barrier.The buffer 
-                                       // objects affected by this bit are derived from the DRAW_INDIRECT_BUFFER 
-                                       // and DISPATCH_INDIRECT_BUFFER bindings.
-                m_ContextState);
+        auto* pBufferGL = ValidatedCast<BufferGLImpl>(pAttribsBuffer);
+        pBufferGL->BufferMemoryBarrier(
+            GL_COMMAND_BARRIER_BIT,// Command data sourced from buffer objects by
+                                    // Draw*Indirect and DispatchComputeIndirect commands after the barrier
+                                    // will reflect data written by shaders prior to the barrier.The buffer 
+                                    // objects affected by this bit are derived from the DRAW_INDIRECT_BUFFER 
+                                    // and DISPATCH_INDIRECT_BUFFER bindings.
+            m_ContextState);
 
-            constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
-            m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, pBufferGL->m_GlBuffer, ResetVAO);
-            CHECK_GL_ERROR( "Failed to bind a buffer for dispatch indirect command" );
+        constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
+        m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, pBufferGL->m_GlBuffer, ResetVAO);
+        CHECK_GL_ERROR( "Failed to bind a buffer for dispatch indirect command" );
 
-            glDispatchComputeIndirect(DispatchAttrs.DispatchArgsByteOffset);
-            CHECK_GL_ERROR("glDispatchComputeIndirect() failed");
+        glDispatchComputeIndirect(Attribs.DispatchArgsByteOffset);
+        CHECK_GL_ERROR("glDispatchComputeIndirect() failed");
 
-            m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
-        }
-        else
-        {
-            glDispatchCompute(DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ);
-            CHECK_GL_ERROR("glDispatchCompute() failed");
-        }
-
-        // IMPORTANT: new pending memory barriers in the context must be set
-        // after all previous barriers have been executed.
-        // m_CommitedResourcesTentativeBarriers contains memory barriers that will be required 
-        // AFTER the actual draw/dispatch command is executed. 
-        m_ContextState.SetPendingMemoryBarriers( m_CommitedResourcesTentativeBarriers );
-        m_CommitedResourcesTentativeBarriers = 0;
+        m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
+        
+        PostDraw();
 #else
         UNSUPPORTED("Compute shaders are not supported");
 #endif

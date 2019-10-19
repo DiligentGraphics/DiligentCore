@@ -91,9 +91,13 @@ public:
                                   ITextureView*                  pDepthStencil,
                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
-    virtual void Draw(DrawAttribs& DrawAttribs)override final;
+    virtual void Draw               (const DrawAttribs& Attribs)override final;
+    virtual void DrawIndexed        (const DrawIndexedAttribs& Attribs)override final;
+    virtual void DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
+    virtual void DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
 
-    virtual void DispatchCompute(const DispatchComputeAttribs& DispatchAttrs)override final;
+    virtual void DispatchCompute(const DispatchComputeAttribs& Attribs)override final;
+    virtual void DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
 
     virtual void ClearDepthStencil(ITextureView*                  pView,
                                    CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
@@ -217,6 +221,13 @@ private:
 
     /// Unbinds a texture from depth-stencil.
     void UnbindTextureFromDepthStencil(TextureBaseD3D11* pTexD3D11);
+
+    /// Prepares for a draw command
+    __forceinline void PrepareForDraw(DRAW_FLAGS Flags);
+
+    /// Prepares for an indexed draw command
+    __forceinline void PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
+
 
     template<bool TransitionResources,
              bool CommitResources>

@@ -108,62 +108,175 @@ enum RESOURCE_STATE_TRANSITION_MODE : Uint8
     RESOURCE_STATE_TRANSITION_MODE_VERIFY
 };
 
+
 /// Defines the draw command attributes.
 
-/// This structure is used by IRenderDevice::Draw().
+/// This structure is used by IDeviceContext::Draw().
 struct DrawAttribs
 {
-    union
-    {
-        /// For a non-indexed draw call, number of vertices to draw.
-        Uint32 NumVertices = 0;
-        
-        /// For an indexed draw call, number of indices to draw.
-        Uint32 NumIndices;
-    };
+    /// The number of vertices to draw.
+    Uint32     NumVertices           = 0;
 
-    /// Indicates if index buffer will be used to index input vertices.
-    Bool IsIndexed                  = False;
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                 = DRAW_FLAG_NONE;
 
-    /// For an indexed draw call, type of elements in the index buffer.
+    /// The number of instances to draw. If more than one instance is specified,
+    /// instanced draw call will be performed.
+    Uint32     NumInstances          = 1;
+
+    /// LOCATION (or INDEX, but NOT the byte offset) of the first vertex in the
+    /// vertex buffer to start reading vertices from.
+    Uint32     StartVertexLocation   = 0;
+
+    /// LOCATION (or INDEX, but NOT the byte offset) in the vertex buffer to start
+    /// reading instance data from.
+    Uint32     FirstInstanceLocation = 0;
+
+
+    /// Initializes the structure members with default values.
+
+    /// Default values:
+    ///
+    /// Member                                   | Default value
+    /// -----------------------------------------|--------------------------------------
+    /// NumVertices                              | 0
+    /// Flags                                    | DRAW_FLAG_NONE
+    /// NumInstances                             | 1
+    /// StartVertexLocation                      | 0
+    /// FirstInstanceLocation                    | 0
+    DrawAttribs()noexcept{}
+
+    /// Initializes the structure with user-specified values.
+    DrawAttribs(Uint32     _NumVertices,
+                DRAW_FLAGS _Flags,
+                Uint32     _NumInstances          = 1,
+                Uint32     _StartVertexLocation   = 0,
+                Uint32     _FirstInstanceLocation = 0)noexcept : 
+        NumVertices          {_NumVertices          },
+        Flags                {_Flags                },
+        NumInstances         {_NumInstances         },
+        StartVertexLocation  {_StartVertexLocation  },
+        FirstInstanceLocation{_FirstInstanceLocation}
+    {}
+};
+
+
+/// Defines the indexed draw command attributes.
+
+/// This structure is used by IDeviceContext::DrawIndexed().
+struct DrawIndexedAttribs
+{
+    /// The number of indices to draw.
+    Uint32     NumIndices            = 0;
+
+    /// The type of elements in the index buffer.
+    /// Allowed values: VT_UINT16 and VT_UINT32.
+    VALUE_TYPE IndexType             = VT_UNDEFINED;
+
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                 = DRAW_FLAG_NONE;
+
+    /// Number of instances to draw. If more than one instance is specified,
+    /// instanced draw call will be performed.
+    Uint32     NumInstances          = 1;
+
+    /// A constant which is added to each index before accessing the vertex buffer.
+    Uint32     BaseVertex            = 0; 
+
+    /// LOCATION (NOT the byte offset) of the first index in
+    /// the index buffer to start reading indices from.
+    Uint32     FirstIndexLocation    = 0; 
+
+    /// LOCATION (or INDEX, but NOT the byte offset) in the vertex
+    /// buffer to start reading instance data from.
+    Uint32     FirstInstanceLocation = 0;
+
+
+    /// Initializes the structure members with default values.
+
+    /// Default values:
+    /// Member                                   | Default value
+    /// -----------------------------------------|--------------------------------------
+    /// NumIndices                               | 0
+    /// IndexType                                | VT_UNDEFINED
+    /// Flags                                    | DRAW_FLAG_NONE
+    /// NumInstances                             | 1
+    /// BaseVertex                               | 0
+    /// FirstIndexLocation                       | 0
+    /// FirstInstanceLocation                    | 0
+    DrawIndexedAttribs()noexcept{}
+
+    /// Initializes the structure members with user-specified values.
+    DrawIndexedAttribs(Uint32      _NumIndices,
+                       VALUE_TYPE  _IndexType,
+                       DRAW_FLAGS  _Flags,
+                       Uint32      _NumInstances          = 1,
+                       Uint32      _BaseVertex            = 0,
+                       Uint32      _FirstIndexLocation    = 0,
+                       Uint32      _FirstInstanceLocation = 0)noexcept : 
+        NumIndices           {_NumIndices           },
+        IndexType            {_IndexType            },
+        Flags                {_Flags                },
+        NumInstances         {_NumInstances         },
+        BaseVertex           {_BaseVertex           },
+        FirstIndexLocation   {_FirstIndexLocation   },
+        FirstInstanceLocation{_FirstInstanceLocation}
+    {}
+};
+
+
+/// Defines the indirect draw command attributes.
+
+/// This structure is used by IDeviceContext::DrawIndirect().
+struct DrawIndirectAttribs
+{
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                = DRAW_FLAG_NONE;
+
+    /// State transition mode for indirect draw arguments buffer.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
+    /// Offset from the beginning of the buffer to the location of draw command attributes.
+    Uint32 IndirectDrawArgsOffset   = 0;
+    
+    /// Initializes the structure members with default values
+
+    /// Default values:
+    /// Member                                   | Default value
+    /// -----------------------------------------|--------------------------------------
+    /// Flags                                    | DRAW_FLAG_NONE
+    /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
+    /// IndirectDrawArgsOffset                   | 0
+    DrawIndirectAttribs()noexcept{}
+
+    /// Initializes the structure members with user-specified values.
+    DrawIndirectAttribs(DRAW_FLAGS                     _Flags,
+                        RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
+                        Uint32                         _IndirectDrawArgsOffset = 0)noexcept :
+        Flags                                   {_Flags                                   },
+        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
+        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
+    {}
+};
+
+
+/// Defines the indexed indirect draw command attributes.
+
+/// This structure is used by IDeviceContext::DrawIndexedIndirect().
+struct DrawIndexedIndirectAttribs
+{
+    /// The type of the elements in the index buffer.
     /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
     VALUE_TYPE IndexType            = VT_UNDEFINED;
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
     DRAW_FLAGS Flags                = DRAW_FLAG_NONE;
 
-    /// State transition mode for indirect draw arguments buffer. Ignored if pIndirectDrawAttribs member is null.
+    /// State transition mode for indirect draw arguments buffer.
     RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
-    /// Number of instances to draw. If more than one instance is specified,
-    /// instanced draw call will be performed.
-    Uint32 NumInstances             = 1;
-
-    /// For indexed rendering, a constant which is added to each index before 
-    /// accessing the vertex buffer.
-    Uint32 BaseVertex               = 0; 
-
-    /// For indirect rendering, offset from the beginning of the buffer to the location
-    /// of draw command attributes. Ignored if DrawAttribs::pIndirectDrawAttribs is null.
+    /// Offset from the beginning of the buffer to the location of draw command attributes.
     Uint32 IndirectDrawArgsOffset   = 0;
-
-    union
-    {
-        /// For non-indexed rendering, LOCATION (or INDEX, but NOT the byte offset) of the 
-        /// first vertex in the vertex buffer to start reading vertices from.
-        Uint32 StartVertexLocation = 0;
-
-        /// For indexed rendering, LOCATION (NOT the byte offset) of the first index in 
-        /// the index buffer to start reading indices from.
-        Uint32 FirstIndexLocation; 
-    };
-    /// For instanced rendering, LOCATION (or INDEX, but NOT the byte offset) in the vertex 
-    /// buffer to start reading instance data from.
-    Uint32 FirstInstanceLocation = 0;
-
-    /// For indirect rendering, pointer to the buffer, from which
-    /// draw attributes will be read.
-    IBuffer* pIndirectDrawAttribs = nullptr;
 
 
     /// Initializes the structure members with default values
@@ -171,78 +284,24 @@ struct DrawAttribs
     /// Default values:
     /// Member                                   | Default value
     /// -----------------------------------------|--------------------------------------
-    /// NumVertices                              | 0
-    /// IsIndexed                                | False
     /// IndexType                                | VT_UNDEFINED
-    /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
     /// Flags                                    | DRAW_FLAG_NONE
-    /// NumInstances                             | 1
-    /// BaseVertex                               | 0
+    /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
     /// IndirectDrawArgsOffset                   | 0
-    /// StartVertexLocation                      | 0
-    /// FirstInstanceLocation                    | 0
-    /// pIndirectDrawAttribs                     | nullptr
-    DrawAttribs()noexcept{}
+    DrawIndexedIndirectAttribs()noexcept{}
 
-    /// Initializes the structure to perform non-indexed draw call.
-    DrawAttribs(Uint32     _NumVertices,
-                DRAW_FLAGS _Flags,
-                Uint32     _NumInstances          = 1,
-                Uint32     _BaseVertex            = 0,
-                Uint32     _StartVertexLocation   = 0,
-                Uint32     _FirstInstanceLocation = 0)noexcept : 
-        NumVertices          (_NumVertices),
-        Flags                (_Flags),
-        NumInstances         (_NumInstances),
-        BaseVertex           (_BaseVertex),
-        StartVertexLocation  (_StartVertexLocation),
-        FirstInstanceLocation(_FirstInstanceLocation)
-    {}
-
-    /// Initializes the structure to perform indexed draw call.
-    DrawAttribs(Uint32      _NumIndices,
-                VALUE_TYPE  _IndexType,
-                DRAW_FLAGS  _Flags,
-                Uint32      _NumInstances          = 1,
-                Uint32      _BaseVertex            = 0,
-                Uint32      _FirstIndexLocation    = 0,
-                Uint32      _FirstInstanceLocation = 0)noexcept : 
-        NumIndices           (_NumIndices),
-        IsIndexed            (true),
-        IndexType            (_IndexType),
-        Flags                (_Flags),
-        NumInstances         (_NumInstances),
-        BaseVertex           (_BaseVertex),
-        FirstIndexLocation   (_FirstIndexLocation),
-        FirstInstanceLocation(_FirstInstanceLocation)
-    {}
-
-
-    /// Initializes the structure to perform non-indexed indirect draw call.
-    DrawAttribs(IBuffer*                       _pIndirectDrawAttribs,
-                DRAW_FLAGS                     _Flags,
-                RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                Uint32                         _IndirectDrawArgsOffset = 0)noexcept :
-        Flags                                   (_Flags),
-        IndirectAttribsBufferStateTransitionMode(_IndirectAttribsBufferStateTransitionMode),
-        IndirectDrawArgsOffset                  (_IndirectDrawArgsOffset),
-        pIndirectDrawAttribs                    (_pIndirectDrawAttribs)
-    {}
-
-    /// Initializes the structure to perform indirect indexed draw call.
-    DrawAttribs(IBuffer*                       _pIndirectDrawAttribs,
-                VALUE_TYPE                     _IndexType,
-                DRAW_FLAGS                     _Flags,
-                RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
-                Uint32                         _IndirectDrawArgsOffset = 0)noexcept : 
-        IsIndexed                               (true),
-        IndexType                               (_IndexType),
-        Flags                                   (_Flags),
-        IndirectAttribsBufferStateTransitionMode(_IndirectAttribsBufferStateTransitionMode),
-        IndirectDrawArgsOffset                  (_IndirectDrawArgsOffset),
-        pIndirectDrawAttribs                    (_pIndirectDrawAttribs)
+    /// Initializes the structure members with user-specified values.
+    DrawIndexedIndirectAttribs(VALUE_TYPE                     _IndexType,
+                               DRAW_FLAGS                     _Flags,
+                               RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
+                               Uint32                         _IndirectDrawArgsOffset = 0)noexcept : 
+        IndexType                               {_IndexType                               },
+        Flags                                   {_Flags                                   },
+        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
+        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
     {}
 };
+
 
 /// Defines which parts of the depth-stencil buffer to clear.
 
@@ -270,48 +329,35 @@ struct DispatchComputeAttribs
     Uint32 ThreadGroupCountY = 1; ///< Number of groups dispatched in Y direction.
     Uint32 ThreadGroupCountZ = 1; ///< Number of groups dispatched in Z direction.
 
-    /// Pointer to the buffer containing dispatch arguments.
-    /// If not nullptr, then indirect dispatch command is executed, and
-    /// ThreadGroupCountX, ThreadGroupCountY, and ThreadGroupCountZ are ignored.
-    IBuffer* pIndirectDispatchAttribs = nullptr;
-    
-    /// If pIndirectDispatchAttribs is not nullptr, indicates offset from the beginning
-    /// of the buffer to the dispatch command arguments. Ignored otherwise.
-    Uint32  DispatchArgsByteOffset    = 0;
-
-    /// State transition mode for indirect dispatch attributes buffer. This member is ignored if pIndirectDispatchAttribs member is null.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
-
     DispatchComputeAttribs()noexcept{}
 
-    /// Initializes the structure to perform non-indirect dispatch command.
-    
-    /// \param [in] GroupsX - Number of groups dispatched in X direction. Default value is 1.
-    /// \param [in] GroupsY - Number of groups dispatched in Y direction. Default value is 1.
-    /// \param [in] GroupsZ - Number of groups dispatched in Z direction. Default value is 1.
-    explicit
-    DispatchComputeAttribs(Uint32 GroupsX, Uint32 GroupsY = 1, Uint32 GroupsZ = 1)noexcept :
-        ThreadGroupCountX       (GroupsX),
-        ThreadGroupCountY       (GroupsY),
-        ThreadGroupCountZ       (GroupsZ),
-        pIndirectDispatchAttribs(nullptr),
-        DispatchArgsByteOffset  (0)
+    /// Initializes the structure with user-specified values.
+    DispatchComputeAttribs(Uint32 GroupsX, Uint32 GroupsY, Uint32 GroupsZ = 1)noexcept :
+        ThreadGroupCountX {GroupsX},
+        ThreadGroupCountY {GroupsY},
+        ThreadGroupCountZ {GroupsZ}
     {}
+};
 
-    /// Initializes the structure to perform indirect dispatch command.
+/// Describes dispatch command arguments.
 
-    /// \param [in] pDispatchAttribs - Pointer to the buffer containing dispatch arguments.
-    /// \param [in] Offset - Offset from the beginning of the buffer to the dispatch command 
-    ///                 arguments. Default value is 0.
-    DispatchComputeAttribs(IBuffer*                       pDispatchAttribs,
-                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                           Uint32                         Offset              = 0) :
-        ThreadGroupCountX                       (0),
-        ThreadGroupCountY                       (0),
-        ThreadGroupCountZ                       (0),
-        pIndirectDispatchAttribs                (pDispatchAttribs),
-        DispatchArgsByteOffset                  (Offset),
-        IndirectAttribsBufferStateTransitionMode(StateTransitionMode)
+/// This structure is used by IDeviceContext::DispatchComputeIndirect().
+struct DispatchComputeIndirectAttribs
+{
+    /// State transition mode for indirect dispatch attributes buffer.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
+    /// The offset from the beginning of the buffer to the dispatch command arguments.
+    Uint32  DispatchArgsByteOffset    = 0;
+
+    DispatchComputeIndirectAttribs()noexcept{}
+
+    /// Initializes the structure with user-specified values.
+    explicit
+    DispatchComputeIndirectAttribs(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                   Uint32                         Offset              = 0) :
+        IndirectAttribsBufferStateTransitionMode{StateTransitionMode},
+        DispatchArgsByteOffset                  {Offset             }
     {}
 };
 
@@ -688,10 +734,37 @@ public:
 
     /// Executes a draw command.
 
-    /// \param [in] DrawAttribs - Structure describing draw command attributes, see Diligent::DrawAttribs for details.
+    /// \param [in] Attribs - Draw command attributes, see Diligent::DrawAttribs for details.
+    ///
+    /// \remarks  If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex
+    ///           buffers, so no other threads are allowed to alter the states of the same resources.
+    ///           It is OK to read these states.
+    ///          
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    virtual void Draw(const DrawAttribs& Attribs) = 0;
+
+
+    /// Executes an indexed draw command.
+
+    /// \param [in] Attribs - Draw command attributes, see Diligent::DrawIndexedAttribs for details.
+    ///
+    /// \remarks  If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
+    ///           buffers, so no other threads are allowed to alter the states of the same resources.
+    ///           It is OK to read these states.
+    ///          
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    virtual void DrawIndexed(const DrawIndexedAttribs& Attribs) = 0;
+
+
+    /// Executes an indirect draw command.
+
+    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawIndirectAttribs for details.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-    ///           the method may transition the state of indirect draw arguments buffer. This is not a thread safe operation, 
+    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
     ///           so no other thread is allowed to read or write the state of the buffer.
     ///
     ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
@@ -700,13 +773,37 @@ public:
     ///          
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
-    virtual void Draw(DrawAttribs &DrawAttribs) = 0;
-    
+    virtual void DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) = 0;
+
+
+    /// Executes an indexed indirect draw command.
+
+    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawIndexedIndirectAttribs for details.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///
+    /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
+    ///           so no other thread is allowed to read or write the state of the buffer.
+    ///
+    ///           If Diligent::DRAW_FLAG_VERIFY_STATES flag is set, the method reads the state of vertex/index
+    ///           buffers, so no other threads are allowed to alter the states of the same resources.
+    ///           It is OK to read these states.
+    ///          
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    virtual void DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) = 0;
+
 
     /// Executes a dispatch compute command.
     
-    /// \param [in] DispatchAttrs - Structure describing dispatch command attributes, 
-    ///                             see Diligent::DispatchComputeAttribs for details.
+    /// \param [in] Attribs - Dispatch command attributes, see Diligent::DispatchComputeAttribs for details.
+    virtual void DispatchCompute(const DispatchComputeAttribs& Attribs) = 0;
+
+
+    /// Executes an indirect dispatch compute command.
+    
+    /// \param [in] Attribs        - The command attributes, see Diligent::DispatchComputeIndirectAttribs for details.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect dispatch arguments.
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of indirect dispatch arguments buffer. This is not a thread safe operation, 
@@ -714,7 +811,7 @@ public:
     ///          
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
-    virtual void DispatchCompute(const DispatchComputeAttribs &DispatchAttrs) = 0;
+    virtual void DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) = 0;
 
 
     /// Clears a depth-stencil view.

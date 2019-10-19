@@ -393,38 +393,22 @@ namespace Diligent
         LOG_ERROR_MESSAGE(ss.str());
     }
 
-    void DeviceContextVkImpl::Draw( DrawAttribs& drawAttribs )
+    void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     {
 #ifdef DEVELOPMENT
-        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0 && !DvpVerifyDrawArguments(drawAttribs))
-            return;
-
-        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
+        if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
             DvpVerifyRenderTargets();
 #endif
 
         EnsureVkCmdBuffer();
 
-        const bool VerifyStates = (drawAttribs.Flags & DRAW_FLAG_VERIFY_STATES) != 0;
-        if ( drawAttribs.IsIndexed )
-        {
-#ifdef DEVELOPMENT
-            if (VerifyStates)
-            {
-                DvpVerifyBufferState(*m_pIndexBuffer, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw call (DeviceContextVkImpl::Draw)");
-            }
-#endif
-            DEV_CHECK_ERR(drawAttribs.IndexType == VT_UINT16 || drawAttribs.IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
-            VkIndexType vkIndexType = drawAttribs.IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
-            m_CommandBuffer.BindIndexBuffer(m_pIndexBuffer->GetVkBuffer(), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(m_ContextId, this), vkIndexType);
-        }
-
         if (!m_State.CommittedVBsUpToDate && m_pPipelineState->GetNumBufferSlotsUsed() > 0)
         {
             CommitVkVertexBuffers();
         }
+
 #ifdef DEVELOPMENT
-        if (VerifyStates)
+        if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
         {
             for (Uint32 slot = 0; slot < m_NumVertexStreams; ++slot )
             {
@@ -448,14 +432,6 @@ namespace Diligent
 #endif
 #endif
 
-        auto* pIndirectDrawAttribsVk = ValidatedCast<BufferVkImpl>(drawAttribs.pIndirectDrawAttribs);
-        if (pIndirectDrawAttribsVk != nullptr)
-        {
-            // Buffer memory barries must be executed outside of render pass
-            TransitionOrVerifyBufferState(*pIndirectDrawAttribsVk, drawAttribs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
-                                          VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect draw (DeviceContextVkImpl::Draw)");
-        }
-
 #ifdef DEVELOPMENT
         if (m_pPipelineState->GetVkRenderPass() != m_RenderPass)
         {
@@ -463,38 +439,95 @@ namespace Diligent
         }
 #endif
 
-        CommitRenderPassAndFramebuffer(VerifyStates);
+        CommitRenderPassAndFramebuffer((Flags & DRAW_FLAG_VERIFY_STATES) != 0);
+    }
 
-        if (pIndirectDrawAttribsVk != nullptr)
-        {
+    BufferVkImpl* DeviceContextVkImpl::PrepareIndirectDrawAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode)
+    {
+        DEV_CHECK_ERR(pAttribsBuffer, "Indirect draw attribs buffer must not be null");
+        auto* pIndirectDrawAttribsVk = ValidatedCast<BufferVkImpl>(pAttribsBuffer);
+
 #ifdef DEVELOPMENT
-            if (pIndirectDrawAttribsVk->GetDesc().Usage == USAGE_DYNAMIC)
-                pIndirectDrawAttribsVk->DvpVerifyDynamicAllocation(this);
+        if (pIndirectDrawAttribsVk->GetDesc().Usage == USAGE_DYNAMIC)
+            pIndirectDrawAttribsVk->DvpVerifyDynamicAllocation(this);
 #endif
 
-            if ( drawAttribs.IsIndexed )
-                m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + drawAttribs.IndirectDrawArgsOffset, 1, 0);
-            else
-                m_CommandBuffer.DrawIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + drawAttribs.IndirectDrawArgsOffset, 1, 0);
-        }
-        else
-        {
-            if ( drawAttribs.IsIndexed )
-                m_CommandBuffer.DrawIndexed(drawAttribs.NumIndices, drawAttribs.NumInstances, drawAttribs.FirstIndexLocation, drawAttribs.BaseVertex, drawAttribs.FirstInstanceLocation);
-            else
-                m_CommandBuffer.Draw(drawAttribs.NumVertices, drawAttribs.NumInstances, drawAttribs.StartVertexLocation, drawAttribs.FirstInstanceLocation );
-        }
+        // Buffer memory barries must be executed outside of render pass
+        TransitionOrVerifyBufferState(*pIndirectDrawAttribsVk, TransitonMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
+                                       VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect draw (DeviceContextVkImpl::Draw)");
+        return pIndirectDrawAttribsVk;
+    }
 
+    void DeviceContextVkImpl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType)
+    {
+        PrepareForDraw(Flags);
+
+#ifdef DEVELOPMENT
+        if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
+        {
+            DvpVerifyBufferState(*m_pIndexBuffer, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw call (DeviceContextVkImpl::Draw)");
+        }
+#endif
+        DEV_CHECK_ERR(IndexType == VT_UINT16 || IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
+        VkIndexType vkIndexType = IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+        m_CommandBuffer.BindIndexBuffer(m_pIndexBuffer->GetVkBuffer(), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(m_ContextId, this), vkIndexType);
+    }
+
+    void DeviceContextVkImpl::Draw(const DrawAttribs& Attribs)
+    {
+        if (!DvpVerifyDrawArguments(Attribs))
+            return;
+
+        PrepareForDraw(Attribs.Flags);
+
+        m_CommandBuffer.Draw(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation );
         ++m_State.NumCommands;
     }
 
-    void DeviceContextVkImpl::DispatchCompute( const DispatchComputeAttribs& DispatchAttrs )
+    void DeviceContextVkImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     {
-#ifdef DEVELOPMENT
-        if (!DvpVerifyDispatchArguments(DispatchAttrs))
+        if (!DvpVerifyDrawIndexedArguments(Attribs))
             return;
-#endif
 
+        PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+
+        m_CommandBuffer.DrawIndexed(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+        ++m_State.NumCommands;
+    }
+
+    void DeviceContextVkImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+        // We must prepare indirect draw attribs buffer first because state transitions must
+        // be performed outside of render pass, and PrepareForDraw commits render pass
+        BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectDrawAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode);
+
+        PrepareForDraw(Attribs.Flags);
+
+        m_CommandBuffer.DrawIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + Attribs.IndirectDrawArgsOffset, 1, 0);
+        ++m_State.NumCommands;             
+    }
+
+    void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+        // We must prepare indirect draw attribs buffer first because state transitions must
+        // be performed outside of render pass, and PrepareForDraw commits render pass
+        BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectDrawAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode);
+
+        PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
+
+        m_CommandBuffer.DrawIndexedIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + Attribs.IndirectDrawArgsOffset, 1, 0);
+        ++m_State.NumCommands;
+    }
+
+
+    void DeviceContextVkImpl::PrepareForDispatchCompute()
+    {
         EnsureVkCmdBuffer();
 
         // Dispatch commands must be executed outside of render pass
@@ -512,27 +545,40 @@ namespace Diligent
         }
 #endif
 #endif
+    }
 
-        if (DispatchAttrs.pIndirectDispatchAttribs != nullptr)
-        {
-            auto *pBufferVk = ValidatedCast<BufferVkImpl>(DispatchAttrs.pIndirectDispatchAttribs);
-            
-#ifdef DEVELOPMENT
-            if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
-                pBufferVk->DvpVerifyDynamicAllocation(this);
-#endif
+    void DeviceContextVkImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
+    {
+        if (!DvpVerifyDispatchArguments(Attribs))
+            return;
 
-            // Buffer memory barries must be executed outside of render pass
-            TransitionOrVerifyBufferState(*pBufferVk, DispatchAttrs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
-                                            VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
-
-            m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + DispatchAttrs.DispatchArgsByteOffset);
-        }
-        else
-            m_CommandBuffer.Dispatch(DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ);
-
+        PrepareForDispatchCompute();
+        m_CommandBuffer.Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
         ++m_State.NumCommands;
     }
+
+    void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+        PrepareForDispatchCompute();
+
+        auto* pBufferVk = ValidatedCast<BufferVkImpl>(pAttribsBuffer);
+            
+#ifdef DEVELOPMENT
+        if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
+            pBufferVk->DvpVerifyDynamicAllocation(this);
+#endif
+
+        // Buffer memory barries must be executed outside of render pass
+        TransitionOrVerifyBufferState(*pBufferVk, Attribs.IndirectAttribsBufferStateTransitionMode, RESOURCE_STATE_INDIRECT_ARGUMENT,
+                                        VK_ACCESS_INDIRECT_COMMAND_READ_BIT, "Indirect dispatch (DeviceContextVkImpl::DispatchCompute)");
+
+        m_CommandBuffer.DispatchIndirect(pBufferVk->GetVkBuffer(), pBufferVk->GetDynamicOffset(m_ContextId, this) + Attribs.DispatchArgsByteOffset);
+        ++m_State.NumCommands;
+    }
+
 
     void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView,
                                                 CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
@@ -1030,7 +1076,7 @@ namespace Diligent
         }
     }
 
-    inline void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
+    void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
     {
         const auto& CmdBufferState = m_CommandBuffer.GetState();
         if (CmdBufferState.Framebuffer != m_Framebuffer)

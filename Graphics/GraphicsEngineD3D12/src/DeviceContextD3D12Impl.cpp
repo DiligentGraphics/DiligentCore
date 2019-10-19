@@ -268,7 +268,7 @@ namespace Diligent
         }
     }
 
-    void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(VALUE_TYPE IndexType)
+    void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, VALUE_TYPE IndexType)
     {
         VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
 
@@ -308,8 +308,7 @@ namespace Diligent
             m_State.CommittedD3D12IndexBuffer          = pd3d12Buff;
             m_State.CommittedIBFormat                  = IndexType;
             m_State.CommittedD3D12IndexDataStartOffset = m_IndexDataStartOffset + static_cast<Uint32>(BuffDataStartByteOffset);
-            auto& GraphicsCtx = GetCmdContext().AsGraphicsContext();
-            GraphicsCtx.SetIndexBuffer( IBView );
+            GraphCtx.SetIndexBuffer( IBView );
         }
         
         // GPU virtual address of a dynamic index buffer can change every time
@@ -362,33 +361,12 @@ namespace Diligent
         m_State.bCommittedD3D12VBsUpToDate = !DynamicBufferPresent;
     }
 
-    void DeviceContextD3D12Impl::Draw( DrawAttribs& drawAttribs )
+    void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAGS Flags)
     {
 #ifdef DEVELOPMENT
-        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) != 0 && !DvpVerifyDrawArguments(drawAttribs))
-            return;
-
-        if ((drawAttribs.Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
+        if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
             DvpVerifyRenderTargets();
 #endif
-
-        const bool VerifyStates = (drawAttribs.Flags & DRAW_FLAG_VERIFY_STATES) != 0;
-        auto& GraphCtx = GetCmdContext().AsGraphicsContext();
-        if (drawAttribs.IsIndexed)
-        {
-            if (m_State.CommittedIBFormat != drawAttribs.IndexType)
-                m_State.bCommittedD3D12IBUpToDate = false;
-            if (!m_State.bCommittedD3D12IBUpToDate)
-            {
-                CommitD3D12IndexBuffer(drawAttribs.IndexType);
-            }
-#ifdef DEVELOPMENT
-            if (VerifyStates)
-            {
-                DvpVerifyBufferState(*m_pIndexBuffer, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw (DeviceContextD3D12Impl::Draw())");
-            }
-#endif
-        }
 
         if (!m_State.bCommittedD3D12VBsUpToDate && m_pPipelineState->GetNumBufferSlotsUsed() > 0)
         {
@@ -396,7 +374,7 @@ namespace Diligent
         }
 
 #ifdef DEVELOPMENT
-        if (VerifyStates)
+        if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
         {
             for( Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff )
             {
@@ -409,6 +387,7 @@ namespace Diligent
             }
         }
 #endif
+
         GraphCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
 
         if (m_State.pCommittedResourceCache != nullptr)
@@ -418,47 +397,107 @@ namespace Diligent
 #ifdef DEVELOPMENT
         else
         {
-            if( m_pPipelineState->dbgContainsShaderResources() )
+            if (m_pPipelineState->dbgContainsShaderResources())
                 LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called with non-null SRB" );
         }
 #endif
-        
+    }
 
-        auto* pIndirectDrawAttribsD3D12 = ValidatedCast<BufferD3D12Impl>(drawAttribs.pIndirectDrawAttribs);
-        if (pIndirectDrawAttribsD3D12 != nullptr)
+    void DeviceContextD3D12Impl::PrepareForIndexedDraw(GraphicsContext& GraphCtx, DRAW_FLAGS Flags, VALUE_TYPE IndexType)
+    {
+        PrepareForDraw(GraphCtx, Flags);
+        if (m_State.CommittedIBFormat != IndexType)
+            m_State.bCommittedD3D12IBUpToDate = false;
+        if (!m_State.bCommittedD3D12IBUpToDate)
         {
+            CommitD3D12IndexBuffer(GraphCtx, IndexType);
+        }
 #ifdef DEVELOPMENT
-            if (pIndirectDrawAttribsD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(this);
-#endif
-
-            TransitionOrVerifyBufferState(GraphCtx, *pIndirectDrawAttribsD3D12, drawAttribs.IndirectAttribsBufferStateTransitionMode,
-                                          RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect draw (DeviceContextD3D12Impl::Draw)");
-
-            size_t BuffDataStartByteOffset;
-            ID3D12Resource *pd3d12ArgsBuff = pIndirectDrawAttribsD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
-            GraphCtx.ExecuteIndirect(drawAttribs.IsIndexed ? m_pDrawIndexedIndirectSignature : m_pDrawIndirectSignature, pd3d12ArgsBuff, drawAttribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
-        }
-        else
+        if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
         {
-            if( drawAttribs.IsIndexed )
-                GraphCtx.DrawIndexed(drawAttribs.NumIndices, drawAttribs.NumInstances, drawAttribs.FirstIndexLocation, drawAttribs.BaseVertex, drawAttribs.FirstInstanceLocation);
-            else
-                GraphCtx.Draw(drawAttribs.NumVertices, drawAttribs.NumInstances, drawAttribs.StartVertexLocation, drawAttribs.FirstInstanceLocation );
+            DvpVerifyBufferState(*m_pIndexBuffer, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw (DeviceContextD3D12Impl::Draw())");
         }
+#endif
+    }
+
+    void DeviceContextD3D12Impl::Draw(const DrawAttribs& Attribs)
+    {
+        if (!DvpVerifyDrawArguments(Attribs))
+            return;
+
+        auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+        PrepareForDraw(GraphCtx, Attribs.Flags);
+        GraphCtx.Draw(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
         ++m_State.NumCommands;
     }
 
-    void DeviceContextD3D12Impl::DispatchCompute( const DispatchComputeAttribs& DispatchAttrs )
+    void DeviceContextD3D12Impl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     {
-#ifdef DEVELOPMENT
-        if (!DvpVerifyDispatchArguments(DispatchAttrs))
+        if (!DvpVerifyDrawIndexedArguments(Attribs))
             return;
+
+        auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+        PrepareForIndexedDraw(GraphCtx, Attribs.Flags, Attribs.IndexType);
+        GraphCtx.DrawIndexed(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
+        ++m_State.NumCommands;
+    }
+
+    void DeviceContextD3D12Impl::PrepareDrawIndirectBuffer(GraphicsContext&               GraphCtx,
+                                                           IBuffer*                       pAttribsBuffer,
+                                                           RESOURCE_STATE_TRANSITION_MODE BufferStateTransitionMode,
+                                                           ID3D12Resource*&               pd3d12ArgsBuff,
+                                                           size_t&                        BuffDataStartByteOffset)
+    {
+        DEV_CHECK_ERR(pAttribsBuffer != nullptr, "Indirect draw attribs buffer must not be null");
+        
+        auto* pIndirectDrawAttribsD3D12 = ValidatedCast<BufferD3D12Impl>(pAttribsBuffer);
+#ifdef DEVELOPMENT
+        if (pIndirectDrawAttribsD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+            pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
-        auto& ComputeCtx = GetCmdContext().AsComputeContext();
-        ComputeCtx.SetRootSignature( m_pPipelineState->GetD3D12RootSignature() );
-      
+        TransitionOrVerifyBufferState(GraphCtx, *pIndirectDrawAttribsD3D12, BufferStateTransitionMode,
+                                      RESOURCE_STATE_INDIRECT_ARGUMENT,
+                                      "Indirect draw (DeviceContextD3D12Impl::PrepareDrawIndirectBuffer)");
+
+        pd3d12ArgsBuff = pIndirectDrawAttribsD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
+    }
+
+    void DeviceContextD3D12Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+        auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+        PrepareForDraw(GraphCtx, Attribs.Flags);
+
+        ID3D12Resource* pd3d12ArgsBuff;
+        size_t BuffDataStartByteOffset;
+        PrepareDrawIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset);
+
+        GraphCtx.ExecuteIndirect(m_pDrawIndirectSignature, pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
+        ++m_State.NumCommands;
+    }
+
+    void DeviceContextD3D12Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+        auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+        PrepareForIndexedDraw(GraphCtx, Attribs.Flags, Attribs.IndexType);
+
+        ID3D12Resource* pd3d12ArgsBuff;
+        size_t BuffDataStartByteOffset;
+        PrepareDrawIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset);
+
+        GraphCtx.ExecuteIndirect(m_pDrawIndexedIndirectSignature, pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
+        ++m_State.NumCommands;
+    }
+
+    void DeviceContextD3D12Impl::PrepareForDispatchCompute(ComputeContext& ComputeCtx)
+    {
+        ComputeCtx.SetRootSignature(m_pPipelineState->GetD3D12RootSignature());
         if (m_State.pCommittedResourceCache != nullptr)
         {
             m_pPipelineState->GetRootSignature().CommitRootViews(*m_State.pCommittedResourceCache, ComputeCtx, true, this);
@@ -466,29 +505,43 @@ namespace Diligent
 #ifdef _DEBUG
         else
         {
-            if( m_pPipelineState->dbgContainsShaderResources() )
+            if (m_pPipelineState->dbgContainsShaderResources())
                 LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called with non-null SRB" );
         }
 #endif
+    }
 
-        if (DispatchAttrs.pIndirectDispatchAttribs != nullptr)
-        {
-            auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(DispatchAttrs.pIndirectDispatchAttribs);
+    void DeviceContextD3D12Impl::DispatchCompute(const DispatchComputeAttribs& Attribs)
+    {
+        if (!DvpVerifyDispatchArguments(Attribs))
+            return;
+
+        auto& ComputeCtx = GetCmdContext().AsComputeContext();
+        PrepareForDispatchCompute(ComputeCtx);
+        ComputeCtx.Dispatch(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
+        ++m_State.NumCommands;
+    }
+
+    void DeviceContextD3D12Impl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+        auto& ComputeCtx = GetCmdContext().AsComputeContext();
+        PrepareForDispatchCompute(ComputeCtx);
+        
+        auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pAttribsBuffer);
 
 #ifdef DEVELOPMENT
-            if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
-                pBufferD3D12->DvpVerifyDynamicAllocation(this);
+        if(pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+            pBufferD3D12->DvpVerifyDynamicAllocation(this);
 #endif
 
-            TransitionOrVerifyBufferState(ComputeCtx, *pBufferD3D12, DispatchAttrs.IndirectAttribsBufferStateTransitionMode,
-                                          RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect dispatch (DeviceContextD3D12Impl::DispatchCompute)");
-
-            size_t BuffDataStartByteOffset;
-            ID3D12Resource *pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
-            ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pd3d12ArgsBuff, DispatchAttrs.DispatchArgsByteOffset + BuffDataStartByteOffset);
-        }
-        else
-            ComputeCtx.Dispatch(DispatchAttrs.ThreadGroupCountX, DispatchAttrs.ThreadGroupCountY, DispatchAttrs.ThreadGroupCountZ);
+        TransitionOrVerifyBufferState(ComputeCtx, *pBufferD3D12, Attribs.IndirectAttribsBufferStateTransitionMode,
+                                      RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect dispatch (DeviceContextD3D12Impl::DispatchComputeIndirect)");
+        size_t BuffDataStartByteOffset;
+        ID3D12Resource* pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
+        ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pd3d12ArgsBuff, Attribs.DispatchArgsByteOffset + BuffDataStartByteOffset);
         ++m_State.NumCommands;
     }
 

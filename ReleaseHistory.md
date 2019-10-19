@@ -2,7 +2,9 @@
 
 ### API Changes
 
-* Enabled bindless shader
+* Split up `Draw` command into `Draw`, `DrawIndexed`, `DrawIndirect` and `DrawIndexedIndirect`.
+  Split up `DispatchCompute` command into `DispatchCompute` and `DispatchComputeInidrect` (API Version 240033).
+* Enabled bindless resources
 * Removed `SHADER_PROFILE` enum (API Version 240032)
 * Added `DIRECT3D_FEATURE_LEVEL` and `DIRECT3D_FEATURE_LEVEL MinimumFeatureLevel` member to 
   `EngineD3D11CreateInfo` and `EngineD3D12CreateInfo` structs (API Version 240032)

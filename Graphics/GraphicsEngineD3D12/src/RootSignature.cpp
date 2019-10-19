@@ -29,7 +29,6 @@
 #include "CommandContext.h"
 #include "RenderDeviceD3D12Impl.h"
 #include "TextureD3D12Impl.h"
-#include "BufferD3D12Impl.h"
 #include "D3D12TypeConversions.h"
 #include "HashUtils.h"
 
@@ -1091,41 +1090,6 @@ void RootSignature::TransitionResources(ShaderResourceCacheD3D12& ResourceCache,
             );
         }
     );
-}
-
-
-void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache, 
-                                    CommandContext&           Ctx, 
-                                    bool                      IsCompute,
-                                    DeviceContextD3D12Impl*   pCtx)const
-{
-    for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
-    {
-        auto& RootView = m_RootParams.GetRootView(rv);
-        auto RootInd = RootView.GetRootIndex();
-       
-        SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
-#ifdef _DEBUG
-        {
-            auto& Param = static_cast<const D3D12_ROOT_PARAMETER&>( RootView );
-            VERIFY_EXPR(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
-            dbgShaderType = ShaderTypeFromShaderVisibility(Param.ShaderVisibility);
-        }
-#endif
-
-        auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType);
-        if (auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>())
-        {
-            if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER) )
-                Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
-
-            D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(pCtx);
-            if(IsCompute)
-                Ctx.GetCommandList()->SetComputeRootConstantBufferView(RootInd, CBVAddress);
-            else
-                Ctx.GetCommandList()->SetGraphicsRootConstantBufferView(RootInd, CBVAddress);
-        }
-    }
 }
 
 }

@@ -193,19 +193,31 @@ protected:
     inline void ClearStateCache();
 
 #ifdef DEVELOPMENT
-    bool DvpVerifyDrawArguments(const DrawAttribs& drawAttribs);
-    void DvpVerifyRenderTargets();
-    bool DvpVerifyDispatchArguments(const DispatchComputeAttribs &DispatchAttrs);
-    void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier);
-    bool DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName);
-    bool DvpVerifyBufferState (const BufferImplType&  Buffer,  RESOURCE_STATE RequiredState, const char* OperationName);
+    bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs)const;
+    bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs)const;
+    bool DvpVerifyDrawIndirectArguments       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer)const;
+    bool DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const;
+
+    bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const;
+    bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const;
+
+    void DvpVerifyRenderTargets()const;
+    void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const;
+    bool DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName)const;
+    bool DvpVerifyBufferState (const BufferImplType&  Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const;
 #else
-#   define DvpVerifyDrawArguments      (...)[](){return true;}()
-#   define DvpVerifyRenderTargets      (...)[](){return true;}()
-#   define DvpVerifyDispatchArguments  (...)[](){return true;}()
-#   define DvpVerifyStateTransitionDesc(...)do{}while(false)
-#   define DvpVerifyTextureState       (...)[](){return true;}()
-#   define DvpVerifyBufferState        (...)[](){return true;}()
+    bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs)const {return true;}
+    bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs)const {return true;}
+    bool DvpVerifyDrawIndirectArguments       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer)const {return true;}
+    bool DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {return true;}
+
+    bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const {return true;}
+    bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {return true;}
+
+    void DvpVerifyRenderTargets()const {}
+    void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const {}
+    bool DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
+    bool DvpVerifyBufferState (const BufferImplType&  Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
 #endif
 
     /// Strong reference to the device.
@@ -871,41 +883,101 @@ inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
 #ifdef DEVELOPMENT
 template<typename BaseInterface, typename ImplementationTraits>
 inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
-            DvpVerifyDrawArguments(const DrawAttribs& drawAttribs)
+            DvpVerifyDrawArguments(const DrawAttribs& Attribs)const
 {
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
+        return true;
+
     if (!m_pPipelineState)
     {
-        LOG_ERROR_MESSAGE("No pipeline state is bound for a draw command");
+        LOG_ERROR_MESSAGE("Draw command arguments are invalid: no pipeline state is bound.");
         return false;
     }
 
     if (m_pPipelineState->GetDesc().IsComputePipeline)
     {
-        LOG_ERROR_MESSAGE("Pipeline state bound for a draw command is a compute pipeline");
+        LOG_ERROR_MESSAGE("Draw command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
         return false;
     }
 
-    if (drawAttribs.pIndirectDrawAttribs == nullptr)
+    if (Attribs.NumVertices == 0)
     {
-        if (drawAttribs.NumIndices == 0)
-            LOG_WARNING_MESSAGE(drawAttribs.IsIndexed ? "Number of indices to draw is zero" : "Number of vertices to draw is zero");
-
-        if (drawAttribs.NumInstances == 0)
-        {
-            LOG_ERROR_MESSAGE("Number of instances cannot be 0. Use 1 for a non-instanced draw command.");
-            return false;
-        }
+        LOG_WARNING_MESSAGE("Draw command arguments are invalid: number of vertices to draw is zero.");
     }
 
-    if (drawAttribs.IsIndexed && drawAttribs.IndexType != VT_UINT16 && drawAttribs.IndexType != VT_UINT32)
+    return true;
+}
+
+template<typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
+            DvpVerifyDrawIndexedArguments(const DrawIndexedAttribs& Attribs)const
+{
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
+        return true;
+
+    if (!m_pPipelineState)
     {
-        LOG_ERROR_MESSAGE("For an indexed draw command IndexType must be VT_UINT16 or VT_UINT32");
+        LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (m_pPipelineState->GetDesc().IsComputePipeline)
+    {
+        LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+        return false;
+    }
+
+    if (Attribs.IndexType != VT_UINT16 && Attribs.IndexType != VT_UINT32)
+    {
+        LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: IndexType (", GetValueTypeString(Attribs.IndexType), ") must be VT_UINT16 or VT_UINT32.");
         return false;
     }
     
-    if (drawAttribs.IsIndexed && !m_pIndexBuffer)
+    if (!m_pIndexBuffer)
     {
-        LOG_ERROR_MESSAGE("No index buffer is bound for indexed draw command");
+        LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: no index buffer is bound.");
+        return false;
+    }
+
+    if (Attribs.NumIndices == 0)
+    {
+        LOG_WARNING_MESSAGE("DrawIndexed command arguments are invalid: number of indices to draw is zero.");
+    }
+
+    return true;
+}
+
+template<typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
+            DvpVerifyDrawIndirectArguments(const DrawIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const
+{
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
+        return true;
+
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (m_pPipelineState->GetDesc().IsComputePipeline)
+    {
+        LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+        return false;
+    }
+
+    if (pAttribsBuffer != nullptr)
+    {
+        if ((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) == 0)
+        {
+            LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: indirect draw arguments buffer '",
+                              pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+            return false;
+        }
+    }
+    else
+    {
+        LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: indirect draw arguments buffer is null.");
         return false;
     }
 
@@ -913,7 +985,57 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
 }
 
 template<typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: DvpVerifyRenderTargets()
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
+            DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const
+{
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
+        return true;
+
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (m_pPipelineState->GetDesc().IsComputePipeline)
+    {
+        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+        return false;
+    }
+
+    if (Attribs.IndexType != VT_UINT16 && Attribs.IndexType != VT_UINT32)
+    {
+        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: IndexType (", GetValueTypeString(Attribs.IndexType), ") must be VT_UINT16 or VT_UINT32.");
+        return false;
+    }
+    
+    if (!m_pIndexBuffer)
+    {
+        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: no index buffer is bound.");
+        return false;
+    }
+
+    if (pAttribsBuffer != nullptr)
+    {
+        if ((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) == 0)
+        {
+            LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: indirect draw arguments buffer '",
+                              pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+            return false;
+        }
+    }
+    else
+    {
+        LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: indirect draw arguments buffer is null.");
+        return false;
+    }
+
+    return true;
+}
+
+template<typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
+            DvpVerifyRenderTargets()const
 {
     if (!m_pPipelineState)
     {
@@ -979,38 +1101,70 @@ inline void DeviceContextBase<BaseInterface,ImplementationTraits> :: DvpVerifyRe
 
 template<typename BaseInterface, typename ImplementationTraits>
 inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
-            DvpVerifyDispatchArguments(const DispatchComputeAttribs& DispatchAttrs)
+            DvpVerifyDispatchArguments(const DispatchComputeAttribs& Attribs)const
 {
     if (!m_pPipelineState)
     {
-        LOG_ERROR("No pipeline state is bound for a dispatch command");
+        LOG_ERROR_MESSAGE("DispatchCompute command arguments are invalid: no pipeline state is bound.");
         return false;
     }
 
     if (!m_pPipelineState->GetDesc().IsComputePipeline)
     {
-        LOG_ERROR("Pipeline state bound for a draw command is a graphics pipeline");
+        LOG_ERROR_MESSAGE("DispatchCompute command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is a graphics pipeline.");
         return false;
     }
 
-    if(DispatchAttrs.pIndirectDispatchAttribs == nullptr)
-    {
-        if (DispatchAttrs.ThreadGroupCountX == 0)
-            LOG_WARNING_MESSAGE("ThreadGroupCountX is zero");
+    if (Attribs.ThreadGroupCountX == 0)
+        LOG_WARNING_MESSAGE("DispatchCompute command arguments are invalid: ThreadGroupCountX is zero.");
 
-        if (DispatchAttrs.ThreadGroupCountY == 0)
-            LOG_WARNING_MESSAGE("ThreadGroupCountY is zero");
+    if (Attribs.ThreadGroupCountY == 0)
+        LOG_WARNING_MESSAGE("DispatchCompute command arguments are invalid: ThreadGroupCountY is zero.");
 
-        if (DispatchAttrs.ThreadGroupCountZ == 0)
-            LOG_WARNING_MESSAGE("ThreadGroupCountZ is zero");
-    }
+    if (Attribs.ThreadGroupCountZ == 0)
+        LOG_WARNING_MESSAGE("DispatchCompute command arguments are invalid: ThreadGroupCountZ is zero.");
 
     return true;
 }
 
 template<typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
+            DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const
+{
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (!m_pPipelineState->GetDesc().IsComputePipeline)
+    {
+        LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is a graphics pipeline.");
+        return false;
+    }
+
+    if (pAttribsBuffer != nullptr)
+    {
+        if ((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) == 0)
+        {
+            LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: indirect dispatch arguments buffer '",
+                              pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+            return false;
+        }
+    }
+    else
+    {
+        LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: indirect dispatch arguments buffer is null.");
+        return false;
+    }
+
+    return true;
+}
+
+
+template<typename BaseInterface, typename ImplementationTraits>
 void DeviceContextBase<BaseInterface,ImplementationTraits> ::
-     DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)
+     DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const
 {
     DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer members of StateTransitionDesc must not be null");
     DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
@@ -1067,7 +1221,7 @@ void DeviceContextBase<BaseInterface,ImplementationTraits> ::
 
 template<typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
-     DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName)
+     DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName)const
 {
     if (Texture.IsInKnownState() && !Texture.CheckState(RequiredState))
     {
@@ -1082,7 +1236,7 @@ bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
 
 template<typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface,ImplementationTraits> :: 
-     DvpVerifyBufferState(const BufferImplType& Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)
+     DvpVerifyBufferState(const BufferImplType& Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const
 {
     if (Buffer.IsInKnownState() && !Buffer.CheckState(RequiredState))
     {
