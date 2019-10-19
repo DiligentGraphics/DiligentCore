@@ -1313,14 +1313,17 @@ namespace Diligent
         /// No debug flag
         D3D11_DEBUG_FLAG_NONE                                = 0x00,
 
+        /// Whether to create Direct3D11 debug device
+        D3D11_DEBUG_FLAG_CREATE_DEBUG_DEVICE                 = 0x01,
+
         /// Before executing draw/dispatch command, verify that
         /// all required shader resources are bound to the device context
-        D3D11_DEBUG_FLAG_VERIFY_COMMITTED_SHADER_RESOURCES   = 0x01,
+        D3D11_DEBUG_FLAG_VERIFY_COMMITTED_SHADER_RESOURCES   = 0x02,
 
         /// Verify that all committed cotext resources are relevant,
         /// i.e. they are consistent with the committed resource cache.
         /// This is very expensive and should generally not be necessary.
-        D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE = 0x02
+        D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE = 0x04
     };
     DEFINE_FLAG_ENUM_OPERATORS(D3D11_DEBUG_FLAGS)
 

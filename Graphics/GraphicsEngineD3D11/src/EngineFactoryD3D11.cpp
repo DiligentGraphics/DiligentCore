@@ -117,8 +117,8 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
     // D3D11_CREATE_DEVICE_BGRA_SUPPORT;
     UINT creationFlags = 0;
 
-#if defined(_DEBUG)
-	if (SdkLayersAvailable())
+#if defined(DEVELOPMENT)
+	if ((EngineCI.DebugFlags & D3D11_DEBUG_FLAG_CREATE_DEBUG_DEVICE) != 0 && SdkLayersAvailable())
 	{
 		// If the project is in a debug build, enable debugging via SDK Layers with this flag.
 		creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
