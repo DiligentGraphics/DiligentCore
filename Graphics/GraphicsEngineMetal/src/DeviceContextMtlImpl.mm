@@ -97,24 +97,53 @@ namespace Diligent
         }
     }
 
-    void DeviceContextMtlImpl::Draw( DrawAttribs &drawAttribs )
+    void DeviceContextMtlImpl::Draw(const DrawAttribs& Attribs)
     {
-#ifdef DEVELOPMENT
-        if (!DvpVerifyDrawArguments(drawAttribs))
+        if (!DvpVerifyDrawArguments(Attribs))
             return;
-#endif
-
+    
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::Draw() is not implemented");
     }
 
-    void DeviceContextMtlImpl::DispatchCompute( const DispatchComputeAttribs &DispatchAttrs )
+    void DeviceContextMtlImpl::DrawIndexed(const DrawIndexedAttribs& Attribs)
     {
-#ifdef DEVELOPMENT
-        if (!DvpVerifyDispatchArguments(DispatchAttrs))
+        if (!DvpVerifyDrawIndexedArguments(Attribs))
             return;
-#endif
 
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::DrawIndexed() is not implemented");
+    }
+
+    void DeviceContextMtlImpl::DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+
+    
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::DrawIndirect() is not implemented");
+    }
+
+    void DeviceContextMtlImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDrawIndexedIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+    
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::DrawIndexedIndirect() is not implemented");
+    }
+
+    void DeviceContextMtlImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
+    {
+        if (!DvpVerifyDispatchArguments(Attribs))
+            return;
+    
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::DispatchCompute() is not implemented");
+    }
+
+    void DeviceContextMtlImpl::DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
+            return;
+    
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::DispatchComputeIndirect() is not implemented");
     }
 
     void DeviceContextMtlImpl::ClearDepthStencil(ITextureView*                    pView,
