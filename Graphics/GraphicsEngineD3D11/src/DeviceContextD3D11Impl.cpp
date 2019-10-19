@@ -326,7 +326,7 @@ namespace Diligent
                     }
 
 #ifdef DEVELOPMENT
-                    if ((m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance) != 0 && ShaderTypeInd == CSInd)
+                    if ((m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0 && ShaderTypeInd == CSInd)
                     {
                         dbgVerifyCommittedUAVs(pShaderD3D11->GetDesc().ShaderType);
                     }
@@ -436,7 +436,7 @@ namespace Diligent
                         m_NumCommittedCBs[ShaderTypeInd] = std::max(m_NumCommittedCBs[ShaderTypeInd], static_cast<Uint8>(NumCBs));
                     }
 #ifdef DEVELOPMENT
-                    if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+                    if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
                     {
                         dbgVerifyCommittedCBs(pShaderD3D11->GetDesc().ShaderType);
                     }
@@ -543,7 +543,7 @@ namespace Diligent
                         m_NumCommittedSRVs[ShaderTypeInd] = std::max(m_NumCommittedSRVs[ShaderTypeInd], static_cast<Uint8>(NumSRVs));
                     }
 #ifdef DEVELOPMENT
-                    if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+                    if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
                     {
                         dbgVerifyCommittedSRVs(pShaderD3D11->GetDesc().ShaderType);
                     }
@@ -583,7 +583,7 @@ namespace Diligent
                         m_NumCommittedSamplers[ShaderTypeInd] = std::max(m_NumCommittedSamplers[ShaderTypeInd], static_cast<Uint8>(NumSamplers));
                     }
 #ifdef DEVELOPMENT
-                    if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+                    if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
                     {
                         dbgVerifyCommittedSamplers(pShaderD3D11->GetDesc().ShaderType);
                     }
@@ -594,7 +594,7 @@ namespace Diligent
 
 
 #ifdef DEVELOPMENT
-            if (CommitResources && (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedShaderResources) != 0)
+            if (CommitResources && (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_SHADER_RESOURCES) != 0)
             {
                 // Use full resource layout to verify that all required resources are committed
                 pShaderD3D11->GetD3D11Resources()->dvpVerifyCommittedResources(
@@ -768,7 +768,7 @@ namespace Diligent
             }
         }
 
-        if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+        if(m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
             // Verify bindings after all resources are set
             dbgVerifyCommittedSRVs();
@@ -863,7 +863,7 @@ namespace Diligent
             return;
 
 #ifdef DEVELOPMENT
-        if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+        if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
             // Verify bindings
             dbgVerifyCommittedSRVs();
@@ -883,7 +883,7 @@ namespace Diligent
             return;
 
 #ifdef DEVELOPMENT
-        if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+        if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
             // Verify bindings
             dbgVerifyCommittedSRVs();
@@ -1469,7 +1469,7 @@ namespace Diligent
                 m_pd3d11DeviceContext->IASetIndexBuffer( nullptr, DXGI_FORMAT_R32_UINT, m_CommittedD3D11IndexDataStartOffset );
             }
 #ifdef DEVELOPMENT
-            if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+            if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
             {
                 dbgVerifyCommittedIndexBuffer();
             }
@@ -1497,7 +1497,7 @@ namespace Diligent
                 }
             }
 #ifdef DEVELOPMENT
-            if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+            if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
             {
                 dbgVerifyCommittedVertexBuffers();
             }
@@ -1523,7 +1523,7 @@ namespace Diligent
                 }
             }
 #ifdef DEVELOPMENT
-            if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+            if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
             {
                 dbgVerifyCommittedCBs();
             }
@@ -1703,7 +1703,7 @@ namespace Diligent
         }
 
 #ifdef DEVELOPMENT
-        if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+        if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
             dbgVerifyCommittedSRVs();
             dbgVerifyCommittedUAVs(SHADER_TYPE_COMPUTE);
@@ -1737,7 +1737,7 @@ namespace Diligent
         InvalidateState();
 
 #ifdef DEVELOPMENT
-        if (m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+        if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
             // Verify bindings
             dbgVerifyCommittedSRVs();
@@ -1774,7 +1774,7 @@ namespace Diligent
         InvalidateState();
 
 #ifdef DEVELOPMENT
-        if(m_DebugFlags & (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance)
+        if(m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
             // Verify bindings
             dbgVerifyCommittedSRVs();

@@ -15,8 +15,7 @@ using namespace Diligent;
 
 EngineD3D11CreateInfo EngineCI;
 EngineCI.DebugFlags =
-    (Uint32)EngineD3D11DebugFlags::VerifyCommittedShaderResources |
-    (Uint32)EngineD3D11DebugFlags::VerifyCommittedResourceRelevance;
+    D3D11_DEBUG_FLAG_VERIFY_COMMITTED_SHADER_RESOURCES;
 
 // Get pointer to the function that returns the factory
 #if ENGINE_DLL
