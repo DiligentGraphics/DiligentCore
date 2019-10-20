@@ -288,11 +288,15 @@ private:
         VALUE_TYPE              CommittedIBFormat                  = VT_UNDEFINED;
         Uint32                  CommittedD3D12IndexDataStartOffset = 0;
 
-        // Flag indicating if currently committed D3D12 vertex buffers are up to date
+        // Indicates if currently committed D3D12 vertex buffers are up to date
         bool bCommittedD3D12VBsUpToDate = false;
 
-        // Fl indicating if currently committed D3D11 index buffer is up to date
+        // Indicates if currently committed D3D11 index buffer is up to date
         bool bCommittedD3D12IBUpToDate  = false;
+
+        // Indicates if root views have been committed since the time SRB
+        // has been committed.
+        bool bRootViewsCommitted        = false;
 
         class ShaderResourceCacheD3D12* pCommittedResourceCache = nullptr;
     }m_State;

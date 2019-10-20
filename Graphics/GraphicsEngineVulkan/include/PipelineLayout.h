@@ -90,10 +90,11 @@ public:
     {
         std::vector<VkDescriptorSet> vkSets;
         std::vector<uint32_t>        DynamicOffsets;
-        const ShaderResourceCacheVk* pResourceCache     = nullptr;
-        VkPipelineBindPoint          BindPoint          = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-        Uint32                       SetCout            = 0;
-        Uint32                       DynamicOffsetCount = 0;
+        const ShaderResourceCacheVk* pResourceCache          = nullptr;
+        VkPipelineBindPoint          BindPoint               = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+        Uint32                       SetCout                 = 0;
+        Uint32                       DynamicOffsetCount      = 0;
+        bool                         DynamicDescriptorsBound = false;
 #ifdef _DEBUG
         const PipelineLayout*        pDbgPipelineLayout = nullptr;
 #endif
@@ -105,16 +106,17 @@ public:
 
         void Reset()
         {
-            SetCout            = 0;
-            DynamicOffsetCount = 0;
+            pResourceCache          = nullptr;
+            BindPoint               = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+            SetCout                 = 0;
+            DynamicOffsetCount      = 0;
+            DynamicDescriptorsBound = false;
+
 #ifdef _DEBUG
             // In release mode, do not clear vectors as this causes unnecessary work
             vkSets.clear();
             DynamicOffsets.clear();
-#endif
-            pResourceCache = nullptr;
-            BindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
-#ifdef _DEBUG
+
             pDbgPipelineLayout = nullptr;
 #endif
         }
@@ -246,6 +248,8 @@ __forceinline void PipelineLayout::BindDescriptorSetsWithDynamicOffsets(VulkanUt
                                  // dynamicOffsetCount must equal the total number of dynamic descriptors in the sets being bound (13.2.5)
                                  BindInfo.DynamicOffsetCount,
                                  BindInfo.DynamicOffsets.data());
+
+    BindInfo.DynamicDescriptorsBound = true;
 }
 
 }

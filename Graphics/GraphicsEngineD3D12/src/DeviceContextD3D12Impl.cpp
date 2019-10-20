@@ -229,6 +229,7 @@ namespace Diligent
             }
         }
         m_State.pCommittedResourceCache = nullptr;
+        m_State.bRootViewsCommitted     = false;
     }
 
     void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
@@ -250,6 +251,7 @@ namespace Diligent
             m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, true,
                     StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
                     StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+        m_State.bRootViewsCommitted = false;
     }
 
     void DeviceContextD3D12Impl::SetStencilRef(Uint32 StencilRef)
@@ -392,7 +394,11 @@ namespace Diligent
 
         if (m_State.pCommittedResourceCache != nullptr)
         {
-            m_pPipelineState->GetRootSignature().CommitRootViews(*m_State.pCommittedResourceCache, GraphCtx, false, this);
+            if (!m_State.bRootViewsCommitted || (Flags & DRAW_FLAG_RESOURCE_BUFFERS_INTACT) == 0)
+            {
+                m_pPipelineState->GetRootSignature().CommitRootViews(*m_State.pCommittedResourceCache, GraphCtx, false, this);
+                m_State.bRootViewsCommitted = true;
+            }
         }
 #ifdef DEVELOPMENT
         else

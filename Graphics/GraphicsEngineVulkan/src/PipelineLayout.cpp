@@ -499,6 +499,8 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*          pCtxVkI
                                      0, 
                                      nullptr);
     }
+
+    BindInfo.DynamicDescriptorsBound = false;
 }
 
 }

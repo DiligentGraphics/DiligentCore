@@ -70,7 +70,40 @@ enum DRAW_FLAGS : Uint8
     DRAW_FLAG_VERIFY_RENDER_TARGETS           = 0x04,
 
     /// Perform all state validation checks
-    DRAW_FLAG_VERIFY_ALL                      = DRAW_FLAG_VERIFY_STATES | DRAW_FLAG_VERIFY_DRAW_ATTRIBS | DRAW_FLAG_VERIFY_RENDER_TARGETS
+    DRAW_FLAG_VERIFY_ALL                      = DRAW_FLAG_VERIFY_STATES | DRAW_FLAG_VERIFY_DRAW_ATTRIBS | DRAW_FLAG_VERIFY_RENDER_TARGETS,
+
+    /// Indicates that none of the resource buffers used by the draw command
+    /// have been modified by the CPU since the last command.
+    ///
+    /// \remarks D3D12 and Vulkan back-ends have to perform some work to make data in buffers
+    ///          available to draw commands. By default the engine assumes that the CPU may
+    ///          change the data after every command. For example, if a draw command uses a constant
+    ///          buffer, the engine assumes that the CPU may write new data to the buffer (for example, new
+    ///          transformation matrices), before every draw call. This is not always the case, however,
+    ///          and the application may inform the engine that the data in the buffer stay intact to avoid
+    ///          extra work.\n
+    ///          This flag is most useful when application issues a series of draw commands that use the same
+    ///          resources that do not change between the commands.\n
+    ///          Note that after a new PSO is bound or an SRB is committed, the engine will always set all
+    ///          required buffers regardless of the flag. The flag will only take effect on the second and
+    ///          susbequent draw calls that use the same PSO and SRB.\n
+    ///          The flag has no effect in D3D11 and OpenGL backends.
+    ///
+    ///          Technical details
+    ///         
+    ///          Vulkan backend allocates VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptors for uniform (constant), 
+    ///          buffers and VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descritptors for storage buffers.
+    ///          Note that HLSL structured buffers are mapped to read-only storage buffers in SPIRV and RW buffers
+    ///          are mapped to RW-storage buffers.
+    ///          By default, all dynamic descriptor sets are updated every time a draw command is issued (see
+    ///          PipelineStateVkImpl::BindDescriptorSetsWithDynamicOffsets). When DRAW_FLAG_RESOURCE_BUFFERS_INTACT is
+    ///          specified, dynamic descriptor sets are only be bound by the first draw command that uses the PSO and the SRB.
+    ///
+    ///          Direct3D12 backend binds constant buffers to root views. By default the engine assumes that the buffers
+    ///          may be modified by the CPU between draw commands and always commits root views (see RootSignature::CommitRootViews).
+    ///          When DRAW_FLAG_RESOURCE_BUFFERS_INTACT is set, root views are only committed by the first draw command that uses
+    ///          the PSO and the SRB pair.
+    DRAW_FLAG_RESOURCE_BUFFERS_INTACT         = 0x08
 };
 DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
 
