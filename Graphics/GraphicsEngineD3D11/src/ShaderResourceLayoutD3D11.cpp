@@ -177,7 +177,9 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             auto VarType = m_pResources->FindVariableType(Sampler, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                auto StaticSamplerInd = m_pResources->FindStaticSampler(Sampler, ResourceLayout);
+                // Constructor of PipelineStateD3D11Impl initializes static samplers and will log the error, if any
+                constexpr bool LogStaticSamplerArrayError = false;
+                auto StaticSamplerInd = m_pResources->FindStaticSampler(Sampler, ResourceLayout, LogStaticSamplerArrayError);
                 if (StaticSamplerInd >= 0)
                 {
                     // Skip static samplers as they are initialized directly in the resource cache by the PSO
@@ -223,7 +225,9 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
                 {
                     AssignedSamplerIndex = TexSRVBindInfo::InvalidSamplerIndex;
 #ifdef _DEBUG
-                    if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout) < 0)
+                    // Shader error will be logged by the PipelineStateD3D11Impl
+                    constexpr bool LogStaticSamplerArrayError = false;
+                    if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout, LogStaticSamplerArrayError) < 0)
                     {
                         UNEXPECTED("Unable to find non-static sampler assigned to texture SRV '", TexSRV.Name, "'.");
                     }
@@ -232,7 +236,9 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
                 else
                 {
 #ifdef _DEBUG
-                    if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout) >= 0)
+                    // Shader error will be logged by the PipelineStateD3D11Impl
+                    constexpr bool LogStaticSamplerArrayError = false;
+                    if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout, LogStaticSamplerArrayError) >= 0)
                     {
                         UNEXPECTED("Static sampler '", AssignedSamplerAttribs.Name, "' is assigned to texture SRV '", TexSRV.Name, "'.");
                     }

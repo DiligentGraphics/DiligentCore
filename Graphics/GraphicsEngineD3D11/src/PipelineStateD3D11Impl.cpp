@@ -165,7 +165,8 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
         for(Uint32 sam = 0; sam < ShaderResources.GetNumSamplers(); ++sam)
         {
             const auto& SamplerAttribs = ShaderResources.GetSampler(sam);
-            auto SrcStaticSamplerInd = ShaderResources.FindStaticSampler(SamplerAttribs, ResourceLayout);
+            constexpr bool LogStaticSamplerArrayError = true;
+            auto SrcStaticSamplerInd = ShaderResources.FindStaticSampler(SamplerAttribs, ResourceLayout, LogStaticSamplerArrayError);
             if (SrcStaticSamplerInd >= 0)
             {
                 const auto& SrcStaticSamplerInfo = ResourceLayout.StaticSamplers[SrcStaticSamplerInd];

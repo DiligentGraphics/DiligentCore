@@ -139,7 +139,8 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
             auto VarType = m_pResources->FindVariableType(Sam, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                auto StaticSamplerInd = m_pResources->FindStaticSampler(Sam, ResourceLayout);
+                constexpr bool LogStaticSamplerArrayError = true;
+                auto StaticSamplerInd = m_pResources->FindStaticSampler(Sam, ResourceLayout, LogStaticSamplerArrayError);
                 // Skip static samplers
                 if (StaticSamplerInd < 0)
                     ++SamplerCount[VarType];
@@ -242,7 +243,9 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
             auto VarType = m_pResources->FindVariableType(Sam, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                auto StaticSamplerInd = m_pResources->FindStaticSampler(Sam, ResourceLayout);
+                // The error (if any) have already been logged when counting the resources
+                constexpr bool LogStaticSamplerArrayError = false;
+                auto StaticSamplerInd = m_pResources->FindStaticSampler(Sam, ResourceLayout, LogStaticSamplerArrayError);
                 if (StaticSamplerInd >= 0)
                 {
                     if (pRootSig != nullptr)
@@ -272,7 +275,9 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
                                   "' is not consistent with the type (", GetShaderVariableTypeLiteralName(SamplerVarType),
                                    ") of the sampler '", SamplerAttribs.Name, "' that is assigned to it");
 
-                    auto StaticSamplerInd = m_pResources->FindStaticSampler(SamplerAttribs, ResourceLayout);
+                    // The error (if any) have already been logged when counting the resources
+                    constexpr bool LogStaticSamplerArrayError = false;
+                    auto StaticSamplerInd = m_pResources->FindStaticSampler(SamplerAttribs, ResourceLayout, LogStaticSamplerArrayError);
                     if (StaticSamplerInd >= 0)
                     {
                         // Static samplers are never copied, and SamplerId == InvalidSamplerId

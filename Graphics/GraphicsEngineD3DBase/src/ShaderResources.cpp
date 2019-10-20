@@ -113,15 +113,36 @@ SHADER_RESOURCE_VARIABLE_TYPE ShaderResources::FindVariableType(const D3DShaderR
 }
 
 Int32 ShaderResources::FindStaticSampler(const D3DShaderResourceAttribs&   ResourceAttribs,
-                                         const PipelineResourceLayoutDesc& ResourceLayoutDesc)const
+                                         const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                                         bool                              LogStaticSamplerArrayError)const
 {
     VERIFY(ResourceAttribs.GetInputType() == D3D_SIT_SAMPLER, "Sampler is expected");
 
-    return Diligent::FindStaticSampler(ResourceLayoutDesc.StaticSamplers,
-                                       ResourceLayoutDesc.NumStaticSamplers,
-                                       m_ShaderType,
-                                       ResourceAttribs.Name,
-                                       m_SamplerSuffix);
+    auto StaticSamplerInd = 
+        Diligent::FindStaticSampler(ResourceLayoutDesc.StaticSamplers,
+                                    ResourceLayoutDesc.NumStaticSamplers,
+                                    m_ShaderType,
+                                    ResourceAttribs.Name,
+                                    m_SamplerSuffix);
+
+    if (StaticSamplerInd >= 0 && ResourceAttribs.BindCount > 1)
+    {
+        Uint32 ShaderMajorVersion = 0;
+        Uint32 ShaderMinorVersion = 0;
+        GetShaderModel(ShaderMajorVersion, ShaderMinorVersion);
+        if (ShaderMajorVersion >= 6 || ShaderMajorVersion >= 5 && ShaderMinorVersion >= 1)
+        {
+            if (LogStaticSamplerArrayError)
+            {
+                LOG_ERROR_MESSAGE("Static sampler '", ResourceAttribs.Name, '[', ResourceAttribs.BindCount, "]' will be ignored because static "
+                                  "sampler arrays are not allowed in shader model 5.1 and above. Compile the shader using shader "
+                                  "model 5.0 or use non-array sampler variable.");
+            }
+            StaticSamplerInd = -1;
+        }
+    }
+
+    return StaticSamplerInd;
 }
 
 
@@ -147,7 +168,8 @@ D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResource
             {
                 if (!CountStaticSamplers)
                 {
-                    if (FindStaticSampler(Sam, ResourceLayout) >= 0)
+                    constexpr bool LogStaticSamplerArrayError = false;
+                    if (FindStaticSampler(Sam, ResourceLayout, LogStaticSamplerArrayError) >= 0)
                         return; // Skip static sampler if requested
                 }
                 ++Counters.NumSamplers;

@@ -347,7 +347,8 @@ public:
                                                    const PipelineResourceLayoutDesc& ResourceLayout)const;
 
     Int32 FindStaticSampler(const D3DShaderResourceAttribs&   ResourceAttribs,
-                            const PipelineResourceLayoutDesc& ResourceLayoutDesc)const;
+                            const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                            bool                              LogStaticSamplerArrayError)const;
 
     D3DShaderResourceCounters CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
                                              const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
@@ -359,10 +360,16 @@ public:
                                         Uint32                            NumShaders);
 #endif
 
+    void GetShaderModel(Uint32& Major, Uint32& Minor)const
+    {
+        Major = (m_ShaderVersion & 0x000000F0) >> 4;
+        Minor = (m_ShaderVersion & 0x0000000F);
+    }
+
 protected:
     template<typename D3D_SHADER_DESC, 
              typename D3D_SHADER_INPUT_BIND_DESC,
-             typename TShaderReflection, 
+             typename TShaderReflection,
              typename TNewResourceHandler>
     void Initialize(ID3DBlob*           pShaderByteCode, 
                     TNewResourceHandler NewResHandler, 
@@ -418,6 +425,8 @@ private:
     OffsetType m_TotalResources = 0;
 
     const SHADER_TYPE m_ShaderType;
+
+    Uint32 m_ShaderVersion = 0;
 };
 
 
@@ -433,6 +442,11 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
     Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
     LoadD3DShaderResources<D3D_SHADER_DESC, D3D_SHADER_INPUT_BIND_DESC, TShaderReflection>(
         pShaderByteCode,
+
+        [&](const D3D_SHADER_DESC& d3dShaderDesc)
+        {
+            m_ShaderVersion = d3dShaderDesc.Version;
+        },
 
         [&](const D3DShaderResourceCounters& ResCounters, size_t ResourceNamesPoolSize)
         {

@@ -49,6 +49,7 @@ namespace Diligent
              typename D3D_SHADER_INPUT_BIND_DESC,
              typename TShaderReflection, 
 
+             typename THandleShaderDesc,
              typename TOnResourcesCounted,
              typename TOnNewCB, 
              typename TOnNewTexUAV, 
@@ -57,7 +58,8 @@ namespace Diligent
              typename TOnNewSampler,
              typename TOnNewTexSRV>
     void LoadD3DShaderResources(ID3DBlob*           pShaderByteCode, 
-                                TOnResourcesCounted OnResourcesCounted, 
+                                THandleShaderDesc   HandleShaderDesc,
+                                TOnResourcesCounted OnResourcesCounted,
                                 TOnNewCB            OnNewCB, 
                                 TOnNewTexUAV        OnNewTexUAV, 
                                 TOnNewBuffUAV       OnNewBuffUAV, 
@@ -71,6 +73,8 @@ namespace Diligent
 
         D3D_SHADER_DESC shaderDesc = {};
         pShaderReflection->GetDesc( &shaderDesc );
+
+        HandleShaderDesc(shaderDesc);
 
         std::vector<D3DShaderResourceAttribs, STDAllocatorRawMem<D3DShaderResourceAttribs> > Resources( STD_ALLOCATOR_RAW_MEM(D3DShaderResourceAttribs, GetRawAllocator(), "Allocator for vector<D3DShaderResourceAttribs>") );
         Resources.reserve(shaderDesc.BoundResources);
