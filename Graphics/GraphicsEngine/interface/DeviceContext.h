@@ -72,13 +72,14 @@ enum DRAW_FLAGS : Uint8
     /// Perform all state validation checks
     DRAW_FLAG_VERIFY_ALL                      = DRAW_FLAG_VERIFY_STATES | DRAW_FLAG_VERIFY_DRAW_ATTRIBS | DRAW_FLAG_VERIFY_RENDER_TARGETS,
 
-    /// Indicates that none of the dynamic buffers used by the draw command
+    /// Indicates that none of the dynamic resource buffers used by the draw command
     /// have been modified by the CPU since the last command.
     ///
     /// \remarks This flag should be used to improve performance when an application issues a
     ///          series of draw commands that use the same pipeline state and shader resources and
     ///          no dynamic buffers (constant or bound as shader resources) are updated between the
     ///          commands, including when there are no dynamic buffers at all.
+    ///          The flag has no effect on dynamic vertex and index buffers.
     ///
     ///          Details
     ///
@@ -102,17 +103,17 @@ enum DRAW_FLAGS : Uint8
     ///          Note that HLSL structured buffers are mapped to read-only storage buffers in SPIRV and RW buffers
     ///          are mapped to RW-storage buffers.
     ///          By default, all dynamic descriptor sets are updated every time a draw command is issued (see
-    ///          PipelineStateVkImpl::BindDescriptorSetsWithDynamicOffsets). When DRAW_FLAG_DYNAMIC_BUFFERS_INTACT is
+    ///          PipelineStateVkImpl::BindDescriptorSetsWithDynamicOffsets). When DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT is
     ///          specified, dynamic descriptor sets are only bound by the first draw command that uses the PSO and the SRB.
     ///          It avoids binding descriptors with the same offsets if none of the offsets have changed or if the buffers
     ///          are not dynamic (in which case the offsets are always zero).
     ///
     ///          Direct3D12 backend binds constant buffers to root views and always treats them as dynamic. By default the engine
     ///          assumes that the buffer's virtual GPU address may change between the draw commands and always commits root views
-    ///          (see RootSignature::CommitRootViews). When DRAW_FLAG_DYNAMIC_BUFFERS_INTACT is set, root views are only committed
+    ///          (see RootSignature::CommitRootViews). When DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT is set, root views are only committed
     ///          by the first draw command that uses the PSO + SRB pair. It avoids committing the same GPU virtual addresses when
     ///          they stay unchanged.
-    DRAW_FLAG_DYNAMIC_BUFFERS_INTACT          = 0x08
+    DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT = 0x08
 };
 DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
 

@@ -422,7 +422,7 @@ namespace Diligent
 
         if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
         {
-            if (!m_DescrSetBindInfo.DynamicDescriptorsBound || (Flags & DRAW_FLAG_DYNAMIC_BUFFERS_INTACT) == 0)
+            if (!m_DescrSetBindInfo.DynamicDescriptorsBound || (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0)
             {
                 m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
             }
