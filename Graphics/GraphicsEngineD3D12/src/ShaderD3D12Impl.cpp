@@ -32,13 +32,20 @@
 namespace Diligent
 {
 
-static const char* GetD3D12ShaderModel(RenderDeviceD3D12Impl* /*pDevice*/)
+static const std::string GetD3D12ShaderModel(RenderDeviceD3D12Impl* /*pDevice*/, const ShaderCreateInfo::ShaderVersion& HLSLVersion)
 {
-    //auto d3dDeviceFeatureLevel = pDevice->GetD3DFeatureLevel();
+    if (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0)
+    {
+        //auto d3dDeviceFeatureLevel = pDevice->GetD3DFeatureLevel();
 
-    // Direct3D12 supports shader model 5.1 on all feature levels.
-    // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-    return "5_1";
+        // Direct3D12 supports shader model 5.1 on all feature levels.
+        // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
+        return "5_1";
+    }
+    else
+    {
+        return std::to_string(Uint32{HLSLVersion.Major}) + '_' + std::to_string(Uint32{HLSLVersion.Minor});
+    }
 }
 
 ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*       pRefCounters,
@@ -50,7 +57,7 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*       pRefCounters,
         pRenderDeviceD3D12,
         ShaderCI.Desc
     },
-    ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12)}
+    ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12, ShaderCI.HLSLVersion).c_str()}
 {
     // Load shader resources
     auto& Allocator = GetRawAllocator();
