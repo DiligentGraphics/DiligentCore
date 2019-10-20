@@ -394,7 +394,7 @@ namespace Diligent
 
         if (m_State.pCommittedResourceCache != nullptr)
         {
-            if (!m_State.bRootViewsCommitted || (Flags & DRAW_FLAG_RESOURCE_BUFFERS_INTACT) == 0)
+            if (!m_State.bRootViewsCommitted || (Flags & DRAW_FLAG_DYNAMIC_BUFFERS_INTACT) == 0)
             {
                 m_pPipelineState->GetRootSignature().CommitRootViews(*m_State.pCommittedResourceCache, GraphCtx, false, this);
                 m_State.bRootViewsCommitted = true;
