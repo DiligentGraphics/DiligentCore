@@ -61,6 +61,7 @@
 
 #include "ShaderResourceVariableD3D.h"
 #include "ShaderResourceLayoutD3D12.h"
+#include "ShaderResourceVariableBase.h"
 
 namespace Diligent
 {
@@ -172,6 +173,7 @@ public:
 
     virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
     {
+        VerifyAndCorrectSetArrayArguments(m_Resource.Attribs.Name, m_Resource.Attribs.BindCount, FirstElement, NumElements);
         for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }

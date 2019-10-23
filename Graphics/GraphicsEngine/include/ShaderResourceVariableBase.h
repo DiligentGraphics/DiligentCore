@@ -306,6 +306,22 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&               Attribs,
     return BindingOK;
 }
 
+inline void VerifyAndCorrectSetArrayArguments(const char* Name, Uint32 ArraySize, Uint32& FirstElement, Uint32& NumElements)
+{
+    if (FirstElement >= ArraySize)
+    {
+        LOG_ERROR_MESSAGE("SetArray arguments are invalid for '", Name,"' variable: FirstElement (", FirstElement, ") is out of allowed range 0 .. ", ArraySize-1);
+        FirstElement = ArraySize-1;
+        NumElements  = 0;
+    }
+
+    if (FirstElement + NumElements > ArraySize)
+    {
+        LOG_ERROR_MESSAGE("SetArray arguments are invalid for '", Name,"' variable: specified element range (", FirstElement, " .. ",
+                          FirstElement + NumElements-1, ") is out of array bounds 0 .. ", ArraySize-1);
+        NumElements = ArraySize - FirstElement;
+    }
+}
 
 struct DefaultShaderVariableIDComparator
 {

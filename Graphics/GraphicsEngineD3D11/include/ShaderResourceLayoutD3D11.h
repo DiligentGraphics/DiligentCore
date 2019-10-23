@@ -83,6 +83,7 @@ public:
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
+            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for(Uint32 elem=0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
@@ -110,6 +111,7 @@ public:
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
+            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for(Uint32 elem=0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
@@ -141,6 +143,7 @@ public:
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
+            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for(Uint32 elem=0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
@@ -166,6 +169,7 @@ public:
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
+            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for(Uint32 elem=0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
@@ -192,6 +196,7 @@ public:
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
+            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for(Uint32 elem=0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
@@ -217,6 +222,7 @@ public:
 
         virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
         {
+            VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for(Uint32 elem=0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement+elem);
         }
