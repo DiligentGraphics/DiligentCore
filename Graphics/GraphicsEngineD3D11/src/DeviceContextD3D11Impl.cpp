@@ -813,7 +813,7 @@ namespace Diligent
 
         PrepareForDraw(Attribs.Flags);
 
-        if (Attribs.NumInstances > 1)
+        if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
             m_pd3d11DeviceContext->DrawInstanced(Attribs.NumVertices, Attribs.NumInstances, Attribs.StartVertexLocation, Attribs.FirstInstanceLocation);
         else
             m_pd3d11DeviceContext->Draw(Attribs.NumVertices, Attribs.StartVertexLocation);
@@ -826,7 +826,7 @@ namespace Diligent
 
         PrepareForIndexedDraw(Attribs.Flags, Attribs.IndexType);
 
-        if (Attribs.NumInstances > 1)
+        if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
             m_pd3d11DeviceContext->DrawIndexedInstanced(Attribs.NumIndices, Attribs.NumInstances, Attribs.FirstIndexLocation, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
         else
             m_pd3d11DeviceContext->DrawIndexed(Attribs.NumIndices, Attribs.FirstIndexLocation, Attribs.BaseVertex);

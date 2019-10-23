@@ -678,9 +678,9 @@ namespace Diligent
         GLenum GlTopology;
         PrepareForDraw(Attribs.Flags, false, GlTopology);
 
-        if (Attribs.NumInstances > 1)
+        if (Attribs.NumInstances > 1 || Attribs.FirstInstanceLocation != 0)
         {
-            if (Attribs.FirstInstanceLocation)
+            if (Attribs.FirstInstanceLocation != 0)
                 glDrawArraysInstancedBaseInstance(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances, Attribs.FirstInstanceLocation);
             else
                 glDrawArraysInstanced(GlTopology, Attribs.StartVertexLocation, Attribs.NumVertices, Attribs.NumInstances);
@@ -710,18 +710,18 @@ namespace Diligent
         // errors in case instance data is read from the same stream as vertex data. Thus handling
         // such cases is left to the application
 
-        if (Attribs.NumInstances > 1)
+        if (Attribs.NumInstances > 1  || Attribs.FirstInstanceLocation != 0)
         {
             if (Attribs.BaseVertex > 0)
             {
-                if (Attribs.FirstInstanceLocation)
+                if (Attribs.FirstInstanceLocation != 0)
                     glDrawElementsInstancedBaseVertexBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), Attribs.NumInstances, Attribs.BaseVertex, Attribs.FirstInstanceLocation);
                 else
                     glDrawElementsInstancedBaseVertex(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), Attribs.NumInstances, Attribs.BaseVertex);
             }
             else
             {
-                if (Attribs.FirstInstanceLocation)
+                if (Attribs.FirstInstanceLocation != 0)
                     glDrawElementsInstancedBaseInstance(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), Attribs.NumInstances, Attribs.FirstInstanceLocation);
                 else
                     glDrawElementsInstanced(GlTopology, Attribs.NumIndices, GLIndexType, reinterpret_cast<GLvoid*>( static_cast<size_t>(FirstIndexByteOffset) ), Attribs.NumInstances);
