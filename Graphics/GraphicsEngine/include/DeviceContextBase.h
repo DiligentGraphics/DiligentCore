@@ -373,7 +373,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
     {
         if (m_pPipelineState->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
         {
-            LOG_ERROR_MESSAGE("Shader resource binding object is not compatible with the currently bound pipeline state");
+            LOG_ERROR_MESSAGE("Shader resource binding object is not compatible with the currently bound pipeline state '", m_pPipelineState->GetDesc().Name, '\'');
             return false;
         }
     }

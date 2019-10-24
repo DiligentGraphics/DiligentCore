@@ -94,7 +94,7 @@ public:
         VkPipelineBindPoint          BindPoint               = VK_PIPELINE_BIND_POINT_MAX_ENUM;
         Uint32                       SetCout                 = 0;
         Uint32                       DynamicOffsetCount      = 0;
-        bool                         DynamicBuffersBound     = false;
+        bool                         DynamicBuffersPresent   = false;
         bool                         DynamicDescriptorsBound = false;
 #ifdef _DEBUG
         const PipelineLayout*        pDbgPipelineLayout = nullptr;
@@ -111,6 +111,7 @@ public:
             BindPoint               = VK_PIPELINE_BIND_POINT_MAX_ENUM;
             SetCout                 = 0;
             DynamicOffsetCount      = 0;
+            DynamicBuffersPresent   = false;
             DynamicDescriptorsBound = false;
 
 #ifdef _DEBUG

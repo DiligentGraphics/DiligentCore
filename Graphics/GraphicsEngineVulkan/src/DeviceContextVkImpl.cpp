@@ -426,7 +426,7 @@ namespace Diligent
             // If there are no dynamic buffers bound in the resource cache, for all subsequent
             // cals we do not need to bind the sets again.
             if (!m_DescrSetBindInfo.DynamicDescriptorsBound || 
-                (m_DescrSetBindInfo.DynamicBuffersBound && (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0))
+                (m_DescrSetBindInfo.DynamicBuffersPresent && (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0))
             {
                 m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
             }
@@ -544,7 +544,12 @@ namespace Diligent
             m_CommandBuffer.EndRenderPass();
 
         if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
-            m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
+        {
+            if (!m_DescrSetBindInfo.DynamicDescriptorsBound || m_DescrSetBindInfo.DynamicBuffersPresent)
+            {
+                m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
+            }
+        }
 #if 0
 #ifdef _DEBUG
         else
@@ -1198,7 +1203,7 @@ namespace Diligent
         VkBufferCopy CopyRegion;
         CopyRegion.srcOffset = SrcOffset;
         CopyRegion.dstOffset = DstOffset;
-        CopyRegion.size = NumBytes;
+        CopyRegion.size      = NumBytes;
         VERIFY(pBuffVk->m_VulkanBuffer != VK_NULL_HANDLE, "Copy destination buffer must not be suballocated");
         m_CommandBuffer.CopyBuffer(vkSrcBuffer, pBuffVk->GetVkBuffer(), 1, &CopyRegion);
         ++m_State.NumCommands;
