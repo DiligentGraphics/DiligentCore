@@ -751,8 +751,8 @@ void TransitionResource(CommandContext&                     Ctx,
 
 
 #ifdef DEVELOPMENT
-void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
-                            D3D12_DESCRIPTOR_RANGE_TYPE               RangeType)
+void RootSignature::DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
+                                           D3D12_DESCRIPTOR_RANGE_TYPE               RangeType)
 {
     switch (Res.Type)
     {

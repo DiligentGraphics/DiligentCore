@@ -164,6 +164,9 @@ void ShaderResourceBindingD3D12Impl::dvpVerifyResourceBindings(const PipelineSta
         const auto& ShaderResLayout = pRefPSO->GetShaderResLayout(l);
         ShaderResLayout.dvpVerifyBindings(m_ShaderResourceCache);
     }
+#ifdef _DEBUG
+    m_ShaderResourceCache.DbgVerifyBoundDynamicCBsCounter();
+#endif
 }
 #endif
 
@@ -205,6 +208,10 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineSt
 #endif
         StaticResLayout.CopyStaticResourceDesriptorHandles(StaticResCache, ShaderResLayout, m_ShaderResourceCache);
     }
+
+#ifdef _DEBUG
+    m_ShaderResourceCache.DbgVerifyBoundDynamicCBsCounter();
+#endif
 
     m_bStaticResourcesInitialized = true;
 }

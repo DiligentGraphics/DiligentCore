@@ -66,11 +66,17 @@ public:
 
     virtual ID3D12RootSignature *GetD3D12RootSignature()const override final{return m_RootSig.GetD3D12RootSignature(); }
 
-    ShaderResourceCacheD3D12* CommitAndTransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding, 
-                                                                 class CommandContext&   Ctx,
-                                                                 bool                    CommitResources,
-                                                                 bool                    TransitionResources,
-                                                                 bool                    ValidateStates)const;
+    struct CommitAndTransitionResourcesAttribs
+    {
+        Uint32                        CtxId                  = 0;
+        IShaderResourceBinding*       pShaderResourceBinding = nullptr;
+        bool                          CommitResources        = false;
+        bool                          TransitionResources    = false;
+        bool                          ValidateStates         = false;
+    };
+    ShaderResourceCacheD3D12* CommitAndTransitionShaderResources(class DeviceContextD3D12Impl*        pDeviceCtx,
+                                                                 class CommandContext&                CmdCtx,
+                                                                 CommitAndTransitionResourcesAttribs& Attrib)const;
     
     const RootSignature& GetRootSignature()const{return m_RootSig;}
     
@@ -92,7 +98,7 @@ public:
         return m_pStaticResourceCaches[ShaderInd];
     }
 
-    bool dbgContainsShaderResources()const;
+    bool ContainsShaderResources()const;
 
     SRBMemoryAllocator& GetSRBMemoryAllocator()
     {

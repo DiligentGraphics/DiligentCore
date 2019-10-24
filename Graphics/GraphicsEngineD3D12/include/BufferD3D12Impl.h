@@ -79,7 +79,20 @@ public:
 
     virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const override final;
 
-    D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(class DeviceContextD3D12Impl* pCtx);
+    __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId, class DeviceContextD3D12Impl* pCtx)
+    {
+        if(m_Desc.Usage == USAGE_DYNAMIC)
+        {
+#ifdef DEVELOPMENT
+            DvpVerifyDynamicAllocation(pCtx);
+#endif
+            return m_DynamicData[ContextId].GPUAddress;
+        }
+        else
+        {
+            return GetD3D12Resource()->GetGPUVirtualAddress();
+        }
+    }
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetCBVHandle(){return m_CBVDescriptorAllocation.GetCpuHandle();}
 

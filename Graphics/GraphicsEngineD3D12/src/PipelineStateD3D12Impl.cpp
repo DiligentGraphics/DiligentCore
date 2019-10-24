@@ -363,29 +363,27 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO)const
     return IsSameRootSignature;
 }
 
-ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResources(IShaderResourceBinding* pShaderResourceBinding, 
-                                                                                     CommandContext&         Ctx,
-                                                                                     bool                    CommitResources,
-                                                                                     bool                    TransitionResources,
-                                                                                     bool                    ValidateStates)const
+ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResources(class DeviceContextD3D12Impl*        pDeviceCtx,
+                                                                                     class CommandContext&                CmdCtx,
+                                                                                     CommitAndTransitionResourcesAttribs& Attrib)const
 {
 #ifdef DEVELOPMENT
-    if (pShaderResourceBinding == nullptr && dbgContainsShaderResources())
+    if (Attrib.pShaderResourceBinding == nullptr && ContainsShaderResources())
     {
         LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to ",
-                          (CommitResources ? "commit" : "transition"), " resources, but none is provided.");
+                          (Attrib.CommitResources ? "commit" : "transition"), " resources, but none is provided.");
     }
 #endif
 
-    auto* pResBindingD3D12Impl = ValidatedCast<ShaderResourceBindingD3D12Impl>(pShaderResourceBinding);
+    auto* pResBindingD3D12Impl = ValidatedCast<ShaderResourceBindingD3D12Impl>(Attrib.pShaderResourceBinding);
     if (pResBindingD3D12Impl == nullptr)
     {
-        if (CommitResources)
+        if (Attrib.CommitResources)
         {
             if(m_Desc.IsComputePipeline)
-                Ctx.AsComputeContext().SetRootSignature( GetD3D12RootSignature() );
+                CmdCtx.AsComputeContext().SetRootSignature( GetD3D12RootSignature() );
             else
-                Ctx.AsGraphicsContext().SetRootSignature( GetD3D12RootSignature() );
+                CmdCtx.AsGraphicsContext().SetRootSignature( GetD3D12RootSignature() );
         }
         return nullptr;
     }
@@ -408,28 +406,46 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
 #endif
 
     auto& ResourceCache = pResBindingD3D12Impl->GetResourceCache();
-    if(CommitResources)
+    if(Attrib.CommitResources)
     {
         if(m_Desc.IsComputePipeline)
-            Ctx.AsComputeContext().SetRootSignature( GetD3D12RootSignature() );
+            CmdCtx.AsComputeContext().SetRootSignature( GetD3D12RootSignature() );
         else
-            Ctx.AsGraphicsContext().SetRootSignature( GetD3D12RootSignature() );
+            CmdCtx.AsGraphicsContext().SetRootSignature( GetD3D12RootSignature() );
 
-        if(TransitionResources)
-            (m_RootSig.*m_RootSig.TransitionAndCommitDescriptorHandles)(m_pDevice, ResourceCache, Ctx, m_Desc.IsComputePipeline, ValidateStates);
+        if(Attrib.TransitionResources)
+        {
+            (m_RootSig.*m_RootSig.TransitionAndCommitDescriptorHandles)(m_pDevice, ResourceCache, CmdCtx, m_Desc.IsComputePipeline, Attrib.ValidateStates);
+        }
         else
-            (m_RootSig.*m_RootSig.CommitDescriptorHandles)(m_pDevice, ResourceCache, Ctx, m_Desc.IsComputePipeline, ValidateStates);
+        {
+            (m_RootSig.*m_RootSig.CommitDescriptorHandles)(m_pDevice, ResourceCache, CmdCtx, m_Desc.IsComputePipeline, Attrib.ValidateStates);
+        }
     }
     else
     {
-        VERIFY(TransitionResources, "Resources should be transitioned or committed or both");
-        m_RootSig.TransitionResources(ResourceCache, Ctx);
+        VERIFY(Attrib.TransitionResources, "Resources should be transitioned or committed or both");
+        m_RootSig.TransitionResources(ResourceCache, CmdCtx);
     }
+
+    // Process only non-dynamic buffers at this point. Dynamic buffers will be handled by the Draw/Dispatch command.
+    m_RootSig.CommitRootViews(ResourceCache,
+                              CmdCtx,
+                              m_Desc.IsComputePipeline,
+                              Attrib.CtxId,
+                              pDeviceCtx,
+                              Attrib.CommitResources,      // CommitViews
+                              false,                       // ProcessDynamicBuffers
+                              true,                        // ProcessNonDynamicBuffers
+                              Attrib.TransitionResources,
+                              Attrib.ValidateStates
+    );
+
     return &ResourceCache;
 }
 
 
-bool PipelineStateD3D12Impl::dbgContainsShaderResources()const
+bool PipelineStateD3D12Impl::ContainsShaderResources()const
 {
     for(auto VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType+1))
     {

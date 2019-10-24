@@ -362,7 +362,8 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
 void ShaderResourceLayoutD3D12::D3D12Resource::CacheCB(IDeviceObject*                      pBuffer,
                                                        ShaderResourceCacheD3D12::Resource& DstRes,
                                                        Uint32                              ArrayInd,
-                                                       D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle)const
+                                                       D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle,
+                                                       Uint32&                             BoundDynamicCBsCounter)const
 {
     // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Binding-Objects-to-Shader-Variables
 
@@ -395,6 +396,13 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheCB(IDeviceObject*           
             pd3d12Device->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
         }
 
+        if (DstRes.pObject != nullptr && DstRes.pObject.RawPtr<const BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC)
+        {
+            VERIFY(BoundDynamicCBsCounter > 0, "There is a dynamic CB bound in the resource cache, but the dynamic CB counter is zero");
+            --BoundDynamicCBsCounter;
+        }
+        if (pBuffD3D12->GetDesc().Usage == USAGE_DYNAMIC)
+            ++BoundDynamicCBsCounter;
         DstRes.pObject = std::move(pBuffD3D12);
     }
 }
@@ -573,7 +581,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
         switch (GetResType())
         {
             case CachedResourceType::CBV:
-                CacheCB(pObj, DstRes, ArrayIndex, ShdrVisibleHeapCPUDescriptorHandle); 
+                CacheCB(pObj, DstRes, ArrayIndex, ShdrVisibleHeapCPUDescriptorHandle, ResourceCache.GetBoundDynamicCBsCounter()); 
             break;
             
             case CachedResourceType::TexSRV: 
@@ -693,7 +701,7 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
 
     auto CbvSrvUavCount = DstLayout.GetCbvSrvUavCount(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
     VERIFY(GetCbvSrvUavCount(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) == CbvSrvUavCount, "Number of static resources in the source cache (", GetCbvSrvUavCount(SHADER_RESOURCE_VARIABLE_TYPE_STATIC), ") is not consistent with the number of static resources in destination cache (", CbvSrvUavCount, ")" );
-
+    auto& DstBoundDynamicCBsCounter = DstCache.GetBoundDynamicCBsCounter();
     for(Uint32 r=0; r < CbvSrvUavCount; ++r)
     {
         // Get resource attributes
@@ -716,8 +724,21 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
             {
                 VERIFY(DstRes.pObject == nullptr, "Static resource has already been initialized, and the resource to be assigned from the shader does not match previously assigned resource");
 
-                DstRes.pObject = SrcRes.pObject;
-                DstRes.Type = SrcRes.Type;
+                if (SrcRes.Type == CachedResourceType::CBV)
+                {
+                    if (DstRes.pObject && DstRes.pObject.RawPtr<const BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC)
+                    {
+                        VERIFY_EXPR(DstBoundDynamicCBsCounter > 0);
+                        --DstBoundDynamicCBsCounter;
+                    }
+                    if (SrcRes.pObject && SrcRes.pObject.RawPtr<const BufferD3D12Impl>()->GetDesc().Usage == USAGE_DYNAMIC)
+                    {
+                        ++DstBoundDynamicCBsCounter;
+                    }
+                }
+
+                DstRes.pObject             = SrcRes.pObject;
+                DstRes.Type                = SrcRes.Type;
                 DstRes.CPUDescriptorHandle = SrcRes.CPUDescriptorHandle;
 
                 auto ShdrVisibleHeapCPUDescriptorHandle = DstCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(res.RootIndex, res.OffsetFromTableStart + ArrInd);
@@ -766,8 +787,8 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
             {
                 VERIFY(DstSampler.pObject == nullptr, "Static-type sampler has already been initialized, and the sampler to be assigned from the shader does not match previously assigned resource");
 
-                DstSampler.pObject = SrcSampler.pObject;
-                DstSampler.Type = SrcSampler.Type;
+                DstSampler.pObject             = SrcSampler.pObject;
+                DstSampler.Type                = SrcSampler.Type;
                 DstSampler.CPUDescriptorHandle = SrcSampler.CPUDescriptorHandle;
 
                 auto ShdrVisibleSamplerHeapCPUDescriptorHandle = DstCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(SamInfo.RootIndex, SamInfo.OffsetFromTableStart + ArrInd);

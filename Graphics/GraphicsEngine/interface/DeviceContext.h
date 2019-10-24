@@ -614,6 +614,10 @@ public:
     ///          IDeviceContext::TransitionResourceStates().
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
+    ///
+    ///          If an application calls any method that changes the state of any resource after it has been committed, the
+    ///          application is responsible for transitioning the resource back to correct state using one of the available methods
+    ///          before issuing the next draw or dispatch command.
     virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
 
     /// Sets the stencil reference value.

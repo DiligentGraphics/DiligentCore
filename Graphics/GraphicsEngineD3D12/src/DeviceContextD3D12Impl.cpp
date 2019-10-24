@@ -238,7 +238,13 @@ namespace Diligent
 
         auto& Ctx = GetCmdContext();
         auto* pPipelineStateD3D12 = ValidatedCast<PipelineStateD3D12Impl>(pPipelineState);
-        pPipelineStateD3D12->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, false, true, false);
+        PipelineStateD3D12Impl::CommitAndTransitionResourcesAttribs Attribs;
+        Attribs.CtxId                  = m_ContextId;
+        Attribs.pShaderResourceBinding = pShaderResourceBinding;
+        Attribs.CommitResources        = false;
+        Attribs.TransitionResources    = true;
+        Attribs.ValidateStates         = false;
+        pPipelineStateD3D12->CommitAndTransitionShaderResources(this, Ctx, Attribs);
     }
 
     void DeviceContextD3D12Impl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
@@ -247,10 +253,13 @@ namespace Diligent
             return;
 
         auto& Ctx = GetCmdContext();
-        m_State.pCommittedResourceCache =
-            m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, Ctx, true,
-                    StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                    StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+        PipelineStateD3D12Impl::CommitAndTransitionResourcesAttribs Attribs;
+        Attribs.CtxId                  = m_ContextId;
+        Attribs.pShaderResourceBinding = pShaderResourceBinding;
+        Attribs.CommitResources        = true;
+        Attribs.TransitionResources    = StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        Attribs.ValidateStates         = StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY;
+        m_State.pCommittedResourceCache = m_pPipelineState->CommitAndTransitionShaderResources(this, Ctx, Attribs);
         m_State.bRootViewsCommitted = false;
     }
 
@@ -275,7 +284,7 @@ namespace Diligent
         VERIFY( m_pIndexBuffer != nullptr, "Index buffer is not set up for indexed draw command" );
 
         D3D12_INDEX_BUFFER_VIEW IBView;
-        IBView.BufferLocation = m_pIndexBuffer->GetGPUAddress(this) + m_IndexDataStartOffset;
+        IBView.BufferLocation = m_pIndexBuffer->GetGPUAddress(m_ContextId, this) + m_IndexDataStartOffset;
         if( IndexType == VT_UINT32 )
             IBView.Format = DXGI_FORMAT_R32_UINT;
         else
@@ -344,7 +353,7 @@ namespace Diligent
                 // so there is no need to reference the resource here
                 //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
-                VBView.BufferLocation = pBufferD3D12->GetGPUAddress(this) + CurrStream.Offset;
+                VBView.BufferLocation = pBufferD3D12->GetGPUAddress(m_ContextId, this) + CurrStream.Offset;
                 VBView.StrideInBytes = m_pPipelineState->GetBufferStride(Buff);
                 // Note that for a dynamic buffer, what we use here is the size of the buffer itself, not the upload heap buffer!
                 VBView.SizeInBytes = pBufferD3D12->GetDesc().uiSizeInBytes - CurrStream.Offset;
@@ -394,16 +403,31 @@ namespace Diligent
 
         if (m_State.pCommittedResourceCache != nullptr)
         {
-            if (!m_State.bRootViewsCommitted || (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0)
+            if (m_State.pCommittedResourceCache->GetNumDynamicCBsBound() > 0)
             {
-                m_pPipelineState->GetRootSignature().CommitRootViews(*m_State.pCommittedResourceCache, GraphCtx, false, this);
-                m_State.bRootViewsCommitted = true;
+                if (!m_State.bRootViewsCommitted || (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0)
+                {
+                    // Only process dynamic buffers. Non-dynamic buffers are committed by CommitShaderResources
+                    m_pPipelineState->GetRootSignature().
+                        CommitRootViews(*m_State.pCommittedResourceCache,
+                                        GraphCtx,
+                                        false,          // IsCompute
+                                        m_ContextId,
+                                        this,
+                                        true,           // CommitViews
+                                        true,           // ProcessDynamicBuffers
+                                        false,          // ProcessNonDynamicBuffers
+                                        false,          // TransitionStates
+                                        false           // ValidateStates
+                    );
+                    m_State.bRootViewsCommitted = true;
+                }
             }
         }
 #ifdef DEVELOPMENT
         else
         {
-            if (m_pPipelineState->dbgContainsShaderResources())
+            if (m_pPipelineState->ContainsShaderResources())
                 LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called with non-null SRB" );
         }
 #endif
@@ -506,12 +530,27 @@ namespace Diligent
         ComputeCtx.SetRootSignature(m_pPipelineState->GetD3D12RootSignature());
         if (m_State.pCommittedResourceCache != nullptr)
         {
-            m_pPipelineState->GetRootSignature().CommitRootViews(*m_State.pCommittedResourceCache, ComputeCtx, true, this);
+            if (m_State.pCommittedResourceCache->GetNumDynamicCBsBound() > 0)
+            {
+                // Only process dynamic buffers. Non-dynamic buffers are committed by CommitShaderResources
+                m_pPipelineState->GetRootSignature().
+                    CommitRootViews(*m_State.pCommittedResourceCache,
+                                    ComputeCtx,
+                                    true,           // IsCompute
+                                    m_ContextId,
+                                    this,
+                                    true,           // CommitViews
+                                    true,           // ProcessDynamicBuffers
+                                    false,          // ProcessNonDynamicBuffers
+                                    false,          // TransitionStates
+                                    false           // ValidateStates
+                    );
+            }
         }
-#ifdef _DEBUG
+#ifdef DEVELOPMENT
         else
         {
-            if (m_pPipelineState->dbgContainsShaderResources())
+            if (m_pPipelineState->ContainsShaderResources())
                 LOG_ERROR_MESSAGE("Pipeline state '", m_pPipelineState->GetDesc().Name, "' contains shader resources, but IDeviceContext::CommitShaderResources() was not called with non-null SRB" );
         }
 #endif

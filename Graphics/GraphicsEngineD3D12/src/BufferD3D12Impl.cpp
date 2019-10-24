@@ -388,22 +388,6 @@ ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(size_t& DataStartByteOffset, IDe
     }
 }
 
-D3D12_GPU_VIRTUAL_ADDRESS BufferD3D12Impl::GetGPUAddress(class DeviceContextD3D12Impl* pCtx)
-{
-    if(m_Desc.Usage == USAGE_DYNAMIC)
-    {
-#ifdef DEVELOPMENT
-        DvpVerifyDynamicAllocation(pCtx);
-#endif
-        Uint32 ContextId = pCtx->GetContextId();
-        return m_DynamicData[ContextId].GPUAddress;
-    }
-    else
-    {
-        return GetD3D12Resource()->GetGPUVirtualAddress();
-    }
-}
-
 #ifdef DEVELOPMENT
 void BufferD3D12Impl::DvpVerifyDynamicAllocation(DeviceContextD3D12Impl* pCtx)const
 {

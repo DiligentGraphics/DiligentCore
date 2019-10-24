@@ -328,9 +328,15 @@ public:
                              class CommandContext&      Ctx)const;
 
     __forceinline void CommitRootViews(ShaderResourceCacheD3D12&     ResourceCache, 
-                                       class CommandContext&         Ctx, 
+                                       class CommandContext&         CmdCtx, 
                                        bool                          IsCompute,
-                                       class DeviceContextD3D12Impl* pCtx)const;
+                                       Uint32                        DeviceCtxId,
+                                       class DeviceContextD3D12Impl* pDeviceCtx,
+                                       bool                          CommitViews,
+                                       bool                          ProcessDynamicBuffers,
+                                       bool                          ProcessNonDynamicBuffers,
+                                       bool                          TransitionStates,
+                                       bool                          ValidateStates)const;
 
     Uint32 GetTotalSrvCbvUavSlots(SHADER_RESOURCE_VARIABLE_TYPE VarType)const
     {
@@ -357,6 +363,11 @@ public:
 private:
 #ifdef _DEBUG
     void dbgVerifyRootParameters()const;
+#endif
+
+#ifdef DEVELOPMENT
+    static void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
+                                       D3D12_DESCRIPTOR_RANGE_TYPE               RangeType);
 #endif
     
     std::vector<Uint32, STDAllocatorRawMem<Uint32> > GetCacheTableSizes()const;
@@ -490,9 +501,15 @@ private:
 };
 
 void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache, 
-                                    CommandContext&           Ctx, 
+                                    CommandContext&           CmdCtx, 
                                     bool                      IsCompute,
-                                    DeviceContextD3D12Impl*   pCtx)const
+                                    Uint32                    DeviceCtxId,
+                                    DeviceContextD3D12Impl*   pDeviceCtx,
+                                    bool                      CommitViews,
+                                    bool                      ProcessDynamicBuffers,
+                                    bool                      ProcessNonDynamicBuffers,
+                                    bool                      TransitionStates,
+                                    bool                      ValidateStates)const
 {
     for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
@@ -511,14 +528,46 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
         auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType);
         if (auto* pBuffToTransition = Res.pObject.RawPtr<BufferD3D12Impl>())
         {
-            if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER) )
-                Ctx.TransitionResource(pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
+            bool IsDynamic = pBuffToTransition->GetDesc().Usage == USAGE_DYNAMIC;
+            if (IsDynamic && ProcessDynamicBuffers || !IsDynamic && ProcessNonDynamicBuffers)
+            {
+                if (IsDynamic)
+                {
+#ifdef _DEBUG
+                    if (pBuffToTransition->IsInKnownState())
+                    {
+                        VERIFY(pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER),
+                               "Dynamic buffers must always have RESOURCE_STATE_CONSTANT_BUFFER state flag set");
+                    }
+#endif
+                }
+                else
+                {
+                    if (TransitionStates)
+                    {
+                        if (pBuffToTransition->IsInKnownState() && !pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER))
+                        {
+                            CmdCtx.TransitionResource(pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
+                        }
+                    }
+#ifdef DEVELOPMENT
+                    else if (ValidateStates)
+                    {
 
-            D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(pCtx);
-            if(IsCompute)
-                Ctx.GetCommandList()->SetComputeRootConstantBufferView(RootInd, CBVAddress);
-            else
-                Ctx.GetCommandList()->SetGraphicsRootConstantBufferView(RootInd, CBVAddress);
+                        DvpVerifyResourceState(Res, D3D12_DESCRIPTOR_RANGE_TYPE_CBV);
+                    }
+#endif
+                }
+
+                if (CommitViews)
+                {
+                    D3D12_GPU_VIRTUAL_ADDRESS CBVAddress = pBuffToTransition->GetGPUAddress(DeviceCtxId, pDeviceCtx);
+                    if(IsCompute)
+                        CmdCtx.GetCommandList()->SetComputeRootConstantBufferView(RootInd, CBVAddress);
+                    else
+                        CmdCtx.GetCommandList()->SetGraphicsRootConstantBufferView(RootInd, CBVAddress);
+                }
+            }
         }
     }
 }

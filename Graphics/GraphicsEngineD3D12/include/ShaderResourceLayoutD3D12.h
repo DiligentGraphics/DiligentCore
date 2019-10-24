@@ -203,7 +203,8 @@ public:
         void CacheCB(IDeviceObject*                      pBuffer, 
                      ShaderResourceCacheD3D12::Resource& DstRes, 
                      Uint32                              ArrayInd, 
-                     D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle)const;
+                     D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle,
+                     Uint32&                             BoundDynamicCBsCounter)const;
 
         template<typename TResourceViewType, 
                  typename TViewTypeEnum,
