@@ -573,6 +573,9 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         m_ShaderResourceLayouts[s].dvpVerifyBindings(ResourceCache);
     }
 #endif
+#ifdef _DEBUG
+    ResourceCache.DbgVerifyDynamicBuffersCounter();
+#endif
 
     if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
@@ -678,6 +681,9 @@ void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& Re
         const auto& ShaderResourceLayouts = GetShaderResLayout(s);
         ShaderResourceLayouts.InitializeStaticResources(StaticResLayout, StaticResCache, ResourceCache);
     }
+#ifdef _DEBUG
+    ResourceCache.DbgVerifyDynamicBuffersCounter();
+#endif
 }
 
 }

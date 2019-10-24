@@ -570,9 +570,10 @@ void ShaderResourceLayoutVk::VkResource::UpdateDescriptorHandle(VkDescriptorSet 
     ParentResLayout.m_LogicalDevice.UpdateDescriptorSets(1, &WriteDescrSet, 0, nullptr);
 }
 
-template<typename ObjectType>
+template<typename ObjectType, typename TPreUpdateObject>
 bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCacheVk::Resource& DstRes,
-                                                              RefCntAutoPtr<ObjectType>&&      pObject)const
+                                                              RefCntAutoPtr<ObjectType>&&      pObject,
+                                                              TPreUpdateObject                 PreUpdateObject)const
 {
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
@@ -585,6 +586,7 @@ bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCach
             return false;
         }
 
+        PreUpdateObject(DstRes.pObject.RawPtr<const ObjectType>(), pObject.RawPtr<const ObjectType>());
         DstRes.pObject.Attach(pObject.Detach());
         return true;
     }
@@ -597,7 +599,8 @@ bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCach
 void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*                     pBuffer,
                                                             ShaderResourceCacheVk::Resource&   DstRes, 
                                                             VkDescriptorSet                    vkDescrSet, 
-                                                            Uint32                             ArrayInd)const
+                                                            Uint32                             ArrayInd,
+                                                            Uint16&                            DynamicBuffersCounter)const
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, "Uniform buffer resource is expected");
     RefCntAutoPtr<BufferVkImpl> pBufferVk(pBuffer, IID_BufferVk);
@@ -605,7 +608,17 @@ void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*      
     VerifyConstantBufferBinding(SpirvAttribs, GetVariableType(), ArrayInd, pBuffer, pBufferVk.RawPtr(), DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
 #endif
 
-    if (UpdateCachedResource(DstRes, std::move(pBufferVk)))
+    auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferVkImpl* pOldBuffer, const BufferVkImpl* pNewBuffer)
+    {
+        if (pOldBuffer != nullptr && pOldBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+        {
+            VERIFY(DynamicBuffersCounter > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
+            --DynamicBuffersCounter;
+        }
+        if (pNewBuffer != nullptr && pNewBuffer->GetDesc().Usage == USAGE_DYNAMIC)
+            ++DynamicBuffersCounter;
+    };
+    if (UpdateCachedResource(DstRes, std::move(pBufferVk), UpdateDynamicBuffersCounter))
     {
         // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER or VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptor type require
         // buffer to be created with VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT
@@ -623,7 +636,8 @@ void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*      
 void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*                     pBufferView,
                                                             ShaderResourceCacheVk::Resource&   DstRes, 
                                                             VkDescriptorSet                    vkDescrSet, 
-                                                            Uint32                             ArrayInd)const
+                                                            Uint32                             ArrayInd,
+                                                            Uint16&                            DynamicBuffersCounter)const
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer || 
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer,
@@ -638,7 +652,18 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
     }
 #endif
 
-    if (UpdateCachedResource(DstRes, std::move(pBufferViewVk)))
+    auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferViewVkImpl* pOldBufferView, const BufferViewVkImpl* pNewBufferView)
+    {
+        if (pOldBufferView != nullptr && pOldBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+        {
+            VERIFY(DynamicBuffersCounter > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
+            --DynamicBuffersCounter;
+        }
+        if (pNewBufferView != nullptr && pNewBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+            ++DynamicBuffersCounter;
+    };
+
+    if (UpdateCachedResource(DstRes, std::move(pBufferViewVk), UpdateDynamicBuffersCounter))
     {
         // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER or VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptor type 
         // require buffer to be created with VK_BUFFER_USAGE_STORAGE_BUFFER_BIT (13.2.4)
@@ -656,7 +681,8 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
 void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*                     pBufferView,
                                                           ShaderResourceCacheVk::Resource&   DstRes, 
                                                           VkDescriptorSet                    vkDescrSet,
-                                                          Uint32                             ArrayInd)const
+                                                          Uint32                             ArrayInd,
+                                                          Uint16&                            DynamicBuffersCounter)const
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer || 
            SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer,
@@ -671,7 +697,18 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
     }
 #endif
 
-    if (UpdateCachedResource(DstRes, std::move(pBufferViewVk)))
+    auto UpdateDynamicBuffersCounter = [&DynamicBuffersCounter](const BufferViewVkImpl* pOldBufferView, const BufferViewVkImpl* pNewBufferView)
+    {
+        if (pOldBufferView != nullptr && pOldBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+        {
+            VERIFY(DynamicBuffersCounter > 0, "Dynamic buffers counter must be greater than zero when there is at least one dynamic buffer bound in the resource cache");
+            --DynamicBuffersCounter;
+        }
+        if (pNewBufferView != nullptr && pNewBufferView->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+            ++DynamicBuffersCounter;
+    };
+
+    if (UpdateCachedResource(DstRes, std::move(pBufferViewVk), UpdateDynamicBuffersCounter))
     {
         // The following bits must have been set at buffer creation time:
         //  * VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER  ->  VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT
@@ -707,7 +744,7 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
         VerifyResourceViewBinding(SpirvAttribs, GetVariableType(), ArrayInd, pTexView, pTexViewVk0.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
     }
 #endif
-    if (UpdateCachedResource(DstRes, std::move(pTexViewVk0)))
+    if (UpdateCachedResource(DstRes, std::move(pTexViewVk0), [](const TextureViewVkImpl*, const TextureViewVkImpl*){}))
     {
         // We can do RawPtr here safely since UpdateCachedResource() returned true
         auto* pTexViewVk = DstRes.pObject.RawPtr<TextureViewVkImpl>();
@@ -778,7 +815,7 @@ void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject*    
                           "cause unpredicted behavior. Use another shader resource binding instance or label the variable as dynamic.");
     }
 #endif
-    if (UpdateCachedResource(DstRes, std::move(pSamplerVk)))
+    if (UpdateCachedResource(DstRes, std::move(pSamplerVk), [](const SamplerVkImpl*, const SamplerVkImpl*){}))
     {
         // Do not update descriptor for a dynamic sampler. All dynamic resource descriptors 
         // are updated at once by CommitDynamicResources() when SRB is committed.
@@ -823,17 +860,17 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject* pObj, Uint3
         switch (SpirvAttribs.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
-                CacheUniformBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
+                CacheUniformBuffer(pObj, DstRes, vkDescrSet, ArrayIndex, ResourceCache.GetDynamicBuffersCounter());
             break;
 
             case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:
             case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:
-                CacheStorageBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
+                CacheStorageBuffer(pObj, DstRes, vkDescrSet, ArrayIndex, ResourceCache.GetDynamicBuffersCounter());
             break;
 
             case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
             case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
-                CacheTexelBuffer(pObj, DstRes, vkDescrSet, ArrayIndex);
+                CacheTexelBuffer(pObj, DstRes, vkDescrSet, ArrayIndex, ResourceCache.GetDynamicBuffersCounter());
                 break;
 
             case SPIRVShaderResourceAttribs::ResourceType::StorageImage:

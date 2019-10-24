@@ -168,12 +168,16 @@ public:
         return reinterpret_cast<const DescriptorSet*>(m_pMemory)[Index];
     }
 
-    inline Uint32 GetNumDescriptorSets()const{return m_NumSets; }
+    inline Uint32 GetNumDescriptorSets()const{return m_NumSets;          }
+    inline Uint32 GetNumDynamicBuffers()const{return m_NumDynamicBuffers;}
+
+    Uint16& GetDynamicBuffersCounter(){return m_NumDynamicBuffers;}
 
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
     DbgCacheContentType DbgGetContentType()const{return m_DbgContentType;}
     void DbgVerifyResourceInitialization()const;
+    void DbgVerifyDynamicBuffersCounter()const;
 #endif
 
     template<bool VerifyOnly>
@@ -187,11 +191,17 @@ private:
     {
         return reinterpret_cast<Resource*>(reinterpret_cast<DescriptorSet*>(m_pMemory) + m_NumSets);
     }
+    const Resource* GetFirstResourcePtr()const
+    {
+        return reinterpret_cast<const Resource*>(reinterpret_cast<const DescriptorSet*>(m_pMemory) + m_NumSets);
+    }
 
-    IMemoryAllocator*   m_pAllocator     = nullptr; 
-    void*               m_pMemory        = nullptr;
-    Uint32              m_NumSets        = 0;
-    Uint32              m_TotalResources = 0;
+    IMemoryAllocator*   m_pAllocator        = nullptr; 
+    void*               m_pMemory           = nullptr;
+    Uint16              m_NumSets           = 0;
+    // Total number of dynamic buffers bound in the resource cache regardless of the variable type
+    Uint16              m_NumDynamicBuffers = 0;
+    Uint32              m_TotalResources    = 0;
 
 #ifdef _DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache

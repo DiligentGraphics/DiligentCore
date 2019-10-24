@@ -57,7 +57,8 @@ void ShaderResourceCacheVk::InitializeSets(IMemoryAllocator& MemAllocator, Uint3
 
     VERIFY(m_pAllocator == nullptr && m_pMemory == nullptr, "Cache already initialized");
     m_pAllocator     = &MemAllocator;
-    m_NumSets        = NumSets;
+    VERIFY(NumSets < std::numeric_limits<decltype(m_NumSets)>::max(), "NumSets (", NumSets, ") exceed maximum representable value");
+    m_NumSets        = static_cast<Uint16>(NumSets);
     m_TotalResources = 0;
     for (Uint32 t=0; t < NumSets; ++t)
         m_TotalResources += SetSizes[t];
@@ -103,6 +104,29 @@ void ShaderResourceCacheVk::DbgVerifyResourceInitialization()const
         for (auto ResInitialized : SetFlags)
             VERIFY(ResInitialized, "Not all resources in the cache have been initialized. This is a bug.");
     }
+}
+void ShaderResourceCacheVk::DbgVerifyDynamicBuffersCounter()const
+{
+    const auto* pResources = GetFirstResourcePtr();
+    Uint32 NumDynamicBuffers = 0;
+    for (Uint32 res=0; res < m_TotalResources; ++res)
+    {
+        const auto& Res = pResources[res];
+        if (Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer)
+        {
+            if (Res.pObject && Res.pObject.RawPtr<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+                ++NumDynamicBuffers;
+        }
+        else if (Res.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer    ||
+                 Res.Type == SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer    ||
+                 Res.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer ||
+                 Res.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer)
+        {
+            if (Res.pObject && Res.pObject.RawPtr<const BufferViewVkImpl>()->GetBuffer<const BufferVkImpl>()->GetDesc().Usage == USAGE_DYNAMIC)
+                ++NumDynamicBuffers;
+        }
+    }
+    VERIFY(NumDynamicBuffers == m_NumDynamicBuffers, "The number of dynamic buffers (", m_NumDynamicBuffers, ") does not match the actual number (", NumDynamicBuffers, ")");
 }
 #endif
 

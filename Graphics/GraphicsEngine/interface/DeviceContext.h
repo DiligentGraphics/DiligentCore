@@ -78,7 +78,7 @@ enum DRAW_FLAGS : Uint8
     /// \remarks This flag should be used to improve performance when an application issues a
     ///          series of draw commands that use the same pipeline state and shader resources and
     ///          no dynamic buffers (constant or bound as shader resources) are updated between the
-    ///          commands, including when there are no dynamic buffers at all.
+    ///          commands.
     ///          The flag has no effect on dynamic vertex and index buffers.
     ///
     ///          Details
@@ -92,26 +92,25 @@ enum DRAW_FLAGS : Uint8
     ///          and the application may use the flag to inform the engine that the data in the buffer 
     ///          stay intact to avoid extra work.\n
     ///          Note that after a new PSO is bound or an SRB is committed, the engine will always set all
-    ///          required buffers addresses/offsets regardless of the flag. The flag will only take effect
+    ///          required buffer addresses/offsets regardless of the flag. The flag will only take effect
     ///          on the second and susbequent draw calls that use the same PSO and SRB.\n
     ///          The flag has no effect in D3D11 and OpenGL backends.
     ///
     ///          Implementation details
     ///         
     ///          Vulkan backend allocates VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC descriptors for all uniform (constant), 
-    ///          buffers and VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descritptors for storage buffers.
+    ///          buffers and VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC descriptors for storage buffers.
     ///          Note that HLSL structured buffers are mapped to read-only storage buffers in SPIRV and RW buffers
     ///          are mapped to RW-storage buffers.
-    ///          By default, all dynamic descriptor sets are updated every time a draw command is issued (see
-    ///          PipelineStateVkImpl::BindDescriptorSetsWithDynamicOffsets). When DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT is
-    ///          specified, dynamic descriptor sets are only bound by the first draw command that uses the PSO and the SRB.
-    ///          It avoids binding descriptors with the same offsets if none of the offsets have changed or if the buffers
-    ///          are not dynamic (in which case the offsets are always zero).
+    ///          By default, all dynamic descriptor sets that have dynamic buffers bound are updated every time a draw command is
+    ///          issued (see PipelineStateVkImpl::BindDescriptorSetsWithDynamicOffsets). When DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT
+    ///          is specified, dynamic descriptor sets are only bound by the first draw command that uses the PSO and the SRB.
+    ///          The flag avoids binding descriptors with the same offsets if none of the dynamic offsets have changed.
     ///
-    ///          Direct3D12 backend binds constant buffers to root views and always treats them as dynamic. By default the engine
-    ///          assumes that the buffer's virtual GPU address may change between the draw commands and always commits root views
-    ///          (see RootSignature::CommitRootViews). When DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT is set, root views are only committed
-    ///          by the first draw command that uses the PSO + SRB pair. It avoids committing the same GPU virtual addresses when
+    ///          Direct3D12 backend binds constant buffers to root views. By default the engine assumes that virtual GPU addresses 
+    ///          of all dynamic buffers may change between the draw commands and always binds dynamic buffers to root views
+    ///          (see RootSignature::CommitRootViews). When DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT is set, root views are only bound
+    ///          by the first draw command that uses the PSO + SRB pair. The flag avoids setting the same GPU virtual addresses when
     ///          they stay unchanged.
     DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT = 0x08
 };

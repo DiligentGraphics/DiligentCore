@@ -422,7 +422,11 @@ namespace Diligent
 
         if (m_DescrSetBindInfo.DynamicOffsetCount != 0)
         {
-            if (!m_DescrSetBindInfo.DynamicDescriptorsBound || (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0)
+            // First time we must always bind descriptor sets with dynamic offsets.
+            // If there are no dynamic buffers bound in the resource cache, for all subsequent
+            // cals we do not need to bind the sets again.
+            if (!m_DescrSetBindInfo.DynamicDescriptorsBound || 
+                (m_DescrSetBindInfo.DynamicBuffersBound && (Flags & DRAW_FLAG_DYNAMIC_RESOURCE_BUFFERS_INTACT) == 0))
             {
                 m_pPipelineState->BindDescriptorSetsWithDynamicOffsets(GetCommandBuffer(), m_ContextId, this, m_DescrSetBindInfo);
             }

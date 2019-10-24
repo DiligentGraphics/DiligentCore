@@ -224,17 +224,20 @@ public:
         void CacheUniformBuffer(IDeviceObject*                     pBuffer, 
                                 ShaderResourceCacheVk::Resource&   DstRes, 
                                 VkDescriptorSet                    vkDescrSet,
-                                Uint32                             ArrayInd)const;
+                                Uint32                             ArrayInd,
+                                Uint16&                            DynamicBuffersCounter)const;
 
         void CacheStorageBuffer(IDeviceObject*                     pBufferView, 
                                 ShaderResourceCacheVk::Resource&   DstRes, 
                                 VkDescriptorSet                    vkDescrSet,
-                                Uint32                             ArrayInd)const;
+                                Uint32                             ArrayInd,
+                                Uint16&                            DynamicBuffersCounter)const;
 
         void CacheTexelBuffer(IDeviceObject*                     pBufferView, 
                               ShaderResourceCacheVk::Resource&   DstRes, 
                               VkDescriptorSet                    vkDescrSet,
-                              Uint32                             ArrayInd)const;
+                              Uint32                             ArrayInd,
+                              Uint16&                            DynamicBuffersCounter)const;
             
         template<typename TCacheSampler>
         void CacheImage(IDeviceObject*                   pTexView,
@@ -248,9 +251,10 @@ public:
                                   VkDescriptorSet                  vkDescrSet,
                                   Uint32                           ArrayInd)const;
 
-        template<typename ObjectType>
+        template<typename ObjectType, typename TPreUpdateObject>
         bool UpdateCachedResource(ShaderResourceCacheVk::Resource&   DstRes,
-                                  RefCntAutoPtr<ObjectType>&&        pObject)const;
+                                  RefCntAutoPtr<ObjectType>&&        pObject,
+                                  TPreUpdateObject                   PreUpdateObject)const;
     };
 
     // Copies static resources from SrcResourceCache defined by SrcLayout

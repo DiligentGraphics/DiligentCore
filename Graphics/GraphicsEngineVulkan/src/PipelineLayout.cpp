@@ -486,6 +486,7 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*          pCtxVkI
 #ifdef _DEBUG
     BindInfo.pDbgPipelineLayout = this;
 #endif
+    BindInfo.DynamicBuffersBound = ResourceCache.GetNumDynamicBuffers() > 0;
 
     if (TotalDynamicDescriptors == 0)
     {
