@@ -586,7 +586,7 @@ bool ShaderResourceLayoutVk::VkResource::UpdateCachedResource(ShaderResourceCach
             return false;
         }
 
-        PreUpdateObject(DstRes.pObject.RawPtr<const ObjectType>(), pObject.RawPtr<const ObjectType>());
+        PreUpdateObject(DstRes.pObject.RawPtr<ObjectType>(), pObject.RawPtr<ObjectType>());
         DstRes.pObject.Attach(pObject.Detach());
         return true;
     }
