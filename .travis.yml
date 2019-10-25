@@ -106,7 +106,7 @@ script:
       else
         cmake .. -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
       fi
-      cmake --build . --target install --config ${CONFIG}
+      xcodebuild -configuration ${CONFIG} | xcpretty
     fi
 
 after_success:
