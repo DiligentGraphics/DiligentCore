@@ -216,7 +216,7 @@ namespace Diligent
         DEV_CHECK_ERR(ViewDesc.NumMipLevels > 1, "Number of mip levels in the view must be greater than 1");
         DEV_CHECK_ERR(OriginalState != RESOURCE_STATE_UNDEFINED,
                       "Attempting to generate mipmaps for texture '", TexDesc.Name, "' which is in RESOURCE_STATE_UNDEFINED state ."
-                      "This is not expected in Vulkan backend as textures are transition to a defined state when created.");
+                      "This is not expected in Vulkan backend as textures are transition to a defined state when created."); (void)OriginalState;
 
         const auto& FmtAttribs = GetTextureFormatAttribs(ViewDesc.Format);
         VkImageSubresourceRange SubresRange = {};

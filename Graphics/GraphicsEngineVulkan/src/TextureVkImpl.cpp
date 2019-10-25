@@ -767,7 +767,7 @@ void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Siz
     InvalidateRange.offset = m_StagingDataAlignedOffset + Offset;
     InvalidateRange.size   = Size;
     auto err = LogicalDevice.InvalidateMappedMemoryRanges(1, &InvalidateRange);
-    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to invalidated mapped texture memory range");
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to invalidated mapped texture memory range"); (void)err;
 }
 
 }
