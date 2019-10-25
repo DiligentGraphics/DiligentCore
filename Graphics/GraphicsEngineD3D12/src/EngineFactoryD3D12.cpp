@@ -146,6 +146,15 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 		    {
 			    debugController->EnableDebugLayer();
                 //static_cast<ID3D12Debug1*>(debugController.p)->SetEnableSynchronizedCommandQueueValidation(FALSE);
+                if (EngineCI.EnableGPUBasedValidation)
+                {
+                    CComPtr<ID3D12Debug1> debugController1;
+                    debugController->QueryInterface(IID_PPV_ARGS(&debugController1));
+                    if (debugController1)
+                    {
+                        debugController1->SetEnableGPUBasedValidation(true);
+                    }
+                }
 		    }
 	    }
 

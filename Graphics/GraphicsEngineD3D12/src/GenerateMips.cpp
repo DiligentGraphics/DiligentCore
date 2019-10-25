@@ -110,6 +110,12 @@ namespace Diligent
         auto* pTexD3D12 = pTexView->GetTexture<TextureD3D12Impl>();
         const auto& TexDesc = pTexD3D12->GetDesc();
         const auto& ViewDesc = pTexView->GetDesc();
+        bool IsAllSlices = (TexDesc.Type != RESOURCE_DIM_TEX_1D_ARRAY &&
+                            TexDesc.Type != RESOURCE_DIM_TEX_2D_ARRAY &&
+                            TexDesc.Type != RESOURCE_DIM_TEX_CUBE_ARRAY) || 
+                            TexDesc.ArraySize == ViewDesc.NumArraySlices;
+        bool IsAllMips = ViewDesc.NumMipLevels == TexDesc.MipLevels;
+
         auto SRVDescriptorHandle = pTexView->GetTexArraySRV();
 
         if (!pTexD3D12->IsInKnownState())
@@ -120,21 +126,18 @@ namespace Diligent
         
         if (pTexD3D12->GetState() == RESOURCE_STATE_UNDEFINED)
         {
-            // If texture state is undefined, transition it to unordered access state
-            Ctx.TransitionResource(pTexD3D12, RESOURCE_STATE_UNORDERED_ACCESS);
+            // If texture state is undefined, transition it to shader resource state.
+            // We need all subresources to be in a defined state at the end of the procedure.
+            Ctx.TransitionResource(pTexD3D12, RESOURCE_STATE_SHADER_RESOURCE);
         }
 
         const auto OriginalState = pTexD3D12->GetState();
-
         pTexD3D12->SetState(RESOURCE_STATE_UNKNOWN); // Switch to manual state management
-        StateTransitionDesc TextureBarrier(pTexD3D12, OriginalState, RESOURCE_STATE_UNORDERED_ACCESS, false);
-        TextureBarrier.FirstMipLevel   = ViewDesc.MostDetailedMip;
-        TextureBarrier.MipLevelsCount  = ViewDesc.NumMipLevels;
-        TextureBarrier.FirstArraySlice = ViewDesc.FirstArraySlice;
-        TextureBarrier.ArraySliceCount = ViewDesc.NumArraySlices;
-        if (OriginalState != RESOURCE_STATE_UNORDERED_ACCESS)
-	        Ctx.TransitionResource(TextureBarrier);
         
+        // If we are processing the entire texture, we will leave it in SHADER_RESOURCE layout.
+        // Otherwise we will transition affected subresources back to original layout.
+        const auto FinalState = (IsAllSlices && IsAllMips) ? RESOURCE_STATE_SHADER_RESOURCE : OriginalState;
+
         auto BottomMip = ViewDesc.NumMipLevels - 1;
         for (uint32_t TopMip = 0; TopMip < BottomMip; )
         {
@@ -211,36 +214,54 @@ namespace Diligent
 
             pd3d12Device->CopyDescriptors(1, &DstDescriptorRange, &DstRangeSize, 1 + MaxMipsHandledByCS, SrcDescriptorRanges, SrcRangeSizes, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
+            // Transition top mip level to the shader resource state
+            StateTransitionDesc SrcMipBarrier{pTexD3D12, TopMip == 0 ? OriginalState : RESOURCE_STATE_UNORDERED_ACCESS, RESOURCE_STATE_SHADER_RESOURCE, false};
+            if (SrcMipBarrier.OldState != SrcMipBarrier.NewState)
+            {
+                SrcMipBarrier.FirstMipLevel   = ViewDesc.MostDetailedMip + TopMip;
+                SrcMipBarrier.MipLevelsCount  = 1;
+                SrcMipBarrier.FirstArraySlice = ViewDesc.FirstArraySlice;
+                SrcMipBarrier.ArraySliceCount = ViewDesc.NumArraySlices;
+	            Ctx.TransitionResource(SrcMipBarrier);
+            }
+
+            // Transition dst mip levels to UAV state
+            StateTransitionDesc DstMipsBarrier{pTexD3D12, OriginalState, RESOURCE_STATE_UNORDERED_ACCESS, false};
+            if (DstMipsBarrier.OldState != DstMipsBarrier.NewState)
+            {
+                DstMipsBarrier.FirstMipLevel   = ViewDesc.MostDetailedMip + TopMip + 1;
+                DstMipsBarrier.MipLevelsCount  = NumMips;
+                DstMipsBarrier.FirstArraySlice = ViewDesc.FirstArraySlice;
+                DstMipsBarrier.ArraySliceCount = ViewDesc.NumArraySlices;
+	            Ctx.TransitionResource(DstMipsBarrier);
+            }
+
             ComputeCtx.Dispatch((DstWidth + 7) / 8, (DstHeight + 7) / 8, ViewDesc.NumArraySlices);
 
-            Ctx.InsertUAVBarrier(pTexD3D12->GetD3D12Resource());
+            // Transition the lowest level back to original layout or leave it in RESOURCE_STATE_SHADER_RESOURCE
+            // if all subresources are processed
+            if (SrcMipBarrier.NewState != FinalState)
+            {
+                SrcMipBarrier.OldState = SrcMipBarrier.NewState;
+                SrcMipBarrier.NewState = FinalState;
+                Ctx.TransitionResource(SrcMipBarrier);
+            }
+
+            if (DstMipsBarrier.NewState != FinalState)
+            {
+                DstMipsBarrier.OldState = DstMipsBarrier.NewState;
+                DstMipsBarrier.NewState = FinalState;
+                // Do not transition the bottom level if we have more mips to process
+                if (TopMip + NumMips < BottomMip)
+                    --DstMipsBarrier.MipLevelsCount;
+                if (DstMipsBarrier.MipLevelsCount > 0)
+                    Ctx.TransitionResource(DstMipsBarrier);
+            }
 
             TopMip += NumMips;
         }
 
-        RESOURCE_STATE TextureState = OriginalState;
-        if (OriginalState != RESOURCE_STATE_UNORDERED_ACCESS)
-        {
-            bool IsAllSlices = (TexDesc.Type != RESOURCE_DIM_TEX_1D_ARRAY &&
-                                TexDesc.Type != RESOURCE_DIM_TEX_2D_ARRAY &&
-                                TexDesc.Type != RESOURCE_DIM_TEX_CUBE_ARRAY) || 
-                               TexDesc.ArraySize == ViewDesc.NumArraySlices;
-            bool IsAllMips = ViewDesc.NumMipLevels == TexDesc.MipLevels;
-            if (IsAllSlices && IsAllMips)
-            {
-                TextureState = RESOURCE_STATE_UNORDERED_ACCESS;
-            }
-            else
-            {
-                VERIFY(OriginalState != RESOURCE_STATE_UNDEFINED, "Original layout must not be undefined");
-                // Transition affected subresources back to original layout
-                std::swap(TextureBarrier.NewState, TextureBarrier.OldState);
-                VERIFY_EXPR(TextureBarrier.NewState == TextureState);
-                Ctx.TransitionResource(TextureBarrier);
-            }
-        }
-
         // Set state
-        pTexD3D12->SetState(TextureState);
+        pTexD3D12->SetState(FinalState);
     }
 }

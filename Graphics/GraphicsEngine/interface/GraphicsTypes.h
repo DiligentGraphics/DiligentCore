@@ -1380,6 +1380,12 @@ namespace Diligent
         /// Enable Direct3D12 debug layer.
         bool EnableDebugLayer  = false;
 
+        /// Enable validation on the GPU timeline.
+        /// See https://docs.microsoft.com/en-us/windows/win32/direct3d12/using-d3d12-debug-layer-gpu-based-validation
+        /// This flag only has effect if EnableDebugLayer is true.
+        /// \note Enabling this option may slow things down a lot.
+        bool EnableGPUBasedValidation = false;
+
         /// Whether to break execution when D3D12 debug layer detects an error.
         /// This flag only has effect if EnableDebugLayer is true.
         bool BreakOnError      = false;
