@@ -106,13 +106,11 @@ script:
       else
         cmake .. -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
       fi
-      xcodebuild -configuration ${CONFIG} | xcpretty
+      cmake --build . --target install --config ${CONFIG} | xcpretty
     fi
 
 after_success:
-  - |
-    if [ "$TRAVIS_OS_NAME" = "linux" ]; then 
-      cd ../cmk_build/install
-      export ZIP_NAME=DiligentCore-${TRAVIS_OS_NAME}-${GLSLANG_BUILD_TYPE}.zip;
-      zip -r ${ZIP_NAME} .
-    fi
+    
+  - cd ../cmk_build/install
+  - export ZIP_NAME=DiligentCore-${TRAVIS_OS_NAME}-${GLSLANG_BUILD_TYPE}.zip;
+  - zip -r ${ZIP_NAME} .
