@@ -16,5 +16,5 @@ Please provide the following information:
 - Build tools and configuration you used to build the engine (e.g. Visual Studio 2017 Debug x64 + CMake 3.15.4)
 - GPU and driver version you have installed on your system
 - Debug output, especially messages from Diligent
-- Call stack (if avaialable)
+- Call stack (if available)
 - If you experience a problem with one back-end, please try running other back-ends and see if the same issue arises
