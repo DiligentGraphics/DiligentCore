@@ -238,6 +238,9 @@ __forceinline void PipelineLayout::BindDescriptorSetsWithDynamicOffsets(VulkanUt
     auto NumOffsetsWritten = BindInfo.pResourceCache->GetDynamicBufferOffsets(CtxId, pCtxVkImpl, BindInfo.DynamicOffsets);
     VERIFY_EXPR(NumOffsetsWritten == BindInfo.DynamicOffsetCount); (void)NumOffsetsWritten;
 
+    // Note that there is one global dynamic buffer from which all dynamic resources are suballocated in Vulkan back-end,
+    // and this buffer is not resizable, so the buffer handle can never change.
+
     // vkCmdBindDescriptorSets causes the sets numbered [firstSet .. firstSet+descriptorSetCount-1] to use the 
     // bindings stored in pDescriptorSets[0 .. descriptorSetCount-1] for subsequent rendering commands 
     // (either compute or graphics, according to the pipelineBindPoint). Any bindings that were previously 
