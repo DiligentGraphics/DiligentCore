@@ -366,5 +366,5 @@ if(INSTALL_DILIGENT_CORE)
         message("Unable to find librarian tool. Combined DiligentCore static library will not be produced.")
     endif()
 
-    install(FILES License.txt DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses")
+    install(FILES License.txt DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses" RENAME DiligentEngine-License.txt)
 endif(INSTALL_DILIGENT_CORE)
