@@ -65,22 +65,22 @@ public:
 
     virtual ICommandQueueType* LockCommandQueue()override final
     {
-        if (m_bIsDeferred)
+        if (this->m_bIsDeferred)
         {
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return nullptr;
         }
-        return m_pDevice.RawPtr<DeviceImplType>()->LockCommandQueue(m_CommandQueueId);
+        return this->m_pDevice.RawPtr<DeviceImplType>()->LockCommandQueue(this->m_CommandQueueId);
     }
 
     virtual void UnlockCommandQueue()
     {
-        if (m_bIsDeferred)
+        if (this->m_bIsDeferred)
         {
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return;
         }
-        m_pDevice.RawPtr<DeviceImplType>()->UnlockCommandQueue(m_CommandQueueId);
+        this->m_pDevice.RawPtr<DeviceImplType>()->UnlockCommandQueue(this->m_CommandQueueId);
     }
 
 protected:
