@@ -28,6 +28,7 @@
 #include "ReferenceCounters.h"
 #include "RefCntAutoPtr.h"
 #include "DeviceContextBase.h"
+#include "RefCntAutoPtr.h"
 
 namespace Diligent
 {
@@ -70,17 +71,17 @@ public:
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return nullptr;
         }
-        return this->m_pDevice.RawPtr<DeviceImplType>()->LockCommandQueue(this->m_CommandQueueId);
+        return this->m_pDevice.template RawPtr<DeviceImplType>()->LockCommandQueue(m_CommandQueueId);
     }
 
-    virtual void UnlockCommandQueue()
+    virtual void UnlockCommandQueue()override final
     {
         if (this->m_bIsDeferred)
         {
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return;
         }
-        this->m_pDevice.RawPtr<DeviceImplType>()->UnlockCommandQueue(this->m_CommandQueueId);
+        this->m_pDevice.template RawPtr<DeviceImplType>()->UnlockCommandQueue(m_CommandQueueId);
     }
 
 protected:
@@ -95,7 +96,7 @@ protected:
         }
         else
         {
-            m_pDevice.RawPtr<DeviceImplType>()->FlushStaleResources(m_CommandQueueId);
+            this->m_pDevice.template RawPtr<DeviceImplType>()->FlushStaleResources(m_CommandQueueId);
         }
         Atomics::AtomicIncrement(m_ContextFrameNumber);
     }
