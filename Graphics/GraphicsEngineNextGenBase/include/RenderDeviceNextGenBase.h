@@ -230,7 +230,7 @@ public:
         return m_CommandQueues[QueueIndex].ReleaseQueue;
     }
 
-    const CommandQueueType& GetCommandQueue(Uint32 QueueIndex)
+    const CommandQueueType& GetCommandQueue(Uint32 QueueIndex)const
     {
         VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
         return *m_CommandQueues[QueueIndex].CmdQueue;
@@ -252,12 +252,27 @@ public:
     }
 
     template<typename TAction>
-    void LockCommandQueue(Uint32 QueueIndex, TAction Action)
+    void LockCmdQueueAndRun(Uint32 QueueIndex, TAction Action)
     {
         VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
         auto& Queue = m_CommandQueues[QueueIndex];
         std::lock_guard<std::mutex> Lock{Queue.Mtx};
         Action(Queue.CmdQueue);
+    }
+
+    CommandQueueType* LockCommandQueue(Uint32 QueueIndex)
+    {
+        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
+        auto& Queue = m_CommandQueues[QueueIndex];
+        Queue.Mtx.lock();
+        return Queue.CmdQueue;
+    }
+
+    void UnlockCommandQueue(Uint32 QueueIndex)
+    {
+        VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
+        auto& Queue = m_CommandQueues[QueueIndex];
+        Queue.Mtx.unlock();
     }
 
 protected:

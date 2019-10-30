@@ -28,7 +28,6 @@
 #include <unordered_map>
 
 #include "DeviceContextVk.h"
-#include "DeviceContextBase.h"
 #include "DeviceContextNextGenBase.h"
 #include "VulkanUtilities/VulkanCommandBufferPool.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
@@ -46,21 +45,25 @@
 namespace Diligent
 {
 
+class RenderDeviceVkImpl;
+
 struct DeviceContextVkImplTraits
 {
     using BufferType        = BufferVkImpl;
     using TextureType       = TextureVkImpl;
     using PipelineStateType = PipelineStateVkImpl;
+    using DeviceType        = RenderDeviceVkImpl;
+    using ICommandQueueType = ICommandQueueVk;
 };
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextVkImpl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, DeviceContextVkImplTraits> >
+class DeviceContextVkImpl final : public DeviceContextNextGenBase<IDeviceContextVk, DeviceContextVkImplTraits>
 {
 public:
-    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextVk, DeviceContextVkImplTraits> >;
+    using TDeviceContextBase = DeviceContextNextGenBase<IDeviceContextVk, DeviceContextVkImplTraits>;
 
     DeviceContextVkImpl(IReferenceCounters*                   pRefCounters,
-                        class RenderDeviceVkImpl*             pDevice,
+                        RenderDeviceVkImpl*                   pDevice,
                         bool                                  bIsDeferred,
                         const EngineVkCreateInfo&             EngineCI,
                         Uint32                                ContextId,

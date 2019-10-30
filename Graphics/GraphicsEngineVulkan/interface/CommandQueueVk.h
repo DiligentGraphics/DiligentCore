@@ -26,7 +26,6 @@
 /// \file
 /// Definition of the Diligent::ICommandQueueVk interface
 
-#include "vulkan.h"
 #include "../../../Primitives/interface/Object.h"
 
 namespace Diligent

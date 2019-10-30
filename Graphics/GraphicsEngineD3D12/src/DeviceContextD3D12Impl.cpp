@@ -749,7 +749,7 @@ namespace Diligent
         for(size_t i=0; i < _countof(m_DynamicGPUDescriptorAllocator); ++i)
             m_DynamicGPUDescriptorAllocator[i].ReleaseAllocations(m_SubmittedBuffersCmdQueueMask);
 
-        EndFrame(*m_pDevice.RawPtr<RenderDeviceD3D12Impl>());
+        EndFrame();
     }
 
     void DeviceContextD3D12Impl::SetVertexBuffers( Uint32                         StartSlot,

@@ -525,7 +525,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         PresentInfo.pImageIndices = &m_BackBufferIndex;
         VkResult Result = VK_SUCCESS;
         PresentInfo.pResults = &Result;
-        pDeviceVk->LockCommandQueue(0, 
+        pDeviceVk->LockCmdQueueAndRun(0, 
             [&PresentInfo](ICommandQueueVk* pCmdQueueVk)
             {
                 pCmdQueueVk->Present(PresentInfo);

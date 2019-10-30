@@ -247,7 +247,7 @@ void RenderDeviceVkImpl::ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, Vk
     // Since transient command buffers do not count as real command buffers, submit them directly to the queue
     // to avoid interference with the command buffer counter
     Uint64 FenceValue = 0;
-    LockCommandQueue(QueueIndex, 
+    LockCmdQueueAndRun(QueueIndex, 
         [&](ICommandQueueVk* pCmdQueueVk)
         {
             FenceValue = pCmdQueueVk->Submit(SubmitInfo);

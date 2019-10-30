@@ -27,6 +27,7 @@
 /// Definition of the Diligent::IDeviceContextVk interface
 
 #include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "CommandQueueVk.h"
 
 namespace Diligent
 {
@@ -53,6 +54,27 @@ public:
     /// \param [in] NewAccessFlags - Access flags to set for the buffer
     /// \remarks The buffer state must be known to the engine.
     virtual void BufferMemoryBarrier(IBuffer *pBuffer, VkAccessFlags NewAccessFlags) = 0;
+
+    /// Locks the internal mutex and returns a pointer to the command queue that is associated with this device context.
+
+    /// \return - a pointer to ICommandQueueVk interface of the command queue associated with the context.
+    ///
+    /// \remarks  Only immediate device contexts have associated command queues.
+    ///
+    ///           The engine locks the internal mutex to prevent simultaneous access to the command queue.
+    ///           An application must release the lock by calling IDeviceContextVk::UnlockCommandQueue()
+    ///           when it is done working with the queue or the engine will not be able to submit any command 
+    ///           list to the queue. Nested calls to LockCommandQueue() are not allowed.
+    ///           The queue pointer never changes while the context is alive, so an application may cache and
+    ///           use the pointer if it does not need to prevent potential simultaneous access to the queue from
+    ///           other threads.
+    ///
+    ///           The engine manages the lifetimes of command queues and all other device objects,
+    ///           so an application must not call AddRef/Release methods on the returned interface.
+    virtual ICommandQueueVk* LockCommandQueue() = 0;
+
+    /// Unlocks the command queue that was previously locked by IDeviceContextVk::LockCommandQueue().
+    virtual void UnlockCommandQueue() = 0;
 };
 
 }

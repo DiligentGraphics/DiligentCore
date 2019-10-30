@@ -2,6 +2,8 @@
 
 ### API Changes
 
+* Added `IDeviceContextD3D12::LockCommandQueue`, `IDeviceContextD3D12::UnlockCommandQueue`,
+  `IDeviceContextVk::LockCommandQueue`, and `IDeviceContextVk::UnlockCommandQueue` methods (API Version 240038)
 * Added `EnableGPUBasedValidation` member to `EngineD3D12CreateInfo` struct (API Version 240037)
 * Added `DRAW_FLAG_RESOURCE_BUFFERS_INTACT` flag (API Version 240036)
 * Added `HLSLVersion`, `GLSLVersion` and `GLESSLVersion` to `ShaderCreateInfo` struct (API Version 240035)

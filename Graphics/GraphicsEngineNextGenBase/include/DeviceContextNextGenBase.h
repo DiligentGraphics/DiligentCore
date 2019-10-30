@@ -27,16 +27,21 @@
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"
 #include "RefCntAutoPtr.h"
+#include "DeviceContextBase.h"
 
 namespace Diligent
 {
 
 /// Base implementation of the device context for next-generation backends.
 
-template<class TBase>
-class DeviceContextNextGenBase : public TBase
+template<typename BaseInterface, typename ImplementationTraits>
+class DeviceContextNextGenBase : public DeviceContextBase<BaseInterface, ImplementationTraits>
 {
 public:
+    using TBase             = DeviceContextBase<BaseInterface, ImplementationTraits>;
+    using DeviceImplType    = typename ImplementationTraits::DeviceType;
+    using ICommandQueueType = typename ImplementationTraits::ICommandQueueType;
+
     DeviceContextNextGenBase(IReferenceCounters* pRefCounters,
                              IRenderDevice*      pRenderDevice,
                              Uint32              ContextId,
@@ -58,11 +63,30 @@ public:
     {
     }
 
+    virtual ICommandQueueType* LockCommandQueue()override final
+    {
+        if (m_bIsDeferred)
+        {
+            LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
+            return nullptr;
+        }
+        return m_pDevice.RawPtr<DeviceImplType>()->LockCommandQueue(m_CommandQueueId);
+    }
+
+    virtual void UnlockCommandQueue()
+    {
+        if (m_bIsDeferred)
+        {
+            LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
+            return;
+        }
+        m_pDevice.RawPtr<DeviceImplType>()->UnlockCommandQueue(m_CommandQueueId);
+    }
+
 protected:
 
     // Should be called at the end of FinishFrame()
-    template<typename RenderDeviceImplType>
-    void EndFrame(RenderDeviceImplType& RenderDeviceImpl)
+    void EndFrame()
     {
         if (this->m_bIsDeferred)
         {
@@ -71,7 +95,7 @@ protected:
         }
         else
         {
-            RenderDeviceImpl.FlushStaleResources(m_CommandQueueId);
+            m_pDevice.RawPtr<DeviceImplType>()->FlushStaleResources(m_CommandQueueId);
         }
         Atomics::AtomicIncrement(m_ContextFrameNumber);
     }

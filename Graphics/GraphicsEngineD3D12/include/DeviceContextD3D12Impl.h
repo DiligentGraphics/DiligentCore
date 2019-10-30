@@ -29,7 +29,6 @@
 #include <unordered_map>
 
 #include "DeviceContextD3D12.h"
-#include "DeviceContextBase.h"
 #include "DeviceContextNextGenBase.h"
 #include "BufferD3D12Impl.h"
 #include "TextureD3D12Impl.h"
@@ -39,21 +38,25 @@
 namespace Diligent
 {
 
+class RenderDeviceD3D12Impl;
+
 struct DeviceContextD3D12ImplTraits
 {
     using BufferType        = BufferD3D12Impl;
     using TextureType       = TextureD3D12Impl;
     using PipelineStateType = PipelineStateD3D12Impl;
+    using DeviceType        = RenderDeviceD3D12Impl;
+    using ICommandQueueType = ICommandQueueD3D12;
 };
 
 /// Implementation of the Diligent::IDeviceContext interface
-class DeviceContextD3D12Impl final : public DeviceContextNextGenBase< DeviceContextBase<IDeviceContextD3D12, DeviceContextD3D12ImplTraits> >
+class DeviceContextD3D12Impl final : public DeviceContextNextGenBase<IDeviceContextD3D12, DeviceContextD3D12ImplTraits>
 {
 public:
-    using TDeviceContextBase = DeviceContextNextGenBase< DeviceContextBase<IDeviceContextD3D12, DeviceContextD3D12ImplTraits> >;
+    using TDeviceContextBase = DeviceContextNextGenBase<IDeviceContextD3D12, DeviceContextD3D12ImplTraits>;
 
     DeviceContextD3D12Impl(IReferenceCounters*           pRefCounters, 
-                           class RenderDeviceD3D12Impl*  pDevice, 
+                           RenderDeviceD3D12Impl*        pDevice, 
                            bool                          bIsDeferred, 
                            const EngineD3D12CreateInfo&  EngineCI, 
                            Uint32                        ContextId,

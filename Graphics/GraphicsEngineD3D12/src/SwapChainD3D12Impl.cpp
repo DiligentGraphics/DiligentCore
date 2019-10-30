@@ -49,7 +49,7 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters*       pRefCounters,
     },
     m_pBackBufferRTV{STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")}
 {
-    pRenderDeviceD3D12->LockCommandQueue(0, 
+    pRenderDeviceD3D12->LockCmdQueueAndRun(0, 
         [this](ICommandQueueD3D12 *pCmdQueue)
         {
             CreateDXGISwapChain(pCmdQueue->GetD3D12CommandQueue());
@@ -187,8 +187,8 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
             if(CreateNew)
             {
                 m_pSwapChain.Release();
-                m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->LockCommandQueue(0, 
-                    [this](ICommandQueueD3D12 *pCmdQueue)
+                m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->LockCmdQueueAndRun(0, 
+                    [this](ICommandQueueD3D12* pCmdQueue)
                     {
                         CreateDXGISwapChain(pCmdQueue->GetD3D12CommandQueue());
                     }

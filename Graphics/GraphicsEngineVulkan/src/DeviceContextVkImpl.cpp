@@ -872,7 +872,7 @@ namespace Diligent
         // be destroyed before the pools are actually returned to the global pool manager.
         m_DynamicDescrSetAllocator.ReleasePools(m_SubmittedBuffersCmdQueueMask);
 
-        EndFrame(DeviceVkImpl);
+        EndFrame();
     }
 
     void DeviceContextVkImpl::Flush()

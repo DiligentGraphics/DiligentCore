@@ -187,7 +187,7 @@ void RenderDeviceD3D12Impl::CloseAndExecuteTransientCommandContext(Uint32 Comman
     ID3D12GraphicsCommandList* pCmdList = Ctx->Close(pAllocator);
     Uint64 FenceValue = 0;
     // Execute command list directly through the queue to avoid interference with command list numbers in the queue
-    LockCommandQueue(CommandQueueIndex, 
+    LockCmdQueueAndRun(CommandQueueIndex, 
         [&](ICommandQueueD3D12* pCmdQueue)
         {
             FenceValue = pCmdQueue->Submit(pCmdList);

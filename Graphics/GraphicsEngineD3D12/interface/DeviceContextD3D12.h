@@ -27,6 +27,7 @@
 /// Definition of the Diligent::IDeviceContextD3D12 interface
 
 #include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "CommandQueueD3D12.h"
 
 namespace Diligent
 {
@@ -70,6 +71,27 @@ public:
     ///           calling IDeviceContext::InvalidateState() and then manually restore all required states via
     ///           appropriate Diligent API calls.
     virtual ID3D12GraphicsCommandList* GetD3D12CommandList() = 0;
+
+    /// Locks the internal mutex and returns a pointer to the command queue that is associated with this device context.
+
+    /// \return - a pointer to ICommandQueueD3D12 interface of the command queue associated with the context.
+    ///
+    /// \remarks  Only immediate device contexts have associated command queues.
+    ///
+    ///           The engine locks the internal mutex to prevent simultaneous access to the command queue.
+    ///           An application must release the lock by calling IDeviceContextD3D12::UnlockCommandQueue()
+    ///           when it is done working with the queue or the engine will not be able to submit any command 
+    ///           list to the queue. Nested calls to LockCommandQueue() are not allowed.
+    ///           The queue pointer never changes while the context is alive, so an application may cache and
+    ///           use the pointer if it does not need to prevent potential simultaneous access to the queue from
+    ///           other threads.
+    ///
+    ///           The engine manages the lifetimes of command queues and all other device objects,
+    ///           so an application must not call AddRef/Release methods on the returned interface.
+    virtual ICommandQueueD3D12* LockCommandQueue() = 0;
+
+    /// Unlocks the command queue that was previously locked by IDeviceContextD3D12::LockCommandQueue().
+    virtual void UnlockCommandQueue() = 0;
 };
 
 }
