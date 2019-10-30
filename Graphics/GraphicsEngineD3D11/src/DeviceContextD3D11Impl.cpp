@@ -43,7 +43,7 @@ namespace Diligent
 {
     DeviceContextD3D11Impl::DeviceContextD3D11Impl( IReferenceCounters*                 pRefCounters,
                                                     IMemoryAllocator&                   Allocator,
-                                                    IRenderDevice*                      pDevice,
+                                                    RenderDeviceD3D11Impl*              pDevice,
                                                     ID3D11DeviceContext*                pd3d11DeviceContext,
                                                     const struct EngineD3D11CreateInfo& EngineAttribs,
                                                     bool                                bIsDeferred ) :
@@ -1729,8 +1729,7 @@ namespace Diligent
                    //   ID3D11DeviceContext::ClearState() was called. 
             &pd3d11CmdList);
 
-        auto* pDeviceD3D11Impl = m_pDevice.RawPtr<RenderDeviceD3D11Impl>();
-        CommandListD3D11Impl* pCmdListD3D11( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(pDeviceD3D11Impl, pd3d11CmdList) );
+        CommandListD3D11Impl* pCmdListD3D11( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D11Impl instance", CommandListD3D11Impl)(m_pDevice, pd3d11CmdList) );
         pCmdListD3D11->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
 
         // Device context is now in default state
@@ -1808,7 +1807,7 @@ namespace Diligent
     void DeviceContextD3D11Impl::SignalFence(IFence* pFence, Uint64 Value)
     {
         VERIFY(!m_bIsDeferred, "Fence can only be signaled from immediate context");
-        auto* pd3d11Device = m_pDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
+        auto* pd3d11Device = m_pDevice->GetD3D11Device();
         CComPtr<ID3D11Query> pd3d11Query = CreateD3D11QueryEvent(pd3d11Device);
         m_pd3d11DeviceContext->End(pd3d11Query);
         auto* pFenceD3D11Impl = ValidatedCast<FenceD3D11Impl>(pFence);
@@ -1828,7 +1827,7 @@ namespace Diligent
     {
         VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
         Flush();
-        auto* pd3d11Device = m_pDevice.RawPtr<RenderDeviceD3D11Impl>()->GetD3D11Device();
+        auto* pd3d11Device = m_pDevice->GetD3D11Device();
         CComPtr<ID3D11Query> pd3d11Query = CreateD3D11QueryEvent(pd3d11Device);
         m_pd3d11DeviceContext->End(pd3d11Query);
         BOOL Data;

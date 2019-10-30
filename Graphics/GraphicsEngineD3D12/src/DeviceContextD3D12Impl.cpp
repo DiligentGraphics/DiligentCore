@@ -136,7 +136,7 @@ namespace Diligent
             if (m_CurrCmdCtx)
             {
                 // The command context has never been executed, so it can be disposed without going through release queue
-                m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->DisposeCommandContext(std::move(m_CurrCmdCtx));
+                m_pDevice->DisposeCommandContext(std::move(m_CurrCmdCtx));
             }
         }
         else
@@ -678,29 +678,28 @@ namespace Diligent
 
     void DeviceContextD3D12Impl::Flush(bool RequestNewCmdCtx)
     {
-        auto pDeviceD3D12Impl = m_pDevice.RawPtr<RenderDeviceD3D12Impl>();
         if( m_CurrCmdCtx )
         {
             VERIFY(!m_bIsDeferred, "Deferred contexts cannot execute command lists directly");
             if (m_State.NumCommands != 0)
             {
                 m_CurrCmdCtx->FlushResourceBarriers();
-                pDeviceD3D12Impl->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(m_CurrCmdCtx), true, &m_PendingFences);
+                m_pDevice->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(m_CurrCmdCtx), true, &m_PendingFences);
                 m_PendingFences.clear();
             }
             else
-                pDeviceD3D12Impl->DisposeCommandContext(std::move(m_CurrCmdCtx));
+                m_pDevice->DisposeCommandContext(std::move(m_CurrCmdCtx));
         }
 
         // If there is no command list to submit, but there are pending fences, we need to signal them now
         if (!m_PendingFences.empty())
         {
-            pDeviceD3D12Impl->SignalFences(m_CommandQueueId, m_PendingFences);
+            m_pDevice->SignalFences(m_CommandQueueId, m_PendingFences);
             m_PendingFences.clear();
         }
 
         if(RequestNewCmdCtx)
-            RequestCommandContext(pDeviceD3D12Impl);
+            RequestCommandContext(m_pDevice);
 
         m_State = State{};
 
@@ -1053,7 +1052,7 @@ namespace Diligent
         {
             LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on D3D12 currently requires flushing context and idling GPU");
             Flush();
-            m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->IdleGPU();
+            m_pDevice->IdleGPU();
             VERIFY(BuffDesc.Usage == USAGE_STAGING, "Buffer must be created as USAGE_STAGING to be mapped for reading");
             D3D12_RANGE MapRange;
             MapRange.Begin = 0;
@@ -1627,17 +1626,15 @@ namespace Diligent
     {
         TDeviceContextBase::GenerateMips(pTexView);
         auto& Ctx = GetCmdContext();
-        auto& DeviceD3D12Impl = *m_pDevice.RawPtr<RenderDeviceD3D12Impl>();
-        const auto& MipsGenerator = DeviceD3D12Impl.GetMipsGenerator();
-        MipsGenerator.GenerateMips(DeviceD3D12Impl.GetD3D12Device(), ValidatedCast<TextureViewD3D12Impl>(pTexView), Ctx);
+        const auto& MipsGenerator = m_pDevice->GetMipsGenerator();
+        MipsGenerator.GenerateMips(m_pDevice->GetD3D12Device(), ValidatedCast<TextureViewD3D12Impl>(pTexView), Ctx);
         ++m_State.NumCommands;
     }
 
     void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
     {
-        auto* pDeviceD3D12Impl = m_pDevice.RawPtr<RenderDeviceD3D12Impl>();
         CommandListD3D12Impl* pCmdListD3D12( NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)
-                                                       (pDeviceD3D12Impl, this, std::move(m_CurrCmdCtx)) );
+                                                       (m_pDevice, this, std::move(m_CurrCmdCtx)) );
         pCmdListD3D12->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
         Flush(true);
 
@@ -1660,7 +1657,7 @@ namespace Diligent
         VERIFY_EXPR(m_PendingFences.empty());
         RefCntAutoPtr<DeviceContextD3D12Impl> pDeferredCtx;
         auto CmdContext = pCmdListD3D12->Close(pDeferredCtx);
-        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(CmdContext), true, nullptr);
+        m_pDevice->CloseAndExecuteCommandContext(m_CommandQueueId, std::move(CmdContext), true, nullptr);
         // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
         pDeferredCtx->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
     }
@@ -1684,7 +1681,7 @@ namespace Diligent
     {
         VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
         Flush();
-        m_pDevice.RawPtr<RenderDeviceD3D12Impl>()->IdleCommandQueue(m_CommandQueueId, true);
+        m_pDevice->IdleCommandQueue(m_CommandQueueId, true);
     }
 
     void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)

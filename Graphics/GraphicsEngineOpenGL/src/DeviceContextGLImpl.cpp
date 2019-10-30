@@ -333,9 +333,8 @@ namespace Diligent
             for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                 pBoundRTVs[rt] = m_pBoundRenderTargets[rt];
 
-            auto* pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
             auto CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
-            auto& FBOCache = pRenderDeviceGL->GetFBOCache(CurrentNativeGLContext);
+            auto& FBOCache = m_pDevice->GetFBOCache(CurrentNativeGLContext);
             const auto& FBO = FBOCache.GetFBO(NumRenderTargets, pBoundRTVs, m_pBoundDepthStencil, m_ContextState);
             // Even though the write mask only applies to writes to a framebuffer, the mask state is NOT 
             // Framebuffer state. So it is NOT part of a Framebuffer Object or the Default Framebuffer. 
@@ -612,12 +611,11 @@ namespace Diligent
 
         m_pPipelineState->CommitProgram(m_ContextState);
 
-        auto* pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
-        auto CurrNativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
+        auto CurrNativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
         const auto& PipelineDesc = m_pPipelineState->GetDesc().GraphicsPipeline;
         if (!m_ContextState.IsValidVAOBound())
         {
-            auto& VAOCache = pRenderDeviceGL->GetVAOCache(CurrNativeGLContext);
+            auto& VAOCache = m_pDevice->GetVAOCache(CurrNativeGLContext);
             IBuffer* pIndexBuffer = IsIndexed ? m_pIndexBuffer.RawPtr() : nullptr;
             if (PipelineDesc.InputLayout.NumElements > 0 || pIndexBuffer != nullptr)
             {
@@ -1028,8 +1026,7 @@ namespace Diligent
 
     bool DeviceContextGLImpl::UpdateCurrentGLContext()
     {
-        auto* pRenderDeviceGL = m_pDevice.RawPtr<RenderDeviceGLImpl>();
-        auto NativeGLContext = pRenderDeviceGL->m_GLContext.GetCurrentNativeGLContext();
+        auto NativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
         if (NativeGLContext == NULL)
             return false;
 

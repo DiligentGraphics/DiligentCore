@@ -44,19 +44,17 @@ public:
     using ICommandQueueType = typename ImplementationTraits::ICommandQueueType;
 
     DeviceContextNextGenBase(IReferenceCounters* pRefCounters,
-                             IRenderDevice*      pRenderDevice,
+                             DeviceImplType*     pRenderDevice,
                              Uint32              ContextId,
                              Uint32              CommandQueueId,
                              Uint32              NumCommandsToFlush,
                              bool                bIsDeferred) :
-        TBase(pRefCounters,
-              pRenderDevice,
-              bIsDeferred),
-        m_ContextId                   (ContextId),
-        m_CommandQueueId              (CommandQueueId),
-        m_NumCommandsToFlush          (NumCommandsToFlush),
-        m_ContextFrameNumber          (0),
-        m_SubmittedBuffersCmdQueueMask(bIsDeferred ? 0 : Uint64{1} << Uint64{CommandQueueId})
+        TBase{pRefCounters, pRenderDevice, bIsDeferred},
+        m_ContextId                   {ContextId         },
+        m_CommandQueueId              {CommandQueueId    },
+        m_NumCommandsToFlush          {NumCommandsToFlush},
+        m_ContextFrameNumber          {0},
+        m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << Uint64{CommandQueueId}}
     {
     }
 
@@ -71,7 +69,7 @@ public:
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return nullptr;
         }
-        return this->m_pDevice.template RawPtr<DeviceImplType>()->LockCommandQueue(m_CommandQueueId);
+        return this->m_pDevice->LockCommandQueue(m_CommandQueueId);
     }
 
     virtual void UnlockCommandQueue()override final
@@ -81,7 +79,7 @@ public:
             LOG_WARNING_MESSAGE("Deferred contexts have no associated command queues");
             return;
         }
-        this->m_pDevice.template RawPtr<DeviceImplType>()->UnlockCommandQueue(m_CommandQueueId);
+        this->m_pDevice->UnlockCommandQueue(m_CommandQueueId);
     }
 
 protected:
@@ -96,7 +94,7 @@ protected:
         }
         else
         {
-            this->m_pDevice.template RawPtr<DeviceImplType>()->FlushStaleResources(m_CommandQueueId);
+            this->m_pDevice->FlushStaleResources(m_CommandQueueId);
         }
         Atomics::AtomicIncrement(m_ContextFrameNumber);
     }

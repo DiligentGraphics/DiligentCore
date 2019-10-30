@@ -35,11 +35,14 @@
 namespace Diligent
 {
 
+class RenderDeviceGLImpl;
+
 struct DeviceContextGLImplTraits
 {
     using BufferType        = BufferGLImpl;
     using TextureType       = TextureBaseGL;
     using PipelineStateType = PipelineStateGLImpl;
+    using DeviceType        = RenderDeviceGLImpl;
 };
 
 /// Implementation of the Diligent::IDeviceContextGL interface
@@ -48,7 +51,7 @@ class DeviceContextGLImpl final : public DeviceContextBase<IDeviceContextGL, Dev
 public:
     using TDeviceContextBase = DeviceContextBase<IDeviceContextGL, DeviceContextGLImplTraits>;
 
-    DeviceContextGLImpl(IReferenceCounters* pRefCounters, class RenderDeviceGLImpl* pDeviceGL, bool bIsDeferred);
+    DeviceContextGLImpl(IReferenceCounters* pRefCounters, RenderDeviceGLImpl* pDeviceGL, bool bIsDeferred);
 
     /// Queries the specific interface, see IObject::QueryInterface() for details.
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;

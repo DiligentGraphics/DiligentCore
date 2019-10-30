@@ -68,6 +68,7 @@ class DeviceContextBase : public ObjectBase<BaseInterface>
 {
 public:
     using TObjectBase           = ObjectBase<BaseInterface>;
+    using DeviceImplType    = typename ImplementationTraits::DeviceType;
     using BufferImplType        = typename ImplementationTraits::BufferType;
     using TextureImplType       = typename ImplementationTraits::TextureType;
     using PipelineStateImplType = typename ImplementationTraits::PipelineStateType;
@@ -76,10 +77,10 @@ public:
     /// \param pRefCounters - reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - render device.
     /// \param bIsDeferred - flag indicating if this instance is a deferred context
-    DeviceContextBase(IReferenceCounters* pRefCounters, IRenderDevice* pRenderDevice, bool bIsDeferred) :
-        TObjectBase(pRefCounters),
-        m_pDevice(pRenderDevice),
-        m_bIsDeferred(bIsDeferred)
+    DeviceContextBase(IReferenceCounters* pRefCounters, DeviceImplType* pRenderDevice, bool bIsDeferred) :
+        TObjectBase  {pRefCounters },
+        m_pDevice    {pRenderDevice},
+        m_bIsDeferred{bIsDeferred  }
     {
     }
 
@@ -221,7 +222,7 @@ protected:
 #endif
 
     /// Strong reference to the device.
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
+    RefCntAutoPtr<DeviceImplType> m_pDevice;
     
     /// Strong reference to the swap chain. Swap chain holds
     /// weak reference to the immediate context.

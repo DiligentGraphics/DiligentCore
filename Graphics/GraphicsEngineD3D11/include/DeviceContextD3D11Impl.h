@@ -40,11 +40,14 @@
 namespace Diligent
 {
 
+class RenderDeviceD3D11Impl;
+
 struct DeviceContextD3D11ImplTraits
 {
     using BufferType        = BufferD3D11Impl;
     using TextureType       = TextureBaseD3D11;
     using PipelineStateType = PipelineStateD3D11Impl;
+    using DeviceType        = RenderDeviceD3D11Impl;
 };
 
 /// Implementation of the Diligent::IDeviceContextD3D11 interface
@@ -55,7 +58,7 @@ public:
 
     DeviceContextD3D11Impl(IReferenceCounters*                 pRefCounters,
                            IMemoryAllocator&                   Allocator,
-                           IRenderDevice*                      pDevice,
+                           RenderDeviceD3D11Impl*              pDevice,
                            ID3D11DeviceContext*                pd3d11DeviceContext,
                            const struct EngineD3D11CreateInfo& EngineAttribs,
                            bool                                bIsDeferred);

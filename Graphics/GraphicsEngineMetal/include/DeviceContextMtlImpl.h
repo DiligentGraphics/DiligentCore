@@ -36,11 +36,14 @@
 namespace Diligent
 {
 
+class RenderDeviceMtlImpl;
+
 struct DeviceContextMtlImplTraits
 {
     using BufferType        = BufferMtlImpl;
     using TextureType       = TextureMtlImpl;
     using PipelineStateType = PipelineStateMtlImpl;
+    using DeviceType        = RenderDeviceMtlImpl;
 };
 
 /// Implementation of the Diligent::IDeviceContextMtl interface
@@ -51,7 +54,7 @@ public:
 
     DeviceContextMtlImpl(IReferenceCounters*               pRefCounters,
                          IMemoryAllocator&                 Allocator,
-                         IRenderDevice*                    pDevice,
+                         RenderDeviceMtlImpl*              pDevice,
                          const struct EngineMtlCreateInfo& EngineAttribs,
                          bool                              bIsDeferred);
 

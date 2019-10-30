@@ -135,19 +135,17 @@ namespace Diligent
         DEV_CHECK_ERR(m_DynamicHeap.GetAllocatedMasterBlockCount()       == 0, "All allocated dynamic heap master blocks must have been released");
         DEV_CHECK_ERR(m_DynamicDescrSetAllocator.GetAllocatedPoolCount() == 0, "All allocated dynamic descriptor set pools must have been released at this point");
 
-        auto* pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
-
         auto VkCmdPool = m_CmdPool.Release();
-        pDeviceVkImpl->SafeReleaseDeviceObject(std::move(VkCmdPool), ~Uint64{0});
+        m_pDevice->SafeReleaseDeviceObject(std::move(VkCmdPool), ~Uint64{0});
         
-        pDeviceVkImpl->SafeReleaseDeviceObject(std::move(m_GenerateMipsHelper), ~Uint64{0});
-        pDeviceVkImpl->SafeReleaseDeviceObject(std::move(m_GenerateMipsSRB),    ~Uint64{0});
-        pDeviceVkImpl->SafeReleaseDeviceObject(std::move(m_DummyVB),            ~Uint64{0});
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_GenerateMipsHelper), ~Uint64{0});
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_GenerateMipsSRB),    ~Uint64{0});
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_DummyVB),            ~Uint64{0});
 
         // The main reason we need to idle the GPU is because we need to make sure that all command buffers are returned to the
         // pool. Upload heap, dynamic heap and dynamic descriptor manager return their resources to global managers and
         // do not really need to wait for GPU to idle.
-        pDeviceVkImpl->IdleGPU();
+        m_pDevice->IdleGPU();
         DEV_CHECK_ERR(m_CmdPool.DvpGetBufferCounter() == 0, "All command buffers must have been returned to the pool");
     }
 
@@ -192,7 +190,7 @@ namespace Diligent
             VulkanUtilities::VulkanCommandBufferPool* Pool;
         };
 
-        auto& ReleaseQueue = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetReleaseQueue(CmdQueue);
+        auto& ReleaseQueue = m_pDevice->GetReleaseQueue(CmdQueue);
         ReleaseQueue.DiscardResource(CmdBufferDeleter{vkCmdBuff, m_CmdPool}, FenceValue);
     }
 
@@ -851,8 +849,6 @@ namespace Diligent
         if (!m_MappedTextures.empty())
             LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
 
-        auto& DeviceVkImpl = *m_pDevice.RawPtr<RenderDeviceVkImpl>();
-
         VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1}<<m_CommandQueueId));
 
         // Release resources used by the context during this frame.
@@ -865,7 +861,7 @@ namespace Diligent
         // Dynamic heap returns all allocated master blocks to the global dynamic memory manager.
         // Note: as global dynamic memory manager is hosted by the render device, the dynamic heap can
         // be destroyed before the blocks are actually returned to the global dynamic memory manager.
-        m_DynamicHeap.ReleaseMasterBlocks(DeviceVkImpl, m_SubmittedBuffersCmdQueueMask);
+        m_DynamicHeap.ReleaseMasterBlocks(*m_pDevice, m_SubmittedBuffersCmdQueueMask);
 
         // Dynamic descriptor set allocator returns all allocated pools to the global dynamic descriptor pool manager.
         // Note: as global pool manager is hosted by the render device, the allocator can
@@ -887,7 +883,6 @@ namespace Diligent
         SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
         SubmitInfo.pNext = nullptr;
 
-        auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
         if (vkCmdBuff != VK_NULL_HANDLE )
         {
@@ -915,7 +910,7 @@ namespace Diligent
 
         // Submit command buffer even if there are no commands to release stale resources.
         //if (SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
-        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, &m_PendingFences);
+        auto SubmittedFenceValue = m_pDevice->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, &m_PendingFences);
         
         m_WaitSemaphores.clear();
         m_WaitDstStageMasks.clear();
@@ -1156,9 +1151,8 @@ namespace Diligent
                 }
             }
 
-            auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
-            auto& FBCache = pDeviceVkImpl->GetFramebufferCache();
-            auto& RPCache = pDeviceVkImpl->GetRenderPassCache();
+            auto& FBCache = m_pDevice->GetFramebufferCache();
+            auto& RPCache = m_pDevice->GetRenderPassCache();
 
             m_RenderPass = RPCache.GetRenderPass(RenderPassKey);
             FBKey.Pass = m_RenderPass;
@@ -1565,7 +1559,7 @@ namespace Diligent
             CopyInfo.RowCount = UpdateRegionHeight;
         }
 
-        const auto& DeviceLimits = m_pDevice.RawPtr<const RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
+        const auto& DeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
         CopyInfo.Stride = Align(CopyInfo.RowSize, static_cast<Uint32>(DeviceLimits.optimalBufferCopyRowPitchAlignment));
         if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
         {
@@ -1600,7 +1594,7 @@ namespace Diligent
         const auto UpdateRegionDepth  = CopyInfo.Region.MaxZ - CopyInfo.Region.MinZ;
 
         // For UpdateTextureRegion(), use UploadHeap, not dynamic heap
-        const auto& DeviceLimits = m_pDevice.RawPtr<const RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
+        const auto& DeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
         // Source buffer offset must be multiple of 4 (18.4)
         auto BufferOffsetAlignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
         // If the calling command's VkImage parameter is a compressed image, bufferOffset must be a multiple of 
@@ -1800,7 +1794,7 @@ namespace Diligent
                 LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in Vulkan backend");
         
             auto CopyInfo = GetBufferToTextureCopyInfo(TexDesc, MipLevel, *pMapRegion);
-            const auto& DeviceLimits = m_pDevice.RawPtr<RenderDeviceVkImpl>()->GetPhysicalDevice().GetProperties().limits;
+            const auto& DeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
             // Source buffer offset must be multiple of 4 (18.4)
             auto Alignment = std::max(DeviceLimits.optimalBufferCopyOffsetAlignment, VkDeviceSize{4});
             // If the calling command's VkImage parameter is a compressed image, bufferOffset must be a multiple of 
@@ -1926,9 +1920,8 @@ namespace Diligent
         auto err = vkEndCommandBuffer(vkCmdBuff);
         DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to end command buffer"); (void)err;
 
-        auto* pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         CommandListVkImpl *pCmdListVk( NEW_RC_OBJ(m_CmdListAllocator, "CommandListVkImpl instance", CommandListVkImpl)
-                                                 (pDeviceVkImpl, this, vkCmdBuff) );
+                                                 (m_pDevice, this, vkCmdBuff) );
         pCmdListVk->QueryInterface( IID_CommandList, reinterpret_cast<IObject**>(ppCommandList) );
 
         m_CommandBuffer.Reset();
@@ -1962,10 +1955,9 @@ namespace Diligent
         SubmitInfo.pNext              = nullptr;
         SubmitInfo.commandBufferCount = 1;
         SubmitInfo.pCommandBuffers    = &vkCmdBuff;
-        auto pDeviceVkImpl = m_pDevice.RawPtr<RenderDeviceVkImpl>();
         VERIFY_EXPR(m_PendingFences.empty());
         auto pDeferredCtxVkImpl = pDeferredCtx.RawPtr<DeviceContextVkImpl>();
-        auto SubmittedFenceValue = pDeviceVkImpl->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, nullptr);
+        auto SubmittedFenceValue = m_pDevice->ExecuteCommandBuffer(m_CommandQueueId, SubmitInfo, this, nullptr);
         // Set the bit in the deferred context cmd queue mask corresponding to cmd queue of this context
         pDeferredCtxVkImpl->m_SubmittedBuffersCmdQueueMask |= Uint64{1} << m_CommandQueueId;
         // It is OK to dispose command buffer from another thread. We are not going to
@@ -1992,7 +1984,7 @@ namespace Diligent
     {
         VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
         Flush();
-        m_pDevice.RawPtr<RenderDeviceVkImpl>()->IdleCommandQueue(m_CommandQueueId, true);
+        m_pDevice->IdleCommandQueue(m_CommandQueueId, true);
     }
 
     void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)
