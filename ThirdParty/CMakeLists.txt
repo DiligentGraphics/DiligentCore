@@ -42,6 +42,7 @@ if(VULKAN_SUPPORTED)
         set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Do not build glslang binaries")
         set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Do not build SPIRV remapper")
         set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip glslang installation")
+        set(ENABLE_CTEST OFF CACHE BOOL "Disable testing")
         add_subdirectory(glslang)
         set_directory_root_folder("glslang" "DiligentCore/ThirdParty/glslang")
 
