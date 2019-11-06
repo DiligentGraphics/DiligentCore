@@ -33,7 +33,8 @@ namespace Diligent
 {
 
 class IMemoryAllocator;
-/// Implementation of the Diligent::ISwapChainD3D11 interface
+
+/// Swap chain implementation in Direct3D11 backend.
 class SwapChainD3D11Impl final : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>
 {
 public:
@@ -49,12 +50,19 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of ISwapChain::Present() in Direct3D11 backend.
     virtual void Present(Uint32 SyncInterval)override final;
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
+    /// Implementation of ISwapChain::Resize() in Direct3D11 backend.
+    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight)override final;
+
+    /// Implementation of ISwapChainD3D11::GetDXGISwapChain() in Direct3D11 backend.
     virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }
 
+    /// Implementation of ISwapChainD3D11::GetCurrentBackBufferRTV() in Direct3D11 backend.
     virtual ITextureViewD3D11* GetCurrentBackBufferRTV()override final{return m_pRenderTargetView;}
+
+    /// Implementation of ISwapChainD3D11::GetDepthBufferDSV() in Direct3D11 backend.
     virtual ITextureViewD3D11* GetDepthBufferDSV()      override final{return m_pDepthStencilView;}
 
 private:

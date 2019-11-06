@@ -36,7 +36,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::ITextureViewD3D11 interface
+/// Texture view implementation in Direct3D11 backend.
 class TextureViewD3D11Impl final : public TextureViewBase<ITextureViewD3D11, RenderDeviceD3D11Impl>
 {
 public:
@@ -51,12 +51,13 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of ITextureViewD3D11::GetD3D11View().
     virtual ID3D11View* GetD3D11View()override final
     {
         return m_pD3D11View;
     }
    
-protected:
+private:
     /// D3D11 view
     CComPtr<ID3D11View> m_pD3D11View;
 };

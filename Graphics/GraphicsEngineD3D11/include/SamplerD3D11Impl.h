@@ -35,7 +35,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::ISamplerD3D11 interface
+
+/// Sampler implementation in Direct3D11 backend.
 class SamplerD3D11Impl final : public SamplerBase<ISamplerD3D11, RenderDeviceD3D11Impl>
 {
 public:
@@ -48,6 +49,7 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
+    /// Implementation of ISamplerD3D11::ISamplerD3D11() method.
     virtual ID3D11SamplerState* GetD3D11SamplerState()override final{ return m_pd3dSampler; }
 
 private:

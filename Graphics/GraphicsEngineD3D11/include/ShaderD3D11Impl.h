@@ -42,7 +42,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 class ResourceMapping;
 
-/// Implementation of the Diligent::IShaderD3D11 interface
+/// Shader implementation in Direct3D11 backend.
 class ShaderD3D11Impl final : public ShaderBase<IShaderD3D11, RenderDeviceD3D11Impl>, public ShaderD3DBase
 {
 public:
@@ -55,21 +55,25 @@ public:
     
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of IShader::GetResourceCount() in Direct3D11 backend.
     virtual Uint32 GetResourceCount()const override final
     {
         return m_pShaderResources->GetTotalResources();
     }
 
+    /// Implementation of IShader::GetResource() in Direct3D11 backend.
     virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
     {
         return GetHLSLResource(Index);
     }
 
+    /// Implementation of IShaderD3D::GetHLSLResource() method.
     virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index)const override final
     {
         return m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
+    /// Implementation of IShaderD3D11::GetD3D11Shader() method.
     virtual ID3D11DeviceChild* GetD3D11Shader()override final
     {
         return m_pShader;

@@ -37,7 +37,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::IPipelineStateD3D11 interface
+
+/// Pipeline state object implementation in Direct3D11 backend.
 class PipelineStateD3D11Impl final : public PipelineStateBase<IPipelineStateD3D11, RenderDeviceD3D11Impl>
 {
 public:
@@ -50,36 +51,53 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
     
-
+    /// Implementation of IPipelineState::BindStaticResources() in Direct3D11 backend.
     virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableCount() in Direct3D11 backend.
     virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableByName() in Direct3D11 backend.
     virtual IShaderResourceVariable* GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableByIndex() in Direct3D11 backend.
     virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
+    /// Implementation of IPipelineState::CreateShaderResourceBinding() in Direct3D11 backend.
+    virtual void CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources)override final;
 
+    /// Implementation of IPipelineState::IsCompatibleWith() in Direct3D11 backend.
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 
 
-    /// Implementation of the IPipelineStateD3D11::GetD3D11BlendState() method.
+    /// Implementation of IPipelineStateD3D11::GetD3D11BlendState() method.
     virtual ID3D11BlendState* GetD3D11BlendState()override final;
 
-    /// Implementation of the IPipelineStateD3D11::GetD3D11RasterizerState() method.
+    /// Implementation of IPipelineStateD3D11::GetD3D11RasterizerState() method.
     virtual ID3D11RasterizerState* GetD3D11RasterizerState()override final;
 
-    /// Implementation of the IPipelineStateD3D11::GetD3D11DepthStencilState() method.
+    /// Implementation of IPipelineStateD3D11::GetD3D11DepthStencilState() method.
     virtual ID3D11DepthStencilState* GetD3D11DepthStencilState()override final;
 
+    /// Implementation of IPipelineStateD3D11::GetD3D11InputLayout() method.
     virtual ID3D11InputLayout* GetD3D11InputLayout()override final;
 
+    /// Implementation of IPipelineStateD3D11::GetD3D11VertexShader() method.
     virtual ID3D11VertexShader*   GetD3D11VertexShader()override final;
+
+    /// Implementation of IPipelineStateD3D11::GetD3D11PixelShader() method.
     virtual ID3D11PixelShader*    GetD3D11PixelShader()override final;
+
+    /// Implementation of IPipelineStateD3D11::GetD3D11GeometryShader() method.
     virtual ID3D11GeometryShader* GetD3D11GeometryShader()override final;
+
+    /// Implementation of IPipelineStateD3D11::GetD3D11DomainShader() method.
     virtual ID3D11DomainShader*   GetD3D11DomainShader()override final;
+
+    /// Implementation of IPipelineStateD3D11::GetD3D11HullShader() method.
     virtual ID3D11HullShader*     GetD3D11HullShader()override final;
+
+    /// Implementation of IPipelineStateD3D11::GetD3D11ComputeShader() method.
     virtual ID3D11ComputeShader*  GetD3D11ComputeShader()override final;
 
 

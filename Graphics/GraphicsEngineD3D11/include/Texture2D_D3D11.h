@@ -31,7 +31,7 @@
 namespace Diligent
 {
 
-/// Implementation of a 2D texture
+/// Implementation of a 2D texture in Direct3D11 backend.
 class Texture2D_D3D11 final : public TextureBaseD3D11
 {
 public:

@@ -37,7 +37,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::IFenceD3D11 interface
+/// Fence implementation in Direct3D11 backend.
 class FenceD3D11Impl final : public FenceBase<IFenceD3D11, RenderDeviceD3D11Impl>
 {
 public:
@@ -48,9 +48,10 @@ public:
                    const FenceDesc&       Desc);
     ~FenceD3D11Impl();
 
+    /// Implementation of IFence::GetCompletedValue() in Direct3D11 backend.
     virtual Uint64 GetCompletedValue()override final;
 
-    /// Resets the fence to the specified value. 
+    /// Implementation of IFence::Reset() in Direct3D11 backend.
     virtual void Reset(Uint64 Value)override final;
 
     void AddPendingQuery(CComPtr<ID3D11DeviceContext> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 Value)

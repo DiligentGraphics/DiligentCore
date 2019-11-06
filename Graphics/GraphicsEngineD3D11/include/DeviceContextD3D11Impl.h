@@ -50,7 +50,7 @@ struct DeviceContextD3D11ImplTraits
     using DeviceType        = RenderDeviceD3D11Impl;
 };
 
-/// Implementation of the Diligent::IDeviceContextD3D11 interface
+/// Device context implementation in Direct3D11 backend.
 class DeviceContextD3D11Impl final : public DeviceContextBase<IDeviceContextD3D11, DeviceContextD3D11ImplTraits>
 {
 public:
@@ -64,16 +64,22 @@ public:
                            bool                                bIsDeferred);
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of IDeviceContext::SetPipelineState() in Direct3D11 backend.
     virtual void SetPipelineState(IPipelineState* pPipelineState)override final;
 
+    /// Implementation of IDeviceContext::TransitionShaderResources() in Direct3D11 backend.
     virtual void TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)override final;
 
+    /// Implementation of IDeviceContext::CommitShaderResources() in Direct3D11 backend.
     virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
+    /// Implementation of IDeviceContext::SetStencilRef() in Direct3D11 backend.
     virtual void SetStencilRef(Uint32 StencilRef)override final;
 
+    /// Implementation of IDeviceContext::SetBlendFactors() in Direct3D11 backend.
     virtual void SetBlendFactors(const float* pBlendFactors = nullptr)override final;
 
+    /// Implementation of IDeviceContext::SetVertexBuffers() in Direct3D11 backend.
     virtual void SetVertexBuffers(Uint32                         StartSlot,
                                   Uint32                         NumBuffersSet,
                                   IBuffer**                      ppBuffers,
@@ -81,41 +87,56 @@ public:
                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                                   SET_VERTEX_BUFFERS_FLAGS       Flags)override final;
     
+    /// Implementation of IDeviceContext::InvalidateState() in Direct3D11 backend.
     virtual void InvalidateState()override final;
 
+    /// Implementation of IDeviceContext::SetIndexBuffer() in Direct3D11 backend.
     virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
+    /// Implementation of IDeviceContext::SetViewports() in Direct3D11 backend.
     virtual void SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight)override final;
 
+    /// Implementation of IDeviceContext::SetScissorRects() in Direct3D11 backend.
     virtual void SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight)override final;
 
+    /// Implementation of IDeviceContext::SetRenderTargets() in Direct3D11 backend.
     virtual void SetRenderTargets(Uint32                         NumRenderTargets,
                                   ITextureView*                  ppRenderTargets[],
                                   ITextureView*                  pDepthStencil,
                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
+    /// Implementation of IDeviceContext::Draw() in Direct3D11 backend.
     virtual void Draw               (const DrawAttribs& Attribs)override final;
+    /// Implementation of IDeviceContext::DrawIndexed() in Direct3D11 backend.
     virtual void DrawIndexed        (const DrawIndexedAttribs& Attribs)override final;
+    /// Implementation of IDeviceContext::DrawIndirect() in Direct3D11 backend.
     virtual void DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
+    /// Implementation of IDeviceContext::DrawIndexedIndirect() in Direct3D11 backend.
     virtual void DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
 
+    /// Implementation of IDeviceContext::DispatchCompute() in Direct3D11 backend.
     virtual void DispatchCompute(const DispatchComputeAttribs& Attribs)override final;
+    /// Implementation of IDeviceContext::DispatchComputeIndirect() in Direct3D11 backend.
     virtual void DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)override final;
 
+    /// Implementation of IDeviceContext::ClearDepthStencil() in Direct3D11 backend.
     virtual void ClearDepthStencil(ITextureView*                  pView,
                                    CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
                                    float                          fDepth,
                                    Uint8                          Stencil,
                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
+    /// Implementation of IDeviceContext::ClearRenderTarget() in Direct3D11 backend.
     virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
+    /// Implementation of IDeviceContext::UpdateBuffer() in Direct3D11 backend.
     virtual void UpdateBuffer(IBuffer*                       pBuffer,
                               Uint32                         Offset,
                               Uint32                         Size,
                               const PVoid                    pData,
                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
+    /// Implementation of IDeviceContext::CopyBuffer() in Direct3D11 backend.
     virtual void CopyBuffer(IBuffer*                       pSrcBuffer,
                             Uint32                         SrcOffset,
                             RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
@@ -124,10 +145,13 @@ public:
                             Uint32                         Size,
                             RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode)override final;
 
+    /// Implementation of IDeviceContext::MapBuffer() in Direct3D11 backend.
     virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData)override final;
 
+    /// Implementation of IDeviceContext::UnmapBuffer() in Direct3D11 backend.
     virtual void UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)override final;
 
+    /// Implementation of IDeviceContext::UpdateTexture() in Direct3D11 backend.
     virtual void UpdateTexture(ITexture*                      pTexture,
                                Uint32                         MipLevel,
                                Uint32                         Slice,
@@ -136,39 +160,51 @@ public:
                                RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)override final;
 
+    /// Implementation of IDeviceContext::CopyTexture() in Direct3D11 backend.
     virtual void CopyTexture(const CopyTextureAttribs& CopyAttribs)override final;
 
-    virtual void MapTextureSubresource( ITexture*                 pTexture,
-                                        Uint32                    MipLevel,
-                                        Uint32                    ArraySlice,
-                                        MAP_TYPE                  MapType,
-                                        MAP_FLAGS                 MapFlags,
-                                        const Box*                pMapRegion,
-                                        MappedTextureSubresource& MappedData )override final;
+    /// Implementation of IDeviceContext::MapTextureSubresource() in Direct3D11 backend.
+    virtual void MapTextureSubresource(ITexture*                 pTexture,
+                                       Uint32                    MipLevel,
+                                       Uint32                    ArraySlice,
+                                       MAP_TYPE                  MapType,
+                                       MAP_FLAGS                 MapFlags,
+                                       const Box*                pMapRegion,
+                                       MappedTextureSubresource& MappedData)override final;
 
-
+    /// Implementation of IDeviceContext::UnmapTextureSubresource() in Direct3D11 backend.
     virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)override final;
 
+    /// Implementation of IDeviceContext::GenerateMips() in Direct3D11 backend.
     virtual void GenerateMips(ITextureView* pTextureView)override final;
 
+    /// Implementation of IDeviceContext::FinishFrame() in Direct3D11 backend.
     virtual void FinishFrame()override final;
 
+    /// Implementation of IDeviceContext::TransitionResourceStates() in Direct3D11 backend.
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
     
+    /// Implementation of IDeviceContext::FinishCommandList() in Direct3D11 backend.
     void FinishCommandList(class ICommandList** ppCommandList)override final;
 
+    /// Implementation of IDeviceContext::ExecuteCommandList() in Direct3D11 backend.
     virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;
 
+    /// Implementation of IDeviceContext::SignalFence() in Direct3D11 backend.
     virtual void SignalFence(IFence* pFence, Uint64 Value)override final;
 
+    /// Implementation of IDeviceContext::WaitForFence() in Direct3D11 backend.
     virtual void WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext)override final;
 
+    /// Implementation of IDeviceContext::WaitForIdle() in Direct3D11 backend.
     virtual void WaitForIdle()override final;
 
+    /// Implementation of IDeviceContext::Flush() in Direct3D11 backend.
     virtual void Flush()override final;
 
+    /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* GetD3D11DeviceContext()override final { return m_pd3d11DeviceContext; }
-    
+
     void CommitRenderTargets();
 
     /// Clears committed shader resource cache. This function 

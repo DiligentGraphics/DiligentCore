@@ -37,7 +37,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::IShaderResourceBindingD3D11 interface
+
+/// Implementation of shader resource binding object in Direct3D11 backend.
 class ShaderResourceBindingD3D11Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D11>
 {
 public:
@@ -50,14 +51,19 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of IShaderResourceBinding::BindResources() in Direct3D11 backend.
     virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
 
+    /// Implementation of IShaderResourceBinding::GetVariableByName() in Direct3D11 backend.
     virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name)override final;
 
+    /// Implementation of IShaderResourceBinding::GetVariableCount() in Direct3D11 backend.
     virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
+    /// Implementation of IShaderResourceBinding::GetVariableByIndex() in Direct3D11 backend.
     virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)override final;
 
+    /// Implementation of IShaderResourceBinding::InitializeStaticResources() in Direct3D11 backend.
     virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
 
     ShaderResourceCacheD3D11&  GetResourceCache (Uint32 Ind){VERIFY_EXPR(Ind < m_NumActiveShaders); return m_pBoundResourceCaches[Ind];}

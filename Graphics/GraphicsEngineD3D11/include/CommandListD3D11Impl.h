@@ -35,7 +35,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::ICommandListD3D11 interface
+/// Command list implementation in Direct3D11 backend.
 class CommandListD3D11Impl final : public CommandListBase<ICommandList, RenderDeviceD3D11Impl>
 {
 public:
@@ -46,7 +46,7 @@ public:
                          ID3D11CommandList*     pd3d11CommandList);
     ~CommandListD3D11Impl();
 
-    ID3D11CommandList *GetD3D11CommandList(){ return m_pd3d11CommandList; }
+    ID3D11CommandList* GetD3D11CommandList(){ return m_pd3d11CommandList; }
 
 private:
     CComPtr<ID3D11CommandList> m_pd3d11CommandList; ///< D3D11 CommandList object

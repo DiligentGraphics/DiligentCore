@@ -33,7 +33,7 @@
 namespace Diligent
 {
 
-/// Implementation of the Diligent::IRenderDeviceD3D11 interface
+/// Render device implementation in Direct3D11 backend.
 class RenderDeviceD3D11Impl final : public RenderDeviceD3DBase<IRenderDeviceD3D11>
 {
 public:
@@ -47,27 +47,43 @@ public:
                            Uint32                       NumDeferredContexts );
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of IRenderDevice::CreateBuffer() in Direct3D11 backend.
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;
 
+    /// Implementation of IRenderDevice::CreateShader() in Direct3D11 backend.
     virtual void CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)override final;
 
+    /// Implementation of IRenderDevice::CreateTexture() in Direct3D11 backend.
     virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)override final;
     
+    /// Implementation of IRenderDevice::CreateSampler() in Direct3D11 backend.
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
 
+    /// Implementation of IRenderDevice::CreatePipelineState() in Direct3D11 backend.
     virtual void CreatePipelineState(const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState)override final;
 
+    /// Implementation of IRenderDevice::CreateFence() in Direct3D11 backend.
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
 
+    /// Implementation of IRenderDeviceD3D11::GetD3D11Device() in Direct3D11 backend.
     ID3D11Device* GetD3D11Device()override final{return m_pd3d11Device;}
 
+    /// Implementation of IRenderDeviceD3D11::CreateBufferFromD3DResource() in Direct3D11 backend.
     virtual void CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)override final;
+
+    /// Implementation of IRenderDeviceD3D11::CreateTextureFromD3DResource() for 1D textures in Direct3D11 backend.
     virtual void CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
+
+    /// Implementation of IRenderDeviceD3D11::CreateTextureFromD3DResource() for 2D textures in Direct3D11 backend.
     virtual void CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
+
+    /// Implementation of IRenderDeviceD3D11::CreateTextureFromD3DResource() for 3D textures in Direct3D11 backend.
     virtual void CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
 
+    /// Implementation of IRenderDevice::ReleaseStaleResources() in Direct3D11 backend.
     virtual void ReleaseStaleResources(bool ForceRelease = false)override final {}
 
+    /// Implementation of IRenderDevice::IdleGPU() in Direct3D11 backend.
     virtual void IdleGPU()override final;
 
     size_t GetCommandQueueCount()const { return 1; }

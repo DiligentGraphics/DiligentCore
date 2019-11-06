@@ -37,7 +37,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::IBufferD3D11 interface
+/// Buffer object implementation in Direct3D11 backend.
 class BufferD3D11Impl final : public BufferBase<IBufferD3D11, RenderDeviceD3D11Impl, BufferViewD3D11Impl, FixedBlockMemoryAllocator>
 {
 public:
@@ -60,8 +60,10 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of IBufferD3D11::GetD3D11Buffer().
     virtual ID3D11Buffer* GetD3D11Buffer()override final{ return m_pd3d11Buffer; }
 
+    /// Implementation of IBuffer::GetNativeHandle().
     virtual void* GetNativeHandle()override final { return GetD3D11Buffer(); }
 
     void AddState(RESOURCE_STATE State)

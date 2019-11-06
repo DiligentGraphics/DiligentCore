@@ -31,7 +31,7 @@
 namespace Diligent
 {
 
-/// Implementation of a 1D texture
+/// Implementation of a 1D texture in Direct3D11 backend.
 class Texture1D_D3D11 final : public TextureBaseD3D11
 {
 public:

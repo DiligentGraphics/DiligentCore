@@ -37,7 +37,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Base implementation of the Diligent::ITextureD3D11 interface
+/// Base implementation of a texture object in Direct3D11 backend.
 class TextureBaseD3D11 : public TextureBase<ITextureD3D11, RenderDeviceD3D11Impl, TextureViewD3D11Impl, FixedBlockMemoryAllocator>
 {
 public:
@@ -53,11 +53,13 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of ITextureD3D11::GetD3D11Texture().
     virtual ID3D11Resource* GetD3D11Texture()override final{ return m_pd3d11Texture; }
 
+    /// Implementation of ITexture::GetNativeHandle().
     virtual void* GetNativeHandle()override final { return GetD3D11Texture(); }
 
-    void AddState  (RESOURCE_STATE State)
+    void AddState(RESOURCE_STATE State)
     {
         m_State = static_cast<RESOURCE_STATE>(m_State & ~static_cast<Uint32>(RESOURCE_STATE_UNDEFINED));
         m_State = static_cast<RESOURCE_STATE>(m_State | State);
