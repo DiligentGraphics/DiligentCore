@@ -106,7 +106,7 @@ struct TextureDesc : DeviceObjectAttribs
     TEXTURE_FORMAT Format   = TEX_FORMAT_UNKNOWN;
 
     /// Number of Mip levels in the texture. Multisampled textures can only have 1 Mip level.
-    /// Specify 0 to generate full mipmap chain.
+    /// Specify 0 to create full mipmap chain.
     Uint32 MipLevels        = 1;
 
     /// Number of samples.\n

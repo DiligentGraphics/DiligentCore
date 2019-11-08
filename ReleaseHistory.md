@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added `IDeviceObject::GetUniqueID` method (API Version 240039)
 * Added `IDeviceContextD3D12::LockCommandQueue`, `IDeviceContextD3D12::UnlockCommandQueue`,
   `IDeviceContextVk::LockCommandQueue`, and `IDeviceContextVk::UnlockCommandQueue` methods (API Version 240038)
 * Added `EnableGPUBasedValidation` member to `EngineD3D12CreateInfo` struct (API Version 240037)

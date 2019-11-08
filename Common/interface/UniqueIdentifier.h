@@ -23,11 +23,12 @@
 
 #pragma once
 
+#include "../../Primitives/interface/BasicTypes.h"
 #include "../../Platforms/interface/Atomics.h"
 
 namespace Diligent
 {
-    using UniqueIdentifier = Atomics::Long;
+    using UniqueIdentifier = Int32;
 
     // Template switch is used to have distinct counters 
     // for unrelated groups of objects
@@ -35,37 +36,35 @@ namespace Diligent
     class UniqueIdHelper
     {
     public:
-        UniqueIdHelper() :
-            m_ID(0)
-        {}
+        UniqueIdHelper()noexcept {}
 
         UniqueIdHelper             (const UniqueIdHelper&) = delete;
         UniqueIdHelper& operator = (const UniqueIdHelper&) = delete;
 
-        UniqueIdHelper(UniqueIdHelper&& RHS) : 
-            m_ID(RHS.m_ID)
+        UniqueIdHelper(UniqueIdHelper&& RHS)noexcept : 
+            m_ID {RHS.m_ID}
         {
             RHS.m_ID = 0;
         }
 
-        const UniqueIdHelper& operator = (UniqueIdHelper&& RHS)
+        UniqueIdHelper& operator = (UniqueIdHelper&& RHS)noexcept
         {
-            m_ID = RHS.m_ID;
+                m_ID = RHS.m_ID;
             RHS.m_ID = 0;
             return *this;
         }
 
-        UniqueIdentifier GetID()const
+        UniqueIdentifier GetID()const noexcept
         { 
             if (m_ID == 0)
             {
-                static Atomics::AtomicLong sm_GlobalCounter;
-                m_ID = Atomics::AtomicIncrement(sm_GlobalCounter);
+                static Atomics::AtomicLong GlobalCounter = 0;
+                m_ID = Atomics::AtomicIncrement(GlobalCounter);
             }
             return m_ID; 
         }
 
     private:
-        mutable UniqueIdentifier m_ID;
+        mutable UniqueIdentifier m_ID = 0;
     };
 }

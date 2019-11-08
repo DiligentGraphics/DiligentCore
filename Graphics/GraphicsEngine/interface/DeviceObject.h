@@ -43,8 +43,28 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override = 0;
 
-    /// Returns the buffer object description
+
+    /// Returns the object description
     virtual const DeviceObjectAttribs& GetDesc()const = 0;
+
+
+    /// Returns unique identifier assigned to an object
+
+    /// \remarks Unique identifiers can be used to reliably check if two objects are identical.
+    ///          Note that the engine resuses memory reclaimed after an object has been released.
+    ///          For example, if a texture object is released and then another texture is created,
+    ///          the engine may return the same pointer, so pointer-to-pointer comparisons are not
+    ///          reliable. Unique identifiers, on the other hand, are guaranteed to be, well, unique.
+    ///
+    ///          Unique identifiers are object-specifics, so, for instance, buffer identifiers
+    ///          are not comparable to texture identifiers.
+    ///
+    ///          Unique identifiers are only meaningful within one session. After an application
+    ///          restarts, all identifiers become invalid.
+    ///
+    ///          Valid identifiers are always positive values. Zero and negative values can never be
+    ///          assigned to an object and are always guaranteed to be invalid.
+    virtual Int32 GetUniqueID() const = 0;
 };
 
 }

@@ -136,7 +136,7 @@ public:
     }
 
     /// Returns unique identifier
-    UniqueIdentifier GetUniqueID()const
+    virtual Int32 GetUniqueID()const override final
     {
         /// \note
         /// This unique ID is used to unambiguously identify device object for
