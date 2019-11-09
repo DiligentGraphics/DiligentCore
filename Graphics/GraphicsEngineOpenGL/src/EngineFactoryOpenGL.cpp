@@ -110,6 +110,9 @@ void EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL(const EngineGLCreateInf
                                                          const SwapChainDesc&      SCDesc, 
                                                          ISwapChain**              ppSwapChain)
 {
+    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+        LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
@@ -187,6 +190,9 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
                                                       IRenderDevice**           ppDevice,
                                                       IDeviceContext**          ppImmediateContext )
 {
+    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+        LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 

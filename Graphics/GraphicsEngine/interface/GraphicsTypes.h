@@ -29,6 +29,7 @@
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Primitives/interface/DebugOutput.h"
 #include "../../../Primitives/interface/FlagEnum.h"
+#include "APIInfo.h"
 
 /// Graphics engine namespace
 namespace Diligent
@@ -1272,6 +1273,9 @@ namespace Diligent
     /// Engine creation attibutes
     struct EngineCreateInfo
     {
+        /// API version number.
+        Int32                   APIVersion            = DILIGENT_API_VERSION;
+
         /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
         /// operations in the engine
         class IMemoryAllocator* pRawMemAllocator      = nullptr;

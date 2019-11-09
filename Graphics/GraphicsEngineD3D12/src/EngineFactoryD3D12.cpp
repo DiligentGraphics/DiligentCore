@@ -107,6 +107,9 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
                                                           IRenderDevice**              ppDevice,
                                                           IDeviceContext**             ppContexts)
 {
+    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+        LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
@@ -307,6 +310,9 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
                                                  IRenderDevice**              ppDevice, 
                                                  IDeviceContext**             ppContexts)
 {
+    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+        LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+
     if (EngineCI.DebugMessageCallback != nullptr)
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 

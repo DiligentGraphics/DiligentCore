@@ -87,6 +87,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                                                     IRenderDevice**           ppDevice, 
                                                     IDeviceContext**          ppContexts)
 {
+    if (_EngineCI.APIVersion != DILIGENT_API_VERSION)
+        LOG_ERROR_AND_THROW("Diligent Engine runtime (", _EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+
     VERIFY( ppDevice && ppContexts, "Null pointer provided" );
     if( !ppDevice || !ppContexts )
         return;
@@ -241,6 +244,9 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                                                IRenderDevice**             ppDevice, 
                                                IDeviceContext**            ppContexts)
 {
+    if (EngineCI.APIVersion != DILIGENT_API_VERSION)
+        LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+
     VERIFY( ppCommandQueues && ppDevice && ppContexts, "Null pointer provided" );
     if(!LogicalDevice || !ppCommandQueues || !ppDevice || !ppContexts )
         return;
