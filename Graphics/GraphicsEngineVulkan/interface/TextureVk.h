@@ -36,7 +36,7 @@ static constexpr INTERFACE_ID IID_TextureVk =
 { 0x3bb9155f, 0x22c5, 0x4365,{ 0x92, 0x7e, 0x8c, 0x40, 0x49, 0xf9, 0xb9, 0x49 } };
 
 
-/// Interface to the texture object implemented in Vulkan
+/// Exposes Vulkan-specific functionality of a texture object.
 class ITextureVk : public ITexture
 {
 public:

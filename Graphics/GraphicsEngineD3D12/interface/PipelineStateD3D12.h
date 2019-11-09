@@ -36,7 +36,7 @@ static constexpr INTERFACE_ID IID_PipelineStateD3D12 =
 { 0x33c9be4b, 0x6f23, 0x4f83, { 0xa6, 0x65, 0x5a, 0xc1, 0x83, 0x6d, 0xf3, 0x5a } };
 
 
-/// Interface to the blend state object implemented in D3D12
+/// Exposes Direct3D12-specific functionality of a pipeline state object.
 class IPipelineStateD3D12 : public IPipelineState
 {
 public:

@@ -36,7 +36,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_ShaderVk =
 { 0x8b0c91b4, 0xb1d8, 0x4e03,{ 0x92, 0x50, 0xa7, 0xe, 0x13, 0x1a, 0x59, 0xfa } };
 
-/// Interface to the shader object implemented in Vulkan
+/// Exposes Vulkan-specific functionality of a shader object.
 class IShaderVk : public IShader
 {
 public:

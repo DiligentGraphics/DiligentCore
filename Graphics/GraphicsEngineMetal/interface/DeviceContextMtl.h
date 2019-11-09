@@ -35,7 +35,7 @@ namespace Diligent
 static const INTERFACE_ID IID_DeviceContextMtl = 
 { 0x2dea7704, 0xc586, 0x4ba7, { 0xb9, 0x38, 0x93, 0xb2, 0x39, 0xdf, 0xa2, 0x68 } };
 
-/// Interface to the device context object implemented in Mtl
+/// Exposes Metal-specific functionality of a device context.
 class IDeviceContextMtl : public IDeviceContext
 {
 public:

@@ -34,7 +34,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_RenderDeviceD3D12 =
 { 0xc7987c98, 0x87fe, 0x4309, { 0xae, 0x88, 0xe9, 0x8f, 0x4, 0x4b, 0x0, 0xf6 } };
 
-/// Interface to the render device object implemented in D3D12
+/// Exposes Direct3D12-specific functionality of a render device.
 class IRenderDeviceD3D12 : public IRenderDevice
 {
 public:

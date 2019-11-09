@@ -35,7 +35,7 @@ namespace Diligent
 static const INTERFACE_ID IID_RenderDeviceMtl = 
 { 0x8d483e4a, 0x2d53, 0x47b2, { 0xb8, 0xd7, 0x27, 0x6f, 0x4c, 0xe5, 0x7f, 0x68 } };
 
-/// Interface to the render device object implemented in Mtl
+/// Exposes Metal-specific functionality of a render device.
 class IRenderDeviceMtl : public IRenderDevice
 {
 public:

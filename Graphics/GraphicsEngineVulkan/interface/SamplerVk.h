@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_SamplerVk =
 { 0x87c21e88, 0x8a9f, 0x4ad2,{ 0x9a, 0x1e, 0xd5, 0xec, 0x14, 0x4, 0x15, 0xea } };
 
-/// Interface to the sampler object implemented in Vulkan
+/// Exposes Vulkan-specific functionality of a sampler object.
 class ISamplerVk : public ISampler
 {
 public:

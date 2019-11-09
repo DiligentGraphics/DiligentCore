@@ -35,7 +35,7 @@ namespace Diligent
 static const INTERFACE_ID IID_FenceMtl = 
 { 0x54fe9f8f, 0xfbbf, 0x4abb, { 0x82, 0x80, 0xd9, 0x80, 0x98, 0x2d, 0xa3, 0x64 } };
 
-/// Interface to the fence object implemented in Mtl
+/// Exposes Metal-specific functionality of a fence object.
 class IFenceMtl : public IFence
 {
 public:

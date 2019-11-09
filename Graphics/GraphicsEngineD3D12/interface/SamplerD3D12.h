@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_SamplerD3D12 =
 { 0x31a3bfaf, 0x738e, 0x4d8c, { 0xad, 0x18, 0xb0, 0x21, 0xc5, 0xd9, 0x48, 0xdd } };
 
-/// Interface to the sampler object implemented in D3D12
+/// Exposes Direct3D12-specific functionality of a sampler object.
 class ISamplerD3D12 : public ISampler
 {
 public:

@@ -35,7 +35,7 @@ namespace Diligent
 static const INTERFACE_ID IID_BufferMtl = 
 { 0xf8a1a3ac, 0x923a, 0x419d, { 0xab, 0x9d, 0xfe, 0x9e, 0x35, 0xdc, 0x65, 0x4b } };
 
-/// Interface to the buffer object implemented in Mtl
+/// Exposes Metal-specific functionality of a buffer object.
 class IBufferMtl : public IBuffer
 {
 public:

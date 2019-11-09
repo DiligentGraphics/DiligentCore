@@ -36,7 +36,7 @@ static constexpr INTERFACE_ID IID_FenceVk =
 { 0x7610b4cd, 0xedea, 0x4951, { 0x82, 0xcf, 0x52, 0xf9, 0x7f, 0xaf, 0xed, 0x2d } };
 
 
-/// Interface to the fence object implemented in GL
+/// Exposes Vulkan-specific functionality of a fence object.
 class IFenceVk : public IFence
 {
 public:

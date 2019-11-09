@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_DeviceContextGL =
 { 0x3464fdf1, 0xc548, 0x4935, { 0x96, 0xc3, 0xb4, 0x54, 0xc9, 0xdf, 0x6f, 0x6a } };
 
-/// Interface to the device context object implemented in OpenGL
+/// Exposes OpenGL-specific functionality of a device context.
 class IDeviceContextGL : public IDeviceContext
 {
 public:

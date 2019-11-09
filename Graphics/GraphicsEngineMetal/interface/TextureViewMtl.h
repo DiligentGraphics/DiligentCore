@@ -35,7 +35,7 @@ namespace Diligent
 static const INTERFACE_ID IID_TextureViewMtl = 
 { 0x94c0d9c3, 0x61e7, 0x4358, { 0xab, 0x9f, 0x6, 0x6e, 0xad, 0x84, 0xd6, 0xf1 } };
 
-/// Interface to the texture view object implemented in Mtl
+/// Exposes Metal-specific functionality of a texture view object.
 class ITextureViewMtl : public ITextureView
 {
 public:

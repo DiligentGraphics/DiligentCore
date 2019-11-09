@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_TextureViewD3D12 =
 { 0xbdfbd325, 0x699, 0x4720, { 0xbc, 0xe, 0xbf, 0x84, 0x8, 0x6e, 0xc0, 0x33 } };
 
-/// Interface to the texture view object implemented in D3D12
+/// Exposes Direct3D12-specific functionality of a texture view object.
 class ITextureViewD3D12 : public ITextureView
 {
 public:

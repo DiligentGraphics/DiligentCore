@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_DeviceContextD3D11 =
 { 0xf0ee0335, 0xc8ab, 0x4ec1, { 0xbb, 0x15, 0xb8, 0xee, 0x5f, 0x0, 0x3b, 0x99 } };
 
-/// Interface to the device context object implemented in D3D11
+/// Exposes Direct3D11-specific functionality of a device context.
 class IDeviceContextD3D11 : public IDeviceContext
 {
 public:

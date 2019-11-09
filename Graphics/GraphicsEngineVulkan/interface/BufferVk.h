@@ -35,8 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_BufferVk =
 { 0x12d8ec02, 0x96f4, 0x431e,{ 0x96, 0x95, 0xc5, 0xf5, 0x72, 0xcc, 0x75, 0x87 } };
 
-
-/// Interface to the buffer object implemented in Vulkan
+/// Exposes Vulkan-specific functionality of a buffer object.
 class IBufferVk : public IBuffer
 {
 public:

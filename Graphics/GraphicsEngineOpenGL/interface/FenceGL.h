@@ -36,7 +36,7 @@ static constexpr INTERFACE_ID IID_FenceGL =
 { 0x8feacbda, 0x89d6, 0x4509, { 0x88, 0xe6, 0xd5, 0x5d, 0xd0, 0x62, 0x20, 0xc5 } };
 
 
-/// Interface to the fence object implemented in GL
+/// Exposes OpenGL-specific functionality of a fence object.
 class IFenceGL : public IFence
 {
 public:

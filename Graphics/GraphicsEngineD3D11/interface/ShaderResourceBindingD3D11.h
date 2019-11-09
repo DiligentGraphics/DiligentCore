@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_ShaderResourceBindingD3D11 =
 { 0x97a6d4ac, 0xd4af, 0x4aa9, { 0xb4, 0x6c, 0x67, 0x41, 0x7b, 0x89, 0x2, 0x6a } };
 
-/// Shader resource binding interface
+/// Exposes Direct3D11-specific functionality of a shader resource binding object.
 class IShaderResourceBindingD3D11 : public IShaderResourceBinding
 {
 public:

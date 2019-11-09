@@ -42,7 +42,7 @@ struct HLSLShaderResourceDesc : ShaderResourceDesc
     Uint32 ShaderRegister = 0;
 };
 
-/// Interface to the Direct3D shader resource variable
+/// Exposes Direct3D-specific functionality of a shader object.
 class IShaderD3D : public IShader
 {
 public:

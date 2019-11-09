@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_ShaderResourceBindingVk =
 { 0x1e8c82dc, 0x5b3a, 0x47d5,{ 0x8a, 0xe9, 0x19, 0x7c, 0xae, 0x8d, 0xb7, 0x1f } };
 
-/// Shader resource binding interface
+/// Exposes Vulkan-specific functionality of a shader resource binding object.
 class IShaderResourceBindingVk : public IShaderResourceBinding
 {
 public:

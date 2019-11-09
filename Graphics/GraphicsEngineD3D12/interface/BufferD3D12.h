@@ -37,7 +37,7 @@ class IDeviceContext;
 static constexpr INTERFACE_ID IID_BufferD3D12 =
 { 0x3e9b15ed, 0xa289, 0x48dc, { 0x82, 0x14, 0xc6, 0xe3, 0xe6, 0x17, 0x73, 0x78 } };
 
-/// Interface to the buffer object implemented in D3D12
+/// Exposes Direct3D12-specific functionality of a buffer object.
 class IBufferD3D12 : public IBuffer
 {
 public:

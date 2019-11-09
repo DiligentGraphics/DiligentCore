@@ -35,7 +35,7 @@ namespace Diligent
 static const INTERFACE_ID IID_ShaderMtl = 
 { 0x7182c29, 0xcc3b, 0x43b2, { 0x99, 0xd8, 0xa7, 0x7f, 0x6f, 0xec, 0xba, 0x82 } };
 
-/// Interface to the shader object implemented in Mtl
+/// Exposes Metal-specific functionality of a shader object.
 class IShaderMtl : public IShader
 {
 public:

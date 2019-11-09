@@ -35,7 +35,7 @@ namespace Diligent
 static const INTERFACE_ID IID_SamplerMtl = 
 { 0x73f8c099, 0x49b, 0x4c81, { 0xad, 0x19, 0xc9, 0x89, 0x63, 0xac, 0x7f, 0xeb } };
 
-/// Interface to the sampler object implemented in Mtl
+/// Exposes Metal-specific functionality of a sampler object.
 class ISamplerMtl : public ISampler
 {
 public:

@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_TextureViewVk =
 { 0xb02aa468, 0x3328, 0x46f3,{ 0x97, 0x77, 0x55, 0xe9, 0x7b, 0xf6, 0xc8, 0x6e } };
 
-/// Interface to the texture view object implemented in Vulkan
+/// Exposes Vulkan-specific functionality of a texture view object.
 class ITextureViewVk : public ITextureView
 {
 public:

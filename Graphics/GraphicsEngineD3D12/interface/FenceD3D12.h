@@ -36,7 +36,7 @@ static constexpr INTERFACE_ID IID_FenceD3D12 =
 { 0x53c0d8c, 0x3757, 0x4220, { 0xa9, 0xcc, 0x47, 0x49, 0xec, 0x47, 0x94, 0xad } };
 
 
-/// Interface to the fence object implemented in D3D12
+/// Exposes Direct3D12-specific functionality of a fence object.
 class IFenceD3D12 : public IFence
 {
 public:

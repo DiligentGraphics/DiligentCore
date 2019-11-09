@@ -36,7 +36,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_RenderDeviceGL =
 { 0xb4b395b9, 0xac99, 0x4e8a, { 0xb7, 0xe1, 0x9d, 0xca, 0xd, 0x48, 0x56, 0x18 } };
 
-/// Interface to the render device object implemented in OpenGL
+/// Exposes OpenGL-specific functionality of a render device.
 class IRenderDeviceGL : public IRenderDevice
 {
 public:

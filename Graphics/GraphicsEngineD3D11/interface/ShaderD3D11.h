@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_ShaderD3D11 =
 { 0xc513e83e, 0xb037, 0x405b, { 0x8b, 0x49, 0xbf, 0x8f, 0x5c, 0x22, 0xd, 0xee } };
 
-/// Interface to the shader object implemented in D3D11
+/// Exposes Direct3D11-specific functionality of a shader object.
 class IShaderD3D11 : public IShaderD3D
 {
 public:

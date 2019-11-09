@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_BufferD3D11 =
 { 0x4a696d2e, 0x44bb, 0x4c4b, { 0x9d, 0xe2, 0x3a, 0xf7, 0xc9, 0x4d, 0xcf, 0xc0 } };
 
-/// Interface to the buffer object implemented in D3D11
+/// Exposes Direct3D11-specific functionality of a buffer object.
 class IBufferD3D11 : public IBuffer
 {
 public:

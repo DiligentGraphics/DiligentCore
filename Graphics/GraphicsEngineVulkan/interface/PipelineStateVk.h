@@ -36,7 +36,7 @@ static constexpr INTERFACE_ID IID_PipelineStateVk =
 { 0x2fea0868, 0x932, 0x412a,{ 0x9f, 0xa, 0x7c, 0xea, 0x7e, 0x61, 0xb5, 0xe0 } };
 
 
-/// Interface to the blend state object implemented in Vulkan
+/// Exposes Vulkan-specific functionality of a pipeline state object.
 class IPipelineStateVk : public IPipelineState
 {
 public:

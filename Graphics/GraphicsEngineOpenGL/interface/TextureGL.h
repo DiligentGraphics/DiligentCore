@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_TextureGL =
 { 0xd7bc9ff0, 0x28f0, 0x4636, { 0x97, 0x32, 0x71, 0xc, 0x20, 0x4d, 0x1d, 0x63 } };
 
-/// Interface to the texture object implemented in OpenGL
+/// Exposes OpenGL-specific functionality of a texture object.
 class ITextureGL : public ITexture
 {
 public:

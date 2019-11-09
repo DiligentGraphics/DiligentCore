@@ -36,7 +36,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_DeviceContextVk =
 { 0x72aeb1ba, 0xc6ad, 0x42ec,{ 0x88, 0x11, 0x7e, 0xd9, 0xc7, 0x21, 0x76, 0xbb } };
 
-/// Interface to the device context object implemented in Vulkan
+/// Exposes Vulkan-specific functionality of a device context.
 class IDeviceContextVk : public IDeviceContext
 {
 public:

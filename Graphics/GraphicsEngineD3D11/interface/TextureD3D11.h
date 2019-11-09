@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_TextureD3D11 =
 { 0xf3a84cc2, 0xe485, 0x4e72, { 0xa0, 0x8a, 0x43, 0x7d, 0x7f, 0xfb, 0xa3, 0xab } };
 
-/// Interface to the texture object implemented in D3D11
+/// Exposes Direct3D11-specific functionality of a texture object.
 class ITextureD3D11 : public ITexture
 {
 public:

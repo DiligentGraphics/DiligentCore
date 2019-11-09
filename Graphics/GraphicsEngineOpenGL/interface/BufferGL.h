@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_BufferGL =
 { 0x8df7319, 0xf425, 0x4ec7, { 0x8d, 0x2b, 0x1b, 0x3f, 0xc0, 0xbd, 0xdb, 0xb4 } };
 
-/// Interface to the buffer object implemented in OpenGL
+/// Exposes OpenGL-specific functionality of a buffer object.
 class IBufferGL : public IBuffer
 {
 public:

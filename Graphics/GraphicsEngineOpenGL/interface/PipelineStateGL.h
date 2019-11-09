@@ -36,7 +36,7 @@ static constexpr INTERFACE_ID IID_PipelineStateGL =
 { 0x80666be3, 0x318a, 0x4403, { 0xae, 0xe1, 0x6e, 0x61, 0xa5, 0xb7, 0xa0, 0xf9 } };
 
 
-/// Interface to the PipelineState object implemented in OpenGL
+/// Exposes OpenGL-specific functionality of a pipeline state object.
 class IPipelineStateGL : public IPipelineState
 {
     

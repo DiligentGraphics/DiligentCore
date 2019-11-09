@@ -35,7 +35,7 @@ namespace Diligent
 static const INTERFACE_ID IID_PipelineStateMtl = 
 { 0xb6a17c51, 0xcca9, 0x44e1, { 0xa2, 0xdc, 0x5d, 0xe2, 0x50, 0xcf, 0x85, 0xad } };
 
-/// Interface to the blend state object implemented in Mtl
+/// Exposes Metal-specific functionality of a pipeline state object.
 class IPipelineStateMtl : public IPipelineState
 {
 public:

@@ -35,8 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_ShaderResourceBindingGL =
 { 0x41db0329, 0xb6d2, 0x4470, { 0x9a, 0x58, 0xd4, 0x4c, 0xf4, 0x69, 0x5f, 0xc6 } };
 
-/// Shader resource binding interface
-
+/// Exposes OpenGL-specific functionality of a shader resource binding object.
 class IShaderResourceBindingGL : public IShaderResourceBinding
 {
 public:

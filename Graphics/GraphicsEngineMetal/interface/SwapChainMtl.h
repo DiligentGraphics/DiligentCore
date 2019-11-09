@@ -36,7 +36,7 @@ namespace Diligent
 static const INTERFACE_ID IID_SwapChainMtl = 
 { 0x8acdd0d9, 0xff1c, 0x4a78, { 0x98, 0x66, 0x92, 0x44, 0x59, 0xa0, 0xd4, 0x56 } };
 
-/// Interface to the swap chain object implemented in Mtl
+/// Exposes Metal-specific functionality of a swap chain.
 class ISwapChainMtl : public ISwapChain
 {
 public:

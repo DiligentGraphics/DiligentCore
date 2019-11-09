@@ -35,7 +35,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_BufferViewVk =
 { 0xcb67024a, 0x1e23, 0x4202,{ 0xa4, 0x9a, 0x7, 0xb6, 0xbc, 0xea, 0xbc, 0x6 } };
 
-/// Interface to the buffer view object implemented in Vulkan
+/// Exposes Vulkan-specific functionality of a buffer view object.
 class IBufferViewVk : public IBufferView
 {
 public:
