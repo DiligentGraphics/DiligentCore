@@ -58,7 +58,7 @@ namespace Diligent
         { 
             if (m_ID == 0)
             {
-                static Atomics::AtomicLong GlobalCounter = 0;
+                static Atomics::AtomicLong GlobalCounter; // = 0 causes gcc error
                 m_ID = Atomics::AtomicIncrement(GlobalCounter);
             }
             return m_ID; 
