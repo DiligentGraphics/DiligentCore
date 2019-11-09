@@ -104,7 +104,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
 
 void SwapChainVkImpl::CreateVulkanSwapChain()
 {
-    auto *pRenderDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    auto* pRenderDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
     auto vkDeviceHandle = PhysicalDevice.GetVkDeviceHandle();
     // Get the list of VkFormats that are supported:
@@ -145,8 +145,8 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
             {
                 case VK_FORMAT_R8G8B8A8_UNORM: VkReplacementColorFormat = VK_FORMAT_B8G8R8A8_UNORM; break;
                 case VK_FORMAT_B8G8R8A8_UNORM: VkReplacementColorFormat = VK_FORMAT_R8G8B8A8_UNORM; break;
-                case VK_FORMAT_B8G8R8A8_SRGB: VkReplacementColorFormat = VK_FORMAT_R8G8B8A8_SRGB; break;
-                case VK_FORMAT_R8G8B8A8_SRGB: VkReplacementColorFormat = VK_FORMAT_B8G8R8A8_SRGB; break;
+                case VK_FORMAT_B8G8R8A8_SRGB:  VkReplacementColorFormat = VK_FORMAT_R8G8B8A8_SRGB;  break;
+                case VK_FORMAT_R8G8B8A8_SRGB:  VkReplacementColorFormat = VK_FORMAT_B8G8R8A8_SRGB;  break;
                 default: VkReplacementColorFormat = VK_FORMAT_UNDEFINED;
             }
 
@@ -405,23 +405,26 @@ void SwapChainVkImpl::InitBuffersAndViews()
         m_pBackBufferRTV[i] = RefCntAutoPtr<ITextureViewVk>(pRTV, IID_TextureViewVk);
     }
 
-    TextureDesc DepthBufferDesc;
-    DepthBufferDesc.Type = RESOURCE_DIM_TEX_2D;
-    DepthBufferDesc.Width = m_SwapChainDesc.Width;
-    DepthBufferDesc.Height = m_SwapChainDesc.Height;
-    DepthBufferDesc.Format = m_SwapChainDesc.DepthBufferFormat;
-    DepthBufferDesc.SampleCount = m_SwapChainDesc.SamplesCount;
-    DepthBufferDesc.Usage = USAGE_DEFAULT;
-    DepthBufferDesc.BindFlags = BIND_DEPTH_STENCIL;
+    if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
+    {
+        TextureDesc DepthBufferDesc;
+        DepthBufferDesc.Type        = RESOURCE_DIM_TEX_2D;
+        DepthBufferDesc.Width       = m_SwapChainDesc.Width;
+        DepthBufferDesc.Height      = m_SwapChainDesc.Height;
+        DepthBufferDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
+        DepthBufferDesc.SampleCount = m_SwapChainDesc.SamplesCount;
+        DepthBufferDesc.Usage       = USAGE_DEFAULT;
+        DepthBufferDesc.BindFlags   = BIND_DEPTH_STENCIL;
 
-    DepthBufferDesc.ClearValue.Format = DepthBufferDesc.Format;
-    DepthBufferDesc.ClearValue.DepthStencil.Depth = m_SwapChainDesc.DefaultDepthValue;
-    DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
-    DepthBufferDesc.Name = "Main depth buffer";
-    RefCntAutoPtr<ITexture> pDepthBufferTex;
-    m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex) );
-    auto pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
-    m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_TextureViewVk);
+        DepthBufferDesc.ClearValue.Format               = DepthBufferDesc.Format;
+        DepthBufferDesc.ClearValue.DepthStencil.Depth   = m_SwapChainDesc.DefaultDepthValue;
+        DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
+        DepthBufferDesc.Name = "Main depth buffer";
+        RefCntAutoPtr<ITexture> pDepthBufferTex;
+        m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex) );
+        auto pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_TextureViewVk);
+    }
 }
 
 VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)

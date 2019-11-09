@@ -124,6 +124,11 @@ namespace Diligent
                 auto DepthFmt = pSCDesc->DepthBufferFormat;
                 switch(DepthFmt)
                 {
+                    case TEX_FORMAT_UNKNOWN:
+                        pfd.cDepthBits   = 0;
+                        pfd.cStencilBits = 0;
+                    break;
+
                     case TEX_FORMAT_D32_FLOAT_S8X24_UINT:
                         pfd.cDepthBits   = 32;
                         pfd.cStencilBits = 8;

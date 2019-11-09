@@ -90,23 +90,26 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         m_pBackBufferRTV[backbuff] = RefCntAutoPtr<ITextureViewD3D12>(pRTV, IID_TextureViewD3D12);
     }
 
-    TextureDesc DepthBufferDesc;
-    DepthBufferDesc.Type = RESOURCE_DIM_TEX_2D;
-    DepthBufferDesc.Width = m_SwapChainDesc.Width;
-    DepthBufferDesc.Height = m_SwapChainDesc.Height;
-    DepthBufferDesc.Format = m_SwapChainDesc.DepthBufferFormat;
-    DepthBufferDesc.SampleCount = m_SwapChainDesc.SamplesCount;
-    DepthBufferDesc.Usage = USAGE_DEFAULT;
-    DepthBufferDesc.BindFlags = BIND_DEPTH_STENCIL;
+    if (m_SwapChainDesc.DepthBufferFormat != TEX_FORMAT_UNKNOWN)
+    {
+        TextureDesc DepthBufferDesc;
+        DepthBufferDesc.Type        = RESOURCE_DIM_TEX_2D;
+        DepthBufferDesc.Width       = m_SwapChainDesc.Width;
+        DepthBufferDesc.Height      = m_SwapChainDesc.Height;
+        DepthBufferDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
+        DepthBufferDesc.SampleCount = m_SwapChainDesc.SamplesCount;
+        DepthBufferDesc.Usage       = USAGE_DEFAULT;
+        DepthBufferDesc.BindFlags   = BIND_DEPTH_STENCIL;
 
-    DepthBufferDesc.ClearValue.Format = DepthBufferDesc.Format;
-    DepthBufferDesc.ClearValue.DepthStencil.Depth = m_SwapChainDesc.DefaultDepthValue;
-    DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
-    DepthBufferDesc.Name = "Main depth buffer";
-    RefCntAutoPtr<ITexture> pDepthBufferTex;
-    m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex) );
-    auto pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
-    m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewD3D12>(pDSV, IID_TextureViewD3D12);
+        DepthBufferDesc.ClearValue.Format               = DepthBufferDesc.Format;
+        DepthBufferDesc.ClearValue.DepthStencil.Depth   = m_SwapChainDesc.DefaultDepthValue;
+        DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
+        DepthBufferDesc.Name = "Main depth buffer";
+        RefCntAutoPtr<ITexture> pDepthBufferTex;
+        m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex) );
+        auto pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+        m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewD3D12>(pDSV, IID_TextureViewD3D12);
+    }
 }
 
 IMPLEMENT_QUERY_INTERFACE( SwapChainD3D12Impl, IID_SwapChainD3D12, TSwapChainBase )

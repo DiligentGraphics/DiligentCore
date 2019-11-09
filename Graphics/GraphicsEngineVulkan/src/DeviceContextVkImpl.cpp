@@ -616,6 +616,11 @@ namespace Diligent
             if (m_pSwapChain)
             {
                 pVkDSV = ValidatedCast<ITextureViewVk>(m_pSwapChain->GetDepthBufferDSV());
+                if (pVkDSV == nullptr)
+                {
+                    LOG_WARNING_MESSAGE("Depth buffer is not initialized in the swap chain. Clear operation will be ignored.");
+                    return;
+                }
             }
             else
             {

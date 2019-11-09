@@ -1202,7 +1202,8 @@ namespace Diligent
         /// Back buffer format. Default value is Diligent::TEX_FORMAT_RGBA8_UNORM_SRGB
         TEXTURE_FORMAT ColorBufferFormat    = TEX_FORMAT_RGBA8_UNORM_SRGB;
         
-        /// Depth buffer format. Default value is Diligent::TEX_FORMAT_D32_FLOAT
+        /// Depth buffer format. Default value is Diligent::TEX_FORMAT_D32_FLOAT.
+        /// Use Diligent::TEX_FORMAT_UNKNOWN to create the swap chain without depth buffer.
         TEXTURE_FORMAT DepthBufferFormat    = TEX_FORMAT_D32_FLOAT;
 
         /// Swap chain usage flags. Default value is Diligent::SWAP_CHAIN_USAGE_RENDER_TARGET

@@ -610,6 +610,11 @@ namespace Diligent
             if (m_pSwapChain)
             {
                 pViewD3D12 = ValidatedCast<ITextureViewD3D12>(m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetDepthBufferDSV());
+                if (pViewD3D12 == nullptr)
+                {
+                    LOG_WARNING_MESSAGE("Depth buffer is not initialized in the swap chain. Clear operation will be ignored.");
+                    return;
+                }
             }
             else
             {

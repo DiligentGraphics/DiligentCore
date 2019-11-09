@@ -910,6 +910,11 @@ namespace Diligent
             if (m_pSwapChain)
             {
                 pView = m_pSwapChain->GetDepthBufferDSV();
+                if (pView == nullptr)
+                {
+                    LOG_WARNING_MESSAGE("Depth buffer is not initialized in the swap chain. Clear operation will be ignored.");
+                    return;
+                }
             }
             else
             {
@@ -1287,9 +1292,12 @@ namespace Diligent
                 auto* pSwapChainD3D11 = m_pSwapChain.RawPtr<ISwapChainD3D11>();
                 auto* pBackBufferViewD3D11 = pSwapChainD3D11->GetCurrentBackBufferRTV();
                 pd3d11RTs[0] = static_cast<ID3D11RenderTargetView*>(pBackBufferViewD3D11->GetD3D11View());
-                auto* pDepthBufferViewD3D11 = pSwapChainD3D11->GetDepthBufferDSV();
-                pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pDepthBufferViewD3D11->GetD3D11View());
-                VERIFY_EXPR(pd3d11RTs[0] != nullptr && pd3d11DSV != nullptr);
+                VERIFY_EXPR(pd3d11RTs[0] != nullptr);
+                if (auto* pDepthBufferViewD3D11 = pSwapChainD3D11->GetDepthBufferDSV())
+                {
+                    pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pDepthBufferViewD3D11->GetD3D11View());
+                    VERIFY_EXPR(pd3d11DSV != nullptr);
+                }
             }
             else
             {
