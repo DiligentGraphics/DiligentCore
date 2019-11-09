@@ -64,7 +64,7 @@ inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
     }
 }
 
-/// Implementation of the Diligent::IShaderGL interface
+/// Shader object implementation in OpenGL backend.
 class ShaderGLImpl final : public ShaderBase<IShaderGL, RenderDeviceGLImpl>
 {
 public:
@@ -78,7 +78,10 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of IShader::GetResourceCount() in OpenGL backend.
     virtual Uint32 GetResourceCount()const override final;
+
+    /// Implementation of IShader::GetResource() in OpenGL backend.
     virtual ShaderResourceDesc GetResource(Uint32 Index)const override final;
 
     static GLObjectWrappers::GLProgramObj LinkProgram(IShader** ppShaders, Uint32 NumShaders, bool IsSeparableProgram);

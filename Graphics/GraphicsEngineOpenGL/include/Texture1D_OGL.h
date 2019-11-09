@@ -28,6 +28,7 @@
 namespace Diligent
 {
 
+/// 1D texture implementation in OpenGL backend.
 class Texture1D_OGL final : public TextureBaseGL
 {
 public:
@@ -48,12 +49,14 @@ public:
 				  bool                         bIsDeviceInternal = false);
     ~Texture1D_OGL();
 
-    virtual void UpdateData( class GLContextState&      CtxState,
+    /// Implementation of TextureBaseGL::UpdateData() for 1D texture.
+    virtual void UpdateData( class GLContextState&       CtxState,
                              Uint32                      MipLevel,
                              Uint32                      Slice,
                              const Box&                  DstBox,
                              const TextureSubResData&    SubresData )override final;
 
+    /// Implementation of TextureBaseGL::AttachToFramebuffer() for 1D texture.
     virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc,
                                       GLenum                        AttachmentPoint )override final;
 };

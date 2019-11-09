@@ -28,6 +28,7 @@
 namespace Diligent
 {
 
+/// Cube array texture implementation in OpenGL backend.
 class TextureCubeArray_OGL final : public TextureBaseGL
 {
 public:
@@ -48,12 +49,14 @@ public:
 				          bool                         bIsDeviceInternal = false);
     ~TextureCubeArray_OGL();
 
+    /// Implementation of TextureBaseGL::UpdateData() for cube texture array.
     virtual void UpdateData(class GLContextState&    CtxState,
                             Uint32                   MipLevel,
                             Uint32                   Slice,
                             const Box&               DstBox,
                             const TextureSubResData& SubresData)override final;
 
+    /// Implementation of TextureBaseGL::AttachToFramebuffer() for cube texture array.
     virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc,
                                       GLenum                        AttachmentPoint )override final;
 };

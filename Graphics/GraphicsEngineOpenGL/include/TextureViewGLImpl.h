@@ -34,7 +34,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::ITextureViewGL interface
+
+/// Texture view implementation in OpenGL backend.
 class TextureViewGLImpl final : public TextureViewBase<ITextureViewGL, RenderDeviceGLImpl>
 {
 public:

@@ -31,7 +31,8 @@ namespace Diligent
 {
 
 class IMemoryAllocator;
-/// Implementation of the Diligent::ISwapChainGL interface
+
+/// Swap chain implementation in OpenGL backend.
 class SwapChainGLImpl final : public SwapChainBase<ISwapChainGL>
 {
 public:
@@ -46,17 +47,25 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
+    /// Implementation of ISwapChain::Present() in OpenGL backend.
     virtual void Present(Uint32 SyncInterval)override final;
 
+    /// Implementation of ISwapChain::Resize() in OpenGL backend.
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
+    /// Implementation of ISwapChain::SetFullscreenMode() in OpenGL backend.
     virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode)override final;
 
+    /// Implementation of ISwapChain::SetWindowedMode() in OpenGL backend.
     virtual void SetWindowedMode()override final;
 
+    /// Implementation of ISwapChainGL::GetDefaultFBO().
     virtual GLuint GetDefaultFBO()const override final{ return 0; }
 
+    /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in OpenGL backend.
     virtual ITextureView* GetCurrentBackBufferRTV()override final{return nullptr;}
+
+    /// Implementation of ISwapChain::GetDepthBufferDSV() in OpenGL backend.
     virtual ITextureView* GetDepthBufferDSV()override final{return nullptr;}
 };
 

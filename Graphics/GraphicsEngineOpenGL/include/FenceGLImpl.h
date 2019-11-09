@@ -38,7 +38,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::IFenceGL interface
+/// Fence object implementation in OpenGL backend.
 class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
 {
 public:
@@ -49,9 +49,10 @@ public:
                 const FenceDesc&    Desc);
     ~FenceGLImpl();
 
+    /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
     virtual Uint64 GetCompletedValue()override final;
 
-    /// Resets the fence to the specified value. 
+    /// Implementation of IFence::Reset() in OpenGL backend.
     virtual void Reset(Uint64 Value)override final;
 
     void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)

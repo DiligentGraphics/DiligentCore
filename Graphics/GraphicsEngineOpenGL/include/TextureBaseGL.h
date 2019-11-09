@@ -37,7 +37,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Base implementation of the Diligent::ITextureGL interface
+/// Base implementation of a texture object in OpenGL backend.
 class TextureBaseGL : public TextureBase<ITextureGL, RenderDeviceGLImpl, TextureViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
 {
 public:
@@ -66,7 +66,10 @@ public:
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
 
     const GLObjectWrappers::GLTextureObj& GetGLHandle()const{ return m_GlTexture; }
+
+    /// Implementation of ITextureGL::GetBindTarget().
     virtual GLenum GetBindTarget()const override final{return m_BindTarget;}
+
     GLenum GetGLTexFormat()const{ return m_GLTexFormat; }
 
     void TextureMemoryBarrier( Uint32 RequiredBarriers, class GLContextState &GLContextState);
@@ -84,7 +87,10 @@ public:
                   Uint32                DstY,
                   Uint32                DstZ);
 
+    /// Implementation of ITextureGL::GetGLTextureHandle().
     virtual GLuint GetGLTextureHandle()override final { return GetGLHandle(); }
+
+    /// Implementation of ITexture::GetNativeHandle() in OpenGL backend.
     virtual void* GetNativeHandle()override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLTextureHandle())); }
 
     virtual void UpdateData( class GLContextState& CtxState, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData ) = 0;

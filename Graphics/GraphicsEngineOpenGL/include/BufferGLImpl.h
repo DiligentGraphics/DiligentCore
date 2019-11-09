@@ -37,7 +37,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::IBufferGL interface
+/// Buffer object implementation in OpenGL backend.
 class BufferGLImpl final : public BufferBase<IBufferGL, RenderDeviceGLImpl, BufferViewGLImpl, FixedBlockMemoryAllocator>, public AsyncWritableResource
 {
 public:
@@ -50,6 +50,7 @@ public:
                  const BufferDesc&          BuffDesc, 
                  const BufferData*          pBuffData,
                  bool                       bIsDeviceInternal);
+
     BufferGLImpl(IReferenceCounters*        pRefCounters, 
                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
                  class RenderDeviceGLImpl*  pDeviceGL,
@@ -57,6 +58,7 @@ public:
                  const BufferDesc&          BuffDesc, 
                  GLuint                     GLHandle,
                  bool                       bIsDeviceInternal);
+
     ~BufferGLImpl();
     
     /// Queries the specific interface, see IObject::QueryInterface() for details
@@ -67,11 +69,14 @@ public:
     void Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData );
     void Unmap(GLContextState& CtxState);
 
-    void BufferMemoryBarrier( Uint32 RequiredBarriers, class GLContextState &GLContextState );
+    void BufferMemoryBarrier( Uint32 RequiredBarriers, class GLContextState& GLContextState );
 
     const GLObjectWrappers::GLBufferObj& GetGLHandle(){ return m_GlBuffer; }
 
+    /// Implementation of IBufferGL::GetGLBufferHandle().
     virtual GLuint GetGLBufferHandle()override final { return GetGLHandle(); }
+
+    /// Implementation of IBuffer::GetNativeHandle() in OpenGL backend.
     virtual void* GetNativeHandle()override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLBufferHandle())); }
 
 private:

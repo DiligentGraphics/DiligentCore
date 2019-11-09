@@ -39,7 +39,7 @@ class IDeviceContext;
 class BufferGLImpl;
 struct BufferViewDesc;
 
-/// Implementation of the Diligent::IBufferViewGL interface
+/// Buffer view implementation in OpenGL backend.
 class BufferViewGLImpl final : public BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>
 {
 public:

@@ -39,7 +39,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::IPipelineStateGL interface
+/// Pipeline state object implementation in OpenGL backend.
 class PipelineStateGLImpl final : public PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>
 {
 public:
@@ -54,16 +54,22 @@ public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override;
 
+    /// Implementation of IPipelineState::BindStaticResources() in OpenGL backend.
     virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
     
+    /// Implementation of IPipelineState::GetStaticVariableCount() in OpenGL backend.
     virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableByName() in OpenGL backend.
     virtual IShaderResourceVariable* GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableByIndex() in OpenGL backend.
     virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
+    /// Implementation of IPipelineState::CreateShaderResourceBinding() in OpenGL backend.
     virtual void CreateShaderResourceBinding( IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources )override final;
 
+    /// Implementation of IPipelineState::IsCompatibleWith() in OpenGL backend.
     virtual bool IsCompatibleWith(const IPipelineState* pPSO)const override final;
 
     void CommitProgram(GLContextState& State);

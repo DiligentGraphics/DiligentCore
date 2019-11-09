@@ -28,6 +28,7 @@
 namespace Diligent
 {
 
+/// 2D texture array implementation in OpenGL backend.
 class Texture2DArray_OGL final : public TextureBaseGL
 {
 public:
@@ -48,12 +49,14 @@ public:
 				       bool                        bIsDeviceInternal = false);
     ~Texture2DArray_OGL();
 
+    /// Implementation of TextureBaseGL::UpdateData() for 2D texture array.
     virtual void UpdateData(class GLContextState&    CtxState,
                             Uint32                   MipLevel,
                             Uint32                   Slice,
                             const Box&               DstBox,
                             const TextureSubResData& SubresData)override final;
 
+    /// Implementation of TextureBaseGL::AttachToFramebuffer() for 2D texture array.
     virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc,
                                       GLenum                        AttachmentPoint )override final;
 };

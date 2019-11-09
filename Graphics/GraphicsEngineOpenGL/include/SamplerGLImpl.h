@@ -34,7 +34,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::ISamplerGL interface
+
+/// Sampler implementation in OpenGL backend.
 class SamplerGLImpl final : public SamplerBase<ISamplerGL, RenderDeviceGLImpl>
 {
 public:
