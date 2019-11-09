@@ -36,7 +36,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::ITextureViewD3D12 interface
+
+/// Texture view object implementation in Direct3D12 backend.
 class TextureViewD3D12Impl final : public TextureViewBase<ITextureViewD3D12, RenderDeviceD3D12Impl>
 {
 public:
@@ -54,6 +55,7 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of ITextureViewD3D12::GetCPUDescriptorHandle().
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override final
     {
         return m_Descriptor.GetCpuHandle();

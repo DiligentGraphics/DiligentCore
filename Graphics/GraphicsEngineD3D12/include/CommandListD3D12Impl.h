@@ -35,7 +35,7 @@ namespace Diligent
 class DeviceContextD3D12Impl;
 class CommandContext;
 
-/// Implementation of the Diligent::ICommandList interface
+/// Command list implementation in Direct3D12 backend.
 class CommandListD3D12Impl final : public CommandListBase<ICommandList, RenderDeviceD3D12Impl>
 {
 public:

@@ -38,7 +38,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Base implementation of the Diligent::ITextureD3D12 interface
+/// Implementation of a texture object in Direct3D12 backend.
 class TextureD3D12Impl final : public TextureBase<ITextureD3D12, RenderDeviceD3D12Impl, TextureViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
 {
 public:
@@ -51,6 +51,7 @@ public:
                      RenderDeviceD3D12Impl*         pDeviceD3D12, 
                      const TextureDesc&             TexDesc, 
                      const TextureData*             pInitData = nullptr);
+
     // Attaches to an existing D3D12 resource
     TextureD3D12Impl(IReferenceCounters*            pRefCounters,
                      FixedBlockMemoryAllocator&     TexViewObjAllocator,
@@ -62,12 +63,16 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
-    virtual ID3D12Resource* GetD3D12Texture(){ return GetD3D12Resource(); }
+    /// Implementation of ITextureD3D12::GetD3D12Texture().
+    virtual ID3D12Resource* GetD3D12Texture()override final{ return GetD3D12Resource(); }
 
+    /// Implementation of ITexture::GetNativeHandle() in Direct3D12 backend.
     virtual void* GetNativeHandle()override final { return GetD3D12Texture(); }
 
+    /// Implementation of ITextureD3D12::SetD3D12ResourceState().
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final;
 
+    /// Implementation of ITextureD3D12::GetD3D12ResourceState().
     virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const override final;
 
     D3D12_RESOURCE_DESC GetD3D12TextureDesc()const;

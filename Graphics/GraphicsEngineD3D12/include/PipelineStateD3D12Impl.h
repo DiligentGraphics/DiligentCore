@@ -39,7 +39,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::IRenderDeviceD3D12 interface
+
+/// Pipeline state object implementation in Direct3D12 backend.
 class PipelineStateD3D12Impl final : public PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>
 {
 public:
@@ -50,21 +51,29 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
    
+    /// Implementation of IPipelineState::BindStaticResources() in Direct3D12 backend.
     virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableCount() in Direct3D12 backend.
     virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableByName() in Direct3D12 backend.
     virtual IShaderResourceVariable* GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableByIndex() in Direct3D12 backend.
     virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
+    /// Implementation of IPipelineState::CreateShaderResourceBinding() in Direct3D12 backend.
     virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
 
+    /// Implementation of IPipelineState::IsCompatibleWith() in Direct3D12 backend.
     virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
 
-    virtual ID3D12PipelineState *GetD3D12PipelineState()const override final{return m_pd3d12PSO;}
+    /// Implementation of IPipelineStateD3D12::GetD3D12PipelineState().
+    virtual ID3D12PipelineState* GetD3D12PipelineState()const override final{return m_pd3d12PSO;}
 
-    virtual ID3D12RootSignature *GetD3D12RootSignature()const override final{return m_RootSig.GetD3D12RootSignature(); }
+    /// Implementation of IPipelineStateD3D12::GetD3D12RootSignature().
+    virtual ID3D12RootSignature* GetD3D12RootSignature()const override final{return m_RootSig.GetD3D12RootSignature(); }
 
     struct CommitAndTransitionResourcesAttribs
     {
@@ -107,7 +116,6 @@ public:
 
 private:
 
-    /// D3D12 device
     CComPtr<ID3D12PipelineState> m_pd3d12PSO;
     RootSignature m_RootSig;
     

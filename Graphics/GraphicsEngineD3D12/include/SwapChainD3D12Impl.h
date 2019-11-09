@@ -35,7 +35,8 @@ namespace Diligent
 
 class ITextureViewD3D12;
 class IMemoryAllocator;
-/// Implementation of the Diligent::ISwapChainD3D12 interface
+
+/// Swap chain implementation in Direct3D12 backend.
 class SwapChainD3D12Impl final : public SwapChainD3DBase<ISwapChainD3D12, IDXGISwapChain3>
 {
 public:
@@ -51,11 +52,16 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of ISwapChain::Present() in Direct3D12 backend.
     virtual void Present(Uint32 SyncInterval)override final;
+
+    /// Implementation of ISwapChain::Resize() in Direct3D12 backend.
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
+    /// Implementation of ISwapChainD3D12::GetDXGISwapChain().
     virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }
 
+    /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in Direct3D12 backend.
     virtual ITextureViewD3D12* GetCurrentBackBufferRTV()override final
     {
         auto CurrentBackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
@@ -63,6 +69,7 @@ public:
         return m_pBackBufferRTV[CurrentBackBufferIndex];
     }
 
+    /// Implementation of ISwapChain::GetDepthBufferDSV() in Direct3D12 backend.
     virtual ITextureViewD3D12* GetDepthBufferDSV()override final{return m_pDepthBufferDSV;}
 
 private:

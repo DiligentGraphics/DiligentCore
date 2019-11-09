@@ -39,7 +39,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::IBufferD3D12 interface
+/// Buffer object implementation in Direct3D12 backend.
 class BufferD3D12Impl final : public BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>, public D3D12ResourceBase
 {
 public:
@@ -50,6 +50,7 @@ public:
                     class RenderDeviceD3D12Impl*  pDeviceD3D12, 
                     const BufferDesc&             BuffDesc, 
                     const BufferData*             pBuffData = nullptr);
+
     BufferD3D12Impl(IReferenceCounters*          pRefCounters, 
                     FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
                     class RenderDeviceD3D12Impl* pDeviceD3D12, 
@@ -64,8 +65,10 @@ public:
     void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx)const;
 #endif
 
+    /// Implementation of IBufferD3D12::GetD3D12Buffer().
     virtual ID3D12Resource* GetD3D12Buffer(size_t& DataStartByteOffset, IDeviceContext* pContext)override final;
     
+    /// Implementation of IBuffer::GetNativeHandle().
     virtual void* GetNativeHandle()override final
     { 
         VERIFY(GetD3D12Resource() != nullptr, "The buffer is dynamic and has no pointer to D3D12 resource");
@@ -75,8 +78,10 @@ public:
         return pd3d12Buffer;
     }
 
+    /// Implementation of IBufferD3D12::SetD3D12ResourceState().
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final;
 
+    /// Implementation of IBufferD3D12::GetD3D12ResourceState().
     virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const override final;
 
     __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId, class DeviceContextD3D12Impl* pCtx)

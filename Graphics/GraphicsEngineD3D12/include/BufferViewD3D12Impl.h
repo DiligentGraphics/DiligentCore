@@ -36,7 +36,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::IBufferViewD3D12 interface
+
+/// Buffer view implementation in Direct3D12 backend.
 class BufferViewD3D12Impl final : public BufferViewBase<IBufferViewD3D12, RenderDeviceD3D12Impl>
 {
 public:
@@ -51,6 +52,7 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of IBufferViewD3D12::GetCPUDescriptorHandle().
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override final{return m_DescriptorHandle.GetCpuHandle();}
    
 protected:

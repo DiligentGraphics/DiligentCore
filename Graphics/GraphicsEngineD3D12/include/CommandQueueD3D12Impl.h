@@ -44,18 +44,22 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
-	// Returns the fence value that will be signaled next time
+	// Implementation of ICommandQueueD3D12::GetNextFenceValue().
     virtual Uint64 GetNextFenceValue()override final { return m_NextFenceValue; }
 
-	// Executes a given command list
+	// Implementation of ICommandQueueD3D12::Submit().
 	virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList)override final;
 
+    // Implementation of ICommandQueueD3D12::GetD3D12CommandQueue().
     virtual ID3D12CommandQueue* GetD3D12CommandQueue()override final { return m_pd3d12CmdQueue; }
 
+    // Implementation of ICommandQueueD3D12::WaitForIdle().
     virtual Uint64 WaitForIdle()override final;
 
+    // Implementation of ICommandQueueD3D12::GetCompletedFenceValue().
     virtual Uint64 GetCompletedFenceValue()override final;
 
+    // Implementation of ICommandQueueD3D12::SignalFence().
     virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value)override final;
 
 private:

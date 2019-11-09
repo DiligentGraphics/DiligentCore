@@ -39,7 +39,7 @@ namespace Diligent
 
 class ResourceMapping;
 
-/// Implementation of the Diligent::IShaderD3D12 interface
+/// Implementation of a shader object in Direct3D12 backend.
 class ShaderD3D12Impl final : public ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>, public ShaderD3DBase
 {
 public:
@@ -52,16 +52,19 @@ public:
     
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of IShader::GetResourceCount() in Direct3D12 backend.
     virtual Uint32 GetResourceCount()const override final
     {
         return m_pShaderResources->GetTotalResources();
     }
 
+    /// Implementation of IShader::GetResource() in Direct3D12 backend.
     virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
     {
         return GetHLSLResource(Index);
     }
 
+    /// Implementation of IShaderD3D::GetHLSLResource() in Direct3D12 backend.
     virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index)const override final
     {
         return m_pShaderResources->GetHLSLShaderResourceDesc(Index);
