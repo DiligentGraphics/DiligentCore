@@ -176,6 +176,11 @@ public:
     /// Implementation of IDeviceContext::TransitionResourceStates() in OpenGL backend.
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
 
+    /// Implementation of IDeviceContext::ResolveTextureSubresource() in OpenGL backend.
+    virtual void ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                           ITexture*                               pDstTexture,
+                                           const ResolveTextureSubresourceAttribs& ResolveAttribs)override final;
+
     /// Implementation of IDeviceContext::FinishCommandList() in OpenGL backend.
     virtual void FinishCommandList(class ICommandList** ppCommandList)override final;
 

@@ -2051,6 +2051,27 @@ namespace Diligent
         }
     }
 
+    void DeviceContextD3D11Impl::ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                                           ITexture*                               pDstTexture,
+                                                           const ResolveTextureSubresourceAttribs& ResolveAttribs)
+    {
+        TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
+
+        auto* pSrcTexD3D11 = ValidatedCast<TextureBaseD3D11>(pSrcTexture);
+        auto* pDstTexD3D11 = ValidatedCast<TextureBaseD3D11>(pDstTexture);
+        const auto& SrcTexDesc = pSrcTexD3D11->GetDesc();
+        const auto& DstTexDesc = pDstTexD3D11->GetDesc();
+
+        auto Format = ResolveAttribs.Format;
+        if (Format == TEX_FORMAT_UNKNOWN)
+            Format = SrcTexDesc.Format;
+
+        auto DXGIFmt = TexFormatToDXGI_Format(Format);
+        auto SrcSubresIndex = D3D11CalcSubresource(ResolveAttribs.SrcMipLevel, ResolveAttribs.SrcSlice, SrcTexDesc.MipLevels);
+        auto DstSubresIndex = D3D11CalcSubresource(ResolveAttribs.DstMipLevel, ResolveAttribs.DstSlice, DstTexDesc.MipLevels);
+        m_pd3d11DeviceContext->ResolveSubresource(pDstTexD3D11->GetD3D11Texture(), DstSubresIndex, pSrcTexD3D11->GetD3D11Texture(), SrcSubresIndex, DXGIFmt);
+    }
+
 #ifdef VERIFY_CONTEXT_BINDINGS
     DEFINE_D3D11CTX_FUNC_POINTERS(GetCBMethods,      GetConstantBuffers)
     DEFINE_D3D11CTX_FUNC_POINTERS(GetSRVMethods,     GetShaderResources)

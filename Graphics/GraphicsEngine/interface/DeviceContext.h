@@ -403,6 +403,36 @@ struct DispatchComputeIndirectAttribs
     {}
 };
 
+
+/// Describes multi-sampled texture resolve command arguments.
+
+/// This structure is used by IDeviceContext::ResolveTextureSubresource().
+struct ResolveTextureSubresourceAttribs
+{
+    /// Mip level of the source multi-sampled texture to resolve.
+    Uint32 SrcMipLevel   = 0;
+
+    /// Array slice of the source multi-sampled texture to resolve.
+    Uint32 SrcSlice      = 0;
+
+    /// Source texture state transition mode, see Diligent::RESOURCE_STATE_TRANSITION_MODE.
+    RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
+    /// Mip level of the destination non-multi-sampled texture.
+    Uint32 DstMipLevel   = 0;
+
+    /// Array slice of the destination non-multi-sampled texture.
+    Uint32 DstSlice      = 0;
+
+    /// Destination texture state transition mode, see Diligent::RESOURCE_STATE_TRANSITION_MODE.
+    RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
+    /// If one or both textures are typeless, specifies the type of the typeless texture.
+    /// If both texture formats are not typeless, in which case they must be identical, this member must be
+    /// either TEX_FORMAT_UNKNOWN, or match this format.
+    TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
+};
+
 /// Defines allowed flags for IDeviceContext::SetVertexBuffers() function.
 enum SET_VERTEX_BUFFERS_FLAGS : Uint8
 {
@@ -1151,7 +1181,7 @@ public:
     ///          When StateTransitionDesc::UpdateResourceState is set to true, the method may update the state of the
     ///          corresponding resource which is not thread safe. No other threads should read or write the sate of that 
     ///          resource.
-
+    ///
     /// \note    Any method that uses Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode may alter
     ///          the state of resources it works with. Diligent::RESOURCE_STATE_TRANSITION_MODE_VERIFY mode
     ///          makes the method read the states, but not write them. When Diligent::RESOURCE_STATE_TRANSITION_MODE_NONE
@@ -1161,6 +1191,16 @@ public:
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) = 0;
+
+
+    /// Resolves a multi-sampled texture subresource into a non-multi-sampled texture subresource.
+
+    /// \param [in] pSrcTexture    - Source multi-sampled texture.
+    /// \param [in] pDstTexture    - Destination non-multi-sampled texture.
+    /// \param [in] ResolveAttribs - Resolve command attributes, see Diligent::ResolveTextureSubresourceAttribs for details.
+    virtual void ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                           ITexture*                               pDstTexture,
+                                           const ResolveTextureSubresourceAttribs& ResolveAttribs) = 0;
 };
 
 }

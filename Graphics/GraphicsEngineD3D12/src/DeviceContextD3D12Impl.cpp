@@ -1760,4 +1760,30 @@ namespace Diligent
         auto& CmdCtx = GetCmdContext();
         return CmdCtx.GetCommandList();
     }
+
+    void DeviceContextD3D12Impl::ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                                           ITexture*                               pDstTexture,
+                                                           const ResolveTextureSubresourceAttribs& ResolveAttribs)
+    {
+        TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
+
+        auto* pSrcTexD3D12 = ValidatedCast<TextureD3D12Impl>(pSrcTexture);
+        auto* pDstTexD3D12 = ValidatedCast<TextureD3D12Impl>(pDstTexture);
+        const auto& SrcTexDesc = pSrcTexD3D12->GetDesc();
+        const auto& DstTexDesc = pDstTexD3D12->GetDesc();
+
+        auto& CmdCtx = GetCmdContext();
+        TransitionOrVerifyTextureState(CmdCtx, *pSrcTexD3D12, ResolveAttribs.SrcTextureTransitionMode, RESOURCE_STATE_RESOLVE_SOURCE, "Resolving multi-sampled texture (DeviceContextD3D12Impl::ResolveTextureSubresource)");
+        TransitionOrVerifyTextureState(CmdCtx, *pDstTexD3D12, ResolveAttribs.DstTextureTransitionMode, RESOURCE_STATE_RESOLVE_DEST,   "Resolving multi-sampled texture (DeviceContextD3D12Impl::ResolveTextureSubresource)");
+
+        auto Format = ResolveAttribs.Format;
+        if (Format == TEX_FORMAT_UNKNOWN)
+            Format = SrcTexDesc.Format;
+
+        auto DXGIFmt = TexFormatToDXGI_Format(Format);
+        auto SrcSubresIndex = D3D12CalcSubresource(ResolveAttribs.SrcMipLevel, ResolveAttribs.SrcSlice, 0, SrcTexDesc.MipLevels, SrcTexDesc.ArraySize);
+        auto DstSubresIndex = D3D12CalcSubresource(ResolveAttribs.DstMipLevel, ResolveAttribs.DstSlice, 0, DstTexDesc.MipLevels, DstTexDesc.ArraySize);
+
+        CmdCtx.ResolveSubresource(pDstTexD3D12->GetD3D12Resource(), DstSubresIndex, pSrcTexD3D12->GetD3D12Resource(), SrcSubresIndex, DXGIFmt);
+    }
 }

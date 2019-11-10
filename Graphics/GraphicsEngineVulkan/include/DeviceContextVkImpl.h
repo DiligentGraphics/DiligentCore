@@ -246,6 +246,10 @@ public:
 
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
 
+    virtual void ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                           ITexture*                               pDstTexture,
+                                           const ResolveTextureSubresourceAttribs& ResolveAttribs)override final;
+
     VkDescriptorSet AllocateDynamicDescriptorSet(VkDescriptorSetLayout SetLayout, const char* DebugName = "")
     {
         // Descriptor pools are externally synchronized, meaning that the application must not allocate 

@@ -182,6 +182,11 @@ public:
     /// Implementation of IDeviceContext::TransitionResourceStates() in Direct3D12 backend.
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
     
+    /// Implementation of IDeviceContext::ResolveTextureSubresource() in Direct3D12 backend.
+    virtual void ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                           ITexture*                               pDstTexture,
+                                           const ResolveTextureSubresourceAttribs& ResolveAttribs)override final;
+
     /// Implementation of IDeviceContext::FinishCommandList() in Direct3D12 backend.
     virtual void FinishCommandList(class ICommandList** ppCommandList)override final;
 

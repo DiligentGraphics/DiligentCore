@@ -72,9 +72,17 @@ namespace Diligent
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::TransitionShaderResources() is not implemented");
     }
 
+    void DeviceContextMtlImpl::ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                                         ITexture*                               pDstTexture,
+                                                         const ResolveTextureSubresourceAttribs& ResolveAttribs)
+    {
+        TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::ResolveTextureSubresource() is not implemented");
+    }
+
     void DeviceContextMtlImpl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
-        if (!DeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/))
+        if (!TDeviceContextBase::CommitShaderResources(pShaderResourceBinding, StateTransitionMode, 0 /*Dummy*/))
             return;
 
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::CommitShaderResources() is not implemented");

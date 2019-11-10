@@ -2249,4 +2249,59 @@ namespace Diligent
             }
         }
     }
+
+    void DeviceContextVkImpl::ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                                        ITexture*                               pDstTexture,
+                                                        const ResolveTextureSubresourceAttribs& ResolveAttribs)
+    {
+        TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
+
+        auto* pSrcTexVk = ValidatedCast<TextureVkImpl>(pSrcTexture);
+        auto* pDstTexVk = ValidatedCast<TextureVkImpl>(pDstTexture);
+        const auto& SrcTexDesc = pSrcTexVk->GetDesc();
+        const auto& DstTexDesc = pDstTexVk->GetDesc();
+        
+        DEV_CHECK_ERR(SrcTexDesc.Format == DstTexDesc.Format, "Vulkan requires that source and destination textures of a resolve operation "
+                                                              "have the same format (18.6)");(void)DstTexDesc;
+
+        EnsureVkCmdBuffer();
+        // srcImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.6)
+        TransitionOrVerifyTextureState(*pSrcTexVk, ResolveAttribs.SrcTextureTransitionMode, RESOURCE_STATE_RESOLVE_SOURCE, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                       "Resolving multi-sampled texture (DeviceContextVkImpl::ResolveTextureSubresource)");
+
+        // dstImageLayout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL or VK_IMAGE_LAYOUT_GENERAL (18.6)
+        TransitionOrVerifyTextureState(*pDstTexVk, ResolveAttribs.DstTextureTransitionMode, RESOURCE_STATE_RESOLVE_DEST, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                       "Resolving multi-sampled texture (DeviceContextVkImpl::ResolveTextureSubresource)");
+
+        const auto& ResolveFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+        DEV_CHECK_ERR(ResolveFmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH && ResolveFmtAttribs.ComponentType != COMPONENT_TYPE_DEPTH_STENCIL, 
+                      "Vulkan only allows resolve operation for color formats");(void)ResolveFmtAttribs;
+        // The aspectMask member of srcSubresource and dstSubresource must only contain VK_IMAGE_ASPECT_COLOR_BIT (18.6)
+        VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        VkImageResolve ResolveRegion;
+        ResolveRegion.srcSubresource.baseArrayLayer = ResolveAttribs.SrcSlice;
+        ResolveRegion.srcSubresource.layerCount     = 1;
+        ResolveRegion.srcSubresource.mipLevel       = ResolveAttribs.SrcMipLevel;
+        ResolveRegion.srcSubresource.aspectMask     = aspectMask;
+    
+        ResolveRegion.dstSubresource.baseArrayLayer = ResolveAttribs.DstSlice;
+        ResolveRegion.dstSubresource.layerCount     = 1;
+        ResolveRegion.dstSubresource.mipLevel       = ResolveAttribs.DstMipLevel;
+        ResolveRegion.dstSubresource.aspectMask     = aspectMask;
+
+        ResolveRegion.srcOffset = VkOffset3D{};
+        ResolveRegion.dstOffset = VkOffset3D{};
+        const auto& MipAttribs = GetMipLevelProperties(SrcTexDesc, ResolveAttribs.SrcMipLevel);
+        ResolveRegion.extent = VkExtent3D
+            {
+                static_cast<uint32_t>(MipAttribs.LogicalWidth),
+                static_cast<uint32_t>(MipAttribs.LogicalHeight),
+                static_cast<uint32_t>(MipAttribs.Depth)
+            };
+
+        m_CommandBuffer.ResolveImage(pSrcTexVk->GetVkImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                     pDstTexVk->GetVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                     1, &ResolveRegion);
+    }
 }

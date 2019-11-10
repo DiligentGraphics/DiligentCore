@@ -65,7 +65,7 @@ SwapChainD3D12Impl::~SwapChainD3D12Impl()
 void SwapChainD3D12Impl::InitBuffersAndViews()
 {
     m_pBackBufferRTV.resize(m_SwapChainDesc.BufferCount);
-    for(Uint32 backbuff = 0; backbuff < m_SwapChainDesc.BufferCount; ++backbuff)
+    for (Uint32 backbuff = 0; backbuff < m_SwapChainDesc.BufferCount; ++backbuff)
     {
 		CComPtr<ID3D12Resource> pBackBuffer;
         auto hr = m_pSwapChain->GetBuffer(backbuff, __uuidof(pBackBuffer), reinterpret_cast<void**>( static_cast<ID3D12Resource**>(&pBackBuffer) ));
@@ -97,7 +97,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         DepthBufferDesc.Width       = m_SwapChainDesc.Width;
         DepthBufferDesc.Height      = m_SwapChainDesc.Height;
         DepthBufferDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
-        DepthBufferDesc.SampleCount = m_SwapChainDesc.SamplesCount;
+        DepthBufferDesc.SampleCount = 1;
         DepthBufferDesc.Usage       = USAGE_DEFAULT;
         DepthBufferDesc.BindFlags   = BIND_DEPTH_STENCIL;
 

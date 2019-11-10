@@ -412,6 +412,22 @@ namespace VulkanUtilities
             vkCmdBlitImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions, filter);
         }
 
+        __forceinline void ResolveImage(VkImage                 srcImage,
+                                        VkImageLayout           srcImageLayout,
+                                        VkImage                 dstImage,
+                                        VkImageLayout           dstImageLayout,
+                                        uint32_t                regionCount,
+                                        const VkImageResolve*   pRegions)
+        {
+            VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+            if (m_State.RenderPass  != VK_NULL_HANDLE)
+            {
+                // Resolve must be performed outside of render pass.
+                EndRenderPass();
+            }
+            vkCmdResolveImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
+        }
+
         void FlushBarriers();
 
         __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)

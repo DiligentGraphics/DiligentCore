@@ -97,6 +97,12 @@ public:
     void TransitionResource(const StateTransitionDesc& Barrier);
 	//void BeginResourceTransition(GpuResource& Resource, D3D12_RESOURCE_STATES NewState, bool FlushImmediate = false);
 	
+    void ResolveSubresource(ID3D12Resource *pDstResource, UINT DstSubresource, ID3D12Resource *pSrcResource, UINT SrcSubresource, DXGI_FORMAT Format)
+    {
+        FlushResourceBarriers();
+        m_pCommandList->ResolveSubresource(pDstResource, DstSubresource, pSrcResource, SrcSubresource, Format);
+    }
+
     void FlushResourceBarriers()
     {
 	    if (!m_PendingResourceBarriers.empty())

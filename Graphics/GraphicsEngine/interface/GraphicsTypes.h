@@ -1209,9 +1209,6 @@ namespace Diligent
         /// Swap chain usage flags. Default value is Diligent::SWAP_CHAIN_USAGE_RENDER_TARGET
         SWAP_CHAIN_USAGE_FLAGS Usage        = SWAP_CHAIN_USAGE_RENDER_TARGET;
 
-        /// Sample count. Default value is 1
-        Uint32 SamplesCount                 = 1;
-
         /// Number of buffers int the swap chain
         Uint32 BufferCount                  = 2;
 
@@ -1234,7 +1231,6 @@ namespace Diligent
                       Uint32         _Height,
                       TEXTURE_FORMAT _ColorBufferFormat,
                       TEXTURE_FORMAT _DepthBufferFormat,
-                      Uint32         _SamplesCount        = SwapChainDesc{}.SamplesCount,
                       Uint32         _BufferCount         = SwapChainDesc{}.BufferCount,
                       Float32        _DefaultDepthValue   = SwapChainDesc{}.DefaultDepthValue,
                       Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue,
@@ -1243,7 +1239,6 @@ namespace Diligent
             Height              (_Height),
             ColorBufferFormat   (_ColorBufferFormat),
             DepthBufferFormat   (_DepthBufferFormat),
-            SamplesCount        (_SamplesCount),
             BufferCount         (_BufferCount),
             DefaultDepthValue   (_DefaultDepthValue),
             DefaultStencilValue (_DefaultStencilValue),

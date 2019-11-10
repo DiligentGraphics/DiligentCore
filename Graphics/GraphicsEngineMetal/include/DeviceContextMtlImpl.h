@@ -151,6 +151,10 @@ public:
 
     virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)override final;
     
+    virtual void ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                           ITexture*                               pDstTexture,
+                                           const ResolveTextureSubresourceAttribs& ResolveAttribs)override final;
+
     void FinishCommandList(class ICommandList** ppCommandList)override final;
 
     virtual void ExecuteCommandList(class ICommandList* pCommandList)override final;

@@ -2,6 +2,8 @@
 
 ### API Changes
 
+* Added `ResolveTextureSubresource` device context command, removed `SamplesCount` member of the
+  `SwapChainDesc` (API Version 240041)
 * Added `APIVersion` member to `EngineCreateInfo` struct (API Version 240040)
 * Added `IDeviceObject::GetUniqueID` method (API Version 240039)
 * Added `IDeviceContextD3D12::LockCommandQueue`, `IDeviceContextD3D12::UnlockCommandQueue`,

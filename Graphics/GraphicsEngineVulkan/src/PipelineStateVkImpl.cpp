@@ -55,7 +55,7 @@ VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
     RenderPassCI.attachmentCount = (DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + NumRenderTargets;
 
     uint32_t AttachmentInd  = 0;
-    VkSampleCountFlagBits SampleCountFlags = static_cast<VkSampleCountFlagBits>(1 << (SampleCount - 1));
+    VkSampleCountFlagBits SampleCountFlags = static_cast<VkSampleCountFlagBits>(SampleCount);
     VkAttachmentReference* pDepthAttachmentReference = nullptr;
     if (DSVFormat != TEX_FORMAT_UNKNOWN)
     {
@@ -356,7 +356,7 @@ PipelineStateVkImpl :: PipelineStateVkImpl(IReferenceCounters*      pRefCounters
         MSStateCI.flags = 0; // reserved for future use
         // If subpass uses color and/or depth/stencil attachments, then the rasterizationSamples member of 
         // pMultisampleState must be the same as the sample count for those subpass attachments
-        MSStateCI.rasterizationSamples = static_cast<VkSampleCountFlagBits>(1 << (GraphicsPipeline.SmplDesc.Count-1));
+        MSStateCI.rasterizationSamples = static_cast<VkSampleCountFlagBits>(GraphicsPipeline.SmplDesc.Count);
         MSStateCI.sampleShadingEnable = VK_FALSE;
         MSStateCI.minSampleShading = 0; // a minimum fraction of sample shading if sampleShadingEnable is set to VK_TRUE.
         uint32_t SampleMask[] = {GraphicsPipeline.SampleMask, 0}; // Vulkan spec allows up to 64 samples

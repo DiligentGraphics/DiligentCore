@@ -1132,4 +1132,12 @@ namespace Diligent
     {
 
     }
+
+    void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                                        ITexture*                               pDstTexture,
+                                                        const ResolveTextureSubresourceAttribs& ResolveAttribs)
+    {
+        TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
+
+    }
 }

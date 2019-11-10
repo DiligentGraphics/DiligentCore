@@ -110,7 +110,7 @@ TextureVkImpl :: TextureVkImpl(IReferenceCounters*          pRefCounters,
         else
             ImageCI.arrayLayers = 1;
 
-        ImageCI.samples = static_cast<VkSampleCountFlagBits>(1 << (m_Desc.SampleCount-1));
+        ImageCI.samples = static_cast<VkSampleCountFlagBits>(m_Desc.SampleCount);
         ImageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
 
         ImageCI.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;

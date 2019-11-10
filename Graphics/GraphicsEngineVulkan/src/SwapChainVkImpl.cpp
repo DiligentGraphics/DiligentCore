@@ -412,7 +412,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
         DepthBufferDesc.Width       = m_SwapChainDesc.Width;
         DepthBufferDesc.Height      = m_SwapChainDesc.Height;
         DepthBufferDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
-        DepthBufferDesc.SampleCount = m_SwapChainDesc.SamplesCount;
+        DepthBufferDesc.SampleCount = 1;
         DepthBufferDesc.Usage       = USAGE_DEFAULT;
         DepthBufferDesc.BindFlags   = BIND_DEPTH_STENCIL;
 
