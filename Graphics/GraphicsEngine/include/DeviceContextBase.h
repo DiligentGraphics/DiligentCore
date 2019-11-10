@@ -885,6 +885,41 @@ inline void DeviceContextBase<BaseInterface,ImplementationTraits> ::
 #endif
 }
 
+
+template<typename BaseInterface, typename ImplementationTraits>
+void DeviceContextBase<BaseInterface,ImplementationTraits> ::
+     ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                               ITexture*                               pDstTexture,
+                               const ResolveTextureSubresourceAttribs& ResolveAttribs)
+{
+    VERIFY_EXPR(pSrcTexture != nullptr && pDstTexture != nullptr);
+    const auto& SrcTexDesc = pSrcTexture->GetDesc();
+    const auto& DstTexDesc = pDstTexture->GetDesc();
+    DEV_CHECK_ERR(SrcTexDesc.SampleCount  > 1, "Source texture '", SrcTexDesc.Name, "' of a resolve operation is not multi-sampled");
+    DEV_CHECK_ERR(DstTexDesc.SampleCount == 1, "Destination texture '", DstTexDesc.Name, "' of a resolve operation is multi-sampled");
+    auto SrcMipLevelProps = GetMipLevelProperties(SrcTexDesc, ResolveAttribs.SrcMipLevel);
+    auto DstMipLevelProps = GetMipLevelProperties(DstTexDesc, ResolveAttribs.DstMipLevel);
+    DEV_CHECK_ERR(SrcMipLevelProps.LogicalWidth == DstMipLevelProps.LogicalWidth && SrcMipLevelProps.LogicalHeight == DstMipLevelProps.LogicalHeight,
+                  "The size (", SrcMipLevelProps.LogicalWidth, "x", SrcMipLevelProps.LogicalHeight, ") of the source subresource of a resolve operation "
+                  "(texture '", SrcTexDesc.Name, "', mip ", ResolveAttribs.SrcMipLevel, ", slice ", ResolveAttribs.SrcSlice, 
+                  ") does not match the size (", DstMipLevelProps.LogicalWidth, "x", DstMipLevelProps.LogicalHeight,
+                  ") of the destination subresource (texture '", DstTexDesc.Name, "', mip ", ResolveAttribs.DstMipLevel, ", slice ",
+                  ResolveAttribs.DstSlice, ")");
+
+    const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+    const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
+    const auto& ResolveFmtAttribs = GetTextureFormatAttribs(ResolveAttribs.Format);
+    if (ResolveAttribs.Format != TEX_FORMAT_UNKNOWN)
+    {
+        DEV_CHECK_ERR(!SrcFmtAttribs.IsTypeless && !DstFmtAttribs.IsTypeless,
+                      "Format of a resolve operations must not be unknown when one of the texture formats is typeless");
+    }
+    if (SrcFmtAttribs.IsTypeless || DstFmtAttribs.IsTypeless)
+    {
+        DEV_CHECK_ERR(!ResolveFmtAttribs.IsTypeless, "Format of a resolve operations must not be typeless when one of the texture formats is typeless");
+    }
+}
+
 #ifdef DEVELOPMENT
 template<typename BaseInterface, typename ImplementationTraits>
 inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
@@ -1252,40 +1287,6 @@ bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
     }
 
     return true;
-}
-
-template<typename BaseInterface, typename ImplementationTraits>
-void DeviceContextBase<BaseInterface,ImplementationTraits> ::
-     ResolveTextureSubresource(ITexture*                               pSrcTexture,
-                               ITexture*                               pDstTexture,
-                               const ResolveTextureSubresourceAttribs& ResolveAttribs)
-{
-    VERIFY_EXPR(pSrcTexture != nullptr && pDstTexture != nullptr);
-    const auto& SrcTexDesc = pSrcTexture->GetDesc();
-    const auto& DstTexDesc = pDstTexture->GetDesc();
-    DEV_CHECK_ERR(SrcTexDesc.SampleCount  > 1, "Source texture '", SrcTexDesc.Name, "' of a resolve operation is not multi-sampled");
-    DEV_CHECK_ERR(DstTexDesc.SampleCount == 1, "Destination texture '", DstTexDesc.Name, "' of a resolve operation is multi-sampled");
-    auto SrcMipLevelProps = GetMipLevelProperties(SrcTexDesc, ResolveAttribs.SrcMipLevel);
-    auto DstMipLevelProps = GetMipLevelProperties(DstTexDesc, ResolveAttribs.DstMipLevel);
-    DEV_CHECK_ERR(SrcMipLevelProps.LogicalWidth == DstMipLevelProps.LogicalWidth && SrcMipLevelProps.LogicalHeight == DstMipLevelProps.LogicalHeight,
-                  "The size (", SrcMipLevelProps.LogicalWidth, "x", SrcMipLevelProps.LogicalHeight, ") of the source subresource of a resolve operation "
-                  "(texture '", SrcTexDesc.Name, "', mip ", ResolveAttribs.SrcMipLevel, ", slice ", ResolveAttribs.SrcSlice, 
-                  ") does not match the size (", DstMipLevelProps.LogicalWidth, "x", DstMipLevelProps.LogicalHeight,
-                  ") of the destination subresource (texture '", DstTexDesc.Name, "', mip ", ResolveAttribs.DstMipLevel, ", slice ",
-                  ResolveAttribs.DstSlice, ")");
-
-    const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
-    const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
-    const auto& ResolveFmtAttribs = GetTextureFormatAttribs(ResolveAttribs.Format);
-    if (ResolveAttribs.Format != TEX_FORMAT_UNKNOWN)
-    {
-        DEV_CHECK_ERR(!SrcFmtAttribs.IsTypeless && !DstFmtAttribs.IsTypeless,
-                      "Format of a resolve operations must not be unknown when one of the texture formats is typeless");
-    }
-    if (SrcFmtAttribs.IsTypeless || DstFmtAttribs.IsTypeless)
-    {
-        DEV_CHECK_ERR(!ResolveFmtAttribs.IsTypeless, "Format of a resolve operations must not be typeless when one of the texture formats is typeless");
-    }
 }
 
 #endif // DEVELOPMENT
