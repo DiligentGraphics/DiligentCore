@@ -63,10 +63,16 @@ public:
     virtual GLuint GetDefaultFBO()const override final{ return 0; }
 
     /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in OpenGL backend.
-    virtual ITextureView* GetCurrentBackBufferRTV()override final{return nullptr;}
+    virtual ITextureView* GetCurrentBackBufferRTV()override final{return m_pRenderTargetView;}
 
     /// Implementation of ISwapChain::GetDepthBufferDSV() in OpenGL backend.
-    virtual ITextureView* GetDepthBufferDSV()override final{return nullptr;}
+    virtual ITextureView* GetDepthBufferDSV()override final{return m_pDepthStencilView;}
+
+private:
+    void CreateDummyBuffers(RenderDeviceGLImpl* pRenderDeviceGL);
+
+    RefCntAutoPtr<TextureViewGLImpl> m_pRenderTargetView;
+    RefCntAutoPtr<TextureViewGLImpl> m_pDepthStencilView;
 };
 
 }

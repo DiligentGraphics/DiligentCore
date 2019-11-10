@@ -32,7 +32,6 @@
 #include "RenderDeviceGLImpl.h"
 
 using namespace GLObjectWrappers;
-using namespace Diligent;
 
 namespace Diligent
 {

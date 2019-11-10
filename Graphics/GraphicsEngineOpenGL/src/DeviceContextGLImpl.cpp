@@ -329,7 +329,7 @@ namespace Diligent
             VERIFY(NumRenderTargets < static_cast<Uint32>(CtxCaps.m_iMaxDrawBuffers), "This device only supports ", CtxCaps.m_iMaxDrawBuffers, " draw buffers, but ", NumRenderTargets, " are being set");
             NumRenderTargets = std::min(NumRenderTargets, static_cast<Uint32>(CtxCaps.m_iMaxDrawBuffers));
 
-            ITextureView* pBoundRTVs[MaxRenderTargets] = {};
+            TextureViewGLImpl* pBoundRTVs[MaxRenderTargets] = {};
             for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                 pBoundRTVs[rt] = m_pBoundRenderTargets[rt];
 
@@ -1138,6 +1138,74 @@ namespace Diligent
                                                         const ResolveTextureSubresourceAttribs& ResolveAttribs)
     {
         TDeviceContextBase::ResolveTextureSubresource(pSrcTexture, pDstTexture, ResolveAttribs);
+        auto* pSrcTexGl = ValidatedCast<TextureBaseGL>(pSrcTexture);
+        auto* pDstTexGl = ValidatedCast<TextureBaseGL>(pDstTexture);
+        const auto& SrcTexDesc = pSrcTexGl->GetDesc();
+        //const auto& DstTexDesc = pDstTexGl->GetDesc();
 
+        auto CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
+        auto& FBOCache = m_pDevice->GetFBOCache(CurrentNativeGLContext);
+
+        {
+            TextureViewDesc SrcTexViewDesc;
+            SrcTexViewDesc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
+            SrcTexViewDesc.MostDetailedMip = ResolveAttribs.SrcMipLevel;
+            SrcTexViewDesc.FirstArraySlice = ResolveAttribs.SrcSlice;
+            TextureViewGLImpl SrcTexView
+            {
+                nullptr,        // pRefCounters
+                m_pDevice,
+                SrcTexViewDesc,
+                pSrcTexGl,
+                false,          // bCreateGLViewTex
+                false           // bIsDefaultView
+            };
+
+            TextureViewGLImpl* pSrcViews[] = {&SrcTexView};
+            const auto& SrcFBO = FBOCache.GetFBO(1, pSrcViews, nullptr, m_ContextState);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBO);
+            DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
+        }
+
+        if (pDstTexGl->GetGLHandle())
+        {
+            TextureViewDesc DstTexViewDesc;
+            DstTexViewDesc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
+            DstTexViewDesc.MostDetailedMip = ResolveAttribs.DstMipLevel;
+            DstTexViewDesc.FirstArraySlice = ResolveAttribs.DstSlice;
+            TextureViewGLImpl DstTexView
+            {
+                nullptr,        // pRefCounters
+                m_pDevice,
+                DstTexViewDesc,
+                pDstTexGl,
+                false,          // bCreateGLViewTex
+                false           // bIsDefaultView
+            };
+
+            TextureViewGLImpl* pDstViews[] = {&DstTexView};
+            const auto& DstFBO = FBOCache.GetFBO(1, pDstViews, nullptr, m_ContextState);
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DstFBO);
+            DEV_CHECK_GL_ERROR("Failed to bind FBO as draw framebuffer");
+        }
+        else
+        {
+            auto* pSwapChainGL = m_pSwapChain.RawPtr<ISwapChainGL>();
+            GLuint DefaultFBOHandle = pSwapChainGL->GetDefaultFBO();
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, DefaultFBOHandle);
+            DEV_CHECK_GL_ERROR("Failed to bind default FBO as draw framebuffer");
+        }
+
+        const auto& MipAttribs = GetMipLevelProperties(SrcTexDesc, ResolveAttribs.SrcMipLevel);
+        glBlitFramebuffer(0, 0, static_cast<GLint>(MipAttribs.LogicalWidth), static_cast<GLint>(MipAttribs.LogicalHeight),
+                          0, 0, static_cast<GLint>(MipAttribs.LogicalWidth), static_cast<GLint>(MipAttribs.LogicalHeight),
+                          GL_COLOR_BUFFER_BIT,
+                          GL_NEAREST // Filter is ignored
+                          );
+        DEV_CHECK_GL_ERROR("glBlitFramebuffer() failed when resolving multi-sampled texture");
+
+        // Restore original FBO
+        m_ContextState.InvalidateFBO();
+        CommitRenderTargets();
     }
 }

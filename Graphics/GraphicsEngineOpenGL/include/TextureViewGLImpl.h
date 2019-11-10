@@ -46,7 +46,7 @@ public:
                       const struct TextureViewDesc& ViewDesc, 
                       class TextureBaseGL*          pTexture,
                       bool                          bCreateGLViewTex,
-                      bool                          bIsDefaultView );
+                      bool                          bIsDefaultView);
     ~TextureViewGLImpl();
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;

@@ -37,15 +37,15 @@ namespace Diligent
     {
     public:
         using TBase = SwapChainBase<BaseInterface>;
-        SwapChainD3DBase(IReferenceCounters *pRefCounters,
-                         IRenderDevice *pDevice,
-                         IDeviceContext *pDeviceContext,
-                         const SwapChainDesc& SCDesc,
-                         const FullScreenModeDesc& FSDesc,
-                         void* pNativeWndHandle) :
-            TBase(pRefCounters, pDevice, pDeviceContext, SCDesc),
-            m_FSDesc(FSDesc),
-            m_pNativeWndHandle(pNativeWndHandle)
+        SwapChainD3DBase(IReferenceCounters*        pRefCounters,
+                         IRenderDevice*             pDevice,
+                         IDeviceContext*            pDeviceContext,
+                         const SwapChainDesc&       SCDesc,
+                         const FullScreenModeDesc&  FSDesc,
+                         void*                      pNativeWndHandle) :
+            TBase{pRefCounters, pDevice, pDeviceContext, SCDesc},
+            m_FSDesc           {FSDesc},
+            m_pNativeWndHandle {pNativeWndHandle}
         {}
 
         ~SwapChainD3DBase()
@@ -99,6 +99,9 @@ namespace Diligent
             // create RGBA8_UNORM_SRGB render target view
             swapChainDesc.Format             = DXGIColorBuffFmt == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGIColorBuffFmt;
             swapChainDesc.Stereo             = FALSE;
+
+            // Multi-sampled swap chains are not supported anymore. CreateSwapChainForHwnd() fails when sample count is not 1
+            // for any swap effect.
             swapChainDesc.SampleDesc.Count   = 1;
             swapChainDesc.SampleDesc.Quality = 0;
             
@@ -193,13 +196,13 @@ namespace Diligent
                 // https://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx#Destroying
                 if (m_FSDesc.Fullscreen)
                     m_pSwapChain->SetFullscreenState(FALSE, nullptr);
-                m_FSDesc.Fullscreen = True;
-                m_FSDesc.RefreshRateNumerator = DisplayMode.RefreshRateNumerator;
+                m_FSDesc.Fullscreen             = True;
+                m_FSDesc.RefreshRateNumerator   = DisplayMode.RefreshRateNumerator;
                 m_FSDesc.RefreshRateDenominator = DisplayMode.RefreshRateDenominator;
-                m_FSDesc.Scaling = DisplayMode.Scaling;
-                m_FSDesc.ScanlineOrder = DisplayMode.ScanlineOrder;
-                m_SwapChainDesc.Width = DisplayMode.Width;
-                m_SwapChainDesc.Height = DisplayMode.Height;
+                m_FSDesc.Scaling                = DisplayMode.Scaling;
+                m_FSDesc.ScanlineOrder          = DisplayMode.ScanlineOrder;
+                m_SwapChainDesc.Width           = DisplayMode.Width;
+                m_SwapChainDesc.Height          = DisplayMode.Height;
                 if (DisplayMode.Format != TEX_FORMAT_UNKNOWN)
                     m_SwapChainDesc.ColorBufferFormat = DisplayMode.Format;
                 UpdateSwapChain(true);

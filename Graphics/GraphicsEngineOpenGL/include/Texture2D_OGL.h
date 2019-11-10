@@ -47,6 +47,14 @@ public:
                   const TextureDesc&           TexDesc,
                   GLuint                       GLTextureHandle,
 				  bool                         bIsDeviceInternal = false);
+
+    /// This constructor is used to create a dummy texture object for the default framebuffer.
+    Texture2D_OGL(IReferenceCounters*          pRefCounters,
+                  FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                  class RenderDeviceGLImpl*    pDeviceGL,
+                  const TextureDesc&           TexDesc,
+				  bool                         bIsDeviceInternal = false);
+
     ~Texture2D_OGL();
 
     /// Implementation of TextureBaseGL::UpdateData() for 2D texture.

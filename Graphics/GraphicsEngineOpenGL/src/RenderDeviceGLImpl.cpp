@@ -301,6 +301,29 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const Textur
     );
 }
 
+void RenderDeviceGLImpl :: CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, TextureBaseGL** ppTexture)
+{
+    CreateDeviceObject( "texture", TexDesc, ppTexture,
+        [&]()
+        {
+            TextureBaseGL* pTextureOGL = nullptr;
+            switch(TexDesc.Type)
+            {
+                case RESOURCE_DIM_TEX_2D:
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Dummy Texture2D_OGL instance", Texture2D_OGL)
+                                            (m_TexViewObjAllocator, this, TexDesc);
+                    break;
+
+                default: LOG_ERROR_AND_THROW( "Unsupported texture type." );
+            }
+    
+            pTextureOGL->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
+            pTextureOGL->CreateDefaultViews();
+            OnCreateDeviceObject( pTextureOGL );
+        }
+    );
+}
+
 void RenderDeviceGLImpl :: CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler, bool bIsDeviceInternal)
 {
     CreateDeviceObject( "sampler", SamplerDesc, ppSampler, 

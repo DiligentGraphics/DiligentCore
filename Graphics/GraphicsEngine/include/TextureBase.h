@@ -175,6 +175,19 @@ public:
         return (this->m_State & State) == State;
     }
 
+    /// Implementation of ITexture::GetDefaultView().
+    virtual ITextureView* GetDefaultView( TEXTURE_VIEW_TYPE ViewType )override
+    {
+        switch( ViewType )
+        {
+            case TEXTURE_VIEW_SHADER_RESOURCE:  return m_pDefaultSRV.get();
+            case TEXTURE_VIEW_RENDER_TARGET:    return m_pDefaultRTV.get();
+            case TEXTURE_VIEW_DEPTH_STENCIL:    return m_pDefaultDSV.get();
+            case TEXTURE_VIEW_UNORDERED_ACCESS: return m_pDefaultUAV.get();
+            default: UNEXPECTED( "Unknown view type" ); return nullptr;
+        }
+    }
+
 protected:
     
     /// Pure virtual function that creates texture view for the specific engine implementation.
@@ -192,19 +205,6 @@ protected:
     std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultDSV;
     /// Default UAV addressing the entire texture
     std::unique_ptr<TTextureViewImpl, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>> m_pDefaultUAV;
-
-    /// Implementation of ITexture::GetDefaultView().
-    ITextureView* GetDefaultView( TEXTURE_VIEW_TYPE ViewType )override
-    {
-        switch( ViewType )
-        {
-            case TEXTURE_VIEW_SHADER_RESOURCE:  return m_pDefaultSRV.get();
-            case TEXTURE_VIEW_RENDER_TARGET:    return m_pDefaultRTV.get();
-            case TEXTURE_VIEW_DEPTH_STENCIL:    return m_pDefaultDSV.get();
-            case TEXTURE_VIEW_UNORDERED_ACCESS: return m_pDefaultUAV.get();
-            default: UNEXPECTED( "Unknown view type" ); return nullptr;
-        }
-    }
 
     void CorrectTextureViewDesc( struct TextureViewDesc& ViewDesc );
 

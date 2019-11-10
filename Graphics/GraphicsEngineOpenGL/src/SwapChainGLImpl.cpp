@@ -67,6 +67,30 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*        pRefCounters,
 #else
 #   error Unsupported platform
 #endif
+
+   CreateDummyBuffers(pRenderDeviceGL);
+}
+
+void SwapChainGLImpl::CreateDummyBuffers(RenderDeviceGLImpl* pRenderDeviceGL)
+{
+    TextureDesc ColorBuffDesc;
+    ColorBuffDesc.Type      = RESOURCE_DIM_TEX_2D;
+    ColorBuffDesc.Name      = "Main color buffer stub";
+    ColorBuffDesc.Width     = m_SwapChainDesc.Width;
+    ColorBuffDesc.Height    = m_SwapChainDesc.Height;
+    ColorBuffDesc.Format    = m_SwapChainDesc.ColorBufferFormat;
+    ColorBuffDesc.BindFlags = BIND_RENDER_TARGET;
+    RefCntAutoPtr<TextureBaseGL> pDummyColorBuffer;
+    pRenderDeviceGL->CreateDummyTexture(ColorBuffDesc, RESOURCE_STATE_RENDER_TARGET, &pDummyColorBuffer);
+    m_pRenderTargetView = ValidatedCast<TextureViewGLImpl>(pDummyColorBuffer->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET));
+
+    TextureDesc DepthBuffDesc = ColorBuffDesc;
+    DepthBuffDesc.Name      = "Main depth buffer stub";
+    DepthBuffDesc.Format    = m_SwapChainDesc.DepthBufferFormat;
+    DepthBuffDesc.BindFlags = BIND_DEPTH_STENCIL;
+    RefCntAutoPtr<TextureBaseGL> pDummyDepthBuffer;
+    pRenderDeviceGL->CreateDummyTexture(DepthBuffDesc, RESOURCE_STATE_DEPTH_WRITE, &pDummyDepthBuffer);
+    m_pDepthStencilView = ValidatedCast<TextureViewGLImpl>(pDummyDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL));
 }
 
 SwapChainGLImpl::~SwapChainGLImpl()
@@ -100,6 +124,8 @@ void SwapChainGLImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
 
     if( TSwapChainBase::Resize( NewWidth, NewHeight ) )
     {
+        CreateDummyBuffers(m_pRenderDevice.RawPtr<RenderDeviceGLImpl>());
+
         auto pDeviceContext = m_wpDeviceContext.Lock();
         VERIFY( pDeviceContext, "Immediate context has been released" );
         if( pDeviceContext )

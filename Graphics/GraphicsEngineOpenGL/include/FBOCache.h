@@ -32,6 +32,8 @@
 namespace Diligent
 {
 
+class TextureViewGLImpl;
+
 class FBOCache
 {
 public:
@@ -44,8 +46,8 @@ public:
     FBOCache& operator = (      FBOCache&&) = delete;
 
     const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32                NumRenderTargets, 
-                                                     ITextureView*         ppRenderTargets[], 
-                                                     ITextureView*         pDepthStencil,
+                                                     TextureViewGLImpl*    ppRTVs[], 
+                                                     TextureViewGLImpl*    pDSV,
                                                      class GLContextState& ContextState);
     void OnReleaseTexture(ITexture* pTexture);
 
@@ -55,28 +57,19 @@ private:
     {
         // Using pointers is not reliable!
 
-        Uint32 NumRenderTargets;
+        Uint32 NumRenderTargets = 0;
 
         // Unique IDs of textures bound as render targets
-        Diligent::UniqueIdentifier RTIds[MaxRenderTargets];
-        TextureViewDesc RTVDescs[MaxRenderTargets];
+        UniqueIdentifier RTIds   [MaxRenderTargets] = {};
+        TextureViewDesc  RTVDescs[MaxRenderTargets];
 
         // Unique IDs of texture bound as depth stencil
-        Diligent::UniqueIdentifier DSId;
-        TextureViewDesc DSVDesc;
+        UniqueIdentifier DSId     = 0;
+        TextureViewDesc  DSVDesc  = {};
 
-        mutable size_t Hash;
+        mutable size_t Hash       = 0;
 
         bool operator == (const FBOCacheKey &Key)const;
-
-        FBOCacheKey() :
-            NumRenderTargets( 0 ),
-            DSId(0),
-            Hash(0)
-        {
-            for( int rt = 0; rt < MaxRenderTargets; ++rt )
-                RTIds[rt] = 0;
-        }
     };
 
     struct FBOCacheKeyHashFunc

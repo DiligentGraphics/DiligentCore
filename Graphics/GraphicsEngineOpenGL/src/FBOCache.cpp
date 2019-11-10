@@ -104,94 +104,86 @@ void FBOCache::OnReleaseTexture(ITexture *pTexture)
     m_TexIdToKey.erase(EqualRange.first, EqualRange.second);
 }
 
-const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO( Uint32 NumRenderTargets, 
-                                                            ITextureView *ppRenderTargets[], 
-                                                            ITextureView *pDepthStencil,
-                                                            GLContextState &ContextState )
+const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32              NumRenderTargets, 
+                                                           TextureViewGLImpl*  ppRTVs[], 
+                                                           TextureViewGLImpl*  pDSV,
+                                                           GLContextState&     ContextState )
 {
     // Pop null render targets from the end of the list
-    while( NumRenderTargets > 0 && ppRenderTargets[NumRenderTargets - 1] == nullptr )
+    while (NumRenderTargets > 0 && ppRTVs[NumRenderTargets - 1] == nullptr)
         --NumRenderTargets;
 
-    VERIFY(NumRenderTargets != 0 || pDepthStencil != nullptr, "At least one render target or a depth-stencil buffer must be provided");
+    VERIFY(NumRenderTargets != 0 || pDSV != nullptr, "At least one render target or a depth-stencil buffer must be provided");
 
     // Lock the cache
     ThreadingTools::LockHelper CacheLock(m_CacheLockFlag);
    
     // Construct the key
     FBOCacheKey Key;
-    VERIFY( NumRenderTargets < MaxRenderTargets, "Too many render targets being set" );
+    VERIFY(NumRenderTargets < MaxRenderTargets, "Too many render targets are being set");
     NumRenderTargets = std::min( NumRenderTargets, MaxRenderTargets );
     Key.NumRenderTargets = NumRenderTargets;
-    for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {
-        auto *pRTView = ppRenderTargets[rt];
-        if( !pRTView )
+        auto* pRTView = ppRTVs[rt];
+        if (pRTView == nullptr)
             continue;
 
-        auto *pTex = pRTView->GetTexture();
-        CHECK_DYNAMIC_TYPE( TextureBaseGL, pTex );
-        auto *pTexGL = static_cast<TextureBaseGL*>(pTex);
-        pTexGL->TextureMemoryBarrier(
+        auto* pColorTexGL = pRTView->GetTexture<TextureBaseGL>();
+        pColorTexGL->TextureMemoryBarrier(
             GL_FRAMEBUFFER_BARRIER_BIT,// Reads and writes via framebuffer object attachments after the 
                                        // barrier will reflect data written by shaders prior to the barrier. 
                                        // Additionally, framebuffer writes issued after the barrier will wait 
                                        // on the completion of all shader writes issued prior to the barrier.
             ContextState);
 
-        Key.RTIds[rt] = pTexGL->GetUniqueID();
+        Key.RTIds[rt]    = pColorTexGL->GetUniqueID();
         Key.RTVDescs[rt] = pRTView->GetDesc();
     }
 
-    if( pDepthStencil )
+    if (pDSV)
     {
-        auto *pTex = pDepthStencil->GetTexture();
-        CHECK_DYNAMIC_TYPE( TextureBaseGL, pTex );
-        auto *pTexGL = static_cast<TextureBaseGL*>(pTex);
-        pTexGL->TextureMemoryBarrier( GL_FRAMEBUFFER_BARRIER_BIT, ContextState );
-        Key.DSId = pTexGL->GetUniqueID();
-        Key.DSVDesc = pDepthStencil->GetDesc();
+        auto* pDepthTexGL = pDSV->GetTexture<TextureBaseGL>();
+        pDepthTexGL->TextureMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT, ContextState);
+        Key.DSId    = pDepthTexGL->GetUniqueID();
+        Key.DSVDesc = pDSV->GetDesc();
     }
 
     // Try to find FBO in the map
     auto It = m_Cache.find(Key);
-    if( It != m_Cache.end() )
+    if (It != m_Cache.end())
     {
         return It->second;
     }
     else
     {
-        // Create new FBO
+        // Create a new FBO
         GLObjectWrappers::GLFrameBufferObj NewFBO(true);
 
         ContextState.BindFBO(NewFBO);
 
-        // Initialize FBO
-        for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
+        // Initialize the FBO
+        for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
         {
-            if( auto *pRTView = ppRenderTargets[rt] )
+            if (auto* pRTView = ppRTVs[rt])
             {
-                auto *pTexture = pRTView->GetTexture();
-                const auto &ViewDesc = pRTView->GetDesc();
-                CHECK_DYNAMIC_TYPE( TextureBaseGL, pTexture );
-                auto *pTexGL = static_cast<TextureBaseGL*>(pTexture);
-                pTexGL->AttachToFramebuffer( ViewDesc, GL_COLOR_ATTACHMENT0 + rt );
+                const auto& RTVDesc = pRTView->GetDesc();
+                auto* pColorTexGL = pRTView->GetTexture<TextureBaseGL>();
+                pColorTexGL->AttachToFramebuffer( RTVDesc, GL_COLOR_ATTACHMENT0 + rt );
             }
         }
 
-        if( auto *pDSView = pDepthStencil )
+        if (pDSV != nullptr)
         {
-            auto *pTexture = pDSView->GetTexture();
-            const auto &ViewDesc = pDSView->GetDesc();
-            CHECK_DYNAMIC_TYPE( TextureBaseGL, pTexture );
-            auto *pTexGL = static_cast<TextureBaseGL*>(pTexture);
+            const auto& DSVDesc = pDSV->GetDesc();
+            auto* pDepthTexGL    = pDSV->GetTexture<TextureBaseGL>();
             GLenum AttachmentPoint = 0;
-            if( ViewDesc.Format == TEX_FORMAT_D32_FLOAT || 
-                ViewDesc.Format == TEX_FORMAT_D16_UNORM )
+            if (DSVDesc.Format == TEX_FORMAT_D32_FLOAT || 
+                DSVDesc.Format == TEX_FORMAT_D16_UNORM)
             {
 #ifdef _DEBUG
                 {
-                    const auto GLTexFmt = pTexGL->GetGLTexFormat();
+                    const auto GLTexFmt = pDepthTexGL->GetGLTexFormat();
                     VERIFY( GLTexFmt == GL_DEPTH_COMPONENT32F || GLTexFmt == GL_DEPTH_COMPONENT16,
                             "Inappropriate internal texture format (", GLTexFmt, ") for depth attachment. "
                             "GL_DEPTH_COMPONENT32F or GL_DEPTH_COMPONENT16 is expected");
@@ -199,12 +191,12 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO( Uint32 NumRenderTarg
 #endif
                 AttachmentPoint = GL_DEPTH_ATTACHMENT;
             }
-            else if( ViewDesc.Format == TEX_FORMAT_D32_FLOAT_S8X24_UINT ||
-                     ViewDesc.Format == TEX_FORMAT_D24_UNORM_S8_UINT )
+            else if (DSVDesc.Format == TEX_FORMAT_D32_FLOAT_S8X24_UINT ||
+                     DSVDesc.Format == TEX_FORMAT_D24_UNORM_S8_UINT)
             {
 #ifdef _DEBUG
                 {
-                    const auto GLTexFmt = pTexGL->GetGLTexFormat();
+                    const auto GLTexFmt = pDepthTexGL->GetGLTexFormat();
                     VERIFY( GLTexFmt == GL_DEPTH24_STENCIL8 || GLTexFmt == GL_DEPTH32F_STENCIL8,
                             "Inappropriate internal texture format (", GLTexFmt, ") for depth-stencil attachment. "
                             "GL_DEPTH24_STENCIL8 or GL_DEPTH32F_STENCIL8 is expected");
@@ -214,9 +206,9 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO( Uint32 NumRenderTarg
             }
             else
             {
-                UNEXPECTED( GetTextureFormatAttribs(ViewDesc.Format).Name, " is not valid depth-stencil view format" );
+                UNEXPECTED( GetTextureFormatAttribs(DSVDesc.Format).Name, " is not valid depth-stencil view format" );
             }
-            pTexGL->AttachToFramebuffer( ViewDesc, AttachmentPoint );
+            pDepthTexGL->AttachToFramebuffer(DSVDesc, AttachmentPoint);
         }
 
         // We now need to set mapping between shader outputs and 
@@ -247,9 +239,9 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO( Uint32 NumRenderTarg
         CHECK_GL_ERROR( "Failed to set draw buffers via glDrawBuffers()" );
 
         GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        if( Status != GL_FRAMEBUFFER_COMPLETE )
+        if (Status != GL_FRAMEBUFFER_COMPLETE)
         {
-            const Char *StatusString = "Unknown";
+            const Char* StatusString = "Unknown";
             switch( Status )
             {
                 case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:         StatusString = "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";         break;
@@ -267,11 +259,11 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO( Uint32 NumRenderTarg
         auto NewElems = m_Cache.emplace( std::make_pair(Key, std::move(NewFBO)) );
         // New element must be actually inserted
         VERIFY( NewElems.second, "New element was not inserted" ); 
-        if( Key.DSId  )
+        if (Key.DSId != 0)
             m_TexIdToKey.insert( std::make_pair(Key.DSId, Key) );
-        for( Uint32 rt = 0; rt < NumRenderTargets; ++rt )
+        for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
         {
-            if( Key.RTIds[rt] )
+            if (Key.RTIds[rt] != 0)
                 m_TexIdToKey.insert( std::make_pair(Key.RTIds[rt], Key) );
         }
 

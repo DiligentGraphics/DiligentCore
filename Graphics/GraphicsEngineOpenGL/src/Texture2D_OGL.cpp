@@ -122,10 +122,36 @@ Texture2D_OGL::Texture2D_OGL( IReferenceCounters*           pRefCounters,
                               const TextureDesc&            TexDesc,
                               GLuint                        GLTextureHandle,
                               bool                          bIsDeviceInternal) :
-    TextureBaseGL(pRefCounters, TexViewObjAllocator, pDeviceGL, GLState, TexDesc, GLTextureHandle, 
-                  TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D, bIsDeviceInternal)
+    TextureBaseGL
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        GLState,
+        TexDesc,
+        GLTextureHandle, 
+        TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D,
+        bIsDeviceInternal
+    }
 {
 }
+
+Texture2D_OGL::Texture2D_OGL( IReferenceCounters*         pRefCounters,
+                              FixedBlockMemoryAllocator&  TexViewObjAllocator,
+                              RenderDeviceGLImpl*         pDeviceGL,
+                              const TextureDesc&          TexDesc,
+                              bool                        bIsDeviceInternal) :
+    TextureBaseGL
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        TexDesc,
+        bIsDeviceInternal
+    }
+{
+}
+
 
 Texture2D_OGL::~Texture2D_OGL()
 {

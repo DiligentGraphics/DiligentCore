@@ -61,6 +61,14 @@ public:
                   GLenum                        BindTarget,
                   bool                          bIsDeviceInternal);
 
+    /// Initializes a dummy texture (dummy textures are used by the swap chain to
+    /// proxy default framebuffer).
+    TextureBaseGL(IReferenceCounters*           pRefCounters,
+                  FixedBlockMemoryAllocator&    TexViewObjAllocator,
+                  RenderDeviceGLImpl*           pDeviceGL,
+                  const TextureDesc&            TexDesc,
+                  bool                          bIsDeviceInternal);
+
     ~TextureBaseGL();
     
     virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;

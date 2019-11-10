@@ -84,6 +84,11 @@ public:
         // Resetting VAO after that with BindVAO(GLVertexArrayObj::Null()) will still have the effect because
         // null VAO's ID is 0, not -1.
     }
+    
+    void InvalidateFBO()
+    {
+        m_FBOId = -1;
+    }
     bool IsValidVAOBound()const {return m_VAOId > 0;}
 
     void SetCurrentGLContext(GLContext::NativeGLContextType Context) { m_CurrentGLContext = Context; }

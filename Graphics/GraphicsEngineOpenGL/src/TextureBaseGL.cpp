@@ -177,12 +177,38 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*            pRefCounters,
                              const TextureDesc&             TexDesc, 
                              GLuint                         GLTextureHandle,
                              GLenum                         BindTarget,
-                             bool                           bIsDeviceInternal/* = false*/)  : 
-    TTextureBase( pRefCounters, TexViewObjAllocator, pDeviceGL, GetTextureDescFromGLHandle(GLState, TexDesc, GLTextureHandle, BindTarget), bIsDeviceInternal ),
+                             bool                           bIsDeviceInternal/* = false*/) :
+    TTextureBase
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        GetTextureDescFromGLHandle(GLState, TexDesc, GLTextureHandle, BindTarget),
+        bIsDeviceInternal
+    },
     // Create texture object wrapper, but use external texture handle
-    m_GlTexture(true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLTextureHandle)),
-    m_BindTarget(BindTarget),
-    m_GLTexFormat( GetTextureInternalFormat(GLState, BindTarget, m_GlTexture, TexDesc.Format) )
+    m_GlTexture     {true, GLObjectWrappers::GLTextureCreateReleaseHelper(GLTextureHandle)},
+    m_BindTarget    {BindTarget},
+    m_GLTexFormat   {GetTextureInternalFormat(GLState, BindTarget, m_GlTexture, TexDesc.Format)}
+{
+}
+
+TextureBaseGL::TextureBaseGL(IReferenceCounters*           pRefCounters,
+                             FixedBlockMemoryAllocator&    TexViewObjAllocator,
+                             RenderDeviceGLImpl*           pDeviceGL,
+                             const TextureDesc&            TexDesc,
+                             bool                          bIsDeviceInternal) :
+    TTextureBase
+    {
+        pRefCounters,
+        TexViewObjAllocator,
+        pDeviceGL,
+        TexDesc,
+        bIsDeviceInternal
+    },
+    m_GlTexture  {false},
+    m_BindTarget {0    },
+    m_GLTexFormat{0    }
 {
 }
 
