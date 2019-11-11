@@ -891,6 +891,7 @@ void DeviceContextBase<BaseInterface,ImplementationTraits> ::
                                ITexture*                               pDstTexture,
                                const ResolveTextureSubresourceAttribs& ResolveAttribs)
 {
+#ifdef DEVELOPMENT
     VERIFY_EXPR(pSrcTexture != nullptr && pDstTexture != nullptr);
     const auto& SrcTexDesc = pSrcTexture->GetDesc();
     const auto& DstTexDesc = pDstTexture->GetDesc();
@@ -917,6 +918,7 @@ void DeviceContextBase<BaseInterface,ImplementationTraits> ::
     {
         DEV_CHECK_ERR(!ResolveFmtAttribs.IsTypeless, "Format of a resolve operations must not be typeless when one of the texture formats is typeless");
     }
+#endif
 }
 
 #ifdef DEVELOPMENT
