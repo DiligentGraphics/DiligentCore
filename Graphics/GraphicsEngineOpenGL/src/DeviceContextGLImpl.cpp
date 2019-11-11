@@ -331,7 +331,16 @@ namespace Diligent
 
             TextureViewGLImpl* pBoundRTVs[MaxRenderTargets] = {};
             for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
+            {
                 pBoundRTVs[rt] = m_pBoundRenderTargets[rt];
+                DEV_CHECK_ERR(!pBoundRTVs[rt] || pBoundRTVs[rt]->GetTexture<TextureBaseGL>()->GetGLHandle(),
+                              "Color buffer of the default framebuffer can only be bound with the default framebuffer's depth buffer "
+                              "and cannot be combined with any other render target or depth buffer in OpenGL backend.");
+            }
+
+            DEV_CHECK_ERR(!m_pBoundDepthStencil || m_pBoundDepthStencil->GetTexture<TextureBaseGL>()->GetGLHandle(),
+                          "Depth buffer of the default framebuffer can only be bound with the default framebuffer's color buffer "
+                          "and cannot be combined with any other render target in OpenGL backend.");
 
             auto CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
             auto& FBOCache = m_pDevice->GetFBOCache(CurrentNativeGLContext);
@@ -351,7 +360,25 @@ namespace Diligent
                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
         if (TDeviceContextBase::SetRenderTargets( NumRenderTargets, ppRenderTargets, pDepthStencil))
+        {
+            if (!m_IsDefaultFramebufferBound)
+            {
+                if (m_NumBoundRenderTargets == 1 && m_pBoundRenderTargets[0] && m_pBoundRenderTargets[0]->GetTexture<TextureBaseGL>()->GetGLHandle() == 0)
+                {
+                    DEV_CHECK_ERR(!m_pBoundDepthStencil || m_pBoundDepthStencil->GetTexture<TextureBaseGL>()->GetGLHandle() == 0,
+                                  "Attempting to bind texture '", m_pBoundDepthStencil->GetTexture()->GetDesc().Name, "' as depth buffer with the "
+                                  "default framebuffer's color buffer: color buffer of the default framebuffer can only be bound with the default "
+                                  "framebuffer's depth buffer and cannot be combined with any other depth buffer in OpenGL backend.");
+                    m_IsDefaultFramebufferBound = true;
+                }
+                else if (m_NumBoundRenderTargets == 0 && m_pBoundDepthStencil && m_pBoundDepthStencil->GetTexture<TextureBaseGL>()->GetGLHandle() == 0)
+                {
+                    m_IsDefaultFramebufferBound = true;
+                }
+            }
+
             CommitRenderTargets();
+        }
     }
 
     void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding)
