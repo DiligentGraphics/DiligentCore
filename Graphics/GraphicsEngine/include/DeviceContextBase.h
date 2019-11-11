@@ -535,14 +535,13 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
 
         pDefaultRTV   = m_pSwapChain->GetCurrentBackBufferRTV();
         pDepthStencil = m_pSwapChain->GetDepthBufferDSV();
-        // In OpenGL, default RTV and DSV are null
         if (pDefaultRTV != nullptr)
         {
             NumRenderTargets = 1;
             ppRenderTargets = &pDefaultRTV;
         }
 
-        const auto &SwapChainDesc = m_pSwapChain->GetDesc();
+        const auto& SwapChainDesc = m_pSwapChain->GetDesc();
         m_FramebufferWidth  = SwapChainDesc.Width;
         m_FramebufferHeight = SwapChainDesc.Height;
         m_FramebufferSlices = 1;
@@ -551,7 +550,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
     if (NumRenderTargets != m_NumBoundRenderTargets)
     {
         bBindRenderTargets = true;
-        for(Uint32 rt = NumRenderTargets; rt < m_NumBoundRenderTargets; ++rt )
+        for (Uint32 rt = NumRenderTargets; rt < m_NumBoundRenderTargets; ++rt )
             m_pBoundRenderTargets[rt].Release();
 
         m_NumBoundRenderTargets = NumRenderTargets;
@@ -560,7 +559,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
     for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {
         auto* pRTView = ppRenderTargets[rt];
-        if ( pRTView )
+        if (pRTView)
         {
             const auto &RTVDesc = pRTView->GetDesc();
 #ifdef DEVELOPMENT
@@ -602,7 +601,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
 
     if (pDepthStencil != nullptr)
     {
-        const auto &DSVDesc = pDepthStencil->GetDesc();
+        const auto& DSVDesc = pDepthStencil->GetDesc();
 #ifdef DEVELOPMENT
         if (DSVDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
             LOG_ERROR("Texture view object named '", DSVDesc.Name ? DSVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected" );
@@ -612,7 +611,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
         if (m_FramebufferWidth == 0)
         {
             auto* pTex = pDepthStencil->GetTexture();
-            const auto &TexDesc = pTex->GetDesc();
+            const auto& TexDesc = pTex->GetDesc();
             m_FramebufferWidth  = std::max(TexDesc.Width  >> DSVDesc.MostDetailedMip, 1U);
             m_FramebufferHeight = std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U);
             m_FramebufferSlices = DSVDesc.NumArraySlices;
@@ -631,7 +630,7 @@ inline bool DeviceContextBase<BaseInterface,ImplementationTraits> ::
         }
     }
 
-    if ( m_pBoundDepthStencil != pDepthStencil)
+    if (m_pBoundDepthStencil != pDepthStencil)
     {
         m_pBoundDepthStencil = ValidatedCast<TextureViewImplType>(pDepthStencil);
         bBindRenderTargets = true;

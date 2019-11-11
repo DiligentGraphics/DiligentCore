@@ -50,24 +50,31 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
-	// Returns the fence value that will be signaled next time
+	/// Implementation of ICommandQueueVk::GetNextFenceValue().
     virtual Uint64 GetNextFenceValue()override final { return m_NextFenceValue; }
 
-	// Submits a given command buffer to the queue
+	/// Implementation of ICommandQueueVk::Submit().
 	virtual Uint64 Submit(VkCommandBuffer cmdBuffer)override final;
 
+    /// Implementation of ICommandQueueVk::Submit().
     virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo)override final;
 
+    /// Implementation of ICommandQueueVk::Present().
     virtual VkResult Present(const VkPresentInfoKHR& PresentInfo)override final;
 
+    /// Implementation of ICommandQueueVk::GetVkQueue().
     virtual VkQueue GetVkQueue()override final{return m_VkQueue;}
 
+    /// Implementation of ICommandQueueVk::GetQueueFamilyIndex().
     virtual uint32_t GetQueueFamilyIndex()const override final { return m_QueueFamilyIndex; }
 
+    /// Implementation of ICommandQueueVk::GetQueueFamilyIndex().
     virtual Uint64 WaitForIdle()override final;
 
+    /// Implementation of ICommandQueueVk::GetCompletedFenceValue().
     virtual Uint64 GetCompletedFenceValue()override final;
 
+    /// Implementation of ICommandQueueVk::SignalFence().
     virtual void SignalFence(VkFence vkFence)override final;
 
     void SetFence(RefCntAutoPtr<FenceVkImpl> pFence){m_pFence = std::move(pFence);}

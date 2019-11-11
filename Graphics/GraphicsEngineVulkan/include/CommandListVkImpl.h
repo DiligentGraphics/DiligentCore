@@ -33,7 +33,7 @@
 namespace Diligent
 {
 
-/// Implementation of the Diligent::ICommandList interface
+/// Command list implementation in Vulkan backend.
 class CommandListVkImpl final : public CommandListBase<ICommandList, RenderDeviceVkImpl>
 {
 public:

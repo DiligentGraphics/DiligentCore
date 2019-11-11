@@ -49,7 +49,7 @@
 namespace Diligent
 {
 
-/// Implementation of the Diligent::IRenderDeviceVk interface
+/// Render device implementation in Vulkan backend.
 class RenderDeviceVkImpl final : public RenderDeviceNextGenBase<RenderDeviceBase<IRenderDeviceVk>, ICommandQueueVk>
 {
 public:
@@ -68,27 +68,36 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
+    /// Implementation of IRenderDevice::CreatePipelineState() in Vulkan backend.
     virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)override final;
 
+    /// Implementation of IRenderDevice::CreateBuffer() in Vulkan backend.
     virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;
 
+    /// Implementation of IRenderDevice::CreateShader() in Vulkan backend.
     virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader)override final;
 
+    /// Implementation of IRenderDevice::CreateTexture() in Vulkan backend.
     virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)override final;
     
     void CreateTexture(const TextureDesc& TexDesc, VkImage vkImgHandle, RESOURCE_STATE InitialState, class TextureVkImpl** ppTexture);
     
+    /// Implementation of IRenderDevice::CreateSampler() in Vulkan backend.
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
 
+    /// Implementation of IRenderDevice::CreateFence() in Vulkan backend.
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
 
+    /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice GetVkDevice()override final{ return m_LogicalVkDevice->GetVkDevice();}
     
+    /// Implementation of IRenderDeviceVk::CreateTextureFromVulkanImage().
     virtual void CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
 
+    /// Implementation of IRenderDeviceVk::CreateBufferFromVulkanResource().
     virtual void CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)override final;
 
-    // Idles the GPU
+    /// Implementation of IRenderDevice::IdleGPU() in Vulkan backend.
 	virtual void IdleGPU()override final;
 
     // pImmediateCtx parameter is only used to make sure the command buffer is submitted from the immediate context
@@ -98,6 +107,7 @@ public:
     void AllocateTransientCmdPool(VulkanUtilities::CommandPoolWrapper& CmdPool, VkCommandBuffer& vkCmdBuff, const Char* DebugPoolName = nullptr);
     void ExecuteAndDisposeTransientCmdBuff(Uint32 QueueIndex, VkCommandBuffer vkCmdBuff, VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
+    /// Implementation of IRenderDevice::ReleaseStaleResources() in Vulkan backend.
     virtual void ReleaseStaleResources(bool ForceRelease = false)override final;
 
     DescriptorSetAllocation AllocateDescriptorSet(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName = "")

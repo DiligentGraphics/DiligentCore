@@ -36,7 +36,8 @@ namespace Diligent
 
 class ITextureViewVk;
 class IMemoryAllocator;
-/// Implementation of the Diligent::ISwapChainVk interface
+
+/// Swap chain implementation in Vulkan backend.
 class SwapChainVkImpl final : public SwapChainBase<ISwapChainVk>
 {
 public:
@@ -51,21 +52,29 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of ISwapChain::Present() in Vulkan backend.
     virtual void Present(Uint32 SyncInterval)override final;
+
+    /// Implementation of ISwapChain::Resize() in Vulkan backend.
     virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
 
+    /// Implementation of ISwapChain::SetFullscreenMode() in Vulkan backend.
     virtual void SetFullscreenMode(const DisplayModeAttribs &DisplayMode)override final;
 
+    /// Implementation of ISwapChain::SetWindowedMode() in Vulkan backend.
     virtual void SetWindowedMode()override final;
 
+    /// Implementation of ISwapChainVk::GetVkSwapChain().
     virtual VkSwapchainKHR GetVkSwapChain()override final{ return m_VkSwapChain; }
 
+    /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in Vulkan backend.
     virtual ITextureViewVk* GetCurrentBackBufferRTV()override final
     {
         VERIFY_EXPR(m_BackBufferIndex >= 0 && m_BackBufferIndex < m_SwapChainDesc.BufferCount);
         return m_pBackBufferRTV[m_BackBufferIndex];
     }
 
+    /// Implementation of ISwapChain::GetDepthBufferDSV() in Vulkan backend.
     virtual ITextureViewVk* GetDepthBufferDSV()override final{return m_pDepthBufferDSV;}
 
 private:

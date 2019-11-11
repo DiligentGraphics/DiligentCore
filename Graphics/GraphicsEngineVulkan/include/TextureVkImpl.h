@@ -40,7 +40,7 @@ class FixedBlockMemoryAllocator;
 
 Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel);
 
-/// Base implementation of the Diligent::ITextureVk interface
+/// Texture object implementation in Vulkan backend.
 class TextureVkImpl final : public TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>
 {
 public:
@@ -66,14 +66,20 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of ITextureVk::GetVkImage().
     virtual VkImage GetVkImage()const override final{ return m_VulkanImage; }
+
+    /// Implementation of ITexture::GetNativeHandle() in Vulkan backend.
     virtual void* GetNativeHandle()override final
     {
         auto vkImage = GetVkImage();
         return vkImage;
     }
 
+    /// Implementation of ITextureVk::SetLayout().
     void SetLayout(VkImageLayout Layout)override final;
+
+    /// Implementation of ITextureVk::GetLayout().
     VkImageLayout GetLayout()const override final;
 
     VkBuffer GetVkStagingBuffer()const

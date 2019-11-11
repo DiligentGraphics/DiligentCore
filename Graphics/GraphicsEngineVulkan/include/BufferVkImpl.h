@@ -43,7 +43,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 class DeviceContextVkImpl;
 
-/// Implementation of the Diligent::IBufferVk interface
+/// Buffer object implementation in Vulkan backend.
 class BufferVkImpl final : public BufferBase<IBufferVk, RenderDeviceVkImpl, BufferViewVkImpl, FixedBlockMemoryAllocator>
 {
 public:
@@ -86,16 +86,23 @@ public:
             return static_cast<Uint32>(DynAlloc.AlignedOffset);
         }
     }
+
+    /// Implementation of IBufferVk::GetVkBuffer().
     VkBuffer GetVkBuffer()const override final;
 
+    /// Implementation of IBuffer::GetNativeHandle() in Vulkan backend.
     virtual void* GetNativeHandle()override final
     { 
         auto vkBuffer = GetVkBuffer(); 
         return vkBuffer;
     }
 
+    /// Implementation of IBufferVk::SetAccessFlags().
     virtual void SetAccessFlags(VkAccessFlags AccessFlags)override final;
+
+    /// Implementation of IBufferVk::GetAccessFlags().
     virtual VkAccessFlags GetAccessFlags()const override final;
+
     bool CheckAccessFlags(VkAccessFlags AccessFlags)const
     {
         return (GetAccessFlags() & AccessFlags) == AccessFlags;

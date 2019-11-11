@@ -37,7 +37,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::IFenceVk interface
+/// Fence implementation in Vulkan backend.
 class FenceVkImpl final : public FenceBase<IFenceVk, RenderDeviceVkImpl>
 {
 public:
@@ -49,14 +49,15 @@ public:
                 bool                IsDeviceInternal = false);
     ~FenceVkImpl();
 
-    // Note that this method is not thread-safe. The reason is that VulkanFencePool is not thread
-    // safe, and DeviceContextVkImpl::SignalFence() adds the fence to the pending fences list that
-    // are signaled later by the command context when it submits the command list. So there is no
-    // guarantee that the fence pool is not accessed simultaneously by multiple threads even if the
-    // fence object itself is protected by mutex.
+    /// Implementation of IFence::GetCompletedValue() in Vulkan backend.
+    /// Note that this method is not thread-safe. The reason is that VulkanFencePool is not thread
+    /// safe, and DeviceContextVkImpl::SignalFence() adds the fence to the pending fences list that
+    /// are signaled later by the command context when it submits the command list. So there is no
+    /// guarantee that the fence pool is not accessed simultaneously by multiple threads even if the
+    /// fence object itself is protected by mutex.
     virtual Uint64 GetCompletedValue()override final;
 
-    /// Resets the fence to the specified value. 
+    /// Implementation of IFence::Reset() in Vulkan backend.
     virtual void Reset(Uint64 Value)override final;
     
     VulkanUtilities::FenceWrapper GetVkFence() { return m_FencePool.GetFence(); }

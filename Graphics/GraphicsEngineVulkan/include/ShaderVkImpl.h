@@ -38,7 +38,7 @@ namespace Diligent
 class ResourceMapping;
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::IShaderVk interface
+/// Shader object object implementation in Vulkan backend.
 class ShaderVkImpl final : public ShaderBase<IShaderVk, RenderDeviceVkImpl>
 {
 public:
@@ -49,13 +49,16 @@ public:
     
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderVk, TShaderBase);
 
+    /// Implementation of IShader::GetResourceCount() in Vulkan backend.
     virtual Uint32 GetResourceCount()const override final
     {
         return m_pShaderResources->GetTotalResources();
     }
 
+    /// Implementation of IShader::GetResource() in Vulkan backend.
     virtual ShaderResourceDesc GetResource(Uint32 Index)const override final;
 
+    /// Implementation of IShaderVk::GetSPIRV().
     virtual const std::vector<uint32_t>& GetSPIRV()const override final
     {
         return m_SPIRV;

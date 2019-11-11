@@ -47,7 +47,7 @@ namespace Diligent
 class FixedBlockMemoryAllocator;
 class ShaderVariableManagerVk;
 
-/// Implementation of the Diligent::IRenderDeviceVk interface
+/// Pipeline state object implementation in Vulkan backend.
 class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>
 {
 public:
@@ -58,20 +58,28 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
    
+    /// Implementation of IPipelineState::CreateShaderResourceBinding() in Vulkan backend.
     virtual void CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)override final;
 
+    /// Implementation of IPipelineState::IsCompatibleWith() in Vulkan backend.
     virtual bool IsCompatibleWith(const IPipelineState* pPSO)const override final;
 
+    /// Implementation of IPipelineStateVk::GetVkRenderPass().
     virtual VkRenderPass GetVkRenderPass()const override final { return m_RenderPass; }
 
+    /// Implementation of IPipelineStateVk::GetVkPipeline().
     virtual VkPipeline   GetVkPipeline()  const override final { return m_Pipeline; }
 
+    /// Implementation of IPipelineState::BindStaticResources() in Vulkan backend.
     virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableCount() in Vulkan backend.
     virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableByName() in Vulkan backend.
     virtual IShaderResourceVariable* GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
 
+    /// Implementation of IPipelineState::GetStaticVariableByIndex() in Vulkan backend.
     virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
     void CommitAndTransitionShaderResources(IShaderResourceBinding*                 pShaderResourceBinding, 

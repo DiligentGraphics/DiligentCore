@@ -36,7 +36,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::ISamplerVk interface
+
+/// Sampler object object implementation in Vulkan backend.
 class SamplerVkImpl final : public SamplerBase<ISamplerVk, RenderDeviceVkImpl>
 {
 public:
@@ -47,6 +48,7 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override;
 
+    /// Implementation of ISamplerVk::GetVkSampler().
     virtual VkSampler GetVkSampler()const override final{return m_VkSampler;}
 
 private:

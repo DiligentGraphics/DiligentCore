@@ -36,7 +36,8 @@ namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-/// Implementation of the Diligent::ITextureViewVk interface
+
+/// Texture view implementation in Vulkan backend.
 class TextureViewVkImpl final : public TextureViewBase<ITextureViewVk, RenderDeviceVkImpl>
 {
 public:
@@ -52,6 +53,7 @@ public:
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
 
+    /// Implementation of ITextureViewVk::GetVulkanImageView().
     VkImageView GetVulkanImageView()const override final{return m_ImageView;}
 
     bool HasMipLevelViews() const
