@@ -39,36 +39,43 @@ struct LayoutElement
     static constexpr Uint32 AutoOffset = static_cast<Uint32>(-1);
     static constexpr Uint32 AutoStride = static_cast<Uint32>(-1);
 
-    /// Input index of the element, which is specified in the vertex shader.
-    Uint32 InputIndex       = 0;
+    /// HLSL semantic. Default value ("ATTRIB") allows HLSL shaders to be converted
+    /// to GLSL and used in OpenGL backend as well as compiled to SPIRV and used
+    /// in Vulkan backend.
+    /// Any value other than default will only work in Direct3D11 and Direct3D12 backends.
+    const char* HLSLSemantic = "ATTRIB";
+
+    /// Input index of the element that is specified in the vertex shader.
+    /// In Direct3D11 and Direct3D12 backends this is the semantic index.
+    Uint32 InputIndex        = 0;
 
     /// Buffer slot index that this element is read from.
-    Uint32 BufferSlot       = 0;
+    Uint32 BufferSlot        = 0;
 
     /// Number of components in the element. Allowed values are 1, 2, 3, and 4.
-    Uint32 NumComponents    = 0;
+    Uint32 NumComponents     = 0;
 
     /// Type of the element components, see Diligent::VALUE_TYPE for details.
-    VALUE_TYPE ValueType    = VT_FLOAT32;
+    VALUE_TYPE ValueType     = VT_FLOAT32;
 
     /// For signed and unsigned integer value types 
     /// (VT_INT8, VT_INT16, VT_INT32, VT_UINT8, VT_UINT16, VT_UINT32)
     /// indicates if the value should be normalized to [-1,+1] or 
     /// [0, 1] range respectively. For floating point types
     /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
-    Bool IsNormalized       = True;
+    Bool IsNormalized        = True;
 
     /// Relative offset, in bytes, to the element bits.
     /// If this value is set to LayoutElement::AutoOffset (default value), the offset will
     /// be computed automatically by placing the element right after the previous one.
-    Uint32 RelativeOffset   = AutoOffset;
+    Uint32 RelativeOffset    = AutoOffset;
 
     /// Stride, in bytes, between two elements, for this buffer slot.
     /// If this value is set to LayoutElement::AutoStride, the stride will be
     /// computed automatically assuming that all elements in the same buffer slot are
     /// packed one after another. If the buffer slot contains multiple layout elements,
     /// they all must specify the same stride or use AutoStride value.
-    Uint32 Stride           = AutoStride;
+    Uint32 Stride            = AutoStride;
 
     /// Input frequency
     enum FREQUENCY : Int32
@@ -103,15 +110,38 @@ struct LayoutElement
                   Uint32     _Stride               = LayoutElement{}.Stride,
                   FREQUENCY  _Frequency            = LayoutElement{}.Frequency,
                   Uint32     _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept : 
-        InputIndex          (_InputIndex),
-        BufferSlot          (_BufferSlot),
-        NumComponents       (_NumComponents),
-        ValueType           (_ValueType),
-        IsNormalized        (_IsNormalized),
-        RelativeOffset      (_RelativeOffset),
-        Stride              (_Stride),
-        Frequency           (_Frequency),
-        InstanceDataStepRate(_InstanceDataStepRate)
+        InputIndex          {_InputIndex          },
+        BufferSlot          {_BufferSlot          },
+        NumComponents       {_NumComponents       },
+        ValueType           {_ValueType           },
+        IsNormalized        {_IsNormalized        },
+        RelativeOffset      {_RelativeOffset      },
+        Stride              {_Stride              },
+        Frequency           {_Frequency           },
+        InstanceDataStepRate{_InstanceDataStepRate}
+    {}
+
+    /// Initializes the structure
+    LayoutElement(const char* _HLSLSemantic,
+                  Uint32      _InputIndex, 
+                  Uint32      _BufferSlot, 
+                  Uint32      _NumComponents, 
+                  VALUE_TYPE  _ValueType,
+                  Bool        _IsNormalized         = LayoutElement{}.IsNormalized, 
+                  Uint32      _RelativeOffset       = LayoutElement{}.RelativeOffset,
+                  Uint32      _Stride               = LayoutElement{}.Stride,
+                  FREQUENCY   _Frequency            = LayoutElement{}.Frequency,
+                  Uint32      _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
+        HLSLSemantic        {_HLSLSemantic        },
+        InputIndex          {_InputIndex          },
+        BufferSlot          {_BufferSlot          },
+        NumComponents       {_NumComponents       },
+        ValueType           {_ValueType           },
+        IsNormalized        {_IsNormalized        },
+        RelativeOffset      {_RelativeOffset      },
+        Stride              {_Stride              },
+        Frequency           {_Frequency           },
+        InstanceDataStepRate{_InstanceDataStepRate}
     {}
 
     /// Initializes the structure
@@ -122,15 +152,15 @@ struct LayoutElement
                   Bool       _IsNormalized, 
                   FREQUENCY  _Frequency,
                   Uint32     _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
-        InputIndex          (_InputIndex),
-        BufferSlot          (_BufferSlot),
-        NumComponents       (_NumComponents),
-        ValueType           (_ValueType),
-        IsNormalized        (_IsNormalized),
-        RelativeOffset      (LayoutElement{}.RelativeOffset),
-        Stride              (LayoutElement{}.Stride),
-        Frequency           (_Frequency),
-        InstanceDataStepRate(_InstanceDataStepRate)
+        InputIndex          {_InputIndex                   },
+        BufferSlot          {_BufferSlot                   },
+        NumComponents       {_NumComponents                },
+        ValueType           {_ValueType                    },
+        IsNormalized        {_IsNormalized                 },
+        RelativeOffset      {LayoutElement{}.RelativeOffset},
+        Stride              {LayoutElement{}.Stride        },
+        Frequency           {_Frequency                    },
+        InstanceDataStepRate{_InstanceDataStepRate         }
     {}
 };
 
@@ -148,8 +178,8 @@ struct InputLayoutDesc
 
     InputLayoutDesc(const LayoutElement* _LayoutElements, 
                     Uint32               _NumElements)noexcept :
-        LayoutElements(_LayoutElements),
-        NumElements   (_NumElements)
+        LayoutElements{_LayoutElements},
+        NumElements   {_NumElements   }
     {}
 };
 

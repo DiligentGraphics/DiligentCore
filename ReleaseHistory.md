@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added `HLSLSemantic` member to `LayoutElement` struct (API Version 240042)
 * Added `ResolveTextureSubresource` device context command, removed `SamplesCount` member of the
   `SwapChainDesc` (API Version 240041)
 * Added `APIVersion` member to `EngineCreateInfo` struct (API Version 240040)

@@ -379,12 +379,12 @@ namespace Diligent
         {
             const auto &CurrElem = InputLayout.LayoutElements[iElem];
             auto &D3DElem = D3DInputElements[iElem];
-            D3DElem.SemanticName = "ATTRIB";
-            D3DElem.SemanticIndex = CurrElem.InputIndex;
-            D3DElem.AlignedByteOffset = CurrElem.RelativeOffset;
-            D3DElem.InputSlot = CurrElem.BufferSlot;
-            D3DElem.Format = TypeToDXGI_Format(CurrElem.ValueType, CurrElem.NumComponents, CurrElem.IsNormalized);
-            D3DElem.InputSlotClass = (CurrElem.Frequency == LayoutElement::FREQUENCY_PER_VERTEX) ? D3D_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+            D3DElem.SemanticName         = CurrElem.HLSLSemantic;
+            D3DElem.SemanticIndex        = CurrElem.InputIndex;
+            D3DElem.AlignedByteOffset    = CurrElem.RelativeOffset;
+            D3DElem.InputSlot            = CurrElem.BufferSlot;
+            D3DElem.Format               = TypeToDXGI_Format(CurrElem.ValueType, CurrElem.NumComponents, CurrElem.IsNormalized);
+            D3DElem.InputSlotClass       = (CurrElem.Frequency == LayoutElement::FREQUENCY_PER_VERTEX) ? D3D_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
             D3DElem.InstanceDataStepRate = (CurrElem.Frequency == LayoutElement::FREQUENCY_PER_VERTEX) ? 0 : CurrElem.InstanceDataStepRate;
         }
     }

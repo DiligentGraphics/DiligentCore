@@ -62,8 +62,8 @@ public:
                        RenderDeviceImplType*    pDevice,
                        const PipelineStateDesc& PSODesc,
                        bool                     bIsDeviceInternal = false ) :
-        TDeviceObjectBase (pRefCounters, pDevice, PSODesc, bIsDeviceInternal),
-        m_NumShaders(0)
+        TDeviceObjectBase {pRefCounters, pDevice, PSODesc, bIsDeviceInternal},
+        m_NumShaders{0}
     {
         const auto& SrcLayout = PSODesc.ResourceLayout;
         size_t StringPoolSize = 0;
@@ -78,6 +78,18 @@ public:
             for (Uint32 i=0; i < SrcLayout.NumStaticSamplers; ++i)
                 StringPoolSize += strlen(SrcLayout.StaticSamplers[i].SamplerOrTextureName) + 1;
         }
+
+        if (!PSODesc.IsComputePipeline)
+        {
+            const auto& InputLayout = PSODesc.GraphicsPipeline.InputLayout;
+            for (Uint32 i=0; i < InputLayout.NumElements; ++i)
+                StringPoolSize += strlen(InputLayout.LayoutElements[i].HLSLSemantic) + 1;
+        }
+        else
+        {
+            DEV_CHECK_ERR(PSODesc.GraphicsPipeline.InputLayout.NumElements == 0, "Compute pipelines must not have input layout elements");
+        }
+
         m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
 
         auto& DstLayout = this->m_Desc.ResourceLayout;
@@ -118,7 +130,6 @@ public:
                 StaticSamplers[i].SamplerOrTextureName = m_StringPool.CopyString(SrcLayout.StaticSamplers[i].SamplerOrTextureName);
             }
         }
-        VERIFY_EXPR(m_StringPool.GetRemainingSize() == 0);
 
 
         if (this->m_Desc.IsComputePipeline)
@@ -183,7 +194,10 @@ public:
             }
             this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = pLayoutElements;
             for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
-                pLayoutElements[Elem] = InputLayout.LayoutElements[Elem];
+            {
+                pLayoutElements[Elem]              = InputLayout.LayoutElements[Elem];
+                pLayoutElements[Elem].HLSLSemantic = m_StringPool.CopyString(InputLayout.LayoutElements[Elem].HLSLSemantic);
+            }
         
 
             // Correct description and compute offsets and tight strides
@@ -265,6 +279,8 @@ public:
                 }
             }
         }
+
+        VERIFY_EXPR(m_StringPool.GetRemainingSize() == 0);
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
         DEV_CHECK_ERR( (this->m_Desc.CommandQueueMask & DeviceQueuesMask) != 0, "No bits in the command queue mask (0x", std::hex, this->m_Desc.CommandQueueMask, ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");
