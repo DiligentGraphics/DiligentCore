@@ -1436,7 +1436,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessStructuredBuffer(TokenList
         ++ShaderStorageBlockBinding;
     }
     else
-        Token->Literal = "layout(std140) buffer";
+        Token->Literal = "layout(std140) readonly buffer";
     // buffer<DataType> g_Data;
     // ^
     
