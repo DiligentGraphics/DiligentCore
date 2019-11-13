@@ -58,6 +58,13 @@ PUBLIC
     Diligent-GraphicsEngineInterface
 )
 
+if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
+    target_link_libraries(Diligent-GraphicsTools 
+    PRIVATE 
+        Diligent-GraphicsEngineD3DBase
+    )
+endif()
+
 set_common_target_properties(Diligent-GraphicsTools)
 
 source_group("src" FILES ${SOURCE})
