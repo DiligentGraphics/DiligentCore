@@ -518,7 +518,20 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* 
     int         Lenghts[]       = {SourceCodeLen};
     Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
     
-    return CompileShaderInternal(Shader, messages, nullptr, ShaderSource, SourceCodeLen, ppCompilerOutput);
+    auto SPIRV = CompileShaderInternal(Shader, messages, nullptr, ShaderSource, SourceCodeLen, ppCompilerOutput);
+    
+    spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
+    SpirvOptimizer.RegisterPerformancePasses();
+    std::vector<uint32_t> OptimizedSPIRV;    
+    if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &OptimizedSPIRV))
+    {
+        return std::move(OptimizedSPIRV);
+    }
+    else
+    {
+        LOG_ERROR("Failed to optimize SPIR-V.");
+        return std::move(SPIRV);
+    }
 }
 
 }
