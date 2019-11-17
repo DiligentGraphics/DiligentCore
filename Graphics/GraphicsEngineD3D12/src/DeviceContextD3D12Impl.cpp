@@ -1778,7 +1778,19 @@ namespace Diligent
 
         auto Format = ResolveAttribs.Format;
         if (Format == TEX_FORMAT_UNKNOWN)
-            Format = SrcTexDesc.Format;
+        {
+            const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+            if (!SrcFmtAttribs.IsTypeless)
+            {
+                Format = SrcTexDesc.Format;
+            }
+            else
+            {
+                const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
+                DEV_CHECK_ERR(!DstFmtAttribs.IsTypeless, "Resolve operation format can't be typeless when both source and destination textures are typeless");
+                Format = DstFmtAttribs.Format;
+            }
+        }
 
         auto DXGIFmt = TexFormatToDXGI_Format(Format);
         auto SrcSubresIndex = D3D12CalcSubresource(ResolveAttribs.SrcMipLevel, ResolveAttribs.SrcSlice, 0, SrcTexDesc.MipLevels, SrcTexDesc.ArraySize);

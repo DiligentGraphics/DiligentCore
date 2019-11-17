@@ -47,8 +47,8 @@ public:
     using CounterValueType = IReferenceCounters::CounterValueType;
 
     EngineFactoryBase(const INTERFACE_ID& FactoryIID)noexcept :
-        m_FactoryIID(FactoryIID),
-        m_RefCounters(*this)
+        m_FactoryIID  {FactoryIID},
+        m_RefCounters {*this     }
     {
     }
 
@@ -96,7 +96,7 @@ private:
     {
     public:
         DummyReferenceCounters(EngineFactoryBase& Factory)noexcept :
-            m_Factory(Factory)
+            m_Factory {Factory}
         {
             m_lNumStrongReferences = 0;
             m_lNumWeakReferences   = 0;

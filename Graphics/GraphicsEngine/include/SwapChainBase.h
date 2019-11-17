@@ -54,16 +54,21 @@ public:
 	/// \param pDevice - pointer to the device.
 	/// \param pDeviceContext - pointer to the device context.
 	/// \param SCDesc - swap chain description
-    SwapChainBase( IReferenceCounters*  pRefCounters,
-                   IRenderDevice*       pDevice,
-                   IDeviceContext*      pDeviceContext,
-                   const SwapChainDesc& SCDesc ) : 
-        TObjectBase(pRefCounters),
-        m_pRenderDevice(pDevice),
-        m_wpDeviceContext(pDeviceContext),
-        m_SwapChainDesc(SCDesc)
+    SwapChainBase(IReferenceCounters*  pRefCounters,
+                  IRenderDevice*       pDevice,
+                  IDeviceContext*      pDeviceContext,
+                  const SwapChainDesc& SCDesc) :
+        TObjectBase       {pRefCounters},
+        m_pRenderDevice   {pDevice       },
+        m_wpDeviceContext {pDeviceContext},
+        m_SwapChainDesc   {SCDesc        }
     {
     }
+
+    SwapChainBase             (const SwapChainBase&)  = delete;
+    SwapChainBase             (      SwapChainBase&&) = delete;
+    SwapChainBase& operator = (const SwapChainBase&)  = delete;
+    SwapChainBase& operator = (     SwapChainBase&&)  = delete;
 
     ~SwapChainBase()
     {
@@ -143,12 +148,6 @@ protected:
 
     /// Swap chain description
     SwapChainDesc m_SwapChainDesc;
-
-private:
-    SwapChainBase                   ( const SwapChainBase& );
-    SwapChainBase                   ( SwapChainBase&& );
-    const SwapChainBase& operator = ( const SwapChainBase& );
-    const SwapChainBase& operator = ( SwapChainBase&& );
 };
 
 }
