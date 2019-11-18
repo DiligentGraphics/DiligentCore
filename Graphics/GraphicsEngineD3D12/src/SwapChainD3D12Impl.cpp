@@ -76,7 +76,6 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         VERIFY_EXPR(SUCCEEDED(hr));
 
         TextureDesc BackBufferDesc;
-        BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
         String Name = "Main back buffer ";
         Name += std::to_string(backbuff);
         BackBufferDesc.Name = Name.c_str();
@@ -85,6 +84,7 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->CreateTexture(BackBufferDesc, pBackBuffer, RESOURCE_STATE_UNDEFINED, &pBackBufferTex);
         TextureViewDesc RTVDesc;
         RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
+        RTVDesc.Format   = m_SwapChainDesc.ColorBufferFormat;
         RefCntAutoPtr<ITextureView> pRTV;
         pBackBufferTex->CreateView(RTVDesc, &pRTV);
         m_pBackBufferRTV[backbuff] = RefCntAutoPtr<ITextureViewD3D12>(pRTV, IID_TextureViewD3D12);

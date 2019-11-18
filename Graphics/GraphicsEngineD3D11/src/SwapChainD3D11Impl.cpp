@@ -75,7 +75,7 @@ void SwapChainD3D11Impl::CreateRTVandDSV()
 
     TextureViewDesc RTVDesc;
     RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
-    RTVDesc.Format = m_SwapChainDesc.ColorBufferFormat;
+    RTVDesc.Format   = m_SwapChainDesc.ColorBufferFormat;
     RefCntAutoPtr<ITextureView> pRTV;
     pBackBuffer->CreateView(RTVDesc, &pRTV);
     m_pRenderTargetView = RefCntAutoPtr<ITextureViewD3D11>(pRTV, IID_TextureViewD3D11);

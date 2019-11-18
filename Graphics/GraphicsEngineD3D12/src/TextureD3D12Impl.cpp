@@ -339,9 +339,13 @@ static TextureDesc InitTexDescFromD3D12Resource(ID3D12Resource* pTexture, const 
     TextureDesc TexDesc = SrcTexDesc;
     if (TexDesc.Format == TEX_FORMAT_UNKNOWN)
         TexDesc.Format = DXGI_FormatToTexFormat(ResourceDesc.Format);
-    auto RefDXGIFormat = TexFormatToDXGI_Format(TexDesc.Format);
-    if( RefDXGIFormat != TexDesc.Format)
-        LOG_ERROR_AND_THROW("Incorrect texture format (", GetTextureFormatAttribs(TexDesc.Format).Name, ")");
+    else
+    {
+        auto RefFormat = DXGI_FormatToTexFormat(ResourceDesc.Format);
+        DEV_CHECK_ERR(RefFormat == TexDesc.Format, "The format specified by texture description (", GetTextureFormatAttribs(TexDesc.Format).Name, ")"
+                                                   " does not match the D3D12 resource format (", GetTextureFormatAttribs(RefFormat).Name, ")");
+        (void)RefFormat;
+    }
 
     TexDesc.Width = static_cast<Uint32>( ResourceDesc.Width );
     TexDesc.Height = Uint32{ ResourceDesc.Height };

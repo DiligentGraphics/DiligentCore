@@ -97,7 +97,20 @@ namespace Diligent
             //  - DXGI_FORMAT_R10G10B10A2_UNORM
             // If RGBA8_UNORM_SRGB swap chain is required, we will create RGBA8_UNORM swap chain, but
             // create RGBA8_UNORM_SRGB render target view
-            swapChainDesc.Format             = DXGIColorBuffFmt == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGIColorBuffFmt;
+            switch (DXGIColorBuffFmt)
+            {
+                case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+                    swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                    break;
+
+                case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+                    swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+                    break;
+
+                default:
+                    swapChainDesc.Format = DXGIColorBuffFmt;
+            }
+
             swapChainDesc.Stereo             = FALSE;
 
             // Multi-sampled swap chains are not supported anymore. CreateSwapChainForHwnd() fails when sample count is not 1
