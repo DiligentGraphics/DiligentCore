@@ -914,6 +914,11 @@ void DeviceContextBase<BaseInterface,ImplementationTraits> ::
         DEV_CHECK_ERR(!SrcFmtAttribs.IsTypeless && !DstFmtAttribs.IsTypeless,
                       "Format of a resolve operations must not be unknown when one of the texture formats is typeless");
     }
+    if (!SrcFmtAttribs.IsTypeless && !DstFmtAttribs.IsTypeless)
+    {
+        DEV_CHECK_ERR(SrcTexDesc.Format == DstTexDesc.Format, "Source (", SrcFmtAttribs.Name, ") and destination (", DstFmtAttribs.Name, ") texture formats "
+                                                              "of a resolve operation must match exaclty or be compatible typeless formats");
+    }
     if (SrcFmtAttribs.IsTypeless || DstFmtAttribs.IsTypeless)
     {
         DEV_CHECK_ERR(!ResolveFmtAttribs.IsTypeless, "Format of a resolve operations must not be typeless when one of the texture formats is typeless");
