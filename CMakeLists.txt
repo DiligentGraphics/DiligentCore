@@ -308,5 +308,5 @@ if(INSTALL_DILIGENT_CORE)
         "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"    # Install destination
     )
 
-    install(FILES License.txt DESTINATION "Licenses/${DILIGENT_CORE_DIR}" RENAME DiligentEngine-License.txt)
+    install(FILES License.txt DESTINATION "Licenses" RENAME DiligentEngine-License.txt)
 endif(INSTALL_DILIGENT_CORE)
