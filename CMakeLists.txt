@@ -297,74 +297,16 @@ add_subdirectory(Platforms)
 add_subdirectory(Common)
 add_subdirectory(Graphics)
 
-
 # Installation instructions
 if(INSTALL_DILIGENT_CORE)
-    set(COMBINED_CORE_LIB_NAME "${CMAKE_STATIC_LIBRARY_PREFIX}DiligentCore${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
-    foreach(CORE_LIB ${DILIGENT_CORE_INSTALL_LIBS_LIST})
-        list(APPEND CORE_LIB_TARGET_FILES $<TARGET_FILE:${CORE_LIB}>)
-    endforeach(CORE_LIB)
-
-    if(MSVC)
-        add_custom_command(
-            OUTPUT ${COMBINED_CORE_LIB_NAME}
-            COMMAND lib.exe /OUT:${COMBINED_CORE_LIB_NAME} ${CORE_LIB_TARGET_FILES}
-            DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
-            COMMENT "Combining core libraries..."
-        )
-        add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
-    else()
-
-        if(PLATFORM_WIN32)
-            # do NOT use stock ar on MinGW
-            find_program(AR NAMES x86_64-w64-mingw32-gcc-ar)
-        else()
-            set(AR ${CMAKE_AR})
-        endif()
-
-        if(AR)
-            add_custom_command(
-                OUTPUT ${COMBINED_CORE_LIB_NAME}
-                # Delete all object files from current directory
-                COMMAND ${CMAKE_COMMAND} -E remove "*${CMAKE_C_OUTPUT_EXTENSION}"
-                DEPENDS ${DILIGENT_CORE_INSTALL_LIBS_LIST}
-                COMMENT "Combining core libraries..."
-            )
-
-            # Unpack all object files from all targets to current directory
-            foreach(CORE_LIB_TARGET ${CORE_LIB_TARGET_FILES})
-                add_custom_command(
-                    OUTPUT ${COMBINED_CORE_LIB_NAME}
-                    COMMAND ${AR} -x ${CORE_LIB_TARGET}
-                    APPEND
-                )
-            endforeach()
-
-            # Pack object files to a combined library and delete them
-            add_custom_command(
-                OUTPUT ${COMBINED_CORE_LIB_NAME}
-                COMMAND ${AR} -crs ${COMBINED_CORE_LIB_NAME} "*${CMAKE_C_OUTPUT_EXTENSION}"
-                COMMAND ${CMAKE_COMMAND} -E remove "*${CMAKE_C_OUTPUT_EXTENSION}"
-                APPEND
-            )
-
-            add_custom_target(DiligentCore-static ALL DEPENDS ${COMBINED_CORE_LIB_NAME})
-        else()
-            message("ar command is not found")
-        endif()
-    endif()
-
-    if(TARGET DiligentCore-static)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COMBINED_CORE_LIB_NAME}"
-                DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
-        )
-        set_target_properties(DiligentCore-static PROPERTIES
-            FOLDER DiligentCore
-        )
-    else()
-        message("Unable to find librarian tool. Combined DiligentCore static library will not be produced.")
-    endif()
+    install_combined_static_lib(
+        "${CMAKE_STATIC_LIBRARY_PREFIX}DiligentCore${CMAKE_STATIC_LIBRARY_SUFFIX}"
+        "${DILIGENT_CORE_INSTALL_LIBS_LIST}"
+        DiligentCore-static                     # Custom target name
+        DiligentCore                            # Folder
+        "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"    # Install destination
+    )
 
     install(FILES License.txt DESTINATION "Licenses/${DILIGENT_CORE_DIR}" RENAME DiligentEngine-License.txt)
 endif(INSTALL_DILIGENT_CORE)
