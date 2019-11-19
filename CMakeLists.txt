@@ -1,5 +1,7 @@
 cmake_minimum_required (VERSION 3.6)
 
+project(DiligentCore)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(DEBUG_CONFIGURATIONS DEBUG CACHE INTERNAL "Debug configurations")
@@ -277,9 +279,7 @@ else()
     set(DILIGENT_INSTALL_PDB OFF)
 endif()
 
-if(NOT DILIGENT_CORE_INSTALL_DIR)
-    set(DILIGENT_CORE_INSTALL_DIR "DiligentCore" CACHE INTERNAL "DiligentCore installation directory")
-endif()
+file(RELATIVE_PATH DILIGENT_CORE_DIR "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 
 SET(DILIGENT_CORE_INSTALL_LIBS_LIST "" CACHE INTERNAL "Core libraries installation list")
 # CMAKE_INSTALL_PREFIX must be absolute otherwise rpath won't work
@@ -357,7 +357,7 @@ if(INSTALL_DILIGENT_CORE)
 
     if(TARGET DiligentCore-static)
         install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${COMBINED_CORE_LIB_NAME}"
-                DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/$<CONFIG>"
+                DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
         )
         set_target_properties(DiligentCore-static PROPERTIES
             FOLDER DiligentCore
@@ -366,5 +366,5 @@ if(INSTALL_DILIGENT_CORE)
         message("Unable to find librarian tool. Combined DiligentCore static library will not be produced.")
     endif()
 
-    install(FILES License.txt DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses" RENAME DiligentEngine-License.txt)
+    install(FILES License.txt DESTINATION "Licenses/${DILIGENT_CORE_DIR}" RENAME DiligentEngine-License.txt)
 endif(INSTALL_DILIGENT_CORE)

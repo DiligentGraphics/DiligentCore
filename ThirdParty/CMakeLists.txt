@@ -4,20 +4,20 @@ if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
 	add_subdirectory(glew)
     if(INSTALL_DILIGENT_CORE)
         install(TARGETS glew-static
-                ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/$<CONFIG>"
-                LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/$<CONFIG>"
-                RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin/$<CONFIG>"
+                ARCHIVE DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                LIBRARY DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                RUNTIME DESTINATION "bin/${DILIGENT_CORE_DIR}/$<CONFIG>"
         )
     endif()
-    install(FILES glew/LICENSE.txt DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME GLEW-License.txt)
+    install(FILES glew/LICENSE.txt DESTINATION "Licenses/${DILIGENT_CORE_DIR}/ThirdParty" RENAME GLEW-License.txt)
 endif()
 
 if(VULKAN_SUPPORTED)
     # We only need to have SPIRV-Headers folder, but we
     # do not really need any target from the project.
     #add_subdirectory(SPIRV-Headers)
-    #set_directory_root_folder("SPIRV-Headers" "DiligentCore/ThirdParty/SPIRV-Headers")
-    install(FILES SPIRV-Headers/LICENSE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME SPIRV-Headers-License.txt)
+    #set_directory_root_folder("SPIRV-Headers" "ThirdParty/DiligentCore/SPIRV-Headers")
+    install(FILES SPIRV-Headers/LICENSE DESTINATION "Licenses/${DILIGENT_CORE_DIR}/ThirdParty" RENAME SPIRV-Headers-License.txt)
 
     option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
 
@@ -36,7 +36,7 @@ if(VULKAN_SUPPORTED)
     set_target_properties(${SPIRV_TOOLS_EXCLUDE_TARGETS} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
         
     set(INSTALL_TARGETS SPIRV-Tools SPIRV-Tools-opt)
-    install(FILES SPIRV-Tools/LICENSE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME SPIRV-Tools-License.txt)
+    install(FILES SPIRV-Tools/LICENSE DESTINATION "Licenses/${DILIGENT_CORE_DIR}/ThirdParty" RENAME SPIRV-Tools-License.txt)
 
     if(NOT ${DILIGENT_NO_GLSLANG})    
         set(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Do not build glslang binaries")
@@ -50,7 +50,7 @@ if(VULKAN_SUPPORTED)
         unset(CMAKE_DEBUG_POSTFIX CACHE)
 
         list(APPEND INSTALL_TARGETS glslang OGLCompiler OSDependent SPIRV HLSL)
-        install(FILES glslang/LICENSE.txt DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME GLSLang-License.txt)
+        install(FILES glslang/LICENSE.txt DESTINATION "Licenses/${DILIGENT_CORE_DIR}/ThirdParty" RENAME GLSLang-License.txt)
     endif()
 
     set(SPIRV_CROSS_CLI OFF CACHE BOOL "Build the CLI binary. Requires SPIRV_CROSS_STATIC.")
@@ -68,13 +68,13 @@ if(VULKAN_SUPPORTED)
     set_directory_root_folder("SPIRV-Cross" "DiligentCore/ThirdParty/SPIRV-Cross")
 
     list(APPEND INSTALL_TARGETS spirv-cross-core)
-    install(FILES SPIRV-Cross/LICENSE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/Licenses/ThirdParty" RENAME SPIRV-Cross-License.txt)
+    install(FILES SPIRV-Cross/LICENSE DESTINATION "Licenses/${DILIGENT_CORE_DIR}/ThirdParty" RENAME SPIRV-Cross-License.txt)
 
     if(INSTALL_DILIGENT_CORE)
         install(TARGETS ${INSTALL_TARGETS}
-                ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/$<CONFIG>"
-                LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/$<CONFIG>"
-                RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin/$<CONFIG>"
+                ARCHIVE DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                LIBRARY DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                RUNTIME DESTINATION "bin/${DILIGENT_CORE_DIR}/$<CONFIG>"
         )
     endif()
 

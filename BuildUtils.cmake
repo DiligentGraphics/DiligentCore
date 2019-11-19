@@ -199,18 +199,16 @@ function(get_supported_backends _TARGETS)
 endfunction()
 
 
-# Returns path to the library relative to the DiligentCore root
-function(get_core_library_relative_dir _TARGET _DIR)
-    # Use the directory of Primitives (the first target processed) as reference
-    get_target_property(PRIMITIVES_SOURCE_DIR Diligent-Primitives SOURCE_DIR)
+# Returns path to the target relative to CMake root
+function(get_target_relative_dir _TARGET _DIR)
     get_target_property(TARGET_SOURCE_DIR ${_TARGET} SOURCE_DIR)
-    file(RELATIVE_PATH TARGET_RELATIVE_PATH "${PRIMITIVES_SOURCE_DIR}/.." "${TARGET_SOURCE_DIR}")
+    file(RELATIVE_PATH TARGET_RELATIVE_PATH "${CMAKE_SOURCE_DIR}" "${TARGET_SOURCE_DIR}")
     set(${_DIR} ${TARGET_RELATIVE_PATH} PARENT_SCOPE)
 endfunction()
 
 # Performs installation steps for the core library
 function(install_core_lib _TARGET)
-    get_core_library_relative_dir(${_TARGET} TARGET_RELATIVE_PATH)
+    get_target_relative_dir(${_TARGET} TARGET_RELATIVE_PATH)
 
     get_target_property(TARGET_TYPE ${_TARGET} TYPE)
     if(TARGET_TYPE STREQUAL STATIC_LIBRARY)
@@ -218,18 +216,18 @@ function(install_core_lib _TARGET)
         set(DILIGENT_CORE_INSTALL_LIBS_LIST ${DILIGENT_CORE_INSTALL_LIBS_LIST} CACHE INTERNAL "Core libraries installation list")
     elseif(TARGET_TYPE STREQUAL SHARED_LIBRARY)
         install(TARGETS				 ${_TARGET}
-                ARCHIVE DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/lib/$<CONFIG>"
-                LIBRARY DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin/$<CONFIG>"
-                RUNTIME DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin/$<CONFIG>"
+                ARCHIVE DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                LIBRARY DESTINATION "bin/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                RUNTIME DESTINATION "bin/${DILIGENT_CORE_DIR}/$<CONFIG>"
         )
         if (DILIGENT_INSTALL_PDB)
-            install(FILES $<TARGET_PDB_FILE:${_TARGET}> DESTINATION "${DILIGENT_CORE_INSTALL_DIR}/bin/$<CONFIG>" OPTIONAL)
+            install(FILES $<TARGET_PDB_FILE:${_TARGET}> DESTINATION "bin/${DILIGENT_CORE_DIR}/$<CONFIG>" OPTIONAL)
         endif()
     endif()
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/interface")
         install(DIRECTORY    interface
-                DESTINATION  "${DILIGENT_CORE_INSTALL_DIR}/headers/${TARGET_RELATIVE_PATH}/"
+                DESTINATION  "headers/${TARGET_RELATIVE_PATH}/"
         )
     endif()
 endfunction()
