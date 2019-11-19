@@ -86,7 +86,7 @@ build:
 after_test:
   - cd install
   - 7z a DiligentCore-"%platform_name%"-"%PLATFORM%"-"%CONFIGURATION%".zip
-    DiligentCore\*
+    .\*
 
 artifacts:
   - path: install\*.zip
