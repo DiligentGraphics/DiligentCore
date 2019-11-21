@@ -89,6 +89,6 @@ set_target_properties(Diligent-GraphicsEngine PROPERTIES
     FOLDER DiligentCore/Graphics
 )
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-GraphicsEngine)
 endif()

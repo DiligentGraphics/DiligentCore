@@ -75,6 +75,6 @@ set_target_properties(Diligent-GraphicsTools PROPERTIES
     FOLDER DiligentCore/Graphics
 )
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-GraphicsTools)
 endif()

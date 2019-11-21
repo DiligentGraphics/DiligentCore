@@ -78,6 +78,6 @@ set_target_properties(Diligent-GLSLTools PROPERTIES
     FOLDER DiligentCore/Graphics
 )
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-GLSLTools)
 endif()

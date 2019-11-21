@@ -268,9 +268,9 @@ elseif(PLATFORM_IOS)
 endif()
 
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_IOS)
-    option(INSTALL_DILIGENT_CORE "Install DiligentCore module headers and libraries" ON)
+    option(DILIGENT_INSTALL_CORE "Install DiligentCore module headers and libraries" ON)
 else()
-    set(INSTALL_DILIGENT_CORE OFF)
+    set(DILIGENT_INSTALL_CORE OFF)
 endif()
 
 if(MSVC)
@@ -298,7 +298,7 @@ add_subdirectory(Common)
 add_subdirectory(Graphics)
 
 # Installation instructions
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
 
     install_combined_static_lib(
         "${CMAKE_STATIC_LIBRARY_PREFIX}DiligentCore${CMAKE_STATIC_LIBRARY_SUFFIX}"
@@ -309,4 +309,4 @@ if(INSTALL_DILIGENT_CORE)
     )
 
     install(FILES License.txt DESTINATION "Licenses" RENAME DiligentEngine-License.txt)
-endif(INSTALL_DILIGENT_CORE)
+endif(DILIGENT_INSTALL_CORE)

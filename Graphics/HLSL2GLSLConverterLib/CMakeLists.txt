@@ -77,6 +77,6 @@ set_target_properties(Diligent-HLSL2GLSLConverterLib PROPERTIES
     FOLDER DiligentCore/Graphics
 )
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-HLSL2GLSLConverterLib)
 endif()

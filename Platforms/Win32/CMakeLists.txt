@@ -41,6 +41,6 @@ set_target_properties(Diligent-Win32Platform PROPERTIES
     FOLDER DiligentCore/Platforms
 )
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-Win32Platform)
 endif()

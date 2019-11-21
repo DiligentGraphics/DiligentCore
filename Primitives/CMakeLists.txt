@@ -43,6 +43,6 @@ set_target_properties(Diligent-Primitives PROPERTIES
     FOLDER DiligentCore
 )
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-Primitives)
 endif()

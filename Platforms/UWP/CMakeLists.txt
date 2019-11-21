@@ -39,6 +39,6 @@ set_target_properties(Diligent-UniversalWindowsPlatform PROPERTIES
     FOLDER DiligentCore/Platforms
 )
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-UniversalWindowsPlatform)
 endif()

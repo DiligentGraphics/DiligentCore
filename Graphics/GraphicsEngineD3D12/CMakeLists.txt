@@ -184,7 +184,7 @@ set_source_files_properties(
     readme.md PROPERTIES HEADER_FILE_ONLY TRUE
 )
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-GraphicsEngineD3D12-shared)
     install_core_lib(Diligent-GraphicsEngineD3D12-static)
 endif()

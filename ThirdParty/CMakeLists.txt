@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.6)
 
 if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
 	add_subdirectory(glew)
-    if(INSTALL_DILIGENT_CORE)
+    if(DILIGENT_INSTALL_CORE)
         install(TARGETS glew-static
                 ARCHIVE DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
                 LIBRARY DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
@@ -70,7 +70,7 @@ if(VULKAN_SUPPORTED)
     list(APPEND INSTALL_TARGETS spirv-cross-core)
     install(FILES SPIRV-Cross/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Cross-License.txt)
 
-    if(INSTALL_DILIGENT_CORE)
+    if(DILIGENT_INSTALL_CORE)
         install(TARGETS ${INSTALL_TARGETS}
                 ARCHIVE DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
                 LIBRARY DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"

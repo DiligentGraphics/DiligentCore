@@ -293,7 +293,7 @@ set_target_properties(Diligent-ProcessGenerateMipsVkShader PROPERTIES
     FOLDER DiligentCore/Graphics/Helper
 )
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-GraphicsEngineVk-shared)
     install_core_lib(Diligent-GraphicsEngineVk-static)
 endif()

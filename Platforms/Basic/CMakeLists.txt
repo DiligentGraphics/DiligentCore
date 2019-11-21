@@ -42,7 +42,7 @@ set_target_properties(Diligent-BasicPlatform PROPERTIES
 )
 
 
-if(INSTALL_DILIGENT_CORE)
+if(DILIGENT_INSTALL_CORE)
     install_core_lib(Diligent-BasicPlatform)
     get_target_relative_dir(Diligent-BasicPlatform BASIC_PLATFORM_DIR)
     install(DIRECTORY    "../interface"
