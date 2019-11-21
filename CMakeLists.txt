@@ -268,7 +268,7 @@ elseif(PLATFORM_IOS)
 endif()
 
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_LINUX OR PLATFORM_MACOS OR PLATFORM_IOS)
-    option(INSTALL_DILIGENT_CORE "Enable engine core installation" ON)
+    option(INSTALL_DILIGENT_CORE "Install DiligentCore module headers and libraries" ON)
 else()
     set(INSTALL_DILIGENT_CORE OFF)
 endif()
