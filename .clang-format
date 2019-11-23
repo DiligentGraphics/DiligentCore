@@ -1,8 +1,10 @@
 ---
+# https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+
 Language:        Cpp
 # BasedOnStyle:  Microsoft
 
-#The extra indent or outdent of access modifiers, e.g. public:.
+# The extra indent or outdent of access modifiers, e.g. public:.
 AccessModifierOffset: -4
 # class
 # {
