@@ -108,7 +108,7 @@ AllowShortCaseLabelsOnASingleLine: true
 
 AllowShortFunctionsOnASingleLine: All
 AllowShortLambdasOnASingleLine: Inline
-AllowShortIfStatementsOnASingleLine: Never
+AllowShortIfStatementsOnASingleLine: Always
 AllowShortLoopsOnASingleLine: true
 
 # The function definition return type breaking style to use.
