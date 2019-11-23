@@ -909,19 +909,19 @@ void DeviceContextBase<BaseInterface,ImplementationTraits> ::
     const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
     const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
     const auto& ResolveFmtAttribs = GetTextureFormatAttribs(ResolveAttribs.Format);
-    if (ResolveAttribs.Format != TEX_FORMAT_UNKNOWN)
-    {
-        DEV_CHECK_ERR(!SrcFmtAttribs.IsTypeless && !DstFmtAttribs.IsTypeless,
-                      "Format of a resolve operations must not be unknown when one of the texture formats is typeless");
-    }
     if (!SrcFmtAttribs.IsTypeless && !DstFmtAttribs.IsTypeless)
     {
         DEV_CHECK_ERR(SrcTexDesc.Format == DstTexDesc.Format, "Source (", SrcFmtAttribs.Name, ") and destination (", DstFmtAttribs.Name, ") texture formats "
                                                               "of a resolve operation must match exaclty or be compatible typeless formats");
+        DEV_CHECK_ERR(ResolveAttribs.Format == TEX_FORMAT_UNKNOWN || SrcTexDesc.Format == ResolveAttribs.Format, "Invalid format of a resolve operation");
+    }
+    if (SrcFmtAttribs.IsTypeless && DstFmtAttribs.IsTypeless)
+    {
+        DEV_CHECK_ERR(ResolveAttribs.Format != TEX_FORMAT_UNKNOWN, "Format of a resolve operation must not be unknown when both src and dst texture formats are typeless");
     }
     if (SrcFmtAttribs.IsTypeless || DstFmtAttribs.IsTypeless)
     {
-        DEV_CHECK_ERR(!ResolveFmtAttribs.IsTypeless, "Format of a resolve operations must not be typeless when one of the texture formats is typeless");
+        DEV_CHECK_ERR(!ResolveFmtAttribs.IsTypeless, "Format of a resolve operation must not be typeless when one of the texture formats is typeless");
     }
 #endif
 }
