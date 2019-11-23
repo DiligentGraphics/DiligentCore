@@ -36,13 +36,13 @@ namespace Diligent
 
 /// Template class implementing base functionality for a texture view interface
 
-/// \tparam BaseInterface - base interface that this class will inheret 
+/// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::ITextureViewD3D11, Diligent::ITextureViewD3D12,
 ///                          Diligent::ITextureViewGL or Diligent::ITextureViewVk).
 /// \tparam RenderDeviceImplType - type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template<class BaseInterface, class RenderDeviceImplType>
+template <class BaseInterface, class RenderDeviceImplType>
 class TextureViewBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, TextureViewDesc>
 {
 public:
@@ -50,68 +50,68 @@ public:
 
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this texture view.
-	/// \param pDevice - pointer to the render device.
-	/// \param ViewDesc - texture view description.
-	/// \param pTexture - pointer to the texture that the view is to be created for.
-	/// \param bIsDefaultView - flag indicating if the view is default view, and is thus
-	///						    part of the texture object. In this case the view will attach 
-	///							to the texture's reference counters.
-    TextureViewBase( IReferenceCounters*    pRefCounters,
-                     RenderDeviceImplType*  pDevice,
-                     const TextureViewDesc& ViewDesc, 
-                     class ITexture*        pTexture,
-                     bool                   bIsDefaultView ) :
-        // Default views are created as part of the texture, so we cannot not keep strong 
-        // reference to the texture to avoid cyclic links. Instead, we will attach to the 
+    /// \param pDevice - pointer to the render device.
+    /// \param ViewDesc - texture view description.
+    /// \param pTexture - pointer to the texture that the view is to be created for.
+    /// \param bIsDefaultView - flag indicating if the view is default view, and is thus
+    ///						    part of the texture object. In this case the view will attach
+    ///							to the texture's reference counters.
+    TextureViewBase(IReferenceCounters*    pRefCounters,
+                    RenderDeviceImplType*  pDevice,
+                    const TextureViewDesc& ViewDesc,
+                    class ITexture*        pTexture,
+                    bool                   bIsDefaultView) :
+        // Default views are created as part of the texture, so we cannot not keep strong
+        // reference to the texture to avoid cyclic links. Instead, we will attach to the
         // reference counters of the texture.
-        TDeviceObjectBase( pRefCounters, pDevice, ViewDesc ),
-        m_pTexture( pTexture ),
+        TDeviceObjectBase(pRefCounters, pDevice, ViewDesc),
+        m_pTexture(pTexture),
         // For non-default view, we will keep strong reference to texture
         m_spTexture(bIsDefaultView ? nullptr : pTexture)
     {}
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_TextureView, TDeviceObjectBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureView, TDeviceObjectBase)
 
     /// Implementation of ITextureView::SetSampler()
-    virtual void SetSampler( class ISampler *pSampler )override final
+    virtual void SetSampler(class ISampler* pSampler) override final
     {
 #ifdef DEVELOPMENT
-        if( this->m_Desc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
-            LOG_ERROR("Texture view \"", this->m_Desc.Name, "\": a sampler can be attached to a shader resource view only. The view type is ", GetTexViewTypeLiteralName(this->m_Desc.ViewType) );
+        if (this->m_Desc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)
+            LOG_ERROR("Texture view \"", this->m_Desc.Name, "\": a sampler can be attached to a shader resource view only. The view type is ", GetTexViewTypeLiteralName(this->m_Desc.ViewType));
 #endif
         m_pSampler = pSampler;
     }
 
     /// Implementation of ITextureView::GetSampler()
-    virtual ISampler* GetSampler()override final
-    { 
-        return m_pSampler; 
+    virtual ISampler* GetSampler() override final
+    {
+        return m_pSampler;
     }
-    
-    const ISampler* GetSampler()const
+
+    const ISampler* GetSampler() const
     {
         return m_pSampler;
     }
 
     /// Implementation of ITextureView::GetTexture()
-    virtual ITexture* GetTexture()override final
+    virtual ITexture* GetTexture() override final
     {
         return m_pTexture;
     }
 
-    const ITexture* GetTexture()const
+    const ITexture* GetTexture() const
     {
         return m_pTexture;
     }
 
-    template<typename TextureType>
+    template <typename TextureType>
     TextureType* GetTexture()
     {
         return ValidatedCast<TextureType>(m_pTexture);
     }
 
-    template<typename TextureType>
-    TextureType* GetTexture()const
+    template <typename TextureType>
+    TextureType* GetTexture() const
     {
         return ValidatedCast<TextureType>(m_pTexture);
     }
@@ -128,4 +128,4 @@ protected:
     RefCntAutoPtr<ITexture> m_spTexture;
 };
 
-}
+} // namespace Diligent

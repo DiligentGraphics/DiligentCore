@@ -42,7 +42,7 @@ namespace Diligent
 
 static APIInfo InitAPIInfo()
 {
-    APIInfo Info = {};
+    APIInfo Info    = {};
     Info.StructSize = sizeof(APIInfo);
     Info.APIVersion = DILIGENT_API_VERSION;
 
@@ -114,4 +114,4 @@ const APIInfo& GetAPIInfo()
     return Info;
 }
 
-}
+} // namespace Diligent

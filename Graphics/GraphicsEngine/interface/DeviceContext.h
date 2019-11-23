@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Definition of the Diligent::IDeviceContext interface and related data structures
 
@@ -50,7 +52,7 @@ namespace Diligent
 
 // {DC92711B-A1BE-4319-B2BD-C662D1CC19E4}
 static constexpr INTERFACE_ID IID_DeviceContext =
-{ 0xdc92711b, 0xa1be, 0x4319, { 0xb2, 0xbd, 0xc6, 0x62, 0xd1, 0xcc, 0x19, 0xe4 } };
+    {0xdc92711b, 0xa1be, 0x4319, {0xb2, 0xbd, 0xc6, 0x62, 0xd1, 0xcc, 0x19, 0xe4}};
 
 /// Draw command flags
 enum DRAW_FLAGS : Uint8
@@ -476,12 +478,12 @@ struct Viewport
     Viewport(Float32 _TopLeftX,     Float32 _TopLeftY,
              Float32 _Width,        Float32 _Height,
              Float32 _MinDepth = 0, Float32 _MaxDepth = 1)noexcept :
-        TopLeftX (_TopLeftX),
-        TopLeftY (_TopLeftY),
-        Width    (_Width   ),
-        Height   (_Height  ),
-        MinDepth (_MinDepth),
-        MaxDepth (_MaxDepth)
+        TopLeftX {_TopLeftX},
+        TopLeftY {_TopLeftY},
+        Width    {_Width   },
+        Height   {_Height  },
+        MinDepth {_MinDepth},
+        MaxDepth {_MaxDepth}
     {}
 
     Viewport()noexcept{}
@@ -503,10 +505,10 @@ struct Rect
 
     /// Initializes the structure
     Rect(Int32 _left, Int32 _top, Int32 _right, Int32 _bottom)noexcept : 
-        left  ( _left   ),
-        top   ( _top    ),
-        right ( _right  ),
-        bottom( _bottom )
+        left   {_left  },
+        top    {_top   },
+        right  {_right },
+        bottom {_bottom}
     {}
 
     Rect()noexcept{}
@@ -565,10 +567,10 @@ struct CopyTextureAttribs
                        RESOURCE_STATE_TRANSITION_MODE _SrcTextureTransitionMode,
                        ITexture*                      _pDstTexture,
                        RESOURCE_STATE_TRANSITION_MODE _DstTextureTransitionMode)noexcept :
-        pSrcTexture             (_pSrcTexture),
-        SrcTextureTransitionMode(_SrcTextureTransitionMode),
-        pDstTexture             (_pDstTexture),
-        DstTextureTransitionMode(_DstTextureTransitionMode)
+        pSrcTexture             {_pSrcTexture             },
+        SrcTextureTransitionMode{_SrcTextureTransitionMode},
+        pDstTexture             {_pDstTexture             },
+        DstTextureTransitionMode{_DstTextureTransitionMode}
     {}
 };
 
@@ -1056,7 +1058,7 @@ public:
     /// \param [in] MapType      - Type of the map operation. See Diligent::MAP_TYPE.
     /// \param [in] MapFlags     - Special map flags. See Diligent::MAP_FLAGS.
     /// \param [out] pMappedData - Reference to the void pointer to store the address of the mapped region.
-    virtual void MapBuffer( IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData ) = 0;
+    virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData) = 0;
 
 
     /// Unmaps the previously mapped buffer.
@@ -1064,7 +1066,7 @@ public:
     /// \param [in] pBuffer - Pointer to the buffer to unmap.
     /// \param [in] MapType - Type of the map operation. This parameter must match the type that was 
     ///                       provided to the Map() method. 
-    virtual void UnmapBuffer( IBuffer* pBuffer, MAP_TYPE MapType ) = 0;
+    virtual void UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType) = 0;
 
 
     /// Updates the data in the texture.
@@ -1107,13 +1109,13 @@ public:
     ///          subresource can be mapped, so pMapRegion must either be null, or cover the entire subresource.
     ///          In D3D11 and Vulkan backends, dynamic textures are no different from non-dynamic textures, and mapping 
     ///          with MAP_FLAG_DISCARD has exactly the same behavior.
-    virtual void MapTextureSubresource( ITexture*                 pTexture,
-                                        Uint32                    MipLevel,
-                                        Uint32                    ArraySlice,
-                                        MAP_TYPE                  MapType,
-                                        MAP_FLAGS                 MapFlags,
-                                        const Box*                pMapRegion,
-                                        MappedTextureSubresource& MappedData ) = 0;
+    virtual void MapTextureSubresource(ITexture*                 pTexture,
+                                       Uint32                    MipLevel,
+                                       Uint32                    ArraySlice,
+                                       MAP_TYPE                  MapType,
+                                       MAP_FLAGS                 MapFlags,
+                                       const Box*                pMapRegion,
+                                       MappedTextureSubresource& MappedData) = 0;
 
 
     /// Unmaps the texture subresource.

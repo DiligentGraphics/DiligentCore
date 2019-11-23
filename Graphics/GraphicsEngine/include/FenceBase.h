@@ -42,7 +42,7 @@ class IFence;
 ///                         (Diligent::IFenceD3D11, Diligent::IFenceD3D12,
 ///                          Diligent::IFenceGL or Diligent::IFenceVk).
 /// \tparam RenderDeviceImplType - type of the render device implementation
-template<class BaseInterface, class RenderDeviceImplType>
+template <class BaseInterface, class RenderDeviceImplType>
 class FenceBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, FenceDesc>
 {
 public:
@@ -50,18 +50,18 @@ public:
 
     /// \param pRefCounters      - reference counters object that controls the lifetime of this command list.
     /// \param Desc              - fence description
-	/// \param pDevice           - pointer to the device.
-	/// \param bIsDeviceInternal - flag indicating if the Fence is an internal device object and 
-	///							   must not keep a strong reference to the device.
-    FenceBase( IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const FenceDesc& Desc, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pRefCounters, pDevice, Desc, bIsDeviceInternal )
+    /// \param pDevice           - pointer to the device.
+    /// \param bIsDeviceInternal - flag indicating if the Fence is an internal device object and
+    ///							   must not keep a strong reference to the device.
+    FenceBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const FenceDesc& Desc, bool bIsDeviceInternal = false) :
+        TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {}
 
     ~FenceBase()
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Fence, TDeviceObjectBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Fence, TDeviceObjectBase)
 };
 
-}
+} // namespace Diligent

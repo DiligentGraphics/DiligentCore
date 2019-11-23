@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Definition of the Diligent::ITexture interface and related data structures
 
@@ -35,7 +37,7 @@ class IDeviceContext;
 
 // {A64B0E60-1B5E-4CFD-B880-663A1ADCBE98}
 static constexpr INTERFACE_ID IID_Texture =
-{ 0xa64b0e60, 0x1b5e, 0x4cfd, { 0xb8, 0x80, 0x66, 0x3a, 0x1a, 0xdc, 0xbe, 0x98 } };
+    {0xa64b0e60, 0x1b5e, 0x4cfd,{0xb8, 0x80, 0x66, 0x3a, 0x1a, 0xdc, 0xbe, 0x98}};
 
 /// Defines optimized depth-stencil clear value.
 struct DepthStencilClearValue
@@ -52,8 +54,8 @@ struct DepthStencilClearValue
 
     DepthStencilClearValue(Float32 _Depth,
                            Uint8   _Stencil)noexcept : 
-        Depth   (_Depth),
-        Stencil (_Stencil)
+        Depth   {_Depth  },
+        Stencil {_Stencil}
     {}
 };
 
@@ -151,19 +153,19 @@ struct TextureDesc : DeviceObjectAttribs
                 MISC_TEXTURE_FLAGS  _MiscFlags        = TextureDesc{}.MiscFlags,
                 OptimizedClearValue _ClearValue       = TextureDesc{}.ClearValue,
                 Uint64              _CommandQueueMask = TextureDesc{}.CommandQueueMask) : 
-        Type             (_Type), 
-        Width            (_Width),
-        Height           (_Height),
-        ArraySize        (_ArraySizeOrDepth),
-        Format           (_Format),
-        MipLevels        (_MipLevels),
-        SampleCount      (_SampleCount),
-        Usage            (_Usage),
-        BindFlags        (_BindFlags),
-        CPUAccessFlags   (_CPUAccessFlags),
-        MiscFlags        (_MiscFlags),
-        ClearValue       (_ClearValue),
-        CommandQueueMask (_CommandQueueMask)
+        Type             {_Type            }, 
+        Width            {_Width           },
+        Height           {_Height          },
+        ArraySize        {_ArraySizeOrDepth},
+        Format           {_Format          },
+        MipLevels        {_MipLevels       },
+        SampleCount      {_SampleCount     },
+        Usage            {_Usage           },
+        BindFlags        {_BindFlags       },
+        CPUAccessFlags   {_CPUAccessFlags  },
+        MiscFlags        {_MiscFlags       },
+        ClearValue       {_ClearValue      },
+        CommandQueueMask {_CommandQueueMask}
     {}
 
     /// Tests if two structures are equivalent
@@ -239,11 +241,11 @@ struct TextureSubResData
 
     /// Initializes the structure members to perform copy from the GPU buffer
     TextureSubResData(IBuffer* _pBuffer, Uint32 _SrcOffset, Uint32 _Stride, Uint32 _DepthStride = 0)noexcept :
-        pData       (nullptr),
-        pSrcBuffer  (_pBuffer),
-        SrcOffset   (_SrcOffset),
-        Stride      (_Stride),
-        DepthStride (_DepthStride)
+        pData       {nullptr     },
+        pSrcBuffer  {_pBuffer    },
+        SrcOffset   {_SrcOffset  },
+        Stride      {_Stride     },
+        DepthStride {_DepthStride}
     {}
 };
 
@@ -264,8 +266,8 @@ struct TextureData
 
     TextureData(TextureSubResData* _pSubResources,
                 Uint32             _NumSubresources) noexcept :
-        pSubResources   (_pSubResources),
-        NumSubresources (_NumSubresources)
+        pSubResources   {_pSubResources  },
+        NumSubresources {_NumSubresources}
     {}
 };
 
@@ -280,9 +282,9 @@ struct MappedTextureSubresource
     MappedTextureSubresource(PVoid  _pData,
                              Uint32 _Stride,
                              Uint32 _DepthStride = 0) noexcept :
-        pData       (_pData),
-        Stride      (_Stride),
-        DepthStride (_DepthStride)
+        pData       {_pData      },
+        Stride      {_Stride     },
+        DepthStride {_DepthStride}
     {}
 };
 

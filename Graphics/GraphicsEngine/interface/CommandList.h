@@ -33,7 +33,7 @@ namespace Diligent
 
 // {C38C68F2-8A8C-4ED5-B7EE-69126E75DCD8}
 static constexpr INTERFACE_ID IID_CommandList =
-{ 0xc38c68f2, 0x8a8c, 0x4ed5, { 0xb7, 0xee, 0x69, 0x12, 0x6e, 0x75, 0xdc, 0xd8 } };
+    {0xc38c68f2, 0x8a8c, 0x4ed5, {0xb7, 0xee, 0x69, 0x12, 0x6e, 0x75, 0xdc, 0xd8}};
 
 /// Command list interface
 
@@ -41,9 +41,6 @@ static constexpr INTERFACE_ID IID_CommandList =
 /// IDeviceContext::ExecuteCommandList().
 class ICommandList : public IDeviceObject
 {
-public:
-    
-
 };
 
-}
+} // namespace Diligent

@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Definition of the device capabilities
 

@@ -33,9 +33,9 @@ namespace Diligent
 class DefaultShaderSourceStreamFactory final : public ObjectBase<IShaderSourceInputStreamFactory>
 {
 public:
-    DefaultShaderSourceStreamFactory(IReferenceCounters* pRefCounters, const Char *SearchDirectories);
+    DefaultShaderSourceStreamFactory(IReferenceCounters* pRefCounters, const Char* SearchDirectories);
 
-    virtual void CreateInputStream(const Char *Name, IFileStream **ppStream)override final;
+    virtual void CreateInputStream(const Char* Name, IFileStream** ppStream) override final;
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderSourceInputStreamFactory, ObjectBase<IShaderSourceInputStreamFactory>);
 
@@ -43,44 +43,44 @@ private:
     std::vector<String> m_SearchDirectories;
 };
 
-DefaultShaderSourceStreamFactory::DefaultShaderSourceStreamFactory(IReferenceCounters* pRefCounters, const Char* SearchDirectories) : 
+DefaultShaderSourceStreamFactory::DefaultShaderSourceStreamFactory(IReferenceCounters* pRefCounters, const Char* SearchDirectories) :
     ObjectBase<IShaderSourceInputStreamFactory>(pRefCounters)
 {
-    while( SearchDirectories )
+    while (SearchDirectories)
     {
-        const char* Semicolon = strchr( SearchDirectories, ';' );
-        String SearchPath;
-        if( Semicolon == nullptr )
+        const char* Semicolon = strchr(SearchDirectories, ';');
+        String      SearchPath;
+        if (Semicolon == nullptr)
         {
-            SearchPath = SearchDirectories;
+            SearchPath        = SearchDirectories;
             SearchDirectories = nullptr;
         }
         else
         {
-            SearchPath = String( SearchDirectories, Semicolon );
+            SearchPath        = String(SearchDirectories, Semicolon);
             SearchDirectories = Semicolon + 1;
         }
 
-        if( SearchPath.length() > 0 )
+        if (SearchPath.length() > 0)
         {
-            if( SearchPath.back() != '\\' && SearchPath.back() != '/' )
-                SearchPath.push_back( '\\' );
-            m_SearchDirectories.push_back( SearchPath );
+            if (SearchPath.back() != '\\' && SearchPath.back() != '/')
+                SearchPath.push_back('\\');
+            m_SearchDirectories.push_back(SearchPath);
         }
     }
-    m_SearchDirectories.push_back( "" );
+    m_SearchDirectories.push_back("");
 }
 
-void DefaultShaderSourceStreamFactory::CreateInputStream( const Diligent::Char *Name, IFileStream **ppStream )
+void DefaultShaderSourceStreamFactory::CreateInputStream(const Diligent::Char* Name, IFileStream** ppStream)
 {
-    bool bFileCreated = false;
+    bool                                     bFileCreated = false;
     Diligent::RefCntAutoPtr<BasicFileStream> pBasicFileStream;
-    for (const auto &SearchDir : m_SearchDirectories)
+    for (const auto& SearchDir : m_SearchDirectories)
     {
-        String FullPath = SearchDir + ( (Name[0] == '\\' || Name[0] == '/') ? Name + 1 : Name);
+        String FullPath = SearchDir + ((Name[0] == '\\' || Name[0] == '/') ? Name + 1 : Name);
         if (!FileSystem::FileExists(FullPath.c_str()))
             continue;
-        pBasicFileStream = MakeNewRCObj<BasicFileStream>()( FullPath.c_str(), EFileAccessMode::Read );
+        pBasicFileStream = MakeNewRCObj<BasicFileStream>()(FullPath.c_str(), EFileAccessMode::Read);
         if (pBasicFileStream->IsValid())
         {
             bFileCreated = true;
@@ -93,23 +93,23 @@ void DefaultShaderSourceStreamFactory::CreateInputStream( const Diligent::Char *
     }
     if (bFileCreated)
     {
-        pBasicFileStream->QueryInterface( IID_FileStream, reinterpret_cast<IObject**>(ppStream) );
+        pBasicFileStream->QueryInterface(IID_FileStream, reinterpret_cast<IObject**>(ppStream));
     }
     else
     {
         *ppStream = nullptr;
-        LOG_ERROR( "Failed to create input stream for source file ", Name );
+        LOG_ERROR("Failed to create input stream for source file ", Name);
     }
 }
 
-void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories, 
+void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories,
                                             IShaderSourceInputStreamFactory** ppShaderSourceStreamFactory)
 {
-    
-    auto& Allocator = GetRawAllocator();
-    DefaultShaderSourceStreamFactory*  pStreamFactory =
+
+    auto&                             Allocator = GetRawAllocator();
+    DefaultShaderSourceStreamFactory* pStreamFactory =
         NEW_RC_OBJ(Allocator, "DefaultShaderSourceStreamFactory instance", DefaultShaderSourceStreamFactory)(SearchDirectories);
     pStreamFactory->QueryInterface(IID_IShaderSourceInputStreamFactory, reinterpret_cast<IObject**>(ppShaderSourceStreamFactory));
 }
 
-}
+} // namespace Diligent

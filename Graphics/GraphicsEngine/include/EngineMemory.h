@@ -30,20 +30,20 @@
 
 namespace Diligent
 {
-    /// Sets raw memory allocator. This function must be called before any memory allocation/deallocation function
-    /// is called.
-    void SetRawAllocator(IMemoryAllocator *pRawAllocator);
+/// Sets raw memory allocator. This function must be called before any memory allocation/deallocation function
+/// is called.
+void SetRawAllocator(IMemoryAllocator* pRawAllocator);
 
-    /// Returns raw memory allocator
-    IMemoryAllocator& GetRawAllocator();
+/// Returns raw memory allocator
+IMemoryAllocator& GetRawAllocator();
 
-    IMemoryAllocator& GetStringAllocator();
+IMemoryAllocator& GetStringAllocator();
 
-#define ALLOCATE_RAW(Allocator, Desc, Size) (Allocator).Allocate(Size, Desc, __FILE__, __LINE__)
+#define ALLOCATE_RAW(Allocator, Desc, Size)    (Allocator).Allocate(Size, Desc, __FILE__, __LINE__)
 #define ALLOCATE(Allocator, Desc, Type, Count) reinterpret_cast<Type*>(ALLOCATE_RAW(Allocator, Desc, sizeof(Type) * (Count)))
-#define FREE(Allocator, Ptr) Allocator.Free(Ptr)
+#define FREE(Allocator, Ptr)                   Allocator.Free(Ptr)
 
-}
+} // namespace Diligent
 
 
 #if 0
@@ -68,10 +68,10 @@ inline void operator delete[](void* Ptr, const char* dbgDescription, const char*
     Diligent::GetRawAllocator().Free(Ptr); 
 }
 
-#define MemAlloc(Size, Desc) GetRawAllocator().Allocate(Size, Desc, __FILE__, __LINE__)
-#define MemFree(Ptr) GetRawAllocator().Free(Ptr)
-#define New(Desc) new(Desc, __FILE__, __LINE__)
-#define Delete delete
+#    define MemAlloc(Size, Desc) GetRawAllocator().Allocate(Size, Desc, __FILE__, __LINE__)
+#    define MemFree(Ptr)         GetRawAllocator().Free(Ptr)
+#    define New(Desc)            new (Desc, __FILE__, __LINE__)
+#    define Delete               delete
 
 
 #endif

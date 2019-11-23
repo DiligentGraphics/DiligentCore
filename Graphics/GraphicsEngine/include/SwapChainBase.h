@@ -39,56 +39,60 @@ namespace Diligent
 
 /// Base implementation of the swap chain.
 
-/// \tparam BaseInterface - base interface that this class will inheret 
+/// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::ISwapChainGL, Diligent::ISwapChainD3D11,
 ///                          Diligent::ISwapChainD3D12 or Diligent::ISwapChainVk).
 /// \remarks Swap chain holds the strong reference to the device and a weak reference to the
 ///          immediate context.
-template<class BaseInterface>
+template <class BaseInterface>
 class SwapChainBase : public ObjectBase<BaseInterface>
 {
 public:
     typedef ObjectBase<BaseInterface> TObjectBase;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this swap chain.
-	/// \param pDevice - pointer to the device.
-	/// \param pDeviceContext - pointer to the device context.
-	/// \param SCDesc - swap chain description
+    /// \param pDevice - pointer to the device.
+    /// \param pDeviceContext - pointer to the device context.
+    /// \param SCDesc - swap chain description
     SwapChainBase(IReferenceCounters*  pRefCounters,
                   IRenderDevice*       pDevice,
                   IDeviceContext*      pDeviceContext,
                   const SwapChainDesc& SCDesc) :
+        // clang-format off
         TObjectBase       {pRefCounters},
         m_pRenderDevice   {pDevice       },
         m_wpDeviceContext {pDeviceContext},
         m_SwapChainDesc   {SCDesc        }
+    // clang-format on
     {
     }
 
+    // clang-format off
     SwapChainBase             (const SwapChainBase&)  = delete;
     SwapChainBase             (      SwapChainBase&&) = delete;
     SwapChainBase& operator = (const SwapChainBase&)  = delete;
     SwapChainBase& operator = (     SwapChainBase&&)  = delete;
+    // clang-format on
 
     ~SwapChainBase()
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_SwapChain, TObjectBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SwapChain, TObjectBase)
 
     /// Implementation of ISwapChain::GetDesc()
-    virtual const SwapChainDesc& GetDesc()const override final
+    virtual const SwapChainDesc& GetDesc() const override final
     {
         return m_SwapChainDesc;
     }
-    
+
 protected:
-    bool Resize( Uint32 NewWidth, Uint32 NewHeight, Int32 Dummy = 0/*To be different from virtual function*/ )
+    bool Resize(Uint32 NewWidth, Uint32 NewHeight, Int32 Dummy = 0 /*To be different from virtual function*/)
     {
-        if( NewWidth != 0 && NewHeight != 0 &&
-            (m_SwapChainDesc.Width != NewWidth || m_SwapChainDesc.Height != NewHeight) )
+        if (NewWidth != 0 && NewHeight != 0 &&
+            (m_SwapChainDesc.Width != NewWidth || m_SwapChainDesc.Height != NewHeight))
         {
-            m_SwapChainDesc.Width = NewWidth;
+            m_SwapChainDesc.Width  = NewWidth;
             m_SwapChainDesc.Height = NewHeight;
             LOG_INFO_MESSAGE("Resizing the swap chain to ", m_SwapChainDesc.Width, "x", m_SwapChainDesc.Height);
             return true;
@@ -97,13 +101,13 @@ protected:
         return false;
     }
 
-    template<typename DeviceContextImplType>
+    template <typename DeviceContextImplType>
     bool UnbindRenderTargets(DeviceContextImplType* pImmediateCtx,
                              ITextureView*          ppBackBufferRTVs[],
                              Uint32                 NumBackBufferRTVs,
                              ITextureView*          pDSV)
     {
-        bool RebindRenderTargets = false; 
+        bool RebindRenderTargets = false;
         bool UnbindRenderTargets = false;
         if (m_SwapChainDesc.IsPrimary)
         {
@@ -112,12 +116,12 @@ protected:
         else
         {
             std::array<ITextureView*, MaxRenderTargets> pBoundRTVs = {};
-            RefCntAutoPtr<ITextureView> pBoundDSV;
-            Uint32 NumRenderTargets = 0;
+            RefCntAutoPtr<ITextureView>                 pBoundDSV;
+            Uint32                                      NumRenderTargets = 0;
             pImmediateCtx->GetRenderTargets(NumRenderTargets, pBoundRTVs.data(), &pBoundDSV);
-            for (Uint32 i=0; i < NumRenderTargets; ++i)
+            for (Uint32 i = 0; i < NumRenderTargets; ++i)
             {
-                for (Uint32 j=0; j < NumBackBufferRTVs; ++j)
+                for (Uint32 j = 0; j < NumBackBufferRTVs; ++j)
                 {
                     if (pBoundRTVs[i] == ppBackBufferRTVs[j])
                         UnbindRenderTargets = true;
@@ -141,7 +145,7 @@ protected:
 
     /// Strong reference to the render device
     RefCntAutoPtr<IRenderDevice> m_pRenderDevice;
-    
+
     /// Weak references to the immediate device context. The context holds
     /// the strong reference to the swap chain.
     RefCntWeakPtr<IDeviceContext> m_wpDeviceContext;
@@ -150,4 +154,4 @@ protected:
     SwapChainDesc m_SwapChainDesc;
 };
 
-}
+} // namespace Diligent

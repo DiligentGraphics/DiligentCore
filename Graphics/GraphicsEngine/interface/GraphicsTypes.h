@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Contains basic graphics engine type defintions
 
@@ -1079,7 +1081,7 @@ namespace Diligent
         DeviceObjectAttribs()noexcept{}
 
         explicit DeviceObjectAttribs(const Char* _Name) : 
-            Name(_Name)
+            Name{_Name}
         {}
     };
 
@@ -1235,14 +1237,14 @@ namespace Diligent
                       Float32        _DefaultDepthValue   = SwapChainDesc{}.DefaultDepthValue,
                       Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue,
                       bool           _IsPrimary           = SwapChainDesc{}.IsPrimary) :
-            Width               (_Width),
-            Height              (_Height),
-            ColorBufferFormat   (_ColorBufferFormat),
-            DepthBufferFormat   (_DepthBufferFormat),
-            BufferCount         (_BufferCount),
-            DefaultDepthValue   (_DefaultDepthValue),
-            DefaultStencilValue (_DefaultStencilValue),
-            IsPrimary           (_IsPrimary)
+            Width               {_Width              },
+            Height              {_Height             },
+            ColorBufferFormat   {_ColorBufferFormat  },
+            DepthBufferFormat   {_DepthBufferFormat  },
+            BufferCount         {_BufferCount        },
+            DefaultDepthValue   {_DefaultDepthValue  },
+            DefaultStencilValue {_DefaultStencilValue},
+            IsPrimary           {_IsPrimary          }
         {}
     };
 
@@ -1507,15 +1509,15 @@ namespace Diligent
                                 Uint32 _NumStorageBufferDescriptors,
                                 Uint32 _NumUniformTexelBufferDescriptors,
                                 Uint32 _NumStorageTexelBufferDescriptors)noexcept :
-                MaxDescriptorSets               (_MaxDescriptorSets               ),
-                NumSeparateSamplerDescriptors   (_NumSeparateSamplerDescriptors   ),
-                NumCombinedSamplerDescriptors   (_NumCombinedSamplerDescriptors   ),
-                NumSampledImageDescriptors      (_NumSampledImageDescriptors      ),
-                NumStorageImageDescriptors      (_NumStorageImageDescriptors      ),
-                NumUniformBufferDescriptors     (_NumUniformBufferDescriptors     ),
-                NumStorageBufferDescriptors     (_NumStorageBufferDescriptors     ),
-                NumUniformTexelBufferDescriptors(_NumUniformTexelBufferDescriptors),
-                NumStorageTexelBufferDescriptors(_NumStorageTexelBufferDescriptors)
+                MaxDescriptorSets               {_MaxDescriptorSets               },
+                NumSeparateSamplerDescriptors   {_NumSeparateSamplerDescriptors   },
+                NumCombinedSamplerDescriptors   {_NumCombinedSamplerDescriptors   },
+                NumSampledImageDescriptors      {_NumSampledImageDescriptors      },
+                NumStorageImageDescriptors      {_NumStorageImageDescriptors      },
+                NumUniformBufferDescriptors     {_NumUniformBufferDescriptors     },
+                NumStorageBufferDescriptors     {_NumStorageBufferDescriptors     },
+                NumUniformTexelBufferDescriptors{_NumUniformTexelBufferDescriptors},
+                NumStorageTexelBufferDescriptors{_NumStorageTexelBufferDescriptors}
             {
                 // On clang aggregate initialization fails to compile if 
                 // structure members have default initializers
@@ -1570,7 +1572,6 @@ namespace Diligent
     /// Attributes of the Metal-based engine implementation
     struct EngineMtlCreateInfo : public EngineCreateInfo
     {
-
     };
 
 
@@ -1587,18 +1588,21 @@ namespace Diligent
        Box(Uint32 _MinX, Uint32 _MaxX,	
            Uint32 _MinY, Uint32 _MaxY,	
            Uint32 _MinZ, Uint32 _MaxZ) : 	
-            MinX(_MinX), MaxX(_MaxX),	
-            MinY(_MinY), MaxY(_MaxY),	
-            MinZ(_MinZ), MaxZ(_MaxZ)	
+            MinX {_MinX},
+            MaxX {_MaxX},
+            MinY {_MinY},
+            MaxY {_MaxY},
+            MinZ {_MinZ},
+            MaxZ {_MaxZ}	
         {}
 
        Box(Uint32 _MinX, Uint32 _MaxX,	
            Uint32 _MinY, Uint32 _MaxY) :
-            Box(_MinX, _MaxX, _MinY, _MaxY, 0, 1)
+            Box{_MinX, _MaxX, _MinY, _MaxY, 0, 1}
         {}
 
        Box(Uint32 _MinX, Uint32 _MaxX) :
-            Box(_MinX, _MaxX, 0, 0, 0, 1)
+            Box{_MinX, _MaxX, 0, 0, 0, 1}
         {}
 
        Box(){}
@@ -1649,29 +1653,29 @@ namespace Diligent
     {
         /// Literal texture format name (for instance, for TEX_FORMAT_RGBA8_UNORM format, this
         /// will be "TEX_FORMAT_RGBA8_UNORM")
-        const Char* Name;
+        const Char* Name            = "TEX_FORMAT_UNKNOWN";
 
         /// Texture format, see Diligent::TEXTURE_FORMAT for a list of supported texture formats
-        TEXTURE_FORMAT Format;
+        TEXTURE_FORMAT Format       = TEX_FORMAT_UNKNOWN;
 
         /// Size of one component in bytes (for instance, for TEX_FORMAT_RGBA8_UNORM format, this will be 1)
         /// For compressed formats, this is the block size in bytes (for TEX_FORMAT_BC1_UNORM format, this will be 8)
-        Uint8 ComponentSize;
+        Uint8 ComponentSize         = 0;
 
         /// Number of components
-        Uint8 NumComponents;
+        Uint8 NumComponents         = 0;
 
         /// Component type, see Diligent::COMPONENT_TYPE for details.
-        COMPONENT_TYPE ComponentType;    
+        COMPONENT_TYPE ComponentType = COMPONENT_TYPE_UNDEFINED;    
 
         /// Bool flag indicating if the format is a typeless format
-        bool IsTypeless;
+        bool IsTypeless             = false;
 
         /// For block-compressed formats, compression block width
-        Uint8 BlockWidth;
+        Uint8 BlockWidth            = 0;
 
         /// For block-compressed formats, compression block height
-        Uint8 BlockHeight;
+        Uint8 BlockHeight           = 0;
 
         /// For non-compressed formats, returns the texel size.
         /// For block-compressed formats, returns the block size.
@@ -1689,27 +1693,18 @@ namespace Diligent
                               bool           _IsTypeless,
                               Uint8          _BlockWidth,
                               Uint8          _BlockHeight)noexcept : 
-            Name         (_Name),
-            Format       (_Format),
-            ComponentSize(_ComponentSize),
-            NumComponents(_NumComponents),
-            ComponentType(_ComponentType),
-            IsTypeless   (_IsTypeless),
-            BlockWidth   (_BlockWidth),
-            BlockHeight  (_BlockHeight)
+            Name         {_Name         },
+            Format       {_Format       },
+            ComponentSize{_ComponentSize},
+            NumComponents{_NumComponents},
+            ComponentType{_ComponentType},
+            IsTypeless   {_IsTypeless   },
+            BlockWidth   {_BlockWidth   },
+            BlockHeight  {_BlockHeight  }
         {
         }
 
-        TextureFormatAttribs()noexcept : 
-            Name         ("TEX_FORMAT_UNKNOWN"),
-            Format       (TEX_FORMAT_UNKNOWN),
-            ComponentSize(0),
-            NumComponents(0),
-            ComponentType(COMPONENT_TYPE_UNDEFINED),
-            IsTypeless   (false),
-            BlockWidth   (0),
-            BlockHeight  (0)
-        {}
+        TextureFormatAttribs()noexcept {}
     };
 
     /// Basic texture format description
@@ -1893,32 +1888,43 @@ namespace Diligent
                             Uint32                _ArraySliceCount = RemainingArraySlices,
                             STATE_TRANSITION_TYPE _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
                             bool                  _UpdateState     = false)noexcept : 
-            pTexture            (_pTexture),
-            FirstMipLevel       (_FirstMipLevel),
-            MipLevelsCount      (_MipLevelsCount),
-            FirstArraySlice     (_FirstArraySlice),
-            ArraySliceCount     (_ArraySliceCount),
-            OldState            (_OldState),
-            NewState            (_NewState),
-            TransitionType      (_TransitionType),
-            UpdateResourceState (_UpdateState)
+            pTexture            {_pTexture       },
+            FirstMipLevel       {_FirstMipLevel  },
+            MipLevelsCount      {_MipLevelsCount },
+            FirstArraySlice     {_FirstArraySlice},
+            ArraySliceCount     {_ArraySliceCount},
+            OldState            {_OldState       },
+            NewState            {_NewState       },
+            TransitionType      {_TransitionType },
+            UpdateResourceState {_UpdateState    }
         {}
 
         StateTransitionDesc(ITexture*      _pTexture, 
                             RESOURCE_STATE _OldState,
                             RESOURCE_STATE _NewState, 
                             bool           _UpdateState)noexcept :
-            StateTransitionDesc(_pTexture, _OldState, _NewState, 0, RemainingMipLevels, 0, RemainingArraySlices, STATE_TRANSITION_TYPE_IMMEDIATE, _UpdateState)
+            StateTransitionDesc
+            {
+                _pTexture,
+                _OldState,
+                _NewState,
+                0,
+                RemainingMipLevels,
+                0,
+                RemainingArraySlices,
+                STATE_TRANSITION_TYPE_IMMEDIATE,
+                _UpdateState
+            }
         {}
 
         StateTransitionDesc(IBuffer*       _pBuffer, 
                             RESOURCE_STATE _OldState,
                             RESOURCE_STATE _NewState,
                             bool           _UpdateState)noexcept : 
-            pBuffer             (_pBuffer),
-            OldState            (_OldState),
-            NewState            (_NewState),
-            UpdateResourceState (_UpdateState)
+            pBuffer             {_pBuffer    },
+            OldState            {_OldState   },
+            NewState            {_NewState   },
+            UpdateResourceState {_UpdateState}
         {}
     };
 }

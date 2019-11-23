@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Blend state description
 
@@ -36,7 +38,7 @@ namespace Diligent
 /// [D3D11_BLEND]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476086(v=vs.85).aspx
 /// [D3D12_BLEND]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770338(v=vs.85).aspx
 /// [glBlendFuncSeparate]: https://www.opengl.org/wiki/GLAPI/glBlendFuncSeparate
-/// This enumeration defines blend factors for alpha-blending. 
+/// This enumeration defines blend factors for alpha-blending.
 /// It generatlly mirrors [D3D11_BLEND][] and [D3D12_BLEND][] enumerations and is used by RenderTargetBlendDesc structure
 /// to define source and destination blend factors for color and alpha channels.
 /// \sa [D3D11_BLEND on MSDN][D3D11_BLEND], [D3D12_BLEND on MSDN][D3D12_BLEND], [glBlendFuncSeparate on OpenGL.org][glBlendFuncSeparate]
@@ -85,7 +87,7 @@ enum BLEND_FACTOR : Int8
     /// Direct3D counterpart: D3D11_BLEND_INV_DEST_COLOR/D3D12_BLEND_INV_DEST_COLOR. OpenGL counterpart: GL_ONE_MINUS_DST_COLOR.
     BLEND_FACTOR_INV_DEST_COLOR,
 
-    /// The blend factor is (f,f,f,1), where f = min(As, 1-Ad), 
+    /// The blend factor is (f,f,f,1), where f = min(As, 1-Ad),
     /// As is alpha data from a pixel shader, and Ad is alpha data from a render target.\n
     /// Direct3D counterpart: D3D11_BLEND_SRC_ALPHA_SAT/D3D12_BLEND_SRC_ALPHA_SAT. OpenGL counterpart: GL_SRC_ALPHA_SATURATE.
     BLEND_FACTOR_SRC_ALPHA_SAT,
@@ -112,11 +114,12 @@ enum BLEND_FACTOR : Int8
 
     /// The blend factor is 1-A, where A is the second alpha data output from a pixel shader.\n
     /// Direct3D counterpart: D3D11_BLEND_INV_SRC1_ALPHA/D3D12_BLEND_INV_SRC1_ALPHA. OpenGL counterpart: GL_ONE_MINUS_SRC1_ALPHA.
-    BLEND_FACTOR_INV_SRC1_ALPHA, 
+    BLEND_FACTOR_INV_SRC1_ALPHA,
 
     /// Helper value that stores the total number of blend factors in the enumeration.
     BLEND_FACTOR_NUM_FACTORS
 };
+
 
 /// Blending operation
 
@@ -124,14 +127,14 @@ enum BLEND_FACTOR : Int8
 /// [D3D12_BLEND_OP]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770340(v=vs.85).aspx
 /// [glBlendEquationSeparate]: https://www.opengl.org/wiki/GLAPI/glBlendEquationSeparate
 /// This enumeration describes blending operation for RGB or Alpha channels and generally mirrors
-/// [D3D11_BLEND_OP][] and [D3D12_BLEND_OP][] enums. It is used by RenderTargetBlendDesc structure to define RGB and Alpha 
+/// [D3D11_BLEND_OP][] and [D3D12_BLEND_OP][] enums. It is used by RenderTargetBlendDesc structure to define RGB and Alpha
 /// blending operations
 /// \sa [D3D11_BLEND_OP on MSDN][D3D11_BLEND_OP], [D3D12_BLEND_OP on MSDN][D3D12_BLEND_OP], [glBlendEquationSeparate on OpenGL.org][glBlendEquationSeparate]
 enum BLEND_OPERATION : Int8
 {
     /// Undefined blend operation
     BLEND_OPERATION_UNDEFINED = 0,
-    
+
     /// Add source and destination color components.\n
     /// Direct3D counterpart: D3D11_BLEND_OP_ADD/D3D12_BLEND_OP_ADD. OpenGL counterpart: GL_FUNC_ADD.
     BLEND_OPERATION_ADD,
@@ -156,33 +159,34 @@ enum BLEND_OPERATION : Int8
     BLEND_OPERATION_NUM_OPERATIONS
 };
 
+
 /// Color component write flags
 
-/// These flags are used by RenderTargetBlendDesc structure to define 
+/// These flags are used by RenderTargetBlendDesc structure to define
 /// writable components of the render target
 enum COLOR_MASK : Int8
 {
     /// Allow data to be stored in the red component.
-    COLOR_MASK_RED	    = 1,
+    COLOR_MASK_RED   = 1,
 
     /// Allow data to be stored in the green component.
-    COLOR_MASK_GREEN	= 2,
+    COLOR_MASK_GREEN = 2,
 
     /// Allow data to be stored in the blue component.
-    COLOR_MASK_BLUE	    = 4,
+    COLOR_MASK_BLUE  = 4,
 
     /// Allow data to be stored in the alpha component.
-    COLOR_MASK_ALPHA	= 8,
+    COLOR_MASK_ALPHA = 8,
 
     /// Allow data to be stored in all components.
-    COLOR_MASK_ALL	= ( ( ( COLOR_MASK_RED | COLOR_MASK_GREEN )  | COLOR_MASK_BLUE )  | COLOR_MASK_ALPHA ) 
+    COLOR_MASK_ALL   = (((COLOR_MASK_RED | COLOR_MASK_GREEN) | COLOR_MASK_BLUE) | COLOR_MASK_ALPHA)
 };
 
 
 /// Logic operation
 
 /// [D3D12_LOGIC_OP]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770379(v=vs.85).aspx
-/// This enumeration describes logic operation and generally mirrors [D3D12_LOGIC_OP][] enum. 
+/// This enumeration describes logic operation and generally mirrors [D3D12_LOGIC_OP][] enum.
 /// It is used by RenderTargetBlendDesc structure to define logic operation.
 /// Only available on D3D12 engine
 /// \sa [D3D12_LOGIC_OP on MSDN][D3D12_LOGIC_OP]
@@ -256,9 +260,10 @@ enum LOGIC_OPERATION : Int8
     LOGIC_OP_NUM_OPERATIONS
 };
 
+
 /// Describes a blend state for a single render target
 
-/// This structure is used by BlendStateDesc to describe 
+/// This structure is used by BlendStateDesc to describe
 /// blend states for render targets
 struct RenderTargetBlendDesc
 {
@@ -320,16 +325,16 @@ struct RenderTargetBlendDesc
                           BLEND_OPERATION _BlendOpAlpha          = RenderTargetBlendDesc{}.BlendOpAlpha,
                           LOGIC_OPERATION _LogicOp               = RenderTargetBlendDesc{}.LogicOp,
                           Uint8           _RenderTargetWriteMask = RenderTargetBlendDesc{}.RenderTargetWriteMask) :
-        BlendEnable          (_BlendEnable),
-		LogicOperationEnable (_LogicOperationEnable),
-        SrcBlend             (_SrcBlend),
-        DestBlend            (_DestBlend),
-        BlendOp              (_BlendOp),
-        SrcBlendAlpha        (_SrcBlendAlpha),
-        DestBlendAlpha       (_DestBlendAlpha),
-        BlendOpAlpha         (_BlendOpAlpha),
-		LogicOp			     (_LogicOp),
-        RenderTargetWriteMask(_RenderTargetWriteMask)
+        BlendEnable          {_BlendEnable          },
+        LogicOperationEnable {_LogicOperationEnable },
+        SrcBlend             {_SrcBlend             },
+        DestBlend            {_DestBlend            },
+        BlendOp              {_BlendOp              },
+        SrcBlendAlpha        {_SrcBlendAlpha        },
+        DestBlendAlpha       {_DestBlendAlpha       },
+        BlendOpAlpha         {_BlendOpAlpha         },
+		LogicOp			     {_LogicOp              },
+        RenderTargetWriteMask{_RenderTargetWriteMask}
     {}
 
     /// Comparison operator tests if two structures are equivalent
@@ -353,36 +358,37 @@ struct RenderTargetBlendDesc
     }
 };
 
+
 /// Blend state description
 
 /// This structure describes the blend state and is part of the GraphicsPipelineDesc.
 struct BlendStateDesc
 {
-    /// Specifies whether to use alpha-to-coverage as a multisampling technique 
+    /// Specifies whether to use alpha-to-coverage as a multisampling technique
     /// when setting a pixel to a render target. Default value: False.
     Bool AlphaToCoverageEnable = False;
 
-    /// Specifies whether to enable independent blending in simultaneous render targets. 
+    /// Specifies whether to enable independent blending in simultaneous render targets.
     /// If set to False, only RenderTargets[0] is used. Default value: False.
     Bool IndependentBlendEnable = False;
 
     /// Constant member defining the maximum number of render targets
     static constexpr int MaxRenderTargets = 8;
 
-    /// An array of RenderTargetBlendDesc structures that describe the blend 
+    /// An array of RenderTargetBlendDesc structures that describe the blend
     /// states for render targets
     RenderTargetBlendDesc RenderTargets[MaxRenderTargets];
 
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     BlendStateDesc{False, False}
 
-    BlendStateDesc()noexcept{}
+    BlendStateDesc() noexcept {}
 
     BlendStateDesc(Bool                         _AlphaToCoverageEnable,
                    Bool                         _IndependentBlendEnable,
-                   const RenderTargetBlendDesc& RT0                     = RenderTargetBlendDesc{})noexcept : 
-        AlphaToCoverageEnable   (_AlphaToCoverageEnable),
-        IndependentBlendEnable  (_IndependentBlendEnable),
+                   const RenderTargetBlendDesc& RT0 = RenderTargetBlendDesc{}) noexcept :
+        AlphaToCoverageEnable   {_AlphaToCoverageEnable },
+        IndependentBlendEnable  {_IndependentBlendEnable},
         RenderTargets           {RT0}
     {
     }
@@ -390,27 +396,29 @@ struct BlendStateDesc
     /// Comparison operator tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return 
-    /// - True if all members are of the two structures equal. 
-    ///   \note The operator performs *bitwise comparison* of the two structures. 
-    ///   That is if for instance both structures have IndependentBlendEnable set to False, 
-    ///   but differ in render target other than 0, the operator will return False 
+    /// \return
+    /// - True if all members are of the two structures equal.
+    ///   \note The operator performs *bitwise comparison* of the two structures.
+    ///   That is if for instance both structures have IndependentBlendEnable set to False,
+    ///   but differ in render target other than 0, the operator will return False
     ///   even though the two blend states created from these structures will be identical.
     /// - False otherwise
-    bool operator == (const BlendStateDesc& RHS)const
+    bool operator==(const BlendStateDesc& RHS) const
     {
         bool bRTsEqual = true;
-        for( int i = 0; i < MaxRenderTargets; ++i )
-            if( !(RenderTargets[i] == RHS.RenderTargets[i]) )
+        for (int i = 0; i < MaxRenderTargets; ++i)
+        {
+            if (!(RenderTargets[i] == RHS.RenderTargets[i]))
             {
                 bRTsEqual = false;
                 break;
             }
+        }
 
-        return  bRTsEqual &&
-                AlphaToCoverageEnable == RHS.AlphaToCoverageEnable &&
-                IndependentBlendEnable== RHS.IndependentBlendEnable;
+        return bRTsEqual &&
+            AlphaToCoverageEnable == RHS.AlphaToCoverageEnable &&
+            IndependentBlendEnable == RHS.IndependentBlendEnable;
     }
 };
 
-}
+} // namespace Diligent

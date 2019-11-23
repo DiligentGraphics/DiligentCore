@@ -35,7 +35,7 @@ namespace Diligent
 
 // {1C703B77-6607-4EEC-B1FE-15C82D3B4130}
 static constexpr INTERFACE_ID IID_SwapChain =
-{ 0x1c703b77, 0x6607, 0x4eec, { 0xb1, 0xfe, 0x15, 0xc8, 0x2d, 0x3b, 0x41, 0x30 } };
+    {0x1c703b77, 0x6607, 0x4eec, {0xb1, 0xfe, 0x15, 0xc8, 0x2d, 0x3b, 0x41, 0x30}};
 
 /// Swap chain interface
 
@@ -43,33 +43,32 @@ static constexpr INTERFACE_ID IID_SwapChain =
 class ISwapChain : public IObject
 {
 public:
-
     /// Presents a rendered image to the user
     virtual void Present(Uint32 SyncInterval = 1) = 0;
 
     /// Returns the swap chain desctription
-    virtual const SwapChainDesc& GetDesc()const = 0;
+    virtual const SwapChainDesc& GetDesc() const = 0;
 
     /// Changes the swap chain's back buffer size
 
     /// \param [in] NewWidth - New swap chain width, in pixels
     /// \param [in] NewHeight - New swap chain height, in pixels
-    /// 
-    /// \note When resizing non-primary swap chains, the engine unbinds the 
+    ///
+    /// \note When resizing non-primary swap chains, the engine unbinds the
     ///       swap chain buffers from the output.
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight ) = 0;
+    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) = 0;
 
     /// Sets fullscreen mode (only supported on Win32 platform)
-    virtual void SetFullscreenMode(const DisplayModeAttribs &DisplayMode) = 0;
+    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) = 0;
 
     /// Sets windowed mode (only supported on Win32 platform)
     virtual void SetWindowedMode() = 0;
 
     /// Returns render target view of the current back buffer in the swap chain
 
-    /// \note For Direct3D12 and Vulkan backends, the function returns 
+    /// \note For Direct3D12 and Vulkan backends, the function returns
     /// different pointer for every offscreen buffer in the swap chain
-    /// (flipped by every call to ISwapChain::Present()). For Direct3D11 
+    /// (flipped by every call to ISwapChain::Present()). For Direct3D11
     /// backend it always returns the same pointer. For OpenGL/GLES backends
     /// the method returns null.
     ///
@@ -84,4 +83,4 @@ public:
     virtual ITextureView* GetDepthBufferDSV() = 0;
 };
 
-}
+} // namespace Diligent

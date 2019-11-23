@@ -32,8 +32,9 @@
 namespace Diligent
 {
 
-static IMemoryAllocator *g_pRawAllocator;
-void SetRawAllocator(IMemoryAllocator *pRawAllocator)
+static IMemoryAllocator* g_pRawAllocator;
+
+void SetRawAllocator(IMemoryAllocator* pRawAllocator)
 {
     if (pRawAllocator == nullptr)
     {
@@ -53,7 +54,7 @@ IMemoryAllocator& GetStringAllocator()
     return GetRawAllocator();
 }
 
-}
+} // namespace Diligent
 #if 0
 
 void* operator new(size_t Size)

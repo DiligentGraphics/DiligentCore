@@ -36,7 +36,7 @@
 namespace Diligent
 {
 
-template<typename TNameCompare>
+template <typename TNameCompare>
 SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                       ShaderStage,
                                                     SHADER_RESOURCE_VARIABLE_TYPE     DefaultVariableType,
                                                     const ShaderResourceVariableDesc* Variables,
@@ -46,7 +46,7 @@ SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                 
     for (Uint32 v = 0; v < NumVars; ++v)
     {
         const auto& CurrVarDesc = Variables[v];
-        if ( ((CurrVarDesc.ShaderStages & ShaderStage) != 0) && NameCompare(CurrVarDesc.Name) )
+        if (((CurrVarDesc.ShaderStages & ShaderStage) != 0) && NameCompare(CurrVarDesc.Name))
         {
             return CurrVarDesc.Type;
         }
@@ -60,12 +60,11 @@ inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
                                                            const ShaderResourceVariableDesc* Variables,
                                                            Uint32                            NumVars)
 {
-    return GetShaderVariableType(ShaderStage, DefaultVariableType, Variables, NumVars, 
-        [&](const char* VarName)
-        {
-            return strcmp(VarName, Name) == 0;
-        }
-    );
+    return GetShaderVariableType(ShaderStage, DefaultVariableType, Variables, NumVars,
+                                 [&](const char* VarName) // clang-format off
+                                 { // clang-format on
+                                     return strcmp(VarName, Name) == 0;
+                                 });
 }
 
 inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                       ShaderStage,
@@ -75,18 +74,17 @@ inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
     return GetShaderVariableType(ShaderStage, Name, LayoutDesc.DefaultVariableType, LayoutDesc.Variables, LayoutDesc.NumVariables);
 }
 
-inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                        ShaderStage,
-                                                           const String&                      Name,
-                                                           SHADER_RESOURCE_VARIABLE_TYPE      DefaultVariableType,
-                                                           const ShaderResourceVariableDesc*  Variables,
-                                                           Uint32                             NumVars)
+inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                       ShaderStage,
+                                                           const String&                     Name,
+                                                           SHADER_RESOURCE_VARIABLE_TYPE     DefaultVariableType,
+                                                           const ShaderResourceVariableDesc* Variables,
+                                                           Uint32                            NumVars)
 {
-    return GetShaderVariableType(ShaderStage, DefaultVariableType, Variables, NumVars, 
-        [&](const char* VarName)
-        {
-            return Name.compare(VarName) == 0;
-        }
-    );
+    return GetShaderVariableType(ShaderStage, DefaultVariableType, Variables, NumVars,
+                                 [&](const char* VarName) // clang-format off
+                                 { // clang-format on
+                                     return Name.compare(VarName) == 0;
+                                 });
 }
 
 inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE                       ShaderStage,
@@ -96,18 +94,18 @@ inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
     return GetShaderVariableType(ShaderStage, Name, LayoutDesc.DefaultVariableType, LayoutDesc.Variables, LayoutDesc.NumVariables);
 }
 
-inline bool IsAllowedType(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 AllowedTypeBits)noexcept
+inline bool IsAllowedType(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 AllowedTypeBits) noexcept
 {
     return ((1 << VarType) & AllowedTypeBits) != 0;
 }
 
-inline Uint32 GetAllowedTypeBits(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes, Uint32 NumAllowedTypes)noexcept
+inline Uint32 GetAllowedTypeBits(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes, Uint32 NumAllowedTypes) noexcept
 {
-    if(AllowedVarTypes == nullptr)
+    if (AllowedVarTypes == nullptr)
         return 0xFFFFFFFF;
 
     Uint32 AllowedTypeBits = 0;
-    for(Uint32 i=0; i < NumAllowedTypes; ++i)
+    for (Uint32 i = 0; i < NumAllowedTypes; ++i)
         AllowedTypeBits |= 1 << AllowedVarTypes[i];
     return AllowedTypeBits;
 }
@@ -118,10 +116,10 @@ inline Int32 FindStaticSampler(const StaticSamplerDesc* StaticSamplers,
                                const char*              ResourceName,
                                const char*              SamplerSuffix)
 {
-    for (Uint32 s=0; s < NumStaticSamplers; ++s)
+    for (Uint32 s = 0; s < NumStaticSamplers; ++s)
     {
         const auto& StSam = StaticSamplers[s];
-        if ( ((StSam.ShaderStages & ShaderType) != 0) && StreqSuff(ResourceName, StSam.SamplerOrTextureName, SamplerSuffix) )
+        if (((StSam.ShaderStages & ShaderType) != 0) && StreqSuff(ResourceName, StSam.SamplerOrTextureName, SamplerSuffix))
             return s;
     }
 
@@ -131,15 +129,15 @@ inline Int32 FindStaticSampler(const StaticSamplerDesc* StaticSamplers,
 
 
 
-template<typename ResourceAttribsType,
-         typename BufferImplType>
-bool VerifyConstantBufferBinding(const ResourceAttribsType&       Attribs,
-                                 SHADER_RESOURCE_VARIABLE_TYPE    VarType,
-                                 Uint32                           ArrayIndex,
-                                 const IDeviceObject*             pBuffer,
-                                 const BufferImplType*            pBufferImpl,
-                                 const IDeviceObject*             pCachedBuffer,
-                                 const char*                      ShaderName = nullptr)
+template <typename ResourceAttribsType,
+          typename BufferImplType>
+bool VerifyConstantBufferBinding(const ResourceAttribsType&    Attribs,
+                                 SHADER_RESOURCE_VARIABLE_TYPE VarType,
+                                 Uint32                        ArrayIndex,
+                                 const IDeviceObject*          pBuffer,
+                                 const BufferImplType*         pBufferImpl,
+                                 const IDeviceObject*          pCachedBuffer,
+                                 const char*                   ShaderName = nullptr)
 {
     if (pBuffer != nullptr && pBufferImpl == nullptr)
     {
@@ -167,7 +165,7 @@ bool VerifyConstantBufferBinding(const ResourceAttribsType&       Attribs,
         LOG_ERROR_MESSAGE(ss.str());
         BindingOK = false;
     }
-       
+
     if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedBuffer != nullptr && pCachedBuffer != pBufferImpl)
     {
         auto VarTypeStr = GetShaderVariableTypeLiteralName(VarType);
@@ -177,7 +175,7 @@ bool VerifyConstantBufferBinding(const ResourceAttribsType&       Attribs,
            << " shader variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
         if (ShaderName != nullptr)
         {
-           ss << " in shader '" << ShaderName << '\'';
+            ss << " in shader '" << ShaderName << '\'';
         }
         ss << ". Attempting to bind ";
         if (pBufferImpl)
@@ -197,42 +195,42 @@ bool VerifyConstantBufferBinding(const ResourceAttribsType&       Attribs,
     return BindingOK;
 }
 
-template<typename TViewTypeEnum>
+template <typename TViewTypeEnum>
 const char* GetResourceTypeName();
 
-template<>
+template <>
 inline const char* GetResourceTypeName<TEXTURE_VIEW_TYPE>()
 {
     return "texture view";
 }
 
-template<>
+template <>
 inline const char* GetResourceTypeName<BUFFER_VIEW_TYPE>()
 {
     return "buffer view";
 }
 
-template<typename ResourceAttribsType,
-         typename ResourceViewImplType,
-         typename ViewTypeEnumType>
-bool VerifyResourceViewBinding(const ResourceAttribsType&               Attribs,
-                               SHADER_RESOURCE_VARIABLE_TYPE            VarType,
-                               Uint32                                   ArrayIndex,
-                               const IDeviceObject*                     pView,
-                               const ResourceViewImplType*              pViewImpl,
-                               std::initializer_list<ViewTypeEnumType>  ExpectedViewTypes,
-                               const IDeviceObject*                     pCachedView,
-                               const char*                              ShaderName = nullptr)
+template <typename ResourceAttribsType,
+          typename ResourceViewImplType,
+          typename ViewTypeEnumType>
+bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
+                               SHADER_RESOURCE_VARIABLE_TYPE           VarType,
+                               Uint32                                  ArrayIndex,
+                               const IDeviceObject*                    pView,
+                               const ResourceViewImplType*             pViewImpl,
+                               std::initializer_list<ViewTypeEnumType> ExpectedViewTypes,
+                               const IDeviceObject*                    pCachedView,
+                               const char*                             ShaderName = nullptr)
 {
     const char* ExpectedResourceType = GetResourceTypeName<ViewTypeEnumType>();
-    
+
     if (pView && !pViewImpl)
     {
         std::stringstream ss;
         ss << "Failed to bind resource '" << pView->GetDesc().Name << "' to variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
         if (ShaderName != nullptr)
         {
-           ss << " in shader '" << ShaderName << '\'';
+            ss << " in shader '" << ShaderName << '\'';
         }
         ss << ". Invalid resource type: " << ExpectedResourceType << " is expected.";
         LOG_ERROR_MESSAGE(ss.str());
@@ -242,9 +240,9 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&               Attribs,
     bool BindingOK = true;
     if (pViewImpl)
     {
-        auto ViewType = pViewImpl->GetDesc().ViewType;
+        auto ViewType           = pViewImpl->GetDesc().ViewType;
         bool IsExpectedViewType = false;
-        for(auto ExpectedViewType : ExpectedViewTypes)
+        for (auto ExpectedViewType : ExpectedViewTypes)
         {
             if (ExpectedViewType == ViewType)
                 IsExpectedViewType = true;
@@ -259,11 +257,11 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&               Attribs,
                << Attribs.GetPrintName(ArrayIndex) << '\'';
             if (ShaderName != nullptr)
             {
-               ss << " in shader '" << ShaderName << '\'';
+                ss << " in shader '" << ShaderName << '\'';
             }
             ss << ". Incorrect view type: ";
             bool IsFirstViewType = true;
-            for(auto ExpectedViewType : ExpectedViewTypes)
+            for (auto ExpectedViewType : ExpectedViewTypes)
             {
                 if (!IsFirstViewType)
                 {
@@ -281,13 +279,13 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&               Attribs,
 
     if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedView != nullptr && pCachedView != pViewImpl)
     {
-        auto VarTypeStr = GetShaderVariableTypeLiteralName(VarType);
+        auto              VarTypeStr = GetShaderVariableTypeLiteralName(VarType);
         std::stringstream ss;
         ss << "Non-null resource '" << pCachedView->GetDesc().Name << "' is already bound to " << VarTypeStr
            << " shader variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
         if (ShaderName != nullptr)
         {
-           ss << " in shader '" << ShaderName << '\'';
+            ss << " in shader '" << ShaderName << '\'';
         }
         ss << ". Attempting to bind ";
         if (pViewImpl)
@@ -310,39 +308,39 @@ inline void VerifyAndCorrectSetArrayArguments(const char* Name, Uint32 ArraySize
 {
     if (FirstElement >= ArraySize)
     {
-        LOG_ERROR_MESSAGE("SetArray arguments are invalid for '", Name,"' variable: FirstElement (", FirstElement, ") is out of allowed range 0 .. ", ArraySize-1);
-        FirstElement = ArraySize-1;
+        LOG_ERROR_MESSAGE("SetArray arguments are invalid for '", Name, "' variable: FirstElement (", FirstElement, ") is out of allowed range 0 .. ", ArraySize - 1);
+        FirstElement = ArraySize - 1;
         NumElements  = 0;
     }
 
     if (FirstElement + NumElements > ArraySize)
     {
-        LOG_ERROR_MESSAGE("SetArray arguments are invalid for '", Name,"' variable: specified element range (", FirstElement, " .. ",
-                          FirstElement + NumElements-1, ") is out of array bounds 0 .. ", ArraySize-1);
+        LOG_ERROR_MESSAGE("SetArray arguments are invalid for '", Name, "' variable: specified element range (", FirstElement, " .. ",
+                          FirstElement + NumElements - 1, ") is out of array bounds 0 .. ", ArraySize - 1);
         NumElements = ArraySize - FirstElement;
     }
 }
 
 struct DefaultShaderVariableIDComparator
 {
-    bool operator() (const INTERFACE_ID& IID)const
+    bool operator()(const INTERFACE_ID& IID) const
     {
         return IID == IID_ShaderResourceVariable || IID == IID_Unknown;
     }
 };
 
 /// Base implementation of a shader variable
-template<typename ResourceLayoutType,
-         typename ResourceVariableBaseInterface = IShaderResourceVariable,
-         typename VariableIDComparator          = DefaultShaderVariableIDComparator>
+template <typename ResourceLayoutType,
+          typename ResourceVariableBaseInterface = IShaderResourceVariable,
+          typename VariableIDComparator          = DefaultShaderVariableIDComparator>
 struct ShaderVariableBase : public ResourceVariableBaseInterface
 {
-    ShaderVariableBase(ResourceLayoutType& ParentResLayout) : 
+    ShaderVariableBase(ResourceLayoutType& ParentResLayout) :
         m_ParentResLayout(ParentResLayout)
     {
     }
 
-    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final
+    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
     {
         if (ppInterface == nullptr)
             return;
@@ -355,17 +353,17 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         }
     }
 
-    virtual Atomics::Long AddRef()override final
+    virtual Atomics::Long AddRef() override final
     {
         return m_ParentResLayout.GetOwner().AddRef();
     }
 
-    virtual Atomics::Long Release()override final
+    virtual Atomics::Long Release() override final
     {
         return m_ParentResLayout.GetOwner().Release();
     }
 
-    virtual IReferenceCounters* GetReferenceCounters()const override final
+    virtual IReferenceCounters* GetReferenceCounters() const override final
     {
         return m_ParentResLayout.GetOwner().GetReferenceCounters();
     }
@@ -374,4 +372,4 @@ protected:
     ResourceLayoutType& m_ParentResLayout;
 };
 
-}
+} // namespace Diligent

@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Defines Diligent::IBuffer interface and related data structures
 
@@ -33,7 +35,7 @@ namespace Diligent
 
 // {EC47EAD3-A2C4-44F2-81C5-5248D14F10E4}
 static constexpr INTERFACE_ID IID_Buffer =
-{ 0xec47ead3, 0xa2c4, 0x44f2, { 0x81, 0xc5, 0x52, 0x48, 0xd1, 0x4f, 0x10, 0xe4 } };
+    {0xec47ead3, 0xa2c4, 0x44f2, {0x81, 0xc5, 0x52, 0x48, 0xd1, 0x4f, 0x10, 0xe4}};
 
 /// Describes the buffer access mode.
 
@@ -47,7 +49,7 @@ enum BUFFER_MODE : Uint8
     /// In this mode, ElementByteStride member of BufferDesc defines the buffer element size.
     /// Buffer views can use different formats, but the format size must match ElementByteStride.
     BUFFER_MODE_FORMATTED,
-        
+
     /// Structured buffer.
     /// In this mode, ElementByteStride member of BufferDesc defines the structure stride.
     BUFFER_MODE_STRUCTURED,
@@ -55,7 +57,7 @@ enum BUFFER_MODE : Uint8
     /// Raw buffer.
     /// In this mode, the buffer is accessed as raw bytes. Formatted views of a raw
     /// buffer can also be created similar to formatted buffer. If formatted views
-    /// are to be created, the ElementByteStride member of BufferDesc must specify the 
+    /// are to be created, the ElementByteStride member of BufferDesc must specify the
     /// size of the format.
     BUFFER_MODE_RAW,
 
@@ -113,12 +115,12 @@ struct BufferDesc : DeviceObjectAttribs
                BUFFER_MODE      _Mode              = BufferDesc{}.Mode,
                Uint32           _ElementByteStride = BufferDesc{}.ElementByteStride,
                Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask)noexcept :
-        uiSizeInBytes       (_uiSizeInBytes),
-        BindFlags           (_BindFlags),
-        Usage               (_Usage),
-        Mode                (_Mode),
-        ElementByteStride   (_ElementByteStride),
-        CommandQueueMask    (_CommandQueueMask)
+        uiSizeInBytes       {_uiSizeInBytes    },
+        BindFlags           {_BindFlags        },
+        Usage               {_Usage            },
+        Mode                {_Mode             },
+        ElementByteStride   {_ElementByteStride},
+        CommandQueueMask    {_CommandQueueMask }
     {
     }
 
@@ -146,21 +148,21 @@ struct BufferDesc : DeviceObjectAttribs
 struct BufferData
 {
     /// Pointer to the data
-    const void* pData   = nullptr;
+    const void* pData = nullptr;
 
     /// Data size, in bytes
-    Uint32 DataSize     = 0;
+    Uint32 DataSize = 0;
 
 
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     BufferData{nullptr, 0}
 
-    BufferData()noexcept{}
+    BufferData() noexcept {}
 
-    BufferData(const void* _pData, 
-               Uint32      _DataSize):
-        pData   (_pData),
-        DataSize(_DataSize)
+    BufferData(const void* _pData,
+               Uint32      _DataSize) :
+        pData   {_pData   },
+        DataSize{_DataSize}
     {}
 };
 
@@ -171,26 +173,26 @@ class IBuffer : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
 
     /// Returns the buffer description used to create the object
-    virtual const BufferDesc& GetDesc()const override = 0;
-    
+    virtual const BufferDesc& GetDesc() const override = 0;
+
     /// Creates a new buffer view
 
     /// \param [in] ViewDesc - View description. See Diligent::BufferViewDesc for details.
     /// \param [out] ppView - Address of the memory location where the pointer to the view interface will be written to.
-    /// 
+    ///
     /// \remarks To create a view addressing the entire buffer, set only BufferViewDesc::ViewType member
     ///          of the ViewDesc structure and leave all other members in their default values.\n
     ///          Buffer view will contain strong reference to the buffer, so the buffer will not be destroyed
     ///          until all views are released.\n
     ///          The function calls AddRef() for the created interface, so it must be released by
     ///          a call to Release() when it is no longer needed.
-    virtual void CreateView( const struct BufferViewDesc& ViewDesc, class IBufferView** ppView ) = 0;
+    virtual void CreateView(const struct BufferViewDesc& ViewDesc, class IBufferView** ppView) = 0;
 
     /// Returns the pointer to the default view.
-    
+
     /// \param [in] ViewType - Type of the requested view. See Diligent::BUFFER_VIEW_TYPE.
     /// \return Pointer to the interface
     ///
@@ -199,7 +201,7 @@ public:
     ///
     /// \note The function does not increase the reference counter for the returned interface, so
     ///       Release() must *NOT* be called.
-    virtual IBufferView* GetDefaultView( BUFFER_VIEW_TYPE ViewType ) = 0;
+    virtual IBufferView* GetDefaultView(BUFFER_VIEW_TYPE ViewType) = 0;
 
     /// Returns native buffer handle specific to the underlying graphics API
 
@@ -221,4 +223,4 @@ public:
     virtual RESOURCE_STATE GetState() const = 0;
 };
 
-}
+} // namespace Diligent

@@ -38,7 +38,7 @@ class IPipelineState;
 
 // {061F8774-9A09-48E8-8411-B5BD20560104}
 static constexpr INTERFACE_ID IID_ShaderResourceBinding =
-{ 0x61f8774, 0x9a09, 0x48e8, { 0x84, 0x11, 0xb5, 0xbd, 0x20, 0x56, 0x1, 0x4 } };
+    {0x61f8774, 0x9a09, 0x48e8, {0x84, 0x11, 0xb5, 0xbd, 0x20, 0x56, 0x1, 0x4}};
 
 
 /// Shader resource binding interface
@@ -46,11 +46,11 @@ class IShaderResourceBinding : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
 
     /// Returns pointer to the referenced buffer object.
 
-    /// The method calls AddRef() on the returned interface, 
+    /// The method calls AddRef() on the returned interface,
     /// so Release() must be called to avoid memory leaks.
     virtual IPipelineState* GetPipelineState() = 0;
 
@@ -58,13 +58,13 @@ public:
 
     /// \param [in] ShaderFlags - Flags that specify shader stages, for which resources will be bound.
     ///                           Any combination of Diligent::SHADER_TYPE may be used.
-    /// \param [in] pResMapping - Shader resource mapping, where required resources will be looked up 
+    /// \param [in] pResMapping - Shader resource mapping, where required resources will be looked up
     /// \param [in] Flags       - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
     virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) = 0;
 
     /// Returns variable
 
-    /// \param [in] ShaderType - Type of the shader to look up the variable. 
+    /// \param [in] ShaderType - Type of the shader to look up the variable.
     ///                          Must be one of Diligent::SHADER_TYPE.
     /// \param [in] Name       - Variable name
     ///
@@ -82,10 +82,10 @@ public:
 
     /// Returns variable
 
-    /// \param [in] ShaderType - Type of the shader to look up the variable. 
+    /// \param [in] ShaderType - Type of the shader to look up the variable.
     ///                          Must be one of Diligent::SHADER_TYPE.
     /// \param [in] Index      - Variable index. The index must be between 0 and the total number
-    ///                          of variables in this shader stage as returned by 
+    ///                          of variables in this shader stage as returned by
     ///                          IShaderResourceBinding::GetVariableCount().
     /// \remark Only mutable and dynamic variables can be accessed through this method.
     ///         Static variables are accessed through the Shader object.
@@ -97,8 +97,8 @@ public:
 
     /// Initializes static resources
 
-    /// If the parent pipeline state object contain static resources 
-    /// (see Diligent::SHADER_RESOURCE_VARIABLE_TYPE_STATIC), this method must be called 
+    /// If the parent pipeline state object contain static resources
+    /// (see Diligent::SHADER_RESOURCE_VARIABLE_TYPE_STATIC), this method must be called
     /// once to initialize static resources in this shader resource binding object.
     /// The method must be called after all static variables are initialized
     /// in the PSO.
@@ -113,4 +113,4 @@ public:
     virtual void InitializeStaticResources(const IPipelineState* pPipelineState = nullptr) = 0;
 };
 
-}
+} // namespace Diligent

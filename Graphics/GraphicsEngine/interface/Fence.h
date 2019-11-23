@@ -33,12 +33,11 @@ namespace Diligent
 
 // {3B19184D-32AB-4701-84F4-9A0C03AE1672}
 static constexpr INTERFACE_ID IID_Fence =
-{ 0x3b19184d, 0x32ab, 0x4701, { 0x84, 0xf4, 0x9a, 0xc, 0x3, 0xae, 0x16, 0x72 } };
+    {0x3b19184d, 0x32ab, 0x4701, {0x84, 0xf4, 0x9a, 0xc, 0x3, 0xae, 0x16, 0x72}};
 
 /// Buffer description
 struct FenceDesc : DeviceObjectAttribs
 {
-
 };
 
 /// Fence interface
@@ -51,10 +50,10 @@ class IFence : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
 
     /// Returns the fence description used to create the object
-    virtual const FenceDesc& GetDesc()const override = 0;
+    virtual const FenceDesc& GetDesc() const override = 0;
 
     /// Returns the last completed value signaled by the GPU
 
@@ -63,8 +62,8 @@ public:
     ///          IDeviceContext::SignalFence().
     virtual Uint64 GetCompletedValue() = 0;
 
-    /// Resets the fence to the specified value. 
+    /// Resets the fence to the specified value.
     virtual void Reset(Uint64 Value) = 0;
 };
 
-}
+} // namespace Diligent

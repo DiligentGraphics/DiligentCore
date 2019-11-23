@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Rasterizer state description
 
@@ -143,15 +145,15 @@ struct RasterizerStateDesc
                         Int32     _DepthBias             = RasterizerStateDesc{}.DepthBias,
                         Float32   _DepthBiasClamp        = RasterizerStateDesc{}.DepthBiasClamp,
                         Float32   _SlopeScaledDepthBias  = RasterizerStateDesc{}.SlopeScaledDepthBias)noexcept : 
-        FillMode             ( _FillMode ),
-        CullMode             ( _CullMode ),
-        FrontCounterClockwise( _FrontCounterClockwise ),
-        DepthClipEnable      ( _DepthClipEnable ),
-        ScissorEnable        ( _ScissorEnable ),
-        AntialiasedLineEnable( _AntialiasedLineEnable ),
-        DepthBias            ( _DepthBias ),
-        DepthBiasClamp       ( _DepthBiasClamp ),
-        SlopeScaledDepthBias ( _SlopeScaledDepthBias )
+        FillMode              {_FillMode             },
+        CullMode              {_CullMode             },
+        FrontCounterClockwise {_FrontCounterClockwise},
+        DepthClipEnable       {_DepthClipEnable      },
+        ScissorEnable         {_ScissorEnable        },
+        AntialiasedLineEnable {_AntialiasedLineEnable},
+        DepthBias             {_DepthBias            },
+        DepthBiasClamp        {_DepthBiasClamp       },
+        SlopeScaledDepthBias  {_SlopeScaledDepthBias }
     {
     }
 

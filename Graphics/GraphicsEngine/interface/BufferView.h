@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Definition of the Diligent::IBufferView interface and related data structures
 
@@ -33,7 +35,7 @@ namespace Diligent
 
 // {E2E83490-E9D2-495B-9A83-ABB413A38B07}
 static constexpr INTERFACE_ID IID_BufferView =
-{ 0xe2e83490, 0xe9d2, 0x495b, { 0x9a, 0x83, 0xab, 0xb4, 0x13, 0xa3, 0x8b, 0x7 } };
+    {0xe2e83490, 0xe9d2, 0x495b, {0x9a, 0x83, 0xab, 0xb4, 0x13, 0xa3, 0x8b, 0x7}};
 
 /// Buffer format description
 struct BufferFormat
@@ -61,9 +63,9 @@ struct BufferFormat
     BufferFormat(VALUE_TYPE _ValueType,
                  Uint8      _NumComponents,
                  Bool       _IsNormalized   = BufferFormat{}.IsNormalized)noexcept : 
-        ValueType       (_ValueType),
-        NumComponents   (_NumComponents),
-        IsNormalized    (_IsNormalized)
+        ValueType     {_ValueType    },
+        NumComponents {_NumComponents},
+        IsNormalized  {_IsNormalized }
     {}
 
 
@@ -102,10 +104,10 @@ struct BufferViewDesc : DeviceObjectAttribs
                    BufferFormat     _Format     = BufferViewDesc{}.Format,
                    Uint32           _ByteOffset = BufferViewDesc{}.ByteOffset,
                    Uint32           _ByteWidth  = BufferViewDesc{}.ByteWidth)noexcept :
-        ViewType    (_ViewType),
-        Format      (_Format),
-        ByteOffset  (_ByteOffset),
-        ByteWidth   (_ByteWidth)
+        ViewType    {_ViewType  },
+        Format      {_Format    },
+        ByteOffset  {_ByteOffset},
+        ByteWidth   {_ByteWidth }
     {}
 
     /// Comparison operator tests if two structures are equivalent
@@ -116,7 +118,7 @@ struct BufferViewDesc : DeviceObjectAttribs
     /// - False otherwise
     /// \remarks
     /// The operator ignores DeviceObjectAttribs::Name field.
-    bool operator == (const BufferViewDesc& RHS)const
+    bool operator==(const BufferViewDesc& RHS) const
     {
                // Name is primarily used for debug purposes and does not affect the view.
                // It is ignored in comparison operation.
@@ -138,16 +140,16 @@ class IBufferView : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
 
     /// Returns the buffer view description used to create the object
-    virtual const BufferViewDesc& GetDesc()const override = 0;
+    virtual const BufferViewDesc& GetDesc() const override = 0;
 
     /// Returns pointer to the referenced buffer object.
 
-    /// The method does *NOT* call AddRef() on the returned interface, 
+    /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual IBuffer* GetBuffer() = 0;
 };
 
-}
+} // namespace Diligent

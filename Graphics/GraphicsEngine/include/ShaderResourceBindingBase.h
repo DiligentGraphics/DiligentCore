@@ -36,52 +36,51 @@ namespace Diligent
 
 /// Template class implementing base functionality for a shader resource binding
 
-/// \tparam BaseInterface - base interface that this class will inheret 
+/// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::IShaderResourceBindingGL, Diligent::IShaderResourceBindingD3D11,
 ///                          Diligent::IShaderResourceBindingD3D12 or Diligent::IShaderResourceBindingVk).
-template<class BaseInterface>
+template <class BaseInterface>
 class ShaderResourceBindingBase : public ObjectBase<BaseInterface>
 {
 public:
     typedef ObjectBase<BaseInterface> TObjectBase;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this SRB.
-	/// \param pPSO - pipeline state that this SRB belongs to.
-	/// \param IsInternal - flag indicating if the shader resource binding is an internal PSO object and 
-	///						must not keep a strong reference to the PSO.
-    ShaderResourceBindingBase( IReferenceCounters* pRefCounters, IPipelineState* pPSO, bool IsInternal = false ) :
-        TObjectBase( pRefCounters ),
-        m_spPSO( IsInternal ? nullptr : pPSO ),
-        m_pPSO( pPSO )
+    /// \param pPSO - pipeline state that this SRB belongs to.
+    /// \param IsInternal - flag indicating if the shader resource binding is an internal PSO object and
+    ///						must not keep a strong reference to the PSO.
+    ShaderResourceBindingBase(IReferenceCounters* pRefCounters, IPipelineState* pPSO, bool IsInternal = false) :
+        TObjectBase{pRefCounters},
+        m_spPSO{IsInternal ? nullptr : pPSO},
+        m_pPSO{pPSO}
     {}
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_ShaderResourceBinding, TObjectBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBinding, TObjectBase)
 
     /// Implementation of IShaderResourceBinding::GetPipelineState().
-    virtual IPipelineState* GetPipelineState()override final
+    virtual IPipelineState* GetPipelineState() override final
     {
         return m_pPSO;
     }
 
-    template<typename PSOType>
+    template <typename PSOType>
     PSOType* GetPipelineState()
     {
         return ValidatedCast<PSOType>(m_pPSO);
     }
 
-    template<typename PSOType>
-    PSOType* GetPipelineState()const
+    template <typename PSOType>
+    PSOType* GetPipelineState() const
     {
         return ValidatedCast<PSOType>(m_pPSO);
     }
 
 protected:
-
     /// Strong reference to PSO. We must use strong reference, because
     /// shader resource binding uses PSO's memory allocator to allocate
     /// memory for shader resource cache.
     RefCntAutoPtr<IPipelineState> m_spPSO;
-    IPipelineState* const m_pPSO;
+    IPipelineState* const         m_pPSO;
 };
 
-}
+} // namespace Diligent

@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Definition of data types that describe depth-stencil state
 
@@ -117,10 +119,10 @@ struct StencilOpDesc
                   STENCIL_OP          _StencilDepthFailOp,
                   STENCIL_OP          _StencilPassOp,
                   COMPARISON_FUNCTION _StencilFunc)noexcept : 
-        StencilFailOp      (_StencilFailOp),
-        StencilDepthFailOp (_StencilDepthFailOp),
-        StencilPassOp      (_StencilPassOp),
-        StencilFunc        (_StencilFunc)
+        StencilFailOp      {_StencilFailOp     },
+        StencilDepthFailOp {_StencilDepthFailOp},
+        StencilPassOp      {_StencilPassOp     },
+        StencilFunc        {_StencilFunc       }
     {}
 
     /// Tests if two structures are equivalent
@@ -129,7 +131,7 @@ struct StencilOpDesc
     /// \return 
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator == (const StencilOpDesc& rhs)const
+    bool operator== (const StencilOpDesc& rhs) const
     {
         return StencilFailOp      == rhs.StencilFailOp      &&
                StencilDepthFailOp == rhs.StencilDepthFailOp &&
@@ -191,14 +193,14 @@ struct DepthStencilStateDesc
                           Uint8               _StencilWriteMask = DepthStencilStateDesc{}.StencilWriteMask,
                           StencilOpDesc       _FrontFace        = StencilOpDesc{},
                           StencilOpDesc       _BackFace         = StencilOpDesc{})noexcept : 
-        DepthEnable     (_DepthEnable),
-        DepthWriteEnable(_DepthWriteEnable),
-        DepthFunc       (_DepthFunc),
-        StencilEnable   (_StencilEnable),
-        StencilReadMask (_StencilReadMask),
-        StencilWriteMask(_StencilWriteMask),
-        FrontFace       (_FrontFace),
-        BackFace        (_BackFace)
+        DepthEnable     {_DepthEnable     },
+        DepthWriteEnable{_DepthWriteEnable},
+        DepthFunc       {_DepthFunc       },
+        StencilEnable   {_StencilEnable   },
+        StencilReadMask {_StencilReadMask },
+        StencilWriteMask{_StencilWriteMask},
+        FrontFace       {_FrontFace       },
+        BackFace        {_BackFace        }
     {}
 
     /// Tests if two structures are equivalent
@@ -207,7 +209,7 @@ struct DepthStencilStateDesc
     /// \return 
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator == (const DepthStencilStateDesc& rhs)const
+    bool operator== (const DepthStencilStateDesc& rhs) const
     {
         return  DepthEnable      == rhs.DepthEnable      &&
                 DepthWriteEnable == rhs.DepthWriteEnable &&

@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 /// \file
 /// Definition of the Diligent::IRenderDevice interface and related data structures
 
@@ -55,8 +57,8 @@ struct SampleDesc
     SampleDesc()noexcept{}
 
     SampleDesc(Uint8 _Count, Uint8 _Quality) noexcept : 
-        Count   (_Count),
-        Quality (_Quality)
+        Count   {_Count  },
+        Quality {_Quality}
     {}
 };
 
@@ -76,9 +78,9 @@ struct ShaderResourceVariableDesc
     ShaderResourceVariableDesc()noexcept{}
 
     ShaderResourceVariableDesc(SHADER_TYPE _ShaderStages, const Char* _Name, SHADER_RESOURCE_VARIABLE_TYPE _Type)noexcept : 
-        ShaderStages(_ShaderStages),
-        Name        (_Name),
-        Type        (_Type)
+        ShaderStages{_ShaderStages},
+        Name        {_Name        },
+        Type        {_Type        }
     {}
 };
 
@@ -101,9 +103,9 @@ struct StaticSamplerDesc
     StaticSamplerDesc(SHADER_TYPE        _ShaderStages,
                       const Char*        _SamplerOrTextureName,
                       const SamplerDesc& _Desc)noexcept : 
-        ShaderStages        (_ShaderStages),
-        SamplerOrTextureName(_SamplerOrTextureName),
-        Desc                (_Desc)
+        ShaderStages        {_ShaderStages        },
+        SamplerOrTextureName{_SamplerOrTextureName},
+        Desc                {_Desc                }
     {}
 };
 
@@ -233,11 +235,9 @@ struct PipelineStateDesc : DeviceObjectAttribs
 
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
 static constexpr INTERFACE_ID IID_PipelineState =
-{ 0x6084ae5, 0x6a71, 0x4fe8, { 0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c } };
+    {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};
 
-/**
-  * Pipeline state interface
-  */
+/// Pipeline state interface
 class IPipelineState : public IDeviceObject
 {
 public:

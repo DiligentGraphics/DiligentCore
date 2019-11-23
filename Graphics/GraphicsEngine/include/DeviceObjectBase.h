@@ -35,9 +35,9 @@
 
 namespace Diligent
 {
-   
+
 /// Template class implementing base functionality for a device object
-template<class BaseInterface, typename RenderDeviceImplType, typename ObjectDescType>
+template <class BaseInterface, typename RenderDeviceImplType, typename ObjectDescType>
 class DeviceObjectBase : public ObjectBase<BaseInterface>
 {
 public:
@@ -48,14 +48,16 @@ public:
     /// \param ObjDesc - object description.
     /// \param bIsDeviceInternal - flag indicating if the object is an internal device object
     ///							   and must not keep a strong reference to the device.
-    DeviceObjectBase( IReferenceCounters*   pRefCounters,
-                      RenderDeviceImplType* pDevice,
-                      const ObjectDescType& ObjDesc,
-                      bool                  bIsDeviceInternal = false) :
-        TBase(pRefCounters),
-        m_pDevice          (pDevice),
-        m_Desc             (ObjDesc),
-        m_bIsDeviceInternal(bIsDeviceInternal)
+    DeviceObjectBase(IReferenceCounters*   pRefCounters,
+                     RenderDeviceImplType* pDevice,
+                     const ObjectDescType& ObjDesc,
+                     bool                  bIsDeviceInternal = false) :
+        // clang-format off
+        TBase              {pRefCounters},
+        m_pDevice          {pDevice          },
+        m_Desc             {ObjDesc          },
+        m_bIsDeviceInternal{bIsDeviceInternal}
+    //clang-format on
     {
         // Do not keep strong reference to the device if the object is an internal device object
         if (!m_bIsDeviceInternal)
@@ -65,15 +67,15 @@ public:
 
         if (ObjDesc.Name != nullptr)
         {
-            auto size = strlen(ObjDesc.Name) + 1;
+            auto  size     = strlen(ObjDesc.Name) + 1;
             auto* NameCopy = ALLOCATE(GetStringAllocator(), "Object name copy", char, size);
             memcpy(NameCopy, ObjDesc.Name, size);
             m_Desc.Name = NameCopy;
         }
         else
         {
-            size_t size = 16 + 2 + 1; // 0x12345678
-            auto* AddressStr = ALLOCATE(GetStringAllocator(), "Object address string", char, size);
+            size_t size       = 16 + 2 + 1; // 0x12345678
+            auto*  AddressStr = ALLOCATE(GetStringAllocator(), "Object address string", char, size);
             snprintf(AddressStr, size, "0x%llX", static_cast<unsigned long long>(reinterpret_cast<size_t>(this)));
             m_Desc.Name = AddressStr;
         }
@@ -85,10 +87,12 @@ public:
         //m_pDevice->AddResourceToHash( this ); - ERROR!
     }
 
+    // clang-format off
     DeviceObjectBase             (const DeviceObjectBase& ) = delete;
     DeviceObjectBase             (      DeviceObjectBase&&) = delete;
     DeviceObjectBase& operator = (const DeviceObjectBase& ) = delete;
     DeviceObjectBase& operator = (      DeviceObjectBase&&) = delete;
+    // clang-format on
 
     virtual ~DeviceObjectBase()
     {
@@ -100,43 +104,42 @@ public:
         }
     }
 
-    inline virtual Atomics::Long Release()override final
+    inline virtual Atomics::Long Release() override final
     {
         // Render device owns allocators for all types of device objects,
-        // so it must be destroyed after all device objects are released. 
-        // Consider the following scenario: an object A owns the last strong 
+        // so it must be destroyed after all device objects are released.
+        // Consider the following scenario: an object A owns the last strong
         // reference to the device:
-        // 
+        //
         // 1. A::~A() completes
         // 2. A::~DeviceObjectBase() completes
         // 3. A::m_pDevice is released
         //       Render device is destroyed, all allocators are invalid
-        // 4. RefCountersImpl::ObjectWrapperBase::DestroyObject() calls 
+        // 4. RefCountersImpl::ObjectWrapperBase::DestroyObject() calls
         //    m_pAllocator->Free(m_pObject) - crash!
-         
+
         RefCntAutoPtr<RenderDeviceImplType> pDevice;
         return TBase::Release(
-                        [&]()
-                        {
-                            // We must keep the device alive while the object is being destroyed
-                            // Note that internal device objects do not keep strong reference to the device
-                            if (!m_bIsDeviceInternal)
-                            {
-                                pDevice = m_pDevice;
-                            }
-                        }
-                      );
+            [&]() // clang-format off
+            { // clang-format on
+                // We must keep the device alive while the object is being destroyed
+                // Note that internal device objects do not keep strong reference to the device
+                if (!m_bIsDeviceInternal)
+                {
+                    pDevice = m_pDevice;
+                }
+            });
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DeviceObject, TBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceObject, TBase)
 
-    virtual const ObjectDescType& GetDesc()const override final
+    virtual const ObjectDescType& GetDesc() const override final
     {
         return m_Desc;
     }
 
     /// Returns unique identifier
-    virtual Int32 GetUniqueID()const override final
+    virtual Int32 GetUniqueID() const override final
     {
         /// \note
         /// This unique ID is used to unambiguously identify device object for
@@ -153,19 +156,19 @@ public:
         return Id1 == Id2;
     }
 
-    RenderDeviceImplType* GetDevice()const{return m_pDevice;}
-    
+    RenderDeviceImplType* GetDevice() const { return m_pDevice; }
+
 protected:
     /// Pointer to the device
     RenderDeviceImplType* const m_pDevice;
 
     /// Object description
     ObjectDescType m_Desc;
-    
-    // Template argument is only used to separate counters for 
+
+    // Template argument is only used to separate counters for
     // different groups of objects
     UniqueIdHelper<BaseInterface> m_UniqueID;
     const bool                    m_bIsDeviceInternal;
 };
 
-}
+} // namespace Diligent

@@ -34,17 +34,19 @@ namespace Diligent
 
 // {595A59BF-FA81-4855-BC5E-C0E048745A95}
 static constexpr INTERFACE_ID IID_Sampler =
-{ 0x595a59bf, 0xfa81, 0x4855, { 0xbc, 0x5e, 0xc0, 0xe0, 0x48, 0x74, 0x5a, 0x95 } };
+    {0x595a59bf, 0xfa81, 0x4855, {0xbc, 0x5e, 0xc0, 0xe0, 0x48, 0x74, 0x5a, 0x95}};
+
+// clang-format off
 
 /// Sampler description
 
-/// This structure describes the sampler state which is used in a call to 
+/// This structure describes the sampler state which is used in a call to
 /// IRenderDevice::CreateSampler() to create a sampler object.
 ///
 /// To create an anisotropic filter, all three filters must either be Diligent::FILTER_TYPE_ANISOTROPIC
 /// or Diligent::FILTER_TYPE_COMPARISON_ANISOTROPIC.
 ///
-/// MipFilter cannot be comparison filter except for Diligent::FILTER_TYPE_ANISOTROPIC if all 
+/// MipFilter cannot be comparison filter except for Diligent::FILTER_TYPE_ANISOTROPIC if all
 /// three filters have that value.
 ///
 /// Both MinFilter and MagFilter must either be regular filters or comparison filters.
@@ -116,17 +118,17 @@ struct SamplerDesc : DeviceObjectAttribs
                 COMPARISON_FUNCTION  _ComparisonFunc = SamplerDesc{}.ComparisonFunc,
                 float                _MinLOD         = SamplerDesc{}.MinLOD,
                 float                _MaxLOD         = SamplerDesc{}.MaxLOD) : 
-        MinFilter      (_MinFilter),
-        MagFilter      (_MagFilter),
-        MipFilter      (_MipFilter),
-        AddressU       (_AddressU),
-        AddressV       (_AddressV),
-        AddressW       (_AddressW),
-        MipLODBias     (_MipLODBias),
-        MaxAnisotropy  (_MaxAnisotropy),
-        ComparisonFunc (_ComparisonFunc),
-        MinLOD         (_MinLOD),
-        MaxLOD         (_MaxLOD)
+        MinFilter      {_MinFilter     },
+        MagFilter      {_MagFilter     },
+        MipFilter      {_MipFilter     },
+        AddressU       {_AddressU      },
+        AddressV       {_AddressV      },
+        AddressW       {_AddressW      },
+        MipLODBias     {_MipLODBias    },
+        MaxAnisotropy  {_MaxAnisotropy },
+        ComparisonFunc {_ComparisonFunc},
+        MinLOD         {_MinLOD        },
+        MaxLOD         {_MaxLOD        }
     {
         BorderColor[0] = BorderColor[1] = BorderColor[2] = BorderColor[3] = 0;
     }
@@ -161,6 +163,8 @@ struct SamplerDesc : DeviceObjectAttribs
     }
 };
 
+// clang-format on
+
 /// Texture sampler interface.
 
 /// The interface holds the sampler state that can be used to perform texture filtering.
@@ -170,10 +174,10 @@ class ISampler : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
 
     /// Returns the sampler description used to create the object
-    virtual const SamplerDesc& GetDesc()const override = 0;
+    virtual const SamplerDesc& GetDesc() const override = 0;
 };
 
-}
+} // namespace Diligent

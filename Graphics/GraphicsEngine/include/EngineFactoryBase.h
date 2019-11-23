@@ -40,19 +40,21 @@ const APIInfo& GetAPIInfo();
 /// \tparam BaseInterface - base interface that this class will inheret
 ///                         (Diligent::IEngineFactoryD3D11, Diligent::IEngineFactoryD3D12,
 ///                          Diligent::IEngineFactoryVk or Diligent::IEngineFactoryOpenGL).
-template<class BaseInterface>
+template <class BaseInterface>
 class EngineFactoryBase : public BaseInterface
 {
 public:
     using CounterValueType = IReferenceCounters::CounterValueType;
 
-    EngineFactoryBase(const INTERFACE_ID& FactoryIID)noexcept :
+    EngineFactoryBase(const INTERFACE_ID& FactoryIID) noexcept :
+        // clang-format off
         m_FactoryIID  {FactoryIID},
         m_RefCounters {*this     }
+    // clang-format on
     {
     }
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
     {
         if (ppInterface == nullptr)
             return;
@@ -65,17 +67,17 @@ public:
         }
     }
 
-    virtual CounterValueType AddRef()override final
+    virtual CounterValueType AddRef() override final
     {
         return m_RefCounters.AddStrongRef();
     }
 
-    virtual CounterValueType Release()override final
+    virtual CounterValueType Release() override final
     {
         return m_RefCounters.ReleaseStrongRef();
     }
 
-    virtual IReferenceCounters* GetReferenceCounters()const override final
+    virtual IReferenceCounters* GetReferenceCounters() const override final
     {
         return const_cast<IReferenceCounters*>(static_cast<const IReferenceCounters*>(&m_RefCounters));
     }
@@ -85,8 +87,8 @@ public:
         return Diligent::GetAPIInfo();
     }
 
-    virtual void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories, 
-                                                        IShaderSourceInputStreamFactory** ppShaderSourceFactory)const override final
+    virtual void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories,
+                                                        IShaderSourceInputStreamFactory** ppShaderSourceFactory) const override final
     {
         Diligent::CreateDefaultShaderSourceStreamFactory(SearchDirectories, ppShaderSourceFactory);
     }
@@ -95,8 +97,8 @@ private:
     class DummyReferenceCounters final : public IReferenceCounters
     {
     public:
-        DummyReferenceCounters(EngineFactoryBase& Factory)noexcept :
-            m_Factory {Factory}
+        DummyReferenceCounters(EngineFactoryBase& Factory) noexcept :
+            m_Factory{Factory}
         {
             m_lNumStrongReferences = 0;
             m_lNumWeakReferences   = 0;
@@ -108,44 +110,45 @@ private:
             return Atomics::AtomicIncrement(m_lNumStrongReferences);
         }
 
-        virtual CounterValueType ReleaseStrongRef()override final
+        virtual CounterValueType ReleaseStrongRef() override final
         {
             return Atomics::AtomicDecrement(m_lNumStrongReferences);
         }
 
-        virtual CounterValueType AddWeakRef()override final
+        virtual CounterValueType AddWeakRef() override final
         {
             return Atomics::AtomicIncrement(m_lNumWeakReferences);
         }
-            
-        virtual CounterValueType ReleaseWeakRef()override final
+
+        virtual CounterValueType ReleaseWeakRef() override final
         {
             return Atomics::AtomicDecrement(m_lNumWeakReferences);
         }
 
-        virtual void GetObject(IObject** ppObject)override final
+        virtual void GetObject(IObject** ppObject) override final
         {
             if (ppObject != nullptr)
                 m_Factory.QueryInterface(IID_Unknown, ppObject);
         }
 
-        virtual CounterValueType GetNumStrongRefs()const override final
+        virtual CounterValueType GetNumStrongRefs() const override final
         {
             return m_lNumStrongReferences;
         }
 
-        virtual CounterValueType GetNumWeakRefs()const override final
+        virtual CounterValueType GetNumWeakRefs() const override final
         {
             return m_lNumWeakReferences;
         }
+
     private:
-        EngineFactoryBase& m_Factory;
+        EngineFactoryBase&  m_Factory;
         Atomics::AtomicLong m_lNumStrongReferences;
         Atomics::AtomicLong m_lNumWeakReferences;
     };
 
-    const INTERFACE_ID m_FactoryIID;
+    const INTERFACE_ID     m_FactoryIID;
     DummyReferenceCounters m_RefCounters;
 };
 
-}
+} // namespace Diligent

@@ -41,30 +41,30 @@ namespace Diligent
 /// \tparam RenderDeviceImplType - type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template<class BaseInterface, class RenderDeviceImplType>
+template <class BaseInterface, class RenderDeviceImplType>
 class SamplerBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, SamplerDesc>
 {
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, SamplerDesc>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this sampler.
-	/// \param pDevice - pointer to the device.
-	/// \param SamDesc - sampler description.
-	/// \param bIsDeviceInternal - flag indicating if the sampler is an internal device object and 
-	///							   must not keep a strong reference to the device.
-    SamplerBase( IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false ) :
-        TDeviceObjectBase( pRefCounters, pDevice, SamDesc, bIsDeviceInternal )
+    /// \param pDevice - pointer to the device.
+    /// \param SamDesc - sampler description.
+    /// \param bIsDeviceInternal - flag indicating if the sampler is an internal device object and
+    ///							   must not keep a strong reference to the device.
+    SamplerBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const SamplerDesc& SamDesc, bool bIsDeviceInternal = false) :
+        TDeviceObjectBase{pRefCounters, pDevice, SamDesc, bIsDeviceInternal}
     {}
 
     ~SamplerBase()
     {
-        /// \note Destructor cannot directly remove the object from the registry as this may cause a 
+        /// \note Destructor cannot directly remove the object from the registry as this may cause a
         ///       deadlock.
-        auto &SamplerRegistry = this->GetDevice()->GetSamplerRegistry();
+        auto& SamplerRegistry = this->GetDevice()->GetSamplerRegistry();
         SamplerRegistry.ReportDeletedObject();
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Sampler, TDeviceObjectBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Sampler, TDeviceObjectBase)
 };
 
-}
+} // namespace Diligent

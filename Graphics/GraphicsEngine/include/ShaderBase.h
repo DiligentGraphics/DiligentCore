@@ -50,8 +50,9 @@ inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
     Int32 ShaderIndex = PlatformMisc::GetLSB(Type);
 
 #ifdef _DEBUG
-    switch( Type )
+    switch (Type)
     {
+        // clang-format off
         case SHADER_TYPE_UNKNOWN: VERIFY_EXPR(ShaderIndex == -1); break;
         case SHADER_TYPE_VERTEX:  VERIFY_EXPR(ShaderIndex ==  0); break;
         case SHADER_TYPE_PIXEL:   VERIFY_EXPR(ShaderIndex ==  1); break;
@@ -59,9 +60,10 @@ inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
         case SHADER_TYPE_HULL:    VERIFY_EXPR(ShaderIndex ==  3); break;
         case SHADER_TYPE_DOMAIN:  VERIFY_EXPR(ShaderIndex ==  4); break;
         case SHADER_TYPE_COMPUTE: VERIFY_EXPR(ShaderIndex ==  5); break;
-        default: UNEXPECTED( "Unexpected shader type (", Type, ")" ); break;
+        // clang-format on
+        default: UNEXPECTED("Unexpected shader type (", Type, ")"); break;
     }
-    VERIFY( Type == GetShaderTypeFromIndex(ShaderIndex), "Incorrect shader type index" );
+    VERIFY(Type == GetShaderTypeFromIndex(ShaderIndex), "Incorrect shader type index");
 #endif
     return ShaderIndex;
 }
@@ -82,23 +84,23 @@ static const int CSInd = GetShaderTypeIndex(SHADER_TYPE_COMPUTE);
 /// \tparam RenderDeviceImplType - type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)
-template<class BaseInterface, class RenderDeviceImplType>
+template <class BaseInterface, class RenderDeviceImplType>
 class ShaderBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderDesc>
 {
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderDesc>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this shader.
-	/// \param pDevice - pointer to the device.
-	/// \param ShdrDesc - shader description.
-	/// \param bIsDeviceInternal - flag indicating if the shader is an internal device object and 
-	///							   must not keep a strong reference to the device.
+    /// \param pDevice - pointer to the device.
+    /// \param ShdrDesc - shader description.
+    /// \param bIsDeviceInternal - flag indicating if the shader is an internal device object and
+    ///							   must not keep a strong reference to the device.
     ShaderBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false) :
-        TDeviceObjectBase(pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal)
+        TDeviceObjectBase{pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal}
     {
     }
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_Shader, TDeviceObjectBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TDeviceObjectBase)
 };
 
-}
+} // namespace Diligent

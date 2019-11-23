@@ -34,18 +34,18 @@ namespace Diligent
 
 // {5B4CCA0B-5075-4230-9759-F48769EE5502}
 static constexpr INTERFACE_ID IID_DeviceObject =
-{ 0x5b4cca0b, 0x5075, 0x4230, { 0x97, 0x59, 0xf4, 0x87, 0x69, 0xee, 0x55, 0x2 } };
+    {0x5b4cca0b, 0x5075, 0x4230, {0x97, 0x59, 0xf4, 0x87, 0x69, 0xee, 0x55, 0x2}};
 
 /// Base interface for all objects created by the render device Diligent::IRenderDevice
 class IDeviceObject : public IObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
 
 
     /// Returns the object description
-    virtual const DeviceObjectAttribs& GetDesc()const = 0;
+    virtual const DeviceObjectAttribs& GetDesc() const = 0;
 
 
     /// Returns unique identifier assigned to an object
@@ -67,4 +67,4 @@ public:
     virtual Int32 GetUniqueID() const = 0;
 };
 
-}
+} // namespace Diligent
