@@ -84,17 +84,40 @@ AllowAllConstructorInitializersOnNextLine: true
 #     member0(0), member1(2) {}
 
 
-AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: Never
-AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: None
-AllowShortLambdasOnASingleLine: All
+# If the function declaration doesn't fit on a line, allow putting all parameters
+# of a function declaration onto the next line even if BinPackParameters is false.
+AllowAllParametersOfDeclarationOnNextLine: false
+#false:
+#void myFunction(int a,
+#                int b,
+#                int c);
+
+
+AllowShortBlocksOnASingleLine: Always
+# Always:
+# while (true) {}
+# while (true) {continue;}
+
+
+AllowShortCaseLabelsOnASingleLine: true
+# true:
+# switch (a)
+# {  
+#     case 1: x = 1; break;  
+
+
+AllowShortFunctionsOnASingleLine: All
+AllowShortLambdasOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: Never
-AllowShortLoopsOnASingleLine: false
+AllowShortLoopsOnASingleLine: true
+
+# The function definition return type breaking style to use.
+# This option is deprecated and is retained for backwards compatibility.
 AlwaysBreakAfterDefinitionReturnType: None
+
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
-AlwaysBreakTemplateDeclarations: MultiLine
+AlwaysBreakTemplateDeclarations: No
 
 # If false, a function call's arguments will either be all on the same line or will have one line each.
 BinPackArguments: true
