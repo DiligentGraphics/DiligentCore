@@ -24,5 +24,5 @@
 #pragma once
 
 #ifdef _DEBUG
-#   define VERIFY_SHADER_BINDINGS
+#    define VERIFY_SHADER_BINDINGS
 #endif

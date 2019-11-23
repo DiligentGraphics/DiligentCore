@@ -33,14 +33,12 @@ namespace Diligent
 
 // {45F2BE28-652B-4180-B6E4-E75F83F63CC7}
 static constexpr INTERFACE_ID IID_FenceD3D11 =
-{ 0x45f2be28, 0x652b, 0x4180, { 0xb6, 0xe4, 0xe7, 0x5f, 0x83, 0xf6, 0x3c, 0xc7 } };
+    {0x45f2be28, 0x652b, 0x4180, {0xb6, 0xe4, 0xe7, 0x5f, 0x83, 0xf6, 0x3c, 0xc7}};
 
 
 /// Exposes Direct3D11-specific functionality of a fence object.
 class IFenceD3D11 : public IFence
 {
-public:
-
 };
 
-}
+} // namespace Diligent

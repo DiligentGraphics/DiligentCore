@@ -42,24 +42,24 @@ class TextureViewD3D11Impl final : public TextureViewBase<ITextureViewD3D11, Ren
 public:
     using TTextureViewBase = TextureViewBase<ITextureViewD3D11, RenderDeviceD3D11Impl>;
 
-    TextureViewD3D11Impl( IReferenceCounters*    pRefCounters,
-                          RenderDeviceD3D11Impl* pDevice, 
-                          const TextureViewDesc& ViewDesc, 
-                          class ITexture*        pTexture,
-                          ID3D11View*            pD3D11View,
-                          bool                   bIsDefaultView);
+    TextureViewD3D11Impl(IReferenceCounters*    pRefCounters,
+                         RenderDeviceD3D11Impl* pDevice,
+                         const TextureViewDesc& ViewDesc,
+                         class ITexture*        pTexture,
+                         ID3D11View*            pD3D11View,
+                         bool                   bIsDefaultView);
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureViewD3D11::GetD3D11View().
-    virtual ID3D11View* GetD3D11View()override final
+    virtual ID3D11View* GetD3D11View() override final
     {
         return m_pD3D11View;
     }
-   
+
 private:
     /// D3D11 view
     CComPtr<ID3D11View> m_pD3D11View;
 };
 
-}
+} // namespace Diligent

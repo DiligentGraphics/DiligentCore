@@ -33,18 +33,17 @@ namespace Diligent
 
 // {31A3BFAF-738E-4D8C-AD18-B021C5D948DD}
 static constexpr INTERFACE_ID IID_SamplerD3D11 =
-{ 0x31a3bfaf, 0x738e, 0x4d8c, { 0xad, 0x18, 0xb0, 0x21, 0xc5, 0xd9, 0x48, 0xdd } };
+    {0x31a3bfaf, 0x738e, 0x4d8c, {0xad, 0x18, 0xb0, 0x21, 0xc5, 0xd9, 0x48, 0xdd}};
 
 /// Exposes Direct3D11-specific functionality of a sampler object.
 class ISamplerD3D11 : public ISampler
 {
 public:
-
     /// Returns a pointer to the ID3D11SamplerState interface of the internal Direct3D11 object.
-    
+
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual ID3D11SamplerState* GetD3D11SamplerState() = 0;
 };
 
-}
+} // namespace Diligent

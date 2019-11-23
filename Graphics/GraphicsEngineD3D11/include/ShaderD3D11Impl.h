@@ -52,44 +52,44 @@ public:
                     class RenderDeviceD3D11Impl* pRenderDeviceD3D11,
                     const ShaderCreateInfo&      ShaderCI);
     ~ShaderD3D11Impl();
-    
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShader::GetResourceCount() in Direct3D11 backend.
-    virtual Uint32 GetResourceCount()const override final
+    virtual Uint32 GetResourceCount() const override final
     {
         return m_pShaderResources->GetTotalResources();
     }
 
     /// Implementation of IShader::GetResource() in Direct3D11 backend.
-    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
+    virtual ShaderResourceDesc GetResource(Uint32 Index) const override final
     {
         return GetHLSLResource(Index);
     }
 
     /// Implementation of IShaderD3D::GetHLSLResource() method.
-    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index)const override final
+    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index) const override final
     {
         return m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     /// Implementation of IShaderD3D11::GetD3D11Shader() method.
-    virtual ID3D11DeviceChild* GetD3D11Shader()override final
+    virtual ID3D11DeviceChild* GetD3D11Shader() override final
     {
         return m_pShader;
     }
 
-    ID3DBlob* GetBytecode(){return m_pShaderByteCode;}
+    ID3DBlob* GetBytecode() { return m_pShaderByteCode; }
 
-    const std::shared_ptr<const ShaderResourcesD3D11>& GetD3D11Resources()const{return m_pShaderResources;}
+    const std::shared_ptr<const ShaderResourcesD3D11>& GetD3D11Resources() const { return m_pShaderResources; }
 
 private:
     /// D3D11 shader
     CComPtr<ID3D11DeviceChild> m_pShader;
-    
-    // ShaderResources class instance must be referenced through the shared pointer, because 
+
+    // ShaderResources class instance must be referenced through the shared pointer, because
     // it is referenced by ShaderResourceLayoutD3D11 class instances
     std::shared_ptr<const ShaderResourcesD3D11> m_pShaderResources;
 };
 
-}
+} // namespace Diligent

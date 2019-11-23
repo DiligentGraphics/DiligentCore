@@ -33,13 +33,12 @@ namespace Diligent
 
 // {6ABA95FC-CD7D-4C03-8CAE-AFC45F9696B7}
 static constexpr INTERFACE_ID IID_BufferViewD3D11 =
-{ 0x6aba95fc, 0xcd7d, 0x4c03, { 0x8c, 0xae, 0xaf, 0xc4, 0x5f, 0x96, 0x96, 0xb7 } };
+    {0x6aba95fc, 0xcd7d, 0x4c03, {0x8c, 0xae, 0xaf, 0xc4, 0x5f, 0x96, 0x96, 0xb7}};
 
 /// Exposes Direct3D11-specific functionality of a buffer view object.
 class IBufferViewD3D11 : public IBufferView
 {
 public:
-
     /// Returns a pointer to the ID3D11View interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -47,4 +46,4 @@ public:
     virtual ID3D11View* GetD3D11View() = 0;
 };
 
-}
+} // namespace Diligent

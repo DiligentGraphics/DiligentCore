@@ -29,26 +29,26 @@
 
 namespace Diligent
 {
-    
-FenceD3D11Impl :: FenceD3D11Impl(IReferenceCounters*    pRefCounters,
-                                 RenderDeviceD3D11Impl* pDevice,
-                                 const FenceDesc&       Desc) : 
+
+FenceD3D11Impl::FenceD3D11Impl(IReferenceCounters*    pRefCounters,
+                               RenderDeviceD3D11Impl* pDevice,
+                               const FenceDesc&       Desc) :
     TFenceBase{pRefCounters, pDevice, Desc}
 {
 }
 
-FenceD3D11Impl :: ~FenceD3D11Impl()
+FenceD3D11Impl::~FenceD3D11Impl()
 {
 }
 
-Uint64 FenceD3D11Impl :: GetCompletedValue()
+Uint64 FenceD3D11Impl::GetCompletedValue()
 {
     while (!m_PendingQueries.empty())
     {
         auto& QueryData = m_PendingQueries.front();
-        BOOL Data;
-        auto res = QueryData.pd3d11Ctx->GetData(QueryData.pd3d11Query, &Data, sizeof(Data), D3D11_ASYNC_GETDATA_DONOTFLUSH);
-        if(res == S_OK)
+        BOOL  Data;
+        auto  res = QueryData.pd3d11Ctx->GetData(QueryData.pd3d11Query, &Data, sizeof(Data), D3D11_ASYNC_GETDATA_DONOTFLUSH);
+        if (res == S_OK)
         {
             VERIFY_EXPR(Data == TRUE);
             if (QueryData.Value > m_LastCompletedFenceValue)
@@ -64,7 +64,7 @@ Uint64 FenceD3D11Impl :: GetCompletedValue()
     return m_LastCompletedFenceValue;
 }
 
-void FenceD3D11Impl :: Wait(Uint64 Value, bool FlushCommands)
+void FenceD3D11Impl::Wait(Uint64 Value, bool FlushCommands)
 {
     while (!m_PendingQueries.empty())
     {
@@ -84,11 +84,11 @@ void FenceD3D11Impl :: Wait(Uint64 Value, bool FlushCommands)
     }
 }
 
-void FenceD3D11Impl :: Reset(Uint64 Value)
+void FenceD3D11Impl::Reset(Uint64 Value)
 {
     DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
     if (Value > m_LastCompletedFenceValue)
         m_LastCompletedFenceValue = Value;
 }
 
-}
+} // namespace Diligent

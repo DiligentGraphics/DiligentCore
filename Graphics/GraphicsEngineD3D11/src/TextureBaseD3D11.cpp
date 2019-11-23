@@ -32,11 +32,12 @@
 namespace Diligent
 {
 
-TextureBaseD3D11 :: TextureBaseD3D11(IReferenceCounters*        pRefCounters,
-                                     FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                     RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
-                                     const TextureDesc&         TexDesc,
-                                     const TextureData*         pInitData /*= nullptr*/) : 
+TextureBaseD3D11 ::TextureBaseD3D11(IReferenceCounters*        pRefCounters,
+                                    FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                    RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
+                                    const TextureDesc&         TexDesc,
+                                    const TextureData*         pInitData /*= nullptr*/) :
+    // clang-format off
     TTextureBase
     {
         pRefCounters,
@@ -44,6 +45,7 @@ TextureBaseD3D11 :: TextureBaseD3D11(IReferenceCounters*        pRefCounters,
         pRenderDeviceD3D11,
         TexDesc
     }
+// clang-format on
 {
     if (m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
         LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time: pInitData can't be null");
@@ -51,109 +53,108 @@ TextureBaseD3D11 :: TextureBaseD3D11(IReferenceCounters*        pRefCounters,
     SetState(RESOURCE_STATE_UNDEFINED);
 }
 
-IMPLEMENT_QUERY_INTERFACE( TextureBaseD3D11, IID_TextureD3D11, TTextureBase )
+IMPLEMENT_QUERY_INTERFACE(TextureBaseD3D11, IID_TextureD3D11, TTextureBase)
 
-void TextureBaseD3D11::CreateViewInternal( const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView )
+void TextureBaseD3D11::CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView)
 {
-    VERIFY( ppView != nullptr, "View pointer address is null" );
-    if( !ppView )return;
-    VERIFY(* ppView == nullptr, "Overwriting reference to existing object may cause memory leaks" );
-    
-   *ppView = nullptr;
+    VERIFY(ppView != nullptr, "View pointer address is null");
+    if (!ppView) return;
+    VERIFY(*ppView == nullptr, "Overwriting reference to existing object may cause memory leaks");
+
+    *ppView = nullptr;
 
     try
     {
         auto UpdatedViewDesc = ViewDesc;
-        CorrectTextureViewDesc( UpdatedViewDesc );
+        CorrectTextureViewDesc(UpdatedViewDesc);
 
         RefCntAutoPtr<ID3D11View> pD3D11View;
-        switch( ViewDesc.ViewType )
+        switch (ViewDesc.ViewType)
         {
             case TEXTURE_VIEW_SHADER_RESOURCE:
             {
-                VERIFY( m_Desc.BindFlags & BIND_SHADER_RESOURCE, "BIND_SHADER_RESOURCE flag is not set" );
+                VERIFY(m_Desc.BindFlags & BIND_SHADER_RESOURCE, "BIND_SHADER_RESOURCE flag is not set");
                 ID3D11ShaderResourceView* pSRV = nullptr;
-                CreateSRV( UpdatedViewDesc, &pSRV );
-                pD3D11View.Attach( pSRV );
+                CreateSRV(UpdatedViewDesc, &pSRV);
+                pD3D11View.Attach(pSRV);
             }
             break;
 
             case TEXTURE_VIEW_RENDER_TARGET:
             {
-                VERIFY( m_Desc.BindFlags & BIND_RENDER_TARGET, "BIND_RENDER_TARGET flag is not set" );
+                VERIFY(m_Desc.BindFlags & BIND_RENDER_TARGET, "BIND_RENDER_TARGET flag is not set");
                 ID3D11RenderTargetView* pRTV = nullptr;
-                CreateRTV( UpdatedViewDesc, &pRTV );
-                pD3D11View.Attach( pRTV );
+                CreateRTV(UpdatedViewDesc, &pRTV);
+                pD3D11View.Attach(pRTV);
             }
             break;
 
             case TEXTURE_VIEW_DEPTH_STENCIL:
             {
-                VERIFY( m_Desc.BindFlags & BIND_DEPTH_STENCIL, "BIND_DEPTH_STENCIL is not set" );
+                VERIFY(m_Desc.BindFlags & BIND_DEPTH_STENCIL, "BIND_DEPTH_STENCIL is not set");
                 ID3D11DepthStencilView* pDSV = nullptr;
-                CreateDSV( UpdatedViewDesc, &pDSV );
-                pD3D11View.Attach( pDSV );
+                CreateDSV(UpdatedViewDesc, &pDSV);
+                pD3D11View.Attach(pDSV);
             }
             break;
 
             case TEXTURE_VIEW_UNORDERED_ACCESS:
             {
-                VERIFY( m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "BIND_UNORDERED_ACCESS flag is not set" );
+                VERIFY(m_Desc.BindFlags & BIND_UNORDERED_ACCESS, "BIND_UNORDERED_ACCESS flag is not set");
                 ID3D11UnorderedAccessView* pUAV = nullptr;
-                CreateUAV( UpdatedViewDesc, &pUAV );
-                pD3D11View.Attach( pUAV );
+                CreateUAV(UpdatedViewDesc, &pUAV);
+                pD3D11View.Attach(pUAV);
             }
             break;
 
-            default: UNEXPECTED( "Unknown view type" ); break;
+            default: UNEXPECTED("Unknown view type"); break;
         }
 
         auto* pDeviceD3D11Impl = ValidatedCast<RenderDeviceD3D11Impl>(GetDevice());
-        auto &TexViewAllocator = pDeviceD3D11Impl->GetTexViewObjAllocator();
-        VERIFY( &TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization" );
+        auto& TexViewAllocator = pDeviceD3D11Impl->GetTexViewObjAllocator();
+        VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
-        auto pViewD3D11 = NEW_RC_OBJ(TexViewAllocator, "TextureViewD3D11Impl instance", TextureViewD3D11Impl, bIsDefaultView ? this : nullptr)
-                                    (pDeviceD3D11Impl, UpdatedViewDesc, this, pD3D11View, bIsDefaultView );
-        VERIFY( pViewD3D11->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type" );
+        auto pViewD3D11 = NEW_RC_OBJ(TexViewAllocator, "TextureViewD3D11Impl instance", TextureViewD3D11Impl, bIsDefaultView ? this : nullptr)(pDeviceD3D11Impl, UpdatedViewDesc, this, pD3D11View, bIsDefaultView);
+        VERIFY(pViewD3D11->GetDesc().ViewType == ViewDesc.ViewType, "Incorrect view type");
 
-        if( bIsDefaultView )
-           * ppView = pViewD3D11;
+        if (bIsDefaultView)
+            *ppView = pViewD3D11;
         else
-            pViewD3D11->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView) );
+            pViewD3D11->QueryInterface(IID_TextureView, reinterpret_cast<IObject**>(ppView));
     }
-    catch( const std::runtime_error & )
+    catch (const std::runtime_error&)
     {
-        const auto *ViewTypeName = GetTexViewTypeLiteralName(ViewDesc.ViewType);
-        LOG_ERROR("Failed to create view \"", ViewDesc.Name ? ViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"" );
+        const auto* ViewTypeName = GetTexViewTypeLiteralName(ViewDesc.ViewType);
+        LOG_ERROR("Failed to create view \"", ViewDesc.Name ? ViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"");
     }
 }
 
-void TextureBaseD3D11 :: PrepareD3D11InitData(const TextureData*                                                                 pInitData,
-                                              Uint32                                                                             NumSubresources, 
-                                              std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> > & D3D11InitData)
+void TextureBaseD3D11 ::PrepareD3D11InitData(const TextureData*                                                               pInitData,
+                                             Uint32                                                                           NumSubresources,
+                                             std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>>& D3D11InitData)
 {
     if (pInitData != nullptr && pInitData->pSubResources != nullptr)
     {
-        if( NumSubresources == pInitData->NumSubresources )
+        if (NumSubresources == pInitData->NumSubresources)
         {
             D3D11InitData.resize(NumSubresources);
-            for(UINT Subres=0; Subres < NumSubresources; ++Subres)
+            for (UINT Subres = 0; Subres < NumSubresources; ++Subres)
             {
-                auto &CurrSubres = pInitData->pSubResources[Subres];
-                D3D11InitData[Subres].pSysMem = CurrSubres.pData;
-                D3D11InitData[Subres].SysMemPitch = CurrSubres.Stride;
+                auto& CurrSubres                       = pInitData->pSubResources[Subres];
+                D3D11InitData[Subres].pSysMem          = CurrSubres.pData;
+                D3D11InitData[Subres].SysMemPitch      = CurrSubres.Stride;
                 D3D11InitData[Subres].SysMemSlicePitch = CurrSubres.DepthStride;
             }
         }
         else
         {
-            UNEXPECTED( "Incorrect number of subrsources" );
+            UNEXPECTED("Incorrect number of subrsources");
         }
     }
 }
 
-TextureBaseD3D11 :: ~TextureBaseD3D11()
+TextureBaseD3D11 ::~TextureBaseD3D11()
 {
 }
 
-}
+} // namespace Diligent

@@ -49,10 +49,10 @@ public:
                            const PipelineStateDesc&     PipelineDesc);
     ~PipelineStateD3D11Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
-    
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+
     /// Implementation of IPipelineState::BindStaticResources() in Direct3D11 backend.
-    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final;
 
     /// Implementation of IPipelineState::GetStaticVariableCount() in Direct3D11 backend.
     virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
@@ -64,41 +64,41 @@ public:
     virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
     /// Implementation of IPipelineState::CreateShaderResourceBinding() in Direct3D11 backend.
-    virtual void CreateShaderResourceBinding(IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources)override final;
+    virtual void CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final;
 
     /// Implementation of IPipelineState::IsCompatibleWith() in Direct3D11 backend.
-    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+    virtual bool IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
 
     /// Implementation of IPipelineStateD3D11::GetD3D11BlendState() method.
-    virtual ID3D11BlendState* GetD3D11BlendState()override final;
+    virtual ID3D11BlendState* GetD3D11BlendState() override final;
 
     /// Implementation of IPipelineStateD3D11::GetD3D11RasterizerState() method.
-    virtual ID3D11RasterizerState* GetD3D11RasterizerState()override final;
+    virtual ID3D11RasterizerState* GetD3D11RasterizerState() override final;
 
     /// Implementation of IPipelineStateD3D11::GetD3D11DepthStencilState() method.
-    virtual ID3D11DepthStencilState* GetD3D11DepthStencilState()override final;
+    virtual ID3D11DepthStencilState* GetD3D11DepthStencilState() override final;
 
     /// Implementation of IPipelineStateD3D11::GetD3D11InputLayout() method.
-    virtual ID3D11InputLayout* GetD3D11InputLayout()override final;
+    virtual ID3D11InputLayout* GetD3D11InputLayout() override final;
 
     /// Implementation of IPipelineStateD3D11::GetD3D11VertexShader() method.
-    virtual ID3D11VertexShader*   GetD3D11VertexShader()override final;
+    virtual ID3D11VertexShader* GetD3D11VertexShader() override final;
 
     /// Implementation of IPipelineStateD3D11::GetD3D11PixelShader() method.
-    virtual ID3D11PixelShader*    GetD3D11PixelShader()override final;
+    virtual ID3D11PixelShader* GetD3D11PixelShader() override final;
 
     /// Implementation of IPipelineStateD3D11::GetD3D11GeometryShader() method.
-    virtual ID3D11GeometryShader* GetD3D11GeometryShader()override final;
+    virtual ID3D11GeometryShader* GetD3D11GeometryShader() override final;
 
     /// Implementation of IPipelineStateD3D11::GetD3D11DomainShader() method.
-    virtual ID3D11DomainShader*   GetD3D11DomainShader()override final;
+    virtual ID3D11DomainShader* GetD3D11DomainShader() override final;
 
     /// Implementation of IPipelineStateD3D11::GetD3D11HullShader() method.
-    virtual ID3D11HullShader*     GetD3D11HullShader()override final;
+    virtual ID3D11HullShader* GetD3D11HullShader() override final;
 
     /// Implementation of IPipelineStateD3D11::GetD3D11ComputeShader() method.
-    virtual ID3D11ComputeShader*  GetD3D11ComputeShader()override final;
+    virtual ID3D11ComputeShader* GetD3D11ComputeShader() override final;
 
 
     SRBMemoryAllocator& GetSRBMemoryAllocator()
@@ -106,7 +106,7 @@ public:
         return m_SRBMemAllocator;
     }
 
-    const ShaderResourceLayoutD3D11& GetStaticResourceLayout(Uint32 s)const
+    const ShaderResourceLayoutD3D11& GetStaticResourceLayout(Uint32 s) const
     {
         VERIFY_EXPR(s < m_NumShaders);
         return m_pStaticResourceLayouts[s];
@@ -118,36 +118,37 @@ public:
         return m_pStaticResourceCaches[s];
     }
 
-    void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd)const;
+    void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const;
 
 private:
-    
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
     CComPtr<ID3D11InputLayout>       m_pd3d11InputLayout;
 
     // The caches are indexed by the shader order in the PSO, not shader index
-    ShaderResourceCacheD3D11*  m_pStaticResourceCaches = nullptr;
-    ShaderResourceLayoutD3D11* m_pStaticResourceLayouts= nullptr;
+    ShaderResourceCacheD3D11*  m_pStaticResourceCaches  = nullptr;
+    ShaderResourceLayoutD3D11* m_pStaticResourceLayouts = nullptr;
 
     // SRB memory allocator must be defined before the default shader res binding
     SRBMemoryAllocator m_SRBMemAllocator;
 
-    Int8  m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
+    Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
 
-    Uint16 m_StaticSamplerOffsets[MaxShadersInPipeline+1] = {};
+    Uint16 m_StaticSamplerOffsets[MaxShadersInPipeline + 1] = {};
     struct StaticSamplerInfo
     {
         const D3DShaderResourceAttribs& Attribs;
         RefCntAutoPtr<ISampler>         pSampler;
         StaticSamplerInfo(const D3DShaderResourceAttribs& _Attribs,
-                          RefCntAutoPtr<ISampler>         _pSampler) : 
-            Attribs  (_Attribs),
-            pSampler (std::move(_pSampler))
+                          RefCntAutoPtr<ISampler>         _pSampler) :
+            // clang-format off
+            Attribs  {_Attribs},
+            pSampler {std::move(_pSampler)}
+        // clang-format on
         {}
     };
-    std::vector< StaticSamplerInfo, STDAllocatorRawMem<StaticSamplerInfo> > m_StaticSamplers;
+    std::vector<StaticSamplerInfo, STDAllocatorRawMem<StaticSamplerInfo>> m_StaticSamplers;
 };
 
-}
+} // namespace Diligent

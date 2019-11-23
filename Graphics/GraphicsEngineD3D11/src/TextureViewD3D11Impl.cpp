@@ -28,12 +28,13 @@
 namespace Diligent
 {
 
-TextureViewD3D11Impl::TextureViewD3D11Impl( IReferenceCounters*    pRefCounters,
-                                            RenderDeviceD3D11Impl* pDevice, 
-                                            const TextureViewDesc& ViewDesc, 
-                                            ITexture*              pTexture,
-                                            ID3D11View*            pD3D11View,
-                                            bool                   bIsDefaultView ) :
+TextureViewD3D11Impl::TextureViewD3D11Impl(IReferenceCounters*    pRefCounters,
+                                           RenderDeviceD3D11Impl* pDevice,
+                                           const TextureViewDesc& ViewDesc,
+                                           ITexture*              pTexture,
+                                           ID3D11View*            pD3D11View,
+                                           bool                   bIsDefaultView) :
+    // clang-format off
     TTextureViewBase
     {
         pRefCounters,
@@ -43,6 +44,7 @@ TextureViewD3D11Impl::TextureViewD3D11Impl( IReferenceCounters*    pRefCounters,
         bIsDefaultView
     },
     m_pD3D11View{pD3D11View}
+// clang-format on
 {
     if (*m_Desc.Name != 0)
     {
@@ -51,6 +53,6 @@ TextureViewD3D11Impl::TextureViewD3D11Impl( IReferenceCounters*    pRefCounters,
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE( TextureViewD3D11Impl, IID_TextureViewD3D11, TTextureViewBase )
+IMPLEMENT_QUERY_INTERFACE(TextureViewD3D11Impl, IID_TextureViewD3D11, TTextureViewBase)
 
-}
+} // namespace Diligent

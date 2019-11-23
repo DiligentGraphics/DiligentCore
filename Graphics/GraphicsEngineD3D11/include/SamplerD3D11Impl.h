@@ -50,11 +50,11 @@ public:
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISamplerD3D11::ISamplerD3D11() method.
-    virtual ID3D11SamplerState* GetD3D11SamplerState()override final{ return m_pd3dSampler; }
+    virtual ID3D11SamplerState* GetD3D11SamplerState() override final { return m_pd3dSampler; }
 
 private:
     /// D3D11 sampler
     CComPtr<ID3D11SamplerState> m_pd3dSampler;
 };
 
-}
+} // namespace Diligent

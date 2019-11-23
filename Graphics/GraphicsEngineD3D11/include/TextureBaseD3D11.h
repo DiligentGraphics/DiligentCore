@@ -45,19 +45,19 @@ public:
     using ViewImplType = TextureViewD3D11Impl;
 
     TextureBaseD3D11(IReferenceCounters*          pRefCounters,
-                     FixedBlockMemoryAllocator&   TexViewObjAllocator, 
-                     class RenderDeviceD3D11Impl* pDeviceD3D11, 
-                     const TextureDesc&           TexDesc, 
+                     FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                     class RenderDeviceD3D11Impl* pDeviceD3D11,
+                     const TextureDesc&           TexDesc,
                      const TextureData*           pInitData = nullptr);
     ~TextureBaseD3D11();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureD3D11::GetD3D11Texture().
-    virtual ID3D11Resource* GetD3D11Texture()override final{ return m_pd3d11Texture; }
+    virtual ID3D11Resource* GetD3D11Texture() override final { return m_pd3d11Texture; }
 
     /// Implementation of ITexture::GetNativeHandle().
-    virtual void* GetNativeHandle()override final { return GetD3D11Texture(); }
+    virtual void* GetNativeHandle() override final { return GetD3D11Texture(); }
 
     void AddState(RESOURCE_STATE State)
     {
@@ -74,19 +74,21 @@ public:
     }
 
 protected:
-    void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override final;
-    void PrepareD3D11InitData(const TextureData*                                                                pInitData,
-                              Uint32                                                                            NumSubresources, 
-                              std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA> >& D3D11InitData);
+    void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override final;
+    void PrepareD3D11InitData(const TextureData*                                                               pInitData,
+                              Uint32                                                                           NumSubresources,
+                              std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>>& D3D11InitData);
 
-    virtual void CreateSRV( TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV ) = 0;
-    virtual void CreateRTV( TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV ) = 0;
-    virtual void CreateDSV( TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV ) = 0;
-    virtual void CreateUAV( TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV ) = 0;
+    // clang-format off
+    virtual void CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV) = 0;
+    virtual void CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV) = 0;
+    virtual void CreateDSV(TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV) = 0;
+    virtual void CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV) = 0;
+    // clang-format on
 
     friend class RenderDeviceD3D11Impl;
     /// D3D11 texture
     CComPtr<ID3D11Resource> m_pd3d11Texture;
 };
 
-}
+} // namespace Diligent

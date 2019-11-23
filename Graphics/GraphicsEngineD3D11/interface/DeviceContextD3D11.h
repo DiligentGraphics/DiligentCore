@@ -33,13 +33,12 @@ namespace Diligent
 
 // {F0EE0335-C8AB-4EC1-BB15-B8EE5F003B99}
 static constexpr INTERFACE_ID IID_DeviceContextD3D11 =
-{ 0xf0ee0335, 0xc8ab, 0x4ec1, { 0xbb, 0x15, 0xb8, 0xee, 0x5f, 0x0, 0x3b, 0x99 } };
+    {0xf0ee0335, 0xc8ab, 0x4ec1, {0xbb, 0x15, 0xb8, 0xee, 0x5f, 0x0, 0x3b, 0x99}};
 
 /// Exposes Direct3D11-specific functionality of a device context.
 class IDeviceContextD3D11 : public IDeviceContext
 {
 public:
-
     /// Returns a pointer to the ID3D11DeviceContext interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -47,4 +46,4 @@ public:
     virtual ID3D11DeviceContext* GetD3D11DeviceContext() = 0;
 };
 
-}
+} // namespace Diligent

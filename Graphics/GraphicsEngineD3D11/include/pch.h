@@ -31,11 +31,11 @@
 #include "targetver.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
-#   define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#    define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
 #endif
 
 #ifndef NOMINMAX
-#   define NOMINMAX
+#    define NOMINMAX
 #endif
 
 #include "PlatformDefinitions.h"
@@ -45,25 +45,25 @@
 #include <algorithm>
 
 #if PLATFORM_WIN32
-#   ifndef D3D11_VERSION
-#       define D3D11_VERSION 0
-#   endif
+#    ifndef D3D11_VERSION
+#        define D3D11_VERSION 0
+#    endif
 #elif PLATFORM_UNIVERSAL_WINDOWS
-#   ifndef D3D11_VERSION
-#       define D3D11_VERSION 2
-#   endif
+#    ifndef D3D11_VERSION
+#        define D3D11_VERSION 2
+#    endif
 #endif
 
 #if D3D11_VERSION == 0
-#   include <d3d11.h>
+#    include <d3d11.h>
 #elif D3D11_VERSION == 1
-#   include <d3d11_1.h>
+#    include <d3d11_1.h>
 #elif D3D11_VERSION == 2
-#   include <d3d11_2.h>
+#    include <d3d11_2.h>
 #elif D3D11_VERSION == 3
-#   include <d3d11_3.h>
+#    include <d3d11_3.h>
 #elif D3D11_VERSION == 4
-#   include <d3d11_4.h>
+#    include <d3d11_4.h>
 #endif
 
 #include "EngineD3D11Defines.h"

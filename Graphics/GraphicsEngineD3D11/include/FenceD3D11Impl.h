@@ -49,10 +49,10 @@ public:
     ~FenceD3D11Impl();
 
     /// Implementation of IFence::GetCompletedValue() in Direct3D11 backend.
-    virtual Uint64 GetCompletedValue()override final;
+    virtual Uint64 GetCompletedValue() override final;
 
     /// Implementation of IFence::Reset() in Direct3D11 backend.
-    virtual void Reset(Uint64 Value)override final;
+    virtual void Reset(Uint64 Value) override final;
 
     void AddPendingQuery(CComPtr<ID3D11DeviceContext> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 Value)
     {
@@ -68,14 +68,16 @@ private:
         CComPtr<ID3D11Query>         pd3d11Query;
         Uint64                       Value;
 
-        PendingFenceData(CComPtr<ID3D11DeviceContext> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 _Value) : 
-            pd3d11Ctx  (std::move(pCtx)),
-            pd3d11Query(std::move(pQuery)),
-            Value      (_Value)
+        PendingFenceData(CComPtr<ID3D11DeviceContext> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 _Value) :
+            // clang-format off
+            pd3d11Ctx  {std::move(pCtx)},
+            pd3d11Query{std::move(pQuery)},
+            Value      {_Value}
+        // clang-format on
         {}
     };
-    std::deque< PendingFenceData > m_PendingQueries;
-    volatile Uint64 m_LastCompletedFenceValue = 0;
+    std::deque<PendingFenceData> m_PendingQueries;
+    volatile Uint64              m_LastCompletedFenceValue = 0;
 };
 
-}
+} // namespace Diligent

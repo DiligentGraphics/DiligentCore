@@ -42,14 +42,14 @@ public:
     using TCommandListBase = CommandListBase<ICommandList, RenderDeviceD3D11Impl>;
 
     CommandListD3D11Impl(IReferenceCounters*    pRefCounters,
-                         RenderDeviceD3D11Impl* pDevice, 
+                         RenderDeviceD3D11Impl* pDevice,
                          ID3D11CommandList*     pd3d11CommandList);
     ~CommandListD3D11Impl();
 
-    ID3D11CommandList* GetD3D11CommandList(){ return m_pd3d11CommandList; }
+    ID3D11CommandList* GetD3D11CommandList() { return m_pd3d11CommandList; }
 
 private:
     CComPtr<ID3D11CommandList> m_pd3d11CommandList; ///< D3D11 CommandList object
 };
 
-}
+} // namespace Diligent

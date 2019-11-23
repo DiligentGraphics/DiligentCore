@@ -45,26 +45,26 @@ public:
 
     BufferD3D11Impl(IReferenceCounters*          pRefCounters,
                     FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
-                    class RenderDeviceD3D11Impl* pDeviceD3D11, 
-                    const BufferDesc&            BuffDesc, 
+                    class RenderDeviceD3D11Impl* pDeviceD3D11,
+                    const BufferDesc&            BuffDesc,
                     const BufferData*            pBuffData = nullptr);
 
     BufferD3D11Impl(IReferenceCounters*          pRefCounters,
                     FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
-                    class RenderDeviceD3D11Impl* pDeviceD3D11, 
-                    const BufferDesc&            BuffDesc, 
+                    class RenderDeviceD3D11Impl* pDeviceD3D11,
+                    const BufferDesc&            BuffDesc,
                     RESOURCE_STATE               InitialState,
                     ID3D11Buffer*                pd3d11Buffer);
 
     ~BufferD3D11Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IBufferD3D11::GetD3D11Buffer().
-    virtual ID3D11Buffer* GetD3D11Buffer()override final{ return m_pd3d11Buffer; }
+    virtual ID3D11Buffer* GetD3D11Buffer() override final { return m_pd3d11Buffer; }
 
     /// Implementation of IBuffer::GetNativeHandle().
-    virtual void* GetNativeHandle()override final { return GetD3D11Buffer(); }
+    virtual void* GetNativeHandle() override final { return GetD3D11Buffer(); }
 
     void AddState(RESOURCE_STATE State)
     {
@@ -81,13 +81,13 @@ public:
     }
 
 private:
-    virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
+    virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;
 
-    void CreateUAV( struct BufferViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV );
-    void CreateSRV( struct BufferViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV );
+    void CreateUAV(struct BufferViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV);
+    void CreateSRV(struct BufferViewDesc& SRVDesc, ID3D11ShaderResourceView** ppD3D11SRV);
 
     friend class DeviceContextD3D11Impl;
     CComPtr<ID3D11Buffer> m_pd3d11Buffer; ///< D3D11 buffer object
 };
 
-}
+} // namespace Diligent

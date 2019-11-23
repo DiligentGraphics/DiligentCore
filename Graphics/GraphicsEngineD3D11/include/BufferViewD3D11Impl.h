@@ -42,23 +42,23 @@ class BufferViewD3D11Impl final : public BufferViewBase<IBufferViewD3D11, Render
 public:
     using TBufferViewBase = BufferViewBase<IBufferViewD3D11, RenderDeviceD3D11Impl>;
 
-    BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
-                         RenderDeviceD3D11Impl* pDevice, 
-                         const BufferViewDesc&  ViewDesc, 
-                         class IBuffer*         pBuffer,
-                         ID3D11View*            pD3D11View,
-                         bool                   bIsDefaultView);
+    BufferViewD3D11Impl(IReferenceCounters*    pRefCounters,
+                        RenderDeviceD3D11Impl* pDevice,
+                        const BufferViewDesc&  ViewDesc,
+                        class IBuffer*         pBuffer,
+                        ID3D11View*            pD3D11View,
+                        bool                   bIsDefaultView);
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject **ppInterface) final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) final;
 
     /// Implementation of IBufferViewD3D11::GetD3D11View().
-    virtual ID3D11View* GetD3D11View()override final
+    virtual ID3D11View* GetD3D11View() override final
     {
         return m_pD3D11View;
     }
-   
+
 protected:
     CComPtr<ID3D11View> m_pD3D11View; ///<D3D11 view
 };
 
-}
+} // namespace Diligent

@@ -49,47 +49,56 @@ public:
                                    bool                          IsInternal);
     ~ShaderResourceBindingD3D11Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShaderResourceBinding::BindResources() in Direct3D11 backend.
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableByName() in Direct3D11 backend.
-    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name)override final;
+    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableCount() in Direct3D11 backend.
     virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableByIndex() in Direct3D11 backend.
-    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)override final;
+    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
     /// Implementation of IShaderResourceBinding::InitializeStaticResources() in Direct3D11 backend.
-    virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
+    virtual void InitializeStaticResources(const IPipelineState* pPipelineState) override final;
 
-    ShaderResourceCacheD3D11&  GetResourceCache (Uint32 Ind){VERIFY_EXPR(Ind < m_NumActiveShaders); return m_pBoundResourceCaches[Ind];}
-    ShaderResourceLayoutD3D11& GetResourceLayout(Uint32 Ind){VERIFY_EXPR(Ind < m_NumActiveShaders); return m_pResourceLayouts[Ind];}
+    ShaderResourceCacheD3D11& GetResourceCache(Uint32 Ind)
+    {
+        VERIFY_EXPR(Ind < m_NumActiveShaders);
+        return m_pBoundResourceCaches[Ind];
+    }
 
-    inline bool IsStaticResourcesBound(){return m_bIsStaticResourcesBound;}
+    ShaderResourceLayoutD3D11& GetResourceLayout(Uint32 Ind)
+    {
+        VERIFY_EXPR(Ind < m_NumActiveShaders);
+        return m_pResourceLayouts[Ind];
+    }
+
+    inline bool IsStaticResourcesBound() { return m_bIsStaticResourcesBound; }
 
     Uint32 GetNumActiveShaders()
     {
         return static_cast<Uint32>(m_NumActiveShaders);
     }
 
-    Int32 GetActiveShaderTypeIndex(Uint32 s){return m_ShaderTypeIndex[s];}
+    Int32 GetActiveShaderTypeIndex(Uint32 s) { return m_ShaderTypeIndex[s]; }
 
 private:
     // The caches are indexed by the shader order in the PSO, not shader index
     ShaderResourceCacheD3D11*  m_pBoundResourceCaches = nullptr;
     ShaderResourceLayoutD3D11* m_pResourceLayouts     = nullptr;
-    
-    Int8  m_ShaderTypeIndex[6]     = {};
+
+    Int8 m_ShaderTypeIndex[6] = {};
 
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
     Int8  m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
     Uint8 m_NumActiveShaders       = 0;
-    
+
     bool m_bIsStaticResourcesBound = false;
 };
 
-}
+} // namespace Diligent

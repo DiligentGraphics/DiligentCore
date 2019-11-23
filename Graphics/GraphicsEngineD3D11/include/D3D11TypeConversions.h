@@ -34,6 +34,7 @@ namespace Diligent
 
 inline UINT BindFlagsToD3D11BindFlags(Uint32 BindFlags)
 {
+    // clang-format off
     UINT D3D11BindFlags = 0;
     D3D11BindFlags = D3D11BindFlags | ((BindFlags & BIND_VERTEX_BUFFER)     ? D3D11_BIND_VERTEX_BUFFER    : 0);
     D3D11BindFlags = D3D11BindFlags | ((BindFlags & BIND_INDEX_BUFFER)      ? D3D11_BIND_INDEX_BUFFER     : 0);
@@ -43,12 +44,14 @@ inline UINT BindFlagsToD3D11BindFlags(Uint32 BindFlags)
     D3D11BindFlags = D3D11BindFlags | ((BindFlags & BIND_RENDER_TARGET)     ? D3D11_BIND_RENDER_TARGET    : 0);
     D3D11BindFlags = D3D11BindFlags | ((BindFlags & BIND_DEPTH_STENCIL)     ? D3D11_BIND_DEPTH_STENCIL    : 0);
     D3D11BindFlags = D3D11BindFlags | ((BindFlags & BIND_UNORDERED_ACCESS)  ? D3D11_BIND_UNORDERED_ACCESS : 0);
+    // clang-format on
     return D3D11BindFlags;
 }
 
 inline BIND_FLAGS D3D11BindFlagsToBindFlags(UINT D3D11BindFlags)
 {
     BIND_FLAGS BindFlags = BIND_NONE;
+    // clang-format off
     BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_VERTEX_BUFFER)     ? BIND_VERTEX_BUFFER    : BIND_NONE);
     BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_INDEX_BUFFER)      ? BIND_INDEX_BUFFER     : BIND_NONE);
     BindFlags = BindFlags | ((D3D11BindFlags & D3D11_BIND_CONSTANT_BUFFER)   ? BIND_UNIFORM_BUFFER   : BIND_NONE);
@@ -61,6 +64,7 @@ inline BIND_FLAGS D3D11BindFlagsToBindFlags(UINT D3D11BindFlags)
                  (D3D11_BIND_VERTEX_BUFFER|D3D11_BIND_INDEX_BUFFER|D3D11_BIND_CONSTANT_BUFFER|
                   D3D11_BIND_SHADER_RESOURCE|D3D11_BIND_STREAM_OUTPUT|D3D11_BIND_RENDER_TARGET|
                   D3D11_BIND_DEPTH_STENCIL|D3D11_BIND_UNORDERED_ACCESS)) == BindFlagsToD3D11BindFlags(BindFlags));
+    // clang-format on
     return BindFlags;
 }
 
@@ -68,52 +72,56 @@ D3D11_PRIMITIVE_TOPOLOGY TopologyToD3D11Topology(PRIMITIVE_TOPOLOGY Topology);
 
 inline D3D11_USAGE UsageToD3D11Usage(USAGE Usage)
 {
-    switch(Usage)
+    switch (Usage)
     {
+        // clang-format off
         case USAGE_STATIC:      return D3D11_USAGE_IMMUTABLE;
         case USAGE_DEFAULT:     return D3D11_USAGE_DEFAULT;
         case USAGE_DYNAMIC:     return D3D11_USAGE_DYNAMIC;
         case USAGE_STAGING:     return D3D11_USAGE_STAGING;
-        default: UNEXPECTED("Unknow usage" ); return D3D11_USAGE_DEFAULT;
+        // clang-format on
+        default: UNEXPECTED("Unknow usage"); return D3D11_USAGE_DEFAULT;
     }
 }
 
 inline USAGE D3D11UsageToUsage(D3D11_USAGE D3D11Usage)
 {
-    switch(D3D11Usage)
+    switch (D3D11Usage)
     {
+        // clang-format off
         case D3D11_USAGE_IMMUTABLE: return USAGE_STATIC;
         case D3D11_USAGE_DEFAULT:   return USAGE_DEFAULT;
         case D3D11_USAGE_DYNAMIC:   return USAGE_DYNAMIC;
         case D3D11_USAGE_STAGING:   return USAGE_STAGING;
-        default: UNEXPECTED("Unknow D3D11 usage" ); return USAGE_DEFAULT;
+        // clang-format on
+        default: UNEXPECTED("Unknow D3D11 usage"); return USAGE_DEFAULT;
     }
 }
 
 inline void MapParamsToD3D11MapParams(MAP_TYPE MapType, Uint32 MapFlags, D3D11_MAP& d3d11MapType, UINT& d3d11MapFlags)
-{ 
+{
     d3d11MapType = static_cast<D3D11_MAP>(0);
-    switch(MapType)
+    switch (MapType)
     {
-        case MAP_READ: 
+        case MAP_READ:
             d3d11MapType = D3D11_MAP_READ;
-        break;
+            break;
 
-        case MAP_WRITE:             
-            if(MapFlags & MAP_FLAG_DISCARD)
+        case MAP_WRITE:
+            if (MapFlags & MAP_FLAG_DISCARD)
                 d3d11MapType = D3D11_MAP_WRITE_DISCARD;
-            else if(MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE)
+            else if (MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE)
                 d3d11MapType = D3D11_MAP_WRITE_NO_OVERWRITE;
-            else 
+            else
                 d3d11MapType = D3D11_MAP_WRITE;
-        break;
+            break;
 
-        case MAP_READ_WRITE:        
+        case MAP_READ_WRITE:
             d3d11MapType = D3D11_MAP_READ_WRITE;
-        break;
+            break;
 
-        default: 
-            UNEXPECTED( "Unknown map type" );
+        default:
+            UNEXPECTED("Unknown map type");
     }
 
     d3d11MapFlags = 0;
@@ -123,7 +131,7 @@ inline void MapParamsToD3D11MapParams(MAP_TYPE MapType, Uint32 MapFlags, D3D11_M
 inline UINT CPUAccessFlagsToD3D11CPUAccessFlags(Uint32 Flags)
 {
     UINT D3D11CPUAccessFlags = 0;
-    D3D11CPUAccessFlags |= (Flags & CPU_ACCESS_READ)  ? D3D11_CPU_ACCESS_READ  : 0;
+    D3D11CPUAccessFlags |= (Flags & CPU_ACCESS_READ) ? D3D11_CPU_ACCESS_READ : 0;
     D3D11CPUAccessFlags |= (Flags & CPU_ACCESS_WRITE) ? D3D11_CPU_ACCESS_WRITE : 0;
     return D3D11CPUAccessFlags;
 }
@@ -131,7 +139,7 @@ inline UINT CPUAccessFlagsToD3D11CPUAccessFlags(Uint32 Flags)
 inline CPU_ACCESS_FLAGS D3D11CPUAccessFlagsToCPUAccessFlags(UINT D3D11CPUAccessFlags)
 {
     CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE;
-    CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_READ)  ? CPU_ACCESS_READ  : CPU_ACCESS_NONE;
+    CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_READ) ? CPU_ACCESS_READ : CPU_ACCESS_NONE;
     CPUAccessFlags |= (D3D11CPUAccessFlags & D3D11_CPU_ACCESS_WRITE) ? CPU_ACCESS_WRITE : CPU_ACCESS_NONE;
     VERIFY_EXPR(D3D11CPUAccessFlags == CPUAccessFlagsToD3D11CPUAccessFlags(CPUAccessFlags));
     return CPUAccessFlags;
@@ -152,21 +160,29 @@ inline MISC_TEXTURE_FLAGS D3D11MiscFlagsToMiscTextureFlags(UINT D3D11MiscFlags)
 }
 
 D3D11_FILTER FilterTypeToD3D11Filter(FILTER_TYPE MinFilter, FILTER_TYPE MagFilter, FILTER_TYPE MipFilter);
+
 D3D11_TEXTURE_ADDRESS_MODE TexAddressModeToD3D11AddressMode(TEXTURE_ADDRESS_MODE Mode);
 
 D3D11_COMPARISON_FUNC ComparisonFuncToD3D11ComparisonFunc(COMPARISON_FUNCTION Func);
-void DepthStencilStateDesc_To_D3D11_DEPTH_STENCIL_DESC(const DepthStencilStateDesc &DepthStencilDesc, D3D11_DEPTH_STENCIL_DESC &d3d11DSSDesc);
-void RasterizerStateDesc_To_D3D11_RASTERIZER_DESC(const RasterizerStateDesc &RasterizerDesc, D3D11_RASTERIZER_DESC &d3d11RSDesc);
-void BlendStateDesc_To_D3D11_BLEND_DESC(const BlendStateDesc &BSDesc, D3D11_BLEND_DESC &D3D11BSDesc);
-void LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(const InputLayoutDesc& InputLayout, 
-                                                 std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC> >& D3D11InputElements);
 
-void TextureViewDesc_to_D3D11_SRV_DESC(const TextureViewDesc& TexViewDesc, D3D11_SHADER_RESOURCE_VIEW_DESC &D3D11SRVDesc,  Uint32 SampleCount);
-void TextureViewDesc_to_D3D11_RTV_DESC(const TextureViewDesc& TexViewDesc, D3D11_RENDER_TARGET_VIEW_DESC &D3D11RTVDesc,    Uint32 SampleCount);
-void TextureViewDesc_to_D3D11_DSV_DESC(const TextureViewDesc& TexViewDesc, D3D11_DEPTH_STENCIL_VIEW_DESC &D3D11DSVDesc,    Uint32 SampleCount);
-void TextureViewDesc_to_D3D11_UAV_DESC(const TextureViewDesc& TexViewDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC &D3D11UAVDesc);
+void DepthStencilStateDesc_To_D3D11_DEPTH_STENCIL_DESC(const DepthStencilStateDesc& DepthStencilDesc,
+                                                       D3D11_DEPTH_STENCIL_DESC&    d3d11DSSDesc);
 
-void BufferViewDesc_to_D3D11_SRV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& SRVDesc, D3D11_SHADER_RESOURCE_VIEW_DESC &D3D11SRVDesc);
-void BufferViewDesc_to_D3D11_UAV_DESC(const BufferDesc &BuffDesc, const BufferViewDesc& UAVDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC &D3D11UAVDesc);
+void RasterizerStateDesc_To_D3D11_RASTERIZER_DESC(const RasterizerStateDesc& RasterizerDesc,
+                                                  D3D11_RASTERIZER_DESC&     d3d11RSDesc);
 
-}
+void BlendStateDesc_To_D3D11_BLEND_DESC(const BlendStateDesc& BSDesc,
+                                        D3D11_BLEND_DESC&     D3D11BSDesc);
+
+void LayoutElements_To_D3D11_INPUT_ELEMENT_DESCs(const InputLayoutDesc&                                                               InputLayout,
+                                                 std::vector<D3D11_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D11_INPUT_ELEMENT_DESC>>& D3D11InputElements);
+
+void TextureViewDesc_to_D3D11_SRV_DESC(const TextureViewDesc& TexViewDesc, D3D11_SHADER_RESOURCE_VIEW_DESC& D3D11SRVDesc, Uint32 SampleCount);
+void TextureViewDesc_to_D3D11_RTV_DESC(const TextureViewDesc& TexViewDesc, D3D11_RENDER_TARGET_VIEW_DESC& D3D11RTVDesc, Uint32 SampleCount);
+void TextureViewDesc_to_D3D11_DSV_DESC(const TextureViewDesc& TexViewDesc, D3D11_DEPTH_STENCIL_VIEW_DESC& D3D11DSVDesc, Uint32 SampleCount);
+void TextureViewDesc_to_D3D11_UAV_DESC(const TextureViewDesc& TexViewDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC& D3D11UAVDesc);
+
+void BufferViewDesc_to_D3D11_SRV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& SRVDesc, D3D11_SHADER_RESOURCE_VIEW_DESC& D3D11SRVDesc);
+void BufferViewDesc_to_D3D11_UAV_DESC(const BufferDesc& BuffDesc, const BufferViewDesc& UAVDesc, D3D11_UNORDERED_ACCESS_VIEW_DESC& D3D11UAVDesc);
+
+} // namespace Diligent

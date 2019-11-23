@@ -36,23 +36,25 @@ class Texture3D_D3D11 final : public TextureBaseD3D11
 {
 public:
     Texture3D_D3D11(IReferenceCounters*          pRefCounters,
-                    FixedBlockMemoryAllocator&   TexViewObjAllocator, 
-                    class RenderDeviceD3D11Impl* pDeviceD3D11, 
-                    const TextureDesc&           TexDesc, 
+                    FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                    class RenderDeviceD3D11Impl* pDeviceD3D11,
+                    const TextureDesc&           TexDesc,
                     const TextureData*           pInitData = nullptr);
 
-    Texture3D_D3D11(IReferenceCounters*          pRefCounters, 
-                    FixedBlockMemoryAllocator&   TexViewObjAllocator, 
-                    class RenderDeviceD3D11Impl* pDeviceD3D11, 
+    Texture3D_D3D11(IReferenceCounters*          pRefCounters,
+                    FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                    class RenderDeviceD3D11Impl* pDeviceD3D11,
                     RESOURCE_STATE               InitialState,
                     ID3D11Texture3D*             pd3d11Texture);
     ~Texture3D_D3D11();
 
 protected:
-    virtual void CreateSRV( TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV )override final;
-    virtual void CreateRTV( TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV )override final;
-    virtual void CreateDSV( TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV )override final;
-    virtual void CreateUAV( TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV )override final;
+    // clang-format off
+    virtual void CreateSRV(TextureViewDesc& SRVDesc, ID3D11ShaderResourceView**  ppD3D11SRV) override final;
+    virtual void CreateRTV(TextureViewDesc& RTVDesc, ID3D11RenderTargetView**    ppD3D11RTV) override final;
+    virtual void CreateDSV(TextureViewDesc& DSVDesc, ID3D11DepthStencilView**    ppD3D11DSV) override final;
+    virtual void CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessView** ppD3D11UAV) override final;
+    // clang-format on
 };
 
-}
+} // namespace Diligent

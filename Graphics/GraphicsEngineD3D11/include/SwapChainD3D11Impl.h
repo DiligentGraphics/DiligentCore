@@ -41,36 +41,36 @@ public:
     using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>;
 
     SwapChainD3D11Impl(IReferenceCounters*           pRefCounters,
-                       const SwapChainDesc&          SCDesc, 
+                       const SwapChainDesc&          SCDesc,
                        const FullScreenModeDesc&     FSDesc,
                        class RenderDeviceD3D11Impl*  pRenderDeviceD3D11,
                        class DeviceContextD3D11Impl* pDeviceContextD3D11,
                        void*                         pNativeWndHandle);
     ~SwapChainD3D11Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISwapChain::Present() in Direct3D11 backend.
-    virtual void Present(Uint32 SyncInterval)override final;
+    virtual void Present(Uint32 SyncInterval) override final;
 
     /// Implementation of ISwapChain::Resize() in Direct3D11 backend.
-    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight)override final;
+    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
 
     /// Implementation of ISwapChainD3D11::GetDXGISwapChain() in Direct3D11 backend.
-    virtual IDXGISwapChain* GetDXGISwapChain()override final{ return m_pSwapChain; }
+    virtual IDXGISwapChain* GetDXGISwapChain() override final { return m_pSwapChain; }
 
     /// Implementation of ISwapChainD3D11::GetCurrentBackBufferRTV() in Direct3D11 backend.
-    virtual ITextureViewD3D11* GetCurrentBackBufferRTV()override final{return m_pRenderTargetView;}
+    virtual ITextureViewD3D11* GetCurrentBackBufferRTV() override final { return m_pRenderTargetView; }
 
     /// Implementation of ISwapChainD3D11::GetDepthBufferDSV() in Direct3D11 backend.
-    virtual ITextureViewD3D11* GetDepthBufferDSV()      override final{return m_pDepthStencilView;}
+    virtual ITextureViewD3D11* GetDepthBufferDSV() override final { return m_pDepthStencilView; }
 
 private:
-    virtual void UpdateSwapChain(bool CreateNew)override final;
-    void CreateRTVandDSV();
+    virtual void UpdateSwapChain(bool CreateNew) override final;
+    void         CreateRTVandDSV();
 
     RefCntAutoPtr<ITextureViewD3D11> m_pRenderTargetView;
     RefCntAutoPtr<ITextureViewD3D11> m_pDepthStencilView;
 };
 
-}
+} // namespace Diligent

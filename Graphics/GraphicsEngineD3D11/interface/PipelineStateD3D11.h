@@ -32,21 +32,20 @@ namespace Diligent
 {
 
 // {3EA6E3F4-9966-47FC-8CE8-0EB3E2273061}
-static constexpr INTERFACE_ID IID_PipelineStateD3D11 = 
-{ 0x3ea6e3f4, 0x9966, 0x47fc, { 0x8c, 0xe8, 0xe, 0xb3, 0xe2, 0x27, 0x30, 0x61 } };
+static constexpr INTERFACE_ID IID_PipelineStateD3D11 =
+    {0x3ea6e3f4, 0x9966, 0x47fc, {0x8c, 0xe8, 0xe, 0xb3, 0xe2, 0x27, 0x30, 0x61}};
 
 /// Exposes Direct3D11-specific functionality of a pipeline state object.
 class IPipelineStateD3D11 : public IPipelineState
 {
 public:
-
     /// Returns a pointer to the ID3D11BlendState interface of the internal Direct3D11 object.
-    
+
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual ID3D11BlendState* GetD3D11BlendState() = 0;
 
-    
+
     /// Returns a pointer to the ID3D11RasterizerState interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -84,7 +83,7 @@ public:
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual ID3D11GeometryShader* GetD3D11GeometryShader() = 0;
-    
+
     /// Returns a pointer to the ID3D11DomainShader interface of the internal domain shader object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -104,4 +103,4 @@ public:
     virtual ID3D11ComputeShader* GetD3D11ComputeShader() = 0;
 };
 
-}
+} // namespace Diligent

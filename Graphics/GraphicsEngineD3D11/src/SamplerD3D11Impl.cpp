@@ -29,39 +29,41 @@
 namespace Diligent
 {
 
-SamplerD3D11Impl::SamplerD3D11Impl(IReferenceCounters*    pRefCounters, 
+SamplerD3D11Impl::SamplerD3D11Impl(IReferenceCounters*    pRefCounters,
                                    RenderDeviceD3D11Impl* pRenderDeviceD3D11,
-                                   const SamplerDesc&     SamplerDesc) : 
+                                   const SamplerDesc&     SamplerDesc) :
+    // clang-format off
     TSamplerBase
     {
         pRefCounters,
         pRenderDeviceD3D11,
         SamplerDesc
     }
+// clang-format on
 {
-    auto *pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
-    D3D11_SAMPLER_DESC D3D11SamplerDesc = 
-    {
-        FilterTypeToD3D11Filter(SamplerDesc.MinFilter, SamplerDesc.MagFilter, SamplerDesc.MipFilter),
-        TexAddressModeToD3D11AddressMode(SamplerDesc.AddressU),
-        TexAddressModeToD3D11AddressMode(SamplerDesc.AddressV),
-        TexAddressModeToD3D11AddressMode(SamplerDesc.AddressW),
-        SamplerDesc.MipLODBias,
-        SamplerDesc.MaxAnisotropy,
-        ComparisonFuncToD3D11ComparisonFunc(SamplerDesc.ComparisonFunc),
-        {SamplerDesc.BorderColor[0], SamplerDesc.BorderColor[1], SamplerDesc.BorderColor[2], SamplerDesc.BorderColor[3]},
-        SamplerDesc.MinLOD,
-        SamplerDesc.MaxLOD
-    };
-    CHECK_D3D_RESULT_THROW( pd3d11Device->CreateSamplerState(&D3D11SamplerDesc, &m_pd3dSampler),
-                            "Failed to create the Direct3D11 sampler");
+    auto*              pd3d11Device = pRenderDeviceD3D11->GetD3D11Device();
+    D3D11_SAMPLER_DESC D3D11SamplerDesc =
+        {
+            FilterTypeToD3D11Filter(SamplerDesc.MinFilter, SamplerDesc.MagFilter, SamplerDesc.MipFilter),
+            TexAddressModeToD3D11AddressMode(SamplerDesc.AddressU),
+            TexAddressModeToD3D11AddressMode(SamplerDesc.AddressV),
+            TexAddressModeToD3D11AddressMode(SamplerDesc.AddressW),
+            SamplerDesc.MipLODBias,
+            SamplerDesc.MaxAnisotropy,
+            ComparisonFuncToD3D11ComparisonFunc(SamplerDesc.ComparisonFunc),
+            {SamplerDesc.BorderColor[0], SamplerDesc.BorderColor[1], SamplerDesc.BorderColor[2], SamplerDesc.BorderColor[3]},
+            SamplerDesc.MinLOD,
+            SamplerDesc.MaxLOD // clang-format off
+        }; // clang-format on
+
+    CHECK_D3D_RESULT_THROW(pd3d11Device->CreateSamplerState(&D3D11SamplerDesc, &m_pd3dSampler),
+                           "Failed to create the Direct3D11 sampler");
 }
 
 SamplerD3D11Impl::~SamplerD3D11Impl()
 {
-
 }
 
-IMPLEMENT_QUERY_INTERFACE( SamplerD3D11Impl, IID_SamplerD3D11, TSamplerBase )
+IMPLEMENT_QUERY_INTERFACE(SamplerD3D11Impl, IID_SamplerD3D11, TSamplerBase)
 
-}
+} // namespace Diligent

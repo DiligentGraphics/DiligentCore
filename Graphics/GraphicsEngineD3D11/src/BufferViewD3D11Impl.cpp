@@ -27,12 +27,13 @@
 namespace Diligent
 {
 
-BufferViewD3D11Impl::BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
-                                          RenderDeviceD3D11Impl* pDevice, 
-                                          const BufferViewDesc&  ViewDesc, 
-                                          IBuffer*               pBuffer,
-                                          ID3D11View*            pD3D11View,
-                                          bool                   bIsDefaultView ) :
+BufferViewD3D11Impl::BufferViewD3D11Impl(IReferenceCounters*    pRefCounters,
+                                         RenderDeviceD3D11Impl* pDevice,
+                                         const BufferViewDesc&  ViewDesc,
+                                         IBuffer*               pBuffer,
+                                         ID3D11View*            pD3D11View,
+                                         bool                   bIsDefaultView) :
+    // clang-format off
     TBufferViewBase
     {
         pRefCounters,
@@ -42,6 +43,7 @@ BufferViewD3D11Impl::BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
         bIsDefaultView
     },
     m_pD3D11View{pD3D11View}
+// clang-format on
 {
     if (*m_Desc.Name != 0)
     {
@@ -50,6 +52,6 @@ BufferViewD3D11Impl::BufferViewD3D11Impl( IReferenceCounters*    pRefCounters,
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE( BufferViewD3D11Impl, IID_BufferViewD3D11, TBufferViewBase )
+IMPLEMENT_QUERY_INTERFACE(BufferViewD3D11Impl, IID_BufferViewD3D11, TBufferViewBase)
 
-}
+} // namespace Diligent

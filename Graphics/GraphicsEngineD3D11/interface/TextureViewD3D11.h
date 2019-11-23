@@ -33,13 +33,12 @@ namespace Diligent
 
 // {0767EBE4-AD47-4E70-9B65-38C6B9CAC37D}
 static constexpr INTERFACE_ID IID_TextureViewD3D11 =
-{ 0x767ebe4, 0xad47, 0x4e70, { 0x9b, 0x65, 0x38, 0xc6, 0xb9, 0xca, 0xc3, 0x7d } };
+    {0x767ebe4, 0xad47, 0x4e70, {0x9b, 0x65, 0x38, 0xc6, 0xb9, 0xca, 0xc3, 0x7d}};
 
 /// Exposes Direct3D11-specific functionality of a texture view object.
 class ITextureViewD3D11 : public ITextureView
 {
 public:
-
     /// Returns a pointer to the ID3D11View interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -47,4 +46,4 @@ public:
     virtual ID3D11View* GetD3D11View() = 0;
 };
 
-}
+} // namespace Diligent
