@@ -37,8 +37,8 @@ enum TargetGLSLCompiler
 };
 
 String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
-                             const DeviceCaps&            deviceCaps,
-                             TargetGLSLCompiler           TargetCompiler,
-                             const char*                  ExtraDefinitions = nullptr);
+                             const DeviceCaps&       deviceCaps,
+                             TargetGLSLCompiler      TargetCompiler,
+                             const char*             ExtraDefinitions = nullptr);
 
-}
+} // namespace Diligent

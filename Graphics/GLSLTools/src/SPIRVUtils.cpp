@@ -27,10 +27,10 @@
 #include <array>
 
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-#	include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
+#    include <MoltenGLSLToSPIRVConverter/GLSLToSPIRVConverter.h>
 #else
-#   define ENABLE_HLSL
-#	include "SPIRV/GlslangToSpv.h"
+#    define ENABLE_HLSL
+#    include "SPIRV/GlslangToSpv.h"
 #endif
 
 #include "SPIRVUtils.h"
@@ -40,9 +40,9 @@
 
 #include "spirv-tools/optimizer.hpp"
 
-static const char g_HLSLDefinitions[] = 
-{
-    #include "../../GraphicsEngineD3DBase/include/HLSLDefinitions_inc.fxh"
+static const char g_HLSLDefinitions[] =
+    {
+#include "../../GraphicsEngineD3DBase/include/HLSLDefinitions_inc.fxh"
 };
 
 namespace Diligent
@@ -60,15 +60,16 @@ void FinalizeGlslang()
 
 EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
 {
-    switch(ShaderType)
+    switch (ShaderType)
     {
+        // clang-format off
         case SHADER_TYPE_VERTEX:    return EShLangVertex;
         case SHADER_TYPE_HULL:      return EShLangTessControl;
         case SHADER_TYPE_DOMAIN:    return EShLangTessEvaluation;
         case SHADER_TYPE_GEOMETRY:  return EShLangGeometry;
         case SHADER_TYPE_PIXEL:     return EShLangFragment;
         case SHADER_TYPE_COMPUTE:   return EShLangCompute;
-
+        // clang-format on
         default:
             UNEXPECTED("Unexpected shader type");
             return EShLangCount;
@@ -79,108 +80,108 @@ TBuiltInResource InitResources()
 {
     TBuiltInResource Resources;
 
-    Resources.maxLights = 32;
-    Resources.maxClipPlanes = 6;
-    Resources.maxTextureUnits = 32;
-    Resources.maxTextureCoords = 32;
-    Resources.maxVertexAttribs = 64;
-    Resources.maxVertexUniformComponents = 4096;
-    Resources.maxVaryingFloats = 64;
-    Resources.maxVertexTextureImageUnits = 32;
-    Resources.maxCombinedTextureImageUnits = 80;
-    Resources.maxTextureImageUnits = 32;
-    Resources.maxFragmentUniformComponents = 4096;
-    Resources.maxDrawBuffers = 32;
-    Resources.maxVertexUniformVectors = 128;
-    Resources.maxVaryingVectors = 8;
-    Resources.maxFragmentUniformVectors = 16;
-    Resources.maxVertexOutputVectors = 16;
-    Resources.maxFragmentInputVectors = 15;
-    Resources.minProgramTexelOffset = -8;
-    Resources.maxProgramTexelOffset = 7;
-    Resources.maxClipDistances = 8;
-    Resources.maxComputeWorkGroupCountX = 65535;
-    Resources.maxComputeWorkGroupCountY = 65535;
-    Resources.maxComputeWorkGroupCountZ = 65535;
-    Resources.maxComputeWorkGroupSizeX = 1024;
-    Resources.maxComputeWorkGroupSizeY = 1024;
-    Resources.maxComputeWorkGroupSizeZ = 64;
-    Resources.maxComputeUniformComponents = 1024;
-    Resources.maxComputeTextureImageUnits = 16;
-    Resources.maxComputeImageUniforms = 8;
-    Resources.maxComputeAtomicCounters = 8;
-    Resources.maxComputeAtomicCounterBuffers = 1;
-    Resources.maxVaryingComponents = 60;
-    Resources.maxVertexOutputComponents = 64;
-    Resources.maxGeometryInputComponents = 64;
-    Resources.maxGeometryOutputComponents = 128;
-    Resources.maxFragmentInputComponents = 128;
-    Resources.maxImageUnits = 8;
-    Resources.maxCombinedImageUnitsAndFragmentOutputs = 8;
-    Resources.maxCombinedShaderOutputResources = 8;
-    Resources.maxImageSamples = 0;
-    Resources.maxVertexImageUniforms = 0;
-    Resources.maxTessControlImageUniforms = 0;
-    Resources.maxTessEvaluationImageUniforms = 0;
-    Resources.maxGeometryImageUniforms = 0;
-    Resources.maxFragmentImageUniforms = 8;
-    Resources.maxCombinedImageUniforms = 8;
-    Resources.maxGeometryTextureImageUnits = 16;
-    Resources.maxGeometryOutputVertices = 256;
-    Resources.maxGeometryTotalOutputComponents = 1024;
-    Resources.maxGeometryUniformComponents = 1024;
-    Resources.maxGeometryVaryingComponents = 64;
-    Resources.maxTessControlInputComponents = 128;
-    Resources.maxTessControlOutputComponents = 128;
-    Resources.maxTessControlTextureImageUnits = 16;
-    Resources.maxTessControlUniformComponents = 1024;
-    Resources.maxTessControlTotalOutputComponents = 4096;
-    Resources.maxTessEvaluationInputComponents = 128;
-    Resources.maxTessEvaluationOutputComponents = 128;
-    Resources.maxTessEvaluationTextureImageUnits = 16;
-    Resources.maxTessEvaluationUniformComponents = 1024;
-    Resources.maxTessPatchComponents = 120;
-    Resources.maxPatchVertices = 32;
-    Resources.maxTessGenLevel = 64;
-    Resources.maxViewports = 16;
-    Resources.maxVertexAtomicCounters = 0;
-    Resources.maxTessControlAtomicCounters = 0;
-    Resources.maxTessEvaluationAtomicCounters = 0;
-    Resources.maxGeometryAtomicCounters = 0;
-    Resources.maxFragmentAtomicCounters = 8;
-    Resources.maxCombinedAtomicCounters = 8;
-    Resources.maxAtomicCounterBindings = 1;
-    Resources.maxVertexAtomicCounterBuffers = 0;
-    Resources.maxTessControlAtomicCounterBuffers = 0;
-    Resources.maxTessEvaluationAtomicCounterBuffers = 0;
-    Resources.maxGeometryAtomicCounterBuffers = 0;
-    Resources.maxFragmentAtomicCounterBuffers = 1;
-    Resources.maxCombinedAtomicCounterBuffers = 1;
-    Resources.maxAtomicCounterBufferSize = 16384;
-    Resources.maxTransformFeedbackBuffers = 4;
+    Resources.maxLights                                 = 32;
+    Resources.maxClipPlanes                             = 6;
+    Resources.maxTextureUnits                           = 32;
+    Resources.maxTextureCoords                          = 32;
+    Resources.maxVertexAttribs                          = 64;
+    Resources.maxVertexUniformComponents                = 4096;
+    Resources.maxVaryingFloats                          = 64;
+    Resources.maxVertexTextureImageUnits                = 32;
+    Resources.maxCombinedTextureImageUnits              = 80;
+    Resources.maxTextureImageUnits                      = 32;
+    Resources.maxFragmentUniformComponents              = 4096;
+    Resources.maxDrawBuffers                            = 32;
+    Resources.maxVertexUniformVectors                   = 128;
+    Resources.maxVaryingVectors                         = 8;
+    Resources.maxFragmentUniformVectors                 = 16;
+    Resources.maxVertexOutputVectors                    = 16;
+    Resources.maxFragmentInputVectors                   = 15;
+    Resources.minProgramTexelOffset                     = -8;
+    Resources.maxProgramTexelOffset                     = 7;
+    Resources.maxClipDistances                          = 8;
+    Resources.maxComputeWorkGroupCountX                 = 65535;
+    Resources.maxComputeWorkGroupCountY                 = 65535;
+    Resources.maxComputeWorkGroupCountZ                 = 65535;
+    Resources.maxComputeWorkGroupSizeX                  = 1024;
+    Resources.maxComputeWorkGroupSizeY                  = 1024;
+    Resources.maxComputeWorkGroupSizeZ                  = 64;
+    Resources.maxComputeUniformComponents               = 1024;
+    Resources.maxComputeTextureImageUnits               = 16;
+    Resources.maxComputeImageUniforms                   = 8;
+    Resources.maxComputeAtomicCounters                  = 8;
+    Resources.maxComputeAtomicCounterBuffers            = 1;
+    Resources.maxVaryingComponents                      = 60;
+    Resources.maxVertexOutputComponents                 = 64;
+    Resources.maxGeometryInputComponents                = 64;
+    Resources.maxGeometryOutputComponents               = 128;
+    Resources.maxFragmentInputComponents                = 128;
+    Resources.maxImageUnits                             = 8;
+    Resources.maxCombinedImageUnitsAndFragmentOutputs   = 8;
+    Resources.maxCombinedShaderOutputResources          = 8;
+    Resources.maxImageSamples                           = 0;
+    Resources.maxVertexImageUniforms                    = 0;
+    Resources.maxTessControlImageUniforms               = 0;
+    Resources.maxTessEvaluationImageUniforms            = 0;
+    Resources.maxGeometryImageUniforms                  = 0;
+    Resources.maxFragmentImageUniforms                  = 8;
+    Resources.maxCombinedImageUniforms                  = 8;
+    Resources.maxGeometryTextureImageUnits              = 16;
+    Resources.maxGeometryOutputVertices                 = 256;
+    Resources.maxGeometryTotalOutputComponents          = 1024;
+    Resources.maxGeometryUniformComponents              = 1024;
+    Resources.maxGeometryVaryingComponents              = 64;
+    Resources.maxTessControlInputComponents             = 128;
+    Resources.maxTessControlOutputComponents            = 128;
+    Resources.maxTessControlTextureImageUnits           = 16;
+    Resources.maxTessControlUniformComponents           = 1024;
+    Resources.maxTessControlTotalOutputComponents       = 4096;
+    Resources.maxTessEvaluationInputComponents          = 128;
+    Resources.maxTessEvaluationOutputComponents         = 128;
+    Resources.maxTessEvaluationTextureImageUnits        = 16;
+    Resources.maxTessEvaluationUniformComponents        = 1024;
+    Resources.maxTessPatchComponents                    = 120;
+    Resources.maxPatchVertices                          = 32;
+    Resources.maxTessGenLevel                           = 64;
+    Resources.maxViewports                              = 16;
+    Resources.maxVertexAtomicCounters                   = 0;
+    Resources.maxTessControlAtomicCounters              = 0;
+    Resources.maxTessEvaluationAtomicCounters           = 0;
+    Resources.maxGeometryAtomicCounters                 = 0;
+    Resources.maxFragmentAtomicCounters                 = 8;
+    Resources.maxCombinedAtomicCounters                 = 8;
+    Resources.maxAtomicCounterBindings                  = 1;
+    Resources.maxVertexAtomicCounterBuffers             = 0;
+    Resources.maxTessControlAtomicCounterBuffers        = 0;
+    Resources.maxTessEvaluationAtomicCounterBuffers     = 0;
+    Resources.maxGeometryAtomicCounterBuffers           = 0;
+    Resources.maxFragmentAtomicCounterBuffers           = 1;
+    Resources.maxCombinedAtomicCounterBuffers           = 1;
+    Resources.maxAtomicCounterBufferSize                = 16384;
+    Resources.maxTransformFeedbackBuffers               = 4;
     Resources.maxTransformFeedbackInterleavedComponents = 64;
-    Resources.maxCullDistances = 8;
-    Resources.maxCombinedClipAndCullDistances = 8;
-    Resources.maxSamples = 4;
-    Resources.maxMeshOutputVerticesNV = 256;
-    Resources.maxMeshOutputPrimitivesNV = 512;
-    Resources.maxMeshWorkGroupSizeX_NV = 32;
-    Resources.maxMeshWorkGroupSizeY_NV = 1;
-    Resources.maxMeshWorkGroupSizeZ_NV = 1;
-    Resources.maxTaskWorkGroupSizeX_NV = 32;
-    Resources.maxTaskWorkGroupSizeY_NV = 1;
-    Resources.maxTaskWorkGroupSizeZ_NV = 1;
-    Resources.maxMeshViewCountNV = 4;
+    Resources.maxCullDistances                          = 8;
+    Resources.maxCombinedClipAndCullDistances           = 8;
+    Resources.maxSamples                                = 4;
+    Resources.maxMeshOutputVerticesNV                   = 256;
+    Resources.maxMeshOutputPrimitivesNV                 = 512;
+    Resources.maxMeshWorkGroupSizeX_NV                  = 32;
+    Resources.maxMeshWorkGroupSizeY_NV                  = 1;
+    Resources.maxMeshWorkGroupSizeZ_NV                  = 1;
+    Resources.maxTaskWorkGroupSizeX_NV                  = 32;
+    Resources.maxTaskWorkGroupSizeY_NV                  = 1;
+    Resources.maxTaskWorkGroupSizeZ_NV                  = 1;
+    Resources.maxMeshViewCountNV                        = 4;
 
-    Resources.limits.nonInductiveForLoops = 1;
-    Resources.limits.whileLoops = 1;
-    Resources.limits.doWhileLoops = 1;
-    Resources.limits.generalUniformIndexing = 1;
+    Resources.limits.nonInductiveForLoops                 = 1;
+    Resources.limits.whileLoops                           = 1;
+    Resources.limits.doWhileLoops                         = 1;
+    Resources.limits.generalUniformIndexing               = 1;
     Resources.limits.generalAttributeMatrixVectorIndexing = 1;
-    Resources.limits.generalVaryingIndexing = 1;
-    Resources.limits.generalSamplerIndexing = 1;
-    Resources.limits.generalVariableIndexing = 1;
-    Resources.limits.generalConstantMatrixVectorIndexing = 1;
+    Resources.limits.generalVaryingIndexing               = 1;
+    Resources.limits.generalSamplerIndexing               = 1;
+    Resources.limits.generalVariableIndexing              = 1;
+    Resources.limits.generalConstantMatrixVectorIndexing  = 1;
 
     return Resources;
 }
@@ -190,14 +191,14 @@ class IoMapResolver final : public glslang::TIoMapResolver
 public:
     // Should return true if the resulting/current binding would be okay.
     // Basic idea is to do aliasing binding checks with this.
-    virtual bool validateBinding(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual bool validateBinding(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
         return true;
     }
 
     // Should return a value >= 0 if the current binding should be overridden.
     // Return -1 if the current binding (including no binding) should be kept.
-    virtual int resolveBinding(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual int resolveBinding(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
         // We do not care about actual binding value here.
         // We only need decoration to be present in SPIRV
@@ -206,7 +207,7 @@ public:
 
     // Should return a value >= 0 if the current set should be overridden.
     // Return -1 if the current set (including no set) should be kept.
-    virtual int resolveSet(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual int resolveSet(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
         // We do not care about actual descriptor set value here.
         // We only need decoration to be present in SPIRV
@@ -215,91 +216,91 @@ public:
 
     // Should return a value >= 0 if the current location should be overridden.
     // Return -1 if the current location (including no location) should be kept.
-    virtual int resolveUniformLocation(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual int resolveUniformLocation(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
         return -1;
     }
 
     // Should return true if the resulting/current setup would be okay.
     // Basic idea is to do aliasing checks and reject invalid semantic names.
-    virtual bool validateInOut(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual bool validateInOut(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
         return true;
     }
 
     // Should return a value >= 0 if the current location should be overridden.
     // Return -1 if the current location (including no location) should be kept.
-    virtual int resolveInOutLocation(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual int resolveInOutLocation(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
         return -1;
     }
 
     // Should return a value >= 0 if the current component index should be overridden.
     // Return -1 if the current component index (including no index) should be kept.
-    virtual int resolveInOutComponent(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual int resolveInOutComponent(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
         return -1;
     }
 
     // Should return a value >= 0 if the current color index should be overridden.
     // Return -1 if the current color index (including no index) should be kept.
-    virtual int resolveInOutIndex(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual int resolveInOutIndex(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
         return -1;
     }
 
     // Notification of a uniform variable
-    virtual void notifyBinding(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual void notifyBinding(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
     }
 
     // Notification of a in or out variable
-    virtual void notifyInOut(EShLanguage stage, glslang::TVarEntryInfo& ent)override final
+    virtual void notifyInOut(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
     {
     }
 
     // Called by mapIO when it starts its notify pass for the given stage
-    virtual void beginNotifications(EShLanguage stage)override final
+    virtual void beginNotifications(EShLanguage stage) override final
     {
     }
 
     // Called by mapIO when it has finished the notify pass
-    virtual void endNotifications(EShLanguage stage)override final
+    virtual void endNotifications(EShLanguage stage) override final
     {
     }
 
     // Called by mipIO when it starts its resolve pass for the given stage
-    virtual void beginResolve(EShLanguage stage)override final
+    virtual void beginResolve(EShLanguage stage) override final
     {
     }
 
     // Called by mapIO when it has finished the resolve pass
-    virtual void endResolve(EShLanguage stage)override final
+    virtual void endResolve(EShLanguage stage) override final
     {
     }
 
     // Called by mapIO when it starts its symbol collect for teh given stage
-    virtual void beginCollect(EShLanguage stage)override final
+    virtual void beginCollect(EShLanguage stage) override final
     {
     }
 
     // Called by mapIO when it has finished the symbol collect
-    virtual void endCollect(EShLanguage stage)override final
+    virtual void endCollect(EShLanguage stage) override final
     {
     }
 
     // Called by TSlotCollector to resolve storage locations or bindings
-    virtual void reserverStorageSlot(glslang::TVarEntryInfo& ent, TInfoSink& infoSink)override final
+    virtual void reserverStorageSlot(glslang::TVarEntryInfo& ent, TInfoSink& infoSink) override final
     {
     }
 
     // Called by TSlotCollector to resolve resource locations or bindings
-    virtual void reserverResourceSlot(glslang::TVarEntryInfo& ent, TInfoSink& infoSink)override final
+    virtual void reserverResourceSlot(glslang::TVarEntryInfo& ent, TInfoSink& infoSink) override final
     {
     }
 
     // Called by mapIO.addStage to set shader stage mask to mark a stage be added to this pipeline
-    virtual void addStage(EShLanguage stage)override final
+    virtual void addStage(EShLanguage stage) override final
     {
     }
 };
@@ -322,7 +323,7 @@ static void LogCompilerError(const char* DebugOutputMessage,
     if (ppCompilerOutput != nullptr)
     {
         auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(SourceCodeLen + 1 + ErrorLog.length() + 1);
-        char* DataPtr = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
+        char* DataPtr         = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
         memcpy(DataPtr, ErrorLog.data(), ErrorLog.length() + 1);
         memcpy(DataPtr + ErrorLog.length() + 1, ShaderSource, SourceCodeLen + 1);
         pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
@@ -337,9 +338,9 @@ static std::vector<unsigned int> CompileShaderInternal(glslang::TShader&        
                                                        IDataBlob**                 ppCompilerOutput)
 {
     Shader.setAutoMapBindings(true);
-    TBuiltInResource Resources = InitResources();
-    auto ParseResult = pIncluder != nullptr ?
-        Shader.parse(&Resources, 100, false, messages, *pIncluder) : 
+    TBuiltInResource Resources   = InitResources();
+    auto             ParseResult = pIncluder != nullptr ?
+        Shader.parse(&Resources, 100, false, messages, *pIncluder) :
         Shader.parse(&Resources, 100, false, messages);
     if (!ParseResult)
     {
@@ -380,23 +381,21 @@ public:
     {
         DEV_CHECK_ERR(m_pInputStreamFactory != nullptr, "The shader source conains #include directives, but no input stream factory was provided");
         RefCntAutoPtr<IFileStream> pSourceStream;
-        m_pInputStreamFactory->CreateInputStream( headerName, &pSourceStream );
-        if( pSourceStream == nullptr )
+        m_pInputStreamFactory->CreateInputStream(headerName, &pSourceStream);
+        if (pSourceStream == nullptr)
         {
-            LOG_ERROR( "Failed to open shader include file \"", headerName, "\". Check that the file exists" );
+            LOG_ERROR("Failed to open shader include file \"", headerName, "\". Check that the file exists");
             return nullptr;
         }
 
-        RefCntAutoPtr<IDataBlob> pFileData( MakeNewRCObj<DataBlobImpl>()(0) );
-        pSourceStream->Read( pFileData );
+        RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
+        pSourceStream->Read(pFileData);
         auto* pNewInclude =
-            new IncludeResult
-            {
+            new IncludeResult{
                 headerName,
                 reinterpret_cast<const char*>(pFileData->GetDataPtr()),
                 pFileData->GetSize(),
-                nullptr
-            };
+                nullptr};
 
         m_IncludeRes.emplace(pNewInclude);
         m_DataBlobs.emplace(pNewInclude, std::move(pFileData));
@@ -421,19 +420,19 @@ public:
     }
 
 private:
-    IShaderSourceInputStreamFactory* const m_pInputStreamFactory;
-    std::unordered_set<std::unique_ptr<IncludeResult>> m_IncludeRes;
+    IShaderSourceInputStreamFactory* const                       m_pInputStreamFactory;
+    std::unordered_set<std::unique_ptr<IncludeResult>>           m_IncludeRes;
     std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
 };
 
 std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob** ppCompilerOutput)
 {
-    EShLanguage ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
-    glslang::TShader Shader(ShLang);
-    EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
+    EShLanguage      ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
+    glslang::TShader Shader{ShLang};
+    EShMessages      messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
 
     VERIFY_EXPR(Attribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
-    
+
     Shader.setEnvInput(glslang::EShSourceHlsl, ShLang, glslang::EShClientVulkan, 100);
     Shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
     Shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
@@ -442,11 +441,12 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
     Shader.setEnvTargetHlslFunctionality1();
 
     RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
-    const char* SourceCode = 0;
-    int SourceCodeLen = 0;
+
+    const char* SourceCode    = 0;
+    int         SourceCodeLen = 0;
     if (Attribs.Source)
     {
-        SourceCode = Attribs.Source;
+        SourceCode    = Attribs.Source;
         SourceCodeLen = static_cast<int>(strlen(Attribs.Source));
     }
     else
@@ -458,7 +458,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
             LOG_ERROR_AND_THROW("Failed to open shader source file");
 
         pSourceStream->Read(pFileData);
-        SourceCode = reinterpret_cast<char*>(pFileData->GetDataPtr());
+        SourceCode    = reinterpret_cast<char*>(pFileData->GetDataPtr());
         SourceCodeLen = static_cast<int>(pFileData->GetSize());
     }
 
@@ -483,19 +483,19 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
     {
         Shader.setPreamble(g_HLSLDefinitions);
     }
-    const char* ShaderStrings      [] = {SourceCode};
+    const char* ShaderStrings[]       = {SourceCode};
     const int   ShaderStringLenghts[] = {SourceCodeLen};
-    const char* Names              [] = {Attribs.FilePath != nullptr ? Attribs.FilePath : ""};
+    const char* Names[]               = {Attribs.FilePath != nullptr ? Attribs.FilePath : ""};
     Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLenghts, Names, 1);
-    
+
     IncluderImpl Includer(Attribs.pShaderSourceStreamFactory);
-    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
-    
-    // SPIR-V bytecode generated from HLSL must be legalized to 
+    auto         SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
+
+    // SPIR-V bytecode generated from HLSL must be legalized to
     // turn it into a valid vulkan SPIR-V shader
     spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
     SpirvOptimizer.RegisterLegalizationPasses();
-    std::vector<uint32_t> LegalizedSPIRV;    
+    std::vector<uint32_t> LegalizedSPIRV;
     if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &LegalizedSPIRV))
     {
         return std::move(LegalizedSPIRV);
@@ -507,22 +507,22 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
     }
 }
 
-std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen, IDataBlob** ppCompilerOutput) 
+std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen, IDataBlob** ppCompilerOutput)
 {
-    EShLanguage ShLang = ShaderTypeToShLanguage(ShaderType);
+    EShLanguage      ShLang = ShaderTypeToShLanguage(ShaderType);
     glslang::TShader Shader(ShLang);
-    
+
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
-    const char* ShaderStrings[] = {ShaderSource };
+    const char* ShaderStrings[] = {ShaderSource};
     int         Lenghts[]       = {SourceCodeLen};
     Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
-    
+
     auto SPIRV = CompileShaderInternal(Shader, messages, nullptr, ShaderSource, SourceCodeLen, ppCompilerOutput);
-    
+
     spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
     SpirvOptimizer.RegisterPerformancePasses();
-    std::vector<uint32_t> OptimizedSPIRV;    
+    std::vector<uint32_t> OptimizedSPIRV;
     if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &OptimizedSPIRV))
     {
         return std::move(OptimizedSPIRV);
@@ -534,4 +534,4 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* 
     }
 }
 
-}
+} // namespace Diligent

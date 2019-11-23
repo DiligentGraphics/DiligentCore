@@ -46,7 +46,7 @@ namespace spirv_cross
 {
 class Compiler;
 struct Resource;
-}
+} // namespace spirv_cross
 
 namespace Diligent
 {
@@ -69,6 +69,8 @@ struct SPIRVShaderResourceAttribs
         NumResourceTypes
     };
 
+    // clang-format off
+
     static constexpr const Uint32   InvalidSepSmplrOrImgInd = static_cast<Uint32>(-1);
 
 /*  0 */const char* const           Name;
@@ -85,16 +87,18 @@ public:
 /* 20 */const uint32_t              DescriptorSetDecorationOffset;
 /* 24 */ // End of structure
 
-    SPIRVShaderResourceAttribs(const spirv_cross::Compiler&  Compiler, 
-                               const spirv_cross::Resource&  Res, 
-                               const char*                   _Name,
-                               ResourceType                  _Type, 
-                               Uint32                        _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd) noexcept;
+    // clang-format on
+
+    SPIRVShaderResourceAttribs(const spirv_cross::Compiler& Compiler,
+                               const spirv_cross::Resource& Res,
+                               const char*                  _Name,
+                               ResourceType                 _Type,
+                               Uint32                       _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd) noexcept;
 
     bool IsValidSepSamplerAssigned() const
     {
         VERIFY_EXPR(Type == SeparateImage);
-        return SepSmplrOrImgInd  != InvalidSepSmplrOrImgInd;
+        return SepSmplrOrImgInd != InvalidSepSmplrOrImgInd;
     }
 
     bool IsValidSepImageAssigned() const
@@ -127,7 +131,7 @@ public:
         SepSmplrOrImgInd = SepImageInd;
     }
 
-    String GetPrintName(Uint32 ArrayInd)const
+    String GetPrintName(Uint32 ArrayInd) const
     {
         VERIFY_EXPR(ArrayInd < ArraySize);
         if (ArraySize > 1)
@@ -140,49 +144,57 @@ public:
             return Name;
     }
 
-    bool IsCompatibleWith(const SPIRVShaderResourceAttribs& Attribs)const
+    bool IsCompatibleWith(const SPIRVShaderResourceAttribs& Attribs) const
     {
+        // clang-format off
         return ArraySize        == Attribs.ArraySize        && 
                Type             == Attribs.Type             &&
                SepSmplrOrImgInd == Attribs.SepSmplrOrImgInd;
+        // clang-format on
     }
 
     ShaderResourceDesc GetResourceDesc() const;
 };
-static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)" );
+static_assert(sizeof(SPIRVShaderResourceAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderResourceAttribs struct must be multiple of sizeof(void*)");
 
 // sizeof(SPIRVShaderResourceAttribs) == 16, msvc x64
 struct SPIRVShaderStageInputAttribs
 {
+    // clang-format off
     SPIRVShaderStageInputAttribs(const char* _Semantic, uint32_t _LocationDecorationOffset) :
-        Semantic                (_Semantic),
-        LocationDecorationOffset(_LocationDecorationOffset)
+        Semantic                 {_Semantic},
+        LocationDecorationOffset {_LocationDecorationOffset}
     {}
+    // clang-format on
 
     const char* const Semantic;
     const uint32_t    LocationDecorationOffset;
 };
-static_assert(sizeof(SPIRVShaderStageInputAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderStageInputAttribs struct must be multiple of sizeof(void*)" );
+static_assert(sizeof(SPIRVShaderStageInputAttribs) % sizeof(void*) == 0, "Size of SPIRVShaderStageInputAttribs struct must be multiple of sizeof(void*)");
 
 /// Diligent::SPIRVShaderResources class
 class SPIRVShaderResources
 {
 public:
-    SPIRVShaderResources(IMemoryAllocator&      Allocator,
-                         IRenderDevice*         pRenderDevice,
-                         std::vector<uint32_t>  spirv_binary,
-                         const ShaderDesc&      shaderDesc,
-                         const char*            CombinedSamplerSuffix,
-                         bool                   LoadShaderStageInputs,
-                         std::string&           EntryPoint);
+    SPIRVShaderResources(IMemoryAllocator&     Allocator,
+                         IRenderDevice*        pRenderDevice,
+                         std::vector<uint32_t> spirv_binary,
+                         const ShaderDesc&     shaderDesc,
+                         const char*           CombinedSamplerSuffix,
+                         bool                  LoadShaderStageInputs,
+                         std::string&          EntryPoint);
 
+    // clang-format off
     SPIRVShaderResources             (const SPIRVShaderResources&)  = delete;
     SPIRVShaderResources             (      SPIRVShaderResources&&) = delete;
     SPIRVShaderResources& operator = (const SPIRVShaderResources&)  = delete;
     SPIRVShaderResources& operator = (      SPIRVShaderResources&&) = delete;
-    
+    // clang-format on
+
     ~SPIRVShaderResources();
-    
+
+    // clang-format off
+
     Uint32 GetNumUBs      ()const noexcept{ return (m_StorageBufferOffset   - 0);                      }
     Uint32 GetNumSBs      ()const noexcept{ return (m_StorageImageOffset    - m_StorageBufferOffset);  }
     Uint32 GetNumImgs     ()const noexcept{ return (m_SampledImageOffset    - m_StorageImageOffset);   }
@@ -201,15 +213,17 @@ public:
     const SPIRVShaderResourceAttribs& GetSepSmplr(Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSepSmplrs(),   m_SeparateSamplerOffset); }
     const SPIRVShaderResourceAttribs& GetSepImg  (Uint32 n)const noexcept{ return GetResAttribs(n, GetNumSepImgs(),     m_SeparateImageOffset  ); }
     const SPIRVShaderResourceAttribs& GetResource(Uint32 n)const noexcept{ return GetResAttribs(n, GetTotalResources(), 0                      ); }
-    
-    const SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n)const noexcept
+
+    // clang-format on
+
+    const SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n) const noexcept
     {
         VERIFY(n < m_NumShaderStageInputs, "Shader stage input index (", n, ") is out of range. Total input count: ", m_NumShaderStageInputs);
         auto* ResourceMemoryEnd = reinterpret_cast<const SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get()) + m_TotalResources;
         return reinterpret_cast<const SPIRVShaderStageInputAttribs*>(ResourceMemoryEnd)[n];
     }
 
-    const SPIRVShaderResourceAttribs& GetAssignedSepSampler(const SPIRVShaderResourceAttribs& SepImg)const
+    const SPIRVShaderResourceAttribs& GetAssignedSepSampler(const SPIRVShaderResourceAttribs& SepImg) const
     {
         VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage, "Separate samplers can only be assigned to separate images");
         VERIFY(SepImg.IsValidSepSamplerAssigned(), "This separate image is not assigned a separate sampler");
@@ -220,32 +234,32 @@ public:
     {
         Uint32 NumUBs       = 0;
         Uint32 NumSBs       = 0;
-        Uint32 NumImgs      = 0; 
-        Uint32 NumSmpldImgs = 0; 
+        Uint32 NumImgs      = 0;
+        Uint32 NumSmpldImgs = 0;
         Uint32 NumACs       = 0;
         Uint32 NumSepSmplrs = 0;
         Uint32 NumSepImgs   = 0;
     };
 
-    SHADER_TYPE GetShaderType()const noexcept{return m_ShaderType;}
+    SHADER_TYPE GetShaderType() const noexcept { return m_ShaderType; }
 
     // Process only resources listed in AllowedVarTypes
-    template<typename THandleUB,
-             typename THandleSB,
-             typename THandleImg,
-             typename THandleSmplImg,
-             typename THandleAC,
-             typename THandleSepSmpl,
-             typename THandleSepImg>
+    template <typename THandleUB,
+              typename THandleSB,
+              typename THandleImg,
+              typename THandleSmplImg,
+              typename THandleAC,
+              typename THandleSepSmpl,
+              typename THandleSepImg>
     void ProcessResources(THandleUB      HandleUB,
                           THandleSB      HandleSB,
                           THandleImg     HandleImg,
                           THandleSmplImg HandleSmplImg,
                           THandleAC      HandleAC,
                           THandleSepSmpl HandleSepSmpl,
-                          THandleSepImg  HandleSepImg)const
+                          THandleSepImg  HandleSepImg) const
     {
-        for(Uint32 n=0; n < GetNumUBs(); ++n)
+        for (Uint32 n = 0; n < GetNumUBs(); ++n)
         {
             const auto& UB = GetUB(n);
             HandleUB(UB, n);
@@ -288,10 +302,10 @@ public:
         }
     }
 
-    template<typename THandler>
-    void ProcessResources(THandler Handler)const
+    template <typename THandler>
+    void ProcessResources(THandler Handler) const
     {
-        for(Uint32 n=0; n < GetTotalResources(); ++n)
+        for (Uint32 n = 0; n < GetTotalResources(); ++n)
         {
             const auto& Res = GetResource(n);
             Handler(Res, n);
@@ -300,31 +314,37 @@ public:
 
     std::string DumpResources();
 
-    bool IsCompatibleWith(const SPIRVShaderResources& Resources)const;
-    
-    const char* GetCombinedSamplerSuffix() const { return m_CombinedSamplerSuffix; } 
-    const char* GetShaderName()            const { return m_ShaderName; } 
+    bool IsCompatibleWith(const SPIRVShaderResources& Resources) const;
+
+    // clang-format off
+
+    const char* GetCombinedSamplerSuffix() const { return m_CombinedSamplerSuffix; }
+    const char* GetShaderName()            const { return m_ShaderName; }
     bool        IsUsingCombinedSamplers()  const { return m_CombinedSamplerSuffix != nullptr; }
 
+    // clang-format on
+
 private:
-    void Initialize(IMemoryAllocator&       Allocator, 
+    void Initialize(IMemoryAllocator&       Allocator,
                     const ResourceCounters& Counters,
                     Uint32                  NumShaderStageInputs,
                     size_t                  ResourceNamesPoolSize);
 
-    SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)noexcept
+    SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset) noexcept
     {
         VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Total resource count: ", NumResources);
         VERIFY_EXPR(Offset + n < m_TotalResources);
         return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
 
-    const SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset)const noexcept
+    const SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset) const noexcept
     {
         VERIFY(n < NumResources, "Resource index (", n, ") is out of range. Total resource count: ", NumResources);
         VERIFY_EXPR(Offset + n < m_TotalResources);
         return reinterpret_cast<SPIRVShaderResourceAttribs*>(m_MemoryBuffer.get())[Offset + n];
     }
+
+    // clang-format off
 
     SPIRVShaderResourceAttribs& GetUB      (Uint32 n)noexcept{ return GetResAttribs(n, GetNumUBs(),         0                      ); }
     SPIRVShaderResourceAttribs& GetSB      (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSBs(),         m_StorageBufferOffset  ); }
@@ -335,21 +355,23 @@ private:
     SPIRVShaderResourceAttribs& GetSepImg  (Uint32 n)noexcept{ return GetResAttribs(n, GetNumSepImgs(),     m_SeparateImageOffset  ); }
     SPIRVShaderResourceAttribs& GetResource(Uint32 n)noexcept{ return GetResAttribs(n, GetTotalResources(), 0                      ); }
 
-    SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n)noexcept
+    // clang-format on
+
+    SPIRVShaderStageInputAttribs& GetShaderStageInputAttribs(Uint32 n) noexcept
     {
         return const_cast<SPIRVShaderStageInputAttribs&>(const_cast<const SPIRVShaderResources*>(this)->GetShaderStageInputAttribs(n));
     }
 
     // Memory buffer that holds all resources as continuous chunk of memory:
     // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  | Stage Inputs | Resource Names |
-    std::unique_ptr< void, STDDeleterRawMem<void> > m_MemoryBuffer;
+    std::unique_ptr<void, STDDeleterRawMem<void>> m_MemoryBuffer;
 
-    StringPool  m_ResourceNames;
+    StringPool m_ResourceNames;
 
     const char* m_CombinedSamplerSuffix = nullptr;
     const char* m_ShaderName            = nullptr;
 
-    using OffsetType = Uint16;
+    using OffsetType                   = Uint16;
     OffsetType m_StorageBufferOffset   = 0;
     OffsetType m_StorageImageOffset    = 0;
     OffsetType m_SampledImageOffset    = 0;
@@ -362,5 +384,4 @@ private:
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
 };
 
-}
-
+} // namespace Diligent

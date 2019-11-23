@@ -34,9 +34,9 @@ namespace Diligent
 {
 
 String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
-                             const DeviceCaps&            deviceCaps,
-                             TargetGLSLCompiler           TargetCompiler,
-                             const char*                  ExtraDefinitions)
+                             const DeviceCaps&       deviceCaps,
+                             TargetGLSLCompiler      TargetCompiler,
+                             const char*             ExtraDefinitions)
 {
     String GLSLSource;
 
@@ -45,15 +45,14 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
 #if PLATFORM_WIN32 || PLATFORM_LINUX
     GLSLSource.append(
         "#version 430 core\n"
-        "#define DESKTOP_GL 1\n"
-    );
-#   if PLATFORM_WIN32
+        "#define DESKTOP_GL 1\n");
+#    if PLATFORM_WIN32
     GLSLSource.append("#define PLATFORM_WIN32 1\n");
-#   elif PLATFORM_LINUX
+#    elif PLATFORM_LINUX
     GLSLSource.append("#define PLATFORM_LINUX 1\n");
-#   else
-#       error Unexpected platform
-#   endif
+#    else
+#        error Unexpected platform
+#    endif
 #elif PLATFORM_MACOS
     if (TargetCompiler == TargetGLSLCompiler::glslang)
         GLSLSource.append("#version 430 core\n");
@@ -64,8 +63,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
 
     GLSLSource.append(
         "#define DESKTOP_GL 1\n"
-        "#define PLATFORM_MACOS 1\n"
-    );
+        "#define PLATFORM_MACOS 1\n");
 
 #elif PLATFORM_ANDROID || PLATFORM_IOS
     bool IsES30        = false;
@@ -80,7 +78,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     }
     else if (deviceCaps.DevType == DeviceType::OpenGLES)
     {
-        IsES30        =                                 deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion == 0;
+        IsES30        = deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion == 0;
         IsES31OrAbove = deviceCaps.MajorVersion > 3 || (deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 1);
         IsES32OrAbove = deviceCaps.MajorVersion > 3 || (deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 2);
         std::stringstream versionss;
@@ -107,16 +105,15 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     GLSLSource.append(
         "#ifndef GL_ES\n"
         "#  define GL_ES 1\n"
-        "#endif\n"
-    );
+        "#endif\n");
 
-#if PLATFORM_ANDROID
+#    if PLATFORM_ANDROID
     GLSLSource.append("#define PLATFORM_ANDROID 1\n");
-#elif PLATFORM_IOS
+#    elif PLATFORM_IOS
     GLSLSource.append("#define PLATFORM_IOS 1\n");
-#else
-#   error "Unexpected platform"
-#endif
+#    else
+#        error "Unexpected platform"
+#    endif
 
     GLSLSource.append(
         "precision highp float;\n"
@@ -140,16 +137,16 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         "precision highp usampler2D;\n"
         "precision highp usampler3D;\n"
         "precision highp usamplerCube;\n"
-        "precision highp usampler2DArray;\n"
-    );
+        "precision highp usampler2DArray;\n" // clang-format off
+    ); // clang-format on
 
     if (IsES32OrAbove)
     {
         GLSLSource.append(
             "precision highp samplerBuffer;\n"
             "precision highp isamplerBuffer;\n"
-            "precision highp usamplerBuffer;\n"
-        );
+            "precision highp usamplerBuffer;\n" // clang-format off
+        ); // clang-format on
     }
 
     if (deviceCaps.TexCaps.bCubemapArraysSupported)
@@ -158,8 +155,8 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
             "precision highp samplerCubeArray;\n"
             "precision highp samplerCubeArrayShadow;\n"
             "precision highp isamplerCubeArray;\n"
-            "precision highp usamplerCubeArray;\n"
-        );
+            "precision highp usamplerCubeArray;\n" // clang-format off
+        ); // clang-format on
     }
 
     if (deviceCaps.TexCaps.bTexture2DMSSupported)
@@ -167,8 +164,8 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         GLSLSource.append(
             "precision highp sampler2DMS;\n"
             "precision highp isampler2DMS;\n"
-            "precision highp usampler2DMS;\n"
-        );
+            "precision highp usampler2DMS;\n" // clang-format off
+        ); // clang-format on
     }
 
     if (deviceCaps.bComputeShadersSupported)
@@ -187,15 +184,15 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
             "precision highp uimage2D;\n"
             "precision highp uimage3D;\n"
             "precision highp uimageCube;\n"
-            "precision highp uimage2DArray;\n"
-        );
+            "precision highp uimage2DArray;\n" // clang-format off
+        ); // clang-format on
         if (IsES32OrAbove)
         {
             GLSLSource.append(
                 "precision highp imageBuffer;\n"
                 "precision highp iimageBuffer;\n"
-                "precision highp uimageBuffer;\n"
-            );
+                "precision highp uimageBuffer;\n" // clang-format off
+            ); // clang-format on
         }
     }
 
@@ -203,16 +200,16 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     {
         // From https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_separate_shader_objects.gles.txt:
         //
-        // When using GLSL ES 3.00 shaders in separable programs, gl_Position and 
-        // gl_PointSize built-in outputs must be redeclared according to Section 7.5 
+        // When using GLSL ES 3.00 shaders in separable programs, gl_Position and
+        // gl_PointSize built-in outputs must be redeclared according to Section 7.5
         // of the OpenGL Shading Language Specification...
-        //   
-        // add to GLSL ES 3.00 new section 7.5, Built-In Redeclaration and 
+        //
+        // add to GLSL ES 3.00 new section 7.5, Built-In Redeclaration and
         // Separable Programs:
-        // 
+        //
         // "The following vertex shader outputs may be redeclared at global scope to
         // specify a built-in output interface, with or without special qualifiers:
-        // 
+        //
         //     gl_Position
         //     gl_PointSize
         //
@@ -227,18 +224,17 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     }
 
 #elif
-#   error "Undefined platform"
+#    error "Undefined platform"
 #endif
 
     // It would be much more convenient to use row_major matrices.
-    // But unfortunatelly on NVIDIA, the following directive 
+    // But unfortunatelly on NVIDIA, the following directive
     // layout(std140, row_major) uniform;
     // does not have any effect on matrices that are part of structures
     // So we have to use column-major matrices which are default in both
     // DX and GLSL.
     GLSLSource.append(
-        "layout(std140) uniform;\n"
-    );
+        "layout(std140) uniform;\n");
 
     if (ShaderType == SHADER_TYPE_VERTEX && TargetCompiler == TargetGLSLCompiler::glslang)
     {
@@ -250,6 +246,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     const Char* ShaderTypeDefine = nullptr;
     switch (ShaderType)
     {
+        // clang-format off
         case SHADER_TYPE_VERTEX:    ShaderTypeDefine = "#define VERTEX_SHADER\n";         break;
         case SHADER_TYPE_PIXEL:     ShaderTypeDefine = "#define FRAGMENT_SHADER\n";       break;
         case SHADER_TYPE_GEOMETRY:  ShaderTypeDefine = "#define GEOMETRY_SHADER\n";       break;
@@ -257,17 +254,18 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         case SHADER_TYPE_DOMAIN:    ShaderTypeDefine = "#define TESS_EVALUATION_SHADER\n"; break;
         case SHADER_TYPE_COMPUTE:   ShaderTypeDefine = "#define COMPUTE_SHADER\n";        break;
         default: UNEXPECTED("Shader type is not specified");
+            // clang-format on
     }
     GLSLSource += ShaderTypeDefine;
 
-    if(ExtraDefinitions != nullptr)
+    if (ExtraDefinitions != nullptr)
     {
         GLSLSource.append(ExtraDefinitions);
     }
 
     if (CreationAttribs.Macros != nullptr)
     {
-        auto *pMacro = CreationAttribs.Macros;
+        auto* pMacro = CreationAttribs.Macros;
         while (pMacro->Name != nullptr && pMacro->Definition != nullptr)
         {
             GLSLSource += "#define ";
@@ -280,8 +278,9 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     }
 
     RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
-    auto ShaderSource = CreationAttribs.Source;
-    size_t SourceLen = 0;
+
+    auto   ShaderSource = CreationAttribs.Source;
+    size_t SourceLen    = 0;
     if (ShaderSource)
     {
         SourceLen = strlen(ShaderSource);
@@ -296,7 +295,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
 
         pSourceStream->Read(pFileData);
         ShaderSource = reinterpret_cast<char*>(pFileData->GetDataPtr());
-        SourceLen = pFileData->GetSize();
+        SourceLen    = pFileData->GetSize();
     }
 
     if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
@@ -306,24 +305,25 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
             LOG_ERROR_AND_THROW("Combined texture samplers are required to convert HLSL source to GLSL");
         }
         // Convert HLSL to GLSL
-        const auto &Converter = HLSL2GLSLConverterImpl::GetInstance();
+        const auto& Converter = HLSL2GLSLConverterImpl::GetInstance();
+
         HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
-        Attribs.pSourceStreamFactory       = CreationAttribs.pShaderSourceStreamFactory;
-        Attribs.ppConversionStream         = CreationAttribs.ppConversionStream;
-        Attribs.HLSLSource                 = ShaderSource;
-        Attribs.NumSymbols                 = SourceLen;
-        Attribs.EntryPoint                 = CreationAttribs.EntryPoint;
-        Attribs.ShaderType                 = CreationAttribs.Desc.ShaderType;
-        Attribs.IncludeDefinitions         = true;
-        Attribs.InputFileName              = CreationAttribs.FilePath;
-        Attribs.SamplerSuffix              = CreationAttribs.CombinedSamplerSuffix;
+        Attribs.pSourceStreamFactory = CreationAttribs.pShaderSourceStreamFactory;
+        Attribs.ppConversionStream   = CreationAttribs.ppConversionStream;
+        Attribs.HLSLSource           = ShaderSource;
+        Attribs.NumSymbols           = SourceLen;
+        Attribs.EntryPoint           = CreationAttribs.EntryPoint;
+        Attribs.ShaderType           = CreationAttribs.Desc.ShaderType;
+        Attribs.IncludeDefinitions   = true;
+        Attribs.InputFileName        = CreationAttribs.FilePath;
+        Attribs.SamplerSuffix        = CreationAttribs.CombinedSamplerSuffix;
         // Separate shader objects extension also allows input/output layout qualifiers for
         // all shader stages.
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt
         // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
         Attribs.UseInOutLocationQualifiers = deviceCaps.bSeparableProgramSupported;
-        auto ConvertedSource = Converter.Convert(Attribs);
-        
+        auto ConvertedSource               = Converter.Convert(Attribs);
+
         GLSLSource.append(ConvertedSource);
     }
     else
@@ -332,4 +332,4 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     return GLSLSource;
 }
 
-}
+} // namespace Diligent
