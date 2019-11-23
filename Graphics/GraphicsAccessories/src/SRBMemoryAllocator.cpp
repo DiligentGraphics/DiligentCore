@@ -31,7 +31,7 @@ SRBMemoryAllocator::~SRBMemoryAllocator()
     if (m_DataAllocators != nullptr)
     {
         auto TotalAllocatorCount = m_ShaderVariableDataAllocatorCount + m_ResourceCacheDataAllocatorCount;
-        for (Uint32 s=0; s < TotalAllocatorCount; ++s)
+        for (Uint32 s = 0; s < TotalAllocatorCount; ++s)
         {
             m_DataAllocators[s].~FixedBlockMemoryAllocator();
         }
@@ -39,8 +39,8 @@ SRBMemoryAllocator::~SRBMemoryAllocator()
     }
 }
 
-void SRBMemoryAllocator::Initialize(Uint32              SRBAllocationGranularity, 
-                                    Uint32              ShaderVariableDataAllocatorCount, 
+void SRBMemoryAllocator::Initialize(Uint32              SRBAllocationGranularity,
+                                    Uint32              ShaderVariableDataAllocatorCount,
                                     const size_t* const ShaderVariableDataSizes,
                                     Uint32              ResourceCacheDataAllocatorCount,
                                     const size_t* const ResourceCacheDataSizes)
@@ -50,23 +50,22 @@ void SRBMemoryAllocator::Initialize(Uint32              SRBAllocationGranularity
 
     m_ShaderVariableDataAllocatorCount = ShaderVariableDataAllocatorCount;
     m_ResourceCacheDataAllocatorCount  = ResourceCacheDataAllocatorCount;
-    auto TotalAllocatorCount = m_ShaderVariableDataAllocatorCount + m_ResourceCacheDataAllocatorCount;
+    auto TotalAllocatorCount           = m_ShaderVariableDataAllocatorCount + m_ResourceCacheDataAllocatorCount;
 
-    if(TotalAllocatorCount == 0)
+    if (TotalAllocatorCount == 0)
         return;
 
     auto* pAllocatorsRawMem = m_RawMemAllocator.Allocate(
         sizeof(FixedBlockMemoryAllocator) * TotalAllocatorCount,
         "Raw memory for SRBMemoryAllocator::m_ShaderVariableDataAllocators",
-        __FILE__, __LINE__
-        );
+        __FILE__, __LINE__);
     m_DataAllocators = reinterpret_cast<FixedBlockMemoryAllocator*>(pAllocatorsRawMem);
 
     for (Uint32 s = 0; s < TotalAllocatorCount; ++s)
     {
         auto size = s < ShaderVariableDataAllocatorCount ? ShaderVariableDataSizes[s] : ResourceCacheDataSizes[s - ShaderVariableDataAllocatorCount];
-        new(m_DataAllocators + s)FixedBlockMemoryAllocator(GetRawAllocator(), size, SRBAllocationGranularity);
+        new (m_DataAllocators + s) FixedBlockMemoryAllocator(GetRawAllocator(), size, SRBAllocationGranularity);
     }
 }
 
-}
+} // namespace Diligent

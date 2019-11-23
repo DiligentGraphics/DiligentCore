@@ -38,9 +38,9 @@ public:
     {}
 
     ~SRBMemoryAllocator();
-    
-    void Initialize(Uint32              SRBAllocationGranularity, 
-                    Uint32              ShaderVariableDataAllocatorCount, 
+
+    void Initialize(Uint32              SRBAllocationGranularity,
+                    Uint32              ShaderVariableDataAllocatorCount,
                     const size_t* const ShaderVariableDataSizes,
                     Uint32              ResourceCacheDataAllocatorCount,
                     const size_t* const ResourceCacheDataSizes);
@@ -67,4 +67,4 @@ private:
     Uint32 m_ResourceCacheDataAllocatorCount  = 0;
 };
 
-}
+} // namespace Diligent

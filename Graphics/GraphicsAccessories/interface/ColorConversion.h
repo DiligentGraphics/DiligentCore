@@ -32,7 +32,7 @@ namespace Diligent
 // https://en.wikipedia.org/wiki/SRGB
 inline float LinearToSRGB(float x)
 {
-    return x <= 0.0031308  ?  x * 12.92f  :  1.055f * std::pow(x, 1.f / 2.4f) - 0.055f;
+    return x <= 0.0031308 ? x * 12.92f : 1.055f * std::pow(x, 1.f / 2.4f) - 0.055f;
 }
 
 inline float SRGBToLinear(float x)
@@ -54,4 +54,4 @@ inline float FastSRGBToLinear(float x)
     return x * (x * (x * 0.305306011f + 0.682171111f) + 0.012522878f);
 }
 
-}
+} // namespace Diligent

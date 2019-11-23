@@ -37,70 +37,95 @@ namespace Diligent
 {
 
 /// Template structure to convert VALUE_TYPE enumeration into C-type
-template<VALUE_TYPE ValType>
+template <VALUE_TYPE ValType>
 struct VALUE_TYPE2CType
 {};
-    
+
 /// VALUE_TYPE2CType<> template specialization for 8-bit integer value type.
 
 /// Usage example:
 ///
 ///     VALUE_TYPE2CType<VT_INT8>::CType MyInt8Var;
-template<>struct VALUE_TYPE2CType<VT_INT8>  { typedef Int8 CType; };
+template <> struct VALUE_TYPE2CType<VT_INT8>
+{
+    typedef Int8 CType;
+};
 
 /// VALUE_TYPE2CType<> template specialization for 16-bit integer value type.
 
 /// Usage example:
 ///
 ///     VALUE_TYPE2CType<VT_INT16>::CType MyInt16Var;
-template<>struct VALUE_TYPE2CType<VT_INT16> { typedef Int16 CType; };
+template <> struct VALUE_TYPE2CType<VT_INT16>
+{
+    typedef Int16 CType;
+};
 
 /// VALUE_TYPE2CType<> template specialization for 32-bit integer value type.
 
 /// Usage example:
 ///
 ///     VALUE_TYPE2CType<VT_INT32>::CType MyInt32Var;
-template<>struct VALUE_TYPE2CType<VT_INT32> { typedef Int32 CType; };
-    
+template <> struct VALUE_TYPE2CType<VT_INT32>
+{
+    typedef Int32 CType;
+};
+
 /// VALUE_TYPE2CType<> template specialization for 8-bit unsigned-integer value type.
 
 /// Usage example:
 ///
 ///     VALUE_TYPE2CType<VT_UINT8>::CType MyUint8Var;
-template<>struct VALUE_TYPE2CType<VT_UINT8> { typedef Uint8 CType; };
+template <> struct VALUE_TYPE2CType<VT_UINT8>
+{
+    typedef Uint8 CType;
+};
 
 /// VALUE_TYPE2CType<> template specialization for 16-bit unsigned-integer value type.
 
 /// Usage example:
 ///
 ///     VALUE_TYPE2CType<VT_UINT16>::CType MyUint16Var;
-template<>struct VALUE_TYPE2CType<VT_UINT16>{ typedef Uint16 CType; };
+template <> struct VALUE_TYPE2CType<VT_UINT16>
+{
+    typedef Uint16 CType;
+};
 
 /// VALUE_TYPE2CType<> template specialization for 32-bit unsigned-integer value type.
 
 /// Usage example:
 ///
 ///     VALUE_TYPE2CType<VT_UINT32>::CType MyUint32Var;
-template<>struct VALUE_TYPE2CType<VT_UINT32>{ typedef Uint32 CType; };
+template <> struct VALUE_TYPE2CType<VT_UINT32>
+{
+    typedef Uint32 CType;
+};
 
 /// VALUE_TYPE2CType<> template specialization for half-precision 16-bit floating-point value type.
-    
+
 /// Usage example:
 ///
 ///     VALUE_TYPE2CType<VT_FLOAT16>::CType MyFloat16Var;
 ///
 /// \note 16-bit floating-point values have no corresponding C++ type and are translated to Uint16
-template<>struct VALUE_TYPE2CType<VT_FLOAT16>{ typedef Uint16 CType; };
+template <> struct VALUE_TYPE2CType<VT_FLOAT16>
+{
+    typedef Uint16 CType;
+};
 
 /// VALUE_TYPE2CType<> template specialization for full-precision 32-bit floating-point value type.
 
 /// Usage example:
 ///
 ///     VALUE_TYPE2CType<VT_FLOAT32>::CType MyFloat32Var;
-template<>struct VALUE_TYPE2CType<VT_FLOAT32>{ typedef Float32 CType; };
+template <> struct VALUE_TYPE2CType<VT_FLOAT32>
+{
+    typedef Float32 CType;
+};
 
 
-static const Uint32 ValueTypeToSizeMap[] = 
+static const Uint32 ValueTypeToSizeMap[] =
+    // clang-format off
 {
     0,
     sizeof(VALUE_TYPE2CType<VT_INT8>    :: CType),
@@ -112,6 +137,7 @@ static const Uint32 ValueTypeToSizeMap[] =
     sizeof(VALUE_TYPE2CType<VT_FLOAT16> :: CType),
     sizeof(VALUE_TYPE2CType<VT_FLOAT32> :: CType)
 };
+// clang-format on
 static_assert(VT_NUM_TYPES == VT_FLOAT32 + 1, "Not all value type sizes initialized.");
 
 /// Returns the size of the specified value type
@@ -122,7 +148,7 @@ inline Uint32 GetValueSize(VALUE_TYPE Val)
 }
 
 /// Returns the string representing the specified value type
-const Char* GetValueTypeString( VALUE_TYPE Val );
+const Char* GetValueTypeString(VALUE_TYPE Val);
 
 /// Returns invariant texture format attributes, see TextureFormatAttribs for details.
 
@@ -157,7 +183,7 @@ TEXTURE_FORMAT GetDefaultTextureViewFormat(TEXTURE_FORMAT TextureFormat, TEXTURE
 /// \param [in] TexDesc - texture description
 /// \param [in] ViewType - texture view type
 /// \return  texture view type format
-inline TEXTURE_FORMAT GetDefaultTextureViewFormat(const TextureDesc &TexDesc, TEXTURE_VIEW_TYPE ViewType)
+inline TEXTURE_FORMAT GetDefaultTextureViewFormat(const TextureDesc& TexDesc, TEXTURE_VIEW_TYPE ViewType)
 {
     return GetDefaultTextureViewFormat(TexDesc.Format, ViewType, TexDesc.BindFlags);
 }
@@ -184,7 +210,7 @@ const Char* GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType);
 const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType);
 
 /// \param [in] ShaderStages - Shader stages.
-/// \return The string representing the shader stages. For example, 
+/// \return The string representing the shader stages. For example,
 ///         if ShaderStages == SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL,
 ///         the following string will be returned:
 ///         "SHADER_TYPE_VERTEX, SHADER_TYPE_PIXEL"
@@ -212,14 +238,14 @@ const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, 
 /// see GetTexViewTypeLiteralName().
 inline const Char* GetViewTypeLiteralName(TEXTURE_VIEW_TYPE TexViewType)
 {
-    return GetTexViewTypeLiteralName( TexViewType );
+    return GetTexViewTypeLiteralName(TexViewType);
 }
 
 /// Overloaded function that returns the literal name of a buffer view type.
 /// see GetBufferViewTypeLiteralName().
 inline const Char* GetViewTypeLiteralName(BUFFER_VIEW_TYPE BuffViewType)
 {
-    return GetBufferViewTypeLiteralName( BuffViewType );
+    return GetBufferViewTypeLiteralName(BuffViewType);
 }
 
 /// Returns the string containing the map type
@@ -229,75 +255,75 @@ const Char* GetMapTypeString(MAP_TYPE MapType);
 const Char* GetUsageString(USAGE Usage);
 
 /// Returns the string containing the texture type
-const Char* GetResourceDimString( RESOURCE_DIMENSION TexType );
+const Char* GetResourceDimString(RESOURCE_DIMENSION TexType);
 
 /// Returns the string containing single bind flag
-const Char* GetBindFlagString( Uint32 BindFlag );
+const Char* GetBindFlagString(Uint32 BindFlag);
 
 /// Returns the string containing the bind flags
-String GetBindFlagsString( Uint32 BindFlags );
+String GetBindFlagsString(Uint32 BindFlags);
 
 /// Returns the string containing the CPU access flags
-String GetCPUAccessFlagsString( Uint32 CpuAccessFlags );
+String GetCPUAccessFlagsString(Uint32 CpuAccessFlags);
 
 /// Returns the string containing the texture description
-String GetTextureDescString(const TextureDesc &Desc);
+String GetTextureDescString(const TextureDesc& Desc);
 
 /// Returns the string containing the buffer format description
 String GetBufferFormatString(const BufferFormat& Fmt);
 
 /// Returns the string containing the buffer mode description
-const Char* GetBufferModeString( BUFFER_MODE Mode );
+const Char* GetBufferModeString(BUFFER_MODE Mode);
 
 /// Returns the string containing the buffer description
-String GetBufferDescString(const BufferDesc &Desc);
+String GetBufferDescString(const BufferDesc& Desc);
 
 /// Returns the string containing the buffer mode description
-const Char* GetResourceStateFlagString( RESOURCE_STATE State );
-String GetResourceStateString( RESOURCE_STATE State );
+const Char* GetResourceStateFlagString(RESOURCE_STATE State);
+String      GetResourceStateString(RESOURCE_STATE State);
 
 /// Helper template function that converts object description into a string
-template<typename TObjectDescType>
-String GetObjectDescString( const TObjectDescType& )
+template <typename TObjectDescType>
+String GetObjectDescString(const TObjectDescType&)
 {
     return "";
 }
 
 /// Template specialization for texture description
-template<>
-inline String GetObjectDescString( const TextureDesc& TexDesc )
+template <>
+inline String GetObjectDescString(const TextureDesc& TexDesc)
 {
-    String Str( "Tex desc: " );
-    Str += GetTextureDescString( TexDesc );
+    String Str{"Tex desc: "};
+    Str += GetTextureDescString(TexDesc);
     return Str;
 }
 
 /// Template specialization for buffer description
-template<>
-inline String GetObjectDescString( const BufferDesc& BuffDesc )
+template <>
+inline String GetObjectDescString(const BufferDesc& BuffDesc)
 {
-    String Str( "Buff desc: " );
-    Str += GetBufferDescString( BuffDesc );
+    String Str{"Buff desc: "};
+    Str += GetBufferDescString(BuffDesc);
     return Str;
 }
 
-Uint32 ComputeMipLevelsCount( Uint32 Width );
-Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height );
-Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height, Uint32 Depth );
+Uint32 ComputeMipLevelsCount(Uint32 Width);
+Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height);
+Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth);
 
 inline bool IsComparisonFilter(FILTER_TYPE FilterType)
 {
     return FilterType == FILTER_TYPE_COMPARISON_POINT ||
-           FilterType == FILTER_TYPE_COMPARISON_LINEAR ||
-           FilterType == FILTER_TYPE_COMPARISON_ANISOTROPIC;
+        FilterType == FILTER_TYPE_COMPARISON_LINEAR ||
+        FilterType == FILTER_TYPE_COMPARISON_ANISOTROPIC;
 }
 
 inline bool IsAnisotropicFilter(FILTER_TYPE FilterType)
 {
     return FilterType == FILTER_TYPE_ANISOTROPIC ||
-           FilterType == FILTER_TYPE_COMPARISON_ANISOTROPIC ||
-           FilterType == FILTER_TYPE_MINIMUM_ANISOTROPIC || 
-           FilterType == FILTER_TYPE_MAXIMUM_ANISOTROPIC;
+        FilterType == FILTER_TYPE_COMPARISON_ANISOTROPIC ||
+        FilterType == FILTER_TYPE_MINIMUM_ANISOTROPIC ||
+        FilterType == FILTER_TYPE_MAXIMUM_ANISOTROPIC;
 }
 
 bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture);
@@ -317,4 +343,4 @@ struct MipLevelProperties
 
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);
 
-}
+} // namespace Diligent

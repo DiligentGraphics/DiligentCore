@@ -30,12 +30,13 @@
 namespace Diligent
 {
 
-const Char* GetValueTypeString( VALUE_TYPE Val )
+const Char* GetValueTypeString(VALUE_TYPE Val)
 {
     static const Char* ValueTypeStrings[VT_NUM_TYPES] = {};
-    static bool bIsInit = false;
-    if( !bIsInit )
+    static bool        bIsInit                        = false;
+    if (!bIsInit)
     {
+        // clang-format off
 #define INIT_VALUE_TYPE_STR( ValType ) ValueTypeStrings[ValType] = #ValType
         INIT_VALUE_TYPE_STR( VT_UNDEFINED );
         INIT_VALUE_TYPE_STR( VT_INT8    );
@@ -47,17 +48,18 @@ const Char* GetValueTypeString( VALUE_TYPE Val )
         INIT_VALUE_TYPE_STR( VT_FLOAT16 );
         INIT_VALUE_TYPE_STR( VT_FLOAT32 );
 #undef  INIT_VALUE_TYPE_STR
+        // clang-format on
         static_assert(VT_NUM_TYPES == VT_FLOAT32 + 1, "Not all value type strings initialized.");
         bIsInit = true;
     }
 
-    if( Val >= VT_UNDEFINED && Val < VT_NUM_TYPES )
+    if (Val >= VT_UNDEFINED && Val < VT_NUM_TYPES)
     {
         return ValueTypeStrings[Val];
     }
     else
     {
-        UNEXPECTED( "Incorrect value type (", Val, ")" );
+        UNEXPECTED("Incorrect value type (", Val, ")");
         return "unknown value type";
     }
 }
@@ -67,6 +69,7 @@ class TexFormatToViewFormatConverter
 public:
     TexFormatToViewFormatConverter()
     {
+        // clang-format off
         static_assert(TEXTURE_VIEW_SHADER_RESOURCE == 1, "TEXTURE_VIEW_SHADER_RESOURCE == 1 expected");
         static_assert(TEXTURE_VIEW_RENDER_TARGET == 2, "TEXTURE_VIEW_RENDER_TARGET == 2 expected");
         static_assert(TEXTURE_VIEW_DEPTH_STENCIL == 3, "TEXTURE_VIEW_DEPTH_STENCIL == 3 expected");
@@ -200,6 +203,7 @@ public:
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC7_UNORM,               BC7_UNORM,      UNKNOWN, UNKNOWN, UNKNOWN);
         INIT_TEX_VIEW_FORMAT_INFO( TEX_FORMAT_BC7_UNORM_SRGB,          BC7_UNORM_SRGB, UNKNOWN, UNKNOWN, UNKNOWN);
 #undef INIT_TVIEW_FORMAT_INFO
+        // clang-format on
     }
 
     TEXTURE_FORMAT GetViewFormat(TEXTURE_FORMAT Format, TEXTURE_VIEW_TYPE ViewType, Uint32 BindFlags)
@@ -212,23 +216,24 @@ public:
             {
                 if (BindFlags & BIND_DEPTH_STENCIL)
                 {
+                    // clang-format off
                     static TEXTURE_FORMAT D16_ViewFmts[] = 
                     {
                         TEX_FORMAT_R16_UNORM, TEX_FORMAT_R16_UNORM, TEX_FORMAT_D16_UNORM, TEX_FORMAT_R16_UNORM
                     };
+                    // clang-format on
                     return D16_ViewFmts[ViewType - 1];
                 }
             }
 
-            default: /*do nothing*/break;
+            default: /*do nothing*/ break;
         }
 
-        return m_ViewFormats[Format][ViewType-1];
+        return m_ViewFormats[Format][ViewType - 1];
     }
 
 private:
-
-    TEXTURE_FORMAT m_ViewFormats[TEX_FORMAT_NUM_FORMATS][TEXTURE_VIEW_NUM_VIEWS-1];
+    TEXTURE_FORMAT m_ViewFormats[TEX_FORMAT_NUM_FORMATS][TEXTURE_VIEW_NUM_VIEWS - 1];
 };
 
 TEXTURE_FORMAT GetDefaultTextureViewFormat(TEXTURE_FORMAT TextureFormat, TEXTURE_VIEW_TYPE ViewType, Uint32 BindFlags)
@@ -237,16 +242,17 @@ TEXTURE_FORMAT GetDefaultTextureViewFormat(TEXTURE_FORMAT TextureFormat, TEXTURE
     return FmtConverter.GetViewFormat(TextureFormat, ViewType, BindFlags);
 }
 
-const TextureFormatAttribs& GetTextureFormatAttribs( TEXTURE_FORMAT Format )
+const TextureFormatAttribs& GetTextureFormatAttribs(TEXTURE_FORMAT Format)
 {
     static TextureFormatAttribs FmtAttribs[TEX_FORMAT_NUM_FORMATS];
-    static bool bIsInit = false;
+    static bool                 bIsInit = false;
     // Note that this implementation is thread-safe
     // Even if two threads try to call the function at the same time,
     // the worst thing that might happen is that the array will be
     // initialized multiple times. But the result will always be correct.
-    if( !bIsInit )
+    if (!bIsInit)
     {
+        // clang-format off
 #define INIT_TEX_FORMAT_INFO(TexFmt, ComponentSize, NumComponents, ComponentType, IsTypeless, BlockWidth, BlockHeight) \
         FmtAttribs[ TexFmt ] = TextureFormatAttribs(#TexFmt, TexFmt, ComponentSize, NumComponents, ComponentType, IsTypeless, BlockWidth, BlockHeight);
 
@@ -369,40 +375,42 @@ const TextureFormatAttribs& GetTextureFormatAttribs( TEXTURE_FORMAT Format )
         INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC7_UNORM,               16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
         INIT_TEX_FORMAT_INFO( TEX_FORMAT_BC7_UNORM_SRGB,          16, 4, COMPONENT_TYPE_COMPRESSED, false, 4,4);
 #undef  INIT_TEX_FORMAT_INFO
+        // clang-format on
         static_assert(TEX_FORMAT_NUM_FORMATS == TEX_FORMAT_BC7_UNORM_SRGB + 1, "Not all texture formats initialized.");
 
 #ifdef _DEBUG
-        for( Uint32 Fmt = TEX_FORMAT_UNKNOWN; Fmt < TEX_FORMAT_NUM_FORMATS; ++Fmt )
+        for (Uint32 Fmt = TEX_FORMAT_UNKNOWN; Fmt < TEX_FORMAT_NUM_FORMATS; ++Fmt)
             VERIFY(FmtAttribs[Fmt].Format == static_cast<TEXTURE_FORMAT>(Fmt), "Uninitialized format");
 #endif
 
         bIsInit = true;
     }
 
-    if( Format >= TEX_FORMAT_UNKNOWN && Format < TEX_FORMAT_NUM_FORMATS )
+    if (Format >= TEX_FORMAT_UNKNOWN && Format < TEX_FORMAT_NUM_FORMATS)
     {
-        const auto &Attribs = FmtAttribs[Format];
-        VERIFY( Attribs.Format == Format, "Unexpected format" );
+        const auto& Attribs = FmtAttribs[Format];
+        VERIFY(Attribs.Format == Format, "Unexpected format");
         return Attribs;
     }
     else
     {
-        UNEXPECTED( "Texture format (", int{Format}, ") is out of allowed range [0, ", int{TEX_FORMAT_NUM_FORMATS}-1, "]" );
+        UNEXPECTED("Texture format (", int{Format}, ") is out of allowed range [0, ", int{TEX_FORMAT_NUM_FORMATS} - 1, "]");
         return FmtAttribs[0];
     }
 }
 
 
-const Char* GetTexViewTypeLiteralName( TEXTURE_VIEW_TYPE ViewType )
+const Char* GetTexViewTypeLiteralName(TEXTURE_VIEW_TYPE ViewType)
 {
     static const Char* TexViewLiteralNames[TEXTURE_VIEW_NUM_VIEWS] = {};
-    static bool bIsInit = false;
+    static bool        bIsInit                                     = false;
     // Note that this implementation is thread-safe
     // Even if two threads try to call the function at the same time,
     // the worst thing that might happen is that the array will be
     // initialized multiple times. But the result will always be correct.
-    if( !bIsInit )
+    if (!bIsInit)
     {
+        // clang-format off
 #define INIT_TEX_VIEW_TYPE_NAME(ViewType)TexViewLiteralNames[ViewType] = #ViewType
         INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_UNDEFINED );
         INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_SHADER_RESOURCE );
@@ -410,57 +418,61 @@ const Char* GetTexViewTypeLiteralName( TEXTURE_VIEW_TYPE ViewType )
         INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_DEPTH_STENCIL );
         INIT_TEX_VIEW_TYPE_NAME( TEXTURE_VIEW_UNORDERED_ACCESS );
 #undef  INIT_TEX_VIEW_TYPE_NAME
+        // clang-format on
         static_assert(TEXTURE_VIEW_NUM_VIEWS == TEXTURE_VIEW_UNORDERED_ACCESS + 1, "Not all texture views names initialized.");
 
         bIsInit = true;
     }
 
-    if( ViewType >= TEXTURE_VIEW_UNDEFINED && ViewType < TEXTURE_VIEW_NUM_VIEWS )
+    if (ViewType >= TEXTURE_VIEW_UNDEFINED && ViewType < TEXTURE_VIEW_NUM_VIEWS)
     {
         return TexViewLiteralNames[ViewType];
     }
     else
     {
-        UNEXPECTED("Texture view type (", ViewType, ") is out of allowed range [0, ", TEXTURE_VIEW_NUM_VIEWS-1, "]" );
+        UNEXPECTED("Texture view type (", ViewType, ") is out of allowed range [0, ", TEXTURE_VIEW_NUM_VIEWS - 1, "]");
         return "<Unknown texture view type>";
     }
 }
 
-const Char* GetBufferViewTypeLiteralName( BUFFER_VIEW_TYPE ViewType )
+const Char* GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType)
 {
     static const Char* BuffViewLiteralNames[BUFFER_VIEW_NUM_VIEWS] = {};
-    static bool bIsInit = false;
+    static bool        bIsInit                                     = false;
     // Note that this implementation is thread-safe
     // Even if two threads try to call the function at the same time,
     // the worst thing that might happen is that the array will be
     // initialized multiple times. But the result will always be correct.
-    if( !bIsInit )
+    if (!bIsInit)
     {
+        // clang-format off
 #define INIT_BUFF_VIEW_TYPE_NAME(ViewType)BuffViewLiteralNames[ViewType] = #ViewType
         INIT_BUFF_VIEW_TYPE_NAME( BUFFER_VIEW_UNDEFINED );
         INIT_BUFF_VIEW_TYPE_NAME( BUFFER_VIEW_SHADER_RESOURCE );
         INIT_BUFF_VIEW_TYPE_NAME( BUFFER_VIEW_UNORDERED_ACCESS );
  #undef INIT_BUFF_VIEW_TYPE_NAME
+        // clang-format on
         static_assert(BUFFER_VIEW_NUM_VIEWS == BUFFER_VIEW_UNORDERED_ACCESS + 1, "Not all buffer views names initialized.");
 
         bIsInit = true;
     }
 
-    if( ViewType >= BUFFER_VIEW_UNDEFINED && ViewType < BUFFER_VIEW_NUM_VIEWS )
+    if (ViewType >= BUFFER_VIEW_UNDEFINED && ViewType < BUFFER_VIEW_NUM_VIEWS)
     {
         return BuffViewLiteralNames[ViewType];
     }
     else
     {
-        UNEXPECTED( "Buffer view type (", ViewType, ") is out of allowed range [0, ", BUFFER_VIEW_NUM_VIEWS-1, "]" );
+        UNEXPECTED("Buffer view type (", ViewType, ") is out of allowed range [0, ", BUFFER_VIEW_NUM_VIEWS - 1, "]");
         return "<Unknown buffer view type>";
     }
 }
 
-const Char* GetShaderTypeLiteralName( SHADER_TYPE ShaderType )
+const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
 {
-    switch( ShaderType )
+    switch (ShaderType)
     {
+        // clang-format off
 #define RETURN_SHADER_TYPE_NAME(ShaderType)\
         case ShaderType: return #ShaderType;
 
@@ -472,26 +484,26 @@ const Char* GetShaderTypeLiteralName( SHADER_TYPE ShaderType )
         RETURN_SHADER_TYPE_NAME( SHADER_TYPE_DOMAIN  )
         RETURN_SHADER_TYPE_NAME( SHADER_TYPE_COMPUTE )
 #undef  RETURN_SHADER_TYPE_NAME
+            // clang-format on
 
-        default: UNEXPECTED( "Unknown shader type constant ", Uint32{ShaderType} ); return "<Unknown shader type>";
+        default: UNEXPECTED("Unknown shader type constant ", Uint32{ShaderType}); return "<Unknown shader type>";
     }
 }
 
 String GetShaderStagesString(SHADER_TYPE ShaderStages)
 {
     String StagesStr;
-    while(ShaderStages != 0)
-    for( Uint32 Stage = SHADER_TYPE_VERTEX; ShaderStages != 0 && Stage <= SHADER_TYPE_COMPUTE; Stage <<= 1 )
+    for (Uint32 Stage = SHADER_TYPE_VERTEX; ShaderStages != 0 && Stage <= SHADER_TYPE_COMPUTE; Stage <<= 1)
     {
-        if( ShaderStages&Stage )
+        if (ShaderStages & Stage)
         {
-            if( StagesStr.length() )
+            if (StagesStr.length())
                 StagesStr += ", ";
-            StagesStr += GetShaderTypeLiteralName( static_cast<SHADER_TYPE>(Stage));
+            StagesStr += GetShaderTypeLiteralName(static_cast<SHADER_TYPE>(Stage));
             ShaderStages &= ~static_cast<SHADER_TYPE>(Stage);
         }
     }
-    VERIFY_EXPR( ShaderStages == 0);
+    VERIFY_EXPR(ShaderStages == 0);
     return StagesStr;
 }
 
@@ -499,21 +511,21 @@ const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarTy
 {
     static const Char* ShortVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
     static const Char* FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
-    static bool bVarTypeStrsInit = false;
-    if( !bVarTypeStrsInit )
+    static bool        bVarTypeStrsInit = false;
+    if (!bVarTypeStrsInit)
     {
         ShortVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_STATIC]  = "static";
         ShortVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] = "mutable";
         ShortVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] = "dynamic";
-        FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_STATIC]  = "SHADER_RESOURCE_VARIABLE_TYPE_STATIC";
-        FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE] = "SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE";
-        FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] = "SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC";
+        FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_STATIC]   = "SHADER_RESOURCE_VARIABLE_TYPE_STATIC";
+        FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE]  = "SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE";
+        FullVarTypeNameStrings[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC]  = "SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC";
 
         static_assert(SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC + 1, "Not all shader variable types initialized.");
 
         bVarTypeStrsInit = true;
     }
-    if( VarType >= SHADER_RESOURCE_VARIABLE_TYPE_STATIC && VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES )
+    if (VarType >= SHADER_RESOURCE_VARIABLE_TYPE_STATIC && VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES)
         return (bGetFullName ? FullVarTypeNameStrings : ShortVarTypeNameStrings)[VarType];
     else
     {
@@ -525,8 +537,9 @@ const Char* GetShaderVariableTypeLiteralName(SHADER_RESOURCE_VARIABLE_TYPE VarTy
 
 const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, bool bGetFullName)
 {
-    switch(ResourceType)
+    switch (ResourceType)
     {
+        // clang-format off
         case SHADER_RESOURCE_TYPE_UNKNOWN:         return bGetFullName ?  "SHADER_RESOURCE_TYPE_UNKNOWN"         : "unknown";
         case SHADER_RESOURCE_TYPE_CONSTANT_BUFFER: return bGetFullName ?  "SHADER_RESOURCE_TYPE_CONSTANT_BUFFER" : "constant buffer";
         case SHADER_RESOURCE_TYPE_TEXTURE_SRV:     return bGetFullName ?  "SHADER_RESOURCE_TYPE_TEXTURE_SRV"     : "texture SRV";
@@ -534,6 +547,7 @@ const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, 
         case SHADER_RESOURCE_TYPE_TEXTURE_UAV:     return bGetFullName ?  "SHADER_RESOURCE_TYPE_TEXTURE_UAV"     : "texture UAV";
         case SHADER_RESOURCE_TYPE_BUFFER_UAV:      return bGetFullName ?  "SHADER_RESOURCE_TYPE_BUFFER_UAV"      : "buffer UAV";
         case SHADER_RESOURCE_TYPE_SAMPLER:         return bGetFullName ?  "SHADER_RESOURCE_TYPE_SAMPLER"         : "sampler";
+        // clang-format on
         default:
             UNEXPECTED("Unexepcted resource type (", Uint32{ResourceType}, ")");
             return "UNKNOWN";
@@ -542,12 +556,12 @@ const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, 
 
 const Char* GetMapTypeString(MAP_TYPE MapType)
 {
-    switch(MapType)
+    switch (MapType)
     {
-        case MAP_READ:       return "MAP_READ";
-        case MAP_WRITE:      return "MAP_WRITE";
+        case MAP_READ: return "MAP_READ";
+        case MAP_WRITE: return "MAP_WRITE";
         case MAP_READ_WRITE: return "MAP_READ_WRITE";
-        
+
         default:
             UNEXPECTED("Unexpected map type");
             return "Unknown map type";
@@ -555,21 +569,23 @@ const Char* GetMapTypeString(MAP_TYPE MapType)
 }
 
 /// Returns the string containing the usage
-const Char* GetUsageString( USAGE Usage )
+const Char* GetUsageString(USAGE Usage)
 {
     static const Char* UsageStrings[4];
-    static bool bUsageStringsInit = false;
-    if( !bUsageStringsInit )
+    static bool        bUsageStringsInit = false;
+    if (!bUsageStringsInit)
     {
+        // clang-format off
 #define INIT_USGAGE_STR(Usage)UsageStrings[Usage] = #Usage
         INIT_USGAGE_STR( USAGE_STATIC );
         INIT_USGAGE_STR( USAGE_DEFAULT );
         INIT_USGAGE_STR( USAGE_DYNAMIC );
         INIT_USGAGE_STR( USAGE_STAGING );
 #undef  INIT_USGAGE_STR
+        // clang-format on
         bUsageStringsInit = true;
     }
-    if( Usage >= USAGE_STATIC && Usage <= USAGE_STAGING )
+    if (Usage >= USAGE_STATIC && Usage <= USAGE_STAGING)
         return UsageStrings[Usage];
     else
     {
@@ -578,11 +594,11 @@ const Char* GetUsageString( USAGE Usage )
     }
 }
 
-const Char* GetResourceDimString( RESOURCE_DIMENSION TexType )
+const Char* GetResourceDimString(RESOURCE_DIMENSION TexType)
 {
     static const Char* TexTypeStrings[RESOURCE_DIM_NUM_DIMENSIONS];
-    static bool bTexTypeStrsInit = false;
-    if( !bTexTypeStrsInit )
+    static bool        bTexTypeStrsInit = false;
+    if (!bTexTypeStrsInit)
     {
         TexTypeStrings[RESOURCE_DIM_UNDEFINED]      = "Undefined";
         TexTypeStrings[RESOURCE_DIM_BUFFER]         = "Buffer";
@@ -597,7 +613,7 @@ const Char* GetResourceDimString( RESOURCE_DIMENSION TexType )
 
         bTexTypeStrsInit = true;
     }
-    if( TexType >= RESOURCE_DIM_UNDEFINED && TexType < RESOURCE_DIM_NUM_DIMENSIONS )
+    if (TexType >= RESOURCE_DIM_UNDEFINED && TexType < RESOURCE_DIM_NUM_DIMENSIONS)
         return TexTypeStrings[TexType];
     else
     {
@@ -606,11 +622,12 @@ const Char* GetResourceDimString( RESOURCE_DIMENSION TexType )
     }
 }
 
-const Char* GetBindFlagString( Uint32 BindFlag )
+const Char* GetBindFlagString(Uint32 BindFlag)
 {
-    VERIFY( (BindFlag & (BindFlag - 1)) == 0, "More than one bind flag specified" );
-    switch( BindFlag )
+    VERIFY((BindFlag & (BindFlag - 1)) == 0, "More than one bind flag specified");
+    switch (BindFlag)
     {
+        // clang-format off
 #define BIND_FLAG_STR_CASE(Flag) case Flag: return #Flag;
         BIND_FLAG_STR_CASE( BIND_VERTEX_BUFFER )
 	    BIND_FLAG_STR_CASE( BIND_INDEX_BUFFER  )
@@ -622,105 +639,108 @@ const Char* GetBindFlagString( Uint32 BindFlag )
 	    BIND_FLAG_STR_CASE( BIND_UNORDERED_ACCESS )
         BIND_FLAG_STR_CASE( BIND_INDIRECT_DRAW_ARGS )
 #undef  BIND_FLAG_STR_CASE
-        default: UNEXPECTED( "Unexpected bind flag ", BindFlag ); return "";
+        // clang-format on
+        default: UNEXPECTED("Unexpected bind flag ", BindFlag); return "";
     }
 }
 
-String GetBindFlagsString( Uint32 BindFlags )
+String GetBindFlagsString(Uint32 BindFlags)
 {
-    if( BindFlags == 0 )
+    if (BindFlags == 0)
         return "0";
     String Str;
-    for( Uint32 Flag = BIND_VERTEX_BUFFER; BindFlags && Flag <= BIND_INDIRECT_DRAW_ARGS; Flag <<= 1 )
+    for (Uint32 Flag = BIND_VERTEX_BUFFER; BindFlags && Flag <= BIND_INDIRECT_DRAW_ARGS; Flag <<= 1)
     {
-        if( BindFlags&Flag )
+        if (BindFlags & Flag)
         {
-            if( Str.length() )
+            if (Str.length())
                 Str += '|';
-            Str += GetBindFlagString( Flag );
+            Str += GetBindFlagString(Flag);
             BindFlags &= ~Flag;
         }
     }
-    VERIFY( BindFlags == 0, "Unknown bind flags left" );
+    VERIFY(BindFlags == 0, "Unknown bind flags left");
     return Str;
 }
 
 
-static const Char* GetSingleCPUAccessFlagString( Uint32 CPUAccessFlag )
+static const Char* GetSingleCPUAccessFlagString(Uint32 CPUAccessFlag)
 {
-    VERIFY( (CPUAccessFlag & (CPUAccessFlag - 1)) == 0, "More than one access flag specified" );
-    switch( CPUAccessFlag )
+    VERIFY((CPUAccessFlag & (CPUAccessFlag - 1)) == 0, "More than one access flag specified");
+    switch (CPUAccessFlag)
     {
+        // clang-format off
 #define CPU_ACCESS_FLAG_STR_CASE(Flag) case Flag: return #Flag;
         CPU_ACCESS_FLAG_STR_CASE( CPU_ACCESS_READ )
 	    CPU_ACCESS_FLAG_STR_CASE( CPU_ACCESS_WRITE  )
 #undef  CPU_ACCESS_FLAG_STR_CASE
-        default: UNEXPECTED( "Unexpected CPU access flag ", CPUAccessFlag ); return "";
+        // clang-format on
+        default: UNEXPECTED("Unexpected CPU access flag ", CPUAccessFlag); return "";
     }
 }
 
-String GetCPUAccessFlagsString( Uint32 CpuAccessFlags )
+String GetCPUAccessFlagsString(Uint32 CpuAccessFlags)
 {
-    if( CpuAccessFlags == 0 )
+    if (CpuAccessFlags == 0)
         return "0";
     String Str;
-    for( Uint32 Flag = CPU_ACCESS_READ; CpuAccessFlags && Flag <= CPU_ACCESS_WRITE; Flag <<= 1 )
+    for (Uint32 Flag = CPU_ACCESS_READ; CpuAccessFlags && Flag <= CPU_ACCESS_WRITE; Flag <<= 1)
     {
-        if( CpuAccessFlags&Flag )
+        if (CpuAccessFlags & Flag)
         {
-            if( Str.length() )
+            if (Str.length())
                 Str += '|';
-            Str += GetSingleCPUAccessFlagString( Flag );
+            Str += GetSingleCPUAccessFlagString(Flag);
             CpuAccessFlags &= ~Flag;
         }
     }
-    VERIFY( CpuAccessFlags == 0, "Unknown CPU access flags left" );
+    VERIFY(CpuAccessFlags == 0, "Unknown CPU access flags left");
     return Str;
 }
 
 // There is a nice standard function to_string, but there is a bug on gcc
 // and it does not work
-template<typename T>
-String ToString( T Val )
+template <typename T>
+String ToString(T Val)
 {
     std::stringstream ss;
     ss << Val;
     return ss.str();
 }
 
-String GetTextureDescString( const TextureDesc &Desc )
+String GetTextureDescString(const TextureDesc& Desc)
 {
     String Str = "Type: ";
     Str += GetResourceDimString(Desc.Type);
     Str += "; size: ";
     Str += ToString(Desc.Width);
-    if( Desc.Type == RESOURCE_DIM_TEX_2D || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_3D || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+    if (Desc.Type == RESOURCE_DIM_TEX_2D || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_3D || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
     {
         Str += "x";
-        Str += ToString( Desc.Height );
+        Str += ToString(Desc.Height);
     }
 
-    if( Desc.Type == RESOURCE_DIM_TEX_3D )
+    if (Desc.Type == RESOURCE_DIM_TEX_3D)
     {
         Str += "x";
-        Str += ToString( Desc.Depth );
+        Str += ToString(Desc.Depth);
     }
-    
-    if( Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY )
+
+    if (Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY || Desc.Type == RESOURCE_DIM_TEX_CUBE || Desc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
     {
         Str += "; Num Slices: ";
-        Str += ToString( Desc.ArraySize );
+        Str += ToString(Desc.ArraySize);
     }
 
-    auto FmtName = GetTextureFormatAttribs( Desc.Format ).Name;
+    auto FmtName = GetTextureFormatAttribs(Desc.Format).Name;
     Str += "; Format: ";
     Str += FmtName;
 
     Str += "; Mip levels: ";
-    Str += ToString( Desc.MipLevels );
+    Str += ToString(Desc.MipLevels);
 
     Str += "; Sample Count: ";
-    Str += ToString( Desc.SampleCount );
+    Str += ToString(Desc.SampleCount);
 
     Str += "; Usage: ";
     Str += GetUsageString(Desc.Usage);
@@ -734,26 +754,28 @@ String GetTextureDescString( const TextureDesc &Desc )
     return Str;
 }
 
-const Char* GetBufferModeString( BUFFER_MODE Mode )
+const Char* GetBufferModeString(BUFFER_MODE Mode)
 {
     static const Char* BufferModeStrings[BUFFER_MODE_NUM_MODES];
-    static bool bBuffModeStringsInit = false;
-    if( !bBuffModeStringsInit )
+    static bool        bBuffModeStringsInit = false;
+    if (!bBuffModeStringsInit)
     {
+        // clang-format off
 #define INIT_BUFF_MODE_STR(Mode)BufferModeStrings[Mode] = #Mode
         INIT_BUFF_MODE_STR( BUFFER_MODE_UNDEFINED );
         INIT_BUFF_MODE_STR( BUFFER_MODE_FORMATTED );
         INIT_BUFF_MODE_STR( BUFFER_MODE_STRUCTURED );
         INIT_BUFF_MODE_STR( BUFFER_MODE_RAW );
 #undef  INIT_BUFF_MODE_STR
+        // clang-format on
         static_assert(BUFFER_MODE_NUM_MODES == BUFFER_MODE_RAW + 1, "Not all buffer mode strings initialized.");
         bBuffModeStringsInit = true;
     }
-    if( Mode >= BUFFER_MODE_UNDEFINED && Mode < BUFFER_MODE_NUM_MODES )
+    if (Mode >= BUFFER_MODE_UNDEFINED && Mode < BUFFER_MODE_NUM_MODES)
         return BufferModeStrings[Mode];
     else
     {
-        UNEXPECTED( "Unknown buffer mode" );
+        UNEXPECTED("Unknown buffer mode");
         return "Unknown buffer mode";
     }
 }
@@ -761,37 +783,37 @@ const Char* GetBufferModeString( BUFFER_MODE Mode )
 String GetBufferFormatString(const BufferFormat& Fmt)
 {
     String Str;
-    Str += GetValueTypeString( Fmt.ValueType );
-    if( Fmt.IsNormalized )
+    Str += GetValueTypeString(Fmt.ValueType);
+    if (Fmt.IsNormalized)
         Str += " norm";
     Str += " x ";
     Str += ToString(Uint32{Fmt.NumComponents});
     return Str;
 }
 
-String GetBufferDescString( const BufferDesc &Desc )
+String GetBufferDescString(const BufferDesc& Desc)
 {
     String Str;
     Str += "Size: ";
     bool bIsLarge = false;
-    if( Desc.uiSizeInBytes > (1 << 20) )
+    if (Desc.uiSizeInBytes > (1 << 20))
     {
-        Str += ToString( Desc.uiSizeInBytes / (1<<20) );
+        Str += ToString(Desc.uiSizeInBytes / (1 << 20));
         Str += " Mb (";
         bIsLarge = true;
     }
-    else if( Desc.uiSizeInBytes > (1 << 10) )
+    else if (Desc.uiSizeInBytes > (1 << 10))
     {
-        Str += ToString( Desc.uiSizeInBytes / (1<<10) );
+        Str += ToString(Desc.uiSizeInBytes / (1 << 10));
         Str += " Kb (";
         bIsLarge = true;
     }
 
-    Str += ToString( Desc.uiSizeInBytes );
+    Str += ToString(Desc.uiSizeInBytes);
     Str += " bytes";
-    if( bIsLarge )
+    if (bIsLarge)
         Str += ')';
-    
+
     Str += "; Mode: ";
     Str += GetBufferModeString(Desc.Mode);
 
@@ -805,17 +827,18 @@ String GetBufferDescString( const BufferDesc &Desc )
     Str += GetCPUAccessFlagsString(Desc.CPUAccessFlags);
 
     Str += "; stride: ";
-    Str += ToString( Desc.ElementByteStride );
+    Str += ToString(Desc.ElementByteStride);
     Str += " bytes";
 
     return Str;
 }
 
-const Char* GetResourceStateFlagString( RESOURCE_STATE State )
+const Char* GetResourceStateFlagString(RESOURCE_STATE State)
 {
-    VERIFY((State & (State-1)) == 0, "Single state is expected");
-    switch(State)
+    VERIFY((State & (State - 1)) == 0, "Single state is expected");
+    switch (State)
     {
+        // clang-format off
         case RESOURCE_STATE_UNKNOWN:           return "UNKNOWN";
         case RESOURCE_STATE_UNDEFINED:         return "UNDEFINED";
         case RESOURCE_STATE_VERTEX_BUFFER:     return "VERTEX_BUFFER";
@@ -833,15 +856,16 @@ const Char* GetResourceStateFlagString( RESOURCE_STATE State )
         case RESOURCE_STATE_RESOLVE_DEST:      return "RESOLVE_DEST";
         case RESOURCE_STATE_RESOLVE_SOURCE:    return "RESOLVE_SOURCE";
         case RESOURCE_STATE_PRESENT:           return "PRESENT";
+        // clang-format on
         default:
             UNEXPECTED("Unknown resource state");
             return "UNKNOWN";
     }
 }
 
-String GetResourceStateString( RESOURCE_STATE State )
+String GetResourceStateString(RESOURCE_STATE State)
 {
-    if(State == RESOURCE_STATE_UNKNOWN)
+    if (State == RESOURCE_STATE_UNKNOWN)
         return "UNKNOWN";
 
     String str;
@@ -849,8 +873,8 @@ String GetResourceStateString( RESOURCE_STATE State )
     {
         if (!str.empty())
             str.push_back('|');
-        
-        auto lsb = State & ~(State-1);
+
+        auto        lsb             = State & ~(State - 1);
         const auto* StateFlagString = GetResourceStateFlagString(static_cast<RESOURCE_STATE>(lsb));
         str.append(StateFlagString);
         State = static_cast<RESOURCE_STATE>(State & ~lsb);
@@ -858,32 +882,33 @@ String GetResourceStateString( RESOURCE_STATE State )
     return str;
 }
 
-Uint32 ComputeMipLevelsCount( Uint32 Width )
+Uint32 ComputeMipLevelsCount(Uint32 Width)
 {
     if (Width == 0)
         return 0;
 
     Uint32 MipLevels = 0;
-    while( (Width >> MipLevels) > 0 )
+    while ((Width >> MipLevels) > 0)
         ++MipLevels;
-    VERIFY( Width >= (1U << (MipLevels-1)) && Width < (1U << MipLevels), "Incorrect number of Mip levels" );
+    VERIFY(Width >= (1U << (MipLevels - 1)) && Width < (1U << MipLevels), "Incorrect number of Mip levels");
     return MipLevels;
 }
 
-Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height )
+Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height)
 {
-    return ComputeMipLevelsCount( std::max( Width, Height ) );
+    return ComputeMipLevelsCount(std::max(Width, Height));
 }
 
-Uint32 ComputeMipLevelsCount( Uint32 Width, Uint32 Height, Uint32 Depth )
+Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth)
 {
-    return ComputeMipLevelsCount( std::max(std::max( Width, Height ), Depth) );
+    return ComputeMipLevelsCount(std::max(std::max(Width, Height), Depth));
 }
 
 bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture)
 {
     static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "Please update this function to handle the new resource state");
 
+    // clang-format off
 #define VERIFY_EXCLUSIVE_STATE(ExclusiveState)\
 if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
 {\
@@ -899,9 +924,11 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_RESOLVE_DEST);
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_PRESENT);
 #undef VERIFY_EXCLUSIVE_STATE
+    // clang-format on
 
     if (IsTexture)
     {
+        // clang-format off
         if (State &
             (RESOURCE_STATE_VERTEX_BUFFER   |
              RESOURCE_STATE_CONSTANT_BUFFER |
@@ -914,9 +941,11 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
                               "RESOURCE_STATE_INDIRECT_ARGUMENT are not applicable to a texture");
             return false;
         }
+        // clang-format on
     }
     else
     {
+        // clang-format off
         if (State &
             (RESOURCE_STATE_RENDER_TARGET  |
              RESOURCE_STATE_DEPTH_WRITE    |
@@ -929,30 +958,30 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
                               "RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_RESOLVE_SOURCE, "
                               "RESOURCE_STATE_RESOLVE_DEST, RESOURCE_STATE_PRESENT are not applicable to a buffer");
             return false;
-
         }
+        // clang-format on
     }
-    
+
     return true;
 }
 
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel)
 {
     MipLevelProperties MipProps;
-    const auto& FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
+    const auto&        FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
 
-    MipProps.LogicalWidth  = std::max(TexDesc.Width  >> MipLevel, 1u);
+    MipProps.LogicalWidth  = std::max(TexDesc.Width >> MipLevel, 1u);
     MipProps.LogicalHeight = std::max(TexDesc.Height >> MipLevel, 1u);
-    MipProps.Depth  = (TexDesc.Type == RESOURCE_DIM_TEX_3D) ? std::max(TexDesc.Depth >> MipLevel, 1u) : 1u;
+    MipProps.Depth         = (TexDesc.Type == RESOURCE_DIM_TEX_3D) ? std::max(TexDesc.Depth >> MipLevel, 1u) : 1u;
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
         VERIFY_EXPR(FmtAttribs.BlockWidth > 1 && FmtAttribs.BlockHeight > 1);
-        VERIFY((FmtAttribs.BlockWidth  & (FmtAttribs.BlockWidth-1))  == 0, "Compressed block width is expected to be power of 2");
-        VERIFY((FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight-1)) == 0, "Compressed block height is expected to be power of 2");
+        VERIFY((FmtAttribs.BlockWidth & (FmtAttribs.BlockWidth - 1)) == 0, "Compressed block width is expected to be power of 2");
+        VERIFY((FmtAttribs.BlockHeight & (FmtAttribs.BlockHeight - 1)) == 0, "Compressed block height is expected to be power of 2");
         // For block-compression formats, all parameters are still specified in texels rather than compressed texel blocks (18.4.1)
         MipProps.StorageWidth   = Align(MipProps.LogicalWidth, Uint32{FmtAttribs.BlockWidth});
-        MipProps.StorageHeight  = Align(MipProps.LogicalHeight,Uint32{FmtAttribs.BlockHeight});
-        MipProps.RowSize        = MipProps.StorageWidth  / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
+        MipProps.StorageHeight  = Align(MipProps.LogicalHeight, Uint32{FmtAttribs.BlockHeight});
+        MipProps.RowSize        = MipProps.StorageWidth / Uint32{FmtAttribs.BlockWidth} * Uint32{FmtAttribs.ComponentSize}; // ComponentSize is the block size
         MipProps.DepthSliceSize = MipProps.StorageHeight / Uint32{FmtAttribs.BlockHeight} * MipProps.RowSize;
         MipProps.MipSize        = MipProps.DepthSliceSize * MipProps.Depth;
     }
@@ -968,4 +997,4 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
     return MipProps;
 }
 
-}
+} // namespace Diligent

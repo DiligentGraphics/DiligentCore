@@ -32,80 +32,82 @@
 
 namespace Diligent
 {
-    // Class extends basic variable-size memory block allocator by deferring deallocation
-    // of freed blocks untill the corresponding frame is completed
-    class VariableSizeGPUAllocationsManager : public VariableSizeAllocationsManager
+// Class extends basic variable-size memory block allocator by deferring deallocation
+// of freed blocks untill the corresponding frame is completed
+class VariableSizeGPUAllocationsManager : public VariableSizeAllocationsManager
+{
+private:
+    struct StaleAllocationAttribs
     {
-    private:
-        struct StaleAllocationAttribs
-        {
-            OffsetType Offset;
-            OffsetType Size;
-            Uint64 FenceValue;
-			StaleAllocationAttribs(OffsetType _Offset, OffsetType _Size, Uint64 _FenceValue) :
-                Offset(_Offset), Size(_Size), FenceValue(_FenceValue)
-            {}
-        };
-
-    public:
-        VariableSizeGPUAllocationsManager(OffsetType MaxSize, IMemoryAllocator &Allocator) : 
-            VariableSizeAllocationsManager(MaxSize, Allocator),
-            m_StaleAllocations(0, StaleAllocationAttribs(0,0,0), STD_ALLOCATOR_RAW_MEM(StaleAllocationAttribs, Allocator, "Allocator for deque<StaleAllocationAttribs>" ))
+        OffsetType Offset;
+        OffsetType Size;
+        Uint64     FenceValue;
+        StaleAllocationAttribs(OffsetType _Offset, OffsetType _Size, Uint64 _FenceValue) :
+            Offset{_Offset}, Size{_Size}, FenceValue{_FenceValue}
         {}
-
-        ~VariableSizeGPUAllocationsManager()
-        {
-            VERIFY(m_StaleAllocations.empty(), "Not all stale allocations released");
-			VERIFY(m_StaleAllocationsSize == 0, "Not all stale allocations released");
-        }
-
-        // = default causes compiler error when instantiating std::vector::emplace_back() in Visual Studio 2015 (Version 14.0.23107.0 D14REL)
-        VariableSizeGPUAllocationsManager(VariableSizeGPUAllocationsManager&& rhs) noexcept : 
-            VariableSizeAllocationsManager(std::move(rhs)),
-            m_StaleAllocations(std::move(rhs.m_StaleAllocations)),
-			m_StaleAllocationsSize(rhs.m_StaleAllocationsSize)
-        {
-			rhs.m_StaleAllocationsSize = 0;
-        }
-
-		VariableSizeGPUAllocationsManager& operator = (VariableSizeGPUAllocationsManager&& rhs) = delete;
-        VariableSizeGPUAllocationsManager(const VariableSizeGPUAllocationsManager&) = delete;
-        VariableSizeGPUAllocationsManager& operator = (const VariableSizeGPUAllocationsManager&) = delete;
-
-        void Free(VariableSizeAllocationsManager::Allocation&& allocation, Uint64 FenceValue)
-        {
-            Free(allocation.UnalignedOffset, allocation.Size, FenceValue);
-            allocation = VariableSizeAllocationsManager::Allocation{};
-        }
-
-        void Free(OffsetType Offset, OffsetType Size, Uint64 FenceValue)
-        {
-            // Do not release the block immediately, but add
-            // it to the queue instead
-            m_StaleAllocations.emplace_back(Offset, Size, FenceValue);
-			m_StaleAllocationsSize += Size;
-        }
-
-		// Releases stale allocation from completed command lists
-		// The method takes the last known completed fence value N
-		// and releases all allocations whose associated fence value 
-        // is at most N (n <= N)
-        void ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
-        {
-            // Free all allocations from the beginning of the queue that belong to completed command lists
-            while(!m_StaleAllocations.empty() && m_StaleAllocations.front().FenceValue <= LastCompletedFenceValue)
-            {
-                auto &OldestAllocation = m_StaleAllocations.front();
-                VariableSizeAllocationsManager::Free(OldestAllocation.Offset, OldestAllocation.Size);
-				m_StaleAllocationsSize -= OldestAllocation.Size;
-				m_StaleAllocations.pop_front();
-            }
-        }
-
-		size_t GetStaleAllocationsSize()const { return m_StaleAllocationsSize; }
-
-    private:
-        std::deque< StaleAllocationAttribs, STDAllocatorRawMem<StaleAllocationAttribs> > m_StaleAllocations;
-		size_t m_StaleAllocationsSize = 0;
     };
-}
+
+public:
+    VariableSizeGPUAllocationsManager(OffsetType MaxSize, IMemoryAllocator& Allocator) :
+        VariableSizeAllocationsManager{MaxSize, Allocator},
+        m_StaleAllocations{0, StaleAllocationAttribs(0, 0, 0), STD_ALLOCATOR_RAW_MEM(StaleAllocationAttribs, Allocator, "Allocator for deque<StaleAllocationAttribs>")}
+    {}
+
+    ~VariableSizeGPUAllocationsManager()
+    {
+        VERIFY(m_StaleAllocations.empty(), "Not all stale allocations released");
+        VERIFY(m_StaleAllocationsSize == 0, "Not all stale allocations released");
+    }
+
+    // = default causes compiler error when instantiating std::vector::emplace_back() in Visual Studio 2015 (Version 14.0.23107.0 D14REL)
+    VariableSizeGPUAllocationsManager(VariableSizeGPUAllocationsManager&& rhs) noexcept :
+        VariableSizeAllocationsManager(std::move(rhs)),
+        m_StaleAllocations(std::move(rhs.m_StaleAllocations)),
+        m_StaleAllocationsSize(rhs.m_StaleAllocationsSize)
+    {
+        rhs.m_StaleAllocationsSize = 0;
+    }
+
+    // clang-format off
+	VariableSizeGPUAllocationsManager& operator = (VariableSizeGPUAllocationsManager&& rhs) = delete;
+    VariableSizeGPUAllocationsManager(const VariableSizeGPUAllocationsManager&) = delete;
+    VariableSizeGPUAllocationsManager& operator = (const VariableSizeGPUAllocationsManager&) = delete;
+    // clang-format on
+
+    void Free(VariableSizeAllocationsManager::Allocation&& allocation, Uint64 FenceValue)
+    {
+        Free(allocation.UnalignedOffset, allocation.Size, FenceValue);
+        allocation = VariableSizeAllocationsManager::Allocation{};
+    }
+
+    void Free(OffsetType Offset, OffsetType Size, Uint64 FenceValue)
+    {
+        // Do not release the block immediately, but add
+        // it to the queue instead
+        m_StaleAllocations.emplace_back(Offset, Size, FenceValue);
+        m_StaleAllocationsSize += Size;
+    }
+
+    // Releases stale allocation from completed command lists
+    // The method takes the last known completed fence value N
+    // and releases all allocations whose associated fence value
+    // is at most N (n <= N)
+    void ReleaseStaleAllocations(Uint64 LastCompletedFenceValue)
+    {
+        // Free all allocations from the beginning of the queue that belong to completed command lists
+        while (!m_StaleAllocations.empty() && m_StaleAllocations.front().FenceValue <= LastCompletedFenceValue)
+        {
+            auto& OldestAllocation = m_StaleAllocations.front();
+            VariableSizeAllocationsManager::Free(OldestAllocation.Offset, OldestAllocation.Size);
+            m_StaleAllocationsSize -= OldestAllocation.Size;
+            m_StaleAllocations.pop_front();
+        }
+    }
+
+    size_t GetStaleAllocationsSize() const { return m_StaleAllocationsSize; }
+
+private:
+    std::deque<StaleAllocationAttribs, STDAllocatorRawMem<StaleAllocationAttribs>> m_StaleAllocations;
+    size_t                                                                         m_StaleAllocationsSize = 0;
+};
+} // namespace Diligent

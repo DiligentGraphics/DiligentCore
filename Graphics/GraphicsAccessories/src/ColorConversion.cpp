@@ -36,7 +36,7 @@ class LinearToSRGBMap
 public:
     LinearToSRGBMap() noexcept
     {
-        for (Uint32 i=0; i < m_ToSRBG.size(); ++i)
+        for (Uint32 i = 0; i < m_ToSRBG.size(); ++i)
         {
             m_ToSRBG[i] = LinearToSRGB(static_cast<float>(i) / 255.f);
         }
@@ -56,7 +56,7 @@ class SRGBToLinearMap
 public:
     SRGBToLinearMap() noexcept
     {
-        for (Uint32 i=0; i < m_ToLinear.size(); ++i)
+        for (Uint32 i = 0; i < m_ToLinear.size(); ++i)
         {
             m_ToLinear[i] = SRGBToLinear(static_cast<float>(i) / 255.f);
         }
