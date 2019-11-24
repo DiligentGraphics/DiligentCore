@@ -39,7 +39,7 @@ namespace Diligent
 namespace DynamicHeap
 {
 
-    
+
 // Having global ring buffer shared between all contexts is inconvinient because all contexts
 // must share the same frame. Having individual ring bufer per context may result in a lot of unused
 // memory. As a result, ring buffer is not currently used for dynamic memory management.
@@ -47,19 +47,21 @@ namespace DynamicHeap
 class MasterBlockRingBufferBasedManager
 {
 public:
-    using OffsetType  = RingBuffer::OffsetType;
-    using MasterBlock = RingBuffer::OffsetType;
+    using OffsetType                                = RingBuffer::OffsetType;
+    using MasterBlock                               = RingBuffer::OffsetType;
     static constexpr const OffsetType InvalidOffset = RingBuffer::InvalidOffset;
 
-    MasterBlockRingBufferBasedManager(IMemoryAllocator& Allocator, 
-                                      Uint32            Size) : 
-        m_RingBuffer(Size, Allocator)
+    MasterBlockRingBufferBasedManager(IMemoryAllocator& Allocator,
+                                      Uint32            Size) :
+        m_RingBuffer{Size, Allocator}
     {}
 
+    // clang-format off
     MasterBlockRingBufferBasedManager            (const MasterBlockRingBufferBasedManager&)  = delete;
     MasterBlockRingBufferBasedManager            (      MasterBlockRingBufferBasedManager&&) = delete;
     MasterBlockRingBufferBasedManager& operator= (const MasterBlockRingBufferBasedManager&)  = delete;
     MasterBlockRingBufferBasedManager& operator= (      MasterBlockRingBufferBasedManager&&) = delete;
+    // clang-format on
 
     void DiscardMasterBlocks(std::vector<MasterBlock>& /*Blocks*/, Uint64 FenceValue)
     {
@@ -73,8 +75,8 @@ public:
         m_RingBuffer.ReleaseCompletedFrames(LastCompletedFenceValue);
     }
 
-    OffsetType GetSize()    const { return m_RingBuffer.GetMaxSize();  }
-    OffsetType GetUsedSize()const { return m_RingBuffer.GetUsedSize(); }
+    OffsetType GetSize() const { return m_RingBuffer.GetMaxSize(); }
+    OffsetType GetUsedSize() const { return m_RingBuffer.GetUsedSize(); }
 
 protected:
     MasterBlock AllocateMasterBlock(OffsetType SizeInBytes, OffsetType Alignment)
@@ -95,26 +97,28 @@ public:
     using OffsetType  = VariableSizeAllocationsManager::OffsetType;
     using MasterBlock = VariableSizeAllocationsManager::Allocation;
 
-    MasterBlockListBasedManager(IMemoryAllocator& Allocator, 
-                                Uint32            Size) : 
-        m_AllocationsMgr(Size, Allocator)
+    MasterBlockListBasedManager(IMemoryAllocator& Allocator,
+                                Uint32            Size) :
+        m_AllocationsMgr{Size, Allocator}
     {
 #ifdef DEVELOPMENT
         m_MasterBlockCounter = 0;
 #endif
     }
 
+    // clang-format off
     MasterBlockListBasedManager            (const MasterBlockListBasedManager&)  = delete;
     MasterBlockListBasedManager            (      MasterBlockListBasedManager&&) = delete;
     MasterBlockListBasedManager& operator= (const MasterBlockListBasedManager&)  = delete;
     MasterBlockListBasedManager& operator= (      MasterBlockListBasedManager&&) = delete;
+    // clang-format on
 
     ~MasterBlockListBasedManager()
     {
         DEV_CHECK_ERR(m_MasterBlockCounter == 0, m_MasterBlockCounter, " master block(s) have not been returned to the manager");
     }
 
-    template<typename RenderDeviceImplType>
+    template <typename RenderDeviceImplType>
     void ReleaseMasterBlocks(std::vector<MasterBlock>& Blocks, RenderDeviceImplType& Device, Uint64 CmdQueueMask)
     {
         struct StaleMasterBlock
@@ -122,9 +126,10 @@ public:
             MasterBlock                  Block;
             MasterBlockListBasedManager* Mgr;
 
+            // clang-format off
             StaleMasterBlock(MasterBlock&& _Block, MasterBlockListBasedManager* _Mgr)noexcept :
-                Block (std::move(_Block)),
-                Mgr   (_Mgr)
+                Block {std::move(_Block)},
+                Mgr   {_Mgr             }
             {
             }
 
@@ -133,12 +138,13 @@ public:
             StaleMasterBlock& operator= (      StaleMasterBlock&&) = delete;
 
             StaleMasterBlock(StaleMasterBlock&& rhs)noexcept : 
-                Block (std::move(rhs.Block)),
-                Mgr   (rhs.Mgr)
+                Block {std::move(rhs.Block)},
+                Mgr   {rhs.Mgr             }
             {
                 rhs.Block = MasterBlock{};
                 rhs.Mgr   = nullptr;
             }
+            // clang-format on
 
             ~StaleMasterBlock()
             {
@@ -152,25 +158,30 @@ public:
                 }
             }
         };
-        for(auto& Block : Blocks)
+        for (auto& Block : Blocks)
         {
             DEV_CHECK_ERR(Block.IsValid(), "Attempting to release invalid master block");
             Device.SafeReleaseDeviceObject(StaleMasterBlock{std::move(Block), this}, CmdQueueMask);
         }
     }
 
-    OffsetType GetSize()    const { return m_AllocationsMgr.GetMaxSize(); }
-    OffsetType GetUsedSize()const { return m_AllocationsMgr.GetUsedSize();}
+    // clang-format off
+    OffsetType GetSize()     const { return m_AllocationsMgr.GetMaxSize(); }
+    OffsetType GetUsedSize() const { return m_AllocationsMgr.GetUsedSize();}
+    // clang-format on
 
 #ifdef DEVELOPMENT
-    int32_t GetMasterBlockCounter()const{return m_MasterBlockCounter;}
+    int32_t GetMasterBlockCounter() const
+    {
+        return m_MasterBlockCounter;
+    }
 #endif
 
 protected:
     MasterBlock AllocateMasterBlock(OffsetType SizeInBytes, OffsetType Alignment)
     {
         std::lock_guard<std::mutex> Lock{m_AllocationsMgrMtx};
-        auto NewBlock = m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
+        auto                        NewBlock = m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
 #ifdef DEVELOPMENT
         if (NewBlock.IsValid())
         {
@@ -181,11 +192,11 @@ protected:
     }
 
 private:
-    std::mutex                      m_AllocationsMgrMtx;
-    VariableSizeAllocationsManager  m_AllocationsMgr;
+    std::mutex                     m_AllocationsMgrMtx;
+    VariableSizeAllocationsManager m_AllocationsMgr;
 
 #ifdef DEVELOPMENT
-    std::atomic_int32_t             m_MasterBlockCounter;
+    std::atomic_int32_t m_MasterBlockCounter;
 #endif
 };
 

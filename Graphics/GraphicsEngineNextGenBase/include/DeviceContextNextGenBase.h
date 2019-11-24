@@ -35,7 +35,7 @@ namespace Diligent
 
 /// Base implementation of the device context for next-generation backends.
 
-template<typename BaseInterface, typename ImplementationTraits>
+template <typename BaseInterface, typename ImplementationTraits>
 class DeviceContextNextGenBase : public DeviceContextBase<BaseInterface, ImplementationTraits>
 {
 public:
@@ -49,12 +49,14 @@ public:
                              Uint32              CommandQueueId,
                              Uint32              NumCommandsToFlush,
                              bool                bIsDeferred) :
+        // clang-format off
         TBase{pRefCounters, pRenderDevice, bIsDeferred},
         m_ContextId                   {ContextId         },
         m_CommandQueueId              {CommandQueueId    },
         m_NumCommandsToFlush          {NumCommandsToFlush},
         m_ContextFrameNumber          {0},
         m_SubmittedBuffersCmdQueueMask{bIsDeferred ? 0 : Uint64{1} << Uint64{CommandQueueId}}
+    // clang-format on
     {
     }
 
@@ -62,7 +64,7 @@ public:
     {
     }
 
-    virtual ICommandQueueType* LockCommandQueue()override final
+    virtual ICommandQueueType* LockCommandQueue() override final
     {
         if (this->m_bIsDeferred)
         {
@@ -72,7 +74,7 @@ public:
         return this->m_pDevice->LockCommandQueue(m_CommandQueueId);
     }
 
-    virtual void UnlockCommandQueue()override final
+    virtual void UnlockCommandQueue() override final
     {
         if (this->m_bIsDeferred)
         {
@@ -83,7 +85,6 @@ public:
     }
 
 protected:
-
     // Should be called at the end of FinishFrame()
     void EndFrame()
     {
@@ -99,17 +100,17 @@ protected:
         Atomics::AtomicIncrement(m_ContextFrameNumber);
     }
 
-    const Uint32 m_ContextId;
-    const Uint32 m_CommandQueueId;
-    const Uint32 m_NumCommandsToFlush;
+    const Uint32         m_ContextId;
+    const Uint32         m_CommandQueueId;
+    const Uint32         m_NumCommandsToFlush;
     Atomics::AtomicInt64 m_ContextFrameNumber;
 
     // This mask indicates which command queues command buffers from this context were submitted to.
-    // For immediate context, this will always be 1 << m_CommandQueueId. 
+    // For immediate context, this will always be 1 << m_CommandQueueId.
     // For deferred contexts, this will accumulate bits of the queues to which command buffers
     // were submitted to before FinishFrame() was called. This mask is used to release resources
     // allocated by the context during the frame when FinishFrame() is called.
     Uint64 m_SubmittedBuffersCmdQueueMask = 0;
 };
 
-}
+} // namespace Diligent

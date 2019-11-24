@@ -41,25 +41,25 @@ namespace Diligent
 
 /// Base implementation of the render device for next-generation backends.
 
-template<class TBase, typename CommandQueueType>
+template <class TBase, typename CommandQueueType>
 class RenderDeviceNextGenBase : public TBase
 {
 public:
     using typename TBase::DeviceObjectSizes;
 
-    RenderDeviceNextGenBase(IReferenceCounters*      pRefCounters, 
-                            IMemoryAllocator&        RawMemAllocator, 
+    RenderDeviceNextGenBase(IReferenceCounters*      pRefCounters,
+                            IMemoryAllocator&        RawMemAllocator,
                             IEngineFactory*          pEngineFactory,
                             size_t                   CmdQueueCount,
                             CommandQueueType**       Queues,
                             Uint32                   NumDeferredContexts,
                             const DeviceObjectSizes& ObjectSizes) :
-        TBase           (pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts, ObjectSizes),
-        m_CmdQueueCount (CmdQueueCount)
+        TBase{pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts, ObjectSizes},
+        m_CmdQueueCount{CmdQueueCount}
     {
         m_CommandQueues = ALLOCATE(this->m_RawMemAllocator, "Raw memory for the device command/release queues", CommandQueue, m_CmdQueueCount);
-        for(size_t q=0; q < m_CmdQueueCount; ++q)
-            new(m_CommandQueues+q)CommandQueue(RefCntAutoPtr<CommandQueueType>(Queues[q]), this->m_RawMemAllocator);
+        for (size_t q = 0; q < m_CmdQueueCount; ++q)
+            new (m_CommandQueues + q) CommandQueue(RefCntAutoPtr<CommandQueueType>(Queues[q]), this->m_RawMemAllocator);
     }
 
     ~RenderDeviceNextGenBase()
@@ -87,23 +87,23 @@ public:
     //                              .              .               .                   .                .
     // -----------------------------.--------------.---------------.-------------------.----------------.-------------
     //                              .              .               .                   .                .
-    //       
+    //
     // GPU                          | Cmd List N-2 | Cmd List N-1  |    Cmd List N     |   Cmd List N+1 |
     //                                                                                 |
     //                                                                                 |
     //                                                                          Resource X can
     //                                                                           be released
-    template<typename ObjectType, typename = typename std::enable_if<std::is_object<ObjectType>::value>::type>
+    template <typename ObjectType, typename = typename std::enable_if<std::is_object<ObjectType>::value>::type>
     void SafeReleaseDeviceObject(ObjectType&& Object, Uint64 QueueMask)
     {
         QueueMask &= GetCommandQueueMask();
-        
+
         VERIFY(QueueMask != 0, "At least one bit should be set in the command queue mask");
         if (QueueMask == 0)
             return;
 
         Atomics::Long NumReferences = PlatformMisc::CountOneBits(QueueMask);
-        auto Wrapper = DynamicStaleResourceWrapper::Create(std::move(Object), NumReferences);
+        auto          Wrapper       = DynamicStaleResourceWrapper::Create(std::move(Object), NumReferences);
 
         while (QueueMask != 0)
         {
@@ -120,28 +120,28 @@ public:
 
         Wrapper.GiveUpOwnership();
     }
-    
-    size_t GetCommandQueueCount()const
+
+    size_t GetCommandQueueCount() const
     {
         return m_CmdQueueCount;
     }
 
-    Uint64 GetCommandQueueMask()const
+    Uint64 GetCommandQueueMask() const
     {
         return (m_CmdQueueCount < 64) ? ((Uint64{1} << Uint64{m_CmdQueueCount}) - 1) : ~Uint64{0};
     }
 
     void PurgeReleaseQueues(bool ForceRelease = false)
     {
-        for(Uint32 q=0; q < m_CmdQueueCount; ++q)
+        for (Uint32 q = 0; q < m_CmdQueueCount; ++q)
             PurgeReleaseQueue(q, ForceRelease);
     }
 
     void PurgeReleaseQueue(Uint32 QueueIndex, bool ForceRelease = false)
     {
         VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueIndex];
-        auto CompletedFenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : Queue.CmdQueue->GetCompletedFenceValue();
+        auto& Queue               = m_CommandQueues[QueueIndex];
+        auto  CompletedFenceValue = ForceRelease ? std::numeric_limits<Uint64>::max() : Queue.CmdQueue->GetCompletedFenceValue();
         Queue.ReleaseQueue.Purge(CompletedFenceValue);
     }
 
@@ -176,7 +176,7 @@ public:
 
     void IdleAllCommandQueues(bool ReleaseResources)
     {
-        for(size_t q=0; q < m_CmdQueueCount; ++q)
+        for (size_t q = 0; q < m_CmdQueueCount; ++q)
             IdleCommandQueue(q, ReleaseResources);
     }
 
@@ -185,7 +185,7 @@ public:
         Uint64 CmdBufferNumber = 0;
         Uint64 FenceValue      = 0;
     };
-    template<typename SubmitDataType>
+    template <typename SubmitDataType>
     SubmittedCommandBufferInfo SubmitCommandBuffer(Uint32 QueueIndex, SubmitDataType& SubmitData, bool DiscardStaleResources)
     {
         SubmittedCommandBufferInfo CmdBuffInfo;
@@ -212,8 +212,8 @@ public:
             //
 
             // Move stale objects into the release queue.
-            // Note that objects are moved from stale list to release queue based on the cmd buffer number, 
-            // not fence value. This makes sure that basic requirement is met even when the fence value is 
+            // Note that objects are moved from stale list to release queue based on the cmd buffer number,
+            // not fence value. This makes sure that basic requirement is met even when the fence value is
             // not incremented while executing the command buffer (as is the case with Unity command queue).
 
             // As long as resources used by deferred contexts are not released before the command list
@@ -230,7 +230,7 @@ public:
         return m_CommandQueues[QueueIndex].ReleaseQueue;
     }
 
-    const CommandQueueType& GetCommandQueue(Uint32 QueueIndex)const
+    const CommandQueueType& GetCommandQueue(Uint32 QueueIndex) const
     {
         VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
         return *m_CommandQueues[QueueIndex].CmdQueue;
@@ -251,11 +251,11 @@ public:
         return FenceValue <= GetCompletedFenceValue(QueueIndex);
     }
 
-    template<typename TAction>
+    template <typename TAction>
     void LockCmdQueueAndRun(Uint32 QueueIndex, TAction Action)
     {
         VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
-        auto& Queue = m_CommandQueues[QueueIndex];
+        auto&                       Queue = m_CommandQueues[QueueIndex];
         std::lock_guard<std::mutex> Lock{Queue.Mtx};
         Action(Queue.CmdQueue);
     }
@@ -280,7 +280,7 @@ protected:
     {
         if (m_CommandQueues != nullptr)
         {
-            for(size_t q=0; q < m_CmdQueueCount; ++q)
+            for (size_t q = 0; q < m_CmdQueueCount; ++q)
             {
                 auto& Queue = m_CommandQueues[q];
                 DEV_CHECK_ERR(Queue.ReleaseQueue.GetStaleResourceCount() == 0, "All stale resources must be released before destroying a command queue");
@@ -294,18 +294,20 @@ protected:
 
     struct CommandQueue
     {
-        CommandQueue(RefCntAutoPtr<CommandQueueType> _CmdQueue, IMemoryAllocator& Allocator)noexcept : 
-            CmdQueue    (std::move(_CmdQueue)),
-            ReleaseQueue(Allocator)
+        CommandQueue(RefCntAutoPtr<CommandQueueType> _CmdQueue, IMemoryAllocator& Allocator) noexcept :
+            CmdQueue{std::move(_CmdQueue)},
+            ReleaseQueue{Allocator}
         {
             NextCmdBufferNumber = 0;
         }
 
-        CommandQueue             (const CommandQueue& rhs)  = delete;
-        CommandQueue             (      CommandQueue&& rhs) = delete;
-        CommandQueue& operator = (const CommandQueue& rhs)  = delete;
-        CommandQueue& operator = (      CommandQueue&& rhs) = delete;
-        
+        // clang-format off
+        CommandQueue             (const CommandQueue&)  = delete;
+        CommandQueue             (      CommandQueue&&) = delete;
+        CommandQueue& operator = (const CommandQueue&)  = delete;
+        CommandQueue& operator = (      CommandQueue&&) = delete;
+        // clang-format on
+
         std::mutex                                        Mtx;
         Atomics::AtomicInt64                              NextCmdBufferNumber;
         RefCntAutoPtr<CommandQueueType>                   CmdQueue;
@@ -315,4 +317,4 @@ protected:
     CommandQueue* m_CommandQueues = nullptr;
 };
 
-}
+} // namespace Diligent
