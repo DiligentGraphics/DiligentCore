@@ -40,47 +40,54 @@ class RenderDeviceVkImpl;
 class RenderPassCache
 {
 public:
-    RenderPassCache(RenderDeviceVkImpl& DeviceVk)noexcept : 
-        m_DeviceVkImpl(DeviceVk)
+    RenderPassCache(RenderDeviceVkImpl& DeviceVk) noexcept :
+        m_DeviceVkImpl{DeviceVk}
     {}
 
+    // clang-format off
     RenderPassCache             (const RenderPassCache&) = delete;
     RenderPassCache             (RenderPassCache&&)      = delete;
     RenderPassCache& operator = (const RenderPassCache&) = delete;
     RenderPassCache& operator = (RenderPassCache&&)      = delete;
+    // clang-format on
 
     ~RenderPassCache();
 
     // This structure is used as the key to find framebuffer
     struct RenderPassCacheKey
     {
+        // clang-format off
         RenderPassCacheKey() : 
             NumRenderTargets{0},
             SampleCount     {0},
             DSVFormat       {TEX_FORMAT_UNKNOWN}
         {}
+        // clang-format on
 
-        RenderPassCacheKey(Uint32               _NumRenderTargets, 
+        RenderPassCacheKey(Uint32               _NumRenderTargets,
                            Uint32               _SampleCount,
                            const TEXTURE_FORMAT _RTVFormats[],
-                           TEXTURE_FORMAT       _DSVFormat) : 
+                           TEXTURE_FORMAT       _DSVFormat) :
+            // clang-format off
             NumRenderTargets{static_cast<decltype(NumRenderTargets)>(_NumRenderTargets)},
             SampleCount     {static_cast<decltype(SampleCount)>     (_SampleCount)     },
             DSVFormat       {_DSVFormat                                                }
+        // clang-format on
         {
             VERIFY_EXPR(_NumRenderTargets <= std::numeric_limits<decltype(NumRenderTargets)>::max());
             VERIFY_EXPR(_SampleCount <= std::numeric_limits<decltype(SampleCount)>::max());
-            for(Uint32 rt=0; rt < NumRenderTargets; ++rt)
+            for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                 RTVFormats[rt] = _RTVFormats[rt];
         }
         // Default memeber initialization is intentionally omitted
-        Uint8           NumRenderTargets;
-        Uint8           SampleCount;
-        TEXTURE_FORMAT  DSVFormat;
-        TEXTURE_FORMAT  RTVFormats[MaxRenderTargets];
+        Uint8          NumRenderTargets;
+        Uint8          SampleCount;
+        TEXTURE_FORMAT DSVFormat;
+        TEXTURE_FORMAT RTVFormats[MaxRenderTargets];
 
-        bool operator == (const RenderPassCacheKey &rhs)const
+        bool operator==(const RenderPassCacheKey& rhs) const
         {
+            // clang-format off
             if (GetHash()        != rhs.GetHash()        ||
                 NumRenderTargets != rhs.NumRenderTargets ||
                 SampleCount      != rhs.SampleCount      ||
@@ -88,6 +95,7 @@ public:
             {
                 return false;
             }
+            // clang-format on
 
             for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                 if (RTVFormats[rt] != rhs.RTVFormats[rt])
@@ -96,12 +104,12 @@ public:
             return true;
         }
 
-        size_t GetHash()const
+        size_t GetHash() const
         {
-            if(Hash == 0)
+            if (Hash == 0)
             {
                 Hash = ComputeHash(NumRenderTargets, SampleCount, DSVFormat);
-                for(Uint32 rt = 0; rt < NumRenderTargets; ++rt)
+                for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
                     HashCombine(Hash, RTVFormats[rt]);
             }
             return Hash;
@@ -114,18 +122,18 @@ public:
     VkRenderPass GetRenderPass(const RenderPassCacheKey& Key);
 
 private:
-
     struct RenderPassCacheKeyHash
     {
-        std::size_t operator() (const RenderPassCacheKey& Key)const
+        std::size_t operator()(const RenderPassCacheKey& Key) const
         {
             return Key.GetHash();
         }
     };
-    
+
     RenderDeviceVkImpl& m_DeviceVkImpl;
-    std::mutex m_Mutex;
+
+    std::mutex                                                                                         m_Mutex;
     std::unordered_map<RenderPassCacheKey, VulkanUtilities::RenderPassWrapper, RenderPassCacheKeyHash> m_Cache;
 };
 
-}
+} // namespace Diligent

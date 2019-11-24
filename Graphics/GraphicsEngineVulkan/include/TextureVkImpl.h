@@ -50,44 +50,44 @@ public:
     // Creates a new Vk resource
     TextureVkImpl(IReferenceCounters*        pRefCounters,
                   FixedBlockMemoryAllocator& TexViewObjAllocator,
-                  RenderDeviceVkImpl*        pDeviceVk, 
-                  const TextureDesc&         TexDesc, 
+                  RenderDeviceVkImpl*        pDeviceVk,
+                  const TextureDesc&         TexDesc,
                   const TextureData*         pInitData = nullptr);
-    
+
     // Attaches to an existing Vk resource
-    TextureVkImpl(IReferenceCounters*         pRefCounters,
-                  FixedBlockMemoryAllocator&  TexViewObjAllocator,
-                  class RenderDeviceVkImpl*   pDeviceVk, 
-                  const TextureDesc&          TexDesc, 
-                  RESOURCE_STATE              InitialState,
-                  VkImage                     VkImageHandle);
+    TextureVkImpl(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  class RenderDeviceVkImpl*  pDeviceVk,
+                  const TextureDesc&         TexDesc,
+                  RESOURCE_STATE             InitialState,
+                  VkImage                    VkImageHandle);
 
     ~TextureVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureVk::GetVkImage().
-    virtual VkImage GetVkImage()const override final{ return m_VulkanImage; }
+    virtual VkImage GetVkImage() const override final { return m_VulkanImage; }
 
     /// Implementation of ITexture::GetNativeHandle() in Vulkan backend.
-    virtual void* GetNativeHandle()override final
+    virtual void* GetNativeHandle() override final
     {
         auto vkImage = GetVkImage();
         return vkImage;
     }
 
     /// Implementation of ITextureVk::SetLayout().
-    void SetLayout(VkImageLayout Layout)override final;
+    void SetLayout(VkImageLayout Layout) override final;
 
     /// Implementation of ITextureVk::GetLayout().
-    VkImageLayout GetLayout()const override final;
+    VkImageLayout GetLayout() const override final;
 
-    VkBuffer GetVkStagingBuffer()const
+    VkBuffer GetVkStagingBuffer() const
     {
         return m_StagingBuffer;
     }
 
-    uint8_t* GetStagingDataCPUAddress()const
+    uint8_t* GetStagingDataCPUAddress() const
     {
         auto* StagingDataCPUAddress = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
         VERIFY_EXPR(StagingDataCPUAddress != nullptr);
@@ -98,12 +98,12 @@ public:
     void InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size);
 
 protected:
-    void CreateViewInternal( const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView )override;
+    void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override;
     //void PrepareVkInitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<Vk_SUBRESOURCE_DATA> &VkInitData);
-    
-    bool CheckCSBasedMipGenerationSupport(VkFormat vkFmt)const;
 
-    VulkanUtilities::ImageViewWrapper CreateImageView(TextureViewDesc &ViewDesc);
+    bool CheckCSBasedMipGenerationSupport(VkFormat vkFmt) const;
+
+    VulkanUtilities::ImageViewWrapper CreateImageView(TextureViewDesc& ViewDesc);
 
     VulkanUtilities::ImageWrapper           m_VulkanImage;
     VulkanUtilities::BufferWrapper          m_StagingBuffer;
@@ -112,4 +112,4 @@ protected:
     bool                                    m_bCSBasedMipGenerationSupported = false;
 };
 
-}
+} // namespace Diligent

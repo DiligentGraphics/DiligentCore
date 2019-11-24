@@ -38,13 +38,15 @@ class FramebufferCache
 {
 public:
     FramebufferCache(RenderDeviceVkImpl& DeviceVKImpl) :
-        m_DeviceVk(DeviceVKImpl)
+        m_DeviceVk{DeviceVKImpl}
     {}
 
+    // clang-format off
     FramebufferCache             (const FramebufferCache&) = delete;
     FramebufferCache             (FramebufferCache&&)      = delete;
     FramebufferCache& operator = (const FramebufferCache&) = delete;
     FramebufferCache& operator = (FramebufferCache&&)      = delete;
+    // clang-format on
 
     ~FramebufferCache();
 
@@ -58,33 +60,33 @@ public:
         VkImageView  RTVs[MaxRenderTargets];
         Uint64       CommandQueueMask;
 
-        bool operator == (const FramebufferCacheKey &rhs)const;
-        size_t GetHash()const;
+        bool   operator==(const FramebufferCacheKey& rhs) const;
+        size_t GetHash() const;
 
     private:
         mutable size_t Hash = 0;
     };
 
     VkFramebuffer GetFramebuffer(const FramebufferCacheKey& Key, uint32_t width, uint32_t height, uint32_t layers);
-    void OnDestroyImageView(VkImageView ImgView);
-    void OnDestroyRenderPass(VkRenderPass Pass);
+    void          OnDestroyImageView(VkImageView ImgView);
+    void          OnDestroyRenderPass(VkRenderPass Pass);
 
 private:
-    
     RenderDeviceVkImpl& m_DeviceVk;
 
     struct FramebufferCacheKeyHash
     {
-        std::size_t operator() (const FramebufferCacheKey& Key)const
+        std::size_t operator()(const FramebufferCacheKey& Key) const
         {
             return Key.GetHash();
         }
     };
-    
-    std::mutex m_Mutex;
+
+    std::mutex                                                                                            m_Mutex;
     std::unordered_map<FramebufferCacheKey, VulkanUtilities::FramebufferWrapper, FramebufferCacheKeyHash> m_Cache;
-    std::unordered_multimap<VkImageView, FramebufferCacheKey> m_ViewToKeyMap;
+
+    std::unordered_multimap<VkImageView, FramebufferCacheKey>  m_ViewToKeyMap;
     std::unordered_multimap<VkRenderPass, FramebufferCacheKey> m_RenderPassToKeyMap;
 };
 
-}
+} // namespace Diligent

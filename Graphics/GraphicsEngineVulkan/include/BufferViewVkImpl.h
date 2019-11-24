@@ -45,24 +45,23 @@ public:
     using TBufferViewBase = BufferViewBase<IBufferViewVk, RenderDeviceVkImpl>;
 
     BufferViewVkImpl(IReferenceCounters*                  pRefCounters,
-                     RenderDeviceVkImpl*                  pDevice, 
-                     const BufferViewDesc&                ViewDesc, 
+                     RenderDeviceVkImpl*                  pDevice,
+                     const BufferViewDesc&                ViewDesc,
                      class IBuffer*                       pBuffer,
                      VulkanUtilities::BufferViewWrapper&& BuffView,
                      bool                                 bIsDefaultView);
     ~BufferViewVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IBufferViewVk::GetVkBufferView().
-    virtual VkBufferView GetVkBufferView()const override final{return m_BuffView;}
+    virtual VkBufferView GetVkBufferView() const override final { return m_BuffView; }
 
-    const BufferVkImpl* GetBufferVk()const;
-          BufferVkImpl* GetBufferVk();
+    const BufferVkImpl* GetBufferVk() const;
+    BufferVkImpl*       GetBufferVk();
 
 protected:
-
     VulkanUtilities::BufferViewWrapper m_BuffView;
 };
 
-}
+} // namespace Diligent

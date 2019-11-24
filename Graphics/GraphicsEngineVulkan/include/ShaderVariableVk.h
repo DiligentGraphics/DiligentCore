@@ -26,7 +26,7 @@
 /// \file
 /// Declaration of Diligent::ShaderVariableManagerVk and Diligent::ShaderVariableVkImpl classes
 
-// 
+//
 //  * ShaderVariableManagerVk keeps list of variables of specific types
 //  * Every ShaderVariableVkImpl references VkResource from ShaderResourceLayoutVk
 //  * ShaderVariableManagerVk keeps reference to ShaderResourceCacheVk
@@ -69,12 +69,12 @@ class ShaderVariableVkImpl;
 class ShaderVariableManagerVk
 {
 public:
-    ShaderVariableManagerVk(IObject&                              Owner,
-                            const ShaderResourceLayoutVk&         SrcLayout, 
-                            IMemoryAllocator&                     Allocator,
-                            const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
-                            Uint32                                NumAllowedTypes, 
-                            ShaderResourceCacheVk&                ResourceCache);
+    ShaderVariableManagerVk(IObject&                             Owner,
+                            const ShaderResourceLayoutVk&        SrcLayout,
+                            IMemoryAllocator&                    Allocator,
+                            const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                            Uint32                               NumAllowedTypes,
+                            ShaderResourceCacheVk&               ResourceCache);
 
     ~ShaderVariableManagerVk();
 
@@ -85,33 +85,33 @@ public:
 
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
-    static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk&          Layout, 
-                                        const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
-                                        Uint32                                 NumAllowedTypes,
-                                        Uint32&                                NumVariables);
+    static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk&        Layout,
+                                        const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                                        Uint32                               NumAllowedTypes,
+                                        Uint32&                              NumVariables);
 
-    Uint32 GetVariableCount()const { return m_NumVariables; }
+    Uint32 GetVariableCount() const { return m_NumVariables; }
 
 private:
     friend ShaderVariableVkImpl;
 
     Uint32 GetVariableIndex(const ShaderVariableVkImpl& Variable);
 
-    IObject&                      m_Owner;
+    IObject& m_Owner;
     // Variable mgr is owned by either Pipeline state object (in which case m_ResourceCache references
-    // static resource cache owned by the same PSO object), or by SRB object (in which case 
+    // static resource cache owned by the same PSO object), or by SRB object (in which case
     // m_ResourceCache references the cache in the SRB). Thus the cache and the resource layout
     // (which the variables reference) are guaranteed to be alive while the manager is alive.
-    ShaderResourceCacheVk&        m_ResourceCache;
+    ShaderResourceCacheVk& m_ResourceCache;
 
     // Memory is allocated through the allocator provided by the pipeline state. If allocation granularity > 1, fixed block
     // memory allocator is used. This ensures that all resources from different shader resource bindings reside in
     // continuous memory. If allocation granularity == 1, raw allocator is used.
-    ShaderVariableVkImpl*         m_pVariables     = nullptr;
-    Uint32                        m_NumVariables = 0;
+    ShaderVariableVkImpl* m_pVariables   = nullptr;
+    Uint32                m_NumVariables = 0;
 
 #ifdef _DEBUG
-    IMemoryAllocator&             m_DbgAllocator;
+    IMemoryAllocator& m_DbgAllocator;
 #endif
 };
 
@@ -121,32 +121,34 @@ class ShaderVariableVkImpl final : public IShaderResourceVariable
 public:
     ShaderVariableVkImpl(ShaderVariableManagerVk&                  ParentManager,
                          const ShaderResourceLayoutVk::VkResource& Resource) :
-        m_ParentManager(ParentManager),
-        m_Resource(Resource)
+        m_ParentManager{ParentManager},
+        m_Resource{Resource}
     {}
 
+    // clang-format off
     ShaderVariableVkImpl            (const ShaderVariableVkImpl&) = delete;
     ShaderVariableVkImpl            (ShaderVariableVkImpl&&)      = delete;
     ShaderVariableVkImpl& operator= (const ShaderVariableVkImpl&) = delete;
     ShaderVariableVkImpl& operator= (ShaderVariableVkImpl&&)      = delete;
+    // clang-format on
 
 
-    virtual IReferenceCounters* GetReferenceCounters()const override final
+    virtual IReferenceCounters* GetReferenceCounters() const override final
     {
         return m_ParentManager.m_Owner.GetReferenceCounters();
     }
 
-    virtual Atomics::Long AddRef()override final
+    virtual Atomics::Long AddRef() override final
     {
         return m_ParentManager.m_Owner.AddRef();
     }
 
-    virtual Atomics::Long Release()override final
+    virtual Atomics::Long Release() override final
     {
         return m_ParentManager.m_Owner.Release();
     }
 
-    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final
+    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
     {
         if (ppInterface == nullptr)
             return;
@@ -159,29 +161,29 @@ public:
         }
     }
 
-    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
+    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType() const override final
     {
         return m_Resource.GetVariableType();
     }
 
-    virtual void Set(IDeviceObject* pObject)override final 
+    virtual void Set(IDeviceObject* pObject) override final
     {
-        m_Resource.BindResource(pObject, 0, m_ParentManager.m_ResourceCache); 
+        m_Resource.BindResource(pObject, 0, m_ParentManager.m_ResourceCache);
     }
 
-    virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
+    virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
     {
         VerifyAndCorrectSetArrayArguments(m_Resource.SpirvAttribs.Name, m_Resource.SpirvAttribs.ArraySize, FirstElement, NumElements);
         for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
 
-    virtual ShaderResourceDesc GetResourceDesc()const override final
+    virtual ShaderResourceDesc GetResourceDesc() const override final
     {
         return m_Resource.SpirvAttribs.GetResourceDesc();
     }
 
-    virtual Uint32 GetIndex()const override final
+    virtual Uint32 GetIndex() const override final
     {
         return m_ParentManager.GetVariableIndex(*this);
     }
@@ -191,7 +193,7 @@ public:
         return m_Resource.IsBound(ArrayIndex, m_ParentManager.m_ResourceCache);
     }
 
-    const ShaderResourceLayoutVk::VkResource& GetResource()const
+    const ShaderResourceLayoutVk::VkResource& GetResource() const
     {
         return m_Resource;
     }
@@ -203,4 +205,4 @@ private:
     const ShaderResourceLayoutVk::VkResource& m_Resource;
 };
 
-}
+} // namespace Diligent

@@ -46,16 +46,16 @@ public:
     SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc);
     ~SamplerVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     /// Implementation of ISamplerVk::GetVkSampler().
-    virtual VkSampler GetVkSampler()const override final{return m_VkSampler;}
+    virtual VkSampler GetVkSampler() const override final { return m_VkSampler; }
 
 private:
     friend class ShaderVkImpl;
     /// Vk sampler handle
     VulkanUtilities::SamplerWrapper m_VkSampler;
-    static constexpr Uint64 m_CommandQueueMask = ~Uint64{0};
+    static constexpr Uint64         m_CommandQueueMask = ~Uint64{0};
 };
 
-}
+} // namespace Diligent

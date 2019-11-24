@@ -43,48 +43,48 @@ class CommandQueueVkImpl final : public ObjectBase<ICommandQueueVk>
 public:
     using TBase = ObjectBase<ICommandQueueVk>;
 
-    CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters, 
-                       std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice, 
+    CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters,
+                       std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                        uint32_t                                              QueueFamilyIndex);
     ~CommandQueueVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-	/// Implementation of ICommandQueueVk::GetNextFenceValue().
-    virtual Uint64 GetNextFenceValue()override final { return m_NextFenceValue; }
-
-	/// Implementation of ICommandQueueVk::Submit().
-	virtual Uint64 Submit(VkCommandBuffer cmdBuffer)override final;
+    /// Implementation of ICommandQueueVk::GetNextFenceValue().
+    virtual Uint64 GetNextFenceValue() override final { return m_NextFenceValue; }
 
     /// Implementation of ICommandQueueVk::Submit().
-    virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo)override final;
+    virtual Uint64 Submit(VkCommandBuffer cmdBuffer) override final;
+
+    /// Implementation of ICommandQueueVk::Submit().
+    virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo) override final;
 
     /// Implementation of ICommandQueueVk::Present().
-    virtual VkResult Present(const VkPresentInfoKHR& PresentInfo)override final;
+    virtual VkResult Present(const VkPresentInfoKHR& PresentInfo) override final;
 
     /// Implementation of ICommandQueueVk::GetVkQueue().
-    virtual VkQueue GetVkQueue()override final{return m_VkQueue;}
+    virtual VkQueue GetVkQueue() override final { return m_VkQueue; }
 
     /// Implementation of ICommandQueueVk::GetQueueFamilyIndex().
-    virtual uint32_t GetQueueFamilyIndex()const override final { return m_QueueFamilyIndex; }
+    virtual uint32_t GetQueueFamilyIndex() const override final { return m_QueueFamilyIndex; }
 
     /// Implementation of ICommandQueueVk::GetQueueFamilyIndex().
-    virtual Uint64 WaitForIdle()override final;
+    virtual Uint64 WaitForIdle() override final;
 
     /// Implementation of ICommandQueueVk::GetCompletedFenceValue().
-    virtual Uint64 GetCompletedFenceValue()override final;
+    virtual Uint64 GetCompletedFenceValue() override final;
 
     /// Implementation of ICommandQueueVk::SignalFence().
-    virtual void SignalFence(VkFence vkFence)override final;
+    virtual void SignalFence(VkFence vkFence) override final;
 
-    void SetFence(RefCntAutoPtr<FenceVkImpl> pFence){m_pFence = std::move(pFence);}
+    void SetFence(RefCntAutoPtr<FenceVkImpl> pFence) { m_pFence = std::move(pFence); }
 
 private:
     std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> m_LogicalDevice;
 
-    const VkQueue m_VkQueue;
+    const VkQueue  m_VkQueue;
     const uint32_t m_QueueFamilyIndex;
-    // Fence is signaled right after a command buffer has been 
+    // Fence is signaled right after a command buffer has been
     // submitted to the command queue for execution.
     // All command buffers with fence value less than or equal to the signaled value
     // are guaranteed to be finished by the GPU
@@ -96,4 +96,4 @@ private:
     std::mutex m_QueueMutex;
 };
 
-}
+} // namespace Diligent

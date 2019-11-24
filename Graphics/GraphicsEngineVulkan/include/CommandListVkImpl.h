@@ -39,16 +39,18 @@ class CommandListVkImpl final : public CommandListBase<ICommandList, RenderDevic
 public:
     using TCommandListBase = CommandListBase<ICommandList, RenderDeviceVkImpl>;
 
-    CommandListVkImpl(IReferenceCounters*  pRefCounters,
-                      RenderDeviceVkImpl*  pDevice,
-                      IDeviceContext*      pDeferredCtx,
-                      VkCommandBuffer      vkCmdBuff) :
+    CommandListVkImpl(IReferenceCounters* pRefCounters,
+                      RenderDeviceVkImpl* pDevice,
+                      IDeviceContext*     pDeferredCtx,
+                      VkCommandBuffer     vkCmdBuff) :
+        // clang-format off
         TCommandListBase {pRefCounters, pDevice},
         m_pDeferredCtx   {pDeferredCtx},
         m_vkCmdBuff      {vkCmdBuff   }
+    // clang-format on
     {
     }
-    
+
     ~CommandListVkImpl()
     {
         VERIFY(m_vkCmdBuff == VK_NULL_HANDLE && !m_pDeferredCtx, "Destroying command list that was never executed");
@@ -57,14 +59,14 @@ public:
     void Close(VkCommandBuffer&               CmdBuff,
                RefCntAutoPtr<IDeviceContext>& pDeferredCtx)
     {
-        CmdBuff       = m_vkCmdBuff;
-        m_vkCmdBuff   = VK_NULL_HANDLE;
-        pDeferredCtx  = std::move(m_pDeferredCtx);
+        CmdBuff      = m_vkCmdBuff;
+        m_vkCmdBuff  = VK_NULL_HANDLE;
+        pDeferredCtx = std::move(m_pDeferredCtx);
     }
 
 private:
     RefCntAutoPtr<IDeviceContext> m_pDeferredCtx;
-    VkCommandBuffer m_vkCmdBuff;
+    VkCommandBuffer               m_vkCmdBuff;
 };
 
-}
+} // namespace Diligent

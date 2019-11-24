@@ -33,15 +33,14 @@ namespace Diligent
 
 // {12D8EC02-96F4-431E-9695-C5F572CC7587}
 static constexpr INTERFACE_ID IID_BufferVk =
-{ 0x12d8ec02, 0x96f4, 0x431e,{ 0x96, 0x95, 0xc5, 0xf5, 0x72, 0xcc, 0x75, 0x87 } };
+    {0x12d8ec02, 0x96f4, 0x431e, {0x96, 0x95, 0xc5, 0xf5, 0x72, 0xcc, 0x75, 0x87}};
 
 /// Exposes Vulkan-specific functionality of a buffer object.
 class IBufferVk : public IBuffer
 {
 public:
-
     /// Returns a vulkan buffer handle
-    virtual VkBuffer GetVkBuffer()const = 0;
+    virtual VkBuffer GetVkBuffer() const = 0;
 
     /// Sets vulkan access flags
 
@@ -53,4 +52,4 @@ public:
     virtual VkAccessFlags GetAccessFlags() const = 0;
 };
 
-}
+} // namespace Diligent

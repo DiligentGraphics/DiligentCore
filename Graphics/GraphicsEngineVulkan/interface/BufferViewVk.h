@@ -33,15 +33,14 @@ namespace Diligent
 
 // {CB67024A-1E23-4202-A49A-07B6BCEABC06}
 static constexpr INTERFACE_ID IID_BufferViewVk =
-{ 0xcb67024a, 0x1e23, 0x4202,{ 0xa4, 0x9a, 0x7, 0xb6, 0xbc, 0xea, 0xbc, 0x6 } };
+    {0xcb67024a, 0x1e23, 0x4202, {0xa4, 0x9a, 0x7, 0xb6, 0xbc, 0xea, 0xbc, 0x6}};
 
 /// Exposes Vulkan-specific functionality of a buffer view object.
 class IBufferViewVk : public IBufferView
 {
 public:
-
     /// Returns Vulkan buffer view object.
-    virtual VkBufferView GetVkBufferView()const = 0;
+    virtual VkBufferView GetVkBufferView() const = 0;
 };
 
-}
+} // namespace Diligent

@@ -33,15 +33,14 @@ namespace Diligent
 
 // {B02AA468-3328-46F3-9777-55E97BF6C86E}
 static constexpr INTERFACE_ID IID_TextureViewVk =
-{ 0xb02aa468, 0x3328, 0x46f3,{ 0x97, 0x77, 0x55, 0xe9, 0x7b, 0xf6, 0xc8, 0x6e } };
+    {0xb02aa468, 0x3328, 0x46f3, {0x97, 0x77, 0x55, 0xe9, 0x7b, 0xf6, 0xc8, 0x6e}};
 
 /// Exposes Vulkan-specific functionality of a texture view object.
 class ITextureViewVk : public ITextureView
 {
 public:
-    
     /// Returns Vulkan image view handle
-    virtual VkImageView GetVulkanImageView()const = 0;
+    virtual VkImageView GetVulkanImageView() const = 0;
 };
 
-}
+} // namespace Diligent

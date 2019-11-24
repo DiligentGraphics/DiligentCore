@@ -36,15 +36,14 @@ namespace Diligent
 
 // {22A39881-5EC5-4A9C-8395-90215F04A5CC}
 static constexpr INTERFACE_ID IID_SwapChainVk =
-{ 0x22a39881, 0x5ec5, 0x4a9c,{ 0x83, 0x95, 0x90, 0x21, 0x5f, 0x4, 0xa5, 0xcc } };
+    {0x22a39881, 0x5ec5, 0x4a9c, {0x83, 0x95, 0x90, 0x21, 0x5f, 0x4, 0xa5, 0xcc}};
 
 /// Exposes Vulkan-specific functionality of a swap chain.
 class ISwapChainVk : public ISwapChain
 {
 public:
-
     /// Returns a handle to the Vulkan swap chain object.
     virtual VkSwapchainKHR GetVkSwapChain() = 0;
 };
 
-}
+} // namespace Diligent

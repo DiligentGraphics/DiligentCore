@@ -28,71 +28,78 @@
 
 namespace VulkanUtilities
 {
-    template<typename VulkanObjectType>
-    class VulkanObjectWrapper
+
+template <typename VulkanObjectType>
+class VulkanObjectWrapper
+{
+public:
+    using VkObjectType = VulkanObjectType;
+
+    // clang-format off
+    VulkanObjectWrapper() : 
+        m_pLogicalDevice{nullptr       },
+        m_VkObject      {VK_NULL_HANDLE}
+    {}
+
+    VulkanObjectWrapper(std::shared_ptr<const VulkanLogicalDevice> pLogicalDevice, VulkanObjectType&& vkObject) :
+        m_pLogicalDevice{pLogicalDevice},
+        m_VkObject      {vkObject      }
     {
-    public:
-        using VkObjectType = VulkanObjectType;
+        vkObject = VK_NULL_HANDLE;
+    }
+    // This constructor does not take ownership of the vulkan object
+    explicit VulkanObjectWrapper(VulkanObjectType vkObject) :
+        m_VkObject {vkObject}
+    {
+    }
 
-        VulkanObjectWrapper() : 
-            m_pLogicalDevice{nullptr       },
-            m_VkObject      {VK_NULL_HANDLE}
-        {}
-        VulkanObjectWrapper(std::shared_ptr<const VulkanLogicalDevice> pLogicalDevice, VulkanObjectType&& vkObject) :
-            m_pLogicalDevice{pLogicalDevice},
-            m_VkObject      {vkObject      }
+    VulkanObjectWrapper             (const VulkanObjectWrapper&) = delete;
+    VulkanObjectWrapper& operator = (const VulkanObjectWrapper&) = delete;
+
+    VulkanObjectWrapper(VulkanObjectWrapper&& rhs)noexcept : 
+        m_pLogicalDevice{std::move(rhs.m_pLogicalDevice)},
+        m_VkObject      {rhs.m_VkObject                 }
+    {
+        rhs.m_VkObject = VK_NULL_HANDLE;
+    }
+
+    // clang-format on
+
+    VulkanObjectWrapper& operator=(VulkanObjectWrapper&& rhs) noexcept
+    {
+        Release();
+        m_pLogicalDevice = std::move(rhs.m_pLogicalDevice);
+        m_VkObject       = rhs.m_VkObject;
+        rhs.m_VkObject   = VK_NULL_HANDLE;
+        return *this;
+    }
+
+    operator VulkanObjectType() const
+    {
+        return m_VkObject;
+    }
+
+    void Release()
+    {
+        // For externally managed objects, m_pLogicalDevice is null
+        if (m_pLogicalDevice && m_VkObject != VK_NULL_HANDLE)
         {
-            vkObject = VK_NULL_HANDLE;
+            m_pLogicalDevice->ReleaseVulkanObject(std::move(*this));
         }
-        // This constructor does not take ownership of the vulkan object
-        explicit VulkanObjectWrapper(VulkanObjectType vkObject) :
-            m_VkObject      {vkObject}
-        {
-        }
+        m_VkObject = VK_NULL_HANDLE;
+        m_pLogicalDevice.reset();
+    }
 
-        VulkanObjectWrapper             (const VulkanObjectWrapper&) = delete;
-        VulkanObjectWrapper& operator = (const VulkanObjectWrapper&) = delete;
+    ~VulkanObjectWrapper()
+    {
+        Release();
+    }
 
-        VulkanObjectWrapper(VulkanObjectWrapper&& rhs)noexcept : 
-            m_pLogicalDevice{std::move(rhs.m_pLogicalDevice)},
-            m_VkObject      {rhs.m_VkObject                 }
-        {
-            rhs.m_VkObject = VK_NULL_HANDLE;
-        }
-        VulkanObjectWrapper& operator = (VulkanObjectWrapper&& rhs)noexcept
-        {
-            Release();
-            m_pLogicalDevice = std::move(rhs.m_pLogicalDevice);
-            m_VkObject = rhs.m_VkObject;
-            rhs.m_VkObject = VK_NULL_HANDLE;
-            return *this;
-        }
+private:
+    friend class VulkanLogicalDevice;
 
-        operator VulkanObjectType()const
-        {
-            return m_VkObject;
-        }
+    std::shared_ptr<const VulkanLogicalDevice> m_pLogicalDevice;
+    VulkanObjectType                           m_VkObject;
+};
 
-        void Release()
-        {
-            // For externally managed objects, m_pLogicalDevice is null
-            if(m_pLogicalDevice && m_VkObject != VK_NULL_HANDLE)
-            {
-                m_pLogicalDevice->ReleaseVulkanObject(std::move(*this));
-            }
-            m_VkObject = VK_NULL_HANDLE;
-            m_pLogicalDevice.reset();
-        }
-
-        ~VulkanObjectWrapper()
-        {
-            Release();
-        }
-
-    private:
-        friend class VulkanLogicalDevice;
-
-        std::shared_ptr<const VulkanLogicalDevice> m_pLogicalDevice;
-        VulkanObjectType m_VkObject;
-    };
-}
+} // namespace VulkanUtilities

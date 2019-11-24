@@ -55,12 +55,13 @@ public:
     /// are signaled later by the command context when it submits the command list. So there is no
     /// guarantee that the fence pool is not accessed simultaneously by multiple threads even if the
     /// fence object itself is protected by mutex.
-    virtual Uint64 GetCompletedValue()override final;
+    virtual Uint64 GetCompletedValue() override final;
 
     /// Implementation of IFence::Reset() in Vulkan backend.
-    virtual void Reset(Uint64 Value)override final;
-    
+    virtual void Reset(Uint64 Value) override final;
+
     VulkanUtilities::FenceWrapper GetVkFence() { return m_FencePool.GetFence(); }
+
     void AddPendingFence(VulkanUtilities::FenceWrapper&& vkFence, Uint64 FenceValue)
     {
         m_PendingFences.emplace_back(FenceValue, std::move(vkFence));
@@ -69,9 +70,9 @@ public:
     void Wait(Uint64 Value);
 
 private:
-    VulkanUtilities::VulkanFencePool m_FencePool;
+    VulkanUtilities::VulkanFencePool                             m_FencePool;
     std::deque<std::pair<Uint64, VulkanUtilities::FenceWrapper>> m_PendingFences;
-    volatile Uint64 m_LastCompletedFenceValue = 0;
+    volatile Uint64                                              m_LastCompletedFenceValue = 0;
 };
 
-}
+} // namespace Diligent

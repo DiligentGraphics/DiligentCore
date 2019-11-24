@@ -43,18 +43,18 @@ class TextureViewVkImpl final : public TextureViewBase<ITextureViewVk, RenderDev
 public:
     using TTextureViewBase = TextureViewBase<ITextureViewVk, RenderDeviceVkImpl>;
 
-    TextureViewVkImpl( IReferenceCounters*                 pRefCounters,
-                       RenderDeviceVkImpl*                 pDevice, 
-                       const TextureViewDesc&              ViewDesc, 
-                       class ITexture*                     pTexture,
-                       VulkanUtilities::ImageViewWrapper&& ImgView,
-                       bool                                bIsDefaultView);
+    TextureViewVkImpl(IReferenceCounters*                 pRefCounters,
+                      RenderDeviceVkImpl*                 pDevice,
+                      const TextureViewDesc&              ViewDesc,
+                      class ITexture*                     pTexture,
+                      VulkanUtilities::ImageViewWrapper&& ImgView,
+                      bool                                bIsDefaultView);
     ~TextureViewVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureViewVk::GetVulkanImageView().
-    VkImageView GetVulkanImageView()const override final{return m_ImageView;}
+    VkImageView GetVulkanImageView() const override final { return m_ImageView; }
 
     bool HasMipLevelViews() const
     {
@@ -64,16 +64,16 @@ public:
     TextureViewVkImpl* GetMipLevelSRV(Uint32 MipLevel)
     {
         VERIFY_EXPR(m_MipLevelViews != nullptr && MipLevel < m_Desc.NumMipLevels);
-        return m_MipLevelViews[MipLevel*2].get();
+        return m_MipLevelViews[MipLevel * 2].get();
     }
 
     TextureViewVkImpl* GetMipLevelUAV(Uint32 MipLevel)
     {
         VERIFY_EXPR(m_MipLevelViews != nullptr && MipLevel < m_Desc.NumMipLevels);
-        return m_MipLevelViews[MipLevel*2 + 1].get();
+        return m_MipLevelViews[MipLevel * 2 + 1].get();
     }
 
-    using MipLevelViewAutoPtrType = std::unique_ptr<TextureViewVkImpl, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator> >;
+    using MipLevelViewAutoPtrType = std::unique_ptr<TextureViewVkImpl, STDDeleter<TextureViewVkImpl, FixedBlockMemoryAllocator>>;
 
     void AssignMipLevelViews(MipLevelViewAutoPtrType* MipLevelViews)
     {
@@ -82,10 +82,10 @@ public:
 
 protected:
     /// Vulkan image view descriptor handle
-    VulkanUtilities::ImageViewWrapper       m_ImageView;
+    VulkanUtilities::ImageViewWrapper m_ImageView;
 
     /// Individual mip level views used for mipmap generation
-    MipLevelViewAutoPtrType*                m_MipLevelViews = nullptr;
+    MipLevelViewAutoPtrType* m_MipLevelViews = nullptr;
 };
 
-}
+} // namespace Diligent

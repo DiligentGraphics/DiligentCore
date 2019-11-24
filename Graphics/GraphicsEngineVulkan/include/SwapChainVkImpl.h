@@ -44,47 +44,48 @@ public:
     using TSwapChainBase = SwapChainBase<ISwapChainVk>;
 
     SwapChainVkImpl(IReferenceCounters*        pRefCounters,
-                    const SwapChainDesc&       SwapChainDesc, 
+                    const SwapChainDesc&       SwapChainDesc,
                     class RenderDeviceVkImpl*  pRenderDeviceVk,
                     class DeviceContextVkImpl* pDeviceContextVk,
                     void*                      pNativeWndHandle);
     ~SwapChainVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISwapChain::Present() in Vulkan backend.
-    virtual void Present(Uint32 SyncInterval)override final;
+    virtual void Present(Uint32 SyncInterval) override final;
 
     /// Implementation of ISwapChain::Resize() in Vulkan backend.
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
+    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
 
     /// Implementation of ISwapChain::SetFullscreenMode() in Vulkan backend.
-    virtual void SetFullscreenMode(const DisplayModeAttribs &DisplayMode)override final;
+    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
 
     /// Implementation of ISwapChain::SetWindowedMode() in Vulkan backend.
-    virtual void SetWindowedMode()override final;
+    virtual void SetWindowedMode() override final;
 
     /// Implementation of ISwapChainVk::GetVkSwapChain().
-    virtual VkSwapchainKHR GetVkSwapChain()override final{ return m_VkSwapChain; }
+    virtual VkSwapchainKHR GetVkSwapChain() override final { return m_VkSwapChain; }
 
     /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in Vulkan backend.
-    virtual ITextureViewVk* GetCurrentBackBufferRTV()override final
+    virtual ITextureViewVk* GetCurrentBackBufferRTV() override final
     {
         VERIFY_EXPR(m_BackBufferIndex >= 0 && m_BackBufferIndex < m_SwapChainDesc.BufferCount);
         return m_pBackBufferRTV[m_BackBufferIndex];
     }
 
     /// Implementation of ISwapChain::GetDepthBufferDSV() in Vulkan backend.
-    virtual ITextureViewVk* GetDepthBufferDSV()override final{return m_pDepthBufferDSV;}
+    virtual ITextureViewVk* GetDepthBufferDSV() override final { return m_pDepthBufferDSV; }
 
 private:
-    void CreateVulkanSwapChain();
-    void InitBuffersAndViews();
+    void     CreateVulkanSwapChain();
+    void     InitBuffersAndViews();
     VkResult AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
-    void RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk);
-    void WaitForImageAcquiredFences();
+    void     RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk);
+    void     WaitForImageAcquiredFences();
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> m_VulkanInstance;
+
     VkSurfaceKHR   m_VkSurface     = VK_NULL_HANDLE;
     VkSwapchainKHR m_VkSwapChain   = VK_NULL_HANDLE;
     VkFormat       m_VkColorFormat = VK_FORMAT_UNDEFINED;
@@ -92,14 +93,17 @@ private:
     std::vector<VulkanUtilities::SemaphoreWrapper> m_ImageAcquiredSemaphores;
     std::vector<VulkanUtilities::SemaphoreWrapper> m_DrawCompleteSemaphores;
     std::vector<VulkanUtilities::FenceWrapper>     m_ImageAcquiredFences;
-    std::vector< RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>> > m_pBackBufferRTV;
-    std::vector<bool, STDAllocatorRawMem<bool> > m_SwapChainImagesInitialized;
-    std::vector<bool, STDAllocatorRawMem<bool> > m_ImageAcquiredFenceSubmitted;
+
+    std::vector<RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>>> m_pBackBufferRTV;
+
+    std::vector<bool, STDAllocatorRawMem<bool>> m_SwapChainImagesInitialized;
+    std::vector<bool, STDAllocatorRawMem<bool>> m_ImageAcquiredFenceSubmitted;
 
     RefCntAutoPtr<ITextureViewVk> m_pDepthBufferDSV;
+
     Uint32   m_SemaphoreIndex  = 0;
     uint32_t m_BackBufferIndex = 0;
     bool     m_IsMinimized     = false;
 };
 
-}
+} // namespace Diligent

@@ -43,8 +43,9 @@ class VulkanMemoryManager;
 
 struct VulkanMemoryAllocation
 {
-    VulkanMemoryAllocation()noexcept{}
+    VulkanMemoryAllocation() noexcept {}
 
+    // clang-format off
     VulkanMemoryAllocation            (const VulkanMemoryAllocation&) = delete;
     VulkanMemoryAllocation& operator= (const VulkanMemoryAllocation&) = delete;
 
@@ -76,25 +77,27 @@ struct VulkanMemoryAllocation
 
         return *this;
     }
+    // clang-format on
 
     // Destructor immediately returns the allocation to the parent page.
     // The allocation must not be in use by the GPU.
     ~VulkanMemoryAllocation();
-    
-    VulkanMemoryPage* Page             = nullptr;	// Memory page that contains this allocation
-	VkDeviceSize      UnalignedOffset  = 0;         // Unaligned offset from the start of the memory
-	VkDeviceSize      Size             = 0;	        // Reserved size of this allocation
+
+    VulkanMemoryPage* Page            = nullptr; // Memory page that contains this allocation
+    VkDeviceSize      UnalignedOffset = 0;       // Unaligned offset from the start of the memory
+    VkDeviceSize      Size            = 0;       // Reserved size of this allocation
 };
 
 class VulkanMemoryPage
 {
 public:
     VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
-                     VkDeviceSize         PageSize, 
+                     VkDeviceSize         PageSize,
                      uint32_t             MemoryTypeIndex,
-                     bool                 IsHostVisible)noexcept;
+                     bool                 IsHostVisible) noexcept;
     ~VulkanMemoryPage();
 
+    // clang-format off
     VulkanMemoryPage(VulkanMemoryPage&& rhs)noexcept :
         m_ParentMemoryMgr {rhs.m_ParentMemoryMgr         },
         m_AllocationMgr   {std::move(rhs.m_AllocationMgr)},
@@ -107,21 +110,23 @@ public:
     VulkanMemoryPage            (const VulkanMemoryPage&) = delete;
     VulkanMemoryPage& operator= (VulkanMemoryPage&)       = delete;
     VulkanMemoryPage& operator= (VulkanMemoryPage&& rhs)  = delete;
+    
+    bool IsEmpty() const { return m_AllocationMgr.IsEmpty(); }
+    bool IsFull()  const { return m_AllocationMgr.IsFull();  }
+    VkDeviceSize GetPageSize() const { return m_AllocationMgr.GetMaxSize();  }
+    VkDeviceSize GetUsedSize() const { return m_AllocationMgr.GetUsedSize(); }
 
-    bool IsEmpty()const{return m_AllocationMgr.IsEmpty();}
-    bool IsFull() const{return m_AllocationMgr.IsFull();}
-    VkDeviceSize GetPageSize()const{return m_AllocationMgr.GetMaxSize();}
-    VkDeviceSize GetUsedSize()const{return m_AllocationMgr.GetUsedSize();}
+    // clang-format on
 
     VulkanMemoryAllocation Allocate(VkDeviceSize size, VkDeviceSize alignment);
 
-    VkDeviceMemory GetVkMemory()const{return m_VkMemory;}
-    void* GetCPUMemory()const{return m_CPUMemory;}
-    
+    VkDeviceMemory GetVkMemory() const { return m_VkMemory; }
+    void*          GetCPUMemory() const { return m_CPUMemory; }
+
 private:
     friend struct VulkanMemoryAllocation;
-    
-    // Memory is reclaimed immediately. The application is responsible to ensure it is not in use by the GPU    
+
+    // Memory is reclaimed immediately. The application is responsible to ensure it is not in use by the GPU
     void Free(VulkanMemoryAllocation&& Allocation);
 
     VulkanMemoryManager&                     m_ParentMemoryMgr;
@@ -134,6 +139,7 @@ private:
 class VulkanMemoryManager
 {
 public:
+    // clang-format off
 	VulkanMemoryManager(std::string                  MgrName,
                         const VulkanLogicalDevice&   LogicalDevice, 
                         const VulkanPhysicalDevice&  PhysicalDevice, 
@@ -151,6 +157,7 @@ public:
         m_DeviceLocalReserveSize{DeviceLocalReserveSize},
         m_HostVisibleReserveSize{HostVisibleReserveSize}
     {}
+
 
     // We have to write this constructor because on msvc default
     // constructor is not labeled with noexcept, which makes all
@@ -172,25 +179,28 @@ public:
         m_CurrAllocatedSize {rhs.m_CurrAllocatedSize},
         m_PeakAllocatedSize {rhs.m_PeakAllocatedSize}
     {
-        for(size_t i=0; i < m_CurrUsedSize.size(); ++i)
+        // clang-format on
+        for (size_t i = 0; i < m_CurrUsedSize.size(); ++i)
             m_CurrUsedSize[i].store(rhs.m_CurrUsedSize[i].load());
     }
 
     ~VulkanMemoryManager();
 
+    // clang-format off
     VulkanMemoryManager            (const VulkanMemoryManager&) = delete;
     VulkanMemoryManager& operator= (const VulkanMemoryManager&) = delete;
     VulkanMemoryManager& operator= (VulkanMemoryManager&&)      = delete;
-    
+    // clang-format on
+
     VulkanMemoryAllocation Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible);
-	VulkanMemoryAllocation Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps);
-    void ShrinkMemory();
+    VulkanMemoryAllocation Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps);
+    void                   ShrinkMemory();
 
 protected:
     friend class VulkanMemoryPage;
 
-    virtual void OnNewPageCreated(VulkanMemoryPage& NewPage){}
-    virtual void OnPageDestroy(VulkanMemoryPage& Page){}
+    virtual void OnNewPageCreated(VulkanMemoryPage& NewPage) {}
+    virtual void OnPageDestroy(VulkanMemoryPage& Page) {}
 
     std::string m_MgrName;
 
@@ -205,6 +215,7 @@ protected:
         const uint32_t MemoryTypeIndex;
         const bool     IsHostVisible;
 
+        // clang-format off
         MemoryPageIndex(uint32_t _MemoryTypeIndex,
                         bool     _IsHostVisible) : 
             MemoryTypeIndex(_MemoryTypeIndex),
@@ -216,31 +227,32 @@ protected:
             return MemoryTypeIndex == rhs.MemoryTypeIndex &&
                    IsHostVisible   == rhs.IsHostVisible;
         }
+        // clang-format on
 
         struct Hasher
         {
-            size_t operator()(const MemoryPageIndex& PageIndex)const
+            size_t operator()(const MemoryPageIndex& PageIndex) const
             {
                 return Diligent::ComputeHash(PageIndex.MemoryTypeIndex, PageIndex.IsHostVisible);
             }
         };
     };
     std::unordered_multimap<MemoryPageIndex, VulkanMemoryPage, MemoryPageIndex::Hasher> m_Pages;
-    
+
     const VkDeviceSize m_DeviceLocalPageSize;
     const VkDeviceSize m_HostVisiblePageSize;
     const VkDeviceSize m_DeviceLocalReserveSize;
     const VkDeviceSize m_HostVisibleReserveSize;
-    
+
     void OnFreeAllocation(VkDeviceSize Size, bool IsHostVisble);
 
     // 0 == Device local, 1 == Host-visible
-    std::array<std::atomic_int64_t, 2> m_CurrUsedSize = {};
-    std::array<VkDeviceSize, 2> m_PeakUsedSize = {};
-    std::array<VkDeviceSize, 2> m_CurrAllocatedSize = {};
-    std::array<VkDeviceSize, 2> m_PeakAllocatedSize = {};
+    std::array<std::atomic_int64_t, 2> m_CurrUsedSize      = {};
+    std::array<VkDeviceSize, 2>        m_PeakUsedSize      = {};
+    std::array<VkDeviceSize, 2>        m_CurrAllocatedSize = {};
+    std::array<VkDeviceSize, 2>        m_PeakAllocatedSize = {};
 
     // If adding new member, do not forget to update move ctor
 };
 
-}
+} // namespace VulkanUtilities

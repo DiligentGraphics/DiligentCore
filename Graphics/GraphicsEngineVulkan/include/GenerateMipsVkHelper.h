@@ -23,7 +23,7 @@
 
 #pragma once
 
- /// \file
+/// \file
 /// Implementation of mipmap generation routines
 
 #include <array>
@@ -33,36 +33,42 @@
 
 namespace Diligent
 {
-    class RenderDeviceVkImpl;
-    class TextureViewVkImpl;
-    class DeviceContextVkImpl;
 
-    class GenerateMipsVkHelper
-    {
-    public:
-        GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl);
-        
-        GenerateMipsVkHelper             (const GenerateMipsVkHelper&)  = delete;
-        GenerateMipsVkHelper             (      GenerateMipsVkHelper&&) = delete;
-        GenerateMipsVkHelper& operator = (const GenerateMipsVkHelper&)  = delete;
-        GenerateMipsVkHelper& operator = (      GenerateMipsVkHelper&&) = delete;
+class RenderDeviceVkImpl;
+class TextureViewVkImpl;
+class DeviceContextVkImpl;
 
-        void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB);
-        void CreateSRB(IShaderResourceBinding** ppSRB);
-        void WarmUpCache(TEXTURE_FORMAT Fmt);
+class GenerateMipsVkHelper
+{
+public:
+    GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl);
 
-    private:
-        std::array<RefCntAutoPtr<IPipelineState>, 4>  CreatePSOs(TEXTURE_FORMAT Fmt);
-        std::array<RefCntAutoPtr<IPipelineState>, 4>& FindPSOs  (TEXTURE_FORMAT Fmt);
+    // clang-format off
+    GenerateMipsVkHelper             (const GenerateMipsVkHelper&)  = delete;
+    GenerateMipsVkHelper             (      GenerateMipsVkHelper&&) = delete;
+    GenerateMipsVkHelper& operator = (const GenerateMipsVkHelper&)  = delete;
+    GenerateMipsVkHelper& operator = (      GenerateMipsVkHelper&&) = delete;
+    // clang-format on
 
-        VkImageLayout GenerateMipsCS  (TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange);
-        VkImageLayout GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange)const;
+    void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB);
+    void CreateSRB(IShaderResourceBinding** ppSRB);
+    void WarmUpCache(TEXTURE_FORMAT Fmt);
 
-        RenderDeviceVkImpl& m_DeviceVkImpl;
+private:
+    std::array<RefCntAutoPtr<IPipelineState>, 4>  CreatePSOs(TEXTURE_FORMAT Fmt);
+    std::array<RefCntAutoPtr<IPipelineState>, 4>& FindPSOs(TEXTURE_FORMAT Fmt);
 
-        std::mutex m_PSOMutex;
-	    std::unordered_map< TEXTURE_FORMAT, std::array<RefCntAutoPtr<IPipelineState>, 4> > m_PSOHash;
-        static void GetGlImageFormat(const TextureFormatAttribs& FmtAttribs, std::array<char, 16>& GlFmt);
-        RefCntAutoPtr<IBuffer> m_ConstantsCB;
-    };
-}
+    VkImageLayout GenerateMipsCS(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange);
+    VkImageLayout GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange) const;
+
+    RenderDeviceVkImpl& m_DeviceVkImpl;
+
+    std::mutex                                                                       m_PSOMutex;
+    std::unordered_map<TEXTURE_FORMAT, std::array<RefCntAutoPtr<IPipelineState>, 4>> m_PSOHash;
+
+    static void GetGlImageFormat(const TextureFormatAttribs& FmtAttribs, std::array<char, 16>& GlFmt);
+
+    RefCntAutoPtr<IBuffer> m_ConstantsCB;
+};
+
+} // namespace Diligent

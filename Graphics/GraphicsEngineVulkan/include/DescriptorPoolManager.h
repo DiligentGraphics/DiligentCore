@@ -21,7 +21,7 @@
  *  of the possibility of such damages.
  */
 
-// Descriptor heap management utilities. 
+// Descriptor heap management utilities.
 // See http://diligentgraphics.com/diligent-engine/architecture/d3d12/managing-descriptor-heaps/ for details
 
 #pragma once
@@ -38,13 +38,14 @@ namespace Diligent
 class DescriptorSetAllocator;
 class RenderDeviceVkImpl;
 
-// This class manages descriptor set allocation. 
+// This class manages descriptor set allocation.
 // The class destructor calls DescriptorSetAllocator::FreeDescriptorSet() that moves
 // the set into the release queue.
 // sizeof(DescriptorSetAllocation) == 32 (x64)
 class DescriptorSetAllocation
 {
 public:
+    // clang-format off
     DescriptorSetAllocation(VkDescriptorSet         _Set,
                             VkDescriptorPool        _Pool,
                             Uint64                  _CmdQueueMask,
@@ -67,8 +68,9 @@ public:
     {
         rhs.Reset();
     }
+    // clang-format on
 
-    DescriptorSetAllocation& operator = (DescriptorSetAllocation&& rhs)noexcept
+    DescriptorSetAllocation& operator=(DescriptorSetAllocation&& rhs) noexcept
     {
         Release();
 
@@ -82,7 +84,7 @@ public:
         return *this;
     }
 
-    operator bool()const
+    operator bool() const
     {
         return Set != VK_NULL_HANDLE;
     }
@@ -102,7 +104,7 @@ public:
         Release();
     }
 
-    VkDescriptorSet GetVkDescriptorSet()const {return Set;}
+    VkDescriptorSet GetVkDescriptorSet() const { return Set; }
 
 private:
     VkDescriptorSet         Set               = VK_NULL_HANDLE;
@@ -113,19 +115,20 @@ private:
 
 
 // The class manages pool of descriptor set pools
-//      ______________________________     
+//      ______________________________
 //     |                              |
 //     |     DescriptorPoolManager    |
 //     |                              |
 //     |   | Pool[0] | Pool[1] | ...  |
 //     |______________________________|
-//             |            A        
+//             |            A
 //   GetPool() |            | FreePool()
 //             V            |
 //
 class DescriptorPoolManager
 {
 public:
+    // clang-format off
     DescriptorPoolManager(RenderDeviceVkImpl&               DeviceVkImpl,
                           std::string                       PoolName,
                           std::vector<VkDescriptorPoolSize> PoolSizes,
@@ -147,18 +150,23 @@ public:
     DescriptorPoolManager& operator = (const DescriptorPoolManager&) = delete;
     DescriptorPoolManager             (DescriptorPoolManager&&)      = delete;
     DescriptorPoolManager& operator = (DescriptorPoolManager&&)      = delete;
-    
+    // clang-format on
+
     VulkanUtilities::DescriptorPoolWrapper GetPool(const char* DebugName);
+
     void DisposePool(VulkanUtilities::DescriptorPoolWrapper&& Pool, Uint64 QueueMask);
 
-    RenderDeviceVkImpl& GetDeviceVkImpl() {return m_DeviceVkImpl;}
+    RenderDeviceVkImpl& GetDeviceVkImpl() { return m_DeviceVkImpl; }
 
 #ifdef DEVELOPMENT
-    int32_t GetAllocatedPoolCounter()const{return m_AllocatedPoolCounter;}
+    int32_t GetAllocatedPoolCounter() const
+    {
+        return m_AllocatedPoolCounter;
+    }
 #endif
 
 protected:
-    VulkanUtilities::DescriptorPoolWrapper CreateDescriptorPool(const char* DebugName)const;
+    VulkanUtilities::DescriptorPoolWrapper CreateDescriptorPool(const char* DebugName) const;
 
     RenderDeviceVkImpl& m_DeviceVkImpl;
     const std::string   m_PoolName;
@@ -166,15 +174,15 @@ protected:
     const std::vector<VkDescriptorPoolSize> m_PoolSizes;
     const uint32_t                          m_MaxSets;
     const bool                              m_AllowFreeing;
-    
-    std::mutex                                           m_Mutex;
-    std::deque< VulkanUtilities::DescriptorPoolWrapper > m_Pools;
+
+    std::mutex                                         m_Mutex;
+    std::deque<VulkanUtilities::DescriptorPoolWrapper> m_Pools;
 
 private:
     void FreePool(VulkanUtilities::DescriptorPoolWrapper&& Pool);
 
 #ifdef DEVELOPMENT
-    std::atomic_int32_t                                  m_AllocatedPoolCounter;
+    std::atomic_int32_t m_AllocatedPoolCounter;
 #endif
 };
 
@@ -189,7 +197,8 @@ public:
                            std::string                       PoolName,
                            std::vector<VkDescriptorPoolSize> PoolSizes,
                            uint32_t                          MaxSets,
-                           bool                              AllowFreeing) noexcept:
+                           bool                              AllowFreeing) noexcept :
+        // clang-format off
         DescriptorPoolManager
         {
             DeviceVkImpl,
@@ -198,6 +207,7 @@ public:
             MaxSets,
             AllowFreeing
         }
+    // clang-format on
     {
 #ifdef DEVELOPMENT
         m_AllocatedSetCounter = 0;
@@ -209,10 +219,13 @@ public:
     DescriptorSetAllocation Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName = "");
 
 #ifdef DEVELOPMENT
-    int32_t GetAllocatedDescriptorSetCounter()const{return m_AllocatedSetCounter;}
+    int32_t GetAllocatedDescriptorSetCounter() const
+    {
+        return m_AllocatedSetCounter;
+    }
 #endif
 
-private:  
+private:
     void FreeDescriptorSet(VkDescriptorSet Set, VkDescriptorPool Pool, Uint64 QueueMask);
 
 #ifdef DEVELOPMENT
@@ -235,7 +248,7 @@ private:
 //             |                          A                   |
 //             |                          |                   |
 //             |Allocate()       GetPool()|                   |FreePool()
-//             |                     _____|___________________V____     
+//             |                     _____|___________________V____
 //             V                    |                              |
 //       VkDescriptorSet            |     DescriptorPoolManager    |
 //                                  |                              |
@@ -245,9 +258,11 @@ private:
 class DynamicDescriptorSetAllocator
 {
 public:
-    DynamicDescriptorSetAllocator(DescriptorPoolManager& PoolMgr, std::string Name) : 
+    DynamicDescriptorSetAllocator(DescriptorPoolManager& PoolMgr, std::string Name) :
+        // clang-format off
         m_GlobalPoolMgr{PoolMgr        },
         m_Name         {std::move(Name)}
+    // clang-format on
     {}
     ~DynamicDescriptorSetAllocator();
 
@@ -258,7 +273,7 @@ public:
     // be destroyed before the pools are actually returned to the global pool manager.
     void ReleasePools(Uint64 QueueMask);
 
-    size_t GetAllocatedPoolCount()const{return m_AllocatedPools.size();}
+    size_t GetAllocatedPoolCount() const { return m_AllocatedPools.size(); }
 
 private:
     DescriptorPoolManager&                              m_GlobalPoolMgr;
@@ -267,4 +282,4 @@ private:
     size_t                                              m_PeakPoolCount = 0;
 };
 
-}
+} // namespace Diligent

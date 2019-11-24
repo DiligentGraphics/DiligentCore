@@ -46,31 +46,32 @@ public:
 
     ShaderVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const ShaderCreateInfo& CreationAttribs);
     ~ShaderVkImpl();
-    
+
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderVk, TShaderBase);
 
     /// Implementation of IShader::GetResourceCount() in Vulkan backend.
-    virtual Uint32 GetResourceCount()const override final
+    virtual Uint32 GetResourceCount() const override final
     {
         return m_pShaderResources->GetTotalResources();
     }
 
     /// Implementation of IShader::GetResource() in Vulkan backend.
-    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final;
+    virtual ShaderResourceDesc GetResource(Uint32 Index) const override final;
 
     /// Implementation of IShaderVk::GetSPIRV().
-    virtual const std::vector<uint32_t>& GetSPIRV()const override final
+    virtual const std::vector<uint32_t>& GetSPIRV() const override final
     {
         return m_SPIRV;
     }
-    
-    const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources()const{return m_pShaderResources;}
+
+    const std::shared_ptr<const SPIRVShaderResources>& GetShaderResources() const { return m_pShaderResources; }
+
     const char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
 private:
     void MapHLSLVertexShaderInputs();
 
-    // SPIRVShaderResources class instance must be referenced through the shared pointer, because 
+    // SPIRVShaderResources class instance must be referenced through the shared pointer, because
     // it is referenced by ShaderResourceLayoutVk class instances
     std::shared_ptr<const SPIRVShaderResources> m_pShaderResources;
 
@@ -78,4 +79,4 @@ private:
     std::vector<uint32_t> m_SPIRV;
 };
 
-}
+} // namespace Diligent

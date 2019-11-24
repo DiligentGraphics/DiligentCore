@@ -34,26 +34,25 @@ namespace Diligent
 
 // {72AEB1BA-C6AD-42EC-8811-7ED9C72176BB}
 static constexpr INTERFACE_ID IID_DeviceContextVk =
-{ 0x72aeb1ba, 0xc6ad, 0x42ec,{ 0x88, 0x11, 0x7e, 0xd9, 0xc7, 0x21, 0x76, 0xbb } };
+    {0x72aeb1ba, 0xc6ad, 0x42ec, {0x88, 0x11, 0x7e, 0xd9, 0xc7, 0x21, 0x76, 0xbb}};
 
 /// Exposes Vulkan-specific functionality of a device context.
 class IDeviceContextVk : public IDeviceContext
 {
 public:
-
     /// Transitions internal vulkan image to a specified layout
 
     /// \param [in] pTexture - texture to transition
     /// \param [in] NewLayout - Vulkan image layout this texture to transition to
     /// \remarks The texture state must be known to the engine.
-    virtual void TransitionImageLayout(ITexture *pTexture, VkImageLayout NewLayout) = 0;
+    virtual void TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout) = 0;
 
     /// Transitions internal vulkan buffer object to a specified state
 
     /// \param [in] pBuffer - Buffer to transition
     /// \param [in] NewAccessFlags - Access flags to set for the buffer
     /// \remarks The buffer state must be known to the engine.
-    virtual void BufferMemoryBarrier(IBuffer *pBuffer, VkAccessFlags NewAccessFlags) = 0;
+    virtual void BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags) = 0;
 
     /// Locks the internal mutex and returns a pointer to the command queue that is associated with this device context.
 
@@ -63,7 +62,7 @@ public:
     ///
     ///           The engine locks the internal mutex to prevent simultaneous access to the command queue.
     ///           An application must release the lock by calling IDeviceContextVk::UnlockCommandQueue()
-    ///           when it is done working with the queue or the engine will not be able to submit any command 
+    ///           when it is done working with the queue or the engine will not be able to submit any command
     ///           list to the queue. Nested calls to LockCommandQueue() are not allowed.
     ///           The queue pointer never changes while the context is alive, so an application may cache and
     ///           use the pointer if it does not need to prevent potential simultaneous access to the queue from
@@ -77,4 +76,4 @@ public:
     virtual void UnlockCommandQueue() = 0;
 };
 
-}
+} // namespace Diligent

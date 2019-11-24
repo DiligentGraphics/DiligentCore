@@ -49,29 +49,29 @@ class BufferVkImpl final : public BufferBase<IBufferVk, RenderDeviceVkImpl, Buff
 public:
     using TBufferBase = BufferBase<IBufferVk, RenderDeviceVkImpl, BufferViewVkImpl, FixedBlockMemoryAllocator>;
 
-    BufferVkImpl(IReferenceCounters*        pRefCounters, 
-                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
-                 RenderDeviceVkImpl*        pDeviceVk, 
-                 const BufferDesc&          BuffDesc, 
+    BufferVkImpl(IReferenceCounters*        pRefCounters,
+                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                 RenderDeviceVkImpl*        pDeviceVk,
+                 const BufferDesc&          BuffDesc,
                  const BufferData*          pBuffData = nullptr);
 
-    BufferVkImpl(IReferenceCounters*        pRefCounters, 
-                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
-                 class RenderDeviceVkImpl*  pDeviceVk, 
-                 const BufferDesc&          BuffDesc, 
+    BufferVkImpl(IReferenceCounters*        pRefCounters,
+                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                 class RenderDeviceVkImpl*  pDeviceVk,
+                 const BufferDesc&          BuffDesc,
                  RESOURCE_STATE             InitialState,
                  VkBuffer                   vkBuffer);
     ~BufferVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
 #ifdef DEVELOPMENT
-    void DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx)const;
+    void DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx) const;
 #endif
 
-    Uint32 GetDynamicOffset(Uint32 CtxId, DeviceContextVkImpl* pCtx)const
+    Uint32 GetDynamicOffset(Uint32 CtxId, DeviceContextVkImpl* pCtx) const
     {
-        if(m_VulkanBuffer != VK_NULL_HANDLE)
+        if (m_VulkanBuffer != VK_NULL_HANDLE)
         {
             return 0;
         }
@@ -88,22 +88,22 @@ public:
     }
 
     /// Implementation of IBufferVk::GetVkBuffer().
-    VkBuffer GetVkBuffer()const override final;
+    VkBuffer GetVkBuffer() const override final;
 
     /// Implementation of IBuffer::GetNativeHandle() in Vulkan backend.
-    virtual void* GetNativeHandle()override final
-    { 
-        auto vkBuffer = GetVkBuffer(); 
+    virtual void* GetNativeHandle() override final
+    {
+        auto vkBuffer = GetVkBuffer();
         return vkBuffer;
     }
 
     /// Implementation of IBufferVk::SetAccessFlags().
-    virtual void SetAccessFlags(VkAccessFlags AccessFlags)override final;
+    virtual void SetAccessFlags(VkAccessFlags AccessFlags) override final;
 
     /// Implementation of IBufferVk::GetAccessFlags().
-    virtual VkAccessFlags GetAccessFlags()const override final;
+    virtual VkAccessFlags GetAccessFlags() const override final;
 
-    bool CheckAccessFlags(VkAccessFlags AccessFlags)const
+    bool CheckAccessFlags(VkAccessFlags AccessFlags) const
     {
         return (GetAccessFlags() & AccessFlags) == AccessFlags;
     }
@@ -111,15 +111,15 @@ public:
 private:
     friend class DeviceContextVkImpl;
 
-    virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView)override;
+    virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;
 
-    VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc &ViewDesc);
-    Uint32        m_DynamicOffsetAlignment = 0;
+    VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc& ViewDesc);
+    Uint32                             m_DynamicOffsetAlignment = 0;
 
-    std::vector<VulkanDynamicAllocation, STDAllocatorRawMem<VulkanDynamicAllocation> > m_DynamicAllocations;
+    std::vector<VulkanDynamicAllocation, STDAllocatorRawMem<VulkanDynamicAllocation>> m_DynamicAllocations;
 
     VulkanUtilities::BufferWrapper          m_VulkanBuffer;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
 };
 
-}
+} // namespace Diligent

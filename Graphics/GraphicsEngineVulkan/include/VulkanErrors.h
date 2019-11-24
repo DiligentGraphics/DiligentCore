@@ -27,17 +27,17 @@
 #include "DebugUtilities.h"
 #include "VulkanUtilities/VulkanDebug.h"
 
-#define CHECK_VK_ERROR(err, ...)\
-{                                       \
-    if( err < 0 )                       \
-    {                                   \
-        Diligent::LogError<false>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nVK Error: ", VulkanUtilities::VkResultToString(err)); \
-        UNEXPECTED("Error");            \
-    }                                   \
-}
+#define CHECK_VK_ERROR(err, ...)                                                                                                              \
+    {                                                                                                                                         \
+        if (err < 0)                                                                                                                          \
+        {                                                                                                                                     \
+            Diligent::LogError<false>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nVK Error: ", VulkanUtilities::VkResultToString(err)); \
+            UNEXPECTED("Error");                                                                                                              \
+        }                                                                                                                                     \
+    }
 
-#define CHECK_VK_ERROR_AND_THROW(err, ...)\
-{                                       \
-    if( err < 0 )                       \
-        Diligent::LogError<true>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nVK Error Code: ", VulkanUtilities::VkResultToString(err)); \
-}
+#define CHECK_VK_ERROR_AND_THROW(err, ...)                                                                                                        \
+    {                                                                                                                                             \
+        if (err < 0)                                                                                                                              \
+            Diligent::LogError<true>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nVK Error Code: ", VulkanUtilities::VkResultToString(err)); \
+    }

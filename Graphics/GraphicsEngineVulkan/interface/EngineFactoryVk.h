@@ -35,12 +35,12 @@
 
 #if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || (PLATFORM_WIN32 && !defined(_MSC_VER))
 
-    // https://gcc.gnu.org/wiki/Visibility
-#   define API_QUALIFIER __attribute__((visibility("default")))
+// https://gcc.gnu.org/wiki/Visibility
+#    define API_QUALIFIER __attribute__((visibility("default")))
 
 #elif PLATFORM_WIN32
 
-#   define API_QUALIFIER
+#    define API_QUALIFIER
 
 #else
 #    error Unsupported platform
@@ -50,8 +50,8 @@ namespace Diligent
 {
 
 // {F554EEE4-57C2-4637-A508-85BE80DC657C}
-static const INTERFACE_ID IID_EngineFactoryVk = 
-{ 0xf554eee4, 0x57c2, 0x4637, { 0xa5, 0x8, 0x85, 0xbe, 0x80, 0xdc, 0x65, 0x7c } };
+static const INTERFACE_ID IID_EngineFactoryVk =
+    {0xf554eee4, 0x57c2, 0x4637, {0xa5, 0x8, 0x85, 0xbe, 0x80, 0xdc, 0x65, 0x7c}};
 
 class IEngineFactoryVk : public IEngineFactory
 {
@@ -60,10 +60,10 @@ public:
                                            IRenderDevice**           ppDevice,
                                            IDeviceContext**          ppContexts) = 0;
 
-    //virtual void AttachToVulkanDevice(void *pVkNativeDevice, 
+    //virtual void AttachToVulkanDevice(void *pVkNativeDevice,
     //                                 class ICommandQueueVk *pCommandQueue,
-    //                                 const EngineVkCreateInfo& EngineCI, 
-    //                                 IRenderDevice **ppDevice, 
+    //                                 const EngineVkCreateInfo& EngineCI,
+    //                                 IRenderDevice **ppDevice,
     //                                 IDeviceContext **ppContexts) = 0;
 
     virtual void CreateSwapChainVk(IRenderDevice*       pDevice,
@@ -71,61 +71,60 @@ public:
                                    const SwapChainDesc& SwapChainDesc,
                                    void*                pNativeWndHandle,
                                    ISwapChain**         ppSwapChain) = 0;
-
 };
 
 
 #if ENGINE_DLL && PLATFORM_WIN32 && defined(_MSC_VER)
 
-#   define EXPLICITLY_LOAD_ENGINE_VK_DLL 1
+#    define EXPLICITLY_LOAD_ENGINE_VK_DLL 1
 
-    typedef IEngineFactoryVk* (*GetEngineFactoryVkType)();
+typedef IEngineFactoryVk* (*GetEngineFactoryVkType)();
 
-    static bool LoadGraphicsEngineVk(GetEngineFactoryVkType& GetFactoryFunc)
+static bool LoadGraphicsEngineVk(GetEngineFactoryVkType& GetFactoryFunc)
+{
+    GetFactoryFunc      = nullptr;
+    std::string LibName = "GraphicsEngineVk_";
+
+#    if _WIN64
+    LibName += "64";
+#    else
+    LibName += "32";
+#    endif
+
+#    ifdef _DEBUG
+    LibName += "d";
+#    else
+    LibName += "r";
+#    endif
+
+    LibName += ".dll";
+    auto hModule = LoadLibraryA(LibName.c_str());
+    if (hModule == NULL)
     {
-        GetFactoryFunc = nullptr;
-        std::string LibName = "GraphicsEngineVk_";
-
-#   if _WIN64
-        LibName += "64";
-#   else
-        LibName += "32";
-#   endif
-
-#   ifdef _DEBUG
-        LibName += "d";
-#   else
-        LibName += "r";
-#   endif
-
-        LibName += ".dll";
-        auto hModule = LoadLibraryA(LibName.c_str());
-        if (hModule == NULL)
-        {
-            std::stringstream ss;
-            ss << "Failed to load " << LibName << " library.\n";
-            OutputDebugStringA(ss.str().c_str());
-            return false;
-        }
-
-        GetFactoryFunc = reinterpret_cast<GetEngineFactoryVkType>(GetProcAddress(hModule, "GetEngineFactoryVk"));
-        if (GetFactoryFunc == NULL)
-        {
-            std::stringstream ss;
-            ss << "Failed to load GetEngineFactoryVk() from " << LibName << " library.\n";
-            OutputDebugStringA(ss.str().c_str());
-            FreeLibrary(hModule);
-            return false;
-        }
-
-        return true;
+        std::stringstream ss;
+        ss << "Failed to load " << LibName << " library.\n";
+        OutputDebugStringA(ss.str().c_str());
+        return false;
     }
+
+    GetFactoryFunc = reinterpret_cast<GetEngineFactoryVkType>(GetProcAddress(hModule, "GetEngineFactoryVk"));
+    if (GetFactoryFunc == NULL)
+    {
+        std::stringstream ss;
+        ss << "Failed to load GetEngineFactoryVk() from " << LibName << " library.\n";
+        OutputDebugStringA(ss.str().c_str());
+        FreeLibrary(hModule);
+        return false;
+    }
+
+    return true;
+}
 
 #else
 
-    API_QUALIFIER
-    IEngineFactoryVk* GetEngineFactoryVk();
+API_QUALIFIER
+IEngineFactoryVk* GetEngineFactoryVk();
 
 #endif
 
-}
+} // namespace Diligent

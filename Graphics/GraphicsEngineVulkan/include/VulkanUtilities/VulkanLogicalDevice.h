@@ -28,144 +28,150 @@
 
 namespace VulkanUtilities
 {
-    template<typename VulkanObjectType>
-    class VulkanObjectWrapper;
 
-    using CommandPoolWrapper    = VulkanObjectWrapper<VkCommandPool>;
-    using BufferWrapper         = VulkanObjectWrapper<VkBuffer>;
-    using BufferViewWrapper     = VulkanObjectWrapper<VkBufferView>;
-    using ImageWrapper          = VulkanObjectWrapper<VkImage>;
-    using ImageViewWrapper      = VulkanObjectWrapper<VkImageView>;
-    using DeviceMemoryWrapper   = VulkanObjectWrapper<VkDeviceMemory>;
-    using FenceWrapper          = VulkanObjectWrapper<VkFence>;
-    using RenderPassWrapper     = VulkanObjectWrapper<VkRenderPass>;
-    using PipelineWrapper       = VulkanObjectWrapper<VkPipeline>;
-    using ShaderModuleWrapper   = VulkanObjectWrapper<VkShaderModule>;
-    using PipelineLayoutWrapper = VulkanObjectWrapper<VkPipelineLayout>;
-    using SamplerWrapper        = VulkanObjectWrapper<VkSampler>;
-    using FramebufferWrapper    = VulkanObjectWrapper<VkFramebuffer>;
-    using DescriptorPoolWrapper = VulkanObjectWrapper<VkDescriptorPool>;
-    using DescriptorSetLayoutWrapper = VulkanObjectWrapper<VkDescriptorSetLayout>;
-    using SemaphoreWrapper      = VulkanObjectWrapper<VkSemaphore>;
+template <typename VulkanObjectType>
+class VulkanObjectWrapper;
 
-    class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
+using CommandPoolWrapper         = VulkanObjectWrapper<VkCommandPool>;
+using BufferWrapper              = VulkanObjectWrapper<VkBuffer>;
+using BufferViewWrapper          = VulkanObjectWrapper<VkBufferView>;
+using ImageWrapper               = VulkanObjectWrapper<VkImage>;
+using ImageViewWrapper           = VulkanObjectWrapper<VkImageView>;
+using DeviceMemoryWrapper        = VulkanObjectWrapper<VkDeviceMemory>;
+using FenceWrapper               = VulkanObjectWrapper<VkFence>;
+using RenderPassWrapper          = VulkanObjectWrapper<VkRenderPass>;
+using PipelineWrapper            = VulkanObjectWrapper<VkPipeline>;
+using ShaderModuleWrapper        = VulkanObjectWrapper<VkShaderModule>;
+using PipelineLayoutWrapper      = VulkanObjectWrapper<VkPipelineLayout>;
+using SamplerWrapper             = VulkanObjectWrapper<VkSampler>;
+using FramebufferWrapper         = VulkanObjectWrapper<VkFramebuffer>;
+using DescriptorPoolWrapper      = VulkanObjectWrapper<VkDescriptorPool>;
+using DescriptorSetLayoutWrapper = VulkanObjectWrapper<VkDescriptorSetLayout>;
+using SemaphoreWrapper           = VulkanObjectWrapper<VkSemaphore>;
+
+class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
+{
+public:
+    static std::shared_ptr<VulkanLogicalDevice> Create(VkPhysicalDevice             vkPhysicalDevice,
+                                                       const VkDeviceCreateInfo&    DeviceCI,
+                                                       const VkAllocationCallbacks* vkAllocator);
+
+    // clang-format off
+    VulkanLogicalDevice             (const VulkanLogicalDevice&) = delete;
+    VulkanLogicalDevice             (VulkanLogicalDevice&&)      = delete;
+    VulkanLogicalDevice& operator = (const VulkanLogicalDevice&) = delete;
+    VulkanLogicalDevice& operator = (VulkanLogicalDevice&&)      = delete;
+    // clang-format on
+
+    ~VulkanLogicalDevice();
+
+    std::shared_ptr<VulkanLogicalDevice> GetSharedPtr()
     {
-    public:
-        static std::shared_ptr<VulkanLogicalDevice> Create(VkPhysicalDevice             vkPhysicalDevice, 
-                                                           const VkDeviceCreateInfo&    DeviceCI, 
-                                                           const VkAllocationCallbacks* vkAllocator);
+        return shared_from_this();
+    }
 
-        VulkanLogicalDevice             (const VulkanLogicalDevice&) = delete;
-        VulkanLogicalDevice             (VulkanLogicalDevice&&)      = delete;
-        VulkanLogicalDevice& operator = (const VulkanLogicalDevice&) = delete;
-        VulkanLogicalDevice& operator = (VulkanLogicalDevice&&)      = delete;
+    std::shared_ptr<const VulkanLogicalDevice> GetSharedPtr() const
+    {
+        return shared_from_this();
+    }
 
-        ~VulkanLogicalDevice();
+    VkQueue GetQueue(uint32_t queueFamilyIndex, uint32_t queueIndex);
 
-        std::shared_ptr<VulkanLogicalDevice> GetSharedPtr()
-        {
-            return shared_from_this();
-        }
+    VkDevice GetVkDevice() const
+    {
+        return m_VkDevice;
+    }
 
-        std::shared_ptr<const VulkanLogicalDevice> GetSharedPtr()const
-        {
-            return shared_from_this();
-        }
+    void WaitIdle() const;
 
-        VkQueue GetQueue(uint32_t queueFamilyIndex, uint32_t queueIndex);
+    // clang-format off
+    CommandPoolWrapper  CreateCommandPool   (const VkCommandPoolCreateInfo &CmdPoolCI,   const char* DebugName = "")const;
+    BufferWrapper       CreateBuffer        (const VkBufferCreateInfo      &BufferCI,    const char* DebugName = "")const;
+    BufferViewWrapper   CreateBufferView    (const VkBufferViewCreateInfo  &BuffViewCI,  const char* DebugName = "")const;
+    ImageWrapper        CreateImage         (const VkImageCreateInfo       &ImageCI,     const char* DebugName = "")const;
+    ImageViewWrapper    CreateImageView     (const VkImageViewCreateInfo   &ImageViewCI, const char* DebugName = "")const;
+    SamplerWrapper      CreateSampler       (const VkSamplerCreateInfo     &SamplerCI,   const char* DebugName = "")const;
+    FenceWrapper        CreateFence         (const VkFenceCreateInfo       &FenceCI,     const char* DebugName = "")const;
+    RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo  &RenderPassCI,const char* DebugName = "")const;
+    DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo    &AllocInfo,   const char* DebugName = "")const;
+    PipelineWrapper     CreateComputePipeline (const VkComputePipelineCreateInfo  &PipelineCI, VkPipelineCache cache, const char* DebugName = "")const;
+    PipelineWrapper     CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo &PipelineCI, VkPipelineCache cache, const char* DebugName = "")const;
+    ShaderModuleWrapper CreateShaderModule    (const VkShaderModuleCreateInfo &ShaderModuleCI,  const char* DebugName = "")const;
+    PipelineLayoutWrapper CreatePipelineLayout(const VkPipelineLayoutCreateInfo &LayoutCI,      const char* DebugName = "")const;
+    FramebufferWrapper    CreateFramebuffer   (const VkFramebufferCreateInfo    &FramebufferCI, const char* DebugName = "")const;
+    DescriptorPoolWrapper CreateDescriptorPool(const VkDescriptorPoolCreateInfo &DescrPoolCI,   const char* DebugName = "")const;
+    DescriptorSetLayoutWrapper CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo &LayoutCI, const char* DebugName = "")const;
+    SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo &SemaphoreCI, const char* DebugName = "")const;
 
-        VkDevice GetVkDevice()const
-        { 
-            return m_VkDevice; 
-        }
+    VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char* DebugName = "")const;
+    VkDescriptorSet     AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo &AllocInfo, const char* DebugName = "")const;
 
-        void WaitIdle()const;
+    void ReleaseVulkanObject(CommandPoolWrapper&&  CmdPool)const;
+    void ReleaseVulkanObject(BufferWrapper&&       Buffer)const;
+    void ReleaseVulkanObject(BufferViewWrapper&&   BufferView)const;
+    void ReleaseVulkanObject(ImageWrapper&&        Image)const;
+    void ReleaseVulkanObject(ImageViewWrapper&&    ImageView)const;
+    void ReleaseVulkanObject(SamplerWrapper&&      Sampler)const;
+    void ReleaseVulkanObject(FenceWrapper&&        Fence)const;
+    void ReleaseVulkanObject(RenderPassWrapper&&   RenderPass)const;
+    void ReleaseVulkanObject(DeviceMemoryWrapper&& Memory)const;
+    void ReleaseVulkanObject(PipelineWrapper&&     Pipeline)const;
+    void ReleaseVulkanObject(ShaderModuleWrapper&& ShaderModule)const;
+    void ReleaseVulkanObject(PipelineLayoutWrapper&& PipelineLayout)const;
+    void ReleaseVulkanObject(FramebufferWrapper&&   Framebuffer)const;
+    void ReleaseVulkanObject(DescriptorPoolWrapper&& DescriptorPool)const;
+    void ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout)const;
+    void ReleaseVulkanObject(SemaphoreWrapper&&     Semaphore)const;
 
-        CommandPoolWrapper  CreateCommandPool   (const VkCommandPoolCreateInfo &CmdPoolCI,   const char* DebugName = "")const;
-        BufferWrapper       CreateBuffer        (const VkBufferCreateInfo      &BufferCI,    const char* DebugName = "")const;
-        BufferViewWrapper   CreateBufferView    (const VkBufferViewCreateInfo  &BuffViewCI,  const char* DebugName = "")const;
-        ImageWrapper        CreateImage         (const VkImageCreateInfo       &ImageCI,     const char* DebugName = "")const;
-        ImageViewWrapper    CreateImageView     (const VkImageViewCreateInfo   &ImageViewCI, const char* DebugName = "")const;
-        SamplerWrapper      CreateSampler       (const VkSamplerCreateInfo     &SamplerCI,   const char* DebugName = "")const;
-        FenceWrapper        CreateFence         (const VkFenceCreateInfo       &FenceCI,     const char* DebugName = "")const;
-        RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo  &RenderPassCI,const char* DebugName = "")const;
-        DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo    &AllocInfo,   const char* DebugName = "")const;
-        PipelineWrapper     CreateComputePipeline (const VkComputePipelineCreateInfo  &PipelineCI, VkPipelineCache cache, const char* DebugName = "")const;
-        PipelineWrapper     CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo &PipelineCI, VkPipelineCache cache, const char* DebugName = "")const;
-        ShaderModuleWrapper CreateShaderModule    (const VkShaderModuleCreateInfo &ShaderModuleCI,  const char* DebugName = "")const;
-        PipelineLayoutWrapper CreatePipelineLayout(const VkPipelineLayoutCreateInfo &LayoutCI,      const char* DebugName = "")const;
-        FramebufferWrapper    CreateFramebuffer   (const VkFramebufferCreateInfo    &FramebufferCI, const char* DebugName = "")const;
-        DescriptorPoolWrapper CreateDescriptorPool(const VkDescriptorPoolCreateInfo &DescrPoolCI,   const char* DebugName = "")const;
-        DescriptorSetLayoutWrapper CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo &LayoutCI, const char* DebugName = "")const;
-        SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo &SemaphoreCI, const char* DebugName = "")const;
+    void FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set)const;
 
-        VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo &AllocInfo, const char* DebugName = "")const;
-        VkDescriptorSet     AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo &AllocInfo, const char* DebugName = "")const;
+    VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer)const;
+    VkMemoryRequirements GetImageMemoryRequirements (VkImage vkImage  )const;
 
-        void ReleaseVulkanObject(CommandPoolWrapper&&  CmdPool)const;
-        void ReleaseVulkanObject(BufferWrapper&&       Buffer)const;
-        void ReleaseVulkanObject(BufferViewWrapper&&   BufferView)const;
-        void ReleaseVulkanObject(ImageWrapper&&        Image)const;
-        void ReleaseVulkanObject(ImageViewWrapper&&    ImageView)const;
-        void ReleaseVulkanObject(SamplerWrapper&&      Sampler)const;
-        void ReleaseVulkanObject(FenceWrapper&&        Fence)const;
-        void ReleaseVulkanObject(RenderPassWrapper&&   RenderPass)const;
-        void ReleaseVulkanObject(DeviceMemoryWrapper&& Memory)const;
-        void ReleaseVulkanObject(PipelineWrapper&&     Pipeline)const;
-        void ReleaseVulkanObject(ShaderModuleWrapper&& ShaderModule)const;
-        void ReleaseVulkanObject(PipelineLayoutWrapper&& PipelineLayout)const;
-        void ReleaseVulkanObject(FramebufferWrapper&&   Framebuffer)const;
-        void ReleaseVulkanObject(DescriptorPoolWrapper&& DescriptorPool)const;
-        void ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout)const;
-        void ReleaseVulkanObject(SemaphoreWrapper&&     Semaphore)const;
+    VkResult BindBufferMemory(VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset)const;
+    VkResult BindImageMemory (VkImage image,   VkDeviceMemory memory, VkDeviceSize memoryOffset)const;
+    // clang-format on
 
-        void FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set)const;
+    VkResult MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) const;
+    void     UnmapMemory(VkDeviceMemory memory) const;
 
-        VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer)const;
-        VkMemoryRequirements GetImageMemoryRequirements (VkImage vkImage  )const;
+    VkResult InvalidateMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) const;
+    VkResult FlushMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges) const;
 
-        VkResult BindBufferMemory(VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset)const;
-        VkResult BindImageMemory (VkImage image,   VkDeviceMemory memory, VkDeviceSize memoryOffset)const;
+    VkResult GetFenceStatus(VkFence fence) const;
+    VkResult ResetFence(VkFence fence) const;
+    VkResult WaitForFences(uint32_t       fenceCount,
+                           const VkFence* pFences,
+                           VkBool32       waitAll,
+                           uint64_t       timeout) const;
 
-        VkResult MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData)const;
-        void UnmapMemory(VkDeviceMemory memory)const;
+    void UpdateDescriptorSets(uint32_t                    descriptorWriteCount,
+                              const VkWriteDescriptorSet* pDescriptorWrites,
+                              uint32_t                    descriptorCopyCount,
+                              const VkCopyDescriptorSet*  pDescriptorCopies) const;
 
-        VkResult InvalidateMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)const;
-        VkResult FlushMappedMemoryRanges(uint32_t memoryRangeCount, const VkMappedMemoryRange* pMemoryRanges)const;
+    VkResult ResetCommandPool(VkCommandPool           vkCmdPool,
+                              VkCommandPoolResetFlags flags = 0) const;
 
-        VkResult GetFenceStatus(VkFence fence)const;
-        VkResult ResetFence(VkFence fence)const;
-        VkResult WaitForFences(uint32_t          fenceCount,
-                               const VkFence*    pFences,
-                               VkBool32          waitAll,
-                               uint64_t          timeout)const;
+    VkResult ResetDescriptorPool(VkDescriptorPool           descriptorPool,
+                                 VkDescriptorPoolResetFlags flags = 0) const;
 
-        void UpdateDescriptorSets(uint32_t                      descriptorWriteCount, 
-                                  const VkWriteDescriptorSet*   pDescriptorWrites,
-                                  uint32_t                      descriptorCopyCount,
-                                  const VkCopyDescriptorSet*    pDescriptorCopies)const;
+    VkPipelineStageFlags GetEnabledGraphicsShaderStages() const { return m_EnabledGraphicsShaderStages; }
 
-        VkResult ResetCommandPool(VkCommandPool             vkCmdPool,
-                                  VkCommandPoolResetFlags   flags = 0)const;
+private:
+    VulkanLogicalDevice(VkPhysicalDevice             vkPhysicalDevice,
+                        const VkDeviceCreateInfo&    DeviceCI,
+                        const VkAllocationCallbacks* vkAllocator);
 
-        VkResult ResetDescriptorPool(VkDescriptorPool           descriptorPool,
-                                     VkDescriptorPoolResetFlags flags = 0)const;
+    template <typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
+    VulkanObjectWrapper<VkObjectType> CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
+                                                         const VkObjectCreateInfoType& CreateInfo,
+                                                         const char*                   DebugName,
+                                                         const char*                   ObjectType) const;
 
-        VkPipelineStageFlags GetEnabledGraphicsShaderStages()const { return m_EnabledGraphicsShaderStages; }
+    VkDevice                           m_VkDevice = VK_NULL_HANDLE;
+    const VkAllocationCallbacks* const m_VkAllocator;
+    VkPipelineStageFlags               m_EnabledGraphicsShaderStages = 0;
+};
 
-    private:
-        VulkanLogicalDevice(VkPhysicalDevice vkPhysicalDevice, 
-                            const VkDeviceCreateInfo &DeviceCI, 
-                            const VkAllocationCallbacks* vkAllocator);
-
-        template<typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
-        VulkanObjectWrapper<VkObjectType> CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
-                                                             const VkObjectCreateInfoType& CreateInfo,
-                                                             const char*                   DebugName,
-                                                             const char*                   ObjectType)const;
-
-        VkDevice m_VkDevice = VK_NULL_HANDLE;
-        const VkAllocationCallbacks* const m_VkAllocator;
-        VkPipelineStageFlags m_EnabledGraphicsShaderStages = 0;
-    };
-}
+} // namespace VulkanUtilities

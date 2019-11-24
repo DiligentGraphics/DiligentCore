@@ -30,12 +30,12 @@
 namespace Diligent
 {
 
-// Upload heap is used by a device context to update texture and buffer regions through 
+// Upload heap is used by a device context to update texture and buffer regions through
 // UpdateBufferRegion() and UpdateTextureRegion().
-// 
+//
 // The heap allocates pages from the global memory manager.
 // The pages are released and returned to the manager at the end of every frame.
-// 
+//
 //   _______________________________________________________________________________________________________________________________
 //  |                                                                                                                               |
 //  |                                                  VulkanUploadHeap                                                             |
@@ -46,7 +46,7 @@ namespace Diligent
 //             |                                      A                   |
 //             |                                      |                   |
 //             |Allocate()             CreateNewPage()|                   |ReleaseAllocatedPages()
-//             |                                ______|___________________V____     
+//             |                                ______|___________________V____
 //             V                               |                              |
 //   VulkanUploadAllocation                    |    Global Memory Manager     |
 //                                             |    (VulkanMemoryManager)     |
@@ -58,6 +58,7 @@ class RenderDeviceVkImpl;
 struct VulkanUploadAllocation
 {
     VulkanUploadAllocation() noexcept {}
+    // clang-format off
     VulkanUploadAllocation(void*        _CPUAddress,
                            VkDeviceSize _Size,
                            VkDeviceSize _AlignedOffset,
@@ -71,6 +72,7 @@ struct VulkanUploadAllocation
     VulkanUploadAllocation& operator = (const VulkanUploadAllocation&)  = delete;
     VulkanUploadAllocation             (      VulkanUploadAllocation&&) = default;
     VulkanUploadAllocation& operator = (      VulkanUploadAllocation&&) = default;
+    // clang-format on
 
     VkBuffer     vkBuffer      = VK_NULL_HANDLE; // Vulkan buffer associated with this memory.
     void*        CPUAddress    = nullptr;
@@ -84,22 +86,24 @@ public:
     VulkanUploadHeap(RenderDeviceVkImpl& RenderDevice,
                      std::string         HeapName,
                      VkDeviceSize        PageSize);
-    
+
+    // clang-format off
     VulkanUploadHeap            (const VulkanUploadHeap&)  = delete;
     VulkanUploadHeap            (      VulkanUploadHeap&&) = delete;
     VulkanUploadHeap& operator= (const VulkanUploadHeap&)  = delete;
     VulkanUploadHeap& operator= (      VulkanUploadHeap&&) = delete;
+    // clang-format on
 
     ~VulkanUploadHeap();
 
     VulkanUploadAllocation Allocate(size_t SizeInBytes, size_t Alignment);
-    
+
     // Releases all allocated pages that are later returned to the global memory manager by the release queues.
-    // As global memory manager is hosted by the render device, the upload heap can be destroyed before the 
+    // As global memory manager is hosted by the render device, the upload heap can be destroyed before the
     // pages are actually returned to the manager.
     void ReleaseAllocatedPages(Uint64 CmdQueueMask);
 
-    size_t GetStalePagesCount()const
+    size_t GetStalePagesCount() const
     {
         return m_Pages.size();
     }
@@ -111,6 +115,7 @@ private:
 
     struct UploadPageInfo
     {
+        // clang-format off
         UploadPageInfo(VulkanUtilities::VulkanMemoryAllocation&& _MemAllocation, 
                        VulkanUtilities::BufferWrapper&&          _Buffer,
                        Uint8*                                    _CPUAddress) :
@@ -119,6 +124,8 @@ private:
             CPUAddress   {_CPUAddress              }
         {
         }
+        // clang-format on
+
         VulkanUtilities::VulkanMemoryAllocation MemAllocation;
         VulkanUtilities::BufferWrapper          Buffer;
         Uint8* const                            CPUAddress = nullptr;
@@ -131,6 +138,7 @@ private:
         Uint8*   CurrCPUAddress = nullptr;
         size_t   CurrOffset     = 0;
         size_t   AvailableSize  = 0;
+
         void Reset(UploadPageInfo& NewPage, size_t PageSize)
         {
             vkBuffer       = NewPage.Buffer;
@@ -138,20 +146,21 @@ private:
             CurrOffset     = 0;
             AvailableSize  = PageSize;
         }
+
         void Advance(size_t SizeInBytes)
         {
-            CurrCPUAddress+= SizeInBytes;
-            CurrOffset    += SizeInBytes;
+            CurrCPUAddress += SizeInBytes;
+            CurrOffset += SizeInBytes;
             AvailableSize -= SizeInBytes;
         }
-    }m_CurrPage;
+    } m_CurrPage;
 
-    size_t   m_CurrFrameSize   = 0;
-    size_t   m_PeakFrameSize   = 0;
-    size_t   m_CurrAllocatedSize   = 0;
-    size_t   m_PeakAllocatedSize   = 0;
+    size_t m_CurrFrameSize     = 0;
+    size_t m_PeakFrameSize     = 0;
+    size_t m_CurrAllocatedSize = 0;
+    size_t m_PeakAllocatedSize = 0;
 
-    UploadPageInfo CreateNewPage(VkDeviceSize SizeInBytes)const;
+    UploadPageInfo CreateNewPage(VkDeviceSize SizeInBytes) const;
 };
 
-}
+} // namespace Diligent

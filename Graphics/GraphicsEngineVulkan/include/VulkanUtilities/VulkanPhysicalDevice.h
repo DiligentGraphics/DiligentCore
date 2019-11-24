@@ -29,35 +29,43 @@
 
 namespace VulkanUtilities
 {
-    class VulkanPhysicalDevice
-    {
-    public:
-        VulkanPhysicalDevice             (const VulkanPhysicalDevice&) = delete;
-        VulkanPhysicalDevice             (VulkanPhysicalDevice&&)      = delete;
-        VulkanPhysicalDevice& operator = (const VulkanPhysicalDevice&) = delete;
-        VulkanPhysicalDevice& operator = (VulkanPhysicalDevice&&)      = delete;
 
-        static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice vkDevice);
+class VulkanPhysicalDevice
+{
+public:
+    // clang-format off
+    VulkanPhysicalDevice             (const VulkanPhysicalDevice&) = delete;
+    VulkanPhysicalDevice             (VulkanPhysicalDevice&&)      = delete;
+    VulkanPhysicalDevice& operator = (const VulkanPhysicalDevice&) = delete;
+    VulkanPhysicalDevice& operator = (VulkanPhysicalDevice&&)      = delete;
+    // clang-format on
 
-        uint32_t         FindQueueFamily     (VkQueueFlags QueueFlags)                           const;
-        VkPhysicalDevice GetVkDeviceHandle   ()                                                  const { return m_VkDevice; }
-        bool             IsExtensionSupported(const char* ExtensionName)                         const;
-        bool             CheckPresentSupport (uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface) const;
-        
-        static constexpr uint32_t InvalidMemoryTypeIndex = static_cast<uint32_t>(-1);
-        uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties)const;
-        const VkPhysicalDeviceProperties& GetProperties() const {return m_Properties;}
-        const VkPhysicalDeviceFeatures&   GetFeatures()   const {return m_Features;  }
-        VkFormatProperties  GetPhysicalDeviceFormatProperties(VkFormat imageFormat)const;
+    static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice vkDevice);
 
-    private:
-        VulkanPhysicalDevice(VkPhysicalDevice vkDevice);
+    // clang-format off
+    uint32_t         FindQueueFamily     (VkQueueFlags QueueFlags)                           const;
+    VkPhysicalDevice GetVkDeviceHandle   ()                                                  const { return m_VkDevice; }
+    bool             IsExtensionSupported(const char* ExtensionName)                         const;
+    bool             CheckPresentSupport (uint32_t queueFamilyIndex, VkSurfaceKHR VkSurface) const;
+    // clang-format on
 
-        const VkPhysicalDevice               m_VkDevice;
-        VkPhysicalDeviceProperties           m_Properties           = {};
-        VkPhysicalDeviceFeatures             m_Features             = {};
-        VkPhysicalDeviceMemoryProperties     m_MemoryProperties     = {};
-        std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
-        std::vector<VkExtensionProperties>   m_SupportedExtensions;
-    };
-}
+    static constexpr uint32_t InvalidMemoryTypeIndex = static_cast<uint32_t>(-1);
+
+    uint32_t GetMemoryTypeIndex(uint32_t typeBits, VkMemoryPropertyFlags properties) const;
+
+    const VkPhysicalDeviceProperties& GetProperties() const { return m_Properties; }
+    const VkPhysicalDeviceFeatures&   GetFeatures() const { return m_Features; }
+    VkFormatProperties                GetPhysicalDeviceFormatProperties(VkFormat imageFormat) const;
+
+private:
+    VulkanPhysicalDevice(VkPhysicalDevice vkDevice);
+
+    const VkPhysicalDevice               m_VkDevice;
+    VkPhysicalDeviceProperties           m_Properties       = {};
+    VkPhysicalDeviceFeatures             m_Features         = {};
+    VkPhysicalDeviceMemoryProperties     m_MemoryProperties = {};
+    std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
+    std::vector<VkExtensionProperties>   m_SupportedExtensions;
+};
+
+} // namespace VulkanUtilities

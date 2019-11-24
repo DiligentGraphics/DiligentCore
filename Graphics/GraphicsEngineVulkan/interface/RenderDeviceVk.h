@@ -33,13 +33,12 @@ namespace Diligent
 
 // {AB8CF3A6-D959-41C1-AE00-A58AE9820E6A}
 static constexpr INTERFACE_ID IID_RenderDeviceVk =
-{ 0xab8cf3a6, 0xd959, 0x41c1,{ 0xae, 0x0, 0xa5, 0x8a, 0xe9, 0x82, 0xe, 0x6a } };
+    {0xab8cf3a6, 0xd959, 0x41c1, {0xae, 0x0, 0xa5, 0x8a, 0xe9, 0x82, 0xe, 0x6a}};
 
 /// Exposes Vulkan-specific functionality of a render device.
 class IRenderDeviceVk : public IRenderDevice
 {
 public:
-
     /// Returns logical Vulkan device handle
     virtual VkDevice GetVkDevice() = 0;
 
@@ -56,35 +55,35 @@ public:
     /// Creates a texture object from native Vulkan image
 
     /// \param [in]  vkImage      - Vulkan image handle
-    /// \param [in]  TexDesc      - Texture description. Vulkan provides no means to retrieve any 
+    /// \param [in]  TexDesc      - Texture description. Vulkan provides no means to retrieve any
     ///                             image properties from the image handle, so complete texture
     ///                             description must be provided
     /// \param [in]  InitialState - Initial texture state. See Diligent::RESOURCE_STATE.
     /// \param [out] ppTexture    - Address of the memory location where the pointer to the
-    ///                             texture interface will be stored. 
-    ///                             The function calls AddRef(), so that the new object will contain 
+    ///                             texture interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
     /// \note  Created texture object does not take ownership of the Vulkan image and will not
-    ///        destroy it once released. The application must not destroy the image while it is 
+    ///        destroy it once released. The application must not destroy the image while it is
     ///        in use by the engine.
     virtual void CreateTextureFromVulkanImage(VkImage            vkImage,
                                               const TextureDesc& TexDesc,
                                               RESOURCE_STATE     InitialState,
-                                              ITexture** ppTexture) = 0;
+                                              ITexture**         ppTexture) = 0;
 
     /// Creates a buffer object from native Vulkan resource
 
     /// \param [in] vkBuffer      - Vulkan buffer handle
-    /// \param [in] BuffDesc      - Buffer description. Vulkan provides no means to retrieve any 
+    /// \param [in] BuffDesc      - Buffer description. Vulkan provides no means to retrieve any
     ///                             buffer properties from the buffer handle, so complete buffer
     ///                             description must be provided
     /// \param [in]  InitialState - Initial buffer state. See Diligent::RESOURCE_STATE.
     /// \param [out] ppBuffer     - Address of the memory location where the pointer to the
-    ///                             buffer interface will be stored. 
-    ///                             The function calls AddRef(), so that the new object will contain 
+    ///                             buffer interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
     /// \note  Created buffer object does not take ownership of the Vulkan buffer and will not
-    ///        destroy it once released. The application must not destroy Vulkan buffer while it is 
+    ///        destroy it once released. The application must not destroy Vulkan buffer while it is
     ///        in use by the engine.
     virtual void CreateBufferFromVulkanResource(VkBuffer          vkBuffer,
                                                 const BufferDesc& BuffDesc,
@@ -92,4 +91,4 @@ public:
                                                 IBuffer**         ppBuffer) = 0;
 };
 
-}
+} // namespace Diligent

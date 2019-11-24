@@ -48,36 +48,35 @@ public:
     ShaderResourceBindingVkImpl(IReferenceCounters* pRefCounters, class PipelineStateVkImpl* pPSO, bool IsPSOInternal);
     ~ShaderResourceBindingVkImpl();
 
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShaderResourceBinding::BindResources() in Vulkan backend.
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableByName() in Vulkan backend.
-    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name)override final;
+    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableCount() in Vulkan backend.
     virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableByIndex() in Vulkan backend.
-    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)override final;
+    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
     /// Implementation of IShaderResourceBinding::InitializeStaticResources() in Vulkan backend.
-    virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
+    virtual void InitializeStaticResources(const IPipelineState* pPipelineState) override final;
 
     ShaderResourceCacheVk& GetResourceCache() { return m_ShaderResourceCache; }
 
     bool StaticResourcesInitialized() const { return m_bStaticResourcesInitialized; }
 
 private:
-
     ShaderResourceCacheVk    m_ShaderResourceCache;
     ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
 
     // Shader variable manager index in m_pShaderVarMgrs[] array for every shader stage
-    Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
-    bool m_bStaticResourcesInitialized = false;
-    Uint8 m_NumShaders = 0;
+    Int8  m_ResourceLayoutIndex[6]      = {-1, -1, -1, -1, -1, -1};
+    bool  m_bStaticResourcesInitialized = false;
+    Uint8 m_NumShaders                  = 0;
 };
 
-}
+} // namespace Diligent

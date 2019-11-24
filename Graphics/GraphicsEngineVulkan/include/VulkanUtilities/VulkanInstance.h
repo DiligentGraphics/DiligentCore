@@ -29,48 +29,56 @@
 
 namespace VulkanUtilities
 {
-    class VulkanInstance : public std::enable_shared_from_this<VulkanInstance>
+
+class VulkanInstance : public std::enable_shared_from_this<VulkanInstance>
+{
+public:
+    // clang-format off
+    VulkanInstance             (const VulkanInstance&)  = delete;
+    VulkanInstance             (      VulkanInstance&&) = delete;
+    VulkanInstance& operator = (const VulkanInstance&)  = delete;
+    VulkanInstance& operator = (      VulkanInstance&&) = delete;
+    // clang-format on
+
+    static std::shared_ptr<VulkanInstance> Create(bool                   EnableValidation,
+                                                  uint32_t               GlobalExtensionCount,
+                                                  const char* const*     ppGlobalExtensionNames,
+                                                  VkAllocationCallbacks* pVkAllocator);
+    ~VulkanInstance();
+
+    std::shared_ptr<VulkanInstance> GetSharedPtr()
     {
-    public:
-        VulkanInstance             (const VulkanInstance&)  = delete;
-        VulkanInstance             (      VulkanInstance&&) = delete;
-        VulkanInstance& operator = (const VulkanInstance&)  = delete;
-        VulkanInstance& operator = (      VulkanInstance&&) = delete;
+        return shared_from_this();
+    }
 
-        static std::shared_ptr<VulkanInstance> Create(bool                   EnableValidation, 
-                                                      uint32_t               GlobalExtensionCount, 
-                                                      const char* const*     ppGlobalExtensionNames,
-                                                      VkAllocationCallbacks* pVkAllocator);
-        ~VulkanInstance();
+    std::shared_ptr<const VulkanInstance> GetSharedPtr() const
+    {
+        return shared_from_this();
+    }
 
-        std::shared_ptr<VulkanInstance> GetSharedPtr()
-        {
-            return shared_from_this();
-        }
+    // clang-format off
+    bool IsLayerAvailable    (const char* LayerName)    const;
+    bool IsExtensionAvailable(const char* ExtensionName)const;
 
-        std::shared_ptr<const VulkanInstance> GetSharedPtr()const
-        {
-            return shared_from_this();
-        }
+    VkPhysicalDevice SelectPhysicalDevice()const;
 
-        bool IsLayerAvailable    (const char* LayerName)    const;
-        bool IsExtensionAvailable(const char* ExtensionName)const;
-        VkPhysicalDevice SelectPhysicalDevice()const;
-        VkAllocationCallbacks* GetVkAllocator()const{return m_pVkAllocator;}
-        VkInstance             GetVkInstance() const{return m_VkInstance;}
+    VkAllocationCallbacks* GetVkAllocator()const{return m_pVkAllocator;}
+    VkInstance             GetVkInstance() const{return m_VkInstance;  }
+    // clang-format on
 
-    private:
-        VulkanInstance(bool                   EnableValidation, 
-                       uint32_t               GlobalExtensionCount, 
-                       const char* const*     ppGlobalExtensionNames,
-                       VkAllocationCallbacks* pVkAllocator);
+private:
+    VulkanInstance(bool                   EnableValidation,
+                   uint32_t               GlobalExtensionCount,
+                   const char* const*     ppGlobalExtensionNames,
+                   VkAllocationCallbacks* pVkAllocator);
 
-        bool m_DebugUtilsEnabled = false;
-        VkAllocationCallbacks* const m_pVkAllocator;
-        VkInstance m_VkInstance = VK_NULL_HANDLE;
+    bool                         m_DebugUtilsEnabled = false;
+    VkAllocationCallbacks* const m_pVkAllocator;
+    VkInstance                   m_VkInstance = VK_NULL_HANDLE;
 
-        std::vector<VkLayerProperties>     m_Layers;
-        std::vector<VkExtensionProperties> m_Extensions;
-        std::vector<VkPhysicalDevice>      m_PhysicalDevices;
-    };
-}
+    std::vector<VkLayerProperties>     m_Layers;
+    std::vector<VkExtensionProperties> m_Extensions;
+    std::vector<VkPhysicalDevice>      m_PhysicalDevices;
+};
+
+} // namespace VulkanUtilities

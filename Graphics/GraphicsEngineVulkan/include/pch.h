@@ -29,13 +29,13 @@
 #pragma once
 
 #ifdef PLATFORM_WIN32
-#   ifndef WIN32_LEAN_AND_MEAN
-#       define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
-#   endif
+#    ifndef WIN32_LEAN_AND_MEAN
+#        define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
+#    endif
 
-#   ifndef NOMINMAX
-#       define NOMINMAX
-#   endif
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
 #endif
 
 #include <vector>
@@ -48,21 +48,23 @@
 
 namespace std
 {
-    template<>struct hash<Diligent::TEXTURE_FORMAT>
+
+template <> struct hash<Diligent::TEXTURE_FORMAT>
+{
+    size_t operator()(const Diligent::TEXTURE_FORMAT& fmt) const
     {
-        size_t operator()( const Diligent::TEXTURE_FORMAT &fmt ) const
-        {
-            return hash<size_t>()(size_t{fmt});
-        }
-    };
-    template<>struct hash<VkFormat>
+        return hash<size_t>()(size_t{fmt});
+    }
+};
+template <> struct hash<VkFormat>
+{
+    size_t operator()(const VkFormat& fmt) const
     {
-        size_t operator()( const VkFormat &fmt ) const
-        {
-            return hash<int>()(int{fmt});
-        }
-    };
-}
+        return hash<int>()(int{fmt});
+    }
+};
+
+} // namespace std
 
 #include "PlatformDefinitions.h"
 #include "Errors.h"
@@ -70,4 +72,3 @@ namespace std
 #include "VulkanErrors.h"
 #include "RenderDeviceBase.h"
 #include "ValidatedCast.h"
-

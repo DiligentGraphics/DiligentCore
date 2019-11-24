@@ -33,18 +33,17 @@ namespace Diligent
 
 // {3BB9155F-22C5-4365-927E-8C4049F9B949}
 static constexpr INTERFACE_ID IID_TextureVk =
-{ 0x3bb9155f, 0x22c5, 0x4365,{ 0x92, 0x7e, 0x8c, 0x40, 0x49, 0xf9, 0xb9, 0x49 } };
+    {0x3bb9155f, 0x22c5, 0x4365, {0x92, 0x7e, 0x8c, 0x40, 0x49, 0xf9, 0xb9, 0x49}};
 
 
 /// Exposes Vulkan-specific functionality of a texture object.
 class ITextureVk : public ITexture
 {
 public:
-
     /// Returns Vulkan image handle.
-    
+
     /// The application must not release the returned image
-    virtual VkImage GetVkImage()const = 0;
+    virtual VkImage GetVkImage() const = 0;
 
     /// Sets Vulkan image layout
 
@@ -54,7 +53,7 @@ public:
     virtual void SetLayout(VkImageLayout Layout) = 0;
 
     /// Returns current Vulkan image layout. If the state is unknown to the engine, returns VK_IMAGE_LAYOUT_UNDEFINED
-    virtual VkImageLayout GetLayout()const = 0;
+    virtual VkImageLayout GetLayout() const = 0;
 };
 
-}
+} // namespace Diligent

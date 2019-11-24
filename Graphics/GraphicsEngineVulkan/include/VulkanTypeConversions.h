@@ -32,31 +32,32 @@
 namespace Diligent
 {
 
-VkFormat TexFormatToVkFormat(TEXTURE_FORMAT TexFmt);
+VkFormat       TexFormatToVkFormat(TEXTURE_FORMAT TexFmt);
 TEXTURE_FORMAT VkFormatToTexFormat(VkFormat VkFmt);
 
 VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
 
-VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationStateCI(const RasterizerStateDesc &RasterizerDesc);
-VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const DepthStencilStateDesc &DepthStencilDesc);
-void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc&                             BSDesc, 
+VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationStateCI(const RasterizerStateDesc& RasterizerDesc);
+VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const DepthStencilStateDesc& DepthStencilDesc);
+
+void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc&                             BSDesc,
                                       VkPipelineColorBlendStateCreateInfo&              ColorBlendStateCI,
                                       std::vector<VkPipelineColorBlendAttachmentState>& ColorBlendAttachments);
 
-void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&                                             LayoutDesc, 
+void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&                                             LayoutDesc,
                                              VkPipelineVertexInputStateCreateInfo&                              VertexInputStateCI,
                                              std::array<VkVertexInputBindingDescription, iMaxLayoutElements>&   BindingDescriptions,
                                              std::array<VkVertexInputAttributeDescription, iMaxLayoutElements>& AttributeDescription);
 
-void PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(PRIMITIVE_TOPOLOGY   PrimTopology, 
-                                                             VkPrimitiveTopology& VkPrimTopology, 
+void PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(PRIMITIVE_TOPOLOGY   PrimTopology,
+                                                             VkPrimitiveTopology& VkPrimTopology,
                                                              uint32_t&            PatchControlPoints);
 
-VkCompareOp ComparisonFuncToVkCompareOp(COMPARISON_FUNCTION CmpFunc);
-VkFilter FilterTypeToVkFilter(FILTER_TYPE FilterType);
-VkSamplerMipmapMode FilterTypeToVkMipmapMode(FILTER_TYPE FilterType);
+VkCompareOp          ComparisonFuncToVkCompareOp(COMPARISON_FUNCTION CmpFunc);
+VkFilter             FilterTypeToVkFilter(FILTER_TYPE FilterType);
+VkSamplerMipmapMode  FilterTypeToVkMipmapMode(FILTER_TYPE FilterType);
 VkSamplerAddressMode AddressModeToVkAddressMode(TEXTURE_ADDRESS_MODE AddressMode);
-VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[]);
+VkBorderColor        BorderColorToVkBorderColor(const Float32 BorderColor[]);
 
 VkAccessFlags ResourceStateFlagsToVkAccessFlags(RESOURCE_STATE StateFlags);
 VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag);
@@ -64,4 +65,4 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag);
 RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlags AccessFlags);
 RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout);
 
-}
+} // namespace Diligent

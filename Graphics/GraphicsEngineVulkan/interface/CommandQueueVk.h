@@ -33,19 +33,19 @@ namespace Diligent
 
 // {9FBF582F-3069-41B9-AC05-344D5AF5CE8C}
 static constexpr INTERFACE_ID IID_CommandQueueVk =
-{ 0x9fbf582f, 0x3069, 0x41b9,{ 0xac, 0x5, 0x34, 0x4d, 0x5a, 0xf5, 0xce, 0x8c } };
+    {0x9fbf582f, 0x3069, 0x41b9, {0xac, 0x5, 0x34, 0x4d, 0x5a, 0xf5, 0xce, 0x8c}};
 
 /// Command queue interface
 class ICommandQueueVk : public Diligent::IObject
 {
 public:
-	/// Returns the fence value that will be signaled next time
-	virtual Uint64 GetNextFenceValue() = 0;
+    /// Returns the fence value that will be signaled next time
+    virtual Uint64 GetNextFenceValue() = 0;
 
-	/// Submits a given command buffer to the command queue
+    /// Submits a given command buffer to the command queue
 
     /// \return Fence value associated with the submitted command buffer
-	virtual Uint64 Submit(VkCommandBuffer cmdBuffer) = 0;
+    virtual Uint64 Submit(VkCommandBuffer cmdBuffer) = 0;
 
     /// Submits a given chunk of work to the command queue
 
@@ -59,7 +59,7 @@ public:
     virtual VkQueue GetVkQueue() = 0;
 
     /// Returns vulkan command queue family index
-    virtual uint32_t GetQueueFamilyIndex()const = 0;
+    virtual uint32_t GetQueueFamilyIndex() const = 0;
 
     /// Returns value of the last completed fence
     virtual Uint64 GetCompletedFenceValue() = 0;
@@ -73,4 +73,4 @@ public:
     virtual void SignalFence(VkFence vkFence) = 0;
 };
 
-}
+} // namespace Diligent

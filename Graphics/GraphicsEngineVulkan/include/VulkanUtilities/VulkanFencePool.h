@@ -31,24 +31,28 @@
 
 namespace VulkanUtilities
 {
-    class VulkanFencePool
-    {
-    public:
-        VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice)noexcept;
 
-        VulkanFencePool             (const VulkanFencePool&) = delete;
-        VulkanFencePool             (VulkanFencePool&&)      = delete;
-        VulkanFencePool& operator = (const VulkanFencePool&) = delete;
-        VulkanFencePool& operator = (VulkanFencePool&&)      = delete;
+class VulkanFencePool
+{
+public:
+    VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice) noexcept;
 
-        ~VulkanFencePool();
+    // clang-format off
+    VulkanFencePool             (const VulkanFencePool&) = delete;
+    VulkanFencePool             (VulkanFencePool&&)      = delete;
+    VulkanFencePool& operator = (const VulkanFencePool&) = delete;
+    VulkanFencePool& operator = (VulkanFencePool&&)      = delete;
+    // clang-format off
 
-        FenceWrapper GetFence();
-        void DisposeFence(FenceWrapper&& Fence);
+    ~VulkanFencePool();
 
-    private:
-        // Shared pointer to logical device must be declared before fences
-        std::shared_ptr<const VulkanLogicalDevice> m_LogicalDevice;
-        std::vector<FenceWrapper>                  m_Fences;
-    };
+    FenceWrapper GetFence();
+    void DisposeFence(FenceWrapper&& Fence);
+
+private:
+    // Shared pointer to logical device must be declared before fences
+    std::shared_ptr<const VulkanLogicalDevice> m_LogicalDevice;
+    std::vector<FenceWrapper>                  m_Fences;
+};
+
 }
