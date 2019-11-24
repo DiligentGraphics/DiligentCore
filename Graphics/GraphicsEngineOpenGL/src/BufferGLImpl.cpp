@@ -38,34 +38,35 @@ static GLenum GetBufferBindTarget(const BufferDesc& Desc)
     GLenum Target = GL_ARRAY_BUFFER;
     if (Desc.BindFlags & BIND_VERTEX_BUFFER)
         Target = GL_ARRAY_BUFFER;
-    else if(Desc.BindFlags & BIND_INDEX_BUFFER)
+    else if (Desc.BindFlags & BIND_INDEX_BUFFER)
         Target = GL_ELEMENT_ARRAY_BUFFER;
     else if (Desc.BindFlags & BIND_UNIFORM_BUFFER)
         Target = GL_UNIFORM_BUFFER;
-    else if(Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
+    else if (Desc.BindFlags & BIND_INDIRECT_DRAW_ARGS)
     {
 #ifdef _MSC_VER
-#   pragma warning(push)
-#   pragma warning(disable : 4127) // conditional expression is constant
+#    pragma warning(push)
+#    pragma warning(disable : 4127) // conditional expression is constant
 #endif
-		VERIFY(GL_DRAW_INDIRECT_BUFFER != 0, "Inidrect draw is not supported");
+        VERIFY(GL_DRAW_INDIRECT_BUFFER != 0, "Inidrect draw is not supported");
 #ifdef _MSC_VER
-#   pragma warning(pop)
+#    pragma warning(pop)
 #endif
         Target = GL_DRAW_INDIRECT_BUFFER;
     }
     else if (Desc.Usage == USAGE_STAGING && Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         Target = GL_PIXEL_UNPACK_BUFFER;
-    
+
     return Target;
 }
-BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters, 
-                           FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
-                           RenderDeviceGLImpl*          pDeviceGL, 
-                           GLContextState&              GLState,
-                           const BufferDesc&            BuffDesc, 
-                           const BufferData*            pBuffData /*= nullptr*/,
-                           bool                         bIsDeviceInternal) : 
+BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
+                           FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                           RenderDeviceGLImpl*        pDeviceGL,
+                           GLContextState&            GLState,
+                           const BufferDesc&          BuffDesc,
+                           const BufferData*          pBuffData /*= nullptr*/,
+                           bool                       bIsDeviceInternal) :
+    // clang-format off
     TBufferBase
     {
         pRefCounters,
@@ -74,11 +75,12 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
         BuffDesc,
         bIsDeviceInternal
     },
-    m_GlBuffer                {true                          }, // Create buffer immediately
-    m_BindTarget              {GetBufferBindTarget(BuffDesc) },
-    m_GLUsageHint             {UsageToGLUsage(BuffDesc.Usage)}
+    m_GlBuffer    {true                          }, // Create buffer immediately
+    m_BindTarget  {GetBufferBindTarget(BuffDesc) },
+    m_GLUsageHint {UsageToGLUsage(BuffDesc.Usage)}
+// clang-format on
 {
-    if( BuffDesc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr) )
+    if (BuffDesc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr))
         LOG_ERROR_AND_THROW("Static buffer must be initialized with data at creation time");
 
     // TODO: find out if it affects performance if the buffer is originally bound to one target
@@ -87,21 +89,21 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
     // We must unbind VAO because otherwise we will break the bindings
     constexpr bool ResetVAO = true;
     GLState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
-    VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr || pBuffData->DataSize >= BuffDesc.uiSizeInBytes, "Data pointer is null or data size is not consistent with buffer size" );
-    GLsizeiptr DataSize = BuffDesc.uiSizeInBytes;
- 	const GLvoid *pData = nullptr;
-    if( pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize >= BuffDesc.uiSizeInBytes )
+    VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr || pBuffData->DataSize >= BuffDesc.uiSizeInBytes, "Data pointer is null or data size is not consistent with buffer size");
+    GLsizeiptr    DataSize = BuffDesc.uiSizeInBytes;
+    const GLvoid* pData    = nullptr;
+    if (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize >= BuffDesc.uiSizeInBytes)
     {
         pData    = pBuffData->pData;
         DataSize = pBuffData->DataSize;
     }
     // Create and initialize a buffer object's data store
 
-    // Target must be one of GL_ARRAY_BUFFER, GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, 
-    // GL_ELEMENT_ARRAY_BUFFER, GL_PIXEL_PACK_BUFFER, GL_PIXEL_UNPACK_BUFFER, GL_TEXTURE_BUFFER, 
+    // Target must be one of GL_ARRAY_BUFFER, GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER,
+    // GL_ELEMENT_ARRAY_BUFFER, GL_PIXEL_PACK_BUFFER, GL_PIXEL_UNPACK_BUFFER, GL_TEXTURE_BUFFER,
     // GL_TRANSFORM_FEEDBACK_BUFFER, or GL_UNIFORM_BUFFER.
 
-    // Usage must be one of GL_STREAM_DRAW, GL_STREAM_READ, GL_STREAM_COPY, GL_STATIC_DRAW, 
+    // Usage must be one of GL_STREAM_DRAW, GL_STREAM_READ, GL_STREAM_COPY, GL_STATIC_DRAW,
     // GL_STATIC_READ, GL_STATIC_COPY, GL_DYNAMIC_DRAW, GL_DYNAMIC_READ, or GL_DYNAMIC_COPY.
 
     //The frequency of access may be one of these:
@@ -115,30 +117,30 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
     //DYNAMIC
     //  The data store contents will be modified repeatedly and used many times.
     //
-    
+
     //The nature of access may be one of these:
     //
     //DRAW
-    //  The data store contents are modified by the application, and used as the source for GL 
+    //  The data store contents are modified by the application, and used as the source for GL
     //  drawing and image specification commands.
     //
     //READ
-    //  The data store contents are modified by reading data from the GL, and used to return that 
+    //  The data store contents are modified by reading data from the GL, and used to return that
     //  data when queried by the application.
     //
     //COPY
-    //  The data store contents are modified by reading data from the GL, and used as the source 
+    //  The data store contents are modified by reading data from the GL, and used as the source
     //  for GL drawing and image specification commands.
 
     // See also http://www.informit.com/articles/article.aspx?p=2033340&seqNum=2
 
-    // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same 
+    // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
     glBufferData(m_BindTarget, DataSize, pData, m_GLUsageHint);
     CHECK_GL_ERROR_AND_THROW("glBufferData() failed");
     GLState.BindBuffer(m_BindTarget, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 }
- 
+
 static BufferDesc GetBufferDescFromGLHandle(GLContextState& GLState, BufferDesc BuffDesc, GLuint BufferHandle)
 {
     // NOTE: the operations in this function are merely for debug purposes.
@@ -159,8 +161,8 @@ static BufferDesc GetBufferDescFromGLHandle(GLContextState& GLState, BufferDesc 
     VERIFY_EXPR(BufferSize > 0);
 
     VERIFY(BuffDesc.uiSizeInBytes == 0 || BuffDesc.uiSizeInBytes == static_cast<Uint32>(BufferSize), "Buffer size specified by the BufferDesc (", BuffDesc.uiSizeInBytes, ") does not match the size recovered from gl buffer object (", BufferSize, ")");
-    if(BufferSize > 0)
-        BuffDesc.uiSizeInBytes = static_cast<Uint32>( BufferSize );
+    if (BufferSize > 0)
+        BuffDesc.uiSizeInBytes = static_cast<Uint32>(BufferSize);
 
     glBindBuffer(BindTarget, 0);
     CHECK_GL_ERROR("Failed to unbind GL buffer");
@@ -168,13 +170,14 @@ static BufferDesc GetBufferDescFromGLHandle(GLContextState& GLState, BufferDesc 
     return BuffDesc;
 }
 
-BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
-                           FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
-                           RenderDeviceGLImpl*          pDeviceGL,
-                           GLContextState&              CtxState,
-                           const BufferDesc&            BuffDesc,
-                           GLuint                       GLHandle,
-                           bool                         bIsDeviceInternal) :
+BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
+                           FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                           RenderDeviceGLImpl*        pDeviceGL,
+                           GLContextState&            CtxState,
+                           const BufferDesc&          BuffDesc,
+                           GLuint                     GLHandle,
+                           bool                       bIsDeviceInternal) :
+    // clang-format off
     TBufferBase
     {
         pRefCounters,
@@ -184,32 +187,33 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*          pRefCounters,
         bIsDeviceInternal
     },
     // Attach to external buffer handle
-    m_GlBuffer                {true, GLObjectWrappers::GLBufferObjCreateReleaseHelper(GLHandle)},
-    m_BindTarget              {GetBufferBindTarget(m_Desc)   },
-    m_GLUsageHint             {UsageToGLUsage(BuffDesc.Usage)}
+    m_GlBuffer    {true, GLObjectWrappers::GLBufferObjCreateReleaseHelper(GLHandle)},
+    m_BindTarget  {GetBufferBindTarget(m_Desc)   },
+    m_GLUsageHint {UsageToGLUsage(BuffDesc.Usage)}
+// clang-format on
 {
 }
 
 BufferGLImpl::~BufferGLImpl()
 {
-    static_cast<RenderDeviceGLImpl*>( GetDevice() )->OnDestroyBuffer(this);
+    static_cast<RenderDeviceGLImpl*>(GetDevice())->OnDestroyBuffer(this);
 }
 
 IMPLEMENT_QUERY_INTERFACE(BufferGLImpl, IID_BufferGL, TBufferBase)
 
-void BufferGLImpl :: UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData)
+void BufferGLImpl ::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData)
 {
     BufferMemoryBarrier(
-        GL_BUFFER_UPDATE_BARRIER_BIT,// Reads or writes to buffer objects via any OpenGL API functions that allow 
-                                     // modifying their contents will reflect data written by shaders prior to the barrier. 
-                                     // Additionally, writes via these commands issued after the barrier will wait on 
-                                     // the completion of any shader writes to the same memory initiated prior to the barrier.
+        GL_BUFFER_UPDATE_BARRIER_BIT, // Reads or writes to buffer objects via any OpenGL API functions that allow
+                                      // modifying their contents will reflect data written by shaders prior to the barrier.
+                                      // Additionally, writes via these commands issued after the barrier will wait on
+                                      // the completion of any shader writes to the same memory initiated prior to the barrier.
         CtxState);
-    
+
     // We must unbind VAO because otherwise we will break the bindings
     constexpr bool ResetVAO = true;
     CtxState.BindBuffer(GL_ARRAY_BUFFER, m_GlBuffer, ResetVAO);
-    // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same 
+    // All buffer bind targets (GL_ARRAY_BUFFER, GL_ELEMENT_ARRAY_BUFFER etc.) relate to the same
     // kind of objects. As a result they are all equivalent from a transfer point of view.
     glBufferSubData(GL_ARRAY_BUFFER, Offset, Size, pData);
     CHECK_GL_ERROR("glBufferSubData() failed");
@@ -217,22 +221,22 @@ void BufferGLImpl :: UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 
 }
 
 
-void BufferGLImpl :: CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+void BufferGLImpl ::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
 {
     BufferMemoryBarrier(
-        GL_BUFFER_UPDATE_BARRIER_BIT,// Reads or writes to buffer objects via any OpenGL API functions that allow 
-                                     // modifying their contents will reflect data written by shaders prior to the barrier. 
-                                     // Additionally, writes via these commands issued after the barrier will wait on 
-                                     // the completion of any shader writes to the same memory initiated prior to the barrier.
+        GL_BUFFER_UPDATE_BARRIER_BIT, // Reads or writes to buffer objects via any OpenGL API functions that allow
+                                      // modifying their contents will reflect data written by shaders prior to the barrier.
+                                      // Additionally, writes via these commands issued after the barrier will wait on
+                                      // the completion of any shader writes to the same memory initiated prior to the barrier.
         CtxState);
     SrcBufferGL.BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT,
         CtxState);
 
-    // Whilst glCopyBufferSubData() can be used to copy data between buffers bound to any two targets, 
-    // the targets GL_COPY_READ_BUFFER and GL_COPY_WRITE_BUFFER are provided specifically for this purpose. 
-    // Neither target is used for anything else by OpenGL, and so you can safely bind buffers to them for 
-    // the purposes of copying or staging data without disturbing OpenGL state or needing to keep track of 
+    // Whilst glCopyBufferSubData() can be used to copy data between buffers bound to any two targets,
+    // the targets GL_COPY_READ_BUFFER and GL_COPY_WRITE_BUFFER are provided specifically for this purpose.
+    // Neither target is used for anything else by OpenGL, and so you can safely bind buffers to them for
+    // the purposes of copying or staging data without disturbing OpenGL state or needing to keep track of
     // what was bound to the target before your copy.
     constexpr bool ResetVAO = false; // No need to reset VAO for READ/WRITE targets
     CtxState.BindBuffer(GL_COPY_WRITE_BUFFER, m_GlBuffer, ResetVAO);
@@ -243,12 +247,12 @@ void BufferGLImpl :: CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferG
     CtxState.BindBuffer(GL_COPY_WRITE_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 }
 
-void BufferGLImpl :: Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid &pMappedData)
+void BufferGLImpl ::Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
 {
     BufferMemoryBarrier(
-        GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT,// Access by the client to persistent mapped regions of buffer 
-                                            // objects will reflect data written by shaders prior to the barrier. 
-                                            // Note that this may cause additional synchronization operations.
+        GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT, // Access by the client to persistent mapped regions of buffer
+                                             // objects will reflect data written by shaders prior to the barrier.
+                                             // Note that this may cause additional synchronization operations.
         CtxState);
 
     // We must unbind VAO because otherwise we will break the bindings
@@ -256,52 +260,52 @@ void BufferGLImpl :: Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapF
     CtxState.BindBuffer(m_BindTarget, m_GlBuffer, ResetVAO);
 
     // !!!WARNING!!! GL_MAP_UNSYNCHRONIZED_BIT is not the same thing as MAP_FLAG_DO_NOT_WAIT.
-    // If GL_MAP_UNSYNCHRONIZED_BIT flag is set, OpenGL will not attempt to synchronize operations 
+    // If GL_MAP_UNSYNCHRONIZED_BIT flag is set, OpenGL will not attempt to synchronize operations
     // on the buffer. This does not mean that map will fail if the buffer still in use. It is thus
     // what WRITE_NO_OVERWRITE does
 
     GLbitfield Access = 0;
-    switch(MapType)
+    switch (MapType)
     {
-        case MAP_READ: 
+        case MAP_READ:
             Access |= GL_MAP_READ_BIT;
-        break;
+            break;
 
         case MAP_WRITE:
             Access |= GL_MAP_WRITE_BIT;
-        
+
             if (MapFlags & MAP_FLAG_DISCARD)
             {
                 // Use GL_MAP_INVALIDATE_BUFFER_BIT flag to discard previous buffer contents
 
-                // If GL_MAP_INVALIDATE_BUFFER_BIT is specified, the entire contents of the buffer may 
-                // be discarded and considered invalid, regardless of the specified range. Any data 
-                // lying outside the mapped range of the buffer object becomes undefined, as does any 
-                // data within the range but not subsequently written by the application.This flag may 
+                // If GL_MAP_INVALIDATE_BUFFER_BIT is specified, the entire contents of the buffer may
+                // be discarded and considered invalid, regardless of the specified range. Any data
+                // lying outside the mapped range of the buffer object becomes undefined, as does any
+                // data within the range but not subsequently written by the application.This flag may
                 // not be used with GL_MAP_READ_BIT.
                 Access |= GL_MAP_INVALIDATE_BUFFER_BIT;
             }
 
             if (MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE)
             {
-                // If GL_MAP_UNSYNCHRONIZED_BIT flag is set, OpenGL will not attempt to synchronize 
-                // operations on the buffer. 
+                // If GL_MAP_UNSYNCHRONIZED_BIT flag is set, OpenGL will not attempt to synchronize
+                // operations on the buffer.
                 Access |= GL_MAP_UNSYNCHRONIZED_BIT;
             }
-        break;
-            
+            break;
+
 
         case MAP_READ_WRITE:
             Access |= GL_MAP_WRITE_BIT | GL_MAP_READ_BIT;
-        break;
+            break;
 
 
-        default: UNEXPECTED( "Unknown map type" );
+        default: UNEXPECTED("Unknown map type");
     }
 
-    pMappedData = glMapBufferRange(m_BindTarget, 0, m_Desc.uiSizeInBytes,  Access);
+    pMappedData = glMapBufferRange(m_BindTarget, 0, m_Desc.uiSizeInBytes, Access);
     CHECK_GL_ERROR("glMapBufferRange() failed");
-    VERIFY( pMappedData, "Map failed" );
+    VERIFY(pMappedData, "Map failed");
 }
 
 void BufferGLImpl::Unmap(GLContextState& CtxState)
@@ -317,14 +321,16 @@ void BufferGLImpl::Unmap(GLContextState& CtxState)
     // occur only during the periods that a buffer's data store is mapped. If such corruption
     // has occurred, glUnmapBuffer() returns FALSE, and the contents of the buffer's
     // data store become undefined.
-    VERIFY( Result != GL_FALSE, "Failed to unmap buffer. The data may have been corrupted" ); (void)Result;
+    VERIFY(Result != GL_FALSE, "Failed to unmap buffer. The data may have been corrupted");
+    (void)Result;
 }
 
-void BufferGLImpl::BufferMemoryBarrier( Uint32 RequiredBarriers, GLContextState &GLContextState )
+void BufferGLImpl::BufferMemoryBarrier(Uint32 RequiredBarriers, GLContextState& GLContextState)
 {
 #if GL_ARB_shader_image_load_store
-    #ifdef _DEBUG
+#    ifdef _DEBUG
     {
+        // clang-format off
         constexpr Uint32 BufferBarriers =
             GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT  |
             GL_ELEMENT_ARRAY_BARRIER_BIT        |
@@ -335,45 +341,46 @@ void BufferGLImpl::BufferMemoryBarrier( Uint32 RequiredBarriers, GLContextState 
             GL_SHADER_STORAGE_BARRIER_BIT       |
             GL_TEXTURE_FETCH_BARRIER_BIT        |
             GL_SHADER_IMAGE_ACCESS_BARRIER_BIT;
-        VERIFY( (RequiredBarriers & BufferBarriers) !=0,   "At least one buffer memory barrier flag should be set" );
-        VERIFY( (RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag" );
+        // clang-format on
+        VERIFY((RequiredBarriers & BufferBarriers) != 0, "At least one buffer memory barrier flag should be set");
+        VERIFY((RequiredBarriers & ~BufferBarriers) == 0, "Inappropriate buffer memory barrier flag");
     }
-    #endif
-    
-    GLContextState.EnsureMemoryBarrier( RequiredBarriers, this );
+#    endif
+
+    GLContextState.EnsureMemoryBarrier(RequiredBarriers, this);
 #endif
 }
 
 void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, class IBufferView** ppView, bool bIsDefaultView)
 {
-    VERIFY( ppView != nullptr, "Buffer view pointer address is null" );
-    if( !ppView )return;
-    VERIFY( *ppView == nullptr, "Overwriting reference to existing object may cause memory leaks" );
-    
+    VERIFY(ppView != nullptr, "Buffer view pointer address is null");
+    if (!ppView) return;
+    VERIFY(*ppView == nullptr, "Overwriting reference to existing object may cause memory leaks");
+
     *ppView = nullptr;
 
     try
     {
         auto ViewDesc = OrigViewDesc;
-        CorrectBufferViewDesc( ViewDesc );
+        CorrectBufferViewDesc(ViewDesc);
 
-        auto *pDeviceGLImpl = ValidatedCast<RenderDeviceGLImpl>(GetDevice());
-        auto &BuffViewAllocator = pDeviceGLImpl->GetBuffViewObjAllocator();
-        VERIFY( &BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization" );
+        auto* pDeviceGLImpl     = ValidatedCast<RenderDeviceGLImpl>(GetDevice());
+        auto& BuffViewAllocator = pDeviceGLImpl->GetBuffViewObjAllocator();
+        VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization");
 
         auto pContext = pDeviceGLImpl->GetImmediateContext();
-        VERIFY( pContext, "Immediate context has been released" );
-        
+        VERIFY(pContext, "Immediate context has been released");
+
         *ppView = NEW_RC_OBJ(BuffViewAllocator, "BufferViewGLImpl instance", BufferViewGLImpl, bIsDefaultView ? this : nullptr)(pDeviceGLImpl, pContext, ViewDesc, this, bIsDefaultView);
-        
-        if( !bIsDefaultView )
+
+        if (!bIsDefaultView)
             (*ppView)->AddRef();
     }
-    catch( const std::runtime_error & )
+    catch (const std::runtime_error&)
     {
-        const auto *ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
+        const auto* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
         LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name ? m_Desc.Name : "", "\"");
     }
 }
 
-}
+} // namespace Diligent

@@ -3,5 +3,4 @@ python clang-format-validate.py --color never --clang-format-executable clang-fo
 --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions.h ^
 --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions_inc.h ^
 --exclude ../../Graphics/GraphicsEngineVulkan ^
---exclude ../../Graphics/GraphicsEngineMetal ^
---exclude ../../Graphics/GraphicsEngineOpenGL
+--exclude ../../Graphics/GraphicsEngineMetal

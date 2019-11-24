@@ -41,18 +41,18 @@ public:
     VAOCache();
     ~VAOCache();
 
-    VAOCache(const VAOCache&)  = delete;
-    VAOCache(      VAOCache&&) = delete;
+    // clang-format off
+    VAOCache             (const VAOCache&)  = delete;
+    VAOCache             (      VAOCache&&) = delete;
     VAOCache& operator = (const VAOCache&)  = delete;
     VAOCache& operator = (      VAOCache&&) = delete;
-    
-    
+    // clang-format on
 
-    const GLObjectWrappers::GLVertexArrayObj& GetVAO( IPipelineState*                       pPSO,
-                                                      IBuffer*                              pIndexBuffer,
-                                                      VertexStreamInfo<class BufferGLImpl>  VertexStreams[],
-                                                      Uint32                                NumVertexStreams,
-                                                      class GLContextState&                 GLContextState);
+    const GLObjectWrappers::GLVertexArrayObj& GetVAO(IPipelineState*                      pPSO,
+                                                     IBuffer*                             pIndexBuffer,
+                                                     VertexStreamInfo<class BufferGLImpl> VertexStreams[],
+                                                     Uint32                               NumVertexStreams,
+                                                     class GLContextState&                GLContextState);
     const GLObjectWrappers::GLVertexArrayObj& GetEmptyVAO();
 
     void OnDestroyBuffer(IBuffer* pBuffer);
@@ -62,10 +62,12 @@ private:
     // This structure is used as the key to find VAO
     struct VAOCacheKey
     {
-        VAOCacheKey(UniqueIdentifier pso_id, UniqueIdentifier ib_id) : 
+        VAOCacheKey(UniqueIdentifier pso_id, UniqueIdentifier ib_id) :
+            // clang-format off
             PSOUId         {pso_id},
             IndexBufferUId {ib_id },
             NumUsedSlots   {0     }
+        // clang-format on
         {}
 
         // Note that using pointers is unsafe as they may (and will) be reused:
@@ -84,22 +86,22 @@ private:
             UniqueIdentifier BufferUId;
             Uint32           Stride;
             Uint32           Offset;
-        }Streams[MaxBufferSlots];
-        
+        } Streams[MaxBufferSlots];
+
         mutable size_t Hash = 0;
 
-        bool operator == (const VAOCacheKey &Key)const
+        bool operator==(const VAOCacheKey& Key) const
         {
-            return PSOUId          == Key.PSOUId          &&
-                   IndexBufferUId  == Key.IndexBufferUId  &&
-                   NumUsedSlots    == Key.NumUsedSlots    &&
-                   std::memcmp(Streams, Key.Streams, sizeof(StreamAttribs) * NumUsedSlots) == 0;
+            return PSOUId == Key.PSOUId &&
+                IndexBufferUId == Key.IndexBufferUId &&
+                NumUsedSlots == Key.NumUsedSlots &&
+                std::memcmp(Streams, Key.Streams, sizeof(StreamAttribs) * NumUsedSlots) == 0;
         }
     };
 
     struct VAOCacheKeyHashFunc
     {
-        std::size_t operator() ( const VAOCacheKey& Key )const
+        std::size_t operator()(const VAOCacheKey& Key) const
         {
             if (Key.Hash == 0)
             {
@@ -107,7 +109,7 @@ private:
                 HashCombine(Seed, Key.PSOUId, Key.IndexBufferUId, Key.NumUsedSlots);
                 for (Uint32 slot = 0; slot < Key.NumUsedSlots; ++slot)
                 {
-                    auto &CurrStream = Key.Streams[slot];
+                    auto& CurrStream = Key.Streams[slot];
                     HashCombine(Seed, CurrStream.BufferUId);
                     HashCombine(Seed, CurrStream.Offset);
                     HashCombine(Seed, CurrStream.Stride);
@@ -120,10 +122,11 @@ private:
 
 
     friend class RenderDeviceGLImpl;
-    ThreadingTools::LockFlag m_CacheLockFlag;
+    ThreadingTools::LockFlag                                                                 m_CacheLockFlag;
     std::unordered_map<VAOCacheKey, GLObjectWrappers::GLVertexArrayObj, VAOCacheKeyHashFunc> m_Cache;
+
     std::unordered_multimap<const IPipelineState*, VAOCacheKey> m_PSOToKey;
-    std::unordered_multimap<const IBuffer*, VAOCacheKey> m_BuffToKey;
+    std::unordered_multimap<const IBuffer*, VAOCacheKey>        m_BuffToKey;
 
     // Any draw command fails if no VAO is bound. We will use this empty
     // VAO for draw commands with null input layout, such as these that
@@ -131,4 +134,4 @@ private:
     GLObjectWrappers::GLVertexArrayObj m_EmptyVAO;
 };
 
-}
+} // namespace Diligent

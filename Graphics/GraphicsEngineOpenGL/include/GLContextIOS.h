@@ -25,13 +25,15 @@
 
 namespace Diligent
 {
-    class GLContext
-    {
-    public:
-        typedef void* NativeGLContextType; // EAGLContext*
 
-        GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
+class GLContext
+{
+public:
+    using NativeGLContextType = void*; // EAGLContext*
 
-        NativeGLContextType GetCurrentNativeGLContext();
-    };
-}
+    GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
+
+    NativeGLContextType GetCurrentNativeGLContext();
+};
+
+} // namespace Diligent

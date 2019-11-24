@@ -38,8 +38,9 @@ class FixedBlockMemoryAllocator;
 
 inline GLenum GetGLShaderType(SHADER_TYPE ShaderType)
 {
-    switch(ShaderType)
+    switch (ShaderType)
     {
+        // clang-format off
         case SHADER_TYPE_VERTEX:    return GL_VERTEX_SHADER;          break;
         case SHADER_TYPE_PIXEL:     return GL_FRAGMENT_SHADER;        break;
         case SHADER_TYPE_GEOMETRY:  return GL_GEOMETRY_SHADER;        break;
@@ -47,13 +48,15 @@ inline GLenum GetGLShaderType(SHADER_TYPE ShaderType)
         case SHADER_TYPE_DOMAIN:    return GL_TESS_EVALUATION_SHADER; break;
         case SHADER_TYPE_COMPUTE:   return GL_COMPUTE_SHADER;         break;
         default: return 0;
+            // clang-format on
     }
 }
 
 inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
 {
-    switch(ShaderType)
+    switch (ShaderType)
     {
+        // clang-format off
         case SHADER_TYPE_VERTEX:    return GL_VERTEX_SHADER_BIT;          break;
         case SHADER_TYPE_PIXEL:     return GL_FRAGMENT_SHADER_BIT;        break;
         case SHADER_TYPE_GEOMETRY:  return GL_GEOMETRY_SHADER_BIT;        break;
@@ -61,6 +64,7 @@ inline GLenum ShaderTypeToGLShaderBit(SHADER_TYPE ShaderType)
         case SHADER_TYPE_DOMAIN:    return GL_TESS_EVALUATION_SHADER_BIT; break;
         case SHADER_TYPE_COMPUTE:   return GL_COMPUTE_SHADER_BIT;         break;
         default: return 0;
+            // clang-format on
     }
 }
 
@@ -70,19 +74,19 @@ class ShaderGLImpl final : public ShaderBase<IShaderGL, RenderDeviceGLImpl>
 public:
     using TShaderBase = ShaderBase<IShaderGL, RenderDeviceGLImpl>;
 
-    ShaderGLImpl(IReferenceCounters*        pRefCounters,
-                 RenderDeviceGLImpl*        pDeviceGL,
-                 const ShaderCreateInfo&    ShaderCreateInfo,
-                 bool                       bIsDeviceInternal = false);
+    ShaderGLImpl(IReferenceCounters*     pRefCounters,
+                 RenderDeviceGLImpl*     pDeviceGL,
+                 const ShaderCreateInfo& ShaderCreateInfo,
+                 bool                    bIsDeviceInternal = false);
     ~ShaderGLImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShader::GetResourceCount() in OpenGL backend.
-    virtual Uint32 GetResourceCount()const override final;
+    virtual Uint32 GetResourceCount() const override final;
 
     /// Implementation of IShader::GetResource() in OpenGL backend.
-    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final;
+    virtual ShaderResourceDesc GetResource(Uint32 Index) const override final;
 
     static GLObjectWrappers::GLProgramObj LinkProgram(IShader** ppShaders, Uint32 NumShaders, bool IsSeparableProgram);
 
@@ -91,4 +95,4 @@ private:
     GLProgramResources            m_Resources;
 };
 
-}
+} // namespace Diligent

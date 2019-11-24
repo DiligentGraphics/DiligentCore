@@ -47,11 +47,12 @@
 namespace Diligent
 {
 
-RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters*        pRefCounters,
-                                         IMemoryAllocator&          RawMemAllocator,
-                                         IEngineFactory*            pEngineFactory,
-                                         const EngineGLCreateInfo&  InitAttribs,
-                                         const SwapChainDesc*       pSCDesc):
+RenderDeviceGLImpl ::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
+                                        IMemoryAllocator&         RawMemAllocator,
+                                        IEngineFactory*           pEngineFactory,
+                                        const EngineGLCreateInfo& InitAttribs,
+                                        const SwapChainDesc*      pSCDesc) :
+    // clang-format off
     TRenderDeviceBase
     {
         pRefCounters,
@@ -73,334 +74,324 @@ RenderDeviceGLImpl :: RenderDeviceGLImpl(IReferenceCounters*        pRefCounters
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
     m_GLContext{InitAttribs, m_DeviceCaps, pSCDesc}
+// clang-format on
 {
     GLint NumExtensions = 0;
-    glGetIntegerv( GL_NUM_EXTENSIONS,& NumExtensions );
-    CHECK_GL_ERROR( "Failed to get the number of extensions" );
+    glGetIntegerv(GL_NUM_EXTENSIONS, &NumExtensions);
+    CHECK_GL_ERROR("Failed to get the number of extensions");
     m_ExtensionStrings.reserve(NumExtensions);
-    for( int Ext = 0; Ext < NumExtensions; ++Ext )
+    for (int Ext = 0; Ext < NumExtensions; ++Ext)
     {
-        auto CurrExtension = glGetStringi( GL_EXTENSIONS, Ext );
-        CHECK_GL_ERROR( "Failed to get extension string #", Ext );
-        m_ExtensionStrings.emplace( reinterpret_cast<const Char*>(CurrExtension) );
+        auto CurrExtension = glGetStringi(GL_EXTENSIONS, Ext);
+        CHECK_GL_ERROR("Failed to get extension string #", Ext);
+        m_ExtensionStrings.emplace(reinterpret_cast<const Char*>(CurrExtension));
     }
 
     FlagSupportedTexFormats();
     QueryDeviceCaps();
 
-    std::basic_string<GLubyte> glstrVendor = glGetString( GL_VENDOR );
-    std::string Vendor = StrToLower(std::string(glstrVendor.begin(), glstrVendor.end()));
+    std::basic_string<GLubyte> glstrVendor = glGetString(GL_VENDOR);
+    std::string                Vendor      = StrToLower(std::string(glstrVendor.begin(), glstrVendor.end()));
     LOG_INFO_MESSAGE("GPU Vendor: ", Vendor);
 
-    if( Vendor.find( "intel" ) != std::string::npos )
+    if (Vendor.find("intel") != std::string::npos)
         m_GPUInfo.Vendor = GPU_VENDOR::INTEL;
-    else if( Vendor.find( "nvidia" ) != std::string::npos )
+    else if (Vendor.find("nvidia") != std::string::npos)
         m_GPUInfo.Vendor = GPU_VENDOR::NVIDIA;
-    else if( Vendor.find( "ati" ) != std::string::npos || 
-             Vendor.find( "amd" ) != std::string::npos )
+    else if (Vendor.find("ati") != std::string::npos ||
+             Vendor.find("amd") != std::string::npos)
         m_GPUInfo.Vendor = GPU_VENDOR::ATI;
-    else if( Vendor.find( "qualcomm" ) )
+    else if (Vendor.find("qualcomm"))
         m_GPUInfo.Vendor = GPU_VENDOR::QUALCOMM;
 }
 
-RenderDeviceGLImpl :: ~RenderDeviceGLImpl()
+RenderDeviceGLImpl ::~RenderDeviceGLImpl()
 {
 }
 
-IMPLEMENT_QUERY_INTERFACE( RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceBase )
+IMPLEMENT_QUERY_INTERFACE(RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceBase)
 
-void RenderDeviceGLImpl :: InitTexRegionRender()
+void RenderDeviceGLImpl ::InitTexRegionRender()
 {
     m_pTexRegionRender.reset(new TexRegionRender(this));
 }
 
-void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer **ppBuffer, bool bIsDeviceInternal)
+void RenderDeviceGLImpl ::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal)
 {
-    CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
-        [&]()
+    CreateDeviceObject(
+        "buffer", BuffDesc, ppBuffer,
+        [&]() //
         {
             auto spDeviceContext = GetImmediateContext();
             VERIFY(spDeviceContext, "Immediate device context has been destroyed");
             auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
 
-            BufferGLImpl *pBufferOGL( NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)
-                                                (m_BuffViewObjAllocator, this, pDeviceContextGL->GetContextState(), BuffDesc, pBuffData, bIsDeviceInternal ) );
-            pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
+            BufferGLImpl* pBufferOGL(NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)(m_BuffViewObjAllocator, this, pDeviceContextGL->GetContextState(), BuffDesc, pBuffData, bIsDeviceInternal));
+            pBufferOGL->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
             pBufferOGL->CreateDefaultViews();
-            OnCreateDeviceObject( pBufferOGL );
-        } 
+            OnCreateDeviceObject(pBufferOGL);
+        } //
     );
 }
 
-void RenderDeviceGLImpl :: CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer **ppBuffer)
+void RenderDeviceGLImpl ::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBuffer)
 {
-	CreateBuffer(BuffDesc, BuffData, ppBuffer, false);
+    CreateBuffer(BuffDesc, BuffData, ppBuffer, false);
 }
 
-void RenderDeviceGLImpl :: CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer **ppBuffer)
+void RenderDeviceGLImpl ::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
     VERIFY(GLHandle, "GL buffer handle must not be null");
-    CreateDeviceObject( "buffer", BuffDesc, ppBuffer, 
-        [&]()
+    CreateDeviceObject(
+        "buffer", BuffDesc, ppBuffer,
+        [&]() //
         {
             auto spDeviceContext = GetImmediateContext();
             VERIFY(spDeviceContext, "Immediate device context has been destroyed");
             auto* pDeviceContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
 
-            BufferGLImpl *pBufferOGL( NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)
-                                                (m_BuffViewObjAllocator, this, pDeviceContextGL->GetContextState(), BuffDesc, GLHandle, false ) );
-            pBufferOGL->QueryInterface( IID_Buffer, reinterpret_cast<IObject**>(ppBuffer) );
+            BufferGLImpl* pBufferOGL(NEW_RC_OBJ(m_BufObjAllocator, "BufferGLImpl instance", BufferGLImpl)(m_BuffViewObjAllocator, this, pDeviceContextGL->GetContextState(), BuffDesc, GLHandle, false));
+            pBufferOGL->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
             pBufferOGL->CreateDefaultViews();
-            OnCreateDeviceObject( pBufferOGL );
-        } 
+            OnCreateDeviceObject(pBufferOGL);
+        } //
     );
 }
 
-void RenderDeviceGLImpl :: CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal)
+void RenderDeviceGLImpl ::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal)
 {
-    CreateDeviceObject( "shader", ShaderCreateInfo.Desc, ppShader, 
-        [&]()
+    CreateDeviceObject(
+        "shader", ShaderCreateInfo.Desc, ppShader,
+        [&]() //
         {
-            ShaderGLImpl *pShaderOGL(NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderGLImpl instance", ShaderGLImpl)
-                                               (this, ShaderCreateInfo, bIsDeviceInternal));
-            pShaderOGL->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader) );
+            ShaderGLImpl* pShaderOGL(NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderGLImpl instance", ShaderGLImpl)(this, ShaderCreateInfo, bIsDeviceInternal));
+            pShaderOGL->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
 
-            OnCreateDeviceObject( pShaderOGL );
-        }
+            OnCreateDeviceObject(pShaderOGL);
+        } //
     );
 }
 
-void RenderDeviceGLImpl :: CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader **ppShader)
+void RenderDeviceGLImpl ::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader)
 {
-	CreateShader(ShaderCreateInfo, ppShader, false);
+    CreateShader(ShaderCreateInfo, ppShader, false);
 }
 
-void RenderDeviceGLImpl :: CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture **ppTexture, bool bIsDeviceInternal)
+void RenderDeviceGLImpl ::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture, bool bIsDeviceInternal)
 {
-    CreateDeviceObject( "texture", TexDesc, ppTexture, 
-        [&]()
+    CreateDeviceObject(
+        "texture", TexDesc, ppTexture,
+        [&]() //
         {
             auto spDeviceContext = GetImmediateContext();
             VERIFY(spDeviceContext, "Immediate device context has been destroyed");
             auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
 
-            const auto& FmtInfo = GetTextureFormatInfo( TexDesc.Format );
-            if( !FmtInfo.Supported )
+            const auto& FmtInfo = GetTextureFormatInfo(TexDesc.Format);
+            if (!FmtInfo.Supported)
             {
-                LOG_ERROR_AND_THROW( FmtInfo.Name, " is not supported texture format" );
+                LOG_ERROR_AND_THROW(FmtInfo.Name, " is not supported texture format");
             }
 
-            TextureBaseGL *pTextureOGL = nullptr;
-            switch(TexDesc.Type)
+            TextureBaseGL* pTextureOGL = nullptr;
+            switch (TexDesc.Type)
             {
                 case RESOURCE_DIM_TEX_1D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
-        
+
                 case RESOURCE_DIM_TEX_1D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_2D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
-        
+
                 case RESOURCE_DIM_TEX_2D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_3D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, pData, bIsDeviceInternal);
                     break;
 
-                default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );
+                default: LOG_ERROR_AND_THROW("Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)");
             }
-    
-            pTextureOGL->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
+
+            pTextureOGL->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
             pTextureOGL->CreateDefaultViews();
-            OnCreateDeviceObject( pTextureOGL );
-        }
+            OnCreateDeviceObject(pTextureOGL);
+        } //
     );
 }
 
-void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture **ppTexture)
+void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture** ppTexture)
 {
-	CreateTexture(TexDesc, Data, ppTexture, false);
+    CreateTexture(TexDesc, Data, ppTexture, false);
 }
 
-void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture **ppTexture)
+void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)
 {
     VERIFY(GLHandle, "GL texture handle must not be null");
-    CreateDeviceObject( "texture", TexDesc, ppTexture,
-        [&]()
+    CreateDeviceObject(
+        "texture", TexDesc, ppTexture,
+        [&]() //
         {
             auto spDeviceContext = GetImmediateContext();
             VERIFY(spDeviceContext, "Immediate device context has been destroyed");
             auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
 
-            TextureBaseGL *pTextureOGL = nullptr;
-            switch(TexDesc.Type)
+            TextureBaseGL* pTextureOGL = nullptr;
+            switch (TexDesc.Type)
             {
                 case RESOURCE_DIM_TEX_1D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
-        
+
                 case RESOURCE_DIM_TEX_1D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
                 case RESOURCE_DIM_TEX_2D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
-        
+
                 case RESOURCE_DIM_TEX_2D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
                 case RESOURCE_DIM_TEX_3D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)
-                                            (m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
                     break;
 
-                default: LOG_ERROR_AND_THROW( "Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)" );
+                default: LOG_ERROR_AND_THROW("Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)");
             }
-    
-            pTextureOGL->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
+
+            pTextureOGL->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
             pTextureOGL->CreateDefaultViews();
-            OnCreateDeviceObject( pTextureOGL );
-        }
+            OnCreateDeviceObject(pTextureOGL);
+        } //
     );
 }
 
-void RenderDeviceGLImpl :: CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, TextureBaseGL** ppTexture)
+void RenderDeviceGLImpl ::CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, TextureBaseGL** ppTexture)
 {
-    CreateDeviceObject( "texture", TexDesc, ppTexture,
-        [&]()
+    CreateDeviceObject(
+        "texture", TexDesc, ppTexture,
+        [&]() //
         {
             TextureBaseGL* pTextureOGL = nullptr;
-            switch(TexDesc.Type)
+            switch (TexDesc.Type)
             {
                 case RESOURCE_DIM_TEX_2D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Dummy Texture2D_OGL instance", Texture2D_OGL)
-                                            (m_TexViewObjAllocator, this, TexDesc);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Dummy Texture2D_OGL instance", Texture2D_OGL)(m_TexViewObjAllocator, this, TexDesc);
                     break;
 
-                default: LOG_ERROR_AND_THROW( "Unsupported texture type." );
+                default: LOG_ERROR_AND_THROW("Unsupported texture type.");
             }
-    
-            pTextureOGL->QueryInterface( IID_Texture, reinterpret_cast<IObject**>(ppTexture) );
+
+            pTextureOGL->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
             pTextureOGL->CreateDefaultViews();
-            OnCreateDeviceObject( pTextureOGL );
-        }
+            OnCreateDeviceObject(pTextureOGL);
+        } //
     );
 }
 
-void RenderDeviceGLImpl :: CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler, bool bIsDeviceInternal)
+void RenderDeviceGLImpl ::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler, bool bIsDeviceInternal)
 {
-    CreateDeviceObject( "sampler", SamplerDesc, ppSampler, 
-        [&]()
+    CreateDeviceObject(
+        "sampler", SamplerDesc, ppSampler,
+        [&]() //
         {
-            m_SamplersRegistry.Find( SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler) );
-            if( *ppSampler == nullptr )
+            m_SamplersRegistry.Find(SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler));
+            if (*ppSampler == nullptr)
             {
-                SamplerGLImpl *pSamplerOGL( NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerGLImpl instance", SamplerGLImpl)
-                                                      (this, SamplerDesc, bIsDeviceInternal ) );
-                pSamplerOGL->QueryInterface( IID_Sampler, reinterpret_cast<IObject**>(ppSampler) );
-                OnCreateDeviceObject( pSamplerOGL );
-                m_SamplersRegistry.Add( SamplerDesc, *ppSampler );
+                SamplerGLImpl* pSamplerOGL(NEW_RC_OBJ(m_SamplerObjAllocator, "SamplerGLImpl instance", SamplerGLImpl)(this, SamplerDesc, bIsDeviceInternal));
+                pSamplerOGL->QueryInterface(IID_Sampler, reinterpret_cast<IObject**>(ppSampler));
+                OnCreateDeviceObject(pSamplerOGL);
+                m_SamplersRegistry.Add(SamplerDesc, *ppSampler);
             }
-        }
+        } //
     );
 }
 
-void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler **ppSampler)
+void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
 {
-	CreateSampler(SamplerDesc, ppSampler, false);
+    CreateSampler(SamplerDesc, ppSampler, false);
 }
 
 
-void RenderDeviceGLImpl::CreatePipelineState( const PipelineStateDesc& PipelineDesc, IPipelineState **ppPipelineState)
+void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)
 {
     CreatePipelineState(PipelineDesc, ppPipelineState, false);
 }
 
-void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState **ppPipelineState, bool bIsDeviceInternal)
+void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
 {
-    CreateDeviceObject( "Pipeline state", PipelineDesc, ppPipelineState, 
-        [&]()
+    CreateDeviceObject(
+        "Pipeline state", PipelineDesc, ppPipelineState,
+        [&]() //
         {
-            PipelineStateGLImpl *pPipelineStateOGL( NEW_RC_OBJ(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl)
-                                                              (this, PipelineDesc, bIsDeviceInternal ) );
-            pPipelineStateOGL->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState) );
-            OnCreateDeviceObject( pPipelineStateOGL );
-        }
+            PipelineStateGLImpl* pPipelineStateOGL(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl)(this, PipelineDesc, bIsDeviceInternal));
+            pPipelineStateOGL->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
+            OnCreateDeviceObject(pPipelineStateOGL);
+        } //
     );
 }
 
 void RenderDeviceGLImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
 {
-    CreateDeviceObject( "Fence", Desc, ppFence, 
-        [&]()
+    CreateDeviceObject(
+        "Fence", Desc, ppFence,
+        [&]() //
         {
-            FenceGLImpl* pFenceOGL( NEW_RC_OBJ(m_FenceAllocator, "FenceGLImpl instance", FenceGLImpl)
-                                              (this, Desc) );
-            pFenceOGL->QueryInterface( IID_Fence, reinterpret_cast<IObject**>(ppFence) );
-            OnCreateDeviceObject( pFenceOGL );
-        }
+            FenceGLImpl* pFenceOGL(NEW_RC_OBJ(m_FenceAllocator, "FenceGLImpl instance", FenceGLImpl)(this, Desc));
+            pFenceOGL->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
+            OnCreateDeviceObject(pFenceOGL);
+        } //
     );
 }
 
-bool RenderDeviceGLImpl::CheckExtension( const Char *ExtensionString )
+bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString)
 {
-    return m_ExtensionStrings.find( ExtensionString ) != m_ExtensionStrings.end();
+    return m_ExtensionStrings.find(ExtensionString) != m_ExtensionStrings.end();
 }
 
 void RenderDeviceGLImpl::FlagSupportedTexFormats()
 {
-    const auto& DeviceCaps = GetDeviceCaps();
-    bool bGL33OrAbove = DeviceCaps.DevType == DeviceType::OpenGL&&  
-                        (DeviceCaps.MajorVersion >= 4 || (DeviceCaps.MajorVersion == 3&&  DeviceCaps.MinorVersion >= 3) );
+    const auto& DeviceCaps   = GetDeviceCaps();
+    bool        bGL33OrAbove = DeviceCaps.DevType == DeviceType::OpenGL &&
+        (DeviceCaps.MajorVersion >= 4 || (DeviceCaps.MajorVersion == 3 && DeviceCaps.MinorVersion >= 3));
 
-    bool bRGTC = CheckExtension( "GL_ARB_texture_compression_rgtc" );
-    bool bBPTC = CheckExtension( "GL_ARB_texture_compression_bptc" );
-    bool bS3TC = CheckExtension( "GL_EXT_texture_compression_s3tc" );
-    bool bTexNorm16 = CheckExtension( "GL_EXT_texture_norm16" ); // Only for ES3.1+
-    
-#define FLAG_FORMAT(Fmt, IsSupported)\
-    m_TextureFormatsInfo[Fmt].Supported=IsSupported
+    bool bRGTC      = CheckExtension("GL_ARB_texture_compression_rgtc");
+    bool bBPTC      = CheckExtension("GL_ARB_texture_compression_bptc");
+    bool bS3TC      = CheckExtension("GL_EXT_texture_compression_s3tc");
+    bool bTexNorm16 = CheckExtension("GL_EXT_texture_norm16"); // Only for ES3.1+
+
+#define FLAG_FORMAT(Fmt, IsSupported) \
+    m_TextureFormatsInfo[Fmt].Supported = IsSupported
 
     // The formats marked by true below are required in GL 3.3+ and GLES 3.0+
     // Note that GLES2.0 does not specify any required formats
 
+    // clang-format off
     FLAG_FORMAT(TEX_FORMAT_RGBA32_TYPELESS,            true       );
     FLAG_FORMAT(TEX_FORMAT_RGBA32_FLOAT,               true       );
     FLAG_FORMAT(TEX_FORMAT_RGBA32_UINT,                true       );
@@ -504,47 +495,48 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_BC7_TYPELESS,               bBPTC );
     FLAG_FORMAT(TEX_FORMAT_BC7_UNORM,                  bBPTC );
     FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             bBPTC );
+    // clang-format on
 
 #ifdef _DEBUG
-    bool bGL43OrAbove = DeviceCaps.DevType == DeviceType::OpenGL &&  
-                        (DeviceCaps.MajorVersion >= 5 || (DeviceCaps.MajorVersion == 4 && DeviceCaps.MinorVersion >= 3) );
+    bool bGL43OrAbove = DeviceCaps.DevType == DeviceType::OpenGL &&
+        (DeviceCaps.MajorVersion >= 5 || (DeviceCaps.MajorVersion == 4 && DeviceCaps.MinorVersion >= 3));
 
-    constexpr int TestTextureDim = 8;
-    constexpr int MaxTexelSize   = 16;
+    constexpr int      TestTextureDim = 8;
+    constexpr int      MaxTexelSize   = 16;
     std::vector<Uint8> ZeroData(TestTextureDim * TestTextureDim * MaxTexelSize);
-    
+
     // Go through all formats and try to create small 2D texture to check if the format is supported
-    for( auto FmtInfo = m_TextureFormatsInfo.begin(); FmtInfo != m_TextureFormatsInfo.end(); ++FmtInfo )
+    for (auto FmtInfo = m_TextureFormatsInfo.begin(); FmtInfo != m_TextureFormatsInfo.end(); ++FmtInfo)
     {
-        if( FmtInfo->Format == TEX_FORMAT_UNKNOWN )
+        if (FmtInfo->Format == TEX_FORMAT_UNKNOWN)
             continue;
 
         auto GLFmt = TexFormatToGLInternalTexFormat(FmtInfo->Format);
-        if( GLFmt == 0 )
+        if (GLFmt == 0)
         {
-            VERIFY( !FmtInfo->Supported, "Format should be marked as unsupported" );
+            VERIFY(!FmtInfo->Supported, "Format should be marked as unsupported");
             continue;
         }
 
-#if GL_ARB_internalformat_query2
+#    if GL_ARB_internalformat_query2
         // Only works on GL4.3+
-        if( bGL43OrAbove )
+        if (bGL43OrAbove)
         {
             GLint params = 0;
-            glGetInternalformativ( GL_TEXTURE_2D, GLFmt, GL_INTERNALFORMAT_SUPPORTED, 1, &params );
-            CHECK_GL_ERROR( "glGetInternalformativ() failed" );
-            VERIFY( FmtInfo->Supported == (params == GL_TRUE), "This internal format should be supported" );
+            glGetInternalformativ(GL_TEXTURE_2D, GLFmt, GL_INTERNALFORMAT_SUPPORTED, 1, &params);
+            CHECK_GL_ERROR("glGetInternalformativ() failed");
+            VERIFY(FmtInfo->Supported == (params == GL_TRUE), "This internal format should be supported");
         }
-#endif
+#    endif
 
         // Check that the format is indeed supported
         if (FmtInfo->Supported)
         {
-            GLObjectWrappers::GLTextureObj TestGLTex( true );
+            GLObjectWrappers::GLTextureObj TestGLTex(true);
             // Immediate context has not been created yet, so use raw GL functions
-            glBindTexture( GL_TEXTURE_2D, TestGLTex );
-            CHECK_GL_ERROR( "Failed to bind texture" );
-            glTexStorage2D( GL_TEXTURE_2D, 1, GLFmt, TestTextureDim, TestTextureDim );
+            glBindTexture(GL_TEXTURE_2D, TestGLTex);
+            CHECK_GL_ERROR("Failed to bind texture");
+            glTexStorage2D(GL_TEXTURE_2D, 1, GLFmt, TestTextureDim, TestTextureDim);
             if (glGetError() == GL_NO_ERROR)
             {
                 // It turned out it is not enough to only allocate texture storage
@@ -555,178 +547,196 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
                 if (TransferAttribs.IsCompressed)
                 {
                     const auto& FmtAttribs = GetTextureFormatAttribs(FmtInfo->Format);
-                    static_assert( (TestTextureDim & (TestTextureDim-1)) == 0, "Test texture dim must be power of two!");
-                    auto BlockBytesInRow = (TestTextureDim/int{FmtAttribs.BlockWidth}) * int{FmtAttribs.ComponentSize};
-                    glCompressedTexSubImage2D(GL_TEXTURE_2D, 0,  // mip level
-                        0, 0, TestTextureDim, TestTextureDim,
-                        GLFmt,
-                        (TestTextureDim/int{FmtAttribs.BlockHeight}) * BlockBytesInRow,
-                        ZeroData.data() );
+                    static_assert((TestTextureDim & (TestTextureDim - 1)) == 0, "Test texture dim must be power of two!");
+                    auto BlockBytesInRow = (TestTextureDim / int{FmtAttribs.BlockWidth}) * int{FmtAttribs.ComponentSize};
+                    glCompressedTexSubImage2D(GL_TEXTURE_2D, 0, // mip level
+                                              0, 0, TestTextureDim, TestTextureDim,
+                                              GLFmt,
+                                              (TestTextureDim / int{FmtAttribs.BlockHeight}) * BlockBytesInRow,
+                                              ZeroData.data());
                 }
                 else
                 {
-                    glTexSubImage2D( GL_TEXTURE_2D, 0,  // mip level
-                        0, 0, TestTextureDim, TestTextureDim,
-                        TransferAttribs.PixelFormat, TransferAttribs.DataType,
-                        ZeroData.data() );
+                    glTexSubImage2D(GL_TEXTURE_2D, 0, // mip level
+                                    0, 0, TestTextureDim, TestTextureDim,
+                                    TransferAttribs.PixelFormat, TransferAttribs.DataType,
+                                    ZeroData.data());
                 }
 
                 if (glGetError() != GL_NO_ERROR)
                 {
                     LOG_WARNING_MESSAGE("Failed to upload data to a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name, " texture. "
-                                        "This likely indicates that the format is not supported despite being reported so by the device.");
+                                                                                                                                     "This likely indicates that the format is not supported despite being reported so by the device.");
                     FmtInfo->Supported = false;
                 }
             }
             else
             {
-                LOG_WARNING_MESSAGE( "Failed to allocate storage for a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name, " texture. "
-                                     "This likely indicates that the format is not supported despite being reported so by the device.");
+                LOG_WARNING_MESSAGE("Failed to allocate storage for a test ", TestTextureDim, "x", TestTextureDim, " ", FmtInfo->Name, " texture. "
+                                                                                                                                       "This likely indicates that the format is not supported despite being reported so by the device.");
                 FmtInfo->Supported = false;
             }
-            glBindTexture( GL_TEXTURE_2D, 0 );
+            glBindTexture(GL_TEXTURE_2D, 0);
         }
     }
 #endif
 }
 
-template<typename CreateFuncType>
+template <typename CreateFuncType>
 bool CreateTestGLTexture(GLContextState& GlCtxState, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& GLTexObj, CreateFuncType CreateFunc)
 {
     GlCtxState.BindTexture(-1, BindTarget, GLTexObj);
     CreateFunc();
     bool bSuccess = glGetError() == GL_NO_ERROR;
-    GlCtxState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false) );
+    GlCtxState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj(false));
     return bSuccess;
 }
 
-void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
+void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 {
     auto& TexFormatInfo = m_TextureFormatsInfo[TexFormat];
-    VERIFY( TexFormatInfo.Supported, "Texture format is not supported" );
+    VERIFY(TexFormatInfo.Supported, "Texture format is not supported");
 
     auto GLFmt = TexFormatToGLInternalTexFormat(TexFormat);
-    VERIFY( GLFmt != 0, "Incorrect internal GL format" );
+    VERIFY(GLFmt != 0, "Incorrect internal GL format");
 
     auto spDeviceContext = GetImmediateContext();
     VERIFY(spDeviceContext, "Immediate device context has been destroyed");
-    auto *pContextGL = spDeviceContext.RawPtr<DeviceContextGLImpl>();
+    auto* pContextGL   = spDeviceContext.RawPtr<DeviceContextGLImpl>();
     auto& ContextState = pContextGL->GetContextState();
 
-    const int TestTextureDim = 32;
+    const int TestTextureDim   = 32;
     const int TestTextureDepth = 8;
 
     // Create test texture 1D
     TexFormatInfo.Tex1DFmt = false;
-    if( m_DeviceCaps.TexCaps.bTexture1DSupported && 
-        TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED )
+    if (m_DeviceCaps.TexCaps.bTexture1DSupported &&
+        TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED)
     {
-        GLObjectWrappers::GLTextureObj TestGLTex( true );
-        TexFormatInfo.Tex1DFmt = CreateTestGLTexture( ContextState, GL_TEXTURE_1D, TestGLTex, [&]()
-        {
-            glTexStorage1D(GL_TEXTURE_1D, 1, GLFmt, TestTextureDim);
-        } );
+        GLObjectWrappers::GLTextureObj TestGLTex(true);
+        TexFormatInfo.Tex1DFmt = CreateTestGLTexture(
+            ContextState, GL_TEXTURE_1D, TestGLTex,
+            [&]() //
+            {
+                glTexStorage1D(GL_TEXTURE_1D, 1, GLFmt, TestTextureDim);
+            } //
+        );
     }
 
     // Create test texture 2D
-    TexFormatInfo.Tex2DFmt = false;
-    TexFormatInfo.TexCubeFmt = false;
+    TexFormatInfo.Tex2DFmt        = false;
+    TexFormatInfo.TexCubeFmt      = false;
     TexFormatInfo.ColorRenderable = false;
     TexFormatInfo.DepthRenderable = false;
     {
-        GLObjectWrappers::GLTextureObj TestGLTex( true );
-        TexFormatInfo.Tex2DFmt = CreateTestGLTexture( ContextState, GL_TEXTURE_2D, TestGLTex, [&]()
-        {
-            glTexStorage2D(GL_TEXTURE_2D, 1, GLFmt, TestTextureDim, TestTextureDim);
-        } );
+        GLObjectWrappers::GLTextureObj TestGLTex(true);
+        TexFormatInfo.Tex2DFmt = CreateTestGLTexture(
+            ContextState, GL_TEXTURE_2D, TestGLTex,
+            [&]() //
+            {
+                glTexStorage2D(GL_TEXTURE_2D, 1, GLFmt, TestTextureDim, TestTextureDim);
+            } //
+        );
 
-        if( TexFormatInfo.Tex2DFmt )
+        if (TexFormatInfo.Tex2DFmt)
         {
             {
-                GLObjectWrappers::GLTextureObj TestGLCubeTex( true );
-                TexFormatInfo.TexCubeFmt = CreateTestGLTexture( ContextState, GL_TEXTURE_CUBE_MAP, TestGLCubeTex, [&]()
-                {
-                    glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GLFmt, TestTextureDim, TestTextureDim);
-                } );
+                GLObjectWrappers::GLTextureObj TestGLCubeTex(true);
+                TexFormatInfo.TexCubeFmt = CreateTestGLTexture(
+                    ContextState, GL_TEXTURE_CUBE_MAP, TestGLCubeTex,
+                    [&]() //
+                    {
+                        glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GLFmt, TestTextureDim, TestTextureDim);
+                    } //
+                );
             }
 
-            bool bTestDepthAttachment = 
+            bool bTestDepthAttachment =
                 TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
                 TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL;
             bool bTestColorAttachment = !bTestDepthAttachment && TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED;
 
             GLObjectWrappers::GLFrameBufferObj NewFBO(false);
-            
+
             GLint CurrentFramebuffer = -1;
-            if( bTestColorAttachment || bTestDepthAttachment )
+            if (bTestColorAttachment || bTestDepthAttachment)
             {
-                glGetIntegerv( GL_DRAW_FRAMEBUFFER_BINDING, &CurrentFramebuffer );
-                CHECK_GL_ERROR( "Failed to get current framebuffer");
+                glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &CurrentFramebuffer);
+                CHECK_GL_ERROR("Failed to get current framebuffer");
 
                 NewFBO.Create();
-                glBindFramebuffer( GL_DRAW_FRAMEBUFFER, NewFBO );
-                CHECK_GL_ERROR( "Failed to bind the framebuffer");
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, NewFBO);
+                CHECK_GL_ERROR("Failed to bind the framebuffer");
             }
 
-            if( bTestDepthAttachment )
+            if (bTestDepthAttachment)
             {
                 GLenum Attachment = TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ? GL_DEPTH_ATTACHMENT : GL_DEPTH_STENCIL_ATTACHMENT;
-                glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, Attachment, GL_TEXTURE_2D, TestGLTex, 0 );
-                if( glGetError() == GL_NO_ERROR )
+                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, Attachment, GL_TEXTURE_2D, TestGLTex, 0);
+                if (glGetError() == GL_NO_ERROR)
                 {
                     // Create dummy texture2D since some older version do not allow depth only
                     // attachments
-                    GLObjectWrappers::GLTextureObj ColorTex( true );
-                    bool Success = CreateTestGLTexture( ContextState, GL_TEXTURE_2D, ColorTex, [&]()
-                    {
-                        glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, TestTextureDim, TestTextureDim);
-                    } );
-                    VERIFY( Success, "Failed to create dummy render target texture" ); (void)Success;
-                    glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ColorTex, 0 );
-                    CHECK_GL_ERROR( "Failed to set bind dummy render target to framebuffer" );
+                    GLObjectWrappers::GLTextureObj ColorTex(true);
 
-                    static const GLenum DrawBuffers[] = { GL_COLOR_ATTACHMENT0 };
-                    glDrawBuffers( _countof( DrawBuffers ), DrawBuffers );
-                    CHECK_GL_ERROR( "Failed to set draw buffers via glDrawBuffers()" );
+                    bool Success = CreateTestGLTexture(
+                        ContextState, GL_TEXTURE_2D, ColorTex,
+                        [&]() //
+                        {
+                            glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, TestTextureDim, TestTextureDim);
+                        } //
+                    );
+                    VERIFY(Success, "Failed to create dummy render target texture");
+                    (void)Success;
+                    glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ColorTex, 0);
+                    CHECK_GL_ERROR("Failed to set bind dummy render target to framebuffer");
 
-                    GLenum Status = glCheckFramebufferStatus( GL_FRAMEBUFFER );
+                    static const GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0};
+                    glDrawBuffers(_countof(DrawBuffers), DrawBuffers);
+                    CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
+
+                    GLenum Status                 = glCheckFramebufferStatus(GL_FRAMEBUFFER);
                     TexFormatInfo.DepthRenderable = (glGetError() == GL_NO_ERROR) && (Status == GL_FRAMEBUFFER_COMPLETE);
                 }
             }
-            else if( bTestColorAttachment )
+            else if (bTestColorAttachment)
             {
-                glFramebufferTexture2D( GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TestGLTex, 0 );
-                if( glGetError() == GL_NO_ERROR )
+                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TestGLTex, 0);
+                if (glGetError() == GL_NO_ERROR)
                 {
-                    static const GLenum DrawBuffers[] = { GL_COLOR_ATTACHMENT0 };
-                    glDrawBuffers( _countof( DrawBuffers ), DrawBuffers );
-                    CHECK_GL_ERROR( "Failed to set draw buffers via glDrawBuffers()" );
+                    static const GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0};
+                    glDrawBuffers(_countof(DrawBuffers), DrawBuffers);
+                    CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
 
-                    GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                    GLenum Status                 = glCheckFramebufferStatus(GL_FRAMEBUFFER);
                     TexFormatInfo.ColorRenderable = (glGetError() == GL_NO_ERROR) && (Status == GL_FRAMEBUFFER_COMPLETE);
                 }
             }
 
-            if( bTestColorAttachment || bTestDepthAttachment )
+            if (bTestColorAttachment || bTestDepthAttachment)
             {
-                glBindFramebuffer( GL_DRAW_FRAMEBUFFER, CurrentFramebuffer );
-                CHECK_GL_ERROR( "Failed to bind the framebuffer");
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, CurrentFramebuffer);
+                CHECK_GL_ERROR("Failed to bind the framebuffer");
             }
         }
     }
 
     TexFormatInfo.SampleCounts = 0x01;
-    if( TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED &&  
-        m_DeviceCaps.TexCaps.bTexture2DMSSupported )
+    if (TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED &&
+        m_DeviceCaps.TexCaps.bTexture2DMSSupported)
     {
 #if GL_ARB_texture_storage_multisample
         for (GLsizei SampleCount = 2; SampleCount <= 8; SampleCount *= 2)
         {
-            GLObjectWrappers::GLTextureObj TestGLTex( true );
-            auto SampleCountSupported = CreateTestGLTexture( ContextState, GL_TEXTURE_2D_MULTISAMPLE, TestGLTex, [&]()
-            {
-                glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, SampleCount, GLFmt, TestTextureDim, TestTextureDim, GL_TRUE);
-            } );
+            GLObjectWrappers::GLTextureObj TestGLTex(true);
+
+            auto SampleCountSupported = CreateTestGLTexture(
+                ContextState, GL_TEXTURE_2D_MULTISAMPLE, TestGLTex,
+                [&]() //
+                {
+                    glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, SampleCount, GLFmt, TestTextureDim, TestTextureDim, GL_TRUE);
+                } //
+            );
             if (SampleCountSupported)
                 TexFormatInfo.SampleCounts |= SampleCount;
         }
@@ -736,34 +746,37 @@ void RenderDeviceGLImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
     // Create test texture 3D
     TexFormatInfo.Tex3DFmt = false;
     // 3D textures do not support depth formats
-    if( !(TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
-          TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL) )
+    if (!(TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
+          TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL))
     {
-        GLObjectWrappers::GLTextureObj TestGLTex( true );
-        TexFormatInfo.Tex3DFmt = CreateTestGLTexture( ContextState, GL_TEXTURE_3D, TestGLTex, [&]()
-        {
-            glTexStorage3D(GL_TEXTURE_3D, 1, GLFmt, TestTextureDim, TestTextureDim, TestTextureDepth);
-        } );
+        GLObjectWrappers::GLTextureObj TestGLTex(true);
+        TexFormatInfo.Tex3DFmt = CreateTestGLTexture(
+            ContextState, GL_TEXTURE_3D, TestGLTex,
+            [&]() //
+            {
+                glTexStorage3D(GL_TEXTURE_3D, 1, GLFmt, TestTextureDim, TestTextureDim, TestTextureDepth);
+            } //
+        );
     }
 }
 
-void RenderDeviceGLImpl :: QueryDeviceCaps()
+void RenderDeviceGLImpl ::QueryDeviceCaps()
 {
-    if(glPolygonMode == nullptr)
+    if (glPolygonMode == nullptr)
         m_DeviceCaps.bWireframeFillSupported = false;
-        
-    if(m_DeviceCaps.bWireframeFillSupported)
+
+    if (m_DeviceCaps.bWireframeFillSupported)
     {
         // Test glPolygonMode() function to check if it fails
-        // (It does fail on NVidia Shield tablet, but works fine 
+        // (It does fail on NVidia Shield tablet, but works fine
         // on Intel hw)
-        VERIFY( glGetError() == GL_NO_ERROR, "Unhandled gl error encountered" );
+        VERIFY(glGetError() == GL_NO_ERROR, "Unhandled gl error encountered");
         m_DeviceCaps.bWireframeFillSupported = True;
-        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-        if( glGetError() != GL_NO_ERROR )
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        if (glGetError() != GL_NO_ERROR)
             m_DeviceCaps.bWireframeFillSupported = False;
-        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
-        if( glGetError() != GL_NO_ERROR )
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        if (glGetError() != GL_NO_ERROR)
             m_DeviceCaps.bWireframeFillSupported = False;
     }
 }
@@ -775,7 +788,7 @@ FBOCache& RenderDeviceGLImpl::GetFBOCache(GLContext::NativeGLContextType Context
     return m_FBOCache[Context];
 }
 
-void RenderDeviceGLImpl::OnReleaseTexture(ITexture *pTexture)
+void RenderDeviceGLImpl::OnReleaseTexture(ITexture* pTexture)
 {
     ThreadingTools::LockHelper FBOCacheLock(m_FBOCacheLockFlag);
     for (auto& FBOCacheIt : m_FBOCache)
@@ -788,14 +801,14 @@ VAOCache& RenderDeviceGLImpl::GetVAOCache(GLContext::NativeGLContextType Context
     return m_VAOCache[Context];
 }
 
-void RenderDeviceGLImpl::OnDestroyPSO(IPipelineState *pPSO)
+void RenderDeviceGLImpl::OnDestroyPSO(IPipelineState* pPSO)
 {
     ThreadingTools::LockHelper VAOCacheLock(m_VAOCacheLockFlag);
     for (auto& VAOCacheIt : m_VAOCache)
         VAOCacheIt.second.OnDestroyPSO(pPSO);
 }
 
-void RenderDeviceGLImpl::OnDestroyBuffer(IBuffer *pBuffer)
+void RenderDeviceGLImpl::OnDestroyBuffer(IBuffer* pBuffer)
 {
     ThreadingTools::LockHelper VAOCacheLock(m_VAOCacheLockFlag);
     for (auto& VAOCacheIt : m_VAOCache)
@@ -807,4 +820,4 @@ void RenderDeviceGLImpl::IdleGPU()
     glFinish();
 }
 
-}
+} // namespace Diligent

@@ -32,41 +32,41 @@ namespace Diligent
 class Texture2D_OGL final : public TextureBaseGL
 {
 public:
-    Texture2D_OGL(IReferenceCounters*          pRefCounters,
-                  FixedBlockMemoryAllocator&   TexViewObjAllocator,
-                  class RenderDeviceGLImpl*    pDeviceGL,
-                  class GLContextState&        GLState,
-                  const TextureDesc&           TexDesc,
-                  const TextureData*           pInitData         = nullptr, 
-				  bool                         bIsDeviceInternal = false);
+    Texture2D_OGL(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  class RenderDeviceGLImpl*  pDeviceGL,
+                  class GLContextState&      GLState,
+                  const TextureDesc&         TexDesc,
+                  const TextureData*         pInitData         = nullptr,
+                  bool                       bIsDeviceInternal = false);
 
-    Texture2D_OGL(IReferenceCounters*          pRefCounters,
-                  FixedBlockMemoryAllocator&   TexViewObjAllocator,
-                  class RenderDeviceGLImpl*    pDeviceGL,
-                  class GLContextState&        GLState,
-                  const TextureDesc&           TexDesc,
-                  GLuint                       GLTextureHandle,
-				  bool                         bIsDeviceInternal = false);
+    Texture2D_OGL(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  class RenderDeviceGLImpl*  pDeviceGL,
+                  class GLContextState&      GLState,
+                  const TextureDesc&         TexDesc,
+                  GLuint                     GLTextureHandle,
+                  bool                       bIsDeviceInternal = false);
 
     /// This constructor is used to create a dummy texture object for the default framebuffer.
-    Texture2D_OGL(IReferenceCounters*          pRefCounters,
-                  FixedBlockMemoryAllocator&   TexViewObjAllocator,
-                  class RenderDeviceGLImpl*    pDeviceGL,
-                  const TextureDesc&           TexDesc,
-				  bool                         bIsDeviceInternal = false);
+    Texture2D_OGL(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  class RenderDeviceGLImpl*  pDeviceGL,
+                  const TextureDesc&         TexDesc,
+                  bool                       bIsDeviceInternal = false);
 
     ~Texture2D_OGL();
 
     /// Implementation of TextureBaseGL::UpdateData() for 2D texture.
-    virtual void UpdateData( class GLContextState&    CtxState,
-                             Uint32                   MipLevel,
-                             Uint32                   Slice,
-                             const Box&               DstBox,
-                             const TextureSubResData& SubresData )override final;
+    virtual void UpdateData(class GLContextState&    CtxState,
+                            Uint32                   MipLevel,
+                            Uint32                   Slice,
+                            const Box&               DstBox,
+                            const TextureSubResData& SubresData) override final;
 
     /// Implementation of TextureBaseGL::AttachToFramebuffer() for 2D texture.
-    virtual void AttachToFramebuffer( const struct TextureViewDesc& ViewDesc,
-                                      GLenum                        AttachmentPoint )override final;
+    virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
+                                     GLenum                        AttachmentPoint) override final;
 };
 
-}
+} // namespace Diligent

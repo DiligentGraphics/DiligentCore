@@ -33,7 +33,7 @@ namespace Diligent
 
 // {8FEACBDA-89D6-4509-88E6-D55DD06220C5}
 static constexpr INTERFACE_ID IID_FenceGL =
-{ 0x8feacbda, 0x89d6, 0x4509, { 0x88, 0xe6, 0xd5, 0x5d, 0xd0, 0x62, 0x20, 0xc5 } };
+    {0x8feacbda, 0x89d6, 0x4509, {0x88, 0xe6, 0xd5, 0x5d, 0xd0, 0x62, 0x20, 0xc5}};
 
 
 /// Exposes OpenGL-specific functionality of a fence object.
@@ -44,4 +44,4 @@ public:
     //virtual IGLFence* GetGLFence() = 0;
 };
 
-}
+} // namespace Diligent

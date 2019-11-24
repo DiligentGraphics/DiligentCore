@@ -30,52 +30,56 @@
 
 namespace Diligent
 {
-    TextureViewGLImpl::TextureViewGLImpl(IReferenceCounters *pRefCounters,
-                                         RenderDeviceGLImpl *pDevice, 
-                                         const TextureViewDesc& ViewDesc, 
-                                         TextureBaseGL* pTexture,
-                                         bool bCreateGLViewTex,
-                                         bool bIsDefaultView) :
-        TTextureViewBase
-        {
-            pRefCounters,
-            pDevice,
-            ViewDesc,
-            pTexture,
-            bIsDefaultView
-        },
-        m_ViewTexGLHandle   {bCreateGLViewTex},
-        m_ViewTexBindTarget {0               }
-    {
-    }
 
-    TextureViewGLImpl::~TextureViewGLImpl()
+TextureViewGLImpl::TextureViewGLImpl(IReferenceCounters*    pRefCounters,
+                                     RenderDeviceGLImpl*    pDevice,
+                                     const TextureViewDesc& ViewDesc,
+                                     TextureBaseGL*         pTexture,
+                                     bool                   bCreateGLViewTex,
+                                     bool                   bIsDefaultView) :
+    // clang-format off
+    TTextureViewBase
     {
-    }
+        pRefCounters,
+        pDevice,
+        ViewDesc,
+        pTexture,
+        bIsDefaultView
+    },
+    m_ViewTexGLHandle   {bCreateGLViewTex},
+    m_ViewTexBindTarget {0               }
+// clang-format on
+{
+}
 
-    IMPLEMENT_QUERY_INTERFACE( TextureViewGLImpl, IID_TextureViewGL, TTextureViewBase )
+TextureViewGLImpl::~TextureViewGLImpl()
+{
+}
 
-    const GLObjectWrappers::GLTextureObj& TextureViewGLImpl::GetHandle()
+IMPLEMENT_QUERY_INTERFACE(TextureViewGLImpl, IID_TextureViewGL, TTextureViewBase)
+
+const GLObjectWrappers::GLTextureObj& TextureViewGLImpl::GetHandle()
+{
+    if (m_ViewTexGLHandle)
+        return m_ViewTexGLHandle;
+    else
     {
-        if( m_ViewTexGLHandle )
-            return m_ViewTexGLHandle;
-        else
-        {
-            auto *pTexture = GetTexture();
-            CHECK_DYNAMIC_TYPE( TextureBaseGL, pTexture );
-            return static_cast<TextureBaseGL*>(pTexture)->GetGLHandle();
-        }
-    }
-
-    GLenum TextureViewGLImpl::GetBindTarget()
-    {
-        if( m_ViewTexGLHandle )
-            return m_ViewTexBindTarget;
-        else
-        {
-            auto *pTexture = GetTexture();
-            CHECK_DYNAMIC_TYPE( TextureBaseGL, pTexture );
-            return static_cast<TextureBaseGL*>(pTexture)->GetBindTarget();
-        }
+        auto* pTexture = GetTexture();
+        CHECK_DYNAMIC_TYPE(TextureBaseGL, pTexture);
+        return static_cast<TextureBaseGL*>(pTexture)->GetGLHandle();
     }
 }
+
+GLenum TextureViewGLImpl::GetBindTarget()
+{
+    if (m_ViewTexGLHandle)
+        return m_ViewTexBindTarget;
+    else
+    {
+        auto* pTexture = GetTexture();
+        CHECK_DYNAMIC_TYPE(TextureBaseGL, pTexture);
+        return static_cast<TextureBaseGL*>(pTexture)->GetBindTarget();
+    }
+}
+
+} // namespace Diligent

@@ -28,33 +28,37 @@
 
 namespace Diligent
 {
-    
-FenceGLImpl :: FenceGLImpl(IReferenceCounters* pRefCounters,
-                           RenderDeviceGLImpl* pDevice,
-                           const FenceDesc&    Desc) : 
+
+FenceGLImpl ::FenceGLImpl(IReferenceCounters* pRefCounters,
+                          RenderDeviceGLImpl* pDevice,
+                          const FenceDesc&    Desc) :
+    // clang-format off
     TFenceBase
     {
         pRefCounters,
         pDevice,
         Desc
     }
+// clang-format on
 {
 }
 
-FenceGLImpl :: ~FenceGLImpl()
+FenceGLImpl ::~FenceGLImpl()
 {
 }
 
-Uint64 FenceGLImpl :: GetCompletedValue()
+Uint64 FenceGLImpl ::GetCompletedValue()
 {
     while (!m_PendingFences.empty())
     {
         auto& val_fence = m_PendingFences.front();
-        auto res = glClientWaitSync(val_fence.second, 
-            0, // Can be SYNC_FLUSH_COMMANDS_BIT
-            0  // Timeout in nanoseconds
-        );
-        if(res == GL_ALREADY_SIGNALED)
+
+        auto res =
+            glClientWaitSync(val_fence.second,
+                             0, // Can be SYNC_FLUSH_COMMANDS_BIT
+                             0  // Timeout in nanoseconds
+            );
+        if (res == GL_ALREADY_SIGNALED)
         {
             if (val_fence.first > m_LastCompletedFenceValue)
                 m_LastCompletedFenceValue = val_fence.first;
@@ -69,16 +73,17 @@ Uint64 FenceGLImpl :: GetCompletedValue()
     return m_LastCompletedFenceValue;
 }
 
-void FenceGLImpl :: Wait(Uint64 Value, bool FlushCommands)
+void FenceGLImpl ::Wait(Uint64 Value, bool FlushCommands)
 {
     while (!m_PendingFences.empty())
     {
-        auto& val_fence = m_PendingFences.front();  
+        auto& val_fence = m_PendingFences.front();
         if (val_fence.first > Value)
             break;
 
         auto res = glClientWaitSync(val_fence.second, FlushCommands ? GL_SYNC_FLUSH_COMMANDS_BIT : 0, std::numeric_limits<GLuint64>::max());
-        VERIFY_EXPR(res == GL_ALREADY_SIGNALED || res == GL_CONDITION_SATISFIED); (void)res;
+        VERIFY_EXPR(res == GL_ALREADY_SIGNALED || res == GL_CONDITION_SATISFIED);
+        (void)res;
 
         if (val_fence.first > m_LastCompletedFenceValue)
             m_LastCompletedFenceValue = val_fence.first;
@@ -86,11 +91,11 @@ void FenceGLImpl :: Wait(Uint64 Value, bool FlushCommands)
     }
 }
 
-void FenceGLImpl :: Reset(Uint64 Value)
+void FenceGLImpl ::Reset(Uint64 Value)
 {
     DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
     if (Value > m_LastCompletedFenceValue)
         m_LastCompletedFenceValue = Value;
 }
 
-}
+} // namespace Diligent

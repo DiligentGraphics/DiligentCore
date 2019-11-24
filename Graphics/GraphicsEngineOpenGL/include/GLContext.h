@@ -24,15 +24,15 @@
 #pragma once
 
 #if PLATFORM_WIN32
-#   include "GLContextWindows.h"
+#    include "GLContextWindows.h"
 #elif PLATFORM_ANDROID
-#   include "GLContextAndroid.h"
+#    include "GLContextAndroid.h"
 #elif PLATFORM_LINUX
-#   include "GLContextLinux.h"
+#    include "GLContextLinux.h"
 #elif PLATFORM_MACOS
-#   include "GLContextMacOS.h"
+#    include "GLContextMacOS.h"
 #elif PLATFORM_IOS
-#   include "GLContextIOS.h"
+#    include "GLContextIOS.h"
 #else
-#   error Unsupported platform
+#    error Unsupported platform
 #endif

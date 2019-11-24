@@ -25,20 +25,22 @@
 
 namespace Diligent
 {
-    class GLContext
-    {
-    public:
-        typedef GLXContext NativeGLContextType;
 
-        GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
-        ~GLContext();
-        void SwapBuffers();
+class GLContext
+{
+public:
+    using NativeGLContextType = GLXContext;
 
-        NativeGLContextType GetCurrentNativeGLContext();
+    GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
+    ~GLContext();
+    void SwapBuffers();
 
-    private:
-        void *m_pNativeWindow = nullptr;
-        void *m_pDisplay = nullptr;
-        NativeGLContextType m_Context;
-    };
-}
+    NativeGLContextType GetCurrentNativeGLContext();
+
+private:
+    void*               m_pNativeWindow = nullptr;
+    void*               m_pDisplay      = nullptr;
+    NativeGLContextType m_Context;
+};
+
+} // namespace Diligent

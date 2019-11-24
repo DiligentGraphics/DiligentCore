@@ -35,7 +35,7 @@ namespace Diligent
 
 // {F705A0D9-2023-4DE1-8B3C-C56E4CEB8DB7}
 static const Diligent::INTERFACE_ID IID_RenderDeviceGLES =
-{ 0xf705a0d9, 0x2023, 0x4de1, { 0x8b, 0x3c, 0xc5, 0x6e, 0x4c, 0xeb, 0x8d, 0xb7 } };
+    {0xf705a0d9, 0x2023, 0x4de1, {0x8b, 0x3c, 0xc5, 0x6e, 0x4c, 0xeb, 0x8d, 0xb7}};
 
 /// Interface to the render device object implemented in OpenGLES
 class IRenderDeviceGLES : public Diligent::IRenderDeviceGL
@@ -45,7 +45,7 @@ public:
 
     virtual void Suspend() = 0;
 
-    virtual EGLint Resume( ANativeWindow* window ) = 0;
+    virtual EGLint Resume(ANativeWindow* window) = 0;
 };
 
-}
+} // namespace Diligent

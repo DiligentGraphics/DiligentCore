@@ -38,35 +38,35 @@ class SwapChainGLImpl final : public SwapChainBase<ISwapChainGL>
 public:
     using TSwapChainBase = SwapChainBase<ISwapChainGL>;
 
-    SwapChainGLImpl(IReferenceCounters*         pRefCounters,
-                    const EngineGLCreateInfo&   InitAttribs,
-                    const SwapChainDesc&        SwapChainDesc, 
-                    class RenderDeviceGLImpl*   pRenderDeviceGL,
-                    class DeviceContextGLImpl*  pImmediateContextGL);
+    SwapChainGLImpl(IReferenceCounters*        pRefCounters,
+                    const EngineGLCreateInfo&  InitAttribs,
+                    const SwapChainDesc&       SwapChainDesc,
+                    class RenderDeviceGLImpl*  pRenderDeviceGL,
+                    class DeviceContextGLImpl* pImmediateContextGL);
     ~SwapChainGLImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISwapChain::Present() in OpenGL backend.
-    virtual void Present(Uint32 SyncInterval)override final;
+    virtual void Present(Uint32 SyncInterval) override final;
 
     /// Implementation of ISwapChain::Resize() in OpenGL backend.
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
+    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
 
     /// Implementation of ISwapChain::SetFullscreenMode() in OpenGL backend.
-    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode)override final;
+    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
 
     /// Implementation of ISwapChain::SetWindowedMode() in OpenGL backend.
-    virtual void SetWindowedMode()override final;
+    virtual void SetWindowedMode() override final;
 
     /// Implementation of ISwapChainGL::GetDefaultFBO().
-    virtual GLuint GetDefaultFBO()const override final{ return 0; }
+    virtual GLuint GetDefaultFBO() const override final { return 0; }
 
     /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in OpenGL backend.
-    virtual ITextureView* GetCurrentBackBufferRTV()override final{return m_pRenderTargetView;}
+    virtual ITextureView* GetCurrentBackBufferRTV() override final { return m_pRenderTargetView; }
 
     /// Implementation of ISwapChain::GetDepthBufferDSV() in OpenGL backend.
-    virtual ITextureView* GetDepthBufferDSV()override final{return m_pDepthStencilView;}
+    virtual ITextureView* GetDepthBufferDSV() override final { return m_pDepthStencilView; }
 
 private:
     void CreateDummyBuffers(RenderDeviceGLImpl* pRenderDeviceGL);
@@ -75,4 +75,4 @@ private:
     RefCntAutoPtr<TextureViewGLImpl> m_pDepthStencilView;
 };
 
-}
+} // namespace Diligent

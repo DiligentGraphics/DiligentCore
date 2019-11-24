@@ -33,7 +33,8 @@
 namespace Diligent
 {
 
-GLProgramResources::GLProgramResources(GLProgramResources&& Program)noexcept :
+GLProgramResources::GLProgramResources(GLProgramResources&& Program) noexcept :
+    // clang-format off
     m_ShaderStages     {Program.m_ShaderStages         },
     m_UniformBuffers   {Program.m_UniformBuffers       },
     m_Samplers         {Program.m_Samplers             },
@@ -44,6 +45,7 @@ GLProgramResources::GLProgramResources(GLProgramResources&& Program)noexcept :
     m_NumSamplers      {Program.m_NumSamplers          },
     m_NumImages        {Program.m_NumImages            },        
     m_NumStorageBlocks {Program.m_NumStorageBlocks     }
+// clang-format on
 {
     Program.m_UniformBuffers = nullptr;
     Program.m_Samplers       = nullptr;
@@ -56,7 +58,7 @@ GLProgramResources::GLProgramResources(GLProgramResources&& Program)noexcept :
     Program.m_NumStorageBlocks  = 0;
 }
 
-inline void RemoveArrayBrackets(char *Str)
+inline void RemoveArrayBrackets(char* Str)
 {
     auto* OpenBacketPtr = strchr(Str, '[');
     if (OpenBacketPtr != nullptr)
@@ -98,12 +100,14 @@ void GLProgramResources::AllocateResources(std::vector<UniformBufferInfo>& Unifo
 
     auto AlignedStringPoolDataSize = Align(StringPoolDataSize, sizeof(void*));
 
+    // clang-format off
     size_t TotalMemorySize = 
         m_NumUniformBuffers * sizeof(UniformBufferInfo) + 
         m_NumSamplers       * sizeof(SamplerInfo) +
         m_NumImages         * sizeof(ImageInfo) +
         m_NumStorageBlocks  * sizeof(StorageBlockInfo);
-        
+    // clang-format on
+
     if (TotalMemorySize == 0)
     {
         m_UniformBuffers = nullptr;
@@ -122,36 +126,38 @@ void GLProgramResources::AllocateResources(std::vector<UniformBufferInfo>& Unifo
     TotalMemorySize += AlignedStringPoolDataSize * sizeof(Char);
 
     auto& MemAllocator = GetRawAllocator();
-    void* RawMemory = ALLOCATE_RAW(MemAllocator, "Memory buffer for GLProgramResources", TotalMemorySize);
+    void* RawMemory    = ALLOCATE_RAW(MemAllocator, "Memory buffer for GLProgramResources", TotalMemorySize);
 
+    // clang-format off
     m_UniformBuffers = reinterpret_cast<UniformBufferInfo*>(RawMemory);
     m_Samplers       = reinterpret_cast<SamplerInfo*>     (m_UniformBuffers + m_NumUniformBuffers);
     m_Images         = reinterpret_cast<ImageInfo*>       (m_Samplers       + m_NumSamplers);
     m_StorageBlocks  = reinterpret_cast<StorageBlockInfo*>(m_Images         + m_NumImages);
     void* EndOfResourceData =                              m_StorageBlocks + m_NumStorageBlocks;
     Char* StringPoolData = reinterpret_cast<Char*>(EndOfResourceData);
+    // clang-format on
 
     m_StringPool.AssignMemory(StringPoolData, StringPoolDataSize);
 
-    for (Uint32 ub=0; ub < m_NumUniformBuffers; ++ub)
+    for (Uint32 ub = 0; ub < m_NumUniformBuffers; ++ub)
     {
         auto& SrcUB = UniformBlocks[ub];
         new (m_UniformBuffers + ub) UniformBufferInfo{SrcUB, m_StringPool};
     }
 
-    for (Uint32 s=0; s < m_NumSamplers; ++s)
+    for (Uint32 s = 0; s < m_NumSamplers; ++s)
     {
         auto& SrcSam = Samplers[s];
         new (m_Samplers + s) SamplerInfo{SrcSam, m_StringPool};
     }
 
-    for (Uint32 img=0; img < m_NumImages; ++img)
+    for (Uint32 img = 0; img < m_NumImages; ++img)
     {
         auto& SrcImg = Images[img];
         new (m_Images + img) ImageInfo{SrcImg, m_StringPool};
     }
 
-    for (Uint32 sb=0; sb < m_NumStorageBlocks; ++sb)
+    for (Uint32 sb = 0; sb < m_NumStorageBlocks; ++sb)
     {
         auto& SrcSB = StorageBlocks[sb];
         new (m_StorageBlocks + sb) StorageBlockInfo{SrcSB, m_StringPool};
@@ -162,6 +168,7 @@ void GLProgramResources::AllocateResources(std::vector<UniformBufferInfo>& Unifo
 
 GLProgramResources::~GLProgramResources()
 {
+    // clang-format off
     ProcessResources(
         [&](UniformBufferInfo& UB)
         {
@@ -180,6 +187,7 @@ GLProgramResources::~GLProgramResources()
             SB.~StorageBlockInfo();
         }
     );
+    // clang-format on
 
     void* RawMemory = m_UniformBuffers;
     if (RawMemory != nullptr)
@@ -233,7 +241,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
     //CHECK_GL_ERROR_AND_THROW("Unable to get the maximum uniform block name length\n");
     if (glGetError() != GL_NO_ERROR)
     {
-        LOG_WARNING_MESSAGE( "Unable to get the maximum uniform block name length. Using 1024 as a workaround\n" );
+        LOG_WARNING_MESSAGE("Unable to get the maximum uniform block name length. Using 1024 as a workaround\n");
         activeUniformBlockMaxLength = 1024;
     }
 
@@ -244,33 +252,33 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
     if (glGetProgramInterfaceiv)
     {
         glGetProgramInterfaceiv(GLProgram, GL_SHADER_STORAGE_BLOCK, GL_ACTIVE_RESOURCES, &numActiveShaderStorageBlocks);
-        CHECK_GL_ERROR_AND_THROW( "Unable to get the number of shader storage blocks blocks\n" );
+        CHECK_GL_ERROR_AND_THROW("Unable to get the number of shader storage blocks blocks\n");
 
         // Query the maximum name length of the active shader storage block (including null terminator)
         GLint MaxShaderStorageBlockNameLen = 0;
         glGetProgramInterfaceiv(GLProgram, GL_SHADER_STORAGE_BLOCK, GL_MAX_NAME_LENGTH, &MaxShaderStorageBlockNameLen);
-        CHECK_GL_ERROR_AND_THROW( "Unable to get the maximum shader storage block name length\n" );
-        MaxNameLength = std::max( MaxNameLength, MaxShaderStorageBlockNameLen );
+        CHECK_GL_ERROR_AND_THROW("Unable to get the maximum shader storage block name length\n");
+        MaxNameLength = std::max(MaxNameLength, MaxShaderStorageBlockNameLen);
     }
 #endif
 
     MaxNameLength = std::max(MaxNameLength, 512);
     std::vector<GLchar> Name(MaxNameLength + 1);
-    for (int i = 0; i < numActiveUniforms; i++) 
+    for (int i = 0; i < numActiveUniforms; i++)
     {
-        GLenum  dataType = 0;
-        GLint   size     = 0;
-        GLint   NameLen  = 0;
-        // If one or more elements of an array are active, the name of the array is returned in 'name', 
-        // the type is returned in 'type', and the 'size' parameter returns the highest array element index used, 
-        // plus one, as determined by the compiler and/or linker. 
+        GLenum dataType = 0;
+        GLint  size     = 0;
+        GLint  NameLen  = 0;
+        // If one or more elements of an array are active, the name of the array is returned in 'name',
+        // the type is returned in 'type', and the 'size' parameter returns the highest array element index used,
+        // plus one, as determined by the compiler and/or linker.
         // Only one active uniform variable will be reported for a uniform array.
         // Uniform variables other than arrays will have a size of 1
         glGetActiveUniform(GLProgram, i, MaxNameLength, &NameLen, &size, &dataType, Name.data());
         CHECK_GL_ERROR_AND_THROW("Unable to get active uniform\n");
-        VERIFY(NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen( Name.data() ), "Incorrect uniform name");
+        VERIFY(NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen(Name.data()), "Incorrect uniform name");
         VERIFY(size >= 1, "Size is expected to be at least 1");
-        // Note that 
+        // Note that
         // glGetActiveUniform( program, index, bufSize, length, size, type, name );
         //
         // is equivalent to
@@ -280,7 +288,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
         // glGetProgramResourceiv( program, GL_UNIFORM, index, 1, &props[0], 1, NULL, size );
         // glGetProgramResourceiv( program, GL_UNIFORM, index, 1, &props[1], 1, NULL, (int *)type );
         //
-        // The latter is only available in GL 4.4 and GLES 3.1 
+        // The latter is only available in GL 4.4 and GLES 3.1
 
         switch (dataType)
         {
@@ -327,25 +335,29 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
             case GL_UNSIGNED_INT_SAMPLER_BUFFER:
             {
                 auto UniformLocation = glGetUniformLocation(GLProgram, Name.data());
-                // Note that glGetUniformLocation(program, name) is equivalent to 
+                // Note that glGetUniformLocation(program, name) is equivalent to
                 // glGetProgramResourceLocation(program, GL_UNIFORM, name);
                 // The latter is only available in GL 4.4 and GLES 3.1
 
-                const auto ResourceType = dataType == GL_SAMPLER_BUFFER     || 
-                                          dataType == GL_INT_SAMPLER_BUFFER || 
-                                          dataType == GL_UNSIGNED_INT_SAMPLER_BUFFER ? 
-                    SHADER_RESOURCE_TYPE_BUFFER_SRV : SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+                // clang-format off
+                const auto ResourceType = 
+                        dataType == GL_SAMPLER_BUFFER     ||
+                        dataType == GL_INT_SAMPLER_BUFFER ||
+                        dataType == GL_UNSIGNED_INT_SAMPLER_BUFFER ?
+                    SHADER_RESOURCE_TYPE_BUFFER_SRV :
+                    SHADER_RESOURCE_TYPE_TEXTURE_SRV;
+                // clang-format on
 
                 RemoveArrayBrackets(Name.data());
-                    
+
                 Samplers.emplace_back(
                     NamesPool.emplace(Name.data()).first->c_str(),
                     ShaderStages,
                     ResourceType,
                     SamplerBinding,
                     static_cast<Uint32>(size),
-                    UniformLocation, 
-                    dataType
+                    UniformLocation,
+                    dataType //
                 );
 
                 for (GLint arr_ind = 0; arr_ind < size; ++arr_ind)
@@ -393,12 +405,16 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
             case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE:
             case GL_UNSIGNED_INT_IMAGE_2D_MULTISAMPLE_ARRAY:
             {
-                auto UniformLocation = glGetUniformLocation( GLProgram, Name.data() );
+                auto UniformLocation = glGetUniformLocation(GLProgram, Name.data());
 
-                const auto ResourceType = dataType == GL_IMAGE_BUFFER     ||
-                                          dataType == GL_INT_IMAGE_BUFFER ||
-                                          dataType == GL_UNSIGNED_INT_IMAGE_BUFFER ?
-                    SHADER_RESOURCE_TYPE_BUFFER_UAV : SHADER_RESOURCE_TYPE_TEXTURE_UAV;
+                // clang-format off
+                const auto ResourceType = 
+                        dataType == GL_IMAGE_BUFFER     ||
+                        dataType == GL_INT_IMAGE_BUFFER ||
+                        dataType == GL_UNSIGNED_INT_IMAGE_BUFFER ?
+                    SHADER_RESOURCE_TYPE_BUFFER_UAV :
+                    SHADER_RESOURCE_TYPE_TEXTURE_UAV;
+                // clang-format on
 
                 RemoveArrayBrackets(Name.data());
 
@@ -409,7 +425,8 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                     ImageBinding,
                     static_cast<Uint32>(size),
                     UniformLocation,
-                    dataType );
+                    dataType //
+                );
 
                 for (GLint arr_ind = 0; arr_ind < size; ++arr_ind)
                 {
@@ -421,8 +438,8 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                         if (size > 1)
                         {
                             LOG_WARNING_MESSAGE("Failed to set binding for image uniform '", Name.data(), "'[", arr_ind,
-                                                "]. Expected binding: ", ImageBinding, "."
-                                                " Make sure that this binding is explicitly assigned in shader source code."
+                                                "]. Expected binding: ", ImageBinding,
+                                                ". Make sure that this binding is explicitly assigned in shader source code."
                                                 " Note that if the source code is converted from HLSL and if images are only used"
                                                 " by a single shader stage, then bindings automatically assigned by HLSL->GLSL"
                                                 " converter will work fine.");
@@ -430,8 +447,9 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                         else
                         {
                             LOG_WARNING_MESSAGE("Failed to set binding for image uniform '", Name.data(), "'."
-                                                " Expected binding: ", ImageBinding, "."
-                                                " Make sure that this binding is explicitly assigned in shader source code."
+                                                                                                          " Expected binding: ",
+                                                ImageBinding,
+                                                ". Make sure that this binding is explicitly assigned in shader source code."
                                                 " Note that if the source code is converted from HLSL and if images are only used"
                                                 " by a single shader stage, then bindings automatically assigned by HLSL->GLSL"
                                                 " converter will work fine.");
@@ -455,7 +473,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
         GLsizei NameLen = 0;
         glGetActiveUniformBlockName(GLProgram, i, MaxNameLength, &NameLen, Name.data());
         CHECK_GL_ERROR_AND_THROW("Unable to get active uniform block name\n");
-        VERIFY(NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen( Name.data() ), "Incorrect uniform block name");
+        VERIFY(NameLen < MaxNameLength && static_cast<size_t>(NameLen) == strlen(Name.data()), "Incorrect uniform block name");
 
         // glGetActiveUniformBlockName( program, uniformBlockIndex, bufSize, length, uniformBlockName );
         // is equivalent to
@@ -469,12 +487,12 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
 
         bool IsNewBlock = true;
 
-        GLint ArraySize = 1;
+        GLint ArraySize     = 1;
         auto* OpenBacketPtr = strchr(Name.data(), '[');
         if (OpenBacketPtr != nullptr)
         {
-            auto Ind = atoi(OpenBacketPtr+1);
-            ArraySize = std::max(ArraySize, Ind+1);
+            auto Ind       = atoi(OpenBacketPtr + 1);
+            ArraySize      = std::max(ArraySize, Ind + 1);
             *OpenBacketPtr = 0;
             if (!UniformBlocks.empty())
             {
@@ -485,7 +503,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                     ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.ArraySize));
                     VERIFY(UniformBlockIndex == LastBlock.UBIndex + Ind, "Uniform block indices are expected to be continuous");
                     LastBlock.ArraySize = ArraySize;
-                    IsNewBlock = false;
+                    IsNewBlock          = false;
                 }
                 else
                 {
@@ -505,7 +523,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                 SHADER_RESOURCE_TYPE_CONSTANT_BUFFER,
                 UniformBufferBinding,
                 static_cast<Uint32>(ArraySize),
-                UniformBlockIndex
+                UniformBlockIndex //
             );
         }
 
@@ -519,18 +537,18 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
         GLsizei Length = 0;
         glGetProgramResourceName(GLProgram, GL_SHADER_STORAGE_BLOCK, i, MaxNameLength, &Length, Name.data());
         CHECK_GL_ERROR_AND_THROW("Unable to get shader storage block name\n");
-        VERIFY( Length < MaxNameLength && static_cast<size_t>(Length) == strlen( Name.data() ), "Incorrect shader storage block name" );
+        VERIFY(Length < MaxNameLength && static_cast<size_t>(Length) == strlen(Name.data()), "Incorrect shader storage block name");
 
         auto SBIndex = glGetProgramResourceIndex(GLProgram, GL_SHADER_STORAGE_BLOCK, Name.data());
         CHECK_GL_ERROR_AND_THROW("Unable to get shader storage block index\n");
 
-        bool IsNewBlock = true;
-        Int32 ArraySize = 1;
+        bool  IsNewBlock    = true;
+        Int32 ArraySize     = 1;
         auto* OpenBacketPtr = strchr(Name.data(), '[');
         if (OpenBacketPtr != nullptr)
         {
-            auto Ind = atoi(OpenBacketPtr+1);
-            ArraySize = std::max(ArraySize, Ind+1);
+            auto Ind       = atoi(OpenBacketPtr + 1);
+            ArraySize      = std::max(ArraySize, Ind + 1);
             *OpenBacketPtr = 0;
             if (!StorageBlocks.empty())
             {
@@ -541,14 +559,14 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                     ArraySize = std::max(ArraySize, static_cast<GLint>(LastBlock.ArraySize));
                     VERIFY(static_cast<GLint>(SBIndex) == LastBlock.SBIndex + Ind, "Storage block indices are expected to be continuous");
                     LastBlock.ArraySize = ArraySize;
-                    IsNewBlock = false;
+                    IsNewBlock          = false;
                 }
                 else
                 {
-#ifdef _DEBUG
+#    ifdef _DEBUG
                     for (const auto& sb : StorageBlocks)
                         VERIFY(strcmp(sb.Name, Name.data()) != 0, "Storage block with the name \"", sb.Name, "\" has already been enumerated");
-#endif
+#    endif
                 }
             }
         }
@@ -560,8 +578,8 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                 ShaderStages,
                 SHADER_RESOURCE_TYPE_BUFFER_UAV,
                 StorageBufferBinding,
-                static_cast<Uint32>(ArraySize), 
-                SBIndex
+                static_cast<Uint32>(ArraySize),
+                SBIndex //
             );
         }
 
@@ -574,8 +592,8 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
         {
             LOG_WARNING_MESSAGE("glShaderStorageBlockBinding is not available on this device and "
                                 "the engine is unable to automatically assign shader storage block bindindg for '",
-                                Name.data(), "' variable. Expected binding: ", StorageBufferBinding, "."
-                                " Make sure that this binding is explicitly assigned in shader source code."
+                                Name.data(), "' variable. Expected binding: ", StorageBufferBinding,
+                                ". Make sure that this binding is explicitly assigned in shader source code."
                                 " Note that if the source code is converted from HLSL and if storage blocks are only used"
                                 " by a single shader stage, then bindings automatically assigned by HLSL->GLSL"
                                 " converter will work fine.");
@@ -589,7 +607,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
     AllocateResources(UniformBlocks, Samplers, Images, StorageBlocks);
 }
 
-ShaderResourceDesc GLProgramResources::GetResourceDesc(Uint32 Index)const
+ShaderResourceDesc GLProgramResources::GetResourceDesc(Uint32 Index) const
 {
     if (Index < m_NumUniformBuffers)
         return GetUniformBuffer(Index).GetResourceDesc();
@@ -618,8 +636,9 @@ ShaderResourceDesc GLProgramResources::GetResourceDesc(Uint32 Index)const
 void GLProgramResources::CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
                                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                         Uint32                               NumAllowedTypes,
-                                        ResourceCounters&                    Counters)const
+                                        ResourceCounters&                    Counters) const
 {
+    // clang-format off
     ProcessConstResources(
         [&](const GLProgramResources::UniformBufferInfo& UB)
         {
@@ -641,15 +660,18 @@ void GLProgramResources::CountResources(const PipelineResourceLayoutDesc&    Res
         AllowedVarTypes,
         NumAllowedTypes
     );
+    // clang-format on
 }
 
-bool GLProgramResources::IsCompatibleWith(const GLProgramResources& Res)const
+bool GLProgramResources::IsCompatibleWith(const GLProgramResources& Res) const
 {
+    // clang-format off
     if (GetNumUniformBuffers() != Res.GetNumUniformBuffers() ||
         GetNumSamplers()       != Res.GetNumSamplers()       ||
         GetNumImages()         != Res.GetNumImages()         ||
         GetNumStorageBlocks()  != Res.GetNumStorageBlocks())
         return false;
+    // clang-format on
 
     for (Uint32 ub = 0; ub < GetNumUniformBuffers(); ++ub)
     {
@@ -687,10 +709,11 @@ bool GLProgramResources::IsCompatibleWith(const GLProgramResources& Res)const
 }
 
 
-size_t GLProgramResources::GetHash()const
+size_t GLProgramResources::GetHash() const
 {
     size_t hash = ComputeHash(GetNumUniformBuffers(), GetNumSamplers(), GetNumImages(), GetNumStorageBlocks());
 
+    // clang-format off
     ProcessConstResources(
         [&](const UniformBufferInfo& UB)
         {
@@ -709,8 +732,9 @@ size_t GLProgramResources::GetHash()const
             HashCombine(hash, SB.GetHash());
         }
     );
+    // clang-format on
 
     return hash;
 }
 
-}
+} // namespace Diligent

@@ -42,22 +42,23 @@ public:
     using TTextureViewBase = TextureViewBase<ITextureViewGL, RenderDeviceGLImpl>;
 
     TextureViewGLImpl(IReferenceCounters*           pRefCounters,
-                      RenderDeviceGLImpl*           pDevice, 
-                      const struct TextureViewDesc& ViewDesc, 
+                      RenderDeviceGLImpl*           pDevice,
+                      const struct TextureViewDesc& ViewDesc,
                       class TextureBaseGL*          pTexture,
                       bool                          bCreateGLViewTex,
                       bool                          bIsDefaultView);
     ~TextureViewGLImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     const GLObjectWrappers::GLTextureObj& GetHandle();
+
     GLenum GetBindTarget();
-    void SetBindTarget(GLenum ViewTexBindTarget) { m_ViewTexBindTarget = ViewTexBindTarget; }
+    void   SetBindTarget(GLenum ViewTexBindTarget) { m_ViewTexBindTarget = ViewTexBindTarget; }
 
 protected:
     GLObjectWrappers::GLTextureObj m_ViewTexGLHandle;
-    GLenum  m_ViewTexBindTarget;
+    GLenum                         m_ViewTexBindTarget;
 };
 
-}
+} // namespace Diligent

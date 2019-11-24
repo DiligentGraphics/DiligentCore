@@ -43,51 +43,51 @@ class BufferGLImpl final : public BufferBase<IBufferGL, RenderDeviceGLImpl, Buff
 public:
     using TBufferBase = BufferBase<IBufferGL, RenderDeviceGLImpl, BufferViewGLImpl, FixedBlockMemoryAllocator>;
 
-    BufferGLImpl(IReferenceCounters*        pRefCounters, 
-                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
+    BufferGLImpl(IReferenceCounters*        pRefCounters,
+                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                  RenderDeviceGLImpl*        pDeviceGL,
                  GLContextState&            CtxState,
-                 const BufferDesc&          BuffDesc, 
+                 const BufferDesc&          BuffDesc,
                  const BufferData*          pBuffData,
                  bool                       bIsDeviceInternal);
 
-    BufferGLImpl(IReferenceCounters*        pRefCounters, 
-                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator, 
+    BufferGLImpl(IReferenceCounters*        pRefCounters,
+                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
                  class RenderDeviceGLImpl*  pDeviceGL,
                  GLContextState&            CtxState,
-                 const BufferDesc&          BuffDesc, 
+                 const BufferDesc&          BuffDesc,
                  GLuint                     GLHandle,
                  bool                       bIsDeviceInternal);
 
     ~BufferGLImpl();
-    
+
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     void UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData);
     void CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
-    void Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData );
+    void Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData);
     void Unmap(GLContextState& CtxState);
 
-    void BufferMemoryBarrier( Uint32 RequiredBarriers, class GLContextState& GLContextState );
+    void BufferMemoryBarrier(Uint32 RequiredBarriers, class GLContextState& GLContextState);
 
-    const GLObjectWrappers::GLBufferObj& GetGLHandle(){ return m_GlBuffer; }
+    const GLObjectWrappers::GLBufferObj& GetGLHandle() { return m_GlBuffer; }
 
     /// Implementation of IBufferGL::GetGLBufferHandle().
-    virtual GLuint GetGLBufferHandle()override final { return GetGLHandle(); }
+    virtual GLuint GetGLBufferHandle() override final { return GetGLHandle(); }
 
     /// Implementation of IBuffer::GetNativeHandle() in OpenGL backend.
-    virtual void* GetNativeHandle()override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLBufferHandle())); }
+    virtual void* GetNativeHandle() override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLBufferHandle())); }
 
 private:
-    virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, class IBufferView **ppView, bool bIsDefaultView )override;
+    virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, class IBufferView** ppView, bool bIsDefaultView) override;
 
     friend class DeviceContextGLImpl;
     friend class VAOCache;
 
     GLObjectWrappers::GLBufferObj m_GlBuffer;
-    const Uint32 m_BindTarget;
-    const GLenum m_GLUsageHint;
+    const Uint32                  m_BindTarget;
+    const GLenum                  m_GLUsageHint;
 };
 
-}
+} // namespace Diligent

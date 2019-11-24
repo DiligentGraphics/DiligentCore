@@ -29,16 +29,19 @@ namespace Diligent
 
 size_t GLProgramResourceCache::GetRequriedMemorySize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount)
 {
+    // clang-format off
     auto MemSize = 
                 sizeof(CachedUB)           * UBCount + 
                 sizeof(CachedResourceView) * SamplerCount + 
                 sizeof(CachedResourceView) * ImageCount + 
                 sizeof(CachedSSBO)         * SSBOCount;
+    // clang-format on
     return MemSize;
 }
 
 void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount, class IMemoryAllocator& MemAllocator)
 {
+    // clang-format off
     m_SmplrsOffset    = static_cast<Uint16>(m_UBsOffset    + sizeof(CachedUB)           * UBCount);
     m_ImgsOffset      = static_cast<Uint16>(m_SmplrsOffset + sizeof(CachedResourceView) * SamplerCount);
     m_SSBOsOffset     = static_cast<Uint16>(m_ImgsOffset   + sizeof(CachedResourceView) * ImageCount);
@@ -48,16 +51,17 @@ void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uin
     VERIFY_EXPR(GetSamplerCount() == static_cast<Uint32>(SamplerCount));
     VERIFY_EXPR(GetImageCount()   == static_cast<Uint32>(ImageCount));
     VERIFY_EXPR(GetSSBOCount()    == static_cast<Uint32>(SSBOCount));
+    // clang-format on
 
     VERIFY_EXPR(m_pResourceData == nullptr);
-    size_t BufferSize =  m_MemoryEndOffset;
+    size_t BufferSize = m_MemoryEndOffset;
 
     VERIFY_EXPR(BufferSize == GetRequriedMemorySize(UBCount, SamplerCount, ImageCount, SSBOCount));
 
 #ifdef _DEBUG
     m_pdbgMemoryAllocator = &MemAllocator;
 #endif
-    if( BufferSize > 0 )
+    if (BufferSize > 0)
     {
         m_pResourceData = ALLOCATE(MemAllocator, "Shader resource cache data buffer", Uint8, BufferSize);
         memset(m_pResourceData, 0, BufferSize);
@@ -65,27 +69,27 @@ void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uin
 
     // Explicitly construct all objects
     for (Uint32 cb = 0; cb < UBCount; ++cb)
-        new(&GetUB(cb)) CachedUB;
+        new (&GetUB(cb)) CachedUB;
 
     for (Uint32 s = 0; s < SamplerCount; ++s)
-        new(&GetSampler(s)) CachedResourceView;
+        new (&GetSampler(s)) CachedResourceView;
 
     for (Uint32 i = 0; i < ImageCount; ++i)
-        new(&GetImage(i)) CachedResourceView;
-    
+        new (&GetImage(i)) CachedResourceView;
+
     for (Uint32 s = 0; s < SSBOCount; ++s)
-        new(&GetSSBO(s)) CachedSSBO;
+        new (&GetSSBO(s)) CachedSSBO;
 }
 
 GLProgramResourceCache::~GLProgramResourceCache()
 {
-    VERIFY( !IsInitialized(), "Shader resource cache memory must be released with GLProgramResourceCache::Destroy()" );
+    VERIFY(!IsInitialized(), "Shader resource cache memory must be released with GLProgramResourceCache::Destroy()");
 }
 
 void GLProgramResourceCache::Destroy(class IMemoryAllocator& MemAllocator)
 {
-    VERIFY( IsInitialized(), "Resource cache is not initialized");
-    VERIFY( m_pdbgMemoryAllocator == &MemAllocator, "The allocator does not match the one used to create resources");
+    VERIFY(IsInitialized(), "Resource cache is not initialized");
+    VERIFY(m_pdbgMemoryAllocator == &MemAllocator, "The allocator does not match the one used to create resources");
 
     for (Uint32 cb = 0; cb < GetUBCount(); ++cb)
         GetUB(cb).~CachedUB();
@@ -95,18 +99,18 @@ void GLProgramResourceCache::Destroy(class IMemoryAllocator& MemAllocator)
 
     for (Uint32 i = 0; i < GetImageCount(); ++i)
         GetImage(i).~CachedResourceView();
-    
+
     for (Uint32 s = 0; s < GetSSBOCount(); ++s)
         GetSSBO(s).~CachedSSBO();
 
     if (m_pResourceData != nullptr)
         MemAllocator.Free(m_pResourceData);
 
-    m_pResourceData = nullptr;
+    m_pResourceData   = nullptr;
     m_SmplrsOffset    = InvalidResourceOffset;
     m_ImgsOffset      = InvalidResourceOffset;
     m_SSBOsOffset     = InvalidResourceOffset;
     m_MemoryEndOffset = InvalidResourceOffset;
 }
 
-}
+} // namespace Diligent

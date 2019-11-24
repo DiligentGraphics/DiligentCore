@@ -39,16 +39,18 @@ size_t GLPipelineResourceLayout::GetRequiredMemorySize(GLProgramResources*      
                                                        Uint32                               NumAllowedTypes)
 {
     GLProgramResources::ResourceCounters Counters;
-    for(Uint32 prog = 0; prog < NumPrograms; ++prog)
+    for (Uint32 prog = 0; prog < NumPrograms; ++prog)
     {
         ProgramResources[prog].CountResources(ResourceLayout, AllowedVarTypes, NumAllowedTypes, Counters);
     }
 
+    // clang-format off
     size_t RequiredSize = Counters.NumUBs           * sizeof(UniformBuffBindInfo)   + 
                           Counters.NumSamplers      * sizeof(SamplerBindInfo)       +
                           Counters.NumImages        * sizeof(ImageBindInfo)         +
                           Counters.NumStorageBlocks * sizeof(StorageBufferBindInfo) +
                           NumPrograms               * sizeof(GLProgramResources::ResourceCounters);
+    // clang-format on
     return RequiredSize;
 }
 
@@ -61,27 +63,31 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
 {
     GLProgramResources::ResourceCounters Counters;
 
-    for(Uint32 prog = 0; prog < NumPrograms; ++prog)
+    for (Uint32 prog = 0; prog < NumPrograms; ++prog)
     {
         ProgramResources[prog].CountResources(ResourceLayout, AllowedVarTypes, NumAllowedTypes, Counters);
     }
 
     // Initialize offsets
     size_t CurrentOffset = 0;
-    auto AdvanceOffset = [&CurrentOffset](size_t NumBytes)
+
+    auto AdvanceOffset = [&CurrentOffset](size_t NumBytes) //
     {
         constexpr size_t MaxOffset = std::numeric_limits<OffsetType>::max();
-        VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");(void)MaxOffset;
+        VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
+        (void)MaxOffset;
         auto Offset = static_cast<OffsetType>(CurrentOffset);
         CurrentOffset += NumBytes;
         return Offset;
     };
 
+    // clang-format off
     auto UBOffset         = AdvanceOffset(Counters.NumUBs           * sizeof(UniformBuffBindInfo)  ); (void)UBOffset; // To suppress warning
     m_SamplerOffset       = AdvanceOffset(Counters.NumSamplers      * sizeof(SamplerBindInfo)      );
     m_ImageOffset         = AdvanceOffset(Counters.NumImages        * sizeof(ImageBindInfo)        );
     m_StorageBufferOffset = AdvanceOffset(Counters.NumStorageBlocks * sizeof(StorageBufferBindInfo));
     m_VariableEndOffset   = AdvanceOffset(0);
+    // clang-format off
     m_NumPrograms         = static_cast<Uint8>(NumPrograms);
     VERIFY_EXPR(m_NumPrograms == NumPrograms);
     auto TotalMemorySize = m_VariableEndOffset + m_NumPrograms * sizeof(GLProgramResources::ResourceCounters);
@@ -94,10 +100,12 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
         m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void> >(pRawMem, ResLayoutDataAllocator);
     }
 
+    // clang-format off
     VERIFY_EXPR(Counters.NumUBs           == GetNumUBs()           );
     VERIFY_EXPR(Counters.NumSamplers      == GetNumSamplers()      );
     VERIFY_EXPR(Counters.NumImages        == GetNumImages()        );
     VERIFY_EXPR(Counters.NumStorageBlocks == GetNumStorageBuffers());
+    // clang-format on
 
     // Current resource index for every resource type
     GLProgramResources::ResourceCounters VarCounters = {};
@@ -110,24 +118,25 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
 #ifdef _DEBUG
     const Uint32 DbgAllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 #endif
-    for(Uint32 prog = 0; prog < NumPrograms; ++prog)
+    for (Uint32 prog = 0; prog < NumPrograms; ++prog)
     {
-        const auto& Resources = ProgramResources[prog];
-        auto ShaderStages = Resources.GetShaderStages();
+        const auto& Resources    = ProgramResources[prog];
+        auto        ShaderStages = Resources.GetShaderStages();
         Resources.ProcessConstResources(
-            [&](const GLProgramResources::UniformBufferInfo& UB)
+            [&](const GLProgramResources::UniformBufferInfo& UB) //
             {
                 auto VarType = GetShaderVariableType(ShaderStages, UB.Name, ResourceLayout);
                 VERIFY_EXPR(IsAllowedType(VarType, DbgAllowedTypeBits));
-                auto* pUBVar = new (&GetResource<UniformBuffBindInfo>(VarCounters.NumUBs++)) UniformBuffBindInfo
-                {
-                    UB,
-                    *this,
-                    VarType
-                };
+                auto* pUBVar = new (&GetResource<UniformBuffBindInfo>(VarCounters.NumUBs++))
+                    UniformBuffBindInfo //
+                    {
+                        UB,
+                        *this,
+                        VarType //
+                    };
                 UniformBindingSlots = std::max(UniformBindingSlots, pUBVar->m_Attribs.Binding + pUBVar->m_Attribs.ArraySize);
             },
-            [&](const GLProgramResources::SamplerInfo& Sam)
+            [&](const GLProgramResources::SamplerInfo& Sam) //
             {
                 auto VarType = GetShaderVariableType(ShaderStages, Sam.Name, ResourceLayout);
                 VERIFY_EXPR(IsAllowedType(VarType, DbgAllowedTypeBits));
@@ -137,58 +146,63 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
                     StaticSamplerIdx = FindStaticSampler(ResourceLayout.StaticSamplers, ResourceLayout.NumStaticSamplers, ShaderStages,
                                                          Sam.Name, nullptr);
                 }
-                auto* pSamVar = new (&GetResource<SamplerBindInfo>(VarCounters.NumSamplers++)) SamplerBindInfo
-                {
-                    Sam,
-                    *this,
-                    VarType,
-                    StaticSamplerIdx
-                };
+                auto* pSamVar = new (&GetResource<SamplerBindInfo>(VarCounters.NumSamplers++))
+                    SamplerBindInfo //
+                    {
+                        Sam,
+                        *this,
+                        VarType,
+                        StaticSamplerIdx //
+                    };
                 SamplerBindingSlots = std::max(SamplerBindingSlots, pSamVar->m_Attribs.Binding + pSamVar->m_Attribs.ArraySize);
             },
-            [&](const GLProgramResources::ImageInfo& Img)
+            [&](const GLProgramResources::ImageInfo& Img) //
             {
                 auto VarType = GetShaderVariableType(ShaderStages, Img.Name, ResourceLayout);
                 VERIFY_EXPR(IsAllowedType(VarType, DbgAllowedTypeBits));
-                auto* pImgVar = new (&GetResource<ImageBindInfo>(VarCounters.NumImages++)) ImageBindInfo
-                {
-                    Img,
-                    *this,
-                    VarType
-                };
+                auto* pImgVar = new (&GetResource<ImageBindInfo>(VarCounters.NumImages++))
+                    ImageBindInfo //
+                    {
+                        Img,
+                        *this,
+                        VarType //
+                    };
                 ImageBindingSlots = std::max(ImageBindingSlots, pImgVar->m_Attribs.Binding + pImgVar->m_Attribs.ArraySize);
             },
-            [&](const GLProgramResources::StorageBlockInfo& SB)
+            [&](const GLProgramResources::StorageBlockInfo& SB) //
             {
                 auto VarType = GetShaderVariableType(ShaderStages, SB.Name, ResourceLayout);
                 VERIFY_EXPR(IsAllowedType(VarType, DbgAllowedTypeBits));
-                auto* pSSBOVar = new (&GetResource<StorageBufferBindInfo>(VarCounters.NumStorageBlocks++)) StorageBufferBindInfo
-                {
-                    SB,
-                    *this,
-                    VarType
-                };
+                auto* pSSBOVar = new (&GetResource<StorageBufferBindInfo>(VarCounters.NumStorageBlocks++))
+                    StorageBufferBindInfo //
+                    {
+                        SB,
+                        *this,
+                        VarType //
+                    };
                 SSBOBindingSlots = std::max(SSBOBindingSlots, pSSBOVar->m_Attribs.Binding + pSSBOVar->m_Attribs.ArraySize);
             },
             &ResourceLayout,
             AllowedVarTypes,
-            NumAllowedTypes
+            NumAllowedTypes //
         );
 
         new (&GetProgramVarEndOffsets(prog)) GLProgramResources::ResourceCounters{VarCounters};
         while (ShaderStages != SHADER_TYPE_UNKNOWN)
         {
-            auto Stage = static_cast<SHADER_TYPE>(Uint32{ShaderStages} & ~(Uint32{ShaderStages}-1));
-            auto ShaderInd = GetShaderTypeIndex(Stage);
+            auto Stage                = static_cast<SHADER_TYPE>(Uint32{ShaderStages} & ~(Uint32{ShaderStages} - 1));
+            auto ShaderInd            = GetShaderTypeIndex(Stage);
             m_ProgramIndex[ShaderInd] = static_cast<Int8>(prog);
-            ShaderStages = static_cast<SHADER_TYPE>(Uint32{ShaderStages} & ~Stage);
+            ShaderStages              = static_cast<SHADER_TYPE>(Uint32{ShaderStages} & ~Stage);
         }
     }
-    
+
+    // clang-format off
     VERIFY(VarCounters.NumUBs           == GetNumUBs(),             "Not all UBs are initialized which will cause a crash when dtor is called");
     VERIFY(VarCounters.NumSamplers      == GetNumSamplers(),        "Not all Samplers are initialized which will cause a crash when dtor is called");
     VERIFY(VarCounters.NumImages        == GetNumImages(),          "Not all Images are initialized which will cause a crash when dtor is called");
     VERIFY(VarCounters.NumStorageBlocks == GetNumStorageBuffers(),  "Not all SSBOs are initialized which will cause a crash when dtor is called");
+    // clang-format on
 
     m_pResourceCache = pResourceCache;
     if (m_pResourceCache != nullptr && !m_pResourceCache->IsInitialized())
@@ -200,6 +214,7 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
 
 GLPipelineResourceLayout::~GLPipelineResourceLayout()
 {
+    // clang-format off
     HandleResources(
         [&](UniformBuffBindInfo& ub)
         {
@@ -221,13 +236,14 @@ GLPipelineResourceLayout::~GLPipelineResourceLayout()
             ssbo.~StorageBufferBindInfo();
         }
     );
+    // clang-format on
 }
 
 
 void GLPipelineResourceLayout::UniformBuffBindInfo::BindResource(IDeviceObject* pBuffer,
                                                                  Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.ArraySize-1);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.ArraySize - 1);
     VERIFY(m_ParentResLayout.m_pResourceCache != nullptr, "Resource cache is not initialized");
     auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
 
@@ -251,7 +267,7 @@ void GLPipelineResourceLayout::UniformBuffBindInfo::BindResource(IDeviceObject* 
 void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pView,
                                                              Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.ArraySize-1);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.ArraySize - 1);
     VERIFY(m_ParentResLayout.m_pResourceCache != nullptr, "Resource cache is not initialized");
     auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
 
@@ -298,7 +314,7 @@ void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pVie
 void GLPipelineResourceLayout::ImageBindInfo::BindResource(IDeviceObject* pView,
                                                            Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.ArraySize-1);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.ArraySize - 1);
     VERIFY(m_ParentResLayout.m_pResourceCache != nullptr, "Resource cache is not initialized");
     auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
 
@@ -339,7 +355,7 @@ void GLPipelineResourceLayout::ImageBindInfo::BindResource(IDeviceObject* pView,
 void GLPipelineResourceLayout::StorageBufferBindInfo::BindResource(IDeviceObject* pView,
                                                                    Uint32         ArrayIndex)
 {
-    DEV_CHECK_ERR(ArrayIndex < m_Attribs.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.ArraySize-1);
+    DEV_CHECK_ERR(ArrayIndex < m_Attribs.ArraySize, "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name, "'. Max allowed index: ", m_Attribs.ArraySize - 1);
     VERIFY(m_ParentResLayout.m_pResourceCache != nullptr, "Resource cache is not initialized");
     auto& ResourceCache = *m_ParentResLayout.m_pResourceCache;
     VERIFY_EXPR(m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_UAV);
@@ -364,29 +380,31 @@ class BindResourceHelper
 {
 public:
     BindResourceHelper(IResourceMapping& RM, SHADER_TYPE SS, Uint32 Fl) :
+        // clang-format off
         ResourceMapping {RM},
         ShaderStage     {SS},
         Flags           {Fl}
+    // clang-format on
     {
     }
 
-    template<typename ResourceType>
-    void Bind( ResourceType& Res)
+    template <typename ResourceType>
+    void Bind(ResourceType& Res)
     {
-        if ( (Flags & (1 << Res.GetType())) == 0 )
+        if ((Flags & (1 << Res.GetType())) == 0)
             return;
 
-        for (Uint16 elem=0; elem < Res.m_Attribs.ArraySize; ++elem)
+        for (Uint16 elem = 0; elem < Res.m_Attribs.ArraySize; ++elem)
         {
             if ((Res.m_Attribs.ShaderStages & ShaderStage) == 0)
                 continue;
 
-            if ( (Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(elem) )
+            if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(elem))
                 continue;
 
-            const auto* VarName = Res.m_Attribs.Name;
+            const auto*                  VarName = Res.m_Attribs.Name;
             RefCntAutoPtr<IDeviceObject> pRes;
-            ResourceMapping.GetResource( VarName, &pRes, elem );
+            ResourceMapping.GetResource(VarName, &pRes, elem);
             if (pRes)
             {
                 //  Call non-virtual function
@@ -394,8 +412,8 @@ public:
             }
             else
             {
-                if ( (Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(elem) )
-                    LOG_ERROR_MESSAGE( "Unable to bind resource to shader variable '", VarName, "': resource is not found in the resource mapping" );
+                if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(elem))
+                    LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '", VarName, "': resource is not found in the resource mapping");
             }
         }
     }
@@ -413,15 +431,16 @@ void GLPipelineResourceLayout::BindResources(SHADER_TYPE ShaderStage, IResourceM
 
     if (pResourceMapping == nullptr)
     {
-        LOG_ERROR_MESSAGE( "Failed to bind resources: resource mapping is null" );
+        LOG_ERROR_MESSAGE("Failed to bind resources: resource mapping is null");
         return;
     }
-    
-    if ( (Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0 )
+
+    if ((Flags & BIND_SHADER_RESOURCES_UPDATE_ALL) == 0)
         Flags |= BIND_SHADER_RESOURCES_UPDATE_ALL;
 
     BindResourceHelper BindResHelper(*pResourceMapping, ShaderStage, Flags);
 
+    // clang-format off
     HandleResources(
         [&](UniformBuffBindInfo& ub)
         {
@@ -443,17 +462,18 @@ void GLPipelineResourceLayout::BindResources(SHADER_TYPE ShaderStage, IResourceM
             BindResHelper.Bind(ssbo);
         }
     );
+    // clang-format on
 }
 
 
-template<typename ResourceType>
+template <typename ResourceType>
 IShaderResourceVariable* GLPipelineResourceLayout::GetResourceByName(SHADER_TYPE ShaderStage, const Char* Name)
 {
     auto NumResources = GetNumResources<ResourceType>();
     for (Uint32 res = 0; res < NumResources; ++res)
     {
         auto& Resource = GetResource<ResourceType>(res);
-        if ( (Resource.m_Attribs.ShaderStages & ShaderStage) != 0 && strcmp(Resource.m_Attribs.Name, Name) == 0)
+        if ((Resource.m_Attribs.ShaderStages & ShaderStage) != 0 && strcmp(Resource.m_Attribs.Name, Name) == 0)
             return &Resource;
     }
 
@@ -478,27 +498,29 @@ IShaderResourceVariable* GLPipelineResourceLayout::GetShaderVariable(SHADER_TYPE
     return nullptr;
 }
 
-Uint32 GLPipelineResourceLayout::GetNumVariables(SHADER_TYPE ShaderStage)const
+Uint32 GLPipelineResourceLayout::GetNumVariables(SHADER_TYPE ShaderStage) const
 {
     VERIFY(IsPowerOfTwo(Uint32{ShaderStage}), "Only one shader stage must be specified");
     auto ShaderInd = GetShaderTypeIndex(ShaderStage);
-    auto ProgIdx = m_ProgramIndex[ShaderInd];
+    auto ProgIdx   = m_ProgramIndex[ShaderInd];
 
     if (ProgIdx < 0)
         return 0;
 
     const auto& VariableEndOffset   = GetProgramVarEndOffsets(ProgIdx);
-    const auto& VariableStartOffset = ProgIdx > 0 ? GetProgramVarEndOffsets(ProgIdx-1) : GLProgramResources::ResourceCounters{};
+    const auto& VariableStartOffset = ProgIdx > 0 ? GetProgramVarEndOffsets(ProgIdx - 1) : GLProgramResources::ResourceCounters{};
 
+    // clang-format off
     Uint32 NumVars = VariableEndOffset.NumUBs           - VariableStartOffset.NumUBs      + 
                      VariableEndOffset.NumSamplers      - VariableStartOffset.NumSamplers + 
                      VariableEndOffset.NumImages        - VariableStartOffset.NumImages   +
                      VariableEndOffset.NumStorageBlocks - VariableStartOffset.NumStorageBlocks;
+    // clang-format on
+
 #ifdef _DEBUG
     {
         Uint32 DbgNumVars = 0;
-        auto CountVar = [&](const GLVariableBase& Var)
-        {
+        auto   CountVar   = [&](const GLVariableBase& Var) {
             DbgNumVars += ((Var.m_Attribs.ShaderStages & ShaderStage) != 0) ? 1 : 0;
         };
         HandleConstResources(CountVar, CountVar, CountVar, CountVar);
@@ -512,14 +534,16 @@ Uint32 GLPipelineResourceLayout::GetNumVariables(SHADER_TYPE ShaderStage)const
 class ShaderVariableLocator
 {
 public:
-    ShaderVariableLocator(GLPipelineResourceLayout&   _Layout,
-                          Uint32                      _Index) : 
+    ShaderVariableLocator(GLPipelineResourceLayout& _Layout,
+                          Uint32                    _Index) :
+        // clang-format off
         Layout {_Layout},
         Index  {_Index}
+    // clang-format on
     {
     }
 
-    template<typename ResourceType>
+    template <typename ResourceType>
     IShaderResourceVariable* TryResource(Uint32 StartVarOffset, Uint32 EndVarOffset)
     {
         auto NumResources = EndVarOffset - StartVarOffset;
@@ -533,8 +557,8 @@ public:
     }
 
 private:
-    GLPipelineResourceLayout&   Layout;
-    Uint32                      Index;
+    GLPipelineResourceLayout& Layout;
+    Uint32                    Index;
 };
 
 
@@ -542,26 +566,26 @@ IShaderResourceVariable* GLPipelineResourceLayout::GetShaderVariable(SHADER_TYPE
 {
     VERIFY(IsPowerOfTwo(Uint32{ShaderStage}), "Only one shader stage must be specified");
     auto ShaderInd = GetShaderTypeIndex(ShaderStage);
-    auto ProgIdx = m_ProgramIndex[ShaderInd];
+    auto ProgIdx   = m_ProgramIndex[ShaderInd];
 
     if (ProgIdx < 0)
         return nullptr;
 
     const auto& VariableEndOffset   = GetProgramVarEndOffsets(ProgIdx);
-    const auto& VariableStartOffset = ProgIdx > 0 ? GetProgramVarEndOffsets(ProgIdx-1) : GLProgramResources::ResourceCounters{};
+    const auto& VariableStartOffset = ProgIdx > 0 ? GetProgramVarEndOffsets(ProgIdx - 1) : GLProgramResources::ResourceCounters{};
 
     ShaderVariableLocator VarLocator(*this, Index);
 
-    if(auto* pUB = VarLocator.TryResource<UniformBuffBindInfo>(VariableStartOffset.NumUBs, VariableEndOffset.NumUBs))
+    if (auto* pUB = VarLocator.TryResource<UniformBuffBindInfo>(VariableStartOffset.NumUBs, VariableEndOffset.NumUBs))
         return pUB;
 
-    if(auto* pSampler = VarLocator.TryResource<SamplerBindInfo>(VariableStartOffset.NumSamplers, VariableEndOffset.NumSamplers))
+    if (auto* pSampler = VarLocator.TryResource<SamplerBindInfo>(VariableStartOffset.NumSamplers, VariableEndOffset.NumSamplers))
         return pSampler;
 
-    if(auto* pImage = VarLocator.TryResource<ImageBindInfo>(VariableStartOffset.NumImages, VariableEndOffset.NumImages))
+    if (auto* pImage = VarLocator.TryResource<ImageBindInfo>(VariableStartOffset.NumImages, VariableEndOffset.NumImages))
         return pImage;
 
-    if(auto* pSSBO = VarLocator.TryResource<StorageBufferBindInfo>(VariableStartOffset.NumStorageBlocks, VariableEndOffset.NumStorageBlocks))
+    if (auto* pSSBO = VarLocator.TryResource<StorageBufferBindInfo>(VariableStartOffset.NumStorageBlocks, VariableEndOffset.NumStorageBlocks))
         return pSSBO;
 
     LOG_ERROR(Index, " is not a valid variable index.");
@@ -573,18 +597,20 @@ IShaderResourceVariable* GLPipelineResourceLayout::GetShaderVariable(SHADER_TYPE
 class ShaderVariableIndexLocator
 {
 public:
-    ShaderVariableIndexLocator(const GLPipelineResourceLayout& _Layout, const GLPipelineResourceLayout::GLVariableBase& Variable) : 
-        Layout   (_Layout),
+    ShaderVariableIndexLocator(const GLPipelineResourceLayout& _Layout, const GLPipelineResourceLayout::GLVariableBase& Variable) :
+        // clang-format off
+        Layout   {_Layout},
         VarOffset(reinterpret_cast<const Uint8*>(&Variable) - reinterpret_cast<const Uint8*>(_Layout.m_ResourceBuffer.get()))
+    // clang-format on
     {}
 
-    template<typename ResourceType>
+    template <typename ResourceType>
     bool TryResource(Uint32 NextResourceTypeOffset, Uint32 FirstVarOffset, Uint32 LastVarOffset)
     {
         if (VarOffset < NextResourceTypeOffset)
         {
             auto RelativeOffset = VarOffset - Layout.GetResourceOffset<ResourceType>();
-            DEV_CHECK_ERR( RelativeOffset % sizeof(ResourceType) == 0, "Offset is not multiple of resource type (", sizeof(ResourceType), ")");
+            DEV_CHECK_ERR(RelativeOffset % sizeof(ResourceType) == 0, "Offset is not multiple of resource type (", sizeof(ResourceType), ")");
             RelativeOffset /= sizeof(ResourceType);
             VERIFY(RelativeOffset >= FirstVarOffset && RelativeOffset < LastVarOffset,
                    "Relative offset is out of bounds which either means the variable does not belong to this SRB or "
@@ -599,29 +625,29 @@ public:
         }
     }
 
-    Uint32 GetIndex() const {return Index;}
+    Uint32 GetIndex() const { return Index; }
 
 private:
     const GLPipelineResourceLayout& Layout;
-    const size_t VarOffset;
-    Uint32 Index = 0;
+    const size_t                    VarOffset;
+    Uint32                          Index = 0;
 };
 
 
-Uint32 GLPipelineResourceLayout::GetVariableIndex(const GLVariableBase& Var)const
+Uint32 GLPipelineResourceLayout::GetVariableIndex(const GLVariableBase& Var) const
 {
     if (!m_ResourceBuffer)
     {
         LOG_ERROR("This shader resource layout does not have resources");
         return static_cast<Uint32>(-1);
     }
-   
-    auto FirstStage = static_cast<SHADER_TYPE>(Uint32{Var.m_Attribs.ShaderStages} & ~(Uint32{Var.m_Attribs.ShaderStages}-1));
-    auto ProgIdx = m_ProgramIndex[GetShaderTypeIndex(FirstStage)];
+
+    auto FirstStage = static_cast<SHADER_TYPE>(Uint32{Var.m_Attribs.ShaderStages} & ~(Uint32{Var.m_Attribs.ShaderStages} - 1));
+    auto ProgIdx    = m_ProgramIndex[GetShaderTypeIndex(FirstStage)];
     VERIFY(ProgIdx >= 0, "This shader stage is not initialized in the resource layout");
 
     const auto& VariableEndOffset   = GetProgramVarEndOffsets(ProgIdx);
-    const auto& VariableStartOffset = ProgIdx > 0 ? GetProgramVarEndOffsets(ProgIdx-1) : GLProgramResources::ResourceCounters{};
+    const auto& VariableStartOffset = ProgIdx > 0 ? GetProgramVarEndOffsets(ProgIdx - 1) : GLProgramResources::ResourceCounters{};
 
     ShaderVariableIndexLocator IdxLocator(*this, Var);
 
@@ -641,17 +667,19 @@ Uint32 GLPipelineResourceLayout::GetVariableIndex(const GLVariableBase& Var)cons
     return static_cast<Uint32>(-1);
 }
 
-void GLPipelineResourceLayout::CopyResources(GLProgramResourceCache& DstCache)const
+void GLPipelineResourceLayout::CopyResources(GLProgramResourceCache& DstCache) const
 {
     VERIFY_EXPR(m_pResourceCache != nullptr);
     const auto& SrcCache = *m_pResourceCache;
+    // clang-format off
     VERIFY( DstCache.GetUBCount()      >= SrcCache.GetUBCount(),      "Dst cache is not large enough to contain all CBs" );
     VERIFY( DstCache.GetSamplerCount() >= SrcCache.GetSamplerCount(), "Dst cache is not large enough to contain all SRVs" );
     VERIFY( DstCache.GetImageCount()   >= SrcCache.GetImageCount(),   "Dst cache is not large enough to contain all samplers" );
     VERIFY( DstCache.GetSSBOCount()    >= SrcCache.GetSSBOCount(),    "Dst cache is not large enough to contain all UAVs" );
+    // clang-format on
 
     HandleConstResources(
-        [&](const UniformBuffBindInfo& UB)
+        [&](const UniformBuffBindInfo& UB) //
         {
             for (auto binding = UB.m_Attribs.Binding; binding < UB.m_Attribs.Binding + UB.m_Attribs.ArraySize; ++binding)
             {
@@ -660,7 +688,7 @@ void GLPipelineResourceLayout::CopyResources(GLProgramResourceCache& DstCache)co
             }
         },
 
-        [&](const SamplerBindInfo& Sam)
+        [&](const SamplerBindInfo& Sam) //
         {
             for (auto binding = Sam.m_Attribs.Binding; binding < Sam.m_Attribs.Binding + Sam.m_Attribs.ArraySize; ++binding)
             {
@@ -669,7 +697,7 @@ void GLPipelineResourceLayout::CopyResources(GLProgramResourceCache& DstCache)co
             }
         },
 
-        [&](const ImageBindInfo& Img)
+        [&](const ImageBindInfo& Img) //
         {
             for (auto binding = Img.m_Attribs.Binding; binding < Img.m_Attribs.Binding + Img.m_Attribs.ArraySize; ++binding)
             {
@@ -678,37 +706,37 @@ void GLPipelineResourceLayout::CopyResources(GLProgramResourceCache& DstCache)co
             }
         },
 
-        [&](const StorageBufferBindInfo& SSBO)
+        [&](const StorageBufferBindInfo& SSBO) //
         {
             for (auto binding = SSBO.m_Attribs.Binding; binding < SSBO.m_Attribs.Binding + SSBO.m_Attribs.ArraySize; ++binding)
             {
                 auto pBufferView = SrcCache.GetConstSSBO(binding).pBufferView;
                 DstCache.SetSSBO(binding, std::move(pBufferView));
             }
-        }
+        } //
     );
 }
 
 #ifdef DEVELOPMENT
-bool GLPipelineResourceLayout::dvpVerifyBindings(const GLProgramResourceCache& ResourceCache)const
+bool GLPipelineResourceLayout::dvpVerifyBindings(const GLProgramResourceCache& ResourceCache) const
 {
-#define LOG_MISSING_BINDING(VarType, BindInfo, BindPt) LOG_ERROR_MESSAGE("No resource is bound to ", VarType, " variable '", BindInfo.m_Attribs.GetPrintName(BindPt - BindInfo.m_Attribs.Binding), "'")
+#    define LOG_MISSING_BINDING(VarType, BindInfo, BindPt) LOG_ERROR_MESSAGE("No resource is bound to ", VarType, " variable '", BindInfo.m_Attribs.GetPrintName(BindPt - BindInfo.m_Attribs.Binding), "'")
 
     bool BindingsOK = true;
     HandleConstResources(
-        [&](const UniformBuffBindInfo& ub)
+        [&](const UniformBuffBindInfo& ub) //
         {
             for (Uint32 BindPoint = ub.m_Attribs.Binding; BindPoint < Uint32{ub.m_Attribs.Binding} + ub.m_Attribs.ArraySize; ++BindPoint)
             {
                 if (!ResourceCache.IsUBBound(BindPoint))
                 {
                     LOG_MISSING_BINDING("constant buffer", ub, BindPoint);
-                    BindingsOK  = false;
+                    BindingsOK = false;
                 }
             }
         },
 
-        [&](const SamplerBindInfo& sam)
+        [&](const SamplerBindInfo& sam) //
         {
             for (Uint32 BindPoint = sam.m_Attribs.Binding; BindPoint < Uint32{sam.m_Attribs.Binding} + sam.m_Attribs.ArraySize; ++BindPoint)
             {
@@ -717,7 +745,7 @@ bool GLPipelineResourceLayout::dvpVerifyBindings(const GLProgramResourceCache& R
                 if (!ResourceCache.IsSamplerBound(BindPoint, sam.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV))
                 {
                     LOG_MISSING_BINDING("texture", sam, BindPoint);
-                    BindingsOK  = false;
+                    BindingsOK = false;
                 }
                 else
                 {
@@ -725,13 +753,13 @@ bool GLPipelineResourceLayout::dvpVerifyBindings(const GLProgramResourceCache& R
                     if (sam.m_StaticSamplerIdx >= 0 && CachedSampler.pSampler == nullptr)
                     {
                         LOG_ERROR_MESSAGE("Static sampler is not initialized for texture '", sam.m_Attribs.Name, "'");
-                        BindingsOK  = false;
+                        BindingsOK = false;
                     }
                 }
             }
         },
 
-        [&](const ImageBindInfo& img)
+        [&](const ImageBindInfo& img) //
         {
             for (Uint32 BindPoint = img.m_Attribs.Binding; BindPoint < Uint32{img.m_Attribs.Binding} + img.m_Attribs.ArraySize; ++BindPoint)
             {
@@ -740,28 +768,27 @@ bool GLPipelineResourceLayout::dvpVerifyBindings(const GLProgramResourceCache& R
                 if (!ResourceCache.IsImageBound(BindPoint, img.m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV))
                 {
                     LOG_MISSING_BINDING("texture UAV", img, BindPoint);
-                    BindingsOK  = false;
+                    BindingsOK = false;
                 }
             }
         },
 
-        [&](const StorageBufferBindInfo& ssbo)
+        [&](const StorageBufferBindInfo& ssbo) //
         {
             for (Uint32 BindPoint = ssbo.m_Attribs.Binding; BindPoint < Uint32{ssbo.m_Attribs.Binding} + ssbo.m_Attribs.ArraySize; ++BindPoint)
             {
                 if (!ResourceCache.IsSSBOBound(BindPoint))
                 {
                     LOG_MISSING_BINDING("buffer", ssbo, BindPoint);
-                    BindingsOK  = false;
+                    BindingsOK = false;
                 }
             }
-        }
-    );
-#undef LOG_MISSING_BINDING
+        });
+#    undef LOG_MISSING_BINDING
 
     return BindingsOK;
 }
 
 #endif
 
-}
+} // namespace Diligent

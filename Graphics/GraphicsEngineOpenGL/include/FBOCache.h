@@ -40,15 +40,18 @@ public:
     FBOCache();
     ~FBOCache();
 
-    FBOCache(const FBOCache&)  = delete;
-    FBOCache(      FBOCache&&) = delete;
+    // clang-format off
+    FBOCache             (const FBOCache&)  = delete;
+    FBOCache             (      FBOCache&&) = delete;
     FBOCache& operator = (const FBOCache&)  = delete;
     FBOCache& operator = (      FBOCache&&) = delete;
+    // clang-format on
 
-    const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32                NumRenderTargets, 
-                                                     TextureViewGLImpl*    ppRTVs[], 
+    const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32                NumRenderTargets,
+                                                     TextureViewGLImpl*    ppRTVs[],
                                                      TextureViewGLImpl*    pDSV,
                                                      class GLContextState& ContextState);
+
     void OnReleaseTexture(ITexture* pTexture);
 
 private:
@@ -60,31 +63,31 @@ private:
         Uint32 NumRenderTargets = 0;
 
         // Unique IDs of textures bound as render targets
-        UniqueIdentifier RTIds   [MaxRenderTargets] = {};
+        UniqueIdentifier RTIds[MaxRenderTargets] = {};
         TextureViewDesc  RTVDescs[MaxRenderTargets];
 
         // Unique IDs of texture bound as depth stencil
-        UniqueIdentifier DSId     = 0;
-        TextureViewDesc  DSVDesc  = {};
+        UniqueIdentifier DSId    = 0;
+        TextureViewDesc  DSVDesc = {};
 
-        mutable size_t Hash       = 0;
+        mutable size_t Hash = 0;
 
-        bool operator == (const FBOCacheKey &Key)const;
+        bool operator==(const FBOCacheKey& Key) const;
     };
 
     struct FBOCacheKeyHashFunc
     {
-        std::size_t operator() ( const FBOCacheKey& Key )const;
+        std::size_t operator()(const FBOCacheKey& Key) const;
     };
 
 
     friend class RenderDeviceGLImpl;
-    ThreadingTools::LockFlag m_CacheLockFlag;
+    ThreadingTools::LockFlag                                                                 m_CacheLockFlag;
     std::unordered_map<FBOCacheKey, GLObjectWrappers::GLFrameBufferObj, FBOCacheKeyHashFunc> m_Cache;
-    
+
     // Multimap that sets up correspondence between unique texture id and all
     // FBOs it is used in
     std::unordered_multimap<Diligent::UniqueIdentifier, FBOCacheKey> m_TexIdToKey;
 };
 
-}
+} // namespace Diligent

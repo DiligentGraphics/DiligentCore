@@ -41,15 +41,15 @@ class SamplerGLImpl final : public SamplerBase<ISamplerGL, RenderDeviceGLImpl>
 public:
     using TSamplerBase = SamplerBase<ISamplerGL, RenderDeviceGLImpl>;
 
-    SamplerGLImpl( IReferenceCounters *pRefCounters, RenderDeviceGLImpl *pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false );
+    SamplerGLImpl(IReferenceCounters* pRefCounters, RenderDeviceGLImpl* pDeviceGL, const SamplerDesc& SamplerDesc, bool bIsDeviceInternal = false);
     ~SamplerGLImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    const GLObjectWrappers::GLSamplerObj& GetHandle(){ return m_GlSampler; }
+    const GLObjectWrappers::GLSamplerObj& GetHandle() { return m_GlSampler; }
 
 private:
     GLObjectWrappers::GLSamplerObj m_GlSampler;
 };
 
-}
+} // namespace Diligent

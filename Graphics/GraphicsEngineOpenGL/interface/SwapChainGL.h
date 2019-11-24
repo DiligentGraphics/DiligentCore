@@ -33,14 +33,14 @@ namespace Diligent
 
 // {F457BD7C-E725-4D3E-8607-A1F9BAE329EB}
 static constexpr INTERFACE_ID IID_SwapChainGL =
-{ 0xf457bd7c, 0xe725, 0x4d3e, { 0x86, 0x7, 0xa1, 0xf9, 0xba, 0xe3, 0x29, 0xeb } };
+    {0xf457bd7c, 0xe725, 0x4d3e, {0x86, 0x7, 0xa1, 0xf9, 0xba, 0xe3, 0x29, 0xeb}};
 
 /// Exposes OpenGL-specific functionality of a swap chain.
 class ISwapChainGL : public ISwapChain
 {
 public:
     /// Returns the default framebuffer handle
-    virtual GLuint GetDefaultFBO()const = 0;
+    virtual GLuint GetDefaultFBO() const = 0;
 };
 
-}
+} // namespace Diligent

@@ -46,10 +46,12 @@ public:
 
     ~GLProgramResourceCache();
 
+    // clang-format off
     GLProgramResourceCache             (const GLProgramResourceCache&) = delete;
     GLProgramResourceCache& operator = (const GLProgramResourceCache&) = delete;
     GLProgramResourceCache             (GLProgramResourceCache&&)      = delete;
     GLProgramResourceCache& operator = (GLProgramResourceCache&&)      = delete;
+    // clang-format on
 
     /// Describes a resource bound to a uniform buffer or a shader storage block slot
     struct CachedUB
@@ -63,15 +65,16 @@ public:
     {
         /// We keep strong reference to the view instead of the reference
         /// to the texture or buffer because this is more efficient from
-        /// performance point of view: this avoids one pair of 
-        /// AddStrongRef()/ReleaseStrongRef(). The view holds a strong reference 
+        /// performance point of view: this avoids one pair of
+        /// AddStrongRef()/ReleaseStrongRef(). The view holds a strong reference
         /// to the texture or the buffer, so it makes no difference.
         RefCntAutoPtr<IDeviceObject> pView;
-        TextureBaseGL*  pTexture = nullptr;
+
+        TextureBaseGL* pTexture = nullptr;
         union
         {
-            BufferGLImpl*   pBuffer  = nullptr; // When pTexture == nullptr
-            SamplerGLImpl*  pSampler;           // When pTexture != nullptr
+            BufferGLImpl*  pBuffer = nullptr; // When pTexture == nullptr
+            SamplerGLImpl* pSampler;          // When pTexture != nullptr
         };
         CachedResourceView() noexcept {}
 
@@ -107,6 +110,7 @@ public:
 
 
     static size_t GetRequriedMemorySize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount);
+
     void Initialize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount, class IMemoryAllocator& MemAllocator);
     void Destroy(class IMemoryAllocator& MemAllocator);
 
@@ -155,7 +159,7 @@ public:
         GetSSBO(Binding).pBufferView = std::move(pBuffView);
     }
 
-    bool IsUBBound(Uint32 Binding)const
+    bool IsUBBound(Uint32 Binding) const
     {
         if (Binding >= GetUBCount())
             return false;
@@ -164,7 +168,7 @@ public:
         return UB.pBuffer;
     }
 
-    bool IsSamplerBound(Uint32 Binding, bool dbgIsTextureView)const
+    bool IsSamplerBound(Uint32 Binding, bool dbgIsTextureView) const
     {
         if (Binding >= GetSamplerCount())
             return false;
@@ -174,7 +178,7 @@ public:
         return Sampler.pView;
     }
 
-    bool IsImageBound(Uint32 Binding, bool dbgIsTextureView)const
+    bool IsImageBound(Uint32 Binding, bool dbgIsTextureView) const
     {
         if (Binding >= GetImageCount())
             return false;
@@ -184,7 +188,7 @@ public:
         return Image.pView;
     }
 
-    bool IsSSBOBound(Uint32 Binding)const
+    bool IsSSBOBound(Uint32 Binding) const
     {
         if (Binding >= GetSSBOCount())
             return false;
@@ -193,38 +197,40 @@ public:
         return SSBO.pBufferView;
     }
 
+    // clang-format off
     Uint32 GetUBCount()      const { return (m_SmplrsOffset    - m_UBsOffset)    / sizeof(CachedUB);            }
     Uint32 GetSamplerCount() const { return (m_ImgsOffset      - m_SmplrsOffset) / sizeof(CachedResourceView);  }
     Uint32 GetImageCount()   const { return (m_SSBOsOffset     - m_ImgsOffset)   / sizeof(CachedResourceView);  }
     Uint32 GetSSBOCount()    const { return (m_MemoryEndOffset - m_SSBOsOffset)  / sizeof(CachedSSBO);          }
+    // clang-format on
 
-    const CachedUB& GetConstUB(Uint32 Binding)const
+    const CachedUB& GetConstUB(Uint32 Binding) const
     {
         VERIFY(Binding < GetUBCount(), "Uniform buffer binding (", Binding, ") is out of range");
         return reinterpret_cast<CachedUB*>(m_pResourceData + m_UBsOffset)[Binding];
     }
 
-    const CachedResourceView& GetConstSampler(Uint32 Binding)const
+    const CachedResourceView& GetConstSampler(Uint32 Binding) const
     {
         VERIFY(Binding < GetSamplerCount(), "Sampler binding (", Binding, ") is out of range");
         return reinterpret_cast<CachedResourceView*>(m_pResourceData + m_SmplrsOffset)[Binding];
     }
 
-    const CachedResourceView& GetConstImage(Uint32 Binding)const
+    const CachedResourceView& GetConstImage(Uint32 Binding) const
     {
         VERIFY(Binding < GetImageCount(), "Image buffer binding (", Binding, ") is out of range");
         return reinterpret_cast<CachedResourceView*>(m_pResourceData + m_ImgsOffset)[Binding];
     }
 
-    const CachedSSBO& GetConstSSBO(Uint32 Binding)const
+    const CachedSSBO& GetConstSSBO(Uint32 Binding) const
     {
         VERIFY(Binding < GetSSBOCount(), "Shader storage block binding (", Binding, ") is out of range");
         return reinterpret_cast<CachedSSBO*>(m_pResourceData + m_SSBOsOffset)[Binding];
     }
 
-    bool IsInitialized()const
+    bool IsInitialized() const
     {
-        return  m_MemoryEndOffset != InvalidResourceOffset;
+        return m_MemoryEndOffset != InvalidResourceOffset;
     }
 
 private:
@@ -249,7 +255,8 @@ private:
     }
 
     static constexpr const Uint16 InvalidResourceOffset = 0xFFFF;
-    static constexpr const Uint16 m_UBsOffset = 0;
+    static constexpr const Uint16 m_UBsOffset           = 0;
+
     Uint16 m_SmplrsOffset    = InvalidResourceOffset;
     Uint16 m_ImgsOffset      = InvalidResourceOffset;
     Uint16 m_SSBOsOffset     = InvalidResourceOffset;
@@ -260,7 +267,6 @@ private:
 #ifdef _DEBUG
     IMemoryAllocator* m_pdbgMemoryAllocator = nullptr;
 #endif
-
 };
 
-}
+} // namespace Diligent

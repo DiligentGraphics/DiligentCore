@@ -28,18 +28,20 @@
 namespace GLObjectWrappers
 {
 
-template<class CreateReleaseHelperType>
+template <class CreateReleaseHelperType>
 class GLObjWrapper
 {
 public:
-    explicit GLObjWrapper(bool CreateObject, CreateReleaseHelperType CreateReleaseHelper = CreateReleaseHelperType()) : 
+    explicit GLObjWrapper(bool CreateObject, CreateReleaseHelperType CreateReleaseHelper = CreateReleaseHelperType()) :
+        // clang-format off
         m_uiHandle           {0                  },
         m_CreateReleaseHelper{CreateReleaseHelper}
+    // clang-format on
     {
-        if( CreateObject )
+        if (CreateObject)
         {
             Create();
-            if(!m_uiHandle)
+            if (!m_uiHandle)
             {
                 LOG_ERROR_AND_THROW("Failed to create ", m_CreateReleaseHelper.Name, " GL object");
             }
@@ -50,19 +52,23 @@ public:
     {
         Release();
     }
-    
-    GLObjWrapper             (const GLObjWrapper&) = delete;
-    GLObjWrapper& operator = (const GLObjWrapper&) = delete;
 
-    GLObjWrapper(GLObjWrapper&& Wrapper) : 
+    // clang-format off
+    GLObjWrapper           (const GLObjWrapper&) = delete;
+    GLObjWrapper& operator=(const GLObjWrapper&) = delete;
+    // clang-format on
+
+    GLObjWrapper(GLObjWrapper&& Wrapper) :
+        // clang-format off
         m_uiHandle           {Wrapper.m_uiHandle                      },
         m_CreateReleaseHelper{std::move(Wrapper.m_CreateReleaseHelper)},
         m_UniqueId           {std::move(Wrapper.m_UniqueId)           }
+    // clang-format on
     {
         Wrapper.m_uiHandle = 0;
     }
 
-    GLObjWrapper& operator = (GLObjWrapper&& Wrapper)
+    GLObjWrapper& operator=(GLObjWrapper&& Wrapper)
     {
         Release();
 
@@ -70,7 +76,7 @@ public:
         m_CreateReleaseHelper = std::move(Wrapper.m_CreateReleaseHelper);
         m_UniqueId            = std::move(Wrapper.m_UniqueId);
 
-        Wrapper.m_uiHandle    = 0;
+        Wrapper.m_uiHandle = 0;
 
         return *this;
     }
@@ -80,7 +86,7 @@ public:
         VERIFY(m_uiHandle == 0, "GL object is already initialized");
         Release();
         m_CreateReleaseHelper.Create(m_uiHandle);
-        VERIFY(m_uiHandle, "Failed to initialize GL object" );
+        VERIFY(m_uiHandle, "Failed to initialize GL object");
     }
 
     void Release()
@@ -92,7 +98,7 @@ public:
         }
     }
 
-    Diligent::UniqueIdentifier GetUniqueID()const
+    Diligent::UniqueIdentifier GetUniqueID() const
     {
         // This unique ID is used to unambiguously identify the object for
         // tracking purposes.
@@ -101,7 +107,7 @@ public:
         return m_UniqueId.GetID();
     }
 
-    operator GLuint()const{return m_uiHandle;}
+    operator GLuint() const { return m_uiHandle; }
 
     static GLObjWrapper Null()
     {
@@ -109,7 +115,7 @@ public:
     }
 
 private:
-    GLuint m_uiHandle;
+    GLuint                  m_uiHandle;
     CreateReleaseHelperType m_CreateReleaseHelper;
 
     // Have separate counter for every type of wrappers
@@ -120,25 +126,25 @@ class GLBufferObjCreateReleaseHelper
 {
 public:
     explicit GLBufferObjCreateReleaseHelper(GLuint ExternalGLBufferHandle = 0) :
-        m_ExternalGLBufferHandle(ExternalGLBufferHandle)
+        m_ExternalGLBufferHandle{ExternalGLBufferHandle}
     {}
 
-    void Create(GLuint &BuffObj)
-    { 
+    void Create(GLuint& BuffObj)
+    {
         if (m_ExternalGLBufferHandle != 0)
             BuffObj = m_ExternalGLBufferHandle; // Attach to external GL buffer handle
         else
-            glGenBuffers(1, &BuffObj); 
+            glGenBuffers(1, &BuffObj);
     }
 
     void Release(GLuint BuffObj)
-    { 
+    {
         if (m_ExternalGLBufferHandle != 0)
             m_ExternalGLBufferHandle = 0; // Detach from external GL buffer. DO NOT delete the buffer
         else
-            glDeleteBuffers(1, &BuffObj); 
+            glDeleteBuffers(1, &BuffObj);
     }
-    static const char *Name;
+    static const char* Name;
 
 private:
     GLuint m_ExternalGLBufferHandle;
@@ -149,9 +155,10 @@ typedef GLObjWrapper<GLBufferObjCreateReleaseHelper> GLBufferObj;
 class GLProgramObjCreateReleaseHelper
 {
 public:
-    static void Create(GLuint &ProgObj){ ProgObj = glCreateProgram(); }
-    static void Release(GLuint ProgObj){ glDeleteProgram(ProgObj);    }
-    static const char *Name;
+    static void Create(GLuint& ProgObj) { ProgObj = glCreateProgram(); }
+    static void Release(GLuint ProgObj) { glDeleteProgram(ProgObj); }
+
+    static const char* Name;
 };
 typedef GLObjWrapper<GLProgramObjCreateReleaseHelper> GLProgramObj;
 
@@ -159,10 +166,13 @@ typedef GLObjWrapper<GLProgramObjCreateReleaseHelper> GLProgramObj;
 class GLShaderObjCreateReleaseHelper
 {
 public:
-    GLShaderObjCreateReleaseHelper(GLenum ShaderType) : m_ShaderType(ShaderType){}
-    void Create(GLuint &ShaderObj){ ShaderObj = glCreateShader(m_ShaderType); }
-    void Release(GLuint ShaderObj){ glDeleteShader(ShaderObj);    }
-    static const char *Name;
+    GLShaderObjCreateReleaseHelper(GLenum ShaderType) :
+        m_ShaderType(ShaderType) {}
+    void Create(GLuint& ShaderObj) { ShaderObj = glCreateShader(m_ShaderType); }
+    void Release(GLuint ShaderObj) { glDeleteShader(ShaderObj); }
+
+    static const char* Name;
+
 private:
     GLenum m_ShaderType;
 };
@@ -172,9 +182,10 @@ typedef GLObjWrapper<GLShaderObjCreateReleaseHelper> GLShaderObj;
 class GLPipelineObjCreateReleaseHelper
 {
 public:
-    void Create(GLuint &Pipeline) { glGenProgramPipelines(1, &Pipeline); }
+    void Create(GLuint& Pipeline) { glGenProgramPipelines(1, &Pipeline); }
     void Release(GLuint Pipeline) { glDeleteProgramPipelines(1, &Pipeline); }
-    static const char *Name;
+
+    static const char* Name;
 };
 typedef GLObjWrapper<GLPipelineObjCreateReleaseHelper> GLPipelineObj;
 
@@ -182,9 +193,10 @@ typedef GLObjWrapper<GLPipelineObjCreateReleaseHelper> GLPipelineObj;
 class GLVAOCreateReleaseHelper
 {
 public:
-    void Create(GLuint &VAO) { glGenVertexArrays(1, &VAO); }
+    void Create(GLuint& VAO) { glGenVertexArrays(1, &VAO); }
     void Release(GLuint VAO) { glDeleteVertexArrays(1, &VAO); }
-    static const char *Name;
+
+    static const char* Name;
 };
 typedef GLObjWrapper<GLVAOCreateReleaseHelper> GLVertexArrayObj;
 
@@ -196,8 +208,8 @@ public:
         m_ExternalGLTextureHandle(ExternalGLTextureHandle)
     {}
 
-    void Create(GLuint &Tex) 
-    { 
+    void Create(GLuint& Tex)
+    {
         if (m_ExternalGLTextureHandle != 0)
             Tex = m_ExternalGLTextureHandle; // Attach to the external texture
         else
@@ -205,14 +217,14 @@ public:
     }
 
     void Release(GLuint Tex)
-    { 
+    {
         if (m_ExternalGLTextureHandle != 0)
             m_ExternalGLTextureHandle = 0; // Detach from the external texture. DO NOT delete it!
         else
             glDeleteTextures(1, &Tex);
     }
 
-    static const char *Name;
+    static const char* Name;
 
 private:
     GLuint m_ExternalGLTextureHandle;
@@ -222,9 +234,10 @@ typedef GLObjWrapper<GLTextureCreateReleaseHelper> GLTextureObj;
 class GLSamplerCreateReleaseHelper
 {
 public:
-    void Create(GLuint &Sampler) { glGenSamplers(1, &Sampler); }
+    void Create(GLuint& Sampler) { glGenSamplers(1, &Sampler); }
     void Release(GLuint Sampler) { glDeleteSamplers(1, &Sampler); }
-    static const char *Name;
+
+    static const char* Name;
 };
 typedef GLObjWrapper<GLSamplerCreateReleaseHelper> GLSamplerObj;
 
@@ -236,23 +249,23 @@ public:
         m_ExternalFBOHandle(ExternalFBOHandle)
     {}
 
-    void Create(GLuint &FBO) 
-    { 
+    void Create(GLuint& FBO)
+    {
         if (m_ExternalFBOHandle != 0)
             FBO = m_ExternalFBOHandle; // Attach to external FBO handle
         else
-            glGenFramebuffers(1, &FBO); 
+            glGenFramebuffers(1, &FBO);
     }
 
-    void Release(GLuint FBO) 
-    { 
+    void Release(GLuint FBO)
+    {
         if (m_ExternalFBOHandle != 0)
             m_ExternalFBOHandle = 0; // DO NOT delete the FBO
         else
-            glDeleteFramebuffers(1, &FBO); 
+            glDeleteFramebuffers(1, &FBO);
     }
 
-    static const char *Name;
+    static const char* Name;
 
 private:
     GLuint m_ExternalFBOHandle;
@@ -263,27 +276,31 @@ typedef GLObjWrapper<GLFBOCreateReleaseHelper> GLFrameBufferObj;
 class GLRBOCreateReleaseHelper
 {
 public:
-    void Create(GLuint &RBO) { glGenRenderbuffers(1, &RBO); }
+    void Create(GLuint& RBO) { glGenRenderbuffers(1, &RBO); }
     void Release(GLuint RBO) { glDeleteRenderbuffers(1, &RBO); }
-    static const char *Name;
+
+    static const char* Name;
 };
 typedef GLObjWrapper<GLRBOCreateReleaseHelper> GLRenderBufferObj;
-    
+
 struct GLSyncObj
 {
     GLSyncObj() {}
-    GLSyncObj(GLsync _SyncHandle) : SyncHandle(_SyncHandle) {}
+    GLSyncObj(GLsync _SyncHandle) :
+        SyncHandle{_SyncHandle} {}
 
+    // clang-format off
     GLSyncObj             (const GLSyncObj&) = delete;
     GLSyncObj& operator = (const GLSyncObj&) = delete;
-    
+    // clang-format on
+
     GLSyncObj(GLSyncObj&& rhs)
     {
         SyncHandle     = rhs.SyncHandle;
         rhs.SyncHandle = GLsync{};
     }
 
-    GLSyncObj& operator = (GLSyncObj&& rhs)
+    GLSyncObj& operator=(GLSyncObj&& rhs)
     {
         Release();
         SyncHandle     = rhs.SyncHandle;
@@ -303,10 +320,10 @@ struct GLSyncObj
         Release();
     }
 
-    operator GLsync()const{return SyncHandle;}
+    operator GLsync() const { return SyncHandle; }
 
 private:
     GLsync SyncHandle = {};
 };
 
-}
+} // namespace GLObjectWrappers

@@ -37,72 +37,72 @@
 
 #if PLATFORM_WIN32
 
-#   ifndef GLEW_STATIC
-#       define GLEW_STATIC // Must be defined to use static version of glew
-#   endif
-#   include "GL/glew.h"
-    // Glew includes <windows.h>
-#   ifndef NOMINMAX
-#       define NOMINMAX
-#   endif
-#   include "GL/wglew.h"
-#   include <GL/GL.h>
+#    ifndef GLEW_STATIC
+#        define GLEW_STATIC // Must be defined to use static version of glew
+#    endif
+#    include "GL/glew.h"
+// Glew includes <windows.h>
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include "GL/wglew.h"
+#    include <GL/GL.h>
 
 #elif PLATFORM_LINUX
 
-#   ifndef GLEW_STATIC
-#       define GLEW_STATIC // Must be defined to use static version of glew
-#   endif
-#   ifndef GLEW_NO_GLU
-#       define GLEW_NO_GLU
-#   endif
+#    ifndef GLEW_STATIC
+#        define GLEW_STATIC // Must be defined to use static version of glew
+#    endif
+#    ifndef GLEW_NO_GLU
+#        define GLEW_NO_GLU
+#    endif
 
-#   include "GL/glew.h"
-#   include <GL/glx.h>
+#    include "GL/glew.h"
+#    include <GL/glx.h>
 
 // Undefine beautiful defines from GL/glx.h -> X11/Xlib.h
-#   ifdef Bool
-#       undef Bool
-#   endif
-#   ifdef True
-#       undef True
-#   endif
-#   ifdef False
-#       undef False
-#   endif
-#   ifdef Status
-#       undef Status
-#   endif
-#   ifdef Success
-#       undef Success
-#   endif
+#    ifdef Bool
+#        undef Bool
+#    endif
+#    ifdef True
+#        undef True
+#    endif
+#    ifdef False
+#        undef False
+#    endif
+#    ifdef Status
+#        undef Status
+#    endif
+#    ifdef Success
+#        undef Success
+#    endif
 
 #elif PLATFORM_MACOS
 
-#   ifndef GLEW_STATIC
-#       define GLEW_STATIC // Must be defined to use static version of glew
-#   endif
-#   ifndef GLEW_NO_GLU
-#       define GLEW_NO_GLU
-#   endif
+#    ifndef GLEW_STATIC
+#        define GLEW_STATIC // Must be defined to use static version of glew
+#    endif
+#    ifndef GLEW_NO_GLU
+#        define GLEW_NO_GLU
+#    endif
 
-#   include "GL/glew.h"
+#    include "GL/glew.h"
 
 #elif PLATFORM_ANDROID
 
-#   include <GLES3/gl3.h>
-#   include <GLES3/gl3ext.h>
-    // GLStubs must be included after GLFeatures!
-#   include "GLStubsAndroid.h"
+#    include <GLES3/gl3.h>
+#    include <GLES3/gl3ext.h>
+// GLStubs must be included after GLFeatures!
+#    include "GLStubsAndroid.h"
 
 #elif PLATFORM_IOS
 
-#   include <OpenGLES/ES3/gl.h>
-#   include <OpenGLES/ES3/glext.h>
-#   include "GLStubsIOS.h"
+#    include <OpenGLES/ES3/gl.h>
+#    include <OpenGLES/ES3/glext.h>
+#    include "GLStubsIOS.h"
 
 #else
-#   error Unsupported platform
+#    error Unsupported platform
 #endif
 
 #include "Errors.h"
@@ -115,25 +115,30 @@
 #include "RenderDevice.h"
 #include "BaseInterfacesGL.h"
 
-#define CHECK_GL_ERROR(...)\
-{                                       \
-    auto err = glGetError();            \
-    if( err != GL_NO_ERROR )            \
-    {                                   \
-        LogError<false>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
-        UNEXPECTED("Error");            \
-    }                                   \
-}
+#define CHECK_GL_ERROR(...)                                                                           \
+    do                                                                                                \
+    {                                                                                                 \
+        auto err = glGetError();                                                                      \
+        if (err != GL_NO_ERROR)                                                                       \
+        {                                                                                             \
+            LogError<false>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
+            UNEXPECTED("Error");                                                                      \
+        }                                                                                             \
+    } while (false)
 
-#define CHECK_GL_ERROR_AND_THROW(...)\
-{                                       \
-    auto err = glGetError();            \
-    if( err != GL_NO_ERROR )            \
-        LogError<true>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
-}
+#define CHECK_GL_ERROR_AND_THROW(...)                                                                \
+    do                                                                                               \
+    {                                                                                                \
+        auto err = glGetError();                                                                     \
+        if (err != GL_NO_ERROR)                                                                      \
+            LogError<true>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
+    } while (false)
 
 #ifdef DEVELOPMENT
-#   define DEV_CHECK_GL_ERROR CHECK_GL_ERROR
+#    define DEV_CHECK_GL_ERROR CHECK_GL_ERROR
 #else
-#   define DEV_CHECK_GL_ERROR(...) do{}while(false)
+#    define DEV_CHECK_GL_ERROR(...) \
+        do                          \
+        {                           \
+        } while (false)
 #endif

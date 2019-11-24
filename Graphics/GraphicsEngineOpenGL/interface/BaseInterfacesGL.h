@@ -23,25 +23,33 @@
 
 #pragma once
 
+// clang-format off
+
 #if PLATFORM_ANDROID
-    #include "RenderDeviceGLES.h"
+
+#   include "RenderDeviceGLES.h"
     namespace Diligent
     {
         using IGLDeviceBaseInterface = IRenderDeviceGLES;
     }
+
 #elif PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
-    #include "RenderDeviceGL.h"
+
+#   include "RenderDeviceGL.h"
     namespace Diligent
     {
         using IGLDeviceBaseInterface = IRenderDeviceGL;
     }
+
 #elif PLATFORM_IOS
-    #include "RenderDeviceGL.h"
+
+#   include "RenderDeviceGL.h"
     namespace Diligent
     {
         using IGLDeviceBaseInterface = IRenderDeviceGL;
     }
 #else
+
 #   error Unsupported platform
 #endif
 

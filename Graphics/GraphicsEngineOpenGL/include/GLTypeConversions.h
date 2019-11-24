@@ -26,7 +26,8 @@
 namespace Diligent
 {
 
-static const GLenum PrimTopologyToGLTopologyMap[] = 
+// clang-format off
+static const GLenum PrimTopologyToGLTopologyMap[] =
 {
     0,                 //PRIMITIVE_TOPOLOGY_UNDEFINED = 0
     GL_TRIANGLES,      //PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
@@ -34,25 +35,29 @@ static const GLenum PrimTopologyToGLTopologyMap[] =
     GL_POINTS,         //PRIMITIVE_TOPOLOGY_POINT_LIST
     GL_LINES           //PRIMITIVE_TOPOLOGY_LINE_LIST
 };
+// clang-format on
 
 inline GLenum PrimitiveTopologyToGLTopology(PRIMITIVE_TOPOLOGY PrimTopology)
 {
     VERIFY_EXPR(PrimTopology < _countof(PrimTopologyToGLTopologyMap));
     auto GLTopology = PrimTopologyToGLTopologyMap[PrimTopology];
 #ifdef _DEBUG
-    switch(PrimTopology)
+    switch (PrimTopology)
     {
+        // clang-format off
         case PRIMITIVE_TOPOLOGY_UNDEFINED:      VERIFY_EXPR(GLTopology == 0);                 break;
         case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:  VERIFY_EXPR(GLTopology == GL_TRIANGLES);      break;
         case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP: VERIFY_EXPR(GLTopology == GL_TRIANGLE_STRIP); break;
         case PRIMITIVE_TOPOLOGY_POINT_LIST:     VERIFY_EXPR(GLTopology == GL_POINTS);         break;
         case PRIMITIVE_TOPOLOGY_LINE_LIST:      VERIFY_EXPR(GLTopology == GL_LINES);          break;
         default: UNEXPECTED("Unexpected primitive topology");
+            // clang-format on
     }
 #endif
     return GLTopology;
 }
 
+// clang-format off
 static const GLenum TypeToGLTypeMap[] = 
 {
     0,                  //VT_UNDEFINED = 0
@@ -65,14 +70,16 @@ static const GLenum TypeToGLTypeMap[] =
     0,                  //VT_FLOAT16
     GL_FLOAT            //VT_FLOAT32
 };
+// clang-format on
 
 inline GLenum TypeToGLType(VALUE_TYPE Value)
 {
     VERIFY_EXPR(Value < _countof(TypeToGLTypeMap));
     auto GLType = TypeToGLTypeMap[Value];
 #ifdef _DEBUG
-    switch(Value)
+    switch (Value)
     {
+        // clang-format off
         case VT_INT8:    VERIFY_EXPR(GLType == GL_BYTE);           break;
         case VT_INT16:   VERIFY_EXPR(GLType == GL_SHORT);          break;
         case VT_INT32:   VERIFY_EXPR(GLType == GL_INT);            break;
@@ -81,6 +88,7 @@ inline GLenum TypeToGLType(VALUE_TYPE Value)
         case VT_UINT32:  VERIFY_EXPR(GLType == GL_UNSIGNED_INT);   break;
         case VT_FLOAT32: VERIFY_EXPR(GLType == GL_FLOAT);          break;
         default: UNEXPECTED("Unexpected value type");
+            // clang-format on
     }
 #endif
     return GLType;
@@ -90,84 +98,87 @@ inline GLenum UsageToGLUsage(USAGE Usage)
 {
     // http://www.informit.com/articles/article.aspx?p=2033340&seqNum=2
     // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glBufferData.xml
-    switch(Usage)
+    switch (Usage)
     {
         // STATIC: The data store contents will be modified once and used many times.
         // STREAM: The data store contents will be modified once and used at MOST a few times.
         // DYNAMIC: The data store contents will be modified repeatedly and used many times.
 
+        // clang-format off
         case USAGE_STATIC:      return GL_STATIC_DRAW;
         case USAGE_DEFAULT:     return GL_STATIC_DRAW;
         case USAGE_DYNAMIC:     return GL_DYNAMIC_DRAW;
         case USAGE_STAGING:     return GL_DYNAMIC_READ;
         default: UNEXPECTED( "Unknow usage" ); return 0;
+            // clang-format on
     }
 }
 
-inline void FilterTypeToGLFilterType(FILTER_TYPE Filter, GLenum &GLFilter, Bool &bIsAnisotropic, Bool &bIsComparison)
+inline void FilterTypeToGLFilterType(FILTER_TYPE Filter, GLenum& GLFilter, Bool& bIsAnisotropic, Bool& bIsComparison)
 {
-    switch(Filter)
+    switch (Filter)
     {
         case FILTER_TYPE_UNKNOWN:
-            UNEXPECTED( "Unspecified filter type" ); 
+            UNEXPECTED("Unspecified filter type");
             bIsAnisotropic = false;
-            bIsComparison = false;
-            GLFilter = GL_NEAREST;
+            bIsComparison  = false;
+            GLFilter       = GL_NEAREST;
             break;
 
         case FILTER_TYPE_POINT:
             bIsAnisotropic = false;
-            bIsComparison = false;
-            GLFilter = GL_NEAREST;
+            bIsComparison  = false;
+            GLFilter       = GL_NEAREST;
             break;
 
         case FILTER_TYPE_LINEAR:
             bIsAnisotropic = false;
-            bIsComparison = false;
-            GLFilter = GL_LINEAR;
+            bIsComparison  = false;
+            GLFilter       = GL_LINEAR;
             break;
 
-	    case FILTER_TYPE_ANISOTROPIC:
+        case FILTER_TYPE_ANISOTROPIC:
             bIsAnisotropic = true;
-            bIsComparison = false;
-            GLFilter = GL_LINEAR;
+            bIsComparison  = false;
+            GLFilter       = GL_LINEAR;
             break;
 
         case FILTER_TYPE_COMPARISON_POINT:
             bIsAnisotropic = false;
-            bIsComparison = true;
-            GLFilter = GL_NEAREST;
+            bIsComparison  = true;
+            GLFilter       = GL_NEAREST;
             break;
 
         case FILTER_TYPE_COMPARISON_LINEAR:
             bIsAnisotropic = false;
-            bIsComparison = true;
-            GLFilter = GL_LINEAR;
+            bIsComparison  = true;
+            GLFilter       = GL_LINEAR;
             break;
 
         case FILTER_TYPE_COMPARISON_ANISOTROPIC:
             bIsAnisotropic = true;
-            bIsComparison = true;
-            GLFilter = GL_LINEAR;
+            bIsComparison  = true;
+            GLFilter       = GL_LINEAR;
             break;
 
         default:
+            UNEXPECTED("Unknown filter type");
             bIsAnisotropic = false;
-            bIsComparison = false;
-            UNEXPECTED( "Unknown filter type" ); 
-            GLFilter = GL_NEAREST;
+            bIsComparison  = false;
+            GLFilter       = GL_NEAREST;
             break;
     }
 }
 
-GLenum TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags = 0);
+GLenum         TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags = 0);
 TEXTURE_FORMAT GLInternalTexFormatToTexFormat(GLenum GlFormat);
-GLenum CorrectGLTexFormat(GLenum GLTexFormat, Uint32 BindFlags);
+GLenum         CorrectGLTexFormat(GLenum GLTexFormat, Uint32 BindFlags);
 
 inline GLenum TexAddressModeToGLAddressMode(TEXTURE_ADDRESS_MODE Mode)
 {
-    switch(Mode)
+    switch (Mode)
     {
+        // clang-format off
         case TEXTURE_ADDRESS_UNKNOWN: UNEXPECTED( "Texture address mode is not specified" ); return GL_CLAMP_TO_EDGE;
         case TEXTURE_ADDRESS_WRAP:          return GL_REPEAT;
         case TEXTURE_ADDRESS_MIRROR:        return GL_MIRRORED_REPEAT;
@@ -180,13 +191,15 @@ inline GLenum TexAddressModeToGLAddressMode(TEXTURE_ADDRESS_MODE Mode)
                                             // GL_CLAMP_TO_EDGE except that it takes the absolute value of the texture 
                                             // coordinates before clamping.
         default: UNEXPECTED( "Unknown texture address mode" ); return GL_CLAMP_TO_EDGE;
+            // clang-format on
     }
 }
 
 inline GLenum CompareFuncToGLCompareFunc(COMPARISON_FUNCTION Func)
 {
-    switch(Func)
+    switch (Func)
     {
+        // clang-format off
         case COMPARISON_FUNC_UNKNOWN: UNEXPECTED( "Comparison function is not specified" ); return GL_ALWAYS;
         case COMPARISON_FUNC_NEVER:         return GL_NEVER;
 	    case COMPARISON_FUNC_LESS:          return GL_LESS;
@@ -197,24 +210,28 @@ inline GLenum CompareFuncToGLCompareFunc(COMPARISON_FUNCTION Func)
 	    case COMPARISON_FUNC_GREATER_EQUAL: return GL_GEQUAL;
 	    case COMPARISON_FUNC_ALWAYS:        return GL_ALWAYS;
         default: UNEXPECTED( "Unknown comparison func" ); return GL_ALWAYS;
+            // clang-format on
     }
 }
 
 struct NativePixelAttribs
 {
-    GLenum PixelFormat;
-    GLenum DataType;
-    Bool IsCompressed;
-    explicit NativePixelAttribs(GLenum _PixelFormat = 0, GLenum _DataType = 0, Bool _IsCompressed = False) :
-        PixelFormat(_PixelFormat),
-        DataType(_DataType),
-        IsCompressed(_IsCompressed)
+    GLenum PixelFormat  = 0;
+    GLenum DataType     = 0;
+    Bool   IsCompressed = 0;
+
+    NativePixelAttribs() noexcept {}
+
+    explicit NativePixelAttribs(GLenum _PixelFormat, GLenum _DataType, Bool _IsCompressed = False) noexcept :
+        PixelFormat{_PixelFormat},
+        DataType{_DataType},
+        IsCompressed{_IsCompressed}
     {}
 };
 
 inline Uint32 GetNumPixelFormatComponents(GLenum Format)
 {
-    switch(Format)
+    switch (Format)
     {
         case GL_RGBA:
         case GL_RGBA_INTEGER:
@@ -234,14 +251,15 @@ inline Uint32 GetNumPixelFormatComponents(GLenum Format)
         case GL_DEPTH_STENCIL:
             return 1;
 
-        default: UNEXPECTED( "Unknonw pixel format" ); return 0;
+        default: UNEXPECTED("Unknonw pixel format"); return 0;
     };
 }
 
 inline Uint32 GetPixelTypeSize(GLenum Type)
 {
-    switch(Type)
+    switch (Type)
     {
+        // clang-format off
         case GL_FLOAT:          return sizeof(GLfloat);
 
         case GL_UNSIGNED_INT_10_10_10_2: 
@@ -267,14 +285,15 @@ inline Uint32 GetPixelTypeSize(GLenum Type)
         case GL_FLOAT_32_UNSIGNED_INT_24_8_REV:return sizeof(GLfloat) + sizeof(GLuint);
 
         default: UNEXPECTED( "Unknonw pixel type" ); return 0;
+            // clang-format on
     }
 }
 
 NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat);
-GLenum AccessFlags2GLAccess( Uint32 UAVAccessFlags );
-GLenum TypeToGLTexFormat( VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized );
-GLenum StencilOp2GlStencilOp( STENCIL_OP StencilOp );
-GLenum BlendFactor2GLBlend( BLEND_FACTOR bf );
-GLenum BlendOperation2GLBlendOp( BLEND_OPERATION BlendOp );
+GLenum             AccessFlags2GLAccess(Uint32 UAVAccessFlags);
+GLenum             TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
+GLenum             StencilOp2GlStencilOp(STENCIL_OP StencilOp);
+GLenum             BlendFactor2GLBlend(BLEND_FACTOR bf);
+GLenum             BlendOperation2GLBlendOp(BLEND_OPERATION BlendOp);
 
-}
+} // namespace Diligent

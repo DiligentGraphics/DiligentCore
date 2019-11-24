@@ -45,15 +45,15 @@ public:
     using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
 
     FenceGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice, 
+                RenderDeviceGLImpl* pDevice,
                 const FenceDesc&    Desc);
     ~FenceGLImpl();
 
     /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
-    virtual Uint64 GetCompletedValue()override final;
+    virtual Uint64 GetCompletedValue() override final;
 
     /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void Reset(Uint64 Value)override final;
+    virtual void Reset(Uint64 Value) override final;
 
     void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
     {
@@ -63,9 +63,8 @@ public:
     void Wait(Uint64 Value, bool FlushCommands);
 
 private:
-    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj> > m_PendingFences;
-    volatile Uint64 m_LastCompletedFenceValue = 0;
+    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
+    volatile Uint64                                            m_LastCompletedFenceValue = 0;
 };
 
-}
-
+} // namespace Diligent

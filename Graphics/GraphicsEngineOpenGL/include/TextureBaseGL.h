@@ -44,73 +44,83 @@ public:
     using TTextureBase = TextureBase<ITextureGL, RenderDeviceGLImpl, TextureViewGLImpl, FixedBlockMemoryAllocator>;
     using ViewImplType = TextureViewGLImpl;
 
-    TextureBaseGL(IReferenceCounters*           pRefCounters,
-                  FixedBlockMemoryAllocator&    TexViewObjAllocator,
-                  RenderDeviceGLImpl*           pDeviceGL,
-                  const TextureDesc&            TexDesc,
-                  GLenum                        BindTarget,
-                  const TextureData*            pInitData         = nullptr, 
-                  bool                          bIsDeviceInternal = false);
+    TextureBaseGL(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  RenderDeviceGLImpl*        pDeviceGL,
+                  const TextureDesc&         TexDesc,
+                  GLenum                     BindTarget,
+                  const TextureData*         pInitData         = nullptr,
+                  bool                       bIsDeviceInternal = false);
 
-    TextureBaseGL(IReferenceCounters*           pRefCounters,
-                  FixedBlockMemoryAllocator&    TexViewObjAllocator,
-                  RenderDeviceGLImpl*           pDeviceGL,
-                  GLContextState&               GLState,
-                  const TextureDesc&            TexDesc,
-                  GLuint                        GLTextureHandle,
-                  GLenum                        BindTarget,
-                  bool                          bIsDeviceInternal);
+    TextureBaseGL(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  RenderDeviceGLImpl*        pDeviceGL,
+                  GLContextState&            GLState,
+                  const TextureDesc&         TexDesc,
+                  GLuint                     GLTextureHandle,
+                  GLenum                     BindTarget,
+                  bool                       bIsDeviceInternal);
 
     /// Initializes a dummy texture (dummy textures are used by the swap chain to
     /// proxy default framebuffer).
-    TextureBaseGL(IReferenceCounters*           pRefCounters,
-                  FixedBlockMemoryAllocator&    TexViewObjAllocator,
-                  RenderDeviceGLImpl*           pDeviceGL,
-                  const TextureDesc&            TexDesc,
-                  bool                          bIsDeviceInternal);
+    TextureBaseGL(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  RenderDeviceGLImpl*        pDeviceGL,
+                  const TextureDesc&         TexDesc,
+                  bool                       bIsDeviceInternal);
 
     ~TextureBaseGL();
-    
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
 
-    const GLObjectWrappers::GLTextureObj& GetGLHandle()const{ return m_GlTexture; }
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+
+    const GLObjectWrappers::GLTextureObj& GetGLHandle() const { return m_GlTexture; }
 
     /// Implementation of ITextureGL::GetBindTarget().
-    virtual GLenum GetBindTarget()const override final{return m_BindTarget;}
+    virtual GLenum GetBindTarget() const override final { return m_BindTarget; }
 
-    GLenum GetGLTexFormat()const{ return m_GLTexFormat; }
+    GLenum GetGLTexFormat() const { return m_GLTexFormat; }
 
-    void TextureMemoryBarrier( Uint32 RequiredBarriers, class GLContextState &GLContextState);
+    void TextureMemoryBarrier(Uint32 RequiredBarriers, class GLContextState& GLContextState);
 
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc, GLenum AttachmentPoint) = 0;
 
-    void CopyData(DeviceContextGLImpl*  pDeviceCtxGL, 
-                  TextureBaseGL*        pSrcTextureGL, 
-                  Uint32                SrcMipLevel,
-                  Uint32                SrcSlice,
-                  const Box*            pSrcBox,
-                  Uint32                DstMipLevel,
-                  Uint32                DstSlice,
-                  Uint32                DstX,
-                  Uint32                DstY,
-                  Uint32                DstZ);
+    void CopyData(DeviceContextGLImpl* pDeviceCtxGL,
+                  TextureBaseGL*       pSrcTextureGL,
+                  Uint32               SrcMipLevel,
+                  Uint32               SrcSlice,
+                  const Box*           pSrcBox,
+                  Uint32               DstMipLevel,
+                  Uint32               DstSlice,
+                  Uint32               DstX,
+                  Uint32               DstY,
+                  Uint32               DstZ);
 
     /// Implementation of ITextureGL::GetGLTextureHandle().
-    virtual GLuint GetGLTextureHandle()override final { return GetGLHandle(); }
+    virtual GLuint GetGLTextureHandle() override final { return GetGLHandle(); }
 
     /// Implementation of ITexture::GetNativeHandle() in OpenGL backend.
-    virtual void* GetNativeHandle()override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLTextureHandle())); }
+    virtual void* GetNativeHandle() override final
+    {
+        return reinterpret_cast<void*>(static_cast<size_t>(GetGLTextureHandle()));
+    }
 
-    virtual void UpdateData( class GLContextState& CtxState, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData ) = 0;
+    virtual void UpdateData(class GLContextState&    CtxState,
+                            Uint32                   MipLevel,
+                            Uint32                   Slice,
+                            const Box&               DstBox,
+                            const TextureSubResData& SubresData) = 0;
 
 protected:
-    virtual void CreateViewInternal( const struct TextureViewDesc& ViewDesc, class ITextureView** ppView, bool bIsDefaultView )override;
+    virtual void CreateViewInternal(const struct TextureViewDesc& ViewDesc,
+                                    class ITextureView**          ppView,
+                                    bool                          bIsDefaultView) override;
+
     void SetDefaultGLParameters();
 
     GLObjectWrappers::GLTextureObj m_GlTexture;
-    const GLenum m_BindTarget;
-    const GLenum m_GLTexFormat;
+    const GLenum                   m_BindTarget;
+    const GLenum                   m_GLTexFormat;
     //Uint32 m_uiMapTarget;
 };
 
-}
+} // namespace Diligent

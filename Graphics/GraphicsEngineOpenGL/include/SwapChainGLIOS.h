@@ -32,40 +32,40 @@ namespace Diligent
 
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainGL interface on IOS
-class SwapChainGLIOS final :  public SwapChainBase<ISwapChainGL>
+class SwapChainGLIOS final : public SwapChainBase<ISwapChainGL>
 {
 public:
     typedef SwapChainBase<ISwapChainGL> TSwapChainBase;
-    
-    SwapChainGLIOS(IReferenceCounters*          pRefCounters,
-                    const EngineGLCreateInfo&   InitAttribs,
-                    const SwapChainDesc&        SwapChainDesc,
-                    class RenderDeviceGLImpl*   pRenderDeviceGL,
-                    class DeviceContextGLImpl*  pImmediateContextGL);
+
+    SwapChainGLIOS(IReferenceCounters*        pRefCounters,
+                   const EngineGLCreateInfo&  InitAttribs,
+                   const SwapChainDesc&       SwapChainDesc,
+                   class RenderDeviceGLImpl*  pRenderDeviceGL,
+                   class DeviceContextGLImpl* pImmediateContextGL);
     SwapChainGLIOS();
-    
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
-    
-    virtual void Present(Uint32 SyncInterval)override final;
-    
-    virtual void Resize( Uint32 NewWidth, Uint32 NewHeight )override final;
-    
-    virtual void SetFullscreenMode(const DisplayModeAttribs &DisplayMode)override final;
 
-    virtual void SetWindowedMode()override final;
+    virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual GLuint GetDefaultFBO()const override final;
+    virtual void Present(Uint32 SyncInterval) override final;
 
-    virtual ITextureView* GetCurrentBackBufferRTV()override final{return nullptr;}
-    virtual ITextureView* GetDepthBufferDSV()override final{return nullptr;}
-    
+    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
+
+    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
+
+    virtual void SetWindowedMode() override final;
+
+    virtual GLuint GetDefaultFBO() const override final;
+
+    virtual ITextureView* GetCurrentBackBufferRTV() override final { return nullptr; }
+    virtual ITextureView* GetDepthBufferDSV() override final { return nullptr; }
+
 private:
-    void InitRenderBuffers(bool InitFromDrawable, Uint32 &Width, Uint32 &Height);
-    
+    void InitRenderBuffers(bool InitFromDrawable, Uint32& Width, Uint32& Height);
+
     GLObjectWrappers::GLRenderBufferObj m_ColorRenderBuffer;
     GLObjectWrappers::GLRenderBufferObj m_DepthRenderBuffer;
-    GLObjectWrappers::GLFrameBufferObj m_DefaultFBO;
-    void  *m_CALayer;
+    GLObjectWrappers::GLFrameBufferObj  m_DefaultFBO;
+    void*                               m_CALayer;
 };
 
-}
+} // namespace Diligent

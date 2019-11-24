@@ -29,37 +29,37 @@ namespace Diligent
 class AsyncWritableResource
 {
 public:
-    AsyncWritableResource() : m_PendingMemoryBarriers( 0 ) {}
-    
-    void SetPendingMemoryBarriers( Uint32 Barriers ){ m_PendingMemoryBarriers |= Barriers; }
-    Uint32 GetPendingMemortBarriers(){ return m_PendingMemoryBarriers;}
+    AsyncWritableResource() noexcept {}
+
+    void   SetPendingMemoryBarriers(Uint32 Barriers) { m_PendingMemoryBarriers |= Barriers; }
+    Uint32 GetPendingMemortBarriers() { return m_PendingMemoryBarriers; }
 
 private:
     friend class GLContextState;
-    void ResetPendingMemoryBarriers( Uint32 Barriers ){ m_PendingMemoryBarriers = Barriers; }
-    void ClearPendingMemoryBarriers( Uint32 Barriers ){ m_PendingMemoryBarriers &= ~Barriers; }
+    void ResetPendingMemoryBarriers(Uint32 Barriers) { m_PendingMemoryBarriers = Barriers; }
+    void ClearPendingMemoryBarriers(Uint32 Barriers) { m_PendingMemoryBarriers &= ~Barriers; }
 
     // Buffer barriers:
     // GL_VERTEX_ATTRIB_ARRAY_BARRIER_BIT
     // GL_ELEMENT_ARRAY_BARRIER_BIT
     // GL_UNIFORM_BARRIER_BIT
-    // GL_BUFFER_UPDATE_BARRIER_BIT  
+    // GL_BUFFER_UPDATE_BARRIER_BIT
     // GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT
     // GL_SHADER_STORAGE_BARRIER_BIT
 
     // Texture barriers:
     // GL_TEXTURE_FETCH_BARRIER_BIT
     // GL_SHADER_IMAGE_ACCESS_BARRIER_BIT
-    // GL_PIXEL_BUFFER_BARRIER_BIT          
-    // GL_TEXTURE_UPDATE_BARRIER_BIT        
+    // GL_PIXEL_BUFFER_BARRIER_BIT
+    // GL_TEXTURE_UPDATE_BARRIER_BIT
 
     // Misc barriers:
-    // GL_FRAMEBUFFER_BARRIER_BIT           
-    // GL_TRANSFORM_FEEDBACK_BARRIER_BIT    
-    // GL_ATOMIC_COUNTER_BARRIER_BIT        
+    // GL_FRAMEBUFFER_BARRIER_BIT
+    // GL_TRANSFORM_FEEDBACK_BARRIER_BIT
+    // GL_ATOMIC_COUNTER_BARRIER_BIT
     // GL_QUERY_BUFFER_BARRIER_BIT
 
-    Uint32 m_PendingMemoryBarriers;
+    Uint32 m_PendingMemoryBarriers = 0;
 };
 
-}
+} // namespace Diligent

@@ -33,7 +33,7 @@
 
 enum class GPU_VENDOR
 {
-    UNKNOWN, 
+    UNKNOWN,
     INTEL,
     ATI,
     NVIDIA,
@@ -61,56 +61,56 @@ public:
                        const EngineGLCreateInfo& InitAttribs,
                        const SwapChainDesc*      pSCDesc = nullptr);
     ~RenderDeviceGLImpl();
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override;
-    
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+
     /// Implementation of IRenderDevice::CreateBuffer() in OpenGL backend.
-	void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBufferLayout, bool bIsDeviceInternal);
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBufferLayout)override final;
+    void         CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBufferLayout, bool bIsDeviceInternal);
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBufferLayout) override final;
 
     /// Implementation of IRenderDevice::CreateShader() in OpenGL backend.
-	void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader **ppShader, bool bIsDeviceInternal );
-    virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader **ppShader)override final;
+    void         CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal);
+    virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader) override final;
 
     /// Implementation of IRenderDevice::CreateTexture() in OpenGL backend.
-	void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture, bool bIsDeviceInternal);
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture** ppTexture)override final;
-    
+    void         CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture, bool bIsDeviceInternal);
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture** ppTexture) override final;
+
     /// Implementation of IRenderDevice::CreateSampler() in OpenGL backend.
-	void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler, bool bIsDeviceInternal);
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
+    void         CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler, bool bIsDeviceInternal);
+    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler) override final;
 
     /// Implementation of IRenderDevice::CreatePipelineState() in OpenGL backend.
-    void CreatePipelineState( const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState, bool bIsDeviceInternal);
-    virtual void CreatePipelineState( const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState )override final;
-    
+    void         CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState, bool bIsDeviceInternal);
+    virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState) override final;
+
     /// Implementation of IRenderDevice::CreateFence() in OpenGL backend.
-    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
+    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
 
     /// Implementation of IRenderDeviceGL::CreateTextureFromGLHandle().
-    virtual void CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)override final;
+    virtual void CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
 
     /// Implementation of IRenderDeviceGL::CreateBufferFromGLHandle().
-    virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)override final;
+    virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer) override final;
 
     /// Implementation of IRenderDevice::ReleaseStaleResources() in OpenGL backend.
-    virtual void ReleaseStaleResources(bool ForceRelease = false)override final {}
+    virtual void ReleaseStaleResources(bool ForceRelease = false) override final {}
 
     /// Implementation of IRenderDevice::IdleGPU() in OpenGL backend.
-    virtual void IdleGPU()override final;
+    virtual void IdleGPU() override final;
 
-    const GPUInfo& GetGPUInfo(){ return m_GPUInfo; }
+    const GPUInfo& GetGPUInfo() { return m_GPUInfo; }
 
     FBOCache& GetFBOCache(GLContext::NativeGLContextType Context);
-    void OnReleaseTexture(ITexture* pTexture);
+    void      OnReleaseTexture(ITexture* pTexture);
 
     VAOCache& GetVAOCache(GLContext::NativeGLContextType Context);
-    void OnDestroyPSO(IPipelineState* pPSO);
-    void OnDestroyBuffer(IBuffer* pBuffer);
+    void      OnDestroyPSO(IPipelineState* pPSO);
+    void      OnDestroyBuffer(IBuffer* pBuffer);
 
     void CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, class TextureBaseGL** ppTexture);
 
-    size_t GetCommandQueueCount()const { return 1; }
-    Uint64 GetCommandQueueMask()const { return Uint64{1};}
+    size_t GetCommandQueueCount() const { return 1; }
+    Uint64 GetCommandQueueMask() const { return Uint64{1}; }
 
     void InitTexRegionRender();
 
@@ -125,25 +125,25 @@ protected:
     friend class GLContextState;
 
     // Must be the first member because its constructor initializes OpenGL
-    GLContext m_GLContext; 
+    GLContext m_GLContext;
 
     std::unordered_set<String> m_ExtensionStrings;
 
-    ThreadingTools::LockFlag m_VAOCacheLockFlag;
+    ThreadingTools::LockFlag                                     m_VAOCacheLockFlag;
     std::unordered_map<GLContext::NativeGLContextType, VAOCache> m_VAOCache;
 
-    ThreadingTools::LockFlag m_FBOCacheLockFlag;
+    ThreadingTools::LockFlag                                     m_FBOCacheLockFlag;
     std::unordered_map<GLContext::NativeGLContextType, FBOCache> m_FBOCache;
 
     GPUInfo m_GPUInfo;
 
     std::unique_ptr<TexRegionRender> m_pTexRegionRender;
-    
+
 private:
-    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
-    bool CheckExtension(const Char* ExtensionString);
-    void FlagSupportedTexFormats();
-    void QueryDeviceCaps();
+    virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
+    bool         CheckExtension(const Char* ExtensionString);
+    void         FlagSupportedTexFormats();
+    void         QueryDeviceCaps();
 };
 
-}
+} // namespace Diligent

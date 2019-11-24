@@ -25,6 +25,8 @@
 
 #include "Errors.h"
 
+// clang-format off
+
 // Define unsupported formats for OpenGL ES
 #ifndef GL_RGBA16
 #   define GL_RGBA16 0x805B

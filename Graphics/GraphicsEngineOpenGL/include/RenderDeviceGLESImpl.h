@@ -31,19 +31,19 @@ namespace Diligent
 class RenderDeviceGLESImpl final : public RenderDeviceGLImpl
 {
 public:
-    RenderDeviceGLESImpl( IReferenceCounters*       pRefCounters,
-                          IMemoryAllocator&         RawMemAllocator,
-                          IEngineFactory*           pEngineFactory,
-                          const EngineGLCreateInfo& InitAttribs,
-                          const SwapChainDesc*      pSCDesc = nullptr);
-     
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface );
+    RenderDeviceGLESImpl(IReferenceCounters*       pRefCounters,
+                         IMemoryAllocator&         RawMemAllocator,
+                         IEngineFactory*           pEngineFactory,
+                         const EngineGLCreateInfo& InitAttribs,
+                         const SwapChainDesc*      pSCDesc = nullptr);
+
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface);
 
     virtual bool Invalidate();
 
     virtual void Suspend();
 
-    virtual EGLint Resume( ANativeWindow* window );
+    virtual EGLint Resume(ANativeWindow* window);
 };
 
-}
+} // namespace Diligent

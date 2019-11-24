@@ -34,7 +34,9 @@ namespace Diligent
 class GLContextState
 {
 public:
-    GLContextState(class RenderDeviceGLImpl *pDeviceGL);
+    GLContextState(class RenderDeviceGLImpl* pDeviceGL);
+
+    // clang-format off
 
     void SetProgram        (const GLObjectWrappers::GLProgramObj&     GLProgram);
     void SetPipeline       (const GLObjectWrappers::GLPipelineObj&    GLPipeline);
@@ -75,7 +77,9 @@ public:
     void GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& bIsIndependent);
     void SetColorWriteMask(Uint32 RTIndex, Uint32 WriteMask, Bool bIsIndependent);
 
-    void SetNumPatchVertices( Int32 NumVertices);
+    // clang-format on
+
+    void SetNumPatchVertices(Int32 NumVertices);
     void Invalidate();
 
     void InvalidateVAO()
@@ -84,100 +88,109 @@ public:
         // Resetting VAO after that with BindVAO(GLVertexArrayObj::Null()) will still have the effect because
         // null VAO's ID is 0, not -1.
     }
-    
+
     void InvalidateFBO()
     {
         m_FBOId = -1;
     }
-    bool IsValidVAOBound()const {return m_VAOId > 0;}
+    bool IsValidVAOBound() const { return m_VAOId > 0; }
 
     void SetCurrentGLContext(GLContext::NativeGLContextType Context) { m_CurrentGLContext = Context; }
-    GLContext::NativeGLContextType GetCurrentGLContext()const { return m_CurrentGLContext; }
+
+    GLContext::NativeGLContextType GetCurrentGLContext() const { return m_CurrentGLContext; }
 
     struct ContextCaps
     {
-        bool bFillModeSelectionSupported  = true;
+        bool  bFillModeSelectionSupported = true;
         GLint m_iMaxCombinedTexUnits      = 0;
         GLint m_iMaxDrawBuffers           = 0;
         GLint m_iMaxUniformBufferBindings = 0;
     };
-    const ContextCaps& GetContextCaps(){return m_Caps;}
+    const ContextCaps& GetContextCaps() { return m_Caps; }
 
 private:
     // It is unsafe to use GL handle to keep track of bound objects
-    // When an object is released, GL is free to reuse its handle for 
+    // When an object is released, GL is free to reuse its handle for
     // the new created objects.
     // Even using pointers is not safe as when an object is created,
     // the system can reuse the same address
     // The safest way is to keep global unique ID for all objects
 
-    UniqueIdentifier m_GLProgId     = -1;
-    UniqueIdentifier m_GLPipelineId = -1;
-    UniqueIdentifier m_VAOId        = -1;
-    UniqueIdentifier m_FBOId        = -1;
-    std::vector< UniqueIdentifier > m_BoundTextures;
-    std::vector< UniqueIdentifier > m_BoundSamplers;
-    std::vector< UniqueIdentifier > m_BoundUniformBuffers;
-    
+    UniqueIdentifier              m_GLProgId     = -1;
+    UniqueIdentifier              m_GLPipelineId = -1;
+    UniqueIdentifier              m_VAOId        = -1;
+    UniqueIdentifier              m_FBOId        = -1;
+    std::vector<UniqueIdentifier> m_BoundTextures;
+    std::vector<UniqueIdentifier> m_BoundSamplers;
+    std::vector<UniqueIdentifier> m_BoundUniformBuffers;
+
     struct BoundImageInfo
     {
         UniqueIdentifier InterfaceID = -1;
-        GLint       MipLevel    = 0;
-        GLboolean   IsLayered   = 0;
-        GLint       Layer       = 0;
-        GLenum      Access      = 0;
-        GLenum      Format      = 0;
-        
-        BoundImageInfo() {};
+        GLint            MipLevel    = 0;
+        GLboolean        IsLayered   = 0;
+        GLint            Layer       = 0;
+        GLenum           Access      = 0;
+        GLenum           Format      = 0;
 
-        BoundImageInfo( UniqueIdentifier _UniqueID,
-                        GLint _MipLevel,
-                        GLboolean _IsLayered,
-                        GLint _Layer,
-                        GLenum _Access,
-                        GLenum _Format) :
-            InterfaceID {_UniqueID },
-            MipLevel    {_MipLevel },
-            IsLayered   {_IsLayered},
-            Layer       {_Layer    },
-            Access      {_Access   },
-            Format      {_Format   }
+        BoundImageInfo(){};
+
+        BoundImageInfo(UniqueIdentifier _UniqueID,
+                       GLint            _MipLevel,
+                       GLboolean        _IsLayered,
+                       GLint            _Layer,
+                       GLenum           _Access,
+                       GLenum           _Format) :
+            // clang-format off
+            InterfaceID{_UniqueID},
+            MipLevel   {_MipLevel},
+            IsLayered  {_IsLayered},
+            Layer      {_Layer},
+            Access     {_Access},
+            Format     {_Format}
+        // clang-format on
         {}
 
-        bool operator==(const BoundImageInfo &rhs)const
+        bool operator==(const BoundImageInfo& rhs) const
         {
-            return  InterfaceID == rhs.InterfaceID  &&
-                    MipLevel    == rhs.MipLevel  &&
-                    IsLayered   == rhs.IsLayered &&
-                    Layer       == rhs.Layer     &&
-                    Access      == rhs.Access    &&
-                    Format      == rhs.Format;
+            // clang-format off
+            return InterfaceID == rhs.InterfaceID &&
+                   MipLevel    == rhs.MipLevel &&
+                   IsLayered   == rhs.IsLayered &&
+                   Layer       == rhs.Layer &&
+                   Access      == rhs.Access &&
+                   Format      == rhs.Format;
+            // clang-format on
         }
     };
-    std::vector< BoundImageInfo > m_BoundImages;
+    std::vector<BoundImageInfo> m_BoundImages;
 
     struct BoundSSBOInfo
     {
-        BoundSSBOInfo(){}
+        BoundSSBOInfo() {}
         BoundSSBOInfo(UniqueIdentifier _BufferID,
-                      GLintptr         _Offset ,
+                      GLintptr         _Offset,
                       GLsizeiptr       _Size) :
+            // clang-format off
             BufferID{_BufferID},
-            Offset  {_Offset  },
-            Size    {_Size    }
+            Offset  {_Offset},
+            Size    {_Size}
+        // clang-format on
         {}
         UniqueIdentifier BufferID = -1;
-	    GLintptr         Offset   = 0;
- 	    GLsizeiptr       Size     = 0;
+        GLintptr         Offset   = 0;
+        GLsizeiptr       Size     = 0;
 
-        bool operator==(const BoundSSBOInfo &rhs)const
+        bool operator==(const BoundSSBOInfo& rhs) const
         {
-            return  BufferID == rhs.BufferID  &&
-                    Offset   == rhs.Offset    &&
-                    Size     == rhs.Size;
+            // clang-format off
+            return BufferID == rhs.BufferID &&
+                   Offset   == rhs.Offset &&
+                   Size     == rhs.Size;
+            // clang-format on
         }
     };
-    std::vector< BoundSSBOInfo > m_BoundStorageBlocks;
+    std::vector<BoundSSBOInfo> m_BoundStorageBlocks;
 
     Uint32 m_PendingMemoryBarriers = 0;
 
@@ -191,23 +204,23 @@ private:
             DISABLED
         };
 
-        bool operator == (bool bEnabled)const
+        bool operator==(bool bEnabled) const
         {
-            return  (bEnabled && m_EnableState == ENABLE_STATE::ENABLED) ||
-                   (!bEnabled && m_EnableState == ENABLE_STATE::DISABLED);
+            return (bEnabled && m_EnableState == ENABLE_STATE::ENABLED) ||
+                (!bEnabled && m_EnableState == ENABLE_STATE::DISABLED);
         }
-        bool operator != (bool bEnabled) const
+        bool operator!=(bool bEnabled) const
         {
             return !(*this == bEnabled);
         }
 
-        const EnableStateHelper& operator = (bool bEnabled)
+        const EnableStateHelper& operator=(bool bEnabled)
         {
             m_EnableState = bEnabled ? ENABLE_STATE::ENABLED : ENABLE_STATE::DISABLED;
             return *this;
         }
 
-        operator bool()const
+        operator bool() const
         {
             return m_EnableState == ENABLE_STATE::ENABLED;
         }
@@ -218,42 +231,42 @@ private:
 
     struct DepthStencilGLState
     {
-        EnableStateHelper m_DepthEnableState;
-        EnableStateHelper m_DepthWritesEnableState;
+        EnableStateHelper   m_DepthEnableState;
+        EnableStateHelper   m_DepthWritesEnableState;
         COMPARISON_FUNCTION m_DepthCmpFunc = COMPARISON_FUNC_UNKNOWN;
-        EnableStateHelper m_StencilTestEnableState;
-        Uint16 m_StencilReadMask  = 0xFFFF;
-        Uint16 m_StencilWriteMask = 0xFFFF;
+        EnableStateHelper   m_StencilTestEnableState;
+        Uint16              m_StencilReadMask  = 0xFFFF;
+        Uint16              m_StencilWriteMask = 0xFFFF;
         struct StencilOpState
         {
-            COMPARISON_FUNCTION Func = COMPARISON_FUNC_UNKNOWN;
-            STENCIL_OP StencilFailOp      = STENCIL_OP_UNDEFINED;
-            STENCIL_OP StencilDepthFailOp = STENCIL_OP_UNDEFINED;
-            STENCIL_OP StencilPassOp      = STENCIL_OP_UNDEFINED;
-            Int32 Ref = std::numeric_limits<Int32>::min();
-            Uint32 Mask = static_cast<Uint32>(-1);
-        }m_StencilOpState[2];
-    }m_DSState;
+            COMPARISON_FUNCTION Func               = COMPARISON_FUNC_UNKNOWN;
+            STENCIL_OP          StencilFailOp      = STENCIL_OP_UNDEFINED;
+            STENCIL_OP          StencilDepthFailOp = STENCIL_OP_UNDEFINED;
+            STENCIL_OP          StencilPassOp      = STENCIL_OP_UNDEFINED;
+            Int32               Ref                = std::numeric_limits<Int32>::min();
+            Uint32              Mask               = static_cast<Uint32>(-1);
+        } m_StencilOpState[2];
+    } m_DSState;
 
     struct RasterizerGLState
     {
-        FILL_MODE FillMode = FILL_MODE_UNDEFINED;
-        CULL_MODE CullMode = CULL_MODE_UNDEFINED;
+        FILL_MODE         FillMode = FILL_MODE_UNDEFINED;
+        CULL_MODE         CullMode = CULL_MODE_UNDEFINED;
         EnableStateHelper FrontCounterClockwise;
-        float fDepthBias = std::numeric_limits<float>::max();
-        float fSlopeScaledDepthBias = std::numeric_limits<float>::max();
+        float             fDepthBias            = std::numeric_limits<float>::max();
+        float             fSlopeScaledDepthBias = std::numeric_limits<float>::max();
         EnableStateHelper DepthClampEnable;
         EnableStateHelper ScissorTestEnable;
-    }m_RSState;
+    } m_RSState;
 
     ContextCaps m_Caps;
 
-    Uint32 m_ColorWriteMasks[MaxRenderTargets] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+    Uint32            m_ColorWriteMasks[MaxRenderTargets] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     EnableStateHelper m_bIndependentWriteMasks;
-    Int32 m_iActiveTexture = -1;
-    Int32 m_NumPatchVertices = -1;
-    
+    Int32             m_iActiveTexture   = -1;
+    Int32             m_NumPatchVertices = -1;
+
     GLContext::NativeGLContextType m_CurrentGLContext = {};
 };
 
-}
+} // namespace Diligent

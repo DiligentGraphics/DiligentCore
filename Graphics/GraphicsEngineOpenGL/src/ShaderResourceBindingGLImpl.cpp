@@ -30,21 +30,24 @@
 namespace Diligent
 {
 
-ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters*     pRefCounters,
-                                                         PipelineStateGLImpl*    pPSO,
-                                                         GLProgramResources*     ProgramResources,
-                                                         Uint32                  NumPrograms) :
+ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters*  pRefCounters,
+                                                         PipelineStateGLImpl* pPSO,
+                                                         GLProgramResources*  ProgramResources,
+                                                         Uint32               NumPrograms) :
+    // clang-format off
     TBase
     {
         pRefCounters,
         pPSO
     },
     m_ResourceLayout{*this}
+// clang-format on
 {
     pPSO->InitializeSRBResourceCache(m_ResourceCache);
 
     // Copy only mutable and dynamic variables from master resource layout
     const SHADER_RESOURCE_VARIABLE_TYPE SRBVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+
     const auto& ResourceLayout = pPSO->GetDesc().ResourceLayout;
     m_ResourceLayout.Initialize(ProgramResources, NumPrograms, ResourceLayout, SRBVarTypes, _countof(SRBVarTypes), &m_ResourceCache);
 }
@@ -104,15 +107,15 @@ void ShaderResourceBindingGLImpl::InitializeStaticResources(const IPipelineState
         DEV_CHECK_ERR(pPipelineState->IsCompatibleWith(GetPipelineState()), "The pipeline state is not compatible with this SRB");
     }
 
-    const auto* pPSOGL = ValidatedCast<const PipelineStateGLImpl>(pPipelineState);
+    const auto* pPSOGL          = ValidatedCast<const PipelineStateGLImpl>(pPipelineState);
     const auto& StaticResLayout = pPSOGL->GetStaticResourceLayout();
 
 #ifdef DEVELOPMENT
     if (!StaticResLayout.dvpVerifyBindings(pPSOGL->GetStaticResourceCache()))
     {
-        LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSOGL->GetDesc().Name, "' will not be successfully initialized "
-                          "because not all static resource bindings in shader '", pPSOGL->GetDesc().Name, "' are valid. "
-                          "Please make sure you bind all static resources to PSO before calling InitializeStaticResources() "
+        LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSOGL->GetDesc().Name,
+                          "' will not be successfully initialized because not all static resource bindings in shader '", pPSOGL->GetDesc().Name,
+                          "' are valid. Please make sure you bind all static resources to PSO before calling InitializeStaticResources() "
                           "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
     }
 #endif
@@ -121,4 +124,4 @@ void ShaderResourceBindingGLImpl::InitializeStaticResources(const IPipelineState
     m_bIsStaticResourcesBound = true;
 }
 
-}
+} // namespace Diligent

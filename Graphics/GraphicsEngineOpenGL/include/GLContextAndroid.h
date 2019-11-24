@@ -28,57 +28,60 @@
 
 namespace Diligent
 {
-    class GLContext
-    {
-    public:
-        typedef EGLContext NativeGLContextType;
 
-        GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
-        ~GLContext();
+class GLContext
+{
+public:
+    using NativeGLContextType = EGLContext;
 
-        bool Init( ANativeWindow* window );
+    GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
+    ~GLContext();
 
-        void SwapBuffers();
+    bool Init(ANativeWindow* window);
 
-        void UpdateScreenSize();
+    void SwapBuffers();
 
-        bool Invalidate();
+    void UpdateScreenSize();
 
-        void Suspend();
-        EGLint Resume( ANativeWindow* window );
+    bool Invalidate();
 
-        NativeGLContextType GetCurrentNativeGLContext();
-        int32_t GetScreenWidth()const{return screen_width_;}
-        int32_t GetScreenHeight()const{return screen_height_;}
+    void   Suspend();
+    EGLint Resume(ANativeWindow* window);
 
-    private:
-        //EGL configurations
-        ANativeWindow* window_ = nullptr;
-        EGLDisplay display_ = EGL_NO_DISPLAY;
-        EGLSurface surface_ = EGL_NO_SURFACE;
-        EGLContext context_ = EGL_NO_CONTEXT;
-        EGLConfig config_;
+    NativeGLContextType GetCurrentNativeGLContext();
 
-        //Screen parameters
-        int32_t color_size_ = 0;
-        int32_t depth_size_ = 0;
-        int32_t major_version_ = 0;
-        int32_t minor_version_ = 0;
-        int32_t screen_width_ = 0;
-        int32_t screen_height_ = 0;
+    int32_t GetScreenWidth() const { return screen_width_; }
+    int32_t GetScreenHeight() const { return screen_height_; }
 
-        //Flags
-        bool gles_initialized_ = false;
-        bool egl_context_initialized_ = false;
-        bool context_valid_ = false;
+private:
+    //EGL configurations
+    ANativeWindow* window_  = nullptr;
+    EGLDisplay     display_ = EGL_NO_DISPLAY;
+    EGLSurface     surface_ = EGL_NO_SURFACE;
+    EGLContext     context_ = EGL_NO_CONTEXT;
+    EGLConfig      config_;
 
-        SwapChainDesc SwapChainAttribs_;
+    //Screen parameters
+    int32_t color_size_    = 0;
+    int32_t depth_size_    = 0;
+    int32_t major_version_ = 0;
+    int32_t minor_version_ = 0;
+    int32_t screen_width_  = 0;
+    int32_t screen_height_ = 0;
 
-        void InitGLES();
-        void Terminate();
-        bool InitEGLSurface();
-        bool InitEGLContext();
-        void AttachToCurrentEGLContext();
-        void FillDeviceCaps( DeviceCaps &DeviceCaps );
-    };
-}
+    //Flags
+    bool gles_initialized_        = false;
+    bool egl_context_initialized_ = false;
+    bool context_valid_           = false;
+
+    SwapChainDesc SwapChainAttribs_;
+
+    void InitGLES();
+    void Terminate();
+    bool InitEGLSurface();
+    bool InitEGLContext();
+    void AttachToCurrentEGLContext();
+    void FillDeviceCaps(DeviceCaps& DeviceCaps);
+};
+
+} // namespace Diligent

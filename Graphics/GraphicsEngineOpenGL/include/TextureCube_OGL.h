@@ -32,21 +32,21 @@ namespace Diligent
 class TextureCube_OGL final : public TextureBaseGL
 {
 public:
-    TextureCube_OGL(IReferenceCounters*          pRefCounters,
-                    FixedBlockMemoryAllocator&   TexViewObjAllocator,
-                    class RenderDeviceGLImpl*    pDeviceGL,
-                    class GLContextState&        GLState,
-                    const TextureDesc&           TexDesc,
-                    const TextureData*           pInitData         = nullptr, 
-				    bool                         bIsDeviceInternal = false);
+    TextureCube_OGL(IReferenceCounters*        pRefCounters,
+                    FixedBlockMemoryAllocator& TexViewObjAllocator,
+                    class RenderDeviceGLImpl*  pDeviceGL,
+                    class GLContextState&      GLState,
+                    const TextureDesc&         TexDesc,
+                    const TextureData*         pInitData         = nullptr,
+                    bool                       bIsDeviceInternal = false);
 
-    TextureCube_OGL(IReferenceCounters*          pRefCounters,
-                    FixedBlockMemoryAllocator&   TexViewObjAllocator,
-                    class RenderDeviceGLImpl*    pDeviceGL,
-                    class GLContextState&        GLState,
-                    const TextureDesc&           TexDesc,
-                    GLuint                       GLTextureHandle,
-				    bool                         bIsDeviceInternal = false);
+    TextureCube_OGL(IReferenceCounters*        pRefCounters,
+                    FixedBlockMemoryAllocator& TexViewObjAllocator,
+                    class RenderDeviceGLImpl*  pDeviceGL,
+                    class GLContextState&      GLState,
+                    const TextureDesc&         TexDesc,
+                    GLuint                     GLTextureHandle,
+                    bool                       bIsDeviceInternal = false);
     ~TextureCube_OGL();
 
     /// Implementation of TextureBaseGL::UpdateData() for cube texture.
@@ -54,11 +54,11 @@ public:
                             Uint32                   MipLevel,
                             Uint32                   Slice,
                             const Box&               DstBox,
-                            const TextureSubResData& SubresData)override final;
+                            const TextureSubResData& SubresData) override final;
 
     /// Implementation of TextureBaseGL::AttachToFramebuffer() for cube texture.
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
-                                     GLenum                        AttachmentPoint)override final;
+                                     GLenum                        AttachmentPoint) override final;
 };
 
-}
+} // namespace Diligent

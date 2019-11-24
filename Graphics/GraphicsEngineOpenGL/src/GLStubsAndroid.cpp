@@ -25,6 +25,8 @@
 #include "GLStubsAndroid.h"
 #include <EGL/egl.h>
 
+// clang-format off
+
 #define DECLARE_GL_FUNCTION(Func, FuncType, ...)\
     FuncType Func = nullptr;                    \
     void Func##Stub(__VA_ARGS__)                \

@@ -30,16 +30,14 @@
 
 namespace Diligent
 {
- 
+
 // {2FF3C191-285B-4E6C-BD0B-D084DDEA6FCC}
 static constexpr INTERFACE_ID IID_ShaderGL =
-{ 0x2ff3c191, 0x285b, 0x4e6c, { 0xbd, 0xb, 0xd0, 0x84, 0xdd, 0xea, 0x6f, 0xcc } };
+    {0x2ff3c191, 0x285b, 0x4e6c, {0xbd, 0xb, 0xd0, 0x84, 0xdd, 0xea, 0x6f, 0xcc}};
 
 /// Exposes OpenGL-specific functionality of a shader object.
 class IShaderGL : public IShader
 {
-public:
-
 };
 
-}
+} // namespace Diligent

@@ -33,7 +33,7 @@ namespace Diligent
 
 // {08DF7319-F425-4EC7-8D2B-1B3FC0BDDBB4}
 static constexpr INTERFACE_ID IID_BufferGL =
-{ 0x8df7319, 0xf425, 0x4ec7, { 0x8d, 0x2b, 0x1b, 0x3f, 0xc0, 0xbd, 0xdb, 0xb4 } };
+    {0x8df7319, 0xf425, 0x4ec7, {0x8d, 0x2b, 0x1b, 0x3f, 0xc0, 0xbd, 0xdb, 0xb4}};
 
 /// Exposes OpenGL-specific functionality of a buffer object.
 class IBufferGL : public IBuffer
@@ -43,4 +43,4 @@ public:
     virtual GLuint GetGLBufferHandle() = 0;
 };
 
-}
+} // namespace Diligent
