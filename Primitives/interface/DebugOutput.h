@@ -52,7 +52,11 @@ enum class DebugMessageSeverity : Int32
 /// \param [in] Function - Name of the function or nullptr
 /// \param [in] Function - File name or nullptr
 /// \param [in] Line - Line number
-using DebugMessageCallbackType = void(*)(DebugMessageSeverity Severity, const Char* Message, const char* Function, const char* File, int Line);
+using DebugMessageCallbackType = void (*)(DebugMessageSeverity Severity,
+                                          const Char*          Message,
+                                          const char*          Function,
+                                          const char*          File,
+                                          int                  Line);
 extern DebugMessageCallbackType DebugMessageCallback;
 
 
@@ -62,4 +66,4 @@ extern DebugMessageCallbackType DebugMessageCallback;
 ///       wants to use the callback.
 void SetDebugMessageCallback(DebugMessageCallbackType DbgMessageCallback);
 
-}
+} // namespace Diligent

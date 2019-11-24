@@ -29,23 +29,25 @@
 /// Unique identification structures
 namespace Diligent
 {
-    /// Describes unique identifier
-    struct INTERFACE_ID
-    {
-        Uint32 Data1;
-        Uint16 Data2;
-        Uint16 Data3;
-        Uint8  Data4[8];
-        
-        bool operator == (const INTERFACE_ID& rhs)const
-        {
-            return Data1 == rhs.Data1 && 
-                   Data2 == rhs.Data2 &&
-                   Data3 == rhs.Data3 &&
-                   std::memcmp(Data4, rhs.Data4, sizeof(Data4)) == 0;
-        }
-    };
 
-    /// Unknown interface
-    static constexpr INTERFACE_ID IID_Unknown = { 0, 0, 0, { 0, 0, 0, 0, 0, 0, 0, 0 } };
-}
+/// Unique interface identifier
+struct INTERFACE_ID
+{
+    Uint32 Data1;
+    Uint16 Data2;
+    Uint16 Data3;
+    Uint8  Data4[8];
+
+    bool operator==(const INTERFACE_ID& rhs) const
+    {
+        return Data1 == rhs.Data1 &&
+            Data2 == rhs.Data2 &&
+            Data3 == rhs.Data3 &&
+            std::memcmp(Data4, rhs.Data4, sizeof(Data4)) == 0;
+    }
+};
+
+/// Unknown interface
+static constexpr INTERFACE_ID IID_Unknown = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
+
+} // namespace Diligent

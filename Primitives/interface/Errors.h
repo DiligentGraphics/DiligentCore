@@ -33,28 +33,29 @@
 namespace Diligent
 {
 
-template<bool>
-void ThrowIf(std::string &&)
+template <bool>
+void ThrowIf(std::string&&)
 {
 }
 
-template<>
-inline void ThrowIf<true>(std::string &&msg)
+template <>
+inline void ThrowIf<true>(std::string&& msg)
 {
-    throw std::runtime_error( std::move(msg) );
+    throw std::runtime_error(std::move(msg));
 }
 
-template<bool bThrowException, typename... ArgsType>
-void LogError( const char *Function, const char *FullFilePath, int Line, const ArgsType&... Args )
+template <bool bThrowException, typename... ArgsType>
+void LogError(const char* Function, const char* FullFilePath, int Line, const ArgsType&... Args)
 {
     std::string FileName(FullFilePath);
+
     auto LastSlashPos = FileName.find_last_of("/\\");
-    if(LastSlashPos != std::string::npos)
-        FileName.erase(0, LastSlashPos+1);
+    if (LastSlashPos != std::string::npos)
+        FileName.erase(0, LastSlashPos + 1);
     auto Msg = FormatString(Args...);
-    if(DebugMessageCallback != nullptr)
+    if (DebugMessageCallback != nullptr)
     {
-        DebugMessageCallback( bThrowException ? DebugMessageSeverity::FatalError : DebugMessageSeverity::Error, Msg.c_str(), Function, FileName.c_str(), Line);
+        DebugMessageCallback(bThrowException ? DebugMessageSeverity::FatalError : DebugMessageSeverity::Error, Msg.c_str(), Function, FileName.c_str(), Line);
     }
     else
     {
@@ -64,76 +65,82 @@ void LogError( const char *Function, const char *FullFilePath, int Line, const A
     ThrowIf<bThrowException>(std::move(Msg));
 }
 
-}
+} // namespace Diligent
 
 
 
-#define LOG_ERROR(...)\
-do{                                       \
-    Diligent::LogError<false>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
-}while(false)
+#define LOG_ERROR(...)                                                              \
+    do                                                                              \
+    {                                                                               \
+        Diligent::LogError<false>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
+    } while (false)
 
 
-#define LOG_ERROR_ONCE(...)\
-do{                                     \
-    static bool IsFirstTime = true;     \
-    if(IsFirstTime)                     \
+#define LOG_ERROR_ONCE(...)             \
+    do                                  \
     {                                   \
-        LOG_ERROR(##__VA_ARGS__);       \
-        IsFirstTime = false;            \
-    }                                   \
-}while(false)
+        static bool IsFirstTime = true; \
+        if (IsFirstTime)                \
+        {                               \
+            LOG_ERROR(##__VA_ARGS__);   \
+            IsFirstTime = false;        \
+        }                               \
+    } while (false)
 
 
-#define LOG_ERROR_AND_THROW(...)\
-do{                                     \
-    Diligent::LogError<true>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__);\
-}while(false)
+#define LOG_ERROR_AND_THROW(...)                                                   \
+    do                                                                             \
+    {                                                                              \
+        Diligent::LogError<true>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
+    } while (false)
 
 
-#define LOG_DEBUG_MESSAGE(Severity, ...)\
-do{                                                     \
-    auto _msg = Diligent::FormatString( __VA_ARGS__ );\
-    if(Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback( Severity, _msg.c_str(), nullptr, nullptr, 0 );\
-}while(false)
+#define LOG_DEBUG_MESSAGE(Severity, ...)                                                                                            \
+    do                                                                                                                              \
+    {                                                                                                                               \
+        auto _msg = Diligent::FormatString(__VA_ARGS__);                                                                            \
+        if (Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback(Severity, _msg.c_str(), nullptr, nullptr, 0); \
+    } while (false)
 
-#define LOG_ERROR_MESSAGE(...)    LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Error,   ##__VA_ARGS__)
-#define LOG_WARNING_MESSAGE(...)  LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define LOG_INFO_MESSAGE(...)     LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Info,    ##__VA_ARGS__)
-
-
-#define LOG_DEBUG_MESSAGE_ONCE(Severity, ...)\
-do{                                                \
-    static bool IsFirstTime = true;                \
-    if(IsFirstTime)                                \
-    {                                              \
-        LOG_DEBUG_MESSAGE(Severity, ##__VA_ARGS__);\
-        IsFirstTime = false;                       \
-    }                                              \
-}while(false)
-
-#define LOG_ERROR_MESSAGE_ONCE(...)    LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Error,   ##__VA_ARGS__)
-#define LOG_WARNING_MESSAGE_ONCE(...)  LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define LOG_INFO_MESSAGE_ONCE(...)     LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Info,    ##__VA_ARGS__)
+#define LOG_ERROR_MESSAGE(...)   LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE(...) LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE(...)    LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
 
 
-#define CHECK(Expr, Severity, ...)\
-do{                               \
-    if( !(Expr) )                 \
-    {                             \
-        LOG_DEBUG_MESSAGE(Severity, ##__VA_ARGS__);\
-    }                             \
-}while(false)
+#define LOG_DEBUG_MESSAGE_ONCE(Severity, ...)           \
+    do                                                  \
+    {                                                   \
+        static bool IsFirstTime = true;                 \
+        if (IsFirstTime)                                \
+        {                                               \
+            LOG_DEBUG_MESSAGE(Severity, ##__VA_ARGS__); \
+            IsFirstTime = false;                        \
+        }                                               \
+    } while (false)
 
-#define CHECK_ERR(Expr, ...)  CHECK(Expr, Diligent::DebugMessageSeverity::Error,   ##__VA_ARGS__)
+#define LOG_ERROR_MESSAGE_ONCE(...)   LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE_ONCE(...) LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE_ONCE(...)    LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
+
+
+#define CHECK(Expr, Severity, ...)                      \
+    do                                                  \
+    {                                                   \
+        if (!(Expr))                                    \
+        {                                               \
+            LOG_DEBUG_MESSAGE(Severity, ##__VA_ARGS__); \
+        }                                               \
+    } while (false)
+
+#define CHECK_ERR(Expr, ...)  CHECK(Expr, Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
 #define CHECK_WARN(Expr, ...) CHECK(Expr, Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define CHECK_INFO(Expr, ...) CHECK(Expr, Diligent::DebugMessageSeverity::Info,    ##__VA_ARGS__)
+#define CHECK_INFO(Expr, ...) CHECK(Expr, Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
 
-#define CHECK_THROW(Expr, ...)\
-do{                               \
-    if( !(Expr) )                 \
-    {                             \
-        LOG_ERROR_AND_THROW(##__VA_ARGS__);\
-    }                             \
-}while(false)
-
+#define CHECK_THROW(Expr, ...)                  \
+    do                                          \
+    {                                           \
+        if (!(Expr))                            \
+        {                                       \
+            LOG_ERROR_AND_THROW(##__VA_ARGS__); \
+        }                                       \
+    } while (false)

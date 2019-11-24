@@ -32,16 +32,15 @@ namespace Diligent
 {
 
 // {F578FF0D-ABD2-4514-9D32-7CB454D4A73B}
-static constexpr INTERFACE_ID IID_DataBlob = 
-{ 0xf578ff0d, 0xabd2, 0x4514, { 0x9d, 0x32, 0x7c, 0xb4, 0x54, 0xd4, 0xa7, 0x3b } };
+static constexpr INTERFACE_ID IID_DataBlob =
+    {0xf578ff0d, 0xabd2, 0x4514, {0x9d, 0x32, 0x7c, 0xb4, 0x54, 0xd4, 0xa7, 0x3b}};
 
 /// Base interface for a file stream
 class IDataBlob : public IObject
 {
 public:
-    
     /// Sets the size of the internal data buffer
-    virtual void Resize( size_t NewSize ) = 0;
+    virtual void Resize(size_t NewSize) = 0;
 
     /// Returns the size of the internal data buffer
     virtual size_t GetSize() = 0;
@@ -50,4 +49,4 @@ public:
     virtual void* GetDataPtr() = 0;
 };
 
-}
+} // namespace Diligent

@@ -25,17 +25,17 @@
 
 #include "BasicTypes.h"
 
-template<typename EnumType>
+template <typename EnumType>
 using _UNDERLYING_ENUM_T = typename std::underlying_type<EnumType>::type;
 
-#define DEFINE_FLAG_ENUM_OPERATORS(ENUMTYPE)\
-extern "C++"\
-{\
-inline           ENUMTYPE& operator |= (ENUMTYPE& a, ENUMTYPE b) throw() { return reinterpret_cast<ENUMTYPE&>(reinterpret_cast<_UNDERLYING_ENUM_T<ENUMTYPE>&>(a) |= static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); } \
-inline           ENUMTYPE& operator &= (ENUMTYPE& a, ENUMTYPE b) throw() { return reinterpret_cast<ENUMTYPE&>(reinterpret_cast<_UNDERLYING_ENUM_T<ENUMTYPE>&>(a) &= static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); } \
-inline           ENUMTYPE& operator ^= (ENUMTYPE& a, ENUMTYPE b) throw() { return reinterpret_cast<ENUMTYPE&>(reinterpret_cast<_UNDERLYING_ENUM_T<ENUMTYPE>&>(a) ^= static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); } \
-inline constexpr ENUMTYPE  operator |  (ENUMTYPE  a, ENUMTYPE b) throw() { return static_cast<ENUMTYPE> (static_cast<_UNDERLYING_ENUM_T<ENUMTYPE> >(a) |  static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); } \
-inline constexpr ENUMTYPE  operator &  (ENUMTYPE  a, ENUMTYPE b) throw() { return static_cast<ENUMTYPE> (static_cast<_UNDERLYING_ENUM_T<ENUMTYPE> >(a) &  static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); } \
-inline constexpr ENUMTYPE  operator ^  (ENUMTYPE  a, ENUMTYPE b) throw() { return static_cast<ENUMTYPE> (static_cast<_UNDERLYING_ENUM_T<ENUMTYPE> >(a) ^  static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); } \
-inline constexpr ENUMTYPE  operator ~  (ENUMTYPE  a)             throw() { return static_cast<ENUMTYPE> (~static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(a)); } \
-}
+#define DEFINE_FLAG_ENUM_OPERATORS(ENUMTYPE)                                                                                                                                                                              \
+    extern "C++"                                                                                                                                                                                                          \
+    {                                                                                                                                                                                                                     \
+        inline ENUMTYPE&          operator|=(ENUMTYPE& a, ENUMTYPE b) throw() { return reinterpret_cast<ENUMTYPE&>(reinterpret_cast<_UNDERLYING_ENUM_T<ENUMTYPE>&>(a) |= static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); } \
+        inline ENUMTYPE&          operator&=(ENUMTYPE& a, ENUMTYPE b) throw() { return reinterpret_cast<ENUMTYPE&>(reinterpret_cast<_UNDERLYING_ENUM_T<ENUMTYPE>&>(a) &= static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); } \
+        inline ENUMTYPE&          operator^=(ENUMTYPE& a, ENUMTYPE b) throw() { return reinterpret_cast<ENUMTYPE&>(reinterpret_cast<_UNDERLYING_ENUM_T<ENUMTYPE>&>(a) ^= static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); } \
+        inline constexpr ENUMTYPE operator|(ENUMTYPE a, ENUMTYPE b) throw() { return static_cast<ENUMTYPE>(static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(a) | static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); }                \
+        inline constexpr ENUMTYPE operator&(ENUMTYPE a, ENUMTYPE b) throw() { return static_cast<ENUMTYPE>(static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(a) & static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); }                \
+        inline constexpr ENUMTYPE operator^(ENUMTYPE a, ENUMTYPE b) throw() { return static_cast<ENUMTYPE>(static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(a) ^ static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(b)); }                \
+        inline constexpr ENUMTYPE operator~(ENUMTYPE a) throw() { return static_cast<ENUMTYPE>(~static_cast<_UNDERLYING_ENUM_T<ENUMTYPE>>(a)); }                                                                          \
+    }

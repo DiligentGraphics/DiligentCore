@@ -28,25 +28,27 @@
 
 namespace Diligent
 {
-    typedef float       Float32; ///< 32-bit float
 
-    typedef int64_t     Int64;   ///< 64-bit signed integer
-    typedef int32_t     Int32;   ///< 32-bit signed integer
-    typedef int16_t     Int16;   ///< 16-bit signed integer
-    typedef int8_t      Int8;    ///< 8-bit signed integer
+using Float32 = float; ///< 32-bit float
 
-    typedef uint64_t    Uint64;  ///< 64-bit unsigned integer
-    typedef uint32_t    Uint32;  ///< 32-bit unsigned integer
-    typedef uint16_t    Uint16;  ///< 16-bit unsigned integer
-    typedef uint8_t     Uint8;   ///< 8-bit unsigned integer
+using Int64 = int64_t; ///< 64-bit signed integer
+using Int32 = int32_t; ///< 32-bit signed integer
+using Int16 = int16_t; ///< 16-bit signed integer
+using Int8  = int8_t;  ///< 8-bit signed integer
 
-    typedef size_t SizeType;
-    typedef void* PVoid;
+using Uint64 = uint64_t; ///< 64-bit unsigned integer
+using Uint32 = uint32_t; ///< 32-bit unsigned integer
+using Uint16 = uint16_t; ///< 16-bit unsigned integer
+using Uint8  = uint8_t;  ///< 8-bit unsigned integer
 
-    typedef bool Bool;          ///< Boolean
-    static constexpr Bool False = false;
-    static constexpr Bool True  = true;
+using SizeType = size_t;
+using PVoid    = void*;
 
-    typedef char Char;
-    typedef std::basic_string<Char> String; ///< String variable
-}
+using Bool                  = bool; ///< Boolean
+static constexpr Bool False = false;
+static constexpr Bool True  = true;
+
+using Char   = char;
+using String = std::basic_string<Char>; ///< String variable
+
+} // namespace Diligent

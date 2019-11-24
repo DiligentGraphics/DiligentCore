@@ -33,4 +33,4 @@ void SetDebugMessageCallback(DebugMessageCallbackType DbgMessageCallback)
     DebugMessageCallback = DbgMessageCallback;
 }
 
-}
+} // namespace Diligent

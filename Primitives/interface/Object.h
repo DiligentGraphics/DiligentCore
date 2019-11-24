@@ -38,12 +38,12 @@ class IObject
 public:
     using CounterValueType = IReferenceCounters::CounterValueType;
 
-    /// Queries the specific interface. 
+    /// Queries the specific interface.
 
     /// \param [in] IID - Unique identifier of the requested interface.
     /// \param [out] ppInterface - Memory address where the pointer to the requested interface will be written.
     ///                            If the interface is not supported, null pointer will be returned.
-    /// \remark The method increments the number of strong references by 1. The interface must be 
+    /// \remark The method increments the number of strong references by 1. The interface must be
     ///         released by a call to Release() method when it is no longer needed.
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) = 0;
 
@@ -58,7 +58,7 @@ public:
     virtual CounterValueType AddRef() = 0;
 
 
-    /// Decrements the number of strong references by 1 and destroys the object when the 
+    /// Decrements the number of strong references by 1 and destroys the object when the
     /// counter reaches zero.
 
     /// \remark This method is equivalent to GetReferenceCounters()->ReleaseStrongRef().\n
@@ -66,15 +66,15 @@ public:
     /// \return The number of strong references after decrementing the counter.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    ///         The only reliable value is 0 as the object is destroyed when the last 
+    ///         The only reliable value is 0 as the object is destroyed when the last
     ///         strong reference is released.
     virtual CounterValueType Release() = 0;
 
 
-    /// Returns the pointer to IReferenceCounters interface of the associated 
+    /// Returns the pointer to IReferenceCounters interface of the associated
     /// reference counters object. The method does *NOT* increment
     /// the number of strong references to the returned object.
-    virtual IReferenceCounters* GetReferenceCounters()const = 0;
+    virtual IReferenceCounters* GetReferenceCounters() const = 0;
 };
 
-}
+} // namespace Diligent

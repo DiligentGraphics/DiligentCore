@@ -36,10 +36,10 @@ class IMemoryAllocator
 {
 public:
     /// Allocates block of memory
-    virtual void* Allocate( size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber) = 0;
+    virtual void* Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber) = 0;
 
     /// Releases memory
-    virtual void Free(void *Ptr) = 0;
+    virtual void Free(void* Ptr) = 0;
 };
 
-}
+} // namespace Diligent
