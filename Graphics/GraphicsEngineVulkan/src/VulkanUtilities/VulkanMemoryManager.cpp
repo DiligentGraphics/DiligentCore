@@ -27,7 +27,7 @@
 
 namespace VulkanUtilities
 {
-    
+
 VulkanMemoryAllocation::~VulkanMemoryAllocation()
 {
     if (Page != nullptr)
@@ -37,24 +37,28 @@ VulkanMemoryAllocation::~VulkanMemoryAllocation()
 }
 
 VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
-                                   VkDeviceSize         PageSize, 
+                                   VkDeviceSize         PageSize,
                                    uint32_t             MemoryTypeIndex,
-                                   bool                 IsHostVisible)noexcept : 
+                                   bool                 IsHostVisible) noexcept :
+    // clang-format off
     m_ParentMemoryMgr{ParentMemoryMgr},
     m_AllocationMgr  {PageSize, ParentMemoryMgr.m_Allocator}
+// clang-format on
 {
     VkMemoryAllocateInfo MemAlloc = {};
-    MemAlloc.pNext = nullptr;
-    MemAlloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    MemAlloc.allocationSize = PageSize;
+
+    MemAlloc.pNext           = nullptr;
+    MemAlloc.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    MemAlloc.allocationSize  = PageSize;
     MemAlloc.memoryTypeIndex = MemoryTypeIndex;
 
     auto MemoryName = Diligent::FormatString("Device memory page. Size: ", Diligent::FormatMemorySize(PageSize, 2), ", type: ", MemoryTypeIndex);
-    m_VkMemory = ParentMemoryMgr.m_LogicalDevice.AllocateDeviceMemory(MemAlloc, MemoryName.c_str());
+    m_VkMemory      = ParentMemoryMgr.m_LogicalDevice.AllocateDeviceMemory(MemAlloc, MemoryName.c_str());
 
     if (IsHostVisible)
     {
-        auto err = ParentMemoryMgr.m_LogicalDevice.MapMemory(m_VkMemory, 
+        auto err = ParentMemoryMgr.m_LogicalDevice.MapMemory(
+            m_VkMemory,
             0, // offset
             PageSize,
             0, // flags, reserved for future use
@@ -77,12 +81,12 @@ VulkanMemoryPage::~VulkanMemoryPage()
 VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
-    auto Allocation = m_AllocationMgr.Allocate(size, alignment);
+    auto                        Allocation = m_AllocationMgr.Allocate(size, alignment);
     if (Allocation.IsValid())
     {
         // Offset may not necessarily be aligned, but the allocation is guaranteed to be large enough
         // to accomodate requested alignment
-        VERIFY_EXPR( Diligent::Align(VkDeviceSize{Allocation.UnalignedOffset}, alignment) - Allocation.UnalignedOffset + size <= Allocation.Size );
+        VERIFY_EXPR(Diligent::Align(VkDeviceSize{Allocation.UnalignedOffset}, alignment) - Allocation.UnalignedOffset + size <= Allocation.Size);
         return VulkanMemoryAllocation{this, Allocation.UnalignedOffset, Allocation.Size};
     }
     else
@@ -101,8 +105,8 @@ void VulkanMemoryPage::Free(VulkanMemoryAllocation&& Allocation)
 
 VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps)
 {
-    // memoryTypeBits is a bitmask and contains one bit set for every supported memory type for the resource. 
-    // Bit i is set if and only if the memory type i in the VkPhysicalDeviceMemoryProperties structure for the 
+    // memoryTypeBits is a bitmask and contains one bit set for every supported memory type for the resource.
+    // Bit i is set if and only if the memory type i in the VkPhysicalDeviceMemoryProperties structure for the
     // physical device is supported for the resource.
     auto MemoryTypeIndex = m_PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, MemoryProps);
     if (MemoryProps == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
@@ -113,7 +117,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
                       "at least one bit set corresponding to a VkMemoryType with a propertyFlags that has the "
                       "VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT bit set (11.6)");
     }
-    else if ( (MemoryProps & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
+    else if ((MemoryProps & (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) == (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT))
     {
         DEV_CHECK_ERR(MemoryTypeIndex != VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex,
                       "Vulkan spec requires that for a VkBuffer not created with the VK_BUFFER_CREATE_SPARSE_BINDING_BIT "
@@ -136,16 +140,17 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
     VulkanMemoryAllocation Allocation;
 
     // On integrated GPUs, there is no difference between host-visible and GPU-only
-    // memory, so MemoryTypeIndex is the same. As GPU-only pages do not have CPU address, 
+    // memory, so MemoryTypeIndex is the same. As GPU-only pages do not have CPU address,
     // we need to use HostVisible flag to differentiate the two.
-    // It is likely a good idea to always keep staging pages separate to reduce fragmenation 
-    // even though on integrated GPUs same pages can be used for both GPU-only and staging 
-    // allocations. Staging allocations are short-living and will be released when upload is 
+    // It is likely a good idea to always keep staging pages separate to reduce fragmenation
+    // even though on integrated GPUs same pages can be used for both GPU-only and staging
+    // allocations. Staging allocations are short-living and will be released when upload is
     // complete, while GPU-only allocations are expected to be long-living.
-    MemoryPageIndex PageIdx{MemoryTypeIndex, HostVisible};
+    MemoryPageIndex             PageIdx{MemoryTypeIndex, HostVisible};
     std::lock_guard<std::mutex> Lock{m_PagesMtx};
+
     auto range = m_Pages.equal_range(PageIdx);
-    for(auto page_it = range.first; page_it != range.second; ++page_it)
+    for (auto page_it = range.first; page_it != range.second; ++page_it)
     {
         Allocation = page_it->second.Allocate(Size, Alignment);
         if (Allocation.Page != nullptr)
@@ -163,8 +168,8 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
 
         auto it = m_Pages.emplace(PageIdx, VulkanMemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible});
-        LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"), 
-                         " page. (", Diligent::FormatMemorySize(PageSize, 2), ", type idx: ", MemoryTypeIndex, 
+        LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"),
+                         " page. (", Diligent::FormatMemorySize(PageSize, 2), ", type idx: ", MemoryTypeIndex,
                          "). Current allocated size: ", Diligent::FormatMemorySize(m_CurrAllocatedSize[stat_ind], 2));
         OnNewPageCreated(it->second);
         Allocation = it->second.Allocate(Size, Alignment);
@@ -193,16 +198,17 @@ void VulkanMemoryManager::ShrinkMemory()
     {
         auto curr_it = it;
         ++it;
-        auto& Page = curr_it->second;
-        bool IsHostVisible = Page.GetCPUMemory() != nullptr;
-        auto ReserveSize = IsHostVisible ? m_HostVisibleReserveSize : m_DeviceLocalReserveSize;
+        auto& Page          = curr_it->second;
+        bool  IsHostVisible = Page.GetCPUMemory() != nullptr;
+        auto  ReserveSize   = IsHostVisible ? m_HostVisibleReserveSize : m_DeviceLocalReserveSize;
         if (Page.IsEmpty() && m_CurrAllocatedSize[IsHostVisible ? 1 : 0] > ReserveSize)
         {
             auto PageSize = Page.GetPageSize();
             m_CurrAllocatedSize[IsHostVisible ? 1 : 0] -= PageSize;
-            LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"), 
-                             " page (", Diligent::FormatMemorySize(PageSize, 2), ")."
-                             " Current allocated size: ", Diligent::FormatMemorySize(m_CurrAllocatedSize[IsHostVisible ? 1 : 0], 2));
+            LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': destroying ", (IsHostVisible ? "host-visible" : "device-local"),
+                             " page (", Diligent::FormatMemorySize(PageSize, 2),
+                             "). Current allocated size: ",
+                             Diligent::FormatMemorySize(m_CurrAllocatedSize[IsHostVisible ? 1 : 0], 2));
             OnPageDestroy(Page);
             m_Pages.erase(curr_it);
         }
@@ -211,7 +217,7 @@ void VulkanMemoryManager::ShrinkMemory()
 
 void VulkanMemoryManager::OnFreeAllocation(VkDeviceSize Size, bool IsHostVisble)
 {
-    m_CurrUsedSize[IsHostVisble ? 1 : 0].fetch_add( -static_cast<int64_t>(Size) );
+    m_CurrUsedSize[IsHostVisble ? 1 : 0].fetch_add(-static_cast<int64_t>(Size));
 }
 
 VulkanMemoryManager::~VulkanMemoryManager()
@@ -219,19 +225,18 @@ VulkanMemoryManager::~VulkanMemoryManager()
     auto PeakDeviceLocalPages  = m_PeakAllocatedSize[0] / m_DeviceLocalPageSize;
     auto PeakHostVisisblePages = m_PeakAllocatedSize[1] / m_HostVisiblePageSize;
     LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "' stats:\n"
-                     "                       Peak used/allocated device-local memory size: ", 
-                     Diligent::FormatMemorySize(m_PeakUsedSize[0],      2, m_PeakAllocatedSize[0]), " / ",
+                                                         "                       Peak used/allocated device-local memory size: ",
+                     Diligent::FormatMemorySize(m_PeakUsedSize[0], 2, m_PeakAllocatedSize[0]), " / ",
                      Diligent::FormatMemorySize(m_PeakAllocatedSize[0], 2, m_PeakAllocatedSize[0]),
                      " (", PeakDeviceLocalPages, (PeakDeviceLocalPages == 1 ? " page)" : " pages)"),
-                     "\n                       Peak used/allocated host-visible memory size: ", 
-                     Diligent::FormatMemorySize(m_PeakUsedSize[1],      2, m_PeakAllocatedSize[1]), " / ",
+                     "\n                       Peak used/allocated host-visible memory size: ",
+                     Diligent::FormatMemorySize(m_PeakUsedSize[1], 2, m_PeakAllocatedSize[1]), " / ",
                      Diligent::FormatMemorySize(m_PeakAllocatedSize[1], 2, m_PeakAllocatedSize[1]),
-                     " (", PeakHostVisisblePages, (PeakHostVisisblePages == 1 ? " page)" : " pages)")
-        );
-    
-    for(auto it=m_Pages.begin(); it != m_Pages.end(); ++it )
+                     " (", PeakHostVisisblePages, (PeakHostVisisblePages == 1 ? " page)" : " pages)"));
+
+    for (auto it = m_Pages.begin(); it != m_Pages.end(); ++it)
         VERIFY(it->second.IsEmpty(), "The page contains outstanding allocations");
     VERIFY(m_CurrUsedSize[0] == 0 && m_CurrUsedSize[1] == 0, "Not all allocations have been released");
 }
 
-}
+} // namespace VulkanUtilities

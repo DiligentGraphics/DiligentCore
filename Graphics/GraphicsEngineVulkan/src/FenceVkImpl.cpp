@@ -29,11 +29,12 @@
 
 namespace Diligent
 {
-    
-FenceVkImpl :: FenceVkImpl(IReferenceCounters* pRefCounters,
-                           RenderDeviceVkImpl* pRendeDeviceVkImpl,
-                           const FenceDesc&    Desc,
-                           bool                IsDeviceInternal) : 
+
+FenceVkImpl ::FenceVkImpl(IReferenceCounters* pRefCounters,
+                          RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                          const FenceDesc&    Desc,
+                          bool                IsDeviceInternal) :
+    // clang-format off
     TFenceBase
     {
         pRefCounters,
@@ -42,30 +43,32 @@ FenceVkImpl :: FenceVkImpl(IReferenceCounters* pRefCounters,
         IsDeviceInternal
     },
     m_FencePool{pRendeDeviceVkImpl->GetLogicalDevice().GetSharedPtr()}
+// clang-format on
 {
 }
 
-FenceVkImpl :: ~FenceVkImpl()
+FenceVkImpl ::~FenceVkImpl()
 {
     if (!m_PendingFences.empty())
     {
         LOG_INFO_MESSAGE("FenceVkImpl::~FenceVkImpl(): waiting for ", m_PendingFences.size(), " pending Vulkan ",
                          (m_PendingFences.size() > 1 ? "fences." : "fence."));
-        // Vulkan spec states that all queue submission commands that refer to 
+        // Vulkan spec states that all queue submission commands that refer to
         // a fence must have completed execution before the fence is destroyed.
         // (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-vkDestroyFence-fence-01120)
         Wait(UINT64_MAX);
     }
 }
 
-Uint64 FenceVkImpl :: GetCompletedValue()
+Uint64 FenceVkImpl ::GetCompletedValue()
 {
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     while (!m_PendingFences.empty())
     {
         auto& Value_Fence = m_PendingFences.front();
+
         auto status = LogicalDevice.GetFenceStatus(Value_Fence.second);
-        if(status == VK_SUCCESS)
+        if (status == VK_SUCCESS)
         {
             if (Value_Fence.first > m_LastCompletedFenceValue)
                 m_LastCompletedFenceValue = Value_Fence.first;
@@ -81,7 +84,7 @@ Uint64 FenceVkImpl :: GetCompletedValue()
     return m_LastCompletedFenceValue;
 }
 
-void FenceVkImpl :: Reset(Uint64 Value)
+void FenceVkImpl ::Reset(Uint64 Value)
 {
     DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
     if (Value > m_LastCompletedFenceValue)
@@ -89,7 +92,7 @@ void FenceVkImpl :: Reset(Uint64 Value)
 }
 
 
-void FenceVkImpl :: Wait(Uint64 Value)
+void FenceVkImpl ::Wait(Uint64 Value)
 {
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     while (!m_PendingFences.empty())
@@ -102,10 +105,12 @@ void FenceVkImpl :: Wait(Uint64 Value)
         if (status == VK_NOT_READY)
         {
             VkFence FenceToWait = val_fence.second;
+
             status = LogicalDevice.WaitForFences(1, &FenceToWait, VK_TRUE, UINT64_MAX);
         }
 
-        DEV_CHECK_ERR(status == VK_SUCCESS, "All pending fences must now be complete!"); (void)status;
+        DEV_CHECK_ERR(status == VK_SUCCESS, "All pending fences must now be complete!");
+        (void)status;
         if (val_fence.first > m_LastCompletedFenceValue)
             m_LastCompletedFenceValue = val_fence.first;
         m_FencePool.DisposeFence(std::move(val_fence.second));
@@ -114,4 +119,4 @@ void FenceVkImpl :: Wait(Uint64 Value)
     }
 }
 
-}
+} // namespace Diligent

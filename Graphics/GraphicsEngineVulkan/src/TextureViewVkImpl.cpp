@@ -29,12 +29,13 @@
 namespace Diligent
 {
 
-TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters*                 pRefCounters,
-                                      RenderDeviceVkImpl*                 pDevice, 
-                                      const TextureViewDesc&              ViewDesc, 
-                                      ITexture*                           pTexture,
-                                      VulkanUtilities::ImageViewWrapper&& ImgView,
-                                      bool                                bIsDefaultView) :
+TextureViewVkImpl::TextureViewVkImpl(IReferenceCounters*                 pRefCounters,
+                                     RenderDeviceVkImpl*                 pDevice,
+                                     const TextureViewDesc&              ViewDesc,
+                                     ITexture*                           pTexture,
+                                     VulkanUtilities::ImageViewWrapper&& ImgView,
+                                     bool                                bIsDefaultView) :
+    // clang-format off
     TTextureViewBase
     {
         pRefCounters,
@@ -44,6 +45,7 @@ TextureViewVkImpl::TextureViewVkImpl( IReferenceCounters*                 pRefCo
         bIsDefaultView
     },
     m_ImageView{std::move(ImgView)}
+// clang-format on
 {
 }
 
@@ -51,7 +53,7 @@ TextureViewVkImpl::~TextureViewVkImpl()
 {
     if (m_MipLevelViews != nullptr)
     {
-        for (Uint32 MipView=0; MipView < m_Desc.NumMipLevels * 2; ++MipView)
+        for (Uint32 MipView = 0; MipView < m_Desc.NumMipLevels * 2; ++MipView)
         {
             m_MipLevelViews[MipView].~MipLevelViewAutoPtrType();
         }
@@ -59,11 +61,11 @@ TextureViewVkImpl::~TextureViewVkImpl()
         GetRawAllocator().Free(m_MipLevelViews);
     }
 
-    if(m_Desc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || m_Desc.ViewType == TEXTURE_VIEW_RENDER_TARGET)
+    if (m_Desc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL || m_Desc.ViewType == TEXTURE_VIEW_RENDER_TARGET)
         m_pDevice->GetFramebufferCache().OnDestroyImageView(m_ImageView);
     m_pDevice->SafeReleaseDeviceObject(std::move(m_ImageView), m_pTexture->GetDesc().CommandQueueMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE( TextureViewVkImpl, IID_TextureViewVk, TTextureViewBase )
+IMPLEMENT_QUERY_INTERFACE(TextureViewVkImpl, IID_TextureViewVk, TTextureViewBase)
 
-}
+} // namespace Diligent

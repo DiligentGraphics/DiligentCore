@@ -32,64 +32,78 @@
 namespace Diligent
 {
 
-SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
-                                 const SwapChainDesc&   SCDesc, 
-                                 RenderDeviceVkImpl*    pRenderDeviceVk, 
-                                 DeviceContextVkImpl*   pDeviceContextVk, 
-                                 void*                  pNativeWndHandle) : 
+SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
+                                 const SwapChainDesc& SCDesc,
+                                 RenderDeviceVkImpl*  pRenderDeviceVk,
+                                 DeviceContextVkImpl* pDeviceContextVk,
+                                 void*                pNativeWndHandle) :
+    // clang-format off
     TSwapChainBase               {pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc},
     m_VulkanInstance             {pRenderDeviceVk->GetVulkanInstance()},
     m_pBackBufferRTV             {STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")},
     m_SwapChainImagesInitialized {STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")},
     m_ImageAcquiredFenceSubmitted{STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")}
+// clang-format on
 {
     // Create OS-specific surface
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
-    surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+
+    surfaceCreateInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.hinstance = GetModuleHandle(NULL);
-    surfaceCreateInfo.hwnd = (HWND)pNativeWndHandle;
+    surfaceCreateInfo.hwnd      = (HWND)pNativeWndHandle;
+
     auto err = vkCreateWin32SurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
-    surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.window = (ANativeWindow*) pNativeWndHandle;
+
+    surfaceCreateInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    surfaceCreateInfo.window = (ANativeWindow*)pNativeWndHandle;
+
     auto err = vkCreateAndroidSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     VkIOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
+
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
     surfaceCreateInfo.pView = pNativeWndHandle;
+
     auto err = vkCreateIOSSurfaceMVK(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
     VkMacOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
+
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
     surfaceCreateInfo.pView = pNativeWndHandle;
+
     auto err = vkCreateMacOSSurfaceMVK(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
-    surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
+
+    surfaceCreateInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.display = display;
-    surfaceCreatem_VkSurface = window;
+    surfaceCreatem_VkSurface  = window;
+
     err = vkCreateWaylandSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     VkXcbSurfaceCreateInfoKHR surfaceCreateInfo = {};
+
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     struct XCBInfo
     {
         xcb_connection_t* connection = nullptr;
-        uint32_t window = 0;
+        uint32_t          window     = 0;
     };
-    XCBInfo& info = *reinterpret_cast<XCBInfo*>(pNativeWndHandle);
+    XCBInfo& info                = *reinterpret_cast<XCBInfo*>(pNativeWndHandle);
     surfaceCreateInfo.connection = info.connection;
-    surfaceCreateInfo.window = info.window;
+    surfaceCreateInfo.window     = info.window;
+
     auto err = vkCreateXcbSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #endif
 
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create OS-specific surface");
-    const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-    auto& CmdQueueVK = pRenderDeviceVk->GetCommandQueue(0);
-    auto QueueFamilyIndex = CmdQueueVK.GetQueueFamilyIndex();
-    if( !PhysicalDevice.CheckPresentSupport(QueueFamilyIndex, m_VkSurface) )
+    const auto& PhysicalDevice   = pRenderDeviceVk->GetPhysicalDevice();
+    auto&       CmdQueueVK       = pRenderDeviceVk->GetCommandQueue(0);
+    auto        QueueFamilyIndex = CmdQueueVK.GetQueueFamilyIndex();
+    if (!PhysicalDevice.CheckPresentSupport(QueueFamilyIndex, m_VkSurface))
     {
         LOG_ERROR_AND_THROW("Selected physical device does not support present capability.\n"
                             "There could be few ways to mitigate this problem. One is to try to find another queue that supports present, but does not support graphics and compute capabilities."
@@ -99,16 +113,18 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*    pRefCounters,
     CreateVulkanSwapChain();
     InitBuffersAndViews();
     auto res = AcquireNextImage(pDeviceContextVk);
-    DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the newly created swap chain"); (void)res;
+    DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the newly created swap chain");
+    (void)res;
 }
 
 void SwapChainVkImpl::CreateVulkanSwapChain()
 {
-    auto* pRenderDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-    const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-    auto vkDeviceHandle = PhysicalDevice.GetVkDeviceHandle();
+    auto*       pRenderDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    const auto& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
+    auto        vkDeviceHandle  = PhysicalDevice.GetVkDeviceHandle();
     // Get the list of VkFormats that are supported:
     uint32_t formatCount = 0;
+
     auto err = vkGetPhysicalDeviceSurfaceFormatsKHR(vkDeviceHandle, m_VkSurface, &formatCount, NULL);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to query number of supported formats");
     VERIFY_EXPR(formatCount > 0);
@@ -117,8 +133,9 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     CHECK_VK_ERROR_AND_THROW(err, "Failed to query supported format properties");
     VERIFY_EXPR(formatCount == SupportedFormats.size());
     m_VkColorFormat = TexFormatToVkFormat(m_SwapChainDesc.ColorBufferFormat);
+
     VkColorSpaceKHR ColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-    if (formatCount == 1 && SupportedFormats[0].format == VK_FORMAT_UNDEFINED) 
+    if (formatCount == 1 && SupportedFormats[0].format == VK_FORMAT_UNDEFINED)
     {
         // If the format list includes just one entry of VK_FORMAT_UNDEFINED,
         // the surface has no preferred format.  Otherwise, at least one
@@ -126,28 +143,30 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
 
         // Do nothing
     }
-    else 
+    else
     {
         bool FmtFound = false;
-        for(const auto& SrfFmt : SupportedFormats)
+        for (const auto& SrfFmt : SupportedFormats)
         {
-            if(SrfFmt.format == m_VkColorFormat)
+            if (SrfFmt.format == m_VkColorFormat)
             {
-                FmtFound = true;
+                FmtFound   = true;
                 ColorSpace = SrfFmt.colorSpace;
                 break;
             }
         }
-        if(!FmtFound)
+        if (!FmtFound)
         {
             VkFormat VkReplacementColorFormat = VK_FORMAT_UNDEFINED;
-            switch(m_VkColorFormat)
+            switch (m_VkColorFormat)
             {
+                // clang-format off
                 case VK_FORMAT_R8G8B8A8_UNORM: VkReplacementColorFormat = VK_FORMAT_B8G8R8A8_UNORM; break;
                 case VK_FORMAT_B8G8R8A8_UNORM: VkReplacementColorFormat = VK_FORMAT_R8G8B8A8_UNORM; break;
                 case VK_FORMAT_B8G8R8A8_SRGB:  VkReplacementColorFormat = VK_FORMAT_R8G8B8A8_SRGB;  break;
                 case VK_FORMAT_R8G8B8A8_SRGB:  VkReplacementColorFormat = VK_FORMAT_B8G8R8A8_SRGB;  break;
                 default: VkReplacementColorFormat = VK_FORMAT_UNDEFINED;
+                    // clang-format on
             }
 
             bool ReplacementFmtFound = false;
@@ -156,30 +175,32 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
                 if (SrfFmt.format == VkReplacementColorFormat)
                 {
                     ReplacementFmtFound = true;
-                    ColorSpace = SrfFmt.colorSpace;
+                    ColorSpace          = SrfFmt.colorSpace;
                     break;
                 }
             }
 
-            if(ReplacementFmtFound)
+            if (ReplacementFmtFound)
             {
-                m_VkColorFormat = VkReplacementColorFormat;
+                m_VkColorFormat           = VkReplacementColorFormat;
                 auto NewColorBufferFormat = VkFormatToTexFormat(VkReplacementColorFormat);
                 LOG_INFO_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, " is not supported by the surface and will be replaced with ", GetTextureFormatAttribs(NewColorBufferFormat).Name);
                 m_SwapChainDesc.ColorBufferFormat = NewColorBufferFormat;
             }
             else
             {
-                LOG_WARNING_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name ,"is not supported by the surface");
+                LOG_WARNING_MESSAGE("Requested color buffer format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, "is not supported by the surface");
             }
         }
     }
-    
+
     VkSurfaceCapabilitiesKHR surfCapabilities = {};
+
     err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkDeviceHandle, m_VkSurface, &surfCapabilities);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to query physical device surface capabilities");
 
     uint32_t presentModeCount = 0;
+
     err = vkGetPhysicalDeviceSurfacePresentModesKHR(vkDeviceHandle, m_VkSurface, &presentModeCount, NULL);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to query surface present mode count");
     VERIFY_EXPR(presentModeCount > 0);
@@ -194,27 +215,28 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     {
         // If the surface size is undefined, the size is set to
         // the size of the images requested.
-        swapchainExtent.width  = std::min(std::max(m_SwapChainDesc.Width,  surfCapabilities.minImageExtent.width),  surfCapabilities.maxImageExtent.width);
+        swapchainExtent.width  = std::min(std::max(m_SwapChainDesc.Width, surfCapabilities.minImageExtent.width), surfCapabilities.maxImageExtent.width);
         swapchainExtent.height = std::min(std::max(m_SwapChainDesc.Height, surfCapabilities.minImageExtent.height), surfCapabilities.maxImageExtent.height);
     }
-    else 
+    else
     {
         // If the surface size is defined, the swap chain size must match
         swapchainExtent = surfCapabilities.currentExtent;
     }
-    swapchainExtent.width  = std::max(swapchainExtent.width,  1u);
+    swapchainExtent.width  = std::max(swapchainExtent.width, 1u);
     swapchainExtent.height = std::max(swapchainExtent.height, 1u);
     m_SwapChainDesc.Width  = swapchainExtent.width;
     m_SwapChainDesc.Height = swapchainExtent.height;
 
     // Mailbox is the lowest latency non-tearing presentation mode
     VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+
     bool PresentModeSupported = std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end();
-    if(!PresentModeSupported)
+    if (!PresentModeSupported)
     {
         swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
         // The FIFO present mode is guaranteed by the spec to be supported
-        VERIFY(std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end(), "FIFO present mode must be supported" );
+        VERIFY(std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end(), "FIFO present mode must be supported");
     }
 
     // Determine the number of VkImage's to use in the swap chain.
@@ -222,7 +244,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     // Asking for minImageCount images ensures that we can acquire
     // 1 presentable image as long as we present it before attempting
     // to acquire another.
-    if(m_SwapChainDesc.BufferCount < surfCapabilities.minImageCount)
+    if (m_SwapChainDesc.BufferCount < surfCapabilities.minImageCount)
     {
         LOG_INFO_MESSAGE("Requested back buffer count (", m_SwapChainDesc.BufferCount, ") is smaller than the minimal image count supported for this surface (", surfCapabilities.minImageCount, "). Resetting to ", surfCapabilities.minImageCount);
         m_SwapChainDesc.BufferCount = surfCapabilities.minImageCount;
@@ -234,29 +256,34 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     }
     uint32_t desiredNumberOfSwapChainImages = m_SwapChainDesc.BufferCount;
 
-    VkSurfaceTransformFlagBitsKHR preTransform = 
-        (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? 
-            VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : 
-            surfCapabilities.currentTransform;
+    VkSurfaceTransformFlagBitsKHR preTransform =
+        (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ?
+        VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR :
+        surfCapabilities.currentTransform;
 
     // Find a supported composite alpha mode - one of these is guaranteed to be set
-    VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
-        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
-        VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
-        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
-    };
-    for (uint32_t i = 0; i < _countof(compositeAlphaFlags); i++) {
-        if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i]) {
+    VkCompositeAlphaFlagBitsKHR compositeAlpha         = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = //
+        {
+            VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+            VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+            VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+            VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+        };
+    for (uint32_t i = 0; i < _countof(compositeAlphaFlags); i++)
+    {
+        if (surfCapabilities.supportedCompositeAlpha & compositeAlphaFlags[i])
+        {
             compositeAlpha = compositeAlphaFlags[i];
             break;
         }
     }
 
     auto oldSwapchain = m_VkSwapChain;
-    m_VkSwapChain = VK_NULL_HANDLE;
+    m_VkSwapChain     = VK_NULL_HANDLE;
+
     VkSwapchainCreateInfoKHR swapchain_ci = {};
+
     swapchain_ci.sType              = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_ci.pNext              = NULL;
     swapchain_ci.surface            = m_VkSurface;
@@ -271,7 +298,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     swapchain_ci.oldSwapchain       = oldSwapchain;
     swapchain_ci.clipped            = VK_TRUE;
     swapchain_ci.imageColorSpace    = ColorSpace;
-    
+
     DEV_CHECK_ERR(m_SwapChainDesc.Usage != 0, "No swap chain usage flags defined");
     if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_RENDER_TARGET)
         swapchain_ci.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -282,9 +309,9 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
 
     // vkCmdClearColorImage() command requires the image to use VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL layout
     // that requires  VK_IMAGE_USAGE_TRANSFER_DST_BIT to be set
-    swapchain_ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    swapchain_ci.imageSharingMode      = VK_SHARING_MODE_EXCLUSIVE;
     swapchain_ci.queueFamilyIndexCount = 0;
-    swapchain_ci.pQueueFamilyIndices = NULL;
+    swapchain_ci.pQueueFamilyIndices   = NULL;
     //uint32_t queueFamilyIndices[] = { (uint32_t)info.graphics_queue_family_index, (uint32_t)info.present_queue_family_index };
     //if (info.graphics_queue_family_index != info.present_queue_family_index) {
     //    // If the graphics and present queues are from different queue families,
@@ -297,16 +324,18 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     //}
 
     const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
-    auto vkDevice = pRenderDeviceVk->GetVkDevice();
+    auto        vkDevice      = pRenderDeviceVk->GetVkDevice();
+
     err = vkCreateSwapchainKHR(vkDevice, &swapchain_ci, NULL, &m_VkSwapChain);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan swapchain");
 
-    if(oldSwapchain != VK_NULL_HANDLE)
+    if (oldSwapchain != VK_NULL_HANDLE)
     {
         vkDestroySwapchainKHR(vkDevice, oldSwapchain, NULL);
     }
 
     uint32_t swapchainImageCount = 0;
+
     err = vkGetSwapchainImagesKHR(vkDevice, m_VkSwapChain, &swapchainImageCount, NULL);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to request swap chain image count");
     VERIFY_EXPR(swapchainImageCount > 0);
@@ -319,19 +348,23 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     m_ImageAcquiredSemaphores.resize(swapchainImageCount);
     m_DrawCompleteSemaphores.resize(swapchainImageCount);
     m_ImageAcquiredFences.resize(swapchainImageCount);
-    for(uint32_t i = 0; i < swapchainImageCount; ++i)
+    for (uint32_t i = 0; i < swapchainImageCount; ++i)
     {
         VkSemaphoreCreateInfo SemaphoreCI = {};
+
         SemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
         SemaphoreCI.pNext = nullptr;
         SemaphoreCI.flags = 0; // reserved for future use
+
         m_ImageAcquiredSemaphores[i] = LogicalDevice.CreateSemaphore(SemaphoreCI);
         m_DrawCompleteSemaphores[i]  = LogicalDevice.CreateSemaphore(SemaphoreCI);
 
+
         VkFenceCreateInfo FenceCI = {};
-        FenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        FenceCI.pNext = nullptr;
-        FenceCI.flags = 0;
+
+        FenceCI.sType            = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        FenceCI.pNext            = nullptr;
+        FenceCI.flags            = 0;
         m_ImageAcquiredFences[i] = LogicalDevice.CreateFence(FenceCI);
     }
 }
@@ -340,7 +373,7 @@ SwapChainVkImpl::~SwapChainVkImpl()
 {
     if (m_VkSwapChain != VK_NULL_HANDLE)
     {
-        auto *pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+        auto* pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
         pDeviceVkImpl->IdleGPU();
 
         // We need to explicitly wait for all submitted Image Acquired Fences to signal.
@@ -358,13 +391,13 @@ SwapChainVkImpl::~SwapChainVkImpl()
 
 void SwapChainVkImpl::InitBuffersAndViews()
 {
-    auto* pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-    auto LogicalVkDevice = pDeviceVkImpl->GetVkDevice();
+    auto* pDeviceVkImpl   = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    auto  LogicalVkDevice = pDeviceVkImpl->GetVkDevice();
 
 #ifdef _DEBUG
     {
         uint32_t swapchainImageCount = 0;
-        auto err = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, NULL);
+        auto     err                 = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, NULL);
         VERIFY_EXPR(err == VK_SUCCESS);
         VERIFY(swapchainImageCount == m_SwapChainDesc.BufferCount, "Unexpected swap chain buffer count");
     }
@@ -374,30 +407,30 @@ void SwapChainVkImpl::InitBuffersAndViews()
     m_SwapChainImagesInitialized.resize(m_pBackBufferRTV.size(), false);
     m_ImageAcquiredFenceSubmitted.resize(m_pBackBufferRTV.size(), false);
 
-    uint32_t swapchainImageCount = m_SwapChainDesc.BufferCount;
+    uint32_t             swapchainImageCount = m_SwapChainDesc.BufferCount;
     std::vector<VkImage> swapchainImages(swapchainImageCount);
-    auto err = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, swapchainImages.data());
+    auto                 err = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, swapchainImages.data());
     CHECK_VK_ERROR_AND_THROW(err, "Failed to get swap chain images");
     VERIFY_EXPR(swapchainImageCount == swapchainImages.size());
 
-    for (uint32_t i = 0; i < swapchainImageCount; i++) 
+    for (uint32_t i = 0; i < swapchainImageCount; i++)
     {
         TextureDesc BackBufferDesc;
         BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
         std::stringstream name_ss;
         name_ss << "Main back buffer " << i;
-        auto name = name_ss.str();
-        BackBufferDesc.Name = name.c_str();
-        BackBufferDesc.Type = RESOURCE_DIM_TEX_2D;
-        BackBufferDesc.Width  = m_SwapChainDesc.Width;
-        BackBufferDesc.Height = m_SwapChainDesc.Height;
-        BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
+        auto name                = name_ss.str();
+        BackBufferDesc.Name      = name.c_str();
+        BackBufferDesc.Type      = RESOURCE_DIM_TEX_2D;
+        BackBufferDesc.Width     = m_SwapChainDesc.Width;
+        BackBufferDesc.Height    = m_SwapChainDesc.Height;
+        BackBufferDesc.Format    = m_SwapChainDesc.ColorBufferFormat;
         BackBufferDesc.BindFlags = BIND_RENDER_TARGET;
         BackBufferDesc.MipLevels = 1;
 
         RefCntAutoPtr<TextureVkImpl> pBackBufferTex;
         m_pRenderDevice.RawPtr<RenderDeviceVkImpl>()->CreateTexture(BackBufferDesc, swapchainImages[i], RESOURCE_STATE_UNDEFINED, &pBackBufferTex);
-        
+
         TextureViewDesc RTVDesc;
         RTVDesc.ViewType = TEXTURE_VIEW_RENDER_TARGET;
         RefCntAutoPtr<ITextureView> pRTV;
@@ -419,17 +452,17 @@ void SwapChainVkImpl::InitBuffersAndViews()
         DepthBufferDesc.ClearValue.Format               = DepthBufferDesc.Format;
         DepthBufferDesc.ClearValue.DepthStencil.Depth   = m_SwapChainDesc.DefaultDepthValue;
         DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
-        DepthBufferDesc.Name = "Main depth buffer";
+        DepthBufferDesc.Name                            = "Main depth buffer";
         RefCntAutoPtr<ITexture> pDepthBufferTex;
-        m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex) );
-        auto pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+        m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex));
+        auto pDSV         = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
         m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewVk>(pDSV, IID_TextureViewVk);
     }
 }
 
 VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
 {
-    auto* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    auto*       pDeviceVk     = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     // Applications should not rely on vkAcquireNextImageKHR blocking in order to
@@ -459,15 +492,18 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
         if (LogicalDevice.GetFenceStatus(OldestSubmittedFence) == VK_NOT_READY)
         {
             auto res = LogicalDevice.WaitForFences(1, &OldestSubmittedFence, VK_TRUE, UINT64_MAX);
-            VERIFY_EXPR(res == VK_SUCCESS); (void)res;
+            VERIFY_EXPR(res == VK_SUCCESS);
+            (void)res;
         }
         LogicalDevice.ResetFence(OldestSubmittedFence);
         m_ImageAcquiredFenceSubmitted[OldestSubmittedImageFenceInd] = false;
     }
 
-    VkFence     ImageAcquiredFence     = m_ImageAcquiredFences    [m_SemaphoreIndex];
+    VkFence     ImageAcquiredFence     = m_ImageAcquiredFences[m_SemaphoreIndex];
     VkSemaphore ImageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
+
     auto res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore, ImageAcquiredFence, &m_BackBufferIndex);
+
     m_ImageAcquiredFenceSubmitted[m_SemaphoreIndex] = (res == VK_SUCCESS);
     if (res == VK_SUCCESS)
     {
@@ -486,20 +522,20 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     return res;
 }
 
-IMPLEMENT_QUERY_INTERFACE( SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase )
+IMPLEMENT_QUERY_INTERFACE(SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase)
 
 
 void SwapChainVkImpl::Present(Uint32 SyncInterval)
 {
     auto pDeviceContext = m_wpDeviceContext.Lock();
-    if( !pDeviceContext )
+    if (!pDeviceContext)
     {
-        LOG_ERROR_MESSAGE( "Immediate context has been released" );
+        LOG_ERROR_MESSAGE("Immediate context has been released");
         return;
     }
 
     auto* pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
-    auto* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+    auto* pDeviceVk       = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
 
     if (!m_IsMinimized)
     {
@@ -517,28 +553,30 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     if (!m_IsMinimized)
     {
         VkPresentInfoKHR PresentInfo = {};
-        PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        PresentInfo.pNext = nullptr;
+
+        PresentInfo.sType              = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+        PresentInfo.pNext              = nullptr;
         PresentInfo.waitSemaphoreCount = 1;
         // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
-        VkSemaphore WaitSemaphore[] = { m_DrawCompleteSemaphores[m_SemaphoreIndex] };
+        VkSemaphore WaitSemaphore[] = {m_DrawCompleteSemaphores[m_SemaphoreIndex]};
         PresentInfo.pWaitSemaphores = WaitSemaphore;
-        PresentInfo.swapchainCount = 1;
-        PresentInfo.pSwapchains = &m_VkSwapChain;
-        PresentInfo.pImageIndices = &m_BackBufferIndex;
-        VkResult Result = VK_SUCCESS;
-        PresentInfo.pResults = &Result;
-        pDeviceVk->LockCmdQueueAndRun(0, 
-            [&PresentInfo](ICommandQueueVk* pCmdQueueVk)
+        PresentInfo.swapchainCount  = 1;
+        PresentInfo.pSwapchains     = &m_VkSwapChain;
+        PresentInfo.pImageIndices   = &m_BackBufferIndex;
+        VkResult Result             = VK_SUCCESS;
+        PresentInfo.pResults        = &Result;
+        pDeviceVk->LockCmdQueueAndRun(
+            0,
+            [&PresentInfo](ICommandQueueVk* pCmdQueueVk) //
             {
                 pCmdQueueVk->Present(PresentInfo);
-            }
+            } //
         );
 
         if (Result == VK_SUBOPTIMAL_KHR || Result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             RecreateVulkanSwapchain(pImmediateCtxVk);
-            m_SemaphoreIndex = m_SwapChainDesc.BufferCount-1; // To start with 0 index when acquire next image
+            m_SemaphoreIndex = m_SwapChainDesc.BufferCount - 1; // To start with 0 index when acquire next image
         }
         else
         {
@@ -562,7 +600,8 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
         {
             RecreateVulkanSwapchain(pImmediateCtxVk);
-            m_SemaphoreIndex = m_SwapChainDesc.BufferCount-1; // To start with 0 index when acquire next image
+            m_SemaphoreIndex = m_SwapChainDesc.BufferCount - 1; // To start with 0 index when acquire next image
+
             res = AcquireNextImage(pImmediateCtxVk);
         }
         DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next swap chain image");
@@ -579,7 +618,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
 void SwapChainVkImpl::WaitForImageAcquiredFences()
 {
     const auto& LogicalDevice = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>()->GetLogicalDevice();
-    for (size_t i=0; i < m_ImageAcquiredFences.size(); ++i)
+    for (size_t i = 0; i < m_ImageAcquiredFences.size(); ++i)
     {
         if (m_ImageAcquiredFenceSubmitted[i])
         {
@@ -593,12 +632,12 @@ void SwapChainVkImpl::WaitForImageAcquiredFences()
 void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk)
 {
     std::vector<ITextureView*> pBackBufferRTVs(m_pBackBufferRTV.size());
-    for(size_t i=0; i < m_pBackBufferRTV.size(); ++i)
+    for (size_t i = 0; i < m_pBackBufferRTV.size(); ++i)
         pBackBufferRTVs[i] = m_pBackBufferRTV[i];
     UnbindRenderTargets(pImmediateCtxVk, pBackBufferRTVs.data(), static_cast<Uint32>(m_pBackBufferRTV.size()), m_pDepthBufferDSV);
 
     RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-    
+
     // This will release references to Vk swap chain buffers hold by
     // m_pBackBufferRTV[].
     pDeviceVk->IdleGPU();
@@ -625,36 +664,37 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
     InitBuffersAndViews();
 }
 
-void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
+void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight)
 {
-    if( TSwapChainBase::Resize(NewWidth, NewHeight) )
+    if (TSwapChainBase::Resize(NewWidth, NewHeight))
     {
         auto pDeviceContext = m_wpDeviceContext.Lock();
-        VERIFY( pDeviceContext, "Immediate context has been released" );
-        if( pDeviceContext )
+        VERIFY(pDeviceContext, "Immediate context has been released");
+        if (pDeviceContext)
         {
             pDeviceContext->Flush();
 
             try
             {
-            	auto* pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
+                auto* pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
                 // RecreateVulkanSwapchain() unbinds default FB
                 bool bIsDefaultFBBound = pImmediateCtxVk->IsDefaultFBBound();
                 RecreateVulkanSwapchain(pImmediateCtxVk);
 
                 auto res = AcquireNextImage(pImmediateCtxVk);
-                DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the just resized swap chain"); (void)res;
+                DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the just resized swap chain");
+                (void)res;
 
                 if (m_SwapChainDesc.IsPrimary && bIsDefaultFBBound)
                 {
                     // Set default render target and viewport
-                    pDeviceContext->SetRenderTargets( 0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-                    pDeviceContext->SetViewports( 1, nullptr, 0, 0 );
+                    pDeviceContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                    pDeviceContext->SetViewports(1, nullptr, 0, 0);
                 }
             }
-            catch( const std::runtime_error & )
+            catch (const std::runtime_error&)
             {
-                LOG_ERROR( "Failed to resize the swap chain" );
+                LOG_ERROR("Failed to resize the swap chain");
             }
         }
     }
@@ -663,7 +703,7 @@ void SwapChainVkImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
 }
 
 
-void SwapChainVkImpl::SetFullscreenMode(const DisplayModeAttribs &DisplayMode)
+void SwapChainVkImpl::SetFullscreenMode(const DisplayModeAttribs& DisplayMode)
 {
 }
 
@@ -671,4 +711,4 @@ void SwapChainVkImpl::SetWindowedMode()
 {
 }
 
-}
+} // namespace Diligent

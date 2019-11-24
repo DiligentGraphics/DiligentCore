@@ -30,30 +30,34 @@
 namespace Diligent
 {
 
-SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc) : 
+SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc) :
+    // clang-format off
     TSamplerBase
     {
         pRefCounters,
         pRenderDeviceVk,
         SamplerDesc
     }
+// clang-format on
 {
-    const auto &LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+    const auto& LogicalDevice = pRenderDeviceVk->GetLogicalDevice();
+
     VkSamplerCreateInfo SamplerCI = {};
-    SamplerCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    SamplerCI.pNext = nullptr;
-    SamplerCI.flags = 0; // reserved for future use
-    SamplerCI.magFilter = FilterTypeToVkFilter(m_Desc.MagFilter);
-    SamplerCI.minFilter = FilterTypeToVkFilter(m_Desc.MinFilter);
-    SamplerCI.mipmapMode = FilterTypeToVkMipmapMode(m_Desc.MipFilter);
-    SamplerCI.addressModeU = AddressModeToVkAddressMode(m_Desc.AddressU);
-    SamplerCI.addressModeV = AddressModeToVkAddressMode(m_Desc.AddressV);
-    SamplerCI.addressModeW = AddressModeToVkAddressMode(m_Desc.AddressW);
-    SamplerCI.mipLodBias = m_Desc.MipLODBias;
+
+    SamplerCI.sType            = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    SamplerCI.pNext            = nullptr;
+    SamplerCI.flags            = 0; // reserved for future use
+    SamplerCI.magFilter        = FilterTypeToVkFilter(m_Desc.MagFilter);
+    SamplerCI.minFilter        = FilterTypeToVkFilter(m_Desc.MinFilter);
+    SamplerCI.mipmapMode       = FilterTypeToVkMipmapMode(m_Desc.MipFilter);
+    SamplerCI.addressModeU     = AddressModeToVkAddressMode(m_Desc.AddressU);
+    SamplerCI.addressModeV     = AddressModeToVkAddressMode(m_Desc.AddressV);
+    SamplerCI.addressModeW     = AddressModeToVkAddressMode(m_Desc.AddressW);
+    SamplerCI.mipLodBias       = m_Desc.MipLODBias;
     SamplerCI.anisotropyEnable = IsAnisotropicFilter(m_Desc.MinFilter);
 #ifdef DEVELOPMENT
-    if( !( (SamplerCI.anisotropyEnable &&  IsAnisotropicFilter(m_Desc.MagFilter)) ||
-          (!SamplerCI.anisotropyEnable && !IsAnisotropicFilter(m_Desc.MagFilter)) ) )
+    if (!((SamplerCI.anisotropyEnable && IsAnisotropicFilter(m_Desc.MagFilter)) ||
+          (!SamplerCI.anisotropyEnable && !IsAnisotropicFilter(m_Desc.MagFilter))))
     {
         LOG_ERROR("Min and mag fiters must both be either anisotropic filters or non-anisotropic ones");
     }
@@ -62,17 +66,17 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
     SamplerCI.maxAnisotropy = static_cast<float>(m_Desc.MaxAnisotropy);
     SamplerCI.compareEnable = IsComparisonFilter(m_Desc.MinFilter);
 #ifdef DEVELOPMENT
-    if( !( (SamplerCI.compareEnable &&  IsComparisonFilter(m_Desc.MagFilter)) ||
-          (!SamplerCI.compareEnable && !IsComparisonFilter(m_Desc.MagFilter)) ) )
+    if (!((SamplerCI.compareEnable && IsComparisonFilter(m_Desc.MagFilter)) ||
+          (!SamplerCI.compareEnable && !IsComparisonFilter(m_Desc.MagFilter))))
     {
         LOG_ERROR("Min and mag fiters must both be either comparison filters or non-comparison ones");
     }
 #endif
 
-    SamplerCI.compareOp = ComparisonFuncToVkCompareOp(m_Desc.ComparisonFunc);
-    SamplerCI.minLod = m_Desc.MinLOD;
-    SamplerCI.maxLod = m_Desc.MaxLOD;
-    SamplerCI.borderColor = BorderColorToVkBorderColor(m_Desc.BorderColor);
+    SamplerCI.compareOp               = ComparisonFuncToVkCompareOp(m_Desc.ComparisonFunc);
+    SamplerCI.minLod                  = m_Desc.MinLOD;
+    SamplerCI.maxLod                  = m_Desc.MaxLOD;
+    SamplerCI.borderColor             = BorderColorToVkBorderColor(m_Desc.BorderColor);
     SamplerCI.unnormalizedCoordinates = VK_FALSE;
 
     m_VkSampler = LogicalDevice.CreateSampler(SamplerCI);
@@ -83,6 +87,6 @@ SamplerVkImpl::~SamplerVkImpl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_VkSampler), m_CommandQueueMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE( SamplerVkImpl, IID_SamplerVk, TSamplerBase )
+IMPLEMENT_QUERY_INTERFACE(SamplerVkImpl, IID_SamplerVk, TSamplerBase)
 
-}
+} // namespace Diligent

@@ -28,44 +28,48 @@
 
 namespace VulkanUtilities
 {
-    VulkanFencePool::VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice)noexcept :
-        m_LogicalDevice{std::move(LogicalDevice)}
-    {}
 
-    VulkanFencePool::~VulkanFencePool()
-    {
+VulkanFencePool::VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> LogicalDevice) noexcept :
+    m_LogicalDevice{std::move(LogicalDevice)}
+{}
+
+VulkanFencePool::~VulkanFencePool()
+{
 #ifdef DEVELOPMENT
-        for (const auto& fence : m_Fences)
-        {
-            DEV_CHECK_ERR(m_LogicalDevice->GetFenceStatus(fence) == VK_SUCCESS, "Destroying a fence that has not been signaled");
-        }
+    for (const auto& fence : m_Fences)
+    {
+        DEV_CHECK_ERR(m_LogicalDevice->GetFenceStatus(fence) == VK_SUCCESS, "Destroying a fence that has not been signaled");
+    }
 #endif
-        m_Fences.clear();
-    }
-
-    FenceWrapper VulkanFencePool::GetFence()
-    {
-        FenceWrapper Fence;
-        if(!m_Fences.empty())
-        {
-            Fence = std::move(m_Fences.back());
-            m_LogicalDevice->ResetFence(Fence);
-            m_Fences.pop_back();
-        }
-        else
-        {
-            VkFenceCreateInfo FenceCI = {};
-            FenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-            FenceCI.pNext = nullptr;
-            FenceCI.flags = 0; // Available flag: VK_FENCE_CREATE_SIGNALED_BIT
-            Fence = m_LogicalDevice->CreateFence(FenceCI);
-        }
-        return Fence;
-    }
-
-    void VulkanFencePool::DisposeFence(FenceWrapper&& Fence)
-    {
-        DEV_CHECK_ERR(m_LogicalDevice->GetFenceStatus(Fence) == VK_SUCCESS, "Disposing a fence that has not been signaled");
-        m_Fences.emplace_back(std::move(Fence));
-    }
+    m_Fences.clear();
 }
+
+FenceWrapper VulkanFencePool::GetFence()
+{
+    FenceWrapper Fence;
+    if (!m_Fences.empty())
+    {
+        Fence = std::move(m_Fences.back());
+        m_LogicalDevice->ResetFence(Fence);
+        m_Fences.pop_back();
+    }
+    else
+    {
+        VkFenceCreateInfo FenceCI = {};
+
+        FenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        FenceCI.pNext = nullptr;
+        FenceCI.flags = 0; // Available flag: VK_FENCE_CREATE_SIGNALED_BIT
+
+        Fence = m_LogicalDevice->CreateFence(FenceCI);
+    }
+    return Fence;
+}
+
+void VulkanFencePool::DisposeFence(FenceWrapper&& Fence)
+{
+    DEV_CHECK_ERR(m_LogicalDevice->GetFenceStatus(Fence) == VK_SUCCESS, "Disposing a fence that has not been signaled");
+    m_Fences.emplace_back(std::move(Fence));
+}
+
+} // namespace VulkanUtilities

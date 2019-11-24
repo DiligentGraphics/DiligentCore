@@ -37,11 +37,11 @@ class RenderDeviceVkImpl;
 class CommandPoolManager
 {
 public:
-    CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl, 
+    CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl,
                        std::string              Name,
-                       uint32_t                 queueFamilyIndex, 
-                       VkCommandPoolCreateFlags flags)noexcept;
-    
+                       uint32_t                 queueFamilyIndex,
+                       VkCommandPoolCreateFlags flags) noexcept;
+
     // clang-format off
     CommandPoolManager             (const CommandPoolManager&)  = delete;
     CommandPoolManager             (      CommandPoolManager&&) = delete;
@@ -52,31 +52,34 @@ public:
     ~CommandPoolManager();
 
     // Allocates Vulkan command pool.
-    VulkanUtilities::CommandPoolWrapper AllocateCommandPool(const char *DebugName = nullptr);
-    
+    VulkanUtilities::CommandPoolWrapper AllocateCommandPool(const char* DebugName = nullptr);
+
     void SafeReleaseCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool, Uint32 CmdQueueIndex, Uint64 FenceValue);
 
     void DestroyPools();
 
 #ifdef DEVELOPMENT
-    int32_t GetAllocatedPoolCount()const{return m_AllocatedPoolCounter;}
+    int32_t GetAllocatedPoolCount() const
+    {
+        return m_AllocatedPoolCounter;
+    }
 #endif
 
 private:
     // Returns command pool to the list of available pools. The GPU must have finished using the pool
     void FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool);
 
-    RenderDeviceVkImpl&             m_DeviceVkImpl;
-    const std::string               m_Name;
-    const uint32_t                  m_QueueFamilyIndex;
-    const VkCommandPoolCreateFlags  m_CmdPoolFlags;
+    RenderDeviceVkImpl&            m_DeviceVkImpl;
+    const std::string              m_Name;
+    const uint32_t                 m_QueueFamilyIndex;
+    const VkCommandPoolCreateFlags m_CmdPoolFlags;
 
-    std::mutex                      m_Mutex;
-    std::deque< VulkanUtilities::CommandPoolWrapper, STDAllocatorRawMem<VulkanUtilities::CommandPoolWrapper> > m_CmdPools;
+    std::mutex                                                                                               m_Mutex;
+    std::deque<VulkanUtilities::CommandPoolWrapper, STDAllocatorRawMem<VulkanUtilities::CommandPoolWrapper>> m_CmdPools;
 
 #ifdef DEVELOPMENT
     std::atomic_int32_t m_AllocatedPoolCounter;
 #endif
 };
 
-}
+} // namespace Diligent

@@ -28,25 +28,27 @@
 namespace Diligent
 {
 
-CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters, 
+CommandQueueVkImpl::CommandQueueVkImpl(IReferenceCounters*                                   pRefCounters,
                                        std::shared_ptr<VulkanUtilities::VulkanLogicalDevice> LogicalDevice,
                                        uint32_t                                              QueueFamilyIndex) :
+    // clang-format off
     TBase{pRefCounters},
     m_LogicalDevice    {LogicalDevice},
     m_VkQueue          {LogicalDevice->GetQueue(QueueFamilyIndex, 0)},
     m_QueueFamilyIndex {QueueFamilyIndex},
     m_NextFenceValue   {1}
+// clang-format on
 {
 }
 
 CommandQueueVkImpl::~CommandQueueVkImpl()
 {
     // Queues are created along with the logical device during vkCreateDevice.
-    // All queues associated with the logical device are destroyed when vkDestroyDevice 
+    // All queues associated with the logical device are destroyed when vkDestroyDevice
     // is called on that device.
 }
 
-IMPLEMENT_QUERY_INTERFACE( CommandQueueVkImpl, IID_CommandQueueVk, TBase )
+IMPLEMENT_QUERY_INTERFACE(CommandQueueVkImpl, IID_CommandQueueVk, TBase)
 
 
 Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
@@ -58,13 +60,16 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
     Atomics::AtomicIncrement(m_NextFenceValue);
 
     auto vkFence = m_pFence->GetVkFence();
-    uint32_t SubmitCount = 
-        (SubmitInfo.waitSemaphoreCount   != 0 || 
-         SubmitInfo.commandBufferCount   != 0 || 
-         SubmitInfo.signalSemaphoreCount != 0) ? 
-        1 : 0;
+
+    uint32_t SubmitCount =
+        (SubmitInfo.waitSemaphoreCount != 0 ||
+         SubmitInfo.commandBufferCount != 0 ||
+         SubmitInfo.signalSemaphoreCount != 0) ?
+        1 :
+        0;
     auto err = vkQueueSubmit(m_VkQueue, SubmitCount, &SubmitInfo, vkFence);
-    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue"); (void)err;
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+    (void)err;
 
     // We must atomically place the (value, fence) pair into the deque
     m_pFence->AddPendingFence(std::move(vkFence), FenceValue);
@@ -75,18 +80,19 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
 Uint64 CommandQueueVkImpl::Submit(VkCommandBuffer cmdBuffer)
 {
     VkSubmitInfo SubmitInfo = {};
-    SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.commandBufferCount = cmdBuffer != VK_NULL_HANDLE ? 1 : 0;
-    SubmitInfo.pCommandBuffers = &cmdBuffer;
-    SubmitInfo.waitSemaphoreCount = 0; // the number of semaphores upon which to wait before executing the command buffers
-    SubmitInfo.pWaitSemaphores = nullptr; // a pointer to an array of semaphores upon which to wait before the command 
-                                          // buffers begin execution
-    SubmitInfo.pWaitDstStageMask = nullptr; // a pointer to an array of pipeline stages at which each corresponding 
-                                            // semaphore wait will occur
-    SubmitInfo.signalSemaphoreCount = 0; // the number of semaphores to be signaled once the commands specified in 
-                                         // pCommandBuffers have completed execution
-    SubmitInfo.pSignalSemaphores = nullptr; // a pointer to an array of semaphores which will be signaled when the 
-                                            // command buffers for this batch have completed execution
+    SubmitInfo.pCommandBuffers    = &cmdBuffer;
+    SubmitInfo.waitSemaphoreCount = 0;       // the number of semaphores upon which to wait before executing the command buffers
+    SubmitInfo.pWaitSemaphores    = nullptr; // a pointer to an array of semaphores upon which to wait before the command
+                                             // buffers begin execution
+    SubmitInfo.pWaitDstStageMask = nullptr;  // a pointer to an array of pipeline stages at which each corresponding
+                                             // semaphore wait will occur
+    SubmitInfo.signalSemaphoreCount = 0;     // the number of semaphores to be signaled once the commands specified in
+                                             // pCommandBuffers have completed execution
+    SubmitInfo.pSignalSemaphores = nullptr;  // a pointer to an array of semaphores which will be signaled when the
+                                             // command buffers for this batch have completed execution
 
     return Submit(SubmitInfo);
 }
@@ -115,8 +121,10 @@ Uint64 CommandQueueVkImpl::GetCompletedFenceValue()
 void CommandQueueVkImpl::SignalFence(VkFence vkFence)
 {
     std::lock_guard<std::mutex> Lock{m_QueueMutex};
+
     auto err = vkQueueSubmit(m_VkQueue, 0, nullptr, vkFence);
-    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue"); (void)err;
+    DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to submit command buffer to the command queue");
+    (void)err;
 }
 
 VkResult CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)
@@ -125,4 +133,4 @@ VkResult CommandQueueVkImpl::Present(const VkPresentInfoKHR& PresentInfo)
     return vkQueuePresentKHR(m_VkQueue, &PresentInfo);
 }
 
-}
+} // namespace Diligent

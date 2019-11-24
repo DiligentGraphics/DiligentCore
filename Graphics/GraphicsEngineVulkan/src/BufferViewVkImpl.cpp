@@ -29,12 +29,13 @@
 namespace Diligent
 {
 
-BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters*                  pRefCounters,
-                                    RenderDeviceVkImpl*                  pDevice, 
-                                    const BufferViewDesc&                ViewDesc, 
-                                    IBuffer*                             pBuffer,
-                                    VulkanUtilities::BufferViewWrapper&& BuffView,
-                                    bool                                 bIsDefaultView ) :
+BufferViewVkImpl::BufferViewVkImpl(IReferenceCounters*                  pRefCounters,
+                                   RenderDeviceVkImpl*                  pDevice,
+                                   const BufferViewDesc&                ViewDesc,
+                                   IBuffer*                             pBuffer,
+                                   VulkanUtilities::BufferViewWrapper&& BuffView,
+                                   bool                                 bIsDefaultView) :
+    // clang-format off
     TBufferViewBase
     {
         pRefCounters,
@@ -44,6 +45,7 @@ BufferViewVkImpl::BufferViewVkImpl( IReferenceCounters*                  pRefCou
         bIsDefaultView
     },
     m_BuffView{std::move(BuffView)}
+// clang-format on
 {
 }
 
@@ -52,9 +54,9 @@ BufferViewVkImpl::~BufferViewVkImpl()
     m_pDevice->SafeReleaseDeviceObject(std::move(m_BuffView), m_pBuffer->GetDesc().CommandQueueMask);
 }
 
-IMPLEMENT_QUERY_INTERFACE( BufferViewVkImpl, IID_BufferViewVk, TBufferViewBase )
+IMPLEMENT_QUERY_INTERFACE(BufferViewVkImpl, IID_BufferViewVk, TBufferViewBase)
 
-const BufferVkImpl* BufferViewVkImpl::GetBufferVk()const
+const BufferVkImpl* BufferViewVkImpl::GetBufferVk() const
 {
     return ValidatedCast<const BufferVkImpl>(m_pBuffer);
 }
@@ -64,4 +66,4 @@ BufferVkImpl* BufferViewVkImpl::GetBufferVk()
     return ValidatedCast<BufferVkImpl>(m_pBuffer);
 }
 
-}
+} // namespace Diligent
