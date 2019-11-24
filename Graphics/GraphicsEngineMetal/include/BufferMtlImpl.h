@@ -43,24 +43,24 @@ class BufferMtlImpl final : public BufferBase<IBufferMtl, RenderDeviceMtlImpl, B
 public:
     using TBufferBase = BufferBase<IBufferMtl, RenderDeviceMtlImpl, BufferViewMtlImpl, FixedBlockMemoryAllocator>;
 
-    BufferMtlImpl(IReferenceCounters*         pRefCounters,
-                  FixedBlockMemoryAllocator&  BuffViewObjMemAllocator,
-                  class RenderDeviceMtlImpl*  pDeviceMtl, 
-                  const BufferDesc&           BuffDesc, 
-                  const BufferData*           pBuffData = nullptr);
+    BufferMtlImpl(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                  class RenderDeviceMtlImpl* pDeviceMtl,
+                  const BufferDesc&          BuffDesc,
+                  const BufferData*          pBuffData = nullptr);
 
     BufferMtlImpl(IReferenceCounters*        pRefCounters,
                   FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
-                  class RenderDeviceMtlImpl* pDeviceMtl, 
-                  const BufferDesc&          BuffDesc, 
+                  class RenderDeviceMtlImpl* pDeviceMtl,
+                  const BufferDesc&          BuffDesc,
                   RESOURCE_STATE             InitialState,
                   void*                      pMetalBuffer);
 
     ~BufferMtlImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual void* GetNativeHandle()override final
+    virtual void* GetNativeHandle() override final
     {
         LOG_ERROR_MESSAGE("BufferMtlImpl::GetNativeHandle() is not implemented");
         return nullptr;
@@ -69,8 +69,7 @@ public:
 private:
     friend class DeviceContextMtlImpl;
 
-    virtual void CreateViewInternal( const struct BufferViewDesc &ViewDesc, IBufferView **ppView, bool bIsDefaultView )override;
-
+    virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;
 };
 
-}
+} // namespace Diligent

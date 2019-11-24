@@ -32,14 +32,13 @@ namespace Diligent
 {
 
 // {4D7AF38E-4650-4A11-B33B-FFC70A8CD68B}
-static const INTERFACE_ID IID_ShaderResourceBindingMtl = 
-{ 0x4d7af38e, 0x4650, 0x4a11, { 0xb3, 0x3b, 0xff, 0xc7, 0xa, 0x8c, 0xd6, 0x8b } };
+static const INTERFACE_ID IID_ShaderResourceBindingMtl =
+    {0x4d7af38e, 0x4650, 0x4a11, {0xb3, 0x3b, 0xff, 0xc7, 0xa, 0x8c, 0xd6, 0x8b}};
 
 /// Exposes Metal-specific functionality of a shader resource binding object.
 class IShaderResourceBindingMtl : public IShaderResourceBinding
 {
 public:
-
 };
 
-}
+} // namespace Diligent

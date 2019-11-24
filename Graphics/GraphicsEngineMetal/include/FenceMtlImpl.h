@@ -43,18 +43,17 @@ class FenceMtlImpl final : public FenceBase<IFenceMtl, RenderDeviceMtlImpl>
 public:
     using TFenceBase = FenceBase<IFenceMtl, RenderDeviceMtlImpl>;
 
-    FenceMtlImpl(IReferenceCounters*    pRefCounters,
-                   RenderDeviceMtlImpl* pDevice,
-                   const FenceDesc&       Desc);
+    FenceMtlImpl(IReferenceCounters*  pRefCounters,
+                 RenderDeviceMtlImpl* pDevice,
+                 const FenceDesc&     Desc);
     ~FenceMtlImpl();
 
-    virtual Uint64 GetCompletedValue()override final;
+    virtual Uint64 GetCompletedValue() override final;
 
-    /// Resets the fence to the specified value. 
-    virtual void Reset(Uint64 Value)override final;
+    /// Resets the fence to the specified value.
+    virtual void Reset(Uint64 Value) override final;
 
 private:
-
 };
 
-}
+} // namespace Diligent

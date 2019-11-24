@@ -33,14 +33,13 @@ namespace Diligent
 {
 
 // {8ACDD0D9-FF1C-4A78-9866-924459A0D456}
-static const INTERFACE_ID IID_SwapChainMtl = 
-{ 0x8acdd0d9, 0xff1c, 0x4a78, { 0x98, 0x66, 0x92, 0x44, 0x59, 0xa0, 0xd4, 0x56 } };
+static const INTERFACE_ID IID_SwapChainMtl =
+    {0x8acdd0d9, 0xff1c, 0x4a78, {0x98, 0x66, 0x92, 0x44, 0x59, 0xa0, 0xd4, 0x56}};
 
 /// Exposes Metal-specific functionality of a swap chain.
 class ISwapChainMtl : public ISwapChain
 {
 public:
-
 };
 
-}
+} // namespace Diligent

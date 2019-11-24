@@ -42,27 +42,26 @@ class ShaderMtlImpl final : public ShaderBase<IShaderMtl, RenderDeviceMtlImpl>
 public:
     using TShaderBase = ShaderBase<IShaderMtl, RenderDeviceMtlImpl>;
 
-    ShaderMtlImpl(IReferenceCounters*          pRefCounters,
-                  class RenderDeviceMtlImpl*   pRenderDeviceMtl,
-                  const ShaderCreateInfo&      ShaderCI);
+    ShaderMtlImpl(IReferenceCounters*        pRefCounters,
+                  class RenderDeviceMtlImpl* pRenderDeviceMtl,
+                  const ShaderCreateInfo&    ShaderCI);
     ~ShaderMtlImpl();
-    
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override final;
 
-    virtual Uint32 GetResourceCount()const override final
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+
+    virtual Uint32 GetResourceCount() const override final
     {
         LOG_ERROR_MESSAGE("ShaderMtlImpl::GetResourceCount() is not implemented");
         return 0;
     }
 
-    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
+    virtual ShaderResourceDesc GetResource(Uint32 Index) const override final
     {
         LOG_ERROR_MESSAGE("ShaderMtlImpl::GetResource() is not implemented");
         return ShaderResourceDesc{};
     }
-    
-private:
 
+private:
 };
 
-}
+} // namespace Diligent

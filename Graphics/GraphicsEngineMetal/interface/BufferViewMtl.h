@@ -32,14 +32,13 @@ namespace Diligent
 {
 
 // {6D8B8199-1011-42B6-80DF-A9FA8B4F33FF}
-static const INTERFACE_ID IID_BufferViewMtl = 
-{ 0x6d8b8199, 0x1011, 0x42b6, { 0x80, 0xdf, 0xa9, 0xfa, 0x8b, 0x4f, 0x33, 0xff } };
+static const INTERFACE_ID IID_BufferViewMtl =
+    {0x6d8b8199, 0x1011, 0x42b6, {0x80, 0xdf, 0xa9, 0xfa, 0x8b, 0x4f, 0x33, 0xff}};
 
 /// Exposes Metal-specific functionality of a buffer view object.
 class IBufferViewMtl : public IBufferView
 {
 public:
-
 };
 
-}
+} // namespace Diligent

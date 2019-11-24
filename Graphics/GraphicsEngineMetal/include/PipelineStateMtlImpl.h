@@ -43,22 +43,22 @@ class PipelineStateMtlImpl final : public PipelineStateBase<IPipelineStateMtl, R
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateMtl, RenderDeviceMtlImpl>;
 
-    PipelineStateMtlImpl(IReferenceCounters*          pRefCounters,
-                           class RenderDeviceMtlImpl* pDeviceMtl,
-                           const PipelineStateDesc&     PipelineDesc);
+    PipelineStateMtlImpl(IReferenceCounters*        pRefCounters,
+                         class RenderDeviceMtlImpl* pDeviceMtl,
+                         const PipelineStateDesc&   PipelineDesc);
     ~PipelineStateMtlImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
-    
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
+    virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+    virtual void CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final;
 
-    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final
+    virtual bool IsCompatibleWith(const IPipelineState* pPSO) const override final;
+
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final
     {
         LOG_ERROR_MESSAGE("PipelineStateMtlImpl::BindStaticResources() is not implemented");
     }
-    
+
     virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final
     {
         LOG_ERROR_MESSAGE("PipelineStateMtlImpl::GetStaticVariableCount() is not implemented");
@@ -79,7 +79,6 @@ public:
 
 
 private:
-
 };
 
-}
+} // namespace Diligent

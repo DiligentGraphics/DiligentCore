@@ -46,10 +46,9 @@ public:
                    const SamplerDesc&         SamplerDesc);
     ~SamplerMtlImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface ) final;
+    virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) final;
 
 private:
-
 };
 
-}
+} // namespace Diligent

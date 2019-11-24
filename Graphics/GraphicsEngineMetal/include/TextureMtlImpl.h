@@ -44,24 +44,23 @@ public:
     using TTextureBase = TextureBase<ITextureMtl, RenderDeviceMtlImpl, TextureViewMtlImpl, FixedBlockMemoryAllocator>;
     using ViewImplType = TextureViewMtlImpl;
 
-    TextureMtlImpl(IReferenceCounters*            pRefCounters,
-                     FixedBlockMemoryAllocator&   TexViewObjAllocator, 
-                     class RenderDeviceMtlImpl*   pDeviceMtl, 
-                     const TextureDesc&           TexDesc, 
-                     const TextureData*           pInitData = nullptr);
+    TextureMtlImpl(IReferenceCounters*        pRefCounters,
+                   FixedBlockMemoryAllocator& TexViewObjAllocator,
+                   class RenderDeviceMtlImpl* pDeviceMtl,
+                   const TextureDesc&         TexDesc,
+                   const TextureData*         pInitData = nullptr);
     ~TextureMtlImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual void* GetNativeHandle()override final
+    virtual void* GetNativeHandle() override final
     {
         LOG_ERROR_MESSAGE("TextureMtlImpl::GetNativeHandle() is not implemented");
         return nullptr;
     }
 
 protected:
-    void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override final;
-
+    void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override final;
 };
 
-}
+} // namespace Diligent

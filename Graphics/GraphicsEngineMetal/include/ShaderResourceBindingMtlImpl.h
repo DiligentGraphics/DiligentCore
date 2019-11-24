@@ -41,25 +41,24 @@ class ShaderResourceBindingMtlImpl final : public ShaderResourceBindingBase<ISha
 public:
     using TBase = ShaderResourceBindingBase<IShaderResourceBindingMtl>;
 
-    ShaderResourceBindingMtlImpl(IReferenceCounters*           pRefCounters,
-                                   class PipelineStateMtlImpl* pPSO,
-                                   bool                          IsInternal);
+    ShaderResourceBindingMtlImpl(IReferenceCounters*         pRefCounters,
+                                 class PipelineStateMtlImpl* pPSO,
+                                 bool                        IsInternal);
     ~ShaderResourceBindingMtlImpl();
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject** ppInterface )override final;
+    virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override final;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override final;
 
-    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char *Name)override final;
+    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final;
 
     virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
-    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)override final;
+    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
-    virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
+    virtual void InitializeStaticResources(const IPipelineState* pPipelineState) override final;
 
 private:
-
 };
 
-}
+} // namespace Diligent

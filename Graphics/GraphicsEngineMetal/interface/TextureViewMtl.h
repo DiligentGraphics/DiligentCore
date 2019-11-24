@@ -32,14 +32,13 @@ namespace Diligent
 {
 
 // {94C0D9C3-61E7-4358-AB9F-066EAD84D6F1}
-static const INTERFACE_ID IID_TextureViewMtl = 
-{ 0x94c0d9c3, 0x61e7, 0x4358, { 0xab, 0x9f, 0x6, 0x6e, 0xad, 0x84, 0xd6, 0xf1 } };
+static const INTERFACE_ID IID_TextureViewMtl =
+    {0x94c0d9c3, 0x61e7, 0x4358, {0xab, 0x9f, 0x6, 0x6e, 0xad, 0x84, 0xd6, 0xf1}};
 
 /// Exposes Metal-specific functionality of a texture view object.
 class ITextureViewMtl : public ITextureView
 {
 public:
-
 };
 
-}
+} // namespace Diligent

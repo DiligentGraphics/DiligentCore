@@ -39,37 +39,37 @@ class RenderDeviceMtlImpl final : public RenderDeviceBase<IRenderDeviceMtl>
 public:
     using TRenderDeviceBase = RenderDeviceBase<IRenderDeviceMtl>;
 
-    RenderDeviceMtlImpl( IReferenceCounters*        pRefCounters,
-                         IMemoryAllocator&          RawMemAllocator,
-                         IEngineFactory*            pEngineFactory,
-                         const EngineMtlCreateInfo& EngineAttribs,
-                         void*                      pMtlDevice);
+    RenderDeviceMtlImpl(IReferenceCounters*        pRefCounters,
+                        IMemoryAllocator&          RawMemAllocator,
+                        IEngineFactory*            pEngineFactory,
+                        const EngineMtlCreateInfo& EngineAttribs,
+                        void*                      pMtlDevice);
 
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject **ppInterface )override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)override final;
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer) override final;
 
-    virtual void CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)override final;
+    virtual void CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader) override final;
 
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)override final;
-    
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)override final;
+    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture) override final;
 
-    virtual void CreatePipelineState(const PipelineStateDesc &PipelineDesc, IPipelineState **ppPipelineState)override final;
+    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler) override final;
 
-    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence)override final;
+    virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState) override final;
 
-    virtual void ReleaseStaleResources(bool ForceRelease = false)override final {}
+    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
 
-    virtual void IdleGPU()override final;
+    virtual void ReleaseStaleResources(bool ForceRelease = false) override final {}
 
-    size_t GetCommandQueueCount()const { return 1; }
-    Uint64 GetCommandQueueMask()const { return Uint64{1};}
+    virtual void IdleGPU() override final;
+
+    size_t GetCommandQueueCount() const { return 1; }
+    Uint64 GetCommandQueueMask() const { return Uint64{1}; }
 
 private:
-    virtual void TestTextureFormat( TEXTURE_FORMAT TexFormat )override final;
+    virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
     EngineMtlCreateInfo m_EngineAttribs;
 };
 
-}
+} // namespace Diligent

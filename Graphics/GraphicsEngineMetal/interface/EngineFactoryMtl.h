@@ -40,29 +40,29 @@ namespace Diligent
 {
 
 // {CF4A590D-2E40-4F48-9579-0D25991F963B}
-static const INTERFACE_ID IID_EngineFactoryMtl = 
-{ 0xcf4a590d, 0x2e40, 0x4f48, { 0x95, 0x79, 0xd, 0x25, 0x99, 0x1f, 0x96, 0x3b } };
+static const INTERFACE_ID IID_EngineFactoryMtl =
+    {0xcf4a590d, 0x2e40, 0x4f48, {0x95, 0x79, 0xd, 0x25, 0x99, 0x1f, 0x96, 0x3b}};
 
 class IEngineFactoryMtl : public IEngineFactory
 {
 public:
-    virtual void CreateDeviceAndContextsMtl(const EngineMtlCreateInfo& Attribs, 
-                                            IRenderDevice**            ppDevice, 
+    virtual void CreateDeviceAndContextsMtl(const EngineMtlCreateInfo& Attribs,
+                                            IRenderDevice**            ppDevice,
                                             IDeviceContext**           ppContexts) = 0;
 
-   virtual void CreateSwapChainMtl( IRenderDevice*            pDevice, 
-                                    IDeviceContext*           pImmediateContext, 
-                                    const SwapChainDesc&      SCDesc, 
-                                    void*                     pView, 
-                                    ISwapChain**              ppSwapChain ) = 0;
+    virtual void CreateSwapChainMtl(IRenderDevice*       pDevice,
+                                    IDeviceContext*      pImmediateContext,
+                                    const SwapChainDesc& SCDesc,
+                                    void*                pView,
+                                    ISwapChain**         ppSwapChain) = 0;
 
-   virtual void AttachToMtlDevice(void*                      pMtlNativeDevice, 
-                                  const EngineMtlCreateInfo& EngineAttribs, 
-                                  IRenderDevice**            ppDevice, 
-                                  IDeviceContext**           ppContexts) = 0;
+    virtual void AttachToMtlDevice(void*                      pMtlNativeDevice,
+                                   const EngineMtlCreateInfo& EngineAttribs,
+                                   IRenderDevice**            ppDevice,
+                                   IDeviceContext**           ppContexts) = 0;
 };
 
 
 API_QUALIFIER IEngineFactoryMtl* GetEngineFactoryMtl();
 
-}
+} // namespace Diligent

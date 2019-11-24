@@ -32,14 +32,13 @@ namespace Diligent
 {
 
 // {2DEA7704-C586-4BA7-B938-93B239DFA268}
-static const INTERFACE_ID IID_DeviceContextMtl = 
-{ 0x2dea7704, 0xc586, 0x4ba7, { 0xb9, 0x38, 0x93, 0xb2, 0x39, 0xdf, 0xa2, 0x68 } };
+static const INTERFACE_ID IID_DeviceContextMtl =
+    {0x2dea7704, 0xc586, 0x4ba7, {0xb9, 0x38, 0x93, 0xb2, 0x39, 0xdf, 0xa2, 0x68}};
 
 /// Exposes Metal-specific functionality of a device context.
 class IDeviceContextMtl : public IDeviceContext
 {
 public:
-
 };
 
-}
+} // namespace Diligent

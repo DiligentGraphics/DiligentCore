@@ -41,17 +41,16 @@ class BufferViewMtlImpl final : public BufferViewBase<IBufferViewMtl, RenderDevi
 public:
     using TBufferViewBase = BufferViewBase<IBufferViewMtl, RenderDeviceMtlImpl>;
 
-    BufferViewMtlImpl( IReferenceCounters*    pRefCounters,
-                       RenderDeviceMtlImpl*   pDevice, 
-                       const BufferViewDesc&  ViewDesc, 
-                       class IBuffer*         pBuffer,
-                       void*                  pMtlView,
-                       bool                   bIsDefaultView);
+    BufferViewMtlImpl(IReferenceCounters*   pRefCounters,
+                      RenderDeviceMtlImpl*  pDevice,
+                      const BufferViewDesc& ViewDesc,
+                      class IBuffer*        pBuffer,
+                      void*                 pMtlView,
+                      bool                  bIsDefaultView);
 
-    virtual void QueryInterface( const Diligent::INTERFACE_ID &IID, IObject **ppInterface ) final;
+    virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) final;
 
 protected:
-    
 };
 
-}
+} // namespace Diligent
