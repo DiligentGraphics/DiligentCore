@@ -28,29 +28,31 @@
 
 namespace Diligent
 {
-    void CreateTextureUploader(IRenderDevice *pDevice, const TextureUploaderDesc& Desc, ITextureUploader **ppUploader)
+
+void CreateTextureUploader(IRenderDevice* pDevice, const TextureUploaderDesc& Desc, ITextureUploader** ppUploader)
+{
+    *ppUploader = nullptr;
+    switch (pDevice->GetDeviceCaps().DevType)
     {
-        *ppUploader = nullptr;
-        switch (pDevice->GetDeviceCaps().DevType)
-        {
-            case DeviceType::D3D11:
-                *ppUploader = MakeNewRCObj<TextureUploaderD3D11>()( pDevice, Desc );
-                break;
+        case DeviceType::D3D11:
+            *ppUploader = MakeNewRCObj<TextureUploaderD3D11>()(pDevice, Desc);
+            break;
 
-            case DeviceType::D3D12:
-            case DeviceType::Vulkan:
-                *ppUploader = MakeNewRCObj<TextureUploaderD3D12_Vk>()( pDevice, Desc );
-                break;
+        case DeviceType::D3D12:
+        case DeviceType::Vulkan:
+            *ppUploader = MakeNewRCObj<TextureUploaderD3D12_Vk>()(pDevice, Desc);
+            break;
 
-            case DeviceType::OpenGLES:
-            case DeviceType::OpenGL:
-                *ppUploader = MakeNewRCObj<TextureUploaderGL>()( pDevice, Desc );
-                break;
-            
-            default:
-                UNEXPECTED("Unexpected device type");
-        }
-        if (*ppUploader != nullptr)
-            (*ppUploader)->AddRef();
+        case DeviceType::OpenGLES:
+        case DeviceType::OpenGL:
+            *ppUploader = MakeNewRCObj<TextureUploaderGL>()(pDevice, Desc);
+            break;
+
+        default:
+            UNEXPECTED("Unexpected device type");
     }
+    if (*ppUploader != nullptr)
+        (*ppUploader)->AddRef();
 }
+
+} // namespace Diligent

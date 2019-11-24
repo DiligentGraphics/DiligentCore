@@ -34,18 +34,18 @@
 
 namespace Diligent
 {
-    
+
 class ScreenCapture
 {
 public:
     ScreenCapture(IRenderDevice* pDevice);
 
     void Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Uint32 FrameId);
-        
+
     struct CaptureInfo
     {
         RefCntAutoPtr<ITexture> pTexture;
-        Uint32                  Id      = 0;
+        Uint32                  Id = 0;
 
         operator bool() const
         {
@@ -54,6 +54,7 @@ public:
     };
 
     CaptureInfo GetCapture();
+
     void RecycleStagingTexture(RefCntAutoPtr<ITexture>&& pTexture);
 
     size_t GetNumPendingCaptures()
@@ -69,13 +70,15 @@ private:
     std::mutex                           m_AvailableTexturesMtx;
     std::vector<RefCntAutoPtr<ITexture>> m_AvailableTextures;
 
-    std::mutex                                             m_PendingTexturesMtx;
+    std::mutex m_PendingTexturesMtx;
     struct PendingTextureInfo
     {
         PendingTextureInfo(RefCntAutoPtr<ITexture>&& _pTex, Uint32 _Id, Uint64 _Fence) :
-            pTex    (std::move(_pTex)),
-            Id      (_Id),
-            Fence   (_Fence)
+            // clang-format off
+            pTex    {std::move(_pTex)},
+            Id      {_Id             },
+            Fence   {_Fence          }
+        // clang-format on
         {
         }
 
@@ -88,4 +91,4 @@ private:
     Uint64 m_CurrentFenceValue = 1;
 };
 
-}
+} // namespace Diligent

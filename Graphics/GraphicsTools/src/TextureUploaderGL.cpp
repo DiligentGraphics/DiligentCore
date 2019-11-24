@@ -36,35 +36,37 @@
 namespace Diligent
 {
 
-namespace 
+namespace
 {
 
 class UploadBufferGL : public UploadBufferBase
 {
 public:
-    UploadBufferGL(IReferenceCounters *pRefCounters, const UploadBufferDesc &Desc) :
-        UploadBufferBase(pRefCounters, Desc),
-        m_SubresourceOffsets(Desc.MipLevels * Desc.ArraySize + 1),
-        m_SubresourceStrides(Desc.MipLevels * Desc.ArraySize)
+    UploadBufferGL(IReferenceCounters* pRefCounters, const UploadBufferDesc& Desc) :
+        // clang-format off
+        UploadBufferBase{pRefCounters, Desc},
+        m_SubresourceOffsets{Desc.MipLevels * Desc.ArraySize + 1},
+        m_SubresourceStrides{Desc.MipLevels * Desc.ArraySize    }
+    // clang-format on
     {
         const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
-        Uint32 SubRes = 0;
+        Uint32      SubRes     = 0;
         for (Uint32 Slice = 0; Slice < Desc.ArraySize; ++Slice)
         {
             for (Uint32 Mip = 0; Mip < Desc.MipLevels; ++Mip)
             {
-                auto MipWidth  = std::max(Desc.Width  >> Mip, 1u);
+                auto MipWidth  = std::max(Desc.Width >> Mip, 1u);
                 auto MipHeight = std::max(Desc.Height >> Mip, 1u);
                 if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
                 {
-                    MipWidth  = Align(MipWidth,  Uint32{FmtAttribs.BlockWidth});
+                    MipWidth  = Align(MipWidth, Uint32{FmtAttribs.BlockWidth});
                     MipHeight = Align(MipHeight, Uint32{FmtAttribs.BlockHeight});
                 }
 
-                auto RowStride = MipWidth / Uint32{FmtAttribs.BlockWidth} * FmtAttribs.GetElementSize();
+                auto RowStride               = MipWidth / Uint32{FmtAttribs.BlockWidth} * FmtAttribs.GetElementSize();
                 m_SubresourceStrides[SubRes] = RowStride;
 
-                auto MipSize = MipHeight / Uint32{FmtAttribs.BlockHeight} * RowStride;
+                auto MipSize                     = MipHeight / Uint32{FmtAttribs.BlockHeight} * RowStride;
                 m_SubresourceOffsets[SubRes + 1] = m_SubresourceOffsets[SubRes] + MipSize;
                 ++SubRes;
             }
@@ -87,12 +89,12 @@ public:
         m_CopyScheduledSignal.Trigger();
     }
 
-    virtual void WaitForCopyScheduled()override final
+    virtual void WaitForCopyScheduled() override final
     {
         m_CopyScheduledSignal.Wait();
     }
 
-    bool DbgIsCopyScheduled()const { return m_CopyScheduledSignal.IsTriggered(); }
+    bool DbgIsCopyScheduled() const { return m_CopyScheduledSignal.IsTriggered(); }
 
     void SetDataPtr(Uint8* pBufferData)
     {
@@ -100,7 +102,7 @@ public:
         {
             for (Uint32 Mip = 0; Mip < m_Desc.MipLevels; ++Mip)
             {
-                SetMappedData(Mip, Slice, MappedTextureSubresource{pBufferData + GetOffset(Mip,Slice), GetStride(Mip,Slice), 0});
+                SetMappedData(Mip, Slice, MappedTextureSubresource{pBufferData + GetOffset(Mip, Slice), GetStride(Mip, Slice), 0});
             }
         }
     }
@@ -118,7 +120,7 @@ public:
         UploadBufferBase::Reset();
     }
 
-    Uint32 GetTotalSize()const
+    Uint32 GetTotalSize() const
     {
         return m_SubresourceOffsets.back();
     }
@@ -134,8 +136,8 @@ private:
     ThreadingTools::Signal m_BufferMappedSignal;
     ThreadingTools::Signal m_CopyScheduledSignal;
     RefCntAutoPtr<IBuffer> m_pStagingBuffer;
-    std::vector<Uint32> m_SubresourceOffsets;
-    std::vector<Uint32> m_SubresourceStrides;
+    std::vector<Uint32>    m_SubresourceOffsets;
+    std::vector<Uint32>    m_SubresourceStrides;
 };
 
 } // namespace
@@ -149,61 +151,63 @@ struct TextureUploaderGL::InternalData
         m_PendingOperations.swap(m_InWorkOperations);
     }
 
-    void EnqueCopy(UploadBufferGL *pUploadBuffer, ITexture *pDstTexture, Uint32 dstSlice, Uint32 dstMip)
+    void EnqueCopy(UploadBufferGL* pUploadBuffer, ITexture* pDstTexture, Uint32 dstSlice, Uint32 dstMip)
     {
         std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
         m_PendingOperations.emplace_back(PendingBufferOperation::Operation::Copy, pUploadBuffer, pDstTexture, dstSlice, dstMip);
     }
 
-    void EnqueMap(UploadBufferGL *pUploadBuffer)
+    void EnqueMap(UploadBufferGL* pUploadBuffer)
     {
         std::lock_guard<std::mutex> QueueLock(m_PendingOperationsMtx);
         m_PendingOperations.emplace_back(PendingBufferOperation::Operation::Map, pUploadBuffer);
     }
 
-        
+
     struct PendingBufferOperation
     {
         enum Operation
         {
             Map,
             Copy
-        }operation;
+        } operation;
         RefCntAutoPtr<UploadBufferGL> pUploadBuffer;
-        RefCntAutoPtr<ITexture> pDstTexture;
-        Uint32 DstSlice = 0;
-        Uint32 DstMip = 0;
+        RefCntAutoPtr<ITexture>       pDstTexture;
+        Uint32                        DstSlice = 0;
+        Uint32                        DstMip   = 0;
 
+        // clang-format off
         PendingBufferOperation(Operation op, UploadBufferGL* pBuff) :
-            operation(op),
-            pUploadBuffer(pBuff)
+            operation    {op   },
+            pUploadBuffer{pBuff}
         {}
         PendingBufferOperation(Operation op, UploadBufferGL* pBuff, ITexture *pDstTex, Uint32 dstSlice, Uint32 dstMip) :
-            operation(op),
-            pUploadBuffer(pBuff),
-            pDstTexture(pDstTex),
-            DstSlice(dstSlice),
-            DstMip(dstMip)
+            operation    {op      },
+            pUploadBuffer{pBuff   },
+            pDstTexture  {pDstTex },
+            DstSlice     {dstSlice},
+            DstMip       {dstMip  }
         {}
+        // clang-format on
     };
 
-    std::mutex m_PendingOperationsMtx;
-    std::vector< PendingBufferOperation > m_PendingOperations;
-    std::vector< PendingBufferOperation > m_InWorkOperations;
+    std::mutex                          m_PendingOperationsMtx;
+    std::vector<PendingBufferOperation> m_PendingOperations;
+    std::vector<PendingBufferOperation> m_InWorkOperations;
 
-    std::mutex m_UploadBuffCacheMtx;
-    std::unordered_map< UploadBufferDesc, std::deque<RefCntAutoPtr<UploadBufferGL> > > m_UploadBufferCache;
+    std::mutex                                                                      m_UploadBuffCacheMtx;
+    std::unordered_map<UploadBufferDesc, std::deque<RefCntAutoPtr<UploadBufferGL>>> m_UploadBufferCache;
 };
 
-TextureUploaderGL::TextureUploaderGL(IReferenceCounters *pRefCounters, IRenderDevice *pDevice, const TextureUploaderDesc Desc) :
-    TextureUploaderBase(pRefCounters, pDevice, Desc),
-    m_pInternalData(new InternalData())
+TextureUploaderGL::TextureUploaderGL(IReferenceCounters* pRefCounters, IRenderDevice* pDevice, const TextureUploaderDesc Desc) :
+    TextureUploaderBase{pRefCounters, pDevice, Desc},
+    m_pInternalData{new InternalData{}}
 {
 }
 
 TextureUploaderGL::~TextureUploaderGL()
 {
-    auto Stats =  TextureUploaderGL::GetStats();
+    auto Stats = TextureUploaderGL::GetStats();
     if (Stats.NumPendingOperations != 0)
     {
         LOG_WARNING_MESSAGE("TextureUploaderGL::~TextureUploaderGL(): there ", (Stats.NumPendingOperations > 1 ? "are " : "is "),
@@ -216,21 +220,22 @@ TextureUploaderGL::~TextureUploaderGL()
     {
         if (BuffQueueIt.second.size())
         {
-            const auto &desc = BuffQueueIt.first;
-            auto &FmtInfo = m_pDevice->GetTextureFormatInfo(desc.Format);
-            LOG_INFO_MESSAGE("TextureUploaderGL: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " upload buffer(s) ");
+            const auto& desc    = BuffQueueIt.first;
+            auto&       FmtInfo = m_pDevice->GetTextureFormatInfo(desc.Format);
+            LOG_INFO_MESSAGE("TextureUploaderGL: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x',
+                             desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " upload buffer(s) ");
         }
     }
 }
 
-void TextureUploaderGL::RenderThreadUpdate(IDeviceContext *pContext)
+void TextureUploaderGL::RenderThreadUpdate(IDeviceContext* pContext)
 {
     m_pInternalData->SwapMapQueues();
     if (!m_pInternalData->m_InWorkOperations.empty())
     {
         for (auto& OperationInfo : m_pInternalData->m_InWorkOperations)
         {
-            auto& pBuffer = OperationInfo.pUploadBuffer;
+            auto&       pBuffer        = OperationInfo.pUploadBuffer;
             const auto& UploadBuffDesc = pBuffer->GetDesc();
 
             switch (OperationInfo.operation)
@@ -258,7 +263,7 @@ void TextureUploaderGL::RenderThreadUpdate(IDeviceContext *pContext)
 
                 case InternalData::PendingBufferOperation::Copy:
                 {
-                    const auto& TexDesc    = OperationInfo.pDstTexture->GetDesc();
+                    const auto& TexDesc = OperationInfo.pDstTexture->GetDesc();
                     pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
                     for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
                     {
@@ -266,9 +271,11 @@ void TextureUploaderGL::RenderThreadUpdate(IDeviceContext *pContext)
                         {
                             auto SrcOffset = pBuffer->GetOffset(Mip, Slice);
                             auto SrcStride = pBuffer->GetMappedData(Mip, Slice).Stride;
+
                             TextureSubResData SubResData(pBuffer->m_pStagingBuffer, SrcOffset, SrcStride);
+
                             auto MipLevelProps = GetMipLevelProperties(TexDesc, Mip);
-                            Box DstBox;
+                            Box  DstBox;
                             DstBox.MaxX = MipLevelProps.LogicalWidth;
                             DstBox.MaxY = MipLevelProps.LogicalHeight;
                             pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip + Mip, OperationInfo.DstSlice + Slice, DstBox,
@@ -284,20 +291,20 @@ void TextureUploaderGL::RenderThreadUpdate(IDeviceContext *pContext)
     }
 }
 
-void TextureUploaderGL::AllocateUploadBuffer(const UploadBufferDesc& Desc, bool IsRenderThread, IUploadBuffer **ppBuffer)
+void TextureUploaderGL::AllocateUploadBuffer(const UploadBufferDesc& Desc, bool IsRenderThread, IUploadBuffer** ppBuffer)
 {
     *ppBuffer = nullptr;
     RefCntAutoPtr<UploadBufferGL> pUploadBuffer;
 
     {
         std::lock_guard<std::mutex> CacheLock(m_pInternalData->m_UploadBuffCacheMtx);
-        auto &Cache = m_pInternalData->m_UploadBufferCache;
+        auto&                       Cache = m_pInternalData->m_UploadBufferCache;
         if (!Cache.empty())
         {
             auto DequeIt = Cache.find(Desc);
             if (DequeIt != Cache.end())
             {
-                auto &Deque = DequeIt->second;
+                auto& Deque = DequeIt->second;
                 if (!Deque.empty())
                 {
                     pUploadBuffer.Attach(Deque.front().Detach());
@@ -307,10 +314,11 @@ void TextureUploaderGL::AllocateUploadBuffer(const UploadBufferDesc& Desc, bool 
         }
     }
 
-    if( !pUploadBuffer )
+    if (!pUploadBuffer)
     {
         pUploadBuffer = MakeNewRCObj<UploadBufferGL>()(Desc);
-        LOG_INFO_MESSAGE("TextureUploaderGL: created upload buffer for ", Desc.Width, 'x', Desc.Height, 'x', Desc.Depth, ' ', Desc.MipLevels,  "-mip ",
+        LOG_INFO_MESSAGE("TextureUploaderGL: created upload buffer for ", Desc.Width, 'x', Desc.Height, 'x',
+                         Desc.Depth, ' ', Desc.MipLevels, "-mip ",
                          m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " texture");
     }
 
@@ -319,30 +327,31 @@ void TextureUploaderGL::AllocateUploadBuffer(const UploadBufferDesc& Desc, bool 
     *ppBuffer = pUploadBuffer.Detach();
 }
 
-void TextureUploaderGL::ScheduleGPUCopy(ITexture *pDstTexture,
-    Uint32 ArraySlice,
-    Uint32 MipLevel,
-    IUploadBuffer *pUploadBuffer)
+void TextureUploaderGL::ScheduleGPUCopy(ITexture*      pDstTexture,
+                                        Uint32         ArraySlice,
+                                        Uint32         MipLevel,
+                                        IUploadBuffer* pUploadBuffer)
 {
-    auto *pUploadBufferGL = ValidatedCast<UploadBufferGL>(pUploadBuffer);
+    auto* pUploadBufferGL = ValidatedCast<UploadBufferGL>(pUploadBuffer);
     m_pInternalData->EnqueCopy(pUploadBufferGL, pDstTexture, ArraySlice, MipLevel);
 }
 
-void TextureUploaderGL::RecycleBuffer(IUploadBuffer *pUploadBuffer)
+void TextureUploaderGL::RecycleBuffer(IUploadBuffer* pUploadBuffer)
 {
-    auto *pUploadBufferGL = ValidatedCast<UploadBufferGL>(pUploadBuffer);
+    auto* pUploadBufferGL = ValidatedCast<UploadBufferGL>(pUploadBuffer);
     VERIFY(pUploadBufferGL->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
     pUploadBufferGL->Reset();
 
     std::lock_guard<std::mutex> CacheLock(m_pInternalData->m_UploadBuffCacheMtx);
-    auto &Cache = m_pInternalData->m_UploadBufferCache;
-    auto &Deque = Cache[pUploadBufferGL->GetDesc()];
-    Deque.emplace_back( pUploadBufferGL );
+
+    auto& Cache = m_pInternalData->m_UploadBufferCache;
+    auto& Deque = Cache[pUploadBufferGL->GetDesc()];
+    Deque.emplace_back(pUploadBufferGL);
 }
 
 TextureUploaderStats TextureUploaderGL::GetStats()
 {
-    TextureUploaderStats Stats;
+    TextureUploaderStats        Stats;
     std::lock_guard<std::mutex> QueueLock(m_pInternalData->m_PendingOperationsMtx);
     Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.size());
     return Stats;

@@ -28,58 +28,61 @@
 
 namespace Diligent
 {
-    struct UploadBufferDesc
+
+// clang-format off
+struct UploadBufferDesc
+{
+    Uint32         Width       = 0;
+    Uint32         Height      = 0;
+    Uint32         Depth       = 1;
+    Uint32         MipLevels   = 1;
+    Uint32         ArraySize   = 1;
+    TEXTURE_FORMAT Format      = TEX_FORMAT_UNKNOWN;
+
+    bool operator == (const UploadBufferDesc &rhs) const
     {
-        Uint32         Width       = 0;
-        Uint32         Height      = 0;
-        Uint32         Depth       = 1;
-        Uint32         MipLevels   = 1;
-        Uint32         ArraySize   = 1;
-        TEXTURE_FORMAT Format      = TEX_FORMAT_UNKNOWN;
+        return Width  == rhs.Width  && 
+                Height == rhs.Height &&
+                Depth  == rhs.Depth  &&
+                Format == rhs.Format;
+    }
+};
+// clang-format on
 
-        bool operator == (const UploadBufferDesc &rhs) const
-        {
-            return Width  == rhs.Width  && 
-                   Height == rhs.Height &&
-                   Depth  == rhs.Depth  &&
-                   Format == rhs.Format;
-        }
-    };
+class IUploadBuffer : public IObject
+{
+public:
+    virtual void                     WaitForCopyScheduled()                  = 0;
+    virtual MappedTextureSubresource GetMappedData(Uint32 Mip, Uint32 Slice) = 0;
+    virtual const UploadBufferDesc&  GetDesc() const                         = 0;
+};
 
-    class IUploadBuffer : public IObject
-    {
-    public:
-        virtual void WaitForCopyScheduled() = 0;
-        virtual MappedTextureSubresource GetMappedData(Uint32 Mip, Uint32 Slice) = 0;
-        virtual const UploadBufferDesc& GetDesc()const = 0;
-    };
+struct TextureUploaderDesc
+{
+};
 
-    struct TextureUploaderDesc
-    {
+struct TextureUploaderStats
+{
+    Uint32 NumPendingOperations = 0;
+};
 
-    };
+class ITextureUploader : public IObject
+{
+public:
+    virtual void RenderThreadUpdate(IDeviceContext* pContext) = 0;
 
-    struct TextureUploaderStats
-    {
-        Uint32 NumPendingOperations = 0;
-    };
+    virtual void AllocateUploadBuffer(const UploadBufferDesc& Desc,
+                                      bool                    IsRenderThread,
+                                      IUploadBuffer**         ppBuffer) = 0;
+    virtual void ScheduleGPUCopy(ITexture*      pDstTexture,
+                                 Uint32         ArraySlice,
+                                 Uint32         MipLevel,
+                                 IUploadBuffer* pUploadBuffer)  = 0;
+    virtual void RecycleBuffer(IUploadBuffer* pUploadBuffer)    = 0;
 
-    class ITextureUploader : public IObject
-    {
-    public:
-        virtual void RenderThreadUpdate(IDeviceContext* pContext) = 0;
+    virtual TextureUploaderStats GetStats() = 0;
+};
 
-        virtual void AllocateUploadBuffer(const UploadBufferDesc& Desc,
-                                          bool                    IsRenderThread,
-                                          IUploadBuffer**         ppBuffer) = 0;
-        virtual void ScheduleGPUCopy(ITexture*      pDstTexture,
-                                     Uint32         ArraySlice,
-                                     Uint32         MipLevel,
-                                     IUploadBuffer* pUploadBuffer) = 0;
-        virtual void RecycleBuffer(IUploadBuffer* pUploadBuffer) = 0;
+void CreateTextureUploader(IRenderDevice* pDevice, const TextureUploaderDesc& Desc, ITextureUploader** ppUploader);
 
-        virtual TextureUploaderStats GetStats() = 0;
-    };
-
-    void CreateTextureUploader(IRenderDevice* pDevice, const TextureUploaderDesc& Desc, ITextureUploader** ppUploader);
-}
+} // namespace Diligent

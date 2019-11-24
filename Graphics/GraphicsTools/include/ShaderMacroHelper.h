@@ -52,23 +52,22 @@ namespace Diligent
 class ShaderMacroHelper
 {
 public:
+    template <typename DefintionType>
+    void AddShaderMacro(const Char* Name, DefintionType Definition)
+    {
+        std::ostringstream ss;
+        ss << Definition;
+        AddShaderMacro<const Char*>(Name, ss.str().c_str());
+    }
 
-    template<typename DefintionType>
-	void AddShaderMacro( const Char* Name, DefintionType Definition )
-	{
-		std::ostringstream ss;
-		ss << Definition;
-		AddShaderMacro<const Char*>( Name, ss.str().c_str() );
-	}
-	
     void Finalize()
-	{
+    {
         if (!m_bIsFinalized)
         {
             m_Macros.emplace_back(nullptr, nullptr);
             m_bIsFinalized = true;
         }
-	}
+    }
 
     void Reopen()
     {
@@ -87,16 +86,16 @@ public:
         m_bIsFinalized = false;
     }
 
-	operator const ShaderMacro* ()
-	{
+    operator const ShaderMacro*()
+    {
         if (m_Macros.size() > 0 && !m_bIsFinalized)
             Finalize();
         return m_Macros.size() ? m_Macros.data() : nullptr;
-	}
-    
+    }
+
     void RemoveMacro(const Char* Name)
     {
-        size_t i=0;
+        size_t i = 0;
         while (i < m_Macros.size() && m_Macros[i].Definition != nullptr)
         {
             if (strcmp(m_Macros[i].Name, Name) == 0)
@@ -111,56 +110,55 @@ public:
         }
     }
 
-    template<typename DefintionType>
-	void UpdateMacro( const Char* Name, DefintionType Definition )
-	{
+    template <typename DefintionType>
+    void UpdateMacro(const Char* Name, DefintionType Definition)
+    {
         RemoveMacro(Name);
         AddShaderMacro(Name, Definition);
     }
 
 private:
-
-	std::vector< ShaderMacro > m_Macros;
-	std::set< std::string > m_DefinitionsPool;
-    bool m_bIsFinalized = false;
+    std::vector<ShaderMacro> m_Macros;
+    std::set<std::string>    m_DefinitionsPool;
+    bool                     m_bIsFinalized = false;
 };
 
-template<>
-inline void ShaderMacroHelper::AddShaderMacro( const Char* Name, const Char* Definition )
+template <>
+inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, const Char* Definition)
 {
     Reopen();
-    auto *PooledDefinition = m_DefinitionsPool.insert(Definition).first->c_str();
-	m_Macros.emplace_back(Name, PooledDefinition);
+    auto* PooledDefinition = m_DefinitionsPool.insert(Definition).first->c_str();
+    m_Macros.emplace_back(Name, PooledDefinition);
 }
 
-template<>
-inline void ShaderMacroHelper::AddShaderMacro( const Char* Name, bool Definition )
+template <>
+inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, bool Definition)
 {
-	AddShaderMacro( Name, Definition ? "1" : "0");
+    AddShaderMacro(Name, Definition ? "1" : "0");
 }
 
-template<>
-inline void ShaderMacroHelper::AddShaderMacro( const Char* Name, float Definition )
+template <>
+inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, float Definition)
 {
-	std::ostringstream ss;
-    
+    std::ostringstream ss;
+
     // Make sure that when floating point represents integer, it is still
     // written as float: 1024.0, but not 1024. This is essnetial to
     // avoid type conversion issues in GLES.
-    if( Definition == static_cast<float>(static_cast<int>(Definition)) )
-        ss << std::fixed << std::setprecision( 1 );
+    if (Definition == static_cast<float>(static_cast<int>(Definition)))
+        ss << std::fixed << std::setprecision(1);
 
-	ss << Definition;
-	AddShaderMacro<const Char*>( Name, ss.str().c_str() );
+    ss << Definition;
+    AddShaderMacro<const Char*>(Name, ss.str().c_str());
 }
 
-template<>
-inline void ShaderMacroHelper::AddShaderMacro( const Char* Name, Uint32 Definition )
+template <>
+inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, Uint32 Definition)
 {
     // Make sure that uint constants have the 'u' suffix to avoid problems in GLES.
-	std::ostringstream ss;
-	ss << Definition << 'u';
-	AddShaderMacro<const Char*>( Name, ss.str().c_str() );
+    std::ostringstream ss;
+    ss << Definition << 'u';
+    AddShaderMacro<const Char*>(Name, ss.str().c_str());
 }
 
-}
+} // namespace Diligent

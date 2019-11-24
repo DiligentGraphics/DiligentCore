@@ -28,7 +28,7 @@ namespace Diligent
 {
 
 ScreenCapture::ScreenCapture(IRenderDevice* pDevice) :
-    m_pDevice(pDevice)
+    m_pDevice{pDevice}
 {
     FenceDesc fenceDesc;
     fenceDesc.Name = "Screen capture fence";
@@ -37,9 +37,9 @@ ScreenCapture::ScreenCapture(IRenderDevice* pDevice) :
 
 void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Uint32 FrameId)
 {
-    auto* pCurrentRTV        = pSwapChain->GetCurrentBackBufferRTV();
-    auto* pCurrentBackBuffer = pCurrentRTV->GetTexture();
-    const auto& SCDesc       = pSwapChain->GetDesc();
+    auto*       pCurrentRTV        = pSwapChain->GetCurrentBackBufferRTV();
+    auto*       pCurrentBackBuffer = pCurrentRTV->GetTexture();
+    const auto& SCDesc             = pSwapChain->GetDesc();
 
     RefCntAutoPtr<ITexture> pStagingTexture;
 
@@ -50,9 +50,9 @@ void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Ui
             pStagingTexture = std::move(m_AvailableTextures.back());
             m_AvailableTextures.pop_back();
             const auto& TexDesc = pStagingTexture->GetDesc();
-            if ( !(TexDesc.Width  == SCDesc.Width  && 
-                   TexDesc.Height == SCDesc.Height &&
-                   TexDesc.Format == SCDesc.ColorBufferFormat) )
+            if (!(TexDesc.Width == SCDesc.Width &&
+                  TexDesc.Height == SCDesc.Height &&
+                  TexDesc.Format == SCDesc.ColorBufferFormat))
             {
                 pStagingTexture.Release();
             }
@@ -88,11 +88,12 @@ void ScreenCapture::Capture(ISwapChain* pSwapChain, IDeviceContext* pContext, Ui
 ScreenCapture::CaptureInfo ScreenCapture::GetCapture()
 {
     CaptureInfo Capture;
+
     std::lock_guard<std::mutex> Lock{m_PendingTexturesMtx};
     if (!m_PendingTextures.empty())
     {
-        auto& OldestCapture = m_PendingTextures.front();
-        auto CompletedFenceValue = m_pFence->GetCompletedValue();
+        auto& OldestCapture       = m_PendingTextures.front();
+        auto  CompletedFenceValue = m_pFence->GetCompletedValue();
         if (OldestCapture.Fence <= CompletedFenceValue)
         {
             Capture.pTexture = std::move(OldestCapture.pTex);
@@ -109,4 +110,4 @@ void ScreenCapture::RecycleStagingTexture(RefCntAutoPtr<ITexture>&& pTexture)
     m_AvailableTextures.emplace_back(std::move(pTexture));
 }
 
-}
+} // namespace Diligent

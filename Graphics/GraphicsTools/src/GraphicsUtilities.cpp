@@ -35,21 +35,21 @@
 namespace Diligent
 {
 
-void CreateUniformBuffer(IRenderDevice*    pDevice,
-                         Uint32            Size,
-                         const Char*       Name,
-                         IBuffer**         ppBuffer,
-                         USAGE             Usage,
-                         BIND_FLAGS        BindFlags,
-                         CPU_ACCESS_FLAGS  CPUAccessFlags,
-                         void*             pInitialData)
+void CreateUniformBuffer(IRenderDevice*   pDevice,
+                         Uint32           Size,
+                         const Char*      Name,
+                         IBuffer**        ppBuffer,
+                         USAGE            Usage,
+                         BIND_FLAGS       BindFlags,
+                         CPU_ACCESS_FLAGS CPUAccessFlags,
+                         void*            pInitialData)
 {
     BufferDesc CBDesc;
-    CBDesc.Name             = Name;
-    CBDesc.uiSizeInBytes    = Size;
-    CBDesc.Usage            = Usage;
-    CBDesc.BindFlags        = BindFlags;
-    CBDesc.CPUAccessFlags   = CPUAccessFlags;
+    CBDesc.Name           = Name;
+    CBDesc.uiSizeInBytes  = Size;
+    CBDesc.Usage          = Usage;
+    CBDesc.BindFlags      = BindFlags;
+    CBDesc.CPUAccessFlags = CPUAccessFlags;
 
     BufferData InitialData;
     if (pInitialData != nullptr)
@@ -57,10 +57,10 @@ void CreateUniformBuffer(IRenderDevice*    pDevice,
         InitialData.pData    = pInitialData;
         InitialData.DataSize = Size;
     }
-    pDevice->CreateBuffer( CBDesc, pInitialData != nullptr ? &InitialData : nullptr, ppBuffer );
+    pDevice->CreateBuffer(CBDesc, pInitialData != nullptr ? &InitialData : nullptr, ppBuffer);
 }
 
-template<class TConverter>
+template <class TConverter>
 void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt, Uint32 HorzCells, Uint32 VertCells, Uint8* pData, Uint32 StrideInBytes, TConverter Converter)
 {
     const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
@@ -68,13 +68,13 @@ void GenerateCheckerBoardPatternInternal(Uint32 Width, Uint32 Height, TEXTURE_FO
     {
         for (Uint32 x = 0; x < Width; ++x)
         {
-            float horzWave = sin((static_cast<float>(x) + 0.5f) / static_cast<float>(Width)  * PI_F * static_cast<float>(HorzCells));
-            float vertWave = sin((static_cast<float>(y) + 0.5f) / static_cast<float>(Height) * PI_F * static_cast<float>(VertCells));
-            float val = horzWave * vertWave;
-            val = std::max( std::min( val*20.f, +1.f), -1.f );
-            val = val * 0.5f + 1.f;
-            val = val * 0.5f + 0.25f;
-            Uint8 *pDstTexel = pData + x * Uint32{FmtAttribs.NumComponents} * Uint32{FmtAttribs.ComponentSize} + y * StrideInBytes;
+            float horzWave   = sin((static_cast<float>(x) + 0.5f) / static_cast<float>(Width) * PI_F * static_cast<float>(HorzCells));
+            float vertWave   = sin((static_cast<float>(y) + 0.5f) / static_cast<float>(Height) * PI_F * static_cast<float>(VertCells));
+            float val        = horzWave * vertWave;
+            val              = std::max(std::min(val * 20.f, +1.f), -1.f);
+            val              = val * 0.5f + 1.f;
+            val              = val * 0.5f + 0.25f;
+            Uint8* pDstTexel = pData + x * Uint32{FmtAttribs.NumComponents} * Uint32{FmtAttribs.ComponentSize} + y * StrideInBytes;
             Converter(pDstTexel, Uint32{FmtAttribs.NumComponents}, val);
         }
     }
@@ -85,39 +85,46 @@ void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt
     const auto& FmtAttribs = GetTextureFormatAttribs(Fmt);
     switch (FmtAttribs.ComponentType)
     {
-    case COMPONENT_TYPE_UINT:
-    case COMPONENT_TYPE_UNORM:
-        GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
-            [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
-            {
-                Uint8 uVal = static_cast<Uint8>(fVal * 255.f);
-                for (Uint32 c = 0; c < NumComponents; ++c)
-                    pDstTexel[c] = uVal;
-            });
-        break;
+        case COMPONENT_TYPE_UINT:
+        case COMPONENT_TYPE_UNORM:
+            GenerateCheckerBoardPatternInternal(
+                Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes,
+                [](Uint8* pDstTexel, Uint32 NumComponents, float fVal) //
+                {
+                    Uint8 uVal = static_cast<Uint8>(fVal * 255.f);
+                    for (Uint32 c = 0; c < NumComponents; ++c)
+                        pDstTexel[c] = uVal;
+                } //
+            );
+            break;
 
-    case COMPONENT_TYPE_UNORM_SRGB:
-        GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
-            [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
-            {
-                Uint8 uVal = static_cast<Uint8>(  FastLinearToSRGB(fVal) * 255.f);
-                for (Uint32 c = 0; c < NumComponents; ++c)
-                    pDstTexel[c] = uVal;
-            });
-        break;
+        case COMPONENT_TYPE_UNORM_SRGB:
+            GenerateCheckerBoardPatternInternal(
+                Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes,
+                [](Uint8* pDstTexel, Uint32 NumComponents, float fVal) //
+                {
+                    Uint8 uVal = static_cast<Uint8>(FastLinearToSRGB(fVal) * 255.f);
+                    for (Uint32 c = 0; c < NumComponents; ++c)
+                        pDstTexel[c] = uVal;
+                } //
+            );
+            break;
 
-    case COMPONENT_TYPE_FLOAT:
-        GenerateCheckerBoardPatternInternal(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes, 
-            [](Uint8 *pDstTexel, Uint32 NumComponents, float fVal)
-            {
-                for (Uint32 c = 0; c < NumComponents; ++c)
-                    (reinterpret_cast<float*>(pDstTexel))[c] = fVal;
-            });
-        break;
+        case COMPONENT_TYPE_FLOAT:
+            GenerateCheckerBoardPatternInternal(
+                Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes,
+                [](Uint8* pDstTexel, Uint32 NumComponents, float fVal) //
+                {
+                    for (Uint32 c = 0; c < NumComponents; ++c)
+                        (reinterpret_cast<float*>(pDstTexel))[c] = fVal;
+                } //
+            );
+            break;
 
-    default:
-        UNSUPPORTED("Unsupported component type");
-        return;
+        default:
+            UNSUPPORTED("Unsupported component type");
+            return;
     }
 }
-}
+
+} // namespace Diligent
