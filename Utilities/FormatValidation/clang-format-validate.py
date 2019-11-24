@@ -372,9 +372,9 @@ def main():
                 retcode = ExitStatus.DIFF
 
     if retcode == ExitStatus.SUCCESS:
-        sys.stdout.write("Source code formatting validation completed: no issues found in " + str(len(files)) + " files")
+        sys.stdout.write("Source code formatting validation completed: no issues found in " + str(len(files)) + " files\n")
     else:
-        sys.stderr.write("Source code formatting validation failed")
+        sys.stderr.write("Source code formatting validation failed\n")
 
     return retcode
 
