@@ -23,6 +23,8 @@
 
 #pragma once
 
+// clang-format off
+
 #define LIST_VECTOR_AND_MATRIX_EXPANSIONS(KEYWORD_HANDLER, type)\
 KEYWORD_HANDLER(type)\
 KEYWORD_HANDLER(type##1)\

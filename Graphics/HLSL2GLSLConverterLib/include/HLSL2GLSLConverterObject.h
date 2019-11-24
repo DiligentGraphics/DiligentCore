@@ -35,17 +35,17 @@ class HLSL2GLSLConverterObject : public ObjectBase<IHLSL2GLSLConverter>
 public:
     typedef ObjectBase<IHLSL2GLSLConverter> TBase;
 
-    HLSL2GLSLConverterObject(IReferenceCounters *pRefCounters) :
-        TBase(pRefCounters)
+    HLSL2GLSLConverterObject(IReferenceCounters* pRefCounters) :
+        TBase{pRefCounters}
     {}
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_HLSL2GLSLConverter, TBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_HLSL2GLSLConverter, TBase)
 
-    virtual void CreateStream(const Char* InputFileName,
-                              IShaderSourceInputStreamFactory *pSourceStreamFactory, 
-                              const Char* HLSLSource, 
-                              size_t NumSymbols, 
-                              IHLSL2GLSLConversionStream **ppStream)const override;
+    virtual void CreateStream(const Char*                      InputFileName,
+                              IShaderSourceInputStreamFactory* pSourceStreamFactory,
+                              const Char*                      HLSLSource,
+                              size_t                           NumSymbols,
+                              IHLSL2GLSLConversionStream**     ppStream) const override;
 };
 
-}
+} // namespace Diligent

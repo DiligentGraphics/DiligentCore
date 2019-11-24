@@ -28,13 +28,15 @@
 
 namespace Diligent
 {
-    void HLSL2GLSLConverterObject::CreateStream(const Char* InputFileName,
-                                                IShaderSourceInputStreamFactory *pSourceStreamFactory, 
-                                                const Char* HLSLSource, 
-                                                size_t NumSymbols, 
-                                                IHLSL2GLSLConversionStream **ppStream)const
-    {
-        const auto& Converter = HLSL2GLSLConverterImpl::GetInstance();
-        Converter.CreateStream(InputFileName, pSourceStreamFactory, HLSLSource, NumSymbols, ppStream);
-    }
+
+void HLSL2GLSLConverterObject::CreateStream(const Char*                      InputFileName,
+                                            IShaderSourceInputStreamFactory* pSourceStreamFactory,
+                                            const Char*                      HLSLSource,
+                                            size_t                           NumSymbols,
+                                            IHLSL2GLSLConversionStream**     ppStream) const
+{
+    const auto& Converter = HLSL2GLSLConverterImpl::GetInstance();
+    Converter.CreateStream(InputFileName, pSourceStreamFactory, HLSLSource, NumSymbols, ppStream);
 }
+
+} // namespace Diligent
