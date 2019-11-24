@@ -24,26 +24,26 @@
 #include <Windows.h>
 #include <crtdbg.h>
 
-BOOL APIENTRY DllMain(HANDLE hModule, 
-                      DWORD  ul_reason_for_call, 
+BOOL APIENTRY DllMain(HANDLE hModule,
+                      DWORD  ul_reason_for_call,
                       LPVOID lpReserved)
 {
-    switch( ul_reason_for_call ) 
+    switch (ul_reason_for_call)
     {
         case DLL_PROCESS_ATTACH:
-		#if defined(_DEBUG) || defined(DEBUG)
-			_CrtSetDbgFlag( _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF );
-		#endif
-        break;
+#if defined(_DEBUG) || defined(DEBUG)
+            _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+            break;
 
         case DLL_THREAD_ATTACH:
-        break;
-        
+            break;
+
         case DLL_THREAD_DETACH:
-        break;
+            break;
 
         case DLL_PROCESS_DETACH:
-        break;
+            break;
     }
 
     return TRUE;
