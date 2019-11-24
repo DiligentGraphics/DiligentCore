@@ -138,8 +138,8 @@ IMPLEMENT_QUERY_INTERFACE(RenderDeviceD3D11Impl, IID_RenderDeviceD3D11, TRenderD
 void RenderDeviceD3D11Impl ::CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            BufferD3D11Impl* pBufferD3D11(NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)(m_BuffViewObjAllocator, this, BuffDesc, InitialState, pd3d11Buffer));
                            pBufferD3D11->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
                            pBufferD3D11->CreateDefaultViews();
@@ -150,8 +150,8 @@ void RenderDeviceD3D11Impl ::CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buf
 void RenderDeviceD3D11Impl ::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            BufferD3D11Impl* pBufferD3D11(NEW_RC_OBJ(m_BufObjAllocator, "BufferD3D11Impl instance", BufferD3D11Impl)(m_BuffViewObjAllocator, this, BuffDesc, pBuffData));
                            pBufferD3D11->QueryInterface(IID_Buffer, reinterpret_cast<IObject**>(ppBuffer));
                            pBufferD3D11->CreateDefaultViews();
@@ -162,8 +162,8 @@ void RenderDeviceD3D11Impl ::CreateBuffer(const BufferDesc& BuffDesc, const Buff
 void RenderDeviceD3D11Impl ::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
     CreateDeviceObject("shader", ShaderCI.Desc, ppShader,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            ShaderD3D11Impl* pShaderD3D11(NEW_RC_OBJ(m_ShaderObjAllocator, "ShaderD3D11Impl instance", ShaderD3D11Impl)(this, ShaderCI));
                            pShaderD3D11->QueryInterface(IID_Shader, reinterpret_cast<IObject**>(ppShader));
 
@@ -179,8 +179,8 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11
     TextureDesc TexDesc;
     TexDesc.Name = "Texture1D from native d3d11 texture";
     CreateDeviceObject("texture", TexDesc, ppTexture,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            TextureBaseD3D11* pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_D3D11 instance", Texture1D_D3D11)(m_TexViewObjAllocator, this, InitialState, pd3d11Texture);
                            pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
                            pTextureD3D11->CreateDefaultViews();
@@ -196,8 +196,8 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11
     TextureDesc TexDesc;
     TexDesc.Name = "Texture2D from native d3d11 texture";
     CreateDeviceObject("texture", TexDesc, ppTexture,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            TextureBaseD3D11* pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_D3D11 instance", Texture2D_D3D11)(m_TexViewObjAllocator, this, InitialState, pd3d11Texture);
                            pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
                            pTextureD3D11->CreateDefaultViews();
@@ -213,8 +213,8 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11
     TextureDesc TexDesc;
     TexDesc.Name = "Texture3D from native d3d11 texture";
     CreateDeviceObject("texture", TexDesc, ppTexture,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            TextureBaseD3D11* pTextureD3D11 = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_D3D11 instance", Texture3D_D3D11)(m_TexViewObjAllocator, this, InitialState, pd3d11Texture);
                            pTextureD3D11->QueryInterface(IID_Texture, reinterpret_cast<IObject**>(ppTexture));
                            pTextureD3D11->CreateDefaultViews();
@@ -226,8 +226,8 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11
 void RenderDeviceD3D11Impl ::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)
 {
     CreateDeviceObject("texture", TexDesc, ppTexture,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            TextureBaseD3D11* pTextureD3D11 = nullptr;
                            switch (TexDesc.Type)
                            {
@@ -258,8 +258,8 @@ void RenderDeviceD3D11Impl ::CreateTexture(const TextureDesc& TexDesc, const Tex
 void RenderDeviceD3D11Impl ::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
 {
     CreateDeviceObject("sampler", SamplerDesc, ppSampler,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            m_SamplersRegistry.Find(SamplerDesc, reinterpret_cast<IDeviceObject**>(ppSampler));
                            if (*ppSampler == nullptr)
                            {
@@ -274,8 +274,8 @@ void RenderDeviceD3D11Impl ::CreateSampler(const SamplerDesc& SamplerDesc, ISamp
 void RenderDeviceD3D11Impl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)
 {
     CreateDeviceObject("Pipeline state", PipelineDesc, ppPipelineState,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            PipelineStateD3D11Impl* pPipelineStateD3D11(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateD3D11Impl instance", PipelineStateD3D11Impl)(this, PipelineDesc));
                            pPipelineStateD3D11->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
                            OnCreateDeviceObject(pPipelineStateD3D11);
@@ -285,8 +285,8 @@ void RenderDeviceD3D11Impl::CreatePipelineState(const PipelineStateDesc& Pipelin
 void RenderDeviceD3D11Impl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
 {
     CreateDeviceObject("Fence", Desc, ppFence,
-                       [&]() // clang-format off
-                       { // clang-format on
+                       [&]() //
+                       {
                            FenceD3D11Impl* pFenceD3D11(NEW_RC_OBJ(m_FenceAllocator, "FenceD3D11Impl instance", FenceD3D11Impl)(this, Desc));
                            pFenceD3D11->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
                            OnCreateDeviceObject(pFenceD3D11);

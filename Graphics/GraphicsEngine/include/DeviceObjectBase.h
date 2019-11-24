@@ -120,8 +120,8 @@ public:
 
         RefCntAutoPtr<RenderDeviceImplType> pDevice;
         return TBase::Release(
-            [&]() // clang-format off
-            { // clang-format on
+            [&]() //
+            {
                 // We must keep the device alive while the object is being destroyed
                 // Note that internal device objects do not keep strong reference to the device
                 if (!m_bIsDeviceInternal)

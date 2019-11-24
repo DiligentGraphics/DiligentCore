@@ -61,8 +61,8 @@ inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
                                                            Uint32                            NumVars)
 {
     return GetShaderVariableType(ShaderStage, DefaultVariableType, Variables, NumVars,
-                                 [&](const char* VarName) // clang-format off
-                                 { // clang-format on
+                                 [&](const char* VarName) //
+                                 {
                                      return strcmp(VarName, Name) == 0;
                                  });
 }
@@ -81,8 +81,8 @@ inline SHADER_RESOURCE_VARIABLE_TYPE GetShaderVariableType(SHADER_TYPE          
                                                            Uint32                            NumVars)
 {
     return GetShaderVariableType(ShaderStage, DefaultVariableType, Variables, NumVars,
-                                 [&](const char* VarName) // clang-format off
-                                 { // clang-format on
+                                 [&](const char* VarName) //
+                                 {
                                      return Name.compare(VarName) == 0;
                                  });
 }

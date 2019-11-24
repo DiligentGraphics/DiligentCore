@@ -612,15 +612,15 @@ std::string SPIRVShaderResources::DumpResources()
     };
 
     ProcessResources(
-        [&](const SPIRVShaderResourceAttribs& UB, Uint32) // clang-format off
-        { // clang-format on
+        [&](const SPIRVShaderResourceAttribs& UB, Uint32) //
+        {
             VERIFY(UB.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, "Unexpected resource type");
             ss << std::endl
                << std::setw(3) << ResNum << " Uniform Buffer   ";
             DumpResource(UB);
         },
-        [&](const SPIRVShaderResourceAttribs& SB, Uint32) // clang-format off
-        { // clang-format on
+        [&](const SPIRVShaderResourceAttribs& SB, Uint32) //
+        {
             VERIFY(SB.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer ||
                        SB.Type == SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer,
                    "Unexpected resource type");
@@ -629,8 +629,8 @@ std::string SPIRVShaderResources::DumpResources()
                << (SB.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer ? " RO Storage Buffer" : " RW Storage Buffer");
             DumpResource(SB);
         },
-        [&](const SPIRVShaderResourceAttribs& Img, Uint32) // clang-format off
-        { // clang-format on
+        [&](const SPIRVShaderResourceAttribs& Img, Uint32) //
+        {
             if (Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
             {
                 ss << std::endl
@@ -645,8 +645,8 @@ std::string SPIRVShaderResources::DumpResources()
                 UNEXPECTED("Unexpected resource type");
             DumpResource(Img);
         },
-        [&](const SPIRVShaderResourceAttribs& SmplImg, Uint32) // clang-format off
-        { // clang-format on
+        [&](const SPIRVShaderResourceAttribs& SmplImg, Uint32) //
+        {
             if (SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage)
             {
                 ss << std::endl
@@ -661,28 +661,28 @@ std::string SPIRVShaderResources::DumpResources()
                 UNEXPECTED("Unexpected resource type");
             DumpResource(SmplImg);
         },
-        [&](const SPIRVShaderResourceAttribs& AC, Uint32) // clang-format off
-        { // clang-format on
+        [&](const SPIRVShaderResourceAttribs& AC, Uint32) //
+        {
             VERIFY(AC.Type == SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, "Unexpected resource type");
             ss << std::endl
                << std::setw(3) << ResNum << " Atomic Cntr      ";
             DumpResource(AC);
         },
-        [&](const SPIRVShaderResourceAttribs& SepSmpl, Uint32) // clang-format off
-        { // clang-format on
+        [&](const SPIRVShaderResourceAttribs& SepSmpl, Uint32) //
+        {
             VERIFY(SepSmpl.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Unexpected resource type");
             ss << std::endl
                << std::setw(3) << ResNum << " Separate Smpl    ";
             DumpResource(SepSmpl);
         },
-        [&](const SPIRVShaderResourceAttribs& SepImg, Uint32) // clang-format off
-        { // clang-format on
+        [&](const SPIRVShaderResourceAttribs& SepImg, Uint32) //
+        {
             VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage, "Unexpected resource type");
             ss << std::endl
                << std::setw(3) << ResNum << " Separate Img     ";
             DumpResource(SepImg);
-        } // clang-format off
-    ); // clang-format on
+        } //
+    );
     VERIFY_EXPR(ResNum == GetTotalResources());
 
     return ss.str();

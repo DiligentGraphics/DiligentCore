@@ -123,8 +123,8 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
     // Initialize offsets
     size_t CurrentOffset = 0;
 
-    auto AdvanceOffset = [&CurrentOffset](size_t NumBytes) // clang-format off
-    { // clang-format on
+    auto AdvanceOffset = [&CurrentOffset](size_t NumBytes) //
+    {
         constexpr size_t MaxOffset = std::numeric_limits<OffsetType>::max();
         VERIFY(CurrentOffset <= MaxOffset, "Current offser (", CurrentOffset, ") exceeds max allowed value (", MaxOffset, ")");
         auto Offset = static_cast<OffsetType>(CurrentOffset);
@@ -172,8 +172,8 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
     Uint32 NumSamplerSlots = 0;
     Uint32 NumUAVSlots     = 0;
     m_pResources->ProcessResources(
-        [&](const D3DShaderResourceAttribs& CB, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& CB, Uint32) //
+        {
             auto VarType = m_pResources->FindVariableType(CB, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
@@ -183,8 +183,8 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             }
         },
 
-        [&](const D3DShaderResourceAttribs& Sampler, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& Sampler, Uint32) //
+        {
             auto VarType = m_pResources->FindVariableType(Sampler, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
@@ -202,8 +202,8 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             }
         },
 
-        [&](const D3DShaderResourceAttribs& TexSRV, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& TexSRV, Uint32) //
+        {
             auto VarType = m_pResources->FindVariableType(TexSRV, ResourceLayout);
             if (!IsAllowedType(VarType, AllowedTypeBits))
                 return;
@@ -262,8 +262,8 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             NumSRVSlots = std::max(NumSRVSlots, Uint32{TexSRV.BindPoint} + Uint32{TexSRV.BindCount});
         },
 
-        [&](const D3DShaderResourceAttribs& TexUAV, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& TexUAV, Uint32) //
+        {
             auto VarType = m_pResources->FindVariableType(TexUAV, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
@@ -273,8 +273,8 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             }
         },
 
-        [&](const D3DShaderResourceAttribs& BuffSRV, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& BuffSRV, Uint32) //
+        {
             auto VarType = m_pResources->FindVariableType(BuffSRV, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
@@ -284,8 +284,8 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             }
         },
 
-        [&](const D3DShaderResourceAttribs& BuffUAV, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& BuffUAV, Uint32) //
+        {
             auto VarType = m_pResources->FindVariableType(BuffUAV, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
@@ -356,8 +356,8 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
     // clang-format on
 
     HandleConstResources(
-        [&](const ConstBuffBindInfo& cb) // clang-format off
-        { // clang-format on
+        [&](const ConstBuffBindInfo& cb) //
+        {
             for (auto CBSlot = cb.m_Attribs.BindPoint; CBSlot < cb.m_Attribs.BindPoint + cb.m_Attribs.BindCount; ++CBSlot)
             {
                 VERIFY_EXPR(CBSlot < m_ResourceCache.GetCBCount() && CBSlot < DstCache.GetCBCount());
@@ -366,8 +366,8 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
             }
         },
 
-        [&](const TexSRVBindInfo& ts) // clang-format off
-        { // clang-format on
+        [&](const TexSRVBindInfo& ts) // 
+        {
             for (auto SRVSlot = ts.m_Attribs.BindPoint; SRVSlot < ts.m_Attribs.BindPoint + ts.m_Attribs.BindCount; ++SRVSlot)
             {
                 VERIFY_EXPR(SRVSlot < m_ResourceCache.GetSRVCount() && SRVSlot < DstCache.GetSRVCount());
@@ -376,8 +376,8 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
             }
         },
 
-        [&](const TexUAVBindInfo& uav) // clang-format off
-        { // clang-format on
+        [&](const TexUAVBindInfo& uav) // 
+        {
             for (auto UAVSlot = uav.m_Attribs.BindPoint; UAVSlot < uav.m_Attribs.BindPoint + uav.m_Attribs.BindCount; ++UAVSlot)
             {
                 VERIFY_EXPR(UAVSlot < m_ResourceCache.GetUAVCount() && UAVSlot < DstCache.GetUAVCount());
@@ -386,8 +386,8 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
             }
         },
 
-        [&](const BuffSRVBindInfo& srv) // clang-format off
-        { // clang-format on
+        [&](const BuffSRVBindInfo& srv) //
+        {
             for (auto SRVSlot = srv.m_Attribs.BindPoint; SRVSlot < srv.m_Attribs.BindPoint + srv.m_Attribs.BindCount; ++SRVSlot)
             {
                 VERIFY_EXPR(SRVSlot < m_ResourceCache.GetSRVCount() && SRVSlot < DstCache.GetSRVCount());
@@ -396,8 +396,8 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
             }
         },
 
-        [&](const BuffUAVBindInfo& uav) // clang-format off
-        { // clang-format on
+        [&](const BuffUAVBindInfo& uav) //
+        {
             for (auto UAVSlot = uav.m_Attribs.BindPoint; UAVSlot < uav.m_Attribs.BindPoint + uav.m_Attribs.BindCount; ++UAVSlot)
             {
                 VERIFY_EXPR(UAVSlot < m_ResourceCache.GetUAVCount() && UAVSlot < DstCache.GetUAVCount());
@@ -406,8 +406,8 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
             }
         },
 
-        [&](const SamplerBindInfo& sam) // clang-format off
-        { // clang-format on
+        [&](const SamplerBindInfo& sam) //
+        {
             //VERIFY(!sam.IsStaticSampler, "Variables are not created for static samplers");
             for (auto SamSlot = sam.m_Attribs.BindPoint; SamSlot < sam.m_Attribs.BindPoint + sam.m_Attribs.BindCount; ++SamSlot)
             {
@@ -896,8 +896,8 @@ bool ShaderResourceLayoutD3D11::dvpVerifyBindings() const
 
     bool BindingsOK = true;
     HandleConstResources(
-        [&](const ConstBuffBindInfo& cb) // clang-format off
-        { // clang-format on
+        [&](const ConstBuffBindInfo& cb) //
+        {
             for (Uint32 BindPoint = cb.m_Attribs.BindPoint; BindPoint < Uint32{cb.m_Attribs.BindPoint} + cb.m_Attribs.BindCount; ++BindPoint)
             {
                 if (!m_ResourceCache.IsCBBound(BindPoint))
@@ -908,8 +908,8 @@ bool ShaderResourceLayoutD3D11::dvpVerifyBindings() const
             }
         },
 
-        [&](const TexSRVBindInfo& ts) // clang-format off
-        { // clang-format on
+        [&](const TexSRVBindInfo& ts) //
+        {
             for (Uint32 BindPoint = ts.m_Attribs.BindPoint; BindPoint < Uint32{ts.m_Attribs.BindPoint} + ts.m_Attribs.BindCount; ++BindPoint)
             {
                 if (!m_ResourceCache.IsSRVBound(BindPoint, true))
@@ -951,8 +951,8 @@ bool ShaderResourceLayoutD3D11::dvpVerifyBindings() const
             }
         },
 
-        [&](const TexUAVBindInfo& uav) // clang-format off
-        { // clang-format on
+        [&](const TexUAVBindInfo& uav) //
+        {
             for (Uint32 BindPoint = uav.m_Attribs.BindPoint; BindPoint < Uint32{uav.m_Attribs.BindPoint} + uav.m_Attribs.BindCount; ++BindPoint)
             {
                 if (!m_ResourceCache.IsUAVBound(BindPoint, true))
@@ -963,8 +963,8 @@ bool ShaderResourceLayoutD3D11::dvpVerifyBindings() const
             }
         },
 
-        [&](const BuffSRVBindInfo& buf) // clang-format off
-        { // clang-format on
+        [&](const BuffSRVBindInfo& buf) //
+        {
             for (Uint32 BindPoint = buf.m_Attribs.BindPoint; BindPoint < Uint32{buf.m_Attribs.BindPoint} + buf.m_Attribs.BindCount; ++BindPoint)
             {
                 if (!m_ResourceCache.IsSRVBound(BindPoint, false))
@@ -975,8 +975,8 @@ bool ShaderResourceLayoutD3D11::dvpVerifyBindings() const
             }
         },
 
-        [&](const BuffUAVBindInfo& uav) // clang-format off
-        { // clang-format on
+        [&](const BuffUAVBindInfo& uav) //
+        {
             for (Uint32 BindPoint = uav.m_Attribs.BindPoint; BindPoint < Uint32{uav.m_Attribs.BindPoint} + uav.m_Attribs.BindCount; ++BindPoint)
             {
                 if (!m_ResourceCache.IsUAVBound(BindPoint, false))
@@ -987,8 +987,8 @@ bool ShaderResourceLayoutD3D11::dvpVerifyBindings() const
             }
         },
 
-        [&](const SamplerBindInfo& sam) // clang-format off
-        { // clang-format on
+        [&](const SamplerBindInfo& sam) //
+        {
             for (Uint32 BindPoint = sam.m_Attribs.BindPoint; BindPoint < Uint32{sam.m_Attribs.BindPoint} + sam.m_Attribs.BindCount; ++BindPoint)
             {
                 if (!m_ResourceCache.IsSamplerBound(BindPoint))

@@ -148,8 +148,8 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
     // clang-format on
 
     ProcessResources(
-        [&](const D3DShaderResourceAttribs& cb, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& cb, Uint32) //
+        {
             for (auto BindPoint = cb.BindPoint; BindPoint < cb.BindPoint + cb.BindCount; ++BindPoint)
             {
                 if (BindPoint >= ResourceCache.GetCBCount())
@@ -194,8 +194,8 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
             }
         },
 
-        [&](const D3DShaderResourceAttribs& sam, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& sam, Uint32) //
+        {
             for (auto BindPoint = sam.BindPoint; BindPoint < sam.BindPoint + sam.BindCount; ++BindPoint)
             {
                 if (BindPoint >= ResourceCache.GetSamplerCount())
@@ -230,8 +230,8 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
             }
         },
 
-        [&](const D3DShaderResourceAttribs& tex, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& tex, Uint32) //
+        {
             for (auto BindPoint = tex.BindPoint; BindPoint < tex.BindPoint + tex.BindCount; ++BindPoint)
             {
                 if (BindPoint >= ResourceCache.GetSRVCount())
@@ -286,8 +286,8 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
             }
         },
 
-        [&](const D3DShaderResourceAttribs& uav, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& uav, Uint32) //
+        {
             for (auto BindPoint = uav.BindPoint; BindPoint < uav.BindPoint + uav.BindCount; ++BindPoint)
             {
                 if (BindPoint >= ResourceCache.GetUAVCount())
@@ -334,8 +334,8 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
         },
 
 
-        [&](const D3DShaderResourceAttribs& buf, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& buf, Uint32) //
+        {
             for (auto BindPoint = buf.BindPoint; BindPoint < buf.BindPoint + buf.BindCount; ++BindPoint)
             {
                 if (BindPoint >= ResourceCache.GetSRVCount())
@@ -384,8 +384,8 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
             }
         },
 
-        [&](const D3DShaderResourceAttribs& uav, Uint32) // clang-format off
-        { // clang-format on
+        [&](const D3DShaderResourceAttribs& uav, Uint32) //
+        {
             for (auto BindPoint = uav.BindPoint; BindPoint < uav.BindPoint + uav.BindCount; ++BindPoint)
             {
                 if (BindPoint >= ResourceCache.GetUAVCount())
