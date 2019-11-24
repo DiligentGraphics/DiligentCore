@@ -35,64 +35,66 @@ namespace Diligent
 class ComErrorDesc
 {
 public:
-    ComErrorDesc( HRESULT hr )
+    ComErrorDesc(HRESULT hr)
     {
-        FormatMessageA( 
-            FORMAT_MESSAGE_FROM_SYSTEM |
-            FORMAT_MESSAGE_IGNORE_INSERTS,
+        FormatMessageA(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
             NULL,
             hr,
-            MAKELANGID( LANG_NEUTRAL, SUBLANG_DEFAULT ),
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
             m_Msg,
             _countof(m_Msg),
-            NULL );
-        auto nLen = strlen( m_Msg );
-        if( nLen > 1 && m_Msg[nLen - 1] == '\n' ) 
+            NULL);
+        auto nLen = strlen(m_Msg);
+        if (nLen > 1 && m_Msg[nLen - 1] == '\n')
         {
             m_Msg[nLen - 1] = 0;
-            if( m_Msg[nLen - 2] == '\r' ) 
+            if (m_Msg[nLen - 2] == '\r')
             {
                 m_Msg[nLen - 2] = 0;
             }
         }
     }
 
-    const char* Get(){ return m_Msg; }
+    const char* Get() { return m_Msg; }
 
 private:
     char m_Msg[4096];
 };
 
-}
+} // namespace Diligent
 
 
-#define CHECK_D3D_RESULT_THROW(Expr, Message)\
-do{                         \
-    HRESULT _hr_ = Expr;    \
-    if(FAILED(_hr_))        \
-    {                       \
-        ComErrorDesc ErrDesc( _hr_ );    \
-        LOG_ERROR_AND_THROW( Message, "\nHRESULT Desc: ", ErrDesc.Get());\
-    }                       \
-}while(false)
+#define CHECK_D3D_RESULT_THROW(Expr, Message)                                \
+    do                                                                       \
+    {                                                                        \
+        HRESULT _hr_ = Expr;                                                 \
+        if (FAILED(_hr_))                                                    \
+        {                                                                    \
+            ComErrorDesc ErrDesc(_hr_);                                      \
+            LOG_ERROR_AND_THROW(Message, "\nHRESULT Desc: ", ErrDesc.Get()); \
+        }                                                                    \
+    } while (false)
 
-#define CHECK_D3D_RESULT_THROW_EX(Expr, ...)\
-do{                         \
-    HRESULT _hr_ = Expr;    \
-    if(FAILED(_hr_))        \
-    {                       \
-        auto msg = Diligent::FormatString(__VA_ARGS__);  \
-        ComErrorDesc ErrDesc( _hr_ );                    \
-        LOG_ERROR_AND_THROW( msg, "\nHRESULT Desc: ", ErrDesc.Get());\
-    }                       \
-}while(false)
+#define CHECK_D3D_RESULT_THROW_EX(Expr, ...)                             \
+    do                                                                   \
+    {                                                                    \
+        HRESULT _hr_ = Expr;                                             \
+        if (FAILED(_hr_))                                                \
+        {                                                                \
+            auto         msg = Diligent::FormatString(__VA_ARGS__);      \
+            ComErrorDesc ErrDesc(_hr_);                                  \
+            LOG_ERROR_AND_THROW(msg, "\nHRESULT Desc: ", ErrDesc.Get()); \
+        }                                                                \
+    } while (false)
 
-#define LOG_D3D_ERROR(Expr, Message)\
-do{                         \
-    HRESULT _hr_ = Expr;    \
-    if(FAILED(_hr_))        \
-    {                       \
-        ComErrorDesc ErrDesc( _hr_ );    \
-        LOG_ERROR_MESSAGE( Message, "\nHRESULT Desc: ", ErrDesc.Get());\
-    }                       \
-}while(false)
+#define LOG_D3D_ERROR(Expr, Message)                                       \
+    do                                                                     \
+    {                                                                      \
+        HRESULT _hr_ = Expr;                                               \
+        if (FAILED(_hr_))                                                  \
+        {                                                                  \
+            ComErrorDesc ErrDesc(_hr_);                                    \
+            LOG_ERROR_MESSAGE(Message, "\nHRESULT Desc: ", ErrDesc.Get()); \
+        }                                                                  \
+    } while (false)

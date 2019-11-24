@@ -33,7 +33,7 @@ namespace Diligent
 
 // {1EA0898C-1612-457F-B74E-808843D2CBE3}
 static constexpr INTERFACE_ID IID_ShaderD3D =
-{ 0x1ea0898c, 0x1612, 0x457f, { 0xb7, 0x4e, 0x80, 0x88, 0x43, 0xd2, 0xcb, 0xe3 } };
+    {0x1ea0898c, 0x1612, 0x457f, {0xb7, 0x4e, 0x80, 0x88, 0x43, 0xd2, 0xcb, 0xe3}};
 
 
 /// HLSL resource description
@@ -47,7 +47,7 @@ class IShaderD3D : public IShader
 {
 public:
     /// Returns HLSL shader resource description
-    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index)const = 0;
+    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index) const = 0;
 };
 
-}
+} // namespace Diligent

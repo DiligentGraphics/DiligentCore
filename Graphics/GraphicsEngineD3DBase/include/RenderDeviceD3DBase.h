@@ -33,19 +33,20 @@ namespace Diligent
 
 /// Base implementation of a D3D render device
 
-template<typename BaseInterface>
+template <typename BaseInterface>
 class RenderDeviceD3DBase : public RenderDeviceBase<BaseInterface>
 {
 public:
-    RenderDeviceD3DBase(IReferenceCounters*      pRefCounters, 
-                        IMemoryAllocator&        RawMemAllocator, 
+    RenderDeviceD3DBase(IReferenceCounters*      pRefCounters,
+                        IMemoryAllocator&        RawMemAllocator,
                         IEngineFactory*          pEngineFactory,
                         Uint32                   NumDeferredContexts,
-                        const DeviceObjectSizes& ObjectSizes) : 
-        RenderDeviceBase<BaseInterface>(pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts, ObjectSizes)
+                        const DeviceObjectSizes& ObjectSizes) :
+        RenderDeviceBase<BaseInterface>{pRefCounters, RawMemAllocator, pEngineFactory, NumDeferredContexts, ObjectSizes}
     {
         // Flag texture formats always supported in D3D11 and D3D12
 
+        // clang-format off
 #define FLAG_FORMAT(Fmt, IsSupported) m_TextureFormatsInfo[Fmt].Supported=IsSupported
 
         FLAG_FORMAT(TEX_FORMAT_RGBA32_TYPELESS,            true);
@@ -148,7 +149,8 @@ public:
         FLAG_FORMAT(TEX_FORMAT_BC7_UNORM,                  true);
         FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             true);
 #undef FLAG_FORMAT
+        // clang-format on
     }
 };
 
-}
+} // namespace Diligent

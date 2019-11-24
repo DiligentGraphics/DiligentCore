@@ -32,13 +32,15 @@
 
 namespace Diligent
 {
-    /// Base implementation of a D3D shader
-    class ShaderD3DBase
-    {
-    public:
-        ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* ShaderModel);
 
-    protected:
-        CComPtr<ID3DBlob> m_pShaderByteCode;
-    };
-}
+/// Base implementation of a D3D shader
+class ShaderD3DBase
+{
+public:
+    ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* ShaderModel);
+
+protected:
+    CComPtr<ID3DBlob> m_pShaderByteCode;
+};
+
+} // namespace Diligent

@@ -31,51 +31,55 @@
 
 namespace Diligent
 {
-    struct D3DVariableIDComparator
+
+struct D3DVariableIDComparator
+{
+    bool operator()(const INTERFACE_ID& IID) const
     {
-        bool operator() (const INTERFACE_ID& IID)const
-        {
-            return IID == IID_ShaderResourceVariableD3D || IID == IID_ShaderResourceVariable || IID == IID_Unknown;
-        }
-    };
+        return IID == IID_ShaderResourceVariableD3D || IID == IID_ShaderResourceVariable || IID == IID_Unknown;
+    }
+};
 
-    template<typename TShaderResourceLayout>
-    struct ShaderVariableD3DBase : public ShaderVariableBase<TShaderResourceLayout, IShaderResourceVariableD3D, D3DVariableIDComparator>
+template <typename TShaderResourceLayout>
+struct ShaderVariableD3DBase : public ShaderVariableBase<TShaderResourceLayout, IShaderResourceVariableD3D, D3DVariableIDComparator>
+{
+    using TBase = ShaderVariableBase<TShaderResourceLayout, IShaderResourceVariableD3D, D3DVariableIDComparator>;
+
+    ShaderVariableD3DBase(TShaderResourceLayout&          ParentResLayout,
+                          const D3DShaderResourceAttribs& Attribs,
+                          SHADER_RESOURCE_VARIABLE_TYPE   VariableType) :
+        // clang-format off
+        TBase          {ParentResLayout},
+        m_Attribs      {Attribs        },
+        m_VariableType {VariableType   }
+    // clang-format on
     {
-        using TBase = ShaderVariableBase<TShaderResourceLayout, IShaderResourceVariableD3D, D3DVariableIDComparator>;
+    }
 
-        ShaderVariableD3DBase(TShaderResourceLayout&            ParentResLayout,
-                              const D3DShaderResourceAttribs&   Attribs,
-                              SHADER_RESOURCE_VARIABLE_TYPE     VariableType) : 
-            TBase          {ParentResLayout},
-            m_Attribs      {Attribs        },
-            m_VariableType {VariableType   }
-        {
-        }
+    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType() const override final
+    {
+        return m_VariableType;
+    }
 
-        virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
-        {
-            return m_VariableType;
-        }
+    virtual ShaderResourceDesc GetResourceDesc() const override final
+    {
+        return GetHLSLResourceDesc();
+    }
 
-        virtual ShaderResourceDesc GetResourceDesc()const override final
-        {
-            return GetHLSLResourceDesc();
-        }
+    virtual HLSLShaderResourceDesc GetHLSLResourceDesc() const override final
+    {
+        return m_Attribs.GetHLSLResourceDesc();
+    }
 
-        virtual HLSLShaderResourceDesc GetHLSLResourceDesc()const override final
-        {
-            return m_Attribs.GetHLSLResourceDesc();
-        }
+    virtual Uint32 GetIndex() const override final
+    {
+        return m_ParentResLayout.GetVariableIndex(*this);
+    }
 
-        virtual Uint32 GetIndex()const override final
-        {
-            return m_ParentResLayout.GetVariableIndex(*this);
-        }
+    const D3DShaderResourceAttribs& m_Attribs;
 
-        const D3DShaderResourceAttribs&     m_Attribs;
+protected:
+    const SHADER_RESOURCE_VARIABLE_TYPE m_VariableType;
+};
 
-    protected:
-        const SHADER_RESOURCE_VARIABLE_TYPE m_VariableType;
-    };
-}
+} // namespace Diligent
