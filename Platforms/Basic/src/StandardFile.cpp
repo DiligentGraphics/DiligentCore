@@ -25,17 +25,17 @@
 #include "DebugUtilities.h"
 #include "Errors.h"
 
-StandardFile::StandardFile(const FileOpenAttribs &OpenAttribs, Diligent::Char SlashSymbol) : 
-    BasicFile(OpenAttribs, SlashSymbol),
-    m_pFile  (nullptr)
+StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol) :
+    BasicFile{OpenAttribs, SlashSymbol},
+    m_pFile{nullptr}
 {
 #if PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
     auto OpenModeStr = GetOpenModeStr();
-    m_pFile = fopen(m_OpenAttribs.strFilePath, OpenModeStr.c_str());
+    m_pFile          = fopen(m_OpenAttribs.strFilePath, OpenModeStr.c_str());
     if (m_pFile == nullptr)
     {
         LOG_ERROR_AND_THROW("Failed to open file ", m_OpenAttribs.strFilePath,
-            "\nThe following error occured: ", strerror(errno));
+                            "\nThe following error occured: ", strerror(errno));
     }
 #endif
 }
@@ -55,7 +55,8 @@ void StandardFile::Read(Diligent::IDataBlob* pData)
     auto FileSize = GetSize();
     pData->Resize(FileSize);
     auto Res = Read(pData->GetDataPtr(), pData->GetSize());
-    VERIFY(Res, "Failed to read ", FileSize, " bytes from file"); (void)Res;
+    VERIFY(Res, "Failed to read ", FileSize, " bytes from file");
+    (void)Res;
 }
 
 bool StandardFile::Read(void* Data, size_t Size)
@@ -106,10 +107,12 @@ void StandardFile::SetPos(size_t Offset, FilePosOrigin Origin)
     int orig = SEEK_SET;
     switch (Origin)
     {
-    case FilePosOrigin::Start: orig = SEEK_SET; break;
-    case FilePosOrigin::Curr:  orig = SEEK_CUR; break;
-    case FilePosOrigin::End:   orig = SEEK_END; break;
-    default: UNEXPECTED("Unknown origin");
+        // clang-format off
+        case FilePosOrigin::Start: orig = SEEK_SET; break;
+        case FilePosOrigin::Curr:  orig = SEEK_CUR; break;
+        case FilePosOrigin::End:   orig = SEEK_END; break;
+        // clang-format on
+        default: UNEXPECTED("Unknown origin");
     }
 
     fseek(m_pFile, static_cast<long>(Offset), orig);

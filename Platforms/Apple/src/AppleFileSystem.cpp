@@ -34,66 +34,69 @@
 
 namespace
 {
-    std::string FindResource(const std::string &FilePath)
+
+std::string FindResource(const std::string& FilePath)
+{
+    std::string dir, name;
+    BasicFileSystem::SplitFilePath(FilePath, &dir, &name);
+    auto        dotPos = name.find(".");
+    std::string type   = (dotPos != std::string::npos) ? name.substr(dotPos + 1) : "";
+    if (dotPos != std::string::npos)
+        name.erase(dotPos);
+
+    // Naming convention established by Core Foundation library:
+    // * If a function name contains the word "Create" or "Copy", you own the object.
+    // * If a function name contains the word "Get", you do not own the object.
+    // If you own an object, it is your responsibility to relinquish ownership
+    // (using CFRelease) when you have finished with it.
+    // https://developer.apple.com/library/content/documentation/CoreFoundation/Conceptual/CFMemoryMgmt/Concepts/Ownership.html
+
+    // get bundle and CFStrings
+    CFBundleRef     mainBundle       = CFBundleGetMainBundle();
+    CFStringWrapper cf_resource_path = CFStringCreateWithCString(NULL, dir.c_str(), kCFStringEncodingUTF8);
+    CFStringWrapper cf_filename      = CFStringCreateWithCString(NULL, name.c_str(), kCFStringEncodingUTF8);
+    CFStringWrapper cf_file_type     = CFStringCreateWithCString(NULL, type.c_str(), kCFStringEncodingUTF8);
+    CFURLWrapper    cf_url_resource  = CFBundleCopyResourceURL(mainBundle, cf_filename, cf_file_type, cf_resource_path);
+    std::string     resource_path;
+    if (cf_url_resource != NULL)
     {
-        std::string dir, name;
-        BasicFileSystem::SplitFilePath(FilePath, &dir, &name);
-        auto dotPos = name.find(".");
-        std::string type = (dotPos != std::string::npos) ? name.substr(dotPos+1) : "";
-        if(dotPos != std::string::npos)
-            name.erase(dotPos);
-
-        // Naming convention established by Core Foundation library:
-        // * If a function name contains the word "Create" or "Copy", you own the object.
-        // * If a function name contains the word "Get", you do not own the object.
-        // If you own an object, it is your responsibility to relinquish ownership
-        // (using CFRelease) when you have finished with it.
-        // https://developer.apple.com/library/content/documentation/CoreFoundation/Conceptual/CFMemoryMgmt/Concepts/Ownership.html
-
-        // get bundle and CFStrings
-        CFBundleRef mainBundle = CFBundleGetMainBundle();
-        CFStringWrapper cf_resource_path = CFStringCreateWithCString(NULL, dir.c_str(), kCFStringEncodingUTF8);
-        CFStringWrapper cf_filename = CFStringCreateWithCString(NULL, name.c_str(), kCFStringEncodingUTF8);
-        CFStringWrapper cf_file_type = CFStringCreateWithCString(NULL, type.c_str(), kCFStringEncodingUTF8);
-        CFURLWrapper cf_url_resource = CFBundleCopyResourceURL(mainBundle, cf_filename, cf_file_type, cf_resource_path);
-        std::string resource_path;
-        if(cf_url_resource != NULL)
-        {
-            CFStringWrapper cf_url_string = CFURLCopyFileSystemPath(cf_url_resource, kCFURLPOSIXPathStyle);
-            const char* url_string = CFStringGetCStringPtr(cf_url_string, kCFStringEncodingUTF8);
-            resource_path = url_string;
-        }
-        return resource_path;
+        CFStringWrapper cf_url_string = CFURLCopyFileSystemPath(cf_url_resource, kCFURLPOSIXPathStyle);
+        const char*     url_string    = CFStringGetCStringPtr(cf_url_string, kCFStringEncodingUTF8);
+        resource_path                 = url_string;
     }
+    return resource_path;
 }
-AppleFile* AppleFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
+
+} // namespace
+
+AppleFile* AppleFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
     // Try to find the file in the bundle first
     std::string path(OpenAttribs.strFilePath);
     CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
     auto resource_path = FindResource(path);
 
-    AppleFile *pFile = nullptr;
-    if(!resource_path.empty())
+    AppleFile* pFile = nullptr;
+    if (!resource_path.empty())
     {
         try
         {
             FileOpenAttribs BundleResourceOpenAttribs = OpenAttribs;
-            BundleResourceOpenAttribs.strFilePath = resource_path.c_str();
-            pFile = new AppleFile(BundleResourceOpenAttribs, AppleFileSystem::GetSlashSymbol());
+            BundleResourceOpenAttribs.strFilePath     = resource_path.c_str();
+            pFile                                     = new AppleFile(BundleResourceOpenAttribs, AppleFileSystem::GetSlashSymbol());
         }
-        catch( const std::runtime_error &err )
+        catch (const std::runtime_error& err)
         {
         }
     }
 
-    if(pFile == nullptr)
+    if (pFile == nullptr)
     {
         try
         {
             pFile = new AppleFile(OpenAttribs, AppleFileSystem::GetSlashSymbol());
         }
-        catch( const std::runtime_error &err )
+        catch (const std::runtime_error& err)
         {
         }
     }
@@ -101,43 +104,43 @@ AppleFile* AppleFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 }
 
 
-bool AppleFileSystem::FileExists( const Diligent::Char *strFilePath )
+bool AppleFileSystem::FileExists(const Diligent::Char* strFilePath)
 {
     std::string path(strFilePath);
     CorrectSlashes(path, AppleFileSystem::GetSlashSymbol());
     auto resource_path = FindResource(path);
 
-    if(!FindResource(path).empty())
+    if (!FindResource(path).empty())
         return true;
 
     auto res = access(path.c_str(), F_OK);
     return res == 0;
 }
 
-bool AppleFileSystem::PathExists( const Diligent::Char *strPath )
+bool AppleFileSystem::PathExists(const Diligent::Char* strPath)
 {
-    UNSUPPORTED( "Not implemented" );
-    return false;
-}
-    
-bool AppleFileSystem::CreateDirectory( const Diligent::Char *strPath )
-{
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
     return false;
 }
 
-void AppleFileSystem::ClearDirectory( const Diligent::Char *strPath )
+bool AppleFileSystem::CreateDirectory(const Diligent::Char* strPath)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
+    return false;
 }
 
-void AppleFileSystem::DeleteFile( const Diligent::Char *strPath )
+void AppleFileSystem::ClearDirectory(const Diligent::Char* strPath)
+{
+    UNSUPPORTED("Not implemented");
+}
+
+void AppleFileSystem::DeleteFile(const Diligent::Char* strPath)
 {
     remove(strPath);
 }
-    
-std::vector<std::unique_ptr<FindFileData>> AppleFileSystem::Search(const Diligent::Char *SearchPattern)
+
+std::vector<std::unique_ptr<FindFileData>> AppleFileSystem::Search(const Diligent::Char* SearchPattern)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
 }

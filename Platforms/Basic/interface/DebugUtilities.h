@@ -29,62 +29,74 @@
 
 #ifdef _DEBUG
 
-#include <typeinfo>
+#    include <typeinfo>
 
-#define ASSERTION_FAILED(Message, ...)\
-do{                                         \
-    auto msg = Diligent::FormatString(Message, ##__VA_ARGS__);\
-    DebugAssertionFailed( msg.c_str(), __FUNCTION__, __FILE__, __LINE__); \
-}while(false)
+#    define ASSERTION_FAILED(Message, ...)                                       \
+        do                                                                       \
+        {                                                                        \
+            auto msg = Diligent::FormatString(Message, ##__VA_ARGS__);           \
+            DebugAssertionFailed(msg.c_str(), __FUNCTION__, __FILE__, __LINE__); \
+        } while (false)
 
-#   define VERIFY(Expr, Message, ...)\
-    do{                              \
-        if( !(Expr) )                \
-        {                            \
-            ASSERTION_FAILED(Message, ##__VA_ARGS__);\
-        }                            \
-    }while(false)
+#    define VERIFY(Expr, Message, ...)                    \
+        do                                                \
+        {                                                 \
+            if (!(Expr))                                  \
+            {                                             \
+                ASSERTION_FAILED(Message, ##__VA_ARGS__); \
+            }                                             \
+        } while (false)
 
-#   define UNEXPECTED   ASSERTION_FAILED
-#   define UNSUPPORTED  ASSERTION_FAILED
+#    define UNEXPECTED  ASSERTION_FAILED
+#    define UNSUPPORTED ASSERTION_FAILED
 
-#   define VERIFY_EXPR(Expr) VERIFY(Expr, "Debug exression failed:\n", #Expr)
+#    define VERIFY_EXPR(Expr) VERIFY(Expr, "Debug exression failed:\n", #    Expr)
 
 
-template<typename DstType, typename SrcType>
-void CheckDynamicType( SrcType *pSrcPtr )
+template <typename DstType, typename SrcType>
+void CheckDynamicType(SrcType* pSrcPtr)
 {
-    VERIFY(pSrcPtr == nullptr || dynamic_cast<DstType*> (pSrcPtr) != nullptr, "Dynamic type cast failed. Src typeid: \'", typeid(*pSrcPtr).name(), "\' Dst typeid: \'", typeid(DstType).name(), '\'');
+    VERIFY(pSrcPtr == nullptr || dynamic_cast<DstType*>(pSrcPtr) != nullptr, "Dynamic type cast failed. Src typeid: \'", typeid(*pSrcPtr).name(), "\' Dst typeid: \'", typeid(DstType).name(), '\'');
 }
-#   define CHECK_DYNAMIC_TYPE(DstType, pSrcPtr) do{ CheckDynamicType<DstType>(pSrcPtr); }while(false)
+#    define CHECK_DYNAMIC_TYPE(DstType, pSrcPtr) \
+        do                                       \
+        {                                        \
+            CheckDynamicType<DstType>(pSrcPtr);  \
+        } while (false)
 
 
 #else
 
-#   define CHECK_DYNAMIC_TYPE(...)do{}while(false)
-#   define VERIFY(...)do{}while(false)
-#   define UNEXPECTED(...)do{}while(false)
-#   define UNSUPPORTED(...)do{}while(false)
-#   define VERIFY_EXPR(...)do{}while(false)
+// clang-format off
+#    define CHECK_DYNAMIC_TYPE(...) do{}while(false)
+#    define VERIFY(...)do{}while(false)
+#    define UNEXPECTED(...)do{}while(false)
+#    define UNSUPPORTED(...)do{}while(false)
+#    define VERIFY_EXPR(...)do{}while(false)
+// clang-format on
 
 #endif
 
 #if defined(_DEBUG)
-#   define DEV_CHECK_ERR VERIFY
+#    define DEV_CHECK_ERR VERIFY
 #elif defined(DEVELOPMENT)
-#   define DEV_CHECK_ERR CHECK_ERR
+#    define DEV_CHECK_ERR CHECK_ERR
 #else
-#   define DEV_CHECK_ERR(...) do{}while(false)
+// clang-format off
+#    define DEV_CHECK_ERR(...)do{}while(false)
+// clang-format on
 #endif
 
 #ifdef DEVELOPMENT
 
-#define DEV_CHECK_WARN CHECK_WARN
-#define DEV_CHECK_INFO CHECK_INFO
+#    define DEV_CHECK_WARN CHECK_WARN
+#    define DEV_CHECK_INFO CHECK_INFO
 
 #else
 
-#define DEV_CHECK_WARN(...) do{}while(false)
-#define DEV_CHECK_INFO(...) do{}while(false)
+// clang-format off
+#    define DEV_CHECK_WARN(...)do{}while(false)
+#    define DEV_CHECK_INFO(...)do{}while(false)
+// clang-format on
 
 #endif

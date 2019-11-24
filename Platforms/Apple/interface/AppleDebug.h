@@ -27,13 +27,13 @@
 
 struct AppleDebug : public BasicPlatformDebug
 {
-    static void AssertionFailed( const Diligent::Char *Message, 
-                                 const char *Function, // type of __FUNCTION__
-                                 const char *File,     // type of __FILE__
-                                 int Line );
-    static void OutputDebugMessage( Diligent::DebugMessageSeverity Severity, 
-                                    const Diligent::Char *Message, 
-                                    const char *Function, // type of __FUNCTION__
-                                    const char *File,     // type of __FILE__
-                                    int Line);
+    static void AssertionFailed(const Diligent::Char* Message,
+                                const char*           Function, // type of __FUNCTION__
+                                const char*           File,     // type of __FILE__
+                                int                   Line);
+    static void OutputDebugMessage(Diligent::DebugMessageSeverity Severity,
+                                   const Diligent::Char*          Message,
+                                   const char*                    Function, // type of __FUNCTION__
+                                   const char*                    File,     // type of __FILE__
+                                   int                            Line);
 };

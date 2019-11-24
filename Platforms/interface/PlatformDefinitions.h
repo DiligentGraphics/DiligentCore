@@ -24,70 +24,70 @@
 #pragma once
 
 #if defined(ANDROID)
-#   ifndef PLATFORM_ANDROID
-#       define PLATFORM_ANDROID 1
-#   endif
+#    ifndef PLATFORM_ANDROID
+#        define PLATFORM_ANDROID 1
+#    endif
 #endif
 
 #if !PLATFORM_WIN32 && !PLATFORM_UNIVERSAL_WINDOWS && !PLATFORM_ANDROID && !PLATFORM_LINUX && !PLATFORM_MACOS && !PLATFORM_IOS
-    #error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
 #endif
 
 
 #if !D3D11_SUPPORTED && !D3D12_SUPPORTED && !GL_SUPPORTED && !GLES_SUPPORTED && !VULKAN_SUPPORTED && !METAL_SUPPORTED
-    #error No API is supported on this platform. At least one of D3D11_SUPPORTED, D3D12_SUPPORTED, GL_SUPPORTED, GLES_SUPPORTED, VULKAN_SUPPORTED, or METAL_SUPPORTED macros must be defined as 1.
+#    error No API is supported on this platform. At least one of D3D11_SUPPORTED, D3D12_SUPPORTED, GL_SUPPORTED, GLES_SUPPORTED, VULKAN_SUPPORTED, or METAL_SUPPORTED macros must be defined as 1.
 #endif
 
 #if PLATFORM_WIN32
 
-#   if PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
-#       error Conflicting platform macros
-#   endif
+#    if PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
+#        error Conflicting platform macros
+#    endif
 
-#   include "../Win32/interface/Win32PlatformDefinitions.h"
+#    include "../Win32/interface/Win32PlatformDefinitions.h"
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
 
-#   if PLATFORM_WIN32 || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
-#       error Conflicting platform macros
-#   endif
+#    if PLATFORM_WIN32 || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
+#        error Conflicting platform macros
+#    endif
 
-#   include "../UWP/interface/UWPDefinitions.h"
+#    include "../UWP/interface/UWPDefinitions.h"
 
 #elif PLATFORM_ANDROID
 
-#   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
-#       error Conflicting platform macros
-#   endif
+#    if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
+#        error Conflicting platform macros
+#    endif
 
-#   include "../Android/interface/AndroidPlatformDefinitions.h"
+#    include "../Android/interface/AndroidPlatformDefinitions.h"
 
 #elif PLATFORM_LINUX
 
-#   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_MACOS || PLATFORM_IOS
-#       error Conflicting platform macros
-#   endif
+#    if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_MACOS || PLATFORM_IOS
+#        error Conflicting platform macros
+#    endif
 
-#   include "../Linux/interface/LinuxPlatformDefinitions.h"
+#    include "../Linux/interface/LinuxPlatformDefinitions.h"
 
 #elif PLATFORM_MACOS
 
-#   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_IOS
-#       error Conflicting platform macros
-#   endif
+#    if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_IOS
+#        error Conflicting platform macros
+#    endif
 
-#   include "../Apple/interface/ApplePlatformDefinitions.h"
+#    include "../Apple/interface/ApplePlatformDefinitions.h"
 
 #elif PLATFORM_IOS
 
-#   if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS
-#       error Conflicting platform macros
-#   endif
+#    if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS || PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS
+#        error Conflicting platform macros
+#    endif
 
-#   include "../Apple/interface/ApplePlatformDefinitions.h"
+#    include "../Apple/interface/ApplePlatformDefinitions.h"
 
 #else
 
-#   error Unsupported platform
+#    error Unsupported platform
 
 #endif

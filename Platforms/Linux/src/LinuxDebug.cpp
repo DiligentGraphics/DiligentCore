@@ -29,16 +29,16 @@
 
 using namespace Diligent;
 
-void LinuxDebug :: AssertionFailed( const Char *Message, const char *Function, const char *File, int Line )
+void LinuxDebug ::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
     OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
 
-    raise( SIGTRAP );
+    raise(SIGTRAP);
 };
 
 
-void LinuxDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char *Message, const char *Function, const char *File, int Line)
+void LinuxDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char* Message, const char* Function, const char* File, int Line)
 {
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
     std::cerr << msg;
@@ -46,10 +46,12 @@ void LinuxDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char *M
 
 void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
 {
-    LinuxDebug :: AssertionFailed( Message, Function, File, Line );
+    LinuxDebug ::AssertionFailed(Message, Function, File, Line);
 }
 
 namespace Diligent
 {
+
 DebugMessageCallbackType DebugMessageCallback = LinuxDebug::OutputDebugMessage;
+
 }

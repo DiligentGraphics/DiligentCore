@@ -33,19 +33,19 @@ struct WindowsAtomics
     using AtomicInt64 = volatile long long;
 
     // The function returns the resulting INCREMENTED value.
-    static Long  AtomicIncrement(AtomicLong  &Val);
-    static Int64 AtomicIncrement(AtomicInt64 &Val);
+    static Long  AtomicIncrement(AtomicLong& Val);
+    static Int64 AtomicIncrement(AtomicInt64& Val);
 
     // The function returns the resulting DECREMENTED value.
-    static Long  AtomicDecrement(AtomicLong  &Val);
-    static Int64 AtomicDecrement(AtomicInt64 &Val);
-    
-    // The function compares the Destination value with the Comparand value. If the Destination value is equal 
-    // to the Comparand value, the Exchange value is stored in the address specified by Destination. 
+    static Long  AtomicDecrement(AtomicLong& Val);
+    static Int64 AtomicDecrement(AtomicInt64& Val);
+
+    // The function compares the Destination value with the Comparand value. If the Destination value is equal
+    // to the Comparand value, the Exchange value is stored in the address specified by Destination.
     // Otherwise, no operation is performed.
     // The function returns the initial value of the Destination parameter
-    static Long AtomicCompareExchange( AtomicLong &Destination, Long Exchange, Long Comparand);
+    static Long AtomicCompareExchange(AtomicLong& Destination, Long Exchange, Long Comparand);
 
-    static Long  AtomicAdd( AtomicLong  &Destination, Long  Val);
-    static Int64 AtomicAdd( AtomicInt64 &Destination, Int64 Val);
+    static Long  AtomicAdd(AtomicLong& Destination, Long Val);
+    static Int64 AtomicAdd(AtomicInt64& Destination, Int64 Val);
 };

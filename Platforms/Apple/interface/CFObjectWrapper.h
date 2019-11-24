@@ -23,28 +23,27 @@
 
 #pragma once
 
-template<typename CFType>
+template <typename CFType>
 class CFObjectWrapper
 {
 public:
     CFObjectWrapper(CFType obj) :
-        m_Obj(obj)
+        m_Obj{obj}
     {}
-    
+
     ~CFObjectWrapper()
     {
-        if(m_Obj != NULL)
+        if (m_Obj != NULL)
         {
             CFRelease(m_Obj);
         }
     }
-    
-    operator CFType(){return m_Obj;}
-    
+
+    operator CFType() { return m_Obj; }
+
 private:
     CFType m_Obj;
 };
 
 using CFStringWrapper = CFObjectWrapper<CFStringRef>;
-using CFURLWrapper = CFObjectWrapper<CFURLRef>;
-
+using CFURLWrapper    = CFObjectWrapper<CFURLRef>;

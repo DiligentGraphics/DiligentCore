@@ -34,14 +34,14 @@
 class AndroidFile : public BasicFile
 {
 public:
-    AndroidFile( const FileOpenAttribs &OpenAttribs );
+    AndroidFile(const FileOpenAttribs& OpenAttribs);
     ~AndroidFile();
 
-    void Read( Diligent::IDataBlob *pData );
+    void Read(Diligent::IDataBlob* pData);
 
-    bool Read( void* Data, size_t BufferSize );
+    bool Read(void* Data, size_t BufferSize);
 
-    bool Write( const void *Data, size_t BufferSize );
+    bool Write(const void* Data, size_t BufferSize);
 
     size_t GetSize() { return m_Size; }
 
@@ -62,14 +62,15 @@ struct AndroidFileSystem : public BasicFileSystem
 public:
     static void Init(void* Activity, const char* ActivityClassName);
 
-    static AndroidFile* OpenFile( const FileOpenAttribs &OpenAttribs );
-    static inline Diligent::Char GetSlashSymbol(){ return '/'; }
+    static AndroidFile*          OpenFile(const FileOpenAttribs& OpenAttribs);
+    static inline Diligent::Char GetSlashSymbol() { return '/'; }
 
-    static bool FileExists( const Diligent::Char *strFilePath );
-    static bool PathExists( const Diligent::Char *strPath );
+    static bool FileExists(const Diligent::Char* strFilePath);
+    static bool PathExists(const Diligent::Char* strPath);
 
-    static bool CreateDirectory( const Diligent::Char *strPath );
-    static void ClearDirectory( const Diligent::Char *strPath );
-    static void DeleteFile( const Diligent::Char *strPath );
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char *SearchPattern);
+    static bool CreateDirectory(const Diligent::Char* strPath);
+    static void ClearDirectory(const Diligent::Char* strPath);
+    static void DeleteFile(const Diligent::Char* strPath);
+
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
 };

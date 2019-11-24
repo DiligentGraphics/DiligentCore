@@ -27,15 +27,15 @@
 
 struct BasicPlatformDebug
 {
-    static Diligent::String FormatAssertionFailedMessage(const Diligent::Char* Message, 
-                                                         const char* Function,  // type of __FUNCTION__
-                                                         const char* File,      // type of __FILE__
-                                                         int Line);
-    static Diligent::String FormatDebugMessage(Diligent::DebugMessageSeverity Severity, 
-                                               const Diligent::Char* Message, 
-                                               const char* Function, // type of __FUNCTION__
-                                               const char* File,     // type of __FILE__
-                                               int Line);
+    static Diligent::String FormatAssertionFailedMessage(const Diligent::Char* Message,
+                                                         const char*           Function, // type of __FUNCTION__
+                                                         const char*           File,     // type of __FILE__
+                                                         int                   Line);
+    static Diligent::String FormatDebugMessage(Diligent::DebugMessageSeverity Severity,
+                                               const Diligent::Char*          Message,
+                                               const char*                    Function, // type of __FUNCTION__
+                                               const char*                    File,     // type of __FILE__
+                                               int                            Line);
 };
 
 // Forward declarations of platform-specific debug functions

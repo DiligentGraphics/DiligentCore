@@ -34,14 +34,16 @@ using AppleFile = StandardFile;
 struct AppleFileSystem : public BasicFileSystem
 {
 public:
-    static AppleFile* OpenFile( const FileOpenAttribs &OpenAttribs );
-    static inline Diligent::Char GetSlashSymbol(){ return '/'; }
+    static AppleFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
-    static bool FileExists( const Diligent::Char *strFilePath );
-    static bool PathExists( const Diligent::Char *strPath );
-    
-    static bool CreateDirectory( const Diligent::Char *strPath );
-    static void ClearDirectory( const Diligent::Char *strPath );
-    static void DeleteFile( const Diligent::Char *strPath );
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char *SearchPattern);
+    static inline Diligent::Char GetSlashSymbol() { return '/'; }
+
+    static bool FileExists(const Diligent::Char* strFilePath);
+    static bool PathExists(const Diligent::Char* strPath);
+
+    static bool CreateDirectory(const Diligent::Char* strPath);
+    static void ClearDirectory(const Diligent::Char* strPath);
+    static void DeleteFile(const Diligent::Char* strPath);
+
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
 };

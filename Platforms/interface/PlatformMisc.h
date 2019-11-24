@@ -26,23 +26,23 @@
 #include "PlatformDefinitions.h"
 
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-    #include "../Win32/interface/Win32PlatformMisc.h"
-    using PlatformMisc = WindowsMisc;
+#    include "../Win32/interface/Win32PlatformMisc.h"
+using PlatformMisc = WindowsMisc;
 
 #elif PLATFORM_ANDROID
-    #include "../Android/interface/AndroidPlatformMisc.h"
-    using PlatformMisc = AndroidMisc;
+#    include "../Android/interface/AndroidPlatformMisc.h"
+using PlatformMisc = AndroidMisc;
 
 #elif PLATFORM_LINUX
-    #include "../Linux/interface/LinuxPlatformMisc.h"
-    using PlatformMisc = LinuxMisc;
+#    include "../Linux/interface/LinuxPlatformMisc.h"
+using PlatformMisc = LinuxMisc;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS
-    #include "../Apple/interface/ApplePlatformMisc.h"
-    using PlatformMisc = AppleMisc;
+#    include "../Apple/interface/ApplePlatformMisc.h"
+using PlatformMisc = AppleMisc;
 
 #else
 
-    #error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
 
 #endif

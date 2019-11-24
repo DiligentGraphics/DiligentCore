@@ -28,39 +28,39 @@
 
 using namespace Diligent;
 
-String BasicPlatformDebug :: FormatAssertionFailedMessage( const Char *Message, 
-                                                           const char *Function, // type of __FUNCTION__
-                                                           const char *File,     // type of __FILE__
-                                                           int Line )
+String BasicPlatformDebug ::FormatAssertionFailedMessage(const Char* Message,
+                                                         const char* Function, // type of __FUNCTION__
+                                                         const char* File,     // type of __FILE__
+                                                         int         Line)
 {
     String FileName;
-    BasicFileSystem::SplitFilePath( File, nullptr, &FileName );
+    BasicFileSystem::SplitFilePath(File, nullptr, &FileName);
     return Diligent::FormatString("Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
 }
 
-String BasicPlatformDebug::FormatDebugMessage(DebugMessageSeverity Severity, 
-                                              const Char* Message, 
-                                              const char* Function, // type of __FUNCTION__
-                                              const char* File,     // type of __FILE__
-                                              int Line)
+String BasicPlatformDebug::FormatDebugMessage(DebugMessageSeverity Severity,
+                                              const Char*          Message,
+                                              const char*          Function, // type of __FUNCTION__
+                                              const char*          File,     // type of __FILE__
+                                              int                  Line)
 {
     std::stringstream msg_ss;
 
-    static const Char* const strSeverities[] = { "Info", "Warning", "ERROR", "CRITICAL ERROR" };
-    const auto* MessageSevery = strSeverities[static_cast<int>(Severity)];
-    
+    static const Char* const strSeverities[] = {"Info", "Warning", "ERROR", "CRITICAL ERROR"};
+    const auto*              MessageSevery   = strSeverities[static_cast<int>(Severity)];
+
     msg_ss << "Diligent Engine: " << MessageSevery;
-    if(Function != nullptr || File != nullptr)
+    if (Function != nullptr || File != nullptr)
     {
         msg_ss << " in ";
-        if(Function != nullptr)
+        if (Function != nullptr)
         {
             msg_ss << Function << "()";
-            if(File != nullptr)
+            if (File != nullptr)
                 msg_ss << " (";
         }
 
-        if(File != nullptr)
+        if (File != nullptr)
         {
             msg_ss << File << ", " << Line << ')';
         }

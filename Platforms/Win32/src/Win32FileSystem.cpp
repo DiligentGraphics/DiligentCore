@@ -30,16 +30,18 @@
 
 // Windows.h defines CreateDirectory and DeleteFile as macros.
 // So we need to do some tricks to avoid name mess.
-static bool CreateDirectoryImpl( const Diligent::Char* strPath );
-bool WindowsFileSystem::CreateDirectory( const Diligent::Char* strPath )
+static bool CreateDirectoryImpl(const Diligent::Char* strPath);
+
+bool WindowsFileSystem::CreateDirectory(const Diligent::Char* strPath)
 {
     return CreateDirectoryImpl(strPath);
 }
 
-static void DeleteFileImpl( const Diligent::Char* strPath );
-void WindowsFileSystem::DeleteFile( const Diligent::Char* strPath )
+static void DeleteFileImpl(const Diligent::Char* strPath);
+
+void WindowsFileSystem::DeleteFile(const Diligent::Char* strPath)
 {
-   DeleteFileImpl(strPath);
+    DeleteFileImpl(strPath);
 }
 
 #include <Windows.h>
@@ -50,30 +52,30 @@ using namespace Diligent;
 
 static std::vector<wchar_t> UTF8ToUTF16(LPCSTR lpUTF8)
 {
-    // When last parameter is 0, the function returns the required buffer size, in characters, 
+    // When last parameter is 0, the function returns the required buffer size, in characters,
     // including any terminating null character.
-    auto nChars = MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, NULL, 0);
+    auto                 nChars = MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, NULL, 0);
     std::vector<wchar_t> wstr(nChars);
     MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, wstr.data(), nChars);
     return wstr;
 }
 
-WindowsFile::WindowsFile( const FileOpenAttribs& OpenAttribs ) : 
+WindowsFile::WindowsFile(const FileOpenAttribs& OpenAttribs) :
     StandardFile(OpenAttribs, WindowsFileSystem::GetSlashSymbol())
 {
-    VERIFY_EXPR(m_pFile == nullptr );
-    auto OpenModeStr = WidenString( GetOpenModeStr() );
-    
-    for( ;; )
+    VERIFY_EXPR(m_pFile == nullptr);
+    auto OpenModeStr = WidenString(GetOpenModeStr());
+
+    for (;;)
     {
-        auto UTF16FilePath = UTF8ToUTF16(m_OpenAttribs.strFilePath);
-        errno_t err = _wfopen_s( &m_pFile, UTF16FilePath.data(), OpenModeStr.c_str() );
-        if( err == 0 )
+        auto    UTF16FilePath = UTF8ToUTF16(m_OpenAttribs.strFilePath);
+        errno_t err           = _wfopen_s(&m_pFile, UTF16FilePath.data(), OpenModeStr.c_str());
+        if (err == 0)
         {
             break;
         }
-        else if( err == ENFILE || // Too many files open in system 
-                 err == EMFILE )  // Too many open files 
+        else if (err == ENFILE || // Too many files open in system
+                 err == EMFILE)   // Too many open files
         {
             // No more file descriptors are available: we have to wait
             //g_SystemMetricsStream << "Failed to open file " << FileName;
@@ -84,113 +86,113 @@ WindowsFile::WindowsFile( const FileOpenAttribs& OpenAttribs ) :
         else
         {
             char errstr[128];
-            strerror_s( errstr, _countof( errstr ), err );
-            LOG_ERROR_AND_THROW( "Failed to open file ", m_OpenAttribs.strFilePath, 
-                                 "\nThe following error occured: ", errstr );
+            strerror_s(errstr, _countof(errstr), err);
+            LOG_ERROR_AND_THROW("Failed to open file ", m_OpenAttribs.strFilePath,
+                                "\nThe following error occured: ", errstr);
         }
     }
 }
 
-WindowsFile* WindowsFileSystem::OpenFile( const FileOpenAttribs& OpenAttribs )
+WindowsFile* WindowsFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
-    WindowsFile *pFile = nullptr;
+    WindowsFile* pFile = nullptr;
     try
     {
-        pFile = new WindowsFile( OpenAttribs );
+        pFile = new WindowsFile(OpenAttribs);
     }
-    catch( const std::runtime_error &/*err*/ )
+    catch (const std::runtime_error& /*err*/)
     {
-
     }
 
     return pFile;
 }
 
-bool WindowsFileSystem::FileExists( const Char* strFilePath )
+bool WindowsFileSystem::FileExists(const Char* strFilePath)
 {
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
-    BasicFile DummyFile( OpenAttribs, WindowsFileSystem::GetSlashSymbol() );
-    const auto& Path = DummyFile.GetPath(); // This is necessary to correct slashes
-    auto UTF16FilePath = UTF8ToUTF16(Path.c_str());
-    FILE *pFile = nullptr;
-    auto err = _wfopen_s( &pFile, UTF16FilePath.data(), L"r" );
-    bool Exists = (err == 0);
-    if( Exists && pFile )
-        fclose( pFile );
+    BasicFile   DummyFile(OpenAttribs, WindowsFileSystem::GetSlashSymbol());
+    const auto& Path          = DummyFile.GetPath(); // This is necessary to correct slashes
+    auto        UTF16FilePath = UTF8ToUTF16(Path.c_str());
+    FILE*       pFile         = nullptr;
+    auto        err           = _wfopen_s(&pFile, UTF16FilePath.data(), L"r");
+    bool        Exists        = (err == 0);
+    if (Exists && pFile)
+        fclose(pFile);
     return Exists;
 }
 
-static bool CreateDirectoryImpl( const Char* strPath )
+static bool CreateDirectoryImpl(const Char* strPath)
 {
-    // Test all parent directories 
-    std::string DirectoryPath = strPath;
-    std::string::size_type SlashPos = std::wstring::npos;
+    // Test all parent directories
+    std::string            DirectoryPath = strPath;
+    std::string::size_type SlashPos      = std::wstring::npos;
     do
     {
-        SlashPos = DirectoryPath.find( '\\', (SlashPos != std::string::npos) ? SlashPos+1 : 0);
+        SlashPos = DirectoryPath.find('\\', (SlashPos != std::string::npos) ? SlashPos + 1 : 0);
+
         std::string ParentDir = (SlashPos != std::wstring::npos) ? DirectoryPath.substr(0, SlashPos) : DirectoryPath;
-        if( !WindowsFileSystem::PathExists(ParentDir.c_str()) )
+        if (!WindowsFileSystem::PathExists(ParentDir.c_str()))
         {
             // If there is no directory, create it
-            if( !::CreateDirectoryA(ParentDir.c_str(), NULL) )
+            if (!::CreateDirectoryA(ParentDir.c_str(), NULL))
                 return false;
         }
-    }
-    while( SlashPos != std::string::npos );
-    
+    } while (SlashPos != std::string::npos);
+
     return true;
 }
 
-void WindowsFileSystem::ClearDirectory( const Char* strPath )
+void WindowsFileSystem::ClearDirectory(const Char* strPath)
 {
     WIN32_FIND_DATAA ffd;
-    HANDLE hFind = INVALID_HANDLE_VALUE;
+    HANDLE           hFind = INVALID_HANDLE_VALUE;
 
     // Find the first file in the directory.
-    std::string Directory ( strPath );
-    if( Directory.length() > 0 && Directory.back() != GetSlashSymbol() )
-        Directory.push_back( GetSlashSymbol() );
+    std::string Directory(strPath);
+    if (Directory.length() > 0 && Directory.back() != GetSlashSymbol())
+        Directory.push_back(GetSlashSymbol());
 
     auto SearchPattern = Directory + "*";
-    hFind = FindFirstFileA( SearchPattern.c_str(), &ffd);
+    hFind              = FindFirstFileA(SearchPattern.c_str(), &ffd);
 
-    if (INVALID_HANDLE_VALUE == hFind) 
+    if (INVALID_HANDLE_VALUE == hFind)
     {
         LOG_ERROR_AND_THROW("FindFirstFile");
-    } 
+    }
 
     // List all the files in the directory
     do
     {
-        if( !(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) )
+        if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
         {
             auto FileName = Directory + ffd.cFileName;
-            DeleteFileImpl( FileName.c_str() );
+            DeleteFileImpl(FileName.c_str());
         }
-    }
-    while( FindNextFileA(hFind, &ffd) != 0 );
+    } while (FindNextFileA(hFind, &ffd) != 0);
 }
 
 
-static void DeleteFileImpl( const Char* strPath )
+static void DeleteFileImpl(const Char* strPath)
 {
-     DeleteFileA(strPath);
+    DeleteFileA(strPath);
 }
 
-bool WindowsFileSystem::PathExists( const Char* strPath )
+bool WindowsFileSystem::PathExists(const Char* strPath)
 {
     return PathFileExistsA(strPath) != FALSE;
 }
 
 struct WndFindFileData : public FindFileData
 {
-    virtual const Char* Name()const override{return ffd.cFileName;}
-    virtual bool IsDirectory()const override{return (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;}
+    virtual const Char* Name() const override { return ffd.cFileName; }
+
+    virtual bool IsDirectory() const override { return (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0; }
 
     WIN32_FIND_DATAA ffd;
 
-    WndFindFileData(const WIN32_FIND_DATAA& _ffd) : ffd(_ffd){}
+    WndFindFileData(const WIN32_FIND_DATAA& _ffd) :
+        ffd{_ffd} {}
 };
 
 std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char* SearchPattern)
@@ -199,22 +201,21 @@ std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char*
 
     WIN32_FIND_DATAA ffd;
     // Find the first file in the directory.
-    auto hFind = FindFirstFileA( SearchPattern, &ffd);
+    auto hFind = FindFirstFileA(SearchPattern, &ffd);
 
-    if (INVALID_HANDLE_VALUE == hFind) 
+    if (INVALID_HANDLE_VALUE == hFind)
     {
         return SearchRes;
-    } 
+    }
 
     // List all the files in the directory
     do
     {
-        SearchRes.emplace_back( new WndFindFileData(ffd) );
-    }
-    while( FindNextFileA(hFind, &ffd) != 0 );
+        SearchRes.emplace_back(new WndFindFileData(ffd));
+    } while (FindNextFileA(hFind, &ffd) != 0);
 
     auto dwError = GetLastError();
-    if (dwError != ERROR_NO_MORE_FILES) 
+    if (dwError != ERROR_NO_MORE_FILES)
     {
         //ErrorHandler(TEXT("FindFirstFile"));
     }
@@ -226,18 +227,18 @@ std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char*
 
 std::string WindowsFileSystem::OpenFileDialog(const char* Title, const char* Filter)
 {
-    std::string FileName;
-	char buffer[1024] = {};
-    OPENFILENAMEA ofn = {};
-	ofn.lStructSize = sizeof(ofn);
-	ofn.lpstrFilter = Filter;
-	ofn.lpstrFile   = buffer;
-	ofn.nMaxFile    = _countof(buffer);
-	ofn.lpstrTitle  = Title;
-	ofn.Flags       = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
-	if (GetOpenFileNameA(&ofn))
+    std::string   FileName;
+    char          buffer[1024] = {};
+    OPENFILENAMEA ofn          = {};
+    ofn.lStructSize            = sizeof(ofn);
+    ofn.lpstrFilter            = Filter;
+    ofn.lpstrFile              = buffer;
+    ofn.nMaxFile               = _countof(buffer);
+    ofn.lpstrTitle             = Title;
+    ofn.Flags                  = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+    if (GetOpenFileNameA(&ofn))
     {
-		FileName = buffer;
-	}
+        FileName = buffer;
+    }
     return FileName;
 }

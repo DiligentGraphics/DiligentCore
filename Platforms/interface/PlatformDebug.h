@@ -26,25 +26,25 @@
 #include "PlatformDefinitions.h"
 
 #if PLATFORM_WIN32
-    #include "../Win32/interface/Win32Debug.h"
-    typedef WindowsDebug PlatformDebug;
+#    include "../Win32/interface/Win32Debug.h"
+using PlatformDebug = WindowsDebug;
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
-    #include "../UWP/interface/UWPDebug.h"
-    typedef WindowsStoreDebug PlatformDebug;
+#    include "../UWP/interface/UWPDebug.h"
+using PlatformDebug = WindowsStoreDebug;
 
 #elif PLATFORM_ANDROID
-    #include "../Android/interface/AndroidDebug.h"
-    typedef AndroidDebug PlatformDebug;
+#    include "../Android/interface/AndroidDebug.h"
+using PlatformDebug = AndroidDebug;
 
 #elif PLATFORM_LINUX
-    #include "../Linux/interface/LinuxDebug.h"
-    typedef LinuxDebug PlatformDebug;
+#    include "../Linux/interface/LinuxDebug.h"
+using PlatformDebug = LinuxDebug;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS
-    #include "../Apple/interface/AppleDebug.h"
-    typedef AppleDebug PlatformDebug;
+#    include "../Apple/interface/AppleDebug.h"
+using PlatformDebug = AppleDebug;
 
 #else
-    #error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
 #endif

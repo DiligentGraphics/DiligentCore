@@ -29,5 +29,4 @@
 
 struct AppleMisc : public LinuxMisc
 {
-
 };

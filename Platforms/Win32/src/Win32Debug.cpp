@@ -29,15 +29,15 @@
 
 using namespace Diligent;
 
-void WindowsDebug :: AssertionFailed( const Diligent::Char *Message, const char *Function, const char *File, int Line )
+void WindowsDebug::AssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage( DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
+    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
 
     int nCode = MessageBoxA(NULL,
                             AssertionFailedMessage.c_str(),
                             "Runtime assertion failed",
-                            MB_TASKMODAL|MB_ICONHAND|MB_ABORTRETRYIGNORE|MB_SETFOREGROUND);
+                            MB_TASKMODAL | MB_ICONHAND | MB_ABORTRETRYIGNORE | MB_SETFOREGROUND);
 
     // Abort: abort the program
     if (nCode == IDABORT)
@@ -63,12 +63,12 @@ void WindowsDebug :: AssertionFailed( const Diligent::Char *Message, const char 
         return;
 };
 
-void WindowsDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char *Message, const char *Function, const char *File, int Line)
+void WindowsDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char* Message, const char* Function, const char* File, int Line)
 {
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
     OutputDebugStringA(msg.c_str());
 
-    if( Severity == DebugMessageSeverity::Error || Severity == DebugMessageSeverity::FatalError )
+    if (Severity == DebugMessageSeverity::Error || Severity == DebugMessageSeverity::FatalError)
         std::cerr << msg;
     else
         std::cout << msg;
@@ -76,10 +76,12 @@ void WindowsDebug::OutputDebugMessage( DebugMessageSeverity Severity, const Char
 
 void DebugAssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
 {
-    WindowsDebug :: AssertionFailed( Message, Function, File, Line );
+    WindowsDebug::AssertionFailed(Message, Function, File, Line);
 }
 
 namespace Diligent
 {
+
 DebugMessageCallbackType DebugMessageCallback = WindowsDebug::OutputDebugMessage;
+
 }

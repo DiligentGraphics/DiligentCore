@@ -27,36 +27,36 @@
 
 #if PLATFORM_WIN32
 
-    #include "../Win32/interface/Win32FileSystem.h"
-    typedef WindowsFileSystem FileSystem;
-    typedef WindowsFile       CFile;
+#    include "../Win32/interface/Win32FileSystem.h"
+using FileSystem = WindowsFileSystem;
+using CFile      = WindowsFile;
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
 
-    #include "../UWP/interface/UWPFileSystem.h"
-    typedef WindowsStoreFileSystem FileSystem;
-    typedef WindowsStoreFile       CFile;
+#    include "../UWP/interface/UWPFileSystem.h"
+using FileSystem = WindowsStoreFileSystem;
+using CFile      = WindowsStoreFile;
 
 #elif PLATFORM_ANDROID
 
-    #include "../Android/interface/AndroidFileSystem.h"
-    typedef AndroidFileSystem FileSystem;
-    typedef AndroidFile       CFile;
+#    include "../Android/interface/AndroidFileSystem.h"
+using FileSystem = AndroidFileSystem;
+using CFile      = AndroidFile;
 
 #elif PLATFORM_LINUX
 
-    #include "../Linux/interface/LinuxFileSystem.h"
-    typedef LinuxFileSystem FileSystem;
-    typedef LinuxFile       CFile;
+#    include "../Linux/interface/LinuxFileSystem.h"
+using FileSystem = LinuxFileSystem;
+using CFile      = LinuxFile;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS
 
-    #include "../Apple/interface/AppleFileSystem.h"
-    typedef AppleFileSystem FileSystem;
-    typedef AppleFile       CFile;
+#    include "../Apple/interface/AppleFileSystem.h"
+using FileSystem = AppleFileSystem;
+using CFile      = AppleFile;
 
 #else
 
-    #error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
 
 #endif

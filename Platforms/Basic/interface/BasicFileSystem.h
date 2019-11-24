@@ -43,57 +43,59 @@ enum class FilePosOrigin
 
 struct FileOpenAttribs
 {
-    const Diligent::Char *strFilePath;
-    EFileAccessMode AccessMode;
-    FileOpenAttribs(const Diligent::Char *Path = nullptr, 
-                     EFileAccessMode Access = EFileAccessMode::Read) :
-        strFilePath( Path ),
-        AccessMode( Access )
+    const Diligent::Char* strFilePath;
+    EFileAccessMode       AccessMode;
+    FileOpenAttribs(const Diligent::Char* Path   = nullptr,
+                    EFileAccessMode       Access = EFileAccessMode::Read) :
+        strFilePath{Path},
+        AccessMode{Access}
     {}
 };
 
 class BasicFile
 {
 public:
-    BasicFile( const FileOpenAttribs &OpenAttribs, Diligent::Char SlashSymbol );
+    BasicFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol);
     virtual ~BasicFile();
 
-    const Diligent::String& GetPath(){ return m_Path; }
-    
+    const Diligent::String& GetPath() { return m_Path; }
+
 protected:
     Diligent::String GetOpenModeStr();
 
-    FileOpenAttribs m_OpenAttribs;
+    FileOpenAttribs  m_OpenAttribs;
     Diligent::String m_Path;
 };
 
 struct FindFileData
 {
-    virtual const Diligent::Char* Name()const = 0;
-    virtual bool IsDirectory()const = 0;
+    virtual const Diligent::Char* Name() const        = 0;
+    virtual bool                  IsDirectory() const = 0;
 
-    virtual ~FindFileData(){}
+    virtual ~FindFileData() {}
 };
 
 struct BasicFileSystem
 {
 public:
-    static BasicFile* OpenFile( FileOpenAttribs &OpenAttribs );
-    static void ReleaseFile( BasicFile* );
+    static BasicFile* OpenFile(FileOpenAttribs& OpenAttribs);
+    static void       ReleaseFile(BasicFile*);
 
-    static std::string GetFullPath( const Diligent::Char *strFilePath );
+    static std::string GetFullPath(const Diligent::Char* strFilePath);
 
-    static bool FileExists( const Diligent::Char *strFilePath );
+    static bool FileExists(const Diligent::Char* strFilePath);
 
-    static void SetWorkingDirectory( const Diligent::Char *strWorkingDir ){ m_strWorkingDirectory = strWorkingDir; }
-    static const Diligent::String &GetWorkingDirectory(){ return m_strWorkingDirectory; }
+    static void SetWorkingDirectory(const Diligent::Char* strWorkingDir) { m_strWorkingDirectory = strWorkingDir; }
+
+    static const Diligent::String& GetWorkingDirectory() { return m_strWorkingDirectory; }
 
     static Diligent::Char GetSlashSymbol();
-    static void CorrectSlashes(Diligent::String &Path, Diligent::Char SlashSymbol);
-    
+
+    static void CorrectSlashes(Diligent::String& Path, Diligent::Char SlashSymbol);
+
     static void SplitFilePath(const Diligent::String& FullName,
-                              Diligent::String *Path, 
-                              Diligent::String *Name);
+                              Diligent::String*       Path,
+                              Diligent::String*       Name);
 
 protected:
     static Diligent::String m_strWorkingDirectory;

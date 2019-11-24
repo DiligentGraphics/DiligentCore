@@ -30,12 +30,12 @@ struct LinuxMisc : public BasicPlatformMisc
 {
     static Diligent::Uint32 GetMSB(Diligent::Uint32 Val)
     {
-        if( Val == 0 )return 32;
+        if (Val == 0) return 32;
 
-        // Returns the number of leading 0-bits in x, starting at the 
+        // Returns the number of leading 0-bits in x, starting at the
         // most significant bit position. If x is 0, the result is undefined.
         auto LeadingZeros = __builtin_clz(Val);
-        auto MSB = 31 - LeadingZeros;
+        auto MSB          = 31 - LeadingZeros;
         VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
 
         return MSB;
@@ -43,12 +43,12 @@ struct LinuxMisc : public BasicPlatformMisc
 
     static Diligent::Uint32 GetLSB(Diligent::Uint32 Val)
     {
-        if( Val == 0 )return 32;
+        if (Val == 0) return 32;
 
-        // Returns the number of trailing 0-bits in x, starting at the 
+        // Returns the number of trailing 0-bits in x, starting at the
         // least significant bit position. If x is 0, the result is undefined.
         auto TrailingZeros = __builtin_ctz(Val);
-        auto LSB = TrailingZeros;
+        auto LSB           = TrailingZeros;
         VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
 
         return LSB;
@@ -56,12 +56,12 @@ struct LinuxMisc : public BasicPlatformMisc
 
     static Diligent::Uint32 GetMSB(Diligent::Uint64 Val)
     {
-        if( Val == 0 )return 64;
+        if (Val == 0) return 64;
 
-        // Returns the number of leading 0-bits in x, starting at the 
+        // Returns the number of leading 0-bits in x, starting at the
         // most significant bit position. If x is 0, the result is undefined.
         auto LeadingZeros = __builtin_clzll(Val);
-        auto MSB = 63 - LeadingZeros;
+        auto MSB          = 63 - LeadingZeros;
         VERIFY_EXPR(MSB == BasicPlatformMisc::GetMSB(Val));
 
         return MSB;
@@ -69,12 +69,12 @@ struct LinuxMisc : public BasicPlatformMisc
 
     static Diligent::Uint32 GetLSB(Diligent::Uint64 Val)
     {
-        if( Val == 0 )return 64;
+        if (Val == 0) return 64;
 
-        // Returns the number of trailing 0-bits in x, starting at the 
+        // Returns the number of trailing 0-bits in x, starting at the
         // least significant bit position. If x is 0, the result is undefined.
         auto TrailingZeros = __builtin_ctzll(Val);
-        auto LSB = TrailingZeros;
+        auto LSB           = TrailingZeros;
         VERIFY_EXPR(LSB == BasicPlatformMisc::GetLSB(Val));
 
         return LSB;

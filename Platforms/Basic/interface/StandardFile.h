@@ -32,7 +32,7 @@ class StandardFile : public BasicFile
 {
 public:
     StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol);
-    virtual ~StandardFile()override;
+    virtual ~StandardFile() override;
 
     void Read(Diligent::IDataBlob* pData);
 
@@ -45,7 +45,7 @@ public:
     size_t GetPos();
 
     void SetPos(size_t Offset, FilePosOrigin Origin);
-    
+
 protected:
     FILE* m_pFile = nullptr;
 };

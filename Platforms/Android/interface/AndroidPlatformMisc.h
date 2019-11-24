@@ -29,5 +29,4 @@
 
 struct AndroidMisc : public LinuxMisc
 {
-
 };

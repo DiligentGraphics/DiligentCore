@@ -36,15 +36,15 @@
 class WindowsStoreFile : public BasicFile
 {
 public:
-    WindowsStoreFile( const FileOpenAttribs &OpenAttribs );
+    WindowsStoreFile(const FileOpenAttribs& OpenAttribs);
     ~WindowsStoreFile();
 
-    void Read( Diligent::IDataBlob *pData );
+    void Read(Diligent::IDataBlob* pData);
 
-    bool Read( void *Data, size_t BufferSize );
+    bool Read(void* Data, size_t BufferSize);
 
-    void Write( Diligent::IDataBlob *pData );
-    bool Write( const void *Data, size_t BufferSize );
+    void Write(Diligent::IDataBlob* pData);
+    bool Write(const void* Data, size_t BufferSize);
 
     size_t GetSize();
 
@@ -61,14 +61,16 @@ private:
 struct WindowsStoreFileSystem : public BasicFileSystem
 {
 public:
-    static WindowsStoreFile* OpenFile( const FileOpenAttribs &OpenAttribs );
-    static inline Diligent::Char GetSlashSymbol(){ return '\\'; }
+    static WindowsStoreFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
-    static bool FileExists( const Diligent::Char *strFilePath );
-    static bool PathExists( const Diligent::Char *strPath );
-    
-    static bool CreateDirectory( const Diligent::Char *strPath );
-    static void ClearDirectory( const Diligent::Char *strPath );
-    static void DeleteFile( const Diligent::Char *strPath );
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char *SearchPattern);
+    static inline Diligent::Char GetSlashSymbol() { return '\\'; }
+
+    static bool FileExists(const Diligent::Char* strFilePath);
+    static bool PathExists(const Diligent::Char* strPath);
+
+    static bool CreateDirectory(const Diligent::Char* strPath);
+    static void ClearDirectory(const Diligent::Char* strPath);
+    static void DeleteFile(const Diligent::Char* strPath);
+
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
 };

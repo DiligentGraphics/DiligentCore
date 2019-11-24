@@ -29,14 +29,16 @@
 
 // Windows headers define CreateDirectory and DeleteFile as macros.
 // So we need to do some tricks to avoid name mess.
-bool CreateDirectoryImpl( const Diligent::Char *strPath );
-bool WindowsStoreFileSystem::CreateDirectory( const Diligent::Char *strPath )
+bool CreateDirectoryImpl(const Diligent::Char* strPath);
+
+bool WindowsStoreFileSystem::CreateDirectory(const Diligent::Char* strPath)
 {
     return CreateDirectoryImpl(strPath);
 }
 
-void DeleteFileImpl( const Diligent::Char *strPath );
-void WindowsStoreFileSystem::DeleteFile( const Diligent::Char *strPath )
+void DeleteFileImpl(const Diligent::Char* strPath);
+
+void WindowsStoreFileSystem::DeleteFile(const Diligent::Char* strPath)
 {
     return DeleteFileImpl(strPath);
 }
@@ -54,58 +56,58 @@ public:
     Wrappers::FileHandle FH;
 };
 
-WindowsStoreFile::WindowsStoreFile( const FileOpenAttribs &OpenAttribs ) : 
+WindowsStoreFile::WindowsStoreFile(const FileOpenAttribs& OpenAttribs) :
     BasicFile(OpenAttribs, WindowsStoreFileSystem::GetSlashSymbol()),
     m_FileHandle(new FileHandleWrapper)
 {
     CREATEFILE2_EXTENDED_PARAMETERS extendedParams = {0};
-    extendedParams.dwSize = sizeof(CREATEFILE2_EXTENDED_PARAMETERS);
-    extendedParams.dwFileAttributes = FILE_ATTRIBUTE_NORMAL;
-    extendedParams.dwFileFlags = FILE_FLAG_SEQUENTIAL_SCAN;
-    extendedParams.dwSecurityQosFlags = SECURITY_ANONYMOUS;
-    extendedParams.lpSecurityAttributes = nullptr;
-    extendedParams.hTemplateFile = nullptr;
 
-    auto wstrPath = Diligent::WidenString(m_OpenAttribs.strFilePath);
-    DWORD dwDesiredAccess = 0;
-    DWORD dwShareMode = 0;
+    extendedParams.dwSize               = sizeof(CREATEFILE2_EXTENDED_PARAMETERS);
+    extendedParams.dwFileAttributes     = FILE_ATTRIBUTE_NORMAL;
+    extendedParams.dwFileFlags          = FILE_FLAG_SEQUENTIAL_SCAN;
+    extendedParams.dwSecurityQosFlags   = SECURITY_ANONYMOUS;
+    extendedParams.lpSecurityAttributes = nullptr;
+    extendedParams.hTemplateFile        = nullptr;
+
+    auto  wstrPath           = Diligent::WidenString(m_OpenAttribs.strFilePath);
+    DWORD dwDesiredAccess    = 0;
+    DWORD dwShareMode        = 0;
     DWORD dwCreateDeposition = 0;
-    switch( OpenAttribs.AccessMode )
+    switch (OpenAttribs.AccessMode)
     {
         case EFileAccessMode::Read:
             dwDesiredAccess = GENERIC_READ;
             // In Windows 8.1, the file cannot be opened if it is not shared!
-            dwShareMode = FILE_SHARE_READ;
+            dwShareMode        = FILE_SHARE_READ;
             dwCreateDeposition = OPEN_EXISTING;
-        break;
+            break;
 
         case EFileAccessMode::Overwrite:
-            dwDesiredAccess = GENERIC_WRITE;
-            dwShareMode = 0;
+            dwDesiredAccess    = GENERIC_WRITE;
+            dwShareMode        = 0;
             dwCreateDeposition = CREATE_ALWAYS;
-        break;
+            break;
 
         case EFileAccessMode::Append:
-            dwDesiredAccess = GENERIC_WRITE;
-            dwShareMode = 0;
+            dwDesiredAccess    = GENERIC_WRITE;
+            dwShareMode        = 0;
             dwCreateDeposition = OPEN_ALWAYS;
-        break;
+            break;
 
         default:
-            UNEXPECTED( "Unknown file access mode" );
-        break;
+            UNEXPECTED("Unknown file access mode");
+            break;
     }
-    m_FileHandle->FH.Attach( CreateFile2(
-            wstrPath.c_str(),
-            dwDesiredAccess,
-            dwShareMode,
-            dwCreateDeposition,
-            &extendedParams
-            ) );
+    m_FileHandle->FH.Attach(CreateFile2(
+        wstrPath.c_str(),
+        dwDesiredAccess,
+        dwShareMode,
+        dwCreateDeposition,
+        &extendedParams));
 
     if (m_FileHandle->FH.Get() == INVALID_HANDLE_VALUE)
     {
-        LOG_ERROR_AND_THROW( "Failed to open file ", m_OpenAttribs.strFilePath );
+        LOG_ERROR_AND_THROW("Failed to open file ", m_OpenAttribs.strFilePath);
     }
 }
 
@@ -113,20 +115,19 @@ WindowsStoreFile::~WindowsStoreFile()
 {
 }
 
-bool WindowsStoreFile::Read( void *Data, size_t BufferSize )
+bool WindowsStoreFile::Read(void* Data, size_t BufferSize)
 {
     DWORD BytesRead = 0;
     if (!ReadFile(
-        m_FileHandle->FH.Get(),
-        Data,
-        static_cast<DWORD>(BufferSize),
-        &BytesRead,
-        nullptr
-        ))
+            m_FileHandle->FH.Get(),
+            Data,
+            static_cast<DWORD>(BufferSize),
+            &BytesRead,
+            nullptr))
     {
         return false;
     }
-    
+
     return BytesRead == BufferSize;
 }
 
@@ -134,52 +135,48 @@ size_t WindowsStoreFile::GetSize()
 {
     FILE_STANDARD_INFO fileInfo = {0};
     if (!GetFileInformationByHandleEx(
-        m_FileHandle->FH.Get(),
-        FileStandardInfo,
-        &fileInfo,
-        sizeof(fileInfo)
-        ))
+            m_FileHandle->FH.Get(),
+            FileStandardInfo,
+            &fileInfo,
+            sizeof(fileInfo)))
     {
-        LOG_ERROR_AND_THROW( "Failed to get file info" );
+        LOG_ERROR_AND_THROW("Failed to get file info");
     }
 
     if (fileInfo.EndOfFile.HighPart != 0)
     {
-        LOG_ERROR_AND_THROW( "File is too large to be read" );
+        LOG_ERROR_AND_THROW("File is too large to be read");
     }
 
     return fileInfo.EndOfFile.LowPart;
 }
 
-void WindowsStoreFile::Read( Diligent::IDataBlob *pData )
+void WindowsStoreFile::Read(Diligent::IDataBlob* pData)
 {
-    pData->Resize( GetSize() );
+    pData->Resize(GetSize());
 
     if (!Read(pData->GetDataPtr(), pData->GetSize()))
     {
-        LOG_ERROR_AND_THROW( "Failed to read data from file" );
+        LOG_ERROR_AND_THROW("Failed to read data from file");
     }
 }
 
-void WindowsStoreFile::Write( Diligent::IDataBlob *pData )
+void WindowsStoreFile::Write(Diligent::IDataBlob* pData)
 {
     DWORD numBytesWritten;
-    if (
-        !WriteFile(
+    if (!WriteFile(
             m_FileHandle->FH.Get(),
             pData->GetDataPtr(),
             static_cast<DWORD>(pData->GetSize()),
             &numBytesWritten,
-            nullptr
-            ) ||
-        numBytesWritten != pData->GetSize()
-        )
+            nullptr) ||
+        numBytesWritten != pData->GetSize())
     {
-        LOG_ERROR_AND_THROW( "Failed to write data to file" );
+        LOG_ERROR_AND_THROW("Failed to write data to file");
     }
 }
 
-bool WindowsStoreFile::Write( const void *Data, size_t BufferSize )
+bool WindowsStoreFile::Write(const void* Data, size_t BufferSize)
 {
     UNSUPPORTED("Not implemented");
     return false;
@@ -197,79 +194,79 @@ void WindowsStoreFile::SetPos(size_t Offset, FilePosOrigin Origin)
 }
 
 
-WindowsStoreFile* WindowsStoreFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
+WindowsStoreFile* WindowsStoreFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
-    WindowsStoreFile *pFile = nullptr;
+    WindowsStoreFile* pFile = nullptr;
     try
     {
-        pFile = new WindowsStoreFile( OpenAttribs );
+        pFile = new WindowsStoreFile(OpenAttribs);
     }
-    catch( const std::runtime_error &/*err*/ )
+    catch (const std::runtime_error& /*err*/)
     {
-
     }
 
     return pFile;
 }
 
-bool WindowsStoreFileSystem::FileExists( const Diligent::Char *strFilePath )
+bool WindowsStoreFileSystem::FileExists(const Diligent::Char* strFilePath)
 {
     FileOpenAttribs OpenAttribs;
-    OpenAttribs.AccessMode = EFileAccessMode::Read;
+    OpenAttribs.AccessMode  = EFileAccessMode::Read;
     OpenAttribs.strFilePath = strFilePath;
-    BasicFile DummyFile( OpenAttribs, WindowsStoreFileSystem::GetSlashSymbol() );
-    const auto &Path = DummyFile.GetPath();
+    BasicFile   DummyFile(OpenAttribs, WindowsStoreFileSystem::GetSlashSymbol());
+    const auto& Path = DummyFile.GetPath();
 
     CREATEFILE2_EXTENDED_PARAMETERS extendedParams = {0};
-    extendedParams.dwSize = sizeof(CREATEFILE2_EXTENDED_PARAMETERS);
-    extendedParams.dwFileAttributes = FILE_ATTRIBUTE_NORMAL;
-    extendedParams.dwFileFlags = FILE_FLAG_SEQUENTIAL_SCAN;
-    extendedParams.dwSecurityQosFlags = SECURITY_ANONYMOUS;
+
+    extendedParams.dwSize               = sizeof(CREATEFILE2_EXTENDED_PARAMETERS);
+    extendedParams.dwFileAttributes     = FILE_ATTRIBUTE_NORMAL;
+    extendedParams.dwFileFlags          = FILE_FLAG_SEQUENTIAL_SCAN;
+    extendedParams.dwSecurityQosFlags   = SECURITY_ANONYMOUS;
     extendedParams.lpSecurityAttributes = nullptr;
-    extendedParams.hTemplateFile = nullptr;
+    extendedParams.hTemplateFile        = nullptr;
 
     auto wstrPath = Diligent::WidenString(Path);
 
     auto Handle = CreateFile2(
-            wstrPath.c_str(),
-            GENERIC_READ,
-            FILE_SHARE_READ,
-            OPEN_EXISTING,
-            &extendedParams);
+        wstrPath.c_str(),
+        GENERIC_READ,
+        FILE_SHARE_READ,
+        OPEN_EXISTING,
+        &extendedParams);
     bool Exists = false;
-    if( Handle != INVALID_HANDLE_VALUE )
+    if (Handle != INVALID_HANDLE_VALUE)
     {
-        CloseHandle( Handle );
+        CloseHandle(Handle);
         Exists = true;
     }
     return Exists;
 }
 
 
-bool WindowsStoreFileSystem::PathExists( const Diligent::Char *strPath )
+bool WindowsStoreFileSystem::PathExists(const Diligent::Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-void WindowsStoreFileSystem::ClearDirectory( const Diligent::Char *strPath )
+void WindowsStoreFileSystem::ClearDirectory(const Diligent::Char* strPath)
 {
     UNSUPPORTED("Not implemented");
 }
 
 
-bool CreateDirectoryImpl( const Diligent::Char *strPath )
+bool CreateDirectoryImpl(const Diligent::Char* strPath)
 {
     UNSUPPORTED("Not implemented");
     return false;
 }
 
-void DeleteFileImpl( const Diligent::Char *strPath )
+void DeleteFileImpl(const Diligent::Char* strPath)
 {
     UNSUPPORTED("Not implemented");
 }
 
-std::vector<std::unique_ptr<FindFileData>> WindowsStoreFileSystem::Search(const Diligent::Char *SearchPattern)
+std::vector<std::unique_ptr<FindFileData>> WindowsStoreFileSystem::Search(const Diligent::Char* SearchPattern)
 {
     UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();

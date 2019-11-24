@@ -37,7 +37,7 @@ class JNIMiniHelper
 public:
     static void Init(ANativeActivity* activity, std::string activity_class_name)
     {
-        auto& TheHelper = GetInstance();
+        auto& TheHelper                = GetInstance();
         TheHelper.activity_            = activity;
         TheHelper.activity_class_name_ = std::move(activity_class_name);
     }
@@ -63,11 +63,11 @@ public:
         // First, try reading from externalFileDir;
         std::string ExternalFilesPath;
         {
-            JNIEnv* env = nullptr;
-            bool DetachThread = AttachCurrentThread(env);
+            JNIEnv* env          = nullptr;
+            bool    DetachThread = AttachCurrentThread(env);
             if (jstring jstr_path = GetExternalFilesDirJString(env))
             {
-                const char* path = env->GetStringUTFChars(jstr_path, nullptr);
+                const char* path  = env->GetStringUTFChars(jstr_path, nullptr);
                 ExternalFilesPath = std::string(path);
                 if (fileName[0] != '/')
                 {
@@ -93,7 +93,7 @@ public:
         {
             // Fallback to assetManager
             AAssetManager* assetManager = activity_->assetManager;
-            AssetFile = AAssetManager_open(assetManager, fileName, AASSET_MODE_BUFFER);
+            AssetFile                   = AAssetManager_open(assetManager, fileName, AASSET_MODE_BUFFER);
             if (!AssetFile)
             {
                 return false;
@@ -145,10 +145,12 @@ private:
     {
     }
 
+    // clang-format off
     JNIMiniHelper           (const JNIMiniHelper&) = delete;
     JNIMiniHelper& operator=(const JNIMiniHelper&) = delete;
-    JNIMiniHelper           (JNIMiniHelper&&) = delete;
-    JNIMiniHelper& operator=(JNIMiniHelper&&) = delete;
+    JNIMiniHelper           (JNIMiniHelper&&)      = delete;
+    JNIMiniHelper& operator=(JNIMiniHelper&&)      = delete;
+    // clang-format on
 
     jstring GetExternalFilesDirJString(JNIEnv* env)
     {
@@ -160,12 +162,12 @@ private:
 
         jstring obj_Path = nullptr;
         // Invoking getExternalFilesDir() java API
-        jclass cls_Env   = env->FindClass(activity_class_name_.c_str());
-        jmethodID mid    = env->GetMethodID(cls_Env, "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
-        jobject obj_File = env->CallObjectMethod(activity_->clazz, mid, NULL);
+        jclass    cls_Env  = env->FindClass(activity_class_name_.c_str());
+        jmethodID mid      = env->GetMethodID(cls_Env, "getExternalFilesDir", "(Ljava/lang/String;)Ljava/io/File;");
+        jobject   obj_File = env->CallObjectMethod(activity_->clazz, mid, NULL);
         if (obj_File)
         {
-            jclass cls_File       = env->FindClass("java/io/File");
+            jclass    cls_File    = env->FindClass("java/io/File");
             jmethodID mid_getPath = env->GetMethodID(cls_File, "getPath", "()Ljava/lang/String;");
             obj_Path              = (jstring)env->CallObjectMethod(obj_File, mid_getPath);
             env->DeleteLocalRef(cls_File);
@@ -180,31 +182,31 @@ private:
         activity_->vm->DetachCurrentThread();
     }
 
-    ANativeActivity*   activity_ = nullptr;
-    std::string        activity_class_name_;
+    ANativeActivity* activity_ = nullptr;
+    std::string      activity_class_name_;
 
     // mutex for synchronization
     // This class uses singleton pattern and can be invoked from multiple threads,
     // each methods locks the mutex for a thread safety
-    mutable             std::mutex mutex_;
+    mutable std::mutex mutex_;
 };
 
 
-}
+} // namespace
 
 
 bool AndroidFile::Open(const char* FileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& Size)
 {
-    return JNIMiniHelper::GetInstance().OpenFile( FileName, IFS, AssetFile, Size );
+    return JNIMiniHelper::GetInstance().OpenFile(FileName, IFS, AssetFile, Size);
 }
 
-AndroidFile::AndroidFile( const FileOpenAttribs &OpenAttribs ) : 
+AndroidFile::AndroidFile(const FileOpenAttribs& OpenAttribs) :
     BasicFile(OpenAttribs, AndroidFileSystem::GetSlashSymbol())
 {
     auto FullPath = m_OpenAttribs.strFilePath;
-    if( !Open(FullPath, m_IFS, m_AssetFile, m_Size) )
+    if (!Open(FullPath, m_IFS, m_AssetFile, m_Size))
     {
-        LOG_ERROR_AND_THROW( "Failed to open file ", FullPath );
+        LOG_ERROR_AND_THROW("Failed to open file ", FullPath);
     }
 }
 
@@ -217,13 +219,13 @@ AndroidFile::~AndroidFile()
         AAsset_close(m_AssetFile);
 }
 
-void AndroidFile::Read( Diligent::IDataBlob* pData )
+void AndroidFile::Read(Diligent::IDataBlob* pData)
 {
-    pData->Resize( GetSize() );
+    pData->Resize(GetSize());
     Read(pData->GetDataPtr(), pData->GetSize());
 }
 
-bool AndroidFile::Read( void *Data, size_t BufferSize )
+bool AndroidFile::Read(void* Data, size_t BufferSize)
 {
     VERIFY(BufferSize == m_Size, "Only whole file reads are currently supported");
 
@@ -244,39 +246,39 @@ bool AndroidFile::Read( void *Data, size_t BufferSize )
     }
 }
 
-bool AndroidFile::Write( const void *Data, size_t BufferSize )
+bool AndroidFile::Write(const void* Data, size_t BufferSize)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
 
     return false;
 }
 
 size_t AndroidFile::GetPos()
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
 
     return 0;
 }
 
 void AndroidFile::SetPos(size_t Offset, FilePosOrigin Origin)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
 }
 
 
-void AndroidFileSystem::Init(void *Activity, const char *ActivityClassName)
+void AndroidFileSystem::Init(void* Activity, const char* ActivityClassName)
 {
     JNIMiniHelper::Init((ANativeActivity*)Activity, ActivityClassName);
 }
 
-AndroidFile* AndroidFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
+AndroidFile* AndroidFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
-    AndroidFile *pFile = nullptr;
+    AndroidFile* pFile = nullptr;
     try
     {
-        pFile = new AndroidFile( OpenAttribs );
+        pFile = new AndroidFile(OpenAttribs);
     }
-    catch( const std::runtime_error &err )
+    catch (const std::runtime_error& err)
     {
     }
 
@@ -284,16 +286,16 @@ AndroidFile* AndroidFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
 }
 
 
-bool AndroidFileSystem::FileExists( const Diligent::Char *strFilePath )
+bool AndroidFileSystem::FileExists(const Diligent::Char* strFilePath)
 {
-    std::ifstream IFS;
-    AAsset*       AssetFile = nullptr;
-    size_t        Size      = 0;
+    std::ifstream   IFS;
+    AAsset*         AssetFile = nullptr;
+    size_t          Size      = 0;
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
-    BasicFile DummyFile( OpenAttribs, AndroidFileSystem::GetSlashSymbol() );
-    const auto& Path = DummyFile.GetPath(); // This is necessary to correct slashes
-    bool Exists = AndroidFile::Open(Path.c_str(), IFS, AssetFile, Size);
+    BasicFile   DummyFile(OpenAttribs, AndroidFileSystem::GetSlashSymbol());
+    const auto& Path   = DummyFile.GetPath(); // This is necessary to correct slashes
+    bool        Exists = AndroidFile::Open(Path.c_str(), IFS, AssetFile, Size);
 
     if (IFS)
         IFS.close();
@@ -303,30 +305,30 @@ bool AndroidFileSystem::FileExists( const Diligent::Char *strFilePath )
     return Exists;
 }
 
-bool AndroidFileSystem::PathExists( const Diligent::Char *strPath )
+bool AndroidFileSystem::PathExists(const Diligent::Char* strPath)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
     return false;
 }
 
-bool AndroidFileSystem::CreateDirectory( const Diligent::Char *strPath )
+bool AndroidFileSystem::CreateDirectory(const Diligent::Char* strPath)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
     return false;
 }
 
-void AndroidFileSystem::ClearDirectory( const Diligent::Char *strPath )
+void AndroidFileSystem::ClearDirectory(const Diligent::Char* strPath)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
 }
 
-void AndroidFileSystem::DeleteFile( const Diligent::Char *strPath )
+void AndroidFileSystem::DeleteFile(const Diligent::Char* strPath)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
 }
 
-std::vector<std::unique_ptr<FindFileData>> AndroidFileSystem::Search(const Diligent::Char *SearchPattern)
+std::vector<std::unique_ptr<FindFileData>> AndroidFileSystem::Search(const Diligent::Char* SearchPattern)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
 }

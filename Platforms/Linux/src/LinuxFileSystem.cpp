@@ -29,58 +29,57 @@
 #include "Errors.h"
 #include "DebugUtilities.h"
 
-LinuxFile* LinuxFileSystem::OpenFile( const FileOpenAttribs &OpenAttribs )
+LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {
-    LinuxFile *pFile = nullptr;
+    LinuxFile* pFile = nullptr;
     try
     {
         pFile = new LinuxFile(OpenAttribs, LinuxFileSystem::GetSlashSymbol());
     }
-    catch( const std::runtime_error &err )
+    catch (const std::runtime_error& err)
     {
-
     }
     return pFile;
 }
 
 
-bool LinuxFileSystem::FileExists( const Diligent::Char *strFilePath )
+bool LinuxFileSystem::FileExists(const Diligent::Char* strFilePath)
 {
     FileOpenAttribs OpenAttribs;
     OpenAttribs.strFilePath = strFilePath;
-    BasicFile DummyFile( OpenAttribs, LinuxFileSystem::GetSlashSymbol() );
-    const auto& Path = DummyFile.GetPath(); // This is necessary to correct slashes
-    FILE *pFile = fopen( Path.c_str(), "r" );
-    bool Exists = (pFile != nullptr);
-    if( Exists && pFile )
-        fclose( pFile );
+    BasicFile   DummyFile(OpenAttribs, LinuxFileSystem::GetSlashSymbol());
+    const auto& Path   = DummyFile.GetPath(); // This is necessary to correct slashes
+    FILE*       pFile  = fopen(Path.c_str(), "r");
+    bool        Exists = (pFile != nullptr);
+    if (Exists && pFile)
+        fclose(pFile);
     return Exists;
 }
 
-bool LinuxFileSystem::PathExists( const Diligent::Char *strPath )
+bool LinuxFileSystem::PathExists(const Diligent::Char* strPath)
 {
-    UNSUPPORTED( "Not implemented" );
-    return false;
-}
-    
-bool LinuxFileSystem::CreateDirectory( const Diligent::Char *strPath )
-{
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
     return false;
 }
 
-void LinuxFileSystem::ClearDirectory( const Diligent::Char *strPath )
+bool LinuxFileSystem::CreateDirectory(const Diligent::Char* strPath)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
+    return false;
 }
 
-void LinuxFileSystem::DeleteFile( const Diligent::Char *strPath )
+void LinuxFileSystem::ClearDirectory(const Diligent::Char* strPath)
+{
+    UNSUPPORTED("Not implemented");
+}
+
+void LinuxFileSystem::DeleteFile(const Diligent::Char* strPath)
 {
     remove(strPath);
 }
-    
-std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Diligent::Char *SearchPattern)
+
+std::vector<std::unique_ptr<FindFileData>> LinuxFileSystem::Search(const Diligent::Char* SearchPattern)
 {
-    UNSUPPORTED( "Not implemented" );
+    UNSUPPORTED("Not implemented");
     return std::vector<std::unique_ptr<FindFileData>>();
 }
