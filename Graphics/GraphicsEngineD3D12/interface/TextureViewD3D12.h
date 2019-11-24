@@ -33,15 +33,14 @@ namespace Diligent
 
 // {BDFBD325-0699-4720-BC0E-BF84086EC033}
 static constexpr INTERFACE_ID IID_TextureViewD3D12 =
-{ 0xbdfbd325, 0x699, 0x4720, { 0xbc, 0xe, 0xbf, 0x84, 0x8, 0x6e, 0xc0, 0x33 } };
+    {0xbdfbd325, 0x699, 0x4720, {0xbc, 0xe, 0xbf, 0x84, 0x8, 0x6e, 0xc0, 0x33}};
 
 /// Exposes Direct3D12-specific functionality of a texture view object.
 class ITextureViewD3D12 : public ITextureView
 {
 public:
-    
     /// Returns CPU descriptor handle of the texture view.
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() = 0;
 };
 
-}
+} // namespace Diligent

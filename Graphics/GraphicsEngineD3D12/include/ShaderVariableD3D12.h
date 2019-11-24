@@ -26,7 +26,7 @@
 /// \file
 /// Declaration of Diligent::ShaderVariableManagerD3D12 and Diligent::ShaderVariableD3D12Impl classes
 
-// 
+//
 //  * ShaderVariableManagerD3D12 keeps list of variables of specific types
 //  * Every ShaderVariableD3D12Impl references D3D12Resource from ShaderResourceLayoutD3D12
 //  * ShaderVariableManagerD3D12 keeps pointer to ShaderResourceCacheD3D12
@@ -72,12 +72,12 @@ class ShaderVariableD3D12Impl;
 class ShaderVariableManagerD3D12
 {
 public:
-    ShaderVariableManagerD3D12(IObject&                               Owner,
-                               const ShaderResourceLayoutD3D12&       Layout, 
-                               IMemoryAllocator&                      Allocator,
-                               const SHADER_RESOURCE_VARIABLE_TYPE*   AllowedVarTypes, 
-                               Uint32                                 NumAllowedTypes, 
-                               ShaderResourceCacheD3D12&              ResourceCache);
+    ShaderVariableManagerD3D12(IObject&                             Owner,
+                               const ShaderResourceLayoutD3D12&     Layout,
+                               IMemoryAllocator&                    Allocator,
+                               const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                               Uint32                               NumAllowedTypes,
+                               ShaderResourceCacheD3D12&            ResourceCache);
     ~ShaderVariableManagerD3D12();
 
     void Destroy(IMemoryAllocator& Allocator);
@@ -85,19 +85,21 @@ public:
     ShaderVariableD3D12Impl* GetVariable(const Char* Name);
     ShaderVariableD3D12Impl* GetVariable(Uint32 Index);
 
-    void BindResources( IResourceMapping* pResourceMapping, Uint32 Flags);
+    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
 
-    static size_t GetRequiredMemorySize(const ShaderResourceLayoutD3D12&      Layout, 
-                                        const SHADER_RESOURCE_VARIABLE_TYPE*  AllowedVarTypes, 
-                                        Uint32                                NumAllowedTypes,
-                                        Uint32&                               NumVariables);
+    static size_t GetRequiredMemorySize(const ShaderResourceLayoutD3D12&     Layout,
+                                        const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                                        Uint32                               NumAllowedTypes,
+                                        Uint32&                              NumVariables);
 
-    Uint32 GetVariableCount()const { return m_NumVariables; }
+    Uint32 GetVariableCount() const { return m_NumVariables; }
 
 private:
     friend ShaderVariableD3D12Impl;
 
     Uint32 GetVariableIndex(const ShaderVariableD3D12Impl& Variable);
+
+    // clang-format off
 
     IObject&                         m_Owner;
 
@@ -116,39 +118,42 @@ private:
 #ifdef _DEBUG
     IMemoryAllocator&                m_DbgAllocator;
 #endif
+    // clang-format on
 };
 
 // sizeof(ShaderVariableD3D12Impl) == 24 (x64)
 class ShaderVariableD3D12Impl final : public IShaderResourceVariableD3D
 {
 public:
-    ShaderVariableD3D12Impl(ShaderVariableManagerD3D12& ParentManager,
-                         const ShaderResourceLayoutD3D12::D3D12Resource& Resource) :
+    ShaderVariableD3D12Impl(ShaderVariableManagerD3D12&                     ParentManager,
+                            const ShaderResourceLayoutD3D12::D3D12Resource& Resource) :
         m_ParentManager{ParentManager},
-        m_Resource     {Resource     }
+        m_Resource{Resource}
     {}
 
+    // clang-format off
     ShaderVariableD3D12Impl            (const ShaderVariableD3D12Impl&) = delete;
     ShaderVariableD3D12Impl            (ShaderVariableD3D12Impl&&)      = delete;
     ShaderVariableD3D12Impl& operator= (const ShaderVariableD3D12Impl&) = delete;
     ShaderVariableD3D12Impl& operator= (ShaderVariableD3D12Impl&&)      = delete;
+    // clang-format on
 
-    virtual IReferenceCounters* GetReferenceCounters()const override final
+    virtual IReferenceCounters* GetReferenceCounters() const override final
     {
         return m_ParentManager.m_Owner.GetReferenceCounters();
     }
 
-    virtual Atomics::Long AddRef()override final
+    virtual Atomics::Long AddRef() override final
     {
         return m_ParentManager.m_Owner.AddRef();
     }
 
-    virtual Atomics::Long Release()override final
+    virtual Atomics::Long Release() override final
     {
         return m_ParentManager.m_Owner.Release();
     }
 
-    void QueryInterface(const INTERFACE_ID &IID, IObject **ppInterface)override final
+    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
     {
         if (ppInterface == nullptr)
             return;
@@ -161,34 +166,34 @@ public:
         }
     }
 
-    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType()const override final
+    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType() const override final
     {
         return m_Resource.GetVariableType();
     }
 
-    virtual void Set(IDeviceObject *pObject)override final 
+    virtual void Set(IDeviceObject* pObject) override final
     {
-        m_Resource.BindResource(pObject, 0, m_ParentManager.m_ResourceCache); 
+        m_Resource.BindResource(pObject, 0, m_ParentManager.m_ResourceCache);
     }
 
-    virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements)override final
+    virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
     {
         VerifyAndCorrectSetArrayArguments(m_Resource.Attribs.Name, m_Resource.Attribs.BindCount, FirstElement, NumElements);
         for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
 
-    virtual ShaderResourceDesc GetResourceDesc()const override final
+    virtual ShaderResourceDesc GetResourceDesc() const override final
     {
         return GetHLSLResourceDesc();
     }
 
-    virtual HLSLShaderResourceDesc GetHLSLResourceDesc()const override final
+    virtual HLSLShaderResourceDesc GetHLSLResourceDesc() const override final
     {
         return m_Resource.Attribs.GetHLSLResourceDesc();
     }
 
-    virtual Uint32 GetIndex()const override final
+    virtual Uint32 GetIndex() const override final
     {
         return m_ParentManager.GetVariableIndex(*this);
     }
@@ -198,7 +203,7 @@ public:
         return m_Resource.IsBound(ArrayIndex, m_ParentManager.m_ResourceCache);
     }
 
-    const ShaderResourceLayoutD3D12::D3D12Resource& GetResource()const
+    const ShaderResourceLayoutD3D12::D3D12Resource& GetResource() const
     {
         return m_Resource;
     }
@@ -210,4 +215,4 @@ private:
     const ShaderResourceLayoutD3D12::D3D12Resource& m_Resource;
 };
 
-}
+} // namespace Diligent

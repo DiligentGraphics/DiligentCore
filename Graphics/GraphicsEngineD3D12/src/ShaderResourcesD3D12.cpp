@@ -38,19 +38,20 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const Shad
     class NewResourceHandler
     {
     public:
+        // clang-format off
         void OnNewCB     (const D3DShaderResourceAttribs& CBAttribs)     {}
         void OnNewTexUAV (const D3DShaderResourceAttribs& TexUAV)        {}
         void OnNewBuffUAV(const D3DShaderResourceAttribs& BuffUAV)       {}
         void OnNewBuffSRV(const D3DShaderResourceAttribs& BuffSRV)       {}
         void OnNewSampler(const D3DShaderResourceAttribs& SamplerAttribs){}
         void OnNewTexSRV (const D3DShaderResourceAttribs& TexAttribs)    {}
+        // clang-format on
     };
     Initialize<D3D12_SHADER_DESC, D3D12_SHADER_INPUT_BIND_DESC, ID3D12ShaderReflection>(
         pShaderBytecode,
         NewResourceHandler{},
         ShdrDesc.Name,
-        CombinedSamplerSuffix
-    );
+        CombinedSamplerSuffix);
 }
 
-}
+} // namespace Diligent

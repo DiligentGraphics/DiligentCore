@@ -31,34 +31,34 @@ namespace Diligent
 
 SamplerD3D12Impl::SamplerD3D12Impl(IReferenceCounters*    pRefCounters,
                                    RenderDeviceD3D12Impl* pRenderDeviceD3D12,
-                                   const SamplerDesc&     SamplerDesc) : 
+                                   const SamplerDesc&     SamplerDesc) :
     TSamplerBase{pRefCounters, pRenderDeviceD3D12, SamplerDesc}
 {
-    auto *pD3D12Device = pRenderDeviceD3D12->GetD3D12Device();
-    D3D12_SAMPLER_DESC D3D12SamplerDesc = 
-    {
-        FilterTypeToD3D12Filter(SamplerDesc.MinFilter, SamplerDesc.MagFilter, SamplerDesc.MipFilter),
-        TexAddressModeToD3D12AddressMode(SamplerDesc.AddressU),
-        TexAddressModeToD3D12AddressMode(SamplerDesc.AddressV),
-        TexAddressModeToD3D12AddressMode(SamplerDesc.AddressW),
-        SamplerDesc.MipLODBias,
-        SamplerDesc.MaxAnisotropy,
-        ComparisonFuncToD3D12ComparisonFunc(SamplerDesc.ComparisonFunc),
-        {SamplerDesc.BorderColor[0], SamplerDesc.BorderColor[1], SamplerDesc.BorderColor[2], SamplerDesc.BorderColor[3]},
-        SamplerDesc.MinLOD,
-        SamplerDesc.MaxLOD
-    };
+    auto* pD3D12Device = pRenderDeviceD3D12->GetD3D12Device();
+
+    D3D12_SAMPLER_DESC D3D12SamplerDesc =
+        {
+            FilterTypeToD3D12Filter(SamplerDesc.MinFilter, SamplerDesc.MagFilter, SamplerDesc.MipFilter),
+            TexAddressModeToD3D12AddressMode(SamplerDesc.AddressU),
+            TexAddressModeToD3D12AddressMode(SamplerDesc.AddressV),
+            TexAddressModeToD3D12AddressMode(SamplerDesc.AddressW),
+            SamplerDesc.MipLODBias,
+            SamplerDesc.MaxAnisotropy,
+            ComparisonFuncToD3D12ComparisonFunc(SamplerDesc.ComparisonFunc),
+            {SamplerDesc.BorderColor[0], SamplerDesc.BorderColor[1], SamplerDesc.BorderColor[2], SamplerDesc.BorderColor[3]},
+            SamplerDesc.MinLOD,
+            SamplerDesc.MaxLOD //
+        };
 
     auto CPUDescriptorAlloc = pRenderDeviceD3D12->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-    m_Descriptor = std::move(CPUDescriptorAlloc);
-	pD3D12Device->CreateSampler(&D3D12SamplerDesc, m_Descriptor.GetCpuHandle());
+    m_Descriptor            = std::move(CPUDescriptorAlloc);
+    pD3D12Device->CreateSampler(&D3D12SamplerDesc, m_Descriptor.GetCpuHandle());
 }
 
 SamplerD3D12Impl::~SamplerD3D12Impl()
 {
-
 }
 
-IMPLEMENT_QUERY_INTERFACE( SamplerD3D12Impl, IID_SamplerD3D12, TSamplerBase )
+IMPLEMENT_QUERY_INTERFACE(SamplerD3D12Impl, IID_SamplerD3D12, TSamplerBase)
 
-}
+} // namespace Diligent

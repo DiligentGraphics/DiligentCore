@@ -46,36 +46,36 @@ public:
     using ViewImplType = TextureViewD3D12Impl;
 
     // Creates a new D3D12 resource
-    TextureD3D12Impl(IReferenceCounters*            pRefCounters,
-                     FixedBlockMemoryAllocator&     TexViewObjAllocator,
-                     RenderDeviceD3D12Impl*         pDeviceD3D12, 
-                     const TextureDesc&             TexDesc, 
-                     const TextureData*             pInitData = nullptr);
+    TextureD3D12Impl(IReferenceCounters*        pRefCounters,
+                     FixedBlockMemoryAllocator& TexViewObjAllocator,
+                     RenderDeviceD3D12Impl*     pDeviceD3D12,
+                     const TextureDesc&         TexDesc,
+                     const TextureData*         pInitData = nullptr);
 
     // Attaches to an existing D3D12 resource
-    TextureD3D12Impl(IReferenceCounters*            pRefCounters,
-                     FixedBlockMemoryAllocator&     TexViewObjAllocator,
-                     class RenderDeviceD3D12Impl*   pDeviceD3D12, 
-                     const TextureDesc&             TexDesc, 
-                     RESOURCE_STATE                 InitialState,
-                     ID3D12Resource*                pTexture);
+    TextureD3D12Impl(IReferenceCounters*          pRefCounters,
+                     FixedBlockMemoryAllocator&   TexViewObjAllocator,
+                     class RenderDeviceD3D12Impl* pDeviceD3D12,
+                     const TextureDesc&           TexDesc,
+                     RESOURCE_STATE               InitialState,
+                     ID3D12Resource*              pTexture);
     ~TextureD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureD3D12::GetD3D12Texture().
-    virtual ID3D12Resource* GetD3D12Texture()override final{ return GetD3D12Resource(); }
+    virtual ID3D12Resource* GetD3D12Texture() override final { return GetD3D12Resource(); }
 
     /// Implementation of ITexture::GetNativeHandle() in Direct3D12 backend.
-    virtual void* GetNativeHandle()override final { return GetD3D12Texture(); }
+    virtual void* GetNativeHandle() override final { return GetD3D12Texture(); }
 
     /// Implementation of ITextureD3D12::SetD3D12ResourceState().
-    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final;
+    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) override final;
 
     /// Implementation of ITextureD3D12::GetD3D12ResourceState().
-    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const override final;
+    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState() const override final;
 
-    D3D12_RESOURCE_DESC GetD3D12TextureDesc()const;
+    D3D12_RESOURCE_DESC GetD3D12TextureDesc() const;
 
     const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& GetStagingFootprint(Uint32 Subresource)
     {
@@ -85,17 +85,17 @@ public:
     }
 
 protected:
-    void CreateViewInternal( const struct TextureViewDesc &ViewDesc, ITextureView **ppView, bool bIsDefaultView )override final;
+    void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override final;
     //void PrepareD3D12InitData(const TextureData &InitData, Uint32 NumSubresources, std::vector<D3D12_SUBRESOURCE_DATA> &D3D12InitData);
 
-    void CreateSRV( TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle );
-    void CreateRTV( TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle );
-    void CreateDSV( TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle );
-    void CreateUAV( TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle );
+    void CreateSRV(TextureViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVHandle);
+    void CreateRTV(TextureViewDesc& RTVDesc, D3D12_CPU_DESCRIPTOR_HANDLE RTVHandle);
+    void CreateDSV(TextureViewDesc& DSVDesc, D3D12_CPU_DESCRIPTOR_HANDLE DSVHandle);
+    void CreateUAV(TextureViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle);
 
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT* m_StagingFootprints = nullptr;
 
     friend class RenderDeviceD3D12Impl;
 };
 
-}
+} // namespace Diligent

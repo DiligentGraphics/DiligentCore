@@ -31,19 +31,19 @@ namespace Diligent
 
 // {D89693CE-F3F4-44B5-B7EF-24115AAD085E}
 static constexpr INTERFACE_ID IID_CommandQueueD3D12 =
-{ 0xd89693ce, 0xf3f4, 0x44b5, { 0xb7, 0xef, 0x24, 0x11, 0x5a, 0xad, 0x8, 0x5e } };
+    {0xd89693ce, 0xf3f4, 0x44b5, {0xb7, 0xef, 0x24, 0x11, 0x5a, 0xad, 0x8, 0x5e}};
 
 /// Command queue interface
 class ICommandQueueD3D12 : public Diligent::IObject
 {
 public:
-	/// Returns the fence value that will be signaled next time
-	virtual Uint64 GetNextFenceValue() = 0;
+    /// Returns the fence value that will be signaled next time
+    virtual Uint64 GetNextFenceValue() = 0;
 
-	/// Executes a given command list
+    /// Executes a given command list
 
     /// \return Fence value associated with the executed command list
-	virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList) = 0;
+    virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList) = 0;
 
     /// Returns D3D12 command queue. May return null if queue is anavailable
     virtual ID3D12CommandQueue* GetD3D12CommandQueue() = 0;
@@ -58,4 +58,4 @@ public:
     virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value) = 0;
 };
 
-}
+} // namespace Diligent

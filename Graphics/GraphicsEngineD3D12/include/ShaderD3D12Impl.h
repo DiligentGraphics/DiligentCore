@@ -45,38 +45,39 @@ class ShaderD3D12Impl final : public ShaderBase<IShaderD3D12, RenderDeviceD3D12I
 public:
     using TShaderBase = ShaderBase<IShaderD3D12, RenderDeviceD3D12Impl>;
 
-    ShaderD3D12Impl(IReferenceCounters*      pRefCounters, 
-                    RenderDeviceD3D12Impl*   pRenderDeviceD3D12, 
-                    const ShaderCreateInfo&  ShaderCI);
+    ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
+                    RenderDeviceD3D12Impl*  pRenderDeviceD3D12,
+                    const ShaderCreateInfo& ShaderCI);
     ~ShaderD3D12Impl();
-    
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShader::GetResourceCount() in Direct3D12 backend.
-    virtual Uint32 GetResourceCount()const override final
+    virtual Uint32 GetResourceCount() const override final
     {
         return m_pShaderResources->GetTotalResources();
     }
 
     /// Implementation of IShader::GetResource() in Direct3D12 backend.
-    virtual ShaderResourceDesc GetResource(Uint32 Index)const override final
+    virtual ShaderResourceDesc GetResource(Uint32 Index) const override final
     {
         return GetHLSLResource(Index);
     }
 
     /// Implementation of IShaderD3D::GetHLSLResource() in Direct3D12 backend.
-    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index)const override final
+    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index) const override final
     {
         return m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
-    ID3DBlob* GetShaderByteCode(){return m_pShaderByteCode;}
-    const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources()const { return m_pShaderResources; }
+    ID3DBlob* GetShaderByteCode() { return m_pShaderByteCode; }
+
+    const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources() const { return m_pShaderResources; }
 
 private:
-    // ShaderResources class instance must be referenced through the shared pointer, because 
+    // ShaderResources class instance must be referenced through the shared pointer, because
     // it is referenced by ShaderResourceLayoutD3D12 class instances
     std::shared_ptr<const ShaderResourcesD3D12> m_pShaderResources;
 };
 
-}
+} // namespace Diligent

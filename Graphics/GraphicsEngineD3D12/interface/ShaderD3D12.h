@@ -33,13 +33,12 @@ namespace Diligent
 
 // {C059B160-7F31-4029-943D-0996B98EE79A}
 static constexpr INTERFACE_ID IID_ShaderD3D12 =
-{ 0xc059b160, 0x7f31, 0x4029, { 0x94, 0x3d, 0x9, 0x96, 0xb9, 0x8e, 0xe7, 0x9a } };
+    {0xc059b160, 0x7f31, 0x4029, {0x94, 0x3d, 0x9, 0x96, 0xb9, 0x8e, 0xe7, 0x9a}};
 
 /// Exposes Direct3D12-specific functionality of a shader object.
 class IShaderD3D12 : public IShaderD3D
 {
 public:
-
     /// Returns a pointer to the ID3D12DeviceChild interface of the internal Direct3D12 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -47,4 +46,4 @@ public:
     //virtual ID3D12DeviceChild* GetD3D12Shader() = 0;
 };
 
-}
+} // namespace Diligent

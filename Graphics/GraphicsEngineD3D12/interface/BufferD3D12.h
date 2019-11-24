@@ -35,13 +35,12 @@ class IDeviceContext;
 
 // {3E9B15ED-A289-48DC-8214-C6E3E6177378}
 static constexpr INTERFACE_ID IID_BufferD3D12 =
-{ 0x3e9b15ed, 0xa289, 0x48dc, { 0x82, 0x14, 0xc6, 0xe3, 0xe6, 0x17, 0x73, 0x78 } };
+    {0x3e9b15ed, 0xa289, 0x48dc, {0x82, 0x14, 0xc6, 0xe3, 0xe6, 0x17, 0x73, 0x78}};
 
 /// Exposes Direct3D12-specific functionality of a buffer object.
 class IBufferD3D12 : public IBuffer
 {
 public:
-
     /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -58,10 +57,10 @@ public:
     /// \param [in] state - D3D12 resource state to be set for this buffer
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
 
-    /// Returns current D3D12 buffer state. 
-    /// If the state is unknown to the engine (Diligent::RESOURCE_STATE_UNKNOWN), 
+    /// Returns current D3D12 buffer state.
+    /// If the state is unknown to the engine (Diligent::RESOURCE_STATE_UNKNOWN),
     /// returns D3D12_RESOURCE_STATE_COMMON (0).
-    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const = 0;
+    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState() const = 0;
 };
 
-}
+} // namespace Diligent

@@ -33,11 +33,12 @@ namespace Diligent
 {
 
 SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters*       pRefCounters,
-                                       const SwapChainDesc&      SCDesc, 
+                                       const SwapChainDesc&      SCDesc,
                                        const FullScreenModeDesc& FSDesc,
-                                       RenderDeviceD3D12Impl*    pRenderDeviceD3D12, 
-                                       DeviceContextD3D12Impl*   pDeviceContextD3D12, 
-                                       void*                     pNativeWndHandle) : 
+                                       RenderDeviceD3D12Impl*    pRenderDeviceD3D12,
+                                       DeviceContextD3D12Impl*   pDeviceContextD3D12,
+                                       void*                     pNativeWndHandle) :
+    // clang-format off
     TSwapChainBase
     {
         pRefCounters,
@@ -48,12 +49,14 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters*       pRefCounters,
         pNativeWndHandle
     },
     m_pBackBufferRTV{STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")}
+// clang-format on
 {
-    pRenderDeviceD3D12->LockCmdQueueAndRun(0, 
-        [this](ICommandQueueD3D12 *pCmdQueue)
+    pRenderDeviceD3D12->LockCmdQueueAndRun(
+        0,
+        [this](ICommandQueueD3D12* pCmdQueue) //
         {
             CreateDXGISwapChain(pCmdQueue->GetD3D12CommandQueue());
-        }
+        } //
     );
     InitBuffersAndViews();
 }
@@ -67,16 +70,16 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
     m_pBackBufferRTV.resize(m_SwapChainDesc.BufferCount);
     for (Uint32 backbuff = 0; backbuff < m_SwapChainDesc.BufferCount; ++backbuff)
     {
-		CComPtr<ID3D12Resource> pBackBuffer;
-        auto hr = m_pSwapChain->GetBuffer(backbuff, __uuidof(pBackBuffer), reinterpret_cast<void**>( static_cast<ID3D12Resource**>(&pBackBuffer) ));
-        if(FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to get back buffer ", backbuff," from the swap chain");
+        CComPtr<ID3D12Resource> pBackBuffer;
+        auto                    hr = m_pSwapChain->GetBuffer(backbuff, __uuidof(pBackBuffer), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&pBackBuffer)));
+        if (FAILED(hr))
+            LOG_ERROR_AND_THROW("Failed to get back buffer ", backbuff, " from the swap chain");
 
         hr = pBackBuffer->SetName(L"Main back buffer");
         VERIFY_EXPR(SUCCEEDED(hr));
 
         TextureDesc BackBufferDesc;
-        String Name = "Main back buffer ";
+        String      Name = "Main back buffer ";
         Name += std::to_string(backbuff);
         BackBufferDesc.Name = Name.c_str();
 
@@ -104,56 +107,56 @@ void SwapChainD3D12Impl::InitBuffersAndViews()
         DepthBufferDesc.ClearValue.Format               = DepthBufferDesc.Format;
         DepthBufferDesc.ClearValue.DepthStencil.Depth   = m_SwapChainDesc.DefaultDepthValue;
         DepthBufferDesc.ClearValue.DepthStencil.Stencil = m_SwapChainDesc.DefaultStencilValue;
-        DepthBufferDesc.Name = "Main depth buffer";
+        DepthBufferDesc.Name                            = "Main depth buffer";
         RefCntAutoPtr<ITexture> pDepthBufferTex;
-        m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex) );
-        auto pDSV = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+        m_pRenderDevice->CreateTexture(DepthBufferDesc, nullptr, static_cast<ITexture**>(&pDepthBufferTex));
+        auto pDSV         = pDepthBufferTex->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
         m_pDepthBufferDSV = RefCntAutoPtr<ITextureViewD3D12>(pDSV, IID_TextureViewD3D12);
     }
 }
 
-IMPLEMENT_QUERY_INTERFACE( SwapChainD3D12Impl, IID_SwapChainD3D12, TSwapChainBase )
+IMPLEMENT_QUERY_INTERFACE(SwapChainD3D12Impl, IID_SwapChainD3D12, TSwapChainBase)
 
 
 void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
 {
 #if PLATFORM_UNIVERSAL_WINDOWS
-    SyncInterval = 1; // Interval 0 is not supported on Windows Phone 
+    SyncInterval = 1; // Interval 0 is not supported on Windows Phone
 #endif
 
     auto pDeviceContext = m_wpDeviceContext.Lock();
     if (!pDeviceContext)
     {
-        LOG_ERROR_MESSAGE( "Immediate context has been released" );
+        LOG_ERROR_MESSAGE("Immediate context has been released");
         return;
     }
 
     auto* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
 
-    auto& CmdCtx = pImmediateCtxD3D12->GetCmdContext();
+    auto& CmdCtx      = pImmediateCtxD3D12->GetCmdContext();
     auto* pBackBuffer = ValidatedCast<TextureD3D12Impl>(GetCurrentBackBufferRTV()->GetTexture());
     CmdCtx.TransitionResource(pBackBuffer, RESOURCE_STATE_PRESENT);
 
     pImmediateCtxD3D12->Flush();
 
-    auto hr = m_pSwapChain->Present( SyncInterval, 0 );
+    auto hr = m_pSwapChain->Present(SyncInterval, 0);
     VERIFY(SUCCEEDED(hr), "Present failed");
 
     if (m_SwapChainDesc.IsPrimary)
     {
         pImmediateCtxD3D12->FinishFrame();
-        auto* pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>( pImmediateCtxD3D12->GetDevice() );
+        auto* pDeviceD3D12 = ValidatedCast<RenderDeviceD3D12Impl>(pImmediateCtxD3D12->GetDevice());
         pDeviceD3D12->ReleaseStaleResources();
     }
 
 #if 0
-#if PLATFORM_UNIVERSAL_WINDOWS
+#    if PLATFORM_UNIVERSAL_WINDOWS
     // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds 
     // backbuffer 0 from all GPU writeable bind points.
     // We need to rebind all render targets to make sure that
     // the back buffer is not unbound
     pImmediateCtxD3D12->CommitRenderTargets();
-#endif
+#    endif
 #endif
 }
 
@@ -168,14 +171,15 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
     VERIFY(pDeviceContext, "Immediate context has been released");
     if (pDeviceContext)
     {
-        RenderDeviceD3D12Impl *pDeviceD3D12 = m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>();
+        RenderDeviceD3D12Impl* pDeviceD3D12 = m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>();
         pDeviceContext->Flush();
 
         try
         {
             auto* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
+
             std::vector<ITextureView*> pBackBufferRTVs(m_pBackBufferRTV.size());
-            for(size_t i=0; i < m_pBackBufferRTV.size(); ++i)
+            for (size_t i = 0; i < m_pBackBufferRTV.size(); ++i)
                 pBackBufferRTVs[i] = m_pBackBufferRTV[i];
             bool RebindRenderTargets = UnbindRenderTargets(pImmediateCtxD3D12, pBackBufferRTVs.data(), static_cast<Uint32>(m_pBackBufferRTV.size()), m_pDepthBufferDSV);
 
@@ -187,15 +191,14 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
             // m_pBackBufferRTV[]
             pDeviceD3D12->IdleGPU();
 
-            if(CreateNew)
+            if (CreateNew)
             {
                 m_pSwapChain.Release();
-                m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->LockCmdQueueAndRun(0, 
-                    [this](ICommandQueueD3D12* pCmdQueue)
-                    {
+                m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->LockCmdQueueAndRun(
+                    0,
+                    [this](ICommandQueueD3D12* pCmdQueue) {
                         CreateDXGISwapChain(pCmdQueue->GetD3D12CommandQueue());
-                    }
-                );
+                    });
             }
             else
             {
@@ -203,9 +206,9 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
                 memset(&SCDes, 0, sizeof(SCDes));
                 m_pSwapChain->GetDesc(&SCDes);
                 CHECK_D3D_RESULT_THROW(m_pSwapChain->ResizeBuffers(SCDes.BufferCount, m_SwapChainDesc.Width,
-                    m_SwapChainDesc.Height, SCDes.BufferDesc.Format,
-                    SCDes.Flags),
-                    "Failed to resize the DXGI swap chain");
+                                                                   m_SwapChainDesc.Height, SCDes.BufferDesc.Format,
+                                                                   SCDes.Flags),
+                                       "Failed to resize the DXGI swap chain");
             }
 
             InitBuffersAndViews();
@@ -217,19 +220,19 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
                 pDeviceContext->SetViewports(1, nullptr, 0, 0);
             }
         }
-        catch (const std::runtime_error &)
+        catch (const std::runtime_error&)
         {
             LOG_ERROR("Failed to resize the swap chain");
         }
     }
 }
 
-void SwapChainD3D12Impl::Resize( Uint32 NewWidth, Uint32 NewHeight )
+void SwapChainD3D12Impl::Resize(Uint32 NewWidth, Uint32 NewHeight)
 {
-    if( TSwapChainBase::Resize(NewWidth, NewHeight) )
+    if (TSwapChainBase::Resize(NewWidth, NewHeight))
     {
         UpdateSwapChain(false);
     }
 }
 
-}
+} // namespace Diligent

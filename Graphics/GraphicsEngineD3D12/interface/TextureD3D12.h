@@ -33,13 +33,12 @@ namespace Diligent
 
 // {CF5522EF-8116-4D76-ADF1-5CC8FB31FF66}
 static constexpr INTERFACE_ID IID_TextureD3D12 =
-{ 0xcf5522ef, 0x8116, 0x4d76, { 0xad, 0xf1, 0x5c, 0xc8, 0xfb, 0x31, 0xff, 0x66 } };
+    {0xcf5522ef, 0x8116, 0x4d76, {0xad, 0xf1, 0x5c, 0xc8, 0xfb, 0x31, 0xff, 0x66}};
 
 /// Exposes Direct3D12-specific functionality of a texture object.
 class ITextureD3D12 : public ITexture
 {
 public:
-
     /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -51,10 +50,10 @@ public:
     /// \param [in] state - D3D12 resource state to be set for this texture
     virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
 
-    /// Returns current D3D12 texture state. 
-    /// If the state is unknown to the engine (Diligent::RESOURCE_STATE_UNKNOWN), 
+    /// Returns current D3D12 texture state.
+    /// If the state is unknown to the engine (Diligent::RESOURCE_STATE_UNKNOWN),
     /// returns D3D12_RESOURCE_STATE_COMMON (0).
-    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const = 0;
+    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState() const = 0;
 };
 
-}
+} // namespace Diligent

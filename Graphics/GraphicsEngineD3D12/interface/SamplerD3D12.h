@@ -33,18 +33,17 @@ namespace Diligent
 
 // {31A3BFAF-738E-4D8C-AD18-B021C5D948DD}
 static constexpr INTERFACE_ID IID_SamplerD3D12 =
-{ 0x31a3bfaf, 0x738e, 0x4d8c, { 0xad, 0x18, 0xb0, 0x21, 0xc5, 0xd9, 0x48, 0xdd } };
+    {0x31a3bfaf, 0x738e, 0x4d8c, {0xad, 0x18, 0xb0, 0x21, 0xc5, 0xd9, 0x48, 0xdd}};
 
 /// Exposes Direct3D12-specific functionality of a sampler object.
 class ISamplerD3D12 : public ISampler
 {
 public:
-
     /// Returns a CPU descriptor handle of the D3D12 sampler object
-    
+
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() = 0;
 };
 
-}
+} // namespace Diligent

@@ -33,14 +33,13 @@ namespace Diligent
 
 // {053C0D8C-3757-4220-A9CC-4749EC4794AD}
 static constexpr INTERFACE_ID IID_FenceD3D12 =
-{ 0x53c0d8c, 0x3757, 0x4220, { 0xa9, 0xcc, 0x47, 0x49, 0xec, 0x47, 0x94, 0xad } };
+    {0x53c0d8c, 0x3757, 0x4220, {0xa9, 0xcc, 0x47, 0x49, 0xec, 0x47, 0x94, 0xad}};
 
 
 /// Exposes Direct3D12-specific functionality of a fence object.
 class IFenceD3D12 : public IFence
 {
 public:
-
     /// Returns a pointer to the ID3D12Fence interface of the internal Direct3D12 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -51,4 +50,4 @@ public:
     virtual void WaitForCompletion(Uint64 Value) = 0;
 };
 
-}
+} // namespace Diligent

@@ -32,13 +32,12 @@ namespace Diligent
 {
 // {C7987C98-87FE-4309-AE88-E98F044B00F6}
 static constexpr INTERFACE_ID IID_RenderDeviceD3D12 =
-{ 0xc7987c98, 0x87fe, 0x4309, { 0xae, 0x88, 0xe9, 0x8f, 0x4, 0x4b, 0x0, 0xf6 } };
+    {0xc7987c98, 0x87fe, 0x4309, {0xae, 0x88, 0xe9, 0x8f, 0x4, 0x4b, 0x0, 0xf6}};
 
 /// Exposes Direct3D12-specific functionality of a render device.
 class IRenderDeviceD3D12 : public IRenderDevice
 {
 public:
-
     /// Returns ID3D12Device interface of the internal Direct3D12 device object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -60,8 +59,8 @@ public:
     /// \param [in]  pd3d12Texture - pointer to the native D3D12 texture
     /// \param [in]  InitialState  - Initial texture state. See Diligent::RESOURCE_STATE.
     /// \param [out] ppTexture     - Address of the memory location where the pointer to the
-    ///                              texture interface will be stored. 
-    ///                              The function calls AddRef(), so that the new object will contain 
+    ///                              texture interface will be stored.
+    ///                              The function calls AddRef(), so that the new object will contain
     ///                              one reference.
     virtual void CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture,
                                               RESOURCE_STATE  InitialState,
@@ -71,12 +70,12 @@ public:
 
     /// \param [in]  pd3d12Buffer - Pointer to the native d3d12 buffer resource
     /// \param [in]  BuffDesc     - Buffer description. The system can recover buffer size, but
-    ///                             the rest of the fields need to be populated by the client 
+    ///                             the rest of the fields need to be populated by the client
     ///                             as they cannot be recovered from d3d12 resource description
     /// \param [in]  InitialState - Initial buffer state. See Diligent::RESOURCE_STATE.
     /// \param [out] ppBuffer     - Address of the memory location where the pointer to the
-    ///                             buffer interface will be stored. 
-    ///                             The function calls AddRef(), so that the new object will contain 
+    ///                             buffer interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
     virtual void CreateBufferFromD3DResource(ID3D12Resource*   pd3d12Buffer,
                                              const BufferDesc& BuffDesc,
@@ -84,4 +83,4 @@ public:
                                              IBuffer**         ppBuffer) = 0;
 };
 
-}
+} // namespace Diligent

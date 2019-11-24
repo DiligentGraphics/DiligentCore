@@ -35,7 +35,7 @@
 //
 // Developed by Minigraph
 //
-// Author:  James Stanard 
+// Author:  James Stanard
 //
 
 
@@ -47,16 +47,16 @@
 
 namespace Diligent
 {
-    class GenerateMipsHelper
-    {
-    public:
-        GenerateMipsHelper(ID3D12Device* pd3d12Device);
+class GenerateMipsHelper
+{
+public:
+    GenerateMipsHelper(ID3D12Device* pd3d12Device);
 
-        void GenerateMips(ID3D12Device* pd3d12Device, class TextureViewD3D12Impl* pTexView, class CommandContext& Ctx)const;
+    void GenerateMips(ID3D12Device* pd3d12Device, class TextureViewD3D12Impl* pTexView, class CommandContext& Ctx) const;
 
-    private:
-        CComPtr<ID3D12RootSignature> m_pGenerateMipsRS;
-	    CComPtr<ID3D12PipelineState> m_pGenerateMipsLinearPSO[4];
-	    CComPtr<ID3D12PipelineState> m_pGenerateMipsGammaPSO[4];
-    };
-}
+private:
+    CComPtr<ID3D12RootSignature> m_pGenerateMipsRS;
+    CComPtr<ID3D12PipelineState> m_pGenerateMipsLinearPSO[4];
+    CComPtr<ID3D12PipelineState> m_pGenerateMipsGammaPSO[4];
+};
+} // namespace Diligent

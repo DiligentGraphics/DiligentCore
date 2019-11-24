@@ -26,20 +26,22 @@
 
 namespace Diligent
 {
-    const Char* GetD3D12DescriptorHeapTypeLiteralName(D3D12_DESCRIPTOR_HEAP_TYPE Type)
+const Char* GetD3D12DescriptorHeapTypeLiteralName(D3D12_DESCRIPTOR_HEAP_TYPE Type)
+{
+    static bool        bIsInitialized = false;
+    static const Char* HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
+    if (!bIsInitialized)
     {
-        static bool bIsInitialized = false;
-        static const Char* HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
-        if (!bIsInitialized)
-        {
-            HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = "D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV";
-            HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER]     = "D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER";
-            HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_RTV]         = "D3D12_DESCRIPTOR_HEAP_TYPE_RTV";
-            HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_DSV]         = "D3D12_DESCRIPTOR_HEAP_TYPE_DSV";
+        // clang-format off
+        HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV] = "D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV";
+        HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER]     = "D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER";
+        HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_RTV]         = "D3D12_DESCRIPTOR_HEAP_TYPE_RTV";
+        HeapTypeNames[D3D12_DESCRIPTOR_HEAP_TYPE_DSV]         = "D3D12_DESCRIPTOR_HEAP_TYPE_DSV";
+        // clang-format on
 
-            bIsInitialized = true;
-        }
-        VERIFY_EXPR(Type >= 0 && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES);
-        return HeapTypeNames[Type];
+        bIsInitialized = true;
     }
+    VERIFY_EXPR(Type >= 0 && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES);
+    return HeapTypeNames[Type];
 }
+} // namespace Diligent

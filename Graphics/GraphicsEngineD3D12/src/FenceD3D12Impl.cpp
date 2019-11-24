@@ -30,35 +30,35 @@
 #include "RenderDeviceD3D12Impl.h"
 namespace Diligent
 {
-    
-FenceD3D12Impl :: FenceD3D12Impl(IReferenceCounters*    pRefCounters,
-                                 RenderDeviceD3D12Impl* pDevice,
-                                 const FenceDesc&       Desc) : 
+
+FenceD3D12Impl::FenceD3D12Impl(IReferenceCounters*    pRefCounters,
+                               RenderDeviceD3D12Impl* pDevice,
+                               const FenceDesc&       Desc) :
     TFenceBase{pRefCounters, pDevice, Desc}
 {
     auto* pd3d12Device = ValidatedCast<RenderDeviceD3D12Impl>(pDevice)->GetD3D12Device();
-    auto hr = pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(m_pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&m_pd3d12Fence)));
+    auto  hr           = pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(m_pd3d12Fence), reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&m_pd3d12Fence)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D12 fence");
 }
 
-FenceD3D12Impl :: ~FenceD3D12Impl()
+FenceD3D12Impl::~FenceD3D12Impl()
 {
 }
 
-Uint64 FenceD3D12Impl :: GetCompletedValue()
+Uint64 FenceD3D12Impl::GetCompletedValue()
 {
     return m_pd3d12Fence->GetCompletedValue();
 }
 
-void FenceD3D12Impl :: Reset(Uint64 Value)
+void FenceD3D12Impl::Reset(Uint64 Value)
 {
     m_pd3d12Fence->Signal(Value);
 }
 
-void FenceD3D12Impl :: WaitForCompletion(Uint64 Value)
+void FenceD3D12Impl::WaitForCompletion(Uint64 Value)
 {
     while (m_pd3d12Fence->GetCompletedValue() < Value)
         std::this_thread::yield();
 }
 
-}
+} // namespace Diligent

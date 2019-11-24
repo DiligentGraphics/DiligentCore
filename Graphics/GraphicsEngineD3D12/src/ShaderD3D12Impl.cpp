@@ -48,9 +48,10 @@ static const std::string GetD3D12ShaderModel(RenderDeviceD3D12Impl* /*pDevice*/,
     }
 }
 
-ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*       pRefCounters,
-                                 RenderDeviceD3D12Impl*    pRenderDeviceD3D12,
-                                 const ShaderCreateInfo&   ShaderCI) : 
+ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
+                                 RenderDeviceD3D12Impl*  pRenderDeviceD3D12,
+                                 const ShaderCreateInfo& ShaderCI) :
+    // clang-format off
     TShaderBase
     {
         pRefCounters,
@@ -58,10 +59,11 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*       pRefCounters,
         ShaderCI.Desc
     },
     ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12, ShaderCI.HLSLVersion).c_str()}
+// clang-format on
 {
     // Load shader resources
-    auto& Allocator = GetRawAllocator();
-    auto* pRawMem = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
+    auto& Allocator  = GetRawAllocator();
+    auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
     auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
 }
@@ -81,8 +83,8 @@ void ShaderD3D12Impl::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterf
     }
     else
     {
-        TShaderBase::QueryInterface( IID, ppInterface );
+        TShaderBase::QueryInterface(IID, ppInterface);
     }
 }
 
-}
+} // namespace Diligent

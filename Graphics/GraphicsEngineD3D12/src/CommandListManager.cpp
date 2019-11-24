@@ -28,9 +28,11 @@
 namespace Diligent
 {
 
-CommandListManager::CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl) : 
+CommandListManager::CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl) :
+    // clang-format off
     m_DeviceD3D12Impl{DeviceD3D12Impl},
     m_FreeAllocators {STD_ALLOCATOR_RAW_MEM(CComPtr<ID3D12CommandAllocator>, GetRawAllocator(), "Allocator for vector<CComPtr<ID3D12CommandAllocator>>")}
+// clang-format on
 {
 }
 
@@ -40,56 +42,57 @@ CommandListManager::~CommandListManager()
     LOG_INFO_MESSAGE("Command list manager: created ", m_FreeAllocators.size(), " allocators");
 }
 
-void CommandListManager::CreateNewCommandList( ID3D12GraphicsCommandList** List, ID3D12CommandAllocator** Allocator )
+void CommandListManager::CreateNewCommandList(ID3D12GraphicsCommandList** List, ID3D12CommandAllocator** Allocator)
 {
-	RequestAllocator(Allocator);
+    RequestAllocator(Allocator);
     auto* pd3d12Device = m_DeviceD3D12Impl.GetD3D12Device();
-	auto hr = pd3d12Device->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, *Allocator, nullptr, __uuidof(*List), reinterpret_cast<void**>(List) );
+    auto  hr           = pd3d12Device->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, *Allocator, nullptr, __uuidof(*List), reinterpret_cast<void**>(List));
     VERIFY(SUCCEEDED(hr), "Failed to create command list");
-	(*List)->SetName(L"CommandList");
+    (*List)->SetName(L"CommandList");
 }
 
 
 void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
 {
-	std::lock_guard<std::mutex> LockGuard(m_AllocatorMutex);
+    std::lock_guard<std::mutex> LockGuard(m_AllocatorMutex);
 
-    VERIFY( (*ppAllocator) == nullptr, "Allocator pointer is not null" );
+    VERIFY((*ppAllocator) == nullptr, "Allocator pointer is not null");
     (*ppAllocator) = nullptr;
 
     if (!m_FreeAllocators.empty())
-	{
-		*ppAllocator = m_FreeAllocators.back().Detach();
-		auto hr = (*ppAllocator)->Reset();
+    {
+        *ppAllocator = m_FreeAllocators.back().Detach();
+        auto hr      = (*ppAllocator)->Reset();
         DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to reset command allocator");
-		m_FreeAllocators.pop_back();
-	}
+        m_FreeAllocators.pop_back();
+    }
 
-	// If no allocators were ready to be reused, create a new one
-	if ((*ppAllocator) == nullptr)
-	{
+    // If no allocators were ready to be reused, create a new one
+    if ((*ppAllocator) == nullptr)
+    {
         auto* pd3d12Device = m_DeviceD3D12Impl.GetD3D12Device();
-		auto hr = pd3d12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(*ppAllocator), reinterpret_cast<void**>(ppAllocator));
+        auto  hr           = pd3d12Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, __uuidof(*ppAllocator), reinterpret_cast<void**>(ppAllocator));
         VERIFY(SUCCEEDED(hr), "Failed to create command allocator");
-		wchar_t AllocatorName[32];
-        swprintf(AllocatorName, _countof(AllocatorName), L"Cmd list allocator %ld", Atomics::AtomicIncrement(m_NumAllocators)-1);
-		(*ppAllocator)->SetName(AllocatorName);
-	}
+        wchar_t AllocatorName[32];
+        swprintf(AllocatorName, _countof(AllocatorName), L"Cmd list allocator %ld", Atomics::AtomicIncrement(m_NumAllocators) - 1);
+        (*ppAllocator)->SetName(AllocatorName);
+    }
 #ifdef DEVELOPMENT
     Atomics::AtomicIncrement(m_AllocatorCounter);
 #endif
 }
 
-void CommandListManager::ReleaseAllocator( CComPtr<ID3D12CommandAllocator>&& Allocator, Uint32 CmdQueue, Uint64 FenceValue )
+void CommandListManager::ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, Uint32 CmdQueue, Uint64 FenceValue)
 {
     struct StaleAllocator
     {
         CComPtr<ID3D12CommandAllocator> Allocator;
         CommandListManager*             Mgr;
 
+        // clang-format off
         StaleAllocator(CComPtr<ID3D12CommandAllocator>&& _Allocator, CommandListManager& _Mgr)noexcept :
-            Allocator (std::move(_Allocator)),
-            Mgr       (&_Mgr)
+            Allocator {std::move(_Allocator)},
+            Mgr       {&_Mgr                }
         {
         }
 
@@ -98,28 +101,29 @@ void CommandListManager::ReleaseAllocator( CComPtr<ID3D12CommandAllocator>&& All
         StaleAllocator& operator= (      StaleAllocator&&) = delete;
             
         StaleAllocator(StaleAllocator&& rhs)noexcept : 
-            Allocator (std::move(rhs.Allocator)),
-            Mgr       (rhs.Mgr)
+            Allocator {std::move(rhs.Allocator)},
+            Mgr       {rhs.Mgr                 }
         {
             rhs.Mgr       = nullptr;
         }
+        // clang-format on
 
         ~StaleAllocator()
         {
             if (Mgr != nullptr)
-                Mgr->FreeAllocator( std::move(Allocator) );
+                Mgr->FreeAllocator(std::move(Allocator));
         }
     };
     m_DeviceD3D12Impl.GetReleaseQueue(CmdQueue).DiscardResource(StaleAllocator{std::move(Allocator), *this}, FenceValue);
 }
 
-void CommandListManager::FreeAllocator( CComPtr<ID3D12CommandAllocator>&& Allocator )
+void CommandListManager::FreeAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator)
 {
-	std::lock_guard<std::mutex> LockGuard(m_AllocatorMutex);
-	m_FreeAllocators.emplace_back( std::move(Allocator) );
+    std::lock_guard<std::mutex> LockGuard(m_AllocatorMutex);
+    m_FreeAllocators.emplace_back(std::move(Allocator));
 #ifdef DEVELOPMENT
     Atomics::AtomicDecrement(m_AllocatorCounter);
 #endif
 }
 
-}
+} // namespace Diligent

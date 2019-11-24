@@ -34,13 +34,12 @@ namespace Diligent
 
 // {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
 static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
-{ 0xdde9e3ab, 0x5109, 0x4026, { 0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e } };
+    {0xdde9e3ab, 0x5109, 0x4026, {0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e}};
 
 /// Exposes Direct3D12-specific functionality of a device context.
 class IDeviceContextD3D12 : public IDeviceContext
 {
 public:
-
     /// Transitions internal D3D12 texture object to a specified state
 
     /// \param [in] pTexture - texture to transition
@@ -58,16 +57,16 @@ public:
     /// \return - a pointer to the current command list
     ///
     /// \remarks  Any command on the device context may potentially submit the command list for
-    ///           execution into the command queue and make it invalid. An application should 
-    ///           never cache the pointer and should instead request the command list every time it 
+    ///           execution into the command queue and make it invalid. An application should
+    ///           never cache the pointer and should instead request the command list every time it
     ///           needs it.
     ///
     ///           The engine manages the lifetimes of all command buffers, so an application must
     ///           not call AddRef/Release methods on the returned interface.
     ///
-    ///           Diligent Engine internally keeps track of all resource state changes (vertex and index 
+    ///           Diligent Engine internally keeps track of all resource state changes (vertex and index
     ///           buffers, pipeline states, render targets, etc.). If an application changes any of these
-    ///           states in the command list, it must invalidate the engine's internal state tracking by 
+    ///           states in the command list, it must invalidate the engine's internal state tracking by
     ///           calling IDeviceContext::InvalidateState() and then manually restore all required states via
     ///           appropriate Diligent API calls.
     virtual ID3D12GraphicsCommandList* GetD3D12CommandList() = 0;
@@ -80,7 +79,7 @@ public:
     ///
     ///           The engine locks the internal mutex to prevent simultaneous access to the command queue.
     ///           An application must release the lock by calling IDeviceContextD3D12::UnlockCommandQueue()
-    ///           when it is done working with the queue or the engine will not be able to submit any command 
+    ///           when it is done working with the queue or the engine will not be able to submit any command
     ///           list to the queue. Nested calls to LockCommandQueue() are not allowed.
     ///           The queue pointer never changes while the context is alive, so an application may cache and
     ///           use the pointer if it does not need to prevent potential simultaneous access to the queue from
@@ -94,4 +93,4 @@ public:
     virtual void UnlockCommandQueue() = 0;
 };
 
-}
+} // namespace Diligent

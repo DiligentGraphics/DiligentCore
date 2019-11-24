@@ -42,25 +42,25 @@ public:
     CommandQueueD3D12Impl(IReferenceCounters* pRefCounters, ID3D12CommandQueue* pd3d12NativeCmdQueue, ID3D12Fence* pd3d12Fence);
     ~CommandQueueD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-	// Implementation of ICommandQueueD3D12::GetNextFenceValue().
-    virtual Uint64 GetNextFenceValue()override final { return m_NextFenceValue; }
+    // Implementation of ICommandQueueD3D12::GetNextFenceValue().
+    virtual Uint64 GetNextFenceValue() override final { return m_NextFenceValue; }
 
-	// Implementation of ICommandQueueD3D12::Submit().
-	virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList)override final;
+    // Implementation of ICommandQueueD3D12::Submit().
+    virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList) override final;
 
     // Implementation of ICommandQueueD3D12::GetD3D12CommandQueue().
-    virtual ID3D12CommandQueue* GetD3D12CommandQueue()override final { return m_pd3d12CmdQueue; }
+    virtual ID3D12CommandQueue* GetD3D12CommandQueue() override final { return m_pd3d12CmdQueue; }
 
     // Implementation of ICommandQueueD3D12::WaitForIdle().
-    virtual Uint64 WaitForIdle()override final;
+    virtual Uint64 WaitForIdle() override final;
 
     // Implementation of ICommandQueueD3D12::GetCompletedFenceValue().
-    virtual Uint64 GetCompletedFenceValue()override final;
+    virtual Uint64 GetCompletedFenceValue() override final;
 
     // Implementation of ICommandQueueD3D12::SignalFence().
-    virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value)override final;
+    virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value) override final;
 
 private:
     // A value that will be signaled by the command queue next
@@ -72,7 +72,7 @@ private:
     std::mutex                  m_QueueMtx;
     CComPtr<ID3D12CommandQueue> m_pd3d12CmdQueue;
 
-    // The fence is signaled right after the command list has been 
+    // The fence is signaled right after the command list has been
     // submitted to the command queue for execution.
     // All command lists with fence value less or equal to the signaled value
     // are guaranteed to be finished by the GPU
@@ -81,4 +81,4 @@ private:
     HANDLE m_WaitForGPUEventHandle = {};
 };
 
-}
+} // namespace Diligent

@@ -44,39 +44,41 @@ class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<IS
 public:
     using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D12>;
 
-    ShaderResourceBindingD3D12Impl(IReferenceCounters*            pRefCounters,
-                                   class PipelineStateD3D12Impl*  pPSO,
-                                   bool                           IsPSOInternal);
+    ShaderResourceBindingD3D12Impl(IReferenceCounters*           pRefCounters,
+                                   class PipelineStateD3D12Impl* pPSO,
+                                   bool                          IsPSOInternal);
     ~ShaderResourceBindingD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags)override;
+    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override;
 
-    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name)override;
+    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override;
 
     virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
-    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)override final;
+    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
-    virtual void InitializeStaticResources(const IPipelineState* pPipelineState)override final;
-    
-    ShaderResourceCacheD3D12& GetResourceCache(){return m_ShaderResourceCache;}
+    virtual void InitializeStaticResources(const IPipelineState* pPipelineState) override final;
+
+    ShaderResourceCacheD3D12& GetResourceCache() { return m_ShaderResourceCache; }
 
 #ifdef DEVELOPMENT
-    void dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO)const;
+    void dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO) const;
 #endif
 
-    bool StaticResourcesInitialized()const{return m_bStaticResourcesInitialized;}
+    bool StaticResourcesInitialized() const
+    {
+        return m_bStaticResourcesInitialized;
+    }
 
 private:
-
-    ShaderResourceCacheD3D12 m_ShaderResourceCache;
+    ShaderResourceCacheD3D12    m_ShaderResourceCache;
     ShaderVariableManagerD3D12* m_pShaderVarMgrs = nullptr;
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
-    Int8 m_ResourceLayoutIndex[6]      = {-1, -1, -1, -1, -1, -1};
-    bool m_bStaticResourcesInitialized = false;
-    const Uint8 m_NumShaders           = 0;
+    Int8        m_ResourceLayoutIndex[6]      = {-1, -1, -1, -1, -1, -1};
+    bool        m_bStaticResourcesInitialized = false;
+    const Uint8 m_NumShaders                  = 0;
 };
 
-}
+} // namespace Diligent

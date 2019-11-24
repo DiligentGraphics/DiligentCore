@@ -45,48 +45,48 @@ class BufferD3D12Impl final : public BufferBase<IBufferD3D12, RenderDeviceD3D12I
 public:
     using TBufferBase = BufferBase<IBufferD3D12, RenderDeviceD3D12Impl, BufferViewD3D12Impl, FixedBlockMemoryAllocator>;
 
-    BufferD3D12Impl(IReferenceCounters*           pRefCounters, 
-                    FixedBlockMemoryAllocator&    BuffViewObjMemAllocator, 
-                    class RenderDeviceD3D12Impl*  pDeviceD3D12, 
-                    const BufferDesc&             BuffDesc, 
-                    const BufferData*             pBuffData = nullptr);
+    BufferD3D12Impl(IReferenceCounters*          pRefCounters,
+                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
+                    class RenderDeviceD3D12Impl* pDeviceD3D12,
+                    const BufferDesc&            BuffDesc,
+                    const BufferData*            pBuffData = nullptr);
 
-    BufferD3D12Impl(IReferenceCounters*          pRefCounters, 
-                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator, 
-                    class RenderDeviceD3D12Impl* pDeviceD3D12, 
-                    const BufferDesc&            BuffDesc, 
+    BufferD3D12Impl(IReferenceCounters*          pRefCounters,
+                    FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
+                    class RenderDeviceD3D12Impl* pDeviceD3D12,
+                    const BufferDesc&            BuffDesc,
                     RESOURCE_STATE               InitialState,
                     ID3D12Resource*              pd3d12Buffer);
     ~BufferD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
 #ifdef DEVELOPMENT
-    void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx)const;
+    void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx) const;
 #endif
 
     /// Implementation of IBufferD3D12::GetD3D12Buffer().
-    virtual ID3D12Resource* GetD3D12Buffer(size_t& DataStartByteOffset, IDeviceContext* pContext)override final;
-    
+    virtual ID3D12Resource* GetD3D12Buffer(size_t& DataStartByteOffset, IDeviceContext* pContext) override final;
+
     /// Implementation of IBuffer::GetNativeHandle().
-    virtual void* GetNativeHandle()override final
-    { 
+    virtual void* GetNativeHandle() override final
+    {
         VERIFY(GetD3D12Resource() != nullptr, "The buffer is dynamic and has no pointer to D3D12 resource");
         size_t DataStartByteOffset = 0;
-        auto *pd3d12Buffer = GetD3D12Buffer(DataStartByteOffset, 0); 
+        auto*  pd3d12Buffer        = GetD3D12Buffer(DataStartByteOffset, 0);
         VERIFY(DataStartByteOffset == 0, "0 offset expected");
         return pd3d12Buffer;
     }
 
     /// Implementation of IBufferD3D12::SetD3D12ResourceState().
-    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state)override final;
+    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) override final;
 
     /// Implementation of IBufferD3D12::GetD3D12ResourceState().
-    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState()const override final;
+    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState() const override final;
 
     __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId, class DeviceContextD3D12Impl* pCtx)
     {
-        if(m_Desc.Usage == USAGE_DYNAMIC)
+        if (m_Desc.Usage == USAGE_DYNAMIC)
         {
 #ifdef DEVELOPMENT
             DvpVerifyDynamicAllocation(pCtx);
@@ -99,20 +99,21 @@ public:
         }
     }
 
-    D3D12_CPU_DESCRIPTOR_HANDLE GetCBVHandle(){return m_CBVDescriptorAllocation.GetCpuHandle();}
+    D3D12_CPU_DESCRIPTOR_HANDLE GetCBVHandle() { return m_CBVDescriptorAllocation.GetCpuHandle(); }
 
 private:
-    virtual void CreateViewInternal( const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView )override;
+    virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;
 
-    void CreateUAV( struct BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor );
-    void CreateSRV( struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor );
-    void CreateCBV( D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor );
+    void CreateUAV(struct BufferViewDesc& UAVDesc, D3D12_CPU_DESCRIPTOR_HANDLE UAVDescriptor);
+    void CreateSRV(struct BufferViewDesc& SRVDesc, D3D12_CPU_DESCRIPTOR_HANDLE SRVDescriptor);
+    void CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor);
+
     DescriptorHeapAllocation m_CBVDescriptorAllocation;
 
     friend class DeviceContextD3D12Impl;
     // Array of dynamic allocations for every device context
     // sizeof(D3D12DynamicAllocation) == 40 (x64)
-    std::vector<D3D12DynamicAllocation,  STDAllocatorRawMem<D3D12DynamicAllocation> > m_DynamicData;
+    std::vector<D3D12DynamicAllocation, STDAllocatorRawMem<D3D12DynamicAllocation>> m_DynamicData;
 };
 
-}
+} // namespace Diligent

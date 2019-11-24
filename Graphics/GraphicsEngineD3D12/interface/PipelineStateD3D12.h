@@ -32,26 +32,25 @@ namespace Diligent
 {
 
 // {33C9BE4B-6F23-4F83-A665-5AC1836DF35A}
-static constexpr INTERFACE_ID IID_PipelineStateD3D12 = 
-{ 0x33c9be4b, 0x6f23, 0x4f83, { 0xa6, 0x65, 0x5a, 0xc1, 0x83, 0x6d, 0xf3, 0x5a } };
+static constexpr INTERFACE_ID IID_PipelineStateD3D12 =
+    {0x33c9be4b, 0x6f23, 0x4f83, {0xa6, 0x65, 0x5a, 0xc1, 0x83, 0x6d, 0xf3, 0x5a}};
 
 
 /// Exposes Direct3D12-specific functionality of a pipeline state object.
 class IPipelineStateD3D12 : public IPipelineState
 {
 public:
-
     /// Returns ID3D12PipelineState interface of the internal D3D12 pipeline state object object.
-    
+
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D12PipelineState* GetD3D12PipelineState()const = 0;
+    virtual ID3D12PipelineState* GetD3D12PipelineState() const = 0;
 
     /// Returns a pointer to the root signature object associated with this pipeline state.
-    
+
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D12RootSignature* GetD3D12RootSignature()const = 0;
+    virtual ID3D12RootSignature* GetD3D12RootSignature() const = 0;
 };
 
-}
+} // namespace Diligent

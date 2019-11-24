@@ -39,7 +39,7 @@
 //   |                      |  unique_ptr    |        |           |           |           |           |            |
 //   | ShaderResourcesD3D12 |--------------->|   CBs  |  TexSRVs  |  TexUAVs  |  BufSRVs  |  BufUAVs  |  Samplers  |
 //   |______________________|                |________|___________|___________|___________|___________|____________|
-//            A                                         A                              A                   A  
+//            A                                         A                              A                   A
 //            |                                          \                            /                     \
 //            |shared_ptr                                Ref                        Ref                     Ref
 //    ________|__________________                  ________\________________________/_________________________\_________________________________________
@@ -57,15 +57,15 @@
 //
 //
 //  One ShaderResourcesD3D12 instance can be referenced by multiple objects
-//                                                                                                           
-//                                                                                                           
-//             ________________________           _<m_pShaderResourceLayouts>_          _____<m_pShaderVarMgrs>_____       ________________________________  
-//            |                        |         |                            |        |                            |     |                                |      
+//
+//
+//             ________________________           _<m_pShaderResourceLayouts>_          _____<m_pShaderVarMgrs>_____       ________________________________
+//            |                        |         |                            |        |                            |     |                                |
 //            | PipelineStateD3D12Impl |========>| ShaderResourceLayoutD3D12  |<-------| ShaderVariableManagerD3D12 |<====| ShaderResourceBindingD3D12Impl |
-//            |________________________|         |____________________________|        |____________________________|     |________________________________|      
-//                                                            |            A        
+//            |________________________|         |____________________________|        |____________________________|     |________________________________|
+//                                                            |            A
 //                                                            |shared_ptr   \         
-//             _________________                   ___________V__________    \          _____<m_pShaderVarMgrs>_____       ________________________________          
+//             _________________                   ___________V__________    \          _____<m_pShaderVarMgrs>_____       ________________________________
 //            |                 |  shared_ptr     |                      |    \        |                            |     |                                |
 //            | ShaderD3D12Impl |---------------->| ShaderResourcesD3D12 |     '-------| ShaderVariableManagerD3D12 |<====| ShaderResourceBindingD3D12Impl |
 //            |_________________|                 |______________________|             |____________________________|     |________________________________|
@@ -76,7 +76,7 @@
 // |                            |       |                           |
 // | ShaderVariableManagerD3D12 |------>| ShaderResourceLayoutD3D12 |
 // |____________________________|       |___________________________|
-//                                      
+//
 
 #include "ShaderResources.h"
 
@@ -90,10 +90,12 @@ public:
     // Loads shader resources from the compiled shader bytecode
     ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const ShaderDesc& ShdrDesc, const char* CombinedSamplerSuffix);
 
+    // clang-format off
     ShaderResourcesD3D12             (const ShaderResourcesD3D12&)  = delete;
     ShaderResourcesD3D12             (      ShaderResourcesD3D12&&) = delete;
     ShaderResourcesD3D12& operator = (const ShaderResourcesD3D12&)  = delete;
     ShaderResourcesD3D12& operator = (      ShaderResourcesD3D12&&) = delete;
+    // clang-format on
 };
 
-}
+} // namespace Diligent

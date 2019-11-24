@@ -36,13 +36,12 @@ namespace Diligent
 
 // {C9F8384D-A45E-4970-8447-394177E5B0EE}
 static constexpr INTERFACE_ID IID_SwapChainD3D12 =
-{ 0xc9f8384d, 0xa45e, 0x4970, { 0x84, 0x47, 0x39, 0x41, 0x77, 0xe5, 0xb0, 0xee } };
+    {0xc9f8384d, 0xa45e, 0x4970, {0x84, 0x47, 0x39, 0x41, 0x77, 0xe5, 0xb0, 0xee}};
 
 /// Exposes Direct3D12-specific functionality of a swap chain.
 class ISwapChainD3D12 : public ISwapChain
 {
 public:
-
     /// Returns a pointer to the IDXGISwapChain interface of the internal DXGI object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -50,4 +49,4 @@ public:
     virtual IDXGISwapChain* GetDXGISwapChain() = 0;
 };
 
-}
+} // namespace Diligent

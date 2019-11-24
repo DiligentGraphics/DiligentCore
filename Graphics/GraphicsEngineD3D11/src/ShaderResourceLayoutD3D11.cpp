@@ -366,7 +366,7 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
             }
         },
 
-        [&](const TexSRVBindInfo& ts) // 
+        [&](const TexSRVBindInfo& ts) //
         {
             for (auto SRVSlot = ts.m_Attribs.BindPoint; SRVSlot < ts.m_Attribs.BindPoint + ts.m_Attribs.BindCount; ++SRVSlot)
             {
@@ -376,7 +376,7 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
             }
         },
 
-        [&](const TexUAVBindInfo& uav) // 
+        [&](const TexUAVBindInfo& uav) //
         {
             for (auto UAVSlot = uav.m_Attribs.BindPoint; UAVSlot < uav.m_Attribs.BindPoint + uav.m_Attribs.BindCount; ++UAVSlot)
             {

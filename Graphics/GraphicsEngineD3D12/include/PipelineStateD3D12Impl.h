@@ -46,13 +46,13 @@ class PipelineStateD3D12Impl final : public PipelineStateBase<IPipelineStateD3D1
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>;
 
-    PipelineStateD3D12Impl( IReferenceCounters *pRefCounters, RenderDeviceD3D12Impl *pDeviceD3D12, const PipelineStateDesc &PipelineDesc );
+    PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const PipelineStateDesc& PipelineDesc);
     ~PipelineStateD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
-   
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+
     /// Implementation of IPipelineState::BindStaticResources() in Direct3D12 backend.
-    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)override final;
+    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final;
 
     /// Implementation of IPipelineState::GetStaticVariableCount() in Direct3D12 backend.
     virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
@@ -64,50 +64,50 @@ public:
     virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
     /// Implementation of IPipelineState::CreateShaderResourceBinding() in Direct3D12 backend.
-    virtual void CreateShaderResourceBinding( IShaderResourceBinding **ppShaderResourceBinding, bool InitStaticResources )override final;
+    virtual void CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final;
 
     /// Implementation of IPipelineState::IsCompatibleWith() in Direct3D12 backend.
-    virtual bool IsCompatibleWith(const IPipelineState *pPSO)const override final;
+    virtual bool IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
     /// Implementation of IPipelineStateD3D12::GetD3D12PipelineState().
-    virtual ID3D12PipelineState* GetD3D12PipelineState()const override final{return m_pd3d12PSO;}
+    virtual ID3D12PipelineState* GetD3D12PipelineState() const override final { return m_pd3d12PSO; }
 
     /// Implementation of IPipelineStateD3D12::GetD3D12RootSignature().
-    virtual ID3D12RootSignature* GetD3D12RootSignature()const override final{return m_RootSig.GetD3D12RootSignature(); }
+    virtual ID3D12RootSignature* GetD3D12RootSignature() const override final { return m_RootSig.GetD3D12RootSignature(); }
 
     struct CommitAndTransitionResourcesAttribs
     {
-        Uint32                        CtxId                  = 0;
-        IShaderResourceBinding*       pShaderResourceBinding = nullptr;
-        bool                          CommitResources        = false;
-        bool                          TransitionResources    = false;
-        bool                          ValidateStates         = false;
+        Uint32                  CtxId                  = 0;
+        IShaderResourceBinding* pShaderResourceBinding = nullptr;
+        bool                    CommitResources        = false;
+        bool                    TransitionResources    = false;
+        bool                    ValidateStates         = false;
     };
     ShaderResourceCacheD3D12* CommitAndTransitionShaderResources(class DeviceContextD3D12Impl*        pDeviceCtx,
                                                                  class CommandContext&                CmdCtx,
-                                                                 CommitAndTransitionResourcesAttribs& Attrib)const;
-    
-    const RootSignature& GetRootSignature()const{return m_RootSig;}
-    
-    const ShaderResourceLayoutD3D12& GetShaderResLayout(Uint32 ShaderInd)const
+                                                                 CommitAndTransitionResourcesAttribs& Attrib) const;
+
+    const RootSignature& GetRootSignature() const { return m_RootSig; }
+
+    const ShaderResourceLayoutD3D12& GetShaderResLayout(Uint32 ShaderInd) const
     {
         VERIFY_EXPR(ShaderInd < m_NumShaders);
         return m_pShaderResourceLayouts[ShaderInd];
     }
 
-    const ShaderResourceLayoutD3D12& GetStaticShaderResLayout(Uint32 ShaderInd)const
+    const ShaderResourceLayoutD3D12& GetStaticShaderResLayout(Uint32 ShaderInd) const
     {
         VERIFY_EXPR(ShaderInd < m_NumShaders);
         return m_pShaderResourceLayouts[m_NumShaders + ShaderInd];
     }
-    
-    ShaderResourceCacheD3D12& GetStaticShaderResCache(Uint32 ShaderInd)const
+
+    ShaderResourceCacheD3D12& GetStaticShaderResCache(Uint32 ShaderInd) const
     {
         VERIFY_EXPR(ShaderInd < m_NumShaders);
         return m_pStaticResourceCaches[ShaderInd];
     }
 
-    bool ContainsShaderResources()const;
+    bool ContainsShaderResources() const;
 
     SRBMemoryAllocator& GetSRBMemoryAllocator()
     {
@@ -115,18 +115,17 @@ public:
     }
 
 private:
-
     CComPtr<ID3D12PipelineState> m_pd3d12PSO;
-    RootSignature m_RootSig;
-    
+    RootSignature                m_RootSig;
+
     // Must be defined before default SRB
     SRBMemoryAllocator m_SRBMemAllocator;
 
-    ShaderResourceLayoutD3D12*   m_pShaderResourceLayouts = nullptr;
-    ShaderResourceCacheD3D12*    m_pStaticResourceCaches  = nullptr;
-    ShaderVariableManagerD3D12*  m_pStaticVarManagers     = nullptr;
+    ShaderResourceLayoutD3D12*  m_pShaderResourceLayouts = nullptr;
+    ShaderResourceCacheD3D12*   m_pStaticResourceCaches  = nullptr;
+    ShaderVariableManagerD3D12* m_pStaticVarManagers     = nullptr;
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
     Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
 };
 
-}
+} // namespace Diligent

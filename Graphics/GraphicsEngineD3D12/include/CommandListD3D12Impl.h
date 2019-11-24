@@ -41,10 +41,11 @@ class CommandListD3D12Impl final : public CommandListBase<ICommandList, RenderDe
 public:
     using TCommandListBase = CommandListBase<ICommandList, RenderDeviceD3D12Impl>;
 
-    CommandListD3D12Impl(IReferenceCounters*                            pRefCounters, 
-                         RenderDeviceD3D12Impl*                         pDevice,
-                         DeviceContextD3D12Impl*                        pDeferredCtx,
-                         RenderDeviceD3D12Impl::PooledCommandContext&&  pCmdContext) :
+    CommandListD3D12Impl(IReferenceCounters*                           pRefCounters,
+                         RenderDeviceD3D12Impl*                        pDevice,
+                         DeviceContextD3D12Impl*                       pDeferredCtx,
+                         RenderDeviceD3D12Impl::PooledCommandContext&& pCmdContext) :
+        // clang-format off
         TCommandListBase
         {
             pRefCounters,
@@ -52,9 +53,10 @@ public:
         },
         m_pDeferredCtx  {pDeferredCtx          },
         m_pCmdContext   {std::move(pCmdContext)}
+    // clang-format on
     {
     }
-    
+
     ~CommandListD3D12Impl()
     {
         if (m_pCmdContext != nullptr)
@@ -79,4 +81,4 @@ private:
     RenderDeviceD3D12Impl::PooledCommandContext m_pCmdContext;
 };
 
-}
+} // namespace Diligent

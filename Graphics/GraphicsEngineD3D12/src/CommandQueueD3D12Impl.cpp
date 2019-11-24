@@ -27,14 +27,16 @@
 namespace Diligent
 {
 
-CommandQueueD3D12Impl::CommandQueueD3D12Impl(IReferenceCounters*    pRefCounters,
-                                             ID3D12CommandQueue*    pd3d12NativeCmdQueue,
-                                             ID3D12Fence*           pd3d12Fence) :
-        TBase{pRefCounters},
-        m_pd3d12CmdQueue       {pd3d12NativeCmdQueue},
-        m_d3d12Fence           {pd3d12Fence         },
-        m_NextFenceValue       {1                   },
-        m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)}
+CommandQueueD3D12Impl::CommandQueueD3D12Impl(IReferenceCounters* pRefCounters,
+                                             ID3D12CommandQueue* pd3d12NativeCmdQueue,
+                                             ID3D12Fence*        pd3d12Fence) :
+    // clang-format off
+    TBase{pRefCounters},
+    m_pd3d12CmdQueue       {pd3d12NativeCmdQueue},
+    m_d3d12Fence           {pd3d12Fence         },
+    m_NextFenceValue       {1                   },
+    m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)}
+// clang-format on
 {
     VERIFY_EXPR(m_WaitForGPUEventHandle != INVALID_HANDLE_VALUE);
     m_d3d12Fence->Signal(0);
@@ -45,7 +47,7 @@ CommandQueueD3D12Impl::~CommandQueueD3D12Impl()
     CloseHandle(m_WaitForGPUEventHandle);
 }
 
-IMPLEMENT_QUERY_INTERFACE( CommandQueueD3D12Impl, IID_CommandQueueD3D12, TBase )
+IMPLEMENT_QUERY_INTERFACE(CommandQueueD3D12Impl, IID_CommandQueueD3D12, TBase)
 
 Uint64 CommandQueueD3D12Impl::Submit(ID3D12GraphicsCommandList* commandList)
 {
@@ -57,13 +59,13 @@ Uint64 CommandQueueD3D12Impl::Submit(ID3D12GraphicsCommandList* commandList)
 
     if (commandList != nullptr)
     {
-        ID3D12CommandList *const ppCmdLists[] = {commandList};
-	    m_pd3d12CmdQueue->ExecuteCommandLists(1, ppCmdLists);
+        ID3D12CommandList* const ppCmdLists[] = {commandList};
+        m_pd3d12CmdQueue->ExecuteCommandLists(1, ppCmdLists);
     }
 
     // Signal the fence. This must be done atomically with command list submission.
     m_pd3d12CmdQueue->Signal(m_d3d12Fence, FenceValue);
-    
+
     return FenceValue;
 }
 
@@ -75,7 +77,7 @@ Uint64 CommandQueueD3D12Impl::WaitForIdle()
     Atomics::AtomicIncrement(m_NextFenceValue);
 
     m_pd3d12CmdQueue->Signal(m_d3d12Fence, LastSignaledFenceValue);
-    
+
     if (GetCompletedFenceValue() < LastSignaledFenceValue)
     {
         m_d3d12Fence->SetEventOnCompletion(LastSignaledFenceValue, m_WaitForGPUEventHandle);
@@ -88,7 +90,7 @@ Uint64 CommandQueueD3D12Impl::WaitForIdle()
 Uint64 CommandQueueD3D12Impl::GetCompletedFenceValue()
 {
     auto CompletedFenceValue = m_d3d12Fence->GetCompletedValue();
-    if(CompletedFenceValue > m_LastCompletedFenceValue)
+    if (CompletedFenceValue > m_LastCompletedFenceValue)
         m_LastCompletedFenceValue = CompletedFenceValue;
     return m_LastCompletedFenceValue;
 }
@@ -99,4 +101,4 @@ void CommandQueueD3D12Impl::SignalFence(ID3D12Fence* pFence, Uint64 Value)
     m_pd3d12CmdQueue->Signal(pFence, Value);
 }
 
-}
+} // namespace Diligent

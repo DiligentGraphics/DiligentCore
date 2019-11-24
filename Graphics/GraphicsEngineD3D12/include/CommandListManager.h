@@ -35,31 +35,36 @@ class RenderDeviceD3D12Impl;
 class CommandListManager
 {
 public:
-	CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl);
-	~CommandListManager();
+    CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl);
+    ~CommandListManager();
 
+    // clang-format off
     CommandListManager             (const CommandListManager&)  = delete;
     CommandListManager             (      CommandListManager&&) = delete;
     CommandListManager& operator = (const CommandListManager&)  = delete;
     CommandListManager& operator = (      CommandListManager&&) = delete;
+    // clang-format on
 
-    void CreateNewCommandList( ID3D12GraphicsCommandList** ppList, ID3D12CommandAllocator** ppAllocator );
-    
+    void CreateNewCommandList(ID3D12GraphicsCommandList** ppList, ID3D12CommandAllocator** ppAllocator);
+
     void RequestAllocator(ID3D12CommandAllocator** ppAllocator);
     void ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, Uint32 CmdQueue, Uint64 FenceValue);
 
     // Returns allocator to the list of available allocators. The GPU must have finished using the
     // allocator
-    void FreeAllocator( CComPtr<ID3D12CommandAllocator>&& Allocator );
+    void FreeAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator);
 
 #ifdef DEVELOPMENT
-    Atomics::Long GetAllocatorCounter() const {return m_AllocatorCounter;}
+    Atomics::Long GetAllocatorCounter() const
+    {
+        return m_AllocatorCounter;
+    }
 #endif
 
 private:
-    std::mutex m_AllocatorMutex;
-	std::vector< CComPtr<ID3D12CommandAllocator>, STDAllocatorRawMem<CComPtr<ID3D12CommandAllocator>> > m_FreeAllocators;
-	
+    std::mutex                                                                                        m_AllocatorMutex;
+    std::vector<CComPtr<ID3D12CommandAllocator>, STDAllocatorRawMem<CComPtr<ID3D12CommandAllocator>>> m_FreeAllocators;
+
     RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
 
     Atomics::AtomicLong m_NumAllocators = 0; // For debug purposes only
@@ -69,4 +74,4 @@ private:
 #endif
 };
 
-}
+} // namespace Diligent

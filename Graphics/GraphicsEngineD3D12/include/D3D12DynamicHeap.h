@@ -35,16 +35,18 @@ class RenderDeviceD3D12Impl;
 
 struct D3D12DynamicAllocation
 {
-    D3D12DynamicAllocation()noexcept{}
-    D3D12DynamicAllocation(ID3D12Resource*           pBuff, 
-                           Uint64                    _Offset, 
+    D3D12DynamicAllocation() noexcept {}
+    D3D12DynamicAllocation(ID3D12Resource*           pBuff,
+                           Uint64                    _Offset,
                            Uint64                    _Size,
                            void*                     _CPUAddress,
                            D3D12_GPU_VIRTUAL_ADDRESS _GPUAddress
 #ifdef DEVELOPMENT
-                         , Uint64                    _DvpCtxFrameNumber
+                           ,
+                           Uint64 _DvpCtxFrameNumber
 #endif
-    )noexcept :
+                           ) noexcept :
+        // clang-format off
         pBuffer    {pBuff       }, 
         Offset     {_Offset     },
         Size       {_Size       },
@@ -53,28 +55,31 @@ struct D3D12DynamicAllocation
 #ifdef DEVELOPMENT
       , DvpCtxFrameNumber(_DvpCtxFrameNumber)
 #endif
+    // clang-format on
     {}
 
-    ID3D12Resource*           pBuffer    = nullptr;	// The D3D buffer associated with this memory.
-    Uint64                    Offset     = 0;			// Offset from start of buffer resource
-    Uint64                    Size       = 0;			// Reserved size of this allocation
-    void*                     CPUAddress = nullptr;   // The CPU-writeable address
-    D3D12_GPU_VIRTUAL_ADDRESS GPUAddress = 0;	// The GPU-visible address
+    ID3D12Resource*           pBuffer    = nullptr; // The D3D buffer associated with this memory.
+    Uint64                    Offset     = 0;       // Offset from start of buffer resource
+    Uint64                    Size       = 0;       // Reserved size of this allocation
+    void*                     CPUAddress = nullptr; // The CPU-writeable address
+    D3D12_GPU_VIRTUAL_ADDRESS GPUAddress = 0;       // The GPU-visible address
 #ifdef DEVELOPMENT
     Uint64 DvpCtxFrameNumber = static_cast<Uint64>(-1);
 #endif
 };
 
-    
+
 class D3D12DynamicPage
 {
 public:
     D3D12DynamicPage(ID3D12Device* pd3d12Device, Uint64 Size);
-    
+
+    // clang-format off
     D3D12DynamicPage            (const D3D12DynamicPage&)  = delete;
     D3D12DynamicPage            (      D3D12DynamicPage&&) = default;
     D3D12DynamicPage& operator= (const D3D12DynamicPage&)  = delete;
     D3D12DynamicPage& operator= (      D3D12DynamicPage&&) = delete;
+    // clang-format on
 
     void* GetCPUAddress(Uint64 Offset)
     {
@@ -95,34 +100,36 @@ public:
         return m_pd3d12Buffer;
     }
 
-    Uint64 GetSize()const
+    Uint64 GetSize() const
     {
         VERIFY_EXPR(m_pd3d12Buffer);
         return m_pd3d12Buffer->GetDesc().Width;
     }
 
-    bool IsValid()const { return m_pd3d12Buffer != nullptr; }
+    bool IsValid() const { return m_pd3d12Buffer != nullptr; }
 
 private:
     CComPtr<ID3D12Resource>   m_pd3d12Buffer;
     void*                     m_CPUVirtualAddress = nullptr; // The CPU-writeable address
-    D3D12_GPU_VIRTUAL_ADDRESS m_GPUVirtualAddress = 0;	     // The GPU-visible address
+    D3D12_GPU_VIRTUAL_ADDRESS m_GPUVirtualAddress = 0;       // The GPU-visible address
 };
 
 
 class D3D12DynamicMemoryManager
 {
 public:
-    D3D12DynamicMemoryManager(IMemoryAllocator&      Allocator, 
+    D3D12DynamicMemoryManager(IMemoryAllocator&      Allocator,
                               RenderDeviceD3D12Impl& DeviceD3D12Impl,
                               Uint32                 NumPagesToReserve,
                               Uint64                 PageSize);
     ~D3D12DynamicMemoryManager();
 
+    // clang-format off
     D3D12DynamicMemoryManager            (const D3D12DynamicMemoryManager&)  = delete;
     D3D12DynamicMemoryManager            (      D3D12DynamicMemoryManager&&) = delete;
     D3D12DynamicMemoryManager& operator= (const D3D12DynamicMemoryManager&)  = delete;
     D3D12DynamicMemoryManager& operator= (      D3D12DynamicMemoryManager&&) = delete;
+    // clang-format on
 
     void ReleasePages(std::vector<D3D12DynamicPage>& Pages, Uint64 QueueMask);
 
@@ -131,15 +138,18 @@ public:
     D3D12DynamicPage AllocatePage(Uint64 SizeInBytes);
 
 #ifdef DEVELOPMENT
-    int32_t GetAllocatedPageCounter()const{return m_AllocatedPageCounter;}
+    int32_t GetAllocatedPageCounter() const
+    {
+        return m_AllocatedPageCounter;
+    }
 #endif
 
 private:
     RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
-    
+
     std::mutex m_AvailablePagesMtx;
     using AvailablePagesMapElemType = std::pair<Uint64, D3D12DynamicPage>;
-    std::multimap<Uint64, D3D12DynamicPage, std::less<Uint64>, STDAllocatorRawMem<AvailablePagesMapElemType> > m_AvailablePages;
+    std::multimap<Uint64, D3D12DynamicPage, std::less<Uint64>, STDAllocatorRawMem<AvailablePagesMapElemType>> m_AvailablePages;
 
 #ifdef DEVELOPMENT
     std::atomic_int32_t m_AllocatedPageCounter = 0;
@@ -151,35 +161,37 @@ class D3D12DynamicHeap
 {
 public:
     D3D12DynamicHeap(D3D12DynamicMemoryManager& DynamicMemMgr, std::string HeapName, Uint64 PageSize) :
-        m_GlobalDynamicMemMgr (DynamicMemMgr),
-        m_HeapName            (std::move(HeapName)),
-        m_PageSize            (PageSize)
+        m_GlobalDynamicMemMgr{DynamicMemMgr},
+        m_HeapName{std::move(HeapName)},
+        m_PageSize{PageSize}
     {}
 
+    // clang-format off
     D3D12DynamicHeap            (const D3D12DynamicHeap&) = delete;
     D3D12DynamicHeap            (D3D12DynamicHeap&&)      = delete;
     D3D12DynamicHeap& operator= (const D3D12DynamicHeap&) = delete;
     D3D12DynamicHeap& operator= (D3D12DynamicHeap&&)      = delete;
-    
+    // clang-format on
+
     ~D3D12DynamicHeap();
 
     D3D12DynamicAllocation Allocate(Uint64 SizeInBytes, Uint64 Alignment, Uint64 DvpCtxFrameNumber);
-    void ReleaseAllocatedPages(Uint64 QueueMask);
+    void                   ReleaseAllocatedPages(Uint64 QueueMask);
 
     static constexpr Uint64 InvalidOffset = static_cast<Uint64>(-1);
 
-    size_t GetAllocatedPagesCount() const {return m_AllocatedPages.size();}
+    size_t GetAllocatedPagesCount() const { return m_AllocatedPages.size(); }
 
 private:
     D3D12DynamicMemoryManager& m_GlobalDynamicMemMgr;
-    const std::string m_HeapName;
+    const std::string          m_HeapName;
 
     std::vector<D3D12DynamicPage> m_AllocatedPages;
-    
+
     const Uint64 m_PageSize;
 
-    Uint64 m_CurrOffset        = InvalidOffset;
-    Uint64 m_AvailableSize     = 0;
+    Uint64 m_CurrOffset    = InvalidOffset;
+    Uint64 m_AvailableSize = 0;
 
     Uint64 m_CurrAllocatedSize = 0;
     Uint64 m_CurrUsedSize      = 0;
@@ -189,4 +201,4 @@ private:
     Uint64 m_PeakAlignedSize   = 0;
 };
 
-}
+} // namespace Diligent

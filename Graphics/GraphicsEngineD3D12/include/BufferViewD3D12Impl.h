@@ -43,21 +43,21 @@ class BufferViewD3D12Impl final : public BufferViewBase<IBufferViewD3D12, Render
 public:
     using TBufferViewBase = BufferViewBase<IBufferViewD3D12, RenderDeviceD3D12Impl>;
 
-    BufferViewD3D12Impl( IReferenceCounters*        pRefCounters,
-                         RenderDeviceD3D12Impl*     pDevice, 
-                         const BufferViewDesc&      ViewDesc, 
-                         class IBuffer*             pBuffer,
-                         DescriptorHeapAllocation&& HandleAlloc,
-                         bool bIsDefaultView);
+    BufferViewD3D12Impl(IReferenceCounters*        pRefCounters,
+                        RenderDeviceD3D12Impl*     pDevice,
+                        const BufferViewDesc&      ViewDesc,
+                        class IBuffer*             pBuffer,
+                        DescriptorHeapAllocation&& HandleAlloc,
+                        bool                       bIsDefaultView);
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IBufferViewD3D12::GetCPUDescriptorHandle().
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override final{return m_DescriptorHandle.GetCpuHandle();}
-   
+    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() override final { return m_DescriptorHandle.GetCpuHandle(); }
+
 protected:
     // Allocation in a CPU-only descriptor heap
     DescriptorHeapAllocation m_DescriptorHandle;
 };
 
-}
+} // namespace Diligent

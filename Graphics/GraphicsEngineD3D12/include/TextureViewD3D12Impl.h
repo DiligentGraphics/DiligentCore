@@ -43,27 +43,27 @@ class TextureViewD3D12Impl final : public TextureViewBase<ITextureViewD3D12, Ren
 public:
     using TTextureViewBase = TextureViewBase<ITextureViewD3D12, RenderDeviceD3D12Impl>;
 
-    TextureViewD3D12Impl( IReferenceCounters*        pRefCounters,
-                          RenderDeviceD3D12Impl*     pDevice, 
-                          const TextureViewDesc&     ViewDesc, 
-                          class ITexture*            pTexture,
-                          DescriptorHeapAllocation&& Descriptor,
-                          DescriptorHeapAllocation&& TexArraySRVDescriptor,
-                          DescriptorHeapAllocation&& MipLevelUAVDescriptors,
-                          bool                       bIsDefaultView);
+    TextureViewD3D12Impl(IReferenceCounters*        pRefCounters,
+                         RenderDeviceD3D12Impl*     pDevice,
+                         const TextureViewDesc&     ViewDesc,
+                         class ITexture*            pTexture,
+                         DescriptorHeapAllocation&& Descriptor,
+                         DescriptorHeapAllocation&& TexArraySRVDescriptor,
+                         DescriptorHeapAllocation&& MipLevelUAVDescriptors,
+                         bool                       bIsDefaultView);
     ~TextureViewD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureViewD3D12::GetCPUDescriptorHandle().
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override final
+    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() override final
     {
         return m_Descriptor.GetCpuHandle();
     }
 
     D3D12_CPU_DESCRIPTOR_HANDLE GetMipLevelUAV(Uint32 Mip)
     {
-        VERIFY_EXPR((m_Desc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0 && m_MipGenerationDescriptors != nullptr && Mip < m_Desc.NumMipLevels );
+        VERIFY_EXPR((m_Desc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0 && m_MipGenerationDescriptors != nullptr && Mip < m_Desc.NumMipLevels);
         return m_MipGenerationDescriptors[1].GetCpuHandle(Mip);
     }
 
@@ -83,4 +83,4 @@ protected:
     DescriptorHeapAllocation* m_MipGenerationDescriptors = nullptr;
 };
 
-}
+} // namespace Diligent

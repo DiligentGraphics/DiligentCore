@@ -43,15 +43,15 @@ class SamplerD3D12Impl final : public SamplerBase<ISamplerD3D12, RenderDeviceD3D
 public:
     using TSamplerBase = SamplerBase<ISamplerD3D12, RenderDeviceD3D12Impl>;
 
-    SamplerD3D12Impl(IReferenceCounters*     pRefCounters, 
-                     RenderDeviceD3D12Impl*  pRenderDeviceD3D12, 
-                     const SamplerDesc&      SamplerDesc);
+    SamplerD3D12Impl(IReferenceCounters*    pRefCounters,
+                     RenderDeviceD3D12Impl* pRenderDeviceD3D12,
+                     const SamplerDesc&     SamplerDesc);
     ~SamplerD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override final;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISamplerD3D12::GetCPUDescriptorHandle().
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle()override{ return m_Descriptor.GetCpuHandle(); }
+    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() override { return m_Descriptor.GetCpuHandle(); }
 
 private:
     friend class ShaderD3D12Impl;
@@ -59,4 +59,4 @@ private:
     DescriptorHeapAllocation m_Descriptor;
 };
 
-}
+} // namespace Diligent
