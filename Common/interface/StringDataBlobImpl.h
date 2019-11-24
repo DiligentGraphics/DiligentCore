@@ -33,33 +33,36 @@
 
 namespace Diligent
 {
-    
+
 /// Base interface for a file stream
 class StringDataBlobImpl : public Diligent::ObjectBase<IDataBlob>
 {
 public:
     typedef Diligent::ObjectBase<IDataBlob> TBase;
 
-    StringDataBlobImpl( IReferenceCounters* pRefCounters, const char* str )   : TBase(pRefCounters), m_String(str) {}
-    StringDataBlobImpl( IReferenceCounters* pRefCounters, const String& str ) : TBase(pRefCounters), m_String(str) {}
-    StringDataBlobImpl( IReferenceCounters* pRefCounters, String&& str )      : TBase(pRefCounters), m_String( std::move(str) ) {}
+    StringDataBlobImpl(IReferenceCounters* pRefCounters, const char* str) :
+        TBase(pRefCounters), m_String(str) {}
+    StringDataBlobImpl(IReferenceCounters* pRefCounters, const String& str) :
+        TBase(pRefCounters), m_String(str) {}
+    StringDataBlobImpl(IReferenceCounters* pRefCounters, String&& str) :
+        TBase(pRefCounters), m_String(std::move(str)) {}
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE( IID_DataBlob, TBase )
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DataBlob, TBase)
 
     /// Sets the size of the internal data buffer
-    virtual void Resize(size_t NewSize)override
+    virtual void Resize(size_t NewSize) override
     {
         m_String.resize(NewSize);
     }
 
     /// Returns the size of the internal data buffer
-    virtual size_t GetSize()override
+    virtual size_t GetSize() override
     {
         return m_String.length();
     }
 
     /// Returns the pointer to the internal data buffer
-    virtual void* GetDataPtr()override
+    virtual void* GetDataPtr() override
     {
         return &m_String[0];
     }
@@ -68,4 +71,4 @@ private:
     String m_String;
 };
 
-}
+} // namespace Diligent

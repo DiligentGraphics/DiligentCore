@@ -27,32 +27,34 @@
 using namespace std::chrono;
 namespace Diligent
 {
-    Timer::Timer()
-    {
-        Restart();
-    }
 
-    void Timer::Restart()
-    {
-        m_StartTime = high_resolution_clock().now();
-    }
-
-    template<typename T>
-    T GetElapsedTime( high_resolution_clock::time_point StartTime )
-    {
-        auto CurrTime = high_resolution_clock::now();
-        auto time_span = duration_cast<duration<T>>(CurrTime - StartTime);
-        return time_span.count();
-    }
-
-    double Timer::GetElapsedTime()const
-    {
-        return Diligent::GetElapsedTime<double>( m_StartTime );
-    }
-
-    float Timer::GetElapsedTimef()const
-    {
-
-        return Diligent::GetElapsedTime<float>( m_StartTime );
-    }
+Timer::Timer()
+{
+    Restart();
 }
+
+void Timer::Restart()
+{
+    m_StartTime = high_resolution_clock().now();
+}
+
+template <typename T>
+T GetElapsedTime(high_resolution_clock::time_point StartTime)
+{
+    auto CurrTime  = high_resolution_clock::now();
+    auto time_span = duration_cast<duration<T>>(CurrTime - StartTime);
+    return time_span.count();
+}
+
+double Timer::GetElapsedTime() const
+{
+    return Diligent::GetElapsedTime<double>(m_StartTime);
+}
+
+float Timer::GetElapsedTimef() const
+{
+
+    return Diligent::GetElapsedTime<float>(m_StartTime);
+}
+
+} // namespace Diligent

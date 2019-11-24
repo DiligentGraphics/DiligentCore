@@ -33,13 +33,13 @@ namespace Diligent
 class FileWrapper
 {
 public:
-    FileWrapper( ) : 
-        m_pFile(nullptr)
+    FileWrapper() :
+        m_pFile{nullptr}
     {}
 
-    FileWrapper( const Diligent::Char *Path, 
-                  EFileAccessMode Access = EFileAccessMode::Read) : 
-        m_pFile( nullptr )
+    FileWrapper(const Char*     Path,
+                EFileAccessMode Access = EFileAccessMode::Read) :
+        m_pFile{nullptr}
     {
         FileOpenAttribs OpenAttribs(Path, Access);
         Open(OpenAttribs);
@@ -52,19 +52,19 @@ public:
 
     void Open(const FileOpenAttribs& OpenAttribs)
     {
-        VERIFY( !m_pFile, "Another file already attached" );
+        VERIFY(!m_pFile, "Another file already attached");
         Close();
-        m_pFile = FileSystem::OpenFile( OpenAttribs );
+        m_pFile = FileSystem::OpenFile(OpenAttribs);
     }
-    
-    CFile *Detach()
+
+    CFile* Detach()
     {
-        CFile *pFile = m_pFile;
-        m_pFile = NULL;
+        CFile* pFile = m_pFile;
+        m_pFile      = NULL;
         return pFile;
     }
 
-    void Attach(CFile *pFile)
+    void Attach(CFile* pFile)
     {
         VERIFY(!m_pFile, "Another file already attached");
         Close();
@@ -73,19 +73,19 @@ public:
 
     void Close()
     {
-        if( m_pFile )
+        if (m_pFile)
             FileSystem::ReleaseFile(m_pFile);
         m_pFile = nullptr;
     }
 
-    operator CFile*(){return m_pFile;}
-    CFile* operator->(){return m_pFile;}
+    operator CFile*() { return m_pFile; }
+    CFile* operator->() { return m_pFile; }
 
 private:
     FileWrapper(const FileWrapper&);
     const FileWrapper& operator=(const FileWrapper&);
 
-    CFile *m_pFile;
+    CFile* m_pFile;
 };
 
-}
+} // namespace Diligent

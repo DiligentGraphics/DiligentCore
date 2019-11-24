@@ -26,32 +26,33 @@
 
 namespace Diligent
 {
-    DefaultRawMemoryAllocator::DefaultRawMemoryAllocator()
-    {
 
-    }
-
-    void* DefaultRawMemoryAllocator::Allocate( size_t Size, const Char* dbgDescription, const char* dbgFileName, const  Int32 dbgLineNumber)
-    {
-#ifdef _DEBUG
-        return new Uint8[Size+16]+16;
-#else
-        return new Uint8[Size];
-#endif
-    }
-
-    void DefaultRawMemoryAllocator::Free(void *Ptr)
-    {
-#ifdef _DEBUG
-        delete[] (reinterpret_cast<Uint8*>(Ptr)-16);
-#else
-        delete[] reinterpret_cast<Uint8*>(Ptr);
-#endif
-    }
-
-    DefaultRawMemoryAllocator& DefaultRawMemoryAllocator::GetAllocator()
-    {
-        static DefaultRawMemoryAllocator Allocator;
-        return Allocator;
-    }
+DefaultRawMemoryAllocator::DefaultRawMemoryAllocator()
+{
 }
+
+void* DefaultRawMemoryAllocator::Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
+{
+#ifdef _DEBUG
+    return new Uint8[Size + 16] + 16;
+#else
+    return new Uint8[Size];
+#endif
+}
+
+void DefaultRawMemoryAllocator::Free(void* Ptr)
+{
+#ifdef _DEBUG
+    delete[](reinterpret_cast<Uint8*>(Ptr) - 16);
+#else
+    delete[] reinterpret_cast<Uint8*>(Ptr);
+#endif
+}
+
+DefaultRawMemoryAllocator& DefaultRawMemoryAllocator::GetAllocator()
+{
+    static DefaultRawMemoryAllocator Allocator;
+    return Allocator;
+}
+
+} // namespace Diligent

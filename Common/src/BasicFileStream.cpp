@@ -26,38 +26,40 @@
 
 namespace Diligent
 {
-    BasicFileStream::BasicFileStream(IReferenceCounters* pRefCounters,
-                                     const Char*         Path, 
-                                     EFileAccessMode     Access/* = EFileAccessMode::Read*/) :
-        TBase(pRefCounters),
-        m_FileWrpr(Path, Access)
-    {
-    }
 
-    IMPLEMENT_QUERY_INTERFACE(BasicFileStream, IID_FileStream, TBase)
-
-    bool BasicFileStream::Read(void* Data, size_t Size)
-    {
-        return m_FileWrpr->Read( Data, Size );
-    }
-
-    void BasicFileStream::Read( Diligent::IDataBlob* pData )
-    {
-        return m_FileWrpr->Read( pData );
-    }
-
-    bool BasicFileStream::Write(const void* Data, size_t Size)
-    {
-        return m_FileWrpr->Write( Data, Size );
-    }
-
-    bool BasicFileStream::IsValid()
-    {
-        return !!m_FileWrpr;
-    }
-
-    size_t BasicFileStream::GetSize()
-    {
-        return m_FileWrpr->GetSize();
-    }
+BasicFileStream::BasicFileStream(IReferenceCounters* pRefCounters,
+                                 const Char*         Path,
+                                 EFileAccessMode     Access /* = EFileAccessMode::Read*/) :
+    TBase{pRefCounters},
+    m_FileWrpr{Path, Access}
+{
 }
+
+IMPLEMENT_QUERY_INTERFACE(BasicFileStream, IID_FileStream, TBase)
+
+bool BasicFileStream::Read(void* Data, size_t Size)
+{
+    return m_FileWrpr->Read(Data, Size);
+}
+
+void BasicFileStream::Read(Diligent::IDataBlob* pData)
+{
+    return m_FileWrpr->Read(pData);
+}
+
+bool BasicFileStream::Write(const void* Data, size_t Size)
+{
+    return m_FileWrpr->Write(Data, Size);
+}
+
+bool BasicFileStream::IsValid()
+{
+    return !!m_FileWrpr;
+}
+
+size_t BasicFileStream::GetSize()
+{
+    return m_FileWrpr->GetSize();
+}
+
+} // namespace Diligent

@@ -35,13 +35,13 @@ namespace Diligent
 {
 
 template <typename T>
-typename std::enable_if<std::is_destructible<T>::value, void>::type Destruct(T *ptr)
+typename std::enable_if<std::is_destructible<T>::value, void>::type Destruct(T* ptr)
 {
     ptr->~T();
 }
 
 template <typename T>
-typename std::enable_if<!std::is_destructible<T>::value, void>::type Destruct(T *ptr)
+typename std::enable_if<!std::is_destructible<T>::value, void>::type Destruct(T* ptr)
 {
 }
 
@@ -56,40 +56,46 @@ struct STDAllocator
     using size_type       = std::size_t;
     using difference_type = std::ptrdiff_t;
 
-    STDAllocator(AllocatorType& Allocator, const Char* Description, const Char* FileName, const Int32 LineNumber)noexcept : 
-        m_Allocator     (Allocator)
+    STDAllocator(AllocatorType& Allocator, const Char* Description, const Char* FileName, const Int32 LineNumber) noexcept :
+        // clang-format off
+        m_Allocator     {Allocator}
 #ifdef DEVELOPMENT
-      , m_dvpDescription(Description)
-      , m_dvpFileName   (FileName)
-      , m_dvpLineNumber (LineNumber)
+      , m_dvpDescription{Description}
+      , m_dvpFileName   {FileName   }
+      , m_dvpLineNumber {LineNumber }
 #endif
+    // clang-format on
     {
     }
 
-    template <class U> 
-    STDAllocator(const STDAllocator<U, AllocatorType>& other)noexcept : 
-        m_Allocator     (other.m_Allocator)
+    template <class U>
+    STDAllocator(const STDAllocator<U, AllocatorType>& other) noexcept :
+        // clang-format off
+        m_Allocator     {other.m_Allocator}
 #ifdef DEVELOPMENT
-      , m_dvpDescription(other.m_dvpDescription)
-      , m_dvpFileName   (other.m_dvpFileName)
-      , m_dvpLineNumber (other.m_dvpLineNumber)
+      , m_dvpDescription{other.m_dvpDescription}
+      , m_dvpFileName   {other.m_dvpFileName   }
+      , m_dvpLineNumber {other.m_dvpLineNumber }
 #endif
+    // clang-format on
     {
     }
 
-    template <class U> 
-    STDAllocator(STDAllocator<U, AllocatorType>&& other)noexcept : 
-        m_Allocator     (other.m_Allocator)
+    template <class U>
+    STDAllocator(STDAllocator<U, AllocatorType>&& other) noexcept :
+        // clang-format off
+        m_Allocator     {other.m_Allocator}
 #ifdef DEVELOPMENT
-      , m_dvpDescription(other.m_dvpDescription)
-      , m_dvpFileName   (other.m_dvpFileName)
-      , m_dvpLineNumber (other.m_dvpLineNumber)
+      , m_dvpDescription{other.m_dvpDescription}
+      , m_dvpFileName   {other.m_dvpFileName   }
+      , m_dvpLineNumber {other.m_dvpLineNumber }
 #endif
+    // clang-format on
     {
     }
 
-    template <class U> 
-    STDAllocator& operator = (STDAllocator<U, AllocatorType>&& other)noexcept
+    template <class U>
+    STDAllocator& operator=(STDAllocator<U, AllocatorType>&& other) noexcept
     {
         // Android build requires this operator to be defined - I have no idea why.
         // There is no default constructor to create null allocator, so all fields must be
@@ -97,14 +103,14 @@ struct STDAllocator
         DEV_CHECK_ERR(&m_Allocator == &other.m_Allocator, "Inconsistent allocators");
 #ifdef DEVELOPMENT
         DEV_CHECK_ERR(m_dvpDescription == other.m_dvpDescription, "Incosistent allocator descriptions");
-        DEV_CHECK_ERR(m_dvpFileName    == other.m_dvpFileName,    "Incosistent allocator file names");
-        DEV_CHECK_ERR(m_dvpLineNumber  == other.m_dvpLineNumber,  "Incosistent allocator line numbers");
+        DEV_CHECK_ERR(m_dvpFileName == other.m_dvpFileName, "Incosistent allocator file names");
+        DEV_CHECK_ERR(m_dvpLineNumber == other.m_dvpLineNumber, "Incosistent allocator line numbers");
 #endif
         return *this;
     }
 
-    template< class U > struct rebind
-    { 
+    template <class U> struct rebind
+    {
         typedef STDAllocator<U, AllocatorType> other;
     };
 
@@ -115,10 +121,10 @@ struct STDAllocator
         static constexpr const char* m_dvpFileName    = "<Unavailable in release build>";
         static constexpr Int32       m_dvpLineNumber  = -1;
 #endif
-        return reinterpret_cast<T*>( m_Allocator.Allocate(count * sizeof(T), m_dvpDescription, m_dvpFileName, m_dvpLineNumber ) );
+        return reinterpret_cast<T*>(m_Allocator.Allocate(count * sizeof(T), m_dvpDescription, m_dvpFileName, m_dvpLineNumber));
     }
 
-    pointer       address(reference r)       { return &r; }
+    pointer       address(reference r) { return &r; }
     const_pointer address(const_reference r) { return &r; }
 
     void deallocate(T* p, std::size_t count)
@@ -126,74 +132,74 @@ struct STDAllocator
         m_Allocator.Free(p);
     }
 
-    inline size_type max_size() const 
-    { 
-        return std::numeric_limits<size_type>::max() / sizeof(T); 
+    inline size_type max_size() const
+    {
+        return std::numeric_limits<size_type>::max() / sizeof(T);
     }
 
     //    construction/destruction
-    template< class U, class... Args >
-    void construct( U* p, Args&&... args )
-    { 
-        ::new(p) U(std::forward<Args>(args)...); 
+    template <class U, class... Args>
+    void construct(U* p, Args&&... args)
+    {
+        ::new (p) U(std::forward<Args>(args)...);
     }
 
     inline void destroy(pointer p)
-    { 
-        p->~T(); 
+    {
+        p->~T();
     }
 
-    AllocatorType &m_Allocator;
+    AllocatorType& m_Allocator;
 #ifdef DEVELOPMENT
     const Char* const m_dvpDescription;
     const Char* const m_dvpFileName;
-    Int32       const m_dvpLineNumber;
+    Int32 const       m_dvpLineNumber;
 #endif
 };
 
 #define STD_ALLOCATOR(Type, AllocatorType, Allocator, Description) STDAllocator<Type, AllocatorType>(Allocator, Description, __FILE__, __LINE__)
 
 template <class T, class U, class A>
-bool operator==(const STDAllocator<T, A>&left, const STDAllocator<U, A>&right)
+bool operator==(const STDAllocator<T, A>& left, const STDAllocator<U, A>& right)
 {
     return &left.m_Allocator == &right.m_Allocator;
 }
 
 template <class T, class U, class A>
-bool operator!=(const STDAllocator<T, A> &left, const STDAllocator<U, A> &right)
+bool operator!=(const STDAllocator<T, A>& left, const STDAllocator<U, A>& right)
 {
     return !(left == right);
 }
 
-template<class T> using STDAllocatorRawMem = STDAllocator<T, IMemoryAllocator>; 
+template <class T> using STDAllocatorRawMem = STDAllocator<T, IMemoryAllocator>;
 #define STD_ALLOCATOR_RAW_MEM(Type, Allocator, Description) STDAllocatorRawMem<Type>(Allocator, Description, __FILE__, __LINE__)
 
-template< class T, typename AllocatorType > 
+template <class T, typename AllocatorType>
 struct STDDeleter
 {
     STDDeleter() noexcept {}
 
-    STDDeleter(AllocatorType& Allocator) noexcept : 
-        m_Allocator(&Allocator)
+    STDDeleter(AllocatorType& Allocator) noexcept :
+        m_Allocator{&Allocator}
     {}
-    
-    STDDeleter             (const STDDeleter&) = default;
-    STDDeleter& operator = (const STDDeleter&) = default;
 
-    STDDeleter(STDDeleter&& rhs) noexcept : 
-        m_Allocator(rhs.m_Allocator)
+    STDDeleter(const STDDeleter&) = default;
+    STDDeleter& operator=(const STDDeleter&) = default;
+
+    STDDeleter(STDDeleter&& rhs) noexcept :
+        m_Allocator{rhs.m_Allocator}
     {
         rhs.m_Allocator = nullptr;
     }
 
-    STDDeleter& operator = (STDDeleter&& rhs) noexcept
+    STDDeleter& operator=(STDDeleter&& rhs) noexcept
     {
-        m_Allocator = rhs.m_Allocator;
+        m_Allocator     = rhs.m_Allocator;
         rhs.m_Allocator = nullptr;
         return *this;
     }
 
-    void operator()(T *ptr) noexcept
+    void operator()(T* ptr) noexcept
     {
         VERIFY(m_Allocator != nullptr, "The deleter has been moved away or never initialized, and can't be used");
         Destruct(ptr);
@@ -203,6 +209,6 @@ struct STDDeleter
 private:
     AllocatorType* m_Allocator = nullptr;
 };
-template<class T> using STDDeleterRawMem = STDDeleter<T, IMemoryAllocator>; 
+template <class T> using STDDeleterRawMem = STDDeleter<T, IMemoryAllocator>;
 
-}
+} // namespace Diligent

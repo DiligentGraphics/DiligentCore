@@ -38,71 +38,75 @@ namespace Diligent
 inline std::string NarrowString(const std::wstring& WideStr)
 {
     std::string NarrowStr;
-    const std::ctype<wchar_t>& ctfacet = std::use_facet< std::ctype<wchar_t> >( std::wstringstream().getloc() ) ;
-    for( std::wstring::const_iterator CurrWChar = WideStr.begin();
+
+    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
+    for (std::wstring::const_iterator CurrWChar = WideStr.begin();
          CurrWChar != WideStr.end();
-         CurrWChar++ )
-         NarrowStr.push_back( ctfacet.narrow( *CurrWChar, 0 ) );
-         
-	return NarrowStr;
+         CurrWChar++)
+        NarrowStr.push_back(ctfacet.narrow(*CurrWChar, 0));
+
+    return NarrowStr;
 }
 
 inline std::string NarrowString(const wchar_t* WideStr)
 {
     std::string NarrowStr;
-    const std::ctype<wchar_t>& ctfacet = std::use_facet< std::ctype<wchar_t> >( std::wstringstream().getloc() ) ;
-    for( auto CurrWChar = WideStr; *CurrWChar != 0; ++CurrWChar )
-         NarrowStr.push_back( ctfacet.narrow( *CurrWChar, 0 ) );
-         
-	return NarrowStr;
+
+    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
+    for (auto CurrWChar = WideStr; *CurrWChar != 0; ++CurrWChar)
+        NarrowStr.push_back(ctfacet.narrow(*CurrWChar, 0));
+
+    return NarrowStr;
 }
 
 inline std::wstring WidenString(const char* Str)
 {
-	std::wstring WideStr;
-    const std::ctype<wchar_t>& ctfacet = std::use_facet< std::ctype<wchar_t> >( std::wstringstream().getloc() ) ;
-    for( auto CurrChar = Str; *CurrChar != 0; ++CurrChar )
-         WideStr.push_back( ctfacet.widen( *CurrChar ) );
-         
-	return WideStr;
+    std::wstring WideStr;
+
+    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
+    for (auto CurrChar = Str; *CurrChar != 0; ++CurrChar)
+        WideStr.push_back(ctfacet.widen(*CurrChar));
+
+    return WideStr;
 }
 
 inline std::wstring WidenString(const std::string& Str)
 {
-	std::wstring WideStr;
-    const std::ctype<wchar_t>& ctfacet = std::use_facet< std::ctype<wchar_t> >( std::wstringstream().getloc() ) ;
-    for( std::string::const_iterator CurrChar = Str.begin();
+    std::wstring WideStr;
+
+    const std::ctype<wchar_t>& ctfacet = std::use_facet<std::ctype<wchar_t>>(std::wstringstream().getloc());
+    for (std::string::const_iterator CurrChar = Str.begin();
          CurrChar != Str.end();
-         CurrChar++ )
-         WideStr.push_back( ctfacet.widen( *CurrChar ) );
-         
-	return WideStr;
+         CurrChar++)
+        WideStr.push_back(ctfacet.widen(*CurrChar));
+
+    return WideStr;
 }
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2, size_t NumChars)
 {
 #if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
-#   define _strnicmp strncasecmp
+#    define _strnicmp strncasecmp
 #endif
 
-    return _strnicmp( Str1, Str2, NumChars );
+    return _strnicmp(Str1, Str2, NumChars);
 }
 
 inline int StrCmpNoCase(const char* Str1, const char* Str2)
 {
 #if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS
-#   define _stricmp strcasecmp
+#    define _stricmp strcasecmp
 #endif
 
-    return _stricmp( Str1, Str2 );
+    return _stricmp(Str1, Str2);
 }
 
 // Returns true if RefStr == Str + Suff
 // If Suff == nullptr or NoSuffixAllowed == true, also returns true if RefStr == Str
 inline bool StreqSuff(const char* RefStr, const char* Str, const char* Suff, bool NoSuffixAllowed = false)
 {
-    VERIFY_EXPR(RefStr != nullptr && Str!= nullptr);
-    if (RefStr==nullptr)
+    VERIFY_EXPR(RefStr != nullptr && Str != nullptr);
+    if (RefStr == nullptr)
         return false;
 
     const auto* r = RefStr;
@@ -160,12 +164,11 @@ inline bool StreqSuff(const char* RefStr, const char* Str, const char* Suff, boo
     }
 }
 
-inline void StrToLowerInPlace(std::string &str)
+inline void StrToLowerInPlace(std::string& str)
 {
     std::transform(str.begin(), str.end(), str.begin(),
-        // http://en.cppreference.com/w/cpp/string/byte/tolower
-        [](unsigned char c) { return static_cast<char>(std::tolower(c)); }
-    );
+                   // http://en.cppreference.com/w/cpp/string/byte/tolower
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 }
 
 inline std::string StrToLower(std::string str)
@@ -174,4 +177,4 @@ inline std::string StrToLower(std::string str)
     return str;
 }
 
-}
+} // namespace Diligent

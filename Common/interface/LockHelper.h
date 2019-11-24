@@ -32,45 +32,45 @@ namespace ThreadingTools
 class LockFlag
 {
 public:
-    enum {LOCK_FLAG_UNLOCKED = 0, LOCK_FLAG_LOCKED = 1};
-    LockFlag(Atomics::Long InitFlag = LOCK_FLAG_UNLOCKED)noexcept
+    enum
+    {
+        LOCK_FLAG_UNLOCKED = 0,
+        LOCK_FLAG_LOCKED   = 1
+    };
+    LockFlag(Atomics::Long InitFlag = LOCK_FLAG_UNLOCKED) noexcept
     {
         //m_Flag.store(InitFlag);
         m_Flag = InitFlag;
     }
 
-    operator Atomics::Long()const{return m_Flag;}
+    operator Atomics::Long() const { return m_Flag; }
 
 private:
     friend class LockHelper;
     Atomics::AtomicLong m_Flag;
 };
-  
+
 // Spinlock implementation. This kind of lock should be used in scenarios
 // where simultaneous access is uncommon but possible.
 class LockHelper
 {
 public:
-    
-    LockHelper()noexcept :
-        m_pLockFlag(nullptr)
-    {
-    }
-    LockHelper(LockFlag& LockFlag)noexcept :
-        m_pLockFlag(nullptr)
+    LockHelper() noexcept {}
+
+    LockHelper(LockFlag& LockFlag) noexcept
     {
         Lock(LockFlag);
     }
 
-    LockHelper( LockHelper&& LockHelper )noexcept :
-        m_pLockFlag( std::move(LockHelper.m_pLockFlag) )
+    LockHelper(LockHelper&& LockHelper) noexcept :
+        m_pLockFlag{std::move(LockHelper.m_pLockFlag)}
     {
         LockHelper.m_pLockFlag = nullptr;
     }
 
-    const LockHelper& operator = (LockHelper&& LockHelper)noexcept
+    const LockHelper& operator=(LockHelper&& LockHelper) noexcept
     {
-        m_pLockFlag = std::move( LockHelper.m_pLockFlag );
+        m_pLockFlag            = std::move(LockHelper.m_pLockFlag);
         LockHelper.m_pLockFlag = nullptr;
         return *this;
     }
@@ -80,33 +80,33 @@ public:
         Unlock();
     }
 
-    static bool UnsafeTryLock(LockFlag& LockFlag)noexcept
+    static bool UnsafeTryLock(LockFlag& LockFlag) noexcept
     {
-        return Atomics::AtomicCompareExchange( LockFlag.m_Flag, 
-                                               static_cast<Atomics::Long>( LockFlag::LOCK_FLAG_LOCKED ), 
-                                               static_cast<Atomics::Long>( LockFlag::LOCK_FLAG_UNLOCKED) ) == LockFlag::LOCK_FLAG_UNLOCKED;
+        return Atomics::AtomicCompareExchange(LockFlag.m_Flag,
+                                              static_cast<Atomics::Long>(LockFlag::LOCK_FLAG_LOCKED),
+                                              static_cast<Atomics::Long>(LockFlag::LOCK_FLAG_UNLOCKED)) == LockFlag::LOCK_FLAG_UNLOCKED;
     }
 
-    bool TryLock(LockFlag& LockFlag)noexcept
+    bool TryLock(LockFlag& LockFlag) noexcept
     {
-        if( UnsafeTryLock( LockFlag) )
+        if (UnsafeTryLock(LockFlag))
         {
             m_pLockFlag = &LockFlag;
             return true;
         }
-        else 
+        else
             return false;
     }
-    
+
     static constexpr const int DefaultSpinCountToYield = 256;
 
-    static void UnsafeLock(LockFlag& LockFlag, int SpinCountToYield = DefaultSpinCountToYield)noexcept
+    static void UnsafeLock(LockFlag& LockFlag, int SpinCountToYield = DefaultSpinCountToYield) noexcept
     {
         int SpinCount = 0;
-        while( !UnsafeTryLock( LockFlag ) )
+        while (!UnsafeTryLock(LockFlag))
         {
             ++SpinCount;
-            if(SpinCount == SpinCountToYield)
+            if (SpinCount == SpinCountToYield)
             {
                 SpinCount = 0;
                 YieldThread();
@@ -114,15 +114,15 @@ public:
         }
     }
 
-    void Lock(LockFlag& LockFlag, int SpinCountToYield = DefaultSpinCountToYield)noexcept
+    void Lock(LockFlag& LockFlag, int SpinCountToYield = DefaultSpinCountToYield) noexcept
     {
-        VERIFY( m_pLockFlag == NULL, "Object already locked" );
+        VERIFY(m_pLockFlag == NULL, "Object already locked");
         // Wait for the flag to become unlocked and lock it
         int SpinCount = 0;
-        while( !TryLock( LockFlag ) )
+        while (!TryLock(LockFlag))
         {
             ++SpinCount;
-            if(SpinCount == SpinCountToYield)
+            if (SpinCount == SpinCountToYield)
             {
                 SpinCount = 0;
                 YieldThread();
@@ -130,24 +130,27 @@ public:
         }
     }
 
-    static void UnsafeUnlock(LockFlag& LockFlag)noexcept
+    static void UnsafeUnlock(LockFlag& LockFlag) noexcept
     {
         LockFlag.m_Flag = LockFlag::LOCK_FLAG_UNLOCKED;
     }
 
-    void Unlock()noexcept
+    void Unlock() noexcept
     {
-        if( m_pLockFlag )
+        if (m_pLockFlag)
             UnsafeUnlock(*m_pLockFlag);
         m_pLockFlag = NULL;
     }
 
 private:
-    static void YieldThread()noexcept;
+    static void YieldThread() noexcept;
 
-    LockFlag* m_pLockFlag;
-    LockHelper( const LockHelper& LockHelper );
-    const LockHelper& operator = ( const LockHelper& LockHelper );
+    LockFlag* m_pLockFlag = nullptr;
+
+    // clang-format off
+    LockHelper           (const LockHelper& LockHelper) = delete;
+    LockHelper& operator=(const LockHelper& LockHelper) = delete;
+    // clang-format on
 };
 
-}
+} // namespace ThreadingTools

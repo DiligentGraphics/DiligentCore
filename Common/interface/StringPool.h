@@ -38,26 +38,30 @@ namespace Diligent
 class StringPool
 {
 public:
-    StringPool(){}
-    
-    StringPool             (const StringPool&) = delete;
-    StringPool& operator = (const StringPool&) = delete;
+    StringPool() {}
 
-    StringPool (StringPool&& Pool) : 
-        m_pBuffer     (Pool.m_pBuffer     ),
-        m_pCurrPtr    (Pool.m_pCurrPtr    ),
-        m_ReservedSize(Pool.m_ReservedSize),
-        m_pAllocator  (Pool.m_pAllocator  )
+    // clang-format off
+    StringPool           (const StringPool&) = delete;
+    StringPool& operator=(const StringPool&) = delete;
+    // clang-format on
+
+    StringPool(StringPool&& Pool) :
+        // clang-format off
+        m_pBuffer     {Pool.m_pBuffer     },
+        m_pCurrPtr    {Pool.m_pCurrPtr    },
+        m_ReservedSize{Pool.m_ReservedSize},
+        m_pAllocator  {Pool.m_pAllocator  }
+    // clang-format on
     {
-        Pool.m_pBuffer       = nullptr;
-        Pool.m_pCurrPtr      = nullptr;
-        Pool.m_ReservedSize  = 0;
-        Pool.m_pAllocator    = nullptr;
+        Pool.m_pBuffer      = nullptr;
+        Pool.m_pCurrPtr     = nullptr;
+        Pool.m_ReservedSize = 0;
+        Pool.m_pAllocator   = nullptr;
     }
 
     ~StringPool()
     {
-        if(m_pBuffer != nullptr && m_pAllocator != nullptr)
+        if (m_pBuffer != nullptr && m_pAllocator != nullptr)
         {
             m_pAllocator->Free(m_pBuffer);
         }
@@ -66,7 +70,7 @@ public:
     void Reserve(size_t Size, IMemoryAllocator& Allocator)
     {
         VERIFY(m_ReservedSize == 0, "Pool is already initialized");
-        m_pAllocator = &Allocator;
+        m_pAllocator   = &Allocator;
         m_ReservedSize = Size;
         if (m_ReservedSize != 0)
         {
@@ -79,23 +83,23 @@ public:
     {
         VERIFY(m_ReservedSize == 0, "Pool is already initialized");
         m_ReservedSize = Size;
-        m_pBuffer = pBuffer;
-        m_pCurrPtr = m_pBuffer;
+        m_pBuffer      = pBuffer;
+        m_pCurrPtr     = m_pBuffer;
     }
 
     Char* Allocate(size_t Length)
     {
         VERIFY(m_pCurrPtr + Length <= m_pBuffer + m_ReservedSize, "Not enough space in the buffer");
-        auto *Ptr = m_pCurrPtr;
+        auto* Ptr = m_pCurrPtr;
         m_pCurrPtr += Length;
         return Ptr;
     }
 
     Char* CopyString(const String& Str)
     {
-        auto len = Str.length();
-        auto *str = Allocate(len + 1);
-        if(len != 0)
+        auto  len = Str.length();
+        auto* str = Allocate(len + 1);
+        if (len != 0)
         {
             memcpy(str, Str.data(), len * sizeof(str[0]));
         }
@@ -106,11 +110,11 @@ public:
     Char* CopyString(const char* Str)
     {
         auto* Ptr = m_pCurrPtr;
-        while(*Str != 0 && m_pCurrPtr < m_pBuffer + m_ReservedSize)
+        while (*Str != 0 && m_pCurrPtr < m_pBuffer + m_ReservedSize)
         {
             *(m_pCurrPtr++) = *(Str++);
         }
-        if(m_pCurrPtr < m_pBuffer + m_ReservedSize)
+        if (m_pCurrPtr < m_pBuffer + m_ReservedSize)
             *(m_pCurrPtr++) = 0;
         else
             UNEXPECTED("Not enough space reserved in the string pool");
@@ -118,22 +122,22 @@ public:
     }
 
 
-    size_t GetRemainingSize()const
+    size_t GetRemainingSize() const
     {
         VERIFY(m_pCurrPtr <= m_pBuffer + m_ReservedSize, "Buffer overflow");
         return m_ReservedSize - (m_pCurrPtr - m_pBuffer);
     }
-    size_t GetUsedSize()const
+    size_t GetUsedSize() const
     {
         VERIFY(m_pCurrPtr <= m_pBuffer + m_ReservedSize, "Buffer overflow");
         return m_pCurrPtr - m_pBuffer;
     }
 
 private:
-    Char*               m_pBuffer       = nullptr;
-    Char*               m_pCurrPtr      = nullptr;
-    size_t              m_ReservedSize  = 0;
-    IMemoryAllocator*   m_pAllocator    = nullptr;
+    Char*             m_pBuffer      = nullptr;
+    Char*             m_pCurrPtr     = nullptr;
+    size_t            m_ReservedSize = 0;
+    IMemoryAllocator* m_pAllocator   = nullptr;
 };
 
-}
+} // namespace Diligent

@@ -28,43 +28,47 @@
 
 namespace Diligent
 {
-    using UniqueIdentifier = Int32;
 
-    // Template switch is used to have distinct counters 
-    // for unrelated groups of objects
-    template<typename ObjectsClass> 
-    class UniqueIdHelper
+using UniqueIdentifier = Int32;
+
+// Template switch is used to have distinct counters
+// for unrelated groups of objects
+template <typename ObjectsClass>
+class UniqueIdHelper
+{
+public:
+    UniqueIdHelper() noexcept {}
+
+    // clang-format off
+    UniqueIdHelper             (const UniqueIdHelper&) = delete;
+    UniqueIdHelper& operator = (const UniqueIdHelper&) = delete;
+    // clang-format on
+
+    UniqueIdHelper(UniqueIdHelper&& RHS) noexcept :
+        m_ID{RHS.m_ID}
     {
-    public:
-        UniqueIdHelper()noexcept {}
+        RHS.m_ID = 0;
+    }
 
-        UniqueIdHelper             (const UniqueIdHelper&) = delete;
-        UniqueIdHelper& operator = (const UniqueIdHelper&) = delete;
+    UniqueIdHelper& operator=(UniqueIdHelper&& RHS) noexcept
+    {
+        m_ID     = RHS.m_ID;
+        RHS.m_ID = 0;
+        return *this;
+    }
 
-        UniqueIdHelper(UniqueIdHelper&& RHS)noexcept : 
-            m_ID {RHS.m_ID}
+    UniqueIdentifier GetID() const noexcept
+    {
+        if (m_ID == 0)
         {
-            RHS.m_ID = 0;
+            static Atomics::AtomicLong GlobalCounter; // = 0 causes gcc error
+            m_ID = static_cast<UniqueIdentifier>(Atomics::AtomicIncrement(GlobalCounter));
         }
+        return m_ID;
+    }
 
-        UniqueIdHelper& operator = (UniqueIdHelper&& RHS)noexcept
-        {
-                m_ID = RHS.m_ID;
-            RHS.m_ID = 0;
-            return *this;
-        }
+private:
+    mutable UniqueIdentifier m_ID = 0;
+};
 
-        UniqueIdentifier GetID()const noexcept
-        { 
-            if (m_ID == 0)
-            {
-                static Atomics::AtomicLong GlobalCounter; // = 0 causes gcc error
-                m_ID = static_cast<UniqueIdentifier>(Atomics::AtomicIncrement(GlobalCounter));
-            }
-            return m_ID; 
-        }
-
-    private:
-        mutable UniqueIdentifier m_ID = 0;
-    };
-}
+} // namespace Diligent

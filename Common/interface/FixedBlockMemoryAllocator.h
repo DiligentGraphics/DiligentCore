@@ -40,12 +40,12 @@ namespace Diligent
 {
 
 #ifdef _DEBUG
-    inline void FillWithDebugPattern(void *ptr, Uint8 Pattern, size_t NumBytes)
-    {
-        memset(ptr, Pattern, NumBytes);
-    }
+inline void FillWithDebugPattern(void* ptr, Uint8 Pattern, size_t NumBytes)
+{
+    memset(ptr, Pattern, NumBytes);
+}
 #else
-    #define FillWithDebugPattern(...)
+#    define FillWithDebugPattern(...)
 #endif
 
 /// Memory allocator that allocates memory in a fixed-size chunks
@@ -56,48 +56,53 @@ public:
     ~FixedBlockMemoryAllocator();
 
     /// Allocates block of memory
-    virtual void* Allocate( size_t Size, const Char* dbgDescription, const char* dbgFileName, const  Int32 dbgLineNumber)override final;
+    virtual void* Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber) override final;
 
     /// Releases memory
-    virtual void Free(void *Ptr)override final;
-    
+    virtual void Free(void* Ptr) override final;
+
 private:
+    // clang-format off
     FixedBlockMemoryAllocator             (const FixedBlockMemoryAllocator&) = delete;
     FixedBlockMemoryAllocator             (FixedBlockMemoryAllocator&&)      = delete;
     FixedBlockMemoryAllocator& operator = (const FixedBlockMemoryAllocator&) = delete;
     FixedBlockMemoryAllocator& operator = (FixedBlockMemoryAllocator&&)      = delete;
+    // clang-format on
 
     void CreateNewPage();
 
     // Memory page class is based on the fixed-size memory pool described in "Fast Efficient Fixed-Size Memory Pool"
     // by Ben Kenwright
     class MemoryPage
-    { 
+    {
     public:
         static constexpr Uint8 NewPageMemPattern          = 0xAA;
         static constexpr Uint8 AllocatedBlockMemPattern   = 0xAB;
         static constexpr Uint8 DeallocatedBlockMemPattern = 0xDE;
         static constexpr Uint8 InitializedBlockMemPattern = 0xCF;
 
-        MemoryPage(FixedBlockMemoryAllocator& OwnerAllocator):
-            m_NumFreeBlocks       (OwnerAllocator.m_NumBlocksInPage),
-            m_NumInitializedBlocks(0),
-            m_pOwnerAllocator     (&OwnerAllocator)
+        MemoryPage(FixedBlockMemoryAllocator& OwnerAllocator) :
+            // clang-format off
+            m_NumFreeBlocks       {OwnerAllocator.m_NumBlocksInPage},
+            m_NumInitializedBlocks{0},
+            m_pOwnerAllocator     {&OwnerAllocator}
+        // clang-format on
         {
             auto PageSize = OwnerAllocator.m_BlockSize * OwnerAllocator.m_NumBlocksInPage;
-            m_pPageStart = reinterpret_cast<Uint8*>(
-                OwnerAllocator.m_RawMemoryAllocator.Allocate(PageSize, "FixedBlockMemoryAllocator page", __FILE__, __LINE__)
-                );
+            m_pPageStart  = reinterpret_cast<Uint8*>(
+                OwnerAllocator.m_RawMemoryAllocator.Allocate(PageSize, "FixedBlockMemoryAllocator page", __FILE__, __LINE__));
             m_pNextFreeBlock = m_pPageStart;
             FillWithDebugPattern(m_pPageStart, NewPageMemPattern, PageSize);
         }
 
-        MemoryPage(MemoryPage&& Page) noexcept : 
-            m_NumFreeBlocks       (Page.m_NumFreeBlocks),
-            m_NumInitializedBlocks(Page.m_NumInitializedBlocks),
-            m_pPageStart          (Page.m_pPageStart),
-            m_pNextFreeBlock      (Page.m_pNextFreeBlock),
-            m_pOwnerAllocator     (Page.m_pOwnerAllocator)
+        MemoryPage(MemoryPage&& Page) noexcept :
+            // clang-format off
+            m_NumFreeBlocks       {Page.m_NumFreeBlocks       },
+            m_NumInitializedBlocks{Page.m_NumInitializedBlocks},
+            m_pPageStart          {Page.m_pPageStart          },
+            m_pNextFreeBlock      {Page.m_pNextFreeBlock      },
+            m_pOwnerAllocator     {Page.m_pOwnerAllocator     }
+        // clang-format on
         {
             Page.m_NumFreeBlocks        = 0;
             Page.m_NumInitializedBlocks = 0;
@@ -106,31 +111,31 @@ private:
             Page.m_pOwnerAllocator      = nullptr;
         }
 
-        ~MemoryPage() 
-        { 
-            if(m_pOwnerAllocator)
+        ~MemoryPage()
+        {
+            if (m_pOwnerAllocator)
                 m_pOwnerAllocator->m_RawMemoryAllocator.Free(m_pPageStart);
         }
 
         void* GetBlockStartAddress(Uint32 BlockIndex) const
         {
             VERIFY_EXPR(m_pOwnerAllocator != nullptr);
-            VERIFY(BlockIndex >= 0 && BlockIndex < m_pOwnerAllocator->m_NumBlocksInPage, "Invalid block index" );
+            VERIFY(BlockIndex >= 0 && BlockIndex < m_pOwnerAllocator->m_NumBlocksInPage, "Invalid block index");
             return reinterpret_cast<Uint8*>(m_pPageStart) + BlockIndex * m_pOwnerAllocator->m_BlockSize;
         }
 
 #ifdef _DEBUG
-        void dbgVerifyAddress(const void* pBlockAddr)const
+        void dbgVerifyAddress(const void* pBlockAddr) const
         {
             size_t Delta = reinterpret_cast<const Uint8*>(pBlockAddr) - reinterpret_cast<Uint8*>(m_pPageStart);
             VERIFY(Delta % m_pOwnerAllocator->m_BlockSize == 0, "Invalid address");
             Uint32 BlockIndex = static_cast<Uint32>(Delta / m_pOwnerAllocator->m_BlockSize);
-            VERIFY(BlockIndex >= 0 && BlockIndex < m_pOwnerAllocator->m_NumBlocksInPage, "Invalid block index" );
+            VERIFY(BlockIndex >= 0 && BlockIndex < m_pOwnerAllocator->m_NumBlocksInPage, "Invalid block index");
         }
 #else
-        #define dbgVerifyAddress(...)
+#    define dbgVerifyAddress(...)
 #endif
-        
+
         void* Allocate()
         {
             VERIFY_EXPR(m_pOwnerAllocator != nullptr);
@@ -149,33 +154,33 @@ private:
                 //
                 //                            ___________                      ___________
                 //                           |           |                    |           |
-                //                           | 0xcdcdcd  |                 -->| 0xcdcdcd  |   m_NumInitializedBlocks 
+                //                           | 0xcdcdcd  |                 -->| 0xcdcdcd  |   m_NumInitializedBlocks
                 //                           |-----------|                |   |-----------|
                 //                           |           |                |   |           |
-                //  m_NumInitializedBlocks   | 0xcdcdcd  |      ==>        ---|           |    
+                //  m_NumInitializedBlocks   | 0xcdcdcd  |      ==>        ---|           |
                 //                           |-----------|                    |-----------|
-                //                                                     
+                //
                 //                           ~           ~                    ~           ~
                 //                           |           |                    |           |
-                //                       0   |           |                    |           | 
+                //                       0   |           |                    |           |
                 //                            -----------                      -----------
-                // 
-                auto *pUninitializedBlock = GetBlockStartAddress(m_NumInitializedBlocks);
+                //
+                auto* pUninitializedBlock = GetBlockStartAddress(m_NumInitializedBlocks);
                 FillWithDebugPattern(pUninitializedBlock, InitializedBlockMemPattern, m_pOwnerAllocator->m_BlockSize);
-                void** ppNextBlock = reinterpret_cast<void**>( pUninitializedBlock );
+                void** ppNextBlock = reinterpret_cast<void**>(pUninitializedBlock);
                 ++m_NumInitializedBlocks;
-                if( m_NumInitializedBlocks < m_pOwnerAllocator->m_NumBlocksInPage ) 
+                if (m_NumInitializedBlocks < m_pOwnerAllocator->m_NumBlocksInPage)
                     *ppNextBlock = GetBlockStartAddress(m_NumInitializedBlocks);
                 else
                     *ppNextBlock = nullptr;
             }
-            
+
             void* res = m_pNextFreeBlock;
             dbgVerifyAddress(res);
             // Move pointer to the next free block
             m_pNextFreeBlock = *reinterpret_cast<void**>(m_pNextFreeBlock);
             --m_NumFreeBlocks;
-            if(m_NumFreeBlocks != 0)
+            if (m_NumFreeBlocks != 0)
                 dbgVerifyAddress(m_pNextFreeBlock);
             else
                 VERIFY_EXPR(m_pNextFreeBlock == nullptr);
@@ -192,47 +197,48 @@ private:
             FillWithDebugPattern(p, DeallocatedBlockMemPattern, m_pOwnerAllocator->m_BlockSize);
             // Add block to the beginning of the linked list
             *reinterpret_cast<void**>(p) = m_pNextFreeBlock;
-            m_pNextFreeBlock = p;
+            m_pNextFreeBlock             = p;
             ++m_NumFreeBlocks;
         }
 
-        bool HasSpace()const{return m_NumFreeBlocks>0;}
-        bool HasAllocations()const{return m_NumFreeBlocks<m_NumInitializedBlocks;}
+        bool HasSpace() const { return m_NumFreeBlocks > 0; }
+        bool HasAllocations() const { return m_NumFreeBlocks < m_NumInitializedBlocks; }
+
     private:
+        MemoryPage(const MemoryPage&) = delete;
+        MemoryPage& operator=(const MemoryPage) = delete;
+        MemoryPage& operator=(MemoryPage&&) = delete;
 
-        MemoryPage(const MemoryPage&)=delete;
-        MemoryPage& operator = (const MemoryPage)=delete;
-        MemoryPage& operator = (MemoryPage&&)=delete;
-
-        Uint32 m_NumFreeBlocks = 0;         // Num of remaining blocks
-        Uint32 m_NumInitializedBlocks = 0;  // Num of initialized blocks
-        void* m_pPageStart = nullptr;       // Beginning of memory pool
-        void* m_pNextFreeBlock = nullptr;   // Num of next free block
-        FixedBlockMemoryAllocator *m_pOwnerAllocator = nullptr;
+        Uint32                     m_NumFreeBlocks        = 0;       // Num of remaining blocks
+        Uint32                     m_NumInitializedBlocks = 0;       // Num of initialized blocks
+        void*                      m_pPageStart           = nullptr; // Beginning of memory pool
+        void*                      m_pNextFreeBlock       = nullptr; // Num of next free block
+        FixedBlockMemoryAllocator* m_pOwnerAllocator      = nullptr;
     };
 
-    std::vector<MemoryPage, STDAllocatorRawMem<MemoryPage> > m_PagePool;
-    std::unordered_set<size_t, std::hash<size_t>, std::equal_to<size_t>, STDAllocatorRawMem<size_t> > m_AvailablePages;
-    typedef std::pair<void* const, size_t> AddrToPageIdMapElem;
-    std::unordered_map<void*, size_t, std::hash<void*>, std::equal_to<void*>, STDAllocatorRawMem<AddrToPageIdMapElem> > m_AddrToPageId;
+    std::vector<MemoryPage, STDAllocatorRawMem<MemoryPage>>                                          m_PagePool;
+    std::unordered_set<size_t, std::hash<size_t>, std::equal_to<size_t>, STDAllocatorRawMem<size_t>> m_AvailablePages;
+
+    using AddrToPageIdMapElem = std::pair<void* const, size_t>;
+    std::unordered_map<void*, size_t, std::hash<void*>, std::equal_to<void*>, STDAllocatorRawMem<AddrToPageIdMapElem>> m_AddrToPageId;
 
     std::mutex m_Mutex;
 
-    IMemoryAllocator &m_RawMemoryAllocator;
-    size_t m_BlockSize;
-    Uint32 m_NumBlocksInPage;
+    IMemoryAllocator& m_RawMemoryAllocator;
+    size_t            m_BlockSize;
+    Uint32            m_NumBlocksInPage;
 };
 
 IMemoryAllocator& GetRawAllocator();
 
-template<typename ObjectType>
+template <typename ObjectType>
 class ObjectPool
 {
 public:
-    static void SetRawAllocator(IMemoryAllocator &Allocator)
+    static void SetRawAllocator(IMemoryAllocator& Allocator)
     {
 #ifdef _DEBUG
-        if(m_bPoolInitialized && m_pRawAllocator != &Allocator)
+        if (m_bPoolInitialized && m_pRawAllocator != &Allocator)
         {
             LOG_WARNING_MESSAGE("Setting pool raw allocator after the pool has been initialized has no effect");
         }
@@ -242,7 +248,7 @@ public:
     static void SetPageSize(Uint32 NumAllocationsInPage)
     {
 #ifdef _DEBUG
-        if(m_bPoolInitialized && m_NumAllocationsInPage != NumAllocationsInPage)
+        if (m_bPoolInitialized && m_NumAllocationsInPage != NumAllocationsInPage)
         {
             LOG_WARNING_MESSAGE("Setting pool page size after the pool has been initialized has no effect");
         }
@@ -258,13 +264,13 @@ public:
         return ThePool;
     }
 
-    template<typename ... CtorArgTypes>
-    ObjectType* NewObject(const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber, CtorArgTypes&& ... CtorArgs)
+    template <typename... CtorArgTypes>
+    ObjectType* NewObject(const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber, CtorArgTypes&&... CtorArgs)
     {
-        void *pRawMem = m_FixedBlockAlloctor.Allocate(sizeof(ObjectType), dbgDescription, dbgFileName, dbgLineNumber);
+        void* pRawMem = m_FixedBlockAlloctor.Allocate(sizeof(ObjectType), dbgDescription, dbgFileName, dbgLineNumber);
         try
         {
-            return new(pRawMem) ObjectType(std::forward<CtorArgTypes>(CtorArgs)...);
+            return new (pRawMem) ObjectType(std::forward<CtorArgTypes>(CtorArgs)...);
         }
         catch (...)
         {
@@ -275,7 +281,7 @@ public:
 
     void Destroy(ObjectType* pObj)
     {
-        if(pObj != nullptr)
+        if (pObj != nullptr)
         {
             pObj->~ObjectType();
             m_FixedBlockAlloctor.Free(pObj);
@@ -283,31 +289,31 @@ public:
     }
 
 private:
-    static Uint32 m_NumAllocationsInPage;
-    static IMemoryAllocator *m_pRawAllocator;
+    static Uint32            m_NumAllocationsInPage;
+    static IMemoryAllocator* m_pRawAllocator;
 
-    ObjectPool() : 
-        m_FixedBlockAlloctor(m_pRawAllocator ? *m_pRawAllocator : GetRawAllocator(), sizeof(ObjectType),  m_NumAllocationsInPage)
+    ObjectPool() :
+        m_FixedBlockAlloctor(m_pRawAllocator ? *m_pRawAllocator : GetRawAllocator(), sizeof(ObjectType), m_NumAllocationsInPage)
     {}
 #ifdef _DEBUG
     static bool m_bPoolInitialized;
 #endif
     FixedBlockMemoryAllocator m_FixedBlockAlloctor;
 };
-template<typename ObjectType>
+template <typename ObjectType>
 Uint32 ObjectPool<ObjectType>::m_NumAllocationsInPage = 64;
 
-template<typename ObjectType>
+template <typename ObjectType>
 IMemoryAllocator* ObjectPool<ObjectType>::m_pRawAllocator = nullptr;
 
 #ifdef _DEBUG
-template<typename ObjectType>
+template <typename ObjectType>
 bool ObjectPool<ObjectType>::m_bPoolInitialized = false;
 #endif
 
-#define SET_POOL_RAW_ALLOCATOR(ObjectType, Allocator)ObjectPool<ObjectType>::SetRawAllocator(Allocator)
-#define SET_POOL_PAGE_SIZE(ObjectType, NumAllocationsInPage)ObjectPool<ObjectType>::SetPageSize(NumAllocationsInPage)
-#define NEW_POOL_OBJECT(ObjectType, Desc, ...)ObjectPool<ObjectType>::GetPool().NewObject(Desc, __FILE__, __LINE__, ##__VA_ARGS__)
-#define DESTROY_POOL_OBJECT(pObject)ObjectPool< std::remove_reference<decltype(*pObject)>::type >::GetPool().Destroy(pObject)
+#define SET_POOL_RAW_ALLOCATOR(ObjectType, Allocator)        ObjectPool<ObjectType>::SetRawAllocator(Allocator)
+#define SET_POOL_PAGE_SIZE(ObjectType, NumAllocationsInPage) ObjectPool<ObjectType>::SetPageSize(NumAllocationsInPage)
+#define NEW_POOL_OBJECT(ObjectType, Desc, ...)               ObjectPool<ObjectType>::GetPool().NewObject(Desc, __FILE__, __LINE__, ##__VA_ARGS__)
+#define DESTROY_POOL_OBJECT(pObject)                         ObjectPool<std::remove_reference<decltype(*pObject)>::type>::GetPool().Destroy(pObject)
 
-}
+} // namespace Diligent

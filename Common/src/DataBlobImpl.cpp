@@ -28,16 +28,16 @@
 
 namespace Diligent
 {
-    
-DataBlobImpl::DataBlobImpl( IReferenceCounters *pRefCounters, size_t InitialSize ) : 
-    TBase(pRefCounters),
+
+DataBlobImpl::DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize) :
+    TBase{pRefCounters},
     m_DataBuff(InitialSize)
 {}
 
 /// Sets the size of the internal data buffer
-void DataBlobImpl::Resize( size_t NewSize )
+void DataBlobImpl::Resize(size_t NewSize)
 {
-    m_DataBuff.resize( NewSize );
+    m_DataBuff.resize(NewSize);
 }
 
 /// Returns the size of the internal data buffer
@@ -46,7 +46,7 @@ size_t DataBlobImpl::GetSize()
     return m_DataBuff.size();
 }
 
-    /// Returns the pointer to the internal data buffer
+/// Returns the pointer to the internal data buffer
 void* DataBlobImpl::GetDataPtr()
 {
     return m_DataBuff.data();
@@ -54,4 +54,4 @@ void* DataBlobImpl::GetDataPtr()
 
 IMPLEMENT_QUERY_INTERFACE(DataBlobImpl, IID_DataBlob, TBase)
 
-}
+} // namespace Diligent

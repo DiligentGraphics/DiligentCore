@@ -34,36 +34,36 @@ namespace Diligent
 
 
 #define IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName) \
-{                                                               \
-    if( ppInterface == nullptr )                                \
-        return;                                                 \
-    if( IID == InterfaceID )                                    \
-    {                                                           \
-        *ppInterface = this;                                    \
-        (*ppInterface)->AddRef();                               \
-    }                                                           \
-    else                                                        \
-    {                                                           \
-        ParentClassName::QueryInterface( IID, ppInterface );    \
-    }                                                           \
-}
+    {                                                                \
+        if (ppInterface == nullptr)                                  \
+            return;                                                  \
+        if (IID == InterfaceID)                                      \
+        {                                                            \
+            *ppInterface = this;                                     \
+            (*ppInterface)->AddRef();                                \
+        }                                                            \
+        else                                                         \
+        {                                                            \
+            ParentClassName::QueryInterface(IID, ppInterface);       \
+        }                                                            \
+    }
 
-#define IMPLEMENT_QUERY_INTERFACE(ClassName, InterfaceID, ParentClassName) \
-    void ClassName :: QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) \
-    IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
+#define IMPLEMENT_QUERY_INTERFACE(ClassName, InterfaceID, ParentClassName)          \
+    void ClassName ::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) \
+        IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
-#define IMPLEMENT_QUERY_INTERFACE_IN_PLACE(InterfaceID, ParentClassName) \
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override \
-    IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
+#define IMPLEMENT_QUERY_INTERFACE_IN_PLACE(InterfaceID, ParentClassName)                 \
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override \
+        IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
 
 /// Template class implementing base functionality for an object
-template<typename BaseInterface>
+template <typename BaseInterface>
 class ObjectBase : public RefCountedObject<BaseInterface>
 {
 public:
-    ObjectBase(IReferenceCounters* pRefCounters) : 
-        RefCountedObject<BaseInterface>(pRefCounters)
+    ObjectBase(IReferenceCounters* pRefCounters) :
+        RefCountedObject<BaseInterface>{pRefCounters}
     {}
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
@@ -80,4 +80,4 @@ public:
     }
 };
 
-}
+} // namespace Diligent

@@ -33,7 +33,7 @@
 
 namespace Diligent
 {
-    
+
 /// Base interface for a data blob
 class DataBlobImpl : public Diligent::ObjectBase<IDataBlob>
 {
@@ -42,19 +42,19 @@ public:
 
     DataBlobImpl(IReferenceCounters* pRefCounters, size_t InitialSize = 0);
 
-    virtual void QueryInterface(const INTERFACE_ID &IID, IObject** ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     /// Sets the size of the internal data buffer
-    virtual void Resize( size_t NewSize )override;
+    virtual void Resize(size_t NewSize) override;
 
     /// Returns the size of the internal data buffer
-    virtual size_t GetSize()override;
+    virtual size_t GetSize() override;
 
     /// Returns the pointer to the internal data buffer
-    virtual void* GetDataPtr()override;
+    virtual void* GetDataPtr() override;
 
 private:
     std::vector<Uint8> m_DataBuff;
 };
 
-}
+} // namespace Diligent

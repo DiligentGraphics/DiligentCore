@@ -25,13 +25,13 @@
 
 #include "../../Platforms/Basic/interface/DebugUtilities.h"
 
-template<typename DstType, typename SrcType>
+template <typename DstType, typename SrcType>
 DstType* ValidatedCast(SrcType* Ptr)
 {
 #ifdef _DEBUG
-    if(Ptr != nullptr)
+    if (Ptr != nullptr)
     {
-        CHECK_DYNAMIC_TYPE( DstType, Ptr );
+        CHECK_DYNAMIC_TYPE(DstType, Ptr);
     }
 #endif
     return static_cast<DstType*>(Ptr);

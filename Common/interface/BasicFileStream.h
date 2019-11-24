@@ -42,26 +42,26 @@ public:
     typedef ObjectBase<IFileStream> TBase;
 
     BasicFileStream(IReferenceCounters* pRefCounters,
-                    const Char*         Path, 
+                    const Char*         Path,
                     EFileAccessMode     Access = EFileAccessMode::Read);
 
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     /// Reads data from the stream
-    virtual void Read( IDataBlob* pData )override;
+    virtual void Read(IDataBlob* pData) override;
 
     /// Reads data from the stream
-    virtual bool Read( void* Data, size_t Size )override;
+    virtual bool Read(void* Data, size_t Size) override;
 
     /// Writes data to the stream
-    virtual bool Write( const void* Data, size_t Size )override;
+    virtual bool Write(const void* Data, size_t Size) override;
 
-    virtual size_t GetSize()override;
+    virtual size_t GetSize() override;
 
-    virtual bool IsValid()override;
+    virtual bool IsValid() override;
 
 private:
     FileWrapper m_FileWrpr;
 };
 
-}
+} // namespace Diligent

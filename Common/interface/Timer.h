@@ -27,15 +27,17 @@
 
 namespace Diligent
 {
-    class Timer
-    {
-    public: 
-        Timer();
-        void Restart();
-        double GetElapsedTime()const;
-        float GetElapsedTimef()const;
 
-    private:
-        std::chrono::high_resolution_clock::time_point m_StartTime;
-    };
-}
+class Timer
+{
+public:
+    Timer();
+    void   Restart();
+    double GetElapsedTime() const;
+    float  GetElapsedTimef() const;
+
+private:
+    std::chrono::high_resolution_clock::time_point m_StartTime;
+};
+
+} // namespace Diligent

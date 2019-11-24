@@ -28,53 +28,56 @@
 
 namespace Diligent
 {
-    MemoryFileStream::MemoryFileStream(IReferenceCounters* pRefCounters,
-                                       IDataBlob*          pData) :
-        TBase(pRefCounters),
-        m_DataBlob(pData)
-    {
-    }
 
-    IMPLEMENT_QUERY_INTERFACE(MemoryFileStream, IID_FileStream, TBase)
-
-    bool MemoryFileStream::Read(void* Data, size_t Size)
-    {
-        VERIFY_EXPR(m_CurrentOffset <= m_DataBlob->GetSize());
-        auto BytesLeft = m_DataBlob->GetSize() - m_CurrentOffset;
-        auto BytesToRead = std::min(BytesLeft, Size);
-        auto* pSrcData = reinterpret_cast<const Uint8*>(m_DataBlob->GetDataPtr()) + m_CurrentOffset;
-        memcpy(Data, pSrcData, BytesToRead);
-        m_CurrentOffset += BytesToRead;
-        return Size == BytesToRead;
-    }
-
-    void MemoryFileStream::Read( IDataBlob* pData )
-    {
-        auto BytesLeft = m_DataBlob->GetSize() - m_CurrentOffset;
-        pData->Resize(BytesLeft);
-        auto res = Read(pData->GetDataPtr(), pData->GetSize());
-        VERIFY_EXPR(res); (void)res;
-    }
-
-    bool MemoryFileStream::Write(const void* Data, size_t Size)
-    {
-        if (m_CurrentOffset + Size > m_DataBlob->GetSize())
-        {
-            m_DataBlob->Resize(m_CurrentOffset + Size);
-        }
-        auto* DstData = reinterpret_cast<Uint8*>(m_DataBlob->GetDataPtr()) + m_CurrentOffset;
-        memcpy(DstData, Data, Size);
-        m_CurrentOffset += Size;
-        return true;
-    }
-
-    bool MemoryFileStream::IsValid()
-    {
-        return !!m_DataBlob;
-    }
-
-    size_t MemoryFileStream::GetSize()
-    {
-        return m_DataBlob->GetSize();
-    }
+MemoryFileStream::MemoryFileStream(IReferenceCounters* pRefCounters,
+                                   IDataBlob*          pData) :
+    TBase{pRefCounters},
+    m_DataBlob{pData}
+{
 }
+
+IMPLEMENT_QUERY_INTERFACE(MemoryFileStream, IID_FileStream, TBase)
+
+bool MemoryFileStream::Read(void* Data, size_t Size)
+{
+    VERIFY_EXPR(m_CurrentOffset <= m_DataBlob->GetSize());
+    auto  BytesLeft   = m_DataBlob->GetSize() - m_CurrentOffset;
+    auto  BytesToRead = std::min(BytesLeft, Size);
+    auto* pSrcData    = reinterpret_cast<const Uint8*>(m_DataBlob->GetDataPtr()) + m_CurrentOffset;
+    memcpy(Data, pSrcData, BytesToRead);
+    m_CurrentOffset += BytesToRead;
+    return Size == BytesToRead;
+}
+
+void MemoryFileStream::Read(IDataBlob* pData)
+{
+    auto BytesLeft = m_DataBlob->GetSize() - m_CurrentOffset;
+    pData->Resize(BytesLeft);
+    auto res = Read(pData->GetDataPtr(), pData->GetSize());
+    VERIFY_EXPR(res);
+    (void)res;
+}
+
+bool MemoryFileStream::Write(const void* Data, size_t Size)
+{
+    if (m_CurrentOffset + Size > m_DataBlob->GetSize())
+    {
+        m_DataBlob->Resize(m_CurrentOffset + Size);
+    }
+    auto* DstData = reinterpret_cast<Uint8*>(m_DataBlob->GetDataPtr()) + m_CurrentOffset;
+    memcpy(DstData, Data, Size);
+    m_CurrentOffset += Size;
+    return true;
+}
+
+bool MemoryFileStream::IsValid()
+{
+    return !!m_DataBlob;
+}
+
+size_t MemoryFileStream::GetSize()
+{
+    return m_DataBlob->GetSize();
+}
+
+} // namespace Diligent

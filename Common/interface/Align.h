@@ -34,14 +34,14 @@ namespace Diligent
 template <typename T>
 bool IsPowerOfTwo(T val)
 {
-    return val > 0 && (val & (val-1)) == 0;
+    return val > 0 && (val & (val - 1)) == 0;
 }
 
 template <typename T>
 inline T Align(T val, T alignment)
 {
-    VERIFY( IsPowerOfTwo(alignment), "Alignment (", alignment, ") must be power of 2" );
-    return (val + (alignment-1)) & ~(alignment-1);
+    VERIFY(IsPowerOfTwo(alignment), "Alignment (", alignment, ") must be power of 2");
+    return (val + (alignment - 1)) & ~(alignment - 1);
 }
 
-}
+} // namespace Diligent
