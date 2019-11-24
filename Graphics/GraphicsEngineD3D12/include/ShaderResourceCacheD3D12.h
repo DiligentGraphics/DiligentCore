@@ -107,7 +107,7 @@ public:
     };
 
     ShaderResourceCacheD3D12(DbgCacheContentType dbgContentType)
-        // clang-format off
+    // clang-format off
 #ifdef _DEBUG
         : m_DbgContentType
     {

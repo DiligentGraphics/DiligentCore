@@ -41,21 +41,21 @@ DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, D3D12_RESOURCE_FLAGS Flags)
 {
     if (Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)
     {
+        // clang-format off
         switch (Fmt)
         {
-            // clang-format off
             case DXGI_FORMAT_R32_TYPELESS:      return DXGI_FORMAT_D32_FLOAT;
             case DXGI_FORMAT_R16_TYPELESS:      return DXGI_FORMAT_D16_UNORM;
             case DXGI_FORMAT_R24G8_TYPELESS:    return DXGI_FORMAT_D24_UNORM_S8_UINT;
             case DXGI_FORMAT_R32G8X24_TYPELESS: return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-            // clang-format on
         }
+        // clang-format on
     }
     else if (Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET)
     {
+        // clang-format off
         switch (Fmt)
         {
-            // clang-format off
             case DXGI_FORMAT_R32G32B32A32_TYPELESS: return DXGI_FORMAT_R32G32B32A32_FLOAT;
             case DXGI_FORMAT_R32G32B32_TYPELESS:    return DXGI_FORMAT_R32G32B32_FLOAT;  
             case DXGI_FORMAT_R16G16B16A16_TYPELESS: return DXGI_FORMAT_R16G16B16A16_FLOAT;
@@ -69,8 +69,8 @@ DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, D3D12_RESOURCE_FLAGS Flags)
             case DXGI_FORMAT_R8_TYPELESS:           return DXGI_FORMAT_R8_UNORM;         
             case DXGI_FORMAT_B8G8R8A8_TYPELESS:     return DXGI_FORMAT_B8G8R8A8_UNORM;   
             case DXGI_FORMAT_B8G8R8X8_TYPELESS:     return DXGI_FORMAT_B8G8R8X8_UNORM;
-            // clang-format on
         }
+        // clang-format on
     }
     return Fmt;
 }

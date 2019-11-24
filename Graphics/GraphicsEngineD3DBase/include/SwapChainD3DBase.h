@@ -33,22 +33,22 @@ namespace Diligent
 {
 
 /// Base implementation of a D3D swap chain
-template<class BaseInterface, typename DXGISwapChainType>
+template <class BaseInterface, typename DXGISwapChainType>
 class SwapChainD3DBase : public SwapChainBase<BaseInterface>
 {
 public:
     using TBase = SwapChainBase<BaseInterface>;
-    SwapChainD3DBase(IReferenceCounters*        pRefCounters,
-                        IRenderDevice*             pDevice,
-                        IDeviceContext*            pDeviceContext,
-                        const SwapChainDesc&       SCDesc,
-                        const FullScreenModeDesc&  FSDesc,
-                        void*                      pNativeWndHandle) :
+    SwapChainD3DBase(IReferenceCounters*       pRefCounters,
+                     IRenderDevice*            pDevice,
+                     IDeviceContext*           pDeviceContext,
+                     const SwapChainDesc&      SCDesc,
+                     const FullScreenModeDesc& FSDesc,
+                     void*                     pNativeWndHandle) :
         // clang-format off
         TBase{pRefCounters, pDevice, pDeviceContext, SCDesc},
         m_FSDesc           {FSDesc},
         m_pNativeWndHandle {pNativeWndHandle}
-        // clang-format on
+    // clang-format on
     {}
 
     ~SwapChainD3DBase()
@@ -67,7 +67,7 @@ public:
 protected:
     virtual void UpdateSwapChain(bool CreateNew) = 0;
 
-    void CreateDXGISwapChain(IUnknown *pD3D11DeviceOrD3D12CmdQueue)
+    void CreateDXGISwapChain(IUnknown* pD3D11DeviceOrD3D12CmdQueue)
     {
 #if PLATFORM_WIN32
         auto hWnd = reinterpret_cast<HWND>(m_pNativeWndHandle);
@@ -83,7 +83,7 @@ protected:
             {
                 GetClientRect(hWnd, &rc);
             }
-            m_SwapChainDesc.Width = rc.right - rc.left;
+            m_SwapChainDesc.Width  = rc.right - rc.left;
             m_SwapChainDesc.Height = rc.bottom - rc.top;
         }
 #endif
@@ -91,10 +91,11 @@ protected:
         auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
 
         DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+
         swapChainDesc.Width  = m_SwapChainDesc.Width;
         swapChainDesc.Height = m_SwapChainDesc.Height;
-        //  Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD) only support the following Formats: 
-        //  - DXGI_FORMAT_R16G16B16A16_FLOAT 
+        //  Flip model swapchains (DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL and DXGI_SWAP_EFFECT_FLIP_DISCARD) only support the following Formats:
+        //  - DXGI_FORMAT_R16G16B16A16_FLOAT
         //  - DXGI_FORMAT_B8G8R8A8_UNORM
         //  - DXGI_FORMAT_R8G8B8A8_UNORM
         //  - DXGI_FORMAT_R10G10B10A2_UNORM
@@ -114,13 +115,13 @@ protected:
                 swapChainDesc.Format = DXGIColorBuffFmt;
         }
 
-        swapChainDesc.Stereo             = FALSE;
+        swapChainDesc.Stereo = FALSE;
 
         // Multi-sampled swap chains are not supported anymore. CreateSwapChainForHwnd() fails when sample count is not 1
         // for any swap effect.
         swapChainDesc.SampleDesc.Count   = 1;
         swapChainDesc.SampleDesc.Quality = 0;
-            
+
         DEV_CHECK_ERR(m_SwapChainDesc.Usage != 0, "No swap chain usage flags defined");
         swapChainDesc.BufferUsage = 0;
         if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_RENDER_TARGET)
@@ -130,8 +131,8 @@ protected:
         //if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_COPY_SOURCE)
         //    ;
 
-        swapChainDesc.BufferCount        = m_SwapChainDesc.BufferCount;
-        swapChainDesc.Scaling            = DXGI_SCALING_NONE;
+        swapChainDesc.BufferCount = m_SwapChainDesc.BufferCount;
+        swapChainDesc.Scaling     = DXGI_SCALING_NONE;
 
 #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP)
         // DXGI_SCALING_NONE is supported starting with Windows 8
@@ -139,7 +140,7 @@ protected:
             swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 #endif
 
-        // DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL is the flip presentation model, where the contents of the back 
+        // DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL is the flip presentation model, where the contents of the back
         // buffer is preserved after the call to Present. This flag cannot be used with multisampling.
         // The only swap effect that supports multisampling is DXGI_SWAP_EFFECT_DISCARD.
         // Windows Store apps must use DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL or DXGI_SWAP_EFFECT_FLIP_DISCARD.
@@ -147,39 +148,41 @@ protected:
 
         swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED; //  Transparency behavior is not specified
 
-        // DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH enables an application to switch modes by calling 
-        // IDXGISwapChain::ResizeTarget(). When switching from windowed to fullscreen mode, the display 
+        // DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH enables an application to switch modes by calling
+        // IDXGISwapChain::ResizeTarget(). When switching from windowed to fullscreen mode, the display
         // mode (or monitor resolution) will be changed to match the dimensions of the application window.
         swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
         CComPtr<IDXGISwapChain1> pSwapChain1;
-        CComPtr<IDXGIFactory2> factory;
-        HRESULT hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory2**>(&factory)));
+        CComPtr<IDXGIFactory2>   factory;
+        HRESULT                  hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory2**>(&factory)));
         CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
 #if PLATFORM_WIN32
 
         DXGI_SWAP_CHAIN_FULLSCREEN_DESC FullScreenDesc = {};
-        FullScreenDesc.Windowed = m_FSDesc.Fullscreen ? FALSE : TRUE;
+
+        FullScreenDesc.Windowed                = m_FSDesc.Fullscreen ? FALSE : TRUE;
         FullScreenDesc.RefreshRate.Numerator   = m_FSDesc.RefreshRateNumerator;
         FullScreenDesc.RefreshRate.Denominator = m_FSDesc.RefreshRateDenominator;
-        FullScreenDesc.Scaling          = static_cast<DXGI_MODE_SCALING>(m_FSDesc.Scaling);
-        FullScreenDesc.ScanlineOrdering = static_cast<DXGI_MODE_SCANLINE_ORDER>(m_FSDesc.ScanlineOrder);
+        FullScreenDesc.Scaling                 = static_cast<DXGI_MODE_SCALING>(m_FSDesc.Scaling);
+        FullScreenDesc.ScanlineOrdering        = static_cast<DXGI_MODE_SCANLINE_ORDER>(m_FSDesc.ScanlineOrder);
+
         hr = factory->CreateSwapChainForHwnd(pD3D11DeviceOrD3D12CmdQueue, hWnd, &swapChainDesc, &FullScreenDesc, nullptr, &pSwapChain1);
         CHECK_D3D_RESULT_THROW(hr, "Failed to create Swap Chain");
-            
+
         {
-            // This is silly, but IDXGIFactory used for MakeWindowAssociation must be retrieved via 
+            // This is silly, but IDXGIFactory used for MakeWindowAssociation must be retrieved via
             // calling IDXGISwapchain::GetParent first, otherwise it won't work
             // https://www.gamedev.net/forums/topic/634235-dxgidisabling-altenter/?do=findComment&comment=4999990
             CComPtr<IDXGIFactory1> pFactoryFromSC;
-            if (SUCCEEDED(pSwapChain1->GetParent(__uuidof(pFactoryFromSC), (void **)&pFactoryFromSC)))
+            if (SUCCEEDED(pSwapChain1->GetParent(__uuidof(pFactoryFromSC), (void**)&pFactoryFromSC)))
             {
                 // Do not allow the swap chain to handle Alt+Enter
                 pFactoryFromSC->MakeWindowAssociation(hWnd, DXGI_MWA_NO_WINDOW_CHANGES | DXGI_MWA_NO_ALT_ENTER);
             }
         }
-            
+
 #elif PLATFORM_UNIVERSAL_WINDOWS
 
         if (m_FSDesc.Fullscreen)
@@ -200,10 +203,9 @@ protected:
 #endif
 
         pSwapChain1->QueryInterface(__uuidof(m_pSwapChain), reinterpret_cast<void**>(static_cast<DXGISwapChainType**>(&m_pSwapChain)));
-
     }
 
-    virtual void SetFullscreenMode(const DisplayModeAttribs &DisplayMode)override final
+    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final
     {
         if (m_pSwapChain)
         {
@@ -225,7 +227,7 @@ protected:
         }
     }
 
-    virtual void SetWindowedMode()override final
+    virtual void SetWindowedMode() override final
     {
         if (m_FSDesc.Fullscreen)
         {
@@ -234,9 +236,9 @@ protected:
         }
     }
 
-    FullScreenModeDesc m_FSDesc;
+    FullScreenModeDesc         m_FSDesc;
     CComPtr<DXGISwapChainType> m_pSwapChain;
-    void* m_pNativeWndHandle;
+    void*                      m_pNativeWndHandle;
 };
 
-}
+} // namespace Diligent

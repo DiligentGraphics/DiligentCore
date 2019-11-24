@@ -46,7 +46,7 @@ TextureViewD3D12Impl::TextureViewD3D12Impl(IReferenceCounters*        pRefCounte
         bIsDefaultView
     },
     m_Descriptor{std::move(Descriptor)}
-    // clang-format on
+// clang-format on
 {
     if (!TexArraySRVDescriptor.IsNull() && !MipLevelUAVDescriptors.IsNull())
     {
