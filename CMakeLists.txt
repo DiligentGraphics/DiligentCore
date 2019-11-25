@@ -310,3 +310,21 @@ if(DILIGENT_INSTALL_CORE)
 
     install(FILES License.txt DESTINATION "Licenses" RENAME DiligentEngine-License.txt)
 endif(DILIGENT_INSTALL_CORE)
+
+
+if(NOT TARGET Diligent-ValidateFormatting)
+    # Create a custom target to run source code formatting validation command
+    add_custom_target(Diligent-ValidateFormatting ALL)
+    set_target_properties(Diligent-ValidateFormatting PROPERTIES
+        FOLDER DiligentCore
+    )
+
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+        add_custom_command(TARGET Diligent-ValidateFormatting
+                           COMMAND validate_format_win.bat
+                           WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Utilities/FormatValidation"
+                           COMMENT "Validating source code formatting..."
+                           VERBATIM
+        )
+    endif()
+endif()
