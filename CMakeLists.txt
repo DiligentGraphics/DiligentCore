@@ -291,7 +291,7 @@ endif()
 include(BuildUtils.cmake)
 
 add_subdirectory(ThirdParty)
-add_subdirectory(Utilities)
+add_subdirectory(BuildTools)
 add_subdirectory(Primitives)
 add_subdirectory(Platforms)
 add_subdirectory(Common)
@@ -312,20 +312,18 @@ if(DILIGENT_INSTALL_CORE)
 endif(DILIGENT_INSTALL_CORE)
 
 
-if(NOT TARGET Diligent-ValidateFormatting)
-    # Create a custom target to run source code formatting validation command
-    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-        add_custom_target(Diligent-ValidateFormatting ALL
-            COMMAND validate_format_win.bat
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Utilities/FormatValidation"
-            COMMENT "Validating source code formatting..."
-            VERBATIM
-        )
-    endif()
+# Create a custom target to run source code formatting validation command
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+    add_custom_target(DiligentCore-ValidateFormatting ALL
+        COMMAND validate_format_win.bat
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/BuildTools/FormatValidation"
+        COMMENT "Validating source code formatting..."
+        VERBATIM
+    )
+endif()
 
-    if(TARGET Diligent-ValidateFormatting)
-        set_target_properties(Diligent-ValidateFormatting PROPERTIES
-            FOLDER DiligentCore
-        )
-    endif()
+if(TARGET DiligentCore-ValidateFormatting)
+    set_target_properties(DiligentCore-ValidateFormatting PROPERTIES
+        FOLDER DiligentCore/BuildTools
+    )
 endif()
