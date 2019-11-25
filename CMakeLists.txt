@@ -317,7 +317,7 @@ if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
     add_custom_target(DiligentCore-ValidateFormatting ALL
         COMMAND validate_format_win.bat
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/BuildTools/FormatValidation"
-        COMMENT "Validating source code formatting..."
+        COMMENT "Validating DiligentCore module's source code formatting..."
         VERBATIM
     )
 endif()
