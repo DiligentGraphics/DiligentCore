@@ -300,3 +300,29 @@ function(install_combined_static_lib COMBINED_LIB_NAME LIBS_LIST CUSTOM_TARGET_N
     endif()
 
 endfunction()
+
+
+
+
+function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
+    
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+        # Start by copying .clang-format file to the module's root folder
+        add_custom_target(${MODULE_NAME}-ValidateFormatting ALL
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DILIGENT_CORE_SOURCE_DIR}/.clang-format" "${MODULE_ROOT_PATH}/.clang-format"
+        )
+
+        # Run the format validation script
+        add_custom_command(TARGET ${MODULE_NAME}-ValidateFormatting
+            COMMAND validate_format_win.bat
+            WORKING_DIRECTORY "${MODULE_ROOT_PATH}/BuildTools/FormatValidation"
+            COMMENT "Validating ${MODULE_NAME} module's source code formatting..."
+            VERBATIM
+        )
+    endif()
+
+    if(TARGET ${MODULE_NAME}-ValidateFormatting)
+        set_target_properties(${MODULE_NAME}-ValidateFormatting PROPERTIES FOLDER ${IDE_FOLDER})
+    endif()
+
+endfunction()

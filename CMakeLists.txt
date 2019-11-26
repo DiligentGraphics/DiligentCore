@@ -32,6 +32,8 @@ set(GLES_SUPPORTED FALSE CACHE INTERNAL "GLES is not spported")
 set(VULKAN_SUPPORTED FALSE CACHE INTERNAL "Vulkan is not spported")
 set(METAL_SUPPORTED FALSE CACHE INTERNAL "Metal is not spported")
 
+set(DILIGENT_CORE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE INTERNAL "DiligentCore module source directory")
+
 set(CMAKE_OBJECT_PATH_MAX 4096)
 
 if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
@@ -311,19 +313,5 @@ if(DILIGENT_INSTALL_CORE)
     install(FILES License.txt DESTINATION "Licenses" RENAME DiligentEngine-License.txt)
 endif(DILIGENT_INSTALL_CORE)
 
-
 # Create a custom target to run source code formatting validation command
-if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-    add_custom_target(DiligentCore-ValidateFormatting ALL
-        COMMAND validate_format_win.bat
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/BuildTools/FormatValidation"
-        COMMENT "Validating DiligentCore module's source code formatting..."
-        VERBATIM
-    )
-endif()
-
-if(TARGET DiligentCore-ValidateFormatting)
-    set_target_properties(DiligentCore-ValidateFormatting PROPERTIES
-        FOLDER DiligentCore/BuildTools
-    )
-endif()
+add_format_validation_target(DiligentCore "${CMAKE_CURRENT_SOURCE_DIR}" DiligentCore/BuildTools)
