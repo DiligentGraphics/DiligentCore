@@ -59,7 +59,7 @@ clone_folder: c:\projects\DiligentCore
 install:
   # clone submodules
   - git submodule update --init --recursive
-  - BuildTools\Scripts\install.bat
+  - BuildTools\Scripts\appveyor\install.bat
 
 before_build:
   - cd c:\projects\DiligentCore\BuildTools\FormatValidation
