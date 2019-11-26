@@ -59,7 +59,7 @@ clone_folder: c:\projects\DiligentCore
 install:
   # clone submodules
   - git submodule update --init --recursive
-  - ..\BuildTools\Scripts\install.bat
+  - BuildTools\Scripts\install.bat
 
 before_build:
   - cd c:\projects\DiligentCore\BuildTools\FormatValidation
@@ -67,10 +67,10 @@ before_build:
   - cd c:\projects\DiligentCore
   - echo %PLATFORM%
   - echo %cmake_args%
-  - cmake %cmake_args% -S . -B ./cmk_build -G "Visual Studio 15 2017" -A %PLATFORM%
+  - cmake %cmake_args% -S . -B ./build -G "Visual Studio 15 2017" -A %PLATFORM%
 
 build:
-  project: c:\projects\DiligentCore\cmk_build\INSTALL.vcxproj
+  project: c:\projects\DiligentCore\build\INSTALL.vcxproj
   verbosity: minimal
   parallel: true
 
