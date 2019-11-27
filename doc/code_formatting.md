@@ -14,7 +14,7 @@ For convenience, clang-format executables for Windows, Linux and Mac are checked
 ## Validation
 
 Diligent Engine provides script files that can be executed to validate the source code formatting of every module. These scripts
-can be found under `BuildTools/FormatValidation` folder. Besides that, CMake generates build targets
+can be found under `BuildTools/FormatValidation` folder of each module. Besides that, CMake generates build targets
 (e.g. `DiligentCore-ValidateFormatting`) that run the same scripts. Building these targets has the effect of format validation,
 so if All-build finishes without errors, the code should be properly formatted.
 
@@ -42,16 +42,17 @@ commit complies with the formatting rules.
 
 clang-format [supports integration](https://clang.llvm.org/docs/ClangFormat.html) with many popular IDEs.
 Formatting the code directly from the editor is probably the most convenient way as it let's you see the
-results right-away. In certain circumstances it may be preferrable to override automatic formatting using
-special comments:
+results right-away.
+In particular, to configure Visual Studio 2017 or later to use clang-format, open `Tools -> Options` dialog and
+go to `Text Editor -> C/C++ -> Formatting` tab. Mark `Enable ClangFormat` checkbox, and make sure to use custom clang-format
+file either from the source tree, or, if you have the right version installed, from LLVM distribution.
+In the same dialog you can also configure various formatting options.
+
+Note that in certain circumstances it may be preferrable to disable automatic formatting (please do not abuse
+this option!), which can be done using the following special comments:
 
 ```cpp
 // clang-format off
 ...
 // clang-format on
 ```
-
-In particular, to configure Visual Studio 2017 or late to use clang-format, open `Tools -> Options` dialog and
-go to `Text Editor -> C/C++ -> Formatting` tab. Mark `Enable ClangFormat` checkbox, and make sure to use custom clang-format
-file either from the source tree, or, if you have the right version installed, from LLVM distribution.
-In the same dialog you can also configure various formatting options.
