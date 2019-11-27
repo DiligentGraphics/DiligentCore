@@ -1,6 +1,6 @@
 # Source Code Formatting
 
-Diligent Engine uses [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to valdiate and enforce
+Diligent Engine uses [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to ensure
 consistent source code formatting style throught the code base. The format is validated by appveyor and travis
 for each commit and pull request, and the build will fail if any code formatting issue is found. You can check the
 logs to find the exact problem. It is, however, may be hard to strictly follow the formatting rules, so using 
