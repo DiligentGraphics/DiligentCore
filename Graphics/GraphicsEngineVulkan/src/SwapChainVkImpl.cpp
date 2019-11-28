@@ -40,9 +40,9 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
     // clang-format off
     TSwapChainBase               {pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc},
     m_VulkanInstance             {pRenderDeviceVk->GetVulkanInstance()},
-    m_pBackBufferRTV             {STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")},
-    m_SwapChainImagesInitialized {STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")},
-    m_ImageAcquiredFenceSubmitted{STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")}
+    m_pBackBufferRTV             (STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")),
+    m_SwapChainImagesInitialized (STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")),
+    m_ImageAcquiredFenceSubmitted(STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
 // clang-format on
 {
     // Create OS-specific surface

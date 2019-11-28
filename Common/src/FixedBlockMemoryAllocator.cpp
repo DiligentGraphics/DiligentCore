@@ -31,9 +31,9 @@ FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator& RawMemory
                                                      size_t            BlockSize,
                                                      Uint32            NumBlocksInPage) :
     // clang-format off
-    m_PagePool          {STD_ALLOCATOR_RAW_MEM(MemoryPage, RawMemoryAllocator, "Allocator for vector<MemoryPage>")},
-    m_AvailablePages    {STD_ALLOCATOR_RAW_MEM(size_t, RawMemoryAllocator, "Allocator for unordered_set<size_t>") },
-    m_AddrToPageId      {STD_ALLOCATOR_RAW_MEM(AddrToPageIdMapElem, RawMemoryAllocator, "Allocator for unordered_map<void*, size_t>")},
+    m_PagePool          (STD_ALLOCATOR_RAW_MEM(MemoryPage, RawMemoryAllocator, "Allocator for vector<MemoryPage>")),
+    m_AvailablePages    (STD_ALLOCATOR_RAW_MEM(size_t, RawMemoryAllocator, "Allocator for unordered_set<size_t>") ),
+    m_AddrToPageId      (STD_ALLOCATOR_RAW_MEM(AddrToPageIdMapElem, RawMemoryAllocator, "Allocator for unordered_map<void*, size_t>")),
     m_RawMemoryAllocator{RawMemoryAllocator},
     m_BlockSize         {BlockSize         },
     m_NumBlocksInPage   {NumBlocksInPage   }

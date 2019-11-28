@@ -43,7 +43,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
         PipelineDesc
     },
     m_SRBMemAllocator{GetRawAllocator()},
-    m_StaticSamplers {STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>")}
+    m_StaticSamplers (STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"))
 // clang-format on
 {
     if (PipelineDesc.IsComputePipeline)

@@ -219,8 +219,8 @@ class ResourceReleaseQueue
 public:
     // clang-format off
     ResourceReleaseQueue(IMemoryAllocator& Allocator) :
-        m_ReleaseQueue  {STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, Allocator, "Allocator for deque<ReleaseQueueElemType>")},
-        m_StaleResources{STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, Allocator, "Allocator for deque<ReleaseQueueElemType>")}
+        m_ReleaseQueue  (STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, Allocator, "Allocator for deque<ReleaseQueueElemType>")),
+        m_StaleResources(STD_ALLOCATOR_RAW_MEM(ReleaseQueueElemType, Allocator, "Allocator for deque<ReleaseQueueElemType>"))
     {}
     // clang-format on
 

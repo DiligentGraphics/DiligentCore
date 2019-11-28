@@ -90,7 +90,7 @@ VkDescriptorType PipelineLayout::GetVkDescriptorType(const SPIRVShaderResourceAt
 
 PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayoutManager(IMemoryAllocator& MemAllocator) :
     m_MemAllocator{MemAllocator},
-    m_LayoutBindings{STD_ALLOCATOR_RAW_MEM(VkDescriptorSetLayoutBinding, MemAllocator, "Allocator for Layout Bindings")}
+    m_LayoutBindings(STD_ALLOCATOR_RAW_MEM(VkDescriptorSetLayoutBinding, MemAllocator, "Allocator for Layout Bindings"))
 {}
 
 

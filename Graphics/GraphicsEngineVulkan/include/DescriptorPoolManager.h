@@ -136,7 +136,7 @@ public:
                           bool                              AllowFreeing) noexcept:
         m_DeviceVkImpl{DeviceVkImpl        },
         m_PoolName    {std::move(PoolName) },
-        m_PoolSizes   {std::move(PoolSizes)},
+        m_PoolSizes   (std::move(PoolSizes)),
         m_MaxSets     {MaxSets             },
         m_AllowFreeing{AllowFreeing        }
     {

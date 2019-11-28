@@ -158,8 +158,8 @@ CPUDescriptorHeap::CPUDescriptorHeap(IMemoryAllocator&           Allocator,
     // clang-format off
     m_MemAllocator   {Allocator      },
     m_DeviceD3D12Impl{DeviceD3D12Impl},
-    m_HeapPool       {STD_ALLOCATOR_RAW_MEM(DescriptorHeapAllocationManager, GetRawAllocator(), "Allocator for vector<DescriptorHeapAllocationManager>")},
-    m_AvailableHeaps {STD_ALLOCATOR_RAW_MEM(size_t, GetRawAllocator(), "Allocator for unordered_set<size_t>")},
+    m_HeapPool       (STD_ALLOCATOR_RAW_MEM(DescriptorHeapAllocationManager, GetRawAllocator(), "Allocator for vector<DescriptorHeapAllocationManager>")),
+    m_AvailableHeaps (STD_ALLOCATOR_RAW_MEM(size_t, GetRawAllocator(), "Allocator for unordered_set<size_t>")),
     m_HeapDesc
     {
         Type,
@@ -403,7 +403,7 @@ DynamicSuballocationsManager::DynamicSuballocationsManager(IMemoryAllocator&  Al
     // clang-format off
     m_ParentGPUHeap   {ParentGPUHeap   },
     m_DynamicChunkSize{DynamicChunkSize},
-    m_Suballocations  {STD_ALLOCATOR_RAW_MEM(DescriptorHeapAllocation, GetRawAllocator(), "Allocator for vector<DescriptorHeapAllocation>")},
+    m_Suballocations  (STD_ALLOCATOR_RAW_MEM(DescriptorHeapAllocation, GetRawAllocator(), "Allocator for vector<DescriptorHeapAllocation>")),
     m_ManagerName     {std::move(ManagerName)}
 // clang-format on
 {

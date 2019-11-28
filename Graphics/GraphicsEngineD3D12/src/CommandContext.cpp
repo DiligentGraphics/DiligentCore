@@ -38,7 +38,7 @@ CommandContext::CommandContext(CommandListManager& CmdListManager) :
 	m_pCurGraphicsRootSignature {nullptr},
 	m_pCurPipelineState         {nullptr},
 	m_pCurComputeRootSignature  {nullptr},
-    m_PendingResourceBarriers   {STD_ALLOCATOR_RAW_MEM(D3D12_RESOURCE_BARRIER, GetRawAllocator(), "Allocator for vector<D3D12_RESOURCE_BARRIER>")}
+    m_PendingResourceBarriers   (STD_ALLOCATOR_RAW_MEM(D3D12_RESOURCE_BARRIER, GetRawAllocator(), "Allocator for vector<D3D12_RESOURCE_BARRIER>"))
 // clang-format on
 {
     m_PendingResourceBarriers.reserve(MaxPendingBarriers);

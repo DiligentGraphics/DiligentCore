@@ -59,7 +59,7 @@ public:
     static constexpr const OffsetType InvalidOffset = static_cast<OffsetType>(-1);
 
     RingBuffer(OffsetType MaxSize, IMemoryAllocator& Allocator) noexcept :
-        m_CompletedFrameHeads{STD_ALLOCATOR_RAW_MEM(FrameHeadAttribs, Allocator, "Allocator for deque<FrameHeadAttribs>")},
+        m_CompletedFrameHeads(STD_ALLOCATOR_RAW_MEM(FrameHeadAttribs, Allocator, "Allocator for deque<FrameHeadAttribs>")),
         m_MaxSize{MaxSize}
     {}
 

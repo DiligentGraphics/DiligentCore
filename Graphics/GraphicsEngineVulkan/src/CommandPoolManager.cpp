@@ -37,7 +37,7 @@ CommandPoolManager::CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl,
     m_Name            {std::move(Name)  },
     m_QueueFamilyIndex{queueFamilyIndex },
     m_CmdPoolFlags    {flags            },
-    m_CmdPools        {STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>")}
+    m_CmdPools        (STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>"))
 // clang-format on
 {
 #ifdef DEVELOPMENT

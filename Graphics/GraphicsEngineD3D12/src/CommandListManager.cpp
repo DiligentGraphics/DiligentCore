@@ -31,7 +31,7 @@ namespace Diligent
 CommandListManager::CommandListManager(RenderDeviceD3D12Impl& DeviceD3D12Impl) :
     // clang-format off
     m_DeviceD3D12Impl{DeviceD3D12Impl},
-    m_FreeAllocators {STD_ALLOCATOR_RAW_MEM(CComPtr<ID3D12CommandAllocator>, GetRawAllocator(), "Allocator for vector<CComPtr<ID3D12CommandAllocator>>")}
+    m_FreeAllocators (STD_ALLOCATOR_RAW_MEM(CComPtr<ID3D12CommandAllocator>, GetRawAllocator(), "Allocator for vector<CComPtr<ID3D12CommandAllocator>>"))
 // clang-format on
 {
 }

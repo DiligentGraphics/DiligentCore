@@ -48,7 +48,7 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters*       pRefCounters,
         FSDesc,
         pNativeWndHandle
     },
-    m_pBackBufferRTV{STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")}
+    m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))
 // clang-format on
 {
     pRenderDeviceD3D12->LockCmdQueueAndRun(

@@ -75,7 +75,7 @@ D3D12DynamicMemoryManager::D3D12DynamicMemoryManager(IMemoryAllocator&      Allo
                                                      Uint32                 NumPagesToReserve,
                                                      Uint64                 PageSize) :
     m_DeviceD3D12Impl{DeviceD3D12Impl},
-    m_AvailablePages{STD_ALLOCATOR_RAW_MEM(AvailablePagesMapElemType, Allocator, "Allocator for multimap<AvailablePagesMapElemType>")}
+    m_AvailablePages(STD_ALLOCATOR_RAW_MEM(AvailablePagesMapElemType, Allocator, "Allocator for multimap<AvailablePagesMapElemType>"))
 {
     for (Uint32 i = 0; i < NumPagesToReserve; ++i)
     {

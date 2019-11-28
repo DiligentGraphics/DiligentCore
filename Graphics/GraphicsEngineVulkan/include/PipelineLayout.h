@@ -103,8 +103,8 @@ public:
 #endif
         DescriptorSetBindInfo() :
             // clang-format off
-            vkSets        {2},
-            DynamicOffsets{64}
+            vkSets        (2),
+            DynamicOffsets(64)
         // clang-format on
         {
         }

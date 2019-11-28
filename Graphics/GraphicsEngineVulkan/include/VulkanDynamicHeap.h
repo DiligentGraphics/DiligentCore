@@ -182,7 +182,7 @@ public:
     VulkanDynamicHeap(VulkanDynamicMemoryManager& DynamicMemMgr, std::string HeapName, Uint32 PageSize) :
         m_GlobalDynamicMemMgr{DynamicMemMgr},
         m_HeapName           {std::move(HeapName)},
-        m_MasterBlockSize    {PageSize}
+        m_MasterBlockSize    (PageSize)
     {}
 
     VulkanDynamicHeap            (const VulkanDynamicHeap&) = delete;
