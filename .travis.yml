@@ -8,7 +8,7 @@ notifications:
     on_failure: always
 
 before_install:
-  - ./BuildTools/Scripts/travis/before_install.sh
+  - . ./BuildTools/Scripts/travis/before_install.sh
 
 addons:
   apt:
@@ -51,7 +51,7 @@ matrix:
       - IOS=true
 
 script:
-  - ./BuildTools/Scripts/travis/build_install.sh
+  - . ./BuildTools/Scripts/travis/build_install.sh
 
 after_success:
 
