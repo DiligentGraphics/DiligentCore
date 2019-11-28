@@ -51,6 +51,7 @@ matrix:
       - IOS=true
 
 script:
+  - . ./BuildTools/Scripts/FormatValidation/validate_format_linux.sh
   - . ./BuildTools/Scripts/travis/build_install.sh
 
 after_success:
