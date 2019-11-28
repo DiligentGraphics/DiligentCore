@@ -7,47 +7,8 @@ notifications:
     on_success: never
     on_failure: always
 
-env:
-  global:
-    - CMAKE_VERSION=3.15.4
-
 before_install:
-  - |
-    if [ "$TRAVIS_OS_NAME" = "osx" ];  then
-      wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz
-      tar -xzf cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz
-      export PATH=$PWD/cmake-${CMAKE_VERSION}-Darwin-x86_64/CMake.app/Contents/bin:$PATH
-      cmake --version
-      if [ "$IOS" = "true" ];  then
-        wget -O vulkansdk-macos-$VULKAN_SDK_VER.tar.gz https://sdk.lunarg.com/sdk/download/$VULKAN_SDK_VER/mac/vulkansdk-macos-$VULKAN_SDK_VER.tar.gz?Human=true &&
-        tar -xzf vulkansdk-macos-$VULKAN_SDK_VER.tar.gz
-        export VULKAN_SDK=$PWD/vulkansdk-macos-$VULKAN_SDK_VER
-      fi
-    fi
-  - |
-    if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-      # Link gcc-7 and g++-7 to their standard commands
-      sudo ln -s /usr/bin/gcc-7 /usr/local/bin/gcc
-      sudo ln -s /usr/bin/g++-7 /usr/local/bin/g++
-      # Export CC and CXX to tell cmake which compiler to use
-      export CC=/usr/bin/gcc-7
-      export CXX=/usr/bin/g++-7
-      # Check versions of gcc, g++ and cmake
-      gcc -v
-      g++ -v
-      # Download a recent cmake
-      mkdir $HOME/usr
-      export PATH="$HOME/usr/bin:$PATH"
-      wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh
-      chmod +x cmake-${CMAKE_VERSION}-Linux-x86_64.sh
-      ./cmake-${CMAKE_VERSION}-Linux-x86_64.sh --prefix=$HOME/usr --exclude-subdir --skip-license
-      cmake --version
-      sudo apt-get update
-      sudo apt-get install libx11-dev
-      sudo apt-get install mesa-common-dev
-      sudo apt-get install mesa-utils
-      sudo apt-get install libgl-dev
-    fi
+  - ./BuildTools/Scripts/travis/before_install.sh
 
 addons:
   apt:
@@ -57,12 +18,13 @@ addons:
       - gcc-7
       - g++-7
       - cmake
-      
+
 matrix:
   include:
   - os: linux
     compiler: gcc
-    env: CONFIG=Debug
+    env: 
+      - CONFIG=Debug
   - os: osx
     compiler: clang
     env: 
@@ -73,10 +35,10 @@ matrix:
     env: 
       - CONFIG=Debug
       - IOS=true
-      - VULKAN_SDK_VER="1.1.101.0"
   - os: linux
     compiler: gcc
-    env: CONFIG=Release
+    env:
+      - CONFIG=Release
   - os: osx
     compiler: clang
     env: 
@@ -87,30 +49,12 @@ matrix:
     env: 
       - CONFIG=Release
       - IOS=true
-      - VULKAN_SDK_VER="1.1.101.0"
-    
-script:
 
-  # Run cmake
-  - mkdir cmk_build
-  - cd cmk_build
-  - |
-    if [ "$TRAVIS_OS_NAME" = "linux" ]; then 
-      cmake .. -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=${CONFIG} -DCMAKE_INSTALL_PREFIX=install
-      cmake --build . --target install
-    fi
-  - |
-    if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
-      if [ "$IOS" = "true" ]; then 
-        cmake .. -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -DIOS_ARCH=arm64 -DVULKAN_SDK="$VULKAN_SDK" -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
-      else
-        cmake .. -DCMAKE_INSTALL_PREFIX=install -G "Xcode"
-      fi
-      cmake --build . --target install --config ${CONFIG} | xcpretty
-    fi
+script:
+  - ./BuildTools/Scripts/travis/build_install.sh
 
 after_success:
-    
-  - cd ../cmk_build/install
+
+  - cd ../build/install
   - export ZIP_NAME=DiligentCore-${TRAVIS_OS_NAME}-${GLSLANG_BUILD_TYPE}.zip;
   - zip -r ${ZIP_NAME} .
