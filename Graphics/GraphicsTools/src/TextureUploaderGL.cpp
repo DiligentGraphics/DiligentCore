@@ -45,8 +45,8 @@ public:
     UploadBufferGL(IReferenceCounters* pRefCounters, const UploadBufferDesc& Desc) :
         // clang-format off
         UploadBufferBase{pRefCounters, Desc},
-        m_SubresourceOffsets{Desc.MipLevels * Desc.ArraySize + 1},
-        m_SubresourceStrides{Desc.MipLevels * Desc.ArraySize    }
+        m_SubresourceOffsets(Desc.MipLevels * Desc.ArraySize + 1),
+        m_SubresourceStrides(Desc.MipLevels * Desc.ArraySize    )
     // clang-format on
     {
         const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);

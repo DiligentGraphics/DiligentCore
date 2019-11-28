@@ -478,7 +478,7 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
 
     auto TotalParams = m_RootParams.GetNumRootTables() + m_RootParams.GetNumRootViews();
 
-    std::vector<D3D12_ROOT_PARAMETER, STDAllocatorRawMem<D3D12_ROOT_PARAMETER>> D3D12Parameters{TotalParams, D3D12_ROOT_PARAMETER(), STD_ALLOCATOR_RAW_MEM(D3D12_ROOT_PARAMETER, GetRawAllocator(), "Allocator for vector<D3D12_ROOT_PARAMETER>")};
+    std::vector<D3D12_ROOT_PARAMETER, STDAllocatorRawMem<D3D12_ROOT_PARAMETER>> D3D12Parameters(TotalParams, D3D12_ROOT_PARAMETER(), STD_ALLOCATOR_RAW_MEM(D3D12_ROOT_PARAMETER, GetRawAllocator(), "Allocator for vector<D3D12_ROOT_PARAMETER>"));
     for (Uint32 rt = 0; rt < m_RootParams.GetNumRootTables(); ++rt)
     {
         const auto&                 RootTable = m_RootParams.GetRootTable(rt);
