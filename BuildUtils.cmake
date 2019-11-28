@@ -305,30 +305,29 @@ endfunction()
 
 
 function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
-    
-    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows" OR
-       CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-        # Start by copying .clang-format file to the module's root folder
-        add_custom_target(${MODULE_NAME}-ValidateFormatting ALL
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DILIGENT_CORE_SOURCE_DIR}/.clang-format" "${MODULE_ROOT_PATH}/.clang-format"
-        )
 
-        if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-            set(RUN_VALIDATION_SCRIPT validate_format_win.bat)
-        elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
-            set(RUN_VALIDATION_SCRIPT ./validate_format_linux.sh)
-        else()
-            mesage(FATAL_ERROR "Unexpected platform")
-        endif()
+    # Start by copying .clang-format file to the module's root folder
+    add_custom_target(${MODULE_NAME}-ValidateFormatting ALL
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DILIGENT_CORE_SOURCE_DIR}/.clang-format" "${MODULE_ROOT_PATH}/.clang-format"
+    )
 
-        # Run the format validation script
-        add_custom_command(TARGET ${MODULE_NAME}-ValidateFormatting
-            COMMAND ${RUN_VALIDATION_SCRIPT}
-            WORKING_DIRECTORY "${MODULE_ROOT_PATH}/BuildTools/FormatValidation"
-            COMMENT "Validating ${MODULE_NAME} module's source code formatting..."
-            VERBATIM
-        )
+    if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
+        set(RUN_VALIDATION_SCRIPT validate_format_win.bat)
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Linux")
+        set(RUN_VALIDATION_SCRIPT ./validate_format_linux.sh)
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+        set(RUN_VALIDATION_SCRIPT ./validate_format_mac.sh)
+    else()
+        mesage(FATAL_ERROR "Unexpected host system")
     endif()
+
+    # Run the format validation script
+    add_custom_command(TARGET ${MODULE_NAME}-ValidateFormatting
+        COMMAND ${RUN_VALIDATION_SCRIPT}
+        WORKING_DIRECTORY "${MODULE_ROOT_PATH}/BuildTools/FormatValidation"
+        COMMENT "Validating ${MODULE_NAME} module's source code formatting..."
+        VERBATIM
+    )
 
     if(TARGET ${MODULE_NAME}-ValidateFormatting)
         set_target_properties(${MODULE_NAME}-ValidateFormatting PROPERTIES FOLDER ${IDE_FOLDER})
