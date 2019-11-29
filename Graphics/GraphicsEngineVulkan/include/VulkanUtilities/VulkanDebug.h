@@ -92,26 +92,10 @@ void SetSemaphoreName           (VkDevice device, VkSemaphore           semaphor
 void SetFenceName               (VkDevice device, VkFence               fence,               const char * name);
 void SetEventName               (VkDevice device, VkEvent               _event,              const char * name);
 
-void SetVulkanObjectName(VkDevice device, VkCommandPool         cmdPool,             const char * name);
-void SetVulkanObjectName(VkDevice device, VkCommandBuffer       cmdBuffer,           const char * name);
-void SetVulkanObjectName(VkDevice device, VkQueue               queue,               const char * name);
-void SetVulkanObjectName(VkDevice device, VkImage               image,               const char * name);
-void SetVulkanObjectName(VkDevice device, VkImageView           imageView,           const char * name);
-void SetVulkanObjectName(VkDevice device, VkSampler             sampler,             const char * name);
-void SetVulkanObjectName(VkDevice device, VkBuffer              buffer,              const char * name);
-void SetVulkanObjectName(VkDevice device, VkBufferView          bufferView,          const char * name);
-void SetVulkanObjectName(VkDevice device, VkDeviceMemory        memory,              const char * name);
-void SetVulkanObjectName(VkDevice device, VkShaderModule        shaderModule,        const char * name);
-void SetVulkanObjectName(VkDevice device, VkPipeline            pipeline,            const char * name);
-void SetVulkanObjectName(VkDevice device, VkPipelineLayout      pipelineLayout,      const char * name);
-void SetVulkanObjectName(VkDevice device, VkRenderPass          renderPass,          const char * name);
-void SetVulkanObjectName(VkDevice device, VkFramebuffer         framebuffer,         const char * name);
-void SetVulkanObjectName(VkDevice device, VkDescriptorSetLayout descriptorSetLayout, const char * name);
-void SetVulkanObjectName(VkDevice device, VkDescriptorSet       descriptorSet,       const char * name);
-void SetVulkanObjectName(VkDevice device, VkDescriptorPool      descriptorPool,      const char * name);
-void SetVulkanObjectName(VkDevice device, VkSemaphore           semaphore,           const char * name);
-void SetVulkanObjectName(VkDevice device, VkFence               fence,               const char * name);
-void SetVulkanObjectName(VkDevice device, VkEvent               _event,              const char * name);
+enum class VulkanHandleTypeId : uint32_t;
+
+template<typename VulkanObjectType, VulkanHandleTypeId>
+void SetVulkanObjectName(VkDevice device, VulkanObjectType vkObject, const char * name);
 
 const char* VkResultToString       (VkResult         errorCode);
 const char* VkAccessFlagBitToString(VkAccessFlagBits Bit);

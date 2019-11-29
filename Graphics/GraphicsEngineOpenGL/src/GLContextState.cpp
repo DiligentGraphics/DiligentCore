@@ -309,7 +309,7 @@ void GLContextState::BindStorageBlock(Int32 Index, const GLObjectWrappers::GLBuf
 {
 #if GL_ARB_shader_storage_buffer_object
     BoundSSBOInfo NewSSBOInfo{Buff.GetUniqueID(), Offset, Size};
-    if (Index >= m_BoundStorageBlocks.size())
+    if (Index >= static_cast<Int32>(m_BoundStorageBlocks.size()))
         m_BoundStorageBlocks.resize(Index + 1);
 
     if (!(m_BoundStorageBlocks[Index] == NewSSBOInfo))

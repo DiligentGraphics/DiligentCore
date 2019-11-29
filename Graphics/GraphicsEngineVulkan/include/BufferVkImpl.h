@@ -94,7 +94,7 @@ public:
     virtual void* GetNativeHandle() override final
     {
         auto vkBuffer = GetVkBuffer();
-        return vkBuffer;
+        return reinterpret_cast<void*>(vkBuffer);
     }
 
     /// Implementation of IBufferVk::SetAccessFlags().

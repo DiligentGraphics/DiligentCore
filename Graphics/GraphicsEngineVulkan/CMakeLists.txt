@@ -177,7 +177,12 @@ set(PRIVATE_DEPENDENCIES
 )
 
 if(PLATFORM_WIN32)
-    find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../ThirdParty/vulkan/libs/windows")
+    if(${ARCH} EQUAL 64)
+        set(VULKAN_LIB_FOLDER x64)
+    else()
+        set(VULKAN_LIB_FOLDER x86)
+    endif()
+    find_library(Vulkan_LIBRARY NAMES vulkan-1 vulkan PATHS "../../ThirdParty/vulkan/libs/windows/${VULKAN_LIB_FOLDER}")
 elseif(PLATFORM_MACOS)
     find_library(Vulkan_LIBRARY NAMES vulkan.1 vulkan PATHS "../../ThirdParty/vulkan/libs/macOS")
 elseif(PLATFORM_IOS)

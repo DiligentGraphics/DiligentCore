@@ -76,11 +76,14 @@ void VulkanLogicalDevice::WaitIdle() const
     (void)err;
 }
 
-template <typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
-VulkanObjectWrapper<VkObjectType> VulkanLogicalDevice::CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
-                                                                          const VkObjectCreateInfoType& CreateInfo,
-                                                                          const char*                   DebugName,
-                                                                          const char*                   ObjectType) const
+template <typename VkObjectType,
+          VulkanHandleTypeId VkTypeId,
+          typename VkCreateObjectFuncType,
+          typename VkObjectCreateInfoType>
+VulkanObjectWrapper<VkObjectType, VkTypeId> VulkanLogicalDevice::CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
+                                                                                    const VkObjectCreateInfoType& CreateInfo,
+                                                                                    const char*                   DebugName,
+                                                                                    const char*                   ObjectType) const
 {
     if (DebugName == nullptr)
         DebugName = "";
@@ -91,62 +94,62 @@ VulkanObjectWrapper<VkObjectType> VulkanLogicalDevice::CreateVulkanObject(VkCrea
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan ", ObjectType, " '", DebugName, '\'');
 
     if (DebugName != nullptr && *DebugName != 0)
-        SetVulkanObjectName(m_VkDevice, VkObject, DebugName);
+        SetVulkanObjectName<VkObjectType, VkTypeId>(m_VkDevice, VkObject, DebugName);
 
-    return VulkanObjectWrapper<VkObjectType>{GetSharedPtr(), std::move(VkObject)};
+    return VulkanObjectWrapper<VkObjectType, VkTypeId>{GetSharedPtr(), std::move(VkObject)};
 }
 
 CommandPoolWrapper VulkanLogicalDevice::CreateCommandPool(const VkCommandPoolCreateInfo& CmdPoolCI,
                                                           const char*                    DebugName) const
 {
     VERIFY_EXPR(CmdPoolCI.sType == VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO);
-    return CreateVulkanObject<VkCommandPool>(vkCreateCommandPool, CmdPoolCI, DebugName, "command pool");
+    return CreateVulkanObject<VkCommandPool, VulkanHandleTypeId::CommandPool>(vkCreateCommandPool, CmdPoolCI, DebugName, "command pool");
 }
 
 BufferWrapper VulkanLogicalDevice::CreateBuffer(const VkBufferCreateInfo& BufferCI,
                                                 const char*               DebugName) const
 {
     VERIFY_EXPR(BufferCI.sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
-    return CreateVulkanObject<VkBuffer>(vkCreateBuffer, BufferCI, DebugName, "buffer");
+    return CreateVulkanObject<VkBuffer, VulkanHandleTypeId::Buffer>(vkCreateBuffer, BufferCI, DebugName, "buffer");
 }
 
 BufferViewWrapper VulkanLogicalDevice::CreateBufferView(const VkBufferViewCreateInfo& BuffViewCI,
                                                         const char*                   DebugName) const
 {
     VERIFY_EXPR(BuffViewCI.sType == VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO);
-    return CreateVulkanObject<VkBufferView>(vkCreateBufferView, BuffViewCI, DebugName, "buffer view");
+    return CreateVulkanObject<VkBufferView, VulkanHandleTypeId::BufferView>(vkCreateBufferView, BuffViewCI, DebugName, "buffer view");
 }
 
 ImageWrapper VulkanLogicalDevice::CreateImage(const VkImageCreateInfo& ImageCI,
                                               const char*              DebugName) const
 {
     VERIFY_EXPR(ImageCI.sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
-    return CreateVulkanObject<VkImage>(vkCreateImage, ImageCI, DebugName, "image");
+    return CreateVulkanObject<VkImage, VulkanHandleTypeId::Image>(vkCreateImage, ImageCI, DebugName, "image");
 }
 
 ImageViewWrapper VulkanLogicalDevice::CreateImageView(const VkImageViewCreateInfo& ImageViewCI,
                                                       const char*                  DebugName) const
 {
     VERIFY_EXPR(ImageViewCI.sType == VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO);
-    return CreateVulkanObject<VkImageView>(vkCreateImageView, ImageViewCI, DebugName, "image view");
+    return CreateVulkanObject<VkImageView, VulkanHandleTypeId::ImageView>(vkCreateImageView, ImageViewCI, DebugName, "image view");
 }
 
 SamplerWrapper VulkanLogicalDevice::CreateSampler(const VkSamplerCreateInfo& SamplerCI, const char* DebugName) const
 {
     VERIFY_EXPR(SamplerCI.sType == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
-    return CreateVulkanObject<VkSampler>(vkCreateSampler, SamplerCI, DebugName, "sampler");
+    return CreateVulkanObject<VkSampler, VulkanHandleTypeId::Sampler>(vkCreateSampler, SamplerCI, DebugName, "sampler");
 }
 
 FenceWrapper VulkanLogicalDevice::CreateFence(const VkFenceCreateInfo& FenceCI, const char* DebugName) const
 {
     VERIFY_EXPR(FenceCI.sType == VK_STRUCTURE_TYPE_FENCE_CREATE_INFO);
-    return CreateVulkanObject<VkFence>(vkCreateFence, FenceCI, DebugName, "fence");
+    return CreateVulkanObject<VkFence, VulkanHandleTypeId::Fence>(vkCreateFence, FenceCI, DebugName, "fence");
 }
 
 RenderPassWrapper VulkanLogicalDevice::CreateRenderPass(const VkRenderPassCreateInfo& RenderPassCI, const char* DebugName) const
 {
     VERIFY_EXPR(RenderPassCI.sType == VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO);
-    return CreateVulkanObject<VkRenderPass>(vkCreateRenderPass, RenderPassCI, DebugName, "render pass");
+    return CreateVulkanObject<VkRenderPass, VulkanHandleTypeId::RenderPass>(vkCreateRenderPass, RenderPassCI, DebugName, "render pass");
 }
 
 DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllocateInfo& AllocInfo,
@@ -211,37 +214,37 @@ PipelineWrapper VulkanLogicalDevice::CreateGraphicsPipeline(const VkGraphicsPipe
 ShaderModuleWrapper VulkanLogicalDevice::CreateShaderModule(const VkShaderModuleCreateInfo& ShaderModuleCI, const char* DebugName) const
 {
     VERIFY_EXPR(ShaderModuleCI.sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO);
-    return CreateVulkanObject<VkShaderModule>(vkCreateShaderModule, ShaderModuleCI, DebugName, "shader module");
+    return CreateVulkanObject<VkShaderModule, VulkanHandleTypeId::ShaderModule>(vkCreateShaderModule, ShaderModuleCI, DebugName, "shader module");
 }
 
 PipelineLayoutWrapper VulkanLogicalDevice::CreatePipelineLayout(const VkPipelineLayoutCreateInfo& PipelineLayoutCI, const char* DebugName) const
 {
     VERIFY_EXPR(PipelineLayoutCI.sType == VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO);
-    return CreateVulkanObject<VkPipelineLayout>(vkCreatePipelineLayout, PipelineLayoutCI, DebugName, "pipeline layout");
+    return CreateVulkanObject<VkPipelineLayout, VulkanHandleTypeId::PipelineLayout>(vkCreatePipelineLayout, PipelineLayoutCI, DebugName, "pipeline layout");
 }
 
 FramebufferWrapper VulkanLogicalDevice::CreateFramebuffer(const VkFramebufferCreateInfo& FramebufferCI, const char* DebugName) const
 {
     VERIFY_EXPR(FramebufferCI.sType == VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO);
-    return CreateVulkanObject<VkFramebuffer>(vkCreateFramebuffer, FramebufferCI, DebugName, "framebuffer");
+    return CreateVulkanObject<VkFramebuffer, VulkanHandleTypeId::Framebuffer>(vkCreateFramebuffer, FramebufferCI, DebugName, "framebuffer");
 }
 
 DescriptorPoolWrapper VulkanLogicalDevice::CreateDescriptorPool(const VkDescriptorPoolCreateInfo& DescrPoolCI, const char* DebugName) const
 {
     VERIFY_EXPR(DescrPoolCI.sType == VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO);
-    return CreateVulkanObject<VkDescriptorPool>(vkCreateDescriptorPool, DescrPoolCI, DebugName, "descriptor pool");
+    return CreateVulkanObject<VkDescriptorPool, VulkanHandleTypeId::DescriptorPool>(vkCreateDescriptorPool, DescrPoolCI, DebugName, "descriptor pool");
 }
 
 DescriptorSetLayoutWrapper VulkanLogicalDevice::CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo& LayoutCI, const char* DebugName) const
 {
     VERIFY_EXPR(LayoutCI.sType == VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO);
-    return CreateVulkanObject<VkDescriptorSetLayout>(vkCreateDescriptorSetLayout, LayoutCI, DebugName, "descriptor set layout");
+    return CreateVulkanObject<VkDescriptorSetLayout, VulkanHandleTypeId::DescriptorSetLayout>(vkCreateDescriptorSetLayout, LayoutCI, DebugName, "descriptor set layout");
 }
 
 SemaphoreWrapper VulkanLogicalDevice::CreateSemaphore(const VkSemaphoreCreateInfo& SemaphoreCI, const char* DebugName) const
 {
     VERIFY_EXPR(SemaphoreCI.sType == VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO);
-    return CreateVulkanObject<VkSemaphore>(vkCreateSemaphore, SemaphoreCI, DebugName, "semaphore");
+    return CreateVulkanObject<VkSemaphore, VulkanHandleTypeId::Semaphore>(vkCreateSemaphore, SemaphoreCI, DebugName, "semaphore");
 }
 
 VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName) const

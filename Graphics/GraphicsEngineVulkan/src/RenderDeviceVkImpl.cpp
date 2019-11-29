@@ -146,7 +146,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_DeviceCaps.MinorVersion                            = 0;
     m_DeviceCaps.bSeparableProgramSupported              = True;
     m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
-    for (int fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
+    for (Uint32 fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
         m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
 
     m_DeviceCaps.bGeometryShadersSupported = EngineCI.EnabledFeatures.geometryShader;

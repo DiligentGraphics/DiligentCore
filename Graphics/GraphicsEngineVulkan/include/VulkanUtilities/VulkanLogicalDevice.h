@@ -29,25 +29,53 @@
 namespace VulkanUtilities
 {
 
-template <typename VulkanObjectType>
+// In 32-bit version, all Vulkan handles are typedefed as uint64_t, so we have to
+// use VulkanHandleTypeId to distinguish objects.
+enum class VulkanHandleTypeId : uint32_t
+{
+    CommandPool,
+    CommandBuffer,
+    Buffer,
+    BufferView,
+    Image,
+    ImageView,
+    DeviceMemory,
+    Fence,
+    RenderPass,
+    Pipeline,
+    ShaderModule,
+    PipelineLayout,
+    Sampler,
+    Framebuffer,
+    DescriptorPool,
+    DescriptorSetLayout,
+    DescriptorSet,
+    Semaphore,
+    Queue,
+    Event
+};
+
+template <typename VulkanObjectType, VulkanHandleTypeId>
 class VulkanObjectWrapper;
 
-using CommandPoolWrapper         = VulkanObjectWrapper<VkCommandPool>;
-using BufferWrapper              = VulkanObjectWrapper<VkBuffer>;
-using BufferViewWrapper          = VulkanObjectWrapper<VkBufferView>;
-using ImageWrapper               = VulkanObjectWrapper<VkImage>;
-using ImageViewWrapper           = VulkanObjectWrapper<VkImageView>;
-using DeviceMemoryWrapper        = VulkanObjectWrapper<VkDeviceMemory>;
-using FenceWrapper               = VulkanObjectWrapper<VkFence>;
-using RenderPassWrapper          = VulkanObjectWrapper<VkRenderPass>;
-using PipelineWrapper            = VulkanObjectWrapper<VkPipeline>;
-using ShaderModuleWrapper        = VulkanObjectWrapper<VkShaderModule>;
-using PipelineLayoutWrapper      = VulkanObjectWrapper<VkPipelineLayout>;
-using SamplerWrapper             = VulkanObjectWrapper<VkSampler>;
-using FramebufferWrapper         = VulkanObjectWrapper<VkFramebuffer>;
-using DescriptorPoolWrapper      = VulkanObjectWrapper<VkDescriptorPool>;
-using DescriptorSetLayoutWrapper = VulkanObjectWrapper<VkDescriptorSetLayout>;
-using SemaphoreWrapper           = VulkanObjectWrapper<VkSemaphore>;
+#define DEFINE_VULKAN_OBJECT_WRAPPER(Type) VulkanObjectWrapper<Vk##Type, VulkanHandleTypeId::Type>
+using CommandPoolWrapper         = DEFINE_VULKAN_OBJECT_WRAPPER(CommandPool);
+using BufferWrapper              = DEFINE_VULKAN_OBJECT_WRAPPER(Buffer);
+using BufferViewWrapper          = DEFINE_VULKAN_OBJECT_WRAPPER(BufferView);
+using ImageWrapper               = DEFINE_VULKAN_OBJECT_WRAPPER(Image);
+using ImageViewWrapper           = DEFINE_VULKAN_OBJECT_WRAPPER(ImageView);
+using DeviceMemoryWrapper        = DEFINE_VULKAN_OBJECT_WRAPPER(DeviceMemory);
+using FenceWrapper               = DEFINE_VULKAN_OBJECT_WRAPPER(Fence);
+using RenderPassWrapper          = DEFINE_VULKAN_OBJECT_WRAPPER(RenderPass);
+using PipelineWrapper            = DEFINE_VULKAN_OBJECT_WRAPPER(Pipeline);
+using ShaderModuleWrapper        = DEFINE_VULKAN_OBJECT_WRAPPER(ShaderModule);
+using PipelineLayoutWrapper      = DEFINE_VULKAN_OBJECT_WRAPPER(PipelineLayout);
+using SamplerWrapper             = DEFINE_VULKAN_OBJECT_WRAPPER(Sampler);
+using FramebufferWrapper         = DEFINE_VULKAN_OBJECT_WRAPPER(Framebuffer);
+using DescriptorPoolWrapper      = DEFINE_VULKAN_OBJECT_WRAPPER(DescriptorPool);
+using DescriptorSetLayoutWrapper = DEFINE_VULKAN_OBJECT_WRAPPER(DescriptorSetLayout);
+using SemaphoreWrapper           = DEFINE_VULKAN_OBJECT_WRAPPER(Semaphore);
+#undef DEFINE_VULKAN_OBJECT_WRAPPER
 
 class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
 {
@@ -166,11 +194,14 @@ private:
                         const VkDeviceCreateInfo&    DeviceCI,
                         const VkAllocationCallbacks* vkAllocator);
 
-    template <typename VkObjectType, typename VkCreateObjectFuncType, typename VkObjectCreateInfoType>
-    VulkanObjectWrapper<VkObjectType> CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
-                                                         const VkObjectCreateInfoType& CreateInfo,
-                                                         const char*                   DebugName,
-                                                         const char*                   ObjectType) const;
+    template <typename VkObjectType,
+              VulkanHandleTypeId VkTypeId,
+              typename VkCreateObjectFuncType,
+              typename VkObjectCreateInfoType>
+    VulkanObjectWrapper<VkObjectType, VkTypeId> CreateVulkanObject(VkCreateObjectFuncType        VkCreateObject,
+                                                                   const VkObjectCreateInfoType& CreateInfo,
+                                                                   const char*                   DebugName,
+                                                                   const char*                   ObjectType) const;
 
     VkDevice                           m_VkDevice = VK_NULL_HANDLE;
     const VkAllocationCallbacks* const m_VkAllocator;

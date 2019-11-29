@@ -32,7 +32,7 @@ void DescriptorSetAllocation::Release()
 {
     if (Set != VK_NULL_HANDLE)
     {
-        VERIFY_EXPR(DescrSetAllocator != nullptr && Pool != nullptr);
+        VERIFY_EXPR(DescrSetAllocator != nullptr && Pool != VK_NULL_HANDLE);
         DescrSetAllocator->FreeDescriptorSet(Set, Pool, CmdQueueMask);
 
         Reset();
@@ -219,8 +219,8 @@ void DescriptorSetAllocator::FreeDescriptorSet(VkDescriptorSet Set, VkDescriptor
             Pool      {rhs.Pool     }
         {
             rhs.Allocator = nullptr;
-            rhs.Set       = nullptr;
-            rhs.Pool      = nullptr;
+            rhs.Set       = VK_NULL_HANDLE;
+            rhs.Pool      = VK_NULL_HANDLE;
         }
         // clang-format on
 

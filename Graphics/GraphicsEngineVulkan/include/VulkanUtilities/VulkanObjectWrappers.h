@@ -29,7 +29,11 @@
 namespace VulkanUtilities
 {
 
-template <typename VulkanObjectType>
+// In 32-bit version, all Vulkan handles are typedefed as uint64_t, so we have to
+// use another way to distinguish objects.
+enum class VulkanHandleTypeId : uint32_t;
+
+template <typename VulkanObjectType, VulkanHandleTypeId>
 class VulkanObjectWrapper
 {
 public:

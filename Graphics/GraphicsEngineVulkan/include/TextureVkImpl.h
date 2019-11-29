@@ -73,7 +73,7 @@ public:
     virtual void* GetNativeHandle() override final
     {
         auto vkImage = GetVkImage();
-        return vkImage;
+        return reinterpret_cast<void*>(vkImage);
     }
 
     /// Implementation of ITextureVk::SetLayout().
