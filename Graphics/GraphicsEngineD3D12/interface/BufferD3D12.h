@@ -50,7 +50,7 @@ public:
     ///                            is required for dynamic buffers, which are
     ///                            suballocated in a dynamic upload heap
     /// \param [in] pContext - Device context within which address of the buffer is requested.
-    virtual ID3D12Resource* GetD3D12Buffer(size_t& DataStartByteOffset, IDeviceContext* pContext) = 0;
+    virtual ID3D12Resource* GetD3D12Buffer(Uint64& DataStartByteOffset, IDeviceContext* pContext) = 0;
 
     /// Sets the buffer usage state
 

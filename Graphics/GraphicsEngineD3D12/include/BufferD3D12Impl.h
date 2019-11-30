@@ -66,13 +66,13 @@ public:
 #endif
 
     /// Implementation of IBufferD3D12::GetD3D12Buffer().
-    virtual ID3D12Resource* GetD3D12Buffer(size_t& DataStartByteOffset, IDeviceContext* pContext) override final;
+    virtual ID3D12Resource* GetD3D12Buffer(Uint64& DataStartByteOffset, IDeviceContext* pContext) override final;
 
     /// Implementation of IBuffer::GetNativeHandle().
     virtual void* GetNativeHandle() override final
     {
         VERIFY(GetD3D12Resource() != nullptr, "The buffer is dynamic and has no pointer to D3D12 resource");
-        size_t DataStartByteOffset = 0;
+        Uint64 DataStartByteOffset = 0;
         auto*  pd3d12Buffer        = GetD3D12Buffer(DataStartByteOffset, 0);
         VERIFY(DataStartByteOffset == 0, "0 offset expected");
         return pd3d12Buffer;

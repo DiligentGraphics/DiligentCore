@@ -305,7 +305,7 @@ private:
                                                  IBuffer*                       pAttribsBuffer,
                                                  RESOURCE_STATE_TRANSITION_MODE BufferStateTransitionMode,
                                                  ID3D12Resource*&               pd3d12ArgsBuff,
-                                                 size_t&                        BuffDataStartByteOffset);
+                                                 Uint64&                        BuffDataStartByteOffset);
 
     struct TextureUploadSpace
     {
@@ -337,7 +337,7 @@ private:
 
         CComPtr<ID3D12Resource> CommittedD3D12IndexBuffer;
         VALUE_TYPE              CommittedIBFormat                  = VT_UNDEFINED;
-        Uint32                  CommittedD3D12IndexDataStartOffset = 0;
+        Uint64                  CommittedD3D12IndexDataStartOffset = 0;
 
         // Indicates if currently committed D3D12 vertex buffers are up to date
         bool bCommittedD3D12VBsUpToDate = false;

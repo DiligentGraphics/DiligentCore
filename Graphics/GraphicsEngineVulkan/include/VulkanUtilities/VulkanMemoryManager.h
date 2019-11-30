@@ -124,6 +124,8 @@ public:
     void*          GetCPUMemory() const { return m_CPUMemory; }
 
 private:
+    using AllocationsMgrOffsetType = Diligent::VariableSizeAllocationsManager::OffsetType;
+
     friend struct VulkanMemoryAllocation;
 
     // Memory is reclaimed immediately. The application is responsible to ensure it is not in use by the GPU

@@ -42,9 +42,13 @@ VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
                                    bool                 IsHostVisible) noexcept :
     // clang-format off
     m_ParentMemoryMgr{ParentMemoryMgr},
-    m_AllocationMgr  {PageSize, ParentMemoryMgr.m_Allocator}
+    m_AllocationMgr  {static_cast<AllocationsMgrOffsetType>(PageSize), ParentMemoryMgr.m_Allocator}
 // clang-format on
 {
+    VERIFY(PageSize <= std::numeric_limits<AllocationsMgrOffsetType>::max(),
+           "PageSize (", PageSize, ") exceeds maximum allowed value ",
+           std::numeric_limits<AllocationsMgrOffsetType>::max());
+
     VkMemoryAllocateInfo MemAlloc = {};
 
     MemAlloc.pNext           = nullptr;
@@ -81,7 +85,10 @@ VulkanMemoryPage::~VulkanMemoryPage()
 VulkanMemoryAllocation VulkanMemoryPage::Allocate(VkDeviceSize size, VkDeviceSize alignment)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
-    auto                        Allocation = m_AllocationMgr.Allocate(size, alignment);
+    VERIFY(size <= std::numeric_limits<AllocationsMgrOffsetType>::max(),
+           "Allocation size (", size, ") exceeds maximum allowed value ",
+           std::numeric_limits<AllocationsMgrOffsetType>::max());
+    auto Allocation = m_AllocationMgr.Allocate(static_cast<AllocationsMgrOffsetType>(size), static_cast<AllocationsMgrOffsetType>(alignment));
     if (Allocation.IsValid())
     {
         // Offset may not necessarily be aligned, but the allocation is guaranteed to be large enough
@@ -99,7 +106,9 @@ void VulkanMemoryPage::Free(VulkanMemoryAllocation&& Allocation)
 {
     m_ParentMemoryMgr.OnFreeAllocation(Allocation.Size, m_CPUMemory != nullptr);
     std::lock_guard<std::mutex> Lock{m_Mutex};
-    m_AllocationMgr.Free(Allocation.UnalignedOffset, Allocation.Size);
+    VERIFY_EXPR(Allocation.UnalignedOffset <= std::numeric_limits<AllocationsMgrOffsetType>::max());
+    VERIFY_EXPR(Allocation.Size <= std::numeric_limits<AllocationsMgrOffsetType>::max());
+    m_AllocationMgr.Free(static_cast<AllocationsMgrOffsetType>(Allocation.UnalignedOffset), static_cast<AllocationsMgrOffsetType>(Allocation.Size));
     Allocation = VulkanMemoryAllocation{};
 }
 

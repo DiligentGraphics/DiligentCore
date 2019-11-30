@@ -317,7 +317,7 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
         m_pIndexBuffer->DvpVerifyDynamicAllocation(this);
 #endif
 
-    size_t BuffDataStartByteOffset;
+    Uint64 BuffDataStartByteOffset;
     auto*  pd3d12Buff = m_pIndexBuffer->GetD3D12Buffer(BuffDataStartByteOffset, this);
 
     // clang-format off
@@ -329,7 +329,7 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
     {
         m_State.CommittedD3D12IndexBuffer          = pd3d12Buff;
         m_State.CommittedIBFormat                  = IndexType;
-        m_State.CommittedD3D12IndexDataStartOffset = m_IndexDataStartOffset + static_cast<Uint32>(BuffDataStartByteOffset);
+        m_State.CommittedD3D12IndexDataStartOffset = m_IndexDataStartOffset + BuffDataStartByteOffset;
         GraphCtx.SetIndexBuffer(IBView);
     }
 
@@ -487,7 +487,7 @@ void DeviceContextD3D12Impl::PrepareDrawIndirectBuffer(GraphicsContext&         
                                                        IBuffer*                       pAttribsBuffer,
                                                        RESOURCE_STATE_TRANSITION_MODE BufferStateTransitionMode,
                                                        ID3D12Resource*&               pd3d12ArgsBuff,
-                                                       size_t&                        BuffDataStartByteOffset)
+                                                       Uint64&                        BuffDataStartByteOffset)
 {
     DEV_CHECK_ERR(pAttribsBuffer != nullptr, "Indirect draw attribs buffer must not be null");
 
@@ -513,7 +513,7 @@ void DeviceContextD3D12Impl::DrawIndirect(const DrawIndirectAttribs& Attribs, IB
     PrepareForDraw(GraphCtx, Attribs.Flags);
 
     ID3D12Resource* pd3d12ArgsBuff;
-    size_t          BuffDataStartByteOffset;
+    Uint64          BuffDataStartByteOffset;
     PrepareDrawIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset);
 
     GraphCtx.ExecuteIndirect(m_pDrawIndirectSignature, pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
@@ -529,7 +529,7 @@ void DeviceContextD3D12Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
     PrepareForIndexedDraw(GraphCtx, Attribs.Flags, Attribs.IndexType);
 
     ID3D12Resource* pd3d12ArgsBuff;
-    size_t          BuffDataStartByteOffset;
+    Uint64          BuffDataStartByteOffset;
     PrepareDrawIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset);
 
     GraphCtx.ExecuteIndirect(m_pDrawIndexedIndirectSignature, pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
@@ -595,7 +595,7 @@ void DeviceContextD3D12Impl::DispatchComputeIndirect(const DispatchComputeIndire
 
     TransitionOrVerifyBufferState(ComputeCtx, *pBufferD3D12, Attribs.IndirectAttribsBufferStateTransitionMode,
                                   RESOURCE_STATE_INDIRECT_ARGUMENT, "Indirect dispatch (DeviceContextD3D12Impl::DispatchComputeIndirect)");
-    size_t          BuffDataStartByteOffset;
+    Uint64          BuffDataStartByteOffset;
     ID3D12Resource* pd3d12ArgsBuff = pBufferD3D12->GetD3D12Buffer(BuffDataStartByteOffset, this);
     ComputeCtx.ExecuteIndirect(m_pDispatchIndirectSignature, pd3d12ArgsBuff, Attribs.DispatchArgsByteOffset + BuffDataStartByteOffset);
     ++m_State.NumCommands;
@@ -1016,7 +1016,7 @@ void DeviceContextD3D12Impl::UpdateBufferRegion(BufferD3D12Impl*               p
     auto& CmdCtx = GetCmdContext();
     VERIFY_EXPR(static_cast<size_t>(NumBytes) == NumBytes);
     TransitionOrVerifyBufferState(CmdCtx, *pBuffD3D12, StateTransitionMode, RESOURCE_STATE_COPY_DEST, "Updating buffer (DeviceContextD3D12Impl::UpdateBufferRegion)");
-    size_t DstBuffDataStartByteOffset;
+    Uint64 DstBuffDataStartByteOffset;
     auto*  pd3d12Buff = pBuffD3D12->GetD3D12Buffer(DstBuffDataStartByteOffset, this);
     VERIFY(DstBuffDataStartByteOffset == 0, "Dst buffer must not be suballocated");
     CmdCtx.FlushResourceBarriers();
@@ -1061,11 +1061,11 @@ void DeviceContextD3D12Impl::CopyBuffer(IBuffer*                       pSrcBuffe
     TransitionOrVerifyBufferState(CmdCtx, *pSrcBuffD3D12, SrcBufferTransitionMode, RESOURCE_STATE_COPY_SOURCE, "Using resource as copy source (DeviceContextD3D12Impl::CopyBuffer)");
     TransitionOrVerifyBufferState(CmdCtx, *pDstBuffD3D12, DstBufferTransitionMode, RESOURCE_STATE_COPY_DEST, "Using resource as copy destination (DeviceContextD3D12Impl::CopyBuffer)");
 
-    size_t DstDataStartByteOffset;
+    Uint64 DstDataStartByteOffset;
     auto*  pd3d12DstBuff = pDstBuffD3D12->GetD3D12Buffer(DstDataStartByteOffset, this);
     VERIFY(DstDataStartByteOffset == 0, "Dst buffer must not be suballocated");
 
-    size_t SrcDataStartByteOffset;
+    Uint64 SrcDataStartByteOffset;
     auto*  pd3d12SrcBuff = pSrcBuffD3D12->GetD3D12Buffer(SrcDataStartByteOffset, this);
     CmdCtx.FlushResourceBarriers();
     CmdCtx.GetCommandList()->CopyBufferRegion(pd3d12DstBuff, DstOffset + DstDataStartByteOffset, pd3d12SrcBuff, SrcOffset + SrcDataStartByteOffset, Size);
@@ -1222,10 +1222,11 @@ void DeviceContextD3D12Impl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
     TDeviceContextBase::CopyTexture(CopyAttribs);
 
-    auto*       pSrcTexD3D12 = ValidatedCast<TextureD3D12Impl>(CopyAttribs.pSrcTexture);
-    auto*       pDstTexD3D12 = ValidatedCast<TextureD3D12Impl>(CopyAttribs.pDstTexture);
-    const auto& SrcTexDesc   = pSrcTexD3D12->GetDesc();
-    const auto& DstTexDesc   = pDstTexD3D12->GetDesc();
+    auto* pSrcTexD3D12 = ValidatedCast<TextureD3D12Impl>(CopyAttribs.pSrcTexture);
+    auto* pDstTexD3D12 = ValidatedCast<TextureD3D12Impl>(CopyAttribs.pDstTexture);
+
+    const auto& SrcTexDesc = pSrcTexD3D12->GetDesc();
+    const auto& DstTexDesc = pDstTexD3D12->GetDesc();
 
     D3D12_BOX D3D12SrcBox, *pD3D12SrcBox = nullptr;
     if (const auto* pSrcBox = CopyAttribs.pSrcBox)
@@ -1415,7 +1416,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer*                       pS
 #endif
     }
     GetCmdContext().FlushResourceBarriers();
-    size_t DataStartByteOffset = 0;
+    Uint64 DataStartByteOffset = 0;
     auto*  pd3d12Buffer        = pBufferD3D12->GetD3D12Buffer(DataStartByteOffset, this);
     CopyTextureRegion(pd3d12Buffer, static_cast<Uint32>(DataStartByteOffset) + SrcOffset, SrcStride, SrcDepthStride,
                       pBufferD3D12->GetDesc().uiSizeInBytes, TextureD3D12, DstSubResIndex, DstBox, TextureTransitionMode);
@@ -1426,10 +1427,11 @@ DeviceContextD3D12Impl::TextureUploadSpace DeviceContextD3D12Impl::AllocateTextu
 {
     TextureUploadSpace UploadSpace;
     VERIFY_EXPR(Region.MaxX > Region.MinX && Region.MaxY > Region.MinY && Region.MaxZ > Region.MinZ);
-    auto        UpdateRegionWidth  = Region.MaxX - Region.MinX;
-    auto        UpdateRegionHeight = Region.MaxY - Region.MinY;
-    auto        UpdateRegionDepth  = Region.MaxZ - Region.MinZ;
-    const auto& FmtAttribs         = GetTextureFormatAttribs(TexFmt);
+    auto UpdateRegionWidth  = Region.MaxX - Region.MinX;
+    auto UpdateRegionHeight = Region.MaxY - Region.MinY;
+    auto UpdateRegionDepth  = Region.MaxZ - Region.MinZ;
+
+    const auto& FmtAttribs = GetTextureFormatAttribs(TexFmt);
     if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
     {
         // Box must be aligned by the calling function

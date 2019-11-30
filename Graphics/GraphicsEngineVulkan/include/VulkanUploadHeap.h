@@ -96,7 +96,7 @@ public:
 
     ~VulkanUploadHeap();
 
-    VulkanUploadAllocation Allocate(size_t SizeInBytes, size_t Alignment);
+    VulkanUploadAllocation Allocate(VkDeviceSize SizeInBytes, VkDeviceSize Alignment);
 
     // Releases all allocated pages that are later returned to the global memory manager by the release queues.
     // As global memory manager is hosted by the render device, the upload heap can be destroyed before the
@@ -134,12 +134,12 @@ private:
 
     struct CurrPageInfo
     {
-        VkBuffer vkBuffer       = VK_NULL_HANDLE;
-        Uint8*   CurrCPUAddress = nullptr;
-        size_t   CurrOffset     = 0;
-        size_t   AvailableSize  = 0;
+        VkBuffer     vkBuffer       = VK_NULL_HANDLE;
+        Uint8*       CurrCPUAddress = nullptr;
+        VkDeviceSize CurrOffset     = 0;
+        VkDeviceSize AvailableSize  = 0;
 
-        void Reset(UploadPageInfo& NewPage, size_t PageSize)
+        void Reset(UploadPageInfo& NewPage, VkDeviceSize PageSize)
         {
             vkBuffer       = NewPage.Buffer;
             CurrCPUAddress = NewPage.CPUAddress;
@@ -147,7 +147,7 @@ private:
             AvailableSize  = PageSize;
         }
 
-        void Advance(size_t SizeInBytes)
+        void Advance(VkDeviceSize SizeInBytes)
         {
             CurrCPUAddress += SizeInBytes;
             CurrOffset += SizeInBytes;
@@ -155,10 +155,10 @@ private:
         }
     } m_CurrPage;
 
-    size_t m_CurrFrameSize     = 0;
-    size_t m_PeakFrameSize     = 0;
-    size_t m_CurrAllocatedSize = 0;
-    size_t m_PeakAllocatedSize = 0;
+    VkDeviceSize m_CurrFrameSize     = 0;
+    VkDeviceSize m_PeakFrameSize     = 0;
+    VkDeviceSize m_CurrAllocatedSize = 0;
+    VkDeviceSize m_PeakAllocatedSize = 0;
 
     UploadPageInfo CreateNewPage(VkDeviceSize SizeInBytes) const;
 };

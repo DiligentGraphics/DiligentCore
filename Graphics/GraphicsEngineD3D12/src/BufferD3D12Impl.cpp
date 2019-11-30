@@ -371,7 +371,7 @@ void BufferD3D12Impl::CreateCBV(D3D12_CPU_DESCRIPTOR_HANDLE CBVDescriptor)
     pDeviceD3D12->CreateConstantBufferView(&D3D12_CBVDesc, CBVDescriptor);
 }
 
-ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(size_t& DataStartByteOffset, IDeviceContext* pContext)
+ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDeviceContext* pContext)
 {
     auto* pd3d12Resource = GetD3D12Resource();
     if (pd3d12Resource != nullptr)

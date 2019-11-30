@@ -86,7 +86,7 @@ VulkanUploadHeap::UploadPageInfo VulkanUploadHeap::CreateNewPage(VkDeviceSize Si
     return UploadPageInfo{std::move(MemAllocation), std::move(NewBuffer), CPUAddress};
 }
 
-VulkanUploadAllocation VulkanUploadHeap::Allocate(size_t SizeInBytes, size_t Alignment)
+VulkanUploadAllocation VulkanUploadHeap::Allocate(VkDeviceSize SizeInBytes, VkDeviceSize Alignment)
 {
     VERIFY(IsPowerOfTwo(Alignment), "Alignment (", Alignment, ") must be power of two");
 
