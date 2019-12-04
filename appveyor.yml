@@ -75,11 +75,10 @@ build:
   parallel: true
 
 test_script:
-  - cd c:\projects\DiligentCore\build\DiligentCore
-  - ..\..\BuildTools\scripts\appveyor\run_tests.bat
+  - if NOT "%PLATFORM_NAME%"=="UWP" ( C:\projects\DiligentCore\build\UnitTests\%CONFIGURATION%\DiligentCoreTest.exe )
 
 after_test:
-  - cd c:\projects\DiligentCore\build\install
+  - cd install
   - 7z a DiligentCore-"%platform_name%"-"%PLATFORM%"-"%CONFIGURATION%".zip
     .\*
 
