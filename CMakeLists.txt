@@ -137,6 +137,12 @@ else()
     message(FATAL_ERROR "No PLATFORM_XXX variable defined. Make sure that 'DiligentCore' folder is processed first")
 endif()
 
+if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
+    option(DILIGENT_BUILD_TESTS "Build Diligent Engine unit tests" OFF)
+else()
+    set(DILIGENT_BUILD_TESTS FALSE CACHE INTERNAL "Tests are not available on this platform")
+endif()
+
 
 option(DILIGENT_NO_DIRECT3D11 "Disable Direct3D11 backend" OFF)
 option(DILIGENT_NO_DIRECT3D12 "Disable Direct3D12 backend" OFF)
@@ -296,6 +302,11 @@ add_subdirectory(Primitives)
 add_subdirectory(Platforms)
 add_subdirectory(Common)
 add_subdirectory(Graphics)
+
+if(DILIGENT_BUILD_TESTS AND TARGET gtest)
+    add_subdirectory(UnitTests)
+endif()
+
 
 # Installation instructions
 if(DILIGENT_INSTALL_CORE)

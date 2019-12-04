@@ -10,3 +10,6 @@
 [submodule "ThirdParty/SPIRV-Headers"]
 	path = ThirdParty/SPIRV-Headers
 	url = https://github.com/DiligentGraphics/SPIRV-Headers
+[submodule "ThirdParty/googletest"]
+	path = ThirdParty/googletest
+	url = https://github.com/DiligentGraphics/googletest

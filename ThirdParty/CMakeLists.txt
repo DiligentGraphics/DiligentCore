@@ -79,3 +79,12 @@ if(VULKAN_SUPPORTED)
     endif()
 
 endif()
+
+if(${DILIGENT_BUILD_TESTS})
+    set(INSTALL_GTEST OFF CACHE BOOL "Do not install googletest")
+    set(BUILD_GMOCK OFF CACHE BOOL "Do not build gmock")
+    set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib.")
+    add_subdirectory(googletest)
+    set_directory_root_folder("googletest" "DiligentCore/ThirdParty/googletest")
+    install(FILES googletest/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME googletest-License.txt)
+endif()

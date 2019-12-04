@@ -67,15 +67,19 @@ before_build:
   - cd c:\projects\DiligentCore
   - echo %PLATFORM%
   - echo.%cmake_args%
-  - cmake %cmake_args% -S . -B ./build -G "Visual Studio 15 2017" -A %PLATFORM%
+  - cmake %cmake_args% -S . -B ./build -D DILIGENT_BUILD_TESTS=TRUE -G "Visual Studio 15 2017" -A %PLATFORM%
 
 build:
   project: c:\projects\DiligentCore\build\INSTALL.vcxproj
   verbosity: minimal
   parallel: true
 
+test_script:
+  - cd c:\projects\DiligentCore\build\DiligentCore
+  - ..\..\BuildTools\scripts\appveyor\run_tests.bat
+
 after_test:
-  - cd install
+  - cd c:\projects\DiligentCore\build\install
   - 7z a DiligentCore-"%platform_name%"-"%PLATFORM%"-"%CONFIGURATION%".zip
     .\*
 
