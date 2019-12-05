@@ -35,7 +35,7 @@ namespace
 {
 
 // Constructors
-TEST(MathLibTest, VectorConstructors)
+TEST(Common_BasicMath, VectorConstructors)
 {
     {
         float2 f2{1, 2};
@@ -75,7 +75,7 @@ TEST(MathLibTest, VectorConstructors)
 }
 
 // a - b
-TEST(MathLibTest, OpeartorMinus)
+TEST(Common_BasicMath, OpeartorMinus)
 {
     {
         auto v = float2{5, 3} - float2{1, 2};
@@ -100,7 +100,7 @@ TEST(MathLibTest, OpeartorMinus)
 }
 
 // a -= b
-TEST(MathLibTest, OpeartorMinusEqual)
+TEST(Common_BasicMath, OpeartorMinusEqual)
 {
     {
         auto v = float2{5, 3};
@@ -128,7 +128,7 @@ TEST(MathLibTest, OpeartorMinusEqual)
 }
 
 // -a
-TEST(MathLibTest, UnaryMinus)
+TEST(Common_BasicMath, UnaryMinus)
 {
     {
         auto v = -float2{1, 2};
@@ -153,7 +153,7 @@ TEST(MathLibTest, UnaryMinus)
 }
 
 // a + b
-TEST(MathLibTest, OperatorPlus)
+TEST(Common_BasicMath, OperatorPlus)
 {
     // a + b
     {
@@ -179,7 +179,7 @@ TEST(MathLibTest, OperatorPlus)
 }
 
 // a += b
-TEST(MathLibTest, OpeartorPlusEqual)
+TEST(Common_BasicMath, OpeartorPlusEqual)
 {
     {
         auto v = float2{5, 3};
@@ -207,7 +207,7 @@ TEST(MathLibTest, OpeartorPlusEqual)
 }
 
 // a * b
-TEST(MathLibTest, VectorVectorMultiply)
+TEST(Common_BasicMath, VectorVectorMultiply)
 {
     {
         auto v = float2{5, 3} * float2{1, 2};
@@ -232,7 +232,7 @@ TEST(MathLibTest, VectorVectorMultiply)
 }
 
 // a *= b
-TEST(MathLibTest, VectorVectorMultiplyEqual)
+TEST(Common_BasicMath, VectorVectorMultiplyEqual)
 {
     {
         auto v = float2{5, 3};
@@ -261,7 +261,7 @@ TEST(MathLibTest, VectorVectorMultiplyEqual)
 
 
 // a * s
-TEST(MathLibTest, VectorScalarMultiply)
+TEST(Common_BasicMath, VectorScalarMultiply)
 {
     {
         auto v = float2{5, 3} * 2;
@@ -286,7 +286,7 @@ TEST(MathLibTest, VectorScalarMultiply)
 }
 
 // a *= s
-TEST(MathLibTest, VectorScalarMultiplyEqual)
+TEST(Common_BasicMath, VectorScalarMultiplyEqual)
 {
     {
         auto v = float2{5, 3};
@@ -314,7 +314,7 @@ TEST(MathLibTest, VectorScalarMultiplyEqual)
 }
 
 // s * a
-TEST(MathLibTest, ScalarVectorMultiply)
+TEST(Common_BasicMath, ScalarVectorMultiply)
 {
     {
         auto v = 2.f * float2{5, 3};
@@ -339,7 +339,7 @@ TEST(MathLibTest, ScalarVectorMultiply)
 }
 
 // a / s
-TEST(MathLibTest, VectorScalarDivision)
+TEST(Common_BasicMath, VectorScalarDivision)
 {
     {
         auto v = float2{10, 6} / 2;
@@ -364,7 +364,7 @@ TEST(MathLibTest, VectorScalarDivision)
 }
 
 // a / b
-TEST(MathLibTest, VectorVectorDivision)
+TEST(Common_BasicMath, VectorVectorDivision)
 {
     {
         auto v = float2{6, 4} / float2{1, 2};
@@ -389,7 +389,7 @@ TEST(MathLibTest, VectorVectorDivision)
 }
 
 // a /= b
-TEST(MathLibTest, VectorVectorDivideEqual)
+TEST(Common_BasicMath, VectorVectorDivideEqual)
 {
     {
         auto v = float2{6, 4};
@@ -418,7 +418,7 @@ TEST(MathLibTest, VectorVectorDivideEqual)
 
 
 // a /= s
-TEST(MathLibTest, VectorScalarDivideEqual)
+TEST(Common_BasicMath, VectorScalarDivideEqual)
 {
     {
         auto v = float2{6, 4};
@@ -447,7 +447,7 @@ TEST(MathLibTest, VectorScalarDivideEqual)
 
 
 // max
-TEST(MathLibTest, StdMax)
+TEST(Common_BasicMath, StdMax)
 {
     {
         auto v = std::max(float2{6, 4}, float2{1, 40});
@@ -472,7 +472,7 @@ TEST(MathLibTest, StdMax)
 }
 
 // min
-TEST(MathLibTest, StdMin)
+TEST(Common_BasicMath, StdMin)
 {
     {
         auto v = std::min(float2{6, 4}, float2{1, 40});
@@ -497,7 +497,7 @@ TEST(MathLibTest, StdMin)
 }
 
 // a == b
-TEST(MathLibTest, ComparisonOperators)
+TEST(Common_BasicMath, ComparisonOperators)
 {
     {
         EXPECT_TRUE(float2(1, 2) == float2(1, 2));
@@ -574,7 +574,7 @@ TEST(MathLibTest, ComparisonOperators)
 }
 
 // Functions
-TEST(MathLibTest, Abs)
+TEST(Common_BasicMath, Abs)
 {
     {
         // clang-format off
@@ -625,7 +625,7 @@ TEST(MathLibTest, Abs)
 }
 
 
-TEST(MathLibTest, MatrixConstructors)
+TEST(Common_BasicMath, MatrixConstructors)
 {
     // Matrix 2x2
     {
@@ -716,7 +716,7 @@ TEST(MathLibTest, MatrixConstructors)
     }
 }
 
-TEST(MathLibTest, MatrixInverse)
+TEST(Common_BasicMath, MatrixInverse)
 {
     {
         // clang-format off
@@ -760,7 +760,7 @@ TEST(MathLibTest, MatrixInverse)
 }
 
 
-TEST(MathLibTest, Hash)
+TEST(Common_BasicMath, Hash)
 {
     {
         EXPECT_NE(std::hash<float2>{}(float2{1, 2}), 0);
@@ -798,7 +798,7 @@ TEST(MathLibTest, Hash)
     }
 }
 
-TEST(MathLibTest, OrthoProjection)
+TEST(Common_BasicMath, OrthoProjection)
 {
     {
         float4x4 OrthoProj = float4x4::Ortho(2.f, 4.f, -4.f, 12.f, false);
@@ -837,20 +837,7 @@ TEST(MathLibTest, OrthoProjection)
     }
 }
 
-TEST(MathLibTest, Planes)
-{
-    Plane3D plane = {};
-    EXPECT_NE(std::hash<Plane3D>{}(plane), 0);
-
-    ViewFrustum frustum = {};
-    EXPECT_NE(std::hash<ViewFrustum>{}(frustum), 0);
-
-    ViewFrustumExt frustm_ext = {};
-    EXPECT_NE(std::hash<ViewFrustumExt>{}(frustm_ext), 0);
-}
-
-
-TEST(MathLibTest, MakeObject)
+TEST(Common_BasicMath, MakeObject)
 {
     double data[] = {1, 2, 3, 4,
                      5, 6, 7, 8,
@@ -865,7 +852,7 @@ TEST(MathLibTest, MakeObject)
     EXPECT_EQ(float2x2::MakeMatrix(data), float2x2(1, 2, 3, 4));
 }
 
-TEST(MathLibTest, MatrixMultiply)
+TEST(Common_BasicMath, MatrixMultiply)
 {
     {
         float2x2 m1(1, 2, 3, 4);
@@ -903,7 +890,7 @@ TEST(MathLibTest, MatrixMultiply)
     }
 }
 
-TEST(MathLibTest, VectorRecast)
+TEST(Common_BasicMath, VectorRecast)
 {
     {
         EXPECT_EQ(float2(1, 2).Recast<int>(), Vector2<int>(1, 2));
@@ -912,7 +899,7 @@ TEST(MathLibTest, VectorRecast)
     }
 }
 
-TEST(MathLibTest, StdFloorCeil)
+TEST(Common_BasicMath, StdFloorCeil)
 {
     {
         EXPECT_EQ(std::floor(float2(0.1f, 1.2f)), float2(0, 1));
@@ -924,7 +911,19 @@ TEST(MathLibTest, StdFloorCeil)
     }
 }
 
-TEST(MathLibTest, HermiteSpline)
+TEST(Common_AdvancedMath, Planes)
+{
+    Plane3D plane = {};
+    EXPECT_NE(std::hash<Plane3D>{}(plane), 0);
+
+    ViewFrustum frustum = {};
+    EXPECT_NE(std::hash<ViewFrustum>{}(frustum), 0);
+
+    ViewFrustumExt frustm_ext = {};
+    EXPECT_NE(std::hash<ViewFrustumExt>{}(frustm_ext), 0);
+}
+
+TEST(Common_AdvancedMath, HermiteSpline)
 {
     EXPECT_NE(HermiteSpline(float3(1, 2, 3), float3(4, 5, 6), float3(7, 8, 9), float3(10, 11, 12), 0.1f), float3(0, 0, 0));
     EXPECT_NE(HermiteSpline(double3(1, 2, 3), double3(4, 5, 6), double3(7, 8, 9), double3(10, 11, 12), 0.1), double3(0, 0, 0));

@@ -44,6 +44,8 @@ public:
     // http://en.cppreference.com/w/cpp/thread/condition_variable
     void Trigger(bool NotifyAll = false, int SignalValue = 1)
     {
+        VERIFY(SignalValue != 0, "Signal value must not be zero");
+
         //  The thread that intends to modify the variable has to
         //  * acquire a std::mutex (typically via std::lock_guard)
         //  * perform the modification while the lock is held
