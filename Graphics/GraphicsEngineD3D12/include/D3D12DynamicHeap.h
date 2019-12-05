@@ -148,7 +148,7 @@ private:
     RenderDeviceD3D12Impl& m_DeviceD3D12Impl;
 
     std::mutex m_AvailablePagesMtx;
-    using AvailablePagesMapElemType = std::pair<Uint64, D3D12DynamicPage>;
+    using AvailablePagesMapElemType = std::pair<const Uint64, D3D12DynamicPage>;
     std::multimap<Uint64, D3D12DynamicPage, std::less<Uint64>, STDAllocatorRawMem<AvailablePagesMapElemType>> m_AvailablePages;
 
 #ifdef DEVELOPMENT

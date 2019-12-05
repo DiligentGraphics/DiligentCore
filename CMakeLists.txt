@@ -196,12 +196,11 @@ if(MSVC)
     target_compile_options(Diligent-BuildSettings INTERFACE /W4 /wd4100 /wd4505)
     # In all release modes also:
     # - disable w4189 - local variable is initialized but not referenced
-    # - Enable AVX2 instruction set (/arch:AVX2)
     # - Disable RTTI (/GR-)
     # - Enable whole program optimization (/GL)
     # - Enable string pooling (/GF)
-    set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /arch:AVX2 /wd4189 /GR- /GL /GF)
-    #target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/arch:AVX2 /wd4189 /Ot")
+    set(MSVC_ALL_RELEASE_COMPILE_OPTIONS /wd4189 /GR- /GL /GF)
+    #target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/wd4189 /Ot")
     # In RELEASE mode:
     # - Set favor fast code option (/Ot)
     # - Enable intrinsic functions (/Oi)

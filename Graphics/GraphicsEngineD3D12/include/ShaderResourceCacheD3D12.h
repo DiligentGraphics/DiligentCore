@@ -132,6 +132,8 @@ public:
     //http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Cache-Structure
     struct Resource
     {
+        Resource() noexcept {}
+
         CachedResourceType Type = CachedResourceType::Unknown;
         // CPU descriptor handle of a cached resource in CPU-only descriptor heap
         // Note that for dynamic resources, this is the only available CPU descriptor handle

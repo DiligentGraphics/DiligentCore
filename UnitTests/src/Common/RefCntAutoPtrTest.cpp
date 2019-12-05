@@ -863,7 +863,7 @@ void RefCntAutoPtrThreadingTest::WorkerThreadFunc(RefCntAutoPtrThreadingTest* Th
 void RefCntAutoPtrThreadingTest::StartConcurrencyTest()
 {
     auto numCores = std::thread::hardware_concurrency();
-    m_Threads.resize(std::max(numCores, 2u));
+    m_Threads.resize(std::max(numCores, 4u));
     for (auto& t : m_Threads)
         t = std::thread(WorkerThreadFunc, this, &t - m_Threads.data());
 }
