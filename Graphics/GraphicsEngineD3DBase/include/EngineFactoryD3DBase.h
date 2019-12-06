@@ -43,9 +43,9 @@ public:
     {}
 
 
-    virtual void EnumerateHardwareAdapters(DIRECT3D_FEATURE_LEVEL  MinFeatureLevel,
-                                           Uint32&                 NumAdapters,
-                                           HardwareAdapterAttribs* Adapters) override final
+    virtual void EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                   Uint32&                NumAdapters,
+                                   AdapterAttribs*        Adapters) override final
     {
         auto DXGIAdapters = FindCompatibleAdapters(MinFeatureLevel);
 
@@ -61,6 +61,8 @@ public:
                 pDXIAdapter->GetDesc1(&AdapterDesc);
 
                 auto& Attribs = Adapters[adapter];
+
+                Attribs.AdapterType = (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
                 WideCharToMultiByte(CP_ACP, 0, AdapterDesc.Description, -1, Attribs.Description, _countof(Attribs.Description), NULL, FALSE);
                 Attribs.DedicatedVideoMemory  = AdapterDesc.DedicatedVideoMemory;
                 Attribs.DedicatedSystemMemory = AdapterDesc.DedicatedSystemMemory;
@@ -148,19 +150,14 @@ public:
             return std::move(DXGIAdapters);
         }
 
-        auto                   d3dFeatureLevel = GetD3DFeatureLevel(MinFeatureLevel);
         CComPtr<IDXGIAdapter1> pDXIAdapter;
-        UINT                   adapter = 0;
+
+        auto d3dFeatureLevel = GetD3DFeatureLevel(MinFeatureLevel);
+        UINT adapter         = 0;
         for (; pFactory->EnumAdapters1(adapter, &pDXIAdapter) != DXGI_ERROR_NOT_FOUND; ++adapter, pDXIAdapter.Release())
         {
             DXGI_ADAPTER_DESC1 AdapterDesc;
             pDXIAdapter->GetDesc1(&AdapterDesc);
-            if (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE)
-            {
-                // Skip software devices
-                continue;
-            }
-
             bool IsCompatibleAdapter = CheckAdapterCompatibility<DevType>(pDXIAdapter, d3dFeatureLevel);
             if (IsCompatibleAdapter)
             {

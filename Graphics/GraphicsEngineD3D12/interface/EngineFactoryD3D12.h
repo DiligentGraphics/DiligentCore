@@ -117,15 +117,15 @@ public:
     /// \param [out]    Adapters - Pointer to the array conataining adapter information. If
     ///                            null is provided, the number of available adapters is written to
     ///                            NumAdapters
-    virtual void EnumerateHardwareAdapters(DIRECT3D_FEATURE_LEVEL  MinFeatureLevel,
-                                           Uint32&                 NumAdapters,
-                                           HardwareAdapterAttribs* Adapters) = 0;
+    virtual void EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                   Uint32&                NumAdapters,
+                                   AdapterAttribs*        Adapters) = 0;
 
 
     /// Enumerates available display modes for the specified output of the specified adapter.
 
-    /// \param [in] MinFeatureLevel - Minimum feature level of the adapter that was given to EnumerateHardwareAdapters().
-    /// \param [in] AdapterId       - Id of the adapter enumerated by EnumerateHardwareAdapters().
+    /// \param [in] MinFeatureLevel - Minimum feature level of the adapter that was given to EnumerateAdapters().
+    /// \param [in] AdapterId       - Id of the adapter enumerated by EnumerateAdapters().
     /// \param [in] OutputId        - Adapter output id.
     /// \param [in] Format          - Display mode format.
     /// \param [in, out] NumDisplayModes - Number of display modes. If DisplayModes is null, this

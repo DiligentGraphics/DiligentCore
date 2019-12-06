@@ -26,7 +26,7 @@
 /// \file
 /// Diligent API information
 
-#define DILIGENT_API_VERSION 240042
+#define DILIGENT_API_VERSION 240043
 
 #include "../../../Primitives/interface/BasicTypes.h"
 
@@ -55,7 +55,7 @@ struct APIInfo
     size_t RectSize                       = 0;
     size_t CopyTextureAttribsSize         = 0;
     size_t DeviceObjectAttribsSize        = 0;
-    size_t HardwareAdapterAttribsSize     = 0;
+    size_t AdapterAttribsSize             = 0;
     size_t DisplayModeAttribsSize         = 0;
     size_t SwapChainDescSize              = 0;
     size_t FullScreenModeDescSize         = 0;

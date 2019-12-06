@@ -64,7 +64,7 @@ static APIInfo InitAPIInfo()
     INIT_STRUCTURE_SIZE(Rect);
     INIT_STRUCTURE_SIZE(CopyTextureAttribs);
     INIT_STRUCTURE_SIZE(DeviceObjectAttribs);
-    INIT_STRUCTURE_SIZE(HardwareAdapterAttribs);
+    INIT_STRUCTURE_SIZE(AdapterAttribs);
     INIT_STRUCTURE_SIZE(DisplayModeAttribs);
     INIT_STRUCTURE_SIZE(SwapChainDesc);
     INIT_STRUCTURE_SIZE(FullScreenModeDesc);

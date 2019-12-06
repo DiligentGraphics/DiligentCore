@@ -1084,10 +1084,26 @@ namespace Diligent
             Name{_Name}
         {}
     };
-
-    /// Hardware adapter attributes
-    struct HardwareAdapterAttribs
+    
+    /// Hardware adapter type
+    enum ADAPTER_TYPE : Uint8
     {
+        /// Adapter type is unknown
+        ADAPTER_TYPE_UNKNOWN = 0,
+
+        /// Software adapter
+        ADAPTER_TYPE_SOFTWARE,
+
+        /// Hardware adapter
+        ADAPTER_TYPE_HARDWARE
+    };
+
+    /// Adapter attributes
+    struct AdapterAttribs
+    {
+        /// Adapter type. See Diligent::ADAPTER_TYPE.
+        ADAPTER_TYPE AdapterType        = ADAPTER_TYPE_UNKNOWN;
+
         /// A string that contains the adapter description
         char Description[128]           = {};
 
