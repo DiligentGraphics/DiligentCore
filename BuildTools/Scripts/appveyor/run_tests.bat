@@ -20,9 +20,9 @@ if "%RUN_API_CORE_TEST%"=="true" (
 )
 
 if "%RUN_CORE_API_D3D11_TEST%"=="true" (
-    "%1\UnitTests\DiligentCoreAPITest\%CONFIGURATION%\DiligentCoreAPITest.exe" "--mode=d3d11_sw"
+    "%1\UnitTests\DiligentCoreAPITest\%CONFIGURATION%\DiligentCoreAPITest.exe" --mode=d3d11_sw
 )
 
 if "%RUN_CORE_API_D3D12_TEST%"=="true" (
-    "%1\UnitTests\DiligentCoreAPITest\%CONFIGURATION%\DiligentCoreAPITest.exe" "--mode=d3d12_sw"
+    "%1\UnitTests\DiligentCoreAPITest\%CONFIGURATION%\DiligentCoreAPITest.exe" --mode=d3d12_sw
 )
