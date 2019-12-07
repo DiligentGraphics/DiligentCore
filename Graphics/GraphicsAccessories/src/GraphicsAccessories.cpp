@@ -618,6 +618,30 @@ const Char* GetComparisonFunctionLiteralName(COMPARISON_FUNCTION ComparisonFunc,
     }
 }
 
+const Char* GetStencilOpLiteralName(STENCIL_OP StencilOp)
+{
+#define STENCIL_OP_TO_STR(Op) \
+    case Op: return #Op
+
+    switch (StencilOp)
+    {
+        STENCIL_OP_TO_STR(STENCIL_OP_UNDEFINED);
+        STENCIL_OP_TO_STR(STENCIL_OP_KEEP);
+        STENCIL_OP_TO_STR(STENCIL_OP_ZERO);
+        STENCIL_OP_TO_STR(STENCIL_OP_REPLACE);
+        STENCIL_OP_TO_STR(STENCIL_OP_INCR_SAT);
+        STENCIL_OP_TO_STR(STENCIL_OP_DECR_SAT);
+        STENCIL_OP_TO_STR(STENCIL_OP_INVERT);
+        STENCIL_OP_TO_STR(STENCIL_OP_INCR_WRAP);
+        STENCIL_OP_TO_STR(STENCIL_OP_DECR_WRAP);
+
+        default:
+            UNEXPECTED("Unexepcted stencil operation (", static_cast<Uint32>(StencilOp), ")");
+            return "UNKNOWN";
+    }
+#undef STENCIL_OP_TO_STR
+}
+
 const Char* GetBlendFactorLiteralName(BLEND_FACTOR BlendFactor)
 {
 #define BLEND_FACTOR_TO_STR(Factor) \
@@ -670,6 +694,43 @@ const Char* GetBlendOperationLiteralName(BLEND_OPERATION BlendOp)
             return "UNKNOWN";
     }
 #undef BLEND_OP_TO_STR
+}
+
+const Char* GetFillModeLiteralName(FILL_MODE FillMode)
+{
+#define FILL_MODE_TO_STR(Mode) \
+    case Mode: return #Mode
+
+    switch (FillMode)
+    {
+        FILL_MODE_TO_STR(FILL_MODE_UNDEFINED);
+        FILL_MODE_TO_STR(FILL_MODE_WIREFRAME);
+        FILL_MODE_TO_STR(FILL_MODE_SOLID);
+
+        default:
+            UNEXPECTED("Unexepcted fill mode (", static_cast<int>(FillMode), ")");
+            return "UNKNOWN";
+    }
+#undef FILL_MODE_TO_STR
+}
+
+const Char* GetCullModeLiteralName(CULL_MODE CullMode)
+{
+#define CULL_MODE_TO_STR(Mode) \
+    case Mode: return #Mode
+
+    switch (CullMode)
+    {
+        CULL_MODE_TO_STR(CULL_MODE_UNDEFINED);
+        CULL_MODE_TO_STR(CULL_MODE_NONE);
+        CULL_MODE_TO_STR(CULL_MODE_FRONT);
+        CULL_MODE_TO_STR(CULL_MODE_BACK);
+
+        default:
+            UNEXPECTED("Unexepcted cull mode (", static_cast<int>(CullMode), ")");
+            return "UNKNOWN";
+    }
+#undef CULL_MODE_TO_STR
 }
 
 const Char* GetMapTypeString(MAP_TYPE MapType)

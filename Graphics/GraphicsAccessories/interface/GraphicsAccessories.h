@@ -278,6 +278,13 @@ const Char* GetTextureAddressModeLiteralName(TEXTURE_ADDRESS_MODE AddressMode, b
 const Char* GetComparisonFunctionLiteralName(COMPARISON_FUNCTION ComparisonFunc, bool bGetFullName);
 
 
+/// Returns the literal name of a stencil operation.
+
+/// \param [in] StencilOp - Stencil operation, see Diligent::STENCIL_OP.
+/// \return                 Literal name of the stencil operation.
+const Char* GetStencilOpLiteralName(STENCIL_OP StencilOp);
+
+
 /// Returns the literal name of a blend factor.
 
 /// \param [in] BlendFactor - Blend factor, see Diligent::BLEND_FACTOR.
@@ -291,6 +298,18 @@ const Char* GetBlendFactorLiteralName(BLEND_FACTOR BlendFactor);
 /// \return               Literal name of the blend operation.
 const Char* GetBlendOperationLiteralName(BLEND_OPERATION BlendOp);
 
+
+/// Returns the literal name of a fill mode.
+
+/// \param [in] FillMode - Fill mode, see Diligent::FILL_MODE.
+/// \return                Literal name of the fill mode.
+const Char* GetFillModeLiteralName(FILL_MODE FillMode);
+
+/// Returns the literal name of a cull mode.
+
+/// \param [in] CullMode - Cull mode, see Diligent::CULL_MODE.
+/// \return                Literal name of the cull mode.
+const Char* GetCullModeLiteralName(CULL_MODE CullMode);
 
 /// Returns the string containing the map type
 const Char* GetMapTypeString(MAP_TYPE MapType);

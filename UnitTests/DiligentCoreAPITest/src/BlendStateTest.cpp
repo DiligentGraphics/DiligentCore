@@ -109,7 +109,9 @@ protected:
 
         RefCntAutoPtr<IPipelineState> pPSO;
         pDevice->CreatePipelineState(PSODesc, &pPSO);
-        pDeviceContext->SetPipelineState(pPSO);
+        EXPECT_TRUE(pPSO);
+        if (pPSO)
+            pDeviceContext->SetPipelineState(pPSO);
         return pPSO;
     }
 
@@ -182,7 +184,7 @@ TEST_F(BlendStateBasicTest, CreatePSO)
     EXPECT_TRUE(CreateTestPSO(PSODesc, true));
 }
 
-class BlendFactorTest : public BlendStateTestBase, public testing::TestWithParam<std::tuple<Uint32, int, bool>>
+class BlendFactorTest : public BlendStateTestBase, public testing::TestWithParam<std::tuple<int, bool>>
 {
 protected:
     static void SetUpTestSuite()
@@ -204,26 +206,29 @@ TEST_P(BlendFactorTest, CreatePSO)
 
     const auto& Param = GetParam();
 
-    auto NumRenderTarges = std::get<0>(Param);
-    auto BlendFactor     = static_cast<BLEND_FACTOR>(std::get<1>(Param));
-    bool TestingAlpha    = std::get<2>(Param);
+    const auto BlendFactor  = static_cast<BLEND_FACTOR>(std::get<0>(Param));
+    const bool TestingAlpha = std::get<1>(Param);
 
-    const auto& DevCaps = pDevice->GetDeviceCaps();
-    if (DevCaps.DevType == DeviceType::OpenGLES && NumRenderTarges > 4)
+    const auto& DevCaps              = pDevice->GetDeviceCaps();
+    Uint32      MaxTestRenderTargets = (DevCaps.DevType == DeviceType::OpenGLES) ? 4 : 8;
+
+    const bool TestSRC1 = DevCaps.DevType != DeviceType::OpenGLES; // || DevCaps.Vendor == GPU_VENDOR::NVIDIA;
+    if (BlendFactor == BLEND_FACTOR_SRC1_COLOR ||
+        BlendFactor == BLEND_FACTOR_INV_SRC1_COLOR ||
+        BlendFactor == BLEND_FACTOR_SRC1_ALPHA ||
+        BlendFactor == BLEND_FACTOR_INV_SRC1_ALPHA)
     {
-        GTEST_SKIP();
+        if (!TestSRC1)
+        {
+            GTEST_SKIP();
+        }
+        else
+        {
+            MaxTestRenderTargets = 1;
+        }
     }
 
-    bool TestSRC1 = DevCaps.DevType != DeviceType::OpenGLES; // || DevCaps.Vendor == GPU_VENDOR::NVIDIA;
-    if ((!TestSRC1 || NumRenderTarges > 1) &&
-        (BlendFactor == BLEND_FACTOR_SRC1_COLOR ||
-         BlendFactor == BLEND_FACTOR_INV_SRC1_COLOR ||
-         BlendFactor == BLEND_FACTOR_SRC1_ALPHA ||
-         BlendFactor == BLEND_FACTOR_INV_SRC1_ALPHA))
-    {
-        GTEST_SKIP();
-    }
-
+    for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {
         auto PSODesc = GetPSODesc(NumRenderTarges);
         PSODesc.Name = "SrcBlendFactorTest";
@@ -243,23 +248,24 @@ TEST_P(BlendFactorTest, CreatePSO)
         }
 
         auto pPSO = CreateTestPSO(PSODesc, true);
-        ASSERT_TRUE(pPSO);
+        ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTarges;
         for (Uint32 i = 0; i < NumRenderTarges; ++i)
         {
             auto& RT = pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[i];
 
-            EXPECT_EQ(RT.BlendEnable, True);
+            EXPECT_EQ(RT.BlendEnable, True) << "Render target: " << i;
             if (TestingAlpha)
             {
-                EXPECT_EQ(RT.SrcBlendAlpha, BlendFactor);
+                EXPECT_EQ(RT.SrcBlendAlpha, BlendFactor) << "Render target: " << i;
             }
             else
             {
-                EXPECT_EQ(RT.SrcBlend, BlendFactor);
+                EXPECT_EQ(RT.SrcBlend, BlendFactor) << "Render target: " << i;
             }
         }
     }
 
+    for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {
         auto PSODesc = GetPSODesc(NumRenderTarges);
         PSODesc.Name = "DstBlendFactorTest";
@@ -279,38 +285,36 @@ TEST_P(BlendFactorTest, CreatePSO)
         }
 
         auto pPSO = CreateTestPSO(PSODesc, true);
-        ASSERT_TRUE(pPSO);
+        ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTarges;
         for (Uint32 i = 0; i < NumRenderTarges; ++i)
         {
             auto& RT = pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[i];
 
-            EXPECT_EQ(RT.BlendEnable, True);
+            EXPECT_EQ(RT.BlendEnable, True) << "Render target: " << i;
             if (TestingAlpha)
             {
-                EXPECT_EQ(RT.DestBlendAlpha, BlendFactor);
+                EXPECT_EQ(RT.DestBlendAlpha, BlendFactor) << "Render target: " << i;
             }
             else
             {
-                EXPECT_EQ(RT.DestBlend, BlendFactor);
+                EXPECT_EQ(RT.DestBlend, BlendFactor) << "Render target: " << i;
             }
         }
     }
 }
 
-std::string PrintBlendFactorTestName(const testing::TestParamInfo<std::tuple<Uint32, int, bool>>& info) //
+std::string PrintBlendFactorTestName(const testing::TestParamInfo<std::tuple<int, bool>>& info) //
 {
-    auto NumRenderTarges = std::get<0>(info.param);
-    auto BlendFactor     = static_cast<BLEND_FACTOR>(std::get<1>(info.param));
+    auto BlendFactor = static_cast<BLEND_FACTOR>(std::get<0>(info.param));
 
     std::stringstream name_ss;
-    name_ss << GetBlendFactorLiteralName(BlendFactor) << "_x_" << NumRenderTarges;
+    name_ss << GetBlendFactorLiteralName(BlendFactor);
     return name_ss.str();
 }
 
 INSTANTIATE_TEST_SUITE_P(ColorBlendFactors,
                          BlendFactorTest,
                          testing::Combine(
-                             testing::Range<Uint32>(Uint32{1}, Uint32{8}),
                              testing::Range<int>(BLEND_FACTOR_UNDEFINED + 1, BLEND_FACTOR_NUM_FACTORS),
                              testing::Values(false)),
                          PrintBlendFactorTestName);
@@ -319,7 +323,6 @@ INSTANTIATE_TEST_SUITE_P(ColorBlendFactors,
 INSTANTIATE_TEST_SUITE_P(AlphaBlendFactors,
                          BlendFactorTest,
                          testing::Combine(
-                             testing::Range<Uint32>(Uint32{1}, Uint32{8}),
                              testing::Values<int>(BLEND_FACTOR_ZERO,
                                                   BLEND_FACTOR_ONE,
                                                   BLEND_FACTOR_SRC_ALPHA,
@@ -335,7 +338,7 @@ INSTANTIATE_TEST_SUITE_P(AlphaBlendFactors,
                          PrintBlendFactorTestName);
 
 
-class BlendOperationTest : public BlendStateTestBase, public testing::TestWithParam<std::tuple<Uint32, int, bool>>
+class BlendOperationTest : public BlendStateTestBase, public testing::TestWithParam<std::tuple<int, bool>>
 {
 protected:
     static void SetUpTestSuite()
@@ -358,68 +361,65 @@ TEST_P(BlendOperationTest, CreatePSO)
 
     const auto& Param = GetParam();
 
-    auto NumRenderTarges = std::get<0>(Param);
-    auto BlendOp         = static_cast<BLEND_OPERATION>(std::get<1>(Param));
-    auto TestingAlpha    = std::get<2>(Param);
+    const auto BlendOp      = static_cast<BLEND_OPERATION>(std::get<0>(Param));
+    const auto TestingAlpha = std::get<1>(Param);
 
-    const auto& DevCaps = pDevice->GetDeviceCaps();
-    if (DevCaps.DevType == DeviceType::OpenGLES && NumRenderTarges > 4)
+    const auto&  DevCaps              = pDevice->GetDeviceCaps();
+    const Uint32 MaxTestRenderTargets = (DevCaps.DevType == DeviceType::OpenGLES) ? 4 : 8;
+
+    for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {
-        GTEST_SKIP();
-    }
+        auto PSODesc = GetPSODesc(NumRenderTarges);
+        PSODesc.Name = "BlendOperationTest";
 
-    auto PSODesc = GetPSODesc(NumRenderTarges);
-    PSODesc.Name = "BlendOperationTest";
+        BlendStateDesc& BSDesc = PSODesc.GraphicsPipeline.BlendDesc;
 
-    BlendStateDesc& BSDesc = PSODesc.GraphicsPipeline.BlendDesc;
-
-    BSDesc.IndependentBlendEnable = True;
-    for (Uint32 i = 0; i < NumRenderTarges; ++i)
-    {
-        auto& RT          = BSDesc.RenderTargets[i];
-        RT.BlendEnable    = True;
-        RT.SrcBlend       = BLEND_FACTOR_SRC_COLOR;
-        RT.DestBlend      = BLEND_FACTOR_INV_SRC_COLOR;
-        RT.SrcBlendAlpha  = BLEND_FACTOR_SRC_ALPHA;
-        RT.DestBlendAlpha = BLEND_FACTOR_INV_SRC_ALPHA;
-        if (TestingAlpha)
-            RT.BlendOpAlpha = BlendOp;
-        else
-            RT.BlendOp = BlendOp;
-    }
-
-    auto pPSO = CreateTestPSO(PSODesc, true);
-    ASSERT_TRUE(pPSO);
-    for (Uint32 i = 0; i < NumRenderTarges; ++i)
-    {
-        auto& RT = pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[i];
-
-        EXPECT_EQ(RT.BlendEnable, True);
-        if (TestingAlpha)
+        BSDesc.IndependentBlendEnable = True;
+        for (Uint32 i = 0; i < NumRenderTarges; ++i)
         {
-            EXPECT_EQ(RT.BlendOpAlpha, BlendOp);
+            auto& RT          = BSDesc.RenderTargets[i];
+            RT.BlendEnable    = True;
+            RT.SrcBlend       = BLEND_FACTOR_SRC_COLOR;
+            RT.DestBlend      = BLEND_FACTOR_INV_SRC_COLOR;
+            RT.SrcBlendAlpha  = BLEND_FACTOR_SRC_ALPHA;
+            RT.DestBlendAlpha = BLEND_FACTOR_INV_SRC_ALPHA;
+            if (TestingAlpha)
+                RT.BlendOpAlpha = BlendOp;
+            else
+                RT.BlendOp = BlendOp;
         }
-        else
+
+        auto pPSO = CreateTestPSO(PSODesc, true);
+        ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTarges;
+        for (Uint32 i = 0; i < NumRenderTarges; ++i)
         {
-            EXPECT_EQ(RT.BlendOp, BlendOp);
+            auto& RT = pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[i];
+
+            EXPECT_EQ(RT.BlendEnable, True) << "Render target: " << i;
+            if (TestingAlpha)
+            {
+                EXPECT_EQ(RT.BlendOpAlpha, BlendOp) << "Render target: " << i;
+            }
+            else
+            {
+                EXPECT_EQ(RT.BlendOp, BlendOp) << "Render target: " << i;
+            }
         }
     }
 }
 
-
-INSTANTIATE_TEST_SUITE_P(ColorBlendOperations,
+INSTANTIATE_TEST_SUITE_P(BlendOperations,
                          BlendOperationTest,
                          testing::Combine(
-                             testing::Range<Uint32>(Uint32{1}, Uint32{8}),
                              testing::Range<int>(BLEND_OPERATION_UNDEFINED + 1, BLEND_OPERATION_NUM_OPERATIONS),
                              testing::Values(true, false)),
-                         [](const testing::TestParamInfo<std::tuple<Uint32, int, bool>>& info) //
+                         [](const testing::TestParamInfo<std::tuple<int, bool>>& info) //
                          {
-                             auto              NumRenderTarges = std::get<0>(info.param);
-                             auto              BlendOp         = static_cast<BLEND_OPERATION>(std::get<1>(info.param));
-                             auto              IsTestingAlpha  = std::get<2>(info.param);
+                             auto BlendOp        = static_cast<BLEND_OPERATION>(std::get<0>(info.param));
+                             auto IsTestingAlpha = std::get<1>(info.param);
+
                              std::stringstream name_ss;
-                             name_ss << (IsTestingAlpha ? "Alpha_" : "Color_") << GetBlendOperationLiteralName(BlendOp) << "_x_" << NumRenderTarges;
+                             name_ss << (IsTestingAlpha ? "Alpha_" : "Color_") << GetBlendOperationLiteralName(BlendOp);
                              return name_ss.str();
                          } //
 );

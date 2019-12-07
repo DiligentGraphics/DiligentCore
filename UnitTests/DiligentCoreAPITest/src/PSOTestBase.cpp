@@ -84,7 +84,7 @@ RefCntAutoPtr<IPipelineState> PSOTestBase::CreateTestPSO(const PipelineStateDesc
 
     RefCntAutoPtr<IPipelineState> pPSO;
     pDevice->CreatePipelineState(PSODesc, &pPSO);
-    if (BindPSO)
+    if (BindPSO && pPSO)
     {
         pContext->SetPipelineState(pPSO);
     }

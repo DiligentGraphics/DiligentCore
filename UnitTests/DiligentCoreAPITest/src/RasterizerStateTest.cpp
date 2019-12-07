@@ -23,6 +23,7 @@
 
 #include "TestingEnvironment.h"
 #include "PSOTestBase.h"
+#include "GraphicsAccessories.h"
 
 #include "gtest/gtest.h"
 
@@ -58,7 +59,7 @@ TEST_F(RasterizerStateTest, CreatePSO)
     {
         RSDesc.FillMode = static_cast<FILL_MODE>(FillMode);
         auto pPSO       = CreateTestPSO(PSODesc, true);
-        ASSERT_TRUE(pPSO);
+        ASSERT_TRUE(pPSO) << "Fill mode: " << GetFillModeLiteralName(RSDesc.FillMode);
         EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.FillMode, RSDesc.FillMode);
     }
 
@@ -66,7 +67,7 @@ TEST_F(RasterizerStateTest, CreatePSO)
     {
         RSDesc.CullMode = static_cast<CULL_MODE>(CullMode);
         auto pPSO       = CreateTestPSO(PSODesc, true);
-        ASSERT_TRUE(pPSO);
+        ASSERT_TRUE(pPSO) << "Cull mode: " << GetCullModeLiteralName(RSDesc.CullMode);
         EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.CullMode, RSDesc.CullMode);
     }
 

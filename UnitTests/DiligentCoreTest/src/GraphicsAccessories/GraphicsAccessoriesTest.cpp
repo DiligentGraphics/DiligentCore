@@ -141,6 +141,51 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetBlendOperationLiteralName)
 #undef TEST_BLEND_OP_ENUM
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, GetFillModeLiteralName)
+{
+#define TEST_FILL_MODE_ENUM(ENUM_VAL)                              \
+    {                                                              \
+        EXPECT_STREQ(GetFillModeLiteralName(ENUM_VAL), #ENUM_VAL); \
+    }
+    TEST_FILL_MODE_ENUM(FILL_MODE_UNDEFINED);
+    TEST_FILL_MODE_ENUM(FILL_MODE_WIREFRAME);
+    TEST_FILL_MODE_ENUM(FILL_MODE_SOLID);
+#undef TEST_FILL_MODE_ENUM
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, GetCullModeLiteralName)
+{
+#define TEST_CULL_MODE_ENUM(ENUM_VAL)                              \
+    {                                                              \
+        EXPECT_STREQ(GetCullModeLiteralName(ENUM_VAL), #ENUM_VAL); \
+    }
+    TEST_CULL_MODE_ENUM(CULL_MODE_UNDEFINED);
+    TEST_CULL_MODE_ENUM(CULL_MODE_NONE);
+    TEST_CULL_MODE_ENUM(CULL_MODE_FRONT);
+    TEST_CULL_MODE_ENUM(CULL_MODE_BACK);
+#undef TEST_CULL_MODE_ENUM
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, GetStencilOpLiteralName)
+{
+#define TEST_STENCIL_OP_ENUM(ENUM_VAL)                              \
+    {                                                               \
+        EXPECT_STREQ(GetStencilOpLiteralName(ENUM_VAL), #ENUM_VAL); \
+    }
+
+    TEST_STENCIL_OP_ENUM(STENCIL_OP_UNDEFINED);
+    TEST_STENCIL_OP_ENUM(STENCIL_OP_KEEP);
+    TEST_STENCIL_OP_ENUM(STENCIL_OP_ZERO);
+    TEST_STENCIL_OP_ENUM(STENCIL_OP_REPLACE);
+    TEST_STENCIL_OP_ENUM(STENCIL_OP_INCR_SAT);
+    TEST_STENCIL_OP_ENUM(STENCIL_OP_DECR_SAT);
+    TEST_STENCIL_OP_ENUM(STENCIL_OP_INVERT);
+    TEST_STENCIL_OP_ENUM(STENCIL_OP_INCR_WRAP);
+    TEST_STENCIL_OP_ENUM(STENCIL_OP_DECR_WRAP);
+#undef TEST_STENCIL_OP_ENUM
+}
+
+
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetTextureFormatAttribs)
 {
