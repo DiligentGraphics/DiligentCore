@@ -72,7 +72,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             default: AdapterTypeStr = "Type unknown";
         }
         LOG_INFO_MESSAGE("Adapter ", AdapterId, ": '", AdapterInfo.Description, "' (",
-                         AdapterTypeStr, ", ", AdapterInfo.SharedSystemMemory / (1 << 20), " MB); ",
+                         AdapterTypeStr, ", ", AdapterInfo.DedicatedVideoMemory / (1 << 20), " MB); ",
                          DisplayModes.size(), (DisplayModes.size() == 1 ? " display mode" : " display modes"));
     };
     switch (m_DeviceType)
