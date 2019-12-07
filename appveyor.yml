@@ -75,14 +75,7 @@ build:
   parallel: true
 
 test_script:
-  - |
-    if "%PLATFORM_NAME%"=="Windows" OR "%PLATFORM_NAME%"=="Windows8.1" (
-      C:\projects\DiligentCore\build\UnitTests\DiligentCoreTest\%CONFIGURATION%\DiligentCoreTest.exe
-      C:\projects\DiligentCore\build\UnitTests\DiligentCoreAPITest\%CONFIGURATION%\DiligentCoreAPITest.exe --mode=d3d11_sw
-      if "%PLATFORM_NAME%"=="Windows" (
-        C:\projects\DiligentCore\build\UnitTests\DiligentCoreAPITest\%CONFIGURATION%\DiligentCoreAPITest.exe --mode=d3d12_sw
-      )
-    )
+  - c:\projects\DiligentCore\BuildTools\Scripts\appveyor\run_tests.bat "C:\projects\DiligentCore\build"
 
 after_test:
   - cd install
