@@ -348,12 +348,10 @@ public:
     OffsetType GetUsedSize()const{return m_MaxSize - m_FreeSize;}
     // clang-format on
 
-#ifdef _DEBUG
-    size_t DbgGetNumFreeBlocks() const
+    size_t GetNumFreeBlocks() const
     {
         return m_FreeBlocksByOffset.size();
     }
-#endif
 
 private:
     void AddNewBlock(OffsetType Offset, OffsetType Size)

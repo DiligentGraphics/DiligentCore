@@ -37,12 +37,12 @@ TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, AllocateFree)
 
     {
         VariableSizeAllocationsManager ListMgr(128, Allocator);
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
 
         auto a1 = ListMgr.Allocate(17, 4);
         EXPECT_EQ(a1.UnalignedOffset, 0);
         EXPECT_EQ(a1.Size, 20);
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
 
         auto a2 = ListMgr.Allocate(17, 8);
         EXPECT_EQ(a2.UnalignedOffset, 20);
@@ -75,49 +75,49 @@ TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, AllocateFree)
         auto a8 = ListMgr.Allocate(8, 1);
         EXPECT_EQ(a8.UnalignedOffset, 112);
         EXPECT_EQ(a8.Size, 8);
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
 
         auto a9 = ListMgr.Allocate(8, 1);
         EXPECT_EQ(a9.UnalignedOffset, 120);
         EXPECT_EQ(a9.Size, 8);
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 0);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 0);
 
         EXPECT_TRUE(ListMgr.IsFull());
 
         ListMgr.Free(std::move(a6));
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
 
         ListMgr.Free(a8.UnalignedOffset, a8.Size);
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
 
         ListMgr.Free(std::move(a9));
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
 
         auto a10 = ListMgr.Allocate(16, 1);
         EXPECT_EQ(a10.UnalignedOffset, 112);
         EXPECT_EQ(a10.Size, 16);
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
 
         ListMgr.Free(a10.UnalignedOffset, a10.Size);
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
 
         ListMgr.Free(std::move(a7));
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
 
         ListMgr.Free(std::move(a4));
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
 
         ListMgr.Free(a2.UnalignedOffset, a2.Size);
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 3);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 3);
 
         ListMgr.Free(std::move(a1));
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 3);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 3);
 
         ListMgr.Free(std::move(a3));
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
 
         ListMgr.Free(std::move(a5));
-        EXPECT_EQ(ListMgr.DbgGetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
 
         EXPECT_TRUE(ListMgr.IsEmpty());
     }
