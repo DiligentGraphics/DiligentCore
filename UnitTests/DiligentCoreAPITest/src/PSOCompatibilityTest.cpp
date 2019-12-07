@@ -1,0 +1,324 @@
+/*     Copyright 2019 Diligent Graphics LLC
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+#include "TestingEnvironment.h"
+
+#include "gtest/gtest.h"
+
+using namespace Diligent;
+
+namespace
+{
+
+static const char* VS0 = R"(
+float4 main() : SV_Position
+{
+    return float4(0.0, 0.0, 0.0, 0.0);
+}
+)";
+
+static const char* PS0 = R"(
+float4 main() : SV_Target
+{
+    return float4(0.0, 0.0, 0.0, 0.0);
+}
+)";
+
+static const char* PS_Tex = R"(
+Texture2D<float4> g_tex2D;
+SamplerState g_tex2D_sampler;
+float4 main() : SV_Target
+{
+    return g_tex2D.Sample(g_tex2D_sampler, float2(0.0, 0.0));
+}
+)";
+
+static const char* PS_Tex2 = R"(
+Texture2D<float4> g_tex2D2;
+SamplerState g_tex2D2_sampler;
+float4 main() : SV_Target
+{
+    return g_tex2D2.Sample(g_tex2D2_sampler, float2(0.0, 0.0));
+}
+)";
+
+static const char* PS_ArrOfTex = R"(
+Texture2D<float4> g_tex2D[2];
+SamplerState g_tex2D_sampler;
+float4 main() : SV_Target
+{
+    return g_tex2D[0].Sample(g_tex2D_sampler, float2(0.0, 0.0)) + g_tex2D[1].Sample(g_tex2D_sampler, float2(0.0, 0.0));
+}
+)";
+
+static const char* PS_TexArr = R"(
+Texture2DArray<float4> g_tex2D;
+SamplerState g_tex2D_sampler;
+float4 main() : SV_Target
+{
+    return g_tex2D.Sample(g_tex2D_sampler, float3(0.0, 0.0, 0.0));
+}
+)";
+
+
+static const char* PS_CB = R"(
+cbuffer Test
+{
+    float4 g_Test;
+};
+
+float4 main() : SV_Target
+{
+    return g_Test;
+}
+)";
+
+static const char* PS1_CB = R"(
+cbuffer Test
+{
+    float4 g_Test;
+    float4 g_Test2;
+};
+
+float4 main() : SV_Target
+{
+    return g_Test + g_Test2;
+}
+)";
+
+static const char* PS_2CB = R"(
+cbuffer Test
+{
+    float4 g_Test;
+};
+
+cbuffer Test2
+{
+    float4 g_Test2;
+};
+
+float4 main() : SV_Target
+{
+    return g_Test + g_Test2;
+}
+)";
+
+static const char* PS_TexCB = R"(
+cbuffer Test
+{
+    float4 g_Test;
+};
+
+cbuffer Test2
+{
+    float4 g_Test2;
+};
+
+Texture2D<float4> g_tex2D;
+SamplerState g_tex2D_sampler;
+float4 main() : SV_Target
+{
+    return g_Test + g_Test2 + g_tex2D.Sample(g_tex2D_sampler, float2(0.0, 0.0));
+}
+)";
+
+static const char* PS_TexCB2 = R"(
+cbuffer TestA
+{
+    float4 g_Test;
+};
+
+cbuffer Test2A
+{
+    float4 g_Test2;
+};
+
+Texture2D<float4> g_tex2DA;
+SamplerState g_tex2DA_sampler;
+float4 main() : SV_Target
+{
+    return g_Test + g_Test2 + g_tex2DA.Sample(g_tex2DA_sampler, float2(0.0, 0.0));
+}
+)";
+
+static const char* CS_RwBuff = R"(
+RWTexture2D<float/* format=r32f */> g_RWTex;
+
+[numthreads(1,1,1)]
+void main()
+{
+    g_RWTex[int2(0,0)] = 0.0;
+}
+)";
+
+static const char* CS_RwBuff2 = R"(
+RWTexture2D<float/* format=r32f */> g_RWTex2;
+
+[numthreads(1,1,1)]
+void main()
+{
+    g_RWTex2[int2(0,0)] = 0.0;
+}
+)";
+
+static const char* CS_RwBuff3 = R"(
+RWTexture2D<float/* format=r32f */> g_RWTex;
+RWTexture2D<float/* format=r32f */> g_RWTex2;
+
+[numthreads(1,1,1)]
+void main()
+{
+    g_RWTex[int2(0,0)] = 0.0;
+    g_RWTex2[int2(0,0)] = 0.0;
+}
+)";
+
+
+RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IRenderDevice* pDevice, const char* VSSource, const char* PSSource)
+{
+    PipelineStateDesc PSODesc;
+    PSODesc.IsComputePipeline                             = false;
+    PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
+    PSODesc.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM_SRGB;
+    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderCreateInfo CreationAttrs;
+    CreationAttrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    CreationAttrs.UseCombinedTextureSamplers = true;
+    RefCntAutoPtr<IShader> pVS;
+    {
+        CreationAttrs.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        CreationAttrs.EntryPoint      = "main";
+        CreationAttrs.Desc.Name       = "PSO Compatibility test VS";
+        CreationAttrs.Source          = VSSource;
+        pDevice->CreateShader(CreationAttrs, &pVS);
+        VERIFY_EXPR(pVS != nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        CreationAttrs.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        CreationAttrs.EntryPoint      = "main";
+        CreationAttrs.Desc.Name       = "PSO Compatibility test PS";
+        CreationAttrs.Source          = PSSource;
+        pDevice->CreateShader(CreationAttrs, &pPS);
+        VERIFY_EXPR(pPS != nullptr);
+    }
+
+    PSODesc.GraphicsPipeline.pVS = pVS;
+    PSODesc.GraphicsPipeline.pPS = pPS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    VERIFY_EXPR(pPSO != nullptr);
+
+    return pPSO;
+}
+
+RefCntAutoPtr<IPipelineState> CreateComputePSO(IRenderDevice* pDevice, const char* CSSource)
+{
+    PipelineStateDesc PSODesc;
+    PSODesc.IsComputePipeline = true;
+    ShaderCreateInfo CreationAttrs;
+    CreationAttrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    CreationAttrs.UseCombinedTextureSamplers = true;
+    RefCntAutoPtr<IShader> pCS;
+    {
+        CreationAttrs.Desc.ShaderType = SHADER_TYPE_COMPUTE;
+        CreationAttrs.EntryPoint      = "main";
+        CreationAttrs.Desc.Name       = "PSO Compatibility test CS";
+        CreationAttrs.Source          = CSSource;
+        pDevice->CreateShader(CreationAttrs, &pCS);
+        VERIFY_EXPR(pCS != nullptr);
+    }
+    PSODesc.ComputePipeline.pCS = pCS;
+
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    VERIFY_EXPR(pPSO != nullptr);
+
+    return pPSO;
+}
+
+TEST(PSOCompatibility, CompilationFailure)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    auto DevType = pDevice->GetDeviceCaps().DevType;
+    auto PSO0    = CreateGraphicsPSO(pDevice, VS0, PS0);
+    ASSERT_TRUE(PSO0);
+    EXPECT_TRUE(PSO0->IsCompatibleWith(PSO0));
+    auto PSO0_1 = CreateGraphicsPSO(pDevice, VS0, PS0);
+    ASSERT_TRUE(PSO0_1);
+    EXPECT_TRUE(PSO0->IsCompatibleWith(PSO0_1));
+    EXPECT_TRUE(PSO0_1->IsCompatibleWith(PSO0));
+
+    auto PSO_Tex      = CreateGraphicsPSO(pDevice, VS0, PS_Tex);
+    auto PSO_Tex2     = CreateGraphicsPSO(pDevice, VS0, PS_Tex2);
+    auto PSO_TexArr   = CreateGraphicsPSO(pDevice, VS0, PS_TexArr);
+    auto PSO_ArrOfTex = CreateGraphicsPSO(pDevice, VS0, PS_ArrOfTex);
+    ASSERT_TRUE(PSO_Tex);
+    ASSERT_TRUE(PSO_Tex2);
+    ASSERT_TRUE(PSO_TexArr);
+    ASSERT_TRUE(PSO_ArrOfTex);
+    EXPECT_TRUE(PSO_Tex->IsCompatibleWith(PSO_Tex2));
+    if (DevType != DeviceType::D3D12 && DevType != DeviceType::Vulkan)
+    {
+        EXPECT_FALSE(PSO_Tex->IsCompatibleWith(PSO_TexArr));
+    }
+    VERIFY_EXPR(!PSO_Tex->IsCompatibleWith(PSO_ArrOfTex));
+    if (DevType != DeviceType::D3D12 && DevType != DeviceType::Vulkan)
+    {
+        EXPECT_FALSE(PSO_Tex2->IsCompatibleWith(PSO_TexArr));
+    }
+    EXPECT_FALSE(PSO_Tex2->IsCompatibleWith(PSO_ArrOfTex));
+    EXPECT_FALSE(PSO_TexArr->IsCompatibleWith(PSO_ArrOfTex));
+
+    auto PSO_CB  = CreateGraphicsPSO(pDevice, VS0, PS_CB);
+    auto PSO1_CB = CreateGraphicsPSO(pDevice, VS0, PS1_CB);
+    auto PSO_2CB = CreateGraphicsPSO(pDevice, VS0, PS_2CB);
+    EXPECT_TRUE(PSO_CB->IsCompatibleWith(PSO1_CB));
+    EXPECT_FALSE(PSO_CB->IsCompatibleWith(PSO_2CB));
+
+    auto PSO_TexCB  = CreateGraphicsPSO(pDevice, VS0, PS_TexCB);
+    auto PSO_TexCB2 = CreateGraphicsPSO(pDevice, VS0, PS_TexCB2);
+    EXPECT_TRUE(PSO_TexCB->IsCompatibleWith(PSO_TexCB2));
+    EXPECT_TRUE(PSO_TexCB2->IsCompatibleWith(PSO_TexCB));
+
+    if (pDevice->GetDeviceCaps().bComputeShadersSupported)
+    {
+        auto PSO_RWBuff  = CreateComputePSO(pDevice, CS_RwBuff);
+        auto PSO_RWBuff2 = CreateComputePSO(pDevice, CS_RwBuff2);
+        auto PSO_RWBuff3 = CreateComputePSO(pDevice, CS_RwBuff3);
+        EXPECT_TRUE(PSO_RWBuff);
+        EXPECT_TRUE(PSO_RWBuff2);
+        EXPECT_TRUE(PSO_RWBuff3);
+        EXPECT_TRUE(PSO_RWBuff->IsCompatibleWith(PSO_RWBuff2));
+        EXPECT_FALSE(PSO_RWBuff->IsCompatibleWith(PSO_RWBuff3));
+    }
+
+    pEnv->Reset();
+}
+
+} // namespace

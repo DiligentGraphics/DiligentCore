@@ -983,9 +983,11 @@ void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE 
         }
     }
 
-    VERIFY_EXPR(NumRenderTargets > 0 || DSVHandle.ptr != 0);
-    // No need to flush resource barriers as this is a CPU-side command
-    CmdCtx.AsGraphicsContext().GetCommandList()->OMSetRenderTargets(NumRenderTargets, RTVHandles, FALSE, DSVHandle.ptr != 0 ? &DSVHandle : nullptr);
+    if (NumRenderTargets > 0 || DSVHandle.ptr != 0)
+    {
+        // No need to flush resource barriers as this is a CPU-side command
+        CmdCtx.AsGraphicsContext().GetCommandList()->OMSetRenderTargets(NumRenderTargets, RTVHandles, FALSE, DSVHandle.ptr != 0 ? &DSVHandle : nullptr);
+    }
 }
 
 void DeviceContextD3D12Impl::SetRenderTargets(Uint32                         NumRenderTargets,

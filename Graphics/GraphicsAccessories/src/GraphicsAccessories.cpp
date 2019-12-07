@@ -554,6 +554,124 @@ const Char* GetShaderResourceTypeLiteralName(SHADER_RESOURCE_TYPE ResourceType, 
     }
 }
 
+const Char* GetFilterTypeLiteralName(FILTER_TYPE FilterType, bool bGetFullName)
+{
+    switch (FilterType)
+    {
+        // clang-format off
+        case FILTER_TYPE_UNKNOWN:                return bGetFullName ? "FILTER_TYPE_UNKNOWN"                : "unknown";
+        case FILTER_TYPE_POINT:                  return bGetFullName ? "FILTER_TYPE_POINT"                  : "point";
+        case FILTER_TYPE_LINEAR:                 return bGetFullName ? "FILTER_TYPE_LINEAR"                 : "linear";
+        case FILTER_TYPE_ANISOTROPIC:            return bGetFullName ? "FILTER_TYPE_ANISOTROPIC"            : "anisotropic";
+        case FILTER_TYPE_COMPARISON_POINT:       return bGetFullName ? "FILTER_TYPE_COMPARISON_POINT"       : "comparison point";
+        case FILTER_TYPE_COMPARISON_LINEAR:      return bGetFullName ? "FILTER_TYPE_COMPARISON_LINEAR"      : "comparison linear";
+        case FILTER_TYPE_COMPARISON_ANISOTROPIC: return bGetFullName ? "FILTER_TYPE_COMPARISON_ANISOTROPIC" : "comparison anisotropic";
+        case FILTER_TYPE_MINIMUM_POINT:          return bGetFullName ? "FILTER_TYPE_MINIMUM_POINT"          : "minimum point";
+        case FILTER_TYPE_MINIMUM_LINEAR:         return bGetFullName ? "FILTER_TYPE_MINIMUM_LINEAR"         : "minimum linear";
+        case FILTER_TYPE_MINIMUM_ANISOTROPIC:    return bGetFullName ? "FILTER_TYPE_MINIMUM_ANISOTROPIC"    : "minimum anisotropic";
+        case FILTER_TYPE_MAXIMUM_POINT:          return bGetFullName ? "FILTER_TYPE_MAXIMUM_POINT"          : "maximum point";
+        case FILTER_TYPE_MAXIMUM_LINEAR:         return bGetFullName ? "FILTER_TYPE_MAXIMUM_LINEAR"         : "maximum linear";
+        case FILTER_TYPE_MAXIMUM_ANISOTROPIC:    return bGetFullName ? "FILTER_TYPE_MAXIMUM_ANISOTROPIC"    : "maximum anisotropic";
+        // clang-format on
+        default:
+            UNEXPECTED("Unexepcted filter type (", Uint32{FilterType}, ")");
+            return "UNKNOWN";
+    }
+}
+
+const Char* GetTextureAddressModeLiteralName(TEXTURE_ADDRESS_MODE AddressMode, bool bGetFullName)
+{
+    switch (AddressMode)
+    {
+        // clang-format off
+        case TEXTURE_ADDRESS_UNKNOWN:     return bGetFullName ? "TEXTURE_ADDRESS_UNKNOWN"     : "unknown";
+        case TEXTURE_ADDRESS_WRAP:        return bGetFullName ? "TEXTURE_ADDRESS_WRAP"        : "wrap";
+        case TEXTURE_ADDRESS_MIRROR:      return bGetFullName ? "TEXTURE_ADDRESS_MIRROR"      : "mirror";
+        case TEXTURE_ADDRESS_CLAMP:       return bGetFullName ? "TEXTURE_ADDRESS_CLAMP"       : "clamp";
+        case TEXTURE_ADDRESS_BORDER:      return bGetFullName ? "TEXTURE_ADDRESS_BORDER"      : "border";
+        case TEXTURE_ADDRESS_MIRROR_ONCE: return bGetFullName ? "TEXTURE_ADDRESS_MIRROR_ONCE" : "mirror once";
+        // clang-format on
+        default:
+            UNEXPECTED("Unexepcted texture address mode (", Uint32{AddressMode}, ")");
+            return "UNKNOWN";
+    }
+}
+
+const Char* GetComparisonFunctionLiteralName(COMPARISON_FUNCTION ComparisonFunc, bool bGetFullName)
+{
+    switch (ComparisonFunc)
+    {
+        // clang-format off
+        case COMPARISON_FUNC_UNKNOWN:       return bGetFullName ? "COMPARISON_FUNC_UNKNOWN"      : "unknown";
+        case COMPARISON_FUNC_NEVER:         return bGetFullName ? "COMPARISON_FUNC_NEVER"        : "never";
+        case COMPARISON_FUNC_LESS:          return bGetFullName ? "COMPARISON_FUNC_LESS"         : "less";
+        case COMPARISON_FUNC_EQUAL:         return bGetFullName ? "COMPARISON_FUNC_EQUAL"        : "equal";
+        case COMPARISON_FUNC_LESS_EQUAL:    return bGetFullName ? "COMPARISON_FUNC_LESS_EQUAL"   : "less equal";
+        case COMPARISON_FUNC_GREATER:       return bGetFullName ? "COMPARISON_FUNC_GREATER"      : "greater";
+        case COMPARISON_FUNC_NOT_EQUAL:     return bGetFullName ? "COMPARISON_FUNC_NOT_EQUAL"    : "not equal";
+        case COMPARISON_FUNC_GREATER_EQUAL: return bGetFullName ? "COMPARISON_FUNC_GREATER_EQUAL": "greater equal";
+        case COMPARISON_FUNC_ALWAYS:        return bGetFullName ? "COMPARISON_FUNC_ALWAYS"       : "always";
+        // clang-format on
+        default:
+            UNEXPECTED("Unexepcted comparison function (", Uint32{ComparisonFunc}, ")");
+            return "UNKNOWN";
+    }
+}
+
+const Char* GetBlendFactorLiteralName(BLEND_FACTOR BlendFactor)
+{
+#define BLEND_FACTOR_TO_STR(Factor) \
+    case Factor: return #Factor
+
+    switch (BlendFactor)
+    {
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_UNDEFINED);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_ZERO);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_ONE);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_SRC_COLOR);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_INV_SRC_COLOR);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_SRC_ALPHA);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_INV_SRC_ALPHA);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_DEST_ALPHA);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_INV_DEST_ALPHA);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_DEST_COLOR);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_INV_DEST_COLOR);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_SRC_ALPHA_SAT);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_BLEND_FACTOR);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_INV_BLEND_FACTOR);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_SRC1_COLOR);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_INV_SRC1_COLOR);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_SRC1_ALPHA);
+        BLEND_FACTOR_TO_STR(BLEND_FACTOR_INV_SRC1_ALPHA);
+
+        default:
+            UNEXPECTED("Unexepcted blend factor (", static_cast<int>(BlendFactor), ")");
+            return "UNKNOWN";
+    }
+#undef BLEND_FACTOR_TO_STR
+}
+
+const Char* GetBlendOperationLiteralName(BLEND_OPERATION BlendOp)
+{
+#define BLEND_OP_TO_STR(BlendOp) \
+    case BlendOp: return #BlendOp
+
+    switch (BlendOp)
+    {
+        BLEND_OP_TO_STR(BLEND_OPERATION_UNDEFINED);
+        BLEND_OP_TO_STR(BLEND_OPERATION_ADD);
+        BLEND_OP_TO_STR(BLEND_OPERATION_SUBTRACT);
+        BLEND_OP_TO_STR(BLEND_OPERATION_REV_SUBTRACT);
+        BLEND_OP_TO_STR(BLEND_OPERATION_MIN);
+        BLEND_OP_TO_STR(BLEND_OPERATION_MAX);
+
+        default:
+            UNEXPECTED("Unexepcted blend operation (", static_cast<int>(BlendOp), ")");
+            return "UNKNOWN";
+    }
+#undef BLEND_OP_TO_STR
+}
+
 const Char* GetMapTypeString(MAP_TYPE MapType)
 {
     switch (MapType)
@@ -874,7 +992,8 @@ String GetResourceStateString(RESOURCE_STATE State)
         if (!str.empty())
             str.push_back('|');
 
-        auto        lsb             = State & ~(State - 1);
+        auto lsb = State & ~(State - 1);
+
         const auto* StateFlagString = GetResourceStateFlagString(static_cast<RESOURCE_STATE>(lsb));
         str.append(StateFlagString);
         State = static_cast<RESOURCE_STATE>(State & ~lsb);

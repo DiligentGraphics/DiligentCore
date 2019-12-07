@@ -248,6 +248,50 @@ inline const Char* GetViewTypeLiteralName(BUFFER_VIEW_TYPE BuffViewType)
     return GetBufferViewTypeLiteralName(BuffViewType);
 }
 
+/// Returns the literal name of a filter type. For instance,
+/// for FILTER_TYPE_POINT, if bGetFullName == true, "FILTER_TYPE_POINT" will be returned;
+/// if bGetFullName == false, "point" will be returned.
+
+/// \param [in] FilterType   - Filter type, see Diligent::FILTER_TYPE.
+/// \param [in] bGetFullName - Whether to return string representation of the enum value.
+/// \return                    Literal name of the filter type.
+const Char* GetFilterTypeLiteralName(FILTER_TYPE FilterType, bool bGetFullName);
+
+
+/// Returns the literal name of a texture address mode. For instance,
+/// for TEXTURE_ADDRESS_WRAP, if bGetFullName == true, "TEXTURE_ADDRESS_WRAP" will be returned;
+/// if bGetFullName == false, "wrap" will be returned.
+
+/// \param [in] AddressMode  - Texture address mode, see Diligent::TEXTURE_ADDRESS_MODE.
+/// \param [in] bGetFullName - Whether to return string representation of the enum value.
+/// \return                    Literal name of the address mode.
+const Char* GetTextureAddressModeLiteralName(TEXTURE_ADDRESS_MODE AddressMode, bool bGetFullName);
+
+
+/// Returns the literal name of a comparison function. For instance,
+/// for COMPARISON_FUNC_LESS, if bGetFullName == true, "COMPARISON_FUNC_LESS" will be returned;
+/// if bGetFullName == false, "less" will be returned.
+
+/// \param [in] ComparisonFunc - Comparison function, see Diligent::COMPARISON_FUNCTION.
+/// \param [in] bGetFullName   - Whether to return string representation of the enum value.
+/// \return                      Literal name of the comparison function.
+const Char* GetComparisonFunctionLiteralName(COMPARISON_FUNCTION ComparisonFunc, bool bGetFullName);
+
+
+/// Returns the literal name of a blend factor.
+
+/// \param [in] BlendFactor - Blend factor, see Diligent::BLEND_FACTOR.
+/// \return                   Literal name of the blend factor.
+const Char* GetBlendFactorLiteralName(BLEND_FACTOR BlendFactor);
+
+
+/// Returns the literal name of a blend operation.
+
+/// \param [in] BlendOp - Blend operation, see Diligent::BLEND_OPERATION.
+/// \return               Literal name of the blend operation.
+const Char* GetBlendOperationLiteralName(BLEND_OPERATION BlendOp);
+
+
 /// Returns the string containing the map type
 const Char* GetMapTypeString(MAP_TYPE MapType);
 

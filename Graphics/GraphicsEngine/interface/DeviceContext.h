@@ -1150,9 +1150,9 @@ public:
 
     /// Finishes the current frame and releases dynamic resources allocated by the context.
 
-    /// For immediate context, this method is called automatically by Present(), but can
-    /// also be called explicitly. For deferred context, the method must be called by the application to
-    /// release dynamic resources. The method has some overhead, so it is better to call it once
+    /// For immediate context, this method is called automatically by ISwapChain::Present() of the primary
+    /// swap chain, but can also be called explicitly. For deferred contexts, the method must be called by the
+    /// application to release dynamic resources. The method has some overhead, so it is better to call it once
     /// per frame, though it can be called with different frequency. Note that unless the GPU is idled,
     /// the resources may actually be released several frames after the one they were used in last time.
     /// \note After the call all dynamic resources become invalid and must be written again before the next use. 
