@@ -331,7 +331,7 @@ public:
         if (IsEmpty())
         {
             // Reset current alignment
-            VERIFY_EXPR(DbgGetNumFreeBlocks() == 1);
+            VERIFY_EXPR(GetNumFreeBlocks() == 1);
             ResetCurrAlignment();
         }
 
