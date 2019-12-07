@@ -34,16 +34,17 @@
 #include "../../GraphicsEngine/interface/SwapChain.h"
 
 #if PLATFORM_ANDROID || PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || (PLATFORM_WIN32 && !defined(_MSC_VER))
-
 // https://gcc.gnu.org/wiki/Visibility
 #    define API_QUALIFIER __attribute__((visibility("default")))
-
 #elif PLATFORM_WIN32
-
 #    define API_QUALIFIER
-
 #else
 #    error Unsupported platform
+#endif
+
+#if ENGINE_DLL && PLATFORM_WIN32 && defined(_MSC_VER)
+#    include "../../GraphicsEngine/interface/LoadEngineDll.h"
+#    define EXPLICITLY_LOAD_ENGINE_VK_DLL 1
 #endif
 
 namespace Diligent
@@ -74,50 +75,15 @@ public:
 };
 
 
-#if ENGINE_DLL && PLATFORM_WIN32 && defined(_MSC_VER)
+#if EXPLICITLY_LOAD_ENGINE_VK_DLL
 
-#    define EXPLICITLY_LOAD_ENGINE_VK_DLL 1
-
-typedef IEngineFactoryVk* (*GetEngineFactoryVkType)();
+using GetEngineFactoryVkType = IEngineFactoryVk* (*)();
 
 static bool LoadGraphicsEngineVk(GetEngineFactoryVkType& GetFactoryFunc)
 {
-    GetFactoryFunc      = nullptr;
-    std::string LibName = "GraphicsEngineVk_";
-
-#    if _WIN64
-    LibName += "64";
-#    else
-    LibName += "32";
-#    endif
-
-#    ifdef _DEBUG
-    LibName += "d";
-#    else
-    LibName += "r";
-#    endif
-
-    LibName += ".dll";
-    auto hModule = LoadLibraryA(LibName.c_str());
-    if (hModule == NULL)
-    {
-        std::stringstream ss;
-        ss << "Failed to load " << LibName << " library.\n";
-        OutputDebugStringA(ss.str().c_str());
-        return false;
-    }
-
-    GetFactoryFunc = reinterpret_cast<GetEngineFactoryVkType>(GetProcAddress(hModule, "GetEngineFactoryVk"));
-    if (GetFactoryFunc == NULL)
-    {
-        std::stringstream ss;
-        ss << "Failed to load GetEngineFactoryVk() from " << LibName << " library.\n";
-        OutputDebugStringA(ss.str().c_str());
-        FreeLibrary(hModule);
-        return false;
-    }
-
-    return true;
+    auto ProcAddress = LoadEngineDll("GraphicsEngineVk", "GetEngineFactoryVk");
+    GetFactoryFunc   = reinterpret_cast<GetEngineFactoryVkType>(ProcAddress);
+    return GetFactoryFunc != nullptr;
 }
 
 #else

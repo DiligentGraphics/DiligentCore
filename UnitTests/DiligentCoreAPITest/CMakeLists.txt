@@ -11,26 +11,7 @@ set(INCLUDE ${COMMON_INCLUDE})
 add_executable(DiligentCoreAPITest ${SOURCE} ${INCLUDE})
 set_common_target_properties(DiligentCoreAPITest)
 
-if(GL_SUPPORTED OR GLES_SUPPORTED)
-    list(APPEND BACKENDS Diligent-GraphicsEngineOpenGL-static)
-endif()
-
-if(D3D11_SUPPORTED)
-    list(APPEND BACKENDS Diligent-GraphicsEngineD3D11-static)
-endif()
-
-if(D3D12_SUPPORTED)
-    list(APPEND BACKENDS Diligent-GraphicsEngineD3D12-static)
-endif()
-
-if(VULKAN_SUPPORTED)
-    list(APPEND BACKENDS Diligent-GraphicsEngineVk-static)
-endif()
-
-if(METAL_SUPPORTED)
-    list(APPEND BACKENDS Diligent-GraphicsEngineMtl-static)
-endif()
-
+get_supported_backends(ENGINE_LIBRARIES)
 
 target_link_libraries(DiligentCoreAPITest 
 PRIVATE 
@@ -39,11 +20,20 @@ PRIVATE
     Diligent-TargetPlatform
     Diligent-GraphicsAccessories
     Diligent-Common
-    ${BACKENDS}
+    ${ENGINE_LIBRARIES}
 )
 
 
 target_include_directories(DiligentCoreAPITest PRIVATE include)
+
+
+if(PLATFORM_WIN32)
+    #set_target_properties(DiligentCoreAPITest PROPERTIES
+    #    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+    #)
+    copy_required_dlls(DiligentCoreAPITest)
+endif()
+
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${INCLUDE})
 

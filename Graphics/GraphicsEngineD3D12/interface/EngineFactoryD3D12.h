@@ -33,8 +33,8 @@
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
 
-#if PLATFORM_UNIVERSAL_WINDOWS && defined(ENGINE_DLL)
-#    include "../../../Common/interface/StringTools.h"
+#if ENGINE_DLL
+#    include "../../GraphicsEngine/interface/LoadEngineDll.h"
 #endif
 
 namespace Diligent
@@ -145,54 +145,15 @@ public:
 
 #if ENGINE_DLL
 
-typedef IEngineFactoryD3D12* (*GetEngineFactoryD3D12Type)();
+using GetEngineFactoryD3D12Type = IEngineFactoryD3D12* (*)();
 
 static bool LoadGraphicsEngineD3D12(GetEngineFactoryD3D12Type& GetFactoryFunc)
 {
-    GetFactoryFunc      = nullptr;
-    std::string LibName = "GraphicsEngineD3D12_";
-
-#    if _WIN64
-    LibName += "64";
-#    else
-    LibName += "32";
-#    endif
-
-#    ifdef _DEBUG
-    LibName += "d";
-#    else
-    LibName += "r";
-#    endif
-
-    LibName += ".dll";
-#    if PLATFORM_WIN32
-    auto hModule = LoadLibraryA(LibName.c_str());
-#    elif PLATFORM_UNIVERSAL_WINDOWS
-    auto hModule = LoadPackagedLibrary(WidenString(LibName).c_str(), 0);
-#    else
-#        error Unexpected platform
-#    endif
-
-    if (hModule == NULL)
-    {
-        std::stringstream ss;
-        ss << "Failed to load " << LibName << " library.\n";
-        OutputDebugStringA(ss.str().c_str());
-        return false;
-    }
-
-    GetFactoryFunc = reinterpret_cast<GetEngineFactoryD3D12Type>(GetProcAddress(hModule, "GetEngineFactoryD3D12"));
-    if (GetFactoryFunc == NULL)
-    {
-        std::stringstream ss;
-        ss << "Failed to load GetEngineFactoryD3D12() from " << LibName << " library.\n";
-        OutputDebugStringA(ss.str().c_str());
-        FreeLibrary(hModule);
-        return false;
-    }
-
-    return true;
+    auto ProcAddress = LoadEngineDll("GraphicsEngineD3D12", "GetEngineFactoryD3D12");
+    GetFactoryFunc   = reinterpret_cast<GetEngineFactoryD3D12Type>(ProcAddress);
+    return GetFactoryFunc != nullptr;
 }
+
 #else
 
 IEngineFactoryD3D12* GetEngineFactoryD3D12();

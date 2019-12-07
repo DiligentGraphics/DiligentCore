@@ -80,6 +80,16 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #if D3D11_SUPPORTED
         case DeviceType::D3D11:
         {
+#    if ENGINE_DLL
+            GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = nullptr;
+            // Load the dll and import GetEngineFactoryD3D11() function
+            LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
+            if (GetEngineFactoryD3D11 == nullptr)
+            {
+                LOG_ERROR_AND_THROW("Failed to load the engine");
+            }
+#    endif
+
             EngineD3D11CreateInfo CreateInfo;
 #    ifdef _DEBUG
             CreateInfo.DebugFlags =
@@ -137,8 +147,18 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #if D3D12_SUPPORTED
         case DeviceType::D3D12:
         {
-            auto*  pFactoryD3D12 = GetEngineFactoryD3D12();
-            Uint32 NumAdapters   = 0;
+#    if ENGINE_DLL
+            GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = nullptr;
+            // Load the dll and import GetEngineFactoryD3D12() function
+            LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
+            if (GetEngineFactoryD3D12 == nullptr)
+            {
+                LOG_ERROR_AND_THROW("Failed to load the engine");
+            }
+#    endif
+            auto* pFactoryD3D12 = GetEngineFactoryD3D12();
+
+            Uint32 NumAdapters = 0;
             pFactoryD3D12->EnumerateAdapters(DIRECT3D_FEATURE_LEVEL_11_0, NumAdapters, 0);
             Adapters.resize(NumAdapters);
             pFactoryD3D12->EnumerateAdapters(DIRECT3D_FEATURE_LEVEL_11_0, NumAdapters, Adapters.data());
@@ -200,6 +220,16 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #    if !PLATFORM_MACOS
             VERIFY_EXPR(NativeWindowHandle != nullptr);
 #    endif
+#    if EXPLICITLY_LOAD_ENGINE_GL_DLL
+            // Declare function pointer
+            GetEngineFactoryOpenGLType GetEngineFactoryOpenGL = nullptr;
+            // Load the dll and import GetEngineFactoryOpenGL() function
+            LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL);
+            if (GetEngineFactoryOpenGL == nullptr)
+            {
+                LOG_ERROR_AND_THROW("Failed to load the engine");
+            }
+#    endif
             auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
 
             EngineGLCreateInfo CreateInfo;
@@ -222,6 +252,16 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #if VULKAN_SUPPORTED
         case DeviceType::Vulkan:
         {
+#    if EXPLICITLY_LOAD_ENGINE_VK_DLL
+            GetEngineFactoryVkType GetEngineFactoryVk = nullptr;
+            // Load the dll and import GetEngineFactoryVk() function
+            LoadGraphicsEngineVk(GetEngineFactoryVk);
+            if (GetEngineFactoryVk == nullptr)
+            {
+                LOG_ERROR_AND_THROW("Failed to load the engine");
+            }
+#    endif
+
             EngineVkCreateInfo CreateInfo;
 
             CreateInfo.EnableValidation          = true;

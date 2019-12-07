@@ -26,15 +26,13 @@
 /// \file
 /// Declaration of functions that initialize Direct3D11-based engine implementation
 
-#include <sstream>
-
 #include "../../GraphicsEngine/interface/EngineFactory.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/SwapChain.h"
 
-#if PLATFORM_UNIVERSAL_WINDOWS && defined(ENGINE_DLL)
-#    include "../../../Common/interface/StringTools.h"
+#if ENGINE_DLL
+#    include "../../GraphicsEngine/interface/LoadEngineDll.h"
 #endif
 
 namespace Diligent
@@ -142,53 +140,15 @@ public:
 
 #if ENGINE_DLL
 
-typedef IEngineFactoryD3D11* (*GetEngineFactoryD3D11Type)();
+using GetEngineFactoryD3D11Type = IEngineFactoryD3D11* (*)();
 
 static bool LoadGraphicsEngineD3D11(GetEngineFactoryD3D11Type& GetFactoryFunc)
 {
-    GetFactoryFunc      = nullptr;
-    std::string LibName = "GraphicsEngineD3D11_";
-
-#    if _WIN64
-    LibName += "64";
-#    else
-    LibName += "32";
-#    endif
-
-#    ifdef _DEBUG
-    LibName += "d";
-#    else
-    LibName += "r";
-#    endif
-
-    LibName += ".dll";
-#    if PLATFORM_WIN32
-    auto hModule = LoadLibraryA(LibName.c_str());
-#    elif PLATFORM_UNIVERSAL_WINDOWS
-    auto hModule = LoadPackagedLibrary(WidenString(LibName).c_str(), 0);
-#    else
-#        error Unexpected platform
-#    endif
-    if (hModule == NULL)
-    {
-        std::stringstream ss;
-        ss << "Failed to load " << LibName << " library.\n";
-        OutputDebugStringA(ss.str().c_str());
-        return false;
-    }
-
-    GetFactoryFunc = reinterpret_cast<GetEngineFactoryD3D11Type>(GetProcAddress(hModule, "GetEngineFactoryD3D11"));
-    if (GetFactoryFunc == NULL)
-    {
-        std::stringstream ss;
-        ss << "Failed to load GetEngineFactoryD3D11() from " << LibName << " library.\n";
-        OutputDebugStringA(ss.str().c_str());
-        FreeLibrary(hModule);
-        return false;
-    }
-
-    return true;
+    auto ProcAddress = LoadEngineDll("GraphicsEngineD3D11", "GetEngineFactoryD3D11");
+    GetFactoryFunc   = reinterpret_cast<GetEngineFactoryD3D11Type>(ProcAddress);
+    return GetFactoryFunc != nullptr;
 }
+
 #else
 
 IEngineFactoryD3D11* GetEngineFactoryD3D11();
