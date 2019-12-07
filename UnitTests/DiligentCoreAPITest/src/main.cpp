@@ -29,7 +29,50 @@ using namespace Diligent;
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
-    ::testing::AddGlobalTestEnvironment(new Diligent::TestingEnvironment{DeviceType::D3D12});
+    
+    DeviceType deviceType = DeviceType::Undefined;
+    ADAPTER_TYPE AdapterType = ADAPTER_TYPE_UNKNOWN;
+    for(int i=1; i < argc; ++i)
+    {
+        const auto* arg = argv[i];
+        if(strcmp(arg, "--mode=d3d11") == 0)
+        {
+            deviceType = DeviceType::D3D11;
+        }
+        else if(strcmp(arg, "--mode=d3d11_sw") == 0)
+        {
+            deviceType = DeviceType::D3D11;
+            AdapterType = ADAPTER_TYPE_SOFTWARE;
+        }
+        else if(strcmp(arg, "--mode=d3d12") == 0)
+        {
+            deviceType = DeviceType::D3D12;
+        }
+        else if(strcmp(arg, "--mode=d3d12_sw") == 0)
+        {
+            deviceType = DeviceType::D3D12;
+            AdapterType = ADAPTER_TYPE_SOFTWARE;
+        }
+        else if(strcmp(arg, "--mode=vk") == 0)
+        {
+            deviceType = DeviceType::Vulkan;
+        }
+        else if(strcmp(arg, "--mode=gl") == 0)
+        {
+            deviceType = DeviceType::OpenGL;
+        }
+    }
+
+    Diligent::TestingEnvironment* pEnv = nullptr;
+    try
+    {
+        pEnv = new Diligent::TestingEnvironment{deviceType, AdapterType};
+    }
+    catch(...)
+    {
+        return -1;
+    }
+    ::testing::AddGlobalTestEnvironment(pEnv);
 
     auto ret_val = RUN_ALL_TESTS();
     return ret_val;

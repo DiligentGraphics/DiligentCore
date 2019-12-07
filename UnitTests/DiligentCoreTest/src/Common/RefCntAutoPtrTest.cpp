@@ -643,7 +643,6 @@ public:
     std::vector<std::thread> m_Threads;
 
     Object* m_pSharedObject     = nullptr;
-    int     m_NumTestsPerformed = 0;
 #ifdef _DEBUG
     static const int NumThreadInterations = 10000;
 #else
@@ -665,8 +664,7 @@ RefCntAutoPtrThreadingTest::~RefCntAutoPtrThreadingTest()
     for (auto& t : m_Threads)
         t.join();
 
-    LOG_INFO_MESSAGE("Performed ", m_NumTestsPerformed, " concurrency ", (m_NumTestsPerformed > 1 ? "tests" : "test"),
-                     " with ", NumThreadInterations, " iterations on ", m_Threads.size(), " threads");
+    LOG_INFO_MESSAGE("Performed ", NumThreadInterations, " iterations on ", m_Threads.size(), " threads");
 }
 
 void RefCntAutoPtrThreadingTest::WaitSiblingWorkerThreads(int SignalIdx)
@@ -893,7 +891,6 @@ void RefCntAutoPtrThreadingTest::RunConcurrencyTest()
 
         StartWorkerThreadsAndWait(1);
     }
-    ++m_NumTestsPerformed;
 }
 
 TEST(Common_RefCntAutoPtr, Threading)

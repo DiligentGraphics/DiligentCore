@@ -106,7 +106,7 @@ public:
             pDXIAdapter->GetDesc1(&AdapterDesc);
             char DescriptionMB[_countof(AdapterDesc.Description)];
             WideCharToMultiByte(CP_ACP, 0, AdapterDesc.Description, -1, DescriptionMB, _countof(DescriptionMB), NULL, FALSE);
-            LOG_ERROR_MESSAGE("Failed to enumerate output ", OutputId, " for adapter ", AdapterId, " (", DescriptionMB, ')');
+            LOG_ERROR_MESSAGE("Failed to enumerate output ", OutputId, " of adapter ", AdapterId, " (", DescriptionMB, ')');
             return;
         }
 

@@ -48,7 +48,7 @@ namespace Diligent
 
 TestingEnvironment* TestingEnvironment::m_pTheEnvironment = nullptr;
 
-TestingEnvironment::TestingEnvironment(DeviceType deviceType) :
+TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType) :
     m_DeviceType{deviceType}
 {
     VERIFY(m_pTheEnvironment == nullptr, "Testing environment object has already been initialized!");
@@ -61,8 +61,20 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType) :
 
     std::vector<IDeviceContext*>                 ppContexts;
     std::vector<AdapterAttribs>                  Adapters;
-    std::vector<std::vector<DisplayModeAttribs>> AdapterDisplayModes;
 
+    auto PrintAdapterInfo = [](Uint32 AdapterId, const AdapterAttribs& AdapterInfo, const std::vector<DisplayModeAttribs>& DisplayModes) //
+    {
+        const char* AdapterTypeStr = nullptr;
+        switch (AdapterInfo.AdapterType)
+        {
+            case ADAPTER_TYPE_HARDWARE: AdapterTypeStr = "HW"; break;
+            case ADAPTER_TYPE_SOFTWARE: AdapterTypeStr = "SW"; break;
+            default: AdapterTypeStr = "Type unknown";
+        }
+        LOG_INFO_MESSAGE("Adapter ", AdapterId, ": '", AdapterInfo.Description, "' (",
+                         AdapterTypeStr, ", ", AdapterInfo.SharedSystemMemory / (1 << 20), " MB); ",
+                         DisplayModes.size(), (DisplayModes.size() == 1 ? " display mode" : " display modes"));
+    };
     switch (m_DeviceType)
     {
 #if D3D11_SUPPORTED
@@ -81,18 +93,34 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType) :
             Adapters.resize(NumAdapters);
             pFactoryD3D11->EnumerateAdapters(DIRECT3D_FEATURE_LEVEL_11_0, NumAdapters, Adapters.data());
 
+            LOG_INFO_MESSAGE("Found ", Adapters.size(), " compatible adapters");
             for (Uint32 i = 0; i < Adapters.size(); ++i)
             {
-                if (Adapters[i].AdapterType == ADAPTER_TYPE_SOFTWARE)
-                    CreateInfo.AdapterId = i;
-
-                Uint32 NumDisplayModes = 0;
+                const auto& AdapterInfo = Adapters[i];
 
                 std::vector<DisplayModeAttribs> DisplayModes;
-                pFactoryD3D11->EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL_11_0, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, nullptr);
-                DisplayModes.resize(NumDisplayModes);
-                pFactoryD3D11->EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL_11_0, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, DisplayModes.data());
-                AdapterDisplayModes.emplace_back(std::move(DisplayModes));
+                if (AdapterInfo.NumOutputs > 0)
+                {
+                    Uint32 NumDisplayModes = 0;
+                    pFactoryD3D11->EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL_11_0, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, nullptr);
+                    DisplayModes.resize(NumDisplayModes);
+                    pFactoryD3D11->EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL_11_0, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, DisplayModes.data());
+                }
+
+                PrintAdapterInfo(i, AdapterInfo, DisplayModes);
+            }
+            if (AdapterType != ADAPTER_TYPE_UNKNOWN)
+            {
+                for (Uint32 i = 0; i < Adapters.size(); ++i)
+                {
+                    if (Adapters[i].AdapterType == AdapterType &&
+                        CreateInfo.AdapterId == EngineD3D11CreateInfo::DefaultAdapterId)
+                    {
+                        CreateInfo.AdapterId = i;
+                        LOG_INFO_MESSAGE("Using adapter ", i, ": '", Adapters[i].Description, "'");
+                        break;
+                    }
+                }
             }
 
 
@@ -117,19 +145,35 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType) :
 
             EngineD3D12CreateInfo CreateInfo;
 
+            LOG_INFO_MESSAGE("Found ", Adapters.size(), " compatible adapters");
             for (Uint32 i = 0; i < Adapters.size(); ++i)
             {
-                Uint32 NumDisplayModes = 0;
-                if (Adapters[i].AdapterType == ADAPTER_TYPE_SOFTWARE)
-                    CreateInfo.AdapterId = i;
+                const auto& AdapterInfo = Adapters[i];
 
                 std::vector<DisplayModeAttribs> DisplayModes;
-                pFactoryD3D12->EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL_11_0, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, nullptr);
-                DisplayModes.resize(NumDisplayModes);
-                pFactoryD3D12->EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL_11_0, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, DisplayModes.data());
-                AdapterDisplayModes.emplace_back(std::move(DisplayModes));
-            }
+                if (AdapterInfo.NumOutputs > 0)
+                {
+                    Uint32 NumDisplayModes = 0;
+                    pFactoryD3D12->EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL_11_0, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, nullptr);
+                    DisplayModes.resize(NumDisplayModes);
+                    pFactoryD3D12->EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL_11_0, i, 0, TEX_FORMAT_RGBA8_UNORM, NumDisplayModes, DisplayModes.data());
+                }
 
+                PrintAdapterInfo(i, AdapterInfo, DisplayModes);
+            }
+            if (AdapterType != ADAPTER_TYPE_UNKNOWN)
+            {
+                for (Uint32 i = 0; i < Adapters.size(); ++i)
+                {
+                    if (Adapters[i].AdapterType == AdapterType &&
+                        CreateInfo.AdapterId == EngineD3D11CreateInfo::DefaultAdapterId)
+                    {
+                        CreateInfo.AdapterId = i;
+                        LOG_INFO_MESSAGE("Using adapter ", i, ": '", Adapters[i].Description, "'");
+                        break;
+                    }
+                }
+            }
             CreateInfo.EnableDebugLayer = true;
             //CreateInfo.EnableGPUBasedValidation = true;
             CreateInfo.CPUDescriptorHeapAllocationSize[0]      = 64; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV

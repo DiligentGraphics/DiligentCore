@@ -34,7 +34,7 @@ namespace Diligent
 class TestingEnvironment final : public ::testing::Environment
 {
 public:
-    TestingEnvironment(DeviceType deviceType);
+    TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType);
     ~TestingEnvironment() override;
 
     // Override this to define how to set up the environment.
