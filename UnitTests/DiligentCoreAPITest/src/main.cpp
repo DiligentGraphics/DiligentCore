@@ -29,35 +29,35 @@ using namespace Diligent;
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
-    
-    DeviceType deviceType = DeviceType::Undefined;
+
+    DeviceType   deviceType  = DeviceType::Undefined;
     ADAPTER_TYPE AdapterType = ADAPTER_TYPE_UNKNOWN;
-    for(int i=1; i < argc; ++i)
+    for (int i = 1; i < argc; ++i)
     {
         const auto* arg = argv[i];
-        if(strcmp(arg, "--mode=d3d11") == 0)
+        if (strcmp(arg, "--mode=d3d11") == 0)
         {
             deviceType = DeviceType::D3D11;
         }
-        else if(strcmp(arg, "--mode=d3d11_sw") == 0)
+        else if (strcmp(arg, "--mode=d3d11_sw") == 0)
         {
-            deviceType = DeviceType::D3D11;
+            deviceType  = DeviceType::D3D11;
             AdapterType = ADAPTER_TYPE_SOFTWARE;
         }
-        else if(strcmp(arg, "--mode=d3d12") == 0)
+        else if (strcmp(arg, "--mode=d3d12") == 0)
         {
             deviceType = DeviceType::D3D12;
         }
-        else if(strcmp(arg, "--mode=d3d12_sw") == 0)
+        else if (strcmp(arg, "--mode=d3d12_sw") == 0)
         {
-            deviceType = DeviceType::D3D12;
+            deviceType  = DeviceType::D3D12;
             AdapterType = ADAPTER_TYPE_SOFTWARE;
         }
-        else if(strcmp(arg, "--mode=vk") == 0)
+        else if (strcmp(arg, "--mode=vk") == 0)
         {
             deviceType = DeviceType::Vulkan;
         }
-        else if(strcmp(arg, "--mode=gl") == 0)
+        else if (strcmp(arg, "--mode=gl") == 0)
         {
             deviceType = DeviceType::OpenGL;
         }
@@ -68,7 +68,7 @@ int main(int argc, char** argv)
     {
         pEnv = new Diligent::TestingEnvironment{deviceType, AdapterType};
     }
-    catch(...)
+    catch (...)
     {
         return -1;
     }

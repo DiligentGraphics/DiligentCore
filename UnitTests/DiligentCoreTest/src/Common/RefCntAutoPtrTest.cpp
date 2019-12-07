@@ -642,7 +642,7 @@ public:
 
     std::vector<std::thread> m_Threads;
 
-    Object* m_pSharedObject     = nullptr;
+    Object* m_pSharedObject = nullptr;
 #ifdef _DEBUG
     static const int NumThreadInterations = 10000;
 #else

@@ -59,8 +59,8 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
     Uint32 NumDeferredCtx     = 0;
     void*  NativeWindowHandle = nullptr;
 
-    std::vector<IDeviceContext*>                 ppContexts;
-    std::vector<AdapterAttribs>                  Adapters;
+    std::vector<IDeviceContext*> ppContexts;
+    std::vector<AdapterAttribs>  Adapters;
 
     auto PrintAdapterInfo = [](Uint32 AdapterId, const AdapterAttribs& AdapterInfo, const std::vector<DisplayModeAttribs>& DisplayModes) //
     {
