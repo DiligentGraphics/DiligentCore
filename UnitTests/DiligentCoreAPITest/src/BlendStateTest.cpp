@@ -65,8 +65,10 @@ protected:
             for (Uint32 rt = 0; rt < NumRTs; ++rt)
             {
                 if (rt > 0)
-                    source_ss << ',' << std::endl
+                {
+                    source_ss << ",\n"
                               << "            ";
+                }
                 source_ss << "out float4 col" << rt << " : SV_TARGET" << rt;
             }
             source_ss << ")\n{";
