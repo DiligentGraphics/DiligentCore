@@ -63,6 +63,12 @@ int main(int argc, char** argv)
         }
     }
 
+    if (deviceType == DeviceType::Undefined)
+    {
+        LOG_ERROR_MESSAGE("Device type is not specified");
+        return -1;
+    }
+
     Diligent::TestingEnvironment* pEnv = nullptr;
     try
     {
