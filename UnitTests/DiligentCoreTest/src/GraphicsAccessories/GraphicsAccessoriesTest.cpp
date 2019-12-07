@@ -141,4 +141,265 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetBlendOperationLiteralName)
 #undef TEST_BLEND_OP_ENUM
 }
 
+
+TEST(GraphicsAccessories_GraphicsAccessories, GetTextureFormatAttribs)
+{
+    auto CheckFormatSize = [](TEXTURE_FORMAT* begin, TEXTURE_FORMAT* end, Uint32 RefSize) //
+    {
+        for (auto fmt = begin; fmt != end; ++fmt)
+        {
+            auto FmtAttrs = GetTextureFormatAttribs(*fmt);
+            EXPECT_EQ(Uint32{FmtAttrs.ComponentSize} * Uint32{FmtAttrs.NumComponents}, RefSize);
+        }
+    };
+
+    auto CheckNumComponents = [](TEXTURE_FORMAT* begin, TEXTURE_FORMAT* end, Uint32 RefComponents) //
+    {
+        for (auto fmt = begin; fmt != end; ++fmt)
+        {
+            auto FmtAttrs = GetTextureFormatAttribs(*fmt);
+            EXPECT_EQ(FmtAttrs.NumComponents, RefComponents);
+        }
+    };
+
+    auto CheckComponentType = [](TEXTURE_FORMAT* begin, TEXTURE_FORMAT* end, COMPONENT_TYPE RefType) //
+    {
+        for (auto fmt = begin; fmt != end; ++fmt)
+        {
+            auto FmtAttrs = GetTextureFormatAttribs(*fmt);
+            EXPECT_EQ(FmtAttrs.ComponentType, RefType);
+        }
+    };
+
+    TEXTURE_FORMAT _16ByteFormats[] =
+        {
+            TEX_FORMAT_RGBA32_TYPELESS, TEX_FORMAT_RGBA32_FLOAT, TEX_FORMAT_RGBA32_UINT, TEX_FORMAT_RGBA32_SINT //
+        };
+    CheckFormatSize(std::begin(_16ByteFormats), std::end(_16ByteFormats), 16);
+
+    TEXTURE_FORMAT _12ByteFormats[] =
+        {
+            TEX_FORMAT_RGB32_TYPELESS, TEX_FORMAT_RGB32_FLOAT, TEX_FORMAT_RGB32_UINT, TEX_FORMAT_RGB32_SINT //
+        };
+    CheckFormatSize(std::begin(_12ByteFormats), std::end(_12ByteFormats), 12);
+
+    TEXTURE_FORMAT _8ByteFormats[] =
+        {
+            TEX_FORMAT_RGBA16_TYPELESS, TEX_FORMAT_RGBA16_FLOAT, TEX_FORMAT_RGBA16_UNORM, TEX_FORMAT_RGBA16_UINT, TEX_FORMAT_RGBA16_SNORM, TEX_FORMAT_RGBA16_SINT,
+            TEX_FORMAT_RG32_TYPELESS, TEX_FORMAT_RG32_FLOAT, TEX_FORMAT_RG32_UINT, TEX_FORMAT_RG32_SINT,
+            TEX_FORMAT_R32G8X24_TYPELESS, TEX_FORMAT_D32_FLOAT_S8X24_UINT, TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS, TEX_FORMAT_X32_TYPELESS_G8X24_UINT //
+        };
+    CheckFormatSize(std::begin(_8ByteFormats), std::end(_8ByteFormats), 8);
+
+    TEXTURE_FORMAT _4ByteFormats[] =
+        {
+            TEX_FORMAT_RGB10A2_TYPELESS, TEX_FORMAT_RGB10A2_UNORM, TEX_FORMAT_RGB10A2_UINT, TEX_FORMAT_R11G11B10_FLOAT,
+            TEX_FORMAT_RGBA8_TYPELESS, TEX_FORMAT_RGBA8_UNORM, TEX_FORMAT_RGBA8_UNORM_SRGB, TEX_FORMAT_RGBA8_UINT, TEX_FORMAT_RGBA8_SNORM, TEX_FORMAT_RGBA8_SINT,
+            TEX_FORMAT_RG16_TYPELESS, TEX_FORMAT_RG16_FLOAT, TEX_FORMAT_RG16_UNORM, TEX_FORMAT_RG16_UINT, TEX_FORMAT_RG16_SNORM, TEX_FORMAT_RG16_SINT,
+            TEX_FORMAT_R32_TYPELESS, TEX_FORMAT_D32_FLOAT, TEX_FORMAT_R32_FLOAT, TEX_FORMAT_R32_UINT, TEX_FORMAT_R32_SINT,
+            TEX_FORMAT_R24G8_TYPELESS, TEX_FORMAT_D24_UNORM_S8_UINT, TEX_FORMAT_R24_UNORM_X8_TYPELESS, TEX_FORMAT_X24_TYPELESS_G8_UINT,
+            TEX_FORMAT_RGB9E5_SHAREDEXP, TEX_FORMAT_RG8_B8G8_UNORM, TEX_FORMAT_G8R8_G8B8_UNORM,
+            TEX_FORMAT_BGRA8_UNORM, TEX_FORMAT_BGRX8_UNORM, TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,
+            TEX_FORMAT_BGRA8_TYPELESS, TEX_FORMAT_BGRA8_UNORM_SRGB, TEX_FORMAT_BGRX8_TYPELESS, TEX_FORMAT_BGRX8_UNORM_SRGB //
+        };
+    CheckFormatSize(std::begin(_4ByteFormats), std::end(_4ByteFormats), 4);
+
+    TEXTURE_FORMAT _2ByteFormats[] =
+        {
+            TEX_FORMAT_RG8_TYPELESS, TEX_FORMAT_RG8_UNORM, TEX_FORMAT_RG8_UINT, TEX_FORMAT_RG8_SNORM, TEX_FORMAT_RG8_SINT,
+            TEX_FORMAT_R16_TYPELESS, TEX_FORMAT_R16_FLOAT, TEX_FORMAT_D16_UNORM, TEX_FORMAT_R16_UNORM, TEX_FORMAT_R16_UINT, TEX_FORMAT_R16_SNORM, TEX_FORMAT_R16_SINT,
+            TEX_FORMAT_B5G6R5_UNORM, TEX_FORMAT_B5G5R5A1_UNORM //
+        };
+    CheckFormatSize(std::begin(_2ByteFormats), std::end(_2ByteFormats), 2);
+
+    TEXTURE_FORMAT _1ByteFormats[] =
+        {
+            TEX_FORMAT_R8_TYPELESS, TEX_FORMAT_R8_UNORM, TEX_FORMAT_R8_UINT, TEX_FORMAT_R8_SNORM, TEX_FORMAT_R8_SINT, TEX_FORMAT_A8_UNORM, //TEX_FORMAT_R1_UNORM
+        };
+    CheckFormatSize(std::begin(_1ByteFormats), std::end(_1ByteFormats), 1);
+
+    TEXTURE_FORMAT _4ComponentFormats[] =
+        {
+            TEX_FORMAT_RGBA32_TYPELESS, TEX_FORMAT_RGBA32_FLOAT, TEX_FORMAT_RGBA32_UINT, TEX_FORMAT_RGBA32_SINT,
+            TEX_FORMAT_RGBA16_TYPELESS, TEX_FORMAT_RGBA16_FLOAT, TEX_FORMAT_RGBA16_UNORM, TEX_FORMAT_RGBA16_UINT, TEX_FORMAT_RGBA16_SNORM, TEX_FORMAT_RGBA16_SINT,
+            TEX_FORMAT_RGBA8_TYPELESS, TEX_FORMAT_RGBA8_UNORM, TEX_FORMAT_RGBA8_UNORM_SRGB, TEX_FORMAT_RGBA8_UINT, TEX_FORMAT_RGBA8_SNORM, TEX_FORMAT_RGBA8_SINT,
+            TEX_FORMAT_RG8_B8G8_UNORM, TEX_FORMAT_G8R8_G8B8_UNORM,
+            TEX_FORMAT_BGRA8_UNORM, TEX_FORMAT_BGRX8_UNORM, TEX_FORMAT_BGRA8_TYPELESS, TEX_FORMAT_BGRA8_UNORM_SRGB, TEX_FORMAT_BGRX8_TYPELESS, TEX_FORMAT_BGRX8_UNORM_SRGB //
+        };
+    CheckNumComponents(std::begin(_4ComponentFormats), std::end(_4ComponentFormats), 4);
+
+    TEXTURE_FORMAT _3ComponentFormats[] =
+        {
+            TEX_FORMAT_RGB32_TYPELESS,
+            TEX_FORMAT_RGB32_FLOAT,
+            TEX_FORMAT_RGB32_UINT,
+            TEX_FORMAT_RGB32_SINT //
+        };
+    CheckNumComponents(std::begin(_3ComponentFormats), std::end(_3ComponentFormats), 3);
+
+    TEXTURE_FORMAT _2ComponentFormats[] =
+        {
+            TEX_FORMAT_RG32_TYPELESS, TEX_FORMAT_RG32_FLOAT, TEX_FORMAT_RG32_UINT, TEX_FORMAT_RG32_SINT,
+            TEX_FORMAT_R32G8X24_TYPELESS, TEX_FORMAT_D32_FLOAT_S8X24_UINT, TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS, TEX_FORMAT_X32_TYPELESS_G8X24_UINT,
+            TEX_FORMAT_RG16_TYPELESS, TEX_FORMAT_RG16_FLOAT, TEX_FORMAT_RG16_UNORM, TEX_FORMAT_RG16_UINT, TEX_FORMAT_RG16_SNORM, TEX_FORMAT_RG16_SINT,
+            TEX_FORMAT_RG8_TYPELESS, TEX_FORMAT_RG8_UNORM, TEX_FORMAT_RG8_UINT, TEX_FORMAT_RG8_SNORM, TEX_FORMAT_RG8_SINT //
+        };
+    CheckNumComponents(std::begin(_2ComponentFormats), std::end(_2ComponentFormats), 2);
+
+    TEXTURE_FORMAT _1ComponentFormats[] =
+        {
+            TEX_FORMAT_RGB10A2_TYPELESS, TEX_FORMAT_RGB10A2_UNORM, TEX_FORMAT_RGB10A2_UINT, TEX_FORMAT_R11G11B10_FLOAT,
+            TEX_FORMAT_R32_TYPELESS, TEX_FORMAT_D32_FLOAT, TEX_FORMAT_R32_FLOAT, TEX_FORMAT_R32_UINT, TEX_FORMAT_R32_SINT,
+            TEX_FORMAT_R24G8_TYPELESS, TEX_FORMAT_D24_UNORM_S8_UINT, TEX_FORMAT_R24_UNORM_X8_TYPELESS, TEX_FORMAT_X24_TYPELESS_G8_UINT,
+            TEX_FORMAT_R16_TYPELESS, TEX_FORMAT_R16_FLOAT, TEX_FORMAT_D16_UNORM, TEX_FORMAT_R16_UNORM, TEX_FORMAT_R16_UINT, TEX_FORMAT_R16_SNORM, TEX_FORMAT_R16_SINT,
+            TEX_FORMAT_R8_TYPELESS, TEX_FORMAT_R8_UNORM, TEX_FORMAT_R8_UINT, TEX_FORMAT_R8_SNORM, TEX_FORMAT_R8_SINT, TEX_FORMAT_A8_UNORM, //TEX_FORMAT_R1_UNORM
+            TEX_FORMAT_RGB9E5_SHAREDEXP,
+            TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM, TEX_FORMAT_B5G6R5_UNORM, TEX_FORMAT_B5G5R5A1_UNORM //
+        };
+    CheckNumComponents(std::begin(_1ComponentFormats), std::end(_1ComponentFormats), 1);
+
+
+    TEXTURE_FORMAT FloatFormats[] =
+        {
+            TEX_FORMAT_RGBA32_FLOAT,
+            TEX_FORMAT_RGB32_FLOAT,
+            TEX_FORMAT_RGBA16_FLOAT,
+            TEX_FORMAT_RG32_FLOAT,
+            TEX_FORMAT_RG16_FLOAT,
+            TEX_FORMAT_R32_FLOAT,
+            TEX_FORMAT_R16_FLOAT //
+        };
+    CheckComponentType(std::begin(FloatFormats), std::end(FloatFormats), COMPONENT_TYPE_FLOAT);
+
+    TEXTURE_FORMAT SintFormats[] =
+        {
+            TEX_FORMAT_RGBA32_SINT,
+            TEX_FORMAT_RGB32_SINT,
+            TEX_FORMAT_RGBA16_SINT,
+            TEX_FORMAT_RG32_SINT,
+            TEX_FORMAT_RGBA8_SINT,
+            TEX_FORMAT_RG16_SINT,
+            TEX_FORMAT_R32_SINT,
+            TEX_FORMAT_RG8_SINT,
+            TEX_FORMAT_R16_SINT,
+            TEX_FORMAT_R8_SINT //
+        };
+    CheckComponentType(std::begin(SintFormats), std::end(SintFormats), COMPONENT_TYPE_SINT);
+
+    TEXTURE_FORMAT UintFormats[] =
+        {
+            TEX_FORMAT_RGBA32_UINT,
+            TEX_FORMAT_RGB32_UINT,
+            TEX_FORMAT_RGBA16_UINT,
+            TEX_FORMAT_RG32_UINT,
+            TEX_FORMAT_RGBA8_UINT,
+            TEX_FORMAT_RG16_UINT,
+            TEX_FORMAT_R32_UINT,
+            TEX_FORMAT_RG8_UINT,
+            TEX_FORMAT_R16_UINT,
+            TEX_FORMAT_R8_UINT //
+        };
+    CheckComponentType(std::begin(UintFormats), std::end(UintFormats), COMPONENT_TYPE_UINT);
+
+    TEXTURE_FORMAT UnormFormats[] =
+        {
+            TEX_FORMAT_RGBA16_UNORM,
+            TEX_FORMAT_RGBA8_UNORM,
+            TEX_FORMAT_RG16_UNORM,
+            TEX_FORMAT_RG8_UNORM,
+            TEX_FORMAT_R16_UNORM,
+            TEX_FORMAT_R8_UNORM,
+            TEX_FORMAT_A8_UNORM,
+            TEX_FORMAT_R1_UNORM,
+            TEX_FORMAT_RG8_B8G8_UNORM,
+            TEX_FORMAT_G8R8_G8B8_UNORM,
+            TEX_FORMAT_BGRA8_UNORM,
+            TEX_FORMAT_BGRX8_UNORM //
+        };
+    CheckComponentType(std::begin(UnormFormats), std::end(UnormFormats), COMPONENT_TYPE_UNORM);
+
+    TEXTURE_FORMAT UnormSRGBFormats[] =
+        {
+            TEX_FORMAT_RGBA8_UNORM_SRGB,
+            TEX_FORMAT_BGRA8_UNORM_SRGB,
+            TEX_FORMAT_BGRX8_UNORM_SRGB //
+        };
+    CheckComponentType(std::begin(UnormSRGBFormats), std::end(UnormSRGBFormats), COMPONENT_TYPE_UNORM_SRGB);
+
+    TEXTURE_FORMAT SnormFormats[] =
+        {
+            TEX_FORMAT_RGBA16_SNORM,
+            TEX_FORMAT_RGBA8_SNORM,
+            TEX_FORMAT_RG16_SNORM,
+            TEX_FORMAT_RG8_SNORM,
+            TEX_FORMAT_R16_SNORM,
+            TEX_FORMAT_R8_SNORM //
+        };
+    CheckComponentType(std::begin(SnormFormats), std::end(SnormFormats), COMPONENT_TYPE_SNORM);
+
+    TEXTURE_FORMAT UndefinedFormats[] =
+        {
+            TEX_FORMAT_RGBA32_TYPELESS,
+            TEX_FORMAT_RGB32_TYPELESS,
+            TEX_FORMAT_RGBA16_TYPELESS,
+            TEX_FORMAT_RG32_TYPELESS,
+            TEX_FORMAT_RGBA8_TYPELESS,
+            TEX_FORMAT_RG16_TYPELESS,
+            TEX_FORMAT_R32_TYPELESS,
+            TEX_FORMAT_RG8_TYPELESS,
+            TEX_FORMAT_R16_TYPELESS,
+            TEX_FORMAT_R8_TYPELESS,
+            TEX_FORMAT_BGRA8_TYPELESS,
+            TEX_FORMAT_BGRX8_TYPELESS //
+        };
+    CheckComponentType(std::begin(UndefinedFormats), std::end(UndefinedFormats), COMPONENT_TYPE_UNDEFINED);
+
+    TEXTURE_FORMAT DepthFormats[] =
+        {
+            TEX_FORMAT_D32_FLOAT,
+            TEX_FORMAT_D16_UNORM //
+        };
+    CheckComponentType(std::begin(DepthFormats), std::end(DepthFormats), COMPONENT_TYPE_DEPTH);
+
+    TEXTURE_FORMAT DepthStencilFormats[] =
+        {
+            TEX_FORMAT_R32G8X24_TYPELESS,
+            TEX_FORMAT_D32_FLOAT_S8X24_UINT,
+            TEX_FORMAT_R32_FLOAT_X8X24_TYPELESS,
+            TEX_FORMAT_X32_TYPELESS_G8X24_UINT,
+            TEX_FORMAT_R24G8_TYPELESS,
+            TEX_FORMAT_D24_UNORM_S8_UINT,
+            TEX_FORMAT_R24_UNORM_X8_TYPELESS,
+            TEX_FORMAT_X24_TYPELESS_G8_UINT //
+        };
+    CheckComponentType(std::begin(DepthStencilFormats), std::end(DepthStencilFormats), COMPONENT_TYPE_DEPTH_STENCIL);
+
+    TEXTURE_FORMAT CompoundFormats[] =
+        {
+            TEX_FORMAT_RGB10A2_TYPELESS,
+            TEX_FORMAT_RGB10A2_UNORM,
+            TEX_FORMAT_RGB10A2_UINT,
+            TEX_FORMAT_RGB9E5_SHAREDEXP,
+            TEX_FORMAT_R11G11B10_FLOAT,
+            TEX_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,
+            TEX_FORMAT_B5G6R5_UNORM,
+            TEX_FORMAT_B5G5R5A1_UNORM //
+        };
+    CheckComponentType(std::begin(CompoundFormats), std::end(CompoundFormats), COMPONENT_TYPE_COMPOUND);
+
+
+    TEXTURE_FORMAT CompressedFormats[] =
+        {
+            TEX_FORMAT_BC1_TYPELESS, TEX_FORMAT_BC1_UNORM, TEX_FORMAT_BC1_UNORM_SRGB,
+            TEX_FORMAT_BC2_TYPELESS, TEX_FORMAT_BC2_UNORM, TEX_FORMAT_BC2_UNORM_SRGB,
+            TEX_FORMAT_BC3_TYPELESS, TEX_FORMAT_BC3_UNORM, TEX_FORMAT_BC3_UNORM_SRGB,
+            TEX_FORMAT_BC4_TYPELESS, TEX_FORMAT_BC4_UNORM, TEX_FORMAT_BC4_SNORM,
+            TEX_FORMAT_BC5_TYPELESS, TEX_FORMAT_BC5_UNORM, TEX_FORMAT_BC5_SNORM,
+            TEX_FORMAT_BC6H_TYPELESS, TEX_FORMAT_BC6H_UF16, TEX_FORMAT_BC6H_SF16,
+            TEX_FORMAT_BC7_TYPELESS, TEX_FORMAT_BC7_UNORM, TEX_FORMAT_BC7_UNORM_SRGB //
+        };
+    CheckComponentType(std::begin(CompressedFormats), std::end(CompressedFormats), COMPONENT_TYPE_COMPRESSED);
+}
+
+
 } // namespace

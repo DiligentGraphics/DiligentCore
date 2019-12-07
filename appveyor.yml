@@ -75,7 +75,7 @@ build:
   parallel: true
 
 test_script:
-  - if NOT "%PLATFORM_NAME%"=="UWP" ( C:\projects\DiligentCore\build\UnitTests\%CONFIGURATION%\DiligentCoreTest.exe )
+  - if NOT "%PLATFORM_NAME%"=="UWP" ( C:\projects\DiligentCore\build\UnitTests\DiligentCoreTest\%CONFIGURATION%\DiligentCoreTest.exe )
 
 after_test:
   - cd install
