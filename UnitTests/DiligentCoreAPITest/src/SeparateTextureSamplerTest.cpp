@@ -67,6 +67,8 @@ TEST(SeparateTextureSampler, CreateSampler)
         GTEST_SKIP();
     }
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     ShaderCreateInfo Attrs;
     Attrs.Source          = g_VSShaderSource;
     Attrs.EntryPoint      = "VSMain";
@@ -173,8 +175,6 @@ TEST(SeparateTextureSampler, CreateSampler)
     pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
     pContext->Draw(DrawAttrs);
-
-    pEnv->Reset();
 }
 
 } // namespace

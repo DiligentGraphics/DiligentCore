@@ -42,6 +42,8 @@ TEST(Shader, CompilationFailure)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     ShaderCreateInfo Attrs;
     Attrs.Source                     = g_BrokenShaderSource;
     Attrs.EntryPoint                 = "VSMain";
@@ -61,8 +63,6 @@ TEST(Shader, CompilationFailure)
     const char* Msg = reinterpret_cast<const char*>(pErrors->GetDataPtr());
     LOG_INFO_MESSAGE("Compiler output:\n", Msg);
     pErrors->Release();
-
-    pEnv->Reset();
 }
 
 } // namespace

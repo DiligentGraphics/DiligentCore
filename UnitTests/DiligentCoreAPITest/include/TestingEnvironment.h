@@ -46,6 +46,28 @@ public:
     void Reset();
     void ReleaseResources();
 
+    class ScopedReset
+    {
+    public:
+        ScopedReset() = default;
+        ~ScopedReset()
+        {
+            if (m_pTheEnvironment)
+                m_pTheEnvironment->Reset();
+        }
+    };
+
+    class ScopedReleaseResources
+    {
+    public:
+        ScopedReleaseResources() = default;
+        ~ScopedReleaseResources()
+        {
+            if (m_pTheEnvironment)
+                m_pTheEnvironment->ReleaseResources();
+        }
+    };
+
     IRenderDevice*  GetDevice() { return m_pDevice; }
     IDeviceContext* GetDeviceContext() { return m_pDeviceContext; }
 

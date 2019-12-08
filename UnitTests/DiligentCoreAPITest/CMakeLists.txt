@@ -2,8 +2,11 @@ cmake_minimum_required (VERSION 3.6)
 
 project(DiligentCoreAPITest)
 
-file(GLOB COMMON_SOURCE src/*)
-file(GLOB COMMON_INCLUDE include/*)
+file(GLOB COMMON_SOURCE LIST_DIRECTORIES false src/*)
+file(GLOB COMMON_INCLUDE LIST_DIRECTORIES false include/*)
+file(GLOB SHADERS LIST_DIRECTORIES false assets/shaders/*.*)
+
+set_source_files_properties(${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
 
 set(SOURCE ${COMMON_SOURCE})
 set(INCLUDE ${COMMON_INCLUDE})
@@ -30,7 +33,7 @@ if(NOT VULKAN_SUPPORTED)
     list(REMOVE_ITEM INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/CreateObjFromNativeResVK.h)
 endif()
 
-add_executable(DiligentCoreAPITest ${SOURCE} ${INCLUDE})
+add_executable(DiligentCoreAPITest ${SOURCE} ${INCLUDE} ${SHADERS})
 set_common_target_properties(DiligentCoreAPITest)
 
 get_supported_backends(ENGINE_LIBRARIES)
@@ -61,15 +64,17 @@ PRIVATE
 )
 
 
+set_target_properties(DiligentCoreAPITest
+PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+)
+
 if(PLATFORM_WIN32)
-    #set_target_properties(DiligentCoreAPITest PROPERTIES
-    #    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
-    #)
     copy_required_dlls(DiligentCoreAPITest)
 endif()
 
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${INCLUDE})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${INCLUDE} ${SHADERS})
 
 set_target_properties(DiligentCoreAPITest PROPERTIES
     FOLDER "DiligentCore/Tests"

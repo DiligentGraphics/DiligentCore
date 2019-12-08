@@ -265,6 +265,8 @@ TEST(PSOCompatibility, CompilationFailure)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
     auto DevType = pDevice->GetDeviceCaps().DevType;
     auto PSO0    = CreateGraphicsPSO(pDevice, VS0, PS0);
     ASSERT_TRUE(PSO0);
@@ -317,8 +319,6 @@ TEST(PSOCompatibility, CompilationFailure)
         EXPECT_TRUE(PSO_RWBuff->IsCompatibleWith(PSO_RWBuff2));
         EXPECT_FALSE(PSO_RWBuff->IsCompatibleWith(PSO_RWBuff3));
     }
-
-    pEnv->Reset();
 }
 
 } // namespace
