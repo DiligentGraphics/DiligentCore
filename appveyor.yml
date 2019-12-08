@@ -62,24 +62,24 @@ install:
   - BuildTools\Scripts\appveyor\install.bat
 
 before_build:
-  - cd %APPVEYOR_BUILD_FOLDER%\BuildTools\FormatValidation
+  - cd '%APPVEYOR_BUILD_FOLDER%\BuildTools\FormatValidation'
   - validate_format_win.bat
-  - cd %APPVEYOR_BUILD_FOLDER%
+  - cd '%APPVEYOR_BUILD_FOLDER%'
   - echo %PLATFORM%
   - echo.%cmake_args%
   - cmake %cmake_args% -S . -B ./build -D DILIGENT_BUILD_TESTS=TRUE -G "Visual Studio 15 2017" -A %PLATFORM%
 
 build:
-  project: %APPVEYOR_BUILD_FOLDER%\build\INSTALL.vcxproj
+  project: '%APPVEYOR_BUILD_FOLDER%\build\INSTALL.vcxproj'
   verbosity: minimal
   parallel: true
 
 test_script:
-  - cd %APPVEYOR_BUILD_FOLDER%\UnitTests\DiligentCoreAPITest\assets
-  - %APPVEYOR_BUILD_FOLDER%\BuildTools\Scripts\appveyor\run_tests.bat %APPVEYOR_BUILD_FOLDER%\build
+  - cd '%APPVEYOR_BUILD_FOLDER%\UnitTests\DiligentCoreAPITest\assets'
+  - '%APPVEYOR_BUILD_FOLDER%\BuildTools\Scripts\appveyor\run_tests.bat' '%APPVEYOR_BUILD_FOLDER%\build'
 
 after_test:
-  - cd %APPVEYOR_BUILD_FOLDER%\build\install
+  - cd '%APPVEYOR_BUILD_FOLDER%\build\install'
   - 7z a DiligentCore-"%platform_name%"-"%PLATFORM%"-"%CONFIGURATION%".zip
     .\*
 
