@@ -337,6 +337,9 @@ void TestingEnvironment::TearDown()
 
 void TestingEnvironment::ReleaseResources()
 {
+    // It is necessary to call Flush() to force the driver to release resources.
+    // Without flushing the command buffer, the memory may not be released until sometimes
+    // later causing out-of-memory error.
     m_pDeviceContext->Flush();
     m_pDeviceContext->FinishFrame();
     m_pDevice->ReleaseStaleResources();

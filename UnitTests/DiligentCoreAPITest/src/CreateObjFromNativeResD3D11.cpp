@@ -40,9 +40,10 @@ void TestCreateObjFromNativeResD3D11::CreateTexture(ITexture* pTexture)
     ASSERT_NE(pDeviceD3D11, nullptr);
     ASSERT_NE(pTextureD3D11, nullptr);
 
-    const auto& SrcTexDesc    = pTexture->GetDesc();
-    auto*       pd3d11Texture = pTextureD3D11->GetD3D11Texture();
+    auto* pd3d11Texture = pTextureD3D11->GetD3D11Texture();
     ASSERT_NE(pd3d11Texture, nullptr);
+
+    const auto& SrcTexDesc = pTexture->GetDesc();
 
     RefCntAutoPtr<ITexture> pTextureFromNativeD3D11Handle;
     if (SrcTexDesc.Type == RESOURCE_DIM_TEX_1D ||

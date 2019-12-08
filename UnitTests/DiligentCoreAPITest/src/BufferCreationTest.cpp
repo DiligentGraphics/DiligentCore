@@ -37,6 +37,8 @@
 #    include "CreateObjFromNativeResVK.h"
 #endif
 
+#include "GraphicsAccessories.h"
+
 #include "TestingEnvironment.h"
 
 #include "gtest/gtest.h"
@@ -114,7 +116,7 @@ TEST_F(BufferCreationTest, CreateVertexBuffer)
     InitData.pData = DummyData.data();
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, &InitData, &pBuffer);
-    ASSERT_NE(pBuffer, nullptr);
+    ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
 
     pCreateObjFromNativeRes->CreateBuffer(pBuffer);
 }
@@ -133,7 +135,7 @@ TEST_F(BufferCreationTest, CreateIndexBuffer)
 
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, &NullData, &pBuffer);
-    ASSERT_NE(pBuffer, nullptr);
+    ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
 
     pCreateObjFromNativeRes->CreateBuffer(pBuffer);
 }
@@ -158,7 +160,7 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
 
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
-    ASSERT_NE(pBuffer, nullptr);
+    ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
 
     BufferViewDesc ViewDesc;
     ViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
@@ -168,12 +170,12 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
     ViewDesc.Format.IsNormalized  = false;
     RefCntAutoPtr<IBufferView> pBufferSRV;
     pBuffer->CreateView(ViewDesc, &pBufferSRV);
-    EXPECT_NE(pBufferSRV, nullptr);
+    EXPECT_NE(pBufferSRV, nullptr) << GetObjectDescString(BuffDesc);
 
     ViewDesc.ViewType = BUFFER_VIEW_UNORDERED_ACCESS;
     RefCntAutoPtr<IBufferView> pBufferUAV;
     pBuffer->CreateView(ViewDesc, &pBufferUAV);
-    EXPECT_NE(pBufferUAV, nullptr);
+    EXPECT_NE(pBufferUAV, nullptr) << GetObjectDescString(BuffDesc);
 
     pCreateObjFromNativeRes->CreateBuffer(pBuffer);
 }
@@ -197,7 +199,7 @@ TEST_F(BufferCreationTest, CreateStructuedBuffer)
     BuffDesc.ElementByteStride = 16;
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
-    ASSERT_NE(pBuffer, nullptr);
+    ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
 
     pCreateObjFromNativeRes->CreateBuffer(pBuffer);
 }
@@ -213,7 +215,7 @@ TEST_F(BufferCreationTest, CreateUniformBuffer)
     BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
-    ASSERT_NE(pBuffer, nullptr);
+    ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
 
     pCreateObjFromNativeRes->CreateBuffer(pBuffer);
 }
@@ -231,7 +233,7 @@ TEST_F(BufferCreationTest, CreateRawBuffer)
     BuffDesc.ElementByteStride = 16;
     RefCntAutoPtr<IBuffer> pBuffer;
     pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
-    ASSERT_NE(pBuffer, nullptr);
+    ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
 
     BufferViewDesc ViewDesc;
     ViewDesc.ViewType             = BUFFER_VIEW_UNORDERED_ACCESS;
@@ -240,12 +242,12 @@ TEST_F(BufferCreationTest, CreateRawBuffer)
     ViewDesc.Format.ValueType     = VT_FLOAT32;
     RefCntAutoPtr<IBufferView> pBufferUAV;
     pBuffer->CreateView(ViewDesc, &pBufferUAV);
-    ASSERT_NE(pBufferUAV, nullptr);
+    ASSERT_NE(pBufferUAV, nullptr) << GetObjectDescString(BuffDesc);
 
     ViewDesc.ViewType = BUFFER_VIEW_SHADER_RESOURCE;
     RefCntAutoPtr<IBufferView> pBufferSRV;
     pBuffer->CreateView(ViewDesc, &pBufferSRV);
-    ASSERT_NE(pBufferSRV, nullptr);
+    ASSERT_NE(pBufferSRV, nullptr) << GetObjectDescString(BuffDesc);
 
     pCreateObjFromNativeRes->CreateBuffer(pBuffer);
 }
