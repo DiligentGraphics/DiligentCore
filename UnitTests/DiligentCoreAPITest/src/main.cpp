@@ -21,13 +21,23 @@
  *  of the possibility of such damages.
  */
 
+#include <iostream>
+
 #include "gtest/gtest.h"
 #include "TestingEnvironment.h"
+
+#if PLATFORM_WIN32
+#    include <crtdbg.h>
+#endif
 
 using namespace Diligent;
 
 int main(int argc, char** argv)
 {
+#if PLATFORM_WIN32
+    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
     ::testing::InitGoogleTest(&argc, argv);
 
     DeviceType   deviceType  = DeviceType::Undefined;
@@ -38,28 +48,34 @@ int main(int argc, char** argv)
         if (strcmp(arg, "--mode=d3d11") == 0)
         {
             deviceType = DeviceType::D3D11;
+            std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D11 mode ==================\n\n";
         }
         else if (strcmp(arg, "--mode=d3d11_sw") == 0)
         {
             deviceType  = DeviceType::D3D11;
             AdapterType = ADAPTER_TYPE_SOFTWARE;
+            std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D11-SW mode =================\n\n";
         }
         else if (strcmp(arg, "--mode=d3d12") == 0)
         {
             deviceType = DeviceType::D3D12;
+            std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D12 mode ==================\n\n";
         }
         else if (strcmp(arg, "--mode=d3d12_sw") == 0)
         {
             deviceType  = DeviceType::D3D12;
             AdapterType = ADAPTER_TYPE_SOFTWARE;
+            std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D12-SW mode =================\n\n";
         }
         else if (strcmp(arg, "--mode=vk") == 0)
         {
             deviceType = DeviceType::Vulkan;
+            std::cout << "\n\n\n==================== Testing Diligent Core API in Vulkan mode ====================\n\n";
         }
         else if (strcmp(arg, "--mode=gl") == 0)
         {
             deviceType = DeviceType::OpenGL;
+            std::cout << "\n\n\n==================== Testing Diligent Core API in OpenGL mode ====================\n\n";
         }
     }
 

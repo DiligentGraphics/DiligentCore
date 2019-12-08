@@ -23,8 +23,20 @@ PRIVATE
     ${ENGINE_LIBRARIES}
 )
 
+if(GL_SUPPORTED OR GLES_SUPPORTED)
+    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-HLSL2GLSLConverterLib)
+endif()
 
-target_include_directories(DiligentCoreAPITest PRIVATE include)
+if(GL_SUPPORTED)
+    target_link_libraries(DiligentCoreAPITest PRIVATE glew-static)
+endif()
+
+
+target_include_directories(DiligentCoreAPITest
+PRIVATE
+    include
+    ../../ThirdParty/vulkan
+)
 
 
 if(PLATFORM_WIN32)
