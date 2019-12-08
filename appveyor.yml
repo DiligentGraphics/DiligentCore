@@ -67,7 +67,7 @@ before_build:
   - cd c:\projects\DiligentCore
   - echo %PLATFORM%
   - echo.%cmake_args%
-  - cmake %cmake_args% -S . -B ./build -D DILIGENT_BUILD_TESTS=TRUE -G "Visual Studio 15 2017" -A %PLATFORM%
+  - cmake %cmake_args% -S . -B ./build -D DILIGENT_BUILD_TESTS=TRUE -D DILIGENT_NO_VULKAN=TRUE -G "Visual Studio 15 2017" -A %PLATFORM%
 
 build:
   project: c:\projects\DiligentCore\build\INSTALL.vcxproj

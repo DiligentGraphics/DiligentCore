@@ -672,7 +672,7 @@ const TextureTestAttribs TestList[] =
     {TEX_FORMAT_RG16_SINT,               4, BindSRU, true},
 
     {TEX_FORMAT_R32_TYPELESS,            4, BindSRU, true},
-    {TEX_FORMAT_D32_FLOAT,               4, BindD,   true},
+//    {TEX_FORMAT_D32_FLOAT,               4, BindD,   true}, TEMPORARY!!!
     {TEX_FORMAT_R32_FLOAT,               4, BindSRU, true},
     {TEX_FORMAT_R32_UINT,                4, BindSRU, true},
     {TEX_FORMAT_R32_SINT,                4, BindSRU, true},
