@@ -140,7 +140,10 @@ endif()
 if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
     option(DILIGENT_BUILD_TESTS "Build Diligent Engine unit tests" OFF)
 else()
-    set(DILIGENT_BUILD_TESTS FALSE CACHE INTERNAL "Tests are not available on this platform")
+    if(DILIGENT_BUILD_TESTS)
+        message("Unit tests are not supported on this platform and will be disabled")
+    endif()
+    set(DILIGENT_BUILD_TESTS FALSE CACHE INTERNAL "Tests are not available on this platform" FORCE)
 endif()
 
 
