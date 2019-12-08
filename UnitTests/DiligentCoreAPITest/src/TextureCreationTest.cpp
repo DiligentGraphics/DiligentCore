@@ -194,7 +194,7 @@ protected:
         TexDesc.SampleCount = SampleCount;
 
         RefCntAutoPtr<ITexture> pTestTex;
-        TextureData                       NullData;
+        TextureData             NullData;
         pDevice->CreateTexture(TexDesc, &NullData, &pTestTex);
         ASSERT_NE(pTestTex, nullptr) << GetObjectDescString(TexDesc);
 
