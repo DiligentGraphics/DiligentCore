@@ -76,7 +76,7 @@ build:
 
 test_script:
   - cd '%APPVEYOR_BUILD_FOLDER%\UnitTests\DiligentCoreAPITest\assets'
-  - '%APPVEYOR_BUILD_FOLDER%\BuildTools\Scripts\appveyor\run_tests.bat' '%APPVEYOR_BUILD_FOLDER%\build'
+  - cmd: '%APPVEYOR_BUILD_FOLDER%\BuildTools\Scripts\appveyor\run_tests.bat' '%APPVEYOR_BUILD_FOLDER%\build'
 
 after_test:
   - cd '%APPVEYOR_BUILD_FOLDER%\build\install'
