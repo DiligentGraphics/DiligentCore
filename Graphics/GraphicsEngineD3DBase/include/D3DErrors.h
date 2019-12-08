@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include <string.h>
+
 #include "Errors.h"
 
 /// \file
@@ -37,7 +39,7 @@ class ComErrorDesc
 public:
     ComErrorDesc(HRESULT hr)
     {
-        FormatMessageA(
+        auto NumCharsWritten = FormatMessageA(
             FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
             NULL,
             hr,
@@ -45,13 +47,21 @@ public:
             m_Msg,
             _countof(m_Msg),
             NULL);
-        auto nLen = strlen(m_Msg);
-        if (nLen > 1 && m_Msg[nLen - 1] == '\n')
+
+        if (NumCharsWritten == 0)
         {
-            m_Msg[nLen - 1] = 0;
-            if (m_Msg[nLen - 2] == '\r')
+            strcpy_s(m_Msg, _countof(m_Msg), "Unknown error");
+        }
+        else
+        {
+            auto nLen = strlen(m_Msg);
+            if (nLen > 1 && m_Msg[nLen - 1] == '\n')
             {
-                m_Msg[nLen - 2] = 0;
+                m_Msg[nLen - 1] = 0;
+                if (m_Msg[nLen - 2] == '\r')
+                {
+                    m_Msg[nLen - 2] = 0;
+                }
             }
         }
     }

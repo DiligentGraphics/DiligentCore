@@ -7,22 +7,22 @@ uniform sampler2D g_tex2D_StaticArr[2];
 
 uniform UniformBuff_Stat
 {
-	vec4 g_f4Color0;
+    vec4 g_f4Color0;
 }g_UniformBuff_Stat;
 
 uniform UniformBuff_Stat2
 {
-	vec4 g_f4Color01;
+    vec4 g_f4Color01;
 }g_UniformBuff_Stat2;
 
 uniform UniformBuff_Mut
 {
-	vec4 g_f4Color1;
+    vec4 g_f4Color1;
 }g_UniformBuff_Mut;
 
 uniform UniformBuff_Dyn
 {
-	vec4 g_f4Color2;
+    vec4 g_f4Color2;
 }g_UniformBuff_Dyn;
 
 layout(rgba32f) uniform readonly image2D g_rwtex2D_Static;
@@ -32,17 +32,17 @@ layout(rgba32f) uniform readonly image2D g_rwtex2D_Dyn;
 
 layout(std140) buffer g_rwBuff_Static
 {
-	vec4 data[];
+    vec4 data[];
 }rwBuff_Static;
 
 layout(std140) buffer g_rwBuff_Mut
 {
-	vec4 data[];
+    vec4 data[];
 }rwBuff_Mut;
 
 layout(std140) buffer g_rwBuff_Dyn
 {
-	vec4 data[];
+    vec4 data[];
 }rwBuff_Dyn;
 
 uniform samplerBuffer  g_Buffer_Static;
