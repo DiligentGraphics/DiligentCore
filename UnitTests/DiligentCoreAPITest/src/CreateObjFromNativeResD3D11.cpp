@@ -27,6 +27,7 @@
 #include "RenderDeviceD3D11.h"
 #include "TextureD3D11.h"
 #include "BufferD3D11.h"
+#include "GraphicsAccessories.h"
 
 #include "gtest/gtest.h"
 
@@ -75,7 +76,9 @@ void TestCreateObjFromNativeResD3D11::CreateTexture(ITexture* pTexture)
         EXPECT_EQ(TestTexDesc.Type, RESOURCE_DIM_TEX_2D_ARRAY);
         TestTexDesc.Type = SrcTexDesc.Type;
     }
-    EXPECT_EQ(TestTexDesc, SrcTexDesc);
+    EXPECT_EQ(TestTexDesc, SrcTexDesc) << "Src tex desc:  " << GetObjectDescString(SrcTexDesc)
+                                       << "\nTest tex desc: " << GetObjectDescString(TestTexDesc);
+
     RefCntAutoPtr<ITextureD3D11> pTestTextureD3D11(pTextureFromNativeD3D11Handle, IID_TextureD3D11);
     ASSERT_NE(pTestTextureD3D11, nullptr);
     EXPECT_EQ(pTestTextureD3D11->GetD3D11Texture(), pd3d11Texture);
@@ -115,7 +118,8 @@ void TestCreateObjFromNativeResD3D11::CreateBuffer(IBuffer* pBuffer)
         ASSERT_NE(pBufferFromNativeD3D11Handle, nullptr);
 
         const auto& TestBufferDesc = pBufferFromNativeD3D11Handle->GetDesc();
-        EXPECT_EQ(TestBufferDesc, SrcBuffDesc);
+        EXPECT_EQ(TestBufferDesc, SrcBuffDesc) << "Src buff desc:  " << GetObjectDescString(SrcBuffDesc)
+                                               << "\nTest buff desc: " << GetObjectDescString(TestBufferDesc);
 
         RefCntAutoPtr<IBufferD3D11> pTestBufferD3D11(pBufferFromNativeD3D11Handle, IID_BufferD3D11);
         ASSERT_NE(pTestBufferD3D11, nullptr);

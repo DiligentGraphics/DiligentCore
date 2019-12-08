@@ -26,6 +26,7 @@
 #include "RenderDeviceD3D12.h"
 #include "TextureD3D12.h"
 #include "BufferD3D12.h"
+#include "GraphicsAccessories.h"
 
 #include "gtest/gtest.h"
 
@@ -53,7 +54,8 @@ void TestCreateObjFromNativeResD3D12::CreateTexture(Diligent::ITexture* pTexture
         EXPECT_EQ(TestTexDesc.Type, RESOURCE_DIM_TEX_2D_ARRAY);
         TestTexDesc.Type = SrcTexDesc.Type;
     }
-    EXPECT_EQ(TestTexDesc, SrcTexDesc);
+    EXPECT_EQ(TestTexDesc, SrcTexDesc) << "Src tex desc:  " << GetObjectDescString(SrcTexDesc)
+                                       << "\nTest tex desc: " << GetObjectDescString(TestTexDesc);
 
     RefCntAutoPtr<ITextureD3D12> pTestTextureD3D12(pTextureFromNativeD3D12Handle, IID_TextureD3D12);
     ASSERT_NE(pTestTextureD3D12, nullptr);
@@ -81,7 +83,8 @@ void TestCreateObjFromNativeResD3D12::CreateBuffer(Diligent::IBuffer* pBuffer)
         ASSERT_NE(pBufferFromNativeD3D12Handle, nullptr);
 
         const auto& TestBufferDesc = pBufferFromNativeD3D12Handle->GetDesc();
-        EXPECT_EQ(TestBufferDesc, SrcBuffDesc);
+        EXPECT_EQ(TestBufferDesc, SrcBuffDesc) << "Src buff desc:  " << GetObjectDescString(SrcBuffDesc)
+                                               << "\nTest buff desc: " << GetObjectDescString(TestBufferDesc);
 
         RefCntAutoPtr<IBufferD3D12> pTestBufferD3D12(pBufferFromNativeD3D12Handle, IID_BufferD3D12);
         ASSERT_NE(pTestBufferD3D12, nullptr);

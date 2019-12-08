@@ -208,7 +208,7 @@ protected:
 
             PrepareSubresourceData(TexDesc, FmtInfo, Data, SubResources, InitData);
 
-            TexDesc.Name = "TestTexture2";
+            TexDesc.Name = "Test Texture 2";
             RefCntAutoPtr<ITexture> pTestTex2;
             pDevice->CreateTexture(TexDesc, &InitData, &pTestTex2);
             ASSERT_NE(pTestTex2, nullptr) << GetObjectDescString(TexDesc);
@@ -244,7 +244,7 @@ protected:
             LOG_WARNING_MESSAGE_ONCE("Texture views are not supported!\n");
         }
 
-        if (TexCaps.bTextureViewSupported && !pDevice->GetTextureFormatInfo(TexDesc.Format).IsTypeless)
+        if (TexCaps.bTextureViewSupported && !FmtInfo.IsTypeless)
         {
             TextureViewDesc ViewDesc;
             ViewDesc.TextureDim = TexDesc.Type;
@@ -372,7 +372,7 @@ protected:
             pCreateObjFromNativeRes->CreateTexture(pTestCubemap);
         }
 
-        if (TexCaps.bTextureViewSupported && !pDevice->GetTextureFormatInfo(TexDesc.Format).IsTypeless)
+        if (TexCaps.bTextureViewSupported && !FmtInfo.IsTypeless)
         {
             TextureViewDesc ViewDesc;
             if (TexDesc.BindFlags & BIND_SHADER_RESOURCE)
@@ -546,12 +546,7 @@ TEST_P(TextureCreationTest, CreateTexture)
     }
     else
     {
-        static bool FirstTime = true;
-        if (FirstTime)
-        {
-            LOG_WARNING_MESSAGE("Texture 1D is not supported\n");
-            FirstTime = false;
-        }
+        LOG_WARNING_MESSAGE_ONCE("Texture 1D is not supported\n");
     }
 
     if (TexCaps.bTexture1DArraySupported)
@@ -561,12 +556,7 @@ TEST_P(TextureCreationTest, CreateTexture)
     }
     else
     {
-        static bool FirstTime = true;
-        if (FirstTime)
-        {
-            LOG_WARNING_MESSAGE("Texture 1D array is not supported\n");
-            FirstTime = false;
-        }
+        LOG_WARNING_MESSAGE_ONCE("Texture 1D array is not supported\n");
     }
 
     // Test texture 2D / texture 2D array
