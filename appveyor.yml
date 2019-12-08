@@ -62,7 +62,7 @@ install:
   - BuildTools\Scripts\appveyor\install.bat
 
 before_build:
-  - 'cd %APPVEYOR_BUILD_FOLDER%\BuildTools\FormatValidation'
+  - cd BuildTools\FormatValidation
   - validate_format_win.bat
   - 'cd %APPVEYOR_BUILD_FOLDER%'
   - echo %PLATFORM%
@@ -75,11 +75,11 @@ build:
   parallel: true
 
 test_script:
-  - 'cd %APPVEYOR_BUILD_FOLDER%\UnitTests\DiligentCoreAPITest\assets'
+  - cd UnitTests\DiligentCoreAPITest\assets
   - '%APPVEYOR_BUILD_FOLDER%\BuildTools\Scripts\appveyor\run_tests.bat %APPVEYOR_BUILD_FOLDER%\build'
 
 after_test:
-  - 'cd %APPVEYOR_BUILD_FOLDER%\build\install'
+  - cd install
   - 7z a DiligentCore-"%platform_name%"-"%PLATFORM%"-"%CONFIGURATION%".zip
     .\*
 
