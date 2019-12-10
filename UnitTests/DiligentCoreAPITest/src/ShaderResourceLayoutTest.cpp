@@ -168,7 +168,7 @@ TEST(ShaderResourceLayout, ResourceLayout)
 
         TxlBuffViewDesc.Name     = "Storage texel buffer UAV";
         TxlBuffViewDesc.ViewType = BUFFER_VIEW_UNORDERED_ACCESS;
-        for (int i=0; i < _countof(pStorageTexelBuff); ++i)
+        for (int i = 0; i < _countof(pStorageTexelBuff); ++i)
         {
             pDevice->CreateBuffer(TxlBuffDesc, nullptr, &(pStorageTexelBuff[i]));
             ASSERT_NE(pStorageTexelBuff[i], nullptr);
