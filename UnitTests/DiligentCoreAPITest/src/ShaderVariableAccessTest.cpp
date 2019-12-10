@@ -35,7 +35,7 @@ namespace Diligent
 
 namespace Test
 {
-    
+
 void PrintShaderResources(IShader* pShader)
 {
     RefCntAutoPtr<IShaderD3D> pShaderD3D(pShader, IID_ShaderD3D);
