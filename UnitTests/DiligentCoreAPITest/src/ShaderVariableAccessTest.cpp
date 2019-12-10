@@ -30,9 +30,12 @@
 
 using namespace Diligent;
 
-namespace
+namespace Diligent
 {
 
+namespace Test
+{
+    
 void PrintShaderResources(IShader* pShader)
 {
     RefCntAutoPtr<IShaderD3D> pShaderD3D(pShader, IID_ShaderD3D);
@@ -57,6 +60,12 @@ void PrintShaderResources(IShader* pShader)
     }
     LOG_INFO_MESSAGE(ss.str());
 }
+
+} // namespace Test
+
+} // namespace Diligent
+namespace
+{
 
 TEST(ShaderResourceLayout, VariableAccess)
 {
@@ -218,7 +227,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         pDevice->CreateShader(ShaderCI, &pVS);
         ASSERT_NE(pVS, nullptr);
 
-        PrintShaderResources(pVS);
+        Diligent::Test::PrintShaderResources(pVS);
     }
 
     std::vector<ShaderResourceVariableDesc> VarDesc =
@@ -260,7 +269,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
 
-        PrintShaderResources(pPS);
+        Diligent::Test::PrintShaderResources(pPS);
     }
 
 

@@ -323,6 +323,8 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 
 TestingEnvironment::~TestingEnvironment()
 {
+    m_pDeviceContext->Flush();
+    m_pDeviceContext->FinishFrame();
 }
 
 // Override this to define how to set up the environment.

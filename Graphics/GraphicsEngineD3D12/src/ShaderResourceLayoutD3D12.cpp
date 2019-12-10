@@ -567,9 +567,9 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
         }
         else if (ResourceCache.DbgGetContentType() == ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources)
         {
-            if (GetResType() == CachedResourceType::CBV)
+            if (GetResType() == CachedResourceType::CBV && Attribs.BindCount == 1)
             {
-                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Constant buffers are bound as root views and should not be assigned shader visible descriptor space");
+                VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Non-array constant buffers are bound as root views and should not be assigned shader visible descriptor space");
             }
             else
             {
@@ -879,9 +879,9 @@ bool ShaderResourceLayoutD3D12::dvpVerifyBindings(const ShaderResourceCacheD3D12
                     }
                     else if (ResourceCache.DbgGetContentType() == ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources)
                     {
-                        if (res.GetResType() == CachedResourceType::CBV)
+                        if (res.GetResType() == CachedResourceType::CBV && res.Attribs.BindCount == 1)
                         {
-                            VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Constant buffers are bound as root views and should not be assigned shader visible descriptor space");
+                            VERIFY(ShdrVisibleHeapCPUDescriptorHandle.ptr == 0, "Non-array constant buffers are bound as root views and should not be assigned shader visible descriptor space");
                         }
                         else
                         {
