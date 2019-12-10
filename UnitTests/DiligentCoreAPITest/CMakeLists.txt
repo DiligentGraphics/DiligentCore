@@ -45,6 +45,7 @@ PRIVATE
     Diligent-TargetPlatform
     Diligent-GraphicsAccessories
     Diligent-Common
+    Diligent-GraphicsTools
     ${ENGINE_LIBRARIES}
 )
 
