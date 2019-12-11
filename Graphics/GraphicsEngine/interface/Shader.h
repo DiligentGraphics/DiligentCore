@@ -246,6 +246,16 @@ enum SHADER_RESOURCE_TYPE : Uint8
 /// Shader resource description
 struct ShaderResourceDesc
 {
+    ShaderResourceDesc() noexcept {}
+
+    ShaderResourceDesc(const char*          _Name,
+                       SHADER_RESOURCE_TYPE _Type,
+                       Uint32               _ArraySize) noexcept :
+        Name{_Name},
+        Type{_Type},
+        ArraySize{_ArraySize}
+    {}
+
     // clang-format off
     /// Shader resource name
     const char*          Name      = nullptr;

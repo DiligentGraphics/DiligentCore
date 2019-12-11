@@ -97,6 +97,7 @@ protected:
         }
     }
 
+    template <typename TModifyShaderCI>
     static RefCntAutoPtr<IShader> CreateShader(const char*               ShaderName,
                                                const char*               FileName,
                                                const char*               EntryPoint,
@@ -104,7 +105,8 @@ protected:
                                                SHADER_SOURCE_LANGUAGE    SrcLang,
                                                const ShaderMacro*        Macros,
                                                const ShaderResourceDesc* ExpectedResources,
-                                               Uint32                    NumExpectedResources)
+                                               Uint32                    NumExpectedResources,
+                                               TModifyShaderCI           ModifyShaderCI)
     {
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
@@ -123,6 +125,8 @@ protected:
         ShaderCI.SourceLanguage  = SrcLang;
         ShaderCI.Macros          = Macros;
 
+        ModifyShaderCI(ShaderCI);
+
         RefCntAutoPtr<IShader> pShader;
         pDevice->CreateShader(ShaderCI, &pShader);
         if (pShader)
@@ -133,6 +137,28 @@ protected:
 
         return pShader;
     }
+
+    static RefCntAutoPtr<IShader> CreateShader(const char*               ShaderName,
+                                               const char*               FileName,
+                                               const char*               EntryPoint,
+                                               SHADER_TYPE               ShaderType,
+                                               SHADER_SOURCE_LANGUAGE    SrcLang,
+                                               const ShaderMacro*        Macros,
+                                               const ShaderResourceDesc* ExpectedResources,
+                                               Uint32                    NumExpectedResources)
+    {
+        return CreateShader(ShaderName,
+                            FileName,
+                            EntryPoint,
+                            ShaderType,
+                            SrcLang,
+                            Macros,
+                            ExpectedResources,
+                            NumExpectedResources,
+                            [](const ShaderCreateInfo&) {});
+    }
+
+
     static void CreateGraphicsPSO(IShader*                               pVS,
                                   IShader*                               pPS,
                                   const PipelineResourceLayoutDesc&      ResourceLayout,
@@ -222,6 +248,7 @@ protected:
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
 
+    void TestTexturesAndStaticSamplers(bool TestStaticSamplers);
     void TestStructuredOrFormattedBuffer(bool IsFormatted);
     void TestRWStructuredOrFormattedBuffer(bool IsFormatted);
 
@@ -249,39 +276,71 @@ RefCntAutoPtr<ITextureView> ShaderResourceLayoutTest::pRTV;
             pVar->SetMethod(__VA_ARGS__);                                               \
     } while (false)
 
-TEST_F(ShaderResourceLayoutTest, Textures)
+
+void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamplers)
 {
+    auto*                           pEnv    = TestingEnvironment::GetInstance();
+    auto*                           pDevice = pEnv->GetDevice();
     TestingEnvironment::ScopedReset AutoResetEnvironment;
 
-    static constexpr int StaticTexArraySize  = 2;
-    static constexpr int MutableTexArraySize = 4;
-    static constexpr int DynamicTexArraySize = 3;
-    ShaderMacroHelper    Macros;
-    Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", StaticTexArraySize);
-    Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", MutableTexArraySize);
-    Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", DynamicTexArraySize);
+    static constexpr Uint32 StaticTexArraySize  = 2;
+    static constexpr Uint32 MutableTexArraySize = 4;
+    static constexpr Uint32 DynamicTexArraySize = 3;
+    ShaderMacroHelper       Macros;
+    Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
+    Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
+    Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
 
     RefCntAutoPtr<IPipelineState>         pPSO;
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
     // clang-format off
-    ShaderResourceDesc Resources[] = 
+    std::vector<ShaderResourceDesc> Resources = 
     {
-        {"g_Tex2D_Static",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
-        {"g_Tex2D_Mut",         SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
-        {"g_Tex2D_Dyn",         SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
-        {"g_Tex2DArr_Static",   SHADER_RESOURCE_TYPE_TEXTURE_SRV, StaticTexArraySize},
-        {"g_Tex2DArr_Mut",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, MutableTexArraySize},
-        {"g_Tex2DArr_Dyn",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, DynamicTexArraySize},
-        {"g_Sampler",           SHADER_RESOURCE_TYPE_SAMPLER,     1},
+        ShaderResourceDesc{"g_Tex2D_Static",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
+        ShaderResourceDesc{"g_Tex2D_Mut",         SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
+        ShaderResourceDesc{"g_Tex2D_Dyn",         SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
+        ShaderResourceDesc{"g_Tex2DArr_Static",   SHADER_RESOURCE_TYPE_TEXTURE_SRV, StaticTexArraySize},
+        ShaderResourceDesc{"g_Tex2DArr_Mut",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, MutableTexArraySize},
+        ShaderResourceDesc{"g_Tex2DArr_Dyn",      SHADER_RESOURCE_TYPE_TEXTURE_SRV, DynamicTexArraySize}
     };
+    if (!pDevice->GetDeviceCaps().IsGLDevice())
+    {
+        if (TestStaticSamplers)
+        {
+            Resources.emplace_back("g_Tex2D_Static_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, 1);
+            Resources.emplace_back("g_Tex2D_Mut_sampler",       SHADER_RESOURCE_TYPE_SAMPLER, 1);
+            Resources.emplace_back("g_Tex2D_Dyn_sampler",       SHADER_RESOURCE_TYPE_SAMPLER, 1);
+            Resources.emplace_back("g_Tex2DArr_Static_sampler", SHADER_RESOURCE_TYPE_SAMPLER, 1);
+            Resources.emplace_back("g_Tex2DArr_Mut_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, MutableTexArraySize);
+            Resources.emplace_back("g_Tex2DArr_Dyn_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, DynamicTexArraySize);
+        }
+        else
+        {
+            Resources.emplace_back("g_Sampler", SHADER_RESOURCE_TYPE_SAMPLER, 1);
+        }
+    }
     // clang-format on
 
-    auto pVS = CreateShader("ShaderResourceLayoutTest.Textures - VS", "Textures.hlsl", "VSMain",
+    auto ModifyShaderCI = [TestStaticSamplers](ShaderCreateInfo& ShaderCI)
+    {
+        if (TestStaticSamplers)
+        {
+            ShaderCI.UseCombinedTextureSamplers = true;
+            ShaderCI.HLSLVersion = ShaderCreateInfo::ShaderVersion{5,0};
+        }
+    };
+    auto pVS = CreateShader(TestStaticSamplers ? "ShaderResourceLayoutTest.StaticSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
+                            TestStaticSamplers ? "StaticSamplers.hlsl" : "Textures.hlsl",
+                            "VSMain",
                             SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
-                            Resources, _countof(Resources));
-    auto pPS = CreateShader("ShaderResourceLayoutTest.Textures - PS", "Textures.hlsl", "PSMain",
+                            Resources.data(), static_cast<Uint32>(Resources.size()),
+                            ModifyShaderCI);
+    auto pPS = CreateShader(TestStaticSamplers ? "ShaderResourceLayoutTest.StaticSamplers - PS" : "ShaderResourceLayoutTest.Textures - PS",
+                            TestStaticSamplers ? "StaticSamplers.hlsl" : "Textures.hlsl",
+                            "PSMain",
                             SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
-                            Resources, _countof(Resources));
+                            Resources.data(), static_cast<Uint32>(Resources.size()),
+                            ModifyShaderCI);
     ASSERT_NE(pVS, nullptr);
     ASSERT_NE(pPS, nullptr);
 
@@ -297,17 +356,27 @@ TEST_F(ShaderResourceLayoutTest, Textures)
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
     };
-    StaticSamplerDesc StaticSamplers[] =
+    std::vector<StaticSamplerDesc> StaticSamplers;
+    if (TestStaticSamplers)
     {
-        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{}}
-    };
+        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static",    SamplerDesc{});
+        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",       SamplerDesc{});
+        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",       SamplerDesc{});
+        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SamplerDesc{});
+        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SamplerDesc{});
+        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SamplerDesc{});
+    }
+    else
+    {
+        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{});
+    }
     // clang-format on
 
     PipelineResourceLayoutDesc ResourceLayout;
     ResourceLayout.Variables         = Vars;
     ResourceLayout.NumVariables      = _countof(Vars);
-    ResourceLayout.StaticSamplers    = StaticSamplers;
-    ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
+    ResourceLayout.StaticSamplers    = StaticSamplers.data();
+    ResourceLayout.NumStaticSamplers = static_cast<Uint32>(StaticSamplers.size());
 
     CreateGraphicsPSO(pVS, pPS, ResourceLayout, pPSO, pSRB);
     ASSERT_NE(pPSO, nullptr);
@@ -318,7 +387,6 @@ TEST_F(ShaderResourceLayoutTest, Textures)
     std::array<RefCntAutoPtr<ITexture>, MaxTextures> pTextures;
     std::array<IDeviceObject*, MaxTextures>          pTexSRVs = {};
 
-    auto* pEnv = TestingEnvironment::GetInstance();
     for (Uint32 i = 0; i < MaxTextures; ++i)
     {
         pTextures[i] = pEnv->CreateTexture("Test texture", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 256, 256);
@@ -363,6 +431,17 @@ TEST_F(ShaderResourceLayoutTest, Textures)
     pContext->Draw(DrawAttrs);
 }
 
+TEST_F(ShaderResourceLayoutTest, Textures)
+{
+    TestTexturesAndStaticSamplers(false);
+}
+
+TEST_F(ShaderResourceLayoutTest, StaticSamplers)
+{
+    TestTexturesAndStaticSamplers(true);
+}
+
+
 void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 {
     TestingEnvironment::ScopedReset AutoResetEnvironment;
@@ -392,9 +471,9 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     
     auto AddArrayResources = [&Resources]()
     {
-        Resources.emplace_back(ShaderResourceDesc{"g_BuffArr_Static", SHADER_RESOURCE_TYPE_BUFFER_SRV, StaticBuffArraySize});
-        Resources.emplace_back(ShaderResourceDesc{"g_BuffArr_Mut",    SHADER_RESOURCE_TYPE_BUFFER_SRV, MutableBuffArraySize});
-        Resources.emplace_back(ShaderResourceDesc{"g_BuffArr_Dyn",    SHADER_RESOURCE_TYPE_BUFFER_SRV, DynamicBuffArraySize});
+        Resources.emplace_back("g_BuffArr_Static", SHADER_RESOURCE_TYPE_BUFFER_SRV, StaticBuffArraySize);
+        Resources.emplace_back("g_BuffArr_Mut",    SHADER_RESOURCE_TYPE_BUFFER_SRV, MutableBuffArraySize);
+        Resources.emplace_back("g_BuffArr_Dyn",    SHADER_RESOURCE_TYPE_BUFFER_SRV, DynamicBuffArraySize);
     };
     // clang-format on
     if (!UseArraysInPSOnly)
@@ -780,13 +859,13 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
 {
     TestingEnvironment::ScopedReset AutoResetEnvironment;
 
-    static constexpr int StaticSamArraySize  = 2;
-    static constexpr int MutableSamArraySize = 4;
-    static constexpr int DynamicSamArraySize = 3;
-    ShaderMacroHelper    Macros;
-    Macros.AddShaderMacro("STATIC_SAM_ARRAY_SIZE", StaticSamArraySize);
-    Macros.AddShaderMacro("MUTABLE_SAM_ARRAY_SIZE", MutableSamArraySize);
-    Macros.AddShaderMacro("DYNAMIC_SAM_ARRAY_SIZE", DynamicSamArraySize);
+    static constexpr Uint32 StaticSamArraySize  = 2;
+    static constexpr Uint32 MutableSamArraySize = 4;
+    static constexpr Uint32 DynamicSamArraySize = 3;
+    ShaderMacroHelper       Macros;
+    Macros.AddShaderMacro("STATIC_SAM_ARRAY_SIZE", static_cast<int>(StaticSamArraySize));
+    Macros.AddShaderMacro("MUTABLE_SAM_ARRAY_SIZE", static_cast<int>(MutableSamArraySize));
+    Macros.AddShaderMacro("DYNAMIC_SAM_ARRAY_SIZE", static_cast<int>(DynamicSamArraySize));
 
     RefCntAutoPtr<IPipelineState>         pPSO;
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
