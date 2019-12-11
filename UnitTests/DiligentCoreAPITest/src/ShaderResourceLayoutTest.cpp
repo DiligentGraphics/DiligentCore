@@ -161,6 +161,47 @@ protected:
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
 
+    static RefCntAutoPtr<IBufferView> CreateResourceBufferView(BUFFER_MODE BufferMode, BUFFER_VIEW_TYPE ViewType)
+    {
+        VERIFY_EXPR(ViewType == BUFFER_VIEW_SHADER_RESOURCE || ViewType == BUFFER_VIEW_UNORDERED_ACCESS);
+
+        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pDevice = pEnv->GetDevice();
+
+        BufferDesc BuffDesc;
+        BuffDesc.Name              = "Formatted buffer";
+        BuffDesc.uiSizeInBytes     = 256;
+        BuffDesc.BindFlags         = ViewType == BUFFER_VIEW_SHADER_RESOURCE ? BIND_SHADER_RESOURCE : BIND_UNORDERED_ACCESS;
+        BuffDesc.Usage             = USAGE_DEFAULT;
+        BuffDesc.ElementByteStride = 16;
+        BuffDesc.Mode              = BufferMode;
+        RefCntAutoPtr<IBuffer>     pBuffer;
+        RefCntAutoPtr<IBufferView> pBufferView;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
+        if (!pBuffer)
+        {
+            ADD_FAILURE() << "Unable to create buffer " << BuffDesc;
+            return pBufferView;
+        }
+
+        if (BufferMode == BUFFER_MODE_FORMATTED)
+        {
+            BufferViewDesc BuffViewDesc;
+            BuffViewDesc.Name                 = "Formatted buffer SRV";
+            BuffViewDesc.ViewType             = ViewType;
+            BuffViewDesc.Format.ValueType     = VT_FLOAT32;
+            BuffViewDesc.Format.NumComponents = 4;
+            BuffViewDesc.Format.IsNormalized  = false;
+            pBuffer->CreateView(BuffViewDesc, &pBufferView);
+        }
+        else
+        {
+            pBufferView = pBuffer->GetDefaultView(ViewType);
+        }
+
+        return pBufferView;
+    }
+
     static void CreateComputePSO(IShader*                               pCS,
                                  const PipelineResourceLayoutDesc&      ResourceLayout,
                                  RefCntAutoPtr<IPipelineState>&         pPSO,
@@ -429,34 +470,8 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 
     for (Uint32 i = 0; i < MaxBuffers; ++i)
     {
-        BufferDesc BuffDesc;
-        BuffDesc.Name              = "Formatted buffer";
-        BuffDesc.uiSizeInBytes     = 256;
-        BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
-        BuffDesc.Usage             = USAGE_DEFAULT;
-        BuffDesc.ElementByteStride = 16;
-        BuffDesc.Mode              = IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED;
-        RefCntAutoPtr<IBuffer> pBuffer;
-        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
-        ASSERT_NE(pBuffer, nullptr) << "Unable to create buffer " << BuffDesc;
-
-        if (IsFormatted)
-        {
-            BufferViewDesc BuffViewDesc;
-            BuffViewDesc.Name                 = "Formatted buffer (uniform texel buffer) SRV";
-            BuffViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
-            BuffViewDesc.Format.ValueType     = VT_FLOAT32;
-            BuffViewDesc.Format.NumComponents = 4;
-            BuffViewDesc.Format.IsNormalized  = false;
-            pBuffer->CreateView(BuffViewDesc, &pBufferViews[i]);
-        }
-        else
-        {
-            pBufferViews[i] = pBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE);
-        }
-
+        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_SHADER_RESOURCE);
         ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
-
         pBuffSRVs[i] = pBufferViews[i];
     }
 
@@ -613,34 +628,8 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
 
     for (Uint32 i = 0; i < TotalBuffers; ++i)
     {
-        BufferDesc BuffDesc;
-        BuffDesc.Name              = "Formatted buffer";
-        BuffDesc.uiSizeInBytes     = 256;
-        BuffDesc.BindFlags         = BIND_UNORDERED_ACCESS;
-        BuffDesc.Usage             = USAGE_DEFAULT;
-        BuffDesc.ElementByteStride = 16;
-        BuffDesc.Mode              = IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED;
-        RefCntAutoPtr<IBuffer> pBuffer;
-        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
-        ASSERT_NE(pBuffer, nullptr) << "Unable to create buffer " << BuffDesc;
-
-        if (IsFormatted)
-        {
-            BufferViewDesc BuffViewDesc;
-            BuffViewDesc.Name                 = "Formatted buffer (uniform texel buffer) SRV";
-            BuffViewDesc.ViewType             = BUFFER_VIEW_UNORDERED_ACCESS;
-            BuffViewDesc.Format.ValueType     = VT_FLOAT32;
-            BuffViewDesc.Format.NumComponents = 4;
-            BuffViewDesc.Format.IsNormalized  = false;
-            pBuffer->CreateView(BuffViewDesc, &pBufferViews[i]);
-        }
-        else
-        {
-            pBufferViews[i] = pBuffer->GetDefaultView(BUFFER_VIEW_UNORDERED_ACCESS);
-        }
-
+        pBufferViews[i] = CreateResourceBufferView(IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED, BUFFER_VIEW_UNORDERED_ACCESS);
         ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
-
         pBuffUAVs[i] = pBufferViews[i];
     }
 
