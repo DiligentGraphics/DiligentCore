@@ -672,12 +672,107 @@ TEST_F(ShaderResourceLayoutTest, StructuredRWBuffers)
     TestRWStructuredOrFormattedBuffer(false /*IsFormatted*/);
 }
 
-
-TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
+TEST_F(ShaderResourceLayoutTest, RWTextures)
 {
+    TestingEnvironment::ScopedReset AutoResetEnvironment;
+
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    auto deviceType = pDevice->GetDeviceCaps().DevType;
+
+    const Uint32 StaticTexArraySize  = 2;
+    const Uint32 MutableTexArraySize = deviceType == DeviceType::D3D11 ? 2 : 4;
+    const Uint32 DynamicTexArraySize = deviceType == DeviceType::D3D11 ? 1 : 3;
+
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
+    Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", static_cast<int>(MutableTexArraySize));
+    Macros.AddShaderMacro("DYNAMIC_TEX_ARRAY_SIZE", static_cast<int>(DynamicTexArraySize));
+
+    // clang-format off
+    ShaderResourceDesc Resources[] = 
+    {
+        {"g_RWTex2D_Static",    SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
+        {"g_RWTex2D_Mut",       SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
+        {"g_RWTex2D_Dyn",       SHADER_RESOURCE_TYPE_TEXTURE_UAV, 1},
+        {"g_RWTex2DArr_Static", SHADER_RESOURCE_TYPE_TEXTURE_UAV, StaticTexArraySize },
+        {"g_RWTex2DArr_Mut",    SHADER_RESOURCE_TYPE_TEXTURE_UAV, MutableTexArraySize},
+        {"g_RWTex2DArr_Dyn",    SHADER_RESOURCE_TYPE_TEXTURE_UAV, DynamicTexArraySize}
+    };
+
+    auto pCS = CreateShader("ShaderResourceLayoutTest.RWTextures - CS",
+                            "RWTextures.hlsl", "main",
+                            SHADER_TYPE_COMPUTE, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
+                            Resources, _countof(Resources));
+    ASSERT_NE(pCS, nullptr);
+
+    // clang-format off
+    ShaderResourceVariableDesc Vars[] =
+    {
+        {SHADER_TYPE_COMPUTE, "g_RWTex2D_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_COMPUTE, "g_RWTex2D_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+
+        {SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+    };
+    // clang-format on
+
+    PipelineResourceLayoutDesc ResourceLayout;
+    ResourceLayout.Variables    = Vars;
+    ResourceLayout.NumVariables = _countof(Vars);
+
+    RefCntAutoPtr<IPipelineState>         pPSO;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+
+    CreateComputePSO(pCS, ResourceLayout, pPSO, pSRB);
+    ASSERT_NE(pPSO, nullptr);
+    ASSERT_NE(pSRB, nullptr);
+
+    const auto TotalTextures = StaticTexArraySize + MutableTexArraySize + DynamicTexArraySize + 3 + 2;
+
+    std::vector<RefCntAutoPtr<ITexture>> pTextures(TotalTextures);
+    std::vector<IDeviceObject*>          pUAVs(TotalTextures);
+
+    for (Uint32 i = 0; i < TotalTextures; ++i)
+    {
+        pTextures[i] = pEnv->CreateTexture("Test RW texture", TEX_FORMAT_RGBA32_FLOAT, BIND_UNORDERED_ACCESS, 256, 256);
+        ASSERT_NE(pTextures[i], nullptr);
+        pUAVs[i] = pTextures[i]->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS);
+        ASSERT_NE(pUAVs[i], nullptr);
+    }
+
+    Uint32 uav = 0;
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWTex2D_Static", Set, pUAVs[uav++]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Static", SetArray, &pUAVs[uav], 0, StaticTexArraySize);
+    uav += StaticTexArraySize;
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Mut", Set, pUAVs[uav++]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, pUAVs[uav++]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Mut", SetArray, &pUAVs[uav], 0, MutableTexArraySize);
+    uav += MutableTexArraySize;
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, &pUAVs[uav], 0, DynamicTexArraySize);
+    uav += DynamicTexArraySize;
+    VERIFY_EXPR(uav + 2 == pUAVs.size());
+
+    pSRB->InitializeStaticResources(pPSO);
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DispatchComputeAttribs DispatchAttribs(1, 1, 1);
+    pContext->DispatchCompute(DispatchAttribs);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, pUAVs[uav++]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, &pUAVs[uav++], 1, 1);
+    pContext->DispatchCompute(DispatchAttribs);
 }
 
-TEST_F(ShaderResourceLayoutTest, RWTextures)
+TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
 {
 }
 
