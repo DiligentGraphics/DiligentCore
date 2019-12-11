@@ -148,24 +148,12 @@ TEST(ShaderResourceLayout, ResourceArray)
 
     RefCntAutoPtr<ITextureView> pRTV, pDSV;
     {
-        TextureDesc TexDesc;
-        TexDesc.Name      = "Offscreen render target";
-        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-        TexDesc.Width     = 25;
-        TexDesc.Height    = 256;
-        TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-        TexDesc.BindFlags = BIND_RENDER_TARGET;
-        RefCntAutoPtr<ITexture> pRenderTarget;
-        pDevice->CreateTexture(TexDesc, nullptr, &pRenderTarget);
+        auto pRenderTarget = pEnv->CreateTexture("ShaderResourceLayout: offscreen render target", TEX_FORMAT_RGBA8_UNORM, BIND_RENDER_TARGET, 256, 256);
         ASSERT_NE(pRenderTarget, nullptr);
         pRTV = pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
         ASSERT_NE(pRTV, nullptr);
 
-        TexDesc.Name      = "Offscreen depth";
-        TexDesc.Format    = TEX_FORMAT_D32_FLOAT;
-        TexDesc.BindFlags = BIND_DEPTH_STENCIL;
-        RefCntAutoPtr<ITexture> pDepth;
-        pDevice->CreateTexture(TexDesc, nullptr, &pDepth);
+        auto pDepth = pEnv->CreateTexture("ShaderResourceLayout: offscreen depth", TEX_FORMAT_D32_FLOAT, BIND_DEPTH_STENCIL, 256, 256);
         ASSERT_NE(pDepth, nullptr);
         pDSV = pDepth->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
         ASSERT_NE(pDSV, nullptr);
@@ -174,7 +162,7 @@ TEST(ShaderResourceLayout, ResourceArray)
     RefCntAutoPtr<ISampler> pSampler;
     SamplerDesc             SamDesc;
     pDevice->CreateSampler(SamDesc, &pSampler);
-    RefCntAutoPtr<Diligent::ITexture> pTextures[8];
+    RefCntAutoPtr<ITexture> pTextures[8];
     for (auto t = 0; t < _countof(pTextures); ++t)
     {
         TextureDesc TexDesc;

@@ -356,4 +356,22 @@ void TestingEnvironment::Reset()
     m_pDeviceContext->InvalidateState();
 }
 
+RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height)
+{
+    TextureDesc TexDesc;
+
+    TexDesc.Name      = Name;
+    TexDesc.Type      = RESOURCE_DIM_TEX_2D;
+    TexDesc.Format    = Fmt;
+    TexDesc.BindFlags = BindFlags;
+    TexDesc.Width     = Width;
+    TexDesc.Height    = Height;
+    
+    RefCntAutoPtr<ITexture> pTexture;
+    m_pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
+    VERIFY_EXPR(pTexture != nullptr);
+
+    return pTexture;
+}
+
 } // namespace Diligent

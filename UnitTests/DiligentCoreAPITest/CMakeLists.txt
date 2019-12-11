@@ -4,7 +4,7 @@ project(DiligentCoreAPITest)
 
 file(GLOB COMMON_SOURCE LIST_DIRECTORIES false src/*)
 file(GLOB COMMON_INCLUDE LIST_DIRECTORIES false include/*)
-file(GLOB SHADERS LIST_DIRECTORIES false assets/shaders/*.*)
+file(GLOB_RECURSE SHADERS LIST_DIRECTORIES false assets/shaders/*.*)
 
 set_source_files_properties(${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
 

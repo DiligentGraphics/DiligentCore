@@ -25,8 +25,19 @@
 #include "DeviceContext.h"
 #include "RefCntAutoPtr.h"
 #include "SwapChain.h"
+#include "GraphicsAccessories.h"
 
 #include "gtest/gtest.h"
+
+namespace Diligent
+{
+
+inline std::ostream& operator<<(std::ostream& os, const SHADER_RESOURCE_TYPE& ResType)
+{
+    return os << GetShaderResourceTypeLiteralName(ResType, true);
+}
+
+} // namespace Diligent
 
 namespace Diligent
 {
@@ -72,6 +83,8 @@ public:
     IDeviceContext* GetDeviceContext() { return m_pDeviceContext; }
 
     static TestingEnvironment* GetInstance() { return m_pTheEnvironment; }
+
+    RefCntAutoPtr<ITexture> CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height);
 
 private:
     const DeviceType m_DeviceType;
