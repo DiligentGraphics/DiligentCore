@@ -161,7 +161,28 @@ protected:
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
 
+    static void CreateComputePSO(IShader*                               pCS,
+                                 const PipelineResourceLayoutDesc&      ResourceLayout,
+                                 RefCntAutoPtr<IPipelineState>&         pPSO,
+                                 RefCntAutoPtr<IShaderResourceBinding>& pSRB)
+    {
+        PipelineStateDesc PSODesc;
+
+        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pDevice = pEnv->GetDevice();
+
+        PSODesc.Name                = "Shader resource layout test";
+        PSODesc.IsComputePipeline   = true;
+        PSODesc.ResourceLayout      = ResourceLayout;
+        PSODesc.ComputePipeline.pCS = pCS;
+
+        pDevice->CreatePipelineState(PSODesc, &pPSO);
+        if (pPSO)
+            pPSO->CreateShaderResourceBinding(&pSRB, false);
+    }
+
     void TestStructuredOrFormattedBuffer(bool IsFormatted);
+    void TestRWStructuredOrFormattedBuffer(bool IsFormatted);
 
     static RefCntAutoPtr<ITextureView> pRTV;
 };
@@ -313,9 +334,6 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", MutableBuffArraySize);
     Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", DynamicBuffArraySize);
 
-    RefCntAutoPtr<IPipelineState>         pPSO;
-    RefCntAutoPtr<IShaderResourceBinding> pSRB;
-
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
@@ -326,9 +344,9 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     // clang-format off
     std::vector<ShaderResourceDesc> Resources = 
     {
-        {"g_Buff_Static",      SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
-        {"g_Buff_Mut",         SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
-        {"g_Buff_Dyn",         SHADER_RESOURCE_TYPE_BUFFER_SRV, 1}
+        {"g_Buff_Static", SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
+        {"g_Buff_Mut",    SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
+        {"g_Buff_Dyn",    SHADER_RESOURCE_TYPE_BUFFER_SRV, 1}
     };
     
     auto AddArrayResources = [&Resources]()
@@ -364,7 +382,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     {
         GTEST_FAIL() << "Unexpected device type";
     }
-    auto pVS = CreateShader("ShaderResourceLayoutTest.Buffers - VS",
+    auto pVS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - VS" : "ShaderResourceLayoutTest.StructuredBuffers - VS",
                             ShaderFileName, "VSMain",
                             SHADER_TYPE_VERTEX, SrcLang, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()));
@@ -372,7 +390,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     {
         AddArrayResources();
     }
-    auto pPS = CreateShader("ShaderResourceLayoutTest.Buffers - PS",
+    auto pPS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - PS" : "ShaderResourceLayoutTest.StructuredBuffers - PS",
                             ShaderFileName, "PSMain",
                             SHADER_TYPE_PIXEL, SrcLang, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()));
@@ -396,6 +414,9 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     PipelineResourceLayoutDesc ResourceLayout;
     ResourceLayout.Variables    = Vars;
     ResourceLayout.NumVariables = _countof(Vars);
+
+    RefCntAutoPtr<IPipelineState>         pPSO;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
 
     CreateGraphicsPSO(pVS, pPS, ResourceLayout, pPSO, pSRB);
     ASSERT_NE(pPSO, nullptr);
@@ -504,6 +525,176 @@ TEST_F(ShaderResourceLayoutTest, StructuredBuffers)
 {
     TestStructuredOrFormattedBuffer(false);
 }
+
+
+void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatted)
+{
+    TestingEnvironment::ScopedReset AutoResetEnvironment;
+
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    auto deviceType = pDevice->GetDeviceCaps().DevType;
+
+    const Uint32      StaticBuffArraySize  = deviceType == DeviceType::D3D11 ? 1 : 4;
+    const Uint32      MutableBuffArraySize = deviceType == DeviceType::D3D11 ? 2 : 3;
+    const Uint32      DynamicBuffArraySize = 2;
+    ShaderMacroHelper Macros;
+    Macros.AddShaderMacro("STATIC_BUFF_ARRAY_SIZE", static_cast<int>(StaticBuffArraySize));
+    Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", static_cast<int>(MutableBuffArraySize));
+    Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", static_cast<int>(DynamicBuffArraySize));
+
+    // clang-format off
+    ShaderResourceDesc Resources[] = 
+    {
+        {"g_RWBuff_Static",    SHADER_RESOURCE_TYPE_BUFFER_UAV, 1},
+        {"g_RWBuff_Mut",       SHADER_RESOURCE_TYPE_BUFFER_UAV, 1},
+        {"g_RWBuff_Dyn",       SHADER_RESOURCE_TYPE_BUFFER_UAV, 1},
+        {"g_RWBuffArr_Static", SHADER_RESOURCE_TYPE_BUFFER_UAV, StaticBuffArraySize },
+        {"g_RWBuffArr_Mut",    SHADER_RESOURCE_TYPE_BUFFER_UAV, MutableBuffArraySize},
+        {"g_RWBuffArr_Dyn",    SHADER_RESOURCE_TYPE_BUFFER_UAV, DynamicBuffArraySize}
+    };
+
+    const char*            ShaderFileName = nullptr;
+    SHADER_SOURCE_LANGUAGE SrcLang        = SHADER_SOURCE_LANGUAGE_DEFAULT;
+    if (pDevice->GetDeviceCaps().IsD3DDevice())
+    {
+        ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.hlsl";
+        SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
+    }
+    else if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    {
+        ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.glsl";
+        SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
+    }
+    else if (pDevice->GetDeviceCaps().IsGLDevice())
+    {
+        ShaderFileName = IsFormatted ? "RWFormattedBuffers.glsl" : "RWStructuredBuffers.glsl";
+        SrcLang        = SHADER_SOURCE_LANGUAGE_GLSL;
+    }
+    else
+    {
+        GTEST_FAIL() << "Unexpected device type";
+    }
+    auto pCS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.RWFormattedBuffers - CS" : "ShaderResourceLayoutTest.RWtructuredBuffers - CS",
+                            ShaderFileName, "main",
+                            SHADER_TYPE_COMPUTE, SrcLang, Macros,
+                            Resources, _countof(Resources));
+    ASSERT_NE(pCS, nullptr);
+
+    // clang-format off
+    ShaderResourceVariableDesc Vars[] =
+    {
+        {SHADER_TYPE_COMPUTE, "g_RWBuff_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_COMPUTE, "g_RWBuff_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+
+        {SHADER_TYPE_COMPUTE, "g_RWBuffArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_COMPUTE, "g_RWBuffArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+    };
+    // clang-format on
+
+    PipelineResourceLayoutDesc ResourceLayout;
+    ResourceLayout.Variables    = Vars;
+    ResourceLayout.NumVariables = _countof(Vars);
+
+    RefCntAutoPtr<IPipelineState>         pPSO;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+
+    CreateComputePSO(pCS, ResourceLayout, pPSO, pSRB);
+    ASSERT_NE(pPSO, nullptr);
+    ASSERT_NE(pSRB, nullptr);
+
+    const auto TotalBuffers = StaticBuffArraySize + MutableBuffArraySize + DynamicBuffArraySize + 3 + 2;
+
+    std::vector<RefCntAutoPtr<IBufferView>> pBufferViews(TotalBuffers);
+    std::vector<IDeviceObject*>             pBuffUAVs(TotalBuffers);
+
+    for (Uint32 i = 0; i < TotalBuffers; ++i)
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name              = "Formatted buffer";
+        BuffDesc.uiSizeInBytes     = 256;
+        BuffDesc.BindFlags         = BIND_UNORDERED_ACCESS;
+        BuffDesc.Usage             = USAGE_DEFAULT;
+        BuffDesc.ElementByteStride = 16;
+        BuffDesc.Mode              = IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED;
+        RefCntAutoPtr<IBuffer> pBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
+        ASSERT_NE(pBuffer, nullptr) << "Unable to create buffer " << BuffDesc;
+
+        if (IsFormatted)
+        {
+            BufferViewDesc BuffViewDesc;
+            BuffViewDesc.Name                 = "Formatted buffer (uniform texel buffer) SRV";
+            BuffViewDesc.ViewType             = BUFFER_VIEW_UNORDERED_ACCESS;
+            BuffViewDesc.Format.ValueType     = VT_FLOAT32;
+            BuffViewDesc.Format.NumComponents = 4;
+            BuffViewDesc.Format.IsNormalized  = false;
+            pBuffer->CreateView(BuffViewDesc, &pBufferViews[i]);
+        }
+        else
+        {
+            pBufferViews[i] = pBuffer->GetDefaultView(BUFFER_VIEW_UNORDERED_ACCESS);
+        }
+
+        ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
+
+        pBuffUAVs[i] = pBufferViews[i];
+    }
+
+    Uint32 uav = 0;
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWBuff_Static", Set, pBuffUAVs[uav++]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Static", SetArray, &pBuffUAVs[uav], 0, StaticBuffArraySize);
+    uav += StaticBuffArraySize;
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Mut", Set, pBuffUAVs[uav++]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn", Set, pBuffUAVs[uav++]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Mut", SetArray, &pBuffUAVs[uav], 0, MutableBuffArraySize);
+    uav += MutableBuffArraySize;
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn", SetArray, &pBuffUAVs[uav], 0, DynamicBuffArraySize);
+    uav += DynamicBuffArraySize;
+    VERIFY_EXPR(uav + 2 == pBuffUAVs.size());
+
+    pSRB->InitializeStaticResources(pPSO);
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DispatchComputeAttribs DispatchAttribs(1, 1, 1);
+    pContext->DispatchCompute(DispatchAttribs);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuff_Dyn", Set, pBuffUAVs[uav++]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWBuffArr_Dyn", SetArray, &pBuffUAVs[uav++], 1, 1);
+    pContext->DispatchCompute(DispatchAttribs);
+}
+
+TEST_F(ShaderResourceLayoutTest, FormattedRWBuffers)
+{
+    TestRWStructuredOrFormattedBuffer(true);
+}
+
+TEST_F(ShaderResourceLayoutTest, StructuredRWBuffers)
+{
+    //TestRWStructuredOrFormattedBuffer(false);
+}
+
+
+TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
+{
+}
+
+TEST_F(ShaderResourceLayoutTest, RWTextures)
+{
+}
+
+TEST_F(ShaderResourceLayoutTest, SeparateSamplers)
+{
+}
+
 
 #if 0
 TEST(ShaderResourceLayout, ResourceLayout)
