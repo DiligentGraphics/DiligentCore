@@ -533,12 +533,12 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 
 TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
 {
-    TestStructuredOrFormattedBuffer(true);
+    TestStructuredOrFormattedBuffer(true /*IsFormatted*/);
 }
 
 TEST_F(ShaderResourceLayoutTest, StructuredBuffers)
 {
-    TestStructuredOrFormattedBuffer(false);
+    TestStructuredOrFormattedBuffer(false /*IsFormatted*/);
 }
 
 
@@ -551,9 +551,10 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
 
     auto deviceType = pDevice->GetDeviceCaps().DevType;
 
-    const Uint32      StaticBuffArraySize  = deviceType == DeviceType::D3D11 ? 1 : 4;
-    const Uint32      MutableBuffArraySize = deviceType == DeviceType::D3D11 ? 2 : 3;
-    const Uint32      DynamicBuffArraySize = 2;
+    const Uint32 StaticBuffArraySize  = deviceType == DeviceType::D3D11 ? 1 : 4;
+    const Uint32 MutableBuffArraySize = deviceType == DeviceType::D3D11 ? 2 : 3;
+    const Uint32 DynamicBuffArraySize = 2;
+
     ShaderMacroHelper Macros;
     Macros.AddShaderMacro("STATIC_BUFF_ARRAY_SIZE", static_cast<int>(StaticBuffArraySize));
     Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", static_cast<int>(MutableBuffArraySize));
@@ -663,12 +664,12 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
 
 TEST_F(ShaderResourceLayoutTest, FormattedRWBuffers)
 {
-    TestRWStructuredOrFormattedBuffer(true);
+    TestRWStructuredOrFormattedBuffer(true /*IsFormatted*/);
 }
 
 TEST_F(ShaderResourceLayoutTest, StructuredRWBuffers)
 {
-    //TestRWStructuredOrFormattedBuffer(false);
+    TestRWStructuredOrFormattedBuffer(false /*IsFormatted*/);
 }
 
 
