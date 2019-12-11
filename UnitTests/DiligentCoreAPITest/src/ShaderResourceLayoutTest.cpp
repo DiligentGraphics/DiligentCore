@@ -33,6 +33,13 @@
 
 using namespace Diligent;
 
+namespace Diligent
+{
+namespace Test
+{
+void PrintShaderResources(IShader* pShader);
+}
+} // namespace Diligent
 
 namespace
 {
@@ -121,6 +128,7 @@ protected:
         if (pShader)
         {
             VerifyShaderResources(pShader, ExpectedResources, NumExpectedResources);
+            Diligent::Test::PrintShaderResources(pShader);
         }
 
         return pShader;
@@ -152,6 +160,8 @@ protected:
         if (pPSO)
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
+
+    void TestStructuredOrFormattedBuffer(bool IsFormatted);
 
     static RefCntAutoPtr<ITextureView> pRTV;
 };
@@ -291,7 +301,7 @@ TEST_F(ShaderResourceLayoutTest, Textures)
     pContext->Draw(DrawAttrs);
 }
 
-TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
+void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
 {
     TestingEnvironment::ScopedReset AutoResetEnvironment;
 
@@ -305,24 +315,67 @@ TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
 
     RefCntAutoPtr<IPipelineState>         pPSO;
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
+
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    // Vulkan only allows 16 dynamic storage buffer bindings among all stages, so
+    // use arrays only in fragment shader for structured buffer test.
+    const auto UseArraysInPSOnly = !IsFormatted && pDevice->GetDeviceCaps().IsVulkanDevice();
+
     // clang-format off
-    ShaderResourceDesc Resources[] = 
+    std::vector<ShaderResourceDesc> Resources = 
     {
         {"g_Buff_Static",      SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
         {"g_Buff_Mut",         SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
-        {"g_Buff_Dyn",         SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
-        {"g_BuffArr_Static",   SHADER_RESOURCE_TYPE_BUFFER_SRV, StaticBuffArraySize},
-        {"g_BuffArr_Mut",      SHADER_RESOURCE_TYPE_BUFFER_SRV, MutableBuffArraySize},
-        {"g_BuffArr_Dyn",      SHADER_RESOURCE_TYPE_BUFFER_SRV, DynamicBuffArraySize}
+        {"g_Buff_Dyn",         SHADER_RESOURCE_TYPE_BUFFER_SRV, 1}
+    };
+    
+    auto AddArrayResources = [&Resources]()
+    {
+        Resources.emplace_back(ShaderResourceDesc{"g_BuffArr_Static", SHADER_RESOURCE_TYPE_BUFFER_SRV, StaticBuffArraySize});
+        Resources.emplace_back(ShaderResourceDesc{"g_BuffArr_Mut",    SHADER_RESOURCE_TYPE_BUFFER_SRV, MutableBuffArraySize});
+        Resources.emplace_back(ShaderResourceDesc{"g_BuffArr_Dyn",    SHADER_RESOURCE_TYPE_BUFFER_SRV, DynamicBuffArraySize});
     };
     // clang-format on
+    if (!UseArraysInPSOnly)
+    {
+        AddArrayResources();
+    }
 
-    auto pVS = CreateShader("ShaderResourceLayoutTest.Buffers - VS", "FormattedBuffers.hlsl", "VSMain",
-                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
-                            Resources, _countof(Resources));
-    auto pPS = CreateShader("ShaderResourceLayoutTest.Buffers - PS", "FormattedBuffers.hlsl", "PSMain",
-                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
-                            Resources, _countof(Resources));
+    const char*            ShaderFileName = nullptr;
+    SHADER_SOURCE_LANGUAGE SrcLang        = SHADER_SOURCE_LANGUAGE_DEFAULT;
+    if (pDevice->GetDeviceCaps().IsD3DDevice())
+    {
+        ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.hlsl";
+        SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
+    }
+    else if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    {
+        ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.glsl";
+        SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
+    }
+    else if (pDevice->GetDeviceCaps().IsGLDevice())
+    {
+        ShaderFileName = IsFormatted ? "FormattedBuffers.glsl" : "StructuredBuffers.glsl";
+        SrcLang        = SHADER_SOURCE_LANGUAGE_GLSL;
+    }
+    else
+    {
+        GTEST_FAIL() << "Unexpected device type";
+    }
+    auto pVS = CreateShader("ShaderResourceLayoutTest.Buffers - VS",
+                            ShaderFileName, "VSMain",
+                            SHADER_TYPE_VERTEX, SrcLang, Macros,
+                            Resources.data(), static_cast<Uint32>(Resources.size()));
+    if (UseArraysInPSOnly)
+    {
+        AddArrayResources();
+    }
+    auto pPS = CreateShader("ShaderResourceLayoutTest.Buffers - PS",
+                            ShaderFileName, "PSMain",
+                            SHADER_TYPE_PIXEL, SrcLang, Macros,
+                            Resources.data(), static_cast<Uint32>(Resources.size()));
     ASSERT_NE(pVS, nullptr);
     ASSERT_NE(pPS, nullptr);
 
@@ -353,8 +406,6 @@ TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
     std::array<RefCntAutoPtr<IBufferView>, MaxBuffers> pBufferViews;
     std::array<IDeviceObject*, MaxBuffers>             pBuffSRVs = {};
 
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
     for (Uint32 i = 0; i < MaxBuffers; ++i)
     {
         BufferDesc BuffDesc;
@@ -363,33 +414,56 @@ TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
         BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
         BuffDesc.Usage             = USAGE_DEFAULT;
         BuffDesc.ElementByteStride = 16;
-        BuffDesc.Mode              = BUFFER_MODE_FORMATTED;
+        BuffDesc.Mode              = IsFormatted ? BUFFER_MODE_FORMATTED : BUFFER_MODE_STRUCTURED;
         RefCntAutoPtr<IBuffer> pBuffer;
         pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
         ASSERT_NE(pBuffer, nullptr) << "Unable to create buffer " << BuffDesc;
 
-        BufferViewDesc BuffViewDesc;
-        BuffViewDesc.Name                 = "Formatted buffer (uniform texel buffer) SRV";
-        BuffViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
-        BuffViewDesc.Format.ValueType     = VT_FLOAT32;
-        BuffViewDesc.Format.NumComponents = 4;
-        BuffViewDesc.Format.IsNormalized  = false;
-        pBuffer->CreateView(BuffViewDesc, &pBufferViews[i]);
+        if (IsFormatted)
+        {
+            BufferViewDesc BuffViewDesc;
+            BuffViewDesc.Name                 = "Formatted buffer (uniform texel buffer) SRV";
+            BuffViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
+            BuffViewDesc.Format.ValueType     = VT_FLOAT32;
+            BuffViewDesc.Format.NumComponents = 4;
+            BuffViewDesc.Format.IsNormalized  = false;
+            pBuffer->CreateView(BuffViewDesc, &pBufferViews[i]);
+        }
+        else
+        {
+            pBufferViews[i] = pBuffer->GetDefaultView(BUFFER_VIEW_SHADER_RESOURCE);
+        }
+
         ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
 
         pBuffSRVs[i] = pBufferViews[i];
     }
 
     SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_Buff_Static", Set, pBuffSRVs[0]);
-    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_BuffArr_Static", SetArray, pBuffSRVs.data(), 0, StaticBuffArraySize);
-
+    if (!UseArraysInPSOnly)
+    {
+        SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_BuffArr_Static", SetArray, pBuffSRVs.data(), 0, StaticBuffArraySize);
+    }
+    else
+    {
+        EXPECT_EQ(pPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_BuffArr_Static"), nullptr);
+    }
     SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Buff_Static", Set, pBuffSRVs[0]);
     SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_BuffArr_Static", SetArray, pBuffSRVs.data(), 0, StaticBuffArraySize);
 
+
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Mut", Set, pBuffSRVs[0]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[0]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Mut", SetArray, pBuffSRVs.data(), 0, MutableBuffArraySize);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 0, DynamicBuffArraySize);
+    if (!UseArraysInPSOnly)
+    {
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Mut", SetArray, pBuffSRVs.data(), 0, MutableBuffArraySize);
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 0, DynamicBuffArraySize);
+    }
+    else
+    {
+        EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_BuffArr_Mut"), nullptr);
+        EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_BuffArr_Dyn"), nullptr);
+    }
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Mut", Set, pBuffSRVs[0]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[0]);
@@ -410,7 +484,10 @@ TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
     pContext->Draw(DrawAttrs);
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[1]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 1, DynamicBuffArraySize - 1);
+    if (!UseArraysInPSOnly)
+    {
+        SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 1, DynamicBuffArraySize - 1);
+    }
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[1]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 1, DynamicBuffArraySize - 1);
@@ -418,6 +495,15 @@ TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
     pContext->Draw(DrawAttrs);
 }
 
+TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
+{
+    TestStructuredOrFormattedBuffer(true);
+}
+
+TEST_F(ShaderResourceLayoutTest, StructuredBuffers)
+{
+    TestStructuredOrFormattedBuffer(false);
+}
 
 #if 0
 TEST(ShaderResourceLayout, ResourceLayout)
