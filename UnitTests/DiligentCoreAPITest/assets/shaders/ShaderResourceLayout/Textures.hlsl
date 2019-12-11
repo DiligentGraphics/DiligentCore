@@ -2,9 +2,9 @@ Texture2D g_Tex2D_Static;
 Texture2D g_Tex2D_Mut;
 Texture2D g_Tex2D_Dyn;
 
-Texture2D g_Tex2DArr_Static[STATIC_TEX_ARRAY_SIZE];
-Texture2D g_Tex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE];
-Texture2D g_Tex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE];
+Texture2D g_Tex2DArr_Static[STATIC_TEX_ARRAY_SIZE];  // 2
+Texture2D g_Tex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE]; // 4
+Texture2D g_Tex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE]; // 3
 
 SamplerState g_Sampler;
 
@@ -16,13 +16,19 @@ float4 UseResources()
     f4Color += g_Tex2D_Mut.   SampleLevel(g_Sampler, UV.xy, 0.0);
     f4Color += g_Tex2D_Dyn.   SampleLevel(g_Sampler, UV.xy, 0.0);
 
-    int i = 0;
-    for (i=0; i < STATIC_TEX_ARRAY_SIZE; ++i)
-        f4Color += g_Tex2DArr_Static[i].SampleLevel(g_Sampler, UV.xy, 0.0);
-    for (i=0; i < MUTABLE_TEX_ARRAY_SIZE; ++i)
-        f4Color += g_Tex2DArr_Mut[i].SampleLevel(g_Sampler,  UV.xy, 0.0);
-    for (i=0; i < DYNAMIC_TEX_ARRAY_SIZE; ++i)
-        f4Color += g_Tex2DArr_Dyn[i].SampleLevel(g_Sampler,  UV.xy, 0.0);
+    // glslang is not smart enough to unroll the loops even when explicitly told to do so
+
+    f4Color += g_Tex2DArr_Static[0].SampleLevel(g_Sampler, UV.xy, 0.0);
+    f4Color += g_Tex2DArr_Static[1].SampleLevel(g_Sampler, UV.xy, 0.0);
+
+    f4Color += g_Tex2DArr_Mut[0].SampleLevel(g_Sampler,  UV.xy, 0.0);
+    f4Color += g_Tex2DArr_Mut[1].SampleLevel(g_Sampler,  UV.xy, 0.0);
+    f4Color += g_Tex2DArr_Mut[2].SampleLevel(g_Sampler,  UV.xy, 0.0);
+    f4Color += g_Tex2DArr_Mut[3].SampleLevel(g_Sampler,  UV.xy, 0.0);
+
+    f4Color += g_Tex2DArr_Dyn[0].SampleLevel(g_Sampler,  UV.xy, 0.0);
+    f4Color += g_Tex2DArr_Dyn[1].SampleLevel(g_Sampler,  UV.xy, 0.0);
+    f4Color += g_Tex2DArr_Dyn[2].SampleLevel(g_Sampler,  UV.xy, 0.0);
 
 	return f4Color;
 }

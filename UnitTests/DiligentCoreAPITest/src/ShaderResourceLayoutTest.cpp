@@ -181,9 +181,9 @@ TEST_F(ShaderResourceLayoutTest, Textures)
 {
     TestingEnvironment::ScopedReset AutoResetEnvironment;
 
-    static constexpr int StaticTexArraySize  = 3;
-    static constexpr int MutableTexArraySize = 5;
-    static constexpr int DynamicTexArraySize = 4;
+    static constexpr int StaticTexArraySize  = 2;
+    static constexpr int MutableTexArraySize = 4;
+    static constexpr int DynamicTexArraySize = 3;
     ShaderMacroHelper    Macros;
     Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", StaticTexArraySize);
     Macros.AddShaderMacro("MUTABLE_TEX_ARRAY_SIZE", MutableTexArraySize);
@@ -290,6 +290,134 @@ TEST_F(ShaderResourceLayoutTest, Textures)
 
     pContext->Draw(DrawAttrs);
 }
+
+TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
+{
+    TestingEnvironment::ScopedReset AutoResetEnvironment;
+
+    static constexpr int StaticBuffArraySize  = 4;
+    static constexpr int MutableBuffArraySize = 3;
+    static constexpr int DynamicBuffArraySize = 2;
+    ShaderMacroHelper    Macros;
+    Macros.AddShaderMacro("STATIC_BUFF_ARRAY_SIZE", StaticBuffArraySize);
+    Macros.AddShaderMacro("MUTABLE_BUFF_ARRAY_SIZE", MutableBuffArraySize);
+    Macros.AddShaderMacro("DYNAMIC_BUFF_ARRAY_SIZE", DynamicBuffArraySize);
+
+    RefCntAutoPtr<IPipelineState>         pPSO;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    // clang-format off
+    ShaderResourceDesc Resources[] = 
+    {
+        {"g_Buff_Static",      SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
+        {"g_Buff_Mut",         SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
+        {"g_Buff_Dyn",         SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
+        {"g_BuffArr_Static",   SHADER_RESOURCE_TYPE_BUFFER_SRV, StaticBuffArraySize},
+        {"g_BuffArr_Mut",      SHADER_RESOURCE_TYPE_BUFFER_SRV, MutableBuffArraySize},
+        {"g_BuffArr_Dyn",      SHADER_RESOURCE_TYPE_BUFFER_SRV, DynamicBuffArraySize}
+    };
+    // clang-format on
+
+    auto pVS = CreateShader("ShaderResourceLayoutTest.Buffers - VS", "FormattedBuffers.hlsl", "VSMain",
+                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
+                            Resources, _countof(Resources));
+    auto pPS = CreateShader("ShaderResourceLayoutTest.Buffers - PS", "FormattedBuffers.hlsl", "PSMain",
+                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
+                            Resources, _countof(Resources));
+    ASSERT_NE(pVS, nullptr);
+    ASSERT_NE(pPS, nullptr);
+
+
+    // clang-format off
+    ShaderResourceVariableDesc Vars[] =
+    {
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Buff_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Buff_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Buff_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_BuffArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_BuffArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_BuffArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+    };
+    // clang-format on
+
+    PipelineResourceLayoutDesc ResourceLayout;
+    ResourceLayout.Variables    = Vars;
+    ResourceLayout.NumVariables = _countof(Vars);
+
+    CreateGraphicsPSO(pVS, pPS, ResourceLayout, pPSO, pSRB);
+    ASSERT_NE(pPSO, nullptr);
+    ASSERT_NE(pSRB, nullptr);
+
+    constexpr auto MaxBuffers = std::max(std::max(StaticBuffArraySize, MutableBuffArraySize), DynamicBuffArraySize);
+
+    std::array<RefCntAutoPtr<IBufferView>, MaxBuffers> pBufferViews;
+    std::array<IDeviceObject*, MaxBuffers>             pBuffSRVs = {};
+
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    for (Uint32 i = 0; i < MaxBuffers; ++i)
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name              = "Formatted buffer";
+        BuffDesc.uiSizeInBytes     = 256;
+        BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
+        BuffDesc.Usage             = USAGE_DEFAULT;
+        BuffDesc.ElementByteStride = 16;
+        BuffDesc.Mode              = BUFFER_MODE_FORMATTED;
+        RefCntAutoPtr<IBuffer> pBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
+        ASSERT_NE(pBuffer, nullptr) << "Unable to create buffer " << BuffDesc;
+
+        BufferViewDesc BuffViewDesc;
+        BuffViewDesc.Name                 = "Formatted buffer (uniform texel buffer) SRV";
+        BuffViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
+        BuffViewDesc.Format.ValueType     = VT_FLOAT32;
+        BuffViewDesc.Format.NumComponents = 4;
+        BuffViewDesc.Format.IsNormalized  = false;
+        pBuffer->CreateView(BuffViewDesc, &pBufferViews[i]);
+        ASSERT_NE(pBufferViews[i], nullptr) << "Unable to formatted buffer view ";
+
+        pBuffSRVs[i] = pBufferViews[i];
+    }
+
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_Buff_Static", Set, pBuffSRVs[0]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_BuffArr_Static", SetArray, pBuffSRVs.data(), 0, StaticBuffArraySize);
+
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Buff_Static", Set, pBuffSRVs[0]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_BuffArr_Static", SetArray, pBuffSRVs.data(), 0, StaticBuffArraySize);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Mut", Set, pBuffSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Mut", SetArray, pBuffSRVs.data(), 0, MutableBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 0, DynamicBuffArraySize);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Mut", Set, pBuffSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Mut", SetArray, pBuffSRVs.data(), 0, MutableBuffArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 0, DynamicBuffArraySize);
+
+    pSRB->InitializeStaticResources(pPSO);
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    ITextureView* ppRTVs[] = {pRTV};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+    pContext->Draw(DrawAttrs);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Buff_Dyn", Set, pBuffSRVs[1]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 1, DynamicBuffArraySize - 1);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Buff_Dyn", Set, pBuffSRVs[1]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_BuffArr_Dyn", SetArray, pBuffSRVs.data(), 1, DynamicBuffArraySize - 1);
+
+    pContext->Draw(DrawAttrs);
+}
+
 
 #if 0
 TEST(ShaderResourceLayout, ResourceLayout)

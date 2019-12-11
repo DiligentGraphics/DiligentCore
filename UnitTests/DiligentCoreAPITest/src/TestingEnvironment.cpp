@@ -366,7 +366,7 @@ RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXT
     TexDesc.BindFlags = BindFlags;
     TexDesc.Width     = Width;
     TexDesc.Height    = Height;
-    
+
     RefCntAutoPtr<ITexture> pTexture;
     m_pDevice->CreateTexture(TexDesc, nullptr, &pTexture);
     VERIFY_EXPR(pTexture != nullptr);

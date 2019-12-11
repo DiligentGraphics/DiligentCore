@@ -37,6 +37,16 @@ inline std::ostream& operator<<(std::ostream& os, const SHADER_RESOURCE_TYPE& Re
     return os << GetShaderResourceTypeLiteralName(ResType, true);
 }
 
+inline std::ostream& operator<<(std::ostream& os, const TextureDesc& TexDesc)
+{
+    return os << GetObjectDescString(TexDesc);
+}
+
+inline std::ostream& operator<<(std::ostream& os, const BufferDesc& BuffDesc)
+{
+    return os << GetObjectDescString(BuffDesc);
+}
+
 } // namespace Diligent
 
 namespace Diligent
