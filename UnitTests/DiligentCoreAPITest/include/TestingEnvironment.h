@@ -25,29 +25,9 @@
 #include "DeviceContext.h"
 #include "RefCntAutoPtr.h"
 #include "SwapChain.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsTypesOutputInserters.h"
 
 #include "gtest/gtest.h"
-
-namespace Diligent
-{
-
-inline std::ostream& operator<<(std::ostream& os, const SHADER_RESOURCE_TYPE& ResType)
-{
-    return os << GetShaderResourceTypeLiteralName(ResType, true);
-}
-
-inline std::ostream& operator<<(std::ostream& os, const TextureDesc& TexDesc)
-{
-    return os << GetObjectDescString(TexDesc);
-}
-
-inline std::ostream& operator<<(std::ostream& os, const BufferDesc& BuffDesc)
-{
-    return os << GetObjectDescString(BuffDesc);
-}
-
-} // namespace Diligent
 
 namespace Diligent
 {

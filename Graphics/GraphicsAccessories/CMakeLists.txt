@@ -5,6 +5,7 @@ project(Diligent-GraphicsAccessories CXX)
 set(INTERFACE 
     interface/ColorConversion.h
     interface/GraphicsAccessories.h
+    interface/GraphicsTypesOutputInserters.h
     interface/ResourceReleaseQueue.h
     interface/RingBuffer.h
     interface/SRBMemoryAllocator.h
