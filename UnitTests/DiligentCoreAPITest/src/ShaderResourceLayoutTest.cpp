@@ -768,7 +768,7 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     pContext->DispatchCompute(DispatchAttribs);
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2D_Dyn", Set, pUAVs[uav++]);
-    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, &pUAVs[uav++], 1, 1);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_COMPUTE, "g_RWTex2DArr_Dyn", SetArray, &pUAVs[uav++], 0, 1);
     pContext->DispatchCompute(DispatchAttribs);
 }
 
@@ -776,8 +776,122 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
 {
 }
 
-TEST_F(ShaderResourceLayoutTest, SeparateSamplers)
+TEST_F(ShaderResourceLayoutTest, Samplers)
 {
+    TestingEnvironment::ScopedReset AutoResetEnvironment;
+
+    static constexpr int StaticSamArraySize  = 2;
+    static constexpr int MutableSamArraySize = 4;
+    static constexpr int DynamicSamArraySize = 3;
+    ShaderMacroHelper    Macros;
+    Macros.AddShaderMacro("STATIC_SAM_ARRAY_SIZE", StaticSamArraySize);
+    Macros.AddShaderMacro("MUTABLE_SAM_ARRAY_SIZE", MutableSamArraySize);
+    Macros.AddShaderMacro("DYNAMIC_SAM_ARRAY_SIZE", DynamicSamArraySize);
+
+    RefCntAutoPtr<IPipelineState>         pPSO;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    // clang-format off
+    ShaderResourceDesc Resources[] = 
+    {
+        {"g_Sam_Static",      SHADER_RESOURCE_TYPE_SAMPLER,     1},
+        {"g_Sam_Mut",         SHADER_RESOURCE_TYPE_SAMPLER,     1},
+        {"g_Sam_Dyn",         SHADER_RESOURCE_TYPE_SAMPLER,     1},
+        {"g_SamArr_Static",   SHADER_RESOURCE_TYPE_SAMPLER,     StaticSamArraySize},
+        {"g_SamArr_Mut",      SHADER_RESOURCE_TYPE_SAMPLER,     MutableSamArraySize},
+        {"g_SamArr_Dyn",      SHADER_RESOURCE_TYPE_SAMPLER,     DynamicSamArraySize},
+        {"g_Tex2D",           SHADER_RESOURCE_TYPE_TEXTURE_SRV, 1},
+    };
+    // clang-format on
+    auto pVS = CreateShader("ShaderResourceLayoutTest.Samplers - VS", "Samplers.hlsl", "VSMain",
+                            SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
+                            Resources, _countof(Resources));
+    auto pPS = CreateShader("ShaderResourceLayoutTest.Samplers - PS", "Samplers.hlsl", "PSMain",
+                            SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
+                            Resources, _countof(Resources));
+    ASSERT_NE(pVS, nullptr);
+    ASSERT_NE(pPS, nullptr);
+
+
+    // clang-format off
+    ShaderResourceVariableDesc Vars[] =
+    {
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D",         SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sam_Static",    SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sam_Mut",       SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sam_Dyn",       SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
+
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_SamArr_Static", SHADER_RESOURCE_VARIABLE_TYPE_STATIC},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_SamArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
+        {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_SamArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
+    };
+    // clang-format on
+
+    PipelineResourceLayoutDesc ResourceLayout;
+    ResourceLayout.Variables    = Vars;
+    ResourceLayout.NumVariables = _countof(Vars);
+
+    CreateGraphicsPSO(pVS, pPS, ResourceLayout, pPSO, pSRB);
+    ASSERT_NE(pPSO, nullptr);
+    ASSERT_NE(pSRB, nullptr);
+
+    constexpr auto MaxSamplers = std::max(std::max(StaticSamArraySize, MutableSamArraySize), DynamicSamArraySize);
+
+    std::array<RefCntAutoPtr<ISampler>, MaxSamplers> pSamplers;
+    std::array<IDeviceObject*, MaxSamplers>          pSamObjs = {};
+
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    for (Uint32 i = 0; i < MaxSamplers; ++i)
+    {
+        SamplerDesc SamDesc;
+        pDevice->CreateSampler(SamDesc, &pSamplers[i]);
+        ASSERT_NE(pSamplers[i], nullptr);
+        pSamObjs[i] = pSamplers[i];
+    }
+
+    auto  pTex2D    = pEnv->CreateTexture("ShaderResourceLayoutTest: test RTV", TEX_FORMAT_RGBA8_UNORM, BIND_SHADER_RESOURCE, 512, 512);
+    auto* pTex2DSRV = pTex2D->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_Tex2D", Set, pTex2DSRV);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Tex2D", Set, pTex2DSRV);
+
+
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_Sam_Static", Set, pSamObjs[0]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_VERTEX, "g_SamArr_Static", SetArray, pSamObjs.data(), 0, StaticSamArraySize);
+
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_Sam_Static", Set, pSamObjs[0]);
+    SET_STATIC_VAR(pPSO, SHADER_TYPE_PIXEL, "g_SamArr_Static", SetArray, pSamObjs.data(), 0, StaticSamArraySize);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Sam_Mut", Set, pSamObjs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Sam_Dyn", Set, pSamObjs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_SamArr_Mut", SetArray, pSamObjs.data(), 0, MutableSamArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_SamArr_Dyn", SetArray, pSamObjs.data(), 0, DynamicSamArraySize);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Sam_Mut", Set, pSamObjs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Sam_Dyn", Set, pSamObjs[0]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_SamArr_Mut", SetArray, pSamObjs.data(), 0, MutableSamArraySize);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_SamArr_Dyn", SetArray, pSamObjs.data(), 0, DynamicSamArraySize);
+
+    pSRB->InitializeStaticResources(pPSO);
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    ITextureView* ppRTVs[] = {pRTV};
+    pContext->SetRenderTargets(1, ppRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->SetPipelineState(pPSO);
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawAttribs DrawAttrs(3, DRAW_FLAG_VERIFY_ALL);
+    pContext->Draw(DrawAttrs);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_Sam_Dyn", Set, pSamObjs[1]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_VERTEX, "g_SamArr_Dyn", SetArray, pSamObjs.data(), 1, DynamicSamArraySize - 1);
+
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Sam_Dyn", Set, pSamObjs[1]);
+    SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_SamArr_Dyn", SetArray, pSamObjs.data(), 1, DynamicSamArraySize - 1);
+
+    pContext->Draw(DrawAttrs);
 }
 
 
