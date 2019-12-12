@@ -128,9 +128,6 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
 
         for (Uint32 i = 0; i < NumBuffersToCreate; ++i)
         {
-            RefCntAutoPtr<IBuffer>     pBuffer1, pBuffer2, pBuffer3, pBuffer4;
-            RefCntAutoPtr<IBufferView> pBufferSRV, pBufferUAV;
-
             BufferDesc BuffDesc;
             BuffDesc.Usage         = USAGE_DEFAULT;
             BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
@@ -141,12 +138,18 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
             BuffData.DataSize = BuffDesc.uiSizeInBytes;
             BuffData.pData    = RawBufferData.data();
 
+            RefCntAutoPtr<IBuffer> pBuffer1;
             pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer1);
+            EXPECT_NE(pBuffer1, nullptr) << "Failed to create the following buffer:\n"
+                                         << BuffDesc;
 
             BuffDesc.Mode              = BUFFER_MODE_FORMATTED;
             BuffDesc.ElementByteStride = 16;
             BuffDesc.BindFlags         = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
+            RefCntAutoPtr<IBuffer> pBuffer2;
             pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer2);
+            EXPECT_NE(pBuffer2, nullptr) << "Failed to create the following buffer:\n"
+                                         << BuffDesc;
 
             BufferViewDesc ViewDesc;
             ViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
@@ -154,41 +157,60 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
             ViewDesc.Format.NumComponents = 4;
             ViewDesc.Format.IsNormalized  = False;
             ViewDesc.Format.ValueType     = VT_FLOAT32;
-            pBuffer2->CreateView(ViewDesc, &pBufferSRV);
+            RefCntAutoPtr<IBufferView> pBufferSRV;
+            if (pBuffer2)
+            {
+                pBuffer2->CreateView(ViewDesc, &pBufferSRV);
+                EXPECT_NE(pBufferSRV, nullptr) << "Failed to create SRV for the following buffer:\n"
+                                               << BuffDesc;
+            }
 
             BuffDesc.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS;
+            RefCntAutoPtr<IBuffer> pBuffer3;
             pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer3);
+            EXPECT_NE(pBuffer3, nullptr) << "Failed to create the following buffer:\n"
+                                         << BuffDesc;
             ViewDesc.ViewType = BUFFER_VIEW_UNORDERED_ACCESS;
-            pBuffer3->CreateView(ViewDesc, &pBufferUAV);
+            RefCntAutoPtr<IBufferView> pBufferUAV;
+            if (pBuffer3)
+            {
+                pBuffer3->CreateView(ViewDesc, &pBufferUAV);
+                EXPECT_NE(pBufferUAV, nullptr) << "Failed to create UAV for the following buffer:\n"
+                                               << BuffDesc;
+            }
 
             BuffDesc.Mode      = BUFFER_MODE_RAW;
             BuffDesc.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
+            RefCntAutoPtr<IBuffer> pBuffer4;
             pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer4);
+            EXPECT_NE(pBuffer4, nullptr) << "Failed to create the following buffer:\n"
+                                         << BuffDesc;
         }
 
         for (Uint32 i = 0; i < NumTexturesToCreate; ++i)
         {
             RefCntAutoPtr<ITexture> pTexture;
-            {
-                TextureDesc TexDesc;
-                TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
-                TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-                TexDesc.Width     = 1024;
-                TexDesc.Height    = 1024;
-                TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
-                TexDesc.MipLevels = 1;
+
+            TextureDesc TexDesc;
+            TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
+            TexDesc.Type      = RESOURCE_DIM_TEX_2D;
+            TexDesc.Width     = 1024;
+            TexDesc.Height    = 1024;
+            TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
+            TexDesc.MipLevels = 1;
 
 
-                TextureSubResData SubResData;
-                SubResData.pData  = RawTextureData.data();
-                SubResData.Stride = TexDesc.Width * 4;
+            TextureSubResData SubResData;
+            SubResData.pData  = RawTextureData.data();
+            SubResData.Stride = TexDesc.Width * 4;
 
-                TextureData TexData;
-                TexData.NumSubresources = 1;
-                TexData.pSubResources   = &SubResData;
+            TextureData TexData;
+            TexData.NumSubresources = 1;
+            TexData.pSubResources   = &SubResData;
 
-                pDevice->CreateTexture(TexDesc, &TexData, &pTexture);
-            }
+            pDevice->CreateTexture(TexDesc, &TexData, &pTexture);
+            EXPECT_NE(pTexture, nullptr) << "Failed to create the following texture:\n"
+                                         << TexDesc;
         }
 
         for (Uint32 i = 0; i < NumPSOToCreate; ++i)
@@ -204,11 +226,21 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
                 Attrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
                 Attrs.UseCombinedTextureSamplers = true;
                 pDevice->CreateShader(Attrs, &pTrivialVS);
+                if (!pTrivialVS)
+                {
+                    ADD_FAILURE() << "Failed to create trivial VS";
+                    continue;
+                }
 
                 Attrs.EntryPoint      = "PSMain";
                 Attrs.Desc.ShaderType = SHADER_TYPE_PIXEL;
                 Attrs.Desc.Name       = "TrivialPS (MTResourceCreationTest)";
                 pDevice->CreateShader(Attrs, &pTrivialPS);
+                if (!pTrivialPS)
+                {
+                    ADD_FAILURE() << "Failed to create trivial PS";
+                    continue;
+                }
 
                 PipelineStateDesc PSODesc;
                 PSODesc.GraphicsPipeline.pVS               = pTrivialVS;
@@ -219,6 +251,7 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
                 PSODesc.GraphicsPipeline.DSVFormat         = TEX_FORMAT_D32_FLOAT;
 
                 pDevice->CreatePipelineState(PSODesc, &pPSO);
+                EXPECT_NE(pPSO, nullptr) << "Failed to create test PSO";
             }
         }
 
