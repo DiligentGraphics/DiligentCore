@@ -33,6 +33,11 @@ if(NOT VULKAN_SUPPORTED)
     list(REMOVE_ITEM INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/CreateObjFromNativeResVK.h)
 endif()
 
+if(PLATFORM_WIN32)
+    file(GLOB SOURCE_WIN32 LIST_DIRECTORIES false src/Win32/*)
+    list(APPEND SOURCE ${SOURCE_WIN32})
+endif()
+
 add_executable(DiligentCoreAPITest ${SOURCE} ${INCLUDE} ${SHADERS})
 set_common_target_properties(DiligentCoreAPITest)
 

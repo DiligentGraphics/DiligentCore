@@ -17,12 +17,12 @@ layout(std140, binding = 2) writeonly buffer g_RWBuff_Dyn
 layout(std140, binding = 3) writeonly buffer g_RWBuffArr_Static
 {
     vec4 data;
-}g_StorageBuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4
+}g_StorageBuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4 or 1 in OpenGL
 
 layout(std140, binding = 7) writeonly buffer g_RWBuffArr_Mut
 {
     vec4 data;
-}g_StorageBuffArr_Mut[MUTABLE_BUFF_ARRAY_SIZE]; // 3
+}g_StorageBuffArr_Mut[MUTABLE_BUFF_ARRAY_SIZE]; // 3 or 2 in OpenGL
 
 layout(std140, binding = 10) writeonly buffer g_RWBuffArr_Dyn
 {
@@ -39,13 +39,17 @@ void UseResources()
     // glslang is not smart enough to unroll the loops even when explicitly told to do so
 
     g_StorageBuffArr_Static[0].data = Data;
+#if (STATIC_BUFF_ARRAY_SIZE == 4)
     g_StorageBuffArr_Static[1].data = Data;
     g_StorageBuffArr_Static[2].data = Data;
     g_StorageBuffArr_Static[3].data = Data;
+#endif
 
     g_StorageBuffArr_Mut[0].data = Data;
     g_StorageBuffArr_Mut[1].data = Data;
+#if (MUTABLE_BUFF_ARRAY_SIZE == 3)
     g_StorageBuffArr_Mut[2].data = Data;
+#endif
 
     g_StorageBuffArr_Dyn[0].data = Data;
     g_StorageBuffArr_Dyn[1].data = Data;

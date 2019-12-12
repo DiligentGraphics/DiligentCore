@@ -56,8 +56,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 
     SwapChainDesc SCDesc;
 
-    Uint32 NumDeferredCtx     = 0;
-    void*  NativeWindowHandle = nullptr;
+    Uint32 NumDeferredCtx = 0;
 
     std::vector<IDeviceContext*> ppContexts;
     std::vector<AdapterAttribs>  Adapters;
@@ -137,9 +136,6 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);
             pFactoryD3D11->CreateDeviceAndContextsD3D11(CreateInfo, &m_pDevice, ppContexts.data());
-
-            if (NativeWindowHandle != nullptr)
-                pFactoryD3D11->CreateSwapChainD3D11(m_pDevice, ppContexts[0], SCDesc, FullScreenModeDesc{}, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 #endif
@@ -206,9 +202,6 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
             pFactoryD3D12->CreateDeviceAndContextsD3D12(CreateInfo, &m_pDevice, ppContexts.data());
-
-            if (!m_pSwapChain && NativeWindowHandle != nullptr)
-                pFactoryD3D12->CreateSwapChainD3D12(m_pDevice, ppContexts[0], SCDesc, FullScreenModeDesc{}, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 #endif
@@ -217,9 +210,6 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
         case DeviceType::OpenGL:
         case DeviceType::OpenGLES:
         {
-#    if !PLATFORM_MACOS
-            VERIFY_EXPR(NativeWindowHandle != nullptr);
-#    endif
 #    if EXPLICITLY_LOAD_ENGINE_GL_DLL
             // Declare function pointer
             GetEngineFactoryOpenGLType GetEngineFactoryOpenGL = nullptr;
@@ -232,10 +222,12 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #    endif
             auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
 
+            auto NativeWnd = CreateNativeWindow();
+
             EngineGLCreateInfo CreateInfo;
-            CreateInfo.pNativeWndHandle = NativeWindowHandle;
+            CreateInfo.pNativeWndHandle = NativeWnd.NativeWindowHandle;
 #    if PLATFORM_LINUX
-            CreateInfo.pDisplay = display;
+            CreateInfo.pDisplay = NativeWnd.Display;
 #    endif
             if (NumDeferredCtx != 0)
             {
@@ -290,9 +282,6 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             ppContexts.resize(1 + NumDeferredCtx);
             auto* pFactoryVk = GetEngineFactoryVk();
             pFactoryVk->CreateDeviceAndContextsVk(CreateInfo, &m_pDevice, ppContexts.data());
-
-            if (!m_pSwapChain && NativeWindowHandle != nullptr)
-                pFactoryVk->CreateSwapChainVk(m_pDevice, ppContexts[0], SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 #endif
@@ -306,9 +295,6 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             ppContexts.resize(1 + NumDeferredCtx);
             auto* pFactoryMtl = GetEngineFactoryMtl();
             pFactoryMtl->CreateDeviceAndContextsMtl(MtlAttribs, &m_pDevice, ppContexts.data());
-
-            if (!m_pSwapChain && NativeWindowHandle != nullptr)
-                pFactoryMtl->CreateSwapChainMtl(m_pDevice, ppContexts[0], SCDesc, NativeWindowHandle, &m_pSwapChain);
         }
         break;
 #endif

@@ -116,7 +116,7 @@ protected:
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.UseCombinedTextureSamplers = false;
+        ShaderCI.UseCombinedTextureSamplers = pDevice->GetDeviceCaps().IsGLDevice();
 
         ShaderCI.FilePath        = FileName;
         ShaderCI.Desc.Name       = ShaderName;
@@ -488,15 +488,10 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
-    else if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    else if (pDevice->GetDeviceCaps().IsVulkanDevice() || pDevice->GetDeviceCaps().IsGLDevice())
     {
         ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.glsl";
         SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
-    }
-    else if (pDevice->GetDeviceCaps().IsGLDevice())
-    {
-        ShaderFileName = IsFormatted ? "FormattedBuffers.glsl" : "StructuredBuffers.glsl";
-        SrcLang        = SHADER_SOURCE_LANGUAGE_GLSL;
     }
     else
     {
@@ -617,6 +612,15 @@ TEST_F(ShaderResourceLayoutTest, FormattedBuffers)
 
 TEST_F(ShaderResourceLayoutTest, StructuredBuffers)
 {
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (pDevice->GetDeviceCaps().IsGLDevice())
+    {
+        GTEST_SKIP() << "Read-only structured buffers in glsl are currently "
+                        "identified as UAVs in OpenGL backend because "
+                        "there seems to be no way to detect read-only property on the host";
+    }
+
     TestStructuredOrFormattedBuffer(false /*IsFormatted*/);
 }
 
@@ -628,10 +632,11 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    auto deviceType = pDevice->GetDeviceCaps().DevType;
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    auto        deviceType = deviceCaps.DevType;
 
-    const Uint32 StaticBuffArraySize  = deviceType == DeviceType::D3D11 ? 1 : 4;
-    const Uint32 MutableBuffArraySize = deviceType == DeviceType::D3D11 ? 2 : 3;
+    const Uint32 StaticBuffArraySize  = deviceType == DeviceType::D3D11 || deviceCaps.IsGLDevice() ? 1 : 4;
+    const Uint32 MutableBuffArraySize = deviceType == DeviceType::D3D11 || deviceCaps.IsGLDevice() ? 2 : 3;
     const Uint32 DynamicBuffArraySize = 2;
 
     ShaderMacroHelper Macros;
@@ -657,15 +662,10 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
         ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
-    else if (pDevice->GetDeviceCaps().IsVulkanDevice())
+    else if (pDevice->GetDeviceCaps().IsVulkanDevice() || pDevice->GetDeviceCaps().IsGLDevice())
     {
         ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.glsl";
         SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
-    }
-    else if (pDevice->GetDeviceCaps().IsGLDevice())
-    {
-        ShaderFileName = IsFormatted ? "RWFormattedBuffers.glsl" : "RWStructuredBuffers.glsl";
-        SrcLang        = SHADER_SOURCE_LANGUAGE_GLSL;
     }
     else
     {
@@ -676,7 +676,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
                             SHADER_TYPE_COMPUTE, SrcLang, Macros,
                             Resources, _countof(Resources));
     ASSERT_NE(pCS, nullptr);
-
+    
     // clang-format off
     ShaderResourceVariableDesc Vars[] =
     {
@@ -758,11 +758,12 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
-    auto deviceType = pDevice->GetDeviceCaps().DevType;
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    auto        deviceType = deviceCaps.DevType;
 
     const Uint32 StaticTexArraySize  = 2;
-    const Uint32 MutableTexArraySize = deviceType == DeviceType::D3D11 ? 2 : 4;
-    const Uint32 DynamicTexArraySize = deviceType == DeviceType::D3D11 ? 1 : 3;
+    const Uint32 MutableTexArraySize = deviceType == DeviceType::D3D11 || deviceCaps.IsGLDevice() ? 2 : 4;
+    const Uint32 DynamicTexArraySize = deviceType == DeviceType::D3D11 || deviceCaps.IsGLDevice() ? 1 : 3;
 
     ShaderMacroHelper Macros;
     Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
@@ -869,7 +870,7 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     Macros.AddShaderMacro("MUTABLE_CB_ARRAY_SIZE", static_cast<int>(MutableCBArraySize));
     Macros.AddShaderMacro("DYNAMIC_CB_ARRAY_SIZE", static_cast<int>(DynamicCBArraySize));
 
-    const auto CBArraysSupported = deviceCaps.DevType == DeviceType::D3D12 || deviceCaps.IsVulkanDevice() || deviceCaps.IsGLDevice();
+    const auto CBArraysSupported = deviceCaps.DevType == DeviceType::D3D12 || deviceCaps.IsVulkanDevice();
     Macros.AddShaderMacro("ARRAYS_SUPPORTED", CBArraysSupported);
 
     // clang-format off
@@ -995,6 +996,13 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
 
 TEST_F(ShaderResourceLayoutTest, Samplers)
 {
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (pDevice->GetDeviceCaps().IsGLDevice())
+    {
+        GTEST_SKIP() << "OpenGL does not support separate samplers";
+    }
+
     TestingEnvironment::ScopedReset AutoResetEnvironment;
 
     static constexpr Uint32 StaticSamArraySize  = 2;
@@ -1057,8 +1065,6 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
     std::array<RefCntAutoPtr<ISampler>, MaxSamplers> pSamplers;
     std::array<IDeviceObject*, MaxSamplers>          pSamObjs = {};
 
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
     for (Uint32 i = 0; i < MaxSamplers; ++i)
     {
         SamplerDesc SamDesc;

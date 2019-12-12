@@ -1,10 +1,10 @@
-RWTexture2D<float4> g_RWTex2D_Static;
-RWTexture2D<float4> g_RWTex2D_Mut;
-RWTexture2D<float4> g_RWTex2D_Dyn;
+RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2D_Static;
+RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2D_Mut;
+RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2D_Dyn;
 
-RWTexture2D<float4> g_RWTex2DArr_Static[STATIC_TEX_ARRAY_SIZE];  // 2
-RWTexture2D<float4> g_RWTex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE]; // 4 or 2 in D3D11
-RWTexture2D<float4> g_RWTex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE]; // 3 or 1 in D3D11
+RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2DArr_Static[STATIC_TEX_ARRAY_SIZE];  // 2
+RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2DArr_Mut   [MUTABLE_TEX_ARRAY_SIZE]; // 4 or 2 in D3D11
+RWTexture2D<float4 /*format=rgba32f*/> g_RWTex2DArr_Dyn   [DYNAMIC_TEX_ARRAY_SIZE]; // 3 or 1 in D3D11
 
 void UseResources()
 {

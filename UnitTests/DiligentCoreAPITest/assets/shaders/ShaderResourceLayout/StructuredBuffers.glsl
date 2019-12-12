@@ -58,6 +58,19 @@ vec4 UseResources()
 }
 
 #ifdef VERTEX_SHADER
+
+//To use any built-in input or output in the gl_PerVertex and
+//gl_PerFragment blocks in separable program objects, shader code must
+//redeclare those blocks prior to use. 
+//
+// Declaring this block causes compilation error on NVidia GLES
+#ifndef GL_ES
+out gl_PerVertex
+{
+	vec4 gl_Position;
+};
+#endif
+
 layout(location = 0)out vec4 out_Color;
 void main()
 {

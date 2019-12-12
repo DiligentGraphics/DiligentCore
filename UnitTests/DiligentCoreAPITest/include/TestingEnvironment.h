@@ -35,6 +35,15 @@ namespace Diligent
 class TestingEnvironment final : public ::testing::Environment
 {
 public:
+    struct NativeWindow
+    {
+        void* NativeWindowHandle = nullptr;
+#if PLATFORM_LINUX
+        void* Display = nullptr;
+#endif
+    };
+
+
     TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType);
     ~TestingEnvironment() override;
 
@@ -77,6 +86,8 @@ public:
     RefCntAutoPtr<ITexture> CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height);
 
 private:
+    NativeWindow CreateNativeWindow();
+
     const DeviceType m_DeviceType;
 
     static TestingEnvironment* m_pTheEnvironment;

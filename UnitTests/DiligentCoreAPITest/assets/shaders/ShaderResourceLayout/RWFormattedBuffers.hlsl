@@ -1,10 +1,10 @@
-RWBuffer<float4> g_RWBuff_Static;
-RWBuffer<float4> g_RWBuff_Mut;
-RWBuffer<float4> g_RWBuff_Dyn;
+RWBuffer<float4 /*format=rgba32f*/> g_RWBuff_Static;
+RWBuffer<float4 /*format=rgba32f*/> g_RWBuff_Mut;
+RWBuffer<float4 /*format=rgba32f*/> g_RWBuff_Dyn;
 
-RWBuffer<float4> g_RWBuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4 or 1 in D3D11
-RWBuffer<float4> g_RWBuffArr_Mut   [MUTABLE_BUFF_ARRAY_SIZE]; // 3 or 2 in D3D11
-RWBuffer<float4> g_RWBuffArr_Dyn   [DYNAMIC_BUFF_ARRAY_SIZE]; // 2
+RWBuffer<float4 /*format=rgba32f*/> g_RWBuffArr_Static[STATIC_BUFF_ARRAY_SIZE];  // 4 or 1 in D3D11
+RWBuffer<float4 /*format=rgba32f*/> g_RWBuffArr_Mut   [MUTABLE_BUFF_ARRAY_SIZE]; // 3 or 2 in D3D11
+RWBuffer<float4 /*format=rgba32f*/> g_RWBuffArr_Dyn   [DYNAMIC_BUFF_ARRAY_SIZE]; // 2
 
 void UseResources()
 {

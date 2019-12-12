@@ -530,8 +530,7 @@ TEST_P(TextureCreationTest, CreateTexture)
 
     if (!FmtInfo.Supported)
     {
-        LOG_WARNING_MESSAGE("Texture format ", FmtInfo.Name, " is not supported!\n");
-        GTEST_SKIP();
+        GTEST_SKIP() << "Texture format " << FmtInfo.Name << " is not supported";
     }
 
     EXPECT_TRUE(TestInfo.PixelSize == Uint32{FmtInfo.ComponentSize} * Uint32{FmtInfo.NumComponents} ||
