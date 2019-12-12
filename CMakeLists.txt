@@ -305,7 +305,7 @@ add_subdirectory(Platforms)
 add_subdirectory(Common)
 add_subdirectory(Graphics)
 
-if(DILIGENT_BUILD_TESTS AND TARGET gtest)
+if(DILIGENT_BUILD_TESTS)
     add_subdirectory(UnitTests)
 endif()
 

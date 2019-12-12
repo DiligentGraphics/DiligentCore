@@ -41,7 +41,7 @@ if(MSVC)
     )
 endif()
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${INCLUDE} ${SHADERS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE})
 
 set_target_properties(DiligentCore-IncludeTest PROPERTIES
     FOLDER "DiligentCore/Tests"
