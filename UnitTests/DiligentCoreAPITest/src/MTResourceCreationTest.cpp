@@ -118,7 +118,7 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
     std::vector<Uint8> RawTextureData(1024 * 1024 * 4);
 
     int SignalIdx = 0;
-    while(true)
+    while (true)
     {
         auto SignaledValue = This->m_WorkerThreadSignal[SignalIdx].Wait(true, NumThreads);
         if (SignaledValue < 0)
