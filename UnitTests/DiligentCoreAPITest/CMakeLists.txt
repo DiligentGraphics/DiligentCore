@@ -12,9 +12,9 @@ set(SOURCE ${COMMON_SOURCE})
 set(INCLUDE ${COMMON_INCLUDE})
 
 if(NOT GL_SUPPORTED AND NOT GLES_SUPPORTED)
-    #list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderConverterTest.cpp)
+    list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/HLSL2GLSLConverterTest.cpp)
     list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/CreateObjFromNativeResGL.cpp)
-    #list(REMOVE_ITEM INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/ShaderConverterTest.h)
+    
     list(REMOVE_ITEM INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/CreateObjFromNativeResGL.h)
 endif()
 
