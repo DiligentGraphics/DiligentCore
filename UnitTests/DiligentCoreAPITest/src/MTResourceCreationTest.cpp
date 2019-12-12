@@ -74,7 +74,7 @@ protected:
 #ifdef _DEBUG
     static const int NumIterations = 10;
 #else
-    static const int NumIterations = 100;
+    static const int NumIterations = 30;
 #endif
 };
 
@@ -114,8 +114,11 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
 
     const int NumThreads = static_cast<int>(This->m_Threads.size());
 
+    constexpr Uint32 TexWidth  = 512;
+    constexpr Uint32 TexHeight = 512;
+
     std::vector<Uint8> RawBufferData(1024);
-    std::vector<Uint8> RawTextureData(1024 * 1024 * 4);
+    std::vector<Uint8> RawTextureData(TexWidth * TexHeight * 4);
 
     int SignalIdx = 0;
     while (true)
@@ -194,8 +197,8 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
             TextureDesc TexDesc;
             TexDesc.BindFlags = BIND_SHADER_RESOURCE | BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
             TexDesc.Type      = RESOURCE_DIM_TEX_2D;
-            TexDesc.Width     = 1024;
-            TexDesc.Height    = 1024;
+            TexDesc.Width     = TexWidth;
+            TexDesc.Height    = TexHeight;
             TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
             TexDesc.MipLevels = 1;
 
