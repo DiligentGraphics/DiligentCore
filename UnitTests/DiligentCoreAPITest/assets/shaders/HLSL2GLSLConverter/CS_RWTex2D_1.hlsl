@@ -212,5 +212,5 @@ void TestCS(CSInput In,
     DeviceMemoryBarrier();
     DeviceMemoryBarrierWithGroupSync();
     AllMemoryBarrier();
-    AllMemoryBarrierWithGroupSync();
+    //AllMemoryBarrierWithGroupSync();
 }
