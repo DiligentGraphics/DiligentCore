@@ -87,6 +87,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                                                     IRenderDevice**           ppDevice,
                                                     IDeviceContext**          ppContexts)
 {
+    if (_EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(_EngineCI.DebugMessageCallback);
+
     if (_EngineCI.APIVersion != DILIGENT_API_VERSION)
         LOG_ERROR_AND_THROW("Diligent Engine runtime (", _EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
 
@@ -245,6 +248,9 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
                                                IRenderDevice**                                        ppDevice,
                                                IDeviceContext**                                       ppContexts)
 {
+    if (EngineCI.DebugMessageCallback != nullptr)
+        SetDebugMessageCallback(EngineCI.DebugMessageCallback);
+
     if (EngineCI.APIVersion != DILIGENT_API_VERSION)
         LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
 

@@ -22,6 +22,7 @@
  */
 
 #include "TestingEnvironment.h"
+#include "PlatformDebug.h"
 
 #if D3D11_SUPPORTED
 #    include "EngineFactoryD3D11.h"
@@ -47,6 +48,38 @@ namespace Diligent
 {
 
 TestingEnvironment* TestingEnvironment::m_pTheEnvironment = nullptr;
+std::atomic_int     TestingEnvironment::m_NumAllowedErrors;
+
+void TestingEnvironment::MessageCallback(DebugMessageSeverity Severity,
+                                         const Char*          Message,
+                                         const char*          Function,
+                                         const char*          File,
+                                         int                  Line)
+{
+    if (Severity == DebugMessageSeverity::Error || Severity == DebugMessageSeverity::FatalError)
+    {
+        if (m_NumAllowedErrors == 0)
+        {
+            ADD_FAILURE() << "Unexpected error";
+        }
+        else
+        {
+            m_NumAllowedErrors--;
+        }
+    }
+
+    PlatformDebug::OutputDebugMessage(Severity, Message, Function, File, Line);
+}
+
+void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage)
+{
+    m_NumAllowedErrors = NumErrorsToAllow;
+    if (InfoMessage != nullptr)
+    {
+        std::cout << InfoMessage;
+    }
+}
+
 
 TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType) :
     m_DeviceType{deviceType}
@@ -90,6 +123,8 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #    endif
 
             EngineD3D11CreateInfo CreateInfo;
+            CreateInfo.DebugMessageCallback = MessageCallback;
+
 #    ifdef _DEBUG
             CreateInfo.DebugFlags =
                 D3D11_DEBUG_FLAG_CREATE_DEBUG_DEVICE |
@@ -160,6 +195,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             pFactoryD3D12->EnumerateAdapters(DIRECT3D_FEATURE_LEVEL_11_0, NumAdapters, Adapters.data());
 
             EngineD3D12CreateInfo CreateInfo;
+            CreateInfo.DebugMessageCallback = MessageCallback;
 
             LOG_INFO_MESSAGE("Found ", Adapters.size(), " compatible adapters");
             for (Uint32 i = 0; i < Adapters.size(); ++i)
@@ -225,7 +261,8 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             auto NativeWnd = CreateNativeWindow();
 
             EngineGLCreateInfo CreateInfo;
-            CreateInfo.pNativeWndHandle = NativeWnd.NativeWindowHandle;
+            CreateInfo.DebugMessageCallback = MessageCallback;
+            CreateInfo.pNativeWndHandle     = NativeWnd.NativeWindowHandle;
 #    if PLATFORM_LINUX
             CreateInfo.pDisplay = NativeWnd.Display;
 #    endif
@@ -255,7 +292,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #    endif
 
             EngineVkCreateInfo CreateInfo;
-
+            CreateInfo.DebugMessageCallback      = MessageCallback;
             CreateInfo.EnableValidation          = true;
             CreateInfo.MainDescriptorPoolSize    = EngineVkCreateInfo::DescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32};
             CreateInfo.DynamicDescriptorPoolSize = EngineVkCreateInfo::DescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32};
@@ -291,7 +328,8 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
         {
             EngineMtlCreateInfo MtlAttribs;
 
-            MtlAttribs.NumDeferredContexts = NumDeferredCtx;
+            MtlAttribs.DebugMessageCallback = MessageCallback;
+            MtlAttribs.NumDeferredContexts  = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);
             auto* pFactoryMtl = GetEngineFactoryMtl();
             pFactoryMtl->CreateDeviceAndContextsMtl(MtlAttribs, &m_pDevice, ppContexts.data());
@@ -340,6 +378,7 @@ void TestingEnvironment::Reset()
     m_pDevice->IdleGPU();
     m_pDevice->ReleaseStaleResources();
     m_pDeviceContext->InvalidateState();
+    m_NumAllowedErrors = 0;
 }
 
 RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height)

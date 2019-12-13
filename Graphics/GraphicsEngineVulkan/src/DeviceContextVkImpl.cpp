@@ -994,6 +994,9 @@ void DeviceContextVkImpl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffse
 
 void DeviceContextVkImpl::CommitViewports()
 {
+    if (m_NumViewports == 0)
+        return;
+
     VkViewport VkViewports[MaxViewports]; // Do not waste time initializing array to zero
     for (Uint32 vp = 0; vp < m_NumViewports; ++vp)
     {

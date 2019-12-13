@@ -489,7 +489,10 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
     Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLenghts, Names, 1);
 
     IncluderImpl Includer(Attribs.pShaderSourceStreamFactory);
-    auto         SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
+
+    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
+    if (SPIRV.empty())
+        return SPIRV;
 
     // SPIR-V bytecode generated from HLSL must be legalized to
     // turn it into a valid vulkan SPIR-V shader

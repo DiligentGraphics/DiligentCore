@@ -21,6 +21,8 @@
  *  of the possibility of such damages.
  */
 
+#include <atomic>
+
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "RefCntAutoPtr.h"
@@ -85,8 +87,17 @@ public:
 
     RefCntAutoPtr<ITexture> CreateTexture(const char* Name, TEXTURE_FORMAT Fmt, BIND_FLAGS BindFlags, Uint32 Width, Uint32 Height);
 
+    static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
+
+
 private:
     NativeWindow CreateNativeWindow();
+
+    static void MessageCallback(DebugMessageSeverity Severity,
+                                const Char*          Message,
+                                const char*          Function,
+                                const char*          File,
+                                int                  Line);
 
     const DeviceType m_DeviceType;
 
@@ -95,6 +106,8 @@ private:
     RefCntAutoPtr<IRenderDevice>  m_pDevice;
     RefCntAutoPtr<IDeviceContext> m_pDeviceContext;
     RefCntAutoPtr<ISwapChain>     m_pSwapChain;
+
+    static std::atomic_int m_NumAllowedErrors;
 };
 
 } // namespace Diligent

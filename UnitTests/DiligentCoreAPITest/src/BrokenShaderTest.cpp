@@ -55,7 +55,7 @@ TEST(Shader, CompilationFailure)
     IDataBlob* pErrors     = nullptr;
     Attrs.ppCompilerOutput = &pErrors;
 
-    LOG_INFO_MESSAGE("\n\nNo worries, testing broken shader...");
+    pEnv->SetErrorAllowance(pDevice->GetDeviceCaps().IsVulkanDevice() ? 3 : 2, "\n\nNo worries, testing broken shader...\n\n");
     RefCntAutoPtr<IShader> pBrokenShader;
     pDevice->CreateShader(Attrs, &pBrokenShader);
     EXPECT_FALSE(pBrokenShader);

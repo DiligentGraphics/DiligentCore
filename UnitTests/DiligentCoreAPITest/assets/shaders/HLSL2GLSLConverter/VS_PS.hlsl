@@ -1208,7 +1208,11 @@ void TestPS  ( in VSOutput In,
         //f1 = dst(f1,f1); f1 = dst(f2,f2); f1 = dst(f3,f3); f1 = dst(f4,f4);
         f1 = rcp(f1); f2 = rcp(f2); f3 = rcp(f3); f4 = rcp(f4);
 
-#if !GLES30 // no bit operations in GLES3.0
+        f1 = saturate(f1); f2 = saturate(f2); f3 = saturate(f3); f4 = saturate(f4);
+        sincos(f1,f1,f1_); sincos(f2,f2,f2_); sincos(f3,f3,f3_); sincos(f4,f4,f4_);
+
+        // no bit operations in GLES3.0. SPIRV optimizer also fails to legalize these operations.
+#if !GLES30 && !defined(VULKAN)
         i1 = countbits(u1); i2 = countbits(u2); i3 = countbits(u3); i4 = countbits(u4);
         i1 = countbits(i1); i2 = countbits(i2); i3 = countbits(i3); i4 = countbits(i4);
         i1 = firstbithigh(u1); i2 = firstbithigh(u2); i3 = firstbithigh(u3); i4 = firstbithigh(u4);
@@ -1217,12 +1221,7 @@ void TestPS  ( in VSOutput In,
         i1 = firstbitlow(i1); i2 = firstbitlow(i2); i3 = firstbitlow(i3); i4 = firstbitlow(i4);
         u1 = reversebits(u1); u2 = reversebits(u2); u3 = reversebits(u3); u4 = reversebits(u4);
         i1 = reversebits(i1); i2 = reversebits(i2); i3 = reversebits(i3); i4 = reversebits(i4);
-#endif
 
-        f1 = saturate(f1); f2 = saturate(f2); f3 = saturate(f3); f4 = saturate(f4);
-        sincos(f1,f1,f1_); sincos(f2,f2,f2_); sincos(f3,f3,f3_); sincos(f4,f4,f4_);
-
-#if !GLES30
         f1 = frexp(f1_, f1); f2 = frexp(f2_, f2); f3 = frexp(f3_, f3); f4 = frexp(f4_, f4);
         f1 = ldexp(f1, i1); f2 = ldexp(f2, i2); f3 = ldexp(f3, i3); f4 = ldexp(f4, i4);
 #endif
