@@ -27,6 +27,9 @@
 
 #include "TestingEnvironment.h"
 #include "ThreadSignal.h"
+#if D3D12_SUPPORTED
+#    include "D3D12/D3D12DebugLayerSetNameBugWorkaround.h"
+#endif
 
 #include "gtest/gtest.h"
 
@@ -69,7 +72,7 @@ protected:
 
     static const int NumBuffersToCreate  = 10;
     static const int NumTexturesToCreate = 5;
-    static const int NumPSOToCreate      = 2;
+    static const int NumPSOToCreate      = 3;
 
 #ifdef _DEBUG
     static const int NumIterations = 10;
@@ -266,16 +269,23 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
 
 TEST_F(MultithreadedResourceCreationTest, CreateResources)
 {
-    // This test sometimes randomly crashes when running in Direct3D12 mode (both SW and HW) which is caused by
-    // a bug in D3D12 debug layer. Apparently SetName() method works incorrectly in a multithreading environment.
-    // Disabling the debug layer or limiting the length of the name by 15 symbols fixes the problem.
-
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     if (pDevice->GetDeviceCaps().IsGLDevice())
     {
         GTEST_SKIP() << "Multithreading resource creation is not supported in OpenGL";
     }
+
+#if D3D12_SUPPORTED
+    // There is a bug in D3D12 debug layer as of build version 10.0.18362: SetName() method
+    // is not protected by a mutex internally. This, in combination with the fact that root signatures are
+    // de-duplicated by D3D12 runtime results in a race condition when SetName is called and causes random crashes.
+
+    // As a workaround, we create the root signature ahead of time and reserve enough space for the name
+    // to avoid memory allocation.
+
+    D3D12DebugLayerSetNameBugWorkaround D3D12DebugLayerBugWorkaround(pDevice);
+#endif
 
     TestingEnvironment::ScopedReleaseResources AutoResetEnvironment;
 

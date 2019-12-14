@@ -38,6 +38,14 @@ if(PLATFORM_WIN32)
     list(APPEND SOURCE ${SOURCE_WIN32})
 endif()
 
+if(D3D12_SUPPORTED)
+    file(GLOB D3D12_SOURCE LIST_DIRECTORIES false src/D3D12/*)
+    file(GLOB D3D12_INCLUDE LIST_DIRECTORIES false include/D3D12/*)
+    list(APPEND INCLUDE ${D3D12_INCLUDE})
+    list(APPEND SOURCE ${D3D12_SOURCE})
+endif()
+
+
 add_executable(DiligentCoreAPITest ${SOURCE} ${INCLUDE} ${SHADERS})
 set_common_target_properties(DiligentCoreAPITest)
 
