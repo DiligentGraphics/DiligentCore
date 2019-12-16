@@ -45,15 +45,17 @@ struct PSInput
 void main(in  uint    VertId : SV_VertexID,
           out PSInput PSIn) 
 {
-    float4 Pos[3];
-    Pos[0] = float4(-0.5, -0.5, 0.5, 1.0);
-    Pos[1] = float4( 0.0, +0.5, 0.5, 1.0);
-    Pos[2] = float4(+0.5, -0.5, 0.5, 1.0);
+    float4 Pos[4];
+    Pos[0] = float4(-0.5, -0.5, 0.0, 1.0);
+    Pos[1] = float4(-0.5, +0.5, 0.0, 1.0);
+    Pos[2] = float4(+0.5, -0.5, 0.0, 1.0);
+    Pos[3] = float4(+0.5, +0.5, 0.0, 1.0);
 
-    float3 Col[3];
-    Col[0] = float3(1.0, 0.0, 0.0); // red
-    Col[1] = float3(0.0, 1.0, 0.0); // green
-    Col[2] = float3(0.0, 0.0, 1.0); // blue
+    float3 Col[4];
+    Col[0] = float3(1.0, 0.0, 0.0);
+    Col[1] = float3(0.0, 1.0, 0.0);
+    Col[2] = float3(0.0, 0.0, 1.0);
+    Col[3] = float3(1.0, 1.0, 1.0);
 
     PSIn.Pos   = Pos[VertId];
     PSIn.Color = Col[VertId];
@@ -67,19 +69,13 @@ struct PSInput
     float3 Color : COLOR; 
 };
 
-struct PSOutput
-{ 
-    float4 Color : SV_TARGET; 
-};
-
-void main(in  PSInput  PSIn,
-          out PSOutput PSOut)
+float4 main(in PSInput PSIn) : SV_Target
 {
-    PSOut.Color = float4(PSIn.Color.rgb, 1.0);
+    return float4(PSIn.Color.rgb, 1.0);
 }
 )";
 
-void RenderDrawCommandRefenceTriangleD3D12(ISwapChain* pSwapChain)
+void RenderDrawCommandRefenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pContext               = pEnv->GetDeviceContext();
@@ -156,8 +152,8 @@ void RenderDrawCommandRefenceTriangleD3D12(ISwapChain* pSwapChain)
 
     pCmdList->SetPipelineState(pd3d12PSO);
     pCmdList->SetGraphicsRootSignature(pd3d12RootSignature);
-    pCmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    pCmdList->DrawInstanced(3, 1, 0, 0);
+    pCmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+    pCmdList->DrawInstanced(4, 1, 0, 0);
 
     pCmdList->Close();
     ID3D12CommandList* pCmdLits[] = {pCmdList};

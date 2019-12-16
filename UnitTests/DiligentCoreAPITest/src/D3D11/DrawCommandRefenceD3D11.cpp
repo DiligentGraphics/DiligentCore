@@ -40,15 +40,17 @@ struct PSInput
 void main(in  uint    VertId : SV_VertexID,
           out PSInput PSIn) 
 {
-    float4 Pos[3];
+    float4 Pos[4];
     Pos[0] = float4(-0.5, -0.5, 0.0, 1.0);
-    Pos[1] = float4( 0.0, +0.5, 0.0, 1.0);
+    Pos[1] = float4(-0.5, +0.5, 0.0, 1.0);
     Pos[2] = float4(+0.5, -0.5, 0.0, 1.0);
+    Pos[3] = float4(+0.5, +0.5, 0.0, 1.0);
 
-    float3 Col[3];
-    Col[0] = float3(1.0, 0.0, 0.0); // red
-    Col[1] = float3(0.0, 1.0, 0.0); // green
-    Col[2] = float3(0.0, 0.0, 1.0); // blue
+    float3 Col[4];
+    Col[0] = float3(1.0, 0.0, 0.0);
+    Col[1] = float3(0.0, 1.0, 0.0);
+    Col[2] = float3(0.0, 0.0, 1.0);
+    Col[3] = float3(1.0, 1.0, 1.0);
 
     PSIn.Pos   = Pos[VertId];
     PSIn.Color = Col[VertId];
@@ -62,19 +64,13 @@ struct PSInput
     float3 Color : COLOR; 
 };
 
-struct PSOutput
-{ 
-    float4 Color : SV_TARGET; 
-};
-
-void main(in  PSInput  PSIn,
-          out PSOutput PSOut)
+float4 main(in PSInput PSIn) : SV_Target
 {
-    PSOut.Color = float4(PSIn.Color.rgb, 1.0);
+    return float4(PSIn.Color.rgb, 1.0);
 }
 )";
 
-void RenderDrawCommandRefenceTriangleD3D11(ISwapChain* pSwapChain)
+void RenderDrawCommandRefenceD3D11(ISwapChain* pSwapChain)
 {
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
@@ -108,8 +104,8 @@ void RenderDrawCommandRefenceTriangleD3D11(ISwapChain* pSwapChain)
     d3dVP.MaxDepth     = 1;
     pd3d11Context->RSSetViewports(1, &d3dVP);
 
-    pd3d11Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    pd3d11Context->Draw(3, 0);
+    pd3d11Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+    pd3d11Context->Draw(4, 0);
 
     pd3d11Context->ClearState();
 }

@@ -37,7 +37,7 @@ static const char* PSSource = R"(
 
 )";
 
-void RenderDrawCommandRefenceTriangleVk(ISwapChain* pSwapChain)
+void RenderDrawCommandRefenceVk(ISwapChain* pSwapChain)
 {
 }
 

@@ -127,7 +127,6 @@ void CompareTestImages(const Uint8*   pReferencePixels,
 
     bool bIsIdentical = true;
 
-    std::vector<Uint8> Delta(Width * Height * 4);
     for (Uint32 row = 0; row < Height; ++row)
     {
         if (memcmp(pReferencePixels + row * RefPixelsStride,

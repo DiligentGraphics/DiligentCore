@@ -33,19 +33,19 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-void RenderDrawCommandRefenceTriangleD3D11(ISwapChain* pSwapChain);
+void RenderDrawCommandRefenceD3D11(ISwapChain* pSwapChain);
 #endif
 
 #if D3D12_SUPPORTED
-void RenderDrawCommandRefenceTriangleD3D12(ISwapChain* pSwapChain);
+void RenderDrawCommandRefenceD3D12(ISwapChain* pSwapChain);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-void RenderDrawCommandRefenceTriangleGL(ISwapChain* pSwapChain);
+void RenderDrawCommandRefenceGL(ISwapChain* pSwapChain);
 #endif
 
 #if VULKAN_SUPPORTED
-void RenderDrawCommandRefenceTriangleVk(ISwapChain* pSwapChain);
+void RenderDrawCommandRefenceVk(ISwapChain* pSwapChain);
 #endif
 
 #if METAL_SUPPORTED
@@ -72,15 +72,17 @@ struct PSInput
 void main(in  uint    VertId : SV_VertexID,
           out PSInput PSIn) 
 {
-    float4 Pos[3];
+    float4 Pos[4];
     Pos[0] = float4(-0.5, -0.5, 0.0, 1.0);
-    Pos[1] = float4( 0.0, +0.5, 0.0, 1.0);
+    Pos[1] = float4(-0.5, +0.5, 0.0, 1.0);
     Pos[2] = float4(+0.5, -0.5, 0.0, 1.0);
+    Pos[3] = float4(+0.5, +0.5, 0.0, 1.0);
 
-    float3 Col[3];
-    Col[0] = float3(1.0, 0.0, 0.0); // red
-    Col[1] = float3(0.0, 1.0, 0.0); // green
-    Col[2] = float3(0.0, 0.0, 1.0); // blue
+    float3 Col[4];
+    Col[0] = float3(1.0, 0.0, 0.0);
+    Col[1] = float3(0.0, 1.0, 0.0);
+    Col[2] = float3(0.0, 0.0, 1.0);
+    Col[3] = float3(1.0, 1.0, 1.0);
 
     PSIn.Pos   = Pos[VertId];
     PSIn.Color = Col[VertId];
@@ -127,27 +129,27 @@ protected:
             {
 #if D3D11_SUPPORTED
                 case DeviceType::D3D11:
-                    RenderDrawCommandRefenceTriangleD3D11(pSwapChain);
+                    RenderDrawCommandRefenceD3D11(pSwapChain);
                     break;
 #endif
 
 #if D3D12_SUPPORTED
                 case DeviceType::D3D12:
-                    RenderDrawCommandRefenceTriangleD3D12(pSwapChain);
+                    RenderDrawCommandRefenceD3D12(pSwapChain);
                     break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
                 case DeviceType::OpenGL:
                 case DeviceType::OpenGLES:
-                    RenderDrawCommandRefenceTriangleGL(pSwapChain);
+                    RenderDrawCommandRefenceGL(pSwapChain);
                     break;
 
 #endif
 
 #if VULKAN_SUPPORTED
                 case DeviceType::Vulkan:
-                    RenderDrawCommandRefenceTriangleVk(pSwapChain);
+                    RenderDrawCommandRefenceVk(pSwapChain);
                     break;
 
 #endif
@@ -166,7 +168,7 @@ protected:
         PSODesc.IsComputePipeline                             = false;
         PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
         PSODesc.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
-        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
         PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
         PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
@@ -208,7 +210,7 @@ protected:
         pEnv->Reset();
     }
 
-    static void SetRenderTargets()
+    static void SetRenderTargets(IPipelineState* pPSO)
     {
         auto* pEnv       = TestingEnvironment::GetInstance();
         auto* pContext   = pEnv->GetDeviceContext();
@@ -219,23 +221,21 @@ protected:
 
         const float ClearColor[] = {0.f, 0.f, 0.f, 0.0f};
         pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-    }
-
-    static void DrawTriangle(IPipelineState* pPSO)
-    {
-        auto* pEnv       = TestingEnvironment::GetInstance();
-        auto* pContext   = pEnv->GetDeviceContext();
-        auto* pSwapChain = pEnv->GetSwapChain();
 
         pContext->SetPipelineState(pPSO);
-        // Commit shader resources. we don't really have any resources, this call also sets the shaders in OpenGL backend.
+        // Commit shader resources. We don't really have any resources, this call also sets the shaders in OpenGL backend.
         pContext->CommitShaderResources(nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    }
 
-        DrawAttribs drawAttrs;
-        drawAttrs.NumVertices = 3;
-        pContext->Draw(drawAttrs);
+    static void Present()
+    {
+        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pSwapChain = pEnv->GetSwapChain();
+        auto* pContext   = pEnv->GetDeviceContext();
 
         pSwapChain->Present();
+
+        pContext->InvalidateState();
     }
 
     static RefCntAutoPtr<IPipelineState> sm_pDrawProceduralPSO;
@@ -245,10 +245,15 @@ RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawProceduralPSO;
 
 TEST_F(DrawCommandTest, DrawProcedural)
 {
-    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
 
-    SetRenderTargets();
-    DrawTriangle(sm_pDrawProceduralPSO);
+    SetRenderTargets(sm_pDrawProceduralPSO);
+
+    DrawAttribs drawAttrs{4, DRAW_FLAG_VERIFY_ALL};
+    pContext->Draw(drawAttrs);
+
+    Present();
 }
 
 } // namespace

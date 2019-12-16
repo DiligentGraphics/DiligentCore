@@ -35,7 +35,7 @@ static const char* VSSource = R"(
 static const char* PSSource = R"(
 )";
 
-void RenderDrawCommandRefenceTriangleGL(ISwapChain* pSwapChain)
+void RenderDrawCommandRefenceGL(ISwapChain* pSwapChain)
 {
 }
 
