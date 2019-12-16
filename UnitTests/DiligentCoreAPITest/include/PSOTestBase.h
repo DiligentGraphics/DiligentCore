@@ -29,6 +29,9 @@
 namespace Diligent
 {
 
+namespace Testing
+{
+
 class PSOTestBase
 {
 protected:
@@ -53,5 +56,7 @@ private:
 
     static Resources sm_Resources;
 };
+
+} // namespace Testing
 
 } // namespace Diligent

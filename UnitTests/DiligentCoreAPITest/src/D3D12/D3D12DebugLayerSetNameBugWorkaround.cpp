@@ -21,7 +21,7 @@
  *  of the possibility of such damages.
  */
 
-#include "../include/D3D12/D3D12DebugLayerSetNameBugWorkaround.h"
+#include "D3D12/D3D12DebugLayerSetNameBugWorkaround.h"
 
 #include "RefCntAutoPtr.h"
 
@@ -35,6 +35,9 @@
 #include "RenderDeviceD3D12.h"
 
 namespace Diligent
+{
+
+namespace Testing
 {
 
 struct D3D12DebugLayerSetNameBugWorkaround::RootSignatureWrapper
@@ -67,5 +70,7 @@ D3D12DebugLayerSetNameBugWorkaround::D3D12DebugLayerSetNameBugWorkaround(IRender
 D3D12DebugLayerSetNameBugWorkaround::~D3D12DebugLayerSetNameBugWorkaround()
 {
 }
+
+} // namespace Testing
 
 } // namespace Diligent

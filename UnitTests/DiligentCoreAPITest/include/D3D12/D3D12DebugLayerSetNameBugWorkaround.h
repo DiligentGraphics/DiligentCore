@@ -28,6 +28,9 @@
 namespace Diligent
 {
 
+namespace Testing
+{
+
 // There is a bug in D3D12 debug layer as of build version 10.0.18362: SetName() method
 // is not protected by a mutex internally. This, in combination with the fact that root signatures are
 // de-duplicated by D3D12 runtime, causes the following problem:
@@ -48,5 +51,7 @@ private:
     struct RootSignatureWrapper;
     std::unique_ptr<RootSignatureWrapper> m_RootSignature;
 };
+
+} // namespace Testing
 
 } // namespace Diligent

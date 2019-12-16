@@ -21,22 +21,28 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-#include "CreateObjFromNativeResTestBase.h"
+#include "TestingSwapChainBase.h"
 
 namespace Diligent
 {
 
-class TestCreateObjFromNativeResGL : public CreateObjFromNativeResTestBase
+namespace Testing
+{
+
+class TestingSwapChainGL : public TestingSwapChainBase<ISwapChain>
 {
 public:
-    TestCreateObjFromNativeResGL(IRenderDevice* pDevice) :
-        CreateObjFromNativeResTestBase(pDevice)
-    {}
+    using TBase = TestingSwapChainBase<ISwapChain>;
+    TestingSwapChainGL(IReferenceCounters*  pRefCounters,
+                       IRenderDevice*       pDevice,
+                       IDeviceContext*      pContext,
+                       const SwapChainDesc& SCDesc);
 
-    virtual void CreateTexture(ITexture* pTexture) override final;
-    virtual void CreateBuffer(IBuffer* pBuffer) override final;
+    virtual void TakeSnapshot() override final;
+
+private:
 };
+
+} // namespace Testing
 
 } // namespace Diligent

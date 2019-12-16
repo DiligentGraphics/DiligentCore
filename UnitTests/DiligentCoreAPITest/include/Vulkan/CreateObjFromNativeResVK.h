@@ -23,10 +23,7 @@
 
 #pragma once
 
-#include "RenderDevice.h"
-#include "Texture.h"
-#include "Buffer.h"
-#include "RefCntAutoPtr.h"
+#include "CreateObjFromNativeResTestBase.h"
 
 namespace Diligent
 {
@@ -34,20 +31,15 @@ namespace Diligent
 namespace Testing
 {
 
-class CreateObjFromNativeResTestBase
+class TestCreateObjFromNativeResVK : public CreateObjFromNativeResTestBase
 {
 public:
-    CreateObjFromNativeResTestBase(IRenderDevice* pDevice) :
-        m_pDevice{pDevice}
+    TestCreateObjFromNativeResVK(IRenderDevice* pDevice) :
+        CreateObjFromNativeResTestBase(pDevice)
     {}
 
-    virtual ~CreateObjFromNativeResTestBase() {}
-
-    virtual void CreateTexture(ITexture* pTexture) = 0;
-    virtual void CreateBuffer(IBuffer* pBuffer)    = 0;
-
-protected:
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
+    virtual void CreateTexture(ITexture* pTexture) override final;
+    virtual void CreateBuffer(IBuffer* pBuffer) override final;
 };
 
 } // namespace Testing

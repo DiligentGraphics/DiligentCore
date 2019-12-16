@@ -23,6 +23,7 @@
 
 #include "TestingEnvironment.h"
 #include "PlatformDebug.h"
+#include "TestingSwapChainBase.h"
 
 #if D3D11_SUPPORTED
 #    include "EngineFactoryD3D11.h"
@@ -45,6 +46,9 @@
 #endif
 
 namespace Diligent
+{
+
+namespace Testing
 {
 
 TestingEnvironment* TestingEnvironment::m_pTheEnvironment = nullptr;
@@ -227,7 +231,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
                 }
             }
             CreateInfo.EnableDebugLayer = true;
-            //CreateInfo.EnableGPUBasedValidation = true;
+            //CreateInfo.EnableGPUBasedValidation                = true;
             CreateInfo.CPUDescriptorHeapAllocationSize[0]      = 64; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
             CreateInfo.CPUDescriptorHeapAllocationSize[1]      = 32; // D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
             CreateInfo.CPUDescriptorHeapAllocationSize[2]      = 16; // D3D12_DESCRIPTOR_HEAP_TYPE_RTV
@@ -341,8 +345,14 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             LOG_ERROR_AND_THROW("Unknown device type");
             break;
     }
-
     m_pDeviceContext.Attach(ppContexts[0]);
+
+    SCDesc.Width             = 512;
+    SCDesc.Height            = 512;
+    SCDesc.ColorBufferFormat = TEX_FORMAT_RGBA8_UNORM;
+    SCDesc.DepthBufferFormat = TEX_FORMAT_D32_FLOAT;
+
+    CreateTestingSwapChain(m_pDevice, m_pDeviceContext, SCDesc, &m_pSwapChain);
 }
 
 TestingEnvironment::~TestingEnvironment()
@@ -398,5 +408,7 @@ RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXT
 
     return pTexture;
 }
+
+} // namespace Testing
 
 } // namespace Diligent

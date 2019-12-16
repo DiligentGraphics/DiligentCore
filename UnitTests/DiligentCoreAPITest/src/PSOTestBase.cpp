@@ -27,6 +27,9 @@
 namespace Diligent
 {
 
+namespace Testing
+{
+
 PSOTestBase::Resources PSOTestBase::sm_Resources;
 
 static const char g_ShaderSource[] = R"(
@@ -90,5 +93,7 @@ RefCntAutoPtr<IPipelineState> PSOTestBase::CreateTestPSO(const PipelineStateDesc
     }
     return pPSO;
 }
+
+} // namespace Testing
 
 } // namespace Diligent

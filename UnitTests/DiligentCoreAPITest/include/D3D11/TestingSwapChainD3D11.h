@@ -21,22 +21,61 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "TestingSwapChainBase.h"
 
-#include "CreateObjFromNativeResTestBase.h"
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
+
+#include <d3d11.h>
+#include <atlcomcli.h>
 
 namespace Diligent
 {
 
-class TestCreateObjFromNativeResD3D12 : public CreateObjFromNativeResTestBase
+namespace Testing
+{
+
+class TestingSwapChainD3D11 final : public TestingSwapChainBase<ISwapChain>
 {
 public:
-    TestCreateObjFromNativeResD3D12(IRenderDevice* pDevice) :
-        CreateObjFromNativeResTestBase(pDevice)
-    {}
+    using TBase = TestingSwapChainBase<ISwapChain>;
+    TestingSwapChainD3D11(IReferenceCounters*  pRefCounters,
+                          IRenderDevice*       pDevice,
+                          IDeviceContext*      pContext,
+                          const SwapChainDesc& SCDesc);
 
-    virtual void CreateTexture(ITexture* pTexture) override final;
-    virtual void CreateBuffer(IBuffer* pBuffer) override final;
+    virtual void TakeSnapshot() override final;
+
+    ID3D11Texture2D* GetD3D11RenderTarget()
+    {
+        return m_pd3d11RenderTarget;
+    }
+
+    ID3D11Texture2D* GetD3D11DepthBuffer()
+    {
+        return m_pd3d11DepthBuffer;
+    }
+
+    ID3D11RenderTargetView* GetD3D11RTV()
+    {
+        return m_pd3d11RTV;
+    }
+
+    ID3D11DepthStencilView* GetD3D11DSV()
+    {
+        return m_pd3d11DSV;
+    }
+
+private:
+    CComPtr<ID3D11DeviceContext>    m_pd3d11Context;
+    CComPtr<ID3D11Texture2D>        m_pd3d11RenderTarget;
+    CComPtr<ID3D11Texture2D>        m_pd3d11DepthBuffer;
+    CComPtr<ID3D11RenderTargetView> m_pd3d11RTV;
+    CComPtr<ID3D11DepthStencilView> m_pd3d11DSV;
+    CComPtr<ID3D11Texture2D>        m_pd3d11StagingTex;
 };
+
+} // namespace Testing
 
 } // namespace Diligent

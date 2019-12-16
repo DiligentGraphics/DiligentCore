@@ -21,12 +21,7 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-#include "RenderDevice.h"
-#include "Texture.h"
-#include "Buffer.h"
-#include "RefCntAutoPtr.h"
+#include "GL/TestingSwapChainGL.h"
 
 namespace Diligent
 {
@@ -34,21 +29,32 @@ namespace Diligent
 namespace Testing
 {
 
-class CreateObjFromNativeResTestBase
+TestingSwapChainGL::TestingSwapChainGL(IReferenceCounters*  pRefCounters,
+                                       IRenderDevice*       pDevice,
+                                       IDeviceContext*      pContext,
+                                       const SwapChainDesc& SCDesc) :
+    TBase //
+    {
+        pRefCounters,
+        pDevice,
+        pContext,
+        SCDesc //
+    }
 {
-public:
-    CreateObjFromNativeResTestBase(IRenderDevice* pDevice) :
-        m_pDevice{pDevice}
-    {}
+}
 
-    virtual ~CreateObjFromNativeResTestBase() {}
+void TestingSwapChainGL::TakeSnapshot()
+{
+}
 
-    virtual void CreateTexture(ITexture* pTexture) = 0;
-    virtual void CreateBuffer(IBuffer* pBuffer)    = 0;
-
-protected:
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
-};
+void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
+                              IDeviceContext*      pContext,
+                              const SwapChainDesc& SCDesc,
+                              ISwapChain**         ppSwapChain)
+{
+    TestingSwapChainGL* pTestingSC(MakeNewRCObj<TestingSwapChainGL>()(pDevice, pContext, SCDesc));
+    pTestingSC->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+}
 
 } // namespace Testing
 

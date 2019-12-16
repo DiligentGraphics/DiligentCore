@@ -30,11 +30,14 @@
 #include "BufferVk.h"
 #include "GraphicsAccessories.h"
 
-#include "CreateObjFromNativeResVK.h"
+#include "Vulkan/CreateObjFromNativeResVK.h"
 
 #include "gtest/gtest.h"
 
 namespace Diligent
+{
+
+namespace Testing
 {
 
 void TestCreateObjFromNativeResVK::CreateTexture(Diligent::ITexture* pTexture)
@@ -94,5 +97,7 @@ void TestCreateObjFromNativeResVK::CreateBuffer(Diligent::IBuffer* pBuffer)
     EXPECT_EQ(reinterpret_cast<VkBuffer>(pTestBufferVk->GetNativeHandle()), VkBufferHandle);
 #endif
 }
+
+} // namespace Testing
 
 } // namespace Diligent

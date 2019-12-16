@@ -23,20 +23,24 @@
 
 #pragma once
 
-#include "CreateObjFromNativeResTestBase.h"
+#include "TestingEnvironment.h"
 
 namespace Diligent
 {
 
-class TestCreateObjFromNativeResD3D11 : public CreateObjFromNativeResTestBase
+namespace Testing
+{
+
+class TestingEnvironmentVk final : public TestingEnvironment
 {
 public:
-    TestCreateObjFromNativeResD3D11(IRenderDevice* pDevice) :
-        CreateObjFromNativeResTestBase(pDevice)
-    {}
+    TestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE AdapterType);
 
-    virtual void CreateTexture(ITexture* pTexture) override final;
-    virtual void CreateBuffer(IBuffer* pBuffer) override final;
+    static TestingEnvironmentVk* GetInstance() { return ValidatedCast<TestingEnvironmentVk>(TestingEnvironment::GetInstance()); }
+
+private:
 };
+
+} // namespace Testing
 
 } // namespace Diligent

@@ -147,7 +147,7 @@ TextureD3D12Impl ::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
     if (m_Desc.Usage == USAGE_STATIC || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
-        D3D12_CLEAR_VALUE  ClearValue;
+        D3D12_CLEAR_VALUE  ClearValue  = {};
         D3D12_CLEAR_VALUE* pClearValue = nullptr;
         if (Desc.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL))
         {
@@ -172,7 +172,8 @@ TextureD3D12Impl ::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             pClearValue = &ClearValue;
         }
 
-        D3D12_HEAP_PROPERTIES HeapProps;
+        D3D12_HEAP_PROPERTIES HeapProps = {};
+
         HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
         HeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         HeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
@@ -183,8 +184,9 @@ TextureD3D12Impl ::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         auto InitialState       = bInitializeTexture ? RESOURCE_STATE_COPY_DEST : RESOURCE_STATE_UNDEFINED;
         SetState(InitialState);
         auto D3D12State = ResourceStateFlagsToD3D12ResourceStates(InitialState);
-        auto hr         = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
-                                                        &Desc, D3D12State, pClearValue, __uuidof(m_pd3d12Resource), reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
+        auto hr =
+            pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &Desc, D3D12State, pClearValue, __uuidof(m_pd3d12Resource),
+                                                  reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&m_pd3d12Resource)));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create D3D12 texture");
 
@@ -200,14 +202,16 @@ TextureD3D12Impl ::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
             UINT64 uploadBufferSize = 0;
             pd3d12Device->GetCopyableFootprints(&Desc, 0, pInitData->NumSubresources, 0, nullptr, nullptr, nullptr, &uploadBufferSize);
 
-            D3D12_HEAP_PROPERTIES UploadHeapProps;
+            D3D12_HEAP_PROPERTIES UploadHeapProps = {};
+
             UploadHeapProps.Type                 = D3D12_HEAP_TYPE_UPLOAD;
             UploadHeapProps.CPUPageProperty      = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
             UploadHeapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
             UploadHeapProps.CreationNodeMask     = 1;
             UploadHeapProps.VisibleNodeMask      = 1;
 
-            D3D12_RESOURCE_DESC BufferDesc;
+            D3D12_RESOURCE_DESC BufferDesc = {};
+
             BufferDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
             BufferDesc.Alignment          = 0;
             BufferDesc.Width              = uploadBufferSize;
@@ -273,7 +277,7 @@ TextureD3D12Impl ::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     else if (m_Desc.Usage == USAGE_STAGING)
     {
         // Create staging buffer
-        D3D12_HEAP_PROPERTIES StaginHeapProps;
+        D3D12_HEAP_PROPERTIES StaginHeapProps = {};
         DEV_CHECK_ERR((m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_READ ||
                           (m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_WRITE,
                       "Exactly one of CPU_ACCESS_READ or CPU_ACCESS_WRITE flags must be specified");
@@ -306,7 +310,8 @@ TextureD3D12Impl ::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
         pd3d12Device->GetCopyableFootprints(&Desc, 0, NumSubresources, 0, m_StagingFootprints, nullptr, nullptr, &stagingBufferSize);
         m_StagingFootprints[NumSubresources] = D3D12_PLACED_SUBRESOURCE_FOOTPRINT{stagingBufferSize};
 
-        D3D12_RESOURCE_DESC BufferDesc;
+        D3D12_RESOURCE_DESC BufferDesc = {};
+
         BufferDesc.Dimension          = D3D12_RESOURCE_DIMENSION_BUFFER;
         BufferDesc.Alignment          = 0;
         BufferDesc.Width              = stagingBufferSize;

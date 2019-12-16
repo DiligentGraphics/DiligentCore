@@ -48,7 +48,7 @@ template <class BaseInterface>
 class SwapChainBase : public ObjectBase<BaseInterface>
 {
 public:
-    typedef ObjectBase<BaseInterface> TObjectBase;
+    using TObjectBase = ObjectBase<BaseInterface>;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this swap chain.
     /// \param pDevice - pointer to the device.

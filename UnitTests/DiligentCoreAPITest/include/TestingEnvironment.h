@@ -21,6 +21,8 @@
  *  of the possibility of such damages.
  */
 
+#pragma once
+
 #include <atomic>
 
 #include "RenderDevice.h"
@@ -34,7 +36,10 @@
 namespace Diligent
 {
 
-class TestingEnvironment final : public ::testing::Environment
+namespace Testing
+{
+
+class TestingEnvironment : public ::testing::Environment
 {
 public:
     struct NativeWindow
@@ -82,6 +87,7 @@ public:
 
     IRenderDevice*  GetDevice() { return m_pDevice; }
     IDeviceContext* GetDeviceContext() { return m_pDeviceContext; }
+    ISwapChain*     GetSwapChain() { return m_pSwapChain; }
 
     static TestingEnvironment* GetInstance() { return m_pTheEnvironment; }
 
@@ -89,8 +95,7 @@ public:
 
     static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
 
-
-private:
+protected:
     NativeWindow CreateNativeWindow();
 
     static void MessageCallback(DebugMessageSeverity Severity,
@@ -109,5 +114,7 @@ private:
 
     static std::atomic_int m_NumAllowedErrors;
 };
+
+} // namespace Testing
 
 } // namespace Diligent

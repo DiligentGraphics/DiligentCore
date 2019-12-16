@@ -23,10 +23,7 @@
 
 #pragma once
 
-#include "RenderDevice.h"
-#include "Texture.h"
-#include "Buffer.h"
-#include "RefCntAutoPtr.h"
+#include "TestingEnvironment.h"
 
 namespace Diligent
 {
@@ -34,20 +31,14 @@ namespace Diligent
 namespace Testing
 {
 
-class CreateObjFromNativeResTestBase
+class TestingEnvironmentGL final : public TestingEnvironment
 {
 public:
-    CreateObjFromNativeResTestBase(IRenderDevice* pDevice) :
-        m_pDevice{pDevice}
-    {}
+    TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType);
 
-    virtual ~CreateObjFromNativeResTestBase() {}
+    static TestingEnvironmentGL* GetInstance() { return ValidatedCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
 
-    virtual void CreateTexture(ITexture* pTexture) = 0;
-    virtual void CreateBuffer(IBuffer* pBuffer)    = 0;
-
-protected:
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
+private:
 };
 
 } // namespace Testing

@@ -84,11 +84,14 @@
 #include "BufferGL.h"
 #include "GraphicsAccessories.h"
 
-#include "CreateObjFromNativeResGL.h"
+#include "GL/CreateObjFromNativeResGL.h"
 
 #include "gtest/gtest.h"
 
 namespace Diligent
+{
+
+namespace Testing
 {
 
 void TestCreateObjFromNativeResGL::CreateTexture(Diligent::ITexture* pTexture)
@@ -158,5 +161,7 @@ void TestCreateObjFromNativeResGL::CreateBuffer(Diligent::IBuffer* pBuffer)
     EXPECT_EQ(reinterpret_cast<size_t>(pTestBufferGL->GetNativeHandle()), GLBufferHandle);
 #endif
 }
+
+} // namespace Testing
 
 } // namespace Diligent

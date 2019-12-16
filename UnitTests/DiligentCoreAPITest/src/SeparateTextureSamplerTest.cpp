@@ -26,6 +26,7 @@
 #include "gtest/gtest.h"
 
 using namespace Diligent;
+using namespace Diligent::Testing;
 
 namespace
 {

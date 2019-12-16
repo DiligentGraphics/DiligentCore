@@ -31,6 +31,9 @@
 namespace Diligent
 {
 
+namespace Testing
+{
+
 TestingEnvironment::NativeWindow TestingEnvironment::CreateNativeWindow()
 {
 #ifdef UNICODE
@@ -60,5 +63,7 @@ TestingEnvironment::NativeWindow TestingEnvironment::CreateNativeWindow()
 
     return NativeWnd;
 }
+
+} // namespace Testing
 
 } // namespace Diligent

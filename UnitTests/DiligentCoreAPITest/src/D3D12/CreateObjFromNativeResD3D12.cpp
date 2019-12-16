@@ -21,7 +21,7 @@
  *  of the possibility of such damages.
  */
 
-#include "CreateObjFromNativeResD3D12.h"
+#include "D3D12/CreateObjFromNativeResD3D12.h"
 #include <d3d12.h>
 #include "RenderDeviceD3D12.h"
 #include "TextureD3D12.h"
@@ -31,6 +31,9 @@
 #include "gtest/gtest.h"
 
 namespace Diligent
+{
+
+namespace Testing
 {
 
 void TestCreateObjFromNativeResD3D12::CreateTexture(Diligent::ITexture* pTexture)
@@ -95,5 +98,7 @@ void TestCreateObjFromNativeResD3D12::CreateBuffer(Diligent::IBuffer* pBuffer)
         EXPECT_EQ(pTestBufferD3D12->GetNativeHandle(), pD3D12Buffer);
     }
 }
+
+} // namespace Testing
 
 } // namespace Diligent

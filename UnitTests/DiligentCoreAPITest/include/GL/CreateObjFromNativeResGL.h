@@ -28,16 +28,20 @@
 namespace Diligent
 {
 
+namespace Testing
+{
 
-class TestCreateObjFromNativeResVK : public CreateObjFromNativeResTestBase
+class TestCreateObjFromNativeResGL : public CreateObjFromNativeResTestBase
 {
 public:
-    TestCreateObjFromNativeResVK(IRenderDevice* pDevice) :
+    TestCreateObjFromNativeResGL(IRenderDevice* pDevice) :
         CreateObjFromNativeResTestBase(pDevice)
     {}
 
     virtual void CreateTexture(ITexture* pTexture) override final;
     virtual void CreateBuffer(IBuffer* pBuffer) override final;
 };
+
+} // namespace Testing
 
 } // namespace Diligent

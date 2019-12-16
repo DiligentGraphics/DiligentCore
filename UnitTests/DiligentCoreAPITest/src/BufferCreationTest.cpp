@@ -22,19 +22,19 @@
  */
 
 #if D3D11_SUPPORTED
-#    include "CreateObjFromNativeResD3D11.h"
+#    include "D3D11/CreateObjFromNativeResD3D11.h"
 #endif
 
 #if D3D12_SUPPORTED
-#    include "CreateObjFromNativeResD3D12.h"
+#    include "D3D12/CreateObjFromNativeResD3D12.h"
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-#    include "CreateObjFromNativeResGL.h"
+#    include "GL/CreateObjFromNativeResGL.h"
 #endif
 
 #if VULKAN_SUPPORTED
-#    include "CreateObjFromNativeResVK.h"
+#    include "Vulkan/CreateObjFromNativeResVK.h"
 #endif
 
 #include "GraphicsAccessories.h"
@@ -44,6 +44,7 @@
 #include "gtest/gtest.h"
 
 using namespace Diligent;
+using namespace Diligent::Testing;
 
 namespace
 {

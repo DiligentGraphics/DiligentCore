@@ -1350,31 +1350,31 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
     D3D12_TEXTURE_COPY_LOCATION SrcLocation;
     SrcLocation.Type                              = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
     SrcLocation.pResource                         = pd3d12Buffer;
-    D3D12_PLACED_SUBRESOURCE_FOOTPRINT& Footpring = SrcLocation.PlacedFootprint;
-    Footpring.Offset                              = SrcOffset;
-    Footpring.Footprint.Width                     = static_cast<UINT>(DstBox.MaxX - DstBox.MinX);
-    Footpring.Footprint.Height                    = static_cast<UINT>(DstBox.MaxY - DstBox.MinY);
-    Footpring.Footprint.Depth                     = static_cast<UINT>(DstBox.MaxZ - DstBox.MinZ); // Depth cannot be 0
-    Footpring.Footprint.Format                    = TexFormatToDXGI_Format(TexDesc.Format);
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT& Footprint = SrcLocation.PlacedFootprint;
+    Footprint.Offset                              = SrcOffset;
+    Footprint.Footprint.Width                     = static_cast<UINT>(DstBox.MaxX - DstBox.MinX);
+    Footprint.Footprint.Height                    = static_cast<UINT>(DstBox.MaxY - DstBox.MinY);
+    Footprint.Footprint.Depth                     = static_cast<UINT>(DstBox.MaxZ - DstBox.MinZ); // Depth cannot be 0
+    Footprint.Footprint.Format                    = TexFormatToDXGI_Format(TexDesc.Format);
 
-    Footpring.Footprint.RowPitch = static_cast<UINT>(SrcStride);
+    Footprint.Footprint.RowPitch = static_cast<UINT>(SrcStride);
 
 #ifdef _DEBUG
     {
         const auto&  FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
-        const Uint32 RowCount   = std::max((Footpring.Footprint.Height / FmtAttribs.BlockHeight), 1u);
-        VERIFY(BufferSize >= Footpring.Footprint.RowPitch * RowCount * Footpring.Footprint.Depth, "Buffer is not large enough");
-        VERIFY(Footpring.Footprint.Depth == 1 || static_cast<UINT>(SrcDepthStride) == Footpring.Footprint.RowPitch * RowCount, "Depth stride must be equal to the size of 2D plane");
+        const Uint32 RowCount   = std::max((Footprint.Footprint.Height / FmtAttribs.BlockHeight), 1u);
+        VERIFY(BufferSize >= Footprint.Footprint.RowPitch * RowCount * Footprint.Footprint.Depth, "Buffer is not large enough");
+        VERIFY(Footprint.Footprint.Depth == 1 || static_cast<UINT>(SrcDepthStride) == Footprint.Footprint.RowPitch * RowCount, "Depth stride must be equal to the size of 2D plane");
     }
 #endif
 
     D3D12_BOX D3D12SrcBox;
     D3D12SrcBox.left   = 0;
-    D3D12SrcBox.right  = Footpring.Footprint.Width;
+    D3D12SrcBox.right  = Footprint.Footprint.Width;
     D3D12SrcBox.top    = 0;
-    D3D12SrcBox.bottom = Footpring.Footprint.Height;
+    D3D12SrcBox.bottom = Footprint.Footprint.Height;
     D3D12SrcBox.front  = 0;
-    D3D12SrcBox.back   = Footpring.Footprint.Depth;
+    D3D12SrcBox.back   = Footprint.Footprint.Depth;
     CmdCtx.GetCommandList()->CopyTextureRegion(&DstLocation,
                                                static_cast<UINT>(DstBox.MinX),
                                                static_cast<UINT>(DstBox.MinY),

@@ -30,7 +30,40 @@
 #    include <crtdbg.h>
 #endif
 
+
+namespace Diligent
+{
+
+namespace Testing
+{
+
+#if D3D11_SUPPORTED
+TestingEnvironment* CreateTestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+#endif
+
+#if D3D12_SUPPORTED
+TestingEnvironment* CreateTestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+TestingEnvironment* CreateTestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+#endif
+
+#if VULKAN_SUPPORTED
+TestingEnvironment* CreateTestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+#endif
+
+#if METAL_SUPPORTED
+
+#endif
+
+} // namespace Testing
+
+} // namespace Diligent
+
+
 using namespace Diligent;
+using namespace Diligent::Testing;
 
 int main(int argc, char** argv)
 {
@@ -48,34 +81,28 @@ int main(int argc, char** argv)
         if (strcmp(arg, "--mode=d3d11") == 0)
         {
             deviceType = DeviceType::D3D11;
-            std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D11 mode ==================\n\n";
         }
         else if (strcmp(arg, "--mode=d3d11_sw") == 0)
         {
             deviceType  = DeviceType::D3D11;
             AdapterType = ADAPTER_TYPE_SOFTWARE;
-            std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D11-SW mode =================\n\n";
         }
         else if (strcmp(arg, "--mode=d3d12") == 0)
         {
             deviceType = DeviceType::D3D12;
-            std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D12 mode ==================\n\n";
         }
         else if (strcmp(arg, "--mode=d3d12_sw") == 0)
         {
             deviceType  = DeviceType::D3D12;
             AdapterType = ADAPTER_TYPE_SOFTWARE;
-            std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D12-SW mode =================\n\n";
         }
         else if (strcmp(arg, "--mode=vk") == 0)
         {
             deviceType = DeviceType::Vulkan;
-            std::cout << "\n\n\n==================== Testing Diligent Core API in Vulkan mode ====================\n\n";
         }
         else if (strcmp(arg, "--mode=gl") == 0)
         {
             deviceType = DeviceType::OpenGL;
-            std::cout << "\n\n\n==================== Testing Diligent Core API in OpenGL mode ====================\n\n";
         }
     }
 
@@ -85,10 +112,51 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    Diligent::TestingEnvironment* pEnv = nullptr;
+    Diligent::Testing::TestingEnvironment* pEnv = nullptr;
     try
     {
-        pEnv = new Diligent::TestingEnvironment{deviceType, AdapterType};
+        switch (deviceType)
+        {
+#if D3D11_SUPPORTED
+            case DeviceType::D3D11:
+                pEnv = CreateTestingEnvironmentD3D11(deviceType, AdapterType);
+                if (AdapterType == ADAPTER_TYPE_SOFTWARE)
+                    std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D11-SW mode =================\n\n";
+                else
+                    std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D11 mode ==================\n\n";
+                break;
+#endif
+
+#if D3D12_SUPPORTED
+            case DeviceType::D3D12:
+                pEnv = CreateTestingEnvironmentD3D12(deviceType, AdapterType);
+                if (AdapterType == ADAPTER_TYPE_SOFTWARE)
+                    std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D12-SW mode =================\n\n";
+                else
+                    std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D12 mode ==================\n\n";
+                break;
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+            case DeviceType::OpenGL:
+            case DeviceType::OpenGLES:
+                pEnv = CreateTestingEnvironmentGL(deviceType, AdapterType);
+                std::cout << "\n\n\n==================== Testing Diligent Core API in OpenGL mode ====================\n\n";
+                break;
+
+#endif
+
+#if VULKAN_SUPPORTED
+            case DeviceType::Vulkan:
+                pEnv = CreateTestingEnvironmentVk(deviceType, AdapterType);
+                std::cout << "\n\n\n==================== Testing Diligent Core API in Vulkan mode ====================\n\n";
+                break;
+
+#endif
+
+            default:
+                LOG_ERROR_AND_THROW("Unsupported device type");
+        }
     }
     catch (...)
     {

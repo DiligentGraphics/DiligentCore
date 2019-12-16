@@ -282,8 +282,12 @@ PipelineStateD3D12Impl ::PipelineStateD3D12Impl(IReferenceCounters*      pRefCou
         std::array<size_t, MaxShadersInPipeline> ShaderVarMgrDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
-            std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes    = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-            Uint32                                       NumVariablesUnused = 0;
+            std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes =
+                {
+                    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC //
+                };
+            Uint32 NumVariablesUnused = 0;
 
             ShaderVarMgrDataSizes[s] = ShaderVariableManagerD3D12::GetRequiredMemorySize(m_pShaderResourceLayouts[s], AllowedVarTypes.data(), static_cast<Uint32>(AllowedVarTypes.size()), NumVariablesUnused);
         }

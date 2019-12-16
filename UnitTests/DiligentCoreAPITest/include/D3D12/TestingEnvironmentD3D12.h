@@ -23,10 +23,15 @@
 
 #pragma once
 
-#include "RenderDevice.h"
-#include "Texture.h"
-#include "Buffer.h"
-#include "RefCntAutoPtr.h"
+#include "TestingEnvironment.h"
+
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
+
+#include <d3d12.h>
+#include <d3dcompiler.h>
+#include <atlcomcli.h>
 
 namespace Diligent
 {
@@ -34,20 +39,39 @@ namespace Diligent
 namespace Testing
 {
 
-class CreateObjFromNativeResTestBase
+// Implemented in TestingEnvironmentD3D11.cpp
+HRESULT CompileD3DShader(const char*             Source,
+                         LPCSTR                  strFunctionName,
+                         const D3D_SHADER_MACRO* pDefines,
+                         LPCSTR                  profile,
+                         ID3DBlob**              ppBlobOut);
+
+class TestingEnvironmentD3D12 final : public TestingEnvironment
 {
 public:
-    CreateObjFromNativeResTestBase(IRenderDevice* pDevice) :
-        m_pDevice{pDevice}
-    {}
+    TestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+    ~TestingEnvironmentD3D12();
 
-    virtual ~CreateObjFromNativeResTestBase() {}
+    static TestingEnvironmentD3D12* GetInstance() { return ValidatedCast<TestingEnvironmentD3D12>(TestingEnvironment::GetInstance()); }
 
-    virtual void CreateTexture(ITexture* pTexture) = 0;
-    virtual void CreateBuffer(IBuffer* pBuffer)    = 0;
+    ID3D12Device* GetD3D12Device()
+    {
+        return m_pd3d12Device;
+    }
 
-protected:
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
+    //  The allocator is currently never reset, which is not an issue in this testing system.
+    CComPtr<ID3D12GraphicsCommandList> CreateGraphicsCommandList();
+
+    void IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue);
+
+private:
+    CComPtr<ID3D12Device>           m_pd3d12Device;
+    CComPtr<ID3D12CommandAllocator> m_pd3d12CmdAllocator;
+    CComPtr<ID3D12Fence>            m_pd3d12Fence;
+
+    UINT64 m_NextFenceValue = 1;
+
+    HANDLE m_WaitForGPUEventHandle = {};
 };
 
 } // namespace Testing

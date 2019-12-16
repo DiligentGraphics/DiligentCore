@@ -21,12 +21,7 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-#include "RenderDevice.h"
-#include "Texture.h"
-#include "Buffer.h"
-#include "RefCntAutoPtr.h"
+#include "GL/TestingEnvironmentGL.h"
 
 namespace Diligent
 {
@@ -34,21 +29,15 @@ namespace Diligent
 namespace Testing
 {
 
-class CreateObjFromNativeResTestBase
+TestingEnvironmentGL::TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType) :
+    TestingEnvironment{deviceType, AdapterType}
 {
-public:
-    CreateObjFromNativeResTestBase(IRenderDevice* pDevice) :
-        m_pDevice{pDevice}
-    {}
+}
 
-    virtual ~CreateObjFromNativeResTestBase() {}
-
-    virtual void CreateTexture(ITexture* pTexture) = 0;
-    virtual void CreateBuffer(IBuffer* pBuffer)    = 0;
-
-protected:
-    RefCntAutoPtr<IRenderDevice> m_pDevice;
-};
+TestingEnvironment* CreateTestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType)
+{
+    return new TestingEnvironmentGL{deviceType, AdapterType};
+}
 
 } // namespace Testing
 

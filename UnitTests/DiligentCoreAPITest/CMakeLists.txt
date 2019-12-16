@@ -38,6 +38,13 @@ if(PLATFORM_WIN32)
     list(APPEND SOURCE ${SOURCE_WIN32})
 endif()
 
+if(D3D11_SUPPORTED)
+    file(GLOB D3D11_SOURCE LIST_DIRECTORIES false src/D3D11/*)
+    file(GLOB D3D11_INCLUDE LIST_DIRECTORIES false include/D3D11/*)
+    list(APPEND INCLUDE ${D3D11_INCLUDE})
+    list(APPEND SOURCE ${D3D11_SOURCE})
+endif()
+
 if(D3D12_SUPPORTED)
     file(GLOB D3D12_SOURCE LIST_DIRECTORIES false src/D3D12/*)
     file(GLOB D3D12_INCLUDE LIST_DIRECTORIES false include/D3D12/*)
@@ -45,6 +52,19 @@ if(D3D12_SUPPORTED)
     list(APPEND SOURCE ${D3D12_SOURCE})
 endif()
 
+if(VULKAN_SUPPORTED)
+    file(GLOB VK_SOURCE LIST_DIRECTORIES false src/Vulkan/*)
+    file(GLOB VK_INCLUDE LIST_DIRECTORIES false include/Vulkan/*)
+    list(APPEND INCLUDE ${VK_INCLUDE})
+    list(APPEND SOURCE ${VK_SOURCE})
+endif()
+
+if(GL_SUPPORTED OR GLES_SUPPORTED)
+    file(GLOB GL_SOURCE LIST_DIRECTORIES false src/GL/*)
+    file(GLOB GL_INCLUDE LIST_DIRECTORIES false include/GL/*)
+    list(APPEND INCLUDE ${GL_INCLUDE})
+    list(APPEND SOURCE ${GL_SOURCE})
+endif()
 
 add_executable(DiligentCoreAPITest ${SOURCE} ${INCLUDE} ${SHADERS})
 set_common_target_properties(DiligentCoreAPITest)
@@ -61,6 +81,10 @@ PRIVATE
     Diligent-GraphicsTools
     ${ENGINE_LIBRARIES}
 )
+
+if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
+    target_link_libraries(DiligentCoreAPITest PRIVATE d3dcompiler.lib)
+endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
     target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-HLSL2GLSLConverterLib)
