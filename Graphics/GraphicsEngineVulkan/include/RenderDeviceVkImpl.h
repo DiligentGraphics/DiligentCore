@@ -94,6 +94,9 @@ public:
     /// Implementation of IRenderDeviceVk::GetVkPhysicalDevice().
     virtual VkPhysicalDevice GetVkPhysicalDevice() override final { return m_PhysicalDevice->GetVkDeviceHandle(); }
 
+    /// Implementation of IRenderDeviceVk::GetVkInstance().
+    virtual VkInstance GetVkInstance() override final { return m_VulkanInstance->GetVkInstance(); }
+
     /// Implementation of IRenderDeviceVk::CreateTextureFromVulkanImage().
     virtual void CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
 

@@ -28,6 +28,9 @@
 
 #include "SPIRVUtils.h"
 
+#define VOLK_IMPLEMENTATION
+#include "volk/volk.h"
+
 namespace Diligent
 {
 
@@ -43,8 +46,14 @@ TestingEnvironmentVk::TestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE A
 {
     InitializeGlslang();
 
+    // We have to use dynamic Vulkan loader because if an application is statically linked with vulkan-1.lib
+    // and the Vulkan library is not present on the system, the app will instantly crash.
+    volkInitialize();
+
     RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice, IID_RenderDeviceVk};
     m_vkDevice = pRenderDeviceVk->GetVkDevice();
+
+    volkLoadInstance(pRenderDeviceVk->GetVkInstance());
 
     RefCntAutoPtr<IDeviceContextVk> pContextVk{m_pDeviceContext, IID_DeviceContextVk};
 

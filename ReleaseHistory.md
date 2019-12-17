@@ -2,7 +2,7 @@
 
 ### API Changes
 
-* Added `GetVkPhysicalDevice` method to `IRenderDeviceVk` interface (API Version 240044)
+* Added `GetVkInstance` and `GetVkPhysicalDevice` methods to `IRenderDeviceVk` interface (API Version 240044)
 * Added `HLSLSemantic` member to `LayoutElement` struct (API Version 240042)
 * Added `ResolveTextureSubresource` device context command, removed `SamplesCount` member of the
   `SwapChainDesc` (API Version 240041)

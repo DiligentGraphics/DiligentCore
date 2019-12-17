@@ -26,6 +26,8 @@
 
 #include "DeviceContextVk.h"
 
+#include "volk/volk.h"
+
 namespace Diligent
 {
 

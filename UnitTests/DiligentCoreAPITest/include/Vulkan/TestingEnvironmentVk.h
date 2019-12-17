@@ -27,7 +27,8 @@
 
 #include "TestingEnvironment.h"
 
-#include "vulkan.h"
+#define VK_NO_PROTOTYPES
+#include "vulkan/vulkan.h"
 
 namespace Diligent
 {

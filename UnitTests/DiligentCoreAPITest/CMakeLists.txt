@@ -95,13 +95,13 @@ if(GL_SUPPORTED)
 endif()
 
 if(VULKAN_SUPPORTED)
-    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-GLSLTools ${Vulkan_LIBRARY})
+    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-GLSLTools)
+    target_include_directories(DiligentCoreAPITest PRIVATE ../../ThirdParty)
 endif()
 
 target_include_directories(DiligentCoreAPITest
 PRIVATE
     include
-    ../../ThirdParty/vulkan
 )
 
 
