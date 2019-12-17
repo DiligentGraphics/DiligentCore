@@ -23,7 +23,11 @@
 
 #pragma once
 
+#include <array>
+
 #include "TestingEnvironment.h"
+
+#include "vulkan.h"
 
 namespace Diligent
 {
@@ -34,11 +38,62 @@ namespace Testing
 class TestingEnvironmentVk final : public TestingEnvironment
 {
 public:
-    TestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+    TestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+    ~TestingEnvironmentVk();
 
     static TestingEnvironmentVk* GetInstance() { return ValidatedCast<TestingEnvironmentVk>(TestingEnvironment::GetInstance()); }
 
+    void CreateImage2D(uint32_t          Width,
+                       uint32_t          Height,
+                       VkFormat          vkFormat,
+                       VkImageUsageFlags vkUsage,
+                       VkImageLayout     vkInitialLayout,
+                       VkDeviceMemory&   vkMemory,
+                       VkImage&          vkImage);
+
+    void CreateBuffer(VkDeviceSize          Size,
+                      VkBufferUsageFlags    vkUsage,
+                      VkMemoryPropertyFlags MemoryFlags,
+                      VkDeviceMemory&       vkMemory,
+                      VkBuffer&             vkBuffer);
+
+    uint32_t GetMemoryTypeIndex(uint32_t              memoryTypeBitsRequirement,
+                                VkMemoryPropertyFlags requiredProperties) const;
+
+    VkDevice GetVkDevice()
+    {
+        return m_vkDevice;
+    }
+
+    VkShaderModule CreateShaderModule(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen);
+
+    static VkRenderPassCreateInfo GetRenderPassCreateInfo(
+        Uint32                                                     NumRenderTargets,
+        const VkFormat                                             RTVFormats[],
+        VkFormat                                                   DSVFormat,
+        Uint32                                                     SampleCount,
+        VkAttachmentLoadOp                                         DepthAttachmentLoadOp,
+        VkAttachmentLoadOp                                         ColorAttachmentLoadOp,
+        std::array<VkAttachmentDescription, MaxRenderTargets + 1>& Attachments,
+        std::array<VkAttachmentReference, MaxRenderTargets + 1>&   AttachmentReferences,
+        VkSubpassDescription&                                      SubpassDesc);
+
+    VkCommandBuffer AllocateCommandBuffer();
+
+    static void TransitionImageLayout(VkCommandBuffer                CmdBuffer,
+                                      VkImage                        Image,
+                                      VkImageLayout&                 CurrentLayout,
+                                      VkImageLayout                  NewLayout,
+                                      const VkImageSubresourceRange& SubresRange,
+                                      VkPipelineStageFlags           EnabledGraphicsShaderStages,
+                                      VkPipelineStageFlags           SrcStages  = 0,
+                                      VkPipelineStageFlags           DestStages = 0);
+
 private:
+    VkDevice      m_vkDevice  = VK_NULL_HANDLE;
+    VkCommandPool m_vkCmdPool = VK_NULL_HANDLE;
+
+    VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
 };
 
 } // namespace Testing

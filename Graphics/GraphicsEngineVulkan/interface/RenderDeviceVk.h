@@ -42,6 +42,9 @@ public:
     /// Returns logical Vulkan device handle
     virtual VkDevice GetVkDevice() = 0;
 
+    /// Returns physical Vulkan device
+    virtual VkPhysicalDevice GetVkPhysicalDevice() = 0;
+
     /// Returns the fence value that will be signaled by the GPU command queue next
     virtual Uint64 GetNextFenceValue(Uint32 QueueIndex) = 0;
 

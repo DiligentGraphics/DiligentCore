@@ -30,8 +30,13 @@ namespace Diligent
 namespace Testing
 {
 
-TestingEnvironmentD3D12::TestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType) :
-    TestingEnvironment{deviceType, AdapterType},
+void CreateTestingSwapChainD3D12(IRenderDevice*       pDevice,
+                                 IDeviceContext*      pContext,
+                                 const SwapChainDesc& SCDesc,
+                                 ISwapChain**         ppSwapChain);
+
+TestingEnvironmentD3D12::TestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
+    TestingEnvironment{deviceType, AdapterType, SCDesc},
     m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)}
 {
     RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{m_pDevice, IID_RenderDeviceD3D12};
@@ -44,6 +49,11 @@ TestingEnvironmentD3D12::TestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_
     hr = m_pd3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(m_pd3d12Fence),
                                      reinterpret_cast<void**>(static_cast<ID3D12Fence**>(&m_pd3d12Fence)));
     VERIFY_EXPR(SUCCEEDED(hr));
+
+    if (m_pSwapChain == nullptr)
+    {
+        CreateTestingSwapChainD3D12(m_pDevice, m_pDeviceContext, SCDesc, &m_pSwapChain);
+    }
 }
 
 TestingEnvironmentD3D12::~TestingEnvironmentD3D12()
@@ -74,9 +84,9 @@ void TestingEnvironmentD3D12::IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue)
     }
 }
 
-TestingEnvironment* CreateTestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType)
+TestingEnvironment* CreateTestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
-    return new TestingEnvironmentD3D12{deviceType, AdapterType};
+    return new TestingEnvironmentD3D12{deviceType, AdapterType, SCDesc};
 }
 
 } // namespace Testing

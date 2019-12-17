@@ -29,14 +29,23 @@ namespace Diligent
 namespace Testing
 {
 
-TestingEnvironmentGL::TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType) :
-    TestingEnvironment{deviceType, AdapterType}
+void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
+                              IDeviceContext*      pContext,
+                              const SwapChainDesc& SCDesc,
+                              ISwapChain**         ppSwapChain);
+
+TestingEnvironmentGL::TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
+    TestingEnvironment{deviceType, AdapterType, SCDesc}
 {
+    if (m_pSwapChain == nullptr)
+    {
+        CreateTestingSwapChainGL(m_pDevice, m_pDeviceContext, SCDesc, &m_pSwapChain);
+    }
 }
 
-TestingEnvironment* CreateTestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType)
+TestingEnvironment* CreateTestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
-    return new TestingEnvironmentGL{deviceType, AdapterType};
+    return new TestingEnvironmentGL{deviceType, AdapterType, SCDesc};
 }
 
 } // namespace Testing

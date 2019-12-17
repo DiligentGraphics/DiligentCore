@@ -276,20 +276,20 @@ TextureVkImpl ::TextureVkImpl(IReferenceCounters*        pRefCounters,
             }
             VERIFY_EXPR(subres == pInitData->NumSubresources);
 
-            VkBufferCreateInfo VkStaginBuffCI    = {};
-            VkStaginBuffCI.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-            VkStaginBuffCI.pNext                 = nullptr;
-            VkStaginBuffCI.flags                 = 0;
-            VkStaginBuffCI.size                  = uploadBufferSize;
-            VkStaginBuffCI.usage                 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-            VkStaginBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
-            VkStaginBuffCI.queueFamilyIndexCount = 0;
-            VkStaginBuffCI.pQueueFamilyIndices   = nullptr;
+            VkBufferCreateInfo VkStagingBuffCI    = {};
+            VkStagingBuffCI.sType                 = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+            VkStagingBuffCI.pNext                 = nullptr;
+            VkStagingBuffCI.flags                 = 0;
+            VkStagingBuffCI.size                  = uploadBufferSize;
+            VkStagingBuffCI.usage                 = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            VkStagingBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
+            VkStagingBuffCI.queueFamilyIndexCount = 0;
+            VkStagingBuffCI.pQueueFamilyIndices   = nullptr;
 
             std::string StagingBufferName = "Upload buffer for '";
             StagingBufferName += m_Desc.Name;
             StagingBufferName += '\'';
-            VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
+            VulkanUtilities::BufferWrapper StagingBuffer = LogicalDevice.CreateBuffer(VkStagingBuffCI, StagingBufferName.c_str());
 
             VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(StagingBuffer);
             VERIFY(IsPowerOfTwo(StagingBufferMemReqs.alignment), "Alignment is not power of 2!");
@@ -395,12 +395,12 @@ TextureVkImpl ::TextureVkImpl(IReferenceCounters*        pRefCounters,
     }
     else if (m_Desc.Usage == USAGE_STAGING)
     {
-        VkBufferCreateInfo VkStaginBuffCI = {};
+        VkBufferCreateInfo VkStagingBuffCI = {};
 
-        VkStaginBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        VkStaginBuffCI.pNext = nullptr;
-        VkStaginBuffCI.flags = 0;
-        VkStaginBuffCI.size  = GetStagingDataOffset(m_Desc, m_Desc.ArraySize, 0);
+        VkStagingBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        VkStagingBuffCI.pNext = nullptr;
+        VkStagingBuffCI.flags = 0;
+        VkStagingBuffCI.size  = GetStagingDataOffset(m_Desc, m_Desc.ArraySize, 0);
 
         // clang-format off
         DEV_CHECK_ERR((m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_READ ||
@@ -410,13 +410,13 @@ TextureVkImpl ::TextureVkImpl(IReferenceCounters*        pRefCounters,
         VkMemoryPropertyFlags MemProperties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
         if (m_Desc.CPUAccessFlags & CPU_ACCESS_READ)
         {
-            VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+            VkStagingBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
             MemProperties |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
             SetState(RESOURCE_STATE_COPY_DEST);
         }
         else if (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE)
         {
-            VkStaginBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            VkStagingBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
             // VK_MEMORY_PROPERTY_HOST_COHERENT_BIT bit specifies that the host cache management commands vkFlushMappedMemoryRanges
             // and vkInvalidateMappedMemoryRanges are NOT needed to flush host writes to the device or make device writes visible
             // to the host (10.2)
@@ -426,14 +426,14 @@ TextureVkImpl ::TextureVkImpl(IReferenceCounters*        pRefCounters,
         else
             UNEXPECTED("Unexpected CPU access");
 
-        VkStaginBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
-        VkStaginBuffCI.queueFamilyIndexCount = 0;
-        VkStaginBuffCI.pQueueFamilyIndices   = nullptr;
+        VkStagingBuffCI.sharingMode           = VK_SHARING_MODE_EXCLUSIVE;
+        VkStagingBuffCI.queueFamilyIndexCount = 0;
+        VkStagingBuffCI.pQueueFamilyIndices   = nullptr;
 
         std::string StagingBufferName = "Staging buffer for '";
         StagingBufferName += m_Desc.Name;
         StagingBufferName += '\'';
-        m_StagingBuffer = LogicalDevice.CreateBuffer(VkStaginBuffCI, StagingBufferName.c_str());
+        m_StagingBuffer = LogicalDevice.CreateBuffer(VkStagingBuffCI, StagingBufferName.c_str());
 
         VkMemoryRequirements StagingBufferMemReqs = LogicalDevice.GetBufferMemoryRequirements(m_StagingBuffer);
         VERIFY(IsPowerOfTwo(StagingBufferMemReqs.alignment), "Alignment is not power of 2!");

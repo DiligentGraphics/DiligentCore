@@ -91,6 +91,9 @@ public:
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 
+    /// Implementation of IRenderDeviceVk::GetVkPhysicalDevice().
+    virtual VkPhysicalDevice GetVkPhysicalDevice() override final { return m_PhysicalDevice->GetVkDeviceHandle(); }
+
     /// Implementation of IRenderDeviceVk::CreateTextureFromVulkanImage().
     virtual void CreateTextureFromVulkanImage(VkImage vkImage, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
 
@@ -117,10 +120,12 @@ public:
     DescriptorPoolManager& GetDynamicDescriptorPool() { return m_DynamicDescriptorPool; }
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> GetVulkanInstance() const { return m_VulkanInstance; }
-    const VulkanUtilities::VulkanPhysicalDevice&           GetPhysicalDevice() const { return *m_PhysicalDevice; }
-    const VulkanUtilities::VulkanLogicalDevice&            GetLogicalDevice() { return *m_LogicalVkDevice; }
-    FramebufferCache&                                      GetFramebufferCache() { return m_FramebufferCache; }
-    RenderPassCache&                                       GetRenderPassCache() { return m_RenderPassCache; }
+
+    const VulkanUtilities::VulkanPhysicalDevice& GetPhysicalDevice() const { return *m_PhysicalDevice; }
+    const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice() { return *m_LogicalVkDevice; }
+
+    FramebufferCache& GetFramebufferCache() { return m_FramebufferCache; }
+    RenderPassCache&  GetRenderPassCache() { return m_RenderPassCache; }
 
     VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)
     {
@@ -129,7 +134,8 @@ public:
     VulkanUtilities::VulkanMemoryManager& GetGlobalMemoryManager() { return m_MemoryMgr; }
 
     VulkanDynamicMemoryManager& GetDynamicMemoryManager() { return m_DynamicMemoryManager; }
-    void                        FlushStaleResources(Uint32 CmdQueueIndex);
+
+    void FlushStaleResources(Uint32 CmdQueueIndex);
 
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;

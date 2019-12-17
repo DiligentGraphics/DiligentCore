@@ -338,8 +338,9 @@ static std::vector<unsigned int> CompileShaderInternal(glslang::TShader&        
                                                        IDataBlob**                 ppCompilerOutput)
 {
     Shader.setAutoMapBindings(true);
-    TBuiltInResource Resources   = InitResources();
-    auto             ParseResult = pIncluder != nullptr ?
+    TBuiltInResource Resources = InitResources();
+
+    auto ParseResult = pIncluder != nullptr ?
         Shader.parse(&Resources, 100, false, messages, *pIncluder) :
         Shader.parse(&Resources, 100, false, messages);
     if (!ParseResult)

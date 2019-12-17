@@ -38,19 +38,19 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+TestingEnvironment* CreateTestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
 #endif
 
 #if D3D12_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+TestingEnvironment* CreateTestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+TestingEnvironment* CreateTestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
 #endif
 
 #if VULKAN_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+TestingEnvironment* CreateTestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
 #endif
 
 #if METAL_SUPPORTED
@@ -112,6 +112,12 @@ int main(int argc, char** argv)
         return -1;
     }
 
+    SwapChainDesc SCDesc;
+    SCDesc.Width             = 512;
+    SCDesc.Height            = 512;
+    SCDesc.ColorBufferFormat = TEX_FORMAT_RGBA8_UNORM;
+    SCDesc.DepthBufferFormat = TEX_FORMAT_D32_FLOAT;
+
     Diligent::Testing::TestingEnvironment* pEnv = nullptr;
     try
     {
@@ -119,7 +125,7 @@ int main(int argc, char** argv)
         {
 #if D3D11_SUPPORTED
             case DeviceType::D3D11:
-                pEnv = CreateTestingEnvironmentD3D11(deviceType, AdapterType);
+                pEnv = CreateTestingEnvironmentD3D11(deviceType, AdapterType, SCDesc);
                 if (AdapterType == ADAPTER_TYPE_SOFTWARE)
                     std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D11-SW mode =================\n\n";
                 else
@@ -129,7 +135,7 @@ int main(int argc, char** argv)
 
 #if D3D12_SUPPORTED
             case DeviceType::D3D12:
-                pEnv = CreateTestingEnvironmentD3D12(deviceType, AdapterType);
+                pEnv = CreateTestingEnvironmentD3D12(deviceType, AdapterType, SCDesc);
                 if (AdapterType == ADAPTER_TYPE_SOFTWARE)
                     std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D12-SW mode =================\n\n";
                 else
@@ -140,7 +146,7 @@ int main(int argc, char** argv)
 #if GL_SUPPORTED || GLES_SUPPORTED
             case DeviceType::OpenGL:
             case DeviceType::OpenGLES:
-                pEnv = CreateTestingEnvironmentGL(deviceType, AdapterType);
+                pEnv = CreateTestingEnvironmentGL(deviceType, AdapterType, SCDesc);
                 std::cout << "\n\n\n==================== Testing Diligent Core API in OpenGL mode ====================\n\n";
                 break;
 
@@ -148,7 +154,7 @@ int main(int argc, char** argv)
 
 #if VULKAN_SUPPORTED
             case DeviceType::Vulkan:
-                pEnv = CreateTestingEnvironmentVk(deviceType, AdapterType);
+                pEnv = CreateTestingEnvironmentVk(deviceType, AdapterType, SCDesc);
                 std::cout << "\n\n\n==================== Testing Diligent Core API in Vulkan mode ====================\n\n";
                 break;
 

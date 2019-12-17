@@ -63,8 +63,13 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         }
         else
         {
-            auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pRenderDeviceVk->GetDeviceCaps(), TargetGLSLCompiler::glslang, "#define TARGET_API_VULKAN 1\n");
-            m_SPIRV         = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(), static_cast<int>(GLSLSource.length()), CreationAttribs.ppCompilerOutput);
+            auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pRenderDeviceVk->GetDeviceCaps(),
+                                                    TargetGLSLCompiler::glslang,
+                                                    "#define TARGET_API_VULKAN 1\n");
+
+            m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
+                                  static_cast<int>(GLSLSource.length()),
+                                  CreationAttribs.ppCompilerOutput);
         }
 
         if (m_SPIRV.empty())

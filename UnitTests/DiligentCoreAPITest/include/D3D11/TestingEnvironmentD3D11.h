@@ -47,7 +47,7 @@ HRESULT CompileD3DShader(const char*             Source,
 class TestingEnvironmentD3D11 final : public TestingEnvironment
 {
 public:
-    TestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+    TestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
 
     ID3D11Device* GetD3D11Device()
     {

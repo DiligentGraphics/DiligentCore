@@ -34,7 +34,7 @@ namespace Testing
 class TestingEnvironmentGL final : public TestingEnvironment
 {
 public:
-    TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+    TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
 
     static TestingEnvironmentGL* GetInstance() { return ValidatedCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
 

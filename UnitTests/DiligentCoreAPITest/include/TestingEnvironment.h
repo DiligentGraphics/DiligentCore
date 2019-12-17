@@ -51,7 +51,7 @@ public:
     };
 
 
-    TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType);
+    TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
     ~TestingEnvironment() override;
 
     // Override this to define how to set up the environment.

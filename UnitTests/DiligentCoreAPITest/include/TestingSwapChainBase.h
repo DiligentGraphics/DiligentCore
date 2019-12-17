@@ -203,11 +203,6 @@ protected:
     Uint32             m_ReferenceDataPitch = 0;
 };
 
-void CreateTestingSwapChain(IRenderDevice*       pDevice,
-                            IDeviceContext*      pContext,
-                            const SwapChainDesc& SCDesc,
-                            ISwapChain**         ppSwapChain);
-
 } // namespace Testing
 
 } // namespace Diligent

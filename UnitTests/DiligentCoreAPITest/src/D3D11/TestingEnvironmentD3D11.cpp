@@ -34,8 +34,14 @@ namespace Diligent
 namespace Testing
 {
 
-TestingEnvironmentD3D11::TestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType) :
-    TestingEnvironment{deviceType, AdapterType}
+void CreateTestingSwapChainD3D11(IRenderDevice*       pDevice,
+                                 IDeviceContext*      pContext,
+                                 const SwapChainDesc& SCDesc,
+                                 ISwapChain**         ppSwapChain);
+
+
+TestingEnvironmentD3D11::TestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
+    TestingEnvironment{deviceType, AdapterType, SCDesc}
 {
     RefCntAutoPtr<IRenderDeviceD3D11>  pRenderDeviceD3D11{m_pDevice, IID_RenderDeviceD3D11};
     RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{m_pDeviceContext, IID_DeviceContextD3D11};
@@ -67,6 +73,11 @@ TestingEnvironmentD3D11::TestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_
 
         auto hr = m_pd3d11Device->CreateBlendState(&BSDesc, &m_pd3d11DefaultBS);
         VERIFY_EXPR(SUCCEEDED(hr));
+    }
+
+    if (m_pSwapChain == nullptr)
+    {
+        CreateTestingSwapChainD3D11(m_pDevice, m_pDeviceContext, SCDesc, &m_pSwapChain);
     }
 }
 
@@ -223,9 +234,9 @@ CComPtr<ID3D11HullShader> TestingEnvironmentD3D11::CreateHullShader(const char* 
     return pDS;
 }
 
-TestingEnvironment* CreateTestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType)
+TestingEnvironment* CreateTestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
-    return new TestingEnvironmentD3D11{deviceType, AdapterType};
+    return new TestingEnvironmentD3D11{deviceType, AdapterType, SCDesc};
 }
 
 } // namespace Testing

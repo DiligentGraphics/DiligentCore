@@ -85,13 +85,11 @@ void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* Inf
 }
 
 
-TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType) :
+TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
     m_DeviceType{deviceType}
 {
     VERIFY(m_pTheEnvironment == nullptr, "Testing environment object has already been initialized!");
     m_pTheEnvironment = this;
-
-    SwapChainDesc SCDesc;
 
     Uint32 NumDeferredCtx = 0;
 
@@ -346,13 +344,6 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             break;
     }
     m_pDeviceContext.Attach(ppContexts[0]);
-
-    SCDesc.Width             = 512;
-    SCDesc.Height            = 512;
-    SCDesc.ColorBufferFormat = TEX_FORMAT_RGBA8_UNORM;
-    SCDesc.DepthBufferFormat = TEX_FORMAT_D32_FLOAT;
-
-    CreateTestingSwapChain(m_pDevice, m_pDeviceContext, SCDesc, &m_pSwapChain);
 }
 
 TestingEnvironment::~TestingEnvironment()

@@ -23,24 +23,58 @@
 
 #include "TestingSwapChainBase.h"
 
+#include "vulkan.h"
+
 namespace Diligent
 {
 
 namespace Testing
 {
 
+class TestingEnvironmentVk;
+
 class TestingSwapChainVk : public TestingSwapChainBase<ISwapChain>
 {
 public:
     using TBase = TestingSwapChainBase<ISwapChain>;
-    TestingSwapChainVk(IReferenceCounters*  pRefCounters,
-                       IRenderDevice*       pDevice,
-                       IDeviceContext*      pContext,
-                       const SwapChainDesc& SCDesc);
+    TestingSwapChainVk(IReferenceCounters*   pRefCounters,
+                       TestingEnvironmentVk* pEnv,
+                       const SwapChainDesc&  SCDesc);
+    ~TestingSwapChainVk();
 
     virtual void TakeSnapshot() override final;
 
+    VkRenderPass GetRenderPass()
+    {
+        return m_vkRenderPass;
+    }
+
+    void BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages);
+    void EndRenderPass(VkCommandBuffer vkCmdBuffer);
+
 private:
+    void CreateFramebuffer();
+
+    VkDevice m_vkDevice = VK_NULL_HANDLE;
+
+    VkDeviceMemory m_vkRenderTargetMemory = VK_NULL_HANDLE;
+    VkImage        m_vkRenderTargetImage  = VK_NULL_HANDLE;
+    VkImageLayout  m_vkRenerTargetLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageView    m_vkRenderTargetView   = VK_NULL_HANDLE;
+
+    VkDeviceMemory m_vkDepthBufferMemory = VK_NULL_HANDLE;
+    VkImage        m_vkDepthBufferImage  = VK_NULL_HANDLE;
+    VkImageLayout  m_vkDepthBufferLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageView    m_vkDepthBufferView   = VK_NULL_HANDLE;
+
+    VkDeviceSize   m_StagingBufferSize     = 0;
+    VkDeviceMemory m_vkStagingBufferMemory = VK_NULL_HANDLE;
+    VkBuffer       m_vkStagingBuffer       = VK_NULL_HANDLE;
+
+    VkRenderPass  m_vkRenderPass  = VK_NULL_HANDLE;
+    VkFramebuffer m_vkFramebuffer = VK_NULL_HANDLE;
+
+    VkPipelineStageFlags m_ActiveGraphicsShaderStages = 0;
 };
 
 } // namespace Testing

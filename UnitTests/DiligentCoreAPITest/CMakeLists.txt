@@ -94,6 +94,9 @@ if(GL_SUPPORTED)
     target_link_libraries(DiligentCoreAPITest PRIVATE glew-static)
 endif()
 
+if(VULKAN_SUPPORTED)
+    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-GLSLTools ${Vulkan_LIBRARY})
+endif()
 
 target_include_directories(DiligentCoreAPITest
 PRIVATE
