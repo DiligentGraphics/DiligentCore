@@ -22,6 +22,7 @@
  */
 
 #include "GL/TestingEnvironmentGL.h"
+#include "GL/TestingSwapChainGL.h"
 
 namespace Diligent
 {
@@ -30,13 +31,90 @@ namespace Testing
 {
 
 static const char* VSSource = R"(
+#version 420 core
+
+#ifndef GL_ES
+out gl_PerVertex
+{
+	vec4 gl_Position;
+};
+#endif
+
+layout(location = 0) out vec3 out_Color;
+
+void main()
+{
+    vec4 Pos[4];
+    Pos[0] = vec4(-0.5, -0.5, 0.0, 1.0);
+    Pos[1] = vec4(-0.5, +0.5, 0.0, 1.0);
+    Pos[2] = vec4(+0.5, -0.5, 0.0, 1.0);
+    Pos[3] = vec4(+0.5, +0.5, 0.0, 1.0);
+
+    vec3 Col[4];
+    Col[0] = vec3(1.0, 0.0, 0.0);
+    Col[1] = vec3(0.0, 1.0, 0.0);
+    Col[2] = vec3(0.0, 0.0, 1.0);
+    Col[3] = vec3(1.0, 1.0, 1.0);
+    
+    gl_Position = Pos[gl_VertexID];
+    out_Color = Col[gl_VertexID];
+}
 )";
 
 static const char* PSSource = R"(
+#version 420 core
+
+layout(location = 0) in  vec3 in_Color;
+layout(location = 0) out vec4 out_Color;
+
+void main()
+{
+    out_Color = vec4(in_Color, 1.0);
+}
 )";
 
 void RenderDrawCommandRefenceGL(ISwapChain* pSwapChain)
 {
+    auto* pEnv                = TestingEnvironmentGL::GetInstance();
+    auto* pContext            = pEnv->GetDeviceContext();
+    auto* pTestingSwapChainGL = ValidatedCast<TestingSwapChainGL>(pSwapChain);
+
+    const auto& SCDesc = pTestingSwapChainGL->GetDesc();
+
+    GLuint glShaders[2] = {};
+    glShaders[0] = pEnv->CompileGLShader(VSSource, GL_VERTEX_SHADER);
+    ASSERT_NE(glShaders[0], 0u);
+    glShaders[1] = pEnv->CompileGLShader(PSSource, GL_FRAGMENT_SHADER);
+    ASSERT_NE(glShaders[1], 0u);
+    auto glProg = pEnv->LinkProgram(glShaders, 2);
+    ASSERT_NE(glProg, 0u);
+
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    if (glPolygonMode != nullptr)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+    pTestingSwapChainGL->BindFramebuffer();
+    glViewport(0, 0, SCDesc.Width, SCDesc.Height);
+    glUseProgram(glProg);
+    glBindVertexArray(pEnv->GetDummyVAO());
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glBindVertexArray(0);
+    glUseProgram(0);
+
+    // Make sure Diligent Engine will reset all GL states
+    pContext->InvalidateState();
+
+    for(int i = 0; i < _countof(glShaders); ++i)
+    {
+        if (glShaders[i] != 0)
+            glDeleteShader(glShaders[i]);
+    }
+    if (glProg != 0)
+        glDeleteProgram(glProg);
 }
 
 } // namespace Testing

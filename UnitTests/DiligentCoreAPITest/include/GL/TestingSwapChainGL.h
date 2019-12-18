@@ -37,10 +37,16 @@ public:
                        IRenderDevice*       pDevice,
                        IDeviceContext*      pContext,
                        const SwapChainDesc& SCDesc);
+    ~TestingSwapChainGL();
 
     virtual void TakeSnapshot() override final;
 
+    void BindFramebuffer();
+
 private:
+    GLuint m_RenderTarget = 0;
+    GLuint m_DepthBuffer  = 0;
+    GLuint m_FBO          = 0;
 };
 
 } // namespace Testing

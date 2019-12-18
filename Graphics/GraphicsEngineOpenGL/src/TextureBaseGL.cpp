@@ -35,6 +35,38 @@
 namespace Diligent
 {
 
+
+Uint32 TextureBaseGL::GetPBODataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel)
+{
+    VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
+
+    Uint32 Offset = 0;
+    if (ArraySlice > 0)
+    {
+        Uint32 ArraySliceSize = 0;
+        for (Uint32 mip = 0; mip < TexDesc.MipLevels; ++mip)
+        {
+            auto MipInfo = GetMipLevelProperties(TexDesc, mip);
+            ArraySliceSize += (MipInfo.MipSize + 3) & (~3);
+        }
+
+        Offset = ArraySliceSize;
+        if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
+            TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
+            TexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
+            TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+            Offset *= TexDesc.ArraySize;
+    }
+
+    for (Uint32 mip = 0; mip < MipLevel; ++mip)
+    {
+        auto MipInfo = GetMipLevelProperties(TexDesc, mip);
+        Offset += (MipInfo.MipSize + 3) & (~3);
+    }
+
+    return Offset;
+}
+
 TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
                              FixedBlockMemoryAllocator& TexViewObjAllocator,
                              RenderDeviceGLImpl*        pDeviceGL,
@@ -51,7 +83,7 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
         TexDesc,
         bIsDeviceInternal
     },
-    m_GlTexture     {true       }, // Create Texture immediately
+    m_GlTexture     {TexDesc.Usage != USAGE_STAGING},
     m_BindTarget    {BindTarget },
     m_GLTexFormat   {TexFormatToGLInternalTexFormat(m_Desc.Format, m_Desc.BindFlags)}
     //m_uiMapTarget(0)
@@ -60,6 +92,22 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
     VERIFY(m_GLTexFormat != 0, "Unsupported texture format");
     if (TexDesc.Usage == USAGE_STATIC && pInitData == nullptr)
         LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
+
+    if (TexDesc.Usage == USAGE_STAGING)
+    {
+        BufferDesc  StagingBufferDesc;
+        std::string StagingBuffName = "Internal staging buffer of texture '";
+        StagingBuffName += m_Desc.Name;
+        StagingBuffName += '\'';
+        StagingBufferDesc.Name = StagingBuffName.c_str();
+
+        StagingBufferDesc.uiSizeInBytes  = GetPBODataOffset(m_Desc, m_Desc.ArraySize, 0);
+        StagingBufferDesc.Usage          = USAGE_STAGING;
+        StagingBufferDesc.CPUAccessFlags = TexDesc.CPUAccessFlags;
+
+        pDeviceGL->CreateBuffer(StagingBufferDesc, nullptr, &m_pPBO);
+        VERIFY_EXPR(m_pPBO);
+    }
 }
 
 static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarget, const GLObjectWrappers::GLTextureObj& GLTex, TEXTURE_FORMAT TexFmtFromDesc)
@@ -389,7 +437,7 @@ void TextureBaseGL::UpdateData(GLContextState& CtxState, Uint32 MipLevel, Uint32
     TextureMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT, CtxState);
 }
 
-//void TextureBaseGL :: UpdateData(Uint32 Offset, Uint32 Size, const PVoid pData)
+//void TextureBaseGL::UpdateData(Uint32 Offset, Uint32 Size, const PVoid pData)
 //{
 //    CTexture::UpdateData(Offset, Size, pData);
 //
@@ -399,16 +447,16 @@ void TextureBaseGL::UpdateData(GLContextState& CtxState, Uint32 MipLevel, Uint32
 //}
 //
 
-void TextureBaseGL ::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
-                              TextureBaseGL*       pSrcTextureGL,
-                              Uint32               SrcMipLevel,
-                              Uint32               SrcSlice,
-                              const Box*           pSrcBox,
-                              Uint32               DstMipLevel,
-                              Uint32               DstSlice,
-                              Uint32               DstX,
-                              Uint32               DstY,
-                              Uint32               DstZ)
+void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
+                             TextureBaseGL*       pSrcTextureGL,
+                             Uint32               SrcMipLevel,
+                             Uint32               SrcSlice,
+                             const Box*           pSrcBox,
+                             Uint32               DstMipLevel,
+                             Uint32               DstSlice,
+                             Uint32               DstX,
+                             Uint32               DstY,
+                             Uint32               DstZ)
 {
     const auto& SrcTexDesc = pSrcTextureGL->GetDesc();
 

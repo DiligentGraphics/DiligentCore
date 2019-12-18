@@ -37,15 +37,106 @@ void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
 TestingEnvironmentGL::TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
     TestingEnvironment{deviceType, AdapterType, SCDesc}
 {
+    // Initialize GLEW
+    auto err = glewInit();
+    if (GLEW_OK != err)
+        LOG_ERROR_AND_THROW("Failed to initialize GLEW");
+
     if (m_pSwapChain == nullptr)
     {
         CreateTestingSwapChainGL(m_pDevice, m_pDeviceContext, SCDesc, &m_pSwapChain);
     }
+
+    glGenVertexArrays(1, &m_DummyVAO);
+}
+
+TestingEnvironmentGL::~TestingEnvironmentGL()
+{
+    glDeleteVertexArrays(1, &m_DummyVAO);
+}
+
+GLuint TestingEnvironmentGL::CompileGLShader(const char* Source, GLenum ShaderType)
+{
+    GLuint glShader = glCreateShader(ShaderType);
+
+    const char* ShaderStrings[] = {Source};
+    GLint       Lenghts[]       = {static_cast<GLint>(strlen(Source))};
+
+    // Provide source strings (the strings will be saved in internal OpenGL memory)
+    glShaderSource(glShader, _countof(ShaderStrings), ShaderStrings, Lenghts);
+    // When the shader is compiled, it will be compiled as if all of the given strings were concatenated end-to-end.
+    glCompileShader(glShader);
+    GLint compiled = GL_FALSE;
+    // Get compilation status
+    glGetShaderiv(glShader, GL_COMPILE_STATUS, &compiled);
+    if (!compiled)
+    {
+        int infoLogLen = 0;
+        // The function glGetShaderiv() tells how many bytes to allocate; the length includes the NULL terminator.
+        glGetShaderiv(glShader, GL_INFO_LOG_LENGTH, &infoLogLen);
+
+        std::vector<GLchar> infoLog(infoLogLen);
+        if (infoLogLen > 0)
+        {
+            int charsWritten = 0;
+            // Get the log. infoLogLen is the size of infoLog. This tells OpenGL how many bytes at maximum it will write
+            // charsWritten is a return value, specifying how many bytes it actually wrote. One may pass NULL if he
+            // doesn't care
+            glGetShaderInfoLog(glShader, infoLogLen, &charsWritten, infoLog.data());
+            VERIFY(charsWritten == infoLogLen - 1, "Unexpected info log length");
+            LOG_ERROR("Failed to compile GL shader\n", infoLog.data());
+        }
+    }
+
+    return glShader;
+}
+
+GLuint TestingEnvironmentGL::LinkProgram(GLuint Shaders[], GLuint NumShaders)
+{
+    auto glProg = glCreateProgram();
+
+    for (Uint32 i = 0; i < NumShaders; ++i)
+    {
+        glAttachShader(glProg, Shaders[i]);
+        VERIFY_EXPR(glGetError() == GL_NO_ERROR);
+    }
+
+    glLinkProgram(glProg);
+    int IsLinked = GL_FALSE;
+    glGetProgramiv(glProg, GL_LINK_STATUS, &IsLinked);
+    if (!IsLinked)
+    {
+        int LengthWithNull = 0, Length = 0;
+        // Notice that glGetProgramiv is used to get the length for a shader program, not glGetShaderiv.
+        // The length of the info log includes a null terminator.
+        glGetProgramiv(glProg, GL_INFO_LOG_LENGTH, &LengthWithNull);
+
+        // The maxLength includes the NULL character
+        std::vector<char> shaderProgramInfoLog(LengthWithNull);
+
+        // Notice that glGetProgramInfoLog  is used, not glGetShaderInfoLog.
+        glGetProgramInfoLog(glProg, LengthWithNull, &Length, shaderProgramInfoLog.data());
+        VERIFY(Length == LengthWithNull - 1, "Incorrect program info log len");
+        LOG_ERROR_MESSAGE("Failed to link shader program:\n", shaderProgramInfoLog.data(), '\n');
+    }
+
+    for (Uint32 i = 0; i < NumShaders; ++i)
+    {
+        glDetachShader(glProg, Shaders[i]);
+    }
+    return glProg;
 }
 
 TestingEnvironment* CreateTestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
-    return new TestingEnvironmentGL{deviceType, AdapterType, SCDesc};
+    try
+    {
+        return new TestingEnvironmentGL{deviceType, AdapterType, SCDesc};
+    }
+    catch (...)
+    {
+        return nullptr;
+    }
 }
 
 } // namespace Testing

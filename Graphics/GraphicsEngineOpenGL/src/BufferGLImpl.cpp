@@ -54,8 +54,13 @@ static GLenum GetBufferBindTarget(const BufferDesc& Desc)
 #endif
         Target = GL_DRAW_INDIRECT_BUFFER;
     }
-    else if (Desc.Usage == USAGE_STAGING && Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
-        Target = GL_PIXEL_UNPACK_BUFFER;
+    else if (Desc.Usage == USAGE_STAGING)
+    {
+        if (Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
+            Target = GL_PIXEL_UNPACK_BUFFER;
+        else if (Desc.CPUAccessFlags == CPU_ACCESS_READ)
+            Target = GL_PIXEL_PACK_BUFFER;
+    }
 
     return Target;
 }
@@ -77,7 +82,7 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
     },
     m_GlBuffer    {true                          }, // Create buffer immediately
     m_BindTarget  {GetBufferBindTarget(BuffDesc) },
-    m_GLUsageHint {UsageToGLUsage(BuffDesc.Usage)}
+    m_GLUsageHint {UsageToGLUsage(BuffDesc)}
 // clang-format on
 {
     if (BuffDesc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr))
@@ -189,7 +194,7 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
     // Attach to external buffer handle
     m_GlBuffer    {true, GLObjectWrappers::GLBufferObjCreateReleaseHelper(GLHandle)},
     m_BindTarget  {GetBufferBindTarget(m_Desc)   },
-    m_GLUsageHint {UsageToGLUsage(BuffDesc.Usage)}
+    m_GLUsageHint {UsageToGLUsage(BuffDesc)}
 // clang-format on
 {
 }
@@ -201,7 +206,7 @@ BufferGLImpl::~BufferGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE(BufferGLImpl, IID_BufferGL, TBufferBase)
 
-void BufferGLImpl ::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData)
+void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData)
 {
     BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT, // Reads or writes to buffer objects via any OpenGL API functions that allow
@@ -221,7 +226,7 @@ void BufferGLImpl ::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 S
 }
 
 
-void BufferGLImpl ::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
+void BufferGLImpl::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size)
 {
     BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT, // Reads or writes to buffer objects via any OpenGL API functions that allow
@@ -247,7 +252,12 @@ void BufferGLImpl ::CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL
     CtxState.BindBuffer(GL_COPY_WRITE_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 }
 
-void BufferGLImpl ::Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+void BufferGLImpl::Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, PVoid& pMappedData)
+{
+    MapRange(CtxState, MapType, MapFlags, 0, m_Desc.uiSizeInBytes, pMappedData);
+}
+
+void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFlags, Uint32 Offset, Uint32 Length, PVoid& pMappedData)
 {
     BufferMemoryBarrier(
         GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT, // Access by the client to persistent mapped regions of buffer
@@ -303,7 +313,7 @@ void BufferGLImpl ::Map(GLContextState& CtxState, MAP_TYPE MapType, Uint32 MapFl
         default: UNEXPECTED("Unknown map type");
     }
 
-    pMappedData = glMapBufferRange(m_BindTarget, 0, m_Desc.uiSizeInBytes, Access);
+    pMappedData = glMapBufferRange(m_BindTarget, Offset, Length, Access);
     CHECK_GL_ERROR("glMapBufferRange() failed");
     VERIFY(pMappedData, "Map failed");
 }

@@ -88,10 +88,18 @@ endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
     target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-HLSL2GLSLConverterLib)
-endif()
 
-if(GL_SUPPORTED)
-    target_link_libraries(DiligentCoreAPITest PRIVATE glew-static)
+    if(PLATFORM_WIN32)
+        target_link_libraries(DiligentCoreAPITest PRIVATE glew-static opengl32.lib)
+    elseif(PLATFORM_LINUX)
+        target_link_libraries(DiligentCoreAPITest PRIVATE glew-static)
+    elseif(PLATFORM_MACOS)
+        find_package(OpenGL REQUIRED)
+        target_link_libraries(DiligentCoreAPITest PRIVATE glew-static ${OPENGL_LIBRARY})
+    else()
+        message(FATAL_ERROR "Unsupported platform")
+    endif()
+
 endif()
 
 if(VULKAN_SUPPORTED)

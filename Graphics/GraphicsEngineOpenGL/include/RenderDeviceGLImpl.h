@@ -64,8 +64,8 @@ public:
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     /// Implementation of IRenderDevice::CreateBuffer() in OpenGL backend.
-    void         CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBufferLayout, bool bIsDeviceInternal);
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBufferLayout) override final;
+    void         CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal);
+    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBuffer) override final;
 
     /// Implementation of IRenderDevice::CreateShader() in OpenGL backend.
     void         CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal);

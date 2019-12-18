@@ -1123,8 +1123,102 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
     TDeviceContextBase::CopyTexture(CopyAttribs);
     auto* pSrcTexGL = ValidatedCast<TextureBaseGL>(CopyAttribs.pSrcTexture);
     auto* pDstTexGL = ValidatedCast<TextureBaseGL>(CopyAttribs.pDstTexture);
-    pDstTexGL->CopyData(this, pSrcTexGL, CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, CopyAttribs.pSrcBox,
-                        CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
+
+    const auto& SrcTexDesc = pSrcTexGL->GetDesc();
+    const auto& DstTexDesc = pDstTexGL->GetDesc();
+
+    auto SrcMipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
+
+    Box FullSrcBox;
+    FullSrcBox.MaxX = SrcMipLevelAttribs.LogicalWidth;
+    FullSrcBox.MaxY = SrcMipLevelAttribs.LogicalHeight;
+    FullSrcBox.MaxZ = SrcMipLevelAttribs.Depth;
+    auto* pSrcBox   = CopyAttribs.pSrcBox != nullptr ? CopyAttribs.pSrcBox : &FullSrcBox;
+
+    if (SrcTexDesc.Usage == USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING)
+    {
+        TextureSubResData SubresData;
+        SubresData.pData       = nullptr;
+        SubresData.pSrcBuffer  = pSrcTexGL->GetPBO();
+        SubresData.SrcOffset   = TextureBaseGL::GetPBODataOffset(SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel);
+        SubresData.Stride      = SrcMipLevelAttribs.RowSize;
+        SubresData.DepthStride = SrcMipLevelAttribs.DepthSliceSize;
+
+        const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+        SubresData.SrcOffset +=
+            // For compressed-block formats, RowSize is the size of one compressed row.
+            // For non-compressed formats, BlockHeight is 1.
+            (pSrcBox->MinZ * SrcMipLevelAttribs.StorageHeight + pSrcBox->MinY) / SrcFmtAttribs.BlockHeight * SrcMipLevelAttribs.RowSize +
+            // For non-compressed formats, BlockWidth is 1.
+            (pSrcBox->MinX / SrcFmtAttribs.BlockWidth) * SrcFmtAttribs.GetElementSize();
+
+        Box DstBox;
+        DstBox.MinX = CopyAttribs.DstX;
+        DstBox.MinY = CopyAttribs.DstY;
+        DstBox.MinZ = CopyAttribs.DstZ;
+        DstBox.MaxX = DstBox.MinX + pSrcBox->MaxX - pSrcBox->MinX;
+        DstBox.MaxY = DstBox.MinY + pSrcBox->MaxY - pSrcBox->MinY;
+        DstBox.MaxZ = DstBox.MinZ + pSrcBox->MaxZ - pSrcBox->MinZ;
+        pDstTexGL->UpdateData(m_ContextState, CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, DstBox, SubresData);
+    }
+    else if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage == USAGE_STAGING)
+    {
+        auto  CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
+        auto& FBOCache               = m_pDevice->GetFBOCache(CurrentNativeGLContext);
+
+        {
+            TextureViewDesc SrcTexViewDesc;
+            SrcTexViewDesc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
+            SrcTexViewDesc.MostDetailedMip = CopyAttribs.SrcMipLevel;
+            SrcTexViewDesc.FirstArraySlice = CopyAttribs.SrcSlice;
+            TextureViewGLImpl SrcTexView //
+                {
+                    nullptr, // pRefCounters
+                    m_pDevice,
+                    SrcTexViewDesc,
+                    pSrcTexGL,
+                    false, // bCreateGLViewTex
+                    false  // bIsDefaultView
+                };
+
+            TextureViewGLImpl* pSrcViews[] = {&SrcTexView};
+            const auto&        SrcFBO      = FBOCache.GetFBO(1, pSrcViews, nullptr, m_ContextState);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBO);
+            DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
+        }
+
+        auto* pDstBuffer = ValidatedCast<BufferGLImpl>(pDstTexGL->GetPBO());
+        VERIFY(pDstBuffer != nullptr, "Internal staging buffer must not be null");
+        auto DstOffset = TextureBaseGL::GetPBODataOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel);
+
+        auto DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
+
+        const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
+        DstOffset +=
+            // For compressed-block formats, RowSize is the size of one compressed row.
+            // For non-compressed formats, BlockHeight is 1.
+            (CopyAttribs.DstZ * DstMipLevelAttribs.StorageHeight + CopyAttribs.DstY) / DstFmtAttribs.BlockHeight * DstMipLevelAttribs.RowSize +
+            // For non-compressed formats, BlockWidth is 1.
+            (CopyAttribs.DstX / DstFmtAttribs.BlockWidth) * DstFmtAttribs.GetElementSize();
+
+        m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, pDstBuffer->GetGLHandle(), true);
+
+        const auto& TransferAttribs = GetNativePixelTransferAttribs(SrcTexDesc.Format);
+        glReadPixels(pSrcBox->MinX, pSrcBox->MinY, pSrcBox->MaxX - pSrcBox->MinX, pSrcBox->MaxY - pSrcBox->MinY,
+                     TransferAttribs.PixelFormat, TransferAttribs.DataType, reinterpret_cast<void*>(static_cast<size_t>(DstOffset)));
+        DEV_CHECK_GL_ERROR("Failed to read pixel from framebuffer to pixel pack buffer");
+
+        m_ContextState.BindBuffer(GL_PIXEL_PACK_BUFFER, GLObjectWrappers::GLBufferObj::Null(), true);
+        // Restore original FBO
+        m_ContextState.InvalidateFBO();
+        CommitRenderTargets();
+    }
+    else
+    {
+        VERIFY(SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING, "Copying between staging textures is not supported");
+        pDstTexGL->CopyData(this, pSrcTexGL, CopyAttribs.SrcMipLevel, CopyAttribs.SrcSlice, CopyAttribs.pSrcBox,
+                            CopyAttribs.DstMipLevel, CopyAttribs.DstSlice, CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
+    }
 }
 
 void DeviceContextGLImpl::MapTextureSubresource(ITexture*                 pTexture,
@@ -1136,15 +1230,40 @@ void DeviceContextGLImpl::MapTextureSubresource(ITexture*                 pTextu
                                                 MappedTextureSubresource& MappedData)
 {
     TDeviceContextBase::MapTextureSubresource(pTexture, MipLevel, ArraySlice, MapType, MapFlags, pMapRegion, MappedData);
-    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL");
-    MappedData = MappedTextureSubresource{};
+    auto*       pTexGL  = ValidatedCast<TextureBaseGL>(pTexture);
+    const auto& TexDesc = pTexGL->GetDesc();
+    if (TexDesc.Usage == USAGE_STAGING)
+    {
+        auto PBOOffset       = TextureBaseGL::GetPBODataOffset(TexDesc, ArraySlice, MipLevel);
+        auto MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
+        auto pPBO            = ValidatedCast<BufferGLImpl>(pTexGL->GetPBO());
+        pPBO->MapRange(m_ContextState, MapType, MapFlags, PBOOffset, MipLevelAttribs.MipSize, MappedData.pData);
+
+        MappedData.Stride      = MipLevelAttribs.RowSize;
+        MappedData.DepthStride = MipLevelAttribs.MipSize;
+    }
+    else
+    {
+        LOG_ERROR_MESSAGE("Only staging textures can be mapped in OpenGL");
+        MappedData = MappedTextureSubresource{};
+    }
 }
 
 
 void DeviceContextGLImpl::UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice)
 {
     TDeviceContextBase::UnmapTextureSubresource(pTexture, MipLevel, ArraySlice);
-    LOG_ERROR_MESSAGE("Texture mapping is not supported in OpenGL");
+    auto*       pTexGL  = ValidatedCast<TextureBaseGL>(pTexture);
+    const auto& TexDesc = pTexGL->GetDesc();
+    if (TexDesc.Usage == USAGE_STAGING)
+    {
+        auto pPBO = ValidatedCast<BufferGLImpl>(pTexGL->GetPBO());
+        pPBO->Unmap(m_ContextState);
+    }
+    else
+    {
+        LOG_ERROR_MESSAGE("Only staging textures can be mapped in OpenGL");
+    }
 }
 
 void DeviceContextGLImpl::GenerateMips(ITextureView* pTexView)

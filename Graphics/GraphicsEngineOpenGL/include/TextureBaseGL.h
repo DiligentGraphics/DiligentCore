@@ -110,6 +110,13 @@ public:
                             const Box&               DstBox,
                             const TextureSubResData& SubresData) = 0;
 
+    static Uint32 GetPBODataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel);
+
+    IBuffer* GetPBO()
+    {
+        return m_pPBO;
+    }
+
 protected:
     virtual void CreateViewInternal(const struct TextureViewDesc& ViewDesc,
                                     class ITextureView**          ppView,
@@ -118,6 +125,7 @@ protected:
     void SetDefaultGLParameters();
 
     GLObjectWrappers::GLTextureObj m_GlTexture;
+    RefCntAutoPtr<IBuffer>         m_pPBO; // For staging textures
     const GLenum                   m_BindTarget;
     const GLenum                   m_GLTexFormat;
     //Uint32 m_uiMapTarget;

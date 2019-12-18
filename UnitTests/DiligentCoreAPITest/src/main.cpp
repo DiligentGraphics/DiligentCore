@@ -171,5 +171,6 @@ int main(int argc, char** argv)
     ::testing::AddGlobalTestEnvironment(pEnv);
 
     auto ret_val = RUN_ALL_TESTS();
+    std::cout << "\n\n\n";
     return ret_val;
 }

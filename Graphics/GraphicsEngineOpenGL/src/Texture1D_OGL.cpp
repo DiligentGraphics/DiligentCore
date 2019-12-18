@@ -52,6 +52,12 @@ Texture1D_OGL::Texture1D_OGL(IReferenceCounters*        pRefCounters,
     }
 // clang-format on
 {
+    if (TexDesc.Usage == USAGE_STAGING)
+    {
+        // We will use PBO initialized by TextureBaseGL
+        return;
+    }
+
     GLState.BindTexture(-1, m_BindTarget, m_GlTexture);
 
     //                             levels             format          width

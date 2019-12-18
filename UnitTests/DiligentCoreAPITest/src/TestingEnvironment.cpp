@@ -274,8 +274,9 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
                 NumDeferredCtx = 0;
             }
             ppContexts.resize(1 + NumDeferredCtx);
+            RefCntAutoPtr<ISwapChain> pSwapChain; // We will use testing swap chain instead
             pFactoryOpenGL->CreateDeviceAndSwapChainGL(
-                CreateInfo, &m_pDevice, ppContexts.data(), SCDesc, &m_pSwapChain);
+                CreateInfo, &m_pDevice, ppContexts.data(), SCDesc, &pSwapChain);
         }
         break;
 #endif

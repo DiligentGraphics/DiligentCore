@@ -53,6 +53,12 @@ TextureCube_OGL::TextureCube_OGL(IReferenceCounters*        pRefCounters,
     }
 // clang-format on
 {
+    if (TexDesc.Usage == USAGE_STAGING)
+    {
+        // We will use PBO initialized by TextureBaseGL
+        return;
+    }
+
     VERIFY(m_Desc.SampleCount == 1, "Multisampled cubemap textures are not supported");
 
     GLState.BindTexture(-1, m_BindTarget, m_GlTexture);

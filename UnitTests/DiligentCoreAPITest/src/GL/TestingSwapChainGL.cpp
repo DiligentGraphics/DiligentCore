@@ -21,6 +21,7 @@
  *  of the possibility of such damages.
  */
 
+#include "GL/TestingEnvironmentGL.h"
 #include "GL/TestingSwapChainGL.h"
 
 namespace Diligent
@@ -41,10 +42,98 @@ TestingSwapChainGL::TestingSwapChainGL(IReferenceCounters*  pRefCounters,
         SCDesc //
     }
 {
+    {
+        glGenTextures(1, &m_RenderTarget);
+        if (glGetError() != GL_NO_ERROR)
+            LOG_ERROR_AND_THROW("Failed to create render target texture");
+
+        GLenum RenderTargetFmt = 0;
+        switch (m_SwapChainDesc.ColorBufferFormat)
+        {
+            case TEX_FORMAT_RGBA8_UNORM:
+                RenderTargetFmt = GL_RGBA8;
+                break;
+
+            default:
+                UNSUPPORTED("Texture format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, " is not a supported color buffer format");
+        }
+
+        glBindTexture(GL_TEXTURE_2D, m_RenderTarget);
+        //                          levels    format          width                     height
+        glTexStorage2D(GL_TEXTURE_2D, 1, RenderTargetFmt, m_SwapChainDesc.Width, m_SwapChainDesc.Height);
+        if (glGetError() != GL_NO_ERROR)
+            LOG_ERROR_AND_THROW("Failed to allocate render target texture");
+    }
+
+
+    {
+        glGenTextures(1, &m_DepthBuffer);
+        if (glGetError() != GL_NO_ERROR)
+            LOG_ERROR_AND_THROW("Failed to create depth texture");
+
+        GLenum DepthBufferFmt = 0;
+        switch (m_SwapChainDesc.DepthBufferFormat)
+        {
+            case TEX_FORMAT_D32_FLOAT:
+                DepthBufferFmt = GL_DEPTH_COMPONENT32F;
+                break;
+
+            default:
+                UNSUPPORTED("Texture format ", GetTextureFormatAttribs(m_SwapChainDesc.DepthBufferFormat).Name, " is not a supported depth buffer format");
+        }
+
+        glBindTexture(GL_TEXTURE_2D, m_DepthBuffer);
+        //                          levels    format          width                     height
+        glTexStorage2D(GL_TEXTURE_2D, 1, DepthBufferFmt, m_SwapChainDesc.Width, m_SwapChainDesc.Height);
+        if (glGetError() != GL_NO_ERROR)
+            LOG_ERROR_AND_THROW("Failed to allocate render target texture");
+    }
+
+    {
+        glGenFramebuffers(1, &m_FBO);
+        if (glGetError() != GL_NO_ERROR)
+            LOG_ERROR_AND_THROW("Failed to create FBO");
+
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FBO);
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_RenderTarget, 0);
+        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_RenderTarget, 0);
+        glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_DepthBuffer, 0);
+        glFramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_DepthBuffer, 0);
+        static const GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0};
+        glDrawBuffers(1, DrawBuffers);
+        GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (Status != GL_FRAMEBUFFER_COMPLETE)
+            LOG_ERROR_AND_THROW("FBO is incomplete");
+    }
+
+    // Make sure Diligent Engine will reset all GL states
+    pContext->InvalidateState();
+}
+
+void TestingSwapChainGL::BindFramebuffer()
+{
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_FBO);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
+}
+
+TestingSwapChainGL::~TestingSwapChainGL()
+{
+    if (m_RenderTarget != 0)
+        glDeleteTextures(1, &m_RenderTarget);
+    if (m_DepthBuffer != 0)
+        glDeleteTextures(1, &m_DepthBuffer);
+    if (m_FBO != 0)
+        glDeleteFramebuffers(1, &m_FBO);
 }
 
 void TestingSwapChainGL::TakeSnapshot()
 {
+    m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
+    m_ReferenceData.resize(m_SwapChainDesc.Height * m_ReferenceDataPitch);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
+    glReadPixels(0, 0, m_SwapChainDesc.Width, m_SwapChainDesc.Height, GL_RGBA, GL_UNSIGNED_BYTE, m_ReferenceData.data());
 }
 
 void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
@@ -52,8 +141,15 @@ void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
                               const SwapChainDesc& SCDesc,
                               ISwapChain**         ppSwapChain)
 {
-    TestingSwapChainGL* pTestingSC(MakeNewRCObj<TestingSwapChainGL>()(pDevice, pContext, SCDesc));
-    pTestingSC->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+    try
+    {
+        TestingSwapChainGL* pTestingSC(MakeNewRCObj<TestingSwapChainGL>()(pDevice, pContext, SCDesc));
+        pTestingSC->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
+    }
+    catch (...)
+    {
+        *ppSwapChain = nullptr;
+    }
 }
 
 } // namespace Testing

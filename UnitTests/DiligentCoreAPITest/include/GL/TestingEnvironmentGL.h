@@ -23,6 +23,15 @@
 
 #pragma once
 
+#ifndef GLEW_STATIC
+#    define GLEW_STATIC // Must be defined to use static version of glew
+#endif
+#ifndef GLEW_NO_GLU
+#    define GLEW_NO_GLU
+#endif
+
+#include "GL/glew.h"
+
 #include "TestingEnvironment.h"
 
 namespace Diligent
@@ -35,10 +44,17 @@ class TestingEnvironmentGL final : public TestingEnvironment
 {
 public:
     TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+    ~TestingEnvironmentGL();
 
     static TestingEnvironmentGL* GetInstance() { return ValidatedCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
 
+    GLuint CompileGLShader(const char* Source, GLenum ShaderType);
+    GLuint LinkProgram(GLuint Shaders[], GLuint NumShaders);
+
+    GLuint GetDummyVAO() { return m_DummyVAO; }
+
 private:
+    GLuint m_DummyVAO = 0;
 };
 
 } // namespace Testing
