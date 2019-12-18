@@ -82,6 +82,7 @@ void RenderDrawCommandRefenceGL(ISwapChain* pSwapChain)
     const auto& SCDesc = pTestingSwapChainGL->GetDesc();
 
     GLuint glShaders[2] = {};
+
     glShaders[0] = pEnv->CompileGLShader(VSSource, GL_VERTEX_SHADER);
     ASSERT_NE(glShaders[0], 0u);
     glShaders[1] = pEnv->CompileGLShader(PSSource, GL_FRAGMENT_SHADER);
@@ -105,16 +106,16 @@ void RenderDrawCommandRefenceGL(ISwapChain* pSwapChain)
     glBindVertexArray(0);
     glUseProgram(0);
 
-    // Make sure Diligent Engine will reset all GL states
-    pContext->InvalidateState();
-
-    for(int i = 0; i < _countof(glShaders); ++i)
+    for (int i = 0; i < _countof(glShaders); ++i)
     {
         if (glShaders[i] != 0)
             glDeleteShader(glShaders[i]);
     }
     if (glProg != 0)
         glDeleteProgram(glProg);
+
+    // Make sure Diligent Engine will reset all GL states
+    pContext->InvalidateState();
 }
 
 } // namespace Testing
