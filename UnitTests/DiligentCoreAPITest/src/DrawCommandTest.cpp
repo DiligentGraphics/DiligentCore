@@ -382,6 +382,7 @@ protected:
 
         pSwapChain->Present();
 
+        pContext->Flush();
         pContext->InvalidateState();
     }
 

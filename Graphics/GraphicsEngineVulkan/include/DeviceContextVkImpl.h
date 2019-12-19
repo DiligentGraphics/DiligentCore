@@ -295,7 +295,8 @@ public:
 
     VulkanDynamicAllocation AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment);
 
-    void  ResetRenderTargets();
+    virtual void ResetRenderTargets() override final;
+
     Int64 GetContextFrameNumber() const { return m_ContextFrameNumber; }
 
     GenerateMipsVkHelper& GetGenerateMipsHelper() { return *m_GenerateMipsHelper; }

@@ -1260,6 +1260,13 @@ void DeviceContextD3D12Impl::CopyTextureRegion(TextureD3D12Impl*              pS
                                                Uint32                         DstZ,
                                                RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode)
 {
+    // We must unbind the textures from framebuffer because
+    // we will transition their states. If we later try to commit
+    // them as render targets (e.g. from SetPipelineState()), a
+    // state mismatch error will occur.
+    UnbindTextureFromFramebuffer(pSrcTexture, true);
+    UnbindTextureFromFramebuffer(pDstTexture, true);
+
     auto& CmdCtx = GetCmdContext();
     if (pSrcTexture->GetDesc().Usage == USAGE_STAGING)
     {

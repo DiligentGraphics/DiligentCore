@@ -59,7 +59,7 @@ TestingSwapChainVk::TestingSwapChainVk(IReferenceCounters*   pRefCounters,
             UNSUPPORTED("Texture format ", GetTextureFormatAttribs(m_SwapChainDesc.ColorBufferFormat).Name, " is not a supported color buffer format");
     }
     pEnv->CreateImage2D(m_SwapChainDesc.Width, m_SwapChainDesc.Height, ColorFormat,
-                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                         m_vkRenerTargetLayout,
                         m_vkRenderTargetMemory, m_vkRenderTargetImage);
 
@@ -75,7 +75,7 @@ TestingSwapChainVk::TestingSwapChainVk(IReferenceCounters*   pRefCounters,
             UNSUPPORTED("Texture format ", GetTextureFormatAttribs(m_SwapChainDesc.DepthBufferFormat).Name, " is not a supported depth buffer format");
     }
     pEnv->CreateImage2D(m_SwapChainDesc.Width, m_SwapChainDesc.Height, DepthFormat,
-                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+                        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
                         m_vkDepthBufferLayout,
                         m_vkDepthBufferMemory, m_vkDepthBufferImage);
 
@@ -177,7 +177,7 @@ TestingSwapChainVk::~TestingSwapChainVk()
         vkDestroyImageView(m_vkDevice, m_vkDepthBufferView, nullptr);
 }
 
-void TestingSwapChainVk::BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages)
+void TestingSwapChainVk::TransitionRenderTarget(VkCommandBuffer vkCmdBuffer, VkImageLayout Layout, VkPipelineStageFlags GraphicsShaderStages)
 {
     m_ActiveGraphicsShaderStages        = GraphicsShaderStages;
     VkImageSubresourceRange SubresRange = {};
@@ -186,13 +186,25 @@ void TestingSwapChainVk::BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipeline
     SubresRange.layerCount = 1;
     SubresRange.levelCount = 1;
     TestingEnvironmentVk::TransitionImageLayout(vkCmdBuffer, m_vkRenderTargetImage, m_vkRenerTargetLayout,
-                                                VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, SubresRange,
-                                                GraphicsShaderStages);
+                                                Layout, SubresRange, GraphicsShaderStages);
+}
+
+void TestingSwapChainVk::TransitionDepthBuffer(VkCommandBuffer vkCmdBuffer, VkImageLayout Layout, VkPipelineStageFlags GraphicsShaderStages)
+{
+    m_ActiveGraphicsShaderStages        = GraphicsShaderStages;
+    VkImageSubresourceRange SubresRange = {};
 
     SubresRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    SubresRange.layerCount = 1;
+    SubresRange.levelCount = 1;
     TestingEnvironmentVk::TransitionImageLayout(vkCmdBuffer, m_vkDepthBufferImage, m_vkDepthBufferLayout,
-                                                VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, SubresRange,
-                                                GraphicsShaderStages);
+                                                Layout, SubresRange, GraphicsShaderStages);
+}
+
+void TestingSwapChainVk::BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages)
+{
+    TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, GraphicsShaderStages);
+    TransitionDepthBuffer(vkCmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, GraphicsShaderStages);
 
     VkRenderPassBeginInfo BeginInfo = {};
 
@@ -228,14 +240,7 @@ void TestingSwapChainVk::TakeSnapshot()
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
-    VkImageSubresourceRange SubresRange = {};
-
-    SubresRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    SubresRange.layerCount = 1;
-    SubresRange.levelCount = 1;
-    TestingEnvironmentVk::TransitionImageLayout(vkCmdBuffer, m_vkRenderTargetImage, m_vkRenerTargetLayout,
-                                                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SubresRange,
-                                                m_ActiveGraphicsShaderStages);
+    TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_ActiveGraphicsShaderStages);
 
     VkBufferImageCopy BuffImgCopy = {};
 

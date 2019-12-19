@@ -94,6 +94,7 @@ public:
             m_pRTV = m_pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
             VERIFY_EXPR(m_pRTV != nullptr);
 
+            RenderTargetDesc.Name           = "Staging color buffer copy";
             RenderTargetDesc.Usage          = USAGE_STAGING;
             RenderTargetDesc.CPUAccessFlags = CPU_ACCESS_READ;
             RenderTargetDesc.BindFlags      = BIND_NONE;

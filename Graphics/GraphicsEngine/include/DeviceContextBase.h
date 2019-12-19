@@ -190,7 +190,7 @@ public:
     /// Returns the render device
     IRenderDevice* GetDevice() { return m_pDevice; }
 
-    inline void ResetRenderTargets();
+    virtual void ResetRenderTargets();
 
     bool IsDeferred() const { return m_bIsDeferred; }
 
@@ -203,6 +203,17 @@ protected:
 
     /// Clears all cached resources
     inline void ClearStateCache();
+
+    /// Checks if the texture is currently bound as a render target.
+    bool CheckIfBoundAsRenderTarget(TextureImplType* pTexture);
+
+    /// Checks if the texture is currently bound as depth-stencil buffer.
+    bool CheckIfBoundAsDepthStencil(TextureImplType* pTexture);
+
+    /// Checks if the texture is bound as a render target or depth-stencil buffer and
+    /// resets render targets if it is.
+    bool UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage);
+
 
 #ifdef DEVELOPMENT
     // clang-format off
@@ -722,7 +733,72 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCa
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets()
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::CheckIfBoundAsRenderTarget(TextureImplType* pTexture)
+{
+    if (pTexture == nullptr)
+        return false;
+
+    for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+    {
+        if (m_pBoundRenderTargets[rt] && m_pBoundRenderTargets[rt]->GetTexture() == pTexture)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::CheckIfBoundAsDepthStencil(TextureImplType* pTexture)
+{
+    if (pTexture == nullptr)
+        return false;
+
+    return m_pBoundDepthStencil && m_pBoundDepthStencil->GetTexture() == pTexture;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage)
+{
+    if (pTexture == nullptr)
+        return false;
+
+    if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET) && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
+        return false;
+
+    bool bResetRenderTargets = false;
+    if (CheckIfBoundAsRenderTarget(pTexture))
+    {
+        if (bShowMessage)
+        {
+            LOG_INFO_MESSAGE("Texture '", pTexture->GetDesc().Name,
+                             "' is currently bound as render target and will be unset along with all "
+                             "other render targets and depth-stencil buffer. "
+                             "Call SetRenderTargets() to reset the render targets.");
+        }
+
+        bResetRenderTargets = true;
+    }
+    else if (CheckIfBoundAsDepthStencil(pTexture))
+    {
+        LOG_INFO_MESSAGE("Texture '", pTexture->GetDesc().Name,
+                         "' is currently bound as depth buffer and will be unset along with "
+                         "all render targets. Call SetRenderTargets() to reset the render targets.");
+
+        bResetRenderTargets = true;
+    }
+
+    if (bResetRenderTargets)
+    {
+        ResetRenderTargets();
+    }
+
+    return bResetRenderTargets;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets()
 {
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         m_pBoundRenderTargets[rt].Release();

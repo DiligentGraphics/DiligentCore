@@ -45,10 +45,23 @@ public:
 
     virtual void TakeSnapshot() override final;
 
+    VkImage GetVkRenderTargetImage()
+    {
+        return m_vkRenderTargetImage;
+    }
+
+    VkImage GetVkDepthBufferImage()
+    {
+        return m_vkDepthBufferImage;
+    }
+
     VkRenderPass GetRenderPass()
     {
         return m_vkRenderPass;
     }
+
+    void TransitionRenderTarget(VkCommandBuffer vkCmdBuffer, VkImageLayout Layout, VkPipelineStageFlags GraphicsShaderStages);
+    void TransitionDepthBuffer(VkCommandBuffer vkCmdBuffer, VkImageLayout Layout, VkPipelineStageFlags GraphicsShaderStages);
 
     void BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages);
     void EndRenderPass(VkCommandBuffer vkCmdBuffer);

@@ -131,9 +131,10 @@ void TestingSwapChainGL::TakeSnapshot()
 {
     m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
     m_ReferenceData.resize(m_SwapChainDesc.Height * m_ReferenceDataPitch);
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, m_FBO);
     glReadPixels(0, 0, m_SwapChainDesc.Width, m_SwapChainDesc.Height, GL_RGBA, GL_UNSIGNED_BYTE, m_ReferenceData.data());
+    VERIFY(glGetError() == GL_NO_ERROR, "Failed to read pixels from the framebuffer");
 }
 
 void CreateTestingSwapChainGL(IRenderDevice*       pDevice,

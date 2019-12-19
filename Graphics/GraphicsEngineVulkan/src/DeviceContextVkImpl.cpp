@@ -1407,8 +1407,16 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
 {
     TDeviceContextBase::CopyTexture(CopyAttribs);
 
-    auto*       pSrcTexVk  = ValidatedCast<TextureVkImpl>(CopyAttribs.pSrcTexture);
-    auto*       pDstTexVk  = ValidatedCast<TextureVkImpl>(CopyAttribs.pDstTexture);
+    auto* pSrcTexVk = ValidatedCast<TextureVkImpl>(CopyAttribs.pSrcTexture);
+    auto* pDstTexVk = ValidatedCast<TextureVkImpl>(CopyAttribs.pDstTexture);
+
+    // We must unbind the textures from framebuffer because
+    // we will transition their states. If we later try to commit
+    // them as render targets (e.g. from SetPipelineState()), a
+    // state mismatch error will occur.
+    UnbindTextureFromFramebuffer(pSrcTexVk, true);
+    UnbindTextureFromFramebuffer(pDstTexVk, true);
+
     const auto& SrcTexDesc = pSrcTexVk->GetDesc();
     const auto& DstTexDesc = pDstTexVk->GetDesc();
     auto*       pSrcBox    = CopyAttribs.pSrcBox;
