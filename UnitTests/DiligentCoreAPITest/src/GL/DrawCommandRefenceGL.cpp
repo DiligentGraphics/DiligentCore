@@ -44,17 +44,23 @@ layout(location = 0) out vec3 out_Color;
 
 void main()
 {
-    vec4 Pos[4];
-    Pos[0] = vec4(-0.5, -0.5, 0.0, 1.0);
+    vec4 Pos[6];
+    Pos[0] = vec4(-1.0, -0.5, 0.0, 1.0);
     Pos[1] = vec4(-0.5, +0.5, 0.0, 1.0);
-    Pos[2] = vec4(+0.5, -0.5, 0.0, 1.0);
-    Pos[3] = vec4(+0.5, +0.5, 0.0, 1.0);
+    Pos[2] = vec4( 0.0, -0.5, 0.0, 1.0);
 
-    vec3 Col[4];
+    Pos[3] = vec4(+0.0, -0.5, 0.0, 1.0);
+    Pos[4] = vec4(+0.5, +0.5, 0.0, 1.0);
+    Pos[5] = vec4(+1.0, -0.5, 0.0, 1.0);
+
+    vec3 Col[6];
     Col[0] = vec3(1.0, 0.0, 0.0);
     Col[1] = vec3(0.0, 1.0, 0.0);
     Col[2] = vec3(0.0, 0.0, 1.0);
-    Col[3] = vec3(1.0, 1.0, 1.0);
+
+    Col[3] = vec3(1.0, 0.0, 0.0);
+    Col[4] = vec3(0.0, 1.0, 0.0);
+    Col[5] = vec3(0.0, 0.0, 1.0);
     
     gl_Position = Pos[gl_VertexID];
     out_Color = Col[gl_VertexID];
@@ -102,7 +108,7 @@ void RenderDrawCommandRefenceGL(ISwapChain* pSwapChain)
     glViewport(0, 0, SCDesc.Width, SCDesc.Height);
     glUseProgram(glProg);
     glBindVertexArray(pEnv->GetDummyVAO());
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
     glUseProgram(0);
 

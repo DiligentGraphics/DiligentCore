@@ -73,17 +73,23 @@ struct PSInput
 void main(in  uint    VertId : SV_VertexID,
           out PSInput PSIn) 
 {
-    float4 Pos[4];
-    Pos[0] = float4(-0.5, -0.5, 0.0, 1.0);
+    float4 Pos[6];
+    Pos[0] = float4(-1.0, -0.5, 0.0, 1.0);
     Pos[1] = float4(-0.5, +0.5, 0.0, 1.0);
-    Pos[2] = float4(+0.5, -0.5, 0.0, 1.0);
-    Pos[3] = float4(+0.5, +0.5, 0.0, 1.0);
+    Pos[2] = float4( 0.0, -0.5, 0.0, 1.0);
 
-    float3 Col[4];
+    Pos[3] = float4(+0.0, -0.5, 0.0, 1.0);
+    Pos[4] = float4(+0.5, +0.5, 0.0, 1.0);
+    Pos[5] = float4(+1.0, -0.5, 0.0, 1.0);
+
+    float3 Col[6];
     Col[0] = float3(1.0, 0.0, 0.0);
     Col[1] = float3(0.0, 1.0, 0.0);
     Col[2] = float3(0.0, 0.0, 1.0);
-    Col[3] = float3(1.0, 1.0, 1.0);
+
+    Col[3] = float3(1.0, 0.0, 0.0);
+    Col[4] = float3(0.0, 1.0, 0.0);
+    Col[5] = float3(0.0, 0.0, 1.0);
 
     PSIn.Pos   = Pos[VertId];
     PSIn.Color = Col[VertId];
@@ -139,10 +145,13 @@ struct Vertex
 // clang-format off
 float4 Pos[] = 
 {
-    float4(-0.5f, -0.5f, 0.0f, 1.0f),
-    float4(-0.5f, +0.5f, 0.0f, 1.0f),
-    float4(+0.5f, -0.5f, 0.0f, 1.0f),
-    float4(+0.5f, +0.5f, 0.0f, 1.0f)
+    float4(-1.0, -0.5, 0.0, 1.0),
+    float4(-0.5, +0.5, 0.0, 1.0),
+    float4( 0.0, -0.5, 0.0, 1.0),
+
+    float4(+0.0, -0.5, 0.0, 1.0),
+    float4(+0.5, +0.5, 0.0, 1.0),
+    float4(+1.0, -0.5, 0.0, 1.0)
 };
 
 float3 Color[] =
@@ -150,7 +159,6 @@ float3 Color[] =
     float3(1.0f, 0.0f, 0.0f),
     float3(0.0f, 1.0f, 0.0f),
     float3(0.0f, 0.0f, 1.0f),
-    float3(1.0f, 1.0f, 1.0f)
 };
 
 Vertex Vert[] = 
@@ -158,7 +166,10 @@ Vertex Vert[] =
     {Pos[0], Color[0]},
     {Pos[1], Color[1]},
     {Pos[2], Color[2]},
-    {Pos[3], Color[3]}
+
+    {Pos[3], Color[0]},
+    {Pos[4], Color[1]},
+    {Pos[5], Color[2]}
 };
 // clang-format on
 
@@ -222,7 +233,7 @@ protected:
         PSODesc.IsComputePipeline                             = false;
         PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
         PSODesc.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
-        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
         PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
@@ -375,7 +386,7 @@ TEST_F(DrawCommandTest, DrawProcedural)
 
     SetRenderTargets(sm_pDrawProceduralPSO);
 
-    DrawAttribs drawAttrs{4, DRAW_FLAG_VERIFY_ALL};
+    DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
 
     Present();
@@ -392,7 +403,7 @@ TEST_F(DrawCommandTest, Draw)
     const Vertex Triangles[] =
     {
         Vert[0], Vert[1], Vert[2],
-        Vert[1], Vert[2], Vert[3]
+        Vert[3], Vert[4], Vert[5]
     };
     // clang-format on
 
@@ -418,7 +429,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex)
     {
         {}, {},
         Vert[0], Vert[1], Vert[2],
-        Vert[1], Vert[2], Vert[3]
+        Vert[3], Vert[4], Vert[5]
     };
     // clang-format on
 
@@ -445,7 +456,7 @@ TEST_F(DrawCommandTest, Draw_VBOffset)
     {
         {}, {}, {},
         Vert[0], Vert[1], Vert[2],
-        Vert[1], Vert[2], Vert[3]
+        Vert[3], Vert[4], Vert[5]
     };
     // clang-format on
 
@@ -472,7 +483,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
         {}, {}, {}, // Offset
         {}, {}, // Start vertex
         Vert[0], Vert[1], Vert[2],
-        Vert[1], Vert[2], Vert[3]
+        Vert[3], Vert[4], Vert[5]
     };
     // clang-format on
 
@@ -500,7 +511,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
         {}, {}, {},     // Offset
         {}, {}, {}, {}, // Start vertex
         Vert[0], {}, Vert[1], {}, Vert[2], {}, 
-        Vert[1], {}, Vert[2], {}, Vert[3], {}
+        Vert[3], {}, Vert[4], {}, Vert[5], {}
     };
     // clang-format on
 
@@ -527,7 +538,7 @@ TEST_F(DrawCommandTest, DrawIndexed)
     {
         {}, {},
         Vert[0], {}, Vert[1], {}, {}, Vert[2],
-        Vert[1], {}, {}, Vert[3], Vert[2]
+        Vert[3], {}, {}, Vert[5], Vert[4]
     };
     Uint32 Indices[] = {2,4,7, 8,12,11};
     // clang-format on
@@ -557,7 +568,7 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
     {
         {}, {},
         Vert[0], {}, Vert[1], {}, {}, Vert[2],
-        Vert[1], {}, {}, Vert[3], Vert[2]
+        Vert[3], {}, {}, Vert[5], Vert[4]
     };
     Uint32 Indices[] = {0,0,0,0, 2,4,7, 8,12,11};
     // clang-format on
@@ -588,7 +599,7 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
     {
         {}, {},
         Vert[0], {}, Vert[1], {}, {}, Vert[2],
-        Vert[1], {}, {}, Vert[3], Vert[2]
+        Vert[3], {}, {}, Vert[5], Vert[4]
     };
     Uint32 Indices[] = {0,0,0,0, 2-bv,4-bv,7-bv, 8-bv,12-bv,11-bv};
     // clang-format on

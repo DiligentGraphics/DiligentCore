@@ -48,17 +48,23 @@ layout(location = 0) out vec3 out_Color;
 
 void main()
 {
-    vec4 Pos[4];
-    Pos[0] = vec4(-0.5, -0.5, 0.0, 1.0);
+    vec4 Pos[6];
+    Pos[0] = vec4(-1.0, -0.5, 0.0, 1.0);
     Pos[1] = vec4(-0.5, +0.5, 0.0, 1.0);
-    Pos[2] = vec4(+0.5, -0.5, 0.0, 1.0);
-    Pos[3] = vec4(+0.5, +0.5, 0.0, 1.0);
+    Pos[2] = vec4( 0.0, -0.5, 0.0, 1.0);
 
-    vec3 Col[4];
+    Pos[3] = vec4(+0.0, -0.5, 0.0, 1.0);
+    Pos[4] = vec4(+0.5, +0.5, 0.0, 1.0);
+    Pos[5] = vec4(+1.0, -0.5, 0.0, 1.0);
+
+    vec3 Col[6];
     Col[0] = vec3(1.0, 0.0, 0.0);
     Col[1] = vec3(0.0, 1.0, 0.0);
     Col[2] = vec3(0.0, 0.0, 1.0);
-    Col[3] = vec3(1.0, 1.0, 1.0);
+
+    Col[3] = vec3(1.0, 0.0, 0.0);
+    Col[4] = vec3(0.0, 1.0, 0.0);
+    Col[5] = vec3(0.0, 0.0, 1.0);
     
     gl_Position = Pos[gl_VertexIndex];
     out_Color = Col[gl_VertexIndex];
@@ -134,7 +140,7 @@ void RenderDrawCommandRefenceVk(ISwapChain* pSwapChain)
     InputAssemblyCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     InputAssemblyCI.pNext                  = nullptr;
     InputAssemblyCI.flags                  = 0; // reserved for future use
-    InputAssemblyCI.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    InputAssemblyCI.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
     PipelineCI.pInputAssemblyState         = &InputAssemblyCI;
 
@@ -238,7 +244,7 @@ void RenderDrawCommandRefenceVk(ISwapChain* pSwapChain)
 
     pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     vkCmdBindPipeline(vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline);
-    vkCmdDraw(vkCmdBuffer, 4, 1, 0, 0);
+    vkCmdDraw(vkCmdBuffer, 6, 1, 0, 0);
     pTestingSwapChainVk->EndRenderPass(vkCmdBuffer);
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
