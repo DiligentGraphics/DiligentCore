@@ -224,12 +224,12 @@ struct DrawIndexedAttribs
     /// instanced draw call will be performed.
     Uint32     NumInstances          = 1;
 
-    /// A constant which is added to each index before accessing the vertex buffer.
-    Uint32     BaseVertex            = 0; 
-
     /// LOCATION (NOT the byte offset) of the first index in
     /// the index buffer to start reading indices from.
     Uint32     FirstIndexLocation    = 0; 
+
+    /// A constant which is added to each index before accessing the vertex buffer.
+    Uint32     BaseVertex            = 0; 
 
     /// LOCATION (or INDEX, but NOT the byte offset) in the vertex
     /// buffer to start reading instance data from.
@@ -245,8 +245,8 @@ struct DrawIndexedAttribs
     /// IndexType                                | VT_UNDEFINED
     /// Flags                                    | DRAW_FLAG_NONE
     /// NumInstances                             | 1
-    /// BaseVertex                               | 0
     /// FirstIndexLocation                       | 0
+    /// BaseVertex                               | 0
     /// FirstInstanceLocation                    | 0
     DrawIndexedAttribs()noexcept{}
 
@@ -255,15 +255,15 @@ struct DrawIndexedAttribs
                        VALUE_TYPE  _IndexType,
                        DRAW_FLAGS  _Flags,
                        Uint32      _NumInstances          = 1,
-                       Uint32      _BaseVertex            = 0,
                        Uint32      _FirstIndexLocation    = 0,
+                       Uint32      _BaseVertex            = 0,
                        Uint32      _FirstInstanceLocation = 0)noexcept : 
         NumIndices           {_NumIndices           },
         IndexType            {_IndexType            },
         Flags                {_Flags                },
         NumInstances         {_NumInstances         },
-        BaseVertex           {_BaseVertex           },
         FirstIndexLocation   {_FirstIndexLocation   },
+        BaseVertex           {_BaseVertex           },
         FirstInstanceLocation{_FirstInstanceLocation}
     {}
 };

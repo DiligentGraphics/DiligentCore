@@ -136,6 +136,30 @@ void main(in  PSInput  PSIn,
 }
 )";
 
+const char* VSInstancedSource = R"(
+struct PSInput 
+{ 
+    float4 Pos   : SV_POSITION; 
+    float3 Color : COLOR; 
+};
+
+struct VSInput
+{
+    float4 Pos       : ATTRIB0;
+    float3 Color     : ATTRIB1; 
+    float4 ScaleBias : ATTRIB2; 
+};
+
+void main(in  VSInput VSIn,
+          out PSInput PSIn) 
+{
+    PSIn.Pos.xy = VSIn.Pos.xy * VSIn.ScaleBias.xy + VSIn.ScaleBias.zw;
+    PSIn.Pos.zw = VSIn.Pos.zw;
+    PSIn.Color  = VSIn.Color;
+}
+)";
+
+
 struct Vertex
 {
     float4 Pos;
@@ -145,20 +169,20 @@ struct Vertex
 // clang-format off
 float4 Pos[] = 
 {
-    float4(-1.0, -0.5, 0.0, 1.0),
-    float4(-0.5, +0.5, 0.0, 1.0),
-    float4( 0.0, -0.5, 0.0, 1.0),
+    float4(-1.0f,  -0.5f,  0.f,  1.f),
+    float4(-0.5f,  +0.5f,  0.f,  1.f),
+    float4( 0.0f,  -0.5f,  0.f,  1.f),
 
-    float4(+0.0, -0.5, 0.0, 1.0),
-    float4(+0.5, +0.5, 0.0, 1.0),
-    float4(+1.0, -0.5, 0.0, 1.0)
+    float4(+0.0f,  -0.5f,  0.f,  1.f),
+    float4(+0.5f,  +0.5f,  0.f,  1.f),
+    float4(+1.0f,  -0.5f,  0.f,  1.f)
 };
 
 float3 Color[] =
 {
-    float3(1.0f, 0.0f, 0.0f),
-    float3(0.0f, 1.0f, 0.0f),
-    float3(0.0f, 0.0f, 1.0f),
+    float3(1.f,  0.f,  0.f),
+    float3(0.f,  1.f,  0.f),
+    float3(0.f,  0.f,  1.f),
 };
 
 Vertex Vert[] = 
@@ -170,6 +194,13 @@ Vertex Vert[] =
     {Pos[3], Color[0]},
     {Pos[4], Color[1]},
     {Pos[5], Color[2]}
+};
+
+Vertex VertInst[] = 
+{
+    {float4(-1.0,  0.0,  0.0,  1.0), Color[0]},
+    {float4( 0.0, +2.0,  0.0,  1.0), Color[1]},
+    {float4(+1.0,  0.0,  0.0,  1.0), Color[2]}
 };
 // clang-format on
 
@@ -261,6 +292,16 @@ protected:
             ASSERT_NE(pVS, nullptr);
         }
 
+        RefCntAutoPtr<IShader> pInstancedVS;
+        {
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Draw command test instanced vertex shader";
+            ShaderCI.Source          = VSInstancedSource;
+            pDevice->CreateShader(ShaderCI, &pInstancedVS);
+            ASSERT_NE(pInstancedVS, nullptr);
+        }
+
         RefCntAutoPtr<IShader> pPS;
         {
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
@@ -293,6 +334,19 @@ protected:
 
         Elems[0].Stride = sizeof(Vertex) * 2;
         pDevice->CreatePipelineState(PSODesc, &sm_pDraw_2xStride_PSO);
+
+        // clang-format off
+        LayoutElement InstancedElems[] =
+        {
+            LayoutElement{ 0, 0, 4, VT_FLOAT32},
+            LayoutElement{ 1, 0, 3, VT_FLOAT32},
+            LayoutElement{ 2, 1, 4, VT_FLOAT32, false, LayoutElement::FREQUENCY_PER_INSTANCE}
+        };
+        // clang-format on
+        PSODesc.GraphicsPipeline.InputLayout.LayoutElements = InstancedElems;
+        PSODesc.GraphicsPipeline.InputLayout.NumElements    = _countof(InstancedElems);
+        PSODesc.GraphicsPipeline.pVS                        = pInstancedVS;
+        pDevice->CreatePipelineState(PSODesc, &sm_pDrawInstancedPSO);
     }
 
     static void TearDownTestSuite()
@@ -342,8 +396,8 @@ protected:
         InitialData.pData    = VertexData;
         InitialData.DataSize = DataSize;
 
-        auto*                  pEnv    = TestingEnvironment::GetInstance();
-        auto*                  pDevice = pEnv->GetDevice();
+        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+
         RefCntAutoPtr<IBuffer> pBuffer;
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pBuffer);
         VERIFY_EXPR(pBuffer);
@@ -361,8 +415,27 @@ protected:
         InitialData.pData    = Indices;
         InitialData.DataSize = BuffDesc.uiSizeInBytes;
 
-        auto*                  pEnv    = TestingEnvironment::GetInstance();
-        auto*                  pDevice = pEnv->GetDevice();
+        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+
+        RefCntAutoPtr<IBuffer> pBuffer;
+        pDevice->CreateBuffer(BuffDesc, &InitialData, &pBuffer);
+        VERIFY_EXPR(pBuffer);
+        return pBuffer;
+    }
+
+    RefCntAutoPtr<IBuffer> CreateIndirectDrawArgsBuffer(const Uint32* Data, Uint32 DataSize)
+    {
+        BufferDesc BuffDesc;
+        BuffDesc.Name          = "Test index buffer";
+        BuffDesc.BindFlags     = BIND_INDIRECT_DRAW_ARGS;
+        BuffDesc.uiSizeInBytes = DataSize;
+
+        BufferData InitialData;
+        InitialData.pData    = Data;
+        InitialData.DataSize = BuffDesc.uiSizeInBytes;
+
+        auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+
         RefCntAutoPtr<IBuffer> pBuffer;
         pDevice->CreateBuffer(BuffDesc, &InitialData, &pBuffer);
         VERIFY_EXPR(pBuffer);
@@ -378,6 +451,7 @@ protected:
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawProceduralPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawPSO;
 RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDraw_2xStride_PSO;
+RefCntAutoPtr<IPipelineState> DrawCommandTest::sm_pDrawInstancedPSO;
 
 TEST_F(DrawCommandTest, DrawProcedural)
 {
@@ -391,6 +465,10 @@ TEST_F(DrawCommandTest, DrawProcedural)
 
     Present();
 }
+
+
+// Non-indexed draw calls
+
 
 TEST_F(DrawCommandTest, Draw)
 {
@@ -411,6 +489,7 @@ TEST_F(DrawCommandTest, Draw)
     IBuffer* pVBs[]    = {pVB};
     Uint32   Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
 
@@ -427,7 +506,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex)
     // clang-format off
     const Vertex Triangles[] =
     {
-        {}, {},
+        {}, {}, // Skip 2 vertices using StartVertexLocation
         Vert[0], Vert[1], Vert[2],
         Vert[3], Vert[4], Vert[5]
     };
@@ -437,6 +516,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex)
     IBuffer* pVBs[]    = {pVB};
     Uint32   Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.StartVertexLocation = 2;
     pContext->Draw(drawAttrs);
@@ -454,7 +534,7 @@ TEST_F(DrawCommandTest, Draw_VBOffset)
     // clang-format off
     const Vertex Triangles[] =
     {
-        {}, {}, {},
+        {}, {}, {}, // Skip 3 vertices using buffer offset
         Vert[0], Vert[1], Vert[2],
         Vert[3], Vert[4], Vert[5]
     };
@@ -464,6 +544,7 @@ TEST_F(DrawCommandTest, Draw_VBOffset)
     IBuffer* pVBs[]    = {pVB};
     Uint32   Offsets[] = {3 * sizeof(Vertex)};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     pContext->Draw(drawAttrs);
 
@@ -480,8 +561,8 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
     // clang-format off
     const Vertex Triangles[] =
     {
-        {}, {}, {}, // Offset
-        {}, {}, // Start vertex
+        {}, {}, {}, // Skip 3 vertices using buffer offset
+        {}, {},     // Skip 2 vertices using StartVertexLocation
         Vert[0], Vert[1], Vert[2],
         Vert[3], Vert[4], Vert[5]
     };
@@ -491,6 +572,7 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset)
     IBuffer* pVBs[]    = {pVB};
     Uint32   Offsets[] = {3 * sizeof(Vertex)};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.StartVertexLocation = 2;
     pContext->Draw(drawAttrs);
@@ -508,8 +590,8 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
     // clang-format off
     const Vertex Triangles[] =
     {
-        {}, {}, {},     // Offset
-        {}, {}, {}, {}, // Start vertex
+        {}, {}, {},     // Skip 3 * sizeof(Vertex) using buffer offset
+        {}, {}, {}, {}, // Skip 2 vertices using StartVertexLocation
         Vert[0], {}, Vert[1], {}, Vert[2], {}, 
         Vert[3], {}, Vert[4], {}, Vert[5], {}
     };
@@ -519,12 +601,17 @@ TEST_F(DrawCommandTest, Draw_StartVertex_VBOffset_2xStride)
     IBuffer* pVBs[]    = {pVB};
     Uint32   Offsets[] = {3 * sizeof(Vertex)};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
     DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.StartVertexLocation = 2;
     pContext->Draw(drawAttrs);
 
     Present();
 }
+
+
+
+// Indexed draw calls (glDrawElements/DrawIndexed)
 
 TEST_F(DrawCommandTest, DrawIndexed)
 {
@@ -550,6 +637,7 @@ TEST_F(DrawCommandTest, DrawIndexed)
     Uint32   Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
     DrawIndexedAttribs drawAttrs{6, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
     pContext->DrawIndexed(drawAttrs);
 
@@ -570,7 +658,7 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
         Vert[0], {}, Vert[1], {}, {}, Vert[2],
         Vert[3], {}, {}, Vert[5], Vert[4]
     };
-    Uint32 Indices[] = {0,0,0,0, 2,4,7, 8,12,11};
+    Uint32 Indices[] = {0,0,0,0, 2,4,7, 8,12,11}; // Skip 4 indices using index buffer offset
     // clang-format on
 
     auto pVB = CreateVertexBuffer(Triangles, sizeof(Triangles));
@@ -580,6 +668,7 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset)
     Uint32   Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, sizeof(Uint32) * 4, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
     DrawIndexedAttribs drawAttrs{6, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
     pContext->DrawIndexed(drawAttrs);
 
@@ -593,7 +682,7 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
 
     SetRenderTargets(sm_pDrawPSO);
 
-    Uint32 bv = 2;
+    Uint32 bv = 2; // Base vertex
     // clang-format off
     const Vertex Triangles[] =
     {
@@ -611,9 +700,790 @@ TEST_F(DrawCommandTest, DrawIndexed_IBOffset_BaseVertex)
     Uint32   Offsets[] = {0};
     pContext->SetVertexBuffers(0, 1, pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
     pContext->SetIndexBuffer(pIB, sizeof(Uint32) * 4, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
     DrawIndexedAttribs drawAttrs{6, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.BaseVertex = bv;
     pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+
+// Instanced non-indexed draw calls (glDrawArraysInstanced/DrawInstanced)
+
+TEST_F(DrawCommandTest, DrawInstanced)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        VertInst[0], VertInst[1], VertInst[2]
+    };
+    const float4 InstancedData[] = 
+    {
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances = 2; // Draw two instances of the same triangle
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DrawInstanced_VBOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, // Skip 2 vertices with VB offset
+        VertInst[0], VertInst[1], VertInst[2]
+    };
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, // Skip 3 instances with VB offset
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {2 * sizeof(Vertex), 3 * sizeof(float4)};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances = 2; // Draw two instances of the same triangle
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DrawInstanced_StartVertex)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, {}, {}, // Skip 4 vertices with start vertex
+        VertInst[0], VertInst[1], VertInst[2]
+    };
+    const float4 InstancedData[] = 
+    {
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances        = 2; // Draw two instances of the same triangle
+    drawAttrs.StartVertexLocation = 4; // Skip 4 vertices
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+
+// Instanced draw calls with first instance (glDrawArraysInstancedBaseInstance/DrawInstanced)
+
+TEST_F(DrawCommandTest, DrawInstanced_FirstInstance)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        VertInst[0], VertInst[1], VertInst[2]
+    };
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, // Skip 4 instances with FirstInstanceLocation
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances          = 2;
+    drawAttrs.FirstInstanceLocation = 4; // Skip 4 instances
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_VBOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, {}, // Skip 3 vertices with buffer offset
+        VertInst[0], VertInst[1], VertInst[2]
+    };
+    const float4 InstancedData[] = 
+    {
+        {}, {},         // Skip 2 instances with buffer offset
+        {}, {}, {}, {}, // Skip 4 instances with FirstInstanceLocation
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {3 * sizeof(Vertex), 2 * sizeof(float4)};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances          = 2;
+    drawAttrs.FirstInstanceLocation = 4; // Skip 4 instances
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+
+TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, {}, {}, // Skip 4 vertices with VB offset
+        {}, {}, {},     // Skip 3 vertices with StartVertexLocation
+        VertInst[0], VertInst[1], VertInst[2]
+    };
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
+        {}, {}, {}, {},     // Skip 4 instances with FirstInstance
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances          = 2;
+    drawAttrs.FirstInstanceLocation = 4;
+    drawAttrs.StartVertexLocation   = 3;
+    pContext->Draw(drawAttrs);
+
+    Present();
+}
+
+// Instanced indexed draw calls (glDrawElementsInstanced/DrawIndexedInstanced)
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances = 2;
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_IBOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {0,0,0,0,0, 4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 5 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances = 2;
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_VBOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, // Skip 2 vertices with VBOffset
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, // Skip 4 instances with VB offset
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {2 * sizeof(Vertex), 4 * sizeof(float4)};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances = 2;
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstIndex)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {0,0,0,0,0, 4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances       = 2;
+    drawAttrs.FirstIndexLocation = 5;
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+
+// Instanced indexed draw calls with first instance (glDrawElementsInstancedBaseInstance/DrawInstanced)
+
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, // Skip 4 instances with FirstInstance
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances          = 2;
+    drawAttrs.FirstInstanceLocation = 4; // Skip 4 instances
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {0,0,0,0, 4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, // Skip 4 instances with FirstInstance
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 4 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances          = 2;
+    drawAttrs.FirstInstanceLocation = 4; // Skip 4 instances
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_VBOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, {}, {}, // Skip 4 vertices with VB offset
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
+        {}, {}, {}, {}, // Skip 4 instances with FirstInstance
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances          = 2;
+    drawAttrs.FirstInstanceLocation = 4; // Skip 4 instances
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_IBOffset_FirstIndex)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {0,0,0,0, 0,0,0, 4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, // Skip 4 instances with FirstInstance
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 4 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances          = 2;
+    drawAttrs.FirstInstanceLocation = 4; // Skip 4 instances
+    drawAttrs.FirstIndexLocation    = 3;
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+
+
+// Instanced draw commands with base vertex (glDrawElementsInstancedBaseVertex/DrawInstanced)
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_BaseVertex)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, {},     // Skip 3 vertices with BaseVertex
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {0, 0};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances = 2;
+    drawAttrs.BaseVertex   = 3;
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_VBOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, {}, {}, // Skip 4 vertices with VB offset
+        {}, {}, {},     // Skip 3 vertices with BaseVertex
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
+        {}, {}, {}, {}, // Skip 4 instances with FirstInstance
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances          = 2;
+    drawAttrs.FirstInstanceLocation = 4; // Skip 4 instances
+    drawAttrs.BaseVertex            = 3;
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+
+TEST_F(DrawCommandTest, DrawIndexedInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, {}, {}, // Skip 4 vertices with VB offset
+        {}, {}, {},     // Skip 3 vertices with BaseVertex
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {0,0,0,0, 0,0,0, 4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
+        {}, {}, {}, {}, // Skip 4 instances with FirstInstance
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 4 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawIndexedAttribs drawAttrs{3, VT_UINT32, DRAW_FLAG_VERIFY_ALL};
+    drawAttrs.NumInstances          = 2;
+    drawAttrs.FirstInstanceLocation = 4; // Skip 4 instances
+    drawAttrs.BaseVertex            = 3;
+    drawAttrs.FirstIndexLocation    = 3;
+    pContext->DrawIndexed(drawAttrs);
+
+    Present();
+}
+
+
+//  Indirect draw calls
+
+TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset_InstOffset)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceCaps().bIndirectRenderingSupported)
+        GTEST_SKIP() << "Indirect rendering is not supported on this device";
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, {}, {}, // Skip 4 vertices with VB offset
+        {}, {}, {},     // Skip 3 vertices with StartVertexLocation
+        VertInst[0], VertInst[1], VertInst[2]
+    };
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {}, {}, // Skip 5 instances with VB offset
+        {}, {}, {}, {},     // Skip 4 instances with FirstInstance
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+
+    Uint32 IndirectDrawData[] =
+        {
+            0, 0, 0, 0, 0, // Offset
+
+            6, // NumVertices
+            2, // NumInstances
+            3, // StartVertexLocation
+            4  // FirstInstanceLocation
+        };
+    auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
+
+    DrawIndirectAttribs drawAttrs{DRAW_FLAG_VERIFY_ALL, RESOURCE_STATE_TRANSITION_MODE_TRANSITION};
+    drawAttrs.IndirectDrawArgsOffset = 5 * sizeof(Uint32);
+    pContext->DrawIndirect(drawAttrs, pIndirectArgsBuff);
+
+    Present();
+}
+
+TEST_F(DrawCommandTest, DrawIndexedInstancedIndirect_FirstInstance_BaseVertex_FirstIndex_VBOffset_IBOffset_InstOffset)
+{
+    auto* pEnv     = TestingEnvironment::GetInstance();
+    auto* pContext = pEnv->GetDeviceContext();
+
+    SetRenderTargets(sm_pDrawInstancedPSO);
+
+    // clang-format off
+    const Vertex Triangles[] =
+    {
+        {}, {}, {}, {}, // Skip 4 vertices with VB offset
+        {}, {}, {},     // Skip 3 vertices with BaseVertex
+        {}, {},
+        VertInst[1], {}, VertInst[0], {}, {}, VertInst[2]
+    };
+    Uint32 Indices[] = {0,0,0, 0,0,0,0, 4, 2, 7};
+    const float4 InstancedData[] = 
+    {
+        {}, {}, {}, {},     // Skip 4 instances with VB offset
+        {}, {}, {}, {}, {}, // Skip 5 instances with FirstInstance
+        float4{0.5f,  0.5f,  -0.5f, -0.5f},
+        float4{0.5f,  0.5f,  +0.5f, -0.5f}
+    };
+    // clang-format on
+
+    auto pVB     = CreateVertexBuffer(Triangles, sizeof(Triangles));
+    auto pInstVB = CreateVertexBuffer(InstancedData, sizeof(InstancedData));
+    auto pIB     = CreateIndexBuffer(Indices, _countof(Indices));
+
+    IBuffer* pVBs[]    = {pVB, pInstVB};
+    Uint32   Offsets[] = {4 * sizeof(Vertex), 4 * sizeof(float4)};
+    pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
+    pContext->SetIndexBuffer(pIB, 3 * sizeof(Uint32), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    Uint32 IndirectDrawData[] =
+        {
+            0, 0, 0, 0, 0, // Offset
+
+            6, // NumIndices
+            2, // NumInstances
+            4, // FirstIndexLocation
+            3, // BaseVertex
+            5, // FirstInstanceLocation
+        };
+    auto pIndirectArgsBuff = CreateIndirectDrawArgsBuffer(IndirectDrawData, sizeof(IndirectDrawData));
+
+    DrawIndexedIndirectAttribs drawAttrs{VT_UINT32, DRAW_FLAG_VERIFY_ALL, RESOURCE_STATE_TRANSITION_MODE_TRANSITION};
+    drawAttrs.IndirectDrawArgsOffset = 5 * sizeof(Uint32);
+    pContext->DrawIndexedIndirect(drawAttrs, pIndirectArgsBuff);
 
     Present();
 }
