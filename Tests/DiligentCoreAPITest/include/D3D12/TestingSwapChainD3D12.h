@@ -68,7 +68,7 @@ public:
     {
         return m_UAVDescriptorHandle;
     }
-    
+
     ID3D12DescriptorHeap* GetUAVDescriptorHeap()
     {
         return m_pd3d12CbvSrvUavDescriptorHeap;

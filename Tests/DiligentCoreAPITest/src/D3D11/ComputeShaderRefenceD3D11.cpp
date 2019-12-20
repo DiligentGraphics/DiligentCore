@@ -62,7 +62,7 @@ void ComputeShaderReferenceD3D11(ISwapChain* pSwapChain)
     pd3d11Context->CSSetUnorderedAccessViews(0, 1, pUAVs, nullptr);
 
     const auto& SCDesc = pSwapChain->GetDesc();
-    pd3d11Context->Dispatch((SCDesc.Width + 15)/16, (SCDesc.Height + 15)/16, 1);
+    pd3d11Context->Dispatch((SCDesc.Width + 15) / 16, (SCDesc.Height + 15) / 16, 1);
 
     pd3d11Context->ClearState();
 }
