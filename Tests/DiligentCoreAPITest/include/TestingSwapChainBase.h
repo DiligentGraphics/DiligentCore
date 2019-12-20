@@ -54,6 +54,8 @@ class ITestingSwapChain : public IObject
 {
 public:
     virtual void TakeSnapshot() = 0;
+
+    virtual ITextureView* GetCurrentBackBufferUAV() = 0;
 };
 
 template <typename SwapChainInterface>
@@ -89,10 +91,18 @@ public:
             RenderTargetDesc.SampleCount = 1;
             RenderTargetDesc.Usage       = USAGE_DEFAULT;
             RenderTargetDesc.BindFlags   = BIND_RENDER_TARGET;
+            if (pDevice->GetDeviceCaps().bComputeShadersSupported)
+                RenderTargetDesc.BindFlags |= BIND_UNORDERED_ACCESS;
             m_pDevice->CreateTexture(RenderTargetDesc, nullptr, static_cast<ITexture**>(&m_pRenderTarget));
             VERIFY_EXPR(m_pRenderTarget != nullptr);
             m_pRTV = m_pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
             VERIFY_EXPR(m_pRTV != nullptr);
+
+            if (pDevice->GetDeviceCaps().bComputeShadersSupported)
+            {
+                m_pUAV = m_pRenderTarget->GetDefaultView(TEXTURE_VIEW_UNORDERED_ACCESS);
+                VERIFY_EXPR(m_pUAV != nullptr);
+            }
 
             RenderTargetDesc.Name           = "Staging color buffer copy";
             RenderTargetDesc.Usage          = USAGE_STAGING;
@@ -180,6 +190,11 @@ public:
         return m_pRTV;
     }
 
+    virtual ITextureView* GetCurrentBackBufferUAV() override final
+    {
+        return m_pUAV;
+    }
+
     virtual ITextureView* GetDepthBufferDSV() override final
     {
         return m_pDSV;
@@ -197,6 +212,7 @@ protected:
     RefCntAutoPtr<ITexture>       m_pRenderTarget;
     RefCntAutoPtr<ITexture>       m_pDepthBuffer;
     RefCntAutoPtr<ITextureView>   m_pRTV;
+    RefCntAutoPtr<ITextureView>   m_pUAV;
     RefCntAutoPtr<ITextureView>   m_pDSV;
     RefCntAutoPtr<ITexture>       m_pStagingTexture;
 

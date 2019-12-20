@@ -309,6 +309,9 @@ void DeviceContextGLImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
 
 void DeviceContextGLImpl::CommitRenderTargets()
 {
+    if (!m_IsDefaultFramebufferBound && m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
+        return;
+
     if (m_IsDefaultFramebufferBound)
     {
         auto*  pSwapChainGL     = m_pSwapChain.RawPtr<ISwapChainGL>();

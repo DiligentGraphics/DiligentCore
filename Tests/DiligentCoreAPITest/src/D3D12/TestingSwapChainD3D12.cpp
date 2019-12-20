@@ -70,7 +70,7 @@ TestingSwapChainD3D12::TestingSwapChainD3D12(IReferenceCounters*  pRefCounters,
     TexDesc.SampleDesc.Count    = 1;
     TexDesc.SampleDesc.Quality  = 0;
     TexDesc.Layout              = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    TexDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    TexDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
     D3D12_CLEAR_VALUE ClearColorValue = {};
     ClearColorValue.Format            = TexDesc.Format;
@@ -147,6 +147,16 @@ TestingSwapChainD3D12::TestingSwapChainD3D12(IReferenceCounters*  pRefCounters,
     VERIFY(SUCCEEDED(hr), "Failed to create D3D12 DSV descriptor heap");
     m_DSVDescriptorHandle = m_pd3d12DSVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
     pd3d12Device->CreateDepthStencilView(m_pd3d12DepthBuffer, nullptr, m_DSVDescriptorHandle);
+
+    DescriptorHeapDesc.Type  = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    DescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+    hr =
+        pd3d12Device->CreateDescriptorHeap(&DescriptorHeapDesc,
+                                           __uuidof(m_pd3d12CbvSrvUavDescriptorHeap),
+                                           reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&m_pd3d12CbvSrvUavDescriptorHeap)));
+    VERIFY(SUCCEEDED(hr), "Failed to create D3D12 UAV descriptor heap");
+    m_UAVDescriptorHandle = m_pd3d12CbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    pd3d12Device->CreateUnorderedAccessView(m_pd3d12RenderTaget, nullptr, nullptr, m_UAVDescriptorHandle);
 }
 
 void TestingSwapChainD3D12::TransitionBuffers(ID3D12GraphicsCommandList* pCmdList,

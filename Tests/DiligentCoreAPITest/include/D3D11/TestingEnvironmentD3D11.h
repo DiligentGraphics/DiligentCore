@@ -99,6 +99,11 @@ public:
                                                const D3D_SHADER_MACRO* pDefines        = nullptr,
                                                LPCSTR                  profile         = "gs_5_0");
 
+    CComPtr<ID3D11ComputeShader> CreateComputeShader(const char*             Source,
+                                                     LPCSTR                  strFunctionName = "main",
+                                                     const D3D_SHADER_MACRO* pDefines        = nullptr,
+                                                     LPCSTR                  profile         = "cs_5_0");
+
     static TestingEnvironmentD3D11* GetInstance() { return ValidatedCast<TestingEnvironmentD3D11>(TestingEnvironment::GetInstance()); }
 
 private:

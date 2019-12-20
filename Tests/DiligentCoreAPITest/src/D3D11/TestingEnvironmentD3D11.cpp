@@ -234,6 +234,30 @@ CComPtr<ID3D11HullShader> TestingEnvironmentD3D11::CreateHullShader(const char* 
     return pDS;
 }
 
+CComPtr<ID3D11ComputeShader> TestingEnvironmentD3D11::CreateComputeShader(const char*             Source,
+                                                                          LPCSTR                  strFunctionName,
+                                                                          const D3D_SHADER_MACRO* pDefines,
+                                                                          LPCSTR                  profile)
+{
+    CComPtr<ID3DBlob>            pByteCode;
+    CComPtr<ID3D11ComputeShader> pCS;
+
+    auto hr = CompileD3DShader(Source, strFunctionName, pDefines, profile, &pByteCode);
+    if (FAILED(hr))
+    {
+        ADD_FAILURE() << "Failed to compile hull shader";
+        return pCS;
+    }
+
+    hr = m_pd3d11Device->CreateComputeShader(pByteCode->GetBufferPointer(), pByteCode->GetBufferSize(), NULL, &pCS);
+    if (FAILED(hr))
+    {
+        ADD_FAILURE() << "Failed to create hull shader";
+    }
+    return pCS;
+}
+
+
 TestingEnvironment* CreateTestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
     return new TestingEnvironmentD3D11{deviceType, AdapterType, SCDesc};

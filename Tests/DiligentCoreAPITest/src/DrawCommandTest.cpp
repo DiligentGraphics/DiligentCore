@@ -212,13 +212,13 @@ protected:
         auto* pEnv       = TestingEnvironment::GetInstance();
         auto* pDevice    = pEnv->GetDevice();
         auto* pSwapChain = pEnv->GetSwapChain();
-        auto* pConext    = pEnv->GetDeviceContext();
+        auto* pContext   = pEnv->GetDeviceContext();
 
         RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
         if (pTestingSwapChain)
         {
-            pConext->Flush();
-            pConext->InvalidateState();
+            pContext->Flush();
+            pContext->InvalidateState();
 
             auto deviceType = pDevice->GetDeviceCaps().DevType;
             switch (deviceType)
@@ -259,7 +259,7 @@ protected:
         TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
         PipelineStateDesc PSODesc;
-        PSODesc.Name = "Procedural triangle PSO";
+        PSODesc.Name = "Draw command test - procedural triangles";
 
         PSODesc.IsComputePipeline                             = false;
         PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
@@ -312,6 +312,8 @@ protected:
             ASSERT_NE(pPS, nullptr);
         }
 
+        PSODesc.Name = "Draw command test";
+
         PSODesc.GraphicsPipeline.pVS = pProceduralVS;
         PSODesc.GraphicsPipeline.pPS = pPS;
         pDevice->CreatePipelineState(PSODesc, &sm_pDrawProceduralPSO);
@@ -332,9 +334,14 @@ protected:
         PSODesc.GraphicsPipeline.PrimitiveTopology          = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         pDevice->CreatePipelineState(PSODesc, &sm_pDrawPSO);
 
+
+        PSODesc.Name = "Draw command test - 2x stride";
+
         Elems[0].Stride = sizeof(Vertex) * 2;
         pDevice->CreatePipelineState(PSODesc, &sm_pDraw_2xStride_PSO);
 
+
+        PSODesc.Name = "Instanced draw command test";
         // clang-format off
         LayoutElement InstancedElems[] =
         {

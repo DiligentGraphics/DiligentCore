@@ -21,7 +21,8 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingSwapChainBase.h"
+#include "D3D11/TestingEnvironmentD3D11.h"
+#include "D3D11/TestingSwapChainD3D11.h"
 
 namespace Diligent
 {
@@ -29,30 +30,42 @@ namespace Diligent
 namespace Testing
 {
 
-class TestingSwapChainGL : public TestingSwapChainBase<ISwapChain>
+static const char* CSSource = R"(
+RWTexture2D<float4> g_tex2DUAV : register(u0);
+
+[numthreads(16, 16, 1)]
+void main(uint3 DTid : SV_DispatchThreadID)
 {
-public:
-    using TBase = TestingSwapChainBase<ISwapChain>;
-    TestingSwapChainGL(IReferenceCounters*  pRefCounters,
-                       IRenderDevice*       pDevice,
-                       IDeviceContext*      pContext,
-                       const SwapChainDesc& SCDesc);
-    ~TestingSwapChainGL();
+	uint2 ui2Dim;
+	g_tex2DUAV.GetDimensions(ui2Dim.x, ui2Dim.y);
+	if (DTid.x >= ui2Dim.x || DTid.y >= ui2Dim.y)
+        return;
 
-    virtual void TakeSnapshot() override final;
+	g_tex2DUAV[DTid.xy] = float4(float2(DTid.xy % 256u) / 256.0, 0.0, 1.0);
+}
+)";
 
-    GLuint GetRenderTargetGLHandle()
-    {
-        return m_RenderTarget;
-    }
 
-    void BindFramebuffer();
+void ComputeShaderReferenceD3D11(ISwapChain* pSwapChain)
+{
+    auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
+    auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
+    auto* pTestingSwapChainD3D11 = ValidatedCast<TestingSwapChainD3D11>(pSwapChain);
 
-private:
-    GLuint m_RenderTarget = 0;
-    GLuint m_DepthBuffer  = 0;
-    GLuint m_FBO          = 0;
-};
+    pd3d11Context->ClearState();
+
+    auto pCS = pEnvD3D11->CreateComputeShader(CSSource);
+    ASSERT_NE(pCS, nullptr);
+
+    pd3d11Context->CSSetShader(pCS, nullptr, 0);
+    ID3D11UnorderedAccessView* pUAVs[] = {pTestingSwapChainD3D11->GetD3D11UAV()};
+    pd3d11Context->CSSetUnorderedAccessViews(0, 1, pUAVs, nullptr);
+
+    const auto& SCDesc = pSwapChain->GetDesc();
+    pd3d11Context->Dispatch((SCDesc.Width + 15)/16, (SCDesc.Height + 15)/16, 1);
+
+    pd3d11Context->ClearState();
+}
 
 } // namespace Testing
 

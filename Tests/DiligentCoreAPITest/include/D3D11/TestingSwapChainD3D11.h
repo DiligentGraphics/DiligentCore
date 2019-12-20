@@ -62,18 +62,24 @@ public:
         return m_pd3d11RTV;
     }
 
+    ID3D11UnorderedAccessView* GetD3D11UAV()
+    {
+        return m_pd3d11UAV;
+    }
+
     ID3D11DepthStencilView* GetD3D11DSV()
     {
         return m_pd3d11DSV;
     }
 
 private:
-    CComPtr<ID3D11DeviceContext>    m_pd3d11Context;
-    CComPtr<ID3D11Texture2D>        m_pd3d11RenderTarget;
-    CComPtr<ID3D11Texture2D>        m_pd3d11DepthBuffer;
-    CComPtr<ID3D11RenderTargetView> m_pd3d11RTV;
-    CComPtr<ID3D11DepthStencilView> m_pd3d11DSV;
-    CComPtr<ID3D11Texture2D>        m_pd3d11StagingTex;
+    CComPtr<ID3D11DeviceContext>       m_pd3d11Context;
+    CComPtr<ID3D11Texture2D>           m_pd3d11RenderTarget;
+    CComPtr<ID3D11Texture2D>           m_pd3d11DepthBuffer;
+    CComPtr<ID3D11RenderTargetView>    m_pd3d11RTV;
+    CComPtr<ID3D11UnorderedAccessView> m_pd3d11UAV;
+    CComPtr<ID3D11DepthStencilView>    m_pd3d11DSV;
+    CComPtr<ID3D11Texture2D>           m_pd3d11StagingTex;
 };
 
 } // namespace Testing

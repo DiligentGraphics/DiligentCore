@@ -64,6 +64,16 @@ public:
         return m_DSVDescriptorHandle;
     }
 
+    D3D12_CPU_DESCRIPTOR_HANDLE GetUAVDescriptorHandle()
+    {
+        return m_UAVDescriptorHandle;
+    }
+    
+    ID3D12DescriptorHeap* GetUAVDescriptorHeap()
+    {
+        return m_pd3d12CbvSrvUavDescriptorHeap;
+    }
+
 private:
     CComPtr<ID3D12Resource> m_pd3d12RenderTaget;
     CComPtr<ID3D12Resource> m_pd3d12DepthBuffer;
@@ -71,12 +81,14 @@ private:
 
     CComPtr<ID3D12DescriptorHeap> m_pd3d12RTVDescriptorHeap;
     CComPtr<ID3D12DescriptorHeap> m_pd3d12DSVDescriptorHeap;
+    CComPtr<ID3D12DescriptorHeap> m_pd3d12CbvSrvUavDescriptorHeap;
 
     D3D12_RESOURCE_STATES m_RenderTargetState = D3D12_RESOURCE_STATE_RENDER_TARGET;
     D3D12_RESOURCE_STATES m_DepthBufferState  = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
     D3D12_CPU_DESCRIPTOR_HANDLE m_RTVDescriptorHandle = {};
     D3D12_CPU_DESCRIPTOR_HANDLE m_DSVDescriptorHandle = {};
+    D3D12_CPU_DESCRIPTOR_HANDLE m_UAVDescriptorHandle = {};
 
     D3D12_PLACED_SUBRESOURCE_FOOTPRINT m_StagingBufferFootprint = {};
     UINT64                             m_StagingBufferSize      = 0;

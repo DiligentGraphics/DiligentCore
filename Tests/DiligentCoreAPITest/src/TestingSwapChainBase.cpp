@@ -102,7 +102,7 @@ void CompareTestImages(const Uint8*   pReferencePixels,
         {
             LOG_ERROR_MESSAGE("Failed to write ", FileName);
         }
-        ADD_FAILURE() << "Captured image is not identical to the reference image";
+        ADD_FAILURE() << "Image rendered by the test is not identical to the reference image";
     }
 }
 

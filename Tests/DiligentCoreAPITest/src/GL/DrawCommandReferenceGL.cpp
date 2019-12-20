@@ -96,6 +96,7 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain)
     auto glProg = pEnv->LinkProgram(glShaders, 2);
     ASSERT_NE(glProg, 0u);
 
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_BLEND);

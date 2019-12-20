@@ -50,6 +50,11 @@ public:
         return m_vkRenderTargetImage;
     }
 
+    VkImageView GetVkRenderTargetImageView()
+    {
+        return m_vkRenderTargetView;
+    }
+
     VkImage GetVkDepthBufferImage()
     {
         return m_vkDepthBufferImage;

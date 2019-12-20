@@ -61,7 +61,7 @@ TestingSwapChainD3D11::TestingSwapChainD3D11(IReferenceCounters*  pRefCounters,
     TexDesc.SampleDesc.Count   = 1;
     TexDesc.SampleDesc.Quality = 0;
     TexDesc.Usage              = D3D11_USAGE_DEFAULT;
-    TexDesc.BindFlags          = BIND_RENDER_TARGET;
+    TexDesc.BindFlags          = BIND_RENDER_TARGET | BIND_UNORDERED_ACCESS;
     TexDesc.CPUAccessFlags     = 0;
     TexDesc.MiscFlags          = 0;
 
@@ -70,6 +70,9 @@ TestingSwapChainD3D11::TestingSwapChainD3D11(IReferenceCounters*  pRefCounters,
 
     hr = pd3d11Device->CreateRenderTargetView(m_pd3d11RenderTarget, nullptr, &m_pd3d11RTV);
     VERIFY(SUCCEEDED(hr), "Failed to create D3D11 render target view");
+
+    hr = pd3d11Device->CreateUnorderedAccessView(m_pd3d11RenderTarget, nullptr, &m_pd3d11UAV);
+    VERIFY(SUCCEEDED(hr), "Failed to create D3D11 unordered access view");
 
     TexDesc.BindFlags      = 0;
     TexDesc.Usage          = D3D11_USAGE_STAGING;
