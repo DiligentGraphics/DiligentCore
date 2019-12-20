@@ -79,7 +79,7 @@ void main()
 }
 )";
 
-void RenderDrawCommandRefenceGL(ISwapChain* pSwapChain)
+void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain)
 {
     auto* pEnv                = TestingEnvironmentGL::GetInstance();
     auto* pContext            = pEnv->GetDeviceContext();

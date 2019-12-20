@@ -306,7 +306,7 @@ add_subdirectory(Common)
 add_subdirectory(Graphics)
 
 if(DILIGENT_BUILD_TESTS)
-    add_subdirectory(UnitTests)
+    add_subdirectory(Tests)
 endif()
 
 

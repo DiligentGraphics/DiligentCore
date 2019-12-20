@@ -76,7 +76,7 @@ float4 main(in PSInput PSIn) : SV_Target
 }
 )";
 
-void RenderDrawCommandRefenceD3D11(ISwapChain* pSwapChain)
+void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain)
 {
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();

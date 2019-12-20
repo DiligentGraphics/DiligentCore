@@ -83,7 +83,7 @@ void main()
 }
 )";
 
-void RenderDrawCommandRefenceVk(ISwapChain* pSwapChain)
+void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv     = TestingEnvironmentVk::GetInstance();
     auto  vkDevice = pEnv->GetVkDevice();

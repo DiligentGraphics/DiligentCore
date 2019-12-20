@@ -81,7 +81,7 @@ float4 main(in PSInput PSIn) : SV_Target
 }
 )";
 
-void RenderDrawCommandRefenceD3D12(ISwapChain* pSwapChain)
+void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pContext               = pEnv->GetDeviceContext();

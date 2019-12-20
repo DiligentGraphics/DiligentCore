@@ -34,19 +34,19 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-void RenderDrawCommandRefenceD3D11(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain);
 #endif
 
 #if D3D12_SUPPORTED
-void RenderDrawCommandRefenceD3D12(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-void RenderDrawCommandRefenceGL(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain);
 #endif
 
 #if VULKAN_SUPPORTED
-void RenderDrawCommandRefenceVk(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain);
 #endif
 
 #if METAL_SUPPORTED
@@ -225,27 +225,27 @@ protected:
             {
 #if D3D11_SUPPORTED
                 case DeviceType::D3D11:
-                    RenderDrawCommandRefenceD3D11(pSwapChain);
+                    RenderDrawCommandReferenceD3D11(pSwapChain);
                     break;
 #endif
 
 #if D3D12_SUPPORTED
                 case DeviceType::D3D12:
-                    RenderDrawCommandRefenceD3D12(pSwapChain);
+                    RenderDrawCommandReferenceD3D12(pSwapChain);
                     break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
                 case DeviceType::OpenGL:
                 case DeviceType::OpenGLES:
-                    RenderDrawCommandRefenceGL(pSwapChain);
+                    RenderDrawCommandReferenceGL(pSwapChain);
                     break;
 
 #endif
 
 #if VULKAN_SUPPORTED
                 case DeviceType::Vulkan:
-                    RenderDrawCommandRefenceVk(pSwapChain);
+                    RenderDrawCommandReferenceVk(pSwapChain);
                     break;
 
 #endif
