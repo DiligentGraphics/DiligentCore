@@ -53,7 +53,7 @@ Texture1D<float>Tex1D_F2;
 Texture1D<int2>Tex1D_I/*comment*/: /*comment*/register(t4)  /*comment*/;
 Texture1D<uint4>Tex1D_U;
 
-SamplerState Tex1D_F1_sampler;
+SamplerState Tex1D_F1_sampler/*comment*/:/*comment*/ /*comment*/register(s0)  /*comment*/;
 
 Texture1DArray          Tex1D_F_A1;
 Texture1DArray <float>  Tex1D_F_A2;
@@ -64,10 +64,11 @@ SamplerState Tex1D_F_A1_sampler;
 
 Texture1D Tex1DS1;
 Texture1D<float>Tex1DS2:register(t6),Tex1DS3;
-SamplerComparisonState Tex1DS1_sampler, Tex1DS2_sampler, TestCmpSamplerArr[2], Tex1DS3_sampler;
+SamplerComparisonState Tex1DS1_sampler/*comment*/:/*comment*/ /*comment*/register(s1),
+Tex1DS2_sampler/*comment*/:/*comment*/ /*comment*/register(s2), TestCmpSamplerArr[2], Tex1DS3_sampler;
 
 Texture1DArray Tex1DAS1;
-SamplerComparisonState Tex1DAS1_sampler, Tex1DAS2_sampler;
+SamplerComparisonState Tex1DAS1_sampler, Tex1DAS2_sampler : register(s3);
 Texture1DArray<float>Tex1DAS2;
 
 #endif
@@ -79,7 +80,7 @@ Texture2D<int3>Tex2D_I;
 Texture2D<uint4>Tex2D_U;
 
 SamplerState Tex2D_F1_sampler,Tex2D_F6_sampler;
-SamplerComparisonState DummySampler, Tex2DS_F4_sampler,Tex2DS_F5_sampler;
+SamplerComparisonState DummySampler: register(s4), Tex2DS_F4_sampler : register(s5),Tex2DS_F5_sampler;
 
 Texture2DArray          Tex2D_F_A1;
 Texture2DArray <float>  Tex2D_F_A2;

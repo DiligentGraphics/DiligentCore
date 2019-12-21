@@ -2285,6 +2285,62 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveFlowControlAttribute(TokenL
     m_Tokens.erase(PrevToken, Token);
 }
 
+void HLSL2GLSLConverterImpl::ConversionStream::RemoveSamplerRegister(TokenListType::iterator& Token)
+{
+    // SamplerState Tex2D_sampler;
+    // ^
+    VERIFY_EXPR(Token->Type == TokenType::kw_SamplerState || Token->Type == TokenType::kw_SamplerComparisonState);
+
+    ++Token;
+    // SamplerState Tex2D_sampler;
+    //              ^
+
+    while (Token != m_Tokens.end() && Token->Type == TokenType::Identifier)
+    {
+        ++Token;
+        VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF while processing sampler declaration");
+
+        // Skip to one of the following:
+        //
+        // SamplerState Tex2D_sampler;
+        //                           ^
+        // SamplerState Tex2D_sampler,
+        //                           ^
+        // SamplerState Tex2D_sampler:
+        //                           ^
+        while (Token != m_Tokens.end() && Token->Type != TokenType::Comma && Token->Type != TokenType::Semicolon && Token->Literal != ":")
+            ++Token;
+        VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF while processing sampler declaration");
+
+        if (Token->Literal == ":")
+        {
+            // SamplerState Tex2D_sampler : register(s0),
+            //                            ^
+
+            // Remove register
+            while (Token != m_Tokens.end() && Token->Type != TokenType::Comma && Token->Type != TokenType::Semicolon)
+            {
+                auto CurrToken = Token;
+                ++Token;
+                m_Tokens.erase(CurrToken);
+            }
+            // SamplerState Tex2D_sampler ,
+            //                            ^
+        }
+        VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF while processing sampler declaration");
+        VERIFY_PARSER_STATE(Token, Token->Type == TokenType::Comma || Token->Type == TokenType::Semicolon,
+                            "Unexpected symbol while processing sampler declaration: expected ',' or ';'");
+
+        // Go to the next sampler declaration or next statement
+
+        // SamplerState Tex2D_sampler ;
+        //                            ^
+        // SamplerState Tex2D_sampler ,
+        //                            ^
+        ++Token;
+    }
+}
+
 // The function finds all HLSL object methods in the current scope and calls ProcessObjectMethod()
 // that replaces them with the corresponding GLSL function stub.
 void HLSL2GLSLConverterImpl::ConversionStream::ProcessObjectMethods(const TokenListType::iterator& ScopeStart,
@@ -4629,8 +4685,8 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
     std::unordered_map<String, bool> SamplersHash;
 
     auto Token = m_Tokens.begin();
-    // Process constant buffers, fix floating point constants and
-    // remove flow control attributes
+    // Process constant buffers, fix floating point constants,
+    // remove flow control attributes and sampler registers
     while (Token != m_Tokens.end())
     {
         switch (Token->Type)
@@ -4656,6 +4712,11 @@ String HLSL2GLSLConverterImpl::ConversionStream::Convert(const Char* EntryPoint,
                 if (Token->Literal.back() == 'f' || Token->Literal.back() == 'F')
                     Token->Literal.pop_back();
                 ++Token;
+                break;
+
+            case TokenType::kw_SamplerState:
+            case TokenType::kw_SamplerComparisonState:
+                RemoveSamplerRegister(Token);
                 break;
 
             default:

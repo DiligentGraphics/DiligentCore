@@ -350,6 +350,7 @@ private:
         void   RemoveSemantics();
         void   RemoveSpecialShaderAttributes();
         void   RemoveSemanticsFromBlock(TokenListType::iterator& Token, TokenType OpenBracketType, TokenType ClosingBracketType);
+        void   RemoveSamplerRegister(TokenListType::iterator& Token);
 
         // IteratorType may be String::iterator or String::const_iterator.
         // While iterator is convertible to const_iterator,
