@@ -28,28 +28,13 @@
 
 #include "volk/volk.h"
 
+#include "InlineShaders/ComputeShaderTestGLSL.h"
+
 namespace Diligent
 {
 
 namespace Testing
 {
-
-static const char* CSSource = R"(
-#version 430 core
-
-layout(rgba8, binding = 0) uniform writeonly image2D g_tex2DUAV;
-
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
- 
-void main()
-{
-	ivec2 Dim = imageSize(g_tex2DUAV);
-	if (gl_GlobalInvocationID.x >= uint(Dim.x) || gl_GlobalInvocationID.y >= uint(Dim.y))
-		return;
-
-	imageStore(g_tex2DUAV, ivec2(gl_GlobalInvocationID.xy), vec4( vec2(gl_GlobalInvocationID.xy % 256u) / 256.0, 0.0, 1.0) );
-}
-)";
 
 void ComputeShaderReferenceVk(ISwapChain* pSwapChain)
 {
@@ -64,7 +49,7 @@ void ComputeShaderReferenceVk(ISwapChain* pSwapChain)
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
-    auto vkCSModule = pEnv->CreateShaderModule(SHADER_TYPE_COMPUTE, CSSource, static_cast<int>(strlen(CSSource)));
+    auto vkCSModule = pEnv->CreateShaderModule(SHADER_TYPE_COMPUTE, GLSL::FillTextureCS);
     ASSERT_TRUE(vkCSModule != VK_NULL_HANDLE);
 
     VkComputePipelineCreateInfo PipelineCI = {};

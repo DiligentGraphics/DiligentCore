@@ -21,44 +21,66 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
 #include <string>
 
-#ifndef GLEW_STATIC
-#    define GLEW_STATIC // Must be defined to use static version of glew
-#endif
-#ifndef GLEW_NO_GLU
-#    define GLEW_NO_GLU
-#endif
-
-#include "GL/glew.h"
-
-#include "TestingEnvironment.h"
-
-namespace Diligent
+namespace
 {
 
-namespace Testing
+namespace HLSL
 {
 
-class TestingEnvironmentGL final : public TestingEnvironment
-{
-public:
-    TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
-    ~TestingEnvironmentGL();
-
-    static TestingEnvironmentGL* GetInstance() { return ValidatedCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
-
-    GLuint CompileGLShader(const std::string& Source, GLenum ShaderType);
-    GLuint LinkProgram(GLuint Shaders[], GLuint NumShaders);
-
-    GLuint GetDummyVAO() { return m_DummyVAO; }
-
-private:
-    GLuint m_DummyVAO = 0;
+// clang-format off
+const std::string DrawTest_ProceduralTriangleVS{
+R"(
+struct PSInput 
+{ 
+    float4 Pos   : SV_POSITION; 
+    float3 Color : COLOR; 
 };
 
-} // namespace Testing
+void main(in  uint    VertId : SV_VertexID,
+          out PSInput PSIn) 
+{
+    float4 Pos[6];
+    Pos[0] = float4(-1.0, -0.5, 0.0, 1.0);
+    Pos[1] = float4(-0.5, +0.5, 0.0, 1.0);
+    Pos[2] = float4( 0.0, -0.5, 0.0, 1.0);
 
-} // namespace Diligent
+    Pos[3] = float4(+0.0, -0.5, 0.0, 1.0);
+    Pos[4] = float4(+0.5, +0.5, 0.0, 1.0);
+    Pos[5] = float4(+1.0, -0.5, 0.0, 1.0);
+
+    float3 Col[6];
+    Col[0] = float3(1.0, 0.0, 0.0);
+    Col[1] = float3(0.0, 1.0, 0.0);
+    Col[2] = float3(0.0, 0.0, 1.0);
+
+    Col[3] = float3(1.0, 0.0, 0.0);
+    Col[4] = float3(0.0, 1.0, 0.0);
+    Col[5] = float3(0.0, 0.0, 1.0);
+
+    PSIn.Pos   = Pos[VertId];
+    PSIn.Color = Col[VertId];
+}
+)"
+};
+
+const std::string DrawTest_PS{
+R"(
+struct PSInput 
+{ 
+    float4 Pos   : SV_POSITION; 
+    float3 Color : COLOR; 
+};
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    return float4(PSIn.Color.rgb, 1.0);
+}
+)"
+};
+// clang-format on
+
+} // namespace HLSL
+
+} // namespace

@@ -6,7 +6,7 @@
 //TEXTURE2D MacroTex2D;
 
 /******//* /* /**** / */
-void EmptyFunc(){}cbuffer cbTest1{int a;}cbuffer cbTest2{int b;}/*comment
+void EmptyFunc(){}cbuffer cbTest1{int a;}cbuffer cbTest2/*comment*/:/*comment*/register(b0)/*comment*/{int b;}/*comment
 test
 
 */cbuffer cbTest3{int c;}//Single line comment
@@ -25,18 +25,20 @@ cbuffer cbTest6
 int cbuffer_fake;
 int fakecbuffer;
 
-RWTexture2D<float/* format = r32f */>Tex2D_F1;
-RWTexture2D<float/* format = r32f */>Tex2D_F2[2],Tex2D_F3,/*cmt*/Tex2D_F4,  Tex2D_F5;
+RWTexture2D<float/* format = r32f */>Tex2D_F1/*comment*/: /*comment*/register(u0)/*comment*/;
+RWTexture2D<float/* format = r32f */>Tex2D_F2[2]: register(u1),Tex2D_F3: register(u2),/*cmt*/Tex2D_F4,  Tex2D_F5
+/*comment*/:/*comment*/
+register(u3);
 RWTexture2D<int2/* format = rg32i */>Tex2D_I;
 RWTexture2D<uint4/* format = rgba16ui */>Tex2D_U;
 
 
-int GlobalIntVar;Texture2D Tex2D_Test1;Texture2D Tex2D_Test2;/*Comment* / *//* /** Comment2*/Texture2D Tex2D_Test3 /*Cmnt*/,
+int GlobalIntVar;Texture2D Tex2D_Test1:register(t0);Texture2D Tex2D_Test2;/*Comment* / *//* /** Comment2*/Texture2D Tex2D_Test3 /*Cmnt*/: /*comment*/register(t1)/*comment*/,/*comment*/
 //  Comment
-Tex2D_Test4
+Tex2D_Test4:register(t2)
 ;
 
-Texture2D Tex2D_M1, Tex2D_M2;
+Texture2D Tex2D_M1, Tex2D_M2:register(t3);
 
 groupshared float4 g_f4TestSharedArr[10];
 groupshared int4 g_i4TestSharedArr[10];

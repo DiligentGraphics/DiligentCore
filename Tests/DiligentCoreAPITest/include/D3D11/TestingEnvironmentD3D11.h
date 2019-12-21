@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "TestingEnvironment.h"
 
 #ifndef NOMINMAX
@@ -38,7 +40,7 @@ namespace Diligent
 namespace Testing
 {
 
-HRESULT CompileD3DShader(const char*             Source,
+HRESULT CompileD3DShader(const std::string&      Source,
                          LPCSTR                  strFunctionName,
                          const D3D_SHADER_MACRO* pDefines,
                          LPCSTR                  profile,
@@ -74,32 +76,32 @@ public:
         return m_pd3d11DefaultBS;
     }
 
-    CComPtr<ID3D11VertexShader> CreateVertexShader(const char*             Source,
+    CComPtr<ID3D11VertexShader> CreateVertexShader(const std::string&      Source,
                                                    LPCSTR                  strFunctionName = "main",
                                                    const D3D_SHADER_MACRO* pDefines        = nullptr,
                                                    LPCSTR                  profile         = "vs_5_0");
 
-    CComPtr<ID3D11PixelShader> CreatePixelShader(const char*             Source,
+    CComPtr<ID3D11PixelShader> CreatePixelShader(const std::string&      Source,
                                                  LPCSTR                  strFunctionName = "main",
                                                  const D3D_SHADER_MACRO* pDefines        = nullptr,
                                                  LPCSTR                  profile         = "ps_5_0");
 
-    CComPtr<ID3D11GeometryShader> CreateGeometryShader(const char*             Source,
+    CComPtr<ID3D11GeometryShader> CreateGeometryShader(const std::string&      Source,
                                                        LPCSTR                  strFunctionName = "main",
                                                        const D3D_SHADER_MACRO* pDefines        = nullptr,
                                                        LPCSTR                  profile         = "gs_5_0");
 
-    CComPtr<ID3D11DomainShader> CreateDomainShader(const char*             Source,
+    CComPtr<ID3D11DomainShader> CreateDomainShader(const std::string&      Source,
                                                    LPCSTR                  strFunctionName = "main",
                                                    const D3D_SHADER_MACRO* pDefines        = nullptr,
                                                    LPCSTR                  profile         = "ds_5_0");
 
-    CComPtr<ID3D11HullShader> CreateHullShader(const char*             Source,
+    CComPtr<ID3D11HullShader> CreateHullShader(const std::string&      Source,
                                                LPCSTR                  strFunctionName = "main",
                                                const D3D_SHADER_MACRO* pDefines        = nullptr,
                                                LPCSTR                  profile         = "gs_5_0");
 
-    CComPtr<ID3D11ComputeShader> CreateComputeShader(const char*             Source,
+    CComPtr<ID3D11ComputeShader> CreateComputeShader(const std::string&      Source,
                                                      LPCSTR                  strFunctionName = "main",
                                                      const D3D_SHADER_MACRO* pDefines        = nullptr,
                                                      LPCSTR                  profile         = "cs_5_0");

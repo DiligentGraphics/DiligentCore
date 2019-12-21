@@ -4,6 +4,7 @@ project(DiligentCoreAPITest)
 
 file(GLOB COMMON_SOURCE LIST_DIRECTORIES false src/*)
 file(GLOB COMMON_INCLUDE LIST_DIRECTORIES false include/*)
+file(GLOB INLINE_SHADERS LIST_DIRECTORIES false include/InlineShaders/*)
 file(GLOB_RECURSE SHADERS LIST_DIRECTORIES false assets/shaders/*.*)
 
 set_source_files_properties(${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
@@ -66,7 +67,8 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND SOURCE ${GL_SOURCE})
 endif()
 
-add_executable(DiligentCoreAPITest ${SOURCE} ${INCLUDE} ${SHADERS})
+set(ALL_SOURCE ${SOURCE} ${INCLUDE} ${SHADERS} ${INLINE_SHADERS})
+add_executable(DiligentCoreAPITest ${ALL_SOURCE})
 set_common_target_properties(DiligentCoreAPITest)
 
 get_supported_backends(ENGINE_LIBRARIES)
@@ -123,7 +125,7 @@ if(PLATFORM_WIN32)
 endif()
 
 
-source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE} ${INCLUDE} ${SHADERS})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ALL_SOURCE})
 
 set_target_properties(DiligentCoreAPITest PROPERTIES
     FOLDER "DiligentCore/Tests"

@@ -24,7 +24,7 @@
 #include "D3D11/TestingEnvironmentD3D11.h"
 #include "D3D11/TestingSwapChainD3D11.h"
 
-#include "InlineShaders/DrawCommandTestHLSL.h"
+#include "InlineShaders/GeometryShaderTestHLSL.h"
 
 namespace Diligent
 {
@@ -32,7 +32,7 @@ namespace Diligent
 namespace Testing
 {
 
-void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain)
+void GeometryShaderReferenceD3D11(ISwapChain* pSwapChain)
 {
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
@@ -40,13 +40,17 @@ void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain)
 
     pd3d11Context->ClearState();
 
-    auto pVS = pEnvD3D11->CreateVertexShader(HLSL::DrawTest_ProceduralTriangleVS);
+    auto pVS = pEnvD3D11->CreateVertexShader(HLSL::GSTest_VS);
     ASSERT_NE(pVS, nullptr);
 
-    auto pPS = pEnvD3D11->CreatePixelShader(HLSL::DrawTest_PS);
+    auto pGS = pEnvD3D11->CreateGeometryShader(HLSL::GSTest_GS);
+    ASSERT_NE(pGS, nullptr);
+
+    auto pPS = pEnvD3D11->CreatePixelShader(HLSL::GSTest_PS);
     ASSERT_NE(pPS, nullptr);
 
     pd3d11Context->VSSetShader(pVS, nullptr, 0);
+    pd3d11Context->GSSetShader(pGS, nullptr, 0);
     pd3d11Context->PSSetShader(pPS, nullptr, 0);
     pd3d11Context->RSSetState(pEnvD3D11->GetNoCullRS());
     pd3d11Context->OMSetBlendState(pEnvD3D11->GetDefaultBS(), nullptr, 0xFFFFFFFF);
@@ -66,8 +70,8 @@ void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain)
     d3dVP.MaxDepth     = 1;
     pd3d11Context->RSSetViewports(1, &d3dVP);
 
-    pd3d11Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    pd3d11Context->Draw(6, 0);
+    pd3d11Context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_POINTLIST);
+    pd3d11Context->Draw(2, 0);
 
     pd3d11Context->ClearState();
 }

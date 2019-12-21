@@ -81,7 +81,7 @@ TestingEnvironmentD3D11::TestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_
     }
 }
 
-HRESULT CompileD3DShader(const char*             Source,
+HRESULT CompileD3DShader(const std::string&      Source,
                          LPCSTR                  strFunctionName,
                          const D3D_SHADER_MACRO* pDefines,
                          LPCSTR                  profile,
@@ -102,9 +102,7 @@ HRESULT CompileD3DShader(const char*             Source,
 
     CComPtr<ID3DBlob> pCompilerOutput;
 
-    auto SourceLen = strlen(Source);
-
-    auto hr = D3DCompile(Source, SourceLen, NULL, pDefines, nullptr, strFunctionName, profile, dwShaderFlags, 0, ppBlobOut, &pCompilerOutput);
+    auto hr = D3DCompile(Source.c_str(), Source.length(), NULL, pDefines, nullptr, strFunctionName, profile, dwShaderFlags, 0, ppBlobOut, &pCompilerOutput);
 
     const char* CompilerMsg = pCompilerOutput ? reinterpret_cast<const char*>(pCompilerOutput->GetBufferPointer()) : nullptr;
     if (FAILED(hr))
@@ -119,7 +117,7 @@ HRESULT CompileD3DShader(const char*             Source,
     return hr;
 }
 
-CComPtr<ID3D11VertexShader> TestingEnvironmentD3D11::CreateVertexShader(const char*             Source,
+CComPtr<ID3D11VertexShader> TestingEnvironmentD3D11::CreateVertexShader(const std::string&      Source,
                                                                         LPCSTR                  strFunctionName,
                                                                         const D3D_SHADER_MACRO* pDefines,
                                                                         LPCSTR                  profile)
@@ -142,7 +140,7 @@ CComPtr<ID3D11VertexShader> TestingEnvironmentD3D11::CreateVertexShader(const ch
     return pVS;
 }
 
-CComPtr<ID3D11PixelShader> TestingEnvironmentD3D11::CreatePixelShader(const char*             Source,
+CComPtr<ID3D11PixelShader> TestingEnvironmentD3D11::CreatePixelShader(const std::string&      Source,
                                                                       LPCSTR                  strFunctionName,
                                                                       const D3D_SHADER_MACRO* pDefines,
                                                                       LPCSTR                  profile)
@@ -165,7 +163,7 @@ CComPtr<ID3D11PixelShader> TestingEnvironmentD3D11::CreatePixelShader(const char
     return pPS;
 }
 
-CComPtr<ID3D11GeometryShader> TestingEnvironmentD3D11::CreateGeometryShader(const char*             Source,
+CComPtr<ID3D11GeometryShader> TestingEnvironmentD3D11::CreateGeometryShader(const std::string&      Source,
                                                                             LPCSTR                  strFunctionName,
                                                                             const D3D_SHADER_MACRO* pDefines,
                                                                             LPCSTR                  profile)
@@ -188,7 +186,7 @@ CComPtr<ID3D11GeometryShader> TestingEnvironmentD3D11::CreateGeometryShader(cons
     return pGS;
 }
 
-CComPtr<ID3D11DomainShader> TestingEnvironmentD3D11::CreateDomainShader(const char*             Source,
+CComPtr<ID3D11DomainShader> TestingEnvironmentD3D11::CreateDomainShader(const std::string&      Source,
                                                                         LPCSTR                  strFunctionName,
                                                                         const D3D_SHADER_MACRO* pDefines,
                                                                         LPCSTR                  profile)
@@ -211,7 +209,7 @@ CComPtr<ID3D11DomainShader> TestingEnvironmentD3D11::CreateDomainShader(const ch
     return pDS;
 }
 
-CComPtr<ID3D11HullShader> TestingEnvironmentD3D11::CreateHullShader(const char*             Source,
+CComPtr<ID3D11HullShader> TestingEnvironmentD3D11::CreateHullShader(const std::string&      Source,
                                                                     LPCSTR                  strFunctionName,
                                                                     const D3D_SHADER_MACRO* pDefines,
                                                                     LPCSTR                  profile)
@@ -234,7 +232,7 @@ CComPtr<ID3D11HullShader> TestingEnvironmentD3D11::CreateHullShader(const char* 
     return pDS;
 }
 
-CComPtr<ID3D11ComputeShader> TestingEnvironmentD3D11::CreateComputeShader(const char*             Source,
+CComPtr<ID3D11ComputeShader> TestingEnvironmentD3D11::CreateComputeShader(const std::string&      Source,
                                                                           LPCSTR                  strFunctionName,
                                                                           const D3D_SHADER_MACRO* pDefines,
                                                                           LPCSTR                  profile)

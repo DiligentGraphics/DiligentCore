@@ -28,7 +28,7 @@
 
 #include "volk/volk.h"
 
-#include "InlineShaders/DrawCommandTestGLSL.h"
+#include "InlineShaders/GeometryShaderTestGLSL.h"
 
 namespace Diligent
 {
@@ -36,7 +36,7 @@ namespace Diligent
 namespace Testing
 {
 
-void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain)
+void GeometryShaderReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv     = TestingEnvironmentVk::GetInstance();
     auto  vkDevice = pEnv->GetVkDevice();
@@ -49,17 +49,19 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain)
 
     auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
 
-    auto vkVSModule = pEnv->CreateShaderModule(SHADER_TYPE_VERTEX, GLSL::DrawTest_ProceduralTriangleVS);
+    auto vkVSModule = pEnv->CreateShaderModule(SHADER_TYPE_VERTEX, GLSL::GSTest_VS);
     ASSERT_TRUE(vkVSModule != VK_NULL_HANDLE);
-    auto vkPSModule = pEnv->CreateShaderModule(SHADER_TYPE_PIXEL, GLSL::DrawTest_FS);
-    ASSERT_TRUE(vkPSModule != VK_NULL_HANDLE);
+    auto vkGSModule = pEnv->CreateShaderModule(SHADER_TYPE_GEOMETRY, GLSL::GSTest_GS);
+    ASSERT_TRUE(vkGSModule != VK_NULL_HANDLE);
+    auto vkFSModule = pEnv->CreateShaderModule(SHADER_TYPE_PIXEL, GLSL::GSTest_FS);
+    ASSERT_TRUE(vkFSModule != VK_NULL_HANDLE);
 
     VkGraphicsPipelineCreateInfo PipelineCI = {};
 
     PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     PipelineCI.pNext = nullptr;
 
-    VkPipelineShaderStageCreateInfo ShaderStages[2] = {};
+    VkPipelineShaderStageCreateInfo ShaderStages[3] = {};
 
     ShaderStages[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     ShaderStages[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
@@ -67,9 +69,14 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain)
     ShaderStages[0].pName  = "main";
 
     ShaderStages[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    ShaderStages[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
-    ShaderStages[1].module = vkPSModule;
+    ShaderStages[1].stage  = VK_SHADER_STAGE_GEOMETRY_BIT;
+    ShaderStages[1].module = vkGSModule;
     ShaderStages[1].pName  = "main";
+
+    ShaderStages[2].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    ShaderStages[2].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+    ShaderStages[2].module = vkFSModule;
+    ShaderStages[2].pName  = "main";
 
     PipelineCI.pStages    = ShaderStages;
     PipelineCI.stageCount = _countof(ShaderStages);
@@ -93,7 +100,7 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain)
     InputAssemblyCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     InputAssemblyCI.pNext                  = nullptr;
     InputAssemblyCI.flags                  = 0; // reserved for future use
-    InputAssemblyCI.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    InputAssemblyCI.topology               = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
     InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
     PipelineCI.pInputAssemblyState         = &InputAssemblyCI;
 
@@ -197,7 +204,7 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain)
 
     pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
     vkCmdBindPipeline(vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline);
-    vkCmdDraw(vkCmdBuffer, 6, 1, 0, 0);
+    vkCmdDraw(vkCmdBuffer, 2, 1, 0, 0);
     pTestingSwapChainVk->EndRenderPass(vkCmdBuffer);
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
@@ -219,7 +226,8 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain)
     vkDestroyPipeline(vkDevice, vkPipeline, nullptr);
     vkDestroyPipelineLayout(vkDevice, vkLayout, nullptr);
     vkDestroyShaderModule(vkDevice, vkVSModule, nullptr);
-    vkDestroyShaderModule(vkDevice, vkPSModule, nullptr);
+    vkDestroyShaderModule(vkDevice, vkGSModule, nullptr);
+    vkDestroyShaderModule(vkDevice, vkFSModule, nullptr);
 }
 
 } // namespace Testing

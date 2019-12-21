@@ -303,9 +303,9 @@ VkRenderPassCreateInfo TestingEnvironmentVk::GetRenderPassCreateInfo(
     return RenderPassCI;
 }
 
-VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen)
+VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource)
 {
-    auto Bytecode = GLSLtoSPIRV(ShaderType, ShaderSource, SourceCodeLen, nullptr);
+    auto Bytecode = GLSLtoSPIRV(ShaderType, ShaderSource.c_str(), static_cast<int>(ShaderSource.length()), nullptr);
     VERIFY_EXPR(!Bytecode.empty());
     if (Bytecode.empty())
         return VK_NULL_HANDLE;

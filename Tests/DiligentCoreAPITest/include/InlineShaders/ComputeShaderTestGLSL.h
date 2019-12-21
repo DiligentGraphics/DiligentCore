@@ -21,44 +21,35 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
 #include <string>
 
-#ifndef GLEW_STATIC
-#    define GLEW_STATIC // Must be defined to use static version of glew
-#endif
-#ifndef GLEW_NO_GLU
-#    define GLEW_NO_GLU
-#endif
-
-#include "GL/glew.h"
-
-#include "TestingEnvironment.h"
-
-namespace Diligent
+namespace
 {
 
-namespace Testing
+namespace GLSL
 {
 
-class TestingEnvironmentGL final : public TestingEnvironment
+// clang-format off
+const std::string FillTextureCS{
+R"(
+#version 430 core
+
+layout(rgba8, binding = 0) uniform writeonly image2D g_tex2DUAV;
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+ 
+void main()
 {
-public:
-    TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
-    ~TestingEnvironmentGL();
+	ivec2 Dim = imageSize(g_tex2DUAV);
+	if (gl_GlobalInvocationID.x >= uint(Dim.x) || gl_GlobalInvocationID.y >= uint(Dim.y))
+		return;
 
-    static TestingEnvironmentGL* GetInstance() { return ValidatedCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
-
-    GLuint CompileGLShader(const std::string& Source, GLenum ShaderType);
-    GLuint LinkProgram(GLuint Shaders[], GLuint NumShaders);
-
-    GLuint GetDummyVAO() { return m_DummyVAO; }
-
-private:
-    GLuint m_DummyVAO = 0;
+	imageStore(g_tex2DUAV, ivec2(gl_GlobalInvocationID.xy), vec4( vec2(gl_GlobalInvocationID.xy % 256u) / 256.0, 0.0, 1.0) );
+}
+)"
 };
+// clang-format on
 
-} // namespace Testing
+} // namespace GLSL
 
-} // namespace Diligent
+} // namespace

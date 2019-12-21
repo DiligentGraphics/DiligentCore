@@ -1,5 +1,5 @@
-RWTexture2D<int/* format = r32i */>Tex2D_I1;
-RWTexture2D<uint/* format = r32ui */>Tex2D_U1;
+RWTexture2D<int/* format = r32i */>Tex2D_I1: register(u0);
+RWTexture2D<uint/* format = r32ui */>Tex2D_U1/*comment*/:/*comment*/register(u1)/*comment*/;
 
 RWTexture2DArray <float// format = r32f 
                   >  Tex2D_F_A;
@@ -12,9 +12,10 @@ RWTexture3D< float4/*
 format
 =
 rgba32f
-*/> Tex3D_F;
+*/> Tex3D_F:register(u2);
 RWTexture3D< int /* format = r8i */>    Tex3D_I;
-RWTexture3D< uint2 /* format = rg8ui */>  Tex3D_U;
+RWTexture3D< uint2 /* format = rg8ui */>  Tex3D_U/*comment*/:/*comment*/
+/*comment*/register(u3)/*comment*/;
 
 void TestGetDimensions()
 {

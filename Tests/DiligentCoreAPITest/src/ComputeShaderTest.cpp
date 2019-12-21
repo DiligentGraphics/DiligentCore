@@ -26,6 +26,8 @@
 
 #include "gtest/gtest.h"
 
+#include "InlineShaders/ComputeShaderTestHLSL.h"
+
 namespace Diligent
 {
 
@@ -61,22 +63,6 @@ using namespace Diligent::Testing;
 
 namespace
 {
-
-const char* CSSource = R"(
-RWTexture2D</*format=rgba8*/ float4> g_tex2DUAV;
-
-[numthreads(16, 16, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
-{
-	uint2 ui2Dim;
-	g_tex2DUAV.GetDimensions(ui2Dim.x, ui2Dim.y);
-	if (DTid.x >= ui2Dim.x || DTid.y >= ui2Dim.y)
-        return;
-
-	g_tex2DUAV[DTid.xy] = float4(float2(DTid.xy % 256u) / 256.0, 0.0, 1.0);
-}
-)";
-
 
 TEST(ComputeShaderTest, FillTexture)
 {
@@ -143,7 +129,7 @@ TEST(ComputeShaderTest, FillTexture)
     ShaderCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
     ShaderCI.EntryPoint                 = "main";
     ShaderCI.Desc.Name                  = "Compute shader test";
-    ShaderCI.Source                     = CSSource;
+    ShaderCI.Source                     = HLSL::FillTextureCS.c_str();
     RefCntAutoPtr<IShader> pCS;
     pDevice->CreateShader(ShaderCI, &pCS);
     ASSERT_NE(pCS, nullptr);

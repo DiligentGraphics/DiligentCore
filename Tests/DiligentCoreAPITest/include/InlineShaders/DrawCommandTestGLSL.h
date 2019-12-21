@@ -21,44 +21,76 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
 #include <string>
 
-#ifndef GLEW_STATIC
-#    define GLEW_STATIC // Must be defined to use static version of glew
+namespace
+{
+
+namespace GLSL
+{
+
+// clang-format off
+
+const std::string DrawTest_ProceduralTriangleVS{
+R"(
+#version 420 core
+
+#ifndef GL_ES
+out gl_PerVertex
+{
+	vec4 gl_Position;
+};
 #endif
-#ifndef GLEW_NO_GLU
-#    define GLEW_NO_GLU
+
+layout(location = 0) out vec3 out_Color;
+
+void main()
+{
+    vec4 Pos[6];
+    Pos[0] = vec4(-1.0, -0.5, 0.0, 1.0);
+    Pos[1] = vec4(-0.5, +0.5, 0.0, 1.0);
+    Pos[2] = vec4( 0.0, -0.5, 0.0, 1.0);
+
+    Pos[3] = vec4(+0.0, -0.5, 0.0, 1.0);
+    Pos[4] = vec4(+0.5, +0.5, 0.0, 1.0);
+    Pos[5] = vec4(+1.0, -0.5, 0.0, 1.0);
+
+    vec3 Col[6];
+    Col[0] = vec3(1.0, 0.0, 0.0);
+    Col[1] = vec3(0.0, 1.0, 0.0);
+    Col[2] = vec3(0.0, 0.0, 1.0);
+
+    Col[3] = vec3(1.0, 0.0, 0.0);
+    Col[4] = vec3(0.0, 1.0, 0.0);
+    Col[5] = vec3(0.0, 0.0, 1.0);
+    
+#ifdef VULKAN
+    gl_Position = Pos[gl_VertexIndex];
+    out_Color = Col[gl_VertexIndex];
+#else
+    gl_Position = Pos[gl_VertexID];
+    out_Color = Col[gl_VertexID];
 #endif
-
-#include "GL/glew.h"
-
-#include "TestingEnvironment.h"
-
-namespace Diligent
-{
-
-namespace Testing
-{
-
-class TestingEnvironmentGL final : public TestingEnvironment
-{
-public:
-    TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
-    ~TestingEnvironmentGL();
-
-    static TestingEnvironmentGL* GetInstance() { return ValidatedCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
-
-    GLuint CompileGLShader(const std::string& Source, GLenum ShaderType);
-    GLuint LinkProgram(GLuint Shaders[], GLuint NumShaders);
-
-    GLuint GetDummyVAO() { return m_DummyVAO; }
-
-private:
-    GLuint m_DummyVAO = 0;
+}
+)"
 };
 
-} // namespace Testing
+const std::string DrawTest_FS{
+R"(
+#version 420 core
 
-} // namespace Diligent
+layout(location = 0) in  vec3 in_Color;
+layout(location = 0) out vec4 out_Color;
+
+void main()
+{
+    out_Color = vec4(in_Color, 1.0);
+}
+)"
+};
+
+// clang-format on
+
+} // namespace GLSL
+
+} // namespace

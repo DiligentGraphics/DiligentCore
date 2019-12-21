@@ -24,28 +24,13 @@
 #include "GL/TestingEnvironmentGL.h"
 #include "GL/TestingSwapChainGL.h"
 
+#include "InlineShaders/ComputeShaderTestGLSL.h"
+
 namespace Diligent
 {
 
 namespace Testing
 {
-
-static const char* CSSource = R"(
-#version 430 core
-
-layout(rgba8, binding = 0) uniform writeonly image2D g_tex2DUAV;
-
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
- 
-void main()
-{
-	ivec2 Dim = imageSize(g_tex2DUAV);
-	if (gl_GlobalInvocationID.x >= uint(Dim.x) || gl_GlobalInvocationID.y >= uint(Dim.y))
-		return;
-
-	imageStore(g_tex2DUAV, ivec2(gl_GlobalInvocationID.xy), vec4( vec2(gl_GlobalInvocationID.xy % 256u) / 256.0, 0.0, 1.0) );
-}
-)";
 
 void ComputeShaderReferenceGL(ISwapChain* pSwapChain)
 {
@@ -57,7 +42,7 @@ void ComputeShaderReferenceGL(ISwapChain* pSwapChain)
 
     GLuint glCS;
 
-    glCS = pEnv->CompileGLShader(CSSource, GL_COMPUTE_SHADER);
+    glCS = pEnv->CompileGLShader(GLSL::FillTextureCS, GL_COMPUTE_SHADER);
     ASSERT_NE(glCS, 0u);
 
     auto glProg = pEnv->LinkProgram(&glCS, 1);

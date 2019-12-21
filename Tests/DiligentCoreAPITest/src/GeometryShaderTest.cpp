@@ -1,0 +1,194 @@
+/*     Copyright 2019 Diligent Graphics LLC
+ *  
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ * 
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF ANY PROPRIETARY RIGHTS.
+ *
+ *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  contract, or otherwise, unless required by applicable law (such as deliberate 
+ *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  liable for any damages, including any direct, indirect, special, incidental, 
+ *  or consequential damages of any character arising as a result of this License or 
+ *  out of the use or inability to use the software (including but not limited to damages 
+ *  for loss of goodwill, work stoppage, computer failure or malfunction, or any and 
+ *  all other commercial damages or losses), even if such Contributor has been advised 
+ *  of the possibility of such damages.
+ */
+
+#include "TestingEnvironment.h"
+#include "TestingSwapChainBase.h"
+
+#include "gtest/gtest.h"
+
+#include "InlineShaders/GeometryShaderTestHLSL.h"
+
+namespace Diligent
+{
+
+namespace Testing
+{
+
+#if D3D11_SUPPORTED
+void GeometryShaderReferenceD3D11(ISwapChain* pSwapChain);
+#endif
+
+#if D3D12_SUPPORTED
+void GeometryShaderReferenceD3D12(ISwapChain* pSwapChain);
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+void GeometryShaderReferenceGL(ISwapChain* pSwapChain);
+#endif
+
+#if VULKAN_SUPPORTED
+void GeometryShaderReferenceVk(ISwapChain* pSwapChain);
+#endif
+
+#if METAL_SUPPORTED
+
+#endif
+
+} // namespace Testing
+
+} // namespace Diligent
+
+using namespace Diligent;
+using namespace Diligent::Testing;
+
+namespace
+{
+
+TEST(GeometryShaderTest, DrawTriangles)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    if (!pDevice->GetDeviceCaps().bGeometryShadersSupported)
+    {
+        GTEST_SKIP() << "Geometry shaders are not supported by this device";
+    }
+
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pConext    = pEnv->GetDeviceContext();
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    if (pTestingSwapChain)
+    {
+        pConext->Flush();
+        pConext->InvalidateState();
+
+        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        switch (deviceType)
+        {
+#if D3D11_SUPPORTED
+            case DeviceType::D3D11:
+                GeometryShaderReferenceD3D11(pSwapChain);
+                break;
+#endif
+
+#if D3D12_SUPPORTED
+            case DeviceType::D3D12:
+                GeometryShaderReferenceD3D12(pSwapChain);
+                break;
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+            case DeviceType::OpenGL:
+            case DeviceType::OpenGLES:
+                GeometryShaderReferenceGL(pSwapChain);
+                break;
+
+#endif
+
+#if VULKAN_SUPPORTED
+            case DeviceType::Vulkan:
+                GeometryShaderReferenceVk(pSwapChain);
+                break;
+
+#endif
+
+            default:
+                LOG_ERROR_AND_THROW("Unsupported device type");
+        }
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+
+    auto* pContext = pEnv->GetDeviceContext();
+
+    ITextureView* pRTVs[] = {pSwapChain->GetCurrentBackBufferRTV()};
+    pContext->SetRenderTargets(1, pRTVs, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    float ClearColor[] = {0.f, 0.f, 0.f, 0.0f};
+    pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    PipelineStateDesc PSODesc;
+    PSODesc.Name = "Geometry shader test";
+
+    PSODesc.IsComputePipeline                             = false;
+    PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
+    PSODesc.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+    PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_POINT_LIST;
+    PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+    ShaderCreateInfo ShaderCI;
+    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.UseCombinedTextureSamplers = true;
+
+    RefCntAutoPtr<IShader> pVS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Geometry shader test - VS";
+        ShaderCI.Source          = HLSL::GSTest_VS.c_str();
+        pDevice->CreateShader(ShaderCI, &pVS);
+        ASSERT_NE(pVS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pGS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_GEOMETRY;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Geometry shader test - GS";
+        ShaderCI.Source          = HLSL::GSTest_GS.c_str();
+        pDevice->CreateShader(ShaderCI, &pGS);
+        ASSERT_NE(pGS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pPS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Geometry shader test - PS";
+        ShaderCI.Source          = HLSL::GSTest_PS.c_str();
+        pDevice->CreateShader(ShaderCI, &pPS);
+        ASSERT_NE(pPS, nullptr);
+    }
+
+    PSODesc.Name = "Draw command test";
+
+    PSODesc.GraphicsPipeline.pVS = pVS;
+    PSODesc.GraphicsPipeline.pGS = pGS;
+    PSODesc.GraphicsPipeline.pPS = pPS;
+    RefCntAutoPtr<IPipelineState> pPSO;
+    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    ASSERT_NE(pPSO, nullptr);
+
+    pContext->SetPipelineState(pPSO);
+    // Commit shader resources. We don't really have any resources, but this call also sets the shaders in OpenGL backend.
+    pContext->CommitShaderResources(nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    DrawAttribs drawAttrs(2, DRAW_FLAG_VERIFY_ALL);
+    pContext->Draw(drawAttrs);
+
+    pSwapChain->Present();
+}
+
+} // namespace

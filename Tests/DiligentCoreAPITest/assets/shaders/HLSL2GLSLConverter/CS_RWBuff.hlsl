@@ -1,4 +1,4 @@
-RWBuffer</* format = r32f */ float >      TexBuff_F;
+RWBuffer</* format = r32f */ float >      TexBuff_F/*comment*/ : /*comment*/register(u0)/*comment*/;
 RWBuffer</* format = rg16i */ int2 >      TexBuff_I;
 RWBuffer</* format = rgba16ui */ uint4 >  TexBuff_U;
 
@@ -7,9 +7,9 @@ struct StorageBufferStruct
     float4 Data;
 };
 
-RWStructuredBuffer<StorageBufferStruct> RWStructBuff0;
+RWStructuredBuffer<StorageBufferStruct> RWStructBuff0 /*comment*/:/*comment*/ register(u1)/*comment*/;
 RWStructuredBuffer<StorageBufferStruct> RWStructBuff1;
-RWStructuredBuffer<StorageBufferStruct> RWStructBuff2;
+RWStructuredBuffer<StorageBufferStruct> RWStructBuff2 : register(u2);
 
 void TestGetDimensions()
 {

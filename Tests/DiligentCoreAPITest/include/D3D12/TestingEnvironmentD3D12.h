@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include <string>
+
 #include "TestingEnvironment.h"
 
 #ifndef NOMINMAX
@@ -40,7 +42,7 @@ namespace Testing
 {
 
 // Implemented in TestingEnvironmentD3D11.cpp
-HRESULT CompileD3DShader(const char*             Source,
+HRESULT CompileD3DShader(const std::string&      Source,
                          LPCSTR                  strFunctionName,
                          const D3D_SHADER_MACRO* pDefines,
                          LPCSTR                  profile,

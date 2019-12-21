@@ -55,12 +55,12 @@ TestingEnvironmentGL::~TestingEnvironmentGL()
     glDeleteVertexArrays(1, &m_DummyVAO);
 }
 
-GLuint TestingEnvironmentGL::CompileGLShader(const char* Source, GLenum ShaderType)
+GLuint TestingEnvironmentGL::CompileGLShader(const std::string& Source, GLenum ShaderType)
 {
     GLuint glShader = glCreateShader(ShaderType);
 
-    const char* ShaderStrings[] = {Source};
-    GLint       Lenghts[]       = {static_cast<GLint>(strlen(Source))};
+    const char* ShaderStrings[] = {Source.c_str()};
+    GLint       Lenghts[]       = {static_cast<GLint>(Source.length())};
 
     // Provide source strings (the strings will be saved in internal OpenGL memory)
     glShaderSource(glShader, _countof(ShaderStrings), ShaderStrings, Lenghts);

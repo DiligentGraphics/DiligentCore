@@ -1408,6 +1408,22 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessConstantBuffer(TokenListTy
     ++Token;
     // cbuffer CBufferName
     //                    ^
+    if (Token->Literal == ":")
+    {
+        // cbuffer CBufferName : register(b0) {
+        //                     ^
+
+        // Remove register
+        while (Token != m_Tokens.end() && Token->Type != TokenType::OpenBrace)
+        {
+            auto CurrToken = Token;
+            ++Token;
+            m_Tokens.erase(CurrToken);
+        }
+        // cbuffer CBufferName {
+        //                     ^
+    }
+
     while (Token != m_Tokens.end() && Token->Type != TokenType::OpenBrace)
         ++Token;
     // cbuffer CBufferName
@@ -1498,6 +1514,23 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessStructuredBuffer(TokenList
     ++Token;
     // buffer g_Data{DataType g_Data;
     //                              ^
+
+    if (Token->Literal == ":")
+    {
+        // buffer g_Data{DataType g_Data : register(t0);
+        //                               ^
+
+        // Remove register
+        while (Token != m_Tokens.end() && Token->Type != TokenType::Semicolon)
+        {
+            auto CurrToken = Token;
+            ++Token;
+            m_Tokens.erase(CurrToken);
+        }
+
+        // buffer g_Data{DataType g_Data ;
+        //                               ^
+    }
     VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF after");
     VERIFY_PARSER_STATE(Token, Token->Type == TokenType::Semicolon, "\';\' expected");
 
@@ -1985,44 +2018,69 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration(TokenLi
         TexDeclToken->Literal.append(CompleteGLSLSampler);
         Objects.m.insert(std::make_pair(HashMapStringKey(TextureName), HLSLObjectInfo(CompleteGLSLSampler, NumComponents)));
 
-        // In global sceop, multiple variables can be declared in the same statement
+        // In global scope, multiple variables can be declared in the same statement
         if (IsGlobalScope)
         {
             // Texture2D TexName, TexName2 ;
             //           ^
 
-            // Go to the next texture in the declaration or to the statement end
+            // Go to the next texture in the declaration or to the statement end, removing register declarations
             while (Token != m_Tokens.end() && Token->Type != TokenType::Comma && Token->Type != TokenType::Semicolon)
-                ++Token;
-            if (Token->Type == TokenType::Comma)
             {
-                // Texture2D TexName, TexName2 ;
-                //                  ^
-                Token->Type    = TokenType::Semicolon;
-                Token->Literal = ";";
-                // Texture2D TexName; TexName2 ;
-                //                  ^
+                if (Token->Literal == ":")
+                {
+                    // Texture2D TexName : register(t0);
+                    // Texture2D TexName : register(t0),
+                    //                   ^
 
-                ++Token;
-                // Texture2D TexName; TexName2 ;
-                //                    ^
+                    // Remove register
+                    while (Token != m_Tokens.end() && Token->Type != TokenType::Comma && Token->Type != TokenType::Semicolon)
+                    {
+                        auto CurrToken = Token;
+                        ++Token;
+                        m_Tokens.erase(CurrToken);
+                    }
 
-                // Insert empty token that will contain next sampler/image declaration
-                TexDeclToken = m_Tokens.insert(Token, TokenInfo(TextureDim, "", "\n"));
-                // Texture2D TexName;
-                // <Texture Declaration TBD> TexName2 ;
-                // ^                         ^
-                // TexDeclToken              Token
+                    // Texture2D TexName ,
+                    //                   ^
+                }
+                else
+                {
+                    ++Token;
+                }
             }
-            else
+
+            if (Token != m_Tokens.end())
             {
-                // Texture2D TexName, TexName2 ;
-                //                             ^
-                ++Token;
-                break;
+                if (Token->Type == TokenType::Comma)
+                {
+                    // Texture2D TexName, TexName2 ;
+                    //                  ^
+                    Token->Type    = TokenType::Semicolon;
+                    Token->Literal = ";";
+                    // Texture2D TexName; TexName2 ;
+                    //                  ^
+
+                    ++Token;
+                    // Texture2D TexName; TexName2 ;
+                    //                    ^
+
+                    // Insert empty token that will contain next sampler/image declaration
+                    TexDeclToken = m_Tokens.insert(Token, TokenInfo(TextureDim, "", "\n"));
+                    // Texture2D TexName;
+                    // <Texture Declaration TBD> TexName2 ;
+                    // ^                         ^
+                    // TexDeclToken              Token
+                }
+                else
+                {
+                    // Texture2D TexName, TexName2 ;
+                    //                             ^
+                    ++Token;
+                    break;
+                }
             }
         }
-
     } while (IsGlobalScope && Token != m_Tokens.end());
 
 #undef SKIP_DELIMITER

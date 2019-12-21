@@ -26,27 +26,13 @@
 
 #include "DeviceContextD3D12.h"
 
+#include "InlineShaders/ComputeShaderTestHLSL.h"
+
 namespace Diligent
 {
 
 namespace Testing
 {
-
-static const char* CSSource = R"(
-RWTexture2D<float4> g_tex2DUAV : register(u0);
-
-[numthreads(16, 16, 1)]
-void main(uint3 DTid : SV_DispatchThreadID)
-{
-	uint2 ui2Dim;
-	g_tex2DUAV.GetDimensions(ui2Dim.x, ui2Dim.y);
-	if (DTid.x >= ui2Dim.x || DTid.y >= ui2Dim.y)
-        return;
-
-	g_tex2DUAV[DTid.xy] = float4(float2(DTid.xy % 256u) / 256.0, 0.0, 1.0);
-}
-)";
-
 
 void ComputeShaderReferenceD3D12(ISwapChain* pSwapChain)
 {
@@ -59,7 +45,7 @@ void ComputeShaderReferenceD3D12(ISwapChain* pSwapChain)
 
     CComPtr<ID3DBlob> pCSByteCode;
 
-    auto hr = CompileD3DShader(CSSource, "main", nullptr, "cs_5_0", &pCSByteCode);
+    auto hr = CompileD3DShader(HLSL::FillTextureCS, "main", nullptr, "cs_5_0", &pCSByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile compute shader";
 
     D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};

@@ -60,43 +60,17 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain);
 using namespace Diligent;
 using namespace Diligent::Testing;
 
+#include "InlineShaders/DrawCommandTestHLSL.h"
+
 namespace
 {
 
-const char* ProceduralVSSource = R"(
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
-};
-
-void main(in  uint    VertId : SV_VertexID,
-          out PSInput PSIn) 
+namespace HLSL
 {
-    float4 Pos[6];
-    Pos[0] = float4(-1.0, -0.5, 0.0, 1.0);
-    Pos[1] = float4(-0.5, +0.5, 0.0, 1.0);
-    Pos[2] = float4( 0.0, -0.5, 0.0, 1.0);
 
-    Pos[3] = float4(+0.0, -0.5, 0.0, 1.0);
-    Pos[4] = float4(+0.5, +0.5, 0.0, 1.0);
-    Pos[5] = float4(+1.0, -0.5, 0.0, 1.0);
-
-    float3 Col[6];
-    Col[0] = float3(1.0, 0.0, 0.0);
-    Col[1] = float3(0.0, 1.0, 0.0);
-    Col[2] = float3(0.0, 0.0, 1.0);
-
-    Col[3] = float3(1.0, 0.0, 0.0);
-    Col[4] = float3(0.0, 1.0, 0.0);
-    Col[5] = float3(0.0, 0.0, 1.0);
-
-    PSIn.Pos   = Pos[VertId];
-    PSIn.Color = Col[VertId];
-}
-)";
-
-const char* VSSource = R"(
+// clang-format off
+const std::string DrawTest_VS{
+R"(
 struct PSInput 
 { 
     float4 Pos   : SV_POSITION; 
@@ -115,28 +89,12 @@ void main(in  VSInput VSIn,
     PSIn.Pos   = VSIn.Pos;
     PSIn.Color = VSIn.Color;
 }
-)";
-
-const char* PSSource = R"(
-struct PSInput 
-{ 
-    float4 Pos   : SV_POSITION; 
-    float3 Color : COLOR; 
+)"
 };
 
-struct PSOutput
-{ 
-    float4 Color : SV_TARGET; 
-};
 
-void main(in  PSInput  PSIn,
-          out PSOutput PSOut)
-{
-    PSOut.Color = float4(PSIn.Color.rgb, 1.0);
-}
-)";
-
-const char* VSInstancedSource = R"(
+const std::string DrawTest_VSInstanced{
+R"(
 struct PSInput 
 { 
     float4 Pos   : SV_POSITION; 
@@ -157,8 +115,11 @@ void main(in  VSInput VSIn,
     PSIn.Pos.zw = VSIn.Pos.zw;
     PSIn.Color  = VSIn.Color;
 }
-)";
+)"
+};
+// clang-format on
 
+} // namespace HLSL
 
 struct Vertex
 {
@@ -277,7 +238,7 @@ protected:
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Draw command test procedural vertex shader";
-            ShaderCI.Source          = ProceduralVSSource;
+            ShaderCI.Source          = HLSL::DrawTest_ProceduralTriangleVS.c_str();
             pDevice->CreateShader(ShaderCI, &pProceduralVS);
             ASSERT_NE(pProceduralVS, nullptr);
         }
@@ -287,7 +248,7 @@ protected:
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Draw command test vertex shader";
-            ShaderCI.Source          = VSSource;
+            ShaderCI.Source          = HLSL::DrawTest_VS.c_str();
             pDevice->CreateShader(ShaderCI, &pVS);
             ASSERT_NE(pVS, nullptr);
         }
@@ -297,7 +258,7 @@ protected:
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Draw command test instanced vertex shader";
-            ShaderCI.Source          = VSInstancedSource;
+            ShaderCI.Source          = HLSL::DrawTest_VSInstanced.c_str();
             pDevice->CreateShader(ShaderCI, &pInstancedVS);
             ASSERT_NE(pInstancedVS, nullptr);
         }
@@ -307,7 +268,7 @@ protected:
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Draw command test pixel shader";
-            ShaderCI.Source          = PSSource;
+            ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
             pDevice->CreateShader(ShaderCI, &pPS);
             ASSERT_NE(pPS, nullptr);
         }

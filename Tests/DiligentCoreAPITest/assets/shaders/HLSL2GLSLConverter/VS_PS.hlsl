@@ -21,18 +21,18 @@
 //TEXTURE2D MacroTex2D;
 
 /******//* /* /**** / */
-void EmptyFunc(){}cbuffer cbTest1{int a;}cbuffer cbTest2{int b;}/*comment
+void EmptyFunc(){}cbuffer cbTest1/*comment*/ /*comment*/:/*comment*/  /*comment*/register(b0)/*comment*//*comment*/{int a;}cbuffer cbTest2{int b;}/*comment
 test
 
 **/cbuffer cbTest3{int c;}//Single line comment
-cbuffer cbTest4{int d;}
+cbuffer cbTest4:register(b1){int d;}
 
 cbuffer cbTest5
 {
     float4 e;
 }
 
-cbuffer cbTest6
+cbuffer cbTest6 :register(b2)
 {
     float4 f;
 };
@@ -40,9 +40,9 @@ cbuffer cbTest6
 int cbuffer_fake;
 int fakecbuffer;
 
-int GlobalIntVar;Texture2D Tex2D_Test1;Texture2D Tex2D_Test2;/*Comment* / *//* /** Comment2**/Texture2D Tex2D_Test3;
+int GlobalIntVar;Texture2D Tex2D_Test1/*comment*/  :/*comment*/register(t1)/*comment*/;Texture2D Tex2D_Test2;/*Comment* / *//* /** Comment2**/Texture2D Tex2D_Test3;
 
-Texture2D Tex2D_M1, Tex2D_M2;
+Texture2D Tex2D_M1:register(t2), Tex2D_M2:register(t3);
 
 // Test texture declaration
 
@@ -50,20 +50,20 @@ Texture2D Tex2D_M1, Tex2D_M2;
 
 Texture1D Tex1D_F1;
 Texture1D<float>Tex1D_F2;
-Texture1D<int2>Tex1D_I;
+Texture1D<int2>Tex1D_I/*comment*/: /*comment*/register(t4)  /*comment*/;
 Texture1D<uint4>Tex1D_U;
 
 SamplerState Tex1D_F1_sampler;
 
 Texture1DArray          Tex1D_F_A1;
 Texture1DArray <float>  Tex1D_F_A2;
-Texture1DArray <int2>   Tex1D_I_A;
+Texture1DArray <int2>   Tex1D_I_A:register(t5);
 Texture1DArray <uint4>  Tex1D_U_A;
 
 SamplerState Tex1D_F_A1_sampler;
 
 Texture1D Tex1DS1;
-Texture1D<float>Tex1DS2,Tex1DS3;
+Texture1D<float>Tex1DS2:register(t6),Tex1DS3;
 SamplerComparisonState Tex1DS1_sampler, Tex1DS2_sampler, TestCmpSamplerArr[2], Tex1DS3_sampler;
 
 Texture1DArray Tex1DAS1;
@@ -73,7 +73,7 @@ Texture1DArray<float>Tex1DAS2;
 #endif
 
 Texture2D Tex2D_F1;
-Texture2D<float>Tex2D_F3[2],Tex2D_F2,Tex2DS_F4,Tex2DS_F5;
+Texture2D<float>Tex2D_F3[2],Tex2D_F2,Tex2DS_F4:register(t7),Tex2DS_F5;
 Texture2D<float4>Tex2D_F6;
 Texture2D<int3>Tex2D_I;
 Texture2D<uint4>Tex2D_U;
@@ -105,15 +105,15 @@ Texture2DMSArray  <  uint4  >  Tex2DMS_U_A;
 
 Texture3D           Tex3D_F1;
 Texture3D< float4 > Tex3D_F2;
-Texture3D< float  > Tex3D_F3;
-Texture3D< int >    Tex3D_I;
+Texture3D< float  > Tex3D_F3:register(t8);
+Texture3D< int >    Tex3D_I:register(t9);
 Texture3D< uint2 >  Tex3D_U;
 
 SamplerState Tex3D_F1_sampler;
 
 TextureCube          TexC_F1;
-TextureCube <float2> TexC_F2;
-TextureCube <int4>   TexC_I;
+TextureCube <float2> TexC_F2 : register(t11);
+TextureCube <int4>   TexC_I:register(t10);
 TextureCube <uint>   TexC_U;
 
 SamplerState TexC_F1_sampler;
@@ -132,7 +132,7 @@ SamplerComparisonState Tex2DS1_sampler;
 Texture2D<float>Tex2DS2;
 SamplerComparisonState Tex2DS2_sampler;
 
-Texture2DArray Tex2DAS1;
+Texture2DArray Tex2DAS1: register(t12);
 SamplerComparisonState Tex2DAS1_sampler;
 Texture2DArray<float>Tex2DAS2;
 SamplerComparisonState Tex2DAS2_sampler;
@@ -149,9 +149,9 @@ TextureCubeArray <float> TexCAS2;
 SamplerComparisonState TexCAS2_sampler;
 #endif
 
-Buffer TexBuffer_F1;
+Buffer TexBuffer_F1/*comment*/  /*comment*/ : /*comment*/  /*comment*/register(t13)/*comment*/ /*comment*/;
 Buffer<float4>TexBuffer_F4;
-Buffer<int3>TexBuffer_I;
+Buffer<int3>TexBuffer_I: register(t14);
 Buffer<uint4>TexBuffer_U;
 
 int intvar1;SamplerState Dummy;int intvar2;

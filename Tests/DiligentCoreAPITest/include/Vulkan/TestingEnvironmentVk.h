@@ -66,7 +66,7 @@ public:
         return m_vkDevice;
     }
 
-    VkShaderModule CreateShaderModule(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen);
+    VkShaderModule CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource);
 
     static VkRenderPassCreateInfo GetRenderPassCreateInfo(
         Uint32                                                     NumRenderTargets,

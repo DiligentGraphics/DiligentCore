@@ -26,10 +26,9 @@
 #include "../include/DXGITypeConversions.h"
 #include "../include/d3dx12_win.h"
 
-#include "RenderDeviceD3D12.h"
 #include "DeviceContextD3D12.h"
 
-#include "InlineShaders/DrawCommandTestHLSL.h"
+#include "InlineShaders/GeometryShaderTestHLSL.h"
 
 namespace Diligent
 {
@@ -37,7 +36,7 @@ namespace Diligent
 namespace Testing
 {
 
-void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain)
+void GeometryShaderReferenceD3D12(ISwapChain* pSwapChain)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pContext               = pEnv->GetDeviceContext();
@@ -46,12 +45,15 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain)
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
-    CComPtr<ID3DBlob> pVSByteCode, pPSByteCode;
+    CComPtr<ID3DBlob> pVSByteCode, pGSByteCode, pPSByteCode;
 
-    auto hr = CompileD3DShader(HLSL::DrawTest_ProceduralTriangleVS, "main", nullptr, "vs_5_0", &pVSByteCode);
+    auto hr = CompileD3DShader(HLSL::GSTest_VS, "main", nullptr, "vs_5_0", &pVSByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile vertex shader";
 
-    hr = CompileD3DShader(HLSL::DrawTest_PS, "main", nullptr, "ps_5_0", &pPSByteCode);
+    hr = CompileD3DShader(HLSL::GSTest_GS, "main", nullptr, "gs_5_0", &pGSByteCode);
+    ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile pixel shader";
+
+    hr = CompileD3DShader(HLSL::GSTest_PS, "main", nullptr, "ps_5_0", &pPSByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile pixel shader";
 
 
@@ -69,6 +71,8 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain)
     PSODesc.pRootSignature     = pd3d12RootSignature;
     PSODesc.VS.pShaderBytecode = pVSByteCode->GetBufferPointer();
     PSODesc.VS.BytecodeLength  = pVSByteCode->GetBufferSize();
+    PSODesc.GS.pShaderBytecode = pGSByteCode->GetBufferPointer();
+    PSODesc.GS.BytecodeLength  = pGSByteCode->GetBufferSize();
     PSODesc.PS.pShaderBytecode = pPSByteCode->GetBufferPointer();
     PSODesc.PS.BytecodeLength  = pPSByteCode->GetBufferSize();
 
@@ -82,7 +86,7 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain)
 
     PSODesc.SampleMask = 0xFFFFFFFF;
 
-    PSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    PSODesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
     PSODesc.NumRenderTargets      = 1;
     PSODesc.RTVFormats[0]         = TexFormatToDXGI_Format(SCDesc.ColorBufferFormat);
     PSODesc.SampleDesc.Count      = 1;
@@ -114,8 +118,8 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain)
 
     pCmdList->SetPipelineState(pd3d12PSO);
     pCmdList->SetGraphicsRootSignature(pd3d12RootSignature);
-    pCmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    pCmdList->DrawInstanced(6, 1, 0, 0);
+    pCmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+    pCmdList->DrawInstanced(2, 1, 0, 0);
 
     pCmdList->Close();
     ID3D12CommandList* pCmdLits[] = {pCmdList};

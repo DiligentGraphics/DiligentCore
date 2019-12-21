@@ -25,13 +25,13 @@ cbuffer cbTest6
 int cbuffer_fake;
 int fakecbuffer;
 
-RWTexture1D<float /* format=r32f */ >Tex1D_F1;
+RWTexture1D<float /* format=r32f */ >Tex1D_F1 /*comment*/:/*comment*/ register(u0)/*comment*/;
 RWTexture1D<int2  /*format=rg32i*/ >Tex1D_I;
 RWTexture1D<uint4 /* format= rgba32ui */ >Tex1D_U;
 
-RWTexture1DArray </* format = r32f */ float >  Tex1D_F_A;
+RWTexture1DArray </* format = r32f */ float >  Tex1D_F_A : register(u1);
 RWTexture1DArray </* format = rg16i */ int2 >   Tex1D_I_A;
-RWTexture1DArray </* format = rgba16ui */ uint4 >  Tex1D_U_A;
+RWTexture1DArray </* format = rgba16ui */ uint4 >  Tex1D_U_A : register(u2);
 
 void TestGetDimensions()
 {

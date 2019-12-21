@@ -24,7 +24,7 @@
 #include "GL/TestingEnvironmentGL.h"
 #include "GL/TestingSwapChainGL.h"
 
-#include "InlineShaders/DrawCommandTestGLSL.h"
+#include "InlineShaders/GeometryShaderTestGLSL.h"
 
 namespace Diligent
 {
@@ -32,7 +32,7 @@ namespace Diligent
 namespace Testing
 {
 
-void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain)
+void GeometryShaderReferenceGL(ISwapChain* pSwapChain)
 {
     auto* pEnv                = TestingEnvironmentGL::GetInstance();
     auto* pContext            = pEnv->GetDeviceContext();
@@ -40,13 +40,15 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain)
 
     const auto& SCDesc = pTestingSwapChainGL->GetDesc();
 
-    GLuint glShaders[2] = {};
+    GLuint glShaders[3] = {};
 
-    glShaders[0] = pEnv->CompileGLShader(GLSL::DrawTest_ProceduralTriangleVS, GL_VERTEX_SHADER);
+    glShaders[0] = pEnv->CompileGLShader(GLSL::GSTest_VS, GL_VERTEX_SHADER);
     ASSERT_NE(glShaders[0], 0u);
-    glShaders[1] = pEnv->CompileGLShader(GLSL::DrawTest_FS, GL_FRAGMENT_SHADER);
+    glShaders[1] = pEnv->CompileGLShader(GLSL::GSTest_GS, GL_GEOMETRY_SHADER);
     ASSERT_NE(glShaders[1], 0u);
-    auto glProg = pEnv->LinkProgram(glShaders, 2);
+    glShaders[2] = pEnv->CompileGLShader(GLSL::GSTest_FS, GL_FRAGMENT_SHADER);
+    ASSERT_NE(glShaders[2], 0u);
+    auto glProg = pEnv->LinkProgram(glShaders, _countof(glShaders));
     ASSERT_NE(glProg, 0u);
 
     glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
@@ -64,7 +66,7 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain)
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(glProg);
     glBindVertexArray(pEnv->GetDummyVAO());
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    glDrawArrays(GL_POINTS, 0, 2);
     glBindVertexArray(0);
     glUseProgram(0);
 
