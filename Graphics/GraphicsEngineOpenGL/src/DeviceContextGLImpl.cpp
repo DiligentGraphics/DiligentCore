@@ -1166,9 +1166,14 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
     }
     else if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage == USAGE_STAGING)
     {
-        auto  CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
-        auto& FBOCache               = m_pDevice->GetFBOCache(CurrentNativeGLContext);
-
+        if (pSrcTexGL->GetGLTextureHandle() == 0)
+        {
+            auto*  pSwapChainGL     = m_pSwapChain.RawPtr<ISwapChainGL>();
+            GLuint DefaultFBOHandle = pSwapChainGL->GetDefaultFBO();
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, DefaultFBOHandle);
+            DEV_CHECK_GL_ERROR("Failed to bind default FBO as read framebuffer");
+        }
+        else
         {
             TextureViewDesc SrcTexViewDesc;
             SrcTexViewDesc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
@@ -1184,8 +1189,11 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
                     false  // bIsDefaultView
                 };
 
+            auto  CurrentNativeGLContext = m_ContextState.GetCurrentGLContext();
+            auto& fboCache               = m_pDevice->GetFBOCache(CurrentNativeGLContext);
+
             TextureViewGLImpl* pSrcViews[] = {&SrcTexView};
-            const auto&        SrcFBO      = FBOCache.GetFBO(1, pSrcViews, nullptr, m_ContextState);
+            const auto&        SrcFBO      = fboCache.GetFBO(1, pSrcViews, nullptr, m_ContextState);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, SrcFBO);
             DEV_CHECK_GL_ERROR("Failed to bind FBO as read framebuffer");
         }
