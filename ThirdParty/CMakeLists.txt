@@ -20,6 +20,7 @@ if(VULKAN_SUPPORTED)
     install(FILES SPIRV-Headers/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Headers-License.txt)
 
     option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
+    option(DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF "Enable some optimizations for SPIRV-Tools, glslang, SPIRV-Cross and related projects in debug build to improve performance" ON)
 
     set(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SPIRV-Headers")
     set(SPIRV_SKIP_TESTS ON CACHE BOOL "Skip SPIRV tests")
@@ -27,6 +28,9 @@ if(VULKAN_SUPPORTED)
     set(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building SPIRV executable and tests along with the library")
     set(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "Skip SPIRV tools installation")
     set(SPIRV_WERROR OFF CACHE BOOL "Do not enable error on warning")
+    if(${DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF})
+        set(SPIRV_CHECK_CONTEXT OFF CACHE BOOL "Do not check if the IR context is in a valid state")
+    endif()
     set(CMAKE_MACOSX_RPATH TRUE)
     add_subdirectory(SPIRV-Tools)
     set_directory_root_folder("SPIRV-Tools" "DiligentCore/ThirdParty/SPIRV-Tools")
@@ -34,7 +38,7 @@ if(VULKAN_SUPPORTED)
     # Exclude all other targets from build to save build time
     set(SPIRV_TOOLS_EXCLUDE_TARGETS SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared)
     set_target_properties(${SPIRV_TOOLS_EXCLUDE_TARGETS} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
-        
+
     set(INSTALL_TARGETS SPIRV-Tools SPIRV-Tools-opt)
     install(FILES SPIRV-Tools/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Tools-License.txt)
 
@@ -76,6 +80,13 @@ if(VULKAN_SUPPORTED)
                 LIBRARY DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
                 RUNTIME DESTINATION "bin/${DILIGENT_CORE_DIR}/$<CONFIG>"
         )
+    endif()
+
+    if(${DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF} AND MSVC)
+        # Enable function inlining (/Ob1) in Debug build to improve shader compilation performance
+        foreach(TARGET ${INSTALL_TARGETS}) 
+            target_compile_options(${TARGET} PRIVATE "$<$<CONFIG:DEBUG>:/Ob1>")
+        endforeach()
     endif()
 
 endif()
