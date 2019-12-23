@@ -256,6 +256,12 @@ CComPtr<ID3D11ComputeShader> TestingEnvironmentD3D11::CreateComputeShader(const 
 }
 
 
+void TestingEnvironmentD3D11::Reset()
+{
+    TestingEnvironment::Reset();
+    m_pd3d11Context->ClearState();
+}
+
 TestingEnvironment* CreateTestingEnvironmentD3D11(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
     return new TestingEnvironmentD3D11{deviceType, AdapterType, SCDesc};

@@ -55,6 +55,8 @@ public:
 
     GLuint GetDummyVAO() { return m_DummyVAO; }
 
+    virtual void Reset()override final;
+
 private:
     GLuint m_DummyVAO = 0;
 };

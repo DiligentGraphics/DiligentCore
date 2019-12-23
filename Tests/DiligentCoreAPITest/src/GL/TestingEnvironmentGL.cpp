@@ -127,6 +127,58 @@ GLuint TestingEnvironmentGL::LinkProgram(GLuint Shaders[], GLuint NumShaders)
     return glProg;
 }
 
+void TestingEnvironmentGL::Reset()
+{
+    TestingEnvironment::Reset();
+
+    glUseProgram(0);
+    glBindProgramPipeline(0);
+    glBindVertexArray(0);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_BLEND);
+    glDisable(GL_CULL_FACE);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+
+    GLint iMaxCombinedTexUnits = 0;
+    glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, &iMaxCombinedTexUnits);
+    VERIFY_EXPR(glGetError() == GL_NO_ERROR);
+    for (int i = 0; i < iMaxCombinedTexUnits; ++i)
+    {
+        glActiveTexture(GL_TEXTURE0 + i);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, 0);
+        glBindTexture(GL_TEXTURE_3D, 0);
+    }
+    glActiveTexture(GL_TEXTURE0);
+    VERIFY_EXPR(glGetError() == GL_NO_ERROR);
+
+    GLint iMaxUniformBufferBindings = 0;
+    glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &iMaxUniformBufferBindings);
+    VERIFY_EXPR(glGetError() == GL_NO_ERROR);
+    for (int i = 0; i < iMaxUniformBufferBindings; ++i)
+    {
+        glBindBufferBase(GL_UNIFORM_BUFFER, i, 0);
+    }
+    VERIFY_EXPR(glGetError() == GL_NO_ERROR);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_DISPATCH_INDIRECT_BUFFER, 0);
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+    glBindBuffer(GL_QUERY_BUFFER, 0);
+    VERIFY_EXPR(glGetError() == GL_NO_ERROR);
+
+    if (glPolygonMode != nullptr)
+    {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
+}
+
 TestingEnvironment* CreateTestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
     try

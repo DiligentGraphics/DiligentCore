@@ -108,6 +108,8 @@ public:
 
     static TestingEnvironmentD3D11* GetInstance() { return ValidatedCast<TestingEnvironmentD3D11>(TestingEnvironment::GetInstance()); }
 
+    virtual void Reset() override final;
+
 private:
     CComPtr<ID3D11Device>        m_pd3d11Device;
     CComPtr<ID3D11DeviceContext> m_pd3d11Context;

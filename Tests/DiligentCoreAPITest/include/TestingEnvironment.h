@@ -60,7 +60,7 @@ public:
     // Override this to define how to tear down the environment.
     void TearDown() override final;
 
-    void Reset();
+    virtual void Reset();
     void ReleaseResources();
 
     class ScopedReset
