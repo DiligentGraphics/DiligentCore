@@ -437,7 +437,7 @@ void TextureBaseGL::UpdateData(GLContextState& CtxState, Uint32 MipLevel, Uint32
     TextureMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT, CtxState);
 }
 
-//void TextureBaseGL::UpdateData(Uint32 Offset, Uint32 Size, const PVoid pData)
+//void TextureBaseGL::UpdateData(Uint32 Offset, Uint32 Size, const void* pData)
 //{
 //    CTexture::UpdateData(Offset, Size, pData);
 //

@@ -122,7 +122,7 @@ public:
     inline bool SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil);
 
     /// Base implementation of IDeviceContext::UpdateBuffer(); validates input parameters.
-    virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
+    virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const void* pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
 
     /// Base implementation of IDeviceContext::CopyBuffer(); validates input parameters.
     virtual void CopyBuffer(IBuffer*                       pSrcBuffer,
@@ -820,7 +820,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets(
 
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
-    UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const PVoid pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+    UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const void* pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     VERIFY(pBuffer != nullptr, "Buffer must not be null");
 #ifdef DEVELOPMENT

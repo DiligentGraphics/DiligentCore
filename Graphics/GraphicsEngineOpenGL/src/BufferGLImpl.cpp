@@ -206,7 +206,7 @@ BufferGLImpl::~BufferGLImpl()
 
 IMPLEMENT_QUERY_INTERFACE(BufferGLImpl, IID_BufferGL, TBufferBase)
 
-void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const PVoid pData)
+void BufferGLImpl::UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const void* pData)
 {
     BufferMemoryBarrier(
         GL_BUFFER_UPDATE_BARRIER_BIT, // Reads or writes to buffer objects via any OpenGL API functions that allow

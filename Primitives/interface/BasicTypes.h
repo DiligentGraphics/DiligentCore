@@ -43,6 +43,7 @@ using Uint8  = uint8_t;  ///< 8-bit unsigned integer
 
 using SizeType = size_t;
 using PVoid    = void*;
+using CPVoid   = const void*;
 
 using Bool                  = bool; ///< Boolean
 static constexpr Bool False = false;

@@ -129,7 +129,7 @@ public:
     virtual void UpdateBuffer(IBuffer*                       pBuffer,
                               Uint32                         Offset,
                               Uint32                         Size,
-                              const PVoid                    pData,
+                              const void*                    pData,
                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::CopyBuffer() in OpenGL backend.

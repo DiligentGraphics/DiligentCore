@@ -1070,7 +1070,7 @@ bool DeviceContextGLImpl::UpdateCurrentGLContext()
 void DeviceContextGLImpl::UpdateBuffer(IBuffer*                       pBuffer,
                                        Uint32                         Offset,
                                        Uint32                         Size,
-                                       const PVoid                    pData,
+                                       const void*                    pData,
                                        RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
