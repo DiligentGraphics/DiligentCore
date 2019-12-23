@@ -296,7 +296,7 @@ void BufferGLImpl::MapRange(GLContextState& CtxState, MAP_TYPE MapType, Uint32 M
                 Access |= GL_MAP_INVALIDATE_BUFFER_BIT;
             }
 
-            if (MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE)
+            if (MapFlags & MAP_FLAG_NO_OVERWRITE)
             {
                 // If GL_MAP_UNSYNCHRONIZED_BIT flag is set, OpenGL will not attempt to synchronize
                 // operations on the buffer.

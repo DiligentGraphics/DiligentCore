@@ -163,7 +163,7 @@ public:
         m_pContext->CopyTexture(CopyInfo);
         m_pContext->WaitForIdle();
         MappedTextureSubresource MapData;
-        m_pContext->MapTextureSubresource(m_pStagingTexture, 0, 0, MAP_READ, MAP_FLAG_DO_NOT_SYNCHRONIZE, nullptr, MapData);
+        m_pContext->MapTextureSubresource(m_pStagingTexture, 0, 0, MAP_READ, MAP_FLAG_DO_NOT_WAIT, nullptr, MapData);
         CompareTestImages(m_ReferenceData.data(), m_ReferenceDataPitch, reinterpret_cast<const Uint8*>(MapData.pData), MapData.Stride,
                           m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.ColorBufferFormat);
 

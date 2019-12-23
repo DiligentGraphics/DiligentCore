@@ -1036,8 +1036,12 @@ void DeviceContextD3D11Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
     MapParamsToD3D11MapParams(MapType, MapFlags, d3d11MapType, d3d11MapFlags);
 
     D3D11_MAPPED_SUBRESOURCE MappedBuff;
-    HRESULT                  hr = m_pd3d11DeviceContext->Map(pBufferD3D11->m_pd3d11Buffer, 0, d3d11MapType, d3d11MapFlags, &MappedBuff);
-    DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to map buffer '", pBufferD3D11->GetDesc().Name, "'");
+
+    HRESULT hr = m_pd3d11DeviceContext->Map(pBufferD3D11->m_pd3d11Buffer, 0, d3d11MapType, d3d11MapFlags, &MappedBuff);
+    if ((d3d11MapFlags & D3D11_MAP_FLAG_DO_NOT_WAIT) == 0)
+    {
+        DEV_CHECK_ERR(SUCCEEDED(hr), "Failed to map buffer '", pBufferD3D11->GetDesc().Name, "'");
+    }
     pMappedData = SUCCEEDED(hr) ? MappedBuff.pData : nullptr;
 }
 

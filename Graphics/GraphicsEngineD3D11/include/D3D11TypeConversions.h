@@ -110,7 +110,7 @@ inline void MapParamsToD3D11MapParams(MAP_TYPE MapType, Uint32 MapFlags, D3D11_M
         case MAP_WRITE:
             if (MapFlags & MAP_FLAG_DISCARD)
                 d3d11MapType = D3D11_MAP_WRITE_DISCARD;
-            else if (MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE)
+            else if (MapFlags & MAP_FLAG_NO_OVERWRITE)
                 d3d11MapType = D3D11_MAP_WRITE_NO_OVERWRITE;
             else
                 d3d11MapType = D3D11_MAP_WRITE;

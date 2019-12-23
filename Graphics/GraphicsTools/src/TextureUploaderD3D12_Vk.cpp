@@ -87,7 +87,7 @@ public:
     {
         VERIFY(!IsMapped(Mip, Slice), "This subresource is already mapped");
         MappedTextureSubresource MappedData;
-        pDeviceContext->MapTextureSubresource(m_pStagingTexture, Mip, Slice, MAP_WRITE, MAP_FLAG_DO_NOT_SYNCHRONIZE, nullptr, MappedData);
+        pDeviceContext->MapTextureSubresource(m_pStagingTexture, Mip, Slice, MAP_WRITE, MAP_FLAG_NO_OVERWRITE, nullptr, MappedData);
         SetMappedData(Mip, Slice, MappedData);
     }
 

@@ -1309,8 +1309,8 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
-            DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0, "Failed to map buffer '",
-                          BuffDesc.Name, "': Vk buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE flag. Context Id: ", m_ContextId);
+            DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0, "Failed to map buffer '",
+                          BuffDesc.Name, "': Vulkan buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE flag. Context Id: ", m_ContextId);
 
             auto& DynAllocation = pBufferVk->m_DynamicAllocations[m_ContextId];
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynAllocation.pDynamicMemMgr == nullptr)
@@ -1319,7 +1319,7 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
             }
             else
             {
-                VERIFY_EXPR(MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE);
+                VERIFY_EXPR(MapFlags & MAP_FLAG_NO_OVERWRITE);
                 // Reuse the same allocation
             }
 
@@ -1821,8 +1821,8 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
             return;
         }
 
-        if ((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_DO_NOT_SYNCHRONIZE)) != 0)
-            LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_DO_NOT_SYNCHRONIZE has no effect in Vulkan backend");
+        if ((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0)
+            LOG_INFO_MESSAGE_ONCE("Mapping textures with flags MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE has no effect in Vulkan backend");
 
         auto        CopyInfo     = GetBufferToTextureCopyInfo(TexDesc, MipLevel, *pMapRegion);
         const auto& DeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
@@ -1846,13 +1846,6 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
     }
     else if (TexDesc.Usage == USAGE_STAGING)
     {
-        if ((MapFlags & MAP_FLAG_DO_NOT_SYNCHRONIZE) == 0)
-        {
-            LOG_WARNING_MESSAGE_ONCE("Mapping staging textures is never synchronized in Vulkan backend. "
-                                     "Application must use fences or other synchronization methods to explicitly synchronize "
-                                     "access and map texture with MAP_FLAG_DO_NOT_SYNCHRONIZE flag.");
-        }
-
         auto SubresourceOffset = GetStagingDataOffset(TexDesc, ArraySlice, MipLevel);
         auto MipLevelAttribs   = GetMipLevelProperties(TexDesc, MipLevel);
         // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
@@ -1869,6 +1862,13 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
 
         if (MapType == MAP_READ)
         {
+            if ((MapFlags & MAP_FLAG_DO_NOT_WAIT) == 0)
+            {
+                LOG_WARNING_MESSAGE("Mapping staging textures for reading never blocks or waits for GPU in Vulkan backend. "
+                                    "Applications must use fences or other synchronization methods to explicitly synchronize "
+                                    "access and map texture with MAP_FLAG_DO_NOT_WAIT flag.");
+            }
+
             DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");
             // Reaback memory is not created with HOST_COHERENT flag, so we have to explicitly invalidate the mapped range
             // to make device writes visible to CPU reads
