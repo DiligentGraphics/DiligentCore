@@ -1297,15 +1297,22 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
 
     if (MapType == MAP_READ)
     {
-        LOG_ERROR("Mapping buffer for reading is not yet imlemented in Vulkan backend");
-        UNSUPPORTED("Mapping buffer for reading is not yet imlemented in Vulkan backend");
+        DEV_CHECK_ERR(BuffDesc.Usage == USAGE_STAGING, "Buffer must be created as USAGE_STAGING to be mapped for reading");
+
+        if ((MapFlags & MAP_FLAG_DO_NOT_WAIT) == 0)
+        {
+            LOG_WARNING_MESSAGE("Vulkan backend never waits for GPU when mapping staging buffers for reading. "
+                                "Applications must use fences or other synchronization methods to explicitly synchronize "
+                                "access and use MAP_FLAG_DO_NOT_WAIT flag.");
+        }
+
+        pMappedData = pBufferVk->GetStagingCPUAddress();
     }
     else if (MapType == MAP_WRITE)
     {
         if (BuffDesc.Usage == USAGE_STAGING)
         {
-            LOG_ERROR("Not implemented");
-            UNSUPPORTED("Not implemented");
+            pMappedData = pBufferVk->GetStagingCPUAddress();
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
@@ -1340,11 +1347,11 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
     }
     else if (MapType == MAP_READ_WRITE)
     {
-        LOG_ERROR("MAP_READ_WRITE is not supported on Vk");
+        LOG_ERROR("MAP_READ_WRITE is not supported in Vulkan backend");
     }
     else
     {
-        LOG_ERROR("Only MAP_WRITE_DISCARD and MAP_READ are currently implemented in Vk");
+        UNEXPECTED("Unknown map type");
     }
 }
 
@@ -1356,15 +1363,13 @@ void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 
     if (MapType == MAP_READ)
     {
-        LOG_ERROR("This map type is not yet supported");
-        UNSUPPORTED("This map type is not yet supported");
+        // We are currently using cache-coherent memory, so there is no need to invalidated mapped range
     }
     else if (MapType == MAP_WRITE)
     {
         if (BuffDesc.Usage == USAGE_STAGING)
         {
-            LOG_ERROR("This map type is not yet supported");
-            UNSUPPORTED("This map type is not yet supported");
+            // We are currently using cache-coherent memory, so there is no need to flush mapped range
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
@@ -1864,9 +1869,9 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
         {
             if ((MapFlags & MAP_FLAG_DO_NOT_WAIT) == 0)
             {
-                LOG_WARNING_MESSAGE("Mapping staging textures for reading never blocks or waits for GPU in Vulkan backend. "
+                LOG_WARNING_MESSAGE("Vulkan backend never waits for GPU when mapping staging textures for reading. "
                                     "Applications must use fences or other synchronization methods to explicitly synchronize "
-                                    "access and map texture with MAP_FLAG_DO_NOT_WAIT flag.");
+                                    "access and use MAP_FLAG_DO_NOT_WAIT flag.");
             }
 
             DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");

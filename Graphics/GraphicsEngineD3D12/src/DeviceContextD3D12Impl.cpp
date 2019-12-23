@@ -1083,10 +1083,16 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
 
     if (MapType == MAP_READ)
     {
-        LOG_WARNING_MESSAGE_ONCE("Mapping CPU buffer for reading on D3D12 currently requires flushing context and idling GPU");
-        Flush();
-        m_pDevice->IdleGPU();
-        VERIFY(BuffDesc.Usage == USAGE_STAGING, "Buffer must be created as USAGE_STAGING to be mapped for reading");
+        DEV_CHECK_ERR(BuffDesc.Usage == USAGE_STAGING, "Buffer must be created as USAGE_STAGING to be mapped for reading");
+        DEV_CHECK_ERR(pd3d12Resource != nullptr, "USAGE_STAGING buffer must intialize D3D12 resource");
+
+        if ((MapFlags & MAP_FLAG_DO_NOT_WAIT) == 0)
+        {
+            LOG_WARNING_MESSAGE("D3D12 backend never waits for GPU when mapping staging buffers for reading. "
+                                "Applications must use fences or other synchronization methods to explicitly synchronize "
+                                "access and use MAP_FLAG_DO_NOT_WAIT flag.");
+        }
+
         D3D12_RANGE MapRange;
         MapRange.Begin = 0;
         MapRange.End   = BuffDesc.uiSizeInBytes;
@@ -1096,7 +1102,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
     {
         if (BuffDesc.Usage == USAGE_STAGING)
         {
-            VERIFY(pd3d12Resource != nullptr, "USAGE_STAGING buffer mapped for writing must intialize D3D12 resource");
+            DEV_CHECK_ERR(pd3d12Resource != nullptr, "USAGE_STAGING buffer mapped for writing must intialize D3D12 resource");
             if (MapFlags & MAP_FLAG_DISCARD)
             {
             }
@@ -1104,7 +1110,7 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
-            VERIFY((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE flag");
+            DEV_CHECK_ERR((MapFlags & (MAP_FLAG_DISCARD | MAP_FLAG_NO_OVERWRITE)) != 0, "D3D12 buffer must be mapped for writing with MAP_FLAG_DISCARD or MAP_FLAG_NO_OVERWRITE flag");
             auto& DynamicData = pBufferD3D12->m_DynamicData[m_ContextId];
             if ((MapFlags & MAP_FLAG_DISCARD) != 0 || DynamicData.CPUAddress == nullptr)
             {
@@ -1564,9 +1570,9 @@ void DeviceContextD3D12Impl::MapTextureSubresource(ITexture*                 pTe
         {
             if ((MapFlags & MAP_FLAG_DO_NOT_WAIT) == 0)
             {
-                LOG_WARNING_MESSAGE("Mapping staging textures for reading never blocks or waits for GPU in D3D12 backend. "
+                LOG_WARNING_MESSAGE("D3D12 backend never waits for GPU when mapping staging textures for reading. "
                                     "Applications must use fences or other synchronization methods to explicitly synchronize "
-                                    "access and map texture with MAP_FLAG_DO_NOT_WAIT flag.");
+                                    "access and use MAP_FLAG_DO_NOT_WAIT flag.");
             }
 
             DEV_CHECK_ERR((TexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Texture '", TexDesc.Name, "' was not created with CPU_ACCESS_READ flag and can't be mapped for reading");

@@ -189,10 +189,10 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
         m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs, BufferMemoryFlags);
 
-        auto AlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
-        VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (AlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
+        m_BufferMemoryAlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
+        VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_BufferMemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
         auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-        auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, AlignedOffset);
+        auto err    = LogicalDevice.BindBufferMemory(m_VulkanBuffer, Memory, m_BufferMemoryAlignedOffset);
         CHECK_VK_ERROR_AND_THROW(err, "Failed to bind buffer memory");
 
         bool           bInitializeBuffer = (pBuffData != nullptr && pBuffData->pData != nullptr && pBuffData->DataSize > 0);

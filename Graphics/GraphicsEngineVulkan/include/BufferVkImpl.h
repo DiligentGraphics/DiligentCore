@@ -108,13 +108,21 @@ public:
         return (GetAccessFlags() & AccessFlags) == AccessFlags;
     }
 
+    void* GetStagingCPUAddress()
+    {
+        VERIFY_EXPR(m_Desc.Usage == USAGE_STAGING);
+        return reinterpret_cast<Uint8*>(m_MemoryAllocation.Page->GetCPUMemory()) + m_BufferMemoryAlignedOffset;
+    }
+
 private:
     friend class DeviceContextVkImpl;
 
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;
 
     VulkanUtilities::BufferViewWrapper CreateView(struct BufferViewDesc& ViewDesc);
-    Uint32                             m_DynamicOffsetAlignment = 0;
+
+    Uint32       m_DynamicOffsetAlignment    = 0;
+    VkDeviceSize m_BufferMemoryAlignedOffset = 0;
 
     std::vector<VulkanDynamicAllocation, STDAllocatorRawMem<VulkanDynamicAllocation>> m_DynamicAllocations;
 
