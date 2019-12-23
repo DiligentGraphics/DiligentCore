@@ -61,6 +61,7 @@ public:
     void TearDown() override final;
 
     virtual void Reset();
+
     void ReleaseResources();
 
     class ScopedReset
