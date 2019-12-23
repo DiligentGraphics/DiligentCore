@@ -45,6 +45,10 @@
 #    include "EngineFactoryMtl.h"
 #endif
 
+#ifdef HLSL2GLSL_CONVERTER_SUPPORTED
+#    include "HLSL2GLSLConverterImpl.h"
+#endif
+
 namespace Diligent
 {
 
@@ -399,6 +403,49 @@ RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXT
     VERIFY_EXPR(pTexture != nullptr);
 
     return pTexture;
+}
+
+RefCntAutoPtr<IShader> TestingEnvironment::CreateShader(const ShaderCreateInfo& ShaderCI, bool ConvertToGLSL)
+{
+    RefCntAutoPtr<IShader> pShader;
+#ifdef HLSL2GLSL_CONVERTER_SUPPORTED
+    if ((m_pDevice->GetDeviceCaps().IsGLDevice() || m_pDevice->GetDeviceCaps().IsVulkanDevice()) && ConvertToGLSL)
+    {
+        // glslang currently does not produce GS/HS/DS bytecode that can be properly
+        // linked with other shader stages. So we will manually convert HLSL to GLSL
+        // and compile GLSL.
+
+        const auto& Converter = HLSL2GLSLConverterImpl::GetInstance();
+
+        HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
+        Attribs.HLSLSource           = ShaderCI.Source;
+        Attribs.NumSymbols           = Attribs.HLSLSource != nullptr ? strlen(Attribs.HLSLSource) : 0;
+        Attribs.pSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
+        Attribs.ppConversionStream   = nullptr;
+        Attribs.EntryPoint           = ShaderCI.EntryPoint;
+        Attribs.ShaderType           = ShaderCI.Desc.ShaderType;
+        Attribs.IncludeDefinitions   = true;
+        Attribs.InputFileName        = ShaderCI.FilePath;
+        Attribs.SamplerSuffix        = ShaderCI.CombinedSamplerSuffix;
+        // Separate shader objects extension is required to allow input/output layout qualifiers
+        Attribs.UseInOutLocationQualifiers = true;
+        auto ConvertedSource               = Converter.Convert(Attribs);
+
+        ShaderCreateInfo ConvertedShaderCI           = ShaderCI;
+        ConvertedShaderCI.pShaderSourceStreamFactory = nullptr;
+        ConvertedShaderCI.Source                     = ConvertedSource.c_str();
+        ConvertedShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_GLSL;
+
+        m_pDevice->CreateShader(ConvertedShaderCI, &pShader);
+    }
+#endif
+
+    if (!pShader)
+    {
+        m_pDevice->CreateShader(ShaderCI, &pShader);
+    }
+
+    return pShader;
 }
 
 } // namespace Testing

@@ -26,7 +26,7 @@
 
 #include "gtest/gtest.h"
 
-#include "InlineShaders/GeometryShaderTestHLSL.h"
+#include "InlineShaders/TessellationTestHLSL.h"
 
 namespace Diligent
 {
@@ -35,19 +35,19 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-void GeometryShaderReferenceD3D11(ISwapChain* pSwapChain);
+void TessellationReferenceD3D11(ISwapChain* pSwapChain);
 #endif
 
 #if D3D12_SUPPORTED
-void GeometryShaderReferenceD3D12(ISwapChain* pSwapChain);
+void TessellationReferenceD3D12(ISwapChain* pSwapChain);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-void GeometryShaderReferenceGL(ISwapChain* pSwapChain);
+void TessellationReferenceGL(ISwapChain* pSwapChain);
 #endif
 
 #if VULKAN_SUPPORTED
-void GeometryShaderReferenceVk(ISwapChain* pSwapChain);
+void TessellationReferenceVk(ISwapChain* pSwapChain);
 #endif
 
 #if METAL_SUPPORTED
@@ -64,13 +64,13 @@ using namespace Diligent::Testing;
 namespace
 {
 
-TEST(GeometryShaderTest, DrawTriangles)
+TEST(TessellationTest, DrawQuad)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().bGeometryShadersSupported)
+    if (!pDevice->GetDeviceCaps().bTessellationSupported)
     {
-        GTEST_SKIP() << "Geometry shaders are not supported by this device";
+        GTEST_SKIP() << "Tessellation is not supported by this device";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -87,27 +87,27 @@ TEST(GeometryShaderTest, DrawTriangles)
         {
 #if D3D11_SUPPORTED
             case DeviceType::D3D11:
-                GeometryShaderReferenceD3D11(pSwapChain);
+                TessellationReferenceD3D11(pSwapChain);
                 break;
 #endif
 
 #if D3D12_SUPPORTED
             case DeviceType::D3D12:
-                GeometryShaderReferenceD3D12(pSwapChain);
+                TessellationReferenceD3D12(pSwapChain);
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
             case DeviceType::OpenGL:
             case DeviceType::OpenGLES:
-                GeometryShaderReferenceGL(pSwapChain);
+                TessellationReferenceGL(pSwapChain);
                 break;
 
 #endif
 
 #if VULKAN_SUPPORTED
             case DeviceType::Vulkan:
-                GeometryShaderReferenceVk(pSwapChain);
+                TessellationReferenceVk(pSwapChain);
                 break;
 
 #endif
@@ -129,53 +129,76 @@ TEST(GeometryShaderTest, DrawTriangles)
     pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     PipelineStateDesc PSODesc;
-    PSODesc.Name = "Geometry shader test";
+    PSODesc.Name = "Tessellation test";
 
-    PSODesc.IsComputePipeline                             = false;
-    PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-    PSODesc.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
-    PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_POINT_LIST;
-    PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    PSODesc.IsComputePipeline                        = false;
+    PSODesc.GraphicsPipeline.NumRenderTargets        = 1;
+    PSODesc.GraphicsPipeline.RTVFormats[0]           = pSwapChain->GetDesc().ColorBufferFormat;
+    PSODesc.GraphicsPipeline.PrimitiveTopology       = PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;
+    PSODesc.GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_BACK;
+    PSODesc.GraphicsPipeline.RasterizerDesc.FillMode =
+        pDevice->GetDeviceCaps().bWireframeFillSupported ?
+        FILL_MODE_WIREFRAME :
+        FILL_MODE_SOLID;
+    PSODesc.GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
+
     PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.UseCombinedTextureSamplers = true;
 
+    const bool ConvertToGLSL = pDevice->GetDeviceCaps().IsVulkanDevice();
+
     RefCntAutoPtr<IShader> pVS;
     {
         ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
         ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "Geometry shader test - VS";
-        ShaderCI.Source          = HLSL::GSTest_VS.c_str();
-        pDevice->CreateShader(ShaderCI, &pVS);
+        ShaderCI.Desc.Name       = "Tessellation test - VS";
+        ShaderCI.Source          = HLSL::TessTest_VS.c_str();
+
+        pVS = pEnv->CreateShader(ShaderCI, ConvertToGLSL);
         ASSERT_NE(pVS, nullptr);
     }
 
-    RefCntAutoPtr<IShader> pGS;
+    RefCntAutoPtr<IShader> pHS;
     {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_GEOMETRY;
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_HULL;
         ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "Geometry shader test - GS";
-        ShaderCI.Source          = HLSL::GSTest_GS.c_str();
-        pDevice->CreateShader(ShaderCI, &pGS);
-        ASSERT_NE(pGS, nullptr);
+        ShaderCI.Desc.Name       = "Tessellation test - HS";
+        ShaderCI.Source          = HLSL::TessTest_HS.c_str();
+
+        pHS = pEnv->CreateShader(ShaderCI, ConvertToGLSL);
+        ASSERT_NE(pHS, nullptr);
+    }
+
+    RefCntAutoPtr<IShader> pDS;
+    {
+        ShaderCI.Desc.ShaderType = SHADER_TYPE_DOMAIN;
+        ShaderCI.EntryPoint      = "main";
+        ShaderCI.Desc.Name       = "Tessellation test - DS";
+        ShaderCI.Source          = HLSL::TessTest_DS.c_str();
+
+        pDS = pEnv->CreateShader(ShaderCI, ConvertToGLSL);
+        ASSERT_NE(pDS, nullptr);
     }
 
     RefCntAutoPtr<IShader> pPS;
     {
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "Geometry shader test - PS";
-        ShaderCI.Source          = HLSL::GSTest_PS.c_str();
-        pDevice->CreateShader(ShaderCI, &pPS);
+        ShaderCI.Desc.Name       = "Tessellation test - PS";
+        ShaderCI.Source          = HLSL::TessTest_PS.c_str();
+
+        pPS = pEnv->CreateShader(ShaderCI, ConvertToGLSL);
         ASSERT_NE(pPS, nullptr);
     }
 
-    PSODesc.Name = "Geometry shader test";
+    PSODesc.Name = "Tessellation test";
 
     PSODesc.GraphicsPipeline.pVS = pVS;
-    PSODesc.GraphicsPipeline.pGS = pGS;
+    PSODesc.GraphicsPipeline.pHS = pHS;
+    PSODesc.GraphicsPipeline.pDS = pDS;
     PSODesc.GraphicsPipeline.pPS = pPS;
     RefCntAutoPtr<IPipelineState> pPSO;
     pDevice->CreatePipelineState(PSODesc, &pPSO);

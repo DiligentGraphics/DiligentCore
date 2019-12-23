@@ -99,7 +99,7 @@ public:
     CComPtr<ID3D11HullShader> CreateHullShader(const std::string&      Source,
                                                LPCSTR                  strFunctionName = "main",
                                                const D3D_SHADER_MACRO* pDefines        = nullptr,
-                                               LPCSTR                  profile         = "gs_5_0");
+                                               LPCSTR                  profile         = "hs_5_0");
 
     CComPtr<ID3D11ComputeShader> CreateComputeShader(const std::string&      Source,
                                                      LPCSTR                  strFunctionName = "main",

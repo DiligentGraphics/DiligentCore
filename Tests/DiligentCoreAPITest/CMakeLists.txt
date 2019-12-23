@@ -89,8 +89,6 @@ if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
-    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-HLSL2GLSLConverterLib)
-
     if(PLATFORM_WIN32)
         target_link_libraries(DiligentCoreAPITest PRIVATE glew-static opengl32.lib)
     elseif(PLATFORM_LINUX)
@@ -101,7 +99,13 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     else()
         message(FATAL_ERROR "Unsupported platform")
     endif()
+endif()
 
+if(TARGET Diligent-HLSL2GLSLConverterLib)
+    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-HLSL2GLSLConverterLib)
+    target_compile_definitions(DiligentCoreAPITest PRIVATE HLSL2GLSL_CONVERTER_SUPPORTED)
+    get_target_property(HLSL2GLSLConverterLib_SourceDir Diligent-HLSL2GLSLConverterLib SOURCE_DIR)
+    target_include_directories(DiligentCoreAPITest PRIVATE "${HLSL2GLSLConverterLib_SourceDir}/include")
 endif()
 
 if(VULKAN_SUPPORTED)
