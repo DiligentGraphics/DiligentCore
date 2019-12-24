@@ -576,9 +576,15 @@ Before any draw command can be invoked, all required vertex and index buffers as
 be bound to the device context:
 
 ```cpp
-// Clear render target
+// Set render targets before issuing any draw command.
+auto* pRTV = m_pSwapChain->GetCurrentBackBufferRTV();
+auto* pDSV = m_pSwapChain->GetDepthBufferDSV();
+m_pContext->SetRenderTargets(1, &pRTV, pDSV, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+// Clear render target and depth-stencil
 const float zero[4] = {0, 0, 0, 0};
-m_pContext->ClearRenderTarget(nullptr, zero, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+m_pContext->ClearRenderTarget(pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+m_pContext->ClearDepthStencil(pDSV, CLEAR_DEPTH_FLAG, 1.f, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
 // Set vertex and index buffers
 IBuffer* buffer[] = {m_pVertexBuffer};
