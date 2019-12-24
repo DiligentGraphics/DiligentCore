@@ -1236,10 +1236,8 @@ namespace Diligent
         /// Default stencil value, which is used as optimized stencil clear value in D3D12
         Uint8 DefaultStencilValue           = 0;
 
-        /// Indicates if this is a primary swap chain. The back buffer and depth-stencil
-        /// buffer of the primary swap are set by SetRenderTargets(0, nullptr, nullptr)
-        /// call. Also, when Present() is called for the primary swap chain, the engine 
-        /// releases stale resources. There must only be one primary swap chain.
+        /// Indicates if this is a primary swap chain. When Present() is called
+        /// for the primary swap chain, the engine releases stale resources.
         bool  IsPrimary                     = true;
 
         SwapChainDesc()noexcept{}

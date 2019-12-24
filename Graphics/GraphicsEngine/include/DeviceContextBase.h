@@ -30,12 +30,10 @@
 
 #include "DeviceContext.h"
 #include "DeviceObjectBase.h"
-#include "Defines.h"
 #include "ResourceMapping.h"
 #include "Sampler.h"
 #include "ObjectBase.h"
 #include "DebugUtilities.h"
-#include "SwapChain.h"
 #include "ValidatedCast.h"
 #include "GraphicsAccessories.h"
 #include "TextureBase.h"
@@ -165,18 +163,9 @@ public:
 
     virtual void GenerateMips(ITextureView* pTexView) override = 0;
 
-    /// Sets the strong pointer to the swap chain
-    virtual void SetSwapChain(ISwapChain* pSwapChain) override final { m_pSwapChain = pSwapChain; }
-
     virtual void ResolveTextureSubresource(ITexture*                               pSrcTexture,
                                            ITexture*                               pDstTexture,
                                            const ResolveTextureSubresourceAttribs& ResolveAttribs) override = 0;
-
-    /// Returns the swap chain
-    ISwapChain* GetSwapChain() { return m_pSwapChain; }
-
-    /// Returns true if currently bound frame buffer is the default frame buffer
-    inline bool IsDefaultFBBound() { return m_IsDefaultFramebufferBound; }
 
     /// Returns currently bound pipeline state and blend factors
     inline void GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef);
@@ -194,6 +183,10 @@ public:
 
     bool IsDeferred() const { return m_bIsDeferred; }
 
+    /// Checks if a texture is bound as a render target or depth-stencil buffer and
+    /// resets render targets if it is.
+    bool UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage);
+
 protected:
     inline bool SetBlendFactors(const float* BlendFactors, int Dummy);
 
@@ -209,10 +202,6 @@ protected:
 
     /// Checks if the texture is currently bound as depth-stencil buffer.
     bool CheckIfBoundAsDepthStencil(TextureImplType* pTexture);
-
-    /// Checks if the texture is bound as a render target or depth-stencil buffer and
-    /// resets render targets if it is.
-    bool UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage);
 
 
 #ifdef DEVELOPMENT
@@ -247,10 +236,6 @@ protected:
 
     /// Strong reference to the device.
     RefCntAutoPtr<DeviceImplType> m_pDevice;
-
-    /// Strong reference to the swap chain. Swap chain holds
-    /// weak reference to the immediate context.
-    RefCntAutoPtr<ISwapChain> m_pSwapChain;
 
     /// Vertex streams. Every stream holds strong reference to the buffer
     VertexStreamInfo<BufferImplType> m_VertexStreams[MaxBufferSlots];
@@ -298,9 +283,6 @@ protected:
     Uint32 m_FramebufferHeight = 0;
     /// Number of array slices in the currently bound framebuffer
     Uint32 m_FramebufferSlices = 0;
-    /// Flag indicating if default render target & depth-stencil
-    /// buffer are currently bound
-    bool m_IsDefaultFramebufferBound = false;
 
     /// Strong references to the bound depth stencil view.
     /// Use final texture view implementation type to avoid virtual calls to AddRef()/Release()
@@ -411,7 +393,6 @@ template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::InvalidateState()
 {
     DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCache();
-    m_IsDefaultFramebufferBound = false;
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
@@ -541,32 +522,16 @@ template <typename BaseInterface, typename ImplementationTraits>
 inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil)
 {
+    if (NumRenderTargets == 0 && pDepthStencil == nullptr)
+    {
+        ResetRenderTargets();
+        return false;
+    }
+
     bool bBindRenderTargets = false;
     m_FramebufferWidth      = 0;
     m_FramebufferHeight     = 0;
     m_FramebufferSlices     = 0;
-
-    ITextureView* pDefaultRTV         = nullptr;
-    bool          IsDefaultFrambuffer = NumRenderTargets == 0 && pDepthStencil == nullptr;
-    bBindRenderTargets                = (m_IsDefaultFramebufferBound != IsDefaultFrambuffer);
-    m_IsDefaultFramebufferBound       = IsDefaultFrambuffer;
-    if (m_IsDefaultFramebufferBound)
-    {
-        VERIFY(m_pSwapChain, "Swap chain is not initialized in the device context");
-
-        pDefaultRTV   = m_pSwapChain->GetCurrentBackBufferRTV();
-        pDepthStencil = m_pSwapChain->GetDepthBufferDSV();
-        if (pDefaultRTV != nullptr)
-        {
-            NumRenderTargets = 1;
-            ppRenderTargets  = &pDefaultRTV;
-        }
-
-        const auto& SwapChainDesc = m_pSwapChain->GetDesc();
-        m_FramebufferWidth        = SwapChainDesc.Width;
-        m_FramebufferHeight       = SwapChainDesc.Height;
-        m_FramebufferSlices       = 1;
-    }
 
     if (NumRenderTargets != m_NumBoundRenderTargets)
     {
@@ -764,29 +729,42 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::UnbindTextureFromFr
     if (pTexture == nullptr)
         return false;
 
-    if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_RENDER_TARGET) && !pTexture->CheckState(RESOURCE_STATE_DEPTH_WRITE))
-        return false;
+    const auto& TexDesc = pTexture->GetDesc();
 
     bool bResetRenderTargets = false;
-    if (CheckIfBoundAsRenderTarget(pTexture))
+    if (TexDesc.BindFlags & BIND_RENDER_TARGET)
     {
-        if (bShowMessage)
+        if (CheckIfBoundAsRenderTarget(pTexture))
         {
-            LOG_INFO_MESSAGE("Texture '", pTexture->GetDesc().Name,
-                             "' is currently bound as render target and will be unset along with all "
-                             "other render targets and depth-stencil buffer. "
-                             "Call SetRenderTargets() to reset the render targets.");
+            if (bShowMessage)
+            {
+                LOG_INFO_MESSAGE("Texture '", TexDesc.Name,
+                                 "' is currently bound as render target and will be unset along with all "
+                                 "other render targets and depth-stencil buffer. "
+                                 "Call SetRenderTargets() to reset the render targets.\n"
+                                 "To silence this message, explicitly unbind the texture with "
+                                 "SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE)");
+            }
+
+            bResetRenderTargets = true;
         }
-
-        bResetRenderTargets = true;
     }
-    else if (CheckIfBoundAsDepthStencil(pTexture))
-    {
-        LOG_INFO_MESSAGE("Texture '", pTexture->GetDesc().Name,
-                         "' is currently bound as depth buffer and will be unset along with "
-                         "all render targets. Call SetRenderTargets() to reset the render targets.");
 
-        bResetRenderTargets = true;
+    if (TexDesc.BindFlags & BIND_DEPTH_STENCIL)
+    {
+        if (CheckIfBoundAsDepthStencil(pTexture))
+        {
+            if (bShowMessage)
+            {
+                LOG_INFO_MESSAGE("Texture '", TexDesc.Name,
+                                 "' is currently bound as depth buffer and will be unset along with "
+                                 "all render targets. Call SetRenderTargets() to reset the render targets.\n"
+                                 "To silence this message, explicitly unbind the texture with "
+                                 "SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE)");
+            }
+
+            bResetRenderTargets = true;
+        }
     }
 
     if (bResetRenderTargets)
@@ -808,11 +786,10 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets(
         VERIFY(m_pBoundRenderTargets[rt] == nullptr, "Non-null render target found");
     }
 #endif
-    m_NumBoundRenderTargets     = 0;
-    m_FramebufferWidth          = 0;
-    m_FramebufferHeight         = 0;
-    m_FramebufferSlices         = 0;
-    m_IsDefaultFramebufferBound = false;
+    m_NumBoundRenderTargets = 0;
+    m_FramebufferWidth      = 0;
+    m_FramebufferHeight     = 0;
+    m_FramebufferSlices     = 0;
 
     m_pBoundDepthStencil.Release();
 }
@@ -1188,41 +1165,22 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 
     TEXTURE_FORMAT BoundRTVFormats[8] = {TEX_FORMAT_UNKNOWN};
     TEXTURE_FORMAT BoundDSVFormat     = TEX_FORMAT_UNKNOWN;
-    Uint32         NumBoundRTVs       = 0;
-    if (m_IsDefaultFramebufferBound)
-    {
-        if (m_pSwapChain)
-        {
-            BoundRTVFormats[0] = m_pSwapChain->GetDesc().ColorBufferFormat;
-            BoundDSVFormat     = m_pSwapChain->GetDesc().DepthBufferFormat;
-            NumBoundRTVs       = 1;
-        }
-        else
-        {
-            LOG_WARNING_MESSAGE("Failed to get bound render targets and depth-stencil buffer: "
-                                "swap chain is not initialized in the device context");
-            return;
-        }
-    }
-    else
-    {
-        NumBoundRTVs = m_NumBoundRenderTargets;
-        for (Uint32 rt = 0; rt < NumBoundRTVs; ++rt)
-        {
-            if (auto* pRT = m_pBoundRenderTargets[rt].RawPtr())
-                BoundRTVFormats[rt] = pRT->GetDesc().Format;
-            else
-                BoundRTVFormats[rt] = TEX_FORMAT_UNKNOWN;
-        }
 
-        BoundDSVFormat = m_pBoundDepthStencil ? m_pBoundDepthStencil->GetDesc().Format : TEX_FORMAT_UNKNOWN;
+    for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+    {
+        if (auto* pRT = m_pBoundRenderTargets[rt].RawPtr())
+            BoundRTVFormats[rt] = pRT->GetDesc().Format;
+        else
+            BoundRTVFormats[rt] = TEX_FORMAT_UNKNOWN;
     }
+
+    BoundDSVFormat = m_pBoundDepthStencil ? m_pBoundDepthStencil->GetDesc().Format : TEX_FORMAT_UNKNOWN;
 
     const auto& PSODesc          = m_pPipelineState->GetDesc();
     const auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
-    if (GraphicsPipeline.NumRenderTargets != NumBoundRTVs)
+    if (GraphicsPipeline.NumRenderTargets != m_NumBoundRenderTargets)
     {
-        LOG_WARNING_MESSAGE("Number of currently bound render targets (", NumBoundRTVs,
+        LOG_WARNING_MESSAGE("Number of currently bound render targets (", m_NumBoundRenderTargets,
                             ") does not match the number of outputs specified by the PSO '", PSODesc.Name,
                             "' (", Uint32{GraphicsPipeline.NumRenderTargets}, ").");
     }
@@ -1234,7 +1192,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
                             "' (", GetTextureFormatAttribs(GraphicsPipeline.DSVFormat).Name, ").");
     }
 
-    for (Uint32 rt = 0; rt < NumBoundRTVs; ++rt)
+    for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
         auto BoundFmt = BoundRTVFormats[rt];
         auto PSOFmt   = GraphicsPipeline.RTVFormats[rt];

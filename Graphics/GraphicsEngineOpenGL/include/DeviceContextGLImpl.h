@@ -36,6 +36,7 @@ namespace Diligent
 {
 
 class RenderDeviceGLImpl;
+class ISwapChainGL;
 
 struct DeviceContextGLImplTraits
 {
@@ -212,6 +213,11 @@ public:
 
     void CommitRenderTargets();
 
+    void SetSwapChain(ISwapChainGL* pSwapChain);
+
+    virtual void ResetRenderTargets() override final;
+
+
 protected:
     friend class BufferGLImpl;
     friend class TextureBaseGL;
@@ -229,6 +235,10 @@ private:
 
     std::vector<class TextureBaseGL*> m_BoundWritableTextures;
     std::vector<class BufferGLImpl*>  m_BoundWritableBuffers;
+
+    RefCntAutoPtr<ISwapChainGL> m_pSwapChain;
+
+    bool m_IsDefaultFBOBound = false;
 
     GLObjectWrappers::GLFrameBufferObj m_DefaultFBO;
 };

@@ -773,7 +773,7 @@ public:
     virtual void SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight) = 0;
 
 
-    /// Binds one or more render targets and the depth-stencil buffer to the pipeline. It also
+    /// Binds one or more render targets and the depth-stencil buffer to the context. It also
     /// sets the viewport to match the first non-null render target or depth-stencil buffer.
 
     /// \param [in] NumRenderTargets    - Number of render targets to bind.
@@ -789,10 +789,6 @@ public:
     ///              and depth-stencil views. Thus these views (and consequently referenced textures) 
     ///              cannot be released until they are unbound from the context.\n
     ///              Any render targets not defined by this call are set to nullptr.\n\n
-    ///              You can set the default render target and depth stencil using the
-    ///              following call:
-    ///
-    ///     pContext->SetRenderTargets(0, nullptr, nullptr);
     ///
     /// \remarks When StateTransitionMode is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION, the method will 
     ///          transition all render targets in known states to Diligent::RESOURCE_STATE_REDER_TARGET,
@@ -1129,25 +1125,7 @@ public:
     ///          The texture must be created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag.
     virtual void GenerateMips(ITextureView* pTextureView) = 0;
 
-
-    /// Sets the swap chain in the device context.
-
-    /// The swap chain is used by the device context to work with the
-    /// default framebuffer. Specifically, if the swap chain is set in the context,
-    /// the following commands can be used:
-    /// * SetRenderTargets(0, nullptr, nullptr) - to bind the default back buffer & depth buffer
-    /// * SetViewports(1, nullptr, 0, 0) - to set the viewport to match the size of the back buffer
-    /// * ClearRenderTarget(nullptr, color) - to clear the default back buffer
-    /// * ClearDepthStencil(nullptr, ...) - to clear the default depth buffer
-    /// The swap chain is automatically initialized for immediate and all deferred contexts
-    /// by factory functions EngineFactoryD3D11Impl::CreateSwapChainD3D11(),
-    /// EngineFactoryD3D12Impl::CreateSwapChainD3D12(), and EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL().
-    /// However, when the engine is initialized by attaching to existing d3d11/d3d12 device or OpenGL/GLES context, the
-    /// swap chain needs to be set manually if the device context will be using any of the commands above.\n
-    /// Device context keeps strong reference to the swap chain.
-    virtual void SetSwapChain(ISwapChain* pSwapChain) = 0;
-
-
+    
     /// Finishes the current frame and releases dynamic resources allocated by the context.
 
     /// For immediate context, this method is called automatically by ISwapChain::Present() of the primary

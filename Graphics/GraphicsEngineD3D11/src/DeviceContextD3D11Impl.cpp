@@ -32,7 +32,6 @@
 #include "D3D11TypeConversions.h"
 #include "TextureViewD3D11Impl.h"
 #include "PipelineStateD3D11Impl.h"
-#include "SwapChainD3D11.h"
 #include "ShaderResourceBindingD3D11Impl.h"
 #include "EngineD3D11Defines.h"
 #include "CommandListD3D11Impl.h"
@@ -914,20 +913,12 @@ void DeviceContextD3D11Impl::ClearDepthStencil(ITextureView*                  pV
 {
     if (pView == nullptr)
     {
-        if (m_pSwapChain)
+        if (m_pBoundDepthStencil == nullptr)
         {
-            pView = m_pSwapChain->GetDepthBufferDSV();
-            if (pView == nullptr)
-            {
-                LOG_WARNING_MESSAGE("Depth buffer is not initialized in the swap chain. Clear operation will be ignored.");
-                return;
-            }
-        }
-        else
-        {
-            LOG_ERROR("Failed to clear default depth stencil buffer: swap chain is not initialized in the device context");
+            LOG_ERROR_MESSAGE("ClearDepthStencil(nullptr, ...) is invalid because no depth-stencil buffer is currently bound.");
             return;
         }
+        pView = m_pBoundDepthStencil;
     }
 
 #ifdef DEVELOPMENT
@@ -949,15 +940,14 @@ void DeviceContextD3D11Impl::ClearRenderTarget(ITextureView* pView, const float*
 {
     if (pView == nullptr)
     {
-        if (m_pSwapChain != nullptr)
+        if (m_NumBoundRenderTargets != 1)
         {
-            pView = m_pSwapChain->GetCurrentBackBufferRTV();
-        }
-        else
-        {
-            LOG_ERROR("Failed to clear default render target: swap chain is not initialized in the device context");
+            LOG_ERROR_MESSAGE("ClearRenderTarget(nullptr, ...) semantic is only allowed when single render target is bound to the context. ",
+                              m_NumBoundRenderTargets, " render ",
+                              (m_NumBoundRenderTargets != 1 ? "targets are" : "target is"), " currently bound");
             return;
         }
+        pView = m_pBoundRenderTargets[0];
     }
 
 #ifdef DEVELOPMENT
@@ -1294,45 +1284,21 @@ void DeviceContextD3D11Impl::CommitRenderTargets()
     ID3D11RenderTargetView* pd3d11RTs[MaxD3D11RTs];
     ID3D11DepthStencilView* pd3d11DSV = nullptr;
 
-    if (m_IsDefaultFramebufferBound)
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {
-        if (m_pSwapChain)
-        {
-            NumRenderTargets           = 1;
-            auto* pSwapChainD3D11      = m_pSwapChain.RawPtr<ISwapChainD3D11>();
-            auto* pBackBufferViewD3D11 = pSwapChainD3D11->GetCurrentBackBufferRTV();
-            pd3d11RTs[0]               = static_cast<ID3D11RenderTargetView*>(pBackBufferViewD3D11->GetD3D11View());
-            VERIFY_EXPR(pd3d11RTs[0] != nullptr);
-            if (auto* pDepthBufferViewD3D11 = pSwapChainD3D11->GetDepthBufferDSV())
-            {
-                pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pDepthBufferViewD3D11->GetD3D11View());
-                VERIFY_EXPR(pd3d11DSV != nullptr);
-            }
-        }
-        else
-        {
-            LOG_ERROR("Failed to commit default render target and depth stencil: swap chain is not initialized in the device context");
-            return;
-        }
+        auto* pViewD3D11 = m_pBoundRenderTargets[rt].RawPtr();
+        pd3d11RTs[rt]    = pViewD3D11 != nullptr ? static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View()) : nullptr;
     }
-    else
-    {
-        for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
-        {
-            auto* pViewD3D11 = m_pBoundRenderTargets[rt].RawPtr();
-            pd3d11RTs[rt]    = pViewD3D11 != nullptr ? static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View()) : nullptr;
-        }
 
-        if (m_pBoundDepthStencil != nullptr)
-        {
-            pd3d11DSV = static_cast<ID3D11DepthStencilView*>(m_pBoundDepthStencil->GetD3D11View());
-        }
+    if (m_pBoundDepthStencil != nullptr)
+    {
+        pd3d11DSV = static_cast<ID3D11DepthStencilView*>(m_pBoundDepthStencil->GetD3D11View());
     }
 
     auto& NumCommittedPixelShaderUAVs = m_NumCommittedUAVs[PSInd];
     if (NumCommittedPixelShaderUAVs > 0)
     {
-        m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(NumRenderTargets, pd3d11RTs, pd3d11DSV,
+        m_pd3d11DeviceContext->OMSetRenderTargetsAndUnorderedAccessViews(NumRenderTargets, NumRenderTargets > 0 ? pd3d11RTs : nullptr, pd3d11DSV,
                                                                          0, D3D11_KEEP_UNORDERED_ACCESS_VIEWS, nullptr, nullptr);
 
         auto CommittedD3D11UAVs   = m_CommittedD3D11UAVs[PSInd];
@@ -1347,7 +1313,7 @@ void DeviceContextD3D11Impl::CommitRenderTargets()
     }
     else
     {
-        m_pd3d11DeviceContext->OMSetRenderTargets(NumRenderTargets, pd3d11RTs, pd3d11DSV);
+        m_pd3d11DeviceContext->OMSetRenderTargets(NumRenderTargets, NumRenderTargets > 0 ? pd3d11RTs : nullptr, pd3d11DSV);
     }
 }
 

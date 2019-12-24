@@ -547,8 +547,6 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     }
 
     pImmediateCtxVk->Flush();
-    // If present fails, default FB will be undbound by RecreateVulkanSwapchain(), so we need to check it now
-    bool IsDefaultFBBound = pImmediateCtxVk->IsDefaultFBBound();
 
     if (!m_IsMinimized)
     {
@@ -605,13 +603,6 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
             res = AcquireNextImage(pImmediateCtxVk);
         }
         DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next swap chain image");
-
-        if (m_SwapChainDesc.IsPrimary && IsDefaultFBBound)
-        {
-            // If default framebuffer is bound, we need to call SetRenderTargets()
-            // to bind new back buffer RTV
-            pImmediateCtxVk->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-        }
     }
 }
 
@@ -631,10 +622,17 @@ void SwapChainVkImpl::WaitForImageAcquiredFences()
 
 void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk)
 {
-    std::vector<ITextureView*> pBackBufferRTVs(m_pBackBufferRTV.size());
-    for (size_t i = 0; i < m_pBackBufferRTV.size(); ++i)
-        pBackBufferRTVs[i] = m_pBackBufferRTV[i];
-    UnbindRenderTargets(pImmediateCtxVk, pBackBufferRTVs.data(), static_cast<Uint32>(m_pBackBufferRTV.size()), m_pDepthBufferDSV);
+    bool RenderTargetsReset = false;
+    for (Uint32 i = 0; i < m_pBackBufferRTV.size() && !RenderTargetsReset; ++i)
+    {
+        auto* pCurrentBackBuffer = ValidatedCast<TextureVkImpl>(m_pBackBufferRTV[i]->GetTexture());
+        RenderTargetsReset       = pImmediateCtxVk->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
+    }
+    if (RenderTargetsReset)
+    {
+        LOG_INFO_MESSAGE_ONCE("Resizing the swap chain requires back and depth-stencil buffers to be unbound from the device context. "
+                              "An application should use SetRenderTargets() to restore them.");
+    }
 
     RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
 
@@ -678,19 +676,11 @@ void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight)
             {
                 auto* pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
                 // RecreateVulkanSwapchain() unbinds default FB
-                bool bIsDefaultFBBound = pImmediateCtxVk->IsDefaultFBBound();
                 RecreateVulkanSwapchain(pImmediateCtxVk);
 
                 auto res = AcquireNextImage(pImmediateCtxVk);
                 DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the just resized swap chain");
                 (void)res;
-
-                if (m_SwapChainDesc.IsPrimary && bIsDefaultFBBound)
-                {
-                    // Set default render target and viewport
-                    pDeviceContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-                    pDeviceContext->SetViewports(1, nullptr, 0, 0);
-                }
             }
             catch (const std::runtime_error&)
             {

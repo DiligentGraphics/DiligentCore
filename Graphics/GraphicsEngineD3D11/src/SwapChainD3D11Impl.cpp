@@ -157,9 +157,14 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
     VERIFY(pDeviceContext, "Immediate context has been released");
     if (pDeviceContext)
     {
-        auto*         pImmediateCtxD3D11  = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
-        ITextureView* pBackBufferRTVs[]   = {m_pRenderTargetView};
-        bool          RebindRenderTargets = UnbindRenderTargets(pImmediateCtxD3D11, pBackBufferRTVs, 1, m_pDepthStencilView);
+        auto* pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
+        auto* pCurrentBackBuffer = ValidatedCast<TextureBaseD3D11>(m_pRenderTargetView->GetTexture());
+        auto  RenderTargetsReset = pImmediateCtxD3D11->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
+        if (RenderTargetsReset)
+        {
+            LOG_INFO_MESSAGE_ONCE("Resizing the swap chain requires back and depth-stencil buffers to be unbound from the device context. "
+                                  "An application should use SetRenderTargets() to restore them.");
+        }
 
         // Swap chain cannot be resized until all references are released
         m_pRenderTargetView.Release();
@@ -197,13 +202,6 @@ void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)
             }
 
             CreateRTVandDSV();
-
-            if (m_SwapChainDesc.IsPrimary && RebindRenderTargets)
-            {
-                // Set default render target and viewport
-                pImmediateCtxD3D11->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-                pImmediateCtxD3D11->SetViewports(1, nullptr, 0, 0);
-            }
         }
         catch (const std::runtime_error&)
         {

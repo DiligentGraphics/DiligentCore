@@ -153,6 +153,8 @@ public:
 
     virtual void Present(Uint32 SyncInterval = 1) override
     {
+        m_pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
+
         CopyTextureAttribs CopyInfo //
             {
                 m_pRenderTarget,

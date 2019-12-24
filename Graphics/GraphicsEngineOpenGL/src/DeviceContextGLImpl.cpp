@@ -194,6 +194,7 @@ void DeviceContextGLImpl::InvalidateState()
     m_ContextState.Invalidate();
     m_BoundWritableTextures.clear();
     m_BoundWritableBuffers.clear();
+    m_IsDefaultFBOBound = false;
 }
 
 void DeviceContextGLImpl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
@@ -307,15 +308,19 @@ void DeviceContextGLImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
     }
 }
 
+void DeviceContextGLImpl::SetSwapChain(ISwapChainGL* pSwapChain)
+{
+    m_pSwapChain = pSwapChain;
+}
+
 void DeviceContextGLImpl::CommitRenderTargets()
 {
-    if (!m_IsDefaultFramebufferBound && m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
+    if (!m_IsDefaultFBOBound && m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
         return;
 
-    if (m_IsDefaultFramebufferBound)
+    if (m_IsDefaultFBOBound)
     {
-        auto*  pSwapChainGL     = m_pSwapChain.RawPtr<ISwapChainGL>();
-        GLuint DefaultFBOHandle = pSwapChainGL->GetDefaultFBO();
+        GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
         if (m_DefaultFBO != DefaultFBOHandle)
         {
             m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj(true, GLObjectWrappers::GLFBOCreateReleaseHelper(DefaultFBOHandle));
@@ -366,25 +371,33 @@ void DeviceContextGLImpl::SetRenderTargets(Uint32                         NumRen
 {
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
-        if (!m_IsDefaultFramebufferBound)
+        if (m_NumBoundRenderTargets == 1 && m_pBoundRenderTargets[0] && m_pBoundRenderTargets[0]->GetTexture<TextureBaseGL>()->GetGLHandle() == 0)
         {
-            if (m_NumBoundRenderTargets == 1 && m_pBoundRenderTargets[0] && m_pBoundRenderTargets[0]->GetTexture<TextureBaseGL>()->GetGLHandle() == 0)
-            {
-                DEV_CHECK_ERR(!m_pBoundDepthStencil || m_pBoundDepthStencil->GetTexture<TextureBaseGL>()->GetGLHandle() == 0,
-                              "Attempting to bind texture '", m_pBoundDepthStencil->GetTexture()->GetDesc().Name,
-                              "' as depth buffer with the default framebuffer's color buffer: color buffer of the default framebuffer "
-                              "can only be bound with the default framebuffer's depth buffer and cannot be combined with any other depth buffer in OpenGL backend.");
-                m_IsDefaultFramebufferBound = true;
-            }
-            else if (m_NumBoundRenderTargets == 0 && m_pBoundDepthStencil && m_pBoundDepthStencil->GetTexture<TextureBaseGL>()->GetGLHandle() == 0)
-            {
-                m_IsDefaultFramebufferBound = true;
-            }
+            DEV_CHECK_ERR(!m_pBoundDepthStencil || m_pBoundDepthStencil->GetTexture<TextureBaseGL>()->GetGLHandle() == 0,
+                          "Attempting to bind texture '", m_pBoundDepthStencil->GetTexture()->GetDesc().Name,
+                          "' as depth buffer with the default framebuffer's color buffer: color buffer of the default framebuffer "
+                          "can only be bound with the default framebuffer's depth buffer and cannot be combined with any other depth buffer in OpenGL backend.");
+            m_IsDefaultFBOBound = true;
+        }
+        else if (m_NumBoundRenderTargets == 0 && m_pBoundDepthStencil && m_pBoundDepthStencil->GetTexture<TextureBaseGL>()->GetGLHandle() == 0)
+        {
+            m_IsDefaultFBOBound = true;
+        }
+        else
+        {
+            m_IsDefaultFBOBound = false;
         }
 
         CommitRenderTargets();
     }
 }
+
+void DeviceContextGLImpl::ResetRenderTargets()
+{
+    TDeviceContextBase::ResetRenderTargets();
+    m_IsDefaultFBOBound = false;
+}
+
 
 void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding)
 {
@@ -925,10 +938,10 @@ void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView
     }
     else
     {
-        if (!m_IsDefaultFramebufferBound)
+        if (!m_pBoundDepthStencil)
         {
-            UNEXPECTED("Default depth stencil buffer being cleared is not bound to the pipeline");
-            LOG_ERROR_MESSAGE("Default depth stencil buffer must be bound to the pipeline to be cleared");
+            LOG_ERROR_MESSAGE("ClearDepthStencil(nullptr, ...) is invalid because no depth-stencil buffer is currently bound.");
+            return;
         }
     }
     Uint32 glClearFlags = 0;
@@ -978,12 +991,13 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     }
     else
     {
-        if (m_IsDefaultFramebufferBound)
+        if (m_NumBoundRenderTargets == 1)
             RTIndex = 0;
         else
         {
-            UNEXPECTED("Default render target must be bound to the pipeline to be cleared");
-            LOG_ERROR_MESSAGE("Default render target must be bound to the pipeline to be cleared");
+            LOG_ERROR_MESSAGE("ClearRenderTarget(nullptr, ...) semantic is only allowed when single render target is bound to the context. ",
+                              m_NumBoundRenderTargets, " render ",
+                              (m_NumBoundRenderTargets != 1 ? "targets are" : "target is"), " currently bound");
         }
     }
 

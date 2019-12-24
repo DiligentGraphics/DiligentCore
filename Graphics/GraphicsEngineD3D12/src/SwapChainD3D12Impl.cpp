@@ -177,11 +177,18 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
         try
         {
             auto* pImmediateCtxD3D12 = pDeviceContext.RawPtr<DeviceContextD3D12Impl>();
+            bool  RenderTargetsReset = false;
+            for (Uint32 i = 0; i < m_pBackBufferRTV.size() && !RenderTargetsReset; ++i)
+            {
+                auto* pCurrentBackBuffer = ValidatedCast<TextureD3D12Impl>(m_pBackBufferRTV[i]->GetTexture());
+                RenderTargetsReset       = pImmediateCtxD3D12->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
+            }
 
-            std::vector<ITextureView*> pBackBufferRTVs(m_pBackBufferRTV.size());
-            for (size_t i = 0; i < m_pBackBufferRTV.size(); ++i)
-                pBackBufferRTVs[i] = m_pBackBufferRTV[i];
-            bool RebindRenderTargets = UnbindRenderTargets(pImmediateCtxD3D12, pBackBufferRTVs.data(), static_cast<Uint32>(m_pBackBufferRTV.size()), m_pDepthBufferDSV);
+            if (RenderTargetsReset)
+            {
+                LOG_INFO_MESSAGE_ONCE("Resizing the swap chain requires back and depth-stencil buffers to be unbound from the device context. "
+                                      "An application should use SetRenderTargets() to restore them.");
+            }
 
             // All references to the swap chain must be released before it can be resized
             m_pBackBufferRTV.clear();
@@ -196,9 +203,11 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
                 m_pSwapChain.Release();
                 m_pRenderDevice.RawPtr<RenderDeviceD3D12Impl>()->LockCmdQueueAndRun(
                     0,
-                    [this](ICommandQueueD3D12* pCmdQueue) {
+                    [this](ICommandQueueD3D12* pCmdQueue) //
+                    {
                         CreateDXGISwapChain(pCmdQueue->GetD3D12CommandQueue());
-                    });
+                    } //
+                );
             }
             else
             {
@@ -212,13 +221,6 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
             }
 
             InitBuffersAndViews();
-
-            if (m_SwapChainDesc.IsPrimary && RebindRenderTargets)
-            {
-                // Set default render target and viewport
-                pDeviceContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-                pDeviceContext->SetViewports(1, nullptr, 0, 0);
-            }
         }
         catch (const std::runtime_error&)
         {

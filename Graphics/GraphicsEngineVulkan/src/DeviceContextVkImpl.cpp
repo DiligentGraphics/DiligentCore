@@ -25,7 +25,6 @@
 #include <sstream>
 #include "RenderDeviceVkImpl.h"
 #include "DeviceContextVkImpl.h"
-#include "SwapChainVk.h"
 #include "PipelineStateVkImpl.h"
 #include "TextureVkImpl.h"
 #include "BufferVkImpl.h"
@@ -625,20 +624,12 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
     }
     else
     {
-        if (m_pSwapChain)
+        if (m_pBoundDepthStencil == nullptr)
         {
-            pVkDSV = ValidatedCast<ITextureViewVk>(m_pSwapChain->GetDepthBufferDSV());
-            if (pVkDSV == nullptr)
-            {
-                LOG_WARNING_MESSAGE("Depth buffer is not initialized in the swap chain. Clear operation will be ignored.");
-                return;
-            }
-        }
-        else
-        {
-            LOG_ERROR("Failed to clear default depth stencil buffer: swap chain is not initialized in the device context");
+            LOG_ERROR_MESSAGE("ClearDepthStencil(nullptr, ...) is invalid because no depth-stencil buffer is currently bound.");
             return;
         }
+        pVkDSV = m_pBoundDepthStencil;
     }
 
     EnsureVkCmdBuffer();
@@ -745,15 +736,14 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     }
     else
     {
-        if (m_pSwapChain)
+        if (m_NumBoundRenderTargets != 1)
         {
-            pVkRTV = ValidatedCast<ITextureViewVk>(m_pSwapChain->GetCurrentBackBufferRTV());
-        }
-        else
-        {
-            LOG_ERROR("Failed to clear default render target: swap chain is not initialized in the device context");
+            LOG_ERROR_MESSAGE("ClearRenderTarget(nullptr, ...) semantic is only allowed when single render target is bound to the context. ",
+                              m_NumBoundRenderTargets, " render ",
+                              (m_NumBoundRenderTargets != 1 ? "targets are" : "target is"), " currently bound");
             return;
         }
+        pVkRTV = m_pBoundRenderTargets[0];
     }
 
     static constexpr float Zero[4] = {0.f, 0.f, 0.f, 0.f};

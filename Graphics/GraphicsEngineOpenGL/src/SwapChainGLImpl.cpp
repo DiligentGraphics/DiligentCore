@@ -132,15 +132,14 @@ void SwapChainGLImpl::Resize(Uint32 NewWidth, Uint32 NewHeight)
         VERIFY(pDeviceContext, "Immediate context has been released");
         if (pDeviceContext)
         {
-            auto* pImmediateCtxGL   = pDeviceContext.RawPtr<DeviceContextGLImpl>();
-            bool  bIsDefaultFBBound = pImmediateCtxGL->IsDefaultFBBound();
-
-            // To update the viewport is the only thing we need to do in OpenGL
-            if (bIsDefaultFBBound)
+            auto* pImmediateCtxGL = pDeviceContext.RawPtr<DeviceContextGLImpl>();
+            // Unbind the back buffer to be consistent with other backends
+            auto* pCurrentBackBuffer = ValidatedCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
+            auto  RenderTargetsReset = pImmediateCtxGL->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
+            if (RenderTargetsReset)
             {
-                // Update framebuffer size and viewport
-                pImmediateCtxGL->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-                pImmediateCtxGL->SetViewports(1, nullptr, 0, 0);
+                LOG_INFO_MESSAGE_ONCE("Resizing the swap chain requires back and depth-stencil buffers to be unbound from the device context. "
+                                      "An application should use SetRenderTargets() to restore them.");
             }
         }
     }

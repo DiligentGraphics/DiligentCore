@@ -25,7 +25,6 @@
 #include <sstream>
 #include "RenderDeviceD3D12Impl.h"
 #include "DeviceContextD3D12Impl.h"
-#include "SwapChainD3D12.h"
 #include "PipelineStateD3D12Impl.h"
 #include "CommandContext.h"
 #include "TextureD3D12Impl.h"
@@ -618,20 +617,12 @@ void DeviceContextD3D12Impl::ClearDepthStencil(ITextureView*                  pV
     }
     else
     {
-        if (m_pSwapChain)
+        if (m_pBoundDepthStencil == nullptr)
         {
-            pViewD3D12 = ValidatedCast<ITextureViewD3D12>(m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetDepthBufferDSV());
-            if (pViewD3D12 == nullptr)
-            {
-                LOG_WARNING_MESSAGE("Depth buffer is not initialized in the swap chain. Clear operation will be ignored.");
-                return;
-            }
-        }
-        else
-        {
-            LOG_ERROR("Failed to clear default depth stencil buffer: swap chain is not initialized in the device context");
+            LOG_ERROR_MESSAGE("ClearDepthStencil(nullptr, ...) is invalid because no depth-stencil buffer is currently bound.");
             return;
         }
+        pViewD3D12 = m_pBoundDepthStencil;
     }
 
     auto* pTextureD3D12 = ValidatedCast<TextureD3D12Impl>(pViewD3D12->GetTexture());
@@ -661,15 +652,14 @@ void DeviceContextD3D12Impl::ClearRenderTarget(ITextureView* pView, const float*
     }
     else
     {
-        if (m_pSwapChain)
+        if (m_NumBoundRenderTargets != 1)
         {
-            pViewD3D12 = ValidatedCast<ITextureViewD3D12>(m_pSwapChain.RawPtr<ISwapChainD3D12>()->GetCurrentBackBufferRTV());
-        }
-        else
-        {
-            LOG_ERROR("Failed to clear default render target: swap chain is not initialized in the device context");
+            LOG_ERROR_MESSAGE("ClearRenderTarget(nullptr, ...) semantic is only allowed when single render target is bound to the context. ",
+                              m_NumBoundRenderTargets, " render ",
+                              (m_NumBoundRenderTargets != 1 ? "targets are" : "target is"), " currently bound");
             return;
         }
+        pViewD3D12 = m_pBoundRenderTargets[0];
     }
 
     static constexpr float Zero[4] = {0.f, 0.f, 0.f, 0.f};
@@ -930,27 +920,10 @@ void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE 
 
     ITextureViewD3D12* ppRTVs[MaxD3D12RTs]; // Do not initialize with zeroes!
     ITextureViewD3D12* pDSV = nullptr;
-    if (m_IsDefaultFramebufferBound)
-    {
-        if (m_pSwapChain)
-        {
-            NumRenderTargets      = 1;
-            auto* pSwapChainD3D12 = m_pSwapChain.RawPtr<ISwapChainD3D12>();
-            ppRTVs[0]             = ValidatedCast<ITextureViewD3D12>(pSwapChainD3D12->GetCurrentBackBufferRTV());
-            pDSV                  = ValidatedCast<ITextureViewD3D12>(pSwapChainD3D12->GetDepthBufferDSV());
-        }
-        else
-        {
-            LOG_WARNING_MESSAGE("Failed to bind default render targets and depth-stencil buffer: swap chain is not initialized in the device context");
-            return;
-        }
-    }
-    else
-    {
-        for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
-            ppRTVs[rt] = m_pBoundRenderTargets[rt].RawPtr();
-        pDSV = m_pBoundDepthStencil.RawPtr();
-    }
+
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
+        ppRTVs[rt] = m_pBoundRenderTargets[rt].RawPtr();
+    pDSV = m_pBoundDepthStencil.RawPtr();
 
     auto& CmdCtx = GetCmdContext();
 
