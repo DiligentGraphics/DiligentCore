@@ -31,6 +31,8 @@
 namespace Diligent
 {
 
+class ISwapChainGL;
+
 // {3464FDF1-C548-4935-96C3-B454C9DF6F6A}
 static constexpr INTERFACE_ID IID_DeviceContextGL =
     {0x3464fdf1, 0xc548, 0x4935, {0x96, 0xc3, 0xb4, 0x54, 0xc9, 0xdf, 0x6f, 0x6a}};
@@ -47,6 +49,10 @@ public:
     ///
     /// \return false if there is no active GL context, and true otherwise
     virtual bool UpdateCurrentGLContext() = 0;
+
+    /// Sets the swap in the device context. The swap chain is used by the device context
+    /// to obtain the default FBO handle.
+    virtual void SetSwapChain(ISwapChainGL* pSwapChain) = 0;
 };
 
 } // namespace Diligent

@@ -213,7 +213,7 @@ public:
 
     void CommitRenderTargets();
 
-    void SetSwapChain(ISwapChainGL* pSwapChain);
+    virtual void SetSwapChain(ISwapChainGL* pSwapChain) override final;
 
     virtual void ResetRenderTargets() override final;
 
