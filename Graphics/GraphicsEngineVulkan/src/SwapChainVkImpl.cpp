@@ -513,10 +513,15 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
         if (!m_SwapChainImagesInitialized[m_BackBufferIndex])
         {
             // Vulkan validation layers do not like uninitialized memory.
-            // Clear back buffer first time we acquire it. This will use vkCmdClearColorImage()
+            // Clear back buffer first time we acquire it.
+
+            ITextureView* pRTV = GetCurrentBackBufferRTV();
+            ITextureView* pDSV = GetDepthBufferDSV();
+            pDeviceCtxVk->SetRenderTargets(1, &pRTV, pDSV, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
             pDeviceCtxVk->ClearRenderTarget(GetCurrentBackBufferRTV(), nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
             m_SwapChainImagesInitialized[m_BackBufferIndex] = true;
         }
+        pDeviceCtxVk->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
     }
 
     return res;

@@ -609,28 +609,12 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
                                             Uint8                          Stencil,
                                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    ITextureViewVk* pVkDSV = nullptr;
-    if (pView != nullptr)
-    {
-        pVkDSV = ValidatedCast<ITextureViewVk>(pView);
-#ifdef DEVELOPMENT
-        const auto& ViewDesc = pVkDSV->GetDesc();
-        if (ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
-        {
-            LOG_ERROR("The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of texture view '", pView->GetDesc().Name, "' is incorrect for ClearDepthStencil operation. Depth-stencil view (TEXTURE_VIEW_DEPTH_STENCIL) must be provided.");
-            return;
-        }
-#endif
-    }
-    else
-    {
-        if (m_pBoundDepthStencil == nullptr)
-        {
-            LOG_ERROR_MESSAGE("ClearDepthStencil(nullptr, ...) is invalid because no depth-stencil buffer is currently bound.");
-            return;
-        }
-        pVkDSV = m_pBoundDepthStencil;
-    }
+    if (!TDeviceContextBase::ClearDepthStencil(pView))
+        return;
+
+    VERIFY_EXPR(pView != nullptr);
+
+    auto* pVkDSV = ValidatedCast<ITextureViewVk>(pView);
 
     EnsureVkCmdBuffer();
 
@@ -721,30 +705,12 @@ VkClearColorValue ClearValueToVkClearValue(const float* RGBA, TEXTURE_FORMAT Tex
 
 void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    ITextureViewVk* pVkRTV = nullptr;
-    if (pView != nullptr)
-    {
-#ifdef DEVELOPMENT
-        const auto& ViewDesc = pView->GetDesc();
-        if (ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
-        {
-            LOG_ERROR("The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of texture view '", pView->GetDesc().Name, "' is incorrect for ClearRenderTarget operation. Render target view (TEXTURE_VIEW_RENDER_TARGET) must be provided.");
-            return;
-        }
-#endif
-        pVkRTV = ValidatedCast<ITextureViewVk>(pView);
-    }
-    else
-    {
-        if (m_NumBoundRenderTargets != 1)
-        {
-            LOG_ERROR_MESSAGE("ClearRenderTarget(nullptr, ...) semantic is only allowed when single render target is bound to the context. ",
-                              m_NumBoundRenderTargets, " render ",
-                              (m_NumBoundRenderTargets != 1 ? "targets are" : "target is"), " currently bound");
-            return;
-        }
-        pVkRTV = m_pBoundRenderTargets[0];
-    }
+    if (!TDeviceContextBase::ClearRenderTarget(pView))
+        return;
+
+    VERIFY_EXPR(pView != nullptr);
+
+    auto* pVkRTV = ValidatedCast<ITextureViewVk>(pView);
 
     static constexpr float Zero[4] = {0.f, 0.f, 0.f, 0.f};
     if (RGBA == nullptr)

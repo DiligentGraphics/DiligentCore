@@ -606,25 +606,12 @@ void DeviceContextD3D12Impl::ClearDepthStencil(ITextureView*                  pV
                                                Uint8                          Stencil,
                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    ITextureViewD3D12* pViewD3D12 = nullptr;
-    if (pView != nullptr)
-    {
-        pViewD3D12 = ValidatedCast<ITextureViewD3D12>(pView);
-#ifdef _DEBUG
-        const auto& ViewDesc = pViewD3D12->GetDesc();
-        VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected");
-#endif
-    }
-    else
-    {
-        if (m_pBoundDepthStencil == nullptr)
-        {
-            LOG_ERROR_MESSAGE("ClearDepthStencil(nullptr, ...) is invalid because no depth-stencil buffer is currently bound.");
-            return;
-        }
-        pViewD3D12 = m_pBoundDepthStencil;
-    }
+    if (!TDeviceContextBase::ClearDepthStencil(pView))
+        return;
 
+    VERIFY_EXPR(pView != nullptr);
+
+    auto* pViewD3D12    = ValidatedCast<ITextureViewD3D12>(pView);
     auto* pTextureD3D12 = ValidatedCast<TextureD3D12Impl>(pViewD3D12->GetTexture());
     auto& CmdCtx        = GetCmdContext();
     TransitionOrVerifyTextureState(CmdCtx, *pTextureD3D12, StateTransitionMode, RESOURCE_STATE_DEPTH_WRITE, "Clearing depth-stencil buffer (DeviceContextD3D12Impl::ClearDepthStencil)");
@@ -641,26 +628,12 @@ void DeviceContextD3D12Impl::ClearDepthStencil(ITextureView*                  pV
 
 void DeviceContextD3D12Impl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    ITextureViewD3D12* pViewD3D12 = nullptr;
-    if (pView != nullptr)
-    {
-#ifdef _DEBUG
-        const auto& ViewDesc = pView->GetDesc();
-        VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected");
-#endif
-        pViewD3D12 = ValidatedCast<ITextureViewD3D12>(pView);
-    }
-    else
-    {
-        if (m_NumBoundRenderTargets != 1)
-        {
-            LOG_ERROR_MESSAGE("ClearRenderTarget(nullptr, ...) semantic is only allowed when single render target is bound to the context. ",
-                              m_NumBoundRenderTargets, " render ",
-                              (m_NumBoundRenderTargets != 1 ? "targets are" : "target is"), " currently bound");
-            return;
-        }
-        pViewD3D12 = m_pBoundRenderTargets[0];
-    }
+    if (!TDeviceContextBase::ClearRenderTarget(pView))
+        return;
+
+    VERIFY_EXPR(pView != nullptr);
+
+    auto pViewD3D12 = ValidatedCast<ITextureViewD3D12>(pView);
 
     static constexpr float Zero[4] = {0.f, 0.f, 0.f, 0.f};
     if (RGBA == nullptr)

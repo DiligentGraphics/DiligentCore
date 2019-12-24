@@ -911,20 +911,11 @@ void DeviceContextD3D11Impl::ClearDepthStencil(ITextureView*                  pV
                                                Uint8                          Stencil,
                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (pView == nullptr)
-    {
-        if (m_pBoundDepthStencil == nullptr)
-        {
-            LOG_ERROR_MESSAGE("ClearDepthStencil(nullptr, ...) is invalid because no depth-stencil buffer is currently bound.");
-            return;
-        }
-        pView = m_pBoundDepthStencil;
-    }
+    if (!TDeviceContextBase::ClearDepthStencil(pView))
+        return;
 
-#ifdef DEVELOPMENT
-    const auto& ViewDesc = pView->GetDesc();
-    VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected");
-#endif
+    VERIFY_EXPR(pView != nullptr);
+
     auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
     auto* pd3d11DSV  = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
 
@@ -938,22 +929,11 @@ void DeviceContextD3D11Impl::ClearDepthStencil(ITextureView*                  pV
 
 void DeviceContextD3D11Impl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    if (pView == nullptr)
-    {
-        if (m_NumBoundRenderTargets != 1)
-        {
-            LOG_ERROR_MESSAGE("ClearRenderTarget(nullptr, ...) semantic is only allowed when single render target is bound to the context. ",
-                              m_NumBoundRenderTargets, " render ",
-                              (m_NumBoundRenderTargets != 1 ? "targets are" : "target is"), " currently bound");
-            return;
-        }
-        pView = m_pBoundRenderTargets[0];
-    }
+    if (!TDeviceContextBase::ClearRenderTarget(pView))
+        return;
 
-#ifdef DEVELOPMENT
-    const auto& ViewDesc = pView->GetDesc();
-    VERIFY(ViewDesc.ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected");
-#endif
+    VERIFY_EXPR(pView != nullptr);
+
     auto* pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pView);
     auto* pd3d11RTV  = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
 

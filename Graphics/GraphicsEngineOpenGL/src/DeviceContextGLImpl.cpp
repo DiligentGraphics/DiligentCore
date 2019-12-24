@@ -924,26 +924,17 @@ void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView
                                             Uint8                          Stencil,
                                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    // Unlike OpenGL, in D3D10+, the full extent of the resource view is always cleared.
-    // Viewport and scissor settings are not applied.
-    if (pView != nullptr)
+    if (!TDeviceContextBase::ClearDepthStencil(pView))
+        return;
+
+    VERIFY_EXPR(pView != nullptr);
+
+    if (pView != m_pBoundDepthStencil)
     {
-        VERIFY(pView->GetDesc().ViewType == TEXTURE_VIEW_DEPTH_STENCIL, "Incorrect view type: depth stencil is expected");
-        CHECK_DYNAMIC_TYPE(TextureViewGLImpl, pView);
-        if (pView != m_pBoundDepthStencil)
-        {
-            UNEXPECTED("Depth stencil buffer being cleared is not bound to the pipeline");
-            LOG_ERROR_MESSAGE("Depth stencil buffer must be bound to the pipeline to be cleared");
-        }
+        LOG_ERROR_MESSAGE("Depth stencil buffer must be bound to the context to be cleared in OpenGL backend");
+        return;
     }
-    else
-    {
-        if (!m_pBoundDepthStencil)
-        {
-            LOG_ERROR_MESSAGE("ClearDepthStencil(nullptr, ...) is invalid because no depth-stencil buffer is currently bound.");
-            return;
-        }
-    }
+
     Uint32 glClearFlags = 0;
     if (ClearFlags & CLEAR_DEPTH_FLAG) glClearFlags |= GL_DEPTH_BUFFER_BIT;
     if (ClearFlags & CLEAR_STENCIL_FLAG) glClearFlags |= GL_STENCIL_BUFFER_BIT;
@@ -952,6 +943,10 @@ void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView
     // If depth writes are disabled, glClear() will not clear depth buffer!
     bool DepthWritesEnabled = m_ContextState.GetDepthWritesEnabled();
     m_ContextState.EnableDepthWrites(True);
+
+    // Unlike OpenGL, in D3D10+, the full extent of the resource view is always cleared.
+    // Viewport and scissor settings are not applied.
+
     bool ScissorTestEnabled = m_ContextState.GetScissorTestEnabled();
     m_ContextState.EnableScissorTest(False);
     // The pixel ownership test, the scissor test, dithering, and the buffer writemasks affect
@@ -966,39 +961,27 @@ void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView
 
 void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
-    // Unlike OpenGL, in D3D10+, the full extent of the resource view is always cleared.
-    // Viewport and scissor settings are not applied.
+    if (!TDeviceContextBase::ClearRenderTarget(pView))
+        return;
+
+    VERIFY_EXPR(pView != nullptr);
 
     Int32 RTIndex = -1;
-    if (pView != nullptr)
+    VERIFY(pView->GetDesc().ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected");
+    CHECK_DYNAMIC_TYPE(TextureViewGLImpl, pView);
+    for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
-        VERIFY(pView->GetDesc().ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected");
-        CHECK_DYNAMIC_TYPE(TextureViewGLImpl, pView);
-        for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+        if (m_pBoundRenderTargets[rt] == pView)
         {
-            if (m_pBoundRenderTargets[rt] == pView)
-            {
-                RTIndex = rt;
-                break;
-            }
-        }
-
-        if (RTIndex == -1)
-        {
-            UNEXPECTED("Render target being cleared is not bound to the pipeline");
-            LOG_ERROR_MESSAGE("Render target must be bound to the pipeline to be cleared");
+            RTIndex = rt;
+            break;
         }
     }
-    else
+
+    if (RTIndex == -1)
     {
-        if (m_NumBoundRenderTargets == 1)
-            RTIndex = 0;
-        else
-        {
-            LOG_ERROR_MESSAGE("ClearRenderTarget(nullptr, ...) semantic is only allowed when single render target is bound to the context. ",
-                              m_NumBoundRenderTargets, " render ",
-                              (m_NumBoundRenderTargets != 1 ? "targets are" : "target is"), " currently bound");
-        }
+        LOG_ERROR_MESSAGE("Render target must be bound to the context to be cleared in OpenGL backend");
+        return;
     }
 
     static const float Zero[4] = {0, 0, 0, 0};
@@ -1009,6 +992,9 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     // the operation of glClear. The scissor box bounds the cleared region. Alpha function,
     // blend function, logical operation, stenciling, texture mapping, and depth-buffering
     // are ignored by glClear.
+
+    // Unlike OpenGL, in D3D10+, the full extent of the resource view is always cleared.
+    // Viewport and scissor settings are not applied.
 
     // Disable scissor test
     bool ScissorTestEnabled = m_ContextState.GetScissorTestEnabled();

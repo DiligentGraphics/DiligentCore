@@ -203,6 +203,9 @@ protected:
     /// Checks if the texture is currently bound as depth-stencil buffer.
     bool CheckIfBoundAsDepthStencil(TextureImplType* pTexture);
 
+    bool ClearDepthStencil(ITextureView* pView);
+
+    bool ClearRenderTarget(ITextureView* pView);
 
 #ifdef DEVELOPMENT
     // clang-format off
@@ -792,6 +795,95 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets(
     m_FramebufferSlices     = 0;
 
     m_pBoundDepthStencil.Release();
+}
+
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearDepthStencil(ITextureView* pView)
+{
+    if (pView == nullptr)
+    {
+        LOG_ERROR_MESSAGE("Depth-stencil view to clear must not be null");
+        return false;
+    }
+
+#ifdef DEVELOPMENT
+    {
+        const auto& ViewDesc = pView->GetDesc();
+        if (ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
+        {
+            LOG_ERROR_MESSAGE("The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of the texture view '", ViewDesc.Name,
+                              "' is invalid: ClearDepthStencil command expects depth-stencil view (TEXTURE_VIEW_DEPTH_STENCIL).");
+            return false;
+        }
+
+        if (pView != m_pBoundDepthStencil)
+        {
+            if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            {
+                LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
+                                  "' is not bound to the device context. ClearDepthStencil command requires "
+                                  "depth-stencil view be bound to the device contex in OpenGL backend");
+                return false;
+            }
+            else
+            {
+                LOG_WARNING_MESSAGE("Depth-stencil view '", ViewDesc.Name,
+                                    "' is not bound to the device context. "
+                                    "ClearDepthStencil command is more efficient when depth-stencil "
+                                    "view is bound to the context. In OpenGL backend this is a requirement.");
+            }
+        }
+    }
+#endif
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearRenderTarget(ITextureView* pView)
+{
+    if (pView == nullptr)
+    {
+        LOG_ERROR_MESSAGE("Render target view to clear must not be null");
+        return false;
+    }
+
+#ifdef DEVELOPMENT
+    {
+        const auto& ViewDesc = pView->GetDesc();
+        if (ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
+        {
+            LOG_ERROR_MESSAGE("The type (", GetTexViewTypeLiteralName(ViewDesc.ViewType), ") of texture view '", pView->GetDesc().Name,
+                              "' is invalid: ClearRenderTarget command expects render target view (TEXTURE_VIEW_RENDER_TARGET).");
+            return false;
+        }
+
+        bool RTFound = false;
+        for (Uint32 i = 0; i < m_NumBoundRenderTargets && !RTFound; ++i)
+        {
+            RTFound = m_pBoundRenderTargets[i] == pView;
+        }
+        if (!RTFound)
+        {
+            if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            {
+                LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
+                                  "' is not bound to the device context. ClearRenderTarget command "
+                                  "requires render target view be bound to the device contex in OpenGL backend");
+                return false;
+            }
+            else
+            {
+                LOG_WARNING_MESSAGE("Render target view '", ViewDesc.Name,
+                                    "' is not bound to the device context. ClearRenderTarget command is more efficient "
+                                    "if render target view is bound to the device context. In OpenGL backend this is a requirement.");
+            }
+        }
+    }
+#endif
+
+    return true;
 }
 
 
