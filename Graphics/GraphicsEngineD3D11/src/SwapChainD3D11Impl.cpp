@@ -123,6 +123,10 @@ void SwapChainD3D11Impl::Present(Uint32 SyncInterval)
 
     auto* pImmediateCtxD3D11 = pDeviceContext.RawPtr<DeviceContextD3D11Impl>();
 
+    // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds
+    // backbuffer 0 from all GPU writeable bind points.
+    pImmediateCtxD3D11->UnbindTextureFromFramebuffer(ValidatedCast<TextureBaseD3D11>(m_pRenderTargetView->GetTexture()), false);
+
     if (m_SwapChainDesc.IsPrimary)
     {
         // Clear the state caches to release all outstanding objects
@@ -135,15 +139,6 @@ void SwapChainD3D11Impl::Present(Uint32 SyncInterval)
     }
 
     m_pSwapChain->Present(SyncInterval, 0);
-
-    if (m_SwapChainDesc.IsPrimary)
-    {
-        // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds
-        // backbuffer 0 from all GPU writeable bind points.
-        // We need to rebind all render targets to make sure that
-        // the back buffer is not unbound
-        pImmediateCtxD3D11->CommitRenderTargets();
-    }
 }
 
 void SwapChainD3D11Impl::UpdateSwapChain(bool CreateNew)

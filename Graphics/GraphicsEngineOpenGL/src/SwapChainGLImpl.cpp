@@ -112,6 +112,14 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
 #else
 #    error Unsupported platform
 #endif
+
+    // Unbind back buffer from device context to be consistent with other backends
+    if (auto pDeviceContext = m_wpDeviceContext.Lock())
+    {
+        auto* pDeviceCtxGl = pDeviceContext.RawPtr<DeviceContextGLImpl>();
+        auto* pBackBuffer  = ValidatedCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
+        pDeviceCtxGl->UnbindTextureFromFramebuffer(pBackBuffer, false);
+    }
 }
 
 void SwapChainGLImpl::Resize(Uint32 NewWidth, Uint32 NewHeight)

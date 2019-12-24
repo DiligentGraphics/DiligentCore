@@ -135,6 +135,11 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
 
     auto& CmdCtx      = pImmediateCtxD3D12->GetCmdContext();
     auto* pBackBuffer = ValidatedCast<TextureD3D12Impl>(GetCurrentBackBufferRTV()->GetTexture());
+
+    // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds
+    // backbuffer 0 from all GPU writeable bind points.
+    pImmediateCtxD3D12->UnbindTextureFromFramebuffer(pBackBuffer, false);
+
     CmdCtx.TransitionResource(pBackBuffer, RESOURCE_STATE_PRESENT);
 
     pImmediateCtxD3D12->Flush();
@@ -149,15 +154,8 @@ void SwapChainD3D12Impl::Present(Uint32 SyncInterval)
         pDeviceD3D12->ReleaseStaleResources();
     }
 
-#if 0
-#    if PLATFORM_UNIVERSAL_WINDOWS
-    // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds 
+    // A successful Present call for DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL SwapChains unbinds
     // backbuffer 0 from all GPU writeable bind points.
-    // We need to rebind all render targets to make sure that
-    // the back buffer is not unbound
-    pImmediateCtxD3D12->CommitRenderTargets();
-#    endif
-#endif
 }
 
 void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)

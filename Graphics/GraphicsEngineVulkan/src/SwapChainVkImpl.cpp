@@ -542,10 +542,13 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
     auto* pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
     auto* pDeviceVk       = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
 
+    auto* pBackBuffer = GetCurrentBackBufferRTV()->GetTexture();
+    pImmediateCtxVk->UnbindTextureFromFramebuffer(ValidatedCast<TextureVkImpl>(pBackBuffer), false);
+
     if (!m_IsMinimized)
     {
         // TransitionImageLayout() never triggers flush
-        pImmediateCtxVk->TransitionImageLayout(GetCurrentBackBufferRTV()->GetTexture(), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        pImmediateCtxVk->TransitionImageLayout(pBackBuffer, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         // The context can be empty if no render commands were issued by the app
         //VERIFY(pImmediateCtxVk->GetNumCommandsInCtx() != 0, "The context must not be flushed");
         pImmediateCtxVk->AddSignalSemaphore(m_DrawCompleteSemaphores[m_SemaphoreIndex]);
