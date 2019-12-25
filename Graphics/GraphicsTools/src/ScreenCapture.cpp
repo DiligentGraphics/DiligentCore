@@ -104,6 +104,21 @@ ScreenCapture::CaptureInfo ScreenCapture::GetCapture()
     return Capture;
 }
 
+bool ScreenCapture::HasCapture()
+{
+    std::lock_guard<std::mutex> Lock{m_PendingTexturesMtx};
+    if (!m_PendingTextures.empty())
+    {
+        const auto& OldestCapture       = m_PendingTextures.front();
+        auto        CompletedFenceValue = m_pFence->GetCompletedValue();
+        return OldestCapture.Fence <= CompletedFenceValue;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 void ScreenCapture::RecycleStagingTexture(RefCntAutoPtr<ITexture>&& pTexture)
 {
     std::lock_guard<std::mutex> Lock{m_AvailableTexturesMtx};

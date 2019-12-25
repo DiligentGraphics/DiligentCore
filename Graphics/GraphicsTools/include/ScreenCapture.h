@@ -54,6 +54,7 @@ public:
     };
 
     CaptureInfo GetCapture();
+    bool        HasCapture();
 
     void RecycleStagingTexture(RefCntAutoPtr<ITexture>&& pTexture);
 
