@@ -291,7 +291,7 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const Textur
     );
 }
 
-void RenderDeviceGLImpl::CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, TextureBaseGL** ppTexture)
+void RenderDeviceGLImpl::CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)
 {
     CreateDeviceObject(
         "texture", TexDesc, ppTexture,

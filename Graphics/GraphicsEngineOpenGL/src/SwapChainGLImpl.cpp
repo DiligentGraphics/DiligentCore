@@ -82,7 +82,7 @@ void SwapChainGLImpl::CreateDummyBuffers(RenderDeviceGLImpl* pRenderDeviceGL)
     ColorBuffDesc.Height    = m_SwapChainDesc.Height;
     ColorBuffDesc.Format    = m_SwapChainDesc.ColorBufferFormat;
     ColorBuffDesc.BindFlags = BIND_RENDER_TARGET;
-    RefCntAutoPtr<TextureBaseGL> pDummyColorBuffer;
+    RefCntAutoPtr<ITexture> pDummyColorBuffer;
     pRenderDeviceGL->CreateDummyTexture(ColorBuffDesc, RESOURCE_STATE_RENDER_TARGET, &pDummyColorBuffer);
     m_pRenderTargetView = ValidatedCast<TextureViewGLImpl>(pDummyColorBuffer->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET));
 
@@ -90,7 +90,7 @@ void SwapChainGLImpl::CreateDummyBuffers(RenderDeviceGLImpl* pRenderDeviceGL)
     DepthBuffDesc.Name        = "Main depth buffer stub";
     DepthBuffDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
     DepthBuffDesc.BindFlags   = BIND_DEPTH_STENCIL;
-    RefCntAutoPtr<TextureBaseGL> pDummyDepthBuffer;
+    RefCntAutoPtr<ITexture> pDummyDepthBuffer;
     pRenderDeviceGL->CreateDummyTexture(DepthBuffDesc, RESOURCE_STATE_DEPTH_WRITE, &pDummyDepthBuffer);
     m_pDepthStencilView = ValidatedCast<TextureViewGLImpl>(pDummyDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL));
 }

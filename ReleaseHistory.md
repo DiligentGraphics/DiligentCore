@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added `IDeviceContextGL::SetSwapChain` and `IRenderDeviceGL::CreateDummyTexture` methods (API Version 240047)
 * Removed `IDeviceContext::SetSwapChain` method (API Version 240046)
 * Renamed `MAP_FLAG_DO_NOT_SYNCHRONIZE` flag to `MAP_FLAG_NO_OVERWRITE` (API Version 240045)
 * Added `GetVkInstance` and `GetVkPhysicalDevice` methods to `IRenderDeviceVk` interface (API Version 240044)

@@ -92,6 +92,9 @@ public:
     /// Implementation of IRenderDeviceGL::CreateBufferFromGLHandle().
     virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer) override final;
 
+    /// Implementation of IRenderDeviceGL::CreateDummyTexture().
+    virtual void CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+
     /// Implementation of IRenderDevice::ReleaseStaleResources() in OpenGL backend.
     virtual void ReleaseStaleResources(bool ForceRelease = false) override final {}
 
@@ -106,8 +109,6 @@ public:
     VAOCache& GetVAOCache(GLContext::NativeGLContextType Context);
     void      OnDestroyPSO(IPipelineState* pPSO);
     void      OnDestroyBuffer(IBuffer* pBuffer);
-
-    void CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, class TextureBaseGL** ppTexture);
 
     size_t GetCommandQueueCount() const { return 1; }
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }

@@ -75,6 +75,24 @@ public:
                                           const BufferDesc& BuffDesc,
                                           RESOURCE_STATE    InitialState,
                                           IBuffer**         ppBuffer) = 0;
+
+
+    /// Creates a dummy texture with null handle.
+
+    /// The main usage of dummy textures is to serve as render target and depth buffer
+    /// proxies in a swap chain. When dummy color buffer is set as render target, the
+    /// engine binds default FBO provided by the swap chain.
+    ///
+    /// \param [in]  TexDesc      - Texture description.
+    /// \param [in]  InitialState - Initial texture state. See Diligent::RESOURCE_STATE.
+    /// \param [out] ppTexture    - Address of the memory location where the pointer to the
+    ///                             texture interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will contain
+    ///                             one reference.
+    /// \note  Only RESOURCE_DIM_TEX_2D dummy textures are supported.
+    virtual void CreateDummyTexture(const TextureDesc& TexDesc,
+                                    RESOURCE_STATE     InitialState,
+                                    ITexture**         ppTexture) = 0;
 };
 
 } // namespace Diligent
