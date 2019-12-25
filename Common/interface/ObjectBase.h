@@ -48,8 +48,8 @@ namespace Diligent
         }                                                            \
     }
 
-#define IMPLEMENT_QUERY_INTERFACE(ClassName, InterfaceID, ParentClassName)          \
-    void ClassName ::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) \
+#define IMPLEMENT_QUERY_INTERFACE(ClassName, InterfaceID, ParentClassName)         \
+    void ClassName::QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) \
         IMPLEMENT_QUERY_INTERFACE_BODY(InterfaceID, ParentClassName)
 
 #define IMPLEMENT_QUERY_INTERFACE_IN_PLACE(InterfaceID, ParentClassName)                 \

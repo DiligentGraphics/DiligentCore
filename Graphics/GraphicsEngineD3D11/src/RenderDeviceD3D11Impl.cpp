@@ -40,12 +40,12 @@
 namespace Diligent
 {
 
-RenderDeviceD3D11Impl ::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
-                                              IMemoryAllocator&            RawMemAllocator,
-                                              IEngineFactory*              pEngineFactory,
-                                              const EngineD3D11CreateInfo& EngineAttribs,
-                                              ID3D11Device*                pd3d11Device,
-                                              Uint32                       NumDeferredContexts) :
+RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
+                                             IMemoryAllocator&            RawMemAllocator,
+                                             IEngineFactory*              pEngineFactory,
+                                             const EngineD3D11CreateInfo& EngineAttribs,
+                                             ID3D11Device*                pd3d11Device,
+                                             Uint32                       NumDeferredContexts) :
     // clang-format off
     TRenderDeviceBase
     {
@@ -135,7 +135,7 @@ void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
 IMPLEMENT_QUERY_INTERFACE(RenderDeviceD3D11Impl, IID_RenderDeviceD3D11, TRenderDeviceBase)
 
-void RenderDeviceD3D11Impl ::CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
+void RenderDeviceD3D11Impl::CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer,
                        [&]() //
@@ -147,7 +147,7 @@ void RenderDeviceD3D11Impl ::CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buf
                        });
 }
 
-void RenderDeviceD3D11Impl ::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)
+void RenderDeviceD3D11Impl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer,
                        [&]() //
@@ -159,7 +159,7 @@ void RenderDeviceD3D11Impl ::CreateBuffer(const BufferDesc& BuffDesc, const Buff
                        });
 }
 
-void RenderDeviceD3D11Impl ::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
+void RenderDeviceD3D11Impl::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
     CreateDeviceObject("shader", ShaderCI.Desc, ppShader,
                        [&]() //
@@ -223,7 +223,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11
 }
 
 
-void RenderDeviceD3D11Impl ::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)
+void RenderDeviceD3D11Impl::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)
 {
     CreateDeviceObject("texture", TexDesc, ppTexture,
                        [&]() //
@@ -255,7 +255,7 @@ void RenderDeviceD3D11Impl ::CreateTexture(const TextureDesc& TexDesc, const Tex
                        });
 }
 
-void RenderDeviceD3D11Impl ::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
+void RenderDeviceD3D11Impl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
 {
     CreateDeviceObject("sampler", SamplerDesc, ppSampler,
                        [&]() //

@@ -29,11 +29,11 @@
 namespace Diligent
 {
 
-Texture1D_D3D11 ::Texture1D_D3D11(IReferenceCounters*        pRefCounters,
-                                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                  RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
-                                  const TextureDesc&         TexDesc,
-                                  const TextureData*         pInitData /*= nullptr*/) :
+Texture1D_D3D11::Texture1D_D3D11(IReferenceCounters*        pRefCounters,
+                                 FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                 RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
+                                 const TextureDesc&         TexDesc,
+                                 const TextureData*         pInitData /*= nullptr*/) :
     // clang-format off
     TextureBaseD3D11
     {
@@ -126,18 +126,18 @@ private:
 
 } // namespace
 
-Texture1D_D3D11 ::Texture1D_D3D11(IReferenceCounters*        pRefCounters,
-                                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                  RenderDeviceD3D11Impl*     pDeviceD3D11,
-                                  RESOURCE_STATE             InitialState,
-                                  ID3D11Texture1D*           pd3d11Texture) :
+Texture1D_D3D11::Texture1D_D3D11(IReferenceCounters*        pRefCounters,
+                                 FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                 RenderDeviceD3D11Impl*     pDeviceD3D11,
+                                 RESOURCE_STATE             InitialState,
+                                 ID3D11Texture1D*           pd3d11Texture) :
     TextureBaseD3D11{pRefCounters, TexViewObjAllocator, pDeviceD3D11, TexDescFromD3D11Texture1D{}(pd3d11Texture), nullptr}
 {
     m_pd3d11Texture = pd3d11Texture;
     SetState(InitialState);
 }
 
-Texture1D_D3D11 ::~Texture1D_D3D11()
+Texture1D_D3D11::~Texture1D_D3D11()
 {
 }
 

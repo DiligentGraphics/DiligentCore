@@ -32,11 +32,11 @@
 namespace Diligent
 {
 
-TextureBaseD3D11 ::TextureBaseD3D11(IReferenceCounters*        pRefCounters,
-                                    FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                    RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
-                                    const TextureDesc&         TexDesc,
-                                    const TextureData*         pInitData /*= nullptr*/) :
+TextureBaseD3D11::TextureBaseD3D11(IReferenceCounters*        pRefCounters,
+                                   FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                   RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
+                                   const TextureDesc&         TexDesc,
+                                   const TextureData*         pInitData /*= nullptr*/) :
     // clang-format off
     TTextureBase
     {
@@ -129,9 +129,9 @@ void TextureBaseD3D11::CreateViewInternal(const struct TextureViewDesc& ViewDesc
     }
 }
 
-void TextureBaseD3D11 ::PrepareD3D11InitData(const TextureData*                                                               pInitData,
-                                             Uint32                                                                           NumSubresources,
-                                             std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>>& D3D11InitData)
+void TextureBaseD3D11::PrepareD3D11InitData(const TextureData*                                                               pInitData,
+                                            Uint32                                                                           NumSubresources,
+                                            std::vector<D3D11_SUBRESOURCE_DATA, STDAllocatorRawMem<D3D11_SUBRESOURCE_DATA>>& D3D11InitData)
 {
     if (pInitData != nullptr && pInitData->pSubResources != nullptr)
     {
@@ -153,7 +153,7 @@ void TextureBaseD3D11 ::PrepareD3D11InitData(const TextureData*                 
     }
 }
 
-TextureBaseD3D11 ::~TextureBaseD3D11()
+TextureBaseD3D11::~TextureBaseD3D11()
 {
 }
 

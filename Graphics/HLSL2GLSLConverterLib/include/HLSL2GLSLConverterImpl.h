@@ -255,7 +255,7 @@ private:
             return Type >= TokenType::kw_break && Type <= TokenType::kw_while;
         }
 
-        TokenInfo(TokenType   _Type      = TokenType ::Undefined,
+        TokenInfo(TokenType   _Type      = TokenType::Undefined,
                   const Char* _Literal   = "",
                   const Char* _Delimiter = "") :
             Type{_Type},

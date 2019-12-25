@@ -28,10 +28,10 @@
 
 using namespace Diligent;
 
-String BasicPlatformDebug ::FormatAssertionFailedMessage(const Char* Message,
-                                                         const char* Function, // type of __FUNCTION__
-                                                         const char* File,     // type of __FILE__
-                                                         int         Line)
+String BasicPlatformDebug::FormatAssertionFailedMessage(const Char* Message,
+                                                        const char* Function, // type of __FUNCTION__
+                                                        const char* File,     // type of __FILE__
+                                                        int         Line)
 {
     String FileName;
     BasicFileSystem::SplitFilePath(File, nullptr, &FileName);

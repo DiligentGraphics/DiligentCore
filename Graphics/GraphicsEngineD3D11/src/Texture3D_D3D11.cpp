@@ -29,11 +29,11 @@
 namespace Diligent
 {
 
-Texture3D_D3D11 ::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
-                                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                  RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
-                                  const TextureDesc&         TexDesc,
-                                  const TextureData*         pInitData /*= nullptr*/) :
+Texture3D_D3D11::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
+                                 FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                 RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
+                                 const TextureDesc&         TexDesc,
+                                 const TextureData*         pInitData /*= nullptr*/) :
     // clang-format off
     TextureBaseD3D11
     {
@@ -126,11 +126,11 @@ private:
 
 } // namespace
 
-Texture3D_D3D11 ::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
-                                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                  RenderDeviceD3D11Impl*     pDeviceD3D11,
-                                  RESOURCE_STATE             InitialState,
-                                  ID3D11Texture3D*           pd3d11Texture) :
+Texture3D_D3D11::Texture3D_D3D11(IReferenceCounters*        pRefCounters,
+                                 FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                 RenderDeviceD3D11Impl*     pDeviceD3D11,
+                                 RESOURCE_STATE             InitialState,
+                                 ID3D11Texture3D*           pd3d11Texture) :
     // clang-format off
     TextureBaseD3D11
     {
@@ -215,7 +215,7 @@ void Texture3D_D3D11::CreateUAV(TextureViewDesc& UAVDesc, ID3D11UnorderedAccessV
 }
 
 
-Texture3D_D3D11 ::~Texture3D_D3D11()
+Texture3D_D3D11::~Texture3D_D3D11()
 {
 }
 

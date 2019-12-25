@@ -29,9 +29,9 @@
 namespace Diligent
 {
 
-FenceGLImpl ::FenceGLImpl(IReferenceCounters* pRefCounters,
-                          RenderDeviceGLImpl* pDevice,
-                          const FenceDesc&    Desc) :
+FenceGLImpl::FenceGLImpl(IReferenceCounters* pRefCounters,
+                         RenderDeviceGLImpl* pDevice,
+                         const FenceDesc&    Desc) :
     // clang-format off
     TFenceBase
     {
@@ -43,11 +43,11 @@ FenceGLImpl ::FenceGLImpl(IReferenceCounters* pRefCounters,
 {
 }
 
-FenceGLImpl ::~FenceGLImpl()
+FenceGLImpl::~FenceGLImpl()
 {
 }
 
-Uint64 FenceGLImpl ::GetCompletedValue()
+Uint64 FenceGLImpl::GetCompletedValue()
 {
     while (!m_PendingFences.empty())
     {
@@ -73,7 +73,7 @@ Uint64 FenceGLImpl ::GetCompletedValue()
     return m_LastCompletedFenceValue;
 }
 
-void FenceGLImpl ::Wait(Uint64 Value, bool FlushCommands)
+void FenceGLImpl::Wait(Uint64 Value, bool FlushCommands)
 {
     while (!m_PendingFences.empty())
     {
@@ -91,7 +91,7 @@ void FenceGLImpl ::Wait(Uint64 Value, bool FlushCommands)
     }
 }
 
-void FenceGLImpl ::Reset(Uint64 Value)
+void FenceGLImpl::Reset(Uint64 Value)
 {
     DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
     if (Value > m_LastCompletedFenceValue)

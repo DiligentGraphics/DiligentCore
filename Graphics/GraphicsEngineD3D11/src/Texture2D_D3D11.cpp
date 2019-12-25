@@ -29,11 +29,11 @@
 namespace Diligent
 {
 
-Texture2D_D3D11 ::Texture2D_D3D11(IReferenceCounters*        pRefCounters,
-                                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                  RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
-                                  const TextureDesc&         TexDesc,
-                                  const TextureData*         pInitData /*= nullptr*/) :
+Texture2D_D3D11::Texture2D_D3D11(IReferenceCounters*        pRefCounters,
+                                 FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                 RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
+                                 const TextureDesc&         TexDesc,
+                                 const TextureData*         pInitData /*= nullptr*/) :
     // clang-format off
     TextureBaseD3D11
     {
@@ -133,11 +133,11 @@ private:
 
 } // namespace
 
-Texture2D_D3D11 ::Texture2D_D3D11(IReferenceCounters*        pRefCounters,
-                                  FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                  RenderDeviceD3D11Impl*     pDeviceD3D11,
-                                  RESOURCE_STATE             InitialState,
-                                  ID3D11Texture2D*           pd3d11Texture) :
+Texture2D_D3D11::Texture2D_D3D11(IReferenceCounters*        pRefCounters,
+                                 FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                 RenderDeviceD3D11Impl*     pDeviceD3D11,
+                                 RESOURCE_STATE             InitialState,
+                                 ID3D11Texture2D*           pd3d11Texture) :
     // clang-format off
     TextureBaseD3D11
     {
@@ -153,7 +153,7 @@ Texture2D_D3D11 ::Texture2D_D3D11(IReferenceCounters*        pRefCounters,
     SetState(InitialState);
 }
 
-Texture2D_D3D11 ::~Texture2D_D3D11()
+Texture2D_D3D11::~Texture2D_D3D11()
 {
 }
 

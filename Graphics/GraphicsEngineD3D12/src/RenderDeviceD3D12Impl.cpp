@@ -37,7 +37,7 @@
 namespace Diligent
 {
 
-D3D_FEATURE_LEVEL RenderDeviceD3D12Impl ::GetD3DFeatureLevel() const
+D3D_FEATURE_LEVEL RenderDeviceD3D12Impl::GetD3DFeatureLevel() const
 {
     D3D_FEATURE_LEVEL FeatureLevels[] =
         {
@@ -56,13 +56,13 @@ D3D_FEATURE_LEVEL RenderDeviceD3D12Impl ::GetD3DFeatureLevel() const
     return FeatureLevelsData.MaxSupportedFeatureLevel;
 }
 
-RenderDeviceD3D12Impl ::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
-                                              IMemoryAllocator&            RawMemAllocator,
-                                              IEngineFactory*              pEngineFactory,
-                                              const EngineD3D12CreateInfo& EngineCI,
-                                              ID3D12Device*                pd3d12Device,
-                                              size_t                       CommandQueueCount,
-                                              ICommandQueueD3D12**         ppCmdQueues) :
+RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
+                                             IMemoryAllocator&            RawMemAllocator,
+                                             IEngineFactory*              pEngineFactory,
+                                             const EngineD3D12CreateInfo& EngineCI,
+                                             ID3D12Device*                pd3d12Device,
+                                             size_t                       CommandQueueCount,
+                                             ICommandQueueD3D12**         ppCmdQueues) :
     // clang-format off
     TRenderDeviceBase
     {
@@ -348,7 +348,7 @@ void RenderDeviceD3D12Impl::CreatePipelineState(const PipelineStateDesc& Pipelin
                        });
 }
 
-void RenderDeviceD3D12Impl ::CreateBufferFromD3DResource(ID3D12Resource* pd3d12Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
+void RenderDeviceD3D12Impl::CreateBufferFromD3DResource(ID3D12Resource* pd3d12Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer,
                        [&]() //
@@ -360,7 +360,7 @@ void RenderDeviceD3D12Impl ::CreateBufferFromD3DResource(ID3D12Resource* pd3d12B
                        });
 }
 
-void RenderDeviceD3D12Impl ::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)
+void RenderDeviceD3D12Impl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer)
 {
     CreateDeviceObject("buffer", BuffDesc, ppBuffer,
                        [&]() //
@@ -373,7 +373,7 @@ void RenderDeviceD3D12Impl ::CreateBuffer(const BufferDesc& BuffDesc, const Buff
 }
 
 
-void RenderDeviceD3D12Impl ::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
+void RenderDeviceD3D12Impl::CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader)
 {
     CreateDeviceObject("shader", ShaderCI.Desc, ppShader,
                        [&]() //
@@ -410,7 +410,7 @@ void RenderDeviceD3D12Impl::CreateTexture(const TextureDesc& TexDesc, ID3D12Reso
                        });
 }
 
-void RenderDeviceD3D12Impl ::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)
+void RenderDeviceD3D12Impl::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture)
 {
     CreateDeviceObject("texture", TexDesc, ppTexture,
                        [&]() //
@@ -423,7 +423,7 @@ void RenderDeviceD3D12Impl ::CreateTexture(const TextureDesc& TexDesc, const Tex
                        });
 }
 
-void RenderDeviceD3D12Impl ::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
+void RenderDeviceD3D12Impl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler)
 {
     CreateDeviceObject("sampler", SamplerDesc, ppSampler,
                        [&]() //
@@ -450,13 +450,13 @@ void RenderDeviceD3D12Impl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
                        });
 }
 
-DescriptorHeapAllocation RenderDeviceD3D12Impl ::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
+DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
 {
     VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, "Invalid heap type");
     return m_CPUDescriptorHeaps[Type].Allocate(Count);
 }
 
-DescriptorHeapAllocation RenderDeviceD3D12Impl ::AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
+DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
 {
     VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type <= D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, "Invalid heap type");
     return m_GPUDescriptorHeaps[Type].Allocate(Count);

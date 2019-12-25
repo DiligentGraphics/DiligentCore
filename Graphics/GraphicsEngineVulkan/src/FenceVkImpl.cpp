@@ -30,10 +30,10 @@
 namespace Diligent
 {
 
-FenceVkImpl ::FenceVkImpl(IReferenceCounters* pRefCounters,
-                          RenderDeviceVkImpl* pRendeDeviceVkImpl,
-                          const FenceDesc&    Desc,
-                          bool                IsDeviceInternal) :
+FenceVkImpl::FenceVkImpl(IReferenceCounters* pRefCounters,
+                         RenderDeviceVkImpl* pRendeDeviceVkImpl,
+                         const FenceDesc&    Desc,
+                         bool                IsDeviceInternal) :
     // clang-format off
     TFenceBase
     {
@@ -47,7 +47,7 @@ FenceVkImpl ::FenceVkImpl(IReferenceCounters* pRefCounters,
 {
 }
 
-FenceVkImpl ::~FenceVkImpl()
+FenceVkImpl::~FenceVkImpl()
 {
     if (!m_PendingFences.empty())
     {
@@ -60,7 +60,7 @@ FenceVkImpl ::~FenceVkImpl()
     }
 }
 
-Uint64 FenceVkImpl ::GetCompletedValue()
+Uint64 FenceVkImpl::GetCompletedValue()
 {
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     while (!m_PendingFences.empty())
@@ -84,7 +84,7 @@ Uint64 FenceVkImpl ::GetCompletedValue()
     return m_LastCompletedFenceValue;
 }
 
-void FenceVkImpl ::Reset(Uint64 Value)
+void FenceVkImpl::Reset(Uint64 Value)
 {
     DEV_CHECK_ERR(Value >= m_LastCompletedFenceValue, "Resetting fence '", m_Desc.Name, "' to the value (", Value, ") that is smaller than the last completed value (", m_LastCompletedFenceValue, ")");
     if (Value > m_LastCompletedFenceValue)
@@ -92,7 +92,7 @@ void FenceVkImpl ::Reset(Uint64 Value)
 }
 
 
-void FenceVkImpl ::Wait(Uint64 Value)
+void FenceVkImpl::Wait(Uint64 Value)
 {
     const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
     while (!m_PendingFences.empty())

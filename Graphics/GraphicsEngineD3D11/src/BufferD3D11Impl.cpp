@@ -35,11 +35,11 @@
 namespace Diligent
 {
 
-BufferD3D11Impl ::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
-                                  FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
-                                  RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
-                                  const BufferDesc&          BuffDesc,
-                                  const BufferData*          pBuffData /*= nullptr*/) :
+BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
+                                 FixedBlockMemoryAllocator& BuffViewObjMemAllocator,
+                                 RenderDeviceD3D11Impl*     pRenderDeviceD3D11,
+                                 const BufferDesc&          BuffDesc,
+                                 const BufferData*          pBuffData /*= nullptr*/) :
     // clang-format off
     TBufferBase
     {
@@ -182,12 +182,12 @@ static BufferDesc BuffDescFromD3D11Buffer(ID3D11Buffer* pd3d11Buffer, BufferDesc
 
     return BuffDesc;
 }
-BufferD3D11Impl ::BufferD3D11Impl(IReferenceCounters*          pRefCounters,
-                                  FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
-                                  class RenderDeviceD3D11Impl* pDeviceD3D11,
-                                  const BufferDesc&            BuffDesc,
-                                  RESOURCE_STATE               InitialState,
-                                  ID3D11Buffer*                pd3d11Buffer) :
+BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*          pRefCounters,
+                                 FixedBlockMemoryAllocator&   BuffViewObjMemAllocator,
+                                 class RenderDeviceD3D11Impl* pDeviceD3D11,
+                                 const BufferDesc&            BuffDesc,
+                                 RESOURCE_STATE               InitialState,
+                                 ID3D11Buffer*                pd3d11Buffer) :
     // clang-format off
     TBufferBase
     {
@@ -203,7 +203,7 @@ BufferD3D11Impl ::BufferD3D11Impl(IReferenceCounters*          pRefCounters,
     SetState(InitialState);
 }
 
-BufferD3D11Impl ::~BufferD3D11Impl()
+BufferD3D11Impl::~BufferD3D11Impl()
 {
 }
 

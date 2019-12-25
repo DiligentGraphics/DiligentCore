@@ -75,7 +75,7 @@ DXGI_FORMAT GetClearFormat(DXGI_FORMAT Fmt, D3D12_RESOURCE_FLAGS Flags)
     return Fmt;
 }
 
-D3D12_RESOURCE_DESC TextureD3D12Impl ::GetD3D12TextureDesc() const
+D3D12_RESOURCE_DESC TextureD3D12Impl::GetD3D12TextureDesc() const
 {
     D3D12_RESOURCE_DESC Desc = {};
 
@@ -124,11 +124,11 @@ D3D12_RESOURCE_DESC TextureD3D12Impl ::GetD3D12TextureDesc() const
     return Desc;
 }
 
-TextureD3D12Impl ::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
-                                    FixedBlockMemoryAllocator& TexViewObjAllocator,
-                                    RenderDeviceD3D12Impl*     pRenderDeviceD3D12,
-                                    const TextureDesc&         TexDesc,
-                                    const TextureData*         pInitData /*= nullptr*/) :
+TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
+                                   FixedBlockMemoryAllocator& TexViewObjAllocator,
+                                   RenderDeviceD3D12Impl*     pRenderDeviceD3D12,
+                                   const TextureDesc&         TexDesc,
+                                   const TextureData*         pInitData /*= nullptr*/) :
     TTextureBase{pRefCounters, TexViewObjAllocator, pRenderDeviceD3D12, TexDesc}
 {
     if (m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
@@ -505,7 +505,7 @@ void TextureD3D12Impl::CreateViewInternal(const struct TextureViewDesc& ViewDesc
     }
 }
 
-TextureD3D12Impl ::~TextureD3D12Impl()
+TextureD3D12Impl::~TextureD3D12Impl()
 {
     // D3D12 object can only be destroyed when it is no longer used by the GPU
     auto* pDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(GetDevice());

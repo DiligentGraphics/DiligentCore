@@ -47,11 +47,11 @@
 namespace Diligent
 {
 
-RenderDeviceGLImpl ::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
-                                        IMemoryAllocator&         RawMemAllocator,
-                                        IEngineFactory*           pEngineFactory,
-                                        const EngineGLCreateInfo& InitAttribs,
-                                        const SwapChainDesc*      pSCDesc) :
+RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
+                                       IMemoryAllocator&         RawMemAllocator,
+                                       IEngineFactory*           pEngineFactory,
+                                       const EngineGLCreateInfo& InitAttribs,
+                                       const SwapChainDesc*      pSCDesc) :
     // clang-format off
     TRenderDeviceBase
     {
@@ -105,18 +105,18 @@ RenderDeviceGLImpl ::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         m_GPUInfo.Vendor = GPU_VENDOR::QUALCOMM;
 }
 
-RenderDeviceGLImpl ::~RenderDeviceGLImpl()
+RenderDeviceGLImpl::~RenderDeviceGLImpl()
 {
 }
 
 IMPLEMENT_QUERY_INTERFACE(RenderDeviceGLImpl, IID_RenderDeviceGL, TRenderDeviceBase)
 
-void RenderDeviceGLImpl ::InitTexRegionRender()
+void RenderDeviceGLImpl::InitTexRegionRender()
 {
     m_pTexRegionRender.reset(new TexRegionRender(this));
 }
 
-void RenderDeviceGLImpl ::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal)
+void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal)
 {
     CreateDeviceObject(
         "buffer", BuffDesc, ppBuffer,
@@ -134,12 +134,12 @@ void RenderDeviceGLImpl ::CreateBuffer(const BufferDesc& BuffDesc, const BufferD
     );
 }
 
-void RenderDeviceGLImpl ::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBuffer)
+void RenderDeviceGLImpl::CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBuffer)
 {
     CreateBuffer(BuffDesc, BuffData, ppBuffer, false);
 }
 
-void RenderDeviceGLImpl ::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
+void RenderDeviceGLImpl::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
     VERIFY(GLHandle, "GL buffer handle must not be null");
     CreateDeviceObject(
@@ -158,7 +158,7 @@ void RenderDeviceGLImpl ::CreateBufferFromGLHandle(Uint32 GLHandle, const Buffer
     );
 }
 
-void RenderDeviceGLImpl ::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal)
+void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal)
 {
     CreateDeviceObject(
         "shader", ShaderCreateInfo.Desc, ppShader,
@@ -172,12 +172,12 @@ void RenderDeviceGLImpl ::CreateShader(const ShaderCreateInfo& ShaderCreateInfo,
     );
 }
 
-void RenderDeviceGLImpl ::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader)
+void RenderDeviceGLImpl::CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader)
 {
     CreateShader(ShaderCreateInfo, ppShader, false);
 }
 
-void RenderDeviceGLImpl ::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture, bool bIsDeviceInternal)
+void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture, bool bIsDeviceInternal)
 {
     CreateDeviceObject(
         "texture", TexDesc, ppTexture,
@@ -291,7 +291,7 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const Textur
     );
 }
 
-void RenderDeviceGLImpl ::CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, TextureBaseGL** ppTexture)
+void RenderDeviceGLImpl::CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, TextureBaseGL** ppTexture)
 {
     CreateDeviceObject(
         "texture", TexDesc, ppTexture,
@@ -314,7 +314,7 @@ void RenderDeviceGLImpl ::CreateDummyTexture(const TextureDesc& TexDesc, RESOURC
     );
 }
 
-void RenderDeviceGLImpl ::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler, bool bIsDeviceInternal)
+void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler, bool bIsDeviceInternal)
 {
     CreateDeviceObject(
         "sampler", SamplerDesc, ppSampler,
@@ -760,7 +760,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     }
 }
 
-void RenderDeviceGLImpl ::QueryDeviceCaps()
+void RenderDeviceGLImpl::QueryDeviceCaps()
 {
     if (glPolygonMode == nullptr)
         m_DeviceCaps.bWireframeFillSupported = false;

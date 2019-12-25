@@ -35,11 +35,11 @@
 namespace Diligent
 {
 
-TextureVkImpl ::TextureVkImpl(IReferenceCounters*        pRefCounters,
-                              FixedBlockMemoryAllocator& TexViewObjAllocator,
-                              RenderDeviceVkImpl*        pRenderDeviceVk,
-                              const TextureDesc&         TexDesc,
-                              const TextureData*         pInitData /*= nullptr*/) :
+TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
+                             FixedBlockMemoryAllocator& TexViewObjAllocator,
+                             RenderDeviceVkImpl*        pRenderDeviceVk,
+                             const TextureDesc&         TexDesc,
+                             const TextureData*         pInitData /*= nullptr*/) :
     // clang-format off
     TTextureBase
     {
@@ -584,7 +584,7 @@ void TextureVkImpl::CreateViewInternal(const TextureViewDesc& ViewDesc, ITexture
     }
 }
 
-TextureVkImpl ::~TextureVkImpl()
+TextureVkImpl::~TextureVkImpl()
 {
     // Vk object can only be destroyed when it is no longer used by the GPU
     // Wrappers for external texture will not be destroyed as they are created with null device pointer
