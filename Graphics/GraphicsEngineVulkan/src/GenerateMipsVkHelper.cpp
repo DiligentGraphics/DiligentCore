@@ -31,8 +31,8 @@
 #include "MapHelper.h"
 #include "PlatformMisc.h"
 #include "VulkanTypeConversions.h"
-#include "../../GraphicsTools/include/ShaderMacroHelper.h"
-#include "../../GraphicsTools/include/CommonlyUsedStates.h"
+#include "../../GraphicsTools/interface/ShaderMacroHelper.h"
+#include "../../GraphicsTools/interface/CommonlyUsedStates.h"
 
 
 // clang-format off

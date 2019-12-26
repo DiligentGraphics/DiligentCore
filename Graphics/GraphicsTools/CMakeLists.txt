@@ -2,14 +2,14 @@ cmake_minimum_required (VERSION 3.6)
 
 project(Diligent-GraphicsTools CXX)
 
-set(INCLUDE 
-    include/CommonlyUsedStates.h
-    include/GraphicsUtilities.h
-    include/pch.h
-    include/ScreenCapture.h
-    include/ShaderMacroHelper.h
-    include/TextureUploader.h
-    include/TextureUploaderBase.h
+set(INTERFACE
+    interface/CommonlyUsedStates.h
+    interface/GraphicsUtilities.h
+    interface/pch.h
+    interface/ScreenCapture.h
+    interface/ShaderMacroHelper.h
+    interface/TextureUploader.h
+    interface/TextureUploaderBase.h
 )
 
 set(SOURCE 
@@ -23,26 +23,26 @@ set(DEPENDENCIES)
 
 if(D3D11_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderD3D11.cpp)
-    list(APPEND INCLUDE include/TextureUploaderD3D11.h)
+    list(APPEND INTERFACE interface/TextureUploaderD3D11.h)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineD3D11Interface)
 endif()
 
 if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderD3D12_Vk.cpp)
-    list(APPEND INCLUDE include/TextureUploaderD3D12_Vk.h)
+    list(APPEND INTERFACE interface/TextureUploaderD3D12_Vk.h)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderGL.cpp)
-    list(APPEND INCLUDE include/TextureUploaderGL.h)
+    list(APPEND INTERFACE interface/TextureUploaderGL.h)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineOpenGLInterface)
 endif()
 
-add_library(Diligent-GraphicsTools STATIC ${SOURCE} ${INCLUDE})
+add_library(Diligent-GraphicsTools STATIC ${SOURCE} ${INTERFACE})
 
 target_include_directories(Diligent-GraphicsTools 
 PUBLIC
-    include
+    interface
 PRIVATE
     ../GraphicsEngineD3DBase/include
 )
@@ -68,7 +68,6 @@ endif()
 set_common_target_properties(Diligent-GraphicsTools)
 
 source_group("src" FILES ${SOURCE})
-source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})
 
 set_target_properties(Diligent-GraphicsTools PROPERTIES

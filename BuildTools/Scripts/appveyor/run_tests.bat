@@ -2,7 +2,7 @@ rem @echo off
 
 set RUN_API_CORE_TEST=false
 set RUN_CORE_API_D3D11_TEST=false
-set RUN_D3D12_TEST=false
+set RUN_CORE_API_D3D12_TEST=false
 set ERROR=0
 
 if "%PLATFORM_NAME%"=="Windows" (

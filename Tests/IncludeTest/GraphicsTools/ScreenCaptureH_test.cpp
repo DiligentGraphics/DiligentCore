@@ -21,4 +21,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/GraphicsTools/interface/CommonlyUsedStates.h"
+#include "DiligentCore/Graphics/GraphicsTools/interface/ScreenCapture.h"

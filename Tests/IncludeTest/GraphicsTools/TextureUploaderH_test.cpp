@@ -21,4 +21,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/GraphicsTools/include/TextureUploader.h"
+#include "DiligentCore/Graphics/GraphicsTools/interface/TextureUploader.h"
