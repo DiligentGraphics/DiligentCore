@@ -125,37 +125,37 @@ int main(int argc, char** argv)
         {
 #if D3D11_SUPPORTED
             case DeviceType::D3D11:
-                pEnv = CreateTestingEnvironmentD3D11(deviceType, AdapterType, SCDesc);
                 if (AdapterType == ADAPTER_TYPE_SOFTWARE)
                     std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D11-SW mode =================\n\n";
                 else
                     std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D11 mode ==================\n\n";
+                pEnv = CreateTestingEnvironmentD3D11(deviceType, AdapterType, SCDesc);
                 break;
 #endif
 
 #if D3D12_SUPPORTED
             case DeviceType::D3D12:
-                pEnv = CreateTestingEnvironmentD3D12(deviceType, AdapterType, SCDesc);
                 if (AdapterType == ADAPTER_TYPE_SOFTWARE)
                     std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D12-SW mode =================\n\n";
                 else
                     std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D12 mode ==================\n\n";
+                pEnv = CreateTestingEnvironmentD3D12(deviceType, AdapterType, SCDesc);
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
             case DeviceType::OpenGL:
             case DeviceType::OpenGLES:
-                pEnv = CreateTestingEnvironmentGL(deviceType, AdapterType, SCDesc);
                 std::cout << "\n\n\n==================== Testing Diligent Core API in OpenGL mode ====================\n\n";
+                pEnv = CreateTestingEnvironmentGL(deviceType, AdapterType, SCDesc);
                 break;
 
 #endif
 
 #if VULKAN_SUPPORTED
             case DeviceType::Vulkan:
-                pEnv = CreateTestingEnvironmentVk(deviceType, AdapterType, SCDesc);
                 std::cout << "\n\n\n==================== Testing Diligent Core API in Vulkan mode ====================\n\n";
+                pEnv = CreateTestingEnvironmentVk(deviceType, AdapterType, SCDesc);
                 break;
 
 #endif
