@@ -889,7 +889,7 @@ TEST_F(DrawCommandTest, DrawInstanced_FirstInstance_BaseVertex_FirstIndex_VBOffs
     Uint32   Offsets[] = {4 * sizeof(Vertex), 5 * sizeof(float4)};
     pContext->SetVertexBuffers(0, _countof(pVBs), pVBs, Offsets, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, SET_VERTEX_BUFFERS_FLAG_RESET);
 
-    DrawAttribs drawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+    DrawAttribs drawAttrs{3, DRAW_FLAG_VERIFY_ALL};
     drawAttrs.NumInstances          = 2;
     drawAttrs.FirstInstanceLocation = 4;
     drawAttrs.StartVertexLocation   = 3;
