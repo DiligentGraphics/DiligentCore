@@ -12,6 +12,6 @@ if [ "$TRAVIS_OS_NAME" = "osx" ]; then
   else
     cmake .. $1 -G "Xcode"
   fi
-  xcodebuild -configuration ${CONFIG} | xcpretty
+  xcodebuild -configuration ${CONFIG} | xcpretty && exit ${PIPESTATUS[0]}
 fi
 
