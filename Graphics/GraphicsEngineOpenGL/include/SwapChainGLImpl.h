@@ -24,7 +24,7 @@
 #pragma once
 
 #include "SwapChainGL.h"
-#include "SwapChainBase.h"
+#include "SwapChainGLBase.h"
 #include "GLObjectWrapper.h"
 
 namespace Diligent
@@ -33,10 +33,10 @@ namespace Diligent
 class IMemoryAllocator;
 
 /// Swap chain implementation in OpenGL backend.
-class SwapChainGLImpl final : public SwapChainBase<ISwapChainGL>
+class SwapChainGLImpl final : public SwapChainGLBase<ISwapChainGL>
 {
 public:
-    using TSwapChainBase = SwapChainBase<ISwapChainGL>;
+    using TSwapChainGLBase = SwapChainGLBase<ISwapChainGL>;
 
     SwapChainGLImpl(IReferenceCounters*        pRefCounters,
                     const EngineGLCreateInfo&  InitAttribs,
@@ -61,18 +61,6 @@ public:
 
     /// Implementation of ISwapChainGL::GetDefaultFBO().
     virtual GLuint GetDefaultFBO() const override final { return 0; }
-
-    /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in OpenGL backend.
-    virtual ITextureView* GetCurrentBackBufferRTV() override final { return m_pRenderTargetView; }
-
-    /// Implementation of ISwapChain::GetDepthBufferDSV() in OpenGL backend.
-    virtual ITextureView* GetDepthBufferDSV() override final { return m_pDepthStencilView; }
-
-private:
-    void CreateDummyBuffers(RenderDeviceGLImpl* pRenderDeviceGL);
-
-    RefCntAutoPtr<TextureViewGLImpl> m_pRenderTargetView;
-    RefCntAutoPtr<TextureViewGLImpl> m_pDepthStencilView;
 };
 
 } // namespace Diligent

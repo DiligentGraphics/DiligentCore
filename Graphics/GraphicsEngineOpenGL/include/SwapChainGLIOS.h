@@ -65,7 +65,7 @@ private:
 
     RefCntAutoPtr<TextureViewGLImpl> m_pRenderTargetView;
     RefCntAutoPtr<TextureViewGLImpl> m_pDepthStencilView;
-    
+
     GLObjectWrappers::GLRenderBufferObj m_ColorRenderBuffer;
     GLObjectWrappers::GLRenderBufferObj m_DepthRenderBuffer;
     GLObjectWrappers::GLFrameBufferObj  m_DefaultFBO;

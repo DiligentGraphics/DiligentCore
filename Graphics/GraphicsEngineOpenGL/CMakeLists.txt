@@ -22,6 +22,7 @@ set(INCLUDE
     include/SamplerGLImpl.h
     include/ShaderGLImpl.h
     include/ShaderResourceBindingGLImpl.h
+    include/SwapChainGLBase.h
     include/TexRegionRender.h
     include/Texture1D_OGL.h
     include/Texture1DArray_OGL.h
