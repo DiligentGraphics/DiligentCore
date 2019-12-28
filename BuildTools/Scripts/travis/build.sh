@@ -3,7 +3,7 @@ cd build
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then 
   cmake .. -G "Unix Makefiles" $1 -DCMAKE_BUILD_TYPE=${CONFIG}
-  cmake --build .
+  cmake --build . && return ${PIPESTATUS[0]}
 fi
 
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
