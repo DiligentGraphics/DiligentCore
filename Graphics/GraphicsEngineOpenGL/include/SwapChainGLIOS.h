@@ -56,12 +56,16 @@ public:
 
     virtual GLuint GetDefaultFBO() const override final;
 
-    virtual ITextureView* GetCurrentBackBufferRTV() override final { return nullptr; }
-    virtual ITextureView* GetDepthBufferDSV() override final { return nullptr; }
+    virtual ITextureView* GetCurrentBackBufferRTV() override final { return m_pRenderTargetView; }
+    virtual ITextureView* GetDepthBufferDSV() override final { return m_pDepthStencilView; }
 
 private:
     void InitRenderBuffers(bool InitFromDrawable, Uint32& Width, Uint32& Height);
+    void CreateDummyBuffers(RenderDeviceGLImpl* pRenderDeviceGL);
 
+    RefCntAutoPtr<TextureViewGLImpl> m_pRenderTargetView;
+    RefCntAutoPtr<TextureViewGLImpl> m_pDepthStencilView;
+    
     GLObjectWrappers::GLRenderBufferObj m_ColorRenderBuffer;
     GLObjectWrappers::GLRenderBufferObj m_DepthRenderBuffer;
     GLObjectWrappers::GLFrameBufferObj  m_DefaultFBO;

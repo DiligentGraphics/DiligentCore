@@ -73,9 +73,9 @@ public:
                          IDeviceContext*      pContext,
                          const SwapChainDesc& SCDesc) :
         TObjectBase{pRefCounters},
+        m_SwapChainDesc{SCDesc},
         m_pDevice{pDevice},
-        m_pContext{pContext},
-        m_SwapChainDesc{SCDesc}
+        m_pContext{pContext}
     {
         VERIFY_EXPR(m_SwapChainDesc.ColorBufferFormat != TEX_FORMAT_UNKNOWN);
         VERIFY_EXPR(m_SwapChainDesc.Width != 0);
@@ -134,7 +134,7 @@ public:
         }
     }
 
-    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override
     {
         if (ppInterface == nullptr)
             return;
