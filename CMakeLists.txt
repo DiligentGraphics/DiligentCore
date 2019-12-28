@@ -138,7 +138,7 @@ else()
 endif()
 
 if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_MACOS)
-    option(DILIGENT_BUILD_TESTS "Build Diligent Engine unit tests" OFF)
+    option(DILIGENT_BUILD_TESTS "Build Diligent Engine tests" OFF)
 else()
     if(DILIGENT_BUILD_TESTS)
         message("Unit tests are not supported on this platform and will be disabled")

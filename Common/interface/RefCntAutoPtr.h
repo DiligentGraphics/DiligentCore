@@ -71,7 +71,9 @@ template <typename T>
 class RefCntAutoPtr
 {
 public:
-    explicit RefCntAutoPtr(T* pObj = nullptr) noexcept :
+    RefCntAutoPtr() noexcept {}
+
+    explicit RefCntAutoPtr(T* pObj) noexcept :
         m_pObject{pObj}
     {
         if (m_pObject)
@@ -278,7 +280,7 @@ private:
     template <typename OtherType>
     friend class RefCntAutoPtr;
 
-    T* m_pObject;
+    T* m_pObject = nullptr;
 };
 
 /// Implementation of weak pointers

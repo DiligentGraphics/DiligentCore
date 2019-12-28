@@ -84,8 +84,8 @@ protected:
 
 MultithreadedResourceCreationTest::~MultithreadedResourceCreationTest()
 {
-    LOG_INFO_MESSAGE("Created ", NumBuffersToCreate, " buffers, ", NumTexturesToCreate, " textures, and ",
-                     NumPSOToCreate, " PSO in ", NumIterations, " iterations by each of ", m_Threads.size(), " threads");
+    LOG_INFO_MESSAGE("Created ", int{NumBuffersToCreate}, " buffers, ", int{NumTexturesToCreate}, " textures, and ",
+                     int{NumPSOToCreate}, " PSO in ", int{NumIterations}, " iterations by each of ", m_Threads.size(), " threads");
 }
 
 void MultithreadedResourceCreationTest::WaitSiblingWorkerThreads(int SignalIdx)

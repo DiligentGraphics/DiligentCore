@@ -23,6 +23,7 @@
 
 #include "VariableSizeGPUAllocationsManager.h"
 #include "DefaultRawMemoryAllocator.h"
+#include "PlatformDefinitions.h"
 
 #include "gtest/gtest.h"
 

@@ -33,6 +33,9 @@ namespace
 
 TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
 {
+    // Need to define local variable to avoid vexing linker errors
+    const auto InvalidOffset = RingBuffer::InvalidOffset;
+
     auto& Allocator = DefaultRawMemoryAllocator::GetAllocator();
     {
         RingBuffer RB(1023, Allocator);
@@ -96,7 +99,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         EXPECT_EQ(Offset, 768);
 
         Offset = RB.Allocate(128, 2);
-        EXPECT_EQ(Offset, RingBuffer::InvalidOffset);
+        EXPECT_EQ(Offset, InvalidOffset);
 
         Offset = RB.Allocate(128, 1);
         //
@@ -113,7 +116,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         EXPECT_TRUE(RB.IsFull());
 
         Offset = RB.Allocate(1, 1);
-        EXPECT_EQ(Offset, RingBuffer::InvalidOffset);
+        EXPECT_EQ(Offset, InvalidOffset);
 
         RingBuffer RB1(std::move(RB));
         EXPECT_TRUE(RB.IsEmpty());
@@ -199,10 +202,10 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         EXPECT_EQ(Offset, 768);
 
         Offset = RB1.Allocate(513, 64);
-        EXPECT_EQ(Offset, RingBuffer::InvalidOffset);
+        EXPECT_EQ(Offset, InvalidOffset);
 
         Offset = RB1.Allocate(513, 1);
-        EXPECT_EQ(Offset, RingBuffer::InvalidOffset);
+        EXPECT_EQ(Offset, InvalidOffset);
 
         Offset = RB1.Allocate(255, 1);
         //
@@ -227,7 +230,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
 
         EXPECT_TRUE(RB1.IsFull());
         Offset = RB1.Allocate(1, 1);
-        EXPECT_EQ(Offset, RingBuffer::InvalidOffset);
+        EXPECT_EQ(Offset, InvalidOffset);
         RB1.ReleaseCompletedFrames(6);
         //
         //        t         h
@@ -249,7 +252,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         EXPECT_EQ(Offset, 0);
 
         Offset = RB1.Allocate(64, 2);
-        EXPECT_EQ(Offset, RingBuffer::InvalidOffset);
+        EXPECT_EQ(Offset, InvalidOffset);
 
         Offset = RB1.Allocate(64, 1);
         //
@@ -259,7 +262,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         EXPECT_EQ(Offset, 191);
 
         Offset = RB1.Allocate(1, 1);
-        EXPECT_EQ(Offset, RingBuffer::InvalidOffset);
+        EXPECT_EQ(Offset, InvalidOffset);
 
         RB1.FinishCurrentFrame(7);
         RB1.ReleaseCompletedFrames(7);

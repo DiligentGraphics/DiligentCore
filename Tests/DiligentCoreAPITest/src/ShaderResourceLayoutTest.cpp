@@ -22,7 +22,6 @@
  */
 #include <unordered_map>
 #include <vector>
-#include <array>
 #include <algorithm>
 
 #include "TestingEnvironment.h"
@@ -383,10 +382,10 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
     ASSERT_NE(pPSO, nullptr);
     ASSERT_NE(pSRB, nullptr);
 
-    constexpr auto MaxTextures = std::max(std::max(StaticTexArraySize, MutableTexArraySize), DynamicTexArraySize);
+    const auto MaxTextures = std::max(std::max(StaticTexArraySize, MutableTexArraySize), DynamicTexArraySize);
 
-    std::array<RefCntAutoPtr<ITexture>, MaxTextures> pTextures;
-    std::array<IDeviceObject*, MaxTextures>          pTexSRVs = {};
+    std::vector<RefCntAutoPtr<ITexture>> pTextures(MaxTextures);
+    std::vector<IDeviceObject*>          pTexSRVs(MaxTextures);
 
     for (Uint32 i = 0; i < MaxTextures; ++i)
     {
@@ -538,10 +537,10 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     ASSERT_NE(pPSO, nullptr);
     ASSERT_NE(pSRB, nullptr);
 
-    constexpr auto MaxBuffers = std::max(std::max(StaticBuffArraySize, MutableBuffArraySize), DynamicBuffArraySize);
+    const auto MaxBuffers = std::max(std::max(StaticBuffArraySize, MutableBuffArraySize), DynamicBuffArraySize);
 
-    std::array<RefCntAutoPtr<IBufferView>, MaxBuffers> pBufferViews;
-    std::array<IDeviceObject*, MaxBuffers>             pBuffSRVs = {};
+    std::vector<RefCntAutoPtr<IBufferView>> pBufferViews(MaxBuffers);
+    std::vector<IDeviceObject*>             pBuffSRVs(MaxBuffers);
 
     for (Uint32 i = 0; i < MaxBuffers; ++i)
     {
@@ -1061,10 +1060,10 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
     ASSERT_NE(pPSO, nullptr);
     ASSERT_NE(pSRB, nullptr);
 
-    constexpr auto MaxSamplers = std::max(std::max(StaticSamArraySize, MutableSamArraySize), DynamicSamArraySize);
+    const auto MaxSamplers = std::max(std::max(StaticSamArraySize, MutableSamArraySize), DynamicSamArraySize);
 
-    std::array<RefCntAutoPtr<ISampler>, MaxSamplers> pSamplers;
-    std::array<IDeviceObject*, MaxSamplers>          pSamObjs = {};
+    std::vector<RefCntAutoPtr<ISampler>> pSamplers(MaxSamplers);
+    std::vector<IDeviceObject*>          pSamObjs(MaxSamplers);
 
     for (Uint32 i = 0; i < MaxSamplers; ++i)
     {

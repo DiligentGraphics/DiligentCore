@@ -664,7 +664,7 @@ RefCntAutoPtrThreadingTest::~RefCntAutoPtrThreadingTest()
     for (auto& t : m_Threads)
         t.join();
 
-    LOG_INFO_MESSAGE("Performed ", NumThreadInterations, " iterations on ", m_Threads.size(), " threads");
+    LOG_INFO_MESSAGE("Performed ", int{NumThreadInterations}, " iterations on ", m_Threads.size(), " threads");
 }
 
 void RefCntAutoPtrThreadingTest::WaitSiblingWorkerThreads(int SignalIdx)
