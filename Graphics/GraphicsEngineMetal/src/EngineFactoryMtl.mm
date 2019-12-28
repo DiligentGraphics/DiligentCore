@@ -200,28 +200,6 @@ void EngineFactoryMtlImpl::CreateSwapChainMtl(IRenderDevice*            pDevice,
         auto *pSwapChainMtl = NEW_RC_OBJ(RawMemAllocator,  "SwapChainMtlImpl instance", SwapChainMtlImpl)
                                           (SCDesc, pDeviceMtl, pDeviceContextMtl, pView);
         pSwapChainMtl->QueryInterface( IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
-
-        pDeviceContextMtl->SetSwapChain(pSwapChainMtl);
-        // Bind default render target
-        pDeviceContextMtl->SetRenderTargets( 0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION );
-        // Set default viewport
-        pDeviceContextMtl->SetViewports( 1, nullptr, 0, 0 );
-
-        auto NumDeferredCtx = pDeviceMtl->GetNumDeferredContexts();
-        for (size_t ctx = 0; ctx < NumDeferredCtx; ++ctx)
-        {
-            if (auto pDeferredCtx = pDeviceMtl->GetDeferredContext(ctx))
-            {
-                auto *pDeferredCtxMtl = pDeferredCtx.RawPtr<DeviceContextMtlImpl>();
-                pDeferredCtxMtl->SetSwapChain(pSwapChainMtl);
-                // Do not bind default render target and viewport to be
-                // consistent with D3D12
-                //// Bind default render target
-                //pDeferredCtxMtl->SetRenderTargets( 0, nullptr, nullptr );
-                //// Set default viewport
-                //pDeferredCtxMtl->SetViewports( 1, nullptr, 0, 0 );
-            }
-        }
     }
     catch( const std::runtime_error & )
     {

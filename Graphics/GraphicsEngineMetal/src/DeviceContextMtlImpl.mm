@@ -160,36 +160,20 @@ namespace Diligent
                                                    Uint8                          Stencil,
                                                    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {
-        if (pView == nullptr)
-        {
-            if (m_pSwapChain)
-            {
-                pView = m_pSwapChain->GetDepthBufferDSV();
-            }
-            else
-            {
-                LOG_ERROR("Failed to clear default depth stencil buffer: swap chain is not initialized in the device context");
-                return;
-            }
-        }
+        if (!TDeviceContextBase::ClearDepthStencil(pView))
+            return;
+
+        VERIFY_EXPR(pView != nullptr);
 
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::ClearDepthStencil() is not implemented");
     }
 
     void DeviceContextMtlImpl::ClearRenderTarget( ITextureView* pView, const float *RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode )
     {
-        if (pView == nullptr)
-        {
-            if (m_pSwapChain != nullptr)
-            {
-                pView = m_pSwapChain->GetCurrentBackBufferRTV();
-            }
-            else
-            {
-                LOG_ERROR("Failed to clear default render target: swap chain is not initialized in the device context");
-                return;
-            }
-        }
+        if (!TDeviceContextBase::ClearRenderTarget(pView))
+            return;
+
+        VERIFY_EXPR(pView != nullptr);
 
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::ClearRenderTarget() is not implemented");
     }
@@ -202,7 +186,7 @@ namespace Diligent
     void DeviceContextMtlImpl::UpdateBuffer(IBuffer*                       pBuffer,
                                             Uint32                         Offset,
                                             Uint32                         Size,
-                                            const PVoid                    pData,
+                                            const void*                    pData,
                                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
     {                                       
         TDeviceContextBase::UpdateBuffer(pBuffer, Offset, Size, pData, StateTransitionMode);
