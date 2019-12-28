@@ -26,13 +26,12 @@
 /// \file
 /// Implementation of the Diligent::SwapChainBase template class
 
-#include <array>
-
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "SwapChain.h"
-#include "DeviceObjectBase.h"
+#include "ObjectBase.h"
 #include "Errors.h"
+#include "RefCntAutoPtr.h"
 
 namespace Diligent
 {

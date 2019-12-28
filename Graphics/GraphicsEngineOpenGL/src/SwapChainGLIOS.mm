@@ -38,7 +38,7 @@ SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters*          pRefCounters,
                                const SwapChainDesc&         SCDesc,
                                RenderDeviceGLImpl*          pRenderDeviceGL,
                                DeviceContextGLImpl*         pImmediateContextGL) :
-    TSwapChainBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, SCDesc),
+    TSwapChainGLBase( pRefCounters, pRenderDeviceGL, pImmediateContextGL, SCDesc),
     m_ColorRenderBuffer(false),
     m_DepthRenderBuffer(false),
     m_DefaultFBO(false)
@@ -109,51 +109,10 @@ void SwapChainGLIOS::InitRenderBuffers(bool InitFromDrawable, Uint32 &Width, Uin
     }
 }
 
-void SwapChainGLIOS::CreateDummyBuffers(RenderDeviceGLImpl* pRenderDeviceGL)
-{
-    TextureDesc ColorBuffDesc;
-    ColorBuffDesc.Type      = RESOURCE_DIM_TEX_2D;
-    ColorBuffDesc.Name      = "Main color buffer stub";
-    ColorBuffDesc.Width     = m_SwapChainDesc.Width;
-    ColorBuffDesc.Height    = m_SwapChainDesc.Height;
-    ColorBuffDesc.Format    = m_SwapChainDesc.ColorBufferFormat;
-    ColorBuffDesc.BindFlags = BIND_RENDER_TARGET;
-    RefCntAutoPtr<ITexture> pDummyColorBuffer;
-    pRenderDeviceGL->CreateDummyTexture(ColorBuffDesc, RESOURCE_STATE_RENDER_TARGET, &pDummyColorBuffer);
-    m_pRenderTargetView = ValidatedCast<TextureViewGLImpl>(pDummyColorBuffer->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET));
-
-    TextureDesc DepthBuffDesc = ColorBuffDesc;
-    DepthBuffDesc.Name        = "Main depth buffer stub";
-    DepthBuffDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
-    DepthBuffDesc.BindFlags   = BIND_DEPTH_STENCIL;
-    RefCntAutoPtr<ITexture> pDummyDepthBuffer;
-    pRenderDeviceGL->CreateDummyTexture(DepthBuffDesc, RESOURCE_STATE_DEPTH_WRITE, &pDummyDepthBuffer);
-    m_pDepthStencilView = ValidatedCast<TextureViewGLImpl>(pDummyDepthBuffer->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL));
-}
-
 void SwapChainGLIOS::Resize( Uint32 NewWidth, Uint32 NewHeight )
 {
     InitRenderBuffers(false, NewWidth, NewHeight);
-
-    if( TSwapChainBase::Resize( NewWidth, NewHeight ) )
-    {
-        CreateDummyBuffers(m_pRenderDevice.RawPtr<RenderDeviceGLImpl>());
-
-        auto pDeviceContext = m_wpDeviceContext.Lock();
-        VERIFY( pDeviceContext, "Immediate context has been released" );
-        if( pDeviceContext )
-        {
-            auto* pImmediateCtxGL = pDeviceContext.RawPtr<DeviceContextGLImpl>();
-            // Unbind the back buffer to be consistent with other backends
-            auto* pCurrentBackBuffer = ValidatedCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
-            auto  RenderTargetsReset = pImmediateCtxGL->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
-            if (RenderTargetsReset)
-            {
-                LOG_INFO_MESSAGE_ONCE("Resizing the swap chain requires back and depth-stencil buffers to be unbound from the device context. "
-                                      "An application should use SetRenderTargets() to restore them.");
-            }
-        }
-    }
+    TSwapChainGLBase::Resize(NewWidth, NewHeight, 0);
 }
 
 GLuint SwapChainGLIOS::GetDefaultFBO()const

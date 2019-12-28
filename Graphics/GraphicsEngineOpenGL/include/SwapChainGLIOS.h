@@ -24,7 +24,7 @@
 #pragma once
 
 #include "SwapChainGL.h"
-#include "SwapChainBase.h"
+#include "SwapChainGLBase.h"
 #include "GLObjectWrapper.h"
 
 namespace Diligent
@@ -32,10 +32,10 @@ namespace Diligent
 
 class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainGL interface on IOS
-class SwapChainGLIOS final : public SwapChainBase<ISwapChainGL>
+class SwapChainGLIOS final : public SwapChainGLBase<ISwapChainGL>
 {
 public:
-    typedef SwapChainBase<ISwapChainGL> TSwapChainBase;
+    using TSwapChainGLBase = SwapChainGLBase<ISwapChainGL>;
 
     SwapChainGLIOS(IReferenceCounters*        pRefCounters,
                    const EngineGLCreateInfo&  InitAttribs,
@@ -56,15 +56,8 @@ public:
 
     virtual GLuint GetDefaultFBO() const override final;
 
-    virtual ITextureView* GetCurrentBackBufferRTV() override final { return m_pRenderTargetView; }
-    virtual ITextureView* GetDepthBufferDSV() override final { return m_pDepthStencilView; }
-
 private:
     void InitRenderBuffers(bool InitFromDrawable, Uint32& Width, Uint32& Height);
-    void CreateDummyBuffers(RenderDeviceGLImpl* pRenderDeviceGL);
-
-    RefCntAutoPtr<TextureViewGLImpl> m_pRenderTargetView;
-    RefCntAutoPtr<TextureViewGLImpl> m_pDepthStencilView;
 
     GLObjectWrappers::GLRenderBufferObj m_ColorRenderBuffer;
     GLObjectWrappers::GLRenderBufferObj m_DepthRenderBuffer;

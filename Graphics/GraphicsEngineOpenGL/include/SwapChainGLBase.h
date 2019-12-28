@@ -59,9 +59,9 @@ protected:
         {
             if (m_pRenderTargetView)
             {
-                if (auto pDeviceContext = m_wpDeviceContext.Lock())
+                if (auto pDeviceContext = this->m_wpDeviceContext.Lock())
                 {
-                    auto* pImmediateCtxGL = pDeviceContext.RawPtr<DeviceContextGLImpl>();
+                    auto* pImmediateCtxGL = pDeviceContext.template RawPtr<DeviceContextGLImpl>();
                     // Unbind the back buffer to be consistent with other backends
                     auto* pCurrentBackBuffer = ValidatedCast<TextureBaseGL>(m_pRenderTargetView->GetTexture());
                     auto  RenderTargetsReset = pImmediateCtxGL->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
@@ -73,7 +73,7 @@ protected:
                 }
             }
 
-            CreateDummyBuffers(m_pRenderDevice.RawPtr<RenderDeviceGLImpl>());
+            CreateDummyBuffers(this->m_pRenderDevice.template RawPtr<RenderDeviceGLImpl>());
             return true;
         }
 
@@ -85,9 +85,9 @@ protected:
         TextureDesc ColorBuffDesc;
         ColorBuffDesc.Type      = RESOURCE_DIM_TEX_2D;
         ColorBuffDesc.Name      = "Main color buffer stub";
-        ColorBuffDesc.Width     = m_SwapChainDesc.Width;
-        ColorBuffDesc.Height    = m_SwapChainDesc.Height;
-        ColorBuffDesc.Format    = m_SwapChainDesc.ColorBufferFormat;
+        ColorBuffDesc.Width     = this->m_SwapChainDesc.Width;
+        ColorBuffDesc.Height    = this->m_SwapChainDesc.Height;
+        ColorBuffDesc.Format    = this->m_SwapChainDesc.ColorBufferFormat;
         ColorBuffDesc.BindFlags = BIND_RENDER_TARGET;
         RefCntAutoPtr<ITexture> pDummyColorBuffer;
         pRenderDeviceGL->CreateDummyTexture(ColorBuffDesc, RESOURCE_STATE_RENDER_TARGET, &pDummyColorBuffer);
@@ -95,7 +95,7 @@ protected:
 
         TextureDesc DepthBuffDesc = ColorBuffDesc;
         DepthBuffDesc.Name        = "Main depth buffer stub";
-        DepthBuffDesc.Format      = m_SwapChainDesc.DepthBufferFormat;
+        DepthBuffDesc.Format      = this->m_SwapChainDesc.DepthBufferFormat;
         DepthBuffDesc.BindFlags   = BIND_DEPTH_STENCIL;
         RefCntAutoPtr<ITexture> pDummyDepthBuffer;
         pRenderDeviceGL->CreateDummyTexture(DepthBuffDesc, RESOURCE_STATE_DEPTH_WRITE, &pDummyDepthBuffer);
