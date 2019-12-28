@@ -31,7 +31,7 @@ namespace Testing
 
 TestingEnvironment::NativeWindow TestingEnvironment::CreateNativeWindow()
 {
-    return TestingEnvironment::NativeWindow {};
+    return TestingEnvironment::NativeWindow{};
 }
 
 } // namespace Testing
