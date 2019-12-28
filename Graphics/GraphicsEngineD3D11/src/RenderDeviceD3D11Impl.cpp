@@ -40,6 +40,34 @@
 namespace Diligent
 {
 
+static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D11Device(ID3D11Device* pd3d11Device)
+{
+    CComPtr<IDXGIDevice> pDXGIDevice;
+
+    auto hr = pd3d11Device->QueryInterface(__uuidof(pDXGIDevice), reinterpret_cast<void**>(static_cast<IDXGIDevice**>(&pDXGIDevice)));
+    if (SUCCEEDED(hr))
+    {
+        CComPtr<IDXGIAdapter> pDXGIAdapter;
+        hr = pDXGIDevice->GetAdapter(&pDXGIAdapter);
+        if (SUCCEEDED(hr))
+        {
+            CComPtr<IDXGIAdapter1> pDXGIAdapter1;
+            pDXGIAdapter->QueryInterface(__uuidof(pDXGIAdapter1), reinterpret_cast<void**>(static_cast<IDXGIAdapter1**>(&pDXGIAdapter1)));
+            return pDXGIAdapter1;
+        }
+        else
+        {
+            LOG_ERROR("Failed to get DXGI Adapter from DXGI Device.");
+        }
+    }
+    else
+    {
+        LOG_ERROR("Failed to query IDXGIDevice from D3D device.");
+    }
+
+    return nullptr;
+}
+
 RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCounters,
                                              IMemoryAllocator&            RawMemAllocator,
                                              IEngineFactory*              pEngineFactory,
@@ -96,6 +124,21 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     // above 11.0 (for example, 11.1 or 12.0), so bindless resources are never available.
     // https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-downlevel-intro#overview-for-each-feature-level
     m_DeviceCaps.bBindlessSupported = False;
+
+    if (auto pDXGIAdapter1 = DXGIAdapterFromD3D11Device(pd3d11Device))
+    {
+        DXGI_ADAPTER_DESC1 AdapterDesc = {};
+
+        auto hr = pDXGIAdapter1->GetDesc1(&AdapterDesc);
+        if (SUCCEEDED(hr))
+        {
+            m_DeviceCaps.AdaterType = (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter type will be unknown.");
+        }
+    }
 }
 
 void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)

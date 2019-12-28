@@ -22,6 +22,7 @@
  */
 
 #include "pch.h"
+#include <dxgi1_4.h>
 #include "RenderDeviceD3D12Impl.h"
 #include "PipelineStateD3D12Impl.h"
 #include "ShaderD3D12Impl.h"
@@ -36,6 +37,26 @@
 
 namespace Diligent
 {
+
+static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Device)
+{
+    CComPtr<IDXGIFactory4> pDXIFactory;
+
+    HRESULT hr = CreateDXGIFactory1(__uuidof(pDXIFactory), reinterpret_cast<void**>(static_cast<IDXGIFactory4**>(&pDXIFactory)));
+    if (SUCCEEDED(hr))
+    {
+        auto AdapterLUID = pd3d12Device->GetAdapterLuid();
+
+        CComPtr<IDXGIAdapter1> pDXGIAdapter1;
+        pDXIFactory->EnumAdapterByLuid(AdapterLUID, __uuidof(pDXGIAdapter1), reinterpret_cast<void**>(static_cast<IDXGIAdapter1**>(&pDXGIAdapter1)));
+        return pDXGIAdapter1;
+    }
+    else
+    {
+        LOG_ERROR("Unable to create DXIFactory");
+    }
+    return nullptr;
+}
 
 D3D_FEATURE_LEVEL RenderDeviceD3D12Impl::GetD3DFeatureLevel() const
 {
@@ -138,6 +159,21 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     // so bindless resources are always available.
     // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
     m_DeviceCaps.bBindlessSupported = True;
+
+    if (auto pDXGIAdapter1 = DXGIAdapterFromD3D12Device(pd3d12Device))
+    {
+        DXGI_ADAPTER_DESC1 AdapterDesc = {};
+
+        auto hr = pDXGIAdapter1->GetDesc1(&AdapterDesc);
+        if (SUCCEEDED(hr))
+        {
+            m_DeviceCaps.AdaterType = (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter type will be unknown.");
+        }
+    }
 }
 
 RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()

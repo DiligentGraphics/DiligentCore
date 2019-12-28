@@ -103,6 +103,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         m_GPUInfo.Vendor = GPU_VENDOR::ATI;
     else if (Vendor.find("qualcomm"))
         m_GPUInfo.Vendor = GPU_VENDOR::QUALCOMM;
+
+    m_DeviceCaps.AdaterType = ADAPTER_TYPE_HARDWARE;
 }
 
 RenderDeviceGLImpl::~RenderDeviceGLImpl()

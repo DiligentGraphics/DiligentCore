@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added `AdapterType` member to `DeviceCaps` struct (API Version 240048)
 * Added `IDeviceContextGL::SetSwapChain` and `IRenderDeviceGL::CreateDummyTexture` methods (API Version 240047)
 * Removed `IDeviceContext::SetSwapChain` method (API Version 240046)
 * Renamed `MAP_FLAG_DO_NOT_SYNCHRONIZE` flag to `MAP_FLAG_NO_OVERWRITE` (API Version 240045)

@@ -95,6 +95,9 @@ namespace Diligent
         /// Similar to MajorVersion, this value indicates the maximum supported feature level.
         Int32 MinorVersion = 0;
 
+        /// Adapter type. See Diligent::ADAPTER_TYPE.
+        ADAPTER_TYPE AdaterType = ADAPTER_TYPE_UNKNOWN;
+
         /// Indicates if device supports separable programs
         Bool bSeparableProgramSupported = True;
 

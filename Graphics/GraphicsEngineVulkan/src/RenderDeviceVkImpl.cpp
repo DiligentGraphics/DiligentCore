@@ -144,6 +144,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_DeviceCaps.DevType                                 = DeviceType::Vulkan;
     m_DeviceCaps.MajorVersion                            = 1;
     m_DeviceCaps.MinorVersion                            = 0;
+    m_DeviceCaps.AdaterType                              = ADAPTER_TYPE_HARDWARE;
     m_DeviceCaps.bSeparableProgramSupported              = True;
     m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
     for (Uint32 fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
