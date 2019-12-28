@@ -231,12 +231,12 @@ VkRenderPassCreateInfo TestingEnvironmentVk::GetRenderPassCreateInfo(
     RenderPassCI.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     RenderPassCI.pNext           = nullptr;
     RenderPassCI.flags           = 0; // reserved for future use
-    RenderPassCI.attachmentCount = (DSVFormat != TEX_FORMAT_UNKNOWN ? 1 : 0) + NumRenderTargets;
+    RenderPassCI.attachmentCount = (DSVFormat != VK_FORMAT_UNDEFINED ? 1 : 0) + NumRenderTargets;
 
     uint32_t               AttachmentInd             = 0;
     VkSampleCountFlagBits  SampleCountFlags          = static_cast<VkSampleCountFlagBits>(SampleCount);
     VkAttachmentReference* pDepthAttachmentReference = nullptr;
-    if (DSVFormat != TEX_FORMAT_UNKNOWN)
+    if (DSVFormat != VK_FORMAT_UNDEFINED)
     {
         auto& DepthAttachment = Attachments[AttachmentInd];
 
