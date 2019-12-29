@@ -2,7 +2,7 @@ CMAKE_VERSION="3.15.4"
 VULKAN_SDK_VER="1.1.101.0"
 
 if [ "$TRAVIS_OS_NAME" = "osx" ];  then
-  wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz
+  wget --no-check-certificate https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz &&
   tar -xzf cmake-${CMAKE_VERSION}-Darwin-x86_64.tar.gz
   export PATH=$PWD/cmake-${CMAKE_VERSION}-Darwin-x86_64/CMake.app/Contents/bin:$PATH
   cmake --version
@@ -26,8 +26,8 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
   # Download a recent cmake
   mkdir $HOME/usr
   export PATH="$HOME/usr/bin:$PATH"
-  wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh
-  chmod +x cmake-${CMAKE_VERSION}-Linux-x86_64.sh
+  wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-Linux-x86_64.sh &&
+  chmod +x cmake-${CMAKE_VERSION}-Linux-x86_64.sh &&
   ./cmake-${CMAKE_VERSION}-Linux-x86_64.sh --prefix=$HOME/usr --exclude-subdir --skip-license
   cmake --version
   sudo apt-get update
