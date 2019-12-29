@@ -98,7 +98,7 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     if(PLATFORM_WIN32)
         target_link_libraries(DiligentCoreAPITest PRIVATE glew-static opengl32.lib)
     elseif(PLATFORM_LINUX)
-        target_link_libraries(DiligentCoreAPITest PRIVATE glew-static)
+        target_link_libraries(DiligentCoreAPITest PRIVATE glew-static GL X11)
     elseif(PLATFORM_MACOS)
         find_package(OpenGL REQUIRED)
         target_link_libraries(DiligentCoreAPITest PRIVATE glew-static ${OPENGL_LIBRARY})
@@ -117,6 +117,13 @@ endif()
 if(VULKAN_SUPPORTED)
     target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-GLSLTools)
     target_include_directories(DiligentCoreAPITest PRIVATE ../../ThirdParty)
+    if(PLATFORM_LINUX)
+        target_link_libraries(DiligentCoreAPITest
+        PRIVATE
+            dl # Required by Volk
+            xcb
+        )
+    endif()
 endif()
 
 target_include_directories(DiligentCoreAPITest
