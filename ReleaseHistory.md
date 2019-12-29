@@ -1,5 +1,7 @@
 ## Current Progress
 
+## v2.4.d
+
 ### API Changes
 
 * Added `AdapterType` member to `DeviceCaps` struct (API Version 240048)
