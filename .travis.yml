@@ -52,17 +52,15 @@ matrix:
 
 script:
     # Travis keeps running commands even when previous one fails (https://github.com/travis-ci/travis-ci/issues/1066)
-  - |
-    cd ./BuildTools/FormatValidation &&
-    . ../Scripts/travis/validate_format.sh &&
-    cd ../.. &&
-    . ./BuildTools/Scripts/travis/build_install.sh "-DDILIGENT_BUILD_TESTS=TRUE" &&
-    cd ../Tests/DiligentCoreAPITest/assets &&
-    . ../../../BuildTools/Scripts/travis/run_tests.sh ../../../build &&
-    cd ../../..
+  - cd ./BuildTools/FormatValidation
+  - . ../Scripts/travis/validate_format.sh
+  - cd ../..
+  - . ./BuildTools/Scripts/travis/build_install.sh "-DDILIGENT_BUILD_TESTS=TRUE"
+  - cd ../Tests/DiligentCoreAPITest/assets
+  - . ../../../BuildTools/Scripts/travis/run_tests.sh ../../../build
+  - cd ../../..
 
 after_success:
-  - |
-    cd ./build/install &&
-    export ZIP_NAME=DiligentCore-${TRAVIS_OS_NAME}-${GLSLANG_BUILD_TYPE}.zip; &&
-    zip -r ${ZIP_NAME} .
+  - cd ./build/install
+  - export ZIP_NAME=DiligentCore-${TRAVIS_OS_NAME}-${GLSLANG_BUILD_TYPE}.zip;
+  - zip -r ${ZIP_NAME} .
