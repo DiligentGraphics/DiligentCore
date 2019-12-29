@@ -55,7 +55,7 @@ script:
   - . ../Scripts/travis/validate_format.sh
   - cd ../..
   - . ./BuildTools/Scripts/travis/build_install.sh "-DDILIGENT_BUILD_TESTS=TRUE"
-  - cd ./Tests/DiligentCoreAPITest/assets
+  - cd ../Tests/DiligentCoreAPITest/assets
   - . ../../../BuildTools/Scripts/travis/run_tests.sh ../../../build
   - cd ../../..
 
