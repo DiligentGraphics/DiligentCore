@@ -360,7 +360,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
             std::stringstream ss;
             ss << "Swap chain image acquired semaphore " << i;
             auto Name      = ss.str();
-            auto Semaphore = LogicalDevice.CreateSemaphore(SemaphoreCI, ss.str().c_str());
+            auto Semaphore = LogicalDevice.CreateSemaphore(SemaphoreCI, Name.c_str());
             ManagedSemaphore::Create(pRenderDeviceVk, std::move(Semaphore), Name.c_str(), &m_ImageAcquiredSemaphores[i]);
         }
 
@@ -368,7 +368,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
             std::stringstream ss;
             ss << "Swap chain draw complete semaphore " << i;
             auto Name      = ss.str();
-            auto Semaphore = LogicalDevice.CreateSemaphore(SemaphoreCI, ss.str().c_str());
+            auto Semaphore = LogicalDevice.CreateSemaphore(SemaphoreCI, Name.c_str());
             ManagedSemaphore::Create(pRenderDeviceVk, std::move(Semaphore), Name.c_str(), &m_DrawCompleteSemaphores[i]);
         }
 
