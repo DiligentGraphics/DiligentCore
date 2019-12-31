@@ -350,15 +350,19 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     m_ImageAcquiredFences.resize(swapchainImageCount);
     for (uint32_t i = 0; i < swapchainImageCount; ++i)
     {
-        VkSemaphoreCreateInfo SemaphoreCI = {};
+        {
+            std::stringstream ss;
+            ss << "Swap chain image acquired semaphore " << i;
+            auto Name = ss.str();
+            SemaphoreObject::Create(pRenderDeviceVk, Name.c_str(), &m_ImageAcquiredSemaphores[i]);
+        }
 
-        SemaphoreCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-        SemaphoreCI.pNext = nullptr;
-        SemaphoreCI.flags = 0; // reserved for future use
-
-        m_ImageAcquiredSemaphores[i] = LogicalDevice.CreateSemaphore(SemaphoreCI);
-        m_DrawCompleteSemaphores[i]  = LogicalDevice.CreateSemaphore(SemaphoreCI);
-
+        {
+            std::stringstream ss;
+            ss << "Swap chain draw complete semaphore " << i;
+            auto Name = ss.str();
+            SemaphoreObject::Create(pRenderDeviceVk, Name.c_str(), &m_DrawCompleteSemaphores[i]);
+        }
 
         VkFenceCreateInfo FenceCI = {};
 
@@ -500,7 +504,7 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     }
 
     VkFence     ImageAcquiredFence     = m_ImageAcquiredFences[m_SemaphoreIndex];
-    VkSemaphore ImageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex];
+    VkSemaphore ImageAcquiredSemaphore = m_ImageAcquiredSemaphores[m_SemaphoreIndex]->GetVkSemaphore();
 
     auto res = vkAcquireNextImageKHR(LogicalDevice.GetVkDevice(), m_VkSwapChain, UINT64_MAX, ImageAcquiredSemaphore, ImageAcquiredFence, &m_BackBufferIndex);
 
@@ -564,7 +568,7 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         PresentInfo.pNext              = nullptr;
         PresentInfo.waitSemaphoreCount = 1;
         // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
-        VkSemaphore WaitSemaphore[] = {m_DrawCompleteSemaphores[m_SemaphoreIndex]};
+        VkSemaphore WaitSemaphore[] = {m_DrawCompleteSemaphores[m_SemaphoreIndex]->GetVkSemaphore()};
         PresentInfo.pWaitSemaphores = WaitSemaphore;
         PresentInfo.swapchainCount  = 1;
         PresentInfo.pSwapchains     = &m_VkSwapChain;

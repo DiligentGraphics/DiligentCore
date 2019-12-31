@@ -21,6 +21,7 @@ set(INCLUDE
     include/RenderPassCache.h
     include/SamplerVkImpl.h
     include/ShaderVkImpl.h
+    include/Semaphore.h
     include/ShaderResourceBindingVkImpl.h
     include/ShaderResourceCacheVk.h
     include/ShaderResourceLayoutVk.h

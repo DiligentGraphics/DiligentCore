@@ -41,6 +41,7 @@
 #include "TextureVkImpl.h"
 #include "PipelineStateVkImpl.h"
 #include "HashUtils.h"
+#include "SemaphoreObject.h"
 
 namespace Diligent
 {
@@ -234,14 +235,18 @@ public:
     virtual void BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags) override final;
 
 
-    void AddWaitSemaphore(VkSemaphore Semaphore, VkPipelineStageFlags WaitDstStageMask)
+    void AddWaitSemaphore(SemaphoreObject* pWaitSemaphore, VkPipelineStageFlags WaitDstStageMask)
     {
-        m_WaitSemaphores.push_back(Semaphore);
+        VERIFY_EXPR(pWaitSemaphore != nullptr);
+        m_WaitSemaphores.emplace_back(pWaitSemaphore);
+        m_VkWaitSemaphores.push_back(pWaitSemaphore->GetVkSemaphore());
         m_WaitDstStageMasks.push_back(WaitDstStageMask);
     }
-    void AddSignalSemaphore(VkSemaphore Semaphore)
+    void AddSignalSemaphore(SemaphoreObject* pSignalSemaphore)
     {
-        m_SignalSemaphores.push_back(Semaphore);
+        VERIFY_EXPR(pSignalSemaphore != nullptr);
+        m_SignalSemaphores.emplace_back(pSignalSemaphore);
+        m_VkSignalSemaphores.push_back(pSignalSemaphore->GetVkSemaphore());
     }
 
     void UpdateBufferRegion(BufferVkImpl*                  pBuffVk,
@@ -401,9 +406,12 @@ private:
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
     // Semaphores are not owned by the command context
-    std::vector<VkSemaphore>          m_WaitSemaphores;
-    std::vector<VkPipelineStageFlags> m_WaitDstStageMasks;
-    std::vector<VkSemaphore>          m_SignalSemaphores;
+    std::vector<RefCntAutoPtr<SemaphoreObject>> m_WaitSemaphores;
+    std::vector<VkPipelineStageFlags>           m_WaitDstStageMasks;
+    std::vector<RefCntAutoPtr<SemaphoreObject>> m_SignalSemaphores;
+
+    std::vector<VkSemaphore> m_VkWaitSemaphores;
+    std::vector<VkSemaphore> m_VkSignalSemaphores;
 
     // List of fences to signal next time the command context is flushed
     std::vector<std::pair<Uint64, RefCntAutoPtr<IFence>>> m_PendingFences;

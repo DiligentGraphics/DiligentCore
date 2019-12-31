@@ -876,12 +876,15 @@ void DeviceContextVkImpl::Flush()
         }
     }
 
+    VERIFY_EXPR(m_VkWaitSemaphores.size() == m_WaitSemaphores.size());
+    VERIFY_EXPR(m_VkSignalSemaphores.size() == m_SignalSemaphores.size());
+
     SubmitInfo.waitSemaphoreCount = static_cast<uint32_t>(m_WaitSemaphores.size());
     VERIFY_EXPR(m_WaitSemaphores.size() == m_WaitDstStageMasks.size());
-    SubmitInfo.pWaitSemaphores      = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitSemaphores.data() : nullptr;
+    SubmitInfo.pWaitSemaphores      = SubmitInfo.waitSemaphoreCount != 0 ? m_VkWaitSemaphores.data() : nullptr;
     SubmitInfo.pWaitDstStageMask    = SubmitInfo.waitSemaphoreCount != 0 ? m_WaitDstStageMasks.data() : nullptr;
     SubmitInfo.signalSemaphoreCount = static_cast<uint32_t>(m_SignalSemaphores.size());
-    SubmitInfo.pSignalSemaphores    = SubmitInfo.signalSemaphoreCount != 0 ? m_SignalSemaphores.data() : nullptr;
+    SubmitInfo.pSignalSemaphores    = SubmitInfo.signalSemaphoreCount != 0 ? m_VkSignalSemaphores.data() : nullptr;
 
     // Submit command buffer even if there are no commands to release stale resources.
     //if (SubmitInfo.commandBufferCount != 0 || SubmitInfo.waitSemaphoreCount !=0 || SubmitInfo.signalSemaphoreCount != 0)
@@ -890,6 +893,8 @@ void DeviceContextVkImpl::Flush()
     m_WaitSemaphores.clear();
     m_WaitDstStageMasks.clear();
     m_SignalSemaphores.clear();
+    m_VkWaitSemaphores.clear();
+    m_VkSignalSemaphores.clear();
     m_PendingFences.clear();
 
     if (vkCmdBuff != VK_NULL_HANDLE)
