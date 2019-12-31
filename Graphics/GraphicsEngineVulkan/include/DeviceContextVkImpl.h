@@ -41,7 +41,7 @@
 #include "TextureVkImpl.h"
 #include "PipelineStateVkImpl.h"
 #include "HashUtils.h"
-#include "SemaphoreObject.h"
+#include "ManagedVulkanObject.h"
 
 namespace Diligent
 {
@@ -235,18 +235,18 @@ public:
     virtual void BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags) override final;
 
 
-    void AddWaitSemaphore(SemaphoreObject* pWaitSemaphore, VkPipelineStageFlags WaitDstStageMask)
+    void AddWaitSemaphore(ManagedSemaphore* pWaitSemaphore, VkPipelineStageFlags WaitDstStageMask)
     {
         VERIFY_EXPR(pWaitSemaphore != nullptr);
         m_WaitSemaphores.emplace_back(pWaitSemaphore);
-        m_VkWaitSemaphores.push_back(pWaitSemaphore->GetVkSemaphore());
+        m_VkWaitSemaphores.push_back(pWaitSemaphore->Get());
         m_WaitDstStageMasks.push_back(WaitDstStageMask);
     }
-    void AddSignalSemaphore(SemaphoreObject* pSignalSemaphore)
+    void AddSignalSemaphore(ManagedSemaphore* pSignalSemaphore)
     {
         VERIFY_EXPR(pSignalSemaphore != nullptr);
         m_SignalSemaphores.emplace_back(pSignalSemaphore);
-        m_VkSignalSemaphores.push_back(pSignalSemaphore->GetVkSemaphore());
+        m_VkSignalSemaphores.push_back(pSignalSemaphore->Get());
     }
 
     void UpdateBufferRegion(BufferVkImpl*                  pBuffVk,
@@ -406,9 +406,9 @@ private:
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
     // Semaphores are not owned by the command context
-    std::vector<RefCntAutoPtr<SemaphoreObject>> m_WaitSemaphores;
-    std::vector<VkPipelineStageFlags>           m_WaitDstStageMasks;
-    std::vector<RefCntAutoPtr<SemaphoreObject>> m_SignalSemaphores;
+    std::vector<RefCntAutoPtr<ManagedSemaphore>> m_WaitSemaphores;
+    std::vector<VkPipelineStageFlags>            m_WaitDstStageMasks;
+    std::vector<RefCntAutoPtr<ManagedSemaphore>> m_SignalSemaphores;
 
     std::vector<VkSemaphore> m_VkWaitSemaphores;
     std::vector<VkSemaphore> m_VkSignalSemaphores;

@@ -30,7 +30,7 @@
 #include "SwapChainBase.h"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
-#include "SemaphoreObject.h"
+#include "ManagedVulkanObject.h"
 
 namespace Diligent
 {
@@ -91,9 +91,9 @@ private:
     VkSwapchainKHR m_VkSwapChain   = VK_NULL_HANDLE;
     VkFormat       m_VkColorFormat = VK_FORMAT_UNDEFINED;
 
-    std::vector<RefCntAutoPtr<SemaphoreObject>> m_ImageAcquiredSemaphores;
-    std::vector<RefCntAutoPtr<SemaphoreObject>> m_DrawCompleteSemaphores;
-    std::vector<VulkanUtilities::FenceWrapper>  m_ImageAcquiredFences;
+    std::vector<RefCntAutoPtr<ManagedSemaphore>> m_ImageAcquiredSemaphores;
+    std::vector<RefCntAutoPtr<ManagedSemaphore>> m_DrawCompleteSemaphores;
+    std::vector<VulkanUtilities::FenceWrapper>   m_ImageAcquiredFences;
 
     std::vector<RefCntAutoPtr<ITextureViewVk>, STDAllocatorRawMem<RefCntAutoPtr<ITextureViewVk>>> m_pBackBufferRTV;
 
