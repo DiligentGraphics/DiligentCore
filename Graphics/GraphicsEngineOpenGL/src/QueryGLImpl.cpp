@@ -74,7 +74,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize)
             glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT_AVAILABLE, &ResultAvailable);
             CHECK_GL_ERROR("Failed to get query result");
             break;
-            
+
         default:
             return false;
     }
