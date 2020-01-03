@@ -80,6 +80,8 @@ QueryManager::QueryManager(ID3D12Device* pd3d12Device,
         auto hr = pd3d12Device->CreateQueryHeap(&d3d12HeapDesc, __uuidof(HeapInfo.pd3d12QueryHeap), reinterpret_cast<void**>(&HeapInfo.pd3d12QueryHeap));
         CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D12 query heap of type");
 
+        // AlignedDestinationBufferOffset must be a multiple of 8 bytes.
+        // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata
         Uint32 AlignedQueryDataSize = Align(GetQueryDataSize(static_cast<QUERY_TYPE>(QueryType)), Uint32{8});
         HeapInfo.AvailableQueries.resize(HeapInfo.HeapSize);
         HeapInfo.ResolveBufferOffsets.resize(HeapInfo.HeapSize);
@@ -113,6 +115,9 @@ QueryManager::QueryManager(ID3D12Device* pd3d12Device,
     HeapProps.CreationNodeMask      = 1;
     HeapProps.VisibleNodeMask       = 1;
 
+    // The destination buffer of a query resolve operation must be in the D3D12_RESOURCE_USAGE_COPY_DEST state.
+    // ResolveQueryData works with all heap types (default, upload, readback).
+    // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata
     auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
                                                     &D3D12BuffDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
                                                     __uuidof(m_pd3d12ResolveBuffer),
@@ -185,6 +190,8 @@ void QueryManager::EndQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index)
     auto  d3d12QueryType = QueryTypeToD3D12QueryType(Type);
     auto& HeapInfo       = m_Heaps[Type];
     Ctx.EndQuery(HeapInfo.pd3d12QueryHeap, d3d12QueryType, Index);
+
+    // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata
     Ctx.ResolveQueryData(HeapInfo.pd3d12QueryHeap, d3d12QueryType, Index, 1, m_pd3d12ResolveBuffer, HeapInfo.ResolveBufferOffsets[Index]);
 }
 

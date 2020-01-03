@@ -90,7 +90,9 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize)
             {
                 UINT64 AnySamplePassed;
                 QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &AnySamplePassed, sizeof(AnySamplePassed));
-                auto& QueryData           = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+                auto& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+                // Binary occlusion queries write 64-bits per query. The least significant bit is either 0 or 1. The rest of the bits are 0.
+                // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata
                 QueryData.AnySamplePassed = AnySamplePassed != 0;
             }
             break;
@@ -105,6 +107,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize)
                 const auto& CmdQueue    = m_pDevice->GetCommandQueue(CmdQueueId);
                 auto*       pd3d12Queue = const_cast<ICommandQueueD3D12&>(CmdQueue).GetD3D12CommandQueue();
 
+                // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#timestamp-frequency
                 UINT64 TimestampFrequency = 0;
                 pd3d12Queue->GetTimestampFrequency(&TimestampFrequency);
                 QueryData.Frequency = TimestampFrequency;

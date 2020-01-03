@@ -84,14 +84,15 @@ public:
     {
         if (this->m_Desc.Type == QUERY_TYPE_TIMESTAMP)
         {
-            LOG_ERROR_MESSAGE("Timestamp queries are never begun. Call EndQuery to set the timestamp.");
+            LOG_ERROR_MESSAGE("BeginQuery cannot be called on timestamp query '", this->m_Desc.Name,
+                              "'. Call EndQuery to set the timestamp.");
             return false;
         }
 
         if (m_State == QueryState::Querying)
         {
             LOG_ERROR_MESSAGE("Attempting to begin query '", this->m_Desc.Name,
-                              "' that is already in querying state.");
+                              "' twice. A query must be ended before it can be begun again.");
             return false;
         }
 

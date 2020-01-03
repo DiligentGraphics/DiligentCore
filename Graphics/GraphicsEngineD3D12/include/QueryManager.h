@@ -39,6 +39,8 @@ namespace Diligent
 
 class CommandContext;
 
+// https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#queries
+
 class QueryManager
 {
 public:
@@ -79,6 +81,7 @@ private:
     std::mutex                                      m_HeapMutex;
     std::array<QueryHeapInfo, QUERY_TYPE_NUM_TYPES> m_Heaps;
 
+    // Readback buffer that will contain the query data.
     CComPtr<ID3D12Resource> m_pd3d12ResolveBuffer;
 };
 
