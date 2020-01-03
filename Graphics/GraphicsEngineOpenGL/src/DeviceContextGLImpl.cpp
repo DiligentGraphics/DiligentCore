@@ -1073,8 +1073,12 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
     switch (QueryType)
     {
         case QUERY_TYPE_OCCLUSION:
+#if GL_SAMPLES_PASSED
             glBeginQuery(GL_SAMPLES_PASSED, glQuery);
             CHECK_GL_ERROR("Failed to begin GL_SAMPLES_PASSED query");
+#else
+            LOG_ERROR_MESSAGE_ONCE("GL_SAMPLES_PASSED query is not supported by this device");
+#endif
             break;
 
         case QUERY_TYPE_BINARY_OCCLUSION:
@@ -1083,8 +1087,12 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
             break;
 
         case QUERY_TYPE_PIPELINE_STATISTICS:
+#if GL_PRIMITIVES_GENERATED
             glBeginQuery(GL_PRIMITIVES_GENERATED, glQuery);
             CHECK_GL_ERROR("Failed to begin GL_PRIMITIVES_GENERATED query");
+#else
+            LOG_ERROR_MESSAGE_ONCE("GL_PRIMITIVES_GENERATED query is not supported by this device");
+#endif
             break;
 
         default:
@@ -1102,8 +1110,10 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
     switch (QueryType)
     {
         case QUERY_TYPE_OCCLUSION:
+#if GL_SAMPLES_PASSED
             glEndQuery(GL_SAMPLES_PASSED);
             CHECK_GL_ERROR("Failed to end GL_SAMPLES_PASSED query");
+#endif
             break;
 
         case QUERY_TYPE_BINARY_OCCLUSION:
@@ -1112,8 +1122,10 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
             break;
 
         case QUERY_TYPE_PIPELINE_STATISTICS:
+#if GL_PRIMITIVES_GENERATED
             glEndQuery(GL_PRIMITIVES_GENERATED);
             CHECK_GL_ERROR("Failed to end GL_PRIMITIVES_GENERATED query");
+#endif
             break;
 
         case QUERY_TYPE_TIMESTAMP:
@@ -1121,7 +1133,7 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
             glQueryCounter(pQueryGLImpl->GetGlQueryHandle(), GL_TIMESTAMP);
             CHECK_GL_ERROR("glQueryCounter failed");
 #else
-            LOG_WARNING_MESSAGE_ONCE("Timer queries are not supported by this device");
+            LOG_ERROR_MESSAGE_ONCE("Timer queries are not supported by this device");
 #endif
             break;
 

@@ -54,13 +54,29 @@ QueryGLImpl::~QueryGLImpl()
 
 bool QueryGLImpl::GetData(void* pData, Uint32 DataSize)
 {
-    GLint ResultAvailable = 0;
-#if !GL_ARB_timer_query
-    if (m_Desc.Type != QUERY_TYPE_TIMESTAMP)
-#endif
+    GLuint ResultAvailable = GL_FALSE;
+
+    switch (m_Desc.Type)
     {
-        glGetQueryObjectiv(m_GlQuery, GL_QUERY_RESULT_AVAILABLE, &ResultAvailable);
-        CHECK_GL_ERROR("Failed to get query result");
+#if GL_SAMPLES_PASSED
+        case QUERY_TYPE_OCCLUSION:
+#endif
+
+        case QUERY_TYPE_BINARY_OCCLUSION:
+
+#if GL_PRIMITIVES_GENERATED
+        case QUERY_TYPE_PIPELINE_STATISTICS:
+#endif
+
+#if GL_ARB_timer_query
+        case QUERY_TYPE_TIMESTAMP:
+#endif
+            glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT_AVAILABLE, &ResultAvailable);
+            CHECK_GL_ERROR("Failed to get query result");
+            break;
+            
+        default:
+            return false;
     }
 
     if (ResultAvailable)
@@ -120,7 +136,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize)
         }
     }
 
-    return ResultAvailable != 0;
+    return ResultAvailable != GL_FALSE;
 }
 
 } // namespace Diligent

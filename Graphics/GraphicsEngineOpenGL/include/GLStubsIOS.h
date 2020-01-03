@@ -503,6 +503,16 @@
 #    define GL_ALL_BARRIER_BITS 0xFFFFFFFF
 #endif
 
+
+#ifndef GL_SAMPLES_PASSED
+#    define GL_SAMPLES_PASSED 0
+#endif
+
+#ifndef GL_PRIMITIVES_GENERATED
+#    define GL_PRIMITIVES_GENERATED 0
+#endif
+
+
 // Define unsupported GL function stubs
 template <typename T>
 void UnsupportedGLFunctionStub(const T& Name)
