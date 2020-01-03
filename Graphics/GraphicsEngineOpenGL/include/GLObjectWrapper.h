@@ -330,4 +330,14 @@ private:
     GLsync SyncHandle = {};
 };
 
+class GLQueryCreateReleaseHelper
+{
+public:
+    void Create(GLuint& Query) { glGenQueries(1, &Query); }
+    void Release(GLuint Query) { glDeleteQueries(1, &Query); }
+
+    static const char* Name;
+};
+typedef GLObjWrapper<GLQueryCreateReleaseHelper> GLQueryObj;
+
 } // namespace GLObjectWrappers

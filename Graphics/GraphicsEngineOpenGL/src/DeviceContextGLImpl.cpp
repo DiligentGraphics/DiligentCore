@@ -1067,6 +1067,29 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
         return;
 
     auto* pQueryGLImpl = ValidatedCast<QueryGLImpl>(pQuery);
+    auto  QueryType    = pQueryGLImpl->GetDesc().Type;
+    auto  glQuery      = pQueryGLImpl->GetGlQueryHandle();
+
+    switch (QueryType)
+    {
+        case QUERY_TYPE_OCCLUSION:
+            glBeginQuery(GL_SAMPLES_PASSED, glQuery);
+            CHECK_GL_ERROR("Failed to begin GL_SAMPLES_PASSED query");
+            break;
+
+        case QUERY_TYPE_BINARY_OCCLUSION:
+            glBeginQuery(GL_ANY_SAMPLES_PASSED, glQuery);
+            CHECK_GL_ERROR("Failed to begin GL_ANY_SAMPLES_PASSED query");
+            break;
+
+        case QUERY_TYPE_PIPELINE_STATISTICS:
+            glBeginQuery(GL_PRIMITIVES_GENERATED, glQuery);
+            CHECK_GL_ERROR("Failed to begin GL_PRIMITIVES_GENERATED query");
+            break;
+
+        default:
+            UNEXPECTED("Unexpected query type");
+    }
 }
 
 void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
@@ -1075,6 +1098,36 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
         return;
 
     auto* pQueryGLImpl = ValidatedCast<QueryGLImpl>(pQuery);
+    auto  QueryType    = pQueryGLImpl->GetDesc().Type;
+    switch (QueryType)
+    {
+        case QUERY_TYPE_OCCLUSION:
+            glEndQuery(GL_SAMPLES_PASSED);
+            CHECK_GL_ERROR("Failed to end GL_SAMPLES_PASSED query");
+            break;
+
+        case QUERY_TYPE_BINARY_OCCLUSION:
+            glEndQuery(GL_ANY_SAMPLES_PASSED);
+            CHECK_GL_ERROR("Failed to end GL_ANY_SAMPLES_PASSED query");
+            break;
+
+        case QUERY_TYPE_PIPELINE_STATISTICS:
+            glEndQuery(GL_PRIMITIVES_GENERATED);
+            CHECK_GL_ERROR("Failed to end GL_PRIMITIVES_GENERATED query");
+            break;
+
+        case QUERY_TYPE_TIMESTAMP:
+#if GL_ARB_timer_query
+            glQueryCounter(pQueryGLImpl->GetGlQueryHandle(), GL_TIMESTAMP);
+            CHECK_GL_ERROR("glQueryCounter failed");
+#else
+            LOG_WARNING_MESSAGE_ONCE("Timer queries are not supported by this device");
+#endif
+            break;
+
+        default:
+            UNEXPECTED("Unexpected query type");
+    }
 }
 
 bool DeviceContextGLImpl::UpdateCurrentGLContext()

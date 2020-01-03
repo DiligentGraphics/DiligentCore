@@ -42,7 +42,8 @@ QueryGLImpl::QueryGLImpl(IReferenceCounters* pRefCounters,
         pRefCounters,
         pDevice,
         Desc
-    }
+    },
+    m_GlQuery{true}
 // clang-format on
 {
 }
@@ -53,7 +54,73 @@ QueryGLImpl::~QueryGLImpl()
 
 bool QueryGLImpl::GetData(void* pData, Uint32 DataSize)
 {
-    return false;
+    GLint ResultAvailable = 0;
+#if !GL_ARB_timer_query
+    if (m_Desc.Type != QUERY_TYPE_TIMESTAMP)
+#endif
+    {
+        glGetQueryObjectiv(m_GlQuery, GL_QUERY_RESULT_AVAILABLE, &ResultAvailable);
+        CHECK_GL_ERROR("Failed to get query result");
+    }
+
+    if (ResultAvailable)
+    {
+        switch (m_Desc.Type)
+        {
+            case QUERY_TYPE_OCCLUSION:
+            {
+                auto& QueryData = *reinterpret_cast<QueryDataOcclusion*>(pData);
+
+                GLuint SamplesPassed = 0;
+                glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT, &SamplesPassed);
+                CHECK_GL_ERROR("Failed to get query result");
+                QueryData.NumSamples = SamplesPassed;
+            }
+            break;
+
+            case QUERY_TYPE_BINARY_OCCLUSION:
+            {
+                auto& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+
+                GLuint AnySamplePassed = 0;
+                glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT, &AnySamplePassed);
+                CHECK_GL_ERROR("Failed to get query result");
+                QueryData.AnySamplePassed = AnySamplePassed != 0;
+            }
+            break;
+
+            case QUERY_TYPE_PIPELINE_STATISTICS:
+            {
+                auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
+
+                GLuint PrimitivesGenerated = 0;
+                glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT, &PrimitivesGenerated);
+                CHECK_GL_ERROR("Failed to get query result");
+                QueryData.ClippingInvocations = PrimitivesGenerated;
+            }
+            break;
+
+            case QUERY_TYPE_TIMESTAMP:
+            {
+#if GL_ARB_timer_query
+                auto&    QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                GLuint64 Counter   = 0;
+                glGetQueryObjectui64v(m_GlQuery, GL_QUERY_RESULT, &Counter);
+                CHECK_GL_ERROR("Failed to get query result");
+                QueryData.Counter = Counter;
+                // Counter is always measured in nanoseconds (10^-9 seconds)
+                QueryData.Frequency = 1000000000;
+#endif
+            }
+            break;
+
+            default:
+                UNEXPECTED("Unexpected query type");
+                return false;
+        }
+    }
+
+    return ResultAvailable != 0;
 }
 
 } // namespace Diligent

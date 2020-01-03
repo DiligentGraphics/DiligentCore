@@ -41,6 +41,7 @@ const char *GLTextureCreateReleaseHelper    :: Name = "texture";
 const char *GLSamplerCreateReleaseHelper    :: Name = "sampler";
 const char *GLFBOCreateReleaseHelper        :: Name = "framebuffer";
 const char *GLRBOCreateReleaseHelper        :: Name = "renderbuffer";
+const char *GLQueryCreateReleaseHelper      :: Name = "query";
 // clang-format on
 
 } // namespace GLObjectWrappers

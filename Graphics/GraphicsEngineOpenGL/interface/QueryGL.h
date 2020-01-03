@@ -43,6 +43,8 @@ static constexpr INTERFACE_ID IID_QueryGL =
 /// Exposes OpenGL-specific functionality of a Query object.
 class IQueryGL : public IQuery
 {
+    /// Returns OpenGL handle of an internal query object.
+    virtual GLuint GetGlQueryHandle() const = 0;
 };
 
 } // namespace Diligent

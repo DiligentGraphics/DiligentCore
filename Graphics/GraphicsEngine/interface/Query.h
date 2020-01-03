@@ -107,6 +107,8 @@ struct QueryDataTimestamp
 
 /// Pipeline statistics query data.
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_PIPELINE_STATISTICS query type.
+///
+/// \warning  In OpenGL backend the only field that will be populated is ClippingInvocations.
 struct QueryDataPipelineStatistics
 {
     /// Query type - must be Diligent::QUERY_TYPE_PIPELINE_STATISTICS
