@@ -113,22 +113,27 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize)
 
         case QUERY_TYPE_TIMESTAMP:
         {
+            // Timestamp query is only useful if two timestamp queries are done in the middle of a D3D11_QUERY_TIMESTAMP_DISJOINT query.
+            // Timestamp disjoint query is begun by the device context when the first timestamp query is begun and ended
+            // by FinishFrame. Thus timestamp queries will only become available after FinishFrame.
+
             VERIFY_EXPR(m_DisjointQuery);
-            
+
             D3D11_QUERY_DATA_TIMESTAMP_DISJOINT DisjointQueryData;
             DataReady = pd3d11Ctx->GetData(m_DisjointQuery->pd3d11Query, &DisjointQueryData, sizeof(DisjointQueryData), 0) == S_OK;
-            
-            UINT64 NumTicks;
+
             if (DataReady)
             {
-                DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &NumTicks, sizeof(NumTicks), 0) == S_OK;
-            }
-            if (DataReady)
-            {
-                auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                QueryData.NumTicks  = NumTicks;
-                // The timestamp returned by ID3D11DeviceContext::GetData for a timestamp query is only reliable if Disjoint is FALSE.
-                QueryData.Frequency = DisjointQueryData.Disjoint ? 0 : DisjointQueryData.Frequency;
+                UINT64 Counter = 0;
+
+                DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &Counter, sizeof(Counter), 0) == S_OK;
+                if (DataReady)
+                {
+                    auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    QueryData.Counter = Counter;
+                    // The timestamp returned by ID3D11DeviceContext::GetData for a timestamp query is only reliable if Disjoint is FALSE.
+                    QueryData.Frequency = DisjointQueryData.Disjoint ? 0 : DisjointQueryData.Frequency;
+                }
             }
         }
         break;

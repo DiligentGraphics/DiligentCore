@@ -99,10 +99,10 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize)
 
             case QUERY_TYPE_TIMESTAMP:
             {
-                UINT64 NumTicks;
-                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &NumTicks, sizeof(NumTicks));
-                auto& QueryData    = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                QueryData.NumTicks = NumTicks;
+                UINT64 Counter;
+                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &Counter, sizeof(Counter));
+                auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                QueryData.Counter = Counter;
 
                 const auto& CmdQueue    = m_pDevice->GetCommandQueue(CmdQueueId);
                 auto*       pd3d12Queue = const_cast<ICommandQueueD3D12&>(CmdQueue).GetD3D12CommandQueue();

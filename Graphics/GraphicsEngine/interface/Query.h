@@ -98,7 +98,7 @@ struct QueryDataTimestamp
     const QUERY_TYPE Type = QUERY_TYPE_TIMESTAMP;
 
     /// The value of a high-frequency counter.
-    Uint64 NumTicks = 0;
+    Uint64 Counter = 0;
 
     /// The counter frequency, in Hz (ticks/second). If there was an error
     /// while getting the timestamp, this value will be 0.
