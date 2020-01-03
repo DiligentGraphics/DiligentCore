@@ -73,7 +73,7 @@ public:
     {
         if (m_State == QueryState::Querying)
         {
-            LOG_ERROR_MESSAGE("Destroying query '", m_Desc.Name,
+            LOG_ERROR_MESSAGE("Destroying query '", this->m_Desc.Name,
                               "' that is in querying state. End the query before releasing it.");
         }
     }
@@ -82,7 +82,7 @@ public:
 
     bool OnBeginQuery(IDeviceContext* pContext)
     {
-        if (m_Desc.Type == QUERY_TYPE_TIMESTAMP)
+        if (this->m_Desc.Type == QUERY_TYPE_TIMESTAMP)
         {
             LOG_ERROR_MESSAGE("Timestamp queries are never begun. Call EndQuery to set the timestamp.");
             return false;
@@ -90,7 +90,7 @@ public:
 
         if (m_State == QueryState::Querying)
         {
-            LOG_ERROR_MESSAGE("Attempting to begin query '", m_Desc.Name,
+            LOG_ERROR_MESSAGE("Attempting to begin query '", this->m_Desc.Name,
                               "' that is already in querying state.");
             return false;
         }
@@ -102,20 +102,20 @@ public:
 
     bool OnEndQuery(IDeviceContext* pContext)
     {
-        if (m_Desc.Type != QUERY_TYPE_TIMESTAMP)
+        if (this->m_Desc.Type != QUERY_TYPE_TIMESTAMP)
         {
             if (m_State != QueryState::Querying)
             {
-                LOG_ERROR_MESSAGE("Attempting to end query '", m_Desc.Name, "' that has not been begun");
+                LOG_ERROR_MESSAGE("Attempting to end query '", this->m_Desc.Name, "' that has not been begun");
                 return false;
             }
         }
 
         if (m_pContext == nullptr)
         {
-            if (m_Desc.Type != QUERY_TYPE_TIMESTAMP)
+            if (this->m_Desc.Type != QUERY_TYPE_TIMESTAMP)
             {
-                LOG_ERROR_MESSAGE("Ending query '", m_Desc.Name, "' that has not been begun");
+                LOG_ERROR_MESSAGE("Ending query '", this->m_Desc.Name, "' that has not been begun");
                 return false;
             }
 
@@ -123,7 +123,7 @@ public:
         }
         else if (m_pContext != pContext)
         {
-            LOG_ERROR_MESSAGE("Query '", m_Desc.Name, "' has been begun by another context");
+            LOG_ERROR_MESSAGE("Query '", this->m_Desc.Name, "' has been begun by another context");
             return false;
         }
 
@@ -146,17 +146,17 @@ public:
 
         if (m_State != QueryState::Complete)
         {
-            LOG_ERROR_MESSAGE("Attempting to get data of query '", m_Desc.Name, "' that has not been ended");
+            LOG_ERROR_MESSAGE("Attempting to get data of query '", this->m_Desc.Name, "' that has not been ended");
             return false;
         }
 
-        if (*reinterpret_cast<QUERY_TYPE*>(pData) != m_Desc.Type)
+        if (*reinterpret_cast<QUERY_TYPE*>(pData) != this->m_Desc.Type)
         {
             LOG_ERROR_MESSAGE("Incorrect query data structure type.");
             return false;
         }
 
-        switch (m_Desc.Type)
+        switch (this->m_Desc.Type)
         {
             case QUERY_TYPE_UNDEFINED:
                 UNEXPECTED("Undefined query type is unexpected");
