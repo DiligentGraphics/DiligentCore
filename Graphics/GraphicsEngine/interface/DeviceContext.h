@@ -48,6 +48,7 @@
 #include "BlendState.h"
 #include "PipelineState.h"
 #include "Fence.h"
+#include "Query.h"
 #include "CommandList.h"
 #include "SwapChain.h"
 
@@ -1005,6 +1006,30 @@ public:
     ///             application must explicitly reset the PSO and bind all required shader resources after 
     ///             idling the context.\n
     virtual void WaitForIdle() = 0;
+
+
+    /// Marks the beginning of a query.
+
+    /// \param [in] pQuery - A pointer to a query object.
+    ///
+    /// \remarks    Only immediate context can begin a query.
+    virtual void BeginQuery(IQuery* pQuery) = 0;
+
+
+    /// Marks the end of a query.
+
+    /// \param [in] pQuery - A pointer to a query object.
+    ///
+    /// \remarks    A query must be ended by the same context that began it.
+    ///
+    ///             In Direct3D12 and Vulkan, queries (except for timestamp queries)
+    ///             cannot span command list boundaries, so the engine will never flush
+    ///             the context even if the number of commands exceeds the user-specified limit
+    ///             if there is an active query.
+    ///             It is an error to explicitly flush the context while a query is active. 
+    ///
+    ///             All queries must be ended when IDeviceContext::FinishFrame() is called.
+    virtual void EndQuery(IQuery* pQuery) = 0;
 
 
     /// Submits all pending commands in the context for execution to the command queue.

@@ -324,6 +324,9 @@ protected:
     static void TearDownTestSuite()
     {
         sm_pDrawProceduralPSO.Release();
+        sm_pDrawPSO.Release();
+        sm_pDraw_2xStride_PSO.Release();
+        sm_pDrawInstancedPSO.Release();
 
         auto* pEnv = TestingEnvironment::GetInstance();
         pEnv->Reset();

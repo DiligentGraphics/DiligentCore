@@ -217,6 +217,9 @@ public:
 
         /// Size of the fence object (FenceD3D12Impl, FenceVkImpl, etc.), in bytes
         const size_t FenceSize;
+
+        /// Size of the query object (QueryD3D12Impl, QueryVkImpl, etc.), in bytes
+        const size_t QuerySize;
     };
 
     /// \param pRefCounters        - reference counters object that controls the lifetime of this render device
@@ -249,7 +252,8 @@ public:
         m_PSOAllocator          {RawMemAllocator, ObjectSizes.PSOSize,          128 },
         m_SRBAllocator          {RawMemAllocator, ObjectSizes.SRBSize,          1024},
         m_ResMappingAllocator   {RawMemAllocator, sizeof(ResourceMappingImpl),  16  },
-        m_FenceAllocator        {RawMemAllocator, ObjectSizes.FenceSize,        16  }
+        m_FenceAllocator        {RawMemAllocator, ObjectSizes.FenceSize,        16  },
+        m_QueryAllocator        {RawMemAllocator, ObjectSizes.QuerySize,        16  }
     // clang-format on
     {
         // Initialize texture format info
@@ -421,6 +425,7 @@ protected:
     FixedBlockMemoryAllocator m_SRBAllocator;         ///< Allocator for shader resource binding objects
     FixedBlockMemoryAllocator m_ResMappingAllocator;  ///< Allocator for resource mapping objects
     FixedBlockMemoryAllocator m_FenceAllocator;       ///< Allocator for fence objects
+    FixedBlockMemoryAllocator m_QueryAllocator;       ///< Allocator for query objects
 };
 
 

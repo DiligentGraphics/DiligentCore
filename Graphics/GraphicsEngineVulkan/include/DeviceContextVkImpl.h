@@ -44,6 +44,7 @@
 #include "BufferVkImpl.h"
 #include "TextureVkImpl.h"
 #include "PipelineStateVkImpl.h"
+#include "QueryVkImpl.h"
 #include "HashUtils.h"
 #include "ManagedVulkanObject.h"
 
@@ -59,6 +60,7 @@ struct DeviceContextVkImplTraits
     using PipelineStateType = PipelineStateVkImpl;
     using DeviceType        = RenderDeviceVkImpl;
     using ICommandQueueType = ICommandQueueVk;
+    using QueryType         = QueryVkImpl;
 };
 
 /// Device context implementation in Vulkan backend.
@@ -205,6 +207,12 @@ public:
 
     /// Implementation of IDeviceContext::WaitForIdle() in Vulkan backend.
     virtual void WaitForIdle() override final;
+
+    /// Implementation of IDeviceContext::BeginQuery() in Vulkan backend.
+    virtual void BeginQuery(IQuery* pQuery) override final;
+
+    /// Implementation of IDeviceContext::EndQuery() in Vulkan backend.
+    virtual void EndQuery(IQuery* pQuery) override final;
 
     /// Implementation of IDeviceContext::Flush() in Vulkan backend.
     virtual void Flush() override final;

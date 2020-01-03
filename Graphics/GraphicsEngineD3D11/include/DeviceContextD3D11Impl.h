@@ -36,6 +36,7 @@
 #include "BufferD3D11Impl.h"
 #include "TextureBaseD3D11.h"
 #include "PipelineStateD3D11Impl.h"
+#include "QueryD3D11Impl.h"
 
 #ifdef _DEBUG
 #    define VERIFY_CONTEXT_BINDINGS
@@ -52,6 +53,7 @@ struct DeviceContextD3D11ImplTraits
     using TextureType       = TextureBaseD3D11;
     using PipelineStateType = PipelineStateD3D11Impl;
     using DeviceType        = RenderDeviceD3D11Impl;
+    using QueryType         = QueryD3D11Impl;
 };
 
 /// Device context implementation in Direct3D11 backend.
@@ -207,6 +209,12 @@ public:
 
     /// Implementation of IDeviceContext::WaitForIdle() in Direct3D11 backend.
     virtual void WaitForIdle() override final;
+
+    /// Implementation of IDeviceContext::BeginQuery() in Direct3D11 backend.
+    virtual void BeginQuery(IQuery* pQuery) override final;
+
+    /// Implementation of IDeviceContext::EndQuery() in Direct3D11 backend.
+    virtual void EndQuery(IQuery* pQuery) override final;
 
     /// Implementation of IDeviceContext::Flush() in Direct3D11 backend.
     virtual void Flush() override final;

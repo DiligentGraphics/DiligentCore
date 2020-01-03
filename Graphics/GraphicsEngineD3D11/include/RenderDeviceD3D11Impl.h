@@ -69,6 +69,9 @@ public:
     /// Implementation of IRenderDevice::CreateFence() in Direct3D11 backend.
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
 
+    /// Implementation of IRenderDevice::CreateQuery() in Direct3D11 backend.
+    virtual void CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
+
     /// Implementation of IRenderDeviceD3D11::GetD3D11Device() in Direct3D11 backend.
     ID3D11Device* GetD3D11Device() override final { return m_pd3d11Device; }
 

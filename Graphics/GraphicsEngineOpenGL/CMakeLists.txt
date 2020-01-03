@@ -18,6 +18,7 @@ set(INCLUDE
     include/GLTypeConversions.h
     include/pch.h
     include/PipelineStateGLImpl.h
+    include/QueryGLImpl.h
     include/RenderDeviceGLImpl.h
     include/SamplerGLImpl.h
     include/ShaderGLImpl.h
@@ -44,6 +45,7 @@ set(INTERFACE
     interface/EngineFactoryOpenGL.h
     interface/FenceGL.h
     interface/PipelineStateGL.h
+    interface/QueryGL.h
     interface/RenderDeviceGL.h
     interface/SamplerGL.h
     interface/ShaderGL.h
@@ -67,6 +69,7 @@ set(SOURCE
     src/GLProgramResources.cpp
     src/GLTypeConversions.cpp
     src/PipelineStateGLImpl.cpp
+    src/QueryGLImpl.cpp
     src/RenderDeviceGLImpl.cpp
     src/SamplerGLImpl.cpp
     src/ShaderGLImpl.cpp

@@ -37,6 +37,7 @@
 #include "ShaderResourceBindingD3D12Impl.h"
 #include "DeviceContextD3D12Impl.h"
 #include "FenceD3D12Impl.h"
+#include "QueryD3D12Impl.h"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -107,7 +108,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             sizeof(SamplerD3D12Impl),
             sizeof(PipelineStateD3D12Impl),
             sizeof(ShaderResourceBindingD3D12Impl),
-            sizeof(FenceD3D12Impl)
+            sizeof(FenceD3D12Impl),
+            sizeof(QueryD3D12Impl)
         }
     },
     m_pd3d12Device  {pd3d12Device},
@@ -127,7 +129,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     },
     m_ContextPool         (STD_ALLOCATOR_RAW_MEM(PooledCommandContext, GetRawAllocator(), "Allocator for vector<PooledCommandContext>")),
     m_DynamicMemoryManager{GetRawAllocator(), *this, EngineCI.NumDynamicHeapPagesToReserve, EngineCI.DynamicHeapPageSize},
-    m_MipsGenerator       {pd3d12Device}
+    m_MipsGenerator       {pd3d12Device},
+    m_QueryMgr            {pd3d12Device, EngineCI.QueryPoolSizes}
 // clang-format on
 {
     m_DeviceCaps.DevType = DeviceType::D3D12;
@@ -487,6 +490,17 @@ void RenderDeviceD3D12Impl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
                            FenceD3D12Impl* pFenceD3D12(NEW_RC_OBJ(m_FenceAllocator, "FenceD3D12Impl instance", FenceD3D12Impl)(this, Desc));
                            pFenceD3D12->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
                            OnCreateDeviceObject(pFenceD3D12);
+                       });
+}
+
+void RenderDeviceD3D12Impl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
+{
+    CreateDeviceObject("Query", Desc, ppQuery,
+                       [&]() //
+                       {
+                           QueryD3D12Impl* pQueryD3D12(NEW_RC_OBJ(m_QueryAllocator, "QueryD3D12Impl instance", QueryD3D12Impl)(this, Desc));
+                           pQueryD3D12->QueryInterface(IID_Query, reinterpret_cast<IObject**>(ppQuery));
+                           OnCreateDeviceObject(pQueryD3D12);
                        });
 }
 

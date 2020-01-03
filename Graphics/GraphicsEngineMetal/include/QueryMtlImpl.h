@@ -24,12 +24,12 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::FenceMtlImpl class
+/// Declaration of Diligent::QueryMtlImpl class
 
 #include <deque>
-#include "FenceMtl.h"
+#include "QueryMtl.h"
 #include "RenderDeviceMtl.h"
-#include "FenceBase.h"
+#include "QueryBase.h"
 #include "RenderDeviceMtlImpl.h"
 
 namespace Diligent
@@ -37,23 +37,20 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Implementation of the Diligent::IFenceMtl interface
-class FenceMtlImpl final : public FenceBase<IFenceMtl, RenderDeviceMtlImpl>
+/// Implementation of the Diligent::IQueryMtl interface
+class QueryMtlImpl final : public QueryBase<IQueryMtl, RenderDeviceMtlImpl>
 {
 public:
-    using TFenceBase = FenceBase<IFenceMtl, RenderDeviceMtlImpl>;
+    using TQueryBase = QueryBase<IQueryMtl, RenderDeviceMtlImpl>;
 
-    FenceMtlImpl(IReferenceCounters*  pRefCounters,
+    QueryMtlImpl(IReferenceCounters*  pRefCounters,
                  RenderDeviceMtlImpl* pDevice,
-                 const FenceDesc&     Desc);
-    ~FenceMtlImpl();
+                 const QueryDesc&     Desc);
+    ~QueryMtlImpl();
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceMtl, TFenceBase);
 
-    virtual Uint64 GetCompletedValue() override final;
-
-    /// Resets the fence to the specified value.
-    virtual void Reset(Uint64 Value) override final;
+    virtual bool GetData(void* pData, Uint32 DataSize) override final;
 
 private:
 };

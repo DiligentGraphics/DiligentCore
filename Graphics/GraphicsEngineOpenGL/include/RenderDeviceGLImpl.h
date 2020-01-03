@@ -90,6 +90,9 @@ public:
     /// Implementation of IRenderDevice::CreateFence() in OpenGL backend.
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
 
+    /// Implementation of IRenderDevice::CreateQuery() in OpenGL backend.
+    virtual void CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
+
     /// Implementation of IRenderDeviceGL::CreateTextureFromGLHandle().
     virtual void CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
 

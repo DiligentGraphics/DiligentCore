@@ -88,6 +88,11 @@ public:
         this->m_pDevice->UnlockCommandQueue(m_CommandQueueId);
     }
 
+    Uint32 GetCommandQueueId() const
+    {
+        return m_CommandQueueId;
+    }
+
 protected:
     // Should be called at the end of FinishFrame()
     void EndFrame()

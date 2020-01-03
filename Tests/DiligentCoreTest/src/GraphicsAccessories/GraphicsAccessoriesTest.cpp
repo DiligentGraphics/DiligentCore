@@ -189,6 +189,21 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetStencilOpLiteralName)
 #undef TEST_STENCIL_OP_ENUM
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, GetQueryTypeString)
+{
+#define TEST_QUERY_TYPE_ENUM(ENUM_VAL)                         \
+    {                                                          \
+        EXPECT_STREQ(GetQueryTypeString(ENUM_VAL), #ENUM_VAL); \
+    }
+
+    TEST_QUERY_TYPE_ENUM(QUERY_TYPE_UNDEFINED);
+    TEST_QUERY_TYPE_ENUM(QUERY_TYPE_OCCLUSION);
+    TEST_QUERY_TYPE_ENUM(QUERY_TYPE_BINARY_OCCLUSION);
+    TEST_QUERY_TYPE_ENUM(QUERY_TYPE_TIMESTAMP);
+    TEST_QUERY_TYPE_ENUM(QUERY_TYPE_PIPELINE_STATISTICS);
+    static_assert(QUERY_TYPE_NUM_TYPES == 5, "Not all QUERY_TYPE enum values are tested");
+#undef TEST_QUERY_TYPE_ENUM
+}
 
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetTextureFormatAttribs)

@@ -1461,6 +1461,16 @@ namespace Diligent
         /// Number of dynamic heap pages that will be reserved by the
         /// global dynamic heap manager to avoid page creation at run time.
         Uint32 NumDynamicHeapPagesToReserve = 1;
+
+        /// The size of query pool for each query type.
+        Uint32 QueryPoolSizes[5] = 
+        {
+            0,   // Ignored
+            128, // QUERY_TYPE_OCCLUSION
+            128, // QUERY_TYPE_BINARY_OCCLUSION
+            512, // QUERY_TYPE_TIMESTAMP
+            128  // QUERY_TYPE_PIPELINE_STATISTICS
+        };
     };
 
     /// Attributes specific to Vulkan engine

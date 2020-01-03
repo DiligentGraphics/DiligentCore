@@ -39,7 +39,7 @@ namespace Diligent
 static constexpr INTERFACE_ID IID_Fence =
     {0x3b19184d, 0x32ab, 0x4701, {0x84, 0xf4, 0x9a, 0xc, 0x3, 0xae, 0x16, 0x72}};
 
-/// Buffer description
+/// Fence description
 struct FenceDesc : DeviceObjectAttribs
 {
 };

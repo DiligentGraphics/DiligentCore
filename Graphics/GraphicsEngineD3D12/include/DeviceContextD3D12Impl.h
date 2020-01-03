@@ -36,6 +36,7 @@
 #include "DeviceContextNextGenBase.h"
 #include "BufferD3D12Impl.h"
 #include "TextureD3D12Impl.h"
+#include "QueryD3D12Impl.h"
 #include "PipelineStateD3D12Impl.h"
 #include "D3D12DynamicHeap.h"
 
@@ -51,6 +52,7 @@ struct DeviceContextD3D12ImplTraits
     using PipelineStateType = PipelineStateD3D12Impl;
     using DeviceType        = RenderDeviceD3D12Impl;
     using ICommandQueueType = ICommandQueueD3D12;
+    using QueryType         = QueryD3D12Impl;
 };
 
 /// Device context implementation in Direct3D12 backend.
@@ -208,6 +210,12 @@ public:
 
     /// Implementation of IDeviceContext::WaitForIdle() in Direct3D12 backend.
     virtual void WaitForIdle() override final;
+
+    /// Implementation of IDeviceContext::BeginQuery() in Direct3D12 backend.
+    virtual void BeginQuery(IQuery* pQuery) override final;
+
+    /// Implementation of IDeviceContext::EndQuery() in Direct3D12 backend.
+    virtual void EndQuery(IQuery* pQuery) override final;
 
     /// Implementation of IDeviceContext::Flush() in Direct3D12 backend.
     virtual void Flush() override final;
@@ -389,6 +397,8 @@ private:
         };
     };
     std::unordered_map<MappedTextureKey, TextureUploadSpace, MappedTextureKey::Hasher> m_MappedTextures;
+
+    Int32 m_ActiveQueriesCounter = 0;
 };
 
 } // namespace Diligent

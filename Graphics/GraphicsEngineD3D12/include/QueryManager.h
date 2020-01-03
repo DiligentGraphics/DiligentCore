@@ -27,50 +27,59 @@
 
 #pragma once
 
-/// \file
-/// Declaration of Diligent::FenceGLImpl class
-
+#include <mutex>
+#include <array>
 #include <deque>
-#include "FenceGL.h"
-#include "RenderDeviceGL.h"
-#include "FenceBase.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+#include <vector>
+
+#include "Query.h"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
+class CommandContext;
 
-/// Fence object implementation in OpenGL backend.
-class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
+class QueryManager
 {
 public:
-    using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
+    QueryManager(ID3D12Device* pd3d12Device,
+                 const Uint32  QueryHeapSizes[]);
+    ~QueryManager();
 
-    FenceGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice,
-                const FenceDesc&    Desc);
-    ~FenceGLImpl();
+    // clang-format off
+    QueryManager             (const QueryManager&)  = delete;
+    QueryManager             (      QueryManager&&) = delete;
+    QueryManager& operator = (const QueryManager&)  = delete;
+    QueryManager& operator = (      QueryManager&&) = delete;
+    // clang-format on
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase);
+    static constexpr Uint32 InvalidIndex = static_cast<Uint32>(-1);
 
-    /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
-    virtual Uint64 GetCompletedValue() override final;
+    Uint32 AllocateQuery(QUERY_TYPE Type);
+    void   ReleaseQuery(QUERY_TYPE Type, Uint32 Index);
 
-    /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void Reset(Uint64 Value) override final;
-
-    void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
+    ID3D12QueryHeap* GetQueryHeap(QUERY_TYPE Type)
     {
-        m_PendingFences.emplace_back(Value, std::move(Fence));
+        return m_Heaps[Type].pd3d12QueryHeap;
     }
 
-    void Wait(Uint64 Value, bool FlushCommands);
+    void BeginQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index);
+    void EndQuery(CommandContext& Ctx, QUERY_TYPE Type, Uint32 Index);
+    void ReadQueryData(QUERY_TYPE Type, Uint32 Index, void* pDataPtr, Uint32 DataSize) const;
 
 private:
-    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
-    volatile Uint64                                            m_LastCompletedFenceValue = 0;
+    struct QueryHeapInfo
+    {
+        CComPtr<ID3D12QueryHeap> pd3d12QueryHeap;
+        std::deque<Uint32>       AvailableQueries;
+        std::vector<Uint32>      ResolveBufferOffsets;
+        Uint32                   HeapSize = 0;
+    };
+
+    std::mutex                                      m_HeapMutex;
+    std::array<QueryHeapInfo, QUERY_TYPE_NUM_TYPES> m_Heaps;
+
+    CComPtr<ID3D12Resource> m_pd3d12ResolveBuffer;
 };
 
 } // namespace Diligent

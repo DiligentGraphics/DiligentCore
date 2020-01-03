@@ -28,49 +28,25 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::FenceGLImpl class
+/// Definition of the Diligent::IQueryD3D12 interface
 
-#include <deque>
-#include "FenceGL.h"
-#include "RenderDeviceGL.h"
-#include "FenceBase.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+#include "../../GraphicsEngine/interface/Query.h"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
+// {72D109BE-7D70-4E54-84EF-C649DA190B2C}
+static constexpr INTERFACE_ID IID_QueryD3D12 =
+    {0x72d109be, 0x7d70, 0x4e54, {0x84, 0xef, 0xc6, 0x49, 0xda, 0x19, 0xb, 0x2c}};
 
-/// Fence object implementation in OpenGL backend.
-class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
+/// Exposes Direct3D12-specific functionality of a Query object.
+class IQueryD3D12 : public IQuery
 {
-public:
-    using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
+    /// Returns the Direct3D12 query heap that internal query object resides in.
+    virtual ID3D12QueryHeap* GetD3D12QueryHeap() = 0;
 
-    FenceGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice,
-                const FenceDesc&    Desc);
-    ~FenceGLImpl();
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase);
-
-    /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
-    virtual Uint64 GetCompletedValue() override final;
-
-    /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void Reset(Uint64 Value) override final;
-
-    void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
-    {
-        m_PendingFences.emplace_back(Value, std::move(Fence));
-    }
-
-    void Wait(Uint64 Value, bool FlushCommands);
-
-private:
-    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
-    volatile Uint64                                            m_LastCompletedFenceValue = 0;
+    /// Returns the index of a query object in Direct3D12 query heap.
+    virtual Uint32 GetQueryHeapIndex() const = 0;
 };
 
 } // namespace Diligent

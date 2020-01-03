@@ -28,49 +28,21 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::FenceGLImpl class
+/// Definition of the Diligent::IQueryGL interface
 
-#include <deque>
-#include "FenceGL.h"
-#include "RenderDeviceGL.h"
-#include "FenceBase.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+#include "../../GraphicsEngine/interface/Query.h"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
+// {D8A02AB7-0720-417D-AA9B-20A2C05A3EE0}
+static constexpr INTERFACE_ID IID_QueryGL =
+    {0xd8a02ab7, 0x720, 0x417d, {0xaa, 0x9b, 0x20, 0xa2, 0xc0, 0x5a, 0x3e, 0xe0}};
 
-/// Fence object implementation in OpenGL backend.
-class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
+
+/// Exposes OpenGL-specific functionality of a Query object.
+class IQueryGL : public IQuery
 {
-public:
-    using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
-
-    FenceGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice,
-                const FenceDesc&    Desc);
-    ~FenceGLImpl();
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase);
-
-    /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
-    virtual Uint64 GetCompletedValue() override final;
-
-    /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void Reset(Uint64 Value) override final;
-
-    void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
-    {
-        m_PendingFences.emplace_back(Value, std::move(Fence));
-    }
-
-    void Wait(Uint64 Value, bool FlushCommands);
-
-private:
-    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
-    volatile Uint64                                            m_LastCompletedFenceValue = 0;
 };
 
 } // namespace Diligent

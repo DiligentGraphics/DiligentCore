@@ -92,6 +92,9 @@ public:
     /// Implementation of IRenderDevice::CreateFence() in Vulkan backend.
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
 
+    /// Implementation of IRenderDevice::CreateQuery() in Vulkan backend.
+    virtual void CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
+
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 

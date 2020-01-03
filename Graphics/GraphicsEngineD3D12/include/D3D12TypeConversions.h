@@ -68,4 +68,7 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
 D3D12_RESOURCE_STATES     ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE StateFlags);
 RESOURCE_STATE            D3D12ResourceStatesToResourceStateFlags(D3D12_RESOURCE_STATES StateFlags);
 
+D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType);
+D3D12_QUERY_TYPE      QueryTypeToD3D12QueryType(QUERY_TYPE QueryType);
+
 } // namespace Diligent

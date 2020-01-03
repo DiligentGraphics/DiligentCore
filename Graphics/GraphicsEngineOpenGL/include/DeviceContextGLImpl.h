@@ -34,6 +34,7 @@
 #include "GLObjectWrapper.h"
 #include "BufferGLImpl.h"
 #include "TextureBaseGL.h"
+#include "QueryGLImpl.h"
 #include "PipelineStateGLImpl.h"
 
 namespace Diligent
@@ -48,6 +49,7 @@ struct DeviceContextGLImplTraits
     using TextureType       = TextureBaseGL;
     using PipelineStateType = PipelineStateGLImpl;
     using DeviceType        = RenderDeviceGLImpl;
+    using QueryType         = QueryGLImpl;
 };
 
 /// Device context implementation in OpenGL backend.
@@ -204,6 +206,12 @@ public:
 
     /// Implementation of IDeviceContext::WaitForIdle() in OpenGL backend.
     virtual void WaitForIdle() override final;
+
+    /// Implementation of IDeviceContext::BeginQuery() in OpenGL backend.
+    virtual void BeginQuery(IQuery* pQuery) override final;
+
+    /// Implementation of IDeviceContext::EndQuery() in OpenGL backend.
+    virtual void EndQuery(IQuery* pQuery) override final;
 
     /// Implementation of IDeviceContext::Flush() in OpenGL backend.
     virtual void Flush() override final;

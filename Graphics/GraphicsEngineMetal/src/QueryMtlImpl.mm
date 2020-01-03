@@ -21,41 +21,26 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Declaration of Diligent::FenceMtlImpl class
-
-#include <deque>
-#include "FenceMtl.h"
-#include "RenderDeviceMtl.h"
-#include "FenceBase.h"
-#include "RenderDeviceMtlImpl.h"
+#include "QueryMtlImpl.h"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
-
-class FixedBlockMemoryAllocator;
-
-/// Implementation of the Diligent::IFenceMtl interface
-class FenceMtlImpl final : public FenceBase<IFenceMtl, RenderDeviceMtlImpl>
+    
+QueryMtlImpl :: QueryMtlImpl(IReferenceCounters*  pRefCounters,
+                             RenderDeviceMtlImpl* pDevice,
+                             const QueryDesc&     Desc) : 
+    TQueryBase(pRefCounters, pDevice, Desc)
 {
-public:
-    using TFenceBase = FenceBase<IFenceMtl, RenderDeviceMtlImpl>;
+}
 
-    FenceMtlImpl(IReferenceCounters*  pRefCounters,
-                 RenderDeviceMtlImpl* pDevice,
-                 const FenceDesc&     Desc);
-    ~FenceMtlImpl();
+QueryMtlImpl :: ~QueryMtlImpl()
+{
+}
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceMtl, TFenceBase);
+bool QueryMtlImpl :: GetData(void* pData, Uint32 DataSize)
+{
+    return false;
+}
 
-    virtual Uint64 GetCompletedValue() override final;
-
-    /// Resets the fence to the specified value.
-    virtual void Reset(Uint64 Value) override final;
-
-private:
-};
-
-} // namespace Diligent
+}

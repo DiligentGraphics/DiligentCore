@@ -1066,6 +1066,23 @@ String GetResourceStateString(RESOURCE_STATE State)
     return str;
 }
 
+const char* GetQueryTypeString(QUERY_TYPE QueryType)
+{
+    // clang-format off
+    switch(QueryType)
+    {
+        case QUERY_TYPE_UNDEFINED:           return "QUERY_TYPE_UNDEFINED";
+        case QUERY_TYPE_OCCLUSION:           return "QUERY_TYPE_OCCLUSION";
+        case QUERY_TYPE_BINARY_OCCLUSION:    return "QUERY_TYPE_BINARY_OCCLUSION";
+        case QUERY_TYPE_TIMESTAMP:           return "QUERY_TYPE_TIMESTAMP";
+        case QUERY_TYPE_PIPELINE_STATISTICS: return "QUERY_TYPE_PIPELINE_STATISTICS";
+        default:
+            UNEXPECTED("Unepxected query type");
+            return "Unknown";
+    }
+    // clang-format on
+}
+
 Uint32 ComputeMipLevelsCount(Uint32 Width)
 {
     if (Width == 0)

@@ -45,6 +45,7 @@
 #include "BufferView.h"
 #include "PipelineState.h"
 #include "Fence.h"
+#include "Query.h"
 
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
@@ -153,7 +154,7 @@ public:
                                      IPipelineState**         ppPipelineState) = 0;
 
 
-    /// Creates a new pipeline state object
+    /// Creates a new fence object
 
     /// \param [in]  Desc    - Fence description, see Diligent::FenceDesc for details.
     /// \param [out] ppFence - Address of the memory location where the pointer to the
@@ -164,8 +165,20 @@ public:
                              IFence**         ppFence) = 0;
 
 
+    /// Creates a new query object
+
+    /// \param [in]  Desc    - Query description, see Diligent::QueryDesc for details.
+    /// \param [out] ppQuery - Address of the memory location where the pointer to the
+    ///                        query interface will be stored.
+    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        one reference.
+    virtual void CreateQuery(const QueryDesc& Desc,
+                             IQuery**         ppQuery) = 0;
+
+
     /// Gets the device capabilities, see Diligent::DeviceCaps for details
     virtual const DeviceCaps& GetDeviceCaps() const = 0;
+
 
     /// Returns the basic texture format information.
 

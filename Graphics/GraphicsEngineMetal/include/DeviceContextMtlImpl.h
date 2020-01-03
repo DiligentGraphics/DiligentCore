@@ -32,6 +32,7 @@
 #include "BufferMtlImpl.h"
 #include "TextureMtlImpl.h"
 #include "PipelineStateMtlImpl.h"
+#include "QueryMtlImpl.h"
 
 namespace Diligent
 {
@@ -44,6 +45,7 @@ struct DeviceContextMtlImplTraits
     using TextureType       = TextureMtlImpl;
     using PipelineStateType = PipelineStateMtlImpl;
     using DeviceType        = RenderDeviceMtlImpl;
+    using QueryType         = QueryMtlImpl;
 };
 
 /// Implementation of the Diligent::IDeviceContextMtl interface
@@ -164,6 +166,12 @@ public:
     virtual void WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext) override final;
 
     virtual void WaitForIdle() override final;
+
+    /// Implementation of IDeviceContext::BeginQuery() in Metal backend.
+    virtual void BeginQuery(IQuery* pQuery) override final;
+
+    /// Implementation of IDeviceContext::EndQuery() in Metal backend.
+    virtual void EndQuery(IQuery* pQuery) override final;
 
     virtual void Flush() override final;
 

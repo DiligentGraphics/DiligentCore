@@ -1061,6 +1061,22 @@ void DeviceContextGLImpl::WaitForIdle()
     glFinish();
 }
 
+void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
+{
+    if (!TDeviceContextBase::BeginQuery(pQuery, 0))
+        return;
+
+    auto* pQueryGLImpl = ValidatedCast<QueryGLImpl>(pQuery);
+}
+
+void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
+{
+    if (!TDeviceContextBase::EndQuery(pQuery, 0))
+        return;
+
+    auto* pQueryGLImpl = ValidatedCast<QueryGLImpl>(pQuery);
+}
+
 bool DeviceContextGLImpl::UpdateCurrentGLContext()
 {
     auto NativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();

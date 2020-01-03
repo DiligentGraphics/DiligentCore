@@ -41,6 +41,7 @@
 #include "CommandListD3D11Impl.h"
 #include "RenderDeviceD3D11Impl.h"
 #include "FenceD3D11Impl.h"
+#include "QueryD3D11Impl.h"
 
 namespace Diligent
 {
@@ -1808,6 +1809,24 @@ void DeviceContextD3D11Impl::WaitForIdle()
     BOOL Data;
     while (m_pd3d11DeviceContext->GetData(pd3d11Query, &Data, sizeof(Data), 0) != S_OK)
         std::this_thread::yield();
+}
+
+void DeviceContextD3D11Impl::BeginQuery(IQuery* pQuery)
+{
+    if (!TDeviceContextBase::BeginQuery(pQuery, 0))
+        return;
+
+    auto* pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
+    m_pd3d11DeviceContext->Begin(pQueryD3D11Impl->GetD3D11Query());
+}
+
+void DeviceContextD3D11Impl::EndQuery(IQuery* pQuery)
+{
+    if (!TDeviceContextBase::EndQuery(pQuery, 0))
+        return;
+
+    auto* pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
+    m_pd3d11DeviceContext->End(pQueryD3D11Impl->GetD3D11Query());
 }
 
 void DeviceContextD3D11Impl::ClearStateCache()

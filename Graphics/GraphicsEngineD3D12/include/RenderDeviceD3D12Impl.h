@@ -39,6 +39,7 @@
 #include "Atomics.h"
 #include "CommandQueueD3D12.h"
 #include "GenerateMips.h"
+#include "QueryManager.h"
 
 namespace Diligent
 {
@@ -79,6 +80,9 @@ public:
 
     /// Implementation of IRenderDevice::CreateFence() in Direct3D12 backend.
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
+
+    /// Implementation of IRenderDevice::CreateQuery() in Direct3D12 backend.
+    virtual void CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
 
     /// Implementation of IRenderDeviceD3D12::GetD3D12Device().
     virtual ID3D12Device* GetD3D12Device() override final { return m_pd3d12Device; }
@@ -124,6 +128,7 @@ public:
     }
 
     const GenerateMipsHelper& GetMipsGenerator() const { return m_MipsGenerator; }
+    QueryManager&             GetQueryManager() { return m_QueryMgr; }
 
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
@@ -151,6 +156,8 @@ private:
 
     // Note: mips generator must be released after the device has been idled
     GenerateMipsHelper m_MipsGenerator;
+
+    QueryManager m_QueryMgr;
 };
 
 } // namespace Diligent

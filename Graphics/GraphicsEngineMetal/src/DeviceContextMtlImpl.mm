@@ -413,6 +413,25 @@ namespace Diligent
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::WaitForIdle() is not implemented");
     }
 
+    /// Implementation of IDeviceContext::BeginQuery() in Metal backend.
+    void DeviceContextMtlImpl::BeginQuery(IQuery* pQuery)
+    {
+        if (!TDeviceContextBase::BeginQuery(pQuery, 0))
+            return;
+
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::BeginQuery() is not implemented");
+    }
+
+    /// Implementation of IDeviceContext::EndQuery() in Metal backend.
+    void DeviceContextMtlImpl::EndQuery(IQuery* pQuery)
+    {
+        if (!TDeviceContextBase::EndQuery(pQuery, 0))
+            return;
+
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::EndQuery() is not implemented");
+    }
+
+
     void DeviceContextMtlImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
     {
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::TransitionResourceStates() is not implemented");

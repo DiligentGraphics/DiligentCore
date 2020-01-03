@@ -1990,6 +1990,23 @@ void DeviceContextVkImpl::WaitForIdle()
     m_pDevice->IdleCommandQueue(m_CommandQueueId, true);
 }
 
+void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
+{
+    if (!TDeviceContextBase::BeginQuery(pQuery, 0))
+        return;
+
+    auto* pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
+}
+
+void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
+{
+    if (!TDeviceContextBase::EndQuery(pQuery, 0))
+        return;
+
+    auto* pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
+}
+
+
 void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)
 {
     VERIFY_EXPR(pTexture != nullptr);

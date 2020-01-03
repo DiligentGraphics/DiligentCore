@@ -28,49 +28,52 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::FenceGLImpl class
+/// Declaration of Diligent::QueryD3D12Impl class
 
-#include <deque>
-#include "FenceGL.h"
-#include "RenderDeviceGL.h"
-#include "FenceBase.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+#include "QueryD3D12.h"
+#include "QueryBase.h"
+#include "RenderDeviceD3D12Impl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 
-/// Fence object implementation in OpenGL backend.
-class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
+// https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#queries
+
+/// Query implementation in Direct3D12 backend.
+class QueryD3D12Impl final : public QueryBase<IQueryD3D12, RenderDeviceD3D12Impl>
 {
 public:
-    using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
+    using TQueryBase = QueryBase<IQueryD3D12, RenderDeviceD3D12Impl>;
 
-    FenceGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice,
-                const FenceDesc&    Desc);
-    ~FenceGLImpl();
+    QueryD3D12Impl(IReferenceCounters*    pRefCounters,
+                   RenderDeviceD3D12Impl* pDevice,
+                   const QueryDesc&       Desc);
+    ~QueryD3D12Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryD3D12, TQueryBase);
 
-    /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
-    virtual Uint64 GetCompletedValue() override final;
+    /// Implementation of IQuery::GetData().
+    virtual bool GetData(void* pData, Uint32 DataSize) override final;
 
-    /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void Reset(Uint64 Value) override final;
-
-    void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
+    /// Implementation of IQueryD3D12::GetD3D12QueryHeap().
+    virtual ID3D12QueryHeap* GetD3D12QueryHeap() override final
     {
-        m_PendingFences.emplace_back(Value, std::move(Fence));
+        return m_pDevice->GetQueryManager().GetQueryHeap(m_Desc.Type);
     }
 
-    void Wait(Uint64 Value, bool FlushCommands);
+    /// Implementation of IQueryD3D12::GetQueryHeapIndex().
+    virtual Uint32 GetQueryHeapIndex() const override final
+    {
+        return m_QueryHeapIndex;
+    }
+
+    bool OnEndQuery(IDeviceContext* pContext);
 
 private:
-    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
-    volatile Uint64                                            m_LastCompletedFenceValue = 0;
+    Uint32 m_QueryHeapIndex     = static_cast<Uint32>(-1);
+    Uint64 m_QueryEndFenceValue = 0;
 };
 
 } // namespace Diligent

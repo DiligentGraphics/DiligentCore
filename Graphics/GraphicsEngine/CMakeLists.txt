@@ -15,6 +15,7 @@ set(INCLUDE
     include/FenceBase.h
     include/pch.h
     include/PipelineStateBase.h
+    include/QueryBase.h
     include/RenderDeviceBase.h
     include/ResourceMappingImpl.h
     include/SamplerBase.h
@@ -44,6 +45,7 @@ set(INTERFACE
     interface/InputLayout.h
     interface/MapHelper.h
     interface/PipelineState.h
+    interface/Query.h
     interface/RasterizerState.h
     interface/RenderDevice.h
     interface/ResourceMapping.h

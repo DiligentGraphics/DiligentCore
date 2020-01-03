@@ -36,6 +36,7 @@
 #include "ShaderResourceBindingVkImpl.h"
 #include "DeviceContextVkImpl.h"
 #include "FenceVkImpl.h"
+#include "QueryVkImpl.h"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -69,7 +70,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             sizeof(SamplerVkImpl),
             sizeof(PipelineStateVkImpl),
             sizeof(ShaderResourceBindingVkImpl),
-            sizeof(FenceVkImpl)
+            sizeof(FenceVkImpl),
+            sizeof(QueryVkImpl)
         }
     },
     m_VulkanInstance    {Instance                 },
@@ -559,6 +561,19 @@ void RenderDeviceVkImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
             FenceVkImpl* pFenceVk(NEW_RC_OBJ(m_FenceAllocator, "FenceVkImpl instance", FenceVkImpl)(this, Desc));
             pFenceVk->QueryInterface(IID_Fence, reinterpret_cast<IObject**>(ppFence));
             OnCreateDeviceObject(pFenceVk);
+        } //
+    );
+}
+
+void RenderDeviceVkImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
+{
+    CreateDeviceObject(
+        "Query", Desc, ppQuery,
+        [&]() //
+        {
+            QueryVkImpl* pQueryVk(NEW_RC_OBJ(m_QueryAllocator, "QueryVkImpl instance", QueryVkImpl)(this, Desc));
+            pQueryVk->QueryInterface(IID_Query, reinterpret_cast<IObject**>(ppQuery));
+            OnCreateDeviceObject(pQueryVk);
         } //
     );
 }

@@ -25,52 +25,35 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include "pch.h"
 
-/// \file
-/// Declaration of Diligent::FenceGLImpl class
-
-#include <deque>
-#include "FenceGL.h"
-#include "RenderDeviceGL.h"
-#include "FenceBase.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+#include "QueryGLImpl.h"
+#include "EngineMemory.h"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
-/// Fence object implementation in OpenGL backend.
-class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
-{
-public:
-    using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
-
-    FenceGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice,
-                const FenceDesc&    Desc);
-    ~FenceGLImpl();
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase);
-
-    /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
-    virtual Uint64 GetCompletedValue() override final;
-
-    /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void Reset(Uint64 Value) override final;
-
-    void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
+QueryGLImpl::QueryGLImpl(IReferenceCounters* pRefCounters,
+                         RenderDeviceGLImpl* pDevice,
+                         const QueryDesc&    Desc) :
+    // clang-format off
+    TQueryBase
     {
-        m_PendingFences.emplace_back(Value, std::move(Fence));
+        pRefCounters,
+        pDevice,
+        Desc
     }
+// clang-format on
+{
+}
 
-    void Wait(Uint64 Value, bool FlushCommands);
+QueryGLImpl::~QueryGLImpl()
+{
+}
 
-private:
-    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
-    volatile Uint64                                            m_LastCompletedFenceValue = 0;
-};
+bool QueryGLImpl::GetData(void* pData, Uint32 DataSize)
+{
+    return false;
+}
 
 } // namespace Diligent

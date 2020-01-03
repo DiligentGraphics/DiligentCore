@@ -171,6 +171,19 @@ void RenderDeviceMtlImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
     );
 }
 
+void RenderDeviceMtlImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
+{
+    CreateDeviceObject( "Query", Desc, ppQuery, 
+        [&]()
+        {
+            QueryMtlImpl* pQueryMtl( NEW_RC_OBJ(m_QueryAllocator, "QueryMtlImpl instance", QueryMtlImpl)
+                                               (this, Desc) );
+            pQueryMtl->QueryInterface( IID_Query, reinterpret_cast<IObject**>(ppQuery) );
+            OnCreateDeviceObject( pQueryMtl );
+        }
+    );
+}
+
 void RenderDeviceMtlImpl::IdleGPU()
 {
     LOG_ERROR_MESSAGE("RenderDeviceMtlImpl::IdleGPU() is not implemented");

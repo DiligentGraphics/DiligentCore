@@ -75,6 +75,7 @@ public:
     using TextureImplType       = typename ImplementationTraits::TextureType;
     using PipelineStateImplType = typename ImplementationTraits::PipelineStateType;
     using TextureViewImplType   = typename TextureImplType::ViewImplType;
+    using QueryImplType         = typename ImplementationTraits::QueryType;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - render device.
@@ -210,6 +211,10 @@ protected:
     bool ClearDepthStencil(ITextureView* pView);
 
     bool ClearRenderTarget(ITextureView* pView);
+
+    bool BeginQuery(IQuery* pQuery, int);
+
+    bool EndQuery(IQuery* pQuery, int);
 
 #ifdef DEVELOPMENT
     // clang-format off
@@ -890,6 +895,47 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearRenderT
     return true;
 }
 
+template <typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::BeginQuery(IQuery* pQuery, int)
+{
+    if (pQuery == nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BeginQuery: pQuery must not be null");
+        return false;
+    }
+
+    if (m_bIsDeferred)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BeginQuery: Deferred contexts do not support queries");
+        return false;
+    }
+
+    if (!ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(this))
+        return false;
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::EndQuery(IQuery* pQuery, int)
+{
+    if (pQuery == nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::EndQuery: pQuery must not be null");
+        return false;
+    }
+
+    if (m_bIsDeferred)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::EndQuery: Deferred contexts do not support queries");
+        return false;
+    }
+
+    if (!ValidatedCast<QueryImplType>(pQuery)->OnEndQuery(this))
+        return false;
+
+    return true;
+}
 
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::

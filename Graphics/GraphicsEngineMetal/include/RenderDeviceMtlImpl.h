@@ -59,6 +59,8 @@ public:
 
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
 
+    virtual void CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
+
     virtual void ReleaseStaleResources(bool ForceRelease = false) override final {}
 
     virtual void IdleGPU() override final;

@@ -14,6 +14,7 @@ set(INCLUDE
     include/pch.h
 	include/FenceD3D11Impl.h
     include/PipelineStateD3D11Impl.h
+    include/QueryD3D11Impl.h
     include/RenderDeviceD3D11Impl.h
     include/SamplerD3D11Impl.h
     include/ShaderD3D11Impl.h
@@ -37,6 +38,7 @@ set(INTERFACE
     interface/EngineFactoryD3D11.h
     interface/FenceD3D11.h
     interface/PipelineStateD3D11.h
+    interface/QueryD3D11.h
     interface/RenderDeviceD3D11.h
     interface/SamplerD3D11.h
     interface/ShaderD3D11.h
@@ -57,6 +59,7 @@ set(SRC
     src/FenceD3D11Impl.cpp
     src/GUIDDef.cpp
     src/PipelineStateD3D11Impl.cpp
+    src/QueryD3D11Impl.cpp
     src/RenderDeviceD3D11Impl.cpp
     src/SamplerD3D11Impl.cpp
     src/ShaderD3D11Impl.cpp

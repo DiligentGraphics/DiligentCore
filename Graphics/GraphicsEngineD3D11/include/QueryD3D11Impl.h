@@ -28,49 +28,41 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::FenceGLImpl class
+/// Declaration of Diligent::QueryD3D11Impl class
 
-#include <deque>
-#include "FenceGL.h"
-#include "RenderDeviceGL.h"
-#include "FenceBase.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+#include "QueryD3D11.h"
+#include "QueryBase.h"
+#include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
 
-/// Fence object implementation in OpenGL backend.
-class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
+/// Query implementation in Direct3D11 backend.
+class QueryD3D11Impl final : public QueryBase<IQueryD3D11, RenderDeviceD3D11Impl>
 {
 public:
-    using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
+    using TQueryBase = QueryBase<IQueryD3D11, RenderDeviceD3D11Impl>;
 
-    FenceGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice,
-                const FenceDesc&    Desc);
-    ~FenceGLImpl();
+    QueryD3D11Impl(IReferenceCounters*    pRefCounters,
+                   RenderDeviceD3D11Impl* pDevice,
+                   const QueryDesc&       Desc);
+    ~QueryD3D11Impl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase);
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryD3D11, TQueryBase);
 
-    /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
-    virtual Uint64 GetCompletedValue() override final;
+    /// Implementation of IQuery::GetData().
+    virtual bool GetData(void* pData, Uint32 DataSize) override final;
 
-    /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void Reset(Uint64 Value) override final;
-
-    void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
+    /// Implementation of IQueryD3D11::GetD3D11Query().
+    virtual ID3D11Query* GetD3D11Query() override final
     {
-        m_PendingFences.emplace_back(Value, std::move(Fence));
+        return m_pd3d11Query;
     }
 
-    void Wait(Uint64 Value, bool FlushCommands);
-
 private:
-    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
-    volatile Uint64                                            m_LastCompletedFenceValue = 0;
+    CComPtr<ID3D11Query> m_pd3d11Query;
 };
 
 } // namespace Diligent

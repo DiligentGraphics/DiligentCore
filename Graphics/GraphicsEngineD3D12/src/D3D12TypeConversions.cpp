@@ -467,4 +467,38 @@ RESOURCE_STATE D3D12ResourceStatesToResourceStateFlags(D3D12_RESOURCE_STATES Sta
     return static_cast<RESOURCE_STATE>(ResourceStates);
 }
 
+D3D12_QUERY_TYPE QueryTypeToD3D12QueryType(QUERY_TYPE QueryType)
+{
+    // clang-format off
+    switch (QueryType)
+    {
+        case QUERY_TYPE_OCCLUSION:           return D3D12_QUERY_TYPE_OCCLUSION;
+        case QUERY_TYPE_BINARY_OCCLUSION:    return D3D12_QUERY_TYPE_BINARY_OCCLUSION;
+        case QUERY_TYPE_TIMESTAMP:           return D3D12_QUERY_TYPE_TIMESTAMP;
+        case QUERY_TYPE_PIPELINE_STATISTICS: return D3D12_QUERY_TYPE_PIPELINE_STATISTICS;
+
+        default:
+            UNEXPECTED("Unexpected query type");
+            return static_cast<D3D12_QUERY_TYPE>(-1);
+    }
+    // clang-format on
+}
+
+D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType)
+{
+    // clang-format off
+    switch (QueryType)
+    {
+        case QUERY_TYPE_OCCLUSION:           return D3D12_QUERY_HEAP_TYPE_OCCLUSION;
+        case QUERY_TYPE_BINARY_OCCLUSION:    return D3D12_QUERY_HEAP_TYPE_OCCLUSION;
+        case QUERY_TYPE_TIMESTAMP:           return D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
+        case QUERY_TYPE_PIPELINE_STATISTICS: return D3D12_QUERY_HEAP_TYPE_PIPELINE_STATISTICS;
+
+        default:
+            UNEXPECTED("Unexpected query type");
+            return static_cast<D3D12_QUERY_HEAP_TYPE>(-1);
+    }
+    // clang-format on
+}
+
 } // namespace Diligent

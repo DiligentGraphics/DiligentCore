@@ -181,6 +181,26 @@ public:
         m_DynamicGPUDescriptorAllocators = Allocators;
     }
 
+    void BeginQuery(ID3D12QueryHeap* pQueryHeap, D3D12_QUERY_TYPE Type, UINT Index)
+    {
+        m_pCommandList->BeginQuery(pQueryHeap, Type, Index);
+    }
+
+    void EndQuery(ID3D12QueryHeap* pQueryHeap, D3D12_QUERY_TYPE Type, UINT Index)
+    {
+        m_pCommandList->EndQuery(pQueryHeap, Type, Index);
+    }
+
+    void ResolveQueryData(ID3D12QueryHeap* pQueryHeap,
+                          D3D12_QUERY_TYPE Type,
+                          UINT             StartIndex,
+                          UINT             NumQueries,
+                          ID3D12Resource*  pDestinationBuffer,
+                          UINT64           AlignedDestinationBufferOffset)
+    {
+        m_pCommandList->ResolveQueryData(pQueryHeap, Type, StartIndex, NumQueries, pDestinationBuffer, AlignedDestinationBufferOffset);
+    }
+
 protected:
     void InsertAliasBarrier(D3D12ResourceBase& Before, D3D12ResourceBase& After, bool FlushImmediate = false);
 

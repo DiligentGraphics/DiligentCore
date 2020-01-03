@@ -24,38 +24,20 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::FenceMtlImpl class
+/// Definition of the Diligent::IQueryMtl interface
 
-#include <deque>
-#include "FenceMtl.h"
-#include "RenderDeviceMtl.h"
-#include "FenceBase.h"
-#include "RenderDeviceMtlImpl.h"
+#include "../../GraphicsEngine/interface/Query.h"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
+// {514BAE55-C3E9-4D78-A013-63522FD595DA}
+static const INTERFACE_ID IID_QueryMtl =
+    {0x514bae55, 0xc3e9, 0x4d78, {0xa0, 0x13, 0x63, 0x52, 0x2f, 0xd5, 0x95, 0xda}};
 
-/// Implementation of the Diligent::IFenceMtl interface
-class FenceMtlImpl final : public FenceBase<IFenceMtl, RenderDeviceMtlImpl>
+/// Exposes Metal-specific functionality of a Query object.
+class IQueryMtl : public IQuery
 {
-public:
-    using TFenceBase = FenceBase<IFenceMtl, RenderDeviceMtlImpl>;
-
-    FenceMtlImpl(IReferenceCounters*  pRefCounters,
-                 RenderDeviceMtlImpl* pDevice,
-                 const FenceDesc&     Desc);
-    ~FenceMtlImpl();
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceMtl, TFenceBase);
-
-    virtual Uint64 GetCompletedValue() override final;
-
-    /// Resets the fence to the specified value.
-    virtual void Reset(Uint64 Value) override final;
-
-private:
 };
 
 } // namespace Diligent

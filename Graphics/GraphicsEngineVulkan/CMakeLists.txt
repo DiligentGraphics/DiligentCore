@@ -17,6 +17,7 @@ set(INCLUDE
     include/pch.h
     include/PipelineLayout.h
     include/PipelineStateVkImpl.h
+    include/QueryVkImpl.h
     include/RenderDeviceVkImpl.h
     include/RenderPassCache.h
     include/SamplerVkImpl.h
@@ -55,6 +56,7 @@ set(INTERFACE
     interface/EngineFactoryVk.h
     interface/FenceVk.h
     interface/PipelineStateVk.h
+    interface/QueryVk.h
     interface/RenderDeviceVk.h
     interface/SamplerVk.h
     interface/ShaderVk.h
@@ -79,6 +81,7 @@ set(SRC
     src/GenerateMipsVkHelper.cpp
     src/PipelineLayout.cpp
     src/PipelineStateVkImpl.cpp
+    src/QueryVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
     src/RenderPassCache.cpp
     src/SamplerVkImpl.cpp

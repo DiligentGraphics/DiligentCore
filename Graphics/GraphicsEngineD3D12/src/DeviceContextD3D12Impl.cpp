@@ -179,7 +179,9 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         return;
 
     // Never flush deferred context!
-    if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush)
+    // For the query types which support both BeginQuery and EndQuery (all except for timestamp),
+    // a query for a given element must not span command list boundaries.
+    if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush && m_ActiveQueriesCounter == 0)
     {
         Flush(true);
     }
@@ -674,6 +676,12 @@ void DeviceContextD3D12Impl::Flush(bool RequestNewCmdCtx)
             m_pDevice->DisposeCommandContext(std::move(m_CurrCmdCtx));
     }
 
+    if (m_ActiveQueriesCounter > 0)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context that has ", m_ActiveQueriesCounter,
+                          " active queries. Direct3D12 requires that queries are begun and ended in the same command list");
+    }
+
     // If there is no command list to submit, but there are pending fences, we need to signal them now
     if (!m_PendingFences.empty())
     {
@@ -731,6 +739,13 @@ void DeviceContextD3D12Impl::FinishFrame()
                               "This is an error and may cause unpredicted behaviour. Call Flush() to submit all commands"
                               " for execution before finishing the frame");
         }
+    }
+
+    if (m_ActiveQueriesCounter > 0)
+    {
+        LOG_ERROR_MESSAGE("There are ", m_ActiveQueriesCounter,
+                          " active queries in the device context when finishing the frame. "
+                          "All queries must be ended before the frame is finished.");
     }
 
     VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1} << m_CommandQueueId));
@@ -1675,6 +1690,41 @@ void DeviceContextD3D12Impl::WaitForIdle()
     VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
     Flush();
     m_pDevice->IdleCommandQueue(m_CommandQueueId, true);
+}
+
+void DeviceContextD3D12Impl::BeginQuery(IQuery* pQuery)
+{
+    if (!TDeviceContextBase::BeginQuery(pQuery, 0))
+        return;
+
+    auto*      pQueryD3D12Impl = ValidatedCast<QueryD3D12Impl>(pQuery);
+    const auto QueryType       = pQueryD3D12Impl->GetDesc().Type;
+    if (QueryType != QUERY_TYPE_TIMESTAMP)
+        ++m_ActiveQueriesCounter;
+
+    auto& QueueMgr = m_pDevice->GetQueryManager();
+    auto& Ctx      = GetCmdContext();
+    auto  Idx      = pQueryD3D12Impl->GetQueryHeapIndex();
+    QueueMgr.BeginQuery(Ctx, QueryType, Idx);
+}
+
+void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
+{
+    if (!TDeviceContextBase::EndQuery(pQuery, 0))
+        return;
+
+    auto* pQueryD3D12Impl = ValidatedCast<QueryD3D12Impl>(pQuery);
+    if (pQueryD3D12Impl->GetDesc().Type != QUERY_TYPE_TIMESTAMP)
+    {
+        VERIFY(m_ActiveQueriesCounter > 0, "Active query counter is 0 which means there was a mismatch between BeginQuery() / EndQuery() calls");
+        --m_ActiveQueriesCounter;
+    }
+
+    const auto QueryType = pQueryD3D12Impl->GetDesc().Type;
+    auto&      QueueMgr  = m_pDevice->GetQueryManager();
+    auto&      Ctx       = GetCmdContext();
+    auto       Idx       = pQueryD3D12Impl->GetQueryHeapIndex();
+    QueueMgr.EndQuery(Ctx, QueryType, Idx);
 }
 
 void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
