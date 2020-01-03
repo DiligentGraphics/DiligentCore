@@ -175,7 +175,10 @@ public:
     ///                        Diligent::QueryDataTimestamp, or Diligent::QueryDataPipelineStatistics
     ///                        structure.
     /// \param [in] DataSize - Size of the data structure.
-    /// \return    true if the query data is available and false otherwise.
+    /// \return     true if the query data is available and false otherwise.
+    ///
+    /// \note       In Direct3D11 backend timestamp queries will only be available after FinishFrame is called
+    ///             for the frame in which they were collected.
     virtual bool GetData(void* pData, Uint32 DataSize) = 0;
 };
 

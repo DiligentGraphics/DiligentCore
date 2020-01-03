@@ -30,9 +30,12 @@
 /// \file
 /// Declaration of Diligent::QueryD3D11Impl class
 
+#include <memory>
+
 #include "QueryD3D11.h"
 #include "QueryBase.h"
 #include "RenderDeviceD3D11Impl.h"
+#include "DisjointQueryPool.h"
 
 namespace Diligent
 {
@@ -61,8 +64,15 @@ public:
         return m_pd3d11Query;
     }
 
+    void SetDisjointQuery(std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> DisjointQuery)
+    {
+        m_DisjointQuery = DisjointQuery;
+    }
+
 private:
     CComPtr<ID3D11Query> m_pd3d11Query;
+
+    std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> m_DisjointQuery;
 };
 
 } // namespace Diligent

@@ -37,6 +37,7 @@
 #include "TextureBaseD3D11.h"
 #include "PipelineStateD3D11Impl.h"
 #include "QueryD3D11Impl.h"
+#include "DisjointQueryPool.h"
 
 #ifdef _DEBUG
 #    define VERIFY_CONTEXT_BINDINGS
@@ -369,6 +370,9 @@ private:
     const Uint32 m_DebugFlags;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
+
+    DisjointQueryPool                                        m_DisjointQueryPool;
+    std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> m_ActiveDisjointQuery;
 
 #ifdef VERIFY_CONTEXT_BINDINGS
 

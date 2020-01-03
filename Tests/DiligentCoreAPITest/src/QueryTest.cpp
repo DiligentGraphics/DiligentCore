@@ -307,6 +307,7 @@ TEST_F(QueryTest, Timestamp)
     DrawQuad();
     pContext->EndQuery(pQueryEnd);
 
+    pContext->FinishFrame();
     pContext->WaitForIdle();
     QueryDataTimestamp QueryStartData, QueryEndData;
 
@@ -314,6 +315,7 @@ TEST_F(QueryTest, Timestamp)
     ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
     QueryReady = pQueryEnd->GetData(&QueryEndData, sizeof(QueryEndData));
     ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+    EXPECT_TRUE(QueryStartData.Frequency == 0 || QueryEndData.Frequency == 0 || QueryEndData.NumTicks > QueryStartData.NumTicks);
 }
 
 } // namespace

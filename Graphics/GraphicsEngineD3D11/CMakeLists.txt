@@ -10,6 +10,7 @@ set(INCLUDE
     include/D3D11TypeConversions.h
     include/D3D11TypeDefinitions.h
     include/DeviceContextD3D11Impl.h
+    include/DisjointQueryPool.h
     include/EngineD3D11Defines.h
     include/pch.h
 	include/FenceD3D11Impl.h

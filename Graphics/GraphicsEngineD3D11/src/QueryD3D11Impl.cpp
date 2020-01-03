@@ -113,12 +113,22 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize)
 
         case QUERY_TYPE_TIMESTAMP:
         {
+            VERIFY_EXPR(m_DisjointQuery);
+            
+            D3D11_QUERY_DATA_TIMESTAMP_DISJOINT DisjointQueryData;
+            DataReady = pd3d11Ctx->GetData(m_DisjointQuery->pd3d11Query, &DisjointQueryData, sizeof(DisjointQueryData), 0) == S_OK;
+            
             UINT64 NumTicks;
-            DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &NumTicks, sizeof(NumTicks), 0) == S_OK;
             if (DataReady)
             {
-                auto& QueryData    = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                QueryData.NumTicks = NumTicks;
+                DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &NumTicks, sizeof(NumTicks), 0) == S_OK;
+            }
+            if (DataReady)
+            {
+                auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                QueryData.NumTicks  = NumTicks;
+                // The timestamp returned by ID3D11DeviceContext::GetData for a timestamp query is only reliable if Disjoint is FALSE.
+                QueryData.Frequency = DisjointQueryData.Disjoint ? 0 : DisjointQueryData.Frequency;
             }
         }
         break;

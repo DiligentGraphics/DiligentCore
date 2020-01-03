@@ -1149,6 +1149,11 @@ void DeviceContextD3D11Impl::GenerateMips(ITextureView* pTextureView)
 
 void DeviceContextD3D11Impl::FinishFrame()
 {
+    if (m_ActiveDisjointQuery)
+    {
+        m_pd3d11DeviceContext->End(m_ActiveDisjointQuery->pd3d11Query);
+        m_ActiveDisjointQuery.reset();
+    }
 }
 
 void DeviceContextD3D11Impl::SetVertexBuffers(Uint32                         StartSlot,
@@ -1826,6 +1831,17 @@ void DeviceContextD3D11Impl::EndQuery(IQuery* pQuery)
         return;
 
     auto* pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
+    if (pQueryD3D11Impl->GetDesc().Type == QUERY_TYPE_TIMESTAMP)
+    {
+        if (!m_ActiveDisjointQuery)
+        {
+            m_ActiveDisjointQuery = m_DisjointQueryPool.GetDisjointQuery(m_pDevice->GetD3D11Device());
+            // Disjoint timestamp queries should only be invoked once per frame or less.
+            m_pd3d11DeviceContext->Begin(m_ActiveDisjointQuery->pd3d11Query);
+        }
+        pQueryD3D11Impl->SetDisjointQuery(m_ActiveDisjointQuery);
+    }
+
     m_pd3d11DeviceContext->End(pQueryD3D11Impl->GetD3D11Query());
 }
 
