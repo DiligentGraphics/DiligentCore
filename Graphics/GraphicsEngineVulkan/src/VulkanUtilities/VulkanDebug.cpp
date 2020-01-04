@@ -395,6 +395,11 @@ void SetEventName(VkDevice device, VkEvent _event, const char* name)
     SetObjectName(device, (uint64_t)_event, VK_OBJECT_TYPE_EVENT, name);
 }
 
+void SetQueryPoolName(VkDevice device, VkQueryPool queryPool, const char* name)
+{
+    SetObjectName(device, (uint64_t)queryPool, VK_OBJECT_TYPE_QUERY_POOL, name);
+}
+
 
 template <>
 void SetVulkanObjectName<VkCommandPool, VulkanHandleTypeId::CommandPool>(VkDevice device, VkCommandPool cmdPool, const char* name)
@@ -514,6 +519,12 @@ template <>
 void SetVulkanObjectName<VkEvent, VulkanHandleTypeId::Event>(VkDevice device, VkEvent _event, const char* name)
 {
     SetEventName(device, _event, name);
+}
+
+template <>
+void SetVulkanObjectName<VkQueryPool, VulkanHandleTypeId::QueryPool>(VkDevice device, VkQueryPool queryPool, const char* name)
+{
+    SetQueryPoolName(device, queryPool, name);
 }
 
 
@@ -665,7 +676,7 @@ const char* VkObjectTypeToString(VkObjectType ObjectType)
         case VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX:   return "indirect cmd layout NVX";
         case VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT:      return "debug utils messenger";
         case VK_OBJECT_TYPE_VALIDATION_CACHE_EXT:           return "validation cache";
-        case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NVX:     return "acceleration structure NVX";
+        case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV:      return "acceleration structure NVX";
         default: return "unknown";
             // clang-format on
     }

@@ -91,6 +91,7 @@ void SetDescriptorPoolName      (VkDevice device, VkDescriptorPool      descript
 void SetSemaphoreName           (VkDevice device, VkSemaphore           semaphore,           const char * name);
 void SetFenceName               (VkDevice device, VkFence               fence,               const char * name);
 void SetEventName               (VkDevice device, VkEvent               _event,              const char * name);
+void SetQueryPoolName           (VkDevice device, VkQueryPool           queryPool,           const char * name);
 
 enum class VulkanHandleTypeId : uint32_t;
 

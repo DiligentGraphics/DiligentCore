@@ -441,6 +441,54 @@ public:
         vkCmdResolveImage(m_VkCmdBuffer, srcImage, srcImageLayout, dstImage, dstImageLayout, regionCount, pRegions);
     }
 
+    __forceinline void BeginQuery(VkQueryPool         queryPool,
+                                  uint32_t            query,
+                                  VkQueryControlFlags flags)
+    {
+        // A query must either begin and end inside the same subpass of a render
+        // pass instance, or must both begin and end outside of a render pass instance
+        // (i.e. contain entire render pass instances) (17.2).
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        vkCmdBeginQuery(m_VkCmdBuffer, queryPool, query, flags);
+    }
+
+    __forceinline void EndQuery(VkQueryPool queryPool,
+                                uint32_t    query)
+    {
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        vkCmdEndQuery(m_VkCmdBuffer, queryPool, query);
+    }
+
+    __forceinline void ResetQueryPool(VkQueryPool queryPool,
+                                      uint32_t    firstQuery,
+                                      uint32_t    queryCount)
+    {
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Query pool reset must be performed outside of render pass (17.2).
+            EndRenderPass();
+        }
+        vkCmdResetQueryPool(m_VkCmdBuffer, queryPool, firstQuery, queryCount);
+    }
+
+    __forceinline void CopyQueryPoolResults(VkQueryPool        queryPool,
+                                            uint32_t           firstQuery,
+                                            uint32_t           queryCount,
+                                            VkBuffer           dstBuffer,
+                                            VkDeviceSize       dstOffset,
+                                            VkDeviceSize       stride,
+                                            VkQueryResultFlags flags)
+    {
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Copy query results must be performed outside of render pass (17.2).
+            EndRenderPass();
+        }
+        vkCmdCopyQueryPoolResults(m_VkCmdBuffer, queryPool, firstQuery, queryCount,
+                                  dstBuffer, dstOffset, stride, flags);
+    }
+
     void FlushBarriers();
 
     __forceinline void SetVkCmdBuffer(VkCommandBuffer VkCmdBuffer)

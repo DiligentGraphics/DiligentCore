@@ -57,9 +57,9 @@ VulkanLogicalDevice::VulkanLogicalDevice(VkPhysicalDevice             vkPhysical
 
     m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     if (DeviceCI.pEnabledFeatures->geometryShader)
-        m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+        m_EnabledGraphicsShaderStages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
     if (DeviceCI.pEnabledFeatures->tessellationShader)
-        m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+        m_EnabledGraphicsShaderStages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
 }
 
 VkQueue VulkanLogicalDevice::GetQueue(uint32_t queueFamilyIndex, uint32_t queueIndex)
@@ -251,6 +251,12 @@ SemaphoreWrapper VulkanLogicalDevice::CreateSemaphore(const VkSemaphoreCreateInf
     return CreateVulkanObject<VkSemaphore, VulkanHandleTypeId::Semaphore>(vkCreateSemaphore, SemaphoreCI, DebugName, "semaphore");
 }
 
+QueryPoolWrapper VulkanLogicalDevice::CreateQueryPool(const VkQueryPoolCreateInfo& QueryPoolCI, const char* DebugName) const
+{
+    VERIFY_EXPR(QueryPoolCI.sType == VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO);
+    return CreateVulkanObject<VkQueryPool, VulkanHandleTypeId::QueryPool>(vkCreateQueryPool, QueryPoolCI, DebugName, "query pool");
+}
+
 VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName) const
 {
     VERIFY_EXPR(AllocInfo.sType == VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO);
@@ -386,6 +392,11 @@ void VulkanLogicalDevice::ReleaseVulkanObject(SemaphoreWrapper&& Semaphore) cons
     Semaphore.m_VkObject = VK_NULL_HANDLE;
 }
 
+void VulkanLogicalDevice::ReleaseVulkanObject(QueryPoolWrapper&& QueryPool) const
+{
+    vkDestroyQueryPool(m_VkDevice, QueryPool.m_VkObject, m_VkAllocator);
+    QueryPool.m_VkObject = VK_NULL_HANDLE;
+}
 
 void VulkanLogicalDevice::FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const
 {

@@ -56,7 +56,8 @@ enum class VulkanHandleTypeId : uint32_t
     DescriptorSet,
     Semaphore,
     Queue,
-    Event
+    Event,
+    QueryPool
 };
 
 template <typename VulkanObjectType, VulkanHandleTypeId>
@@ -79,6 +80,7 @@ using FramebufferWrapper         = DEFINE_VULKAN_OBJECT_WRAPPER(Framebuffer);
 using DescriptorPoolWrapper      = DEFINE_VULKAN_OBJECT_WRAPPER(DescriptorPool);
 using DescriptorSetLayoutWrapper = DEFINE_VULKAN_OBJECT_WRAPPER(DescriptorSetLayout);
 using SemaphoreWrapper           = DEFINE_VULKAN_OBJECT_WRAPPER(Semaphore);
+using QueryPoolWrapper           = DEFINE_VULKAN_OBJECT_WRAPPER(QueryPool);
 #undef DEFINE_VULKAN_OBJECT_WRAPPER
 
 class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
@@ -137,6 +139,7 @@ public:
     DescriptorSetLayoutWrapper CreateDescriptorSetLayout(const VkDescriptorSetLayoutCreateInfo& LayoutCI,       const char* DebugName = "") const;
 
     SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo& SemaphoreCI, const char* DebugName = "") const;
+    QueryPoolWrapper    CreateQueryPool(const VkQueryPoolCreateInfo& QueryPoolCI, const char* DebugName = "") const;
 
     VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName = "") const;
     VkDescriptorSet     AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo& AllocInfo, const char* DebugName = "") const;
@@ -157,6 +160,7 @@ public:
     void ReleaseVulkanObject(DescriptorPoolWrapper&& DescriptorPool) const;
     void ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout) const;
     void ReleaseVulkanObject(SemaphoreWrapper&&     Semaphore) const;
+    void ReleaseVulkanObject(QueryPoolWrapper&&     QueryPool) const;
 
     void FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const;
 
@@ -190,6 +194,18 @@ public:
 
     VkResult ResetDescriptorPool(VkDescriptorPool           descriptorPool,
                                  VkDescriptorPoolResetFlags flags = 0) const;
+
+    VkResult GetQueryPoolResults(VkQueryPool        queryPool,
+                                 uint32_t           firstQuery,
+                                 uint32_t           queryCount,
+                                 size_t             dataSize,
+                                 void*              pData,
+                                 VkDeviceSize       stride,
+                                 VkQueryResultFlags flags) const
+    {
+        return vkGetQueryPoolResults(m_VkDevice, queryPool, firstQuery, queryCount,
+                                     dataSize, pData, stride, flags);
+    }
 
     VkPipelineStageFlags GetEnabledGraphicsShaderStages() const { return m_EnabledGraphicsShaderStages; }
 
