@@ -39,7 +39,7 @@
 #include "Atomics.h"
 #include "CommandQueueD3D12.h"
 #include "GenerateMips.h"
-#include "QueryManager.h"
+#include "QueryManagerD3D12.h"
 
 namespace Diligent
 {
@@ -128,7 +128,7 @@ public:
     }
 
     const GenerateMipsHelper& GetMipsGenerator() const { return m_MipsGenerator; }
-    QueryManager&             GetQueryManager() { return m_QueryMgr; }
+    QueryManagerD3D12&        GetQueryManager() { return m_QueryMgr; }
 
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
@@ -157,7 +157,7 @@ private:
     // Note: mips generator must be released after the device has been idled
     GenerateMipsHelper m_MipsGenerator;
 
-    QueryManager m_QueryMgr;
+    QueryManagerD3D12 m_QueryMgr;
 };
 
 } // namespace Diligent

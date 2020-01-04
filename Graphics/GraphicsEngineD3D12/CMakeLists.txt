@@ -22,7 +22,7 @@ set(INCLUDE
     include/pch.h
     include/PipelineStateD3D12Impl.h
     include/QueryD3D12Impl.h
-    include/QueryManager.h
+    include/QueryManagerD3D12.h
     include/RenderDeviceD3D12Impl.h
     include/RootSignature.h
     include/SamplerD3D12Impl.h
@@ -72,7 +72,7 @@ set(SRC
     src/GenerateMips.cpp
     src/PipelineStateD3D12Impl.cpp
     src/QueryD3D12Impl.cpp
-    src/QueryManager.cpp
+    src/QueryManagerD3D12.cpp
     src/RenderDeviceD3D12Impl.cpp
     src/RootSignature.cpp
     src/SamplerD3D12Impl.cpp

@@ -41,18 +41,18 @@ class CommandContext;
 
 // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#queries
 
-class QueryManager
+class QueryManagerD3D12
 {
 public:
-    QueryManager(ID3D12Device* pd3d12Device,
-                 const Uint32  QueryHeapSizes[]);
-    ~QueryManager();
+    QueryManagerD3D12(ID3D12Device* pd3d12Device,
+                      const Uint32  QueryHeapSizes[]);
+    ~QueryManagerD3D12();
 
     // clang-format off
-    QueryManager             (const QueryManager&)  = delete;
-    QueryManager             (      QueryManager&&) = delete;
-    QueryManager& operator = (const QueryManager&)  = delete;
-    QueryManager& operator = (      QueryManager&&) = delete;
+    QueryManagerD3D12             (const QueryManagerD3D12&)  = delete;
+    QueryManagerD3D12             (      QueryManagerD3D12&&) = delete;
+    QueryManagerD3D12& operator = (const QueryManagerD3D12&)  = delete;
+    QueryManagerD3D12& operator = (      QueryManagerD3D12&&) = delete;
     // clang-format on
 
     static constexpr Uint32 InvalidIndex = static_cast<Uint32>(-1);

@@ -43,7 +43,7 @@ QueryD3D12Impl::QueryD3D12Impl(IReferenceCounters*    pRefCounters,
 {
     auto& QueryMgr   = pDevice->GetQueryManager();
     m_QueryHeapIndex = QueryMgr.AllocateQuery(m_Desc.Type);
-    if (m_QueryHeapIndex == QueryManager::InvalidIndex)
+    if (m_QueryHeapIndex == QueryManagerD3D12::InvalidIndex)
     {
         LOG_ERROR_AND_THROW("Failed to allocate D3D12 query for type ", GetQueryTypeString(m_Desc.Type),
                             ". Increase the query pool size in EngineD3D12CreateInfo.");

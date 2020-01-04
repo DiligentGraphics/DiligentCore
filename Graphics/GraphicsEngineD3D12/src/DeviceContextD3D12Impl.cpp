@@ -1702,10 +1702,10 @@ void DeviceContextD3D12Impl::BeginQuery(IQuery* pQuery)
     if (QueryType != QUERY_TYPE_TIMESTAMP)
         ++m_ActiveQueriesCounter;
 
-    auto& QueueMgr = m_pDevice->GetQueryManager();
+    auto& QueryMgr = m_pDevice->GetQueryManager();
     auto& Ctx      = GetCmdContext();
     auto  Idx      = pQueryD3D12Impl->GetQueryHeapIndex();
-    QueueMgr.BeginQuery(Ctx, QueryType, Idx);
+    QueryMgr.BeginQuery(Ctx, QueryType, Idx);
 }
 
 void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
@@ -1713,18 +1713,18 @@ void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
     if (!TDeviceContextBase::EndQuery(pQuery, 0))
         return;
 
-    auto* pQueryD3D12Impl = ValidatedCast<QueryD3D12Impl>(pQuery);
-    if (pQueryD3D12Impl->GetDesc().Type != QUERY_TYPE_TIMESTAMP)
+    auto*      pQueryD3D12Impl = ValidatedCast<QueryD3D12Impl>(pQuery);
+    const auto QueryType       = pQueryD3D12Impl->GetDesc().Type;
+    if (QueryType != QUERY_TYPE_TIMESTAMP)
     {
         VERIFY(m_ActiveQueriesCounter > 0, "Active query counter is 0 which means there was a mismatch between BeginQuery() / EndQuery() calls");
         --m_ActiveQueriesCounter;
     }
 
-    const auto QueryType = pQueryD3D12Impl->GetDesc().Type;
-    auto&      QueueMgr  = m_pDevice->GetQueryManager();
-    auto&      Ctx       = GetCmdContext();
-    auto       Idx       = pQueryD3D12Impl->GetQueryHeapIndex();
-    QueueMgr.EndQuery(Ctx, QueryType, Idx);
+    auto& QueryMgr = m_pDevice->GetQueryManager();
+    auto& Ctx      = GetCmdContext();
+    auto  Idx      = pQueryD3D12Impl->GetQueryHeapIndex();
+    QueryMgr.EndQuery(Ctx, QueryType, Idx);
 }
 
 void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
