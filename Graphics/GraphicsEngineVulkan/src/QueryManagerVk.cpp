@@ -110,7 +110,8 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
 
         HeapInfo.vkQueryPool = LogicalDevice.CreateQueryPool(QueryPoolCI, "QueryManagerVk: query pool");
 
-        // Queries must be reset before first use.
+        // After query pool creation, each query must be reset before it is used.
+        // Queries must also be reset between uses (17.2).
         vkCmdResetQueryPool(vkCmdBuff, HeapInfo.vkQueryPool, 0, QueryPoolCI.queryCount);
 
         HeapInfo.AvailableQueries.resize(HeapInfo.PoolSize);

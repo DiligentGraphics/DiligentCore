@@ -453,16 +453,20 @@ public:
                                   VkQueryControlFlags flags,
                                   uint32_t            queryFlag)
     {
+        // queryPool must have been created with a queryType that differs from that of any queries that
+        // are active within commandBuffer (17.2). In other words, only one query of given type can be active
+        // in the command buffer.
+
         if ((m_State.InsidePassQueries | m_State.OutsidePassQueries) & queryFlag)
         {
-            LOG_ERROR_MESSAGE("Another query of the same type is already active. "
-                              "Overlapping queries do not work in Vulkan. The command will be ignored.");
+            LOG_ERROR_MESSAGE("Another query of the same type is already active in the command buffer. "
+                              "Overlapping queries are not allowed in Vulkan. The command will be ignored.");
             return;
         }
 
-        // A query must either begin and end inside the same subpass of a render
-        // pass instance, or must both begin and end outside of a render pass instance
-        // (i.e. contain entire render pass instances) (17.2).
+        // A query must either begin and end inside the same subpass of a render pass instance, or must both
+        // begin and end outside of a render pass instance (i.e. contain entire render pass instances) (17.2).
+
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         vkCmdBeginQuery(m_VkCmdBuffer, queryPool, query, flags);
         if (m_State.RenderPass != VK_NULL_HANDLE)

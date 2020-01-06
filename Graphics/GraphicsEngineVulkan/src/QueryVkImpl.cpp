@@ -135,8 +135,8 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
                 // command executes on a queue. Applications can use fences or events to ensure that a query has
                 // already been reset before checking for its results or availability status. Otherwise, a stale
                 // value could be returned from a previous use of the query.
-                LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-                if (Results[1] == 0)
+                auto res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                if (res != VK_SUCCESS || Results[1] == 0)
                     return false;
 
                 auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
@@ -147,8 +147,8 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
             case QUERY_TYPE_BINARY_OCCLUSION:
             {
                 uint64_t Results[2];
-                LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-                if (Results[1] == 0)
+                auto     res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                if (res != VK_SUCCESS || Results[1] == 0)
                     return false;
 
                 auto& QueryData           = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
@@ -159,8 +159,8 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
             case QUERY_TYPE_TIMESTAMP:
             {
                 uint64_t Results[2];
-                LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-                if (Results[1] == 0)
+                auto     res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                if (res != VK_SUCCESS || Results[1] == 0)
                     return false;
 
                 auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
@@ -176,7 +176,10 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
                 // order starting from the least significant bit. (17.2)
 
                 Uint64 Results[12];
-                LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                auto   res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                if (res != VK_SUCCESS)
+                    return false;
+
                 auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
 
                 const auto EnabledShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
