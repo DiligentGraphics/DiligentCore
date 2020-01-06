@@ -910,6 +910,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::BeginQuery(I
         return false;
     }
 
+    if (pQuery->GetDesc().Type == QUERY_TYPE_TIMESTAMP)
+    {
+        LOG_ERROR_MESSAGE("BeginQuery() is disabled for timestamp queries. Call EndQuery() to set the timestamp.");
+        return false;
+    }
+
     if (!ValidatedCast<QueryImplType>(pQuery)->OnBeginQuery(this))
         return false;
 

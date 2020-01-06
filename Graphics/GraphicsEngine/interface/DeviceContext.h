@@ -1014,7 +1014,7 @@ public:
     ///
     /// \remarks    Only immediate context can begin a query.
     ///
-    /// \warning    OpenGL does not support nested queries of the same type.
+    /// \warning    OpenGL and Vulkan do not support nested queries of the same type.
     virtual void BeginQuery(IQuery* pQuery) = 0;
 
 

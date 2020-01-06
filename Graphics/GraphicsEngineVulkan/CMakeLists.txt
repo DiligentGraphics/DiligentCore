@@ -17,6 +17,7 @@ set(INCLUDE
     include/pch.h
     include/PipelineLayout.h
     include/PipelineStateVkImpl.h
+    include/QueryManagerVk.h
     include/QueryVkImpl.h
     include/RenderDeviceVkImpl.h
     include/RenderPassCache.h
@@ -81,6 +82,7 @@ set(SRC
     src/GenerateMipsVkHelper.cpp
     src/PipelineLayout.cpp
     src/PipelineStateVkImpl.cpp
+    src/QueryManagerVk.cpp
     src/QueryVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
     src/RenderPassCache.cpp

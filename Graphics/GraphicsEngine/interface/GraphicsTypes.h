@@ -1462,7 +1462,7 @@ namespace Diligent
         /// global dynamic heap manager to avoid page creation at run time.
         Uint32 NumDynamicHeapPagesToReserve = 1;
 
-        /// The size of query pool for each query type.
+        /// Query pool size for each query type.
         Uint32 QueryPoolSizes[5] = 
         {
             0,   // Ignored
@@ -1594,6 +1594,16 @@ namespace Diligent
         /// Size of the memory chunk suballocated by immediate/deferred context from
         /// the global dynamic heap to perform lock-free dynamic suballocations
         Uint32 DynamicHeapPageSize = 256 << 10;
+
+        /// Query pool size for each query type.
+        Uint32 QueryPoolSizes[5] = 
+        {
+            0,   // Ignored
+            128, // QUERY_TYPE_OCCLUSION
+            128, // QUERY_TYPE_BINARY_OCCLUSION
+            512, // QUERY_TYPE_TIMESTAMP
+            128  // QUERY_TYPE_PIPELINE_STATISTICS
+        };
     };
 
 

@@ -33,6 +33,7 @@
 #include "QueryVk.h"
 #include "QueryBase.h"
 #include "RenderDeviceVkImpl.h"
+#include "QueryManagerVk.h"
 
 namespace Diligent
 {
@@ -55,7 +56,19 @@ public:
 
     virtual bool GetData(void* pData, Uint32 DataSize) override final;
 
+    Uint32 GetQueryPoolIndex() const
+    {
+        return m_QueryPoolIndex;
+    }
+
+    bool OnEndQuery(IDeviceContext* pContext);
+    bool OnBeginQuery(IDeviceContext* pContext);
+
 private:
+    bool AllocateQuery();
+
+    Uint32 m_QueryPoolIndex     = QueryManagerVk::InvalidIndex;
+    Uint64 m_QueryEndFenceValue = 0;
 };
 
 } // namespace Diligent

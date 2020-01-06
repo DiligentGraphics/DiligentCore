@@ -30,6 +30,7 @@
 #include "QueryVkImpl.h"
 #include "EngineMemory.h"
 #include "RenderDeviceVkImpl.h"
+#include "DeviceContextVkImpl.h"
 
 namespace Diligent
 {
@@ -52,11 +53,168 @@ QueryVkImpl::QueryVkImpl(IReferenceCounters* pRefCounters,
 
 QueryVkImpl::~QueryVkImpl()
 {
+    auto& QueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+    QueryMgr.DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
+}
+
+bool QueryVkImpl::AllocateQuery()
+{
+    auto& QueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+    if (m_QueryPoolIndex != QueryManagerVk::InvalidIndex)
+    {
+        QueryMgr.DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
+    }
+    m_QueryPoolIndex = QueryMgr.AllocateQuery(m_Desc.Type);
+    if (m_QueryPoolIndex == QueryManagerVk::InvalidIndex)
+    {
+        LOG_ERROR_MESSAGE("Failed to allocate Vulkan query for type ", GetQueryTypeString(m_Desc.Type),
+                          ". Increase the query pool size in EngineVkCreateInfo.");
+        return false;
+    }
+
+    return true;
+}
+
+bool QueryVkImpl::OnBeginQuery(IDeviceContext* pContext)
+{
+    if (!TQueryBase::OnBeginQuery(pContext))
+        return false;
+
+    return AllocateQuery();
+}
+
+bool QueryVkImpl::OnEndQuery(IDeviceContext* pContext)
+{
+    if (!TQueryBase::OnEndQuery(pContext))
+        return false;
+
+    if (m_Desc.Type == QUERY_TYPE_TIMESTAMP)
+    {
+        if (!AllocateQuery())
+            return false;
+    }
+
+    if (m_QueryPoolIndex == QueryManagerVk::InvalidIndex)
+    {
+        LOG_ERROR_MESSAGE("Query '", m_Desc.Name, "' is invalid: Vulkan query allocation failed");
+        return false;
+    }
+
+    auto CmdQueueId      = m_pContext.RawPtr<DeviceContextVkImpl>()->GetCommandQueueId();
+    m_QueryEndFenceValue = m_pDevice->GetNextFenceValue(CmdQueueId);
+
+    return true;
 }
 
 bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
 {
-    return false;
+    auto CmdQueueId          = m_pContext.RawPtr<DeviceContextVkImpl>()->GetCommandQueueId();
+    auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
+    if (CompletedFenceValue >= m_QueryEndFenceValue)
+    {
+        auto&       QueryMgr      = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+        auto        vkQueryPool   = QueryMgr.GetQueryPool(m_Desc.Type);
+
+        switch (m_Desc.Type)
+        {
+            case QUERY_TYPE_OCCLUSION:
+            {
+                uint64_t Results[2];
+                // If VK_QUERY_RESULT_WITH_AVAILABILITY_BIT is set, the final integer value written for each query
+                // is non-zero if the query's status was available or zero if the status was unavailable.
+
+                // Applications must take care to ensure that use of the VK_QUERY_RESULT_WITH_AVAILABILITY_BIT
+                // bit has the desired effect.
+                // For example, if a query has been used previously and a command buffer records the commands
+                // vkCmdResetQueryPool, vkCmdBeginQuery, and vkCmdEndQuery for that query, then the query will
+                // remain in the available state until vkResetQueryPoolEXT is called or the vkCmdResetQueryPool
+                // command executes on a queue. Applications can use fences or events to ensure that a query has
+                // already been reset before checking for its results or availability status. Otherwise, a stale
+                // value could be returned from a previous use of the query.
+                LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                if (Results[1] == 0)
+                    return false;
+
+                auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
+                QueryData.NumSamples = Results[0];
+            }
+            break;
+
+            case QUERY_TYPE_BINARY_OCCLUSION:
+            {
+                uint64_t Results[2];
+                LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                if (Results[1] == 0)
+                    return false;
+
+                auto& QueryData           = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+                QueryData.AnySamplePassed = Results[0] != 0;
+            }
+            break;
+
+            case QUERY_TYPE_TIMESTAMP:
+            {
+                uint64_t Results[2];
+                LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                if (Results[1] == 0)
+                    return false;
+
+                auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                QueryData.Counter   = Results[0];
+                QueryData.Frequency = QueryMgr.GetCounterFrequency();
+            }
+            break;
+
+            case QUERY_TYPE_PIPELINE_STATISTICS:
+            {
+                // Pipeline statistics queries write one integer value for each bit that is enabled in the
+                // pipelineStatistics when the pool is created, and the statistics values are written in bit
+                // order starting from the least significant bit. (17.2)
+
+                Uint64 Results[12];
+                LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
+
+                const auto EnabledShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
+
+                auto Idx = 0;
+
+                QueryData.InputVertices   = Results[Idx++]; // INPUT_ASSEMBLY_VERTICES_BIT   = 0x00000001
+                QueryData.InputPrimitives = Results[Idx++]; // INPUT_ASSEMBLY_PRIMITIVES_BIT = 0x00000002
+                QueryData.VSInvocations   = Results[Idx++]; // VERTEX_SHADER_INVOCATIONS_BIT = 0x00000004
+                if (EnabledShaderStages & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
+                {
+                    QueryData.GSInvocations = Results[Idx++]; // GEOMETRY_SHADER_INVOCATIONS_BIT = 0x00000008
+                    QueryData.GSPrimitives  = Results[Idx++]; // GEOMETRY_SHADER_PRIMITIVES_BIT  = 0x00000010
+                }
+                QueryData.ClippingInvocations = Results[Idx++]; // CLIPPING_INVOCATIONS_BIT         = 0x00000020
+                QueryData.ClippingPrimitives  = Results[Idx++]; // CLIPPING_PRIMITIVES_BIT          = 0x00000040
+                QueryData.PSInvocations       = Results[Idx++]; // FRAGMENT_SHADER_INVOCATIONS_BIT  = 0x00000080
+
+                if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT)
+                    QueryData.HSInvocations = Results[Idx++]; // TESSELLATION_CONTROL_SHADER_PATCHES_BIT        = 0x00000100
+
+                if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
+                    QueryData.DSInvocations = Results[Idx++]; // TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT = 0x00000200
+
+                QueryData.CSInvocations = Results[Idx++]; // COMPUTE_SHADER_INVOCATIONS_BIT = 0x00000400
+
+                if (!Results[Idx])
+                    return false;
+            }
+            break;
+
+            default:
+                UNEXPECTED("Unexpected query type");
+        }
+
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 } // namespace Diligent

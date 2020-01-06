@@ -199,6 +199,13 @@ public:
         m_State.Framebuffer       = VK_NULL_HANDLE;
         m_State.FramebufferWidth  = 0;
         m_State.FramebufferHeight = 0;
+        if (m_State.InsidePassQueries != 0)
+        {
+            LOG_ERROR_MESSAGE("There are outstanding queries that have been started inside the render pass, but have "
+                              "not been ended. Vulkan requires that a query must either begin and end inside the same "
+                              "subpass of a render pass instance, or must both begin and end outside of a render pass "
+                              "instance (i.e. contain entire render pass instances). (17.2)");
+        }
     }
 
     __forceinline void EndCommandBuffer()
@@ -443,26 +450,58 @@ public:
 
     __forceinline void BeginQuery(VkQueryPool         queryPool,
                                   uint32_t            query,
-                                  VkQueryControlFlags flags)
+                                  VkQueryControlFlags flags,
+                                  uint32_t            queryFlag)
     {
+        if ((m_State.InsidePassQueries | m_State.OutsidePassQueries) & queryFlag)
+        {
+            LOG_ERROR_MESSAGE("Another query of the same type is already active. "
+                              "Overlapping queries do not work in Vulkan. The command will be ignored.");
+            return;
+        }
+
         // A query must either begin and end inside the same subpass of a render
         // pass instance, or must both begin and end outside of a render pass instance
         // (i.e. contain entire render pass instances) (17.2).
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         vkCmdBeginQuery(m_VkCmdBuffer, queryPool, query, flags);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+            m_State.InsidePassQueries |= queryFlag;
+        else
+            m_State.OutsidePassQueries |= queryFlag;
     }
 
     __forceinline void EndQuery(VkQueryPool queryPool,
-                                uint32_t    query)
+                                uint32_t    query,
+                                uint32_t    queryFlag)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         vkCmdEndQuery(m_VkCmdBuffer, queryPool, query);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            VERIFY((m_State.InsidePassQueries & queryFlag) != 0, "No active inside-pass queries found.");
+            m_State.InsidePassQueries &= ~queryFlag;
+        }
+        else
+        {
+            VERIFY((m_State.OutsidePassQueries & queryFlag) != 0, "No active outside-pass queries found.");
+            m_State.OutsidePassQueries &= ~queryFlag;
+        }
+    }
+
+    __forceinline void WriteTimestamp(VkPipelineStageFlagBits pipelineStage,
+                                      VkQueryPool             queryPool,
+                                      uint32_t                query)
+    {
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        vkCmdWriteTimestamp(m_VkCmdBuffer, pipelineStage, queryPool, query);
     }
 
     __forceinline void ResetQueryPool(VkQueryPool queryPool,
                                       uint32_t    firstQuery,
                                       uint32_t    queryCount)
     {
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         if (m_State.RenderPass != VK_NULL_HANDLE)
         {
             // Query pool reset must be performed outside of render pass (17.2).
@@ -499,15 +538,17 @@ public:
 
     struct StateCache
     {
-        VkRenderPass  RenderPass        = VK_NULL_HANDLE;
-        VkFramebuffer Framebuffer       = VK_NULL_HANDLE;
-        VkPipeline    GraphicsPipeline  = VK_NULL_HANDLE;
-        VkPipeline    ComputePipeline   = VK_NULL_HANDLE;
-        VkBuffer      IndexBuffer       = VK_NULL_HANDLE;
-        VkDeviceSize  IndexBufferOffset = 0;
-        VkIndexType   IndexType         = VK_INDEX_TYPE_MAX_ENUM;
-        uint32_t      FramebufferWidth  = 0;
-        uint32_t      FramebufferHeight = 0;
+        VkRenderPass  RenderPass         = VK_NULL_HANDLE;
+        VkFramebuffer Framebuffer        = VK_NULL_HANDLE;
+        VkPipeline    GraphicsPipeline   = VK_NULL_HANDLE;
+        VkPipeline    ComputePipeline    = VK_NULL_HANDLE;
+        VkBuffer      IndexBuffer        = VK_NULL_HANDLE;
+        VkDeviceSize  IndexBufferOffset  = 0;
+        VkIndexType   IndexType          = VK_INDEX_TYPE_MAX_ENUM;
+        uint32_t      FramebufferWidth   = 0;
+        uint32_t      FramebufferHeight  = 0;
+        uint32_t      InsidePassQueries  = 0;
+        uint32_t      OutsidePassQueries = 0;
     };
 
     const StateCache& GetState() const { return m_State; }

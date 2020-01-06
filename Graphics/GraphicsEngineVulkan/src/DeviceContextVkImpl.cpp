@@ -96,7 +96,8 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
         pDeviceVkImpl->GetDynamicDescriptorPool(),
         GetContextObjectName("Dynamic descriptor set allocator", bIsDeferred, ContextId),
     },
-    m_GenerateMipsHelper{std::move(GenerateMipsHelper)}
+    m_GenerateMipsHelper{std::move(GenerateMipsHelper)},
+    m_QueryMgr{pDeviceVkImpl->GetLogicalDevice(), pDeviceVkImpl->GetPhysicalDevice(), EngineCI.QueryPoolSizes}
 // clang-format on
 {
     m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
@@ -227,7 +228,8 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         return;
 
     // Never flush deferred context!
-    if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush)
+    // A query must begin and end in the same command buffer (17.2)
+    if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush && m_ActiveQueriesCounter == 0)
     {
         Flush();
     }
@@ -824,6 +826,13 @@ void DeviceContextVkImpl::FinishFrame()
         }
     }
 
+    if (m_ActiveQueriesCounter > 0)
+    {
+        LOG_ERROR_MESSAGE("There are ", m_ActiveQueriesCounter,
+                          " active queries in the device context when finishing the frame. "
+                          "All queries must be ended before the frame is finished.");
+    }
+
     if (!m_MappedTextures.empty())
         LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
 
@@ -857,6 +866,12 @@ void DeviceContextVkImpl::Flush()
         return;
     }
 
+    if (m_ActiveQueriesCounter > 0)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context that has ", m_ActiveQueriesCounter,
+                          " active queries. Vulkan requires that queries are begun and ended in the same command buffer");
+    }
+
     VkSubmitInfo SubmitInfo = {};
 
     SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -865,6 +880,8 @@ void DeviceContextVkImpl::Flush()
     auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
     if (vkCmdBuff != VK_NULL_HANDLE)
     {
+        m_QueryMgr.ResetStaleQueries(m_CommandBuffer);
+
         if (m_State.NumCommands != 0)
         {
             if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
@@ -1995,7 +2012,38 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
     if (!TDeviceContextBase::BeginQuery(pQuery, 0))
         return;
 
-    auto* pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
+    auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
+    const auto QueryType    = pQueryVkImpl->GetDesc().Type;
+    auto       Idx          = pQueryVkImpl->GetQueryPoolIndex();
+
+    EnsureVkCmdBuffer();
+    if (QueryType == QUERY_TYPE_TIMESTAMP)
+    {
+        LOG_ERROR_MESSAGE("BeginQuery() is disabled for timestamp queries");
+    }
+    else
+    {
+        const auto& CmdBuffState = m_CommandBuffer.GetState();
+        if ((CmdBuffState.InsidePassQueries | CmdBuffState.OutsidePassQueries) & (1u << QueryType))
+        {
+            LOG_ERROR_MESSAGE("Another query of type ", GetQueryTypeString(QueryType),
+                              " is currently active. Overlapping queries do not work in Vulkan. "
+                              "End the first query before beginning another one.");
+            return;
+        }
+
+        // A query must either begin and end inside the same subpass of a render pass instance, or must
+        // both begin and end outside of a render pass instance (i.e. contain entire render pass instances). (17.2)
+
+        ++m_ActiveQueriesCounter;
+        m_CommandBuffer.BeginQuery(m_QueryMgr.GetQueryPool(QueryType),
+                                   Idx,
+                                   // If flags does not contain VK_QUERY_CONTROL_PRECISE_BIT an implementation
+                                   // may generate any non-zero result value for the query if the count of
+                                   // passing samples is non-zero (17.3).
+                                   QueryType == QUERY_TYPE_OCCLUSION ? VK_QUERY_CONTROL_PRECISE_BIT : 0,
+                                   1u << QueryType);
+    }
 }
 
 void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
@@ -2003,7 +2051,42 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
     if (!TDeviceContextBase::EndQuery(pQuery, 0))
         return;
 
-    auto* pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
+    auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
+    const auto QueryType    = pQueryVkImpl->GetDesc().Type;
+    auto       vkQueryPool  = m_QueryMgr.GetQueryPool(QueryType);
+    auto       Idx          = pQueryVkImpl->GetQueryPoolIndex();
+
+    EnsureVkCmdBuffer();
+    if (QueryType == QUERY_TYPE_TIMESTAMP)
+    {
+        m_CommandBuffer.WriteTimestamp(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vkQueryPool, Idx);
+    }
+    else
+    {
+        VERIFY(m_ActiveQueriesCounter > 0, "Active query counter is 0 which means there was a mismatch between BeginQuery() / EndQuery() calls");
+
+        // A query must either begin and end inside the same subpass of a render pass instance, or must
+        // both begin and end outside of a render pass instance (i.e. contain entire render pass instances). (17.2)
+        const auto& CmdBuffState = m_CommandBuffer.GetState();
+        VERIFY((CmdBuffState.InsidePassQueries | CmdBuffState.OutsidePassQueries) & (1u << QueryType),
+               "No query flag is set which indicates there was no matching BeginQuery call or there was an error while beginning the query.");
+        if (CmdBuffState.OutsidePassQueries & (1 << QueryType))
+        {
+            if (m_CommandBuffer.GetState().RenderPass)
+                m_CommandBuffer.EndRenderPass();
+        }
+        else
+        {
+            if (!m_CommandBuffer.GetState().RenderPass)
+                LOG_ERROR_MESSAGE("The query was started inside render pass, but is being ended oustside of render pass. "
+                                  "Vulkan requires that a query must either begin and end inside the same "
+                                  "subpass of a render pass instance, or must both begin and end outside of a render pass "
+                                  "instance (i.e. contain entire render pass instances). (17.2)");
+        }
+
+        --m_ActiveQueriesCounter;
+        m_CommandBuffer.EndQuery(vkQueryPool, Idx, 1u << QueryType);
+    }
 }
 
 

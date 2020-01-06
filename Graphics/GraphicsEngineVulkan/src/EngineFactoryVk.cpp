@@ -193,6 +193,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         ENABLE_FEATURE(shaderStorageImageExtendedFormats)
 #undef ENABLE_FEATURE
 
+        DeviceFeatures.pipelineStatisticsQuery = VK_TRUE;
+        DeviceFeatures.occlusionQueryPrecise   = VK_TRUE;
+
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains
                                                              // boolean indicators of all the features to be enabled.
 
