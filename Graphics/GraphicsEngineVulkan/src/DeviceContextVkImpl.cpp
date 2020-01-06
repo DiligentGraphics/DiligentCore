@@ -96,10 +96,14 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
         pDeviceVkImpl->GetDynamicDescriptorPool(),
         GetContextObjectName("Dynamic descriptor set allocator", bIsDeferred, ContextId),
     },
-    m_GenerateMipsHelper{std::move(GenerateMipsHelper)},
-    m_QueryMgr{pDeviceVkImpl->GetLogicalDevice(), pDeviceVkImpl->GetPhysicalDevice(), EngineCI.QueryPoolSizes}
+    m_GenerateMipsHelper{std::move(GenerateMipsHelper)}
 // clang-format on
 {
+    if (!m_bIsDeferred)
+    {
+        m_QueryMgr.reset(new QueryManagerVk{pDeviceVkImpl, EngineCI.QueryPoolSizes});
+    }
+
     m_GenerateMipsHelper->CreateSRB(&m_GenerateMipsSRB);
 
     BufferDesc DummyVBDesc;
@@ -880,7 +884,10 @@ void DeviceContextVkImpl::Flush()
     auto vkCmdBuff = m_CommandBuffer.GetVkCmdBuffer();
     if (vkCmdBuff != VK_NULL_HANDLE)
     {
-        m_QueryMgr.ResetStaleQueries(m_CommandBuffer);
+        if (m_QueryMgr)
+        {
+            m_QueryMgr->ResetStaleQueries(m_CommandBuffer);
+        }
 
         if (m_State.NumCommands != 0)
         {
@@ -2036,7 +2043,7 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
         // both begin and end outside of a render pass instance (i.e. contain entire render pass instances). (17.2)
 
         ++m_ActiveQueriesCounter;
-        m_CommandBuffer.BeginQuery(m_QueryMgr.GetQueryPool(QueryType),
+        m_CommandBuffer.BeginQuery(m_QueryMgr->GetQueryPool(QueryType),
                                    Idx,
                                    // If flags does not contain VK_QUERY_CONTROL_PRECISE_BIT an implementation
                                    // may generate any non-zero result value for the query if the count of
@@ -2053,7 +2060,7 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
 
     auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
-    auto       vkQueryPool  = m_QueryMgr.GetQueryPool(QueryType);
+    auto       vkQueryPool  = m_QueryMgr->GetQueryPool(QueryType);
     auto       Idx          = pQueryVkImpl->GetQueryPoolIndex();
 
     EnsureVkCmdBuffer();

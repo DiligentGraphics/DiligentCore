@@ -34,14 +34,19 @@
 namespace Diligent
 {
 
-QueryManagerVk::QueryManagerVk(const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice,
-                               const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice,
-                               const Uint32                                 QueryHeapSizes[])
+QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
+                               const Uint32        QueryHeapSizes[])
 {
+    const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
+    const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
+
     auto timestampPeriod = PhysicalDevice.GetProperties().limits.timestampPeriod;
     m_CounterFrequency   = static_cast<Uint64>(1000000000.0 / timestampPeriod);
 
-    //Uint32 ResolveBufferOffset = 0;
+    VulkanUtilities::CommandPoolWrapper CmdPool;
+    VkCommandBuffer                     vkCmdBuff;
+    pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to reset queries before first use");
+
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
         // clang-format off
@@ -105,12 +110,18 @@ QueryManagerVk::QueryManagerVk(const VulkanUtilities::VulkanLogicalDevice&  Logi
 
         HeapInfo.vkQueryPool = LogicalDevice.CreateQueryPool(QueryPoolCI, "QueryManagerVk: query pool");
 
+        // Queries must be reset before first use.
+        vkCmdResetQueryPool(vkCmdBuff, HeapInfo.vkQueryPool, 0, QueryPoolCI.queryCount);
+
         HeapInfo.AvailableQueries.resize(HeapInfo.PoolSize);
         for (Uint32 i = 0; i < HeapInfo.PoolSize; ++i)
         {
             HeapInfo.AvailableQueries[i] = i;
         }
     }
+
+    Uint32 QueueIndex = 0;
+    pRenderDeviceVk->ExecuteAndDisposeTransientCmdBuff(QueueIndex, vkCmdBuff, std::move(CmdPool));
 }
 
 QueryManagerVk::~QueryManagerVk()

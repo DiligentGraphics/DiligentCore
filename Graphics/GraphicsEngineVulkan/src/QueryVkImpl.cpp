@@ -53,18 +53,20 @@ QueryVkImpl::QueryVkImpl(IReferenceCounters* pRefCounters,
 
 QueryVkImpl::~QueryVkImpl()
 {
-    auto& QueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
-    QueryMgr.DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
+    auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+    VERIFY_EXPR(pQueryMgr != nullptr);
+    pQueryMgr->DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
 }
 
 bool QueryVkImpl::AllocateQuery()
 {
-    auto& QueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+    auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+    VERIFY_EXPR(pQueryMgr != nullptr);
     if (m_QueryPoolIndex != QueryManagerVk::InvalidIndex)
     {
-        QueryMgr.DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
+        pQueryMgr->DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
     }
-    m_QueryPoolIndex = QueryMgr.AllocateQuery(m_Desc.Type);
+    m_QueryPoolIndex = pQueryMgr->AllocateQuery(m_Desc.Type);
     if (m_QueryPoolIndex == QueryManagerVk::InvalidIndex)
     {
         LOG_ERROR_MESSAGE("Failed to allocate Vulkan query for type ", GetQueryTypeString(m_Desc.Type),
@@ -112,9 +114,10 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
     auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
-        auto&       QueryMgr      = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+        auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+        VERIFY_EXPR(pQueryMgr != nullptr);
         const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        auto        vkQueryPool   = QueryMgr.GetQueryPool(m_Desc.Type);
+        auto        vkQueryPool   = pQueryMgr->GetQueryPool(m_Desc.Type);
 
         switch (m_Desc.Type)
         {
@@ -162,7 +165,7 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
 
                 auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
                 QueryData.Counter   = Results[0];
-                QueryData.Frequency = QueryMgr.GetCounterFrequency();
+                QueryData.Frequency = pQueryMgr->GetCounterFrequency();
             }
             break;
 

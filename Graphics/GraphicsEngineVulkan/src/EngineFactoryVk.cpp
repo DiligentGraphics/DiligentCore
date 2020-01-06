@@ -76,6 +76,9 @@ public:
                            const SwapChainDesc& SwapChainDesc,
                            void*                pNativeWndHandle,
                            ISwapChain**         ppSwapChain) override final;
+
+private:
+    std::function<void(RenderDeviceVkImpl*)> OnRenderDeviceCreated = nullptr;
 };
 
 /// Creates render device and device contexts for Vulkan backend
@@ -211,21 +214,25 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         auto vkPhysicalDevice = PhysicalDevice->GetVkDeviceHandle();
         auto LogicalDevice    = VulkanUtilities::VulkanLogicalDevice::Create(vkPhysicalDevice, DeviceCreateInfo, vkAllocator);
 
-        RefCntAutoPtr<CommandQueueVkImpl> pCmdQueueVk;
-        auto&                             RawMemAllocator = GetRawAllocator();
-        pCmdQueueVk                                       = NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, QueueInfo.queueFamilyIndex);
+        auto& RawMemAllocator = GetRawAllocator();
+
+        RefCntAutoPtr<CommandQueueVkImpl> pCmdQueueVk{
+            NEW_RC_OBJ(RawMemAllocator, "CommandQueueVk instance", CommandQueueVkImpl)(LogicalDevice, QueueInfo.queueFamilyIndex)};
+
+        OnRenderDeviceCreated = [&](RenderDeviceVkImpl* pRenderDeviceVk) //
+        {
+            FenceDesc Desc;
+            Desc.Name = "Command queue internal fence";
+            // Render device owns command queue that in turn owns the fence, so it is an internal device object
+            constexpr bool IsDeviceInternal = true;
+
+            RefCntAutoPtr<FenceVkImpl> pFenceVk{
+                NEW_RC_OBJ(RawMemAllocator, "FenceVkImpl instance", FenceVkImpl)(pRenderDeviceVk, Desc, IsDeviceInternal)};
+            pCmdQueueVk->SetFence(std::move(pFenceVk));
+        };
 
         std::array<ICommandQueueVk*, 1> CommandQueues = {{pCmdQueueVk}};
         AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), EngineCI, ppDevice, ppContexts);
-
-        FenceDesc Desc;
-        Desc.Name = "Command queue fence";
-        // Render device owns command queue that in turn owns the fence, so it is an internal device object
-        bool  IsDeviceInternal = true;
-        auto* pRenderDeviceVk  = ValidatedCast<RenderDeviceVkImpl>(*ppDevice);
-
-        RefCntAutoPtr<FenceVkImpl> pFenceVk(NEW_RC_OBJ(RawMemAllocator, "FenceVkImpl instance", FenceVkImpl)(pRenderDeviceVk, Desc, IsDeviceInternal));
-        pCmdQueueVk->SetFence(std::move(pFenceVk));
     }
     catch (std::runtime_error&)
     {
@@ -274,6 +281,9 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 
         RenderDeviceVkImpl* pRenderDeviceVk(NEW_RC_OBJ(RawMemAllocator, "RenderDeviceVkImpl instance", RenderDeviceVkImpl)(RawMemAllocator, this, EngineCI, CommandQueueCount, ppCommandQueues, Instance, std::move(PhysicalDevice), LogicalDevice));
         pRenderDeviceVk->QueryInterface(IID_RenderDevice, reinterpret_cast<IObject**>(ppDevice));
+
+        if (OnRenderDeviceCreated != nullptr)
+            OnRenderDeviceCreated(pRenderDeviceVk);
 
         std::shared_ptr<GenerateMipsVkHelper> GenerateMipsHelper(new GenerateMipsVkHelper(*pRenderDeviceVk));
 

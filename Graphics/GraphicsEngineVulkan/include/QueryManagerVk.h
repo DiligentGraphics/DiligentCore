@@ -41,12 +41,13 @@
 namespace Diligent
 {
 
+class RenderDeviceVkImpl;
+
 class QueryManagerVk
 {
 public:
-    QueryManagerVk(const VulkanUtilities::VulkanLogicalDevice&  LogicalDevice,
-                   const VulkanUtilities::VulkanPhysicalDevice& PhysicalDevice,
-                   const Uint32                                 QueryHeapSizes[]);
+    QueryManagerVk(RenderDeviceVkImpl* RenderDeviceVk,
+                   const Uint32        QueryHeapSizes[]);
     ~QueryManagerVk();
 
     // clang-format off

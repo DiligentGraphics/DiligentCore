@@ -319,7 +319,7 @@ public:
     Int64 GetContextFrameNumber() const { return m_ContextFrameNumber; }
 
     GenerateMipsVkHelper& GetGenerateMipsHelper() { return *m_GenerateMipsHelper; }
-    QueryManagerVk&       GetQueryManager() { return m_QueryMgr; }
+    QueryManagerVk*       GetQueryManager() { return m_QueryMgr.get(); }
 
 private:
     void               TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
@@ -472,8 +472,8 @@ private:
     // In Vulkan we can't bind null vertex buffer, so we have to create a dummy VB
     RefCntAutoPtr<BufferVkImpl> m_DummyVB;
 
-    QueryManagerVk m_QueryMgr;
-    Int32          m_ActiveQueriesCounter = 0;
+    std::unique_ptr<QueryManagerVk> m_QueryMgr;
+    Int32                           m_ActiveQueriesCounter = 0;
 };
 
 } // namespace Diligent
