@@ -313,15 +313,10 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 
             auto& Features                          = CreateInfo.EnabledFeatures;
             Features.depthBiasClamp                 = true;
-            Features.fillModeNonSolid               = true;
             Features.depthClamp                     = true;
             Features.independentBlend               = true;
-            Features.samplerAnisotropy              = true;
-            Features.geometryShader                 = true;
-            Features.tessellationShader             = true;
             Features.dualSrcBlend                   = true;
             Features.multiViewport                  = true;
-            Features.imageCubeArray                 = true;
             Features.textureCompressionBC           = true;
             Features.vertexPipelineStoresAndAtomics = true;
             Features.fragmentStoresAndAtomics       = true;

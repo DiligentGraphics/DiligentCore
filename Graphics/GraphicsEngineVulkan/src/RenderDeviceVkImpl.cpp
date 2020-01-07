@@ -159,7 +159,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 
     Features.SeparablePrograms             = True;
     Features.IndirectRendering             = True;
-    Features.WireframeFill                 = True;
+    Features.WireframeFill                 = vkDeviceFeatures.fillModeNonSolid != VK_FALSE;
     Features.MultithreadedResourceCreation = True;
     Features.ComputeShaders                = True;
     Features.GeometryShaders               = vkDeviceFeatures.geometryShader != VK_FALSE;
@@ -169,6 +169,27 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.BinaryOcclusionQueries        = True;
     Features.TimestampQueries              = True;
     Features.PipelineStatisticsQueries     = vkDeviceFeatures.pipelineStatisticsQuery != VK_FALSE;
+
+    const auto& vkDeviceLimits = m_PhysicalDevice->GetProperties().limits;
+    auto&       TexCaps        = m_DeviceCaps.TexCaps;
+
+    TexCaps.MaxTexture1DDimension     = vkDeviceLimits.maxImageDimension1D;
+    TexCaps.MaxTexture1DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
+    TexCaps.MaxTexture2DDimension     = vkDeviceLimits.maxImageDimension2D;
+    TexCaps.MaxTexture2DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
+    TexCaps.MaxTexture3DDimension     = vkDeviceLimits.maxImageDimension3D;
+    TexCaps.MaxTextureCubeDimension   = vkDeviceLimits.maxImageDimensionCube;
+    TexCaps.Texture2DMSSupported      = True;
+    TexCaps.Texture2DMSArraySupported = True;
+    TexCaps.TextureViewSupported      = True;
+    TexCaps.CubemapArraysSupported    = vkDeviceFeatures.imageCubeArray;
+
+
+    auto& SamCaps = m_DeviceCaps.SamCaps;
+
+    SamCaps.BorderSamplingModeSupported   = True;
+    SamCaps.AnisotropicFilteringSupported = vkDeviceFeatures.samplerAnisotropy;
+    SamCaps.LODBiasSupported              = True;
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()

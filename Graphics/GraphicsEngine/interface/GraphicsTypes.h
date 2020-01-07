@@ -1498,15 +1498,10 @@ namespace Diligent
         struct DeviceFeatures
         {
             bool depthBiasClamp                    = false;
-            bool fillModeNonSolid                  = false;
             bool depthClamp                        = false;
             bool independentBlend                  = false;
-            bool samplerAnisotropy                 = false;
-            bool geometryShader                    = false;
-            bool tessellationShader                = false;
             bool dualSrcBlend                      = false;
             bool multiViewport                     = false;
-            bool imageCubeArray                    = false;
             bool textureCompressionBC              = false;
             bool vertexPipelineStoresAndAtomics    = false;
             bool fragmentStoresAndAtomics          = false;

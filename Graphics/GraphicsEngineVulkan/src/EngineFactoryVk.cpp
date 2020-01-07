@@ -181,23 +181,25 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
     }
 
         ENABLE_FEATURE(depthBiasClamp)
-        ENABLE_FEATURE(fillModeNonSolid)
         ENABLE_FEATURE(depthClamp)
         ENABLE_FEATURE(independentBlend)
-        ENABLE_FEATURE(samplerAnisotropy)
-        ENABLE_FEATURE(geometryShader)
-        ENABLE_FEATURE(tessellationShader)
         ENABLE_FEATURE(dualSrcBlend)
         ENABLE_FEATURE(multiViewport)
-        ENABLE_FEATURE(imageCubeArray)
         ENABLE_FEATURE(textureCompressionBC)
         ENABLE_FEATURE(vertexPipelineStoresAndAtomics)
         ENABLE_FEATURE(fragmentStoresAndAtomics)
         ENABLE_FEATURE(shaderStorageImageExtendedFormats)
 #undef ENABLE_FEATURE
 
-        DeviceFeatures.pipelineStatisticsQuery = PhysicalDeviceFeatures.pipelineStatisticsQuery;
-        DeviceFeatures.occlusionQueryPrecise   = PhysicalDeviceFeatures.occlusionQueryPrecise;
+#define ENABLE_FEATURE(Feature) DeviceFeatures.Feature = PhysicalDeviceFeatures.Feature
+        ENABLE_FEATURE(geometryShader);
+        ENABLE_FEATURE(tessellationShader);
+        ENABLE_FEATURE(pipelineStatisticsQuery);
+        ENABLE_FEATURE(occlusionQueryPrecise);
+        ENABLE_FEATURE(imageCubeArray);
+        ENABLE_FEATURE(fillModeNonSolid);
+        ENABLE_FEATURE(samplerAnisotropy);
+#undef ENABLE_FEATURE
 
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains
                                                              // boolean indicators of all the features to be enabled.

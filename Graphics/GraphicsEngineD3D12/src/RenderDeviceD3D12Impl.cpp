@@ -159,11 +159,6 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             UNEXPECTED("Unexpected D3D feature level");
     }
 
-    // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),
-    // so bindless resources are always available.
-    // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-    m_DeviceCaps.Features.BindlessResources = True;
-
     if (auto pDXGIAdapter1 = DXGIAdapterFromD3D12Device(pd3d12Device))
     {
         DXGI_ADAPTER_DESC1 AdapterDesc = {};
@@ -178,6 +173,30 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter type will be unknown.");
         }
     }
+
+    // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),
+    // so bindless resources are always available.
+    // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
+    m_DeviceCaps.Features.BindlessResources = True;
+
+    auto& TexCaps = m_DeviceCaps.TexCaps;
+
+    TexCaps.MaxTexture1DDimension     = D3D12_REQ_TEXTURE1D_U_DIMENSION;
+    TexCaps.MaxTexture1DArraySlices   = D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
+    TexCaps.MaxTexture2DDimension     = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+    TexCaps.MaxTexture2DArraySlices   = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+    TexCaps.MaxTexture3DDimension     = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+    TexCaps.MaxTextureCubeDimension   = D3D12_REQ_TEXTURECUBE_DIMENSION;
+    TexCaps.Texture2DMSSupported      = True;
+    TexCaps.Texture2DMSArraySupported = True;
+    TexCaps.TextureViewSupported      = True;
+    TexCaps.CubemapArraysSupported    = True;
+
+    auto& SamCaps = m_DeviceCaps.SamCaps;
+
+    SamCaps.BorderSamplingModeSupported   = True;
+    SamCaps.AnisotropicFilteringSupported = True;
+    SamCaps.LODBiasSupported              = True;
 }
 
 RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()

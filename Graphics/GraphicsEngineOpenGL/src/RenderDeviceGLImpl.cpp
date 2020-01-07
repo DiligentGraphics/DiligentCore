@@ -117,6 +117,24 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 
     auto& Features = m_DeviceCaps.Features;
     auto& TexCaps  = m_DeviceCaps.TexCaps;
+    auto& SamCaps  = m_DeviceCaps.SamCaps;
+
+    GLint MaxTextureSize = 0;
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &MaxTextureSize);
+    CHECK_GL_ERROR("Failed to get maximum texture size");
+
+    GLint Max3DTextureSize = 0;
+    glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &Max3DTextureSize);
+    CHECK_GL_ERROR("Failed to get maximum 3d texture size");
+
+    GLint MaxCubeTextureSize = 0;
+    glGetIntegerv(GL_MAX_CUBE_MAP_TEXTURE_SIZE, &MaxCubeTextureSize);
+    CHECK_GL_ERROR("Failed to get maximum cubemap texture size");
+
+    GLint MaxLayers = 0;
+    glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &MaxLayers);
+    CHECK_GL_ERROR("Failed to get maximum number of texture array layers");
+
     if (m_DeviceCaps.DevType == DeviceType::OpenGL)
     {
         const bool IsGL43OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 3;
@@ -134,12 +152,20 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.TimestampQueries              = True;
         Features.PipelineStatisticsQueries     = True;
 
-        TexCaps.bTexture1DSupported        = True;
-        TexCaps.bTexture1DArraySupported   = True;
-        TexCaps.bTexture2DMSSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
-        TexCaps.bTexture2DMSArraySupported = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
-        TexCaps.bTextureViewSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_view");
-        TexCaps.bCubemapArraysSupported    = IsGL43OrAbove || CheckExtension("GL_ARB_texture_cube_map_array");
+        TexCaps.MaxTexture1DDimension     = MaxTextureSize;
+        TexCaps.MaxTexture1DArraySlices   = MaxLayers;
+        TexCaps.MaxTexture2DDimension     = MaxTextureSize;
+        TexCaps.MaxTexture2DArraySlices   = MaxLayers;
+        TexCaps.MaxTexture3DDimension     = Max3DTextureSize;
+        TexCaps.MaxTextureCubeDimension   = MaxCubeTextureSize;
+        TexCaps.Texture2DMSSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
+        TexCaps.Texture2DMSArraySupported = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
+        TexCaps.TextureViewSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_view");
+        TexCaps.CubemapArraysSupported    = IsGL43OrAbove || CheckExtension("GL_ARB_texture_cube_map_array");
+
+        SamCaps.BorderSamplingModeSupported   = True;
+        SamCaps.AnisotropicFilteringSupported = (MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 6) || CheckExtension("GL_ARB_texture_filter_anisotropic");
+        SamCaps.LODBiasSupported              = True;
     }
     else
     {
@@ -164,17 +190,20 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.TimestampQueries              = False;
         Features.PipelineStatisticsQueries     = False;
 
-        TexCaps.bTexture1DSupported        = False; // Not supported in GLES 3.2
-        TexCaps.bTexture1DArraySupported   = False; // Not supported in GLES 3.2
-        TexCaps.bTexture2DMSSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_storage_multisample");
-        TexCaps.bTexture2DMSArraySupported = IsGLES32OrAbove || strstr(Extensions, "texture_storage_multisample_2d_array");
-        TexCaps.bTextureViewSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_view");
-        TexCaps.bCubemapArraysSupported    = IsGLES32OrAbove || strstr(Extensions, "texture_cube_map_array");
+        TexCaps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
+        TexCaps.MaxTexture1DArraySlices   = 0; // Not supported in GLES 3.2
+        TexCaps.MaxTexture2DDimension     = MaxTextureSize;
+        TexCaps.MaxTexture2DArraySlices   = MaxLayers;
+        TexCaps.MaxTexture3DDimension     = Max3DTextureSize;
+        TexCaps.MaxTextureCubeDimension   = MaxCubeTextureSize;
+        TexCaps.Texture2DMSSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_storage_multisample");
+        TexCaps.Texture2DMSArraySupported = IsGLES32OrAbove || strstr(Extensions, "texture_storage_multisample_2d_array");
+        TexCaps.TextureViewSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_view");
+        TexCaps.CubemapArraysSupported    = IsGLES32OrAbove || strstr(Extensions, "texture_cube_map_array");
 
-        auto& SamCaps                          = m_DeviceCaps.SamCaps;
-        SamCaps.bBorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
-        SamCaps.bAnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && (IsGLES31OrAbove || strstr(Extensions, "texture_filter_anisotropic"));
-        SamCaps.bLODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
+        SamCaps.BorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
+        SamCaps.AnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && (IsGLES31OrAbove || strstr(Extensions, "texture_filter_anisotropic"));
+        SamCaps.LODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
     }
 }
 
@@ -696,7 +725,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
     // Create test texture 1D
     TexFormatInfo.Tex1DFmt = false;
-    if (m_DeviceCaps.TexCaps.bTexture1DSupported &&
+    if (m_DeviceCaps.TexCaps.MaxTexture1DDimension != 0 &&
         TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED)
     {
         GLObjectWrappers::GLTextureObj TestGLTex(true);
@@ -809,7 +838,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
     TexFormatInfo.SampleCounts = 0x01;
     if (TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED &&
-        m_DeviceCaps.TexCaps.bTexture2DMSSupported)
+        m_DeviceCaps.TexCaps.Texture2DMSSupported)
     {
 #if GL_ARB_texture_storage_multisample
         for (GLsizei SampleCount = 2; SampleCount <= 8; SampleCount *= 2)

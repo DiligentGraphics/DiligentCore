@@ -83,7 +83,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     {
         auto& WrapMode = WrapModes[i];
         WrapMode       = TexAddressModeToGLAddressMode(AddressModes[i]);
-        if (!SamCaps.bBorderSamplingModeSupported && WrapMode == GL_CLAMP_TO_BORDER)
+        if (!SamCaps.BorderSamplingModeSupported && WrapMode == GL_CLAMP_TO_BORDER)
         {
             LOG_ERROR_MESSAGE("GL_CLAMP_TO_BORDER filtering mode is not supported. Defaulting to GL_CLAMP_TO_EDGE.\n");
             WrapMode = GL_CLAMP_TO_EDGE;
@@ -93,7 +93,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
     glSamplerParameteri(m_GlSampler, GL_TEXTURE_WRAP_T, WrapModes[1]);
     glSamplerParameteri(m_GlSampler, GL_TEXTURE_WRAP_R, WrapModes[2]);
 
-    if (SamCaps.bLODBiasSupported) // Can be unsupported
+    if (SamCaps.LODBiasSupported) // Can be unsupported
         glSamplerParameterf(m_GlSampler, GL_TEXTURE_LOD_BIAS, SamplerDesc.MipLODBias);
     else
     {
@@ -101,7 +101,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
             LOG_WARNING_MESSAGE("Texture LOD bias sampler attribute is not supported\n");
     }
 
-    if (SamCaps.bAnisotropicFilteringSupported) // Can be unsupported
+    if (SamCaps.AnisotropicFilteringSupported) // Can be unsupported
         glSamplerParameterf(m_GlSampler, GL_TEXTURE_MAX_ANISOTROPY_EXT, bMipAnisotropic ? static_cast<float>(SamplerDesc.MaxAnisotropy) : 1.f);
     else
     {
@@ -111,7 +111,7 @@ SamplerGLImpl::SamplerGLImpl(IReferenceCounters* pRefCounters, class RenderDevic
 
     glSamplerParameteri(m_GlSampler, GL_TEXTURE_COMPARE_MODE, bMinComparison ? GL_COMPARE_REF_TO_TEXTURE : GL_NONE);
 
-    if (SamCaps.bBorderSamplingModeSupported) // Can be unsupported
+    if (SamCaps.BorderSamplingModeSupported) // Can be unsupported
         glSamplerParameterfv(m_GlSampler, GL_TEXTURE_BORDER_COLOR, SamplerDesc.BorderColor);
     else
     {

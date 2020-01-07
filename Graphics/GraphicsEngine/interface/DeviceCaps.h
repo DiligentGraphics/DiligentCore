@@ -52,35 +52,47 @@ namespace Diligent
     struct SamplerCaps
     {
         /// Indicates if device supports border texture addressing mode
-        Bool bBorderSamplingModeSupported   = True;
+        Bool BorderSamplingModeSupported   = False;
 
         /// Indicates if device supports anisotrpoic filtering
-        Bool bAnisotropicFilteringSupported = True;
+        Bool AnisotropicFilteringSupported = False;
 
         /// Indicates if device supports MIP load bias
-        Bool bLODBiasSupported              = True;
+        Bool LODBiasSupported              = False;
     };
 
     /// Texture capabilities
     struct TextureCaps
     {
-        /// Indicates if device supports 1D textures
-        Bool bTexture1DSupported        = True;
+        /// Maximum dimension (width) of a 1D texture, or 0 if 1D textures are not supported.
+        Uint32 MaxTexture1DDimension = 0;
 
-        /// Indicates if device supports 1D texture arrays
-        Bool bTexture1DArraySupported   = True;
+        /// Maximum number of slices in a 1D texture array, or 0 if 1D texture arrays are not supported.
+        Uint32 MaxTexture1DArraySlices = 0;
+
+        /// Maximum dimension (width or height) of a 2D texture.
+        Uint32 MaxTexture2DDimension = 0;
+
+        /// Maximum number of slices in a 2D texture array, or 0 if 2D texture arrays are not supported.
+        Uint32 MaxTexture2DArraySlices = 0;
+
+        /// Maximum dimension (width, height, or depth) of a 3D texture, or 0 if 3D textures are not supported.
+        Uint32 MaxTexture3DDimension = 0;
+
+        /// Maximum dimension (width or height) of a cubemap face, or 0 if cubemap textures are not supported.
+        Uint32 MaxTextureCubeDimension = 0;
 
         /// Indicates if device supports 2D multisampled textures
-        Bool bTexture2DMSSupported      = True;
+        Bool Texture2DMSSupported      = False;
 
         /// Indicates if device supports 2D multisampled texture arrays
-        Bool bTexture2DMSArraySupported = True;
+        Bool Texture2DMSArraySupported = False;
 
         /// Indicates if device supports texture views
-        Bool bTextureViewSupported      = True;
+        Bool TextureViewSupported      = False;
 
         /// Indicates if device supports cubemap arrays
-        Bool bCubemapArraysSupported    = True;
+        Bool CubemapArraysSupported    = False;
     };
     
     /// Describes supported device features
@@ -119,7 +131,7 @@ namespace Diligent
         /// Indicates if device supports timestamp queries (see Diligent::QUERY_TYPE_TIMESTAMP).
         Bool TimestampQueries = False;
 
-        /// Indicates if device supports timestamp queries (see Diligent::QUERY_TYPE_PIPELINE_STATISTICS).
+        /// Indicates if device supports pipeline statistics queries (see Diligent::QUERY_TYPE_PIPELINE_STATISTICS).
         Bool PipelineStatisticsQueries = False;
     };
 

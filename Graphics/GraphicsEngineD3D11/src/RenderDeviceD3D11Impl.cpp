@@ -124,11 +124,6 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
             UNEXPECTED("Unexpected D3D feature level");
     }
 
-    // Direct3D11 only supports shader model 5.0 even if the device feature level is
-    // above 11.0 (for example, 11.1 or 12.0), so bindless resources are never available.
-    // https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-downlevel-intro#overview-for-each-feature-level
-    m_DeviceCaps.Features.BindlessResources = False;
-
     if (auto pDXGIAdapter1 = DXGIAdapterFromD3D11Device(pd3d11Device))
     {
         DXGI_ADAPTER_DESC1 AdapterDesc = {};
@@ -143,6 +138,30 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
             LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter type will be unknown.");
         }
     }
+
+    // Direct3D11 only supports shader model 5.0 even if the device feature level is
+    // above 11.0 (for example, 11.1 or 12.0), so bindless resources are never available.
+    // https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-downlevel-intro#overview-for-each-feature-level
+    m_DeviceCaps.Features.BindlessResources = False;
+
+    auto& TexCaps = m_DeviceCaps.TexCaps;
+
+    TexCaps.MaxTexture1DDimension     = D3D11_REQ_TEXTURE1D_U_DIMENSION;
+    TexCaps.MaxTexture1DArraySlices   = D3D11_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
+    TexCaps.MaxTexture2DDimension     = D3D11_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+    TexCaps.MaxTexture2DArraySlices   = D3D11_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+    TexCaps.MaxTexture3DDimension     = D3D11_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+    TexCaps.MaxTextureCubeDimension   = D3D11_REQ_TEXTURECUBE_DIMENSION;
+    TexCaps.Texture2DMSSupported      = True;
+    TexCaps.Texture2DMSArraySupported = True;
+    TexCaps.TextureViewSupported      = True;
+    TexCaps.CubemapArraysSupported    = True;
+
+    auto& SamCaps = m_DeviceCaps.SamCaps;
+
+    SamCaps.BorderSamplingModeSupported   = True;
+    SamCaps.AnisotropicFilteringSupported = True;
+    SamCaps.LODBiasSupported              = True;
 }
 
 void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
