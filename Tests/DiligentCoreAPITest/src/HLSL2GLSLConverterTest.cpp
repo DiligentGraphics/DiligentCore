@@ -81,7 +81,7 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex1D)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pEnv = TestingEnvironment::GetInstance();
-    if (!pEnv->GetDevice()->GetDeviceCaps().bComputeShadersSupported)
+    if (!pEnv->GetDevice()->GetDeviceCaps().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
     }
@@ -95,7 +95,7 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex2D_1)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pEnv = TestingEnvironment::GetInstance();
-    if (!pEnv->GetDevice()->GetDeviceCaps().bComputeShadersSupported)
+    if (!pEnv->GetDevice()->GetDeviceCaps().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
     }
@@ -109,7 +109,7 @@ TEST(HLSL2GLSLConverterTest, CS_RWTex2D_2)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pEnv = TestingEnvironment::GetInstance();
-    if (!pEnv->GetDevice()->GetDeviceCaps().bComputeShadersSupported)
+    if (!pEnv->GetDevice()->GetDeviceCaps().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
     }
@@ -123,7 +123,7 @@ TEST(HLSL2GLSLConverterTest, CS_RWBuff)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto* pEnv = TestingEnvironment::GetInstance();
-    if (!pEnv->GetDevice()->GetDeviceCaps().bComputeShadersSupported)
+    if (!pEnv->GetDevice()->GetDeviceCaps().Features.ComputeShaders)
     {
         GTEST_SKIP() << "This device does not support compute shaders";
     }

@@ -111,6 +111,71 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         m_GPUInfo.Vendor = GPU_VENDOR::QUALCOMM;
 
     m_DeviceCaps.AdaterType = ADAPTER_TYPE_HARDWARE;
+
+    auto MajorVersion = m_DeviceCaps.MajorVersion;
+    auto MinorVersion = m_DeviceCaps.MinorVersion;
+
+    auto& Features = m_DeviceCaps.Features;
+    auto& TexCaps  = m_DeviceCaps.TexCaps;
+    if (m_DeviceCaps.DevType == DeviceType::OpenGL)
+    {
+        const bool IsGL43OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 3;
+
+        Features.SeparablePrograms             = True;
+        Features.IndirectRendering             = True;
+        Features.WireframeFill                 = True;
+        Features.MultithreadedResourceCreation = False;
+        Features.ComputeShaders                = IsGL43OrAbove || CheckExtension("GL_ARB_compute_shader");
+        Features.GeometryShaders               = MajorVersion >= 4 || CheckExtension("GL_ARB_geometry_shader4");
+        Features.Tessellation                  = MajorVersion >= 4 || CheckExtension("GL_ARB_tessellation_shader");
+        Features.BindlessResources             = False;
+        Features.OcclusionQueries              = True;
+        Features.BinaryOcclusionQueries        = True;
+        Features.TimestampQueries              = True;
+        Features.PipelineStatisticsQueries     = True;
+
+        TexCaps.bTexture1DSupported        = True;
+        TexCaps.bTexture1DArraySupported   = True;
+        TexCaps.bTexture2DMSSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
+        TexCaps.bTexture2DMSArraySupported = IsGL43OrAbove || CheckExtension("GL_ARB_texture_storage_multisample");
+        TexCaps.bTextureViewSupported      = IsGL43OrAbove || CheckExtension("GL_ARB_texture_view");
+        TexCaps.bCubemapArraysSupported    = IsGL43OrAbove || CheckExtension("GL_ARB_texture_cube_map_array");
+    }
+    else
+    {
+        const auto* Extensions = (char*)glGetString(GL_EXTENSIONS);
+        LOG_INFO_MESSAGE("Supported extensions: \n", Extensions);
+
+        VERIFY(m_DeviceCaps.DevType == DeviceType::OpenGLES, "Unexpected device type: OpenGLES expected");
+
+        bool IsGLES31OrAbove = (MajorVersion >= 4 || (MajorVersion == 3 && MinorVersion >= 1));
+        bool IsGLES32OrAbove = (MajorVersion >= 4 || (MajorVersion == 3 && MinorVersion >= 2));
+
+        Features.SeparablePrograms             = IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects");
+        Features.IndirectRendering             = IsGLES31OrAbove || strstr(Extensions, "draw_indirect");
+        Features.WireframeFill                 = False;
+        Features.MultithreadedResourceCreation = False;
+        Features.ComputeShaders                = IsGLES31OrAbove || strstr(Extensions, "compute_shader");
+        Features.GeometryShaders               = IsGLES32OrAbove || strstr(Extensions, "geometry_shader");
+        Features.Tessellation                  = IsGLES32OrAbove || strstr(Extensions, "tessellation_shader");
+        Features.BindlessResources             = False;
+        Features.OcclusionQueries              = False;
+        Features.BinaryOcclusionQueries        = False;
+        Features.TimestampQueries              = False;
+        Features.PipelineStatisticsQueries     = False;
+
+        TexCaps.bTexture1DSupported        = False; // Not supported in GLES 3.2
+        TexCaps.bTexture1DArraySupported   = False; // Not supported in GLES 3.2
+        TexCaps.bTexture2DMSSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_storage_multisample");
+        TexCaps.bTexture2DMSArraySupported = IsGLES32OrAbove || strstr(Extensions, "texture_storage_multisample_2d_array");
+        TexCaps.bTextureViewSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_view");
+        TexCaps.bCubemapArraysSupported    = IsGLES32OrAbove || strstr(Extensions, "texture_cube_map_array");
+
+        auto& SamCaps                          = m_DeviceCaps.SamCaps;
+        SamCaps.bBorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
+        SamCaps.bAnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && (IsGLES31OrAbove || strstr(Extensions, "texture_filter_anisotropic"));
+        SamCaps.bLODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
+    }
 }
 
 RenderDeviceGLImpl::~RenderDeviceGLImpl()
@@ -784,21 +849,21 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 void RenderDeviceGLImpl::QueryDeviceCaps()
 {
     if (glPolygonMode == nullptr)
-        m_DeviceCaps.bWireframeFillSupported = false;
+        m_DeviceCaps.Features.WireframeFill = false;
 
-    if (m_DeviceCaps.bWireframeFillSupported)
+    if (m_DeviceCaps.Features.WireframeFill)
     {
         // Test glPolygonMode() function to check if it fails
         // (It does fail on NVidia Shield tablet, but works fine
         // on Intel hw)
         VERIFY(glGetError() == GL_NO_ERROR, "Unhandled gl error encountered");
-        m_DeviceCaps.bWireframeFillSupported = True;
+        m_DeviceCaps.Features.WireframeFill = True;
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         if (glGetError() != GL_NO_ERROR)
-            m_DeviceCaps.bWireframeFillSupported = False;
+            m_DeviceCaps.Features.WireframeFill = False;
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         if (glGetError() != GL_NO_ERROR)
-            m_DeviceCaps.bWireframeFillSupported = False;
+            m_DeviceCaps.Features.WireframeFill = False;
     }
 }
 

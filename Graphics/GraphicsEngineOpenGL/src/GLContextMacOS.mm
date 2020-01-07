@@ -96,15 +96,6 @@ namespace Diligent
         DeviceCaps.DevType = DeviceType::OpenGL;
         DeviceCaps.MajorVersion = MajorVersion;
         DeviceCaps.MinorVersion = MinorVersion;
-        bool IsGL43OrAbove = MajorVersion >= 5 || (MajorVersion == 4 && MinorVersion >= 3);
-        bool IsGL42OrAbove = MajorVersion >= 5 || (MajorVersion == 4 && MinorVersion >= 2);
-        DeviceCaps.bComputeShadersSupported = IsGL42OrAbove;
-        auto &TexCaps = DeviceCaps.TexCaps;
-        TexCaps.bTexture2DMSSupported      = IsGL43OrAbove;
-        TexCaps.bTexture2DMSArraySupported = IsGL43OrAbove;
-        TexCaps.bTextureViewSupported      = IsGL43OrAbove;
-        TexCaps.bCubemapArraysSupported    = IsGL43OrAbove;
-        DeviceCaps.bMultithreadedResourceCreationSupported = False;
     }
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()

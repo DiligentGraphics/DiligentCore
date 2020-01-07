@@ -151,7 +151,7 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
     auto* pDevice = pEnv->GetDevice();
 
     const auto& DevCaps = pDevice->GetDeviceCaps();
-    if (!(DevCaps.bComputeShadersSupported && DevCaps.bIndirectRenderingSupported))
+    if (!(DevCaps.Features.ComputeShaders && DevCaps.Features.IndirectRendering))
     {
         GTEST_SKIP();
     }
@@ -191,7 +191,7 @@ TEST_F(BufferCreationTest, CreateStructuedBuffer)
     auto* pDevice = pEnv->GetDevice();
 
     const auto& DevCaps = pDevice->GetDeviceCaps();
-    if (!DevCaps.bComputeShadersSupported)
+    if (!DevCaps.Features.ComputeShaders)
     {
         GTEST_SKIP();
     }

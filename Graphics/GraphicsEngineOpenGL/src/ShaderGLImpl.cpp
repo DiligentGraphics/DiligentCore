@@ -53,7 +53,9 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     m_GLShaderObj{true, GLObjectWrappers::GLShaderObjCreateReleaseHelper{GetGLShaderType(m_Desc.ShaderType)}}
 // clang-format on
 {
-    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pDeviceGL->GetDeviceCaps(), TargetGLSLCompiler::driver);
+    const auto& deviceCaps = pDeviceGL->GetDeviceCaps();
+
+    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, deviceCaps, TargetGLSLCompiler::driver);
 
     // Note: there is a simpler way to create the program:
     //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);
@@ -125,7 +127,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
         LOG_ERROR_AND_THROW(ErrorMsgSS.str().c_str());
     }
 
-    if (pDeviceGL->GetDeviceCaps().bSeparableProgramSupported)
+    if (deviceCaps.Features.SeparablePrograms)
     {
         IShader*                       ThisShader[]         = {this};
         GLObjectWrappers::GLProgramObj Program              = LinkProgram(ThisShader, 1, true);
@@ -208,7 +210,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(IShader** ppShaders, Ui
 
 Uint32 ShaderGLImpl::GetResourceCount() const
 {
-    if (m_pDevice->GetDeviceCaps().bSeparableProgramSupported)
+    if (m_pDevice->GetDeviceCaps().Features.SeparablePrograms)
     {
         return m_Resources.GetVariableCount();
     }
@@ -222,7 +224,7 @@ Uint32 ShaderGLImpl::GetResourceCount() const
 ShaderResourceDesc ShaderGLImpl::GetResource(Uint32 Index) const
 {
     ShaderResourceDesc ResourceDesc;
-    if (m_pDevice->GetDeviceCaps().bSeparableProgramSupported)
+    if (m_pDevice->GetDeviceCaps().Features.SeparablePrograms)
     {
         DEV_CHECK_ERR(Index < GetResourceCount(), "Index is out of range");
         ResourceDesc = m_Resources.GetResourceDesc(Index);

@@ -72,7 +72,7 @@ TEST(ComputeShaderTest, FillTexture)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().bComputeShadersSupported)
+    if (!pDevice->GetDeviceCaps().Features.ComputeShaders)
     {
         GTEST_SKIP() << "Compute shaders are not supported by this device";
     }

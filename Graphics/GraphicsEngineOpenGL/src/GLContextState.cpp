@@ -43,7 +43,7 @@ namespace Diligent
 GLContextState::GLContextState(RenderDeviceGLImpl* pDeviceGL)
 {
     const DeviceCaps& DeviceCaps       = pDeviceGL->GetDeviceCaps();
-    m_Caps.bFillModeSelectionSupported = DeviceCaps.bWireframeFillSupported;
+    m_Caps.bFillModeSelectionSupported = DeviceCaps.Features.WireframeFill;
 
     {
         m_Caps.m_iMaxCombinedTexUnits = 0;

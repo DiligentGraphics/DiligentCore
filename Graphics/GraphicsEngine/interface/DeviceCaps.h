@@ -83,6 +83,46 @@ namespace Diligent
         Bool bCubemapArraysSupported    = True;
     };
     
+    /// Describes supported device features
+    struct DeviceFeatures
+    {
+        /// Indicates if device supports separable programs
+        Bool SeparablePrograms = False;
+
+        /// Indicates if device supports indirect draw commands
+        Bool IndirectRendering = False;
+
+        /// Indicates if device supports wireframe fill mode
+        Bool WireframeFill = False;
+
+        /// Indicates if device supports multithreaded resource creation
+        Bool MultithreadedResourceCreation = False;
+
+        /// Indicates if device supports compute shaders
+        Bool ComputeShaders = False;
+
+        /// Indicates if device supports geometry shaders
+        Bool GeometryShaders = False;
+        
+        /// Indicates if device supports tessellation
+        Bool Tessellation = False;
+        
+        /// Indicates if device supports bindless resources
+        Bool BindlessResources = False;
+
+        /// Indicates if device supports occlusion queries (see Diligent::QUERY_TYPE_OCCLUSION).
+        Bool OcclusionQueries = False;
+
+        /// Indicates if device supports binary occlusion queries (see Diligent::QUERY_TYPE_BINARY_OCCLUSION).
+        Bool BinaryOcclusionQueries = False;
+
+        /// Indicates if device supports timestamp queries (see Diligent::QUERY_TYPE_TIMESTAMP).
+        Bool TimestampQueries = False;
+
+        /// Indicates if device supports timestamp queries (see Diligent::QUERY_TYPE_PIPELINE_STATISTICS).
+        Bool PipelineStatisticsQueries = False;
+    };
+
     /// Device capabilities
     struct DeviceCaps
     {
@@ -102,35 +142,14 @@ namespace Diligent
         /// Adapter type. See Diligent::ADAPTER_TYPE.
         ADAPTER_TYPE AdaterType = ADAPTER_TYPE_UNKNOWN;
 
-        /// Indicates if device supports separable programs
-        Bool bSeparableProgramSupported = True;
-
-        /// Indicates if device supports indirect draw commands
-        Bool bIndirectRenderingSupported = True;
-
-        /// Indicates if device supports wireframe fill mode
-        Bool bWireframeFillSupported = True;
-
-        /// Indicates if device supports multithreaded resource creation
-        Bool bMultithreadedResourceCreationSupported = False;
-
-        /// Indicates if device supports compute shaders
-        Bool bComputeShadersSupported = True;
-
-        /// Indicates if device supports geometry shaders
-        Bool bGeometryShadersSupported = True;
-        
-        /// Indicates if device supports tessellation
-        Bool bTessellationSupported = True;
-        
-        /// Indicates if device supports bindless resources
-        Bool bBindlessSupported = False;
-
         /// Texture sampling capabilities. See Diligent::SamplerCaps.
         SamplerCaps SamCaps;
 
         /// Texture capabilities. See Diligent::TextureCaps.
         TextureCaps TexCaps;
+
+        /// Device features. See Diligent::DeviceFeatures.
+        DeviceFeatures Features;
 
         bool IsGLDevice()const
         {

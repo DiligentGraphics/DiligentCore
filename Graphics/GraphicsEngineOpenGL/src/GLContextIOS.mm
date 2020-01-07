@@ -68,23 +68,6 @@ namespace Diligent
         deviceCaps.DevType = DeviceType::OpenGLES;
         deviceCaps.MajorVersion = MajorVersion;
         deviceCaps.MinorVersion = MinorVersion;
-        deviceCaps.bMultithreadedResourceCreationSupported = False;
-        deviceCaps.bIndirectRenderingSupported             = False;
-        deviceCaps.bGeometryShadersSupported               = False;
-        deviceCaps.bTessellationSupported                  = False;
-        deviceCaps.bWireframeFillSupported                 = False;
-        deviceCaps.bComputeShadersSupported                = False;
-
-        deviceCaps.SamCaps.bLODBiasSupported            = False;
-        deviceCaps.SamCaps.bBorderSamplingModeSupported = False;
-        
-        deviceCaps.TexCaps.bTexture1DSupported        = False;
-        deviceCaps.TexCaps.bCubemapArraysSupported    = False;
-        deviceCaps.TexCaps.bTexture1DSupported        = False;
-        deviceCaps.TexCaps.bTexture1DArraySupported   = False;
-        deviceCaps.TexCaps.bTextureViewSupported      = False;
-        deviceCaps.TexCaps.bTexture2DMSSupported      = False;
-        deviceCaps.TexCaps.bTexture2DMSArraySupported = False;
     }
 
     GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()

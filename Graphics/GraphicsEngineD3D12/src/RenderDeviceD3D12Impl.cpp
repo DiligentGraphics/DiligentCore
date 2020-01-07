@@ -139,9 +139,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     {
         case D3D_FEATURE_LEVEL_12_0:
         case D3D_FEATURE_LEVEL_12_1:
-            m_DeviceCaps.MajorVersion       = 12;
-            m_DeviceCaps.MinorVersion       = FeatureLevel == D3D_FEATURE_LEVEL_12_1 ? 1 : 0;
-            m_DeviceCaps.bBindlessSupported = true;
+            m_DeviceCaps.MajorVersion = 12;
+            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_12_1 ? 1 : 0;
             break;
 
         case D3D_FEATURE_LEVEL_11_0:
@@ -159,13 +158,11 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         default:
             UNEXPECTED("Unexpected D3D feature level");
     }
-    m_DeviceCaps.bSeparableProgramSupported              = True;
-    m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
 
     // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),
     // so bindless resources are always available.
     // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-    m_DeviceCaps.bBindlessSupported = True;
+    m_DeviceCaps.Features.BindlessResources = True;
 
     if (auto pDXGIAdapter1 = DXGIAdapterFromD3D12Device(pd3d12Device))
     {

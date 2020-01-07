@@ -99,9 +99,21 @@ public:
     /// \param ShdrDesc - shader description.
     /// \param bIsDeviceInternal - flag indicating if the shader is an internal device object and
     ///							   must not keep a strong reference to the device.
-    ShaderBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const ShaderDesc& ShdrDesc, bool bIsDeviceInternal = false) :
+    ShaderBase(IReferenceCounters*   pRefCounters,
+               RenderDeviceImplType* pDevice,
+               const ShaderDesc&     ShdrDesc,
+               bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, ShdrDesc, bIsDeviceInternal}
     {
+        const auto& deviceFeatures = pDevice->GetDeviceCaps().Features;
+        if (ShdrDesc.ShaderType == SHADER_TYPE_GEOMETRY && !deviceFeatures.GeometryShaders)
+            LOG_ERROR_AND_THROW("Geometry shaders are not supported by this device");
+
+        if ((ShdrDesc.ShaderType == SHADER_TYPE_DOMAIN || ShdrDesc.ShaderType == SHADER_TYPE_HULL) && !deviceFeatures.Tessellation)
+            LOG_ERROR_AND_THROW("Tessellation shaders are not supported by this device");
+
+        if (ShdrDesc.ShaderType == SHADER_TYPE_COMPUTE && !deviceFeatures.ComputeShaders)
+            LOG_ERROR_AND_THROW("Compute shaders are not supported by this device");
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TDeviceObjectBase)

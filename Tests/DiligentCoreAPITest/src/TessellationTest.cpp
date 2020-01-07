@@ -72,7 +72,7 @@ TEST(TessellationTest, DrawQuad)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().bTessellationSupported)
+    if (!pDevice->GetDeviceCaps().Features.Tessellation)
     {
         GTEST_SKIP() << "Tessellation is not supported by this device";
     }
@@ -141,7 +141,7 @@ TEST(TessellationTest, DrawQuad)
     PSODesc.GraphicsPipeline.PrimitiveTopology       = PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;
     PSODesc.GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_BACK;
     PSODesc.GraphicsPipeline.RasterizerDesc.FillMode =
-        pDevice->GetDeviceCaps().bWireframeFillSupported ?
+        pDevice->GetDeviceCaps().Features.WireframeFill ?
         FILL_MODE_WIREFRAME :
         FILL_MODE_SOLID;
     PSODesc.GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();

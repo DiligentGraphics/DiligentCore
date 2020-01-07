@@ -1363,7 +1363,7 @@ TEST_F(DrawCommandTest, DrawInstancedIndirect_FirstInstance_BaseVertex_FirstInde
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().bIndirectRenderingSupported)
+    if (!pDevice->GetDeviceCaps().Features.IndirectRendering)
         GTEST_SKIP() << "Indirect rendering is not supported on this device";
 
     auto* pContext = pEnv->GetDeviceContext();

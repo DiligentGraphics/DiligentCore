@@ -313,7 +313,7 @@ TEST(PSOCompatibility, CompilationFailure)
     EXPECT_TRUE(PSO_TexCB->IsCompatibleWith(PSO_TexCB2));
     EXPECT_TRUE(PSO_TexCB2->IsCompatibleWith(PSO_TexCB));
 
-    if (pDevice->GetDeviceCaps().bComputeShadersSupported)
+    if (pDevice->GetDeviceCaps().Features.ComputeShaders)
     {
         auto PSO_RWBuff  = CreateComputePSO(pDevice, CS_RwBuff);
         auto PSO_RWBuff2 = CreateComputePSO(pDevice, CS_RwBuff2);

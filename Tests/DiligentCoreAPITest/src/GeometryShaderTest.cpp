@@ -72,7 +72,7 @@ TEST(GeometryShaderTest, DrawTriangles)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().bGeometryShadersSupported)
+    if (!pDevice->GetDeviceCaps().Features.GeometryShaders)
     {
         GTEST_SKIP() << "Geometry shaders are not supported by this device";
     }

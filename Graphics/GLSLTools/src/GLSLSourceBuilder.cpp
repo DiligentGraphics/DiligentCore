@@ -94,7 +94,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         UNEXPECTED("Unexpected device type");
     }
 
-    if (deviceCaps.bSeparableProgramSupported && !IsES31OrAbove)
+    if (deviceCaps.Features.SeparablePrograms && !IsES31OrAbove)
         GLSLSource.append("#extension GL_EXT_separate_shader_objects : enable\n");
 
     if (deviceCaps.TexCaps.bCubemapArraysSupported && !IsES32OrAbove)
@@ -172,7 +172,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         ); // clang-format on
     }
 
-    if (deviceCaps.bComputeShadersSupported)
+    if (deviceCaps.Features.ComputeShaders)
     {
         GLSLSource.append(
             "precision highp image2D;\n"
@@ -200,7 +200,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         }
     }
 
-    if (IsES30 && deviceCaps.bSeparableProgramSupported && ShaderType == SHADER_TYPE_VERTEX)
+    if (IsES30 && deviceCaps.Features.SeparablePrograms && ShaderType == SHADER_TYPE_VERTEX)
     {
         // From https://www.khronos.org/registry/OpenGL/extensions/EXT/EXT_separate_shader_objects.gles.txt:
         //
@@ -325,7 +325,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         // all shader stages.
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt
         // (search for "Input Layout Qualifiers" and "Output Layout Qualifiers").
-        Attribs.UseInOutLocationQualifiers = deviceCaps.bSeparableProgramSupported;
+        Attribs.UseInOutLocationQualifiers = deviceCaps.Features.SeparablePrograms;
         auto ConvertedSource               = Converter.Convert(Attribs);
 
         GLSLSource.append(ConvertedSource);

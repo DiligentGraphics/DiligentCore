@@ -67,7 +67,34 @@ public:
               const QueryDesc&      Desc,
               bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
-    {}
+    {
+        const auto& deviceFeatures = pDevice->GetDeviceCaps().Features;
+        switch (Desc.Type)
+        {
+            case QUERY_TYPE_OCCLUSION:
+                if (!deviceFeatures.OcclusionQueries)
+                    LOG_ERROR_AND_THROW("Occlusion queries are not supported by this device");
+                break;
+
+            case QUERY_TYPE_BINARY_OCCLUSION:
+                if (!deviceFeatures.BinaryOcclusionQueries)
+                    LOG_ERROR_AND_THROW("Binary occlusion queries are not supported by this device");
+                break;
+
+            case QUERY_TYPE_TIMESTAMP:
+                if (!deviceFeatures.TimestampQueries)
+                    LOG_ERROR_AND_THROW("Timestamp queries are not supported by this device");
+                break;
+
+            case QUERY_TYPE_PIPELINE_STATISTICS:
+                if (!deviceFeatures.PipelineStatisticsQueries)
+                    LOG_ERROR_AND_THROW("Pipeline statistics queries are not supported by this device");
+                break;
+
+            default:
+                UNEXPECTED("Unexpected device type");
+        }
+    }
 
     ~QueryBase()
     {

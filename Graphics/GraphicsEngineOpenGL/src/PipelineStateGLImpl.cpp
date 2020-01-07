@@ -78,7 +78,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
         m_TotalSamplerBindings       = 0;
         m_TotalImageBindings         = 0;
         m_TotalStorageBufferBindings = 0;
-        if (DeviceCaps.bSeparableProgramSupported)
+        if (DeviceCaps.Features.SeparablePrograms)
         {
             // Program pipelines are not shared between GL contexts, so we cannot create
             // it now
@@ -182,7 +182,7 @@ bool PipelineStateGLImpl::IsCompatibleWith(const IPipelineState* pPSO) const
 
 void PipelineStateGLImpl::CommitProgram(GLContextState& State)
 {
-    auto ProgramPipelineSupported = m_pDevice->GetDeviceCaps().bSeparableProgramSupported;
+    auto ProgramPipelineSupported = m_pDevice->GetDeviceCaps().Features.SeparablePrograms;
 
     if (ProgramPipelineSupported)
     {

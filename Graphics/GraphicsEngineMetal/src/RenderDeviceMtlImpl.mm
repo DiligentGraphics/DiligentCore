@@ -66,10 +66,10 @@ RenderDeviceMtlImpl :: RenderDeviceMtlImpl(IReferenceCounters*        pRefCounte
     m_DeviceCaps.DevType = DeviceType::Metal;
     m_DeviceCaps.MajorVersion = 11;
     m_DeviceCaps.MinorVersion = 0;
-    m_DeviceCaps.bSeparableProgramSupported              = True;
-    m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
-    m_DeviceCaps.bGeometryShadersSupported               = False;
-    m_DeviceCaps.bTessellationSupported                  = False;
+    m_DeviceCaps.Features.SeparablePrograms             = True;
+    m_DeviceCaps.Features.MultithreadedResourceCreation = True;
+    m_DeviceCaps.Features.GeometryShaders               = False;
+    m_DeviceCaps.Features.Tessellation                  = False;
 }
 
 void RenderDeviceMtlImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )

@@ -213,7 +213,13 @@ RefCntAutoPtr<IPipelineState> QueryTest::sm_pPSO;
 
 TEST_F(QueryTest, PipelineStats)
 {
-    const auto IsGL = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps().IsGLDevice();
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    if (!deviceCaps.Features.PipelineStatisticsQueries)
+    {
+        GTEST_SKIP() << "Pipeline statistics queries are not supported by this device";
+    }
+
+    const auto IsGL = deviceCaps.IsGLDevice();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -250,6 +256,12 @@ TEST_F(QueryTest, PipelineStats)
 
 TEST_F(QueryTest, Occlusion)
 {
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    if (!deviceCaps.Features.OcclusionQueries)
+    {
+        GTEST_SKIP() << "Occlusion queries are not supported by this device";
+    }
+
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     QueryDesc queryDesc;
@@ -277,6 +289,12 @@ TEST_F(QueryTest, Occlusion)
 
 TEST_F(QueryTest, BinaryOcclusion)
 {
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    if (!deviceCaps.Features.BinaryOcclusionQueries)
+    {
+        GTEST_SKIP() << "Binary occlusion queries are not supported by this device";
+    }
+
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     QueryDesc queryDesc;
@@ -301,6 +319,12 @@ TEST_F(QueryTest, BinaryOcclusion)
 
 TEST_F(QueryTest, Timestamp)
 {
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    if (!deviceCaps.Features.TimestampQueries)
+    {
+        GTEST_SKIP() << "Timestamp queries are not supported by this device";
+    }
+
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();

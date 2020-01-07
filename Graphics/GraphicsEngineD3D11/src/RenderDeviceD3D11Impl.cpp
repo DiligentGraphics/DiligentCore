@@ -123,13 +123,11 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
         default:
             UNEXPECTED("Unexpected D3D feature level");
     }
-    m_DeviceCaps.bSeparableProgramSupported              = True;
-    m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
 
     // Direct3D11 only supports shader model 5.0 even if the device feature level is
     // above 11.0 (for example, 11.1 or 12.0), so bindless resources are never available.
     // https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-downlevel-intro#overview-for-each-feature-level
-    m_DeviceCaps.bBindlessSupported = False;
+    m_DeviceCaps.Features.BindlessResources = False;
 
     if (auto pDXGIAdapter1 = DXGIAdapterFromD3D11Device(pd3d11Device))
     {

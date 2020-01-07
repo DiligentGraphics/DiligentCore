@@ -147,18 +147,28 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     }
 // clang-format on
 {
-    m_DeviceCaps.DevType                                 = DeviceType::Vulkan;
-    m_DeviceCaps.MajorVersion                            = 1;
-    m_DeviceCaps.MinorVersion                            = 0;
-    m_DeviceCaps.AdaterType                              = ADAPTER_TYPE_HARDWARE;
-    m_DeviceCaps.bSeparableProgramSupported              = True;
-    m_DeviceCaps.bMultithreadedResourceCreationSupported = True;
+    m_DeviceCaps.DevType      = DeviceType::Vulkan;
+    m_DeviceCaps.MajorVersion = 1;
+    m_DeviceCaps.MinorVersion = 0;
+    m_DeviceCaps.AdaterType   = ADAPTER_TYPE_HARDWARE;
     for (Uint32 fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
         m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
 
-    m_DeviceCaps.bGeometryShadersSupported = EngineCI.EnabledFeatures.geometryShader;
-    m_DeviceCaps.bTessellationSupported    = EngineCI.EnabledFeatures.tessellationShader;
-    m_DeviceCaps.bBindlessSupported        = True;
+    auto&       Features         = m_DeviceCaps.Features;
+    const auto& vkDeviceFeatures = m_PhysicalDevice->GetFeatures();
+
+    Features.SeparablePrograms             = True;
+    Features.IndirectRendering             = True;
+    Features.WireframeFill                 = True;
+    Features.MultithreadedResourceCreation = True;
+    Features.ComputeShaders                = True;
+    Features.GeometryShaders               = vkDeviceFeatures.geometryShader != VK_FALSE;
+    Features.Tessellation                  = vkDeviceFeatures.tessellationShader != VK_FALSE;
+    Features.BindlessResources             = True;
+    Features.OcclusionQueries              = vkDeviceFeatures.occlusionQueryPrecise != VK_FALSE;
+    Features.BinaryOcclusionQueries        = True;
+    Features.TimestampQueries              = True;
+    Features.PipelineStatisticsQueries     = vkDeviceFeatures.pipelineStatisticsQuery != VK_FALSE;
 }
 
 RenderDeviceVkImpl::~RenderDeviceVkImpl()

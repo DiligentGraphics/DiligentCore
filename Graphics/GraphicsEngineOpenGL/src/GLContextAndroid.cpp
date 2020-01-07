@@ -386,35 +386,9 @@ bool GLContext::Invalidate()
 
 void GLContext::FillDeviceCaps(DeviceCaps& deviceCaps)
 {
-    const auto* Extensions = (char*)glGetString(GL_EXTENSIONS);
-    LOG_INFO_MESSAGE("Supported extensions: \n", Extensions);
-
-    deviceCaps.DevType                     = DeviceType::OpenGLES;
-    deviceCaps.MajorVersion                = major_version_;
-    deviceCaps.MinorVersion                = minor_version_;
-    bool IsGLES31OrAbove                   = (major_version_ >= 4 || (major_version_ == 3 && minor_version_ >= 1));
-    bool IsGLES32OrAbove                   = (major_version_ >= 4 || (major_version_ == 3 && minor_version_ >= 2));
-    deviceCaps.bSeparableProgramSupported  = IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects");
-    deviceCaps.bIndirectRenderingSupported = IsGLES31OrAbove || strstr(Extensions, "draw_indirect");
-
-    deviceCaps.bComputeShadersSupported  = IsGLES31OrAbove || strstr(Extensions, "compute_shader");
-    deviceCaps.bGeometryShadersSupported = IsGLES32OrAbove || strstr(Extensions, "geometry_shader");
-    deviceCaps.bTessellationSupported    = IsGLES32OrAbove || strstr(Extensions, "tessellation_shader");
-
-    auto& SamCaps                          = deviceCaps.SamCaps;
-    SamCaps.bBorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
-    SamCaps.bAnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && (IsGLES31OrAbove || strstr(Extensions, "texture_filter_anisotropic"));
-    SamCaps.bLODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
-
-    auto& TexCaps                      = deviceCaps.TexCaps;
-    TexCaps.bTexture1DSupported        = False; // Not supported in GLES 3.2
-    TexCaps.bTexture1DArraySupported   = False; // Not supported in GLES 3.2
-    TexCaps.bTexture2DMSSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_storage_multisample");
-    TexCaps.bTexture2DMSArraySupported = IsGLES32OrAbove || strstr(Extensions, "texture_storage_multisample_2d_array");
-    TexCaps.bTextureViewSupported      = IsGLES31OrAbove || strstr(Extensions, "texture_view");
-    TexCaps.bCubemapArraysSupported    = IsGLES32OrAbove || strstr(Extensions, "texture_cube_map_array");
-
-    deviceCaps.bMultithreadedResourceCreationSupported = False;
+    deviceCaps.DevType      = DeviceType::OpenGLES;
+    deviceCaps.MajorVersion = major_version_;
+    deviceCaps.MinorVersion = minor_version_;
 }
 
 } // namespace Diligent

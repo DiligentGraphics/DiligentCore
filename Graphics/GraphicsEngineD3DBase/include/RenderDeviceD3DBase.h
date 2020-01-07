@@ -154,6 +154,20 @@ public:
         FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             true);
 #undef FLAG_FORMAT
         // clang-format on
+
+        auto& Features = this->m_DeviceCaps.Features;
+
+        Features.SeparablePrograms             = True;
+        Features.IndirectRendering             = True;
+        Features.WireframeFill                 = True;
+        Features.MultithreadedResourceCreation = True;
+        Features.ComputeShaders                = True;
+        Features.GeometryShaders               = True;
+        Features.Tessellation                  = True;
+        Features.OcclusionQueries              = True;
+        Features.BinaryOcclusionQueries        = True;
+        Features.TimestampQueries              = True;
+        Features.PipelineStatisticsQueries     = True;
     }
 };
 

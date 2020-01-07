@@ -146,16 +146,9 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     if (glGetError() != GL_NO_ERROR)
         LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-    deviceCaps.DevType                                 = DeviceType::OpenGL;
-    deviceCaps.MajorVersion                            = MajorVersion;
-    deviceCaps.MinorVersion                            = MinorVersion;
-    bool  IsGL43OrAbove                                = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 3;
-    auto& TexCaps                                      = deviceCaps.TexCaps;
-    TexCaps.bTexture2DMSSupported                      = IsGL43OrAbove;
-    TexCaps.bTexture2DMSArraySupported                 = IsGL43OrAbove;
-    TexCaps.bTextureViewSupported                      = IsGL43OrAbove;
-    TexCaps.bCubemapArraysSupported                    = IsGL43OrAbove;
-    deviceCaps.bMultithreadedResourceCreationSupported = False;
+    deviceCaps.DevType      = DeviceType::OpenGL;
+    deviceCaps.MajorVersion = MajorVersion;
+    deviceCaps.MinorVersion = MinorVersion;
 }
 
 GLContext::~GLContext()
