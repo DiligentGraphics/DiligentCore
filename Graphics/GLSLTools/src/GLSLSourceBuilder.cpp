@@ -97,7 +97,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     if (deviceCaps.Features.SeparablePrograms && !IsES31OrAbove)
         GLSLSource.append("#extension GL_EXT_separate_shader_objects : enable\n");
 
-    if (deviceCaps.TexCaps.bCubemapArraysSupported && !IsES32OrAbove)
+    if (deviceCaps.TexCaps.CubemapArraysSupported && !IsES32OrAbove)
         GLSLSource.append("#extension GL_EXT_texture_cube_map_array : enable\n");
 
     if (ShaderType == SHADER_TYPE_GEOMETRY && !IsES32OrAbove)
@@ -153,7 +153,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         ); // clang-format on
     }
 
-    if (deviceCaps.TexCaps.bCubemapArraysSupported)
+    if (deviceCaps.TexCaps.CubemapArraysSupported)
     {
         GLSLSource.append(
             "precision highp samplerCubeArray;\n"
@@ -163,7 +163,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         ); // clang-format on
     }
 
-    if (deviceCaps.TexCaps.bTexture2DMSSupported)
+    if (deviceCaps.TexCaps.Texture2DMSSupported)
     {
         GLSLSource.append(
             "precision highp sampler2DMS;\n"
