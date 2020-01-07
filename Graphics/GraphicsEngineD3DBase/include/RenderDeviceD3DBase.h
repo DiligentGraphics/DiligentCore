@@ -168,6 +168,11 @@ public:
         Features.BinaryOcclusionQueries        = True;
         Features.TimestampQueries              = True;
         Features.PipelineStatisticsQueries     = True;
+        Features.DepthBiasClamp                = True;
+        Features.DepthClamp                    = True;
+        Features.IndependentBlend              = True;
+        Features.DualSourceBlend               = True;
+        Features.MultiViewport                 = True;
     }
 };
 

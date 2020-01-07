@@ -65,19 +65,19 @@ namespace Diligent
     struct TextureCaps
     {
         /// Maximum dimension (width) of a 1D texture, or 0 if 1D textures are not supported.
-        Uint32 MaxTexture1DDimension = 0;
+        Uint32 MaxTexture1DDimension   = 0;
 
         /// Maximum number of slices in a 1D texture array, or 0 if 1D texture arrays are not supported.
         Uint32 MaxTexture1DArraySlices = 0;
 
         /// Maximum dimension (width or height) of a 2D texture.
-        Uint32 MaxTexture2DDimension = 0;
+        Uint32 MaxTexture2DDimension   = 0;
 
         /// Maximum number of slices in a 2D texture array, or 0 if 2D texture arrays are not supported.
         Uint32 MaxTexture2DArraySlices = 0;
 
         /// Maximum dimension (width, height, or depth) of a 3D texture, or 0 if 3D textures are not supported.
-        Uint32 MaxTexture3DDimension = 0;
+        Uint32 MaxTexture3DDimension   = 0;
 
         /// Maximum dimension (width or height) of a cubemap face, or 0 if cubemap textures are not supported.
         Uint32 MaxTextureCubeDimension = 0;
@@ -99,40 +99,55 @@ namespace Diligent
     struct DeviceFeatures
     {
         /// Indicates if device supports separable programs
-        Bool SeparablePrograms = False;
+        Bool SeparablePrograms             = False;
 
         /// Indicates if device supports indirect draw commands
-        Bool IndirectRendering = False;
+        Bool IndirectRendering             = False;
 
         /// Indicates if device supports wireframe fill mode
-        Bool WireframeFill = False;
+        Bool WireframeFill                 = False;
 
         /// Indicates if device supports multithreaded resource creation
         Bool MultithreadedResourceCreation = False;
 
         /// Indicates if device supports compute shaders
-        Bool ComputeShaders = False;
+        Bool ComputeShaders                = False;
 
         /// Indicates if device supports geometry shaders
-        Bool GeometryShaders = False;
+        Bool GeometryShaders               = False;
         
         /// Indicates if device supports tessellation
-        Bool Tessellation = False;
+        Bool Tessellation                  = False;
         
         /// Indicates if device supports bindless resources
-        Bool BindlessResources = False;
+        Bool BindlessResources             = False;
 
         /// Indicates if device supports occlusion queries (see Diligent::QUERY_TYPE_OCCLUSION).
-        Bool OcclusionQueries = False;
+        Bool OcclusionQueries              = False;
 
         /// Indicates if device supports binary occlusion queries (see Diligent::QUERY_TYPE_BINARY_OCCLUSION).
-        Bool BinaryOcclusionQueries = False;
+        Bool BinaryOcclusionQueries        = False;
 
         /// Indicates if device supports timestamp queries (see Diligent::QUERY_TYPE_TIMESTAMP).
-        Bool TimestampQueries = False;
+        Bool TimestampQueries              = False;
 
         /// Indicates if device supports pipeline statistics queries (see Diligent::QUERY_TYPE_PIPELINE_STATISTICS).
-        Bool PipelineStatisticsQueries = False;
+        Bool PipelineStatisticsQueries     = False;
+
+        /// Indicates if device supports depth bias clamping
+        Bool DepthBiasClamp                = False;
+
+        /// Indicates if device supports depth clamping
+        Bool DepthClamp                    = False;
+
+        /// Indicates if device supports depth clamping
+        Bool IndependentBlend              = False;
+
+        /// Indicates if device supports dual-source blend
+        Bool DualSourceBlend               = False;
+
+        /// Indicates if device supports multiviewport
+        Bool MultiViewport                 = False;
     };
 
     /// Device capabilities

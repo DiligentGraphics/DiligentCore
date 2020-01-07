@@ -169,6 +169,11 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.BinaryOcclusionQueries        = True;
     Features.TimestampQueries              = True;
     Features.PipelineStatisticsQueries     = vkDeviceFeatures.pipelineStatisticsQuery != VK_FALSE;
+    Features.DepthBiasClamp                = vkDeviceFeatures.depthBiasClamp != VK_FALSE;
+    Features.DepthClamp                    = vkDeviceFeatures.depthClamp != VK_FALSE;
+    Features.IndependentBlend              = vkDeviceFeatures.independentBlend != VK_FALSE;
+    Features.DualSourceBlend               = vkDeviceFeatures.dualSrcBlend != VK_FALSE;
+    Features.MultiViewport                 = vkDeviceFeatures.multiViewport != VK_FALSE;
 
     const auto& vkDeviceLimits = m_PhysicalDevice->GetProperties().limits;
     auto&       TexCaps        = m_DeviceCaps.TexCaps;

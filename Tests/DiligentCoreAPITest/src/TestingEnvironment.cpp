@@ -312,11 +312,6 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             //CreateInfo.HostVisibleMemoryReserveSize = 48 << 20;
 
             auto& Features                          = CreateInfo.EnabledFeatures;
-            Features.depthBiasClamp                 = true;
-            Features.depthClamp                     = true;
-            Features.independentBlend               = true;
-            Features.dualSrcBlend                   = true;
-            Features.multiViewport                  = true;
             Features.textureCompressionBC           = true;
             Features.vertexPipelineStoresAndAtomics = true;
             Features.fragmentStoresAndAtomics       = true;

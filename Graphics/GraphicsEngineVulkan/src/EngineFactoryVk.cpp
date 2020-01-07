@@ -180,11 +180,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         }                                                                                                                              \
     }
 
-        ENABLE_FEATURE(depthBiasClamp)
-        ENABLE_FEATURE(depthClamp)
-        ENABLE_FEATURE(independentBlend)
-        ENABLE_FEATURE(dualSrcBlend)
-        ENABLE_FEATURE(multiViewport)
         ENABLE_FEATURE(textureCompressionBC)
         ENABLE_FEATURE(vertexPipelineStoresAndAtomics)
         ENABLE_FEATURE(fragmentStoresAndAtomics)
@@ -199,6 +194,11 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         ENABLE_FEATURE(imageCubeArray);
         ENABLE_FEATURE(fillModeNonSolid);
         ENABLE_FEATURE(samplerAnisotropy);
+        ENABLE_FEATURE(depthBiasClamp);
+        ENABLE_FEATURE(depthClamp);
+        ENABLE_FEATURE(independentBlend);
+        ENABLE_FEATURE(dualSrcBlend);
+        ENABLE_FEATURE(multiViewport);
 #undef ENABLE_FEATURE
 
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains

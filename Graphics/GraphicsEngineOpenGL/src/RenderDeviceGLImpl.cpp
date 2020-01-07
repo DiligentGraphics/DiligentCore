@@ -138,6 +138,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     if (m_DeviceCaps.DevType == DeviceType::OpenGL)
     {
         const bool IsGL43OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 3;
+        const bool IsGL41OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 1;
 
         Features.SeparablePrograms             = True;
         Features.IndirectRendering             = True;
@@ -151,6 +152,12 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.BinaryOcclusionQueries        = True;
         Features.TimestampQueries              = True;
         Features.PipelineStatisticsQueries     = True;
+        Features.DepthBiasClamp                = False; // There is no depth bias clamp in OpenGL
+        Features.DepthClamp                    = MajorVersion >= 4 || CheckExtension("GL_ARB_depth_clamp");
+        Features.IndependentBlend              = True;
+        Features.DualSourceBlend               = IsGL41OrAbove || CheckExtension("GL_ARB_blend_func_extended");
+        Features.MultiViewport                 = IsGL41OrAbove || CheckExtension("GL_ARB_viewport_array");
+
 
         TexCaps.MaxTexture1DDimension     = MaxTextureSize;
         TexCaps.MaxTexture1DArraySlices   = MaxLayers;
@@ -189,6 +196,12 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.BinaryOcclusionQueries        = False;
         Features.TimestampQueries              = False;
         Features.PipelineStatisticsQueries     = False;
+        Features.DepthBiasClamp                = False; // There is no depth bias clamp in OpenGL
+        Features.DepthClamp                    = strstr(Extensions, "depth_clamp");
+        Features.IndependentBlend              = IsGLES32OrAbove;
+        Features.DualSourceBlend               = strstr(Extensions, "blend_func_extended");
+        Features.MultiViewport                 = strstr(Extensions, "viewport_array");
+
 
         TexCaps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
         TexCaps.MaxTexture1DArraySlices   = 0; // Not supported in GLES 3.2

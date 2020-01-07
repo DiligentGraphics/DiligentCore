@@ -1497,11 +1497,6 @@ namespace Diligent
         /// see https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VkPhysicalDeviceFeatures
         struct DeviceFeatures
         {
-            bool depthBiasClamp                    = false;
-            bool depthClamp                        = false;
-            bool independentBlend                  = false;
-            bool dualSrcBlend                      = false;
-            bool multiViewport                     = false;
             bool textureCompressionBC              = false;
             bool vertexPipelineStoresAndAtomics    = false;
             bool fragmentStoresAndAtomics          = false;
