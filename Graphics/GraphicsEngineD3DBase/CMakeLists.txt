@@ -69,9 +69,7 @@ PUBLIC
     Diligent-GraphicsEngine 
     Diligent-GraphicsEngineD3DBaseInterface
 )
-if(D3D12_SUPPORTED)
-    target_link_libraries(Diligent-GraphicsEngineD3DBase PRIVATE D3D12.lib)
-endif()
+
 set_common_target_properties(Diligent-GraphicsEngineD3DBase)
 
 source_group("src" FILES ${SOURCE})

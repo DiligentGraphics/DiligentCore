@@ -29,7 +29,10 @@
 /// Routines that initialize D3D12-based engine implementation
 
 #include "pch.h"
+
 #include <array>
+#include <string>
+
 #include "EngineFactoryD3D12.h"
 #include "RenderDeviceD3D12Impl.h"
 #include "DeviceContextD3D12Impl.h"
@@ -39,6 +42,10 @@
 #include "StringTools.h"
 #include "EngineMemory.h"
 #include "CommandQueueD3D12Impl.h"
+
+#ifndef NOMINMAX
+#    define NOMINMAX
+#endif
 #include <Windows.h>
 #include <dxgi1_4.h>
 
@@ -61,6 +68,8 @@ public:
         TBase{IID_EngineFactoryD3D12}
     {}
 
+    bool LoadD3D12(const char* DllName) override final;
+
     void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI,
                                       IRenderDevice**              ppDevice,
                                       IDeviceContext**             ppContexts) override final;
@@ -78,7 +87,53 @@ public:
                               const FullScreenModeDesc& FSDesc,
                               void*                     pNativeWndHandle,
                               ISwapChain**              ppSwapChain) override final;
+
+    virtual void EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                   Uint32&                NumAdapters,
+                                   AdapterAttribs*        Adapters) override final;
+
+    virtual void EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                       Uint32                 AdapterId,
+                                       Uint32                 OutputId,
+                                       TEXTURE_FORMAT         Format,
+                                       Uint32&                NumDisplayModes,
+                                       DisplayModeAttribs*    DisplayModes) override final;
+
+
+private:
+#if USE_D3D12_LOADER
+    HMODULE     m_hD3D12Dll = NULL;
+    std::string m_DllName;
+#endif
 };
+
+bool EngineFactoryD3D12Impl::LoadD3D12(const char* DllName)
+{
+#if USE_D3D12_LOADER
+    if (m_hD3D12Dll == NULL)
+    {
+        m_hD3D12Dll = LoadD3D12Dll(DllName);
+        if (m_hD3D12Dll == NULL)
+        {
+            LOG_ERROR_MESSAGE("Failed to load Direct3D12 DLL (", DllName, "). Check that the system supports Direct3D12 and that the dll is present on the system.");
+            return false;
+        }
+
+        if (m_DllName.empty())
+            m_DllName = DllName;
+        else
+        {
+            if (StrCmpNoCase(m_DllName.c_str(), DllName) != 0)
+            {
+                LOG_WARNING_MESSAGE("D3D12 DLL has already been loaded as '", m_DllName,
+                                    "'. New name '", DllName, "' will be ignored.");
+            }
+        }
+    }
+#endif
+
+    return true;
+}
 
 static void GetHardwareAdapter(IDXGIFactory2* pFactory, IDXGIAdapter1** ppAdapter, D3D_FEATURE_LEVEL FeatureLevel)
 {
@@ -115,7 +170,13 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     if (EngineCI.APIVersion != DILIGENT_API_VERSION)
-        LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+    {
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        return;
+    }
+
+    if (!LoadD3D12(EngineCI.D3D12DllName))
+        return;
 
     VERIFY(ppDevice && ppContexts, "Null pointer provided");
     if (!ppDevice || !ppContexts)
@@ -322,7 +383,13 @@ void EngineFactoryD3D12Impl::AttachToD3D12Device(void*                        pd
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     if (EngineCI.APIVersion != DILIGENT_API_VERSION)
-        LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+    {
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        return;
+    }
+
+    if (!LoadD3D12(EngineCI.D3D12DllName))
+        return;
 
     VERIFY(pd3d12NativeDevice && ppCommandQueues && ppDevice && ppContexts, "Null pointer provided");
     if (!pd3d12NativeDevice || !ppCommandQueues || !ppDevice || !ppContexts)
@@ -408,6 +475,37 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12(IRenderDevice*            pDev
 
         LOG_ERROR("Failed to create the swap chain");
     }
+}
+
+void EngineFactoryD3D12Impl::EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                               Uint32&                NumAdapters,
+                                               AdapterAttribs*        Adapters)
+{
+#if USE_D3D12_LOADER
+    if (m_hD3D12Dll == NULL)
+    {
+        LOG_ERROR_MESSAGE("D3D12 has not been loaded. Please use IEngineFactoryD3D12::LoadD3D12() to load the library and entry points.");
+        return;
+    }
+#endif
+    TBase::EnumerateAdapters(MinFeatureLevel, NumAdapters, Adapters);
+}
+
+void EngineFactoryD3D12Impl::EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                                   Uint32                 AdapterId,
+                                                   Uint32                 OutputId,
+                                                   TEXTURE_FORMAT         Format,
+                                                   Uint32&                NumDisplayModes,
+                                                   DisplayModeAttribs*    DisplayModes)
+{
+#if USE_D3D12_LOADER
+    if (m_hD3D12Dll == NULL)
+    {
+        LOG_ERROR_MESSAGE("D3D12 has not been loaded. Please use IEngineFactoryD3D12::LoadD3D12() to load the library and entry points.");
+        return;
+    }
+#endif
+    TBase::EnumerateDisplayModes(MinFeatureLevel, AdapterId, OutputId, Format, NumDisplayModes, DisplayModes);
 }
 
 

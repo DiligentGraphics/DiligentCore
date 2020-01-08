@@ -94,6 +94,10 @@ if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
     target_link_libraries(DiligentCoreAPITest PRIVATE d3dcompiler.lib)
 endif()
 
+if(D3D12_SUPPORTED)
+    target_link_libraries(DiligentCoreAPITest PRIVATE d3d12.lib)
+endif()
+
 if(GL_SUPPORTED OR GLES_SUPPORTED)
     if(PLATFORM_WIN32)
         target_link_libraries(DiligentCoreAPITest PRIVATE glew-static opengl32.lib)

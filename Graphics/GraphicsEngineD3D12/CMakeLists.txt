@@ -87,6 +87,14 @@ set(SRC
     src/TextureViewD3D12Impl.cpp
 )
 
+if(PLATFORM_WIN32)
+    list(APPEND INCLUDE include/D3D12Loader.h)
+    list(APPEND SRC src/D3D12Loader.cpp)
+	set(USE_D3D12_LOADER 1)
+else()
+	set(USE_D3D12_LOADER 0)
+endif()
+
 set(SHADERS
     shaders/GenerateMips/GenerateMipsGammaCS.hlsl
     shaders/GenerateMips/GenerateMipsGammaOddCS.hlsl
@@ -143,11 +151,16 @@ PRIVATE
     Diligent-GraphicsEngineNextGenBase
     Diligent-TargetPlatform 
     dxgi.lib
-    D3D12.lib 
     d3dcompiler.lib
 PUBLIC
     Diligent-GraphicsEngineD3D12Interface
 )
+
+target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE USE_D3D12_LOADER=${USE_D3D12_LOADER})
+if(NOT ${USE_D3D12_LOADER})
+	# Link with d3d12.lib if we don't use d3d12 loader
+	target_link_libraries(Diligent-GraphicsEngineD3D12-static PRIVATE d3d12.lib)
+endif()
 
 target_link_libraries(Diligent-GraphicsEngineD3D12-shared
 PRIVATE

@@ -1389,6 +1389,9 @@ namespace Diligent
     /// Attributes specific to D3D12 engine
     struct EngineD3D12CreateInfo : public EngineCreateInfo
     {
+        /// Name of the D3D12 DLL to load. Ignored on UWP.
+        const char* D3D12DllName = "d3d12.dll";
+
         static constexpr Uint32 DefaultAdapterId = 0xFFFFFFFF;
 
         /// Id of the hardware adapter the engine should be initialized on.

@@ -25,38 +25,33 @@
  *  of the possibility of such damages.
  */
 
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
-
 #pragma once
 
-#ifndef WIN32_LEAN_AND_MEAN
-#    define WIN32_LEAN_AND_MEAN // Exclude rarely-used stuff from Windows headers
-#endif
-
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
-
-
-#include <vector>
-#include <exception>
-#include <algorithm>
 #include <d3d12.h>
 
-#include "PlatformDefinitions.h"
-#include "Errors.h"
-#include "RefCntAutoPtr.h"
-#include "DebugUtilities.h"
-#include "D3DErrors.h"
-#include "RenderDeviceBase.h"
-#include "ValidatedCast.h"
-#include <atlcomcli.h>
+namespace Diligent
+{
 
-#if USE_D3D12_LOADER
-// On Win32 we manually load d3d12.dll and get entry points,
-// but UWP does not support that, so we link with d3d12.lib
-#    include "D3D12Loader.h"
-#endif
+using D3D12CreateDeviceProcType = HRESULT(WINAPI*)(
+    _In_opt_ IUnknown*      pAdapter,
+    D3D_FEATURE_LEVEL       MinimumFeatureLevel,
+    _In_ REFIID             riid,
+    _COM_Outptr_opt_ void** ppDevice);
+
+using D3D12GetDebugInterfaceProcType = HRESULT(WINAPI*)(
+    _In_ REFIID             riid,
+    _COM_Outptr_opt_ void** ppvDebug);
+
+using D3D12SerializeRootSignatureProcType = HRESULT(WINAPI*)(
+    _In_ const D3D12_ROOT_SIGNATURE_DESC* pRootSignature,
+    _In_ D3D_ROOT_SIGNATURE_VERSION       Version,
+    _Out_ ID3DBlob**                                   ppBlob,
+    _Always_(_Outptr_opt_result_maybenull_) ID3DBlob** ppErrorBlob);
+
+extern D3D12CreateDeviceProcType           D3D12CreateDevice;
+extern D3D12GetDebugInterfaceProcType      D3D12GetDebugInterface;
+extern D3D12SerializeRootSignatureProcType D3D12SerializeRootSignature;
+
+HMODULE LoadD3D12Dll(const char* DLLPath = "d3d12.dll");
+
+} // namespace Diligent

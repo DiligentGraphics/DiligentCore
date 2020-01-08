@@ -198,6 +198,10 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             }
 #    endif
             auto* pFactoryD3D12 = GetEngineFactoryD3D12();
+            if (!pFactoryD3D12->LoadD3D12())
+            {
+                LOG_ERROR_AND_THROW("Failed to load d3d12 dll");
+            }
 
             Uint32 NumAdapters = 0;
             pFactoryD3D12->EnumerateAdapters(DIRECT3D_FEATURE_LEVEL_11_0, NumAdapters, 0);

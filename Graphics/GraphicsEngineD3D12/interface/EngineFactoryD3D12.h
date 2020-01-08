@@ -52,6 +52,18 @@ static const INTERFACE_ID IID_EngineFactoryD3D12 =
 class IEngineFactoryD3D12 : public IEngineFactory
 {
 public:
+    /// Loads D3D12 DLL and entry points.
+
+    /// \param [in] DllName - D3D12 dll name.
+    /// \return               true if the library and entry points are loaded sucessfully and false otherwise.
+    ///
+    /// \remarks IEngineFactoryD3D12::CreateDeviceAndContextsD3D12() and
+    ///          IEngineFactoryD3D12::AttachToD3D12Device() functions will automatically
+    ///          load the DLL if it has not be loaded already.
+    ///
+    ///          This method has no effect on UWP.
+    virtual bool LoadD3D12(const char* DllName = "d3d12.dll") = 0;
+
     /// Creates a render device and device contexts for Direct3D12-based engine implementation.
 
     /// \param [in] EngineCI    - Engine creation info.
@@ -121,6 +133,8 @@ public:
     /// \param [out]    Adapters - Pointer to the array conataining adapter information. If
     ///                            null is provided, the number of available adapters is written to
     ///                            NumAdapters
+    ///
+    /// \note           D3D12 must be loaded before this method can be called, see IEngineFactoryD3D12::LoadD3D12.
     virtual void EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
                                    Uint32&                NumAdapters,
                                    AdapterAttribs*        Adapters) = 0;
@@ -138,6 +152,8 @@ public:
     ///                                    this value should contain the maximum number of elements
     ///                                    to be written to DisplayModes array. It is overwritten with
     ///                                    the actual number of display modes written.
+    ///
+    /// \note           D3D12 must be loaded before this method can be called, see IEngineFactoryD3D12::LoadD3D12.
     virtual void EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
                                        Uint32                 AdapterId,
                                        Uint32                 OutputId,
