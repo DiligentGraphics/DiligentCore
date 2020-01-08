@@ -173,6 +173,9 @@ public:
         Features.IndependentBlend              = True;
         Features.DualSourceBlend               = True;
         Features.MultiViewport                 = True;
+        Features.TextureCompressionBC          = True;
+        Features.PixelUAVWritesAndAtomics      = True;
+        Features.TextureUAVExtendedFormats     = True;
     }
 };
 

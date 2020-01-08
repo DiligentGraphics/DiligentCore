@@ -135,9 +135,12 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &MaxLayers);
     CHECK_GL_ERROR("Failed to get maximum number of texture array layers");
 
+    Features.VertexPipelineUAVWritesAndAtomics = False;
+
     if (m_DeviceCaps.DevType == DeviceType::OpenGL)
     {
         const bool IsGL43OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 3;
+        const bool IsGL42OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 2;
         const bool IsGL41OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 1;
 
         Features.SeparablePrograms             = True;
@@ -157,6 +160,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.IndependentBlend              = True;
         Features.DualSourceBlend               = IsGL41OrAbove || CheckExtension("GL_ARB_blend_func_extended");
         Features.MultiViewport                 = IsGL41OrAbove || CheckExtension("GL_ARB_viewport_array");
+        Features.PixelUAVWritesAndAtomics      = IsGL42OrAbove || CheckExtension("GL_ARB_shader_image_load_store");
+        Features.TextureUAVExtendedFormats     = False;
 
 
         TexCaps.MaxTexture1DDimension     = MaxTextureSize;
@@ -201,6 +206,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.IndependentBlend              = IsGLES32OrAbove;
         Features.DualSourceBlend               = strstr(Extensions, "blend_func_extended");
         Features.MultiViewport                 = strstr(Extensions, "viewport_array");
+        Features.PixelUAVWritesAndAtomics      = IsGLES31OrAbove || strstr(Extensions, "shader_image_load_store");
+        Features.TextureUAVExtendedFormats     = False;
 
 
         TexCaps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
@@ -218,6 +225,12 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SamCaps.AnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && (IsGLES31OrAbove || strstr(Extensions, "texture_filter_anisotropic"));
         SamCaps.LODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
     }
+
+    const bool bRGTC = CheckExtension("GL_ARB_texture_compression_rgtc");
+    const bool bBPTC = CheckExtension("GL_ARB_texture_compression_bptc");
+    const bool bS3TC = CheckExtension("GL_EXT_texture_compression_s3tc");
+
+    Features.TextureCompressionBC = bRGTC && bBPTC && bS3TC;
 }
 
 RenderDeviceGLImpl::~RenderDeviceGLImpl()

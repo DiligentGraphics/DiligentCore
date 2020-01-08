@@ -168,24 +168,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         DeviceCreateInfo.pQueueCreateInfos      = &QueueInfo;
         VkPhysicalDeviceFeatures DeviceFeatures = {};
 
-#define ENABLE_FEATURE(Feature)                                                                                                        \
-    if (EngineCI.EnabledFeatures.Feature)                                                                                              \
-    {                                                                                                                                  \
-        if (PhysicalDeviceFeatures.Feature)                                                                                            \
-            DeviceFeatures.Feature = VK_TRUE;                                                                                          \
-        else                                                                                                                           \
-        {                                                                                                                              \
-            LOG_WARNING_MESSAGE("Requested device feature " #Feature " is not supported by the physical device and will be disabled"); \
-            EngineCI.EnabledFeatures.Feature = false;                                                                                  \
-        }                                                                                                                              \
-    }
-
-        ENABLE_FEATURE(textureCompressionBC)
-        ENABLE_FEATURE(vertexPipelineStoresAndAtomics)
-        ENABLE_FEATURE(fragmentStoresAndAtomics)
-        ENABLE_FEATURE(shaderStorageImageExtendedFormats)
-#undef ENABLE_FEATURE
-
 #define ENABLE_FEATURE(Feature) DeviceFeatures.Feature = PhysicalDeviceFeatures.Feature
         ENABLE_FEATURE(geometryShader);
         ENABLE_FEATURE(tessellationShader);
@@ -199,6 +181,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         ENABLE_FEATURE(independentBlend);
         ENABLE_FEATURE(dualSrcBlend);
         ENABLE_FEATURE(multiViewport);
+        ENABLE_FEATURE(textureCompressionBC);
+        ENABLE_FEATURE(vertexPipelineStoresAndAtomics);
+        ENABLE_FEATURE(fragmentStoresAndAtomics);
+        ENABLE_FEATURE(shaderStorageImageExtendedFormats);
 #undef ENABLE_FEATURE
 
         DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains

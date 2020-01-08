@@ -311,11 +311,6 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             //CreateInfo.DeviceLocalMemoryReserveSize = 32 << 20;
             //CreateInfo.HostVisibleMemoryReserveSize = 48 << 20;
 
-            auto& Features                          = CreateInfo.EnabledFeatures;
-            Features.textureCompressionBC           = true;
-            Features.vertexPipelineStoresAndAtomics = true;
-            Features.fragmentStoresAndAtomics       = true;
-
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);
             auto* pFactoryVk = GetEngineFactoryVk();

@@ -1486,22 +1486,12 @@ namespace Diligent
         const char* const* ppGlobalExtensionNames = nullptr;
 
         /// Allocator used as pAllocator parameter in callse to Vulkan Create* functions
-        void *pVkAllocator = nullptr;
+        void* pVkAllocator = nullptr;
 
         /// Number of commands to flush the command buffer. Only draw/dispatch commands count
         /// towards the limit. Command buffers are only flushed when pipeline state is changed
         /// or when backbuffer is presented.
         Uint32 NumCommandsToFlushCmdBuffer = 256;
-
-        /// List of device features to be enabled
-        /// see https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VkPhysicalDeviceFeatures
-        struct DeviceFeatures
-        {
-            bool textureCompressionBC              = false;
-            bool vertexPipelineStoresAndAtomics    = false;
-            bool fragmentStoresAndAtomics          = false;
-            bool shaderStorageImageExtendedFormats = false;
-        }EnabledFeatures;
 
         /// Descriptor pool size
         struct DescriptorPoolSize

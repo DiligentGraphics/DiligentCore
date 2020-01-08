@@ -179,6 +179,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
     m_DeviceCaps.Features.BindlessResources = True;
 
+    m_DeviceCaps.Features.VertexPipelineUAVWritesAndAtomics = True;
+
     auto& TexCaps = m_DeviceCaps.TexCaps;
 
     TexCaps.MaxTexture1DDimension     = D3D12_REQ_TEXTURE1D_U_DIMENSION;

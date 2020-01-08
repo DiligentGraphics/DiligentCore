@@ -144,6 +144,8 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     // https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-downlevel-intro#overview-for-each-feature-level
     m_DeviceCaps.Features.BindlessResources = False;
 
+    m_DeviceCaps.Features.VertexPipelineUAVWritesAndAtomics = False;
+
     auto& TexCaps = m_DeviceCaps.TexCaps;
 
     TexCaps.MaxTexture1DDimension     = D3D11_REQ_TEXTURE1D_U_DIMENSION;

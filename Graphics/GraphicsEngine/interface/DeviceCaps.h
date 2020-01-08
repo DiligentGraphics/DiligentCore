@@ -148,6 +148,20 @@ namespace Diligent
 
         /// Indicates if device supports multiviewport
         Bool MultiViewport                 = False;
+
+        /// Indicates if device supports all BC-compressed formats
+        Bool TextureCompressionBC          = False;
+
+        /// Indicates if device supports writes to UAVs as well as atomic operations in vertex,
+        /// tessellation, and geometry shader stages.
+        Bool VertexPipelineUAVWritesAndAtomics = False;
+
+        /// Indicates if device supports writes to UAVs as well as atomic operations in pixel
+        /// shader stage.
+        Bool PixelUAVWritesAndAtomics          = False;
+
+        /// Specifies whether all the extended UAV texture formats are available in shader code.
+        Bool TextureUAVExtendedFormats         = False;
     };
 
     /// Device capabilities
