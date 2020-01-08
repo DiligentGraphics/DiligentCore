@@ -51,8 +51,8 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
 
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
-        if (QueryType == QUERY_TYPE_OCCLUSION && !deviceFeatures.occlusionQueryPrecise ||
-            QueryType == QUERY_TYPE_PIPELINE_STATISTICS && !deviceFeatures.pipelineStatisticsQuery)
+        if ((QueryType == QUERY_TYPE_OCCLUSION && !deviceFeatures.occlusionQueryPrecise) ||
+            (QueryType == QUERY_TYPE_PIPELINE_STATISTICS && !deviceFeatures.pipelineStatisticsQuery))
             continue;
 
         // clang-format off

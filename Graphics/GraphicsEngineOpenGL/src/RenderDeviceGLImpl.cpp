@@ -139,9 +139,10 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 
     if (m_DeviceCaps.DevType == DeviceType::OpenGL)
     {
-        const bool IsGL43OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 3;
-        const bool IsGL42OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 2;
-        const bool IsGL41OrAbove = MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 1;
+        const bool IsGL46OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 6);
+        const bool IsGL43OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 3);
+        const bool IsGL42OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 2);
+        const bool IsGL41OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 1);
 
         Features.SeparablePrograms             = True;
         Features.IndirectRendering             = True;
@@ -176,7 +177,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         TexCaps.CubemapArraysSupported    = IsGL43OrAbove || CheckExtension("GL_ARB_texture_cube_map_array");
 
         SamCaps.BorderSamplingModeSupported   = True;
-        SamCaps.AnisotropicFilteringSupported = (MajorVersion >= 5 || MajorVersion == 4 && MinorVersion >= 6) || CheckExtension("GL_ARB_texture_filter_anisotropic");
+        SamCaps.AnisotropicFilteringSupported = IsGL46OrAbove || CheckExtension("GL_ARB_texture_filter_anisotropic");
         SamCaps.LODBiasSupported              = True;
     }
     else
@@ -186,8 +187,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 
         VERIFY(m_DeviceCaps.DevType == DeviceType::OpenGLES, "Unexpected device type: OpenGLES expected");
 
-        bool IsGLES31OrAbove = (MajorVersion >= 4 || (MajorVersion == 3 && MinorVersion >= 1));
-        bool IsGLES32OrAbove = (MajorVersion >= 4 || (MajorVersion == 3 && MinorVersion >= 2));
+        bool IsGLES31OrAbove = (MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 1);
+        bool IsGLES32OrAbove = (MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 2);
 
         Features.SeparablePrograms             = IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects");
         Features.IndirectRendering             = IsGLES31OrAbove || strstr(Extensions, "draw_indirect");
