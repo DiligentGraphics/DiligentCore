@@ -107,14 +107,20 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     if (EngineCI.APIVersion != DILIGENT_API_VERSION)
-        LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+    {
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        return;
+    }
 
     VERIFY(ppDevice && ppContexts, "Null pointer provided");
     if (!ppDevice || !ppContexts)
         return;
 
     if (EngineCI.MinimumFeatureLevel >= DIRECT3D_FEATURE_LEVEL_12_0)
-        LOG_ERROR_AND_THROW("DIRECT3D_FEATURE_LEVEL_12_0 and above is not supported by Direct3D11 backend");
+    {
+        LOG_ERROR_MESSAGE("DIRECT3D_FEATURE_LEVEL_12_0 and above is not supported by Direct3D11 backend");
+        return;
+    }
 
     *ppDevice = nullptr;
     memset(ppContexts, 0, sizeof(*ppContexts) * (1 + EngineCI.NumDeferredContexts));
@@ -213,7 +219,10 @@ void EngineFactoryD3D11Impl::AttachToD3D11Device(void*                        pd
         SetDebugMessageCallback(EngineCI.DebugMessageCallback);
 
     if (EngineCI.APIVersion != DILIGENT_API_VERSION)
-        LOG_ERROR_AND_THROW("Diligent Engine runtime (", EngineCI.APIVersion, ") is not compatible with the client API version (", DILIGENT_API_VERSION, ")");
+    {
+        LOG_ERROR_MESSAGE("Diligent Engine runtime (", DILIGENT_API_VERSION, ") is not compatible with the client API version (", EngineCI.APIVersion, ")");
+        return;
+    }
 
     VERIFY(ppDevice && ppContexts, "Null pointer provided");
     if (!ppDevice || !ppContexts)
