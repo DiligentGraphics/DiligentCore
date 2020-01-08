@@ -189,7 +189,7 @@ TEST(ShaderResourceLayout, ResourceArray)
             SubResData.Stride = TexDesc.Width * 4;
         }
 
-        float ColorOffset[4] = {(float)t * 0.13f, (float)t * 0.21f, (float)t * 0.29f, 0};
+        //float ColorOffset[4] = {(float)t * 0.13f, (float)t * 0.21f, (float)t * 0.29f, 0};
         //TestTexturing::GenerateTextureData(pDevice, Data, SubResouces, TexDesc, ColorOffset);
         TextureData TexData;
         TexData.pSubResources   = SubResouces.data();

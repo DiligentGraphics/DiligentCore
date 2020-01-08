@@ -97,6 +97,11 @@ if(${DILIGENT_BUILD_TESTS})
     set(gtest_force_shared_crt ON CACHE BOOL "Use shared (DLL) run-time lib even when Google Test is built as static lib.")
     add_subdirectory(googletest)
     set_directory_root_folder("googletest" "DiligentCore/ThirdParty/googletest")
+    set_target_properties(gtest gtest_main PROPERTIES
+        CXX_VISIBILITY_PRESET hidden # -fvisibility=hidden
+        C_VISIBILITY_PRESET hidden # -fvisibility=hidden
+        VISIBILITY_INLINES_HIDDEN TRUE
+     )
 endif()
 
 install(FILES googletest/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME googletest-License.txt)
