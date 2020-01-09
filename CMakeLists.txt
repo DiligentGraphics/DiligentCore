@@ -2,6 +2,9 @@ cmake_minimum_required (VERSION 3.6)
 
 project(DiligentCore)
 
+# Define GNU standard installation directories such as CMAKE_INSTALL_INCLUDEDIR, CMAKE_INSTALL_LIBDIR, etc.
+include(GNUInstallDirs)
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 set(DEBUG_CONFIGURATIONS DEBUG CACHE INTERNAL "Debug configurations")
