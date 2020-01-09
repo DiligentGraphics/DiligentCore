@@ -318,7 +318,7 @@ if(DILIGENT_INSTALL_CORE)
         "${DILIGENT_CORE_INSTALL_LIBS_LIST}"
         DiligentCore-static                     # Custom target name
         DiligentCore                            # Folder
-        "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"    # Install destination
+        "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"    # Install destination
     )
 
     install(FILES License.txt DESTINATION "Licenses" RENAME DiligentEngine-License.txt)

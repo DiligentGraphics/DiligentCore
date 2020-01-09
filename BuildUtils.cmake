@@ -216,18 +216,18 @@ function(install_core_lib _TARGET)
         set(DILIGENT_CORE_INSTALL_LIBS_LIST ${DILIGENT_CORE_INSTALL_LIBS_LIST} CACHE INTERNAL "Core libraries installation list")
     elseif(TARGET_TYPE STREQUAL SHARED_LIBRARY)
         install(TARGETS				 ${_TARGET}
-                ARCHIVE DESTINATION "lib/${DILIGENT_CORE_DIR}/$<CONFIG>"
-                LIBRARY DESTINATION "bin/${DILIGENT_CORE_DIR}/$<CONFIG>"
-                RUNTIME DESTINATION "bin/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
+                RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>"
         )
         if (DILIGENT_INSTALL_PDB)
-            install(FILES $<TARGET_PDB_FILE:${_TARGET}> DESTINATION "bin/${DILIGENT_CORE_DIR}/$<CONFIG>" OPTIONAL)
+            install(FILES $<TARGET_PDB_FILE:${_TARGET}> DESTINATION "${CMAKE_INSTALL_BINDIR}/${DILIGENT_CORE_DIR}/$<CONFIG>" OPTIONAL)
         endif()
     endif()
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/interface")
         install(DIRECTORY    interface
-                DESTINATION  "headers/${TARGET_RELATIVE_PATH}/"
+                DESTINATION  "${CMAKE_INSTALL_INCLUDEDIR}/${TARGET_RELATIVE_PATH}/"
         )
     endif()
 endfunction()
