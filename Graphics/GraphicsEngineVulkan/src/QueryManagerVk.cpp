@@ -189,19 +189,23 @@ void QueryManagerVk::DiscardQuery(QUERY_TYPE Type, Uint32 Index)
     HeapInfo.StaleQueries.push_back(Index);
 }
 
-void QueryManagerVk::ResetStaleQueries(VulkanUtilities::VulkanCommandBuffer& CmdBuff)
+Uint32 QueryManagerVk::ResetStaleQueries(VulkanUtilities::VulkanCommandBuffer& CmdBuff)
 {
     std::lock_guard<std::mutex> Lock(m_HeapMutex);
 
+    Uint32 NumQueriesReset = 0;
     for (auto& HeapInfo : m_Heaps)
     {
         for (auto& StaleQuery : HeapInfo.StaleQueries)
         {
             CmdBuff.ResetQueryPool(HeapInfo.vkQueryPool, StaleQuery, 1);
             HeapInfo.AvailableQueries.push_back(StaleQuery);
+            ++NumQueriesReset;
         }
         HeapInfo.StaleQueries.clear();
     }
+
+    return NumQueriesReset;
 }
 
 } // namespace Diligent

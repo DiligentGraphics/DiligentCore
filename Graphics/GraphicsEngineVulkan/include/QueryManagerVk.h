@@ -72,7 +72,7 @@ public:
         return m_CounterFrequency;
     }
 
-    void ResetStaleQueries(VulkanUtilities::VulkanCommandBuffer& CmdBuff);
+    Uint32 ResetStaleQueries(VulkanUtilities::VulkanCommandBuffer& CmdBuff);
 
 private:
     struct QueryHeapInfo

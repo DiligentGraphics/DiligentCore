@@ -886,7 +886,7 @@ void DeviceContextVkImpl::Flush()
     {
         if (m_QueryMgr)
         {
-            m_QueryMgr->ResetStaleQueries(m_CommandBuffer);
+            m_State.NumCommands += m_QueryMgr->ResetStaleQueries(m_CommandBuffer);
         }
 
         if (m_State.NumCommands != 0)
