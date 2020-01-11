@@ -6,6 +6,7 @@ set(INTERFACE
     interface/CommonlyUsedStates.h
     interface/GraphicsUtilities.h
     interface/pch.h
+    interface/ScopedQueryHelper.h
     interface/ScreenCapture.h
     interface/ShaderMacroHelper.h
     interface/TextureUploader.h
@@ -14,6 +15,7 @@ set(INTERFACE
 
 set(SOURCE 
     src/GraphicsUtilities.cpp
+    src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
     src/pch.cpp
     src/TextureUploader.cpp
