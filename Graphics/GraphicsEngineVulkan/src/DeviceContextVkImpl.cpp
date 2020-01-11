@@ -1186,6 +1186,8 @@ void DeviceContextVkImpl::ResetRenderTargets()
     TDeviceContextBase::ResetRenderTargets();
     m_RenderPass  = VK_NULL_HANDLE;
     m_Framebuffer = VK_NULL_HANDLE;
+    if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE && m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
+        m_CommandBuffer.EndRenderPass();
 }
 
 void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuffVk,

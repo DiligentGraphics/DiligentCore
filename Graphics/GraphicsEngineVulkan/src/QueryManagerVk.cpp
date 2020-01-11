@@ -136,9 +136,10 @@ QueryManagerVk::~QueryManagerVk()
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
         auto& HeapInfo = m_Heaps[QueryType];
-        if (HeapInfo.AvailableQueries.size() != HeapInfo.PoolSize)
+
+        auto OutstandingQueries = HeapInfo.PoolSize - (HeapInfo.AvailableQueries.size() + HeapInfo.StaleQueries.size());
+        if (OutstandingQueries != 0)
         {
-            auto OutstandingQueries = HeapInfo.PoolSize - HeapInfo.AvailableQueries.size();
             if (OutstandingQueries == 1)
             {
                 LOG_ERROR_MESSAGE("One query of type ", GetQueryTypeString(static_cast<QUERY_TYPE>(QueryType)),

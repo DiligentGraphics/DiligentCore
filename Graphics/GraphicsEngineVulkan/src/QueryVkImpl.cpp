@@ -53,9 +53,13 @@ QueryVkImpl::QueryVkImpl(IReferenceCounters* pRefCounters,
 
 QueryVkImpl::~QueryVkImpl()
 {
-    auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
-    VERIFY_EXPR(pQueryMgr != nullptr);
-    pQueryMgr->DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
+    if (m_QueryPoolIndex != QueryManagerVk::InvalidIndex)
+    {
+        VERIFY(m_pContext != nullptr, "Device context is not initialized");
+        auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+        VERIFY_EXPR(pQueryMgr != nullptr);
+        pQueryMgr->DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
+    }
 }
 
 bool QueryVkImpl::AllocateQuery()

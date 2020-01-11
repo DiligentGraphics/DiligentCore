@@ -1012,7 +1012,18 @@ public:
 
     /// \param [in] pQuery - A pointer to a query object.
     ///
-    /// \remarks    Only immediate context can begin a query.
+    /// \remarks    Only immediate contexts can begin a query.
+    ///
+    ///             Vulkan requires that a query must either begin and end inside the same
+    ///             subpass of a render pass instance, or must both begin and end outside of
+    ///             a render pass instance. This means that an application must either begin
+    ///             and end a query while preserving render targets, or begin it when no render
+    ///             targets are bound to the context. In the latter case the engine will automaticaly
+    ///             end the render pass, if needed, when the query is ended.
+    ///             Also note that resource transitions must be performed outside of a render pass,
+    ///             and may thus require ending current render pass.
+    ///             To explicitly end current render pass, call
+    ///             SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE).
     ///
     /// \warning    OpenGL and Vulkan do not support nested queries of the same type.
     virtual void BeginQuery(IQuery* pQuery) = 0;
@@ -1027,7 +1038,7 @@ public:
     ///             In Direct3D12 and Vulkan, queries (except for timestamp queries)
     ///             cannot span command list boundaries, so the engine will never flush
     ///             the context even if the number of commands exceeds the user-specified limit
-    ///             if there is an active query.
+    ///             when there is an active query.
     ///             It is an error to explicitly flush the context while a query is active. 
     ///
     ///             All queries must be ended when IDeviceContext::FinishFrame() is called.

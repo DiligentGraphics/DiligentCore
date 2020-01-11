@@ -201,8 +201,8 @@ public:
         m_State.FramebufferHeight = 0;
         if (m_State.InsidePassQueries != 0)
         {
-            LOG_ERROR_MESSAGE("There are outstanding queries that have been started inside the render pass, but have "
-                              "not been ended. Vulkan requires that a query must either begin and end inside the same "
+            LOG_ERROR_MESSAGE("Ending render pass while there are outstanding queries that have been started inside the pass, "
+                              "but have not been ended. Vulkan requires that a query must either begin and end inside the same "
                               "subpass of a render pass instance, or must both begin and end outside of a render pass "
                               "instance (i.e. contain entire render pass instances). (17.2)");
         }

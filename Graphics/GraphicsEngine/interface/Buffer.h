@@ -111,7 +111,6 @@ struct BufferDesc : DeviceObjectAttribs
 
     BufferDesc()noexcept{}
 
-    explicit 
     BufferDesc(Uint32           _uiSizeInBytes, 
                BIND_FLAGS       _BindFlags,
                USAGE            _Usage             = BufferDesc{}.Usage,

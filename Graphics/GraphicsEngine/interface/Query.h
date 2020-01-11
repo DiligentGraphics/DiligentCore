@@ -155,6 +155,12 @@ struct QueryDesc : DeviceObjectAttribs
 {
     /// Query type, see Diligent::QUERY_TYPE.
     QUERY_TYPE Type = QUERY_TYPE_UNDEFINED;
+
+    QueryDesc() noexcept {};
+
+    explicit QueryDesc(QUERY_TYPE _Type) noexcept :
+        Type(_Type)
+    {}
 };
 
 
