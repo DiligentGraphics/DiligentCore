@@ -62,14 +62,32 @@ QueryVkImpl::~QueryVkImpl()
     }
 }
 
-bool QueryVkImpl::AllocateQuery()
+void QueryVkImpl::DiscardQuery()
 {
-    auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
-    VERIFY_EXPR(pQueryMgr != nullptr);
     if (m_QueryPoolIndex != QueryManagerVk::InvalidIndex)
     {
+        VERIFY_EXPR(m_pContext);
+        auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+        VERIFY_EXPR(pQueryMgr != nullptr);
         pQueryMgr->DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
+        m_QueryPoolIndex = QueryManagerVk::InvalidIndex;
     }
+}
+
+void QueryVkImpl::Invalidate()
+{
+    DiscardQuery();
+    TQueryBase::Invalidate();
+}
+
+bool QueryVkImpl::AllocateQuery()
+{
+    DiscardQuery();
+    VERIFY_EXPR(m_pContext);
+    auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+    VERIFY_EXPR(pQueryMgr != nullptr);
+    VERIFY_EXPR(m_QueryPoolIndex == QueryManagerVk::InvalidIndex);
+
     m_QueryPoolIndex = pQueryMgr->AllocateQuery(m_Desc.Type);
     if (m_QueryPoolIndex == QueryManagerVk::InvalidIndex)
     {
@@ -112,10 +130,11 @@ bool QueryVkImpl::OnEndQuery(IDeviceContext* pContext)
     return true;
 }
 
-bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
+bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     auto CmdQueueId          = m_pContext.RawPtr<DeviceContextVkImpl>()->GetCommandQueueId();
     auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
+    bool DataAvailable       = false;
     if (CompletedFenceValue >= m_QueryEndFenceValue)
     {
         auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
@@ -140,11 +159,13 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
                 // already been reset before checking for its results or availability status. Otherwise, a stale
                 // value could be returned from a previous use of the query.
                 auto res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-                if (res != VK_SUCCESS || Results[1] == 0)
-                    return false;
 
-                auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
-                QueryData.NumSamples = Results[0];
+                DataAvailable = (res == VK_SUCCESS && Results[1] != 0);
+                if (DataAvailable && pData != nullptr)
+                {
+                    auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
+                    QueryData.NumSamples = Results[0];
+                }
             }
             break;
 
@@ -152,11 +173,13 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
             {
                 uint64_t Results[2];
                 auto     res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-                if (res != VK_SUCCESS || Results[1] == 0)
-                    return false;
 
-                auto& QueryData           = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
-                QueryData.AnySamplePassed = Results[0] != 0;
+                DataAvailable = (res == VK_SUCCESS && Results[1] != 0);
+                if (DataAvailable && pData != nullptr)
+                {
+                    auto& QueryData           = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+                    QueryData.AnySamplePassed = Results[0] != 0;
+                }
             }
             break;
 
@@ -164,12 +187,14 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
             {
                 uint64_t Results[2];
                 auto     res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-                if (res != VK_SUCCESS || Results[1] == 0)
-                    return false;
 
-                auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                QueryData.Counter   = Results[0];
-                QueryData.Frequency = pQueryMgr->GetCounterFrequency();
+                DataAvailable = (res == VK_SUCCESS && Results[1] != 0);
+                if (DataAvailable && pData != nullptr)
+                {
+                    auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    QueryData.Counter   = Results[0];
+                    QueryData.Frequency = pQueryMgr->GetCounterFrequency();
+                }
             }
             break;
 
@@ -181,50 +206,52 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize)
 
                 Uint64 Results[12];
                 auto   res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-                if (res != VK_SUCCESS)
-                    return false;
 
-                auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
-
-                const auto EnabledShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
-
-                auto Idx = 0;
-
-                QueryData.InputVertices   = Results[Idx++]; // INPUT_ASSEMBLY_VERTICES_BIT   = 0x00000001
-                QueryData.InputPrimitives = Results[Idx++]; // INPUT_ASSEMBLY_PRIMITIVES_BIT = 0x00000002
-                QueryData.VSInvocations   = Results[Idx++]; // VERTEX_SHADER_INVOCATIONS_BIT = 0x00000004
-                if (EnabledShaderStages & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
+                DataAvailable = (res == VK_SUCCESS);
+                if (DataAvailable && pData != nullptr)
                 {
-                    QueryData.GSInvocations = Results[Idx++]; // GEOMETRY_SHADER_INVOCATIONS_BIT = 0x00000008
-                    QueryData.GSPrimitives  = Results[Idx++]; // GEOMETRY_SHADER_PRIMITIVES_BIT  = 0x00000010
+                    auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
+
+                    const auto EnabledShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
+
+                    auto Idx = 0;
+
+                    QueryData.InputVertices   = Results[Idx++]; // INPUT_ASSEMBLY_VERTICES_BIT   = 0x00000001
+                    QueryData.InputPrimitives = Results[Idx++]; // INPUT_ASSEMBLY_PRIMITIVES_BIT = 0x00000002
+                    QueryData.VSInvocations   = Results[Idx++]; // VERTEX_SHADER_INVOCATIONS_BIT = 0x00000004
+                    if (EnabledShaderStages & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
+                    {
+                        QueryData.GSInvocations = Results[Idx++]; // GEOMETRY_SHADER_INVOCATIONS_BIT = 0x00000008
+                        QueryData.GSPrimitives  = Results[Idx++]; // GEOMETRY_SHADER_PRIMITIVES_BIT  = 0x00000010
+                    }
+                    QueryData.ClippingInvocations = Results[Idx++]; // CLIPPING_INVOCATIONS_BIT         = 0x00000020
+                    QueryData.ClippingPrimitives  = Results[Idx++]; // CLIPPING_PRIMITIVES_BIT          = 0x00000040
+                    QueryData.PSInvocations       = Results[Idx++]; // FRAGMENT_SHADER_INVOCATIONS_BIT  = 0x00000080
+
+                    if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT)
+                        QueryData.HSInvocations = Results[Idx++]; // TESSELLATION_CONTROL_SHADER_PATCHES_BIT        = 0x00000100
+
+                    if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
+                        QueryData.DSInvocations = Results[Idx++]; // TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT = 0x00000200
+
+                    QueryData.CSInvocations = Results[Idx++]; // COMPUTE_SHADER_INVOCATIONS_BIT = 0x00000400
+
+                    DataAvailable = Results[Idx] != 0;
                 }
-                QueryData.ClippingInvocations = Results[Idx++]; // CLIPPING_INVOCATIONS_BIT         = 0x00000020
-                QueryData.ClippingPrimitives  = Results[Idx++]; // CLIPPING_PRIMITIVES_BIT          = 0x00000040
-                QueryData.PSInvocations       = Results[Idx++]; // FRAGMENT_SHADER_INVOCATIONS_BIT  = 0x00000080
-
-                if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT)
-                    QueryData.HSInvocations = Results[Idx++]; // TESSELLATION_CONTROL_SHADER_PATCHES_BIT        = 0x00000100
-
-                if (EnabledShaderStages & VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT)
-                    QueryData.DSInvocations = Results[Idx++]; // TESSELLATION_EVALUATION_SHADER_INVOCATIONS_BIT = 0x00000200
-
-                QueryData.CSInvocations = Results[Idx++]; // COMPUTE_SHADER_INVOCATIONS_BIT = 0x00000400
-
-                if (!Results[Idx])
-                    return false;
             }
             break;
 
             default:
                 UNEXPECTED("Unexpected query type");
         }
+    }
 
-        return true;
-    }
-    else
+    if (DataAvailable && pData != nullptr && AutoInvalidate)
     {
-        return false;
+        Invalidate();
     }
+
+    return DataAvailable;
 }
 
 } // namespace Diligent

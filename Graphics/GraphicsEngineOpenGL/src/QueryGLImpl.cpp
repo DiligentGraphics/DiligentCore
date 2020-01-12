@@ -52,7 +52,7 @@ QueryGLImpl::~QueryGLImpl()
 {
 }
 
-bool QueryGLImpl::GetData(void* pData, Uint32 DataSize)
+bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     GLuint ResultAvailable = GL_FALSE;
 
@@ -79,7 +79,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize)
             return false;
     }
 
-    if (ResultAvailable)
+    if (ResultAvailable && pData != nullptr)
     {
         switch (m_Desc.Type)
         {
@@ -133,6 +133,11 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize)
             default:
                 UNEXPECTED("Unexpected query type");
                 return false;
+        }
+
+        if (AutoInvalidate)
+        {
+            Invalidate();
         }
     }
 

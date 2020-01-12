@@ -107,6 +107,11 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Query, TDeviceObjectBase)
 
+    virtual void Invalidate() override
+    {
+        m_State = QueryState::Inactive;
+    }
+
     bool OnBeginQuery(IDeviceContext* pContext)
     {
         if (this->m_Desc.Type == QUERY_TYPE_TIMESTAMP)
@@ -166,65 +171,62 @@ public:
 
     bool CheckQueryDataPtr(void* pData, Uint32 DataSize)
     {
-        if (pData == nullptr)
-        {
-            LOG_ERROR_MESSAGE("Query data must not be null");
-            return false;
-        }
-
         if (m_State != QueryState::Complete)
         {
             LOG_ERROR_MESSAGE("Attempting to get data of query '", this->m_Desc.Name, "' that has not been ended");
             return false;
         }
 
-        if (*reinterpret_cast<QUERY_TYPE*>(pData) != this->m_Desc.Type)
+        if (pData != nullptr)
         {
-            LOG_ERROR_MESSAGE("Incorrect query data structure type.");
-            return false;
-        }
-
-        switch (this->m_Desc.Type)
-        {
-            case QUERY_TYPE_UNDEFINED:
-                UNEXPECTED("Undefined query type is unexpected");
+            if (*reinterpret_cast<QUERY_TYPE*>(pData) != this->m_Desc.Type)
+            {
+                LOG_ERROR_MESSAGE("Incorrect query data structure type.");
                 return false;
+            }
 
-            case QUERY_TYPE_OCCLUSION:
-                if (DataSize != sizeof(QueryDataOcclusion))
-                {
-                    LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataOcclusion), " (aka sizeof(QueryDataOcclusion)) is expected");
+            switch (this->m_Desc.Type)
+            {
+                case QUERY_TYPE_UNDEFINED:
+                    UNEXPECTED("Undefined query type is unexpected");
                     return false;
-                }
-                break;
 
-            case QUERY_TYPE_BINARY_OCCLUSION:
-                if (DataSize != sizeof(QueryDataBinaryOcclusion))
-                {
-                    LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataBinaryOcclusion), " (aka sizeof(QueryDataBinaryOcclusion)) is expected");
+                case QUERY_TYPE_OCCLUSION:
+                    if (DataSize != sizeof(QueryDataOcclusion))
+                    {
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataOcclusion), " (aka sizeof(QueryDataOcclusion)) is expected");
+                        return false;
+                    }
+                    break;
+
+                case QUERY_TYPE_BINARY_OCCLUSION:
+                    if (DataSize != sizeof(QueryDataBinaryOcclusion))
+                    {
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataBinaryOcclusion), " (aka sizeof(QueryDataBinaryOcclusion)) is expected");
+                        return false;
+                    }
+                    break;
+
+                case QUERY_TYPE_TIMESTAMP:
+                    if (DataSize != sizeof(QueryDataTimestamp))
+                    {
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataTimestamp), " (aka sizeof(QueryDataTimestamp)) is expected");
+                        return false;
+                    }
+                    break;
+
+                case QUERY_TYPE_PIPELINE_STATISTICS:
+                    if (DataSize != sizeof(QueryDataPipelineStatistics))
+                    {
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataPipelineStatistics), " (aka sizeof(QueryDataPipelineStatistics)) is expected");
+                        return false;
+                    }
+                    break;
+
+                default:
+                    UNEXPECTED("Unexpected query type");
                     return false;
-                }
-                break;
-
-            case QUERY_TYPE_TIMESTAMP:
-                if (DataSize != sizeof(QueryDataTimestamp))
-                {
-                    LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataTimestamp), " (aka sizeof(QueryDataTimestamp)) is expected");
-                    return false;
-                }
-                break;
-
-            case QUERY_TYPE_PIPELINE_STATISTICS:
-                if (DataSize != sizeof(QueryDataPipelineStatistics))
-                {
-                    LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataPipelineStatistics), " (aka sizeof(QueryDataPipelineStatistics)) is expected");
-                    return false;
-                }
-                break;
-
-            default:
-                UNEXPECTED("Unexpected query type");
-                return false;
+            }
         }
 
         return true;

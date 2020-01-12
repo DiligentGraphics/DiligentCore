@@ -178,16 +178,28 @@ public:
 
     /// Gets the query data.
 
-    /// \param [in] pData    - pointer to the query data structure. Depending on the type of the query,
-    ///                        this must be the pointer to Diligent::QueryDataOcclusion, Diligent::QueryDataBinaryOcclusion,
-    ///                        Diligent::QueryDataTimestamp, or Diligent::QueryDataPipelineStatistics
-    ///                        structure.
-    /// \param [in] DataSize - Size of the data structure.
+    /// \param [in] pData          - Pointer to the query data structure. Depending on the type of the query,
+    ///                              this must be the pointer to Diligent::QueryDataOcclusion, Diligent::QueryDataBinaryOcclusion,
+    ///                              Diligent::QueryDataTimestamp, or Diligent::QueryDataPipelineStatistics
+    ///                              structure.
+    ///                              An application may provide nullptr to only check the query status.
+    /// \param [in] DataSize       - Size of the data structure.
+    /// \param [in] AutoInvalidate - Whether to invalidate the query if the results are available and release associated resources.
+    ///                              An application should typically always invalidate completed queries unless
+    ///                              it needs to retrieve the same data through GetData() multiple times.
+    ///                              A query will not be invalidated if pData is nullptr.
+    ///
     /// \return     true if the query data is available and false otherwise.
     ///
     /// \note       In Direct3D11 backend timestamp queries will only be available after FinishFrame is called
     ///             for the frame in which they were collected.
-    virtual bool GetData(void* pData, Uint32 DataSize) = 0;
+    ///
+    ///             If AutoInvalidate is set to true, and the data have been retrieved, an application
+    ///             must not call GetData() until it begins and ends the query again.
+    virtual bool GetData(void* pData, Uint32 DataSize, bool AutoInvalidate = true) = 0;
+
+    /// Invalidates the query and releases associated resources.
+    virtual void Invalidate() = 0;
 };
 
 } // namespace Diligent

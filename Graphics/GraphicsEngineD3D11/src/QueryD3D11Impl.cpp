@@ -74,7 +74,7 @@ QueryD3D11Impl::~QueryD3D11Impl()
 {
 }
 
-bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize)
+bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     if (!TQueryBase::CheckQueryDataPtr(pData, DataSize))
         return false;
@@ -91,7 +91,7 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize)
         {
             UINT64 NumSamples;
             DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &NumSamples, sizeof(NumSamples), 0) == S_OK;
-            if (DataReady)
+            if (DataReady && pData != nullptr)
             {
                 auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
                 QueryData.NumSamples = NumSamples;
@@ -103,7 +103,7 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize)
         {
             BOOL AnySamplePassed;
             DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &AnySamplePassed, sizeof(AnySamplePassed), 0) == S_OK;
-            if (DataReady)
+            if (DataReady && pData != nullptr)
             {
                 auto& QueryData           = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
                 QueryData.AnySamplePassed = AnySamplePassed != FALSE;
@@ -119,14 +119,14 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize)
 
             VERIFY_EXPR(m_DisjointQuery);
 
-            D3D11_QUERY_DATA_TIMESTAMP_DISJOINT DisjointQueryData;
-            DataReady = pd3d11Ctx->GetData(m_DisjointQuery->pd3d11Query, &DisjointQueryData, sizeof(DisjointQueryData), 0) == S_OK;
+            UINT64 Counter = 0;
+            DataReady      = pd3d11Ctx->GetData(m_pd3d11Query, &Counter, sizeof(Counter), 0) == S_OK;
 
-            if (DataReady)
+            if (DataReady && pData != nullptr)
             {
-                UINT64 Counter = 0;
+                D3D11_QUERY_DATA_TIMESTAMP_DISJOINT DisjointQueryData;
+                DataReady = pd3d11Ctx->GetData(m_DisjointQuery->pd3d11Query, &DisjointQueryData, sizeof(DisjointQueryData), 0) == S_OK;
 
-                DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &Counter, sizeof(Counter), 0) == S_OK;
                 if (DataReady)
                 {
                     auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
@@ -142,7 +142,7 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize)
         {
             D3D11_QUERY_DATA_PIPELINE_STATISTICS d3d11QueryData;
             DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &d3d11QueryData, sizeof(d3d11QueryData), 0) == S_OK;
-            if (DataReady)
+            if (DataReady && pData != nullptr)
             {
                 auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
 
@@ -163,6 +163,11 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize)
 
         default:
             UNEXPECTED("Unexpected query type");
+    }
+
+    if (DataReady && pData != nullptr && AutoInvalidate)
+    {
+        Invalidate();
     }
 
     return DataReady;

@@ -55,7 +55,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryGL, TQueryBase);
 
     /// Implementation of IQuery::GetData() in OpenGL backend.
-    virtual bool GetData(void* pData, Uint32 DataSize) override final;
+    virtual bool GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
 
 
     /// Implementation of IQueryGL::GetGlQueryHandle().

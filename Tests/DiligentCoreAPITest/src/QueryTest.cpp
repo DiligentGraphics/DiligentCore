@@ -197,6 +197,7 @@ protected:
             for (Uint32 j = 0; j < i + 1; ++j)
                 DrawQuad();
             pContext->EndQuery(Queries[i]);
+            Queries[i]->GetData(nullptr, 0);
         }
 
         pContext->WaitForIdle();
@@ -238,7 +239,9 @@ TEST_F(QueryTest, PipelineStats)
 
             QueryDataPipelineStatistics QueryData;
 
-            auto QueryReady = Queries[i]->GetData(&QueryData, sizeof(QueryData));
+            auto QueryReady = Queries[i]->GetData(nullptr, 0);
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            QueryReady = Queries[i]->GetData(&QueryData, sizeof(QueryData));
             ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
             if (!IsGL)
             {
@@ -279,7 +282,9 @@ TEST_F(QueryTest, Occlusion)
 
             QueryDataOcclusion QueryData;
 
-            auto QueryReady = Queries[i]->GetData(&QueryData, sizeof(QueryData));
+            auto QueryReady = Queries[i]->GetData(nullptr, 0);
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            QueryReady = Queries[i]->GetData(&QueryData, sizeof(QueryData));
             ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
             auto NumPixels = sm_TextureSize * sm_TextureSize / 16;
             EXPECT_GE(QueryData.NumSamples, NumPixels * DrawCounter);
@@ -310,7 +315,9 @@ TEST_F(QueryTest, BinaryOcclusion)
         {
             QueryDataBinaryOcclusion QueryData;
 
-            auto QueryReady = Queries[i]->GetData(&QueryData, sizeof(QueryData));
+            auto QueryReady = Queries[i]->GetData(nullptr, 0);
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            Queries[i]->GetData(&QueryData, sizeof(QueryData));
             ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
             EXPECT_TRUE(QueryData.AnySamplePassed);
         }
@@ -346,15 +353,22 @@ TEST_F(QueryTest, Timestamp)
     for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
     {
         pContext->EndQuery(pQueryStart);
+        pQueryStart->GetData(nullptr, 0);
         DrawQuad();
         pContext->EndQuery(pQueryEnd);
+        pQueryEnd->GetData(nullptr, 0);
 
         pContext->Flush();
         pContext->FinishFrame();
         pContext->WaitForIdle();
         QueryDataTimestamp QueryStartData, QueryEndData;
 
-        auto QueryReady = pQueryStart->GetData(&QueryStartData, sizeof(QueryStartData));
+        auto QueryReady = pQueryStart->GetData(nullptr, 0);
+        ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+        QueryReady = pQueryStart->GetData(&QueryStartData, sizeof(QueryStartData));
+        ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+
+        QueryReady = pQueryEnd->GetData(nullptr, 0);
         ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
         QueryReady = pQueryEnd->GetData(&QueryEndData, sizeof(QueryEndData));
         ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";

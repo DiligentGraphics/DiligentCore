@@ -55,7 +55,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryD3D12, TQueryBase);
 
     /// Implementation of IQuery::GetData().
-    virtual bool GetData(void* pData, Uint32 DataSize) override final;
+    virtual bool GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
 
     /// Implementation of IQueryD3D12::GetD3D12QueryHeap().
     virtual ID3D12QueryHeap* GetD3D12QueryHeap() override final

@@ -67,7 +67,7 @@ bool QueryD3D12Impl::OnEndQuery(IDeviceContext* pContext)
     return true;
 }
 
-bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize)
+bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     auto CmdQueueId          = m_pContext.RawPtr<DeviceContextD3D12Impl>()->GetCommandQueueId();
     auto CompletedFenceValue = m_pDevice->GetCompletedFenceValue(CmdQueueId);
@@ -81,8 +81,11 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize)
             {
                 UINT64 NumSamples;
                 QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &NumSamples, sizeof(NumSamples));
-                auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
-                QueryData.NumSamples = NumSamples;
+                if (pData != nullptr)
+                {
+                    auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
+                    QueryData.NumSamples = NumSamples;
+                }
             }
             break;
 
@@ -90,10 +93,13 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize)
             {
                 UINT64 AnySamplePassed;
                 QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &AnySamplePassed, sizeof(AnySamplePassed));
-                auto& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
-                // Binary occlusion queries write 64-bits per query. The least significant bit is either 0 or 1. The rest of the bits are 0.
-                // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata
-                QueryData.AnySamplePassed = AnySamplePassed != 0;
+                if (pData != nullptr)
+                {
+                    auto& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
+                    // Binary occlusion queries write 64-bits per query. The least significant bit is either 0 or 1. The rest of the bits are 0.
+                    // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#resolvequerydata
+                    QueryData.AnySamplePassed = AnySamplePassed != 0;
+                }
             }
             break;
 
@@ -101,16 +107,19 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize)
             {
                 UINT64 Counter;
                 QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &Counter, sizeof(Counter));
-                auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                QueryData.Counter = Counter;
+                if (pData != nullptr)
+                {
+                    auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    QueryData.Counter = Counter;
 
-                const auto& CmdQueue    = m_pDevice->GetCommandQueue(CmdQueueId);
-                auto*       pd3d12Queue = const_cast<ICommandQueueD3D12&>(CmdQueue).GetD3D12CommandQueue();
+                    const auto& CmdQueue    = m_pDevice->GetCommandQueue(CmdQueueId);
+                    auto*       pd3d12Queue = const_cast<ICommandQueueD3D12&>(CmdQueue).GetD3D12CommandQueue();
 
-                // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#timestamp-frequency
-                UINT64 TimestampFrequency = 0;
-                pd3d12Queue->GetTimestampFrequency(&TimestampFrequency);
-                QueryData.Frequency = TimestampFrequency;
+                    // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#timestamp-frequency
+                    UINT64 TimestampFrequency = 0;
+                    pd3d12Queue->GetTimestampFrequency(&TimestampFrequency);
+                    QueryData.Frequency = TimestampFrequency;
+                }
             }
             break;
 
@@ -118,24 +127,32 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize)
             {
                 D3D12_QUERY_DATA_PIPELINE_STATISTICS d3d12QueryData;
                 QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &d3d12QueryData, sizeof(d3d12QueryData));
-                auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
+                if (pData != nullptr)
+                {
+                    auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
 
-                QueryData.InputVertices       = d3d12QueryData.IAVertices;
-                QueryData.InputPrimitives     = d3d12QueryData.IAPrimitives;
-                QueryData.GSPrimitives        = d3d12QueryData.GSPrimitives;
-                QueryData.ClippingInvocations = d3d12QueryData.CInvocations;
-                QueryData.ClippingPrimitives  = d3d12QueryData.CPrimitives;
-                QueryData.VSInvocations       = d3d12QueryData.VSInvocations;
-                QueryData.GSInvocations       = d3d12QueryData.GSInvocations;
-                QueryData.PSInvocations       = d3d12QueryData.PSInvocations;
-                QueryData.HSInvocations       = d3d12QueryData.HSInvocations;
-                QueryData.DSInvocations       = d3d12QueryData.DSInvocations;
-                QueryData.CSInvocations       = d3d12QueryData.CSInvocations;
+                    QueryData.InputVertices       = d3d12QueryData.IAVertices;
+                    QueryData.InputPrimitives     = d3d12QueryData.IAPrimitives;
+                    QueryData.GSPrimitives        = d3d12QueryData.GSPrimitives;
+                    QueryData.ClippingInvocations = d3d12QueryData.CInvocations;
+                    QueryData.ClippingPrimitives  = d3d12QueryData.CPrimitives;
+                    QueryData.VSInvocations       = d3d12QueryData.VSInvocations;
+                    QueryData.GSInvocations       = d3d12QueryData.GSInvocations;
+                    QueryData.PSInvocations       = d3d12QueryData.PSInvocations;
+                    QueryData.HSInvocations       = d3d12QueryData.HSInvocations;
+                    QueryData.DSInvocations       = d3d12QueryData.DSInvocations;
+                    QueryData.CSInvocations       = d3d12QueryData.CSInvocations;
+                }
             }
             break;
 
             default:
                 UNEXPECTED("Unexpected query type");
+        }
+
+        if (pData != nullptr && AutoInvalidate)
+        {
+            Invalidate();
         }
 
         return true;

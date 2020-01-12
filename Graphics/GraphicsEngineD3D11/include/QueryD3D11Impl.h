@@ -56,7 +56,14 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryD3D11, TQueryBase);
 
     /// Implementation of IQuery::GetData().
-    virtual bool GetData(void* pData, Uint32 DataSize) override final;
+    virtual bool GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
+
+    /// Implementation of IQuery::Invalidate().
+    virtual void Invalidate() override final
+    {
+        m_DisjointQuery.reset();
+        TQueryBase::Invalidate();
+    }
 
     /// Implementation of IQueryD3D11::GetD3D11Query().
     virtual ID3D11Query* GetD3D11Query() override final
