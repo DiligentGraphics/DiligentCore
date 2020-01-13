@@ -50,7 +50,7 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryMtl, TQueryBase);
 
-    virtual bool GetData(void* pData, Uint32 DataSize) override final;
+    virtual bool GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
 
 private:
 };

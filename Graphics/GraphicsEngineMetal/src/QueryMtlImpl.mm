@@ -38,7 +38,7 @@ QueryMtlImpl :: ~QueryMtlImpl()
 {
 }
 
-bool QueryMtlImpl :: GetData(void* pData, Uint32 DataSize)
+bool QueryMtlImpl :: GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 {
     return false;
 }
