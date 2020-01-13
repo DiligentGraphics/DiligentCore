@@ -38,11 +38,11 @@ static constexpr INTERFACE_ID IID_CommandQueueD3D12 =
     {0xd89693ce, 0xf3f4, 0x44b5, {0xb7, 0xef, 0x24, 0x11, 0x5a, 0xad, 0x8, 0x5e}};
 
 /// Command queue interface
-class ICommandQueueD3D12 : public Diligent::IObject
+class ICommandQueueD3D12 : public IObject
 {
 public:
     /// Returns the fence value that will be signaled next time
-    virtual Uint64 GetNextFenceValue() = 0;
+    virtual Uint64 GetNextFenceValue() const = 0;
 
     /// Executes a given command list
 

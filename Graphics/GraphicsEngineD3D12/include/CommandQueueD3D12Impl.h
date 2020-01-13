@@ -49,7 +49,7 @@ public:
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     // Implementation of ICommandQueueD3D12::GetNextFenceValue().
-    virtual Uint64 GetNextFenceValue() override final { return m_NextFenceValue; }
+    virtual Uint64 GetNextFenceValue() const override final { return m_NextFenceValue; }
 
     // Implementation of ICommandQueueD3D12::Submit().
     virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList) override final;

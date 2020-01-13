@@ -40,11 +40,11 @@ static constexpr INTERFACE_ID IID_CommandQueueVk =
     {0x9fbf582f, 0x3069, 0x41b9, {0xac, 0x5, 0x34, 0x4d, 0x5a, 0xf5, 0xce, 0x8c}};
 
 /// Command queue interface
-class ICommandQueueVk : public Diligent::IObject
+class ICommandQueueVk : public IObject
 {
 public:
     /// Returns the fence value that will be signaled next time
-    virtual Uint64 GetNextFenceValue() = 0;
+    virtual Uint64 GetNextFenceValue() const = 0;
 
     /// Submits a given command buffer to the command queue
 

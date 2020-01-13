@@ -55,7 +55,7 @@ public:
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ICommandQueueVk::GetNextFenceValue().
-    virtual Uint64 GetNextFenceValue() override final { return m_NextFenceValue; }
+    virtual Uint64 GetNextFenceValue() const override final { return m_NextFenceValue; }
 
     /// Implementation of ICommandQueueVk::Submit().
     virtual Uint64 Submit(VkCommandBuffer cmdBuffer) override final;
