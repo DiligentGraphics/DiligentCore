@@ -1152,6 +1152,7 @@ void DeviceContextD3D11Impl::FinishFrame()
     if (m_ActiveDisjointQuery)
     {
         m_pd3d11DeviceContext->End(m_ActiveDisjointQuery->pd3d11Query);
+        m_ActiveDisjointQuery->IsEnded = true;
         m_ActiveDisjointQuery.reset();
     }
 }
@@ -1838,6 +1839,7 @@ void DeviceContextD3D11Impl::EndQuery(IQuery* pQuery)
             m_ActiveDisjointQuery = m_DisjointQueryPool.GetDisjointQuery(m_pDevice->GetD3D11Device());
             // Disjoint timestamp queries should only be invoked once per frame or less.
             m_pd3d11DeviceContext->Begin(m_ActiveDisjointQuery->pd3d11Query);
+            m_ActiveDisjointQuery->IsEnded = false;
         }
         pQueryD3D11Impl->SetDisjointQuery(m_ActiveDisjointQuery);
     }

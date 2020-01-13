@@ -133,6 +133,7 @@ void SwapChainD3D11Impl::Present(Uint32 SyncInterval)
 
     if (m_SwapChainDesc.IsPrimary)
     {
+        pImmediateCtxD3D11->FinishFrame();
         // Clear the state caches to release all outstanding objects
         // that are only kept alive by references in the cache
         // It is better to do this before calling Present() as D3D11

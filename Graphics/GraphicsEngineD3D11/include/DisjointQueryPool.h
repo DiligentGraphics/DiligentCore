@@ -42,6 +42,7 @@ public:
     {
         DisjointQueryPool&   Pool;
         CComPtr<ID3D11Query> pd3d11Query;
+        bool                 IsEnded = false;
 
         DisjointQueryWrapper(DisjointQueryPool&     _Pool,
                              CComPtr<ID3D11Query>&& _pd3d11Query) :

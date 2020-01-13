@@ -119,20 +119,24 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
             VERIFY_EXPR(m_DisjointQuery);
 
-            UINT64 Counter = 0;
-            DataReady      = pd3d11Ctx->GetData(m_pd3d11Query, &Counter, sizeof(Counter), 0) == S_OK;
-
-            if (DataReady && pData != nullptr)
+            DataReady = m_DisjointQuery->IsEnded;
+            if (DataReady)
             {
-                D3D11_QUERY_DATA_TIMESTAMP_DISJOINT DisjointQueryData;
-                DataReady = pd3d11Ctx->GetData(m_DisjointQuery->pd3d11Query, &DisjointQueryData, sizeof(DisjointQueryData), 0) == S_OK;
+                UINT64 Counter = 0;
+                DataReady      = pd3d11Ctx->GetData(m_pd3d11Query, &Counter, sizeof(Counter), 0) == S_OK;
 
-                if (DataReady)
+                if (DataReady && pData != nullptr)
                 {
-                    auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                    QueryData.Counter = Counter;
-                    // The timestamp returned by ID3D11DeviceContext::GetData for a timestamp query is only reliable if Disjoint is FALSE.
-                    QueryData.Frequency = DisjointQueryData.Disjoint ? 0 : DisjointQueryData.Frequency;
+                    D3D11_QUERY_DATA_TIMESTAMP_DISJOINT DisjointQueryData;
+                    DataReady = pd3d11Ctx->GetData(m_DisjointQuery->pd3d11Query, &DisjointQueryData, sizeof(DisjointQueryData), 0) == S_OK;
+
+                    if (DataReady)
+                    {
+                        auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                        QueryData.Counter = Counter;
+                        // The timestamp returned by ID3D11DeviceContext::GetData for a timestamp query is only reliable if Disjoint is FALSE.
+                        QueryData.Frequency = DisjointQueryData.Disjoint ? 0 : DisjointQueryData.Frequency;
+                    }
                 }
             }
         }

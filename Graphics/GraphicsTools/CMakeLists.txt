@@ -4,6 +4,7 @@ project(Diligent-GraphicsTools CXX)
 
 set(INTERFACE
     interface/CommonlyUsedStates.h
+    interface/DurationQueryHelper.h
     interface/GraphicsUtilities.h
     interface/pch.h
     interface/ScopedQueryHelper.h
@@ -14,6 +15,7 @@ set(INTERFACE
 )
 
 set(SOURCE 
+    src/DurationQueryHelper.cpp
     src/GraphicsUtilities.cpp
     src/ScopedQueryHelper.cpp
     src/ScreenCapture.cpp
