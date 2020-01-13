@@ -79,9 +79,11 @@ private:
     {
         VulkanUtilities::QueryPoolWrapper vkQueryPool;
 
-        std::deque<Uint32> AvailableQueries;
-        std::deque<Uint32> StaleQueries;
-        Uint32             PoolSize = 0;
+        std::deque<Uint32>  AvailableQueries;
+        std::vector<Uint32> StaleQueries;
+
+        Uint32 PoolSize            = 0;
+        Uint32 MaxAllocatedQueries = 0;
     };
 
     std::mutex                                      m_HeapMutex;

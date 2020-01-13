@@ -26,6 +26,7 @@
  */
 
 #include "pch.h"
+#include <algorithm>
 #include "QueryManagerVk.h"
 #include "RenderDeviceVkImpl.h"
 #include "GraphicsAccessories.h"
@@ -133,6 +134,8 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
 
 QueryManagerVk::~QueryManagerVk()
 {
+    std::stringstream QueryUsageSS;
+    QueryUsageSS << "Vulkan query manager peak usage:";
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
         auto& HeapInfo = m_Heaps[QueryType];
@@ -152,19 +155,26 @@ QueryManagerVk::~QueryManagerVk()
                                   " have not been returned to the query manager");
             }
         }
+        QueryUsageSS << std::endl
+                     << std::setw(30) << std::left << GetQueryTypeString(static_cast<QUERY_TYPE>(QueryType)) << ": "
+                     << std::setw(4) << std::right << HeapInfo.MaxAllocatedQueries
+                     << '/' << std::setw(4) << HeapInfo.PoolSize;
     }
+    LOG_INFO_MESSAGE(QueryUsageSS.str());
 }
 
 Uint32 QueryManagerVk::AllocateQuery(QUERY_TYPE Type)
 {
     std::lock_guard<std::mutex> Lock(m_HeapMutex);
 
-    Uint32 Index    = InvalidIndex;
-    auto&  HeapInfo = m_Heaps[Type];
-    if (!HeapInfo.AvailableQueries.empty())
+    Uint32 Index            = InvalidIndex;
+    auto&  HeapInfo         = m_Heaps[Type];
+    auto&  AvailableQueries = HeapInfo.AvailableQueries;
+    if (!AvailableQueries.empty())
     {
-        Index = HeapInfo.AvailableQueries.front();
-        HeapInfo.AvailableQueries.pop_front();
+        Index = HeapInfo.AvailableQueries.back();
+        AvailableQueries.pop_back();
+        HeapInfo.MaxAllocatedQueries = std::max(HeapInfo.MaxAllocatedQueries, HeapInfo.PoolSize - static_cast<Uint32>(AvailableQueries.size()));
     }
 
     return Index;
@@ -199,7 +209,7 @@ Uint32 QueryManagerVk::ResetStaleQueries(VulkanUtilities::VulkanCommandBuffer& C
         for (auto& StaleQuery : HeapInfo.StaleQueries)
         {
             CmdBuff.ResetQueryPool(HeapInfo.vkQueryPool, StaleQuery, 1);
-            HeapInfo.AvailableQueries.push_back(StaleQuery);
+            HeapInfo.AvailableQueries.push_front(StaleQuery);
             ++NumQueriesReset;
         }
         HeapInfo.StaleQueries.clear();

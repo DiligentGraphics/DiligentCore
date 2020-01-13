@@ -26,6 +26,8 @@
  */
 
 #include "pch.h"
+#include <algorithm>
+
 #include "QueryManagerD3D12.h"
 #include "D3D12TypeConversions.h"
 #include "GraphicsAccessories.h"
@@ -129,6 +131,9 @@ QueryManagerD3D12::QueryManagerD3D12(ID3D12Device* pd3d12Device,
 
 QueryManagerD3D12::~QueryManagerD3D12()
 {
+    std::stringstream QueryUsageSS;
+    QueryUsageSS << "D3D12 query manager peak usage:";
+
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
         auto& HeapInfo = m_Heaps[QueryType];
@@ -147,19 +152,26 @@ QueryManagerD3D12::~QueryManagerD3D12()
                                   " have not been returned to the query manager");
             }
         }
+        QueryUsageSS << std::endl
+                     << std::setw(30) << std::left << GetQueryTypeString(static_cast<QUERY_TYPE>(QueryType)) << ": "
+                     << std::setw(4) << std::right << HeapInfo.MaxAllocatedQueries
+                     << '/' << std::setw(4) << HeapInfo.HeapSize;
     }
+    LOG_INFO_MESSAGE(QueryUsageSS.str());
 }
 
 Uint32 QueryManagerD3D12::AllocateQuery(QUERY_TYPE Type)
 {
     std::lock_guard<std::mutex> Lock(m_HeapMutex);
 
-    Uint32 Index    = InvalidIndex;
-    auto&  HeapInfo = m_Heaps[Type];
-    if (!HeapInfo.AvailableQueries.empty())
+    Uint32 Index            = InvalidIndex;
+    auto&  HeapInfo         = m_Heaps[Type];
+    auto&  AvailableQueries = HeapInfo.AvailableQueries;
+    if (!AvailableQueries.empty())
     {
-        Index = HeapInfo.AvailableQueries.front();
-        HeapInfo.AvailableQueries.pop_front();
+        Index = AvailableQueries.front();
+        AvailableQueries.pop_front();
+        HeapInfo.MaxAllocatedQueries = std::max(HeapInfo.MaxAllocatedQueries, HeapInfo.HeapSize - static_cast<Uint32>(AvailableQueries.size()));
     }
 
     return Index;

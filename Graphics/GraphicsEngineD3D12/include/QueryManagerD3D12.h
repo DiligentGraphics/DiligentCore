@@ -75,7 +75,9 @@ private:
         CComPtr<ID3D12QueryHeap> pd3d12QueryHeap;
         std::deque<Uint32>       AvailableQueries;
         std::vector<Uint32>      ResolveBufferOffsets;
-        Uint32                   HeapSize = 0;
+
+        Uint32 HeapSize            = 0;
+        Uint32 MaxAllocatedQueries = 0;
     };
 
     std::mutex                                      m_HeapMutex;
