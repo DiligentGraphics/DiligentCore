@@ -51,7 +51,7 @@ public:
     DurationQueryHelper           (const DurationQueryHelper&) = delete;
     DurationQueryHelper& operator=(const DurationQueryHelper&) = delete;
     DurationQueryHelper           (DurationQueryHelper&&)      = default;
-    DurationQueryHelper& operator=(DurationQueryHelper&&)      = default;
+    DurationQueryHelper& operator=(DurationQueryHelper&&)      = delete;
     // clang-format on
 
 

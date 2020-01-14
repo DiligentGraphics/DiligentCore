@@ -52,7 +52,7 @@ public:
     ScopedQueryHelper           (const ScopedQueryHelper&) = delete;
     ScopedQueryHelper& operator=(const ScopedQueryHelper&) = delete;
     ScopedQueryHelper           (ScopedQueryHelper&&)      = default;
-    ScopedQueryHelper& operator=(ScopedQueryHelper&&)      = default;
+    ScopedQueryHelper& operator=(ScopedQueryHelper&&)      = delete;
     // clang-format on
 
 
