@@ -27,6 +27,7 @@
 
 #include <sstream>
 #include <vector>
+#include <thread>
 
 #include "TestingEnvironment.h"
 
@@ -201,6 +202,22 @@ protected:
         }
 
         pContext->WaitForIdle();
+        if (pDevice->GetDeviceCaps().IsGLDevice())
+        {
+            // glFinish() is not a guarantee that queries will become available
+            for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
+            {
+                WaitForQuery(Queries[i]);
+            }
+        }
+    }
+
+    static void WaitForQuery(IQuery* pQuery)
+    {
+        while (!pQuery->GetData(nullptr, 0))
+        {
+            std::this_thread::yield();
+        }
     }
 
     static constexpr Uint32 sm_TextureSize = 512;
@@ -361,6 +378,13 @@ TEST_F(QueryTest, Timestamp)
         pContext->Flush();
         pContext->FinishFrame();
         pContext->WaitForIdle();
+        if (pDevice->GetDeviceCaps().IsGLDevice())
+        {
+            // glFinish() is not a guarantee that queries will become available
+            WaitForQuery(pQueryStart);
+            WaitForQuery(pQueryEnd);
+        }
+
         QueryDataTimestamp QueryStartData, QueryEndData;
 
         auto QueryReady = pQueryStart->GetData(nullptr, 0);
