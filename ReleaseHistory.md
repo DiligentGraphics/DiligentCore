@@ -4,6 +4,7 @@
 
 ### API Changes
 
+* Added Queries (API Version 240051)
 * Added `AdapterType` member to `DeviceCaps` struct (API Version 240048)
 * Added `IDeviceContextGL::SetSwapChain` and `IRenderDeviceGL::CreateDummyTexture` methods (API Version 240047)
 * Removed `IDeviceContext::SetSwapChain` method (API Version 240046)
