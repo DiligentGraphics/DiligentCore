@@ -291,6 +291,7 @@ else()
 endif()
 
 file(RELATIVE_PATH DILIGENT_CORE_DIR "${CMAKE_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
+SET(DILIGENT_CORE_DIR ${DILIGENT_CORE_DIR} CACHE INTERNAL "Diligent Core installation directory")
 
 SET(DILIGENT_CORE_INSTALL_LIBS_LIST "" CACHE INTERNAL "Core libraries installation list")
 # CMAKE_INSTALL_PREFIX must be absolute otherwise rpath won't work
