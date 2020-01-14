@@ -204,7 +204,8 @@ protected:
         pContext->WaitForIdle();
         if (pDevice->GetDeviceCaps().IsGLDevice())
         {
-            // glFinish() is not a guarantee that queries will become available
+            // glFinish() is not a guarantee that queries will become available.
+            // Even using glFenceSync + glClientWaitSync does not help.
             for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
             {
                 WaitForQuery(Queries[i]);
@@ -381,6 +382,7 @@ TEST_F(QueryTest, Timestamp)
         if (pDevice->GetDeviceCaps().IsGLDevice())
         {
             // glFinish() is not a guarantee that queries will become available
+            // Even using glFenceSync + glClientWaitSync does not help.
             WaitForQuery(pQueryStart);
             WaitForQuery(pQueryEnd);
         }

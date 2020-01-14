@@ -1058,6 +1058,7 @@ void DeviceContextGLImpl::WaitForFence(IFence* pFence, Uint64 Value, bool FlushC
 void DeviceContextGLImpl::WaitForIdle()
 {
     VERIFY(!m_bIsDeferred, "Only immediate contexts can be idled");
+    Flush();
     glFinish();
 }
 
