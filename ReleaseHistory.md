@@ -2,6 +2,10 @@
 
 ## v2.4.d
 
+### General
+
+* Implemented automated unit testing and format validation
+
 ### API Changes
 
 * Added Queries (API Version 240051)
