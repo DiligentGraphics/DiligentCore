@@ -219,6 +219,12 @@ public:
     T*       operator->() noexcept { return m_pObject; }
     const T* operator->() const noexcept { return m_pObject; }
 
+    template <typename InterfaceType>
+    RefCntAutoPtr<InterfaceType> Cast(const INTERFACE_ID& IID)
+    {
+        return RefCntAutoPtr<InterfaceType>{m_pObject, IID};
+    }
+
 private:
     // Note that the DoublePtrHelper is a private class, and can be created only by RefCntWeakPtr
     // Thus if no special effort is made, the lifetime of the instances of this class cannot be
