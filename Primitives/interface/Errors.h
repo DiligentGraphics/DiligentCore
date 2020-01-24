@@ -49,7 +49,7 @@ inline void ThrowIf<true>(std::string&& msg)
 }
 
 template <bool bThrowException, typename... ArgsType>
-void LogError(const char* Function, const char* FullFilePath, int Line, const ArgsType&... Args)
+void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int Line, const ArgsType&... Args)
 {
     std::string FileName(FullFilePath);
 
@@ -59,12 +59,12 @@ void LogError(const char* Function, const char* FullFilePath, int Line, const Ar
     auto Msg = FormatString(Args...);
     if (DebugMessageCallback != nullptr)
     {
-        DebugMessageCallback(bThrowException ? DebugMessageSeverity::FatalError : DebugMessageSeverity::Error, Msg.c_str(), Function, FileName.c_str(), Line);
+        DebugMessageCallback(IsFatal ? DebugMessageSeverity::FatalError : DebugMessageSeverity::Error, Msg.c_str(), Function, FileName.c_str(), Line);
     }
     else
     {
         // No callback set - output to cerr
-        std::cerr << "Diligent Engine: " << (bThrowException ? "Fatal Error" : "Error") << " in " << Function << "() (" << FileName << ", " << Line << "): " << Msg << '\n';
+        std::cerr << "Diligent Engine: " << (IsFatal ? "Fatal Error" : "Error") << " in " << Function << "() (" << FileName << ", " << Line << "): " << Msg << '\n';
     }
     ThrowIf<bThrowException>(std::move(Msg));
 }
@@ -73,12 +73,18 @@ void LogError(const char* Function, const char* FullFilePath, int Line, const Ar
 
 
 
-#define LOG_ERROR(...)                                                              \
-    do                                                                              \
-    {                                                                               \
-        Diligent::LogError<false>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
+#define LOG_ERROR(...)                                                                                 \
+    do                                                                                                 \
+    {                                                                                                  \
+        Diligent::LogError<false>(/*IsFatal=*/false, __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
     } while (false)
 
+
+#define LOG_FATAL_ERROR(...)                                                                          \
+    do                                                                                                \
+    {                                                                                                 \
+        Diligent::LogError<false>(/*IsFatal=*/true, __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
+    } while (false)
 
 #define LOG_ERROR_ONCE(...)             \
     do                                  \
@@ -92,10 +98,16 @@ void LogError(const char* Function, const char* FullFilePath, int Line, const Ar
     } while (false)
 
 
-#define LOG_ERROR_AND_THROW(...)                                                   \
-    do                                                                             \
-    {                                                                              \
-        Diligent::LogError<true>(__FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
+#define LOG_ERROR_AND_THROW(...)                                                                      \
+    do                                                                                                \
+    {                                                                                                 \
+        Diligent::LogError<true>(/*IsFatal=*/false, __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
+    } while (false)
+
+#define LOG_FATAL_ERROR_AND_THROW(...)                                                               \
+    do                                                                                               \
+    {                                                                                                \
+        Diligent::LogError<true>(/*IsFatal=*/true, __FUNCTION__, __FILE__, __LINE__, ##__VA_ARGS__); \
     } while (false)
 
 
@@ -106,9 +118,10 @@ void LogError(const char* Function, const char* FullFilePath, int Line, const Ar
         if (Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback(Severity, _msg.c_str(), nullptr, nullptr, 0); \
     } while (false)
 
-#define LOG_ERROR_MESSAGE(...)   LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
-#define LOG_WARNING_MESSAGE(...) LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define LOG_INFO_MESSAGE(...)    LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
+#define LOG_FATAL_ERROR_MESSAGE(...) LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::FatalError, ##__VA_ARGS__)
+#define LOG_ERROR_MESSAGE(...)       LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE(...)     LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE(...)        LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
 
 
 #define LOG_DEBUG_MESSAGE_ONCE(Severity, ...)           \
@@ -122,9 +135,10 @@ void LogError(const char* Function, const char* FullFilePath, int Line, const Ar
         }                                               \
     } while (false)
 
-#define LOG_ERROR_MESSAGE_ONCE(...)   LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
-#define LOG_WARNING_MESSAGE_ONCE(...) LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define LOG_INFO_MESSAGE_ONCE(...)    LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
+#define LOG_FATAL_ERROR_MESSAGE_ONCE(...) LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::FatalError, ##__VA_ARGS__)
+#define LOG_ERROR_MESSAGE_ONCE(...)       LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE_ONCE(...)     LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE_ONCE(...)        LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
 
 
 #define CHECK(Expr, Severity, ...)                      \
@@ -136,9 +150,10 @@ void LogError(const char* Function, const char* FullFilePath, int Line, const Ar
         }                                               \
     } while (false)
 
-#define CHECK_ERR(Expr, ...)  CHECK(Expr, Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
-#define CHECK_WARN(Expr, ...) CHECK(Expr, Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define CHECK_INFO(Expr, ...) CHECK(Expr, Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
+#define CHECK_FATAL_ERR(Expr, ...) CHECK(Expr, Diligent::DebugMessageSeverity::FatalError, ##__VA_ARGS__)
+#define CHECK_ERR(Expr, ...)       CHECK(Expr, Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
+#define CHECK_WARN(Expr, ...)      CHECK(Expr, Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
+#define CHECK_INFO(Expr, ...)      CHECK(Expr, Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
 
 #define CHECK_THROW(Expr, ...)                  \
     do                                          \

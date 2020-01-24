@@ -122,23 +122,23 @@
 #include "RenderDevice.h"
 #include "BaseInterfacesGL.h"
 
-#define CHECK_GL_ERROR(...)                                                                           \
-    do                                                                                                \
-    {                                                                                                 \
-        auto err = glGetError();                                                                      \
-        if (err != GL_NO_ERROR)                                                                       \
-        {                                                                                             \
-            LogError<false>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
-            UNEXPECTED("Error");                                                                      \
-        }                                                                                             \
+#define CHECK_GL_ERROR(...)                                                                                              \
+    do                                                                                                                   \
+    {                                                                                                                    \
+        auto err = glGetError();                                                                                         \
+        if (err != GL_NO_ERROR)                                                                                          \
+        {                                                                                                                \
+            LogError<false>(/*IsFatal=*/false, __FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
+            UNEXPECTED("Error");                                                                                         \
+        }                                                                                                                \
     } while (false)
 
-#define CHECK_GL_ERROR_AND_THROW(...)                                                                \
-    do                                                                                               \
-    {                                                                                                \
-        auto err = glGetError();                                                                     \
-        if (err != GL_NO_ERROR)                                                                      \
-            LogError<true>(__FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
+#define CHECK_GL_ERROR_AND_THROW(...)                                                                                   \
+    do                                                                                                                  \
+    {                                                                                                                   \
+        auto err = glGetError();                                                                                        \
+        if (err != GL_NO_ERROR)                                                                                         \
+            LogError<true>(/*IsFatal=*/false, __FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
     } while (false)
 
 #ifdef DEVELOPMENT
