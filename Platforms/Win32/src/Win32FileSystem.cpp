@@ -179,7 +179,7 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
                 if (!((ffd.cFileName[0] == '.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == '.' && ffd.cFileName[1] == '.')))
                 {
                     auto SubDirName = Directory + ffd.cFileName;
-                    ClearDirectory(SubDirName.c_str());
+                    ClearDirectory(SubDirName.c_str(), Recursive);
                     RemoveDirectoryA(SubDirName.c_str());
                 }
             }
