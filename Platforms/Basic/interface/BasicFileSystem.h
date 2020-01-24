@@ -101,6 +101,8 @@ public:
                               Diligent::String*       Path,
                               Diligent::String*       Name);
 
+    static bool IsPathAbsolute(const Diligent::Char* strPath);
+
 protected:
     static Diligent::String m_strWorkingDirectory;
 };

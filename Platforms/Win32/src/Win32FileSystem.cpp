@@ -131,9 +131,12 @@ static bool CreateDirectoryImpl(const Char* strPath)
     // Test all parent directories
     std::string            DirectoryPath = strPath;
     std::string::size_type SlashPos      = std::wstring::npos;
+    const auto             SlashSym      = WindowsFileSystem::GetSlashSymbol();
+    WindowsFileSystem::CorrectSlashes(DirectoryPath, SlashSym);
+
     do
     {
-        SlashPos = DirectoryPath.find('\\', (SlashPos != std::string::npos) ? SlashPos + 1 : 0);
+        SlashPos = DirectoryPath.find(SlashSym, (SlashPos != std::string::npos) ? SlashPos + 1 : 0);
 
         std::string ParentDir = (SlashPos != std::wstring::npos) ? DirectoryPath.substr(0, SlashPos) : DirectoryPath;
         if (!WindowsFileSystem::PathExists(ParentDir.c_str()))
@@ -147,7 +150,7 @@ static bool CreateDirectoryImpl(const Char* strPath)
     return true;
 }
 
-void WindowsFileSystem::ClearDirectory(const Char* strPath)
+void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
 {
     WIN32_FIND_DATAA ffd;
     HANDLE           hFind = INVALID_HANDLE_VALUE;
@@ -168,12 +171,27 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath)
     // List all the files in the directory
     do
     {
-        if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+        {
+            if (Recursive)
+            {
+                // Skip '.' and anything that begins with '..'
+                if (!((ffd.cFileName[0] == '.' && ffd.cFileName[1] == 0) || (ffd.cFileName[0] == '.' && ffd.cFileName[1] == '.')))
+                {
+                    auto SubDirName = Directory + ffd.cFileName;
+                    ClearDirectory(SubDirName.c_str());
+                    RemoveDirectoryA(SubDirName.c_str());
+                }
+            }
+        }
+        else
         {
             auto FileName = Directory + ffd.cFileName;
             DeleteFileImpl(FileName.c_str());
         }
     } while (FindNextFileA(hFind, &ffd) != 0);
+
+    FindClose(hFind);
 }
 
 
@@ -181,6 +199,13 @@ static void DeleteFileImpl(const Char* strPath)
 {
     DeleteFileA(strPath);
 }
+
+void WindowsFileSystem::DeleteDirectory(const Diligent::Char* strPath)
+{
+    ClearDirectory(strPath, true);
+    RemoveDirectoryA(strPath);
+}
+
 
 bool WindowsFileSystem::PathExists(const Char* strPath)
 {

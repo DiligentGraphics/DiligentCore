@@ -127,3 +127,17 @@ void BasicFileSystem::SplitFilePath(const Diligent::String& FullName,
             *Name = FullName;
     }
 }
+
+bool BasicFileSystem::IsPathAbsolute(const Diligent::Char* strPath)
+{
+    if (strPath == nullptr || strPath[0] == 0)
+        return false;
+
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
+    return strPath[1] == ':' && (strPath[2] == '\\' || strPath[2] == '/');
+#elif PLATFORM_LINUX || PLATFORM_MACOS || PLATFORM_IOS || PLATFORM_ANDROID
+    return strPath[0] == '/';
+#else
+#    error Unknown platform.
+#endif
+}
