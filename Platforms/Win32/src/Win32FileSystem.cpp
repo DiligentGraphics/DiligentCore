@@ -165,7 +165,8 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
 
     if (INVALID_HANDLE_VALUE == hFind)
     {
-        LOG_ERROR_AND_THROW("FindFirstFile");
+        LOG_ERROR_MESSAGE("FindFirstFile failed with error code ", GetLastError());
+        return;
     }
 
     // List all the files in the directory
@@ -180,7 +181,11 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
                 {
                     auto SubDirName = Directory + ffd.cFileName;
                     ClearDirectory(SubDirName.c_str(), Recursive);
-                    RemoveDirectoryA(SubDirName.c_str());
+
+                    if (RemoveDirectoryA(SubDirName.c_str()) == FALSE)
+                    {
+                        LOG_ERROR_MESSAGE("Failed to remove directory '", SubDirName, "'. Error code: ", GetLastError());
+                    }
                 }
             }
         }
@@ -197,13 +202,25 @@ void WindowsFileSystem::ClearDirectory(const Char* strPath, bool Recursive)
 
 static void DeleteFileImpl(const Char* strPath)
 {
-    DeleteFileA(strPath);
+    if (SetFileAttributesA(strPath, FILE_ATTRIBUTE_NORMAL) == FALSE)
+    {
+        LOG_WARNING_MESSAGE("Failed to set FILE_ATTRIBUTE_NORMAL for file '", strPath, "'. Error code: ", GetLastError());
+    }
+
+    if (DeleteFileA(strPath) == FALSE)
+    {
+        LOG_ERROR_MESSAGE("Failed to delete file '", strPath, "'. Error code: ", GetLastError());
+    }
 }
 
 void WindowsFileSystem::DeleteDirectory(const Diligent::Char* strPath)
 {
     ClearDirectory(strPath, true);
-    RemoveDirectoryA(strPath);
+
+    if (RemoveDirectoryA(strPath) == FALSE)
+    {
+        LOG_ERROR_MESSAGE("Failed to remove directory '", strPath, "'. Error code: ", GetLastError());
+    }
 }
 
 
