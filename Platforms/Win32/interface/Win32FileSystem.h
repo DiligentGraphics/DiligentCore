@@ -52,6 +52,7 @@ public:
     static void ClearDirectory(const Diligent::Char* strPath, bool Recursive = false);
     static void DeleteFile(const Diligent::Char* strPath);
     static void DeleteDirectory(const Diligent::Char* strPath);
+    static bool IsDirectory(const Diligent::Char* strPath);
 
     static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
 

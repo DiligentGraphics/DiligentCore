@@ -288,3 +288,14 @@ std::string WindowsFileSystem::OpenFileDialog(const char* Title, const char* Fil
     }
     return FileName;
 }
+
+bool WindowsFileSystem::IsDirectory(const Diligent::Char* strPath)
+{
+    if (!PathExists(strPath))
+    {
+        LOG_WARNING_MESSAGE("Path '", strPath, "' does not exist. Use PathExists function to check if path exists.");
+        return false;
+    }
+
+    return (GetFileAttributesA(strPath) & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
