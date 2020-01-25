@@ -93,7 +93,7 @@ namespace Diligent
         if( glGetError() != GL_NO_ERROR )
             LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-        DeviceCaps.DevType = DeviceType::OpenGL;
+        DeviceCaps.DevType = RENDER_DEVICE_TYPE_GL;
         DeviceCaps.MajorVersion = MajorVersion;
         DeviceCaps.MinorVersion = MinorVersion;
     }
