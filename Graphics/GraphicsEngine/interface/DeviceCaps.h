@@ -34,218 +34,221 @@
 
 #include "GraphicsTypes.h"
 
-namespace Diligent
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+/// Device type
+enum RENDER_DEVICE_TYPE
 {
-    /// Device type
-    enum class DeviceType : Int32
-    {
-        Undefined = 0,  ///< Undefined device
-        D3D11,          ///< D3D11 device
-        D3D12,          ///< D3D12 device
-        OpenGL,         ///< OpenGL device 
-        OpenGLES,       ///< OpenGLES device
-        Vulkan,         ///< Vulkan device
-        Metal           ///< Metal device (not yet implemented)
-    };
+    RENDER_DEVICE_TYPE_UNDEFINED = 0,  ///< Undefined device
+    RENDER_DEVICE_TYPE_D3D11,          ///< D3D11 device
+    RENDER_DEVICE_TYPE_D3D12,          ///< D3D12 device
+    RENDER_DEVICE_TYPE_GL,             ///< OpenGL device 
+    RENDER_DEVICE_TYPE_GLES,           ///< OpenGLES device
+    RENDER_DEVICE_TYPE_VULKAN,         ///< Vulkan device
+    RENDER_DEVICE_TYPE_METAL           ///< Metal device (not yet implemented)
+};
 
-    /// Texture sampler capabilities
-    struct SamplerCaps
-    {
-        /// Indicates if device supports border texture addressing mode
-        Bool BorderSamplingModeSupported   = False;
+/// Texture sampler capabilities
+struct SamplerCaps
+{
+    /// Indicates if device supports border texture addressing mode
+    Bool BorderSamplingModeSupported   DEFAULT_INITIALIZER(False);
 
-        /// Indicates if device supports anisotrpoic filtering
-        Bool AnisotropicFilteringSupported = False;
+    /// Indicates if device supports anisotrpoic filtering
+    Bool AnisotropicFilteringSupported DEFAULT_INITIALIZER(False);
 
-        /// Indicates if device supports MIP load bias
-        Bool LODBiasSupported              = False;
-    };
+    /// Indicates if device supports MIP load bias
+    Bool LODBiasSupported              DEFAULT_INITIALIZER(False);
+};
 
-    /// Texture capabilities
-    struct TextureCaps
-    {
-        /// Maximum dimension (width) of a 1D texture, or 0 if 1D textures are not supported.
-        Uint32 MaxTexture1DDimension   = 0;
+/// Texture capabilities
+struct TextureCaps
+{
+    /// Maximum dimension (width) of a 1D texture, or 0 if 1D textures are not supported.
+    Uint32 MaxTexture1DDimension   DEFAULT_INITIALIZER(0);
 
-        /// Maximum number of slices in a 1D texture array, or 0 if 1D texture arrays are not supported.
-        Uint32 MaxTexture1DArraySlices = 0;
+    /// Maximum number of slices in a 1D texture array, or 0 if 1D texture arrays are not supported.
+    Uint32 MaxTexture1DArraySlices DEFAULT_INITIALIZER(0);
 
-        /// Maximum dimension (width or height) of a 2D texture.
-        Uint32 MaxTexture2DDimension   = 0;
+    /// Maximum dimension (width or height) of a 2D texture.
+    Uint32 MaxTexture2DDimension   DEFAULT_INITIALIZER(0);
 
-        /// Maximum number of slices in a 2D texture array, or 0 if 2D texture arrays are not supported.
-        Uint32 MaxTexture2DArraySlices = 0;
+    /// Maximum number of slices in a 2D texture array, or 0 if 2D texture arrays are not supported.
+    Uint32 MaxTexture2DArraySlices DEFAULT_INITIALIZER(0);
 
-        /// Maximum dimension (width, height, or depth) of a 3D texture, or 0 if 3D textures are not supported.
-        Uint32 MaxTexture3DDimension   = 0;
+    /// Maximum dimension (width, height, or depth) of a 3D texture, or 0 if 3D textures are not supported.
+    Uint32 MaxTexture3DDimension   DEFAULT_INITIALIZER(0);
 
-        /// Maximum dimension (width or height) of a cubemap face, or 0 if cubemap textures are not supported.
-        Uint32 MaxTextureCubeDimension = 0;
+    /// Maximum dimension (width or height) of a cubemap face, or 0 if cubemap textures are not supported.
+    Uint32 MaxTextureCubeDimension DEFAULT_INITIALIZER(0);
 
-        /// Indicates if device supports 2D multisampled textures
-        Bool Texture2DMSSupported      = False;
+    /// Indicates if device supports 2D multisampled textures
+    Bool Texture2DMSSupported      DEFAULT_INITIALIZER(False);
 
-        /// Indicates if device supports 2D multisampled texture arrays
-        Bool Texture2DMSArraySupported = False;
+    /// Indicates if device supports 2D multisampled texture arrays
+    Bool Texture2DMSArraySupported DEFAULT_INITIALIZER(False);
 
-        /// Indicates if device supports texture views
-        Bool TextureViewSupported      = False;
+    /// Indicates if device supports texture views
+    Bool TextureViewSupported      DEFAULT_INITIALIZER(False);
 
-        /// Indicates if device supports cubemap arrays
-        Bool CubemapArraysSupported    = False;
-    };
+    /// Indicates if device supports cubemap arrays
+    Bool CubemapArraysSupported    DEFAULT_INITIALIZER(False);
+};
     
-    /// Describes supported device features
-    struct DeviceFeatures
+/// Describes supported device features
+struct DeviceFeatures
+{
+    /// Indicates if device supports separable programs
+    Bool SeparablePrograms             DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports indirect draw commands
+    Bool IndirectRendering             DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports wireframe fill mode
+    Bool WireframeFill                 DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports multithreaded resource creation
+    Bool MultithreadedResourceCreation DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports compute shaders
+    Bool ComputeShaders                DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports geometry shaders
+    Bool GeometryShaders               DEFAULT_INITIALIZER(False);
+        
+    /// Indicates if device supports tessellation
+    Bool Tessellation                  DEFAULT_INITIALIZER(False);
+        
+    /// Indicates if device supports bindless resources
+    Bool BindlessResources             DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports occlusion queries (see Diligent::QUERY_TYPE_OCCLUSION).
+    Bool OcclusionQueries              DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports binary occlusion queries (see Diligent::QUERY_TYPE_BINARY_OCCLUSION).
+    Bool BinaryOcclusionQueries        DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports timestamp queries (see Diligent::QUERY_TYPE_TIMESTAMP).
+    Bool TimestampQueries              DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports pipeline statistics queries (see Diligent::QUERY_TYPE_PIPELINE_STATISTICS).
+    Bool PipelineStatisticsQueries     DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports depth bias clamping
+    Bool DepthBiasClamp                DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports depth clamping
+    Bool DepthClamp                    DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports depth clamping
+    Bool IndependentBlend              DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports dual-source blend
+    Bool DualSourceBlend               DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports multiviewport
+    Bool MultiViewport                 DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports all BC-compressed formats
+    Bool TextureCompressionBC          DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports writes to UAVs as well as atomic operations in vertex,
+    /// tessellation, and geometry shader stages.
+    Bool VertexPipelineUAVWritesAndAtomics DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports writes to UAVs as well as atomic operations in pixel
+    /// shader stage.
+    Bool PixelUAVWritesAndAtomics          DEFAULT_INITIALIZER(False);
+
+    /// Specifies whether all the extended UAV texture formats are available in shader code.
+    Bool TextureUAVExtendedFormats         DEFAULT_INITIALIZER(False);
+};
+
+/// Device capabilities
+struct DeviceCaps
+{
+    /// Device type. See Diligent::DeviceType.
+    enum RENDER_DEVICE_TYPE DevType DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_UNDEFINED);
+
+    /// Major revision of the graphics API supported by the graphics adapter.
+    /// Note that this value indicates the maximum supported feature level, so,
+    /// for example, if the device type is D3D11, this value will be 10 when 
+    /// the maximum supported Direct3D feature level of the graphics adapter is 10.0.
+    Int32 MajorVersion DEFAULT_INITIALIZER(0);
+
+    /// Minor revision of the graphics API supported by the graphics adapter.
+    /// Similar to MajorVersion, this value indicates the maximum supported feature level.
+    Int32 MinorVersion DEFAULT_INITIALIZER(0);
+
+    /// Adapter type. See Diligent::ADAPTER_TYPE.
+    ADAPTER_TYPE AdaterType DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
+
+    /// Texture sampling capabilities. See Diligent::SamplerCaps.
+    struct SamplerCaps SamCaps;
+
+    /// Texture capabilities. See Diligent::TextureCaps.
+    struct TextureCaps TexCaps;
+
+    /// Device features. See Diligent::DeviceFeatures.
+    struct DeviceFeatures Features;
+
+#if DILIGENT_CPP_INTERFACE
+    bool IsGLDevice()const
     {
-        /// Indicates if device supports separable programs
-        Bool SeparablePrograms             = False;
+        return DevType == RENDER_DEVICE_TYPE_GL || DevType == RENDER_DEVICE_TYPE_GLES;
+    }
+    bool IsD3DDevice()const
+    {
+        return DevType == RENDER_DEVICE_TYPE_D3D11 || DevType == RENDER_DEVICE_TYPE_D3D12;
+    }
+    bool IsVulkanDevice()const
+    {
+        return DevType == RENDER_DEVICE_TYPE_VULKAN;
+    }
 
-        /// Indicates if device supports indirect draw commands
-        Bool IndirectRendering             = False;
+    struct NDCAttribs
+    {
+        const float MinZ;          // Minimum z value of normalized device coordinate space
+        const float ZtoDepthScale; // NDC z to depth scale
+        const float YtoVScale;     // Scale to transform NDC y coordinate to texture V coordinate
 
-        /// Indicates if device supports wireframe fill mode
-        Bool WireframeFill                 = False;
-
-        /// Indicates if device supports multithreaded resource creation
-        Bool MultithreadedResourceCreation = False;
-
-        /// Indicates if device supports compute shaders
-        Bool ComputeShaders                = False;
-
-        /// Indicates if device supports geometry shaders
-        Bool GeometryShaders               = False;
-        
-        /// Indicates if device supports tessellation
-        Bool Tessellation                  = False;
-        
-        /// Indicates if device supports bindless resources
-        Bool BindlessResources             = False;
-
-        /// Indicates if device supports occlusion queries (see Diligent::QUERY_TYPE_OCCLUSION).
-        Bool OcclusionQueries              = False;
-
-        /// Indicates if device supports binary occlusion queries (see Diligent::QUERY_TYPE_BINARY_OCCLUSION).
-        Bool BinaryOcclusionQueries        = False;
-
-        /// Indicates if device supports timestamp queries (see Diligent::QUERY_TYPE_TIMESTAMP).
-        Bool TimestampQueries              = False;
-
-        /// Indicates if device supports pipeline statistics queries (see Diligent::QUERY_TYPE_PIPELINE_STATISTICS).
-        Bool PipelineStatisticsQueries     = False;
-
-        /// Indicates if device supports depth bias clamping
-        Bool DepthBiasClamp                = False;
-
-        /// Indicates if device supports depth clamping
-        Bool DepthClamp                    = False;
-
-        /// Indicates if device supports depth clamping
-        Bool IndependentBlend              = False;
-
-        /// Indicates if device supports dual-source blend
-        Bool DualSourceBlend               = False;
-
-        /// Indicates if device supports multiviewport
-        Bool MultiViewport                 = False;
-
-        /// Indicates if device supports all BC-compressed formats
-        Bool TextureCompressionBC          = False;
-
-        /// Indicates if device supports writes to UAVs as well as atomic operations in vertex,
-        /// tessellation, and geometry shader stages.
-        Bool VertexPipelineUAVWritesAndAtomics = False;
-
-        /// Indicates if device supports writes to UAVs as well as atomic operations in pixel
-        /// shader stage.
-        Bool PixelUAVWritesAndAtomics          = False;
-
-        /// Specifies whether all the extended UAV texture formats are available in shader code.
-        Bool TextureUAVExtendedFormats         = False;
+        float GetZtoDepthBias() const
+        {
+            // Returns ZtoDepthBias such that given NDC z coordinate, depth value can be
+            // computed as follows:
+            // d = z * ZtoDepthScale + ZtoDepthBias
+            return -MinZ * ZtoDepthScale;
+        }
     };
 
-    /// Device capabilities
-    struct DeviceCaps
+    const NDCAttribs& GetNDCAttribs()const
     {
-        /// Device type. See Diligent::DeviceType.
-        DeviceType DevType = DeviceType::Undefined;
-
-        /// Major revision of the graphics API supported by the graphics adapter.
-        /// Note that this value indicates the maximum supported feature level, so,
-        /// for example, if the device type is D3D11, this value will be 10 when 
-        /// the maximum supported Direct3D feature level of the graphics adapter is 10.0.
-        Int32 MajorVersion = 0;
-
-        /// Minor revision of the graphics API supported by the graphics adapter.
-        /// Similar to MajorVersion, this value indicates the maximum supported feature level.
-        Int32 MinorVersion = 0;
-
-        /// Adapter type. See Diligent::ADAPTER_TYPE.
-        ADAPTER_TYPE AdaterType = ADAPTER_TYPE_UNKNOWN;
-
-        /// Texture sampling capabilities. See Diligent::SamplerCaps.
-        SamplerCaps SamCaps;
-
-        /// Texture capabilities. See Diligent::TextureCaps.
-        TextureCaps TexCaps;
-
-        /// Device features. See Diligent::DeviceFeatures.
-        DeviceFeatures Features;
-
-        bool IsGLDevice()const
+        if (IsVulkanDevice())
         {
-            return DevType == DeviceType::OpenGL || DevType == DeviceType::OpenGLES;
+            // Note that Vulkan itself does not invert Y coordinate when transforming
+            // normalized device Y to window space. However, we use negative viewport
+            // height which achieves the same effect as in D3D, thererfore we need to
+            // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
+            static constexpr const NDCAttribs NDCAttribsVk {0.0f, 1.0f, -0.5f};
+            return NDCAttribsVk;
         }
-        bool IsD3DDevice()const
+        else if (IsD3DDevice())
         {
-            return DevType == DeviceType::D3D11 || DevType == DeviceType::D3D12;
+            static constexpr const NDCAttribs NDCAttribsD3D {0.0f, 1.0f, -0.5f};
+            return NDCAttribsD3D;
         }
-        bool IsVulkanDevice()const
+        else if (IsGLDevice())
         {
-            return DevType == DeviceType::Vulkan;
+            static constexpr const NDCAttribs NDCAttribsGL {-1.0f, 0.5f, 0.5f};
+            return NDCAttribsGL;
         }
-
-        struct NDCAttribs
+        else
         {
-            const float MinZ;          // Minimum z value of normalized device coordinate space
-            const float ZtoDepthScale; // NDC z to depth scale
-            const float YtoVScale;     // Scale to transform NDC y coordinate to texture V coordinate
-
-            float GetZtoDepthBias() const
-            {
-                // Returns ZtoDepthBias such that given NDC z coordinate, depth value can be
-                // computed as follows:
-                // d = z * ZtoDepthScale + ZtoDepthBias
-                return -MinZ * ZtoDepthScale;
-            }
-        };
-
-        const NDCAttribs& GetNDCAttribs()const
-        {
-            if (IsVulkanDevice())
-            {
-                // Note that Vulkan itself does not invert Y coordinate when transforming
-                // normalized device Y to window space. However, we use negative viewport
-                // height which achieves the same effect as in D3D, thererfore we need to
-                // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
-                static constexpr const NDCAttribs NDCAttribsVk {0.0f, 1.0f, -0.5f};
-                return NDCAttribsVk;
-            }
-            else if (IsD3DDevice())
-            {
-                static constexpr const NDCAttribs NDCAttribsD3D {0.0f, 1.0f, -0.5f};
-                return NDCAttribsD3D;
-            }
-            else if (IsGLDevice())
-            {
-                static constexpr const NDCAttribs NDCAttribsGL {-1.0f, 0.5f, 0.5f};
-                return NDCAttribsGL;
-            }
-            else
-            {
-                static constexpr const NDCAttribs NDCAttribsDefault {0.0f, 1.0f, 0.5f};
-                return NDCAttribsDefault;
-            }
+            static constexpr const NDCAttribs NDCAttribsDefault {0.0f, 1.0f, 0.5f};
+            return NDCAttribsDefault;
         }
-    };
-}
+    }
+#endif
+};
+
+DILIGENT_END_NAMESPACE // namespace Diligent

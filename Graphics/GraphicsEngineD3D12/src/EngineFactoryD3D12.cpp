@@ -53,7 +53,7 @@ namespace Diligent
 {
 
 /// Engine factory for D3D12 implementation
-class EngineFactoryD3D12Impl : public EngineFactoryD3DBase<IEngineFactoryD3D12, DeviceType::D3D12>
+class EngineFactoryD3D12Impl : public EngineFactoryD3DBase<IEngineFactoryD3D12, RENDER_DEVICE_TYPE_D3D12>
 {
 public:
     static EngineFactoryD3D12Impl* GetInstance()
@@ -62,7 +62,7 @@ public:
         return &TheFactory;
     }
 
-    using TBase = EngineFactoryD3DBase<IEngineFactoryD3D12, DeviceType::D3D12>;
+    using TBase = EngineFactoryD3DBase<IEngineFactoryD3D12, RENDER_DEVICE_TYPE_D3D12>;
 
     EngineFactoryD3D12Impl() :
         TBase{IID_EngineFactoryD3D12}
@@ -235,7 +235,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         const auto MinimumFeatureLevel = EngineCI.MinimumFeatureLevel >= DIRECT3D_FEATURE_LEVEL_11_0 ? EngineCI.MinimumFeatureLevel : DIRECT3D_FEATURE_LEVEL_11_0;
 
         CComPtr<IDXGIAdapter1> hardwareAdapter;
-        if (EngineCI.AdapterId == EngineD3D12CreateInfo::DefaultAdapterId)
+        if (EngineCI.AdapterId == DEFAULT_ADAPTER_ID)
         {
             GetHardwareAdapter(factory, &hardwareAdapter, GetD3DFeatureLevel(MinimumFeatureLevel));
             if (hardwareAdapter == nullptr)

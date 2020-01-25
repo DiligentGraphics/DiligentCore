@@ -52,7 +52,7 @@ struct D3D12DebugLayerSetNameBugWorkaround::RootSignatureWrapper
 D3D12DebugLayerSetNameBugWorkaround::D3D12DebugLayerSetNameBugWorkaround(IRenderDevice* pDevice) :
     m_RootSignature(new RootSignatureWrapper)
 {
-    if (pDevice->GetDeviceCaps().DevType != DeviceType::D3D12)
+    if (pDevice->GetDeviceCaps().DevType != RENDER_DEVICE_TYPE_D3D12)
         return;
 
     RefCntAutoPtr<IRenderDeviceD3D12> pDeviceD3D12(pDevice, IID_RenderDeviceD3D12);

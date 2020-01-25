@@ -65,27 +65,27 @@ protected:
         switch (DevCaps.DevType)
         {
 #if D3D11_SUPPORTED
-            case DeviceType::D3D11:
+            case RENDER_DEVICE_TYPE_D3D11:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResD3D11(pDevice));
                 break;
 
 #endif
 
 #if D3D12_SUPPORTED
-            case DeviceType::D3D12:
+            case RENDER_DEVICE_TYPE_D3D12:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResD3D12(pDevice));
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-            case DeviceType::OpenGL:
-            case DeviceType::OpenGLES:
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResGL(pDevice));
                 break;
 #endif
 
 #if VULKAN_SUPPORTED
-            case DeviceType::Vulkan:
+            case RENDER_DEVICE_TYPE_VULKAN:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResVK(pDevice));
                 break;
 #endif

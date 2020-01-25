@@ -701,7 +701,7 @@ void DeviceContextD3D11Impl::CommitD3D11IndexBuffer(VALUE_TYPE IndexType)
 
 void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pPipelineStateD3D11)
 {
-    VERIFY(m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set");
+    VERIFY(m_NumVertexStreams <= MAX_BUFFER_SLOTS, "Too many buffers are being set");
     UINT NumBuffersToSet = std::max(m_NumVertexStreams, m_NumCommittedD3D11VBs);
 
     bool BindVBs = m_NumVertexStreams != m_NumCommittedD3D11VBs;
@@ -1225,10 +1225,10 @@ void DeviceContextD3D11Impl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOf
 
 void DeviceContextD3D11Impl::SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight)
 {
-    static_assert(MaxViewports >= D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
+    static_assert(MAX_VIEWPORTS >= D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
     TDeviceContextBase::SetViewports(NumViewports, pViewports, RTWidth, RTHeight);
 
-    D3D11_VIEWPORT d3d11Viewports[MaxViewports];
+    D3D11_VIEWPORT d3d11Viewports[MAX_VIEWPORTS];
     VERIFY(NumViewports == m_NumViewports, "Unexpected number of viewports");
     for (Uint32 vp = 0; vp < m_NumViewports; ++vp)
     {
@@ -1246,10 +1246,10 @@ void DeviceContextD3D11Impl::SetViewports(Uint32 NumViewports, const Viewport* p
 
 void DeviceContextD3D11Impl::SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight)
 {
-    static_assert(MaxViewports >= D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
+    static_assert(MAX_VIEWPORTS >= D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D11_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
     TDeviceContextBase::SetScissorRects(NumRects, pRects, RTWidth, RTHeight);
 
-    D3D11_RECT d3d11ScissorRects[MaxViewports];
+    D3D11_RECT d3d11ScissorRects[MAX_VIEWPORTS];
     VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
     for (Uint32 sr = 0; sr < NumRects; ++sr)
     {

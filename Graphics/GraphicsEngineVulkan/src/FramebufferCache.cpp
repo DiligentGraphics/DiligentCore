@@ -82,7 +82,7 @@ VkFramebuffer FramebufferCache::GetFramebuffer(const FramebufferCacheKey& Key, u
         FramebufferCI.flags           = 0; // reserved for future use
         FramebufferCI.renderPass      = Key.Pass;
         FramebufferCI.attachmentCount = (Key.DSV != VK_NULL_HANDLE ? 1 : 0) + Key.NumRenderTargets;
-        VkImageView Attachments[1 + MaxRenderTargets];
+        VkImageView Attachments[1 + MAX_RENDER_TARGETS];
         uint32_t    attachment = 0;
         if (Key.DSV != VK_NULL_HANDLE)
             Attachments[attachment++] = Key.DSV;

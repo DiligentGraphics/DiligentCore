@@ -296,7 +296,7 @@ void BlendStateDescToD3DBlendDesc(const BlendStateDesc& BSDesc, D3D_BLEND_DESC& 
     // D3D_BLEND_DESC and D3D11_BLEND_DESC structures are identical
     d3d12BlendDesc.AlphaToCoverageEnable  = BSDesc.AlphaToCoverageEnable ? TRUE : FALSE;
     d3d12BlendDesc.IndependentBlendEnable = BSDesc.IndependentBlendEnable ? TRUE : FALSE;
-    VERIFY(BSDesc.MaxRenderTargets >= 8, "Number of render targets is expected to be at least 8");
+    VERIFY(MAX_RENDER_TARGETS >= 8, "Number of render targets is expected to be at least 8");
     for (int i = 0; i < 8; ++i)
     {
         const auto& SrcRTDesc = BSDesc.RenderTargets[i];
@@ -400,8 +400,8 @@ void LayoutElements_To_D3D_INPUT_ELEMENT_DESCs(const InputLayoutDesc&           
         D3DElem.AlignedByteOffset    = CurrElem.RelativeOffset;
         D3DElem.InputSlot            = CurrElem.BufferSlot;
         D3DElem.Format               = TypeToDXGI_Format(CurrElem.ValueType, CurrElem.NumComponents, CurrElem.IsNormalized);
-        D3DElem.InputSlotClass       = (CurrElem.Frequency == LayoutElement::FREQUENCY_PER_VERTEX) ? D3D_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
-        D3DElem.InstanceDataStepRate = (CurrElem.Frequency == LayoutElement::FREQUENCY_PER_VERTEX) ? 0 : CurrElem.InstanceDataStepRate;
+        D3DElem.InputSlotClass       = (CurrElem.Frequency == INPUT_ELEMENT_FREQUENCY_PER_VERTEX) ? D3D_INPUT_CLASSIFICATION_PER_VERTEX_DATA : D3D_INPUT_CLASSIFICATION_PER_INSTANCE_DATA;
+        D3DElem.InstanceDataStepRate = (CurrElem.Frequency == INPUT_ELEMENT_FREQUENCY_PER_VERTEX) ? 0 : CurrElem.InstanceDataStepRate;
     }
 }
 

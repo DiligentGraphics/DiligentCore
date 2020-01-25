@@ -35,16 +35,17 @@
 #include "DeviceObject.h"
 #include "Shader.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 // {0D57DF3F-977D-4C8F-B64C-6675814BC80C}
-static constexpr INTERFACE_ID IID_ShaderResourceVariable =
+static const struct INTERFACE_ID IID_ShaderResourceVariable =
     {0xd57df3f, 0x977d, 0x4c8f, {0xb6, 0x4c, 0x66, 0x75, 0x81, 0x4b, 0xc8, 0xc}};
 
+// clang-format off
 
 /// Describes the type of the shader resource variable
-enum SHADER_RESOURCE_VARIABLE_TYPE : Uint8
+DILIGENT_TYPED_ENUM(SHADER_RESOURCE_VARIABLE_TYPE, Uint8)
 {
     /// Shader resource bound to the variable is the same for all SRB instances.
     /// It must be set *once* directly through Pipeline State object.
@@ -64,11 +65,12 @@ enum SHADER_RESOURCE_VARIABLE_TYPE : Uint8
     SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES
 };
 
-
+#ifdef __cplusplus
 static_assert(SHADER_RESOURCE_VARIABLE_TYPE_STATIC == 0 && SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE == 1 && SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC == 2 && SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES == 3, "BIND_SHADER_RESOURCES_UPDATE_* flags rely on shader variable SHADER_RESOURCE_VARIABLE_TYPE_* values being 0,1,2");
+#endif
 
 /// Shader resource binding flags
-enum BIND_SHADER_RESOURCES_FLAGS : Uint32
+DILIGENT_TYPED_ENUM(BIND_SHADER_RESOURCES_FLAGS, Uint32)
 {
     /// Indicates that static shader variable bindings are to be updated.
     BIND_SHADER_RESOURCES_UPDATE_STATIC = (0x01 << SHADER_RESOURCE_VARIABLE_TYPE_STATIC),
@@ -100,6 +102,9 @@ enum BIND_SHADER_RESOURCES_FLAGS : Uint32
     BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED = 0x10
 };
 
+// clang-format on
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Shader resource variable
 class IShaderResourceVariable : public IObject
@@ -139,4 +144,8 @@ public:
     virtual bool IsBound(Uint32 ArrayIndex) const = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

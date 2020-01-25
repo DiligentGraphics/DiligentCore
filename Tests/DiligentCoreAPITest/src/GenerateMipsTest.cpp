@@ -111,7 +111,7 @@ TEST(GenerateMipsTest, GenerateMips)
             ViewDesc.NumArraySlices  = 5;
             ViewDesc.MostDetailedMip = 1;
             ViewDesc.NumMipLevels    = 5;
-            if (pDevice->GetDeviceCaps().DevType == DeviceType::D3D11)
+            if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D11)
             {
                 // The appears to be a bug in D3D11 Warp: the warp crashes if
                 // the view addresses only a subset of mip levels

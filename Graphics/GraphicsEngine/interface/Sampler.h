@@ -33,12 +33,13 @@
 #include <cfloat>
 #include "DeviceObject.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 // {595A59BF-FA81-4855-BC5E-C0E048745A95}
-static constexpr INTERFACE_ID IID_Sampler =
+static const struct INTERFACE_ID IID_Sampler =
     {0x595a59bf, 0xfa81, 0x4855, {0xbc, 0x5e, 0xc0, 0xe0, 0x48, 0x74, 0x5a, 0x95}};
+
 
 // clang-format off
 
@@ -55,60 +56,62 @@ static constexpr INTERFACE_ID IID_Sampler =
 ///
 /// Both MinFilter and MagFilter must either be regular filters or comparison filters.
 /// Mixing comparison and regular filters is an error.
-struct SamplerDesc : DeviceObjectAttribs
-{
+struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
+
     /// Texture minification filter, see Diligent::FILTER_TYPE for details.
     /// Default value: Diligent::FILTER_TYPE_LINEAR.
-    FILTER_TYPE MinFilter               = FILTER_TYPE_LINEAR;
+    enum FILTER_TYPE MinFilter          DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
     
     /// Texture magnification filter, see Diligent::FILTER_TYPE for details.
     /// Default value: Diligent::FILTER_TYPE_LINEAR.
-    FILTER_TYPE MagFilter               = FILTER_TYPE_LINEAR;
+    enum FILTER_TYPE MagFilter          DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
 
     /// Mip filter, see Diligent::FILTER_TYPE for details. 
     /// Only FILTER_TYPE_POINT, FILTER_TYPE_LINEAR, FILTER_TYPE_ANISOTROPIC, and 
     /// FILTER_TYPE_COMPARISON_ANISOTROPIC are allowed.
     /// Default value: Diligent::FILTER_TYPE_LINEAR.
-    FILTER_TYPE MipFilter               = FILTER_TYPE_LINEAR;
+    enum FILTER_TYPE MipFilter          DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
 
     /// Texture address mode for U coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
     /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
-    TEXTURE_ADDRESS_MODE AddressU       = TEXTURE_ADDRESS_CLAMP;
+    enum TEXTURE_ADDRESS_MODE AddressU  DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
     
     /// Texture address mode for V coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
     /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
-    TEXTURE_ADDRESS_MODE AddressV       = TEXTURE_ADDRESS_CLAMP;
+    enum TEXTURE_ADDRESS_MODE AddressV  DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
 
     /// Texture address mode for W coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
     /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
-    TEXTURE_ADDRESS_MODE AddressW       = TEXTURE_ADDRESS_CLAMP;
+    enum TEXTURE_ADDRESS_MODE AddressW  DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
 
     /// Offset from the calculated mipmap level. For example, if a sampler calculates that a texture 
     /// should be sampled at mipmap level 1.2 and MipLODBias is 2.3, then the texture will be sampled at 
     /// mipmap level 3.5. Default value: 0.
-    Float32 MipLODBias                  = 0;
+    Float32 MipLODBias                  DEFAULT_INITIALIZER(0);
 
     /// Maximum anisotropy level for the anisotropic filter. Default value: 0.
-    Uint32 MaxAnisotropy                = 0;
+    Uint32 MaxAnisotropy                DEFAULT_INITIALIZER(0);
 
     /// A function that compares sampled data against existing sampled data when comparsion
     /// filter is used. Default value: Diligent::COMPARISON_FUNC_NEVER.
-    COMPARISON_FUNCTION ComparisonFunc  = COMPARISON_FUNC_NEVER;
+    enum COMPARISON_FUNCTION ComparisonFunc DEFAULT_INITIALIZER(COMPARISON_FUNC_NEVER);
 
     /// Border color to use if TEXTURE_ADDRESS_BORDER is specified for AddressU, AddressV, or AddressW. 
     /// Default value: {0,0,0,0}
-    Float32 BorderColor[4]              = {0, 0, 0, 0};
+    Float32 BorderColor[4]              DEFAULT_INITIALIZER({});
 
     /// Specifies the minimum value that LOD is clamped to before accessing the texture MIP levels.
     /// Must be less than or equal to MaxLOD.
     /// Default value: 0.
-    float MinLOD                        = 0;
+    float MinLOD                        DEFAULT_INITIALIZER(0);
 
     /// Specifies the maximum value that LOD is clamped to before accessing the texture MIP levels.
     /// Must be greater than or equal to MinLOD.
     /// Default value: +FLT_MAX.
-    float MaxLOD                        = +3.402823466e+38F;
+    float MaxLOD                        DEFAULT_INITIALIZER(+3.402823466e+38F);
 
+
+#if DILIGENT_CPP_INTERFACE
     SamplerDesc()noexcept{}
      
     SamplerDesc(FILTER_TYPE          _MinFilter,
@@ -165,7 +168,11 @@ struct SamplerDesc : DeviceObjectAttribs
                 MinLOD          == RHS.MinLOD         && 
                 MaxLOD          == RHS.MaxLOD;
     }
+#endif
 };
+
+
+#if DILIGENT_CPP_INTERFACE
 
 // clang-format on
 
@@ -184,4 +191,10 @@ public:
     virtual const SamplerDesc& GetDesc() const override = 0;
 };
 
-} // namespace Diligent
+#else
+
+
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

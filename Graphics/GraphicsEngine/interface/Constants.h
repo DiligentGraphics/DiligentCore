@@ -32,23 +32,27 @@
 
 #include "../../../Primitives/interface/BasicTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 // clang-format off
 
 /// Maximum number of input buffer slots.
 /// D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT == 32
-static constexpr Uint32 MaxBufferSlots          = 32;
+#define DILIGENT_MAX_BUFFER_SOLTS 32
 
 /// Maximum number of simultaneous render targets.
-static constexpr Uint32 MaxRenderTargets        = 8;
+#define DILIGENT_MAX_RENDER_TARGETS 8
 
 /// Maximum number of viewports.
-static constexpr Uint32 MaxViewports            = 16;
+#define DILIGENT_MAX_VIEWPORTS 16
+
+static const Uint32 MAX_BUFFER_SLOTS   = DILIGENT_MAX_BUFFER_SOLTS;
+static const Uint32 MAX_RENDER_TARGETS = DILIGENT_MAX_RENDER_TARGETS;
+static const Uint32 MAX_VIEWPORTS      = DILIGENT_MAX_VIEWPORTS;
 
 /// Maximum number of shader stages in a pipeline.
-static constexpr Uint32 MaxShadersInPipeline    = 5;
+static const Uint32 MAX_SHADERS_IN_PIPELINE = 5;
 
 // clang-format on
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

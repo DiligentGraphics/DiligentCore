@@ -45,7 +45,7 @@ void CreateTestingSwapChainVk(TestingEnvironmentVk* pEnv,
                               const SwapChainDesc&  SCDesc,
                               ISwapChain**          ppSwapChain);
 
-TestingEnvironmentVk::TestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
+TestingEnvironmentVk::TestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
     TestingEnvironment{deviceType, AdapterType, SCDesc}
 {
     InitializeGlslang();
@@ -217,17 +217,17 @@ void TestingEnvironmentVk::CreateBuffer(VkDeviceSize          Size,
 
 
 VkRenderPassCreateInfo TestingEnvironmentVk::GetRenderPassCreateInfo(
-    Uint32                                                     NumRenderTargets,
-    const VkFormat                                             RTVFormats[],
-    VkFormat                                                   DSVFormat,
-    Uint32                                                     SampleCount,
-    VkAttachmentLoadOp                                         DepthAttachmentLoadOp,
-    VkAttachmentLoadOp                                         ColorAttachmentLoadOp,
-    std::array<VkAttachmentDescription, MaxRenderTargets + 1>& Attachments,
-    std::array<VkAttachmentReference, MaxRenderTargets + 1>&   AttachmentReferences,
-    VkSubpassDescription&                                      SubpassDesc)
+    Uint32                                                       NumRenderTargets,
+    const VkFormat                                               RTVFormats[],
+    VkFormat                                                     DSVFormat,
+    Uint32                                                       SampleCount,
+    VkAttachmentLoadOp                                           DepthAttachmentLoadOp,
+    VkAttachmentLoadOp                                           ColorAttachmentLoadOp,
+    std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1>& Attachments,
+    std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>&   AttachmentReferences,
+    VkSubpassDescription&                                        SubpassDesc)
 {
-    VERIFY_EXPR(NumRenderTargets <= MaxRenderTargets);
+    VERIFY_EXPR(NumRenderTargets <= MAX_RENDER_TARGETS);
 
     // Prepare render pass create info (7.1)
     VkRenderPassCreateInfo RenderPassCI = {};
@@ -635,7 +635,7 @@ void TestingEnvironmentVk::TransitionImageLayout(VkCommandBuffer                
     CurrentLayout = NewLayout;
 }
 
-TestingEnvironment* CreateTestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
+TestingEnvironment* CreateTestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
     return new TestingEnvironmentVk{deviceType, AdapterType, SCDesc};
 }

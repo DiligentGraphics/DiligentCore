@@ -358,9 +358,9 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
         Layouts[s].AllocateMemory(std::move(pShaderResources[s]), LayoutDataAllocator, ResourceLayoutDesc, AllowedVarTypes, NumAllowedTypes, AllocateImmutableSamplers);
     }
 
-    VERIFY_EXPR(NumShaders <= MaxShadersInPipeline);
-    std::array<std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES>, MaxShadersInPipeline> CurrResInd              = {};
-    std::array<Uint32, MaxShadersInPipeline>                                                      CurrImmutableSamplerInd = {};
+    VERIFY_EXPR(NumShaders <= MAX_SHADERS_IN_PIPELINE);
+    std::array<std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES>, MAX_SHADERS_IN_PIPELINE> CurrResInd              = {};
+    std::array<Uint32, MAX_SHADERS_IN_PIPELINE>                                                      CurrImmutableSamplerInd = {};
 #ifdef _DEBUG
     std::unordered_map<Uint32, std::pair<Uint32, Uint32>> dbgBindings_CacheOffsets;
 #endif

@@ -35,17 +35,18 @@
 #include "../../../Primitives/interface/FlagEnum.h"
 #include "DeviceObject.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-class IDeviceContext;
+
 
 // {5B2EA04E-8128-45E4-AA4D-6DC7E70DC424}
-static constexpr INTERFACE_ID IID_TextureView =
+static const struct INTERFACE_ID IID_TextureView =
     {0x5b2ea04e, 0x8128, 0x45e4,{0xaa, 0x4d, 0x6d, 0xc7, 0xe7, 0xd, 0xc4, 0x24}};
 
+// clang-format off
+
 /// Describes allowed unordered access view mode
-enum UAV_ACCESS_FLAG : Uint8
+DILIGENT_TYPED_ENUM(UAV_ACCESS_FLAG, Uint8)
 {
     /// Access mode is unspecified
     UAV_ACCESS_UNSPECIFIED = 0x00,
@@ -62,7 +63,7 @@ enum UAV_ACCESS_FLAG : Uint8
 DEFINE_FLAG_ENUM_OPERATORS(UAV_ACCESS_FLAG)
 
 /// Texture view flags
-enum TEXTURE_VIEW_FLAGS : Uint8
+DILIGENT_TYPED_ENUM(TEXTURE_VIEW_FLAGS, Uint8)
 {
     /// No flags
     TEXTURE_VIEW_FLAG_NONE                      = 0x00,
@@ -74,51 +75,49 @@ enum TEXTURE_VIEW_FLAGS : Uint8
 };
 DEFINE_FLAG_ENUM_OPERATORS(TEXTURE_VIEW_FLAGS)
 
+
 /// Texture view description
-struct TextureViewDesc : DeviceObjectAttribs
-{
-    static constexpr Uint32 RemainingMipLevels   = static_cast<Uint32>(-1);
-    static constexpr Uint32 RemainingArraySlices = static_cast<Uint32>(-1);
+struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Describes the texture view type, see Diligent::TEXTURE_VIEW_TYPE for details.
-    TEXTURE_VIEW_TYPE ViewType      = TEXTURE_VIEW_UNDEFINED;
+    enum TEXTURE_VIEW_TYPE ViewType     DEFAULT_INITIALIZER(TEXTURE_VIEW_UNDEFINED);
 
-    /// View interpretation of the original texture. For instance, 
+    /// View interpretation of the original texture. For instance,
     /// one slice of a 2D texture array can be viewed as a 2D texture.
     /// See Diligent::RESOURCE_DIMENSION for a list of texture types.
     /// If default value Diligent::RESOURCE_DIM_UNDEFINED is provided,
     /// the view type will match the type of the referenced texture.
-    RESOURCE_DIMENSION TextureDim   = RESOURCE_DIM_UNDEFINED;
+    enum RESOURCE_DIMENSION TextureDim  DEFAULT_INITIALIZER(RESOURCE_DIM_UNDEFINED);
 
     /// View format. If default value Diligent::TEX_FORMAT_UNKNOWN is provided,
     /// the view format will match the referenced texture format.
-    TEXTURE_FORMAT Format           = TEX_FORMAT_UNKNOWN;
-    
+    enum TEXTURE_FORMAT Format          DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+
     /// Most detailed mip level to use
-    Uint32 MostDetailedMip          = 0;
+    Uint32 MostDetailedMip  DEFAULT_INITIALIZER(0);
 
     /// Total number of mip levels for the view of the texture.
     /// Render target and depth stencil views can address only one mip level.
     /// If 0 is provided, then for a shader resource view all mip levels will be
-    /// referenced, and for a render target or a depth stencil view, one mip level 
+    /// referenced, and for a render target or a depth stencil view, one mip level
     /// will be referenced.
-    Uint32 NumMipLevels             = 0;
+    Uint32 NumMipLevels     DEFAULT_INITIALIZER(0);
 
     union
     {
         /// For a texture array, first array slice to address in the view
-        Uint32 FirstArraySlice      = 0;
+        Uint32 FirstArraySlice DEFAULT_INITIALIZER(0);
 
         /// For a 3D texture, first depth slice to address the view
         Uint32 FirstDepthSlice;
     };
-    
+
     union
     {
         /// For a texture array, number of array slices to address in the view.
         /// Set to 0 to address all array slices.
-        Uint32 NumArraySlices       = 0;
-        
+        Uint32 NumArraySlices DEFAULT_INITIALIZER(0);
+
         /// For a 3D texture, number of depth slices to address in the view
         /// Set to 0 to address all depth slices.
         Uint32 NumDepthSlices;
@@ -126,12 +125,14 @@ struct TextureViewDesc : DeviceObjectAttribs
 
     /// For an unordered access view, allowed access flags. See Diligent::UAV_ACCESS_FLAG
     /// for details.
-    UAV_ACCESS_FLAG     AccessFlags = UAV_ACCESS_UNSPECIFIED;
-    
-    /// Texture view flags, see Diligent::TEXTURE_VIEW_FLAGS.
-    TEXTURE_VIEW_FLAGS  Flags       = TEXTURE_VIEW_FLAG_NONE;
+    enum UAV_ACCESS_FLAG    AccessFlags DEFAULT_INITIALIZER(UAV_ACCESS_UNSPECIFIED);
 
-    TextureViewDesc()noexcept{}
+    /// Texture view flags, see Diligent::TEXTURE_VIEW_FLAGS.
+    enum TEXTURE_VIEW_FLAGS Flags       DEFAULT_INITIALIZER(TEXTURE_VIEW_FLAG_NONE);
+
+#if DILIGENT_CPP_INTERFACE
+
+    TextureViewDesc() noexcept {}
 
     TextureViewDesc(TEXTURE_VIEW_TYPE  _ViewType,
                     RESOURCE_DIMENSION _TextureDim,
@@ -141,41 +142,48 @@ struct TextureViewDesc : DeviceObjectAttribs
                     Uint32             _FirstArrayOrDepthSlice = TextureViewDesc{}.FirstArraySlice,
                     Uint32             _NumArrayOrDepthSlices  = TextureViewDesc{}.NumArraySlices,
                     UAV_ACCESS_FLAG    _AccessFlags            = TextureViewDesc{}.AccessFlags,
-                    TEXTURE_VIEW_FLAGS _Flags                  = TextureViewDesc{}.Flags)noexcept :
-        ViewType        {_ViewType              },
-        TextureDim      {_TextureDim            },
-        Format          {_Format                },
-        MostDetailedMip {_MostDetailedMip       },
-        NumMipLevels    {_NumMipLevels          },
-        FirstArraySlice {_FirstArrayOrDepthSlice},
-        NumArraySlices  {_NumArrayOrDepthSlices },
-        AccessFlags     {_AccessFlags           },
-        Flags           {_Flags                 }
+                    TEXTURE_VIEW_FLAGS _Flags                  = TextureViewDesc{}.Flags) noexcept :
+        ViewType{_ViewType},
+        TextureDim{_TextureDim},
+        Format{_Format},
+        MostDetailedMip{_MostDetailedMip},
+        NumMipLevels{_NumMipLevels},
+        FirstArraySlice{_FirstArrayOrDepthSlice},
+        NumArraySlices{_NumArrayOrDepthSlices},
+        AccessFlags{_AccessFlags},
+        Flags{_Flags}
     {}
 
     /// Tests if two structures are equivalent
 
     /// \param [in] RHS - reference to the structure to perform comparison with
-    /// \return 
+    /// \return
     /// - True if all members of the two structures are equal.
     /// - False otherwise
-    bool operator == (const TextureViewDesc& RHS)const
+    bool operator==(const TextureViewDesc& RHS) const
     {
-               // Name is primarily used for debug purposes and does not affect the view.
-               // It is ignored in comparison operation.
+        // Name is primarily used for debug purposes and does not affect the view.
+        // It is ignored in comparison operation.
         return //strcmp(Name, RHS.Name) == 0            &&
-               ViewType        == RHS.ViewType        &&
-               TextureDim      == RHS.TextureDim      &&
-               Format          == RHS.Format          &&
-               MostDetailedMip == RHS.MostDetailedMip &&
-               NumMipLevels    == RHS.NumMipLevels    &&
-               FirstArraySlice == RHS.FirstArraySlice &&
-               FirstDepthSlice == RHS.FirstDepthSlice &&
-               NumArraySlices  == RHS.NumArraySlices  &&
-               NumDepthSlices  == RHS.NumDepthSlices  &&
-               AccessFlags     == RHS.AccessFlags;
+            ViewType == RHS.ViewType &&
+            TextureDim == RHS.TextureDim &&
+            Format == RHS.Format &&
+            MostDetailedMip == RHS.MostDetailedMip &&
+            NumMipLevels == RHS.NumMipLevels &&
+            FirstArraySlice == RHS.FirstArraySlice &&
+            FirstDepthSlice == RHS.FirstDepthSlice &&
+            NumArraySlices == RHS.NumArraySlices &&
+            NumDepthSlices == RHS.NumDepthSlices &&
+            AccessFlags == RHS.AccessFlags;
     }
+#else
+
+#endif
 };
+
+// clang-format on
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Texture view interface
 
@@ -189,29 +197,33 @@ class ITextureView : public IDeviceObject
 {
 public:
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
 
     /// Returns the texture view description used to create the object
-    virtual const TextureViewDesc& GetDesc()const override = 0;
+    virtual const TextureViewDesc& GetDesc() const override = 0;
 
     /// Sets the texture sampler to use for filtering operations
     /// when accessing a texture from shaders. Only
     /// shader resource views can be assigned a sampler.
     /// The view will keep strong reference to the sampler.
-    virtual void SetSampler( class ISampler *pSampler ) = 0;
+    virtual void SetSampler(class ISampler* pSampler) = 0;
 
     /// Returns the pointer to the sampler object set by the ITextureView::SetSampler().
 
-    /// The method does *NOT* call AddRef() on the returned interface, 
+    /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual ISampler* GetSampler() = 0;
-    
+
 
     /// Returns the pointer to the referenced texture object.
 
-    /// The method does *NOT* call AddRef() on the returned interface, 
+    /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     virtual class ITexture* GetTexture() = 0;
 };
 
-}
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE

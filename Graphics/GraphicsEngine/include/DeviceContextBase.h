@@ -250,7 +250,7 @@ protected:
     RefCntAutoPtr<DeviceImplType> m_pDevice;
 
     /// Vertex streams. Every stream holds strong reference to the buffer
-    VertexStreamInfo<BufferImplType> m_VertexStreams[MaxBufferSlots];
+    VertexStreamInfo<BufferImplType> m_VertexStreams[MAX_BUFFER_SLOTS];
 
     /// Number of bound vertex streams
     Uint32 m_NumVertexStreams = 0;
@@ -275,18 +275,18 @@ protected:
     Float32 m_BlendFactors[4] = {-1, -1, -1, -1};
 
     /// Current viewports
-    Viewport m_Viewports[MaxViewports];
+    Viewport m_Viewports[MAX_VIEWPORTS];
     /// Number of current viewports
     Uint32 m_NumViewports = 0;
 
     /// Current scissor rects
-    Rect m_ScissorRects[MaxViewports];
+    Rect m_ScissorRects[MAX_VIEWPORTS];
     /// Number of current scissor rects
     Uint32 m_NumScissorRects = 0;
 
     /// Vector of strong references to the bound render targets.
     /// Use final texture view implementation type to avoid virtual calls to AddRef()/Release()
-    RefCntAutoPtr<TextureViewImplType> m_pBoundRenderTargets[MaxRenderTargets];
+    RefCntAutoPtr<TextureViewImplType> m_pBoundRenderTargets[MAX_RENDER_TARGETS];
     /// Number of bound render targets
     Uint32 m_NumBoundRenderTargets = 0;
     /// Width of the currently bound framebuffer
@@ -324,16 +324,16 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
                      SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
 #ifdef DEVELOPMENT
-    if (StartSlot >= MaxBufferSlots)
+    if (StartSlot >= MAX_BUFFER_SLOTS)
     {
-        LOG_ERROR_MESSAGE("Start vertex buffer slot ", StartSlot, " is out of allowed range [0, ", MaxBufferSlots - 1, "].");
+        LOG_ERROR_MESSAGE("Start vertex buffer slot ", StartSlot, " is out of allowed range [0, ", MAX_BUFFER_SLOTS - 1, "].");
         return;
     }
 
-    if (StartSlot + NumBuffersSet > MaxBufferSlots)
+    if (StartSlot + NumBuffersSet > MAX_BUFFER_SLOTS)
     {
-        LOG_ERROR_MESSAGE("The range of vertex buffer slots being set [", StartSlot, ", ", StartSlot + NumBuffersSet - 1, "] is out of allowed range  [0, ", MaxBufferSlots - 1, "].");
-        NumBuffersSet = MaxBufferSlots - StartSlot;
+        LOG_ERROR_MESSAGE("The range of vertex buffer slots being set [", StartSlot, ", ", StartSlot + NumBuffersSet - 1, "] is out of allowed range  [0, ", MAX_BUFFER_SLOTS - 1, "].");
+        NumBuffersSet = MAX_BUFFER_SLOTS - StartSlot;
     }
 #endif
 
@@ -479,8 +479,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
         RTHeight = m_FramebufferHeight;
     }
 
-    VERIFY(NumViewports < MaxViewports, "Number of viewports (", NumViewports, ") exceeds the limit (", MaxViewports, ")");
-    m_NumViewports = std::min(MaxViewports, NumViewports);
+    VERIFY(NumViewports < MAX_VIEWPORTS, "Number of viewports (", NumViewports, ") exceeds the limit (", MAX_VIEWPORTS, ")");
+    m_NumViewports = std::min(MAX_VIEWPORTS, NumViewports);
 
     Viewport DefaultVP(0, 0, static_cast<float>(RTWidth), static_cast<float>(RTHeight));
     // If no viewports are specified, use default viewport
@@ -519,8 +519,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
         RTHeight = m_FramebufferHeight;
     }
 
-    VERIFY(NumRects < MaxViewports, "Number of scissor rects (", NumRects, ") exceeds the limit (", MaxViewports, ")");
-    m_NumScissorRects = std::min(MaxViewports, NumRects);
+    VERIFY(NumRects < MAX_VIEWPORTS, "Number of scissor rects (", NumRects, ") exceeds the limit (", MAX_VIEWPORTS, ")");
+    m_NumScissorRects = std::min(MAX_VIEWPORTS, NumRects);
 
     for (Uint32 sr = 0; sr < m_NumScissorRects; ++sr)
     {
@@ -657,7 +657,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
             else
                 ppRTVs[rt] = nullptr;
         }
-        for (Uint32 rt = NumRenderTargets; rt < MaxRenderTargets; ++rt)
+        for (Uint32 rt = NumRenderTargets; rt < MAX_RENDER_TARGETS; ++rt)
         {
             VERIFY(ppRTVs[rt] == nullptr, "Non-null pointer found in RTV array element #", rt);
             ppRTVs[rt] = nullptr;
@@ -1441,7 +1441,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
         DEV_CHECK_ERR(Barrier.FirstMipLevel < TexDesc.MipLevels, "First mip level (", Barrier.FirstMipLevel,
                       ") specified by the barrier is out of range. Texture '",
                       TexDesc.Name, "' has only ", TexDesc.MipLevels, " mip level(s)");
-        DEV_CHECK_ERR(Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.FirstMipLevel + Barrier.MipLevelsCount <= TexDesc.MipLevels,
+        DEV_CHECK_ERR(Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || Barrier.FirstMipLevel + Barrier.MipLevelsCount <= TexDesc.MipLevels,
                       "Mip level range ", Barrier.FirstMipLevel, "..", Barrier.FirstMipLevel + Barrier.MipLevelsCount - 1,
                       " specified by the barrier is out of range. Texture '",
                       TexDesc.Name, "' has only ", TexDesc.MipLevels, " mip level(s)");
@@ -1449,17 +1449,17 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
         DEV_CHECK_ERR(Barrier.FirstArraySlice < TexDesc.ArraySize, "First array slice (", Barrier.FirstArraySlice,
                       ") specified by the barrier is out of range. Array size of texture '",
                       TexDesc.Name, "' is ", TexDesc.ArraySize);
-        DEV_CHECK_ERR(Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.ArraySize,
+        DEV_CHECK_ERR(Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.FirstArraySlice + Barrier.ArraySliceCount <= TexDesc.ArraySize,
                       "Array slice range ", Barrier.FirstArraySlice, "..", Barrier.FirstArraySlice + Barrier.ArraySliceCount - 1,
                       " specified by the barrier is out of range. Array size of texture '",
                       TexDesc.Name, "' is ", TexDesc.ArraySize);
 
         auto DevType = m_pDevice->GetDeviceCaps().DevType;
-        if (DevType != DeviceType::D3D12 && DevType != DeviceType::Vulkan)
+        if (DevType != RENDER_DEVICE_TYPE_D3D12 && DevType != RENDER_DEVICE_TYPE_VULKAN)
         {
-            DEV_CHECK_ERR(Barrier.FirstMipLevel == 0 && (Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels || Barrier.MipLevelsCount == TexDesc.MipLevels),
+            DEV_CHECK_ERR(Barrier.FirstMipLevel == 0 && (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS || Barrier.MipLevelsCount == TexDesc.MipLevels),
                           "Failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device");
-            DEV_CHECK_ERR(Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices || Barrier.ArraySliceCount == TexDesc.ArraySize),
+            DEV_CHECK_ERR(Barrier.FirstArraySlice == 0 && (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES || Barrier.ArraySliceCount == TexDesc.ArraySize),
                           "Failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device");
         }
     }

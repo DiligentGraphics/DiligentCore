@@ -76,27 +76,27 @@ protected:
         switch (DevCaps.DevType)
         {
 #if D3D11_SUPPORTED
-            case DeviceType::D3D11:
+            case RENDER_DEVICE_TYPE_D3D11:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResD3D11(pDevice));
                 break;
 
 #endif
 
 #if D3D12_SUPPORTED
-            case DeviceType::D3D12:
+            case RENDER_DEVICE_TYPE_D3D12:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResD3D12(pDevice));
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-            case DeviceType::OpenGL:
-            case DeviceType::OpenGLES:
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResGL(pDevice));
                 break;
 #endif
 
 #if VULKAN_SUPPORTED
-            case DeviceType::Vulkan:
+            case RENDER_DEVICE_TYPE_VULKAN:
                 pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResVK(pDevice));
                 break;
 #endif
@@ -219,7 +219,7 @@ protected:
 
             pCreateObjFromNativeRes->CreateTexture(pTestTex2);
 
-            if (deviceCaps.DevType == DeviceType::D3D11 &&
+            if (deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D11 &&
                 ((TexDesc.BindFlags & BIND_DEPTH_STENCIL) != 0 || TexDesc.SampleCount > 1))
             {
                 // In D3D11 if CopySubresourceRegion is used with Multisampled or D3D11_BIND_DEPTH_STENCIL Resources,
@@ -267,17 +267,17 @@ protected:
             if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY || TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY)
             {
                 ViewDesc.FirstArraySlice = 3;
-                ViewDesc.NumArraySlices  = (deviceCaps.DevType == DeviceType::D3D11 || deviceCaps.DevType == DeviceType::D3D12 || ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE) ? 4 : 1;
+                ViewDesc.NumArraySlices  = (deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12 || ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE) ? 4 : 1;
             }
             else if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
             {
-                if (deviceCaps.DevType == DeviceType::D3D11 || deviceCaps.DevType == DeviceType::D3D12)
+                if (deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12)
                 {
                     ViewDesc.FirstDepthSlice = 3;
                     ViewDesc.NumDepthSlices  = 4;
                 }
-                else if ((deviceCaps.DevType == DeviceType::Vulkan && ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET && ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL) ||
-                         deviceCaps.DevType != DeviceType::Vulkan)
+                else if ((deviceCaps.DevType == RENDER_DEVICE_TYPE_VULKAN && ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET && ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL) ||
+                         deviceCaps.DevType != RENDER_DEVICE_TYPE_VULKAN)
                 {
                     // OpenGL cannot create views for separate depth slices
                     ViewDesc.FirstDepthSlice = 0;
@@ -474,7 +474,7 @@ protected:
                 }
 
                 ViewDesc.TextureDim = RESOURCE_DIM_TEX_2D_ARRAY;
-                if (deviceCaps.DevType == DeviceType::OpenGL || deviceCaps.DevType == DeviceType::OpenGLES)
+                if (deviceCaps.DevType == RENDER_DEVICE_TYPE_GL || deviceCaps.DevType == RENDER_DEVICE_TYPE_GLES)
                 {
                     ViewDesc.NumArraySlices  = 1;
                     ViewDesc.FirstArraySlice = 2;

@@ -133,7 +133,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
 
 #ifdef DEVELOPMENT
     {
-        const ShaderResources* pResources[MaxShadersInPipeline] = {};
+        const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
             auto* pShader = GetShader<const ShaderD3D11Impl>(s);
@@ -143,9 +143,9 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
     }
 #endif
 
-    decltype(m_StaticSamplers)               StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"));
-    std::array<size_t, MaxShadersInPipeline> ShaderResLayoutDataSizes = {};
-    std::array<size_t, MaxShadersInPipeline> ShaderResCacheDataSizes  = {};
+    decltype(m_StaticSamplers)                  StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"));
+    std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResLayoutDataSizes = {};
+    std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResCacheDataSizes  = {};
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
         auto*       pShader         = GetShader<const ShaderD3D11Impl>(s);

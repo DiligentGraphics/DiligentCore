@@ -52,26 +52,26 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(VkDebugUtilsMessageSeverit
         }
     }
 
-    Diligent::DebugMessageSeverity MsgSeverity = Diligent::DebugMessageSeverity::Info;
+    Diligent::DEBUG_MESSAGE_SEVERITY MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
     if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)
     {
-        MsgSeverity = Diligent::DebugMessageSeverity::Info;
+        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
     }
     else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
     {
-        MsgSeverity = Diligent::DebugMessageSeverity::Info;
+        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
     }
     else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
     {
-        MsgSeverity = Diligent::DebugMessageSeverity::Warning;
+        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_WARNING;
     }
     else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
     {
-        MsgSeverity = Diligent::DebugMessageSeverity::Error;
+        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_ERROR;
     }
     else
     {
-        MsgSeverity = Diligent::DebugMessageSeverity::Info;
+        MsgSeverity = Diligent::DEBUG_MESSAGE_SEVERITY_INFO;
     }
 
     debugMessage << "Vulkan debug message (";

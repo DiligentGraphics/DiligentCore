@@ -33,12 +33,14 @@
 #include "../../../Primitives/interface/Object.h"
 #include "GraphicsTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 // {5B4CCA0B-5075-4230-9759-F48769EE5502}
-static constexpr INTERFACE_ID IID_DeviceObject =
+static const struct INTERFACE_ID IID_DeviceObject =
     {0x5b4cca0b, 0x5075, 0x4230, {0x97, 0x59, 0xf4, 0x87, 0x69, 0xee, 0x55, 0x2}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Base interface for all objects created by the render device Diligent::IRenderDevice
 class IDeviceObject : public IObject
@@ -71,4 +73,8 @@ public:
     virtual Int32 GetUniqueID() const = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

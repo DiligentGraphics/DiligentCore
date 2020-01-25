@@ -93,7 +93,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*      pRefCoun
 
 #ifdef DEVELOPMENT
     {
-        const ShaderResources* pResources[MaxShadersInPipeline] = {};
+        const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
             const auto* pShader = GetShader<const ShaderD3D12Impl>(s);
@@ -283,7 +283,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*      pRefCoun
 
     if (PipelineDesc.SRBAllocationGranularity > 1)
     {
-        std::array<size_t, MaxShadersInPipeline> ShaderVarMgrDataSizes = {};
+        std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVarMgrDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
             std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes =

@@ -206,10 +206,10 @@ public:
 
 
             // Correct description and compute offsets and tight strides
-            std::array<Uint32, MaxBufferSlots> Strides, TightStrides = {};
+            std::array<Uint32, MAX_BUFFER_SLOTS> Strides, TightStrides = {};
             // Set all strides to an invalid value because an application may want to use 0 stride
             for (auto& Stride : Strides)
-                Stride = LayoutElement::AutoStride;
+                Stride = LAYOUT_ELEMENT_AUTO_STRIDE;
 
             for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
             {
@@ -228,21 +228,21 @@ public:
 
                 auto& CurrAutoStride = TightStrides[BuffSlot];
                 // If offset is not explicitly specified, use current auto stride value
-                if (LayoutElem.RelativeOffset == LayoutElement::AutoOffset)
+                if (LayoutElem.RelativeOffset == LAYOUT_ELEMENT_AUTO_OFFSET)
                 {
                     LayoutElem.RelativeOffset = CurrAutoStride;
                 }
 
                 // If stride is explicitly specified, use it for the current buffer slot
-                if (LayoutElem.Stride != LayoutElement::AutoStride)
+                if (LayoutElem.Stride != LAYOUT_ELEMENT_AUTO_STRIDE)
                 {
                     // Verify that the value is consistent with the previously specified stride, if any
-                    if (Strides[BuffSlot] != LayoutElement::AutoStride && Strides[BuffSlot] != LayoutElem.Stride)
+                    if (Strides[BuffSlot] != LAYOUT_ELEMENT_AUTO_STRIDE && Strides[BuffSlot] != LayoutElem.Stride)
                     {
                         LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot,
                                           ". Input element at index ", LayoutElem.InputIndex, " explicitly specifies stride ",
                                           LayoutElem.Stride, ", while current value is ", Strides[BuffSlot],
-                                          ". Specify consistent strides or use LayoutElement::AutoStride to allow "
+                                          ". Specify consistent strides or use LAYOUT_ELEMENT_AUTO_STRIDE to allow "
                                           "the engine compute strides automatically.");
                     }
                     Strides[BuffSlot] = LayoutElem.Stride;
@@ -257,7 +257,7 @@ public:
 
                 auto BuffSlot = LayoutElem.BufferSlot;
                 // If no input elements explicitly specified stride for this buffer slot, use automatic stride
-                if (Strides[BuffSlot] == LayoutElement::AutoStride)
+                if (Strides[BuffSlot] == LAYOUT_ELEMENT_AUTO_STRIDE)
                 {
                     Strides[BuffSlot] = TightStrides[BuffSlot];
                 }
@@ -270,7 +270,7 @@ public:
                                           " required to accomodate all input elements.");
                     }
                 }
-                if (LayoutElem.Stride == LayoutElement::AutoStride)
+                if (LayoutElem.Stride == LAYOUT_ELEMENT_AUTO_STRIDE)
                     LayoutElem.Stride = Strides[BuffSlot];
             }
 
@@ -282,7 +282,7 @@ public:
                 for (Uint32 i = 0; i < m_BufferSlotsUsed; ++i)
                 {
                     auto Stride   = Strides[i];
-                    m_pStrides[i] = Stride != LayoutElement::AutoStride ? Stride : 0;
+                    m_pStrides[i] = Stride != LAYOUT_ELEMENT_AUTO_STRIDE ? Stride : 0;
                 }
             }
         }

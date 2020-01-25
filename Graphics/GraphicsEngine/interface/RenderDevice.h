@@ -51,12 +51,13 @@
 #include "RasterizerState.h"
 #include "BlendState.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {F0E9B607-AE33-4B2B-B1AF-A8B2C3104022}
-static constexpr INTERFACE_ID IID_RenderDevice =
+static const struct INTERFACE_ID IID_RenderDevice =
     {0xf0e9b607, 0xae33, 0x4b2b, {0xb1, 0xaf, 0xa8, 0xb2, 0xc3, 0x10, 0x40, 0x22}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Render device interface
 class IRenderDevice : public IObject
@@ -225,4 +226,10 @@ public:
     virtual IEngineFactory* GetEngineFactory() const = 0;
 };
 
-} // namespace Diligent
+#else
+
+
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

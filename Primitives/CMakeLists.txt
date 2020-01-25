@@ -9,6 +9,7 @@ set(SOURCE
 
 set(INTERFACE
     interface/BasicTypes.h
+    interface/CommonDefinitions.h
     interface/DataBlob.h
     interface/DebugOutput.h
     interface/FlagEnum.h

@@ -61,7 +61,7 @@ public:
         VkRenderPass Pass;
         Uint32       NumRenderTargets;
         VkImageView  DSV;
-        VkImageView  RTVs[MaxRenderTargets];
+        VkImageView  RTVs[MAX_RENDER_TARGETS];
         Uint64       CommandQueueMask;
 
         bool   operator==(const FramebufferCacheKey& rhs) const;

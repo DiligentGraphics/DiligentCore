@@ -38,17 +38,17 @@ void CreateTextureUploader(IRenderDevice* pDevice, const TextureUploaderDesc& De
     *ppUploader = nullptr;
     switch (pDevice->GetDeviceCaps().DevType)
     {
-        case DeviceType::D3D11:
+        case RENDER_DEVICE_TYPE_D3D11:
             *ppUploader = MakeNewRCObj<TextureUploaderD3D11>()(pDevice, Desc);
             break;
 
-        case DeviceType::D3D12:
-        case DeviceType::Vulkan:
+        case RENDER_DEVICE_TYPE_D3D12:
+        case RENDER_DEVICE_TYPE_VULKAN:
             *ppUploader = MakeNewRCObj<TextureUploaderD3D12_Vk>()(pDevice, Desc);
             break;
 
-        case DeviceType::OpenGLES:
-        case DeviceType::OpenGL:
+        case RENDER_DEVICE_TYPE_GLES:
+        case RENDER_DEVICE_TYPE_GL:
             *ppUploader = MakeNewRCObj<TextureUploaderGL>()(pDevice, Desc);
             break;
 

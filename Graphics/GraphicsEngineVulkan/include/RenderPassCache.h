@@ -87,7 +87,7 @@ public:
         Uint8          NumRenderTargets;
         Uint8          SampleCount;
         TEXTURE_FORMAT DSVFormat;
-        TEXTURE_FORMAT RTVFormats[MaxRenderTargets];
+        TEXTURE_FORMAT RTVFormats[MAX_RENDER_TARGETS];
 
         bool operator==(const RenderPassCacheKey& rhs) const
         {

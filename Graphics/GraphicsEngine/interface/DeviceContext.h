@@ -52,15 +52,15 @@
 #include "CommandList.h"
 #include "SwapChain.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 // {DC92711B-A1BE-4319-B2BD-C662D1CC19E4}
-static constexpr INTERFACE_ID IID_DeviceContext =
+static const struct INTERFACE_ID IID_DeviceContext =
     {0xdc92711b, 0xa1be, 0x4319, {0xb2, 0xbd, 0xc6, 0x62, 0xd1, 0xcc, 0x19, 0xe4}};
 
 /// Draw command flags
-enum DRAW_FLAGS : Uint8
+DILIGENT_TYPED_ENUM(DRAW_FLAGS, Uint8)
 {
     /// No flags.
     DRAW_FLAG_NONE                            = 0x00,
@@ -128,7 +128,7 @@ DEFINE_FLAG_ENUM_OPERATORS(DRAW_FLAGS)
 
 /// Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
 /// of resource state management in Diligent Engine.
-enum RESOURCE_STATE_TRANSITION_MODE : Uint8
+DILIGENT_TYPED_ENUM(RESOURCE_STATE_TRANSITION_MODE, Uint8)
 {
     /// Perform no state transitions and no state validation. 
     /// Resource states are not accessed (either read or written) by the command.
@@ -164,24 +164,25 @@ enum RESOURCE_STATE_TRANSITION_MODE : Uint8
 struct DrawAttribs
 {
     /// The number of vertices to draw.
-    Uint32     NumVertices           = 0;
+    Uint32     NumVertices           DEFAULT_INITIALIZER(0);
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                 = DRAW_FLAG_NONE;
+    DRAW_FLAGS Flags                 DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
     /// The number of instances to draw. If more than one instance is specified,
     /// instanced draw call will be performed.
-    Uint32     NumInstances          = 1;
+    Uint32     NumInstances          DEFAULT_INITIALIZER(1);
 
     /// LOCATION (or INDEX, but NOT the byte offset) of the first vertex in the
     /// vertex buffer to start reading vertices from.
-    Uint32     StartVertexLocation   = 0;
+    Uint32     StartVertexLocation   DEFAULT_INITIALIZER(0);
 
     /// LOCATION (or INDEX, but NOT the byte offset) in the vertex buffer to start
     /// reading instance data from.
-    Uint32     FirstInstanceLocation = 0;
+    Uint32     FirstInstanceLocation DEFAULT_INITIALIZER(0);
 
 
+#if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values.
 
     /// Default values:
@@ -207,6 +208,7 @@ struct DrawAttribs
         StartVertexLocation  {_StartVertexLocation  },
         FirstInstanceLocation{_FirstInstanceLocation}
     {}
+#endif
 };
 
 
@@ -216,31 +218,32 @@ struct DrawAttribs
 struct DrawIndexedAttribs
 {
     /// The number of indices to draw.
-    Uint32     NumIndices            = 0;
+    Uint32     NumIndices            DEFAULT_INITIALIZER(0);
 
     /// The type of elements in the index buffer.
     /// Allowed values: VT_UINT16 and VT_UINT32.
-    VALUE_TYPE IndexType             = VT_UNDEFINED;
+    enum VALUE_TYPE IndexType         DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                 = DRAW_FLAG_NONE;
+    enum DRAW_FLAGS Flags             DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
     /// Number of instances to draw. If more than one instance is specified,
     /// instanced draw call will be performed.
-    Uint32     NumInstances          = 1;
+    Uint32     NumInstances          DEFAULT_INITIALIZER(1);
 
     /// LOCATION (NOT the byte offset) of the first index in
     /// the index buffer to start reading indices from.
-    Uint32     FirstIndexLocation    = 0; 
+    Uint32     FirstIndexLocation    DEFAULT_INITIALIZER(0);
 
     /// A constant which is added to each index before accessing the vertex buffer.
-    Uint32     BaseVertex            = 0; 
+    Uint32     BaseVertex            DEFAULT_INITIALIZER(0);
 
     /// LOCATION (or INDEX, but NOT the byte offset) in the vertex
     /// buffer to start reading instance data from.
-    Uint32     FirstInstanceLocation = 0;
+    Uint32     FirstInstanceLocation DEFAULT_INITIALIZER(0);
 
 
+#if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values.
 
     /// Default values:
@@ -271,6 +274,7 @@ struct DrawIndexedAttribs
         BaseVertex           {_BaseVertex           },
         FirstInstanceLocation{_FirstInstanceLocation}
     {}
+#endif
 };
 
 
@@ -280,14 +284,16 @@ struct DrawIndexedAttribs
 struct DrawIndirectAttribs
 {
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                = DRAW_FLAG_NONE;
+    enum DRAW_FLAGS Flags               DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
     /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    enum RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset   = 0;
+    Uint32 IndirectDrawArgsOffset       DEFAULT_INITIALIZER(0);
     
+
+#if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values
 
     /// Default values:
@@ -306,6 +312,7 @@ struct DrawIndirectAttribs
         IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
         IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
     {}
+#endif
 };
 
 
@@ -316,18 +323,19 @@ struct DrawIndexedIndirectAttribs
 {
     /// The type of the elements in the index buffer.
     /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
-    VALUE_TYPE IndexType            = VT_UNDEFINED;
+    enum VALUE_TYPE IndexType            DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    DRAW_FLAGS Flags                = DRAW_FLAG_NONE;
+    enum DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
     /// State transition mode for indirect draw arguments buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    enum RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset   = 0;
+    Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
 
 
+#if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values
 
     /// Default values:
@@ -349,13 +357,14 @@ struct DrawIndexedIndirectAttribs
         IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
         IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
     {}
+#endif
 };
 
 
 /// Defines which parts of the depth-stencil buffer to clear.
 
 /// These flags are used by IDeviceContext::ClearDepthStencil().
-enum CLEAR_DEPTH_STENCIL_FLAGS : Uint32
+DILIGENT_TYPED_ENUM(CLEAR_DEPTH_STENCIL_FLAGS, Uint32)
 {
     /// Perform no clear.
     CLEAR_DEPTH_FLAG_NONE = 0x00,  
@@ -374,10 +383,11 @@ DEFINE_FLAG_ENUM_OPERATORS(CLEAR_DEPTH_STENCIL_FLAGS)
 /// This structure is used by IDeviceContext::DispatchCompute().
 struct DispatchComputeAttribs
 {
-    Uint32 ThreadGroupCountX = 1; ///< Number of groups dispatched in X direction.
-    Uint32 ThreadGroupCountY = 1; ///< Number of groups dispatched in Y direction.
-    Uint32 ThreadGroupCountZ = 1; ///< Number of groups dispatched in Z direction.
+    Uint32 ThreadGroupCountX DEFAULT_INITIALIZER(1); ///< Number of groups dispatched in X direction.
+    Uint32 ThreadGroupCountY DEFAULT_INITIALIZER(1); ///< Number of groups dispatched in Y direction.
+    Uint32 ThreadGroupCountZ DEFAULT_INITIALIZER(1); ///< Number of groups dispatched in Z direction.
 
+#if DILIGENT_CPP_INTERFACE
     DispatchComputeAttribs()noexcept{}
 
     /// Initializes the structure with user-specified values.
@@ -386,6 +396,7 @@ struct DispatchComputeAttribs
         ThreadGroupCountY {GroupsY},
         ThreadGroupCountZ {GroupsZ}
     {}
+#endif
 };
 
 /// Describes dispatch command arguments.
@@ -394,11 +405,12 @@ struct DispatchComputeAttribs
 struct DispatchComputeIndirectAttribs
 {
     /// State transition mode for indirect dispatch attributes buffer.
-    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    enum RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// The offset from the beginning of the buffer to the dispatch command arguments.
-    Uint32  DispatchArgsByteOffset    = 0;
+    Uint32  DispatchArgsByteOffset    DEFAULT_INITIALIZER(0);
 
+#if DILIGENT_CPP_INTERFACE
     DispatchComputeIndirectAttribs()noexcept{}
 
     /// Initializes the structure with user-specified values.
@@ -408,6 +420,7 @@ struct DispatchComputeIndirectAttribs
         IndirectAttribsBufferStateTransitionMode{StateTransitionMode},
         DispatchArgsByteOffset                  {Offset             }
     {}
+#endif
 };
 
 
@@ -417,31 +430,31 @@ struct DispatchComputeIndirectAttribs
 struct ResolveTextureSubresourceAttribs
 {
     /// Mip level of the source multi-sampled texture to resolve.
-    Uint32 SrcMipLevel   = 0;
+    Uint32 SrcMipLevel   DEFAULT_INITIALIZER(0);
 
     /// Array slice of the source multi-sampled texture to resolve.
-    Uint32 SrcSlice      = 0;
+    Uint32 SrcSlice      DEFAULT_INITIALIZER(0);
 
     /// Source texture state transition mode, see Diligent::RESOURCE_STATE_TRANSITION_MODE.
-    RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    enum RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Mip level of the destination non-multi-sampled texture.
-    Uint32 DstMipLevel   = 0;
+    Uint32 DstMipLevel   DEFAULT_INITIALIZER(0);
 
     /// Array slice of the destination non-multi-sampled texture.
-    Uint32 DstSlice      = 0;
+    Uint32 DstSlice      DEFAULT_INITIALIZER(0);
 
     /// Destination texture state transition mode, see Diligent::RESOURCE_STATE_TRANSITION_MODE.
-    RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    enum RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// If one or both textures are typeless, specifies the type of the typeless texture.
     /// If both texture formats are not typeless, in which case they must be identical, this member must be
     /// either TEX_FORMAT_UNKNOWN, or match this format.
-    TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
+    enum TEXTURE_FORMAT Format DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 };
 
 /// Defines allowed flags for IDeviceContext::SetVertexBuffers() function.
-enum SET_VERTEX_BUFFERS_FLAGS : Uint8
+DILIGENT_TYPED_ENUM(SET_VERTEX_BUFFERS_FLAGS, Uint8)
 {
     /// No extra operations.
     SET_VERTEX_BUFFERS_FLAG_NONE  = 0x00,
@@ -459,26 +472,27 @@ DEFINE_FLAG_ENUM_OPERATORS(SET_VERTEX_BUFFERS_FLAGS)
 struct Viewport
 {
     /// X coordinate of the left boundary of the viewport.
-    Float32 TopLeftX    = 0.f;
+    Float32 TopLeftX    DEFAULT_INITIALIZER(0.f);
 
     /// Y coordinate of the top boundary of the viewport.
     /// When defining a viewport, DirectX convention is used:
     /// window coordinate systems originates in the LEFT TOP corner
     /// of the screen with Y axis pointing down.
-    Float32 TopLeftY    = 0.f;
+    Float32 TopLeftY    DEFAULT_INITIALIZER(0.f);
 
     /// Viewport width.
-    Float32 Width       = 0.f;
+    Float32 Width       DEFAULT_INITIALIZER(0.f);
 
     /// Viewport Height.
-    Float32 Height      = 0.f;
+    Float32 Height      DEFAULT_INITIALIZER(0.f);
 
     /// Minimum depth of the viewport. Ranges between 0 and 1.
-    Float32 MinDepth    = 0.f;
+    Float32 MinDepth    DEFAULT_INITIALIZER(0.f);
 
     /// Maximum depth of the viewport. Ranges between 0 and 1.
-    Float32 MaxDepth    = 1.f;
+    Float32 MaxDepth    DEFAULT_INITIALIZER(1.f);
 
+#if DILIGENT_CPP_INTERFACE
     /// Initializes the structure.
     Viewport(Float32 _TopLeftX,     Float32 _TopLeftY,
              Float32 _Width,        Float32 _Height,
@@ -492,6 +506,7 @@ struct Viewport
     {}
 
     Viewport()noexcept{}
+#endif
 };
 
 /// Describes the rectangle.
@@ -503,11 +518,12 @@ struct Viewport
 ///          of the screen with Y axis pointing down.
 struct Rect
 {
-    Int32 left   = 0;  ///< X coordinate of the left boundary of the viewport.
-    Int32 top    = 0;  ///< Y coordinate of the top boundary of the viewport.
-    Int32 right  = 0;  ///< X coordinate of the right boundary of the viewport.
-    Int32 bottom = 0;  ///< Y coordinate of the bottom boundary of the viewport.
+    Int32 left   DEFAULT_INITIALIZER(0);  ///< X coordinate of the left boundary of the viewport.
+    Int32 top    DEFAULT_INITIALIZER(0);  ///< Y coordinate of the top boundary of the viewport.
+    Int32 right  DEFAULT_INITIALIZER(0);  ///< X coordinate of the right boundary of the viewport.
+    Int32 bottom DEFAULT_INITIALIZER(0);  ///< Y coordinate of the bottom boundary of the viewport.
 
+#if DILIGENT_CPP_INTERFACE
     /// Initializes the structure
     Rect(Int32 _left, Int32 _top, Int32 _right, Int32 _bottom)noexcept : 
         left   {_left  },
@@ -522,6 +538,7 @@ struct Rect
     {
         return right > left && bottom > top;
     }
+#endif
 };
 
 
@@ -531,41 +548,43 @@ struct Rect
 struct CopyTextureAttribs
 {
     /// Source texture to copy data from.
-    ITexture*                      pSrcTexture              = nullptr;  
+    class ITexture*                pSrcTexture              DEFAULT_INITIALIZER(nullptr);
 
     /// Mip level of the source texture to copy data from.
-    Uint32                         SrcMipLevel              = 0;
+    Uint32                         SrcMipLevel              DEFAULT_INITIALIZER(0);
 
     /// Array slice of the source texture to copy data from. Must be 0 for non-array textures.
-    Uint32                         SrcSlice                 = 0;
+    Uint32                         SrcSlice                 DEFAULT_INITIALIZER(0);
     
     /// Source region to copy. Use nullptr to copy the entire subresource.
-    const Box*                     pSrcBox                  = nullptr;  
+    const struct Box*              pSrcBox                  DEFAULT_INITIALIZER(nullptr);
     
     /// Source texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
-    RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    enum RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Destination texture.
-    ITexture*                      pDstTexture              = nullptr;
+    class ITexture*                pDstTexture              DEFAULT_INITIALIZER(nullptr);
 
     /// Destination mip level.
-    Uint32                         DstMipLevel              = 0;
+    Uint32                         DstMipLevel              DEFAULT_INITIALIZER(0);
 
     /// Destination array slice. Must be 0 for non-array textures.
-    Uint32                         DstSlice                 = 0;
+    Uint32                         DstSlice                 DEFAULT_INITIALIZER(0);
 
     /// X offset on the destination subresource.
-    Uint32                         DstX                     = 0;
+    Uint32                         DstX                     DEFAULT_INITIALIZER(0);
 
     /// Y offset on the destination subresource.
-    Uint32                         DstY                     = 0;
+    Uint32                         DstY                     DEFAULT_INITIALIZER(0);
 
     /// Z offset on the destination subresource
-    Uint32                         DstZ                     = 0;
+    Uint32                         DstZ                     DEFAULT_INITIALIZER(0);
 
     /// Destination texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
-    RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    enum RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
+
+#if DILIGENT_CPP_INTERFACE
     CopyTextureAttribs()noexcept{}
 
     CopyTextureAttribs(ITexture*                      _pSrcTexture,
@@ -577,7 +596,12 @@ struct CopyTextureAttribs
         pDstTexture             {_pDstTexture             },
         DstTextureTransitionMode{_DstTextureTransitionMode}
     {}
+#endif
 };
+
+
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Device context interface.
 
@@ -1225,4 +1249,10 @@ public:
                                            const ResolveTextureSubresourceAttribs& ResolveAttribs) = 0;
 };
 
-}
+#else
+
+
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

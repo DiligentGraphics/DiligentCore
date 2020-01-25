@@ -39,7 +39,7 @@ void CreateTestingSwapChainD3D12(IRenderDevice*       pDevice,
                                  const SwapChainDesc& SCDesc,
                                  ISwapChain**         ppSwapChain);
 
-TestingEnvironmentD3D12::TestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
+TestingEnvironmentD3D12::TestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
     TestingEnvironment{deviceType, AdapterType, SCDesc},
     m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)}
 {
@@ -88,7 +88,7 @@ void TestingEnvironmentD3D12::IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue)
     }
 }
 
-TestingEnvironment* CreateTestingEnvironmentD3D12(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
+TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
     return new TestingEnvironmentD3D12{deviceType, AdapterType, SCDesc};
 }

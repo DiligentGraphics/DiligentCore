@@ -43,7 +43,7 @@ namespace Diligent
 {
 
 /// Engine factory for D3D11 implementation
-class EngineFactoryD3D11Impl : public EngineFactoryD3DBase<IEngineFactoryD3D11, DeviceType::D3D11>
+class EngineFactoryD3D11Impl : public EngineFactoryD3DBase<IEngineFactoryD3D11, RENDER_DEVICE_TYPE_D3D11>
 {
 public:
     static EngineFactoryD3D11Impl* GetInstance()
@@ -52,7 +52,7 @@ public:
         return &TheFactory;
     }
 
-    using TBase = EngineFactoryD3DBase<IEngineFactoryD3D11, DeviceType::D3D11>;
+    using TBase = EngineFactoryD3DBase<IEngineFactoryD3D11, RENDER_DEVICE_TYPE_D3D11>;
 
     EngineFactoryD3D11Impl() :
         TBase{IID_EngineFactoryD3D11}
@@ -139,7 +139,7 @@ void EngineFactoryD3D11Impl::CreateDeviceAndContextsD3D11(const EngineD3D11Creat
 #endif
 
     CComPtr<IDXGIAdapter1> SpecificAdapter;
-    if (EngineCI.AdapterId != EngineD3D11CreateInfo::DefaultAdapterId)
+    if (EngineCI.AdapterId != DEFAULT_ADAPTER_ID)
     {
         auto Adapters = FindCompatibleAdapters(EngineCI.MinimumFeatureLevel);
         if (EngineCI.AdapterId < Adapters.size())

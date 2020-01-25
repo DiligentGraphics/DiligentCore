@@ -34,31 +34,31 @@
 
 #include "Buffer.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {E2E83490-E9D2-495B-9A83-ABB413A38B07}
-static constexpr INTERFACE_ID IID_BufferView =
+static const struct INTERFACE_ID IID_BufferView =
     {0xe2e83490, 0xe9d2, 0x495b, {0x9a, 0x83, 0xab, 0xb4, 0x13, 0xa3, 0x8b, 0x7}};
 
 /// Buffer format description
 struct BufferFormat
 {
     /// Type of components. For a formatted buffer views, this value cannot be VT_UNDEFINED
-    VALUE_TYPE ValueType    = VT_UNDEFINED;
+    VALUE_TYPE ValueType    DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// Number of components. Allowed values: 1, 2, 3, 4. 
     /// For a formatted buffer, this value cannot be 0
-    Uint8 NumComponents     = 0;
+    Uint8 NumComponents     DEFAULT_INITIALIZER(0);
 
     /// For signed and unsigned integer value types 
     /// (VT_INT8, VT_INT16, VT_INT32, VT_UINT8, VT_UINT16, VT_UINT32)
     /// indicates if the value should be normalized to [-1,+1] or 
     /// [0, 1] range respectively. For floating point types
     /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
-    Bool IsNormalized       = False;
+    Bool IsNormalized       DEFAULT_INITIALIZER(False);
 
 
+#if DILIGENT_CPP_INTERFACE
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     BufferFormat{VT_FLOAT32, 4}
     
@@ -80,27 +80,29 @@ struct BufferFormat
                NumComponents == RHS.NumComponents &&
                IsNormalized  == RHS.IsNormalized;
     }
+#endif
 };
 
 /// Buffer view description
-struct BufferViewDesc : DeviceObjectAttribs
-{
+struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
+
     /// View type. See Diligent::BUFFER_VIEW_TYPE for details.
-    BUFFER_VIEW_TYPE ViewType = BUFFER_VIEW_UNDEFINED;
+    BUFFER_VIEW_TYPE ViewType DEFAULT_INITIALIZER(BUFFER_VIEW_UNDEFINED);
 
     /// Format of the view. This member is only used for formatted and raw buffers.
     /// To create raw view of a raw buffer, set Format.ValueType member to VT_UNDEFINED
     /// (default value).
-    BufferFormat Format;
+    struct BufferFormat Format;
 
     /// Offset in bytes from the beginnig of the buffer to the start of the
     /// buffer region referenced by the view
-    Uint32 ByteOffset       = 0;
+    Uint32 ByteOffset       DEFAULT_INITIALIZER(0);
 
     /// Size in bytes of the referenced buffer region
-    Uint32 ByteWidth        = 0;
+    Uint32 ByteWidth        DEFAULT_INITIALIZER(0);
 
 
+#if DILIGENT_CPP_INTERFACE
     BufferViewDesc()noexcept{}
 
     explicit
@@ -132,7 +134,11 @@ struct BufferViewDesc : DeviceObjectAttribs
                ByteWidth == RHS.ByteWidth  &&
                Format    == RHS.Format;
     }
+#endif
 };
+
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Buffer view interface
 
@@ -156,4 +162,8 @@ public:
     virtual IBuffer* GetBuffer() = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

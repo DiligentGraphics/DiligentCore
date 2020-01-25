@@ -34,88 +34,92 @@
 
 #include "GraphicsTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-static constexpr Uint32 iMaxLayoutElements = 16;
+
+static const Uint32 MAX_LAYOUT_ELEMENTS        = 16;
+static const Uint32 LAYOUT_ELEMENT_AUTO_OFFSET = 0xFFFFFFFF;
+static const Uint32 LAYOUT_ELEMENT_AUTO_STRIDE = 0xFFFFFFFF;
+
+/// Input frequency
+enum INPUT_ELEMENT_FREQUENCY
+{
+    /// Frequency is undefined.
+    INPUT_ELEMENT_FREQUENCY_UNDEFINED = 0,
+
+    /// Input data is per-vertex data.
+    INPUT_ELEMENT_FREQUENCY_PER_VERTEX,
+
+    /// Input data is per-instance data.
+    INPUT_ELEMENT_FREQUENCY_PER_INSTANCE,
+
+    /// Helper value that stores the total number of frequencies in the enumeration.
+    INPUT_ELEMENT_FREQUENCY_NUM_FREQUENCIES
+};
 
 /// Description of a single element of the input layout
 struct LayoutElement
 {
-    static constexpr Uint32 AutoOffset = static_cast<Uint32>(-1);
-    static constexpr Uint32 AutoStride = static_cast<Uint32>(-1);
 
     /// HLSL semantic. Default value ("ATTRIB") allows HLSL shaders to be converted
     /// to GLSL and used in OpenGL backend as well as compiled to SPIRV and used
     /// in Vulkan backend.
     /// Any value other than default will only work in Direct3D11 and Direct3D12 backends.
-    const char* HLSLSemantic = "ATTRIB";
+    const char* HLSLSemantic DEFAULT_INITIALIZER("ATTRIB");
 
     /// Input index of the element that is specified in the vertex shader.
     /// In Direct3D11 and Direct3D12 backends this is the semantic index.
-    Uint32 InputIndex        = 0;
+    Uint32 InputIndex        DEFAULT_INITIALIZER(0);
 
     /// Buffer slot index that this element is read from.
-    Uint32 BufferSlot        = 0;
+    Uint32 BufferSlot        DEFAULT_INITIALIZER(0);
 
     /// Number of components in the element. Allowed values are 1, 2, 3, and 4.
-    Uint32 NumComponents     = 0;
+    Uint32 NumComponents     DEFAULT_INITIALIZER(0);
 
     /// Type of the element components, see Diligent::VALUE_TYPE for details.
-    VALUE_TYPE ValueType     = VT_FLOAT32;
+    VALUE_TYPE ValueType     DEFAULT_INITIALIZER(VT_FLOAT32);
 
     /// For signed and unsigned integer value types 
     /// (VT_INT8, VT_INT16, VT_INT32, VT_UINT8, VT_UINT16, VT_UINT32)
     /// indicates if the value should be normalized to [-1,+1] or 
     /// [0, 1] range respectively. For floating point types
     /// (VT_FLOAT16 and VT_FLOAT32), this member is ignored.
-    Bool IsNormalized        = True;
+    Bool IsNormalized        DEFAULT_INITIALIZER(True);
 
     /// Relative offset, in bytes, to the element bits.
-    /// If this value is set to LayoutElement::AutoOffset (default value), the offset will
+    /// If this value is set to LAYOUT_ELEMENT_AUTO_OFFSET (default value), the offset will
     /// be computed automatically by placing the element right after the previous one.
-    Uint32 RelativeOffset    = AutoOffset;
+    Uint32 RelativeOffset    DEFAULT_INITIALIZER(LAYOUT_ELEMENT_AUTO_OFFSET);
 
     /// Stride, in bytes, between two elements, for this buffer slot.
-    /// If this value is set to LayoutElement::AutoStride, the stride will be
+    /// If this value is set to LAYOUT_ELEMENT_AUTO_STRIDE, the stride will be
     /// computed automatically assuming that all elements in the same buffer slot are
     /// packed one after another. If the buffer slot contains multiple layout elements,
-    /// they all must specify the same stride or use AutoStride value.
-    Uint32 Stride            = AutoStride;
+    /// they all must specify the same stride or use LAYOUT_ELEMENT_AUTO_STRIDE value.
+    Uint32 Stride            DEFAULT_INITIALIZER(LAYOUT_ELEMENT_AUTO_STRIDE);
 
-    /// Input frequency
-    enum FREQUENCY : Int32
-    {
-        /// Frequency is undefined.
-        FREQUENCY_UNDEFINED = 0,
-
-        /// Input data is per-vertex data.
-        FREQUENCY_PER_VERTEX,
-
-        /// Input data is per-instance data.
-        FREQUENCY_PER_INSTANCE,
-
-        /// Helper value that stores the total number of frequencies in the enumeration.
-        FREQUENCY_NUM_FREQUENCIES
-    };
-    FREQUENCY Frequency         = FREQUENCY_PER_VERTEX;
+    enum INPUT_ELEMENT_FREQUENCY Frequency DEFAULT_INITIALIZER(INPUT_ELEMENT_FREQUENCY_PER_VERTEX);
     
     /// The number of instances to draw using the same per-instance data before advancing 
     /// in the buffer by one element.
-    Uint32 InstanceDataStepRate = 1;
+    Uint32 InstanceDataStepRate DEFAULT_INITIALIZER(1);
+
+
+#if DILIGENT_CPP_INTERFACE
 
     LayoutElement()noexcept{}
 
     /// Initializes the structure
-    LayoutElement(Uint32     _InputIndex, 
-                  Uint32     _BufferSlot, 
-                  Uint32     _NumComponents, 
-                  VALUE_TYPE _ValueType,
-                  Bool       _IsNormalized         = LayoutElement{}.IsNormalized, 
-                  Uint32     _RelativeOffset       = LayoutElement{}.RelativeOffset,
-                  Uint32     _Stride               = LayoutElement{}.Stride,
-                  FREQUENCY  _Frequency            = LayoutElement{}.Frequency,
-                  Uint32     _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept : 
+    LayoutElement(Uint32                   _InputIndex, 
+                  Uint32                   _BufferSlot, 
+                  Uint32                   _NumComponents, 
+                  VALUE_TYPE               _ValueType,
+                  Bool                     _IsNormalized         = LayoutElement{}.IsNormalized, 
+                  Uint32                   _RelativeOffset       = LayoutElement{}.RelativeOffset,
+                  Uint32                   _Stride               = LayoutElement{}.Stride,
+                  INPUT_ELEMENT_FREQUENCY  _Frequency            = LayoutElement{}.Frequency,
+                  Uint32                   _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept : 
         InputIndex          {_InputIndex          },
         BufferSlot          {_BufferSlot          },
         NumComponents       {_NumComponents       },
@@ -128,16 +132,16 @@ struct LayoutElement
     {}
 
     /// Initializes the structure
-    LayoutElement(const char* _HLSLSemantic,
-                  Uint32      _InputIndex, 
-                  Uint32      _BufferSlot, 
-                  Uint32      _NumComponents, 
-                  VALUE_TYPE  _ValueType,
-                  Bool        _IsNormalized         = LayoutElement{}.IsNormalized, 
-                  Uint32      _RelativeOffset       = LayoutElement{}.RelativeOffset,
-                  Uint32      _Stride               = LayoutElement{}.Stride,
-                  FREQUENCY   _Frequency            = LayoutElement{}.Frequency,
-                  Uint32      _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
+    LayoutElement(const char*               _HLSLSemantic,
+                  Uint32                    _InputIndex, 
+                  Uint32                    _BufferSlot, 
+                  Uint32                    _NumComponents, 
+                  VALUE_TYPE                _ValueType,
+                  Bool                      _IsNormalized         = LayoutElement{}.IsNormalized, 
+                  Uint32                    _RelativeOffset       = LayoutElement{}.RelativeOffset,
+                  Uint32                    _Stride               = LayoutElement{}.Stride,
+                  INPUT_ELEMENT_FREQUENCY   _Frequency            = LayoutElement{}.Frequency,
+                  Uint32                    _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
         HLSLSemantic        {_HLSLSemantic        },
         InputIndex          {_InputIndex          },
         BufferSlot          {_BufferSlot          },
@@ -151,13 +155,13 @@ struct LayoutElement
     {}
 
     /// Initializes the structure
-    LayoutElement(Uint32     _InputIndex, 
-                  Uint32     _BufferSlot, 
-                  Uint32     _NumComponents, 
-                  VALUE_TYPE _ValueType,
-                  Bool       _IsNormalized, 
-                  FREQUENCY  _Frequency,
-                  Uint32     _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
+    LayoutElement(Uint32                   _InputIndex, 
+                  Uint32                   _BufferSlot, 
+                  Uint32                   _NumComponents, 
+                  VALUE_TYPE               _ValueType,
+                  Bool                     _IsNormalized, 
+                  INPUT_ELEMENT_FREQUENCY  _Frequency,
+                  Uint32                   _InstanceDataStepRate = LayoutElement{}.InstanceDataStepRate)noexcept :
         InputIndex          {_InputIndex                   },
         BufferSlot          {_BufferSlot                   },
         NumComponents       {_NumComponents                },
@@ -168,6 +172,7 @@ struct LayoutElement
         Frequency           {_Frequency                    },
         InstanceDataStepRate{_InstanceDataStepRate         }
     {}
+#endif
 };
 
 /// Layout description
@@ -176,10 +181,11 @@ struct LayoutElement
 struct InputLayoutDesc 
 {
     /// Array of layout elements
-    const LayoutElement*  LayoutElements = nullptr;
+    const struct LayoutElement* LayoutElements  DEFAULT_INITIALIZER(nullptr);
     /// Number of layout elements
-    Uint32 NumElements                   = 0;
+    Uint32                      NumElements     DEFAULT_INITIALIZER(0);
 
+#if DILIGENT_CPP_INTERFACE
     InputLayoutDesc()noexcept{}
 
     InputLayoutDesc(const LayoutElement* _LayoutElements, 
@@ -187,6 +193,7 @@ struct InputLayoutDesc
         LayoutElements{_LayoutElements},
         NumElements   {_NumElements   }
     {}
+#endif
 };
 
-}
+DILIGENT_END_NAMESPACE

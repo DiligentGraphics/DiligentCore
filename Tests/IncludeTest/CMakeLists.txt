@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.6)
 
 project(DiligentCore-IncludeTest)
 
-file(GLOB_RECURSE SOURCE LIST_DIRECTORIES false *.cpp)
+file(GLOB_RECURSE SOURCE LIST_DIRECTORIES false *.cpp *.c)
 
 if(NOT D3D11_SUPPORTED)
     file(GLOB GRAPHICS_ENGINE_D3D11_INC_TEST LIST_DIRECTORIES false GraphicsEngineD3D11/*.cpp)

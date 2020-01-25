@@ -32,17 +32,20 @@
 
 #include "DeviceObject.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {3B19184D-32AB-4701-84F4-9A0C03AE1672}
-static constexpr INTERFACE_ID IID_Fence =
+static const struct INTERFACE_ID IID_Fence =
     {0x3b19184d, 0x32ab, 0x4701, {0x84, 0xf4, 0x9a, 0xc, 0x3, 0xae, 0x16, 0x72}};
 
+// clang-format off
 /// Fence description
-struct FenceDesc : DeviceObjectAttribs
-{
+struct FenceDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 };
+// clang-format on
+
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Fence interface
 
@@ -70,4 +73,8 @@ public:
     virtual void Reset(Uint64 Value) = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

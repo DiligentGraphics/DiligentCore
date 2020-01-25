@@ -328,7 +328,7 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
         if (TestStaticSamplers)
         {
             ShaderCI.UseCombinedTextureSamplers = true;
-            ShaderCI.HLSLVersion                = ShaderCreateInfo::ShaderVersion{5, 0};
+            ShaderCI.HLSLVersion                = ShaderVersion{5, 0};
         }
     };
     auto pVS = CreateShader(TestStaticSamplers ? "ShaderResourceLayoutTest.StaticSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
@@ -639,8 +639,8 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
     const auto& deviceCaps = pDevice->GetDeviceCaps();
     auto        deviceType = deviceCaps.DevType;
 
-    const Uint32 StaticBuffArraySize  = deviceType == DeviceType::D3D11 || deviceCaps.IsGLDevice() ? 1 : 4;
-    const Uint32 MutableBuffArraySize = deviceType == DeviceType::D3D11 || deviceCaps.IsGLDevice() ? 2 : 3;
+    const Uint32 StaticBuffArraySize  = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : 4;
+    const Uint32 MutableBuffArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 2 : 3;
     const Uint32 DynamicBuffArraySize = 2;
 
     ShaderMacroHelper Macros;
@@ -766,8 +766,8 @@ TEST_F(ShaderResourceLayoutTest, RWTextures)
     auto        deviceType = deviceCaps.DevType;
 
     const Uint32 StaticTexArraySize  = 2;
-    const Uint32 MutableTexArraySize = deviceType == DeviceType::D3D11 || deviceCaps.IsGLDevice() ? 2 : 4;
-    const Uint32 DynamicTexArraySize = deviceType == DeviceType::D3D11 || deviceCaps.IsGLDevice() ? 1 : 3;
+    const Uint32 MutableTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 2 : 4;
+    const Uint32 DynamicTexArraySize = deviceType == RENDER_DEVICE_TYPE_D3D11 || deviceCaps.IsGLDevice() ? 1 : 3;
 
     ShaderMacroHelper Macros;
     Macros.AddShaderMacro("STATIC_TEX_ARRAY_SIZE", static_cast<int>(StaticTexArraySize));
@@ -874,7 +874,7 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     Macros.AddShaderMacro("MUTABLE_CB_ARRAY_SIZE", static_cast<int>(MutableCBArraySize));
     Macros.AddShaderMacro("DYNAMIC_CB_ARRAY_SIZE", static_cast<int>(DynamicCBArraySize));
 
-    const auto CBArraysSupported = deviceCaps.DevType == DeviceType::D3D12 || deviceCaps.IsVulkanDevice();
+    const auto CBArraysSupported = deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12 || deviceCaps.IsVulkanDevice();
     Macros.AddShaderMacro("ARRAYS_SUPPORTED", CBArraysSupported);
 
     // clang-format off

@@ -336,11 +336,11 @@ private:
     /// There is no need to keep strong references because D3D11 device context
     /// already does. Buffers cannot be destroyed while bound to the context.
     /// We only mirror all bindings.
-    ID3D11Buffer* m_CommittedD3D11VertexBuffers[MaxBufferSlots] = {};
+    ID3D11Buffer* m_CommittedD3D11VertexBuffers[MAX_BUFFER_SLOTS] = {};
     /// An array of strides of committed vertex buffers
-    UINT m_CommittedD3D11VBStrides[MaxBufferSlots] = {};
+    UINT m_CommittedD3D11VBStrides[MAX_BUFFER_SLOTS] = {};
     /// An array of offsets of committed vertex buffers
-    UINT m_CommittedD3D11VBOffsets[MaxBufferSlots] = {};
+    UINT m_CommittedD3D11VBOffsets[MAX_BUFFER_SLOTS] = {};
     /// Number committed vertex buffers
     UINT m_NumCommittedD3D11VBs = 0;
     /// Flag indicating if currently committed D3D11 vertex buffers are up to date

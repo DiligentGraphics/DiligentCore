@@ -30,6 +30,7 @@
 #include "ObjectBase.h"
 #include "RefCntAutoPtr.h"
 #include "EngineMemory.h"
+#include "BasicFileStream.h"
 
 namespace Diligent
 {

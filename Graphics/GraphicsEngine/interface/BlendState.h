@@ -33,9 +33,10 @@
 /// Blend state description
 
 #include "../../../Primitives/interface/BasicTypes.h"
+#include "Constants.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 /// Blend factors
 
@@ -46,7 +47,7 @@ namespace Diligent
 /// It generatlly mirrors [D3D11_BLEND][] and [D3D12_BLEND][] enumerations and is used by RenderTargetBlendDesc structure
 /// to define source and destination blend factors for color and alpha channels.
 /// \sa [D3D11_BLEND on MSDN][D3D11_BLEND], [D3D12_BLEND on MSDN][D3D12_BLEND], [glBlendFuncSeparate on OpenGL.org][glBlendFuncSeparate]
-enum BLEND_FACTOR : Int8
+DILIGENT_TYPED_ENUM(BLEND_FACTOR, Int8)
 {
     /// Undefined blend factor
     BLEND_FACTOR_UNDEFINED = 0,
@@ -134,7 +135,7 @@ enum BLEND_FACTOR : Int8
 /// [D3D11_BLEND_OP][] and [D3D12_BLEND_OP][] enums. It is used by RenderTargetBlendDesc structure to define RGB and Alpha
 /// blending operations
 /// \sa [D3D11_BLEND_OP on MSDN][D3D11_BLEND_OP], [D3D12_BLEND_OP on MSDN][D3D12_BLEND_OP], [glBlendEquationSeparate on OpenGL.org][glBlendEquationSeparate]
-enum BLEND_OPERATION : Int8
+DILIGENT_TYPED_ENUM(BLEND_OPERATION, Int8)
 {
     /// Undefined blend operation
     BLEND_OPERATION_UNDEFINED = 0,
@@ -168,7 +169,7 @@ enum BLEND_OPERATION : Int8
 
 /// These flags are used by RenderTargetBlendDesc structure to define
 /// writable components of the render target
-enum COLOR_MASK : Int8
+DILIGENT_TYPED_ENUM(COLOR_MASK, Int8)
 {
     /// Allow data to be stored in the red component.
     COLOR_MASK_RED   = 1,
@@ -194,7 +195,7 @@ enum COLOR_MASK : Int8
 /// It is used by RenderTargetBlendDesc structure to define logic operation.
 /// Only available on D3D12 engine
 /// \sa [D3D12_LOGIC_OP on MSDN][D3D12_LOGIC_OP]
-enum LOGIC_OPERATION : Int8
+DILIGENT_TYPED_ENUM(LOGIC_OPERATION, Int8)
 {
     /// Clear the render target.\n
     /// Direct3D12 counterpart: D3D12_LOGIC_OP_CLEAR.
@@ -272,49 +273,48 @@ enum LOGIC_OPERATION : Int8
 struct RenderTargetBlendDesc
 {
     /// Enable or disable blending for this render target. Default value: False.
-    Bool            BlendEnable           = False;
+    Bool            BlendEnable           DEFAULT_INITIALIZER(False);
 
     /// Enable or disable a logical operation for this render target. Default value: False.
-	Bool			LogicOperationEnable  = False;
+	Bool			LogicOperationEnable  DEFAULT_INITIALIZER(False);
 
     /// Specifies the blend factor to apply to the RGB value output from the pixel shader
     /// Default value: Diligent::BLEND_FACTOR_ONE.
-    BLEND_FACTOR    SrcBlend              = BLEND_FACTOR_ONE;
+    BLEND_FACTOR    SrcBlend              DEFAULT_INITIALIZER(BLEND_FACTOR_ONE);
 
     /// Specifies the blend factor to apply to the RGB value in the render target
     /// Default value: Diligent::BLEND_FACTOR_ZERO.
-    BLEND_FACTOR    DestBlend             = BLEND_FACTOR_ZERO;
+    BLEND_FACTOR    DestBlend             DEFAULT_INITIALIZER(BLEND_FACTOR_ZERO);
 
     /// Defines how to combine the source and destination RGB values
     /// after applying the SrcBlend and DestBlend factors.
     /// Default value: Diligent::BLEND_OPERATION_ADD.
-    BLEND_OPERATION BlendOp               = BLEND_OPERATION_ADD;
+    BLEND_OPERATION BlendOp               DEFAULT_INITIALIZER(BLEND_OPERATION_ADD);
 
     /// Specifies the blend factor to apply to the alpha value output from the pixel shader.
     /// Blend factors that end in _COLOR are not allowed. 
     /// Default value: Diligent::BLEND_FACTOR_ONE.
-    BLEND_FACTOR    SrcBlendAlpha         = BLEND_FACTOR_ONE;
+    BLEND_FACTOR    SrcBlendAlpha         DEFAULT_INITIALIZER(BLEND_FACTOR_ONE);
 
     /// Specifies the blend factor to apply to the alpha value in the render target.
     /// Blend factors that end in _COLOR are not allowed. 
     /// Default value: Diligent::BLEND_FACTOR_ZERO.
-    BLEND_FACTOR    DestBlendAlpha        = BLEND_FACTOR_ZERO;
+    BLEND_FACTOR    DestBlendAlpha        DEFAULT_INITIALIZER(BLEND_FACTOR_ZERO);
 
     /// Defines how to combine the source and destination alpha values
     /// after applying the SrcBlendAlpha and DestBlendAlpha factors.
     /// Default value: Diligent::BLEND_OPERATION_ADD.
-    BLEND_OPERATION BlendOpAlpha          = BLEND_OPERATION_ADD;
+    BLEND_OPERATION BlendOpAlpha          DEFAULT_INITIALIZER(BLEND_OPERATION_ADD);
 
     /// Defines logical operation for the render target.
     /// Default value: Diligent::LOGIC_OP_NOOP.
-	LOGIC_OPERATION LogicOp               = LOGIC_OP_NOOP;
+	LOGIC_OPERATION LogicOp               DEFAULT_INITIALIZER(LOGIC_OP_NOOP);
 
     /// Render target write mask.
     /// Default value: Diligent::COLOR_MASK_ALL.
-    Uint8           RenderTargetWriteMask = COLOR_MASK_ALL;
+    Uint8           RenderTargetWriteMask DEFAULT_INITIALIZER(COLOR_MASK_ALL);
 
-    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
-    //     RenderTargetBlendDesc{False, False}
+#if DILIGENT_CPP_INTERFACE
 
     RenderTargetBlendDesc()noexcept{}
 
@@ -360,6 +360,7 @@ struct RenderTargetBlendDesc
 			   LogicOp               == rhs.LogicOp		   &&
                RenderTargetWriteMask == rhs.RenderTargetWriteMask;
     }
+#endif
 };
 
 
@@ -370,19 +371,17 @@ struct BlendStateDesc
 {
     /// Specifies whether to use alpha-to-coverage as a multisampling technique
     /// when setting a pixel to a render target. Default value: False.
-    Bool AlphaToCoverageEnable = False;
+    Bool AlphaToCoverageEnable DEFAULT_INITIALIZER(False);
 
     /// Specifies whether to enable independent blending in simultaneous render targets.
     /// If set to False, only RenderTargets[0] is used. Default value: False.
-    Bool IndependentBlendEnable = False;
-
-    /// Constant member defining the maximum number of render targets
-    static constexpr int MaxRenderTargets = 8;
+    Bool IndependentBlendEnable DEFAULT_INITIALIZER(False);
 
     /// An array of RenderTargetBlendDesc structures that describe the blend
     /// states for render targets
-    RenderTargetBlendDesc RenderTargets[MaxRenderTargets];
+    struct RenderTargetBlendDesc RenderTargets[DILIGENT_MAX_RENDER_TARGETS];
 
+#if DILIGENT_CPP_INTERFACE
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     BlendStateDesc{False, False}
 
@@ -410,7 +409,7 @@ struct BlendStateDesc
     bool operator==(const BlendStateDesc& RHS) const
     {
         bool bRTsEqual = true;
-        for (int i = 0; i < MaxRenderTargets; ++i)
+        for (int i = 0; i < MAX_RENDER_TARGETS; ++i)
         {
             if (!(RenderTargets[i] == RHS.RenderTargets[i]))
             {
@@ -423,6 +422,7 @@ struct BlendStateDesc
             AlphaToCoverageEnable == RHS.AlphaToCoverageEnable &&
             IndependentBlendEnable == RHS.IndependentBlendEnable;
     }
+#endif
 };
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

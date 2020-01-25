@@ -35,15 +35,16 @@
 #include "ShaderResourceVariable.h"
 #include "ResourceMapping.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 class IPipelineState;
 
 // {061F8774-9A09-48E8-8411-B5BD20560104}
-static constexpr INTERFACE_ID IID_ShaderResourceBinding =
+static const struct INTERFACE_ID IID_ShaderResourceBinding =
     {0x61f8774, 0x9a09, 0x48e8, {0x84, 0x11, 0xb5, 0xbd, 0x20, 0x56, 0x1, 0x4}};
 
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Shader resource binding interface
 class IShaderResourceBinding : public IObject
@@ -117,4 +118,8 @@ public:
     virtual void InitializeStaticResources(const IPipelineState* pPipelineState = nullptr) = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

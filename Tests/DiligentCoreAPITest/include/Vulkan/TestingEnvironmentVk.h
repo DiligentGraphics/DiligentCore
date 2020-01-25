@@ -43,7 +43,7 @@ namespace Testing
 class TestingEnvironmentVk final : public TestingEnvironment
 {
 public:
-    TestingEnvironmentVk(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+    TestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
     ~TestingEnvironmentVk();
 
     static TestingEnvironmentVk* GetInstance() { return ValidatedCast<TestingEnvironmentVk>(TestingEnvironment::GetInstance()); }
@@ -73,15 +73,15 @@ public:
     VkShaderModule CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource);
 
     static VkRenderPassCreateInfo GetRenderPassCreateInfo(
-        Uint32                                                     NumRenderTargets,
-        const VkFormat                                             RTVFormats[],
-        VkFormat                                                   DSVFormat,
-        Uint32                                                     SampleCount,
-        VkAttachmentLoadOp                                         DepthAttachmentLoadOp,
-        VkAttachmentLoadOp                                         ColorAttachmentLoadOp,
-        std::array<VkAttachmentDescription, MaxRenderTargets + 1>& Attachments,
-        std::array<VkAttachmentReference, MaxRenderTargets + 1>&   AttachmentReferences,
-        VkSubpassDescription&                                      SubpassDesc);
+        Uint32                                                       NumRenderTargets,
+        const VkFormat                                               RTVFormats[],
+        VkFormat                                                     DSVFormat,
+        Uint32                                                       SampleCount,
+        VkAttachmentLoadOp                                           DepthAttachmentLoadOp,
+        VkAttachmentLoadOp                                           ColorAttachmentLoadOp,
+        std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1>& Attachments,
+        std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>&   AttachmentReferences,
+        VkSubpassDescription&                                        SubpassDesc);
 
     VkCommandBuffer AllocateCommandBuffer();
 

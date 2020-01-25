@@ -34,26 +34,22 @@
 
 #include "DeviceObject.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-class IDeviceContext;
 
 // {A64B0E60-1B5E-4CFD-B880-663A1ADCBE98}
-static constexpr INTERFACE_ID IID_Texture =
+static const struct INTERFACE_ID IID_Texture =
     {0xa64b0e60, 0x1b5e, 0x4cfd,{0xb8, 0x80, 0x66, 0x3a, 0x1a, 0xdc, 0xbe, 0x98}};
 
 /// Defines optimized depth-stencil clear value.
 struct DepthStencilClearValue
 {
     /// Depth clear value
-    Float32 Depth   = 1.f;
+    Float32 Depth   DEFAULT_INITIALIZER(1.f);
     /// Stencil clear value
-    Uint8 Stencil   = 0;
+    Uint8 Stencil   DEFAULT_INITIALIZER(0);
 
-    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
-    //     DepthStencilClearValue{1, 0}
-
+#if DILIGENT_CPP_INTERFACE
     DepthStencilClearValue()noexcept{}
 
     DepthStencilClearValue(Float32 _Depth,
@@ -61,20 +57,22 @@ struct DepthStencilClearValue
         Depth   {_Depth  },
         Stencil {_Stencil}
     {}
+#endif
 };
 
 /// Defines optimized clear value.
 struct OptimizedClearValue
 {
     /// Format
-    TEXTURE_FORMAT Format = TEX_FORMAT_UNKNOWN;
+    enum TEXTURE_FORMAT Format DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Render target clear value
-    Float32 Color[4]     = {0, 0, 0, 0};
+    Float32 Color[4]     DEFAULT_INITIALIZER({});
 
     /// Depth stencil clear value
-    DepthStencilClearValue DepthStencil;
+    struct DepthStencilClearValue DepthStencil;
 
+#if DILIGENT_CPP_INTERFACE
     bool operator == (const OptimizedClearValue& rhs)const
     {
         return Format == rhs.Format &&
@@ -85,63 +83,66 @@ struct OptimizedClearValue
                DepthStencil.Depth   == rhs.DepthStencil.Depth &&
                DepthStencil.Stencil == rhs.DepthStencil.Stencil;
     }
+#endif
 };
 
 /// Texture description
-struct TextureDesc : DeviceObjectAttribs
-{
+struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
+
     /// Texture type. See Diligent::RESOURCE_DIMENSION for details.
-    RESOURCE_DIMENSION Type = RESOURCE_DIM_UNDEFINED;
+    enum RESOURCE_DIMENSION Type DEFAULT_INITIALIZER(RESOURCE_DIM_UNDEFINED);
 
     /// Texture width, in pixels.
-    Uint32 Width            = 0;
+    Uint32 Width            DEFAULT_INITIALIZER(0);
 
     /// Texture height, in pixels.
-    Uint32 Height           = 0;
+    Uint32 Height           DEFAULT_INITIALIZER(0);
 
     union
     {
         /// For a 1D array or 2D array, number of array slices
-        Uint32 ArraySize    = 1;
+        Uint32 ArraySize    DEFAULT_INITIALIZER(1);
 
         /// For a 3D texture, number of depth slices
         Uint32 Depth;
     };
 
     /// Texture format, see Diligent::TEXTURE_FORMAT.
-    TEXTURE_FORMAT Format   = TEX_FORMAT_UNKNOWN;
+    enum TEXTURE_FORMAT Format  DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Number of Mip levels in the texture. Multisampled textures can only have 1 Mip level.
     /// Specify 0 to create full mipmap chain.
-    Uint32 MipLevels        = 1;
+    Uint32 MipLevels            DEFAULT_INITIALIZER(1);
 
     /// Number of samples.\n
     /// Only 2D textures or 2D texture arrays can be multisampled.
-    Uint32 SampleCount      = 1;
+    Uint32 SampleCount          DEFAULT_INITIALIZER(1);
 
     /// Texture usage. See Diligent::USAGE for details.
-    USAGE Usage             = USAGE_DEFAULT;
+    enum USAGE Usage            DEFAULT_INITIALIZER(USAGE_DEFAULT);
 
     /// Bind flags, see Diligent::BIND_FLAGS for details. \n
     /// The following bind flags are allowed:
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_RENDER_TARGET, Diligent::BIND_DEPTH_STENCIL,
     /// Diligent::and BIND_UNORDERED_ACCESS. \n
     /// Multisampled textures cannot have Diligent::BIND_UNORDERED_ACCESS flag set
-    BIND_FLAGS BindFlags    = BIND_NONE;
+    enum BIND_FLAGS BindFlags   DEFAULT_INITIALIZER(BIND_NONE);
 
     /// CPU access flags or 0 if no CPU access is allowed, 
     /// see Diligent::CPU_ACCESS_FLAGS for details.
-    CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE;
+    enum CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
     
     /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAGS for details.
-    MISC_TEXTURE_FLAGS MiscFlags    = MISC_TEXTURE_FLAG_NONE;
+    enum MISC_TEXTURE_FLAGS MiscFlags    DEFAULT_INITIALIZER(MISC_TEXTURE_FLAG_NONE);
     
     /// Optimized clear value
-    OptimizedClearValue ClearValue;
+    struct OptimizedClearValue ClearValue;
 
     /// Defines which command queues this texture can be used with
-    Uint64 CommandQueueMask         = 1;
+    Uint64 CommandQueueMask              DEFAULT_INITIALIZER(1);
 
+
+#if DILIGENT_CPP_INTERFACE
     TextureDesc()noexcept{}
 
     TextureDesc(RESOURCE_DIMENSION  _Type, 
@@ -199,6 +200,7 @@ struct TextureDesc : DeviceObjectAttribs
                 ClearValue       == RHS.ClearValue     &&
                 CommandQueueMask == RHS.CommandQueueMask;
     }
+#endif
 };
 
 /// Describes data for one subresource
@@ -206,23 +208,25 @@ struct TextureSubResData
 {
     /// Pointer to the subresource data in CPU memory.
     /// If provided, pSrcBuffer must be null
-    const void* pData           = nullptr;
+    const void* pData           DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the GPU buffer that contains subresource data.
     /// If provided, pData must be null
-    class IBuffer* pSrcBuffer   = nullptr;
+    class IBuffer* pSrcBuffer   DEFAULT_INITIALIZER(nullptr);
 
     /// When updating data from the buffer (pSrcBuffer is not null),
     /// offset from the beginning of the buffer to the data start
-    Uint32 SrcOffset            = 0;
+    Uint32 SrcOffset            DEFAULT_INITIALIZER(0);
 
     /// For 2D and 3D textures, row stride in bytes
-    Uint32 Stride               = 0;
+    Uint32 Stride               DEFAULT_INITIALIZER(0);
 
     /// For 3D textures, depth slice stride in bytes
     /// \note On OpenGL, this must be a mutliple of Stride
-    Uint32 DepthStride          = 0;
+    Uint32 DepthStride          DEFAULT_INITIALIZER(0);
 
+
+#if DILIGENT_CPP_INTERFACE
     /// Initializes the structure members with default values
 
     /// Default values:
@@ -251,6 +255,7 @@ struct TextureSubResData
         Stride      {_Stride     },
         DepthStride {_DepthStride}
     {}
+#endif
 };
 
 /// Describes the initial data to store in the texture
@@ -258,14 +263,15 @@ struct TextureData
 {
     /// Pointer to the array of the TextureSubResData elements containing
     /// information about each subresource.
-    TextureSubResData* pSubResources    = nullptr;
+    struct TextureSubResData* pSubResources    DEFAULT_INITIALIZER(nullptr);
 
     /// Number of elements in pSubResources array.
     /// NumSubresources must exactly match the number
     /// of subresources in the texture. Otherwise an error
     /// occurs.
-    Uint32             NumSubresources  = 0;
+    Uint32             NumSubresources  DEFAULT_INITIALIZER(0);
 
+#if DILIGENT_CPP_INTERFACE
     TextureData() noexcept {}
 
     TextureData(TextureSubResData* _pSubResources,
@@ -273,14 +279,16 @@ struct TextureData
         pSubResources   {_pSubResources  },
         NumSubresources {_NumSubresources}
     {}
+#endif
 };
 
 struct MappedTextureSubresource
 {
-    PVoid  pData       = nullptr;
-    Uint32 Stride      = 0;
-    Uint32 DepthStride = 0;
+    PVoid  pData       DEFAULT_INITIALIZER(nullptr);
+    Uint32 Stride      DEFAULT_INITIALIZER(0);
+    Uint32 DepthStride DEFAULT_INITIALIZER(0);
 
+#if DILIGENT_CPP_INTERFACE
     MappedTextureSubresource() noexcept {}
 
     MappedTextureSubresource(PVoid  _pData,
@@ -290,7 +298,11 @@ struct MappedTextureSubresource
         Stride      {_Stride     },
         DepthStride {_DepthStride}
     {}
+#endif
 };
+
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Texture inteface
 class ITexture : public IDeviceObject
@@ -353,4 +365,8 @@ public:
     virtual RESOURCE_STATE GetState() const = 0;
 };
 
-}
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -929,16 +929,16 @@ void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc&                     
     }
 }
 
-VkVertexInputRate LayoutElemFrequencyToVkInputRate(LayoutElement::FREQUENCY frequency)
+VkVertexInputRate LayoutElemFrequencyToVkInputRate(INPUT_ELEMENT_FREQUENCY frequency)
 {
     switch (frequency)
     {
-        case LayoutElement::FREQUENCY_UNDEFINED:
+        case INPUT_ELEMENT_FREQUENCY_UNDEFINED:
             UNEXPECTED("Undefined layout element frequency");
             return VK_VERTEX_INPUT_RATE_VERTEX;
 
-        case LayoutElement::FREQUENCY_PER_VERTEX: return VK_VERTEX_INPUT_RATE_VERTEX;
-        case LayoutElement::FREQUENCY_PER_INSTANCE: return VK_VERTEX_INPUT_RATE_INSTANCE;
+        case INPUT_ELEMENT_FREQUENCY_PER_VERTEX: return VK_VERTEX_INPUT_RATE_VERTEX;
+        case INPUT_ELEMENT_FREQUENCY_PER_INSTANCE: return VK_VERTEX_INPUT_RATE_INSTANCE;
 
         default:
             UNEXPECTED("Unknown layout element frequency");
@@ -946,10 +946,10 @@ VkVertexInputRate LayoutElemFrequencyToVkInputRate(LayoutElement::FREQUENCY freq
     }
 }
 
-void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&                                             LayoutDesc,
-                                             VkPipelineVertexInputStateCreateInfo&                              VertexInputStateCI,
-                                             std::array<VkVertexInputBindingDescription, iMaxLayoutElements>&   BindingDescriptions,
-                                             std::array<VkVertexInputAttributeDescription, iMaxLayoutElements>& AttributeDescription)
+void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&                                              LayoutDesc,
+                                             VkPipelineVertexInputStateCreateInfo&                               VertexInputStateCI,
+                                             std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>&   BindingDescriptions,
+                                             std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS>& AttributeDescription)
 {
     // Vertex input description (20.2)
     VertexInputStateCI.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -959,7 +959,7 @@ void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&             
     VertexInputStateCI.pVertexBindingDescriptions      = BindingDescriptions.data();
     VertexInputStateCI.vertexAttributeDescriptionCount = LayoutDesc.NumElements;
     VertexInputStateCI.pVertexAttributeDescriptions    = AttributeDescription.data();
-    std::array<Int32, iMaxLayoutElements> BufferSlot2BindingDescInd;
+    std::array<Int32, MAX_LAYOUT_ELEMENTS> BufferSlot2BindingDescInd;
     BufferSlot2BindingDescInd.fill(-1);
     for (Uint32 elem = 0; elem < LayoutDesc.NumElements; ++elem)
     {

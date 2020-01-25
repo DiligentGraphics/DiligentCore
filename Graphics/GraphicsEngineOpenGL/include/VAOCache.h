@@ -90,7 +90,7 @@ private:
             UniqueIdentifier BufferUId;
             Uint32           Stride;
             Uint32           Offset;
-        } Streams[MaxBufferSlots];
+        } Streams[MAX_BUFFER_SLOTS];
 
         mutable size_t Hash = 0;
 

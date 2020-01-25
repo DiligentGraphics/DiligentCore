@@ -36,7 +36,7 @@
 namespace Diligent
 {
 
-static const std::string GetD3D12ShaderModel(RenderDeviceD3D12Impl* /*pDevice*/, const ShaderCreateInfo::ShaderVersion& HLSLVersion)
+static const std::string GetD3D12ShaderModel(RenderDeviceD3D12Impl* /*pDevice*/, const ShaderVersion& HLSLVersion)
 {
     if (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0)
     {

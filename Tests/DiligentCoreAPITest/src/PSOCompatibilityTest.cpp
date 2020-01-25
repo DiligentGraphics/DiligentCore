@@ -290,12 +290,12 @@ TEST(PSOCompatibility, CompilationFailure)
     ASSERT_TRUE(PSO_TexArr);
     ASSERT_TRUE(PSO_ArrOfTex);
     EXPECT_TRUE(PSO_Tex->IsCompatibleWith(PSO_Tex2));
-    if (DevType != DeviceType::D3D12 && DevType != DeviceType::Vulkan)
+    if (DevType != RENDER_DEVICE_TYPE_D3D12 && DevType != RENDER_DEVICE_TYPE_VULKAN)
     {
         EXPECT_FALSE(PSO_Tex->IsCompatibleWith(PSO_TexArr));
     }
     VERIFY_EXPR(!PSO_Tex->IsCompatibleWith(PSO_ArrOfTex));
-    if (DevType != DeviceType::D3D12 && DevType != DeviceType::Vulkan)
+    if (DevType != RENDER_DEVICE_TYPE_D3D12 && DevType != RENDER_DEVICE_TYPE_VULKAN)
     {
         EXPECT_FALSE(PSO_Tex2->IsCompatibleWith(PSO_TexArr));
     }

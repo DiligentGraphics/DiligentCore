@@ -32,7 +32,7 @@
 
 using namespace Diligent;
 
-String BasicPlatformDebug::FormatAssertionFailedMessage(const Char* Message,
+String BasicPlatformDebug::FormatAssertionFailedMessage(const char* Message,
                                                         const char* Function, // type of __FUNCTION__
                                                         const char* File,     // type of __FILE__
                                                         int         Line)
@@ -42,11 +42,11 @@ String BasicPlatformDebug::FormatAssertionFailedMessage(const Char* Message,
     return Diligent::FormatString("Debug assertion failed in ", Function, "(), file ", FileName, ", line ", Line, ":\n", Message);
 }
 
-String BasicPlatformDebug::FormatDebugMessage(DebugMessageSeverity Severity,
-                                              const Char*          Message,
-                                              const char*          Function, // type of __FUNCTION__
-                                              const char*          File,     // type of __FILE__
-                                              int                  Line)
+String BasicPlatformDebug::FormatDebugMessage(DEBUG_MESSAGE_SEVERITY Severity,
+                                              const Char*            Message,
+                                              const char*            Function, // type of __FUNCTION__
+                                              const char*            File,     // type of __FILE__
+                                              int                    Line)
 {
     std::stringstream msg_ss;
 

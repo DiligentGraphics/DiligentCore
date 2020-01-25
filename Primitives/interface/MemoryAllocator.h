@@ -32,8 +32,10 @@
 
 #include "BasicTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Base interface for a raw memory allocator
 class IMemoryAllocator
@@ -46,4 +48,8 @@ public:
     virtual void Free(void* Ptr) = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

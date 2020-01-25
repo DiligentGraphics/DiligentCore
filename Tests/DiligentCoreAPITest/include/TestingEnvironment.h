@@ -55,7 +55,7 @@ public:
     };
 
 
-    TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+    TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
     ~TestingEnvironment() override;
 
     // Override this to define how to set up the environment.
@@ -105,13 +105,13 @@ public:
 protected:
     NativeWindow CreateNativeWindow();
 
-    static void MessageCallback(DebugMessageSeverity Severity,
-                                const Char*          Message,
-                                const char*          Function,
-                                const char*          File,
-                                int                  Line);
+    static void MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,
+                                const Char*            Message,
+                                const char*            Function,
+                                const char*            File,
+                                int                    Line);
 
-    const DeviceType m_DeviceType;
+    const RENDER_DEVICE_TYPE m_DeviceType;
 
     static TestingEnvironment* m_pTheEnvironment;
 

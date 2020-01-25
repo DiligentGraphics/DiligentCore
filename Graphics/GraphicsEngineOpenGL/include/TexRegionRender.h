@@ -57,10 +57,10 @@ private:
     IShaderResourceVariable*              m_pSrcTexVar = nullptr;
 
     RefCntAutoPtr<IPipelineState> m_pOrigPSO;
-    Uint32                        m_OrigStencilRef              = 0;
-    float                         m_OrigBlendFactors[4]         = {};
-    Uint32                        m_NumRenderTargets            = 0;
-    ITextureView*                 m_pOrigRTVs[MaxRenderTargets] = {};
+    Uint32                        m_OrigStencilRef                = 0;
+    float                         m_OrigBlendFactors[4]           = {};
+    Uint32                        m_NumRenderTargets              = 0;
+    ITextureView*                 m_pOrigRTVs[MAX_RENDER_TARGETS] = {};
     RefCntAutoPtr<ITextureView>   m_pOrigDSV;
     std::vector<Viewport>         m_OrigViewports;
 };

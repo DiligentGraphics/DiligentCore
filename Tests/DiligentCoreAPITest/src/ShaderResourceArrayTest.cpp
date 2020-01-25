@@ -48,7 +48,7 @@ TEST(ShaderResourceLayout, ResourceArray)
     ShaderCreateInfo ShaderCI;
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
     ShaderCI.UseCombinedTextureSamplers = true;
-    ShaderCI.HLSLVersion                = ShaderCreateInfo::ShaderVersion{5, 0};
+    ShaderCI.HLSLVersion                = ShaderVersion{5, 0};
     RefCntAutoPtr<IShader> pVS, pPS;
     {
         ShaderCI.Desc.Name       = "ShaderResourceArrayTest: VS";

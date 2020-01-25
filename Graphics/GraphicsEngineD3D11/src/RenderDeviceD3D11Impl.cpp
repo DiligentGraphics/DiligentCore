@@ -104,7 +104,7 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     m_pd3d11Device {pd3d11Device }
 // clang-format on
 {
-    m_DeviceCaps.DevType = DeviceType::D3D11;
+    m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D11;
     auto FeatureLevel    = m_pd3d11Device->GetFeatureLevel();
     switch (FeatureLevel)
     {

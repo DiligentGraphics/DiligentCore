@@ -147,7 +147,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     }
 // clang-format on
 {
-    m_DeviceCaps.DevType      = DeviceType::Vulkan;
+    m_DeviceCaps.DevType      = RENDER_DEVICE_TYPE_VULKAN;
     m_DeviceCaps.MajorVersion = 1;
     m_DeviceCaps.MinorVersion = 0;
     m_DeviceCaps.AdaterType   = ADAPTER_TYPE_HARDWARE;

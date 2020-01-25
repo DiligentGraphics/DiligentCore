@@ -44,8 +44,8 @@
 #include "Shader.h"
 #include "Sampler.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
     
 /// Sample description
 
@@ -53,17 +53,19 @@ namespace Diligent
 struct SampleDesc
 {
     /// Sample count
-    Uint8 Count     = 1;
+    Uint8 Count     DEFAULT_INITIALIZER(1);
 
     /// Quality
-    Uint8 Quality   = 0;
+    Uint8 Quality   DEFAULT_INITIALIZER(0);
 
+#if DILIGENT_CPP_INTERFACE
     SampleDesc()noexcept{}
 
     SampleDesc(Uint8 _Count, Uint8 _Quality) noexcept : 
         Count   {_Count  },
         Quality {_Quality}
     {}
+#endif
 };
 
 
@@ -71,14 +73,15 @@ struct SampleDesc
 struct ShaderResourceVariableDesc
 {
     /// Shader stages this resources variable applies to. More than one shader stage can be specified.
-    SHADER_TYPE                   ShaderStages = SHADER_TYPE_UNKNOWN;
+    enum SHADER_TYPE              ShaderStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Shader variable name
-    const Char*                   Name         = nullptr;
+    const Char*                   Name         DEFAULT_INITIALIZER(nullptr);
 
     /// Shader variable type. See Diligent::SHADER_RESOURCE_VARIABLE_TYPE for a list of allowed types
-    SHADER_RESOURCE_VARIABLE_TYPE Type         = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+    SHADER_RESOURCE_VARIABLE_TYPE Type         DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
+#if DILIGENT_CPP_INTERFACE
     ShaderResourceVariableDesc()noexcept{}
 
     ShaderResourceVariableDesc(SHADER_TYPE _ShaderStages, const Char* _Name, SHADER_RESOURCE_VARIABLE_TYPE _Type)noexcept : 
@@ -86,6 +89,7 @@ struct ShaderResourceVariableDesc
         Name        {_Name        },
         Type        {_Type        }
     {}
+#endif
 };
 
 
@@ -93,15 +97,16 @@ struct ShaderResourceVariableDesc
 struct StaticSamplerDesc
 {
     /// Shader stages that this static sampler applies to. More than one shader stage can be specified.
-    SHADER_TYPE ShaderStages         = SHADER_TYPE_UNKNOWN;
+    enum SHADER_TYPE ShaderStages    DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// The name of the sampler itself or the name of the texture variable that 
     /// this static sampler is assigned to if combined texture samplers are used.
-    const Char* SamplerOrTextureName = nullptr;
+    const Char* SamplerOrTextureName DEFAULT_INITIALIZER(nullptr);
 
     /// Sampler description
-    SamplerDesc Desc;
+    struct SamplerDesc Desc;
 
+#if DILIGENT_CPP_INTERFACE
     StaticSamplerDesc()noexcept{}
 
     StaticSamplerDesc(SHADER_TYPE        _ShaderStages,
@@ -111,6 +116,7 @@ struct StaticSamplerDesc
         SamplerOrTextureName{_SamplerOrTextureName},
         Desc                {_Desc                }
     {}
+#endif
 };
 
 
@@ -120,19 +126,19 @@ struct PipelineResourceLayoutDesc
     /// Default shader resource variable type. This type will be used if shader
     /// variable description is not found in the Variables array
     /// or if Variables == nullptr
-    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+    enum SHADER_RESOURCE_VARIABLE_TYPE  DefaultVariableType   DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
     /// Number of elements in Variables array            
-    Uint32                              NumVariables        = 0;
+    Uint32                              NumVariables          DEFAULT_INITIALIZER(0);
 
     /// Array of shader resource variable descriptions               
-    const ShaderResourceVariableDesc*   Variables           = nullptr;
+    const struct ShaderResourceVariableDesc*   Variables      DEFAULT_INITIALIZER(nullptr);
                                                             
     /// Number of static samplers in StaticSamplers array   
-    Uint32                              NumStaticSamplers   = 0;
+    Uint32                              NumStaticSamplers     DEFAULT_INITIALIZER(0);
                                                             
     /// Array of static sampler descriptions                
-    const StaticSamplerDesc*            StaticSamplers      = nullptr;
+    const struct StaticSamplerDesc*            StaticSamplers DEFAULT_INITIALIZER(nullptr);
 };
 
 
@@ -142,61 +148,61 @@ struct PipelineResourceLayoutDesc
 struct GraphicsPipelineDesc
 {
     /// Vertex shader to be used with the pipeline
-    IShader* pVS = nullptr;
+    class IShader* pVS DEFAULT_INITIALIZER(nullptr);
 
     /// Pixel shader to be used with the pipeline
-    IShader* pPS = nullptr;
+    class IShader* pPS DEFAULT_INITIALIZER(nullptr);
 
     /// Domain shader to be used with the pipeline
-    IShader* pDS = nullptr;
+    class IShader* pDS DEFAULT_INITIALIZER(nullptr);
 
     /// Hull shader to be used with the pipeline
-    IShader* pHS = nullptr;
+    class IShader* pHS DEFAULT_INITIALIZER(nullptr);
 
     /// Geometry shader to be used with the pipeline
-    IShader* pGS = nullptr;
+    class IShader* pGS DEFAULT_INITIALIZER(nullptr);
     
     //D3D12_STREAM_OUTPUT_DESC StreamOutput;
     
     /// Blend state description
-    BlendStateDesc BlendDesc;
+    struct BlendStateDesc BlendDesc;
 
     /// 32-bit sample mask that determines which samples get updated 
     /// in all the active render targets. A sample mask is always applied; 
     /// it is independent of whether multisampling is enabled, and does not 
     /// depend on whether an application uses multisample render targets.
-    Uint32 SampleMask = 0xFFFFFFFF;
+    Uint32 SampleMask DEFAULT_INITIALIZER(0xFFFFFFFF);
 
     /// Rasterizer state description
-    RasterizerStateDesc RasterizerDesc;
+    struct RasterizerStateDesc RasterizerDesc;
 
     /// Depth-stencil state description
-    DepthStencilStateDesc DepthStencilDesc;
+    struct DepthStencilStateDesc DepthStencilDesc;
 
     /// Input layout
-    InputLayoutDesc InputLayout;
+    struct InputLayoutDesc InputLayout;
     //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
     /// Primitive topology type
-    PRIMITIVE_TOPOLOGY PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    enum PRIMITIVE_TOPOLOGY PrimitiveTopology DEFAULT_INITIALIZER(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
     /// Number of viewports used by this pipeline
-    Uint8 NumViewports = 1;
+    Uint8 NumViewports DEFAULT_INITIALIZER(1);
 
     /// Number of render targets in the RTVFormats member
-    Uint8 NumRenderTargets = 0;
+    Uint8 NumRenderTargets DEFAULT_INITIALIZER(0);
 
     /// Render target formats
-    TEXTURE_FORMAT RTVFormats[8] = {};
+    enum TEXTURE_FORMAT RTVFormats[8] DEFAULT_INITIALIZER({});
 
     /// Depth-stencil format
-    TEXTURE_FORMAT DSVFormat = TEX_FORMAT_UNKNOWN;
+    enum TEXTURE_FORMAT DSVFormat DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Multisampling parameters
-    SampleDesc SmplDesc;
+    struct SampleDesc SmplDesc;
 
     /// Node mask.
-    Uint32 NodeMask = 0;
+    Uint32 NodeMask DEFAULT_INITIALIZER(0);
 
     //D3D12_CACHED_PIPELINE_STATE CachedPSO;
     //D3D12_PIPELINE_STATE_FLAGS Flags;
@@ -209,37 +215,39 @@ struct GraphicsPipelineDesc
 struct ComputePipelineDesc
 {
     /// Compute shader to be used with the pipeline
-    IShader* pCS = nullptr;
+    class IShader* pCS DEFAULT_INITIALIZER(nullptr);
 };
 
 /// Pipeline state description
-struct PipelineStateDesc : DeviceObjectAttribs
-{
+struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
+
     /// Flag indicating if pipeline state is a compute pipeline state
-    bool IsComputePipeline          = false;
+    bool IsComputePipeline          DEFAULT_INITIALIZER(false);
 
     /// Shader resource binding allocation granularity
 
     /// This member defines allocation granularity for internal resources required by the shader resource
     /// binding object instances.
-    Uint32 SRBAllocationGranularity = 1;
+    Uint32 SRBAllocationGranularity DEFAULT_INITIALIZER(1);
 
     /// Defines which command queues this pipeline state can be used with
-    Uint64 CommandQueueMask         = 1;
+    Uint64 CommandQueueMask         DEFAULT_INITIALIZER(1);
 
     /// Pipeline layout description
-    PipelineResourceLayoutDesc ResourceLayout;
+    struct PipelineResourceLayoutDesc ResourceLayout;
 
     /// Graphics pipeline state description. This memeber is ignored if IsComputePipeline == True
-    GraphicsPipelineDesc GraphicsPipeline;
+    struct GraphicsPipelineDesc GraphicsPipeline;
 
     /// Compute pipeline state description. This memeber is ignored if IsComputePipeline == False
-    ComputePipelineDesc ComputePipeline;
+    struct ComputePipelineDesc ComputePipeline;
 };
 
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
-static constexpr INTERFACE_ID IID_PipelineState =
+static const struct INTERFACE_ID IID_PipelineState =
     {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Pipeline state interface
 class IPipelineState : public IDeviceObject
@@ -321,4 +329,8 @@ public:
     virtual bool IsCompatibleWith(const IPipelineState* pPSO)const = 0;
 };
 
-}
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE

@@ -41,15 +41,15 @@ namespace Diligent
 {
 
 VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
-    Uint32                                                     NumRenderTargets,
-    const TEXTURE_FORMAT                                       RTVFormats[],
-    TEXTURE_FORMAT                                             DSVFormat,
-    Uint32                                                     SampleCount,
-    std::array<VkAttachmentDescription, MaxRenderTargets + 1>& Attachments,
-    std::array<VkAttachmentReference, MaxRenderTargets + 1>&   AttachmentReferences,
-    VkSubpassDescription&                                      SubpassDesc)
+    Uint32                                                       NumRenderTargets,
+    const TEXTURE_FORMAT                                         RTVFormats[],
+    TEXTURE_FORMAT                                               DSVFormat,
+    Uint32                                                       SampleCount,
+    std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1>& Attachments,
+    std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>&   AttachmentReferences,
+    VkSubpassDescription&                                        SubpassDesc)
 {
-    VERIFY_EXPR(NumRenderTargets <= MaxRenderTargets);
+    VERIFY_EXPR(NumRenderTargets <= MAX_RENDER_TARGETS);
 
     // Prepare render pass create info (7.1)
     VkRenderPassCreateInfo RenderPassCI = {};
@@ -160,8 +160,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
     // Initialize shader resource layouts
     auto& ShaderResLayoutAllocator = GetRawAllocator();
 
-    std::array<std::shared_ptr<const SPIRVShaderResources>, MaxShadersInPipeline> ShaderResources;
-    std::array<std::vector<uint32_t>, MaxShadersInPipeline>                       ShaderSPIRVs;
+    std::array<std::shared_ptr<const SPIRVShaderResources>, MAX_SHADERS_IN_PIPELINE> ShaderResources;
+    std::array<std::vector<uint32_t>, MAX_SHADERS_IN_PIPELINE>                       ShaderSPIRVs;
 
     m_ShaderResourceLayouts = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", ShaderResourceLayoutVk, m_NumShaders * 2);
     m_StaticResCaches       = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheVk", ShaderResourceCacheVk, m_NumShaders);
@@ -189,7 +189,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
 
     if (PipelineDesc.SRBAllocationGranularity > 1)
     {
-        std::array<size_t, MaxShadersInPipeline> ShaderVariableDataSizes = {};
+        std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
         {
             const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
@@ -206,7 +206,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
     }
 
     // Create shader modules and initialize shader stages
-    std::array<VkPipelineShaderStageCreateInfo, MaxShadersInPipeline> ShaderStages = {};
+    std::array<VkPipelineShaderStageCreateInfo, MAX_SHADERS_IN_PIPELINE> ShaderStages = {};
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
         auto* pShaderVk  = GetShader<const ShaderVkImpl>(s);
@@ -309,8 +309,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
 
         VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
 
-        std::array<VkVertexInputBindingDescription, iMaxLayoutElements>   BindingDescriptions;
-        std::array<VkVertexInputAttributeDescription, iMaxLayoutElements> AttributeDescription;
+        std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>   BindingDescriptions;
+        std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS> AttributeDescription;
         InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, VertexInputStateCI, BindingDescriptions, AttributeDescription);
         PipelineCI.pVertexInputState = &VertexInputStateCI;
 

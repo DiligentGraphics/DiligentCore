@@ -62,13 +62,13 @@ namespace Testing
 TestingEnvironment* TestingEnvironment::m_pTheEnvironment = nullptr;
 std::atomic_int     TestingEnvironment::m_NumAllowedErrors;
 
-void TestingEnvironment::MessageCallback(DebugMessageSeverity Severity,
-                                         const Char*          Message,
-                                         const char*          Function,
-                                         const char*          File,
-                                         int                  Line)
+void TestingEnvironment::MessageCallback(DEBUG_MESSAGE_SEVERITY Severity,
+                                         const Char*            Message,
+                                         const char*            Function,
+                                         const char*            File,
+                                         int                    Line)
 {
-    if (Severity == DebugMessageSeverity::Error || Severity == DebugMessageSeverity::FatalError)
+    if (Severity == DEBUG_MESSAGE_SEVERITY_ERROR || Severity == DEBUG_MESSAGE_SEVERITY_FATAL_ERROR)
     {
         if (m_NumAllowedErrors == 0)
         {
@@ -93,7 +93,7 @@ void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* Inf
 }
 
 
-TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
+TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
     m_DeviceType{deviceType}
 {
     VERIFY(m_pTheEnvironment == nullptr, "Testing environment object has already been initialized!");
@@ -120,7 +120,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
     switch (m_DeviceType)
     {
 #if D3D11_SUPPORTED
-        case DeviceType::D3D11:
+        case RENDER_DEVICE_TYPE_D3D11:
         {
 #    if ENGINE_DLL
             GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = nullptr;
@@ -168,7 +168,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
                 for (Uint32 i = 0; i < Adapters.size(); ++i)
                 {
                     if (Adapters[i].AdapterType == AdapterType &&
-                        CreateInfo.AdapterId == EngineD3D11CreateInfo::DefaultAdapterId)
+                        CreateInfo.AdapterId == DEFAULT_ADAPTER_ID)
                     {
                         CreateInfo.AdapterId = i;
                         LOG_INFO_MESSAGE("Using adapter ", i, ": '", Adapters[i].Description, "'");
@@ -186,7 +186,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #endif
 
 #if D3D12_SUPPORTED
-        case DeviceType::D3D12:
+        case RENDER_DEVICE_TYPE_D3D12:
         {
 #    if ENGINE_DLL
             GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = nullptr;
@@ -232,7 +232,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
                 for (Uint32 i = 0; i < Adapters.size(); ++i)
                 {
                     if (Adapters[i].AdapterType == AdapterType &&
-                        CreateInfo.AdapterId == EngineD3D11CreateInfo::DefaultAdapterId)
+                        CreateInfo.AdapterId == DEFAULT_ADAPTER_ID)
                     {
                         CreateInfo.AdapterId = i;
                         LOG_INFO_MESSAGE("Using adapter ", i, ": '", Adapters[i].Description, "'");
@@ -257,8 +257,8 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-        case DeviceType::OpenGL:
-        case DeviceType::OpenGLES:
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
         {
 #    if EXPLICITLY_LOAD_ENGINE_GL_DLL
             // Declare function pointer
@@ -294,7 +294,7 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
 #endif
 
 #if VULKAN_SUPPORTED
-        case DeviceType::Vulkan:
+        case RENDER_DEVICE_TYPE_VULKAN:
         {
 #    if EXPLICITLY_LOAD_ENGINE_VK_DLL
             GetEngineFactoryVkType GetEngineFactoryVk = nullptr;
@@ -309,8 +309,8 @@ TestingEnvironment::TestingEnvironment(DeviceType deviceType, ADAPTER_TYPE Adapt
             EngineVkCreateInfo CreateInfo;
             CreateInfo.DebugMessageCallback      = MessageCallback;
             CreateInfo.EnableValidation          = true;
-            CreateInfo.MainDescriptorPoolSize    = EngineVkCreateInfo::DescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32};
-            CreateInfo.DynamicDescriptorPoolSize = EngineVkCreateInfo::DescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32};
+            CreateInfo.MainDescriptorPoolSize    = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32};
+            CreateInfo.DynamicDescriptorPoolSize = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32};
             CreateInfo.UploadHeapPageSize        = 32 * 1024;
             //CreateInfo.DeviceLocalMemoryReserveSize = 32 << 20;
             //CreateInfo.HostVisibleMemoryReserveSize = 48 << 20;

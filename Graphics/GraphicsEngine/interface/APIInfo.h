@@ -30,74 +30,73 @@
 /// \file
 /// Diligent API information
 
-#define DILIGENT_API_VERSION 240051
+#define DILIGENT_API_VERSION 240052
 
 #include "../../../Primitives/interface/BasicTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 /// Diligent API Info. This tructure can be used to verify API compatibility.
 struct APIInfo
 {
-    size_t StructSize                     = 0;
-    int    APIVersion                     = 0;
-    size_t RenderTargetBlendDescSize      = 0;
-    size_t BlendStateDescSize             = 0;
-    size_t BufferDescSize                 = 0;
-    size_t BufferDataSize                 = 0;
-    size_t BufferFormatSize               = 0;
-    size_t BufferViewDescSize             = 0;
-    size_t StencilOpDescSize              = 0;
-    size_t DepthStencilStateDescSize      = 0;
-    size_t SamplerCapsSize                = 0;
-    size_t TextureCapsSize                = 0;
-    size_t DeviceCapsSize                 = 0;
-    size_t DrawAttribsSize                = 0;
-    size_t DispatchComputeAttribsSize     = 0;
-    size_t ViewportSize                   = 0;
-    size_t RectSize                       = 0;
-    size_t CopyTextureAttribsSize         = 0;
-    size_t DeviceObjectAttribsSize        = 0;
-    size_t AdapterAttribsSize             = 0;
-    size_t DisplayModeAttribsSize         = 0;
-    size_t SwapChainDescSize              = 0;
-    size_t FullScreenModeDescSize         = 0;
-    size_t EngineCreateInfoSize           = 0;
-    size_t EngineGLCreateInfoSize         = 0;
-    size_t EngineD3D11CreateInfoSize      = 0;
-    size_t EngineD3D12CreateInfoSize      = 0;
-    size_t EngineVkCreateInfoSize         = 0;
-    size_t EngineMtlCreateInfoSize        = 0;
-    size_t BoxSize                        = 0;
-    size_t TextureFormatAttribsSize       = 0;
-    size_t TextureFormatInfoSize          = 0;
-    size_t TextureFormatInfoExtSize       = 0;
-    size_t StateTransitionDescSize        = 0;
-    size_t LayoutElementSize              = 0;
-    size_t InputLayoutDescSize            = 0;
-    size_t SampleDescSize                 = 0;
-    size_t ShaderResourceVariableDescSize = 0;
-    size_t StaticSamplerDescSize          = 0;
-    size_t PipelineResourceLayoutDescSize = 0;
-    size_t GraphicsPipelineDescSize       = 0;
-    size_t ComputePipelineDescSize        = 0;
-    size_t PipelineStateDescSize          = 0;
-    size_t RasterizerStateDescSize        = 0;
-    size_t ResourceMappingEntrySize       = 0;
-    size_t ResourceMappingDescSize        = 0;
-    size_t SamplerDescSize                = 0;
-    size_t ShaderDescSize                 = 0;
-    size_t ShaderMacroSize                = 0;
-    size_t ShaderCreateInfoSize           = 0;
-    size_t ShaderResourceDescSize         = 0;
-    size_t DepthStencilClearValueSize     = 0;
-    size_t OptimizedClearValueSize        = 0;
-    size_t TextureDescSize                = 0;
-    size_t TextureSubResDataSize          = 0;
-    size_t TextureDataSize                = 0;
-    size_t MappedTextureSubresourceSize   = 0;
-    size_t TextureViewDescSize            = 0;
+    size_t StructSize                     DEFAULT_INITIALIZER(0);
+    int APIVersion                        DEFAULT_INITIALIZER(0);
+    size_t RenderTargetBlendDescSize      DEFAULT_INITIALIZER(0);
+    size_t BlendStateDescSize             DEFAULT_INITIALIZER(0);
+    size_t BufferDescSize                 DEFAULT_INITIALIZER(0);
+    size_t BufferDataSize                 DEFAULT_INITIALIZER(0);
+    size_t BufferFormatSize               DEFAULT_INITIALIZER(0);
+    size_t BufferViewDescSize             DEFAULT_INITIALIZER(0);
+    size_t StencilOpDescSize              DEFAULT_INITIALIZER(0);
+    size_t DepthStencilStateDescSize      DEFAULT_INITIALIZER(0);
+    size_t SamplerCapsSize                DEFAULT_INITIALIZER(0);
+    size_t TextureCapsSize                DEFAULT_INITIALIZER(0);
+    size_t DeviceCapsSize                 DEFAULT_INITIALIZER(0);
+    size_t DrawAttribsSize                DEFAULT_INITIALIZER(0);
+    size_t DispatchComputeAttribsSize     DEFAULT_INITIALIZER(0);
+    size_t ViewportSize                   DEFAULT_INITIALIZER(0);
+    size_t RectSize                       DEFAULT_INITIALIZER(0);
+    size_t CopyTextureAttribsSize         DEFAULT_INITIALIZER(0);
+    size_t DeviceObjectAttribsSize        DEFAULT_INITIALIZER(0);
+    size_t AdapterAttribsSize             DEFAULT_INITIALIZER(0);
+    size_t DisplayModeAttribsSize         DEFAULT_INITIALIZER(0);
+    size_t SwapChainDescSize              DEFAULT_INITIALIZER(0);
+    size_t FullScreenModeDescSize         DEFAULT_INITIALIZER(0);
+    size_t EngineCreateInfoSize           DEFAULT_INITIALIZER(0);
+    size_t EngineGLCreateInfoSize         DEFAULT_INITIALIZER(0);
+    size_t EngineD3D11CreateInfoSize      DEFAULT_INITIALIZER(0);
+    size_t EngineD3D12CreateInfoSize      DEFAULT_INITIALIZER(0);
+    size_t EngineVkCreateInfoSize         DEFAULT_INITIALIZER(0);
+    size_t EngineMtlCreateInfoSize        DEFAULT_INITIALIZER(0);
+    size_t BoxSize                        DEFAULT_INITIALIZER(0);
+    size_t TextureFormatAttribsSize       DEFAULT_INITIALIZER(0);
+    size_t TextureFormatInfoSize          DEFAULT_INITIALIZER(0);
+    size_t TextureFormatInfoExtSize       DEFAULT_INITIALIZER(0);
+    size_t StateTransitionDescSize        DEFAULT_INITIALIZER(0);
+    size_t LayoutElementSize              DEFAULT_INITIALIZER(0);
+    size_t InputLayoutDescSize            DEFAULT_INITIALIZER(0);
+    size_t SampleDescSize                 DEFAULT_INITIALIZER(0);
+    size_t ShaderResourceVariableDescSize DEFAULT_INITIALIZER(0);
+    size_t StaticSamplerDescSize          DEFAULT_INITIALIZER(0);
+    size_t PipelineResourceLayoutDescSize DEFAULT_INITIALIZER(0);
+    size_t GraphicsPipelineDescSize       DEFAULT_INITIALIZER(0);
+    size_t ComputePipelineDescSize        DEFAULT_INITIALIZER(0);
+    size_t PipelineStateDescSize          DEFAULT_INITIALIZER(0);
+    size_t RasterizerStateDescSize        DEFAULT_INITIALIZER(0);
+    size_t ResourceMappingEntrySize       DEFAULT_INITIALIZER(0);
+    size_t ResourceMappingDescSize        DEFAULT_INITIALIZER(0);
+    size_t SamplerDescSize                DEFAULT_INITIALIZER(0);
+    size_t ShaderDescSize                 DEFAULT_INITIALIZER(0);
+    size_t ShaderMacroSize                DEFAULT_INITIALIZER(0);
+    size_t ShaderCreateInfoSize           DEFAULT_INITIALIZER(0);
+    size_t ShaderResourceDescSize         DEFAULT_INITIALIZER(0);
+    size_t DepthStencilClearValueSize     DEFAULT_INITIALIZER(0);
+    size_t OptimizedClearValueSize        DEFAULT_INITIALIZER(0);
+    size_t TextureDescSize                DEFAULT_INITIALIZER(0);
+    size_t TextureSubResDataSize          DEFAULT_INITIALIZER(0);
+    size_t TextureDataSize                DEFAULT_INITIALIZER(0);
+    size_t MappedTextureSubresourceSize   DEFAULT_INITIALIZER(0);
+    size_t TextureViewDescSize            DEFAULT_INITIALIZER(0);
 };
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

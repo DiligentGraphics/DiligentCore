@@ -90,27 +90,27 @@ TEST(GeometryShaderTest, DrawTriangles)
         switch (deviceType)
         {
 #if D3D11_SUPPORTED
-            case DeviceType::D3D11:
+            case RENDER_DEVICE_TYPE_D3D11:
                 GeometryShaderReferenceD3D11(pSwapChain);
                 break;
 #endif
 
 #if D3D12_SUPPORTED
-            case DeviceType::D3D12:
+            case RENDER_DEVICE_TYPE_D3D12:
                 GeometryShaderReferenceD3D12(pSwapChain);
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-            case DeviceType::OpenGL:
-            case DeviceType::OpenGLES:
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
                 GeometryShaderReferenceGL(pSwapChain);
                 break;
 
 #endif
 
 #if VULKAN_SUPPORTED
-            case DeviceType::Vulkan:
+            case RENDER_DEVICE_TYPE_VULKAN:
                 GeometryShaderReferenceVk(pSwapChain);
                 break;
 

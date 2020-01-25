@@ -34,8 +34,8 @@
 
 #include "GraphicsTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 /// Stencil operation
 
@@ -45,7 +45,7 @@ namespace Diligent
 /// [D3D11_STENCIL_OP][]/[D3D12_STENCIL_OP][] enumeration. 
 /// It is used by Diligent::StencilOpDesc structure to describe the stencil fail, depth fail
 /// and stencil pass operations
-enum STENCIL_OP : Int8
+DILIGENT_TYPED_ENUM(STENCIL_OP, Int8)
 {
     /// Undefined operation.
     STENCIL_OP_UNDEFINED = 0,
@@ -99,21 +99,22 @@ struct StencilOpDesc
 {
     /// The stencil operation to perform when stencil testing fails.
     /// Default value: Diligent::STENCIL_OP_KEEP.
-    STENCIL_OP          StencilFailOp       = STENCIL_OP_KEEP;
+    STENCIL_OP          StencilFailOp       DEFAULT_INITIALIZER(STENCIL_OP_KEEP);
 
     /// The stencil operation to perform when stencil testing passes and depth testing fails.
     /// Default value: Diligent::STENCIL_OP_KEEP.
-    STENCIL_OP          StencilDepthFailOp  = STENCIL_OP_KEEP;
+    STENCIL_OP          StencilDepthFailOp  DEFAULT_INITIALIZER(STENCIL_OP_KEEP);
 
     /// The stencil operation to perform when stencil testing and depth testing both pass.
     /// Default value: Diligent::STENCIL_OP_KEEP.
-    STENCIL_OP          StencilPassOp       = STENCIL_OP_KEEP;
+    STENCIL_OP          StencilPassOp       DEFAULT_INITIALIZER(STENCIL_OP_KEEP);
 
     /// A function that compares stencil data against existing stencil data. 
     /// Default value: Diligent::COMPARISON_FUNC_ALWAYS. See Diligent::COMPARISON_FUNCTION.
-    COMPARISON_FUNCTION StencilFunc         = COMPARISON_FUNC_ALWAYS;
+    COMPARISON_FUNCTION StencilFunc         DEFAULT_INITIALIZER(COMPARISON_FUNC_ALWAYS);
 
 
+#if DILIGENT_CPP_INTERFACE
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     StencilOpDesc{STENCIL_OP_KEEP, STENCIL_OP_KEEP, STENCIL_OP_KEEP, COMPARISON_FUNC_ALWAYS}
 
@@ -142,6 +143,7 @@ struct StencilOpDesc
                StencilPassOp      == rhs.StencilPassOp      &&
                StencilFunc        == rhs.StencilFunc;
     }
+#endif
 };
 
 /// Depth stencil state description
@@ -156,34 +158,35 @@ struct DepthStencilStateDesc
     /// Enable depth-stencil operations. When it is set to False, 
     /// depth test always passes, depth writes are disabled,
     /// and no stencil operations are performed. Default value: True.
-    Bool                DepthEnable         = True;
+    Bool                DepthEnable         DEFAULT_INITIALIZER(True);
 
     /// Enable or disable writes to a depth buffer. Default value: True.
-    Bool                DepthWriteEnable    = True;
+    Bool                DepthWriteEnable    DEFAULT_INITIALIZER(True);
 
     /// A function that compares depth data against existing depth data. 
     /// See Diligent::COMPARISON_FUNCTION for details.
     /// Default value: Diligent::COMPARISON_FUNC_LESS.
-    COMPARISON_FUNCTION DepthFunc           = COMPARISON_FUNC_LESS;
+    COMPARISON_FUNCTION DepthFunc           DEFAULT_INITIALIZER(COMPARISON_FUNC_LESS);
 
     /// Enable stencil opertaions. Default value: False.
-    Bool                StencilEnable       = False;
+    Bool                StencilEnable       DEFAULT_INITIALIZER(False);
     
     /// Identify which bits of the depth-stencil buffer are accessed when reading stencil data.
     /// Default value: 0xFF.
-    Uint8               StencilReadMask     = 0xFF;
+    Uint8               StencilReadMask     DEFAULT_INITIALIZER(0xFF);
     
     /// Identify which bits of the depth-stencil buffer are accessed when writing stencil data.
     /// Default value: 0xFF.
-    Uint8               StencilWriteMask    = 0xFF;
+    Uint8               StencilWriteMask    DEFAULT_INITIALIZER(0xFF);
 
     /// Identify stencil operations for the front-facing triangles, see Diligent::StencilOpDesc.
-    StencilOpDesc      FrontFace;
+    struct StencilOpDesc FrontFace;
 
     /// Identify stencil operations for the back-facing triangles, see Diligent::StencilOpDesc.
-    StencilOpDesc      BackFace;
+    struct StencilOpDesc BackFace;
 
 
+#if DILIGENT_CPP_INTERFACE
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
     //     DepthStencilStateDesc{False, False}
 
@@ -224,6 +227,7 @@ struct DepthStencilStateDesc
                 FrontFace        == rhs.FrontFace        &&
                 BackFace         == rhs.BackFace;     
     }
+#endif
 };
 
-}
+DILIGENT_END_NAMESPACE

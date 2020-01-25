@@ -265,7 +265,7 @@ private:
 
     ContextCaps m_Caps;
 
-    Uint32            m_ColorWriteMasks[MaxRenderTargets] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    Uint32            m_ColorWriteMasks[MAX_RENDER_TARGETS] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     EnableStateHelper m_bIndependentWriteMasks;
     Int32             m_iActiveTexture   = -1;
     Int32             m_NumPatchVertices = -1;

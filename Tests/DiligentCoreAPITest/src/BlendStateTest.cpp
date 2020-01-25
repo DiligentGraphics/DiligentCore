@@ -62,7 +62,7 @@ protected:
         Attrs.UseCombinedTextureSamplers = true;
         pDevice->CreateShader(Attrs, &sm_Resources.pTrivialVS);
 
-        Uint32 MaxTestRenderTargets = pDevice->GetDeviceCaps().DevType == DeviceType::OpenGLES ? 4 : 8;
+        Uint32 MaxTestRenderTargets = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_GLES ? 4 : 8;
         for (Uint32 NumRTs = 1; NumRTs <= MaxTestRenderTargets; ++NumRTs)
         {
             std::stringstream source_ss;
@@ -135,7 +135,7 @@ private:
     struct Resources
     {
         RefCntAutoPtr<IShader> pTrivialVS;
-        RefCntAutoPtr<IShader> pTrivialPS[MaxRenderTargets + 1];
+        RefCntAutoPtr<IShader> pTrivialPS[MAX_RENDER_TARGETS + 1];
 
         PipelineStateDesc PSODesc;
     };
@@ -215,9 +215,9 @@ TEST_P(BlendFactorTest, CreatePSO)
     const bool TestingAlpha = std::get<1>(Param);
 
     const auto& DevCaps              = pDevice->GetDeviceCaps();
-    Uint32      MaxTestRenderTargets = (DevCaps.DevType == DeviceType::OpenGLES) ? 4 : 8;
+    Uint32      MaxTestRenderTargets = (DevCaps.DevType == RENDER_DEVICE_TYPE_GLES) ? 4 : 8;
 
-    const bool TestSRC1 = DevCaps.DevType != DeviceType::OpenGLES; // || DevCaps.Vendor == GPU_VENDOR::NVIDIA;
+    const bool TestSRC1 = DevCaps.DevType != RENDER_DEVICE_TYPE_GLES; // || DevCaps.Vendor == GPU_VENDOR::NVIDIA;
     if (BlendFactor == BLEND_FACTOR_SRC1_COLOR ||
         BlendFactor == BLEND_FACTOR_INV_SRC1_COLOR ||
         BlendFactor == BLEND_FACTOR_SRC1_ALPHA ||
@@ -370,7 +370,7 @@ TEST_P(BlendOperationTest, CreatePSO)
     const auto TestingAlpha = std::get<1>(Param);
 
     const auto&  DevCaps              = pDevice->GetDeviceCaps();
-    const Uint32 MaxTestRenderTargets = (DevCaps.DevType == DeviceType::OpenGLES) ? 4 : 8;
+    const Uint32 MaxTestRenderTargets = (DevCaps.DevType == RENDER_DEVICE_TYPE_GLES) ? 4 : 8;
 
     for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {

@@ -34,7 +34,7 @@
 namespace Diligent
 {
 
-static const std::string HLSLVersionToShaderModelString(const ShaderCreateInfo::ShaderVersion& Version, Uint8 MaxMajorRevision, Uint8 MaxMinorRevision)
+static const std::string HLSLVersionToShaderModelString(const ShaderVersion& Version, Uint8 MaxMajorRevision, Uint8 MaxMinorRevision)
 {
     std::string ModelStr;
     if (Version.Major > MaxMajorRevision || Version.Major == MaxMajorRevision && Version.Minor > MaxMinorRevision)
@@ -51,7 +51,7 @@ static const std::string HLSLVersionToShaderModelString(const ShaderCreateInfo::
     return ModelStr;
 }
 
-static const std::string GetD3D11ShaderModel(ID3D11Device* pd3d11Device, const ShaderCreateInfo::ShaderVersion& HLSLVersion)
+static const std::string GetD3D11ShaderModel(ID3D11Device* pd3d11Device, const ShaderVersion& HLSLVersion)
 {
     auto d3dDeviceFeatureLevel = pd3d11Device->GetFeatureLevel();
     switch (d3dDeviceFeatureLevel)

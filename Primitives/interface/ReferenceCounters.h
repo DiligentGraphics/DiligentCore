@@ -32,8 +32,9 @@
 
 #include "InterfaceID.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Base interface for a reference counter object that stores the number of strong and
 /// weak references and the pointer to the object. It is necessary to separate reference
@@ -117,4 +118,8 @@ public:
     virtual CounterValueType GetNumWeakRefs() const = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

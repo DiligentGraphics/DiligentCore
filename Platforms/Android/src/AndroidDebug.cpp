@@ -31,13 +31,13 @@ using namespace Diligent;
 void AndroidDebug::AssertionFailed(const Char* Message, const char* Function, const char* File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
+    OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
 
     raise(SIGTRAP);
 };
 
 
-void AndroidDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char* Message, const char* Function, const char* File, int Line)
+void AndroidDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char* Message, const char* Function, const char* File, int Line)
 {
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
 

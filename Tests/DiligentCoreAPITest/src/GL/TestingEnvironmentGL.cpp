@@ -38,7 +38,7 @@ void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
                               const SwapChainDesc& SCDesc,
                               ISwapChain**         ppSwapChain);
 
-TestingEnvironmentGL::TestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
+TestingEnvironmentGL::TestingEnvironmentGL(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
     TestingEnvironment{deviceType, AdapterType, SCDesc}
 {
     // Initialize GLEW
@@ -183,7 +183,7 @@ void TestingEnvironmentGL::Reset()
     }
 }
 
-TestingEnvironment* CreateTestingEnvironmentGL(DeviceType deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
+TestingEnvironment* CreateTestingEnvironmentGL(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
 {
     try
     {

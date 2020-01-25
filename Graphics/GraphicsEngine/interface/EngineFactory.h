@@ -33,15 +33,15 @@
 #include "../../../Primitives/interface/Object.h"
 #include "APIInfo.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 class IShaderSourceInputStreamFactory;
 
 // {D932B052-4ED6-4729-A532-F31DEEC100F3}
-static constexpr INTERFACE_ID IID_EngineFactory =
+static const struct INTERFACE_ID IID_EngineFactory =
     {0xd932b052, 0x4ed6, 0x4729, {0xa5, 0x32, 0xf3, 0x1d, 0xee, 0xc1, 0x0, 0xf3}};
 
+#if DILIGENT_CPP_INTERFACE
 
 /// Engine factory base interface
 class IEngineFactory : public IObject
@@ -56,13 +56,17 @@ public:
     virtual void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories,
                                                         IShaderSourceInputStreamFactory** ppShaderSourceFactory) const = 0;
 
-#if PLATFORM_ANDROID
+#    if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before
     /// CreateDefaultShaderSourceStreamFactory() method can be called.
     /// \param [in] Activity          - Pointer to the activity.
     /// \param [in] ActivityClassName - Activity class name.
     virtual void InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const = 0;
-#endif
+#    endif
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

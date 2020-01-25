@@ -67,8 +67,8 @@ private:
         Uint32 NumRenderTargets = 0;
 
         // Unique IDs of textures bound as render targets
-        UniqueIdentifier RTIds[MaxRenderTargets] = {};
-        TextureViewDesc  RTVDescs[MaxRenderTargets];
+        UniqueIdentifier RTIds[MAX_RENDER_TARGETS] = {};
+        TextureViewDesc  RTVDescs[MAX_RENDER_TARGETS];
 
         // Unique IDs of texture bound as depth stencil
         UniqueIdentifier DSId    = 0;

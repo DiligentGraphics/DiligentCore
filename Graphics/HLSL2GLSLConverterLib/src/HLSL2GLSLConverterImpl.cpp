@@ -3171,7 +3171,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessFragmentShaderArguments(st
                                 RTIndex = 0;
                         }
 
-                        if (RTIndex >= 0 && RTIndex < MaxRenderTargets)
+                        if (RTIndex >= 0 && RTIndex < MAX_RENDER_TARGETS)
                         {
                             // Layout location qualifiers are allowed on FS outputs even in GLES3.0
                             String OutVarName = BuildParameterName(MemberStack, '_', "_psout_");

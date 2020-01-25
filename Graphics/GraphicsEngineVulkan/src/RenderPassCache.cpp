@@ -50,8 +50,8 @@ VkRenderPass RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
     if (it == m_Cache.end())
     {
         // Do not zero-intitialize arrays
-        std::array<VkAttachmentDescription, MaxRenderTargets + 1> Attachments;
-        std::array<VkAttachmentReference, MaxRenderTargets + 1>   AttachmentReferences;
+        std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1> Attachments;
+        std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>   AttachmentReferences;
 
         VkSubpassDescription Subpass;
 

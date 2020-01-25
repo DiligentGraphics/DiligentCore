@@ -32,11 +32,11 @@
 
 #include "DeviceObject.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 // {70F2A88A-F8BE-4901-8F05-2F72FA695BA0}
-static constexpr INTERFACE_ID IID_Query =
+static const struct INTERFACE_ID IID_Query =
     {0x70f2a88a, 0xf8be, 0x4901, {0x8f, 0x5, 0x2f, 0x72, 0xfa, 0x69, 0x5b, 0xa0}};
 
 /// Query type.
@@ -71,11 +71,11 @@ enum QUERY_TYPE
 struct QueryDataOcclusion
 {
     /// Query type - must be Diligent::QUERY_TYPE_OCCLUSION
-    const QUERY_TYPE Type = QUERY_TYPE_OCCLUSION;
+    const enum QUERY_TYPE Type DEFAULT_INITIALIZER(QUERY_TYPE_OCCLUSION);
 
     /// The number of samples that passed the depth and stencil tests in between
     /// IDeviceContext::BeginQuery and IDeviceContext::EndQuery.
-    Uint64 NumSamples = 0;
+    Uint64 NumSamples DEFAULT_INITIALIZER(0);
 };
 
 /// Binary occlusion query data.
@@ -83,11 +83,11 @@ struct QueryDataOcclusion
 struct QueryDataBinaryOcclusion
 {
     /// Query type - must be Diligent::QUERY_TYPE_BINARY_OCCLUSION
-    const QUERY_TYPE Type = QUERY_TYPE_BINARY_OCCLUSION;
+    const enum QUERY_TYPE Type DEFAULT_INITIALIZER(QUERY_TYPE_BINARY_OCCLUSION);
 
     /// Indicates if at least one sample passed depth and stencil testing in between
     /// IDeviceContext::BeginQuery and IDeviceContext::EndQuery.
-    bool AnySamplePassed = 0;
+    bool AnySamplePassed DEFAULT_INITIALIZER(0);
 };
 
 /// Timestamp query data.
@@ -95,14 +95,14 @@ struct QueryDataBinaryOcclusion
 struct QueryDataTimestamp
 {
     /// Query type - must be Diligent::QUERY_TYPE_TIMESTAMP
-    const QUERY_TYPE Type = QUERY_TYPE_TIMESTAMP;
+    const enum QUERY_TYPE Type DEFAULT_INITIALIZER(QUERY_TYPE_TIMESTAMP);
 
     /// The value of a high-frequency counter.
-    Uint64 Counter = 0;
+    Uint64 Counter DEFAULT_INITIALIZER(0);
 
     /// The counter frequency, in Hz (ticks/second). If there was an error
     /// while getting the timestamp, this value will be 0.
-    Uint64 Frequency = 0;
+    Uint64 Frequency DEFAULT_INITIALIZER(0);
 };
 
 /// Pipeline statistics query data.
@@ -112,57 +112,65 @@ struct QueryDataTimestamp
 struct QueryDataPipelineStatistics
 {
     /// Query type - must be Diligent::QUERY_TYPE_PIPELINE_STATISTICS
-    const QUERY_TYPE Type = QUERY_TYPE_PIPELINE_STATISTICS;
+    const enum QUERY_TYPE Type DEFAULT_INITIALIZER(QUERY_TYPE_PIPELINE_STATISTICS);
 
     /// Number of vertices processed by the input assembler stage.
-    Uint64 InputVertices = 0;
+    Uint64 InputVertices DEFAULT_INITIALIZER(0);
 
     /// Number of primitives processed by the input assembler stage.
-    Uint64 InputPrimitives = 0;
+    Uint64 InputPrimitives DEFAULT_INITIALIZER(0);
 
     /// Number of primitives output by a geometry shader.
-    Uint64 GSPrimitives = 0;
+    Uint64 GSPrimitives DEFAULT_INITIALIZER(0);
 
     /// Number of primitives that were sent to the clipping stage.
-    Uint64 ClippingInvocations = 0;
+    Uint64 ClippingInvocations DEFAULT_INITIALIZER(0);
 
     /// Number of primitives that were output by the clipping stage and were rendered.
     /// This may be larger or smaller than ClippingInvocations because after a primitive is
     /// clipped sometimes it is either broken up into more than one primitive or completely culled.
-    Uint64 ClippingPrimitives = 0;
+    Uint64 ClippingPrimitives DEFAULT_INITIALIZER(0);
 
     /// Number of times a vertex shader was invoked.
-    Uint64 VSInvocations = 0;
+    Uint64 VSInvocations DEFAULT_INITIALIZER(0);
 
     /// Number of times a geometry shader was invoked.
-    Uint64 GSInvocations = 0;
+    Uint64 GSInvocations DEFAULT_INITIALIZER(0);
 
     /// Number of times a pixel shader shader was invoked.
-    Uint64 PSInvocations = 0;
+    Uint64 PSInvocations DEFAULT_INITIALIZER(0);
 
     /// Number of times a hull shader shader was invoked.
-    Uint64 HSInvocations = 0;
+    Uint64 HSInvocations DEFAULT_INITIALIZER(0);
 
     /// Number of times a domain shader shader was invoked.
-    Uint64 DSInvocations = 0;
+    Uint64 DSInvocations DEFAULT_INITIALIZER(0);
 
     /// Number of times a compute shader was invoked.
-    Uint64 CSInvocations = 0;
+    Uint64 CSInvocations DEFAULT_INITIALIZER(0);
 };
 
-/// Query description.
-struct QueryDesc : DeviceObjectAttribs
-{
-    /// Query type, see Diligent::QUERY_TYPE.
-    QUERY_TYPE Type = QUERY_TYPE_UNDEFINED;
 
+// clang-format off
+
+/// Query description.
+struct QueryDesc DILIGENT_DERIVE(DeviceObjectAttribs)
+
+    /// Query type, see Diligent::QUERY_TYPE.
+    enum QUERY_TYPE Type DEFAULT_INITIALIZER(QUERY_TYPE_UNDEFINED);
+
+#if DILIGENT_CPP_INTERFACE
     QueryDesc() noexcept {};
 
     explicit QueryDesc(QUERY_TYPE _Type) noexcept :
         Type(_Type)
     {}
+#endif
 };
 
+// clang-format on
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Query interface.
 
@@ -202,4 +210,8 @@ public:
     virtual void Invalidate() = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

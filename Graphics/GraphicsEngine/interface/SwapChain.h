@@ -34,12 +34,15 @@
 #include "TextureView.h"
 #include "GraphicsTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 // {1C703B77-6607-4EEC-B1FE-15C82D3B4130}
-static constexpr INTERFACE_ID IID_SwapChain =
+static const struct INTERFACE_ID IID_SwapChain =
     {0x1c703b77, 0x6607, 0x4eec, {0xb1, 0xfe, 0x15, 0xc8, 0x2d, 0x3b, 0x41, 0x30}};
+
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Swap chain interface
 
@@ -87,4 +90,8 @@ public:
     virtual ITextureView* GetDepthBufferDSV() = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

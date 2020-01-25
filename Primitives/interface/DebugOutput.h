@@ -29,23 +29,22 @@
 
 #include "BasicTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 /// Describes debug message severity
-enum class DebugMessageSeverity : Int32
+enum DEBUG_MESSAGE_SEVERITY
 {
     /// Information message
-    Info = 0,
+    DEBUG_MESSAGE_SEVERITY_INFO = 0,
 
     /// Warning message
-    Warning,
+    DEBUG_MESSAGE_SEVERITY_WARNING,
 
     /// Error, with potential recovery
-    Error,
+    DEBUG_MESSAGE_SEVERITY_ERROR,
 
     /// Fatal error - recovery is not possible
-    FatalError
+    DEBUG_MESSAGE_SEVERITY_FATAL_ERROR
 };
 
 
@@ -56,11 +55,11 @@ enum class DebugMessageSeverity : Int32
 /// \param [in] Function - Name of the function or nullptr
 /// \param [in] Function - File name or nullptr
 /// \param [in] Line - Line number
-using DebugMessageCallbackType = void (*)(DebugMessageSeverity Severity,
-                                          const Char*          Message,
-                                          const char*          Function,
-                                          const char*          File,
-                                          int                  Line);
+typedef void (*DebugMessageCallbackType)(enum DEBUG_MESSAGE_SEVERITY Severity,
+                                         const Char*                 Message,
+                                         const Char*                 Function,
+                                         const Char*                 File,
+                                         int                         Line);
 extern DebugMessageCallbackType DebugMessageCallback;
 
 
@@ -70,4 +69,4 @@ extern DebugMessageCallbackType DebugMessageCallback;
 ///       wants to use the callback.
 void SetDebugMessageCallback(DebugMessageCallbackType DbgMessageCallback);
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

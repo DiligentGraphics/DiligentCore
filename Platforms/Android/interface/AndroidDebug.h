@@ -31,9 +31,9 @@ struct AndroidDebug : public BasicPlatformDebug
                                 const char*           Function, // type of __FUNCTION__
                                 const char*           File,     // type of __FILE__
                                 int                   Line);
-    static void OutputDebugMessage(Diligent::DebugMessageSeverity Severity,
-                                   const Diligent::Char*          Message,
-                                   const char*                    Function, // type of __FUNCTION__
-                                   const char*                    File,     // type of __FILE__
-                                   int                            Line);
+    static void OutputDebugMessage(Diligent::DEBUG_MESSAGE_SEVERITY Severity,
+                                   const Diligent::Char*            Message,
+                                   const char*                      Function, // type of __FUNCTION__
+                                   const char*                      File,     // type of __FILE__
+                                   int                              Line);
 };

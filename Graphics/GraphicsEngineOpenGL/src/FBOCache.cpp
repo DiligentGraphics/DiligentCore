@@ -125,8 +125,8 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
 
     // Construct the key
     FBOCacheKey Key;
-    VERIFY(NumRenderTargets < MaxRenderTargets, "Too many render targets are being set");
-    NumRenderTargets     = std::min(NumRenderTargets, MaxRenderTargets);
+    VERIFY(NumRenderTargets < MAX_RENDER_TARGETS, "Too many render targets are being set");
+    NumRenderTargets     = std::min(NumRenderTargets, MAX_RENDER_TARGETS);
     Key.NumRenderTargets = NumRenderTargets;
     for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
     {

@@ -78,7 +78,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    if (pDevice->GetDeviceCaps().DevType == DeviceType::OpenGLES)
+    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_GLES)
         return;
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;

@@ -332,9 +332,9 @@ void DeviceContextVkImpl::CommitVkVertexBuffers()
         LOG_ERROR("Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
 #endif
     // Do not initialize array with zeros for performance reasons
-    VkBuffer     vkVertexBuffers[MaxBufferSlots]; // = {}
-    VkDeviceSize Offsets[MaxBufferSlots];
-    VERIFY(m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set");
+    VkBuffer     vkVertexBuffers[MAX_BUFFER_SLOTS]; // = {}
+    VkDeviceSize Offsets[MAX_BUFFER_SLOTS];
+    VERIFY(m_NumVertexStreams <= MAX_BUFFER_SLOTS, "Too many buffers are being set");
     bool DynamicBufferPresent = false;
     for (Uint32 slot = 0; slot < m_NumVertexStreams; ++slot)
     {
@@ -986,7 +986,7 @@ void DeviceContextVkImpl::CommitViewports()
     if (m_NumViewports == 0)
         return;
 
-    VkViewport VkViewports[MaxViewports]; // Do not waste time initializing array to zero
+    VkViewport VkViewports[MAX_VIEWPORTS]; // Do not waste time initializing array to zero
     for (Uint32 vp = 0; vp < m_NumViewports; ++vp)
     {
         VkViewports[vp].x        = m_Viewports[vp].TopLeftX;
@@ -1043,7 +1043,7 @@ void DeviceContextVkImpl::CommitScissorRects()
     if (m_NumScissorRects == 0)
         return; // Scissors have not been set in the context yet
 
-    VkRect2D VkScissorRects[MaxViewports]; // Do not waste time initializing array with zeroes
+    VkRect2D VkScissorRects[MAX_VIEWPORTS]; // Do not waste time initializing array with zeroes
     for (Uint32 sr = 0; sr < m_NumScissorRects; ++sr)
     {
         const auto& SrcRect       = m_ScissorRects[sr];
@@ -2346,9 +2346,9 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTra
             VkImageSubresourceRange SubResRange;
             SubResRange.aspectMask     = 0;
             SubResRange.baseMipLevel   = Barrier.FirstMipLevel;
-            SubResRange.levelCount     = (Barrier.MipLevelsCount == StateTransitionDesc::RemainingMipLevels) ? VK_REMAINING_MIP_LEVELS : Barrier.MipLevelsCount;
+            SubResRange.levelCount     = (Barrier.MipLevelsCount == REMAINING_MIP_LEVELS) ? VK_REMAINING_MIP_LEVELS : Barrier.MipLevelsCount;
             SubResRange.baseArrayLayer = Barrier.FirstArraySlice;
-            SubResRange.layerCount     = (Barrier.ArraySliceCount == StateTransitionDesc::RemainingArraySlices) ? VK_REMAINING_ARRAY_LAYERS : Barrier.ArraySliceCount;
+            SubResRange.layerCount     = (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES) ? VK_REMAINING_ARRAY_LAYERS : Barrier.ArraySliceCount;
             TransitionTextureState(*pTextureVkImpl, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState, &SubResRange);
         }
         else

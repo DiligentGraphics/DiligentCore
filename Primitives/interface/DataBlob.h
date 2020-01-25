@@ -32,12 +32,14 @@
 
 #include "Object.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 // {F578FF0D-ABD2-4514-9D32-7CB454D4A73B}
-static constexpr INTERFACE_ID IID_DataBlob =
+static const struct INTERFACE_ID IID_DataBlob =
     {0xf578ff0d, 0xabd2, 0x4514, {0x9d, 0x32, 0x7c, 0xb4, 0x54, 0xd4, 0xa7, 0x3b}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Base interface for a file stream
 class IDataBlob : public IObject
@@ -53,4 +55,8 @@ public:
     virtual void* GetDataPtr() = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

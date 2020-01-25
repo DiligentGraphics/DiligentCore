@@ -73,14 +73,14 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     bool IsES30        = false;
     bool IsES31OrAbove = false;
     bool IsES32OrAbove = false;
-    if (deviceCaps.DevType == DeviceType::Vulkan)
+    if (deviceCaps.DevType == RENDER_DEVICE_TYPE_VULKAN)
     {
         IsES30        = false;
         IsES31OrAbove = true;
         IsES32OrAbove = false;
         GLSLSource.append("#version 310 es\n");
     }
-    else if (deviceCaps.DevType == DeviceType::OpenGLES)
+    else if (deviceCaps.DevType == RENDER_DEVICE_TYPE_GLES)
     {
         IsES30        = deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion == 0;
         IsES31OrAbove = deviceCaps.MajorVersion > 3 || (deviceCaps.MajorVersion == 3 && deviceCaps.MinorVersion >= 1);

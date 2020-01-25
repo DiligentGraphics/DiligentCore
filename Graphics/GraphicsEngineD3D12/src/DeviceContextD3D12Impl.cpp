@@ -346,8 +346,8 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
 void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
 {
     // Do not initialize array with zeroes for performance reasons
-    D3D12_VERTEX_BUFFER_VIEW VBViews[MaxBufferSlots]; // = {}
-    VERIFY(m_NumVertexStreams <= MaxBufferSlots, "Too many buffers are being set");
+    D3D12_VERTEX_BUFFER_VIEW VBViews[MAX_BUFFER_SLOTS]; // = {}
+    VERIFY(m_NumVertexStreams <= MAX_BUFFER_SLOTS, "Too many buffers are being set");
     DEV_CHECK_ERR(m_NumVertexStreams >= m_pPipelineState->GetNumBufferSlotsUsed(), "Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
     bool DynamicBufferPresent = false;
     for (UINT Buff = 0; Buff < m_NumVertexStreams; ++Buff)
@@ -803,8 +803,8 @@ void DeviceContextD3D12Impl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOf
 
 void DeviceContextD3D12Impl::CommitViewports()
 {
-    static_assert(MaxViewports >= D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
-    D3D12_VIEWPORT d3d12Viewports[MaxViewports]; // Do not waste time initializing array to zero
+    static_assert(MAX_VIEWPORTS >= D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
+    D3D12_VIEWPORT d3d12Viewports[MAX_VIEWPORTS]; // Do not waste time initializing array to zero
 
     for (Uint32 vp = 0; vp < m_NumViewports; ++vp)
     {
@@ -822,7 +822,7 @@ void DeviceContextD3D12Impl::CommitViewports()
 
 void DeviceContextD3D12Impl::SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight)
 {
-    static_assert(MaxViewports >= D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
+    static_assert(MAX_VIEWPORTS >= D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE, "MaxViewports constant must be greater than D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE");
     TDeviceContextBase::SetViewports(NumViewports, pViewports, RTWidth, RTHeight);
     VERIFY(NumViewports == m_NumViewports, "Unexpected number of viewports");
 

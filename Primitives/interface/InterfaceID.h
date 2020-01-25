@@ -27,12 +27,14 @@
 
 #pragma once
 
-#include <cstring>
+#if DILIGENT_CPP_INTERFACE
+#    include <cstring>
+#endif
+
 #include "BasicTypes.h"
 
 /// Unique identification structures
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 /// Unique interface identifier
 struct INTERFACE_ID
@@ -42,6 +44,7 @@ struct INTERFACE_ID
     Uint16 Data3;
     Uint8  Data4[8];
 
+#if DILIGENT_CPP_INTERFACE
     bool operator==(const INTERFACE_ID& rhs) const
     {
         return Data1 == rhs.Data1 &&
@@ -49,9 +52,10 @@ struct INTERFACE_ID
             Data3 == rhs.Data3 &&
             std::memcmp(Data4, rhs.Data4, sizeof(Data4)) == 0;
     }
+#endif
 };
 
 /// Unknown interface
-static constexpr INTERFACE_ID IID_Unknown = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
+static const struct INTERFACE_ID IID_Unknown = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -36,7 +36,7 @@ using namespace Diligent;
 void WindowsDebug::AssertionFailed(const Diligent::Char* Message, const char* Function, const char* File, int Line)
 {
     auto AssertionFailedMessage = FormatAssertionFailedMessage(Message, Function, File, Line);
-    OutputDebugMessage(DebugMessageSeverity::Error, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
+    OutputDebugMessage(DEBUG_MESSAGE_SEVERITY_ERROR, AssertionFailedMessage.c_str(), nullptr, nullptr, 0);
 
     int nCode = MessageBoxA(NULL,
                             AssertionFailedMessage.c_str(),
@@ -67,12 +67,12 @@ void WindowsDebug::AssertionFailed(const Diligent::Char* Message, const char* Fu
         return;
 };
 
-void WindowsDebug::OutputDebugMessage(DebugMessageSeverity Severity, const Char* Message, const char* Function, const char* File, int Line)
+void WindowsDebug::OutputDebugMessage(DEBUG_MESSAGE_SEVERITY Severity, const Char* Message, const char* Function, const char* File, int Line)
 {
     auto msg = FormatDebugMessage(Severity, Message, Function, File, Line);
     OutputDebugStringA(msg.c_str());
 
-    if (Severity == DebugMessageSeverity::Error || Severity == DebugMessageSeverity::FatalError)
+    if (Severity == DEBUG_MESSAGE_SEVERITY_ERROR || Severity == DEBUG_MESSAGE_SEVERITY_FATAL_ERROR)
         std::cerr << msg;
     else
         std::cout << msg;

@@ -34,8 +34,8 @@
 
 #include "GraphicsTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 /// Fill mode
 
@@ -43,8 +43,8 @@ namespace Diligent
 /// [D3D12_FILL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770366(v=vs.85).aspx
 /// This enumeration determines the fill mode to use when rendering triangles and mirrors the 
 /// [D3D11_FILL_MODE][]/[D3D12_FILL_MODE][] enum. It is used by RasterizerStateDesc structure to define the fill mode.
-enum FILL_MODE : Int8
-{ 
+DILIGENT_TYPED_ENUM(FILL_MODE, Int8)
+{
     /// Undefined fill mode.
     FILL_MODE_UNDEFINED = 0,
 
@@ -66,7 +66,7 @@ enum FILL_MODE : Int8
 /// [D3D12_CULL_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770354(v=vs.85).aspx
 /// This enumeration defines which triangles are not drawn during the rasterization and mirrors
 /// [D3D11_CULL_MODE][]/[D3D12_CULL_MODE][] enum. It is used by RasterizerStateDesc structure to define the polygon cull mode.
-enum CULL_MODE : Int8
+DILIGENT_TYPED_ENUM(CULL_MODE, Int8)
 {
     /// Undefined cull mode.
     CULL_MODE_UNDEFINED = 0,
@@ -97,46 +97,46 @@ struct RasterizerStateDesc
 {
     /// Determines traingle fill mode, see Diligent::FILL_MODE for details.
     /// Default value: Diligent::FILL_MODE_SOLID.
-    FILL_MODE FillMode              = FILL_MODE_SOLID;
+    enum FILL_MODE FillMode         DEFAULT_INITIALIZER(FILL_MODE_SOLID);
 
     /// Determines traingle cull mode, see Diligent::CULL_MODE for details.
     /// Default value: Diligent::CULL_MODE_BACK.
-    CULL_MODE CullMode              = CULL_MODE_BACK;
+    enum CULL_MODE CullMode         DEFAULT_INITIALIZER(CULL_MODE_BACK);
 
     /// Determines if a triangle is front- or back-facing. If this parameter is True, 
     /// a triangle will be considered front-facing if its vertices are counter-clockwise 
     /// on the render target and considered back-facing if they are clockwise. 
     /// If this parameter is False, the opposite is true.
     /// Default value: False.
-    Bool      FrontCounterClockwise = False;
+    Bool      FrontCounterClockwise DEFAULT_INITIALIZER(False);
 
     /// Enable clipping against near and far clip planes.
     /// Default value: True.
-    Bool      DepthClipEnable       = True;
+    Bool      DepthClipEnable       DEFAULT_INITIALIZER(True);
 
     /// Enable scissor-rectangle culling. All pixels outside an active scissor rectangle are culled.
     /// Default value: False.
-    Bool      ScissorEnable         = False;
+    Bool      ScissorEnable         DEFAULT_INITIALIZER(False);
 
     /// Specifies whether to enable line antialiasing.
     /// Default value: False.
-    Bool      AntialiasedLineEnable = False;
+    Bool      AntialiasedLineEnable DEFAULT_INITIALIZER(False);
 
     /// Constant value added to the depth of a given pixel.
     /// Default value: 0.
-    Int32     DepthBias             = 0;
+    Int32     DepthBias             DEFAULT_INITIALIZER(0);
 
     /// Maximum depth bias of a pixel.
     /// \warning Depth bias clamp is not available in OpenGL
     /// Default value: 0.
-    Float32   DepthBiasClamp        = 0.f;
+    Float32   DepthBiasClamp        DEFAULT_INITIALIZER(0.f);
 
     /// Scalar that scales the given pixel's slope before adding to the pixel's depth.
     /// Default value: 0.
-    Float32   SlopeScaledDepthBias  = 0.f;
+    Float32   SlopeScaledDepthBias  DEFAULT_INITIALIZER(0.f);
 
-    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
-    //     RasterizerStateDesc{FILL_MODE_SOLID, CULL_MODE_BACK}
+
+#if DILIGENT_CPP_INTERFACE
 
     RasterizerStateDesc()noexcept{}
 
@@ -179,6 +179,7 @@ struct RasterizerStateDesc
                 ScissorEnable         == RHS.ScissorEnable         &&
                 AntialiasedLineEnable == RHS.AntialiasedLineEnable;
     }
+#endif
 };
 
-}
+DILIGENT_END_NAMESPACE

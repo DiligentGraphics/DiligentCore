@@ -86,7 +86,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
     // Lock the cache
     ThreadingTools::LockHelper CacheLock{m_CacheLockFlag};
 
-    BufferGLImpl* VertexBuffers[MaxBufferSlots];
+    BufferGLImpl* VertexBuffers[MAX_BUFFER_SLOTS];
     for (Uint32 s = 0; s < NumVertexStreams; ++s)
         VertexBuffers[s] = nullptr;
 
@@ -109,9 +109,9 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
                 UNEXPECTED("Input layout requires more buffers than bound to the pipeline");
                 continue;
             }
-            if (BuffSlot >= MaxBufferSlots)
+            if (BuffSlot >= MAX_BUFFER_SLOTS)
             {
-                VERIFY(BuffSlot >= MaxBufferSlots, "Incorrect input slot");
+                VERIFY(BuffSlot >= MAX_BUFFER_SLOTS, "Incorrect input slot");
                 continue;
             }
             auto MaxUsedSlot = std::max(Key.NumUsedSlots, BuffSlot + 1);
@@ -175,7 +175,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
         for (size_t Elem = 0; Elem < NumElems; ++Elem, ++LayoutIt)
         {
             auto BuffSlot = LayoutIt->BufferSlot;
-            if (BuffSlot >= NumVertexStreams || BuffSlot >= MaxBufferSlots)
+            if (BuffSlot >= NumVertexStreams || BuffSlot >= MAX_BUFFER_SLOTS)
             {
                 UNEXPECTED("Incorrect input buffer slot");
                 continue;
@@ -203,7 +203,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
             else
                 glVertexAttribPointer(LayoutIt->InputIndex, LayoutIt->NumComponents, GlType, LayoutIt->IsNormalized, Stride, DataStartOffset);
 
-            if (LayoutIt->Frequency == LayoutElement::FREQUENCY_PER_INSTANCE)
+            if (LayoutIt->Frequency == INPUT_ELEMENT_FREQUENCY_PER_INSTANCE)
             {
                 // If divisor is zero, then the attribute acts like normal, being indexed by the array or index
                 // buffer. If divisor is non-zero, then the current instance is divided by this divisor, and

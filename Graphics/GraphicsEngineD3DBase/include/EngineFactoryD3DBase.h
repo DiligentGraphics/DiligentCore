@@ -36,7 +36,7 @@
 namespace Diligent
 {
 
-template <typename BaseInterface, DeviceType DevType>
+template <typename BaseInterface, RENDER_DEVICE_TYPE DevType>
 class EngineFactoryD3DBase : public EngineFactoryBase<BaseInterface>
 {
 public:
@@ -131,8 +131,8 @@ public:
                 DstMode.Format                 = DXGI_FormatToTexFormat(SrcMode.Format);
                 DstMode.RefreshRateNumerator   = SrcMode.RefreshRate.Numerator;
                 DstMode.RefreshRateDenominator = SrcMode.RefreshRate.Denominator;
-                DstMode.Scaling                = static_cast<DisplayModeAttribs::SCALING>(SrcMode.Scaling);
-                DstMode.ScanlineOrder          = static_cast<DisplayModeAttribs::SCANLINE_ORDER>(SrcMode.ScanlineOrdering);
+                DstMode.Scaling                = static_cast<SCALING_MODE>(SrcMode.Scaling);
+                DstMode.ScanlineOrder          = static_cast<SCANLINE_ORDER>(SrcMode.ScanlineOrdering);
             }
             NumDisplayModes = std::min(NumDisplayModes, numModes);
         }
@@ -194,13 +194,13 @@ protected:
     }
 
 private:
-    template <DeviceType DevType>
+    template <RENDER_DEVICE_TYPE DevType>
     bool CheckAdapterCompatibility(IDXGIAdapter1*    pDXGIAdapter,
                                    D3D_FEATURE_LEVEL FeatureLevels);
 
     template <>
-    bool CheckAdapterCompatibility<DeviceType::D3D11>(IDXGIAdapter1*    pDXGIAdapter,
-                                                      D3D_FEATURE_LEVEL FeatureLevel)
+    bool CheckAdapterCompatibility<RENDER_DEVICE_TYPE_D3D11>(IDXGIAdapter1*    pDXGIAdapter,
+                                                             D3D_FEATURE_LEVEL FeatureLevel)
     {
         auto hr = D3D11CreateDevice(
             nullptr,
@@ -218,8 +218,8 @@ private:
     }
 
     template <>
-    bool CheckAdapterCompatibility<DeviceType::D3D12>(IDXGIAdapter1*    pDXGIAdapter,
-                                                      D3D_FEATURE_LEVEL FeatureLevel)
+    bool CheckAdapterCompatibility<RENDER_DEVICE_TYPE_D3D12>(IDXGIAdapter1*    pDXGIAdapter,
+                                                             D3D_FEATURE_LEVEL FeatureLevel)
     {
         auto hr = D3D12CreateDevice(pDXGIAdapter, FeatureLevel, _uuidof(ID3D12Device), nullptr);
         return SUCCEEDED(hr);

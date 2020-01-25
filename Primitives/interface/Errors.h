@@ -59,7 +59,7 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
     auto Msg = FormatString(Args...);
     if (DebugMessageCallback != nullptr)
     {
-        DebugMessageCallback(IsFatal ? DebugMessageSeverity::FatalError : DebugMessageSeverity::Error, Msg.c_str(), Function, FileName.c_str(), Line);
+        DebugMessageCallback(IsFatal ? DEBUG_MESSAGE_SEVERITY_FATAL_ERROR : DEBUG_MESSAGE_SEVERITY_ERROR, Msg.c_str(), Function, FileName.c_str(), Line);
     }
     else
     {
@@ -118,10 +118,10 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
         if (Diligent::DebugMessageCallback != nullptr) Diligent::DebugMessageCallback(Severity, _msg.c_str(), nullptr, nullptr, 0); \
     } while (false)
 
-#define LOG_FATAL_ERROR_MESSAGE(...) LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::FatalError, ##__VA_ARGS__)
-#define LOG_ERROR_MESSAGE(...)       LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
-#define LOG_WARNING_MESSAGE(...)     LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define LOG_INFO_MESSAGE(...)        LOG_DEBUG_MESSAGE(Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
+#define LOG_FATAL_ERROR_MESSAGE(...) LOG_DEBUG_MESSAGE(Diligent::DEBUG_MESSAGE_SEVERITY_FATAL_ERROR, ##__VA_ARGS__)
+#define LOG_ERROR_MESSAGE(...)       LOG_DEBUG_MESSAGE(Diligent::DEBUG_MESSAGE_SEVERITY_ERROR, ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE(...)     LOG_DEBUG_MESSAGE(Diligent::DEBUG_MESSAGE_SEVERITY_WARNING, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE(...)        LOG_DEBUG_MESSAGE(Diligent::DEBUG_MESSAGE_SEVERITY_INFO, ##__VA_ARGS__)
 
 
 #define LOG_DEBUG_MESSAGE_ONCE(Severity, ...)           \
@@ -135,10 +135,10 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
         }                                               \
     } while (false)
 
-#define LOG_FATAL_ERROR_MESSAGE_ONCE(...) LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::FatalError, ##__VA_ARGS__)
-#define LOG_ERROR_MESSAGE_ONCE(...)       LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
-#define LOG_WARNING_MESSAGE_ONCE(...)     LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define LOG_INFO_MESSAGE_ONCE(...)        LOG_DEBUG_MESSAGE_ONCE(Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
+#define LOG_FATAL_ERROR_MESSAGE_ONCE(...) LOG_DEBUG_MESSAGE_ONCE(Diligent::DEBUG_MESSAGE_SEVERITY_FATAL_ERROR, ##__VA_ARGS__)
+#define LOG_ERROR_MESSAGE_ONCE(...)       LOG_DEBUG_MESSAGE_ONCE(Diligent::DEBUG_MESSAGE_SEVERITY_ERROR, ##__VA_ARGS__)
+#define LOG_WARNING_MESSAGE_ONCE(...)     LOG_DEBUG_MESSAGE_ONCE(Diligent::DEBUG_MESSAGE_SEVERITY_WARNING, ##__VA_ARGS__)
+#define LOG_INFO_MESSAGE_ONCE(...)        LOG_DEBUG_MESSAGE_ONCE(Diligent::DEBUG_MESSAGE_SEVERITY_INFO, ##__VA_ARGS__)
 
 
 #define CHECK(Expr, Severity, ...)                      \
@@ -150,10 +150,10 @@ void LogError(bool IsFatal, const char* Function, const char* FullFilePath, int 
         }                                               \
     } while (false)
 
-#define CHECK_FATAL_ERR(Expr, ...) CHECK(Expr, Diligent::DebugMessageSeverity::FatalError, ##__VA_ARGS__)
-#define CHECK_ERR(Expr, ...)       CHECK(Expr, Diligent::DebugMessageSeverity::Error, ##__VA_ARGS__)
-#define CHECK_WARN(Expr, ...)      CHECK(Expr, Diligent::DebugMessageSeverity::Warning, ##__VA_ARGS__)
-#define CHECK_INFO(Expr, ...)      CHECK(Expr, Diligent::DebugMessageSeverity::Info, ##__VA_ARGS__)
+#define CHECK_FATAL_ERR(Expr, ...) CHECK(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_FATAL_ERROR, ##__VA_ARGS__)
+#define CHECK_ERR(Expr, ...)       CHECK(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_ERROR, ##__VA_ARGS__)
+#define CHECK_WARN(Expr, ...)      CHECK(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_WARNING, ##__VA_ARGS__)
+#define CHECK_INFO(Expr, ...)      CHECK(Expr, Diligent::DEBUG_MESSAGE_SEVERITY_INFO, ##__VA_ARGS__)
 
 #define CHECK_THROW(Expr, ...)                  \
     do                                          \

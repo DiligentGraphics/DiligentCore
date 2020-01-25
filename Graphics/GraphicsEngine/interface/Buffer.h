@@ -34,17 +34,17 @@
 
 #include "DeviceObject.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 
 // {EC47EAD3-A2C4-44F2-81C5-5248D14F10E4}
-static constexpr INTERFACE_ID IID_Buffer =
+static const struct INTERFACE_ID IID_Buffer =
     {0xec47ead3, 0xa2c4, 0x44f2, {0x81, 0xc5, 0x52, 0x48, 0xd1, 0x4f, 0x10, 0xe4}};
 
 /// Describes the buffer access mode.
 
 /// This enumeration is used by BufferDesc structure.
-enum BUFFER_MODE : Uint8
+DILIGENT_TYPED_ENUM(BUFFER_MODE, Uint8)
 {
     /// Undefined mode.
     BUFFER_MODE_UNDEFINED = 0,
@@ -70,10 +70,10 @@ enum BUFFER_MODE : Uint8
 };
 
 /// Buffer description
-struct BufferDesc : DeviceObjectAttribs
-{
+struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
+
     /// Size of the buffer, in bytes. For a uniform buffer, this must be multiple of 16.
-    Uint32 uiSizeInBytes            = 0;
+    Uint32 uiSizeInBytes            DEFAULT_INITIALIZER(0);
 
     /// Buffer bind flags, see Diligent::BIND_FLAGS for details
 
@@ -81,17 +81,17 @@ struct BufferDesc : DeviceObjectAttribs
     /// Diligent::BIND_VERTEX_BUFFER, Diligent::BIND_INDEX_BUFFER, Diligent::BIND_UNIFORM_BUFFER,
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_STREAM_OUTPUT, Diligent::BIND_UNORDERED_ACCESS,
     /// Diligent::BIND_INDIRECT_DRAW_ARGS
-    BIND_FLAGS BindFlags            = BIND_NONE;
+    BIND_FLAGS BindFlags            DEFAULT_INITIALIZER(BIND_NONE);
 
     /// Buffer usage, see Diligent::USAGE for details
-    USAGE Usage                     = USAGE_DEFAULT;
+    USAGE Usage                     DEFAULT_INITIALIZER(USAGE_DEFAULT);
 
     /// CPU access flags or 0 if no CPU access is allowed, 
     /// see Diligent::CPU_ACCESS_FLAGS for details.
-    CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_NONE;
+    CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
     
     /// Buffer mode, see Diligent::BUFFER_MODE
-    BUFFER_MODE Mode                = BUFFER_MODE_UNDEFINED;
+    BUFFER_MODE Mode                DEFAULT_INITIALIZER(BUFFER_MODE_UNDEFINED);
 
     /// Buffer element stride, in bytes.
 
@@ -100,12 +100,12 @@ struct BufferDesc : DeviceObjectAttribs
     /// (BufferDesc::Mode equals Diligent::BUFFER_MODE_FORMATTED) and optionally for a raw buffer 
     /// (Diligent::BUFFER_MODE_RAW), this member defines the size of the format that will be used for views 
     /// created for this buffer.
-    Uint32 ElementByteStride        = 0;
+    Uint32 ElementByteStride        DEFAULT_INITIALIZER(0);
 
     /// Defines which command queues this buffer can be used with
-    Uint64 CommandQueueMask         = 1;
+    Uint64 CommandQueueMask         DEFAULT_INITIALIZER(1);
 
-
+#if DILIGENT_CPP_INTERFACE
     // We have to explicitly define constructors because otherwise the following initialization fails on Apple's clang:
     //      BufferDesc{1024, BIND_UNIFORM_BUFFER, USAGE_DEFAULT}
 
@@ -145,20 +145,20 @@ struct BufferDesc : DeviceObjectAttribs
                ElementByteStride == RHS.ElementByteStride && 
                CommandQueueMask  == RHS.CommandQueueMask;
     }
+#endif
 };
 
 /// Describes the buffer initial data
 struct BufferData
 {
     /// Pointer to the data
-    const void* pData = nullptr;
+    const void* pData DEFAULT_INITIALIZER(nullptr);
 
     /// Data size, in bytes
-    Uint32 DataSize = 0;
+    Uint32 DataSize   DEFAULT_INITIALIZER(0);
 
 
-    // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
-    //     BufferData{nullptr, 0}
+#if DILIGENT_CPP_INTERFACE
 
     BufferData() noexcept {}
 
@@ -167,7 +167,11 @@ struct BufferData
         pData   {_pData   },
         DataSize{_DataSize}
     {}
+#endif
 };
+
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Buffer interface
 
@@ -226,4 +230,8 @@ public:
     virtual RESOURCE_STATE GetState() const = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

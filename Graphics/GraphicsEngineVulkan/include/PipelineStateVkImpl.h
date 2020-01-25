@@ -113,13 +113,13 @@ public:
         return m_SRBMemAllocator;
     }
 
-    static VkRenderPassCreateInfo GetRenderPassCreateInfo(Uint32                                                     NumRenderTargets,
-                                                          const TEXTURE_FORMAT                                       RTVFormats[],
-                                                          TEXTURE_FORMAT                                             DSVFormat,
-                                                          Uint32                                                     SampleCount,
-                                                          std::array<VkAttachmentDescription, MaxRenderTargets + 1>& Attachments,
-                                                          std::array<VkAttachmentReference, MaxRenderTargets + 1>&   AttachmentReferences,
-                                                          VkSubpassDescription&                                      SubpassDesc);
+    static VkRenderPassCreateInfo GetRenderPassCreateInfo(Uint32                                                       NumRenderTargets,
+                                                          const TEXTURE_FORMAT                                         RTVFormats[],
+                                                          TEXTURE_FORMAT                                               DSVFormat,
+                                                          Uint32                                                       SampleCount,
+                                                          std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1>& Attachments,
+                                                          std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>&   AttachmentReferences,
+                                                          VkSubpassDescription&                                        SubpassDesc);
 
 
     void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
@@ -150,7 +150,7 @@ private:
     // SRB memory allocator must be declared before m_pDefaultShaderResBinding
     SRBMemoryAllocator m_SRBMemAllocator;
 
-    std::array<VulkanUtilities::ShaderModuleWrapper, MaxShadersInPipeline> m_ShaderModules;
+    std::array<VulkanUtilities::ShaderModuleWrapper, MAX_SHADERS_IN_PIPELINE> m_ShaderModules;
 
     VkRenderPass                     m_RenderPass = VK_NULL_HANDLE; // Render passes are managed by the render device
     VulkanUtilities::PipelineWrapper m_Pipeline;

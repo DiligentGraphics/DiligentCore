@@ -33,8 +33,9 @@
 #include "InterfaceID.h"
 #include "ReferenceCounters.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Base interface for all dynamic objects in the engine
 class IObject
@@ -81,4 +82,8 @@ public:
     virtual IReferenceCounters* GetReferenceCounters() const = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

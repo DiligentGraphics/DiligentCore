@@ -139,7 +139,7 @@ private:
 
     Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
 
-    Uint16 m_StaticSamplerOffsets[MaxShadersInPipeline + 1] = {};
+    Uint16 m_StaticSamplerOffsets[MAX_SHADERS_IN_PIPELINE + 1] = {};
     struct StaticSamplerInfo
     {
         const D3DShaderResourceAttribs& Attribs;

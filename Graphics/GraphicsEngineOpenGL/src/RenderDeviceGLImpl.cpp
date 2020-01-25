@@ -137,7 +137,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 
     Features.VertexPipelineUAVWritesAndAtomics = False;
 
-    if (m_DeviceCaps.DevType == DeviceType::OpenGL)
+    if (m_DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL)
     {
         const bool IsGL46OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 6);
         const bool IsGL43OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 3);
@@ -185,7 +185,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         const auto* Extensions = (char*)glGetString(GL_EXTENSIONS);
         LOG_INFO_MESSAGE("Supported extensions: \n", Extensions);
 
-        VERIFY(m_DeviceCaps.DevType == DeviceType::OpenGLES, "Unexpected device type: OpenGLES expected");
+        VERIFY(m_DeviceCaps.DevType == RENDER_DEVICE_TYPE_GLES, "Unexpected device type: OpenGLES expected");
 
         bool IsGLES31OrAbove = (MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 1);
         bool IsGLES32OrAbove = (MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 2);
@@ -519,7 +519,7 @@ bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString)
 void RenderDeviceGLImpl::FlagSupportedTexFormats()
 {
     const auto& DeviceCaps   = GetDeviceCaps();
-    bool        bGL33OrAbove = DeviceCaps.DevType == DeviceType::OpenGL &&
+    bool        bGL33OrAbove = DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL &&
         (DeviceCaps.MajorVersion >= 4 || (DeviceCaps.MajorVersion == 3 && DeviceCaps.MinorVersion >= 3));
 
     bool bRGTC      = CheckExtension("GL_ARB_texture_compression_rgtc");
@@ -640,7 +640,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     // clang-format on
 
 #ifdef _DEBUG
-    bool bGL43OrAbove = DeviceCaps.DevType == DeviceType::OpenGL &&
+    bool bGL43OrAbove = DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL &&
         (DeviceCaps.MajorVersion >= 5 || (DeviceCaps.MajorVersion == 4 && DeviceCaps.MinorVersion >= 3));
 
     constexpr int      TestTextureDim = 8;

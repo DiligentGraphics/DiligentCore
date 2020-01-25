@@ -32,10 +32,10 @@
 
 #include "DeviceObject.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 // {6C1AC7A6-B429-4139-9433-9E54E93E384A}
-static constexpr INTERFACE_ID IID_ResourceMapping =
+static const struct INTERFACE_ID IID_ResourceMapping =
     {0x6c1ac7a6, 0xb429, 0x4139, {0x94, 0x33, 0x9e, 0x54, 0xe9, 0x3e, 0x38, 0x4a}};
 
 /// Describes the resourse mapping object entry
@@ -44,12 +44,16 @@ struct ResourceMappingEntry
     // clang-format off
 
     /// Object name
-    const Char* Name       = nullptr;
+    const Char* Name             DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the object's interface
-    IDeviceObject *pObject = nullptr;
+    class IDeviceObject* pObject DEFAULT_INITIALIZER(nullptr);
 
-    Uint32 ArrayIndex      = 0;
+    Uint32 ArrayIndex            DEFAULT_INITIALIZER(0);
+
+
+#if DILIGENT_CPP_INTERFACE
+    ResourceMappingEntry() noexcept {}
 
     /// Initializes the structure members
 
@@ -61,10 +65,8 @@ struct ResourceMappingEntry
         pObject   { _pObject  },
         ArrayIndex{_ArrayIndex}
     {}
-
     // clang-format on
-
-    ResourceMappingEntry() noexcept {}
+#endif
 };
 
 /// Resource mapping description
@@ -73,14 +75,20 @@ struct ResourceMappingDesc
     /// Pointer to the array of resource mapping entries.
     /// The last element in the array must be default value
     /// created by ResourceMappingEntry::ResourceMappingEntry()
-    ResourceMappingEntry* pEntries = nullptr;
+    struct ResourceMappingEntry* pEntries DEFAULT_INITIALIZER(nullptr);
 
-    ResourceMappingDesc() noexcept {}
+#if DILIGENT_CPP_INTERFACE
+    ResourceMappingDesc() noexcept
+    {}
 
     explicit ResourceMappingDesc(ResourceMappingEntry* _pEntries) noexcept :
         pEntries{_pEntries}
     {}
+#endif
 };
+
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Resouce mapping
 
@@ -141,4 +149,9 @@ public:
     /// Returns the size of the resource mapping, i.e. the number of objects.
     virtual size_t GetSize() = 0;
 };
-} // namespace Diligent
+
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

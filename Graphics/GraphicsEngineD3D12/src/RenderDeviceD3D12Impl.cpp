@@ -133,7 +133,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     m_QueryMgr            {pd3d12Device, EngineCI.QueryPoolSizes}
 // clang-format on
 {
-    m_DeviceCaps.DevType = DeviceType::D3D12;
+    m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D12;
     auto FeatureLevel    = GetD3DFeatureLevel();
     switch (FeatureLevel)
     {

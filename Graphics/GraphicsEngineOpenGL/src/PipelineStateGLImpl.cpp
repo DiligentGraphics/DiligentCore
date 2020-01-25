@@ -67,7 +67,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
     }
 
     auto& DeviceCaps = pDeviceGL->GetDeviceCaps();
-    VERIFY(DeviceCaps.DevType != DeviceType::Undefined, "Device caps are not initialized");
+    VERIFY(DeviceCaps.DevType != RENDER_DEVICE_TYPE_UNDEFINED, "Device caps are not initialized");
 
     auto pImmediateCtx = m_pDevice->GetImmediateContext();
     VERIFY_EXPR(pImmediateCtx);
