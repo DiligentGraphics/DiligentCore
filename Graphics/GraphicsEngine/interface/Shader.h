@@ -208,7 +208,7 @@ struct ShaderCreateInfo
     struct ShaderDesc Desc;
 
     /// Shader source language. See Diligent::SHADER_SOURCE_LANGUAGE.
-    enum SHADER_SOURCE_LANGUAGE SourceLanguage DEFAULT_INITIALIZER(SHADER_SOURCE_LANGUAGE_DEFAULT);
+    SHADER_SOURCE_LANGUAGE SourceLanguage DEFAULT_INITIALIZER(SHADER_SOURCE_LANGUAGE_DEFAULT);
 
     /// HLSL shader model to use when compiling the shader. When default value
     /// is given (0, 0), the engine will attempt to use the highest HLSL shader model
