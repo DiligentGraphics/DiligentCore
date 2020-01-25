@@ -146,7 +146,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     if (glGetError() != GL_NO_ERROR)
         LOG_ERROR_MESSAGE("Failed to enable SRGB framebuffers");
 
-    deviceCaps.DevType      = DeviceType::OpenGL;
+    deviceCaps.DevType      = RENDER_DEVICE_TYPE_GL;
     deviceCaps.MajorVersion = MajorVersion;
     deviceCaps.MinorVersion = MinorVersion;
 }

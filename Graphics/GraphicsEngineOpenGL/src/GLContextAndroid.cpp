@@ -386,7 +386,7 @@ bool GLContext::Invalidate()
 
 void GLContext::FillDeviceCaps(DeviceCaps& deviceCaps)
 {
-    deviceCaps.DevType      = DeviceType::OpenGLES;
+    deviceCaps.DevType      = RENDER_DEVICE_TYPE_GLES;
     deviceCaps.MajorVersion = major_version_;
     deviceCaps.MinorVersion = minor_version_;
 }
