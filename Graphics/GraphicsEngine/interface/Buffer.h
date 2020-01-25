@@ -234,12 +234,14 @@ struct IBuffer;
 
 struct IBufferVtbl
 {
-    void (*CreateView)(const struct BufferViewDesc* ViewDesc, class IBufferView** ppView);
-    class IBufferView* (*GetDefaultView)(BUFFER_VIEW_TYPE ViewType);
-    void* (*GetNativeHandle)();
-    void (*SetState)(RESOURCE_STATE State);
-    RESOURCE_STATE (*GetState)();
+    void               (*CreateView)     (struct IBuffer*, const struct BufferViewDesc* ViewDesc, class IBufferView** ppView);
+    class IBufferView* (*GetDefaultView) (struct IBuffer*, BUFFER_VIEW_TYPE ViewType);
+    void*              (*GetNativeHandle)(struct IBuffer*);
+    void               (*SetState)       (struct IBuffer*,RESOURCE_STATE State);
+    RESOURCE_STATE     (*GetState)       (struct IBuffer*);
 };
+
+// clang-format on
 
 struct IBuffer
 {
@@ -248,13 +250,17 @@ struct IBuffer
     struct IBufferVtbl*       pBufferVtbl;
 };
 
-#    define IBuffer_GetDesc(This) (const struct BufferDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+// clang-format off
 
-#    define IBuffer_CreateView(This, ...)     (This)->pBufferVtbl->CreateView(This, __VA_ARGS__)
-#    define IBuffer_GetDefaultView(This, ...) (This)->pBufferVtbl->GetDefaultView(This, __VA_ARGS__)
-#    define IBuffer_GetNativeHandle(This)     (This)->pBufferVtbl->(This)
-#    define IBuffer_SetState(This)            (This)->pBufferVtbl->SetState(This, __VA_ARGS__)
-#    define IBuffer_GetState(This)            (This)->pBufferVtbl->GetState(This, __VA_ARGS__)
+#    define IBuffer_GetDesc(This) (const struct BufferDesc*)IDeviceObject_GetDesc(This)
+
+#    define IBuffer_CreateView(This, ...)     (This)->pBufferVtbl->CreateView     ((struct IBuffer*)(This), __VA_ARGS__)
+#    define IBuffer_GetDefaultView(This, ...) (This)->pBufferVtbl->GetDefaultView ((struct IBuffer*)(This), __VA_ARGS__)
+#    define IBuffer_GetNativeHandle(This)     (This)->pBufferVtbl->GetNativeHandle((struct IBuffer*)(This))
+#    define IBuffer_SetState(This, ...)       (This)->pBufferVtbl->SetState       ((struct IBuffer*)(This), __VA_ARGS__)
+#    define IBuffer_GetState(This)            (This)->pBufferVtbl->GetState       ((struct IBuffer*)(This))
+
+// clang-format on
 
 #endif
 

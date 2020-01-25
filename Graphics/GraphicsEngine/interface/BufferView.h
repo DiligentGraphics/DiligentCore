@@ -166,7 +166,7 @@ class IBuffer;
 
 struct IBufferViewVtbl
 {
-    class IBuffer* (*GetBuffer)();
+    class IBuffer* (*GetBuffer)(struct IBufferView*);
 };
 
 struct IBufferView
@@ -176,9 +176,9 @@ struct IBufferView
     struct IBufferViewVtbl*   pBufferVtbl;
 };
 
-#    define IBufferView_GetDesc(This) (const struct BufferViewDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+#    define IBufferView_GetDesc(This) (const struct BufferViewDesc*)IDeviceObject_GetDesc(This)
 
-#    define IBufferView_GetBuffer(This) (This)->pBufferVtbl->GetBuffer(This)
+#    define IBufferView_GetBuffer(This) (This)->pBufferVtbl->GetBuffer((struct IBufferView*)(This))
 
 #endif
 

@@ -73,11 +73,15 @@ public:
 
 struct IDeviceObject;
 
+// clang-format off
+
 struct IDeviceObjectVtbl
 {
-    const struct DeviceObjectAttribs* (*GetDesc)();
-    Int32 (*GetUniqueID)();
+    const struct DeviceObjectAttribs* (*GetDesc)    (struct IDeviceObject*);
+    Int32                             (*GetUniqueID)(struct IDeviceObject*);
 };
+
+// clang-format on
 
 struct IDeviceObject
 {
@@ -85,8 +89,12 @@ struct IDeviceObject
     struct IDeviceObjectVtbl* pDeviceObjectVtbl;
 };
 
-#    define IDeviceObject_GetDesc(This)     (This)->pDeviceObjectVtbl->GetDesc(This)
-#    define IDeviceObject_GetUniqueID(This) (This)->pDeviceObjectVtbl->GetUniqueID(This)
+// clang-format off
+
+#    define IDeviceObject_GetDesc(This)     (This)->pDeviceObjectVtbl->GetDesc    ((struct IDeviceObject*)(This))
+#    define IDeviceObject_GetUniqueID(This) (This)->pDeviceObjectVtbl->GetUniqueID((struct IDeviceObject*)(This))
+
+// clang-format on
 
 #endif
 

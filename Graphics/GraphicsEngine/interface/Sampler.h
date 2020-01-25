@@ -59,29 +59,29 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Texture minification filter, see Diligent::FILTER_TYPE for details.
     /// Default value: Diligent::FILTER_TYPE_LINEAR.
-    enum FILTER_TYPE MinFilter          DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
+    FILTER_TYPE MinFilter           DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
     
     /// Texture magnification filter, see Diligent::FILTER_TYPE for details.
     /// Default value: Diligent::FILTER_TYPE_LINEAR.
-    enum FILTER_TYPE MagFilter          DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
+    FILTER_TYPE MagFilter           DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
 
     /// Mip filter, see Diligent::FILTER_TYPE for details. 
     /// Only FILTER_TYPE_POINT, FILTER_TYPE_LINEAR, FILTER_TYPE_ANISOTROPIC, and 
     /// FILTER_TYPE_COMPARISON_ANISOTROPIC are allowed.
     /// Default value: Diligent::FILTER_TYPE_LINEAR.
-    enum FILTER_TYPE MipFilter          DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
+    FILTER_TYPE MipFilter           DEFAULT_INITIALIZER(FILTER_TYPE_LINEAR);
 
     /// Texture address mode for U coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
     /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
-    enum TEXTURE_ADDRESS_MODE AddressU  DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
+    TEXTURE_ADDRESS_MODE AddressU   DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
     
     /// Texture address mode for V coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
     /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
-    enum TEXTURE_ADDRESS_MODE AddressV  DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
+    TEXTURE_ADDRESS_MODE AddressV   DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
 
     /// Texture address mode for W coordinate, see Diligent::TEXTURE_ADDRESS_MODE for details
     /// Default value: Diligent::TEXTURE_ADDRESS_CLAMP.
-    enum TEXTURE_ADDRESS_MODE AddressW  DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
+    TEXTURE_ADDRESS_MODE AddressW   DEFAULT_INITIALIZER(TEXTURE_ADDRESS_CLAMP);
 
     /// Offset from the calculated mipmap level. For example, if a sampler calculates that a texture 
     /// should be sampled at mipmap level 1.2 and MipLODBias is 2.3, then the texture will be sampled at 
@@ -93,7 +93,7 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// A function that compares sampled data against existing sampled data when comparsion
     /// filter is used. Default value: Diligent::COMPARISON_FUNC_NEVER.
-    enum COMPARISON_FUNCTION ComparisonFunc DEFAULT_INITIALIZER(COMPARISON_FUNC_NEVER);
+    COMPARISON_FUNCTION ComparisonFunc  DEFAULT_INITIALIZER(COMPARISON_FUNC_NEVER);
 
     /// Border color to use if TEXTURE_ADDRESS_BORDER is specified for AddressU, AddressV, or AddressW. 
     /// Default value: {0,0,0,0}

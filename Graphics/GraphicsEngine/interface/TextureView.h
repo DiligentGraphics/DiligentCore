@@ -80,28 +80,28 @@ DEFINE_FLAG_ENUM_OPERATORS(TEXTURE_VIEW_FLAGS)
 struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Describes the texture view type, see Diligent::TEXTURE_VIEW_TYPE for details.
-    enum TEXTURE_VIEW_TYPE ViewType     DEFAULT_INITIALIZER(TEXTURE_VIEW_UNDEFINED);
+    TEXTURE_VIEW_TYPE ViewType     DEFAULT_INITIALIZER(TEXTURE_VIEW_UNDEFINED);
 
     /// View interpretation of the original texture. For instance,
     /// one slice of a 2D texture array can be viewed as a 2D texture.
     /// See Diligent::RESOURCE_DIMENSION for a list of texture types.
     /// If default value Diligent::RESOURCE_DIM_UNDEFINED is provided,
     /// the view type will match the type of the referenced texture.
-    enum RESOURCE_DIMENSION TextureDim  DEFAULT_INITIALIZER(RESOURCE_DIM_UNDEFINED);
+    RESOURCE_DIMENSION TextureDim  DEFAULT_INITIALIZER(RESOURCE_DIM_UNDEFINED);
 
     /// View format. If default value Diligent::TEX_FORMAT_UNKNOWN is provided,
     /// the view format will match the referenced texture format.
-    enum TEXTURE_FORMAT Format          DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+    TEXTURE_FORMAT Format          DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Most detailed mip level to use
-    Uint32 MostDetailedMip  DEFAULT_INITIALIZER(0);
+    Uint32 MostDetailedMip         DEFAULT_INITIALIZER(0);
 
     /// Total number of mip levels for the view of the texture.
     /// Render target and depth stencil views can address only one mip level.
     /// If 0 is provided, then for a shader resource view all mip levels will be
     /// referenced, and for a render target or a depth stencil view, one mip level
     /// will be referenced.
-    Uint32 NumMipLevels     DEFAULT_INITIALIZER(0);
+    Uint32 NumMipLevels            DEFAULT_INITIALIZER(0);
 
     union
     {
@@ -125,10 +125,10 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// For an unordered access view, allowed access flags. See Diligent::UAV_ACCESS_FLAG
     /// for details.
-    enum UAV_ACCESS_FLAG    AccessFlags DEFAULT_INITIALIZER(UAV_ACCESS_UNSPECIFIED);
+    UAV_ACCESS_FLAG    AccessFlags DEFAULT_INITIALIZER(UAV_ACCESS_UNSPECIFIED);
 
     /// Texture view flags, see Diligent::TEXTURE_VIEW_FLAGS.
-    enum TEXTURE_VIEW_FLAGS Flags       DEFAULT_INITIALIZER(TEXTURE_VIEW_FLAG_NONE);
+    TEXTURE_VIEW_FLAGS Flags       DEFAULT_INITIALIZER(TEXTURE_VIEW_FLAG_NONE);
 
 #if DILIGENT_CPP_INTERFACE
 
@@ -224,11 +224,13 @@ public:
 struct ITextureView;
 struct ISampler;
 
+// clang-format off
+
 struct ITextureViewVtbl
 {
-    void (*SetSampler)(class ISampler* pSampler);
-    class ISampler* (*GetSampler)();
-    class ITexture* (*GetTexture)();
+    void            (*SetSampler)(struct ITextureView*, class ISampler* pSampler);
+    class ISampler* (*GetSampler)(struct ITextureView*);
+    class ITexture* (*GetTexture)(struct ITextureView*);
 };
 
 // clang-format on
@@ -237,14 +239,18 @@ struct ITextureView
 {
     struct IObjectVtbl*       pObjectVtbl;
     struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct ITextureView*      pTextureViewVtbl;
+    struct ITextureViewVtbl*  pTextureViewVtbl;
 };
 
-#    define ITextureView_GetDesc(This) (const struct TextureViewDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+#    define ITextureView_GetDesc(This) (const struct TextureViewDesc*)IDeviceObject_GetDesc(This)
 
-#    define ITextureView_SetSampler(This) (This)->pTextureViewVtbl->SetSampler(This)
-#    define ITextureView_GetSampler(This) (This)->pTextureViewVtbl->GetSampler(This)
-#    define ITextureView_GetTexture(This) (This)->pTextureViewVtbl->GetTexture(This)
+// clang-format off
+
+#    define ITextureView_SetSampler(This, ...) (This)->pTextureViewVtbl->SetSampler((struct ITextureView*)(This), __VA_ARGS__)
+#    define ITextureView_GetSampler(This)      (This)->pTextureViewVtbl->GetSampler((struct ITextureView*)(This))
+#    define ITextureView_GetTexture(This)      (This)->pTextureViewVtbl->GetTexture((struct ITextureView*)(This))
+
+// clang-format on
 
 #endif
 

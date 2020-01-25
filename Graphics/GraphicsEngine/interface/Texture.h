@@ -370,11 +370,11 @@ struct ITextureView;
 
 struct ITextureVtbl
 {
-    void (*CreateView)(const struct TextureViewDesc* ViewDesc, class ITextureView** ppView);
-    class ITextureView* (*GetDefaultView)(enum TEXTURE_VIEW_TYPE ViewType);
-    void* (*GetNativeHandle)();
-    void (*SetState)(RESOURCE_STATE State);
-    RESOURCE_STATE (*GetState)();
+    void                (*CreateView)     (struct ITexture*, const struct TextureViewDesc* ViewDesc, class ITextureView** ppView);
+    class ITextureView* (*GetDefaultView) (struct ITexture*, TEXTURE_VIEW_TYPE ViewType);
+    void*               (*GetNativeHandle)(struct ITexture*);
+    void                (*SetState)       (struct ITexture*, RESOURCE_STATE State);
+    RESOURCE_STATE      (*GetState)       (struct ITexture*);
 };
 
 // clang-format on
@@ -383,16 +383,20 @@ struct ITexture
 {
     struct IObjectVtbl*       pObjectVtbl;
     struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct ITexture*          pTextureVtbl;
+    struct ITextureVtbl*      pTextureVtbl;
 };
 
-#    define ITexture_GetDesc(This) (const struct TextureDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+// clang-format off
 
-#    define ITexture_CreateView(This, ...)     (This)->pTextureVtbl->SetSampler(This, __VA_ARGS__)
-#    define ITexture_GetDefaultView(This, ...) (This)->pTextureVtbl->GetDefaultView(This, __VA_ARGS__)
-#    define ITexture_GetNativeHandle(This)     (This)->pTextureVtbl->GetNativeHandle(This)
-#    define ITexture_SetState(This, ...)       (This)->pTextureVtbl->SetState(This, __VA_ARGS__)
-#    define ITexture_GetState(This)            (This)->pTextureVtbl->GetState(This, __VA_ARGS__)
+#    define ITexture_GetDesc(This) (const struct TextureDesc*)IDeviceObject_GetDesc(This)
+
+#    define ITexture_CreateView(This, ...)     (This)->pTextureVtbl->CreateView     ((struct ITexture*)(This), __VA_ARGS__)
+#    define ITexture_GetDefaultView(This, ...) (This)->pTextureVtbl->GetDefaultView ((struct ITexture*)(This), __VA_ARGS__)
+#    define ITexture_GetNativeHandle(This)     (This)->pTextureVtbl->GetNativeHandle((struct ITexture*)(This))
+#    define ITexture_SetState(This, ...)       (This)->pTextureVtbl->SetState       ((struct ITexture*)(This), __VA_ARGS__)
+#    define ITexture_GetState(This)            (This)->pTextureVtbl->GetState       ((struct ITexture*)(This))
+
+// clang-format on
 
 #endif
 
