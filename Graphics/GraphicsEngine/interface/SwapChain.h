@@ -92,6 +92,27 @@ public:
 
 #else
 
+struct ISwapChain;
+
+struct ISwapChainVtbl
+{
+    void (*Present)(Uint32 SyncInterval);
+    const struct SwapChainDesc* (*GetDesc)();
+    void (*Resize)(Uint32 NewWidth, Uint32 NewHeight);
+    void (*SetFullscreenMode)(const struct DisplayModeAttribs* DisplayMode);
+    void (*SetWindowedMode)();
+    struct ITextureView* (*GetCurrentBackBufferRTV)();
+    struct ITextureView* (*GetDepthBufferDSV)();
+};
+
+// clang-format on
+
+struct ISwapChain
+{
+    struct IObjectVtbl* pObjectVtbl;
+    struct ISwapChain*  pSwapChainVtbl;
+};
+
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

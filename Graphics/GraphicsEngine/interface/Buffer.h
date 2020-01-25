@@ -33,6 +33,7 @@
 /// Defines Diligent::IBuffer interface and related data structures
 
 #include "DeviceObject.h"
+#include "BufferView.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -179,9 +180,6 @@ struct BufferData
 class IBuffer : public IDeviceObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Returns the buffer description used to create the object
     virtual const BufferDesc& GetDesc() const override = 0;
 
@@ -231,6 +229,32 @@ public:
 };
 
 #else
+
+struct IBuffer;
+
+struct IBufferVtbl
+{
+    void (*CreateView)(const struct BufferViewDesc* ViewDesc, class IBufferView** ppView);
+    class IBufferView* (*GetDefaultView)(BUFFER_VIEW_TYPE ViewType);
+    void* (*GetNativeHandle)();
+    void (*SetState)(RESOURCE_STATE State);
+    RESOURCE_STATE (*GetState)();
+};
+
+struct IBuffer
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    struct IBufferVtbl*       pBufferVtbl;
+};
+
+#    define IBuffer_GetDesc(This) (const struct BufferDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+
+#    define IBuffer_CreateView(This, ...)     (This)->pBufferVtbl->CreateView(This, __VA_ARGS__)
+#    define IBuffer_GetDefaultView(This, ...) (This)->pBufferVtbl->GetDefaultView(This, __VA_ARGS__)
+#    define IBuffer_GetNativeHandle(This)     (This)->pBufferVtbl->(This)
+#    define IBuffer_SetState(This)            (This)->pBufferVtbl->SetState(This, __VA_ARGS__)
+#    define IBuffer_GetState(This)            (This)->pBufferVtbl->GetState(This, __VA_ARGS__)
 
 #endif
 

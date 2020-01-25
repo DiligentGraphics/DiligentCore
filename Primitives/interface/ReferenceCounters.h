@@ -34,6 +34,8 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
+typedef long ReferenceCounterValueType;
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Base interface for a reference counter object that stores the number of strong and
@@ -42,15 +44,13 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 class IReferenceCounters
 {
 public:
-    using CounterValueType = long;
-
     /// Increments the number of strong references by 1.
 
     /// \return The number of strong references after incrementing the counter.
     /// \remark The method is thread-safe and does not require explicit synchronization.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual CounterValueType AddStrongRef() = 0;
+    virtual ReferenceCounterValueType AddStrongRef() = 0;
 
 
     /// Decrements the number of strong references by 1 and destroys the referenced object
@@ -66,7 +66,7 @@ public:
     ///         as other threads may simultaneously change the actual value of the counter.
     ///         The only reliable value is 0 as the object is destroyed when the last
     ///         strong reference is released.
-    virtual CounterValueType ReleaseStrongRef() = 0;
+    virtual ReferenceCounterValueType ReleaseStrongRef() = 0;
 
 
     /// Increments the number of weak references by 1.
@@ -75,7 +75,7 @@ public:
     /// \remark The method is thread-safe and does not require explicit synchronization.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual CounterValueType AddWeakRef() = 0;
+    virtual ReferenceCounterValueType AddWeakRef() = 0;
 
 
     /// Decrements the number of weak references by 1. If there are no more strong and weak
@@ -85,7 +85,7 @@ public:
     /// \remark The method is thread-safe and does not require explicit synchronization.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual CounterValueType ReleaseWeakRef() = 0;
+    virtual ReferenceCounterValueType ReleaseWeakRef() = 0;
 
 
     /// Gets the pointer to the IUnknown interface of the referenced object.
@@ -107,7 +107,7 @@ public:
     ///         as other threads may simultaneously change the actual value of the counter.
     ///         The only reliable value is 0 as the object is destroyed when the last
     ///         strong reference is released.
-    virtual CounterValueType GetNumStrongRefs() const = 0;
+    virtual ReferenceCounterValueType GetNumStrongRefs() const = 0;
 
 
     /// Returns the number of outstanding weak references.
@@ -115,7 +115,7 @@ public:
     /// \return The number of weak references.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual CounterValueType GetNumWeakRefs() const = 0;
+    virtual ReferenceCounterValueType GetNumWeakRefs() const = 0;
 };
 
 #else

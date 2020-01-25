@@ -146,6 +146,34 @@ public:
 
 #else
 
+struct IShaderResourceVariable;
+
+// clang-format off
+struct IShaderResourceVariableVtbl
+{
+    void (*Set)(class IDeviceObject* pObject);
+    void (*SetArray)(class IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements);
+    SHADER_RESOURCE_VARIABLE_TYPE(*GetType)();
+    struct ShaderResourceDesc (*GetResourceDesc)();
+    Uint32 (*GetIndex)();
+    bool (*IsBound)(Uint32 ArrayIndex);
+};
+// clang-format on
+
+
+struct IShaderResourceVariable
+{
+    struct IObjectVtbl*             pObjectVtbl;
+    struct IShaderResourceVariable* pShaderResourceVariableVtbl;
+};
+
+#    define IShaderResourceVariable_Set(This, ...)        (This)->pShaderResourceVariableVtbl->Set(This, __VA_ARGS__)
+#    define IShaderResourceVariable_SetArray(This, ...)   (This)->pShaderResourceVariableVtbl->SetArray(This, __VA_ARGS__)
+#    define IShaderResourceVariable_GetType(This)         (This)->pShaderResourceVariableVtbl->GetType(This)
+#    define IShaderResourceVariable_GetResourceDesc(This) (This)->pShaderResourceVariableVtbl->GetResourceDesc(This)
+#    define IShaderResourceVariable_GetIndex(This)        (This)->pShaderResourceVariableVtbl->GetIndex(This)
+#    define IShaderResourceVariable_IsBound(This, ...)    (This)->pShaderResourceVariableVtbl->IsBound(This, __VA_ARGS__)
+
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

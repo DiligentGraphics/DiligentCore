@@ -253,10 +253,6 @@ static const struct INTERFACE_ID IID_PipelineState =
 class IPipelineState : public IDeviceObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface( const INTERFACE_ID& IID, IObject** ppInterface )override = 0;
-
-
     /// Returns the blend state description used to create the object
     virtual const PipelineStateDesc& GetDesc()const override = 0;
 
@@ -330,6 +326,37 @@ public:
 };
 
 #else
+
+struct IPipelineState;
+
+struct IPipelineStateVtbl
+{
+    void (*BindStaticResources)(Uint32 ShaderFlags, class IResourceMapping* pResourceMapping, Uint32 Flags);
+    Uint32 (*GetStaticVariableCount)(SHADER_TYPE ShaderType);
+    class IShaderResourceVariable* (*GetStaticVariableByName)(SHADER_TYPE ShaderType, const Char* Name);
+    class IShaderResourceVariable* (*GetStaticVariableByIndex)(SHADER_TYPE ShaderType, Uint32 Index);
+    void (*CreateShaderResourceBinding)(class IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources);
+    bool (*IsCompatibleWith)(const class IPipelineState* pPSO);
+};
+
+// clang-format on
+
+struct IPipelineState
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    struct IPipelineState*    pPipelineStateVtbl;
+};
+
+#    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+
+#    define IPipelineState_BindStaticResources(This, ...)         (This)->pPipelineStateVtbl->BindStaticResources(This, __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableCount(This, ...)      (This)->pPipelineStateVtbl->GetStaticVariableCount(This, __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByName(This, ...)     (This)->pPipelineStateVtbl->GetStaticVariableByName(This, __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByIndex(This, ...)    (This)->pPipelineStateVtbl->GetStaticVariableByIndex(This, __VA_ARGS__)
+#    define IPipelineState_CreateShaderResourceBinding(This, ...) (This)->pPipelineStateVtbl->CreateShaderResourceBinding(This, __VA_ARGS__)
+#    define IPipelineState_IsCompatibleWith(This, ...)            (This)->pPipelineStateVtbl->IsCompatibleWith(This, __VA_ARGS__)
+
 
 #endif
 

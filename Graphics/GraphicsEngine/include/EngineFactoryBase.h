@@ -48,8 +48,6 @@ template <class BaseInterface>
 class EngineFactoryBase : public BaseInterface
 {
 public:
-    using CounterValueType = IReferenceCounters::CounterValueType;
-
     EngineFactoryBase(const INTERFACE_ID& FactoryIID) noexcept :
         // clang-format off
         m_FactoryIID  {FactoryIID},
@@ -71,12 +69,12 @@ public:
         }
     }
 
-    virtual CounterValueType AddRef() override final
+    virtual ReferenceCounterValueType AddRef() override final
     {
         return m_RefCounters.AddStrongRef();
     }
 
-    virtual CounterValueType Release() override final
+    virtual ReferenceCounterValueType Release() override final
     {
         return m_RefCounters.ReleaseStrongRef();
     }
@@ -108,23 +106,22 @@ private:
             m_lNumWeakReferences   = 0;
         }
 
-        using IReferenceCounters::CounterValueType;
-        virtual CounterValueType AddStrongRef() override final
+        virtual ReferenceCounterValueType AddStrongRef() override final
         {
             return Atomics::AtomicIncrement(m_lNumStrongReferences);
         }
 
-        virtual CounterValueType ReleaseStrongRef() override final
+        virtual ReferenceCounterValueType ReleaseStrongRef() override final
         {
             return Atomics::AtomicDecrement(m_lNumStrongReferences);
         }
 
-        virtual CounterValueType AddWeakRef() override final
+        virtual ReferenceCounterValueType AddWeakRef() override final
         {
             return Atomics::AtomicIncrement(m_lNumWeakReferences);
         }
 
-        virtual CounterValueType ReleaseWeakRef() override final
+        virtual ReferenceCounterValueType ReleaseWeakRef() override final
         {
             return Atomics::AtomicDecrement(m_lNumWeakReferences);
         }
@@ -135,12 +132,12 @@ private:
                 m_Factory.QueryInterface(IID_Unknown, ppObject);
         }
 
-        virtual CounterValueType GetNumStrongRefs() const override final
+        virtual ReferenceCounterValueType GetNumStrongRefs() const override final
         {
             return m_lNumStrongReferences;
         }
 
-        virtual CounterValueType GetNumWeakRefs() const override final
+        virtual ReferenceCounterValueType GetNumWeakRefs() const override final
         {
             return m_lNumWeakReferences;
         }

@@ -46,10 +46,6 @@ static const struct INTERFACE_ID IID_DeviceObject =
 class IDeviceObject : public IObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
-
     /// Returns the object description
     virtual const DeviceObjectAttribs& GetDesc() const = 0;
 
@@ -74,6 +70,23 @@ public:
 };
 
 #else
+
+struct IDeviceObject;
+
+struct IDeviceObjectVtbl
+{
+    const struct DeviceObjectAttribs* (*GetDesc)();
+    Int32 (*GetUniqueID)();
+};
+
+struct IDeviceObject
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+};
+
+#    define IDeviceObject_GetDesc(This)     (This)->pDeviceObjectVtbl->GetDesc(This)
+#    define IDeviceObject_GetUniqueID(This) (This)->pDeviceObjectVtbl->GetUniqueID(This)
 
 #endif
 

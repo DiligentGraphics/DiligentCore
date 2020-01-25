@@ -178,9 +178,6 @@ struct QueryDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 class IQuery : public IDeviceObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details.
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Returns the Query description used to create the object.
     virtual const QueryDesc& GetDesc() const override = 0;
 
@@ -211,6 +208,26 @@ public:
 };
 
 #else
+
+struct IQuery;
+
+struct IQueryVtbl
+{
+    bool (*GetData)(void* pData, Uint32 DataSize, bool AutoInvalidate);
+    void (*Invalidate)();
+};
+
+struct IQuery
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    struct IQuery*            pQueryVtbl;
+};
+
+#    define IQuery_GetDesc(This) (const struct QueryDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+
+#    define IQuery_GetData(This, ...) (This)->pQueryVtbl->GetData(This, __VA_ARGS__)
+#    define IQuery_Invalidate(This)   (This)->pQueryVtbl->Invalidate(This)
 
 #endif
 

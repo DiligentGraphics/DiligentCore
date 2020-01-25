@@ -63,9 +63,6 @@ static const struct INTERFACE_ID IID_RenderDevice =
 class IRenderDevice : public IObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Creates a new buffer object
 
     /// \param [in] BuffDesc   - Buffer description, see Diligent::BufferDesc for details.
@@ -228,7 +225,57 @@ public:
 
 #else
 
+struct IRenderDevice;
 
+struct IRenderDeviceVtbl
+{
+    void (*CreateBuffer)(const struct BufferDesc* BuffDesc,
+                         const struct BufferData* pBuffData,
+                         class IBuffer**          ppBuffer);
+    void (*CreateShader)(const struct ShaderCreateInfo* ShaderCI,
+                         class IShader**                ppShader);
+    void (*CreateTexture)(const struct TextureDesc* TexDesc,
+                          const struct TextureData* pData,
+                          class ITexture**          ppTexture);
+    void (*CreateSampler)(const struct SamplerDesc* SamDesc,
+                          class ISampler**          ppSampler);
+    void (*CreateResourceMapping)(const struct ResourceMappingDesc* MappingDesc,
+                                  class IResourceMapping**          ppMapping);
+    void (*CreatePipelineState)(const struct PipelineStateDesc* PipelineDesc,
+                                class IPipelineState**          ppPipelineState);
+    void (*CreateFence)(const struct FenceDesc* Desc,
+                        class IFence**          ppFence);
+    void (*CreateQuery)(const struct QueryDesc* Desc,
+                        class IQuery**          ppQuery);
+    const struct DeviceCaps* (*GetDeviceCaps)();
+    const struct TextureFormatInfo* (*GetTextureFormatInfo)(TEXTURE_FORMAT TexFormat);
+    const struct TextureFormatInfoExt* (*GetTextureFormatInfoExt)(TEXTURE_FORMAT TexFormat);
+    void (*ReleaseStaleResources)(bool ForceRelease);
+    void (*IdleGPU)();
+    class IEngineFactory* (*GetEngineFactory)();
+};
+
+struct IRenderDevice
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    struct IRenderDevice*     pRenderDeviceVtbl;
+};
+
+#    define IRenderDevice_CreateBuffer(This, ...)            (This)->pRenderDeviceVtbl->CreateBuffer(This, __VA_ARGS__)
+#    define IRenderDevice_CreateShader(This, ...)            (This)->pRenderDeviceVtbl->CreateShader(This, __VA_ARGS__)
+#    define IRenderDevice_CreateTexture(This, ...)           (This)->pRenderDeviceVtbl->CreateTexture(This, __VA_ARGS__)
+#    define IRenderDevice_CreateSampler(This, ...)           (This)->pRenderDeviceVtbl->CreateSampler(This, __VA_ARGS__)
+#    define IRenderDevice_CreateResourceMapping(This, ...)   (This)->pRenderDeviceVtbl->CreateResourceMapping(This, __VA_ARGS__)
+#    define IRenderDevice_CreatePipelineState(This, ...)     (This)->pRenderDeviceVtbl->CreatePipelineState(This, __VA_ARGS__)
+#    define IRenderDevice_CreateFence(This, ...)             (This)->pRenderDeviceVtbl->CreateFence(This, __VA_ARGS__)
+#    define IRenderDevice_CreateQuery(This, ...)             (This)->pRenderDeviceVtbl->CreateQuery(This, __VA_ARGS__)
+#    define IRenderDevice_GetDeviceCaps(This)                (This)->pRenderDeviceVtbl->GetDeviceCaps(This)
+#    define IRenderDevice_GetTextureFormatInfo(This, ...)    (This)->pRenderDeviceVtbl->GetTextureFormatInfo(This, __VA_ARGS__)
+#    define IRenderDevice_GetTextureFormatInfoExt(This, ...) (This)->pRenderDeviceVtbl->GetTextureFormatInfoExt(This, __VA_ARGS__)
+#    define IRenderDevice_ReleaseStaleResources(This, ...)   (This)->pRenderDeviceVtbl->ReleaseStaleResources(This, __VA_ARGS__)
+#    define IRenderDevice_IdleGPU(This)                      (This)->pRenderDeviceVtbl->IdleGPU(This)
+#    define IRenderDevice_GetEngineFactory(This)             (This)->pRenderDeviceVtbl->GetEngineFactory(This)
 
 #endif
 

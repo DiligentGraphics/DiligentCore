@@ -51,6 +51,20 @@ class ICommandList : public IDeviceObject
 
 #else
 
+struct ICommandList;
+
+//  C requires that a struct or union has at least one member
+//struct ICommandListVtbl
+//{
+//};
+
+struct ICommandList
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    //struct ICommandListVtbl*  pCommandListVtbl;
+};
+
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

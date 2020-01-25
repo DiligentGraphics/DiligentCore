@@ -560,7 +560,7 @@ struct CopyTextureAttribs
     const struct Box*              pSrcBox                  DEFAULT_INITIALIZER(nullptr);
     
     /// Source texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
-    enum RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Destination texture.
     class ITexture*                pDstTexture              DEFAULT_INITIALIZER(nullptr);
@@ -612,9 +612,6 @@ struct CopyTextureAttribs
 class IDeviceContext : public IObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details.
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
-
     /// Sets the pipeline state.
 
     /// \param [in] pPipelineState - Pointer to IPipelineState interface to bind to the context.
@@ -1251,7 +1248,134 @@ public:
 
 #else
 
+// clang-format on
 
+struct IDeviceContext;
+
+struct IDeviceContextVtbl
+{
+    void (*SetPipelineState)(class IPipelineState* pPipelineState);
+    void (*TransitionShaderResources)(class IPipelineState* pPipelineState, class IShaderResourceBinding* pShaderResourceBinding);
+    void (*CommitShaderResources)(class IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
+    void (*SetStencilRef)(Uint32 StencilRef);
+    void (*SetBlendFactors)(const float* pBlendFactors);
+    void (*SetVertexBuffers)(Uint32                         StartSlot,
+                             Uint32                         NumBuffersSet,
+                             class IBuffer**                ppBuffers,
+                             Uint32*                        pOffsets,
+                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                             SET_VERTEX_BUFFERS_FLAGS       Flags);
+    void (*InvalidateState)();
+    void (*SetIndexBuffer)(class IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
+    void (*SetViewports)(Uint32 NumViewports, const struct Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight);
+    void (*SetScissorRects)(Uint32 NumRects, const struct Rect* pRects, Uint32 RTWidth, Uint32 RTHeight);
+    void (*SetRenderTargets)(Uint32                         NumRenderTargets,
+                             class ITextureView*            ppRenderTargets[],
+                             class ITextureView*            pDepthStencil,
+                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
+    void (*Draw)(const struct DrawAttribs* Attribs);
+    void (*DrawIndexed)(const struct DrawIndexedAttribs* Attribs);
+    void (*DrawIndirect)(const struct DrawIndirectAttribs* Attribs, class IBuffer* pAttribsBuffer);
+    void (*DrawIndexedIndirect)(const struct DrawIndexedIndirectAttribs* Attribs, class IBuffer* pAttribsBuffer);
+    void (*DispatchCompute)(const struct DispatchComputeAttribs* Attribs);
+    void (*DispatchComputeIndirect)(const struct DispatchComputeIndirectAttribs* Attribs, class IBuffer* pAttribsBuffer);
+    void (*ClearDepthStencil)(class ITextureView*            pView,
+                              CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
+                              float                          fDepth,
+                              Uint8                          Stencil,
+                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
+    void (*ClearRenderTarget)(class ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
+    void (*FinishCommandList)(class ICommandList** ppCommandList);
+    void (*ExecuteCommandList)(class ICommandList* pCommandList);
+    void (*SignalFence)(class IFence* pFence, Uint64 Value);
+    void (*WaitForFence)(class IFence* pFence, Uint64 Value, bool FlushContext);
+    void (*WaitForIdle)();
+    void (*BeginQuery)(class IQuery* pQuery);
+    void (*EndQuery)(class IQuery* pQuery);
+    void (*Flush)();
+    void (*UpdateBuffer)(class IBuffer*                 pBuffer,
+                         Uint32                         Offset,
+                         Uint32                         Size,
+                         const void*                    pData,
+                         RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
+    void (*CopyBuffer)(class IBuffer*                 pSrcBuffer,
+                       Uint32                         SrcOffset,
+                       RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                       class IBuffer*                 pDstBuffer,
+                       Uint32                         DstOffset,
+                       Uint32                         Size,
+                       RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode);
+    void (*MapBuffer)(class IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid* pMappedData);
+    void (*UnmapBuffer)(class IBuffer* pBuffer, MAP_TYPE MapType);
+    void (*UpdateTexture)(class ITexture*                 pTexture,
+                          Uint32                          MipLevel,
+                          Uint32                          Slice,
+                          const struct Box*               DstBox,
+                          const struct TextureSubResData* SubresData,
+                          RESOURCE_STATE_TRANSITION_MODE  SrcBufferTransitionMode,
+                          RESOURCE_STATE_TRANSITION_MODE  TextureTransitionMode);
+    void (*CopyTexture)(const struct CopyTextureAttribs* CopyAttribs);
+    void (*MapTextureSubresource)(class ITexture*                  pTexture,
+                                  Uint32                           MipLevel,
+                                  Uint32                           ArraySlice,
+                                  MAP_TYPE                         MapType,
+                                  MAP_FLAGS                        MapFlags,
+                                  const struct Box*                pMapRegion,
+                                  struct MappedTextureSubresource* MappedData);
+    void (*UnmapTextureSubresource)(class ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice);
+    void (*GenerateMips)(class ITextureView* pTextureView);
+    void (*FinishFrame)();
+    void (*TransitionResourceStates)(Uint32 BarrierCount, struct StateTransitionDesc* pResourceBarriers);
+    void (*ResolveTextureSubresource)(class ITexture*                                pSrcTexture,
+                                      class ITexture*                                pDstTexture,
+                                      const struct ResolveTextureSubresourceAttribs* ResolveAttribs);
+};
+
+struct IDeviceContext
+{
+    struct IObjectVtbl*        pObjectVtbl;
+    struct IDeviceContextVtbl* pDeviceContextVtbl;
+};
+
+#    define IDeviceContext_SetPipelineState(This, ...)          (This)->pDeviceContextVtbl->SetPipelineState(This, __VA_ARGS__)
+#    define IDeviceContext_TransitionShaderResources(This, ...) (This)->pDeviceContextVtbl->TransitionShaderResources(This, __VA_ARGS__)
+#    define IDeviceContext_CommitShaderResources(This, ...)     (This)->pDeviceContextVtbl - CommitShaderResources(This, __VA_ARGS__)
+#    define IDeviceContext_SetStencilRef(This, ...)             (This)->pDeviceContextVtbl->SetStencilRef(This, __VA_ARGS__)
+#    define IDeviceContext_SetBlendFactors(This, ...)           (This)->pDeviceContextVtbl->SetBlendFactors(This, __VA_ARGS__)
+#    define IDeviceContext_SetVertexBuffers(This, ...)          (This)->pDeviceContextVtbl->SetVertexBuffers(This, __VA_ARGS__)
+#    define IDeviceContext_InvalidateState(This)                (This)->pDeviceContextVtbl->InvalidateState(This)
+#    define IDeviceContext_SetIndexBuffer(This, ...)            (This)->pDeviceContextVtbl->SetIndexBuffer(This, __VA_ARGS__)
+#    define IDeviceContext_SetViewports(This, ...)              (This)->pDeviceContextVtbl->SetViewports(This, __VA_ARGS__)
+#    define IDeviceContext_SetScissorRects(This, ...)           (This)->pDeviceContextVtbl->SetScissorRects(This, __VA_ARGS__)
+#    define IDeviceContext_SetRenderTargets(This, ...)          (This)->pDeviceContextVtbl->SetRenderTargets(This, __VA_ARGS__)
+#    define IDeviceContext_Draw(This, ...)                      (This)->pDeviceContextVtbl->Draw(This, __VA_ARGS__)
+#    define IDeviceContext_DrawIndexed(This, ...)               (This)->pDeviceContextVtbl->DrawIndexed(This, __VA_ARGS__)
+#    define IDeviceContext_DrawIndirect(This, ...)              (This)->pDeviceContextVtbl->DrawIndirect(This, __VA_ARGS__)
+#    define IDeviceContext_DrawIndexedIndirect(This, ...)       (This)->pDeviceContextVtbl->DrawIndexedIndirect(This, __VA_ARGS__)
+#    define IDeviceContext_DispatchCompute(This, ...)           (This)->pDeviceContextVtbl->DispatchCompute(This, __VA_ARGS__)
+#    define IDeviceContext_DispatchComputeIndirect(This, ...)   (This)->pDeviceContextVtbl->DispatchComputeIndirect(This, __VA_ARGS__)
+#    define IDeviceContext_ClearDepthStencil(This, ...)         (This)->pDeviceContextVtbl->ClearDepthStencil(This, __VA_ARGS__)
+#    define IDeviceContext_ClearRenderTarget(This, ...)         (This)->pDeviceContextVtbl->ClearRenderTarget(This, __VA_ARGS__)
+#    define IDeviceContext_FinishCommandList(This, ...)         (This)->pDeviceContextVtbl->FinishCommandList(This, __VA_ARGS__)
+#    define IDeviceContext_ExecuteCommandList(This, ...)        (This)->pDeviceContextVtbl->ExecuteCommandList(This, __VA_ARGS__)
+#    define IDeviceContext_SignalFence(This, ...)               (This)->pDeviceContextVtbl->SignalFence(This, __VA_ARGS__)
+#    define IDeviceContext_WaitForFence(This, ...)              (This)->pDeviceContextVtbl->WaitForFence(This, __VA_ARGS__)
+#    define IDeviceContext_WaitForIdle(This, ...)               (This)->pDeviceContextVtbl->WaitForIdle(This, __VA_ARGS__)
+#    define IDeviceContext_BeginQuery(This, ...)                (This)->pDeviceContextVtbl->BeginQuery(This, __VA_ARGS__)
+#    define IDeviceContext_EndQuery(This, ...)                  (This)->pDeviceContextVtbl->EndQuery(This, __VA_ARGS__)
+#    define IDeviceContext_Flush(This, ...)                     (This)->pDeviceContextVtbl->Flush(This, __VA_ARGS__)
+#    define IDeviceContext_UpdateBuffer(This, ...)              (This)->pDeviceContextVtbl->UpdateBuffer(This, __VA_ARGS__)
+#    define IDeviceContext_CopyBuffer(This, ...)                (This)->pDeviceContextVtbl->CopyBuffer(This, __VA_ARGS__)
+#    define IDeviceContext_MapBuffer(This, ...)                 (This)->pDeviceContextVtbl->MapBuffer(This, __VA_ARGS__)
+#    define IDeviceContext_UnmapBuffer(This, ...)               (This)->pDeviceContextVtbl->UnmapBuffer(This, __VA_ARGS__)
+#    define IDeviceContext_UpdateTexture(This, ...)             (This)->pDeviceContextVtbl->UpdateTexture(This, __VA_ARGS__)
+#    define IDeviceContext_CopyTexture(This, ...)               (This)->pDeviceContextVtbl->CopyTexture(This, __VA_ARGS__)
+#    define IDeviceContext_MapTextureSubresource(This, ...)     (This)->pDeviceContextVtbl->MapTextureSubresource(This, __VA_ARGS__)
+#    define IDeviceContext_UnmapTextureSubresource(This, ...)   (This)->pDeviceContextVtbl->UnmapTextureSubresource(This, __VA_ARGS__)
+#    define IDeviceContext_GenerateMips(This, ...)              (This)->pDeviceContextVtbl->GenerateMips(This, __VA_ARGS__)
+#    define IDeviceContext_FinishFrame(This)                    (This)->pDeviceContextVtbl->FinishFrame(This)
+#    define IDeviceContext_TransitionResourceStates(This, ...)  (This)->pDeviceContextVtbl->TransitionResourceStates(This, __VA_ARGS__)
+#    define IDeviceContext_ResolveTextureSubresource(This, ...) (This)->pDeviceContextVtbl->ResolveTextureSubresource(This, __VA_ARGS__)
 
 #endif
 

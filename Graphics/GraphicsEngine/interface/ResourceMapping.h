@@ -98,9 +98,6 @@ struct ResourceMappingDesc
 class IResourceMapping : public IObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Adds a resource to the mapping.
 
     /// \param [in] Name - Resource name.
@@ -151,6 +148,29 @@ public:
 };
 
 #else
+
+struct IResourceMapping;
+
+struct IResourceMappingVtbl
+{
+    void (*AddResource)(const Char* Name, class IDeviceObject* pObject, bool bIsUnique);
+    void (*AddResourceArray)(const Char* Name, Uint32 StartIndex, class IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique);
+    void (*RemoveResourceByName)(const Char* Name, Uint32 ArrayIndex);
+    void (*GetResource)(const Char* Name, class IDeviceObject** ppResource, Uint32 ArrayIndex);
+    size_t (*GetSize)();
+};
+
+struct IResourceMapping
+{
+    struct IObjectVtbl*      pObjectVtbl;
+    struct IResourceMapping* pResourceMappingVtbl;
+};
+
+#    define IResourceMapping_AddResource(This, ...)          (This)->pResourceMappingVtbl->AddResource(This, __VA_ARGS__)
+#    define IResourceMapping_AddResourceArray(This, ...)     (This)->pResourceMappingVtbl->AddResourceArray(This, __VA_ARGS__)
+#    define IResourceMapping_RemoveResourceByName(This, ...) (This)->pResourceMappingVtbl->RemoveResourceByName(This, __VA_ARGS__)
+#    define IResourceMapping_GetResource(This, ...)          (This)->pResourceMappingVtbl->GetResource(This, __VA_ARGS__)
+#    define IResourceMapping_GetSize(This)                   (This)->pResourceMappingVtbl->GetSize(This)
 
 #endif
 

@@ -295,9 +295,6 @@ struct ShaderResourceDesc
 class IShader : public IDeviceObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Returns the shader description
     virtual const ShaderDesc& GetDesc() const override = 0;
 
@@ -309,6 +306,26 @@ public:
 };
 
 #else
+
+struct IShader;
+
+struct IShaderVtbl
+{
+    Uint32 (*GetResourceCount)();
+    struct ShaderResourceDesc (*GetResource)(Uint32 Index);
+};
+
+struct IShader
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    struct IShader*           pShaderVtbl;
+};
+
+#    define IShader_GetDesc(This) (const struct ShaderDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+
+#    define ITexture_GetResourceCount(This) (This)->pShaderVtbl->GetResourceCount(This)
+#    define ITexture_GetResource(This, ...) (This)->pShaderVtbl->GetResource(This, __VA_ARGS__)
 
 #endif
 

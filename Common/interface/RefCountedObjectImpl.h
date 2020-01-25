@@ -44,7 +44,7 @@ namespace Diligent
 class RefCountersImpl final : public IReferenceCounters
 {
 public:
-    inline virtual CounterValueType AddStrongRef() override final
+    inline virtual ReferenceCounterValueType AddStrongRef() override final
     {
         VERIFY(m_ObjectState == ObjectState::Alive, "Attempting to increment strong reference counter for a destroyed or not itialized object!");
         VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
@@ -52,7 +52,7 @@ public:
     }
 
     template <class TPreObjectDestroy>
-    inline CounterValueType ReleaseStrongRef(TPreObjectDestroy PreObjectDestroy)
+    inline ReferenceCounterValueType ReleaseStrongRef(TPreObjectDestroy PreObjectDestroy)
     {
         VERIFY(m_ObjectState == ObjectState::Alive, "Attempting to decrement strong reference counter for an object that is not alive");
         VERIFY(m_ObjectWrapperBuffer[0] != 0 && m_ObjectWrapperBuffer[1] != 0, "Object wrapper is not initialized");
@@ -69,17 +69,17 @@ public:
         return RefCount;
     }
 
-    inline virtual CounterValueType ReleaseStrongRef() override final
+    inline virtual ReferenceCounterValueType ReleaseStrongRef() override final
     {
         return ReleaseStrongRef([]() {});
     }
 
-    inline virtual CounterValueType AddWeakRef() override final
+    inline virtual ReferenceCounterValueType AddWeakRef() override final
     {
         return Atomics::AtomicIncrement(m_lNumWeakReferences);
     }
 
-    inline virtual CounterValueType ReleaseWeakRef() override final
+    inline virtual ReferenceCounterValueType ReleaseWeakRef() override final
     {
         // The method must be serialized!
         ThreadingTools::LockHelper Lock(m_LockFlag);
@@ -202,12 +202,12 @@ public:
         Atomics::AtomicDecrement(m_lNumStrongReferences);
     }
 
-    inline virtual CounterValueType GetNumStrongRefs() const override final
+    inline virtual ReferenceCounterValueType GetNumStrongRefs() const override final
     {
         return m_lNumStrongReferences;
     }
 
-    inline virtual CounterValueType GetNumWeakRefs() const override final
+    inline virtual ReferenceCounterValueType GetNumWeakRefs() const override final
     {
         return m_lNumWeakReferences;
     }
@@ -489,8 +489,6 @@ template <typename Base>
 class RefCountedObject : public Base
 {
 public:
-    using CounterValueType = IReferenceCounters::CounterValueType;
-
     template <typename... BaseCtorArgTypes>
     RefCountedObject(IReferenceCounters* pRefCounters, BaseCtorArgTypes&&... BaseCtorArgs) noexcept :
         // clang-format off
@@ -533,7 +531,7 @@ public:
         return m_pRefCounters;
     }
 
-    inline virtual CounterValueType AddRef() override final
+    inline virtual ReferenceCounterValueType AddRef() override final
     {
         VERIFY_EXPR(m_pRefCounters != nullptr);
         // Since type of m_pRefCounters is RefCountersImpl,
@@ -541,7 +539,7 @@ public:
         return m_pRefCounters->AddStrongRef();
     }
 
-    inline virtual CounterValueType Release() override
+    inline virtual ReferenceCounterValueType Release() override
     {
         VERIFY_EXPR(m_pRefCounters != nullptr);
         // Since type of m_pRefCounters is RefCountersImpl,
@@ -550,7 +548,7 @@ public:
     }
 
     template <class TPreObjectDestroy>
-    inline CounterValueType Release(TPreObjectDestroy PreObjectDestroy)
+    inline ReferenceCounterValueType Release(TPreObjectDestroy PreObjectDestroy)
     {
         VERIFY_EXPR(m_pRefCounters != nullptr);
         return m_pRefCounters->ReleaseStrongRef(PreObjectDestroy);

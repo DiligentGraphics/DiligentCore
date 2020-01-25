@@ -30,7 +30,6 @@
 /// \file
 /// Definition of the Diligent::ISampler interface and related data structures
 
-#include <cfloat>
 #include "DeviceObject.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -184,16 +183,26 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 class ISampler : public IDeviceObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Returns the sampler description used to create the object
     virtual const SamplerDesc& GetDesc() const override = 0;
 };
 
 #else
 
+struct ISampler;
 
+//struct ISamplerVtbl
+//{
+//};
+
+struct ISampler
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    //struct ISampler*          pSamplerVtbl;
+};
+
+#    define ISampler_GetDesc(This) (const struct SamplerDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
 
 #endif
 

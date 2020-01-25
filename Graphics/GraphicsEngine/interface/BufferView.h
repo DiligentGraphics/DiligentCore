@@ -32,7 +32,7 @@
 /// \file
 /// Definition of the Diligent::IBufferView interface and related data structures
 
-#include "Buffer.h"
+#include "DeviceObject.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -149,9 +149,6 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 class IBufferView : public IDeviceObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Returns the buffer view description used to create the object
     virtual const BufferViewDesc& GetDesc() const override = 0;
 
@@ -159,10 +156,29 @@ public:
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual IBuffer* GetBuffer() = 0;
+    virtual class IBuffer* GetBuffer() = 0;
 };
 
 #else
+
+class IBufferView;
+class IBuffer;
+
+struct IBufferViewVtbl
+{
+    class IBuffer* (*GetBuffer)();
+};
+
+struct IBufferView
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    struct IBufferViewVtbl*   pBufferVtbl;
+};
+
+#    define IBufferView_GetDesc(This) (const struct BufferViewDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+
+#    define IBufferView_GetBuffer(This) (This)->pBufferVtbl->GetBuffer(This)
 
 #endif
 

@@ -50,9 +50,6 @@ static const struct INTERFACE_ID IID_ShaderResourceBinding =
 class IShaderResourceBinding : public IObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Returns pointer to the referenced buffer object.
 
     /// The method calls AddRef() on the returned interface,
@@ -119,6 +116,34 @@ public:
 };
 
 #else
+
+class IPipelineState;
+struct IShaderResourceBinding;
+
+// clang-format off
+struct IShaderResourceBindingVtbl
+{
+    class IPipelineState* (*GetPipelineState)();
+    void (*BindResources)(Uint32 ShaderFlags, class IResourceMapping* pResMapping, Uint32 Flags);
+    class IShaderResourceVariable* (*GetVariableByName)(SHADER_TYPE ShaderType, const char* Name);
+    Uint32 (*GetVariableCount)(SHADER_TYPE ShaderType);
+    class IShaderResourceVariable* (*GetVariableByIndex)(SHADER_TYPE ShaderType, Uint32 Index);
+    void (*InitializeStaticResources)(const class IPipelineState* pPipelineState);
+};
+// clang-format on
+
+struct IShaderResourceBinding
+{
+    struct IObjectVtbl*            pObjectVtbl;
+    struct IShaderResourceBinding* pShaderResourceBindingVtbl;
+};
+
+#    define IShaderResourceBinding_GetPipelineState(This)               (This)->pShaderResourceBindingVtbl->GetPipelineState(This)
+#    define IShaderResourceBinding_BindResources(This, ...)             (This)->pShaderResourceBindingVtbl->BindResources(This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByName(This, ...)         (This)->pShaderResourceBindingVtbl->GetVariableByName(This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableCount(This, ...)          (This)->pShaderResourceBindingVtbl->GetVariableCount(This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByIndex(This, ...)        (This)->pShaderResourceBindingVtbl->GetVariableByIndex(This, __VA_ARGS__)
+#    define IShaderResourceBinding_InitializeStaticResources(This, ...) (This)->pShaderResourceBindingVtbl->InitializeStaticResources(This, __VA_ARGS__)
 
 #endif
 

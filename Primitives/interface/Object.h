@@ -41,8 +41,6 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 class IObject
 {
 public:
-    using CounterValueType = IReferenceCounters::CounterValueType;
-
     /// Queries the specific interface.
 
     /// \param [in] IID - Unique identifier of the requested interface.
@@ -60,7 +58,7 @@ public:
     /// \return The number of strong references after incrementing the counter.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual CounterValueType AddRef() = 0;
+    virtual ReferenceCounterValueType AddRef() = 0;
 
 
     /// Decrements the number of strong references by 1 and destroys the object when the
@@ -73,7 +71,7 @@ public:
     ///         as other threads may simultaneously change the actual value of the counter.
     ///         The only reliable value is 0 as the object is destroyed when the last
     ///         strong reference is released.
-    virtual CounterValueType Release() = 0;
+    virtual ReferenceCounterValueType Release() = 0;
 
 
     /// Returns the pointer to IReferenceCounters interface of the associated
@@ -83,6 +81,26 @@ public:
 };
 
 #else
+
+struct IObject;
+
+struct IObjectVtbl
+{
+    void (*QueryInterface)(const struct INTERFACE_ID* IID, struct IObject** ppInterface);
+    ReferenceCounterValueType (*AddRef)();
+    ReferenceCounterValueType (*Release)();
+    class IReferenceCounters* (*GetReferenceCounters)();
+};
+
+struct IObject
+{
+    struct IObjectVtbl* pObjectVtbl;
+    struct IObjectVtbl* pDeviceObjectVtbl;
+};
+
+#    define IObject_QueryInterface(This, ...) (This)->pDeviceObjectVtbl->QueryInterface(This, __VA_ARGS__)
+#    define IObject_AddRef(This, ...)         (This)->pDeviceObjectVtbl->AddRef(This, __VA_ARGS__)
+#    define IObject_Release(This)             (This)->pDeviceObjectVtbl->Release()
 
 #endif
 

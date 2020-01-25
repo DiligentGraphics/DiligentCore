@@ -313,7 +313,7 @@ public:
 
     // It is important to have final implementation of Release() method to avoid
     // virtual calls
-    inline virtual IReferenceCounters::CounterValueType Release() override final
+    inline virtual ReferenceCounterValueType Release() override final
     {
         return TObjectBase::Release();
     }

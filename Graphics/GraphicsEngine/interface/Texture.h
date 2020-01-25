@@ -33,6 +33,7 @@
 /// Definition of the Diligent::ITexture interface and related data structures
 
 #include "DeviceObject.h"
+#include "TextureView.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -64,10 +65,10 @@ struct DepthStencilClearValue
 struct OptimizedClearValue
 {
     /// Format
-    enum TEXTURE_FORMAT Format DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+    TEXTURE_FORMAT Format       DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Render target clear value
-    Float32 Color[4]     DEFAULT_INITIALIZER({});
+    Float32        Color[4]     DEFAULT_INITIALIZER({});
 
     /// Depth stencil clear value
     struct DepthStencilClearValue DepthStencil;
@@ -90,7 +91,7 @@ struct OptimizedClearValue
 struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Texture type. See Diligent::RESOURCE_DIMENSION for details.
-    enum RESOURCE_DIMENSION Type DEFAULT_INITIALIZER(RESOURCE_DIM_UNDEFINED);
+    RESOURCE_DIMENSION Type DEFAULT_INITIALIZER(RESOURCE_DIM_UNDEFINED);
 
     /// Texture width, in pixels.
     Uint32 Width            DEFAULT_INITIALIZER(0);
@@ -108,32 +109,32 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     };
 
     /// Texture format, see Diligent::TEXTURE_FORMAT.
-    enum TEXTURE_FORMAT Format  DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+    TEXTURE_FORMAT Format       DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Number of Mip levels in the texture. Multisampled textures can only have 1 Mip level.
     /// Specify 0 to create full mipmap chain.
-    Uint32 MipLevels            DEFAULT_INITIALIZER(1);
+    Uint32          MipLevels   DEFAULT_INITIALIZER(1);
 
     /// Number of samples.\n
     /// Only 2D textures or 2D texture arrays can be multisampled.
-    Uint32 SampleCount          DEFAULT_INITIALIZER(1);
+    Uint32          SampleCount DEFAULT_INITIALIZER(1);
 
     /// Texture usage. See Diligent::USAGE for details.
-    enum USAGE Usage            DEFAULT_INITIALIZER(USAGE_DEFAULT);
+    USAGE           Usage       DEFAULT_INITIALIZER(USAGE_DEFAULT);
 
     /// Bind flags, see Diligent::BIND_FLAGS for details. \n
     /// The following bind flags are allowed:
     /// Diligent::BIND_SHADER_RESOURCE, Diligent::BIND_RENDER_TARGET, Diligent::BIND_DEPTH_STENCIL,
     /// Diligent::and BIND_UNORDERED_ACCESS. \n
     /// Multisampled textures cannot have Diligent::BIND_UNORDERED_ACCESS flag set
-    enum BIND_FLAGS BindFlags   DEFAULT_INITIALIZER(BIND_NONE);
+    BIND_FLAGS      BindFlags   DEFAULT_INITIALIZER(BIND_NONE);
 
     /// CPU access flags or 0 if no CPU access is allowed, 
     /// see Diligent::CPU_ACCESS_FLAGS for details.
-    enum CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
+    CPU_ACCESS_FLAGS CPUAccessFlags     DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
     
     /// Miscellaneous flags, see Diligent::MISC_TEXTURE_FLAGS for details.
-    enum MISC_TEXTURE_FLAGS MiscFlags    DEFAULT_INITIALIZER(MISC_TEXTURE_FLAG_NONE);
+    MISC_TEXTURE_FLAGS MiscFlags        DEFAULT_INITIALIZER(MISC_TEXTURE_FLAG_NONE);
     
     /// Optimized clear value
     struct OptimizedClearValue ClearValue;
@@ -308,9 +309,6 @@ struct MappedTextureSubresource
 class ITexture : public IDeviceObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface)override = 0;
-
     /// Returns the texture description used to create the object
     virtual const TextureDesc& GetDesc()const override = 0;
     
@@ -366,6 +364,35 @@ public:
 };
 
 #else
+
+struct ITexture;
+struct ITextureView;
+
+struct ITextureVtbl
+{
+    void (*CreateView)(const struct TextureViewDesc* ViewDesc, class ITextureView** ppView);
+    class ITextureView* (*GetDefaultView)(enum TEXTURE_VIEW_TYPE ViewType);
+    void* (*GetNativeHandle)();
+    void (*SetState)(RESOURCE_STATE State);
+    RESOURCE_STATE (*GetState)();
+};
+
+// clang-format on
+
+struct ITexture
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    struct ITexture*          pTextureVtbl;
+};
+
+#    define ITexture_GetDesc(This) (const struct TextureDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+
+#    define ITexture_CreateView(This, ...)     (This)->pTextureVtbl->SetSampler(This, __VA_ARGS__)
+#    define ITexture_GetDefaultView(This, ...) (This)->pTextureVtbl->GetDefaultView(This, __VA_ARGS__)
+#    define ITexture_GetNativeHandle(This)     (This)->pTextureVtbl->GetNativeHandle(This)
+#    define ITexture_SetState(This, ...)       (This)->pTextureVtbl->SetState(This, __VA_ARGS__)
+#    define ITexture_GetState(This)            (This)->pTextureVtbl->GetState(This, __VA_ARGS__)
 
 #endif
 

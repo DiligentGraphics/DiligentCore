@@ -56,9 +56,6 @@ struct FenceDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 class IFence : public IDeviceObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Returns the fence description used to create the object
     virtual const FenceDesc& GetDesc() const override = 0;
 
@@ -74,6 +71,26 @@ public:
 };
 
 #else
+
+struct IFence;
+
+struct IFenceVtbl
+{
+    Uint64 (*GetCompletedValue)();
+    void (*Reset)(Uint64 Value);
+};
+
+struct IFence
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    struct IFenceVtbl*        pFenceVtbl;
+};
+
+#    define IFence_GetDesc(This) (const struct FenceDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+
+#    define IFence_GetCompletedValue(This) (This)->pFenceVtbl->GetCompletedValue(This)
+#    define IFence_Reset(This, ...)        (This)->pFenceVtbl->Reset(This, __VA_ARGS__)
 
 #endif
 

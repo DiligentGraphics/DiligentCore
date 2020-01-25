@@ -196,9 +196,6 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 class ITextureView : public IDeviceObject
 {
 public:
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override = 0;
-
     /// Returns the texture view description used to create the object
     virtual const TextureViewDesc& GetDesc() const override = 0;
 
@@ -223,6 +220,31 @@ public:
 };
 
 #else
+
+struct ITextureView;
+struct ISampler;
+
+struct ITextureViewVtbl
+{
+    void (*SetSampler)(class ISampler* pSampler);
+    class ISampler* (*GetSampler)();
+    class ITexture* (*GetTexture)();
+};
+
+// clang-format on
+
+struct ITextureView
+{
+    struct IObjectVtbl*       pObjectVtbl;
+    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
+    struct ITextureView*      pTextureViewVtbl;
+};
+
+#    define ITextureView_GetDesc(This) (const struct TextureViewDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+
+#    define ITextureView_SetSampler(This) (This)->pTextureViewVtbl->SetSampler(This)
+#    define ITextureView_GetSampler(This) (This)->pTextureViewVtbl->GetSampler(This)
+#    define ITextureView_GetTexture(This) (This)->pTextureViewVtbl->GetTexture(This)
 
 #endif
 
