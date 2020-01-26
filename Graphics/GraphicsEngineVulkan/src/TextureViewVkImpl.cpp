@@ -26,9 +26,9 @@
  */
 
 #include "pch.h"
-#include "TextureViewVkImpl.h"
-#include "DeviceContextVkImpl.h"
-#include "RenderDeviceVkImpl.h"
+#include "TextureViewVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

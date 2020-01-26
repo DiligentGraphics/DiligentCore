@@ -26,9 +26,9 @@
  */
 
 #include "pch.h"
-#include "BufferViewVkImpl.h"
-#include "RenderDeviceVkImpl.h"
-#include "BufferVkImpl.h"
+#include "BufferViewVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
+#include "BufferVkImpl.hpp"
 
 namespace Diligent
 {

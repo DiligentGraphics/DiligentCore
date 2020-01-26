@@ -31,13 +31,13 @@
 #include "pch.h"
 #include <array>
 #include "EngineFactoryVk.h"
-#include "RenderDeviceVkImpl.h"
-#include "DeviceContextVkImpl.h"
-#include "SwapChainVkImpl.h"
+#include "RenderDeviceVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
+#include "SwapChainVkImpl.hpp"
 #include "EngineMemory.h"
-#include "CommandQueueVkImpl.h"
-#include "VulkanUtilities/VulkanInstance.h"
-#include "VulkanUtilities/VulkanPhysicalDevice.h"
+#include "CommandQueueVkImpl.hpp"
+#include "VulkanUtilities/VulkanInstance.hpp"
+#include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 #include "EngineFactoryBase.hpp"
 
 namespace Diligent

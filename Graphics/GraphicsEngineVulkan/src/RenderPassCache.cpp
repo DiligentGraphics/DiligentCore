@@ -27,9 +27,9 @@
 
 #include "pch.h"
 #include <sstream>
-#include "RenderPassCache.h"
-#include "RenderDeviceVkImpl.h"
-#include "PipelineStateVkImpl.h"
+#include "RenderPassCache.hpp"
+#include "RenderDeviceVkImpl.hpp"
+#include "PipelineStateVkImpl.hpp"
 
 namespace Diligent
 {

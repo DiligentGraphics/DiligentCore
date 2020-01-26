@@ -26,7 +26,7 @@
  */
 #include <sstream>
 
-#include "VulkanUtilities/VulkanCommandBuffer.h"
+#include "VulkanUtilities/VulkanCommandBuffer.hpp"
 
 namespace VulkanUtilities
 {

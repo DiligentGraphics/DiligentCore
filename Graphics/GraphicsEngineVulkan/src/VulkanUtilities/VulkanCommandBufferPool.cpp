@@ -26,11 +26,11 @@
  */
 #include <sstream>
 
-#include "VulkanUtilities/VulkanCommandBufferPool.h"
-#include "VulkanUtilities/VulkanDebug.h"
+#include "VulkanUtilities/VulkanCommandBufferPool.hpp"
+#include "VulkanUtilities/VulkanDebug.hpp"
 #include "Errors.h"
 #include "DebugUtilities.h"
-#include "VulkanErrors.h"
+#include "VulkanErrors.hpp"
 
 namespace VulkanUtilities
 {

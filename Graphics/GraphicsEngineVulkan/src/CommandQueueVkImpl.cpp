@@ -27,7 +27,7 @@
 
 #include <thread>
 #include "pch.h"
-#include "CommandQueueVkImpl.h"
+#include "CommandQueueVkImpl.hpp"
 
 namespace Diligent
 {

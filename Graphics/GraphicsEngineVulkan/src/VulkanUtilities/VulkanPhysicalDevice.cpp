@@ -27,8 +27,8 @@
 
 #include <limits>
 #include <cstring>
-#include "VulkanErrors.h"
-#include "VulkanUtilities/VulkanPhysicalDevice.h"
+#include "VulkanErrors.hpp"
+#include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 
 namespace VulkanUtilities
 {

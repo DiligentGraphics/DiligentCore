@@ -26,8 +26,8 @@
  */
 
 #include "pch.h"
-#include "VulkanUploadHeap.h"
-#include "RenderDeviceVkImpl.h"
+#include "VulkanUploadHeap.hpp"
+#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

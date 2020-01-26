@@ -27,18 +27,18 @@
 
 #include "pch.h"
 
-#include "ShaderResourceLayoutVk.h"
-#include "ShaderResourceCacheVk.h"
-#include "BufferVkImpl.h"
+#include "ShaderResourceLayoutVk.hpp"
+#include "ShaderResourceCacheVk.hpp"
+#include "BufferVkImpl.hpp"
 #include "BufferViewVk.h"
-#include "TextureVkImpl.h"
-#include "TextureViewVkImpl.h"
-#include "SamplerVkImpl.h"
-#include "ShaderVkImpl.h"
-#include "PipelineLayout.h"
+#include "TextureVkImpl.hpp"
+#include "TextureViewVkImpl.hpp"
+#include "SamplerVkImpl.hpp"
+#include "ShaderVkImpl.hpp"
+#include "PipelineLayout.hpp"
 #include "ShaderResourceVariableBase.hpp"
 #include "StringTools.h"
-#include "PipelineStateVkImpl.h"
+#include "PipelineStateVkImpl.hpp"
 
 namespace Diligent
 {

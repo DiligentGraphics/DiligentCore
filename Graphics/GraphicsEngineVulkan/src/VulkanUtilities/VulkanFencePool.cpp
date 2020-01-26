@@ -26,7 +26,7 @@
  */
 #include <sstream>
 
-#include "VulkanUtilities/VulkanFencePool.h"
+#include "VulkanUtilities/VulkanFencePool.hpp"
 #include "Errors.h"
 #include "DebugUtilities.h"
 

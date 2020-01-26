@@ -27,7 +27,7 @@
 
 #include "pch.h"
 #include <sstream>
-#include "VulkanUtilities/VulkanMemoryManager.h"
+#include "VulkanUtilities/VulkanMemoryManager.hpp"
 
 namespace VulkanUtilities
 {

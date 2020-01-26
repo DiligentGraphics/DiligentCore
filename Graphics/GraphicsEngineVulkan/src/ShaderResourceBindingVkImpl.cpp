@@ -26,10 +26,10 @@
  */
 
 #include "pch.h"
-#include "ShaderResourceBindingVkImpl.h"
-#include "PipelineStateVkImpl.h"
-#include "ShaderVkImpl.h"
-#include "RenderDeviceVkImpl.h"
+#include "ShaderResourceBindingVkImpl.hpp"
+#include "PipelineStateVkImpl.hpp"
+#include "ShaderVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

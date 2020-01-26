@@ -29,7 +29,7 @@
 #include <unordered_map>
 #include <array>
 
-#include "VulkanTypeConversions.h"
+#include "VulkanTypeConversions.hpp"
 #include "PlatformMisc.h"
 
 namespace Diligent

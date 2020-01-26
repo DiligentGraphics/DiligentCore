@@ -73,6 +73,6 @@ template <> struct hash<VkFormat>
 #include "PlatformDefinitions.h"
 #include "Errors.h"
 #include "RefCntAutoPtr.h"
-#include "VulkanErrors.h"
+#include "VulkanErrors.hpp"
 #include "RenderDeviceBase.hpp"
 #include "ValidatedCast.h"

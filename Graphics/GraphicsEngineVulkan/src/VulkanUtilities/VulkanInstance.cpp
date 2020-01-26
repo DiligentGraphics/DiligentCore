@@ -27,9 +27,9 @@
 
 #include <vector>
 #include <cstring>
-#include "VulkanErrors.h"
-#include "VulkanUtilities/VulkanInstance.h"
-#include "VulkanUtilities/VulkanDebug.h"
+#include "VulkanErrors.hpp"
+#include "VulkanUtilities/VulkanInstance.hpp"
+#include "VulkanUtilities/VulkanDebug.hpp"
 
 #if !NO_GLSLANG
 #    include "SPIRVUtils.hpp"

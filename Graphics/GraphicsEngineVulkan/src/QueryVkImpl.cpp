@@ -27,10 +27,10 @@
 
 #include "pch.h"
 
-#include "QueryVkImpl.h"
+#include "QueryVkImpl.hpp"
 #include "EngineMemory.h"
-#include "RenderDeviceVkImpl.h"
-#include "DeviceContextVkImpl.h"
+#include "RenderDeviceVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
 
 namespace Diligent
 {

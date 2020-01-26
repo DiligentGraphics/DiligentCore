@@ -26,12 +26,12 @@
  */
 
 #include "pch.h"
-#include "TextureVkImpl.h"
-#include "RenderDeviceVkImpl.h"
-#include "DeviceContextVkImpl.h"
-#include "VulkanTypeConversions.h"
-#include "TextureViewVkImpl.h"
-#include "VulkanTypeConversions.h"
+#include "TextureVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
+#include "TextureViewVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
 #include "StringTools.h"
 #include "GraphicsAccessories.hpp"

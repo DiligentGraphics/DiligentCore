@@ -26,11 +26,11 @@
  */
 
 #include "pch.h"
-#include "SwapChainVkImpl.h"
-#include "RenderDeviceVkImpl.h"
-#include "DeviceContextVkImpl.h"
-#include "VulkanTypeConversions.h"
-#include "TextureVkImpl.h"
+#include "SwapChainVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
+#include "TextureVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

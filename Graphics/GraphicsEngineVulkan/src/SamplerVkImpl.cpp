@@ -26,9 +26,9 @@
  */
 
 #include "pch.h"
-#include "SamplerVkImpl.h"
-#include "RenderDeviceVkImpl.h"
-#include "VulkanTypeConversions.h"
+#include "SamplerVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent

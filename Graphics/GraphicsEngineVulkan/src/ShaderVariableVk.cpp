@@ -27,7 +27,7 @@
 
 #include "pch.h"
 
-#include "ShaderVariableVk.h"
+#include "ShaderVariableVk.hpp"
 #include "ShaderResourceVariableBase.hpp"
 
 namespace Diligent

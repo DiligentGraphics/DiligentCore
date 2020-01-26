@@ -3,49 +3,49 @@ cmake_minimum_required (VERSION 3.10)
 project(Diligent-GraphicsEngineVk CXX)
 
 set(INCLUDE 
-    include/BufferVkImpl.h
-    include/BufferViewVkImpl.h
-    include/CommandListVkImpl.h
-    include/CommandPoolManager.h
-    include/CommandQueueVkImpl.h
-    include/DescriptorPoolManager.h
-    include/DeviceContextVkImpl.h
-    include/FenceVkImpl.h
-    include/VulkanDynamicHeap.h
-    include/FramebufferCache.h
-    include/GenerateMipsVkHelper.h
+    include/BufferVkImpl.hpp
+    include/BufferViewVkImpl.hpp
+    include/CommandListVkImpl.hpp
+    include/CommandPoolManager.hpp
+    include/CommandQueueVkImpl.hpp
+    include/DescriptorPoolManager.hpp
+    include/DeviceContextVkImpl.hpp
+    include/FenceVkImpl.hpp
+    include/VulkanDynamicHeap.hpp
+    include/FramebufferCache.hpp
+    include/GenerateMipsVkHelper.hpp
     include/pch.h
-    include/PipelineLayout.h
-    include/PipelineStateVkImpl.h
-    include/QueryManagerVk.h
-    include/QueryVkImpl.h
-    include/RenderDeviceVkImpl.h
-    include/RenderPassCache.h
-    include/SamplerVkImpl.h
-    include/ShaderVkImpl.h
-    include/ManagedVulkanObject.h
-    include/ShaderResourceBindingVkImpl.h
-    include/ShaderResourceCacheVk.h
-    include/ShaderResourceLayoutVk.h
-    include/ShaderVariableVk.h
-    include/SwapChainVkImpl.h
-    include/TextureVkImpl.h
-    include/TextureViewVkImpl.h
-    include/VulkanErrors.h
-    include/VulkanTypeConversions.h
-    include/VulkanUploadHeap.h
+    include/PipelineLayout.hpp
+    include/PipelineStateVkImpl.hpp
+    include/QueryManagerVk.hpp
+    include/QueryVkImpl.hpp
+    include/RenderDeviceVkImpl.hpp
+    include/RenderPassCache.hpp
+    include/SamplerVkImpl.hpp
+    include/ShaderVkImpl.hpp
+    include/ManagedVulkanObject.hpp
+    include/ShaderResourceBindingVkImpl.hpp
+    include/ShaderResourceCacheVk.hpp
+    include/ShaderResourceLayoutVk.hpp
+    include/ShaderVariableVk.hpp
+    include/SwapChainVkImpl.hpp
+    include/TextureVkImpl.hpp
+    include/TextureViewVkImpl.hpp
+    include/VulkanErrors.hpp
+    include/VulkanTypeConversions.hpp
+    include/VulkanUploadHeap.hpp
 )
 
 set(VULKAN_UTILS_INCLUDE 
-    include/VulkanUtilities/VulkanCommandBuffer.h
-    include/VulkanUtilities/VulkanCommandBufferPool.h
-    include/VulkanUtilities/VulkanDebug.h
-    include/VulkanUtilities/VulkanFencePool.h
-    include/VulkanUtilities/VulkanInstance.h
-    include/VulkanUtilities/VulkanLogicalDevice.h
-    include/VulkanUtilities/VulkanMemoryManager.h
-    include/VulkanUtilities/VulkanObjectWrappers.h
-    include/VulkanUtilities/VulkanPhysicalDevice.h
+    include/VulkanUtilities/VulkanCommandBuffer.hpp
+    include/VulkanUtilities/VulkanCommandBufferPool.hpp
+    include/VulkanUtilities/VulkanDebug.hpp
+    include/VulkanUtilities/VulkanFencePool.hpp
+    include/VulkanUtilities/VulkanInstance.hpp
+    include/VulkanUtilities/VulkanLogicalDevice.hpp
+    include/VulkanUtilities/VulkanMemoryManager.hpp
+    include/VulkanUtilities/VulkanObjectWrappers.hpp
+    include/VulkanUtilities/VulkanPhysicalDevice.hpp
 )
 
 

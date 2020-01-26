@@ -26,16 +26,16 @@
  */
 
 #include "pch.h"
-#include "BufferVkImpl.h"
-#include "RenderDeviceVkImpl.h"
-#include "DeviceContextVkImpl.h"
-#include "VulkanTypeConversions.h"
-#include "BufferViewVkImpl.h"
+#include "BufferVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
+#include "BufferViewVkImpl.hpp"
 #include "GraphicsAccessories.hpp"
 #include "EngineMemory.h"
 #include "StringTools.h"
-#include "VulkanUtilities/VulkanDebug.h"
-#include "VulkanUtilities/VulkanCommandBuffer.h"
+#include "VulkanUtilities/VulkanDebug.hpp"
+#include "VulkanUtilities/VulkanCommandBuffer.hpp"
 
 namespace Diligent
 {

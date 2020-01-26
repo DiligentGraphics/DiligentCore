@@ -26,8 +26,8 @@
  */
 
 #include "pch.h"
-#include "CommandPoolManager.h"
-#include "RenderDeviceVkImpl.h"
+#include "CommandPoolManager.hpp"
+#include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent
 {

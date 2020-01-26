@@ -27,12 +27,12 @@
 
 #include "pch.h"
 #include <array>
-#include "PipelineStateVkImpl.h"
-#include "ShaderVkImpl.h"
-#include "VulkanTypeConversions.h"
-#include "RenderDeviceVkImpl.h"
-#include "DeviceContextVkImpl.h"
-#include "ShaderResourceBindingVkImpl.h"
+#include "PipelineStateVkImpl.hpp"
+#include "ShaderVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
+#include "RenderDeviceVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
+#include "ShaderResourceBindingVkImpl.hpp"
 #include "EngineMemory.h"
 #include "StringTools.h"
 #include "spirv-tools/optimizer.hpp"

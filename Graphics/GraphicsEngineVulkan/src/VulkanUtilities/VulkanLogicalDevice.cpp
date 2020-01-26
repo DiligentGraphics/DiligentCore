@@ -26,10 +26,10 @@
  */
 
 #include <limits>
-#include "VulkanErrors.h"
-#include "VulkanUtilities/VulkanLogicalDevice.h"
-#include "VulkanUtilities/VulkanDebug.h"
-#include "VulkanUtilities/VulkanObjectWrappers.h"
+#include "VulkanErrors.hpp"
+#include "VulkanUtilities/VulkanLogicalDevice.hpp"
+#include "VulkanUtilities/VulkanDebug.hpp"
+#include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace VulkanUtilities
 {

@@ -29,8 +29,8 @@
 #include <cctype>
 #include "pch.h"
 
-#include "ShaderVkImpl.h"
-#include "RenderDeviceVkImpl.h"
+#include "ShaderVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
 #include "DataBlobImpl.h"
 #include "GLSLSourceBuilder.hpp"
 

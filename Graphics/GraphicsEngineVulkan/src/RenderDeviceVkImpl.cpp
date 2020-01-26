@@ -26,17 +26,17 @@
  */
 
 #include "pch.h"
-#include "RenderDeviceVkImpl.h"
-#include "PipelineStateVkImpl.h"
-#include "ShaderVkImpl.h"
-#include "TextureVkImpl.h"
-#include "VulkanTypeConversions.h"
-#include "SamplerVkImpl.h"
-#include "BufferVkImpl.h"
-#include "ShaderResourceBindingVkImpl.h"
-#include "DeviceContextVkImpl.h"
-#include "FenceVkImpl.h"
-#include "QueryVkImpl.h"
+#include "RenderDeviceVkImpl.hpp"
+#include "PipelineStateVkImpl.hpp"
+#include "ShaderVkImpl.hpp"
+#include "TextureVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
+#include "SamplerVkImpl.hpp"
+#include "BufferVkImpl.hpp"
+#include "ShaderResourceBindingVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
+#include "FenceVkImpl.hpp"
+#include "QueryVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

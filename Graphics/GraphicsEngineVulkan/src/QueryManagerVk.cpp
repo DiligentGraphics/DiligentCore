@@ -27,10 +27,10 @@
 
 #include "pch.h"
 #include <algorithm>
-#include "QueryManagerVk.h"
-#include "RenderDeviceVkImpl.h"
+#include "QueryManagerVk.hpp"
+#include "RenderDeviceVkImpl.hpp"
 #include "GraphicsAccessories.hpp"
-#include "VulkanUtilities/VulkanCommandBuffer.h"
+#include "VulkanUtilities/VulkanCommandBuffer.hpp"
 
 namespace Diligent
 {

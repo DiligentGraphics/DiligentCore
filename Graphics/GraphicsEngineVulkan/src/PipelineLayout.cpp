@@ -27,14 +27,14 @@
 
 #include "pch.h"
 
-#include "PipelineLayout.h"
-#include "ShaderResourceLayoutVk.h"
-#include "ShaderVkImpl.h"
-#include "RenderDeviceVkImpl.h"
-#include "DeviceContextVkImpl.h"
-#include "TextureVkImpl.h"
-#include "BufferVkImpl.h"
-#include "VulkanTypeConversions.h"
+#include "PipelineLayout.hpp"
+#include "ShaderResourceLayoutVk.hpp"
+#include "ShaderVkImpl.hpp"
+#include "RenderDeviceVkImpl.hpp"
+#include "DeviceContextVkImpl.hpp"
+#include "TextureVkImpl.hpp"
+#include "BufferVkImpl.hpp"
+#include "VulkanTypeConversions.hpp"
 #include "HashUtils.h"
 
 namespace Diligent
