@@ -39,6 +39,7 @@ extern "C"
 {
     int TestShaderResourceVariableCInterface(void* pVar, void* pObjectToSet);
     int TestShaderResourceBindingCInterface(void* pSRB);
+    int TestShaderCInterface(void* pShader);
 }
 
 namespace Diligent
@@ -237,6 +238,7 @@ TEST(ShaderResourceLayout, VariableAccess)
 
         pDevice->CreateShader(ShaderCI, &pVS);
         ASSERT_NE(pVS, nullptr);
+        TestShaderCInterface(pVS);
 
         Diligent::Test::PrintShaderResources(pVS);
     }

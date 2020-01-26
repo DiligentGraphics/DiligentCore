@@ -309,23 +309,36 @@ public:
 
 struct IShader;
 
+// clang-format off
+
+struct IShaderMethods
+{
+    Uint32                    (*GetResourceCount)(struct IShader*);
+    struct ShaderResourceDesc (*GetResource)     (struct IShader*, Uint32 Index);
+};
+
+// clang-format on
+
 struct IShaderVtbl
 {
-    Uint32 (*GetResourceCount)();
-    struct ShaderResourceDesc (*GetResource)(Uint32 Index);
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IShaderMethods       Shader;
 };
 
 struct IShader
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct IShader*           pShaderVtbl;
+    struct IShaderVtbl* pVtbl;
 };
 
-#    define IShader_GetDesc(This) (const struct ShaderDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+// clang-format off
 
-#    define ITexture_GetResourceCount(This) (This)->pShaderVtbl->GetResourceCount(This)
-#    define ITexture_GetResource(This, ...) (This)->pShaderVtbl->GetResource(This, __VA_ARGS__)
+#    define IShader_GetDesc(This) (const struct ShaderDesc*)IDeviceObject_GetDesc(This)
+
+#    define IShader_GetResourceCount(This) (This)->pVtbl->Shader.GetResourceCount((struct IShader*)(This))
+#    define IShader_GetResource(This, ...) (This)->pVtbl->Shader.GetResource     ((struct IShader*)(This), __VA_ARGS__)
+
+// clang-format on
 
 #endif
 
