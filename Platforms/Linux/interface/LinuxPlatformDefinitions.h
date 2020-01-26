@@ -23,8 +23,16 @@
 
 #pragma once
 
-#include <cstddef>
+#if DILIGENT_C_INTERFACE
+
+#    define _countof(arr) (sizeof(arr) / sizeof(arr[0]))
+
+#else
+
+#    include <cstddef>
 
 template <typename _CountofType, std::size_t _SizeOfArray>
 char (*__countof_helper(_CountofType (&_Array)[_SizeOfArray]))[_SizeOfArray];
-#define _countof(_Array) (sizeof(*__countof_helper(_Array)) + 0)
+#    define _countof(_Array) (sizeof(*__countof_helper(_Array)) + 0)
+
+#endif
