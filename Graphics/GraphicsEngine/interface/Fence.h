@@ -74,23 +74,36 @@ public:
 
 struct IFence;
 
+// clang-format off
+
+struct IFenceMethods
+{
+    Uint64 (*GetCompletedValue)(struct IFence*);
+    void   (*Reset)            (struct IFence*, Uint64 Value);
+};
+
+// clang-format on
+
 struct IFenceVtbl
 {
-    Uint64 (*GetCompletedValue)();
-    void (*Reset)(Uint64 Value);
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IFenceMethods        Fence;
 };
 
 struct IFence
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct IFenceVtbl*        pFenceVtbl;
+    struct IFenceVtbl* pVtbl;
 };
 
-#    define IFence_GetDesc(This) (const struct FenceDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+// clang-format off
 
-#    define IFence_GetCompletedValue(This) (This)->pFenceVtbl->GetCompletedValue(This)
-#    define IFence_Reset(This, ...)        (This)->pFenceVtbl->Reset(This, __VA_ARGS__)
+#    define IFence_GetDesc(This) (const struct FenceDesc*)IDeviceObject_GetDesc(This)
+
+#    define IFence_GetCompletedValue(This) (This)->pVtbl->Fence.GetCompletedValue((struct IFenceVtbl*)(This))
+#    define IFence_Reset(This, ...)        (This)->pVtbl->Fence.Reset            ((struct IFenceVtbl*)(This), __VA_ARGS__)
+
+// clang-format on
 
 #endif
 

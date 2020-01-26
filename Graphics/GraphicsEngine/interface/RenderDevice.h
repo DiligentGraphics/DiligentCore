@@ -227,55 +227,74 @@ public:
 
 struct IRenderDevice;
 
-struct IRenderDeviceVtbl
+struct IRenderDeviceMethods
 {
-    void (*CreateBuffer)(const struct BufferDesc* BuffDesc,
+    void (*CreateBuffer)(struct IRenderDevice*,
+                         const struct BufferDesc* BuffDesc,
                          const struct BufferData* pBuffData,
                          class IBuffer**          ppBuffer);
-    void (*CreateShader)(const struct ShaderCreateInfo* ShaderCI,
+    void (*CreateShader)(struct IRenderDevice*,
+                         const struct ShaderCreateInfo* ShaderCI,
                          class IShader**                ppShader);
-    void (*CreateTexture)(const struct TextureDesc* TexDesc,
+    void (*CreateTexture)(struct IRenderDevice*,
+                          const struct TextureDesc* TexDesc,
                           const struct TextureData* pData,
                           class ITexture**          ppTexture);
-    void (*CreateSampler)(const struct SamplerDesc* SamDesc,
+    void (*CreateSampler)(struct IRenderDevice*,
+                          const struct SamplerDesc* SamDesc,
                           class ISampler**          ppSampler);
-    void (*CreateResourceMapping)(const struct ResourceMappingDesc* MappingDesc,
+    void (*CreateResourceMapping)(struct IRenderDevice*,
+                                  const struct ResourceMappingDesc* MappingDesc,
                                   class IResourceMapping**          ppMapping);
-    void (*CreatePipelineState)(const struct PipelineStateDesc* PipelineDesc,
+    void (*CreatePipelineState)(struct IRenderDevice*,
+                                const struct PipelineStateDesc* PipelineDesc,
                                 class IPipelineState**          ppPipelineState);
-    void (*CreateFence)(const struct FenceDesc* Desc,
+    void (*CreateFence)(struct IRenderDevice*,
+                        const struct FenceDesc* Desc,
                         class IFence**          ppFence);
-    void (*CreateQuery)(const struct QueryDesc* Desc,
+    void (*CreateQuery)(struct IRenderDevice*,
+                        const struct QueryDesc* Desc,
                         class IQuery**          ppQuery);
-    const struct DeviceCaps* (*GetDeviceCaps)();
-    const struct TextureFormatInfo* (*GetTextureFormatInfo)(TEXTURE_FORMAT TexFormat);
-    const struct TextureFormatInfoExt* (*GetTextureFormatInfoExt)(TEXTURE_FORMAT TexFormat);
-    void (*ReleaseStaleResources)(bool ForceRelease);
-    void (*IdleGPU)();
-    class IEngineFactory* (*GetEngineFactory)();
+    const struct DeviceCaps* (*GetDeviceCaps)(struct IRenderDevice*);
+    const struct TextureFormatInfo* (*GetTextureFormatInfo)(struct IRenderDevice*,
+                                                            TEXTURE_FORMAT TexFormat);
+    const struct TextureFormatInfoExt* (*GetTextureFormatInfoExt)(struct IRenderDevice*,
+                                                                  TEXTURE_FORMAT TexFormat);
+    void (*ReleaseStaleResources)(struct IRenderDevice*,
+                                  bool ForceRelease);
+    void (*IdleGPU)(struct IRenderDevice*);
+    class IEngineFactory* (*GetEngineFactory)(struct IRenderDevice*);
+};
+
+struct IRenderDeviceVtbl
+{
+    struct IObjectMethods       Object;
+    struct IRenderDeviceMethods RenderDevice;
 };
 
 struct IRenderDevice
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct IRenderDevice*     pRenderDeviceVtbl;
+    struct IRenderDeviceVtbl* pVtbl;
 };
 
-#    define IRenderDevice_CreateBuffer(This, ...)            (This)->pRenderDeviceVtbl->CreateBuffer(This, __VA_ARGS__)
-#    define IRenderDevice_CreateShader(This, ...)            (This)->pRenderDeviceVtbl->CreateShader(This, __VA_ARGS__)
-#    define IRenderDevice_CreateTexture(This, ...)           (This)->pRenderDeviceVtbl->CreateTexture(This, __VA_ARGS__)
-#    define IRenderDevice_CreateSampler(This, ...)           (This)->pRenderDeviceVtbl->CreateSampler(This, __VA_ARGS__)
-#    define IRenderDevice_CreateResourceMapping(This, ...)   (This)->pRenderDeviceVtbl->CreateResourceMapping(This, __VA_ARGS__)
-#    define IRenderDevice_CreatePipelineState(This, ...)     (This)->pRenderDeviceVtbl->CreatePipelineState(This, __VA_ARGS__)
-#    define IRenderDevice_CreateFence(This, ...)             (This)->pRenderDeviceVtbl->CreateFence(This, __VA_ARGS__)
-#    define IRenderDevice_CreateQuery(This, ...)             (This)->pRenderDeviceVtbl->CreateQuery(This, __VA_ARGS__)
-#    define IRenderDevice_GetDeviceCaps(This)                (This)->pRenderDeviceVtbl->GetDeviceCaps(This)
-#    define IRenderDevice_GetTextureFormatInfo(This, ...)    (This)->pRenderDeviceVtbl->GetTextureFormatInfo(This, __VA_ARGS__)
-#    define IRenderDevice_GetTextureFormatInfoExt(This, ...) (This)->pRenderDeviceVtbl->GetTextureFormatInfoExt(This, __VA_ARGS__)
-#    define IRenderDevice_ReleaseStaleResources(This, ...)   (This)->pRenderDeviceVtbl->ReleaseStaleResources(This, __VA_ARGS__)
-#    define IRenderDevice_IdleGPU(This)                      (This)->pRenderDeviceVtbl->IdleGPU(This)
-#    define IRenderDevice_GetEngineFactory(This)             (This)->pRenderDeviceVtbl->GetEngineFactory(This)
+// clang-format off
+
+#    define IRenderDevice_CreateBuffer(This, ...)            (This)->pVtbl->RenderDevice.CreateBuffer           ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateShader(This, ...)            (This)->pVtbl->RenderDevice.CreateShader           ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateTexture(This, ...)           (This)->pVtbl->RenderDevice.CreateTexture          ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateSampler(This, ...)           (This)->pVtbl->RenderDevice.CreateSampler          ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateResourceMapping(This, ...)   (This)->pVtbl->RenderDevice.CreateResourceMapping  ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreatePipelineState(This, ...)     (This)->pVtbl->RenderDevice.CreatePipelineState    ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateFence(This, ...)             (This)->pVtbl->RenderDevice.CreateFence            ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateQuery(This, ...)             (This)->pVtbl->RenderDevice.CreateQuery            ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_GetDeviceCaps(This)                (This)->pVtbl->RenderDevice.GetDeviceCaps          ((struct IRenderDevice*)(This))
+#    define IRenderDevice_GetTextureFormatInfo(This, ...)    (This)->pVtbl->RenderDevice.GetTextureFormatInfo   ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_GetTextureFormatInfoExt(This, ...) (This)->pVtbl->RenderDevice.GetTextureFormatInfoExt((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_ReleaseStaleResources(This, ...)   (This)->pVtbl->RenderDevice.ReleaseStaleResources  ((struct IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_IdleGPU(This)                      (This)->pVtbl->RenderDevice.IdleGPU                ((struct IRenderDevice*)(This))
+#    define IRenderDevice_GetEngineFactory(This)             (This)->pVtbl->RenderDevice.GetEngineFactory       ((struct IRenderDevice*)(This))
+
+// clang-format on
 
 #endif
 

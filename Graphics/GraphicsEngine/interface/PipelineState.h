@@ -329,34 +329,42 @@ public:
 
 struct IPipelineState;
 
-struct IPipelineStateVtbl
+struct IPipelineStateMethods
 {
-    void (*BindStaticResources)(Uint32 ShaderFlags, class IResourceMapping* pResourceMapping, Uint32 Flags);
-    Uint32 (*GetStaticVariableCount)(SHADER_TYPE ShaderType);
-    class IShaderResourceVariable* (*GetStaticVariableByName)(SHADER_TYPE ShaderType, const Char* Name);
-    class IShaderResourceVariable* (*GetStaticVariableByIndex)(SHADER_TYPE ShaderType, Uint32 Index);
-    void (*CreateShaderResourceBinding)(class IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources);
-    bool (*IsCompatibleWith)(const class IPipelineState* pPSO);
+    void                           (*BindStaticResources)        (struct IPipelineState*, Uint32 ShaderFlags, class IResourceMapping* pResourceMapping, Uint32 Flags);
+    Uint32                         (*GetStaticVariableCount)     (struct IPipelineState*, SHADER_TYPE ShaderType);
+    class IShaderResourceVariable* (*GetStaticVariableByName)    (struct IPipelineState*, SHADER_TYPE ShaderType, const Char* Name);
+    class IShaderResourceVariable* (*GetStaticVariableByIndex)   (struct IPipelineState*, SHADER_TYPE ShaderType, Uint32 Index);
+    void                           (*CreateShaderResourceBinding)(struct IPipelineState*, class IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources);
+    bool                           (*IsCompatibleWith)           (struct IPipelineState*, const class IPipelineState* pPSO);
 };
 
 // clang-format on
 
-struct IPipelineState
+struct IPipelineStateVtbl
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct IPipelineState*    pPipelineStateVtbl;
+    struct IObjectMethods        Object;
+    struct IDeviceObjectMethods  DeviceObject;
+    struct IPipelineStateMethods PipelineState;
 };
 
-#    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+struct IPipelineState
+{
+    struct IPipelineStateVtbl* pVtbl;
+};
 
-#    define IPipelineState_BindStaticResources(This, ...)         (This)->pPipelineStateVtbl->BindStaticResources(This, __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableCount(This, ...)      (This)->pPipelineStateVtbl->GetStaticVariableCount(This, __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByName(This, ...)     (This)->pPipelineStateVtbl->GetStaticVariableByName(This, __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByIndex(This, ...)    (This)->pPipelineStateVtbl->GetStaticVariableByIndex(This, __VA_ARGS__)
-#    define IPipelineState_CreateShaderResourceBinding(This, ...) (This)->pPipelineStateVtbl->CreateShaderResourceBinding(This, __VA_ARGS__)
-#    define IPipelineState_IsCompatibleWith(This, ...)            (This)->pPipelineStateVtbl->IsCompatibleWith(This, __VA_ARGS__)
+// clang-format off
 
+#    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
+
+#    define IPipelineState_BindStaticResources(This, ...)         (This)->pPipelineStateVtbl->BindStaticResources        ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableCount(This, ...)      (This)->pPipelineStateVtbl->GetStaticVariableCount     ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByName(This, ...)     (This)->pPipelineStateVtbl->GetStaticVariableByName    ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByIndex(This, ...)    (This)->pPipelineStateVtbl->GetStaticVariableByIndex   ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_CreateShaderResourceBinding(This, ...) (This)->pPipelineStateVtbl->CreateShaderResourceBinding((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_IsCompatibleWith(This, ...)            (This)->pPipelineStateVtbl->IsCompatibleWith           ((struct IPipelineState*)(This), __VA_ARGS__)
+
+// clang-format on
 
 #endif
 

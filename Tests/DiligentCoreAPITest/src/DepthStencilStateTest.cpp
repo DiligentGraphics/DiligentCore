@@ -34,6 +34,11 @@
 using namespace Diligent;
 using namespace Diligent::Testing;
 
+extern "C"
+{
+    int TestRenderDeviceCInterface_CreatePipelineState(void* pRenderDevice, void* pPSODesc);
+}
+
 namespace
 {
 
@@ -61,6 +66,9 @@ TEST_F(DepthStencilStateTest, CreatePSO)
     DSSDesc.DepthEnable      = False;
     DSSDesc.DepthWriteEnable = False;
     ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+
+    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    EXPECT_EQ(TestRenderDeviceCInterface_CreatePipelineState(pDevice, &PSODesc), 0);
 
     DSSDesc.DepthEnable = True;
     ASSERT_TRUE(CreateTestPSO(PSODesc, true));

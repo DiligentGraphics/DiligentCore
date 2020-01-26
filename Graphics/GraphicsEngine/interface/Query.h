@@ -211,23 +211,36 @@ public:
 
 struct IQuery;
 
+// clang-format off
+
+struct IQueryMethods
+{
+    bool (*GetData)   (struct IQuery*, void* pData, Uint32 DataSize, bool AutoInvalidate);
+    void (*Invalidate)(struct IQuery*);
+};
+
+// clang-format on
+
 struct IQueryVtbl
 {
-    bool (*GetData)(void* pData, Uint32 DataSize, bool AutoInvalidate);
-    void (*Invalidate)();
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IQueryMethods        Query;
 };
 
 struct IQuery
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct IQuery*            pQueryVtbl;
+    struct IQueryVtbl* pVtbl;
 };
 
-#    define IQuery_GetDesc(This) (const struct QueryDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+// clang-format off
 
-#    define IQuery_GetData(This, ...) (This)->pQueryVtbl->GetData(This, __VA_ARGS__)
-#    define IQuery_Invalidate(This)   (This)->pQueryVtbl->Invalidate(This)
+#    define IQuery_GetDesc(This) (const struct QueryDesc*)IDeviceObject_GetDesc(This)
+
+#    define IQuery_GetData(This, ...) (This)->pVtbl->Query.GetData   ((struct IQuery*)(This), __VA_ARGS__)
+#    define IQuery_Invalidate(This)   (This)->pVtbl->Query.Invalidate((struct IQuery*)(This))
+
+// clang-format on
 
 #endif
 
