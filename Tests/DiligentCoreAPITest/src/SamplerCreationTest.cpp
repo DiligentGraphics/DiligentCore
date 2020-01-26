@@ -37,6 +37,11 @@
 using namespace Diligent;
 using namespace Diligent::Testing;
 
+extern "C"
+{
+    int TestSamplerCInterface(void* pSampler);
+}
+
 namespace
 {
 
@@ -63,6 +68,8 @@ TEST_P(FilterTypeTest, CreateSampler)
     pDevice->CreateSampler(SamplerDesc, &pSampler);
     ASSERT_TRUE(pSampler);
     EXPECT_EQ(pSampler->GetDesc(), SamplerDesc);
+
+    TestSamplerCInterface(pSampler);
 }
 
 std::string GetSamplerFilterTestName(const testing::TestParamInfo<std::tuple<FILTER_TYPE, FILTER_TYPE, FILTER_TYPE>>& info) //

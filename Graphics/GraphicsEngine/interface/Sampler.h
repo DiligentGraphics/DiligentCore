@@ -191,18 +191,23 @@ public:
 
 struct ISampler;
 
-//struct ISamplerVtbl
+//struct ISamplerMethods
 //{
 //};
 
-struct ISampler
+struct ISamplerVtbl
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    //struct ISampler*          pSamplerVtbl;
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    //struct ISamplerMethods Sampler;
 };
 
-#    define ISampler_GetDesc(This) (const struct SamplerDesc*)(This)->pDeviceObjectVtbl->GetDesc(This)
+struct ISampler
+{
+    struct ISamplerVtbl* pVtbl;
+};
+
+#    define ISampler_GetDesc(This) (const struct SamplerDesc*)IDeviceObject_GetDesc(This)
 
 #endif
 

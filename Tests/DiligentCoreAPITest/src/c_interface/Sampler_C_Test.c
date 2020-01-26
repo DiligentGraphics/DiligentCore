@@ -25,12 +25,12 @@
  *  of the possibility of such damages.
  */
 
-#include "Shader.h"
+#include "Sampler.h"
 
 int TestObjectCInterface(struct IObject* pObject);
 int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
-int TestShaderCInterface(struct IShader* pShader)
+int TestSamplerCInterface(struct ISampler* pSampler)
 {
     struct IObject*           pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
@@ -38,47 +38,37 @@ int TestShaderCInterface(struct IShader* pShader)
     struct DeviceObjectAttribs Desc;
     Int32                      UniqueId = 0;
 
-    struct ShaderDesc         ShaderDesc;
-    Uint32                    ResourceCount = 0;
-    struct ShaderResourceDesc ResourceDesc;
+    struct SamplerDesc SamplerDesc;
 
     int num_errors =
-        TestObjectCInterface((struct IObject*)pShader) +
-        TestDeviceObjectCInterface((struct IDeviceObject*)pShader);
+        TestObjectCInterface((struct IObject*)pSampler) +
+        TestDeviceObjectCInterface((struct IDeviceObject*)pSampler);
 
-    IObject_QueryInterface(pShader, &IID_Unknown, &pUnknown);
+    IObject_QueryInterface(pSampler, &IID_Unknown, &pUnknown);
     if (pUnknown != NULL)
         IObject_Release(pUnknown);
     else
         ++num_errors;
 
-    RefCnt1 = IObject_AddRef(pShader);
+    RefCnt1 = IObject_AddRef(pSampler);
     if (RefCnt1 <= 1)
         ++num_errors;
-    RefCnt2 = IObject_Release(pShader);
+    RefCnt2 = IObject_Release(pSampler);
     if (RefCnt2 <= 0)
         ++num_errors;
     if (RefCnt2 != RefCnt1 - 1)
         ++num_errors;
 
-    Desc = *IDeviceObject_GetDesc(pShader);
+    Desc = *IDeviceObject_GetDesc(pSampler);
     if (Desc.Name == NULL)
         ++num_errors;
 
-    UniqueId = IDeviceObject_GetUniqueID(pShader);
+    UniqueId = IDeviceObject_GetUniqueID(pSampler);
     if (UniqueId == 0)
         ++num_errors;
 
-    ShaderDesc = *IShader_GetDesc(pShader);
-    if (ShaderDesc.ShaderType != SHADER_TYPE_VERTEX)
-        ++num_errors;
-
-    ResourceCount = IShader_GetResourceCount(pShader);
-    if (ResourceCount == 0)
-        ++num_errors;
-
-    IShader_GetResourceDesc(pShader, 0, &ResourceDesc);
-    if (ResourceDesc.ArraySize == 0)
+    SamplerDesc = *ISampler_GetDesc(pSampler);
+    if (SamplerDesc.AddressU == TEXTURE_ADDRESS_UNKNOWN)
         ++num_errors;
 
     return num_errors;

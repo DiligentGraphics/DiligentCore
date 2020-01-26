@@ -313,8 +313,8 @@ struct IShader;
 
 struct IShaderMethods
 {
-    Uint32                    (*GetResourceCount)(struct IShader*);
-    struct ShaderResourceDesc (*GetResourceDesc) (struct IShader*, Uint32 Index);
+    Uint32  (*GetResourceCount)(struct IShader*);
+    void    (*GetResourceDesc) (struct IShader*, Uint32 Index, struct ShaderResourceDesc* ResourceDesc);
 };
 
 // clang-format on
