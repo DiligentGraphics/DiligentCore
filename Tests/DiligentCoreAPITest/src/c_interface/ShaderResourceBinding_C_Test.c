@@ -25,53 +25,59 @@
  *  of the possibility of such damages.
  */
 
-#include "ShaderResourceVariable.h"
+#include "ShaderResourceBinding.h"
 
 int TestObjectCInterface(struct IObject* pObject);
 
-int TestShaderResourceVariableCInterface(struct IShaderResourceVariable* pVar, struct IDeviceObject* pObjectToSet)
+int TestShaderResourceBindingCInterface(struct IShaderResourceBinding* pSRB)
 {
     struct IObject*           pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
+    struct IPipelineState*          pPSO     = NULL;
+    struct IShaderResourceVariable* pVar     = NULL;
+    Uint32                          VarCount = 0;
 
-    SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
-    struct ShaderResourceDesc     ResDesc;
-    Uint32                        Index   = 0;
-    bool                          IsBound = false;
+    int num_errors = TestObjectCInterface((struct IObject*)pSRB);
 
-    int num_errors = TestObjectCInterface((struct IObject*)pVar);
-
-    IObject_QueryInterface(pVar, &IID_Unknown, &pUnknown);
+    IObject_QueryInterface(pSRB, &IID_Unknown, &pUnknown);
     if (pUnknown != NULL)
         IObject_Release(pUnknown);
     else
         ++num_errors;
 
-    RefCnt1 = IObject_AddRef(pVar);
+    RefCnt1 = IObject_AddRef(pSRB);
     if (RefCnt1 <= 1)
         ++num_errors;
-    RefCnt2 = IObject_Release(pVar);
+    RefCnt2 = IObject_Release(pSRB);
     if (RefCnt2 <= 0)
         ++num_errors;
     if (RefCnt2 != RefCnt1 - 1)
         ++num_errors;
 
-    IShaderResourceVariable_Set(pVar, pObjectToSet);
-    IShaderResourceVariable_SetArray(pVar, &pObjectToSet, 0, 1);
-    VarType = IShaderResourceVariable_GetType(pVar);
-    if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+    pPSO = IShaderResourceBinding_GetPipelineState(pSRB);
+    if (pPSO == NULL)
         ++num_errors;
 
-    //ResDesc = IShaderResourceVariable_GetResourceDesc(pVar);
-
-    Index = IShaderResourceVariable_GetIndex(pVar);
-
-    IsBound = IShaderResourceVariable_IsBound(pVar, 0);
-    if (!IsBound)
+    pVar = IShaderResourceBinding_GetVariableByName(pSRB, SHADER_TYPE_VERTEX, "g_tex2D_Mut");
+    if (pVar == NULL)
         ++num_errors;
+
+    VarCount = IShaderResourceBinding_GetVariableCount(pSRB, SHADER_TYPE_VERTEX);
+    if (VarCount == 0)
+        ++num_errors;
+
+    pVar = IShaderResourceBinding_GetVariableByIndex(pSRB, SHADER_TYPE_VERTEX, 0);
+    if (pVar == NULL)
+        ++num_errors;
+
+    IShaderResourceBinding_InitializeStaticResources(pSRB, pPSO);
 
     return num_errors;
+}
+
+void TestShaderResourceBindingC_API(struct IShaderResourceBinding* pSRB)
+{
+    struct IResourceMapping* pResMapping = NULL;
+    IShaderResourceBinding_BindResources(pSRB, SHADER_TYPE_VERTEX, pResMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 }

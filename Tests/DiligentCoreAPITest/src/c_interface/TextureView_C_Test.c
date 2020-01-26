@@ -52,7 +52,7 @@ int TestTextureViewCInterface(struct ITextureView* pView, struct ISampler* pSamp
         ++num_errors;
 
     RefCnt1 = IObject_AddRef(pView);
-    if (RefCnt1 <= 0)
+    if (RefCnt1 <= 1)
         ++num_errors;
     RefCnt2 = IObject_Release(pView);
     if (RefCnt2 <= 0)

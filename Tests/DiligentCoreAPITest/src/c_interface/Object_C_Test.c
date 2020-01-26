@@ -41,7 +41,7 @@ int TestObjectCInterface(struct IObject* pObject)
         ++num_errors;
 
     RefCnt1 = IObject_AddRef(pObject);
-    if (RefCnt1 <= 0)
+    if (RefCnt1 <= 1)
         ++num_errors;
     RefCnt2 = IObject_Release(pObject);
     if (RefCnt2 <= 0)

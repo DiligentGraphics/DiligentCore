@@ -48,7 +48,7 @@ int TestSwapChainCInterface(struct ISwapChain* pSwapChain)
         ++num_errors;
 
     RefCnt1 = IObject_AddRef(pSwapChain);
-    if (RefCnt1 <= 0)
+    if (RefCnt1 <= 1)
         ++num_errors;
     RefCnt2 = IObject_Release(pSwapChain);
     if (RefCnt2 <= 0)
@@ -67,7 +67,7 @@ int TestSwapChainCInterface(struct ISwapChain* pSwapChain)
     return num_errors;
 }
 
-void SwapChainCInterfaceTest(struct ISwapChain* pSwapChain)
+void TestSwapChainC_API(struct ISwapChain* pSwapChain)
 {
     struct DisplayModeAttribs* pDisplayMode = NULL;
     struct ITextureView*       pDSV         = NULL;

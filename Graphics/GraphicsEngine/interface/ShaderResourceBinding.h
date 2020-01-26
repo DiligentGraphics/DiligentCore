@@ -121,29 +121,40 @@ class IPipelineState;
 struct IShaderResourceBinding;
 
 // clang-format off
+
+struct IShaderResourceBindingMethods
+{
+    class IPipelineState*          (*GetPipelineState)         (struct IShaderResourceBinding*);
+    void                           (*BindResources)            (struct IShaderResourceBinding*, Uint32 ShaderFlags, class IResourceMapping* pResMapping, Uint32 Flags);
+    class IShaderResourceVariable* (*GetVariableByName)        (struct IShaderResourceBinding*, SHADER_TYPE ShaderType, const char* Name);
+    Uint32                         (*GetVariableCount)         (struct IShaderResourceBinding*, SHADER_TYPE ShaderType);
+    class IShaderResourceVariable* (*GetVariableByIndex)       (struct IShaderResourceBinding*, SHADER_TYPE ShaderType, Uint32 Index);
+    void                           (*InitializeStaticResources)(struct IShaderResourceBinding*, const class IPipelineState* pPipelineState);
+};
+
+// clang-format on
+
 struct IShaderResourceBindingVtbl
 {
-    class IPipelineState* (*GetPipelineState)();
-    void (*BindResources)(Uint32 ShaderFlags, class IResourceMapping* pResMapping, Uint32 Flags);
-    class IShaderResourceVariable* (*GetVariableByName)(SHADER_TYPE ShaderType, const char* Name);
-    Uint32 (*GetVariableCount)(SHADER_TYPE ShaderType);
-    class IShaderResourceVariable* (*GetVariableByIndex)(SHADER_TYPE ShaderType, Uint32 Index);
-    void (*InitializeStaticResources)(const class IPipelineState* pPipelineState);
+    struct IObjectMethods                Object;
+    struct IShaderResourceBindingMethods ShaderResourceBinding;
 };
-// clang-format on
 
 struct IShaderResourceBinding
 {
-    struct IObjectVtbl*            pObjectVtbl;
-    struct IShaderResourceBinding* pShaderResourceBindingVtbl;
+    struct IShaderResourceBindingVtbl* pVtbl;
 };
 
-#    define IShaderResourceBinding_GetPipelineState(This)               (This)->pShaderResourceBindingVtbl->GetPipelineState(This)
-#    define IShaderResourceBinding_BindResources(This, ...)             (This)->pShaderResourceBindingVtbl->BindResources(This, __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableByName(This, ...)         (This)->pShaderResourceBindingVtbl->GetVariableByName(This, __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableCount(This, ...)          (This)->pShaderResourceBindingVtbl->GetVariableCount(This, __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableByIndex(This, ...)        (This)->pShaderResourceBindingVtbl->GetVariableByIndex(This, __VA_ARGS__)
-#    define IShaderResourceBinding_InitializeStaticResources(This, ...) (This)->pShaderResourceBindingVtbl->InitializeStaticResources(This, __VA_ARGS__)
+// clang-format off
+
+#    define IShaderResourceBinding_GetPipelineState(This)               (This)->pVtbl->ShaderResourceBinding.GetPipelineState         ((struct IShaderResourceBinding*)(This))
+#    define IShaderResourceBinding_BindResources(This, ...)             (This)->pVtbl->ShaderResourceBinding.BindResources            ((struct IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByName(This, ...)         (This)->pVtbl->ShaderResourceBinding.GetVariableByName        ((struct IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableCount(This, ...)          (This)->pVtbl->ShaderResourceBinding.GetVariableCount         ((struct IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByIndex(This, ...)        (This)->pVtbl->ShaderResourceBinding.GetVariableByIndex       ((struct IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_InitializeStaticResources(This, ...) (This)->pVtbl->ShaderResourceBinding.InitializeStaticResources((struct IShaderResourceBinding*)(This), __VA_ARGS__)
+
+// clang-format on
 
 #endif
 

@@ -38,6 +38,7 @@ using namespace Diligent::Testing;
 extern "C"
 {
     int TestShaderResourceVariableCInterface(void* pVar, void* pObjectToSet);
+    int TestShaderResourceBindingCInterface(void* pSRB);
 }
 
 namespace Diligent
@@ -515,8 +516,9 @@ TEST(ShaderResourceLayout, VariableAccess)
     }
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    pTestPSO->CreateShaderResourceBinding(&pSRB, true);
+    pTestPSO->CreateShaderResourceBinding(&pSRB, false);
     ASSERT_NE(pSRB, nullptr);
+    EXPECT_EQ(TestShaderResourceBindingCInterface(pSRB.RawPtr()), 0);
 
     {
         {

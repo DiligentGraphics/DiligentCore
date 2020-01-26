@@ -55,7 +55,7 @@ int TestBufferCInterface(struct IBuffer* pBuffer)
         ++num_errors;
 
     RefCnt1 = IObject_AddRef(pBuffer);
-    if (RefCnt1 <= 0)
+    if (RefCnt1 <= 1)
         ++num_errors;
     RefCnt2 = IObject_Release(pBuffer);
     if (RefCnt2 <= 0)

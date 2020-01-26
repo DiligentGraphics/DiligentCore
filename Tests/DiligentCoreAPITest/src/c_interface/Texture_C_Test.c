@@ -57,7 +57,7 @@ int TestTextureCInterface(struct ITexture* pTexture)
         ++num_errors;
 
     RefCnt1 = IObject_AddRef(pTexture);
-    if (RefCnt1 <= 0)
+    if (RefCnt1 <= 1)
         ++num_errors;
     RefCnt2 = IObject_Release(pTexture);
     if (RefCnt2 <= 0)
