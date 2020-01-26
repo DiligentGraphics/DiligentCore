@@ -27,9 +27,9 @@
 
 #include "pch.h"
 #include <unordered_set>
-#include "GLContextState.h"
-#include "GLProgramResources.h"
-#include "RenderDeviceGLImpl.h"
+#include "GLContextState.hpp"
+#include "GLProgramResources.hpp"
+#include "RenderDeviceGLImpl.hpp"
 #include "ShaderResourceBindingBase.hpp"
 #include "ShaderResourceVariableBase.hpp"
 #include "Align.h"

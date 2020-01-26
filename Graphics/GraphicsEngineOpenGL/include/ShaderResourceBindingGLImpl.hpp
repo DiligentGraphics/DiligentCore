@@ -33,10 +33,10 @@
 #include "ShaderResourceBindingGL.h"
 #include "RenderDeviceGL.h"
 #include "ShaderResourceBindingBase.hpp"
-#include "GLProgramResources.h"
+#include "GLProgramResources.hpp"
 #include "ShaderBase.hpp"
-#include "GLProgramResourceCache.h"
-#include "GLPipelineResourceLayout.h"
+#include "GLProgramResourceCache.hpp"
+#include "GLPipelineResourceLayout.hpp"
 
 namespace Diligent
 {

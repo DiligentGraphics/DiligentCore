@@ -27,7 +27,7 @@
 
 #include "pch.h"
 
-#include "GLContextWindows.h"
+#include "GLContextWindows.hpp"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
 #include "GraphicsAccessories.hpp"

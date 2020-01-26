@@ -27,13 +27,13 @@
 
 #include "pch.h"
 
-#include "GLContextState.h"
-#include "TextureBaseGL.h"
-#include "SamplerGLImpl.h"
-#include "AsyncWritableResource.h"
+#include "GLContextState.hpp"
+#include "TextureBaseGL.hpp"
+#include "SamplerGLImpl.hpp"
+#include "AsyncWritableResource.hpp"
 #include "GLTypeConversions.h"
-#include "BufferViewGLImpl.h"
-#include "RenderDeviceGLImpl.h"
+#include "BufferViewGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
 
 using namespace GLObjectWrappers;
 

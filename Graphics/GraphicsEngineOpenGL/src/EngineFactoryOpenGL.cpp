@@ -30,8 +30,8 @@
 
 #include "pch.h"
 #include "EngineFactoryOpenGL.h"
-#include "RenderDeviceGLImpl.h"
-#include "DeviceContextGLImpl.h"
+#include "RenderDeviceGLImpl.hpp"
+#include "DeviceContextGLImpl.hpp"
 #include "EngineMemory.h"
 #include "HLSL2GLSLConverterObject.h"
 #include "EngineFactoryBase.hpp"
@@ -39,7 +39,7 @@
 #if PLATFORM_IOS
 #    include "SwapChainGLIOS.h"
 #else
-#    include "SwapChainGLImpl.h"
+#    include "SwapChainGLImpl.hpp"
 #endif
 
 #if PLATFORM_ANDROID

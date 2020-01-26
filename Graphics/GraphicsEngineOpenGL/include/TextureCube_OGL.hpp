@@ -27,40 +27,40 @@
 
 #pragma once
 
-#include "TextureBaseGL.h"
+#include "TextureBaseGL.hpp"
 
 namespace Diligent
 {
 
-/// Cube array texture implementation in OpenGL backend.
-class TextureCubeArray_OGL final : public TextureBaseGL
+/// Cube texture implementation in OpenGL backend.
+class TextureCube_OGL final : public TextureBaseGL
 {
 public:
-    TextureCubeArray_OGL(IReferenceCounters*        pRefCounters,
-                         FixedBlockMemoryAllocator& TexViewObjAllocator,
-                         class RenderDeviceGLImpl*  pDeviceGL,
-                         class GLContextState&      GLState,
-                         const TextureDesc&         TexDesc,
-                         const TextureData*         pInitData         = nullptr,
-                         bool                       bIsDeviceInternal = false);
+    TextureCube_OGL(IReferenceCounters*        pRefCounters,
+                    FixedBlockMemoryAllocator& TexViewObjAllocator,
+                    class RenderDeviceGLImpl*  pDeviceGL,
+                    class GLContextState&      GLState,
+                    const TextureDesc&         TexDesc,
+                    const TextureData*         pInitData         = nullptr,
+                    bool                       bIsDeviceInternal = false);
 
-    TextureCubeArray_OGL(IReferenceCounters*        pRefCounters,
-                         FixedBlockMemoryAllocator& TexViewObjAllocator,
-                         class RenderDeviceGLImpl*  pDeviceGL,
-                         class GLContextState&      GLState,
-                         const TextureDesc&         TexDesc,
-                         GLuint                     GLTextureHandle,
-                         bool                       bIsDeviceInternal = false);
-    ~TextureCubeArray_OGL();
+    TextureCube_OGL(IReferenceCounters*        pRefCounters,
+                    FixedBlockMemoryAllocator& TexViewObjAllocator,
+                    class RenderDeviceGLImpl*  pDeviceGL,
+                    class GLContextState&      GLState,
+                    const TextureDesc&         TexDesc,
+                    GLuint                     GLTextureHandle,
+                    bool                       bIsDeviceInternal = false);
+    ~TextureCube_OGL();
 
-    /// Implementation of TextureBaseGL::UpdateData() for cube texture array.
+    /// Implementation of TextureBaseGL::UpdateData() for cube texture.
     virtual void UpdateData(class GLContextState&    CtxState,
                             Uint32                   MipLevel,
                             Uint32                   Slice,
                             const Box&               DstBox,
                             const TextureSubResData& SubresData) override final;
 
-    /// Implementation of TextureBaseGL::AttachToFramebuffer() for cube texture array.
+    /// Implementation of TextureBaseGL::AttachToFramebuffer() for cube texture.
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
                                      GLenum                        AttachmentPoint) override final;
 };

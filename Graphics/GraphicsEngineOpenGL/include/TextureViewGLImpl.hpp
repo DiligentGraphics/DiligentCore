@@ -27,16 +27,42 @@
 
 #pragma once
 
-#if PLATFORM_WIN32
-#    include "GLContextWindows.h"
-#elif PLATFORM_ANDROID
-#    include "GLContextAndroid.h"
-#elif PLATFORM_LINUX
-#    include "GLContextLinux.h"
-#elif PLATFORM_MACOS
-#    include "GLContextMacOS.h"
-#elif PLATFORM_IOS
-#    include "GLContextIOS.h"
-#else
-#    error Unsupported platform
-#endif
+#include "BaseInterfacesGL.h"
+#include "TextureViewGL.h"
+#include "TextureViewBase.hpp"
+#include "RenderDevice.h"
+#include "GLObjectWrapper.hpp"
+#include "RenderDeviceGLImpl.hpp"
+
+namespace Diligent
+{
+
+class FixedBlockMemoryAllocator;
+
+/// Texture view implementation in OpenGL backend.
+class TextureViewGLImpl final : public TextureViewBase<ITextureViewGL, RenderDeviceGLImpl>
+{
+public:
+    using TTextureViewBase = TextureViewBase<ITextureViewGL, RenderDeviceGLImpl>;
+
+    TextureViewGLImpl(IReferenceCounters*           pRefCounters,
+                      RenderDeviceGLImpl*           pDevice,
+                      const struct TextureViewDesc& ViewDesc,
+                      class TextureBaseGL*          pTexture,
+                      bool                          bCreateGLViewTex,
+                      bool                          bIsDefaultView);
+    ~TextureViewGLImpl();
+
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+
+    const GLObjectWrappers::GLTextureObj& GetHandle();
+
+    GLenum GetBindTarget();
+    void   SetBindTarget(GLenum ViewTexBindTarget) { m_ViewTexBindTarget = ViewTexBindTarget; }
+
+protected:
+    GLObjectWrappers::GLTextureObj m_ViewTexGLHandle;
+    GLenum                         m_ViewTexBindTarget;
+};
+
+} // namespace Diligent

@@ -32,7 +32,7 @@
 #include <unordered_map>
 
 #include "DeviceContextVk.h"
-#include "DeviceContextNextGenBase.h"
+#include "DeviceContextNextGenBase.hpp"
 #include "VulkanUtilities/VulkanCommandBufferPool.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "VulkanUploadHeap.h"

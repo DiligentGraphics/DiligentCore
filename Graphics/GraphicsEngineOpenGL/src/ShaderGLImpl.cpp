@@ -27,9 +27,9 @@
 
 #include "pch.h"
 
-#include "ShaderGLImpl.h"
-#include "RenderDeviceGLImpl.h"
-#include "DeviceContextGLImpl.h"
+#include "ShaderGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "DeviceContextGLImpl.hpp"
 #include "DataBlobImpl.h"
 #include "GLSLSourceBuilder.hpp"
 

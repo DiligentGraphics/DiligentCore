@@ -29,12 +29,12 @@
 
 #include "BufferGL.h"
 #include "BufferBase.hpp"
-#include "GLObjectWrapper.h"
-#include "AsyncWritableResource.h"
+#include "GLObjectWrapper.hpp"
+#include "AsyncWritableResource.hpp"
 #include "BaseInterfacesGL.h"
-#include "BufferViewGLImpl.h"
-#include "RenderDeviceGLImpl.h"
-#include "GLContextState.h"
+#include "BufferViewGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "GLContextState.hpp"
 
 namespace Diligent
 {

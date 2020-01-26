@@ -3,9 +3,9 @@ cmake_minimum_required (VERSION 3.6)
 project(Diligent-GraphicsEngineNextGenBase CXX)
 
 set(INCLUDE 
-    include/DeviceContextNextGenBase.h
-    include/DynamicHeap.h
-    include/RenderDeviceNextGenBase.h
+    include/DeviceContextNextGenBase.hpp
+    include/DynamicHeap.hpp
+    include/RenderDeviceNextGenBase.hpp
 )
 
 set(SOURCE 

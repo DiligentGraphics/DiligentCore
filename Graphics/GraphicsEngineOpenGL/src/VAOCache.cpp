@@ -27,13 +27,13 @@
 
 #include "pch.h"
 
-#include "VAOCache.h"
-#include "RenderDeviceGLImpl.h"
-#include "GLObjectWrapper.h"
-#include "BufferGLImpl.h"
+#include "VAOCache.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "GLObjectWrapper.hpp"
+#include "BufferGLImpl.hpp"
 #include "GLTypeConversions.h"
-#include "GLContextState.h"
-#include "PipelineStateGLImpl.h"
+#include "GLContextState.hpp"
+#include "PipelineStateGLImpl.hpp"
 
 namespace Diligent
 {

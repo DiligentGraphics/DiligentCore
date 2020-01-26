@@ -31,12 +31,12 @@
 #include "PipelineStateGL.h"
 #include "PipelineStateBase.hpp"
 #include "RenderDevice.h"
-#include "GLObjectWrapper.h"
-#include "GLContext.h"
-#include "RenderDeviceGLImpl.h"
-#include "GLProgramResources.h"
-#include "GLPipelineResourceLayout.h"
-#include "GLProgramResourceCache.h"
+#include "GLObjectWrapper.hpp"
+#include "GLContext.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "GLProgramResources.hpp"
+#include "GLPipelineResourceLayout.hpp"
+#include "GLProgramResourceCache.hpp"
 
 namespace Diligent
 {

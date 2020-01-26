@@ -27,7 +27,7 @@
 
 #include "pch.h"
 
-#include "QueryGLImpl.h"
+#include "QueryGLImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

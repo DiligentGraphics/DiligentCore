@@ -26,9 +26,9 @@
  */
 
 #include "pch.h"
-#include "ShaderResourceBindingGLImpl.h"
-#include "PipelineStateGLImpl.h"
-#include "ShaderGLImpl.h"
+#include "ShaderResourceBindingGLImpl.hpp"
+#include "PipelineStateGLImpl.hpp"
+#include "ShaderGLImpl.hpp"
 #include "FixedBlockMemoryAllocator.h"
 
 namespace Diligent

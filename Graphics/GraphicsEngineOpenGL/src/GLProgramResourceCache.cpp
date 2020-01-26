@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "GLProgramResourceCache.h"
+#include "GLProgramResourceCache.hpp"
 
 namespace Diligent
 {

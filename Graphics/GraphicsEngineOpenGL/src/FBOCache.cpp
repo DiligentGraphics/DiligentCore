@@ -27,10 +27,10 @@
 
 #include "pch.h"
 
-#include "FBOCache.h"
-#include "RenderDeviceGLImpl.h"
-#include "TextureBaseGL.h"
-#include "GLContextState.h"
+#include "FBOCache.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "TextureBaseGL.hpp"
+#include "GLContextState.hpp"
 
 namespace Diligent
 {

@@ -33,7 +33,7 @@
 
 #include "RenderDeviceVk.h"
 #include "RenderDeviceBase.hpp"
-#include "RenderDeviceNextGenBase.h"
+#include "RenderDeviceNextGenBase.hpp"
 #include "DescriptorPoolManager.h"
 #include "VulkanDynamicHeap.h"
 #include "Atomics.h"
@@ -48,7 +48,6 @@
 #include "FramebufferCache.h"
 #include "RenderPassCache.h"
 #include "CommandPoolManager.h"
-#include "VulkanDynamicHeap.h"
 
 namespace Diligent
 {

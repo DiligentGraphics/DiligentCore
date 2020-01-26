@@ -29,11 +29,11 @@
 
 #include <memory>
 #include "RenderDeviceBase.hpp"
-#include "GLContext.h"
-#include "VAOCache.h"
+#include "GLContext.hpp"
+#include "VAOCache.hpp"
 #include "BaseInterfacesGL.h"
-#include "FBOCache.h"
-#include "TexRegionRender.h"
+#include "FBOCache.hpp"
+#include "TexRegionRender.hpp"
 
 enum class GPU_VENDOR
 {

@@ -27,7 +27,7 @@
 
 #include "pch.h"
 
-#include "FenceGLImpl.h"
+#include "FenceGLImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

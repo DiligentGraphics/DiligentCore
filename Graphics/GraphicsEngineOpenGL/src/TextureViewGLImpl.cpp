@@ -27,10 +27,10 @@
 
 #include "pch.h"
 
-#include "TextureViewGLImpl.h"
-#include "RenderDeviceGLImpl.h"
-#include "TextureBaseGL.h"
-#include "DeviceContextGLImpl.h"
+#include "TextureViewGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "TextureBaseGL.hpp"
+#include "DeviceContextGLImpl.hpp"
 
 namespace Diligent
 {

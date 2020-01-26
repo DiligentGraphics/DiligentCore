@@ -27,45 +27,16 @@
 
 #pragma once
 
-/// \file
-/// Declaration of Diligent::QueryGLImpl class
-
-#include "QueryGL.h"
-#include "RenderDeviceGL.h"
-#include "QueryBase.hpp"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
-
-namespace Diligent
-{
-
-class FixedBlockMemoryAllocator;
-
-/// Query object implementation in OpenGL backend.
-class QueryGLImpl final : public QueryBase<IQueryGL, RenderDeviceGLImpl>
-{
-public:
-    using TQueryBase = QueryBase<IQueryGL, RenderDeviceGLImpl>;
-
-    QueryGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice,
-                const QueryDesc&    Desc);
-    ~QueryGLImpl();
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryGL, TQueryBase);
-
-    /// Implementation of IQuery::GetData() in OpenGL backend.
-    virtual bool GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
-
-
-    /// Implementation of IQueryGL::GetGlQueryHandle().
-    virtual GLuint GetGlQueryHandle() const override final
-    {
-        return m_GlQuery;
-    }
-
-private:
-    GLObjectWrappers::GLQueryObj m_GlQuery;
-};
-
-} // namespace Diligent
+#if PLATFORM_WIN32
+#    include "GLContextWindows.hpp"
+#elif PLATFORM_ANDROID
+#    include "GLContextAndroid.hpp"
+#elif PLATFORM_LINUX
+#    include "GLContextLinux.hpp"
+#elif PLATFORM_MACOS
+#    include "GLContextMacOS.h"
+#elif PLATFORM_IOS
+#    include "GLContextIOS.h"
+#else
+#    error Unsupported platform
+#endif

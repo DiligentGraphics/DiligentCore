@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "GLObjectWrapper.h"
+#include "GLObjectWrapper.hpp"
 
 namespace GLObjectWrappers
 {

@@ -31,8 +31,8 @@
 #include "SamplerGL.h"
 #include "SamplerBase.hpp"
 #include "RenderDevice.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+#include "GLObjectWrapper.hpp"
+#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {

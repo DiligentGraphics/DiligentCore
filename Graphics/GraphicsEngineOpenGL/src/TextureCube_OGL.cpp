@@ -27,12 +27,12 @@
 
 #include "pch.h"
 
-#include "TextureCube_OGL.h"
-#include "RenderDeviceGLImpl.h"
-#include "DeviceContextGLImpl.h"
+#include "TextureCube_OGL.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "DeviceContextGLImpl.hpp"
 #include "GLTypeConversions.h"
 #include "GraphicsAccessories.hpp"
-#include "BufferGLImpl.h"
+#include "BufferGLImpl.hpp"
 
 namespace Diligent
 {

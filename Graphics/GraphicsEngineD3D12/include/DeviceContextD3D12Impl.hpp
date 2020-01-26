@@ -33,7 +33,7 @@
 #include <unordered_map>
 
 #include "DeviceContextD3D12.h"
-#include "DeviceContextNextGenBase.h"
+#include "DeviceContextNextGenBase.hpp"
 #include "BufferD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
 #include "QueryD3D12Impl.hpp"

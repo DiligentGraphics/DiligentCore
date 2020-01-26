@@ -27,50 +27,44 @@
 
 #pragma once
 
-/// \file
-/// Declaration of Diligent::FenceGLImpl class
-
-#include <deque>
-#include "FenceGL.h"
-#include "RenderDeviceGL.h"
-#include "FenceBase.hpp"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+#include "SwapChainGL.h"
+#include "SwapChainGLBase.hpp"
+#include "GLObjectWrapper.hpp"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
+class IMemoryAllocator;
 
-/// Fence object implementation in OpenGL backend.
-class FenceGLImpl final : public FenceBase<IFenceGL, RenderDeviceGLImpl>
+/// Swap chain implementation in OpenGL backend.
+class SwapChainGLImpl final : public SwapChainGLBase<ISwapChainGL>
 {
 public:
-    using TFenceBase = FenceBase<IFenceGL, RenderDeviceGLImpl>;
+    using TSwapChainGLBase = SwapChainGLBase<ISwapChainGL>;
 
-    FenceGLImpl(IReferenceCounters* pRefCounters,
-                RenderDeviceGLImpl* pDevice,
-                const FenceDesc&    Desc);
-    ~FenceGLImpl();
+    SwapChainGLImpl(IReferenceCounters*        pRefCounters,
+                    const EngineGLCreateInfo&  InitAttribs,
+                    const SwapChainDesc&       SwapChainDesc,
+                    class RenderDeviceGLImpl*  pRenderDeviceGL,
+                    class DeviceContextGLImpl* pImmediateContextGL);
+    ~SwapChainGLImpl();
 
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase);
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
-    virtual Uint64 GetCompletedValue() override final;
+    /// Implementation of ISwapChain::Present() in OpenGL backend.
+    virtual void Present(Uint32 SyncInterval) override final;
 
-    /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void Reset(Uint64 Value) override final;
+    /// Implementation of ISwapChain::Resize() in OpenGL backend.
+    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
 
-    void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
-    {
-        m_PendingFences.emplace_back(Value, std::move(Fence));
-    }
+    /// Implementation of ISwapChain::SetFullscreenMode() in OpenGL backend.
+    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
 
-    void Wait(Uint64 Value, bool FlushCommands);
+    /// Implementation of ISwapChain::SetWindowedMode() in OpenGL backend.
+    virtual void SetWindowedMode() override final;
 
-private:
-    std::deque<std::pair<Uint64, GLObjectWrappers::GLSyncObj>> m_PendingFences;
-    volatile Uint64                                            m_LastCompletedFenceValue = 0;
+    /// Implementation of ISwapChainGL::GetDefaultFBO().
+    virtual GLuint GetDefaultFBO() const override final { return 0; }
 };
 
 } // namespace Diligent

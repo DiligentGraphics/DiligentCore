@@ -71,8 +71,8 @@
 
 #include "Object.h"
 #include "ShaderResourceVariableBase.hpp"
-#include "GLProgramResources.h"
-#include "GLProgramResourceCache.h"
+#include "GLProgramResources.hpp"
+#include "GLProgramResourceCache.hpp"
 
 namespace Diligent
 {

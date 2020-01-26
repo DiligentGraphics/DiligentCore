@@ -27,11 +27,11 @@
 
 #include "pch.h"
 
-#include "BufferGLImpl.h"
-#include "RenderDeviceGLImpl.h"
+#include "BufferGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
 #include "GLTypeConversions.h"
-#include "BufferViewGLImpl.h"
-#include "DeviceContextGLImpl.h"
+#include "BufferViewGLImpl.hpp"
+#include "DeviceContextGLImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

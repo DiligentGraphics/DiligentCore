@@ -27,12 +27,12 @@
 
 #include "pch.h"
 
-#include "Texture2DArray_OGL.h"
-#include "RenderDeviceGLImpl.h"
-#include "DeviceContextGLImpl.h"
+#include "Texture2DArray_OGL.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "DeviceContextGLImpl.hpp"
 #include "GLTypeConversions.h"
 #include "GraphicsAccessories.hpp"
-#include "BufferGLImpl.h"
+#include "BufferGLImpl.hpp"
 
 namespace Diligent
 {

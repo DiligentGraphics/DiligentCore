@@ -31,7 +31,7 @@
 /// Declaration of Diligent::RenderDeviceD3D12Impl class
 #include "RenderDeviceD3D12.h"
 #include "RenderDeviceD3DBase.hpp"
-#include "RenderDeviceNextGenBase.h"
+#include "RenderDeviceNextGenBase.hpp"
 #include "DescriptorHeap.hpp"
 #include "CommandListManager.hpp"
 #include "CommandContext.hpp"

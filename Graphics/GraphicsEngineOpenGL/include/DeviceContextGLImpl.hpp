@@ -30,12 +30,12 @@
 #include "DeviceContextGL.h"
 #include "DeviceContextBase.hpp"
 #include "BaseInterfacesGL.h"
-#include "GLContextState.h"
-#include "GLObjectWrapper.h"
-#include "BufferGLImpl.h"
-#include "TextureBaseGL.h"
-#include "QueryGLImpl.h"
-#include "PipelineStateGLImpl.h"
+#include "GLContextState.hpp"
+#include "GLObjectWrapper.hpp"
+#include "BufferGLImpl.hpp"
+#include "TextureBaseGL.hpp"
+#include "QueryGLImpl.hpp"
+#include "PipelineStateGLImpl.hpp"
 
 namespace Diligent
 {

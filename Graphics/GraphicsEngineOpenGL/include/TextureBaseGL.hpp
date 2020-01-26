@@ -31,10 +31,10 @@
 #include "TextureGL.h"
 #include "TextureBase.hpp"
 #include "RenderDevice.h"
-#include "GLObjectWrapper.h"
-#include "TextureViewGLImpl.h"
-#include "AsyncWritableResource.h"
-#include "RenderDeviceGLImpl.h"
+#include "GLObjectWrapper.hpp"
+#include "TextureViewGLImpl.hpp"
+#include "AsyncWritableResource.hpp"
+#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {

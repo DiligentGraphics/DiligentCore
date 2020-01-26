@@ -32,7 +32,7 @@
 #include "VulkanUtilities/VulkanMemoryManager.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
-#include "DynamicHeap.h"
+#include "DynamicHeap.hpp"
 
 namespace Diligent
 {

@@ -27,40 +27,40 @@
 
 #pragma once
 
-#include "TextureBaseGL.h"
+#include "TextureBaseGL.hpp"
 
 namespace Diligent
 {
 
-/// 2D texture array implementation in OpenGL backend.
-class Texture2DArray_OGL final : public TextureBaseGL
+/// 3D texture implementation in OpenGL backend.
+class Texture3D_OGL final : public TextureBaseGL
 {
 public:
-    Texture2DArray_OGL(IReferenceCounters*        pRefCounters,
-                       FixedBlockMemoryAllocator& TexViewObjAllocator,
-                       class RenderDeviceGLImpl*  pDeviceGL,
-                       class GLContextState&      GLState,
-                       const TextureDesc&         TexDesc,
-                       const TextureData*         pInitData         = nullptr,
-                       bool                       bIsDeviceInternal = false);
+    Texture3D_OGL(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  class RenderDeviceGLImpl*  pDeviceGL,
+                  class GLContextState&      GLState,
+                  const TextureDesc&         TexDesc,
+                  const TextureData*         pInitData         = nullptr,
+                  bool                       bIsDeviceInternal = false);
 
-    Texture2DArray_OGL(IReferenceCounters*        pRefCounters,
-                       FixedBlockMemoryAllocator& TexViewObjAllocator,
-                       class RenderDeviceGLImpl*  pDeviceGL,
-                       class GLContextState&      GLState,
-                       const TextureDesc&         TexDesc,
-                       GLuint                     GLTextureHandle,
-                       bool                       bIsDeviceInternal = false);
-    ~Texture2DArray_OGL();
+    Texture3D_OGL(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  class RenderDeviceGLImpl*  pDeviceGL,
+                  class GLContextState&      GLState,
+                  const TextureDesc&         TexDesc,
+                  GLuint                     GLTextureHandle,
+                  bool                       bIsDeviceInternal = false);
+    ~Texture3D_OGL();
 
-    /// Implementation of TextureBaseGL::UpdateData() for 2D texture array.
+    /// Implementation of TextureBaseGL::UpdateData() for 3D texture.
     virtual void UpdateData(class GLContextState&    CtxState,
                             Uint32                   MipLevel,
                             Uint32                   Slice,
                             const Box&               DstBox,
                             const TextureSubResData& SubresData) override final;
 
-    /// Implementation of TextureBaseGL::AttachToFramebuffer() for 2D texture array.
+    /// Implementation of TextureBaseGL::AttachToFramebuffer() for 3D texture.
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
                                      GLenum                        AttachmentPoint) override final;
 };

@@ -27,16 +27,16 @@
 
 #pragma once
 
-#include "TextureBaseGL.h"
+#include "TextureBaseGL.hpp"
 
 namespace Diligent
 {
 
-/// 3D texture implementation in OpenGL backend.
-class Texture3D_OGL final : public TextureBaseGL
+/// 2D texture implementation in OpenGL backend.
+class Texture2D_OGL final : public TextureBaseGL
 {
 public:
-    Texture3D_OGL(IReferenceCounters*        pRefCounters,
+    Texture2D_OGL(IReferenceCounters*        pRefCounters,
                   FixedBlockMemoryAllocator& TexViewObjAllocator,
                   class RenderDeviceGLImpl*  pDeviceGL,
                   class GLContextState&      GLState,
@@ -44,23 +44,31 @@ public:
                   const TextureData*         pInitData         = nullptr,
                   bool                       bIsDeviceInternal = false);
 
-    Texture3D_OGL(IReferenceCounters*        pRefCounters,
+    Texture2D_OGL(IReferenceCounters*        pRefCounters,
                   FixedBlockMemoryAllocator& TexViewObjAllocator,
                   class RenderDeviceGLImpl*  pDeviceGL,
                   class GLContextState&      GLState,
                   const TextureDesc&         TexDesc,
                   GLuint                     GLTextureHandle,
                   bool                       bIsDeviceInternal = false);
-    ~Texture3D_OGL();
 
-    /// Implementation of TextureBaseGL::UpdateData() for 3D texture.
+    /// This constructor is used to create a dummy texture object for the default framebuffer.
+    Texture2D_OGL(IReferenceCounters*        pRefCounters,
+                  FixedBlockMemoryAllocator& TexViewObjAllocator,
+                  class RenderDeviceGLImpl*  pDeviceGL,
+                  const TextureDesc&         TexDesc,
+                  bool                       bIsDeviceInternal = false);
+
+    ~Texture2D_OGL();
+
+    /// Implementation of TextureBaseGL::UpdateData() for 2D texture.
     virtual void UpdateData(class GLContextState&    CtxState,
                             Uint32                   MipLevel,
                             Uint32                   Slice,
                             const Box&               DstBox,
                             const TextureSubResData& SubresData) override final;
 
-    /// Implementation of TextureBaseGL::AttachToFramebuffer() for 3D texture.
+    /// Implementation of TextureBaseGL::AttachToFramebuffer() for 2D texture.
     virtual void AttachToFramebuffer(const struct TextureViewDesc& ViewDesc,
                                      GLenum                        AttachmentPoint) override final;
 };

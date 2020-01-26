@@ -27,42 +27,45 @@
 
 #pragma once
 
-#include "BufferViewGL.h"
-#include "BaseInterfacesGL.h"
-#include "BufferViewBase.hpp"
-#include "RenderDevice.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+/// \file
+/// Declaration of Diligent::QueryGLImpl class
+
+#include "QueryGL.h"
+#include "RenderDeviceGL.h"
+#include "QueryBase.hpp"
+#include "GLObjectWrapper.hpp"
+#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
-class IRenderDevice;
-class IDeviceContext;
-class BufferGLImpl;
-struct BufferViewDesc;
 
-/// Buffer view implementation in OpenGL backend.
-class BufferViewGLImpl final : public BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>
+/// Query object implementation in OpenGL backend.
+class QueryGLImpl final : public QueryBase<IQueryGL, RenderDeviceGLImpl>
 {
 public:
-    using TBuffViewBase = BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>;
+    using TQueryBase = QueryBase<IQueryGL, RenderDeviceGLImpl>;
 
-    BufferViewGLImpl(IReferenceCounters*   pRefCounters,
-                     RenderDeviceGLImpl*   pDevice,
-                     IDeviceContext*       pContext,
-                     const BufferViewDesc& ViewDesc,
-                     BufferGLImpl*         pBuffer,
-                     bool                  bIsDefaultView);
+    QueryGLImpl(IReferenceCounters* pRefCounters,
+                RenderDeviceGLImpl* pDevice,
+                const QueryDesc&    Desc);
+    ~QueryGLImpl();
 
-    /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_QueryGL, TQueryBase);
 
-    const GLObjectWrappers::GLTextureObj& GetTexBufferHandle() { return m_GLTexBuffer; }
+    /// Implementation of IQuery::GetData() in OpenGL backend.
+    virtual bool GetData(void* pData, Uint32 DataSize, bool AutoInvalidate) override final;
+
+
+    /// Implementation of IQueryGL::GetGlQueryHandle().
+    virtual GLuint GetGlQueryHandle() const override final
+    {
+        return m_GlQuery;
+    }
 
 private:
-    GLObjectWrappers::GLTextureObj m_GLTexBuffer;
+    GLObjectWrappers::GLQueryObj m_GlQuery;
 };
 
 } // namespace Diligent

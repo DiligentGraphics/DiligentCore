@@ -27,9 +27,9 @@
 
 #include "pch.h"
 
-#include "TexRegionRender.h"
-#include "RenderDeviceGLImpl.h"
-#include "DeviceContextGLImpl.h"
+#include "TexRegionRender.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "DeviceContextGLImpl.hpp"
 #include "../../GraphicsTools/interface/MapHelper.hpp"
 
 

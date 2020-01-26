@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "TextureBaseGL.h"
+#include "TextureBaseGL.hpp"
 
 namespace Diligent
 {

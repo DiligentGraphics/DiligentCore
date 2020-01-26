@@ -37,7 +37,6 @@
 #include "VulkanDynamicHeap.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanMemoryManager.h"
-#include "VulkanDynamicHeap.h"
 #include "STDAllocator.h"
 #include "RenderDeviceVkImpl.h"
 

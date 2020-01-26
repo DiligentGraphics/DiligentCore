@@ -27,12 +27,12 @@
 
 #include "pch.h"
 
-#include "TextureBaseGL.h"
-#include "RenderDeviceGLImpl.h"
+#include "TextureBaseGL.hpp"
+#include "RenderDeviceGLImpl.hpp"
 #include "GLTypeConversions.h"
-#include "TextureViewGLImpl.h"
-#include "GLContextState.h"
-#include "DeviceContextGLImpl.h"
+#include "TextureViewGLImpl.hpp"
+#include "GLContextState.hpp"
+#include "DeviceContextGLImpl.hpp"
 #include "EngineMemory.h"
 #include "GraphicsAccessories.hpp"
 

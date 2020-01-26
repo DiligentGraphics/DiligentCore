@@ -27,42 +27,42 @@
 
 #pragma once
 
+#include "BufferViewGL.h"
 #include "BaseInterfacesGL.h"
-#include "TextureViewGL.h"
-#include "TextureViewBase.hpp"
+#include "BufferViewBase.hpp"
 #include "RenderDevice.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
+#include "GLObjectWrapper.hpp"
+#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {
 
 class FixedBlockMemoryAllocator;
+class IRenderDevice;
+class IDeviceContext;
+class BufferGLImpl;
+struct BufferViewDesc;
 
-/// Texture view implementation in OpenGL backend.
-class TextureViewGLImpl final : public TextureViewBase<ITextureViewGL, RenderDeviceGLImpl>
+/// Buffer view implementation in OpenGL backend.
+class BufferViewGLImpl final : public BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>
 {
 public:
-    using TTextureViewBase = TextureViewBase<ITextureViewGL, RenderDeviceGLImpl>;
+    using TBuffViewBase = BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>;
 
-    TextureViewGLImpl(IReferenceCounters*           pRefCounters,
-                      RenderDeviceGLImpl*           pDevice,
-                      const struct TextureViewDesc& ViewDesc,
-                      class TextureBaseGL*          pTexture,
-                      bool                          bCreateGLViewTex,
-                      bool                          bIsDefaultView);
-    ~TextureViewGLImpl();
+    BufferViewGLImpl(IReferenceCounters*   pRefCounters,
+                     RenderDeviceGLImpl*   pDevice,
+                     IDeviceContext*       pContext,
+                     const BufferViewDesc& ViewDesc,
+                     BufferGLImpl*         pBuffer,
+                     bool                  bIsDefaultView);
 
+    /// Queries the specific interface, see IObject::QueryInterface() for details
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    const GLObjectWrappers::GLTextureObj& GetHandle();
+    const GLObjectWrappers::GLTextureObj& GetTexBufferHandle() { return m_GLTexBuffer; }
 
-    GLenum GetBindTarget();
-    void   SetBindTarget(GLenum ViewTexBindTarget) { m_ViewTexBindTarget = ViewTexBindTarget; }
-
-protected:
-    GLObjectWrappers::GLTextureObj m_ViewTexGLHandle;
-    GLenum                         m_ViewTexBindTarget;
+private:
+    GLObjectWrappers::GLTextureObj m_GLTexBuffer;
 };
 
 } // namespace Diligent

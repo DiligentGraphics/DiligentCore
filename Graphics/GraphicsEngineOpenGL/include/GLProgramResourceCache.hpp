@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include "BufferGLImpl.h"
-#include "TextureBaseGL.h"
-#include "SamplerGLImpl.h"
+#include "BufferGLImpl.hpp"
+#include "TextureBaseGL.hpp"
+#include "SamplerGLImpl.hpp"
 
 namespace Diligent
 {

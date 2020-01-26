@@ -31,7 +31,7 @@
 #include "TextureView.h"
 #include "LockHelper.h"
 #include "HashUtils.h"
-#include "GLObjectWrapper.h"
+#include "GLObjectWrapper.hpp"
 
 namespace Diligent
 {

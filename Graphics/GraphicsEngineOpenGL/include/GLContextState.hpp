@@ -28,9 +28,9 @@
 #pragma once
 
 #include "GraphicsTypes.h"
-#include "GLObjectWrapper.h"
+#include "GLObjectWrapper.hpp"
 #include "UniqueIdentifier.h"
-#include "GLContext.h"
+#include "GLContext.hpp"
 
 namespace Diligent
 {

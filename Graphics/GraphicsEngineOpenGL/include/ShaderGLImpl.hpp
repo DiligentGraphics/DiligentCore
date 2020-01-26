@@ -31,9 +31,9 @@
 #include "ShaderGL.h"
 #include "ShaderBase.hpp"
 #include "RenderDevice.h"
-#include "GLObjectWrapper.h"
-#include "RenderDeviceGLImpl.h"
-#include "GLProgramResources.h"
+#include "GLObjectWrapper.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "GLProgramResources.hpp"
 
 namespace Diligent
 {

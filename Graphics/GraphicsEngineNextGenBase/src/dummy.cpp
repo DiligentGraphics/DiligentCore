@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "RenderDeviceNextGenBase.h"
+#include "RenderDeviceNextGenBase.hpp"

@@ -26,12 +26,12 @@
  */
 
 #include "pch.h"
-#include "PipelineStateGLImpl.h"
-#include "RenderDeviceGLImpl.h"
-#include "ShaderGLImpl.h"
-#include "ShaderResourceBindingGLImpl.h"
+#include "PipelineStateGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "ShaderGLImpl.hpp"
+#include "ShaderResourceBindingGLImpl.hpp"
 #include "EngineMemory.h"
-#include "DeviceContextGLImpl.h"
+#include "DeviceContextGLImpl.hpp"
 
 namespace Diligent
 {
