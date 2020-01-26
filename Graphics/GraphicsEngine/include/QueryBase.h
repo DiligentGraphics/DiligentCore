@@ -38,6 +38,8 @@
 namespace Diligent
 {
 
+class IDeviceContext;
+
 /// Template class implementing base functionality for a Query object
 
 /// \tparam BaseInterface - base interface that this class will inheret

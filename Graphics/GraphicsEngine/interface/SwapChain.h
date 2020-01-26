@@ -94,24 +94,43 @@ public:
 
 struct ISwapChain;
 
-struct ISwapChainVtbl
+// clang-format off
+
+struct ISwapChainMethods
 {
-    void (*Present)(Uint32 SyncInterval);
-    const struct SwapChainDesc* (*GetDesc)();
-    void (*Resize)(Uint32 NewWidth, Uint32 NewHeight);
-    void (*SetFullscreenMode)(const struct DisplayModeAttribs* DisplayMode);
-    void (*SetWindowedMode)();
-    struct ITextureView* (*GetCurrentBackBufferRTV)();
-    struct ITextureView* (*GetDepthBufferDSV)();
+    void                        (*Present)                (struct ISwapChain*, Uint32 SyncInterval);
+    const struct SwapChainDesc* (*GetDesc)                (struct ISwapChain*);
+    void                        (*Resize)                 (struct ISwapChain*, Uint32 NewWidth, Uint32 NewHeight);
+    void                        (*SetFullscreenMode)      (struct ISwapChain*, const struct DisplayModeAttribs* DisplayMode);
+    void                        (*SetWindowedMode)        (struct ISwapChain*);
+    struct ITextureView*        (*GetCurrentBackBufferRTV)(struct ISwapChain*);
+    struct ITextureView*        (*GetDepthBufferDSV)      (struct ISwapChain*);
 };
 
 // clang-format on
 
+struct ISwapChainVtbl
+{
+    struct IObjectMethods    Object;
+    struct ISwapChainMethods SwapChain;
+};
+
 struct ISwapChain
 {
-    struct IObjectVtbl* pObjectVtbl;
-    struct ISwapChain*  pSwapChainVtbl;
+    struct ISwapChainVtbl* pVtbl;
 };
+
+// clang-format off
+
+#    define ISwapChain_Present(This, ...)            (This)->pVtbl->SwapChain.Present                ((struct ISwapChain*)(This), __VA_ARGS__)
+#    define ISwapChain_GetDesc(This)                 (This)->pVtbl->SwapChain.GetDesc                ((struct ISwapChain*)(This))
+#    define ISwapChain_Resize(This, ...)             (This)->pVtbl->SwapChain.Resize                 ((struct ISwapChain*)(This), __VA_ARGS__)
+#    define ISwapChain_SetFullscreenMode(This, ...)  (This)->pVtbl->SwapChain.SetFullscreenMode      ((struct ISwapChain*)(This), __VA_ARGS__)
+#    define ISwapChain_SetWindowedMode(This)         (This)->pVtbl->SwapChain.SetWindowedMode        ((struct ISwapChain*)(This))
+#    define ISwapChain_GetCurrentBackBufferRTV(This) (This)->pVtbl->SwapChain.GetCurrentBackBufferRTV((struct ISwapChain*)(This))
+#    define ISwapChain_GetDepthBufferDSV(This)       (This)->pVtbl->SwapChain.GetDepthBufferDSV      ((struct ISwapChain*)(This))
+
+// clang-format on
 
 #endif
 

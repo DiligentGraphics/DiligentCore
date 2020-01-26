@@ -30,6 +30,11 @@
 
 #include "gtest/gtest.h"
 
+extern "C"
+{
+    int TestSwapChainCInterface(void* pSwapChain);
+};
+
 namespace Diligent
 {
 
@@ -126,6 +131,8 @@ TEST(ClearRenderTargetTest, Clear)
     pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pSwapChain->Present();
+
+    TestSwapChainCInterface(pSwapChain);
 }
 
 } // namespace
