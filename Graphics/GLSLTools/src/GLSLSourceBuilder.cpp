@@ -30,7 +30,7 @@
 
 #include "GLSLSourceBuilder.hpp"
 #include "DebugUtilities.h"
-#include "HLSL2GLSLConverterImpl.h"
+#include "HLSL2GLSLConverterImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "DataBlobImpl.hpp"
 

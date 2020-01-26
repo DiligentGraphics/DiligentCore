@@ -357,7 +357,7 @@
 #include <unordered_set>
 #include <string>
 
-#include "HLSL2GLSLConverterImpl.h"
+#include "HLSL2GLSLConverterImpl.hpp"
 #include "ShaderBase.hpp"
 #include "DataBlobImpl.hpp"
 #include "StringDataBlobImpl.hpp"

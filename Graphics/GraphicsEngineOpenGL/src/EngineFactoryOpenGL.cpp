@@ -33,7 +33,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "EngineMemory.h"
-#include "HLSL2GLSLConverterObject.h"
+#include "HLSL2GLSLConverterObject.hpp"
 #include "EngineFactoryBase.hpp"
 
 #if PLATFORM_IOS

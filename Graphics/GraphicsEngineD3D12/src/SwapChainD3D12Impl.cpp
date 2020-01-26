@@ -29,7 +29,7 @@
 #include "SwapChainD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DeviceContextD3D12Impl.hpp"
-#include "DXGITypeConversions.h"
+#include "DXGITypeConversions.hpp"
 #include "TextureD3D12Impl.hpp"
 #include "EngineMemory.h"
 

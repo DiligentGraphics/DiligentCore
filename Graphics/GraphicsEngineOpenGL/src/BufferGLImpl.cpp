@@ -29,7 +29,7 @@
 
 #include "BufferGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 #include "BufferViewGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "EngineMemory.h"

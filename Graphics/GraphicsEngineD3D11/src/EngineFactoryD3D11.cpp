@@ -33,7 +33,7 @@
 #include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceContextD3D11Impl.hpp"
 #include "SwapChainD3D11Impl.hpp"
-#include "D3D11TypeConversions.h"
+#include "D3D11TypeConversions.hpp"
 #include "EngineMemory.h"
 #include "EngineFactoryD3DBase.hpp"
 #include <Windows.h>

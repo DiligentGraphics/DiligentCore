@@ -26,8 +26,8 @@
  */
 
 #include "pch.h"
-#include "HLSL2GLSLConverterObject.h"
-#include "HLSL2GLSLConverterImpl.h"
+#include "HLSL2GLSLConverterObject.hpp"
+#include "HLSL2GLSLConverterImpl.hpp"
 #include "StringDataBlobImpl.hpp"
 
 namespace Diligent

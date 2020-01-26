@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "DXGITypeConversions.h"
+#include "DXGITypeConversions.hpp"
 #include "EngineFactoryBase.hpp"
 
 /// \file

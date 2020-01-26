@@ -31,7 +31,7 @@
 /// Type conversion routines
 
 #include "GraphicsTypes.h"
-#include "DXGITypeConversions.h"
+#include "DXGITypeConversions.hpp"
 
 namespace Diligent
 {

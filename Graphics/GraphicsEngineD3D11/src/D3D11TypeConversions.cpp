@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "D3D11TypeConversions.h"
+#include "D3D11TypeConversions.hpp"
 
 #include "D3D11TypeDefinitions.h"
 #include "D3DTypeConversionImpl.hpp"

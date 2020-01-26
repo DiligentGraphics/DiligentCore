@@ -30,8 +30,7 @@
 #include <cmath>
 #include "../../../Primitives/interface/BasicTypes.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // https://en.wikipedia.org/wiki/SRGB
 inline float LinearToSRGB(float x)
@@ -58,4 +57,4 @@ inline float FastSRGBToLinear(float x)
     return x * (x * (x * 0.305306011f + 0.682171111f) + 0.012522878f);
 }
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

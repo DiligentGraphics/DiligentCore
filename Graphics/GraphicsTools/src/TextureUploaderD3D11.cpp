@@ -38,7 +38,7 @@
 #include "RenderDeviceD3D11.h"
 #include "DeviceContextD3D11.h"
 #include "TextureD3D11.h"
-#include "DXGITypeConversions.h"
+#include "DXGITypeConversions.hpp"
 #include "ThreadSignal.hpp"
 #include "GraphicsAccessories.hpp"
 

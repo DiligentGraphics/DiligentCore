@@ -31,7 +31,7 @@
 #include "TextureD3D12Impl.hpp"
 #include "BufferD3D12Impl.hpp"
 #include "CommandListManager.hpp"
-#include "D3D12TypeConversions.h"
+#include "D3D12TypeConversions.hpp"
 
 
 namespace Diligent

@@ -34,11 +34,11 @@
 #include "TextureD3D12Impl.hpp"
 #include "BufferD3D12Impl.hpp"
 #include "FenceD3D12Impl.hpp"
-#include "D3D12TypeConversions.h"
+#include "D3D12TypeConversions.hpp"
 #include "d3dx12_win.h"
 #include "D3D12DynamicHeap.hpp"
 #include "CommandListD3D12Impl.hpp"
-#include "DXGITypeConversions.h"
+#include "DXGITypeConversions.hpp"
 
 namespace Diligent
 {

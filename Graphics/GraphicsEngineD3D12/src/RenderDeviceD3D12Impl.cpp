@@ -31,7 +31,7 @@
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
-#include "DXGITypeConversions.h"
+#include "DXGITypeConversions.hpp"
 #include "SamplerD3D12Impl.hpp"
 #include "BufferD3D12Impl.hpp"
 #include "ShaderResourceBindingD3D12Impl.hpp"

@@ -31,7 +31,7 @@
 #include "TextureBaseGL.hpp"
 #include "SamplerGLImpl.hpp"
 #include "AsyncWritableResource.hpp"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 #include "BufferViewGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
 

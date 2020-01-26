@@ -76,6 +76,6 @@
 #include "DebugUtilities.h"
 #include "D3DErrors.hpp"
 #include "RenderDeviceBase.hpp"
-#include "D3D11TypeConversions.h"
+#include "D3D11TypeConversions.hpp"
 #include "ValidatedCast.hpp"
 #include <atlcomcli.h>

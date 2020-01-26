@@ -4,8 +4,8 @@ project(Diligent-HLSL2GLSLConverterLib CXX)
 
 set(INCLUDE 
     include/GLSLDefinitions.h
-    include/HLSL2GLSLConverterImpl.h
-    include/HLSL2GLSLConverterObject.h
+    include/HLSL2GLSLConverterImpl.hpp
+    include/HLSL2GLSLConverterObject.hpp
     include/HLSLKeywords.h
 )
 

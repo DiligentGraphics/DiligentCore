@@ -36,8 +36,7 @@
 #include "../../GraphicsEngine/interface/RasterizerState.h"
 #include "../../GraphicsEngine/interface/Sampler.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // clang-format off
 
@@ -224,4 +223,4 @@ static const SamplerDesc Sam_Aniso8xWrap
     8     // MaxAnisotropy
 };
 
-}
+DILIGENT_END_NAMESPACE // namespace Diligent

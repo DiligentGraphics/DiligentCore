@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent

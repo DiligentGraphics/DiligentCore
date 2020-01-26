@@ -29,8 +29,8 @@
 
 #include <array>
 
-#include "D3D12TypeConversions.h"
-#include "DXGITypeConversions.h"
+#include "D3D12TypeConversions.hpp"
+#include "DXGITypeConversions.hpp"
 
 #include "D3D12TypeDefinitions.h"
 #include "D3DTypeConversionImpl.hpp"

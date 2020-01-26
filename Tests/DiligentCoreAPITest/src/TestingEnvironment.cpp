@@ -50,7 +50,7 @@
 #endif
 
 #ifdef HLSL2GLSL_CONVERTER_SUPPORTED
-#    include "HLSL2GLSLConverterImpl.h"
+#    include "HLSL2GLSLConverterImpl.hpp"
 #endif
 
 namespace Diligent

@@ -33,7 +33,7 @@
 #include "CommandContext.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
-#include "D3D12TypeConversions.h"
+#include "D3D12TypeConversions.hpp"
 #include "HashUtils.hpp"
 
 namespace Diligent

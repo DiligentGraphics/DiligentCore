@@ -33,7 +33,7 @@
 #include "Texture2D_D3D11.hpp"
 #include "Texture3D_D3D11.hpp"
 #include "SamplerD3D11Impl.hpp"
-#include "D3D11TypeConversions.h"
+#include "D3D11TypeConversions.hpp"
 #include "TextureViewD3D11Impl.hpp"
 #include "PipelineStateD3D11Impl.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"

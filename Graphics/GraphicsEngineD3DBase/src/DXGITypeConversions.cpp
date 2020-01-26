@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "DXGITypeConversions.h"
+#include "DXGITypeConversions.hpp"
 #include "BasicTypes.h"
 #include "DebugUtilities.h"
 

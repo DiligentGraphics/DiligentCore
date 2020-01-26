@@ -29,9 +29,9 @@
 #include <array>
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
-#include "D3D12TypeConversions.h"
+#include "D3D12TypeConversions.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "DXGITypeConversions.h"
+#include "DXGITypeConversions.hpp"
 #include "ShaderResourceBindingD3D12Impl.hpp"
 #include "CommandContext.hpp"
 #include "EngineMemory.h"

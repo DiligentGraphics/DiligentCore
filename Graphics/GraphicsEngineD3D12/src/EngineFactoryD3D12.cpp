@@ -37,7 +37,7 @@
 #include "RenderDeviceD3D12Impl.hpp"
 #include "DeviceContextD3D12Impl.hpp"
 #include "SwapChainD3D12Impl.hpp"
-#include "D3D12TypeConversions.h"
+#include "D3D12TypeConversions.hpp"
 #include "EngineFactoryD3DBase.hpp"
 #include "StringTools.hpp"
 #include "EngineMemory.h"

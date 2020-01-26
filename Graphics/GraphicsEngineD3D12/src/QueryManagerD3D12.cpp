@@ -29,7 +29,7 @@
 #include <algorithm>
 
 #include "QueryManagerD3D12.hpp"
-#include "D3D12TypeConversions.h"
+#include "D3D12TypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 #include "CommandContext.hpp"
 #include "Align.hpp"

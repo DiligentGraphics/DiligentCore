@@ -28,7 +28,7 @@
 #include "pch.h"
 #include "SamplerGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 
 namespace Diligent
 {

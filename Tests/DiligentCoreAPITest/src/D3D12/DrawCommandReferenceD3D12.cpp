@@ -27,7 +27,7 @@
 
 #include "D3D12/TestingEnvironmentD3D12.h"
 #include "D3D12/TestingSwapChainD3D12.h"
-#include "../include/DXGITypeConversions.h"
+#include "../include/DXGITypeConversions.hpp"
 #include "../include/d3dx12_win.h"
 
 #include "RenderDeviceD3D12.h"

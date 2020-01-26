@@ -33,7 +33,7 @@
 #include "SwapChainGL.h"
 #include "DeviceContextGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 
 #include "BufferGLImpl.hpp"
 #include "ShaderGLImpl.hpp"

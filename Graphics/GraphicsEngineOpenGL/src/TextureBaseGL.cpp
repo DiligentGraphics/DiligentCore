@@ -29,7 +29,7 @@
 
 #include "TextureBaseGL.hpp"
 #include "RenderDeviceGLImpl.hpp"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 #include "TextureViewGLImpl.hpp"
 #include "GLContextState.hpp"
 #include "DeviceContextGLImpl.hpp"

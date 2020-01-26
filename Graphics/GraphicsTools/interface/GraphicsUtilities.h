@@ -34,8 +34,7 @@
 #include "../../GraphicsEngine/interface/Buffer.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 void CreateUniformBuffer(IRenderDevice*   pDevice,
                          Uint32           Size,
@@ -54,4 +53,4 @@ void GenerateCheckerBoardPattern(Uint32         Width,
                                  Uint8*         pData,
                                  Uint32         StrideInBytes);
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

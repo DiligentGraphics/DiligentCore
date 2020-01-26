@@ -32,7 +32,7 @@
 
 /// This file must be included after D3D11TypeDefinitions.h or D3D12TypeDefinitions.h
 
-#include "DXGITypeConversions.h"
+#include "DXGITypeConversions.hpp"
 
 namespace Diligent
 {

@@ -33,12 +33,13 @@
 #include "../../GraphicsEngine/interface/Shader.h"
 #include "../../../Primitives/interface/DataBlob.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {1FDE020A-9C73-4A76-8AEF-C2C6C2CF0EA5}
 static constexpr INTERFACE_ID IID_HLSL2GLSLConversionStream =
     {0x1fde020a, 0x9c73, 0x4a76, {0x8a, 0xef, 0xc2, 0xc6, 0xc2, 0xcf, 0xe, 0xa5}};
+
+#if DILIGENT_CPP_INTERFACE
 
 class IHLSL2GLSLConversionStream : public IObject
 {
@@ -51,10 +52,16 @@ public:
                          IDataBlob** ppGLSLSource) = 0;
 };
 
+#else
+
+#endif
+
 
 // {44A21160-77E0-4DDC-A57E-B8B8B65B5342}
 static constexpr INTERFACE_ID IID_HLSL2GLSLConverter =
     {0x44a21160, 0x77e0, 0x4ddc, {0xa5, 0x7e, 0xb8, 0xb8, 0xb6, 0x5b, 0x53, 0x42}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Interface to the buffer object implemented in OpenGL
 class IHLSL2GLSLConverter : public IObject
@@ -67,4 +74,8 @@ public:
                               IHLSL2GLSLConversionStream**     ppStream) const = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

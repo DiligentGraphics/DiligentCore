@@ -7,7 +7,7 @@ set(INCLUDE
     include/D3DShaderResourceLoader.hpp
     include/D3DTypeConversionImpl.hpp
     include/D3DViewDescConversionImpl.hpp
-    include/DXGITypeConversions.h
+    include/DXGITypeConversions.hpp
     include/EngineFactoryD3DBase.hpp
     include/HLSLDefinitions.fxh
     include/RenderDeviceD3DBase.hpp

@@ -41,7 +41,7 @@
 #include "TextureCubeArray_OGL.hpp"
 #include "SamplerGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 #include "PipelineStateGLImpl.hpp"
 #include "ShaderResourceBindingGLImpl.hpp"
 #include "FenceGLImpl.hpp"

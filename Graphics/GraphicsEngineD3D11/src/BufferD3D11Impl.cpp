@@ -31,7 +31,7 @@
 #include "BufferD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceContextD3D11Impl.hpp"
-#include "D3D11TypeConversions.h"
+#include "D3D11TypeConversions.hpp"
 #include "BufferViewD3D11Impl.hpp"
 #include "GraphicsAccessories.hpp"
 #include "EngineMemory.h"

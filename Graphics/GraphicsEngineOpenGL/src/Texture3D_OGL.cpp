@@ -30,7 +30,7 @@
 #include "Texture3D_OGL.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 #include "BufferGLImpl.hpp"
 

@@ -31,7 +31,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "GLObjectWrapper.hpp"
 #include "BufferGLImpl.hpp"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 #include "GLContextState.hpp"
 #include "PipelineStateGLImpl.hpp"
 

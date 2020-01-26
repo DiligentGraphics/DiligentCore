@@ -26,7 +26,7 @@
  */
 
 #include "../include/D3D11/TestingSwapChainD3D11.h"
-#include "../include/DXGITypeConversions.h"
+#include "../include/DXGITypeConversions.hpp"
 
 #include "RenderDeviceD3D11.h"
 #include "DeviceContextD3D11.h"

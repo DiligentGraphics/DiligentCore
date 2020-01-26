@@ -15,7 +15,7 @@ set(INCLUDE
     include/GLProgramResourceCache.hpp
     include/GLPipelineResourceLayout.hpp
     include/GLProgramResources.hpp
-    include/GLTypeConversions.h
+    include/GLTypeConversions.hpp
     include/pch.h
     include/PipelineStateGLImpl.hpp
     include/QueryGLImpl.hpp
