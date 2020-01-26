@@ -32,7 +32,7 @@
 
 #include "RenderDeviceVk.h"
 #include "ShaderVk.h"
-#include "ShaderBase.h"
+#include "ShaderBase.hpp"
 #include "SPIRVShaderResources.hpp"
 #include "RenderDeviceVkImpl.h"
 

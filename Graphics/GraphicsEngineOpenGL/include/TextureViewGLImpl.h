@@ -29,7 +29,7 @@
 
 #include "BaseInterfacesGL.h"
 #include "TextureViewGL.h"
-#include "TextureViewBase.h"
+#include "TextureViewBase.hpp"
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
 #include "RenderDeviceGLImpl.h"

@@ -31,7 +31,7 @@
 /// Declaration of Diligent::QueryVkImpl class
 
 #include "QueryVk.h"
-#include "QueryBase.h"
+#include "QueryBase.hpp"
 #include "RenderDeviceVkImpl.h"
 #include "QueryManagerVk.h"
 

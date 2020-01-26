@@ -41,5 +41,5 @@
 #include "RefCntAutoPtr.h"
 #include "Errors.h"
 #include "DebugUtilities.h"
-#include "RenderDeviceBase.h"
-#include "DeviceContextBase.h"
+#include "RenderDeviceBase.hpp"
+#include "DeviceContextBase.hpp"

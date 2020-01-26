@@ -4,32 +4,32 @@ project(Diligent-GraphicsEngineD3D11 CXX)
 
 
 set(INCLUDE 
-    include/BufferD3D11Impl.h
-    include/BufferViewD3D11Impl.h
-    include/CommandListD3D11Impl.h
+    include/BufferD3D11Impl.hpp
+    include/BufferViewD3D11Impl.hpp
+    include/CommandListD3D11Impl.hpp
     include/D3D11TypeConversions.h
     include/D3D11TypeDefinitions.h
-    include/DeviceContextD3D11Impl.h
-    include/DisjointQueryPool.h
+    include/DeviceContextD3D11Impl.hpp
+    include/DisjointQueryPool.hpp
     include/EngineD3D11Defines.h
     include/pch.h
-	include/FenceD3D11Impl.h
-    include/PipelineStateD3D11Impl.h
-    include/QueryD3D11Impl.h
-    include/RenderDeviceD3D11Impl.h
-    include/SamplerD3D11Impl.h
-    include/ShaderD3D11Impl.h
-    include/ShaderResourceBindingD3D11Impl.h
-    include/ShaderResourceCacheD3D11.h
-    include/ShaderResourceLayoutD3D11.h
-    include/ShaderResourcesD3D11.h
-    include/SwapChainD3D11Impl.h
+	include/FenceD3D11Impl.hpp
+    include/PipelineStateD3D11Impl.hpp
+    include/QueryD3D11Impl.hpp
+    include/RenderDeviceD3D11Impl.hpp
+    include/SamplerD3D11Impl.hpp
+    include/ShaderD3D11Impl.hpp
+    include/ShaderResourceBindingD3D11Impl.hpp
+    include/ShaderResourceCacheD3D11.hpp
+    include/ShaderResourceLayoutD3D11.hpp
+    include/ShaderResourcesD3D11.hpp
+    include/SwapChainD3D11Impl.hpp
     include/targetver.h
-    include/Texture1D_D3D11.h
-    include/Texture2D_D3D11.h
-    include/Texture3D_D3D11.h
-    include/TextureBaseD3D11.h
-    include/TextureViewD3D11Impl.h
+    include/Texture1D_D3D11.hpp
+    include/Texture2D_D3D11.hpp
+    include/Texture3D_D3D11.hpp
+    include/TextureBaseD3D11.hpp
+    include/TextureViewD3D11Impl.hpp
 )
 
 set(INTERFACE 

@@ -32,7 +32,7 @@
 
 #include "SamplerVk.h"
 #include "RenderDeviceVk.h"
-#include "SamplerBase.h"
+#include "SamplerBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "RenderDeviceVkImpl.h"
 

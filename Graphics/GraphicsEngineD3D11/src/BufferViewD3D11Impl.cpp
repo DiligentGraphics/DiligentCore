@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "BufferViewD3D11Impl.h"
+#include "BufferViewD3D11Impl.hpp"
 
 namespace Diligent
 {

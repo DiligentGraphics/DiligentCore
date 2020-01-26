@@ -28,9 +28,9 @@
 #include "pch.h"
 #include "EngineMemory.h"
 #include "StringTools.h"
-#include "ShaderResources.h"
+#include "ShaderResources.hpp"
 #include "HashUtils.h"
-#include "ShaderResourceVariableBase.h"
+#include "ShaderResourceVariableBase.hpp"
 #include "Align.h"
 
 namespace Diligent

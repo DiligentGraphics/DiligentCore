@@ -358,7 +358,7 @@
 #include <string>
 
 #include "HLSL2GLSLConverterImpl.h"
-#include "ShaderBase.h"
+#include "ShaderBase.hpp"
 #include "DataBlobImpl.h"
 #include "StringDataBlobImpl.h"
 #include "StringTools.h"

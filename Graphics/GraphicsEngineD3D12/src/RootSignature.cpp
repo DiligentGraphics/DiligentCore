@@ -27,12 +27,12 @@
 
 #include "pch.h"
 
-#include "RootSignature.h"
-#include "ShaderResourceLayoutD3D12.h"
-#include "ShaderD3D12Impl.h"
-#include "CommandContext.h"
-#include "RenderDeviceD3D12Impl.h"
-#include "TextureD3D12Impl.h"
+#include "RootSignature.hpp"
+#include "ShaderResourceLayoutD3D12.hpp"
+#include "ShaderD3D12Impl.hpp"
+#include "CommandContext.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "TextureD3D12Impl.hpp"
 #include "D3D12TypeConversions.h"
 #include "HashUtils.h"
 

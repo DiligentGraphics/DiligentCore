@@ -29,9 +29,9 @@
 #include <thread>
 #include <atlbase.h>
 
-#include "FenceD3D12Impl.h"
+#include "FenceD3D12Impl.hpp"
 #include "EngineMemory.h"
-#include "RenderDeviceD3D12Impl.h"
+#include "RenderDeviceD3D12Impl.hpp"
 namespace Diligent
 {
 

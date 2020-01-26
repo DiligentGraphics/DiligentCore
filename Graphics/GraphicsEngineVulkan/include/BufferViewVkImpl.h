@@ -32,7 +32,7 @@
 
 #include "BufferViewVk.h"
 #include "RenderDeviceVk.h"
-#include "BufferViewBase.h"
+#include "BufferViewBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "RenderDeviceVkImpl.h"
 

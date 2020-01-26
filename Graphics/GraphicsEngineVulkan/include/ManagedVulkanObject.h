@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "DeviceObjectBase.h"
+#include "DeviceObjectBase.hpp"
 #include "RenderDeviceVkImpl.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 

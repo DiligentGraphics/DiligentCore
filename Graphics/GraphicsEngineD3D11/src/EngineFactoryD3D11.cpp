@@ -30,12 +30,12 @@
 
 #include "pch.h"
 #include "EngineFactoryD3D11.h"
-#include "RenderDeviceD3D11Impl.h"
-#include "DeviceContextD3D11Impl.h"
-#include "SwapChainD3D11Impl.h"
+#include "RenderDeviceD3D11Impl.hpp"
+#include "DeviceContextD3D11Impl.hpp"
+#include "SwapChainD3D11Impl.hpp"
 #include "D3D11TypeConversions.h"
 #include "EngineMemory.h"
-#include "EngineFactoryD3DBase.h"
+#include "EngineFactoryD3DBase.hpp"
 #include <Windows.h>
 #include <dxgi1_2.h>
 

@@ -32,7 +32,7 @@
 
 #include "TextureViewVk.h"
 #include "RenderDeviceVk.h"
-#include "TextureViewBase.h"
+#include "TextureViewBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "RenderDeviceVkImpl.h"
 

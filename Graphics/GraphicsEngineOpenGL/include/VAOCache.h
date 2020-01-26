@@ -33,7 +33,7 @@
 #include "InputLayout.h"
 #include "LockHelper.h"
 #include "HashUtils.h"
-#include "DeviceContextBase.h"
+#include "DeviceContextBase.hpp"
 #include "BaseInterfacesGL.h"
 
 namespace Diligent

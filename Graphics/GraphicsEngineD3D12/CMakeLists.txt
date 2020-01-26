@@ -3,38 +3,38 @@ cmake_minimum_required (VERSION 3.10)
 project(Diligent-GraphicsEngineD3D12 CXX)
 
 set(INCLUDE 
-    include/BufferD3D12Impl.h
-    include/BufferViewD3D12Impl.h
-    include/CommandContext.h
-    include/CommandListD3D12Impl.h
-    include/CommandListManager.h
-    include/CommandQueueD3D12Impl.h
-    include/D3D12ResourceBase.h
+    include/BufferD3D12Impl.hpp
+    include/BufferViewD3D12Impl.hpp
+    include/CommandContext.hpp
+    include/CommandListD3D12Impl.hpp
+    include/CommandListManager.hpp
+    include/CommandQueueD3D12Impl.hpp
+    include/D3D12ResourceBase.hpp
     include/D3D12TypeConversions.h
     include/D3D12TypeDefinitions.h
     include/D3D12Utils.h
     include/d3dx12_win.h
-    include/DescriptorHeap.h
-    include/DeviceContextD3D12Impl.h
-    include/D3D12DynamicHeap.h
-    include/FenceD3D12Impl.h
-    include/GenerateMips.h
+    include/DescriptorHeap.hpp
+    include/DeviceContextD3D12Impl.hpp
+    include/D3D12DynamicHeap.hpp
+    include/FenceD3D12Impl.hpp
+    include/GenerateMips.hpp
     include/pch.h
-    include/PipelineStateD3D12Impl.h
-    include/QueryD3D12Impl.h
-    include/QueryManagerD3D12.h
-    include/RenderDeviceD3D12Impl.h
-    include/RootSignature.h
-    include/SamplerD3D12Impl.h
-    include/ShaderD3D12Impl.h
-    include/ShaderResourceBindingD3D12Impl.h
-    include/ShaderResourceCacheD3D12.h
-    include/ShaderResourceLayoutD3D12.h
-    include/ShaderResourcesD3D12.h
-    include/ShaderVariableD3D12.h
-    include/SwapChainD3D12Impl.h
-    include/TextureD3D12Impl.h
-    include/TextureViewD3D12Impl.h
+    include/PipelineStateD3D12Impl.hpp
+    include/QueryD3D12Impl.hpp
+    include/QueryManagerD3D12.hpp
+    include/RenderDeviceD3D12Impl.hpp
+    include/RootSignature.hpp
+    include/SamplerD3D12Impl.hpp
+    include/ShaderD3D12Impl.hpp
+    include/ShaderResourceBindingD3D12Impl.hpp
+    include/ShaderResourceCacheD3D12.hpp
+    include/ShaderResourceLayoutD3D12.hpp
+    include/ShaderResourcesD3D12.hpp
+    include/ShaderVariableD3D12.hpp
+    include/SwapChainD3D12Impl.hpp
+    include/TextureD3D12Impl.hpp
+    include/TextureViewD3D12Impl.hpp
 )
 
 set(INTERFACE 
@@ -88,7 +88,7 @@ set(SRC
 )
 
 if(PLATFORM_WIN32)
-    list(APPEND INCLUDE include/D3D12Loader.h)
+    list(APPEND INCLUDE include/D3D12Loader.hpp)
     list(APPEND SRC src/D3D12Loader.cpp)
 	set(USE_D3D12_LOADER 1)
 else()

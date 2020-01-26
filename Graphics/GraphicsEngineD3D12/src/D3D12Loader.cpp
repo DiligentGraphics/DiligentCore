@@ -26,7 +26,7 @@
  */
 
 
-#include "D3D12Loader.h"
+#include "D3D12Loader.hpp"
 #include "Errors.h"
 
 #ifndef NOMINMAX

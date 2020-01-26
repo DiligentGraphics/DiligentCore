@@ -26,8 +26,8 @@
  */
 
 #include "pch.h"
-#include "CommandListManager.h"
-#include "RenderDeviceD3D12Impl.h"
+#include "CommandListManager.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {

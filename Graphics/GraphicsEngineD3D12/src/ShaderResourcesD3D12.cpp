@@ -28,9 +28,9 @@
 #include "pch.h"
 
 #include <d3dcompiler.h>
-#include "ShaderResourcesD3D12.h"
-#include "ShaderD3DBase.h"
-#include "ShaderBase.h"
+#include "ShaderResourcesD3D12.hpp"
+#include "ShaderD3DBase.hpp"
+#include "ShaderBase.hpp"
 
 namespace Diligent
 {

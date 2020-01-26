@@ -29,7 +29,7 @@
 
 #include <vector>
 #include "PipelineStateGL.h"
-#include "PipelineStateBase.h"
+#include "PipelineStateBase.hpp"
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
 #include "GLContext.h"

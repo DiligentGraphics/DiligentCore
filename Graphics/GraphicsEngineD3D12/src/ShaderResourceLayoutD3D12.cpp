@@ -27,17 +27,17 @@
 
 #include "pch.h"
 
-#include "ShaderResourceLayoutD3D12.h"
-#include "ShaderResourceCacheD3D12.h"
-#include "BufferD3D12Impl.h"
+#include "ShaderResourceLayoutD3D12.hpp"
+#include "ShaderResourceCacheD3D12.hpp"
+#include "BufferD3D12Impl.hpp"
 #include "BufferViewD3D12.h"
-#include "TextureD3D12Impl.h"
-#include "TextureViewD3D12Impl.h"
-#include "SamplerD3D12Impl.h"
-#include "ShaderD3D12Impl.h"
-#include "RootSignature.h"
-#include "PipelineStateD3D12Impl.h"
-#include "ShaderResourceVariableBase.h"
+#include "TextureD3D12Impl.hpp"
+#include "TextureViewD3D12Impl.hpp"
+#include "SamplerD3D12Impl.hpp"
+#include "ShaderD3D12Impl.hpp"
+#include "RootSignature.hpp"
+#include "PipelineStateD3D12Impl.hpp"
+#include "ShaderResourceVariableBase.hpp"
 
 namespace Diligent
 {

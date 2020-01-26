@@ -38,7 +38,7 @@
 #include "CommandQueueVkImpl.h"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanPhysicalDevice.h"
-#include "EngineFactoryBase.h"
+#include "EngineFactoryBase.hpp"
 
 namespace Diligent
 {

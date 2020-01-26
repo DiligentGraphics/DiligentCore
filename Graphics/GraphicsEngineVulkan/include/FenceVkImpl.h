@@ -32,7 +32,7 @@
 
 #include <deque>
 #include "FenceVk.h"
-#include "FenceBase.h"
+#include "FenceBase.hpp"
 #include "VulkanUtilities/VulkanFencePool.h"
 #include "RenderDeviceVkImpl.h"
 

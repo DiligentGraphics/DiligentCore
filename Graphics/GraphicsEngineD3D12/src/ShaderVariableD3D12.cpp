@@ -27,8 +27,8 @@
 
 #include "pch.h"
 
-#include "ShaderVariableD3D12.h"
-#include "ShaderResourceVariableBase.h"
+#include "ShaderVariableD3D12.hpp"
+#include "ShaderResourceVariableBase.hpp"
 
 namespace Diligent
 {

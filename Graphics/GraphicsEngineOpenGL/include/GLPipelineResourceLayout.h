@@ -70,7 +70,7 @@
 #include <array>
 
 #include "Object.h"
-#include "ShaderResourceVariableBase.h"
+#include "ShaderResourceVariableBase.hpp"
 #include "GLProgramResources.h"
 #include "GLProgramResourceCache.h"
 

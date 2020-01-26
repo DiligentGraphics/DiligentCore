@@ -27,17 +27,17 @@
 
 #include "pch.h"
 #include <sstream>
-#include "RenderDeviceD3D12Impl.h"
-#include "DeviceContextD3D12Impl.h"
-#include "PipelineStateD3D12Impl.h"
-#include "CommandContext.h"
-#include "TextureD3D12Impl.h"
-#include "BufferD3D12Impl.h"
-#include "FenceD3D12Impl.h"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
+#include "PipelineStateD3D12Impl.hpp"
+#include "CommandContext.hpp"
+#include "TextureD3D12Impl.hpp"
+#include "BufferD3D12Impl.hpp"
+#include "FenceD3D12Impl.hpp"
 #include "D3D12TypeConversions.h"
 #include "d3dx12_win.h"
-#include "D3D12DynamicHeap.h"
-#include "CommandListD3D12Impl.h"
+#include "D3D12DynamicHeap.hpp"
+#include "CommandListD3D12Impl.hpp"
 #include "DXGITypeConversions.h"
 
 namespace Diligent

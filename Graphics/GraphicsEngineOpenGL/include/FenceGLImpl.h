@@ -33,7 +33,7 @@
 #include <deque>
 #include "FenceGL.h"
 #include "RenderDeviceGL.h"
-#include "FenceBase.h"
+#include "FenceBase.hpp"
 #include "GLObjectWrapper.h"
 #include "RenderDeviceGLImpl.h"
 

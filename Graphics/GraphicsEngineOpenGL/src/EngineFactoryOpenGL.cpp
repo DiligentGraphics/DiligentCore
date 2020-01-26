@@ -34,7 +34,7 @@
 #include "DeviceContextGLImpl.h"
 #include "EngineMemory.h"
 #include "HLSL2GLSLConverterObject.h"
-#include "EngineFactoryBase.h"
+#include "EngineFactoryBase.hpp"
 
 #if PLATFORM_IOS
 #    include "SwapChainGLIOS.h"

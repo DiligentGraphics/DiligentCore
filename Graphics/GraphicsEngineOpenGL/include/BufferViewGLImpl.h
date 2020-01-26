@@ -29,7 +29,7 @@
 
 #include "BufferViewGL.h"
 #include "BaseInterfacesGL.h"
-#include "BufferViewBase.h"
+#include "BufferViewBase.hpp"
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
 #include "RenderDeviceGLImpl.h"

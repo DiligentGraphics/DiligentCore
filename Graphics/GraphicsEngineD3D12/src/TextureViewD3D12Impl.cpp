@@ -26,8 +26,8 @@
  */
 
 #include "pch.h"
-#include "TextureViewD3D12Impl.h"
-#include "DeviceContextD3D12Impl.h"
+#include "TextureViewD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
 
 namespace Diligent
 {

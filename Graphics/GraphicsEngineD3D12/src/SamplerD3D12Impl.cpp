@@ -26,8 +26,8 @@
  */
 
 #include "pch.h"
-#include "SamplerD3D12Impl.h"
-#include "RenderDeviceD3D12Impl.h"
+#include "SamplerD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 #include "D3D12TypeConversions.h"
 
 namespace Diligent

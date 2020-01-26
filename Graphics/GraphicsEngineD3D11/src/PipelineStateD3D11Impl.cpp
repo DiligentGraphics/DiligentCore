@@ -27,11 +27,11 @@
 
 #include "pch.h"
 #include <array>
-#include "PipelineStateD3D11Impl.h"
-#include "RenderDeviceD3D11Impl.h"
-#include "ShaderResourceBindingD3D11Impl.h"
+#include "PipelineStateD3D11Impl.hpp"
+#include "RenderDeviceD3D11Impl.hpp"
+#include "ShaderResourceBindingD3D11Impl.hpp"
 #include "EngineMemory.h"
-#include "ShaderD3D11Impl.h"
+#include "ShaderD3D11Impl.hpp"
 
 namespace Diligent
 {

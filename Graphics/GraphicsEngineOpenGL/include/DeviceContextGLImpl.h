@@ -28,7 +28,7 @@
 #pragma once
 
 #include "DeviceContextGL.h"
-#include "DeviceContextBase.h"
+#include "DeviceContextBase.hpp"
 #include "BaseInterfacesGL.h"
 #include "GLContextState.h"
 #include "GLObjectWrapper.h"

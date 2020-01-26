@@ -3,18 +3,18 @@ cmake_minimum_required (VERSION 3.10)
 project(Diligent-GraphicsEngineD3DBase CXX)
 
 set(INCLUDE 
-    include/D3DErrors.h
-    include/D3DShaderResourceLoader.h
-    include/D3DTypeConversionImpl.h
-    include/D3DViewDescConversionImpl.h
+    include/D3DErrors.hpp
+    include/D3DShaderResourceLoader.hpp
+    include/D3DTypeConversionImpl.hpp
+    include/D3DViewDescConversionImpl.hpp
     include/DXGITypeConversions.h
-    include/EngineFactoryD3DBase.h
+    include/EngineFactoryD3DBase.hpp
     include/HLSLDefinitions.fxh
-    include/RenderDeviceD3DBase.h
-    include/ShaderD3DBase.h
-    include/ShaderResources.h
-    include/ShaderVariableD3DBase.h
-    include/SwapChainD3DBase.h
+    include/RenderDeviceD3DBase.hpp
+    include/ShaderD3DBase.hpp
+    include/ShaderResources.hpp
+    include/ShaderVariableD3DBase.hpp
+    include/SwapChainD3DBase.hpp
 )
 
 set(INTERFACE

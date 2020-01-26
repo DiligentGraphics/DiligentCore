@@ -28,7 +28,7 @@
 #pragma once
 
 #include "BufferGL.h"
-#include "BufferBase.h"
+#include "BufferBase.hpp"
 #include "GLObjectWrapper.h"
 #include "AsyncWritableResource.h"
 #include "BaseInterfacesGL.h"

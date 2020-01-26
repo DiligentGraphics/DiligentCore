@@ -27,16 +27,16 @@
 
 #include "pch.h"
 #include <array>
-#include "PipelineStateD3D12Impl.h"
-#include "ShaderD3D12Impl.h"
+#include "PipelineStateD3D12Impl.hpp"
+#include "ShaderD3D12Impl.hpp"
 #include "D3D12TypeConversions.h"
-#include "RenderDeviceD3D12Impl.h"
+#include "RenderDeviceD3D12Impl.hpp"
 #include "DXGITypeConversions.h"
-#include "ShaderResourceBindingD3D12Impl.h"
-#include "CommandContext.h"
+#include "ShaderResourceBindingD3D12Impl.hpp"
+#include "CommandContext.hpp"
 #include "EngineMemory.h"
 #include "StringTools.h"
-#include "ShaderVariableD3D12.h"
+#include "ShaderVariableD3D12.hpp"
 
 namespace Diligent
 {

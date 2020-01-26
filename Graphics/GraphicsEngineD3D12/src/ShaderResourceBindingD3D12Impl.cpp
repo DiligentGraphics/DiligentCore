@@ -26,10 +26,10 @@
  */
 
 #include "pch.h"
-#include "ShaderResourceBindingD3D12Impl.h"
-#include "PipelineStateD3D12Impl.h"
-#include "ShaderD3D12Impl.h"
-#include "RenderDeviceD3D12Impl.h"
+#include "ShaderResourceBindingD3D12Impl.hpp"
+#include "PipelineStateD3D12Impl.hpp"
+#include "ShaderD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {

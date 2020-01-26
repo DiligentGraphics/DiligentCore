@@ -30,8 +30,8 @@
 #include "GLContextState.h"
 #include "GLProgramResources.h"
 #include "RenderDeviceGLImpl.h"
-#include "ShaderResourceBindingBase.h"
-#include "ShaderResourceVariableBase.h"
+#include "ShaderResourceBindingBase.hpp"
+#include "ShaderResourceVariableBase.hpp"
 #include "Align.h"
 
 namespace Diligent

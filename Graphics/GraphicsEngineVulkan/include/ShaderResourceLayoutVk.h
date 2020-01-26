@@ -101,7 +101,7 @@
 #include <memory>
 
 #include "PipelineState.h"
-#include "ShaderBase.h"
+#include "ShaderBase.hpp"
 #include "HashUtils.h"
 #include "ShaderResourceCacheVk.h"
 #include "SPIRVShaderResources.hpp"

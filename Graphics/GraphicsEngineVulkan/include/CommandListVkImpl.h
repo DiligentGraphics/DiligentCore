@@ -31,7 +31,7 @@
 /// Declaration of Diligent::CommandListVkImpl class
 
 #include "vulkan.h"
-#include "CommandListBase.h"
+#include "CommandListBase.hpp"
 #include "RenderDeviceVkImpl.h"
 
 namespace Diligent

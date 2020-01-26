@@ -62,7 +62,7 @@
 #include <memory>
 
 #include "ShaderResourceLayoutVk.h"
-#include "ShaderResourceVariableBase.h"
+#include "ShaderResourceVariableBase.hpp"
 
 namespace Diligent
 {

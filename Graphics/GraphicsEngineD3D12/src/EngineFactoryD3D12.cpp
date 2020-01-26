@@ -34,14 +34,14 @@
 #include <string>
 
 #include "EngineFactoryD3D12.h"
-#include "RenderDeviceD3D12Impl.h"
-#include "DeviceContextD3D12Impl.h"
-#include "SwapChainD3D12Impl.h"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
+#include "SwapChainD3D12Impl.hpp"
 #include "D3D12TypeConversions.h"
-#include "EngineFactoryD3DBase.h"
+#include "EngineFactoryD3DBase.hpp"
 #include "StringTools.h"
 #include "EngineMemory.h"
-#include "CommandQueueD3D12Impl.h"
+#include "CommandQueueD3D12Impl.hpp"
 
 #ifndef NOMINMAX
 #    define NOMINMAX

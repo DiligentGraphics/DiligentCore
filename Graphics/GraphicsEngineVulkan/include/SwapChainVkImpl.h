@@ -31,7 +31,7 @@
 /// Declaration of Diligent::SwapChainVkImpl class
 
 #include "SwapChainVk.h"
-#include "SwapChainBase.h"
+#include "SwapChainBase.hpp"
 #include "VulkanUtilities/VulkanInstance.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "ManagedVulkanObject.h"

@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "CommandQueueD3D12Impl.h"
+#include "CommandQueueD3D12Impl.hpp"
 
 namespace Diligent
 {

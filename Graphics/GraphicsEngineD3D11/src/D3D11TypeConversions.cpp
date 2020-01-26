@@ -29,8 +29,8 @@
 #include "D3D11TypeConversions.h"
 
 #include "D3D11TypeDefinitions.h"
-#include "D3DTypeConversionImpl.h"
-#include "D3DViewDescConversionImpl.h"
+#include "D3DTypeConversionImpl.hpp"
+#include "D3DViewDescConversionImpl.hpp"
 
 namespace Diligent
 {

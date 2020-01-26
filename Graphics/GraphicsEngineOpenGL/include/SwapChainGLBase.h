@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "SwapChainBase.h"
+#include "SwapChainBase.hpp"
 #include "TextureViewGLImpl.h"
 
 namespace Diligent

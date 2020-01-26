@@ -28,11 +28,11 @@
 #include <unordered_map>
 #include <D3Dcompiler.h>
 
-#include "D3DErrors.h"
+#include "D3DErrors.hpp"
 #include "DataBlobImpl.h"
 #include "RefCntAutoPtr.h"
 #include <atlcomcli.h>
-#include "ShaderD3DBase.h"
+#include "ShaderD3DBase.hpp"
 
 namespace Diligent
 {

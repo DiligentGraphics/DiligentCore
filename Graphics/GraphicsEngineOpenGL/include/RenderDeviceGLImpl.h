@@ -28,7 +28,7 @@
 #pragma once
 
 #include <memory>
-#include "RenderDeviceBase.h"
+#include "RenderDeviceBase.hpp"
 #include "GLContext.h"
 #include "VAOCache.h"
 #include "BaseInterfacesGL.h"

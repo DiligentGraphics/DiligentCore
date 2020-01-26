@@ -26,9 +26,9 @@
  */
 
 #include "pch.h"
-#include "SwapChainD3D11Impl.h"
-#include "RenderDeviceD3D11Impl.h"
-#include "DeviceContextD3D11Impl.h"
+#include "SwapChainD3D11Impl.hpp"
+#include "RenderDeviceD3D11Impl.hpp"
+#include "DeviceContextD3D11Impl.hpp"
 #include <dxgi1_2.h>
 
 namespace Diligent

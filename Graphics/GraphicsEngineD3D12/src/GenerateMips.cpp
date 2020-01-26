@@ -45,11 +45,11 @@
 #include "pch.h"
 #include "d3dx12_win.h"
 
-#include "RenderDeviceD3D12Impl.h"
-#include "GenerateMips.h"
-#include "CommandContext.h"
-#include "TextureViewD3D12Impl.h"
-#include "TextureD3D12Impl.h"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "GenerateMips.hpp"
+#include "CommandContext.hpp"
+#include "TextureViewD3D12Impl.hpp"
+#include "TextureD3D12Impl.hpp"
 
 #include "GenerateMips/GenerateMipsLinearCS.h"
 #include "GenerateMips/GenerateMipsLinearOddCS.h"

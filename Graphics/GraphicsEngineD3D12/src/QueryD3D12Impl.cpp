@@ -28,10 +28,10 @@
 #include "pch.h"
 #include <atlbase.h>
 
-#include "QueryD3D12Impl.h"
-#include "RenderDeviceD3D12Impl.h"
+#include "QueryD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 #include "GraphicsAccessories.hpp"
-#include "DeviceContextD3D12Impl.h"
+#include "DeviceContextD3D12Impl.hpp"
 
 namespace Diligent
 {

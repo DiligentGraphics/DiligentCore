@@ -27,8 +27,8 @@
 
 #include "pch.h"
 
-#include "ShaderResourceCacheD3D12.h"
-#include "BufferD3D12Impl.h"
+#include "ShaderResourceCacheD3D12.hpp"
+#include "BufferD3D12Impl.hpp"
 
 namespace Diligent
 {

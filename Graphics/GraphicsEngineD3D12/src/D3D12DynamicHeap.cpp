@@ -26,8 +26,8 @@
  */
 
 #include "pch.h"
-#include "D3D12DynamicHeap.h"
-#include "RenderDeviceD3D12Impl.h"
+#include "D3D12DynamicHeap.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {

@@ -26,11 +26,11 @@
  */
 
 #include "pch.h"
-#include "TextureBaseD3D11.h"
-#include "RenderDeviceD3D11Impl.h"
-#include "DeviceContextD3D11Impl.h"
+#include "TextureBaseD3D11.hpp"
+#include "RenderDeviceD3D11Impl.hpp"
+#include "DeviceContextD3D11Impl.hpp"
 #include "D3D11TypeConversions.h"
-#include "TextureViewD3D11Impl.h"
+#include "TextureViewD3D11Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

@@ -29,7 +29,7 @@
 
 #include "BaseInterfacesGL.h"
 #include "SamplerGL.h"
-#include "SamplerBase.h"
+#include "SamplerBase.hpp"
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
 #include "RenderDeviceGLImpl.h"

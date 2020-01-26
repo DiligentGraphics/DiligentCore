@@ -32,9 +32,9 @@
 
 #include "ShaderResourceBindingGL.h"
 #include "RenderDeviceGL.h"
-#include "ShaderResourceBindingBase.h"
+#include "ShaderResourceBindingBase.hpp"
 #include "GLProgramResources.h"
-#include "ShaderBase.h"
+#include "ShaderBase.hpp"
 #include "GLProgramResourceCache.h"
 #include "GLPipelineResourceLayout.h"
 

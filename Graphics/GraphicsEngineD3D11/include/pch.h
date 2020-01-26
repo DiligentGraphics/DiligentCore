@@ -74,8 +74,8 @@
 #include "Errors.h"
 #include "RefCntAutoPtr.h"
 #include "DebugUtilities.h"
-#include "D3DErrors.h"
-#include "RenderDeviceBase.h"
+#include "D3DErrors.hpp"
+#include "RenderDeviceBase.hpp"
 #include "D3D11TypeConversions.h"
 #include "ValidatedCast.h"
 #include <atlcomcli.h>

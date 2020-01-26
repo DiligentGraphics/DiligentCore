@@ -34,7 +34,7 @@
 
 #include "RenderDeviceVk.h"
 #include "PipelineStateVk.h"
-#include "PipelineStateBase.h"
+#include "PipelineStateBase.hpp"
 #include "PipelineLayout.h"
 #include "ShaderResourceLayoutVk.h"
 #include "ShaderVariableVk.h"

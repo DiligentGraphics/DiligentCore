@@ -26,8 +26,8 @@
  */
 
 #include "pch.h"
-#include "ResourceMappingImpl.h"
-#include "DeviceObjectBase.h"
+#include "ResourceMappingImpl.hpp"
+#include "DeviceObjectBase.hpp"
 
 using namespace std;
 

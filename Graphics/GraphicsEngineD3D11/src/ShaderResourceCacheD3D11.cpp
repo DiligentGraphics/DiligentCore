@@ -27,11 +27,11 @@
 
 #include "pch.h"
 
-#include "ShaderResourceCacheD3D11.h"
-#include "ShaderResourceLayoutD3D11.h"
-#include "TextureBaseD3D11.h"
-#include "BufferD3D11Impl.h"
-#include "SamplerD3D11Impl.h"
+#include "ShaderResourceCacheD3D11.hpp"
+#include "ShaderResourceLayoutD3D11.hpp"
+#include "TextureBaseD3D11.hpp"
+#include "BufferD3D11Impl.hpp"
+#include "SamplerD3D11Impl.hpp"
 #include "MemoryAllocator.h"
 
 namespace Diligent

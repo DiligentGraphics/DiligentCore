@@ -26,11 +26,11 @@
  */
 
 #include "pch.h"
-#include "SwapChainD3D12Impl.h"
-#include "RenderDeviceD3D12Impl.h"
-#include "DeviceContextD3D12Impl.h"
+#include "SwapChainD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
 #include "DXGITypeConversions.h"
-#include "TextureD3D12Impl.h"
+#include "TextureD3D12Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

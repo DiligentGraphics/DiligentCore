@@ -31,7 +31,7 @@
 /// Declaration of Diligent::PipelineLayout class
 #include <array>
 
-#include "ShaderBase.h"
+#include "ShaderBase.hpp"
 #include "ShaderResourceLayoutVk.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"

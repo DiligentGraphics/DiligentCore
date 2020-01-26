@@ -28,10 +28,10 @@
 #include "pch.h"
 #include <algorithm>
 
-#include "QueryManagerD3D12.h"
+#include "QueryManagerD3D12.hpp"
 #include "D3D12TypeConversions.h"
 #include "GraphicsAccessories.hpp"
-#include "CommandContext.h"
+#include "CommandContext.hpp"
 #include "Align.h"
 
 namespace Diligent

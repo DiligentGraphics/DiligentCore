@@ -27,17 +27,17 @@
 
 #include "pch.h"
 #include <dxgi1_4.h>
-#include "RenderDeviceD3D12Impl.h"
-#include "PipelineStateD3D12Impl.h"
-#include "ShaderD3D12Impl.h"
-#include "TextureD3D12Impl.h"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "PipelineStateD3D12Impl.hpp"
+#include "ShaderD3D12Impl.hpp"
+#include "TextureD3D12Impl.hpp"
 #include "DXGITypeConversions.h"
-#include "SamplerD3D12Impl.h"
-#include "BufferD3D12Impl.h"
-#include "ShaderResourceBindingD3D12Impl.h"
-#include "DeviceContextD3D12Impl.h"
-#include "FenceD3D12Impl.h"
-#include "QueryD3D12Impl.h"
+#include "SamplerD3D12Impl.hpp"
+#include "BufferD3D12Impl.hpp"
+#include "ShaderResourceBindingD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
+#include "FenceD3D12Impl.hpp"
+#include "QueryD3D12Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

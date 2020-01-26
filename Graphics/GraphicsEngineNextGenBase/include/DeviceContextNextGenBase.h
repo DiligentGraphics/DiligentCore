@@ -31,7 +31,7 @@
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"
 #include "RefCntAutoPtr.h"
-#include "DeviceContextBase.h"
+#include "DeviceContextBase.hpp"
 #include "RefCntAutoPtr.h"
 
 namespace Diligent

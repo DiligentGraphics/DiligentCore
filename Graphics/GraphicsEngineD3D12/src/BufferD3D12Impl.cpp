@@ -26,11 +26,11 @@
  */
 
 #include "pch.h"
-#include "BufferD3D12Impl.h"
-#include "RenderDeviceD3D12Impl.h"
-#include "DeviceContextD3D12Impl.h"
+#include "BufferD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
 #include "D3D12TypeConversions.h"
-#include "BufferViewD3D12Impl.h"
+#include "BufferViewD3D12Impl.hpp"
 #include "GraphicsAccessories.hpp"
 #include "DXGITypeConversions.h"
 #include "EngineMemory.h"

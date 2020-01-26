@@ -32,7 +32,7 @@
 #include <memory>
 
 #include "RenderDeviceVk.h"
-#include "RenderDeviceBase.h"
+#include "RenderDeviceBase.hpp"
 #include "RenderDeviceNextGenBase.h"
 #include "DescriptorPoolManager.h"
 #include "VulkanDynamicHeap.h"

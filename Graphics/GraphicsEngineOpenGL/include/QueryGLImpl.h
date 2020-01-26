@@ -32,7 +32,7 @@
 
 #include "QueryGL.h"
 #include "RenderDeviceGL.h"
-#include "QueryBase.h"
+#include "QueryBase.hpp"
 #include "GLObjectWrapper.h"
 #include "RenderDeviceGLImpl.h"
 

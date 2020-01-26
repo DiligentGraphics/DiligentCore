@@ -29,7 +29,7 @@
 #include "SPIRVShaderResources.hpp"
 #include "spirv_parser.hpp"
 #include "spirv_cross.hpp"
-#include "ShaderBase.h"
+#include "ShaderBase.hpp"
 #include "GraphicsAccessories.hpp"
 #include "StringTools.h"
 #include "Align.h"

@@ -50,13 +50,13 @@
 #include "Errors.h"
 #include "RefCntAutoPtr.h"
 #include "DebugUtilities.h"
-#include "D3DErrors.h"
-#include "RenderDeviceBase.h"
+#include "D3DErrors.hpp"
+#include "RenderDeviceBase.hpp"
 #include "ValidatedCast.h"
 #include <atlcomcli.h>
 
 #if USE_D3D12_LOADER
 // On Win32 we manually load d3d12.dll and get entry points,
 // but UWP does not support that, so we link with d3d12.lib
-#    include "D3D12Loader.h"
+#    include "D3D12Loader.hpp"
 #endif

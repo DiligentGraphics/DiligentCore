@@ -28,10 +28,10 @@
 #include "pch.h"
 
 #include <d3dcompiler.h>
-#include "ShaderResourcesD3D11.h"
-#include "ShaderBase.h"
-#include "ShaderResourceCacheD3D11.h"
-#include "RenderDeviceD3D11Impl.h"
+#include "ShaderResourcesD3D11.hpp"
+#include "ShaderBase.hpp"
+#include "ShaderResourceCacheD3D11.hpp"
+#include "RenderDeviceD3D11Impl.hpp"
 
 namespace Diligent
 {

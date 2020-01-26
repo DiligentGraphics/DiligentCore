@@ -33,8 +33,8 @@
 #include "DXGITypeConversions.h"
 
 #include "D3D12TypeDefinitions.h"
-#include "D3DTypeConversionImpl.h"
-#include "D3DViewDescConversionImpl.h"
+#include "D3DTypeConversionImpl.hpp"
+#include "D3DViewDescConversionImpl.hpp"
 #include "PlatformMisc.h"
 
 namespace Diligent

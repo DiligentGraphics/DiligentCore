@@ -32,8 +32,8 @@
 
 #include "ShaderResourceBindingVk.h"
 #include "RenderDeviceVk.h"
-#include "ShaderResourceBindingBase.h"
-#include "ShaderBase.h"
+#include "ShaderResourceBindingBase.hpp"
+#include "ShaderBase.hpp"
 #include "ShaderResourceCacheVk.h"
 #include "ShaderVariableVk.h"
 

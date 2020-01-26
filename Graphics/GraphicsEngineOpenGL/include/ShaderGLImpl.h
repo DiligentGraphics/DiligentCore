@@ -29,7 +29,7 @@
 
 #include "BaseInterfacesGL.h"
 #include "ShaderGL.h"
-#include "ShaderBase.h"
+#include "ShaderBase.hpp"
 #include "RenderDevice.h"
 #include "GLObjectWrapper.h"
 #include "RenderDeviceGLImpl.h"

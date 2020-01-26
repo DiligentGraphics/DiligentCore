@@ -27,10 +27,10 @@
 
 #include "pch.h"
 #include "d3dx12_win.h"
-#include "CommandContext.h"
-#include "TextureD3D12Impl.h"
-#include "BufferD3D12Impl.h"
-#include "CommandListManager.h"
+#include "CommandContext.hpp"
+#include "TextureD3D12Impl.hpp"
+#include "BufferD3D12Impl.hpp"
+#include "CommandListManager.hpp"
 #include "D3D12TypeConversions.h"
 
 

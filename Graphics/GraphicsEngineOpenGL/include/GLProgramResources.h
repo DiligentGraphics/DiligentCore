@@ -44,7 +44,7 @@
 #include "Object.h"
 #include "StringPool.h"
 #include "HashUtils.h"
-#include "ShaderResourceVariableBase.h"
+#include "ShaderResourceVariableBase.hpp"
 
 namespace Diligent
 {

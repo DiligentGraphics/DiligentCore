@@ -36,7 +36,7 @@
 #include "SamplerVkImpl.h"
 #include "ShaderVkImpl.h"
 #include "PipelineLayout.h"
-#include "ShaderResourceVariableBase.h"
+#include "ShaderResourceVariableBase.hpp"
 #include "StringTools.h"
 #include "PipelineStateVkImpl.h"
 

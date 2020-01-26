@@ -29,15 +29,15 @@
 
 #include <d3dcompiler.h>
 
-#include "ShaderResourceLayoutD3D11.h"
-#include "ShaderResourceCacheD3D11.h"
-#include "BufferD3D11Impl.h"
-#include "BufferViewD3D11Impl.h"
-#include "TextureBaseD3D11.h"
+#include "ShaderResourceLayoutD3D11.hpp"
+#include "ShaderResourceCacheD3D11.hpp"
+#include "BufferD3D11Impl.hpp"
+#include "BufferViewD3D11Impl.hpp"
+#include "TextureBaseD3D11.hpp"
 #include "TextureViewD3D11.h"
-#include "SamplerD3D11Impl.h"
-#include "ShaderD3D11Impl.h"
-#include "ShaderResourceVariableBase.h"
+#include "SamplerD3D11Impl.hpp"
+#include "ShaderD3D11Impl.hpp"
+#include "ShaderResourceVariableBase.hpp"
 
 namespace Diligent
 {
