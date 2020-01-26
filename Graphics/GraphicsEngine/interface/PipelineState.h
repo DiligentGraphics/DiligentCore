@@ -357,12 +357,12 @@ struct IPipelineState
 
 #    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
 
-#    define IPipelineState_BindStaticResources(This, ...)         (This)->pPipelineStateVtbl->BindStaticResources        ((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableCount(This, ...)      (This)->pPipelineStateVtbl->GetStaticVariableCount     ((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByName(This, ...)     (This)->pPipelineStateVtbl->GetStaticVariableByName    ((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByIndex(This, ...)    (This)->pPipelineStateVtbl->GetStaticVariableByIndex   ((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_CreateShaderResourceBinding(This, ...) (This)->pPipelineStateVtbl->CreateShaderResourceBinding((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_IsCompatibleWith(This, ...)            (This)->pPipelineStateVtbl->IsCompatibleWith           ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_BindStaticResources(This, ...)         (This)->pVtbl->PipelineState.BindStaticResources        ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableCount(This, ...)      (This)->pVtbl->PipelineState.GetStaticVariableCount     ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByName(This, ...)     (This)->pVtbl->PipelineState.GetStaticVariableByName    ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByIndex(This, ...)    (This)->pVtbl->PipelineState.GetStaticVariableByIndex   ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_CreateShaderResourceBinding(This, ...) (This)->pVtbl->PipelineState.CreateShaderResourceBinding((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_IsCompatibleWith(This, ...)            (This)->pVtbl->PipelineState.IsCompatibleWith           ((struct IPipelineState*)(This), __VA_ARGS__)
 
 // clang-format on
 

@@ -40,6 +40,7 @@ extern "C"
     int TestShaderResourceVariableCInterface(void* pVar, void* pObjectToSet);
     int TestShaderResourceBindingCInterface(void* pSRB);
     int TestShaderCInterface(void* pShader);
+    int TestPipelineStateCInterface(void* pPSO);
 }
 
 namespace Diligent
@@ -306,6 +307,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     RefCntAutoPtr<IPipelineState> pTestPSO;
     pDevice->CreatePipelineState(PSODesc, &pTestPSO);
     ASSERT_NE(pTestPSO, nullptr);
+    EXPECT_EQ(TestPipelineStateCInterface(pTestPSO), 0);
 
     {
         EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_VERTEX), 6u);
