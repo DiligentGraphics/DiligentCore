@@ -151,26 +151,39 @@ public:
 
 struct IResourceMapping;
 
+// clang-format off
+
+struct IResourceMappingMethods
+{
+    void   (*AddResource)         (struct IResourceMapping*, const Char* Name, class IDeviceObject* pObject, bool bIsUnique);
+    void   (*AddResourceArray)    (struct IResourceMapping*, const Char* Name, Uint32 StartIndex, class IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique);
+    void   (*RemoveResourceByName)(struct IResourceMapping*, const Char* Name, Uint32 ArrayIndex);
+    void   (*GetResource)         (struct IResourceMapping*, const Char* Name, class IDeviceObject** ppResource, Uint32 ArrayIndex);
+    size_t (*GetSize)             (struct IResourceMapping*);
+};
+
+// clang-format on
+
 struct IResourceMappingVtbl
 {
-    void (*AddResource)(const Char* Name, class IDeviceObject* pObject, bool bIsUnique);
-    void (*AddResourceArray)(const Char* Name, Uint32 StartIndex, class IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique);
-    void (*RemoveResourceByName)(const Char* Name, Uint32 ArrayIndex);
-    void (*GetResource)(const Char* Name, class IDeviceObject** ppResource, Uint32 ArrayIndex);
-    size_t (*GetSize)();
+    struct IObjectMethods          Object;
+    struct IResourceMappingMethods ResourceMapping;
 };
 
 struct IResourceMapping
 {
-    struct IObjectVtbl*      pObjectVtbl;
-    struct IResourceMapping* pResourceMappingVtbl;
+    struct IResourceMappingVtbl* pVtbl;
 };
 
-#    define IResourceMapping_AddResource(This, ...)          (This)->pResourceMappingVtbl->AddResource(This, __VA_ARGS__)
-#    define IResourceMapping_AddResourceArray(This, ...)     (This)->pResourceMappingVtbl->AddResourceArray(This, __VA_ARGS__)
-#    define IResourceMapping_RemoveResourceByName(This, ...) (This)->pResourceMappingVtbl->RemoveResourceByName(This, __VA_ARGS__)
-#    define IResourceMapping_GetResource(This, ...)          (This)->pResourceMappingVtbl->GetResource(This, __VA_ARGS__)
-#    define IResourceMapping_GetSize(This)                   (This)->pResourceMappingVtbl->GetSize(This)
+// clang-format off
+
+#    define IResourceMapping_AddResource(This, ...)          (This)->pVtbl->ResourceMapping.AddResource         ((struct IResourceMapping*)(This), __VA_ARGS__)
+#    define IResourceMapping_AddResourceArray(This, ...)     (This)->pVtbl->ResourceMapping.AddResourceArray    ((struct IResourceMapping*)(This), __VA_ARGS__)
+#    define IResourceMapping_RemoveResourceByName(This, ...) (This)->pVtbl->ResourceMapping.RemoveResourceByName((struct IResourceMapping*)(This), __VA_ARGS__)
+#    define IResourceMapping_GetResource(This, ...)          (This)->pVtbl->ResourceMapping.GetResource         ((struct IResourceMapping*)(This), __VA_ARGS__)
+#    define IResourceMapping_GetSize(This)                   (This)->pVtbl->ResourceMapping.GetSize             ((struct IResourceMapping*)(This))
+
+// clang-format on
 
 #endif
 
