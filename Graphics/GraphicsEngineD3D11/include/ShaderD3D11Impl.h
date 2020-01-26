@@ -66,9 +66,9 @@ public:
     }
 
     /// Implementation of IShader::GetResource() in Direct3D11 backend.
-    virtual ShaderResourceDesc GetResource(Uint32 Index) const override final
+    virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
     {
-        return GetHLSLResource(Index);
+        ResourceDesc = GetHLSLResource(Index);
     }
 
     /// Implementation of IShaderD3D::GetHLSLResource() method.

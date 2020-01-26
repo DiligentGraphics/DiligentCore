@@ -60,7 +60,7 @@ public:
     }
 
     /// Implementation of IShader::GetResource() in Vulkan backend.
-    virtual ShaderResourceDesc GetResource(Uint32 Index) const override final;
+    virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
 
     /// Implementation of IShaderVk::GetSPIRV().
     virtual const std::vector<uint32_t>& GetSPIRV() const override final

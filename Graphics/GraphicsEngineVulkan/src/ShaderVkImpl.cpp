@@ -145,17 +145,15 @@ ShaderVkImpl::~ShaderVkImpl()
 {
 }
 
-ShaderResourceDesc ShaderVkImpl::GetResource(Uint32 Index) const
+void ShaderVkImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const
 {
     auto ResCount = GetResourceCount();
     DEV_CHECK_ERR(Index < ResCount, "Resource index (", Index, ") is out of range");
-    ShaderResourceDesc ResourceDesc;
     if (Index < ResCount)
     {
         const auto& SPIRVResource = m_pShaderResources->GetResource(Index);
         ResourceDesc              = SPIRVResource.GetResourceDesc();
     }
-    return ResourceDesc;
 }
 
 } // namespace Diligent

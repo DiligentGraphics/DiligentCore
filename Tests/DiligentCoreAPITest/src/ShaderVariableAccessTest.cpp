@@ -56,7 +56,8 @@ void PrintShaderResources(IShader* pShader)
     ss << "Resources of shader '" << pShader->GetDesc().Name << "':" << std::endl;
     for (Uint32 res = 0; res < pShader->GetResourceCount(); ++res)
     {
-        auto ResDec = pShader->GetResource(res);
+        ShaderResourceDesc ResDec;
+        pShader->GetResourceDesc(res, ResDec);
 
         std::stringstream name_ss;
         name_ss << ResDec.Name;

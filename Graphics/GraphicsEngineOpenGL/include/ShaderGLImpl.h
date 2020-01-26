@@ -90,7 +90,7 @@ public:
     virtual Uint32 GetResourceCount() const override final;
 
     /// Implementation of IShader::GetResource() in OpenGL backend.
-    virtual ShaderResourceDesc GetResource(Uint32 Index) const override final;
+    virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
 
     static GLObjectWrappers::GLProgramObj LinkProgram(IShader** ppShaders, Uint32 NumShaders, bool IsSeparableProgram);
 

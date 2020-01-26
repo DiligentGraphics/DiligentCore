@@ -221,9 +221,8 @@ Uint32 ShaderGLImpl::GetResourceCount() const
     }
 }
 
-ShaderResourceDesc ShaderGLImpl::GetResource(Uint32 Index) const
+void ShaderGLImpl::GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const
 {
-    ShaderResourceDesc ResourceDesc;
     if (m_pDevice->GetDeviceCaps().Features.SeparablePrograms)
     {
         DEV_CHECK_ERR(Index < GetResourceCount(), "Index is out of range");
@@ -233,7 +232,6 @@ ShaderResourceDesc ShaderGLImpl::GetResource(Uint32 Index) const
     {
         LOG_WARNING_MESSAGE("Shader resource queries are not available when separate shader objects are unsupported");
     }
-    return ResourceDesc;
 }
 
 } // namespace Diligent

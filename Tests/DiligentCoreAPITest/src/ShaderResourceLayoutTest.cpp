@@ -74,7 +74,8 @@ protected:
         std::unordered_map<std::string, ShaderResourceDesc> Resources;
         for (Uint32 i = 0; i < ResCount; ++i)
         {
-            const auto& ResDesc = pShader->GetResource(i);
+            ShaderResourceDesc ResDesc;
+            pShader->GetResourceDesc(i, ResDesc);
             Resources.emplace(ResDesc.Name, ResDesc);
         }
 

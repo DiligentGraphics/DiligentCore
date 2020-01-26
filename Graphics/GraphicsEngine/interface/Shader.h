@@ -302,7 +302,7 @@ public:
     virtual Uint32 GetResourceCount() const = 0;
 
     /// Returns the pointer to the array of shader resources
-    virtual ShaderResourceDesc GetResource(Uint32 Index) const = 0;
+    virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const = 0;
 };
 
 #else
@@ -314,7 +314,7 @@ struct IShader;
 struct IShaderMethods
 {
     Uint32                    (*GetResourceCount)(struct IShader*);
-    struct ShaderResourceDesc (*GetResource)     (struct IShader*, Uint32 Index);
+    struct ShaderResourceDesc (*GetResourceDesc) (struct IShader*, Uint32 Index);
 };
 
 // clang-format on
@@ -335,8 +335,8 @@ struct IShader
 
 #    define IShader_GetDesc(This) (const struct ShaderDesc*)IDeviceObject_GetDesc(This)
 
-#    define IShader_GetResourceCount(This) (This)->pVtbl->Shader.GetResourceCount((struct IShader*)(This))
-#    define IShader_GetResource(This, ...) (This)->pVtbl->Shader.GetResource     ((struct IShader*)(This), __VA_ARGS__)
+#    define IShader_GetResourceCount(This)     (This)->pVtbl->Shader.GetResourceCount((struct IShader*)(This))
+#    define IShader_GetResourceDesc(This, ...) (This)->pVtbl->Shader.GetResourceDesc ((struct IShader*)(This), __VA_ARGS__)
 
 // clang-format on
 
