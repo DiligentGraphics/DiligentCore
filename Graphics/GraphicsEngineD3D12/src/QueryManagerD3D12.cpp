@@ -32,7 +32,7 @@
 #include "D3D12TypeConversions.h"
 #include "GraphicsAccessories.hpp"
 #include "CommandContext.hpp"
-#include "Align.h"
+#include "Align.hpp"
 
 namespace Diligent
 {

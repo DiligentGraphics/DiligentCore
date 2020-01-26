@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "StringTools.h"
+#include "StringTools.hpp"
 
 #include "gtest/gtest.h"
 

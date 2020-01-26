@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "DefaultRawMemoryAllocator.h"
-#include "FixedBlockMemoryAllocator.h"
+#include "DefaultRawMemoryAllocator.hpp"
+#include "FixedBlockMemoryAllocator.hpp"
 
 #include "gtest/gtest.h"
 

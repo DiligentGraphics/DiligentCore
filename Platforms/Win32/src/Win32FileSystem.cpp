@@ -26,8 +26,8 @@
  */
 
 #include "Win32FileSystem.h"
-#include "Errors.h"
-#include "../../Common/interface/StringTools.h"
+#include "Errors.hpp"
+#include "../../Common/interface/StringTools.hpp"
 
 // We can't use namespace Diligent before #including <Windows.h> because Diligent::INTERFACE_ID will confilct with windows InterfaceID
 //using namespace Diligent;

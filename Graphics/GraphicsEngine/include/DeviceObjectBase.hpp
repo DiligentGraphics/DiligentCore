@@ -32,9 +32,9 @@
 
 #include <cstring>
 #include <cstdio>
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 #include "ObjectBase.h"
-#include "UniqueIdentifier.h"
+#include "UniqueIdentifier.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

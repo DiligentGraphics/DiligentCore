@@ -7,28 +7,28 @@ set(INCLUDE
 )
 
 set(INTERFACE 
-    interface/AdvancedMath.h
-    interface/Align.h
-    interface/BasicMath.h
-    interface/BasicFileStream.h
-    interface/DataBlobImpl.h
-    interface/DefaultRawMemoryAllocator.h
-    interface/FileWrapper.h
-    interface/FixedBlockMemoryAllocator.h
-    interface/HashUtils.h
-    interface/LockHelper.h 
-    interface/MemoryFileStream.h 
+    interface/AdvancedMath.hpp
+    interface/Align.hpp
+    interface/BasicMath.hpp
+    interface/BasicFileStream.hpp
+    interface/DataBlobImpl.hpp
+    interface/DefaultRawMemoryAllocator.hpp
+    interface/FileWrapper.hpp
+    interface/FixedBlockMemoryAllocator.hpp
+    interface/HashUtils.hpp
+    interface/LockHelper.hpp 
+    interface/MemoryFileStream.hpp 
     interface/ObjectBase.h
-    interface/RefCntAutoPtr.h
-    interface/RefCountedObjectImpl.h
-    interface/STDAllocator.h
-    interface/StringDataBlobImpl.h
-    interface/StringTools.h
-    interface/StringPool.h
-    interface/ThreadSignal.h
-    interface/Timer.h
-    interface/UniqueIdentifier.h
-    interface/ValidatedCast.h
+    interface/RefCntAutoPtr.hpp
+    interface/RefCountedObjectImpl.hpp
+    interface/STDAllocator.hpp
+    interface/StringDataBlobImpl.hpp
+    interface/StringTools.hpp
+    interface/StringPool.hpp
+    interface/ThreadSignal.hpp
+    interface/Timer.hpp
+    interface/UniqueIdentifier.hpp
+    interface/ValidatedCast.hpp
 )
 
 set(SOURCE 

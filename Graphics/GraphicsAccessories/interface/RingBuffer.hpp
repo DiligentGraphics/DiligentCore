@@ -34,8 +34,8 @@
 #include <deque>
 #include "../../../Primitives/interface/MemoryAllocator.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.h"
-#include "../../../Common/interface/Align.h"
-#include "../../../Common/interface/STDAllocator.h"
+#include "../../../Common/interface/Align.hpp"
+#include "../../../Common/interface/STDAllocator.hpp"
 
 namespace Diligent
 {

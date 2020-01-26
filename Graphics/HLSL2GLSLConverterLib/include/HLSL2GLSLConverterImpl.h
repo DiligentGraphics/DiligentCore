@@ -36,7 +36,7 @@
 #include "ObjectBase.h"
 #include "HLSLKeywords.h"
 #include "Shader.h"
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 #include "HLSLKeywords.h"
 
 namespace Diligent

@@ -35,7 +35,7 @@
 #include "TextureVkImpl.hpp"
 #include "BufferVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {

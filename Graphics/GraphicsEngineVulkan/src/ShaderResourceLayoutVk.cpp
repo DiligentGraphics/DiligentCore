@@ -37,7 +37,7 @@
 #include "ShaderVkImpl.hpp"
 #include "PipelineLayout.hpp"
 #include "ShaderResourceVariableBase.hpp"
-#include "StringTools.h"
+#include "StringTools.hpp"
 #include "PipelineStateVkImpl.hpp"
 
 namespace Diligent

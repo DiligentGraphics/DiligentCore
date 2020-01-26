@@ -29,8 +29,8 @@
 
 #include "GraphicsTypes.h"
 #include "TextureView.h"
-#include "LockHelper.h"
-#include "HashUtils.h"
+#include "LockHelper.hpp"
+#include "HashUtils.hpp"
 #include "GLObjectWrapper.hpp"
 
 namespace Diligent

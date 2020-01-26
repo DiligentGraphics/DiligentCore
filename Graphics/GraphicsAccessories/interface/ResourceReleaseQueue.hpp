@@ -37,7 +37,7 @@
 #include <deque>
 
 #include "../../../Primitives/interface/MemoryAllocator.h"
-#include "../../../Common/interface/STDAllocator.h"
+#include "../../../Common/interface/STDAllocator.hpp"
 #include "../../../Platforms/interface/Atomics.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.h"
 

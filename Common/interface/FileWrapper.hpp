@@ -27,45 +27,69 @@
 
 #pragma once
 
-/// \file
-/// Implementation of the MemoryFileStream class
-
-#include "../../Primitives/interface/FileStream.h"
-#include "../../Primitives/interface/DataBlob.h"
-#include "ObjectBase.h"
-#include "RefCountedObjectImpl.h"
-#include "RefCntAutoPtr.h"
+#include "../../Primitives/interface/Errors.hpp"
+#include "../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Platforms/interface/FileSystem.h"
 
 namespace Diligent
 {
 
-/// Memory file stream implementation
-class MemoryFileStream : public ObjectBase<IFileStream>
+class FileWrapper
 {
 public:
-    typedef ObjectBase<IFileStream> TBase;
+    FileWrapper() :
+        m_pFile{nullptr}
+    {}
 
-    MemoryFileStream(IReferenceCounters* pRefCounters,
-                     IDataBlob*          pData);
+    FileWrapper(const Char*     Path,
+                EFileAccessMode Access = EFileAccessMode::Read) :
+        m_pFile{nullptr}
+    {
+        FileOpenAttribs OpenAttribs(Path, Access);
+        Open(OpenAttribs);
+    }
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    ~FileWrapper()
+    {
+        Close();
+    }
 
-    /// Reads data from the stream
-    virtual void Read(IDataBlob* pData) override;
+    void Open(const FileOpenAttribs& OpenAttribs)
+    {
+        VERIFY(!m_pFile, "Another file already attached");
+        Close();
+        m_pFile = FileSystem::OpenFile(OpenAttribs);
+    }
 
-    /// Reads data from the stream
-    virtual bool Read(void* Data, size_t Size) override;
+    CFile* Detach()
+    {
+        CFile* pFile = m_pFile;
+        m_pFile      = NULL;
+        return pFile;
+    }
 
-    /// Writes data to the stream
-    virtual bool Write(const void* Data, size_t Size) override;
+    void Attach(CFile* pFile)
+    {
+        VERIFY(!m_pFile, "Another file already attached");
+        Close();
+        m_pFile = pFile;
+    }
 
-    virtual size_t GetSize() override;
+    void Close()
+    {
+        if (m_pFile)
+            FileSystem::ReleaseFile(m_pFile);
+        m_pFile = nullptr;
+    }
 
-    virtual bool IsValid() override;
+    operator CFile*() { return m_pFile; }
+    CFile* operator->() { return m_pFile; }
 
 private:
-    RefCntAutoPtr<IDataBlob> m_DataBlob;
-    size_t                   m_CurrentOffset = 0;
+    FileWrapper(const FileWrapper&);
+    const FileWrapper& operator=(const FileWrapper&);
+
+    CFile* m_pFile;
 };
 
 } // namespace Diligent

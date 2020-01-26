@@ -32,7 +32,7 @@
 #include <iostream>
 
 #include "DebugOutput.h"
-#include "FormatString.h"
+#include "FormatString.hpp"
 
 namespace Diligent
 {

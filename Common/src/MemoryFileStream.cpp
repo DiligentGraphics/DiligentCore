@@ -28,7 +28,7 @@
 #include <algorithm>
 #include "pch.h"
 
-#include "MemoryFileStream.h"
+#include "MemoryFileStream.hpp"
 
 namespace Diligent
 {

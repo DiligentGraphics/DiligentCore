@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "FixedBlockMemoryAllocator.h"
+#include "FixedBlockMemoryAllocator.hpp"
 
 namespace Diligent
 {

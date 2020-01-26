@@ -29,7 +29,7 @@
 
 #include "GraphicsAccessories.hpp"
 #include "DebugUtilities.h"
-#include "Align.h"
+#include "Align.hpp"
 
 namespace Diligent
 {

@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "Timer.h"
+#include "Timer.hpp"
 
 using namespace std::chrono;
 namespace Diligent

@@ -36,9 +36,9 @@
 #include <vector>
 #include <cstring>
 #include <memory>
-#include "../../Primitives/interface/Errors.h"
+#include "../../Primitives/interface/Errors.hpp"
 #include "../../Primitives/interface/MemoryAllocator.h"
-#include "STDAllocator.h"
+#include "STDAllocator.hpp"
 
 namespace Diligent
 {

@@ -34,7 +34,7 @@
 #include "../../GraphicsEngine/interface/SwapChain.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
-#include "../../../Common/interface/RefCntAutoPtr.h"
+#include "../../../Common/interface/RefCntAutoPtr.hpp"
 
 namespace Diligent
 {

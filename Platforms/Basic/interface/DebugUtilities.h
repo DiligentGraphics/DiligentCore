@@ -27,8 +27,8 @@
 
 #pragma once
 
-#include "../../../Primitives/interface/FormatString.h"
-#include "../../../Primitives/interface/Errors.h"
+#include "../../../Primitives/interface/FormatString.hpp"
+#include "../../../Primitives/interface/Errors.hpp"
 #include "BasicPlatformDebug.h"
 
 #ifdef _DEBUG

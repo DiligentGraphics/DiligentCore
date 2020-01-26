@@ -33,9 +33,9 @@
 #include <algorithm>
 
 #include "TextureUploaderGL.hpp"
-#include "ThreadSignal.h"
+#include "ThreadSignal.hpp"
 #include "GraphicsAccessories.hpp"
-#include "Align.h"
+#include "Align.hpp"
 
 namespace Diligent
 {

@@ -32,7 +32,7 @@
 
 #include "DeviceObject.h"
 #include <unordered_map>
-#include "STDAllocator.h"
+#include "STDAllocator.hpp"
 
 namespace Diligent
 {

@@ -34,7 +34,7 @@
 #include "GraphicsAccessories.hpp"
 #include "DXGITypeConversions.h"
 #include "EngineMemory.h"
-#include "StringTools.h"
+#include "StringTools.hpp"
 
 namespace Diligent
 {

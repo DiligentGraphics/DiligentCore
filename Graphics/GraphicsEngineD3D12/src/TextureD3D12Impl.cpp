@@ -34,7 +34,7 @@
 #include "DXGITypeConversions.h"
 #include "d3dx12_win.h"
 #include "EngineMemory.h"
-#include "StringTools.h"
+#include "StringTools.hpp"
 
 using namespace Diligent;
 

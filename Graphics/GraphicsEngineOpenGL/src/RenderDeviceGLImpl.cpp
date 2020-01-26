@@ -47,7 +47,7 @@
 #include "FenceGLImpl.hpp"
 #include "QueryGLImpl.hpp"
 #include "EngineMemory.h"
-#include "StringTools.h"
+#include "StringTools.hpp"
 
 namespace Diligent
 {

@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "UniqueIdentifier.h"
+#include "UniqueIdentifier.hpp"
 
 namespace GLObjectWrappers
 {

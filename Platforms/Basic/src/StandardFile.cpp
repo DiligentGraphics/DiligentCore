@@ -27,7 +27,7 @@
 
 #include "StandardFile.h"
 #include "DebugUtilities.h"
-#include "Errors.h"
+#include "Errors.hpp"
 
 StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol) :
     BasicFile{OpenAttribs, SlashSymbol},

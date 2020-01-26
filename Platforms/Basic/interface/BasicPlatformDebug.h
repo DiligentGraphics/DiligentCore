@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "../../../Primitives/interface/Errors.h"
+#include "../../../Primitives/interface/Errors.hpp"
 
 struct BasicPlatformDebug
 {

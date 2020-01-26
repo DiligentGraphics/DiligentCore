@@ -30,9 +30,9 @@
 #include "Atomics.h"
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 #include "DeviceContextBase.hpp"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {

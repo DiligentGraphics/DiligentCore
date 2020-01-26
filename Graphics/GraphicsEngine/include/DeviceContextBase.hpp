@@ -38,7 +38,7 @@
 #include "Sampler.h"
 #include "ObjectBase.h"
 #include "DebugUtilities.h"
-#include "ValidatedCast.h"
+#include "ValidatedCast.hpp"
 #include "GraphicsAccessories.hpp"
 #include "TextureBase.hpp"
 

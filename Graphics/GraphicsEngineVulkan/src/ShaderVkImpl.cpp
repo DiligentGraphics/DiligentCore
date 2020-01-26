@@ -31,7 +31,7 @@
 
 #include "ShaderVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
-#include "DataBlobImpl.h"
+#include "DataBlobImpl.hpp"
 #include "GLSLSourceBuilder.hpp"
 
 #if !NO_GLSLANG

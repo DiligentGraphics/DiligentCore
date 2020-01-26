@@ -102,7 +102,7 @@
 
 #include "PipelineState.h"
 #include "ShaderBase.hpp"
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 #include "ShaderResourceCacheVk.hpp"
 #include "SPIRVShaderResources.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"

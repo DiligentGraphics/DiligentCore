@@ -31,8 +31,8 @@
 
 #include "TextureUploader.hpp"
 #include "../../../Common/interface/ObjectBase.h"
-#include "../../../Common/interface/HashUtils.h"
-#include "../../../Common/interface/RefCntAutoPtr.h"
+#include "../../../Common/interface/HashUtils.hpp"
+#include "../../../Common/interface/RefCntAutoPtr.hpp"
 
 namespace std
 {

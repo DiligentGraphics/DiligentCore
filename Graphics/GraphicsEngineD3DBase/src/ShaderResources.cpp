@@ -27,11 +27,11 @@
 
 #include "pch.h"
 #include "EngineMemory.h"
-#include "StringTools.h"
+#include "StringTools.hpp"
 #include "ShaderResources.hpp"
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 #include "ShaderResourceVariableBase.hpp"
-#include "Align.h"
+#include "Align.hpp"
 
 namespace Diligent
 {

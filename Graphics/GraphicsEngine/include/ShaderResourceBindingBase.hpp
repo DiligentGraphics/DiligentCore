@@ -33,7 +33,7 @@
 #include "ShaderResourceBinding.h"
 #include "ObjectBase.h"
 #include "GraphicsTypes.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {

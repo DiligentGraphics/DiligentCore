@@ -28,7 +28,7 @@
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "PipelineState.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {

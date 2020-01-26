@@ -34,7 +34,7 @@
 #include "RenderDeviceD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
 #include "D3D12TypeConversions.h"
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {

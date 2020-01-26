@@ -42,8 +42,8 @@
 #include <vector>
 
 #include "Object.h"
-#include "StringPool.h"
-#include "HashUtils.h"
+#include "StringPool.hpp"
+#include "HashUtils.hpp"
 #include "ShaderResourceVariableBase.hpp"
 
 namespace Diligent

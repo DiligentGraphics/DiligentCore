@@ -33,7 +33,7 @@
 #include "TextureViewVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "EngineMemory.h"
-#include "StringTools.h"
+#include "StringTools.hpp"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent

@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "BasicMath.h"
-#include "AdvancedMath.h"
+#include "BasicMath.hpp"
+#include "AdvancedMath.hpp"
 
 #include "gtest/gtest.h"
 

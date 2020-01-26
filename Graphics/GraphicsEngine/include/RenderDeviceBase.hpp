@@ -35,14 +35,14 @@
 #include "Defines.h"
 #include "ResourceMappingImpl.hpp"
 #include "StateObjectsRegistry.hpp"
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 #include "ObjectBase.h"
 #include "DeviceContext.h"
 #include "SwapChain.h"
 #include "GraphicsAccessories.hpp"
-#include "FixedBlockMemoryAllocator.h"
+#include "FixedBlockMemoryAllocator.hpp"
 #include "EngineMemory.h"
-#include "STDAllocator.h"
+#include "STDAllocator.hpp"
 
 namespace std
 {

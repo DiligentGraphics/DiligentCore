@@ -30,7 +30,7 @@
 #include "ShaderGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
-#include "DataBlobImpl.h"
+#include "DataBlobImpl.hpp"
 #include "GLSLSourceBuilder.hpp"
 
 using namespace Diligent;

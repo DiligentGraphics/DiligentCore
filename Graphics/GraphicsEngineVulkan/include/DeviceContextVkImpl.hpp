@@ -45,7 +45,7 @@
 #include "TextureVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
 #include "QueryVkImpl.hpp"
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 #include "ManagedVulkanObject.hpp"
 #include "QueryManagerVk.hpp"
 

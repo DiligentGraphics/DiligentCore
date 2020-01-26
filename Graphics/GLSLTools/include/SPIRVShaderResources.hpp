@@ -42,9 +42,9 @@
 
 #include "Shader.h"
 #include "RenderDevice.h"
-#include "STDAllocator.h"
-#include "RefCntAutoPtr.h"
-#include "StringPool.h"
+#include "STDAllocator.hpp"
+#include "RefCntAutoPtr.hpp"
+#include "StringPool.hpp"
 
 namespace spirv_cross
 {

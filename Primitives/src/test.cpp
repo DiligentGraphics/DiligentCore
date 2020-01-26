@@ -30,6 +30,6 @@
 #include "ReferenceCounters.h"
 #include "Object.h"
 #include "MemoryAllocator.h"
-#include "FormatString.h"
+#include "FormatString.hpp"
 #include "FileStream.h"
 #include "DataBlob.h"

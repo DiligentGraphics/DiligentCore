@@ -31,10 +31,10 @@
 #include <condition_variable>
 #include <algorithm>
 
-#include "DefaultRawMemoryAllocator.h"
-#include "RefCntAutoPtr.h"
-#include "RefCountedObjectImpl.h"
-#include "ThreadSignal.h"
+#include "DefaultRawMemoryAllocator.hpp"
+#include "RefCntAutoPtr.hpp"
+#include "RefCountedObjectImpl.hpp"
+#include "ThreadSignal.hpp"
 
 #include "gtest/gtest.h"
 

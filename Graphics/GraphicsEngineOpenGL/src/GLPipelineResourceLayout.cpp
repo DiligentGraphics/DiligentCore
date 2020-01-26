@@ -28,7 +28,7 @@
 #include "pch.h"
 #include <array>
 #include "GLPipelineResourceLayout.hpp"
-#include "Align.h"
+#include "Align.hpp"
 #include "PlatformMisc.h"
 #include "ShaderBase.hpp"
 

@@ -27,7 +27,7 @@
 #include <sstream>
 
 #include "VulkanUtilities/VulkanFencePool.hpp"
-#include "Errors.h"
+#include "Errors.hpp"
 #include "DebugUtilities.h"
 
 namespace VulkanUtilities

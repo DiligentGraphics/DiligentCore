@@ -33,7 +33,7 @@
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/Query.h"
-#include "../../../Common/interface/RefCntAutoPtr.h"
+#include "../../../Common/interface/RefCntAutoPtr.hpp"
 
 namespace Diligent
 {

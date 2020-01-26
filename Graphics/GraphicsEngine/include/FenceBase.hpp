@@ -32,7 +32,7 @@
 
 #include "DeviceObjectBase.hpp"
 #include "GraphicsTypes.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {

@@ -30,7 +30,7 @@
 #include "../../Platforms/interface/PlatformDefinitions.h"
 #include "../../Primitives/interface/FlagEnum.h"
 
-#include "BasicMath.h"
+#include "BasicMath.hpp"
 
 namespace Diligent
 {

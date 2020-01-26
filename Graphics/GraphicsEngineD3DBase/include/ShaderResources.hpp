@@ -62,9 +62,9 @@
 #include <d3dcommon.h>
 
 #include "ShaderD3D.h"
-#include "STDAllocator.h"
-#include "HashUtils.h"
-#include "StringPool.h"
+#include "STDAllocator.hpp"
+#include "HashUtils.hpp"
+#include "StringPool.hpp"
 #include "D3DShaderResourceLoader.hpp"
 #include "PipelineState.h"
 

@@ -29,8 +29,8 @@
 #include <D3Dcompiler.h>
 
 #include "D3DErrors.hpp"
-#include "DataBlobImpl.h"
-#include "RefCntAutoPtr.h"
+#include "DataBlobImpl.hpp"
+#include "RefCntAutoPtr.hpp"
 #include <atlcomcli.h>
 #include "ShaderD3DBase.hpp"
 

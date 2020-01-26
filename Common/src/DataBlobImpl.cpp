@@ -28,7 +28,7 @@
 #include "pch.h"
 
 
-#include "DataBlobImpl.h"
+#include "DataBlobImpl.hpp"
 
 namespace Diligent
 {

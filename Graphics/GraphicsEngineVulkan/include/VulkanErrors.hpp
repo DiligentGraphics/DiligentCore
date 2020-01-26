@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "Errors.h"
+#include "Errors.hpp"
 #include "DebugUtilities.h"
 #include "VulkanUtilities/VulkanDebug.hpp"
 

@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "DefaultRawMemoryAllocator.h"
+#include "DefaultRawMemoryAllocator.hpp"
 
 namespace Diligent
 {

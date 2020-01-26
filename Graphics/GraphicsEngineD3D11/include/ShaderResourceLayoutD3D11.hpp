@@ -34,7 +34,7 @@
 #include "ShaderBase.hpp"
 #include "ShaderResourceCacheD3D11.hpp"
 #include "EngineD3D11Defines.h"
-#include "STDAllocator.h"
+#include "STDAllocator.hpp"
 #include "ShaderVariableD3DBase.hpp"
 #include "ShaderResourcesD3D11.hpp"
 

@@ -31,8 +31,8 @@
 #include "GraphicsTypes.h"
 #include "Buffer.h"
 #include "InputLayout.h"
-#include "LockHelper.h"
-#include "HashUtils.h"
+#include "LockHelper.hpp"
+#include "HashUtils.hpp"
 #include "DeviceContextBase.hpp"
 #include "BaseInterfacesGL.h"
 

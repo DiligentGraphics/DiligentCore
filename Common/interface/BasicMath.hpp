@@ -51,7 +51,7 @@
 #include <cmath>
 #include <algorithm>
 
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 
 #ifdef _MSC_VER
 #    pragma warning(push)

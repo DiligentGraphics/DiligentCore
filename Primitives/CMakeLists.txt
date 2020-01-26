@@ -13,9 +13,9 @@ set(INTERFACE
     interface/DataBlob.h
     interface/DebugOutput.h
     interface/FlagEnum.h
-    interface/Errors.h
+    interface/Errors.hpp
     interface/FileStream.h
-    interface/FormatString.h
+    interface/FormatString.hpp
     interface/InterfaceID.h
     interface/MemoryAllocator.h
     interface/Object.h

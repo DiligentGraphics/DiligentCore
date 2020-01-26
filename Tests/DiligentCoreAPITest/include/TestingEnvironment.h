@@ -31,7 +31,7 @@
 
 #include "RenderDevice.h"
 #include "DeviceContext.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 #include "SwapChain.h"
 #include "GraphicsTypesOutputInserters.hpp"
 

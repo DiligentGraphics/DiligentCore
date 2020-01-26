@@ -29,7 +29,7 @@
 
 #include "GraphicsTypes.h"
 #include "GLObjectWrapper.hpp"
-#include "UniqueIdentifier.h"
+#include "UniqueIdentifier.hpp"
 #include "GLContext.hpp"
 
 namespace Diligent

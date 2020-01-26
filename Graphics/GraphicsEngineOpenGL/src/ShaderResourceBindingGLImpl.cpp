@@ -29,7 +29,7 @@
 #include "ShaderResourceBindingGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
 #include "ShaderGLImpl.hpp"
-#include "FixedBlockMemoryAllocator.h"
+#include "FixedBlockMemoryAllocator.hpp"
 
 namespace Diligent
 {

@@ -33,8 +33,8 @@
 #include "ResourceMapping.h"
 #include "ObjectBase.h"
 #include <unordered_map>
-#include "HashUtils.h"
-#include "STDAllocator.h"
+#include "HashUtils.hpp"
+#include "STDAllocator.hpp"
 
 namespace Diligent
 {

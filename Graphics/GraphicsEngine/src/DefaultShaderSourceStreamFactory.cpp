@@ -28,9 +28,9 @@
 #include "pch.h"
 #include "DefaultShaderSourceStreamFactory.h"
 #include "ObjectBase.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
-#include "BasicFileStream.h"
+#include "BasicFileStream.hpp"
 
 namespace Diligent
 {

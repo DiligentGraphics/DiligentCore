@@ -26,7 +26,7 @@
  */
 
 #include "RingBuffer.hpp"
-#include "DefaultRawMemoryAllocator.h"
+#include "DefaultRawMemoryAllocator.hpp"
 
 #include "gtest/gtest.h"
 

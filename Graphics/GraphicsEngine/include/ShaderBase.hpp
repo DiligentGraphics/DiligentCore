@@ -34,10 +34,10 @@
 
 #include "Shader.h"
 #include "DeviceObjectBase.hpp"
-#include "STDAllocator.h"
+#include "STDAllocator.hpp"
 #include "PlatformMisc.h"
 #include "EngineMemory.h"
-#include "Align.h"
+#include "Align.hpp"
 
 namespace Diligent
 {

@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Common/interface/StringPool.h"
+#include "DiligentCore/Common/interface/StringPool.hpp"

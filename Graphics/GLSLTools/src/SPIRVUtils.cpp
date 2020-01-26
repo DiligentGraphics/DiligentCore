@@ -39,8 +39,8 @@
 
 #include "SPIRVUtils.hpp"
 #include "DebugUtilities.h"
-#include "DataBlobImpl.h"
-#include "RefCntAutoPtr.h"
+#include "DataBlobImpl.hpp"
+#include "RefCntAutoPtr.hpp"
 
 #include "spirv-tools/optimizer.hpp"
 

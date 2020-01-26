@@ -35,10 +35,10 @@
 
 #include "PipelineState.h"
 #include "DeviceObjectBase.hpp"
-#include "STDAllocator.h"
+#include "STDAllocator.hpp"
 #include "EngineMemory.h"
 #include "GraphicsAccessories.hpp"
-#include "StringPool.h"
+#include "StringPool.hpp"
 
 namespace Diligent
 {

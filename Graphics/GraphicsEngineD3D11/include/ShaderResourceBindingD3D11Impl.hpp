@@ -35,7 +35,7 @@
 #include "ShaderResourceBindingBase.hpp"
 #include "ShaderResourceCacheD3D11.hpp"
 #include "ShaderResourceLayoutD3D11.hpp"
-#include "STDAllocator.h"
+#include "STDAllocator.hpp"
 
 namespace Diligent
 {

@@ -27,7 +27,7 @@
 
 #include "D3D12/D3D12DebugLayerSetNameBugWorkaround.h"
 
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 
 #ifndef NOMINMAX
 #    define NOMINMAX

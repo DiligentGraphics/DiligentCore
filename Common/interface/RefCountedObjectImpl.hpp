@@ -34,8 +34,8 @@
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "../../Platforms/interface/Atomics.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.h"
-#include "LockHelper.h"
-#include "ValidatedCast.h"
+#include "LockHelper.hpp"
+#include "ValidatedCast.hpp"
 
 namespace Diligent
 {

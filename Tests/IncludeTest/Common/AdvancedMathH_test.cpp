@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Common/interface/AdvancedMath.h"
+#include "DiligentCore/Common/interface/AdvancedMath.hpp"

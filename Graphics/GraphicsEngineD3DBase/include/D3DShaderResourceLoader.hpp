@@ -32,7 +32,7 @@
 #include <unordered_set>
 
 #include "Shader.h"
-#include "StringTools.h"
+#include "StringTools.hpp"
 
 /// \file
 /// D3D shader resource loading

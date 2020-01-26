@@ -34,7 +34,7 @@
 #include <mutex>
 #include "GraphicsTypes.h"
 #include "Constants.h"
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent

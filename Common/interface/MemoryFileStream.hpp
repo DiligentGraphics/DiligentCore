@@ -28,25 +28,25 @@
 #pragma once
 
 /// \file
-/// Implementation of the BasicFileStream class
+/// Implementation of the MemoryFileStream class
 
 #include "../../Primitives/interface/FileStream.h"
 #include "../../Primitives/interface/DataBlob.h"
 #include "ObjectBase.h"
-#include "FileWrapper.h"
+#include "RefCountedObjectImpl.hpp"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
 
-/// Basic file stream implementation
-class BasicFileStream : public ObjectBase<IFileStream>
+/// Memory file stream implementation
+class MemoryFileStream : public ObjectBase<IFileStream>
 {
 public:
     typedef ObjectBase<IFileStream> TBase;
 
-    BasicFileStream(IReferenceCounters* pRefCounters,
-                    const Char*         Path,
-                    EFileAccessMode     Access = EFileAccessMode::Read);
+    MemoryFileStream(IReferenceCounters* pRefCounters,
+                     IDataBlob*          pData);
 
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
@@ -64,7 +64,8 @@ public:
     virtual bool IsValid() override;
 
 private:
-    FileWrapper m_FileWrpr;
+    RefCntAutoPtr<IDataBlob> m_DataBlob;
+    size_t                   m_CurrentOffset = 0;
 };
 
 } // namespace Diligent

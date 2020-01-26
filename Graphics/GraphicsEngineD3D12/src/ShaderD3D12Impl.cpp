@@ -31,7 +31,7 @@
 
 #include "ShaderD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "DataBlobImpl.h"
+#include "DataBlobImpl.hpp"
 
 namespace Diligent
 {

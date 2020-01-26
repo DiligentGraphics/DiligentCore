@@ -27,69 +27,44 @@
 
 #pragma once
 
-#include "../../Primitives/interface/Errors.h"
-#include "../../Platforms/Basic/interface/DebugUtilities.h"
-#include "../../Platforms/interface/FileSystem.h"
+/// \file
+/// Implementation of the BasicFileStream class
+
+#include "../../Primitives/interface/FileStream.h"
+#include "../../Primitives/interface/DataBlob.h"
+#include "ObjectBase.h"
+#include "FileWrapper.hpp"
 
 namespace Diligent
 {
 
-class FileWrapper
+/// Basic file stream implementation
+class BasicFileStream : public ObjectBase<IFileStream>
 {
 public:
-    FileWrapper() :
-        m_pFile{nullptr}
-    {}
+    typedef ObjectBase<IFileStream> TBase;
 
-    FileWrapper(const Char*     Path,
-                EFileAccessMode Access = EFileAccessMode::Read) :
-        m_pFile{nullptr}
-    {
-        FileOpenAttribs OpenAttribs(Path, Access);
-        Open(OpenAttribs);
-    }
+    BasicFileStream(IReferenceCounters* pRefCounters,
+                    const Char*         Path,
+                    EFileAccessMode     Access = EFileAccessMode::Read);
 
-    ~FileWrapper()
-    {
-        Close();
-    }
+    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
-    void Open(const FileOpenAttribs& OpenAttribs)
-    {
-        VERIFY(!m_pFile, "Another file already attached");
-        Close();
-        m_pFile = FileSystem::OpenFile(OpenAttribs);
-    }
+    /// Reads data from the stream
+    virtual void Read(IDataBlob* pData) override;
 
-    CFile* Detach()
-    {
-        CFile* pFile = m_pFile;
-        m_pFile      = NULL;
-        return pFile;
-    }
+    /// Reads data from the stream
+    virtual bool Read(void* Data, size_t Size) override;
 
-    void Attach(CFile* pFile)
-    {
-        VERIFY(!m_pFile, "Another file already attached");
-        Close();
-        m_pFile = pFile;
-    }
+    /// Writes data to the stream
+    virtual bool Write(const void* Data, size_t Size) override;
 
-    void Close()
-    {
-        if (m_pFile)
-            FileSystem::ReleaseFile(m_pFile);
-        m_pFile = nullptr;
-    }
+    virtual size_t GetSize() override;
 
-    operator CFile*() { return m_pFile; }
-    CFile* operator->() { return m_pFile; }
+    virtual bool IsValid() override;
 
 private:
-    FileWrapper(const FileWrapper&);
-    const FileWrapper& operator=(const FileWrapper&);
-
-    CFile* m_pFile;
+    FileWrapper m_FileWrpr;
 };
 
 } // namespace Diligent

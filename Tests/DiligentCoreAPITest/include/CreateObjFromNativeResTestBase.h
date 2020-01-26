@@ -30,7 +30,7 @@
 #include "RenderDevice.h"
 #include "Texture.h"
 #include "Buffer.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {

@@ -35,11 +35,11 @@
 #include <unordered_set>
 #include <algorithm>
 
-#include "Errors.h"
+#include "Errors.hpp"
 #include "PlatformDefinitions.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 #include "DebugUtilities.h"
-#include "ValidatedCast.h"
+#include "ValidatedCast.hpp"
 #include "RenderDevice.h"
 
 using namespace Diligent;

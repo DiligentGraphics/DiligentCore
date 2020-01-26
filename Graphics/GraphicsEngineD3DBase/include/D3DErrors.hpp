@@ -29,7 +29,7 @@
 
 #include <string.h>
 
-#include "Errors.h"
+#include "Errors.hpp"
 
 /// \file
 /// Declaration of Diligent::ComErrorDesc class

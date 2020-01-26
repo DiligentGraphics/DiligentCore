@@ -34,7 +34,7 @@
 #include "DeviceContextVkImpl.hpp"
 #include "ShaderResourceBindingVkImpl.hpp"
 #include "EngineMemory.h"
-#include "StringTools.h"
+#include "StringTools.hpp"
 #include "spirv-tools/optimizer.hpp"
 
 namespace Diligent

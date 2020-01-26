@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Common/interface/STDAllocator.h"
+#include "DiligentCore/Common/interface/STDAllocator.hpp"

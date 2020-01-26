@@ -26,7 +26,7 @@
  */
 
 #include <thread>
-#include "LockHelper.h"
+#include "LockHelper.hpp"
 
 namespace ThreadingTools
 {

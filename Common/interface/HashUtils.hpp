@@ -31,7 +31,7 @@
 #include <memory>
 #include <cstring>
 
-#include "../../Primitives/interface/Errors.h"
+#include "../../Primitives/interface/Errors.hpp"
 #include "../../Platforms/Basic/interface/DebugUtilities.h"
 
 #define LOG_HASH_CONFLICTS 1

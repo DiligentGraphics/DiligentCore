@@ -26,7 +26,7 @@
  */
 
 #include "BasicPlatformDebug.h"
-#include "FormatString.h"
+#include "FormatString.hpp"
 #include "BasicFileSystem.h"
 #include <iostream>
 

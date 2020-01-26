@@ -38,8 +38,8 @@
 #include <memory>
 #include <algorithm>
 #include "GraphicsTypes.h"
-#include "RefCntAutoPtr.h"
-#include "Errors.h"
+#include "RefCntAutoPtr.hpp"
+#include "Errors.hpp"
 #include "DebugUtilities.h"
 #include "RenderDeviceBase.hpp"
 #include "DeviceContextBase.hpp"

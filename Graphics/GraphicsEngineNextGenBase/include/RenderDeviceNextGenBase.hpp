@@ -35,7 +35,7 @@
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"
 #include "MemoryAllocator.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 #include "PlatformMisc.h"
 #include "ResourceReleaseQueue.hpp"
 #include "EngineMemory.h"

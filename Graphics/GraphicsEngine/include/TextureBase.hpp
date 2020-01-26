@@ -34,8 +34,8 @@
 #include "GraphicsTypes.h"
 #include "DeviceObjectBase.hpp"
 #include "GraphicsAccessories.hpp"
-#include "STDAllocator.h"
-#include "FormatString.h"
+#include "STDAllocator.hpp"
+#include "FormatString.hpp"
 #include <memory>
 
 namespace Diligent

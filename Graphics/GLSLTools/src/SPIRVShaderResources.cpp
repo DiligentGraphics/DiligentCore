@@ -31,8 +31,8 @@
 #include "spirv_cross.hpp"
 #include "ShaderBase.hpp"
 #include "GraphicsAccessories.hpp"
-#include "StringTools.h"
-#include "Align.h"
+#include "StringTools.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {

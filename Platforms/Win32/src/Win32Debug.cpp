@@ -26,7 +26,7 @@
  */
 
 #include "Win32Debug.h"
-#include "FormatString.h"
+#include "FormatString.hpp"
 #include <csignal>
 #include <iostream>
 #include <Windows.h>

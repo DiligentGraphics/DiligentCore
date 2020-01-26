@@ -32,7 +32,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "ShaderResourceBindingBase.hpp"
 #include "ShaderResourceVariableBase.hpp"
-#include "Align.h"
+#include "Align.hpp"
 
 namespace Diligent
 {

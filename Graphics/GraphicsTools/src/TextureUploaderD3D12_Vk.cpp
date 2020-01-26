@@ -31,7 +31,7 @@
 #include <vector>
 
 #include "TextureUploaderD3D12_Vk.hpp"
-#include "ThreadSignal.h"
+#include "ThreadSignal.hpp"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent

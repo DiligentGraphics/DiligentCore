@@ -37,7 +37,7 @@
 #include "VulkanDynamicHeap.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 #include "VulkanUtilities/VulkanMemoryManager.hpp"
-#include "STDAllocator.h"
+#include "STDAllocator.hpp"
 #include "RenderDeviceVkImpl.hpp"
 
 namespace Diligent

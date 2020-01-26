@@ -37,7 +37,7 @@
 #include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
-#include "HashUtils.h"
+#include "HashUtils.hpp"
 
 namespace VulkanUtilities
 {

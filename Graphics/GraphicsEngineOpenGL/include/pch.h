@@ -112,13 +112,13 @@
 #    error Unsupported platform
 #endif
 
-#include "Errors.h"
+#include "Errors.hpp"
 
 #include "PlatformDefinitions.h"
-#include "RefCntAutoPtr.h"
+#include "RefCntAutoPtr.hpp"
 #include "DebugUtilities.h"
 #include "GLObjectWrapper.hpp"
-#include "ValidatedCast.h"
+#include "ValidatedCast.hpp"
 #include "RenderDevice.h"
 #include "BaseInterfacesGL.h"
 

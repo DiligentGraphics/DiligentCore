@@ -30,7 +30,7 @@
 #include <deque>
 #include <mutex>
 #include <atomic>
-#include "STDAllocator.h"
+#include "STDAllocator.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent

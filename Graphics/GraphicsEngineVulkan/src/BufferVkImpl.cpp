@@ -33,7 +33,7 @@
 #include "BufferViewVkImpl.hpp"
 #include "GraphicsAccessories.hpp"
 #include "EngineMemory.h"
-#include "StringTools.h"
+#include "StringTools.hpp"
 #include "VulkanUtilities/VulkanDebug.hpp"
 #include "VulkanUtilities/VulkanCommandBuffer.hpp"
 

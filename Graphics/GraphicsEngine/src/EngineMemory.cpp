@@ -31,7 +31,7 @@
 
 #include "pch.h"
 #include "EngineMemory.h"
-#include "DefaultRawMemoryAllocator.h"
+#include "DefaultRawMemoryAllocator.hpp"
 
 namespace Diligent
 {

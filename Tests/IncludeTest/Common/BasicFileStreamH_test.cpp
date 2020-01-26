@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Common/interface/BasicFileStream.h"
+#include "DiligentCore/Common/interface/BasicFileStream.hpp"

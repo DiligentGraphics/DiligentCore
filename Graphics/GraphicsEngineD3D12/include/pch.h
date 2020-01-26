@@ -47,12 +47,12 @@
 #include <d3d12.h>
 
 #include "PlatformDefinitions.h"
-#include "Errors.h"
-#include "RefCntAutoPtr.h"
+#include "Errors.hpp"
+#include "RefCntAutoPtr.hpp"
 #include "DebugUtilities.h"
 #include "D3DErrors.hpp"
 #include "RenderDeviceBase.hpp"
-#include "ValidatedCast.h"
+#include "ValidatedCast.hpp"
 #include <atlcomcli.h>
 
 #if USE_D3D12_LOADER

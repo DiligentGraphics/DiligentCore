@@ -35,7 +35,7 @@
 #include "ShaderResourceBindingD3D12Impl.hpp"
 #include "CommandContext.hpp"
 #include "EngineMemory.h"
-#include "StringTools.h"
+#include "StringTools.hpp"
 #include "ShaderVariableD3D12.hpp"
 
 namespace Diligent

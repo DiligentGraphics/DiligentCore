@@ -27,7 +27,7 @@
 
 #include "TestingEnvironment.h"
 #include "TestingSwapChainBase.h"
-#include "BasicMath.h"
+#include "BasicMath.hpp"
 
 #include "gtest/gtest.h"
 

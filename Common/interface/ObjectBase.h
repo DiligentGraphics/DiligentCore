@@ -31,7 +31,7 @@
 /// Implementation of the Diligent::ObjectBase template class
 
 #include "../../Primitives/interface/Object.h"
-#include "RefCountedObjectImpl.h"
+#include "RefCountedObjectImpl.hpp"
 
 namespace Diligent
 {

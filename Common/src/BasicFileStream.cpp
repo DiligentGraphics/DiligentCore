@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "BasicFileStream.h"
+#include "BasicFileStream.hpp"
 
 namespace Diligent
 {

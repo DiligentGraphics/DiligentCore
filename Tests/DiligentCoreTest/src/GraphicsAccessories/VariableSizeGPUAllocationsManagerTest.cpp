@@ -26,7 +26,7 @@
  */
 
 #include "VariableSizeGPUAllocationsManager.hpp"
-#include "DefaultRawMemoryAllocator.h"
+#include "DefaultRawMemoryAllocator.hpp"
 #include "PlatformDefinitions.h"
 
 #include "gtest/gtest.h"

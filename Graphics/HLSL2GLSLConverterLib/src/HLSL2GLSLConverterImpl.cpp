@@ -359,9 +359,9 @@
 
 #include "HLSL2GLSLConverterImpl.h"
 #include "ShaderBase.hpp"
-#include "DataBlobImpl.h"
-#include "StringDataBlobImpl.h"
-#include "StringTools.h"
+#include "DataBlobImpl.hpp"
+#include "StringDataBlobImpl.hpp"
+#include "StringTools.hpp"
 
 namespace Diligent
 {

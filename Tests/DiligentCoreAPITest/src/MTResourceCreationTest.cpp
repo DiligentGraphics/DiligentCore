@@ -30,7 +30,7 @@
 #include <algorithm>
 
 #include "TestingEnvironment.h"
-#include "ThreadSignal.h"
+#include "ThreadSignal.hpp"
 #if D3D12_SUPPORTED
 #    include "D3D12/D3D12DebugLayerSetNameBugWorkaround.h"
 #endif
