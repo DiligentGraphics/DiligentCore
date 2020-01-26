@@ -36,6 +36,11 @@
 using namespace Diligent;
 using namespace Diligent::Testing;
 
+extern "C"
+{
+    int TestQueryCInterface(void* pQuery);
+}
+
 namespace
 {
 
@@ -396,8 +401,9 @@ TEST_F(QueryTest, Timestamp)
 
         QueryReady = pQueryEnd->GetData(nullptr, 0);
         ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
-        QueryReady = pQueryEnd->GetData(&QueryEndData, sizeof(QueryEndData));
+        QueryReady = pQueryEnd->GetData(&QueryEndData, sizeof(QueryEndData), false);
         ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+        EXPECT_EQ(TestQueryCInterface(pQueryEnd.RawPtr()), 0);
         EXPECT_TRUE(QueryStartData.Frequency == 0 || QueryEndData.Frequency == 0 || QueryEndData.Counter > QueryStartData.Counter);
     }
 }
