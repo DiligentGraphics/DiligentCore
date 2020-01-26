@@ -65,9 +65,9 @@ struct ShaderVariableD3DBase : public ShaderVariableBase<TShaderResourceLayout, 
         return m_VariableType;
     }
 
-    virtual ShaderResourceDesc GetResourceDesc() const override final
+    virtual void GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
     {
-        return GetHLSLResourceDesc();
+        ResourceDesc = GetHLSLResourceDesc();
     }
 
     virtual HLSLShaderResourceDesc GetHLSLResourceDesc() const override final

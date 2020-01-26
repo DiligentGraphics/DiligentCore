@@ -157,7 +157,9 @@ TEST(SeparateTextureSampler, CreateSampler)
         auto* pVar = pSRB->GetVariableByIndex(SHADER_TYPE_PIXEL, v);
         EXPECT_EQ(pVar->GetIndex(), v);
         EXPECT_TRUE(pVar->GetType() == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE || pVar->GetType() == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-        auto pVar2 = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, pVar->GetResourceDesc().Name);
+        ShaderResourceDesc ResDesc;
+        pVar->GetResourceDesc(ResDesc);
+        auto pVar2 = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name);
         EXPECT_EQ(pVar, pVar2);
     }
 

@@ -132,9 +132,9 @@ public:
             return m_VariableType;
         }
 
-        virtual ShaderResourceDesc GetResourceDesc() const override final
+        virtual void GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
         {
-            return m_Attribs.GetResourceDesc();
+            ResourceDesc = m_Attribs.GetResourceDesc();
         }
 
         virtual Uint32 GetIndex() const override final

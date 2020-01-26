@@ -312,8 +312,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_tex2D_Static");
             ASSERT_NE(tex2D_Static, nullptr);
-            EXPECT_EQ(tex2D_Static->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(tex2D_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, tex2D_Static->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_Static->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(tex2D_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_Static->Set(pSRVs[0]);
         }
 
@@ -325,8 +327,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_StaticArr = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_tex2D_StaticArr");
             ASSERT_NE(tex2D_StaticArr, nullptr);
-            EXPECT_EQ(tex2D_StaticArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(tex2D_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, tex2D_StaticArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_StaticArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(tex2D_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_StaticArr->SetArray(pSRVs, 0, 2);
         }
 
@@ -338,32 +342,40 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto UniformBuff_Stat = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "UniformBuff_Stat");
             ASSERT_NE(UniformBuff_Stat, nullptr);
-            EXPECT_EQ(UniformBuff_Stat->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(UniformBuff_Stat, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, UniformBuff_Stat->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            UniformBuff_Stat->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(UniformBuff_Stat, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             UniformBuff_Stat->Set(pUBs[0]);
         }
 
         {
             auto UniformBuff_Stat2 = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "UniformBuff_Stat2");
             ASSERT_NE(UniformBuff_Stat2, nullptr);
-            EXPECT_EQ(UniformBuff_Stat2->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(UniformBuff_Stat2, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, UniformBuff_Stat2->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            UniformBuff_Stat2->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(UniformBuff_Stat2, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             UniformBuff_Stat2->Set(pUBs[0]);
         }
 
         {
             auto Buffer_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_Static");
             ASSERT_NE(Buffer_Static, nullptr);
-            EXPECT_EQ(Buffer_Static->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(Buffer_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, Buffer_Static->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_Static->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(Buffer_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_Static->Set(pFormattedBuffSRV);
         }
 
         {
             auto Buffer_StaticArr = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_StaticArr");
             ASSERT_NE(Buffer_StaticArr, nullptr);
-            EXPECT_EQ(Buffer_StaticArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(Buffer_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, Buffer_StaticArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_StaticArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(Buffer_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_StaticArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_StaticArr->SetArray(&pFormattedBuffSRV, 1, 1);
         }
@@ -394,7 +406,9 @@ TEST(ShaderResourceLayout, VariableAccess)
             auto pVar = pTestPSO->GetStaticVariableByIndex(SHADER_TYPE_VERTEX, v);
             EXPECT_EQ(pVar->GetIndex(), v);
             EXPECT_EQ(pVar->GetType(), SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-            auto pVar2 = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, pVar->GetResourceDesc().Name);
+            ShaderResourceDesc ResDesc;
+            pVar->GetResourceDesc(ResDesc);
+            auto pVar2 = pTestPSO->GetStaticVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name);
             EXPECT_EQ(pVar, pVar2);
         }
     }
@@ -406,8 +420,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_Static");
             ASSERT_NE(tex2D_Static, nullptr);
-            EXPECT_EQ(tex2D_Static->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(tex2D_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, tex2D_Static->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_Static->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(tex2D_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_Static->Set(pSRVs[0]);
         }
 
@@ -419,8 +435,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_StaticArr = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_StaticArr");
             ASSERT_NE(tex2D_StaticArr, nullptr);
-            EXPECT_EQ(tex2D_StaticArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(tex2D_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, tex2D_StaticArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_StaticArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(tex2D_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_StaticArr->SetArray(pSRVs, 0, 2);
         }
         {
@@ -431,32 +449,40 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto UniformBuff_Stat = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "UniformBuff_Stat");
             ASSERT_NE(UniformBuff_Stat, nullptr);
-            EXPECT_EQ(UniformBuff_Stat->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(UniformBuff_Stat, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, UniformBuff_Stat->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            UniformBuff_Stat->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(UniformBuff_Stat, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             UniformBuff_Stat->Set(pUBs[0]);
         }
 
         {
             auto UniformBuff_Stat2 = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "UniformBuff_Stat2");
             ASSERT_NE(UniformBuff_Stat2, nullptr);
-            EXPECT_EQ(UniformBuff_Stat2->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(UniformBuff_Stat2, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, UniformBuff_Stat2->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            UniformBuff_Stat2->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(UniformBuff_Stat2, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             UniformBuff_Stat2->Set(pUBs[0]);
         }
 
         {
             auto Buffer_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_Static");
             ASSERT_NE(Buffer_Static, nullptr);
-            EXPECT_EQ(Buffer_Static->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(Buffer_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, Buffer_Static->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_Static->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(Buffer_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_Static->Set(pFormattedBuffSRV);
         }
 
         {
             auto Buffer_StaticArr = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_StaticArr");
             ASSERT_NE(Buffer_StaticArr, nullptr);
-            EXPECT_EQ(Buffer_StaticArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(Buffer_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, Buffer_StaticArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_StaticArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(Buffer_StaticArr, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_StaticArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_StaticArr->SetArray(&pFormattedBuffSRV, 1, 1);
         }
@@ -465,8 +491,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto rwtex2D_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_rwtex2D_Static");
             ASSERT_NE(rwtex2D_Static, nullptr);
-            EXPECT_EQ(rwtex2D_Static->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(rwtex2D_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, rwtex2D_Static->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            rwtex2D_Static->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(rwtex2D_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwtex2D_Static->Set(pTexUAVs[0]);
         }
 
@@ -474,16 +502,20 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto rwtex2D_Static2 = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_rwtex2D_Static2");
             ASSERT_NE(rwtex2D_Static2, nullptr);
-            EXPECT_EQ(rwtex2D_Static2->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(rwtex2D_Static2, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, rwtex2D_Static2->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            rwtex2D_Static2->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(rwtex2D_Static2, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwtex2D_Static2->Set(pTexUAVs[1]);
         }
 
         {
             auto rwBuff_Static = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_rwBuff_Static");
             ASSERT_NE(rwBuff_Static, nullptr);
-            EXPECT_EQ(rwBuff_Static->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(rwBuff_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, rwBuff_Static->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            rwBuff_Static->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(rwBuff_Static, pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwBuff_Static->Set(spRawBuffUAV[0]);
         }
 
@@ -512,7 +544,9 @@ TEST(ShaderResourceLayout, VariableAccess)
             auto pVar = pTestPSO->GetStaticVariableByIndex(SHADER_TYPE_PIXEL, v);
             EXPECT_EQ(pVar->GetIndex(), v);
             EXPECT_EQ(pVar->GetType(), SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
-            auto pVar2 = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, pVar->GetResourceDesc().Name);
+            ShaderResourceDesc ResDesc;
+            pVar->GetResourceDesc(ResDesc);
+            auto pVar2 = pTestPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name);
             EXPECT_EQ(pVar, pVar2);
         }
     }
@@ -526,8 +560,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_Mut = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_tex2D_Mut");
             ASSERT_NE(tex2D_Mut, nullptr);
-            EXPECT_EQ(tex2D_Mut->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(tex2D_Mut, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, tex2D_Mut->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_Mut->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(tex2D_Mut, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_Mut->Set(pSRVs[0]);
         }
 
@@ -539,8 +575,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_MutArr = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_tex2D_MutArr");
             ASSERT_NE(tex2D_MutArr, nullptr);
-            EXPECT_EQ(tex2D_MutArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(tex2D_MutArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, tex2D_MutArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_MutArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(tex2D_MutArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_MutArr->SetArray(pSRVs, 0, 2);
         }
 
@@ -552,8 +590,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_Dyn = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_tex2D_Dyn");
             ASSERT_NE(tex2D_Dyn, nullptr);
-            EXPECT_EQ(tex2D_Dyn->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(tex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, tex2D_Dyn->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_Dyn->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(tex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             //tex2D_Dyn->Set(pSRVs[0]);
             EXPECT_EQ(TestShaderResourceVariableCInterface(tex2D_Dyn, pSRVs[0]), 0);
         }
@@ -566,8 +606,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_DynArr = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_tex2D_DynArr");
             ASSERT_NE(tex2D_DynArr, nullptr);
-            EXPECT_EQ(tex2D_DynArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(tex2D_DynArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, tex2D_DynArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_DynArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(tex2D_DynArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             tex2D_DynArr->SetArray(pSRVs, 0, 2);
         }
 
@@ -579,32 +621,40 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto UniformBuff_Mut = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "UniformBuff_Mut");
             ASSERT_NE(UniformBuff_Mut, nullptr);
-            EXPECT_EQ(UniformBuff_Mut->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(UniformBuff_Mut, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, UniformBuff_Mut->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            UniformBuff_Mut->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(UniformBuff_Mut, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             UniformBuff_Mut->Set(pUBs[0]);
         }
 
         {
             auto UniformBuff_Dyn = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "UniformBuff_Dyn");
             ASSERT_NE(UniformBuff_Dyn, nullptr);
-            EXPECT_EQ(UniformBuff_Dyn->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(UniformBuff_Dyn, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, UniformBuff_Dyn->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            UniformBuff_Dyn->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(UniformBuff_Dyn, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             UniformBuff_Dyn->Set(pUBs[0]);
         }
 
         {
             auto Buffer_Mut = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_Mut");
             ASSERT_NE(Buffer_Mut, nullptr);
-            EXPECT_EQ(Buffer_Mut->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(Buffer_Mut, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, Buffer_Mut->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_Mut->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(Buffer_Mut, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_Mut->Set(pFormattedBuffSRV);
         }
 
         {
             auto Buffer_MutArr = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_MutArr");
             ASSERT_NE(Buffer_MutArr, nullptr);
-            EXPECT_EQ(Buffer_MutArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(Buffer_MutArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, Buffer_MutArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_MutArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(Buffer_MutArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_MutArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_MutArr->SetArray(&pFormattedBuffSRV, 1, 1);
         }
@@ -612,16 +662,20 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto Buffer_Dyn = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_Dyn");
             ASSERT_NE(Buffer_Dyn, nullptr);
-            EXPECT_EQ(Buffer_Dyn->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(Buffer_Dyn, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, Buffer_Dyn->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_Dyn->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(Buffer_Dyn, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_Dyn->Set(pFormattedBuffSRV);
         }
 
         {
             auto Buffer_DynArr = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, "g_Buffer_DynArr");
             ASSERT_NE(Buffer_DynArr, nullptr);
-            EXPECT_EQ(Buffer_DynArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(Buffer_DynArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, Buffer_DynArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_DynArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(Buffer_DynArr, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name));
             Buffer_DynArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_DynArr->SetArray(&pFormattedBuffSRV, 1, 1);
         }
@@ -641,8 +695,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_Mut = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_Mut");
             ASSERT_NE(tex2D_Mut, nullptr);
-            EXPECT_EQ(tex2D_Mut->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(tex2D_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, tex2D_Mut->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_Mut->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(tex2D_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_Mut->Set(pRWTexSRVs[4]);
         }
 
@@ -654,8 +710,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_MutArr = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_MutArr");
             ASSERT_NE(tex2D_MutArr, nullptr);
-            EXPECT_EQ(tex2D_MutArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(tex2D_MutArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, tex2D_MutArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_MutArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(tex2D_MutArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_MutArr->SetArray(pRWTexSRVs + 5, 0, 2);
         }
 
@@ -667,8 +725,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_Dyn = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_Dyn");
             ASSERT_NE(tex2D_Dyn, nullptr);
-            EXPECT_EQ(tex2D_Dyn->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(tex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, tex2D_Dyn->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_Dyn->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(tex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_Dyn->Set(pRWTexSRVs[7]);
         }
 
@@ -680,8 +740,10 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto tex2D_DynArr = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_tex2D_DynArr");
             ASSERT_NE(tex2D_DynArr, nullptr);
-            EXPECT_EQ(tex2D_DynArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(tex2D_DynArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, tex2D_DynArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            tex2D_DynArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(tex2D_DynArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             tex2D_DynArr->SetArray(pSRVs, 0, 2);
         }
 
@@ -694,32 +756,40 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto UniformBuff_Mut = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "UniformBuff_Mut");
             ASSERT_NE(UniformBuff_Mut, nullptr);
-            EXPECT_EQ(UniformBuff_Mut->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(UniformBuff_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, UniformBuff_Mut->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            UniformBuff_Mut->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(UniformBuff_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             UniformBuff_Mut->Set(pUBs[0]);
         }
 
         {
             auto UniformBuff_Dyn = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "UniformBuff_Dyn");
             ASSERT_NE(UniformBuff_Dyn, nullptr);
-            EXPECT_EQ(UniformBuff_Dyn->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(UniformBuff_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, UniformBuff_Dyn->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            UniformBuff_Dyn->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(UniformBuff_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             UniformBuff_Dyn->Set(pUBs[0]);
         }
 
         {
             auto Buffer_Mut = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_Mut");
             ASSERT_NE(Buffer_Mut, nullptr);
-            EXPECT_EQ(Buffer_Mut->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(Buffer_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, Buffer_Mut->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_Mut->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(Buffer_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_Mut->Set(spRawBuffSRVs[1]);
         }
 
         {
             auto Buffer_MutArr = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_MutArr");
             ASSERT_NE(Buffer_MutArr, nullptr);
-            EXPECT_EQ(Buffer_MutArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(Buffer_MutArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, Buffer_MutArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_MutArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(Buffer_MutArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_MutArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_MutArr->SetArray(&pFormattedBuffSRV, 1, 1);
         }
@@ -727,16 +797,20 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto Buffer_Dyn = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_Dyn");
             ASSERT_NE(Buffer_Dyn, nullptr);
-            EXPECT_EQ(Buffer_Dyn->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(Buffer_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, Buffer_Dyn->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_Dyn->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(Buffer_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_Dyn->Set(pFormattedBuffSRVs[3]);
         }
 
         {
             auto Buffer_DynArr = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_Buffer_DynArr");
             ASSERT_NE(Buffer_DynArr, nullptr);
-            EXPECT_EQ(Buffer_DynArr->GetResourceDesc().ArraySize, 2u);
-            EXPECT_EQ(Buffer_DynArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, Buffer_DynArr->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            Buffer_DynArr->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 2u);
+            EXPECT_EQ(Buffer_DynArr, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             Buffer_DynArr->SetArray(&pFormattedBuffSRV, 0, 1);
             Buffer_DynArr->SetArray(&pFormattedBuffSRV, 1, 1);
         }
@@ -744,32 +818,40 @@ TEST(ShaderResourceLayout, VariableAccess)
         {
             auto rwtex2D_Mut = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwtex2D_Mut");
             ASSERT_NE(rwtex2D_Mut, nullptr);
-            EXPECT_EQ(rwtex2D_Mut->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(rwtex2D_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, rwtex2D_Mut->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            rwtex2D_Mut->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(rwtex2D_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwtex2D_Mut->Set(pTexUAVs[2]);
         }
 
         {
             auto rwtex2D_Dyn = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwtex2D_Dyn");
             ASSERT_NE(rwtex2D_Dyn, nullptr);
-            EXPECT_EQ(rwtex2D_Dyn->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(rwtex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, rwtex2D_Dyn->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            rwtex2D_Dyn->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(rwtex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwtex2D_Dyn->Set(pTexUAVs[3]);
         }
 
         {
             auto rwBuff_Mut = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwBuff_Mut");
             ASSERT_NE(rwBuff_Mut, nullptr);
-            EXPECT_EQ(rwBuff_Mut->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(rwBuff_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, rwBuff_Mut->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            rwBuff_Mut->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(rwBuff_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwBuff_Mut->Set(pFormattedBuffUAV[1]);
         }
 
         {
             auto rwBuff_Dyn = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, "g_rwBuff_Dyn");
             ASSERT_NE(rwBuff_Dyn, nullptr);
-            EXPECT_EQ(rwBuff_Dyn->GetResourceDesc().ArraySize, 1u);
-            EXPECT_EQ(rwBuff_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, rwBuff_Dyn->GetResourceDesc().Name));
+            ShaderResourceDesc ResDesc;
+            rwBuff_Dyn->GetResourceDesc(ResDesc);
+            EXPECT_EQ(ResDesc.ArraySize, 1u);
+            EXPECT_EQ(rwBuff_Dyn, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
             rwBuff_Dyn->Set(pFormattedBuffUAV[2]);
         }
 
@@ -791,7 +873,9 @@ TEST(ShaderResourceLayout, VariableAccess)
             auto pVar = pSRB->GetVariableByIndex(SHADER_TYPE_VERTEX, v);
             EXPECT_EQ(pVar->GetIndex(), v);
             EXPECT_TRUE(pVar->GetType() == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE || pVar->GetType() == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-            auto pVar2 = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, pVar->GetResourceDesc().Name);
+            ShaderResourceDesc ResDesc;
+            pVar->GetResourceDesc(ResDesc);
+            auto pVar2 = pSRB->GetVariableByName(SHADER_TYPE_VERTEX, ResDesc.Name);
             EXPECT_EQ(pVar, pVar2);
         }
     }
@@ -803,7 +887,9 @@ TEST(ShaderResourceLayout, VariableAccess)
             auto pVar = pSRB->GetVariableByIndex(SHADER_TYPE_PIXEL, v);
             EXPECT_EQ(pVar->GetIndex(), v);
             EXPECT_TRUE(pVar->GetType() == SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE || pVar->GetType() == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC);
-            auto pVar2 = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, pVar->GetResourceDesc().Name);
+            ShaderResourceDesc ResDesc;
+            pVar->GetResourceDesc(ResDesc);
+            auto pVar2 = pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name);
             EXPECT_EQ(pVar, pVar2);
         }
     }

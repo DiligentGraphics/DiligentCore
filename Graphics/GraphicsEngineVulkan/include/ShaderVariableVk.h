@@ -182,9 +182,9 @@ public:
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
 
-    virtual ShaderResourceDesc GetResourceDesc() const override final
+    virtual void GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
     {
-        return m_Resource.SpirvAttribs.GetResourceDesc();
+        ResourceDesc = m_Resource.SpirvAttribs.GetResourceDesc();
     }
 
     virtual Uint32 GetIndex() const override final

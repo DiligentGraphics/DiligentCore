@@ -187,9 +187,9 @@ public:
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
 
-    virtual ShaderResourceDesc GetResourceDesc() const override final
+    virtual void GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
     {
-        return GetHLSLResourceDesc();
+        ResourceDesc = GetHLSLResourceDesc();
     }
 
     virtual HLSLShaderResourceDesc GetHLSLResourceDesc() const override final

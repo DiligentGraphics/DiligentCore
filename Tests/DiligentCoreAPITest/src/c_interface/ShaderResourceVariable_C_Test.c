@@ -34,9 +34,6 @@ int TestShaderResourceVariableCInterface(struct IShaderResourceVariable* pVar, s
     struct IObject*           pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
-
     SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
     struct ShaderResourceDesc     ResDesc;
     Uint32                        Index   = 0;
@@ -65,7 +62,9 @@ int TestShaderResourceVariableCInterface(struct IShaderResourceVariable* pVar, s
     if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
         ++num_errors;
 
-    //ResDesc = IShaderResourceVariable_GetResourceDesc(pVar);
+    IShaderResourceVariable_GetResourceDesc(pVar, &ResDesc);
+    if (ResDesc.Type != SHADER_RESOURCE_TYPE_TEXTURE_SRV)
+        ++num_errors;
 
     Index = IShaderResourceVariable_GetIndex(pVar);
 
