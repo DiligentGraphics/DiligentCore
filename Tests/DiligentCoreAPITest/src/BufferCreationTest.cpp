@@ -47,6 +47,12 @@
 
 #include "gtest/gtest.h"
 
+extern "C"
+{
+    int TestBufferCInterface(void* pBuffer);
+    int TestBufferViewCInterface(void* pView);
+}
+
 using namespace Diligent;
 using namespace Diligent::Testing;
 
@@ -177,12 +183,16 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
     pBuffer->CreateView(ViewDesc, &pBufferSRV);
     EXPECT_NE(pBufferSRV, nullptr) << GetObjectDescString(BuffDesc);
 
+    EXPECT_EQ(TestBufferViewCInterface(pBufferSRV.RawPtr()), 0);
+
     ViewDesc.ViewType = BUFFER_VIEW_UNORDERED_ACCESS;
     RefCntAutoPtr<IBufferView> pBufferUAV;
     pBuffer->CreateView(ViewDesc, &pBufferUAV);
     EXPECT_NE(pBufferUAV, nullptr) << GetObjectDescString(BuffDesc);
 
     pCreateObjFromNativeRes->CreateBuffer(pBuffer);
+
+    EXPECT_EQ(TestBufferCInterface(pBuffer.RawPtr()), 0);
 }
 
 TEST_F(BufferCreationTest, CreateStructuedBuffer)

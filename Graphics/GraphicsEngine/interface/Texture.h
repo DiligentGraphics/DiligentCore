@@ -368,7 +368,7 @@ public:
 struct ITexture;
 struct ITextureView;
 
-struct ITextureVtbl
+struct ITextureMethods
 {
     void                (*CreateView)     (struct ITexture*, const struct TextureViewDesc* ViewDesc, class ITextureView** ppView);
     class ITextureView* (*GetDefaultView) (struct ITexture*, TEXTURE_VIEW_TYPE ViewType);
@@ -379,22 +379,27 @@ struct ITextureVtbl
 
 // clang-format on
 
+struct ITextureVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct ITextureMethods      Texture;
+};
+
 struct ITexture
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct ITextureVtbl*      pTextureVtbl;
+    struct ITextureVtbl* pVtbl;
 };
 
 // clang-format off
 
 #    define ITexture_GetDesc(This) (const struct TextureDesc*)IDeviceObject_GetDesc(This)
 
-#    define ITexture_CreateView(This, ...)     (This)->pTextureVtbl->CreateView     ((struct ITexture*)(This), __VA_ARGS__)
-#    define ITexture_GetDefaultView(This, ...) (This)->pTextureVtbl->GetDefaultView ((struct ITexture*)(This), __VA_ARGS__)
-#    define ITexture_GetNativeHandle(This)     (This)->pTextureVtbl->GetNativeHandle((struct ITexture*)(This))
-#    define ITexture_SetState(This, ...)       (This)->pTextureVtbl->SetState       ((struct ITexture*)(This), __VA_ARGS__)
-#    define ITexture_GetState(This)            (This)->pTextureVtbl->GetState       ((struct ITexture*)(This))
+#    define ITexture_CreateView(This, ...)     (This)->pVtbl->Texture.CreateView     ((struct ITexture*)(This), __VA_ARGS__)
+#    define ITexture_GetDefaultView(This, ...) (This)->pVtbl->Texture.GetDefaultView ((struct ITexture*)(This), __VA_ARGS__)
+#    define ITexture_GetNativeHandle(This)     (This)->pVtbl->Texture.GetNativeHandle((struct ITexture*)(This))
+#    define ITexture_SetState(This, ...)       (This)->pVtbl->Texture.SetState       ((struct ITexture*)(This), __VA_ARGS__)
+#    define ITexture_GetState(This)            (This)->pVtbl->Texture.GetState       ((struct ITexture*)(This))
 
 // clang-format on
 

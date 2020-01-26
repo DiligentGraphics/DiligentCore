@@ -73,7 +73,7 @@ struct SampleDesc
 struct ShaderResourceVariableDesc
 {
     /// Shader stages this resources variable applies to. More than one shader stage can be specified.
-    enum SHADER_TYPE              ShaderStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+    SHADER_TYPE                   ShaderStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Shader variable name
     const Char*                   Name         DEFAULT_INITIALIZER(nullptr);
@@ -97,7 +97,7 @@ struct ShaderResourceVariableDesc
 struct StaticSamplerDesc
 {
     /// Shader stages that this static sampler applies to. More than one shader stage can be specified.
-    enum SHADER_TYPE ShaderStages    DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+    SHADER_TYPE ShaderStages         DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// The name of the sampler itself or the name of the texture variable that 
     /// this static sampler is assigned to if combined texture samplers are used.
@@ -126,7 +126,7 @@ struct PipelineResourceLayoutDesc
     /// Default shader resource variable type. This type will be used if shader
     /// variable description is not found in the Variables array
     /// or if Variables == nullptr
-    enum SHADER_RESOURCE_VARIABLE_TYPE  DefaultVariableType   DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType   DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
     /// Number of elements in Variables array            
     Uint32                              NumVariables          DEFAULT_INITIALIZER(0);
@@ -184,19 +184,19 @@ struct GraphicsPipelineDesc
     //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
     /// Primitive topology type
-    enum PRIMITIVE_TOPOLOGY PrimitiveTopology DEFAULT_INITIALIZER(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+    PRIMITIVE_TOPOLOGY PrimitiveTopology DEFAULT_INITIALIZER(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
     /// Number of viewports used by this pipeline
-    Uint8 NumViewports DEFAULT_INITIALIZER(1);
+    Uint8 NumViewports           DEFAULT_INITIALIZER(1);
 
     /// Number of render targets in the RTVFormats member
-    Uint8 NumRenderTargets DEFAULT_INITIALIZER(0);
+    Uint8 NumRenderTargets       DEFAULT_INITIALIZER(0);
 
     /// Render target formats
-    enum TEXTURE_FORMAT RTVFormats[8] DEFAULT_INITIALIZER({});
+    TEXTURE_FORMAT RTVFormats[8] DEFAULT_INITIALIZER({});
 
     /// Depth-stencil format
-    enum TEXTURE_FORMAT DSVFormat DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+    TEXTURE_FORMAT DSVFormat     DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Multisampling parameters
     struct SampleDesc SmplDesc;

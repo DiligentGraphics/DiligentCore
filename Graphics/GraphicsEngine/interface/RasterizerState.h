@@ -97,11 +97,11 @@ struct RasterizerStateDesc
 {
     /// Determines traingle fill mode, see Diligent::FILL_MODE for details.
     /// Default value: Diligent::FILL_MODE_SOLID.
-    enum FILL_MODE FillMode         DEFAULT_INITIALIZER(FILL_MODE_SOLID);
+    FILL_MODE FillMode              DEFAULT_INITIALIZER(FILL_MODE_SOLID);
 
     /// Determines traingle cull mode, see Diligent::CULL_MODE for details.
     /// Default value: Diligent::CULL_MODE_BACK.
-    enum CULL_MODE CullMode         DEFAULT_INITIALIZER(CULL_MODE_BACK);
+    CULL_MODE CullMode              DEFAULT_INITIALIZER(CULL_MODE_BACK);
 
     /// Determines if a triangle is front- or back-facing. If this parameter is True, 
     /// a triangle will be considered front-facing if its vertices are counter-clockwise 

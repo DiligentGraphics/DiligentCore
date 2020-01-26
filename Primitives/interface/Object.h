@@ -86,7 +86,7 @@ struct IObject;
 
 // clang-format off
 
-struct IObjectVtbl
+struct IObjectMethods
 {
     void                      (*QueryInterface)      (struct IObject*, const struct INTERFACE_ID* IID, struct IObject** ppInterface);
     ReferenceCounterValueType (*AddRef)              (struct IObject*);
@@ -94,18 +94,23 @@ struct IObjectVtbl
     class IReferenceCounters* (*GetReferenceCounters)(struct IObject*);
 };
 
+struct IObjectVtbl
+{
+    struct IObjectMethods Object;
+};
+
 // clang-format on
 
 struct IObject
 {
-    struct IObjectVtbl* pObjectVtbl;
+    struct IObjectVtbl* pVtbl;
 };
 
 // clang-format off
 
-#    define IObject_QueryInterface(This, ...) (This)->pObjectVtbl->QueryInterface((struct IObject*)(This), __VA_ARGS__)
-#    define IObject_AddRef(This, ...)         (This)->pObjectVtbl->AddRef        ((struct IObject*)(This), __VA_ARGS__)
-#    define IObject_Release(This)             (This)->pObjectVtbl->Release       ((struct IObject*)(This))
+#    define IObject_QueryInterface(This, ...) (This)->pVtbl->Object.QueryInterface((struct IObject*)(This), __VA_ARGS__)
+#    define IObject_AddRef(This, ...)         (This)->pVtbl->Object.AddRef        ((struct IObject*)(This), __VA_ARGS__)
+#    define IObject_Release(This)             (This)->pVtbl->Object.Release       ((struct IObject*)(This))
 
 // clang-format on
 

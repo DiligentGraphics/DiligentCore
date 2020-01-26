@@ -232,7 +232,7 @@ public:
 
 struct IBuffer;
 
-struct IBufferVtbl
+struct IBufferMethods
 {
     void               (*CreateView)     (struct IBuffer*, const struct BufferViewDesc* ViewDesc, class IBufferView** ppView);
     class IBufferView* (*GetDefaultView) (struct IBuffer*, BUFFER_VIEW_TYPE ViewType);
@@ -243,22 +243,27 @@ struct IBufferVtbl
 
 // clang-format on
 
+struct IBufferVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IBufferMethods       Buffer;
+};
+
 struct IBuffer
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct IBufferVtbl*       pBufferVtbl;
+    struct IBufferVtbl* pVtbl;
 };
 
 // clang-format off
 
 #    define IBuffer_GetDesc(This) (const struct BufferDesc*)IDeviceObject_GetDesc(This)
 
-#    define IBuffer_CreateView(This, ...)     (This)->pBufferVtbl->CreateView     ((struct IBuffer*)(This), __VA_ARGS__)
-#    define IBuffer_GetDefaultView(This, ...) (This)->pBufferVtbl->GetDefaultView ((struct IBuffer*)(This), __VA_ARGS__)
-#    define IBuffer_GetNativeHandle(This)     (This)->pBufferVtbl->GetNativeHandle((struct IBuffer*)(This))
-#    define IBuffer_SetState(This, ...)       (This)->pBufferVtbl->SetState       ((struct IBuffer*)(This), __VA_ARGS__)
-#    define IBuffer_GetState(This)            (This)->pBufferVtbl->GetState       ((struct IBuffer*)(This))
+#    define IBuffer_CreateView(This, ...)     (This)->pVtbl->Buffer.CreateView     ((struct IBuffer*)(This), __VA_ARGS__)
+#    define IBuffer_GetDefaultView(This, ...) (This)->pVtbl->Buffer.GetDefaultView ((struct IBuffer*)(This), __VA_ARGS__)
+#    define IBuffer_GetNativeHandle(This)     (This)->pVtbl->Buffer.GetNativeHandle((struct IBuffer*)(This))
+#    define IBuffer_SetState(This, ...)       (This)->pVtbl->Buffer.SetState       ((struct IBuffer*)(This), __VA_ARGS__)
+#    define IBuffer_GetState(This)            (This)->pVtbl->Buffer.GetState       ((struct IBuffer*)(This))
 
 // clang-format on
 

@@ -164,21 +164,26 @@ public:
 class IBufferView;
 class IBuffer;
 
-struct IBufferViewVtbl
+struct IBufferViewMethods
 {
     class IBuffer* (*GetBuffer)(struct IBufferView*);
 };
 
+struct IBufferViewVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IBufferViewMethods   BufferView;
+};
+
 struct IBufferView
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct IBufferViewVtbl*   pBufferVtbl;
+    struct IBufferViewVtbl* pVtbl;
 };
 
 #    define IBufferView_GetDesc(This) (const struct BufferViewDesc*)IDeviceObject_GetDesc(This)
 
-#    define IBufferView_GetBuffer(This) (This)->pBufferVtbl->GetBuffer((struct IBufferView*)(This))
+#    define IBufferView_GetBuffer(This) (This)->pVtbl->BufferView.GetBuffer((struct IBufferView*)(This))
 
 #endif
 

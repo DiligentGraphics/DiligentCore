@@ -226,7 +226,7 @@ struct ISampler;
 
 // clang-format off
 
-struct ITextureViewVtbl
+struct ITextureViewMethods
 {
     void            (*SetSampler)(struct ITextureView*, class ISampler* pSampler);
     class ISampler* (*GetSampler)(struct ITextureView*);
@@ -235,20 +235,25 @@ struct ITextureViewVtbl
 
 // clang-format on
 
+struct ITextureViewVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct ITextureViewMethods  TextureView;
+};
+
 struct ITextureView
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    struct ITextureViewVtbl*  pTextureViewVtbl;
+    struct ITextureViewVtbl* pVtbl;
 };
 
 #    define ITextureView_GetDesc(This) (const struct TextureViewDesc*)IDeviceObject_GetDesc(This)
 
 // clang-format off
 
-#    define ITextureView_SetSampler(This, ...) (This)->pTextureViewVtbl->SetSampler((struct ITextureView*)(This), __VA_ARGS__)
-#    define ITextureView_GetSampler(This)      (This)->pTextureViewVtbl->GetSampler((struct ITextureView*)(This))
-#    define ITextureView_GetTexture(This)      (This)->pTextureViewVtbl->GetTexture((struct ITextureView*)(This))
+#    define ITextureView_SetSampler(This, ...) (This)->pVtbl->TextureView.SetSampler((struct ITextureView*)(This), __VA_ARGS__)
+#    define ITextureView_GetSampler(This)      (This)->pVtbl->TextureView.GetSampler((struct ITextureView*)(This))
+#    define ITextureView_GetTexture(This)      (This)->pVtbl->TextureView.GetTexture((struct ITextureView*)(This))
 
 // clang-format on
 

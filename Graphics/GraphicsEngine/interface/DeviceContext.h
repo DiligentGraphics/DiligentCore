@@ -222,10 +222,10 @@ struct DrawIndexedAttribs
 
     /// The type of elements in the index buffer.
     /// Allowed values: VT_UINT16 and VT_UINT32.
-    enum VALUE_TYPE IndexType         DEFAULT_INITIALIZER(VT_UNDEFINED);
+    VALUE_TYPE IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    enum DRAW_FLAGS Flags             DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+    DRAW_FLAGS Flags                 DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
     /// Number of instances to draw. If more than one instance is specified,
     /// instanced draw call will be performed.
@@ -284,13 +284,13 @@ struct DrawIndexedAttribs
 struct DrawIndirectAttribs
 {
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    enum DRAW_FLAGS Flags               DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
     /// State transition mode for indirect draw arguments buffer.
-    enum RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Offset from the beginning of the buffer to the location of draw command attributes.
-    Uint32 IndirectDrawArgsOffset       DEFAULT_INITIALIZER(0);
+    Uint32 IndirectDrawArgsOffset   DEFAULT_INITIALIZER(0);
     
 
 #if DILIGENT_CPP_INTERFACE
@@ -323,13 +323,13 @@ struct DrawIndexedIndirectAttribs
 {
     /// The type of the elements in the index buffer.
     /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
-    enum VALUE_TYPE IndexType            DEFAULT_INITIALIZER(VT_UNDEFINED);
+    VALUE_TYPE IndexType            DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
-    enum DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
 
     /// State transition mode for indirect draw arguments buffer.
-    enum RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Offset from the beginning of the buffer to the location of draw command attributes.
     Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
@@ -405,7 +405,7 @@ struct DispatchComputeAttribs
 struct DispatchComputeIndirectAttribs
 {
     /// State transition mode for indirect dispatch attributes buffer.
-    enum RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// The offset from the beginning of the buffer to the dispatch command arguments.
     Uint32  DispatchArgsByteOffset    DEFAULT_INITIALIZER(0);
@@ -436,7 +436,7 @@ struct ResolveTextureSubresourceAttribs
     Uint32 SrcSlice      DEFAULT_INITIALIZER(0);
 
     /// Source texture state transition mode, see Diligent::RESOURCE_STATE_TRANSITION_MODE.
-    enum RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Mip level of the destination non-multi-sampled texture.
     Uint32 DstMipLevel   DEFAULT_INITIALIZER(0);
@@ -445,12 +445,12 @@ struct ResolveTextureSubresourceAttribs
     Uint32 DstSlice      DEFAULT_INITIALIZER(0);
 
     /// Destination texture state transition mode, see Diligent::RESOURCE_STATE_TRANSITION_MODE.
-    enum RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// If one or both textures are typeless, specifies the type of the typeless texture.
     /// If both texture formats are not typeless, in which case they must be identical, this member must be
     /// either TEX_FORMAT_UNKNOWN, or match this format.
-    enum TEXTURE_FORMAT Format DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+    TEXTURE_FORMAT Format DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 };
 
 /// Defines allowed flags for IDeviceContext::SetVertexBuffers() function.
@@ -581,7 +581,7 @@ struct CopyTextureAttribs
     Uint32                         DstZ                     DEFAULT_INITIALIZER(0);
 
     /// Destination texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
-    enum RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE DstTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
 
 #if DILIGENT_CPP_INTERFACE

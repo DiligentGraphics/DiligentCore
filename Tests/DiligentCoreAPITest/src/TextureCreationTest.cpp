@@ -53,6 +53,12 @@
 using namespace Diligent;
 using namespace Diligent::Testing;
 
+extern "C"
+{
+    int TestTextureCInterface(void* pTexture);
+    int TestTextureViewCInterface(void* pView, void* pSampler);
+}
+
 namespace
 {
 
@@ -103,11 +109,14 @@ protected:
 
             default: UNEXPECTED("Unexpected device type");
         }
+
+        pDevice->CreateSampler(SamplerDesc{}, &pSampler);
     }
 
     static void TearDownTestSuite()
     {
         pCreateObjFromNativeRes.reset();
+        pSampler.Release();
         TestingEnvironment::GetInstance()->Reset();
     }
 
@@ -296,6 +305,9 @@ protected:
                 RefCntAutoPtr<ITextureView> pSRV;
                 pTestTex->CreateView(ViewDesc, &pSRV);
                 EXPECT_NE(pSRV, nullptr) << GetObjectDescString(TexDesc);
+
+                EXPECT_EQ(TestTextureCInterface(pTestTex), 0);
+                EXPECT_EQ(TestTextureViewCInterface(pSRV.RawPtr(), pSampler.RawPtr()), 0);
             }
 
             // RTV, DSV & UAV can reference only one mip level
@@ -519,9 +531,11 @@ protected:
     }
 
     static std::unique_ptr<CreateObjFromNativeResTestBase> pCreateObjFromNativeRes;
+    static RefCntAutoPtr<ISampler>                         pSampler;
 };
 
 std::unique_ptr<CreateObjFromNativeResTestBase> TextureCreationTest::pCreateObjFromNativeRes;
+RefCntAutoPtr<ISampler>                         TextureCreationTest::pSampler;
 
 TEST_P(TextureCreationTest, CreateTexture)
 {
