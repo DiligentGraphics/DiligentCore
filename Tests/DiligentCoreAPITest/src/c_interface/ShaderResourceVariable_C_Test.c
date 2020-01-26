@@ -25,14 +25,11 @@
  *  of the possibility of such damages.
  */
 
-#include "Texture.h"
+#include "ShaderResourceVariable.h"
 
 int TestObjectCInterface(struct IObject* pObject);
-int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
-struct ISampler;
-
-int TestTextureCInterface(struct ITexture* pTexture)
+int TestShaderResourceVariableCInterface(struct IShaderResourceVariable* pVar, struct IDeviceObject* pObjectToSet)
 {
     struct IObject*           pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
@@ -40,62 +37,41 @@ int TestTextureCInterface(struct ITexture* pTexture)
     struct DeviceObjectAttribs Desc;
     Int32                      UniqueId = 0;
 
-    struct TextureDesc     TexDesc;
-    struct ITextureView *  pView0 = NULL, *pView1 = NULL;
-    struct TextureViewDesc ViewDesc;
-    void*                  NativeHanlde;
-    RESOURCE_STATE         State = RESOURCE_STATE_SHADER_RESOURCE;
+    SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+    struct ShaderResourceDesc     ResDesc;
+    Uint32                        Index   = 0;
+    bool                          IsBound = false;
 
-    int num_errors =
-        TestObjectCInterface((struct IObject*)pTexture) +
-        TestDeviceObjectCInterface((struct IDeviceObject*)pTexture);
+    int num_errors = TestObjectCInterface((struct IObject*)pVar);
 
-    IObject_QueryInterface(pTexture, &IID_Unknown, &pUnknown);
+    IObject_QueryInterface(pVar, &IID_Unknown, &pUnknown);
     if (pUnknown != NULL)
         IObject_Release(pUnknown);
     else
         ++num_errors;
 
-    RefCnt1 = IObject_AddRef(pTexture);
+    RefCnt1 = IObject_AddRef(pVar);
     if (RefCnt1 <= 0)
         ++num_errors;
-    RefCnt2 = IObject_Release(pTexture);
+    RefCnt2 = IObject_Release(pVar);
     if (RefCnt2 <= 0)
         ++num_errors;
     if (RefCnt2 != RefCnt1 - 1)
         ++num_errors;
 
-    Desc = *IDeviceObject_GetDesc(pTexture);
-    if (Desc.Name == NULL)
+    IShaderResourceVariable_Set(pVar, pObjectToSet);
+    IShaderResourceVariable_SetArray(pVar, &pObjectToSet, 0, 1);
+    VarType = IShaderResourceVariable_GetType(pVar);
+    if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
         ++num_errors;
 
-    UniqueId = IDeviceObject_GetUniqueID(pTexture);
-    if (UniqueId == 0)
-        ++num_errors;
+    //ResDesc = IShaderResourceVariable_GetResourceDesc(pVar);
 
-    TexDesc = *ITexture_GetDesc(pTexture);
-    if (TexDesc._DeviceObjectAttribs.Name == NULL)
-        ++num_errors;
+    Index = IShaderResourceVariable_GetIndex(pVar);
 
-    memset(&ViewDesc, 0, sizeof(ViewDesc));
-    ViewDesc._DeviceObjectAttribs.Name = "Test SRV";
-    ViewDesc.ViewType                  = TEXTURE_VIEW_SHADER_RESOURCE;
-    ITexture_CreateView(pTexture, &ViewDesc, &pView0);
-    if (pView0 != NULL)
-        IObject_Release(pView0);
-    else
+    IsBound = IShaderResourceVariable_IsBound(pVar, 0);
+    if (!IsBound)
         ++num_errors;
-
-    pView1 = ITexture_GetDefaultView(pTexture, TEXTURE_VIEW_SHADER_RESOURCE);
-    if (pView1 == NULL)
-        ++num_errors;
-
-    NativeHanlde = ITexture_GetNativeHandle(pTexture);
-    if (NativeHanlde == NULL)
-        ++num_errors;
-
-    State = ITexture_GetState(pTexture);
-    ITexture_SetState(pTexture, State);
 
     return num_errors;
 }

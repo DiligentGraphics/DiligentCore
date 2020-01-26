@@ -31,7 +31,7 @@ int TestObjectCInterface(struct IObject* pObject);
 
 int TestSwapChainCInterface(struct ISwapChain* pSwapChain)
 {
-    struct IObject*           pObject = NULL;
+    struct IObject*           pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
     struct SwapChainDesc SCDesc;
@@ -41,9 +41,9 @@ int TestSwapChainCInterface(struct ISwapChain* pSwapChain)
 
     int num_errors = TestObjectCInterface((struct IObject*)pSwapChain);
 
-    IObject_QueryInterface(pSwapChain, &IID_Unknown, &pObject);
-    if (pObject != NULL)
-        IObject_Release(pObject);
+    IObject_QueryInterface(pSwapChain, &IID_Unknown, &pUnknown);
+    if (pUnknown != NULL)
+        IObject_Release(pUnknown);
     else
         ++num_errors;
 

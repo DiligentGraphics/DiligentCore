@@ -324,7 +324,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
 #endif
 
 #if METAL_SUPPORTED
-        case DeviceType::Metal:
+        case RENDER_DEVICE_TYPE_METAL:
         {
             EngineMtlCreateInfo MtlAttribs;
 

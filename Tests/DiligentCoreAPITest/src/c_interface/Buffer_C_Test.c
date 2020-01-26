@@ -32,7 +32,7 @@ int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
 int TestBufferCInterface(struct IBuffer* pBuffer)
 {
-    struct IObject*           pObject = NULL;
+    struct IObject*           pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
     struct DeviceObjectAttribs Desc;
@@ -48,9 +48,9 @@ int TestBufferCInterface(struct IBuffer* pBuffer)
         TestObjectCInterface((struct IObject*)pBuffer) +
         TestDeviceObjectCInterface((struct IDeviceObject*)pBuffer);
 
-    IObject_QueryInterface(pBuffer, &IID_Unknown, &pObject);
-    if (pObject != NULL)
-        IObject_Release(pObject);
+    IObject_QueryInterface(pBuffer, &IID_Unknown, &pUnknown);
+    if (pUnknown != NULL)
+        IObject_Release(pUnknown);
     else
         ++num_errors;
 

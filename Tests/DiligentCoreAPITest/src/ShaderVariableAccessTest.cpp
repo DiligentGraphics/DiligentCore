@@ -35,6 +35,11 @@
 using namespace Diligent;
 using namespace Diligent::Testing;
 
+extern "C"
+{
+    int TestShaderResourceVariableCInterface(void* pVar, void* pObjectToSet);
+}
+
 namespace Diligent
 {
 
@@ -545,7 +550,8 @@ TEST(ShaderResourceLayout, VariableAccess)
             ASSERT_NE(tex2D_Dyn, nullptr);
             EXPECT_EQ(tex2D_Dyn->GetResourceDesc().ArraySize, 1u);
             EXPECT_EQ(tex2D_Dyn, pSRB->GetVariableByName(SHADER_TYPE_VERTEX, tex2D_Dyn->GetResourceDesc().Name));
-            tex2D_Dyn->Set(pSRVs[0]);
+            //tex2D_Dyn->Set(pSRVs[0]);
+            EXPECT_EQ(TestShaderResourceVariableCInterface(tex2D_Dyn, pSRVs[0]), 0);
         }
 
         {

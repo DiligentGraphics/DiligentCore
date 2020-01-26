@@ -29,14 +29,14 @@
 
 int TestObjectCInterface(struct IObject* pObject)
 {
-    struct IObject*           pObject1 = NULL;
+    struct IObject*           pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
     int num_errors = 0;
 
-    IObject_QueryInterface(pObject, &IID_Unknown, &pObject1);
-    if (pObject1 != NULL)
-        IObject_Release(pObject1);
+    IObject_QueryInterface(pObject, &IID_Unknown, &pUnknown);
+    if (pUnknown != NULL)
+        IObject_Release(pUnknown);
     else
         ++num_errors;
 

@@ -149,30 +149,41 @@ public:
 struct IShaderResourceVariable;
 
 // clang-format off
-struct IShaderResourceVariableVtbl
+struct IShaderResourceVariableMethods
 {
-    void (*Set)(class IDeviceObject* pObject);
-    void (*SetArray)(class IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements);
-    SHADER_RESOURCE_VARIABLE_TYPE(*GetType)();
-    struct ShaderResourceDesc (*GetResourceDesc)();
-    Uint32 (*GetIndex)();
-    bool (*IsBound)(Uint32 ArrayIndex);
+    void                          (*Set)            (struct IShaderResourceVariable*, class IDeviceObject* pObject);
+    void                          (*SetArray)       (struct IShaderResourceVariable*, class IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements);
+    SHADER_RESOURCE_VARIABLE_TYPE (*GetType)        (struct IShaderResourceVariable*);
+    struct ShaderResourceDesc     (*GetResourceDesc)(struct IShaderResourceVariable*);
+    Uint32                        (*GetIndex)       (struct IShaderResourceVariable*);
+    bool                          (*IsBound)        (struct IShaderResourceVariable*, Uint32 ArrayIndex);
 };
 // clang-format on
 
+struct IShaderResourceVariableVtbl
+{
+    struct IObjectMethods                 Object;
+    struct IShaderResourceVariableMethods ShaderResourceVariable;
+};
 
 struct IShaderResourceVariable
 {
-    struct IObjectVtbl*             pObjectVtbl;
-    struct IShaderResourceVariable* pShaderResourceVariableVtbl;
+    struct IShaderResourceVariableVtbl* pVtbl;
 };
 
-#    define IShaderResourceVariable_Set(This, ...)        (This)->pShaderResourceVariableVtbl->Set(This, __VA_ARGS__)
-#    define IShaderResourceVariable_SetArray(This, ...)   (This)->pShaderResourceVariableVtbl->SetArray(This, __VA_ARGS__)
-#    define IShaderResourceVariable_GetType(This)         (This)->pShaderResourceVariableVtbl->GetType(This)
-#    define IShaderResourceVariable_GetResourceDesc(This) (This)->pShaderResourceVariableVtbl->GetResourceDesc(This)
-#    define IShaderResourceVariable_GetIndex(This)        (This)->pShaderResourceVariableVtbl->GetIndex(This)
-#    define IShaderResourceVariable_IsBound(This, ...)    (This)->pShaderResourceVariableVtbl->IsBound(This, __VA_ARGS__)
+// clang-format off
+
+#    define IShaderResourceVariable_Set(This, ...)        (This)->pVtbl->ShaderResourceVariable.Set            ((struct IShaderResourceVariable*)(This), __VA_ARGS__)
+#    define IShaderResourceVariable_SetArray(This, ...)   (This)->pVtbl->ShaderResourceVariable.SetArray       ((struct IShaderResourceVariable*)(This), __VA_ARGS__)
+#    define IShaderResourceVariable_GetType(This)         (This)->pVtbl->ShaderResourceVariable.GetType        ((struct IShaderResourceVariable*)(This))
+
+// TODO: returning structure from a function produces different signatures in C and C++
+//#    define IShaderResourceVariable_GetResourceDesc(This) (This)->pVtbl->ShaderResourceVariable.GetResourceDesc((struct IShaderResourceVariable*)(This))
+
+#    define IShaderResourceVariable_GetIndex(This)        (This)->pVtbl->ShaderResourceVariable.GetIndex       ((struct IShaderResourceVariable*)(This))
+#    define IShaderResourceVariable_IsBound(This, ...)    (This)->pVtbl->ShaderResourceVariable.IsBound        ((struct IShaderResourceVariable*)(This), __VA_ARGS__)
+
+// clang-format on
 
 #endif
 

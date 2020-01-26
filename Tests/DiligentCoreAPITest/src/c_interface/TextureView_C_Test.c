@@ -32,7 +32,7 @@ int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
 int TestTextureViewCInterface(struct ITextureView* pView, struct ISampler* pSampler)
 {
-    struct IObject*           pObject = NULL;
+    struct IObject*           pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
     struct DeviceObjectAttribs Desc;
@@ -45,9 +45,9 @@ int TestTextureViewCInterface(struct ITextureView* pView, struct ISampler* pSamp
         TestObjectCInterface((struct IObject*)pView) +
         TestDeviceObjectCInterface((struct IDeviceObject*)pView);
 
-    IObject_QueryInterface(pView, &IID_Unknown, &pObject);
-    if (pObject != NULL)
-        IObject_Release(pObject);
+    IObject_QueryInterface(pView, &IID_Unknown, &pUnknown);
+    if (pUnknown != NULL)
+        IObject_Release(pUnknown);
     else
         ++num_errors;
 
