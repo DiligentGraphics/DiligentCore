@@ -32,11 +32,11 @@
 #include "DeviceContextVkImpl.h"
 #include "TextureViewVkImpl.h"
 #include "TextureVkImpl.h"
-#include "MapHelper.h"
 #include "PlatformMisc.h"
 #include "VulkanTypeConversions.h"
 #include "../../GraphicsTools/interface/ShaderMacroHelper.h"
 #include "../../GraphicsTools/interface/CommonlyUsedStates.h"
+#include "../../GraphicsTools/interface/MapHelper.h"
 
 
 // clang-format off

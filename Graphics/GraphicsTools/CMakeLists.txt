@@ -6,6 +6,7 @@ set(INTERFACE
     interface/CommonlyUsedStates.h
     interface/DurationQueryHelper.h
     interface/GraphicsUtilities.h
+    interface/MapHelper.h
     interface/pch.h
     interface/ScopedQueryHelper.h
     interface/ScreenCapture.h

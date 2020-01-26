@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/GraphicsEngine/interface/MapHelper.h"
+#include "DiligentCore/Graphics/GraphicsTools/interface/MapHelper.h"

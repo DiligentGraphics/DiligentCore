@@ -43,7 +43,6 @@ set(INTERFACE
     interface/Fence.h
     interface/GraphicsTypes.h
     interface/InputLayout.h
-    interface/MapHelper.h
     interface/PipelineState.h
     interface/Query.h
     interface/RasterizerState.h

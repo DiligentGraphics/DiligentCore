@@ -32,8 +32,8 @@
 
 #include "../../../Platforms/Basic/interface/DebugUtilities.h"
 #include "../../../Common/interface/RefCntAutoPtr.h"
-#include "DeviceContext.h"
-#include "Buffer.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
+#include "../../GraphicsEngine/interface/Buffer.h"
 
 namespace Diligent
 {
