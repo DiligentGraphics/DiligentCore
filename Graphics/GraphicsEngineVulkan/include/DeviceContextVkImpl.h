@@ -37,7 +37,7 @@
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "VulkanUploadHeap.h"
 #include "VulkanDynamicHeap.h"
-#include "ResourceReleaseQueue.h"
+#include "ResourceReleaseQueue.hpp"
 #include "DescriptorPoolManager.h"
 #include "PipelineLayout.h"
 #include "GenerateMipsVkHelper.h"

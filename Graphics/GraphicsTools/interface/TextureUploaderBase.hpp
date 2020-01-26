@@ -29,7 +29,7 @@
 
 #include <vector>
 
-#include "TextureUploader.h"
+#include "TextureUploader.hpp"
 #include "../../../Common/interface/ObjectBase.h"
 #include "../../../Common/interface/HashUtils.h"
 #include "../../../Common/interface/RefCntAutoPtr.h"

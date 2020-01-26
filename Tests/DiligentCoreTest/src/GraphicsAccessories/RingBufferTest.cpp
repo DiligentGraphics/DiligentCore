@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "RingBuffer.h"
+#include "RingBuffer.hpp"
 #include "DefaultRawMemoryAllocator.h"
 
 #include "gtest/gtest.h"

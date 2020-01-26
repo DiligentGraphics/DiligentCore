@@ -26,9 +26,9 @@
  */
 
 #include "pch.h"
-#include "TextureUploaderD3D11.h"
-#include "TextureUploaderD3D12_Vk.h"
-#include "TextureUploaderGL.h"
+#include "TextureUploaderD3D11.hpp"
+#include "TextureUploaderD3D12_Vk.hpp"
+#include "TextureUploaderGL.hpp"
 
 namespace Diligent
 {

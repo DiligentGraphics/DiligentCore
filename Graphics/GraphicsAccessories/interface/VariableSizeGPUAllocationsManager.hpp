@@ -32,7 +32,7 @@
 #pragma once
 
 #include <deque>
-#include "VariableSizeAllocationsManager.h"
+#include "VariableSizeAllocationsManager.hpp"
 
 namespace Diligent
 {

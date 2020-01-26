@@ -35,7 +35,7 @@
 #include "PipelineStateBase.h"
 #include "RootSignature.h"
 #include "ShaderResourceLayoutD3D12.h"
-#include "SRBMemoryAllocator.h"
+#include "SRBMemoryAllocator.hpp"
 #include "RenderDeviceD3D12Impl.h"
 #include "ShaderVariableD3D12.h"
 

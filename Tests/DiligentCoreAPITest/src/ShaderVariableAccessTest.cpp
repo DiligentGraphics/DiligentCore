@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "../../../Graphics/GraphicsEngineD3DBase/interface/ShaderD3D.h"
 
 #include "TestingEnvironment.h"

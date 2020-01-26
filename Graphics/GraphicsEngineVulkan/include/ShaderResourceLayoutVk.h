@@ -104,7 +104,7 @@
 #include "ShaderBase.h"
 #include "HashUtils.h"
 #include "ShaderResourceCacheVk.h"
-#include "SPIRVShaderResources.h"
+#include "SPIRVShaderResources.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 
 namespace Diligent

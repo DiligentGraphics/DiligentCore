@@ -33,7 +33,7 @@
 #include "Buffer.h"
 #include "GraphicsTypes.h"
 #include "DeviceObjectBase.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "STDAllocator.h"
 #include <memory>
 

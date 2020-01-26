@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/GraphicsAccessories/interface/VariableSizeGPUAllocationsManager.h"
+#include "DiligentCore/Graphics/GraphicsAccessories/interface/VariableSizeGPUAllocationsManager.hpp"

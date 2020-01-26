@@ -29,8 +29,8 @@
 #include <algorithm>
 
 #include "TestingEnvironment.h"
-#include "ShaderMacroHelper.h"
-#include "GraphicsAccessories.h"
+#include "ShaderMacroHelper.hpp"
+#include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
 

@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "TextureUploaderBase.h"
+#include "TextureUploaderBase.hpp"
 
 namespace Diligent
 {

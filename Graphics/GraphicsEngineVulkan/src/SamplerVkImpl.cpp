@@ -29,7 +29,7 @@
 #include "SamplerVkImpl.h"
 #include "RenderDeviceVkImpl.h"
 #include "VulkanTypeConversions.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {

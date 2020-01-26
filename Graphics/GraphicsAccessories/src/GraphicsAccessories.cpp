@@ -27,7 +27,7 @@
 
 #include <algorithm>
 
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "DebugUtilities.h"
 #include "Align.h"
 

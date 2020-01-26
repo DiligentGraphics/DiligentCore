@@ -27,7 +27,7 @@
 
 #include "TestingEnvironment.h"
 #include "PSOTestBase.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
 

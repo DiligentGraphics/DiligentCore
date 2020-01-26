@@ -34,9 +34,9 @@
 #include "TextureVkImpl.h"
 #include "PlatformMisc.h"
 #include "VulkanTypeConversions.h"
-#include "../../GraphicsTools/interface/ShaderMacroHelper.h"
+#include "../../GraphicsTools/interface/ShaderMacroHelper.hpp"
 #include "../../GraphicsTools/interface/CommonlyUsedStates.h"
-#include "../../GraphicsTools/interface/MapHelper.h"
+#include "../../GraphicsTools/interface/MapHelper.hpp"
 
 
 // clang-format off

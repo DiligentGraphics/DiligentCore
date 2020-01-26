@@ -35,7 +35,7 @@
 #include "VulkanTypeConversions.h"
 #include "CommandListVkImpl.h"
 #include "FenceVkImpl.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {

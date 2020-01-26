@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "VariableSizeGPUAllocationsManager.h"
+#include "VariableSizeGPUAllocationsManager.hpp"
 #include "DefaultRawMemoryAllocator.h"
 #include "PlatformDefinitions.h"
 

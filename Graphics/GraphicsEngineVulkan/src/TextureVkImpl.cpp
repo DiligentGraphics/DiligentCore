@@ -34,7 +34,7 @@
 #include "VulkanTypeConversions.h"
 #include "EngineMemory.h"
 #include "StringTools.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {

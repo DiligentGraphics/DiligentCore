@@ -3,7 +3,7 @@ cmake_minimum_required (VERSION 3.6)
 project(Diligent-GLSLTools CXX)
 
 set(INCLUDE 
-    include/GLSLSourceBuilder.h
+    include/GLSLSourceBuilder.hpp
 )
 
 set(SOURCE 
@@ -15,7 +15,7 @@ if(VULKAN_SUPPORTED)
         src/SPIRVShaderResources.cpp
     )
     list(APPEND INCLUDE 
-        include/SPIRVShaderResources.h
+        include/SPIRVShaderResources.hpp
     )
 
     if (NOT ${DILIGENT_NO_GLSLANG})
@@ -23,7 +23,7 @@ if(VULKAN_SUPPORTED)
             src/SPIRVUtils.cpp
         )
         list(APPEND INCLUDE 
-            include/SPIRVUtils.h
+            include/SPIRVUtils.hpp
         )
     endif()
 endif()

@@ -31,7 +31,7 @@
 #include "RenderDeviceGLImpl.h"
 #include "DeviceContextGLImpl.h"
 #include "GLTypeConversions.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "BufferGLImpl.h"
 
 namespace Diligent

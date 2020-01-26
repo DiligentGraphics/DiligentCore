@@ -33,7 +33,7 @@
 #include "RenderDeviceVk.h"
 #include "ShaderVk.h"
 #include "ShaderBase.h"
-#include "SPIRVShaderResources.h"
+#include "SPIRVShaderResources.hpp"
 #include "RenderDeviceVkImpl.h"
 
 namespace Diligent

@@ -41,7 +41,7 @@
 #    include "Vulkan/CreateObjFromNativeResVK.h"
 #endif
 
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 #include "TestingEnvironment.h"
 

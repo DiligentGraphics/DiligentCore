@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/GraphicsAccessories/interface/VariableSizeAllocationsManager.h"
+#include "DiligentCore/Graphics/GraphicsAccessories/interface/VariableSizeAllocationsManager.hpp"

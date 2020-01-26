@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "ScopedQueryHelper.h"
+#include "ScopedQueryHelper.hpp"
 
 namespace Diligent
 {

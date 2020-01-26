@@ -28,7 +28,7 @@
 #include <cstring>
 #include <sstream>
 
-#include "GLSLSourceBuilder.h"
+#include "GLSLSourceBuilder.hpp"
 #include "DebugUtilities.h"
 #include "HLSL2GLSLConverterImpl.h"
 #include "RefCntAutoPtr.h"

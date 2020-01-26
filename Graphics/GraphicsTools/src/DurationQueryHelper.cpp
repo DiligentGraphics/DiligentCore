@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "DurationQueryHelper.h"
+#include "DurationQueryHelper.hpp"
 
 namespace Diligent
 {

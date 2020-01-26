@@ -33,7 +33,7 @@
 #include <atomic>
 #include <string>
 #include "MemoryAllocator.h"
-#include "VariableSizeAllocationsManager.h"
+#include "VariableSizeAllocationsManager.hpp"
 #include "VulkanUtilities/VulkanPhysicalDevice.h"
 #include "VulkanUtilities/VulkanLogicalDevice.h"
 #include "VulkanUtilities/VulkanObjectWrappers.h"

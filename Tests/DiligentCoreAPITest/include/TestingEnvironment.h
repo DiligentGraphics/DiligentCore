@@ -33,7 +33,7 @@
 #include "DeviceContext.h"
 #include "RefCntAutoPtr.h"
 #include "SwapChain.h"
-#include "GraphicsTypesOutputInserters.h"
+#include "GraphicsTypesOutputInserters.hpp"
 
 #include "gtest/gtest.h"
 

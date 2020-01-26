@@ -26,11 +26,11 @@
  */
 
 #include <iomanip>
-#include "SPIRVShaderResources.h"
+#include "SPIRVShaderResources.hpp"
 #include "spirv_parser.hpp"
 #include "spirv_cross.hpp"
 #include "ShaderBase.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "StringTools.h"
 #include "Align.h"
 

@@ -33,7 +33,7 @@
 #include "RenderDeviceVk.h"
 #include "TextureVk.h"
 #include "BufferVk.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 #include "Vulkan/CreateObjFromNativeResVK.h"
 

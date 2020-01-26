@@ -33,7 +33,7 @@
 #include "Texture.h"
 #include "GraphicsTypes.h"
 #include "DeviceObjectBase.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "STDAllocator.h"
 #include "FormatString.h"
 #include <memory>

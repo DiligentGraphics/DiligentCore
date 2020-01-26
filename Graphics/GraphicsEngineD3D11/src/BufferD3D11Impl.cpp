@@ -33,7 +33,7 @@
 #include "DeviceContextD3D11Impl.h"
 #include "D3D11TypeConversions.h"
 #include "BufferViewD3D11Impl.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

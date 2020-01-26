@@ -37,7 +37,7 @@
 #include "MemoryAllocator.h"
 #include "RefCntAutoPtr.h"
 #include "PlatformMisc.h"
-#include "ResourceReleaseQueue.h"
+#include "ResourceReleaseQueue.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

@@ -30,7 +30,7 @@
 
 #include "QueryManagerD3D12.h"
 #include "D3D12TypeConversions.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "CommandContext.h"
 #include "Align.h"
 

@@ -30,7 +30,7 @@
 #include "RenderDeviceD3D12.h"
 #include "TextureD3D12.h"
 #include "BufferD3D12.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
 

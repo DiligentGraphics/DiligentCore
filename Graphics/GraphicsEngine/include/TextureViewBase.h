@@ -33,7 +33,7 @@
 #include "TextureView.h"
 #include "DeviceObjectBase.h"
 #include "RefCntAutoPtr.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {

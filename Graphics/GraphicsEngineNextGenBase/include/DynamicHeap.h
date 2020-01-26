@@ -34,8 +34,8 @@
 #include <deque>
 #include <vector>
 #include <atomic>
-#include "VariableSizeAllocationsManager.h"
-#include "RingBuffer.h"
+#include "VariableSizeAllocationsManager.hpp"
+#include "RingBuffer.hpp"
 
 namespace Diligent
 {

@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Graphics/GraphicsTools/interface/DurationQueryHelper.h"
+#include "DiligentCore/Graphics/GraphicsTools/interface/DurationQueryHelper.hpp"

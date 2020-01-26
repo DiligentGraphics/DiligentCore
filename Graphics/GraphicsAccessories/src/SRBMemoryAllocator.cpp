@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "SRBMemoryAllocator.h"
+#include "SRBMemoryAllocator.hpp"
 
 namespace Diligent
 {

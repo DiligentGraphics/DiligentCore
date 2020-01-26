@@ -4,13 +4,13 @@ project(Diligent-GraphicsAccessories CXX)
 
 set(INTERFACE 
     interface/ColorConversion.h
-    interface/GraphicsAccessories.h
-    interface/GraphicsTypesOutputInserters.h
-    interface/ResourceReleaseQueue.h
-    interface/RingBuffer.h
-    interface/SRBMemoryAllocator.h
-    interface/VariableSizeAllocationsManager.h
-    interface/VariableSizeGPUAllocationsManager.h
+    interface/GraphicsAccessories.hpp
+    interface/GraphicsTypesOutputInserters.hpp
+    interface/ResourceReleaseQueue.hpp
+    interface/RingBuffer.hpp
+    interface/SRBMemoryAllocator.hpp
+    interface/VariableSizeAllocationsManager.hpp
+    interface/VariableSizeGPUAllocationsManager.hpp
 )
 
 set(SOURCE

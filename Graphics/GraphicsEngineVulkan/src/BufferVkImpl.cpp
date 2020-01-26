@@ -31,7 +31,7 @@
 #include "DeviceContextVkImpl.h"
 #include "VulkanTypeConversions.h"
 #include "BufferViewVkImpl.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "EngineMemory.h"
 #include "StringTools.h"
 #include "VulkanUtilities/VulkanDebug.h"

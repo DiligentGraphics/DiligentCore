@@ -31,7 +31,7 @@
 
 #include "GraphicsUtilities.h"
 #include "DebugUtilities.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "ColorConversion.h"
 
 #define PI_F 3.1415926f

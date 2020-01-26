@@ -34,7 +34,7 @@
 #include "RenderDeviceD3D11.h"
 #include "PipelineStateBase.h"
 #include "ShaderD3D11Impl.h"
-#include "SRBMemoryAllocator.h"
+#include "SRBMemoryAllocator.hpp"
 #include "RenderDeviceD3D11Impl.h"
 
 namespace Diligent

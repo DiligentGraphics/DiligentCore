@@ -37,7 +37,7 @@
 #    include "SPIRV/GlslangToSpv.h"
 #endif
 
-#include "SPIRVUtils.h"
+#include "SPIRVUtils.hpp"
 #include "DebugUtilities.h"
 #include "DataBlobImpl.h"
 #include "RefCntAutoPtr.h"

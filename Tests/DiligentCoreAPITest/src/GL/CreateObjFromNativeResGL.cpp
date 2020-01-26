@@ -86,7 +86,7 @@
 #include "RenderDeviceGL.h"
 #include "TextureGL.h"
 #include "BufferGL.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 #include "GL/CreateObjFromNativeResGL.h"
 

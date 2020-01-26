@@ -26,5 +26,5 @@
  */
 
 #if D3D11_SUPPORTED
-#    include "DiligentCore/Graphics/GraphicsTools/interface/TextureUploaderD3D11.h"
+#    include "DiligentCore/Graphics/GraphicsTools/interface/TextureUploaderD3D11.hpp"
 #endif

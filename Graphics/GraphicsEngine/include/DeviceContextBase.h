@@ -39,7 +39,7 @@
 #include "ObjectBase.h"
 #include "DebugUtilities.h"
 #include "ValidatedCast.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "TextureBase.h"
 
 namespace Diligent

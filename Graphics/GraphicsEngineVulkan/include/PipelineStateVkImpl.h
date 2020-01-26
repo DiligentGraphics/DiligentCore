@@ -39,7 +39,7 @@
 #include "ShaderResourceLayoutVk.h"
 #include "ShaderVariableVk.h"
 #include "FixedBlockMemoryAllocator.h"
-#include "SRBMemoryAllocator.h"
+#include "SRBMemoryAllocator.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.h"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 #include "PipelineLayout.h"

@@ -28,7 +28,7 @@
 #include <algorithm>
 
 #include "RenderDevice.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 #if D3D11_SUPPORTED
 #    include "D3D11/CreateObjFromNativeResD3D11.h"

@@ -32,7 +32,7 @@
 #include "VulkanUtilities/VulkanDebug.h"
 
 #if !NO_GLSLANG
-#    include "SPIRVUtils.h"
+#    include "SPIRVUtils.hpp"
 #endif
 
 #include "PlatformDefinitions.h"

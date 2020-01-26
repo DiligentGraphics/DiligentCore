@@ -30,7 +30,7 @@
 
 #include "QueryD3D12Impl.h"
 #include "RenderDeviceD3D12Impl.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "DeviceContextD3D12Impl.h"
 
 namespace Diligent

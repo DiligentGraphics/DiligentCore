@@ -55,7 +55,7 @@
 
 #include <vector>
 #include "DescriptorPoolManager.h"
-#include "SPIRVShaderResources.h"
+#include "SPIRVShaderResources.hpp"
 #include "BufferVkImpl.h"
 
 namespace Diligent

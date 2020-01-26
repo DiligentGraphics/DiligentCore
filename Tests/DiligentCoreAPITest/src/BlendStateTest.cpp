@@ -28,7 +28,7 @@
 #include <sstream>
 
 #include "TestingEnvironment.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
 

@@ -27,7 +27,7 @@
 
 #include <memory>
 
-#include "ResourceReleaseQueue.h"
+#include "ResourceReleaseQueue.hpp"
 #include "DefaultRawMemoryAllocator.h"
 
 #include "gtest/gtest.h"

@@ -32,10 +32,10 @@
 #include "ShaderVkImpl.h"
 #include "RenderDeviceVkImpl.h"
 #include "DataBlobImpl.h"
-#include "GLSLSourceBuilder.h"
+#include "GLSLSourceBuilder.hpp"
 
 #if !NO_GLSLANG
-#    include "SPIRVUtils.h"
+#    include "SPIRVUtils.hpp"
 #endif
 
 namespace Diligent

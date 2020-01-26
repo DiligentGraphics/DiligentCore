@@ -29,7 +29,7 @@
 #include <algorithm>
 #include "QueryManagerVk.h"
 #include "RenderDeviceVkImpl.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "VulkanUtilities/VulkanCommandBuffer.h"
 
 namespace Diligent

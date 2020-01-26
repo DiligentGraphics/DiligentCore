@@ -30,7 +30,7 @@
 #include "GLContextWindows.h"
 #include "DeviceCaps.h"
 #include "GLTypeConversions.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {

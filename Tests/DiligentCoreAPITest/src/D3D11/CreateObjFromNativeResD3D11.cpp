@@ -31,7 +31,7 @@
 #include "RenderDeviceD3D11.h"
 #include "TextureD3D11.h"
 #include "BufferD3D11.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
 

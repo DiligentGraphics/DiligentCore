@@ -26,5 +26,5 @@
  */
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-#    include "DiligentCore/Graphics/GraphicsTools/interface/TextureUploaderGL.h"
+#    include "DiligentCore/Graphics/GraphicsTools/interface/TextureUploaderGL.hpp"
 #endif

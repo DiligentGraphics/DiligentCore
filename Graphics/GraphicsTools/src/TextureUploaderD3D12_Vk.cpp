@@ -30,9 +30,9 @@
 #include <deque>
 #include <vector>
 
-#include "TextureUploaderD3D12_Vk.h"
+#include "TextureUploaderD3D12_Vk.hpp"
 #include "ThreadSignal.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {

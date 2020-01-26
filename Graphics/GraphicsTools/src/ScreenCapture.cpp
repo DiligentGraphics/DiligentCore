@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include "ScreenCapture.h"
+#include "ScreenCapture.hpp"
 
 namespace Diligent
 {

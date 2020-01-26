@@ -32,9 +32,9 @@
 #include <vector>
 #include <algorithm>
 
-#include "TextureUploaderGL.h"
+#include "TextureUploaderGL.hpp"
 #include "ThreadSignal.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "Align.h"
 
 namespace Diligent

@@ -39,7 +39,7 @@
 #include "ObjectBase.h"
 #include "DeviceContext.h"
 #include "SwapChain.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "FixedBlockMemoryAllocator.h"
 #include "EngineMemory.h"
 #include "STDAllocator.h"

@@ -30,7 +30,7 @@
 #include <algorithm>
 
 #include "TestingSwapChainBase.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../../../ThirdParty/stb/stb_image_write.h"

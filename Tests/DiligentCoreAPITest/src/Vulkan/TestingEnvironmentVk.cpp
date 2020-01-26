@@ -30,7 +30,7 @@
 #include "RenderDeviceVk.h"
 #include "DeviceContextVk.h"
 
-#include "SPIRVUtils.h"
+#include "SPIRVUtils.hpp"
 
 #define VOLK_IMPLEMENTATION
 #include "volk/volk.h"

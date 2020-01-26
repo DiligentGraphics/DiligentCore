@@ -30,7 +30,7 @@
 #include "TexRegionRender.h"
 #include "RenderDeviceGLImpl.h"
 #include "DeviceContextGLImpl.h"
-#include "../../GraphicsTools/interface/MapHelper.h"
+#include "../../GraphicsTools/interface/MapHelper.hpp"
 
 
 namespace Diligent

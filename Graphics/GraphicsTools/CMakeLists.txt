@@ -4,15 +4,15 @@ project(Diligent-GraphicsTools CXX)
 
 set(INTERFACE
     interface/CommonlyUsedStates.h
-    interface/DurationQueryHelper.h
+    interface/DurationQueryHelper.hpp
     interface/GraphicsUtilities.h
-    interface/MapHelper.h
+    interface/MapHelper.hpp
     interface/pch.h
-    interface/ScopedQueryHelper.h
-    interface/ScreenCapture.h
-    interface/ShaderMacroHelper.h
-    interface/TextureUploader.h
-    interface/TextureUploaderBase.h
+    interface/ScopedQueryHelper.hpp
+    interface/ScreenCapture.hpp
+    interface/ShaderMacroHelper.hpp
+    interface/TextureUploader.hpp
+    interface/TextureUploaderBase.hpp
 )
 
 set(SOURCE 
@@ -28,18 +28,18 @@ set(DEPENDENCIES)
 
 if(D3D11_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderD3D11.cpp)
-    list(APPEND INTERFACE interface/TextureUploaderD3D11.h)
+    list(APPEND INTERFACE interface/TextureUploaderD3D11.hpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineD3D11Interface)
 endif()
 
 if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderD3D12_Vk.cpp)
-    list(APPEND INTERFACE interface/TextureUploaderD3D12_Vk.h)
+    list(APPEND INTERFACE interface/TextureUploaderD3D12_Vk.hpp)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
     list(APPEND SOURCE src/TextureUploaderGL.cpp)
-    list(APPEND INTERFACE interface/TextureUploaderGL.h)
+    list(APPEND INTERFACE interface/TextureUploaderGL.hpp)
     list(APPEND DEPENDENCIES Diligent-GraphicsEngineOpenGLInterface)
 endif()
 

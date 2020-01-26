@@ -27,18 +27,18 @@
 
 #pragma once
 
-#include "TextureUploaderBase.h"
+#include "TextureUploaderBase.hpp"
 
 namespace Diligent
 {
 
-class TextureUploaderGL : public TextureUploaderBase
+class TextureUploaderD3D11 : public TextureUploaderBase
 {
 public:
-    TextureUploaderGL(IReferenceCounters*       pRefCounters,
-                      IRenderDevice*            pDevice,
-                      const TextureUploaderDesc Desc);
-    ~TextureUploaderGL();
+    TextureUploaderD3D11(IReferenceCounters*       pRefCounters,
+                         IRenderDevice*            pDevice,
+                         const TextureUploaderDesc Desc);
+    ~TextureUploaderD3D11();
 
     virtual void RenderThreadUpdate(IDeviceContext* pContext) override final;
 

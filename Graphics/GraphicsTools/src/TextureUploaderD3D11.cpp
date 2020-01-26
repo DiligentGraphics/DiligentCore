@@ -34,13 +34,13 @@
 #include <vector>
 #include <d3d11.h>
 
-#include "TextureUploaderD3D11.h"
+#include "TextureUploaderD3D11.hpp"
 #include "RenderDeviceD3D11.h"
 #include "DeviceContextD3D11.h"
 #include "TextureD3D11.h"
 #include "DXGITypeConversions.h"
 #include "ThreadSignal.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
