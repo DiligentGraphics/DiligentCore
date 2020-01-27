@@ -31,12 +31,12 @@ int TestObjectCInterface(struct IObject* pObject);
 
 int TestShaderResourceBindingCInterface(struct IShaderResourceBinding* pSRB)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct IPipelineState*          pPSO     = NULL;
-    struct IShaderResourceVariable* pVar     = NULL;
-    Uint32                          VarCount = 0;
+    struct IPipelineState*   pPSO     = NULL;
+    IShaderResourceVariable* pVar     = NULL;
+    Uint32                   VarCount = 0;
 
     int num_errors = TestObjectCInterface((struct IObject*)pSRB);
 

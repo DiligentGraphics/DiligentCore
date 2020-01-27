@@ -53,7 +53,7 @@ bool MemoryFileStream::Read(void* Data, size_t Size)
     return Size == BytesToRead;
 }
 
-void MemoryFileStream::Read(IDataBlob* pData)
+void MemoryFileStream::ReadBlob(IDataBlob* pData)
 {
     auto BytesLeft = m_DataBlob->GetSize() - m_CurrentOffset;
     pData->Resize(BytesLeft);

@@ -1057,7 +1057,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::InsertIncludes(String& GLSLSource
             if (!pIncludeDataStream)
                 LOG_ERROR_AND_THROW("Failed to open include file ", IncludeName);
             RefCntAutoPtr<IDataBlob> pIncludeData(MakeNewRCObj<DataBlobImpl>()(0));
-            pIncludeDataStream->Read(pIncludeData);
+            pIncludeDataStream->ReadBlob(pIncludeData);
 
             // Get include text
             auto   IncludeText = reinterpret_cast<const Char*>(pIncludeData->GetDataPtr());
@@ -4587,7 +4587,7 @@ HLSL2GLSLConverterImpl::ConversionStream::ConversionStream(IReferenceCounters*  
             LOG_ERROR_AND_THROW("Failed to open shader source file ", InputFileName);
 
         pFileData = MakeNewRCObj<DataBlobImpl>()(0);
-        pSourceStream->Read(pFileData);
+        pSourceStream->ReadBlob(pFileData);
         HLSLSource = reinterpret_cast<char*>(pFileData->GetDataPtr());
         NumSymbols = pFileData->GetSize();
     }

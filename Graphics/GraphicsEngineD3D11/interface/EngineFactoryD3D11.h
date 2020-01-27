@@ -48,7 +48,7 @@ static const struct INTERFACE_ID IID_EngineFactoryD3D11 =
 #if DILIGENT_CPP_INTERFACE
 
 /// Engine factory for Direct3D11 rendering backend.
-class IEngineFactoryD3D11 : public IEngineFactory
+struct IEngineFactoryD3D11 : public IEngineFactory
 {
 public:
     /// Creates a render device and device contexts for Direct3D11-based engine implementation.
@@ -151,23 +151,23 @@ struct IEngineFactoryD3D11Methods
 {
     void (*CreateDeviceAndContextsD3D11)(struct IEngineFactoryD3D11*,
                                          const struct EngineD3D11CreateInfo* EngineCI,
-                                         class IRenderDevice**               ppDevice,
-                                         class IDeviceContext**              ppContexts);
+                                         struct IRenderDevice**              ppDevice,
+                                         struct IDeviceContext**             ppContexts);
 
     void (*CreateSwapChainD3D11)(struct IEngineFactoryD3D11*,
-                                 class IRenderDevice*             pDevice,
-                                 class IDeviceContext*            pImmediateContext,
+                                 struct IRenderDevice*            pDevice,
+                                 struct IDeviceContext*           pImmediateContext,
                                  const struct SwapChainDesc*      SCDesc,
                                  const struct FullScreenModeDesc* FSDesc,
                                  void*                            pNativeWndHandle,
-                                 class ISwapChain**               ppSwapChain);
+                                 struct ISwapChain**              ppSwapChain);
 
     void (*AttachToD3D11Device)(struct IEngineFactoryD3D11*,
                                 void*                               pd3d11NativeDevice,
                                 void*                               pd3d11ImmediateContext,
                                 const struct EngineD3D11CreateInfo* EngineCI,
-                                class IRenderDevice**               ppDevice,
-                                class IDeviceContext**              ppContexts);
+                                struct IRenderDevice**              ppDevice,
+                                struct IDeviceContext**             ppContexts);
 
     void (*EnumerateAdapters)(struct IEngineFactoryD3D11*,
                               DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
@@ -211,7 +211,7 @@ struct IEngineFactoryD3D11
 
 #if ENGINE_DLL
 
-typedef class IEngineFactoryD3D11* (*GetEngineFactoryD3D11Type)();
+typedef struct IEngineFactoryD3D11* (*GetEngineFactoryD3D11Type)();
 
 inline GetEngineFactoryD3D11Type LoadGraphicsEngineD3D11()
 {
@@ -220,7 +220,7 @@ inline GetEngineFactoryD3D11Type LoadGraphicsEngineD3D11()
 
 #else
 
-class IEngineFactoryD3D11* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryD3D11)();
+struct IEngineFactoryD3D11* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryD3D11)();
 
 #endif
 

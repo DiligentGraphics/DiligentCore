@@ -32,14 +32,14 @@ int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
 int TestTextureViewCInterface(struct ITextureView* pView, struct ISampler* pSampler)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
+    DeviceObjectAttribs Desc;
+    Int32               UniqueId = 0;
 
-    struct TextureViewDesc ViewDesc;
-    class ITexture*        pTexture = NULL;
+    TextureViewDesc  ViewDesc;
+    struct ITexture* pTexture = NULL;
 
     int num_errors =
         TestObjectCInterface((struct IObject*)pView) +

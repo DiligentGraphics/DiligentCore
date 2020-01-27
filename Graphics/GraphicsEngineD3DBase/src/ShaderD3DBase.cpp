@@ -62,7 +62,7 @@ public:
         }
 
         RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
-        pSourceStream->Read(pFileData);
+        pSourceStream->ReadBlob(pFileData);
         *ppData = pFileData->GetDataPtr();
         *pBytes = static_cast<UINT>(pFileData->GetSize());
 
@@ -164,7 +164,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* Shade
             RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
             if (pSourceStream == nullptr)
                 LOG_ERROR_AND_THROW("Failed to open shader source file");
-            pSourceStream->Read(pFileData);
+            pSourceStream->ReadBlob(pFileData);
             // Null terminator is not read from the stream!
             auto* FileDataPtr = reinterpret_cast<Char*>(pFileData->GetDataPtr());
             auto  Size        = pFileData->GetSize();

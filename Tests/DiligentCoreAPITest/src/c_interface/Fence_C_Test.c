@@ -32,14 +32,14 @@ int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
 int TestFenceCInterface(struct IFence* pFence)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
+    DeviceObjectAttribs Desc;
+    Int32               UniqueId = 0;
 
-    struct FenceDesc FenceDesc;
-    Uint64           FenceValue = 0;
+    FenceDesc FenceDesc;
+    Uint64    FenceValue = 0;
 
     int num_errors =
         TestObjectCInterface((struct IObject*)pFence) +

@@ -31,10 +31,10 @@ int TestObjectCInterface(struct IObject* pObject);
 
 int TestResourceMappingCInterface(struct IResourceMapping* pResourceMapping)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct ResourceMappingDesc SCDesc;
+    ResourceMappingDesc SCDesc;
 
     memset(&SCDesc, 0, sizeof(SCDesc));
 
@@ -60,7 +60,7 @@ int TestResourceMappingCInterface(struct IResourceMapping* pResourceMapping)
 
 void TestResourceMappingC_API(struct IResourceMapping* pResourceMapping)
 {
-    struct IDeviceObject* pObject = NULL;
+    IDeviceObject* pObject = NULL;
 
     Uint32 ArraySize  = 4;
     Uint32 ArrayIndex = 6;

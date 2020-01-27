@@ -35,7 +35,7 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {6C1AC7A6-B429-4139-9433-9E54E93E384A}
-static const struct INTERFACE_ID IID_ResourceMapping =
+static const INTERFACE_ID IID_ResourceMapping =
     {0x6c1ac7a6, 0xb429, 0x4139, {0x94, 0x33, 0x9e, 0x54, 0xe9, 0x3e, 0x38, 0x4a}};
 
 /// Describes the resourse mapping object entry
@@ -44,12 +44,12 @@ struct ResourceMappingEntry
     // clang-format off
 
     /// Object name
-    const Char* Name             DEFAULT_INITIALIZER(nullptr);
+    const Char* Name        DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the object's interface
-    class IDeviceObject* pObject DEFAULT_INITIALIZER(nullptr);
+    IDeviceObject* pObject  DEFAULT_INITIALIZER(nullptr);
 
-    Uint32 ArrayIndex            DEFAULT_INITIALIZER(0);
+    Uint32 ArrayIndex       DEFAULT_INITIALIZER(0);
 
 
 #if DILIGENT_CPP_INTERFACE
@@ -68,6 +68,8 @@ struct ResourceMappingEntry
     // clang-format on
 #endif
 };
+typedef struct ResourceMappingEntry ResourceMappingEntry;
+
 
 /// Resource mapping description
 struct ResourceMappingDesc
@@ -75,7 +77,7 @@ struct ResourceMappingDesc
     /// Pointer to the array of resource mapping entries.
     /// The last element in the array must be default value
     /// created by ResourceMappingEntry::ResourceMappingEntry()
-    struct ResourceMappingEntry* pEntries DEFAULT_INITIALIZER(nullptr);
+    ResourceMappingEntry* pEntries DEFAULT_INITIALIZER(nullptr);
 
 #if DILIGENT_CPP_INTERFACE
     ResourceMappingDesc() noexcept
@@ -86,18 +88,23 @@ struct ResourceMappingDesc
     {}
 #endif
 };
+typedef struct ResourceMappingDesc ResourceMappingDesc;
 
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IResourceMapping*
+#    define THIS_ struct IResourceMapping*,
+#endif
+
+// clang-format off
 
 /// Resouce mapping
 
 /// This interface provides mapping between literal names and resource pointers.
 /// It is created by IRenderDevice::CreateResourceMapping().
 /// \remarks Resource mapping holds strong references to all objects it keeps.
-class IResourceMapping : public IObject
+DILIGENT_INTERFACE(IResourceMapping, IObject)
 {
-public:
     /// Adds a resource to the mapping.
 
     /// \param [in] Name - Resource name.
@@ -108,7 +115,10 @@ public:
     ///
     /// \remarks Resource mapping increases the reference counter for referenced objects. So an
     ///          object will not be released as long as it is in the resource mapping.
-    virtual void AddResource(const Char* Name, IDeviceObject* pObject, bool bIsUnique) = 0;
+    VIRTUAL void METHOD(AddResource)(THIS_
+                                     const Char*    Name,
+                                     IDeviceObject* pObject,
+                                     bool           bIsUnique) PURE;
 
 
     /// Adds resource array to the mapping.
@@ -123,14 +133,21 @@ public:
     ///
     /// \remarks Resource mapping increases the reference counter for referenced objects. So an
     ///          object will not be released as long as it is in the resource mapping.
-    virtual void AddResourceArray(const Char* Name, Uint32 StartIndex, IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique) = 0;
+    VIRTUAL void METHOD(AddResourceArray)(THIS_
+                                          const Char*           Name,
+                                          Uint32                StartIndex,
+                                          IDeviceObject* const* ppObjects,
+                                          Uint32                NumElements,
+                                          bool                  bIsUnique) PURE;
 
 
     /// Removes a resource from the mapping using its literal name.
 
     /// \param [in] Name - Name of the resource to remove.
     /// \param [in] ArrayIndex - For array resources, index in the array
-    virtual void RemoveResourceByName(const Char* Name, Uint32 ArrayIndex = 0) = 0;
+    VIRTUAL void METHOD(RemoveResourceByName)(THIS_
+                                              const Char* Name,
+                                              Uint32      ArrayIndex DEFAULT_VALUE(0)) PURE;
 
     /// Finds a resource in the mapping.
 
@@ -141,26 +158,19 @@ public:
     ///                           If no object is found, nullptr will be written.
     /// \remarks The method increases the reference counter
     ///          of the returned object, so Release() must be called.
-    virtual void GetResource(const Char* Name, IDeviceObject** ppResource, Uint32 ArrayIndex = 0) = 0;
+    VIRTUAL void METHOD(GetResource)(THIS_
+                                     const Char*     Name,
+                                     IDeviceObject** ppResource,
+                                     Uint32          ArrayIndex DEFAULT_VALUE(0)) PURE;
 
     /// Returns the size of the resource mapping, i.e. the number of objects.
-    virtual size_t GetSize() = 0;
+    VIRTUAL size_t METHOD(GetSize)(THIS) PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-struct IResourceMapping;
-
-// clang-format off
-
-struct IResourceMappingMethods
-{
-    void   (*AddResource)         (struct IResourceMapping*, const Char* Name, class IDeviceObject* pObject, bool bIsUnique);
-    void   (*AddResourceArray)    (struct IResourceMapping*, const Char* Name, Uint32 StartIndex, class IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique);
-    void   (*RemoveResourceByName)(struct IResourceMapping*, const Char* Name, Uint32 ArrayIndex);
-    void   (*GetResource)         (struct IResourceMapping*, const Char* Name, class IDeviceObject** ppResource, Uint32 ArrayIndex);
-    size_t (*GetSize)             (struct IResourceMapping*);
-};
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
 
@@ -170,18 +180,18 @@ struct IResourceMappingVtbl
     struct IResourceMappingMethods ResourceMapping;
 };
 
-struct IResourceMapping
+typedef struct IResourceMapping
 {
     struct IResourceMappingVtbl* pVtbl;
-};
+} IResourceMapping;
 
 // clang-format off
 
-#    define IResourceMapping_AddResource(This, ...)          (This)->pVtbl->ResourceMapping.AddResource         ((struct IResourceMapping*)(This), __VA_ARGS__)
-#    define IResourceMapping_AddResourceArray(This, ...)     (This)->pVtbl->ResourceMapping.AddResourceArray    ((struct IResourceMapping*)(This), __VA_ARGS__)
-#    define IResourceMapping_RemoveResourceByName(This, ...) (This)->pVtbl->ResourceMapping.RemoveResourceByName((struct IResourceMapping*)(This), __VA_ARGS__)
-#    define IResourceMapping_GetResource(This, ...)          (This)->pVtbl->ResourceMapping.GetResource         ((struct IResourceMapping*)(This), __VA_ARGS__)
-#    define IResourceMapping_GetSize(This)                   (This)->pVtbl->ResourceMapping.GetSize             ((struct IResourceMapping*)(This))
+#    define IResourceMapping_AddResource(This, ...)          (This)->pVtbl->ResourceMapping.AddResource         ((IResourceMapping*)(This), __VA_ARGS__)
+#    define IResourceMapping_AddResourceArray(This, ...)     (This)->pVtbl->ResourceMapping.AddResourceArray    ((IResourceMapping*)(This), __VA_ARGS__)
+#    define IResourceMapping_RemoveResourceByName(This, ...) (This)->pVtbl->ResourceMapping.RemoveResourceByName((IResourceMapping*)(This), __VA_ARGS__)
+#    define IResourceMapping_GetResource(This, ...)          (This)->pVtbl->ResourceMapping.GetResource         ((IResourceMapping*)(This), __VA_ARGS__)
+#    define IResourceMapping_GetSize(This)                   (This)->pVtbl->ResourceMapping.GetSize             ((IResourceMapping*)(This))
 
 // clang-format on
 

@@ -65,10 +65,10 @@ struct ICommandListVtbl
     //struct ICommandListMethods  CommandList;
 };
 
-struct ICommandList
+typedef struct ICommandList
 {
     struct ICommandListVtbl* pVtbl;
-};
+} ICommandList;
 
 #endif
 

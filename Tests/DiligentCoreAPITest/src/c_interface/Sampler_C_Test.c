@@ -32,13 +32,13 @@ int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
 int TestSamplerCInterface(struct ISampler* pSampler)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
+    DeviceObjectAttribs Desc;
+    Int32               UniqueId = 0;
 
-    struct SamplerDesc SamplerDesc;
+    SamplerDesc SamplerDesc;
 
     int num_errors =
         TestObjectCInterface((struct IObject*)pSampler) +

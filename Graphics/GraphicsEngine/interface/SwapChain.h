@@ -38,23 +38,28 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {1C703B77-6607-4EEC-B1FE-15C82D3B4130}
-static const struct INTERFACE_ID IID_SwapChain =
+static const INTERFACE_ID IID_SwapChain =
     {0x1c703b77, 0x6607, 0x4eec, {0xb1, 0xfe, 0x15, 0xc8, 0x2d, 0x3b, 0x41, 0x30}};
 
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct ISwapChain*
+#    define THIS_ struct ISwapChain*,
+#endif
+
+// clang-format off
 
 /// Swap chain interface
 
 /// The swap chain is created by a platform-dependent function
-class ISwapChain : public IObject
+DILIGENT_INTERFACE(ISwapChain, IObject)
 {
-public:
     /// Presents a rendered image to the user
-    virtual void Present(Uint32 SyncInterval = 1) = 0;
+    VIRTUAL void METHOD(Present)(THIS_
+                                 Uint32 SyncInterval DEFAULT_VALUE(1)) PURE;
 
     /// Returns the swap chain desctription
-    virtual const SwapChainDesc& GetDesc() const = 0;
+    VIRTUAL const SwapChainDesc REF METHOD(GetDesc)(THIS) CONST PURE;
 
     /// Changes the swap chain's back buffer size
 
@@ -63,13 +68,15 @@ public:
     ///
     /// \note When resizing non-primary swap chains, the engine unbinds the
     ///       swap chain buffers from the output.
-    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) = 0;
+    VIRTUAL void METHOD(Resize)(THIS_
+                                Uint32 NewWidth,
+                                Uint32 NewHeight) PURE;
 
     /// Sets fullscreen mode (only supported on Win32 platform)
-    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) = 0;
+    VIRTUAL void METHOD(SetFullscreenMode)(THIS_ const DisplayModeAttribs REF DisplayMode) PURE;
 
     /// Sets windowed mode (only supported on Win32 platform)
-    virtual void SetWindowedMode() = 0;
+    VIRTUAL void METHOD(SetWindowedMode)(THIS) PURE;
 
     /// Returns render target view of the current back buffer in the swap chain
 
@@ -81,31 +88,20 @@ public:
     ///
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ITextureView* GetCurrentBackBufferRTV() = 0;
+    VIRTUAL ITextureView* METHOD(GetCurrentBackBufferRTV)(THIS) PURE;
 
     /// Returns depth-stencil view of the depth buffer
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ITextureView* GetDepthBufferDSV() = 0;
+    VIRTUAL ITextureView* METHOD(GetDepthBufferDSV)(THIS) PURE;
 };
 
-#else
 
-struct ISwapChain;
+#if DILIGENT_C_INTERFACE
 
-// clang-format off
-
-struct ISwapChainMethods
-{
-    void                        (*Present)                (struct ISwapChain*, Uint32 SyncInterval);
-    const struct SwapChainDesc* (*GetDesc)                (struct ISwapChain*);
-    void                        (*Resize)                 (struct ISwapChain*, Uint32 NewWidth, Uint32 NewHeight);
-    void                        (*SetFullscreenMode)      (struct ISwapChain*, const struct DisplayModeAttribs* DisplayMode);
-    void                        (*SetWindowedMode)        (struct ISwapChain*);
-    struct ITextureView*        (*GetCurrentBackBufferRTV)(struct ISwapChain*);
-    struct ITextureView*        (*GetDepthBufferDSV)      (struct ISwapChain*);
-};
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
 
@@ -115,20 +111,20 @@ struct ISwapChainVtbl
     struct ISwapChainMethods SwapChain;
 };
 
-struct ISwapChain
+typedef struct ISwapChain
 {
     struct ISwapChainVtbl* pVtbl;
-};
+} ISwapChain;
 
 // clang-format off
 
-#    define ISwapChain_Present(This, ...)            (This)->pVtbl->SwapChain.Present                ((struct ISwapChain*)(This), __VA_ARGS__)
-#    define ISwapChain_GetDesc(This)                 (This)->pVtbl->SwapChain.GetDesc                ((struct ISwapChain*)(This))
-#    define ISwapChain_Resize(This, ...)             (This)->pVtbl->SwapChain.Resize                 ((struct ISwapChain*)(This), __VA_ARGS__)
-#    define ISwapChain_SetFullscreenMode(This, ...)  (This)->pVtbl->SwapChain.SetFullscreenMode      ((struct ISwapChain*)(This), __VA_ARGS__)
-#    define ISwapChain_SetWindowedMode(This)         (This)->pVtbl->SwapChain.SetWindowedMode        ((struct ISwapChain*)(This))
-#    define ISwapChain_GetCurrentBackBufferRTV(This) (This)->pVtbl->SwapChain.GetCurrentBackBufferRTV((struct ISwapChain*)(This))
-#    define ISwapChain_GetDepthBufferDSV(This)       (This)->pVtbl->SwapChain.GetDepthBufferDSV      ((struct ISwapChain*)(This))
+#    define ISwapChain_Present(This, ...)            (This)->pVtbl->SwapChain.Present                ((ISwapChain*)(This), __VA_ARGS__)
+#    define ISwapChain_GetDesc(This)                 (This)->pVtbl->SwapChain.GetDesc                ((ISwapChain*)(This))
+#    define ISwapChain_Resize(This, ...)             (This)->pVtbl->SwapChain.Resize                 ((ISwapChain*)(This), __VA_ARGS__)
+#    define ISwapChain_SetFullscreenMode(This, ...)  (This)->pVtbl->SwapChain.SetFullscreenMode      ((ISwapChain*)(This), __VA_ARGS__)
+#    define ISwapChain_SetWindowedMode(This)         (This)->pVtbl->SwapChain.SetWindowedMode        ((ISwapChain*)(This))
+#    define ISwapChain_GetCurrentBackBufferRTV(This) (This)->pVtbl->SwapChain.GetCurrentBackBufferRTV((ISwapChain*)(This))
+#    define ISwapChain_GetDepthBufferDSV(This)       (This)->pVtbl->SwapChain.GetDepthBufferDSV      ((ISwapChain*)(This))
 
 // clang-format on
 

@@ -35,17 +35,21 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {3B19184D-32AB-4701-84F4-9A0C03AE1672}
-static const struct INTERFACE_ID IID_Fence =
+static const INTERFACE_ID IID_Fence =
     {0x3b19184d, 0x32ab, 0x4701, {0x84, 0xf4, 0x9a, 0xc, 0x3, 0xae, 0x16, 0x72}};
 
 // clang-format off
 /// Fence description
 struct FenceDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 };
-// clang-format on
+typedef struct FenceDesc FenceDesc;
 
+// clang-format off
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IFence*
+#    define THIS_ struct IFence*,
+#endif
 
 /// Fence interface
 
@@ -53,34 +57,30 @@ struct FenceDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 ///
 /// \remarks When a fence that was previously signaled by IDeviceContext::SignalFence() is destroyed,
 ///          it may block the GPU until all prior commands have completed execution.
-class IFence : public IDeviceObject
+DILIGENT_INTERFACE(IFence, IDeviceObject)
 {
-public:
+#if DILIGENT_CPP_INTERFACE
     /// Returns the fence description used to create the object
     virtual const FenceDesc& GetDesc() const override = 0;
+#endif
 
     /// Returns the last completed value signaled by the GPU
 
     /// \remarks This method is not thread safe (even if the fence object is protected by mutex)
     ///          and must only be called by the same thread that signals the fence via
     ///          IDeviceContext::SignalFence().
-    virtual Uint64 GetCompletedValue() = 0;
+    VIRTUAL Uint64 METHOD(GetCompletedValue)(THIS) PURE;
 
     /// Resets the fence to the specified value.
-    virtual void Reset(Uint64 Value) = 0;
+    VIRTUAL void METHOD(Reset)(THIS_
+                               Uint64 Value) PURE;
 };
 
-#else
 
-struct IFence;
+#if DILIGENT_C_INTERFACE
 
-// clang-format off
-
-struct IFenceMethods
-{
-    Uint64 (*GetCompletedValue)(struct IFence*);
-    void   (*Reset)            (struct IFence*, Uint64 Value);
-};
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
 
@@ -91,17 +91,17 @@ struct IFenceVtbl
     struct IFenceMethods        Fence;
 };
 
-struct IFence
+typedef struct IFence
 {
     struct IFenceVtbl* pVtbl;
-};
+} IFence;
 
 // clang-format off
 
 #    define IFence_GetDesc(This) (const struct FenceDesc*)IDeviceObject_GetDesc(This)
 
-#    define IFence_GetCompletedValue(This) (This)->pVtbl->Fence.GetCompletedValue((struct IFence*)(This))
-#    define IFence_Reset(This, ...)        (This)->pVtbl->Fence.Reset            ((struct IFence*)(This), __VA_ARGS__)
+#    define IFence_GetCompletedValue(This) (This)->pVtbl->Fence.GetCompletedValue((IFence*)(This))
+#    define IFence_Reset(This, ...)        (This)->pVtbl->Fence.Reset            ((IFence*)(This), __VA_ARGS__)
 
 // clang-format on
 

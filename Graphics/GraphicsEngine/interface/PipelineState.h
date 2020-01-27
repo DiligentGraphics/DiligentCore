@@ -67,6 +67,7 @@ struct SampleDesc
     {}
 #endif
 };
+typedef struct SampleDesc SampleDesc;
 
 
 /// Describes shader variable
@@ -91,6 +92,7 @@ struct ShaderResourceVariableDesc
     {}
 #endif
 };
+typedef struct ShaderResourceVariableDesc ShaderResourceVariableDesc;
 
 
 /// Static sampler description
@@ -118,7 +120,7 @@ struct StaticSamplerDesc
     {}
 #endif
 };
-
+typedef struct StaticSamplerDesc StaticSamplerDesc;
 
 /// Pipeline layout description
 struct PipelineResourceLayoutDesc
@@ -126,20 +128,21 @@ struct PipelineResourceLayoutDesc
     /// Default shader resource variable type. This type will be used if shader
     /// variable description is not found in the Variables array
     /// or if Variables == nullptr
-    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType   DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
     /// Number of elements in Variables array            
-    Uint32                              NumVariables          DEFAULT_INITIALIZER(0);
+    Uint32                              NumVariables        DEFAULT_INITIALIZER(0);
 
     /// Array of shader resource variable descriptions               
-    const struct ShaderResourceVariableDesc*   Variables      DEFAULT_INITIALIZER(nullptr);
+    const ShaderResourceVariableDesc*   Variables           DEFAULT_INITIALIZER(nullptr);
                                                             
     /// Number of static samplers in StaticSamplers array   
-    Uint32                              NumStaticSamplers     DEFAULT_INITIALIZER(0);
+    Uint32                              NumStaticSamplers   DEFAULT_INITIALIZER(0);
                                                             
     /// Array of static sampler descriptions                
-    const struct StaticSamplerDesc*            StaticSamplers DEFAULT_INITIALIZER(nullptr);
+    const StaticSamplerDesc*            StaticSamplers      DEFAULT_INITIALIZER(nullptr);
 };
+typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
 
 
 /// Graphics pipeline state description
@@ -148,24 +151,24 @@ struct PipelineResourceLayoutDesc
 struct GraphicsPipelineDesc
 {
     /// Vertex shader to be used with the pipeline
-    class IShader* pVS DEFAULT_INITIALIZER(nullptr);
+    IShader* pVS DEFAULT_INITIALIZER(nullptr);
 
     /// Pixel shader to be used with the pipeline
-    class IShader* pPS DEFAULT_INITIALIZER(nullptr);
+    IShader* pPS DEFAULT_INITIALIZER(nullptr);
 
     /// Domain shader to be used with the pipeline
-    class IShader* pDS DEFAULT_INITIALIZER(nullptr);
+    IShader* pDS DEFAULT_INITIALIZER(nullptr);
 
     /// Hull shader to be used with the pipeline
-    class IShader* pHS DEFAULT_INITIALIZER(nullptr);
+    IShader* pHS DEFAULT_INITIALIZER(nullptr);
 
     /// Geometry shader to be used with the pipeline
-    class IShader* pGS DEFAULT_INITIALIZER(nullptr);
+    IShader* pGS DEFAULT_INITIALIZER(nullptr);
     
     //D3D12_STREAM_OUTPUT_DESC StreamOutput;
     
     /// Blend state description
-    struct BlendStateDesc BlendDesc;
+    BlendStateDesc BlendDesc;
 
     /// 32-bit sample mask that determines which samples get updated 
     /// in all the active render targets. A sample mask is always applied; 
@@ -174,13 +177,13 @@ struct GraphicsPipelineDesc
     Uint32 SampleMask DEFAULT_INITIALIZER(0xFFFFFFFF);
 
     /// Rasterizer state description
-    struct RasterizerStateDesc RasterizerDesc;
+    RasterizerStateDesc RasterizerDesc;
 
     /// Depth-stencil state description
-    struct DepthStencilStateDesc DepthStencilDesc;
+    DepthStencilStateDesc DepthStencilDesc;
 
     /// Input layout
-    struct InputLayoutDesc InputLayout;
+    InputLayoutDesc InputLayout;
     //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
     /// Primitive topology type
@@ -199,7 +202,7 @@ struct GraphicsPipelineDesc
     TEXTURE_FORMAT DSVFormat     DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
     /// Multisampling parameters
-    struct SampleDesc SmplDesc;
+    SampleDesc SmplDesc;
 
     /// Node mask.
     Uint32 NodeMask DEFAULT_INITIALIZER(0);
@@ -207,6 +210,7 @@ struct GraphicsPipelineDesc
     //D3D12_CACHED_PIPELINE_STATE CachedPSO;
     //D3D12_PIPELINE_STATE_FLAGS Flags;
 };
+typedef struct GraphicsPipelineDesc GraphicsPipelineDesc;
 
 
 /// Compute pipeline state description
@@ -215,8 +219,10 @@ struct GraphicsPipelineDesc
 struct ComputePipelineDesc
 {
     /// Compute shader to be used with the pipeline
-    class IShader* pCS DEFAULT_INITIALIZER(nullptr);
+    IShader* pCS DEFAULT_INITIALIZER(nullptr);
 };
+typedef struct ComputePipelineDesc ComputePipelineDesc;
+
 
 /// Pipeline state description
 struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
@@ -234,27 +240,35 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     Uint64 CommandQueueMask         DEFAULT_INITIALIZER(1);
 
     /// Pipeline layout description
-    struct PipelineResourceLayoutDesc ResourceLayout;
+    PipelineResourceLayoutDesc ResourceLayout;
 
     /// Graphics pipeline state description. This memeber is ignored if IsComputePipeline == True
-    struct GraphicsPipelineDesc GraphicsPipeline;
+    GraphicsPipelineDesc GraphicsPipeline;
 
     /// Compute pipeline state description. This memeber is ignored if IsComputePipeline == False
-    struct ComputePipelineDesc ComputePipeline;
+    ComputePipelineDesc ComputePipeline;
 };
+typedef struct PipelineStateDesc PipelineStateDesc;
 
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
 static const struct INTERFACE_ID IID_PipelineState =
     {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};
 
-#if DILIGENT_CPP_INTERFACE
+
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IPipelineState*
+#    define THIS_ struct IPipelineState*,
+#endif
+
+// clang-format off
 
 /// Pipeline state interface
-class IPipelineState : public IDeviceObject
+DILIGENT_INTERFACE(IPipelineState, IDeviceObject)
 {
-public:
+#if DILIGENT_CPP_INTERFACE
     /// Returns the blend state description used to create the object
     virtual const PipelineStateDesc& GetDesc()const override = 0;
+#endif
 
 
     /// Binds resources for all shaders in the pipeline state
@@ -263,7 +277,10 @@ public:
     ///                           Any combination of Diligent::SHADER_TYPE may be used.
     /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
     /// \param [in] Flags - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
-    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) = 0;
+    VIRTUAL void METHOD(BindStaticResources)(THIS_
+                                             Uint32             ShaderFlags,
+                                             IResourceMapping*  pResourceMapping,
+                                             Uint32             Flags) PURE;
 
 
     /// Returns the number of static shader resource variables.
@@ -271,7 +288,8 @@ public:
     /// \param [in] ShaderType - Type of the shader.
     /// \remark Only static variables (that can be accessed directly through the PSO) are counted.
     ///         Mutable and dynamic variables are accessed through Shader Resource Binding object.
-    virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const = 0;
+    VIRTUAL Uint32 METHOD(GetStaticVariableCount)(THIS_
+                                                  SHADER_TYPE ShaderType) CONST PURE;
 
 
     /// Returns static shader resource variable. If the variable is not found,
@@ -282,7 +300,9 @@ public:
     /// \param [in] Name - Name of the variable.
     /// \remark The method does not increment the reference counter
     ///         of the returned interface.
-    virtual IShaderResourceVariable* GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) = 0;
+    VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByName)(THIS_
+                                                                     SHADER_TYPE ShaderType,
+                                                                     const Char* Name) PURE;
 
 
     /// Returns static shader resource variable by its index.
@@ -295,7 +315,9 @@ public:
     /// \remark Only static shader resource variables can be accessed through this method.
     ///         Mutable and dynamic variables are accessed through Shader Resource 
     ///         Binding object
-    virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) = 0;
+    VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByIndex)(THIS_
+                                                                      SHADER_TYPE ShaderType,
+                                                                      Uint32      Index) PURE;
 
 
     /// Creates a shader resource binding object
@@ -305,7 +327,9 @@ public:
     /// \param [in] InitStaticResources      - if set to true, the method will initialize static resources in
     ///                                        the created object, which has the exact same effect as calling 
     ///                                        IShaderResourceBinding::InitializeStaticResources().
-    virtual void CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources = false) = 0;
+    VIRTUAL void METHOD(CreateShaderResourceBinding)(THIS_
+                                                     IShaderResourceBinding** ppShaderResourceBinding,
+                                                     bool                     InitStaticResources DEFAULT_VALUE(false)) PURE;
 
 
     /// Checks if this pipeline state object is compatible with another PSO
@@ -322,22 +346,14 @@ public:
     ///             to commit resources for the second pipeline, a runtime error will occur.\n
     ///             The function only checks compatibility of shader resource layouts. It does not take
     ///             into account vertex shader input layout, number of outputs, etc.
-    virtual bool IsCompatibleWith(const IPipelineState* pPSO)const = 0;
+    VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
+                                          const struct IPipelineState* pPSO) CONST PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-struct IPipelineState;
-
-struct IPipelineStateMethods
-{
-    void                           (*BindStaticResources)        (struct IPipelineState*, Uint32 ShaderFlags, class IResourceMapping* pResourceMapping, Uint32 Flags);
-    Uint32                         (*GetStaticVariableCount)     (struct IPipelineState*, SHADER_TYPE ShaderType);
-    class IShaderResourceVariable* (*GetStaticVariableByName)    (struct IPipelineState*, SHADER_TYPE ShaderType, const Char* Name);
-    class IShaderResourceVariable* (*GetStaticVariableByIndex)   (struct IPipelineState*, SHADER_TYPE ShaderType, Uint32 Index);
-    void                           (*CreateShaderResourceBinding)(struct IPipelineState*, class IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources);
-    bool                           (*IsCompatibleWith)           (struct IPipelineState*, const class IPipelineState* pPSO);
-};
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
 
@@ -348,21 +364,21 @@ struct IPipelineStateVtbl
     struct IPipelineStateMethods PipelineState;
 };
 
-struct IPipelineState
+typedef struct IPipelineState
 {
     struct IPipelineStateVtbl* pVtbl;
-};
+} IPipelineState;
 
 // clang-format off
 
 #    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
 
-#    define IPipelineState_BindStaticResources(This, ...)         (This)->pVtbl->PipelineState.BindStaticResources        ((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableCount(This, ...)      (This)->pVtbl->PipelineState.GetStaticVariableCount     ((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByName(This, ...)     (This)->pVtbl->PipelineState.GetStaticVariableByName    ((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByIndex(This, ...)    (This)->pVtbl->PipelineState.GetStaticVariableByIndex   ((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_CreateShaderResourceBinding(This, ...) (This)->pVtbl->PipelineState.CreateShaderResourceBinding((struct IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_IsCompatibleWith(This, ...)            (This)->pVtbl->PipelineState.IsCompatibleWith           ((struct IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_BindStaticResources(This, ...)         (This)->pVtbl->PipelineState.BindStaticResources        ((IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableCount(This, ...)      (This)->pVtbl->PipelineState.GetStaticVariableCount     ((IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByName(This, ...)     (This)->pVtbl->PipelineState.GetStaticVariableByName    ((IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByIndex(This, ...)    (This)->pVtbl->PipelineState.GetStaticVariableByIndex   ((IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_CreateShaderResourceBinding(This, ...) (This)->pVtbl->PipelineState.CreateShaderResourceBinding((IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_IsCompatibleWith(This, ...)            (This)->pVtbl->PipelineState.IsCompatibleWith           ((IPipelineState*)(This), __VA_ARGS__)
 
 // clang-format on
 

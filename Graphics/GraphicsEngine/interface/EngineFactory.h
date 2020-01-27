@@ -35,54 +35,48 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-class IShaderSourceInputStreamFactory;
+struct IShaderSourceInputStreamFactory;
 
 // {D932B052-4ED6-4729-A532-F31DEEC100F3}
-static const struct INTERFACE_ID IID_EngineFactory =
+static const INTERFACE_ID IID_EngineFactory =
     {0xd932b052, 0x4ed6, 0x4729, {0xa5, 0x32, 0xf3, 0x1d, 0xee, 0xc1, 0x0, 0xf3}};
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IEngineFactory*
+#    define THIS_ struct IEngineFactory*,
+#endif
+
+// clang-format off
 
 /// Engine factory base interface
-class IEngineFactory : public IObject
+DILIGENT_INTERFACE(IEngineFactory, IObject)
 {
-public:
     /// Returns API info structure
-    virtual const APIInfo& GetAPIInfo() const = 0;
+    VIRTUAL const APIInfo REF METHOD(GetAPIInfo)(THIS) CONST PURE;
 
     /// Creates default shader source input stream factory
     /// \param [in]  SearchDirectories           - Semicolon-seprated list of search directories.
     /// \param [out] ppShaderSourceStreamFactory - Memory address where pointer to the shader source stream factory will be written.
-    virtual void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories,
-                                                        IShaderSourceInputStreamFactory** ppShaderSourceFactory) const = 0;
+    VIRTUAL void METHOD(CreateDefaultShaderSourceStreamFactory)(
+                        THIS_
+                        const Char*                              SearchDirectories,
+                        struct IShaderSourceInputStreamFactory** ppShaderSourceFactory) CONST PURE;
 
-#    if PLATFORM_ANDROID
+#if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before
     /// CreateDefaultShaderSourceStreamFactory() method can be called.
     /// \param [in] Activity          - Pointer to the activity.
     /// \param [in] ActivityClassName - Activity class name.
-    virtual void InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const = 0;
-#    endif
+    VIRTUAL void METHOD(InitAndroidFileSystem)(THIS_
+                                               void*       Activity,
+                                               const char* ActivityClassName) CONST PURE;
+#endif
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-struct IEngineFactory;
-struct IShaderSourceInputStreamFactory;
-
-// clang-format off
-
-struct IEngineFactoryMethods
-{
-    const struct APIInfo* (*GetAPIInfo)                            (struct IEngineFactory*);
-    void                  (*CreateDefaultShaderSourceStreamFactory)(struct IEngineFactory*,
-                                                                    const Char*                              SearchDirectories,
-                                                                    struct IShaderSourceInputStreamFactory** ppShaderSourceFactory);
-
-#    if PLATFORM_ANDROID
-    void (*InitAndroidFileSystem)                                  (struct IEngineFactory*, void* Activity, const char* ActivityClassName);
-#    endif
-};
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
 
@@ -92,16 +86,16 @@ struct IEngineFactoryVtbl
     struct IEngineFactoryMethods EngineFactory;
 };
 
-struct IEngineFactory
+typedef struct IEngineFactory
 {
     struct IEngineFactoryVtbl* pVtbl;
-};
+} IEngineFactory;
 
 // clang-format off
 
-#    define IEngineFactory_GetAPIInfo(This)                                  (This)->pVtbl->EngineFactory.GetAPIInfo                            ((struct IEngineFactory*)(This))
-#    define IEngineFactory_CreateDefaultShaderSourceStreamFactory(This, ...) (This)->pVtbl->EngineFactory.CreateDefaultShaderSourceStreamFactory((struct IEngineFactory*)(This), __VA_ARGS__)
-#    define IEngineFactory_InitAndroidFileSystem(This, ...)                  (This)->pVtbl->EngineFactory.InitAndroidFileSystem                 ((struct IEngineFactory*)(This), __VA_ARGS__)
+#    define IEngineFactory_GetAPIInfo(This)                                  (This)->pVtbl->EngineFactory.GetAPIInfo                            ((IEngineFactory*)(This))
+#    define IEngineFactory_CreateDefaultShaderSourceStreamFactory(This, ...) (This)->pVtbl->EngineFactory.CreateDefaultShaderSourceStreamFactory((IEngineFactory*)(This), __VA_ARGS__)
+#    define IEngineFactory_InitAndroidFileSystem(This, ...)                  (This)->pVtbl->EngineFactory.InitAndroidFileSystem                 ((IEngineFactory*)(This), __VA_ARGS__)
 
 // clang-format on
 

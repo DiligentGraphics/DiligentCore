@@ -39,7 +39,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {0D57DF3F-977D-4C8F-B64C-6675814BC80C}
-static const struct INTERFACE_ID IID_ShaderResourceVariable =
+static const INTERFACE_ID IID_ShaderResourceVariable =
     {0xd57df3f, 0x977d, 0x4c8f, {0xb6, 0x4c, 0x66, 0x75, 0x81, 0x4b, 0xc8, 0xc}};
 
 // clang-format off
@@ -104,18 +104,23 @@ DILIGENT_TYPED_ENUM(BIND_SHADER_RESOURCES_FLAGS, Uint32)
 
 // clang-format on
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IShaderResourceVariable*
+#    define THIS_ struct IShaderResourceVariable*,
+#endif
+
+// clang-format off
 
 /// Shader resource variable
-class IShaderResourceVariable : public IObject
+DILIGENT_INTERFACE(IShaderResourceVariable, IObject)
 {
-public:
     /// Binds resource to the variable
 
     /// \remark The method performs run-time correctness checks.
     ///         For instance, shader resource view cannot
     ///         be assigned to a constant buffer variable.
-    virtual void Set(IDeviceObject* pObject) = 0;
+    VIRTUAL void METHOD(Set)(THIS_
+                             IDeviceObject* pObject) PURE;
 
     /// Binds resource array to the variable
 
@@ -126,38 +131,35 @@ public:
     /// \remark The method performs run-time correctness checks.
     ///         For instance, shader resource view cannot
     ///         be assigned to a constant buffer variable.
-    virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) = 0;
+    VIRTUAL void METHOD(SetArray)(THIS_
+                                  IDeviceObject* const* ppObjects,
+                                  Uint32                FirstElement,
+                                  Uint32                NumElements) PURE;
 
     /// Returns the shader resource variable type
-    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType() const = 0;
+    VIRTUAL SHADER_RESOURCE_VARIABLE_TYPE METHOD(GetType)(THIS) CONST PURE;
 
     /// Returns shader resource description. See Diligent::ShaderResourceDesc.
-    virtual void GetResourceDesc(ShaderResourceDesc& ResourceDesc) const = 0;
+    VIRTUAL void METHOD(GetResourceDesc)(THIS_
+                                         ShaderResourceDesc REF ResourceDesc) CONST PURE;
 
     /// Returns the variable index that can be used to access the variable.
-    virtual Uint32 GetIndex() const = 0;
+    VIRTUAL Uint32 METHOD(GetIndex)(THIS) CONST PURE;
 
     /// Returns true if non-null resource is bound to this variable.
 
     /// \param [in] ArrayIndex - Resource array index. Must be 0 for
     ///                          non-array variables.
-    virtual bool IsBound(Uint32 ArrayIndex) const = 0;
+    VIRTUAL bool METHOD(IsBound)(THIS_
+                                 Uint32 ArrayIndex) CONST PURE;
 };
 
-#else
 
-struct IShaderResourceVariable;
+#if DILIGENT_C_INTERFACE
 
-// clang-format off
-struct IShaderResourceVariableMethods
-{
-    void                          (*Set)            (struct IShaderResourceVariable*, class IDeviceObject* pObject);
-    void                          (*SetArray)       (struct IShaderResourceVariable*, class IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements);
-    SHADER_RESOURCE_VARIABLE_TYPE (*GetType)        (struct IShaderResourceVariable*);
-    void                          (*GetResourceDesc)(struct IShaderResourceVariable*, struct ShaderResourceDesc* ResourceDesc);
-    Uint32                        (*GetIndex)       (struct IShaderResourceVariable*);
-    bool                          (*IsBound)        (struct IShaderResourceVariable*, Uint32 ArrayIndex);
-};
+#    undef THIS
+#    undef THIS_
+
 // clang-format on
 
 struct IShaderResourceVariableVtbl
@@ -166,19 +168,19 @@ struct IShaderResourceVariableVtbl
     struct IShaderResourceVariableMethods ShaderResourceVariable;
 };
 
-struct IShaderResourceVariable
+typedef struct IShaderResourceVariable
 {
     struct IShaderResourceVariableVtbl* pVtbl;
-};
+} IShaderResourceVariable;
 
 // clang-format off
 
-#    define IShaderResourceVariable_Set(This, ...)             (This)->pVtbl->ShaderResourceVariable.Set            ((struct IShaderResourceVariable*)(This), __VA_ARGS__)
-#    define IShaderResourceVariable_SetArray(This, ...)        (This)->pVtbl->ShaderResourceVariable.SetArray       ((struct IShaderResourceVariable*)(This), __VA_ARGS__)
-#    define IShaderResourceVariable_GetType(This)              (This)->pVtbl->ShaderResourceVariable.GetType        ((struct IShaderResourceVariable*)(This))
-#    define IShaderResourceVariable_GetResourceDesc(This, ...) (This)->pVtbl->ShaderResourceVariable.GetResourceDesc((struct IShaderResourceVariable*)(This), __VA_ARGS__)
-#    define IShaderResourceVariable_GetIndex(This)             (This)->pVtbl->ShaderResourceVariable.GetIndex       ((struct IShaderResourceVariable*)(This))
-#    define IShaderResourceVariable_IsBound(This, ...)         (This)->pVtbl->ShaderResourceVariable.IsBound        ((struct IShaderResourceVariable*)(This), __VA_ARGS__)
+#    define IShaderResourceVariable_Set(This, ...)             (This)->pVtbl->ShaderResourceVariable.Set            ((IShaderResourceVariable*)(This), __VA_ARGS__)
+#    define IShaderResourceVariable_SetArray(This, ...)        (This)->pVtbl->ShaderResourceVariable.SetArray       ((IShaderResourceVariable*)(This), __VA_ARGS__)
+#    define IShaderResourceVariable_GetType(This)              (This)->pVtbl->ShaderResourceVariable.GetType        ((IShaderResourceVariable*)(This))
+#    define IShaderResourceVariable_GetResourceDesc(This, ...) (This)->pVtbl->ShaderResourceVariable.GetResourceDesc((IShaderResourceVariable*)(This), __VA_ARGS__)
+#    define IShaderResourceVariable_GetIndex(This)             (This)->pVtbl->ShaderResourceVariable.GetIndex       ((IShaderResourceVariable*)(This))
+#    define IShaderResourceVariable_IsBound(This, ...)         (This)->pVtbl->ShaderResourceVariable.IsBound        ((IShaderResourceVariable*)(This), __VA_ARGS__)
 
 // clang-format on
 

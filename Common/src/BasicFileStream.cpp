@@ -46,7 +46,7 @@ bool BasicFileStream::Read(void* Data, size_t Size)
     return m_FileWrpr->Read(Data, Size);
 }
 
-void BasicFileStream::Read(Diligent::IDataBlob* pData)
+void BasicFileStream::ReadBlob(Diligent::IDataBlob* pData)
 {
     return m_FileWrpr->Read(pData);
 }

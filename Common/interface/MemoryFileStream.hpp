@@ -51,7 +51,7 @@ public:
     virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     /// Reads data from the stream
-    virtual void Read(IDataBlob* pData) override;
+    virtual void ReadBlob(IDataBlob* pData) override;
 
     /// Reads data from the stream
     virtual bool Read(void* Data, size_t Size) override;

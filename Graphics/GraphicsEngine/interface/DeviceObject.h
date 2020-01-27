@@ -37,17 +37,19 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {5B4CCA0B-5075-4230-9759-F48769EE5502}
-static const struct INTERFACE_ID IID_DeviceObject =
+static const INTERFACE_ID IID_DeviceObject =
     {0x5b4cca0b, 0x5075, 0x4230, {0x97, 0x59, 0xf4, 0x87, 0x69, 0xee, 0x55, 0x2}};
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IDeviceObject*
+#    define THIS_ struct IDeviceObject*,
+#endif
 
 /// Base interface for all objects created by the render device Diligent::IRenderDevice
-class IDeviceObject : public IObject
+DILIGENT_INTERFACE(IDeviceObject, IObject)
 {
-public:
     /// Returns the object description
-    virtual const DeviceObjectAttribs& GetDesc() const = 0;
+    VIRTUAL const DeviceObjectAttribs REF METHOD(GetDesc)(THIS) CONST PURE;
 
 
     /// Returns unique identifier assigned to an object
@@ -66,22 +68,15 @@ public:
     ///
     ///          Valid identifiers are always positive values. Zero and negative values can never be
     ///          assigned to an object and are always guaranteed to be invalid.
-    virtual Int32 GetUniqueID() const = 0;
+    VIRTUAL Int32 METHOD(GetUniqueID)(THIS) CONST PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-struct IDeviceObject;
+#    undef THIS
+#    undef THIS_
 
 // clang-format off
-
-struct IDeviceObjectMethods
-{
-    const struct DeviceObjectAttribs* (*GetDesc)    (struct IDeviceObject*);
-    Int32                             (*GetUniqueID)(struct IDeviceObject*);
-};
-
-// clang-format on
 
 struct IDeviceObjectVtbl
 {
@@ -89,15 +84,15 @@ struct IDeviceObjectVtbl
     struct IDeviceObjectMethods DeviceObject;
 };
 
-struct IDeviceObject
+typedef struct IDeviceObject
 {
     struct IDeviceObjectVtbl* pVtbl;
-};
+}IDeviceObject;
 
 // clang-format off
 
-#    define IDeviceObject_GetDesc(This)     (This)->pVtbl->DeviceObject.GetDesc    ((struct IDeviceObject*)(This))
-#    define IDeviceObject_GetUniqueID(This) (This)->pVtbl->DeviceObject.GetUniqueID((struct IDeviceObject*)(This))
+#    define IDeviceObject_GetDesc(This)     (This)->pVtbl->DeviceObject.GetDesc    ((IDeviceObject*)(This))
+#    define IDeviceObject_GetUniqueID(This) (This)->pVtbl->DeviceObject.GetUniqueID((IDeviceObject*)(This))
 
 // clang-format on
 

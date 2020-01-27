@@ -36,7 +36,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {595A59BF-FA81-4855-BC5E-C0E048745A95}
-static const struct INTERFACE_ID IID_Sampler =
+static const INTERFACE_ID IID_Sampler =
     {0x595a59bf, 0xfa81, 0x4855, {0xbc, 0x5e, 0xc0, 0xe0, 0x48, 0x74, 0x5a, 0x95}};
 
 
@@ -169,25 +169,31 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     }
 #endif
 };
+typedef struct SamplerDesc SamplerDesc;
 
 
 #if DILIGENT_CPP_INTERFACE
 
-// clang-format on
+// clang-format off
 
 /// Texture sampler interface.
 
 /// The interface holds the sampler state that can be used to perform texture filtering.
 /// To create a sampler, call IRenderDevice::CreateSampler(). To use a sampler,
 /// call ITextureView::SetSampler().
-class ISampler : public IDeviceObject
+DILIGENT_INTERFACE(ISampler, IDeviceObject)
 {
-public:
+#if DILIGENT_CPP_INTERFACE
     /// Returns the sampler description used to create the object
     virtual const SamplerDesc& GetDesc() const override = 0;
+#endif
 };
 
-#else
+#endif
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
 
 struct ISampler;
 
@@ -202,10 +208,10 @@ struct ISamplerVtbl
     //struct ISamplerMethods Sampler;
 };
 
-struct ISampler
+typedef struct ISampler
 {
     struct ISamplerVtbl* pVtbl;
-};
+} ISampler;
 
 #    define ISampler_GetDesc(This) (const struct SamplerDesc*)IDeviceObject_GetDesc(This)
 

@@ -40,8 +40,8 @@
 /// Graphics engine namespace
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-class ITexture;
-class IBuffer;
+struct ITexture;
+struct IBuffer;
 
 /// Value type
 
@@ -1090,6 +1090,7 @@ struct DeviceObjectAttribs
     {}
 #endif
 };
+typedef struct DeviceObjectAttribs DeviceObjectAttribs;
     
 /// Hardware adapter type
 DILIGENT_TYPED_ENUM(ADAPTER_TYPE, Uint8)
@@ -1131,6 +1132,7 @@ struct AdapterAttribs
     /// Number of outputs this device has
     Uint32 NumOutputs               DEFAULT_INITIALIZER(0);
 };
+typedef struct AdapterAttribs AdapterAttribs;
 
 
 /// Flags indicating how an image is stretched to fit a given monitor's resolution.
@@ -1197,6 +1199,7 @@ struct DisplayModeAttribs
     /// The scaling mode. 
     enum SCANLINE_ORDER ScanlineOrder   DEFAULT_INITIALIZER(SCANLINE_ORDER_UNSPECIFIED);
 };
+typedef struct DisplayModeAttribs DisplayModeAttribs;
 
 /// Defines allowed swap chain usage flags
 DILIGENT_TYPED_ENUM(SWAP_CHAIN_USAGE_FLAGS, Uint32)
@@ -1270,6 +1273,7 @@ struct SwapChainDesc
     {}
 #endif
 };
+typedef struct SwapChainDesc SwapChainDesc;
 
 /// Full screen mode description
 /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh404531(v=vs.85).aspx">DXGI_SWAP_CHAIN_FULLSCREEN_DESC structure on MSDN</a>, 
@@ -1290,6 +1294,7 @@ struct FullScreenModeDesc
     /// The scaling mode. 
     enum SCANLINE_ORDER  ScanlineOrder   DEFAULT_INITIALIZER(SCANLINE_ORDER_UNSPECIFIED);
 };
+typedef struct FullScreenModeDesc FullScreenModeDesc;
 
 /// Engine creation attibutes
 struct EngineCreateInfo
@@ -1299,7 +1304,7 @@ struct EngineCreateInfo
 
     /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
     /// operations in the engine
-    class IMemoryAllocator* pRawMemAllocator      DEFAULT_INITIALIZER(nullptr);
+    struct IMemoryAllocator* pRawMemAllocator      DEFAULT_INITIALIZER(nullptr);
 
     /// Pointer to the user-specified debug message callback function
     DebugMessageCallbackType DebugMessageCallback DEFAULT_INITIALIZER(nullptr);
@@ -1311,6 +1316,7 @@ struct EngineCreateInfo
     /// starting at position 1.
     Uint32                   NumDeferredContexts  DEFAULT_INITIALIZER(0);
 };
+typedef struct EngineCreateInfo EngineCreateInfo;
 
 
 /// Attributes of the OpenGL-based engine implementation
@@ -1328,6 +1334,7 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     void* pDisplay         DEFAULT_INITIALIZER(nullptr);
 #endif
 };
+typedef struct EngineGLCreateInfo EngineGLCreateInfo;
 
 
 /// Debug flags that can be specified when creating Direct3D11-based engine implementation.
@@ -1390,6 +1397,8 @@ struct EngineD3D11CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// \sa CreateDeviceAndContextsD3D11Type, CreateSwapChainD3D11Type, LoadGraphicsEngineD3D11
     D3D11_DEBUG_FLAGS      DebugFlags          DEFAULT_INITIALIZER(D3D11_DEBUG_FLAG_NONE);
 };
+typedef struct EngineD3D11CreateInfo EngineD3D11CreateInfo;
+
 
 /// Attributes specific to D3D12 engine
 struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
@@ -1493,6 +1502,8 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 #endif
     ;
 };
+typedef struct EngineD3D12CreateInfo EngineD3D12CreateInfo;
+
 
 /// Descriptor pool size
 struct VulkanDescriptorPoolSize
@@ -1534,6 +1545,8 @@ struct VulkanDescriptorPoolSize
     }
 #endif
 };
+typedef struct VulkanDescriptorPoolSize VulkanDescriptorPoolSize;
+
 
 /// Attributes specific to Vulkan engine
 struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
@@ -1558,7 +1571,7 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// Size of the main descriptor pool that is used to allocate descriptor sets
     /// for static and mutable variables. If allocation from the current pool fails,
     /// the engine creates another one.
-    struct VulkanDescriptorPoolSize MainDescriptorPoolSize
+    VulkanDescriptorPoolSize MainDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
         //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB
         {8192,  1024,  8192,  8192,  1024,  4096,  4096,  1024,  1024}
@@ -1570,7 +1583,7 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// The allocator requests pools from global dynamic descriptor pool manager, and then 
     /// performs lock-free suballocations from the pool.
     
-    struct VulkanDescriptorPoolSize DynamicDescriptorPoolSize
+    VulkanDescriptorPoolSize DynamicDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
         //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB
         {2048,   256,  2048,  2048,   256,  1024,  1024,   256,   256}
@@ -1620,12 +1633,14 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 #endif
     ;
 };
+typedef struct EngineVkCreateInfo EngineVkCreateInfo;
 
 
 /// Attributes of the Metal-based engine implementation
 struct EngineMtlCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
 };
+typedef struct EngineMtlCreateInfo EngineMtlCreateInfo;
 
 
 /// Box
@@ -1662,6 +1677,7 @@ struct Box
     Box() noexcept {}
 #endif
 };
+typedef struct Box Box;
 
 
 /// Describes texture format component type
@@ -1763,6 +1779,8 @@ struct TextureFormatAttribs
     TextureFormatAttribs()noexcept {}
 #endif
 };
+typedef struct TextureFormatAttribs TextureFormatAttribs;
+
 
 /// Basic texture format description
 
@@ -1772,6 +1790,8 @@ struct TextureFormatInfo DILIGENT_DERIVE(TextureFormatAttribs)
     /// Indicates if the format is supported by the device
     bool Supported  DEFAULT_INITIALIZER(false);
 };
+typedef struct TextureFormatInfo TextureFormatInfo;
+
 
 /// Extended texture format description
 
@@ -1803,6 +1823,8 @@ struct TextureFormatInfoExt DILIGENT_DERIVE(TextureFormatInfo)
     /// If the format supports n samples, then (SampleCounts & n) != 0
     Uint32 SampleCounts     DEFAULT_INITIALIZER(0);
 };
+typedef struct TextureFormatInfoExt TextureFormatInfoExt;
+
 
 /// Resource usage state
 DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
@@ -1895,11 +1917,11 @@ struct StateTransitionDesc
 {
     /// Texture to transition.
     /// \note Exactly one of pTexture or pBuffer must be non-null.
-    class ITexture* pTexture DEFAULT_INITIALIZER(nullptr);
+    struct ITexture* pTexture DEFAULT_INITIALIZER(nullptr);
         
     /// Buffer to transition.
     /// \note Exactly one of pTexture or pBuffer must be non-null.
-    class IBuffer* pBuffer   DEFAULT_INITIALIZER(nullptr);
+    struct IBuffer* pBuffer   DEFAULT_INITIALIZER(nullptr);
         
     /// When transitioning a texture, first mip level of the subresource range to transition.
     Uint32 FirstMipLevel     DEFAULT_INITIALIZER(0);
@@ -1986,5 +2008,6 @@ struct StateTransitionDesc
     {}
 #endif
 };
+typedef struct StateTransitionDesc StateTransitionDesc;
 
 DILIGENT_END_NAMESPACE // namespace Diligent

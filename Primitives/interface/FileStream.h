@@ -35,33 +35,66 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-
 /// IFileStream interface unique identifier
 // {E67F386C-6A5A-4A24-A0CE-C66435465D41}
 static const struct INTERFACE_ID IID_FileStream =
     {0xe67f386c, 0x6a5a, 0x4a24, {0xa0, 0xce, 0xc6, 0x64, 0x35, 0x46, 0x5d, 0x41}};
 
+// clang-format off
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IFileStream*
+#    define THIS_ struct IFileStream*,
+#endif
 
 /// Base interface for a file stream
-class IFileStream : public IObject
+DILIGENT_INTERFACE(IFileStream, IObject)
 {
-public:
     /// Reads data from the stream
-    virtual bool Read(void* Data, size_t BufferSize) = 0;
+    VIRTUAL bool METHOD(Read)(THIS_
+                              void*  Data,
+                              size_t BufferSize) PURE;
 
-    virtual void Read(IDataBlob* pData) = 0;
+    VIRTUAL void METHOD(ReadBlob)(THIS_
+                                  IDataBlob* pData) PURE;
 
     /// Writes data to the stream
-    virtual bool Write(const void* Data, size_t Size) = 0;
+    VIRTUAL bool METHOD(Write)(THIS_
+                               const void* Data, 
+                               size_t      Size) PURE;
 
-    virtual size_t GetSize() = 0;
+    VIRTUAL size_t METHOD(GetSize)(THIS) PURE;
 
-    virtual bool IsValid() = 0;
+    VIRTUAL bool METHOD(IsValid)(THIS) PURE;
 };
 
-#else
+    // clang-format on
+
+#if DILIGENT_C_INTERFACE
+
+#    undef THIS
+#    undef THIS_
+
+struct IFileStreamVtbl
+{
+    struct IObjectMethods     Object;
+    struct IFileStreamMethods FileStream;
+};
+
+typedef struct IFileStream
+{
+    struct IFileStreamVtbl* pVtbl;
+} IFileStream;
+
+// clang-format off
+
+#    define IFileStream_Read(This, ...)     (This)->pVtbl->FileStream.Read    ((IFileStream*)(This), __VA_ARGS__)
+#    define IFileStream_ReadBlob(This, ...) (This)->pVtbl->FileStream.ReadBlob((IFileStream*)(This), __VA_ARGS__)
+#    define IFileStream_Write(This, ...)    (This)->pVtbl->FileStream.Write   ((IFileStream*)(This), __VA_ARGS__)
+#    define IFileStream_GetSize(This)       (This)->pVtbl->FileStream.GetSize ((IFileStream*)(This))
+#    define IFileStream_IsValid(This)       (This)->pVtbl->FileStream.IsValid ((IFileStream*)(This))
+
+// clang-format on
 
 #endif
 

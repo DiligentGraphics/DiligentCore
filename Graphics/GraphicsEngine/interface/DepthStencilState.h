@@ -145,6 +145,7 @@ struct StencilOpDesc
     }
 #endif
 };
+typedef struct StencilOpDesc StencilOpDesc;
 
 /// Depth stencil state description
 
@@ -180,10 +181,10 @@ struct DepthStencilStateDesc
     Uint8               StencilWriteMask    DEFAULT_INITIALIZER(0xFF);
 
     /// Identify stencil operations for the front-facing triangles, see Diligent::StencilOpDesc.
-    struct StencilOpDesc FrontFace;
+    StencilOpDesc FrontFace;
 
     /// Identify stencil operations for the back-facing triangles, see Diligent::StencilOpDesc.
-    struct StencilOpDesc BackFace;
+    StencilOpDesc BackFace;
 
 
 #if DILIGENT_CPP_INTERFACE
@@ -229,5 +230,6 @@ struct DepthStencilStateDesc
     }
 #endif
 };
+typedef struct DepthStencilStateDesc DepthStencilStateDesc;
 
 DILIGENT_END_NAMESPACE

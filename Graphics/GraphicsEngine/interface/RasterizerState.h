@@ -181,5 +181,6 @@ struct RasterizerStateDesc
     }
 #endif
 };
+typedef struct RasterizerStateDesc RasterizerStateDesc;
 
 DILIGENT_END_NAMESPACE

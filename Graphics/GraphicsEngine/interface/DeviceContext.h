@@ -56,7 +56,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {DC92711B-A1BE-4319-B2BD-C662D1CC19E4}
-static const struct INTERFACE_ID IID_DeviceContext =
+static const INTERFACE_ID IID_DeviceContext =
     {0xdc92711b, 0xa1be, 0x4319, {0xb2, 0xbd, 0xc6, 0x62, 0xd1, 0xcc, 0x19, 0xe4}};
 
 /// Draw command flags
@@ -210,6 +210,7 @@ struct DrawAttribs
     {}
 #endif
 };
+typedef struct DrawAttribs DrawAttribs;
 
 
 /// Defines the indexed draw command attributes.
@@ -276,7 +277,7 @@ struct DrawIndexedAttribs
     {}
 #endif
 };
-
+typedef struct DrawIndexedAttribs DrawIndexedAttribs;
 
 /// Defines the indirect draw command attributes.
 
@@ -314,7 +315,7 @@ struct DrawIndirectAttribs
     {}
 #endif
 };
-
+typedef struct DrawIndirectAttribs DrawIndirectAttribs;
 
 /// Defines the indexed indirect draw command attributes.
 
@@ -359,7 +360,7 @@ struct DrawIndexedIndirectAttribs
     {}
 #endif
 };
-
+typedef struct DrawIndexedIndirectAttribs DrawIndexedIndirectAttribs;
 
 /// Defines which parts of the depth-stencil buffer to clear.
 
@@ -398,6 +399,8 @@ struct DispatchComputeAttribs
     {}
 #endif
 };
+typedef struct DispatchComputeAttribs DispatchComputeAttribs;
+
 
 /// Describes dispatch command arguments.
 
@@ -422,6 +425,7 @@ struct DispatchComputeIndirectAttribs
     {}
 #endif
 };
+typedef struct DispatchComputeIndirectAttribs DispatchComputeIndirectAttribs;
 
 
 /// Describes multi-sampled texture resolve command arguments.
@@ -452,6 +456,8 @@ struct ResolveTextureSubresourceAttribs
     /// either TEX_FORMAT_UNKNOWN, or match this format.
     TEXTURE_FORMAT Format DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 };
+typedef struct ResolveTextureSubresourceAttribs ResolveTextureSubresourceAttribs;
+
 
 /// Defines allowed flags for IDeviceContext::SetVertexBuffers() function.
 DILIGENT_TYPED_ENUM(SET_VERTEX_BUFFERS_FLAGS, Uint8)
@@ -508,6 +514,8 @@ struct Viewport
     Viewport()noexcept{}
 #endif
 };
+typedef struct Viewport Viewport;
+
 
 /// Describes the rectangle.
 
@@ -540,6 +548,7 @@ struct Rect
     }
 #endif
 };
+typedef struct Rect Rect;
 
 
 /// Defines copy texture command attributes.
@@ -548,7 +557,7 @@ struct Rect
 struct CopyTextureAttribs
 {
     /// Source texture to copy data from.
-    class ITexture*                pSrcTexture              DEFAULT_INITIALIZER(nullptr);
+    ITexture*                pSrcTexture                    DEFAULT_INITIALIZER(nullptr);
 
     /// Mip level of the source texture to copy data from.
     Uint32                         SrcMipLevel              DEFAULT_INITIALIZER(0);
@@ -557,13 +566,13 @@ struct CopyTextureAttribs
     Uint32                         SrcSlice                 DEFAULT_INITIALIZER(0);
     
     /// Source region to copy. Use nullptr to copy the entire subresource.
-    const struct Box*              pSrcBox                  DEFAULT_INITIALIZER(nullptr);
+    const Box*                     pSrcBox                  DEFAULT_INITIALIZER(nullptr);
     
     /// Source texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
     RESOURCE_STATE_TRANSITION_MODE SrcTextureTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// Destination texture.
-    class ITexture*                pDstTexture              DEFAULT_INITIALIZER(nullptr);
+    ITexture*                      pDstTexture              DEFAULT_INITIALIZER(nullptr);
 
     /// Destination mip level.
     Uint32                         DstMipLevel              DEFAULT_INITIALIZER(0);
@@ -598,10 +607,13 @@ struct CopyTextureAttribs
     {}
 #endif
 };
+typedef struct CopyTextureAttribs CopyTextureAttribs;
 
 
-
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IDeviceContext*
+#    define THIS_ struct IDeviceContext*,
+#endif
 
 /// Device context interface.
 
@@ -609,13 +621,13 @@ struct CopyTextureAttribs
 ///          the pipeline: buffers, states, samplers, shaders, etc.
 ///          The context also keeps strong reference to the device and
 ///          the swap chain.
-class IDeviceContext : public IObject
+DILIGENT_INTERFACE(IDeviceContext, IObject)
 {
-public:
     /// Sets the pipeline state.
 
     /// \param [in] pPipelineState - Pointer to IPipelineState interface to bind to the context.
-    virtual void SetPipelineState(IPipelineState* pPipelineState) = 0;
+    VIRTUAL void METHOD(SetPipelineState)(THIS_
+                                          IPipelineState* pPipelineState) PURE;
 
 
     /// Transitions shader resources to the states required by Draw or Dispatch command.
@@ -636,7 +648,9 @@ public:
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
-    virtual void TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding) = 0;
+    VIRTUAL void METHOD(TransitionShaderResources)(THIS_ 
+                                                   IPipelineState*         pPipelineState, 
+                                                   IShaderResourceBinding* pShaderResourceBinding) PURE;
 
     /// Commits shader resources to the device context.
 
@@ -675,12 +689,15 @@ public:
     ///          If an application calls any method that changes the state of any resource after it has been committed, the
     ///          application is responsible for transitioning the resource back to correct state using one of the available methods
     ///          before issuing the next draw or dispatch command.
-    virtual void CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
+    VIRTUAL void METHOD(CommitShaderResources)(THIS_
+                                               IShaderResourceBinding*        pShaderResourceBinding,
+                                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
     /// Sets the stencil reference value.
 
     /// \param [in] StencilRef - Stencil reference value.
-    virtual void SetStencilRef(Uint32 StencilRef) = 0;
+    VIRTUAL void METHOD(SetStencilRef)(THIS_
+                                       Uint32 StencilRef) PURE;
 
     
     /// \param [in] pBlendFactors - Array of four blend factors, one for each RGBA component. 
@@ -689,7 +706,8 @@ public:
     ///                             Diligent::BLEND_FACTOR_INV_BLEND_FACTOR 
     ///                             blend factors. If nullptr is provided,
     ///                             default blend factors array {1,1,1,1} will be used.
-    virtual void SetBlendFactors(const float* pBlendFactors = nullptr) = 0;
+    VIRTUAL void METHOD(SetBlendFactors)(THIS_
+                                         const float* pBlendFactors DEFAULT_VALUE(nullptr)) PURE;
 
 
     /// Binds vertex buffers to the pipeline.
@@ -722,19 +740,20 @@ public:
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
-    virtual void SetVertexBuffers(Uint32                         StartSlot, 
-                                  Uint32                         NumBuffersSet, 
-                                  IBuffer**                      ppBuffers, 
-                                  Uint32*                        pOffsets,
-                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                                  SET_VERTEX_BUFFERS_FLAGS       Flags) = 0;
+    VIRTUAL void METHOD(SetVertexBuffers)(THIS_
+                                          Uint32                         StartSlot, 
+                                          Uint32                         NumBuffersSet, 
+                                          IBuffer**                      ppBuffers, 
+                                          Uint32*                        pOffsets,
+                                          RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                          SET_VERTEX_BUFFERS_FLAGS       Flags) PURE;
 
 
     /// Invalidates the cached context state.
 
     /// This method should be called by an application to invalidate 
     /// internal cached states.
-    virtual void InvalidateState() = 0;
+    VIRTUAL void METHOD(InvalidateState)(THIS) PURE;
 
 
     /// Binds an index buffer to the pipeline.
@@ -758,7 +777,10 @@ public:
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
-    virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
+    VIRTUAL void METHOD(SetIndexBuffer)(THIS_
+                                        IBuffer*                       pIndexBuffer,
+                                        Uint32                         ByteOffset,
+                                        RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
 
     /// Sets an array of viewports.
@@ -779,7 +801,11 @@ public:
     /// following call:
     ///
     ///     pContext->SetViewports(1, nullptr, 0, 0);
-    virtual void SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32 RTWidth, Uint32 RTHeight) = 0;
+    VIRTUAL void METHOD(SetViewports)(THIS_
+                                      Uint32          NumViewports,
+                                      const Viewport* pViewports, 
+                                      Uint32          RTWidth, 
+                                      Uint32          RTHeight) PURE;
 
 
     /// Sets active scissor rects.
@@ -796,7 +822,11 @@ public:
     /// required to convert viewport from DirectX to OpenGL coordinate system if OpenGL device is used.\n\n
     /// All scissor rects must be set atomically as one operation. Any rects not 
     /// defined by the call are disabled.
-    virtual void SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32 RTWidth, Uint32 RTHeight) = 0;
+    VIRTUAL void METHOD(SetScissorRects)(THIS_
+                                         Uint32      NumRects,
+                                         const Rect* pRects,
+                                         Uint32      RTWidth,
+                                         Uint32      RTHeight) PURE;
 
 
     /// Binds one or more render targets and the depth-stencil buffer to the context. It also
@@ -826,10 +856,11 @@ public:
     ///          explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
-    virtual void SetRenderTargets(Uint32                         NumRenderTargets,
-                                  ITextureView*                  ppRenderTargets[],
-                                  ITextureView*                  pDepthStencil,
-                                  RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
+    VIRTUAL void METHOD(SetRenderTargets)(THIS_
+                                          Uint32                         NumRenderTargets,
+                                          ITextureView*                  ppRenderTargets[],
+                                          ITextureView*                  pDepthStencil,
+                                          RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
 
     /// Executes a draw command.
@@ -842,7 +873,8 @@ public:
     ///          
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
-    virtual void Draw(const DrawAttribs& Attribs) = 0;
+    VIRTUAL void METHOD(Draw)(THIS_
+                              const DrawAttribs REF Attribs) PURE;
 
 
     /// Executes an indexed draw command.
@@ -855,7 +887,8 @@ public:
     ///          
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
-    virtual void DrawIndexed(const DrawIndexedAttribs& Attribs) = 0;
+    VIRTUAL void METHOD(DrawIndexed)(THIS_
+                                     const DrawIndexedAttribs REF Attribs) PURE;
 
 
     /// Executes an indirect draw command.
@@ -873,7 +906,9 @@ public:
     ///          
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
-    virtual void DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) = 0;
+    VIRTUAL void METHOD(DrawIndirect)(THIS_
+                                      const DrawIndirectAttribs REF Attribs,
+                                      IBuffer*                      pAttribsBuffer) PURE;
 
 
     /// Executes an indexed indirect draw command.
@@ -891,13 +926,16 @@ public:
     ///          
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
-    virtual void DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) = 0;
+    VIRTUAL void METHOD(DrawIndexedIndirect)(THIS_
+                                             const DrawIndexedIndirectAttribs REF Attribs,
+                                             IBuffer*                             pAttribsBuffer) PURE;
 
 
     /// Executes a dispatch compute command.
     
     /// \param [in] Attribs - Dispatch command attributes, see Diligent::DispatchComputeAttribs for details.
-    virtual void DispatchCompute(const DispatchComputeAttribs& Attribs) = 0;
+    VIRTUAL void METHOD(DispatchCompute)(THIS_
+                                         const DispatchComputeAttribs REF Attribs) PURE;
 
 
     /// Executes an indirect dispatch compute command.
@@ -911,7 +949,9 @@ public:
     ///          
     ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
     ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
-    virtual void DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) = 0;
+    VIRTUAL void METHOD(DispatchComputeIndirect)(THIS_
+                                                 const DispatchComputeIndirectAttribs REF Attribs,
+                                                 IBuffer*                                 pAttribsBuffer) PURE;
 
 
     /// Clears a depth-stencil view.
@@ -935,11 +975,12 @@ public:
     ///          the state of resources used by the command.
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
-    virtual void ClearDepthStencil(ITextureView*                  pView,
-                                   CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
-                                   float                          fDepth,
-                                   Uint8                          Stencil,
-                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
+    VIRTUAL void METHOD(ClearDepthStencil)(THIS_
+                                           ITextureView*                  pView,
+                                           CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
+                                           float                          fDepth,
+                                           Uint8                          Stencil,
+                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
 
     /// Clears a render target view
@@ -967,20 +1008,25 @@ public:
     ///          Diligent::RESOURCE_STATE_COPY_DEST state. Inside a render pass it must be in Diligent::RESOURCE_STATE_RENDER_TARGET
     ///          state. When using Diligent::RESOURCE_STATE_TRANSITION_TRANSITION mode, the engine takes care of proper
     ///          resource state transition, otherwise it is the responsibility of the application.
-    virtual void ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
+    VIRTUAL void METHOD(ClearRenderTarget)(THIS_
+                                           ITextureView*                  pView,
+                                           const float*                   RGBA, 
+                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
 
     /// Finishes recording commands and generates a command list.
     
     /// \param [out] ppCommandList - Memory location where pointer to the recorded command list will be written.
-    virtual void FinishCommandList(ICommandList **ppCommandList) = 0;
+    VIRTUAL void METHOD(FinishCommandList)(THIS_
+                                           ICommandList** ppCommandList) PURE;
 
 
     /// Executes recorded commands in a command list.
 
     /// \param [in] pCommandList - Pointer to the command list to executre.
     /// \remarks After command list is executed, it is no longer valid and should be released.
-    virtual void ExecuteCommandList(ICommandList* pCommandList) = 0;
+    VIRTUAL void METHOD(ExecuteCommandList)(THIS_
+                                            ICommandList* pCommandList) PURE;
 
 
     /// Tells the GPU to set a fence to a specified value after all previous work has completed.
@@ -993,7 +1039,9 @@ public:
     /// \param [in] pFence - The fence to signal
     /// \param [in] Value  - The value to set the fence to. This value must be greater than the
     ///                      previously signaled value on the same fence.
-    virtual void SignalFence(IFence* pFence, Uint64 Value) = 0;
+    VIRTUAL void METHOD(SignalFence)(THIS_
+                                     IFence*    pFence,
+                                     Uint64     Value) PURE;
 
 
     /// Waits until the specified fence reaches or exceeds the specified value, on the host.
@@ -1015,7 +1063,10 @@ public:
     ///             may never return.\n
     ///             The fence can only be waited for from the same context it has
     ///             previously been signaled.
-    virtual void WaitForFence(IFence* pFence, Uint64 Value, bool FlushContext) = 0;
+    VIRTUAL void METHOD(WaitForFence)(THIS_
+                                      IFence*   pFence,
+                                      Uint64    Value,
+                                      bool      FlushContext) PURE;
 
 
     /// Submits all outstanding commands for execution to the GPU and waits until they are complete.
@@ -1026,7 +1077,7 @@ public:
     ///             The methods implicitly flushes the context (see IDeviceContext::Flush()), so an 
     ///             application must explicitly reset the PSO and bind all required shader resources after 
     ///             idling the context.\n
-    virtual void WaitForIdle() = 0;
+    VIRTUAL void METHOD(WaitForIdle)(THIS) PURE;
 
 
     /// Marks the beginning of a query.
@@ -1047,7 +1098,8 @@ public:
     ///             SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE).
     ///
     /// \warning    OpenGL and Vulkan do not support nested queries of the same type.
-    virtual void BeginQuery(IQuery* pQuery) = 0;
+    VIRTUAL void METHOD(BeginQuery)(THIS_
+                                    IQuery* pQuery) PURE;
 
 
     /// Marks the end of a query.
@@ -1063,7 +1115,8 @@ public:
     ///             It is an error to explicitly flush the context while a query is active. 
     ///
     ///             All queries must be ended when IDeviceContext::FinishFrame() is called.
-    virtual void EndQuery(IQuery* pQuery) = 0;
+    VIRTUAL void METHOD(EndQuery)(THIS_
+                                  IQuery* pQuery) PURE;
 
 
     /// Submits all pending commands in the context for execution to the command queue.
@@ -1075,7 +1128,7 @@ public:
     ///             restore viewports and scissor rects, etc.) except for the pipeline state and shader resource
     ///             bindings. An application must explicitly reset the PSO and bind all required shader 
     ///             resources after flushing the context.
-    virtual void Flush() = 0;
+    VIRTUAL void METHOD(Flush)(THIS) PURE;
 
 
     /// Updates the data in the buffer.
@@ -1085,11 +1138,12 @@ public:
     /// \param [in] Size                - Size in bytes of the data region to update.
     /// \param [in] pData               - Pointer to the data to write to the buffer.
     /// \param [in] StateTransitionMode - Buffer state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
-    virtual void UpdateBuffer(IBuffer*                       pBuffer,
-                              Uint32                         Offset,
-                              Uint32                         Size,
-                              const void*                    pData,
-                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) = 0;
+    VIRTUAL void METHOD(UpdateBuffer)(THIS_
+                                      IBuffer*                       pBuffer,
+                                      Uint32                         Offset,
+                                      Uint32                         Size,
+                                      const void*                    pData,
+                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
 
     /// Copies the data from one buffer to another.
@@ -1102,13 +1156,14 @@ public:
     ///                                       of the destination region.
     /// \param [in] Size                    - Size in bytes of data to copy.
     /// \param [in] DstBufferTransitionMode - State transition mode of the destination buffer (see Diligent::RESOURCE_STATE_TRANSITION_MODE).
-    virtual void CopyBuffer(IBuffer*                       pSrcBuffer,
-                            Uint32                         SrcOffset,
-                            RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
-                            IBuffer*                       pDstBuffer,
-                            Uint32                         DstOffset,
-                            Uint32                         Size,
-                            RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) = 0;
+    VIRTUAL void METHOD(CopyBuffer)(THIS_
+                                    IBuffer*                       pSrcBuffer,
+                                    Uint32                         SrcOffset,
+                                    RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                                    IBuffer*                       pDstBuffer,
+                                    Uint32                         DstOffset,
+                                    Uint32                         Size,
+                                    RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) PURE;
 
 
     /// Maps the buffer.
@@ -1117,7 +1172,11 @@ public:
     /// \param [in] MapType      - Type of the map operation. See Diligent::MAP_TYPE.
     /// \param [in] MapFlags     - Special map flags. See Diligent::MAP_FLAGS.
     /// \param [out] pMappedData - Reference to the void pointer to store the address of the mapped region.
-    virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData) = 0;
+    VIRTUAL void METHOD(MapBuffer)(THIS_
+                                   IBuffer*     pBuffer,
+                                   MAP_TYPE     MapType,
+                                   MAP_FLAGS    MapFlags,
+                                   PVoid REF    pMappedData) PURE;
 
 
     /// Unmaps the previously mapped buffer.
@@ -1125,7 +1184,9 @@ public:
     /// \param [in] pBuffer - Pointer to the buffer to unmap.
     /// \param [in] MapType - Type of the map operation. This parameter must match the type that was 
     ///                       provided to the Map() method. 
-    virtual void UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType) = 0;
+    VIRTUAL void METHOD(UnmapBuffer)(THIS_
+                                     IBuffer*   pBuffer,
+                                     MAP_TYPE   MapType) PURE;
 
 
     /// Updates the data in the texture.
@@ -1139,19 +1200,21 @@ public:
     ///                                       parameter defines state transition mode of the source buffer. 
     ///                                       If pSrcBuffer is null, this parameter is ignored.
     /// \param [in] TextureTransitionMode   - Texture state transition mode (see Diligent::RESOURCE_STATE_TRANSITION_MODE)
-    virtual void UpdateTexture(ITexture*                      pTexture,
-                               Uint32                         MipLevel,
-                               Uint32                         Slice,
-                               const Box&                     DstBox,
-                               const TextureSubResData&       SubresData,
-                               RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
-                               RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode) = 0;
+    VIRTUAL void METHOD(UpdateTexture)(THIS_
+                                       ITexture*                        pTexture,
+                                       Uint32                           MipLevel,
+                                       Uint32                           Slice,
+                                       const Box REF                    DstBox,
+                                       const TextureSubResData REF      SubresData,
+                                       RESOURCE_STATE_TRANSITION_MODE   SrcBufferTransitionMode,
+                                       RESOURCE_STATE_TRANSITION_MODE   TextureTransitionMode) PURE;
 
 
     /// Copies data from one texture to another.
 
     /// \param [in] CopyAttribs - Structure describing copy command attributes, see Diligent::CopyTextureAttribs for details.
-    virtual void CopyTexture(const CopyTextureAttribs& CopyAttribs) = 0;
+    VIRTUAL void METHOD(CopyTexture)(THIS_
+                                     const CopyTextureAttribs REF CopyAttribs) PURE;
 
 
     /// Maps the texture subresource.
@@ -1168,17 +1231,21 @@ public:
     ///          subresource can be mapped, so pMapRegion must either be null, or cover the entire subresource.
     ///          In D3D11 and Vulkan backends, dynamic textures are no different from non-dynamic textures, and mapping 
     ///          with MAP_FLAG_DISCARD has exactly the same behavior.
-    virtual void MapTextureSubresource(ITexture*                 pTexture,
-                                       Uint32                    MipLevel,
-                                       Uint32                    ArraySlice,
-                                       MAP_TYPE                  MapType,
-                                       MAP_FLAGS                 MapFlags,
-                                       const Box*                pMapRegion,
-                                       MappedTextureSubresource& MappedData) = 0;
+    VIRTUAL void METHOD(MapTextureSubresource)(THIS_
+                                               ITexture*                    pTexture,
+                                               Uint32                       MipLevel,
+                                               Uint32                       ArraySlice,
+                                               MAP_TYPE                     MapType,
+                                               MAP_FLAGS                    MapFlags,
+                                               const Box*                   pMapRegion,
+                                               MappedTextureSubresource REF MappedData) PURE;
 
 
     /// Unmaps the texture subresource.
-    virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice) = 0;
+    VIRTUAL void METHOD(UnmapTextureSubresource)(THIS_
+                                                 ITexture* pTexture,
+                                                 Uint32    MipLevel,
+                                                 Uint32    ArraySlice) PURE;
 
     
     /// Generates a mipmap chain.
@@ -1186,7 +1253,8 @@ public:
     /// \param [in] pTextureView - Texture view to generate mip maps for.
     /// \remarks This function can only be called for a shader resource view.
     ///          The texture must be created with MISC_TEXTURE_FLAG_GENERATE_MIPS flag.
-    virtual void GenerateMips(ITextureView* pTextureView) = 0;
+    VIRTUAL void METHOD(GenerateMips)(THIS_
+                                      ITextureView* pTextureView) PURE;
 
     
     /// Finishes the current frame and releases dynamic resources allocated by the context.
@@ -1201,7 +1269,7 @@ public:
     ///       For deferred contexts, this method must be called after all command lists referencing dynamic resources
     ///       have been executed through immediate context.\n
     ///       The method does not Flush() the context.
-    virtual void FinishFrame() = 0;
+    VIRTUAL void METHOD(FinishFrame)(THIS) PURE;
 
 
     /// Transitions resource states.
@@ -1233,7 +1301,9 @@ public:
     ///
     ///          Refer to http://diligentgraphics.com/2018/12/09/resource-state-management/ for detailed explanation
     ///          of resource state management in Diligent Engine.
-    virtual void TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers) = 0;
+    VIRTUAL void METHOD(TransitionResourceStates)(THIS_
+                                                  Uint32               BarrierCount,
+                                                  StateTransitionDesc* pResourceBarriers) PURE;
 
 
     /// Resolves a multi-sampled texture subresource into a non-multi-sampled texture subresource.
@@ -1241,114 +1311,18 @@ public:
     /// \param [in] pSrcTexture    - Source multi-sampled texture.
     /// \param [in] pDstTexture    - Destination non-multi-sampled texture.
     /// \param [in] ResolveAttribs - Resolve command attributes, see Diligent::ResolveTextureSubresourceAttribs for details.
-    virtual void ResolveTextureSubresource(ITexture*                               pSrcTexture,
-                                           ITexture*                               pDstTexture,
-                                           const ResolveTextureSubresourceAttribs& ResolveAttribs) = 0;
+    VIRTUAL void METHOD(ResolveTextureSubresource)(THIS_
+                                                   ITexture*                                  pSrcTexture,
+                                                   ITexture*                                  pDstTexture,
+                                                   const ResolveTextureSubresourceAttribs REF ResolveAttribs) PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
+
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
-
-struct IDeviceContext;
-
-struct IDeviceContextMethods
-{
-    void (*SetPipelineState)(struct IDeviceContext*, class IPipelineState* pPipelineState);
-    void (*TransitionShaderResources)(struct IDeviceContext*, class IPipelineState* pPipelineState, class IShaderResourceBinding* pShaderResourceBinding);
-    void (*CommitShaderResources)(struct IDeviceContext*, class IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
-    void (*SetStencilRef)(struct IDeviceContext*, Uint32 StencilRef);
-    void (*SetBlendFactors)(struct IDeviceContext*, const float* pBlendFactors);
-    void (*SetVertexBuffers)(struct IDeviceContext*,
-                             Uint32                         StartSlot,
-                             Uint32                         NumBuffersSet,
-                             class IBuffer**                ppBuffers,
-                             Uint32*                        pOffsets,
-                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                             SET_VERTEX_BUFFERS_FLAGS       Flags);
-    void (*InvalidateState)(struct IDeviceContext*);
-    void (*SetIndexBuffer)(struct IDeviceContext*,
-                           class IBuffer*                 pIndexBuffer,
-                           Uint32                         ByteOffset,
-                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
-    void (*SetViewports)(struct IDeviceContext*,
-                         Uint32                 NumViewports,
-                         const struct Viewport* pViewports,
-                         Uint32                 RTWidth,
-                         Uint32                 RTHeight);
-    void (*SetScissorRects)(struct IDeviceContext*,
-                            Uint32             NumRects,
-                            const struct Rect* pRects,
-                            Uint32             RTWidth,
-                            Uint32             RTHeight);
-    void (*SetRenderTargets)(struct IDeviceContext*,
-                             Uint32                         NumRenderTargets,
-                             class ITextureView*            ppRenderTargets[],
-                             class ITextureView*            pDepthStencil,
-                             RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
-    void (*Draw)(struct IDeviceContext*, const struct DrawAttribs* Attribs);
-    void (*DrawIndexed)(struct IDeviceContext*, const struct DrawIndexedAttribs* Attribs);
-    void (*DrawIndirect)(struct IDeviceContext*, const struct DrawIndirectAttribs* Attribs, class IBuffer* pAttribsBuffer);
-    void (*DrawIndexedIndirect)(struct IDeviceContext*, const struct DrawIndexedIndirectAttribs* Attribs, class IBuffer* pAttribsBuffer);
-    void (*DispatchCompute)(struct IDeviceContext*, const struct DispatchComputeAttribs* Attribs);
-    void (*DispatchComputeIndirect)(struct IDeviceContext*, const struct DispatchComputeIndirectAttribs* Attribs, class IBuffer* pAttribsBuffer);
-    void (*ClearDepthStencil)(struct IDeviceContext*,
-                              class ITextureView*            pView,
-                              CLEAR_DEPTH_STENCIL_FLAGS      ClearFlags,
-                              float                          fDepth,
-                              Uint8                          Stencil,
-                              RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
-    void (*ClearRenderTarget)(struct IDeviceContext*, class ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
-    void (*FinishCommandList)(struct IDeviceContext*, class ICommandList** ppCommandList);
-    void (*ExecuteCommandList)(struct IDeviceContext*, class ICommandList* pCommandList);
-    void (*SignalFence)(struct IDeviceContext*, class IFence* pFence, Uint64 Value);
-    void (*WaitForFence)(struct IDeviceContext*, class IFence* pFence, Uint64 Value, bool FlushContext);
-    void (*WaitForIdle)(struct IDeviceContext*);
-    void (*BeginQuery)(struct IDeviceContext*, class IQuery* pQuery);
-    void (*EndQuery)(struct IDeviceContext*, class IQuery* pQuery);
-    void (*Flush)(struct IDeviceContext*);
-    void (*UpdateBuffer)(struct IDeviceContext*,
-                         class IBuffer*                 pBuffer,
-                         Uint32                         Offset,
-                         Uint32                         Size,
-                         const void*                    pData,
-                         RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
-    void (*CopyBuffer)(struct IDeviceContext*,
-                       class IBuffer*                 pSrcBuffer,
-                       Uint32                         SrcOffset,
-                       RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
-                       class IBuffer*                 pDstBuffer,
-                       Uint32                         DstOffset,
-                       Uint32                         Size,
-                       RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode);
-    void (*MapBuffer)(struct IDeviceContext*, class IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid* pMappedData);
-    void (*UnmapBuffer)(struct IDeviceContext*, class IBuffer* pBuffer, MAP_TYPE MapType);
-    void (*UpdateTexture)(struct IDeviceContext*,
-                          class ITexture*                 pTexture,
-                          Uint32                          MipLevel,
-                          Uint32                          Slice,
-                          const struct Box*               DstBox,
-                          const struct TextureSubResData* SubresData,
-                          RESOURCE_STATE_TRANSITION_MODE  SrcBufferTransitionMode,
-                          RESOURCE_STATE_TRANSITION_MODE  TextureTransitionMode);
-    void (*CopyTexture)(struct IDeviceContext*, const struct CopyTextureAttribs* CopyAttribs);
-    void (*MapTextureSubresource)(struct IDeviceContext*,
-                                  class ITexture*                  pTexture,
-                                  Uint32                           MipLevel,
-                                  Uint32                           ArraySlice,
-                                  MAP_TYPE                         MapType,
-                                  MAP_FLAGS                        MapFlags,
-                                  const struct Box*                pMapRegion,
-                                  struct MappedTextureSubresource* MappedData);
-    void (*UnmapTextureSubresource)(struct IDeviceContext*, class ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice);
-    void (*GenerateMips)(struct IDeviceContext*, class ITextureView* pTextureView);
-    void (*FinishFrame)(struct IDeviceContext*);
-    void (*TransitionResourceStates)(struct IDeviceContext*, Uint32 BarrierCount, struct StateTransitionDesc* pResourceBarriers);
-    void (*ResolveTextureSubresource)(struct IDeviceContext*,
-                                      class ITexture*                                pSrcTexture,
-                                      class ITexture*                                pDstTexture,
-                                      const struct ResolveTextureSubresourceAttribs* ResolveAttribs);
-};
 
 struct IDeviceContextVtbl
 {
@@ -1356,52 +1330,52 @@ struct IDeviceContextVtbl
     struct IDeviceContextMethods DeviceContext;
 };
 
-struct IDeviceContext
+typedef struct IDeviceContext
 {
     struct IDeviceContextVtbl* pVtbl;
-};
+} IDeviceContext;
 
 // clang-format off
 
-#    define IDeviceContext_SetPipelineState(This, ...)          (This)->pVtbl->DeviceContext.SetPipelineState          ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_TransitionShaderResources(This, ...) (This)->pVtbl->DeviceContext.TransitionShaderResources ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_CommitShaderResources(This, ...)     (This)->pVtbl->DeviceContext.CommitShaderResources     ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_SetStencilRef(This, ...)             (This)->pVtbl->DeviceContext.SetStencilRef             ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_SetBlendFactors(This, ...)           (This)->pVtbl->DeviceContext.SetBlendFactors           ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_SetVertexBuffers(This, ...)          (This)->pVtbl->DeviceContext.SetVertexBuffers          ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_InvalidateState(This)                (This)->pVtbl->DeviceContext.InvalidateState           ((struct IDeviceContext*)(This))
-#    define IDeviceContext_SetIndexBuffer(This, ...)            (This)->pVtbl->DeviceContext.SetIndexBuffer            ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_SetViewports(This, ...)              (This)->pVtbl->DeviceContext.SetViewports              ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_SetScissorRects(This, ...)           (This)->pVtbl->DeviceContext.SetScissorRects           ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_SetRenderTargets(This, ...)          (This)->pVtbl->DeviceContext.SetRenderTargets          ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_Draw(This, ...)                      (This)->pVtbl->DeviceContext.Draw                      ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_DrawIndexed(This, ...)               (This)->pVtbl->DeviceContext.DrawIndexed               ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_DrawIndirect(This, ...)              (This)->pVtbl->DeviceContext.DrawIndirect              ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_DrawIndexedIndirect(This, ...)       (This)->pVtbl->DeviceContext.DrawIndexedIndirect       ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_DispatchCompute(This, ...)           (This)->pVtbl->DeviceContext.DispatchCompute           ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_DispatchComputeIndirect(This, ...)   (This)->pVtbl->DeviceContext.DispatchComputeIndirect   ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_ClearDepthStencil(This, ...)         (This)->pVtbl->DeviceContext.ClearDepthStencil         ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_ClearRenderTarget(This, ...)         (This)->pVtbl->DeviceContext.ClearRenderTarget         ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_FinishCommandList(This, ...)         (This)->pVtbl->DeviceContext.FinishCommandList         ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_ExecuteCommandList(This, ...)        (This)->pVtbl->DeviceContext.ExecuteCommandList        ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_SignalFence(This, ...)               (This)->pVtbl->DeviceContext.SignalFence               ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_WaitForFence(This, ...)              (This)->pVtbl->DeviceContext.WaitForFence              ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_WaitForIdle(This, ...)               (This)->pVtbl->DeviceContext.WaitForIdle               ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_BeginQuery(This, ...)                (This)->pVtbl->DeviceContext.BeginQuery                ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_EndQuery(This, ...)                  (This)->pVtbl->DeviceContext.EndQuery                  ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_Flush(This, ...)                     (This)->pVtbl->DeviceContext.Flush                     ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_UpdateBuffer(This, ...)              (This)->pVtbl->DeviceContext.UpdateBuffer              ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_CopyBuffer(This, ...)                (This)->pVtbl->DeviceContext.CopyBuffer                ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_MapBuffer(This, ...)                 (This)->pVtbl->DeviceContext.MapBuffer                 ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_UnmapBuffer(This, ...)               (This)->pVtbl->DeviceContext.UnmapBuffer               ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_UpdateTexture(This, ...)             (This)->pVtbl->DeviceContext.UpdateTexture             ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_CopyTexture(This, ...)               (This)->pVtbl->DeviceContext.CopyTexture               ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_MapTextureSubresource(This, ...)     (This)->pVtbl->DeviceContext.MapTextureSubresource     ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_UnmapTextureSubresource(This, ...)   (This)->pVtbl->DeviceContext.UnmapTextureSubresource   ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_GenerateMips(This, ...)              (This)->pVtbl->DeviceContext.GenerateMips              ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_FinishFrame(This)                    (This)->pVtbl->DeviceContext.FinishFrame               ((struct IDeviceContext*)(This))
-#    define IDeviceContext_TransitionResourceStates(This, ...)  (This)->pVtbl->DeviceContext.TransitionResourceStates  ((struct IDeviceContext*)(This), __VA_ARGS__)
-#    define IDeviceContext_ResolveTextureSubresource(This, ...) (This)->pVtbl->DeviceContext.ResolveTextureSubresource ((struct IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_SetPipelineState(This, ...)          (This)->pVtbl->DeviceContext.SetPipelineState          ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_TransitionShaderResources(This, ...) (This)->pVtbl->DeviceContext.TransitionShaderResources ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_CommitShaderResources(This, ...)     (This)->pVtbl->DeviceContext.CommitShaderResources     ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_SetStencilRef(This, ...)             (This)->pVtbl->DeviceContext.SetStencilRef             ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_SetBlendFactors(This, ...)           (This)->pVtbl->DeviceContext.SetBlendFactors           ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_SetVertexBuffers(This, ...)          (This)->pVtbl->DeviceContext.SetVertexBuffers          ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_InvalidateState(This)                (This)->pVtbl->DeviceContext.InvalidateState           ((IDeviceContext*)(This))
+#    define IDeviceContext_SetIndexBuffer(This, ...)            (This)->pVtbl->DeviceContext.SetIndexBuffer            ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_SetViewports(This, ...)              (This)->pVtbl->DeviceContext.SetViewports              ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_SetScissorRects(This, ...)           (This)->pVtbl->DeviceContext.SetScissorRects           ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_SetRenderTargets(This, ...)          (This)->pVtbl->DeviceContext.SetRenderTargets          ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_Draw(This, ...)                      (This)->pVtbl->DeviceContext.Draw                      ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_DrawIndexed(This, ...)               (This)->pVtbl->DeviceContext.DrawIndexed               ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_DrawIndirect(This, ...)              (This)->pVtbl->DeviceContext.DrawIndirect              ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_DrawIndexedIndirect(This, ...)       (This)->pVtbl->DeviceContext.DrawIndexedIndirect       ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_DispatchCompute(This, ...)           (This)->pVtbl->DeviceContext.DispatchCompute           ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_DispatchComputeIndirect(This, ...)   (This)->pVtbl->DeviceContext.DispatchComputeIndirect   ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_ClearDepthStencil(This, ...)         (This)->pVtbl->DeviceContext.ClearDepthStencil         ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_ClearRenderTarget(This, ...)         (This)->pVtbl->DeviceContext.ClearRenderTarget         ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_FinishCommandList(This, ...)         (This)->pVtbl->DeviceContext.FinishCommandList         ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_ExecuteCommandList(This, ...)        (This)->pVtbl->DeviceContext.ExecuteCommandList        ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_SignalFence(This, ...)               (This)->pVtbl->DeviceContext.SignalFence               ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_WaitForFence(This, ...)              (This)->pVtbl->DeviceContext.WaitForFence              ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_WaitForIdle(This, ...)               (This)->pVtbl->DeviceContext.WaitForIdle               ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_BeginQuery(This, ...)                (This)->pVtbl->DeviceContext.BeginQuery                ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_EndQuery(This, ...)                  (This)->pVtbl->DeviceContext.EndQuery                  ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_Flush(This, ...)                     (This)->pVtbl->DeviceContext.Flush                     ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_UpdateBuffer(This, ...)              (This)->pVtbl->DeviceContext.UpdateBuffer              ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_CopyBuffer(This, ...)                (This)->pVtbl->DeviceContext.CopyBuffer                ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_MapBuffer(This, ...)                 (This)->pVtbl->DeviceContext.MapBuffer                 ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_UnmapBuffer(This, ...)               (This)->pVtbl->DeviceContext.UnmapBuffer               ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_UpdateTexture(This, ...)             (This)->pVtbl->DeviceContext.UpdateTexture             ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_CopyTexture(This, ...)               (This)->pVtbl->DeviceContext.CopyTexture               ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_MapTextureSubresource(This, ...)     (This)->pVtbl->DeviceContext.MapTextureSubresource     ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_UnmapTextureSubresource(This, ...)   (This)->pVtbl->DeviceContext.UnmapTextureSubresource   ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_GenerateMips(This, ...)              (This)->pVtbl->DeviceContext.GenerateMips              ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_FinishFrame(This)                    (This)->pVtbl->DeviceContext.FinishFrame               ((IDeviceContext*)(This))
+#    define IDeviceContext_TransitionResourceStates(This, ...)  (This)->pVtbl->DeviceContext.TransitionResourceStates  ((IDeviceContext*)(This), __VA_ARGS__)
+#    define IDeviceContext_ResolveTextureSubresource(This, ...) (This)->pVtbl->DeviceContext.ResolveTextureSubresource ((IDeviceContext*)(This), __VA_ARGS__)
 
 // clang-format on
 

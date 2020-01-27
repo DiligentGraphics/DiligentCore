@@ -34,17 +34,17 @@ struct ISampler;
 
 int TestTextureCInterface(struct ITexture* pTexture)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
+    DeviceObjectAttribs Desc;
+    Int32               UniqueId = 0;
 
-    struct TextureDesc     TexDesc;
-    struct ITextureView *  pView0 = NULL, *pView1 = NULL;
-    struct TextureViewDesc ViewDesc;
-    void*                  NativeHanlde;
-    RESOURCE_STATE         State = RESOURCE_STATE_SHADER_RESOURCE;
+    TextureDesc     TexDesc;
+    ITextureView *  pView0 = NULL, *pView1 = NULL;
+    TextureViewDesc ViewDesc;
+    void*           NativeHanlde;
+    RESOURCE_STATE  State = RESOURCE_STATE_SHADER_RESOURCE;
 
     int num_errors =
         TestObjectCInterface((struct IObject*)pTexture) +

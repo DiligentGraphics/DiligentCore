@@ -60,6 +60,7 @@ struct SamplerCaps
     /// Indicates if device supports MIP load bias
     Bool LODBiasSupported              DEFAULT_INITIALIZER(False);
 };
+typedef struct SamplerCaps SamplerCaps;
 
 /// Texture capabilities
 struct TextureCaps
@@ -94,6 +95,7 @@ struct TextureCaps
     /// Indicates if device supports cubemap arrays
     Bool CubemapArraysSupported    DEFAULT_INITIALIZER(False);
 };
+typedef struct TextureCaps TextureCaps;
     
 /// Describes supported device features
 struct DeviceFeatures
@@ -163,6 +165,7 @@ struct DeviceFeatures
     /// Specifies whether all the extended UAV texture formats are available in shader code.
     Bool TextureUAVExtendedFormats         DEFAULT_INITIALIZER(False);
 };
+typedef struct DeviceFeatures DeviceFeatures;
 
 /// Device capabilities
 struct DeviceCaps
@@ -184,13 +187,13 @@ struct DeviceCaps
     ADAPTER_TYPE AdaterType DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
 
     /// Texture sampling capabilities. See Diligent::SamplerCaps.
-    struct SamplerCaps SamCaps;
+    SamplerCaps SamCaps;
 
     /// Texture capabilities. See Diligent::TextureCaps.
-    struct TextureCaps TexCaps;
+    TextureCaps TexCaps;
 
     /// Device features. See Diligent::DeviceFeatures.
-    struct DeviceFeatures Features;
+    DeviceFeatures Features;
 
 #if DILIGENT_CPP_INTERFACE
     bool IsGLDevice()const
@@ -250,5 +253,6 @@ struct DeviceCaps
     }
 #endif
 };
+typedef struct DeviceCaps DeviceCaps;
 
 DILIGENT_END_NAMESPACE // namespace Diligent

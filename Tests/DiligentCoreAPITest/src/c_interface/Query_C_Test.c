@@ -32,16 +32,16 @@ int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
 int TestQueryCInterface(struct IQuery* pQuery)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
+    DeviceObjectAttribs Desc;
+    Int32               UniqueId = 0;
 
-    struct QueryDataTimestamp queryData      = {QUERY_TYPE_TIMESTAMP};
-    bool                      QueryDataReady = false;
+    QueryDataTimestamp queryData      = {QUERY_TYPE_TIMESTAMP};
+    bool               QueryDataReady = false;
 
-    struct QueryDesc QueryDesc;
+    QueryDesc QueryDesc;
 
     int num_errors =
         TestObjectCInterface((struct IObject*)pQuery) +

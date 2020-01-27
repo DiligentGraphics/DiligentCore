@@ -297,7 +297,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         if (pSourceStream == nullptr)
             LOG_ERROR_AND_THROW("Failed to open shader source file");
 
-        pSourceStream->Read(pFileData);
+        pSourceStream->ReadBlob(pFileData);
         ShaderSource = reinterpret_cast<char*>(pFileData->GetDataPtr());
         SourceLen    = pFileData->GetSize();
     }

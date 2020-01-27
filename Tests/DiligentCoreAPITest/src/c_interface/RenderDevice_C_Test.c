@@ -33,12 +33,12 @@ int TestObjectCInterface(struct IObject* pObject);
 
 int TestRenderDeviceCInterface_Misc(struct IRenderDevice* pRenderDevice)
 {
-    struct IObject*             pUnknown = NULL;
-    ReferenceCounterValueType   RefCnt1 = 0, RefCnt2 = 0;
-    struct DeviceCaps           deviceCaps;
-    struct TextureFormatInfo    TexFmtInfo;
-    struct TextureFormatInfoExt TexFmtInfoExt;
-    struct IEngineFactory*      pFactory = NULL;
+    IObject*                  pUnknown = NULL;
+    ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
+    DeviceCaps                deviceCaps;
+    TextureFormatInfo         TexFmtInfo;
+    TextureFormatInfoExt      TexFmtInfoExt;
+    IEngineFactory*           pFactory = NULL;
 
     int num_errors = TestObjectCInterface((struct IObject*)pRenderDevice);
 

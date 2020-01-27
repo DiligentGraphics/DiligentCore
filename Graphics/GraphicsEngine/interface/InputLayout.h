@@ -174,16 +174,18 @@ struct LayoutElement
     {}
 #endif
 };
+typedef struct LayoutElement LayoutElement;
+
 
 /// Layout description
 
 /// This structure is used by IRenderDevice::CreatePipelineState().
-struct InputLayoutDesc 
+struct InputLayoutDesc
 {
     /// Array of layout elements
-    const struct LayoutElement* LayoutElements  DEFAULT_INITIALIZER(nullptr);
+    const LayoutElement* LayoutElements  DEFAULT_INITIALIZER(nullptr);
     /// Number of layout elements
-    Uint32                      NumElements     DEFAULT_INITIALIZER(0);
+    Uint32               NumElements     DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     InputLayoutDesc()noexcept{}
@@ -195,5 +197,6 @@ struct InputLayoutDesc
     {}
 #endif
 };
+typedef struct InputLayoutDesc InputLayoutDesc;
 
 DILIGENT_END_NAMESPACE

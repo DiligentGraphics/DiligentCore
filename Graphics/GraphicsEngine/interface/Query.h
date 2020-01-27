@@ -36,7 +36,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {70F2A88A-F8BE-4901-8F05-2F72FA695BA0}
-static const struct INTERFACE_ID IID_Query =
+static const INTERFACE_ID IID_Query =
     {0x70f2a88a, 0xf8be, 0x4901, {0x8f, 0x5, 0x2f, 0x72, 0xfa, 0x69, 0x5b, 0xa0}};
 
 /// Query type.
@@ -77,6 +77,7 @@ struct QueryDataOcclusion
     /// IDeviceContext::BeginQuery and IDeviceContext::EndQuery.
     Uint64 NumSamples DEFAULT_INITIALIZER(0);
 };
+typedef struct QueryDataOcclusion QueryDataOcclusion;
 
 /// Binary occlusion query data.
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_BINARY_OCCLUSION query type.
@@ -89,6 +90,7 @@ struct QueryDataBinaryOcclusion
     /// IDeviceContext::BeginQuery and IDeviceContext::EndQuery.
     bool AnySamplePassed DEFAULT_INITIALIZER(0);
 };
+typedef struct QueryDataBinaryOcclusion QueryDataBinaryOcclusion;
 
 /// Timestamp query data.
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_TIMESTAMP query type.
@@ -104,6 +106,7 @@ struct QueryDataTimestamp
     /// while getting the timestamp, this value will be 0.
     Uint64 Frequency DEFAULT_INITIALIZER(0);
 };
+typedef struct QueryDataTimestamp QueryDataTimestamp;
 
 /// Pipeline statistics query data.
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_PIPELINE_STATISTICS query type.
@@ -149,7 +152,7 @@ struct QueryDataPipelineStatistics
     /// Number of times a compute shader was invoked.
     Uint64 CSInvocations DEFAULT_INITIALIZER(0);
 };
-
+typedef struct QueryDataPipelineStatistics QueryDataPipelineStatistics;
 
 // clang-format off
 
@@ -167,19 +170,24 @@ struct QueryDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     {}
 #endif
 };
+typedef struct QueryDesc QueryDesc;
 
-// clang-format on
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IQuery*
+#    define THIS_ struct IQuery*,
+#endif
 
-#if DILIGENT_CPP_INTERFACE
+// clang-format off
 
 /// Query interface.
 
 /// Defines the methods to manipulate a Query object
-class IQuery : public IDeviceObject
+DILIGENT_INTERFACE(IQuery, IDeviceObject)
 {
-public:
+#if DILIGENT_CPP_INTERFACE
     /// Returns the Query description used to create the object.
     virtual const QueryDesc& GetDesc() const override = 0;
+#endif
 
     /// Gets the query data.
 
@@ -201,23 +209,19 @@ public:
     ///
     ///             If AutoInvalidate is set to true, and the data have been retrieved, an application
     ///             must not call GetData() until it begins and ends the query again.
-    virtual bool GetData(void* pData, Uint32 DataSize, bool AutoInvalidate = true) = 0;
+    VIRTUAL bool METHOD(GetData)(THIS_
+                                 void*   pData,
+                                 Uint32  DataSize, 
+                                 bool    AutoInvalidate DEFAULT_VALUE(true)) PURE;
 
     /// Invalidates the query and releases associated resources.
-    virtual void Invalidate() = 0;
+    VIRTUAL void METHOD(Invalidate)(THIS) PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-struct IQuery;
-
-// clang-format off
-
-struct IQueryMethods
-{
-    bool (*GetData)   (struct IQuery*, void* pData, Uint32 DataSize, bool AutoInvalidate);
-    void (*Invalidate)(struct IQuery*);
-};
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
 
@@ -228,17 +232,17 @@ struct IQueryVtbl
     struct IQueryMethods        Query;
 };
 
-struct IQuery
+typedef struct IQuery
 {
     struct IQueryVtbl* pVtbl;
-};
+} IQuery;
 
 // clang-format off
 
 #    define IQuery_GetDesc(This) (const struct QueryDesc*)IDeviceObject_GetDesc(This)
 
-#    define IQuery_GetData(This, ...) (This)->pVtbl->Query.GetData   ((struct IQuery*)(This), __VA_ARGS__)
-#    define IQuery_Invalidate(This)   (This)->pVtbl->Query.Invalidate((struct IQuery*)(This))
+#    define IQuery_GetData(This, ...) (This)->pVtbl->Query.GetData   ((IQuery*)(This), __VA_ARGS__)
+#    define IQuery_Invalidate(This)   (This)->pVtbl->Query.Invalidate((IQuery*)(This))
 
 // clang-format on
 

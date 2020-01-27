@@ -37,24 +37,28 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-class IPipelineState;
+struct IPipelineState;
 
 // {061F8774-9A09-48E8-8411-B5BD20560104}
-static const struct INTERFACE_ID IID_ShaderResourceBinding =
+static const INTERFACE_ID IID_ShaderResourceBinding =
     {0x61f8774, 0x9a09, 0x48e8, {0x84, 0x11, 0xb5, 0xbd, 0x20, 0x56, 0x1, 0x4}};
 
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IShaderResourceBinding*
+#    define THIS_ struct IShaderResourceBinding*,
+#endif
+
+// clang-format off
 
 /// Shader resource binding interface
-class IShaderResourceBinding : public IObject
+DILIGENT_INTERFACE(IShaderResourceBinding, IObject)
 {
-public:
     /// Returns pointer to the referenced buffer object.
 
     /// The method calls AddRef() on the returned interface,
     /// so Release() must be called to avoid memory leaks.
-    virtual IPipelineState* GetPipelineState() = 0;
+    VIRTUAL struct IPipelineState* METHOD(GetPipelineState)(THIS) PURE;
 
     /// Binds mutable and dynamice resources using the resource mapping
 
@@ -62,7 +66,10 @@ public:
     ///                           Any combination of Diligent::SHADER_TYPE may be used.
     /// \param [in] pResMapping - Shader resource mapping, where required resources will be looked up
     /// \param [in] Flags       - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) = 0;
+    VIRTUAL void METHOD(BindResources)(THIS_
+                                       Uint32            ShaderFlags,
+                                       IResourceMapping* pResMapping, 
+                                       Uint32            Flags) PURE;
 
     /// Returns variable
 
@@ -72,7 +79,9 @@ public:
     ///
     /// \note  This operation may potentially be expensive. If the variable will be used often, it is
     ///        recommended to store and reuse the pointer as it never changes.
-    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name) = 0;
+    VIRTUAL IShaderResourceVariable* METHOD(GetVariableByName)(THIS_
+                                                               SHADER_TYPE ShaderType,
+                                                               const char* Name) PURE;
 
     /// Returns the total variable count for the specific shader stage.
 
@@ -80,7 +89,8 @@ public:
     /// \remark The method only counts mutable and dynamic variables that can be accessed through
     ///         the Shader Resource Binding object. Static variables are accessed through the Shader
     ///         object.
-    virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const = 0;
+    VIRTUAL Uint32 METHOD(GetVariableCount)(THIS_
+                                            SHADER_TYPE ShaderType) CONST PURE;
 
     /// Returns variable
 
@@ -94,7 +104,9 @@ public:
     ///
     /// \note   This operation may potentially be expensive. If the variable will be used often, it is
     ///         recommended to store and reuse the pointer as it never changes.
-    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) = 0;
+    VIRTUAL IShaderResourceVariable* METHOD(GetVariableByIndex)(THIS_
+                                                                SHADER_TYPE ShaderType,
+                                                                Uint32      Index) PURE;
 
 
     /// Initializes static resources
@@ -112,25 +124,14 @@ public:
     /// \note The method must be called exactly once. If static resources have
     ///       already been initialized and the method is called again, it will have
     ///       no effect and a warning messge will be displayed.
-    virtual void InitializeStaticResources(const IPipelineState* pPipelineState = nullptr) = 0;
+    VIRTUAL void METHOD(InitializeStaticResources)(THIS_
+                                                   const struct IPipelineState* pPipelineState DEFAULT_VALUE(nullptr)) PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-class IPipelineState;
-struct IShaderResourceBinding;
-
-// clang-format off
-
-struct IShaderResourceBindingMethods
-{
-    class IPipelineState*          (*GetPipelineState)         (struct IShaderResourceBinding*);
-    void                           (*BindResources)            (struct IShaderResourceBinding*, Uint32 ShaderFlags, class IResourceMapping* pResMapping, Uint32 Flags);
-    class IShaderResourceVariable* (*GetVariableByName)        (struct IShaderResourceBinding*, SHADER_TYPE ShaderType, const char* Name);
-    Uint32                         (*GetVariableCount)         (struct IShaderResourceBinding*, SHADER_TYPE ShaderType);
-    class IShaderResourceVariable* (*GetVariableByIndex)       (struct IShaderResourceBinding*, SHADER_TYPE ShaderType, Uint32 Index);
-    void                           (*InitializeStaticResources)(struct IShaderResourceBinding*, const class IPipelineState* pPipelineState);
-};
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
 
@@ -140,19 +141,19 @@ struct IShaderResourceBindingVtbl
     struct IShaderResourceBindingMethods ShaderResourceBinding;
 };
 
-struct IShaderResourceBinding
+typedef struct IShaderResourceBinding
 {
     struct IShaderResourceBindingVtbl* pVtbl;
-};
+} IShaderResourceBinding;
 
 // clang-format off
 
-#    define IShaderResourceBinding_GetPipelineState(This)               (This)->pVtbl->ShaderResourceBinding.GetPipelineState         ((struct IShaderResourceBinding*)(This))
-#    define IShaderResourceBinding_BindResources(This, ...)             (This)->pVtbl->ShaderResourceBinding.BindResources            ((struct IShaderResourceBinding*)(This), __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableByName(This, ...)         (This)->pVtbl->ShaderResourceBinding.GetVariableByName        ((struct IShaderResourceBinding*)(This), __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableCount(This, ...)          (This)->pVtbl->ShaderResourceBinding.GetVariableCount         ((struct IShaderResourceBinding*)(This), __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableByIndex(This, ...)        (This)->pVtbl->ShaderResourceBinding.GetVariableByIndex       ((struct IShaderResourceBinding*)(This), __VA_ARGS__)
-#    define IShaderResourceBinding_InitializeStaticResources(This, ...) (This)->pVtbl->ShaderResourceBinding.InitializeStaticResources((struct IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_GetPipelineState(This)               (This)->pVtbl->ShaderResourceBinding.GetPipelineState         ((IShaderResourceBinding*)(This))
+#    define IShaderResourceBinding_BindResources(This, ...)             (This)->pVtbl->ShaderResourceBinding.BindResources            ((IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByName(This, ...)         (This)->pVtbl->ShaderResourceBinding.GetVariableByName        ((IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableCount(This, ...)          (This)->pVtbl->ShaderResourceBinding.GetVariableCount         ((IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByIndex(This, ...)        (This)->pVtbl->ShaderResourceBinding.GetVariableByIndex       ((IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_InitializeStaticResources(This, ...) (This)->pVtbl->ShaderResourceBinding.InitializeStaticResources((IShaderResourceBinding*)(This), __VA_ARGS__)
 
 // clang-format on
 

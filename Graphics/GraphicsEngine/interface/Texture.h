@@ -39,7 +39,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {A64B0E60-1B5E-4CFD-B880-663A1ADCBE98}
-static const struct INTERFACE_ID IID_Texture =
+static const INTERFACE_ID IID_Texture =
     {0xa64b0e60, 0x1b5e, 0x4cfd,{0xb8, 0x80, 0x66, 0x3a, 0x1a, 0xdc, 0xbe, 0x98}};
 
 /// Defines optimized depth-stencil clear value.
@@ -60,6 +60,7 @@ struct DepthStencilClearValue
     {}
 #endif
 };
+typedef struct DepthStencilClearValue DepthStencilClearValue;
 
 /// Defines optimized clear value.
 struct OptimizedClearValue
@@ -71,7 +72,7 @@ struct OptimizedClearValue
     Float32        Color[4]     DEFAULT_INITIALIZER({});
 
     /// Depth stencil clear value
-    struct DepthStencilClearValue DepthStencil;
+    DepthStencilClearValue DepthStencil;
 
 #if DILIGENT_CPP_INTERFACE
     bool operator == (const OptimizedClearValue& rhs)const
@@ -86,6 +87,7 @@ struct OptimizedClearValue
     }
 #endif
 };
+typedef struct OptimizedClearValue OptimizedClearValue;
 
 /// Texture description
 struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
@@ -137,7 +139,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     MISC_TEXTURE_FLAGS MiscFlags        DEFAULT_INITIALIZER(MISC_TEXTURE_FLAG_NONE);
     
     /// Optimized clear value
-    struct OptimizedClearValue ClearValue;
+    OptimizedClearValue ClearValue;
 
     /// Defines which command queues this texture can be used with
     Uint64 CommandQueueMask              DEFAULT_INITIALIZER(1);
@@ -203,6 +205,7 @@ struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     }
 #endif
 };
+typedef struct TextureDesc TextureDesc;
 
 /// Describes data for one subresource
 struct TextureSubResData
@@ -213,7 +216,7 @@ struct TextureSubResData
 
     /// Pointer to the GPU buffer that contains subresource data.
     /// If provided, pData must be null
-    class IBuffer* pSrcBuffer   DEFAULT_INITIALIZER(nullptr);
+    struct IBuffer* pSrcBuffer   DEFAULT_INITIALIZER(nullptr);
 
     /// When updating data from the buffer (pSrcBuffer is not null),
     /// offset from the beginning of the buffer to the data start
@@ -258,13 +261,14 @@ struct TextureSubResData
     {}
 #endif
 };
+typedef struct TextureSubResData TextureSubResData;
 
 /// Describes the initial data to store in the texture
 struct TextureData
 {
     /// Pointer to the array of the TextureSubResData elements containing
     /// information about each subresource.
-    struct TextureSubResData* pSubResources    DEFAULT_INITIALIZER(nullptr);
+    TextureSubResData* pSubResources    DEFAULT_INITIALIZER(nullptr);
 
     /// Number of elements in pSubResources array.
     /// NumSubresources must exactly match the number
@@ -282,6 +286,7 @@ struct TextureData
     {}
 #endif
 };
+typedef struct TextureData TextureData;
 
 struct MappedTextureSubresource
 {
@@ -301,17 +306,21 @@ struct MappedTextureSubresource
     {}
 #endif
 };
+typedef struct MappedTextureSubresource MappedTextureSubresource;
 
-
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct ITexture*
+#    define THIS_ struct ITexture*,
+#endif
 
 /// Texture inteface
-class ITexture : public IDeviceObject
+DILIGENT_INTERFACE(ITexture, IDeviceObject)
 {
-public:
+#if DILIGENT_CPP_INTERFACE
     /// Returns the texture description used to create the object
     virtual const TextureDesc& GetDesc()const override = 0;
-    
+#endif
+
     /// Creates a new texture view
 
     /// \param [in] ViewDesc - View description. See Diligent::TextureViewDesc for details.
@@ -331,7 +340,9 @@ public:
     ///          until all views are released.\n
     ///          The function calls AddRef() for the created interface, so it must be released by
     ///          a call to Release() when it is no longer needed.
-    virtual void CreateView(const struct TextureViewDesc& ViewDesc, class ITextureView** ppView) = 0;
+    VIRTUAL void METHOD(CreateView)(THIS_
+                                    const TextureViewDesc REF ViewDesc,
+                                    ITextureView**            ppView) PURE;
 
     /// Returns the pointer to the default view.
     
@@ -340,7 +351,8 @@ public:
     ///
     /// \note The function does not increase the reference counter for the returned interface, so
     ///       Release() must *NOT* be called.
-    virtual ITextureView* GetDefaultView(TEXTURE_VIEW_TYPE ViewType) = 0;
+    VIRTUAL ITextureView* METHOD(GetDefaultView)(THIS_
+                                                 TEXTURE_VIEW_TYPE ViewType) PURE;
 
 
     /// Returns native texture handle specific to the underlying graphics API
@@ -348,7 +360,7 @@ public:
     /// \return pointer to ID3D11Resource interface, for D3D11 implementation\n
     ///         pointer to ID3D12Resource interface, for D3D12 implementation\n
     ///         GL buffer handle, for GL implementation
-    virtual void* GetNativeHandle() = 0;
+    VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
 
     /// Sets the usage state for all texture subresources.
 
@@ -357,25 +369,17 @@ public:
     ///       This method should be used after the application finished
     ///       manually managing the texture state and wants to hand over
     ///       state management back to the engine.
-    virtual void SetState(RESOURCE_STATE State) = 0;
+    VIRTUAL void METHOD(SetState)(THIS_
+                                  RESOURCE_STATE State) PURE;
 
     /// Returns the internal texture state
-    virtual RESOURCE_STATE GetState() const = 0;
+    VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-struct ITexture;
-struct ITextureView;
-
-struct ITextureMethods
-{
-    void                (*CreateView)     (struct ITexture*, const struct TextureViewDesc* ViewDesc, class ITextureView** ppView);
-    class ITextureView* (*GetDefaultView) (struct ITexture*, TEXTURE_VIEW_TYPE ViewType);
-    void*               (*GetNativeHandle)(struct ITexture*);
-    void                (*SetState)       (struct ITexture*, RESOURCE_STATE State);
-    RESOURCE_STATE      (*GetState)       (struct ITexture*);
-};
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
 
@@ -386,20 +390,20 @@ struct ITextureVtbl
     struct ITextureMethods      Texture;
 };
 
-struct ITexture
+typedef struct ITexture
 {
     struct ITextureVtbl* pVtbl;
-};
+} ITexture;
 
 // clang-format off
 
 #    define ITexture_GetDesc(This) (const struct TextureDesc*)IDeviceObject_GetDesc(This)
 
-#    define ITexture_CreateView(This, ...)     (This)->pVtbl->Texture.CreateView     ((struct ITexture*)(This), __VA_ARGS__)
-#    define ITexture_GetDefaultView(This, ...) (This)->pVtbl->Texture.GetDefaultView ((struct ITexture*)(This), __VA_ARGS__)
-#    define ITexture_GetNativeHandle(This)     (This)->pVtbl->Texture.GetNativeHandle((struct ITexture*)(This))
-#    define ITexture_SetState(This, ...)       (This)->pVtbl->Texture.SetState       ((struct ITexture*)(This), __VA_ARGS__)
-#    define ITexture_GetState(This)            (This)->pVtbl->Texture.GetState       ((struct ITexture*)(This))
+#    define ITexture_CreateView(This, ...)     (This)->pVtbl->Texture.CreateView     ((ITexture*)(This), __VA_ARGS__)
+#    define ITexture_GetDefaultView(This, ...) (This)->pVtbl->Texture.GetDefaultView ((ITexture*)(This), __VA_ARGS__)
+#    define ITexture_GetNativeHandle(This)     (This)->pVtbl->Texture.GetNativeHandle((ITexture*)(This))
+#    define ITexture_SetState(This, ...)       (This)->pVtbl->Texture.SetState       ((ITexture*)(This), __VA_ARGS__)
+#    define ITexture_GetState(This)            (This)->pVtbl->Texture.GetState       ((ITexture*)(This))
 
 // clang-format on
 

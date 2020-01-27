@@ -32,14 +32,14 @@ int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
 int TestBufferViewCInterface(struct IBufferView* pView)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
+    DeviceObjectAttribs Desc;
+    Int32               UniqueId = 0;
 
-    struct BufferViewDesc ViewDesc;
-    class IBuffer*        pBuffer = NULL;
+    BufferViewDesc  ViewDesc;
+    struct IBuffer* pBuffer = NULL;
 
     int num_errors =
         TestObjectCInterface((struct IObject*)pView) +

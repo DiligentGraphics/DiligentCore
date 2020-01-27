@@ -32,20 +32,19 @@ int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
 int TestPipelineStateCInterface(struct IPipelineState* pPSO)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
+    DeviceObjectAttribs Desc;
+    Int32               UniqueId = 0;
 
-    struct PipelineStateDesc PSODesc;
-    class IBuffer*           pBuffer = NULL;
+    PipelineStateDesc PSODesc;
 
     Uint32 StaticVarCount = 0;
     bool   IsComptible    = false;
 
-    struct IShaderResourceVariable* pVar = NULL;
-    struct IShaderResourceBinding*  pSRB = NULL;
+    IShaderResourceVariable* pVar = NULL;
+    IShaderResourceBinding*  pSRB = NULL;
 
     int num_errors =
         TestObjectCInterface((struct IObject*)pPSO) +
@@ -106,6 +105,6 @@ int TestPipelineStateCInterface(struct IPipelineState* pPSO)
 
 void TestPipelineStateC_API(struct IPipelineState* pPipelineState)
 {
-    class IResourceMapping* pResourceMapping = NULL;
+    IResourceMapping* pResourceMapping = NULL;
     IPipelineState_BindStaticResources(pPipelineState, SHADER_TYPE_VERTEX, pResourceMapping, BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED);
 }

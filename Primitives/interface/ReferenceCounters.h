@@ -97,7 +97,7 @@ public:
     ///         will be stored. In this case, the number of strong references to the object
     ///         will be incremented by 1.\n
     ///         The method is thread-safe and does not require explicit synchronization.
-    virtual void GetObject(class IObject** ppObject) = 0;
+    virtual void GetObject(struct IObject** ppObject) = 0;
 
 
     /// Returns the number of outstanding strong references.

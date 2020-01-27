@@ -39,23 +39,52 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_DataBlob =
     {0xf578ff0d, 0xabd2, 0x4514, {0x9d, 0x32, 0x7c, 0xb4, 0x54, 0xd4, 0xa7, 0x3b}};
 
-#if DILIGENT_CPP_INTERFACE
+// clang-format off
+
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IDataBlob*
+#    define THIS_ struct IDataBlob*,
+#endif
 
 /// Base interface for a file stream
-class IDataBlob : public IObject
+DILIGENT_INTERFACE(IDataBlob, IObject)
 {
-public:
     /// Sets the size of the internal data buffer
-    virtual void Resize(size_t NewSize) = 0;
+    VIRTUAL void METHOD(Resize)(THIS_
+                                        size_t NewSize) PURE;
 
     /// Returns the size of the internal data buffer
-    virtual size_t GetSize() = 0;
+    VIRTUAL size_t METHOD(GetSize)(THIS) PURE;
 
     /// Returns the pointer to the internal data buffer
-    virtual void* GetDataPtr() = 0;
+    VIRTUAL void* METHOD(GetDataPtr)(THIS) PURE;
 };
 
-#else
+    // clang-format on
+
+#if DILIGENT_C_INTERFACE
+
+#    undef THIS
+#    undef THIS_
+
+struct IDataBlobVtbl
+{
+    struct IObjectMethods   Object;
+    struct IDataBlobMethods DataBlob;
+};
+
+typedef struct IDataBlob
+{
+    struct IDataBlobVtbl* pVtbl;
+} IDataBlob;
+
+// clang-format off
+
+#    define IDataBlob_Resize(This, ...)  (This)->pVtbl->DataBlob.Resize    ((IDataBlob*)(This), __VA_ARGS__)
+#    define IDataBlob_GetSize(This)      (This)->pVtbl->DataBlob.GetSize   ((IDataBlob*)(This))
+#    define IDataBlob_GetDataPtr(This)   (This)->pVtbl->DataBlob.GetDataPtr((IDataBlob*)(This))
+
+// clang-format on
 
 #endif
 

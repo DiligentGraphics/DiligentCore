@@ -51,8 +51,9 @@ struct INTERFACE_ID
     }
 #endif
 };
+typedef struct INTERFACE_ID INTERFACE_ID;
 
 /// Unknown interface
-static const struct INTERFACE_ID IID_Unknown = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
+static const INTERFACE_ID IID_Unknown = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
 
 DILIGENT_END_NAMESPACE // namespace Diligent

@@ -54,15 +54,19 @@
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {F0E9B607-AE33-4B2B-B1AF-A8B2C3104022}
-static const struct INTERFACE_ID IID_RenderDevice =
+static const INTERFACE_ID IID_RenderDevice =
     {0xf0e9b607, 0xae33, 0x4b2b, {0xb1, 0xaf, 0xa8, 0xb2, 0xc3, 0x10, 0x40, 0x22}};
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IRenderDevice*
+#    define THIS_ struct IRenderDevice*,
+#endif
+
+// clang-format off
 
 /// Render device interface
-class IRenderDevice : public IObject
+DILIGENT_INTERFACE(IRenderDevice, IObject)
 {
-public:
     /// Creates a new buffer object
 
     /// \param [in] BuffDesc   - Buffer description, see Diligent::BufferDesc for details.
@@ -78,9 +82,10 @@ public:
     /// Size of a uniform buffer (BIND_UNIFORM_BUFFER) must be multiple of 16.\n
     /// Stride of a formatted buffer will be computed automatically from the format if
     /// ElementByteStride member of buffer description is set to default value (0).
-    virtual void CreateBuffer(const BufferDesc& BuffDesc,
-                              const BufferData* pBuffData,
-                              IBuffer**         ppBuffer) = 0;
+    VIRTUAL void METHOD(CreateBuffer)(THIS_
+                                      const BufferDesc REF BuffDesc,
+                                      const BufferData*    pBuffData,
+                                      IBuffer**            ppBuffer) PURE;
 
     /// Creates a new shader object
 
@@ -89,8 +94,9 @@ public:
     ///                         shader interface will be stored.
     ///                         The function calls AddRef(), so that the new object will contain
     ///                         one reference.
-    virtual void CreateShader(const ShaderCreateInfo& ShaderCI,
-                              IShader**               ppShader) = 0;
+    VIRTUAL void METHOD(CreateShader)(THIS_
+                                      const ShaderCreateInfo REF ShaderCI,
+                                      IShader**                   ppShader) PURE;
 
     /// Creates a new texture object
 
@@ -114,9 +120,10 @@ public:
     /// 15x6, 7x3, 3x1, 1x1, 15x6, 7x3, 3x1, 1x1.\n
     /// For a 15 x 6 x 4 3D texture, the following array of subresources should be provided:\n
     /// 15x6x4, 7x3x2, 3x1x1, 1x1x1
-    virtual void CreateTexture(const TextureDesc& TexDesc,
-                               const TextureData* pData,
-                               ITexture**         ppTexture) = 0;
+    VIRTUAL void METHOD(CreateTexture)(THIS_
+                                       const TextureDesc REF TexDesc,
+                                       const TextureData*    pData,
+                                       ITexture**            ppTexture) PURE;
 
     /// Creates a new sampler object
 
@@ -128,8 +135,9 @@ public:
     /// \remark If an application attempts to create a sampler interface with the same attributes
     ///         as an existing interface, the same interface will be returned.
     /// \note   In D3D11, 4096 unique sampler state objects can be created on a device at a time.
-    virtual void CreateSampler(const SamplerDesc& SamDesc,
-                               ISampler**         ppSampler) = 0;
+    VIRTUAL void METHOD(CreateSampler)(THIS_
+                                       const SamplerDesc REF SamDesc,
+                                       ISampler**            ppSampler) PURE;
 
     /// Creates a new resource mapping
 
@@ -138,8 +146,9 @@ public:
     ///                            resource mapping interface will be stored.
     ///                            The function calls AddRef(), so that the new object will contain
     ///                            one reference.
-    virtual void CreateResourceMapping(const ResourceMappingDesc& MappingDesc,
-                                       IResourceMapping**         ppMapping) = 0;
+    VIRTUAL void METHOD(CreateResourceMapping)(THIS_
+                                               const ResourceMappingDesc REF MappingDesc,
+                                               IResourceMapping**            ppMapping) PURE;
 
     /// Creates a new pipeline state object
 
@@ -148,8 +157,9 @@ public:
     ///                                pipeline state interface will be stored.
     ///                                The function calls AddRef(), so that the new object will contain
     ///                                one reference.
-    virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc,
-                                     IPipelineState**         ppPipelineState) = 0;
+    VIRTUAL void METHOD(CreatePipelineState)(THIS_
+                                             const PipelineStateDesc REF PipelineDesc,
+                                             IPipelineState**            ppPipelineState) PURE;
 
 
     /// Creates a new fence object
@@ -159,8 +169,9 @@ public:
     ///                        fence interface will be stored.
     ///                        The function calls AddRef(), so that the new object will contain
     ///                        one reference.
-    virtual void CreateFence(const FenceDesc& Desc,
-                             IFence**         ppFence) = 0;
+    VIRTUAL void METHOD(CreateFence)(THIS_
+                                     const FenceDesc REF Desc,
+                                     IFence**            ppFence) PURE;
 
 
     /// Creates a new query object
@@ -170,12 +181,13 @@ public:
     ///                        query interface will be stored.
     ///                        The function calls AddRef(), so that the new object will contain
     ///                        one reference.
-    virtual void CreateQuery(const QueryDesc& Desc,
-                             IQuery**         ppQuery) = 0;
+    VIRTUAL void METHOD(CreateQuery)(THIS_
+                                     const QueryDesc REF Desc,
+                                     IQuery**            ppQuery) PURE;
 
 
     /// Gets the device capabilities, see Diligent::DeviceCaps for details
-    virtual const DeviceCaps& GetDeviceCaps() const = 0;
+    VIRTUAL const DeviceCaps REF METHOD(GetDeviceCaps)(THIS) CONST PURE;
 
 
     /// Returns the basic texture format information.
@@ -184,7 +196,8 @@ public:
     /// \param [in] TexFormat - Texture format for which to provide the information
     /// \return Const reference to the TextureFormatInfo structure containing the
     ///         texture format description.
-    virtual const TextureFormatInfo& GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) = 0;
+    VIRTUAL const TextureFormatInfo REF METHOD(GetTextureFormatInfo)(THIS_
+                                                                     TEXTURE_FORMAT TexFormat) PURE;
 
 
     /// Returns the extended texture format information.
@@ -196,14 +209,16 @@ public:
     /// \remark The first time this method is called for a particular format, it may be
     ///         considerably slower than GetTextureFormatInfo(). If you do not require
     ///         extended information, call GetTextureFormatInfo() instead.
-    virtual const TextureFormatInfoExt& GetTextureFormatInfoExt(TEXTURE_FORMAT TexFormat) = 0;
+    VIRTUAL const TextureFormatInfoExt REF METHOD(GetTextureFormatInfoExt)(THIS_
+                                                                           TEXTURE_FORMAT TexFormat) PURE;
 
     /// Purges device release queues and releases all stale resources.
     /// This method is automatically called by ISwapChain::Present() of the primary swap chain.
     /// \param [in]  ForceRelease - Forces release of all objects. Use this option with
     ///                             great care only if you are sure the resources are not
     ///                             in use by the GPU (such as when the device has just been idled).
-    virtual void ReleaseStaleResources(bool ForceRelease = false) = 0;
+    VIRTUAL void METHOD(ReleaseStaleResources)(THIS_
+                                               bool ForceRelease DEFAULT_VALUE(false)) PURE;
 
 
     /// Waits until all outstanding operations on the GPU are complete.
@@ -214,57 +229,22 @@ public:
     ///          have been previously submitted for execution. An application should explicitly flush
     ///          the contexts using IDeviceContext::Flush() if it needs to make sure all recorded commands
     ///          are complete when the method returns.
-    virtual void IdleGPU() = 0;
+    VIRTUAL void METHOD(IdleGPU)(THIS) PURE;
 
 
     /// Returns engine factory this device was created from.
     /// \remark This method does not increment the reference counter of the returned interface,
     ///         so the application should not call Release().
-    virtual IEngineFactory* GetEngineFactory() const = 0;
+    VIRTUAL IEngineFactory* METHOD(GetEngineFactory)(THIS) CONST PURE;
 };
 
-#else
 
-struct IRenderDevice;
+#if DILIGENT_C_INTERFACE
 
-struct IRenderDeviceMethods
-{
-    void (*CreateBuffer)(struct IRenderDevice*,
-                         const struct BufferDesc* BuffDesc,
-                         const struct BufferData* pBuffData,
-                         class IBuffer**          ppBuffer);
-    void (*CreateShader)(struct IRenderDevice*,
-                         const struct ShaderCreateInfo* ShaderCI,
-                         class IShader**                ppShader);
-    void (*CreateTexture)(struct IRenderDevice*,
-                          const struct TextureDesc* TexDesc,
-                          const struct TextureData* pData,
-                          class ITexture**          ppTexture);
-    void (*CreateSampler)(struct IRenderDevice*,
-                          const struct SamplerDesc* SamDesc,
-                          class ISampler**          ppSampler);
-    void (*CreateResourceMapping)(struct IRenderDevice*,
-                                  const struct ResourceMappingDesc* MappingDesc,
-                                  class IResourceMapping**          ppMapping);
-    void (*CreatePipelineState)(struct IRenderDevice*,
-                                const struct PipelineStateDesc* PipelineDesc,
-                                class IPipelineState**          ppPipelineState);
-    void (*CreateFence)(struct IRenderDevice*,
-                        const struct FenceDesc* Desc,
-                        class IFence**          ppFence);
-    void (*CreateQuery)(struct IRenderDevice*,
-                        const struct QueryDesc* Desc,
-                        class IQuery**          ppQuery);
-    const struct DeviceCaps* (*GetDeviceCaps)(struct IRenderDevice*);
-    const struct TextureFormatInfo* (*GetTextureFormatInfo)(struct IRenderDevice*,
-                                                            TEXTURE_FORMAT TexFormat);
-    const struct TextureFormatInfoExt* (*GetTextureFormatInfoExt)(struct IRenderDevice*,
-                                                                  TEXTURE_FORMAT TexFormat);
-    void (*ReleaseStaleResources)(struct IRenderDevice*,
-                                  bool ForceRelease);
-    void (*IdleGPU)(struct IRenderDevice*);
-    class IEngineFactory* (*GetEngineFactory)(struct IRenderDevice*);
-};
+#    undef THIS
+#    undef THIS
+
+// clang-format on
 
 struct IRenderDeviceVtbl
 {
@@ -272,27 +252,27 @@ struct IRenderDeviceVtbl
     struct IRenderDeviceMethods RenderDevice;
 };
 
-struct IRenderDevice
+typedef struct IRenderDevice
 {
     struct IRenderDeviceVtbl* pVtbl;
-};
+} IRenderDevice;
 
 // clang-format off
 
-#    define IRenderDevice_CreateBuffer(This, ...)            (This)->pVtbl->RenderDevice.CreateBuffer           ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateShader(This, ...)            (This)->pVtbl->RenderDevice.CreateShader           ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateTexture(This, ...)           (This)->pVtbl->RenderDevice.CreateTexture          ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateSampler(This, ...)           (This)->pVtbl->RenderDevice.CreateSampler          ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateResourceMapping(This, ...)   (This)->pVtbl->RenderDevice.CreateResourceMapping  ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreatePipelineState(This, ...)     (This)->pVtbl->RenderDevice.CreatePipelineState    ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateFence(This, ...)             (This)->pVtbl->RenderDevice.CreateFence            ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateQuery(This, ...)             (This)->pVtbl->RenderDevice.CreateQuery            ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_GetDeviceCaps(This)                (This)->pVtbl->RenderDevice.GetDeviceCaps          ((struct IRenderDevice*)(This))
-#    define IRenderDevice_GetTextureFormatInfo(This, ...)    (This)->pVtbl->RenderDevice.GetTextureFormatInfo   ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_GetTextureFormatInfoExt(This, ...) (This)->pVtbl->RenderDevice.GetTextureFormatInfoExt((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_ReleaseStaleResources(This, ...)   (This)->pVtbl->RenderDevice.ReleaseStaleResources  ((struct IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_IdleGPU(This)                      (This)->pVtbl->RenderDevice.IdleGPU                ((struct IRenderDevice*)(This))
-#    define IRenderDevice_GetEngineFactory(This)             (This)->pVtbl->RenderDevice.GetEngineFactory       ((struct IRenderDevice*)(This))
+#    define IRenderDevice_CreateBuffer(This, ...)            (This)->pVtbl->RenderDevice.CreateBuffer           ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateShader(This, ...)            (This)->pVtbl->RenderDevice.CreateShader           ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateTexture(This, ...)           (This)->pVtbl->RenderDevice.CreateTexture          ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateSampler(This, ...)           (This)->pVtbl->RenderDevice.CreateSampler          ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateResourceMapping(This, ...)   (This)->pVtbl->RenderDevice.CreateResourceMapping  ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreatePipelineState(This, ...)     (This)->pVtbl->RenderDevice.CreatePipelineState    ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateFence(This, ...)             (This)->pVtbl->RenderDevice.CreateFence            ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_CreateQuery(This, ...)             (This)->pVtbl->RenderDevice.CreateQuery            ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_GetDeviceCaps(This)                (This)->pVtbl->RenderDevice.GetDeviceCaps          ((IRenderDevice*)(This))
+#    define IRenderDevice_GetTextureFormatInfo(This, ...)    (This)->pVtbl->RenderDevice.GetTextureFormatInfo   ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_GetTextureFormatInfoExt(This, ...) (This)->pVtbl->RenderDevice.GetTextureFormatInfoExt((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_ReleaseStaleResources(This, ...)   (This)->pVtbl->RenderDevice.ReleaseStaleResources  ((IRenderDevice*)(This), __VA_ARGS__)
+#    define IRenderDevice_IdleGPU(This)                      (This)->pVtbl->RenderDevice.IdleGPU                ((IRenderDevice*)(This))
+#    define IRenderDevice_GetEngineFactory(This)             (This)->pVtbl->RenderDevice.GetEngineFactory       ((IRenderDevice*)(This))
 
 // clang-format on
 

@@ -38,9 +38,8 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 #if DILIGENT_CPP_INTERFACE
 
 /// Base interface for all dynamic objects in the engine
-class IObject
+struct IObject
 {
-public:
     /// Queries the specific interface.
 
     /// \param [in] IID - Unique identifier of the requested interface.
@@ -88,10 +87,10 @@ struct IObject;
 
 struct IObjectMethods
 {
-    void                      (*QueryInterface)      (struct IObject*, const struct INTERFACE_ID* IID, struct IObject** ppInterface);
-    ReferenceCounterValueType (*AddRef)              (struct IObject*);
-    ReferenceCounterValueType (*Release)             (struct IObject*);
-    class IReferenceCounters* (*GetReferenceCounters)(struct IObject*);
+    void                       (*QueryInterface)      (struct IObject*, const struct INTERFACE_ID* IID, struct IObject** ppInterface);
+    ReferenceCounterValueType  (*AddRef)              (struct IObject*);
+    ReferenceCounterValueType  (*Release)             (struct IObject*);
+    struct IReferenceCounters* (*GetReferenceCounters)(struct IObject*);
 };
 
 struct IObjectVtbl
@@ -101,10 +100,10 @@ struct IObjectVtbl
 
 // clang-format on
 
-struct IObject
+typedef struct IObject
 {
     struct IObjectVtbl* pVtbl;
-};
+} IObject;
 
 // clang-format off
 

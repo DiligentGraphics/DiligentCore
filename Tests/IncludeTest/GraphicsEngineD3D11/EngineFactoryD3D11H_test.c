@@ -39,16 +39,16 @@
 void TestEngineFactoryD3D11CInterface()
 {
     GetEngineFactoryD3D11Type    GetEngineFactoryD3D11 = LoadGraphicsEngineD3D11();
-    class IEngineFactoryD3D11*   pFactory              = GetEngineFactoryD3D11();
+    struct IEngineFactoryD3D11*  pFactory              = GetEngineFactoryD3D11();
     struct EngineD3D11CreateInfo EngineCI              = {0};
-    class IRenderDevice*         pDevice               = NULL;
-    class IDeviceContext*        pCtx                  = NULL;
+    IRenderDevice*               pDevice               = NULL;
+    IDeviceContext*              pCtx                  = NULL;
     IEngineFactoryD3D11_CreateDeviceAndContextsD3D11(pFactory, &EngineCI, &pDevice, &pCtx);
 
     struct SwapChainDesc      SCDesc           = {0};
     struct FullScreenModeDesc FSDes            = {0};
     void*                     pNativeWndHandle = NULL;
-    class ISwapChain*         pSwapChain       = NULL;
+    ISwapChain*               pSwapChain       = NULL;
     IEngineFactoryD3D11_CreateSwapChainD3D11(pFactory, pDevice, pCtx, &SCDesc, &FSDes, pNativeWndHandle, &pSwapChain);
 
     void* pd3d11NativeDevice     = NULL;

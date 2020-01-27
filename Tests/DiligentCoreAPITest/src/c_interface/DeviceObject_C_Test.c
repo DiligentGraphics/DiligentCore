@@ -29,8 +29,8 @@
 
 int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject)
 {
-    struct DeviceObjectAttribs Desc;
-    Int32                      UniqueId = 0;
+    DeviceObjectAttribs Desc;
+    Int32               UniqueId = 0;
 
     int num_errors = 0;
 

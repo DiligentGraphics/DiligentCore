@@ -29,7 +29,7 @@
 
 int TestObjectCInterface(struct IObject* pObject)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
     int num_errors = 0;

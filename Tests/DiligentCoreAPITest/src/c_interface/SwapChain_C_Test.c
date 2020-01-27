@@ -31,11 +31,11 @@ int TestObjectCInterface(struct IObject* pObject);
 
 int TestSwapChainCInterface(struct ISwapChain* pSwapChain)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-    struct SwapChainDesc SCDesc;
-    struct ITextureView* pRTV = NULL;
+    SwapChainDesc SCDesc;
+    ITextureView* pRTV = NULL;
 
     memset(&SCDesc, 0, sizeof(SCDesc));
 
@@ -69,8 +69,8 @@ int TestSwapChainCInterface(struct ISwapChain* pSwapChain)
 
 void TestSwapChainC_API(struct ISwapChain* pSwapChain)
 {
-    struct DisplayModeAttribs* pDisplayMode = NULL;
-    struct ITextureView*       pDSV         = NULL;
+    DisplayModeAttribs* pDisplayMode = NULL;
+    ITextureView*       pDSV         = NULL;
 
     ISwapChain_Present(pSwapChain, 0);
     ISwapChain_Resize(pSwapChain, 1024, 768);

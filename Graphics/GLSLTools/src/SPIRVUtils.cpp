@@ -394,7 +394,7 @@ public:
         }
 
         RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
-        pSourceStream->Read(pFileData);
+        pSourceStream->ReadBlob(pFileData);
         auto* pNewInclude =
             new IncludeResult{
                 headerName,
@@ -462,7 +462,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
         if (pSourceStream == nullptr)
             LOG_ERROR_AND_THROW("Failed to open shader source file");
 
-        pSourceStream->Read(pFileData);
+        pSourceStream->ReadBlob(pFileData);
         SourceCode    = reinterpret_cast<char*>(pFileData->GetDataPtr());
         SourceCodeLen = static_cast<int>(pFileData->GetSize());
     }

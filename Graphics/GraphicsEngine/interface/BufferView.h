@@ -82,6 +82,7 @@ struct BufferFormat
     }
 #endif
 };
+typedef struct BufferFormat BufferFormat;
 
 /// Buffer view description
 struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
@@ -136,9 +137,14 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     }
 #endif
 };
+typedef struct BufferViewDesc BufferViewDesc;
 
 
-#if DILIGENT_CPP_INTERFACE
+
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IBufferView*
+#    define THIS_ struct IBufferView*,
+#endif
 
 /// Buffer view interface
 
@@ -146,28 +152,26 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 /// \remarks
 /// Buffer view holds strong references to the buffer. The buffer
 /// will not be destroyed until all views are released.
-class IBufferView : public IDeviceObject
+DILIGENT_INTERFACE(IBufferView, IDeviceObject)
 {
-public:
+#if DILIGENT_CPP_INTERFACE
     /// Returns the buffer view description used to create the object
     virtual const BufferViewDesc& GetDesc() const override = 0;
+#endif
 
     /// Returns pointer to the referenced buffer object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual class IBuffer* GetBuffer() = 0;
+    VIRTUAL struct IBuffer* METHOD(GetBuffer)(THIS) PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-class IBufferView;
-class IBuffer;
+#    undef THIS
+#    undef THIS_
 
-struct IBufferViewMethods
-{
-    class IBuffer* (*GetBuffer)(struct IBufferView*);
-};
+// clang-format on
 
 struct IBufferViewVtbl
 {
@@ -176,14 +180,18 @@ struct IBufferViewVtbl
     struct IBufferViewMethods   BufferView;
 };
 
-struct IBufferView
+typedef struct IBufferView
 {
     struct IBufferViewVtbl* pVtbl;
-};
+} IBufferView;
+
+// clang-format off
 
 #    define IBufferView_GetDesc(This) (const struct BufferViewDesc*)IDeviceObject_GetDesc(This)
 
-#    define IBufferView_GetBuffer(This) (This)->pVtbl->BufferView.GetBuffer((struct IBufferView*)(This))
+#    define IBufferView_GetBuffer(This) (This)->pVtbl->BufferView.GetBuffer((IBufferView*)(This))
+
+// clang-format on
 
 #endif
 

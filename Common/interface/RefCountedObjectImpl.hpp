@@ -151,7 +151,7 @@ public:
         return NumWeakReferences;
     }
 
-    inline virtual void GetObject(class IObject** ppObject) override final
+    inline virtual void GetObject(struct IObject** ppObject) override final
     {
         if (m_ObjectState != ObjectState::Alive)
             return; // Early exit

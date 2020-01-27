@@ -362,6 +362,7 @@ struct RenderTargetBlendDesc
     }
 #endif
 };
+typedef struct RenderTargetBlendDesc RenderTargetBlendDesc;
 
 
 /// Blend state description
@@ -379,7 +380,7 @@ struct BlendStateDesc
 
     /// An array of RenderTargetBlendDesc structures that describe the blend
     /// states for render targets
-    struct RenderTargetBlendDesc RenderTargets[DILIGENT_MAX_RENDER_TARGETS];
+    RenderTargetBlendDesc RenderTargets[DILIGENT_MAX_RENDER_TARGETS];
 
 #if DILIGENT_CPP_INTERFACE
     // We have to explicitly define constructors because otherwise Apple's clang fails to compile the following legitimate code:
@@ -424,5 +425,6 @@ struct BlendStateDesc
     }
 #endif
 };
+typedef struct BlendStateDesc BlendStateDesc;
 
 DILIGENT_END_NAMESPACE // namespace Diligent

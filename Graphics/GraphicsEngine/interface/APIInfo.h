@@ -98,5 +98,6 @@ struct APIInfo
     size_t MappedTextureSubresourceSize   DEFAULT_INITIALIZER(0);
     size_t TextureViewDescSize            DEFAULT_INITIALIZER(0);
 };
+typedef struct APIInfo APIInfo;
 
 DILIGENT_END_NAMESPACE // namespace Diligent

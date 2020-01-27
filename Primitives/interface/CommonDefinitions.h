@@ -55,6 +55,17 @@
 
 #    define DILIGENT_GLOBAL_FUNCTION(FuncName) Diligent_##FuncName
 
+#    define DILIGENT_INTERFACE(Name, Base) \
+        struct Name;                       \
+        struct Name##Methods
+
+#    define VIRTUAL
+#    define CONST
+#    define PURE
+#    define REF          *
+#    define METHOD(Name) (*Name)
+#    define DEFAULT_VALUE(x)
+
 #else
 
 #    define DILIGENT_BEGIN_NAMESPACE(Name) \
@@ -72,10 +83,18 @@
 
 #    define DILIGENT_GLOBAL_FUNCTION(FuncName) FuncName
 
-#endif
+#    define DILIGENT_INTERFACE(Name, Base) struct Name : public Base
 
-#ifndef __cplusplus
-#    define class struct
+#    define THIS
+#    define THIS_
+#    define VIRTUAL          virtual
+#    define CONST            const
+#    define PURE             = 0
+#    define REF              &
+#    define METHOD(Name)     Name
+#    define DEFAULT_VALUE(x) = x
+
+
 #endif
 
 #if DILIGENT_C_INTERFACE

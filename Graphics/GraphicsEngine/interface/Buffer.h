@@ -39,7 +39,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 
 // {EC47EAD3-A2C4-44F2-81C5-5248D14F10E4}
-static const struct INTERFACE_ID IID_Buffer =
+static const INTERFACE_ID IID_Buffer =
     {0xec47ead3, 0xa2c4, 0x44f2, {0x81, 0xc5, 0x52, 0x48, 0xd1, 0x4f, 0x10, 0xe4}};
 
 /// Describes the buffer access mode.
@@ -148,6 +148,7 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     }
 #endif
 };
+typedef struct BufferDesc BufferDesc;
 
 /// Describes the buffer initial data
 struct BufferData
@@ -170,18 +171,23 @@ struct BufferData
     {}
 #endif
 };
+typedef struct BufferData BufferData;
 
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct IBuffer*
+#    define THIS_ struct IBuffer*,
+#endif
 
-#if DILIGENT_CPP_INTERFACE
 
 /// Buffer interface
 
 /// Defines the methods to manipulate a buffer object
-class IBuffer : public IDeviceObject
+DILIGENT_INTERFACE(IBuffer, IDeviceObject)
 {
-public:
+#if DILIGENT_CPP_INTERFACE
     /// Returns the buffer description used to create the object
     virtual const BufferDesc& GetDesc() const override = 0;
+#endif
 
     /// Creates a new buffer view
 
@@ -194,7 +200,9 @@ public:
     ///          until all views are released.\n
     ///          The function calls AddRef() for the created interface, so it must be released by
     ///          a call to Release() when it is no longer needed.
-    virtual void CreateView(const struct BufferViewDesc& ViewDesc, class IBufferView** ppView) = 0;
+    VIRTUAL void METHOD(CreateView)(THIS_
+                                    const BufferViewDesc REF ViewDesc,
+                                    IBufferView** ppView) PURE;
 
     /// Returns the pointer to the default view.
 
@@ -206,14 +214,15 @@ public:
     ///
     /// \note The function does not increase the reference counter for the returned interface, so
     ///       Release() must *NOT* be called.
-    virtual IBufferView* GetDefaultView(BUFFER_VIEW_TYPE ViewType) = 0;
+    VIRTUAL  IBufferView* METHOD(GetDefaultView)(THIS_
+                                                 BUFFER_VIEW_TYPE ViewType) PURE;
 
     /// Returns native buffer handle specific to the underlying graphics API
 
     /// \return pointer to ID3D11Resource interface, for D3D11 implementation\n
     ///         pointer to ID3D12Resource interface, for D3D12 implementation\n
     ///         GL buffer handle, for GL implementation
-    virtual void* GetNativeHandle() = 0;
+    VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
 
     /// Sets the buffer usage state.
 
@@ -222,24 +231,17 @@ public:
     ///       This method should be used after the application finished
     ///       manually managing the buffer state and wants to hand over
     ///       state management back to the engine.
-    virtual void SetState(RESOURCE_STATE State) = 0;
+    VIRTUAL void METHOD(SetState)(THIS_
+                                  RESOURCE_STATE State) PURE;
 
     /// Returns the internal buffer state
-    virtual RESOURCE_STATE GetState() const = 0;
+    VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-struct IBuffer;
-
-struct IBufferMethods
-{
-    void               (*CreateView)     (struct IBuffer*, const struct BufferViewDesc* ViewDesc, class IBufferView** ppView);
-    class IBufferView* (*GetDefaultView) (struct IBuffer*, BUFFER_VIEW_TYPE ViewType);
-    void*              (*GetNativeHandle)(struct IBuffer*);
-    void               (*SetState)       (struct IBuffer*,RESOURCE_STATE State);
-    RESOURCE_STATE     (*GetState)       (struct IBuffer*);
-};
+#undef THIS
+#undef THIS_
 
 // clang-format on
 
@@ -250,20 +252,20 @@ struct IBufferVtbl
     struct IBufferMethods       Buffer;
 };
 
-struct IBuffer
+typedef struct IBuffer
 {
     struct IBufferVtbl* pVtbl;
-};
+} IBuffer;
 
 // clang-format off
 
 #    define IBuffer_GetDesc(This) (const struct BufferDesc*)IDeviceObject_GetDesc(This)
 
-#    define IBuffer_CreateView(This, ...)     (This)->pVtbl->Buffer.CreateView     ((struct IBuffer*)(This), __VA_ARGS__)
-#    define IBuffer_GetDefaultView(This, ...) (This)->pVtbl->Buffer.GetDefaultView ((struct IBuffer*)(This), __VA_ARGS__)
-#    define IBuffer_GetNativeHandle(This)     (This)->pVtbl->Buffer.GetNativeHandle((struct IBuffer*)(This))
-#    define IBuffer_SetState(This, ...)       (This)->pVtbl->Buffer.SetState       ((struct IBuffer*)(This), __VA_ARGS__)
-#    define IBuffer_GetState(This)            (This)->pVtbl->Buffer.GetState       ((struct IBuffer*)(This))
+#    define IBuffer_CreateView(This, ...)     (This)->pVtbl->Buffer.CreateView     ((IBuffer*)(This), __VA_ARGS__)
+#    define IBuffer_GetDefaultView(This, ...) (This)->pVtbl->Buffer.GetDefaultView ((IBuffer*)(This), __VA_ARGS__)
+#    define IBuffer_GetNativeHandle(This)     (This)->pVtbl->Buffer.GetNativeHandle((IBuffer*)(This))
+#    define IBuffer_SetState(This, ...)       (This)->pVtbl->Buffer.SetState       ((IBuffer*)(This), __VA_ARGS__)
+#    define IBuffer_GetState(This)            (This)->pVtbl->Buffer.GetState       ((IBuffer*)(This))
 
 // clang-format on
 

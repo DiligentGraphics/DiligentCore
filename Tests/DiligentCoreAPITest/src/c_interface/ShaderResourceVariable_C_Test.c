@@ -31,11 +31,11 @@ int TestObjectCInterface(struct IObject* pObject);
 
 int TestShaderResourceVariableCInterface(struct IShaderResourceVariable* pVar, struct IDeviceObject* pObjectToSet)
 {
-    struct IObject*           pUnknown = NULL;
+    IObject*                  pUnknown = NULL;
     ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
     SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
-    struct ShaderResourceDesc     ResDesc;
+    ShaderResourceDesc            ResDesc;
     Uint32                        Index   = 0;
     bool                          IsBound = false;
 

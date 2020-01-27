@@ -37,10 +37,10 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-
+struct ISampler;
 
 // {5B2EA04E-8128-45E4-AA4D-6DC7E70DC424}
-static const struct INTERFACE_ID IID_TextureView =
+static const INTERFACE_ID IID_TextureView =
     {0x5b2ea04e, 0x8128, 0x45e4,{0xaa, 0x4d, 0x6d, 0xc7, 0xe7, 0xd, 0xc4, 0x24}};
 
 // clang-format off
@@ -180,10 +180,14 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
 #endif
 };
+typedef struct TextureViewDesc TextureViewDesc;
 
 // clang-format on
 
-#if DILIGENT_CPP_INTERFACE
+#if DILIGENT_C_INTERFACE
+#    define THIS  struct ITextureView*
+#    define THIS_ struct ITextureView*,
+#endif
 
 /// Texture view interface
 
@@ -193,45 +197,37 @@ struct TextureViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 /// will not be destroyed until all views are released.
 /// The texture view will also keep a strong reference to the texture sampler,
 /// if any is set.
-class ITextureView : public IDeviceObject
+DILIGENT_INTERFACE(ITextureView, IDeviceObject)
 {
-public:
+#if DILIGENT_CPP_INTERFACE
     /// Returns the texture view description used to create the object
     virtual const TextureViewDesc& GetDesc() const override = 0;
+#endif
 
     /// Sets the texture sampler to use for filtering operations
     /// when accessing a texture from shaders. Only
     /// shader resource views can be assigned a sampler.
     /// The view will keep strong reference to the sampler.
-    virtual void SetSampler(class ISampler* pSampler) = 0;
+    VIRTUAL void METHOD(SetSampler)(THIS_ struct ISampler * pSampler) PURE;
 
     /// Returns the pointer to the sampler object set by the ITextureView::SetSampler().
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ISampler* GetSampler() = 0;
+    VIRTUAL struct ISampler* METHOD(GetSampler)(THIS) PURE;
 
 
     /// Returns the pointer to the referenced texture object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual class ITexture* GetTexture() = 0;
+    VIRTUAL struct ITexture* METHOD(GetTexture)(THIS) PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
 
-struct ITextureView;
-struct ISampler;
-
-// clang-format off
-
-struct ITextureViewMethods
-{
-    void            (*SetSampler)(struct ITextureView*, class ISampler* pSampler);
-    class ISampler* (*GetSampler)(struct ITextureView*);
-    class ITexture* (*GetTexture)(struct ITextureView*);
-};
+#    undef THIS
+#    undef THIS_
 
 // clang-format on
 
@@ -242,18 +238,18 @@ struct ITextureViewVtbl
     struct ITextureViewMethods  TextureView;
 };
 
-struct ITextureView
+typedef struct ITextureView
 {
     struct ITextureViewVtbl* pVtbl;
-};
+} ITextureView;
 
 #    define ITextureView_GetDesc(This) (const struct TextureViewDesc*)IDeviceObject_GetDesc(This)
 
 // clang-format off
 
-#    define ITextureView_SetSampler(This, ...) (This)->pVtbl->TextureView.SetSampler((struct ITextureView*)(This), __VA_ARGS__)
-#    define ITextureView_GetSampler(This)      (This)->pVtbl->TextureView.GetSampler((struct ITextureView*)(This))
-#    define ITextureView_GetTexture(This)      (This)->pVtbl->TextureView.GetTexture((struct ITextureView*)(This))
+#    define ITextureView_SetSampler(This, ...) (This)->pVtbl->TextureView.SetSampler((ITextureView*)(This), __VA_ARGS__)
+#    define ITextureView_GetSampler(This)      (This)->pVtbl->TextureView.GetSampler((ITextureView*)(This))
+#    define ITextureView_GetTexture(This)      (This)->pVtbl->TextureView.GetTexture((ITextureView*)(This))
 
 // clang-format on
 
