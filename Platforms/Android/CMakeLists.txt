@@ -3,10 +3,10 @@ cmake_minimum_required (VERSION 3.6)
 project(Diligent-AndroidPlatform CXX)
 
 set(INTERFACE 
-    interface/AndroidDebug.h
-    interface/AndroidFileSystem.h
+    interface/AndroidDebug.hpp
+    interface/AndroidFileSystem.hpp
     interface/AndroidPlatformDefinitions.h
-    interface/AndroidPlatformMisc.h
+    interface/AndroidPlatformMisc.hpp
 )
 
 set(SOURCE 

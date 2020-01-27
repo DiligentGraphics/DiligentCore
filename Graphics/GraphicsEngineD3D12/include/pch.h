@@ -49,7 +49,7 @@
 #include "PlatformDefinitions.h"
 #include "Errors.hpp"
 #include "RefCntAutoPtr.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "D3DErrors.hpp"
 #include "RenderDeviceBase.hpp"
 #include "ValidatedCast.hpp"

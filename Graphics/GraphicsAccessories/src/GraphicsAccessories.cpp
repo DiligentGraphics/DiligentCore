@@ -28,7 +28,7 @@
 #include <algorithm>
 
 #include "GraphicsAccessories.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "Align.hpp"
 
 namespace Diligent

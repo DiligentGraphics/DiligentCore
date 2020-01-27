@@ -40,6 +40,6 @@
 #include "GraphicsTypes.h"
 #include "RefCntAutoPtr.hpp"
 #include "Errors.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "RenderDeviceBase.hpp"
 #include "DeviceContextBase.hpp"

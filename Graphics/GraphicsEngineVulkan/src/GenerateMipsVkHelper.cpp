@@ -32,7 +32,7 @@
 #include "DeviceContextVkImpl.hpp"
 #include "TextureViewVkImpl.hpp"
 #include "TextureVkImpl.hpp"
-#include "PlatformMisc.h"
+#include "PlatformMisc.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "../../GraphicsTools/interface/ShaderMacroHelper.hpp"
 #include "../../GraphicsTools/interface/CommonlyUsedStates.h"

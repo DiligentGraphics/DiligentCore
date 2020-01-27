@@ -27,7 +27,7 @@
 
 #include "DXGITypeConversions.hpp"
 #include "BasicTypes.h"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 
 namespace Diligent
 {

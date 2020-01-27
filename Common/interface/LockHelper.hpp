@@ -27,8 +27,8 @@
 
 #pragma once
 
-#include "../../Platforms/interface/Atomics.h"
-#include "../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Platforms/interface/Atomics.hpp"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace ThreadingTools
 {

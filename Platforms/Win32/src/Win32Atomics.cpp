@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "Win32Atomics.h"
+#include "Win32Atomics.hpp"
 
 #include <Windows.h>
 

@@ -27,40 +27,34 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include <memory>
+#include "../../Basic/interface/BasicFileSystem.hpp"
+#include "../../Basic/interface/StandardFile.hpp"
 
-#if PLATFORM_WIN32
+class WindowsFile : public StandardFile
+{
+public:
+    WindowsFile(const FileOpenAttribs& OpenAttribs);
+};
 
-#    include "../Win32/interface/Win32FileSystem.h"
-using FileSystem = WindowsFileSystem;
-using CFile      = WindowsFile;
 
-#elif PLATFORM_UNIVERSAL_WINDOWS
+struct WindowsFileSystem : public BasicFileSystem
+{
+public:
+    static WindowsFile* OpenFile(const FileOpenAttribs& OpenAttribs);
 
-#    include "../UWP/interface/UWPFileSystem.h"
-using FileSystem = WindowsStoreFileSystem;
-using CFile      = WindowsStoreFile;
+    static inline Diligent::Char GetSlashSymbol() { return '\\'; }
 
-#elif PLATFORM_ANDROID
+    static bool FileExists(const Diligent::Char* strFilePath);
+    static bool PathExists(const Diligent::Char* strPath);
 
-#    include "../Android/interface/AndroidFileSystem.h"
-using FileSystem = AndroidFileSystem;
-using CFile      = AndroidFile;
+    static bool CreateDirectory(const Diligent::Char* strPath);
+    static void ClearDirectory(const Diligent::Char* strPath, bool Recursive = false);
+    static void DeleteFile(const Diligent::Char* strPath);
+    static void DeleteDirectory(const Diligent::Char* strPath);
+    static bool IsDirectory(const Diligent::Char* strPath);
 
-#elif PLATFORM_LINUX
+    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
 
-#    include "../Linux/interface/LinuxFileSystem.h"
-using FileSystem = LinuxFileSystem;
-using CFile      = LinuxFile;
-
-#elif PLATFORM_MACOS || PLATFORM_IOS
-
-#    include "../Apple/interface/AppleFileSystem.h"
-using FileSystem = AppleFileSystem;
-using CFile      = AppleFile;
-
-#else
-
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
-
-#endif
+    static std::string OpenFileDialog(const char* Title, const char* Filter);
+};

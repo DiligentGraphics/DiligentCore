@@ -32,8 +32,8 @@
 
 #include "../../Primitives/interface/Object.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
-#include "../../Platforms/interface/Atomics.h"
-#include "../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Platforms/interface/Atomics.hpp"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "LockHelper.hpp"
 #include "ValidatedCast.hpp"
 

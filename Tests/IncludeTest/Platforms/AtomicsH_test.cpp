@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Platforms/interface/Atomics.h"
+#include "DiligentCore/Platforms/interface/Atomics.hpp"

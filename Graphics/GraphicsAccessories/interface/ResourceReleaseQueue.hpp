@@ -38,8 +38,8 @@
 
 #include "../../../Primitives/interface/MemoryAllocator.h"
 #include "../../../Common/interface/STDAllocator.hpp"
-#include "../../../Platforms/interface/Atomics.h"
-#include "../../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../../Platforms/interface/Atomics.hpp"
+#include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
 {

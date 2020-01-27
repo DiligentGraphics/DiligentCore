@@ -27,34 +27,17 @@
 
 #pragma once
 
-#include <memory>
-#include "../../Basic/interface/BasicFileSystem.h"
-#include "../../Basic/interface/StandardFile.h"
+#include "../../Basic/interface/BasicPlatformDebug.hpp"
 
-class WindowsFile : public StandardFile
+struct WindowsDebug : public BasicPlatformDebug
 {
-public:
-    WindowsFile(const FileOpenAttribs& OpenAttribs);
-};
-
-
-struct WindowsFileSystem : public BasicFileSystem
-{
-public:
-    static WindowsFile* OpenFile(const FileOpenAttribs& OpenAttribs);
-
-    static inline Diligent::Char GetSlashSymbol() { return '\\'; }
-
-    static bool FileExists(const Diligent::Char* strFilePath);
-    static bool PathExists(const Diligent::Char* strPath);
-
-    static bool CreateDirectory(const Diligent::Char* strPath);
-    static void ClearDirectory(const Diligent::Char* strPath, bool Recursive = false);
-    static void DeleteFile(const Diligent::Char* strPath);
-    static void DeleteDirectory(const Diligent::Char* strPath);
-    static bool IsDirectory(const Diligent::Char* strPath);
-
-    static std::vector<std::unique_ptr<FindFileData>> Search(const Diligent::Char* SearchPattern);
-
-    static std::string OpenFileDialog(const char* Title, const char* Filter);
+    static void AssertionFailed(const Diligent::Char* Message,
+                                const char*           Function, // type of __FUNCTION__
+                                const char*           File,     // type of __FILE__
+                                int                   Line);
+    static void OutputDebugMessage(Diligent::DEBUG_MESSAGE_SEVERITY Severity,
+                                   const Diligent::Char*            Message,
+                                   const char*                      Function, // type of __FUNCTION__
+                                   const char*                      File,     // type of __FILE__
+                                   int                              Line);
 };

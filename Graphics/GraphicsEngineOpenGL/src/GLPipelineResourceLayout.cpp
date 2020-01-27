@@ -29,7 +29,7 @@
 #include <array>
 #include "GLPipelineResourceLayout.hpp"
 #include "Align.hpp"
-#include "PlatformMisc.h"
+#include "PlatformMisc.hpp"
 #include "ShaderBase.hpp"
 
 namespace Diligent

@@ -3,10 +3,10 @@ cmake_minimum_required (VERSION 3.8)
 project(Diligent-UniversalWindowsPlatform CXX)
 
 set(INTERFACE 
-    interface/UWPDebug.h
-    interface/UWPFileSystem.h
+    interface/UWPDebug.hpp
+    interface/UWPFileSystem.hpp
     interface/UWPDefinitions.h
-    ../Win32/interface/Win32Atomics.h
+    ../Win32/interface/Win32Atomics.hpp
 )
 
 set(SOURCE 

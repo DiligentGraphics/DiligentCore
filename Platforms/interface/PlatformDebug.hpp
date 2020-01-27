@@ -30,23 +30,23 @@
 #include "PlatformDefinitions.h"
 
 #if PLATFORM_WIN32
-#    include "../Win32/interface/Win32Debug.h"
+#    include "../Win32/interface/Win32Debug.hpp"
 using PlatformDebug = WindowsDebug;
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
-#    include "../UWP/interface/UWPDebug.h"
+#    include "../UWP/interface/UWPDebug.hpp"
 using PlatformDebug = WindowsStoreDebug;
 
 #elif PLATFORM_ANDROID
-#    include "../Android/interface/AndroidDebug.h"
+#    include "../Android/interface/AndroidDebug.hpp"
 using PlatformDebug = AndroidDebug;
 
 #elif PLATFORM_LINUX
-#    include "../Linux/interface/LinuxDebug.h"
+#    include "../Linux/interface/LinuxDebug.hpp"
 using PlatformDebug = LinuxDebug;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS
-#    include "../Apple/interface/AppleDebug.h"
+#    include "../Apple/interface/AppleDebug.hpp"
 using PlatformDebug = AppleDebug;
 
 #else

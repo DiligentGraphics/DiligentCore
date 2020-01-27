@@ -35,7 +35,7 @@
 #include "../../GraphicsEngine/interface/Texture.h"
 #include "../../GraphicsEngine/interface/Buffer.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
-#include "../../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
 {

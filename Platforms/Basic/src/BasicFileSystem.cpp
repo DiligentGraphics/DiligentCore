@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "BasicFileSystem.h"
-#include "DebugUtilities.h"
+#include "BasicFileSystem.hpp"
+#include "DebugUtilities.hpp"
 #include <algorithm>
 
 Diligent::String BasicFileSystem::m_strWorkingDirectory;

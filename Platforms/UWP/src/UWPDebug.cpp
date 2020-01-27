@@ -21,8 +21,8 @@
  *  of the possibility of such damages.
  */
 
-#include "UWPDebug.h"
-#include "FormatString.h"
+#include "UWPDebug.hpp"
+#include "FormatString.hpp"
 #include <csignal>
 
 #define NOMINMAX

@@ -47,7 +47,7 @@
 #include <sstream>
 #include <iomanip>
 #include "../../GraphicsEngine/interface/Shader.h"
-#include "../../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 
 namespace Diligent

@@ -26,11 +26,11 @@
 #include <cstdio>
 #include <CoreFoundation/CoreFoundation.h>
 
-#include "CFObjectWrapper.h"
+#include "CFObjectWrapper.hpp"
 
-#include "AppleFileSystem.h"
-#include "Errors.h"
-#include "DebugUtilities.h"
+#include "AppleFileSystem.hpp"
+#include "Errors.hpp"
+#include "DebugUtilities.hpp"
 
 namespace
 {

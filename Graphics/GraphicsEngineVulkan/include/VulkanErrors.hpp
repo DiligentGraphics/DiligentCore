@@ -28,7 +28,7 @@
 #pragma once
 
 #include "Errors.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "VulkanUtilities/VulkanDebug.hpp"
 
 #define CHECK_VK_ERROR(err, ...)                                                                                                                                 \

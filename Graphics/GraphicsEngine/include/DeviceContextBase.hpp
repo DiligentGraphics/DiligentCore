@@ -37,7 +37,7 @@
 #include "ResourceMapping.h"
 #include "Sampler.h"
 #include "ObjectBase.h"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "ValidatedCast.hpp"
 #include "GraphicsAccessories.hpp"
 #include "TextureBase.hpp"

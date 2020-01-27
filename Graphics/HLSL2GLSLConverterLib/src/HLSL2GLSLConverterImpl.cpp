@@ -363,6 +363,8 @@
 #include "StringDataBlobImpl.hpp"
 #include "StringTools.hpp"
 
+using namespace std;
+
 namespace Diligent
 {
 

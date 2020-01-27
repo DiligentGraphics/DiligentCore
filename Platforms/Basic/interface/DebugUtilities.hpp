@@ -29,7 +29,7 @@
 
 #include "../../../Primitives/interface/FormatString.hpp"
 #include "../../../Primitives/interface/Errors.hpp"
-#include "BasicPlatformDebug.h"
+#include "BasicPlatformDebug.hpp"
 
 #ifdef _DEBUG
 

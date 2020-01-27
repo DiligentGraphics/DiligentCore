@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "Win32Debug.h"
+#include "Win32Debug.hpp"
 #include "FormatString.hpp"
 #include <csignal>
 #include <iostream>

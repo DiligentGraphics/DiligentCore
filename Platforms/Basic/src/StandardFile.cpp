@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "StandardFile.h"
-#include "DebugUtilities.h"
+#include "StandardFile.hpp"
+#include "DebugUtilities.hpp"
 #include "Errors.hpp"
 
 StandardFile::StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol) :

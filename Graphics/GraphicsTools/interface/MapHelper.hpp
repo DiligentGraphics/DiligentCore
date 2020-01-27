@@ -30,7 +30,7 @@
 /// \file
 /// Definition of the Diligent::MapHelper helper template class
 
-#include "../../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "../../../Common/interface/RefCntAutoPtr.hpp"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "../../GraphicsEngine/interface/Buffer.h"

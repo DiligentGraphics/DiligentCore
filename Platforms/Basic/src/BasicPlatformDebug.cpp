@@ -25,9 +25,9 @@
  *  of the possibility of such damages.
  */
 
-#include "BasicPlatformDebug.h"
+#include "BasicPlatformDebug.hpp"
 #include "FormatString.hpp"
-#include "BasicFileSystem.h"
+#include "BasicFileSystem.hpp"
 #include <iostream>
 
 using namespace Diligent;

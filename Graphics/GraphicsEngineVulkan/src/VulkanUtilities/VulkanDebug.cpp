@@ -14,7 +14,7 @@
 #include "VulkanUtilities/VulkanDebug.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
 #include "Errors.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 
 namespace VulkanUtilities
 {

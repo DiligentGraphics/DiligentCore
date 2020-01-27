@@ -30,7 +30,7 @@
 #include <cmath>
 
 #include "GraphicsUtilities.h"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "GraphicsAccessories.hpp"
 #include "ColorConversion.h"
 

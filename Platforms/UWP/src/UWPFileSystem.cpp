@@ -21,10 +21,10 @@
  *  of the possibility of such damages.
  */
 
-#include "UWPFileSystem.h"
-#include "Errors.h"
-#include "../../Common/interface/StringTools.h"
-#include "DebugUtilities.h"
+#include "UWPFileSystem.hpp"
+#include "Errors.hpp"
+#include "../../Common/interface/StringTools.hpp"
+#include "DebugUtilities.hpp"
 
 
 // Windows headers define CreateDirectory and DeleteFile as macros.

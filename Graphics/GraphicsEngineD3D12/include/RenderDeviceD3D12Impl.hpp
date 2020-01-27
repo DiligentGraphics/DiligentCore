@@ -36,7 +36,7 @@
 #include "CommandListManager.hpp"
 #include "CommandContext.hpp"
 #include "D3D12DynamicHeap.hpp"
-#include "Atomics.h"
+#include "Atomics.hpp"
 #include "CommandQueueD3D12.h"
 #include "GenerateMips.hpp"
 #include "QueryManagerD3D12.hpp"

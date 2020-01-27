@@ -26,7 +26,7 @@
  */
 
 #include "TestingEnvironment.hpp"
-#include "PlatformDebug.h"
+#include "PlatformDebug.hpp"
 #include "TestingSwapChainBase.hpp"
 
 #if D3D11_SUPPORTED

@@ -25,9 +25,9 @@
 #include <unistd.h>
 #include <cstdio>
 
-#include "LinuxFileSystem.h"
-#include "Errors.h"
-#include "DebugUtilities.h"
+#include "LinuxFileSystem.hpp"
+#include "Errors.hpp"
+#include "DebugUtilities.hpp"
 
 LinuxFile* LinuxFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
 {

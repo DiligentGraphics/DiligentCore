@@ -28,7 +28,7 @@
 #pragma once
 
 #include "vulkan.h"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 
 namespace VulkanUtilities
 {

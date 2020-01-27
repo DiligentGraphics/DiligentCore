@@ -29,7 +29,7 @@
 #include <sstream>
 
 #include "GLSLSourceBuilder.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "HLSL2GLSLConverterImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "DataBlobImpl.hpp"

@@ -28,7 +28,7 @@
 #pragma once
 
 #include "../../Primitives/interface/Object.h"
-#include "../../Platforms/interface/Atomics.h"
+#include "../../Platforms/interface/Atomics.hpp"
 #include "ValidatedCast.hpp"
 #include "RefCountedObjectImpl.hpp"
 

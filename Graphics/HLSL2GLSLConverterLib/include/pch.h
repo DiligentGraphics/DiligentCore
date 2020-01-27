@@ -38,9 +38,6 @@
 #include "Errors.hpp"
 #include "PlatformDefinitions.h"
 #include "RefCntAutoPtr.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "ValidatedCast.hpp"
 #include "RenderDevice.h"
-
-using namespace Diligent;
-using namespace std;

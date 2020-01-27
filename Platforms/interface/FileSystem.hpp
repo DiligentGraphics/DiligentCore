@@ -27,17 +27,40 @@
 
 #pragma once
 
-#include "../../Basic/interface/BasicPlatformDebug.h"
+#include "PlatformDefinitions.h"
 
-struct WindowsDebug : public BasicPlatformDebug
-{
-    static void AssertionFailed(const Diligent::Char* Message,
-                                const char*           Function, // type of __FUNCTION__
-                                const char*           File,     // type of __FILE__
-                                int                   Line);
-    static void OutputDebugMessage(Diligent::DEBUG_MESSAGE_SEVERITY Severity,
-                                   const Diligent::Char*            Message,
-                                   const char*                      Function, // type of __FUNCTION__
-                                   const char*                      File,     // type of __FILE__
-                                   int                              Line);
-};
+#if PLATFORM_WIN32
+
+#    include "../Win32/interface/Win32FileSystem.hpp"
+using FileSystem = WindowsFileSystem;
+using CFile      = WindowsFile;
+
+#elif PLATFORM_UNIVERSAL_WINDOWS
+
+#    include "../UWP/interface/UWPFileSystem.hpp"
+using FileSystem = WindowsStoreFileSystem;
+using CFile      = WindowsStoreFile;
+
+#elif PLATFORM_ANDROID
+
+#    include "../Android/interface/AndroidFileSystem.hpp"
+using FileSystem = AndroidFileSystem;
+using CFile      = AndroidFile;
+
+#elif PLATFORM_LINUX
+
+#    include "../Linux/interface/LinuxFileSystem.hpp"
+using FileSystem = LinuxFileSystem;
+using CFile      = LinuxFile;
+
+#elif PLATFORM_MACOS || PLATFORM_IOS
+
+#    include "../Apple/interface/AppleFileSystem.hpp"
+using FileSystem = AppleFileSystem;
+using CFile      = AppleFile;
+
+#else
+
+#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+
+#endif

@@ -116,7 +116,7 @@
 
 #include "PlatformDefinitions.h"
 #include "RefCntAutoPtr.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "GLObjectWrapper.hpp"
 #include "ValidatedCast.hpp"
 #include "RenderDevice.h"

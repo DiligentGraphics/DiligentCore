@@ -36,7 +36,7 @@
 #include "RenderDeviceNextGenBase.hpp"
 #include "DescriptorPoolManager.hpp"
 #include "VulkanDynamicHeap.hpp"
-#include "Atomics.h"
+#include "Atomics.hpp"
 #include "CommandQueueVk.h"
 #include "VulkanUtilities/VulkanInstance.hpp"
 #include "VulkanUtilities/VulkanPhysicalDevice.hpp"

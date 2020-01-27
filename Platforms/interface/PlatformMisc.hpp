@@ -30,19 +30,19 @@
 #include "PlatformDefinitions.h"
 
 #if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-#    include "../Win32/interface/Win32PlatformMisc.h"
+#    include "../Win32/interface/Win32PlatformMisc.hpp"
 using PlatformMisc = WindowsMisc;
 
 #elif PLATFORM_ANDROID
-#    include "../Android/interface/AndroidPlatformMisc.h"
+#    include "../Android/interface/AndroidPlatformMisc.hpp"
 using PlatformMisc = AndroidMisc;
 
 #elif PLATFORM_LINUX
-#    include "../Linux/interface/LinuxPlatformMisc.h"
+#    include "../Linux/interface/LinuxPlatformMisc.hpp"
 using PlatformMisc = LinuxMisc;
 
 #elif PLATFORM_MACOS || PLATFORM_IOS
-#    include "../Apple/interface/ApplePlatformMisc.h"
+#    include "../Apple/interface/ApplePlatformMisc.hpp"
 using PlatformMisc = AppleMisc;
 
 #else

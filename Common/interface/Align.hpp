@@ -30,7 +30,7 @@
 /// \file
 /// Alignment utilities
 
-#include "../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
 {

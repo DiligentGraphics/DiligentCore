@@ -32,7 +32,7 @@
 #include <cstring>
 
 #include "../../Primitives/interface/Errors.hpp"
-#include "../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 #define LOG_HASH_CONFLICTS 1
 

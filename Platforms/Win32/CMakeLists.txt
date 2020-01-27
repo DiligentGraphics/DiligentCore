@@ -3,11 +3,11 @@ cmake_minimum_required (VERSION 3.3)
 project(WindowsPlatform CXX)
 
 set(INTERFACE
-    interface/Win32Atomics.h
-    interface/Win32Debug.h
-    interface/Win32FileSystem.h
+    interface/Win32Atomics.hpp
+    interface/Win32Debug.hpp
+    interface/Win32FileSystem.hpp
     interface/Win32PlatformDefinitions.h
-    interface/Win32PlatformMisc.h
+    interface/Win32PlatformMisc.hpp
 )
 
 set(SOURCE 

@@ -21,8 +21,8 @@
  *  of the possibility of such damages.
  */
 
-#include "AndroidDebug.h"
-#include "FormatString.h"
+#include "AndroidDebug.hpp"
+#include "FormatString.hpp"
 #include <android/log.h>
 #include <csignal>
 

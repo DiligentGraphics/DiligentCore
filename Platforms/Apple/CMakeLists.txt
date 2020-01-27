@@ -3,14 +3,14 @@ cmake_minimum_required (VERSION 3.6)
 project(Diligent-ApplePlatform CXX)
 
 set(INTERFACE
-    interface/CFObjectWrapper.h
-    interface/AppleDebug.h
-    interface/AppleFileSystem.h
+    interface/CFObjectWrapper.hpp
+    interface/AppleDebug.hpp
+    interface/AppleFileSystem.hpp
     interface/ApplePlatformDefinitions.h
-    interface/ApplePlatformMisc.h
+    interface/ApplePlatformMisc.hpp
 )
 
-set(SOURCE 
+set(SOURCE
     src/AppleDebug.mm
     src/AppleFileSystem.cpp
 )

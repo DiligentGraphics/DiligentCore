@@ -28,8 +28,8 @@
 #pragma once
 
 #include "../../Primitives/interface/Errors.hpp"
-#include "../../Platforms/Basic/interface/DebugUtilities.h"
-#include "../../Platforms/interface/FileSystem.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "../../Platforms/interface/FileSystem.hpp"
 
 namespace Diligent
 {

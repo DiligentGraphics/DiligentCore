@@ -35,7 +35,7 @@
 #include "Shader.h"
 #include "DeviceObjectBase.hpp"
 #include "STDAllocator.hpp"
-#include "PlatformMisc.h"
+#include "PlatformMisc.hpp"
 #include "EngineMemory.h"
 #include "Align.hpp"
 

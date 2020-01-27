@@ -28,7 +28,7 @@
 #pragma once
 
 #include "../../Primitives/interface/BasicTypes.h"
-#include "../../Platforms/interface/Atomics.h"
+#include "../../Platforms/interface/Atomics.hpp"
 
 namespace Diligent
 {

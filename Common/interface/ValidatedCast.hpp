@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 template <typename DstType, typename SrcType>
 DstType* ValidatedCast(SrcType* Ptr)

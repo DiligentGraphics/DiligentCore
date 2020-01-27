@@ -31,12 +31,12 @@
 #include <mutex>
 
 #include "EngineFactory.h"
-#include "Atomics.h"
+#include "Atomics.hpp"
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"
 #include "MemoryAllocator.h"
 #include "RefCntAutoPtr.hpp"
-#include "PlatformMisc.h"
+#include "PlatformMisc.hpp"
 #include "ResourceReleaseQueue.hpp"
 #include "EngineMemory.h"
 

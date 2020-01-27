@@ -30,7 +30,7 @@
 #include <array>
 
 #include "VulkanTypeConversions.hpp"
-#include "PlatformMisc.h"
+#include "PlatformMisc.hpp"
 
 namespace Diligent
 {

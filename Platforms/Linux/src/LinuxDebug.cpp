@@ -24,8 +24,8 @@
 #include <csignal>
 #include <iostream>
 
-#include "LinuxDebug.h"
-#include "FormatString.h"
+#include "LinuxDebug.hpp"
+#include "FormatString.hpp"
 
 using namespace Diligent;
 

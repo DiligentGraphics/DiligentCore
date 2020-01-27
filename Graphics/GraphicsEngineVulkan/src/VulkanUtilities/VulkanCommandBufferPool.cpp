@@ -29,7 +29,7 @@
 #include "VulkanUtilities/VulkanCommandBufferPool.hpp"
 #include "VulkanUtilities/VulkanDebug.hpp"
 #include "Errors.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "VulkanErrors.hpp"
 
 namespace VulkanUtilities

@@ -3,10 +3,10 @@ cmake_minimum_required (VERSION 3.6)
 project(Diligent-LinuxPlatform CXX)
 
 set(INTERFACE 
-    interface/LinuxDebug.h
-    interface/LinuxFileSystem.h
+    interface/LinuxDebug.hpp
+    interface/LinuxFileSystem.hpp
     interface/LinuxPlatformDefinitions.h
-    interface/LinuxPlatformMisc.h
+    interface/LinuxPlatformMisc.hpp
 )
 
 set(SOURCE 

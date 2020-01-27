@@ -34,7 +34,7 @@
 #include <algorithm>
 
 #include "../../../Primitives/interface/MemoryAllocator.h"
-#include "../../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
 #include "../../../Common/interface/Align.hpp"
 #include "../../../Common/interface/STDAllocator.hpp"
 

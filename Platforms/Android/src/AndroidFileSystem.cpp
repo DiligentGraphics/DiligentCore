@@ -24,9 +24,9 @@
 #include <string>
 #include <android/native_activity.h>
 
-#include "AndroidFileSystem.h"
-#include "Errors.h"
-#include "DebugUtilities.h"
+#include "AndroidFileSystem.hpp"
+#include "Errors.hpp"
+#include "DebugUtilities.hpp"
 
 
 namespace

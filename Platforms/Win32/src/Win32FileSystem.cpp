@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "Win32FileSystem.h"
+#include "Win32FileSystem.hpp"
 #include "Errors.hpp"
 #include "../../Common/interface/StringTools.hpp"
 

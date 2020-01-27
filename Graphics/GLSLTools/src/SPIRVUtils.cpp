@@ -38,7 +38,7 @@
 #endif
 
 #include "SPIRVUtils.hpp"
-#include "DebugUtilities.h"
+#include "DebugUtilities.hpp"
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 

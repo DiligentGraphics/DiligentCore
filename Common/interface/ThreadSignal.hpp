@@ -31,7 +31,7 @@
 #include <condition_variable>
 #include <atomic>
 
-#include "../../Platforms/Basic/interface/DebugUtilities.h"
+#include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace ThreadingTools
 {

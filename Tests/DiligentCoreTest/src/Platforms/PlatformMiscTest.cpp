@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "PlatformMisc.h"
+#include "PlatformMisc.hpp"
 
 #include "gtest/gtest.h"
 

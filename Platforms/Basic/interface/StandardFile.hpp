@@ -27,17 +27,29 @@
 
 #pragma once
 
-#include "PlatformDefinitions.h"
+#include <stdio.h>
 
-#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
+#include "../../../Primitives/interface/DataBlob.h"
+#include "BasicFileSystem.hpp"
 
-#    include "../Win32/interface/Win32Atomics.h"
-using Atomics = WindowsAtomics;
+class StandardFile : public BasicFile
+{
+public:
+    StandardFile(const FileOpenAttribs& OpenAttribs, Diligent::Char SlashSymbol);
+    virtual ~StandardFile() override;
 
-#else
+    void Read(Diligent::IDataBlob* pData);
 
-// Use c++11 standard atomics
-#    include "../Basic/interface/BasicAtomics.h"
-using Atomics = BasicAtomics;
+    bool Read(void* Data, size_t Size);
 
-#endif
+    bool Write(const void* Data, size_t Size);
+
+    size_t GetSize();
+
+    size_t GetPos();
+
+    void SetPos(size_t Offset, FilePosOrigin Origin);
+
+protected:
+    FILE* m_pFile = nullptr;
+};

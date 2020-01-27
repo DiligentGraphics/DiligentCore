@@ -35,7 +35,7 @@
 #include "D3D12TypeDefinitions.h"
 #include "D3DTypeConversionImpl.hpp"
 #include "D3DViewDescConversionImpl.hpp"
-#include "PlatformMisc.h"
+#include "PlatformMisc.hpp"
 
 namespace Diligent
 {

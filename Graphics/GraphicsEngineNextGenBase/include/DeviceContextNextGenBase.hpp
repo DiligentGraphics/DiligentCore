@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "Atomics.h"
+#include "Atomics.hpp"
 #include "BasicTypes.h"
 #include "ReferenceCounters.h"
 #include "RefCntAutoPtr.hpp"
