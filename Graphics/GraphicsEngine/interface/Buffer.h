@@ -173,10 +173,8 @@ struct BufferData
 };
 typedef struct BufferData BufferData;
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IBuffer*
-#    define THIS_ struct IBuffer*,
-#endif
+#define DILIGENT_INTERFACE_NAME IBuffer
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 
 /// Buffer interface
@@ -238,10 +236,9 @@ DILIGENT_INTERFACE(IBuffer, IDeviceObject)
     VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#undef THIS
-#undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

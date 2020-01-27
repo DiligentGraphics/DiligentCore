@@ -184,10 +184,10 @@ typedef struct TextureViewDesc TextureViewDesc;
 
 // clang-format on
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct ITextureView*
-#    define THIS_ struct ITextureView*,
-#endif
+#define DILIGENT_INTERFACE_NAME ITextureView
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+
 
 /// Texture view interface
 
@@ -224,10 +224,9 @@ DILIGENT_INTERFACE(ITextureView, IDeviceObject)
     VIRTUAL struct ITexture* METHOD(GetTexture)(THIS) PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

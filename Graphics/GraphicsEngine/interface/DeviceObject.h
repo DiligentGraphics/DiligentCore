@@ -40,10 +40,8 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const INTERFACE_ID IID_DeviceObject =
     {0x5b4cca0b, 0x5075, 0x4230, {0x97, 0x59, 0xf4, 0x87, 0x69, 0xee, 0x55, 0x2}};
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IDeviceObject*
-#    define THIS_ struct IDeviceObject*,
-#endif
+#define DILIGENT_INTERFACE_NAME IDeviceObject
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Base interface for all objects created by the render device Diligent::IRenderDevice
 DILIGENT_INTERFACE(IDeviceObject, IObject)
@@ -71,10 +69,9 @@ DILIGENT_INTERFACE(IDeviceObject, IObject)
     VIRTUAL Int32 METHOD(GetUniqueID)(THIS) CONST PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format off
 

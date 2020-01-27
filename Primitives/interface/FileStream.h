@@ -42,10 +42,9 @@ static const struct INTERFACE_ID IID_FileStream =
 
 // clang-format off
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IFileStream*
-#    define THIS_ struct IFileStream*,
-#endif
+#define DILIGENT_INTERFACE_NAME IFileStream
+#include "DefineInterfaceHelperMacros.h"
+
 
 /// Base interface for a file stream
 DILIGENT_INTERFACE(IFileStream, IObject)
@@ -68,12 +67,13 @@ DILIGENT_INTERFACE(IFileStream, IObject)
     VIRTUAL bool METHOD(IsValid)(THIS) PURE;
 };
 
-    // clang-format on
+#include "UndefInterfaceHelperMacros.h"
+
 
 #if DILIGENT_C_INTERFACE
 
-#    undef THIS
-#    undef THIS_
+
+// clang-format on
 
 struct IFileStreamVtbl
 {

@@ -90,11 +90,9 @@ struct ResourceMappingDesc
 };
 typedef struct ResourceMappingDesc ResourceMappingDesc;
 
+#define DILIGENT_INTERFACE_NAME IResourceMapping
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IResourceMapping*
-#    define THIS_ struct IResourceMapping*,
-#endif
 
 // clang-format off
 
@@ -167,10 +165,9 @@ DILIGENT_INTERFACE(IResourceMapping, IObject)
     VIRTUAL size_t METHOD(GetSize)(THIS) PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

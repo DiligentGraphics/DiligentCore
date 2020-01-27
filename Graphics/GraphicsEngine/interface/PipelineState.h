@@ -254,11 +254,8 @@ typedef struct PipelineStateDesc PipelineStateDesc;
 static const struct INTERFACE_ID IID_PipelineState =
     {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};
 
-
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IPipelineState*
-#    define THIS_ struct IPipelineState*,
-#endif
+#define DILIGENT_INTERFACE_NAME IPipelineState
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 // clang-format off
 
@@ -350,10 +347,9 @@ DILIGENT_INTERFACE(IPipelineState, IDeviceObject)
                                           const struct IPipelineState* pPSO) CONST PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

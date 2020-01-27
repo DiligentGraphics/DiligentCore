@@ -609,11 +609,8 @@ struct CopyTextureAttribs
 };
 typedef struct CopyTextureAttribs CopyTextureAttribs;
 
-
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IDeviceContext*
-#    define THIS_ struct IDeviceContext*,
-#endif
+#define DILIGENT_INTERFACE_NAME IDeviceContext
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Device context interface.
 
@@ -1317,10 +1314,9 @@ DILIGENT_INTERFACE(IDeviceContext, IObject)
                                                    const ResolveTextureSubresourceAttribs REF ResolveAttribs) PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

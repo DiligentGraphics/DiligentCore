@@ -171,6 +171,8 @@ struct SamplerDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 };
 typedef struct SamplerDesc SamplerDesc;
 
+#define DILIGENT_INTERFACE_NAME ISampler
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 #if DILIGENT_CPP_INTERFACE
 
@@ -190,6 +192,9 @@ DILIGENT_INTERFACE(ISampler, IDeviceObject)
 };
 
 #endif
+
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
 

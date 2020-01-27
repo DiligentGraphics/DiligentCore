@@ -172,10 +172,9 @@ struct QueryDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 };
 typedef struct QueryDesc QueryDesc;
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IQuery*
-#    define THIS_ struct IQuery*,
-#endif
+#define DILIGENT_INTERFACE_NAME IQuery
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 
 // clang-format off
 
@@ -218,10 +217,9 @@ DILIGENT_INTERFACE(IQuery, IDeviceObject)
     VIRTUAL void METHOD(Invalidate)(THIS) PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

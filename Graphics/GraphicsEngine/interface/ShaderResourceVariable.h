@@ -104,10 +104,10 @@ DILIGENT_TYPED_ENUM(BIND_SHADER_RESOURCES_FLAGS, Uint32)
 
 // clang-format on
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IShaderResourceVariable*
-#    define THIS_ struct IShaderResourceVariable*,
-#endif
+#define DILIGENT_INTERFACE_NAME IShaderResourceVariable
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+
 
 // clang-format off
 
@@ -154,11 +154,9 @@ DILIGENT_INTERFACE(IShaderResourceVariable, IObject)
                                  Uint32 ArrayIndex) CONST PURE;
 };
 
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-#    undef THIS
-#    undef THIS_
 
 // clang-format on
 

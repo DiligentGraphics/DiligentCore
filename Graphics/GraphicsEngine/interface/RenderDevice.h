@@ -57,10 +57,9 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const INTERFACE_ID IID_RenderDevice =
     {0xf0e9b607, 0xae33, 0x4b2b, {0xb1, 0xaf, 0xa8, 0xb2, 0xc3, 0x10, 0x40, 0x22}};
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IRenderDevice*
-#    define THIS_ struct IRenderDevice*,
-#endif
+#define DILIGENT_INTERFACE_NAME IRenderDevice
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 
 // clang-format off
 
@@ -238,11 +237,9 @@ DILIGENT_INTERFACE(IRenderDevice, IObject)
     VIRTUAL IEngineFactory* METHOD(GetEngineFactory)(THIS) CONST PURE;
 };
 
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-#    undef THIS
-#    undef THIS
 
 // clang-format on
 

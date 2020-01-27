@@ -46,10 +46,9 @@ typedef struct FenceDesc FenceDesc;
 
 // clang-format off
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IFence*
-#    define THIS_ struct IFence*,
-#endif
+#define DILIGENT_INTERFACE_NAME IFence
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 
 /// Fence interface
 
@@ -76,11 +75,9 @@ DILIGENT_INTERFACE(IFence, IDeviceObject)
                                Uint64 Value) PURE;
 };
 
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-#    undef THIS
-#    undef THIS_
 
 // clang-format on
 

@@ -41,11 +41,9 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const INTERFACE_ID IID_SwapChain =
     {0x1c703b77, 0x6607, 0x4eec, {0xb1, 0xfe, 0x15, 0xc8, 0x2d, 0x3b, 0x41, 0x30}};
 
+#define DILIGENT_INTERFACE_NAME ISwapChain
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct ISwapChain*
-#    define THIS_ struct ISwapChain*,
-#endif
 
 // clang-format off
 
@@ -97,11 +95,9 @@ DILIGENT_INTERFACE(ISwapChain, IObject)
     VIRTUAL ITextureView* METHOD(GetDepthBufferDSV)(THIS) PURE;
 };
 
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-#    undef THIS
-#    undef THIS_
 
 // clang-format on
 

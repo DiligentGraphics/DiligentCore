@@ -308,10 +308,10 @@ struct MappedTextureSubresource
 };
 typedef struct MappedTextureSubresource MappedTextureSubresource;
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct ITexture*
-#    define THIS_ struct ITexture*,
-#endif
+#define DILIGENT_INTERFACE_NAME ITexture
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+
 
 /// Texture inteface
 DILIGENT_INTERFACE(ITexture, IDeviceObject)
@@ -376,10 +376,9 @@ DILIGENT_INTERFACE(ITexture, IDeviceObject)
     VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

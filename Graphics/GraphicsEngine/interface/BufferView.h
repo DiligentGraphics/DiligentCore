@@ -139,12 +139,8 @@ struct BufferViewDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 };
 typedef struct BufferViewDesc BufferViewDesc;
 
-
-
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IBufferView*
-#    define THIS_ struct IBufferView*,
-#endif
+#define DILIGENT_INTERFACE_NAME IBufferView
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Buffer view interface
 
@@ -166,10 +162,9 @@ DILIGENT_INTERFACE(IBufferView, IDeviceObject)
     VIRTUAL struct IBuffer* METHOD(GetBuffer)(THIS) PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

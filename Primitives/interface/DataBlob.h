@@ -41,10 +41,10 @@ static const struct INTERFACE_ID IID_DataBlob =
 
 // clang-format off
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IDataBlob*
-#    define THIS_ struct IDataBlob*,
-#endif
+#define DILIGENT_INTERFACE_NAME IDataBlob
+#include "DefineInterfaceHelperMacros.h"
+
+
 
 /// Base interface for a file stream
 DILIGENT_INTERFACE(IDataBlob, IObject)
@@ -60,12 +60,12 @@ DILIGENT_INTERFACE(IDataBlob, IObject)
     VIRTUAL void* METHOD(GetDataPtr)(THIS) PURE;
 };
 
-    // clang-format on
+#include "UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
 
-#    undef THIS
-#    undef THIS_
+
+// clang-format on
 
 struct IDataBlobVtbl
 {

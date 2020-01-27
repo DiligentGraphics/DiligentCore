@@ -85,10 +85,9 @@ static const INTERFACE_ID IID_IShaderSourceInputStreamFactory =
 
 // clang-format off
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IShaderSourceInputStreamFactory*
-#    define THIS_ struct IShaderSourceInputStreamFactory*,
-#endif
+#define DILIGENT_INTERFACE_NAME IShaderSourceInputStreamFactory
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 
 /// Shader source stream factory interface
 DILIGENT_INTERFACE(IShaderSourceInputStreamFactory, IObject)
@@ -99,10 +98,9 @@ DILIGENT_INTERFACE(IShaderSourceInputStreamFactory, IObject)
 };
 
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 
@@ -318,11 +316,8 @@ struct ShaderResourceDesc
 };
 typedef struct ShaderResourceDesc ShaderResourceDesc;
 
-
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IShader*
-#    define THIS_ struct IShader*,
-#endif
+#define DILIGENT_INTERFACE_NAME IShader
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 // clang-format off
 
@@ -343,10 +338,10 @@ DILIGENT_INTERFACE(IShader, IDeviceObject)
                                          ShaderResourceDesc REF ResourceDesc) CONST PURE;
 };
 
-#if DILIGENT_C_INTERFACE
 
-#    undef THIS
-#    undef THIS_
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

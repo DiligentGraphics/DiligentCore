@@ -41,10 +41,9 @@ struct IShaderSourceInputStreamFactory;
 static const INTERFACE_ID IID_EngineFactory =
     {0xd932b052, 0x4ed6, 0x4729, {0xa5, 0x32, 0xf3, 0x1d, 0xee, 0xc1, 0x0, 0xf3}};
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IEngineFactory*
-#    define THIS_ struct IEngineFactory*,
-#endif
+#define DILIGENT_INTERFACE_NAME IEngineFactory
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 
 // clang-format off
 
@@ -73,10 +72,9 @@ DILIGENT_INTERFACE(IEngineFactory, IObject)
 #endif
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 

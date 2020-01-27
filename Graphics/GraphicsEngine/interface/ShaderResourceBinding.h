@@ -44,10 +44,10 @@ static const INTERFACE_ID IID_ShaderResourceBinding =
     {0x61f8774, 0x9a09, 0x48e8, {0x84, 0x11, 0xb5, 0xbd, 0x20, 0x56, 0x1, 0x4}};
 
 
-#if DILIGENT_C_INTERFACE
-#    define THIS  struct IShaderResourceBinding*
-#    define THIS_ struct IShaderResourceBinding*,
-#endif
+#define DILIGENT_INTERFACE_NAME IShaderResourceBinding
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+
 
 // clang-format off
 
@@ -128,10 +128,9 @@ DILIGENT_INTERFACE(IShaderResourceBinding, IObject)
                                                    const struct IPipelineState* pPipelineState DEFAULT_VALUE(nullptr)) PURE;
 };
 
-#if DILIGENT_C_INTERFACE
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#    undef THIS
-#    undef THIS_
+#if DILIGENT_C_INTERFACE
 
 // clang-format on
 
