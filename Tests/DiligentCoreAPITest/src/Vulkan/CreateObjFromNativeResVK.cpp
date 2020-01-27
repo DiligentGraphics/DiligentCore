@@ -35,7 +35,7 @@
 #include "BufferVk.h"
 #include "GraphicsAccessories.hpp"
 
-#include "Vulkan/CreateObjFromNativeResVK.h"
+#include "Vulkan/CreateObjFromNativeResVK.hpp"
 
 #include "gtest/gtest.h"
 

@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingSwapChainBase.h"
+#include "TestingSwapChainBase.hpp"
 
 #define VK_NO_PROTOTYPES
 #include "vulkan/vulkan.h"

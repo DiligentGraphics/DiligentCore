@@ -27,8 +27,8 @@
 
 #include <vector>
 
-#include "D3D12/TestingEnvironmentD3D12.h"
-#include "D3D12/TestingSwapChainD3D12.h"
+#include "D3D12/TestingEnvironmentD3D12.hpp"
+#include "D3D12/TestingSwapChainD3D12.hpp"
 #include "../include/DXGITypeConversions.hpp"
 
 #include "RenderDeviceD3D12.h"

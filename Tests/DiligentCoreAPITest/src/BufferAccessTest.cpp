@@ -27,7 +27,7 @@
 
 #include <sstream>
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 

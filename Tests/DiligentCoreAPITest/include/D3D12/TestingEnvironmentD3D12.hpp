@@ -29,16 +29,15 @@
 
 #include <string>
 
-#ifndef GLEW_STATIC
-#    define GLEW_STATIC // Must be defined to use static version of glew
-#endif
-#ifndef GLEW_NO_GLU
-#    define GLEW_NO_GLU
+#include "TestingEnvironment.hpp"
+
+#ifndef NOMINMAX
+#    define NOMINMAX
 #endif
 
-#include "GL/glew.h"
-
-#include "TestingEnvironment.h"
+#include <d3d12.h>
+#include <d3dcompiler.h>
+#include <atlcomcli.h>
 
 namespace Diligent
 {
@@ -46,23 +45,39 @@ namespace Diligent
 namespace Testing
 {
 
-class TestingEnvironmentGL final : public TestingEnvironment
+// Implemented in TestingEnvironmentD3D11.cpp
+HRESULT CompileD3DShader(const std::string&      Source,
+                         LPCSTR                  strFunctionName,
+                         const D3D_SHADER_MACRO* pDefines,
+                         LPCSTR                  profile,
+                         ID3DBlob**              ppBlobOut);
+
+class TestingEnvironmentD3D12 final : public TestingEnvironment
 {
 public:
-    TestingEnvironmentGL(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
-    ~TestingEnvironmentGL();
+    TestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+    ~TestingEnvironmentD3D12();
 
-    static TestingEnvironmentGL* GetInstance() { return ValidatedCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
+    static TestingEnvironmentD3D12* GetInstance() { return ValidatedCast<TestingEnvironmentD3D12>(TestingEnvironment::GetInstance()); }
 
-    GLuint CompileGLShader(const std::string& Source, GLenum ShaderType);
-    GLuint LinkProgram(GLuint Shaders[], GLuint NumShaders);
+    ID3D12Device* GetD3D12Device()
+    {
+        return m_pd3d12Device;
+    }
 
-    GLuint GetDummyVAO() { return m_DummyVAO; }
+    //  The allocator is currently never reset, which is not an issue in this testing system.
+    CComPtr<ID3D12GraphicsCommandList> CreateGraphicsCommandList();
 
-    virtual void Reset() override final;
+    void IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue);
 
 private:
-    GLuint m_DummyVAO = 0;
+    CComPtr<ID3D12Device>           m_pd3d12Device;
+    CComPtr<ID3D12CommandAllocator> m_pd3d12CmdAllocator;
+    CComPtr<ID3D12Fence>            m_pd3d12Fence;
+
+    UINT64 m_NextFenceValue = 1;
+
+    HANDLE m_WaitForGPUEventHandle = {};
 };
 
 } // namespace Testing

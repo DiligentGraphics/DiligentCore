@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "D3D12/TestingEnvironmentD3D12.h"
-#include "D3D12/TestingSwapChainD3D12.h"
+#include "D3D12/TestingEnvironmentD3D12.hpp"
+#include "D3D12/TestingSwapChainD3D12.hpp"
 
 #include "DeviceContextD3D12.h"
 

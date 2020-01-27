@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 #include "HLSL2GLSLConverter.h"
 
 #include "gtest/gtest.h"

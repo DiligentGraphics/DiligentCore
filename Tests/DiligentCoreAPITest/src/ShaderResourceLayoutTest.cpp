@@ -28,7 +28,7 @@
 #include <vector>
 #include <algorithm>
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 #include "ShaderMacroHelper.hpp"
 #include "GraphicsAccessories.hpp"
 

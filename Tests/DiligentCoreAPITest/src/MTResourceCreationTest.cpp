@@ -29,10 +29,10 @@
 #include <atomic>
 #include <algorithm>
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 #include "ThreadSignal.hpp"
 #if D3D12_SUPPORTED
-#    include "D3D12/D3D12DebugLayerSetNameBugWorkaround.h"
+#    include "D3D12/D3D12DebugLayerSetNameBugWorkaround.hpp"
 #endif
 
 #include "gtest/gtest.h"

@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "Vulkan/TestingSwapChainVk.h"
-#include "Vulkan/TestingEnvironmentVk.h"
+#include "Vulkan/TestingSwapChainVk.hpp"
+#include "Vulkan/TestingEnvironmentVk.hpp"
 
 #include "RenderDeviceVk.h"
 #include "DeviceContextVk.h"

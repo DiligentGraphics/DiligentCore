@@ -28,7 +28,7 @@
 #include <algorithm>
 #include <cctype>
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 #include "Sampler.h"
 #include "GraphicsAccessories.hpp"
 

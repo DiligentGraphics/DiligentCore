@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "D3D12/D3D12DebugLayerSetNameBugWorkaround.h"
+#include "D3D12/D3D12DebugLayerSetNameBugWorkaround.hpp"
 
 #include "RefCntAutoPtr.hpp"
 

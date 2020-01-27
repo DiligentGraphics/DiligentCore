@@ -29,7 +29,7 @@
 
 #include <string>
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 
 #ifndef NOMINMAX
 #    define NOMINMAX

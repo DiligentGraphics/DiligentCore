@@ -25,9 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-#include "CreateObjFromNativeResTestBase.h"
+#include "TestingSwapChainBase.hpp"
 
 namespace Diligent
 {
@@ -35,15 +33,29 @@ namespace Diligent
 namespace Testing
 {
 
-class TestCreateObjFromNativeResD3D11 : public CreateObjFromNativeResTestBase
+class TestingSwapChainGL : public TestingSwapChainBase<ISwapChain>
 {
 public:
-    TestCreateObjFromNativeResD3D11(IRenderDevice* pDevice) :
-        CreateObjFromNativeResTestBase(pDevice)
-    {}
+    using TBase = TestingSwapChainBase<ISwapChain>;
+    TestingSwapChainGL(IReferenceCounters*  pRefCounters,
+                       IRenderDevice*       pDevice,
+                       IDeviceContext*      pContext,
+                       const SwapChainDesc& SCDesc);
+    ~TestingSwapChainGL();
 
-    virtual void CreateTexture(ITexture* pTexture) override final;
-    virtual void CreateBuffer(IBuffer* pBuffer) override final;
+    virtual void TakeSnapshot() override final;
+
+    GLuint GetRenderTargetGLHandle()
+    {
+        return m_RenderTarget;
+    }
+
+    void BindFramebuffer();
+
+private:
+    GLuint m_RenderTarget = 0;
+    GLuint m_DepthBuffer  = 0;
+    GLuint m_FBO          = 0;
 };
 
 } // namespace Testing

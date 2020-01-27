@@ -28,7 +28,7 @@
 #include <iostream>
 
 #include "gtest/gtest.h"
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 
 #if PLATFORM_WIN32
 #    include <crtdbg.h>

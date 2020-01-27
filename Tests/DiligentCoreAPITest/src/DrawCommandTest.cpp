@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.h"
-#include "TestingSwapChainBase.h"
+#include "TestingEnvironment.hpp"
+#include "TestingSwapChainBase.hpp"
 #include "BasicMath.hpp"
 
 #include "gtest/gtest.h"

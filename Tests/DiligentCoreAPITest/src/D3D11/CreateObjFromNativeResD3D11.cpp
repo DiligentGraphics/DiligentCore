@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "D3D11/CreateObjFromNativeResD3D11.h"
+#include "D3D11/CreateObjFromNativeResD3D11.hpp"
 
 #include <d3d11.h>
 #include "RenderDeviceD3D11.h"

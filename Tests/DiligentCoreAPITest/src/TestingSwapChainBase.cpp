@@ -29,7 +29,7 @@
 #include <cstdlib>
 #include <algorithm>
 
-#include "TestingSwapChainBase.h"
+#include "TestingSwapChainBase.hpp"
 #include "GraphicsAccessories.hpp"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION

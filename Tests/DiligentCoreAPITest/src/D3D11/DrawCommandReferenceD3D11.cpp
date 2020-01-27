@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "D3D11/TestingEnvironmentD3D11.h"
-#include "D3D11/TestingSwapChainD3D11.h"
+#include "D3D11/TestingEnvironmentD3D11.hpp"
+#include "D3D11/TestingSwapChainD3D11.hpp"
 
 #include "InlineShaders/DrawCommandTestHLSL.h"
 

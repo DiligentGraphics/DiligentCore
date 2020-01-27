@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "CreateObjFromNativeResTestBase.h"
+#include "CreateObjFromNativeResTestBase.hpp"
 
 namespace Diligent
 {
@@ -35,10 +35,10 @@ namespace Diligent
 namespace Testing
 {
 
-class TestCreateObjFromNativeResVK : public CreateObjFromNativeResTestBase
+class TestCreateObjFromNativeResD3D12 : public CreateObjFromNativeResTestBase
 {
 public:
-    TestCreateObjFromNativeResVK(IRenderDevice* pDevice) :
+    TestCreateObjFromNativeResD3D12(IRenderDevice* pDevice) :
         CreateObjFromNativeResTestBase(pDevice)
     {}
 

@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "D3D11/TestingEnvironmentD3D11.h"
+#include "D3D11/TestingEnvironmentD3D11.hpp"
 
 #include "RenderDeviceD3D11.h"
 #include "DeviceContextD3D11.h"

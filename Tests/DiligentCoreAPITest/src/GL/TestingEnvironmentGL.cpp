@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "GL/TestingEnvironmentGL.h"
+#include "GL/TestingEnvironmentGL.hpp"
 
 namespace Diligent
 {

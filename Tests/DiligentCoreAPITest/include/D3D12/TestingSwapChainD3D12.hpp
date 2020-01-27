@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingSwapChainBase.h"
+#include "TestingSwapChainBase.hpp"
 
 #ifndef NOMINMAX
 #    define NOMINMAX

@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.h"
-#include "PSOTestBase.h"
+#include "TestingEnvironment.hpp"
+#include "PSOTestBase.hpp"
 #include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"

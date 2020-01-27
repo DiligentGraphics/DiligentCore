@@ -29,7 +29,7 @@
 
 #include <array>
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 
 #define VK_NO_PROTOTYPES
 #include "vulkan/vulkan.h"

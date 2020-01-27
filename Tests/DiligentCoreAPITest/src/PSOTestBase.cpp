@@ -25,8 +25,8 @@
  *  of the possibility of such damages.
  */
 
-#include "PSOTestBase.h"
-#include "TestingEnvironment.h"
+#include "PSOTestBase.hpp"
+#include "TestingEnvironment.hpp"
 
 namespace Diligent
 {

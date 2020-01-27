@@ -25,9 +25,9 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 #include "PlatformDebug.h"
-#include "TestingSwapChainBase.h"
+#include "TestingSwapChainBase.hpp"
 
 #if D3D11_SUPPORTED
 #    include "EngineFactoryD3D11.h"

@@ -27,7 +27,18 @@
 
 #pragma once
 
-#include "CreateObjFromNativeResTestBase.h"
+#include <string>
+
+#ifndef GLEW_STATIC
+#    define GLEW_STATIC // Must be defined to use static version of glew
+#endif
+#ifndef GLEW_NO_GLU
+#    define GLEW_NO_GLU
+#endif
+
+#include "GL/glew.h"
+
+#include "TestingEnvironment.hpp"
 
 namespace Diligent
 {
@@ -35,15 +46,23 @@ namespace Diligent
 namespace Testing
 {
 
-class TestCreateObjFromNativeResD3D12 : public CreateObjFromNativeResTestBase
+class TestingEnvironmentGL final : public TestingEnvironment
 {
 public:
-    TestCreateObjFromNativeResD3D12(IRenderDevice* pDevice) :
-        CreateObjFromNativeResTestBase(pDevice)
-    {}
+    TestingEnvironmentGL(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+    ~TestingEnvironmentGL();
 
-    virtual void CreateTexture(ITexture* pTexture) override final;
-    virtual void CreateBuffer(IBuffer* pBuffer) override final;
+    static TestingEnvironmentGL* GetInstance() { return ValidatedCast<TestingEnvironmentGL>(TestingEnvironment::GetInstance()); }
+
+    GLuint CompileGLShader(const std::string& Source, GLenum ShaderType);
+    GLuint LinkProgram(GLuint Shaders[], GLuint NumShaders);
+
+    GLuint GetDummyVAO() { return m_DummyVAO; }
+
+    virtual void Reset() override final;
+
+private:
+    GLuint m_DummyVAO = 0;
 };
 
 } // namespace Testing

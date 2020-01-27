@@ -88,7 +88,7 @@
 #include "BufferGL.h"
 #include "GraphicsAccessories.hpp"
 
-#include "GL/CreateObjFromNativeResGL.h"
+#include "GL/CreateObjFromNativeResGL.hpp"
 
 #include "gtest/gtest.h"
 

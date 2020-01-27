@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "D3D12/TestingEnvironmentD3D12.h"
+#include "D3D12/TestingEnvironmentD3D12.hpp"
 #include "RenderDeviceD3D12.h"
 
 namespace Diligent

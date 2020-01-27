@@ -28,7 +28,7 @@
 #include "GraphicsAccessories.hpp"
 #include "../../../Graphics/GraphicsEngineD3DBase/interface/ShaderD3D.h"
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 

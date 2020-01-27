@@ -31,22 +31,22 @@
 #include "GraphicsAccessories.hpp"
 
 #if D3D11_SUPPORTED
-#    include "D3D11/CreateObjFromNativeResD3D11.h"
+#    include "D3D11/CreateObjFromNativeResD3D11.hpp"
 #endif
 
 #if D3D12_SUPPORTED
-#    include "D3D12/CreateObjFromNativeResD3D12.h"
+#    include "D3D12/CreateObjFromNativeResD3D12.hpp"
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-#    include "GL/CreateObjFromNativeResGL.h"
+#    include "GL/CreateObjFromNativeResGL.hpp"
 #endif
 
 #if VULKAN_SUPPORTED
-#    include "Vulkan/CreateObjFromNativeResVK.h"
+#    include "Vulkan/CreateObjFromNativeResVK.hpp"
 #endif
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 

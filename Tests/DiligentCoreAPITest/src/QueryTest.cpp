@@ -29,7 +29,7 @@
 #include <vector>
 #include <thread>
 
-#include "TestingEnvironment.h"
+#include "TestingEnvironment.hpp"
 
 #include "gtest/gtest.h"
 

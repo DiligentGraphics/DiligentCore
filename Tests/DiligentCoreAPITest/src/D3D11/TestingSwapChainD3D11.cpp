@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "../include/D3D11/TestingSwapChainD3D11.h"
+#include "../include/D3D11/TestingSwapChainD3D11.hpp"
 #include "../include/DXGITypeConversions.hpp"
 
 #include "RenderDeviceD3D11.h"

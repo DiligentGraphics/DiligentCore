@@ -25,18 +25,13 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-#include <string>
-
-#include "TestingEnvironment.h"
+#include "TestingSwapChainBase.hpp"
 
 #ifndef NOMINMAX
 #    define NOMINMAX
 #endif
 
-#include <d3d12.h>
-#include <d3dcompiler.h>
+#include <d3d11.h>
 #include <atlcomcli.h>
 
 namespace Diligent
@@ -45,39 +40,50 @@ namespace Diligent
 namespace Testing
 {
 
-// Implemented in TestingEnvironmentD3D11.cpp
-HRESULT CompileD3DShader(const std::string&      Source,
-                         LPCSTR                  strFunctionName,
-                         const D3D_SHADER_MACRO* pDefines,
-                         LPCSTR                  profile,
-                         ID3DBlob**              ppBlobOut);
-
-class TestingEnvironmentD3D12 final : public TestingEnvironment
+class TestingSwapChainD3D11 final : public TestingSwapChainBase<ISwapChain>
 {
 public:
-    TestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
-    ~TestingEnvironmentD3D12();
+    using TBase = TestingSwapChainBase<ISwapChain>;
+    TestingSwapChainD3D11(IReferenceCounters*  pRefCounters,
+                          IRenderDevice*       pDevice,
+                          IDeviceContext*      pContext,
+                          const SwapChainDesc& SCDesc);
 
-    static TestingEnvironmentD3D12* GetInstance() { return ValidatedCast<TestingEnvironmentD3D12>(TestingEnvironment::GetInstance()); }
+    virtual void TakeSnapshot() override final;
 
-    ID3D12Device* GetD3D12Device()
+    ID3D11Texture2D* GetD3D11RenderTarget()
     {
-        return m_pd3d12Device;
+        return m_pd3d11RenderTarget;
     }
 
-    //  The allocator is currently never reset, which is not an issue in this testing system.
-    CComPtr<ID3D12GraphicsCommandList> CreateGraphicsCommandList();
+    ID3D11Texture2D* GetD3D11DepthBuffer()
+    {
+        return m_pd3d11DepthBuffer;
+    }
 
-    void IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue);
+    ID3D11RenderTargetView* GetD3D11RTV()
+    {
+        return m_pd3d11RTV;
+    }
+
+    ID3D11UnorderedAccessView* GetD3D11UAV()
+    {
+        return m_pd3d11UAV;
+    }
+
+    ID3D11DepthStencilView* GetD3D11DSV()
+    {
+        return m_pd3d11DSV;
+    }
 
 private:
-    CComPtr<ID3D12Device>           m_pd3d12Device;
-    CComPtr<ID3D12CommandAllocator> m_pd3d12CmdAllocator;
-    CComPtr<ID3D12Fence>            m_pd3d12Fence;
-
-    UINT64 m_NextFenceValue = 1;
-
-    HANDLE m_WaitForGPUEventHandle = {};
+    CComPtr<ID3D11DeviceContext>       m_pd3d11Context;
+    CComPtr<ID3D11Texture2D>           m_pd3d11RenderTarget;
+    CComPtr<ID3D11Texture2D>           m_pd3d11DepthBuffer;
+    CComPtr<ID3D11RenderTargetView>    m_pd3d11RTV;
+    CComPtr<ID3D11UnorderedAccessView> m_pd3d11UAV;
+    CComPtr<ID3D11DepthStencilView>    m_pd3d11DSV;
+    CComPtr<ID3D11Texture2D>           m_pd3d11StagingTex;
 };
 
 } // namespace Testing
