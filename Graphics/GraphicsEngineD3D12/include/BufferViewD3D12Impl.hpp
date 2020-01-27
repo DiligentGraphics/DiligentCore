@@ -50,7 +50,7 @@ public:
     BufferViewD3D12Impl(IReferenceCounters*        pRefCounters,
                         RenderDeviceD3D12Impl*     pDevice,
                         const BufferViewDesc&      ViewDesc,
-                        class IBuffer*             pBuffer,
+                        IBuffer*                   pBuffer,
                         DescriptorHeapAllocation&& HandleAlloc,
                         bool                       bIsDefaultView);
 

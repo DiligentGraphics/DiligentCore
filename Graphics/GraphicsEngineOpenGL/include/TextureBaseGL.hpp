@@ -123,7 +123,7 @@ public:
 
 protected:
     virtual void CreateViewInternal(const struct TextureViewDesc& ViewDesc,
-                                    class ITextureView**          ppView,
+                                    ITextureView**                ppView,
                                     bool                          bIsDefaultView) override;
 
     void SetDefaultGLParameters();

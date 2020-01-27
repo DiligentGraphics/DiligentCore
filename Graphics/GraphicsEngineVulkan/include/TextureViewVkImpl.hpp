@@ -50,7 +50,7 @@ public:
     TextureViewVkImpl(IReferenceCounters*                 pRefCounters,
                       RenderDeviceVkImpl*                 pDevice,
                       const TextureViewDesc&              ViewDesc,
-                      class ITexture*                     pTexture,
+                      ITexture*                           pTexture,
                       VulkanUtilities::ImageViewWrapper&& ImgView,
                       bool                                bIsDefaultView);
     ~TextureViewVkImpl();

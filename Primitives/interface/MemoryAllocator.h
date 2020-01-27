@@ -38,9 +38,8 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 #if DILIGENT_CPP_INTERFACE
 
 /// Base interface for a raw memory allocator
-class IMemoryAllocator
+struct IMemoryAllocator
 {
-public:
     /// Allocates block of memory
     virtual void* Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber) = 0;
 
@@ -49,6 +48,33 @@ public:
 };
 
 #else
+
+struct IMemoryAllocator;
+
+// clang-format off
+
+struct IMemoryAllocatorMethods
+{
+    void* (*Allocate) (struct IMemoryAllocator*, size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber);
+    void  (*Free)     (struct IMemoryAllocator*, void* Ptr);
+};
+
+struct IMemoryAllocatorVtbl
+{
+    struct IMemoryAllocatorMethods MemoryAllocator;
+};
+
+// clang-format on
+
+typedef struct IMemoryAllocator
+{
+    struct IMemoryAllocatorVtbl* pVtbl;
+} IMemoryAllocator;
+
+// clang-format off
+
+#    define IMemoryAllocator_Allocate(This, ...) (This)->pVtbl->MemoryAllocator.Allocate((IMemoryAllocator*)(This), __VA_ARGS__)
+#    define IMemoryAllocator_Free(This, ...)     (This)->pVtbl->MemoryAllocator.Free    ((IMemoryAllocator*)(This), __VA_ARGS__)
 
 #endif
 

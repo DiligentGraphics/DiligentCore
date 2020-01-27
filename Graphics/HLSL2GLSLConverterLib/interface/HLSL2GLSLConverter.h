@@ -39,20 +39,45 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static constexpr INTERFACE_ID IID_HLSL2GLSLConversionStream =
     {0x1fde020a, 0x9c73, 0x4a76, {0x8a, 0xef, 0xc2, 0xc6, 0xc2, 0xcf, 0xe, 0xa5}};
 
-#if DILIGENT_CPP_INTERFACE
 
-class IHLSL2GLSLConversionStream : public IObject
+#define DILIGENT_INTERFACE_NAME IHLSL2GLSLConversionStream
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
+DILIGENT_INTERFACE(IHLSL2GLSLConversionStream, IObject)
 {
-public:
-    virtual void Convert(const Char* EntryPoint,
-                         SHADER_TYPE ShaderType,
-                         bool        IncludeDefintions,
-                         const char* SamplerSuffix,
-                         bool        UseInOutLocationQualifiers,
-                         IDataBlob** ppGLSLSource) = 0;
+    VIRTUAL void METHOD(Convert)(THIS_
+                                 const Char* EntryPoint,
+                                 SHADER_TYPE ShaderType,
+                                 bool        IncludeDefintions,
+                                 const char* SamplerSuffix,
+                                 bool        UseInOutLocationQualifiers,
+                                 IDataBlob** ppGLSLSource) PURE;
 };
 
-#else
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IHLSL2GLSLConversionStreamVtbl
+{
+    struct IObjectMethods                    Object;
+    struct IHLSL2GLSLConversionStreamMethods HLSL2GLSLConversionStream;
+};
+
+typedef struct IHLSL2GLSLConversionStream
+{
+    struct IHLSL2GLSLConversionStreamVtbl* pVtbl;
+} IHLSL2GLSLConversionStream;
+
+// clang-format off
+
+#    define IHLSL2GLSLConversionStream_Convert(This) (This)->pVtbl->HLSL2GLSLConversionStream.Convert((IHLSL2GLSLConversionStream*)(This), __VA_ARGS__)
+
+// clang-format on
 
 #endif
 
@@ -61,20 +86,42 @@ public:
 static constexpr INTERFACE_ID IID_HLSL2GLSLConverter =
     {0x44a21160, 0x77e0, 0x4ddc, {0xa5, 0x7e, 0xb8, 0xb8, 0xb6, 0x5b, 0x53, 0x42}};
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME IHLSL2GLSLConversionStream
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
 
 /// Interface to the buffer object implemented in OpenGL
-class IHLSL2GLSLConverter : public IObject
+DILIGENT_INTERFACE(IHLSL2GLSLConverter, IObject)
 {
-public:
-    virtual void CreateStream(const Char*                      InputFileName,
-                              IShaderSourceInputStreamFactory* pSourceStreamFactory,
-                              const Char*                      HLSLSource,
-                              size_t                           NumSymbols,
-                              IHLSL2GLSLConversionStream**     ppStream) const = 0;
+    VIRTUAL void METHOD(CreateStream)(THIS_
+                                      const Char*                      InputFileName,
+                                      IShaderSourceInputStreamFactory* pSourceStreamFactory,
+                                      const Char*                      HLSLSource,
+                                      size_t                           NumSymbols,
+                                      IHLSL2GLSLConversionStream**     ppStream) CONST PURE;
 };
 
-#else
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IHLSL2GLSLConverterVtbl
+{
+    struct IObjectMethods             Object;
+    struct IHLSL2GLSLConverterMethods HLSL2GLSLConverter;
+};
+
+typedef struct IHLSL2GLSLConverter
+{
+    struct IHLSL2GLSLConverterVtbl* pVtbl;
+} IHLSL2GLSLConverter;
+
+// clang-format off
+
+#    define IHLSL2GLSLConverter_CreateStream(This) (This)->pVtbl->HLSL2GLSLConverter.CreateStream((IHLSL2GLSLConverter*)(This), __VA_ARGS__)
+
+// clang-format on
 
 #endif
 

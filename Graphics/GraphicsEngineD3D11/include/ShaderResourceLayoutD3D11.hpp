@@ -41,8 +41,6 @@
 namespace Diligent
 {
 
-class IMemoryAllocator;
-
 /// Diligent::ShaderResourceLayoutD3D11 class
 /// http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout/
 // sizeof(ShaderResourceLayoutD3D11) == 64 (x64)

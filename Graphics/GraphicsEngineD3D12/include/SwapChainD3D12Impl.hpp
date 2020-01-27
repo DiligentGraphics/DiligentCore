@@ -37,9 +37,6 @@
 namespace Diligent
 {
 
-class ITextureViewD3D12;
-class IMemoryAllocator;
-
 /// Swap chain implementation in Direct3D12 backend.
 class SwapChainD3D12Impl final : public SwapChainD3DBase<ISwapChainD3D12, IDXGISwapChain3>
 {

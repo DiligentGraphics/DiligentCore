@@ -37,12 +37,6 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-class IRenderDevice;
-class IDeviceContext;
-class BufferGLImpl;
-struct BufferViewDesc;
-
 /// Buffer view implementation in OpenGL backend.
 class BufferViewGLImpl final : public BufferViewBase<IBufferViewGL, RenderDeviceGLImpl>
 {

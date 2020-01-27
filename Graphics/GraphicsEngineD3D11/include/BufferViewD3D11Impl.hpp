@@ -49,7 +49,7 @@ public:
     BufferViewD3D11Impl(IReferenceCounters*    pRefCounters,
                         RenderDeviceD3D11Impl* pDevice,
                         const BufferViewDesc&  ViewDesc,
-                        class IBuffer*         pBuffer,
+                        IBuffer*               pBuffer,
                         ID3D11View*            pD3D11View,
                         bool                   bIsDefaultView);
 

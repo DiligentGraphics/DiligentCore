@@ -77,8 +77,6 @@
 namespace Diligent
 {
 
-class IMemoryAllocator;
-
 class GLPipelineResourceLayout
 {
 public:

@@ -39,9 +39,6 @@
 namespace Diligent
 {
 
-class ITextureViewVk;
-class IMemoryAllocator;
-
 /// Swap chain implementation in Vulkan backend.
 class SwapChainVkImpl final : public SwapChainBase<ISwapChainVk>
 {

@@ -34,8 +34,6 @@
 namespace Diligent
 {
 
-class IMemoryAllocator;
-
 /// Swap chain implementation in OpenGL backend.
 class SwapChainGLImpl final : public SwapChainGLBase<ISwapChainGL>
 {

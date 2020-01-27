@@ -85,7 +85,7 @@ public:
     virtual void* GetNativeHandle() override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLBufferHandle())); }
 
 private:
-    virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, class IBufferView** ppView, bool bIsDefaultView) override;
+    virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;
 
     friend class DeviceContextGLImpl;
     friend class VAOCache;

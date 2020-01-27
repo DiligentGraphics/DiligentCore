@@ -31,11 +31,10 @@
 /// Definition of the Diligent::IBufferD3D12 interface
 
 #include "../../GraphicsEngine/interface/Buffer.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
 
 namespace Diligent
 {
-
-class IDeviceContext;
 
 // {3E9B15ED-A289-48DC-8214-C6E3E6177378}
 static constexpr INTERFACE_ID IID_BufferD3D12 =

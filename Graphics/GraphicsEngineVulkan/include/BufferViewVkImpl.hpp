@@ -51,7 +51,7 @@ public:
     BufferViewVkImpl(IReferenceCounters*                  pRefCounters,
                      RenderDeviceVkImpl*                  pDevice,
                      const BufferViewDesc&                ViewDesc,
-                     class IBuffer*                       pBuffer,
+                     IBuffer*                             pBuffer,
                      VulkanUtilities::BufferViewWrapper&& BuffView,
                      bool                                 bIsDefaultView);
     ~BufferViewVkImpl();

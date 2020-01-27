@@ -38,9 +38,6 @@
 namespace Diligent
 {
 
-class IRenderDevice;
-class IBuffer;
-
 /// Template class implementing base functionality for a buffer view object
 
 /// \tparam BaseInterface - base interface that this class will inheret

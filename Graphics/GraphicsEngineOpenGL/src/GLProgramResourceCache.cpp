@@ -43,7 +43,7 @@ size_t GLProgramResourceCache::GetRequriedMemorySize(Uint32 UBCount, Uint32 Samp
     return MemSize;
 }
 
-void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount, class IMemoryAllocator& MemAllocator)
+void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount, IMemoryAllocator& MemAllocator)
 {
     // clang-format off
     m_SmplrsOffset    = static_cast<Uint16>(m_UBsOffset    + sizeof(CachedUB)           * UBCount);
@@ -90,7 +90,7 @@ GLProgramResourceCache::~GLProgramResourceCache()
     VERIFY(!IsInitialized(), "Shader resource cache memory must be released with GLProgramResourceCache::Destroy()");
 }
 
-void GLProgramResourceCache::Destroy(class IMemoryAllocator& MemAllocator)
+void GLProgramResourceCache::Destroy(IMemoryAllocator& MemAllocator)
 {
     VERIFY(IsInitialized(), "Resource cache is not initialized");
     VERIFY(m_pdbgMemoryAllocator == &MemAllocator, "The allocator does not match the one used to create resources");

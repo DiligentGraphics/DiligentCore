@@ -365,7 +365,7 @@ void BufferGLImpl::BufferMemoryBarrier(Uint32 RequiredBarriers, GLContextState& 
 #endif
 }
 
-void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, class IBufferView** ppView, bool bIsDefaultView)
+void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBufferView** ppView, bool bIsDefaultView)
 {
     VERIFY(ppView != nullptr, "Buffer view pointer address is null");
     if (!ppView) return;

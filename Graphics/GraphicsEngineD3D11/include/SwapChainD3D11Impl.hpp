@@ -36,8 +36,6 @@
 namespace Diligent
 {
 
-class IMemoryAllocator;
-
 /// Swap chain implementation in Direct3D11 backend.
 class SwapChainD3D11Impl final : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>
 {

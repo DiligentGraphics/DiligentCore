@@ -63,7 +63,7 @@ public:
     TextureViewBase(IReferenceCounters*    pRefCounters,
                     RenderDeviceImplType*  pDevice,
                     const TextureViewDesc& ViewDesc,
-                    class ITexture*        pTexture,
+                    ITexture*              pTexture,
                     bool                   bIsDefaultView) :
         // Default views are created as part of the texture, so we cannot not keep strong
         // reference to the texture to avoid cyclic links. Instead, we will attach to the
@@ -77,7 +77,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TextureView, TDeviceObjectBase)
 
     /// Implementation of ITextureView::SetSampler()
-    virtual void SetSampler(class ISampler* pSampler) override final
+    virtual void SetSampler(ISampler* pSampler) override final
     {
 #ifdef DEVELOPMENT
         if (this->m_Desc.ViewType != TEXTURE_VIEW_SHADER_RESOURCE)

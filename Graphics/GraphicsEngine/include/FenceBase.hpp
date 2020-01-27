@@ -37,9 +37,6 @@
 namespace Diligent
 {
 
-class IRenderDevice;
-class IFence;
-
 /// Template class implementing base functionality for a Fence object
 
 /// \tparam BaseInterface - base interface that this class will inheret

@@ -49,7 +49,7 @@ public:
     TextureViewD3D11Impl(IReferenceCounters*    pRefCounters,
                          RenderDeviceD3D11Impl* pDevice,
                          const TextureViewDesc& ViewDesc,
-                         class ITexture*        pTexture,
+                         ITexture*              pTexture,
                          ID3D11View*            pD3D11View,
                          bool                   bIsDefaultView);
 

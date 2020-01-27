@@ -30,6 +30,7 @@
 /// \file
 /// Declaration of Diligent::ShaderResourceCacheD3D11 class
 
+#include "MemoryAllocator.h"
 #include "TextureBaseD3D11.hpp"
 #include "BufferD3D11Impl.hpp"
 #include "SamplerD3D11Impl.hpp"
@@ -126,9 +127,9 @@ public:
 
     static size_t GetRequriedMemorySize(const class ShaderResourcesD3D11& Resources);
 
-    void Initialize(const class ShaderResourcesD3D11& Resources, class IMemoryAllocator& MemAllocator);
-    void Initialize(Uint32 CBCount, Uint32 SRVCount, Uint32 SamplerCount, Uint32 UAVCount, class IMemoryAllocator& MemAllocator);
-    void Destroy(class IMemoryAllocator& MemAllocator);
+    void Initialize(const class ShaderResourcesD3D11& Resources, IMemoryAllocator& MemAllocator);
+    void Initialize(Uint32 CBCount, Uint32 SRVCount, Uint32 SamplerCount, Uint32 UAVCount, IMemoryAllocator& MemAllocator);
+    void Destroy(IMemoryAllocator& MemAllocator);
 
 
     __forceinline void SetCB(Uint32 Slot, RefCntAutoPtr<BufferD3D11Impl>&& pBuffD3D11Impl)

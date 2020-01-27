@@ -50,7 +50,7 @@ public:
     TextureViewD3D12Impl(IReferenceCounters*        pRefCounters,
                          RenderDeviceD3D12Impl*     pDevice,
                          const TextureViewDesc&     ViewDesc,
-                         class ITexture*            pTexture,
+                         ITexture*                  pTexture,
                          DescriptorHeapAllocation&& Descriptor,
                          DescriptorHeapAllocation&& TexArraySRVDescriptor,
                          DescriptorHeapAllocation&& MipLevelUAVDescriptors,

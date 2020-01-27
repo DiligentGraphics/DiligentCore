@@ -283,7 +283,7 @@ TextureBaseGL::~TextureBaseGL()
 IMPLEMENT_QUERY_INTERFACE(TextureBaseGL, IID_TextureGL, TTextureBase)
 
 
-void TextureBaseGL::CreateViewInternal(const struct TextureViewDesc& OrigViewDesc, class ITextureView** ppView, bool bIsDefaultView)
+void TextureBaseGL::CreateViewInternal(const struct TextureViewDesc& OrigViewDesc, ITextureView** ppView, bool bIsDefaultView)
 {
     VERIFY(ppView != nullptr, "Null pointer provided");
     if (!ppView) return;

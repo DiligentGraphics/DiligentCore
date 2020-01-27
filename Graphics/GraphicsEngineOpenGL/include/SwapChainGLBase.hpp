@@ -33,8 +33,6 @@
 namespace Diligent
 {
 
-class IMemoryAllocator;
-
 /// Base implementation of a swap chain for OpenGL.
 template <class BaseInterface>
 class SwapChainGLBase : public SwapChainBase<BaseInterface>

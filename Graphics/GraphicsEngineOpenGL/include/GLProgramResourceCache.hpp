@@ -115,8 +115,8 @@ public:
 
     static size_t GetRequriedMemorySize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount);
 
-    void Initialize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount, class IMemoryAllocator& MemAllocator);
-    void Destroy(class IMemoryAllocator& MemAllocator);
+    void Initialize(Uint32 UBCount, Uint32 SamplerCount, Uint32 ImageCount, Uint32 SSBOCount, IMemoryAllocator& MemAllocator);
+    void Destroy(IMemoryAllocator& MemAllocator);
 
     void SetUniformBuffer(Uint32 Binding, RefCntAutoPtr<BufferGLImpl>&& pBuff)
     {
