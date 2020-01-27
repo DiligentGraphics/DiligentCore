@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "../../Basic/interface/BasicPlatformMisc.h"
-#include "../../../Platforms/Basic/interface/DebugUtilities.h"
-#include "../../Linux/interface/LinuxPlatformMisc.h"
+#include "../../Basic/interface/BasicPlatformMisc.hpp"
+#include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "../../Linux/interface/LinuxPlatformMisc.hpp"
 
 struct AndroidMisc : public LinuxMisc
 {

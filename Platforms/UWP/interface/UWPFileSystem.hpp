@@ -25,7 +25,7 @@
 
 #include <memory>
 
-#include "../../Basic/interface/BasicFileSystem.h"
+#include "../../Basic/interface/BasicFileSystem.hpp"
 #include "../../../Primitives/interface/DataBlob.h"
 
 // Do not include windows headers here as they will mess up CreateDirectory()

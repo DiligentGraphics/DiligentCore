@@ -26,8 +26,8 @@
 #include <memory>
 #include <vector>
 
-#include "../../Basic/interface/BasicFileSystem.h"
-#include "../../Basic/interface/StandardFile.h"
+#include "../../Basic/interface/BasicFileSystem.hpp"
+#include "../../Basic/interface/StandardFile.hpp"
 
 using LinuxFile = StandardFile;
 

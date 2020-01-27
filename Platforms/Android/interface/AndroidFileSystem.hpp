@@ -28,7 +28,7 @@
 #include <fstream>
 #include <android/asset_manager.h>
 
-#include "../../Basic/interface/BasicFileSystem.h"
+#include "../../Basic/interface/BasicFileSystem.hpp"
 #include "../../../Primitives/interface/DataBlob.h"
 
 class AndroidFile : public BasicFile
