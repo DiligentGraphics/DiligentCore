@@ -33,7 +33,7 @@
 #include "RenderDevice.h"
 #include "DeviceContext.h"
 #include "SwapChain.h"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "Errors.hpp"
 #include "RefCntAutoPtr.hpp"
 

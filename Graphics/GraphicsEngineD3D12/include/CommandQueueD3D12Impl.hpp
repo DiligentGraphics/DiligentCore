@@ -31,7 +31,7 @@
 /// Declaration of Diligent::CommandQueueD3D12Impl class
 
 #include "CommandQueueD3D12.h"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include <mutex>
 
 namespace Diligent

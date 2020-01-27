@@ -33,7 +33,7 @@
 #include <cstring>
 #include <cstdio>
 #include "RefCntAutoPtr.hpp"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "UniqueIdentifier.hpp"
 #include "EngineMemory.h"
 

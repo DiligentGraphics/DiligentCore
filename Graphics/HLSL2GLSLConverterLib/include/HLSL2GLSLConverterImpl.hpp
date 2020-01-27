@@ -33,7 +33,7 @@
 #include <vector>
 
 #include "HLSL2GLSLConverter.h"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "HLSLKeywords.h"
 #include "Shader.h"
 #include "HashUtils.hpp"

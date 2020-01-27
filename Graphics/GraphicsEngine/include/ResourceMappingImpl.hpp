@@ -31,7 +31,7 @@
 /// Declaration of the Diligent::ResourceMappingImpl class
 
 #include "ResourceMapping.h"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include <unordered_map>
 #include "HashUtils.hpp"
 #include "STDAllocator.hpp"

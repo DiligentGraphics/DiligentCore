@@ -36,7 +36,7 @@
 #include "ResourceMappingImpl.hpp"
 #include "StateObjectsRegistry.hpp"
 #include "HashUtils.hpp"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "DeviceContext.h"
 #include "SwapChain.h"
 #include "GraphicsAccessories.hpp"

@@ -27,7 +27,7 @@
 
 #include <vector>
 
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "RenderDevice.h"
 #include "DeviceContext.h"

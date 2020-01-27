@@ -32,7 +32,7 @@
 
 #include "../../Primitives/interface/FileStream.h"
 #include "../../Primitives/interface/DataBlob.h"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "RefCountedObjectImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 

@@ -31,7 +31,7 @@
 /// Implementation of the Diligent::ShaderResourceBindingBase template class
 
 #include "ShaderResourceBinding.h"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "GraphicsTypes.h"
 #include "RefCntAutoPtr.hpp"
 

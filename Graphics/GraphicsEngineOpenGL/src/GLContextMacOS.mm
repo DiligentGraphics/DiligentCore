@@ -25,9 +25,9 @@
 
 #import <AppKit/AppKit.h>
 
-#include "GLContextMacOS.h"
+#include "GLContextMacOS.hpp"
 #include "DeviceCaps.h"
-#include "GLTypeConversions.h"
+#include "GLTypeConversions.hpp"
 
 static void glDrawArraysInstancedBaseInstance_stub(GLenum mode, GLint first, GLsizei count, GLsizei primcount, GLuint baseinstance)
 {

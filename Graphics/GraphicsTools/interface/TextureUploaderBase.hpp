@@ -30,7 +30,7 @@
 #include <vector>
 
 #include "TextureUploader.hpp"
-#include "../../../Common/interface/ObjectBase.h"
+#include "../../../Common/interface/ObjectBase.hpp"
 #include "../../../Common/interface/HashUtils.hpp"
 #include "../../../Common/interface/RefCntAutoPtr.hpp"
 

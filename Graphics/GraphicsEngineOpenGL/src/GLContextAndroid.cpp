@@ -24,7 +24,7 @@
 #include "pch.h"
 #include <utility>
 
-#include "GLContextAndroid.h"
+#include "GLContextAndroid.hpp"
 
 #ifndef EGL_CONTEXT_MINOR_VERSION_KHR
 #    define EGL_CONTEXT_MINOR_VERSION_KHR 0x30FB

@@ -34,7 +34,7 @@
 #include <deque>
 #include "vulkan.h"
 #include "CommandQueueVk.h"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
 #include "FenceVkImpl.hpp"
 

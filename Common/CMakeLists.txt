@@ -18,7 +18,7 @@ set(INTERFACE
     interface/HashUtils.hpp
     interface/LockHelper.hpp 
     interface/MemoryFileStream.hpp 
-    interface/ObjectBase.h
+    interface/ObjectBase.hpp
     interface/RefCntAutoPtr.hpp
     interface/RefCountedObjectImpl.hpp
     interface/STDAllocator.hpp

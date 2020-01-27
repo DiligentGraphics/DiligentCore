@@ -25,4 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/Common/interface/ObjectBase.h"
+#include "DiligentCore/Common/interface/ObjectBase.hpp"

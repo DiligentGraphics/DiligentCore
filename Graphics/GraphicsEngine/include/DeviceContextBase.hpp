@@ -36,7 +36,7 @@
 #include "DeviceObjectBase.hpp"
 #include "ResourceMapping.h"
 #include "Sampler.h"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "DebugUtilities.hpp"
 #include "ValidatedCast.hpp"
 #include "GraphicsAccessories.hpp"

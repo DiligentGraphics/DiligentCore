@@ -27,7 +27,7 @@
 
 #include "pch.h"
 #include "DefaultShaderSourceStreamFactory.h"
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "EngineMemory.h"
 #include "BasicFileStream.hpp"

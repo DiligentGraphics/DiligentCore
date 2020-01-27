@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "ObjectBase.h"
+#include "ObjectBase.hpp"
 #include "HLSL2GLSLConverter.h"
 
 namespace Diligent
