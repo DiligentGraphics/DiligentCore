@@ -67,6 +67,44 @@ public:
 
 #else
 
+struct IEngineFactory;
+struct IShaderSourceInputStreamFactory;
+
+// clang-format off
+
+struct IEngineFactoryMethods
+{
+    const struct APIInfo* (*GetAPIInfo)                            (struct IEngineFactory*);
+    void                  (*CreateDefaultShaderSourceStreamFactory)(struct IEngineFactory*,
+                                                                    const Char*                              SearchDirectories,
+                                                                    struct IShaderSourceInputStreamFactory** ppShaderSourceFactory);
+
+#    if PLATFORM_ANDROID
+    void (*InitAndroidFileSystem)                                  (struct IEngineFactory*, void* Activity, const char* ActivityClassName);
+#    endif
+};
+
+// clang-format on
+
+struct IEngineFactoryVtbl
+{
+    struct IObjectMethods        Object;
+    struct IEngineFactoryMethods EngineFactory;
+};
+
+struct IEngineFactory
+{
+    struct IEngineFactoryVtbl* pVtbl;
+};
+
+// clang-format off
+
+#    define IEngineFactory_GetAPIInfo(This)                                  (This)->pVtbl->EngineFactory.GetAPIInfo                            ((struct IEngineFactory*)(This))
+#    define IEngineFactory_CreateDefaultShaderSourceStreamFactory(This, ...) (This)->pVtbl->EngineFactory.CreateDefaultShaderSourceStreamFactory((struct IEngineFactory*)(This), __VA_ARGS__)
+#    define IEngineFactory_InitAndroidFileSystem(This, ...)                  (This)->pVtbl->EngineFactory.InitAndroidFileSystem                 ((struct IEngineFactory*)(This), __VA_ARGS__)
+
+// clang-format on
+
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

@@ -26,3 +26,12 @@
  */
 
 #include "DiligentCore/Graphics/GraphicsEngine/interface/EngineFactory.h"
+
+void TestEngineFactortCInterface(struct IEngineFactory* pFactory)
+{
+    struct APIInfo apiInfo = *IEngineFactory_GetAPIInfo(pFactory);
+    (void)apiInfo;
+    struct IShaderSourceInputStreamFactory* pShaderFactory = NULL;
+
+    IEngineFactory_CreateDefaultShaderSourceStreamFactory(pFactory, "directories", &pShaderFactory);
+}
