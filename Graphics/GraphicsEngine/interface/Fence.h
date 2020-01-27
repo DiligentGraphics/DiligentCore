@@ -100,8 +100,8 @@ struct IFence
 
 #    define IFence_GetDesc(This) (const struct FenceDesc*)IDeviceObject_GetDesc(This)
 
-#    define IFence_GetCompletedValue(This) (This)->pVtbl->Fence.GetCompletedValue((struct IFenceVtbl*)(This))
-#    define IFence_Reset(This, ...)        (This)->pVtbl->Fence.Reset            ((struct IFenceVtbl*)(This), __VA_ARGS__)
+#    define IFence_GetCompletedValue(This) (This)->pVtbl->Fence.GetCompletedValue((struct IFence*)(This))
+#    define IFence_Reset(This, ...)        (This)->pVtbl->Fence.Reset            ((struct IFence*)(This), __VA_ARGS__)
 
 // clang-format on
 

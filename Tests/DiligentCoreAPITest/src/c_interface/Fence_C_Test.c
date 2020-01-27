@@ -25,19 +25,56 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#include "Fence.h"
 
-namespace Diligent
-{
+int TestObjectCInterface(struct IObject* pObject);
+int TestDeviceObjectCInterface(struct IDeviceObject* pDeviceObject);
 
-namespace Testing
+int TestFenceCInterface(struct IFence* pFence)
 {
+    struct IObject*           pUnknown = NULL;
+    ReferenceCounterValueType RefCnt1 = 0, RefCnt2 = 0;
 
-TestingEnvironment::NativeWindow TestingEnvironment::CreateNativeWindow()
-{
-    return TestingEnvironment::NativeWindow{};
+    struct DeviceObjectAttribs Desc;
+    Int32                      UniqueId = 0;
+
+    struct FenceDesc FenceDesc;
+    Uint64           FenceValue = 0;
+
+    int num_errors =
+        TestObjectCInterface((struct IObject*)pFence) +
+        TestDeviceObjectCInterface((struct IDeviceObject*)pFence);
+
+    IObject_QueryInterface(pFence, &IID_Unknown, &pUnknown);
+    if (pUnknown != NULL)
+        IObject_Release(pUnknown);
+    else
+        ++num_errors;
+
+    RefCnt1 = IObject_AddRef(pFence);
+    if (RefCnt1 <= 1)
+        ++num_errors;
+    RefCnt2 = IObject_Release(pFence);
+    if (RefCnt2 <= 0)
+        ++num_errors;
+    if (RefCnt2 != RefCnt1 - 1)
+        ++num_errors;
+
+    Desc = *IDeviceObject_GetDesc(pFence);
+    if (Desc.Name == NULL)
+        ++num_errors;
+
+    UniqueId = IDeviceObject_GetUniqueID(pFence);
+    if (UniqueId == 0)
+        ++num_errors;
+
+    FenceDesc = *IFence_GetDesc(pFence);
+    if (FenceDesc._DeviceObjectAttribs.Name != NULL)
+        ++num_errors;
+
+    FenceValue = IFence_GetCompletedValue(pFence);
+    if (FenceValue != 0)
+        ++num_errors;
+
+    return num_errors;
 }
-
-} // namespace Testing
-
-} // namespace Diligent
