@@ -28,8 +28,8 @@
 
 #include "ShaderResourceBindingMtl.h"
 #include "RenderDeviceMtl.h"
-#include "ShaderResourceBindingBase.h"
-#include "STDAllocator.h"
+#include "ShaderResourceBindingBase.hpp"
+#include "STDAllocator.hpp"
 
 namespace Diligent
 {

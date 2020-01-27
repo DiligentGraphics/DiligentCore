@@ -28,8 +28,7 @@
 
 #include "ShaderMtl.h"
 #include "RenderDeviceMtl.h"
-#include "ShaderBase.h"
-#include "ShaderBase.h"
+#include "ShaderBase.hpp"
 #include "RenderDeviceMtlImpl.h"
 
 namespace Diligent

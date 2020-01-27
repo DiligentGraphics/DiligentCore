@@ -28,7 +28,7 @@
 
 #include "TextureViewMtl.h"
 #include "RenderDeviceMtl.h"
-#include "TextureViewBase.h"
+#include "TextureViewBase.hpp"
 #include "RenderDeviceMtlImpl.h"
 
 namespace Diligent

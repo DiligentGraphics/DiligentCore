@@ -28,7 +28,7 @@
 
 #include "BufferMtl.h"
 #include "RenderDeviceMtl.h"
-#include "BufferBase.h"
+#include "BufferBase.hpp"
 #include "BufferViewMtlImpl.h"
 #include "RenderDeviceMtlImpl.h"
 

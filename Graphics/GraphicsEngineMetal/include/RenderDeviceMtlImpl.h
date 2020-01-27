@@ -27,7 +27,7 @@
 /// Declaration of Diligent::RenderDeviceMtlImpl class
 
 #include "RenderDeviceMtl.h"
-#include "RenderDeviceBase.h"
+#include "RenderDeviceBase.hpp"
 #include "DeviceContextMtl.h"
 
 namespace Diligent

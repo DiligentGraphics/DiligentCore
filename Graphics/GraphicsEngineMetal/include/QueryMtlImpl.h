@@ -29,7 +29,7 @@
 #include <deque>
 #include "QueryMtl.h"
 #include "RenderDeviceMtl.h"
-#include "QueryBase.h"
+#include "QueryBase.hpp"
 #include "RenderDeviceMtlImpl.h"
 
 namespace Diligent

@@ -28,9 +28,9 @@
 
 #include "PipelineStateMtl.h"
 #include "RenderDeviceMtl.h"
-#include "PipelineStateBase.h"
+#include "PipelineStateBase.hpp"
 #include "ShaderMtlImpl.h"
-#include "SRBMemoryAllocator.h"
+#include "SRBMemoryAllocator.hpp"
 #include "RenderDeviceMtlImpl.h"
 
 namespace Diligent

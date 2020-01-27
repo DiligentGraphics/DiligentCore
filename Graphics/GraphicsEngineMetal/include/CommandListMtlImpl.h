@@ -27,7 +27,7 @@
 /// Declaration of Diligent::CommandListMtlImpl class
 
 #include "RenderDeviceMtl.h"
-#include "CommandListBase.h"
+#include "CommandListBase.hpp"
 #include "RenderDeviceMtlImpl.h"
 
 namespace Diligent

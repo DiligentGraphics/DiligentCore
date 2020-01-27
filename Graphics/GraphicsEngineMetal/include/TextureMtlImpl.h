@@ -28,7 +28,7 @@
 
 #include "TextureMtl.h"
 #include "RenderDeviceMtl.h"
-#include "TextureBase.h"
+#include "TextureBase.hpp"
 #include "TextureViewMtlImpl.h"
 #include "RenderDeviceMtlImpl.h"
 

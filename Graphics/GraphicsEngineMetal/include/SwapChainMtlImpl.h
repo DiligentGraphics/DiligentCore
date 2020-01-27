@@ -27,7 +27,7 @@
 /// Declaration of Diligent::SwapChainMtlImpl class
 
 #include "SwapChainMtl.h"
-#include "SwapChainBase.h"
+#include "SwapChainBase.hpp"
 
 namespace Diligent
 {

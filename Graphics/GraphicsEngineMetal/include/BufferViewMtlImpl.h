@@ -28,7 +28,7 @@
 
 #include "BufferViewMtl.h"
 #include "RenderDeviceMtl.h"
-#include "BufferViewBase.h"
+#include "BufferViewBase.hpp"
 #include "RenderDeviceMtlImpl.h"
 
 namespace Diligent

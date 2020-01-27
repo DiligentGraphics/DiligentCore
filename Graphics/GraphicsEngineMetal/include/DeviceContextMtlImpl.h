@@ -27,7 +27,7 @@
 /// Declaration of Diligent::DeviceContextMtlImpl class
 
 #include "DeviceContextMtl.h"
-#include "DeviceContextBase.h"
+#include "DeviceContextBase.hpp"
 #include "ShaderMtlImpl.h"
 #include "BufferMtlImpl.h"
 #include "TextureMtlImpl.h"

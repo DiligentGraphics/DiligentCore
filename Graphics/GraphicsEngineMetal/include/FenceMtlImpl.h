@@ -29,7 +29,7 @@
 #include <deque>
 #include "FenceMtl.h"
 #include "RenderDeviceMtl.h"
-#include "FenceBase.h"
+#include "FenceBase.hpp"
 #include "RenderDeviceMtlImpl.h"
 
 namespace Diligent
