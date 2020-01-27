@@ -27,9 +27,9 @@
 #import <OpenGLES/EAGL.h>
 #import <OpenGLES/EAGLDrawable.h>
 
-#include "DeviceContextGLImpl.h"
-#include "RenderDeviceGLImpl.h"
-#include "SwapChainGLIOS.h"
+#include "DeviceContextGLImpl.hpp"
+#include "RenderDeviceGLImpl.hpp"
+#include "SwapChainGLIOS.hpp"
 
 namespace Diligent
 {
