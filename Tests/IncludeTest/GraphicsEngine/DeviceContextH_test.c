@@ -26,3 +26,19 @@
  */
 
 #include "DiligentCore/Graphics/GraphicsEngine/interface/DeviceContext.h"
+
+void TestDeviceContextCInterface(struct IDeviceContext* pCtx)
+{
+    struct IPipelineState*            pPSO                       = NULL;
+    struct DrawAttribs                drawAttribs                = {0};
+    struct DrawIndexedAttribs         drawIndexedAttribs         = {0};
+    struct DrawIndirectAttribs        drawIndirectAttribs        = {0};
+    struct DrawIndexedIndirectAttribs drawIndexedIndirectAttribs = {0};
+    struct IBuffer*                   pIndirectBuffer            = NULL;
+
+    IDeviceContext_SetPipelineState(pCtx, pPSO);
+    IDeviceContext_Draw(pCtx, &drawAttribs);
+    IDeviceContext_DrawIndexed(pCtx, &drawIndexedAttribs);
+    IDeviceContext_DrawIndirect(pCtx, &drawIndirectAttribs, pIndirectBuffer);
+    IDeviceContext_DrawIndexedIndirect(pCtx, &drawIndexedIndirectAttribs, pIndirectBuffer);
+}

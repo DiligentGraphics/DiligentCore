@@ -54,15 +54,20 @@ class ICommandList : public IDeviceObject
 struct ICommandList;
 
 //  C requires that a struct or union has at least one member
-//struct ICommandListVtbl
+//struct ICommandListMethods
 //{
 //};
 
+struct ICommandListVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    //struct ICommandListMethods  CommandList;
+};
+
 struct ICommandList
 {
-    struct IObjectVtbl*       pObjectVtbl;
-    struct IDeviceObjectVtbl* pDeviceObjectVtbl;
-    //struct ICommandListVtbl*  pCommandListVtbl;
+    struct ICommandListVtbl* pVtbl;
 };
 
 #endif

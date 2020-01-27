@@ -34,9 +34,9 @@
 #elif PLATFORM_LINUX
 #    include "GLContextLinux.hpp"
 #elif PLATFORM_MACOS
-#    include "GLContextMacOS.h"
+#    include "GLContextMacOS.hpp"
 #elif PLATFORM_IOS
-#    include "GLContextIOS.h"
+#    include "GLContextIOS.hpp"
 #else
 #    error Unsupported platform
 #endif
