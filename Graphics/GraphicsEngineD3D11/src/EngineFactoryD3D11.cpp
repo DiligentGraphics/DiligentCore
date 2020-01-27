@@ -324,7 +324,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
 ///         x86               | GraphicsEngineD3D11_32d.dll   |    GraphicsEngineD3D11_32r.dll
 ///         x64               | GraphicsEngineD3D11_64d.dll   |    GraphicsEngineD3D11_64r.dll
 ///
-void LoadGraphicsEngineD3D11(GetEngineFactoryD3D11Type& GetFactoryFunc)
+GetEngineFactoryD3D11Type LoadGraphicsEngineD3D11()
 {
 // This function is only required because DoxyGen refuses to generate documentation for a static function when SHOW_FILES==NO
 #    error This function must never be compiled;
@@ -338,3 +338,11 @@ IEngineFactoryD3D11* GetEngineFactoryD3D11()
 }
 
 } // namespace Diligent
+
+extern "C"
+{
+    Diligent::IEngineFactoryD3D11* Diligent_GetEngineFactoryD3D11()
+    {
+        return Diligent::GetEngineFactoryD3D11();
+    }
+}

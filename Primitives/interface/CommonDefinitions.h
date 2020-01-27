@@ -53,11 +53,14 @@
 
 #    define DEFAULT_INITIALIZER(x)
 
+#    define DILIGENT_GLOBAL_FUNCTION(FuncName) Diligent_##FuncName
+
 #else
 
 #    define DILIGENT_BEGIN_NAMESPACE(Name) \
         namespace Name                     \
         {
+
 #    define DILIGENT_END_NAMESPACE }
 
 #    define DILIGENT_TYPED_ENUM(EnumName, EnumType) enum EnumName : EnumType
@@ -66,6 +69,8 @@
         {
 
 #    define DEFAULT_INITIALIZER(x) = x
+
+#    define DILIGENT_GLOBAL_FUNCTION(FuncName) FuncName
 
 #endif
 

@@ -32,12 +32,13 @@
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {05B1CBB8-FCAD-49EE-BADA-7801223EC3FE}
-static constexpr INTERFACE_ID IID_RenderDeviceD3D11 =
+static const struct INTERFACE_ID IID_RenderDeviceD3D11 =
     {0x5b1cbb8, 0xfcad, 0x49ee, {0xba, 0xda, 0x78, 0x1, 0x22, 0x3e, 0xc3, 0xfe}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a render device.
 class IRenderDeviceD3D11 : public IRenderDevice
@@ -103,4 +104,10 @@ public:
                                               ITexture**       ppTexture) = 0;
 };
 
-} // namespace Diligent
+#else
+
+
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

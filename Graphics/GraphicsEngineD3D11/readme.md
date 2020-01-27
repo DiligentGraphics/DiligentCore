@@ -19,9 +19,8 @@ EngineCI.DebugFlags =
 
 // Get pointer to the function that returns the factory
 #if ENGINE_DLL
-    GetEngineFactoryD3D11Type GetEngineFactoryD3D11 = nullptr;
     // Load the dll and import GetEngineFactoryD3D11() function
-    LoadGraphicsEngineD3D11(GetEngineFactoryD3D11);
+    auto GetEngineFactoryD3D11 = LoadGraphicsEngineD3D11();
 #endif
 auto* pFactoryD3D11 = GetEngineFactoryD3D11();
 

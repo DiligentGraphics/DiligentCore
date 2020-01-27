@@ -32,12 +32,13 @@
 
 #include "../../GraphicsEngineD3DBase/interface/ShaderD3D.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {C513E83E-B037-405B-8B49-BF8F5C220DEE}
-static constexpr INTERFACE_ID IID_ShaderD3D11 =
+static const struct INTERFACE_ID IID_ShaderD3D11 =
     {0xc513e83e, 0xb037, 0x405b, {0x8b, 0x49, 0xbf, 0x8f, 0x5c, 0x22, 0xd, 0xee}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a shader object.
 class IShaderD3D11 : public IShaderD3D
@@ -50,4 +51,28 @@ public:
     virtual ID3D11DeviceChild* GetD3D11Shader() = 0;
 };
 
-} // namespace Diligent
+#else
+
+struct IShaderD3D11Methods
+{
+    ID3D11DeviceChild* (*GetD3D11Shader)();
+};
+
+struct IShaderD3D11Vtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IShaderMethods       Shader;
+    struct IShaderD3D11Methods  ShaderD3D11;
+};
+
+struct IShaderD3D11
+{
+    struct IShaderD3D11Vtbl* pVtbl;
+};
+
+#    define IShaderD3D11_GetD3D11Shader(This) (This)->pVtbl->ShaderD3D11.GetD3D11Shader((struct IShaderD3D11*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

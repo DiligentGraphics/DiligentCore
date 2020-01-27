@@ -32,8 +32,9 @@
 
 #include "../../GraphicsEngine/interface/TextureView.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+#if DILIGENT_CPP_INTERFACE
 
 // {0767EBE4-AD47-4E70-9B65-38C6B9CAC37D}
 static constexpr INTERFACE_ID IID_TextureViewD3D11 =
@@ -50,4 +51,30 @@ public:
     virtual ID3D11View* GetD3D11View() = 0;
 };
 
-} // namespace Diligent
+
+#else
+
+struct ITextureViewD3D11Methods
+{
+    ID3D11View* (*GetD3D11View)();
+};
+
+
+struct ITextureViewD3D11Vtbl
+{
+    struct IObjectMethods           Object;
+    struct IDeviceObjectMethods     DeviceObject;
+    struct ITextureViewMethods      TextureView;
+    struct ITextureViewD3D11Methods TextureViewD3D11;
+};
+
+struct ITextureViewD3D11
+{
+    struct ITextureViewD3D11Vtbl* pVtbl;
+};
+
+#    define ITextureViewD3D11_GetD3D11View(This) (This)->pVtbl->TextureViewD3D11.GetD3D11View((struct ITextureViewD3D11*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

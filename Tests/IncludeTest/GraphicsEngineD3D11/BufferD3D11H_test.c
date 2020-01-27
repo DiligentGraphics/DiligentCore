@@ -25,50 +25,11 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <d3d11.h>
+#include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/BufferD3D11.h"
 
-/// \file
-/// Definition of the Diligent::IQueryD3D11 interface
-
-#include "../../GraphicsEngine/interface/Query.h"
-
-DILIGENT_BEGIN_NAMESPACE(Diligent)
-
-// {77D95EAA-D16E-43F4-B0EB-BEBCD2EC8C57}
-static const struct INTERFACE_ID IID_QueryD3D11 =
-    {0x77d95eaa, 0xd16e, 0x43f4, {0xb0, 0xeb, 0xbe, 0xbc, 0xd2, 0xec, 0x8c, 0x57}};
-
-#if DILIGENT_CPP_INTERFACE
-
-/// Exposes Direct3D11-specific functionality of a Query object.
-class IQueryD3D11 : public IQuery
+void TestBufferD3D11_CInterface(struct IBufferD3D11* pBuffer)
 {
-    /// Returns a pointer to the internal ID3D11Query object.
-    virtual ID3D11Query* GetD3D11Query() = 0;
-};
-
-#else
-
-struct IQueryD3D11Methods
-{
-    ID3D11Query* (*GetD3D11Query)();
-};
-
-struct IQueryD3D11Vtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IQueryMethods        Query;
-    struct IQueryD3D11Methods   QueryD3D11;
-};
-
-struct IQueryD3D11
-{
-    struct IQueryD3D11Vtbl* pVtbl;
-};
-
-#    define IQueryD3D11_GetD3D11Query(This) (This)->pVtbl->QueryD3D11.GetD3D11Query((struct IQueryD3D11*)(This))
-
-#endif
-
-DILIGENT_END_NAMESPACE // namespace Diligent
+    ID3D11Buffer* pd3d11Buffer = IBufferD3D11_GetD3D11Buffer(pBuffer);
+    (void)pd3d11Buffer;
+}

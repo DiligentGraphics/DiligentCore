@@ -30,10 +30,13 @@
 /// \file
 /// Helper function to load engine DLL on Windows
 
-#include <sstream>
+#include <stdlib.h>
+#include <stdio.h>
+
+#include "../../../Primitives/interface/CommonDefinitions.h"
 
 #if PLATFORM_UNIVERSAL_WINDOWS
-#    include "../../../Common/interface/StringTools.h"
+#    include "../../../Common/interface/StringTools.hpp"
 #endif
 
 #ifndef NOMINMAX
@@ -41,53 +44,57 @@
 #endif
 #include <Windows.h>
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 inline FARPROC LoadEngineDll(const char* EngineName, const char* GetFactoryFuncName)
 {
-    std::string LibName = EngineName;
+    const size_t StringBufferSize = 4096;
+    char*        LibName          = (char*)malloc(StringBufferSize);
+    FARPROC      GetFactoryFunc   = NULL;
+    HMODULE      hModule          = NULL;
 
+    // clang-format off
 #if _WIN64
-    LibName += "_64";
+    const char* Arch = "_64";
 #else
-    LibName += "_32";
+    const char* Arch = "_32";
 #endif
 
 #ifdef _DEBUG
-    LibName += "d";
+    const char* Conf = "d";
 #else
-    LibName += "r";
+    const char* Conf = "r";
 #endif
 
-    LibName += ".dll";
+    sprintf_s(LibName, StringBufferSize, "%s%s%s.dll", EngineName, Conf, Arch);
 
 #if PLATFORM_WIN32
-    auto hModule = LoadLibraryA(LibName.c_str());
+    hModule = LoadLibraryA(LibName);
 #elif PLATFORM_UNIVERSAL_WINDOWS
-    auto hModule = LoadPackagedLibrary(WidenString(LibName).c_str(), 0);
+    hModule = LoadPackagedLibrary(WidenString(LibName).c_str(), 0);
 #else
 #    error Unexpected platform
 #endif
+    // clang-format on
 
     if (hModule == NULL)
     {
-        std::stringstream ss;
-        ss << "Failed to load " << LibName << " library.\n";
-        OutputDebugStringA(ss.str().c_str());
+        printf("Failed to load %s library.\n", LibName);
+        OutputDebugStringA("Failed to load engine DLL");
+        free(LibName);
         return NULL;
     }
 
-    auto GetFactoryFunc = GetProcAddress(hModule, GetFactoryFuncName);
+    GetFactoryFunc = GetProcAddress(hModule, GetFactoryFuncName);
     if (GetFactoryFunc == NULL)
     {
-        std::stringstream ss;
-        ss << "Failed to load " << GetFactoryFuncName << " function from " << LibName << " library.\n";
-        OutputDebugStringA(ss.str().c_str());
+        printf("Failed to load %s function from %s library.\n", GetFactoryFuncName, LibName);
+        OutputDebugStringA("Failed to load engine factory function from library");
         FreeLibrary(hModule);
     }
 
+    free(LibName);
     return GetFactoryFunc;
 }
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -25,50 +25,29 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <d3d11.h>
+#include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/PipelineStateD3D11.h"
 
-/// \file
-/// Definition of the Diligent::IQueryD3D11 interface
-
-#include "../../GraphicsEngine/interface/Query.h"
-
-DILIGENT_BEGIN_NAMESPACE(Diligent)
-
-// {77D95EAA-D16E-43F4-B0EB-BEBCD2EC8C57}
-static const struct INTERFACE_ID IID_QueryD3D11 =
-    {0x77d95eaa, 0xd16e, 0x43f4, {0xb0, 0xeb, 0xbe, 0xbc, 0xd2, 0xec, 0x8c, 0x57}};
-
-#if DILIGENT_CPP_INTERFACE
-
-/// Exposes Direct3D11-specific functionality of a Query object.
-class IQueryD3D11 : public IQuery
+void TestPipelineStateD3D11CInterface(struct IPipelineStateD3D11* pPSO)
 {
-    /// Returns a pointer to the internal ID3D11Query object.
-    virtual ID3D11Query* GetD3D11Query() = 0;
-};
-
-#else
-
-struct IQueryD3D11Methods
-{
-    ID3D11Query* (*GetD3D11Query)();
-};
-
-struct IQueryD3D11Vtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IQueryMethods        Query;
-    struct IQueryD3D11Methods   QueryD3D11;
-};
-
-struct IQueryD3D11
-{
-    struct IQueryD3D11Vtbl* pVtbl;
-};
-
-#    define IQueryD3D11_GetD3D11Query(This) (This)->pVtbl->QueryD3D11.GetD3D11Query((struct IQueryD3D11*)(This))
-
-#endif
-
-DILIGENT_END_NAMESPACE // namespace Diligent
+    ID3D11BlendState*        pBlendState        = IPipelineStateD3D11_GetD3D11BlendState(pPSO);
+    ID3D11RasterizerState*   pRasterizerState   = IPipelineStateD3D11_GetD3D11RasterizerState(pPSO);
+    ID3D11DepthStencilState* pDepthStencilState = IPipelineStateD3D11_GetD3D11DepthStencilState(pPSO);
+    ID3D11InputLayout*       pInputLayot        = IPipelineStateD3D11_GetD3D11InputLayout(pPSO);
+    ID3D11VertexShader*      pVS                = IPipelineStateD3D11_GetD3D11VertexShader(pPSO);
+    ID3D11PixelShader*       pPS                = IPipelineStateD3D11_GetD3D11PixelShader(pPSO);
+    ID3D11GeometryShader*    pGS                = IPipelineStateD3D11_GetD3D11GeometryShader(pPSO);
+    ID3D11DomainShader*      pDS                = IPipelineStateD3D11_GetD3D11DomainShader(pPSO);
+    ID3D11HullShader*        pHS                = IPipelineStateD3D11_GetD3D11HullShader(pPSO);
+    ID3D11ComputeShader*     pCS                = IPipelineStateD3D11_GetD3D11ComputeShader(pPSO);
+    (void)pBlendState;
+    (void)pRasterizerState;
+    (void)pDepthStencilState;
+    (void)pInputLayot;
+    (void)pVS;
+    (void)pPS;
+    (void)pGS;
+    (void)pDS;
+    (void)pHS;
+    (void)pCS;
+}

@@ -39,12 +39,13 @@
 #    include "../../GraphicsEngine/interface/LoadEngineDll.h"
 #endif
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {62663A30-AAF0-4A9A-9729-9EAC6BF789F2}
-static const INTERFACE_ID IID_EngineFactoryD3D11 =
+static const struct INTERFACE_ID IID_EngineFactoryD3D11 =
     {0x62663a30, 0xaaf0, 0x4a9a, {0x97, 0x29, 0x9e, 0xac, 0x6b, 0xf7, 0x89, 0xf2}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Engine factory for Direct3D11 rendering backend.
 class IEngineFactoryD3D11 : public IEngineFactory
@@ -142,21 +143,85 @@ public:
                                        DisplayModeAttribs*    DisplayModes) = 0;
 };
 
+#else
+
+struct IEngineFactoryD3D11;
+
+struct IEngineFactoryD3D11Methods
+{
+    void (*CreateDeviceAndContextsD3D11)(struct IEngineFactoryD3D11*,
+                                         const struct EngineD3D11CreateInfo* EngineCI,
+                                         class IRenderDevice**               ppDevice,
+                                         class IDeviceContext**              ppContexts);
+
+    void (*CreateSwapChainD3D11)(struct IEngineFactoryD3D11*,
+                                 class IRenderDevice*             pDevice,
+                                 class IDeviceContext*            pImmediateContext,
+                                 const struct SwapChainDesc*      SCDesc,
+                                 const struct FullScreenModeDesc* FSDesc,
+                                 void*                            pNativeWndHandle,
+                                 class ISwapChain**               ppSwapChain);
+
+    void (*AttachToD3D11Device)(struct IEngineFactoryD3D11*,
+                                void*                               pd3d11NativeDevice,
+                                void*                               pd3d11ImmediateContext,
+                                const struct EngineD3D11CreateInfo* EngineCI,
+                                class IRenderDevice**               ppDevice,
+                                class IDeviceContext**              ppContexts);
+
+    void (*EnumerateAdapters)(struct IEngineFactoryD3D11*,
+                              DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                              Uint32*                NumAdapters,
+                              struct AdapterAttribs* Adapters);
+
+
+    void (*EnumerateDisplayModes)(struct IEngineFactoryD3D11*,
+                                  DIRECT3D_FEATURE_LEVEL     MinFeatureLevel,
+                                  Uint32                     AdapterId,
+                                  Uint32                     OutputId,
+                                  TEXTURE_FORMAT             Format,
+                                  Uint32*                    NumDisplayModes,
+                                  struct DisplayModeAttribs* DisplayModes);
+};
+
+struct IEngineFactoryD3D11Vtbl
+{
+    struct IObjectMethods             Object;
+    struct IEngineFactoryMethods      EngineFactory;
+    struct IEngineFactoryD3D11Methods EngineFactoryD3D11;
+};
+
+struct IEngineFactoryD3D11
+{
+    struct IEngineFactoryD3D11Vtbl* pVtbl;
+};
+
+// clang-format off
+
+#    define IEngineFactoryD3D11_CreateDeviceAndContextsD3D11(This, ...) (This)->pVtbl->EngineFactoryD3D11.CreateDeviceAndContextsD3D11((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_CreateSwapChainD3D11(This, ...)         (This)->pVtbl->EngineFactoryD3D11.CreateSwapChainD3D11        ((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_AttachToD3D11Device(This, ...)          (This)->pVtbl->EngineFactoryD3D11.AttachToD3D11Device         ((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_EnumerateAdapters(This, ...)            (This)->pVtbl->EngineFactoryD3D11.EnumerateAdapters           ((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_EnumerateDisplayModes(This, ...)        (This)->pVtbl->EngineFactoryD3D11.EnumerateDisplayModes       ((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+
 #if ENGINE_DLL
 
-using GetEngineFactoryD3D11Type = IEngineFactoryD3D11* (*)();
+typedef class IEngineFactoryD3D11* (*GetEngineFactoryD3D11Type)();
 
-static bool LoadGraphicsEngineD3D11(GetEngineFactoryD3D11Type& GetFactoryFunc)
+inline GetEngineFactoryD3D11Type LoadGraphicsEngineD3D11()
 {
-    auto ProcAddress = LoadEngineDll("GraphicsEngineD3D11", "GetEngineFactoryD3D11");
-    GetFactoryFunc   = reinterpret_cast<GetEngineFactoryD3D11Type>(ProcAddress);
-    return GetFactoryFunc != nullptr;
+    return (GetEngineFactoryD3D11Type)LoadEngineDll("GraphicsEngineD3D11", "GetEngineFactoryD3D11");
 }
 
 #else
 
-IEngineFactoryD3D11* GetEngineFactoryD3D11();
+class IEngineFactoryD3D11* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryD3D11)();
 
 #endif
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

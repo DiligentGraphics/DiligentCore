@@ -33,12 +33,13 @@
 #include "../../GraphicsEngine/interface/SwapChain.h"
 #include "TextureViewD3D11.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {4DAF2E76-9204-4DC4-A53A-B00097412D3A}
-static constexpr INTERFACE_ID IID_SwapChainD3D11 =
+static const struct INTERFACE_ID IID_SwapChainD3D11 =
     {0x4daf2e76, 0x9204, 0x4dc4, {0xa5, 0x3a, 0xb0, 0x0, 0x97, 0x41, 0x2d, 0x3a}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a swap chain.
 class ISwapChainD3D11 : public ISwapChain
@@ -57,4 +58,8 @@ public:
     virtual IDXGISwapChain* GetDXGISwapChain() = 0;
 };
 
-} // namespace Diligent
+#else
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

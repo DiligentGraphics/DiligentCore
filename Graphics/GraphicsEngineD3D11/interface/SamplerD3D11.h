@@ -32,12 +32,13 @@
 
 #include "../../GraphicsEngine/interface/Sampler.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {31A3BFAF-738E-4D8C-AD18-B021C5D948DD}
-static constexpr INTERFACE_ID IID_SamplerD3D11 =
+static const struct INTERFACE_ID IID_SamplerD3D11 =
     {0x31a3bfaf, 0x738e, 0x4d8c, {0xad, 0x18, 0xb0, 0x21, 0xc5, 0xd9, 0x48, 0xdd}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a sampler object.
 class ISamplerD3D11 : public ISampler
@@ -50,4 +51,28 @@ public:
     virtual ID3D11SamplerState* GetD3D11SamplerState() = 0;
 };
 
-} // namespace Diligent
+#else
+
+struct ISamplerD3D11Methods
+{
+    ID3D11SamplerState* (*GetD3D11Sampler)();
+};
+
+struct ISamplerD3D11Vtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    //struct ISamplerMethods      Sampler;
+    struct ISamplerD3D11Methods SamplerD3D11;
+};
+
+struct ISamplerD3D11
+{
+    struct ISamplerD3D11Vtbl* pVtbl;
+};
+
+#    define ISamplerD3D11_GetD3D11Sampler(This) (This)->pVtbl->SamplerD3D11.GetD3D11Sampler((struct ISamplerD3D11*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

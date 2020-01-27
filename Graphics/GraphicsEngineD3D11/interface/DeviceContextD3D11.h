@@ -32,12 +32,13 @@
 
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {F0EE0335-C8AB-4EC1-BB15-B8EE5F003B99}
-static constexpr INTERFACE_ID IID_DeviceContextD3D11 =
+static const struct INTERFACE_ID IID_DeviceContextD3D11 =
     {0xf0ee0335, 0xc8ab, 0x4ec1, {0xbb, 0x15, 0xb8, 0xee, 0x5f, 0x0, 0x3b, 0x99}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a device context.
 class IDeviceContextD3D11 : public IDeviceContext
@@ -50,4 +51,28 @@ public:
     virtual ID3D11DeviceContext* GetD3D11DeviceContext() = 0;
 };
 
-} // namespace Diligent
+#else
+
+struct IDeviceContextD3D11Methods
+{
+    ID3D11DeviceContext* (*GetD3D11DeviceContext)();
+};
+
+struct IDeviceContextD3D11Vtbl
+{
+    struct IObjectMethods             Object;
+    struct IDeviceObjectMethods       DeviceObject;
+    struct IDeviceContextMethods      DeviceContext;
+    struct IDeviceContextD3D11Methods DeviceContextD3D11;
+};
+
+struct IDeviceContextD3D11
+{
+    struct IDeviceContextD3D11Vtbl* pVtbl;
+};
+
+#    define IDeviceContextD3D11_GetD3D11DeviceContext(This) (This)->pVtbl->DeviceContextD3D11.GetD3D11DeviceContext((struct IDeviceContextD3D11*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

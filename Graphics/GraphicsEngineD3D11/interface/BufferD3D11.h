@@ -32,12 +32,13 @@
 
 #include "../../GraphicsEngine/interface/Buffer.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {4A696D2E-44BB-4C4B-9DE2-3AF7C94DCFC0}
-static constexpr INTERFACE_ID IID_BufferD3D11 =
+static const struct INTERFACE_ID IID_BufferD3D11 =
     {0x4a696d2e, 0x44bb, 0x4c4b, {0x9d, 0xe2, 0x3a, 0xf7, 0xc9, 0x4d, 0xcf, 0xc0}};
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a buffer object.
 class IBufferD3D11 : public IBuffer
@@ -50,4 +51,29 @@ public:
     virtual ID3D11Buffer* GetD3D11Buffer() = 0;
 };
 
-} // namespace Diligent
+#else
+
+struct IBufferD3D11Methods
+{
+    ID3D11Buffer* (*GetD3D11Buffer)();
+};
+
+
+struct IBufferD3D11Vtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IBufferMethods       Buffer;
+    struct IBufferD3D11Methods  BufferD3D11;
+};
+
+struct IBufferD3D11
+{
+    struct IBufferD3D11Vtbl* pVtbl;
+};
+
+#    define IBufferD3D11_GetD3D11Buffer(This) (This)->pVtbl->BufferD3D11.GetD3D11Buffer((struct IBufferD3D11*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

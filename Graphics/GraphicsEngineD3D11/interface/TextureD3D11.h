@@ -32,8 +32,9 @@
 
 #include "../../GraphicsEngine/interface/Texture.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+#if DILIGENT_CPP_INTERFACE
 
 // {F3A84CC2-E485-4E72-A08A-437D7FFBA3AB}
 static constexpr INTERFACE_ID IID_TextureD3D11 =
@@ -50,4 +51,29 @@ public:
     virtual ID3D11Resource* GetD3D11Texture() = 0;
 };
 
-} // namespace Diligent
+#else
+
+struct ITextureD3D11Methods
+{
+    ID3D11Resource* (*GetD3D11Texture)();
+};
+
+
+struct ITextureD3D11Vtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct ITextureMethods      Texture;
+    struct ITextureD3D11Methods TextureD3D11;
+};
+
+struct ITextureD3D11
+{
+    struct ITextureD3D11Vtbl* pVtbl;
+};
+
+#    define ITextureD3D11_GetD3D11Texture(This) (This)->pVtbl->TextureD3D11.GetD3D11Texture((struct ITextureD3D11*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent
