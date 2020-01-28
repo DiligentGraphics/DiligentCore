@@ -57,7 +57,7 @@ class IShaderD3D : public IShader
 {
 public:
     /// Returns HLSL shader resource description
-    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index) const = 0;
+    virtual void GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const = 0;
 };
 
 #else

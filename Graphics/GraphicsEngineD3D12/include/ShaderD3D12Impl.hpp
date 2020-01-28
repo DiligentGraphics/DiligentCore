@@ -65,13 +65,13 @@ public:
     /// Implementation of IShader::GetResource() in Direct3D12 backend.
     virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
     {
-        ResourceDesc = GetHLSLResource(Index);
+        ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     /// Implementation of IShaderD3D::GetHLSLResource() in Direct3D12 backend.
-    virtual HLSLShaderResourceDesc GetHLSLResource(Uint32 Index) const override final
+    virtual void GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
     {
-        return m_pShaderResources->GetHLSLShaderResourceDesc(Index);
+        ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     ID3DBlob* GetShaderByteCode() { return m_pShaderByteCode; }

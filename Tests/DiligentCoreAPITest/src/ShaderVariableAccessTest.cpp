@@ -67,7 +67,8 @@ void PrintShaderResources(IShader* pShader)
         ss << std::setw(2) << std::right << res << ": " << std::setw(25) << std::left << name_ss.str();
         if (pShaderD3D)
         {
-            auto HLSLResDesc = pShaderD3D->GetHLSLResource(res);
+            HLSLShaderResourceDesc HLSLResDesc;
+            pShaderD3D->GetHLSLResource(res, HLSLResDesc);
             ss << "  hlsl register " << std::setw(2) << HLSLResDesc.ShaderRegister;
         }
         ss << "   " << GetShaderResourceTypeLiteralName(ResDec.Type) << std::endl;
