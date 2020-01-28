@@ -32,22 +32,49 @@
 
 #include "../../GraphicsEngine/interface/Texture.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {D7BC9FF0-28F0-4636-9732-710C204D1D63}
-static constexpr INTERFACE_ID IID_TextureGL =
+static const INTERFACE_ID IID_TextureGL =
     {0xd7bc9ff0, 0x28f0, 0x4636, {0x97, 0x32, 0x71, 0xc, 0x20, 0x4d, 0x1d, 0x63}};
 
+#define DILIGENT_INTERFACE_NAME ITextureGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes OpenGL-specific functionality of a texture object.
-class ITextureGL : public ITexture
+DILIGENT_INTERFACE(ITextureGL, ITexture)
 {
-public:
     /// Returns OpenGL texture handle
-    virtual GLuint GetGLTextureHandle() = 0;
+    VIRTUAL GLuint METHOD(GetGLTextureHandle)(THIS) PURE;
 
     /// Returns bind target of the native OpenGL texture
-    virtual GLenum GetBindTarget() const = 0;
+    VIRTUAL GLenum METHOD(GetBindTarget)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct ITextureGLVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct ITextureMethods      Texture;
+    struct ITextureGLMethods    TextureGL;
+};
+
+typedef struct ITextureGL
+{
+    struct ITextureGLVtbl* pVtbl;
+} ITextureGL;
+
+// clang-format off
+
+#    define ITextureGL_GetGLTextureHandle(This) (This)->pVtbl->TextureGL.GetGLTextureHandle((ITextureGL*)(This))
+#    define ITextureGL_GetBindTarget(This)      (This)->pVtbl->TextureGL.GetBindTarget     ((ITextureGL*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

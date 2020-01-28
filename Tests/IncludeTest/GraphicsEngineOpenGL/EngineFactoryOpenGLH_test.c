@@ -25,47 +25,28 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Definition of the Diligent::IShaderResourceBindingD3D11 interface and related data structures
-
-#include "../../GraphicsEngine/interface/ShaderResourceBinding.h"
-
-DILIGENT_BEGIN_NAMESPACE(Diligent)
-
-// {41DB0329-B6D2-4470-9A58-D44CF4695FC6}
-static const INTERFACE_ID IID_ShaderResourceBindingGL =
-    {0x41db0329, 0xb6d2, 0x4470, {0x9a, 0x58, 0xd4, 0x4c, 0xf4, 0x69, 0x5f, 0xc6}};
-
-#define DILIGENT_INTERFACE_NAME IShaderResourceBindingGL
-#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
-
-#if DILIGENT_CPP_INTERFACE
-
-/// Exposes OpenGL-specific functionality of a shader resource binding object.
-DILIGENT_INTERFACE(IShaderResourceBindingGL, IShaderResourceBinding){};
-
+#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    include <Windows.h>
 #endif
 
-#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
-
-#if DILIGENT_C_INTERFACE
-
-struct IShaderResourceBindingGLVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IShaderMethods       Shader;
-    //struct IShaderResourceBindingGLMethods  ShaderResourceBindingGL;
-};
-
-typedef struct IShaderResourceBindingGL
-{
-    struct IShaderResourceBindingGLVtbl* pVtbl;
-} IShaderResourceBindingGL;
-
+#ifndef ENGINE_DLL
+#    define ENGINE_DLL 1
 #endif
 
+#include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/EngineFactoryOpenGL.h"
 
-DILIGENT_END_NAMESPACE // namespace Diligent
+
+void TestEngineFactoryGLCInterface()
+{
+    GetEngineFactoryOpenGLType GetEngineFactoryGL = LoadGraphicsEngineOpenGL();
+    IEngineFactoryOpenGL*      pFactory           = GetEngineFactoryGL();
+    struct EngineGLCreateInfo  EngineCI           = {0};
+    IEngineFactoryOpenGL_CreateDeviceAndSwapChainGL(pFactory, &EngineCI, (IRenderDevice**)NULL, (IDeviceContext**)NULL, (SwapChainDesc*)NULL, (ISwapChain**)NULL);
+
+    IEngineFactoryOpenGL_CreateHLSL2GLSLConverter(pFactory, (IHLSL2GLSLConverter**)NULL);
+
+    IEngineFactoryOpenGL_AttachToActiveGLContext(pFactory, (EngineGLCreateInfo*)NULL, (IRenderDevice**)NULL, (IDeviceContext**)NULL);
+}

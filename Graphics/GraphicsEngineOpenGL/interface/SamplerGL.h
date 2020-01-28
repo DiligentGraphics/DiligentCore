@@ -32,18 +32,39 @@
 
 #include "../../GraphicsEngine/interface/Sampler.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {3E9EB89E-E955-447A-9D13-92C10541F727}
-static constexpr INTERFACE_ID IID_SamplerGL =
+static const INTERFACE_ID IID_SamplerGL =
     {0x3e9eb89e, 0xe955, 0x447a, {0x9d, 0x13, 0x92, 0xc1, 0x5, 0x41, 0xf7, 0x27}};
 
+#define DILIGENT_INTERFACE_NAME ISamplerGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#if DILIGENT_CPP_INTERFACE
+
 /// Exposes OpenGL-specific functionality of a sampler object.
-class ISamplerGL : public ISampler
+DILIGENT_INTERFACE(ISamplerGL, ISampler){};
+
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct ISamplerGLVtbl
 {
-public:
-    //const GLObjectWrappers::GLSamplerObj& GetHandle(){ return m_GlSampler; }
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    //struct ISamplerMethods    Sampler;
+    //struct ISamplerGLMethods  SamplerGL;
 };
 
-} // namespace Diligent
+typedef struct ISamplerGL
+{
+    struct ISamplerGLVtbl* pVtbl;
+} ISamplerGL;
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

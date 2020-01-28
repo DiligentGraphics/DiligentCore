@@ -32,19 +32,45 @@
 
 #include "../../GraphicsEngine/interface/SwapChain.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {F457BD7C-E725-4D3E-8607-A1F9BAE329EB}
-static constexpr INTERFACE_ID IID_SwapChainGL =
+static const INTERFACE_ID IID_SwapChainGL =
     {0xf457bd7c, 0xe725, 0x4d3e, {0x86, 0x7, 0xa1, 0xf9, 0xba, 0xe3, 0x29, 0xeb}};
 
+#define DILIGENT_INTERFACE_NAME ISwapChainGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes OpenGL-specific functionality of a swap chain.
-class ISwapChainGL : public ISwapChain
+DILIGENT_INTERFACE(ISwapChainGL, ISwapChain)
 {
-public:
     /// Returns the default framebuffer handle
-    virtual GLuint GetDefaultFBO() const = 0;
+    VIRTUAL GLuint METHOD(GetDefaultFBO)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct ISwapChainGLVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct ISwapChainMethods    SwapChain;
+    struct ISwapChainGLMethods  SwapChainGL;
+};
+
+typedef struct ISwapChainGL
+{
+    struct ISwapChainGLVtbl* pVtbl;
+} ISwapChainGL;
+
+// clang-format off
+
+#    define ISwapChainGL_GetDefaultFBO(This) (This)->pVtbl->SwapChainGL.GetDefaultFBO((ISwapChainGL*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

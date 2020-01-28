@@ -32,19 +32,43 @@
 
 #include "../../GraphicsEngine/interface/TextureView.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {15F93272-6135-414F-AB10-53FF9A5004AD}
-static constexpr INTERFACE_ID IID_TextureViewGL =
+static const INTERFACE_ID IID_TextureViewGL =
     {0x15f93272, 0x6135, 0x414f, {0xab, 0x10, 0x53, 0xff, 0x9a, 0x50, 0x4, 0xad}};
 
+#define DILIGENT_INTERFACE_NAME ITextureViewGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#if DILIGENT_CPP_INTERFACE
+
 /// Exposes OpenGL-specific functionality of a texture view object.
-class ITextureViewGL : public ITextureView
+DILIGENT_INTERFACE(ITextureViewGL, ITextureView) //
 {
-public:
     //const GLObjectWrappers::GLTextureObj& GetHandle();
     //GLenum GetBindTarget();
 };
 
-} // namespace Diligent
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct ITextureViewGLVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct ITextureViewMethods  TextureView;
+    //struct ITextureViewGLMethods  TextureViewGL;
+};
+
+typedef struct ITextureViewGL
+{
+    struct ITextureViewGLVtbl* pVtbl;
+} ITextureViewGL;
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

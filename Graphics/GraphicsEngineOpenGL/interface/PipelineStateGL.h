@@ -32,17 +32,38 @@
 
 #include "../../GraphicsEngine/interface/PipelineState.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {80666BE3-318A-4403-AEE1-6E61A5B7A0F9}
-static constexpr INTERFACE_ID IID_PipelineStateGL =
+static const INTERFACE_ID IID_PipelineStateGL =
     {0x80666be3, 0x318a, 0x4403, {0xae, 0xe1, 0x6e, 0x61, 0xa5, 0xb7, 0xa0, 0xf9}};
 
+#define DILIGENT_INTERFACE_NAME IPipelineStateGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a pipeline state object.
-class IPipelineStateGL : public IPipelineState
+DILIGENT_INTERFACE(IPipelineStateGL, IPipelineState){};
+
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IPipelineStateGLVtbl
 {
+    struct IObjectMethods        Object;
+    struct IDeviceObjectMethods  DeviceObject;
+    struct IPipelineStateMethods PipelineState;
+    //struct IPipelineStateGLMethods  PipelineStateGL;
 };
 
-} // namespace Diligent
+typedef struct IPipelineStateGL
+{
+    struct IPipelineStateGLVtbl* pVtbl;
+} IPipelineStateGL;
+
+#endif
+DILIGENT_END_NAMESPACE // namespace Diligent

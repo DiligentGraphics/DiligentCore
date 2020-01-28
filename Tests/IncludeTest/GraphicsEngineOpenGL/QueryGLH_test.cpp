@@ -25,47 +25,5 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Definition of the Diligent::IShaderResourceBindingD3D11 interface and related data structures
-
-#include "../../GraphicsEngine/interface/ShaderResourceBinding.h"
-
-DILIGENT_BEGIN_NAMESPACE(Diligent)
-
-// {41DB0329-B6D2-4470-9A58-D44CF4695FC6}
-static const INTERFACE_ID IID_ShaderResourceBindingGL =
-    {0x41db0329, 0xb6d2, 0x4470, {0x9a, 0x58, 0xd4, 0x4c, 0xf4, 0x69, 0x5f, 0xc6}};
-
-#define DILIGENT_INTERFACE_NAME IShaderResourceBindingGL
-#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
-
-#if DILIGENT_CPP_INTERFACE
-
-/// Exposes OpenGL-specific functionality of a shader resource binding object.
-DILIGENT_INTERFACE(IShaderResourceBindingGL, IShaderResourceBinding){};
-
-#endif
-
-#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
-
-#if DILIGENT_C_INTERFACE
-
-struct IShaderResourceBindingGLVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IShaderMethods       Shader;
-    //struct IShaderResourceBindingGLMethods  ShaderResourceBindingGL;
-};
-
-typedef struct IShaderResourceBindingGL
-{
-    struct IShaderResourceBindingGLVtbl* pVtbl;
-} IShaderResourceBindingGL;
-
-#endif
-
-
-DILIGENT_END_NAMESPACE // namespace Diligent
+typedef unsigned int GLuint;
+#include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/QueryGL.h"

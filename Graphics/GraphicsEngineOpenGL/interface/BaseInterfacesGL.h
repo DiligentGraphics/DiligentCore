@@ -32,33 +32,39 @@
 #if PLATFORM_ANDROID
 
 #   include "RenderDeviceGLES.h"
-    namespace Diligent
-    {
-        using IGLDeviceBaseInterface = IRenderDeviceGLES;
-    }
+    DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+        typedef IRenderDeviceGLES IGLDeviceBaseInterface;
+
+    DILIGENT_END_NAMESPACE
 
 #elif PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_MACOS
 
 #   include "RenderDeviceGL.h"
-    namespace Diligent
-    {
-        using IGLDeviceBaseInterface = IRenderDeviceGL;
-    }
+    DILIGENT_BEGIN_NAMESPACE(Diligent)
+    
+        typedef IRenderDeviceGL IGLDeviceBaseInterface;
+    
+    DILIGENT_END_NAMESPACE
 
 #elif PLATFORM_IOS
 
 #   include "RenderDeviceGL.h"
-    namespace Diligent
-    {
-        using IGLDeviceBaseInterface = IRenderDeviceGL;
-    }
+    DILIGENT_BEGIN_NAMESPACE(Diligent)
+    
+        typedef IRenderDeviceGL IGLDeviceBaseInterface;
+    
+    DILIGENT_END_NAMESPACE
+
 #else
 
 #   error Unsupported platform
+
 #endif
 
 #include "DeviceContextGL.h"
-namespace Diligent
-{
-    using IGLDeviceContextBaseInterface = IDeviceContextGL;
-}
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+    typedef IDeviceContextGL IGLDeviceContextBaseInterface;
+
+DILIGENT_END_NAMESPACE

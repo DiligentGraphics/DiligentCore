@@ -40,9 +40,6 @@
 namespace Diligent
 {
 
-class RenderDeviceGLImpl;
-class ISwapChainGL;
-
 struct DeviceContextGLImplTraits
 {
     using BufferType        = BufferGLImpl;

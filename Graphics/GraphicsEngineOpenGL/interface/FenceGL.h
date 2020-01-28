@@ -32,20 +32,39 @@
 
 #include "../../GraphicsEngine/interface/Fence.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {8FEACBDA-89D6-4509-88E6-D55DD06220C5}
-static constexpr INTERFACE_ID IID_FenceGL =
+static const INTERFACE_ID IID_FenceGL =
     {0x8feacbda, 0x89d6, 0x4509, {0x88, 0xe6, 0xd5, 0x5d, 0xd0, 0x62, 0x20, 0xc5}};
 
+#define DILIGENT_INTERFACE_NAME IFenceGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a fence object.
-class IFenceGL : public IFence
+DILIGENT_INTERFACE(IFenceGL, IFence){};
+
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IFenceGLVtbl
 {
-public:
-    /// Returns OpenGL sync object
-    //virtual IGLFence* GetGLFence() = 0;
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IFenceMethods        Fence;
+    //struct IFenceGLMethods  FenceGL;
 };
 
-} // namespace Diligent
+typedef struct IFenceGL
+{
+    struct IFenceGLVtbl* pVtbl;
+} IFenceGL;
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -32,19 +32,41 @@
 
 #include "../../GraphicsEngine/interface/Buffer.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+#define DILIGENT_INTERFACE_NAME IBufferGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 // {08DF7319-F425-4EC7-8D2B-1B3FC0BDDBB4}
-static constexpr INTERFACE_ID IID_BufferGL =
+static const INTERFACE_ID IID_BufferGL =
     {0x8df7319, 0xf425, 0x4ec7, {0x8d, 0x2b, 0x1b, 0x3f, 0xc0, 0xbd, 0xdb, 0xb4}};
 
 /// Exposes OpenGL-specific functionality of a buffer object.
-class IBufferGL : public IBuffer
+DILIGENT_INTERFACE(IBufferGL, IBuffer)
 {
-public:
     /// Returns OpenGL buffer handle
-    virtual GLuint GetGLBufferHandle() = 0;
+    VIRTUAL GLuint METHOD(GetGLBufferHandle)(THIS) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IBufferGLVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IBufferMethods       Buffer;
+    struct IBufferGLMethods     BufferGL;
+};
+
+typedef struct IBufferGL
+{
+    struct IBufferGLVtbl* pVtbl;
+} IBufferGL;
+
+#    define IBufferGL_GetGLBufferHandle(This) (This)->pVtbl->BufferGL.GetGLBufferHandle((IBufferGL*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

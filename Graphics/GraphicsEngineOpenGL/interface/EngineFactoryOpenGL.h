@@ -30,8 +30,6 @@
 /// \file
 /// Declaration of functions that create OpenGL-based engine implementation
 
-#include <sstream>
-
 #include "../../GraphicsEngine/interface/EngineFactory.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
@@ -54,46 +52,79 @@
 #    define EXPLICITLY_LOAD_ENGINE_GL_DLL 1
 #endif
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {9BAAC767-02CC-4FFA-9E4B-E1340F572C49}
 static const INTERFACE_ID IID_EngineFactoryOpenGL =
     {0x9baac767, 0x2cc, 0x4ffa, {0x9e, 0x4b, 0xe1, 0x34, 0xf, 0x57, 0x2c, 0x49}};
 
-class IEngineFactoryOpenGL : public IEngineFactory
-{
-public:
-    virtual void CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
-                                            IRenderDevice**           ppDevice,
-                                            IDeviceContext**          ppImmediateContext,
-                                            const SwapChainDesc&      SCDesc,
-                                            ISwapChain**              ppSwapChain)        = 0;
-    virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppConverter) = 0;
+#define DILIGENT_INTERFACE_NAME IEngineFactoryOpenGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-    virtual void AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
-                                         IRenderDevice**           ppDevice,
-                                         IDeviceContext**          ppImmediateContext) = 0;
+// clang-format off
+
+DILIGENT_INTERFACE(IEngineFactoryOpenGL, IEngineFactory)
+{
+    VIRTUAL void METHOD(CreateDeviceAndSwapChainGL)(THIS_
+                                                    const EngineGLCreateInfo REF EngineCI,
+                                                    IRenderDevice**              ppDevice,
+                                                    IDeviceContext**             ppImmediateContext,
+                                                    const SwapChainDesc REF      SCDesc,
+                                                    ISwapChain**                 ppSwapChain) PURE;
+
+    VIRTUAL void METHOD(CreateHLSL2GLSLConverter)(THIS_
+                                                  IHLSL2GLSLConverter** ppConverter) PURE;
+
+    VIRTUAL void METHOD(AttachToActiveGLContext)(THIS_
+                                                 const EngineGLCreateInfo REF EngineCI,
+                                                 IRenderDevice**              ppDevice,
+                                                 IDeviceContext**             ppImmediateContext) PURE;
 };
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IEngineFactoryOpenGLVtbl
+{
+    struct IObjectMethods              Object;
+    struct IEngineFactoryMethods       EngineFactory;
+    struct IEngineFactoryOpenGLMethods EngineFactoryOpenGL;
+};
+
+typedef struct IEngineFactoryOpenGL
+{
+    struct IEngineFactoryOpenGLVtbl* pVtbl;
+} IEngineFactoryOpenGL;
+
+// clang-format off
+
+#    define IEngineFactoryOpenGL_CreateDeviceAndSwapChainGL(This, ...) (This)->pVtbl->EngineFactoryOpenGL.CreateDeviceAndSwapChainGL((IEngineFactoryOpenGL*)(This), __VA_ARGS__)
+#    define IEngineFactoryOpenGL_CreateHLSL2GLSLConverter(This, ...)   (This)->pVtbl->EngineFactoryOpenGL.CreateHLSL2GLSLConverter  ((IEngineFactoryOpenGL*)(This), __VA_ARGS__)
+#    define IEngineFactoryOpenGL_AttachToActiveGLContext(This, ...)    (This)->pVtbl->EngineFactoryOpenGL.AttachToActiveGLContext   ((IEngineFactoryOpenGL*)(This), __VA_ARGS__)
+
+// clang-format on
+
+#endif
 
 
 #if EXPLICITLY_LOAD_ENGINE_GL_DLL
 
-using GetEngineFactoryOpenGLType = IEngineFactoryOpenGL* (*)();
+typedef struct IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
-static bool LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGLType& GetFactoryFunc)
+inline GetEngineFactoryOpenGLType LoadGraphicsEngineOpenGL()
 {
-    auto ProcAddress = LoadEngineDll("GraphicsEngineOpenGL", "GetEngineFactoryOpenGL");
-    GetFactoryFunc   = reinterpret_cast<GetEngineFactoryOpenGLType>(ProcAddress);
-    return GetFactoryFunc != nullptr;
+    return (GetEngineFactoryOpenGLType)LoadEngineDll("GraphicsEngineGL", "GetEngineFactoryOpenGL");
 }
 
 #else
 
 // Do not forget to call System.loadLibrary("GraphicsEngineOpenGL") in Java on Android!
 API_QUALIFIER
-IEngineFactoryOpenGL* GetEngineFactoryOpenGL();
+struct IEngineFactoryOpenGL* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryOpenGL)();
 
 #endif
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

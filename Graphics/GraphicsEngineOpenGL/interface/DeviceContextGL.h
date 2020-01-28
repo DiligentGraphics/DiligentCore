@@ -32,19 +32,22 @@
 
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-class ISwapChainGL;
+struct ISwapChainGL;
 
 // {3464FDF1-C548-4935-96C3-B454C9DF6F6A}
-static constexpr INTERFACE_ID IID_DeviceContextGL =
+static const INTERFACE_ID IID_DeviceContextGL =
     {0x3464fdf1, 0xc548, 0x4935, {0x96, 0xc3, 0xb4, 0x54, 0xc9, 0xdf, 0x6f, 0x6a}};
 
+#define DILIGENT_INTERFACE_NAME IDeviceContextGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Exposes OpenGL-specific functionality of a device context.
-class IDeviceContextGL : public IDeviceContext
+DILIGENT_INTERFACE(IDeviceContextGL, IDeviceContext)
 {
-public:
     /// Attaches to the active GL context in the thread.
 
     /// If an application uses multiple GL contexts, this method must be called before any
@@ -52,11 +55,40 @@ public:
     /// is passed over from the main application
     ///
     /// \return false if there is no active GL context, and true otherwise
-    virtual bool UpdateCurrentGLContext() = 0;
+    VIRTUAL bool METHOD(UpdateCurrentGLContext)(THIS) PURE;
 
     /// Sets the swap in the device context. The swap chain is used by the device context
     /// to obtain the default FBO handle.
-    virtual void SetSwapChain(ISwapChainGL* pSwapChain) = 0;
+    VIRTUAL void METHOD(SetSwapChain)(THIS_
+                                      struct ISwapChainGL* pSwapChain) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IDeviceContextGLVtbl
+{
+    struct IObjectMethods          Object;
+    struct IDeviceObjectMethods    DeviceObject;
+    struct IDeviceContextMethods   DeviceContext;
+    struct IDeviceContextGLMethods DeviceContextGL;
+};
+
+typedef struct IDeviceContextGL
+{
+    struct IDeviceContextGLVtbl* pVtbl;
+} IDeviceContextGL;
+
+// clang-format off
+
+#    define IDeviceContextGL_UpdateCurrentGLContext(This) (This)->pVtbl->DeviceContextGL.UpdateCurrentGLContext((IDeviceContextGL*)(This))
+#    define IDeviceContextGL_SetSwapChain(This, ...)      (This)->pVtbl->DeviceContextGL.SetSwapChain((IDeviceContextGL*)(This), __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

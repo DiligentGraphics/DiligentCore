@@ -32,19 +32,42 @@
 
 #include "../../GraphicsEngine/interface/Query.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {D8A02AB7-0720-417D-AA9B-20A2C05A3EE0}
-static constexpr INTERFACE_ID IID_QueryGL =
+static const INTERFACE_ID IID_QueryGL =
     {0xd8a02ab7, 0x720, 0x417d, {0xaa, 0x9b, 0x20, 0xa2, 0xc0, 0x5a, 0x3e, 0xe0}};
 
 
+#define DILIGENT_INTERFACE_NAME IQueryGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes OpenGL-specific functionality of a Query object.
-class IQueryGL : public IQuery
+DILIGENT_INTERFACE(IQueryGL, IQuery)
 {
     /// Returns OpenGL handle of an internal query object.
-    virtual GLuint GetGlQueryHandle() const = 0;
+    VIRTUAL GLuint METHOD(GetGlQueryHandle)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IQueryGLVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IQueryMethods        Query;
+    struct IQueryGLMethods      QueryGL;
+};
+
+typedef struct IQueryGL
+{
+    struct IQueryGLVtbl* pVtbl;
+} IQueryGL;
+
+#    define IQueryGL_GetGlQueryHandle(This) (This)->pVtbl->QueryGL.GetGlQueryHandle((IQueryGL*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

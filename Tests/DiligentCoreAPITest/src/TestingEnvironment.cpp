@@ -189,7 +189,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
         {
 #    if ENGINE_DLL
             // Load the dll and import GetEngineFactoryD3D12() function
-            GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
+            auto GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
             if (GetEngineFactoryD3D12 == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");
@@ -260,9 +260,8 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
         {
 #    if EXPLICITLY_LOAD_ENGINE_GL_DLL
             // Declare function pointer
-            GetEngineFactoryOpenGLType GetEngineFactoryOpenGL = nullptr;
             // Load the dll and import GetEngineFactoryOpenGL() function
-            LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGL);
+            auto GetEngineFactoryOpenGL = LoadGraphicsEngineOpenGL();
             if (GetEngineFactoryOpenGL == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");

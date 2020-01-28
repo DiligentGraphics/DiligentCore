@@ -32,18 +32,39 @@
 
 #include "../../GraphicsEngine/interface/BufferView.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {927A865B-3CEB-4743-9A22-2A1397A73E6D}
-static constexpr INTERFACE_ID IID_BufferViewGL =
+static const INTERFACE_ID IID_BufferViewGL =
     {0x927a865b, 0x3ceb, 0x4743, {0x9a, 0x22, 0x2a, 0x13, 0x97, 0xa7, 0x3e, 0x6d}};
 
+#define DILIGENT_INTERFACE_NAME IBufferViewGL
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#if DILIGENT_CPP_INTERFACE
+
 /// Exposes OpenGL-specific functionality of a buffer view object.
-class IBufferViewGL : public IBufferView
+DILIGENT_INTERFACE(IBufferViewGL, IBufferView){};
+
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IBufferViewGLVtbl
 {
-public:
-    //const GLObjectWrappers::GLTextureObj& GetTexBufferHandle(){ return m_GLTexBuffer; }
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IBufferViewMethods   BufferView;
+    //struct IBufferViewGLMethods BufferViewGL;
 };
 
-} // namespace Diligent
+typedef struct IBufferViewGL
+{
+    struct IBufferViewGLVtbl* pVtbl;
+} IBufferViewGL;
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent
