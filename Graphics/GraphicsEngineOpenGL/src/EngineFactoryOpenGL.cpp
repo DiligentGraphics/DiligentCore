@@ -37,7 +37,7 @@
 #include "EngineFactoryBase.hpp"
 
 #if PLATFORM_IOS
-#    include "SwapChainGLIOS.h"
+#    include "SwapChainGLIOS.hpp"
 #else
 #    include "SwapChainGLImpl.hpp"
 #endif

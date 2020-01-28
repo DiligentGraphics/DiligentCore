@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "Errors.h"
+#include "Errors.hpp"
 
 #define glUseProgramStages          glUseProgramStagesEXT
 #define glActiveShaderProgram       glActiveShaderProgramEXT

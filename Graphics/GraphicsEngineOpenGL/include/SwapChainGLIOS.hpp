@@ -24,13 +24,12 @@
 #pragma once
 
 #include "SwapChainGL.h"
-#include "SwapChainGLBase.h"
-#include "GLObjectWrapper.h"
+#include "SwapChainGLBase.hpp"
+#include "GLObjectWrapper.hpp"
 
 namespace Diligent
 {
 
-class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainGL interface on IOS
 class SwapChainGLIOS final : public SwapChainGLBase<ISwapChainGL>
 {
