@@ -42,7 +42,7 @@ static const struct INTERFACE_ID IID_PipelineStateD3D11 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a pipeline state object.
-DILIGENT_INTERFACE(IPipelineStateD3D11, IPipelineState)
+DILIGENT_BEGIN_INTERFACE(IPipelineStateD3D11, IPipelineState)
 {
     /// Returns a pointer to the ID3D11BlendState interface of the internal Direct3D11 object.
 
@@ -107,6 +107,7 @@ DILIGENT_INTERFACE(IPipelineStateD3D11, IPipelineState)
     /// so Release() must not be called.
     VIRTUAL ID3D11ComputeShader* METHOD(GetD3D11ComputeShader)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -119,11 +120,6 @@ struct IPipelineStateD3D11Vtbl
     struct IPipelineStateMethods      PipelineState;
     struct IPipelineStateD3D11Methods PipelineStateD3D11;
 };
-
-typedef struct IPipelineStateD3D11
-{
-    struct IPipelineStateD3D11Vtbl* pVtbl;
-} IPipelineStateD3D11;
 
 // clang-format off
 

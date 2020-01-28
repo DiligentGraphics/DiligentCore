@@ -44,7 +44,7 @@ static const struct INTERFACE_ID IID_RenderDeviceD3D11 =
 // clang-format off
 
 /// Exposes Direct3D11-specific functionality of a render device.
-DILIGENT_INTERFACE(IRenderDeviceD3D11, IRenderDevice)
+DILIGENT_BEGIN_INTERFACE(IRenderDeviceD3D11, IRenderDevice)
 {
     /// Returns a pointer to the ID3D11Device interface of the internal Direct3D11 object.
 
@@ -109,6 +109,7 @@ DILIGENT_INTERFACE(IRenderDeviceD3D11, IRenderDevice)
                                                         RESOURCE_STATE   InitialState,
                                                         ITexture**       ppTexture) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -122,11 +123,6 @@ struct IRenderDeviceD3D11Vtbl
     struct IRenderDeviceMethods      RenderDevice;
     struct IRenderDeviceD3D11Methods RenderDeviceD3D11;
 };
-
-typedef struct IRenderDeviceD3D11
-{
-    struct IRenderDeviceD3D11Vtbl* pVtbl;
-} IRenderDeviceD3D11;
 
 // clang-format off
 

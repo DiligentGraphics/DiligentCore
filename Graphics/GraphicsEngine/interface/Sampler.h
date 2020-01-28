@@ -183,13 +183,14 @@ typedef struct SamplerDesc SamplerDesc;
 /// The interface holds the sampler state that can be used to perform texture filtering.
 /// To create a sampler, call IRenderDevice::CreateSampler(). To use a sampler,
 /// call ITextureView::SetSampler().
-DILIGENT_INTERFACE(ISampler, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(ISampler, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the sampler description used to create the object
     virtual const SamplerDesc& GetDesc() const override = 0;
 #endif
 };
+DILIGENT_END_INTERFACE
 
 #endif
 

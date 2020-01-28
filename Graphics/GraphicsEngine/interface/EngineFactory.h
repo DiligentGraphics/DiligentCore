@@ -48,7 +48,7 @@ static const INTERFACE_ID IID_EngineFactory =
 // clang-format off
 
 /// Engine factory base interface
-DILIGENT_INTERFACE(IEngineFactory, IObject)
+DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
 {
     /// Returns API info structure
     VIRTUAL const APIInfo REF METHOD(GetAPIInfo)(THIS) CONST PURE;
@@ -71,6 +71,7 @@ DILIGENT_INTERFACE(IEngineFactory, IObject)
                                                const char* ActivityClassName) CONST PURE;
 #endif
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -83,11 +84,6 @@ struct IEngineFactoryVtbl
     struct IObjectMethods        Object;
     struct IEngineFactoryMethods EngineFactory;
 };
-
-typedef struct IEngineFactory
-{
-    struct IEngineFactoryVtbl* pVtbl;
-} IEngineFactory;
 
 // clang-format off
 

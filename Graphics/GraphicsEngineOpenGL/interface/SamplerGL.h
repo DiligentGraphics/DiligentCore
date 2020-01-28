@@ -44,7 +44,8 @@ static const INTERFACE_ID IID_SamplerGL =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a sampler object.
-DILIGENT_INTERFACE(ISamplerGL, ISampler){};
+DILIGENT_BEGIN_INTERFACE(ISamplerGL, ISampler){};
+DILIGENT_END_INTERFACE
 
 #endif
 

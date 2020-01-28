@@ -42,7 +42,7 @@ static const INTERFACE_ID IID_PipelineStateD3D12 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D12-specific functionality of a pipeline state object.
-DILIGENT_INTERFACE(IPipelineStateD3D12, IPipelineState)
+DILIGENT_BEGIN_INTERFACE(IPipelineStateD3D12, IPipelineState)
 {
     /// Returns ID3D12PipelineState interface of the internal D3D12 pipeline state object object.
 
@@ -56,7 +56,7 @@ DILIGENT_INTERFACE(IPipelineStateD3D12, IPipelineState)
     /// so Release() must not be called.
     VIRTUAL ID3D12RootSignature* METHOD(GetD3D12RootSignature)(THIS) CONST PURE;
 };
-
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -69,11 +69,6 @@ struct IPipelineStateD3D12Vtbl
     struct IPipelineStateMethods      PipelineState;
     struct IPipelineStateD3D12Methods PipelineStateD3D12;
 };
-
-typedef struct IPipelineStateD3D12
-{
-    struct IPipelineStateD3D12Vtbl* pVtbl;
-} IPipelineStateD3D12;
 
 // clang-format off
 

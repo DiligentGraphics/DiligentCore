@@ -44,7 +44,7 @@ static const INTERFACE_ID IID_RenderDeviceVk =
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a render device.
-DILIGENT_INTERFACE(IRenderDeviceVk, IRenderDevice)
+DILIGENT_BEGIN_INTERFACE(IRenderDeviceVk, IRenderDevice)
 {
     /// Returns logical Vulkan device handle
     VIRTUAL VkDevice METHOD(GetVkDevice)(THIS) PURE;
@@ -109,6 +109,7 @@ DILIGENT_INTERFACE(IRenderDeviceVk, IRenderDevice)
                                                         RESOURCE_STATE       InitialState,
                                                         IBuffer**            ppBuffer) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -122,11 +123,6 @@ struct IRenderDeviceVkVtbl
     struct IRenderDeviceMethods   RenderDevice;
     struct IRenderDeviceVkMethods RenderDeviceVk;
 };
-
-typedef struct IRenderDeviceVk
-{
-    struct IRenderDeviceVkVtbl* pVtbl;
-} IRenderDeviceVk;
 
 // clang-format off
 

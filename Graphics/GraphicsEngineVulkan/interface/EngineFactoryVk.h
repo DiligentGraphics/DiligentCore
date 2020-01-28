@@ -60,7 +60,7 @@ static const INTERFACE_ID IID_EngineFactoryVk =
 
 // clang-format off
 
-DILIGENT_INTERFACE(IEngineFactoryVk, IEngineFactory)
+DILIGENT_BEGIN_INTERFACE(IEngineFactoryVk, IEngineFactory)
 {
     VIRTUAL void METHOD(CreateDeviceAndContextsVk)(THIS_
                                                    const EngineVkCreateInfo REF EngineCI,
@@ -80,6 +80,7 @@ DILIGENT_INTERFACE(IEngineFactoryVk, IEngineFactory)
                                            void*                   pNativeWndHandle,
                                            ISwapChain**            ppSwapChain) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -93,11 +94,6 @@ struct IEngineFactoryVkVtbl
     struct IEngineFactoryMethods   EngineFactory;
     struct IEngineFactoryVkMethods EngineFactoryVk;
 };
-
-typedef struct IEngineFactoryVk
-{
-    struct IEngineFactoryVkVtbl* pVtbl;
-} IEngineFactoryVk;
 
 // clang-format off
 

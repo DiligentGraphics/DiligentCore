@@ -44,11 +44,12 @@ static const INTERFACE_ID IID_TextureViewGL =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a texture view object.
-DILIGENT_INTERFACE(ITextureViewGL, ITextureView) //
+DILIGENT_BEGIN_INTERFACE(ITextureViewGL, ITextureView) //
 {
     //const GLObjectWrappers::GLTextureObj& GetHandle();
     //GLenum GetBindTarget();
 };
+DILIGENT_END_INTERFACE
 
 #endif
 

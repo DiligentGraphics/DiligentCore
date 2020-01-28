@@ -52,7 +52,7 @@ static const INTERFACE_ID IID_ShaderResourceBinding =
 // clang-format off
 
 /// Shader resource binding interface
-DILIGENT_INTERFACE(IShaderResourceBinding, IObject)
+DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding, IObject)
 {
     /// Returns pointer to the referenced buffer object.
 
@@ -127,6 +127,7 @@ DILIGENT_INTERFACE(IShaderResourceBinding, IObject)
     VIRTUAL void METHOD(InitializeStaticResources)(THIS_
                                                    const struct IPipelineState* pPipelineState DEFAULT_VALUE(nullptr)) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -139,11 +140,6 @@ struct IShaderResourceBindingVtbl
     struct IObjectMethods                Object;
     struct IShaderResourceBindingMethods ShaderResourceBinding;
 };
-
-typedef struct IShaderResourceBinding
-{
-    struct IShaderResourceBindingVtbl* pVtbl;
-} IShaderResourceBinding;
 
 // clang-format off
 

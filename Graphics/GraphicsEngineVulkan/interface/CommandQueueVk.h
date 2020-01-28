@@ -44,7 +44,7 @@ static const INTERFACE_ID IID_CommandQueueVk =
 // clang-format off
 
 /// Command queue interface
-DILIGENT_INTERFACE(ICommandQueueVk, IObject)
+DILIGENT_BEGIN_INTERFACE(ICommandQueueVk, IObject)
 {
     /// Returns the fence value that will be signaled next time
     VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS) CONST PURE;
@@ -83,6 +83,7 @@ DILIGENT_INTERFACE(ICommandQueueVk, IObject)
     VIRTUAL void METHOD(SignalFence)(THIS_
                                      VkFence vkFence) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -95,11 +96,6 @@ struct ICommandQueueVkVtbl
     struct IObjectMethods         Object;
     struct ICommandQueueVkMethods CommandQueueVk;
 };
-
-typedef struct ICommandQueueVk
-{
-    struct ICommandQueueVkVtbl* pVtbl;
-} ICommandQueueVk;
 
 // clang-format off
 

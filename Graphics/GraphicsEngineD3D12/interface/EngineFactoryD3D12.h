@@ -53,7 +53,7 @@ static const INTERFACE_ID IID_EngineFactoryD3D12 =
 // clang-format off
 
 /// Engine factory for Direct3D12 rendering backend
-DILIGENT_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
+DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
 {
     /// Loads D3D12 DLL and entry points.
 
@@ -170,6 +170,7 @@ DILIGENT_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
                                                Uint32 REF             NumDisplayModes,
                                                DisplayModeAttribs*    DisplayModes) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -183,11 +184,6 @@ struct IEngineFactoryD3D12Vtbl
     struct IEngineFactoryMethods      EngineFactory;
     struct IEngineFactoryD3D12Methods EngineFactoryD3D12;
 };
-
-typedef struct IEngineFactoryD3D12
-{
-    struct IEngineFactoryD3D12Vtbl* pVtbl;
-} IEngineFactoryD3D12;
 
 // clang-format off
 

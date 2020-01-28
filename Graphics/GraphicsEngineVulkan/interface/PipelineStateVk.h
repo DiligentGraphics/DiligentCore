@@ -42,7 +42,7 @@ static const INTERFACE_ID IID_PipelineStateVk =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Vulkan-specific functionality of a pipeline state object.
-DILIGENT_INTERFACE(IPipelineStateVk, IPipelineState)
+DILIGENT_BEGIN_INTERFACE(IPipelineStateVk, IPipelineState)
 {
     /// Returns handle to a vulkan render pass object.
     VIRTUAL VkRenderPass METHOD(GetVkRenderPass)(THIS) CONST PURE;
@@ -50,6 +50,7 @@ DILIGENT_INTERFACE(IPipelineStateVk, IPipelineState)
     /// Returns handle to a vulkan pipeline pass object.
     VIRTUAL VkPipeline METHOD(GetVkPipeline)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -62,11 +63,6 @@ struct IPipelineStateVkVtbl
     struct IPipelineStateMethods   PipelineState;
     struct IPipelineStateVkMethods PipelineStateVk;
 };
-
-typedef struct IPipelineStateVk
-{
-    struct IPipelineStateVkVtbl* pVtbl;
-} IPipelineStateVk;
 
 // clang-format off
 

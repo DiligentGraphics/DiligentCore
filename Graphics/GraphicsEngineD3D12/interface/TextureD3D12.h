@@ -44,7 +44,7 @@ static const INTERFACE_ID IID_TextureD3D12 =
 // clang-format off
 
 /// Exposes Direct3D12-specific functionality of a texture object.
-DILIGENT_INTERFACE(ITextureD3D12, ITexture)
+DILIGENT_BEGIN_INTERFACE(ITextureD3D12, ITexture)
 {
     /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
 
@@ -63,6 +63,7 @@ DILIGENT_INTERFACE(ITextureD3D12, ITexture)
     /// returns D3D12_RESOURCE_STATE_COMMON (0).
     VIRTUAL D3D12_RESOURCE_STATES METHOD(GetD3D12ResourceState)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -77,11 +78,6 @@ struct ITextureD3D12Vtbl
     struct ITextureMethods      Texture;
     struct ITextureD3D12Methods TextureD3D12;
 };
-
-typedef struct ITextureD3D12
-{
-    struct ITextureD3D12Vtbl* pVtbl;
-} ITextureD3D12;
 
 // clang-format off
 

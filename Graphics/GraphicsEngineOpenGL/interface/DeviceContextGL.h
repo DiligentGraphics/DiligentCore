@@ -46,7 +46,7 @@ static const INTERFACE_ID IID_DeviceContextGL =
 // clang-format off
 
 /// Exposes OpenGL-specific functionality of a device context.
-DILIGENT_INTERFACE(IDeviceContextGL, IDeviceContext)
+DILIGENT_BEGIN_INTERFACE(IDeviceContextGL, IDeviceContext)
 {
     /// Attaches to the active GL context in the thread.
 
@@ -62,6 +62,7 @@ DILIGENT_INTERFACE(IDeviceContextGL, IDeviceContext)
     VIRTUAL void METHOD(SetSwapChain)(THIS_
                                       struct ISwapChainGL* pSwapChain) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -75,11 +76,6 @@ struct IDeviceContextGLVtbl
     struct IDeviceContextMethods   DeviceContext;
     struct IDeviceContextGLMethods DeviceContextGL;
 };
-
-typedef struct IDeviceContextGL
-{
-    struct IDeviceContextGLVtbl* pVtbl;
-} IDeviceContextGL;
 
 // clang-format off
 

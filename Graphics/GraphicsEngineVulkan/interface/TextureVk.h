@@ -44,7 +44,7 @@ static const INTERFACE_ID IID_TextureVk =
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a texture object.
-DILIGENT_INTERFACE(ITextureVk, ITexture)
+DILIGENT_BEGIN_INTERFACE(ITextureVk, ITexture)
 {
     /// Returns Vulkan image handle.
 
@@ -62,6 +62,7 @@ DILIGENT_INTERFACE(ITextureVk, ITexture)
     /// Returns current Vulkan image layout. If the state is unknown to the engine, returns VK_IMAGE_LAYOUT_UNDEFINED
     VIRTUAL VkImageLayout METHOD(GetLayout)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -76,11 +77,6 @@ struct ITextureVkVtbl
     struct ITextureMethods      Texture;
     struct ITextureVkMethods    TextureVk;
 };
-
-typedef struct ITextureVk
-{
-    struct ITextureVkVtbl* pVtbl;
-} ITextureVk;
 
 // clang-format off
 

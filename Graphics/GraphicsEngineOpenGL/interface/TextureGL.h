@@ -42,7 +42,7 @@ static const INTERFACE_ID IID_TextureGL =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes OpenGL-specific functionality of a texture object.
-DILIGENT_INTERFACE(ITextureGL, ITexture)
+DILIGENT_BEGIN_INTERFACE(ITextureGL, ITexture)
 {
     /// Returns OpenGL texture handle
     VIRTUAL GLuint METHOD(GetGLTextureHandle)(THIS) PURE;
@@ -50,6 +50,7 @@ DILIGENT_INTERFACE(ITextureGL, ITexture)
     /// Returns bind target of the native OpenGL texture
     VIRTUAL GLenum METHOD(GetBindTarget)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -62,11 +63,6 @@ struct ITextureGLVtbl
     struct ITextureMethods      Texture;
     struct ITextureGLMethods    TextureGL;
 };
-
-typedef struct ITextureGL
-{
-    struct ITextureGLVtbl* pVtbl;
-} ITextureGL;
 
 // clang-format off
 

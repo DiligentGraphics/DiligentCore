@@ -45,7 +45,7 @@ static const INTERFACE_ID IID_DeviceContextD3D12 =
 // clang-format off
 
 /// Exposes Direct3D12-specific functionality of a device context.
-DILIGENT_INTERFACE(IDeviceContextD3D12, IDeviceContext)
+DILIGENT_BEGIN_INTERFACE(IDeviceContextD3D12, IDeviceContext)
 {
     /// Transitions internal D3D12 texture object to a specified state
 
@@ -103,6 +103,7 @@ DILIGENT_INTERFACE(IDeviceContextD3D12, IDeviceContext)
     /// Unlocks the command queue that was previously locked by IDeviceContextD3D12::LockCommandQueue().
     VIRTUAL void METHOD(UnlockCommandQueue)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -116,11 +117,6 @@ struct IDeviceContextD3D12Vtbl
     struct IDeviceContextMethods      DeviceContext;
     struct IDeviceContextD3D12Methods DeviceContextD3D12;
 };
-
-typedef struct IDeviceContextD3D12
-{
-    struct IDeviceContextD3D12Vtbl* pVtbl;
-} IDeviceContextD3D12;
 
 // clang-format off
 

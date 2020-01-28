@@ -44,7 +44,8 @@ static const INTERFACE_ID IID_FenceGL =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a fence object.
-DILIGENT_INTERFACE(IFenceGL, IFence){};
+DILIGENT_BEGIN_INTERFACE(IFenceGL, IFence){};
+DILIGENT_END_INTERFACE
 
 #endif
 

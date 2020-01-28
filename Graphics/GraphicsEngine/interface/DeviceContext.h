@@ -618,7 +618,7 @@ typedef struct CopyTextureAttribs CopyTextureAttribs;
 ///          the pipeline: buffers, states, samplers, shaders, etc.
 ///          The context also keeps strong reference to the device and
 ///          the swap chain.
-DILIGENT_INTERFACE(IDeviceContext, IObject)
+DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 {
     /// Sets the pipeline state.
 
@@ -1313,6 +1313,7 @@ DILIGENT_INTERFACE(IDeviceContext, IObject)
                                                    ITexture*                                  pDstTexture,
                                                    const ResolveTextureSubresourceAttribs REF ResolveAttribs) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -1325,11 +1326,6 @@ struct IDeviceContextVtbl
     struct IObjectMethods        Object;
     struct IDeviceContextMethods DeviceContext;
 };
-
-typedef struct IDeviceContext
-{
-    struct IDeviceContextVtbl* pVtbl;
-} IDeviceContext;
 
 // clang-format off
 

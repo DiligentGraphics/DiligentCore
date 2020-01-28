@@ -42,11 +42,12 @@ static const struct INTERFACE_ID IID_QueryD3D11 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a Query object.
-DILIGENT_INTERFACE(IQueryD3D11, IQuery)
+DILIGENT_BEGIN_INTERFACE(IQueryD3D11, IQuery)
 {
     /// Returns a pointer to the internal ID3D11Query object.
     VIRTUAL ID3D11Query* METHOD(GetD3D11Query)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -59,11 +60,6 @@ struct IQueryD3D11Vtbl
     struct IQueryMethods        Query;
     struct IQueryD3D11Methods   QueryD3D11;
 };
-
-typedef struct IQueryD3D11
-{
-    struct IQueryD3D11Vtbl* pVtbl;
-} IQueryD3D11;
 
 #    define IQueryD3D11_GetD3D11Query(This) CALL_IFACE_METHOD(QueryD3D11, GetD3D11Query, This)
 

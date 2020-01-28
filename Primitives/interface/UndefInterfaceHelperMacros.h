@@ -34,3 +34,4 @@
 #pragma pop_macro("METHOD")
 
 #undef DILIGENT_INTERFACE_NAME
+#undef DILIGENT_END_INTERFACE

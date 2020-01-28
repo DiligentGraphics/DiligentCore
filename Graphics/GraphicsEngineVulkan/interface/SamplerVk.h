@@ -42,11 +42,12 @@ static const INTERFACE_ID IID_SamplerVk =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Vulkan-specific functionality of a sampler object.
-DILIGENT_INTERFACE(ISamplerVk, ISampler)
+DILIGENT_BEGIN_INTERFACE(ISamplerVk, ISampler)
 {
     /// Returns a vulkan sampler object handle
     VIRTUAL VkSampler METHOD(GetVkSampler)() CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -59,11 +60,6 @@ struct ISamplerVkVtbl
     //struct ISamplerMethods      Sampler;
     struct ISamplerVkMethods SamplerVk;
 };
-
-typedef struct ISamplerVk
-{
-    struct ISamplerVkVtbl* pVtbl;
-} ISamplerVk;
 
 #    define ISamplerVk_GetVkSampler(This) CALL_IFACE_METHOD(SamplerVk, GetVkSampler, This)
 

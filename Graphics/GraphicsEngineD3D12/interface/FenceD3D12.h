@@ -44,7 +44,7 @@ static const INTERFACE_ID IID_FenceD3D12 =
 // clang-format off
 
 /// Exposes Direct3D12-specific functionality of a fence object.
-DILIGENT_INTERFACE(IFenceD3D12, IFence)
+DILIGENT_BEGIN_INTERFACE(IFenceD3D12, IFence)
 {
     /// Returns a pointer to the ID3D12Fence interface of the internal Direct3D12 object.
 
@@ -56,6 +56,7 @@ DILIGENT_INTERFACE(IFenceD3D12, IFence)
     VIRTUAL void METHOD(WaitForCompletion)(THIS_
                                            Uint64 Value) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -70,11 +71,6 @@ struct IFenceD3D12Vtbl
     struct IFenceMethods        Fence;
     struct IFenceD3D12Methods   FenceD3D12;
 };
-
-typedef struct IFenceD3D12
-{
-    struct IFenceD3D12Vtbl* pVtbl;
-} IFenceD3D12;
 
 // clang-format off
 

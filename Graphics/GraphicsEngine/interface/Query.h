@@ -181,7 +181,7 @@ typedef struct QueryDesc QueryDesc;
 /// Query interface.
 
 /// Defines the methods to manipulate a Query object
-DILIGENT_INTERFACE(IQuery, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(IQuery, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the Query description used to create the object.
@@ -216,6 +216,7 @@ DILIGENT_INTERFACE(IQuery, IDeviceObject)
     /// Invalidates the query and releases associated resources.
     VIRTUAL void METHOD(Invalidate)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -229,11 +230,6 @@ struct IQueryVtbl
     struct IDeviceObjectMethods DeviceObject;
     struct IQueryMethods        Query;
 };
-
-typedef struct IQuery
-{
-    struct IQueryVtbl* pVtbl;
-} IQuery;
 
 // clang-format off
 

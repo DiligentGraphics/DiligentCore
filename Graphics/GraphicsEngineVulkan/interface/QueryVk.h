@@ -44,7 +44,8 @@ static const INTERFACE_ID IID_QueryVk =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Vulkan-specific functionality of a Query object.
-DILIGENT_INTERFACE(IQueryVk, IQuery){};
+DILIGENT_BEGIN_INTERFACE(IQueryVk, IQuery){};
+DILIGENT_END_INTERFACE
 
 #endif
 

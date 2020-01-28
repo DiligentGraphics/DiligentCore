@@ -44,7 +44,8 @@ static const INTERFACE_ID IID_BufferViewGL =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a buffer view object.
-DILIGENT_INTERFACE(IBufferViewGL, IBufferView){};
+DILIGENT_BEGIN_INTERFACE(IBufferViewGL, IBufferView){};
+DILIGENT_END_INTERFACE
 
 #endif
 

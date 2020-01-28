@@ -260,7 +260,7 @@ static const struct INTERFACE_ID IID_PipelineState =
 // clang-format off
 
 /// Pipeline state interface
-DILIGENT_INTERFACE(IPipelineState, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the blend state description used to create the object
@@ -346,6 +346,7 @@ DILIGENT_INTERFACE(IPipelineState, IDeviceObject)
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineState* pPSO) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -359,11 +360,6 @@ struct IPipelineStateVtbl
     struct IDeviceObjectMethods  DeviceObject;
     struct IPipelineStateMethods PipelineState;
 };
-
-typedef struct IPipelineState
-{
-    struct IPipelineStateVtbl* pVtbl;
-} IPipelineState;
 
 // clang-format off
 

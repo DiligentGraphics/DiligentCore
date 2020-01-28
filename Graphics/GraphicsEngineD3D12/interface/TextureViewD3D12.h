@@ -42,12 +42,12 @@ static const INTERFACE_ID IID_TextureViewD3D12 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D12-specific functionality of a texture view object.
-DILIGENT_INTERFACE(ITextureViewD3D12, ITextureView)
+DILIGENT_BEGIN_INTERFACE(ITextureViewD3D12, ITextureView)
 {
     /// Returns CPU descriptor handle of the texture view.
     VIRTUAL D3D12_CPU_DESCRIPTOR_HANDLE METHOD(GetCPUDescriptorHandle)(THIS) PURE;
 };
-
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -60,11 +60,6 @@ struct ITextureViewD3D12Vtbl
     struct ITextureViewMethods      TextureView;
     struct ITextureViewD3D12Methods TextureViewD3D12;
 };
-
-typedef struct ITextureViewD3D12
-{
-    struct ITextureViewD3D12Vtbl* pVtbl;
-} ITextureViewD3D12;
 
 #    define ITextureViewD3D12_GetCPUDescriptorHandle(This) CALL_IFACE_METHOD(TextureViewD3D12, GetCPUDescriptorHandle, This)
 

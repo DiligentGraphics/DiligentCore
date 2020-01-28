@@ -180,7 +180,7 @@ typedef struct BufferData BufferData;
 /// Buffer interface
 
 /// Defines the methods to manipulate a buffer object
-DILIGENT_INTERFACE(IBuffer, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the buffer description used to create the object
@@ -235,6 +235,7 @@ DILIGENT_INTERFACE(IBuffer, IDeviceObject)
     /// Returns the internal buffer state
     VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -248,11 +249,6 @@ struct IBufferVtbl
     struct IDeviceObjectMethods DeviceObject;
     struct IBufferMethods       Buffer;
 };
-
-typedef struct IBuffer
-{
-    struct IBufferVtbl* pVtbl;
-} IBuffer;
 
 // clang-format off
 

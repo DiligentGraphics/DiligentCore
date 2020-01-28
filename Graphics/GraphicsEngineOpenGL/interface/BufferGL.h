@@ -42,11 +42,12 @@ static const INTERFACE_ID IID_BufferGL =
     {0x8df7319, 0xf425, 0x4ec7, {0x8d, 0x2b, 0x1b, 0x3f, 0xc0, 0xbd, 0xdb, 0xb4}};
 
 /// Exposes OpenGL-specific functionality of a buffer object.
-DILIGENT_INTERFACE(IBufferGL, IBuffer)
+DILIGENT_BEGIN_INTERFACE(IBufferGL, IBuffer)
 {
     /// Returns OpenGL buffer handle
     VIRTUAL GLuint METHOD(GetGLBufferHandle)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -59,11 +60,6 @@ struct IBufferGLVtbl
     struct IBufferMethods       Buffer;
     struct IBufferGLMethods     BufferGL;
 };
-
-typedef struct IBufferGL
-{
-    struct IBufferGLVtbl* pVtbl;
-} IBufferGL;
 
 #    define IBufferGL_GetGLBufferHandle(This) CALL_IFACE_METHOD(BufferGL, GetGLBufferHandle, This)
 

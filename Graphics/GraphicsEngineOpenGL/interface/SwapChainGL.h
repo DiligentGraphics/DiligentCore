@@ -42,11 +42,12 @@ static const INTERFACE_ID IID_SwapChainGL =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes OpenGL-specific functionality of a swap chain.
-DILIGENT_INTERFACE(ISwapChainGL, ISwapChain)
+DILIGENT_BEGIN_INTERFACE(ISwapChainGL, ISwapChain)
 {
     /// Returns the default framebuffer handle
     VIRTUAL GLuint METHOD(GetDefaultFBO)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -59,11 +60,6 @@ struct ISwapChainGLVtbl
     struct ISwapChainMethods    SwapChain;
     struct ISwapChainGLMethods  SwapChainGL;
 };
-
-typedef struct ISwapChainGL
-{
-    struct ISwapChainGLVtbl* pVtbl;
-} ISwapChainGL;
 
 // clang-format off
 

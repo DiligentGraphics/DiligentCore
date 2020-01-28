@@ -197,7 +197,7 @@ typedef struct TextureViewDesc TextureViewDesc;
 /// will not be destroyed until all views are released.
 /// The texture view will also keep a strong reference to the texture sampler,
 /// if any is set.
-DILIGENT_INTERFACE(ITextureView, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(ITextureView, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the texture view description used to create the object
@@ -223,6 +223,7 @@ DILIGENT_INTERFACE(ITextureView, IDeviceObject)
     /// so Release() must not be called.
     VIRTUAL struct ITexture* METHOD(GetTexture)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -236,11 +237,6 @@ struct ITextureViewVtbl
     struct IDeviceObjectMethods DeviceObject;
     struct ITextureViewMethods  TextureView;
 };
-
-typedef struct ITextureView
-{
-    struct ITextureViewVtbl* pVtbl;
-} ITextureView;
 
 #    define ITextureView_GetDesc(This) (const struct TextureViewDesc*)IDeviceObject_GetDesc(This)
 

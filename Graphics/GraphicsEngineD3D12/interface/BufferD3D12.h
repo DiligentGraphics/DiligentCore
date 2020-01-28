@@ -45,7 +45,7 @@ static const INTERFACE_ID IID_BufferD3D12 =
 // clang-format off
 
 /// Exposes Direct3D12-specific functionality of a buffer object.
-DILIGENT_INTERFACE(IBufferD3D12, IBuffer)
+DILIGENT_BEGIN_INTERFACE(IBufferD3D12, IBuffer)
 {
     /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
 
@@ -71,6 +71,7 @@ DILIGENT_INTERFACE(IBufferD3D12, IBuffer)
     /// returns D3D12_RESOURCE_STATE_COMMON (0).
     VIRTUAL D3D12_RESOURCE_STATES METHOD(GetD3D12ResourceState)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -83,11 +84,6 @@ struct IBufferD3D12Vtbl
     struct IBufferMethods       Buffer;
     struct IBufferD3D12Methods  BufferD3D12;
 };
-
-typedef struct IBufferD3D12
-{
-    struct IBufferD3D12Vtbl* pVtbl;
-} IBufferD3D12;
 
 #    define IBufferD3D12_GetD3D12Buffer(This, ...)        CALL_IFACE_METHOD(BufferD3D12, GetD3D12Buffer,        This, __VA_ARGS__)
 #    define IBufferD3D12_SetD3D12ResourceState(This, ...) CALL_IFACE_METHOD(BufferD3D12, SetD3D12ResourceState, This, __VA_ARGS__)

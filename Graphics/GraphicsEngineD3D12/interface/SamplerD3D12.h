@@ -42,7 +42,7 @@ static const INTERFACE_ID IID_SamplerD3D12 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D12-specific functionality of a sampler object.
-DILIGENT_INTERFACE(ISamplerD3D12, ISampler)
+DILIGENT_BEGIN_INTERFACE(ISamplerD3D12, ISampler)
 {
     /// Returns a CPU descriptor handle of the D3D12 sampler object
 
@@ -50,6 +50,7 @@ DILIGENT_INTERFACE(ISamplerD3D12, ISampler)
     /// so Release() must not be called.
     VIRTUAL D3D12_CPU_DESCRIPTOR_HANDLE METHOD(GetCPUDescriptorHandle)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -62,11 +63,6 @@ struct ISamplerD3D12Vtbl
     //struct ISamplerMethods      Sampler;
     struct ISamplerD3D12Methods SamplerD3D12;
 };
-
-typedef struct ISamplerD3D12
-{
-    struct ISamplerD3D12Vtbl* pVtbl;
-} ISamplerD3D12;
 
 #    define ISamplerD3D12_GetCPUDescriptorHandle(This) CALL_IFACE_METHOD(SamplerD3D12, GetCPUDescriptorHandle, This)
 

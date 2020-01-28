@@ -44,11 +44,12 @@ static const INTERFACE_ID IID_TextureViewVk =
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a texture view object.
-DILIGENT_INTERFACE(ITextureViewVk, ITextureView)
+DILIGENT_BEGIN_INTERFACE(ITextureViewVk, ITextureView)
 {
     /// Returns Vulkan image view handle
     VIRTUAL VkImageView METHOD(GetVulkanImageView)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -63,11 +64,6 @@ struct ITextureViewVkVtbl
     struct ITextureViewMethods   TextureView;
     struct ITextureViewVkMethods TextureViewVk;
 };
-
-typedef struct ITextureViewVk
-{
-    struct ITextureViewVkVtbl* pVtbl;
-} ITextureViewVk;
 
 // clang-format off
 

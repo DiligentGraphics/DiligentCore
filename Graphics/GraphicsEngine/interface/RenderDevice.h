@@ -64,7 +64,7 @@ static const INTERFACE_ID IID_RenderDevice =
 // clang-format off
 
 /// Render device interface
-DILIGENT_INTERFACE(IRenderDevice, IObject)
+DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 {
     /// Creates a new buffer object
 
@@ -236,6 +236,7 @@ DILIGENT_INTERFACE(IRenderDevice, IObject)
     ///         so the application should not call Release().
     VIRTUAL IEngineFactory* METHOD(GetEngineFactory)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -248,11 +249,6 @@ struct IRenderDeviceVtbl
     struct IObjectMethods       Object;
     struct IRenderDeviceMethods RenderDevice;
 };
-
-typedef struct IRenderDevice
-{
-    struct IRenderDeviceVtbl* pVtbl;
-} IRenderDevice;
 
 // clang-format off
 

@@ -42,7 +42,7 @@ static const struct INTERFACE_ID IID_SamplerD3D11 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a sampler object.
-DILIGENT_INTERFACE(ISamplerD3D11, ISampler)
+DILIGENT_BEGIN_INTERFACE(ISamplerD3D11, ISampler)
 {
     /// Returns a pointer to the ID3D11SamplerState interface of the internal Direct3D11 object.
 
@@ -50,6 +50,7 @@ DILIGENT_INTERFACE(ISamplerD3D11, ISampler)
     /// so Release() must not be called.
     VIRTUAL ID3D11SamplerState* METHOD(GetD3D11SamplerState)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -62,11 +63,6 @@ struct ISamplerD3D11Vtbl
     //struct ISamplerMethods      Sampler;
     struct ISamplerD3D11Methods SamplerD3D11;
 };
-
-typedef struct ISamplerD3D11
-{
-    struct ISamplerD3D11Vtbl* pVtbl;
-} ISamplerD3D11;
 
 #    define ISamplerD3D11_GetD3D11SamplerState(This) CALL_IFACE_METHOD(SamplerD3D11, GetD3D11SamplerState, This)
 

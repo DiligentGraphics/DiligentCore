@@ -42,7 +42,7 @@ static const INTERFACE_ID IID_QueryD3D12 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D12-specific functionality of a Query object.
-DILIGENT_INTERFACE(IQueryD3D12, IQuery)
+DILIGENT_BEGIN_INTERFACE(IQueryD3D12, IQuery)
 {
     /// Returns the Direct3D12 query heap that internal query object resides in.
     VIRTUAL ID3D12QueryHeap* METHOD(GetD3D12QueryHeap)(THIS) PURE;
@@ -50,6 +50,7 @@ DILIGENT_INTERFACE(IQueryD3D12, IQuery)
     /// Returns the index of a query object in Direct3D12 query heap.
     VIRTUAL Uint32 METHOD(GetQueryHeapIndex)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -62,11 +63,6 @@ struct IQueryD3D12Vtbl
     struct IQueryMethods        Query;
     struct IQueryD3D12Methods   QueryD3D12;
 };
-
-typedef struct IQueryD3D12
-{
-    struct IQueryD3D12Vtbl* pVtbl;
-} IQueryD3D12;
 
 #    define IQueryD3D12_GetD3D12QueryHeap(This) CALL_IFACE_METHOD(QueryD3D12, GetD3D12QueryHeap, This)
 #    define IQueryD3D12_GetQueryHeapIndex(This) CALL_IFACE_METHOD(QueryD3D12, GetQueryHeapIndex, This)

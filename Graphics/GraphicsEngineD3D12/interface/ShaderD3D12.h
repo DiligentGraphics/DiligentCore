@@ -44,13 +44,14 @@ static const INTERFACE_ID IID_ShaderD3D12 =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D12-specific functionality of a shader object.
-DILIGENT_INTERFACE(IShaderD3D12, IShaderD3D){
+DILIGENT_BEGIN_INTERFACE(IShaderD3D12, IShaderD3D){
     /// Returns a pointer to the ID3D12DeviceChild interface of the internal Direct3D12 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
     //virtual ID3D12DeviceChild* GetD3D12Shader() = 0;
 };
+DILIGENT_END_INTERFACE
 
 #endif
 

@@ -44,7 +44,7 @@ static const INTERFACE_ID IID_CommandQueueD3D12 =
 // clang-format off
 
 /// Command queue interface
-DILIGENT_INTERFACE(ICommandQueueD3D12, IObject)
+DILIGENT_BEGIN_INTERFACE(ICommandQueueD3D12, IObject)
 {
     /// Returns the fence value that will be signaled next time
     VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS) CONST PURE;
@@ -69,6 +69,7 @@ DILIGENT_INTERFACE(ICommandQueueD3D12, IObject)
                                      ID3D12Fence* pFence,
                                      Uint64       Value) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -81,11 +82,6 @@ struct ICommandQueueD3D12Vtbl
     struct IObjectMethods            Object;
     struct ICommandQueueD3D12Methods CommandQueueD3D12;
 };
-
-typedef struct ICommandQueueD3D12
-{
-    struct ICommandQueueD3D12Vtbl* pVtbl;
-} ICommandQueueD3D12;
 
 // clang-format off
 

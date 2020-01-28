@@ -43,7 +43,7 @@ static const struct INTERFACE_ID IID_SwapChainD3D11 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a swap chain.
-DILIGENT_INTERFACE(ISwapChainD3D11, ISwapChain)
+DILIGENT_BEGIN_INTERFACE(ISwapChainD3D11, ISwapChain)
 {
     /// Returns render target view of the back buffer in the swap chain
     VIRTUAL struct ITextureViewD3D11* METHOD(GetCurrentBackBufferRTV)(THIS) PURE;
@@ -57,6 +57,7 @@ DILIGENT_INTERFACE(ISwapChainD3D11, ISwapChain)
     /// so Release() must not be called.
     VIRTUAL IDXGISwapChain* METHOD(GetDXGISwapChain)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -69,11 +70,6 @@ struct ISwapChainD3D11Vtbl
     struct ISwapChainMethods      SwapChain;
     struct ISwapChainD3D11Methods SwapChainD3D11;
 };
-
-typedef struct ISwapChainD3D11
-{
-    struct ISwapChainD3D11Vtbl* pVtbl;
-} ISwapChainD3D11;
 
 // clang-format off
 

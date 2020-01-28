@@ -112,7 +112,7 @@ DILIGENT_TYPED_ENUM(BIND_SHADER_RESOURCES_FLAGS, Uint32)
 // clang-format off
 
 /// Shader resource variable
-DILIGENT_INTERFACE(IShaderResourceVariable, IObject)
+DILIGENT_BEGIN_INTERFACE(IShaderResourceVariable, IObject)
 {
     /// Binds resource to the variable
 
@@ -153,6 +153,7 @@ DILIGENT_INTERFACE(IShaderResourceVariable, IObject)
     VIRTUAL bool METHOD(IsBound)(THIS_
                                  Uint32 ArrayIndex) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -165,11 +166,6 @@ struct IShaderResourceVariableVtbl
     struct IObjectMethods                 Object;
     struct IShaderResourceVariableMethods ShaderResourceVariable;
 };
-
-typedef struct IShaderResourceVariable
-{
-    struct IShaderResourceVariableVtbl* pVtbl;
-} IShaderResourceVariable;
 
 // clang-format off
 

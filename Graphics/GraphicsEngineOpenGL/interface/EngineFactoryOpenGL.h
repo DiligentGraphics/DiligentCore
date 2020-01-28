@@ -63,7 +63,7 @@ static const INTERFACE_ID IID_EngineFactoryOpenGL =
 
 // clang-format off
 
-DILIGENT_INTERFACE(IEngineFactoryOpenGL, IEngineFactory)
+DILIGENT_BEGIN_INTERFACE(IEngineFactoryOpenGL, IEngineFactory)
 {
     VIRTUAL void METHOD(CreateDeviceAndSwapChainGL)(THIS_
                                                     const EngineGLCreateInfo REF EngineCI,
@@ -80,6 +80,7 @@ DILIGENT_INTERFACE(IEngineFactoryOpenGL, IEngineFactory)
                                                  IRenderDevice**              ppDevice,
                                                  IDeviceContext**             ppImmediateContext) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -93,11 +94,6 @@ struct IEngineFactoryOpenGLVtbl
     struct IEngineFactoryMethods       EngineFactory;
     struct IEngineFactoryOpenGLMethods EngineFactoryOpenGL;
 };
-
-typedef struct IEngineFactoryOpenGL
-{
-    struct IEngineFactoryOpenGLVtbl* pVtbl;
-} IEngineFactoryOpenGL;
 
 // clang-format off
 

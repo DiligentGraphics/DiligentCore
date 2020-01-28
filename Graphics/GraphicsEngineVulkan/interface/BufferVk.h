@@ -44,7 +44,7 @@ static const INTERFACE_ID IID_BufferVk =
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a buffer object.
-DILIGENT_INTERFACE(IBufferVk, IBuffer)
+DILIGENT_BEGIN_INTERFACE(IBufferVk, IBuffer)
 {
     /// Returns a vulkan buffer handle
     VIRTUAL VkBuffer METHOD(GetVkBuffer)(THIS) CONST PURE;
@@ -59,6 +59,7 @@ DILIGENT_INTERFACE(IBufferVk, IBuffer)
     /// returns Vulkan access flags corresponding to the state. If the state is unknown, returns 0.
     VIRTUAL VkAccessFlags METHOD(GetAccessFlags)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -73,11 +74,6 @@ struct IBufferVkVtbl
     struct IBufferMethods       Buffer;
     struct IBufferVkMethods     BufferVk;
 };
-
-typedef struct IBufferVk
-{
-    struct IBufferVkVtbl* pVtbl;
-} IBufferVk;
 
 #    define IBufferVk_GetVkBuffer(This)         CALL_IFACE_METHOD(BufferVk, GetVkBuffer, This)
 #    define IBufferVk_SetAccessFlags(This, ...) CALL_IFACE_METHOD(BufferVk, SetAccessFlags, This, __VA_ARGS__)

@@ -42,7 +42,7 @@ static const struct INTERFACE_ID IID_BufferD3D11 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a buffer object.
-DILIGENT_INTERFACE(IBufferD3D11, IBuffer)
+DILIGENT_BEGIN_INTERFACE(IBufferD3D11, IBuffer)
 {
     /// Returns a pointer to the ID3D11Buffer interface of the internal Direct3D11 object.
 
@@ -50,6 +50,7 @@ DILIGENT_INTERFACE(IBufferD3D11, IBuffer)
     /// so Release() must not be called.
     VIRTUAL ID3D11Buffer* METHOD(GetD3D11Buffer)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -62,11 +63,6 @@ struct IBufferD3D11Vtbl
     struct IBufferMethods       Buffer;
     struct IBufferD3D11Methods  BufferD3D11;
 };
-
-typedef struct IBufferD3D11
-{
-    struct IBufferD3D11Vtbl* pVtbl;
-} IBufferD3D11;
 
 #    define IBufferD3D11_GetD3D11Buffer(This) CALL_IFACE_METHOD(BufferD3D11, GetD3D11Buffer, This)
 

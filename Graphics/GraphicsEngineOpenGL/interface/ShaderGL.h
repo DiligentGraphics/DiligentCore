@@ -44,7 +44,8 @@ static const INTERFACE_ID IID_ShaderGL =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a shader object.
-DILIGENT_INTERFACE(IShaderGL, IShader){};
+DILIGENT_BEGIN_INTERFACE(IShaderGL, IShader){};
+DILIGENT_END_INTERFACE
 
 #endif
 
@@ -59,11 +60,6 @@ struct IShaderGLVtbl
     struct IShaderMethods       Shader;
     //struct IShaderGLMethods  ShaderGL;
 };
-
-typedef struct IShaderGL
-{
-    struct IShaderGLVtbl* pVtbl;
-} IShaderGL;
 
 #endif
 

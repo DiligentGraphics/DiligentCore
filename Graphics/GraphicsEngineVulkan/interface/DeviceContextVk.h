@@ -45,7 +45,7 @@ static const INTERFACE_ID IID_DeviceContextVk =
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a device context.
-DILIGENT_INTERFACE(IDeviceContextVk, IDeviceContext)
+DILIGENT_BEGIN_INTERFACE(IDeviceContextVk, IDeviceContext)
 {
     /// Transitions internal vulkan image to a specified layout
 
@@ -86,6 +86,7 @@ DILIGENT_INTERFACE(IDeviceContextVk, IDeviceContext)
     /// Unlocks the command queue that was previously locked by IDeviceContextVk::LockCommandQueue().
     VIRTUAL void METHOD(UnlockCommandQueue)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -99,11 +100,6 @@ struct IDeviceContextVkVtbl
     struct IDeviceContextMethods   DeviceContext;
     struct IDeviceContextVkMethods DeviceContextVk;
 };
-
-typedef struct IDeviceContextVk
-{
-    struct IDeviceContextVkVtbl* pVtbl;
-} IDeviceContextVk;
 
 // clang-format off
 

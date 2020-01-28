@@ -44,11 +44,12 @@ static const INTERFACE_ID IID_BufferViewVk =
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a buffer view object.
-DILIGENT_INTERFACE(IBufferViewVk, IBufferView)
+DILIGENT_BEGIN_INTERFACE(IBufferViewVk, IBufferView)
 {
     /// Returns Vulkan buffer view object.
     VIRTUAL VkBufferView METHOD(GetVkBufferView)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -63,12 +64,6 @@ struct IBufferViewVkVtbl
     struct IBufferViewMethods   BufferView;
     struct IBufferViewVkMethods BufferViewVk;
 };
-
-typedef struct IBufferViewVk
-{
-    struct IBufferViewVkVtbl* pVtbl;
-} IBufferViewVk;
-
 
 // clang-format off
 

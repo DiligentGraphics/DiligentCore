@@ -56,7 +56,7 @@ typedef struct FenceDesc FenceDesc;
 ///
 /// \remarks When a fence that was previously signaled by IDeviceContext::SignalFence() is destroyed,
 ///          it may block the GPU until all prior commands have completed execution.
-DILIGENT_INTERFACE(IFence, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the fence description used to create the object
@@ -74,6 +74,7 @@ DILIGENT_INTERFACE(IFence, IDeviceObject)
     VIRTUAL void METHOD(Reset)(THIS_
                                Uint64 Value) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -87,11 +88,6 @@ struct IFenceVtbl
     struct IDeviceObjectMethods DeviceObject;
     struct IFenceMethods        Fence;
 };
-
-typedef struct IFence
-{
-    struct IFenceVtbl* pVtbl;
-} IFence;
 
 // clang-format off
 

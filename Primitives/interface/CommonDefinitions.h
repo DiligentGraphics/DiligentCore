@@ -55,13 +55,17 @@
 
 #    define DILIGENT_GLOBAL_FUNCTION(FuncName) Diligent_##FuncName
 
-#    define DILIGENT_INTERFACE(Name, Base) \
-        struct Name;                       \
+#    define DILIGENT_BEGIN_INTERFACE(Name, Base) \
+        struct Name;                             \
         struct Name##Methods
 
 #    define DEFAULT_VALUE(x)
 
 #    define CALL_IFACE_METHOD(Iface, Method, This, ...) (This)->pVtbl->Iface.Method((I##Iface*)(This), ##__VA_ARGS__)
+
+// Two levels of indirection are required to concatenate expanded macros
+#    define DILIGENT_CONCATENATE(X, Y) X##Y
+#    define DILIGENT_VTBL_NAME(Iface)  DILIGENT_CONCATENATE(Iface, Vtbl)
 
 #else
 
@@ -80,7 +84,7 @@
 
 #    define DILIGENT_GLOBAL_FUNCTION(FuncName) FuncName
 
-#    define DILIGENT_INTERFACE(Name, Base) struct Name : public Base
+#    define DILIGENT_BEGIN_INTERFACE(Name, Base) struct Name : public Base
 
 #    define DEFAULT_VALUE(x) = x
 

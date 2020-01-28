@@ -57,6 +57,14 @@
 #    define REF          *
 #    define METHOD(Name) (*Name)
 
+// clang-format off
+#    define DILIGENT_END_INTERFACE\
+        typedef struct DILIGENT_INTERFACE_NAME                        \
+        {                                                             \
+            struct DILIGENT_VTBL_NAME(DILIGENT_INTERFACE_NAME)* pVtbl;\
+        } DILIGENT_INTERFACE_NAME;
+// clang-format on
+
 #else
 
 #    define THIS
@@ -66,5 +74,6 @@
 #    define PURE         = 0
 #    define REF          &
 #    define METHOD(Name) Name
+#    define DILIGENT_END_INTERFACE
 
 #endif

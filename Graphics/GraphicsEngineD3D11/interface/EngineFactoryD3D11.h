@@ -51,7 +51,7 @@ static const struct INTERFACE_ID IID_EngineFactoryD3D11 =
 // clang-format off
 
 /// Engine factory for Direct3D11 rendering backend.
-DILIGENT_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
+DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
 {
     /// Creates a render device and device contexts for Direct3D11-based engine implementation.
 
@@ -149,6 +149,7 @@ DILIGENT_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
                                                Uint32 REF             NumDisplayModes,
                                                DisplayModeAttribs*    DisplayModes) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -162,11 +163,6 @@ struct IEngineFactoryD3D11Vtbl
     struct IEngineFactoryMethods      EngineFactory;
     struct IEngineFactoryD3D11Methods EngineFactoryD3D11;
 };
-
-typedef struct IEngineFactoryD3D11
-{
-    struct IEngineFactoryD3D11Vtbl* pVtbl;
-} IEngineFactoryD3D11;
 
 // clang-format off
 

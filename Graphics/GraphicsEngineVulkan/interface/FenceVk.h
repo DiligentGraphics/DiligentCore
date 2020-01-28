@@ -46,9 +46,10 @@ static const INTERFACE_ID IID_FenceVk =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Vulkan-specific functionality of a fence object.
-DILIGENT_INTERFACE(IFenceVk, IFence)
+DILIGENT_BEGIN_INTERFACE(IFenceVk, IFence)
 {
 };
+DILIGENT_END_INTERFACE
 
 #endif
 

@@ -101,7 +101,7 @@ typedef struct ResourceMappingDesc ResourceMappingDesc;
 /// This interface provides mapping between literal names and resource pointers.
 /// It is created by IRenderDevice::CreateResourceMapping().
 /// \remarks Resource mapping holds strong references to all objects it keeps.
-DILIGENT_INTERFACE(IResourceMapping, IObject)
+DILIGENT_BEGIN_INTERFACE(IResourceMapping, IObject)
 {
     /// Adds a resource to the mapping.
 
@@ -164,6 +164,7 @@ DILIGENT_INTERFACE(IResourceMapping, IObject)
     /// Returns the size of the resource mapping, i.e. the number of objects.
     VIRTUAL size_t METHOD(GetSize)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -176,11 +177,6 @@ struct IResourceMappingVtbl
     struct IObjectMethods          Object;
     struct IResourceMappingMethods ResourceMapping;
 };
-
-typedef struct IResourceMapping
-{
-    struct IResourceMappingVtbl* pVtbl;
-} IResourceMapping;
 
 // clang-format off
 

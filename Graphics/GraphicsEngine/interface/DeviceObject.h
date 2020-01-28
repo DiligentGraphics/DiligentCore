@@ -44,7 +44,7 @@ static const INTERFACE_ID IID_DeviceObject =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Base interface for all objects created by the render device Diligent::IRenderDevice
-DILIGENT_INTERFACE(IDeviceObject, IObject)
+DILIGENT_BEGIN_INTERFACE(IDeviceObject, IObject)
 {
     /// Returns the object description
     VIRTUAL const DeviceObjectAttribs REF METHOD(GetDesc)(THIS) CONST PURE;
@@ -68,6 +68,7 @@ DILIGENT_INTERFACE(IDeviceObject, IObject)
     ///          assigned to an object and are always guaranteed to be invalid.
     VIRTUAL Int32 METHOD(GetUniqueID)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -80,11 +81,6 @@ struct IDeviceObjectVtbl
     struct IObjectMethods       Object;
     struct IDeviceObjectMethods DeviceObject;
 };
-
-typedef struct IDeviceObject
-{
-    struct IDeviceObjectVtbl* pVtbl;
-}IDeviceObject;
 
 // clang-format off
 

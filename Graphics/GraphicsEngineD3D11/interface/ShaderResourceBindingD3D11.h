@@ -44,7 +44,8 @@ static const struct INTERFACE_ID IID_ShaderResourceBindingD3D11 =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a shader resource binding object.
-DILIGENT_INTERFACE(IShaderResourceBindingD3D11, IShaderResourceBinding){};
+DILIGENT_BEGIN_INTERFACE(IShaderResourceBindingD3D11, IShaderResourceBinding){};
+DILIGENT_END_INTERFACE
 
 #endif
 
@@ -60,10 +61,10 @@ struct IShaderResourceBindingD3D11Vtbl
     //struct IShaderResourceBindingD3D11Methods ShaderResourceBindingD3D11;
 };
 
-struct IShaderResourceBindingD3D11
+typedef struct IShaderResourceBindingD3D11
 {
     struct IShaderResourceBindingD3D11Vtbl* pVtbl;
-};
+} IShaderResourceBindingD3D11;
 
 #endif
 

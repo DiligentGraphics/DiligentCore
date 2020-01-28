@@ -148,7 +148,7 @@ typedef struct BufferViewDesc BufferViewDesc;
 /// \remarks
 /// Buffer view holds strong references to the buffer. The buffer
 /// will not be destroyed until all views are released.
-DILIGENT_INTERFACE(IBufferView, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(IBufferView, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the buffer view description used to create the object
@@ -161,6 +161,7 @@ DILIGENT_INTERFACE(IBufferView, IDeviceObject)
     /// so Release() must not be called.
     VIRTUAL struct IBuffer* METHOD(GetBuffer)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -174,11 +175,6 @@ struct IBufferViewVtbl
     struct IDeviceObjectMethods DeviceObject;
     struct IBufferViewMethods   BufferView;
 };
-
-typedef struct IBufferView
-{
-    struct IBufferViewVtbl* pVtbl;
-} IBufferView;
 
 // clang-format off
 

@@ -45,7 +45,7 @@ static const INTERFACE_ID IID_RenderDeviceGL =
 // clang-format off
 
 /// Exposes OpenGL-specific functionality of a render device.
-DILIGENT_INTERFACE(IRenderDeviceGL, IRenderDevice)
+DILIGENT_BEGIN_INTERFACE(IRenderDeviceGL, IRenderDevice)
 {
     /// Creates a texture from OpenGL handle
 
@@ -104,7 +104,7 @@ DILIGENT_INTERFACE(IRenderDeviceGL, IRenderDevice)
                                             RESOURCE_STATE        InitialState,
                                             ITexture**            ppTexture) PURE;
 };
-
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -118,11 +118,6 @@ struct IRenderDeviceGLVtbl
     struct IRenderDeviceMethods   RenderDevice;
     struct IRenderDeviceGLMethods RenderDeviceGL;
 };
-
-typedef struct IRenderDeviceGL
-{
-    struct IRenderDeviceGLVtbl* pVtbl;
-} IRenderDeviceGL;
 
 // clang-format off
 

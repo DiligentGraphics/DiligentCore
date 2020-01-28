@@ -43,11 +43,12 @@ static const INTERFACE_ID IID_QueryGL =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes OpenGL-specific functionality of a Query object.
-DILIGENT_INTERFACE(IQueryGL, IQuery)
+DILIGENT_BEGIN_INTERFACE(IQueryGL, IQuery)
 {
     /// Returns OpenGL handle of an internal query object.
     VIRTUAL GLuint METHOD(GetGlQueryHandle)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -60,11 +61,6 @@ struct IQueryGLVtbl
     struct IQueryMethods        Query;
     struct IQueryGLMethods      QueryGL;
 };
-
-typedef struct IQueryGL
-{
-    struct IQueryGLVtbl* pVtbl;
-} IQueryGL;
 
 #    define IQueryGL_GetGlQueryHandle(This) CALL_IFACE_METHOD(QueryGL, GetGlQueryHandle, This)
 

@@ -47,7 +47,7 @@ static const struct INTERFACE_ID IID_DataBlob =
 
 
 /// Base interface for a file stream
-DILIGENT_INTERFACE(IDataBlob, IObject)
+DILIGENT_BEGIN_INTERFACE(IDataBlob, IObject)
 {
     /// Sets the size of the internal data buffer
     VIRTUAL void METHOD(Resize)(THIS_
@@ -59,6 +59,7 @@ DILIGENT_INTERFACE(IDataBlob, IObject)
     /// Returns the pointer to the internal data buffer
     VIRTUAL void* METHOD(GetDataPtr)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "UndefInterfaceHelperMacros.h"
 
@@ -72,11 +73,6 @@ struct IDataBlobVtbl
     struct IObjectMethods   Object;
     struct IDataBlobMethods DataBlob;
 };
-
-typedef struct IDataBlob
-{
-    struct IDataBlobVtbl* pVtbl;
-} IDataBlob;
 
 // clang-format off
 

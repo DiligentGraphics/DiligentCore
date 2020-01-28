@@ -50,7 +50,7 @@ static const INTERFACE_ID IID_SwapChain =
 /// Swap chain interface
 
 /// The swap chain is created by a platform-dependent function
-DILIGENT_INTERFACE(ISwapChain, IObject)
+DILIGENT_BEGIN_INTERFACE(ISwapChain, IObject)
 {
     /// Presents a rendered image to the user
     VIRTUAL void METHOD(Present)(THIS_
@@ -94,6 +94,7 @@ DILIGENT_INTERFACE(ISwapChain, IObject)
     /// so Release() must not be called.
     VIRTUAL ITextureView* METHOD(GetDepthBufferDSV)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -106,11 +107,6 @@ struct ISwapChainVtbl
     struct IObjectMethods    Object;
     struct ISwapChainMethods SwapChain;
 };
-
-typedef struct ISwapChain
-{
-    struct ISwapChainVtbl* pVtbl;
-} ISwapChain;
 
 // clang-format off
 

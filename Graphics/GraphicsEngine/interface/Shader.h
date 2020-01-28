@@ -90,13 +90,13 @@ static const INTERFACE_ID IID_IShaderSourceInputStreamFactory =
 
 
 /// Shader source stream factory interface
-DILIGENT_INTERFACE(IShaderSourceInputStreamFactory, IObject)
+DILIGENT_BEGIN_INTERFACE(IShaderSourceInputStreamFactory, IObject)
 {
     VIRTUAL void METHOD(CreateInputStream)(THIS_
                                            const Char*   Name,
                                            IFileStream** ppStream) PURE;
 };
-
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -109,11 +109,6 @@ struct IShaderSourceInputStreamFactoryVtbl
     struct IObjectMethods                         Object;
     struct IShaderSourceInputStreamFactoryMethods ShaderSourceInputStreamFactory;
 };
-
-typedef struct IShaderSourceInputStreamFactory
-{
-    struct IShaderSourceInputStreamFactoryVtbl* pVtbl;
-} IShaderSourceInputStreamFactory;
 
 #    define IShaderSourceInputStreamFactory_CreateInputStream(This, ...) CALL_IFACE_METHOD(ShaderSourceInputStreamFactory, CreateInputStream, This, __VA_ARGS__)
 
@@ -322,7 +317,7 @@ typedef struct ShaderResourceDesc ShaderResourceDesc;
 // clang-format off
 
 /// Shader interface
-DILIGENT_INTERFACE(IShader, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(IShader, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the shader description
@@ -337,7 +332,7 @@ DILIGENT_INTERFACE(IShader, IDeviceObject)
                                          Uint32 Index,
                                          ShaderResourceDesc REF ResourceDesc) CONST PURE;
 };
-
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -351,11 +346,6 @@ struct IShaderVtbl
     struct IDeviceObjectMethods DeviceObject;
     struct IShaderMethods       Shader;
 };
-
-typedef struct IShader
-{
-    struct IShaderVtbl* pVtbl;
-} IShader;
 
 // clang-format off
 

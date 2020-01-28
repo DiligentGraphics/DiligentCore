@@ -314,7 +314,7 @@ typedef struct MappedTextureSubresource MappedTextureSubresource;
 
 
 /// Texture inteface
-DILIGENT_INTERFACE(ITexture, IDeviceObject)
+DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the texture description used to create the object
@@ -375,6 +375,7 @@ DILIGENT_INTERFACE(ITexture, IDeviceObject)
     /// Returns the internal texture state
     VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -388,11 +389,6 @@ struct ITextureVtbl
     struct IDeviceObjectMethods DeviceObject;
     struct ITextureMethods      Texture;
 };
-
-typedef struct ITexture
-{
-    struct ITextureVtbl* pVtbl;
-} ITexture;
 
 // clang-format off
 

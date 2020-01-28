@@ -42,7 +42,7 @@ static const struct INTERFACE_ID IID_ShaderD3D11 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a shader object.
-DILIGENT_INTERFACE(IShaderD3D11, IShaderD3D)
+DILIGENT_BEGIN_INTERFACE(IShaderD3D11, IShaderD3D)
 {
     /// Returns a pointer to the ID3D11DeviceChild interface of the internal Direct3D11 object.
 
@@ -50,6 +50,7 @@ DILIGENT_INTERFACE(IShaderD3D11, IShaderD3D)
     /// so Release() must not be called.
     VIRTUAL ID3D11DeviceChild* METHOD(GetD3D11Shader)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -63,11 +64,6 @@ struct IShaderD3D11Vtbl
     struct IShaderD3DMethods    ShaderD3D;
     struct IShaderD3D11Methods  ShaderD3D11;
 };
-
-typedef struct IShaderD3D11
-{
-    struct IShaderD3D11Vtbl* pVtbl;
-} IShaderD3D11;
 
 #    define IShaderD3D11_GetD3D11Shader(This) CALL_IFACE_METHOD(ShaderD3D11, GetD3D11Shader, This)
 

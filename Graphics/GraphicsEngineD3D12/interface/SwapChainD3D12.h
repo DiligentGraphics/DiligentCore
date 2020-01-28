@@ -45,7 +45,7 @@ static const INTERFACE_ID IID_SwapChainD3D12 =
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D12-specific functionality of a swap chain.
-DILIGENT_INTERFACE(ISwapChainD3D12, ISwapChain)
+DILIGENT_BEGIN_INTERFACE(ISwapChainD3D12, ISwapChain)
 {
     /// Returns a pointer to the IDXGISwapChain interface of the internal DXGI object.
 
@@ -53,6 +53,7 @@ DILIGENT_INTERFACE(ISwapChainD3D12, ISwapChain)
     /// so Release() must not be called.
     VIRTUAL IDXGISwapChain* METHOD(GetDXGISwapChain)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -65,11 +66,6 @@ struct ISwapChainD3D12Vtbl
     struct ISwapChainMethods      SwapChain;
     struct ISwapChainD3D12Methods SwapChainD3D12;
 };
-
-typedef struct ISwapChainD3D12
-{
-    struct ISwapChainD3D12Vtbl* pVtbl;
-} ISwapChainD3D12;
 
 // clang-format off
 

@@ -44,7 +44,8 @@ static const INTERFACE_ID IID_PipelineStateGL =
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a pipeline state object.
-DILIGENT_INTERFACE(IPipelineStateGL, IPipelineState){};
+DILIGENT_BEGIN_INTERFACE(IPipelineStateGL, IPipelineState){};
+DILIGENT_END_INTERFACE
 
 #endif
 

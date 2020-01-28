@@ -45,7 +45,7 @@ static const INTERFACE_ID IID_HLSL2GLSLConversionStream =
 
 // clang-format off
 
-DILIGENT_INTERFACE(IHLSL2GLSLConversionStream, IObject)
+DILIGENT_BEGIN_INTERFACE(IHLSL2GLSLConversionStream, IObject)
 {
     VIRTUAL void METHOD(Convert)(THIS_
                                  const Char* EntryPoint,
@@ -55,6 +55,7 @@ DILIGENT_INTERFACE(IHLSL2GLSLConversionStream, IObject)
                                  bool        UseInOutLocationQualifiers,
                                  IDataBlob** ppGLSLSource) PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -67,11 +68,6 @@ struct IHLSL2GLSLConversionStreamVtbl
     struct IObjectMethods                    Object;
     struct IHLSL2GLSLConversionStreamMethods HLSL2GLSLConversionStream;
 };
-
-typedef struct IHLSL2GLSLConversionStream
-{
-    struct IHLSL2GLSLConversionStreamVtbl* pVtbl;
-} IHLSL2GLSLConversionStream;
 
 // clang-format off
 
@@ -86,13 +82,13 @@ typedef struct IHLSL2GLSLConversionStream
 static const INTERFACE_ID IID_HLSL2GLSLConverter =
     {0x44a21160, 0x77e0, 0x4ddc, {0xa5, 0x7e, 0xb8, 0xb8, 0xb6, 0x5b, 0x53, 0x42}};
 
-#define DILIGENT_INTERFACE_NAME IHLSL2GLSLConversionStream
+#define DILIGENT_INTERFACE_NAME IHLSL2GLSLConverter
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 // clang-format off
 
 /// Interface to the buffer object implemented in OpenGL
-DILIGENT_INTERFACE(IHLSL2GLSLConverter, IObject)
+DILIGENT_BEGIN_INTERFACE(IHLSL2GLSLConverter, IObject)
 {
     VIRTUAL void METHOD(CreateStream)(THIS_
                                       const Char*                      InputFileName,
@@ -101,6 +97,7 @@ DILIGENT_INTERFACE(IHLSL2GLSLConverter, IObject)
                                       size_t                           NumSymbols,
                                       IHLSL2GLSLConversionStream**     ppStream) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
@@ -113,11 +110,6 @@ struct IHLSL2GLSLConverterVtbl
     struct IObjectMethods             Object;
     struct IHLSL2GLSLConverterMethods HLSL2GLSLConverter;
 };
-
-typedef struct IHLSL2GLSLConverter
-{
-    struct IHLSL2GLSLConverterVtbl* pVtbl;
-} IHLSL2GLSLConverter;
 
 // clang-format off
 
