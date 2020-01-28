@@ -96,7 +96,6 @@ DILIGENT_INTERFACE(IDeviceContextVk, IDeviceContext)
 struct IDeviceContextVkVtbl
 {
     struct IObjectMethods          Object;
-    struct IDeviceObjectMethods    DeviceObject;
     struct IDeviceContextMethods   DeviceContext;
     struct IDeviceContextVkMethods DeviceContextVk;
 };

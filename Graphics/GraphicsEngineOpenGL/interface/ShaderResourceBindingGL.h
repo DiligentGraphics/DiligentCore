@@ -54,9 +54,9 @@ DILIGENT_INTERFACE(IShaderResourceBindingGL, IShaderResourceBinding){};
 
 struct IShaderResourceBindingGLVtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IShaderMethods       Shader;
+    struct IObjectMethods                Object;
+    struct IDeviceObjectMethods          DeviceObject;
+    struct IShaderResourceBindingMethods ShaderResourceBinding;
     //struct IShaderResourceBindingGLMethods  ShaderResourceBindingGL;
 };
 

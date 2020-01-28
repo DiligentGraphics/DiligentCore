@@ -72,7 +72,6 @@ DILIGENT_INTERFACE(IDeviceContextGL, IDeviceContext)
 struct IDeviceContextGLVtbl
 {
     struct IObjectMethods          Object;
-    struct IDeviceObjectMethods    DeviceObject;
     struct IDeviceContextMethods   DeviceContext;
     struct IDeviceContextGLMethods DeviceContextGL;
 };

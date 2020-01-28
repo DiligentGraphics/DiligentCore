@@ -58,7 +58,6 @@ DILIGENT_INTERFACE(IDeviceContextD3D11, IDeviceContext)
 struct IDeviceContextD3D11Vtbl
 {
     struct IObjectMethods             Object;
-    struct IDeviceObjectMethods       DeviceObject;
     struct IDeviceContextMethods      DeviceContext;
     struct IDeviceContextD3D11Methods DeviceContextD3D11;
 };

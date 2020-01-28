@@ -60,10 +60,10 @@ struct IShaderResourceBindingVkVtbl
     //struct IShaderResourceBindingVkMethods ShaderResourceBindingVk;
 };
 
-struct IShaderResourceBindingVk
+typedef struct IShaderResourceBindingVk
 {
     struct IShaderResourceBindingVkVtbl* pVtbl;
-};
+} IShaderResourceBindingVk;
 
 #endif
 
