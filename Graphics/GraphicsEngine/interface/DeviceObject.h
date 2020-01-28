@@ -88,8 +88,8 @@ typedef struct IDeviceObject
 
 // clang-format off
 
-#    define IDeviceObject_GetDesc(This)     (This)->pVtbl->DeviceObject.GetDesc    ((IDeviceObject*)(This))
-#    define IDeviceObject_GetUniqueID(This) (This)->pVtbl->DeviceObject.GetUniqueID((IDeviceObject*)(This))
+#    define IDeviceObject_GetDesc(This)     CALL_IFACE_METHOD(DeviceObject, GetDesc,     This)
+#    define IDeviceObject_GetUniqueID(This) CALL_IFACE_METHOD(DeviceObject, GetUniqueID, This)
 
 // clang-format on
 

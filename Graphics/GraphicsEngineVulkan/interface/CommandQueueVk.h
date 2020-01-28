@@ -103,15 +103,15 @@ typedef struct ICommandQueueVk
 
 // clang-format off
 
-#    define ICommandQueueVk_GetNextFenceValue(This)      (This)->pVtbl->CommandQueueVk.GetNextFenceValue     ((ICommandQueueVk*)(This))
-#    define ICommandQueueVk_SubmitCmdBuffer(This, ...)   (This)->pVtbl->CommandQueueVk.SubmitCmdBuffer       ((ICommandQueueVk*)(This), __VA_ARGS__)
-#    define ICommandQueueVk_Submit(This, ...)            (This)->pVtbl->CommandQueueVk.Submit                ((ICommandQueueVk*)(This), __VA_ARGS__)
-#    define ICommandQueueVk_Present(This, ...)           (This)->pVtbl->CommandQueueVk.Present               ((ICommandQueueVk*)(This), __VA_ARGS__)
-#    define ICommandQueueVk_GetVkQueue(This)             (This)->pVtbl->CommandQueueVk.GetVkQueue            ((ICommandQueueVk*)(This))
-#    define ICommandQueueVk_GetQueueFamilyIndex(This)    (This)->pVtbl->CommandQueueVk.GetQueueFamilyIndex   ((ICommandQueueVk*)(This))
-#    define ICommandQueueVk_GetCompletedFenceValue(This) (This)->pVtbl->CommandQueueVk.GetCompletedFenceValue((ICommandQueueVk*)(This))
-#    define ICommandQueueVk_WaitForIdle(This)            (This)->pVtbl->CommandQueueVk.WaitForIdle           ((ICommandQueueVk*)(This))
-#    define ICommandQueueVk_SignalFence(This, ...)       (This)->pVtbl->CommandQueueVk.SignalFence           ((ICommandQueueVk*)(This), __VA_ARGS__)
+#    define ICommandQueueVk_GetNextFenceValue(This)      CALL_IFACE_METHOD(CommandQueueVk, GetNextFenceValue,      This)
+#    define ICommandQueueVk_SubmitCmdBuffer(This, ...)   CALL_IFACE_METHOD(CommandQueueVk, SubmitCmdBuffer,        This, __VA_ARGS__)
+#    define ICommandQueueVk_Submit(This, ...)            CALL_IFACE_METHOD(CommandQueueVk, Submit,                 This, __VA_ARGS__)
+#    define ICommandQueueVk_Present(This, ...)           CALL_IFACE_METHOD(CommandQueueVk, Present,                This, __VA_ARGS__)
+#    define ICommandQueueVk_GetVkQueue(This)             CALL_IFACE_METHOD(CommandQueueVk, GetVkQueue,             This)
+#    define ICommandQueueVk_GetQueueFamilyIndex(This)    CALL_IFACE_METHOD(CommandQueueVk, GetQueueFamilyIndex,    This)
+#    define ICommandQueueVk_GetCompletedFenceValue(This) CALL_IFACE_METHOD(CommandQueueVk, GetCompletedFenceValue, This)
+#    define ICommandQueueVk_WaitForIdle(This)            CALL_IFACE_METHOD(CommandQueueVk, WaitForIdle,            This)
+#    define ICommandQueueVk_SignalFence(This, ...)       CALL_IFACE_METHOD(CommandQueueVk, SignalFence,            This, __VA_ARGS__)
 
 // clang-format on
 

@@ -65,7 +65,7 @@ typedef struct IBufferViewD3D12
     struct IBufferViewD3D12Vtbl* pVtbl;
 } IBufferViewD3D12;
 
-#    define IBufferViewD3D12_GetCPUDescriptorHandle(This) (This)->pVtbl->BufferViewD3D12.GetCPUDescriptorHandle((IBufferViewD3D12*)(This))
+#    define IBufferViewD3D12_GetCPUDescriptorHandle(This) CALL_IFACE_METHOD(BufferViewD3D12, GetCPUDescriptorHandle, This)
 
 #endif
 

@@ -84,8 +84,8 @@ typedef struct IDeviceContextGL
 
 // clang-format off
 
-#    define IDeviceContextGL_UpdateCurrentGLContext(This) (This)->pVtbl->DeviceContextGL.UpdateCurrentGLContext((IDeviceContextGL*)(This))
-#    define IDeviceContextGL_SetSwapChain(This, ...)      (This)->pVtbl->DeviceContextGL.SetSwapChain((IDeviceContextGL*)(This), __VA_ARGS__)
+#    define IDeviceContextGL_UpdateCurrentGLContext(This) CALL_IFACE_METHOD(DeviceContextGL, UpdateCurrentGLContext, This)
+#    define IDeviceContextGL_SetSwapChain(This, ...)      CALL_IFACE_METHOD(DeviceContextGL, SetSwapChain,           This, __VA_ARGS__)
 
 // clang-format on
 

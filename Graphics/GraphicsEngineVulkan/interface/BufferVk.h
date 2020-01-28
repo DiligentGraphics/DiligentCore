@@ -79,14 +79,9 @@ typedef struct IBufferVk
     struct IBufferVkVtbl* pVtbl;
 } IBufferVk;
 
-
-// clang-format off
-
-#    define IBufferVk_GetVkBuffer(This, ...)    (This)->pVtbl->BufferVk.GetVkBuffer   ((IBufferVk*)(This), __VA_ARGS__)
-#    define IBufferVk_SetAccessFlags(This, ...) (This)->pVtbl->BufferVk.SetAccessFlags((IBufferVk*)(This), __VA_ARGS__)
-#    define IBufferVk_GetAccessFlags(This)      (This)->pVtbl->BufferVk.GetAccessFlags((IBufferVk*)(This))
-
-// clang-format on
+#    define IBufferVk_GetVkBuffer(This)         CALL_IFACE_METHOD(BufferVk, GetVkBuffer, This)
+#    define IBufferVk_SetAccessFlags(This, ...) CALL_IFACE_METHOD(BufferVk, SetAccessFlags, This, __VA_ARGS__)
+#    define IBufferVk_GetAccessFlags(This)      CALL_IFACE_METHOD(BufferVk, GetAccessFlags, This)
 
 #endif
 

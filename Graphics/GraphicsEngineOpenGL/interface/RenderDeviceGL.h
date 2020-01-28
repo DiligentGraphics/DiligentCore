@@ -126,9 +126,9 @@ typedef struct IRenderDeviceGL
 
 // clang-format off
 
-#    define IRenderDeviceGL_CreateTextureFromGLHandle(This, ...)(This)->pVtbl->RenderDeviceGL.CreateTextureFromGLHandle   ((IRenderDeviceGL*)(This), __VA_ARGS__)
-#    define IRenderDeviceGL_CreateBufferFromGLHandle(This, ...) (This)->pVtbl->RenderDeviceGL.CreateBufferFromGLHandle((IRenderDeviceGL*)(This), __VA_ARGS__)
-#    define IRenderDeviceGL_CreateDummyTexture(This, ...)       (This)->pVtbl->RenderDeviceGL.CreateDummyTexture((IRenderDeviceGL*)(This), __VA_ARGS__)
+#    define IRenderDeviceGL_CreateTextureFromGLHandle(This, ...)CALL_IFACE_METHOD(RenderDeviceGL, CreateTextureFromGLHandle, This, __VA_ARGS__)
+#    define IRenderDeviceGL_CreateBufferFromGLHandle(This, ...) CALL_IFACE_METHOD(RenderDeviceGL, CreateBufferFromGLHandle,  This, __VA_ARGS__)
+#    define IRenderDeviceGL_CreateDummyTexture(This, ...)       CALL_IFACE_METHOD(RenderDeviceGL, CreateDummyTexture,        This, __VA_ARGS__)
 
 // clang-format on
 

@@ -70,8 +70,8 @@ typedef struct IPipelineStateVk
 
 // clang-format off
 
-#    define IPipelineStateVk_GetVkRenderPass(This) (This)->pVtbl->PipelineStateVk.GetVkRenderPass((IPipelineStateVk*)(This))
-#    define IPipelineStateVk_GetVkPipeline(This)   (This)->pVtbl->PipelineStateVk.GetVkPipeline((IPipelineStateVk*)(This))
+#    define IPipelineStateVk_GetVkRenderPass(This) CALL_IFACE_METHOD(PipelineStateVk, GetVkRenderPass, This)
+#    define IPipelineStateVk_GetVkPipeline(This)   CALL_IFACE_METHOD(PipelineStateVk, GetVkPipeline,   This)
 
 // clang-format on
 

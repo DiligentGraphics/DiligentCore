@@ -246,9 +246,9 @@ typedef struct ITextureView
 
 // clang-format off
 
-#    define ITextureView_SetSampler(This, ...) (This)->pVtbl->TextureView.SetSampler((ITextureView*)(This), __VA_ARGS__)
-#    define ITextureView_GetSampler(This)      (This)->pVtbl->TextureView.GetSampler((ITextureView*)(This))
-#    define ITextureView_GetTexture(This)      (This)->pVtbl->TextureView.GetTexture((ITextureView*)(This))
+#    define ITextureView_SetSampler(This, ...) CALL_IFACE_METHOD(TextureView, SetSampler, This, __VA_ARGS__)
+#    define ITextureView_GetSampler(This)      CALL_IFACE_METHOD(TextureView, GetSampler, This)
+#    define ITextureView_GetTexture(This)      CALL_IFACE_METHOD(TextureView, GetTexture, This)
 
 // clang-format on
 

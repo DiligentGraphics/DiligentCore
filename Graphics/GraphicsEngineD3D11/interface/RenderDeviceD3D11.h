@@ -130,11 +130,11 @@ typedef struct IRenderDeviceD3D11
 
 // clang-format off
 
-#    define IRenderDeviceD3D11_GetD3D11Device(This)                      (This)->pVtbl->RenderDeviceD3D11.GetD3D11Device                ((IRenderDeviceD3D11*)(This))
-#    define IRenderDeviceD3D11_CreateBufferFromD3DResource(This, ...)    (This)->pVtbl->RenderDeviceD3D11.CreateBufferFromD3DResource   ((IRenderDeviceD3D11*)(This), __VA_ARGS__)
-#    define IRenderDeviceD3D11_CreateTexture1DFromD3DResource(This, ...) (This)->pVtbl->RenderDeviceD3D11.CreateTexture1DFromD3DResource((IRenderDeviceD3D11*)(This), __VA_ARGS__)
-#    define IRenderDeviceD3D11_CreateTexture2DFromD3DResource(This, ...) (This)->pVtbl->RenderDeviceD3D11.CreateTexture2DFromD3DResource((IRenderDeviceD3D11*)(This), __VA_ARGS__)
-#    define IRenderDeviceD3D11_CreateTexture3DFromD3DResource(This, ...) (This)->pVtbl->RenderDeviceD3D11.CreateTexture3DFromD3DResource((IRenderDeviceD3D11*)(This), __VA_ARGS__)
+#    define IRenderDeviceD3D11_GetD3D11Device(This)                      CALL_IFACE_METHOD(RenderDeviceD3D11, GetD3D11Device,                 This)
+#    define IRenderDeviceD3D11_CreateBufferFromD3DResource(This, ...)    CALL_IFACE_METHOD(RenderDeviceD3D11, CreateBufferFromD3DResource,    This, __VA_ARGS__)
+#    define IRenderDeviceD3D11_CreateTexture1DFromD3DResource(This, ...) CALL_IFACE_METHOD(RenderDeviceD3D11, CreateTexture1DFromD3DResource, This, __VA_ARGS__)
+#    define IRenderDeviceD3D11_CreateTexture2DFromD3DResource(This, ...) CALL_IFACE_METHOD(RenderDeviceD3D11, CreateTexture2DFromD3DResource, This, __VA_ARGS__)
+#    define IRenderDeviceD3D11_CreateTexture3DFromD3DResource(This, ...) CALL_IFACE_METHOD(RenderDeviceD3D11, CreateTexture3DFromD3DResource, This, __VA_ARGS__)
 
 // clang-format on
 

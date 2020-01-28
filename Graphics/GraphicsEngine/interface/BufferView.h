@@ -184,7 +184,7 @@ typedef struct IBufferView
 
 #    define IBufferView_GetDesc(This) (const struct BufferViewDesc*)IDeviceObject_GetDesc(This)
 
-#    define IBufferView_GetBuffer(This) (This)->pVtbl->BufferView.GetBuffer((IBufferView*)(This))
+#    define IBufferView_GetBuffer(This) CALL_IFACE_METHOD(BufferView, GetBuffer, This)
 
 // clang-format on
 

@@ -398,11 +398,11 @@ typedef struct ITexture
 
 #    define ITexture_GetDesc(This) (const struct TextureDesc*)IDeviceObject_GetDesc(This)
 
-#    define ITexture_CreateView(This, ...)     (This)->pVtbl->Texture.CreateView     ((ITexture*)(This), __VA_ARGS__)
-#    define ITexture_GetDefaultView(This, ...) (This)->pVtbl->Texture.GetDefaultView ((ITexture*)(This), __VA_ARGS__)
-#    define ITexture_GetNativeHandle(This)     (This)->pVtbl->Texture.GetNativeHandle((ITexture*)(This))
-#    define ITexture_SetState(This, ...)       (This)->pVtbl->Texture.SetState       ((ITexture*)(This), __VA_ARGS__)
-#    define ITexture_GetState(This)            (This)->pVtbl->Texture.GetState       ((ITexture*)(This))
+#    define ITexture_CreateView(This, ...)     CALL_IFACE_METHOD(Texture, CreateView,      This, __VA_ARGS__)
+#    define ITexture_GetDefaultView(This, ...) CALL_IFACE_METHOD(Texture, GetDefaultView,  This, __VA_ARGS__)
+#    define ITexture_GetNativeHandle(This)     CALL_IFACE_METHOD(Texture, GetNativeHandle, This)
+#    define ITexture_SetState(This, ...)       CALL_IFACE_METHOD(Texture, SetState,        This, __VA_ARGS__)
+#    define ITexture_GetState(This)            CALL_IFACE_METHOD(Texture, GetState,        This)
 
 // clang-format on
 

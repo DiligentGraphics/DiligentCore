@@ -115,7 +115,7 @@ typedef struct IShaderSourceInputStreamFactory
     struct IShaderSourceInputStreamFactoryVtbl* pVtbl;
 } IShaderSourceInputStreamFactory;
 
-#    define IShaderSourceInputStreamFactory_CreateInputStream(This, ...) (This)->pVtbl->ShaderSourceInputStreamFactory.CreateInputStream((IShaderSourceInputStreamFactory*)(This), __VA_ARGS__)
+#    define IShaderSourceInputStreamFactory_CreateInputStream(This, ...) CALL_IFACE_METHOD(ShaderSourceInputStreamFactory, CreateInputStream, This, __VA_ARGS__)
 
 #endif
 
@@ -361,8 +361,8 @@ typedef struct IShader
 
 #    define IShader_GetDesc(This) (const struct ShaderDesc*)IDeviceObject_GetDesc(This)
 
-#    define IShader_GetResourceCount(This)     (This)->pVtbl->Shader.GetResourceCount((IShader*)(This))
-#    define IShader_GetResourceDesc(This, ...) (This)->pVtbl->Shader.GetResourceDesc ((IShader*)(This), __VA_ARGS__)
+#    define IShader_GetResourceCount(This)     CALL_IFACE_METHOD(Shader, GetResourceCount, This)
+#    define IShader_GetResourceDesc(This, ...) CALL_IFACE_METHOD(Shader, GetResourceDesc,  This, __VA_ARGS__)
 
 // clang-format on
 

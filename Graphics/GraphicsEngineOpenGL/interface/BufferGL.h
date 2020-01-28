@@ -65,7 +65,7 @@ typedef struct IBufferGL
     struct IBufferGLVtbl* pVtbl;
 } IBufferGL;
 
-#    define IBufferGL_GetGLBufferHandle(This) (This)->pVtbl->BufferGL.GetGLBufferHandle((IBufferGL*)(This))
+#    define IBufferGL_GetGLBufferHandle(This) CALL_IFACE_METHOD(BufferGL, GetGLBufferHandle, This)
 
 #endif
 

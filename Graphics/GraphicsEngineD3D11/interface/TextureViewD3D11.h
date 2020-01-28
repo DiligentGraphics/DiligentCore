@@ -68,7 +68,7 @@ typedef struct ITextureViewD3D11
     struct ITextureViewD3D11Vtbl* pVtbl;
 } ITextureViewD3D11;
 
-#    define ITextureViewD3D11_GetD3D11View(This) (This)->pVtbl->TextureViewD3D11.GetD3D11View((ITextureViewD3D11*)(This))
+#    define ITextureViewD3D11_GetD3D11View(This) CALL_IFACE_METHOD(TextureViewD3D11, GetD3D11View, This)
 
 #endif
 

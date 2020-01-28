@@ -369,12 +369,12 @@ typedef struct IPipelineState
 
 #    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
 
-#    define IPipelineState_BindStaticResources(This, ...)         (This)->pVtbl->PipelineState.BindStaticResources        ((IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableCount(This, ...)      (This)->pVtbl->PipelineState.GetStaticVariableCount     ((IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByName(This, ...)     (This)->pVtbl->PipelineState.GetStaticVariableByName    ((IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_GetStaticVariableByIndex(This, ...)    (This)->pVtbl->PipelineState.GetStaticVariableByIndex   ((IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_CreateShaderResourceBinding(This, ...) (This)->pVtbl->PipelineState.CreateShaderResourceBinding((IPipelineState*)(This), __VA_ARGS__)
-#    define IPipelineState_IsCompatibleWith(This, ...)            (This)->pVtbl->PipelineState.IsCompatibleWith           ((IPipelineState*)(This), __VA_ARGS__)
+#    define IPipelineState_BindStaticResources(This, ...)         CALL_IFACE_METHOD(PipelineState, BindStaticResources,         This, __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableCount(This, ...)      CALL_IFACE_METHOD(PipelineState, GetStaticVariableCount,      This, __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByName(This, ...)     CALL_IFACE_METHOD(PipelineState, GetStaticVariableByName,     This, __VA_ARGS__)
+#    define IPipelineState_GetStaticVariableByIndex(This, ...)    CALL_IFACE_METHOD(PipelineState, GetStaticVariableByIndex,    This, __VA_ARGS__)
+#    define IPipelineState_CreateShaderResourceBinding(This, ...) CALL_IFACE_METHOD(PipelineState, CreateShaderResourceBinding, This, __VA_ARGS__)
+#    define IPipelineState_IsCompatibleWith(This, ...)            CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,            This, __VA_ARGS__)
 
 // clang-format on
 

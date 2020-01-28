@@ -114,13 +114,13 @@ typedef struct ISwapChain
 
 // clang-format off
 
-#    define ISwapChain_Present(This, ...)            (This)->pVtbl->SwapChain.Present                ((ISwapChain*)(This), __VA_ARGS__)
-#    define ISwapChain_GetDesc(This)                 (This)->pVtbl->SwapChain.GetDesc                ((ISwapChain*)(This))
-#    define ISwapChain_Resize(This, ...)             (This)->pVtbl->SwapChain.Resize                 ((ISwapChain*)(This), __VA_ARGS__)
-#    define ISwapChain_SetFullscreenMode(This, ...)  (This)->pVtbl->SwapChain.SetFullscreenMode      ((ISwapChain*)(This), __VA_ARGS__)
-#    define ISwapChain_SetWindowedMode(This)         (This)->pVtbl->SwapChain.SetWindowedMode        ((ISwapChain*)(This))
-#    define ISwapChain_GetCurrentBackBufferRTV(This) (This)->pVtbl->SwapChain.GetCurrentBackBufferRTV((ISwapChain*)(This))
-#    define ISwapChain_GetDepthBufferDSV(This)       (This)->pVtbl->SwapChain.GetDepthBufferDSV      ((ISwapChain*)(This))
+#    define ISwapChain_Present(This, ...)            CALL_IFACE_METHOD(SwapChain, Present,                 This, __VA_ARGS__)
+#    define ISwapChain_GetDesc(This)                 CALL_IFACE_METHOD(SwapChain, GetDesc,                 This)
+#    define ISwapChain_Resize(This, ...)             CALL_IFACE_METHOD(SwapChain, Resize,                  This, __VA_ARGS__)
+#    define ISwapChain_SetFullscreenMode(This, ...)  CALL_IFACE_METHOD(SwapChain, SetFullscreenMode,       This, __VA_ARGS__)
+#    define ISwapChain_SetWindowedMode(This)         CALL_IFACE_METHOD(SwapChain, SetWindowedMode,         This)
+#    define ISwapChain_GetCurrentBackBufferRTV(This) CALL_IFACE_METHOD(SwapChain, GetCurrentBackBufferRTV, This)
+#    define ISwapChain_GetDepthBufferDSV(This)       CALL_IFACE_METHOD(SwapChain, GetDepthBufferDSV,       This)
 
 // clang-format on
 

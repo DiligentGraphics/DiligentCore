@@ -125,11 +125,11 @@ typedef struct IDeviceContextD3D12
 
 // clang-format off
 
-#    define IDeviceContextD3D12_TransitionTextureState(This, ...) (This)->pVtbl->DeviceContextD3D12.TransitionTextureState((IDeviceContextD3D12*)(This), __VA_ARGS__)
-#    define IDeviceContextD3D12_TransitionBufferState(This, ...)  (This)->pVtbl->DeviceContextD3D12.TransitionBufferState ((IDeviceContextD3D12*)(This), __VA_ARGS__)
-#    define IDeviceContextD3D12_GetD3D12CommandList(This)         (This)->pVtbl->DeviceContextD3D12.GetD3D12CommandList   ((IDeviceContextD3D12*)(This))
-#    define IDeviceContextD3D12_LockCommandQueue(This)            (This)->pVtbl->DeviceContextD3D12.LockCommandQueue      ((IDeviceContextD3D12*)(This))
-#    define IDeviceContextD3D12_UnlockCommandQueue(This)          (This)->pVtbl->DeviceContextD3D12.UnlockCommandQueue    ((IDeviceContextD3D12*)(This))
+#    define IDeviceContextD3D12_TransitionTextureState(This, ...) CALL_IFACE_METHOD(DeviceContextD3D12, TransitionTextureState,This, __VA_ARGS__)
+#    define IDeviceContextD3D12_TransitionBufferState(This, ...)  CALL_IFACE_METHOD(DeviceContextD3D12, TransitionBufferState, This, __VA_ARGS__)
+#    define IDeviceContextD3D12_GetD3D12CommandList(This)         CALL_IFACE_METHOD(DeviceContextD3D12, GetD3D12CommandList,   This)
+#    define IDeviceContextD3D12_LockCommandQueue(This)            CALL_IFACE_METHOD(DeviceContextD3D12, LockCommandQueue,      This)
+#    define IDeviceContextD3D12_UnlockCommandQueue(This)          CALL_IFACE_METHOD(DeviceContextD3D12, UnlockCommandQueue,    This)
 
 // clang-format on
 

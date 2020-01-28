@@ -71,7 +71,7 @@ typedef struct ITextureViewVk
 
 // clang-format off
 
-#    define ITextureViewVk_GetVulkanImageView(This) (This)->pVtbl->TextureViewVk.GetVulkanImageView((ITextureViewVk*)(This))
+#    define ITextureViewVk_GetVulkanImageView(This) CALL_IFACE_METHOD(TextureViewVk, GetVulkanImageView, This)
 
 // clang-format ons
 

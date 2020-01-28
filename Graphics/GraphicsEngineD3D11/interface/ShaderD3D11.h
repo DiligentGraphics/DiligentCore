@@ -68,7 +68,7 @@ typedef struct IShaderD3D11
     struct IShaderD3D11Vtbl* pVtbl;
 } IShaderD3D11;
 
-#    define IShaderD3D11_GetD3D11Shader(This) (This)->pVtbl->ShaderD3D11.GetD3D11Shader((IShaderD3D11*)(This))
+#    define IShaderD3D11_GetD3D11Shader(This) CALL_IFACE_METHOD(ShaderD3D11, GetD3D11Shader, This)
 
 #endif
 

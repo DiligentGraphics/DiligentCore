@@ -65,7 +65,7 @@ typedef struct IQueryD3D11
     struct IQueryD3D11Vtbl* pVtbl;
 } IQueryD3D11;
 
-#    define IQueryD3D11_GetD3D11Query(This) (This)->pVtbl->QueryD3D11.GetD3D11Query((IQueryD3D11*)(This))
+#    define IQueryD3D11_GetD3D11Query(This) CALL_IFACE_METHOD(QueryD3D11, GetD3D11Query, This)
 
 #endif
 

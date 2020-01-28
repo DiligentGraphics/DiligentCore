@@ -70,7 +70,7 @@ typedef struct ISwapChainVk
 
 // clang-format off
 
-#    define ISwapChainVk_GetVkSwapChain(This)  (This)->pVtbl->SwapChainVk.GetVkSwapChain((ISwapChainVk*)(This))
+#    define ISwapChainVk_GetVkSwapChain(This)  CALL_IFACE_METHOD(SwapChainVk, GetVkSwapChain, This)
 
 // clang-format on
 

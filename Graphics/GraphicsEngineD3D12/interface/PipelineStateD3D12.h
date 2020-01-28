@@ -77,8 +77,8 @@ typedef struct IPipelineStateD3D12
 
 // clang-format off
 
-#    define IPipelineStateD3D12_GetD3D12PipelineState(This) (This)->pVtbl->PipelineStateD3D12.GetD3D12PipelineState((IPipelineStateD3D12*)(This))
-#    define IPipelineStateD3D12_GetD3D12RootSignature(This) (This)->pVtbl->PipelineStateD3D12.GetD3D12RootSignature((IPipelineStateD3D12*)(This))
+#    define IPipelineStateD3D12_GetD3D12PipelineState(This) CALL_IFACE_METHOD(PipelineStateD3D12, GetD3D12PipelineState, This)
+#    define IPipelineStateD3D12_GetD3D12RootSignature(This) CALL_IFACE_METHOD(PipelineStateD3D12, GetD3D12RootSignature, This)
 
 // clang-format on
 

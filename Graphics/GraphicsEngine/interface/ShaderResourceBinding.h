@@ -147,12 +147,12 @@ typedef struct IShaderResourceBinding
 
 // clang-format off
 
-#    define IShaderResourceBinding_GetPipelineState(This)               (This)->pVtbl->ShaderResourceBinding.GetPipelineState         ((IShaderResourceBinding*)(This))
-#    define IShaderResourceBinding_BindResources(This, ...)             (This)->pVtbl->ShaderResourceBinding.BindResources            ((IShaderResourceBinding*)(This), __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableByName(This, ...)         (This)->pVtbl->ShaderResourceBinding.GetVariableByName        ((IShaderResourceBinding*)(This), __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableCount(This, ...)          (This)->pVtbl->ShaderResourceBinding.GetVariableCount         ((IShaderResourceBinding*)(This), __VA_ARGS__)
-#    define IShaderResourceBinding_GetVariableByIndex(This, ...)        (This)->pVtbl->ShaderResourceBinding.GetVariableByIndex       ((IShaderResourceBinding*)(This), __VA_ARGS__)
-#    define IShaderResourceBinding_InitializeStaticResources(This, ...) (This)->pVtbl->ShaderResourceBinding.InitializeStaticResources((IShaderResourceBinding*)(This), __VA_ARGS__)
+#    define IShaderResourceBinding_GetPipelineState(This)               CALL_IFACE_METHOD(ShaderResourceBinding, GetPipelineState,          This)
+#    define IShaderResourceBinding_BindResources(This, ...)             CALL_IFACE_METHOD(ShaderResourceBinding, BindResources,             This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByName(This, ...)         CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableByName,         This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableCount(This, ...)          CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableCount,          This, __VA_ARGS__)
+#    define IShaderResourceBinding_GetVariableByIndex(This, ...)        CALL_IFACE_METHOD(ShaderResourceBinding, GetVariableByIndex,        This, __VA_ARGS__)
+#    define IShaderResourceBinding_InitializeStaticResources(This, ...) CALL_IFACE_METHOD(ShaderResourceBinding, InitializeStaticResources, This, __VA_ARGS__)
 
 // clang-format on
 

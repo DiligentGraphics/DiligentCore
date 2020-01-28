@@ -89,9 +89,9 @@ typedef struct IBufferD3D12
     struct IBufferD3D12Vtbl* pVtbl;
 } IBufferD3D12;
 
-#    define IBufferD3D12_GetD3D12Buffer(This, ...)        (This)->pVtbl->BufferD3D12.GetD3D12Buffer       ((IBufferD3D12*)(This), __VA_ARGS__)
-#    define IBufferD3D12_SetD3D12ResourceState(This, ...) (This)->pVtbl->BufferD3D12.SetD3D12ResourceState((IBufferD3D12*)(This), __VA_ARGS__)
-#    define IBufferD3D12_GetD3D12ResourceState(This)      (This)->pVtbl->BufferD3D12.GetD3D12ResourceState((IBufferD3D12*)(This))
+#    define IBufferD3D12_GetD3D12Buffer(This, ...)        CALL_IFACE_METHOD(BufferD3D12, GetD3D12Buffer,        This, __VA_ARGS__)
+#    define IBufferD3D12_SetD3D12ResourceState(This, ...) CALL_IFACE_METHOD(BufferD3D12, SetD3D12ResourceState, This, __VA_ARGS__)
+#    define IBufferD3D12_GetD3D12ResourceState(This)      CALL_IFACE_METHOD(BufferD3D12, GetD3D12ResourceState, This)
 
 #endif
 

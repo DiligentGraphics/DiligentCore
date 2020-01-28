@@ -68,7 +68,7 @@ typedef struct ISamplerD3D12
     struct ISamplerD3D12Vtbl* pVtbl;
 } ISamplerD3D12;
 
-#    define ISamplerD3D12_GetCPUDescriptorHandle(This) (This)->pVtbl->SamplerD3D12.GetCPUDescriptorHandle((ISamplerD3D12*)(This))
+#    define ISamplerD3D12_GetCPUDescriptorHandle(This) CALL_IFACE_METHOD(SamplerD3D12, GetCPUDescriptorHandle, This)
 
 #endif
 

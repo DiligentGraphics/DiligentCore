@@ -101,9 +101,9 @@ typedef struct IEngineFactoryOpenGL
 
 // clang-format off
 
-#    define IEngineFactoryOpenGL_CreateDeviceAndSwapChainGL(This, ...) (This)->pVtbl->EngineFactoryOpenGL.CreateDeviceAndSwapChainGL((IEngineFactoryOpenGL*)(This), __VA_ARGS__)
-#    define IEngineFactoryOpenGL_CreateHLSL2GLSLConverter(This, ...)   (This)->pVtbl->EngineFactoryOpenGL.CreateHLSL2GLSLConverter  ((IEngineFactoryOpenGL*)(This), __VA_ARGS__)
-#    define IEngineFactoryOpenGL_AttachToActiveGLContext(This, ...)    (This)->pVtbl->EngineFactoryOpenGL.AttachToActiveGLContext   ((IEngineFactoryOpenGL*)(This), __VA_ARGS__)
+#    define IEngineFactoryOpenGL_CreateDeviceAndSwapChainGL(This, ...) CALL_IFACE_METHOD(EngineFactoryOpenGL, CreateDeviceAndSwapChainGL, This, __VA_ARGS__)
+#    define IEngineFactoryOpenGL_CreateHLSL2GLSLConverter(This, ...)   CALL_IFACE_METHOD(EngineFactoryOpenGL, CreateHLSL2GLSLConverter,   This, __VA_ARGS__)
+#    define IEngineFactoryOpenGL_AttachToActiveGLContext(This, ...)    CALL_IFACE_METHOD(EngineFactoryOpenGL, AttachToActiveGLContext,    This, __VA_ARGS__)
 
 // clang-format on
 

@@ -84,9 +84,9 @@ typedef struct ITextureVk
 
 // clang-format off
 
-#    define ITextureVk_GetVkImage(This)     (This)->pVtbl->TextureVk.GetVkImage((ITextureVk*)(This))
-#    define ITextureVk_SetLayout(This, ...) (This)->pVtbl->TextureVk.SetLayout ((ITextureVk*)(This), __VA_ARGS__)
-#    define ITextureVk_GetLayout(This)      (This)->pVtbl->TextureVk.GetLayout ((ITextureVk*)(This))
+#    define ITextureVk_GetVkImage(This)     CALL_IFACE_METHOD(TextureVk, GetVkImage,This)
+#    define ITextureVk_SetLayout(This, ...) CALL_IFACE_METHOD(TextureVk, SetLayout, This, __VA_ARGS__)
+#    define ITextureVk_GetLayout(This)      CALL_IFACE_METHOD(TextureVk, GetLayout, This)
 
 // clang-format ons
 

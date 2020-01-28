@@ -101,8 +101,8 @@ typedef struct IEngineFactoryVk
 
 // clang-format off
 
-#    define IEngineFactoryVk_CreateDeviceAndContextsVk(This, ...) (This)->pVtbl->EngineFactoryVk.CreateDeviceAndContextsVk((IEngineFactoryVk*)(This), __VA_ARGS__)
-#    define IEngineFactoryVk_CreateSwapChainVk(This, ...)         (This)->pVtbl->EngineFactoryVk.CreateSwapChainVk        ((IEngineFactoryVk*)(This), __VA_ARGS__)
+#    define IEngineFactoryVk_CreateDeviceAndContextsVk(This, ...) CALL_IFACE_METHOD(EngineFactoryVk, CreateDeviceAndContextsVk, This, __VA_ARGS__)
+#    define IEngineFactoryVk_CreateSwapChainVk(This, ...)         CALL_IFACE_METHOD(EngineFactoryVk, CreateSwapChainVk,         This, __VA_ARGS__)
 
 // clang-format on
 

@@ -68,7 +68,7 @@ typedef struct IDeviceContextD3D11
     struct IDeviceContextD3D11Vtbl* pVtbl;
 } IDeviceContextD3D11;
 
-#    define IDeviceContextD3D11_GetD3D11DeviceContext(This) (This)->pVtbl->DeviceContextD3D11.GetD3D11DeviceContext((IDeviceContextD3D11*)(This))
+#    define IDeviceContextD3D11_GetD3D11DeviceContext(This) CALL_IFACE_METHOD(DeviceContextD3D11, GetD3D11DeviceContext, This)
 
 #endif
 

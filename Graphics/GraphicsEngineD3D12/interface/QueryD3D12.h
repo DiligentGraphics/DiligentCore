@@ -68,8 +68,8 @@ typedef struct IQueryD3D12
     struct IQueryD3D12Vtbl* pVtbl;
 } IQueryD3D12;
 
-#    define IQueryD3D12_GetD3D12QueryHeap(This) (This)->pVtbl->QueryD3D12.GetD3D12QueryHeap((IQueryD3D12*)(This))
-#    define IQueryD3D12_GetQueryHeapIndex(This) (This)->pVtbl->QueryD3D12.GetQueryHeapIndex((IQueryD3D12*)(This))
+#    define IQueryD3D12_GetD3D12QueryHeap(This) CALL_IFACE_METHOD(QueryD3D12, GetD3D12QueryHeap, This)
+#    define IQueryD3D12_GetQueryHeapIndex(This) CALL_IFACE_METHOD(QueryD3D12, GetQueryHeapIndex, This)
 
 #endif
 

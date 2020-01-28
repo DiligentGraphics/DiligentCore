@@ -66,7 +66,7 @@ typedef struct IQueryGL
     struct IQueryGLVtbl* pVtbl;
 } IQueryGL;
 
-#    define IQueryGL_GetGlQueryHandle(This) (This)->pVtbl->QueryGL.GetGlQueryHandle((IQueryGL*)(This))
+#    define IQueryGL_GetGlQueryHandle(This) CALL_IFACE_METHOD(QueryGL, GetGlQueryHandle, This)
 
 #endif
 

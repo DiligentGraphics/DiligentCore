@@ -85,9 +85,9 @@ typedef struct ITextureD3D12
 
 // clang-format off
 
-#    define ITextureD3D12_GetD3D12Texture(This)            (This)->pVtbl->TextureD3D12.GetD3D12Texture      ((ITextureD3D12*)(This))
-#    define ITextureD3D12_SetD3D12ResourceState(This, ...) (This)->pVtbl->TextureD3D12.SetD3D12ResourceState((ITextureD3D12*)(This), __VA_ARGS__)
-#    define ITextureD3D12_GetD3D12ResourceState(This)      (This)->pVtbl->TextureD3D12.GetD3D12ResourceState((ITextureD3D12*)(This))
+#    define ITextureD3D12_GetD3D12Texture(This)            CALL_IFACE_METHOD(TextureD3D12, GetD3D12Texture,       This)
+#    define ITextureD3D12_SetD3D12ResourceState(This, ...) CALL_IFACE_METHOD(TextureD3D12, SetD3D12ResourceState, This, __VA_ARGS__)
+#    define ITextureD3D12_GetD3D12ResourceState(This)      CALL_IFACE_METHOD(TextureD3D12, GetD3D12ResourceState, This)
 
 // clang-format ons
 

@@ -191,12 +191,12 @@ typedef struct IEngineFactoryD3D12
 
 // clang-format off
 
-#    define IEngineFactoryD3D12_LoadD3D12(This, ...)                    (This)->pVtbl->EngineFactoryD3D12.LoadD3D12                   ((IEngineFactoryD3D12*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D12_CreateDeviceAndContextsD3D12(This, ...) (This)->pVtbl->EngineFactoryD3D12.CreateDeviceAndContextsD3D12((IEngineFactoryD3D12*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D12_CreateSwapChainD3D12(This, ...)         (This)->pVtbl->EngineFactoryD3D12.CreateSwapChainD3D12        ((IEngineFactoryD3D12*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D12_AttachToD3D12Device(This, ...)          (This)->pVtbl->EngineFactoryD3D12.AttachToD3D12Device         ((IEngineFactoryD3D12*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D12_EnumerateAdapters(This, ...)            (This)->pVtbl->EngineFactoryD3D12.EnumerateAdapters           ((IEngineFactoryD3D12*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D12_EnumerateDisplayModes(This, ...)        (This)->pVtbl->EngineFactoryD3D12.EnumerateDisplayModes       ((IEngineFactoryD3D12*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D12_LoadD3D12(This, ...)                    CALL_IFACE_METHOD(EngineFactoryD3D12, LoadD3D12,                    This, __VA_ARGS__)
+#    define IEngineFactoryD3D12_CreateDeviceAndContextsD3D12(This, ...) CALL_IFACE_METHOD(EngineFactoryD3D12, CreateDeviceAndContextsD3D12, This, __VA_ARGS__)
+#    define IEngineFactoryD3D12_CreateSwapChainD3D12(This, ...)         CALL_IFACE_METHOD(EngineFactoryD3D12, CreateSwapChainD3D12,         This, __VA_ARGS__)
+#    define IEngineFactoryD3D12_AttachToD3D12Device(This, ...)          CALL_IFACE_METHOD(EngineFactoryD3D12, AttachToD3D12Device,          This, __VA_ARGS__)
+#    define IEngineFactoryD3D12_EnumerateAdapters(This, ...)            CALL_IFACE_METHOD(EngineFactoryD3D12, EnumerateAdapters,            This, __VA_ARGS__)
+#    define IEngineFactoryD3D12_EnumerateDisplayModes(This, ...)        CALL_IFACE_METHOD(EngineFactoryD3D12, EnumerateDisplayModes,        This, __VA_ARGS__)
 
 // clang-format on
 

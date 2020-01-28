@@ -73,7 +73,7 @@ typedef struct ISwapChainD3D12
 
 // clang-format off
 
-#    define ISwapChainD3D12_GetDXGISwapChain(This)  (This)->pVtbl->SwapChainD3D12.GetDXGISwapChain((ISwapChainD3D12*)(This))
+#    define ISwapChainD3D12_GetDXGISwapChain(This)  CALL_IFACE_METHOD(SwapChainD3D12, GetDXGISwapChain, This)
 
 // clang-format on
 

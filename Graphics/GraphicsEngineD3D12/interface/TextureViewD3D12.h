@@ -66,7 +66,7 @@ typedef struct ITextureViewD3D12
     struct ITextureViewD3D12Vtbl* pVtbl;
 } ITextureViewD3D12;
 
-#    define ITextureViewD3D12_GetCPUDescriptorHandle(This) (This)->pVtbl->TextureViewD3D12.GetCPUDescriptorHandle((ITextureViewD3D12*)(This))
+#    define ITextureViewD3D12_GetCPUDescriptorHandle(This) CALL_IFACE_METHOD(TextureViewD3D12, GetCPUDescriptorHandle, This)
 
 #endif
 

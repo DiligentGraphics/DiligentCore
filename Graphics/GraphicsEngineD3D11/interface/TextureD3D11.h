@@ -68,7 +68,7 @@ typedef struct ITextureD3D11
     struct ITextureD3D11Vtbl* pVtbl;
 } ITextureD3D11;
 
-#    define ITextureD3D11_GetD3D11Texture(This) (This)->pVtbl->TextureD3D11.GetD3D11Texture((ITextureD3D11*)(This))
+#    define ITextureD3D11_GetD3D11Texture(This) CALL_IFACE_METHOD(TextureD3D11, GetD3D11Texture, This)
 
 #endif
 

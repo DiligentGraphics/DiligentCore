@@ -107,9 +107,9 @@ typedef struct IObject
 
 // clang-format off
 
-#    define IObject_QueryInterface(This, ...) (This)->pVtbl->Object.QueryInterface((struct IObject*)(This), __VA_ARGS__)
-#    define IObject_AddRef(This)              (This)->pVtbl->Object.AddRef        ((struct IObject*)(This))
-#    define IObject_Release(This)             (This)->pVtbl->Object.Release       ((struct IObject*)(This))
+#    define IObject_QueryInterface(This, ...) CALL_IFACE_METHOD(Object, QueryInterface, This, __VA_ARGS__)
+#    define IObject_AddRef(This)              CALL_IFACE_METHOD(Object, AddRef,         This)
+#    define IObject_Release(This)             CALL_IFACE_METHOD(Object, Release,        This)
 
 // clang-format on
 

@@ -117,12 +117,12 @@ typedef struct IRenderDeviceD3D12
 
 // clang-format off
 
-#    define IRenderDeviceD3D12_GetD3D12Device(This)                    (This)->pVtbl->RenderDeviceD3D12.GetD3D12Device              ((IRenderDeviceD3D12*)(This))
-#    define IRenderDeviceD3D12_GetNextFenceValue(This, ...)            (This)->pVtbl->RenderDeviceD3D12.GetNextFenceValue           ((IRenderDeviceD3D12*)(This), __VA_ARGS__)
-#    define IRenderDeviceD3D12_GetCompletedFenceValue(This, ...)       (This)->pVtbl->RenderDeviceD3D12.GetCompletedFenceValue      ((IRenderDeviceD3D12*)(This), __VA_ARGS__)
-#    define IRenderDeviceD3D12_IsFenceSignaled(This, ...)              (This)->pVtbl->RenderDeviceD3D12.IsFenceSignaled             ((IRenderDeviceD3D12*)(This), __VA_ARGS__)
-#    define IRenderDeviceD3D12_CreateTextureFromD3DResource(This, ...) (This)->pVtbl->RenderDeviceD3D12.CreateTextureFromD3DResource((IRenderDeviceD3D12*)(This), __VA_ARGS__)
-#    define IRenderDeviceD3D12_CreateBufferFromD3DResource(This, ...)  (This)->pVtbl->RenderDeviceD3D12.CreateBufferFromD3DResource ((IRenderDeviceD3D12*)(This), __VA_ARGS__)
+#    define IRenderDeviceD3D12_GetD3D12Device(This)                    CALL_IFACE_METHOD(RenderDeviceD3D12, GetD3D12Device,               This)
+#    define IRenderDeviceD3D12_GetNextFenceValue(This, ...)            CALL_IFACE_METHOD(RenderDeviceD3D12, GetNextFenceValue,            This, __VA_ARGS__)
+#    define IRenderDeviceD3D12_GetCompletedFenceValue(This, ...)       CALL_IFACE_METHOD(RenderDeviceD3D12, GetCompletedFenceValue,       This, __VA_ARGS__)
+#    define IRenderDeviceD3D12_IsFenceSignaled(This, ...)              CALL_IFACE_METHOD(RenderDeviceD3D12, IsFenceSignaled,              This, __VA_ARGS__)
+#    define IRenderDeviceD3D12_CreateTextureFromD3DResource(This, ...) CALL_IFACE_METHOD(RenderDeviceD3D12, CreateTextureFromD3DResource, This, __VA_ARGS__)
+#    define IRenderDeviceD3D12_CreateBufferFromD3DResource(This, ...)  CALL_IFACE_METHOD(RenderDeviceD3D12, CreateBufferFromD3DResource,  This, __VA_ARGS__)
 
 // clang-format on
 

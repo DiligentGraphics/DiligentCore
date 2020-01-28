@@ -61,6 +61,8 @@
 
 #    define DEFAULT_VALUE(x)
 
+#    define CALL_IFACE_METHOD(Iface, Method, This, ...) (This)->pVtbl->Iface.Method((I##Iface*)(This), ##__VA_ARGS__)
+
 #else
 
 #    define DILIGENT_BEGIN_NAMESPACE(Name) \

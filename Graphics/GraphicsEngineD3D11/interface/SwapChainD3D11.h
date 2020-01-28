@@ -77,9 +77,9 @@ typedef struct ISwapChainD3D11
 
 // clang-format off
 
-#    define ISwapChainD3D11_GetCurrentBackBufferRTV(This) (This)->pVtbl->SwapChainD3D11.GetCurrentBackBufferRTV((ISwapChainD3D11*)(This))
-#    define ISwapChainD3D11_GetDepthBufferDSV(This)       (This)->pVtbl->SwapChainD3D11.GetDepthBufferDSV      ((ISwapChainD3D11*)(This))
-#    define ISwapChainD3D11_GetDXGISwapChain(This)        (This)->pVtbl->SwapChainD3D11.GetDXGISwapChain       ((ISwapChainD3D11*)(This))
+#    define ISwapChainD3D11_GetCurrentBackBufferRTV(This) CALL_IFACE_METHOD(SwapChainD3D11, GetCurrentBackBufferRTV, This)
+#    define ISwapChainD3D11_GetDepthBufferDSV(This)       CALL_IFACE_METHOD(SwapChainD3D11, GetDepthBufferDSV,       This)
+#    define ISwapChainD3D11_GetDXGISwapChain(This)        CALL_IFACE_METHOD(SwapChainD3D11, GetDXGISwapChain,        This)
 
 // clang-format on
 

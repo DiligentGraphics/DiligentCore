@@ -75,7 +75,7 @@ typedef struct IHLSL2GLSLConversionStream
 
 // clang-format off
 
-#    define IHLSL2GLSLConversionStream_Convert(This, ...) (This)->pVtbl->HLSL2GLSLConversionStream.Convert((IHLSL2GLSLConversionStream*)(This), __VA_ARGS__)
+#    define IHLSL2GLSLConversionStream_Convert(This, ...) CALL_IFACE_METHOD(HLSL2GLSLConversionStream, Convert, This, __VA_ARGS__)
 
 // clang-format on
 
@@ -121,7 +121,7 @@ typedef struct IHLSL2GLSLConverter
 
 // clang-format off
 
-#    define IHLSL2GLSLConverter_CreateStream(This, ...) (This)->pVtbl->HLSL2GLSLConverter.CreateStream((IHLSL2GLSLConverter*)(This), __VA_ARGS__)
+#    define IHLSL2GLSLConverter_CreateStream(This, ...) CALL_IFACE_METHOD(HLSL2GLSLConverter, CreateStream, This, __VA_ARGS__)
 
 // clang-format on
 

@@ -89,12 +89,12 @@ typedef struct ICommandQueueD3D12
 
 // clang-format off
 
-#    define ICommandQueueD3D12_GetNextFenceValue(This)      (This)->pVtbl->CommandQueueD3D12.GetNextFenceValue     ((ICommandQueueD3D12*)(This))
-#    define ICommandQueueD3D12_Submit(This, ...)            (This)->pVtbl->CommandQueueD3D12.Submit                ((ICommandQueueD3D12*)(This), __VA_ARGS__)
-#    define ICommandQueueD3D12_GetD3D12CommandQueue(This)   (This)->pVtbl->CommandQueueD3D12.GetD3D12CommandQueue  ((ICommandQueueD3D12*)(This))
-#    define ICommandQueueD3D12_GetCompletedFenceValue(This) (This)->pVtbl->CommandQueueD3D12.GetCompletedFenceValue((ICommandQueueD3D12*)(This))
-#    define ICommandQueueD3D12_WaitForIdle(This)            (This)->pVtbl->CommandQueueD3D12.WaitForIdle           ((ICommandQueueD3D12*)(This))
-#    define ICommandQueueD3D12_SignalFence(This, ...)       (This)->pVtbl->CommandQueueD3D12.SignalFence           ((ICommandQueueD3D12*)(This), __VA_ARGS__)
+#    define ICommandQueueD3D12_GetNextFenceValue(This)      CALL_IFACE_METHOD(CommandQueueD3D12, GetNextFenceValue,     This)
+#    define ICommandQueueD3D12_Submit(This, ...)            CALL_IFACE_METHOD(CommandQueueD3D12, Submit,                This, __VA_ARGS__)
+#    define ICommandQueueD3D12_GetD3D12CommandQueue(This)   CALL_IFACE_METHOD(CommandQueueD3D12, GetD3D12CommandQueue,  This)
+#    define ICommandQueueD3D12_GetCompletedFenceValue(This) CALL_IFACE_METHOD(CommandQueueD3D12, GetCompletedFenceValue,This)
+#    define ICommandQueueD3D12_WaitForIdle(This)            CALL_IFACE_METHOD(CommandQueueD3D12, WaitForIdle,           This)
+#    define ICommandQueueD3D12_SignalFence(This, ...)       CALL_IFACE_METHOD(CommandQueueD3D12, SignalFence,           This, __VA_ARGS__)
 
 // clang-format on
 

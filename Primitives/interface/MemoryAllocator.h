@@ -73,8 +73,8 @@ typedef struct IMemoryAllocator
 
 // clang-format off
 
-#    define IMemoryAllocator_Allocate(This, ...) (This)->pVtbl->MemoryAllocator.Allocate((IMemoryAllocator*)(This), __VA_ARGS__)
-#    define IMemoryAllocator_Free(This, ...)     (This)->pVtbl->MemoryAllocator.Free    ((IMemoryAllocator*)(This), __VA_ARGS__)
+#    define IMemoryAllocator_Allocate(This, ...) CALL_IFACE_METHOD(MemoryAllocator, Allocate, This, __VA_ARGS__)
+#    define IMemoryAllocator_Free(This, ...)     CALL_IFACE_METHOD(MemoryAllocator, Free,     This, __VA_ARGS__)
 
 #endif
 

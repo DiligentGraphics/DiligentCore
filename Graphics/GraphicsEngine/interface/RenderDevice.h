@@ -256,20 +256,20 @@ typedef struct IRenderDevice
 
 // clang-format off
 
-#    define IRenderDevice_CreateBuffer(This, ...)            (This)->pVtbl->RenderDevice.CreateBuffer           ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateShader(This, ...)            (This)->pVtbl->RenderDevice.CreateShader           ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateTexture(This, ...)           (This)->pVtbl->RenderDevice.CreateTexture          ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateSampler(This, ...)           (This)->pVtbl->RenderDevice.CreateSampler          ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateResourceMapping(This, ...)   (This)->pVtbl->RenderDevice.CreateResourceMapping  ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreatePipelineState(This, ...)     (This)->pVtbl->RenderDevice.CreatePipelineState    ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateFence(This, ...)             (This)->pVtbl->RenderDevice.CreateFence            ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_CreateQuery(This, ...)             (This)->pVtbl->RenderDevice.CreateQuery            ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_GetDeviceCaps(This)                (This)->pVtbl->RenderDevice.GetDeviceCaps          ((IRenderDevice*)(This))
-#    define IRenderDevice_GetTextureFormatInfo(This, ...)    (This)->pVtbl->RenderDevice.GetTextureFormatInfo   ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_GetTextureFormatInfoExt(This, ...) (This)->pVtbl->RenderDevice.GetTextureFormatInfoExt((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_ReleaseStaleResources(This, ...)   (This)->pVtbl->RenderDevice.ReleaseStaleResources  ((IRenderDevice*)(This), __VA_ARGS__)
-#    define IRenderDevice_IdleGPU(This)                      (This)->pVtbl->RenderDevice.IdleGPU                ((IRenderDevice*)(This))
-#    define IRenderDevice_GetEngineFactory(This)             (This)->pVtbl->RenderDevice.GetEngineFactory       ((IRenderDevice*)(This))
+#    define IRenderDevice_CreateBuffer(This, ...)            CALL_IFACE_METHOD(RenderDevice, CreateBuffer,           This, __VA_ARGS__)
+#    define IRenderDevice_CreateShader(This, ...)            CALL_IFACE_METHOD(RenderDevice, CreateShader,           This, __VA_ARGS__)
+#    define IRenderDevice_CreateTexture(This, ...)           CALL_IFACE_METHOD(RenderDevice, CreateTexture,          This, __VA_ARGS__)
+#    define IRenderDevice_CreateSampler(This, ...)           CALL_IFACE_METHOD(RenderDevice, CreateSampler,          This, __VA_ARGS__)
+#    define IRenderDevice_CreateResourceMapping(This, ...)   CALL_IFACE_METHOD(RenderDevice, CreateResourceMapping,  This, __VA_ARGS__)
+#    define IRenderDevice_CreatePipelineState(This, ...)     CALL_IFACE_METHOD(RenderDevice, CreatePipelineState,    This, __VA_ARGS__)
+#    define IRenderDevice_CreateFence(This, ...)             CALL_IFACE_METHOD(RenderDevice, CreateFence,            This, __VA_ARGS__)
+#    define IRenderDevice_CreateQuery(This, ...)             CALL_IFACE_METHOD(RenderDevice, CreateQuery,            This, __VA_ARGS__)
+#    define IRenderDevice_GetDeviceCaps(This)                CALL_IFACE_METHOD(RenderDevice, GetDeviceCaps,          This)
+#    define IRenderDevice_GetTextureFormatInfo(This, ...)    CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,   This, __VA_ARGS__)
+#    define IRenderDevice_GetTextureFormatInfoExt(This, ...) CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,This, __VA_ARGS__)
+#    define IRenderDevice_ReleaseStaleResources(This, ...)   CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,  This, __VA_ARGS__)
+#    define IRenderDevice_IdleGPU(This)                      CALL_IFACE_METHOD(RenderDevice, IdleGPU,                This)
+#    define IRenderDevice_GetEngineFactory(This)             CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,       This)
 
 // clang-format on
 

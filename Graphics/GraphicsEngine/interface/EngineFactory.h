@@ -91,9 +91,9 @@ typedef struct IEngineFactory
 
 // clang-format off
 
-#    define IEngineFactory_GetAPIInfo(This)                                  (This)->pVtbl->EngineFactory.GetAPIInfo                            ((IEngineFactory*)(This))
-#    define IEngineFactory_CreateDefaultShaderSourceStreamFactory(This, ...) (This)->pVtbl->EngineFactory.CreateDefaultShaderSourceStreamFactory((IEngineFactory*)(This), __VA_ARGS__)
-#    define IEngineFactory_InitAndroidFileSystem(This, ...)                  (This)->pVtbl->EngineFactory.InitAndroidFileSystem                 ((IEngineFactory*)(This), __VA_ARGS__)
+#    define IEngineFactory_GetAPIInfo(This)                                  CALL_IFACE_METHOD(EngineFactory, GetAPIInfo,                             This)
+#    define IEngineFactory_CreateDefaultShaderSourceStreamFactory(This, ...) CALL_IFACE_METHOD(EngineFactory, CreateDefaultShaderSourceStreamFactory, This, __VA_ARGS__)
+#    define IEngineFactory_InitAndroidFileSystem(This, ...)                  CALL_IFACE_METHOD(EngineFactory, InitAndroidFileSystem,                  This, __VA_ARGS__)
 
 // clang-format on
 

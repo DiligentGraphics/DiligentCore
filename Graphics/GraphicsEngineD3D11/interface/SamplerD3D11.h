@@ -68,7 +68,7 @@ typedef struct ISamplerD3D11
     struct ISamplerD3D11Vtbl* pVtbl;
 } ISamplerD3D11;
 
-#    define ISamplerD3D11_GetD3D11SamplerState(This) (This)->pVtbl->SamplerD3D11.GetD3D11SamplerState((ISamplerD3D11*)(This))
+#    define ISamplerD3D11_GetD3D11SamplerState(This) CALL_IFACE_METHOD(SamplerD3D11, GetD3D11SamplerState, This)
 
 #endif
 

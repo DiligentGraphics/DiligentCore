@@ -80,9 +80,9 @@ typedef struct IDataBlob
 
 // clang-format off
 
-#    define IDataBlob_Resize(This, ...)  (This)->pVtbl->DataBlob.Resize    ((IDataBlob*)(This), __VA_ARGS__)
-#    define IDataBlob_GetSize(This)      (This)->pVtbl->DataBlob.GetSize   ((IDataBlob*)(This))
-#    define IDataBlob_GetDataPtr(This)   (This)->pVtbl->DataBlob.GetDataPtr((IDataBlob*)(This))
+#    define IDataBlob_Resize(This, ...)  CALL_IFACE_METHOD(DataBlob, Resize,     This, __VA_ARGS__)
+#    define IDataBlob_GetSize(This)      CALL_IFACE_METHOD(DataBlob, GetSize,    This)
+#    define IDataBlob_GetDataPtr(This)   CALL_IFACE_METHOD(DataBlob, GetDataPtr, This)
 
 // clang-format on
 

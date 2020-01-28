@@ -170,11 +170,11 @@ typedef struct IEngineFactoryD3D11
 
 // clang-format off
 
-#    define IEngineFactoryD3D11_CreateDeviceAndContextsD3D11(This, ...) (This)->pVtbl->EngineFactoryD3D11.CreateDeviceAndContextsD3D11((IEngineFactoryD3D11*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D11_CreateSwapChainD3D11(This, ...)         (This)->pVtbl->EngineFactoryD3D11.CreateSwapChainD3D11        ((IEngineFactoryD3D11*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D11_AttachToD3D11Device(This, ...)          (This)->pVtbl->EngineFactoryD3D11.AttachToD3D11Device         ((IEngineFactoryD3D11*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D11_EnumerateAdapters(This, ...)            (This)->pVtbl->EngineFactoryD3D11.EnumerateAdapters           ((IEngineFactoryD3D11*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D11_EnumerateDisplayModes(This, ...)        (This)->pVtbl->EngineFactoryD3D11.EnumerateDisplayModes       ((IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_CreateDeviceAndContextsD3D11(This, ...) CALL_IFACE_METHOD(EngineFactoryD3D11, CreateDeviceAndContextsD3D11, This, __VA_ARGS__)
+#    define IEngineFactoryD3D11_CreateSwapChainD3D11(This, ...)         CALL_IFACE_METHOD(EngineFactoryD3D11, CreateSwapChainD3D11,         This, __VA_ARGS__)
+#    define IEngineFactoryD3D11_AttachToD3D11Device(This, ...)          CALL_IFACE_METHOD(EngineFactoryD3D11, AttachToD3D11Device,          This, __VA_ARGS__)
+#    define IEngineFactoryD3D11_EnumerateAdapters(This, ...)            CALL_IFACE_METHOD(EngineFactoryD3D11, EnumerateAdapters,            This, __VA_ARGS__)
+#    define IEngineFactoryD3D11_EnumerateDisplayModes(This, ...)        CALL_IFACE_METHOD(EngineFactoryD3D11, EnumerateDisplayModes,        This, __VA_ARGS__)
 
 // clang-format on
 

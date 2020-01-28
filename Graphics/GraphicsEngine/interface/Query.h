@@ -239,8 +239,8 @@ typedef struct IQuery
 
 #    define IQuery_GetDesc(This) (const struct QueryDesc*)IDeviceObject_GetDesc(This)
 
-#    define IQuery_GetData(This, ...) (This)->pVtbl->Query.GetData   ((IQuery*)(This), __VA_ARGS__)
-#    define IQuery_Invalidate(This)   (This)->pVtbl->Query.Invalidate((IQuery*)(This))
+#    define IQuery_GetData(This, ...) CALL_IFACE_METHOD(Query, GetData,    This, __VA_ARGS__)
+#    define IQuery_Invalidate(This)   CALL_IFACE_METHOD(Query, Invalidate, This)
 
 // clang-format on
 

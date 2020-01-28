@@ -127,16 +127,16 @@ typedef struct IPipelineStateD3D11
 
 // clang-format off
 
-#    define IPipelineStateD3D11_GetD3D11BlendState(This)        (This)->pVtbl->PipelineStateD3D11.GetD3D11BlendState       ((IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11RasterizerState(This)   (This)->pVtbl->PipelineStateD3D11.GetD3D11RasterizerState  ((IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11DepthStencilState(This) (This)->pVtbl->PipelineStateD3D11.GetD3D11DepthStencilState((IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11InputLayout(This)       (This)->pVtbl->PipelineStateD3D11.GetD3D11InputLayout      ((IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11VertexShader(This)      (This)->pVtbl->PipelineStateD3D11.GetD3D11VertexShader     ((IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11PixelShader(This)       (This)->pVtbl->PipelineStateD3D11.GetD3D11PixelShader      ((IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11GeometryShader(This)    (This)->pVtbl->PipelineStateD3D11.GetD3D11GeometryShader   ((IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11DomainShader(This)      (This)->pVtbl->PipelineStateD3D11.GetD3D11DomainShader     ((IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11HullShader(This)        (This)->pVtbl->PipelineStateD3D11.GetD3D11HullShader       ((IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11ComputeShader(This)     (This)->pVtbl->PipelineStateD3D11.GetD3D11ComputeShader    ((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11BlendState(This)        CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11BlendState,        This)
+#    define IPipelineStateD3D11_GetD3D11RasterizerState(This)   CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11RasterizerState,   This)
+#    define IPipelineStateD3D11_GetD3D11DepthStencilState(This) CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11DepthStencilState, This)
+#    define IPipelineStateD3D11_GetD3D11InputLayout(This)       CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11InputLayout,       This)
+#    define IPipelineStateD3D11_GetD3D11VertexShader(This)      CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11VertexShader,      This)
+#    define IPipelineStateD3D11_GetD3D11PixelShader(This)       CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11PixelShader,       This)
+#    define IPipelineStateD3D11_GetD3D11GeometryShader(This)    CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11GeometryShader,    This)
+#    define IPipelineStateD3D11_GetD3D11DomainShader(This)      CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11DomainShader,      This)
+#    define IPipelineStateD3D11_GetD3D11HullShader(This)        CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11HullShader,        This)
+#    define IPipelineStateD3D11_GetD3D11ComputeShader(This)     CALL_IFACE_METHOD(PipelineStateD3D11, GetD3D11ComputeShader,     This)
 
 // clang-format on
 

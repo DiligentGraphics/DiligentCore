@@ -184,11 +184,11 @@ typedef struct IResourceMapping
 
 // clang-format off
 
-#    define IResourceMapping_AddResource(This, ...)          (This)->pVtbl->ResourceMapping.AddResource         ((IResourceMapping*)(This), __VA_ARGS__)
-#    define IResourceMapping_AddResourceArray(This, ...)     (This)->pVtbl->ResourceMapping.AddResourceArray    ((IResourceMapping*)(This), __VA_ARGS__)
-#    define IResourceMapping_RemoveResourceByName(This, ...) (This)->pVtbl->ResourceMapping.RemoveResourceByName((IResourceMapping*)(This), __VA_ARGS__)
-#    define IResourceMapping_GetResource(This, ...)          (This)->pVtbl->ResourceMapping.GetResource         ((IResourceMapping*)(This), __VA_ARGS__)
-#    define IResourceMapping_GetSize(This)                   (This)->pVtbl->ResourceMapping.GetSize             ((IResourceMapping*)(This))
+#    define IResourceMapping_AddResource(This, ...)          CALL_IFACE_METHOD(ResourceMapping, AddResource,          This, __VA_ARGS__)
+#    define IResourceMapping_AddResourceArray(This, ...)     CALL_IFACE_METHOD(ResourceMapping, AddResourceArray,     This, __VA_ARGS__)
+#    define IResourceMapping_RemoveResourceByName(This, ...) CALL_IFACE_METHOD(ResourceMapping, RemoveResourceByName, This, __VA_ARGS__)
+#    define IResourceMapping_GetResource(This, ...)          CALL_IFACE_METHOD(ResourceMapping, GetResource,          This, __VA_ARGS__)
+#    define IResourceMapping_GetSize(This)                   CALL_IFACE_METHOD(ResourceMapping, GetSize,              This)
 
 // clang-format on
 

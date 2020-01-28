@@ -130,14 +130,14 @@ typedef struct IRenderDeviceVk
 
 // clang-format off
 
-#    define IRenderDeviceVk_GetVkDevice(This)                         (This)->pVtbl->RenderDeviceVk.GetVkDevice                    ((IRenderDeviceVk*)(This))
-#    define IRenderDeviceVk_GetVkPhysicalDevice(This)                 (This)->pVtbl->RenderDeviceVk.GetVkPhysicalDevice            ((IRenderDeviceVk*)(This))
-#    define IRenderDeviceVk_GetVkInstance(This)                       (This)->pVtbl->RenderDeviceVk.GetVkInstance                  ((IRenderDeviceVk*)(This))
-#    define IRenderDeviceVk_GetNextFenceValue(This, ...)              (This)->pVtbl->RenderDeviceVk.GetNextFenceValue              ((IRenderDeviceVk*)(This), __VA_ARGS__)
-#    define IRenderDeviceVk_GetCompletedFenceValue(This, ...)         (This)->pVtbl->RenderDeviceVk.GetCompletedFenceValue         ((IRenderDeviceVk*)(This), __VA_ARGS__)
-#    define IRenderDeviceVk_IsFenceSignaled(This, ...)                (This)->pVtbl->RenderDeviceVk.IsFenceSignaled                ((IRenderDeviceVk*)(This), __VA_ARGS__)
-#    define IRenderDeviceVk_CreateTextureFromVulkanImage(This, ...)   (This)->pVtbl->RenderDeviceVk.CreateTextureFromVulkanImage   ((IRenderDeviceVk*)(This), __VA_ARGS__)
-#    define IRenderDeviceVk_CreateBufferFromVulkanResource(This, ...) (This)->pVtbl->RenderDeviceVk.CreateBufferFromVulkanResource ((IRenderDeviceVk*)(This), __VA_ARGS__)
+#    define IRenderDeviceVk_GetVkDevice(This)                         CALL_IFACE_METHOD(RenderDeviceVk, GetVkDevice,                    This)
+#    define IRenderDeviceVk_GetVkPhysicalDevice(This)                 CALL_IFACE_METHOD(RenderDeviceVk, GetVkPhysicalDevice,            This)
+#    define IRenderDeviceVk_GetVkInstance(This)                       CALL_IFACE_METHOD(RenderDeviceVk, GetVkInstance,                  This)
+#    define IRenderDeviceVk_GetNextFenceValue(This, ...)              CALL_IFACE_METHOD(RenderDeviceVk, GetNextFenceValue,              This, __VA_ARGS__)
+#    define IRenderDeviceVk_GetCompletedFenceValue(This, ...)         CALL_IFACE_METHOD(RenderDeviceVk, GetCompletedFenceValue,         This, __VA_ARGS__)
+#    define IRenderDeviceVk_IsFenceSignaled(This, ...)                CALL_IFACE_METHOD(RenderDeviceVk, IsFenceSignaled,                This, __VA_ARGS__)
+#    define IRenderDeviceVk_CreateTextureFromVulkanImage(This, ...)   CALL_IFACE_METHOD(RenderDeviceVk, CreateTextureFromVulkanImage,   This, __VA_ARGS__)
+#    define IRenderDeviceVk_CreateBufferFromVulkanResource(This, ...) CALL_IFACE_METHOD(RenderDeviceVk, CreateBufferFromVulkanResource, This, __VA_ARGS__)
 
 // clang-format on
 

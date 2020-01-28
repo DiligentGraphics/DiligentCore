@@ -78,8 +78,8 @@ typedef struct IFenceD3D12
 
 // clang-format off
 
-#    define IFenceD3D12_GetD3D12Fence(This)          (This)->pVtbl->FenceD3D12.GetD3D12Fence    ((IFenceD3D12*)(This))
-#    define IFenceD3D12_WaitForCompletion(This, ...) (This)->pVtbl->FenceD3D12.WaitForCompletion((IFenceD3D12*)(This), __VA_ARGS__)
+#    define IFenceD3D12_GetD3D12Fence(This)          CALL_IFACE_METHOD(FenceD3D12, GetD3D12Fence,     This)
+#    define IFenceD3D12_WaitForCompletion(This, ...) CALL_IFACE_METHOD(FenceD3D12, WaitForCompletion, This, __VA_ARGS__)
 
 // clang-format on
 

@@ -88,11 +88,11 @@ typedef struct IFileStream
 
 // clang-format off
 
-#    define IFileStream_Read(This, ...)     (This)->pVtbl->FileStream.Read    ((IFileStream*)(This), __VA_ARGS__)
-#    define IFileStream_ReadBlob(This, ...) (This)->pVtbl->FileStream.ReadBlob((IFileStream*)(This), __VA_ARGS__)
-#    define IFileStream_Write(This, ...)    (This)->pVtbl->FileStream.Write   ((IFileStream*)(This), __VA_ARGS__)
-#    define IFileStream_GetSize(This)       (This)->pVtbl->FileStream.GetSize ((IFileStream*)(This))
-#    define IFileStream_IsValid(This)       (This)->pVtbl->FileStream.IsValid ((IFileStream*)(This))
+#    define IFileStream_Read(This, ...)     CALL_IFACE_METHOD(FileStream, Read,     This, __VA_ARGS__)
+#    define IFileStream_ReadBlob(This, ...) CALL_IFACE_METHOD(FileStream, ReadBlob, This, __VA_ARGS__)
+#    define IFileStream_Write(This, ...)    CALL_IFACE_METHOD(FileStream, Write,    This, __VA_ARGS__)
+#    define IFileStream_GetSize(This)       CALL_IFACE_METHOD(FileStream, GetSize,  This)
+#    define IFileStream_IsValid(This)       CALL_IFACE_METHOD(FileStream, IsValid,  This)
 
 // clang-format on
 

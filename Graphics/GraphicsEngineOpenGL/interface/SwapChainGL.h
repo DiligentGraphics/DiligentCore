@@ -67,7 +67,7 @@ typedef struct ISwapChainGL
 
 // clang-format off
 
-#    define ISwapChainGL_GetDefaultFBO(This) (This)->pVtbl->SwapChainGL.GetDefaultFBO((ISwapChainGL*)(This))
+#    define ISwapChainGL_GetDefaultFBO(This) CALL_IFACE_METHOD(SwapChainGL, GetDefaultFBO, This)
 
 // clang-format on
 

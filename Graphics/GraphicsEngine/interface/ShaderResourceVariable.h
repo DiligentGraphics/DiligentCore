@@ -173,12 +173,12 @@ typedef struct IShaderResourceVariable
 
 // clang-format off
 
-#    define IShaderResourceVariable_Set(This, ...)             (This)->pVtbl->ShaderResourceVariable.Set            ((IShaderResourceVariable*)(This), __VA_ARGS__)
-#    define IShaderResourceVariable_SetArray(This, ...)        (This)->pVtbl->ShaderResourceVariable.SetArray       ((IShaderResourceVariable*)(This), __VA_ARGS__)
-#    define IShaderResourceVariable_GetType(This)              (This)->pVtbl->ShaderResourceVariable.GetType        ((IShaderResourceVariable*)(This))
-#    define IShaderResourceVariable_GetResourceDesc(This, ...) (This)->pVtbl->ShaderResourceVariable.GetResourceDesc((IShaderResourceVariable*)(This), __VA_ARGS__)
-#    define IShaderResourceVariable_GetIndex(This)             (This)->pVtbl->ShaderResourceVariable.GetIndex       ((IShaderResourceVariable*)(This))
-#    define IShaderResourceVariable_IsBound(This, ...)         (This)->pVtbl->ShaderResourceVariable.IsBound        ((IShaderResourceVariable*)(This), __VA_ARGS__)
+#    define IShaderResourceVariable_Set(This, ...)             CALL_IFACE_METHOD(ShaderResourceVariable, Set,             This, __VA_ARGS__)
+#    define IShaderResourceVariable_SetArray(This, ...)        CALL_IFACE_METHOD(ShaderResourceVariable, SetArray,        This, __VA_ARGS__)
+#    define IShaderResourceVariable_GetType(This)              CALL_IFACE_METHOD(ShaderResourceVariable, GetType,         This)
+#    define IShaderResourceVariable_GetResourceDesc(This, ...) CALL_IFACE_METHOD(ShaderResourceVariable, GetResourceDesc, This, __VA_ARGS__)
+#    define IShaderResourceVariable_GetIndex(This)             CALL_IFACE_METHOD(ShaderResourceVariable, GetIndex,        This)
+#    define IShaderResourceVariable_IsBound(This, ...)         CALL_IFACE_METHOD(ShaderResourceVariable, IsBound,         This, __VA_ARGS__)
 
 // clang-format on
 

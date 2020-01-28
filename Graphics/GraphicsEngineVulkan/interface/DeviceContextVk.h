@@ -108,10 +108,10 @@ typedef struct IDeviceContextVk
 
 // clang-format off
 
-#    define IDeviceContextVk_TransitionImageLayout(This, ...) (This)->pVtbl->DeviceContextVk.TransitionImageLayout((IDeviceContextVk*)(This), __VA_ARGS__)
-#    define IDeviceContextVk_BufferMemoryBarrier(This, ...)   (This)->pVtbl->DeviceContextVk.BufferMemoryBarrier  ((IDeviceContextVk*)(This), __VA_ARGS__)
-#    define IDeviceContextVk_LockCommandQueue(This)           (This)->pVtbl->DeviceContextVk.LockCommandQueue     ((IDeviceContextVk*)(This))
-#    define IDeviceContextVk_UnlockCommandQueue(This)         (This)->pVtbl->DeviceContextVk.UnlockCommandQueue   ((IDeviceContextVk*)(This))
+#    define IDeviceContextVk_TransitionImageLayout(This, ...) CALL_IFACE_METHOD(DeviceContextVk, TransitionImageLayout, This, __VA_ARGS__)
+#    define IDeviceContextVk_BufferMemoryBarrier(This, ...)   CALL_IFACE_METHOD(DeviceContextVk, BufferMemoryBarrier,   This, __VA_ARGS__)
+#    define IDeviceContextVk_LockCommandQueue(This)           CALL_IFACE_METHOD(DeviceContextVk, LockCommandQueue,      This)
+#    define IDeviceContextVk_UnlockCommandQueue(This)         CALL_IFACE_METHOD(DeviceContextVk, UnlockCommandQueue,    This)
 
 // clang-format on
 

@@ -68,7 +68,7 @@ typedef struct IBufferViewD3D11
     struct IBufferViewD3D11Vtbl* pVtbl;
 } IBufferViewD3D11;
 
-#    define IBufferViewD3D11_GetD3D11View(This) (This)->pVtbl->BufferViewD3D11.GetD3D11View((IBufferViewD3D11*)(This))
+#    define IBufferViewD3D11_GetD3D11View(This) CALL_IFACE_METHOD(BufferViewD3D11, GetD3D11View, This)
 
 #endif
 

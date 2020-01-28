@@ -72,7 +72,7 @@ typedef struct IBufferViewVk
 
 // clang-format off
 
-#    define IBufferViewVk_GetVkBufferView(This) (This)->pVtbl->BufferViewVk.GetVkBufferView((IBufferViewVk*)(This))
+#    define IBufferViewVk_GetVkBufferView(This) CALL_IFACE_METHOD(BufferViewVk, GetVkBufferView, This)
 
 // clang-format on
 

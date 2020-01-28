@@ -70,8 +70,8 @@ typedef struct ITextureGL
 
 // clang-format off
 
-#    define ITextureGL_GetGLTextureHandle(This) (This)->pVtbl->TextureGL.GetGLTextureHandle((ITextureGL*)(This))
-#    define ITextureGL_GetBindTarget(This)      (This)->pVtbl->TextureGL.GetBindTarget     ((ITextureGL*)(This))
+#    define ITextureGL_GetGLTextureHandle(This) CALL_IFACE_METHOD(TextureGL, GetGLTextureHandle, This)
+#    define ITextureGL_GetBindTarget(This)      CALL_IFACE_METHOD(TextureGL, GetBindTarget,      This)
 
 // clang-format on
 

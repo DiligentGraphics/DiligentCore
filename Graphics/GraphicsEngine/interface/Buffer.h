@@ -258,11 +258,11 @@ typedef struct IBuffer
 
 #    define IBuffer_GetDesc(This) (const struct BufferDesc*)IDeviceObject_GetDesc(This)
 
-#    define IBuffer_CreateView(This, ...)     (This)->pVtbl->Buffer.CreateView     ((IBuffer*)(This), __VA_ARGS__)
-#    define IBuffer_GetDefaultView(This, ...) (This)->pVtbl->Buffer.GetDefaultView ((IBuffer*)(This), __VA_ARGS__)
-#    define IBuffer_GetNativeHandle(This)     (This)->pVtbl->Buffer.GetNativeHandle((IBuffer*)(This))
-#    define IBuffer_SetState(This, ...)       (This)->pVtbl->Buffer.SetState       ((IBuffer*)(This), __VA_ARGS__)
-#    define IBuffer_GetState(This)            (This)->pVtbl->Buffer.GetState       ((IBuffer*)(This))
+#    define IBuffer_CreateView(This, ...)     CALL_IFACE_METHOD(Buffer, CreateView,      This, __VA_ARGS__)
+#    define IBuffer_GetDefaultView(This, ...) CALL_IFACE_METHOD(Buffer, GetDefaultView,  This, __VA_ARGS__)
+#    define IBuffer_GetNativeHandle(This)     CALL_IFACE_METHOD(Buffer, GetNativeHandle, This)
+#    define IBuffer_SetState(This, ...)       CALL_IFACE_METHOD(Buffer, SetState,        This, __VA_ARGS__)
+#    define IBuffer_GetState(This)            CALL_IFACE_METHOD(Buffer, GetState,        This)
 
 // clang-format on
 

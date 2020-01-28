@@ -65,7 +65,7 @@ typedef struct ISamplerVk
     struct ISamplerVkVtbl* pVtbl;
 } ISamplerVk;
 
-#    define ISamplerVk_GetVkSampler(This) (This)->pVtbl->SamplerVk.GetVkSampler((ISamplerVk*)(This))
+#    define ISamplerVk_GetVkSampler(This) CALL_IFACE_METHOD(SamplerVk, GetVkSampler, This)
 
 #endif
 

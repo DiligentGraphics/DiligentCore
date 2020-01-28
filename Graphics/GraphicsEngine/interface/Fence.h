@@ -97,8 +97,8 @@ typedef struct IFence
 
 #    define IFence_GetDesc(This) (const struct FenceDesc*)IDeviceObject_GetDesc(This)
 
-#    define IFence_GetCompletedValue(This) (This)->pVtbl->Fence.GetCompletedValue((IFence*)(This))
-#    define IFence_Reset(This, ...)        (This)->pVtbl->Fence.Reset            ((IFence*)(This), __VA_ARGS__)
+#    define IFence_GetCompletedValue(This) CALL_IFACE_METHOD(Fence, GetCompletedValue, This)
+#    define IFence_Reset(This, ...)        CALL_IFACE_METHOD(Fence, Reset,             This, __VA_ARGS__)
 
 // clang-format on
 
