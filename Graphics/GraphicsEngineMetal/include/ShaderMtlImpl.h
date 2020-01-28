@@ -57,7 +57,7 @@ public:
     virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
     {
         LOG_ERROR_MESSAGE("ShaderMtlImpl::GetResource() is not implemented");
-        return ShaderResourceDesc{};
+        ResourceDesc = ShaderResourceDesc{};
     }
 
 private:

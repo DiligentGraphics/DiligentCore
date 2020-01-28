@@ -27,7 +27,7 @@
 typedef unsigned int GLuint;
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/SwapChainGL.h"
 
-void TestSwapChainCInterface(ISwapChainGL* pSwapChain)
+void TestSwapChain_CInterface(ISwapChainGL* pSwapChain)
 {
     GLuint fbo = ISwapChainGL_GetDefaultFBO(pSwapChain);
     (void)fbo;

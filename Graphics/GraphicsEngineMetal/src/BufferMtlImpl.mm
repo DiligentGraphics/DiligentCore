@@ -26,7 +26,7 @@
 #include "DeviceContextMtlImpl.h"
 #include "MtlTypeConversions.h"
 #include "BufferViewMtlImpl.h"
-#include "GraphicsAccessories.h"
+#include "GraphicsAccessories.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent

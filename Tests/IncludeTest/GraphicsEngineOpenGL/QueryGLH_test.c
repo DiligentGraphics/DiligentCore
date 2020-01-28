@@ -28,7 +28,7 @@
 typedef unsigned int GLuint;
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/QueryGL.h"
 
-void TestQueryGLCInterface(IQueryGL* pQuery)
+void TestQueryGL_CInterface(IQueryGL* pQuery)
 {
     GLuint Handle = IQueryGL_GetGlQueryHandle(pQuery);
     (void)Handle;

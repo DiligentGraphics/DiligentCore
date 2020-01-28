@@ -30,7 +30,7 @@
 #include "SwapChainMtlImpl.h"
 #include "MtlTypeConversions.h"
 #include "EngineMemory.h"
-#include "EngineFactoryBase.h"
+#include "EngineFactoryBase.hpp"
 
 namespace Diligent
 {

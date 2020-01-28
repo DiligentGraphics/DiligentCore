@@ -32,7 +32,6 @@
 namespace Diligent
 {
 
-class IMemoryAllocator;
 /// Implementation of the Diligent::ISwapChainMtl interface
 class SwapChainMtlImpl final : public SwapChainBase<ISwapChainMtl>
 {

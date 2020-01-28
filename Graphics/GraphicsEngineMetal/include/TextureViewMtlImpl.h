@@ -45,7 +45,7 @@ public:
     TextureViewMtlImpl(IReferenceCounters*    pRefCounters,
                        RenderDeviceMtlImpl*   pDevice,
                        const TextureViewDesc& ViewDesc,
-                       class ITexture*        pTexture,
+                       ITexture*              pTexture,
                        void*                  pMtlView,
                        bool                   bIsDefaultView);
 

@@ -27,7 +27,7 @@
 
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/RenderDeviceGL.h"
 
-void TestRenderDeviceGLCInterface(IRenderDeviceGL* pDevice)
+void TestRenderDeviceGL_CInterface(IRenderDeviceGL* pDevice)
 {
     IRenderDeviceGL_CreateTextureFromGLHandle(pDevice, (Uint32)0, (TextureDesc*)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
     IRenderDeviceGL_CreateBufferFromGLHandle(pDevice, (Uint32)0, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);

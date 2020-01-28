@@ -44,7 +44,7 @@ public:
     BufferViewMtlImpl(IReferenceCounters*   pRefCounters,
                       RenderDeviceMtlImpl*  pDevice,
                       const BufferViewDesc& ViewDesc,
-                      class IBuffer*        pBuffer,
+                      IBuffer*              pBuffer,
                       void*                 pMtlView,
                       bool                  bIsDefaultView);
 

@@ -28,7 +28,7 @@
 typedef unsigned int GLuint;
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/BufferGL.h"
 
-void TestBufferGLCInterface(IBufferGL* pBuffer)
+void TestBufferGL_CInterface(IBufferGL* pBuffer)
 {
     GLuint Handle = IBufferGL_GetGLBufferHandle(pBuffer);
     (void)Handle;

@@ -27,7 +27,7 @@
 
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/DeviceContextGL.h"
 
-void TestDeviceContextGLCInterface(IDeviceContextGL* pCtxGL)
+void TestDeviceContextGL_CInterface(IDeviceContextGL* pCtxGL)
 {
     bool res = IDeviceContextGL_UpdateCurrentGLContext(pCtxGL);
     (void)res;

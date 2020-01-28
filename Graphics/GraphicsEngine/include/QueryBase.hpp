@@ -112,7 +112,7 @@ public:
         m_State = QueryState::Inactive;
     }
 
-    bool OnBeginQuery(IDeviceContext* pContext)
+    bool OnBeginQuery(struct IDeviceContext* pContext)
     {
         if (this->m_Desc.Type == QUERY_TYPE_TIMESTAMP)
         {

@@ -25,24 +25,18 @@
  *  of the possibility of such damages.
  */
 
-#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <Windows.h>
-#endif
-
-#ifndef ENGINE_DLL
-#    define ENGINE_DLL 1
-#endif
-
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/EngineFactoryOpenGL.h"
 
 
-void TestEngineFactoryGLCInterface()
+void TestEngineFactoryGL_CInterface()
 {
+#if EXPLICITLY_LOAD_ENGINE_GL_DLL
     GetEngineFactoryOpenGLType GetEngineFactoryGL = LoadGraphicsEngineOpenGL();
     IEngineFactoryOpenGL*      pFactory           = GetEngineFactoryGL();
+#else
+    IEngineFactoryOpenGL* pFactory = Diligent_GetEngineFactoryOpenGL();
+#endif
+    
     struct EngineGLCreateInfo  EngineCI           = {0};
     IEngineFactoryOpenGL_CreateDeviceAndSwapChainGL(pFactory, &EngineCI, (IRenderDevice**)NULL, (IDeviceContext**)NULL, (SwapChainDesc*)NULL, (ISwapChain**)NULL);
 

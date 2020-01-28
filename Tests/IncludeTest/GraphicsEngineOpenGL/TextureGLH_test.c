@@ -28,7 +28,7 @@ typedef unsigned int GLuint;
 typedef unsigned int GLenum;
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/TextureGL.h"
 
-void TestTextureGLCInterface(ITextureGL* pTex)
+void TestTextureGL_CInterface(ITextureGL* pTex)
 {
     GLuint handle = ITextureGL_GetGLTextureHandle(pTex);
     GLenum target = ITextureGL_GetBindTarget(pTex);
