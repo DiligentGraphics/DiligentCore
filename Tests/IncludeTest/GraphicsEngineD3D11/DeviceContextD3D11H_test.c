@@ -28,8 +28,8 @@
 #include <d3d11.h>
 #include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/DeviceContextD3D11.h"
 
-void TestDeviceContextD3D11_CInterface(struct IDeviceContextD3D11* pView)
+void TestDeviceContextD3D11_CInterface(IDeviceContextD3D11* pCtx)
 {
-    ID3D11DeviceContext* pd3d11Ctx = IDeviceContextD3D11_GetD3D11DeviceContext(pView);
+    ID3D11DeviceContext* pd3d11Ctx = IDeviceContextD3D11_GetD3D11DeviceContext(pCtx);
     (void)pd3d11Ctx;
 }

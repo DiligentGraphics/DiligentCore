@@ -32,31 +32,39 @@
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
 // {C7987C98-87FE-4309-AE88-E98F044B00F6}
-static constexpr INTERFACE_ID IID_RenderDeviceD3D12 =
+static const INTERFACE_ID IID_RenderDeviceD3D12 =
     {0xc7987c98, 0x87fe, 0x4309, {0xae, 0x88, 0xe9, 0x8f, 0x4, 0x4b, 0x0, 0xf6}};
 
+#define DILIGENT_INTERFACE_NAME IRenderDeviceD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Exposes Direct3D12-specific functionality of a render device.
-class IRenderDeviceD3D12 : public IRenderDevice
+DILIGENT_INTERFACE(IRenderDeviceD3D12, IRenderDevice)
 {
-public:
     /// Returns ID3D12Device interface of the internal Direct3D12 device object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D12Device* GetD3D12Device() = 0;
+    VIRTUAL ID3D12Device* METHOD(GetD3D12Device)(THIS) PURE;
 
     /// Returns the fence value that will be signaled by the GPU command queue next
-    virtual Uint64 GetNextFenceValue(Uint32 QueueIndex) = 0;
+    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS_
+                                             Uint32 QueueIndex) PURE;
 
     /// Returns the last completed fence value for the given command queue
-    virtual Uint64 GetCompletedFenceValue(Uint32 QueueIndex) = 0;
+    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS_
+                                                  Uint32 QueueIndex) PURE;
 
     /// Checks if the fence value has been signaled by the GPU. True means
     /// that all associated work has been finished
-    virtual Bool IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) = 0;
+    VIRTUAL Bool METHOD(IsFenceSignaled)(THIS_
+                                         Uint32 QueueIndex,
+                                         Uint64 FenceValue) PURE;
 
     /// Creates a texture object from native d3d12 resource
 
@@ -66,9 +74,10 @@ public:
     ///                              texture interface will be stored.
     ///                              The function calls AddRef(), so that the new object will contain
     ///                              one reference.
-    virtual void CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture,
-                                              RESOURCE_STATE  InitialState,
-                                              ITexture**      ppTexture) = 0;
+    VIRTUAL void METHOD(CreateTextureFromD3DResource)(THIS_
+                                                      ID3D12Resource* pd3d12Texture,
+                                                      RESOURCE_STATE  InitialState,
+                                                      ITexture**      ppTexture) PURE;
 
     /// Creates a buffer object from native d3d12 resoruce
 
@@ -81,10 +90,42 @@ public:
     ///                             buffer interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
-    virtual void CreateBufferFromD3DResource(ID3D12Resource*   pd3d12Buffer,
-                                             const BufferDesc& BuffDesc,
-                                             RESOURCE_STATE    InitialState,
-                                             IBuffer**         ppBuffer) = 0;
+    VIRTUAL void METHOD(CreateBufferFromD3DResource)(THIS_
+                                                     ID3D12Resource*      pd3d12Buffer,
+                                                     const BufferDesc REF BuffDesc,
+                                                     RESOURCE_STATE       InitialState,
+                                                     IBuffer**            ppBuffer) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IRenderDeviceD3D12Vtbl
+{
+    struct IObjectMethods            Object;
+    struct IRenderDeviceMethods      RenderDevice;
+    struct IRenderDeviceD3D12Methods RenderDeviceD3D12;
+};
+
+typedef struct IRenderDeviceD3D12
+{
+    struct IRenderDeviceD3D12Vtbl* pVtbl;
+} IRenderDeviceD3D12;
+
+// clang-format off
+
+#    define IRenderDeviceD3D12_GetD3D12Device(This)                    (This)->pVtbl->RenderDeviceD3D12.GetD3D12Device              ((IRenderDeviceD3D12*)(This))
+#    define IRenderDeviceD3D12_GetNextFenceValue(This, ...)            (This)->pVtbl->RenderDeviceD3D12.GetNextFenceValue           ((IRenderDeviceD3D12*)(This), __VA_ARGS__)
+#    define IRenderDeviceD3D12_GetCompletedFenceValue(This, ...)       (This)->pVtbl->RenderDeviceD3D12.GetCompletedFenceValue      ((IRenderDeviceD3D12*)(This), __VA_ARGS__)
+#    define IRenderDeviceD3D12_IsFenceSignaled(This, ...)              (This)->pVtbl->RenderDeviceD3D12.IsFenceSignaled             ((IRenderDeviceD3D12*)(This), __VA_ARGS__)
+#    define IRenderDeviceD3D12_CreateTextureFromD3DResource(This, ...) (This)->pVtbl->RenderDeviceD3D12.CreateTextureFromD3DResource((IRenderDeviceD3D12*)(This), __VA_ARGS__)
+#    define IRenderDeviceD3D12_CreateBufferFromD3DResource(This, ...)  (This)->pVtbl->RenderDeviceD3D12.CreateBufferFromD3DResource ((IRenderDeviceD3D12*)(This), __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -30,36 +30,74 @@
 /// \file
 /// Definition of the Diligent::ICommandQueueD3D12 interface
 
-namespace Diligent
-{
+#include "../../../Primitives/interface/Object.h"
+
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {D89693CE-F3F4-44B5-B7EF-24115AAD085E}
-static constexpr INTERFACE_ID IID_CommandQueueD3D12 =
+static const INTERFACE_ID IID_CommandQueueD3D12 =
     {0xd89693ce, 0xf3f4, 0x44b5, {0xb7, 0xef, 0x24, 0x11, 0x5a, 0xad, 0x8, 0x5e}};
 
+#define DILIGENT_INTERFACE_NAME ICommandQueueD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Command queue interface
-class ICommandQueueD3D12 : public IObject
+DILIGENT_INTERFACE(ICommandQueueD3D12, IObject)
 {
-public:
     /// Returns the fence value that will be signaled next time
-    virtual Uint64 GetNextFenceValue() const = 0;
+    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS) CONST PURE;
 
     /// Executes a given command list
 
     /// \return Fence value associated with the executed command list
-    virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList) = 0;
+    VIRTUAL Uint64 METHOD(Submit)(THIS_
+                                  ID3D12GraphicsCommandList* commandList) PURE;
 
     /// Returns D3D12 command queue. May return null if queue is anavailable
-    virtual ID3D12CommandQueue* GetD3D12CommandQueue() = 0;
+    VIRTUAL ID3D12CommandQueue* METHOD(GetD3D12CommandQueue)(THIS) PURE;
 
     /// Returns value of the last completed fence
-    virtual Uint64 GetCompletedFenceValue() = 0;
+    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS) PURE;
 
     /// Blocks execution until all pending GPU commands are complete
-    virtual Uint64 WaitForIdle() = 0;
+    VIRTUAL Uint64 METHOD(WaitForIdle)(THIS) PURE;
 
     /// Signals the given fence
-    virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value) = 0;
+    VIRTUAL void METHOD(SignalFence)(THIS_
+                                     ID3D12Fence* pFence,
+                                     Uint64       Value) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct ICommandQueueD3D12Vtbl
+{
+    struct IObjectMethods            Object;
+    struct ICommandQueueD3D12Methods CommandQueueD3D12;
+};
+
+typedef struct ICommandQueueD3D12
+{
+    struct ICommandQueueD3D12Vtbl* pVtbl;
+} ICommandQueueD3D12;
+
+// clang-format off
+
+#    define ICommandQueueD3D12_GetNextFenceValue(This)      (This)->pVtbl->CommandQueueD3D12.GetNextFenceValue     ((ICommandQueueD3D12*)(This))
+#    define ICommandQueueD3D12_Submit(This, ...)            (This)->pVtbl->CommandQueueD3D12.Submit                ((ICommandQueueD3D12*)(This), __VA_ARGS__)
+#    define ICommandQueueD3D12_GetD3D12CommandQueue(This)   (This)->pVtbl->CommandQueueD3D12.GetD3D12CommandQueue  ((ICommandQueueD3D12*)(This))
+#    define ICommandQueueD3D12_GetCompletedFenceValue(This) (This)->pVtbl->CommandQueueD3D12.GetCompletedFenceValue((ICommandQueueD3D12*)(This))
+#    define ICommandQueueD3D12_WaitForIdle(This)            (This)->pVtbl->CommandQueueD3D12.WaitForIdle           ((ICommandQueueD3D12*)(This))
+#    define ICommandQueueD3D12_SignalFence(This, ...)       (This)->pVtbl->CommandQueueD3D12.SignalFence           ((ICommandQueueD3D12*)(This), __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

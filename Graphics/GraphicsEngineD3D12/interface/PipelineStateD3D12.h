@@ -32,29 +32,56 @@
 
 #include "../../GraphicsEngine/interface/PipelineState.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {33C9BE4B-6F23-4F83-A665-5AC1836DF35A}
-static constexpr INTERFACE_ID IID_PipelineStateD3D12 =
+static const INTERFACE_ID IID_PipelineStateD3D12 =
     {0x33c9be4b, 0x6f23, 0x4f83, {0xa6, 0x65, 0x5a, 0xc1, 0x83, 0x6d, 0xf3, 0x5a}};
 
+#define DILIGENT_INTERFACE_NAME IPipelineStateD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D12-specific functionality of a pipeline state object.
-class IPipelineStateD3D12 : public IPipelineState
+DILIGENT_INTERFACE(IPipelineStateD3D12, IPipelineState)
 {
-public:
     /// Returns ID3D12PipelineState interface of the internal D3D12 pipeline state object object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D12PipelineState* GetD3D12PipelineState() const = 0;
+    VIRTUAL ID3D12PipelineState* METHOD(GetD3D12PipelineState)(THIS) CONST PURE;
 
     /// Returns a pointer to the root signature object associated with this pipeline state.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D12RootSignature* GetD3D12RootSignature() const = 0;
+    VIRTUAL ID3D12RootSignature* METHOD(GetD3D12RootSignature)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IPipelineStateD3D12Vtbl
+{
+    struct IObjectMethods             Object;
+    struct IDeviceObjectMethods       DeviceObject;
+    struct IPipelineStateMethods      PipelineState;
+    struct IPipelineStateD3D12Methods PipelineStateD3D12;
+};
+
+typedef struct IPipelineStateD3D12
+{
+    struct IPipelineStateD3D12Vtbl* pVtbl;
+} IPipelineStateD3D12;
+
+// clang-format off
+
+#    define IPipelineStateD3D12_GetD3D12PipelineState(This) (This)->pVtbl->PipelineStateD3D12.GetD3D12PipelineState((IPipelineStateD3D12*)(This))
+#    define IPipelineStateD3D12_GetD3D12RootSignature(This) (This)->pVtbl->PipelineStateD3D12.GetD3D12RootSignature((IPipelineStateD3D12*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

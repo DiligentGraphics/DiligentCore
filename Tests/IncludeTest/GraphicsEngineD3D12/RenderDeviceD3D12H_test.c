@@ -25,46 +25,22 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <d3d12.h>
+#include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/RenderDeviceD3D12.h"
 
-/// \file
-/// Definition of the Diligent::IShaderResourceBindingD3D11 interface and related data structures
-
-#include "../../GraphicsEngine/interface/ShaderResourceBinding.h"
-
-DILIGENT_BEGIN_NAMESPACE(Diligent)
-
-// {97A6D4AC-D4AF-4AA9-B46C-67417B89026A}
-static const struct INTERFACE_ID IID_ShaderResourceBindingD3D11 =
-    {0x97a6d4ac, 0xd4af, 0x4aa9, {0xb4, 0x6c, 0x67, 0x41, 0x7b, 0x89, 0x2, 0x6a}};
-
-#define DILIGENT_INTERFACE_NAME IShaderResourceBindingD3D11
-#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
-
-#if DILIGENT_CPP_INTERFACE
-
-/// Exposes Direct3D11-specific functionality of a shader resource binding object.
-DILIGENT_INTERFACE(IShaderResourceBindingD3D11, IShaderResourceBinding){};
-
-#endif
-
-#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
-
-#if DILIGENT_C_INTERFACE
-
-struct IShaderResourceBindingD3D11Vtbl
+void TestRenderDeviceD3D12CInterface(IRenderDeviceD3D12* pDevice)
 {
-    struct IObjectMethods                Object;
-    struct IDeviceObjectMethods          DeviceObject;
-    struct IShaderResourceBindingMethods ShaderResourceBinding;
-    //struct IShaderResourceBindingD3D11Methods ShaderResourceBindingD3D11;
-};
+    ID3D12Device* pD3D12Device = IRenderDeviceD3D12_GetD3D12Device(pDevice);
+    (void)pD3D12Device;
 
-struct IShaderResourceBindingD3D11
-{
-    struct IShaderResourceBindingD3D11Vtbl* pVtbl;
-};
+    Uint64 Fence = IRenderDeviceD3D12_GetNextFenceValue(pDevice, (Uint32)0);
+    (void)Fence;
 
-#endif
+    Fence = IRenderDeviceD3D12_GetCompletedFenceValue(pDevice, (Uint32)0);
 
-DILIGENT_END_NAMESPACE // namespace Diligent
+    bool IsSignaled = IRenderDeviceD3D12_IsFenceSignaled(pDevice, (Uint32)0, (Uint64)0);
+    (void)IsSignaled;
+
+    IRenderDeviceD3D12_CreateTextureFromD3DResource(pDevice, (ID3D12Resource*)NULL, RESOURCE_STATE_SHADER_RESOURCE, (ITexture**)NULL);
+    IRenderDeviceD3D12_CreateBufferFromD3DResource(pDevice, (ID3D12Resource*)NULL, (BufferDesc*)NULL, RESOURCE_STATE_CONSTANT_BUFFER, (IBuffer**)NULL);
+}

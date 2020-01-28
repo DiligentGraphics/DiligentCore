@@ -25,46 +25,14 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <D3D12.h>
+#include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/BufferD3D12.h"
 
-/// \file
-/// Definition of the Diligent::IShaderResourceBindingD3D11 interface and related data structures
-
-#include "../../GraphicsEngine/interface/ShaderResourceBinding.h"
-
-DILIGENT_BEGIN_NAMESPACE(Diligent)
-
-// {97A6D4AC-D4AF-4AA9-B46C-67417B89026A}
-static const struct INTERFACE_ID IID_ShaderResourceBindingD3D11 =
-    {0x97a6d4ac, 0xd4af, 0x4aa9, {0xb4, 0x6c, 0x67, 0x41, 0x7b, 0x89, 0x2, 0x6a}};
-
-#define DILIGENT_INTERFACE_NAME IShaderResourceBindingD3D11
-#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
-
-#if DILIGENT_CPP_INTERFACE
-
-/// Exposes Direct3D11-specific functionality of a shader resource binding object.
-DILIGENT_INTERFACE(IShaderResourceBindingD3D11, IShaderResourceBinding){};
-
-#endif
-
-#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
-
-#if DILIGENT_C_INTERFACE
-
-struct IShaderResourceBindingD3D11Vtbl
+void TestBufferD3D12_CInterface(IBufferD3D12* pBuffer)
 {
-    struct IObjectMethods                Object;
-    struct IDeviceObjectMethods          DeviceObject;
-    struct IShaderResourceBindingMethods ShaderResourceBinding;
-    //struct IShaderResourceBindingD3D11Methods ShaderResourceBindingD3D11;
-};
-
-struct IShaderResourceBindingD3D11
-{
-    struct IShaderResourceBindingD3D11Vtbl* pVtbl;
-};
-
-#endif
-
-DILIGENT_END_NAMESPACE // namespace Diligent
+    ID3D12Resource* pD3D12Res = IBufferD3D12_GetD3D12Buffer(pBuffer, 0, (IDeviceContext*)NULL);
+    (void)pD3D12Res;
+    IBufferD3D12_SetD3D12ResourceState(pBuffer, RESOURCE_STATE_CONSTANT_BUFFER);
+    RESOURCE_STATE State = IBufferD3D12_GetD3D12ResourceState(pBuffer);
+    (void)State;
+}

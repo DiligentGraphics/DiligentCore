@@ -33,28 +33,35 @@
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "CommandQueueD3D12.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {DDE9E3AB-5109-4026-92B7-F5E7EC83E21E}
-static constexpr INTERFACE_ID IID_DeviceContextD3D12 =
+static const INTERFACE_ID IID_DeviceContextD3D12 =
     {0xdde9e3ab, 0x5109, 0x4026, {0x92, 0xb7, 0xf5, 0xe7, 0xec, 0x83, 0xe2, 0x1e}};
 
+#define DILIGENT_INTERFACE_NAME IDeviceContextD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Exposes Direct3D12-specific functionality of a device context.
-class IDeviceContextD3D12 : public IDeviceContext
+DILIGENT_INTERFACE(IDeviceContextD3D12, IDeviceContext)
 {
-public:
     /// Transitions internal D3D12 texture object to a specified state
 
     /// \param [in] pTexture - texture to transition
     /// \param [in] State - D3D12 resource state this texture to transition to
-    virtual void TransitionTextureState(ITexture* pTexture, D3D12_RESOURCE_STATES State) = 0;
+    VIRTUAL void METHOD(TransitionTextureState)(THIS_
+                                                ITexture*             pTexture,
+                                                D3D12_RESOURCE_STATES State) PURE;
 
     /// Transitions internal D3D12 buffer object to a specified state
 
     /// \param [in] pBuffer - Buffer to transition
     /// \param [in] State - D3D12 resource state this buffer to transition to
-    virtual void TransitionBufferState(IBuffer* pBuffer, D3D12_RESOURCE_STATES State) = 0;
+    VIRTUAL void METHOD(TransitionBufferState)(THIS_
+                                               IBuffer*              pBuffer,
+                                               D3D12_RESOURCE_STATES State) PURE;
 
     /// Returns a pointer to Direct3D12 graphics command list that is currently being recorded
 
@@ -73,7 +80,7 @@ public:
     ///           states in the command list, it must invalidate the engine's internal state tracking by
     ///           calling IDeviceContext::InvalidateState() and then manually restore all required states via
     ///           appropriate Diligent API calls.
-    virtual ID3D12GraphicsCommandList* GetD3D12CommandList() = 0;
+    VIRTUAL ID3D12GraphicsCommandList* METHOD(GetD3D12CommandList)(THIS) PURE;
 
     /// Locks the internal mutex and returns a pointer to the command queue that is associated with this device context.
 
@@ -91,10 +98,41 @@ public:
     ///
     ///           The engine manages the lifetimes of command queues and all other device objects,
     ///           so an application must not call AddRef/Release methods on the returned interface.
-    virtual ICommandQueueD3D12* LockCommandQueue() = 0;
+    VIRTUAL ICommandQueueD3D12* METHOD(LockCommandQueue)(THIS) PURE;
 
     /// Unlocks the command queue that was previously locked by IDeviceContextD3D12::LockCommandQueue().
-    virtual void UnlockCommandQueue() = 0;
+    VIRTUAL void METHOD(UnlockCommandQueue)(THIS) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IDeviceContextD3D12Vtbl
+{
+    struct IObjectMethods             Object;
+    struct IDeviceObjectMethods       DeviceObject;
+    struct IDeviceContextMethods      DeviceContext;
+    struct IDeviceContextD3D12Methods DeviceContextD3D12;
+};
+
+typedef struct IDeviceContextD3D12
+{
+    struct IDeviceContextD3D12Vtbl* pVtbl;
+} IDeviceContextD3D12;
+
+// clang-format off
+
+#    define IDeviceContextD3D12_TransitionTextureState(This, ...) (This)->pVtbl->DeviceContextD3D12.TransitionTextureState((IDeviceContextD3D12*)(This), __VA_ARGS__)
+#    define IDeviceContextD3D12_TransitionBufferState(This, ...)  (This)->pVtbl->DeviceContextD3D12.TransitionBufferState ((IDeviceContextD3D12*)(This), __VA_ARGS__)
+#    define IDeviceContextD3D12_GetD3D12CommandList(This)         (This)->pVtbl->DeviceContextD3D12.GetD3D12CommandList   ((IDeviceContextD3D12*)(This))
+#    define IDeviceContextD3D12_LockCommandQueue(This)            (This)->pVtbl->DeviceContextD3D12.LockCommandQueue      ((IDeviceContextD3D12*)(This))
+#    define IDeviceContextD3D12_UnlockCommandQueue(This)          (This)->pVtbl->DeviceContextD3D12.UnlockCommandQueue    ((IDeviceContextD3D12*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

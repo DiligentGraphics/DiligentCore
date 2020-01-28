@@ -150,11 +150,11 @@ DILIGENT_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
                                                DisplayModeAttribs*    DisplayModes) PURE;
 };
 
-    // clang-format on
-
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
+
+// clang-format on
 
 struct IEngineFactoryD3D11Vtbl
 {

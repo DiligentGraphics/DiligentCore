@@ -29,38 +29,41 @@
 #    define NOMINMAX
 #endif
 #include <Windows.h>
-#include <d3d11.h>
+#include <d3d12.h>
 
 #ifndef ENGINE_DLL
 #    define ENGINE_DLL 1
 #endif
 
-#include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/EngineFactoryD3D11.h"
+#include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/EngineFactoryD3D12.h"
 
-void TestEngineFactoryD3D11CInterface()
+void TestEngineFactoryD3D12CInterface()
 {
-    GetEngineFactoryD3D11Type    GetEngineFactoryD3D11 = LoadGraphicsEngineD3D11();
-    struct IEngineFactoryD3D11*  pFactory              = GetEngineFactoryD3D11();
-    struct EngineD3D11CreateInfo EngineCI              = {0};
+    GetEngineFactoryD3D12Type    GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
+    struct IEngineFactoryD3D12*  pFactory              = GetEngineFactoryD3D12();
+    struct EngineD3D12CreateInfo EngineCI              = {0};
     IRenderDevice*               pDevice               = NULL;
     IDeviceContext*              pCtx                  = NULL;
-    IEngineFactoryD3D11_CreateDeviceAndContextsD3D11(pFactory, &EngineCI, &pDevice, &pCtx);
+    IEngineFactoryD3D12_CreateDeviceAndContextsD3D12(pFactory, &EngineCI, &pDevice, &pCtx);
+
+    bool res = IEngineFactoryD3D12_LoadD3D12(pFactory, "d3d12.dll");
+    (void)res;
 
     struct SwapChainDesc      SCDesc           = {0};
     struct FullScreenModeDesc FSDes            = {0};
     void*                     pNativeWndHandle = NULL;
     ISwapChain*               pSwapChain       = NULL;
-    IEngineFactoryD3D11_CreateSwapChainD3D11(pFactory, pDevice, pCtx, &SCDesc, &FSDes, pNativeWndHandle, &pSwapChain);
+    IEngineFactoryD3D12_CreateSwapChainD3D12(pFactory, pDevice, pCtx, &SCDesc, &FSDes, pNativeWndHandle, &pSwapChain);
 
-    void* pd3d11NativeDevice     = NULL;
-    void* pd3d11ImmediateContext = NULL;
-    IEngineFactoryD3D11_AttachToD3D11Device(pFactory, pd3d11NativeDevice, pd3d11ImmediateContext, &EngineCI, &pDevice, &pCtx);
+    void*                      pd3d12NativeDevice = NULL;
+    struct ICommandQueueD3D12* pd3d12CmdQueues    = NULL;
+    IEngineFactoryD3D12_AttachToD3D12Device(pFactory, pd3d12NativeDevice, (size_t)1, &pd3d12CmdQueues, &EngineCI, &pDevice, &pCtx);
 
     Uint32                 NumAdapters = 0;
     struct AdapterAttribs* Adapters    = NULL;
-    IEngineFactoryD3D11_EnumerateAdapters(pFactory, DIRECT3D_FEATURE_LEVEL_11_0, &NumAdapters, Adapters);
+    IEngineFactoryD3D12_EnumerateAdapters(pFactory, DIRECT3D_FEATURE_LEVEL_11_0, &NumAdapters, Adapters);
 
     Uint32                     NumDisplayModes = 0;
     struct DisplayModeAttribs* DisplayModes    = NULL;
-    IEngineFactoryD3D11_EnumerateDisplayModes(pFactory, DIRECT3D_FEATURE_LEVEL_11_0, 0, 0, TEX_FORMAT_RGBA8_UNORM, &NumDisplayModes, DisplayModes);
+    IEngineFactoryD3D12_EnumerateDisplayModes(pFactory, DIRECT3D_FEATURE_LEVEL_11_0, 0, 0, TEX_FORMAT_RGBA8_UNORM, &NumDisplayModes, DisplayModes);
 }

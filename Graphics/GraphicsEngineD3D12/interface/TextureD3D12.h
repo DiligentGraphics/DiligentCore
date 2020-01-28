@@ -32,32 +32,65 @@
 
 #include "../../GraphicsEngine/interface/Texture.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {CF5522EF-8116-4D76-ADF1-5CC8FB31FF66}
-static constexpr INTERFACE_ID IID_TextureD3D12 =
+static const INTERFACE_ID IID_TextureD3D12 =
     {0xcf5522ef, 0x8116, 0x4d76, {0xad, 0xf1, 0x5c, 0xc8, 0xfb, 0x31, 0xff, 0x66}};
 
+#define DILIGENT_INTERFACE_NAME ITextureD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Exposes Direct3D12-specific functionality of a texture object.
-class ITextureD3D12 : public ITexture
+DILIGENT_INTERFACE(ITextureD3D12, ITexture)
 {
-public:
     /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D12Resource* GetD3D12Texture() = 0;
+    VIRTUAL ID3D12Resource* METHOD(GetD3D12Texture)(THIS) PURE;
 
     /// Sets the texture usage state
 
     /// \param [in] state - D3D12 resource state to be set for this texture
-    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
+    VIRTUAL void METHOD(SetD3D12ResourceState)(THIS_
+                                                   D3D12_RESOURCE_STATES state) PURE;
 
     /// Returns current D3D12 texture state.
     /// If the state is unknown to the engine (Diligent::RESOURCE_STATE_UNKNOWN),
     /// returns D3D12_RESOURCE_STATE_COMMON (0).
-    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState() const = 0;
+    VIRTUAL D3D12_RESOURCE_STATES METHOD(GetD3D12ResourceState)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct ITextureD3D12Vtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct ITextureMethods      Texture;
+    struct ITextureD3D12Methods TextureD3D12;
+};
+
+typedef struct ITextureD3D12
+{
+    struct ITextureD3D12Vtbl* pVtbl;
+} ITextureD3D12;
+
+// clang-format off
+
+#    define ITextureD3D12_GetD3D12Texture(This)            (This)->pVtbl->TextureD3D12.GetD3D12Texture      ((ITextureD3D12*)(This))
+#    define ITextureD3D12_SetD3D12ResourceState(This, ...) (This)->pVtbl->TextureD3D12.SetD3D12ResourceState((ITextureD3D12*)(This), __VA_ARGS__)
+#    define ITextureD3D12_GetD3D12ResourceState(This)      (This)->pVtbl->TextureD3D12.GetD3D12ResourceState((ITextureD3D12*)(This))
+
+// clang-format ons
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

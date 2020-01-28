@@ -188,9 +188,8 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
         case RENDER_DEVICE_TYPE_D3D12:
         {
 #    if ENGINE_DLL
-            GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = nullptr;
             // Load the dll and import GetEngineFactoryD3D12() function
-            LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
+            GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
             if (GetEngineFactoryD3D12 == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");

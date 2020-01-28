@@ -26,4 +26,4 @@
  */
 
 #include <d3d12.h>
-#include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/BufferViewD3D12.h"
+#include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/CommandQueueD3D12.h"

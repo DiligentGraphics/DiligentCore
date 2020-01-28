@@ -32,17 +32,19 @@
 
 #include "../../GraphicsEngineD3DBase/interface/ShaderD3D.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {C059B160-7F31-4029-943D-0996B98EE79A}
-static constexpr INTERFACE_ID IID_ShaderD3D12 =
+static const INTERFACE_ID IID_ShaderD3D12 =
     {0xc059b160, 0x7f31, 0x4029, {0x94, 0x3d, 0x9, 0x96, 0xb9, 0x8e, 0xe7, 0x9a}};
 
+#define DILIGENT_INTERFACE_NAME IShaderD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#if DILIGENT_CPP_INTERFACE
+
 /// Exposes Direct3D12-specific functionality of a shader object.
-class IShaderD3D12 : public IShaderD3D
-{
-public:
+DILIGENT_INTERFACE(IShaderD3D12, IShaderD3D){
     /// Returns a pointer to the ID3D12DeviceChild interface of the internal Direct3D12 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -50,4 +52,25 @@ public:
     //virtual ID3D12DeviceChild* GetD3D12Shader() = 0;
 };
 
-} // namespace Diligent
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IShaderD3D12Vtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IShaderMethods       Shader;
+    //struct IShaderD3D12Methods  ShaderD3D12;
+};
+
+typedef struct IShaderD3D12
+{
+    struct IShaderD3D12Vtbl* pVtbl;
+} IShaderD3D12;
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

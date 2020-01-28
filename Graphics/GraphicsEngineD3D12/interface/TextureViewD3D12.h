@@ -32,19 +32,42 @@
 
 #include "../../GraphicsEngine/interface/TextureView.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {BDFBD325-0699-4720-BC0E-BF84086EC033}
-static constexpr INTERFACE_ID IID_TextureViewD3D12 =
+static const INTERFACE_ID IID_TextureViewD3D12 =
     {0xbdfbd325, 0x699, 0x4720, {0xbc, 0xe, 0xbf, 0x84, 0x8, 0x6e, 0xc0, 0x33}};
 
+#define DILIGENT_INTERFACE_NAME ITextureViewD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes Direct3D12-specific functionality of a texture view object.
-class ITextureViewD3D12 : public ITextureView
+DILIGENT_INTERFACE(ITextureViewD3D12, ITextureView)
 {
-public:
     /// Returns CPU descriptor handle of the texture view.
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() = 0;
+    VIRTUAL D3D12_CPU_DESCRIPTOR_HANDLE METHOD(GetCPUDescriptorHandle)(THIS) PURE;
 };
 
-} // namespace Diligent
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct ITextureViewD3D12Vtbl
+{
+    struct IObjectMethods           Object;
+    struct IDeviceObjectMethods     DeviceObject;
+    struct ITextureViewMethods      TextureView;
+    struct ITextureViewD3D12Methods TextureViewD3D12;
+};
+
+typedef struct ITextureViewD3D12
+{
+    struct ITextureViewD3D12Vtbl* pVtbl;
+} ITextureViewD3D12;
+
+#    define ITextureViewD3D12_GetCPUDescriptorHandle(This) (This)->pVtbl->TextureViewD3D12.GetCPUDescriptorHandle((ITextureViewD3D12*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

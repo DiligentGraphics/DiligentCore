@@ -110,11 +110,11 @@ DILIGENT_INTERFACE(IRenderDeviceD3D11, IRenderDevice)
                                                         ITexture**       ppTexture) PURE;
 };
 
-    // clang-format on
-
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
+
+// clang-format on
 
 struct IRenderDeviceD3D11Vtbl
 {

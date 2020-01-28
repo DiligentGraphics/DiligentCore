@@ -33,17 +33,20 @@
 #include "../../GraphicsEngine/interface/Buffer.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {3E9B15ED-A289-48DC-8214-C6E3E6177378}
-static constexpr INTERFACE_ID IID_BufferD3D12 =
+static const INTERFACE_ID IID_BufferD3D12 =
     {0x3e9b15ed, 0xa289, 0x48dc, {0x82, 0x14, 0xc6, 0xe3, 0xe6, 0x17, 0x73, 0x78}};
 
+#define DILIGENT_INTERFACE_NAME IBufferD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Exposes Direct3D12-specific functionality of a buffer object.
-class IBufferD3D12 : public IBuffer
+DILIGENT_INTERFACE(IBufferD3D12, IBuffer)
 {
-public:
     /// Returns a pointer to the ID3D12Resource interface of the internal Direct3D12 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
@@ -53,17 +56,43 @@ public:
     ///                            is required for dynamic buffers, which are
     ///                            suballocated in a dynamic upload heap
     /// \param [in] pContext - Device context within which address of the buffer is requested.
-    virtual ID3D12Resource* GetD3D12Buffer(Uint64& DataStartByteOffset, IDeviceContext* pContext) = 0;
+    VIRTUAL ID3D12Resource* METHOD(GetD3D12Buffer)(THIS_
+                                                   Uint64 REF      DataStartByteOffset,
+                                                   IDeviceContext* pContext) PURE;
 
     /// Sets the buffer usage state
 
     /// \param [in] state - D3D12 resource state to be set for this buffer
-    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) = 0;
+    VIRTUAL void METHOD(SetD3D12ResourceState)(THIS_
+                                               D3D12_RESOURCE_STATES state) PURE;
 
     /// Returns current D3D12 buffer state.
     /// If the state is unknown to the engine (Diligent::RESOURCE_STATE_UNKNOWN),
     /// returns D3D12_RESOURCE_STATE_COMMON (0).
-    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState() const = 0;
+    VIRTUAL D3D12_RESOURCE_STATES METHOD(GetD3D12ResourceState)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IBufferD3D12Vtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IBufferMethods       Buffer;
+    struct IBufferD3D12Methods  BufferD3D12;
+};
+
+typedef struct IBufferD3D12
+{
+    struct IBufferD3D12Vtbl* pVtbl;
+} IBufferD3D12;
+
+#    define IBufferD3D12_GetD3D12Buffer(This, ...)        (This)->pVtbl->BufferD3D12.GetD3D12Buffer       ((IBufferD3D12*)(This), __VA_ARGS__)
+#    define IBufferD3D12_SetD3D12ResourceState(This, ...) (This)->pVtbl->BufferD3D12.SetD3D12ResourceState((IBufferD3D12*)(This), __VA_ARGS__)
+#    define IBufferD3D12_GetD3D12ResourceState(This)      (This)->pVtbl->BufferD3D12.GetD3D12ResourceState((IBufferD3D12*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

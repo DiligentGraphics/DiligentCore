@@ -35,22 +35,48 @@
 #include "../../GraphicsEngine/interface/SwapChain.h"
 #include "TextureViewD3D12.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {C9F8384D-A45E-4970-8447-394177E5B0EE}
-static constexpr INTERFACE_ID IID_SwapChainD3D12 =
+static const INTERFACE_ID IID_SwapChainD3D12 =
     {0xc9f8384d, 0xa45e, 0x4970, {0x84, 0x47, 0x39, 0x41, 0x77, 0xe5, 0xb0, 0xee}};
 
+#define DILIGENT_INTERFACE_NAME ISwapChainD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes Direct3D12-specific functionality of a swap chain.
-class ISwapChainD3D12 : public ISwapChain
+DILIGENT_INTERFACE(ISwapChainD3D12, ISwapChain)
 {
-public:
     /// Returns a pointer to the IDXGISwapChain interface of the internal DXGI object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual IDXGISwapChain* GetDXGISwapChain() = 0;
+    VIRTUAL IDXGISwapChain* METHOD(GetDXGISwapChain)(THIS) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct ISwapChainD3D12Vtbl
+{
+    struct IObjectMethods         Object;
+    struct IDeviceObjectMethods   DeviceObject;
+    struct ISwapChainMethods      SwapChain;
+    struct ISwapChainD3D12Methods SwapChainD3D12;
+};
+
+typedef struct ISwapChainD3D12
+{
+    struct ISwapChainD3D12Vtbl* pVtbl;
+} ISwapChainD3D12;
+
+// clang-format off
+
+#    define ISwapChainD3D12_GetDXGISwapChain(This)  (This)->pVtbl->SwapChainD3D12.GetDXGISwapChain((ISwapChainD3D12*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

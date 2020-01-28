@@ -32,21 +32,45 @@
 
 #include "../../GraphicsEngine/interface/Query.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {72D109BE-7D70-4E54-84EF-C649DA190B2C}
-static constexpr INTERFACE_ID IID_QueryD3D12 =
+static const INTERFACE_ID IID_QueryD3D12 =
     {0x72d109be, 0x7d70, 0x4e54, {0x84, 0xef, 0xc6, 0x49, 0xda, 0x19, 0xb, 0x2c}};
 
+#define DILIGENT_INTERFACE_NAME IQueryD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes Direct3D12-specific functionality of a Query object.
-class IQueryD3D12 : public IQuery
+DILIGENT_INTERFACE(IQueryD3D12, IQuery)
 {
     /// Returns the Direct3D12 query heap that internal query object resides in.
-    virtual ID3D12QueryHeap* GetD3D12QueryHeap() = 0;
+    VIRTUAL ID3D12QueryHeap* METHOD(GetD3D12QueryHeap)(THIS) PURE;
 
     /// Returns the index of a query object in Direct3D12 query heap.
-    virtual Uint32 GetQueryHeapIndex() const = 0;
+    VIRTUAL Uint32 METHOD(GetQueryHeapIndex)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IQueryD3D12Vtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IQueryMethods        Query;
+    struct IQueryD3D12Methods   QueryD3D12;
+};
+
+typedef struct IQueryD3D12
+{
+    struct IQueryD3D12Vtbl* pVtbl;
+} IQueryD3D12;
+
+#    define IQueryD3D12_GetD3D12QueryHeap(This) (This)->pVtbl->QueryD3D12.GetD3D12QueryHeap((IQueryD3D12*)(This))
+#    define IQueryD3D12_GetQueryHeapIndex(This) (This)->pVtbl->QueryD3D12.GetQueryHeapIndex((IQueryD3D12*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

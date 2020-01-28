@@ -29,6 +29,7 @@
 #    define NOMINMAX
 #endif
 #include <Windows.h>
+#include <d3d12.h>
 
 #ifndef ENGINE_DLL
 #    define ENGINE_DLL 1

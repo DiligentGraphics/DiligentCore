@@ -38,7 +38,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_QueryD3D11 =
     {0x77d95eaa, 0xd16e, 0x43f4, {0xb0, 0xeb, 0xbe, 0xbc, 0xd2, 0xec, 0x8c, 0x57}};
 
-#define DILIGENT_INTERFACE_NAME IPipelineStateD3D11
+#define DILIGENT_INTERFACE_NAME IQueryD3D11
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a Query object.

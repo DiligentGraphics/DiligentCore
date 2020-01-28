@@ -32,26 +32,57 @@
 
 #include "../../GraphicsEngine/interface/Fence.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {053C0D8C-3757-4220-A9CC-4749EC4794AD}
-static constexpr INTERFACE_ID IID_FenceD3D12 =
+static const INTERFACE_ID IID_FenceD3D12 =
     {0x53c0d8c, 0x3757, 0x4220, {0xa9, 0xcc, 0x47, 0x49, 0xec, 0x47, 0x94, 0xad}};
 
+#define DILIGENT_INTERFACE_NAME IFenceD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
 
 /// Exposes Direct3D12-specific functionality of a fence object.
-class IFenceD3D12 : public IFence
+DILIGENT_INTERFACE(IFenceD3D12, IFence)
 {
-public:
     /// Returns a pointer to the ID3D12Fence interface of the internal Direct3D12 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D12Fence* GetD3D12Fence() = 0;
+    VIRTUAL ID3D12Fence* METHOD(GetD3D12Fence)(THIS) PURE;
 
     /// Waits until the fence reaches the specified value, on the host.
-    virtual void WaitForCompletion(Uint64 Value) = 0;
+    VIRTUAL void METHOD(WaitForCompletion)(THIS_
+                                           Uint64 Value) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format off
+
+struct IFenceD3D12Vtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IFenceMethods        Fence;
+    struct IFenceD3D12Methods   FenceD3D12;
+};
+
+typedef struct IFenceD3D12
+{
+    struct IFenceD3D12Vtbl* pVtbl;
+} IFenceD3D12;
+
+// clang-format off
+
+#    define IFenceD3D12_GetD3D12Fence(This)          (This)->pVtbl->FenceD3D12.GetD3D12Fence    ((IFenceD3D12*)(This))
+#    define IFenceD3D12_WaitForCompletion(This, ...) (This)->pVtbl->FenceD3D12.WaitForCompletion((IFenceD3D12*)(This), __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

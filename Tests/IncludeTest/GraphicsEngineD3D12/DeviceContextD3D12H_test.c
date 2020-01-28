@@ -25,46 +25,19 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <d3d12.h>
+#include "DiligentCore/Graphics/GraphicsEngineD3D12/interface/DeviceContextD3D12.h"
 
-/// \file
-/// Definition of the Diligent::IShaderResourceBindingD3D11 interface and related data structures
-
-#include "../../GraphicsEngine/interface/ShaderResourceBinding.h"
-
-DILIGENT_BEGIN_NAMESPACE(Diligent)
-
-// {97A6D4AC-D4AF-4AA9-B46C-67417B89026A}
-static const struct INTERFACE_ID IID_ShaderResourceBindingD3D11 =
-    {0x97a6d4ac, 0xd4af, 0x4aa9, {0xb4, 0x6c, 0x67, 0x41, 0x7b, 0x89, 0x2, 0x6a}};
-
-#define DILIGENT_INTERFACE_NAME IShaderResourceBindingD3D11
-#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
-
-#if DILIGENT_CPP_INTERFACE
-
-/// Exposes Direct3D11-specific functionality of a shader resource binding object.
-DILIGENT_INTERFACE(IShaderResourceBindingD3D11, IShaderResourceBinding){};
-
-#endif
-
-#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
-
-#if DILIGENT_C_INTERFACE
-
-struct IShaderResourceBindingD3D11Vtbl
+void TestDeviceContextD3D12_CInterface(IDeviceContextD3D12* pCtx)
 {
-    struct IObjectMethods                Object;
-    struct IDeviceObjectMethods          DeviceObject;
-    struct IShaderResourceBindingMethods ShaderResourceBinding;
-    //struct IShaderResourceBindingD3D11Methods ShaderResourceBindingD3D11;
-};
+    IDeviceContextD3D12_TransitionTextureState(pCtx, (ITexture*)NULL, RESOURCE_STATE_SHADER_RESOURCE);
+    IDeviceContextD3D12_TransitionBufferState(pCtx, (IBuffer*)NULL, RESOURCE_STATE_SHADER_RESOURCE);
 
-struct IShaderResourceBindingD3D11
-{
-    struct IShaderResourceBindingD3D11Vtbl* pVtbl;
-};
+    ID3D12GraphicsCommandList* pd3d12CmdList = IDeviceContextD3D12_GetD3D12CommandList(pCtx);
+    (void)pd3d12CmdList;
 
-#endif
+    ICommandQueueD3D12* pd3d12CmdQueue = IDeviceContextD3D12_LockCommandQueue(pCtx);
+    (void)pd3d12CmdQueue;
 
-DILIGENT_END_NAMESPACE // namespace Diligent
+    IDeviceContextD3D12_UnlockCommandQueue(pCtx);
+}
