@@ -38,25 +38,22 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_ShaderD3D11 =
     {0xc513e83e, 0xb037, 0x405b, {0x8b, 0x49, 0xbf, 0x8f, 0x5c, 0x22, 0xd, 0xee}};
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME IShaderD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a shader object.
-class IShaderD3D11 : public IShaderD3D
+DILIGENT_INTERFACE(IShaderD3D11, IShaderD3D)
 {
-public:
     /// Returns a pointer to the ID3D11DeviceChild interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11DeviceChild* GetD3D11Shader() = 0;
+    VIRTUAL ID3D11DeviceChild* METHOD(GetD3D11Shader)(THIS) PURE;
 };
 
-#else
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-struct IShaderD3D11Methods
-{
-    ID3D11DeviceChild* (*GetD3D11Shader)();
-};
+#if DILIGENT_C_INTERFACE
 
 struct IShaderD3D11Vtbl
 {

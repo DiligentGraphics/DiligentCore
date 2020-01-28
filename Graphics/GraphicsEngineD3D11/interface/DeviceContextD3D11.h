@@ -38,25 +38,22 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_DeviceContextD3D11 =
     {0xf0ee0335, 0xc8ab, 0x4ec1, {0xbb, 0x15, 0xb8, 0xee, 0x5f, 0x0, 0x3b, 0x99}};
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME IDeviceContextD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a device context.
-class IDeviceContextD3D11 : public IDeviceContext
+DILIGENT_INTERFACE(IDeviceContextD3D11, IDeviceContext)
 {
-public:
     /// Returns a pointer to the ID3D11DeviceContext interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11DeviceContext* GetD3D11DeviceContext() = 0;
+    VIRTUAL ID3D11DeviceContext* METHOD(GetD3D11DeviceContext)(THIS) PURE;
 };
 
-#else
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-struct IDeviceContextD3D11Methods
-{
-    ID3D11DeviceContext* (*GetD3D11DeviceContext)();
-};
+#if DILIGENT_C_INTERFACE
 
 struct IDeviceContextD3D11Vtbl
 {
@@ -66,12 +63,12 @@ struct IDeviceContextD3D11Vtbl
     struct IDeviceContextD3D11Methods DeviceContextD3D11;
 };
 
-struct IDeviceContextD3D11
+typedef struct IDeviceContextD3D11
 {
     struct IDeviceContextD3D11Vtbl* pVtbl;
-};
+} IDeviceContextD3D11;
 
-#    define IDeviceContextD3D11_GetD3D11DeviceContext(This) (This)->pVtbl->DeviceContextD3D11.GetD3D11DeviceContext((struct IDeviceContextD3D11*)(This))
+#    define IDeviceContextD3D11_GetD3D11DeviceContext(This) (This)->pVtbl->DeviceContextD3D11.GetD3D11DeviceContext((IDeviceContextD3D11*)(This))
 
 #endif
 

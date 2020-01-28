@@ -38,6 +38,9 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_ShaderResourceBindingD3D11 =
     {0x97a6d4ac, 0xd4af, 0x4aa9, {0xb4, 0x6c, 0x67, 0x41, 0x7b, 0x89, 0x2, 0x6a}};
 
+#define DILIGENT_INTERFACE_NAME IShaderResourceBindingD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a shader resource binding object.
@@ -45,7 +48,24 @@ class IShaderResourceBindingD3D11 : public IShaderResourceBinding
 {
 };
 
-#else
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IShaderResourceBindingD3D11Vtbl
+{
+    struct IObjectMethods                Object;
+    struct IDeviceObjectMethods          DeviceObject;
+    struct IShaderResourceBindingMethods ShaderResourceBinding;
+    //struct IShaderResourceBindingD3D11Methods ShaderResourceBindingD3D11;
+};
+
+struct IShaderResourceBindingD3D11
+{
+    struct IShaderResourceBindingD3D11Vtbl* pVtbl;
+};
 
 #endif
 

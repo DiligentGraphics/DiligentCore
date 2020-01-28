@@ -30,6 +30,6 @@
 
 void TestSamplerD3D11_CInterface(struct ISamplerD3D11* pSampler)
 {
-    ID3D11SamplerState* pd3d11Sampler = ISamplerD3D11_GetD3D11Sampler(pSampler);
+    ID3D11SamplerState* pd3d11Sampler = ISamplerD3D11_GetD3D11SamplerState(pSampler);
     (void)pd3d11Sampler;
 }

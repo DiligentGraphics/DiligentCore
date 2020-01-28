@@ -38,21 +38,19 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_QueryD3D11 =
     {0x77d95eaa, 0xd16e, 0x43f4, {0xb0, 0xeb, 0xbe, 0xbc, 0xd2, 0xec, 0x8c, 0x57}};
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME IPipelineStateD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a Query object.
-class IQueryD3D11 : public IQuery
+DILIGENT_INTERFACE(IQueryD3D11, IQuery)
 {
     /// Returns a pointer to the internal ID3D11Query object.
-    virtual ID3D11Query* GetD3D11Query() = 0;
+    VIRTUAL ID3D11Query* METHOD(GetD3D11Query)(THIS) PURE;
 };
 
-#else
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-struct IQueryD3D11Methods
-{
-    ID3D11Query* (*GetD3D11Query)();
-};
+#if DILIGENT_C_INTERFACE
 
 struct IQueryD3D11Vtbl
 {
@@ -62,12 +60,12 @@ struct IQueryD3D11Vtbl
     struct IQueryD3D11Methods   QueryD3D11;
 };
 
-struct IQueryD3D11
+typedef struct IQueryD3D11
 {
     struct IQueryD3D11Vtbl* pVtbl;
-};
+} IQueryD3D11;
 
-#    define IQueryD3D11_GetD3D11Query(This) (This)->pVtbl->QueryD3D11.GetD3D11Query((struct IQueryD3D11*)(This))
+#    define IQueryD3D11_GetD3D11Query(This) (This)->pVtbl->QueryD3D11.GetD3D11Query((IQueryD3D11*)(This))
 
 #endif
 

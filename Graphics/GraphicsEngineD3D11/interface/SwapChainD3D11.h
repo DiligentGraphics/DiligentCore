@@ -39,26 +39,49 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_SwapChainD3D11 =
     {0x4daf2e76, 0x9204, 0x4dc4, {0xa5, 0x3a, 0xb0, 0x0, 0x97, 0x41, 0x2d, 0x3a}};
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME ISwapChainD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a swap chain.
-class ISwapChainD3D11 : public ISwapChain
+DILIGENT_INTERFACE(ISwapChainD3D11, ISwapChain)
 {
-public:
     /// Returns render target view of the back buffer in the swap chain
-    virtual ITextureViewD3D11* GetCurrentBackBufferRTV() = 0;
+    VIRTUAL struct ITextureViewD3D11* METHOD(GetCurrentBackBufferRTV)(THIS) PURE;
 
     /// Returns depth-stencil view of the depth buffer
-    virtual ITextureViewD3D11* GetDepthBufferDSV() = 0;
+    VIRTUAL struct ITextureViewD3D11* METHOD(GetDepthBufferDSV)(THIS) PURE;
 
     /// Returns a pointer to the IDXGISwapChain interface of the internal DXGI object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual IDXGISwapChain* GetDXGISwapChain() = 0;
+    VIRTUAL IDXGISwapChain* METHOD(GetDXGISwapChain)(THIS) PURE;
 };
 
-#else
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct ISwapChainD3D11Vtbl
+{
+    struct IObjectMethods         Object;
+    struct IDeviceObjectMethods   DeviceObject;
+    struct ISwapChainMethods      SwapChain;
+    struct ISwapChainD3D11Methods SwapChainD3D11;
+};
+
+typedef struct ISwapChainD3D11
+{
+    struct ISwapChainD3D11Vtbl* pVtbl;
+} ISwapChainD3D11;
+
+// clang-format off
+
+#    define ISwapChainD3D11_GetCurrentBackBufferRTV(This) (This)->pVtbl->SwapChainD3D11.GetCurrentBackBufferRTV((ISwapChainD3D11*)(This))
+#    define ISwapChainD3D11_GetDepthBufferDSV(This)       (This)->pVtbl->SwapChainD3D11.GetDepthBufferDSV      ((ISwapChainD3D11*)(This))
+#    define ISwapChainD3D11_GetDXGISwapChain(This)        (This)->pVtbl->SwapChainD3D11.GetDXGISwapChain       ((ISwapChainD3D11*)(This))
+
+// clang-format on
 
 #endif
 

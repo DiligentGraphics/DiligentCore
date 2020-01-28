@@ -34,31 +34,26 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-#if DILIGENT_CPP_INTERFACE
-
 // {0767EBE4-AD47-4E70-9B65-38C6B9CAC37D}
-static constexpr INTERFACE_ID IID_TextureViewD3D11 =
+static const INTERFACE_ID IID_TextureViewD3D11 =
     {0x767ebe4, 0xad47, 0x4e70, {0x9b, 0x65, 0x38, 0xc6, 0xb9, 0xca, 0xc3, 0x7d}};
 
+#define DILIGENT_INTERFACE_NAME ITextureViewD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes Direct3D11-specific functionality of a texture view object.
-class ITextureViewD3D11 : public ITextureView
+DILIGENT_INTERFACE(ITextureViewD3D11, ITextureView)
 {
-public:
     /// Returns a pointer to the ID3D11View interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11View* GetD3D11View() = 0;
+    VIRTUAL ID3D11View* METHOD(GetD3D11View)(THIS) PURE;
 };
 
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-#else
-
-struct ITextureViewD3D11Methods
-{
-    ID3D11View* (*GetD3D11View)();
-};
-
+#if DILIGENT_C_INTERFACE
 
 struct ITextureViewD3D11Vtbl
 {
@@ -68,12 +63,12 @@ struct ITextureViewD3D11Vtbl
     struct ITextureViewD3D11Methods TextureViewD3D11;
 };
 
-struct ITextureViewD3D11
+typedef struct ITextureViewD3D11
 {
     struct ITextureViewD3D11Vtbl* pVtbl;
-};
+} ITextureViewD3D11;
 
-#    define ITextureViewD3D11_GetD3D11View(This) (This)->pVtbl->TextureViewD3D11.GetD3D11View((struct ITextureViewD3D11*)(This))
+#    define ITextureViewD3D11_GetD3D11View(This) (This)->pVtbl->TextureViewD3D11.GetD3D11View((ITextureViewD3D11*)(This))
 
 #endif
 

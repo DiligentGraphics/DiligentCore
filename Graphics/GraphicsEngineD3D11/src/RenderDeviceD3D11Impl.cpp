@@ -239,7 +239,7 @@ void RenderDeviceD3D11Impl::CreateShader(const ShaderCreateInfo& ShaderCI, IShad
                        });
 }
 
-void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
+void RenderDeviceD3D11Impl::CreateTexture1DFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
 {
     if (pd3d11Texture == nullptr)
         return;
@@ -256,7 +256,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11
                        });
 }
 
-void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
+void RenderDeviceD3D11Impl::CreateTexture2DFromD3DResource(ID3D11Texture2D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
 {
     if (pd3d11Texture == nullptr)
         return;
@@ -273,7 +273,7 @@ void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11
                        });
 }
 
-void RenderDeviceD3D11Impl::CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
+void RenderDeviceD3D11Impl::CreateTexture3DFromD3DResource(ID3D11Texture3D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture)
 {
     if (pd3d11Texture == nullptr)
         return;

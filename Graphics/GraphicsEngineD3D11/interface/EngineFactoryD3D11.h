@@ -45,12 +45,14 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_EngineFactoryD3D11 =
     {0x62663a30, 0xaaf0, 0x4a9a, {0x97, 0x29, 0x9e, 0xac, 0x6b, 0xf7, 0x89, 0xf2}};
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME IEngineFactoryD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
 
 /// Engine factory for Direct3D11 rendering backend.
-struct IEngineFactoryD3D11 : public IEngineFactory
+DILIGENT_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
 {
-public:
     /// Creates a render device and device contexts for Direct3D11-based engine implementation.
 
     /// \param [in] EngineCI  - Engine creation info.
@@ -60,9 +62,10 @@ public:
     ///                           the contexts will be written. Immediate context goes at
     ///                           position 0. If EngineCI.NumDeferredContexts > 0,
     ///                           pointers to deferred contexts are written afterwards.
-    virtual void CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI,
-                                              IRenderDevice**              ppDevice,
-                                              IDeviceContext**             ppContexts) = 0;
+    VIRTUAL void METHOD(CreateDeviceAndContextsD3D11)(THIS_ 
+                                                      const EngineD3D11CreateInfo REF EngineCI,
+                                                      IRenderDevice**                    ppDevice,
+                                                      IDeviceContext**                   ppContexts) PURE;
 
 
     /// Creates a swap chain for Direct3D11-based engine implementation.
@@ -79,12 +82,13 @@ public:
     ///
     /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new
     ///                               swap chain will be written.
-    virtual void CreateSwapChainD3D11(IRenderDevice*            pDevice,
-                                      IDeviceContext*           pImmediateContext,
-                                      const SwapChainDesc&      SCDesc,
-                                      const FullScreenModeDesc& FSDesc,
-                                      void*                     pNativeWndHandle,
-                                      ISwapChain**              ppSwapChain) = 0;
+    VIRTUAL void METHOD(CreateSwapChainD3D11)(THIS_
+                                              IRenderDevice*               pDevice,
+                                              IDeviceContext*              pImmediateContext,
+                                              const SwapChainDesc REF      SCDesc,
+                                              const FullScreenModeDesc REF FSDesc,
+                                              void*                        pNativeWndHandle,
+                                              ISwapChain**                 ppSwapChain) PURE;
 
 
     /// Attaches to existing Direct3D11 render device and immediate context.
@@ -98,11 +102,12 @@ public:
     ///                           the contexts will be written. Immediate context goes at
     ///                           position 0. If EngineCI.NumDeferredContexts > 0,
     ///                           pointers to the deferred contexts are written afterwards.
-    virtual void AttachToD3D11Device(void*                        pd3d11NativeDevice,
-                                     void*                        pd3d11ImmediateContext,
-                                     const EngineD3D11CreateInfo& EngineCI,
-                                     IRenderDevice**              ppDevice,
-                                     IDeviceContext**             ppContexts) = 0;
+    VIRTUAL void METHOD(AttachToD3D11Device)(THIS_
+                                             void*                           pd3d11NativeDevice,
+                                             void*                           pd3d11ImmediateContext,
+                                             const EngineD3D11CreateInfo REF EngineCI,
+                                             IRenderDevice**                 ppDevice,
+                                             IDeviceContext**                ppContexts) PURE;
 
 
     /// Enumerates adapters available on this machine.
@@ -118,9 +123,10 @@ public:
     /// \param [out]    Adapters - Pointer to the array conataining adapter information. If
     ///                            null is provided, the number of available adapters is
     ///                            written to NumAdapters.
-    virtual void EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                   Uint32&                NumAdapters,
-                                   AdapterAttribs*        Adapters) = 0;
+    VIRTUAL void METHOD(EnumerateAdapters)(THIS_
+                                           DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                           Uint32 REF             NumAdapters,
+                                           AdapterAttribs*        Adapters) PURE;
 
 
     /// Enumerates available display modes for the specified output of the specified adapter.
@@ -135,54 +141,20 @@ public:
     ///                                    this value should contain the maximum number of elements
     ///                                    to be written to DisplayModes array. It is overwritten with
     ///                                    the actual number of display modes written.
-    virtual void EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                       Uint32                 AdapterId,
-                                       Uint32                 OutputId,
-                                       TEXTURE_FORMAT         Format,
-                                       Uint32&                NumDisplayModes,
-                                       DisplayModeAttribs*    DisplayModes) = 0;
+    VIRTUAL void METHOD(EnumerateDisplayModes)(THIS_
+                                               DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                               Uint32                 AdapterId,
+                                               Uint32                 OutputId,
+                                               TEXTURE_FORMAT         Format,
+                                               Uint32 REF             NumDisplayModes,
+                                               DisplayModeAttribs*    DisplayModes) PURE;
 };
 
-#else
+    // clang-format on
 
-struct IEngineFactoryD3D11;
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-struct IEngineFactoryD3D11Methods
-{
-    void (*CreateDeviceAndContextsD3D11)(struct IEngineFactoryD3D11*,
-                                         const struct EngineD3D11CreateInfo* EngineCI,
-                                         struct IRenderDevice**              ppDevice,
-                                         struct IDeviceContext**             ppContexts);
-
-    void (*CreateSwapChainD3D11)(struct IEngineFactoryD3D11*,
-                                 struct IRenderDevice*            pDevice,
-                                 struct IDeviceContext*           pImmediateContext,
-                                 const struct SwapChainDesc*      SCDesc,
-                                 const struct FullScreenModeDesc* FSDesc,
-                                 void*                            pNativeWndHandle,
-                                 struct ISwapChain**              ppSwapChain);
-
-    void (*AttachToD3D11Device)(struct IEngineFactoryD3D11*,
-                                void*                               pd3d11NativeDevice,
-                                void*                               pd3d11ImmediateContext,
-                                const struct EngineD3D11CreateInfo* EngineCI,
-                                struct IRenderDevice**              ppDevice,
-                                struct IDeviceContext**             ppContexts);
-
-    void (*EnumerateAdapters)(struct IEngineFactoryD3D11*,
-                              DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                              Uint32*                NumAdapters,
-                              struct AdapterAttribs* Adapters);
-
-
-    void (*EnumerateDisplayModes)(struct IEngineFactoryD3D11*,
-                                  DIRECT3D_FEATURE_LEVEL     MinFeatureLevel,
-                                  Uint32                     AdapterId,
-                                  Uint32                     OutputId,
-                                  TEXTURE_FORMAT             Format,
-                                  Uint32*                    NumDisplayModes,
-                                  struct DisplayModeAttribs* DisplayModes);
-};
+#if DILIGENT_C_INTERFACE
 
 struct IEngineFactoryD3D11Vtbl
 {
@@ -191,18 +163,18 @@ struct IEngineFactoryD3D11Vtbl
     struct IEngineFactoryD3D11Methods EngineFactoryD3D11;
 };
 
-struct IEngineFactoryD3D11
+typedef struct IEngineFactoryD3D11
 {
     struct IEngineFactoryD3D11Vtbl* pVtbl;
-};
+} IEngineFactoryD3D11;
 
 // clang-format off
 
-#    define IEngineFactoryD3D11_CreateDeviceAndContextsD3D11(This, ...) (This)->pVtbl->EngineFactoryD3D11.CreateDeviceAndContextsD3D11((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D11_CreateSwapChainD3D11(This, ...)         (This)->pVtbl->EngineFactoryD3D11.CreateSwapChainD3D11        ((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D11_AttachToD3D11Device(This, ...)          (This)->pVtbl->EngineFactoryD3D11.AttachToD3D11Device         ((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D11_EnumerateAdapters(This, ...)            (This)->pVtbl->EngineFactoryD3D11.EnumerateAdapters           ((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
-#    define IEngineFactoryD3D11_EnumerateDisplayModes(This, ...)        (This)->pVtbl->EngineFactoryD3D11.EnumerateDisplayModes       ((struct IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_CreateDeviceAndContextsD3D11(This, ...) (This)->pVtbl->EngineFactoryD3D11.CreateDeviceAndContextsD3D11((IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_CreateSwapChainD3D11(This, ...)         (This)->pVtbl->EngineFactoryD3D11.CreateSwapChainD3D11        ((IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_AttachToD3D11Device(This, ...)          (This)->pVtbl->EngineFactoryD3D11.AttachToD3D11Device         ((IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_EnumerateAdapters(This, ...)            (This)->pVtbl->EngineFactoryD3D11.EnumerateAdapters           ((IEngineFactoryD3D11*)(This), __VA_ARGS__)
+#    define IEngineFactoryD3D11_EnumerateDisplayModes(This, ...)        (This)->pVtbl->EngineFactoryD3D11.EnumerateDisplayModes       ((IEngineFactoryD3D11*)(This), __VA_ARGS__)
 
 // clang-format on
 

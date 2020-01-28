@@ -38,6 +38,9 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_FenceD3D11 =
     {0x45f2be28, 0x652b, 0x4180, {0xb6, 0xe4, 0xe7, 0x5f, 0x83, 0xf6, 0x3c, 0xc7}};
 
+#define DILIGENT_INTERFACE_NAME IFenceD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a fence object.
@@ -45,11 +48,11 @@ class IFenceD3D11 : public IFence
 {
 };
 
-#else
+#endif
 
-//struct IFenceD3D11Methods
-//{
-//};
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
 
 struct IFenceD3D11Vtbl
 {
@@ -59,10 +62,10 @@ struct IFenceD3D11Vtbl
     //struct IFenceD3D11Methods  FenceD3D11;
 };
 
-struct IFenceD3D11
+typedef struct IFenceD3D11
 {
     struct IFenceD3D11Vtbl* pVtbl;
-};
+} IFenceD3D11;
 
 #endif
 

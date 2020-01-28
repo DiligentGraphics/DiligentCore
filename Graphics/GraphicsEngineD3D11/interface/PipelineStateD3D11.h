@@ -38,97 +38,79 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_PipelineStateD3D11 =
     {0x3ea6e3f4, 0x9966, 0x47fc, {0x8c, 0xe8, 0xe, 0xb3, 0xe2, 0x27, 0x30, 0x61}};
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME IPipelineStateD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a pipeline state object.
-class IPipelineStateD3D11 : public IPipelineState
+DILIGENT_INTERFACE(IPipelineStateD3D11, IPipelineState)
 {
-public:
     /// Returns a pointer to the ID3D11BlendState interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11BlendState* GetD3D11BlendState() = 0;
+    VIRTUAL ID3D11BlendState* METHOD(GetD3D11BlendState)(THIS) PURE;
 
 
     /// Returns a pointer to the ID3D11RasterizerState interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11RasterizerState* GetD3D11RasterizerState() = 0;
+    VIRTUAL ID3D11RasterizerState* METHOD(GetD3D11RasterizerState)(THIS) PURE;
 
 
     /// Returns a pointer to the ID3D11DepthStencilState interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11DepthStencilState* GetD3D11DepthStencilState() = 0;
+    VIRTUAL ID3D11DepthStencilState* METHOD(GetD3D11DepthStencilState)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11InputLayout interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11InputLayout* GetD3D11InputLayout() = 0;
+    VIRTUAL ID3D11InputLayout* METHOD(GetD3D11InputLayout)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11VertexShader interface of the internal vertex shader object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11VertexShader* GetD3D11VertexShader() = 0;
+    VIRTUAL ID3D11VertexShader* METHOD(GetD3D11VertexShader)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11PixelShader interface of the internal pixel shader object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11PixelShader* GetD3D11PixelShader() = 0;
+    VIRTUAL ID3D11PixelShader* METHOD(GetD3D11PixelShader)(THIS) PURE;
 
 
     /// Returns a pointer to the ID3D11GeometryShader interface of the internal geometry shader object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11GeometryShader* GetD3D11GeometryShader() = 0;
+    VIRTUAL ID3D11GeometryShader* METHOD(GetD3D11GeometryShader)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11DomainShader interface of the internal domain shader object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11DomainShader* GetD3D11DomainShader() = 0;
+    VIRTUAL ID3D11DomainShader* METHOD(GetD3D11DomainShader)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11HullShader interface of the internal hull shader object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11HullShader* GetD3D11HullShader() = 0;
+    VIRTUAL ID3D11HullShader* METHOD(GetD3D11HullShader)(THIS) PURE;
 
     /// Returns a pointer to the ID3D11ComputeShader interface of the internal compute shader object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11ComputeShader* GetD3D11ComputeShader() = 0;
+    VIRTUAL ID3D11ComputeShader* METHOD(GetD3D11ComputeShader)(THIS) PURE;
 };
 
-#else
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-// clang-format off
-
-struct IPipelineStateD3D11;
-
-struct IPipelineStateD3D11Methods
-{
-    ID3D11BlendState*       (*GetD3D11BlendState)       (struct IPipelineStateD3D11*);
-    ID3D11RasterizerState*  (*GetD3D11RasterizerState)  (struct IPipelineStateD3D11*);
-    ID3D11DepthStencilState*(*GetD3D11DepthStencilState)(struct IPipelineStateD3D11*);
-    ID3D11InputLayout*      (*GetD3D11InputLayout)      (struct IPipelineStateD3D11*);
-    ID3D11VertexShader*     (*GetD3D11VertexShader)     (struct IPipelineStateD3D11*);
-    ID3D11PixelShader*      (*GetD3D11PixelShader)      (struct IPipelineStateD3D11*);
-    ID3D11GeometryShader*   (*GetD3D11GeometryShader)   (struct IPipelineStateD3D11*);
-    ID3D11DomainShader*     (*GetD3D11DomainShader)     (struct IPipelineStateD3D11*);
-    ID3D11HullShader*       (*GetD3D11HullShader)       (struct IPipelineStateD3D11*);
-    ID3D11ComputeShader*    (*GetD3D11ComputeShader)    (struct IPipelineStateD3D11*);
-};
-
-// clang-format on
+#if DILIGENT_C_INTERFACE
 
 struct IPipelineStateD3D11Vtbl
 {
@@ -138,23 +120,23 @@ struct IPipelineStateD3D11Vtbl
     struct IPipelineStateD3D11Methods PipelineStateD3D11;
 };
 
-struct IPipelineStateD3D11
+typedef struct IPipelineStateD3D11
 {
     struct IPipelineStateD3D11Vtbl* pVtbl;
-};
+} IPipelineStateD3D11;
 
 // clang-format off
 
-#    define IPipelineStateD3D11_GetD3D11BlendState(This)        (This)->pVtbl->PipelineStateD3D11.GetD3D11BlendState       ((struct IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11RasterizerState(This)   (This)->pVtbl->PipelineStateD3D11.GetD3D11RasterizerState  ((struct IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11DepthStencilState(This) (This)->pVtbl->PipelineStateD3D11.GetD3D11DepthStencilState((struct IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11InputLayout(This)       (This)->pVtbl->PipelineStateD3D11.GetD3D11InputLayout      ((struct IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11VertexShader(This)      (This)->pVtbl->PipelineStateD3D11.GetD3D11VertexShader     ((struct IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11PixelShader(This)       (This)->pVtbl->PipelineStateD3D11.GetD3D11PixelShader      ((struct IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11GeometryShader(This)    (This)->pVtbl->PipelineStateD3D11.GetD3D11GeometryShader   ((struct IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11DomainShader(This)      (This)->pVtbl->PipelineStateD3D11.GetD3D11DomainShader     ((struct IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11HullShader(This)        (This)->pVtbl->PipelineStateD3D11.GetD3D11HullShader       ((struct IPipelineStateD3D11*)(This))
-#    define IPipelineStateD3D11_GetD3D11ComputeShader(This)     (This)->pVtbl->PipelineStateD3D11.GetD3D11ComputeShader    ((struct IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11BlendState(This)        (This)->pVtbl->PipelineStateD3D11.GetD3D11BlendState       ((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11RasterizerState(This)   (This)->pVtbl->PipelineStateD3D11.GetD3D11RasterizerState  ((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11DepthStencilState(This) (This)->pVtbl->PipelineStateD3D11.GetD3D11DepthStencilState((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11InputLayout(This)       (This)->pVtbl->PipelineStateD3D11.GetD3D11InputLayout      ((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11VertexShader(This)      (This)->pVtbl->PipelineStateD3D11.GetD3D11VertexShader     ((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11PixelShader(This)       (This)->pVtbl->PipelineStateD3D11.GetD3D11PixelShader      ((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11GeometryShader(This)    (This)->pVtbl->PipelineStateD3D11.GetD3D11GeometryShader   ((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11DomainShader(This)      (This)->pVtbl->PipelineStateD3D11.GetD3D11DomainShader     ((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11HullShader(This)        (This)->pVtbl->PipelineStateD3D11.GetD3D11HullShader       ((IPipelineStateD3D11*)(This))
+#    define IPipelineStateD3D11_GetD3D11ComputeShader(This)     (This)->pVtbl->PipelineStateD3D11.GetD3D11ComputeShader    ((IPipelineStateD3D11*)(This))
 
 // clang-format on
 

@@ -57,18 +57,18 @@ void TestCreateObjFromNativeResD3D11::CreateTexture(ITexture* pTexture)
     if (SrcTexDesc.Type == RESOURCE_DIM_TEX_1D ||
         SrcTexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
     {
-        pDeviceD3D11->CreateTextureFromD3DResource(static_cast<ID3D11Texture1D*>(pd3d11Texture), RESOURCE_STATE_UNKNOWN, &pTextureFromNativeD3D11Handle);
+        pDeviceD3D11->CreateTexture1DFromD3DResource(static_cast<ID3D11Texture1D*>(pd3d11Texture), RESOURCE_STATE_UNKNOWN, &pTextureFromNativeD3D11Handle);
     }
     else if (SrcTexDesc.Type == RESOURCE_DIM_TEX_2D ||
              SrcTexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
              SrcTexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
              SrcTexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
     {
-        pDeviceD3D11->CreateTextureFromD3DResource(static_cast<ID3D11Texture2D*>(pd3d11Texture), RESOURCE_STATE_UNKNOWN, &pTextureFromNativeD3D11Handle);
+        pDeviceD3D11->CreateTexture2DFromD3DResource(static_cast<ID3D11Texture2D*>(pd3d11Texture), RESOURCE_STATE_UNKNOWN, &pTextureFromNativeD3D11Handle);
     }
     else if (SrcTexDesc.Type == RESOURCE_DIM_TEX_3D)
     {
-        pDeviceD3D11->CreateTextureFromD3DResource(static_cast<ID3D11Texture3D*>(pd3d11Texture), RESOURCE_STATE_UNKNOWN, &pTextureFromNativeD3D11Handle);
+        pDeviceD3D11->CreateTexture3DFromD3DResource(static_cast<ID3D11Texture3D*>(pd3d11Texture), RESOURCE_STATE_UNKNOWN, &pTextureFromNativeD3D11Handle);
     }
     else
     {

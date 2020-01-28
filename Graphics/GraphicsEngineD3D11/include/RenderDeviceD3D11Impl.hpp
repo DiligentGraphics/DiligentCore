@@ -79,13 +79,13 @@ public:
     virtual void CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer) override final;
 
     /// Implementation of IRenderDeviceD3D11::CreateTextureFromD3DResource() for 1D textures in Direct3D11 backend.
-    virtual void CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+    virtual void CreateTexture1DFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
 
     /// Implementation of IRenderDeviceD3D11::CreateTextureFromD3DResource() for 2D textures in Direct3D11 backend.
-    virtual void CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+    virtual void CreateTexture2DFromD3DResource(ID3D11Texture2D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
 
     /// Implementation of IRenderDeviceD3D11::CreateTextureFromD3DResource() for 3D textures in Direct3D11 backend.
-    virtual void CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+    virtual void CreateTexture3DFromD3DResource(ID3D11Texture3D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
 
     /// Implementation of IRenderDevice::ReleaseStaleResources() in Direct3D11 backend.
     virtual void ReleaseStaleResources(bool ForceRelease = false) override final {}

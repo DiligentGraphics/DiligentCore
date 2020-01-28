@@ -26,3 +26,15 @@
  */
 #include <d3d11.h>
 #include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/SwapChainD3D11.h"
+
+void TestSwapChainD3D11CInterface(ISwapChainD3D11* pSwapChain)
+{
+    struct ITextureViewD3D11* pRTV = ISwapChainD3D11_GetCurrentBackBufferRTV(pSwapChain);
+    struct ITextureViewD3D11* pDSV = ISwapChainD3D11_GetDepthBufferDSV(pSwapChain);
+
+    IDXGISwapChain* pDXGISwapChain = ISwapChainD3D11_GetDXGISwapChain(pSwapChain);
+
+    (void)pRTV;
+    (void)pDSV;
+    (void)pDXGISwapChain;
+}

@@ -38,17 +38,19 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_RenderDeviceD3D11 =
     {0x5b1cbb8, 0xfcad, 0x49ee, {0xba, 0xda, 0x78, 0x1, 0x22, 0x3e, 0xc3, 0xfe}};
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME IRenderDeviceD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
 
 /// Exposes Direct3D11-specific functionality of a render device.
-class IRenderDeviceD3D11 : public IRenderDevice
+DILIGENT_INTERFACE(IRenderDeviceD3D11, IRenderDevice)
 {
-public:
     /// Returns a pointer to the ID3D11Device interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11Device* GetD3D11Device() = 0;
+    VIRTUAL ID3D11Device* METHOD(GetD3D11Device)(THIS) PURE;
 
     /// Creates a buffer object from native d3d11 buffer
 
@@ -62,10 +64,11 @@ public:
     ///                             buffer interface will be stored.
     ///                             The function calls AddRef(), so that the new object will contain
     ///                             one reference.
-    virtual void CreateBufferFromD3DResource(ID3D11Buffer*     pd3d11Buffer,
-                                             const BufferDesc& BuffDesc,
-                                             RESOURCE_STATE    InitialState,
-                                             IBuffer**         ppBuffer) = 0;
+    VIRTUAL void METHOD(CreateBufferFromD3DResource)(THIS_
+                                                     ID3D11Buffer*        pd3d11Buffer,
+                                                     const BufferDesc REF BuffDesc,
+                                                     RESOURCE_STATE       InitialState,
+                                                     IBuffer**            ppBuffer) PURE;
 
     /// Creates a texture object from native d3d11 1D texture
 
@@ -75,9 +78,10 @@ public:
     ///                              texture interface will be stored.
     ///                              The function calls AddRef(), so that the new object will contain
     ///                              one reference.
-    virtual void CreateTextureFromD3DResource(ID3D11Texture1D* pd3d11Texture,
-                                              RESOURCE_STATE   InitialState,
-                                              ITexture**       ppTexture) = 0;
+    VIRTUAL void METHOD(CreateTexture1DFromD3DResource)(THIS_
+                                                        ID3D11Texture1D* pd3d11Texture,
+                                                        RESOURCE_STATE   InitialState,
+                                                        ITexture**       ppTexture) PURE;
 
     /// Creates a texture object from native d3d11 2D texture
 
@@ -87,9 +91,10 @@ public:
     ///                              texture interface will be stored.
     ///                              The function calls AddRef(), so that the new object will contain
     ///                              one reference.
-    virtual void CreateTextureFromD3DResource(ID3D11Texture2D* pd3d11Texture,
-                                              RESOURCE_STATE   InitialState,
-                                              ITexture**       ppTexture) = 0;
+    VIRTUAL void METHOD(CreateTexture2DFromD3DResource)(THIS_
+                                                        ID3D11Texture2D* pd3d11Texture,
+                                                        RESOURCE_STATE   InitialState,
+                                                        ITexture**       ppTexture) PURE;
 
     /// Creates a texture object from native d3d11 3D texture
 
@@ -99,14 +104,39 @@ public:
     ///                              texture interface will be stored.
     ///                              The function calls AddRef(), so that the new object will contain
     ///                              one reference.
-    virtual void CreateTextureFromD3DResource(ID3D11Texture3D* pd3d11Texture,
-                                              RESOURCE_STATE   InitialState,
-                                              ITexture**       ppTexture) = 0;
+    VIRTUAL void METHOD(CreateTexture3DFromD3DResource)(THIS_
+                                                        ID3D11Texture3D* pd3d11Texture,
+                                                        RESOURCE_STATE   InitialState,
+                                                        ITexture**       ppTexture) PURE;
 };
 
-#else
+    // clang-format on
 
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
+#if DILIGENT_C_INTERFACE
+
+struct IRenderDeviceD3D11Vtbl
+{
+    struct IObjectMethods            Object;
+    struct IRenderDeviceMethods      RenderDevice;
+    struct IRenderDeviceD3D11Methods RenderDeviceD3D11;
+};
+
+typedef struct IRenderDeviceD3D11
+{
+    struct IRenderDeviceD3D11Vtbl* pVtbl;
+} IRenderDeviceD3D11;
+
+// clang-format off
+
+#    define IRenderDeviceD3D11_GetD3D11Device(This)                      (This)->pVtbl->RenderDeviceD3D11.GetD3D11Device                ((IRenderDeviceD3D11*)(This))
+#    define IRenderDeviceD3D11_CreateBufferFromD3DResource(This, ...)    (This)->pVtbl->RenderDeviceD3D11.CreateBufferFromD3DResource   ((IRenderDeviceD3D11*)(This), __VA_ARGS__)
+#    define IRenderDeviceD3D11_CreateTexture1DFromD3DResource(This, ...) (This)->pVtbl->RenderDeviceD3D11.CreateTexture1DFromD3DResource((IRenderDeviceD3D11*)(This), __VA_ARGS__)
+#    define IRenderDeviceD3D11_CreateTexture2DFromD3DResource(This, ...) (This)->pVtbl->RenderDeviceD3D11.CreateTexture2DFromD3DResource((IRenderDeviceD3D11*)(This), __VA_ARGS__)
+#    define IRenderDeviceD3D11_CreateTexture3DFromD3DResource(This, ...) (This)->pVtbl->RenderDeviceD3D11.CreateTexture3DFromD3DResource((IRenderDeviceD3D11*)(This), __VA_ARGS__)
+
+// clang-format on
 
 #endif
 

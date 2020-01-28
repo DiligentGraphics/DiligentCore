@@ -38,26 +38,22 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_BufferD3D11 =
     {0x4a696d2e, 0x44bb, 0x4c4b, {0x9d, 0xe2, 0x3a, 0xf7, 0xc9, 0x4d, 0xcf, 0xc0}};
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME IBufferD3D11
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Direct3D11-specific functionality of a buffer object.
-class IBufferD3D11 : public IBuffer
+DILIGENT_INTERFACE(IBufferD3D11, IBuffer)
 {
-public:
     /// Returns a pointer to the ID3D11Buffer interface of the internal Direct3D11 object.
 
     /// The method does *NOT* call AddRef() on the returned interface,
     /// so Release() must not be called.
-    virtual ID3D11Buffer* GetD3D11Buffer() = 0;
+    VIRTUAL ID3D11Buffer* METHOD(GetD3D11Buffer)(THIS) PURE;
 };
 
-#else
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
-struct IBufferD3D11Methods
-{
-    ID3D11Buffer* (*GetD3D11Buffer)();
-};
-
+#if DILIGENT_C_INTERFACE
 
 struct IBufferD3D11Vtbl
 {
@@ -67,12 +63,12 @@ struct IBufferD3D11Vtbl
     struct IBufferD3D11Methods  BufferD3D11;
 };
 
-struct IBufferD3D11
+typedef struct IBufferD3D11
 {
     struct IBufferD3D11Vtbl* pVtbl;
-};
+} IBufferD3D11;
 
-#    define IBufferD3D11_GetD3D11Buffer(This) (This)->pVtbl->BufferD3D11.GetD3D11Buffer((struct IBufferD3D11*)(This))
+#    define IBufferD3D11_GetD3D11Buffer(This) (This)->pVtbl->BufferD3D11.GetD3D11Buffer((IBufferD3D11*)(This))
 
 #endif
 
