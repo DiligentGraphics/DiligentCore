@@ -27,3 +27,14 @@
 
 #include "DiligentCore/ThirdParty/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/DeviceContextVk.h"
+
+void TestDeviceContextVk_CInterface(IDeviceContextVk* pCtx)
+{
+    IDeviceContextVk_TransitionImageLayout(pCtx, (ITexture*)NULL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    IDeviceContextVk_BufferMemoryBarrier(pCtx, (IBuffer*)NULL, VK_ACCESS_HOST_READ_BIT);
+
+    ICommandQueueVk* pVkCmdQueue = IDeviceContextVk_LockCommandQueue(pCtx);
+    (void)pVkCmdQueue;
+
+    IDeviceContextVk_UnlockCommandQueue(pCtx);
+}

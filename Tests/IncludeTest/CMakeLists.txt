@@ -39,6 +39,9 @@ if(MSVC)
     set_target_properties(DiligentCore-IncludeTest PROPERTIES 
         STATIC_LIBRARY_FLAGS "/IGNORE:4221"
     )
+
+    # Treat warnings as errors to catch c compilation issues
+    target_compile_options(DiligentCore-IncludeTest PRIVATE "/WX") 
 endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCE})

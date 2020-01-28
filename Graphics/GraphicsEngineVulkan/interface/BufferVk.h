@@ -41,6 +41,8 @@ static const INTERFACE_ID IID_BufferVk =
 #define DILIGENT_INTERFACE_NAME IBufferVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+// clang-format off
+
 /// Exposes Vulkan-specific functionality of a buffer object.
 DILIGENT_INTERFACE(IBufferVk, IBuffer)
 {
@@ -51,7 +53,7 @@ DILIGENT_INTERFACE(IBufferVk, IBuffer)
 
     /// \param [in] AccessFlags - Vulkan access flags to be set for this buffer
     VIRTUAL void METHOD(SetAccessFlags)(THIS_
-                                            VkAccessFlags AccessFlags) PURE;
+                                        VkAccessFlags AccessFlags) PURE;
 
     /// If the buffer state is known to the engine (i.e. not Diligent::RESOURCE_STATE_UNKNOWN),
     /// returns Vulkan access flags corresponding to the state. If the state is unknown, returns 0.

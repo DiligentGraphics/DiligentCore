@@ -27,3 +27,11 @@
 
 #include "DiligentCore/ThirdParty/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/PipelineStateVk.h"
+
+void TestPipelineStateVk_CInterface(IPipelineStateVk* pPSO)
+{
+    VkRenderPass vkPass     = IPipelineStateVk_GetVkRenderPass(pPSO);
+    VkPipeline   vkPipeline = IPipelineStateVk_GetVkPipeline(pPSO);
+    (void)vkPass;
+    (void)vkPipeline;
+}

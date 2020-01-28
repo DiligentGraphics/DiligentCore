@@ -27,3 +27,9 @@
 
 #include "DiligentCore/ThirdParty/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/TextureViewVk.h"
+
+void TestTextureViewVk_CInterface(ITextureViewVk* pView)
+{
+    VkImageView vkView = ITextureViewVk_GetVulkanImageView(pView);
+    (void)vkView;
+}

@@ -27,3 +27,27 @@
 
 #include "DiligentCore/ThirdParty/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/CommandQueueVk.h"
+
+void TestCommandQueueVk_CInterface(ICommandQueueVk* pQueue)
+{
+    Uint64 FenceVal = ICommandQueueVk_GetNextFenceValue(pQueue);
+    (void)FenceVal;
+
+    FenceVal = ICommandQueueVk_SubmitCmdBuffer(pQueue, (VkCommandBuffer)NULL);
+
+    FenceVal = ICommandQueueVk_Submit(pQueue, (VkSubmitInfo*)NULL);
+
+    ICommandQueueVk_Present(pQueue, (VkPresentInfoKHR*)NULL);
+
+    VkQueue vkQueue = ICommandQueueVk_GetVkQueue(pQueue);
+    (void)vkQueue;
+
+    uint32_t fam = ICommandQueueVk_GetQueueFamilyIndex(pQueue);
+    (void)fam;
+
+    FenceVal = ICommandQueueVk_GetCompletedFenceValue(pQueue);
+
+    ICommandQueueVk_WaitForIdle(pQueue);
+
+    ICommandQueueVk_SignalFence(pQueue, (VkFence)NULL);
+}

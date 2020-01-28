@@ -27,3 +27,14 @@
 
 #include "DiligentCore/ThirdParty/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/TextureVk.h"
+
+void TestTextureVk_CInterface(ITextureVk* pTexture)
+{
+    VkImage vkImg = ITextureVk_GetVkImage(pTexture);
+    (void)vkImg;
+
+    ITextureVk_SetLayout(pTexture, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+    VkImageLayout vkLayout = ITextureVk_GetLayout(pTexture);
+    (void)vkLayout;
+}

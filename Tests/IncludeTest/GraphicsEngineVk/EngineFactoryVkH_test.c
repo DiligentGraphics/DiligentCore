@@ -14,9 +14,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *
- *  In no event and under no legal theory, whether in tort (including negligence), 
+ *  In no event and under no legal theory, whether in tort (including neVkigence), 
  *  contract, or otherwise, unless required by applicable law (such as deliberate 
- *  and grossly negligent acts) or agreed to in writing, shall any Contributor be
+ *  and grossly neVkigent acts) or agreed to in writing, shall any Contributor be
  *  liable for any damages, including any direct, indirect, special, incidental, 
  *  or consequential damages of any character arising as a result of this License or 
  *  out of the use or inability to use the software (including but not limited to damages 
@@ -25,15 +25,29 @@
  *  of the possibility of such damages.
  */
 
-#if PLATFORM_WIN32
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <Windows.h>
-#endif
-
 #ifndef ENGINE_DLL
 #    define ENGINE_DLL 1
 #endif
 
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/EngineFactoryVk.h"
+
+
+void TestEngineFactoryVk_CInterface()
+{
+#if EXPLICITLY_LOAD_ENGINE_VK_DLL
+    GetEngineFactoryVkType GetEngineFactoryVk = LoadGraphicsEngineVk();
+    IEngineFactoryVk*      pFactory           = GetEngineFactoryVk();
+#else
+    IEngineFactoryVk* pFactory = Diligent_GetEngineFactoryVk();
+#endif
+
+    struct EngineVkCreateInfo EngineCI = {0};
+    IRenderDevice*            pDevice  = NULL;
+    IDeviceContext*           pCtx     = NULL;
+    IEngineFactoryVk_CreateDeviceAndContextsVk(pFactory, &EngineCI, &pDevice, &pCtx);
+
+    struct SwapChainDesc SCDesc           = {0};
+    void*                pNativeWndHandle = NULL;
+    ISwapChain*          pSwapChain       = NULL;
+    IEngineFactoryVk_CreateSwapChainVk(pFactory, pDevice, pCtx, &SCDesc, pNativeWndHandle, &pSwapChain);
+}

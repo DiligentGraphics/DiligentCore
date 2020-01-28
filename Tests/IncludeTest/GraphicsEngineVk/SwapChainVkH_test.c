@@ -26,3 +26,9 @@
  */
 #include "DiligentCore/ThirdParty/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/SwapChainVk.h"
+
+void TestSwapChainVk_CInterface(ISwapChainVk* pSwapChain)
+{
+    VkSwapchainKHR sc = ISwapChainVk_GetVkSwapChain(pSwapChain);
+    (void)sc;
+}

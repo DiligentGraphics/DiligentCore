@@ -25,13 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#if PLATFORM_WIN32 || PLATFORM_UNIVERSAL_WINDOWS
-#    ifndef NOMINMAX
-#        define NOMINMAX
-#    endif
-#    include <Windows.h>
-#endif
-
 #ifndef ENGINE_DLL
 #    define ENGINE_DLL 1
 #endif

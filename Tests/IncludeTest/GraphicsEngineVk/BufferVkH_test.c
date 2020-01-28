@@ -27,3 +27,12 @@
 
 #include "DiligentCore/ThirdParty/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/BufferVk.h"
+
+void TestBufferVk_CInterface(IBufferVk* pView)
+{
+    VkBuffer vkView = IBufferVk_GetVkBuffer(pView);
+    (void)vkView;
+    IBufferVk_SetAccessFlags(pView, VK_ACCESS_HOST_READ_BIT);
+    VkAccessFlags vkAccessFlag = IBufferVk_GetAccessFlags(pView);
+    (void)vkAccessFlag;
+}

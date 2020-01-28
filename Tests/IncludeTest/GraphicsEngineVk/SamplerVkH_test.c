@@ -27,3 +27,9 @@
 
 #include "DiligentCore/ThirdParty/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/SamplerVk.h"
+
+void TestSamplerVk_CInterface(ISamplerVk* pSampler)
+{
+    VkSampler Handle = ISamplerVk_GetVkSampler(pSampler);
+    (void)Handle;
+}

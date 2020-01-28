@@ -27,3 +27,9 @@
 
 #include "DiligentCore/ThirdParty/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/BufferViewVk.h"
+
+void TestBufferViewVk_CInterface(IBufferViewVk* pView)
+{
+    VkBufferView vkView = IBufferViewVk_GetVkBufferView(pView);
+    (void)vkView;
+}
