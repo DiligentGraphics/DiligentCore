@@ -32,49 +32,89 @@
 
 #include "../../../Primitives/interface/Object.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {9FBF582F-3069-41B9-AC05-344D5AF5CE8C}
-static constexpr INTERFACE_ID IID_CommandQueueVk =
+static const INTERFACE_ID IID_CommandQueueVk =
     {0x9fbf582f, 0x3069, 0x41b9, {0xac, 0x5, 0x34, 0x4d, 0x5a, 0xf5, 0xce, 0x8c}};
 
+#define DILIGENT_INTERFACE_NAME ICommandQueueVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Command queue interface
-class ICommandQueueVk : public IObject
+DILIGENT_INTERFACE(ICommandQueueVk, IObject)
 {
-public:
     /// Returns the fence value that will be signaled next time
-    virtual Uint64 GetNextFenceValue() const = 0;
+    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS) CONST PURE;
 
     /// Submits a given command buffer to the command queue
 
     /// \return Fence value associated with the submitted command buffer
-    virtual Uint64 Submit(VkCommandBuffer cmdBuffer) = 0;
+    VIRTUAL Uint64 METHOD(SubmitCmdBuffer)(THIS_
+                                           VkCommandBuffer cmdBuffer) PURE;
 
     /// Submits a given chunk of work to the command queue
 
     /// \return Fence value associated with the submitted command buffer
-    virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo) = 0;
+    VIRTUAL Uint64 METHOD(Submit)(THIS_
+                                  const VkSubmitInfo REF SubmitInfo) PURE;
 
     /// Presents the current swap chain image on the screen
-    virtual VkResult Present(const VkPresentInfoKHR& PresentInfo) = 0;
+    VIRTUAL VkResult METHOD(Present)(THIS_
+                                     const VkPresentInfoKHR REF PresentInfo) PURE;
 
     /// Returns Vulkan command queue. May return VK_NULL_HANDLE if queue is anavailable
-    virtual VkQueue GetVkQueue() = 0;
+    VIRTUAL VkQueue METHOD(GetVkQueue)(THIS) PURE;
 
     /// Returns vulkan command queue family index
-    virtual uint32_t GetQueueFamilyIndex() const = 0;
+    VIRTUAL uint32_t METHOD(GetQueueFamilyIndex)(THIS) CONST PURE;
 
     /// Returns value of the last completed fence
-    virtual Uint64 GetCompletedFenceValue() = 0;
+    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS) PURE;
 
     /// Blocks execution until all pending GPU commands are complete
 
     /// \return Last completed fence value
-    virtual Uint64 WaitForIdle() = 0;
+    VIRTUAL Uint64 METHOD(WaitForIdle)(THIS) PURE;
 
     /// Signals the given fence
-    virtual void SignalFence(VkFence vkFence) = 0;
+    VIRTUAL void METHOD(SignalFence)(THIS_
+                                     VkFence vkFence) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct ICommandQueueVkVtbl
+{
+    struct IObjectMethods         Object;
+    struct ICommandQueueVkMethods CommandQueueVk;
+};
+
+typedef struct ICommandQueueVk
+{
+    struct ICommandQueueVkVtbl* pVtbl;
+} ICommandQueueVk;
+
+// clang-format off
+
+#    define ICommandQueueVk_GetNextFenceValue(This)      (This)->pVtbl->CommandQueueVk.GetNextFenceValue     ((ICommandQueueVk*)(This))
+#    define ICommandQueueVk_SubmitCmdBuffer(This, ...)   (This)->pVtbl->CommandQueueVk.SubmitCmdBuffer       ((ICommandQueueVk*)(This), __VA_ARGS__)
+#    define ICommandQueueVk_Submit(This, ...)            (This)->pVtbl->CommandQueueVk.Submit                ((ICommandQueueVk*)(This), __VA_ARGS__)
+#    define ICommandQueueVk_Present(This, ...)           (This)->pVtbl->CommandQueueVk.Present               ((ICommandQueueVk*)(This), __VA_ARGS__)
+#    define ICommandQueueVk_GetVkQueue(This)             (This)->pVtbl->CommandQueueVk.GetVkQueue            ((ICommandQueueVk*)(This))
+#    define ICommandQueueVk_GetQueueFamilyIndex(This)    (This)->pVtbl->CommandQueueVk.GetQueueFamilyIndex   ((ICommandQueueVk*)(This))
+#    define ICommandQueueVk_GetCompletedFenceValue(This) (This)->pVtbl->CommandQueueVk.GetCompletedFenceValue((ICommandQueueVk*)(This))
+#    define ICommandQueueVk_WaitForIdle(This)            (This)->pVtbl->CommandQueueVk.WaitForIdle           ((ICommandQueueVk*)(This))
+#    define ICommandQueueVk_SignalFence(This, ...)       (This)->pVtbl->CommandQueueVk.SignalFence           ((ICommandQueueVk*)(This), __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

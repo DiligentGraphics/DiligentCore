@@ -36,8 +36,8 @@ void TestEngineFactoryGL_CInterface()
 #else
     IEngineFactoryOpenGL* pFactory = Diligent_GetEngineFactoryOpenGL();
 #endif
-    
-    struct EngineGLCreateInfo  EngineCI           = {0};
+
+    struct EngineGLCreateInfo EngineCI = {0};
     IEngineFactoryOpenGL_CreateDeviceAndSwapChainGL(pFactory, &EngineCI, (IRenderDevice**)NULL, (IDeviceContext**)NULL, (SwapChainDesc*)NULL, (ISwapChain**)NULL);
 
     IEngineFactoryOpenGL_CreateHLSL2GLSLConverter(pFactory, (IHLSL2GLSLConverter**)NULL);

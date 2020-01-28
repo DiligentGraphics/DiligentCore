@@ -32,16 +32,39 @@
 
 #include "../../GraphicsEngine/interface/Query.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {161C015B-1FE2-4452-8BFF-E35F27B3103C}
-static constexpr INTERFACE_ID IID_QueryVk =
+static const INTERFACE_ID IID_QueryVk =
     {0x161c015b, 0x1fe2, 0x4452, {0x8b, 0xff, 0xe3, 0x5f, 0x27, 0xb3, 0x10, 0x3c}};
 
+#define DILIGENT_INTERFACE_NAME IQueryVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#if DILIGENT_CPP_INTERFACE
+
 /// Exposes Vulkan-specific functionality of a Query object.
-class IQueryVk : public IQuery
+DILIGENT_INTERFACE(IQueryVk, IQuery){};
+
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IQueryVkVtbl
 {
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IQueryMethods        Query;
+    //struct IQueryVkMethods   QueryVk;
 };
 
-} // namespace Diligent
+typedef struct IQueryVk
+{
+    struct IQueryVkVtbl* pVtbl;
+} IQueryVk;
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

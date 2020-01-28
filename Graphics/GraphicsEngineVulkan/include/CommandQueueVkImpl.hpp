@@ -58,7 +58,7 @@ public:
     virtual Uint64 GetNextFenceValue() const override final { return m_NextFenceValue; }
 
     /// Implementation of ICommandQueueVk::Submit().
-    virtual Uint64 Submit(VkCommandBuffer cmdBuffer) override final;
+    virtual Uint64 SubmitCmdBuffer(VkCommandBuffer cmdBuffer) override final;
 
     /// Implementation of ICommandQueueVk::Submit().
     virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo) override final;

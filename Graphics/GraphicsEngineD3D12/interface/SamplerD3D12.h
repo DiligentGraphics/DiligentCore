@@ -71,4 +71,5 @@ typedef struct ISamplerD3D12
 #    define ISamplerD3D12_GetCPUDescriptorHandle(This) (This)->pVtbl->SamplerD3D12.GetCPUDescriptorHandle((ISamplerD3D12*)(This))
 
 #endif
+
 DILIGENT_END_NAMESPACE // namespace Diligent

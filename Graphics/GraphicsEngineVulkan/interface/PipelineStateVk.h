@@ -32,23 +32,49 @@
 
 #include "../../GraphicsEngine/interface/PipelineState.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {2FEA0868-0932-412A-9F0A-7CEA7E61B5E0}
-static constexpr INTERFACE_ID IID_PipelineStateVk =
+static const INTERFACE_ID IID_PipelineStateVk =
     {0x2fea0868, 0x932, 0x412a, {0x9f, 0xa, 0x7c, 0xea, 0x7e, 0x61, 0xb5, 0xe0}};
 
+#define DILIGENT_INTERFACE_NAME IPipelineStateVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
 /// Exposes Vulkan-specific functionality of a pipeline state object.
-class IPipelineStateVk : public IPipelineState
+DILIGENT_INTERFACE(IPipelineStateVk, IPipelineState)
 {
-public:
     /// Returns handle to a vulkan render pass object.
-    virtual VkRenderPass GetVkRenderPass() const = 0;
+    VIRTUAL VkRenderPass METHOD(GetVkRenderPass)(THIS) CONST PURE;
 
     /// Returns handle to a vulkan pipeline pass object.
-    virtual VkPipeline GetVkPipeline() const = 0;
+    VIRTUAL VkPipeline METHOD(GetVkPipeline)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IPipelineStateVkVtbl
+{
+    struct IObjectMethods          Object;
+    struct IDeviceObjectMethods    DeviceObject;
+    struct IPipelineStateMethods   PipelineState;
+    struct IPipelineStateVkMethods PipelineStateVk;
+};
+
+typedef struct IPipelineStateVk
+{
+    struct IPipelineStateVkVtbl* pVtbl;
+} IPipelineStateVk;
+
+// clang-format off
+
+#    define IPipelineStateVk_GetVkRenderPass(This) (This)->pVtbl->PipelineStateVk.GetVkRenderPass((IPipelineStateVk*)(This))
+#    define IPipelineStateVk_GetVkPipeline(This)   (This)->pVtbl->PipelineStateVk.GetVkPipeline((IPipelineStateVk*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

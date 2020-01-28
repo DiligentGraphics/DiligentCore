@@ -32,19 +32,41 @@
 
 #include "../../GraphicsEngine/interface/Sampler.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {87C21E88-8A9F-4AD2-9A1E-D5EC140415EA}
-static constexpr INTERFACE_ID IID_SamplerVk =
+static const INTERFACE_ID IID_SamplerVk =
     {0x87c21e88, 0x8a9f, 0x4ad2, {0x9a, 0x1e, 0xd5, 0xec, 0x14, 0x4, 0x15, 0xea}};
 
+#define DILIGENT_INTERFACE_NAME ISamplerVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes Vulkan-specific functionality of a sampler object.
-class ISamplerVk : public ISampler
+DILIGENT_INTERFACE(ISamplerVk, ISampler)
 {
-public:
     /// Returns a vulkan sampler object handle
-    virtual VkSampler GetVkSampler() const = 0;
+    VIRTUAL VkSampler METHOD(GetVkSampler)() CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct ISamplerVkVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    //struct ISamplerMethods      Sampler;
+    struct ISamplerVkMethods SamplerVk;
+};
+
+typedef struct ISamplerVk
+{
+    struct ISamplerVkVtbl* pVtbl;
+} ISamplerVk;
+
+#    define ISamplerVk_GetVkSampler(This) (This)->pVtbl->SamplerVk.GetVkSampler((ISamplerVk*)(This))
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -25,56 +25,5 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Definition of the Diligent::ITextureViewVk interface
-
-#include "../../GraphicsEngine/interface/TextureView.h"
-
-DILIGENT_BEGIN_NAMESPACE(Diligent)
-
-// {B02AA468-3328-46F3-9777-55E97BF6C86E}
-static const INTERFACE_ID IID_TextureViewVk =
-    {0xb02aa468, 0x3328, 0x46f3, {0x97, 0x77, 0x55, 0xe9, 0x7b, 0xf6, 0xc8, 0x6e}};
-
-#define DILIGENT_INTERFACE_NAME ITextureViewVk
-#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
-
-// clang-format off
-
-/// Exposes Vulkan-specific functionality of a texture view object.
-DILIGENT_INTERFACE(ITextureViewVk, ITextureView)
-{
-    /// Returns Vulkan image view handle
-    VIRTUAL VkImageView METHOD(GetVulkanImageView)(THIS) CONST PURE;
-};
-
-#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
-
-#if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct ITextureViewVkVtbl
-{
-    struct IObjectMethods        Object;
-    struct IDeviceObjectMethods  DeviceObject;
-    struct ITextureViewMethods   TextureView;
-    struct ITextureViewVkMethods TextureViewVk;
-};
-
-typedef struct ITextureViewVk
-{
-    struct ITextureViewVkVtbl* pVtbl;
-} ITextureViewVk;
-
-// clang-format off
-
-#    define ITextureViewVk_GetVulkanImageView(This) (This)->pVtbl->TextureViewVk.GetVulkanImageView((ITextureViewVk*)(This))
-
-// clang-format ons
-
-#endif
-
-DILIGENT_END_NAMESPACE // namespace Diligent
+#include "DiligentCore/ThirdParty/vulkan/vulkan.h"
+#include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/SamplerVk.h"

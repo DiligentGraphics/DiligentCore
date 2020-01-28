@@ -294,9 +294,8 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
         case RENDER_DEVICE_TYPE_VULKAN:
         {
 #    if EXPLICITLY_LOAD_ENGINE_VK_DLL
-            GetEngineFactoryVkType GetEngineFactoryVk = nullptr;
             // Load the dll and import GetEngineFactoryVk() function
-            LoadGraphicsEngineVk(GetEngineFactoryVk);
+            GetEngineFactoryVkType GetEngineFactoryVk = LoadGraphicsEngineVk();
             if (GetEngineFactoryVk == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");

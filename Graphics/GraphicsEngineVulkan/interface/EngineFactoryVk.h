@@ -30,8 +30,6 @@
 /// \file
 /// Declaration of functions that initialize Direct3D12-based engine implementation
 
-#include <sstream>
-
 #include "../../GraphicsEngine/interface/EngineFactory.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../GraphicsEngine/interface/DeviceContext.h"
@@ -51,19 +49,23 @@
 #    define EXPLICITLY_LOAD_ENGINE_VK_DLL 1
 #endif
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {F554EEE4-57C2-4637-A508-85BE80DC657C}
 static const INTERFACE_ID IID_EngineFactoryVk =
     {0xf554eee4, 0x57c2, 0x4637, {0xa5, 0x8, 0x85, 0xbe, 0x80, 0xdc, 0x65, 0x7c}};
 
-class IEngineFactoryVk : public IEngineFactory
+#define DILIGENT_INTERFACE_NAME IEngineFactoryVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
+DILIGENT_INTERFACE(IEngineFactoryVk, IEngineFactory)
 {
-public:
-    virtual void CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI,
-                                           IRenderDevice**           ppDevice,
-                                           IDeviceContext**          ppContexts) = 0;
+    VIRTUAL void METHOD(CreateDeviceAndContextsVk)(THIS_
+                                                   const EngineVkCreateInfo REF EngineCI,
+                                                   IRenderDevice**              ppDevice,
+                                                   IDeviceContext**             ppContexts) PURE;
 
     //virtual void AttachToVulkanDevice(void *pVkNativeDevice,
     //                                 class ICommandQueueVk *pCommandQueue,
@@ -71,30 +73,55 @@ public:
     //                                 IRenderDevice **ppDevice,
     //                                 IDeviceContext **ppContexts) = 0;
 
-    virtual void CreateSwapChainVk(IRenderDevice*       pDevice,
-                                   IDeviceContext*      pImmediateContext,
-                                   const SwapChainDesc& SwapChainDesc,
-                                   void*                pNativeWndHandle,
-                                   ISwapChain**         ppSwapChain) = 0;
+    VIRTUAL void METHOD(CreateSwapChainVk)(THIS_
+                                           IRenderDevice*          pDevice,
+                                           IDeviceContext*         pImmediateContext,
+                                           const SwapChainDesc REF SwapChainDesc,
+                                           void*                   pNativeWndHandle,
+                                           ISwapChain**            ppSwapChain) PURE;
 };
 
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IEngineFactoryVkVtbl
+{
+    struct IObjectMethods          Object;
+    struct IEngineFactoryMethods   EngineFactory;
+    struct IEngineFactoryVkMethods EngineFactoryVk;
+};
+
+typedef struct IEngineFactoryVk
+{
+    struct IEngineFactoryVkVtbl* pVtbl;
+} IEngineFactoryVk;
+
+// clang-format off
+
+#    define IEngineFactoryVk_CreateDeviceAndContextsVk(This, ...) (This)->pVtbl->EngineFactoryVk.CreateDeviceAndContextsVk((IEngineFactoryVk*)(This), __VA_ARGS__)
+#    define IEngineFactoryVk_CreateSwapChainVk(This, ...)         (This)->pVtbl->EngineFactoryVk.CreateSwapChainVk        ((IEngineFactoryVk*)(This), __VA_ARGS__)
+
+// clang-format on
+
+#endif
 
 #if EXPLICITLY_LOAD_ENGINE_VK_DLL
 
-using GetEngineFactoryVkType = IEngineFactoryVk* (*)();
+typedef struct IEngineFactoryVk* (*GetEngineFactoryVkType)();
 
-static bool LoadGraphicsEngineVk(GetEngineFactoryVkType& GetFactoryFunc)
+inline GetEngineFactoryVkType LoadGraphicsEngineVk()
 {
-    auto ProcAddress = LoadEngineDll("GraphicsEngineVk", "GetEngineFactoryVk");
-    GetFactoryFunc   = reinterpret_cast<GetEngineFactoryVkType>(ProcAddress);
-    return GetFactoryFunc != nullptr;
+    return (GetEngineFactoryVkType)LoadEngineDll("GraphicsEngineVk", "GetEngineFactoryVk");
 }
 
 #else
 
 API_QUALIFIER
-IEngineFactoryVk* GetEngineFactoryVk();
+struct IEngineFactoryVk* DILIGENT_GLOBAL_FUNCTION(GetEngineFactoryVk)();
 
 #endif
 
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

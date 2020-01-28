@@ -32,28 +32,60 @@
 
 #include "../../GraphicsEngine/interface/Buffer.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {12D8EC02-96F4-431E-9695-C5F572CC7587}
-static constexpr INTERFACE_ID IID_BufferVk =
+static const INTERFACE_ID IID_BufferVk =
     {0x12d8ec02, 0x96f4, 0x431e, {0x96, 0x95, 0xc5, 0xf5, 0x72, 0xcc, 0x75, 0x87}};
 
+#define DILIGENT_INTERFACE_NAME IBufferVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes Vulkan-specific functionality of a buffer object.
-class IBufferVk : public IBuffer
+DILIGENT_INTERFACE(IBufferVk, IBuffer)
 {
-public:
     /// Returns a vulkan buffer handle
-    virtual VkBuffer GetVkBuffer() const = 0;
+    VIRTUAL VkBuffer METHOD(GetVkBuffer)(THIS) CONST PURE;
 
     /// Sets vulkan access flags
 
     /// \param [in] AccessFlags - Vulkan access flags to be set for this buffer
-    virtual void SetAccessFlags(VkAccessFlags AccessFlags) = 0;
+    VIRTUAL void METHOD(SetAccessFlags)(THIS_
+                                            VkAccessFlags AccessFlags) PURE;
 
     /// If the buffer state is known to the engine (i.e. not Diligent::RESOURCE_STATE_UNKNOWN),
     /// returns Vulkan access flags corresponding to the state. If the state is unknown, returns 0.
-    virtual VkAccessFlags GetAccessFlags() const = 0;
+    VIRTUAL VkAccessFlags METHOD(GetAccessFlags)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IBufferVkVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IBufferMethods       Buffer;
+    struct IBufferVkMethods     BufferVk;
+};
+
+typedef struct IBufferVk
+{
+    struct IBufferVkVtbl* pVtbl;
+} IBufferVk;
+
+
+// clang-format off
+
+#    define IBufferVk_GetVkBuffer(This, ...)    (This)->pVtbl->BufferVk.GetVkBuffer   ((IBufferVk*)(This), __VA_ARGS__)
+#    define IBufferVk_SetAccessFlags(This, ...) (This)->pVtbl->BufferVk.SetAccessFlags((IBufferVk*)(This), __VA_ARGS__)
+#    define IBufferVk_GetAccessFlags(This)      (This)->pVtbl->BufferVk.GetAccessFlags((IBufferVk*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -35,19 +35,45 @@
 #include "../../GraphicsEngine/interface/SwapChain.h"
 #include "TextureViewVk.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {22A39881-5EC5-4A9C-8395-90215F04A5CC}
-static constexpr INTERFACE_ID IID_SwapChainVk =
+static const INTERFACE_ID IID_SwapChainVk =
     {0x22a39881, 0x5ec5, 0x4a9c, {0x83, 0x95, 0x90, 0x21, 0x5f, 0x4, 0xa5, 0xcc}};
 
+#define DILIGENT_INTERFACE_NAME ISwapChainVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
 /// Exposes Vulkan-specific functionality of a swap chain.
-class ISwapChainVk : public ISwapChain
+DILIGENT_INTERFACE(ISwapChainVk, ISwapChain)
 {
-public:
     /// Returns a handle to the Vulkan swap chain object.
-    virtual VkSwapchainKHR GetVkSwapChain() = 0;
+    VIRTUAL VkSwapchainKHR METHOD(GetVkSwapChain)(THIS) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct ISwapChainVkVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct ISwapChainMethods    SwapChain;
+    struct ISwapChainVkMethods  SwapChainVk;
+};
+
+typedef struct ISwapChainVk
+{
+    struct ISwapChainVkVtbl* pVtbl;
+} ISwapChainVk;
+
+// clang-format off
+
+#    define ISwapChainVk_GetVkSwapChain(This)  (This)->pVtbl->SwapChainVk.GetVkSwapChain((ISwapChainVk*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -32,32 +32,64 @@
 
 #include "../../GraphicsEngine/interface/Texture.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {3BB9155F-22C5-4365-927E-8C4049F9B949}
-static constexpr INTERFACE_ID IID_TextureVk =
+static const INTERFACE_ID IID_TextureVk =
     {0x3bb9155f, 0x22c5, 0x4365, {0x92, 0x7e, 0x8c, 0x40, 0x49, 0xf9, 0xb9, 0x49}};
 
+#define DILIGENT_INTERFACE_NAME ITextureVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
 
 /// Exposes Vulkan-specific functionality of a texture object.
-class ITextureVk : public ITexture
+DILIGENT_INTERFACE(ITextureVk, ITexture)
 {
-public:
     /// Returns Vulkan image handle.
 
     /// The application must not release the returned image
-    virtual VkImage GetVkImage() const = 0;
+    VIRTUAL VkImage METHOD(GetVkImage)(THIS) CONST PURE;
 
     /// Sets Vulkan image layout
 
     /// \param [in] Layout - Vulkan image layout to set.
     /// \note This function does not perform layout transition, but sets the
     ///       internal texture state to match the given Vulkan layout.
-    virtual void SetLayout(VkImageLayout Layout) = 0;
+    VIRTUAL void METHOD(SetLayout)(THIS_
+                                   VkImageLayout Layout) PURE;
 
     /// Returns current Vulkan image layout. If the state is unknown to the engine, returns VK_IMAGE_LAYOUT_UNDEFINED
-    virtual VkImageLayout GetLayout() const = 0;
+    VIRTUAL VkImageLayout METHOD(GetLayout)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct ITextureVkVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct ITextureMethods      Texture;
+    struct ITextureVkMethods    TextureVk;
+};
+
+typedef struct ITextureVk
+{
+    struct ITextureVkVtbl* pVtbl;
+} ITextureVk;
+
+// clang-format off
+
+#    define ITextureVk_GetVkImage(This)     (This)->pVtbl->TextureVk.GetVkImage((ITextureVk*)(This))
+#    define ITextureVk_SetLayout(This, ...) (This)->pVtbl->TextureVk.SetLayout ((ITextureVk*)(This), __VA_ARGS__)
+#    define ITextureVk_GetLayout(This)      (This)->pVtbl->TextureVk.GetLayout ((ITextureVk*)(This))
+
+// clang-format ons
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

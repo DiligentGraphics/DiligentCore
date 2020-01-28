@@ -32,17 +32,45 @@
 
 #include "../../GraphicsEngine/interface/Fence.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {7610B4CD-EDEA-4951-82CF-52F97FAFED2D}
-static constexpr INTERFACE_ID IID_FenceVk =
+static const INTERFACE_ID IID_FenceVk =
     {0x7610b4cd, 0xedea, 0x4951, {0x82, 0xcf, 0x52, 0xf9, 0x7f, 0xaf, 0xed, 0x2d}};
 
+#define DILIGENT_INTERFACE_NAME IFenceVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
+#if DILIGENT_CPP_INTERFACE
 
 /// Exposes Vulkan-specific functionality of a fence object.
-class IFenceVk : public IFence
+DILIGENT_INTERFACE(IFenceVk, IFence)
 {
 };
 
-} // namespace Diligent
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format off
+
+struct IFenceVkVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IFenceMethods        Fence;
+    //struct IFenceVkMethods   FenceVk;
+};
+
+typedef struct IFenceVk
+{
+    struct IFenceVkVtbl* pVtbl;
+} IFenceVk;
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

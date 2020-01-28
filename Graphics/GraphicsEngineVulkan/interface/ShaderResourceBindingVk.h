@@ -32,16 +32,39 @@
 
 #include "../../GraphicsEngine/interface/ShaderResourceBinding.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {1E8C82DC-5B3A-47D5-8AE9-197CAE8DB71F}
-static constexpr INTERFACE_ID IID_ShaderResourceBindingVk =
+static const INTERFACE_ID IID_ShaderResourceBindingVk =
     {0x1e8c82dc, 0x5b3a, 0x47d5, {0x8a, 0xe9, 0x19, 0x7c, 0xae, 0x8d, 0xb7, 0x1f}};
 
+#define DILIGENT_INTERFACE_NAME IShaderResourceBindingVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#if DILIGENT_CPP_INTERFACE
+
 /// Exposes Vulkan-specific functionality of a shader resource binding object.
-class IShaderResourceBindingVk : public IShaderResourceBinding
+DILIGENT_INTERFACE(IShaderResourceBindingVk, IShaderResourceBinding){};
+
+#endif
+
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+struct IShaderResourceBindingVkVtbl
 {
+    struct IObjectMethods                Object;
+    struct IDeviceObjectMethods          DeviceObject;
+    struct IShaderResourceBindingMethods ShaderResourceBinding;
+    //struct IShaderResourceBindingVkMethods ShaderResourceBindingVk;
 };
 
-} // namespace Diligent
+struct IShaderResourceBindingVk
+{
+    struct IShaderResourceBindingVkVtbl* pVtbl;
+};
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

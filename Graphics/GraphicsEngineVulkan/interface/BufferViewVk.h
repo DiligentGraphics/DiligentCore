@@ -32,19 +32,50 @@
 
 #include "../../GraphicsEngine/interface/BufferView.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {CB67024A-1E23-4202-A49A-07B6BCEABC06}
-static constexpr INTERFACE_ID IID_BufferViewVk =
+static const INTERFACE_ID IID_BufferViewVk =
     {0xcb67024a, 0x1e23, 0x4202, {0xa4, 0x9a, 0x7, 0xb6, 0xbc, 0xea, 0xbc, 0x6}};
 
+#define DILIGENT_INTERFACE_NAME IBufferViewVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Exposes Vulkan-specific functionality of a buffer view object.
-class IBufferViewVk : public IBufferView
+DILIGENT_INTERFACE(IBufferViewVk, IBufferView)
 {
-public:
     /// Returns Vulkan buffer view object.
-    virtual VkBufferView GetVkBufferView() const = 0;
+    VIRTUAL VkBufferView METHOD(GetVkBufferView)(THIS) CONST PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IBufferViewVkVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IBufferViewMethods   BufferView;
+    struct IBufferViewVkMethods BufferViewVk;
+};
+
+typedef struct IBufferViewVk
+{
+    struct IBufferViewVkVtbl* pVtbl;
+} IBufferViewVk;
+
+
+// clang-format off
+
+#    define IBufferViewVk_GetVkBufferView(This) (This)->pVtbl->BufferViewVk.GetVkBufferView((IBufferViewVk*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

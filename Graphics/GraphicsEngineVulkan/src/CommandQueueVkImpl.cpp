@@ -81,7 +81,7 @@ Uint64 CommandQueueVkImpl::Submit(const VkSubmitInfo& SubmitInfo)
     return FenceValue;
 }
 
-Uint64 CommandQueueVkImpl::Submit(VkCommandBuffer cmdBuffer)
+Uint64 CommandQueueVkImpl::SubmitCmdBuffer(VkCommandBuffer cmdBuffer)
 {
     VkSubmitInfo SubmitInfo = {};
 

@@ -32,35 +32,42 @@
 
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {AB8CF3A6-D959-41C1-AE00-A58AE9820E6A}
-static constexpr INTERFACE_ID IID_RenderDeviceVk =
+static const INTERFACE_ID IID_RenderDeviceVk =
     {0xab8cf3a6, 0xd959, 0x41c1, {0xae, 0x0, 0xa5, 0x8a, 0xe9, 0x82, 0xe, 0x6a}};
 
+#define DILIGENT_INTERFACE_NAME IRenderDeviceVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Exposes Vulkan-specific functionality of a render device.
-class IRenderDeviceVk : public IRenderDevice
+DILIGENT_INTERFACE(IRenderDeviceVk, IRenderDevice)
 {
-public:
     /// Returns logical Vulkan device handle
-    virtual VkDevice GetVkDevice() = 0;
+    VIRTUAL VkDevice METHOD(GetVkDevice)(THIS) PURE;
 
     /// Returns physical Vulkan device
-    virtual VkPhysicalDevice GetVkPhysicalDevice() = 0;
+    VIRTUAL VkPhysicalDevice METHOD(GetVkPhysicalDevice)(THIS) PURE;
 
     /// Returns Vulkan instance
-    virtual VkInstance GetVkInstance() = 0;
+    VIRTUAL VkInstance METHOD(GetVkInstance)(THIS) PURE;
 
     /// Returns the fence value that will be signaled by the GPU command queue next
-    virtual Uint64 GetNextFenceValue(Uint32 QueueIndex) = 0;
+    VIRTUAL Uint64 METHOD(GetNextFenceValue)(THIS_
+                                             Uint32 QueueIndex) PURE;
 
     /// Returns the last completed fence value for the given command queue
-    virtual Uint64 GetCompletedFenceValue(Uint32 QueueIndex) = 0;
+    VIRTUAL Uint64 METHOD(GetCompletedFenceValue)(THIS_
+                                                  Uint32 QueueIndex) PURE;
 
     /// Checks if the fence value has been signaled by the GPU. True means
     /// that all associated work has been finished
-    virtual Bool IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) = 0;
+    VIRTUAL Bool METHOD(IsFenceSignaled)(THIS_
+                                         Uint32 QueueIndex, 
+                                         Uint64 FenceValue) PURE;
 
     /// Creates a texture object from native Vulkan image
 
@@ -76,10 +83,11 @@ public:
     /// \note  Created texture object does not take ownership of the Vulkan image and will not
     ///        destroy it once released. The application must not destroy the image while it is
     ///        in use by the engine.
-    virtual void CreateTextureFromVulkanImage(VkImage            vkImage,
-                                              const TextureDesc& TexDesc,
-                                              RESOURCE_STATE     InitialState,
-                                              ITexture**         ppTexture) = 0;
+    VIRTUAL void METHOD(CreateTextureFromVulkanImage)(THIS_
+                                                      VkImage               vkImage,
+                                                      const TextureDesc REF TexDesc,
+                                                      RESOURCE_STATE        InitialState,
+                                                      ITexture**            ppTexture) PURE;
 
     /// Creates a buffer object from native Vulkan resource
 
@@ -95,10 +103,44 @@ public:
     /// \note  Created buffer object does not take ownership of the Vulkan buffer and will not
     ///        destroy it once released. The application must not destroy Vulkan buffer while it is
     ///        in use by the engine.
-    virtual void CreateBufferFromVulkanResource(VkBuffer          vkBuffer,
-                                                const BufferDesc& BuffDesc,
-                                                RESOURCE_STATE    InitialState,
-                                                IBuffer**         ppBuffer) = 0;
+    VIRTUAL void METHOD(CreateBufferFromVulkanResource)(THIS_
+                                                        VkBuffer             vkBuffer,
+                                                        const BufferDesc REF BuffDesc,
+                                                        RESOURCE_STATE       InitialState,
+                                                        IBuffer**            ppBuffer) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IRenderDeviceVkVtbl
+{
+    struct IObjectMethods         Object;
+    struct IRenderDeviceMethods   RenderDevice;
+    struct IRenderDeviceVkMethods RenderDeviceVk;
+};
+
+typedef struct IRenderDeviceVk
+{
+    struct IRenderDeviceVkVtbl* pVtbl;
+} IRenderDeviceVk;
+
+// clang-format off
+
+#    define IRenderDeviceVk_GetVkDevice(This)                         (This)->pVtbl->RenderDeviceVk.GetVkDevice                    ((IRenderDeviceVk*)(This))
+#    define IRenderDeviceVk_GetVkPhysicalDevice(This)                 (This)->pVtbl->RenderDeviceVk.GetVkPhysicalDevice            ((IRenderDeviceVk*)(This))
+#    define IRenderDeviceVk_GetVkInstance(This)                       (This)->pVtbl->RenderDeviceVk.GetVkInstance                  ((IRenderDeviceVk*)(This))
+#    define IRenderDeviceVk_GetNextFenceValue(This, ...)              (This)->pVtbl->RenderDeviceVk.GetNextFenceValue              ((IRenderDeviceVk*)(This), __VA_ARGS__)
+#    define IRenderDeviceVk_GetCompletedFenceValue(This, ...)         (This)->pVtbl->RenderDeviceVk.GetCompletedFenceValue         ((IRenderDeviceVk*)(This), __VA_ARGS__)
+#    define IRenderDeviceVk_IsFenceSignaled(This, ...)                (This)->pVtbl->RenderDeviceVk.IsFenceSignaled                ((IRenderDeviceVk*)(This), __VA_ARGS__)
+#    define IRenderDeviceVk_CreateTextureFromVulkanImage(This, ...)   (This)->pVtbl->RenderDeviceVk.CreateTextureFromVulkanImage   ((IRenderDeviceVk*)(This), __VA_ARGS__)
+#    define IRenderDeviceVk_CreateBufferFromVulkanResource(This, ...) (This)->pVtbl->RenderDeviceVk.CreateBufferFromVulkanResource ((IRenderDeviceVk*)(This), __VA_ARGS__)
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

@@ -33,30 +33,37 @@
 #include "../../GraphicsEngine/interface/DeviceContext.h"
 #include "CommandQueueVk.h"
 
-namespace Diligent
-{
+DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 // {72AEB1BA-C6AD-42EC-8811-7ED9C72176BB}
-static constexpr INTERFACE_ID IID_DeviceContextVk =
+static const INTERFACE_ID IID_DeviceContextVk =
     {0x72aeb1ba, 0xc6ad, 0x42ec, {0x88, 0x11, 0x7e, 0xd9, 0xc7, 0x21, 0x76, 0xbb}};
 
+#define DILIGENT_INTERFACE_NAME IDeviceContextVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
+
 /// Exposes Vulkan-specific functionality of a device context.
-class IDeviceContextVk : public IDeviceContext
+DILIGENT_INTERFACE(IDeviceContextVk, IDeviceContext)
 {
-public:
     /// Transitions internal vulkan image to a specified layout
 
     /// \param [in] pTexture - texture to transition
     /// \param [in] NewLayout - Vulkan image layout this texture to transition to
     /// \remarks The texture state must be known to the engine.
-    virtual void TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout) = 0;
+    VIRTUAL void METHOD(TransitionImageLayout)(THIS_
+                                               ITexture*     pTexture,
+                                               VkImageLayout NewLayout) PURE;
 
     /// Transitions internal vulkan buffer object to a specified state
 
     /// \param [in] pBuffer - Buffer to transition
     /// \param [in] NewAccessFlags - Access flags to set for the buffer
     /// \remarks The buffer state must be known to the engine.
-    virtual void BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags) = 0;
+    VIRTUAL void METHOD(BufferMemoryBarrier)(THIS_
+                                             IBuffer*      pBuffer,
+                                             VkAccessFlags NewAccessFlags) PURE;
 
     /// Locks the internal mutex and returns a pointer to the command queue that is associated with this device context.
 
@@ -74,10 +81,40 @@ public:
     ///
     ///           The engine manages the lifetimes of command queues and all other device objects,
     ///           so an application must not call AddRef/Release methods on the returned interface.
-    virtual ICommandQueueVk* LockCommandQueue() = 0;
+    VIRTUAL ICommandQueueVk* METHOD(LockCommandQueue)(THIS) PURE;
 
     /// Unlocks the command queue that was previously locked by IDeviceContextVk::LockCommandQueue().
-    virtual void UnlockCommandQueue() = 0;
+    VIRTUAL void METHOD(UnlockCommandQueue)(THIS) PURE;
 };
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IDeviceContextVkVtbl
+{
+    struct IObjectMethods          Object;
+    struct IDeviceObjectMethods    DeviceObject;
+    struct IDeviceContextMethods   DeviceContext;
+    struct IDeviceContextVkMethods DeviceContextVk;
+};
+
+typedef struct IDeviceContextVk
+{
+    struct IDeviceContextVkVtbl* pVtbl;
+} IDeviceContextVk;
+
+// clang-format off
+
+#    define IDeviceContextVk_TransitionImageLayout(This, ...) (This)->pVtbl->DeviceContextVk.TransitionImageLayout((IDeviceContextVk*)(This), __VA_ARGS__)
+#    define IDeviceContextVk_BufferMemoryBarrier(This, ...)   (This)->pVtbl->DeviceContextVk.BufferMemoryBarrier  ((IDeviceContextVk*)(This), __VA_ARGS__)
+#    define IDeviceContextVk_LockCommandQueue(This)           (This)->pVtbl->DeviceContextVk.LockCommandQueue     ((IDeviceContextVk*)(This))
+#    define IDeviceContextVk_UnlockCommandQueue(This)         (This)->pVtbl->DeviceContextVk.UnlockCommandQueue   ((IDeviceContextVk*)(This))
+
+// clang-format on
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent
