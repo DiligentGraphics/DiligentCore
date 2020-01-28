@@ -47,20 +47,47 @@ struct HLSLShaderResourceDesc DILIGENT_DERIVE(ShaderResourceDesc)
 
     Uint32 ShaderRegister DEFAULT_INITIALIZER(0);
 };
+typedef struct HLSLShaderResourceDesc HLSLShaderResourceDesc;
 
 // clang-format on
 
-#if DILIGENT_CPP_INTERFACE
+#define DILIGENT_INTERFACE_NAME IShaderD3D
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+// clang-format off
 
 /// Exposes Direct3D-specific functionality of a shader object.
-class IShaderD3D : public IShader
+DILIGENT_INTERFACE(IShaderD3D, IShader)
 {
-public:
     /// Returns HLSL shader resource description
-    virtual void GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const = 0;
+    VIRTUAL void METHOD(GetHLSLResource)(THIS_
+                                         Uint32                     Index,
+                                         HLSLShaderResourceDesc REF ResourceDesc) CONST PURE;
 };
 
-#else
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+// clang-format on
+
+struct IShaderD3DVtbl
+{
+    struct IObjectMethods       Object;
+    struct IDeviceObjectMethods DeviceObject;
+    struct IShaderD3DMethods    ShaderD3D;
+};
+
+typedef struct IShaderD3D
+{
+    struct IShaderD3DVtbl* pVtbl;
+} IShaderD3D;
+
+// clang-format off
+
+#    define IShaderD3D_GetHLSLResource(This, ...) CALL_IFACE_METHOD(ShaderD3D, GetHLSLResource, This, __VA_ARGS__)
+
+// clang-format on
 
 #endif
 

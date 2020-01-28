@@ -60,6 +60,7 @@ struct IShaderD3D11Vtbl
     struct IObjectMethods       Object;
     struct IDeviceObjectMethods DeviceObject;
     struct IShaderMethods       Shader;
+    struct IShaderD3DMethods    ShaderD3D;
     struct IShaderD3D11Methods  ShaderD3D11;
 };
 
