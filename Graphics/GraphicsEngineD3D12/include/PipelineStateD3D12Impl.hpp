@@ -74,7 +74,7 @@ public:
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
     /// Implementation of IPipelineStateD3D12::GetD3D12PipelineState().
-    virtual ID3D12PipelineState* DILIGENT_CALL_TYPE DILIGENT_CALL_TYPE GetD3D12PipelineState() const override final { return m_pd3d12PSO; }
+    virtual ID3D12PipelineState* DILIGENT_CALL_TYPE GetD3D12PipelineState() const override final { return m_pd3d12PSO; }
 
     /// Implementation of IPipelineStateD3D12::GetD3D12RootSignature().
     virtual ID3D12RootSignature* DILIGENT_CALL_TYPE GetD3D12RootSignature() const override final { return m_RootSig.GetD3D12RootSignature(); }
