@@ -43,6 +43,10 @@ static const INTERFACE_ID IID_DeviceContextGL =
 #define DILIGENT_INTERFACE_NAME IDeviceContextGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IDeviceContextGLInclusiveMethods \
+    IDeviceContextInclusiveMethods;      \
+    IDeviceContextGLMethods DeviceContextGL
+
 // clang-format off
 
 /// Exposes OpenGL-specific functionality of a device context.
@@ -67,15 +71,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IDeviceContextGLVtbl
-{
-    struct IObjectMethods          Object;
-    struct IDeviceContextMethods   DeviceContext;
-    struct IDeviceContextGLMethods DeviceContextGL;
-};
 
 // clang-format off
 

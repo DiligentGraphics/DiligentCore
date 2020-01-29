@@ -42,6 +42,9 @@ static const INTERFACE_ID IID_DeviceObject =
 
 #define DILIGENT_INTERFACE_NAME IDeviceObject
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+#define IDeviceObjectInclusiveMethods \
+    IObjectInclusiveMethods;          \
+    IDeviceObjectMethods DeviceObject
 
 /// Base interface for all objects created by the render device Diligent::IRenderDevice
 DILIGENT_BEGIN_INTERFACE(IDeviceObject, IObject)
@@ -73,14 +76,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format off
-
-struct IDeviceObjectVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-};
 
 // clang-format off
 

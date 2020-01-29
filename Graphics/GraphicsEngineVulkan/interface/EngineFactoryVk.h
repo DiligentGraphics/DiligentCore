@@ -58,6 +58,10 @@ static const INTERFACE_ID IID_EngineFactoryVk =
 #define DILIGENT_INTERFACE_NAME IEngineFactoryVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IEngineFactoryVkInclusiveMethods \
+    IEngineFactoryInclusiveMethods;      \
+    IEngineFactoryVkMethods EngineFactoryVk
+
 // clang-format off
 
 DILIGENT_BEGIN_INTERFACE(IEngineFactoryVk, IEngineFactory)
@@ -85,15 +89,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IEngineFactoryVkVtbl
-{
-    struct IObjectMethods          Object;
-    struct IEngineFactoryMethods   EngineFactory;
-    struct IEngineFactoryVkMethods EngineFactoryVk;
-};
 
 // clang-format off
 

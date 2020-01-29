@@ -41,6 +41,10 @@ static const struct INTERFACE_ID IID_PipelineStateD3D11 =
 #define DILIGENT_INTERFACE_NAME IPipelineStateD3D11
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IPipelineStateD3D11InclusiveMethods \
+    IPipelineStateInclusiveMethods;         \
+    IPipelineStateD3D11Methods PipelineStateD3D11
+
 /// Exposes Direct3D11-specific functionality of a pipeline state object.
 DILIGENT_BEGIN_INTERFACE(IPipelineStateD3D11, IPipelineState)
 {
@@ -112,14 +116,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct IPipelineStateD3D11Vtbl
-{
-    struct IObjectMethods             Object;
-    struct IDeviceObjectMethods       DeviceObject;
-    struct IPipelineStateMethods      PipelineState;
-    struct IPipelineStateD3D11Methods PipelineStateD3D11;
-};
 
 // clang-format off
 

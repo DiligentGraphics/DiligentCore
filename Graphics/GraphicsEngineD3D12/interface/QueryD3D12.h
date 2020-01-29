@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_QueryD3D12 =
 #define DILIGENT_INTERFACE_NAME IQueryD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IQueryD3D12InclusiveMethods \
+    IQueryInclusiveMethods;         \
+    IQueryD3D12Methods QueryD3D12
+
 /// Exposes Direct3D12-specific functionality of a Query object.
 DILIGENT_BEGIN_INTERFACE(IQueryD3D12, IQuery)
 {
@@ -55,14 +59,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct IQueryD3D12Vtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IQueryMethods        Query;
-    struct IQueryD3D12Methods   QueryD3D12;
-};
 
 #    define IQueryD3D12_GetD3D12QueryHeap(This) CALL_IFACE_METHOD(QueryD3D12, GetD3D12QueryHeap, This)
 #    define IQueryD3D12_GetQueryHeapIndex(This) CALL_IFACE_METHOD(QueryD3D12, GetQueryHeapIndex, This)

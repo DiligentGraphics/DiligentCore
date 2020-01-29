@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_TextureViewGL =
 #define DILIGENT_INTERFACE_NAME ITextureViewGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ITextureViewGLInclusiveMethods \
+    ITextureViewInclusiveMethods
+//ITextureViewGLMethods TextureViewGL
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a texture view object.
@@ -57,13 +61,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-struct ITextureViewGLVtbl
+typedef struct ITextureViewGLVtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct ITextureViewMethods  TextureView;
-    //struct ITextureViewGLMethods  TextureViewGL;
-};
+    ITextureViewGLInclusiveMethods;
+} ITextureViewGLVtbl;
 
 typedef struct ITextureViewGL
 {

@@ -48,6 +48,10 @@ static const struct INTERFACE_ID IID_EngineFactoryD3D11 =
 #define DILIGENT_INTERFACE_NAME IEngineFactoryD3D11
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IEngineFactoryD3D11InclusiveMethods \
+    IEngineFactoryInclusiveMethods;         \
+    IEngineFactoryD3D11Methods EngineFactoryD3D11
+
 // clang-format off
 
 /// Engine factory for Direct3D11 rendering backend.
@@ -154,15 +158,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IEngineFactoryD3D11Vtbl
-{
-    struct IObjectMethods             Object;
-    struct IEngineFactoryMethods      EngineFactory;
-    struct IEngineFactoryD3D11Methods EngineFactoryD3D11;
-};
 
 // clang-format off
 

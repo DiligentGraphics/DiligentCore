@@ -54,6 +54,10 @@ typedef struct HLSLShaderResourceDesc HLSLShaderResourceDesc;
 #define DILIGENT_INTERFACE_NAME IShaderD3D
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IShaderD3DInclusiveMethods \
+    IShaderInclusiveMethods;       \
+    IShaderD3DMethods ShaderD3D
+
 // clang-format off
 
 /// Exposes Direct3D-specific functionality of a shader object.
@@ -69,15 +73,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IShaderD3DVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IShaderD3DMethods    ShaderD3D;
-};
 
 // clang-format off
 

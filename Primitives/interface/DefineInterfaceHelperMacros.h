@@ -57,12 +57,23 @@
 #    define REF          *
 #    define METHOD(Name) (*Name)
 
+// Suppose that DILIGENT_INTERFACE_NAME == Iface, then DILIGENT_END_INTERFACE macro below will expand to the following:
+//
+//      typedef struct IfaceMethods IfaceMethods;
+//      typedef struct IfaceVtbl
+//      {
+//          IfaceInclusiveMethods;
+//      } IfaceVtbl;
+//
+// IfaceInclusiveMethods macro must be properly defined
+
 // clang-format off
 #    define DILIGENT_END_INTERFACE\
-        typedef struct DILIGENT_INTERFACE_NAME                        \
-        {                                                             \
-            struct DILIGENT_VTBL_NAME(DILIGENT_INTERFACE_NAME)* pVtbl;\
-        } DILIGENT_INTERFACE_NAME;
+        typedef struct DILIGENT_CONCATENATE(DILIGENT_INTERFACE_NAME, Methods) DILIGENT_CONCATENATE(DILIGENT_INTERFACE_NAME, Methods); \
+        typedef struct DILIGENT_CONCATENATE(DILIGENT_INTERFACE_NAME, Vtbl)  \
+        {                                                                   \
+            DILIGENT_CONCATENATE(DILIGENT_INTERFACE_NAME, InclusiveMethods);\
+        } DILIGENT_CONCATENATE(DILIGENT_INTERFACE_NAME, Vtbl);
 // clang-format on
 
 #else

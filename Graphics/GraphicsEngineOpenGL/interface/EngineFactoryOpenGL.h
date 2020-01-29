@@ -61,6 +61,10 @@ static const INTERFACE_ID IID_EngineFactoryOpenGL =
 #define DILIGENT_INTERFACE_NAME IEngineFactoryOpenGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IEngineFactoryOpenGLInclusiveMethods \
+    IEngineFactoryInclusiveMethods;          \
+    IEngineFactoryOpenGLMethods EngineFactoryOpenGL
+
 // clang-format off
 
 DILIGENT_BEGIN_INTERFACE(IEngineFactoryOpenGL, IEngineFactory)
@@ -85,15 +89,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IEngineFactoryOpenGLVtbl
-{
-    struct IObjectMethods              Object;
-    struct IEngineFactoryMethods       EngineFactory;
-    struct IEngineFactoryOpenGLMethods EngineFactoryOpenGL;
-};
 
 // clang-format off
 

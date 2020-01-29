@@ -47,7 +47,9 @@ static const INTERFACE_ID IID_ShaderResourceBinding =
 #define DILIGENT_INTERFACE_NAME IShaderResourceBinding
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-
+#define IShaderResourceBindingInclusiveMethods \
+    IObjectInclusiveMethods;                   \
+    IShaderResourceBindingMethods ShaderResourceBinding
 
 // clang-format off
 
@@ -132,14 +134,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IShaderResourceBindingVtbl
-{
-    struct IObjectMethods                Object;
-    struct IShaderResourceBindingMethods ShaderResourceBinding;
-};
 
 // clang-format off
 

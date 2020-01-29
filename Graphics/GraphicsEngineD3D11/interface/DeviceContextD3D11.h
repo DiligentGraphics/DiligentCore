@@ -41,6 +41,10 @@ static const struct INTERFACE_ID IID_DeviceContextD3D11 =
 #define DILIGENT_INTERFACE_NAME IDeviceContextD3D11
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IDeviceContextD3D11InclusiveMethods \
+    IDeviceContextInclusiveMethods;         \
+    IDeviceContextD3D11Methods DeviceContextD3D11
+
 /// Exposes Direct3D11-specific functionality of a device context.
 DILIGENT_BEGIN_INTERFACE(IDeviceContextD3D11, IDeviceContext)
 {
@@ -55,13 +59,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct IDeviceContextD3D11Vtbl
-{
-    struct IObjectMethods             Object;
-    struct IDeviceContextMethods      DeviceContext;
-    struct IDeviceContextD3D11Methods DeviceContextD3D11;
-};
 
 #    define IDeviceContextD3D11_GetD3D11DeviceContext(This) CALL_IFACE_METHOD(DeviceContextD3D11, GetD3D11DeviceContext, This)
 

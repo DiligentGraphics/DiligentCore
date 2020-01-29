@@ -612,6 +612,10 @@ typedef struct CopyTextureAttribs CopyTextureAttribs;
 #define DILIGENT_INTERFACE_NAME IDeviceContext
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IDeviceContextInclusiveMethods  \
+    IObjectInclusiveMethods;            \
+    IDeviceContextMethods DeviceContext
+
 /// Device context interface.
 
 /// \remarks Device context keeps strong references to all objects currently bound to 
@@ -1318,14 +1322,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IDeviceContextVtbl
-{
-    struct IObjectMethods        Object;
-    struct IDeviceContextMethods DeviceContext;
-};
 
 // clang-format off
 

@@ -85,18 +85,20 @@ struct IObject;
 
 // clang-format off
 
-struct IObjectMethods
+typedef struct IObjectMethods
 {
     void                       (*QueryInterface)      (struct IObject*, const struct INTERFACE_ID* IID, struct IObject** ppInterface);
     ReferenceCounterValueType  (*AddRef)              (struct IObject*);
     ReferenceCounterValueType  (*Release)             (struct IObject*);
     struct IReferenceCounters* (*GetReferenceCounters)(struct IObject*);
-};
+} IObjectMethods;
 
-struct IObjectVtbl
+#define IObjectInclusiveMethods IObjectMethods Object
+
+typedef struct IObjectVtbl
 {
-    struct IObjectMethods Object;
-};
+    IObjectInclusiveMethods;
+} IObjectVtbl;
 
 // clang-format on
 

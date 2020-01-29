@@ -142,6 +142,10 @@ typedef struct BufferViewDesc BufferViewDesc;
 #define DILIGENT_INTERFACE_NAME IBufferView
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IBufferViewInclusiveMethods \
+    IDeviceObjectInclusiveMethods;  \
+    IBufferViewMethods BufferView
+
 /// Buffer view interface
 
 /// To create a buffer view, call IBuffer::CreateView().
@@ -166,15 +170,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IBufferViewVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IBufferViewMethods   BufferView;
-};
 
 // clang-format off
 

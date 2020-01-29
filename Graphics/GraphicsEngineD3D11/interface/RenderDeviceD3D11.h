@@ -41,6 +41,10 @@ static const struct INTERFACE_ID IID_RenderDeviceD3D11 =
 #define DILIGENT_INTERFACE_NAME IRenderDeviceD3D11
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IRenderDeviceD3D11InclusiveMethods \
+    IRenderDeviceInclusiveMethods;         \
+    IRenderDeviceD3D11Methods RenderDeviceD3D11
+
 // clang-format off
 
 /// Exposes Direct3D11-specific functionality of a render device.
@@ -114,15 +118,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IRenderDeviceD3D11Vtbl
-{
-    struct IObjectMethods            Object;
-    struct IRenderDeviceMethods      RenderDevice;
-    struct IRenderDeviceD3D11Methods RenderDeviceD3D11;
-};
 
 // clang-format off
 

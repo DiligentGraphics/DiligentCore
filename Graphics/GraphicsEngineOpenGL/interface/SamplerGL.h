@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_SamplerGL =
 #define DILIGENT_INTERFACE_NAME ISamplerGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ISamplerGLInclusiveMethods \
+    ISamplerInclusiveMethods
+//ISamplerGLMethods SamplerGL
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a sampler object.
@@ -53,13 +57,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-struct ISamplerGLVtbl
+typedef struct ISamplerGLVtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    //struct ISamplerMethods    Sampler;
-    //struct ISamplerGLMethods  SamplerGL;
-};
+    ISamplerGLInclusiveMethods;
+} ISamplerGLVtbl;
 
 typedef struct ISamplerGL
 {

@@ -52,6 +52,10 @@ static const INTERFACE_ID IID_EngineFactoryD3D12 =
 
 // clang-format off
 
+#define IEngineFactoryD3D12InclusiveMethods \
+    IEngineFactoryInclusiveMethods;         \
+    IEngineFactoryD3D12Methods EngineFactoryD3D12
+
 /// Engine factory for Direct3D12 rendering backend
 DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
 {
@@ -175,15 +179,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IEngineFactoryD3D12Vtbl
-{
-    struct IObjectMethods             Object;
-    struct IEngineFactoryMethods      EngineFactory;
-    struct IEngineFactoryD3D12Methods EngineFactoryD3D12;
-};
 
 // clang-format off
 

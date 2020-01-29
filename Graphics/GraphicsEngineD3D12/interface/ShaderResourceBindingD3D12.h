@@ -41,6 +41,12 @@ static const INTERFACE_ID IID_ShaderResourceBindingD3D12 =
 #define DILIGENT_INTERFACE_NAME IShaderResourceBindingD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+// clang-format off
+#define IShaderResourceBindingD3D12InclusiveMethods \
+    IShaderResourceBindingInclusiveMethods          \
+    /*IShaderResourceBindingD3D12Methods ShaderResourceBindingD3D12*/
+// clang-format on
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D12-specific functionality of a shader resource binding.
@@ -55,10 +61,7 @@ DILIGENT_END_INTERFACE
 
 struct IShaderResourceBindingD3D12Vtbl
 {
-    struct IObjectMethods                Object;
-    struct IDeviceObjectMethods          DeviceObject;
-    struct IShaderResourceBindingMethods ShaderResourceBinding;
-    //struct IShaderResourceBindingD3D12Methods ShaderResourceBindingD3D12;
+    IShaderResourceBindingD3D12InclusiveMethods;
 };
 
 typedef struct IShaderResourceBindingD3D12

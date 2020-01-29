@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_BufferViewGL =
 #define DILIGENT_INTERFACE_NAME IBufferViewGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IBufferViewGLInclusiveMethods \
+    IBufferViewInclusiveMethods
+//IBufferViewGLMethods BufferViewGL
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a buffer view object.
@@ -53,13 +57,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-struct IBufferViewGLVtbl
+typedef struct IBufferViewGLVtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IBufferViewMethods   BufferView;
-    //struct IBufferViewGLMethods BufferViewGL;
-};
+    IBufferViewGLInclusiveMethods;
+} IBufferViewGLVtbl;
 
 typedef struct IBufferViewGL
 {

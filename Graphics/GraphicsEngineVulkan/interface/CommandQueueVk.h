@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_CommandQueueVk =
 #define DILIGENT_INTERFACE_NAME ICommandQueueVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ICommandQueueVkInclusiveMethods \
+    IObjectInclusiveMethods;            \
+    ICommandQueueVkMethods CommandQueueVk
+
 // clang-format off
 
 /// Command queue interface
@@ -88,14 +92,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct ICommandQueueVkVtbl
-{
-    struct IObjectMethods         Object;
-    struct ICommandQueueVkMethods CommandQueueVk;
-};
 
 // clang-format off
 

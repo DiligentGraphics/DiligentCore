@@ -93,6 +93,9 @@ typedef struct ResourceMappingDesc ResourceMappingDesc;
 #define DILIGENT_INTERFACE_NAME IResourceMapping
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IResourceMappingInclusiveMethods \
+    IObjectInclusiveMethods;             \
+    IResourceMappingMethods ResourceMapping
 
 // clang-format off
 
@@ -169,14 +172,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IResourceMappingVtbl
-{
-    struct IObjectMethods          Object;
-    struct IResourceMappingMethods ResourceMapping;
-};
 
 // clang-format off
 

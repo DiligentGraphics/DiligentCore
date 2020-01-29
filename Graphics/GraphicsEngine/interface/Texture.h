@@ -311,7 +311,9 @@ typedef struct MappedTextureSubresource MappedTextureSubresource;
 #define DILIGENT_INTERFACE_NAME ITexture
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-
+#define ITextureInclusiveMethods   \
+    IDeviceObjectInclusiveMethods; \
+    ITextureMethods Texture
 
 /// Texture inteface
 DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
@@ -380,15 +382,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct ITextureVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct ITextureMethods      Texture;
-};
 
 // clang-format off
 

@@ -38,9 +38,12 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const INTERFACE_ID IID_QueryGL =
     {0xd8a02ab7, 0x720, 0x417d, {0xaa, 0x9b, 0x20, 0xa2, 0xc0, 0x5a, 0x3e, 0xe0}};
 
-
 #define DILIGENT_INTERFACE_NAME IQueryGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IQueryGLInclusiveMethods \
+    IQueryInclusiveMethods;      \
+    IQueryGLMethods QueryGL
 
 /// Exposes OpenGL-specific functionality of a Query object.
 DILIGENT_BEGIN_INTERFACE(IQueryGL, IQuery)
@@ -53,14 +56,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct IQueryGLVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IQueryMethods        Query;
-    struct IQueryGLMethods      QueryGL;
-};
 
 #    define IQueryGL_GetGlQueryHandle(This) CALL_IFACE_METHOD(QueryGL, GetGlQueryHandle, This)
 

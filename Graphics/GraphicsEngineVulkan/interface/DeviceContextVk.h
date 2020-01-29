@@ -42,6 +42,10 @@ static const INTERFACE_ID IID_DeviceContextVk =
 #define DILIGENT_INTERFACE_NAME IDeviceContextVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IDeviceContextVkInclusiveMethods \
+    IDeviceContextInclusiveMethods;      \
+    IDeviceContextVkMethods DeviceContextVk
+
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a device context.
@@ -91,15 +95,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IDeviceContextVkVtbl
-{
-    struct IObjectMethods          Object;
-    struct IDeviceContextMethods   DeviceContext;
-    struct IDeviceContextVkMethods DeviceContextVk;
-};
 
 // clang-format off
 

@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_ShaderResourceBindingGL =
 #define DILIGENT_INTERFACE_NAME IShaderResourceBindingGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IShaderResourceBindingGLInclusiveMethods \
+    IShaderResourceBindingInclusiveMethods
+//IShaderResourceBindingGLMethods ShaderResourceBindingGL
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a shader resource binding object.
@@ -53,13 +57,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-struct IShaderResourceBindingGLVtbl
+typedef struct IShaderResourceBindingGLVtbl
 {
-    struct IObjectMethods                Object;
-    struct IDeviceObjectMethods          DeviceObject;
-    struct IShaderResourceBindingMethods ShaderResourceBinding;
-    //struct IShaderResourceBindingGLMethods  ShaderResourceBindingGL;
-};
+    IShaderResourceBindingGLInclusiveMethods;
+} IShaderResourceBindingGLVtbl;
 
 #endif
 

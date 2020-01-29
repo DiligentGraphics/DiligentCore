@@ -41,6 +41,10 @@ static const struct INTERFACE_ID IID_ShaderD3D11 =
 #define DILIGENT_INTERFACE_NAME IShaderD3D11
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IShaderD3D11InclusiveMethods \
+    IShaderD3DInclusiveMethods;      \
+    IShaderD3D11Methods ShaderD3D11
+
 /// Exposes Direct3D11-specific functionality of a shader object.
 DILIGENT_BEGIN_INTERFACE(IShaderD3D11, IShaderD3D)
 {
@@ -55,15 +59,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct IShaderD3D11Vtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IShaderMethods       Shader;
-    struct IShaderD3DMethods    ShaderD3D;
-    struct IShaderD3D11Methods  ShaderD3D11;
-};
 
 #    define IShaderD3D11_GetD3D11Shader(This) CALL_IFACE_METHOD(ShaderD3D11, GetD3D11Shader, This)
 

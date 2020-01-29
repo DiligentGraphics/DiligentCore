@@ -88,6 +88,9 @@ static const INTERFACE_ID IID_IShaderSourceInputStreamFactory =
 #define DILIGENT_INTERFACE_NAME IShaderSourceInputStreamFactory
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IShaderSourceInputStreamFactoryInclusiveMethods \
+    IObjectInclusiveMethods;                            \
+    IShaderSourceInputStreamFactoryMethods ShaderSourceInputStreamFactory
 
 /// Shader source stream factory interface
 DILIGENT_BEGIN_INTERFACE(IShaderSourceInputStreamFactory, IObject)
@@ -103,12 +106,6 @@ DILIGENT_END_INTERFACE
 #if DILIGENT_C_INTERFACE
 
 // clang-format on
-
-struct IShaderSourceInputStreamFactoryVtbl
-{
-    struct IObjectMethods                         Object;
-    struct IShaderSourceInputStreamFactoryMethods ShaderSourceInputStreamFactory;
-};
 
 #    define IShaderSourceInputStreamFactory_CreateInputStream(This, ...) CALL_IFACE_METHOD(ShaderSourceInputStreamFactory, CreateInputStream, This, __VA_ARGS__)
 
@@ -314,6 +311,10 @@ typedef struct ShaderResourceDesc ShaderResourceDesc;
 #define DILIGENT_INTERFACE_NAME IShader
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IShaderInclusiveMethods    \
+    IDeviceObjectInclusiveMethods; \
+    IShaderMethods Shader
+
 // clang-format off
 
 /// Shader interface
@@ -337,15 +338,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IShaderVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IShaderMethods       Shader;
-};
 
 // clang-format off
 

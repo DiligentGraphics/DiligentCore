@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_FenceVk =
 #define DILIGENT_INTERFACE_NAME IFenceVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IFenceVkInclusiveMethods \
+    IFenceInclusiveMethods
+//IFenceVkMethods FenceVk
+
 // clang-format off
 
 #if DILIGENT_CPP_INTERFACE
@@ -59,13 +63,10 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-struct IFenceVkVtbl
+typedef struct IFenceVkVtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IFenceMethods        Fence;
-    //struct IFenceVkMethods   FenceVk;
-};
+    IFenceVkInclusiveMethods;
+} IFenceVkVtbl;
 
 typedef struct IFenceVk
 {

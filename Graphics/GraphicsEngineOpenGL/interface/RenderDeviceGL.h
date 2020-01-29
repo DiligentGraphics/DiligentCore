@@ -42,6 +42,10 @@ static const INTERFACE_ID IID_RenderDeviceGL =
 #define DILIGENT_INTERFACE_NAME IRenderDeviceGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IRenderDeviceGLInclusiveMethods \
+    IRenderDeviceInclusiveMethods;      \
+    IRenderDeviceGLMethods RenderDeviceGL
+
 // clang-format off
 
 /// Exposes OpenGL-specific functionality of a render device.
@@ -109,15 +113,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IRenderDeviceGLVtbl
-{
-    struct IObjectMethods         Object;
-    struct IRenderDeviceMethods   RenderDevice;
-    struct IRenderDeviceGLMethods RenderDeviceGL;
-};
 
 // clang-format off
 

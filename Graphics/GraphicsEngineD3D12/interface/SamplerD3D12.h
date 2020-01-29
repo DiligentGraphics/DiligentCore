@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_SamplerD3D12 =
 #define DILIGENT_INTERFACE_NAME ISamplerD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ISamplerD3D12InclusiveMethods \
+    ISamplerInclusiveMethods;         \
+    ISamplerD3D12Methods SamplerD3D12
+
 /// Exposes Direct3D12-specific functionality of a sampler object.
 DILIGENT_BEGIN_INTERFACE(ISamplerD3D12, ISampler)
 {
@@ -55,14 +59,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct ISamplerD3D12Vtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    //struct ISamplerMethods      Sampler;
-    struct ISamplerD3D12Methods SamplerD3D12;
-};
 
 #    define ISamplerD3D12_GetCPUDescriptorHandle(This) CALL_IFACE_METHOD(SamplerD3D12, GetCPUDescriptorHandle, This)
 

@@ -41,6 +41,12 @@ static const struct INTERFACE_ID IID_FenceD3D11 =
 #define DILIGENT_INTERFACE_NAME IFenceD3D11
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+// clang-format off
+#define IFenceD3D11InclusiveMethods \
+    IFenceInclusiveMethods          \
+    /*IFenceD3D11Methods FenceD3D11*/
+// clang-format on
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D11-specific functionality of a fence object.
@@ -56,10 +62,7 @@ class IFenceD3D11 : public IFence
 
 struct IFenceD3D11Vtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IFenceMethods        Fence;
-    //struct IFenceD3D11Methods  FenceD3D11;
+    IFenceD3D11InclusiveMethods;
 };
 
 typedef struct IFenceD3D11

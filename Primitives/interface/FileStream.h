@@ -45,6 +45,9 @@ static const struct INTERFACE_ID IID_FileStream =
 #define DILIGENT_INTERFACE_NAME IFileStream
 #include "DefineInterfaceHelperMacros.h"
 
+#define IFileStreamInclusiveMethods \
+    IObjectInclusiveMethods;        \
+    IFileStreamMethods FileStream
 
 /// Base interface for a file stream
 DILIGENT_BEGIN_INTERFACE(IFileStream, IObject)
@@ -70,17 +73,7 @@ DILIGENT_END_INTERFACE
 
 #include "UndefInterfaceHelperMacros.h"
 
-
 #if DILIGENT_C_INTERFACE
-
-
-// clang-format on
-
-struct IFileStreamVtbl
-{
-    struct IObjectMethods     Object;
-    struct IFileStreamMethods FileStream;
-};
 
 // clang-format off
 

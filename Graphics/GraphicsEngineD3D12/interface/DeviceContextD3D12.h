@@ -42,6 +42,10 @@ static const INTERFACE_ID IID_DeviceContextD3D12 =
 #define DILIGENT_INTERFACE_NAME IDeviceContextD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IDeviceContextD3D12InclusiveMethods \
+    IDeviceContextInclusiveMethods;         \
+    IDeviceContextD3D12Methods DeviceContextD3D12
+
 // clang-format off
 
 /// Exposes Direct3D12-specific functionality of a device context.
@@ -108,15 +112,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IDeviceContextD3D12Vtbl
-{
-    struct IObjectMethods             Object;
-    struct IDeviceContextMethods      DeviceContext;
-    struct IDeviceContextD3D12Methods DeviceContextD3D12;
-};
 
 // clang-format off
 

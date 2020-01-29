@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_TextureVk =
 #define DILIGENT_INTERFACE_NAME ITextureVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ITextureVkInclusiveMethods \
+    ITextureInclusiveMethods;      \
+    ITextureVkMethods TextureVk
+
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a texture object.
@@ -67,16 +71,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct ITextureVkVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct ITextureMethods      Texture;
-    struct ITextureVkMethods    TextureVk;
-};
 
 // clang-format off
 

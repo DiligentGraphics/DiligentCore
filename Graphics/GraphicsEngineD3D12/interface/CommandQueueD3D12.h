@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_CommandQueueD3D12 =
 #define DILIGENT_INTERFACE_NAME ICommandQueueD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ICommandQueueD3D12InclusiveMethods \
+    IObjectInclusiveMethods;               \
+    ICommandQueueD3D12Methods CommandQueueD3D12
+
 // clang-format off
 
 /// Command queue interface
@@ -74,14 +78,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct ICommandQueueD3D12Vtbl
-{
-    struct IObjectMethods            Object;
-    struct ICommandQueueD3D12Methods CommandQueueD3D12;
-};
 
 // clang-format off
 

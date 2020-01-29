@@ -187,7 +187,9 @@ typedef struct TextureViewDesc TextureViewDesc;
 #define DILIGENT_INTERFACE_NAME ITextureView
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-
+#define ITextureViewInclusiveMethods \
+    IDeviceObjectInclusiveMethods;   \
+    ITextureViewMethods TextureView
 
 /// Texture view interface
 
@@ -228,15 +230,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct ITextureViewVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct ITextureViewMethods  TextureView;
-};
 
 #    define ITextureView_GetDesc(This) (const struct TextureViewDesc*)IDeviceObject_GetDesc(This)
 

@@ -60,6 +60,9 @@ static const INTERFACE_ID IID_RenderDevice =
 #define DILIGENT_INTERFACE_NAME IRenderDevice
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IRenderDeviceInclusiveMethods \
+    IObjectInclusiveMethods;          \
+    IRenderDeviceMethods RenderDevice
 
 // clang-format off
 
@@ -241,14 +244,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IRenderDeviceVtbl
-{
-    struct IObjectMethods       Object;
-    struct IRenderDeviceMethods RenderDevice;
-};
 
 // clang-format off
 

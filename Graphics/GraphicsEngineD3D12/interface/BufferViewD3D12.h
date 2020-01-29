@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_BufferViewD3D12 =
 #define DILIGENT_INTERFACE_NAME IBufferViewD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IBufferViewD3D12InclusiveMethods \
+    IBufferViewInclusiveMethods;         \
+    IBufferViewD3D12Methods BufferViewD3D12
+
 /// Exposes Direct3D12-specific functionality of a buffer view object.
 DILIGENT_BEGIN_INTERFACE(IBufferViewD3D12, IBufferView)
 {
@@ -52,14 +56,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct IBufferViewD3D12Vtbl
-{
-    struct IObjectMethods          Object;
-    struct IDeviceObjectMethods    DeviceObject;
-    struct IBufferViewMethods      BufferView;
-    struct IBufferViewD3D12Methods BufferViewD3D12;
-};
 
 #    define IBufferViewD3D12_GetCPUDescriptorHandle(This) CALL_IFACE_METHOD(BufferViewD3D12, GetCPUDescriptorHandle, This)
 

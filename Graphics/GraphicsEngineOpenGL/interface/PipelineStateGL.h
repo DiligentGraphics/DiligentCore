@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_PipelineStateGL =
 #define DILIGENT_INTERFACE_NAME IPipelineStateGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IPipelineStateGLInclusiveMethods \
+    IPipelineStateInclusiveMethods
+//IPipelineStateGLMethods PipelineStateGL
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a pipeline state object.
@@ -55,10 +59,7 @@ DILIGENT_END_INTERFACE
 
 struct IPipelineStateGLVtbl
 {
-    struct IObjectMethods        Object;
-    struct IDeviceObjectMethods  DeviceObject;
-    struct IPipelineStateMethods PipelineState;
-    //struct IPipelineStateGLMethods  PipelineStateGL;
+    IPipelineStateGLInclusiveMethods;
 };
 
 typedef struct IPipelineStateGL

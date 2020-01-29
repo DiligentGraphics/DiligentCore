@@ -43,6 +43,10 @@ static const INTERFACE_ID IID_FenceD3D12 =
 
 // clang-format off
 
+#define IFenceD3D12InclusiveMethods \
+    IFenceInclusiveMethods;         \
+    IFenceD3D12Methods FenceD3D12
+
 /// Exposes Direct3D12-specific functionality of a fence object.
 DILIGENT_BEGIN_INTERFACE(IFenceD3D12, IFence)
 {
@@ -61,16 +65,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format off
-
-struct IFenceD3D12Vtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IFenceMethods        Fence;
-    struct IFenceD3D12Methods   FenceD3D12;
-};
 
 // clang-format off
 

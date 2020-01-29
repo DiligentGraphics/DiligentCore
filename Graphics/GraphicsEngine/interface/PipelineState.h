@@ -257,6 +257,10 @@ static const struct INTERFACE_ID IID_PipelineState =
 #define DILIGENT_INTERFACE_NAME IPipelineState
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IPipelineStateInclusiveMethods \
+    IDeviceObjectInclusiveMethods;     \
+    IPipelineStateMethods PipelineState
+
 // clang-format off
 
 /// Pipeline state interface
@@ -351,15 +355,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IPipelineStateVtbl
-{
-    struct IObjectMethods        Object;
-    struct IDeviceObjectMethods  DeviceObject;
-    struct IPipelineStateMethods PipelineState;
-};
 
 // clang-format off
 

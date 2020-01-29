@@ -41,6 +41,12 @@ static const INTERFACE_ID IID_ShaderD3D12 =
 #define DILIGENT_INTERFACE_NAME IShaderD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+// clang-format off
+#define IShaderD3D12InclusiveMethods \
+    IShaderD3DInclusiveMethods       \
+    /*IShaderD3D12Methods ShaderD3D12*/
+// clang-format on
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Direct3D12-specific functionality of a shader object.
@@ -61,11 +67,7 @@ DILIGENT_END_INTERFACE
 
 struct IShaderD3D12Vtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IShaderMethods       Shader;
-    struct IShaderD3DMethods    ShaderD3D;
-    //struct IShaderD3D12Methods  ShaderD3D12;
+    IShaderD3D12InclusiveMethods;
 };
 
 typedef struct IShaderD3D12

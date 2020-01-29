@@ -43,6 +43,10 @@ static const INTERFACE_ID IID_HLSL2GLSLConversionStream =
 #define DILIGENT_INTERFACE_NAME IHLSL2GLSLConversionStream
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IHLSL2GLSLConversionStreamInclusiveMethods \
+    IObjectInclusiveMethods;                       \
+    IHLSL2GLSLConversionStreamMethods HLSL2GLSLConversionStream
+
 // clang-format off
 
 DILIGENT_BEGIN_INTERFACE(IHLSL2GLSLConversionStream, IObject)
@@ -61,14 +65,6 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-// clang-format on
-
-struct IHLSL2GLSLConversionStreamVtbl
-{
-    struct IObjectMethods                    Object;
-    struct IHLSL2GLSLConversionStreamMethods HLSL2GLSLConversionStream;
-};
-
 // clang-format off
 
 #    define IHLSL2GLSLConversionStream_Convert(This, ...) CALL_IFACE_METHOD(HLSL2GLSLConversionStream, Convert, This, __VA_ARGS__)
@@ -84,6 +80,10 @@ static const INTERFACE_ID IID_HLSL2GLSLConverter =
 
 #define DILIGENT_INTERFACE_NAME IHLSL2GLSLConverter
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IHLSL2GLSLConverterInclusiveMethods \
+    IObjectInclusiveMethods;                \
+    IHLSL2GLSLConverterMethods HLSL2GLSLConverter
 
 // clang-format off
 
@@ -102,14 +102,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IHLSL2GLSLConverterVtbl
-{
-    struct IObjectMethods             Object;
-    struct IHLSL2GLSLConverterMethods HLSL2GLSLConverter;
-};
 
 // clang-format off
 

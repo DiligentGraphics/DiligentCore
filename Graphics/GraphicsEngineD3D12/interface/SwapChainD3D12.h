@@ -44,6 +44,10 @@ static const INTERFACE_ID IID_SwapChainD3D12 =
 #define DILIGENT_INTERFACE_NAME ISwapChainD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ISwapChainD3D12InclusiveMethods \
+    ISwapChainInclusiveMethods;         \
+    ISwapChainD3D12Methods SwapChainD3D12
+
 /// Exposes Direct3D12-specific functionality of a swap chain.
 DILIGENT_BEGIN_INTERFACE(ISwapChainD3D12, ISwapChain)
 {
@@ -58,14 +62,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct ISwapChainD3D12Vtbl
-{
-    struct IObjectMethods         Object;
-    struct IDeviceObjectMethods   DeviceObject;
-    struct ISwapChainMethods      SwapChain;
-    struct ISwapChainD3D12Methods SwapChainD3D12;
-};
 
 // clang-format off
 

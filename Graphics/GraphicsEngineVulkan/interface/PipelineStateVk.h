@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_PipelineStateVk =
 #define DILIGENT_INTERFACE_NAME IPipelineStateVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IPipelineStateVkInclusiveMethods \
+    IPipelineStateInclusiveMethods;      \
+    IPipelineStateVkMethods PipelineStateVk
+
 /// Exposes Vulkan-specific functionality of a pipeline state object.
 DILIGENT_BEGIN_INTERFACE(IPipelineStateVk, IPipelineState)
 {
@@ -55,14 +59,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct IPipelineStateVkVtbl
-{
-    struct IObjectMethods          Object;
-    struct IDeviceObjectMethods    DeviceObject;
-    struct IPipelineStateMethods   PipelineState;
-    struct IPipelineStateVkMethods PipelineStateVk;
-};
 
 // clang-format off
 

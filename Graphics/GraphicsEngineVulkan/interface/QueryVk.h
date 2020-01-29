@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_QueryVk =
 #define DILIGENT_INTERFACE_NAME IQueryVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IQueryVkInclusiveMethods \
+    IQueryInclusiveMethods
+//IQueryVkMethods QueryVk
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Vulkan-specific functionality of a Query object.
@@ -53,13 +57,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-struct IQueryVkVtbl
+typedef struct IQueryVkVtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IQueryMethods        Query;
-    //struct IQueryVkMethods   QueryVk;
-};
+    IQueryVkInclusiveMethods;
+} IQueryVkVtbl;
 
 typedef struct IQueryVk
 {

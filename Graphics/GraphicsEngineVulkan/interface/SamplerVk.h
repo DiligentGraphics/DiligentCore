@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_SamplerVk =
 #define DILIGENT_INTERFACE_NAME ISamplerVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ISamplerVkInclusiveMethods \
+    ISamplerInclusiveMethods;      \
+    ISamplerVkMethods SamplerVk
+
 /// Exposes Vulkan-specific functionality of a sampler object.
 DILIGENT_BEGIN_INTERFACE(ISamplerVk, ISampler)
 {
@@ -52,14 +56,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct ISamplerVkVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    //struct ISamplerMethods      Sampler;
-    struct ISamplerVkMethods SamplerVk;
-};
 
 #    define ISamplerVk_GetVkSampler(This) CALL_IFACE_METHOD(SamplerVk, GetVkSampler, This)
 

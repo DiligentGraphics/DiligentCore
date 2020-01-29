@@ -44,7 +44,9 @@ static const struct INTERFACE_ID IID_DataBlob =
 #define DILIGENT_INTERFACE_NAME IDataBlob
 #include "DefineInterfaceHelperMacros.h"
 
-
+#define IDataBlobInclusiveMethods \
+    IObjectInclusiveMethods;      \
+    IDataBlobMethods DataBlob
 
 /// Base interface for a file stream
 DILIGENT_BEGIN_INTERFACE(IDataBlob, IObject)
@@ -64,15 +66,6 @@ DILIGENT_END_INTERFACE
 #include "UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-
-// clang-format on
-
-struct IDataBlobVtbl
-{
-    struct IObjectMethods   Object;
-    struct IDataBlobMethods DataBlob;
-};
 
 // clang-format off
 

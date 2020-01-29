@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_BufferViewVk =
 #define DILIGENT_INTERFACE_NAME IBufferViewVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IBufferViewVkInclusiveMethods \
+    IBufferViewInclusiveMethods;      \
+    IBufferViewVkMethods BufferViewVk
+
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a buffer view object.
@@ -54,16 +58,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IBufferViewVkVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IBufferViewMethods   BufferView;
-    struct IBufferViewVkMethods BufferViewVk;
-};
 
 // clang-format off
 

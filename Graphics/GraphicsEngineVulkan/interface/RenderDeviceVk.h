@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_RenderDeviceVk =
 #define DILIGENT_INTERFACE_NAME IRenderDeviceVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IRenderDeviceVkInclusiveMethods \
+    IRenderDeviceInclusiveMethods;      \
+    IRenderDeviceVkMethods RenderDeviceVk
+
 // clang-format off
 
 /// Exposes Vulkan-specific functionality of a render device.
@@ -114,15 +118,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IRenderDeviceVkVtbl
-{
-    struct IObjectMethods         Object;
-    struct IRenderDeviceMethods   RenderDevice;
-    struct IRenderDeviceVkMethods RenderDeviceVk;
-};
 
 // clang-format off
 

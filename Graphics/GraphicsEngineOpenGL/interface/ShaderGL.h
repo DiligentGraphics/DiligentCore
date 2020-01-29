@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_ShaderGL =
 #define DILIGENT_INTERFACE_NAME IShaderGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IShaderGLInclusiveMethods \
+    IShaderInclusiveMethods
+//IShaderGLMethods ShaderGL
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a shader object.
@@ -53,13 +57,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-struct IShaderGLVtbl
+typedef struct IShaderGLVtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IShaderMethods       Shader;
-    //struct IShaderGLMethods  ShaderGL;
-};
+    IShaderGLInclusiveMethods;
+} IShaderGLVtbl;
 
 #endif
 

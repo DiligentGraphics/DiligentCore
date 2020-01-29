@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_FenceGL =
 #define DILIGENT_INTERFACE_NAME IFenceGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IFenceGLInclusiveMethods \
+    IFenceInclusiveMethods
+//IFenceGLMethods FenceGL
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes OpenGL-specific functionality of a fence object.
@@ -55,10 +59,7 @@ DILIGENT_END_INTERFACE
 
 struct IFenceGLVtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IFenceMethods        Fence;
-    //struct IFenceGLMethods  FenceGL;
+    IFenceGLInclusiveMethods;
 };
 
 typedef struct IFenceGL

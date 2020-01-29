@@ -44,6 +44,9 @@ static const INTERFACE_ID IID_SwapChain =
 #define DILIGENT_INTERFACE_NAME ISwapChain
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ISwapChainInclusiveMethods \
+    IObjectInclusiveMethods;       \
+    ISwapChainMethods SwapChain
 
 // clang-format off
 
@@ -99,14 +102,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct ISwapChainVtbl
-{
-    struct IObjectMethods    Object;
-    struct ISwapChainMethods SwapChain;
-};
 
 // clang-format off
 

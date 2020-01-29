@@ -49,6 +49,9 @@ typedef struct FenceDesc FenceDesc;
 #define DILIGENT_INTERFACE_NAME IFence
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IFenceInclusiveMethods      \
+    IDeviceObjectInclusiveMethods;  \
+    IFenceMethods Fence
 
 /// Fence interface
 
@@ -79,15 +82,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IFenceVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IFenceMethods        Fence;
-};
 
 // clang-format off
 

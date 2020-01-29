@@ -42,6 +42,10 @@ static const INTERFACE_ID IID_BufferD3D12 =
 #define DILIGENT_INTERFACE_NAME IBufferD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IBufferD3D12InclusiveMethods \
+    IBufferInclusiveMethods;         \
+    IBufferD3D12Methods BufferD3D12
+
 // clang-format off
 
 /// Exposes Direct3D12-specific functionality of a buffer object.
@@ -76,14 +80,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct IBufferD3D12Vtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IBufferMethods       Buffer;
-    struct IBufferD3D12Methods  BufferD3D12;
-};
 
 #    define IBufferD3D12_GetD3D12Buffer(This, ...)        CALL_IFACE_METHOD(BufferD3D12, GetD3D12Buffer,        This, __VA_ARGS__)
 #    define IBufferD3D12_SetD3D12ResourceState(This, ...) CALL_IFACE_METHOD(BufferD3D12, SetD3D12ResourceState, This, __VA_ARGS__)

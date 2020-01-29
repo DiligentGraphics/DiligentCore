@@ -42,6 +42,10 @@ static const struct INTERFACE_ID IID_SwapChainD3D11 =
 #define DILIGENT_INTERFACE_NAME ISwapChainD3D11
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ISwapChainD3D11InclusiveMethods \
+    ISwapChainInclusiveMethods;         \
+    ISwapChainD3D11Methods SwapChainD3D11
+
 /// Exposes Direct3D11-specific functionality of a swap chain.
 DILIGENT_BEGIN_INTERFACE(ISwapChainD3D11, ISwapChain)
 {
@@ -62,14 +66,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct ISwapChainD3D11Vtbl
-{
-    struct IObjectMethods         Object;
-    struct IDeviceObjectMethods   DeviceObject;
-    struct ISwapChainMethods      SwapChain;
-    struct ISwapChainD3D11Methods SwapChainD3D11;
-};
 
 // clang-format off
 

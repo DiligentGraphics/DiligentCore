@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_ShaderResourceBindingVk =
 #define DILIGENT_INTERFACE_NAME IShaderResourceBindingVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IShaderResourceBindingVkInclusiveMethods \
+    IShaderResourceBindingInclusiveMethods
+//IShaderResourceBindingVkMethods ShaderResourceBindingVk
+
 #if DILIGENT_CPP_INTERFACE
 
 /// Exposes Vulkan-specific functionality of a shader resource binding object.
@@ -53,13 +57,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-struct IShaderResourceBindingVkVtbl
+typedef struct IShaderResourceBindingVkVtbl
 {
-    struct IObjectMethods                Object;
-    struct IDeviceObjectMethods          DeviceObject;
-    struct IShaderResourceBindingMethods ShaderResourceBinding;
-    //struct IShaderResourceBindingVkMethods ShaderResourceBindingVk;
-};
+    IShaderResourceBindingVkInclusiveMethods;
+} IShaderResourceBindingVkVtbl;
 
 #endif
 

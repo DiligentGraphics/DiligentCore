@@ -38,6 +38,10 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const INTERFACE_ID IID_SwapChainGL =
     {0xf457bd7c, 0xe725, 0x4d3e, {0x86, 0x7, 0xa1, 0xf9, 0xba, 0xe3, 0x29, 0xeb}};
 
+#define ISwapChainGLInclusiveMethods \
+    ISwapChainInclusiveMethods;      \
+    ISwapChainGLMethods SwapChainGL
+
 #define DILIGENT_INTERFACE_NAME ISwapChainGL
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -52,14 +56,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct ISwapChainGLVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct ISwapChainMethods    SwapChain;
-    struct ISwapChainGLMethods  SwapChainGL;
-};
 
 // clang-format off
 

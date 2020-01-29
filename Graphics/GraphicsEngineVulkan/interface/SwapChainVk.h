@@ -44,6 +44,10 @@ static const INTERFACE_ID IID_SwapChainVk =
 #define DILIGENT_INTERFACE_NAME ISwapChainVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ISwapChainVkInclusiveMethods \
+    ISwapChainInclusiveMethods;      \
+    ISwapChainVkMethods SwapChainVk
+
 /// Exposes Vulkan-specific functionality of a swap chain.
 DILIGENT_BEGIN_INTERFACE(ISwapChainVk, ISwapChain)
 {
@@ -55,14 +59,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct ISwapChainVkVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct ISwapChainMethods    SwapChain;
-    struct ISwapChainVkMethods  SwapChainVk;
-};
 
 // clang-format off
 

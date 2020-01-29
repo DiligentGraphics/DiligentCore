@@ -174,6 +174,12 @@ typedef struct SamplerDesc SamplerDesc;
 #define DILIGENT_INTERFACE_NAME ISampler
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+// clang-format off
+#define ISamplerInclusiveMethods  \
+    IDeviceObjectInclusiveMethods \
+    /*ISamplerMethods Sampler*/
+// clang-format on
+
 #if DILIGENT_CPP_INTERFACE
 
 // clang-format off
@@ -199,20 +205,10 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-// clang-format on
-
-struct ISampler;
-
-//struct ISamplerMethods
-//{
-//};
-
-struct ISamplerVtbl
+typedef struct ISamplerVtbl
 {
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    //struct ISamplerMethods Sampler;
-};
+    ISamplerInclusiveMethods;
+} ISamplerVtbl;
 
 typedef struct ISampler
 {

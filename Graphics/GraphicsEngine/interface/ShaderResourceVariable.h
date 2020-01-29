@@ -107,7 +107,9 @@ DILIGENT_TYPED_ENUM(BIND_SHADER_RESOURCES_FLAGS, Uint32)
 #define DILIGENT_INTERFACE_NAME IShaderResourceVariable
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-
+#define IShaderResourceVariableInclusiveMethods \
+    IObjectInclusiveMethods;                    \
+    IShaderResourceVariableMethods ShaderResourceVariable
 
 // clang-format off
 
@@ -158,14 +160,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IShaderResourceVariableVtbl
-{
-    struct IObjectMethods                 Object;
-    struct IShaderResourceVariableMethods ShaderResourceVariable;
-};
 
 // clang-format off
 

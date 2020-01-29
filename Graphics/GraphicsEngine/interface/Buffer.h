@@ -176,6 +176,9 @@ typedef struct BufferData BufferData;
 #define DILIGENT_INTERFACE_NAME IBuffer
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IBufferInclusiveMethods     \
+    IDeviceObjectInclusiveMethods;  \
+    IBufferMethods Buffer
 
 /// Buffer interface
 
@@ -240,15 +243,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IBufferVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IBufferMethods       Buffer;
-};
 
 // clang-format off
 

@@ -175,6 +175,9 @@ typedef struct QueryDesc QueryDesc;
 #define DILIGENT_INTERFACE_NAME IQuery
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define IQueryInclusiveMethods     \
+    IDeviceObjectInclusiveMethods; \
+    IQueryMethods Query
 
 // clang-format off
 
@@ -221,15 +224,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-// clang-format on
-
-struct IQueryVtbl
-{
-    struct IObjectMethods       Object;
-    struct IDeviceObjectMethods DeviceObject;
-    struct IQueryMethods        Query;
-};
 
 // clang-format off
 

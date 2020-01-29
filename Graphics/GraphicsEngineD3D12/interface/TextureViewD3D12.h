@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_TextureViewD3D12 =
 #define DILIGENT_INTERFACE_NAME ITextureViewD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
+#define ITextureViewD3D12InclusiveMethods \
+    ITextureViewInclusiveMethods;         \
+    ITextureViewD3D12Methods TextureViewD3D12
+
 /// Exposes Direct3D12-specific functionality of a texture view object.
 DILIGENT_BEGIN_INTERFACE(ITextureViewD3D12, ITextureView)
 {
@@ -52,14 +56,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-struct ITextureViewD3D12Vtbl
-{
-    struct IObjectMethods           Object;
-    struct IDeviceObjectMethods     DeviceObject;
-    struct ITextureViewMethods      TextureView;
-    struct ITextureViewD3D12Methods TextureViewD3D12;
-};
 
 #    define ITextureViewD3D12_GetCPUDescriptorHandle(This) CALL_IFACE_METHOD(TextureViewD3D12, GetCPUDescriptorHandle, This)
 
