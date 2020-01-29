@@ -40,7 +40,7 @@ class DefaultShaderSourceStreamFactory final : public ObjectBase<IShaderSourceIn
 public:
     DefaultShaderSourceStreamFactory(IReferenceCounters* pRefCounters, const Char* SearchDirectories);
 
-    virtual void CreateInputStream(const Char* Name, IFileStream** ppStream) override final;
+    virtual void DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final;
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderSourceInputStreamFactory, ObjectBase<IShaderSourceInputStreamFactory>);
 

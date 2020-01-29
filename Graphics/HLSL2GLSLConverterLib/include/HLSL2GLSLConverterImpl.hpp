@@ -304,12 +304,12 @@ private:
                        const char* SamplerSuffix,
                        bool        UseInOutLocationQualifiers);
 
-        virtual void Convert(const Char* EntryPoint,
-                             SHADER_TYPE ShaderType,
-                             bool        IncludeDefintions,
-                             const char* SamplerSuffix,
-                             bool        UseInOutLocationQualifiers,
-                             IDataBlob** ppGLSLSource) override final;
+        virtual void DILIGENT_CALL_TYPE Convert(const Char* EntryPoint,
+                                                SHADER_TYPE ShaderType,
+                                                bool        IncludeDefintions,
+                                                const char* SamplerSuffix,
+                                                bool        UseInOutLocationQualifiers,
+                                                IDataBlob** ppGLSLSource) override final;
 
         IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_HLSL2GLSLConversionStream, TBase)
 

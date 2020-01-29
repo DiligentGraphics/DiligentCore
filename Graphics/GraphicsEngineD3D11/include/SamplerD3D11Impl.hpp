@@ -51,10 +51,10 @@ public:
                      const SamplerDesc&           SamplerDesc);
     ~SamplerD3D11Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISamplerD3D11::ISamplerD3D11() method.
-    virtual ID3D11SamplerState* GetD3D11SamplerState() override final { return m_pd3dSampler; }
+    virtual ID3D11SamplerState* DILIGENT_CALL_TYPE GetD3D11SamplerState() override final { return m_pd3dSampler; }
 
 private:
     /// D3D11 sampler

@@ -138,7 +138,7 @@ public:
         }
     }
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override
     {
         if (ppInterface == nullptr)
             return;
@@ -155,7 +155,7 @@ public:
         }
     }
 
-    virtual void Present(Uint32 SyncInterval = 1) override
+    virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval = 1) override
     {
         m_pContext->SetRenderTargets(0, nullptr, nullptr, RESOURCE_STATE_TRANSITION_MODE_NONE);
 
@@ -176,22 +176,22 @@ public:
         m_pContext->UnmapTextureSubresource(m_pStagingTexture, 0, 0);
     }
 
-    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final
+    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight) override final
     {
         UNEXPECTED("Resizing testing swap chains is not supported");
     }
 
-    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final
+    virtual void DILIGENT_CALL_TYPE SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final
     {
         UNEXPECTED("Testing swap chain can't go into full screen mode");
     }
 
-    virtual void SetWindowedMode() override final
+    virtual void DILIGENT_CALL_TYPE SetWindowedMode() override final
     {
         UNEXPECTED("Testing swap chain can't switch between windowed and full screen modes");
     }
 
-    virtual ITextureView* GetCurrentBackBufferRTV() override final
+    virtual ITextureView* DILIGENT_CALL_TYPE GetCurrentBackBufferRTV() override final
     {
         return m_pRTV;
     }
@@ -201,12 +201,12 @@ public:
         return m_pUAV;
     }
 
-    virtual ITextureView* GetDepthBufferDSV() override final
+    virtual ITextureView* DILIGENT_CALL_TYPE GetDepthBufferDSV() override final
     {
         return m_pDSV;
     }
 
-    virtual const SwapChainDesc& GetDesc() const override final
+    virtual const SwapChainDesc& DILIGENT_CALL_TYPE GetDesc() const override final
     {
         return m_SwapChainDesc;
     }

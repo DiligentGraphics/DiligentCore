@@ -48,20 +48,20 @@ public:
                     const Char*         Path,
                     EFileAccessMode     Access = EFileAccessMode::Read);
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     /// Reads data from the stream
-    virtual void ReadBlob(IDataBlob* pData) override;
+    virtual void DILIGENT_CALL_TYPE ReadBlob(IDataBlob* pData) override;
 
     /// Reads data from the stream
-    virtual bool Read(void* Data, size_t Size) override;
+    virtual bool DILIGENT_CALL_TYPE Read(void* Data, size_t Size) override;
 
     /// Writes data to the stream
-    virtual bool Write(const void* Data, size_t Size) override;
+    virtual bool DILIGENT_CALL_TYPE Write(const void* Data, size_t Size) override;
 
-    virtual size_t GetSize() override;
+    virtual size_t DILIGENT_CALL_TYPE GetSize() override;
 
-    virtual bool IsValid() override;
+    virtual bool DILIGENT_CALL_TYPE IsValid() override;
 
 private:
     FileWrapper m_FileWrpr;

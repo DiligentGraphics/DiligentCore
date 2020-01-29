@@ -125,17 +125,17 @@ public:
             VERIFY_EXPR(StaticSamplerIdx < 0 || ResourceAttribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV);
         }
 
-        virtual SHADER_RESOURCE_VARIABLE_TYPE GetType() const override final
+        virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
         {
             return m_VariableType;
         }
 
-        virtual void GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
+        virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
         {
             ResourceDesc = m_Attribs.GetResourceDesc();
         }
 
-        virtual Uint32 GetIndex() const override final
+        virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
         {
             return m_ParentResLayout.GetVariableIndex(*this);
         }
@@ -157,19 +157,21 @@ public:
         // Non-virtual function
         void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
         {
             BindResource(pObject, 0);
         }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        virtual bool IsBound(Uint32 ArrayIndex) const override final
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.ArraySize);
             return m_ParentResLayout.m_pResourceCache->IsUBBound(m_Attribs.Binding + ArrayIndex);
@@ -189,19 +191,21 @@ public:
         // Non-virtual function
         void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
         {
             BindResource(pObject, 0);
         }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        virtual bool IsBound(Uint32 ArrayIndex) const override final
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.ArraySize);
             return m_ParentResLayout.m_pResourceCache->IsSamplerBound(m_Attribs.Binding + ArrayIndex, m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV);
@@ -220,19 +224,21 @@ public:
         // Provide non-virtual function
         void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
         {
             BindResource(pObject, 0);
         }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        virtual bool IsBound(Uint32 ArrayIndex) const override final
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.ArraySize);
             return m_ParentResLayout.m_pResourceCache->IsImageBound(m_Attribs.Binding + ArrayIndex, m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_UAV);
@@ -251,19 +257,21 @@ public:
         // Non-virtual function
         void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
         {
             BindResource(pObject, 0);
         }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.ArraySize, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        virtual bool IsBound(Uint32 ArrayIndex) const override final
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.ArraySize);
             return m_ParentResLayout.m_pResourceCache->IsSSBOBound(m_Attribs.Binding + ArrayIndex);

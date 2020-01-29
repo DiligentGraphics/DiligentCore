@@ -49,10 +49,10 @@ public:
 
 
     /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in OpenGL backend.
-    virtual ITextureView* GetCurrentBackBufferRTV() override final { return m_pRenderTargetView; }
+    virtual ITextureView* DILIGENT_CALL_TYPE GetCurrentBackBufferRTV() override final { return m_pRenderTargetView; }
 
     /// Implementation of ISwapChain::GetDepthBufferDSV() in OpenGL backend.
-    virtual ITextureView* GetDepthBufferDSV() override final { return m_pDepthStencilView; }
+    virtual ITextureView* DILIGENT_CALL_TYPE GetDepthBufferDSV() override final { return m_pDepthStencilView; }
 
 protected:
     bool Resize(Uint32 NewWidth, Uint32 NewHeight, Int32 /*To be different from virtual function*/)

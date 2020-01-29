@@ -49,49 +49,64 @@ public:
                           const EngineD3D11CreateInfo& EngineAttribs,
                           ID3D11Device*                pd3d11Device,
                           Uint32                       NumDeferredContexts);
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IRenderDevice::CreateBuffer() in Direct3D11 backend.
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
+                                                 const BufferData* pBuffData,
+                                                 IBuffer**         ppBuffer) override final;
 
     /// Implementation of IRenderDevice::CreateShader() in Direct3D11 backend.
-    virtual void CreateShader(const ShaderCreateInfo& ShaderCI, IShader** ppShader) override final;
+    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo& ShaderCI,
+                                                 IShader**               ppShader) override final;
 
     /// Implementation of IRenderDevice::CreateTexture() in Direct3D11 backend.
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture) override final;
+    virtual void DILIGENT_CALL_TYPE CreateTexture(const TextureDesc& TexDesc,
+                                                  const TextureData* pData,
+                                                  ITexture**         ppTexture) override final;
 
     /// Implementation of IRenderDevice::CreateSampler() in Direct3D11 backend.
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler) override final;
+    virtual void DILIGENT_CALL_TYPE CreateSampler(const SamplerDesc& SamplerDesc,
+                                                  ISampler**         ppSampler) override final;
 
     /// Implementation of IRenderDevice::CreatePipelineState() in Direct3D11 backend.
-    virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState) override final;
+    virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateDesc& PipelineDesc,
+                                                        IPipelineState**         ppPipelineState) override final;
 
     /// Implementation of IRenderDevice::CreateFence() in Direct3D11 backend.
-    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
+    virtual void DILIGENT_CALL_TYPE CreateFence(const FenceDesc& Desc,
+                                                IFence**         ppFence) override final;
 
     /// Implementation of IRenderDevice::CreateQuery() in Direct3D11 backend.
-    virtual void CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
+    virtual void DILIGENT_CALL_TYPE CreateQuery(const QueryDesc& Desc,
+                                                IQuery**         ppQuery) override final;
 
     /// Implementation of IRenderDeviceD3D11::GetD3D11Device() in Direct3D11 backend.
-    ID3D11Device* GetD3D11Device() override final { return m_pd3d11Device; }
+    ID3D11Device* DILIGENT_CALL_TYPE GetD3D11Device() override final { return m_pd3d11Device; }
 
     /// Implementation of IRenderDeviceD3D11::CreateBufferFromD3DResource() in Direct3D11 backend.
-    virtual void CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE CreateBufferFromD3DResource(ID3D11Buffer* pd3d11Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer) override final;
 
     /// Implementation of IRenderDeviceD3D11::CreateTextureFromD3DResource() for 1D textures in Direct3D11 backend.
-    virtual void CreateTexture1DFromD3DResource(ID3D11Texture1D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+    virtual void DILIGENT_CALL_TYPE CreateTexture1DFromD3DResource(ID3D11Texture1D* pd3d11Texture,
+                                                                   RESOURCE_STATE   InitialState,
+                                                                   ITexture**       ppTexture) override final;
 
     /// Implementation of IRenderDeviceD3D11::CreateTextureFromD3DResource() for 2D textures in Direct3D11 backend.
-    virtual void CreateTexture2DFromD3DResource(ID3D11Texture2D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+    virtual void DILIGENT_CALL_TYPE CreateTexture2DFromD3DResource(ID3D11Texture2D* pd3d11Texture,
+                                                                   RESOURCE_STATE   InitialState,
+                                                                   ITexture**       ppTexture) override final;
 
     /// Implementation of IRenderDeviceD3D11::CreateTextureFromD3DResource() for 3D textures in Direct3D11 backend.
-    virtual void CreateTexture3DFromD3DResource(ID3D11Texture3D* pd3d11Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+    virtual void DILIGENT_CALL_TYPE CreateTexture3DFromD3DResource(ID3D11Texture3D* pd3d11Texture,
+                                                                   RESOURCE_STATE   InitialState,
+                                                                   ITexture**       ppTexture) override final;
 
     /// Implementation of IRenderDevice::ReleaseStaleResources() in Direct3D11 backend.
-    virtual void ReleaseStaleResources(bool ForceRelease = false) override final {}
+    virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final {}
 
     /// Implementation of IRenderDevice::IdleGPU() in Direct3D11 backend.
-    virtual void IdleGPU() override final;
+    virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
     size_t GetCommandQueueCount() const { return 1; }
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }

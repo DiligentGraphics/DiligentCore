@@ -203,7 +203,7 @@ DILIGENT_BEGIN_INTERFACE(ITextureView, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the texture view description used to create the object
-    virtual const TextureViewDesc& GetDesc() const override = 0;
+    virtual const TextureViewDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
     /// Sets the texture sampler to use for filtering operations

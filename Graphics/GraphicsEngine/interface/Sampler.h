@@ -193,7 +193,7 @@ DILIGENT_BEGIN_INTERFACE(ISampler, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the sampler description used to create the object
-    virtual const SamplerDesc& GetDesc() const override = 0;
+    virtual const SamplerDesc& METHOD(GetDesc)() const override = 0;
 #endif
 };
 DILIGENT_END_INTERFACE

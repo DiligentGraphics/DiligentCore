@@ -66,7 +66,7 @@ public:
     ~BufferGLImpl();
 
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     void UpdateData(GLContextState& CtxState, Uint32 Offset, Uint32 Size, const void* pData);
     void CopyData(GLContextState& CtxState, BufferGLImpl& SrcBufferGL, Uint32 SrcOffset, Uint32 DstOffset, Uint32 Size);
@@ -79,10 +79,13 @@ public:
     const GLObjectWrappers::GLBufferObj& GetGLHandle() { return m_GlBuffer; }
 
     /// Implementation of IBufferGL::GetGLBufferHandle().
-    virtual GLuint GetGLBufferHandle() override final { return GetGLHandle(); }
+    virtual GLuint DILIGENT_CALL_TYPE GetGLBufferHandle() override final { return GetGLHandle(); }
 
     /// Implementation of IBuffer::GetNativeHandle() in OpenGL backend.
-    virtual void* GetNativeHandle() override final { return reinterpret_cast<void*>(static_cast<size_t>(GetGLBufferHandle())); }
+    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
+    {
+        return reinterpret_cast<void*>(static_cast<size_t>(GetGLBufferHandle()));
+    }
 
 private:
     virtual void CreateViewInternal(const struct BufferViewDesc& ViewDesc, IBufferView** ppView, bool bIsDefaultView) override;

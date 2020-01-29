@@ -97,14 +97,14 @@ public:
 
     /// Base implementation of IDeviceContext::SetVertexBuffers(); validates parameters and
     /// caches references to the buffers.
-    inline virtual void SetVertexBuffers(Uint32                         StartSlot,
-                                         Uint32                         NumBuffersSet,
-                                         IBuffer**                      ppBuffers,
-                                         Uint32*                        pOffsets,
-                                         RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
-                                         SET_VERTEX_BUFFERS_FLAGS       Flags) override = 0;
+    inline virtual void DILIGENT_CALL_TYPE SetVertexBuffers(Uint32                         StartSlot,
+                                                            Uint32                         NumBuffersSet,
+                                                            IBuffer**                      ppBuffers,
+                                                            Uint32*                        pOffsets,
+                                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
+                                                            SET_VERTEX_BUFFERS_FLAGS       Flags) override = 0;
 
-    inline virtual void InvalidateState() override = 0;
+    inline virtual void DILIGENT_CALL_TYPE InvalidateState() override = 0;
 
     /// Base implementation of IDeviceContext::CommitShaderResources(); validates parameters.
     inline bool CommitShaderResources(IShaderResourceBinding*        pShaderResourceBinding,
@@ -112,7 +112,7 @@ public:
                                       int);
 
     /// Base implementation of IDeviceContext::SetIndexBuffer(); caches the strong reference to the index buffer
-    inline virtual void SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
+    inline virtual void DILIGENT_CALL_TYPE SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOffset, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
 
     /// Caches the viewports
     inline void SetViewports(Uint32 NumViewports, const Viewport* pViewports, Uint32& RTWidth, Uint32& RTHeight);
@@ -125,52 +125,61 @@ public:
     inline bool SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil);
 
     /// Base implementation of IDeviceContext::UpdateBuffer(); validates input parameters.
-    virtual void UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const void* pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
+    virtual void DILIGENT_CALL_TYPE UpdateBuffer(IBuffer*                       pBuffer,
+                                                 Uint32                         Offset,
+                                                 Uint32                         Size,
+                                                 const void*                    pData,
+                                                 RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override = 0;
 
     /// Base implementation of IDeviceContext::CopyBuffer(); validates input parameters.
-    virtual void CopyBuffer(IBuffer*                       pSrcBuffer,
-                            Uint32                         SrcOffset,
-                            RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
-                            IBuffer*                       pDstBuffer,
-                            Uint32                         DstOffset,
-                            Uint32                         Size,
-                            RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) override = 0;
+    virtual void DILIGENT_CALL_TYPE CopyBuffer(IBuffer*                       pSrcBuffer,
+                                               Uint32                         SrcOffset,
+                                               RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                                               IBuffer*                       pDstBuffer,
+                                               Uint32                         DstOffset,
+                                               Uint32                         Size,
+                                               RESOURCE_STATE_TRANSITION_MODE DstBufferTransitionMode) override = 0;
 
     /// Base implementation of IDeviceContext::MapBuffer(); validates input parameters.
-    virtual void MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAGS MapFlags, PVoid& pMappedData) override = 0;
+    virtual void DILIGENT_CALL_TYPE MapBuffer(IBuffer*  pBuffer,
+                                              MAP_TYPE  MapType,
+                                              MAP_FLAGS MapFlags,
+                                              PVoid&    pMappedData) override = 0;
 
     /// Base implementation of IDeviceContext::UnmapBuffer()
-    virtual void UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType) override = 0;
+    virtual void DILIGENT_CALL_TYPE UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType) override = 0;
 
     /// Base implementaiton of IDeviceContext::UpdateData(); validates input parameters
-    virtual void UpdateTexture(ITexture*                      pTexture,
-                               Uint32                         MipLevel,
-                               Uint32                         Slice,
-                               const Box&                     DstBox,
-                               const TextureSubResData&       SubresData,
-                               RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
-                               RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode) override = 0;
+    virtual void DILIGENT_CALL_TYPE UpdateTexture(ITexture*                      pTexture,
+                                                  Uint32                         MipLevel,
+                                                  Uint32                         Slice,
+                                                  const Box&                     DstBox,
+                                                  const TextureSubResData&       SubresData,
+                                                  RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode,
+                                                  RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode) override = 0;
 
     /// Base implementaiton of IDeviceContext::CopyTexture(); validates input parameters
-    virtual void CopyTexture(const CopyTextureAttribs& CopyAttribs) override = 0;
+    virtual void DILIGENT_CALL_TYPE CopyTexture(const CopyTextureAttribs& CopyAttribs) override = 0;
 
     /// Base implementaiton of IDeviceContext::MapTextureSubresource()
-    virtual void MapTextureSubresource(ITexture*                 pTexture,
-                                       Uint32                    MipLevel,
-                                       Uint32                    ArraySlice,
-                                       MAP_TYPE                  MapType,
-                                       MAP_FLAGS                 MapFlags,
-                                       const Box*                pMapRegion,
-                                       MappedTextureSubresource& MappedData) override = 0;
+    virtual void DILIGENT_CALL_TYPE MapTextureSubresource(ITexture*                 pTexture,
+                                                          Uint32                    MipLevel,
+                                                          Uint32                    ArraySlice,
+                                                          MAP_TYPE                  MapType,
+                                                          MAP_FLAGS                 MapFlags,
+                                                          const Box*                pMapRegion,
+                                                          MappedTextureSubresource& MappedData) override = 0;
 
     /// Base implementaiton of IDeviceContext::UnmapTextureSubresource()
-    virtual void UnmapTextureSubresource(ITexture* pTexture, Uint32 MipLevel, Uint32 ArraySlice) override = 0;
+    virtual void DILIGENT_CALL_TYPE UnmapTextureSubresource(ITexture* pTexture,
+                                                            Uint32    MipLevel,
+                                                            Uint32    ArraySlice) override = 0;
 
-    virtual void GenerateMips(ITextureView* pTexView) override = 0;
+    virtual void DILIGENT_CALL_TYPE GenerateMips(ITextureView* pTexView) override = 0;
 
-    virtual void ResolveTextureSubresource(ITexture*                               pSrcTexture,
-                                           ITexture*                               pDstTexture,
-                                           const ResolveTextureSubresourceAttribs& ResolveAttribs) override = 0;
+    virtual void DILIGENT_CALL_TYPE ResolveTextureSubresource(ITexture*                               pSrcTexture,
+                                                              ITexture*                               pDstTexture,
+                                                              const ResolveTextureSubresourceAttribs& ResolveAttribs) override = 0;
 
     /// Returns currently bound pipeline state and blend factors
     inline void GetPipelineState(IPipelineState** ppPSO, float* BlendFactors, Uint32& StencilRef);

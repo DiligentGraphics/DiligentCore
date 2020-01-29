@@ -58,22 +58,22 @@ public:
         TBase{IID_EngineFactoryD3D11}
     {}
 
-    void CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI,
-                                      IRenderDevice**              ppDevice,
-                                      IDeviceContext**             ppContexts) override final;
+    virtual void DILIGENT_CALL_TYPE CreateDeviceAndContextsD3D11(const EngineD3D11CreateInfo& EngineCI,
+                                                                 IRenderDevice**              ppDevice,
+                                                                 IDeviceContext**             ppContexts) override final;
 
-    void CreateSwapChainD3D11(IRenderDevice*            pDevice,
-                              IDeviceContext*           pImmediateContext,
-                              const SwapChainDesc&      SCDesc,
-                              const FullScreenModeDesc& FSDesc,
-                              void*                     pNativeWndHandle,
-                              ISwapChain**              ppSwapChain) override final;
+    virtual void DILIGENT_CALL_TYPE CreateSwapChainD3D11(IRenderDevice*            pDevice,
+                                                         IDeviceContext*           pImmediateContext,
+                                                         const SwapChainDesc&      SCDesc,
+                                                         const FullScreenModeDesc& FSDesc,
+                                                         void*                     pNativeWndHandle,
+                                                         ISwapChain**              ppSwapChain) override final;
 
-    void AttachToD3D11Device(void*                        pd3d11NativeDevice,
-                             void*                        pd3d11ImmediateContext,
-                             const EngineD3D11CreateInfo& EngineCI,
-                             IRenderDevice**              ppDevice,
-                             IDeviceContext**             ppContexts) override final;
+    virtual void DILIGENT_CALL_TYPE AttachToD3D11Device(void*                        pd3d11NativeDevice,
+                                                        void*                        pd3d11ImmediateContext,
+                                                        const EngineD3D11CreateInfo& EngineCI,
+                                                        IRenderDevice**              ppDevice,
+                                                        IDeviceContext**             ppContexts) override final;
 };
 
 

@@ -62,7 +62,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderResourceBinding, TObjectBase)
 
     /// Implementation of IShaderResourceBinding::GetPipelineState().
-    virtual IPipelineState* GetPipelineState() override final
+    virtual IPipelineState* DILIGENT_CALL_TYPE GetPipelineState() override final
     {
         return m_pPSO;
     }

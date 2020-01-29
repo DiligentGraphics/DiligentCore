@@ -65,48 +65,76 @@ public:
                        const EngineGLCreateInfo& InitAttribs,
                        const SwapChainDesc*      pSCDesc = nullptr);
     ~RenderDeviceGLImpl();
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     /// Implementation of IRenderDevice::CreateBuffer() in OpenGL backend.
-    void         CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer, bool bIsDeviceInternal);
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* BuffData, IBuffer** ppBuffer) override final;
+    void                            CreateBuffer(const BufferDesc& BuffDesc,
+                                                 const BufferData* pBuffData,
+                                                 IBuffer**         ppBuffer,
+                                                 bool              bIsDeviceInternal);
+    virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
+                                                 const BufferData* BuffData,
+                                                 IBuffer**         ppBuffer) override final;
 
     /// Implementation of IRenderDevice::CreateShader() in OpenGL backend.
-    void         CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader, bool bIsDeviceInternal);
-    virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader) override final;
+    void                            CreateShader(const ShaderCreateInfo& ShaderCreateInfo,
+                                                 IShader**               ppShader,
+                                                 bool                    bIsDeviceInternal);
+    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo& ShaderCreateInfo,
+                                                 IShader**               ppShader) override final;
 
     /// Implementation of IRenderDevice::CreateTexture() in OpenGL backend.
-    void         CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture, bool bIsDeviceInternal);
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* Data, ITexture** ppTexture) override final;
+    void                            CreateTexture(const TextureDesc& TexDesc,
+                                                  const TextureData* pData,
+                                                  ITexture**         ppTexture,
+                                                  bool               bIsDeviceInternal);
+    virtual void DILIGENT_CALL_TYPE CreateTexture(const TextureDesc& TexDesc,
+                                                  const TextureData* Data,
+                                                  ITexture**         ppTexture) override final;
 
     /// Implementation of IRenderDevice::CreateSampler() in OpenGL backend.
-    void         CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler, bool bIsDeviceInternal);
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler) override final;
+    void                            CreateSampler(const SamplerDesc& SamplerDesc,
+                                                  ISampler**         ppSampler,
+                                                  bool               bIsDeviceInternal);
+    virtual void DILIGENT_CALL_TYPE CreateSampler(const SamplerDesc& SamplerDesc,
+                                                  ISampler**         ppSampler) override final;
 
     /// Implementation of IRenderDevice::CreatePipelineState() in OpenGL backend.
-    void         CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState, bool bIsDeviceInternal);
-    virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState) override final;
+    void                            CreatePipelineState(const PipelineStateDesc& PipelineDesc,
+                                                        IPipelineState**         ppPipelineState,
+                                                        bool                     bIsDeviceInternal);
+    virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateDesc& PipelineDesc,
+                                                        IPipelineState**         ppPipelineState) override final;
 
     /// Implementation of IRenderDevice::CreateFence() in OpenGL backend.
-    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
+    virtual void DILIGENT_CALL_TYPE CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
 
     /// Implementation of IRenderDevice::CreateQuery() in OpenGL backend.
-    virtual void CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
+    virtual void DILIGENT_CALL_TYPE CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
 
     /// Implementation of IRenderDeviceGL::CreateTextureFromGLHandle().
-    virtual void CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+    virtual void DILIGENT_CALL_TYPE CreateTextureFromGLHandle(Uint32             GLHandle,
+                                                              const TextureDesc& TexDesc,
+                                                              RESOURCE_STATE     InitialState,
+                                                              ITexture**         ppTexture) override final;
 
     /// Implementation of IRenderDeviceGL::CreateBufferFromGLHandle().
-    virtual void CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE CreateBufferFromGLHandle(Uint32            GLHandle,
+                                                             const BufferDesc& BuffDesc,
+                                                             RESOURCE_STATE    InitialState,
+                                                             IBuffer**         ppBuffer) override final;
 
     /// Implementation of IRenderDeviceGL::CreateDummyTexture().
-    virtual void CreateDummyTexture(const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+    virtual void DILIGENT_CALL_TYPE CreateDummyTexture(const TextureDesc& TexDesc,
+                                                       RESOURCE_STATE     InitialState,
+                                                       ITexture**         ppTexture) override final;
 
     /// Implementation of IRenderDevice::ReleaseStaleResources() in OpenGL backend.
-    virtual void ReleaseStaleResources(bool ForceRelease = false) override final {}
+    virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final {}
 
     /// Implementation of IRenderDevice::IdleGPU() in OpenGL backend.
-    virtual void IdleGPU() override final;
+    virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
     const GPUInfo& GetGPUInfo() { return m_GPUInfo; }
 

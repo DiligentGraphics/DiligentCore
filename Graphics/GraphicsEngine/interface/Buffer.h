@@ -187,7 +187,7 @@ DILIGENT_BEGIN_INTERFACE(IBuffer, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the buffer description used to create the object
-    virtual const BufferDesc& GetDesc() const override = 0;
+    virtual const BufferDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
     /// Creates a new buffer view

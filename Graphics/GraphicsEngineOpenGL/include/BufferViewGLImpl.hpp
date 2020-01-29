@@ -51,7 +51,7 @@ public:
                      bool                  bIsDefaultView);
 
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     const GLObjectWrappers::GLTextureObj& GetTexBufferHandle() { return m_GLTexBuffer; }
 

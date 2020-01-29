@@ -107,7 +107,7 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Query, TDeviceObjectBase)
 
-    virtual void Invalidate() override
+    virtual void DILIGENT_CALL_TYPE Invalidate() override
     {
         m_State = QueryState::Inactive;
     }

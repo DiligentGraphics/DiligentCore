@@ -344,7 +344,7 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
     {
     }
 
-    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
     {
         if (ppInterface == nullptr)
             return;
@@ -357,17 +357,17 @@ struct ShaderVariableBase : public ResourceVariableBaseInterface
         }
     }
 
-    virtual Atomics::Long AddRef() override final
+    virtual Atomics::Long DILIGENT_CALL_TYPE AddRef() override final
     {
         return m_ParentResLayout.GetOwner().AddRef();
     }
 
-    virtual Atomics::Long Release() override final
+    virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
     {
         return m_ParentResLayout.GetOwner().Release();
     }
 
-    virtual IReferenceCounters* GetReferenceCounters() const override final
+    virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const override final
     {
         return m_ParentResLayout.GetOwner().GetReferenceCounters();
     }

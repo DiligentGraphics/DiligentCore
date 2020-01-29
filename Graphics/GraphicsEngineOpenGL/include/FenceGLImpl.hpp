@@ -56,10 +56,10 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceGL, TFenceBase);
 
     /// Implementation of IFence::GetCompletedValue() in OpenGL backend.
-    virtual Uint64 GetCompletedValue() override final;
+    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
 
     /// Implementation of IFence::Reset() in OpenGL backend.
-    virtual void Reset(Uint64 Value) override final;
+    virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
 
     void AddPendingFence(GLObjectWrappers::GLSyncObj&& Fence, Uint64 Value)
     {

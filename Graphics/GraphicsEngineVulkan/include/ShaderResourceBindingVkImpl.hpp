@@ -52,22 +52,22 @@ public:
     ShaderResourceBindingVkImpl(IReferenceCounters* pRefCounters, class PipelineStateVkImpl* pPSO, bool IsPSOInternal);
     ~ShaderResourceBindingVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShaderResourceBinding::BindResources() in Vulkan backend.
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override final;
+    virtual void DILIGENT_CALL_TYPE BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableByName() in Vulkan backend.
-    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final;
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableCount() in Vulkan backend.
-    virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
+    virtual Uint32 DILIGENT_CALL_TYPE GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableByIndex() in Vulkan backend.
-    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
     /// Implementation of IShaderResourceBinding::InitializeStaticResources() in Vulkan backend.
-    virtual void InitializeStaticResources(const IPipelineState* pPipelineState) override final;
+    virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override final;
 
     ShaderResourceCacheVk& GetResourceCache() { return m_ShaderResourceCache; }
 

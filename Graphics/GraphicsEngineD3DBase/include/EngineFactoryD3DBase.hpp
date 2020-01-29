@@ -47,9 +47,9 @@ public:
     {}
 
 
-    virtual void EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                   Uint32&                NumAdapters,
-                                   AdapterAttribs*        Adapters) override
+    virtual void DILIGENT_CALL_TYPE EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                                      Uint32&                NumAdapters,
+                                                      AdapterAttribs*        Adapters) override
     {
         auto DXGIAdapters = FindCompatibleAdapters(MinFeatureLevel);
 
@@ -86,12 +86,12 @@ public:
     }
 
 
-    virtual void EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                       Uint32                 AdapterId,
-                                       Uint32                 OutputId,
-                                       TEXTURE_FORMAT         Format,
-                                       Uint32&                NumDisplayModes,
-                                       DisplayModeAttribs*    DisplayModes) override
+    virtual void DILIGENT_CALL_TYPE EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                                          Uint32                 AdapterId,
+                                                          Uint32                 OutputId,
+                                                          TEXTURE_FORMAT         Format,
+                                                          Uint32&                NumDisplayModes,
+                                                          DisplayModeAttribs*    DisplayModes) override
     {
         auto DXGIAdapters = FindCompatibleAdapters(MinFeatureLevel);
         if (AdapterId >= DXGIAdapters.size())

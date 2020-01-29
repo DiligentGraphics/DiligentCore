@@ -63,7 +63,7 @@ DILIGENT_BEGIN_INTERFACE(IFence, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the fence description used to create the object
-    virtual const FenceDesc& GetDesc() const override = 0;
+    virtual const FenceDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
     /// Returns the last completed value signaled by the GPU

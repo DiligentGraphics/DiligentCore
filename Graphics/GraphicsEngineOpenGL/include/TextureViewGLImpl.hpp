@@ -53,7 +53,7 @@ public:
                       bool                          bIsDefaultView);
     ~TextureViewGLImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     const GLObjectWrappers::GLTextureObj& GetHandle();
 

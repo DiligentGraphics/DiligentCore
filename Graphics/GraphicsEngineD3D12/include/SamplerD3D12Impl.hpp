@@ -52,10 +52,10 @@ public:
                      const SamplerDesc&     SamplerDesc);
     ~SamplerD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISamplerD3D12::GetCPUDescriptorHandle().
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() override { return m_Descriptor.GetCpuHandle(); }
+    virtual D3D12_CPU_DESCRIPTOR_HANDLE DILIGENT_CALL_TYPE GetCPUDescriptorHandle() override { return m_Descriptor.GetCpuHandle(); }
 
 private:
     friend class ShaderD3D12Impl;

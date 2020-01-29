@@ -109,22 +109,30 @@ public:
 
     ~ResourceMappingImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IResourceMapping::AddResource()
-    virtual void AddResource(const Char* Name, IDeviceObject* pObject, bool bIsUnique) override final;
+    virtual void DILIGENT_CALL_TYPE AddResource(const Char*    Name,
+                                                IDeviceObject* pObject,
+                                                bool           bIsUnique) override final;
 
     /// Implementation of IResourceMapping::AddResourceArray()
-    virtual void AddResourceArray(const Char* Name, Uint32 StartIndex, IDeviceObject* const* ppObjects, Uint32 NumElements, bool bIsUnique) override final;
+    virtual void DILIGENT_CALL_TYPE AddResourceArray(const Char*           Name,
+                                                     Uint32                StartIndex,
+                                                     IDeviceObject* const* ppObjects,
+                                                     Uint32                NumElements,
+                                                     bool                  bIsUnique) override final;
 
     /// Implementation of IResourceMapping::RemoveResourceByName()
-    virtual void RemoveResourceByName(const Char* Name, Uint32 ArrayIndex) override final;
+    virtual void DILIGENT_CALL_TYPE RemoveResourceByName(const Char* Name, Uint32 ArrayIndex) override final;
 
     /// Implementation of IResourceMapping::GetResource()
-    virtual void GetResource(const Char* Name, IDeviceObject** ppResource, Uint32 ArrayIndex) override final;
+    virtual void DILIGENT_CALL_TYPE GetResource(const Char*     Name,
+                                                IDeviceObject** ppResource,
+                                                Uint32          ArrayIndex) override final;
 
     /// Returns number of resources in the resource mapping.
-    virtual size_t GetSize() override final;
+    virtual size_t DILIGENT_CALL_TYPE GetSize() override final;
 
 private:
     ThreadingTools::LockHelper Lock();

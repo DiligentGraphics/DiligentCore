@@ -76,7 +76,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BufferView, TDeviceObjectBase)
 
     /// Implementation of IBufferView::GetBuffer()
-    virtual IBuffer* GetBuffer() override final
+    virtual IBuffer* DILIGENT_CALL_TYPE GetBuffer() override final
     {
         return m_pBuffer;
     }

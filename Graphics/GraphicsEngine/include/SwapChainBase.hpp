@@ -84,7 +84,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_SwapChain, TObjectBase)
 
     /// Implementation of ISwapChain::GetDesc()
-    virtual const SwapChainDesc& GetDesc() const override final
+    virtual const SwapChainDesc& DILIGENT_CALL_TYPE GetDesc() const override final
     {
         return m_SwapChainDesc;
     }

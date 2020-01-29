@@ -121,10 +121,10 @@ public:
 
     /// Implementation of IBuffer::CreateView(); calls CreateViewInternal() virtual function
     /// that creates buffer view for the specific engine implementation.
-    virtual void CreateView(const struct BufferViewDesc& ViewDesc, IBufferView** ppView) override;
+    virtual void DILIGENT_CALL_TYPE CreateView(const struct BufferViewDesc& ViewDesc, IBufferView** ppView) override;
 
     /// Implementation of IBuffer::GetDefaultView().
-    virtual IBufferView* GetDefaultView(BUFFER_VIEW_TYPE ViewType) override;
+    virtual IBufferView* DILIGENT_CALL_TYPE GetDefaultView(BUFFER_VIEW_TYPE ViewType) override;
 
     /// Creates default buffer views.
 
@@ -135,12 +135,12 @@ public:
     /// The function calls CreateViewInternal().
     void CreateDefaultViews();
 
-    virtual void SetState(RESOURCE_STATE State) override final
+    virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
     {
         this->m_State = State;
     }
 
-    virtual RESOURCE_STATE GetState() const override final
+    virtual RESOURCE_STATE DILIGENT_CALL_TYPE GetState() const override final
     {
         return this->m_State;
     }

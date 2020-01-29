@@ -78,17 +78,17 @@ public:
         TBase{IID_EngineFactoryOpenGL}
     {}
 
-    virtual void CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
-                                            IRenderDevice**           ppDevice,
-                                            IDeviceContext**          ppImmediateContext,
-                                            const SwapChainDesc&      SCDesc,
-                                            ISwapChain**              ppSwapChain) override final;
+    virtual void DILIGENT_CALL_TYPE CreateDeviceAndSwapChainGL(const EngineGLCreateInfo& EngineCI,
+                                                               IRenderDevice**           ppDevice,
+                                                               IDeviceContext**          ppImmediateContext,
+                                                               const SwapChainDesc&      SCDesc,
+                                                               ISwapChain**              ppSwapChain) override final;
 
-    virtual void CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppConverter) override final;
+    virtual void DILIGENT_CALL_TYPE CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppConverter) override final;
 
-    virtual void AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
-                                         IRenderDevice**           ppDevice,
-                                         IDeviceContext**          ppImmediateContext) override final;
+    virtual void DILIGENT_CALL_TYPE AttachToActiveGLContext(const EngineGLCreateInfo& EngineCI,
+                                                            IRenderDevice**           ppDevice,
+                                                            IDeviceContext**          ppImmediateContext) override final;
 
 #if PLATFORM_ANDROID
     virtual void InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const override final;

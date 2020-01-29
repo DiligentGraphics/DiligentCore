@@ -68,23 +68,23 @@ public:
 
     ~TextureVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureVk::GetVkImage().
-    virtual VkImage GetVkImage() const override final { return m_VulkanImage; }
+    virtual VkImage DILIGENT_CALL_TYPE GetVkImage() const override final { return m_VulkanImage; }
 
     /// Implementation of ITexture::GetNativeHandle() in Vulkan backend.
-    virtual void* GetNativeHandle() override final
+    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
     {
         auto vkImage = GetVkImage();
         return reinterpret_cast<void*>(vkImage);
     }
 
     /// Implementation of ITextureVk::SetLayout().
-    void SetLayout(VkImageLayout Layout) override final;
+    virtual void DILIGENT_CALL_TYPE SetLayout(VkImageLayout Layout) override final;
 
     /// Implementation of ITextureVk::GetLayout().
-    VkImageLayout GetLayout() const override final;
+    virtual VkImageLayout DILIGENT_CALL_TYPE GetLayout() const override final;
 
     VkBuffer GetVkStagingBuffer() const
     {

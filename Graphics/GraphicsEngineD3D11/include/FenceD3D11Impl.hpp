@@ -55,10 +55,10 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceD3D11, TFenceBase);
 
     /// Implementation of IFence::GetCompletedValue() in Direct3D11 backend.
-    virtual Uint64 GetCompletedValue() override final;
+    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
 
     /// Implementation of IFence::Reset() in Direct3D11 backend.
-    virtual void Reset(Uint64 Value) override final;
+    virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
 
     void AddPendingQuery(CComPtr<ID3D11DeviceContext> pCtx, CComPtr<ID3D11Query> pQuery, Uint64 Value)
     {

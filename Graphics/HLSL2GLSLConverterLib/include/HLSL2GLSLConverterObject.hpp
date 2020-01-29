@@ -45,11 +45,11 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_HLSL2GLSLConverter, TBase)
 
-    virtual void CreateStream(const Char*                      InputFileName,
-                              IShaderSourceInputStreamFactory* pSourceStreamFactory,
-                              const Char*                      HLSLSource,
-                              size_t                           NumSymbols,
-                              IHLSL2GLSLConversionStream**     ppStream) const override;
+    virtual void DILIGENT_CALL_TYPE CreateStream(const Char*                      InputFileName,
+                                                 IShaderSourceInputStreamFactory* pSourceStreamFactory,
+                                                 const Char*                      HLSLSource,
+                                                 size_t                           NumSymbols,
+                                                 IHLSL2GLSLConversionStream**     ppStream) const override;
 };
 
 } // namespace Diligent

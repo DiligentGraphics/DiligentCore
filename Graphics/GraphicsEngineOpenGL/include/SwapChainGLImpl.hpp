@@ -47,22 +47,22 @@ public:
                     class DeviceContextGLImpl* pImmediateContextGL);
     ~SwapChainGLImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISwapChain::Present() in OpenGL backend.
-    virtual void Present(Uint32 SyncInterval) override final;
+    virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;
 
     /// Implementation of ISwapChain::Resize() in OpenGL backend.
-    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
+    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
 
     /// Implementation of ISwapChain::SetFullscreenMode() in OpenGL backend.
-    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
+    virtual void DILIGENT_CALL_TYPE SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
 
     /// Implementation of ISwapChain::SetWindowedMode() in OpenGL backend.
-    virtual void SetWindowedMode() override final;
+    virtual void DILIGENT_CALL_TYPE SetWindowedMode() override final;
 
     /// Implementation of ISwapChainGL::GetDefaultFBO().
-    virtual GLuint GetDefaultFBO() const override final { return 0; }
+    virtual GLuint DILIGENT_CALL_TYPE GetDefaultFBO() const override final { return 0; }
 };
 
 } // namespace Diligent

@@ -53,22 +53,24 @@ public:
                                    bool                          IsInternal);
     ~ShaderResourceBindingD3D11Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShaderResourceBinding::BindResources() in Direct3D11 backend.
-    virtual void BindResources(Uint32 ShaderFlags, IResourceMapping* pResMapping, Uint32 Flags) override final;
+    virtual void DILIGENT_CALL_TYPE BindResources(Uint32            ShaderFlags,
+                                                  IResourceMapping* pResMapping,
+                                                  Uint32            Flags) override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableByName() in Direct3D11 backend.
-    virtual IShaderResourceVariable* GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final;
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByName(SHADER_TYPE ShaderType, const char* Name) override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableCount() in Direct3D11 backend.
-    virtual Uint32 GetVariableCount(SHADER_TYPE ShaderType) const override final;
+    virtual Uint32 DILIGENT_CALL_TYPE GetVariableCount(SHADER_TYPE ShaderType) const override final;
 
     /// Implementation of IShaderResourceBinding::GetVariableByIndex() in Direct3D11 backend.
-    virtual IShaderResourceVariable* GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
     /// Implementation of IShaderResourceBinding::InitializeStaticResources() in Direct3D11 backend.
-    virtual void InitializeStaticResources(const IPipelineState* pPipelineState) override final;
+    virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState* pPipelineState) override final;
 
     ShaderResourceCacheD3D11& GetResourceCache(Uint32 Ind)
     {

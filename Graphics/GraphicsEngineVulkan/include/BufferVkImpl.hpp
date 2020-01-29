@@ -66,7 +66,7 @@ public:
                  VkBuffer                   vkBuffer);
     ~BufferVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
 #ifdef DEVELOPMENT
     void DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx) const;
@@ -91,20 +91,20 @@ public:
     }
 
     /// Implementation of IBufferVk::GetVkBuffer().
-    VkBuffer GetVkBuffer() const override final;
+    virtual VkBuffer DILIGENT_CALL_TYPE GetVkBuffer() const override final;
 
     /// Implementation of IBuffer::GetNativeHandle() in Vulkan backend.
-    virtual void* GetNativeHandle() override final
+    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
     {
         auto vkBuffer = GetVkBuffer();
         return reinterpret_cast<void*>(vkBuffer);
     }
 
     /// Implementation of IBufferVk::SetAccessFlags().
-    virtual void SetAccessFlags(VkAccessFlags AccessFlags) override final;
+    virtual void DILIGENT_CALL_TYPE SetAccessFlags(VkAccessFlags AccessFlags) override final;
 
     /// Implementation of IBufferVk::GetAccessFlags().
-    virtual VkAccessFlags GetAccessFlags() const override final;
+    virtual VkAccessFlags DILIGENT_CALL_TYPE GetAccessFlags() const override final;
 
     bool CheckAccessFlags(VkAccessFlags AccessFlags) const
     {

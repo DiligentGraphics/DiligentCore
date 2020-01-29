@@ -42,7 +42,7 @@ class IShaderResourceVariableD3D : public IShaderResourceVariable
 {
 public:
     /// Returns HLSL ShaderResourceVariable resource description
-    virtual HLSLShaderResourceDesc GetHLSLResourceDesc() const = 0;
+    virtual HLSLShaderResourceDesc DILIGENT_CALL_TYPE GetHLSLResourceDesc() const = 0;
 };
 
 } // namespace Diligent

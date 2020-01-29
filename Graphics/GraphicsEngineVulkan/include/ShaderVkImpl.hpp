@@ -54,16 +54,16 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderVk, TShaderBase);
 
     /// Implementation of IShader::GetResourceCount() in Vulkan backend.
-    virtual Uint32 GetResourceCount() const override final
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
     {
         return m_pShaderResources->GetTotalResources();
     }
 
     /// Implementation of IShader::GetResource() in Vulkan backend.
-    virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
+    virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
 
     /// Implementation of IShaderVk::GetSPIRV().
-    virtual const std::vector<uint32_t>& GetSPIRV() const override final
+    virtual const std::vector<uint32_t>& DILIGENT_CALL_TYPE GetSPIRV() const override final
     {
         return m_SPIRV;
     }

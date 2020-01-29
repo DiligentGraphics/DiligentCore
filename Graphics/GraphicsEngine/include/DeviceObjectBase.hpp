@@ -108,7 +108,7 @@ public:
         }
     }
 
-    inline virtual Atomics::Long Release() override final
+    inline virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
     {
         // Render device owns allocators for all types of device objects,
         // so it must be destroyed after all device objects are released.
@@ -137,13 +137,13 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DeviceObject, TBase)
 
-    virtual const ObjectDescType& GetDesc() const override final
+    virtual const ObjectDescType& DILIGENT_CALL_TYPE GetDesc() const override final
     {
         return m_Desc;
     }
 
     /// Returns unique identifier
-    virtual Int32 GetUniqueID() const override final
+    virtual Int32 DILIGENT_CALL_TYPE GetUniqueID() const override final
     {
         /// \note
         /// This unique ID is used to unambiguously identify device object for

@@ -131,7 +131,7 @@ public:
 
     /// Implementaiton of ITexture::CreateView(); calls CreateViewInternal() virtual function that
     /// creates texture view for the specific engine implementation.
-    virtual void CreateView(const struct TextureViewDesc& ViewDesc, ITextureView** ppView) override
+    virtual void DILIGENT_CALL_TYPE CreateView(const struct TextureViewDesc& ViewDesc, ITextureView** ppView) override
     {
         DEV_CHECK_ERR(ViewDesc.ViewType != TEXTURE_VIEW_UNDEFINED, "Texture view type is not specified");
         if (ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE)
@@ -159,12 +159,12 @@ public:
     /// The function calls CreateViewInternal().
     void CreateDefaultViews();
 
-    virtual void SetState(RESOURCE_STATE State) override final
+    virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
     {
         this->m_State = State;
     }
 
-    virtual RESOURCE_STATE GetState() const override final
+    virtual RESOURCE_STATE DILIGENT_CALL_TYPE GetState() const override final
     {
         return this->m_State;
     }
@@ -182,7 +182,7 @@ public:
     }
 
     /// Implementation of ITexture::GetDefaultView().
-    virtual ITextureView* GetDefaultView(TEXTURE_VIEW_TYPE ViewType) override
+    virtual ITextureView* DILIGENT_CALL_TYPE GetDefaultView(TEXTURE_VIEW_TYPE ViewType) override
     {
         switch (ViewType)
         {

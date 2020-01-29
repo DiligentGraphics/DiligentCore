@@ -47,7 +47,7 @@ struct IObject
     ///                            If the interface is not supported, null pointer will be returned.
     /// \remark The method increments the number of strong references by 1. The interface must be
     ///         released by a call to Release() method when it is no longer needed.
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) = 0;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) = 0;
 
 
     /// Increments the number of strong references by 1.
@@ -57,7 +57,7 @@ struct IObject
     /// \return The number of strong references after incrementing the counter.
     /// \note   In a multithreaded environment, the returned number may not be reliable
     ///         as other threads may simultaneously change the actual value of the counter.
-    virtual ReferenceCounterValueType AddRef() = 0;
+    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE AddRef() = 0;
 
 
     /// Decrements the number of strong references by 1 and destroys the object when the
@@ -70,13 +70,13 @@ struct IObject
     ///         as other threads may simultaneously change the actual value of the counter.
     ///         The only reliable value is 0 as the object is destroyed when the last
     ///         strong reference is released.
-    virtual ReferenceCounterValueType Release() = 0;
+    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() = 0;
 
 
     /// Returns the pointer to IReferenceCounters interface of the associated
     /// reference counters object. The method does *NOT* increment
     /// the number of strong references to the returned object.
-    virtual IReferenceCounters* GetReferenceCounters() const = 0;
+    virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const = 0;
 };
 
 #else

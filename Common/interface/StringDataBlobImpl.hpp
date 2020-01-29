@@ -54,19 +54,19 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_DataBlob, TBase)
 
     /// Sets the size of the internal data buffer
-    virtual void Resize(size_t NewSize) override
+    virtual void DILIGENT_CALL_TYPE Resize(size_t NewSize) override
     {
         m_String.resize(NewSize);
     }
 
     /// Returns the size of the internal data buffer
-    virtual size_t GetSize() override
+    virtual size_t DILIGENT_CALL_TYPE GetSize() override
     {
         return m_String.length();
     }
 
     /// Returns the pointer to the internal data buffer
-    virtual void* GetDataPtr() override
+    virtual void* DILIGENT_CALL_TYPE GetDataPtr() override
     {
         return &m_String[0];
     }

@@ -55,13 +55,13 @@ public:
                      const TextureData*           pInitData = nullptr);
     ~TextureBaseD3D11();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureD3D11::GetD3D11Texture().
-    virtual ID3D11Resource* GetD3D11Texture() override final { return m_pd3d11Texture; }
+    virtual ID3D11Resource* DILIGENT_CALL_TYPE GetD3D11Texture() override final { return m_pd3d11Texture; }
 
     /// Implementation of ITexture::GetNativeHandle().
-    virtual void* GetNativeHandle() override final { return GetD3D11Texture(); }
+    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final { return GetD3D11Texture(); }
 
     void AddState(RESOURCE_STATE State)
     {

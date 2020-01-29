@@ -68,7 +68,7 @@ public:
     {
     }
 
-    virtual ICommandQueueType* LockCommandQueue() override final
+    virtual ICommandQueueType* DILIGENT_CALL_TYPE LockCommandQueue() override final
     {
         if (this->m_bIsDeferred)
         {
@@ -78,7 +78,7 @@ public:
         return this->m_pDevice->LockCommandQueue(m_CommandQueueId);
     }
 
-    virtual void UnlockCommandQueue() override final
+    virtual void DILIGENT_CALL_TYPE UnlockCommandQueue() override final
     {
         if (this->m_bIsDeferred)
         {

@@ -268,7 +268,7 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the blend state description used to create the object
-    virtual const PipelineStateDesc& GetDesc()const override = 0;
+    virtual const PipelineStateDesc& METHOD(GetDesc)()const override = 0;
 #endif
 
 

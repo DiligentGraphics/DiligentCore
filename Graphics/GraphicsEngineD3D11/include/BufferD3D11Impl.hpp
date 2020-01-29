@@ -62,13 +62,13 @@ public:
 
     ~BufferD3D11Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IBufferD3D11::GetD3D11Buffer().
-    virtual ID3D11Buffer* GetD3D11Buffer() override final { return m_pd3d11Buffer; }
+    virtual ID3D11Buffer* DILIGENT_CALL_TYPE GetD3D11Buffer() override final { return m_pd3d11Buffer; }
 
     /// Implementation of IBuffer::GetNativeHandle().
-    virtual void* GetNativeHandle() override final { return GetD3D11Buffer(); }
+    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final { return GetD3D11Buffer(); }
 
     void AddState(RESOURCE_STATE State)
     {

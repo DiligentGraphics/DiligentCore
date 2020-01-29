@@ -68,36 +68,36 @@ public:
         TBase{IID_EngineFactoryD3D12}
     {}
 
-    bool LoadD3D12(const char* DllName) override final;
+    bool DILIGENT_CALL_TYPE LoadD3D12(const char* DllName) override final;
 
-    void CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI,
-                                      IRenderDevice**              ppDevice,
-                                      IDeviceContext**             ppContexts) override final;
+    virtual void DILIGENT_CALL_TYPE CreateDeviceAndContextsD3D12(const EngineD3D12CreateInfo& EngineCI,
+                                                                 IRenderDevice**              ppDevice,
+                                                                 IDeviceContext**             ppContexts) override final;
 
-    void AttachToD3D12Device(void*                        pd3d12NativeDevice,
-                             size_t                       CommandQueueCount,
-                             ICommandQueueD3D12**         ppCommandQueues,
-                             const EngineD3D12CreateInfo& EngineCI,
-                             IRenderDevice**              ppDevice,
-                             IDeviceContext**             ppContexts) override final;
+    virtual void DILIGENT_CALL_TYPE AttachToD3D12Device(void*                        pd3d12NativeDevice,
+                                                        size_t                       CommandQueueCount,
+                                                        ICommandQueueD3D12**         ppCommandQueues,
+                                                        const EngineD3D12CreateInfo& EngineCI,
+                                                        IRenderDevice**              ppDevice,
+                                                        IDeviceContext**             ppContexts) override final;
 
-    void CreateSwapChainD3D12(IRenderDevice*            pDevice,
-                              IDeviceContext*           pImmediateContext,
-                              const SwapChainDesc&      SwapChainDesc,
-                              const FullScreenModeDesc& FSDesc,
-                              void*                     pNativeWndHandle,
-                              ISwapChain**              ppSwapChain) override final;
+    virtual void DILIGENT_CALL_TYPE CreateSwapChainD3D12(IRenderDevice*            pDevice,
+                                                         IDeviceContext*           pImmediateContext,
+                                                         const SwapChainDesc&      SwapChainDesc,
+                                                         const FullScreenModeDesc& FSDesc,
+                                                         void*                     pNativeWndHandle,
+                                                         ISwapChain**              ppSwapChain) override final;
 
-    virtual void EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                   Uint32&                NumAdapters,
-                                   AdapterAttribs*        Adapters) override final;
+    virtual void DILIGENT_CALL_TYPE EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                                      Uint32&                NumAdapters,
+                                                      AdapterAttribs*        Adapters) override final;
 
-    virtual void EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
-                                       Uint32                 AdapterId,
-                                       Uint32                 OutputId,
-                                       TEXTURE_FORMAT         Format,
-                                       Uint32&                NumDisplayModes,
-                                       DisplayModeAttribs*    DisplayModes) override final;
+    virtual void DILIGENT_CALL_TYPE EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
+                                                          Uint32                 AdapterId,
+                                                          Uint32                 OutputId,
+                                                          TEXTURE_FORMAT         Format,
+                                                          Uint32&                NumDisplayModes,
+                                                          DisplayModeAttribs*    DisplayModes) override final;
 
 
 private:

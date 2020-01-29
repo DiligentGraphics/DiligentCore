@@ -50,10 +50,10 @@ public:
     SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pRenderDeviceVk, const SamplerDesc& SamplerDesc);
     ~SamplerVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     /// Implementation of ISamplerVk::GetVkSampler().
-    virtual VkSampler GetVkSampler() const override final { return m_VkSampler; }
+    virtual VkSampler DILIGENT_CALL_TYPE GetVkSampler() const override final { return m_VkSampler; }
 
 private:
     friend class ShaderVkImpl;

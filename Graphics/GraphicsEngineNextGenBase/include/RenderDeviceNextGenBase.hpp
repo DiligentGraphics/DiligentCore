@@ -234,23 +234,23 @@ public:
         return m_CommandQueues[QueueIndex].ReleaseQueue;
     }
 
-    const CommandQueueType& GetCommandQueue(Uint32 QueueIndex) const
+    const CommandQueueType& DILIGENT_CALL_TYPE GetCommandQueue(Uint32 QueueIndex) const
     {
         VERIFY_EXPR(QueueIndex < m_CmdQueueCount);
         return *m_CommandQueues[QueueIndex].CmdQueue;
     }
 
-    virtual Uint64 GetCompletedFenceValue(Uint32 QueueIndex) override final
+    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue(Uint32 QueueIndex) override final
     {
         return m_CommandQueues[QueueIndex].CmdQueue->GetCompletedFenceValue();
     }
 
-    virtual Uint64 GetNextFenceValue(Uint32 QueueIndex) override final
+    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue(Uint32 QueueIndex) override final
     {
         return m_CommandQueues[QueueIndex].CmdQueue->GetNextFenceValue();
     }
 
-    virtual Bool IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) override final
+    virtual Bool DILIGENT_CALL_TYPE IsFenceSignaled(Uint32 QueueIndex, Uint64 FenceValue) override final
     {
         return FenceValue <= GetCompletedFenceValue(QueueIndex);
     }

@@ -57,10 +57,10 @@ public:
                          bool                       bIsDefaultView);
     ~TextureViewD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureViewD3D12::GetCPUDescriptorHandle().
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() override final
+    virtual D3D12_CPU_DESCRIPTOR_HANDLE DILIGENT_CALL_TYPE GetCPUDescriptorHandle() override final
     {
         return m_Descriptor.GetCpuHandle();
     }

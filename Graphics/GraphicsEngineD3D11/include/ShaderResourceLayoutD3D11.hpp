@@ -84,16 +84,18 @@ public:
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        virtual bool IsBound(Uint32 ArrayIndex) const override final
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
             return m_ParentResLayout.m_ResourceCache.IsCBBound(m_Attribs.BindPoint + ArrayIndex);
@@ -113,16 +115,18 @@ public:
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        virtual bool IsBound(Uint32 ArrayIndex) const override final
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
             return m_ParentResLayout.m_ResourceCache.IsSRVBound(m_Attribs.BindPoint + ArrayIndex, true);
@@ -146,16 +150,18 @@ public:
         // Provide non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        __forceinline virtual bool IsBound(Uint32 ArrayIndex) const override final
+        __forceinline virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
             return m_ParentResLayout.m_ResourceCache.IsUAVBound(m_Attribs.BindPoint + ArrayIndex, true);
@@ -173,16 +179,18 @@ public:
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        virtual bool IsBound(Uint32 ArrayIndex) const override final
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
             return m_ParentResLayout.m_ResourceCache.IsUAVBound(m_Attribs.BindPoint + ArrayIndex, false);
@@ -200,16 +208,18 @@ public:
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        virtual bool IsBound(Uint32 ArrayIndex) const override final
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
             return m_ParentResLayout.m_ResourceCache.IsSRVBound(m_Attribs.BindPoint + ArrayIndex, false);
@@ -227,16 +237,18 @@ public:
         // Non-virtual function
         __forceinline void BindResource(IDeviceObject* pObject, Uint32 ArrayIndex);
 
-        virtual void Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
+        virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final { BindResource(pObject, 0); }
 
-        virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+        virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects,
+                                                 Uint32                FirstElement,
+                                                 Uint32                NumElements) override final
         {
             VerifyAndCorrectSetArrayArguments(m_Attribs.Name, m_Attribs.BindCount, FirstElement, NumElements);
             for (Uint32 elem = 0; elem < NumElements; ++elem)
                 BindResource(ppObjects[elem], FirstElement + elem);
         }
 
-        virtual bool IsBound(Uint32 ArrayIndex) const override final
+        virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
         {
             VERIFY_EXPR(ArrayIndex < m_Attribs.BindCount);
             return m_ParentResLayout.m_ResourceCache.IsSamplerBound(m_Attribs.BindPoint + ArrayIndex);

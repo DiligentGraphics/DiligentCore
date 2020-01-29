@@ -58,24 +58,24 @@ public:
         TBase{IID_EngineFactoryVk}
     {}
 
-    void CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI,
-                                   IRenderDevice**           ppDevice,
-                                   IDeviceContext**          ppContexts) override final;
+    virtual void DILIGENT_CALL_TYPE CreateDeviceAndContextsVk(const EngineVkCreateInfo& EngineCI,
+                                                              IRenderDevice**           ppDevice,
+                                                              IDeviceContext**          ppContexts) override final;
 
-    void AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
-                              std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                              std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
-                              size_t                                                 CommandQueueCount,
-                              ICommandQueueVk**                                      ppCommandQueues,
-                              const EngineVkCreateInfo&                              EngineCI,
-                              IRenderDevice**                                        ppDevice,
-                              IDeviceContext**                                       ppContexts); //override final;
+    virtual void DILIGENT_CALL_TYPE AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
+                                                         std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
+                                                         std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice,
+                                                         size_t                                                 CommandQueueCount,
+                                                         ICommandQueueVk**                                      ppCommandQueues,
+                                                         const EngineVkCreateInfo&                              EngineCI,
+                                                         IRenderDevice**                                        ppDevice,
+                                                         IDeviceContext**                                       ppContexts); //override final;
 
-    void CreateSwapChainVk(IRenderDevice*       pDevice,
-                           IDeviceContext*      pImmediateContext,
-                           const SwapChainDesc& SwapChainDesc,
-                           void*                pNativeWndHandle,
-                           ISwapChain**         ppSwapChain) override final;
+    virtual void DILIGENT_CALL_TYPE CreateSwapChainVk(IRenderDevice*       pDevice,
+                                                      IDeviceContext*      pImmediateContext,
+                                                      const SwapChainDesc& SwapChainDesc,
+                                                      void*                pNativeWndHandle,
+                                                      ISwapChain**         ppSwapChain) override final;
 
 private:
     std::function<void(RenderDeviceVkImpl*)> OnRenderDeviceCreated = nullptr;

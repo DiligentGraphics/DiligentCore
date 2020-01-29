@@ -54,10 +54,13 @@ public:
                         DescriptorHeapAllocation&& HandleAlloc,
                         bool                       bIsDefaultView);
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IBufferViewD3D12::GetCPUDescriptorHandle().
-    virtual D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle() override final { return m_DescriptorHandle.GetCpuHandle(); }
+    virtual D3D12_CPU_DESCRIPTOR_HANDLE DILIGENT_CALL_TYPE GetCPUDescriptorHandle() override final
+    {
+        return m_DescriptorHandle.GetCpuHandle();
+    }
 
 protected:
     // Allocation in a CPU-only descriptor heap

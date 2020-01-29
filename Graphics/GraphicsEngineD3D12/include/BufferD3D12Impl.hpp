@@ -63,17 +63,17 @@ public:
                     ID3D12Resource*              pd3d12Buffer);
     ~BufferD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
 #ifdef DEVELOPMENT
     void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx) const;
 #endif
 
     /// Implementation of IBufferD3D12::GetD3D12Buffer().
-    virtual ID3D12Resource* GetD3D12Buffer(Uint64& DataStartByteOffset, IDeviceContext* pContext) override final;
+    virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12Buffer(Uint64& DataStartByteOffset, IDeviceContext* pContext) override final;
 
     /// Implementation of IBuffer::GetNativeHandle().
-    virtual void* GetNativeHandle() override final
+    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
     {
         VERIFY(GetD3D12Resource() != nullptr, "The buffer is dynamic and has no pointer to D3D12 resource");
         Uint64 DataStartByteOffset = 0;
@@ -83,10 +83,10 @@ public:
     }
 
     /// Implementation of IBufferD3D12::SetD3D12ResourceState().
-    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) override final;
+    virtual void DILIGENT_CALL_TYPE SetD3D12ResourceState(D3D12_RESOURCE_STATES state) override final;
 
     /// Implementation of IBufferD3D12::GetD3D12ResourceState().
-    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState() const override final;
+    virtual D3D12_RESOURCE_STATES DILIGENT_CALL_TYPE GetD3D12ResourceState() const override final;
 
     __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress(Uint32 ContextId, class DeviceContextD3D12Impl* pCtx)
     {

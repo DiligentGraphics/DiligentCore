@@ -56,7 +56,7 @@ public:
     {
     }
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
     {
         if (ppInterface == nullptr)
             return;
@@ -69,28 +69,28 @@ public:
         }
     }
 
-    virtual ReferenceCounterValueType AddRef() override final
+    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE AddRef() override final
     {
         return m_RefCounters.AddStrongRef();
     }
 
-    virtual ReferenceCounterValueType Release() override final
+    virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
     {
         return m_RefCounters.ReleaseStrongRef();
     }
 
-    virtual IReferenceCounters* GetReferenceCounters() const override final
+    virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const override final
     {
         return const_cast<IReferenceCounters*>(static_cast<const IReferenceCounters*>(&m_RefCounters));
     }
 
-    virtual const APIInfo& GetAPIInfo() const override final
+    virtual const APIInfo& DILIGENT_CALL_TYPE GetAPIInfo() const override final
     {
         return Diligent::GetAPIInfo();
     }
 
-    virtual void CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories,
-                                                        IShaderSourceInputStreamFactory** ppShaderSourceFactory) const override final
+    virtual void DILIGENT_CALL_TYPE CreateDefaultShaderSourceStreamFactory(const Char*                       SearchDirectories,
+                                                                           IShaderSourceInputStreamFactory** ppShaderSourceFactory) const override final
     {
         Diligent::CreateDefaultShaderSourceStreamFactory(SearchDirectories, ppShaderSourceFactory);
     }

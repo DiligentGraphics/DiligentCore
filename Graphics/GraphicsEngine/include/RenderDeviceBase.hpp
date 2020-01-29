@@ -313,22 +313,22 @@ public:
 
     // It is important to have final implementation of Release() method to avoid
     // virtual calls
-    inline virtual ReferenceCounterValueType Release() override final
+    inline virtual ReferenceCounterValueType DILIGENT_CALL_TYPE Release() override final
     {
         return TObjectBase::Release();
     }
 
     /// Implementation of IRenderDevice::CreateResourceMapping().
-    virtual void CreateResourceMapping(const ResourceMappingDesc& MappingDesc, IResourceMapping** ppMapping) override final;
+    virtual void DILIGENT_CALL_TYPE CreateResourceMapping(const ResourceMappingDesc& MappingDesc, IResourceMapping** ppMapping) override final;
 
     /// Implementation of IRenderDevice::GetDeviceCaps().
-    virtual const DeviceCaps& GetDeviceCaps() const override final
+    virtual const DeviceCaps& DILIGENT_CALL_TYPE GetDeviceCaps() const override final
     {
         return m_DeviceCaps;
     }
 
     /// Implementation of IRenderDevice::GetTextureFormatInfo().
-    virtual const TextureFormatInfo& GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) override final
+    virtual const TextureFormatInfo& DILIGENT_CALL_TYPE GetTextureFormatInfo(TEXTURE_FORMAT TexFormat) override final
     {
         VERIFY(TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS, "Texture format out of range");
         const auto& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
@@ -337,7 +337,7 @@ public:
     }
 
     /// Implementation of IRenderDevice::GetTextureFormatInfoExt().
-    virtual const TextureFormatInfoExt& GetTextureFormatInfoExt(TEXTURE_FORMAT TexFormat) override final
+    virtual const TextureFormatInfoExt& DILIGENT_CALL_TYPE GetTextureFormatInfoExt(TEXTURE_FORMAT TexFormat) override final
     {
         VERIFY(TexFormat >= TEX_FORMAT_UNKNOWN && TexFormat < TEX_FORMAT_NUM_FORMATS, "Texture format out of range");
         const auto& TexFmtInfo = m_TextureFormatsInfo[TexFormat];
@@ -351,7 +351,7 @@ public:
         return TexFmtInfo;
     }
 
-    virtual IEngineFactory* GetEngineFactory() const override final
+    virtual IEngineFactory* DILIGENT_CALL_TYPE GetEngineFactory() const override final
     {
         return m_pEngineFactory.RawPtr<IEngineFactory>();
     }

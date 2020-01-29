@@ -84,13 +84,13 @@ public:
                  bool                    bIsDeviceInternal = false);
     ~ShaderGLImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShader::GetResourceCount() in OpenGL backend.
-    virtual Uint32 GetResourceCount() const override final;
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final;
 
     /// Implementation of IShader::GetResource() in OpenGL backend.
-    virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
+    virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
 
     static GLObjectWrappers::GLProgramObj LinkProgram(IShader** ppShaders, Uint32 NumShaders, bool IsSeparableProgram);
 

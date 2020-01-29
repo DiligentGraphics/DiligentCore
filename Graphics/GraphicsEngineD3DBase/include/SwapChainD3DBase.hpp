@@ -209,7 +209,7 @@ protected:
         pSwapChain1->QueryInterface(__uuidof(m_pSwapChain), reinterpret_cast<void**>(static_cast<DXGISwapChainType**>(&m_pSwapChain)));
     }
 
-    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final
+    virtual void DILIGENT_CALL_TYPE SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final
     {
         if (m_pSwapChain)
         {
@@ -231,7 +231,7 @@ protected:
         }
     }
 
-    virtual void SetWindowedMode() override final
+    virtual void DILIGENT_CALL_TYPE SetWindowedMode() override final
     {
         if (m_FSDesc.Fullscreen)
         {

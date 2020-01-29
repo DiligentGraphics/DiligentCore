@@ -52,34 +52,34 @@ public:
                        uint32_t                                              QueueFamilyIndex);
     ~CommandQueueVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ICommandQueueVk::GetNextFenceValue().
-    virtual Uint64 GetNextFenceValue() const override final { return m_NextFenceValue; }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue; }
 
     /// Implementation of ICommandQueueVk::Submit().
-    virtual Uint64 SubmitCmdBuffer(VkCommandBuffer cmdBuffer) override final;
+    virtual Uint64 DILIGENT_CALL_TYPE SubmitCmdBuffer(VkCommandBuffer cmdBuffer) override final;
 
     /// Implementation of ICommandQueueVk::Submit().
-    virtual Uint64 Submit(const VkSubmitInfo& SubmitInfo) override final;
+    virtual Uint64 DILIGENT_CALL_TYPE Submit(const VkSubmitInfo& SubmitInfo) override final;
 
     /// Implementation of ICommandQueueVk::Present().
-    virtual VkResult Present(const VkPresentInfoKHR& PresentInfo) override final;
+    virtual VkResult DILIGENT_CALL_TYPE Present(const VkPresentInfoKHR& PresentInfo) override final;
 
     /// Implementation of ICommandQueueVk::GetVkQueue().
-    virtual VkQueue GetVkQueue() override final { return m_VkQueue; }
+    virtual VkQueue DILIGENT_CALL_TYPE GetVkQueue() override final { return m_VkQueue; }
 
     /// Implementation of ICommandQueueVk::GetQueueFamilyIndex().
-    virtual uint32_t GetQueueFamilyIndex() const override final { return m_QueueFamilyIndex; }
+    virtual uint32_t DILIGENT_CALL_TYPE GetQueueFamilyIndex() const override final { return m_QueueFamilyIndex; }
 
     /// Implementation of ICommandQueueVk::GetQueueFamilyIndex().
-    virtual Uint64 WaitForIdle() override final;
+    virtual Uint64 DILIGENT_CALL_TYPE WaitForIdle() override final;
 
     /// Implementation of ICommandQueueVk::GetCompletedFenceValue().
-    virtual Uint64 GetCompletedFenceValue() override final;
+    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue() override final;
 
     /// Implementation of ICommandQueueVk::SignalFence().
-    virtual void SignalFence(VkFence vkFence) override final;
+    virtual void DILIGENT_CALL_TYPE SignalFence(VkFence vkFence) override final;
 
     void SetFence(RefCntAutoPtr<FenceVkImpl> pFence) { m_pFence = std::move(pFence); }
 

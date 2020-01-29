@@ -320,7 +320,7 @@ DILIGENT_BEGIN_INTERFACE(ITexture, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the texture description used to create the object
-    virtual const TextureDesc& GetDesc()const override = 0;
+    virtual const TextureDesc& METHOD(GetDesc)()const override = 0;
 #endif
 
     /// Creates a new texture view

@@ -60,22 +60,22 @@ struct ShaderVariableD3DBase : public ShaderVariableBase<TShaderResourceLayout, 
     {
     }
 
-    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType() const override final
+    virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
     {
         return m_VariableType;
     }
 
-    virtual void GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
+    virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
     {
         ResourceDesc = GetHLSLResourceDesc();
     }
 
-    virtual HLSLShaderResourceDesc GetHLSLResourceDesc() const override final
+    virtual HLSLShaderResourceDesc DILIGENT_CALL_TYPE GetHLSLResourceDesc() const override final
     {
         return m_Attribs.GetHLSLResourceDesc();
     }
 
-    virtual Uint32 GetIndex() const override final
+    virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
     {
         return m_ParentResLayout.GetVariableIndex(*this);
     }

@@ -59,45 +59,58 @@ public:
                           ICommandQueueD3D12**         ppCmdQueues);
     ~RenderDeviceD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IRenderDevice::CreatePipelineState() in Direct3D12 backend.
-    virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState) override final;
+    virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState) override final;
 
     /// Implementation of IRenderDevice::CreateBuffer() in Direct3D12 backend.
-    virtual void CreateBuffer(const BufferDesc& BuffDesc, const BufferData* pBuffData, IBuffer** ppBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
+                                                 const BufferData* pBuffData,
+                                                 IBuffer**         ppBuffer) override final;
 
     /// Implementation of IRenderDevice::CreateShader() in Direct3D12 backend.
-    virtual void CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader) override final;
+    virtual void DILIGENT_CALL_TYPE CreateShader(const ShaderCreateInfo& ShaderCreateInfo, IShader** ppShader) override final;
 
     /// Implementation of IRenderDevice::CreateTexture() in Direct3D12 backend.
-    virtual void CreateTexture(const TextureDesc& TexDesc, const TextureData* pData, ITexture** ppTexture) override final;
+    virtual void DILIGENT_CALL_TYPE CreateTexture(const TextureDesc& TexDesc,
+                                                  const TextureData* pData,
+                                                  ITexture**         ppTexture) override final;
 
-    void CreateTexture(const TextureDesc& TexDesc, ID3D12Resource* pd3d12Texture, RESOURCE_STATE InitialState, class TextureD3D12Impl** ppTexture);
+    void CreateTexture(const TextureDesc&       TexDesc,
+                       ID3D12Resource*          pd3d12Texture,
+                       RESOURCE_STATE           InitialState,
+                       class TextureD3D12Impl** ppTexture);
 
     /// Implementation of IRenderDevice::CreateSampler() in Direct3D12 backend.
-    virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler) override final;
+    virtual void DILIGENT_CALL_TYPE CreateSampler(const SamplerDesc& SamplerDesc,
+                                                  ISampler**         ppSampler) override final;
 
     /// Implementation of IRenderDevice::CreateFence() in Direct3D12 backend.
-    virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
+    virtual void DILIGENT_CALL_TYPE CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
 
     /// Implementation of IRenderDevice::CreateQuery() in Direct3D12 backend.
-    virtual void CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
+    virtual void DILIGENT_CALL_TYPE CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
 
     /// Implementation of IRenderDeviceD3D12::GetD3D12Device().
-    virtual ID3D12Device* GetD3D12Device() override final { return m_pd3d12Device; }
+    virtual ID3D12Device* DILIGENT_CALL_TYPE GetD3D12Device() override final { return m_pd3d12Device; }
 
     /// Implementation of IRenderDeviceD3D12::CreateTextureFromD3DResource().
-    virtual void CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture, RESOURCE_STATE InitialState, ITexture** ppTexture) override final;
+    virtual void DILIGENT_CALL_TYPE CreateTextureFromD3DResource(ID3D12Resource* pd3d12Texture,
+                                                                 RESOURCE_STATE  InitialState,
+                                                                 ITexture**      ppTexture) override final;
 
     /// Implementation of IRenderDeviceD3D12::CreateBufferFromD3DResource().
-    virtual void CreateBufferFromD3DResource(ID3D12Resource* pd3d12Buffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer) override final;
+    virtual void DILIGENT_CALL_TYPE CreateBufferFromD3DResource(ID3D12Resource*   pd3d12Buffer,
+                                                                const BufferDesc& BuffDesc,
+                                                                RESOURCE_STATE    InitialState,
+                                                                IBuffer**         ppBuffer) override final;
 
     DescriptorHeapAllocation AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
     DescriptorHeapAllocation AllocateGPUDescriptors(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count = 1);
 
     /// Implementation of IRenderDevice::IdleGPU() in Direct3D12 backend.
-    virtual void IdleGPU() override final;
+    virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
     using PooledCommandContext = std::unique_ptr<CommandContext, STDDeleterRawMem<CommandContext>>;
     PooledCommandContext AllocateCommandContext(const Char* ID = "");
@@ -117,7 +130,7 @@ public:
     void FlushStaleResources(Uint32 CmdQueueIndex);
 
     /// Implementation of IRenderDevice::() in Direct3D12 backend.
-    virtual void ReleaseStaleResources(bool ForceRelease = false) override final;
+    virtual void DILIGENT_CALL_TYPE ReleaseStaleResources(bool ForceRelease = false) override final;
 
     D3D12DynamicMemoryManager& GetDynamicMemoryManager() { return m_DynamicMemoryManager; }
 

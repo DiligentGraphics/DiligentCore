@@ -54,22 +54,22 @@ public:
                     const ShaderCreateInfo& ShaderCI);
     ~ShaderD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShader::GetResourceCount() in Direct3D12 backend.
-    virtual Uint32 GetResourceCount() const override final
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
     {
         return m_pShaderResources->GetTotalResources();
     }
 
     /// Implementation of IShader::GetResource() in Direct3D12 backend.
-    virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
+    virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
     {
         ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     /// Implementation of IShaderD3D::GetHLSLResource() in Direct3D12 backend.
-    virtual void GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
+    virtual void DILIGENT_CALL_TYPE GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
     {
         ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }

@@ -142,22 +142,22 @@ public:
     ShaderVariableD3D12Impl& operator= (ShaderVariableD3D12Impl&&)      = delete;
     // clang-format on
 
-    virtual IReferenceCounters* GetReferenceCounters() const override final
+    virtual IReferenceCounters* DILIGENT_CALL_TYPE GetReferenceCounters() const override final
     {
         return m_ParentManager.m_Owner.GetReferenceCounters();
     }
 
-    virtual Atomics::Long AddRef() override final
+    virtual Atomics::Long DILIGENT_CALL_TYPE AddRef() override final
     {
         return m_ParentManager.m_Owner.AddRef();
     }
 
-    virtual Atomics::Long Release() override final
+    virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
     {
         return m_ParentManager.m_Owner.Release();
     }
 
-    void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final
     {
         if (ppInterface == nullptr)
             return;
@@ -170,39 +170,39 @@ public:
         }
     }
 
-    virtual SHADER_RESOURCE_VARIABLE_TYPE GetType() const override final
+    virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
     {
         return m_Resource.GetVariableType();
     }
 
-    virtual void Set(IDeviceObject* pObject) override final
+    virtual void DILIGENT_CALL_TYPE Set(IDeviceObject* pObject) override final
     {
         m_Resource.BindResource(pObject, 0, m_ParentManager.m_ResourceCache);
     }
 
-    virtual void SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
+    virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
     {
         VerifyAndCorrectSetArrayArguments(m_Resource.Attribs.Name, m_Resource.Attribs.BindCount, FirstElement, NumElements);
         for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
 
-    virtual void GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
+    virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
     {
         ResourceDesc = GetHLSLResourceDesc();
     }
 
-    virtual HLSLShaderResourceDesc GetHLSLResourceDesc() const override final
+    virtual HLSLShaderResourceDesc DILIGENT_CALL_TYPE GetHLSLResourceDesc() const override final
     {
         return m_Resource.Attribs.GetHLSLResourceDesc();
     }
 
-    virtual Uint32 GetIndex() const override final
+    virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final
     {
         return m_ParentManager.GetVariableIndex(*this);
     }
 
-    virtual bool IsBound(Uint32 ArrayIndex) const override final
+    virtual bool DILIGENT_CALL_TYPE IsBound(Uint32 ArrayIndex) const override final
     {
         return m_Resource.IsBound(ArrayIndex, m_ParentManager.m_ResourceCache);
     }

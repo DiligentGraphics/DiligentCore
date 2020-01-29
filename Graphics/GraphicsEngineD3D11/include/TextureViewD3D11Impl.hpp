@@ -53,10 +53,10 @@ public:
                          ID3D11View*            pD3D11View,
                          bool                   bIsDefaultView);
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureViewD3D11::GetD3D11View().
-    virtual ID3D11View* GetD3D11View() override final
+    virtual ID3D11View* DILIGENT_CALL_TYPE GetD3D11View() override final
     {
         return m_pD3D11View;
     }

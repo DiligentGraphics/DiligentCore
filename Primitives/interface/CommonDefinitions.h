@@ -38,6 +38,13 @@
 #    endif
 #endif
 
+#ifdef _MSC_VER
+// Note that MSVC x86 compiler by default uses __this call for class member functions
+#    define DILIGENT_CALL_TYPE __cdecl
+#else
+#    define DILIGENT_CALL_TYPE
+#endif
+
 #if DILIGENT_C_INTERFACE
 
 #    define DILIGENT_BEGIN_NAMESPACE(Name)

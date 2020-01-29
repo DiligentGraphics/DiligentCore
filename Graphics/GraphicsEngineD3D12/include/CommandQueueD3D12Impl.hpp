@@ -46,25 +46,25 @@ public:
     CommandQueueD3D12Impl(IReferenceCounters* pRefCounters, ID3D12CommandQueue* pd3d12NativeCmdQueue, ID3D12Fence* pd3d12Fence);
     ~CommandQueueD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     // Implementation of ICommandQueueD3D12::GetNextFenceValue().
-    virtual Uint64 GetNextFenceValue() const override final { return m_NextFenceValue; }
+    virtual Uint64 DILIGENT_CALL_TYPE GetNextFenceValue() const override final { return m_NextFenceValue; }
 
     // Implementation of ICommandQueueD3D12::Submit().
-    virtual Uint64 Submit(ID3D12GraphicsCommandList* commandList) override final;
+    virtual Uint64 DILIGENT_CALL_TYPE Submit(ID3D12GraphicsCommandList* commandList) override final;
 
     // Implementation of ICommandQueueD3D12::GetD3D12CommandQueue().
-    virtual ID3D12CommandQueue* GetD3D12CommandQueue() override final { return m_pd3d12CmdQueue; }
+    virtual ID3D12CommandQueue* DILIGENT_CALL_TYPE GetD3D12CommandQueue() override final { return m_pd3d12CmdQueue; }
 
     // Implementation of ICommandQueueD3D12::WaitForIdle().
-    virtual Uint64 WaitForIdle() override final;
+    virtual Uint64 DILIGENT_CALL_TYPE WaitForIdle() override final;
 
     // Implementation of ICommandQueueD3D12::GetCompletedFenceValue().
-    virtual Uint64 GetCompletedFenceValue() override final;
+    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedFenceValue() override final;
 
     // Implementation of ICommandQueueD3D12::SignalFence().
-    virtual void SignalFence(ID3D12Fence* pFence, Uint64 Value) override final;
+    virtual void DILIGENT_CALL_TYPE SignalFence(ID3D12Fence* pFence, Uint64 Value) override final;
 
 private:
     // A value that will be signaled by the command queue next

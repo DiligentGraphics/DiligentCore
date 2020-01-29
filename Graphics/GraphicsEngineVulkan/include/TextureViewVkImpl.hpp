@@ -55,10 +55,10 @@ public:
                       bool                                bIsDefaultView);
     ~TextureViewVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureViewVk::GetVulkanImageView().
-    VkImageView GetVulkanImageView() const override final { return m_ImageView; }
+    virtual VkImageView DILIGENT_CALL_TYPE GetVulkanImageView() const override final { return m_ImageView; }
 
     bool HasMipLevelViews() const
     {

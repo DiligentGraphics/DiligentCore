@@ -56,10 +56,10 @@ public:
                      bool                                 bIsDefaultView);
     ~BufferViewVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IBufferViewVk::GetVkBufferView().
-    virtual VkBufferView GetVkBufferView() const override final { return m_BuffView; }
+    virtual VkBufferView DILIGENT_CALL_TYPE GetVkBufferView() const override final { return m_BuffView; }
 
     const BufferVkImpl* GetBufferVk() const;
     BufferVkImpl*       GetBufferVk();

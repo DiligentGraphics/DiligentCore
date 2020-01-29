@@ -188,7 +188,7 @@ DILIGENT_BEGIN_INTERFACE(IQuery, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the Query description used to create the object.
-    virtual const QueryDesc& GetDesc() const override = 0;
+    virtual const QueryDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
     /// Gets the query data.

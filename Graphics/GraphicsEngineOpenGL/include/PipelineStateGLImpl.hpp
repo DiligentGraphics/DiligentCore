@@ -56,25 +56,28 @@ public:
     ~PipelineStateGLImpl();
 
     /// Queries the specific interface, see IObject::QueryInterface() for details
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
     /// Implementation of IPipelineState::BindStaticResources() in OpenGL backend.
-    virtual void BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags) override final;
+    virtual void DILIGENT_CALL_TYPE BindStaticResources(Uint32            ShaderFlags,
+                                                        IResourceMapping* pResourceMapping,
+                                                        Uint32            Flags) override final;
 
     /// Implementation of IPipelineState::GetStaticVariableCount() in OpenGL backend.
-    virtual Uint32 GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
+    virtual Uint32 DILIGENT_CALL_TYPE GetStaticVariableCount(SHADER_TYPE ShaderType) const override final;
 
     /// Implementation of IPipelineState::GetStaticVariableByName() in OpenGL backend.
-    virtual IShaderResourceVariable* GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name) override final;
 
     /// Implementation of IPipelineState::GetStaticVariableByIndex() in OpenGL backend.
-    virtual IShaderResourceVariable* GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index) override final;
 
     /// Implementation of IPipelineState::CreateShaderResourceBinding() in OpenGL backend.
-    virtual void CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources) override final;
+    virtual void DILIGENT_CALL_TYPE CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding,
+                                                                bool                     InitStaticResources) override final;
 
     /// Implementation of IPipelineState::IsCompatibleWith() in OpenGL backend.
-    virtual bool IsCompatibleWith(const IPipelineState* pPSO) const override final;
+    virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
     void CommitProgram(GLContextState& State);
 

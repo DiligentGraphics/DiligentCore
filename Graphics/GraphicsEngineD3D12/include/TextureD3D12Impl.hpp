@@ -65,19 +65,19 @@ public:
                      ID3D12Resource*              pTexture);
     ~TextureD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ITextureD3D12::GetD3D12Texture().
-    virtual ID3D12Resource* GetD3D12Texture() override final { return GetD3D12Resource(); }
+    virtual ID3D12Resource* DILIGENT_CALL_TYPE GetD3D12Texture() override final { return GetD3D12Resource(); }
 
     /// Implementation of ITexture::GetNativeHandle() in Direct3D12 backend.
-    virtual void* GetNativeHandle() override final { return GetD3D12Texture(); }
+    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final { return GetD3D12Texture(); }
 
     /// Implementation of ITextureD3D12::SetD3D12ResourceState().
-    virtual void SetD3D12ResourceState(D3D12_RESOURCE_STATES state) override final;
+    virtual void DILIGENT_CALL_TYPE SetD3D12ResourceState(D3D12_RESOURCE_STATES state) override final;
 
     /// Implementation of ITextureD3D12::GetD3D12ResourceState().
-    virtual D3D12_RESOURCE_STATES GetD3D12ResourceState() const override final;
+    virtual D3D12_RESOURCE_STATES DILIGENT_CALL_TYPE GetD3D12ResourceState() const override final;
 
     D3D12_RESOURCE_DESC GetD3D12TextureDesc() const;
 

@@ -156,7 +156,7 @@ DILIGENT_BEGIN_INTERFACE(IBufferView, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the buffer view description used to create the object
-    virtual const BufferViewDesc& GetDesc() const override = 0;
+    virtual const BufferViewDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
     /// Returns pointer to the referenced buffer object.

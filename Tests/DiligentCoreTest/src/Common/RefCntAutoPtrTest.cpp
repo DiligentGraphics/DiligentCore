@@ -52,13 +52,13 @@ namespace
 class Object : public Diligent::RefCountedObject<Diligent::IObject>
 {
 public:
-    static void Create(Object** ppObj)
+    static void DILIGENT_CALL_TYPE Create(Object** ppObj)
     {
         *ppObj = MakeNewObj<Object>();
         (*ppObj)->AddRef();
     }
 
-    virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, Diligent::IObject** ppInterface)
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const Diligent::INTERFACE_ID& IID, Diligent::IObject** ppInterface)
     {
         *ppInterface = nullptr;
         if (IID == Diligent::IID_Unknown)
@@ -362,7 +362,7 @@ TEST(Common_RefCntAutoPtr, Misc)
             {
             }
 
-            virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
+            virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
             ~OwnerTest()
             {
                 Obj->~Object();
@@ -387,7 +387,7 @@ TEST(Common_RefCntAutoPtr, Misc)
                 wpSelf(this)
             {}
 
-            virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
+            virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
 
         private:
             RefCntWeakPtr<SelfRefTest> wpSelf;
@@ -409,7 +409,7 @@ TEST(Common_RefCntAutoPtr, Misc)
                 throw std::runtime_error("test exception");
             }
 
-            virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
+            virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
 
         private:
             RefCntWeakPtr<ExceptionTest1> wpSelf;
@@ -436,7 +436,7 @@ TEST(Common_RefCntAutoPtr, Misc)
                 throw std::runtime_error("test exception");
             }
 
-            virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
+            virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
 
         private:
             RefCntWeakPtr<ExceptionTest2> wpSelf;
@@ -474,7 +474,7 @@ TEST(Common_RefCntAutoPtr, Misc)
             private:
                 RefCntWeakPtr<ExceptionTest3> wpSelf;
             };
-            virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
+            virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
 
         private:
             Subclass m_Member;
@@ -508,7 +508,7 @@ TEST(Common_RefCntAutoPtr, Misc)
                 {
                 }
             }
-            virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
+            virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
 
             class ExceptionTest4 : public RefCountedObject<IObject>
             {
@@ -533,7 +533,7 @@ TEST(Common_RefCntAutoPtr, Misc)
                     RefCntWeakPtr<ExceptionTest4> wpParent;
                     RefCntWeakPtr<OwnerObject>    wpOwner;
                 };
-                virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
+                virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
 
             private:
                 Subclass m_Member;
@@ -557,7 +557,7 @@ TEST(Common_RefCntAutoPtr, Misc)
                 m_pMember = NEW_RC_OBJ(DefaultRawMemoryAllocator::GetAllocator(), "Test object", ExceptionTest4, this)(*this);
             }
 
-            virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
+            virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
 
             class ExceptionTest4 : public RefCountedObject<IObject>
             {
@@ -582,7 +582,7 @@ TEST(Common_RefCntAutoPtr, Misc)
                     RefCntWeakPtr<ExceptionTest4> wpParent;
                     RefCntWeakPtr<OwnerObject>    wpOwner;
                 };
-                virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
+                virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) {}
 
             private:
                 Subclass m_Member;
@@ -609,9 +609,9 @@ TEST(Common_RefCntAutoPtr, Misc)
             {
             }
 
-            virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final {}
+            virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final {}
 
-            inline virtual Atomics::Long Release() override final
+            inline virtual Atomics::Long DILIGENT_CALL_TYPE Release() override final
             {
                 return RefCountedObject<IObject>::Release(
                     [&]() //

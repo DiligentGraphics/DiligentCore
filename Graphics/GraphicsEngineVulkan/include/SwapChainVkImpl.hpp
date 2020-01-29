@@ -52,32 +52,32 @@ public:
                     void*                      pNativeWndHandle);
     ~SwapChainVkImpl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISwapChain::Present() in Vulkan backend.
-    virtual void Present(Uint32 SyncInterval) override final;
+    virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;
 
     /// Implementation of ISwapChain::Resize() in Vulkan backend.
-    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
+    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
 
     /// Implementation of ISwapChain::SetFullscreenMode() in Vulkan backend.
-    virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
+    virtual void DILIGENT_CALL_TYPE SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
 
     /// Implementation of ISwapChain::SetWindowedMode() in Vulkan backend.
-    virtual void SetWindowedMode() override final;
+    virtual void DILIGENT_CALL_TYPE SetWindowedMode() override final;
 
     /// Implementation of ISwapChainVk::GetVkSwapChain().
-    virtual VkSwapchainKHR GetVkSwapChain() override final { return m_VkSwapChain; }
+    virtual VkSwapchainKHR DILIGENT_CALL_TYPE GetVkSwapChain() override final { return m_VkSwapChain; }
 
     /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in Vulkan backend.
-    virtual ITextureViewVk* GetCurrentBackBufferRTV() override final
+    virtual ITextureViewVk* DILIGENT_CALL_TYPE GetCurrentBackBufferRTV() override final
     {
         VERIFY_EXPR(m_BackBufferIndex >= 0 && m_BackBufferIndex < m_SwapChainDesc.BufferCount);
         return m_pBackBufferRTV[m_BackBufferIndex];
     }
 
     /// Implementation of ISwapChain::GetDepthBufferDSV() in Vulkan backend.
-    virtual ITextureViewVk* GetDepthBufferDSV() override final { return m_pDepthBufferDSV; }
+    virtual ITextureViewVk* DILIGENT_CALL_TYPE GetDepthBufferDSV() override final { return m_pDepthBufferDSV; }
 
 private:
     void     CreateVulkanSwapChain();

@@ -322,7 +322,7 @@ DILIGENT_BEGIN_INTERFACE(IShader, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
     /// Returns the shader description
-    virtual const ShaderDesc& GetDesc() const override = 0;
+    virtual const ShaderDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
     /// Returns the total number of shader resources

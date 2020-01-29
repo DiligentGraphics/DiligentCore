@@ -54,16 +54,16 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_FenceD3D12, TFenceBase);
 
     /// Implementation of IFence::GetCompletedValue() in Direct3D12 backend.
-    virtual Uint64 GetCompletedValue() override final;
+    virtual Uint64 DILIGENT_CALL_TYPE GetCompletedValue() override final;
 
     /// Implementation of IFence::GetCompletedValue() in Direct3D12 backend.
-    virtual void Reset(Uint64 Value) override final;
+    virtual void DILIGENT_CALL_TYPE Reset(Uint64 Value) override final;
 
     /// Implementation of IFenceD3D12::GetD3D12Fence().
-    ID3D12Fence* GetD3D12Fence() override final { return m_pd3d12Fence; }
+    virtual ID3D12Fence* DILIGENT_CALL_TYPE GetD3D12Fence() override final { return m_pd3d12Fence; }
 
     /// Implementation of IFenceD3D12::WaitForCompletion().
-    virtual void WaitForCompletion(Uint64 Value) override final;
+    virtual void DILIGENT_CALL_TYPE WaitForCompletion(Uint64 Value) override final;
 
 private:
     CComPtr<ID3D12Fence> m_pd3d12Fence; ///< D3D12 Fence object

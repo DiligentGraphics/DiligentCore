@@ -51,19 +51,19 @@ public:
                        void*                         pNativeWndHandle);
     ~SwapChainD3D12Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of ISwapChain::Present() in Direct3D12 backend.
-    virtual void Present(Uint32 SyncInterval) override final;
+    virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;
 
     /// Implementation of ISwapChain::Resize() in Direct3D12 backend.
-    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
+    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
 
     /// Implementation of ISwapChainD3D12::GetDXGISwapChain().
-    virtual IDXGISwapChain* GetDXGISwapChain() override final { return m_pSwapChain; }
+    virtual IDXGISwapChain* DILIGENT_CALL_TYPE GetDXGISwapChain() override final { return m_pSwapChain; }
 
     /// Implementation of ISwapChain::GetCurrentBackBufferRTV() in Direct3D12 backend.
-    virtual ITextureViewD3D12* GetCurrentBackBufferRTV() override final
+    virtual ITextureViewD3D12* DILIGENT_CALL_TYPE GetCurrentBackBufferRTV() override final
     {
         auto CurrentBackBufferIndex = m_pSwapChain->GetCurrentBackBufferIndex();
         VERIFY_EXPR(CurrentBackBufferIndex >= 0 && CurrentBackBufferIndex < m_SwapChainDesc.BufferCount);
@@ -71,7 +71,7 @@ public:
     }
 
     /// Implementation of ISwapChain::GetDepthBufferDSV() in Direct3D12 backend.
-    virtual ITextureViewD3D12* GetDepthBufferDSV() override final { return m_pDepthBufferDSV; }
+    virtual ITextureViewD3D12* DILIGENT_CALL_TYPE GetDepthBufferDSV() override final { return m_pDepthBufferDSV; }
 
 private:
     virtual void UpdateSwapChain(bool CreateNew) override final;

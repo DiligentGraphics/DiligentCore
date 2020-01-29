@@ -57,28 +57,28 @@ public:
                     const ShaderCreateInfo&      ShaderCI);
     ~ShaderD3D11Impl();
 
-    virtual void QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IShader::GetResourceCount() in Direct3D11 backend.
-    virtual Uint32 GetResourceCount() const override final
+    virtual Uint32 DILIGENT_CALL_TYPE GetResourceCount() const override final
     {
         return m_pShaderResources->GetTotalResources();
     }
 
     /// Implementation of IShader::GetResource() in Direct3D11 backend.
-    virtual void GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
+    virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final
     {
         ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     /// Implementation of IShaderD3D::GetHLSLResource() method.
-    virtual void GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
+    virtual void DILIGENT_CALL_TYPE GetHLSLResource(Uint32 Index, HLSLShaderResourceDesc& ResourceDesc) const override final
     {
         ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
     /// Implementation of IShaderD3D11::GetD3D11Shader() method.
-    virtual ID3D11DeviceChild* GetD3D11Shader() override final
+    virtual ID3D11DeviceChild* DILIGENT_CALL_TYPE GetD3D11Shader() override final
     {
         return m_pShader;
     }
