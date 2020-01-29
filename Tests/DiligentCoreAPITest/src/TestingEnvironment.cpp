@@ -295,7 +295,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
         {
 #    if EXPLICITLY_LOAD_ENGINE_VK_DLL
             // Load the dll and import GetEngineFactoryVk() function
-            GetEngineFactoryVkType GetEngineFactoryVk = LoadGraphicsEngineVk();
+            auto GetEngineFactoryVk = LoadGraphicsEngineVk();
             if (GetEngineFactoryVk == nullptr)
             {
                 LOG_ERROR_AND_THROW("Failed to load the engine");

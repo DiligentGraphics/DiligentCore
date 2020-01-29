@@ -140,11 +140,11 @@ int TestRenderDeviceCInterface_CreateShader(struct IRenderDevice* pRenderDevice)
 
 int TestRenderDeviceCInterface_CreateTexture(struct IRenderDevice* pRenderDevice)
 {
-    struct TextureDesc       TexDesc;
-    struct TextureData       InitData;
-    struct TextureSubResData Mip0Data;
+    TextureDesc       TexDesc;
+    TextureData       InitData;
+    TextureSubResData Mip0Data;
 
-    struct ITexture* pTexture = NULL;
+    ITexture* pTexture = NULL;
 
     int num_errors = 0;
 
@@ -157,6 +157,7 @@ int TestRenderDeviceCInterface_CreateTexture(struct IRenderDevice* pRenderDevice
     TexDesc.Width                     = 512;
     TexDesc.Height                    = 512;
     TexDesc.MipLevels                 = 1;
+    TexDesc.SampleCount               = 1;
     TexDesc.ArraySize                 = 1;
     TexDesc.Format                    = TEX_FORMAT_RGBA8_UNORM;
     TexDesc.Usage                     = USAGE_DEFAULT;

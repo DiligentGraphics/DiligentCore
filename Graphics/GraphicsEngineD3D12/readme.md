@@ -13,9 +13,8 @@ using namespace Diligent;
 
 // ...
 #if ENGINE_DLL
-  GetEngineFactoryD3D12Type GetEngineFactoryD3D12 = nullptr;
-  // Load the dll and import GetEngineFactoryD3D12() function
-  LoadGraphicsEngineD3D12(GetEngineFactoryD3D12);
+    // Load the dll and import GetEngineFactoryD3D12() function
+    auto GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
 #endif
 auto* pFactoryD3D12 = GetEngineFactoryD3D12();
 EngineD3D12CreateInfo EngineCI;

@@ -66,7 +66,7 @@ inline FARPROC LoadEngineDll(const char* EngineName, const char* GetFactoryFuncN
     const char* Conf = "r";
 #endif
 
-    sprintf_s(LibName, StringBufferSize, "%s%s%s.dll", EngineName, Conf, Arch);
+    sprintf_s(LibName, StringBufferSize, "%s%s%s.dll", EngineName, Arch, Conf);
 
 #if PLATFORM_WIN32
     hModule = LoadLibraryA(LibName);

@@ -316,9 +316,12 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
 
 #ifdef DOXYGEN
 /// Loads Direct3D11-based engine implementation and exports factory functions
-/// \param [out] GetFactoryFunc - Pointer to the function that returns factory for D3D11 engine implementation
-///                               See EngineFactoryD3D11Impl.
+///
+/// \return      - Pointer to the function that returns factory for D3D11 engine implementation
+///                See Diligent::EngineFactoryD3D11Impl.
+///
 /// \remarks Depending on the configuration and platform, the function loads different dll:
+///
 /// Platform\\Configuration   |           Debug               |        Release
 /// --------------------------|-------------------------------|----------------------------
 ///         x86               | GraphicsEngineD3D11_32d.dll   |    GraphicsEngineD3D11_32r.dll

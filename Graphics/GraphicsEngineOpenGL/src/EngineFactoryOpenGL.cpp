@@ -248,17 +248,20 @@ void EngineFactoryOpenGLImpl::AttachToActiveGLContext(const EngineGLCreateInfo& 
 
 #ifdef DOXYGEN
 /// Loads OpenGL-based engine implementation and exports factory functions
-/// \param [out] GetFactoryFunc - Pointer to the function that returns pointer to the factory for
-///                               the OpenGL engine implementation
-///                               See EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL().
+///
+/// \return     - Pointer to the function that returns pointer to the factory for
+///               the OpenGL engine implementation
+///               See EngineFactoryOpenGLImpl::CreateDeviceAndSwapChainGL().
+///
 /// \remarks Depending on the configuration and platform, the function loads different dll:
-/// Platform\\Configuration    |           Debug              |         Release
+///
+/// Platform\\Configuration   |           Debug              |         Release
 /// --------------------------|------------------------------|----------------------------
 ///   Win32/x86               | GraphicsEngineOpenGL_32d.dll | GraphicsEngineOpenGL_32r.dll
 ///   Win32/x64               | GraphicsEngineOpenGL_64d.dll | GraphicsEngineOpenGL_64r.dll
 ///
 /// To load the library on Android, it is necessary to call System.loadLibrary("GraphicsEngineOpenGL") from Java.
-void LoadGraphicsEngineOpenGL(GetEngineFactoryOpenGLType& GetFactoryFunc)
+GetEngineFactoryOpenGLType LoadGraphicsEngineOpenGL()
 {
 // This function is only required because DoxyGen refuses to generate documentation for a static function when SHOW_FILES==NO
 #    error This function must never be compiled;

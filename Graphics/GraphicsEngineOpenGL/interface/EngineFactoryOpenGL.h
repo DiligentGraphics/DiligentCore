@@ -107,7 +107,7 @@ typedef struct IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
 inline GetEngineFactoryOpenGLType LoadGraphicsEngineOpenGL()
 {
-    return (GetEngineFactoryOpenGLType)LoadEngineDll("GraphicsEngineGL", "GetEngineFactoryOpenGL");
+    return (GetEngineFactoryOpenGLType)LoadEngineDll("GraphicsEngineOpenGL", "GetEngineFactoryOpenGL");
 }
 
 #else

@@ -511,15 +511,18 @@ void EngineFactoryD3D12Impl::EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFea
 
 #ifdef DOXYGEN
 /// Loads Direct3D12-based engine implementation and exports factory functions
-/// \param [out] GetFactoryFunc - Pointer to the function that returns factory for D3D12 engine implementation.
-///                               See EngineFactoryD3D12Impl.
+///
+/// \return - Pointer to the function that returns factory for D3D12 engine implementation.
+///           See Duiligent::EngineFactoryD3D12Impl.
+///
 /// \remarks Depending on the configuration and platform, the function loads different dll:
+///
 /// Platform\\Configuration   |           Debug               |        Release
 /// --------------------------|-------------------------------|----------------------------
 ///         x86               | GraphicsEngineD3D12_32d.dll   |    GraphicsEngineD3D12_32r.dll
 ///         x64               | GraphicsEngineD3D12_64d.dll   |    GraphicsEngineD3D12_64r.dll
 ///
-void LoadGraphicsEngineD3D12(GetEngineFactoryD3D12Type& GetFactoryFunc)
+GetEngineFactoryD3D12Type LoadGraphicsEngineD3D12()
 {
 // This function is only required because DoxyGen refuses to generate documentation for a static function when SHOW_FILES==NO
 #    error This function must never be compiled;

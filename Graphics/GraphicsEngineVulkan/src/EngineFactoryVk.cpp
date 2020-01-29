@@ -366,15 +366,18 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
 
 #ifdef DOXYGEN
 /// Loads Direct3D12-based engine implementation and exports factory functions
-/// \param [out] GetFactoryFunc - Pointer to the function that returns factory for Vk engine implementation.
-///                               See EngineFactoryVkImpl.
+///
+/// return - Pointer to the function that returns factory for Vk engine implementation.
+///          See Diligent::EngineFactoryVkImpl.
+///
 /// \remarks Depending on the configuration and platform, the function loads different dll:
+///
 /// Platform\\Configuration   |           Debug               |        Release
 /// --------------------------|-------------------------------|----------------------------
 ///         x86               | GraphicsEngineVk_32d.dll   |    GraphicsEngineVk_32r.dll
 ///         x64               | GraphicsEngineVk_64d.dll   |    GraphicsEngineVk_64r.dll
 ///
-void LoadGraphicsEngineVk(GetEngineFactoryVkType& GetFactoryFunc)
+GetEngineFactoryVkType LoadGraphicsEngineVk()
 {
 // This function is only required because DoxyGen refuses to generate documentation for a static function when SHOW_FILES==NO
 #    error This function must never be compiled;
