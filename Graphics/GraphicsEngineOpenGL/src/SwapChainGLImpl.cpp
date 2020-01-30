@@ -48,14 +48,14 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
 // clang-format on
 {
 #if PLATFORM_WIN32
-    HWND hWnd = reinterpret_cast<HWND>(InitAttribs.pNativeWndHandle);
+    HWND hWnd = reinterpret_cast<HWND>(InitAttribs.Window.hWnd);
     RECT rc;
     GetClientRect(hWnd, &rc);
     m_SwapChainDesc.Width  = rc.right - rc.left;
     m_SwapChainDesc.Height = rc.bottom - rc.top;
 #elif PLATFORM_LINUX
-    auto wnd     = static_cast<Window>(reinterpret_cast<size_t>(InitAttribs.pNativeWndHandle));
-    auto display = reinterpret_cast<Display*>(InitAttribs.pDisplay);
+    auto wnd     = static_cast<Window>(reinterpret_cast<size_t>(InitAttribs.Window.pWindow));
+    auto display = reinterpret_cast<Display*>(InitAttribs.Window.pDisplay);
 
     XWindowAttributes XWndAttribs;
     XGetWindowAttributes(display, wnd, &XWndAttribs);

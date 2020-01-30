@@ -237,7 +237,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     major_version_(0),
     minor_version_(0)
 {
-    auto* NativeWindow = reinterpret_cast<ANativeWindow*>(InitAttribs.pNativeWndHandle);
+    auto* NativeWindow = reinterpret_cast<ANativeWindow*>(InitAttribs.Window.pAWindow);
     Init(NativeWindow);
 
     FillDeviceCaps(deviceCaps);

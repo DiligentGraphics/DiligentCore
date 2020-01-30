@@ -35,6 +35,7 @@
 #include "../../../Primitives/interface/BasicTypes.h"
 #include "../../../Primitives/interface/DebugOutput.h"
 #include "../../../Primitives/interface/FlagEnum.h"
+#include "../../../Platforms/interface/NativeWindow.h"
 #include "APIInfo.h"
 
 /// Graphics engine namespace
@@ -1318,21 +1319,11 @@ struct EngineCreateInfo
 };
 typedef struct EngineCreateInfo EngineCreateInfo;
 
-
 /// Attributes of the OpenGL-based engine implementation
 struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
-    /// Native window handle
-
-    /// * On Win32 platform, this is a window handle (HWND)
-    /// * On Android platform, this is a pointer to the native window (ANativeWindow*)
-    /// * On Linux, this is the native window (Window)
-    void* pNativeWndHandle DEFAULT_INITIALIZER(nullptr);
-
-#if PLATFORM_LINUX
-    /// For linux platform only, this is the pointer to the display
-    void* pDisplay         DEFAULT_INITIALIZER(nullptr);
-#endif
+	/// Native window wrapper
+	NativeWindow Window;
 };
 typedef struct EngineGLCreateInfo EngineGLCreateInfo;
 

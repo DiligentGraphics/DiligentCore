@@ -87,8 +87,8 @@ void openglCallbackFunction(GLenum        source,
 
 GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCaps, const struct SwapChainDesc* /*pSCDesc*/) :
     m_Context(0),
-    m_pNativeWindow(InitAttribs.pNativeWndHandle),
-    m_pDisplay(InitAttribs.pDisplay)
+    m_pNativeWindow(InitAttribs.Window.pWindow),
+    m_pDisplay(InitAttribs.Window.pDisplay)
 {
     auto CurrentCtx = glXGetCurrentContext();
     if (CurrentCtx == 0)
@@ -101,7 +101,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     if (GLEW_OK != err)
         LOG_ERROR_AND_THROW("Failed to initialize GLEW");
 
-    if (InitAttribs.pNativeWndHandle != nullptr && InitAttribs.pDisplay != nullptr)
+    if (InitAttribs.Window.pWindow != nullptr && InitAttribs.Window.pDisplay != nullptr)
     {
         //glXSwapIntervalEXT(0);
 
@@ -127,7 +127,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     //Or better yet, use the GL3 way to get the version number
     glGetIntegerv(GL_MAJOR_VERSION, &MajorVersion);
     glGetIntegerv(GL_MINOR_VERSION, &MinorVersion);
-    LOG_INFO_MESSAGE(InitAttribs.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
+    LOG_INFO_MESSAGE(InitAttribs.Window.pWindow != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
 
     // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap.
     // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but

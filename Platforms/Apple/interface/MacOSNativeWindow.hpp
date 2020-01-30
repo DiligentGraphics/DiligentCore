@@ -25,49 +25,15 @@
  *  of the possibility of such damages.
  */
 
-#include "TestingEnvironment.hpp"
+#pragma once
 
-#ifndef NOMINMAX
-#    define NOMINMAX
-#endif
-#include <Windows.h>
+#include "../../../Primitives/interface/CommonDefinitions.h"
 
-namespace Diligent
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+struct MacOSNativeWindow
 {
+    void* pNSWindow DEFAULT_INITIALIZER(nullptr);
+};
 
-namespace Testing
-{
-
-NativeWindow TestingEnvironment::CreateNativeWindow()
-{
-#ifdef UNICODE
-    const auto* const WindowClassName = L"SampleApp";
-#else
-    const auto* const WindowClassName = "SampleApp";
-#endif
-    // Register window class
-    HINSTANCE instance = NULL;
-
-    WNDCLASSEX wcex = {sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW, DefWindowProc,
-                       0L, 0L, instance, NULL, NULL, NULL, NULL, WindowClassName, NULL};
-    RegisterClassEx(&wcex);
-
-    LONG WindowWidth  = 512;
-    LONG WindowHeight = 512;
-    RECT rc           = {0, 0, WindowWidth, WindowHeight};
-    AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-    HWND wnd = CreateWindowA("SampleApp", "Dummy Window",
-                             WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
-                             rc.right - rc.left, rc.bottom - rc.top, NULL, NULL, instance, NULL);
-    if (wnd == NULL)
-        LOG_ERROR_AND_THROW("Unable to create a window");
-
-    NativeWindow Window;
-    Window.hWnd = wnd;
-
-    return Window;
-}
-
-} // namespace Testing
-
-} // namespace Diligent
+DILIGENT_END_NAMESPACE // namespace Diligent

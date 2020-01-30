@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Added `NativeWindow` wrapper and replaced `pNativeWndHandle` and `pDisplay` members with it in `EngineGLCreateInfo` (API Version 240053)
 * Added C Interface (API Version 240052)
 
 ## v2.4.d

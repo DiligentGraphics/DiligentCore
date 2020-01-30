@@ -269,14 +269,12 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
 #    endif
             auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
 
-            auto NativeWnd = CreateNativeWindow();
+            NativeWindow Window = CreateNativeWindow();
 
             EngineGLCreateInfo CreateInfo;
             CreateInfo.DebugMessageCallback = MessageCallback;
-            CreateInfo.pNativeWndHandle     = NativeWnd.NativeWindowHandle;
-#    if PLATFORM_LINUX
-            CreateInfo.pDisplay = NativeWnd.Display;
-#    endif
+            CreateInfo.Window               = Window;
+
             if (NumDeferredCtx != 0)
             {
                 LOG_ERROR_MESSAGE("Deferred contexts are not supported in OpenGL mode");

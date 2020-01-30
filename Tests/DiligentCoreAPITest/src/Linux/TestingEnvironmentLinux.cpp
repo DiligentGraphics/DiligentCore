@@ -33,9 +33,9 @@ namespace Diligent
 namespace Testing
 {
 
-TestingEnvironment::NativeWindow TestingEnvironment::CreateNativeWindow()
+NativeWindow TestingEnvironment::CreateNativeWindow()
 {
-    return TestingEnvironment::NativeWindow{};
+    return NativeWindow{};
 }
 
 } // namespace Testing

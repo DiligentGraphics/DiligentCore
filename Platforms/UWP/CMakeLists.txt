@@ -6,6 +6,7 @@ set(INTERFACE
     interface/UWPDebug.hpp
     interface/UWPFileSystem.hpp
     interface/UWPDefinitions.h
+    interface/UWPNativeWindow.hpp
     ../Win32/interface/Win32Atomics.hpp
 )
 

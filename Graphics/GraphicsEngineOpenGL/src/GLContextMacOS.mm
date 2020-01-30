@@ -74,7 +74,7 @@ namespace Diligent
         //Or better yet, use the GL3 way to get the version number
         glGetIntegerv( GL_MAJOR_VERSION, &MajorVersion );
         glGetIntegerv( GL_MINOR_VERSION, &MinorVersion );
-        LOG_INFO_MESSAGE(InitAttribs.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
+        LOG_INFO_MESSAGE(InitAttribs.Window.pNSWindow != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ", ", GLRenderer, ')');
 
         // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap. 
         // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but 

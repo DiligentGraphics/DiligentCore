@@ -7,6 +7,7 @@ set(INTERFACE
     interface/LinuxFileSystem.hpp
     interface/LinuxPlatformDefinitions.h
     interface/LinuxPlatformMisc.hpp
+    interface/LinuxNativeWindow.hpp
 )
 
 set(SOURCE 
