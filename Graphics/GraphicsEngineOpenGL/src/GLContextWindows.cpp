@@ -104,9 +104,9 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     m_WindowHandleToDeviceContext{0}
 {
     Int32 MajorVersion = 0, MinorVersion = 0;
-    if (InitAttribs.pNativeWndHandle != nullptr)
+    if (InitAttribs.Window.hWnd != nullptr)
     {
-        HWND hWnd = reinterpret_cast<HWND>(InitAttribs.pNativeWndHandle);
+        HWND hWnd = reinterpret_cast<HWND>(InitAttribs.Window.hWnd);
 
         // See http://www.opengl.org/wiki/Tutorial:_OpenGL_3.1_The_First_Triangle_(C%2B%2B/Win)
         //     http://www.opengl.org/wiki/Creating_an_OpenGL_Context_(WGL)
@@ -273,7 +273,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     //Or better yet, use the GL3 way to get the version number
     glGetIntegerv(GL_MAJOR_VERSION, &MajorVersion);
     glGetIntegerv(GL_MINOR_VERSION, &MinorVersion);
-    LOG_INFO_MESSAGE(InitAttribs.pNativeWndHandle != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ')');
+    LOG_INFO_MESSAGE(InitAttribs.Window.hWnd != nullptr ? "Initialized OpenGL " : "Attached to OpenGL ", MajorVersion, '.', MinorVersion, " context (", GLVersionString, ')');
 
     // Under the standard filtering rules for cubemaps, filtering does not work across faces of the cubemap.
     // This results in a seam across the faces of a cubemap. This was a hardware limitation in the past, but

@@ -34,6 +34,7 @@
 #include "RefCntAutoPtr.hpp"
 #include "SwapChain.h"
 #include "GraphicsTypesOutputInserters.hpp"
+#include "NativeWindow.h"
 
 #include "gtest/gtest.h"
 
@@ -46,16 +47,8 @@ namespace Testing
 class TestingEnvironment : public ::testing::Environment
 {
 public:
-    struct NativeWindow
-    {
-        void* NativeWindowHandle = nullptr;
-#if PLATFORM_LINUX
-        void* Display = nullptr;
-#endif
-    };
-
-
     TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+
     ~TestingEnvironment() override;
 
     // Override this to define how to set up the environment.

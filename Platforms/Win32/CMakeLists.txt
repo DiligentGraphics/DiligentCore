@@ -8,6 +8,7 @@ set(INTERFACE
     interface/Win32FileSystem.hpp
     interface/Win32PlatformDefinitions.h
     interface/Win32PlatformMisc.hpp
+    interface/Win32NativeWindow.hpp
 )
 
 set(SOURCE 

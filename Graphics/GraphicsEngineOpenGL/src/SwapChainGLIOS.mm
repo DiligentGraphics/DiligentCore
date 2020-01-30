@@ -43,7 +43,7 @@ SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters*          pRefCounters,
     m_DepthRenderBuffer(false),
     m_DefaultFBO(false)
 {
-    m_CALayer = InitAttribs.pNativeWndHandle;
+    m_CALayer = InitAttribs.Window.pNSView;
     InitRenderBuffers(true, m_SwapChainDesc.Width, m_SwapChainDesc.Height);
     CreateDummyBuffers(m_pRenderDevice.RawPtr<RenderDeviceGLImpl>());
 }

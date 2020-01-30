@@ -10,6 +10,7 @@ set(PLATFORM_INTERFACE_HEADERS
 	../interface/PlatformDebug.hpp
 	../interface/PlatformDefinitions.h
 	../interface/PlatformMisc.hpp
+	../interface/NativeWindow.h
 )
 
 add_subdirectory(Basic)
