@@ -27,32 +27,28 @@ set(SOURCE
     src/ShaderResources.cpp
 )
 
+set(HLSL_DEFINITIONS include/HLSLDefinitions.fxh)
+
+# We must use the full path, otherwise the build system will not be able to properly detect
+# changes and shader conversion custom command will run every time
+set(HLSL_DEFINITIONS_INC ${CMAKE_CURRENT_SOURCE_DIR}/include/HLSLDefinitions_inc.fxh)
+set_source_files_properties(${HLSL_DEFINITIONS_INC} PROPERTIES GENERATED TRUE)
+
 add_library(Diligent-GraphicsEngineD3DBase STATIC 
-    ${SOURCE} ${INCLUDE} ${INTERFACE} include/HLSLDefinitions_inc.fxh
+    ${SOURCE} ${INCLUDE} ${INTERFACE}
+
+    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the 
+    # custom command as a source file is given a rule to generate the file using the command at build time. 
+    ${HLSL_DEFINITIONS_INC}
 )
 
-set_source_files_properties(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/HLSLDefinitions_inc.fxh
-    PROPERTIES GENERATED TRUE
-)
-
-# Create custom target to convert HLSLDefinitions.fxh to HLSLDefinitions_inc.fxh
-add_custom_target(Diligent-ProcessHLSLDefinitions
-SOURCES
-    include/HLSLDefinitions.fxh
-)
-
-add_custom_command(TARGET Diligent-ProcessHLSLDefinitions 
-                   # Unfortunately it is not possible to set TARGET directly to Diligent-GraphicsEngineD3DBase
-                   # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 
-                   # PRE_BUILD is treated as PRE_LINK.
-                   COMMAND ${FILE2STRING_PATH} include/HLSLDefinitions.fxh include/HLSLDefinitions_inc.fxh
+add_custom_command(OUTPUT ${HLSL_DEFINITIONS_INC} # We must use full path here!
+                   COMMAND ${FILE2STRING_PATH} ${HLSL_DEFINITIONS} include/HLSLDefinitions_inc.fxh
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                   MAIN_DEPENDENCY ${HLSL_DEFINITIONS}
                    COMMENT "Processing HLSLDefinitions.fxh"
                    VERBATIM
 )
-
-add_dependencies(Diligent-GraphicsEngineD3DBase Diligent-ProcessHLSLDefinitions)
 
 add_library(Diligent-GraphicsEngineD3DBaseInterface INTERFACE)
 target_link_libraries(Diligent-GraphicsEngineD3DBaseInterface INTERFACE Diligent-GraphicsEngineInterface)
@@ -63,7 +59,7 @@ PUBLIC
     include
 )
 
-target_link_libraries(Diligent-GraphicsEngineD3DBase 
+target_link_libraries(Diligent-GraphicsEngineD3DBase
 PUBLIC
     Diligent-BuildSettings 
     Diligent-GraphicsEngine 
@@ -79,9 +75,6 @@ source_group("generated" FILES include/HLSLDefinitions_inc.fxh)
 
 set_target_properties(Diligent-GraphicsEngineD3DBase PROPERTIES
     FOLDER DiligentCore/Graphics
-)
-set_target_properties(Diligent-ProcessHLSLDefinitions PROPERTIES
-    FOLDER DiligentCore/Graphics/Helper
 )
 
 if(DILIGENT_INSTALL_CORE)

@@ -110,31 +110,21 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanPhysicalDevice.cpp
 )
 
-set(GENERATE_MIPS_SHADER
-    shaders/GenerateMipsCS.csh
-)
-set(GENERATE_MIPS_SHADER_INC
-    shaders/GenerateMipsCS_inc.h
-)
+set(GENERATE_MIPS_SHADER shaders/GenerateMipsCS.csh)
 
+# We must use the full path, otherwise the build system will not be able to properly detect
+# changes and shader conversion custom command will run every time
+set(GENERATE_MIPS_SHADER_INC ${CMAKE_CURRENT_SOURCE_DIR}/shaders/GenerateMipsCS_inc.h)
 set_source_files_properties(
-    ${CMAKE_CURRENT_SOURCE_DIR}/${GENERATE_MIPS_SHADER_INC}
+    ${GENERATE_MIPS_SHADER_INC}
     PROPERTIES GENERATED TRUE
 )
 
-# Create custom target to convert GenerateMipsCS.csh to GenerateMipsCS_inc.h
-add_custom_target(Diligent-ProcessGenerateMipsVkShader
-SOURCES
-    ${GENERATE_MIPS_SHADER}
-)
-
-add_custom_command(TARGET Diligent-ProcessGenerateMipsVkShader 
-                   # Unfortunately it is not possible to set TARGET directly to Diligent-GraphicsEngineVk-*
-                   # because PRE_BUILD is only supported on Visual Studio 8 or later. For all other generators 
-                   # PRE_BUILD is treated as PRE_LINK.
-                   COMMAND ${FILE2STRING_PATH} ${GENERATE_MIPS_SHADER} ${GENERATE_MIPS_SHADER_INC}
+add_custom_command(OUTPUT ${GENERATE_MIPS_SHADER_INC} # We must use full path here!
+                   COMMAND ${FILE2STRING_PATH} ${GENERATE_MIPS_SHADER} shaders/GenerateMipsCS_inc.h
                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                    COMMENT "Processing GenerateMipsCS.csh"
+                   MAIN_DEPENDENCY ${GENERATE_MIPS_SHADER}
                    VERBATIM
 )
 
@@ -150,7 +140,12 @@ INTERFACE
 )
 
 add_library(Diligent-GraphicsEngineVk-static STATIC 
-    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${GENERATE_MIPS_SHADER} ${GENERATE_MIPS_SHADER_INC}
+    ${SRC} ${VULKAN_UTILS_SRC} ${INTERFACE} ${INCLUDE} ${VULKAN_UTILS_INCLUDE} ${GENERATE_MIPS_SHADER}
+    
+    # A target created in the same directory (CMakeLists.txt file) that specifies any output of the 
+    # custom command as a source file is given a rule to generate the file using the command at build time. 
+    ${GENERATE_MIPS_SHADER_INC}
+
     readme.md
 )
 
@@ -164,8 +159,6 @@ if(MSVC)
         src/GraphicsEngineVk.def
     )
 endif()
-
-add_dependencies(Diligent-GraphicsEngineVk-static Diligent-ProcessGenerateMipsVkShader)
 
 target_include_directories(Diligent-GraphicsEngineVk-static 
 PRIVATE
@@ -298,10 +291,6 @@ set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
 
 set_source_files_properties(
     readme.md PROPERTIES HEADER_FILE_ONLY TRUE
-)
-
-set_target_properties(Diligent-ProcessGenerateMipsVkShader PROPERTIES
-    FOLDER DiligentCore/Graphics/Helper
 )
 
 if(DILIGENT_INSTALL_CORE)
