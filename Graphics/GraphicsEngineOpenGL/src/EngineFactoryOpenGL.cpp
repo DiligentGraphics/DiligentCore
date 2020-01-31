@@ -43,8 +43,9 @@
 #endif
 
 #if PLATFORM_ANDROID
-#    include "RenderDeviceGLESImpl.h"
+#    include "RenderDeviceGLESImpl.hpp"
 #    include "FileStream.h"
+#    include "FileSystem.hpp"
 #endif
 
 namespace Diligent

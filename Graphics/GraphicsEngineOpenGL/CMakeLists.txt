@@ -100,7 +100,7 @@ elseif(PLATFORM_ANDROID)
 
     list(APPEND INCLUDE include/GLContextAndroid.hpp)
     list(APPEND INCLUDE include/GLStubsAndroid.h)
-    list(APPEND INCLUDE include/RenderDeviceGLESImpl.h)
+    list(APPEND INCLUDE include/RenderDeviceGLESImpl.hpp)
     list(APPEND INCLUDE include/SwapChainGLImpl.hpp)
 
     list(APPEND INTERFACE interface/RenderDeviceGLES.h)

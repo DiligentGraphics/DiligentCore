@@ -23,7 +23,7 @@
 
 #include "pch.h"
 
-#include "RenderDeviceGLESImpl.h"
+#include "RenderDeviceGLESImpl.hpp"
 
 namespace Diligent
 {

@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "RenderDeviceGLImpl.h"
+#include "RenderDeviceGLImpl.hpp"
 
 namespace Diligent
 {
