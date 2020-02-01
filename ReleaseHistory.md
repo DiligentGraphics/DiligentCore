@@ -1,5 +1,7 @@
 ## Current Progress
 
+* Added C Interface (API Version 240052)
+
 ## v2.4.d
 
 ### General
