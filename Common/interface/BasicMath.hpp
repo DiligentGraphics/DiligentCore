@@ -211,14 +211,18 @@ template <class T> struct Vector2
                        y >= right.y ? static_cast<T>(1) : static_cast<T>(0));
     }
 
+    T* data() { return reinterpret_cast<T*>(this); }
+
+    const T* data() const { return reinterpret_cast<const T*>(this); }
+
     T& operator[](size_t index)
     {
-        return reinterpret_cast<T*>(this)[index];
+        return data()[index];
     }
 
     const T& operator[](size_t index) const
     {
-        return reinterpret_cast<const T*>(this)[index];
+        return data()[index];
     }
 
     Vector2() :
@@ -409,14 +413,18 @@ template <class T> struct Vector3
                        z >= right.z ? static_cast<T>(1) : static_cast<T>(0));
     }
 
+    T* data() { return reinterpret_cast<T*>(this); }
+
+    const T* data() const { return reinterpret_cast<const T*>(this); }
+
     T& operator[](size_t index)
     {
-        return reinterpret_cast<T*>(this)[index];
+        return data()[index];
     }
 
     const T& operator[](size_t index) const
     {
-        return reinterpret_cast<const T*>(this)[index];
+        return data()[index];
     }
 
     Vector3() :
@@ -621,14 +629,18 @@ template <class T> struct Vector4
                        w >= right.w ? static_cast<T>(1) : static_cast<T>(0));
     }
 
+    T* data() { return reinterpret_cast<T*>(this); }
+
+    const T* data() const { return reinterpret_cast<const T*>(this); }
+
     T& operator[](size_t index)
     {
-        return reinterpret_cast<T*>(this)[index];
+        return data()[index];
     }
 
     const T& operator[](size_t index) const
     {
-        return reinterpret_cast<const T*>(this)[index];
+        return data()[index];
     }
 
     Vector4() :
@@ -743,6 +755,11 @@ template <class T> struct Matrix2x2
     {
         return m[row];
     }
+
+    T* data() { return (*this)[0]; }
+
+    const T* data() const { return (*this)[0]; }
+
 
     Matrix2x2& operator*=(T s)
     {
@@ -905,6 +922,10 @@ template <class T> struct Matrix3x3
     {
         return m[row];
     }
+
+    T* data() { return (*this)[0]; }
+
+    const T* data() const { return (*this)[0]; }
 
     Matrix3x3& operator*=(T s)
     {
@@ -1095,6 +1116,10 @@ template <class T> struct Matrix4x4
     {
         return m[row];
     }
+
+    T* data() { return (*this)[0]; }
+
+    const T* data() const { return (*this)[0]; }
 
     Matrix4x4& operator*=(T s)
     {
