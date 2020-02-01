@@ -127,7 +127,7 @@ struct hash<Diligent::BlendStateDesc>
     size_t operator()(const Diligent::BlendStateDesc& BSDesc) const
     {
         std::size_t Seed = 0;
-        for (int i = 0; i < Diligent::MAX_RENDER_TARGETS; ++i)
+        for (size_t i = 0; i < Diligent::MAX_RENDER_TARGETS; ++i)
         {
             const auto& rt = BSDesc.RenderTargets[i];
             Diligent::HashCombine(Seed,

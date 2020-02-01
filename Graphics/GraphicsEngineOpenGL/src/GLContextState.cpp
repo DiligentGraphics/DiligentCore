@@ -665,7 +665,7 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
     bool bEnableBlend = false;
     if (BSDsc.IndependentBlendEnable)
     {
-        for (int i = 0; i < MAX_RENDER_TARGETS; ++i)
+        for (int i = 0; i < static_cast<int>(MAX_RENDER_TARGETS); ++i)
         {
             const auto& RT = BSDsc.RenderTargets[i];
             if (RT.BlendEnable)
@@ -707,7 +707,7 @@ void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMas
 
         if (BSDsc.IndependentBlendEnable)
         {
-            for (int i = 0; i < MAX_RENDER_TARGETS; ++i)
+            for (int i = 0; i < static_cast<int>(MAX_RENDER_TARGETS); ++i)
             {
                 const auto& RT = BSDsc.RenderTargets[i];
 

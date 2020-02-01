@@ -410,7 +410,7 @@ struct BlendStateDesc
     bool operator==(const BlendStateDesc& RHS) const
     {
         bool bRTsEqual = true;
-        for (int i = 0; i < MAX_RENDER_TARGETS; ++i)
+        for (size_t i = 0; i < MAX_RENDER_TARGETS; ++i)
         {
             if (!(RenderTargets[i] == RHS.RenderTargets[i]))
             {
