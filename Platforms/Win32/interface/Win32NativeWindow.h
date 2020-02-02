@@ -34,6 +34,15 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 struct Win32NativeWindow
 {
     void* hWnd DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    Win32NativeWindow() noexcept
+    {}
+
+    explicit Win32NativeWindow(void* _hWnd) noexcept :
+        hWnd(hWnd)
+    {}
+#endif
 };
 
 DILIGENT_END_NAMESPACE // namespace Diligent

@@ -69,30 +69,30 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
     VkIOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
-    surfaceCreateInfo.pView = Window.pNSWindow;
+    surfaceCreateInfo.pView = Window.pNSView;
 
     auto err = vkCreateIOSSurfaceMVK(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
     VkMacOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
-    surfaceCreateInfo.pView = Window.pNSView;
+    surfaceCreateInfo.pView = Window.pNSWindow;
 
     auto err = vkCreateMacOSSurfaceMVK(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.display = Window.pDisplay;
-    surfaceCreatem_VkSurface  = Window.pWindow;
+    surfaceCreateInfo.display = reinterpret_cast<struct wl_display*>(Window.pDisplay);
+    surfaceCreateInfo.Surface = reinterpret_cast<struct wl_surface*>(Window.pWindow);
 
     err = vkCreateWaylandSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
     VkXcbSurfaceCreateInfoKHR surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.connection = Window.pXCBConnection;
-    surfaceCreateInfo.window     = Window.pWindow;
+    surfaceCreateInfo.connection = reinterpret_cast<xcb_connection_t*>(Window.pXCBConnection);
+    surfaceCreateInfo.window     = (xcb_window_t)Window.pWindow;
 
     auto err = vkCreateXcbSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #endif

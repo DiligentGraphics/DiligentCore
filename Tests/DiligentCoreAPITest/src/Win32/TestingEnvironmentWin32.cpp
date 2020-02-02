@@ -38,7 +38,7 @@ namespace Diligent
 namespace Testing
 {
 
-NativeWindow TestingEnvironment::CreateNativeWindow()
+Win32NativeWindow TestingEnvironment::CreateNativeWindow()
 {
 #ifdef UNICODE
     const auto* const WindowClassName = L"SampleApp";
@@ -62,10 +62,7 @@ NativeWindow TestingEnvironment::CreateNativeWindow()
     if (wnd == NULL)
         LOG_ERROR_AND_THROW("Unable to create a window");
 
-    NativeWindow Window;
-    Window.hWnd = wnd;
-
-    return Window;
+    return Win32NativeWindow{wnd};
 }
 
 } // namespace Testing
