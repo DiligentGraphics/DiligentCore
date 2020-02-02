@@ -7,7 +7,7 @@ set(INTERFACE
     interface/AndroidFileSystem.hpp
     interface/AndroidPlatformDefinitions.h
     interface/AndroidPlatformMisc.hpp
-    interface/AndroidNativeWindow.hpp
+    interface/AndroidNativeWindow.h
 )
 
 set(SOURCE 

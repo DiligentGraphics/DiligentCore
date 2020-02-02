@@ -31,9 +31,9 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-struct MacOSNativeWindow
+struct UWPNativeWindow
 {
-    void* pNSWindow DEFAULT_INITIALIZER(nullptr);
+    void* pWindow DEFAULT_INITIALIZER(nullptr);
 };
 
 DILIGENT_END_NAMESPACE // namespace Diligent

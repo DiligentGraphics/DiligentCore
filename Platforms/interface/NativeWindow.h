@@ -31,30 +31,30 @@
 
 #if PLATFORM_WIN32
 
-#    include "../Win32/interface/Win32NativeWindow.hpp"
+#    include "../Win32/interface/Win32NativeWindow.h"
 
 #elif PLATFORM_UNIVERSAL_WINDOWS
 
-#    include "../UWP/interface/UWPNativeWindow.hpp"
+#    include "../UWP/interface/UWPNativeWindow.h"
 
 #elif PLATFORM_ANDROID
 
-#    include "../Android/interface/AndroidNativeWindow.hpp"
+#    include "../Android/interface/AndroidNativeWindow.h"
 
 #elif PLATFORM_LINUX
 
-#    include "../Linux/interface/LinuxNativeWindow.hpp"
+#    include "../Linux/interface/LinuxNativeWindow.h"
 
 #elif PLATFORM_MACOS
 
-#    include "../Apple/interface/MacOSNativeWindow.hpp"
+#    include "../Apple/interface/MacOSNativeWindow.h"
 
 #elif PLATFORM_IOS
 
-#    include "../Apple/interface/IOSNativeWindow.hpp"
+#    include "../Apple/interface/IOSNativeWindow.h"
 
 #else
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
 #endif
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
@@ -84,7 +84,7 @@ typedef struct MacOSNativeWindow NativeWindow;
 typedef struct IOSNativeWindow NativeWindow;
 
 #else
-#    error Unknown platform. Please define one of the following macros as 1:  PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
+#    error Unknown platform. Please define one of the following macros as 1: PLATFORM_WIN32, PLATFORM_UNIVERSAL_WINDOWS, PLATFORM_ANDROID, PLATFORM_LINUX, PLATFORM_MACOS, PLATFORM_IOS.
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

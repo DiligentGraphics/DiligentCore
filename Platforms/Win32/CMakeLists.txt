@@ -8,7 +8,7 @@ set(INTERFACE
     interface/Win32FileSystem.hpp
     interface/Win32PlatformDefinitions.h
     interface/Win32PlatformMisc.hpp
-    interface/Win32NativeWindow.hpp
+    interface/Win32NativeWindow.h
 )
 
 set(SOURCE 
@@ -35,8 +35,8 @@ PRIVATE
 )
 
 source_group("src" FILES ${SOURCE})
-source_group("include" FILES ${INCLUDE})
-source_group("interface" FILES ${PLATFORM_INTERFACE_HEADERS})
+source_group("interface\\win32" FILES ${INTERFACE})
+source_group("interface\\common" FILES ${PLATFORM_INTERFACE_HEADERS})
 
 set_target_properties(Diligent-Win32Platform PROPERTIES
     FOLDER DiligentCore/Platforms

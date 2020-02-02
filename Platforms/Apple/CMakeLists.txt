@@ -3,9 +3,9 @@ cmake_minimum_required (VERSION 3.6)
 project(Diligent-ApplePlatform CXX)
 
 if(PLATFORM_MACOS)
-    set(APPLE_NATIVE_WINDOW_H interface/MacOSNativeWindow.hpp)
+    set(APPLE_NATIVE_WINDOW_H interface/MacOSNativeWindow.h)
 elseif(PLATFORM_IOS)
-    set(APPLE_NATIVE_WINDOW_H interface/IOSNativeWindow.hpp)
+    set(APPLE_NATIVE_WINDOW_H interface/IOSNativeWindow.h)
 endif()
 
 set(INTERFACE

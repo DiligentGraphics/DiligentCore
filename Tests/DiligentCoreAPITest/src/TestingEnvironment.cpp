@@ -269,7 +269,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
 #    endif
             auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
 
-            NativeWindow Window = CreateNativeWindow();
+            auto Window = CreateNativeWindow();
 
             EngineGLCreateInfo CreateInfo;
             CreateInfo.DebugMessageCallback = MessageCallback;

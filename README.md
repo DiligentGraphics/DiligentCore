@@ -217,7 +217,7 @@ On Android, you can only create OpenGLES device. The following code snippet show
 ```cpp
 auto* pFactoryOpenGL = GetEngineFactoryOpenGL();
 EngineGLCreateInfo EngineCI;
-EngineCI.NativeWindow.pAWindow = NativeWindowHandle;
+EngineCI.Window.pAWindow = NativeWindowHandle;
 pFactoryOpenGL->CreateDeviceAndSwapChainGL(
     EngineCI, &m_pDevice, &m_pContext, SCDesc, &m_pSwapChain);
 IRenderDeviceGLES *pRenderDeviceOpenGLES;
