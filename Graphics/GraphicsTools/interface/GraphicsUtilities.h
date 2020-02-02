@@ -36,21 +36,21 @@
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-void CreateUniformBuffer(IRenderDevice*   pDevice,
-                         Uint32           Size,
-                         const Char*      Name,
-                         IBuffer**        ppBuffer,
-                         USAGE            Usage          = USAGE_DYNAMIC,
-                         BIND_FLAGS       BindFlags      = BIND_UNIFORM_BUFFER,
-                         CPU_ACCESS_FLAGS CPUAccessFlags = CPU_ACCESS_WRITE,
-                         void*            pInitialData   = nullptr);
+void DILIGENT_GLOBAL_FUNCTION(CreateUniformBuffer)(IRenderDevice*                  pDevice,
+                                                   Uint32                          Size,
+                                                   const Char*                     Name,
+                                                   IBuffer**                       ppBuffer,
+                                                   USAGE Usage                     DEFAULT_VALUE(USAGE_DYNAMIC),
+                                                   BIND_FLAGS BindFlags            DEFAULT_VALUE(BIND_UNIFORM_BUFFER),
+                                                   CPU_ACCESS_FLAGS CPUAccessFlags DEFAULT_VALUE(CPU_ACCESS_WRITE),
+                                                   void* pInitialData              DEFAULT_VALUE(nullptr));
 
-void GenerateCheckerBoardPattern(Uint32         Width,
-                                 Uint32         Height,
-                                 TEXTURE_FORMAT Fmt,
-                                 Uint32         HorzCells,
-                                 Uint32         VertCells,
-                                 Uint8*         pData,
-                                 Uint32         StrideInBytes);
+void DILIGENT_GLOBAL_FUNCTION(GenerateCheckerBoardPattern)(Uint32         Width,
+                                                           Uint32         Height,
+                                                           TEXTURE_FORMAT Fmt,
+                                                           Uint32         HorzCells,
+                                                           Uint32         VertCells,
+                                                           Uint8*         pData,
+                                                           Uint32         StrideInBytes);
 
 DILIGENT_END_NAMESPACE // namespace Diligent

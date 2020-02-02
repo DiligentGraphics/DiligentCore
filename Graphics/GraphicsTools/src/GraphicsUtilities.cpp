@@ -132,3 +132,30 @@ void GenerateCheckerBoardPattern(Uint32 Width, Uint32 Height, TEXTURE_FORMAT Fmt
 }
 
 } // namespace Diligent
+
+
+extern "C"
+{
+    void Diligent_CreateUniformBuffer(Diligent::IRenderDevice*   pDevice,
+                                      Diligent::Uint32           Size,
+                                      const Diligent::Char*      Name,
+                                      Diligent::IBuffer**        ppBuffer,
+                                      Diligent::USAGE            Usage,
+                                      Diligent::BIND_FLAGS       BindFlags,
+                                      Diligent::CPU_ACCESS_FLAGS CPUAccessFlags,
+                                      void*                      pInitialData)
+    {
+        Diligent::CreateUniformBuffer(pDevice, Size, Name, ppBuffer, Usage, BindFlags, CPUAccessFlags, pInitialData);
+    }
+
+    void Diligent_GenerateCheckerBoardPattern(Diligent::Uint32         Width,
+                                              Diligent::Uint32         Height,
+                                              Diligent::TEXTURE_FORMAT Fmt,
+                                              Diligent::Uint32         HorzCells,
+                                              Diligent::Uint32         VertCells,
+                                              Diligent::Uint8*         pData,
+                                              Diligent::Uint32         StrideInBytes)
+    {
+        Diligent::GenerateCheckerBoardPattern(Width, Height, Fmt, HorzCells, VertCells, pData, StrideInBytes);
+    }
+}
