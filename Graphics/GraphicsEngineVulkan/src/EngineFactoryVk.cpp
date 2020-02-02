@@ -74,22 +74,14 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateSwapChainVk(IRenderDevice*       pDevice,
                                                       IDeviceContext*      pImmediateContext,
                                                       const SwapChainDesc& SwapChainDesc,
-                                                      void*                pNativeWndHandle,
+                                                      const NativeWindow&  Window,
                                                       ISwapChain**         ppSwapChain) override final;
 
 private:
     std::function<void(RenderDeviceVkImpl*)> OnRenderDeviceCreated = nullptr;
 };
 
-/// Creates render device and device contexts for Vulkan backend
 
-/// \param [in] EngineCI - Engine creation attributes.
-/// \param [out] ppDevice - Address of the memory location where pointer to
-///                         the created device will be written
-/// \param [out] ppContexts - Address of the memory location where pointers to
-///                           the contexts will be written. Immediate context goes at
-///                           position 0. If EngineCI.NumDeferredContexts > 0,
-///                           pointers to the deferred contexts are written afterwards.
 void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _EngineCI,
                                                     IRenderDevice**           ppDevice,
                                                     IDeviceContext**          ppContexts)
@@ -317,23 +309,10 @@ void EngineFactoryVkImpl::AttachToVulkanDevice(std::shared_ptr<VulkanUtilities::
 }
 
 
-/// Creates a swap chain for Direct3D12-based engine implementation
-
-/// \param [in] pDevice - Pointer to the render device
-/// \param [in] pImmediateContext - Pointer to the immediate device context
-/// \param [in] SCDesc - Swap chain description
-/// \param [in] pNativeWndHandle - Platform-specific native handle of the window
-///                                the swap chain will be associated with:
-///                                * On Win32 platform, this should be window handle (HWND)
-///                                * On Universal Windows Platform, this should be reference to the
-///                                  core window (Windows::UI::Core::CoreWindow)
-///
-/// \param [out] ppSwapChain    - Address of the memory location where pointer to the new
-///                               swap chain will be written
 void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
                                             IDeviceContext*      pImmediateContext,
                                             const SwapChainDesc& SCDesc,
-                                            void*                pNativeWndHandle,
+                                            const NativeWindow&  Window,
                                             ISwapChain**         ppSwapChain)
 {
     VERIFY(ppSwapChain, "Null pointer provided");
@@ -348,7 +327,7 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
         auto* pDeviceContextVk = ValidatedCast<DeviceContextVkImpl>(pImmediateContext);
         auto& RawMemAllocator  = GetRawAllocator();
 
-        auto* pSwapChainVk = NEW_RC_OBJ(RawMemAllocator, "SwapChainVkImpl instance", SwapChainVkImpl)(SCDesc, pDeviceVk, pDeviceContextVk, pNativeWndHandle);
+        auto* pSwapChainVk = NEW_RC_OBJ(RawMemAllocator, "SwapChainVkImpl instance", SwapChainVkImpl)(SCDesc, pDeviceVk, pDeviceContextVk, Window);
         pSwapChainVk->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
     }
     catch (const std::runtime_error&)

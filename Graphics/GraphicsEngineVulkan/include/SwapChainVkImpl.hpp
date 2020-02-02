@@ -49,7 +49,7 @@ public:
                     const SwapChainDesc&       SwapChainDesc,
                     class RenderDeviceVkImpl*  pRenderDeviceVk,
                     class DeviceContextVkImpl* pDeviceContextVk,
-                    void*                      pNativeWndHandle);
+                    const NativeWindow&        Window);
     ~SwapChainVkImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

@@ -41,7 +41,7 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters*       pRefCounters,
                                        const FullScreenModeDesc& FSDesc,
                                        RenderDeviceD3D12Impl*    pRenderDeviceD3D12,
                                        DeviceContextD3D12Impl*   pDeviceContextD3D12,
-                                       void*                     pNativeWndHandle) :
+                                       const NativeWindow&       Window) :
     // clang-format off
     TSwapChainBase
     {
@@ -50,7 +50,7 @@ SwapChainD3D12Impl::SwapChainD3D12Impl(IReferenceCounters*       pRefCounters,
         pDeviceContextD3D12,
         SCDesc,
         FSDesc,
-        pNativeWndHandle
+        Window
     },
     m_pBackBufferRTV(STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>"))
 // clang-format on

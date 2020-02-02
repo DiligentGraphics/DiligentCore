@@ -33,8 +33,9 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 struct LinuxNativeWindow
 {
-    void* pDisplay DEFAULT_INITIALIZER(nullptr);
-    void* pWindow  DEFAULT_INITIALIZER(nullptr);
+    void* pDisplay       DEFAULT_INITIALIZER(nullptr);
+    void* pWindow        DEFAULT_INITIALIZER(nullptr);
+    void* pXCBConnection DEFAULT_INITIALIZER(nullptr);
 };
 
 DILIGENT_END_NAMESPACE // namespace Diligent

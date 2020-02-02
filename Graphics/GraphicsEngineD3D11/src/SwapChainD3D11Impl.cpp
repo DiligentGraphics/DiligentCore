@@ -39,7 +39,7 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters*       pRefCounters,
                                        const FullScreenModeDesc& FSDesc,
                                        RenderDeviceD3D11Impl*    pRenderDeviceD3D11,
                                        DeviceContextD3D11Impl*   pDeviceContextD3D11,
-                                       void*                     pNativeWndHandle) :
+                                       const NativeWindow&       Window) :
     // clang-format off
     TSwapChainBase
     {
@@ -48,7 +48,7 @@ SwapChainD3D11Impl::SwapChainD3D11Impl(IReferenceCounters*       pRefCounters,
         pDeviceContextD3D11,
         SCDesc,
         FSDesc,
-        pNativeWndHandle
+        Window
     }
 // clang-format on
 {

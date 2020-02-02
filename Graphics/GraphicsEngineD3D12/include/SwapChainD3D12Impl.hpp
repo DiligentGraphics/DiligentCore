@@ -48,7 +48,7 @@ public:
                        const FullScreenModeDesc&     FSDesc,
                        class RenderDeviceD3D12Impl*  pRenderDeviceD3D12,
                        class DeviceContextD3D12Impl* pDeviceContextD3D12,
-                       void*                         pNativeWndHandle);
+                       const NativeWindow&           Window);
     ~SwapChainD3D12Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

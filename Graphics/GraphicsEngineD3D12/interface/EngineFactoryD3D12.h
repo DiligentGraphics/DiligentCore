@@ -114,11 +114,11 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
     /// \param [in] pImmediateContext - Pointer to the immediate device context.
     /// \param [in] SCDesc            - Swap chain description.
     /// \param [in] FSDesc            - Fullscreen mode description.
-    /// \param [in] pNativeWndHandle - Platform-specific native handle of the window
-    ///                                the swap chain will be associated with:
-    ///                                * On Win32 platform, this should be the window handle (HWND)
-    ///                                * On Universal Windows Platform, this should be the reference
-    ///                                  to the core window (Windows::UI::Core::CoreWindow)
+    /// \param [in] Window            - Platform-specific native window description that
+    ///                                 the swap chain will be associated with:
+    ///                                 * On Win32 platform, this is the window handle (HWND)
+    ///                                 * On Universal Windows Platform, this is the reference
+    ///                                   to the core window (Windows::UI::Core::CoreWindow)
     ///
     /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new
     ///                               swap chain will be written
@@ -127,7 +127,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D12, IEngineFactory)
                                               IDeviceContext*              pImmediateContext,
                                               const SwapChainDesc REF      SwapChainDesc,
                                               const FullScreenModeDesc REF FSDesc,
-                                              void*                        pNativeWndHandle,
+                                              const NativeWindow REF       Window,
                                               ISwapChain**                 ppSwapChain) PURE;
 
 

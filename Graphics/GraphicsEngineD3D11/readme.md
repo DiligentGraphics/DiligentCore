@@ -29,7 +29,9 @@ RefCntAutoPtr<IDeviceContext> pImmediateContext;
 SwapChainDesc SwapChainDesc;
 RefCntAutoPtr<ISwapChain> pSwapChain;
 pFactoryD3D11->CreateDeviceAndContextsD3D11(EngineCI, &pRenderDevice, &pImmediateContext);
-pFactoryD3D11->CreateSwapChainD3D11(pRenderDevice, pImmediateContext, SwapChainDesc, hWnd, &pSwapChain);
+NativeWindow Window;
+Window.hWnd = hWnd;
+pFactoryD3D11->CreateSwapChainD3D11(pRenderDevice, pImmediateContext, SwapChainDesc, Window, &pSwapChain);
 ```
 
 Alternatively, the engine can be initialized by attaching to existing D3D11 device and immediate context (see below).

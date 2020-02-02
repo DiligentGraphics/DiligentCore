@@ -47,11 +47,11 @@ public:
                      IDeviceContext*           pDeviceContext,
                      const SwapChainDesc&      SCDesc,
                      const FullScreenModeDesc& FSDesc,
-                     void*                     pNativeWndHandle) :
+                     const NativeWindow&       Window) :
         // clang-format off
         TBase{pRefCounters, pDevice, pDeviceContext, SCDesc},
         m_FSDesc           {FSDesc},
-        m_pNativeWndHandle {pNativeWndHandle}
+        m_Window           {Window}
     // clang-format on
     {}
 
@@ -74,7 +74,7 @@ protected:
     void CreateDXGISwapChain(IUnknown* pD3D11DeviceOrD3D12CmdQueue)
     {
 #if PLATFORM_WIN32
-        auto hWnd = reinterpret_cast<HWND>(m_pNativeWndHandle);
+        auto hWnd = reinterpret_cast<HWND>(m_Window.hWnd);
         if (m_SwapChainDesc.Width == 0 || m_SwapChainDesc.Height == 0)
         {
             RECT rc;
@@ -194,7 +194,7 @@ protected:
 
         hr = factory->CreateSwapChainForCoreWindow(
             pD3D11DeviceOrD3D12CmdQueue,
-            reinterpret_cast<IUnknown*>(m_pNativeWndHandle),
+            reinterpret_cast<IUnknown*>(m_Window.pWindow),
             &swapChainDesc,
             nullptr,
             &pSwapChain1);
@@ -242,7 +242,7 @@ protected:
 
     FullScreenModeDesc         m_FSDesc;
     CComPtr<DXGISwapChainType> m_pSwapChain;
-    void*                      m_pNativeWndHandle;
+    NativeWindow               m_Window;
 };
 
 } // namespace Diligent

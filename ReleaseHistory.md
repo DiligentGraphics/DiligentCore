@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Updated swap chain creation functions to use `NativeWindow` (API Version 240054)
 * Added `NativeWindow` wrapper and replaced `pNativeWndHandle` and `pDisplay` members with it in `EngineGLCreateInfo` (API Version 240053)
 * Added C Interface (API Version 240052)
 

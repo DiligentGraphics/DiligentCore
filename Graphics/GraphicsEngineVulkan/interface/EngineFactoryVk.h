@@ -66,22 +66,36 @@ static const INTERFACE_ID IID_EngineFactoryVk =
 
 DILIGENT_BEGIN_INTERFACE(IEngineFactoryVk, IEngineFactory)
 {
+    /// Creates a render device and device contexts for Vulkan backend
+
+    /// \param [in] EngineCI    - Engine creation attributes.
+    /// \param [out] ppDevice   - Address of the memory location where pointer to
+    ///                           the created device will be written
+    /// \param [out] ppContexts - Address of the memory location where pointers to
+    ///                           the contexts will be written. Immediate context goes at
+    ///                           position 0. If EngineCI.NumDeferredContexts > 0,
+    ///                           pointers to the deferred contexts are written afterwards.
     VIRTUAL void METHOD(CreateDeviceAndContextsVk)(THIS_
                                                    const EngineVkCreateInfo REF EngineCI,
                                                    IRenderDevice**              ppDevice,
                                                    IDeviceContext**             ppContexts) PURE;
 
-    //virtual void AttachToVulkanDevice(void *pVkNativeDevice,
-    //                                 class ICommandQueueVk *pCommandQueue,
-    //                                 const EngineVkCreateInfo& EngineCI,
-    //                                 IRenderDevice **ppDevice,
-    //                                 IDeviceContext **ppContexts) = 0;
 
+    /// Creates a swap chain for Vulkan-based engine implementation
+
+    /// \param [in] pDevice           - Pointer to the render device
+    /// \param [in] pImmediateContext - Pointer to the immediate device context
+    /// \param [in] SCDesc            - Swap chain description
+    /// \param [in] Window            - Platform-specific native window description that
+    ///                                 the swap chain will be associated with.
+    ///
+    /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new
+    ///                               swap chain will be written
     VIRTUAL void METHOD(CreateSwapChainVk)(THIS_
                                            IRenderDevice*          pDevice,
                                            IDeviceContext*         pImmediateContext,
                                            const SwapChainDesc REF SwapChainDesc,
-                                           void*                   pNativeWndHandle,
+                                           const NativeWindow REF  Window,
                                            ISwapChain**            ppSwapChain) PURE;
 };
 DILIGENT_END_INTERFACE

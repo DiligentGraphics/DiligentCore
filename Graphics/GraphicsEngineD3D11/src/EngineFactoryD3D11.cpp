@@ -66,7 +66,7 @@ public:
                                                          IDeviceContext*           pImmediateContext,
                                                          const SwapChainDesc&      SCDesc,
                                                          const FullScreenModeDesc& FSDesc,
-                                                         void*                     pNativeWndHandle,
+                                                         const NativeWindow&       Window,
                                                          ISwapChain**              ppSwapChain) override final;
 
     virtual void DILIGENT_CALL_TYPE AttachToD3D11Device(void*                        pd3d11NativeDevice,
@@ -284,7 +284,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
                                                   IDeviceContext*           pImmediateContext,
                                                   const SwapChainDesc&      SCDesc,
                                                   const FullScreenModeDesc& FSDesc,
-                                                  void*                     pNativeWndHandle,
+                                                  const NativeWindow&       Window,
                                                   ISwapChain**              ppSwapChain)
 {
     VERIFY(ppSwapChain, "Null pointer provided");
@@ -299,7 +299,7 @@ void EngineFactoryD3D11Impl::CreateSwapChainD3D11(IRenderDevice*            pDev
         auto* pDeviceContextD3D11 = ValidatedCast<DeviceContextD3D11Impl>(pImmediateContext);
         auto& RawMemAllocator     = GetRawAllocator();
 
-        auto* pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D11Impl instance", SwapChainD3D11Impl)(SCDesc, FSDesc, pDeviceD3D11, pDeviceContextD3D11, pNativeWndHandle);
+        auto* pSwapChainD3D11 = NEW_RC_OBJ(RawMemAllocator, "SwapChainD3D11Impl instance", SwapChainD3D11Impl)(SCDesc, FSDesc, pDeviceD3D11, pDeviceContextD3D11, Window);
         pSwapChainD3D11->QueryInterface(IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain));
     }
     catch (const std::runtime_error&)
