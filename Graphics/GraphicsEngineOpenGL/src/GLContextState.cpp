@@ -660,7 +660,8 @@ void GLContextState::SetBlendFactors(const float* BlendFactors)
 
 void GLContextState::SetBlendState(const BlendStateDesc& BSDsc, Uint32 SampleMask)
 {
-    VERIFY(SampleMask == 0xFFFFFFFF, "Sample mask is not currently implemented in GL");
+    if (SampleMask != 0xFFFFFFFF)
+        LOG_ERROR_MESSAGE("Sample mask is not currently implemented in GL backend");
 
     bool bEnableBlend = false;
     if (BSDsc.IndependentBlendEnable)
