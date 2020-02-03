@@ -26,3 +26,5 @@
  */
 
 #pragma once
+
+#include "../../../Primitives/interface/CommonDefinitions.h"

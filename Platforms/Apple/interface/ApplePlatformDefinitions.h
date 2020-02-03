@@ -23,6 +23,8 @@
 
 #pragma once
 
+#include "../../../Primitives/interface/CommonDefinitions.h"
+
 #if DILIGENT_C_INTERFACE
 
 #    define _countof(arr) (sizeof(arr) / sizeof(arr[0]))
