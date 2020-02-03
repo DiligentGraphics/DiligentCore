@@ -53,7 +53,7 @@ public:
     virtual void CreateSwapChainMtl(IRenderDevice*       pDevice,
                                     IDeviceContext*      pImmediateContext,
                                     const SwapChainDesc& SCDesc,
-                                    void*                pView,
+                                    const NativeWindow&  Window,
                                     ISwapChain**         ppSwapChain) = 0;
 
     virtual void AttachToMtlDevice(void*                      pMtlNativeDevice,

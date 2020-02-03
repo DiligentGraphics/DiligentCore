@@ -42,7 +42,7 @@ public:
                      const SwapChainDesc&        SCDesc,
                      class RenderDeviceMtlImpl*  pRenderDeviceMtl,
                      class DeviceContextMtlImpl* pDeviceContextMtl,
-                     void*                       pView);
+                     const NativeWindow&         Window);
     ~SwapChainMtlImpl();
 
     virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) override final;

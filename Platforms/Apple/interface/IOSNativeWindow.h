@@ -33,7 +33,16 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 struct IOSNativeWindow
 {
-    void* pNSView DEFAULT_INITIALIZER(nullptr);
+    void* pCALayer DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    IOSNativeWindow() noexcept
+    {}
+    
+    explicit IOSNativeWindow(void* _pCALayer) noexcept :
+        pCALayer{_pCALayer}
+    {}
+#endif
 };
 
 DILIGENT_END_NAMESPACE // namespace Diligent

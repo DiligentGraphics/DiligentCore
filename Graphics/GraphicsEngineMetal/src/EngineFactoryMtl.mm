@@ -54,11 +54,11 @@ public:
                                     IRenderDevice**             ppDevice, 
                                     IDeviceContext**            ppContexts)override final;
 
-   void CreateSwapChainMtl( IRenderDevice*            pDevice, 
-                            IDeviceContext*           pImmediateContext, 
-                            const SwapChainDesc&      SCDesc, 
-                            void*                     pView,
-                            ISwapChain**              ppSwapChain )override final;
+   void CreateSwapChainMtl( IRenderDevice*         pDevice,
+                            IDeviceContext*        pImmediateContext,
+                            const SwapChainDesc&   SCDesc,
+                            const NativeWindow&    Window,
+                            ISwapChain**           ppSwapChain )override final;
 
    void AttachToMtlDevice(void*                       pMtlNativeDevice, 
                           const EngineMtlCreateInfo&  EngineCI, 
@@ -179,11 +179,11 @@ void EngineFactoryMtlImpl::AttachToMtlDevice(void*                       pMtlNat
 ///                                
 /// \param [out] ppSwapChain    - Address of the memory location where pointer to the new 
 ///                               swap chain will be written
-void EngineFactoryMtlImpl::CreateSwapChainMtl(IRenderDevice*            pDevice, 
-                                              IDeviceContext*           pImmediateContext, 
-                                              const SwapChainDesc&      SCDesc, 
-                                              void*                     pView, 
-                                              ISwapChain**              ppSwapChain )
+void EngineFactoryMtlImpl::CreateSwapChainMtl(IRenderDevice*       pDevice,
+                                              IDeviceContext*      pImmediateContext,
+                                              const SwapChainDesc& SCDesc,
+                                              const NativeWindow&  Window,
+                                              ISwapChain**         ppSwapChain )
 {
     VERIFY( ppSwapChain, "Null pointer provided" );
     if( !ppSwapChain )
@@ -198,7 +198,7 @@ void EngineFactoryMtlImpl::CreateSwapChainMtl(IRenderDevice*            pDevice,
         auto &RawMemAllocator = GetRawAllocator();
 
         auto *pSwapChainMtl = NEW_RC_OBJ(RawMemAllocator,  "SwapChainMtlImpl instance", SwapChainMtlImpl)
-                                          (SCDesc, pDeviceMtl, pDeviceContextMtl, pView);
+                                          (SCDesc, pDeviceMtl, pDeviceContextMtl, Window);
         pSwapChainMtl->QueryInterface( IID_SwapChain, reinterpret_cast<IObject**>(ppSwapChain) );
     }
     catch( const std::runtime_error & )

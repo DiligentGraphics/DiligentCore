@@ -32,7 +32,7 @@ SwapChainMtlImpl::SwapChainMtlImpl(IReferenceCounters*       pRefCounters,
                                    const SwapChainDesc&      SCDesc, 
                                    RenderDeviceMtlImpl*      pRenderDeviceMtl, 
                                    DeviceContextMtlImpl*     pDeviceContextMtl, 
-                                   void*                     pNativeWndHandle) : 
+                                   const NativeWindow&       Window) :
     TSwapChainBase(pRefCounters, pRenderDeviceMtl, pDeviceContextMtl, SCDesc)
 {
     LOG_ERROR_AND_THROW("Swap chain is not implemented in Metal backend");
