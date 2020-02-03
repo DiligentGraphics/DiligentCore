@@ -54,7 +54,7 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
     m_SwapChainDesc.Width  = rc.right - rc.left;
     m_SwapChainDesc.Height = rc.bottom - rc.top;
 #elif PLATFORM_LINUX
-    auto wnd     = static_cast<Window>(reinterpret_cast<size_t>(InitAttribs.Window.pWindow));
+    auto wnd     = InitAttribs.Window.WindowId;
     auto display = reinterpret_cast<Display*>(InitAttribs.Window.pDisplay);
 
     XWindowAttributes XWndAttribs;
