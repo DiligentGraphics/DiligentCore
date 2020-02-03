@@ -84,7 +84,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
 
     surfaceCreateInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.display = reinterpret_cast<struct wl_display*>(Window.pDisplay);
-    surfaceCreateInfo.Surface = reinterpret_cast<struct wl_surface*>(Window.pWindow);
+    surfaceCreateInfo.Surface = reinterpret_cast<struct wl_surface*>(nullptr);
 
     err = vkCreateWaylandSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_XCB_KHR)
@@ -92,7 +92,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
 
     surfaceCreateInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.connection = reinterpret_cast<xcb_connection_t*>(Window.pXCBConnection);
-    surfaceCreateInfo.window     = static_cast<xcb_window_t>(reinterpret_cast<size_t>(Window.pWindow));
+    surfaceCreateInfo.window     = Window.WindowId;
 
     auto err = vkCreateXcbSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #endif
