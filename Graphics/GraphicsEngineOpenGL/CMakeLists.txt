@@ -176,7 +176,7 @@ if(PLATFORM_WIN32)
 elseif(PLATFORM_ANDROID)
     set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} GLESv3 EGL android)
 elseif(PLATFORM_LINUX)
-    set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} glew-static)
+    set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} glew-static GL X11)
 elseif(PLATFORM_MACOS)
     find_package(OpenGL REQUIRED)
     set(PRIVATE_DEPENDENCIES ${PRIVATE_DEPENDENCIES} glew-static ${OPENGL_LIBRARY})
@@ -192,6 +192,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # as hiding is intended
     target_compile_options(Diligent-GraphicsEngineOpenGL-static PRIVATE -Wno-overloaded-virtual)
     target_compile_options(Diligent-GraphicsEngineOpenGL-shared PRIVATE -Wno-overloaded-virtual)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
+        # Disallow missing direct and indirect dependencies to enssure that .so is self-contained
+        LINK_FLAGS "-Wl,--no-undefined -Wl,--no-allow-shlib-undefined"
+    )
 endif()
 
 target_link_libraries(Diligent-GraphicsEngineOpenGL-static

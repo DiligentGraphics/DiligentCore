@@ -217,6 +217,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # as hiding is intended
     target_compile_options(Diligent-GraphicsEngineVk-static PRIVATE -Wno-overloaded-virtual)
     target_compile_options(Diligent-GraphicsEngineVk-shared PRIVATE -Wno-overloaded-virtual)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
+        # Disallow missing direct and indirect dependencies to enssure that .so is self-contained
+        LINK_FLAGS "-Wl,--no-undefined -Wl,--no-allow-shlib-undefined"
+    )
 endif()
 
 if(PLATFORM_WIN32)
