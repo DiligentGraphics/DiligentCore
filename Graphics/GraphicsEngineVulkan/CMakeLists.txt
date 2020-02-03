@@ -217,6 +217,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     # as hiding is intended
     target_compile_options(Diligent-GraphicsEngineVk-static PRIVATE -Wno-overloaded-virtual)
     target_compile_options(Diligent-GraphicsEngineVk-shared PRIVATE -Wno-overloaded-virtual)
+
+    # Disable the following warning:
+    #   moving a local object in a return statement prevents copy elision [-Wpessimizing-move]
+    set_source_files_properties(src/CommandPoolManager.cpp src/VulkanUtilities/VulkanDebug.cpp
+    PROPERTIES
+        COMPILE_FLAGS -Wno-pessimizing-move
+    )
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
         # Disallow missing direct and indirect dependencies to enssure that .so is self-contained

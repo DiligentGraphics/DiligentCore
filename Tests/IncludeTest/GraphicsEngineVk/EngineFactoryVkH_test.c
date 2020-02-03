@@ -25,6 +25,8 @@
  *  of the possibility of such damages.
  */
 
+#include <string.h>
+
 #ifndef ENGINE_DLL
 #    define ENGINE_DLL 1
 #endif
@@ -41,13 +43,15 @@ void TestEngineFactoryVk_CInterface()
     IEngineFactoryVk* pFactory = Diligent_GetEngineFactoryVk();
 #endif
 
-    struct EngineVkCreateInfo EngineCI = {0};
-    IRenderDevice*            pDevice  = NULL;
-    IDeviceContext*           pCtx     = NULL;
+    EngineVkCreateInfo EngineCI;
+    memset(&EngineCI, 0, sizeof(EngineCI));
+    IRenderDevice*  pDevice  = NULL;
+    IDeviceContext* pCtx     = NULL;
     IEngineFactoryVk_CreateDeviceAndContextsVk(pFactory, &EngineCI, &pDevice, &pCtx);
 
-    struct SwapChainDesc SCDesc           = {0};
-    void*                pNativeWndHandle = NULL;
-    ISwapChain*          pSwapChain       = NULL;
+    SwapChainDesc SCDesc;
+    memset(&SCDesc, 0, sizeof(SCDesc));
+    void*       pNativeWndHandle = NULL;
+    ISwapChain* pSwapChain       = NULL;
     IEngineFactoryVk_CreateSwapChainVk(pFactory, pDevice, pCtx, &SCDesc, pNativeWndHandle, &pSwapChain);
 }

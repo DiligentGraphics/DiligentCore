@@ -9,6 +9,15 @@ file(GLOB PLATFORMS_SOURCE src/Platforms/*)
 set(SOURCE ${COMMON_SOURCE} ${GRAPHICS_ACCESSORIES_SOURCE} ${PLATFORMS_SOURCE})
 set(INCLUDE)
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Disable the following warning:
+    #   explicitly moving variable of type '(anonymous namespace)::SmartPtr' (aka 'RefCntAutoPtr<(anonymous namespace)::Object>') to itself [-Wself-move]
+    set_source_files_properties(src/Common/RefCntAutoPtrTest.cpp
+    PROPERTIES
+        COMPILE_FLAGS "-Wno-self-move -Wno-self-assign"
+    )
+endif()
+
 add_executable(DiligentCoreTest ${SOURCE} ${INCLUDE})
 set_common_target_properties(DiligentCoreTest)
 

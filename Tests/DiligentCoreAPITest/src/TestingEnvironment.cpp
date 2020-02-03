@@ -104,6 +104,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
     std::vector<IDeviceContext*> ppContexts;
     std::vector<AdapterAttribs>  Adapters;
 
+#if D3D11_SUPPORTED || D3D12_SUPPORTED
     auto PrintAdapterInfo = [](Uint32 AdapterId, const AdapterAttribs& AdapterInfo, const std::vector<DisplayModeAttribs>& DisplayModes) //
     {
         const char* AdapterTypeStr = nullptr;
@@ -117,6 +118,8 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
                          AdapterTypeStr, ", ", AdapterInfo.DedicatedVideoMemory / (1 << 20), " MB); ",
                          DisplayModes.size(), (DisplayModes.size() == 1 ? " display mode" : " display modes"));
     };
+#endif
+
     switch (m_DeviceType)
     {
 #if D3D11_SUPPORTED

@@ -25,6 +25,14 @@ if(VULKAN_SUPPORTED)
         list(APPEND INCLUDE 
             include/SPIRVUtils.hpp
         )
+        if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            # Disable the following warning:
+            #   moving a local object in a return statement prevents copy elision [-Wpessimizing-move]
+            set_source_files_properties(src/SPIRVUtils.cpp
+            PROPERTIES
+                COMPILE_FLAGS -Wno-pessimizing-move
+            )
+        endif()
     endif()
 endif()
 
