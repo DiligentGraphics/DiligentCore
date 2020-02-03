@@ -33,7 +33,17 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 struct UWPNativeWindow
 {
-    void* pWindow DEFAULT_INITIALIZER(nullptr);
+    /// Windows::UI::Core::CoreWindow
+    void* pCoreWindow DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    UWPNativeWindow() noexcept
+    {}
+
+    explicit UWPNativeWindow(void* _pCoreWindow) noexcept :
+        pCoreWindow{_pCoreWindow}
+    {}
+#endif
 };
 
 DILIGENT_END_NAMESPACE // namespace Diligent

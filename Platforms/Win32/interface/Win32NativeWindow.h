@@ -40,7 +40,7 @@ struct Win32NativeWindow
     {}
 
     explicit Win32NativeWindow(void* _hWnd) noexcept :
-        hWnd(hWnd)
+        hWnd{hWnd}
     {}
 #endif
 };

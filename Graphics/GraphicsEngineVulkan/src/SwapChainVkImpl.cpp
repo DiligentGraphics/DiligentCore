@@ -92,7 +92,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
 
     surfaceCreateInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.connection = reinterpret_cast<xcb_connection_t*>(Window.pXCBConnection);
-    surfaceCreateInfo.window     = (xcb_window_t)Window.pWindow;
+    surfaceCreateInfo.window     = static_cast<xcb_window_t>(reinterpret_cast<size_t>(Window.pWindow));
 
     auto err = vkCreateXcbSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #endif
