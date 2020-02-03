@@ -194,7 +194,7 @@ protected:
 
         hr = factory->CreateSwapChainForCoreWindow(
             pD3D11DeviceOrD3D12CmdQueue,
-            reinterpret_cast<IUnknown*>(m_Window.pWindow),
+            reinterpret_cast<IUnknown*>(m_Window.pCoreWindow),
             &swapChainDesc,
             nullptr,
             &pSwapChain1);
