@@ -38,7 +38,7 @@ struct MacOSNativeWindow
 #if DILIGENT_CPP_INTERFACE
     MacOSNativeWindow() noexcept
     {}
-    
+
     explicit MacOSNativeWindow(void* _pNSView) noexcept :
         pNSView(_pNSView)
     {}

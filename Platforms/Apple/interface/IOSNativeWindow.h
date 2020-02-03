@@ -38,7 +38,7 @@ struct IOSNativeWindow
 #if DILIGENT_CPP_INTERFACE
     IOSNativeWindow() noexcept
     {}
-    
+
     explicit IOSNativeWindow(void* _pCALayer) noexcept :
         pCALayer{_pCALayer}
     {}
