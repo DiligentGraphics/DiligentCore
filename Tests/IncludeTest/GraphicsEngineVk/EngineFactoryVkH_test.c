@@ -25,14 +25,13 @@
  *  of the possibility of such damages.
  */
 
-#include <string.h>
-
 #ifndef ENGINE_DLL
 #    define ENGINE_DLL 1
 #endif
 
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/EngineFactoryVk.h"
 
+#include <string.h>
 
 void TestEngineFactoryVk_CInterface()
 {

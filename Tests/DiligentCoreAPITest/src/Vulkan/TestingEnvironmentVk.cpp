@@ -348,6 +348,7 @@ VkCommandBuffer TestingEnvironmentVk::AllocateCommandBuffer()
     BeginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     auto res        = vkBeginCommandBuffer(vkCmdBuff, &BeginInfo);
     VERIFY(res >= 0, "Failed to begin command buffer");
+    (void)res;
 
     return vkCmdBuff;
 }

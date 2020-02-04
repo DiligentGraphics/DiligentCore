@@ -27,6 +27,8 @@
 
 #include "DiligentCore/Graphics/GraphicsEngineOpenGL/interface/EngineFactoryOpenGL.h"
 
+#include <string.h>
+
 
 void TestEngineFactoryGL_CInterface()
 {
@@ -37,7 +39,8 @@ void TestEngineFactoryGL_CInterface()
     IEngineFactoryOpenGL* pFactory = Diligent_GetEngineFactoryOpenGL();
 #endif
 
-    struct EngineGLCreateInfo EngineCI = {0};
+    EngineGLCreateInfo EngineCI;
+    memset(&EngineCI, 0, sizeof(EngineCI));
     IEngineFactoryOpenGL_CreateDeviceAndSwapChainGL(pFactory, &EngineCI, (IRenderDevice**)NULL, (IDeviceContext**)NULL, (SwapChainDesc*)NULL, (ISwapChain**)NULL);
 
     IEngineFactoryOpenGL_CreateHLSL2GLSLConverter(pFactory, (IHLSL2GLSLConverter**)NULL);

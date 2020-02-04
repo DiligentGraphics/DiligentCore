@@ -151,6 +151,7 @@ void TestingSwapChainVk::CreateFramebuffer()
 
     auto res = vkCreateFramebuffer(m_vkDevice, &FramebufferCI, nullptr, &m_vkFramebuffer);
     VERIFY_EXPR(res >= 0);
+    (void)res;
 }
 
 TestingSwapChainVk::~TestingSwapChainVk()
