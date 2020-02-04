@@ -155,9 +155,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*      pRefCoun
     }
     m_RootSig.Finalize(pd3d12Device);
 
-    if (PipelineDesc.IsComputePipeline)
+    if (m_Desc.IsComputePipeline)
     {
-        auto& ComputePipeline = PipelineDesc.ComputePipeline;
+        auto& ComputePipeline = m_Desc.ComputePipeline;
 
         if (ComputePipeline.pCS == nullptr)
             LOG_ERROR_AND_THROW("Compute shader is not set in the pipeline desc");
@@ -189,7 +189,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*      pRefCoun
     }
     else
     {
-        const auto& GraphicsPipeline = PipelineDesc.GraphicsPipeline;
+        const auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
@@ -281,7 +281,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*      pRefCoun
         m_RootSig.GetD3D12RootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
     }
 
-    if (PipelineDesc.SRBAllocationGranularity > 1)
+    if (m_Desc.SRBAllocationGranularity > 1)
     {
         std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVarMgrDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
@@ -297,7 +297,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*      pRefCoun
         }
 
         auto CacheMemorySize = m_RootSig.GetResourceCacheRequiredMemSize();
-        m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, m_NumShaders, ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
     }
 
     m_ShaderResourceLayoutHash = m_RootSig.GetHash();

@@ -179,15 +179,15 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
 
         auto* pStaticResLayout = new (m_ShaderResourceLayouts + m_NumShaders + s) ShaderResourceLayoutVk(LogicalDevice);
         auto* pStaticResCache  = new (m_StaticResCaches + s) ShaderResourceCacheVk(ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources);
-        pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], ShaderResLayoutAllocator, PipelineDesc.ResourceLayout, m_StaticResCaches[s]);
+        pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], ShaderResLayoutAllocator, m_Desc.ResourceLayout, m_StaticResCaches[s]);
 
         new (m_StaticVarsMgrs + s) ShaderVariableManagerVk(*this, *pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache);
     }
     ShaderResourceLayoutVk::Initialize(pDeviceVk, m_NumShaders, m_ShaderResourceLayouts, ShaderResources.data(), GetRawAllocator(),
-                                       PipelineDesc.ResourceLayout, ShaderSPIRVs.data(), m_PipelineLayout);
+                                       m_Desc.ResourceLayout, ShaderSPIRVs.data(), m_PipelineLayout);
     m_PipelineLayout.Finalize(LogicalDevice);
 
-    if (PipelineDesc.SRBAllocationGranularity > 1)
+    if (m_Desc.SRBAllocationGranularity > 1)
     {
         std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
@@ -202,7 +202,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
         auto   DescriptorSetSizes = m_PipelineLayout.GetDescriptorSetSizes(NumSets);
         auto   CacheMemorySize    = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes.data());
 
-        m_SRBMemAllocator.Initialize(PipelineDesc.SRBAllocationGranularity, m_NumShaders, ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, m_NumShaders, ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
     }
 
     // Create shader modules and initialize shader stages

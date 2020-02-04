@@ -241,7 +241,7 @@ void TestingSwapChainD3D12::TakeSnapshot()
     pd3d12Queue->ExecuteCommandLists(1, pCmdLits);
     pEnv->IdleCommandQueue(pd3d12Queue);
 
-    D3D12_RANGE InvalidateRange = {0, m_StagingBufferSize};
+    D3D12_RANGE InvalidateRange = {0, static_cast<SIZE_T>(m_StagingBufferSize)};
     void*       pStagingDataPtr = nullptr;
     m_pd3d12StagingBuffer->Map(0, &InvalidateRange, &pStagingDataPtr);
     m_ReferenceDataPitch = m_SwapChainDesc.Width * 4;
