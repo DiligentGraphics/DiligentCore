@@ -234,6 +234,10 @@ PUBLIC
 )
 
 target_compile_definitions(Diligent-GraphicsEngineOpenGL-shared PUBLIC ENGINE_DLL=1)
+if(PLATFORM_MACOS)
+    # Silence OpenGL deprecation warnings
+    target_compile_definitions(Diligent-GraphicsEngineOpenGL-static PUBLIC GL_SILENCE_DEPRECATION)
+endif()
 
 if(PLATFORM_WIN32)
 
