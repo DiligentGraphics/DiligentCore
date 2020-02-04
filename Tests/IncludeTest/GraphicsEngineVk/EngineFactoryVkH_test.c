@@ -44,8 +44,8 @@ void TestEngineFactoryVk_CInterface()
 
     EngineVkCreateInfo EngineCI;
     memset(&EngineCI, 0, sizeof(EngineCI));
-    IRenderDevice*  pDevice  = NULL;
-    IDeviceContext* pCtx     = NULL;
+    IRenderDevice*  pDevice = NULL;
+    IDeviceContext* pCtx    = NULL;
     IEngineFactoryVk_CreateDeviceAndContextsVk(pFactory, &EngineCI, &pDevice, &pCtx);
 
     SwapChainDesc SCDesc;
