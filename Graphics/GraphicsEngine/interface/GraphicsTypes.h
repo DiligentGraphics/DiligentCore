@@ -942,6 +942,10 @@ DILIGENT_TYPED_ENUM(PRIMITIVE_TOPOLOGY, Uint8)
     /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINELIST. OpenGL counterpart: GL_LINES.
     PRIMITIVE_TOPOLOGY_LINE_LIST,
 
+    /// Interpret the vertex data as a line strip.\n
+    /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_LINESTRIP. OpenGL counterpart: GL_LINE_STRIP.
+    PRIMITIVE_TOPOLOGY_LINE_STRIP,
+
     /// Interpret the vertex data as a list of one control point patches.\n
     /// D3D counterpart: D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST. OpenGL counterpart: GL_PATCHES.
     PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST,

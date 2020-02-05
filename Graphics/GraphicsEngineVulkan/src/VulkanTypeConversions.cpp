@@ -1015,6 +1015,10 @@ void PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(PRIMITIVE_TOPOLOGY 
             VkPrimTopology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
             return;
 
+        case PRIMITIVE_TOPOLOGY_LINE_STRIP:
+            VkPrimTopology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+            return;
+
         default:
             VERIFY_EXPR(PrimTopology >= PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST && PrimTopology < PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES);
             VkPrimTopology     = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;

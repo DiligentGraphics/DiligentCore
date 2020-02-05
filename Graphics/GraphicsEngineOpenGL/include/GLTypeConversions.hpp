@@ -37,7 +37,8 @@ static const GLenum PrimTopologyToGLTopologyMap[] =
     GL_TRIANGLES,      //PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
     GL_TRIANGLE_STRIP, //PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
     GL_POINTS,         //PRIMITIVE_TOPOLOGY_POINT_LIST
-    GL_LINES           //PRIMITIVE_TOPOLOGY_LINE_LIST
+    GL_LINES,          //PRIMITIVE_TOPOLOGY_LINE_LIST
+    GL_LINE_STRIP      //PRIMITIVE_TOPOLOGY_LINE_STRIP
 };
 // clang-format on
 
@@ -54,6 +55,7 @@ inline GLenum PrimitiveTopologyToGLTopology(PRIMITIVE_TOPOLOGY PrimTopology)
         case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP: VERIFY_EXPR(GLTopology == GL_TRIANGLE_STRIP); break;
         case PRIMITIVE_TOPOLOGY_POINT_LIST:     VERIFY_EXPR(GLTopology == GL_POINTS);         break;
         case PRIMITIVE_TOPOLOGY_LINE_LIST:      VERIFY_EXPR(GLTopology == GL_LINES);          break;
+        case PRIMITIVE_TOPOLOGY_LINE_STRIP:     VERIFY_EXPR(GLTopology == GL_LINE_STRIP);     break;
         default: UNEXPECTED("Unexpected primitive topology");
             // clang-format on
     }
