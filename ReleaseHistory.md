@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Added `PRIMITIVE_TOPOLOGY_LINE_STRIP` topology (API Version 240055)
 * Updated swap chain creation functions to use `NativeWindow` (API Version 240054)
 * Added `NativeWindow` wrapper and replaced `pNativeWndHandle` and `pDisplay` members with it in `EngineGLCreateInfo` (API Version 240053)
 * Added C Interface (API Version 240052)
