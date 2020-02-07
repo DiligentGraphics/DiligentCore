@@ -1119,4 +1119,89 @@ TEST(Common_AdvancedMath, IntersectRayTriangle)
     EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-2, -2, 0}, float3{+2, -2, 0}, float3{0, +2, 0}, float3{0, 0, -rsqrt2}, float3{+rsqrt2, 0, +rsqrt2}), 1);
 }
 
+
+
+static void TestLineTrace(float2 Start, float2 End, const std::initializer_list<int2> Reference, int2 GridSize = {10, 10})
+{
+    auto it = Reference.begin();
+    TraceLineThroughGrid(Start, End, GridSize,
+                         [&](int2 pos) //
+                         {
+                             if (it == Reference.end())
+                             {
+                                 ADD_FAILURE() << "Unexpected end of the reference cell list";
+                                 return false;
+                             }
+
+                             if (pos != *it)
+                             {
+                                 ADD_FAILURE() << static_cast<size_t>(it - Reference.begin()) << ": (" << pos.x << ", " << pos.y << ") != (" << it->x << ", " << it->y << ")";
+                             }
+                             ++it;
+                             return true;
+                         } //
+    );
+    if (it != Reference.end())
+    {
+        ADD_FAILURE() << "End of the line has not been reached";
+    }
+}
+
+TEST(Common_AdvancedMath, TraceLineThroughGrid)
+{
+    // Horizontal direction
+    TestLineTrace(float2{0.f, 0.5f}, float2{2.f, 0.5f}, {int2{0, 0}, int2{1, 0}, int2{2, 0}});
+    TestLineTrace(float2{-10.f, 0.5f}, float2{2.f, 0.5f}, {int2{0, 0}, int2{1, 0}, int2{2, 0}});
+    TestLineTrace(float2{8.f, 0.5f}, float2{10.f, 0.5f}, {int2{8, 0}, int2{9, 0}});
+    TestLineTrace(float2{8.f, 0.5f}, float2{20.f, 0.5f}, {int2{8, 0}, int2{9, 0}});
+
+    // Vertical direction
+    TestLineTrace(float2{0.5f, 0.f}, float2{0.5f, 2.f}, {int2{0, 0}, int2{0, 1}, int2{0, 2}});
+    TestLineTrace(float2{0.5f, -10.f}, float2{0.5f, 2.f}, {int2{0, 0}, int2{0, 1}, int2{0, 2}});
+    TestLineTrace(float2{0.5f, 8.f}, float2{0.5f, 10.f}, {int2{0, 8}, int2{0, 9}});
+    TestLineTrace(float2{0.5f, 8.f}, float2{0.5f, 20.f}, {int2{0, 8}, int2{0, 9}});
+
+    // Sub-cell horizontal
+    TestLineTrace(float2{5.85f, 5.5f}, float2{5.9f, 5.5f}, {int2{5, 5}});
+    TestLineTrace(float2{5.9f, 5.5f}, float2{5.85f, 5.5f}, {int2{5, 5}});
+    TestLineTrace(float2{5.05f, 5.5f}, float2{5.1f, 5.5f}, {int2{5, 5}});
+    TestLineTrace(float2{5.1f, 5.5f}, float2{5.05f, 5.5f}, {int2{5, 5}});
+
+    // Sub-cell vertical
+    TestLineTrace(float2{5.5f, 5.85f}, float2{5.5f, 5.9f}, {int2{5, 5}});
+    TestLineTrace(float2{5.5f, 5.9f}, float2{5.5f, 5.85f}, {int2{5, 5}});
+    TestLineTrace(float2{5.5f, 5.05f}, float2{5.5f, 5.1f}, {int2{5, 5}});
+    TestLineTrace(float2{5.5f, 5.1f}, float2{5.5f, 5.05f}, {int2{5, 5}});
+
+    // Sub-cell diagonal
+    TestLineTrace(float2{5.85f, 5.85f}, float2{5.9f, 5.9f}, {int2{5, 5}});
+    TestLineTrace(float2{5.9f, 5.9f}, float2{5.85f, 5.85f}, {int2{5, 5}});
+    TestLineTrace(float2{5.05f, 5.05f}, float2{5.1f, 5.1f}, {int2{5, 5}});
+    TestLineTrace(float2{5.1f, 5.1f}, float2{5.05f, 5.05f}, {int2{5, 5}});
+    TestLineTrace(float2{5.85f, 5.05f}, float2{5.9f, 5.1f}, {int2{5, 5}});
+    TestLineTrace(float2{5.9f, 5.1f}, float2{5.85f, 5.05f}, {int2{5, 5}});
+    TestLineTrace(float2{5.05f, 5.85f}, float2{5.1f, 5.9f}, {int2{5, 5}});
+    TestLineTrace(float2{5.1f, 5.9f}, float2{5.05f, 5.85f}, {int2{5, 5}});
+
+
+    TestLineTrace(float2{0.5f, 0.9f}, float2{1.5f, 1.2f}, {int2{0, 0}, int2{0, 1}, int2{1, 1}});
+    TestLineTrace(float2{1.5f, 1.2f}, float2{0.5f, 0.9f}, {int2{1, 1}, int2{0, 1}, int2{0, 0}});
+
+    TestLineTrace(float2{1.5f, 0.9f}, float2{0.5f, 1.2f}, {int2{1, 0}, int2{1, 1}, int2{0, 1}});
+    TestLineTrace(float2{0.5f, 1.2f}, float2{1.5f, 0.9f}, {int2{0, 1}, int2{1, 1}, int2{1, 0}});
+
+    TestLineTrace(float2{0.95f, 0.5f}, float2{1.5f, 1.5f}, {int2{0, 0}, int2{1, 0}, int2{1, 1}});
+    TestLineTrace(float2{1.5f, 1.5f}, float2{0.95f, 0.5f}, {int2{1, 1}, int2{1, 0}, int2{0, 0}});
+
+    TestLineTrace(float2{0.95f, 1.5f}, float2{1.5f, 0.5f}, {int2{0, 1}, int2{1, 1}, int2{1, 0}});
+    TestLineTrace(float2{1.5f, 0.5f}, float2{0.95f, 1.5f}, {int2{1, 0}, int2{1, 1}, int2{0, 1}});
+
+    // Test intersections
+    TestLineTrace(float2{-0.1f, 0.85f}, float2{0.35f, -2.f}, {int2{0, 0}});
+    TestLineTrace(float2{10.1f, 0.85f}, float2{9.15f, -3.f}, {int2{9, 0}});
+
+    TestLineTrace(float2{0.25f - 5.f, 9.75f - 6.f}, float2{0.25f + 5.f, 9.75f + 6.f}, {int2{0, 9}});
+    TestLineTrace(float2{9.75f + 5.f, 9.85f - 6.f}, float2{9.75f - 5.f, 9.85f + 6.f}, {int2{9, 9}});
+}
+
 } // namespace

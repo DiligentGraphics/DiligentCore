@@ -553,6 +553,89 @@ inline float IntersectRayTriangle(const float3& V0,
     return t;
 }
 
+
+/// Traces a 2D line through the grid and enumerates all cells the line touches.
+
+/// \tparam TCallback - Type of the callback function.
+/// \param f2Start    - Line start point.
+/// \param f2Start    - Line end point.
+/// \param i2GridSize - Grid dimensions.
+/// \param Callback   - Callback function that will be caleed with the argument of type Int2
+///                     for every cell visited. The function should return true to continue
+///                     tracing and false otherwise.
+///
+/// \remarks The algorithm clips the line against the grid boundaries [0 .. i2GridSize.x] x [0 .. i2GridSize.y]
+///
+/// For example, for the line below, the algorithm will trace the following cells: (0,0), (0,1), (1,1)
+///   __________ __________
+///  |          |End       |
+///  |          /          |
+///  |         /|          |
+///  |________/_|__________|
+///  |       /  |          |
+///  |      /   |          |
+///  |    Start |          |
+///  |__________|__________|
+///
+template <typename TCallback>
+void TraceLineThroughGrid(float2    f2Start,
+                          float2    f2End,
+                          int2      i2GridSize,
+                          TCallback Callback)
+{
+    if (f2Start == f2End)
+        return;
+
+    VERIFY_EXPR(i2GridSize.x > 0 && i2GridSize.y > 0);
+
+    float2 f2Direction = f2End - f2Start;
+
+    auto  f2GridSize = i2GridSize.Recast<float>();
+    float EnterDist, ExitDist;
+    if (IntersectRayBox2D(f2Start, f2Direction, float2{0, 0}, f2GridSize, EnterDist, ExitDist))
+    {
+        f2End   = f2Start + f2Direction * std::min(ExitDist, 1.f);
+        f2Start = f2Start + f2Direction * std::max(EnterDist, 0.f);
+        VERIFY_EXPR(f2End.x >= 0 && f2End.x <= f2GridSize.x);
+        VERIFY_EXPR(f2End.y >= 0 && f2End.y <= f2GridSize.y);
+        VERIFY_EXPR(f2Start.x >= 0 && f2Start.x <= f2GridSize.x);
+        VERIFY_EXPR(f2Start.y >= 0 && f2Start.y <= f2GridSize.y);
+
+        const int   dh = f2Direction.x > 0 ? 1 : -1;
+        const int   dv = f2Direction.y > 0 ? 1 : -1;
+        const float p  = f2Direction.y * f2Start.x - f2Direction.x * f2Start.y;
+        const float tx = p - f2Direction.y * static_cast<float>(dh);
+        const float ty = p + f2Direction.x * static_cast<float>(dv);
+
+        const int2 i2End = f2End.Recast<int>();
+
+        int2 i2Pos = f2Start.Recast<int>();
+        while (true)
+        {
+            if (i2Pos.x < i2GridSize.x && i2Pos.y < i2GridSize.y)
+            {
+                if (!Callback(i2Pos))
+                    break;
+            }
+
+            if (i2Pos == i2End)
+            {
+                // End of the line
+                break;
+            }
+            else
+            {
+                // step to the next cell
+                float t = f2Direction.x * (static_cast<float>(i2Pos.y) + 0.5f) - f2Direction.y * (static_cast<float>(i2Pos.x) + 0.5f);
+                if (std::abs(t + tx) < std::abs(t + ty))
+                    i2Pos.x += dh;
+                else
+                    i2Pos.y += dv;
+            }
+        }
+    }
+}
+
 } // namespace Diligent
 
 namespace std
