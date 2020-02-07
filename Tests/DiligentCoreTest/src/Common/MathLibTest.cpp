@@ -930,4 +930,95 @@ TEST(Common_AdvancedMath, HermiteSpline)
     EXPECT_NE(HermiteSpline(double3(1, 2, 3), double3(4, 5, 6), double3(7, 8, 9), double3(10, 11, 12), 0.1), double3(0, 0, 0));
 }
 
+TEST(Common_AdvancedMath, IntersectRayAABB)
+{
+    BoundBox AABB{float3(2, 4, 6), float3(4, 8, 12)};
+    float3   Center     = (AABB.Min + AABB.Max) * 0.5f;
+    float3   HalfExtent = (AABB.Max - AABB.Min) * 0.5f;
+
+    float Enter = 0, Exit = 0;
+
+    // Intersections along axes
+
+    // +X
+    EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{-2.f, 0.25f, 0.125f}, float3{+1, 0, 0}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.x);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.x * 3);
+    EXPECT_FALSE(IntersectRayAABB(Center + HalfExtent * float3{-2.f, 0.25f, 0.125f}, float3{-1, 0, 0}, AABB, Enter, Exit));
+
+    // -X
+    EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{+2.f, 0.25f, 0.125f}, float3{-1, 0, 0}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.x);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.x * 3);
+    EXPECT_FALSE(IntersectRayAABB(Center + HalfExtent * float3{+2.f, 0.25f, 0.125f}, float3{+1, 0, 0}, AABB, Enter, Exit));
+
+    // +Y
+    EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{0.75f, -2.f, 0.125f}, float3{0, +1, 0}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.y);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.y * 3);
+    EXPECT_FALSE(IntersectRayAABB(Center + HalfExtent * float3{0.75f, -2.f, 0.125f}, float3{0, -1, 0}, AABB, Enter, Exit));
+
+    // -Y
+    EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{0.75f, 2.f, 0.125f}, float3{0, -1, 0}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.y);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.y * 3);
+    EXPECT_FALSE(IntersectRayAABB(Center + HalfExtent * float3{0.75f, 2.f, 0.125f}, float3{0, +1, 0}, AABB, Enter, Exit));
+
+    // +Z
+    EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{0.75f, 0.5f, -2.f}, float3{0, 0, +1}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.z);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.z * 3);
+    EXPECT_FALSE(IntersectRayAABB(Center + HalfExtent * float3{0.75f, 0.5f, -2.f}, float3{0, 0, -1}, AABB, Enter, Exit));
+
+    // -Z
+    EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{0.75f, 0.5f, 2.f}, float3{0, 0, -1}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.z);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.z * 3);
+    EXPECT_FALSE(IntersectRayAABB(Center + HalfExtent * float3{0.75f, 0.5f, 2.f}, float3{0, 0, +1}, AABB, Enter, Exit));
+
+
+    // Origin in the box
+
+    // +X
+    EXPECT_TRUE(IntersectRayAABB(Center, float3{1, 0, 0}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.x);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.x);
+
+    // -X
+    EXPECT_TRUE(IntersectRayAABB(Center, float3{-1, 0, 0}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.x);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.x);
+
+    // +Y
+    EXPECT_TRUE(IntersectRayAABB(Center, float3{0, 1, 0}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.y);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.y);
+
+    // -Y
+    EXPECT_TRUE(IntersectRayAABB(Center, float3{0, -1, 0}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.y);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.y);
+
+    // +Z
+    EXPECT_TRUE(IntersectRayAABB(Center, float3{0, 0, 1}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.z);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.z);
+
+    // -Z
+    EXPECT_TRUE(IntersectRayAABB(Center, float3{0, 0, -1}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.z);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.z);
+
+    const float rsqrt2 = 1.f / std::sqrt(2.f);
+
+    EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{-1.f, -0.5f, -0.125f} + float3{-rsqrt2, 0, 0}, float3{rsqrt2, rsqrt2, 0}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, 1.f);
+
+    EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{-0.5f, -1.f, -0.125f} + float3{0, -rsqrt2, 0}, float3{0, rsqrt2, rsqrt2}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, 1.f);
+
+    EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{-0.125f, -0.5f, -1.f} + float3{0, 0, -rsqrt2}, float3{rsqrt2, 0, rsqrt2}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, 1.f);
+}
+
 } // namespace

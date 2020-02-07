@@ -1907,7 +1907,21 @@ T SmoothStep(T Left, T Right, T w)
     return t * t * (static_cast<T>(3) - static_cast<T>(2) * t);
 }
 
+template <typename T>
+T max3(const T& x, const T& y, const T& z)
+{
+    return std::max(std::max(x, y), z);
+}
+
+template <typename T>
+T min3(const T& x, const T& y, const T& z)
+{
+    return std::min(std::min(x, y), z);
+}
+
 } // namespace Diligent
+
+
 
 namespace std
 {

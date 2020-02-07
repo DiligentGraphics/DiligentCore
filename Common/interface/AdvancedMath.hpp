@@ -427,6 +427,40 @@ inline void GetFrustumMinimumBoundingSphere(float   Proj_00,   // cot(HorzFOV / 
     }
 }
 
+/// Intersects a ray with the axis-aligned bounding box and returns distances to intersections
+inline bool IntersectRayAABB(const float3& RayOrigin,
+                             const float3& RayDirection,
+                             BoundBox      AABB,
+                             float&        EnterDist,
+                             float&        ExitDist)
+{
+    AABB.Min -= RayOrigin;
+    AABB.Max -= RayOrigin;
+
+    static constexpr float Epsilon = 1e-20f;
+
+    float3 AbsRayDir = abs(RayDirection);
+    float3 t_min //
+        {
+            AbsRayDir.x > Epsilon ? AABB.Min.x / RayDirection.x : +FLT_MAX,
+            AbsRayDir.y > Epsilon ? AABB.Min.y / RayDirection.y : +FLT_MAX,
+            AbsRayDir.z > Epsilon ? AABB.Min.z / RayDirection.z : +FLT_MAX //
+        };
+    float3 t_max //
+        {
+            AbsRayDir.x > Epsilon ? AABB.Max.x / RayDirection.x : -FLT_MAX,
+            AbsRayDir.y > Epsilon ? AABB.Max.y / RayDirection.y : -FLT_MAX,
+            AbsRayDir.z > Epsilon ? AABB.Max.z / RayDirection.z : -FLT_MAX //
+        };
+
+    EnterDist = max3(std::min(t_min.x, t_max.x), std::min(t_min.y, t_max.y), std::min(t_min.z, t_max.z));
+    ExitDist  = min3(std::max(t_min.x, t_max.x), std::max(t_min.y, t_max.y), std::max(t_min.z, t_max.z));
+
+    // if ExitDist < 0, the ray intersects AABB, but the whole AABB is behind it
+    // if EnterDist > ExitDist, the ray doesn't intersect AABB
+    return ExitDist >= 0 && EnterDist <= ExitDist;
+}
+
 } // namespace Diligent
 
 namespace std
