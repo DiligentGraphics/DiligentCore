@@ -1152,14 +1152,18 @@ TEST(Common_AdvancedMath, TraceLineThroughGrid)
     // Horizontal direction
     TestLineTrace(float2{0.f, 0.5f}, float2{2.f, 0.5f}, {int2{0, 0}, int2{1, 0}, int2{2, 0}});
     TestLineTrace(float2{-10.f, 0.5f}, float2{2.f, 0.5f}, {int2{0, 0}, int2{1, 0}, int2{2, 0}});
+    TestLineTrace(float2{2.f, 0.5f}, float2{-10.f, 0.5f}, {int2{2, 0}, int2{1, 0}, int2{0, 0}});
     TestLineTrace(float2{8.f, 0.5f}, float2{10.f, 0.5f}, {int2{8, 0}, int2{9, 0}});
     TestLineTrace(float2{8.f, 0.5f}, float2{20.f, 0.5f}, {int2{8, 0}, int2{9, 0}});
+    TestLineTrace(float2{20.f, 0.5f}, float2{8.f, 0.5f}, {int2{9, 0}, int2{8, 0}});
 
     // Vertical direction
     TestLineTrace(float2{0.5f, 0.f}, float2{0.5f, 2.f}, {int2{0, 0}, int2{0, 1}, int2{0, 2}});
     TestLineTrace(float2{0.5f, -10.f}, float2{0.5f, 2.f}, {int2{0, 0}, int2{0, 1}, int2{0, 2}});
+    TestLineTrace(float2{0.5f, 2.f}, float2{0.5f, -10.f}, {int2{0, 2}, int2{0, 1}, int2{0, 0}});
     TestLineTrace(float2{0.5f, 8.f}, float2{0.5f, 10.f}, {int2{0, 8}, int2{0, 9}});
     TestLineTrace(float2{0.5f, 8.f}, float2{0.5f, 20.f}, {int2{0, 8}, int2{0, 9}});
+    TestLineTrace(float2{0.5f, 20.f}, float2{0.5f, 8.f}, {int2{0, 9}, int2{0, 8}});
 
     // Sub-cell horizontal
     TestLineTrace(float2{5.85f, 5.5f}, float2{5.9f, 5.5f}, {int2{5, 5}});

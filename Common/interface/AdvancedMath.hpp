@@ -554,13 +554,13 @@ inline float IntersectRayTriangle(const float3& V0,
 }
 
 
-/// Traces a 2D line through the grid and enumerates all cells the line touches.
+/// Traces a 2D line through the square cell grid and enumerates all cells the line touches.
 
 /// \tparam TCallback - Type of the callback function.
 /// \param f2Start    - Line start point.
 /// \param f2Start    - Line end point.
 /// \param i2GridSize - Grid dimensions.
-/// \param Callback   - Callback function that will be caleed with the argument of type Int2
+/// \param Callback   - Callback function that will be caleed with the argument of type int2
 ///                     for every cell visited. The function should return true to continue
 ///                     tracing and false otherwise.
 ///
