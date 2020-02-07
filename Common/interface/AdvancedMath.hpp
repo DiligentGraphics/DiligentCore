@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <float.h>
+
 #include "../../Platforms/interface/PlatformDefinitions.h"
 #include "../../Primitives/interface/FlagEnum.h"
 
