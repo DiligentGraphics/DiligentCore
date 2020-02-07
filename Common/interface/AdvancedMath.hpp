@@ -463,6 +463,52 @@ inline bool IntersectRayAABB(const float3& RayOrigin,
     return ExitDist >= 0 && EnterDist <= ExitDist;
 }
 
+
+/// Intersects a ray with the trianlge using Moller-Trumbore algorithm and returns
+/// the distance along the ray to the intesrsection point.
+/// If the intersection point is behind the ray origin, the distance will be negative.
+/// If there is no intersection, returns +FLT_MAX.
+inline float IntersectRayTriangle(const float3& V0,
+                                  const float3& V1,
+                                  const float3& V2,
+                                  const float3& RayOrigin,
+                                  const float3& RayDirection,
+                                  bool          CullBackFace = false)
+{
+    float3 V0_V1 = V1 - V0;
+    float3 V0_V2 = V2 - V0;
+
+    float3 PVec = cross(RayDirection, V0_V2);
+
+    float Det = dot(V0_V1, PVec);
+
+    float t = +FLT_MAX;
+
+    static constexpr float Epsilon = 1e-10f;
+    // If determinant is near zero, the ray lies in the triangle plane
+    if (Det > Epsilon || (!CullBackFace && Det < -Epsilon))
+    {
+        float3 V0_RO = RayOrigin - V0;
+
+        // calculate U parameter and test bounds
+        float u = dot(V0_RO, PVec) / Det;
+        if (u >= 0 && u <= 1)
+        {
+            float3 QVec = cross(V0_RO, V0_V1);
+
+            // calculate V parameter and test bounds
+            float v = dot(RayDirection, QVec) / Det;
+            if (v >= 0 && u + v <= 1)
+            {
+                // calculate t, ray intersects triangle
+                t = dot(V0_V2, QVec) / Det;
+            }
+        }
+    }
+
+    return t;
+}
+
 } // namespace Diligent
 
 namespace std

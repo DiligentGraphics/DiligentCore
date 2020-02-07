@@ -1021,4 +1021,39 @@ TEST(Common_AdvancedMath, IntersectRayAABB)
     EXPECT_FLOAT_EQ(Enter, 1.f);
 }
 
+TEST(Common_AdvancedMath, IntersectRayTriangle)
+{
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{0, -1, -1}, float3{0, +1, -1}, float3{0, 0, +1}, float3{-1, 0, 0}, float3{+1, 0, 0}), 1);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{0, -1, -1}, float3{0, +1, -1}, float3{0, 0, +1}, float3{-1, 0, 0}, float3{+1, 0, 0}, true), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{0, -1, -1}, float3{0, +1, -1}, float3{0, 0, +1}, float3{-1, 0, 0}, float3{-1, 0, 0}), -1);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{0, -1, -1}, float3{0, +1, -1}, float3{0, 0, +1}, float3{-1, 0, 0}, float3{0, +1, 0}), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{0, -1, -1}, float3{0, +1, -1}, float3{0, 0, +1}, float3{-1, 0, 0}, float3{0, -1, 0}), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{0, -1, -1}, float3{0, +1, -1}, float3{0, 0, +1}, float3{-1, 0, 0}, float3{0, 0, +1}), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{0, -1, -1}, float3{0, +1, -1}, float3{0, 0, +1}, float3{-1, 0, 0}, float3{0, 0, -1}), FLT_MAX);
+
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{0, -1, -1}, float3{0, +1, -1}, float3{0, 0, +1}, float3{+1, 0, 0}, float3{-1, 0, 0}), 1);
+
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, 0, -1}, float3{+1, 0, -1}, float3{0, 0, +1}, float3{0, -1, 0}, float3{0, +1, 0}), 1);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, 0, -1}, float3{+1, 0, -1}, float3{0, 0, +1}, float3{0, -1, 0}, float3{0, -1, 0}), -1);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, 0, -1}, float3{+1, 0, -1}, float3{0, 0, +1}, float3{0, -1, 0}, float3{0, -1, 0}, true), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, 0, -1}, float3{+1, 0, -1}, float3{0, 0, +1}, float3{0, -1, 0}, float3{+1, 0, 0}), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, 0, -1}, float3{+1, 0, -1}, float3{0, 0, +1}, float3{0, -1, 0}, float3{-1, 0, 0}), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, 0, -1}, float3{+1, 0, -1}, float3{0, 0, +1}, float3{0, -1, 0}, float3{0, 0, +1}), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, 0, -1}, float3{+1, 0, -1}, float3{0, 0, +1}, float3{0, -1, 0}, float3{0, 0, -1}), FLT_MAX);
+
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, -1, 0}, float3{+1, -1, 0}, float3{0, +1, 0}, float3{0, 0, -1}, float3{0, 0, +1}), 1);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, -1, 0}, float3{+1, -1, 0}, float3{0, +1, 0}, float3{0, 0, -1}, float3{0, 0, +1}, true), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, -1, 0}, float3{+1, -1, 0}, float3{0, +1, 0}, float3{0, 0, -1}, float3{0, 0, -1}), -1);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, -1, 0}, float3{+1, -1, 0}, float3{0, +1, 0}, float3{0, 0, -1}, float3{+1, 0, 0}), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, -1, 0}, float3{+1, -1, 0}, float3{0, +1, 0}, float3{0, 0, -1}, float3{-1, 0, 0}), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, -1, 0}, float3{+1, -1, 0}, float3{0, +1, 0}, float3{0, 0, -1}, float3{0, +1, 0}), FLT_MAX);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-1, -1, 0}, float3{+1, -1, 0}, float3{0, +1, 0}, float3{0, 0, -1}, float3{0, -1, 0}), FLT_MAX);
+
+
+    const float rsqrt2 = 1.f / std::sqrt(2.f);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{0, -2, -2}, float3{0, +2, -2}, float3{0, 0, +2}, float3{-rsqrt2, 0, 0}, float3{+rsqrt2, +rsqrt2, 0}), 1);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-2, 0, -2}, float3{+2, 0, -2}, float3{0, 0, +2}, float3{0, -rsqrt2, 0}, float3{0, +rsqrt2, +rsqrt2}), 1);
+    EXPECT_FLOAT_EQ(IntersectRayTriangle(float3{-2, -2, 0}, float3{+2, -2, 0}, float3{0, +2, 0}, float3{0, 0, -rsqrt2}, float3{+rsqrt2, 0, +rsqrt2}), 1);
+}
+
 } // namespace
