@@ -932,7 +932,7 @@ TEST(Common_AdvancedMath, HermiteSpline)
 
 TEST(Common_AdvancedMath, IntersectRayAABB)
 {
-    BoundBox AABB{float3(2, 4, 6), float3(4, 8, 12)};
+    BoundBox AABB{float3{2, 4, 6}, float3{4, 8, 12}};
     float3   Center     = (AABB.Min + AABB.Max) * 0.5f;
     float3   HalfExtent = (AABB.Max - AABB.Min) * 0.5f;
 
@@ -1018,6 +1018,69 @@ TEST(Common_AdvancedMath, IntersectRayAABB)
     EXPECT_FLOAT_EQ(Enter, 1.f);
 
     EXPECT_TRUE(IntersectRayAABB(Center + HalfExtent * float3{-0.125f, -0.5f, -1.f} + float3{0, 0, -rsqrt2}, float3{rsqrt2, 0, rsqrt2}, AABB, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, 1.f);
+}
+
+TEST(Common_AdvancedMath, IntersectRayBox2D)
+{
+    float2 BoxMin{2, 4};
+    float2 BoxMax{4, 8};
+    float2 Center     = (BoxMin + BoxMax) * 0.5f;
+    float2 HalfExtent = (BoxMax - BoxMin) * 0.5f;
+
+    float Enter = 0, Exit = 0;
+
+    // Intersections along axes
+
+    // +X
+    EXPECT_TRUE(IntersectRayBox2D(Center + HalfExtent * float2{-2.f, 0.25f}, float2{+1, 0}, BoxMin, BoxMax, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.x);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.x * 3);
+    EXPECT_FALSE(IntersectRayBox2D(Center + HalfExtent * float2{-2.f, 0.25f}, float2{-1, 0}, BoxMin, BoxMax, Enter, Exit));
+
+    // -X
+    EXPECT_TRUE(IntersectRayBox2D(Center + HalfExtent * float2{+2.f, 0.25f}, float2{-1, 0}, BoxMin, BoxMax, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.x);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.x * 3);
+    EXPECT_FALSE(IntersectRayBox2D(Center + HalfExtent * float2{+2.f, 0.25f}, float2{+1, 0}, BoxMin, BoxMax, Enter, Exit));
+
+    // +Y
+    EXPECT_TRUE(IntersectRayBox2D(Center + HalfExtent * float2{0.75f, -2.f}, float2{0, +1}, BoxMin, BoxMax, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.y);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.y * 3);
+    EXPECT_FALSE(IntersectRayBox2D(Center + HalfExtent * float2{0.75f, -2.f}, float2{0, -1}, BoxMin, BoxMax, Enter, Exit));
+
+    // -Y
+    EXPECT_TRUE(IntersectRayBox2D(Center + HalfExtent * float2{0.75f, 2.f}, float2{0, -1}, BoxMin, BoxMax, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, HalfExtent.y);
+    EXPECT_FLOAT_EQ(Exit, HalfExtent.y * 3);
+    EXPECT_FALSE(IntersectRayBox2D(Center + HalfExtent * float2{0.75f, 2.f}, float2{0, +1}, BoxMin, BoxMax, Enter, Exit));
+
+
+    // Origin in the box
+
+    // +X
+    EXPECT_TRUE(IntersectRayBox2D(Center, float2{1, 0}, BoxMin, BoxMax, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.x);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.x);
+
+    // -X
+    EXPECT_TRUE(IntersectRayBox2D(Center, float2{-1, 0}, BoxMin, BoxMax, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.x);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.x);
+
+    // +Y
+    EXPECT_TRUE(IntersectRayBox2D(Center, float2{0, 1}, BoxMin, BoxMax, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.y);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.y);
+
+    // -Y
+    EXPECT_TRUE(IntersectRayBox2D(Center, float2{0, -1}, BoxMin, BoxMax, Enter, Exit));
+    EXPECT_FLOAT_EQ(Enter, -HalfExtent.y);
+    EXPECT_FLOAT_EQ(Exit, +HalfExtent.y);
+
+    const float rsqrt2 = 1.f / std::sqrt(2.f);
+    EXPECT_TRUE(IntersectRayBox2D(Center + HalfExtent * float2{-1.f, -0.5f} + float2{-rsqrt2, 0}, float2{rsqrt2, rsqrt2}, BoxMin, BoxMax, Enter, Exit));
     EXPECT_FLOAT_EQ(Enter, 1.f);
 }
 

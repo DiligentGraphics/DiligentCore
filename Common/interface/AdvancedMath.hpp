@@ -429,34 +429,78 @@ inline void GetFrustumMinimumBoundingSphere(float   Proj_00,   // cot(HorzFOV / 
     }
 }
 
-/// Intersects a ray with the axis-aligned bounding box and returns distances to intersections
-inline bool IntersectRayAABB(const float3& RayOrigin,
-                             const float3& RayDirection,
-                             BoundBox      AABB,
-                             float&        EnterDist,
-                             float&        ExitDist)
+/// Intersects a ray with 3D box and computes distances to intersections
+inline bool IntersectRayBox3D(const float3& RayOrigin,
+                              const float3& RayDirection,
+                              float3        BoxMin,
+                              float3        BoxMax,
+                              float&        EnterDist,
+                              float&        ExitDist)
 {
-    AABB.Min -= RayOrigin;
-    AABB.Max -= RayOrigin;
+    BoxMin -= RayOrigin;
+    BoxMax -= RayOrigin;
 
     static constexpr float Epsilon = 1e-20f;
 
     float3 AbsRayDir = abs(RayDirection);
     float3 t_min //
         {
-            AbsRayDir.x > Epsilon ? AABB.Min.x / RayDirection.x : +FLT_MAX,
-            AbsRayDir.y > Epsilon ? AABB.Min.y / RayDirection.y : +FLT_MAX,
-            AbsRayDir.z > Epsilon ? AABB.Min.z / RayDirection.z : +FLT_MAX //
+            AbsRayDir.x > Epsilon ? BoxMin.x / RayDirection.x : +FLT_MAX,
+            AbsRayDir.y > Epsilon ? BoxMin.y / RayDirection.y : +FLT_MAX,
+            AbsRayDir.z > Epsilon ? BoxMin.z / RayDirection.z : +FLT_MAX //
         };
     float3 t_max //
         {
-            AbsRayDir.x > Epsilon ? AABB.Max.x / RayDirection.x : -FLT_MAX,
-            AbsRayDir.y > Epsilon ? AABB.Max.y / RayDirection.y : -FLT_MAX,
-            AbsRayDir.z > Epsilon ? AABB.Max.z / RayDirection.z : -FLT_MAX //
+            AbsRayDir.x > Epsilon ? BoxMax.x / RayDirection.x : -FLT_MAX,
+            AbsRayDir.y > Epsilon ? BoxMax.y / RayDirection.y : -FLT_MAX,
+            AbsRayDir.z > Epsilon ? BoxMax.z / RayDirection.z : -FLT_MAX //
         };
 
     EnterDist = max3(std::min(t_min.x, t_max.x), std::min(t_min.y, t_max.y), std::min(t_min.z, t_max.z));
     ExitDist  = min3(std::max(t_min.x, t_max.x), std::max(t_min.y, t_max.y), std::max(t_min.z, t_max.z));
+
+    // if ExitDist < 0, the ray intersects AABB, but the whole AABB is behind it
+    // if EnterDist > ExitDist, the ray doesn't intersect AABB
+    return ExitDist >= 0 && EnterDist <= ExitDist;
+}
+
+/// Intersects a ray with the axis-aligned bounding box and computes distances to intersections
+inline bool IntersectRayAABB(const float3&   RayOrigin,
+                             const float3&   RayDirection,
+                             const BoundBox& AABB,
+                             float&          EnterDist,
+                             float&          ExitDist)
+{
+    return IntersectRayBox3D(RayOrigin, RayDirection, AABB.Min, AABB.Max, EnterDist, ExitDist);
+}
+
+/// Intersects a 2D ray with the 2D axis-aligned bounding box and computes distances to intersections
+inline bool IntersectRayBox2D(const float2& RayOrigin,
+                              const float2& RayDirection,
+                              float2        BoxMin,
+                              float2        BoxMax,
+                              float&        EnterDist,
+                              float&        ExitDist)
+{
+    BoxMin -= RayOrigin;
+    BoxMax -= RayOrigin;
+
+    static constexpr float Epsilon = 1e-20f;
+
+    float2 AbsRayDir = abs(RayDirection);
+    float2 t_min //
+        {
+            AbsRayDir.x > Epsilon ? BoxMin.x / RayDirection.x : +FLT_MAX,
+            AbsRayDir.y > Epsilon ? BoxMin.y / RayDirection.y : +FLT_MAX //
+        };
+    float2 t_max //
+        {
+            AbsRayDir.x > Epsilon ? BoxMax.x / RayDirection.x : -FLT_MAX,
+            AbsRayDir.y > Epsilon ? BoxMax.y / RayDirection.y : -FLT_MAX //
+        };
+
+    EnterDist = std::max(std::min(t_min.x, t_max.x), std::min(t_min.y, t_max.y));
+    ExitDist  = std::min(std::max(t_min.x, t_max.x), std::max(t_min.y, t_max.y));
 
     // if ExitDist < 0, the ray intersects AABB, but the whole AABB is behind it
     // if EnterDist > ExitDist, the ray doesn't intersect AABB
