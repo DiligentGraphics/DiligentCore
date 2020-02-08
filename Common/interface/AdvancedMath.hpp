@@ -437,6 +437,8 @@ inline bool IntersectRayBox3D(const float3& RayOrigin,
                               float&        EnterDist,
                               float&        ExitDist)
 {
+    VERIFY_EXPR(RayDirection != float3(0, 0, 0));
+
     BoxMin -= RayOrigin;
     BoxMax -= RayOrigin;
 
@@ -482,6 +484,8 @@ inline bool IntersectRayBox2D(const float2& RayOrigin,
                               float&        EnterDist,
                               float&        ExitDist)
 {
+    VERIFY_EXPR(RayDirection != float2(0, 0));
+
     BoxMin -= RayOrigin;
     BoxMax -= RayOrigin;
 
@@ -566,16 +570,20 @@ inline float IntersectRayTriangle(const float3& V0,
 ///
 /// \remarks The algorithm clips the line against the grid boundaries [0 .. i2GridSize.x] x [0 .. i2GridSize.y]
 ///
-/// For example, for the line below, the algorithm will trace the following cells: (0,0), (0,1), (1,1)
-///   __________ __________
-///  |          |End       |
+/// For example, for the line below on a 2x2 grid, the algorithm will trace the following cells: (0,0), (0,1), (1,1)
+///
+///                End
+///                /
+///   __________ _/________  2
+///  |          |/         |
 ///  |          /          |
 ///  |         /|          |
-///  |________/_|__________|
+///  |________/_|__________| 1
 ///  |       /  |          |
 ///  |      /   |          |
 ///  |    Start |          |
-///  |__________|__________|
+///  |__________|__________| 0
+/// 0           1          2
 ///
 template <typename TCallback>
 void TraceLineThroughGrid(float2    f2Start,
@@ -583,23 +591,29 @@ void TraceLineThroughGrid(float2    f2Start,
                           int2      i2GridSize,
                           TCallback Callback)
 {
-    if (f2Start == f2End)
-        return;
-
     VERIFY_EXPR(i2GridSize.x > 0 && i2GridSize.y > 0);
+    const auto f2GridSize = i2GridSize.Recast<float>();
+
+    if (f2Start == f2End)
+    {
+        if (f2Start.x >= 0 && f2Start.x < f2GridSize.x &&
+            f2Start.y >= 0 && f2Start.y < f2GridSize.y)
+        {
+            Callback(f2Start.Recast<int>());
+        }
+        return;
+    }
 
     float2 f2Direction = f2End - f2Start;
 
-    auto  f2GridSize = i2GridSize.Recast<float>();
     float EnterDist, ExitDist;
     if (IntersectRayBox2D(f2Start, f2Direction, float2{0, 0}, f2GridSize, EnterDist, ExitDist))
     {
         f2End   = f2Start + f2Direction * std::min(ExitDist, 1.f);
         f2Start = f2Start + f2Direction * std::max(EnterDist, 0.f);
-        VERIFY_EXPR(f2End.x >= 0 && f2End.x <= f2GridSize.x);
-        VERIFY_EXPR(f2End.y >= 0 && f2End.y <= f2GridSize.y);
-        VERIFY_EXPR(f2Start.x >= 0 && f2Start.x <= f2GridSize.x);
-        VERIFY_EXPR(f2Start.y >= 0 && f2Start.y <= f2GridSize.y);
+        // Clamp start and end points to avoid FP precision issues
+        f2Start = clamp(f2Start, float2{0, 0}, f2GridSize);
+        f2End   = clamp(f2End, float2{0, 0}, f2GridSize);
 
         const int   dh = f2Direction.x > 0 ? 1 : -1;
         const int   dv = f2Direction.y > 0 ? 1 : -1;
@@ -608,8 +622,11 @@ void TraceLineThroughGrid(float2    f2Start,
         const float ty = p + f2Direction.x * static_cast<float>(dv);
 
         const int2 i2End = f2End.Recast<int>();
+        VERIFY_EXPR(i2End.x >= 0 && i2End.y >= 0 && i2End.x <= i2GridSize.x && i2End.y <= i2GridSize.y);
 
         int2 i2Pos = f2Start.Recast<int>();
+        VERIFY_EXPR(i2Pos.x >= 0 && i2Pos.y >= 0 && i2Pos.x <= i2GridSize.x && i2Pos.y <= i2GridSize.y);
+
         while (true)
         {
             if (i2Pos.x < i2GridSize.x && i2Pos.y < i2GridSize.y)

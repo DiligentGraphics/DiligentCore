@@ -1206,6 +1206,13 @@ TEST(Common_AdvancedMath, TraceLineThroughGrid)
 
     TestLineTrace(float2{0.25f - 5.f, 9.75f - 6.f}, float2{0.25f + 5.f, 9.75f + 6.f}, {int2{0, 9}});
     TestLineTrace(float2{9.75f + 5.f, 9.85f - 6.f}, float2{9.75f - 5.f, 9.85f + 6.f}, {int2{9, 9}});
+
+    // Degenerate line
+    TestLineTrace(float2{0.5f, 0.5f}, float2{0.5f, 0.5f}, {int2{0, 0}});
+    TestLineTrace(float2{-0.5f, 0.5f}, float2{-0.5f, 0.5f}, {});
+    TestLineTrace(float2{10.5f, 0.5f}, float2{10.5f, 0.5f}, {});
+    TestLineTrace(float2{0.5f, -0.5f}, float2{0.5f, -0.5f}, {});
+    TestLineTrace(float2{0.5f, 10.5f}, float2{0.5f, 10.5f}, {});
 }
 
 } // namespace
