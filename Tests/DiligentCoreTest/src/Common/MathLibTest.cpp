@@ -1123,27 +1123,49 @@ TEST(Common_AdvancedMath, IntersectRayTriangle)
 
 static void TestLineTrace(float2 Start, float2 End, const std::initializer_list<int2> Reference, int2 GridSize = {10, 10})
 {
-    auto it = Reference.begin();
+    auto ref     = Reference.begin();
+    bool TraceOK = true;
+
+    std::vector<int2> trace;
     TraceLineThroughGrid(Start, End, GridSize,
                          [&](int2 pos) //
                          {
-                             if (it == Reference.end())
+                             if (ref != Reference.end())
                              {
-                                 ADD_FAILURE() << "Unexpected end of the reference cell list";
-                                 return false;
+                                 if (pos != *ref)
+                                 {
+                                     TraceOK = false;
+                                 }
+                                 ++ref;
+                             }
+                             else
+                             {
+                                 TraceOK = false;
                              }
 
-                             if (pos != *it)
-                             {
-                                 ADD_FAILURE() << static_cast<size_t>(it - Reference.begin()) << ": (" << pos.x << ", " << pos.y << ") != (" << it->x << ", " << it->y << ")";
-                             }
-                             ++it;
+                             trace.emplace_back(pos);
                              return true;
                          } //
     );
-    if (it != Reference.end())
+
+    if (ref != Reference.end())
+        TraceOK = false;
+
+    if (!TraceOK)
     {
-        ADD_FAILURE() << "End of the line has not been reached";
+        std::stringstream ss;
+        ss << "Expected: ";
+        for (ref = Reference.begin(); ref != Reference.end(); ++ref)
+            ss << "(" << ref->x << ", " << ref->y << ") ";
+        ss << "\n";
+
+        ss << "Actual:   ";
+        for (auto it = trace.begin(); it != trace.end(); ++it)
+            ss << "(" << it->x << ", " << it->y << ") ";
+
+        ADD_FAILURE() << "Failed to trace line (" << std::setprecision(3) << Start.x << ", " << Start.y << ") - (" << End.x << ", " << End.y << ") "
+                      << "through " << GridSize.x << "x" << GridSize.y << " grid:\n"
+                      << ss.str();
     }
 }
 
@@ -1213,6 +1235,17 @@ TEST(Common_AdvancedMath, TraceLineThroughGrid)
     TestLineTrace(float2{10.5f, 0.5f}, float2{10.5f, 0.5f}, {});
     TestLineTrace(float2{0.5f, -0.5f}, float2{0.5f, -0.5f}, {});
     TestLineTrace(float2{0.5f, 10.5f}, float2{0.5f, 10.5f}, {});
+
+    // Some random lines
+    TestLineTrace(float2{-2.9f, 0.9f}, float2{2.9f, 1.9f}, {int2{0, 1}, int2{1, 1}, int2{2, 1}});
+    TestLineTrace(float2{-2.9f, 0.9f}, float2{3.0f, 1.9f}, {int2{0, 1}, int2{1, 1}, int2{2, 1}, int2{3, 1}});
+    TestLineTrace(float2{-2.9f, 0.9f}, float2{3.1f, 1.9f}, {int2{0, 1}, int2{1, 1}, int2{2, 1}, int2{3, 1}});
+
+    TestLineTrace(float2{8.1f, 0.1f}, float2{12.9f, 1.1f}, {int2{8, 0}, int2{9, 0}});
+
+    TestLineTrace(float2{5.1f, -3.1f}, float2{6.1f, 3.1f}, {int2{5, 0}, int2{5, 1}, int2{5, 2}, int2{6, 2}, int2{6, 3}});
+
+    TestLineTrace(float2{5.1f, 8.1f}, float2{7.9f, 12.1f}, {int2{5, 8}, int2{5, 9}, int2{6, 9}});
 }
 
 } // namespace

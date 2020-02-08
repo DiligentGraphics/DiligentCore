@@ -562,13 +562,16 @@ inline float IntersectRayTriangle(const float3& V0,
 
 /// \tparam TCallback - Type of the callback function.
 /// \param f2Start    - Line start point.
-/// \param f2Start    - Line end point.
+/// \param f2End      - Line end point.
 /// \param i2GridSize - Grid dimensions.
-/// \param Callback   - Callback function that will be caleed with the argument of type int2
+/// \param Callback   - Callback function that will be caled with the argument of type int2
 ///                     for every cell visited. The function should return true to continue
-///                     tracing and false otherwise.
+///                     tracing and false to stop it.
 ///
 /// \remarks The algorithm clips the line against the grid boundaries [0 .. i2GridSize.x] x [0 .. i2GridSize.y]
+///
+///          When one of the end points falls exactly on a vertical cell boundary, cell to the right is enumerated.
+///          When one of the end points falls exactly on a horizontal cell boundary, cell above is enumerated.
 ///
 /// For example, for the line below on a 2x2 grid, the algorithm will trace the following cells: (0,0), (0,1), (1,1)
 ///
