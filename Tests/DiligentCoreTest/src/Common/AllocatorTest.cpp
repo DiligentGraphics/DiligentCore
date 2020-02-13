@@ -80,4 +80,44 @@ TEST(Common_FixedBlockMemoryAllocator, AllocDealloc)
                 TestAllocator.Free(Allocations[i][p]);
 }
 
+TEST(Common_FixedBlockMemoryAllocator, SmallObject)
+{
+    constexpr Uint32 AllocSize             = 4;
+    constexpr Uint32 NumAllocationsPerPage = 1;
+
+    FixedBlockMemoryAllocator TestAllocator(DefaultRawMemoryAllocator::GetAllocator(), AllocSize, NumAllocationsPerPage);
+
+    {
+        void* pRawMem0 = TestAllocator.Allocate(AllocSize, "Small object allocation test", __FILE__, __LINE__);
+        TestAllocator.Free(pRawMem0);
+    }
+
+    {
+        void* pRawMem0 = TestAllocator.Allocate(AllocSize, "Small object allocation test", __FILE__, __LINE__);
+        void* pRawMem1 = TestAllocator.Allocate(AllocSize, "Small object allocation test", __FILE__, __LINE__);
+        TestAllocator.Free(pRawMem0);
+        TestAllocator.Free(pRawMem1);
+    }
+}
+
+TEST(Common_FixedBlockMemoryAllocator, UnalignedSize)
+{
+    constexpr Uint32 AllocSize             = 10;
+    constexpr Uint32 NumAllocationsPerPage = 1;
+
+    FixedBlockMemoryAllocator TestAllocator(DefaultRawMemoryAllocator::GetAllocator(), AllocSize, NumAllocationsPerPage);
+
+    {
+        void* pRawMem0 = TestAllocator.Allocate(AllocSize, "Unaligned-size object allocation test", __FILE__, __LINE__);
+        TestAllocator.Free(pRawMem0);
+    }
+
+    {
+        void* pRawMem0 = TestAllocator.Allocate(AllocSize, "Unaligned-size object allocation test", __FILE__, __LINE__);
+        void* pRawMem1 = TestAllocator.Allocate(AllocSize, "Unaligned-size object allocation test", __FILE__, __LINE__);
+        TestAllocator.Free(pRawMem0);
+        TestAllocator.Free(pRawMem1);
+    }
+}
+
 } // namespace

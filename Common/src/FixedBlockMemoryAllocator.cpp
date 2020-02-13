@@ -26,10 +26,17 @@
  */
 
 #include "pch.h"
+#include <algorithm>
 #include "FixedBlockMemoryAllocator.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
+
+static size_t AdjustBlockSize(size_t BlockSize)
+{
+    return Align(std::max(BlockSize, size_t{1}), sizeof(void*));
+}
 
 FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator& RawMemoryAllocator,
                                                      size_t            BlockSize,
@@ -38,16 +45,13 @@ FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator& RawMemory
     m_PagePool          (STD_ALLOCATOR_RAW_MEM(MemoryPage, RawMemoryAllocator, "Allocator for vector<MemoryPage>")),
     m_AvailablePages    (STD_ALLOCATOR_RAW_MEM(size_t, RawMemoryAllocator, "Allocator for unordered_set<size_t>") ),
     m_AddrToPageId      (STD_ALLOCATOR_RAW_MEM(AddrToPageIdMapElem, RawMemoryAllocator, "Allocator for unordered_map<void*, size_t>")),
-    m_RawMemoryAllocator{RawMemoryAllocator},
-    m_BlockSize         {BlockSize         },
-    m_NumBlocksInPage   {NumBlocksInPage   }
+    m_RawMemoryAllocator{RawMemoryAllocator        },
+    m_BlockSize         {AdjustBlockSize(BlockSize)},
+    m_NumBlocksInPage   {NumBlocksInPage           }
 // clang-format on
 {
-    if (BlockSize > 0)
-    {
-        // Allocate one page
-        CreateNewPage();
-    }
+    // Allocate one page
+    CreateNewPage();
 }
 
 FixedBlockMemoryAllocator::~FixedBlockMemoryAllocator()
@@ -70,6 +74,7 @@ void FixedBlockMemoryAllocator::CreateNewPage()
 
 void* FixedBlockMemoryAllocator::Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
 {
+    Size = AdjustBlockSize(Size);
     VERIFY(m_BlockSize == Size, "Requested size (", Size, ") does not match the block size (", m_BlockSize, ")");
 
     std::lock_guard<std::mutex> LockGuard(m_Mutex);

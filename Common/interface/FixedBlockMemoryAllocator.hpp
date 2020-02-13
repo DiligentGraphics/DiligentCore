@@ -229,8 +229,8 @@ private:
     std::mutex m_Mutex;
 
     IMemoryAllocator& m_RawMemoryAllocator;
-    size_t            m_BlockSize;
-    Uint32            m_NumBlocksInPage;
+    const size_t      m_BlockSize;
+    const Uint32      m_NumBlocksInPage;
 };
 
 IMemoryAllocator& GetRawAllocator();
