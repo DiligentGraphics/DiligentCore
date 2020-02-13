@@ -118,10 +118,11 @@ struct BufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
                CPU_ACCESS_FLAGS _CPUAccessFlags    = BufferDesc{}.CPUAccessFlags,
                BUFFER_MODE      _Mode              = BufferDesc{}.Mode,
                Uint32           _ElementByteStride = BufferDesc{}.ElementByteStride,
-               Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask)noexcept :
+               Uint64           _CommandQueueMask  = BufferDesc{}.CommandQueueMask) noexcept :
         uiSizeInBytes       {_uiSizeInBytes    },
         BindFlags           {_BindFlags        },
         Usage               {_Usage            },
+        CPUAccessFlags      {_CPUAccessFlags   },
         Mode                {_Mode             },
         ElementByteStride   {_ElementByteStride},
         CommandQueueMask    {_CommandQueueMask }
