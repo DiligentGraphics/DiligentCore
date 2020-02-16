@@ -1247,10 +1247,19 @@ TEST(Common_AdvancedMath, TraceLineThroughGrid)
 
     TestLineTrace(float2{5.1f, 8.1f}, float2{7.9f, 12.1f}, {int2{5, 8}, int2{5, 9}, int2{6, 9}});
 
-    // This line makes the algorithm miss the end point.
-    TestLineTrace(float2{238.785156f, 274.f}, float2{256.0f, 238.f},
-                  {int2{246, 256}, int2{247, 256}, int2{247, 255}, int2{247, 254}, int2{248, 254}, int2{248, 253}, int2{248, 252}, int2{249, 252}, int2{249, 251}, int2{249, 250}, int2{250, 250}, int2{250, 249}, int2{250, 248}, int2{251, 248}, int2{251, 247}, int2{251, 246}, int2{252, 246}, int2{252, 245}, int2{252, 244}, int2{253, 244}, int2{253, 243}, int2{253, 242}, int2{254, 242}, int2{254, 241}, int2{254, 240}, int2{255, 240}, int2{255, 239}, int2{255, 238}},
-                  int2{257, 257});
+
+    // This line makes the algorithm miss the end point. The reason is that at the last step,
+    //      abs(t + tx) == abs(t + ty)
+    // and choice of horizontal or vertical step is ambiguous. The algorithm chooses vertical step which makes
+    // it miss the end point.
+    TestLineTrace(float2{1, 3}, float2{3, 1}, {int2{1, 3}, int2{1, 2}, int2{1, 1}, int2{2, 1}});
+
+    // This line is symmetric to previous one but it does not miss the end point because in the case when
+    //      abs(t + tx) == abs(t + ty)
+    // vertical step turns out to be the right choice.
+    // It is either this line or the previous one that will make the algorithm miss the end point depending on
+    // whether 'abs(t + tx) < abs(t + ty)' or 'abs(t + tx) <= abs(t + ty)' condition is used.
+    TestLineTrace(float2{3, 1}, float2{1, 3}, {int2{3, 1}, int2{2, 1}, int2{2, 2}, int2{1, 2}, int2{1, 3}});
 }
 
 } // namespace
