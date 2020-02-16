@@ -630,7 +630,11 @@ void TraceLineThroughGrid(float2    f2Start,
         int2 i2Pos = f2Start.Recast<int>();
         VERIFY_EXPR(i2Pos.x >= 0 && i2Pos.y >= 0 && i2Pos.x <= i2GridSize.x && i2Pos.y <= i2GridSize.y);
 
-        while (true)
+        // Loop condition checks if we missed the end point of the line due to
+        // floating point precision issues.
+        // Normally we exit the loop when i2Pos == i2End.
+        while ((i2End.x - i2Pos.x) * dh >= 0 &&
+               (i2End.y - i2Pos.y) * dv >= 0)
         {
             if (i2Pos.x < i2GridSize.x && i2Pos.y < i2GridSize.y)
             {

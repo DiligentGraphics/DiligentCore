@@ -323,7 +323,7 @@ typedef struct DrawIndirectAttribs DrawIndirectAttribs;
 struct DrawIndexedIndirectAttribs
 {
     /// The type of the elements in the index buffer.
-    /// Allowed values: VT_UINT16 and VT_UINT32. Ignored if DrawAttribs::IsIndexed is False.
+    /// Allowed values: VT_UINT16 and VT_UINT32.
     VALUE_TYPE IndexType            DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
@@ -557,7 +557,7 @@ typedef struct Rect Rect;
 struct CopyTextureAttribs
 {
     /// Source texture to copy data from.
-    ITexture*                pSrcTexture                    DEFAULT_INITIALIZER(nullptr);
+    ITexture*                      pSrcTexture              DEFAULT_INITIALIZER(nullptr);
 
     /// Mip level of the source texture to copy data from.
     Uint32                         SrcMipLevel              DEFAULT_INITIALIZER(0);

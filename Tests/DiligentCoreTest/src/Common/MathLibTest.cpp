@@ -1246,6 +1246,11 @@ TEST(Common_AdvancedMath, TraceLineThroughGrid)
     TestLineTrace(float2{5.1f, -3.1f}, float2{6.1f, 3.1f}, {int2{5, 0}, int2{5, 1}, int2{5, 2}, int2{6, 2}, int2{6, 3}});
 
     TestLineTrace(float2{5.1f, 8.1f}, float2{7.9f, 12.1f}, {int2{5, 8}, int2{5, 9}, int2{6, 9}});
+
+    // This line makes the algorithm miss the end point.
+    TestLineTrace(float2{238.785156f, 274.f}, float2{256.0f, 238.f},
+                  {int2{246, 256}, int2{247, 256}, int2{247, 255}, int2{247, 254}, int2{248, 254}, int2{248, 253}, int2{248, 252}, int2{249, 252}, int2{249, 251}, int2{249, 250}, int2{250, 250}, int2{250, 249}, int2{250, 248}, int2{251, 248}, int2{251, 247}, int2{251, 246}, int2{252, 246}, int2{252, 245}, int2{252, 244}, int2{253, 244}, int2{253, 243}, int2{253, 242}, int2{254, 242}, int2{254, 241}, int2{254, 240}, int2{255, 240}, int2{255, 239}, int2{255, 238}},
+                  int2{257, 257});
 }
 
 } // namespace
