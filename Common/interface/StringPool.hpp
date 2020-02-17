@@ -65,14 +65,13 @@ public:
 
     ~StringPool()
     {
-        if (m_pBuffer != nullptr && m_pAllocator != nullptr)
-        {
-            m_pAllocator->Free(m_pBuffer);
-        }
+        Release();
     }
 
     void Reserve(size_t Size, IMemoryAllocator& Allocator)
     {
+        Release();
+
         VERIFY(m_ReservedSize == 0, "Pool is already initialized");
         m_pAllocator   = &Allocator;
         m_ReservedSize = Size;
@@ -81,6 +80,29 @@ public:
             m_pBuffer = reinterpret_cast<Char*>(m_pAllocator->Allocate(m_ReservedSize, "Memory for string pool", __FILE__, __LINE__));
         }
         m_pCurrPtr = m_pBuffer;
+    }
+
+    void Release()
+    {
+        if (m_pBuffer != nullptr && m_pAllocator != nullptr)
+        {
+            m_pAllocator->Free(m_pBuffer);
+        }
+
+        m_pBuffer      = nullptr;
+        m_pCurrPtr     = nullptr;
+        m_ReservedSize = 0;
+        m_pAllocator   = nullptr;
+    }
+
+    static size_t GetRequiredReserveSize(const char* str)
+    {
+        return str != nullptr ? strlen(str) + 1 : 0;
+    }
+
+    static size_t GetRequiredReserveSize(const std::string& str)
+    {
+        return str.length() + 1;
     }
 
     void AssignMemory(Char* pBuffer, size_t Size)
@@ -113,6 +135,9 @@ public:
 
     Char* CopyString(const char* Str)
     {
+        if (Str == nullptr)
+            return nullptr;
+
         auto* Ptr = m_pCurrPtr;
         while (*Str != 0 && m_pCurrPtr < m_pBuffer + m_ReservedSize)
         {
