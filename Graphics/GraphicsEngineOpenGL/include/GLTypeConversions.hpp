@@ -73,7 +73,7 @@ static const GLenum TypeToGLTypeMap[] =
     GL_UNSIGNED_BYTE,   //VT_UINT8
     GL_UNSIGNED_SHORT,  //VT_UINT16
     GL_UNSIGNED_INT,    //VT_UINT32
-    0,                  //VT_FLOAT16
+    GL_HALF_FLOAT,      //VT_FLOAT16
     GL_FLOAT            //VT_FLOAT32
 };
 // clang-format on
@@ -92,6 +92,7 @@ inline GLenum TypeToGLType(VALUE_TYPE Value)
         case VT_UINT8:   VERIFY_EXPR(GLType == GL_UNSIGNED_BYTE);  break;
         case VT_UINT16:  VERIFY_EXPR(GLType == GL_UNSIGNED_SHORT); break;
         case VT_UINT32:  VERIFY_EXPR(GLType == GL_UNSIGNED_INT);   break;
+        case VT_FLOAT16: VERIFY_EXPR(GLType == GL_HALF_FLOAT);     break;
         case VT_FLOAT32: VERIFY_EXPR(GLType == GL_FLOAT);          break;
         default: UNEXPECTED("Unexpected value type");
             // clang-format on
