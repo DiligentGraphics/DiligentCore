@@ -244,18 +244,6 @@ TEXTURE_FORMAT GLInternalTexFormatToTexFormat(GLenum GlFormat)
     return FormatMap[GlFormat];
 }
 
-GLenum CorrectGLTexFormat(GLenum GLTexFormat, Uint32 BindFlags)
-{
-    if (BindFlags & BIND_DEPTH_STENCIL)
-    {
-        if (GLTexFormat == GL_R32F)
-            GLTexFormat = GL_DEPTH_COMPONENT32F;
-        if (GLTexFormat == GL_R16)
-            GLTexFormat = GL_DEPTH_COMPONENT16;
-    }
-    return GLTexFormat;
-}
-
 NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat)
 {
     // http://www.opengl.org/wiki/Pixel_Transfer
@@ -402,23 +390,6 @@ NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat)
         return FmtToGLPixelFmt[0];
     }
 }
-
-GLenum AccessFlags2GLAccess(Uint32 UAVAccessFlags)
-{
-    static GLenum AccessFlags2GLAccessMap[UAV_ACCESS_FLAG_READ_WRITE + 1] = {};
-    static bool   bIsInit                                                 = false;
-    if (!bIsInit)
-    {
-        AccessFlags2GLAccessMap[UAV_ACCESS_FLAG_READ]       = GL_READ_ONLY;
-        AccessFlags2GLAccessMap[UAV_ACCESS_FLAG_WRITE]      = GL_WRITE_ONLY;
-        AccessFlags2GLAccessMap[UAV_ACCESS_FLAG_READ_WRITE] = GL_READ_WRITE;
-        bIsInit                                             = true;
-    }
-
-    auto GLAccess = AccessFlags2GLAccessMap[UAVAccessFlags & UAV_ACCESS_FLAG_READ_WRITE];
-    return GLAccess;
-}
-
 
 GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized)
 {
@@ -572,104 +543,6 @@ GLenum TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNorma
         }
 
         default: UNEXPECTED("Unusupported format"); return 0;
-    }
-}
-
-GLenum StencilOp2GlStencilOp(STENCIL_OP StencilOp)
-{
-    static bool   bIsInit                          = false;
-    static GLenum GLStencilOps[STENCIL_OP_NUM_OPS] = {};
-    if (!bIsInit)
-    {
-        GLStencilOps[STENCIL_OP_KEEP]      = GL_KEEP;
-        GLStencilOps[STENCIL_OP_ZERO]      = GL_ZERO;
-        GLStencilOps[STENCIL_OP_REPLACE]   = GL_REPLACE;
-        GLStencilOps[STENCIL_OP_INCR_SAT]  = GL_INCR;
-        GLStencilOps[STENCIL_OP_DECR_SAT]  = GL_DECR;
-        GLStencilOps[STENCIL_OP_INVERT]    = GL_INVERT;
-        GLStencilOps[STENCIL_OP_INCR_WRAP] = GL_INCR_WRAP;
-        GLStencilOps[STENCIL_OP_DECR_WRAP] = GL_DECR_WRAP;
-        bIsInit                            = true;
-    }
-
-    if (StencilOp > STENCIL_OP_UNDEFINED && StencilOp < STENCIL_OP_NUM_OPS)
-    {
-        auto GlStencilOp = GLStencilOps[StencilOp];
-        VERIFY(GlStencilOp != 0 || GlStencilOp == 0 && StencilOp == STENCIL_OP_ZERO, "Unexpected stencil op");
-        return GlStencilOp;
-    }
-    else
-    {
-        UNEXPECTED("Stencil operation (", StencilOp, ") is out of allowed range [1, ", STENCIL_OP_NUM_OPS - 1, "]");
-        return 0;
-    }
-}
-
-
-GLenum BlendFactor2GLBlend(BLEND_FACTOR bf)
-{
-    static bool   bIsInit                           = false;
-    static GLenum GLBlend[BLEND_FACTOR_NUM_FACTORS] = {};
-    if (!bIsInit)
-    {
-        GLBlend[BLEND_FACTOR_ZERO]             = GL_ZERO;
-        GLBlend[BLEND_FACTOR_ONE]              = GL_ONE;
-        GLBlend[BLEND_FACTOR_SRC_COLOR]        = GL_SRC_COLOR;
-        GLBlend[BLEND_FACTOR_INV_SRC_COLOR]    = GL_ONE_MINUS_SRC_COLOR;
-        GLBlend[BLEND_FACTOR_SRC_ALPHA]        = GL_SRC_ALPHA;
-        GLBlend[BLEND_FACTOR_INV_SRC_ALPHA]    = GL_ONE_MINUS_SRC_ALPHA;
-        GLBlend[BLEND_FACTOR_DEST_ALPHA]       = GL_DST_ALPHA;
-        GLBlend[BLEND_FACTOR_INV_DEST_ALPHA]   = GL_ONE_MINUS_DST_ALPHA;
-        GLBlend[BLEND_FACTOR_DEST_COLOR]       = GL_DST_COLOR;
-        GLBlend[BLEND_FACTOR_INV_DEST_COLOR]   = GL_ONE_MINUS_DST_COLOR;
-        GLBlend[BLEND_FACTOR_SRC_ALPHA_SAT]    = GL_SRC_ALPHA_SATURATE;
-        GLBlend[BLEND_FACTOR_BLEND_FACTOR]     = GL_CONSTANT_COLOR;
-        GLBlend[BLEND_FACTOR_INV_BLEND_FACTOR] = GL_ONE_MINUS_CONSTANT_COLOR;
-        GLBlend[BLEND_FACTOR_SRC1_COLOR]       = GL_SRC1_COLOR;
-        GLBlend[BLEND_FACTOR_INV_SRC1_COLOR]   = GL_ONE_MINUS_SRC1_COLOR;
-        GLBlend[BLEND_FACTOR_SRC1_ALPHA]       = GL_SRC1_ALPHA;
-        GLBlend[BLEND_FACTOR_INV_SRC1_ALPHA]   = GL_ONE_MINUS_SRC1_ALPHA;
-
-        bIsInit = true;
-    }
-    if (bf > BLEND_FACTOR_UNDEFINED && bf < BLEND_FACTOR_NUM_FACTORS)
-    {
-        auto glbf = GLBlend[bf];
-        VERIFY(glbf != 0 || glbf == 0 && bf == BLEND_FACTOR_ZERO, "Incorrect blend factor");
-        return glbf;
-    }
-    else
-    {
-        UNEXPECTED("Incorrect blend factor (", bf, ")");
-        return 0;
-    }
-}
-
-GLenum BlendOperation2GLBlendOp(BLEND_OPERATION BlendOp)
-{
-    static bool   bIsInit                                   = false;
-    static GLenum GLBlendOp[BLEND_OPERATION_NUM_OPERATIONS] = {};
-    if (!bIsInit)
-    {
-        GLBlendOp[BLEND_OPERATION_ADD]          = GL_FUNC_ADD;
-        GLBlendOp[BLEND_OPERATION_SUBTRACT]     = GL_FUNC_SUBTRACT;
-        GLBlendOp[BLEND_OPERATION_REV_SUBTRACT] = GL_FUNC_REVERSE_SUBTRACT;
-        GLBlendOp[BLEND_OPERATION_MIN]          = GL_MIN;
-        GLBlendOp[BLEND_OPERATION_MAX]          = GL_MAX;
-
-        bIsInit = true;
-    }
-
-    if (BlendOp > BLEND_OPERATION_UNDEFINED && BlendOp < BLEND_OPERATION_NUM_OPERATIONS)
-    {
-        auto glbop = GLBlendOp[BlendOp];
-        VERIFY(glbop != 0, "Incorrect blend operation");
-        return glbop;
-    }
-    else
-    {
-        UNEXPECTED("Incorrect blend operation (", BlendOp, ")");
-        return 0;
     }
 }
 

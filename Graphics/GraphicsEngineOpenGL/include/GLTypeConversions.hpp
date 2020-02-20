@@ -30,75 +30,43 @@
 namespace Diligent
 {
 
-// clang-format off
-static const GLenum PrimTopologyToGLTopologyMap[] =
-{
-    0,                 //PRIMITIVE_TOPOLOGY_UNDEFINED = 0
-    GL_TRIANGLES,      //PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
-    GL_TRIANGLE_STRIP, //PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-    GL_POINTS,         //PRIMITIVE_TOPOLOGY_POINT_LIST
-    GL_LINES,          //PRIMITIVE_TOPOLOGY_LINE_LIST
-    GL_LINE_STRIP      //PRIMITIVE_TOPOLOGY_LINE_STRIP
-};
-// clang-format on
-
 inline GLenum PrimitiveTopologyToGLTopology(PRIMITIVE_TOPOLOGY PrimTopology)
 {
-    VERIFY_EXPR(PrimTopology < _countof(PrimTopologyToGLTopologyMap));
-    auto GLTopology = PrimTopologyToGLTopologyMap[PrimTopology];
-#ifdef _DEBUG
-    switch (PrimTopology)
+    // clang-format off
+    static constexpr GLenum PrimTopologyToGLTopologyMap[] =
     {
-        // clang-format off
-        case PRIMITIVE_TOPOLOGY_UNDEFINED:      VERIFY_EXPR(GLTopology == 0);                 break;
-        case PRIMITIVE_TOPOLOGY_TRIANGLE_LIST:  VERIFY_EXPR(GLTopology == GL_TRIANGLES);      break;
-        case PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP: VERIFY_EXPR(GLTopology == GL_TRIANGLE_STRIP); break;
-        case PRIMITIVE_TOPOLOGY_POINT_LIST:     VERIFY_EXPR(GLTopology == GL_POINTS);         break;
-        case PRIMITIVE_TOPOLOGY_LINE_LIST:      VERIFY_EXPR(GLTopology == GL_LINES);          break;
-        case PRIMITIVE_TOPOLOGY_LINE_STRIP:     VERIFY_EXPR(GLTopology == GL_LINE_STRIP);     break;
-        default: UNEXPECTED("Unexpected primitive topology");
-            // clang-format on
-    }
-#endif
-    return GLTopology;
-}
+        0,                 // PRIMITIVE_TOPOLOGY_UNDEFINED = 0
+        GL_TRIANGLES,      // PRIMITIVE_TOPOLOGY_TRIANGLE_LIST
+        GL_TRIANGLE_STRIP, // PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+        GL_POINTS,         // PRIMITIVE_TOPOLOGY_POINT_LIST
+        GL_LINES,          // PRIMITIVE_TOPOLOGY_LINE_LIST
+        GL_LINE_STRIP      // PRIMITIVE_TOPOLOGY_LINE_STRIP
+    };
+    // clang-format on
 
-// clang-format off
-static const GLenum TypeToGLTypeMap[] = 
-{
-    0,                  //VT_UNDEFINED = 0
-    GL_BYTE,            //VT_INT8
-    GL_SHORT,           //VT_INT16
-    GL_INT,             //VT_INT32
-    GL_UNSIGNED_BYTE,   //VT_UINT8
-    GL_UNSIGNED_SHORT,  //VT_UINT16
-    GL_UNSIGNED_INT,    //VT_UINT32
-    GL_HALF_FLOAT,      //VT_FLOAT16
-    GL_FLOAT            //VT_FLOAT32
-};
-// clang-format on
+    VERIFY_EXPR(PrimTopology < _countof(PrimTopologyToGLTopologyMap));
+    return PrimTopologyToGLTopologyMap[PrimTopology];
+}
 
 inline GLenum TypeToGLType(VALUE_TYPE Value)
 {
-    VERIFY_EXPR(Value < _countof(TypeToGLTypeMap));
-    auto GLType = TypeToGLTypeMap[Value];
-#ifdef _DEBUG
-    switch (Value)
+    // clang-format off
+    static constexpr GLenum TypeToGLTypeMap[] = 
     {
-        // clang-format off
-        case VT_INT8:    VERIFY_EXPR(GLType == GL_BYTE);           break;
-        case VT_INT16:   VERIFY_EXPR(GLType == GL_SHORT);          break;
-        case VT_INT32:   VERIFY_EXPR(GLType == GL_INT);            break;
-        case VT_UINT8:   VERIFY_EXPR(GLType == GL_UNSIGNED_BYTE);  break;
-        case VT_UINT16:  VERIFY_EXPR(GLType == GL_UNSIGNED_SHORT); break;
-        case VT_UINT32:  VERIFY_EXPR(GLType == GL_UNSIGNED_INT);   break;
-        case VT_FLOAT16: VERIFY_EXPR(GLType == GL_HALF_FLOAT);     break;
-        case VT_FLOAT32: VERIFY_EXPR(GLType == GL_FLOAT);          break;
-        default: UNEXPECTED("Unexpected value type");
-            // clang-format on
-    }
-#endif
-    return GLType;
+        0,                  // VT_UNDEFINED = 0
+        GL_BYTE,            // VT_INT8
+        GL_SHORT,           // VT_INT16
+        GL_INT,             // VT_INT32
+        GL_UNSIGNED_BYTE,   // VT_UINT8
+        GL_UNSIGNED_SHORT,  // VT_UINT16
+        GL_UNSIGNED_INT,    // VT_UINT32
+        GL_HALF_FLOAT,      // VT_FLOAT16
+        GL_FLOAT            // VT_FLOAT32
+    };
+    // clang-format on
+
+    VERIFY_EXPR(Value < _countof(TypeToGLTypeMap));
+    return TypeToGLTypeMap[Value];
 }
 
 inline GLenum UsageToGLUsage(const BufferDesc& Desc)
@@ -182,48 +150,63 @@ inline void FilterTypeToGLFilterType(FILTER_TYPE Filter, GLenum& GLFilter, Bool&
     }
 }
 
-GLenum         TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags = 0);
-TEXTURE_FORMAT GLInternalTexFormatToTexFormat(GLenum GlFormat);
-GLenum         CorrectGLTexFormat(GLenum GLTexFormat, Uint32 BindFlags);
+inline GLenum CorrectGLTexFormat(GLenum GLTexFormat, Uint32 BindFlags)
+{
+    if (BindFlags & BIND_DEPTH_STENCIL)
+    {
+        if (GLTexFormat == GL_R32F)
+            GLTexFormat = GL_DEPTH_COMPONENT32F;
+        if (GLTexFormat == GL_R16)
+            GLTexFormat = GL_DEPTH_COMPONENT16;
+    }
+    return GLTexFormat;
+}
+
 
 inline GLenum TexAddressModeToGLAddressMode(TEXTURE_ADDRESS_MODE Mode)
 {
-    switch (Mode)
+    // clang-format off
+    static constexpr GLenum TexAddressModeToGLAddressModeMap[] = 
     {
-        // clang-format off
-        case TEXTURE_ADDRESS_UNKNOWN: UNEXPECTED( "Texture address mode is not specified" ); return GL_CLAMP_TO_EDGE;
-        case TEXTURE_ADDRESS_WRAP:          return GL_REPEAT;
-        case TEXTURE_ADDRESS_MIRROR:        return GL_MIRRORED_REPEAT;
-        case TEXTURE_ADDRESS_CLAMP:         return GL_CLAMP_TO_EDGE;
-        case TEXTURE_ADDRESS_BORDER:        return GL_CLAMP_TO_BORDER;
-        case TEXTURE_ADDRESS_MIRROR_ONCE:   return GL_MIRROR_CLAMP_TO_EDGE; // only available with OpenGL 4.4
-                                            // This mode seems to be different from D3D11_TEXTURE_ADDRESS_MIRROR_ONCE
-                                            // The texture coord is clamped to the [-1, 1] range, but mirrors the 
-                                            // negative direction with the positive. Basically, it acts as
-                                            // GL_CLAMP_TO_EDGE except that it takes the absolute value of the texture 
-                                            // coordinates before clamping.
-        default: UNEXPECTED( "Unknown texture address mode" ); return GL_CLAMP_TO_EDGE;
-            // clang-format on
-    }
+        0,                       // TEXTURE_ADDRESS_UNKNOWN = 0
+        GL_REPEAT,               // TEXTURE_ADDRESS_WRAP
+        GL_MIRRORED_REPEAT,      // TEXTURE_ADDRESS_MIRROR
+        GL_CLAMP_TO_EDGE,        // TEXTURE_ADDRESS_CLAMP
+        GL_CLAMP_TO_BORDER,      // TEXTURE_ADDRESS_BORDER
+
+        // Only available in OpenGL 4.4+
+        // This mode seems to be different from D3D11_TEXTURE_ADDRESS_MIRROR_ONCE
+        // The texture coord is clamped to the [-1, 1] range, but mirrors the 
+        // negative direction with the positive. Basically, it acts as
+        // GL_CLAMP_TO_EDGE except that it takes the absolute value of the texture 
+        // coordinates before clamping.
+        GL_MIRROR_CLAMP_TO_EDGE  // TEXTURE_ADDRESS_MIRROR_ONCE
+    };
+    // clang-format on
+
+    VERIFY_EXPR(Mode < _countof(TexAddressModeToGLAddressModeMap));
+    return TexAddressModeToGLAddressModeMap[Mode];
 }
 
 inline GLenum CompareFuncToGLCompareFunc(COMPARISON_FUNCTION Func)
 {
-    switch (Func)
+    // clang-format off
+    static constexpr GLenum CompareFuncToGLCompareFuncMap[] = 
     {
-        // clang-format off
-        case COMPARISON_FUNC_UNKNOWN: UNEXPECTED( "Comparison function is not specified" ); return GL_ALWAYS;
-        case COMPARISON_FUNC_NEVER:         return GL_NEVER;
-	    case COMPARISON_FUNC_LESS:          return GL_LESS;
-	    case COMPARISON_FUNC_EQUAL:         return GL_EQUAL;
-	    case COMPARISON_FUNC_LESS_EQUAL:    return GL_LEQUAL;
-	    case COMPARISON_FUNC_GREATER:       return GL_GREATER;
-	    case COMPARISON_FUNC_NOT_EQUAL:     return GL_NOTEQUAL;
-	    case COMPARISON_FUNC_GREATER_EQUAL: return GL_GEQUAL;
-	    case COMPARISON_FUNC_ALWAYS:        return GL_ALWAYS;
-        default: UNEXPECTED( "Unknown comparison func" ); return GL_ALWAYS;
-            // clang-format on
-    }
+        0,              // COMPARISON_FUNC_UNKNOWN = 0
+        GL_NEVER,       // COMPARISON_FUNC_NEVER
+        GL_LESS,        // COMPARISON_FUNC_LESS
+        GL_EQUAL,       // COMPARISON_FUNC_EQUAL
+        GL_LEQUAL,      // COMPARISON_FUNC_LESS_EQUAL
+        GL_GREATER,     // COMPARISON_FUNC_GREATER
+        GL_NOTEQUAL,    // COMPARISON_FUNC_NOT_EQUAL
+        GL_GEQUAL,      // COMPARISON_FUNC_GREATER_EQUAL
+        GL_ALWAYS       // COMPARISON_FUNC_ALWAYS
+    };
+    // clang-format on
+
+    VERIFY_EXPR(Func < _countof(CompareFuncToGLCompareFuncMap));
+    return CompareFuncToGLCompareFuncMap[Func];
 }
 
 struct NativePixelAttribs
@@ -301,11 +284,96 @@ inline Uint32 GetPixelTypeSize(GLenum Type)
     }
 }
 
+inline GLenum AccessFlags2GLAccess(UAV_ACCESS_FLAG UAVAccessFlags)
+{
+    // clang-format off
+    static constexpr GLenum AccessFlags2GLAccessMap[] = 
+    {
+        0,             // UAV_ACCESS_UNSPECIFIED == 0
+        GL_READ_ONLY,  // UAV_ACCESS_FLAG_READ
+        GL_WRITE_ONLY, // UAV_ACCESS_FLAG_WRITE
+        GL_READ_WRITE  // UAV_ACCESS_FLAG_READ_WRITE
+    };
+    // clang-format on
+
+    VERIFY_EXPR(UAVAccessFlags < _countof(AccessFlags2GLAccessMap));
+    return AccessFlags2GLAccessMap[UAVAccessFlags];
+}
+
+inline GLenum StencilOp2GlStencilOp(STENCIL_OP StencilOp)
+{
+    // clang-format off
+    static constexpr GLenum StencilOp2GlStencilOpMap[] = 
+    {
+        0,             // STENCIL_OP_UNDEFINED == 0
+        GL_KEEP,       // STENCIL_OP_KEEP
+        GL_ZERO,       // STENCIL_OP_ZERO
+        GL_REPLACE,    // STENCIL_OP_REPLACE
+        GL_INCR,       // STENCIL_OP_INCR_SAT
+        GL_DECR,       // STENCIL_OP_DECR_SAT
+        GL_INVERT,     // STENCIL_OP_INVERT
+        GL_INCR_WRAP,  // STENCIL_OP_INCR_WRAP
+        GL_DECR_WRAP,  // STENCIL_OP_DECR_WRAP
+    };
+    // clang-format on
+
+    VERIFY_EXPR(StencilOp < _countof(StencilOp2GlStencilOpMap));
+    return StencilOp2GlStencilOpMap[StencilOp];
+}
+
+inline GLenum BlendFactor2GLBlend(BLEND_FACTOR bf)
+{
+    // clang-format off
+    static constexpr GLenum BlendFactor2GLBlendMap[] = 
+    {
+        0,                           // BLEND_FACTOR_UNDEFINED == 0
+        GL_ZERO,                     // BLEND_FACTOR_ZERO
+        GL_ONE,                      // BLEND_FACTOR_ONE
+        GL_SRC_COLOR,                // BLEND_FACTOR_SRC_COLOR
+        GL_ONE_MINUS_SRC_COLOR,      // BLEND_FACTOR_INV_SRC_COLOR
+        GL_SRC_ALPHA,                // BLEND_FACTOR_SRC_ALPHA
+        GL_ONE_MINUS_SRC_ALPHA,      // BLEND_FACTOR_INV_SRC_ALPHA
+        GL_DST_ALPHA,                // BLEND_FACTOR_DEST_ALPHA
+        GL_ONE_MINUS_DST_ALPHA,      // BLEND_FACTOR_INV_DEST_ALPHA
+        GL_DST_COLOR,                // BLEND_FACTOR_DEST_COLOR
+        GL_ONE_MINUS_DST_COLOR,      // BLEND_FACTOR_INV_DEST_COLOR
+        GL_SRC_ALPHA_SATURATE,       // BLEND_FACTOR_SRC_ALPHA_SAT
+        GL_CONSTANT_COLOR,           // BLEND_FACTOR_BLEND_FACTOR
+        GL_ONE_MINUS_CONSTANT_COLOR, // BLEND_FACTOR_INV_BLEND_FACTOR
+        GL_SRC1_COLOR,               // BLEND_FACTOR_SRC1_COLOR
+        GL_ONE_MINUS_SRC1_COLOR,     // BLEND_FACTOR_INV_SRC1_COLOR
+        GL_SRC1_ALPHA,               // BLEND_FACTOR_SRC1_ALPHA
+        GL_ONE_MINUS_SRC1_ALPHA      // BLEND_FACTOR_INV_SRC1_ALPHA
+    };
+    // clang-format on
+
+    VERIFY_EXPR(bf < _countof(BlendFactor2GLBlendMap));
+    return BlendFactor2GLBlendMap[bf];
+}
+
+inline GLenum BlendOperation2GLBlendOp(BLEND_OPERATION BlendOp)
+{
+    // clang-format off
+    static constexpr GLenum BlendOperation2GLBlendOpMap[] = 
+    {
+        0,                        // BLEND_OPERATION_UNDEFINED
+        GL_FUNC_ADD,              // BLEND_OPERATION_ADD
+        GL_FUNC_SUBTRACT,         // BLEND_OPERATION_SUBTRACT
+        GL_FUNC_REVERSE_SUBTRACT, // BLEND_OPERATION_REV_SUBTRACT
+        GL_MIN,                   // BLEND_OPERATION_MIN
+        GL_MAX                    // BLEND_OPERATION_MAX
+    };
+    // clang-format on
+
+    VERIFY_EXPR(BlendOp < _countof(BlendOperation2GLBlendOpMap));
+    return BlendOperation2GLBlendOpMap[BlendOp];
+}
+
+
+GLenum         TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags = 0);
+TEXTURE_FORMAT GLInternalTexFormatToTexFormat(GLenum GlFormat);
+
 NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat);
-GLenum             AccessFlags2GLAccess(Uint32 UAVAccessFlags);
 GLenum             TypeToGLTexFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
-GLenum             StencilOp2GlStencilOp(STENCIL_OP StencilOp);
-GLenum             BlendFactor2GLBlend(BLEND_FACTOR bf);
-GLenum             BlendOperation2GLBlendOp(BLEND_OPERATION BlendOp);
 
 } // namespace Diligent
