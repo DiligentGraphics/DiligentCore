@@ -11,10 +11,10 @@ fi
 if [ "$TRAVIS_OS_NAME" = "osx" ]; then 
   if [ "$IOS" = "true" ]; then 
     cmake .. $1 -DCMAKE_TOOLCHAIN_FILE=../DiligentCore/ios.toolchain.cmake -DIOS_PLATFORM=OS64 -DIOS_ARCH=arm64 -DVULKAN_SDK="$VULKAN_SDK" -DCMAKE_INSTALL_PREFIX=install -G "Xcode" || return
-    local BUILD_SETTINGS="CODE_SIGN_IDENTITY=\"\" CODE_SIGNING_REQUIRED=NO"
+    XCODE_BUILD_SETTINGS="CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO"
   else
     cmake .. $1 -DCMAKE_INSTALL_PREFIX=install -G "Xcode" || return
-    local BUILD_SETTINGS=""
+    XCODE_BUILD_SETTINGS=""
   fi
-  xcodebuild -target install -configuration ${CONFIG} ${BUILD_SETTINGS}
+  xcodebuild -target install -configuration ${CONFIG} ${XCODE_BUILD_SETTINGS} | xcpretty && return ${PIPESTATUS[0]}
 fi
