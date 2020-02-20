@@ -16,5 +16,5 @@ if [ "$TRAVIS_OS_NAME" = "osx" ]; then
     cmake .. $1 -DCMAKE_INSTALL_PREFIX=install -G "Xcode" || return
     local BUILD_SETTINGS=""
   fi
-  xcodebuild -target install -configuration ${CONFIG} ${BUILD_SETTINGS} | xcpretty && return ${PIPESTATUS[0]}
+  xcodebuild -target install -configuration ${CONFIG} ${BUILD_SETTINGS}
 fi
