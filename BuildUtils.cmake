@@ -1,5 +1,5 @@
 if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
-    
+
     function(copy_required_dlls TARGET_NAME)
         if(D3D11_SUPPORTED)
             list(APPEND ENGINE_DLLS Diligent-GraphicsEngineD3D11-shared)
@@ -57,7 +57,7 @@ endif(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
 
 
 function(set_common_target_properties TARGET)
-    
+
     if(COMMAND custom_configure_target)
         custom_configure_target(${TARGET})
         if(TARGET_CONFIGURATION_COMPLETE)
@@ -111,6 +111,8 @@ function(set_common_target_properties TARGET)
             # error: invalid argument '-std=c++11' not allowed with 'C/ObjC'
             CXX_STANDARD 11
             CXX_STANDARD_REQUIRED ON
+
+            C_STANDARD 11
         )
 
         if(NOT MINGW_BUILD)
@@ -120,7 +122,7 @@ function(set_common_target_properties TARGET)
             )
         endif()
     endif()
-    
+
     if(PLATFORM_IOS)
         set_target_properties(${TARGET} PROPERTIES
             XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 10.0
