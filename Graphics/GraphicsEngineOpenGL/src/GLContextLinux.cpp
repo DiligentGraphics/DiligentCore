@@ -159,15 +159,14 @@ void GLContext::SwapBuffers(int SwapInterval)
 {
     if (m_WindowId != 0 && m_pDisplay != nullptr)
     {
+        auto wnd     = static_cast<Window>(m_WindowId);
+        auto display = reinterpret_cast<Display*>(m_pDisplay);
 #if GLX_EXT_swap_control
         if (glXSwapIntervalEXT != nullptr)
         {
-            glXSwapIntervalEXT(SwapInterval);
+            glXSwapIntervalEXT(display, wnd, SwapInterval);
         }
 #endif
-
-        auto wnd     = static_cast<Window>(m_WindowId);
-        auto display = reinterpret_cast<Display*>(m_pDisplay);
         glXSwapBuffers(display, wnd);
     }
     else

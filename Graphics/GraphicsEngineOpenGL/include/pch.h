@@ -62,6 +62,7 @@
 #    endif
 
 #    include "GL/glew.h"
+#    include "GL/glxew.h"
 #    include <GL/glx.h>
 
 // Undefine beautiful defines from GL/glx.h -> X11/Xlib.h
