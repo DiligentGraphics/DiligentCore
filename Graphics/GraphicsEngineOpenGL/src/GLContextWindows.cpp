@@ -307,12 +307,23 @@ GLContext::~GLContext()
     }
 }
 
-void GLContext::SwapBuffers()
+void GLContext::SwapBuffers(int SwapInterval)
 {
     if (m_WindowHandleToDeviceContext)
+    {
+#if WGL_EXT_swap_control
+        if (wglSwapIntervalEXT != nullptr)
+        {
+            wglSwapIntervalEXT(SwapInterval);
+        }
+#endif
+
         ::SwapBuffers(m_WindowHandleToDeviceContext);
+    }
     else
+    {
         LOG_ERROR("Swap buffer failed because window handle to device context is not initialized");
+    }
 }
 
 GLContext::NativeGLContextType GLContext::GetCurrentNativeGLContext()

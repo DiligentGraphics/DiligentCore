@@ -88,7 +88,7 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
 #if PLATFORM_WIN32 || PLATFORM_LINUX || PLATFORM_ANDROID
     auto* pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
     auto& GLContext = pDeviceGL->m_GLContext;
-    GLContext.SwapBuffers();
+    GLContext.SwapBuffers(static_cast<int>(SyncInterval));
 #elif PLATFORM_MACOS
     LOG_ERROR("Swap buffers operation must be performed by the app on MacOS");
 #else

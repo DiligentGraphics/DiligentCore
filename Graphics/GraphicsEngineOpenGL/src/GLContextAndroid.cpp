@@ -248,7 +248,7 @@ GLContext::~GLContext()
     Terminate();
 }
 
-void GLContext::SwapBuffers()
+void GLContext::SwapBuffers(int /*SwapInterval*/)
 {
     if (surface_ == EGL_NO_SURFACE)
     {

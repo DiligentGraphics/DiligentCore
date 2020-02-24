@@ -33,7 +33,7 @@ public:
 
     GLContext(const struct EngineGLCreateInfo& InitAttribs, struct DeviceCaps& DeviceCaps, const struct SwapChainDesc* pSCDesc);
     ~GLContext();
-    void SwapBuffers();
+    void SwapBuffers(int SwapInterval);
 
     NativeGLContextType GetCurrentNativeGLContext();
 
