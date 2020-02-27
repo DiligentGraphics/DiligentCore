@@ -227,9 +227,11 @@ if(MSVC)
     set(DEBUG_MACROS DEVELOPMENT)
     target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DEBUG_MACROS}>")
 else()
+    # Todo: use __attribute__((always_inline)), but it needs to be defined in a header file
+    target_compile_definitions(Diligent-BuildSettings INTERFACE __forceinline=inline)
 
-    set(DEBUG_MACROS _DEBUG DEBUG DEVELOPMENT __forceinline=inline)
-    set(RELEASE_MACROS NDEBUG __forceinline=inline) # Todo: use __attribute__((always_inline)), but it needs to be defined in a header file
+    set(DEBUG_MACROS _DEBUG DEBUG DEVELOPMENT)
+    set(RELEASE_MACROS NDEBUG)
 
     foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})
         target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${DBG_CONFIG}>:${DEBUG_MACROS}>")
@@ -238,7 +240,6 @@ else()
     foreach(REL_CONFIG ${RELEASE_CONFIGURATIONS})
         target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:${REL_CONFIG}>:${RELEASE_MACROS}>")
     endforeach()
-
 endif(MSVC)
 
 
