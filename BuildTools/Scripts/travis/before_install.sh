@@ -14,12 +14,12 @@ if [ "$TRAVIS_OS_NAME" = "osx" ];  then
 fi
 
 if [ "$TRAVIS_OS_NAME" = "linux" ]; then
-  # Link gcc-7 and g++-7 to their standard commands
-  sudo ln -s /usr/bin/gcc-7 /usr/local/bin/gcc
-  sudo ln -s /usr/bin/g++-7 /usr/local/bin/g++
+  # Link gcc-9 and g++-9 to their standard commands
+  sudo ln -s /usr/bin/gcc-9 /usr/local/bin/gcc
+  sudo ln -s /usr/bin/g++-9 /usr/local/bin/g++
   # Export CC and CXX to tell cmake which compiler to use
-  export CC=/usr/bin/gcc-7
-  export CXX=/usr/bin/g++-7
+  export CC=/usr/bin/gcc-9
+  export CXX=/usr/bin/g++-9
   # Check versions of gcc, g++ and cmake
   gcc -v
   g++ -v
