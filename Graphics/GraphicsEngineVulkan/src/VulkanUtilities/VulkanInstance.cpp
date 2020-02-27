@@ -176,7 +176,7 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
             if (!IsLayerAvailable(pLayerName))
             {
                 ValidationLayersPresent = false;
-                LOG_ERROR_MESSAGE("Failed to find ", pLayerName, " layer. Validation will be disabled");
+                LOG_WARNING_MESSAGE("Failed to find ", pLayerName, " layer. Validation will be disabled");
             }
         }
         if (ValidationLayersPresent)
