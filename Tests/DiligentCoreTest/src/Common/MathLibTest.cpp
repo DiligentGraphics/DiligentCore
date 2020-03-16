@@ -32,16 +32,6 @@
 
 using namespace Diligent;
 
-namespace Diligent
-{
-
-static std::ostream& operator<<(std::ostream& os, const LinearTexFilterSampleInfo& FilterInfo)
-{
-    return os << "i0=" << FilterInfo.i0 << " i1=" << FilterInfo.i1 << " w=" << FilterInfo.w;
-}
-
-} // namespace Diligent
-
 namespace
 {
 
@@ -1270,107 +1260,6 @@ TEST(Common_AdvancedMath, TraceLineThroughGrid)
     // It is either this line or the previous one that will make the algorithm miss the end point depending on
     // whether 'abs(t + tx) < abs(t + ty)' or 'abs(t + tx) <= abs(t + ty)' condition is used.
     TestLineTrace(float2{3, 1}, float2{1, 3}, {int2{3, 1}, int2{2, 1}, int2{2, 2}, int2{1, 2}, int2{1, 3}});
-}
-
-template <TEXTURE_ADDRESS_MODE AddressMode>
-void TestGetLinearTexFilterSampleInfo(float u, Int32 i0, Int32 i1, float w, Uint32 Width = 128)
-{
-    const LinearTexFilterSampleInfo RefSampleInfo{i0, i1, w};
-
-    {
-        auto SampleInfo = GetLinearTexFilterSampleInfo<AddressMode, false>(Width, u);
-        EXPECT_EQ(SampleInfo, RefSampleInfo) << "u=" << u << " width=" << Width;
-    }
-
-    {
-        auto SampleInfo = GetLinearTexFilterSampleInfo<AddressMode, true>(Width, u / static_cast<float>(Width));
-        EXPECT_EQ(SampleInfo, RefSampleInfo) << "u_norm=" << u / static_cast<float>(Width) << " width=" << Width;
-    }
-}
-
-TEST(Common_AdvancedMath, GetLinearTexFilterSampleInfo)
-{
-    // TEXTURE_ADDRESS_CLAMP
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(0.f, 0, 0, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(-0.5f, 0, 0, 0.0f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(-1.f, 0, 0, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(-128.f, 0, 0, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(-129.f, 0, 0, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(-129.5f, 0, 0, 0.0f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(-256.f, 0, 0, 0.5f);
-
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(0.75f, 0, 1, 0.25f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(1.00f, 0, 1, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(1.25f, 0, 1, 0.75f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(1.50f, 1, 2, 0.00f);
-
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(126.75f, 126, 127, 0.25f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(127.00f, 126, 127, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(127.25f, 126, 127, 0.75f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(127.50f, 127, 127, 0.00f);
-
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(128.00f, 127, 127, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(128.50f, 127, 127, 0.00f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(129.00f, 127, 127, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(255.00f, 127, 127, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(256.00f, 127, 127, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_CLAMP>(257.00f, 127, 127, 0.50f);
-
-
-    // TEXTURE_ADDRESS_WRAP
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(0.f, 127, 0, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(-0.5f, 127, 0, 0.0f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(-1.f, 126, 127, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(-128.f, 127, 0, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(-129.f, 126, 127, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(-129.5f, 126, 127, 0.0f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(-256.f, 127, 0, 0.5f);
-
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(0.75f, 0, 1, 0.25f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(1.00f, 0, 1, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(1.25f, 0, 1, 0.75f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(1.50f, 1, 2, 0.00f);
-
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(126.75f, 126, 127, 0.25f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(127.00f, 126, 127, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(127.25f, 126, 127, 0.75f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(127.50f, 127, 0, 0.00f);
-
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(128.00f, 127, 0, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(128.50f, 0, 1, 0.00f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(129.00f, 0, 1, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(255.00f, 126, 127, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(256.00f, 127, 0, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_WRAP>(257.00f, 0, 1, 0.50f);
-
-
-    // TEXTURE_ADDRESS_MIRROR
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(0.f, 0, 0, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(-0.5f, 0, 0, 0.0f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(-1.f, 1, 0, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(-128.f, 127, 127, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(-129.f, 126, 127, 0.5f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(-129.5f, 126, 127, 0.0f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(-256.f, 0, 0, 0.5f);
-
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(0.75f, 0, 1, 0.25f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(1.00f, 0, 1, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(1.25f, 0, 1, 0.75f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(1.50f, 1, 2, 0.00f);
-
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(126.75f, 126, 127, 0.25f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(127.00f, 126, 127, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(127.25f, 126, 127, 0.75f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(127.50f, 127, 127, 0.00f);
-
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(128.00f, 127, 127, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(128.50f, 127, 126, 0.00f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(129.00f, 127, 126, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(129.50f, 126, 125, 0.00f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(255.00f, 1, 0, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(256.00f, 0, 0, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(257.00f, 0, 1, 0.50f);
-    TestGetLinearTexFilterSampleInfo<TEXTURE_ADDRESS_MIRROR>(258.00f, 1, 2, 0.50f);
 }
 
 } // namespace

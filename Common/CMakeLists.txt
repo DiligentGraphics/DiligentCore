@@ -14,6 +14,7 @@ set(INTERFACE
     interface/DataBlobImpl.hpp
     interface/DefaultRawMemoryAllocator.hpp
     interface/FileWrapper.hpp
+    interface/FilteringTools.hpp
     interface/FixedBlockMemoryAllocator.hpp
     interface/HashUtils.hpp
     interface/LockHelper.hpp 

@@ -126,8 +126,8 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
             }
             else
             {
-                LOG_WARNING_MESSAGE("Unsupported color buffer format ", GetTextureFormatAttribs(ColorFmt).Name, ". "
-                                                                                                                "OpenGL only supports 32-bit UNORM color buffer formats.");
+                LOG_WARNING_MESSAGE("Unsupported color buffer format ", GetTextureFormatAttribs(ColorFmt).Name,
+                                    ". OpenGL only supports 32-bit UNORM color buffer formats.");
                 pfd.cColorBits = 32;
             }
 
