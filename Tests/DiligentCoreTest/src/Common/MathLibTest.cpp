@@ -1272,7 +1272,7 @@ TEST(Common_AdvancedMath, TraceLineThroughGrid)
     TestLineTrace(float2{3, 1}, float2{1, 3}, {int2{3, 1}, int2{2, 1}, int2{2, 2}, int2{1, 2}, int2{1, 3}});
 }
 
-template <typename TEXTURE_ADDRESS_MODE AddressMode>
+template <TEXTURE_ADDRESS_MODE AddressMode>
 void TestGetLinearTexFilterSampleInfo(float u, Int32 i0, Int32 i1, float w, Uint32 Width = 128)
 {
     const LinearTexFilterSampleInfo RefSampleInfo{i0, i1, w};
