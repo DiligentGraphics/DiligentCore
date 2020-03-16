@@ -166,8 +166,8 @@ public:
     }
 
 private:
-    MapHelper(const MapHelper&);
-    MapHelper& operator=(const MapHelper&);
+    MapHelper(const MapHelper&) = delete;
+    MapHelper& operator=(const MapHelper&) = delete;
 
     template <typename PtrType, bool UseStrongReference>
     struct PtrTypeSelector

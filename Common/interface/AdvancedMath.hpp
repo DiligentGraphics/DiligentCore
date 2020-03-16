@@ -34,6 +34,8 @@
 
 #include "BasicMath.hpp"
 
+#include "../../Graphics/GraphicsEngine/interface/Sampler.h"
+
 namespace Diligent
 {
 
@@ -658,6 +660,116 @@ void TraceLineThroughGrid(float2    f2Start,
             }
         }
     }
+}
+
+
+/// Linear texture filter sample info
+//
+//                              w
+//                       | - - - - - >|
+//  -----X-------|-------X-------|----*--X-------|-------X
+//     i0-1.5          i0+0.5          i1+0.5          i1+1.5
+//
+//      T[*] = lerp(T[i0], T[i1], w)
+//
+struct LinearTexFilterSampleInfo
+{
+    /// First sample index
+    Int32 i0 = 0;
+
+    /// Second sample index
+    Int32 i1 = 0;
+
+    /// Blend weight
+    float w = 0.f;
+
+    LinearTexFilterSampleInfo() noexcept {}
+
+    LinearTexFilterSampleInfo(Int32 _i0, Int32 _i1, float _w) noexcept :
+        i0{_i0},
+        i1{_i1},
+        w{_w}
+    {
+    }
+
+    bool operator==(const LinearTexFilterSampleInfo& rhs) const
+    {
+        return i0 == rhs.i0 && i1 == rhs.i1 && w == rhs.w;
+    }
+
+    bool operator!=(const LinearTexFilterSampleInfo& rhs) const
+    {
+        return !(*this == rhs);
+    }
+};
+
+/// Returns linear texture filter sample info, see Diligent::LinearTexFilterSampleInfo.
+///
+/// \tparam AddressMode  - Texture addressing mode, see Diligent::TEXTURE_ADDRESS_MODE.
+/// \tparam IsNormalized - Whether sample coordinate is normalized.
+///
+/// \param [in] Width    - Texture width.
+/// \param [in] u        - Texture sample coordinate.
+/// \return                Linear texture filter sample information, see Diligent::LinearTexFilterSampleInfo.
+template <TEXTURE_ADDRESS_MODE AddressMode, bool IsNormalized>
+LinearTexFilterSampleInfo GetLinearTexFilterSampleInfo(Uint32 Width, float u)
+{
+    float x  = IsNormalized ? u * static_cast<float>(Width) : u;
+    float x0 = std::floor(x - 0.5f);
+
+    // clang-format off
+    LinearTexFilterSampleInfo SampleInfo
+    {
+        static_cast<Int32>(x0),
+        static_cast<Int32>(x0 + 1),
+        x - 0.5f - x0
+    };
+    // clang-format on
+
+    auto WrapCoord = [](Int32 i, Uint32 Width) //
+    {
+        auto w = static_cast<Int32>(Width);
+
+        // Note that the sign of a%b is implementation-dependent when one of the operands is negative.
+        // a/b, to the contrary, is always well-defined.
+        i = i - (i / w) * w;
+        return i < 0 ? i + w : i;
+    };
+
+    auto MirrorCoord = [WrapCoord](Int32 i, Uint32 Width) //
+    {
+        i = WrapCoord(i, Width * 2);
+
+        auto w = static_cast<Int32>(Width);
+        return i >= w ? (w * 2 - 1) - i : i;
+    };
+
+    switch (AddressMode)
+    {
+        case TEXTURE_ADDRESS_UNKNOWN:
+            // do nothing
+            break;
+
+        case TEXTURE_ADDRESS_WRAP:
+            SampleInfo.i0 = WrapCoord(SampleInfo.i0, Width);
+            SampleInfo.i1 = WrapCoord(SampleInfo.i1, Width);
+            break;
+
+        case TEXTURE_ADDRESS_MIRROR:
+            SampleInfo.i0 = MirrorCoord(SampleInfo.i0, Width);
+            SampleInfo.i1 = MirrorCoord(SampleInfo.i1, Width);
+            break;
+
+        case TEXTURE_ADDRESS_CLAMP:
+            SampleInfo.i0 = clamp(SampleInfo.i0, 0, static_cast<Int32>(Width - 1));
+            SampleInfo.i1 = clamp(SampleInfo.i1, 0, static_cast<Int32>(Width - 1));
+            break;
+
+        default:
+            UNEXPECTED("Unexpected texture address mode");
+    }
+
+    return SampleInfo;
 }
 
 } // namespace Diligent
