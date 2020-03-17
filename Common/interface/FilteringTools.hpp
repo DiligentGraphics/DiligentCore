@@ -47,16 +47,28 @@ namespace Diligent
 //
 struct LinearTexFilterSampleInfo
 {
-    /// First sample index
-    Int32 i0 = 0;
+    union
+    {
+        struct
+        {
+            /// First sample index
+            Int32 i0;
 
-    /// Second sample index
-    Int32 i1 = 0;
+            /// Second sample index
+            Int32 i1;
+        };
+
+        /// Sample indices
+        Int32 i[2];
+    };
 
     /// Blend weight
     float w = 0.f;
 
-    LinearTexFilterSampleInfo() noexcept {}
+    LinearTexFilterSampleInfo() noexcept :
+        i0{0},
+        i1{0}
+    {}
 
     LinearTexFilterSampleInfo(Int32 _i0, Int32 _i1, float _w) noexcept :
         i0{_i0},
@@ -145,9 +157,26 @@ LinearTexFilterSampleInfo GetLinearTexFilterSampleInfo(Uint32 Width, float u)
     return SampleInfo;
 }
 
+#ifdef _DEBUG
+template <TEXTURE_ADDRESS_MODE AddressMode>
+void _DbgVerifyFilterInfo(const LinearTexFilterSampleInfo& FilterInfo, Uint32 Width, const char* Direction, float u)
+{
+}
+
+template <>
+void _DbgVerifyFilterInfo<TEXTURE_ADDRESS_UNKNOWN>(const LinearTexFilterSampleInfo& FilterInfo, Uint32 Width, const char* Direction, float u)
+{
+    VERIFY(FilterInfo.i0 >= 0 && FilterInfo.i0 < static_cast<Int32>(Width), "First ", Direction, " sample index (", FilterInfo.i0,
+           ") is out of allowed range [0, ", Width - 1, "]. Correct sample coordinate (", u, ") or use one of the texture address modes.");
+    VERIFY(FilterInfo.i1 >= 0 && FilterInfo.i1 < static_cast<Int32>(Width), "Second ", Direction, " sample index (", FilterInfo.i1,
+           ") is out of allowed range [0, ", Width - 1, "]. Correct sample coordinate (", u, ") or use one of the texture address modes.");
+}
+#endif
+
 /// Samples 2D texture using bilinear filter.
 ///
-/// \tparam PixelType         - Pixel type.
+/// \tparam SrcType           - Source pixel type.
+/// \tparam DstType           - Destination type.
 /// \tparam AddressModeU      - U coordinate address mode.
 /// \tparam AddressModeV      - V coordinate address mode.
 /// \tparam IsNormalizedCoord - Whether sample coordinates are normalized.
@@ -159,25 +188,61 @@ LinearTexFilterSampleInfo GetLinearTexFilterSampleInfo(Uint32 Width, float u)
 /// \param [in] u             - Sample u coordinate.
 /// \param [in] v             - Sample v coordinate.
 /// \return                   - Filtered texture sample.
-template <typename PixelType,
+template <typename SrcType,
+          typename DstType,
           TEXTURE_ADDRESS_MODE AddressModeU,
           TEXTURE_ADDRESS_MODE AddressModeV,
           bool                 IsNormalizedCoord>
-PixelType FilterTexture2DBilinear(Uint32           Width,
-                                  Uint32           Height,
-                                  const PixelType* pData,
-                                  Uint32           Stride,
-                                  float            u,
-                                  float            v)
+DstType FilterTexture2DBilinear(Uint32         Width,
+                                Uint32         Height,
+                                const SrcType* pData,
+                                size_t         Stride,
+                                float          u,
+                                float          v)
 {
     auto UFilterInfo = GetLinearTexFilterSampleInfo<AddressModeU, IsNormalizedCoord>(Width, u);
     auto VFilterInfo = GetLinearTexFilterSampleInfo<AddressModeV, IsNormalizedCoord>(Height, v);
 
-    auto S00 = pData[UFilterInfo.i0 + VFilterInfo.i0 * Stride];
-    auto S10 = pData[UFilterInfo.i1 + VFilterInfo.i0 * Stride];
-    auto S01 = pData[UFilterInfo.i0 + VFilterInfo.i1 * Stride];
-    auto S11 = pData[UFilterInfo.i1 + VFilterInfo.i1 * Stride];
+#ifdef _DEBUG
+    {
+        _DbgVerifyFilterInfo<AddressModeU>(UFilterInfo, Width, "horizontal", u);
+        _DbgVerifyFilterInfo<AddressModeV>(VFilterInfo, Height, "horizontal", v);
+    }
+#endif
+
+    auto S00 = static_cast<DstType>(pData[UFilterInfo.i0 + VFilterInfo.i0 * Stride]);
+    auto S10 = static_cast<DstType>(pData[UFilterInfo.i1 + VFilterInfo.i0 * Stride]);
+    auto S01 = static_cast<DstType>(pData[UFilterInfo.i0 + VFilterInfo.i1 * Stride]);
+    auto S11 = static_cast<DstType>(pData[UFilterInfo.i1 + VFilterInfo.i1 * Stride]);
     return lerp(lerp(S00, S10, UFilterInfo.w), lerp(S01, S11, UFilterInfo.w), VFilterInfo.w);
+}
+
+/// Specialization of FilterTexture2DBilinear function that uses CLAMP texture address mode
+/// and takes normalized texture coordinates.
+template <typename SrcType, typename DstType>
+DstType FilterTexture2DBilinearClamp(Uint32         Width,
+                                     Uint32         Height,
+                                     const SrcType* pData,
+                                     size_t         Stride,
+                                     float          u,
+                                     float          v)
+
+{
+    return FilterTexture2DBilinear<SrcType, DstType, TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, true>(Width, Height, pData, Stride, u, v);
+}
+
+/// Specialization of FilterTexture2DBilinear function that uses CLAMP texture address mode
+/// and takes unnormalized texture coordinates.
+template <typename SrcType, typename DstType>
+DstType FilterTexture2DBilinearClampUC(Uint32         Width,
+                                       Uint32         Height,
+                                       const SrcType* pData,
+                                       size_t         Stride,
+                                       float          u,
+                                       float          v)
+
+{
+    return FilterTexture2DBilinear<SrcType, DstType, TEXTURE_ADDRESS_CLAMP, TEXTURE_ADDRESS_CLAMP, false>(Width, Height, pData, Stride, u, v);
 }
 
 } // namespace Diligent

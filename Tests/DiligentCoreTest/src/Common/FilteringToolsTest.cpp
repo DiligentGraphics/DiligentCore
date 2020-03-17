@@ -161,12 +161,12 @@ void TestFilterTexture2DBilinear(float u, float v, float ref)
     constexpr Uint32 Width  = 4;
     constexpr Uint32 Height = 4;
 
-    auto Val = FilterTexture2DBilinear<float, AddressMode, AddressMode, false>(Width, Height, Data, Width, u, v);
+    auto Val = FilterTexture2DBilinear<float, float, AddressMode, AddressMode, false>(Width, Height, Data, Width, u, v);
     EXPECT_EQ(Val, ref) << "u=" << u << " v=" << v;
 
     u /= static_cast<float>(Width);
     v /= static_cast<float>(Height);
-    Val = FilterTexture2DBilinear<float, AddressMode, AddressMode, true>(Width, Height, Data, Width, u, v);
+    Val = FilterTexture2DBilinear<float, float, AddressMode, AddressMode, true>(Width, Height, Data, Width, u, v);
     EXPECT_EQ(Val, ref) << "u_norm=" << u << " v_norm=" << v;
 }
 
@@ -185,6 +185,7 @@ TEST(Common_FilteringTools, FilterTexture2DBilinear)
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_CLAMP>(0.75f, 0.75f, ref);
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_WRAP>(0.75f, 0.75f, ref);
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_MIRROR>(0.75f, 0.75f, ref);
+        TestFilterTexture2DBilinear<TEXTURE_ADDRESS_UNKNOWN>(0.75f, 0.75f, ref);
     }
 
     {
@@ -192,6 +193,7 @@ TEST(Common_FilteringTools, FilterTexture2DBilinear)
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_CLAMP>(1.25f, 0.75f, ref);
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_WRAP>(1.25f, 0.75f, ref);
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_MIRROR>(1.25f, 0.75f, ref);
+        TestFilterTexture2DBilinear<TEXTURE_ADDRESS_UNKNOWN>(1.25f, 0.75f, ref);
     }
 
     {
@@ -199,6 +201,7 @@ TEST(Common_FilteringTools, FilterTexture2DBilinear)
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_CLAMP>(0.75f, 1.25f, ref);
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_WRAP>(0.75f, 1.25f, ref);
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_MIRROR>(0.75f, 1.25f, ref);
+        TestFilterTexture2DBilinear<TEXTURE_ADDRESS_UNKNOWN>(0.75f, 1.25f, ref);
     }
 
     {
@@ -206,6 +209,7 @@ TEST(Common_FilteringTools, FilterTexture2DBilinear)
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_CLAMP>(1.25f, 1.25f, ref);
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_WRAP>(1.25f, 1.25f, ref);
         TestFilterTexture2DBilinear<TEXTURE_ADDRESS_MIRROR>(1.25f, 1.25f, ref);
+        TestFilterTexture2DBilinear<TEXTURE_ADDRESS_UNKNOWN>(1.25f, 1.25f, ref);
     }
 
     // TEXTURE_ADDRESS_CLAMP
