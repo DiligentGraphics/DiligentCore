@@ -13,7 +13,7 @@
 //
 
 
-#   include /*Comment*/ <IncludeTest.h>
+#   include  <IncludeTest.h>
 // #include "NonExistingFile.h"
 
 
