@@ -503,6 +503,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
     // turn it into a valid vulkan SPIR-V shader
     spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
     SpirvOptimizer.RegisterLegalizationPasses();
+    SpirvOptimizer.RegisterPerformancePasses();
     std::vector<uint32_t> LegalizedSPIRV;
     if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &LegalizedSPIRV))
     {
