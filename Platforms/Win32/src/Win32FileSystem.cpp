@@ -48,6 +48,13 @@ void WindowsFileSystem::DeleteFile(const Diligent::Char* strPath)
     DeleteFileImpl(strPath);
 }
 
+static std::string GetCurrentDirectoryImpl();
+
+std::string WindowsFileSystem::GetCurrentDirectory()
+{
+    return GetCurrentDirectoryImpl();
+}
+
 #include <Windows.h>
 #include <Shlwapi.h>
 #pragma comment(lib, "Shlwapi.lib")
@@ -298,4 +305,53 @@ bool WindowsFileSystem::IsDirectory(const Diligent::Char* strPath)
     }
 
     return (GetFileAttributesA(strPath) & FILE_ATTRIBUTE_DIRECTORY) != 0;
+}
+
+std::string GetCurrentDirectoryImpl()
+{
+    std::string CurrDir;
+
+    // If the function succeeds, the return value specifies the number of characters that are
+    // written to the buffer, not including the terminating null character.
+    auto NumChars = GetCurrentDirectoryA(0, nullptr);
+
+    if (NumChars > 0)
+    {
+        auto BufferSize = NumChars + 1;
+        CurrDir.resize(NumChars); // Resize the string to a length of NumChars characters.
+
+        // BufferSize must include room for a terminating null character.
+        // https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-getcurrentdirectory
+        GetCurrentDirectoryA(BufferSize, &CurrDir[0]);
+    }
+    return CurrDir;
+}
+
+bool WindowsFileSystem::GetRelativePath(const Diligent::Char* strPathFrom,
+                                        bool                  IsFromDirectory,
+                                        const Diligent::Char* strPathTo,
+                                        bool                  IsToDirectory,
+                                        std::string&          RelativePath)
+{
+    VERIFY_EXPR(strPathTo != nullptr);
+
+    // https://docs.microsoft.com/en-us/windows/win32/api/shlwapi/nf-shlwapi-pathrelativepathtoa
+    char strRelativePath[MAX_PATH];
+
+    auto Res = PathRelativePathToA(strRelativePath,
+                                   strPathFrom != nullptr ? strPathFrom : GetCurrentDirectoryImpl().c_str(),
+                                   (strPathFrom == nullptr || IsFromDirectory) ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL,
+                                   strPathTo,
+                                   IsToDirectory ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL);
+
+    if (Res != FALSE)
+    {
+        RelativePath = strRelativePath;
+    }
+    else
+    {
+        RelativePath = strPathFrom;
+    }
+
+    return Res != FALSE;
 }
