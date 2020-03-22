@@ -469,7 +469,15 @@ private:
     RefCountersImpl& operator = (RefCountersImpl&&)      = delete;
     // clang-format on
 
-    static constexpr size_t  ObjectWrapperBufferSize = sizeof(ObjectWrapper<IObject, IMemoryAllocator>) / sizeof(size_t);
+    struct IObjectStub : public IObject
+    {
+        virtual ~IObjectStub() = 0;
+    };
+    // MSVC starting with 19.25.28610.4 fails to compile sizeof(ObjectWrapper<IObject, IMemoryAllocator>) because
+    // IObject does not have virtual destructor. The compiler is technically right, so we use IObjectStub,
+    // which does have virtual destructor.
+    static constexpr size_t ObjectWrapperBufferSize = sizeof(ObjectWrapper<IObjectStub, IMemoryAllocator>) / sizeof(size_t);
+
     size_t                   m_ObjectWrapperBuffer[ObjectWrapperBufferSize];
     Atomics::AtomicLong      m_lNumStrongReferences;
     Atomics::AtomicLong      m_lNumWeakReferences;
