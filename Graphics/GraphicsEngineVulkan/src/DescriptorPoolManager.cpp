@@ -68,7 +68,7 @@ DescriptorPoolManager::~DescriptorPoolManager()
 VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::GetPool(const char* DebugName)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     ++m_AllocatedPoolCounter;
 #endif
     if (m_Pools.empty())
@@ -128,7 +128,7 @@ void DescriptorPoolManager::FreePool(VulkanUtilities::DescriptorPoolWrapper&& Po
     std::lock_guard<std::mutex> Lock{m_Mutex};
     m_DeviceVkImpl.GetLogicalDevice().ResetDescriptorPool(Pool);
     m_Pools.emplace_back(std::move(Pool));
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     --m_AllocatedPoolCounter;
 #endif
 }
@@ -177,7 +177,7 @@ DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask
                 std::swap(*it, m_Pools.front());
             }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             ++m_AllocatedSetCounter;
 #endif
             return {Set, Pool, CommandQueueMask, *this};
@@ -192,7 +192,7 @@ DescriptorSetAllocation DescriptorSetAllocator::Allocate(Uint64 CommandQueueMask
     auto  Set     = AllocateDescriptorSet(LogicalDevice, NewPool, SetLayout, DebugName);
     DEV_CHECK_ERR(Set != VK_NULL_HANDLE, "Failed to allocate descriptor set");
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     ++m_AllocatedSetCounter;
 #endif
 
@@ -234,7 +234,7 @@ void DescriptorSetAllocator::FreeDescriptorSet(VkDescriptorSet Set, VkDescriptor
             {
                 std::lock_guard<std::mutex> Lock{Allocator->m_Mutex};
                 Allocator->m_DeviceVkImpl.GetLogicalDevice().FreeDescriptorSet(Pool, Set);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 --Allocator->m_AllocatedSetCounter;
 #endif
             }

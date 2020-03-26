@@ -183,7 +183,7 @@ void QueryManagerD3D12::ReleaseQuery(QUERY_TYPE Type, Uint32 Index)
 
     auto& HeapInfo = m_Heaps[Type];
     VERIFY(Index < HeapInfo.HeapSize, "Query index ", Index, " is out of range");
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     for (const auto& ind : HeapInfo.AvailableQueries)
     {
         VERIFY(ind != Index, "Index ", Index, " already present in available queries list");

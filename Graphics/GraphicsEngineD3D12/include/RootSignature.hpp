@@ -99,7 +99,7 @@ public:
         m_RootParam.ShaderVisibility                    = Visibility;
         m_RootParam.DescriptorTable.NumDescriptorRanges = NumRanges;
         m_RootParam.DescriptorTable.pDescriptorRanges   = pRanges;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         for (Uint32 r = 0; r < NumRanges; ++r)
             pRanges[r].RangeType = static_cast<D3D12_DESCRIPTOR_RANGE_TYPE>(-1);
 #endif
@@ -133,7 +133,7 @@ public:
         DstTbl.pDescriptorRanges   = pRanges;
         const auto& SrcTbl         = RP.m_RootParam.DescriptorTable;
         memcpy(pRanges, SrcTbl.pDescriptorRanges, SrcTbl.NumDescriptorRanges * sizeof(D3D12_DESCRIPTOR_RANGE));
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         {
             Uint32 dbgTableSize = 0;
             for (Uint32 r = 0; r < SrcTbl.NumDescriptorRanges; ++r)
@@ -375,11 +375,11 @@ public:
     }
 
 private:
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     void dbgVerifyRootParameters() const;
 #endif
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     static void DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
                                        D3D12_DESCRIPTOR_RANGE_TYPE               RangeType);
 #endif
@@ -533,7 +533,7 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
         auto  RootInd  = RootView.GetRootIndex();
 
         SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         {
             auto& Param = static_cast<const D3D12_ROOT_PARAMETER&>(RootView);
             VERIFY_EXPR(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
@@ -549,7 +549,7 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
             {
                 if (IsDynamic)
                 {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
                     if (pBuffToTransition->IsInKnownState())
                     {
                         VERIFY(pBuffToTransition->CheckState(RESOURCE_STATE_CONSTANT_BUFFER),
@@ -566,7 +566,7 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
                             CmdCtx.TransitionResource(pBuffToTransition, RESOURCE_STATE_CONSTANT_BUFFER);
                         }
                     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                     else if (ValidateStates)
                     {
 

@@ -53,7 +53,7 @@ inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
 
     Int32 ShaderIndex = PlatformMisc::GetLSB(Type);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     switch (Type)
     {
         // clang-format off

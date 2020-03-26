@@ -119,9 +119,11 @@ public:
     {
         VERIFY(!m_pBuffer && !m_pMappedData && !m_pContext, "Object already mapped");
         Unmap();
-#ifdef _DEBUG
-        auto& BuffDesc = pBuffer->GetDesc();
-        VERIFY(sizeof(DataType) <= BuffDesc.uiSizeInBytes, "Data type size exceeds buffer size");
+#ifdef DILIGENT_DEBUG
+        {
+            auto& BuffDesc = pBuffer->GetDesc();
+            VERIFY(sizeof(DataType) <= BuffDesc.uiSizeInBytes, "Data type size exceeds buffer size");
+        }
 #endif
         pContext->MapBuffer(pBuffer, MapType, MapFlags, (PVoid&)m_pMappedData);
         if (m_pMappedData != nullptr)

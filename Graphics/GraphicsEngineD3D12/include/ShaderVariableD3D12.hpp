@@ -119,7 +119,7 @@ private:
     ShaderVariableD3D12Impl*         m_pVariables     = nullptr;
     Uint32                           m_NumVariables = 0;
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     IMemoryAllocator&                m_DbgAllocator;
 #endif
     // clang-format on

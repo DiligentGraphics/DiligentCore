@@ -39,7 +39,7 @@ VulkanFencePool::VulkanFencePool(std::shared_ptr<const VulkanLogicalDevice> Logi
 
 VulkanFencePool::~VulkanFencePool()
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     for (const auto& fence : m_Fences)
     {
         DEV_CHECK_ERR(m_LogicalDevice->GetFenceStatus(fence) == VK_SUCCESS, "Destroying a fence that has not been signaled");

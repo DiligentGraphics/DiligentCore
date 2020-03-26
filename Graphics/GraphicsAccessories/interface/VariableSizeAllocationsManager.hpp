@@ -108,14 +108,14 @@ public:
         AddNewBlock(0, m_MaxSize);
         ResetCurrAlignment();
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         DbgVerifyList();
 #endif
     }
 
     ~VariableSizeAllocationsManager()
     {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         if (!m_FreeBlocksByOffset.empty() || !m_FreeBlocksBySize.empty())
         {
             VERIFY(m_FreeBlocksByOffset.size() == 1, "Single free block is expected");
@@ -236,7 +236,7 @@ public:
             }
         }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         DbgVerifyList();
 #endif
         return Allocation{Offset, AdjustedSize};
@@ -256,7 +256,7 @@ public:
         // upper_bound() returns an iterator pointing to the first element in the
         // container whose key is considered to go after k.
         auto NextBlockIt = m_FreeBlocksByOffset.upper_bound(Offset);
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         {
             auto LowBnd = m_FreeBlocksByOffset.lower_bound(Offset); // First element whose offset is  >=
             // Since zero-size allocations are not allowed, lower bound must always be equal to the upper bound
@@ -339,7 +339,7 @@ public:
             ResetCurrAlignment();
         }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         DbgVerifyList();
 #endif
     }
@@ -372,7 +372,7 @@ private:
         {}
     }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     void DbgVerifyList()
     {
         OffsetType TotalFreeSize = 0;

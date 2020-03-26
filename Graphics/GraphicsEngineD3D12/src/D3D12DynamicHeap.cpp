@@ -92,7 +92,7 @@ D3D12DynamicMemoryManager::D3D12DynamicMemoryManager(IMemoryAllocator&      Allo
 D3D12DynamicPage D3D12DynamicMemoryManager::AllocatePage(Uint64 SizeInBytes)
 {
     std::lock_guard<std::mutex> AvailablePagesLock(m_AvailablePagesMtx);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     ++m_AllocatedPageCounter;
 #endif
     auto PageIt = m_AvailablePages.lower_bound(SizeInBytes); // Returns an iterator pointing to the first element that is not less than key
@@ -140,7 +140,7 @@ void D3D12DynamicMemoryManager::ReleasePages(std::vector<D3D12DynamicPage>& Page
             if (Mgr != nullptr)
             {
                 std::lock_guard<std::mutex> Lock{Mgr->m_AvailablePagesMtx};
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 --Mgr->m_AllocatedPageCounter;
 #endif
                 auto PageSize = Page.GetSize();
@@ -238,7 +238,7 @@ D3D12DynamicAllocation D3D12DynamicHeap::Allocate(Uint64 SizeInBytes, Uint64 Ali
             SizeInBytes,
             CurrPage.GetCPUAddress(AlignedOffset),
             CurrPage.GetGPUAddress(AlignedOffset)
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             , DvpCtxFrameNumber
 #endif
         };

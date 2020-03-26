@@ -239,7 +239,7 @@ public:
                                             const ShaderResourceLayoutD3D12& DstLayout,
                                             ShaderResourceCacheD3D12&        DstCache) const;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     bool dvpVerifyBindings(const ShaderResourceCacheD3D12& ResourceCache) const;
 #endif
 

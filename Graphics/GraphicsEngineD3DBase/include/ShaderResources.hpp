@@ -128,7 +128,7 @@ public:
         SamplerOrTexSRVId  {_SamplerId}
     // clang-format on
     {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         // clang-format off
         VERIFY(_BindPoint <= MaxBindPoint || _BindPoint == InvalidBindPoint, "Bind Point is out of allowed range");
         VERIFY(_BindCount <= MaxBindCount, "Bind Count is out of allowed range");
@@ -376,7 +376,7 @@ public:
                                              const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                              Uint32                               NumAllowedTypes,
                                              bool                                 CountStaticSamplers) const noexcept;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     static void DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout,
                                         const ShaderResources* const      pShaderResources[],
                                         Uint32                            NumShaders);
@@ -540,7 +540,7 @@ void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
     {
         m_SamplerSuffix = m_ResourceNames.CopyString(CombinedSamplerSuffix);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         for (Uint32 n = 0; n < GetNumSamplers(); ++n)
         {
             const auto& Sampler = GetSampler(n);

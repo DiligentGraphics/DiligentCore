@@ -71,7 +71,7 @@ public:
                const BufferDesc&      BuffDesc,
                bool                   bIsDeviceInternal) :
         TDeviceObjectBase{pRefCounters, pDevice, BuffDesc, bIsDeviceInternal},
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         m_dbgBuffViewAllocator{BuffViewObjAllocator},
 #endif
         m_pDefaultUAV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)},
@@ -164,7 +164,7 @@ protected:
     /// Corrects buffer view description and validates view parameters.
     void CorrectBufferViewDesc(struct BufferViewDesc& ViewDesc);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     TBuffViewObjAllocator& m_dbgBuffViewAllocator;
 #endif
 

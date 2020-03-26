@@ -142,7 +142,7 @@
             LogError<true>(/*IsFatal=*/false, __FUNCTION__, __FILE__, __LINE__, __VA_ARGS__, "\nGL Error Code: ", err); \
     } while (false)
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 #    define DEV_CHECK_GL_ERROR CHECK_GL_ERROR
 #else
 #    define DEV_CHECK_GL_ERROR(...) \

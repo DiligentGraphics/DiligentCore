@@ -44,7 +44,7 @@ CommandPoolManager::CommandPoolManager(RenderDeviceVkImpl&      DeviceVkImpl,
     m_CmdPools        (STD_ALLOCATOR_RAW_MEM(VulkanUtilities::CommandPoolWrapper, GetRawAllocator(), "Allocator for deque<VulkanUtilities::CommandPoolWrapper>"))
 // clang-format on
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     m_AllocatedPoolCounter = 0;
 #endif
 }
@@ -76,7 +76,7 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
 
     LogicalDevice.ResetCommandPool(CmdPool);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     ++m_AllocatedPoolCounter;
 #endif
     return std::move(CmdPool);
@@ -130,7 +130,7 @@ void CommandPoolManager::SafeReleaseCommandPool(VulkanUtilities::CommandPoolWrap
 void CommandPoolManager::FreeCommandPool(VulkanUtilities::CommandPoolWrapper&& CmdPool)
 {
     std::lock_guard<std::mutex> LockGuard(m_Mutex);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     --m_AllocatedPoolCounter;
 #endif
     m_CmdPools.emplace_back(std::move(CmdPool));

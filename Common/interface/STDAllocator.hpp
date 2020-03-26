@@ -63,7 +63,7 @@ struct STDAllocator
     STDAllocator(AllocatorType& Allocator, const Char* Description, const Char* FileName, const Int32 LineNumber) noexcept :
         // clang-format off
         m_Allocator     {Allocator}
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
       , m_dvpDescription{Description}
       , m_dvpFileName   {FileName   }
       , m_dvpLineNumber {LineNumber }
@@ -76,7 +76,7 @@ struct STDAllocator
     STDAllocator(const STDAllocator<U, AllocatorType>& other) noexcept :
         // clang-format off
         m_Allocator     {other.m_Allocator}
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
       , m_dvpDescription{other.m_dvpDescription}
       , m_dvpFileName   {other.m_dvpFileName   }
       , m_dvpLineNumber {other.m_dvpLineNumber }
@@ -89,7 +89,7 @@ struct STDAllocator
     STDAllocator(STDAllocator<U, AllocatorType>&& other) noexcept :
         // clang-format off
         m_Allocator     {other.m_Allocator}
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
       , m_dvpDescription{other.m_dvpDescription}
       , m_dvpFileName   {other.m_dvpFileName   }
       , m_dvpLineNumber {other.m_dvpLineNumber }
@@ -105,7 +105,7 @@ struct STDAllocator
         // There is no default constructor to create null allocator, so all fields must be
         // initialized.
         DEV_CHECK_ERR(&m_Allocator == &other.m_Allocator, "Inconsistent allocators");
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         DEV_CHECK_ERR(m_dvpDescription == other.m_dvpDescription, "Incosistent allocator descriptions");
         DEV_CHECK_ERR(m_dvpFileName == other.m_dvpFileName, "Incosistent allocator file names");
         DEV_CHECK_ERR(m_dvpLineNumber == other.m_dvpLineNumber, "Incosistent allocator line numbers");
@@ -120,7 +120,7 @@ struct STDAllocator
 
     T* allocate(std::size_t count)
     {
-#ifndef DEVELOPMENT
+#ifndef DILIGENT_DEVELOPMENT
         static constexpr const char* m_dvpDescription = "<Unavailable in release build>";
         static constexpr const char* m_dvpFileName    = "<Unavailable in release build>";
         static constexpr Int32       m_dvpLineNumber  = -1;
@@ -154,7 +154,7 @@ struct STDAllocator
     }
 
     AllocatorType& m_Allocator;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     const Char* const m_dvpDescription;
     const Char* const m_dvpFileName;
     Int32 const       m_dvpLineNumber;

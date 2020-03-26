@@ -160,7 +160,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             RESOURCE_STATE_INDIRECT_ARGUMENT);
         SetState(State);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         {
             VkAccessFlags AccessFlags =
                 VK_ACCESS_INDIRECT_COMMAND_READ_BIT |
@@ -405,7 +405,7 @@ VkAccessFlags BufferVkImpl::GetAccessFlags() const
     return ResourceStateFlagsToVkAccessFlags(GetState());
 }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 void BufferVkImpl::DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx) const
 {
     auto        ContextId    = pCtx->GetContextId();

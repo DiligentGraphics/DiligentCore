@@ -270,7 +270,7 @@ public:
                                    const ShaderResourceCacheVk&  SrcResourceCache,
                                    ShaderResourceCacheVk&        DstResourceCache) const;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     bool        dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache) const;
     static void dvpVerifyResourceLayoutDesc(Uint32                                            NumShaders,
                                             const std::shared_ptr<const SPIRVShaderResources> pShaderResources[],

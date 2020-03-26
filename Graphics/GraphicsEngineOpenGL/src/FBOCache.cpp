@@ -186,7 +186,7 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
             if (DSVDesc.Format == TEX_FORMAT_D32_FLOAT ||
                 DSVDesc.Format == TEX_FORMAT_D16_UNORM)
             {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
                 {
                     const auto GLTexFmt = pDepthTexGL->GetGLTexFormat();
                     VERIFY(GLTexFmt == GL_DEPTH_COMPONENT32F || GLTexFmt == GL_DEPTH_COMPONENT16,
@@ -199,7 +199,7 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
             else if (DSVDesc.Format == TEX_FORMAT_D32_FLOAT_S8X24_UINT ||
                      DSVDesc.Format == TEX_FORMAT_D24_UNORM_S8_UINT)
             {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
                 {
                     const auto GLTexFmt = pDepthTexGL->GetGLTexFormat();
                     VERIFY(GLTexFmt == GL_DEPTH24_STENCIL8 || GLTexFmt == GL_DEPTH32F_STENCIL8,

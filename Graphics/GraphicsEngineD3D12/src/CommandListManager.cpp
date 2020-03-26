@@ -81,7 +81,7 @@ void CommandListManager::RequestAllocator(ID3D12CommandAllocator** ppAllocator)
         swprintf(AllocatorName, _countof(AllocatorName), L"Cmd list allocator %ld", Atomics::AtomicIncrement(m_NumAllocators) - 1);
         (*ppAllocator)->SetName(AllocatorName);
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     Atomics::AtomicIncrement(m_AllocatorCounter);
 #endif
 }
@@ -125,7 +125,7 @@ void CommandListManager::FreeAllocator(CComPtr<ID3D12CommandAllocator>&& Allocat
 {
     std::lock_guard<std::mutex> LockGuard(m_AllocatorMutex);
     m_FreeAllocators.emplace_back(std::move(Allocator));
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     Atomics::AtomicDecrement(m_AllocatorCounter);
 #endif
 }

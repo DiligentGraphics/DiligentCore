@@ -84,7 +84,7 @@ public:
                 const TextureDesc&    Desc,
                 bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase(pRefCounters, pDevice, Desc, bIsDeviceInternal),
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         m_dbgTexViewObjAllocator(TexViewObjAllocator),
 #endif
         m_pDefaultSRV(nullptr, STDDeleter<TTextureViewImpl, TTexViewObjAllocator>(TexViewObjAllocator)),
@@ -200,7 +200,7 @@ protected:
     /// Pure virtual function that creates texture view for the specific engine implementation.
     virtual void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) = 0;
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     TTexViewObjAllocator& m_dbgTexViewObjAllocator;
 #endif
     // WARNING! We cannot use ITextureView here, because ITextureView has no virtual dtor!

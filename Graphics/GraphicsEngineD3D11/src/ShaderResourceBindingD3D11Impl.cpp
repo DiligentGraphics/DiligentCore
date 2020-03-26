@@ -154,7 +154,7 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
     {
         const auto& StaticResLayout = pPSOD3D11->GetStaticResourceLayout(shader);
         auto*       pShaderD3D11    = ValidatedCast<ShaderD3D11Impl>(ppShaders[shader]);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (!StaticResLayout.dvpVerifyBindings())
         {
             LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSOD3D11->GetDesc().Name,
@@ -165,10 +165,12 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
         }
 #endif
 
-#ifdef _DEBUG
-        auto ShaderTypeInd     = GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType);
-        auto ResourceLayoutInd = m_ResourceLayoutIndex[ShaderTypeInd];
-        VERIFY_EXPR(ResourceLayoutInd == static_cast<Int8>(shader));
+#ifdef DILIGENT_DEBUG
+        {
+            auto ShaderTypeInd     = GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType);
+            auto ResourceLayoutInd = m_ResourceLayoutIndex[ShaderTypeInd];
+            VERIFY_EXPR(ResourceLayoutInd == static_cast<Int8>(shader));
+        }
 #endif
         StaticResLayout.CopyResources(m_pBoundResourceCaches[shader]);
         pPSOD3D11->SetStaticSamplers(m_pBoundResourceCaches[shader], shader);

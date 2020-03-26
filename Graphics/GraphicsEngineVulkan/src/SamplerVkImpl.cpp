@@ -59,7 +59,7 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
     SamplerCI.addressModeW     = AddressModeToVkAddressMode(m_Desc.AddressW);
     SamplerCI.mipLodBias       = m_Desc.MipLODBias;
     SamplerCI.anisotropyEnable = IsAnisotropicFilter(m_Desc.MinFilter);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (!((SamplerCI.anisotropyEnable && IsAnisotropicFilter(m_Desc.MagFilter)) ||
           (!SamplerCI.anisotropyEnable && !IsAnisotropicFilter(m_Desc.MagFilter))))
     {
@@ -69,7 +69,7 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
 
     SamplerCI.maxAnisotropy = static_cast<float>(m_Desc.MaxAnisotropy);
     SamplerCI.compareEnable = IsComparisonFilter(m_Desc.MinFilter);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (!((SamplerCI.compareEnable && IsComparisonFilter(m_Desc.MagFilter)) ||
           (!SamplerCI.compareEnable && !IsComparisonFilter(m_Desc.MagFilter))))
     {

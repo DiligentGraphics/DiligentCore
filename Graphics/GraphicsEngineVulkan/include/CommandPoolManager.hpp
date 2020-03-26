@@ -62,7 +62,7 @@ public:
 
     void DestroyPools();
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     int32_t GetAllocatedPoolCount() const
     {
         return m_AllocatedPoolCounter;
@@ -81,7 +81,7 @@ private:
     std::mutex                                                                                               m_Mutex;
     std::deque<VulkanUtilities::CommandPoolWrapper, STDAllocatorRawMem<VulkanUtilities::CommandPoolWrapper>> m_CmdPools;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     std::atomic_int32_t m_AllocatedPoolCounter;
 #endif
 };

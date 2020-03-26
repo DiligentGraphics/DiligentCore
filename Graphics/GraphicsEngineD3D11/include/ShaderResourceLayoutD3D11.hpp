@@ -259,7 +259,7 @@ public:
     // while Layout is alive
     void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags, const ShaderResourceCacheD3D11& dbgResourceCache);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     bool dvpVerifyBindings() const;
 #endif
 

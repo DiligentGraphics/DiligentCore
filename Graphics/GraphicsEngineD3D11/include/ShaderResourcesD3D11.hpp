@@ -111,7 +111,7 @@ public:
     __forceinline Int32 GetMaxUAVBindPoint()    const { return m_MaxUAVBindPoint;     }
     // clang-format on
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     void dvpVerifyCommittedResources(ID3D11Buffer*                   CommittedD3D11CBs[],
                                      ID3D11ShaderResourceView*       CommittedD3D11SRVs[],
                                      ID3D11Resource*                 CommittedD3D11SRVResources[],

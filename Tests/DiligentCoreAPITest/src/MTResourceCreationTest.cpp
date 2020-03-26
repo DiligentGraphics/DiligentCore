@@ -79,7 +79,7 @@ protected:
     static const int NumTexturesToCreate = 5;
     static const int NumPSOToCreate      = 3;
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     static const int NumIterations = 10;
 #else
     static const int NumIterations = 30;

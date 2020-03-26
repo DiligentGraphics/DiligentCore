@@ -186,7 +186,7 @@ void Texture2DArray_OGL::UpdateData(GLContextState&          ContextState,
                    ((DstBox.MaxX % 4) == 0 || DstBox.MaxX == MipWidth) &&
                    ((DstBox.MaxY % 4) == 0 || DstBox.MaxY == MipHeight),
                "Compressed texture update region must be 4 pixel-aligned");
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         {
             const auto& FmtAttribs      = GetTextureFormatAttribs(m_Desc.Format);
             auto        BlockBytesInRow = ((DstBox.MaxX - DstBox.MinX + 3) / 4) * Uint32{FmtAttribs.ComponentSize};

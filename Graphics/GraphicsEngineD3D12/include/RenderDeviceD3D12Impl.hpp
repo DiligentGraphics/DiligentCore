@@ -161,7 +161,7 @@ private:
 
     std::mutex                                                                  m_ContextPoolMutex;
     std::vector<PooledCommandContext, STDAllocatorRawMem<PooledCommandContext>> m_ContextPool;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     Atomics::AtomicLong m_AllocatedCtxCounter = 0;
 #endif
 

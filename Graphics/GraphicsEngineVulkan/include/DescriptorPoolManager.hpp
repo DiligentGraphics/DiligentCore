@@ -144,7 +144,7 @@ public:
         m_MaxSets     {MaxSets             },
         m_AllowFreeing{AllowFreeing        }
     {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         m_AllocatedPoolCounter = 0;
 #endif
     }
@@ -162,7 +162,7 @@ public:
 
     RenderDeviceVkImpl& GetDeviceVkImpl() { return m_DeviceVkImpl; }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     int32_t GetAllocatedPoolCounter() const
     {
         return m_AllocatedPoolCounter;
@@ -185,7 +185,7 @@ protected:
 private:
     void FreePool(VulkanUtilities::DescriptorPoolWrapper&& Pool);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     std::atomic_int32_t m_AllocatedPoolCounter;
 #endif
 };
@@ -213,7 +213,7 @@ public:
         }
     // clang-format on
     {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         m_AllocatedSetCounter = 0;
 #endif
     }
@@ -222,7 +222,7 @@ public:
 
     DescriptorSetAllocation Allocate(Uint64 CommandQueueMask, VkDescriptorSetLayout SetLayout, const char* DebugName = "");
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     int32_t GetAllocatedDescriptorSetCounter() const
     {
         return m_AllocatedSetCounter;
@@ -232,7 +232,7 @@ public:
 private:
     void FreeDescriptorSet(VkDescriptorSet Set, VkDescriptorPool Pool, Uint64 QueueMask);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     std::atomic_int32_t m_AllocatedSetCounter;
 #endif
 };

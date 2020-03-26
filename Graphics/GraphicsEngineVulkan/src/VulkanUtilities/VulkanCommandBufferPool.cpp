@@ -49,7 +49,7 @@ VulkanCommandBufferPool::VulkanCommandBufferPool(std::shared_ptr<const VulkanLog
 
     m_CmdPool = m_LogicalDevice->CreateCommandPool(CmdPoolCI);
     DEV_CHECK_ERR(m_CmdPool != VK_NULL_HANDLE, "Failed to create vulkan command pool");
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     m_BuffCounter = 0;
 #endif
 }
@@ -108,7 +108,7 @@ VkCommandBuffer VulkanCommandBufferPool::GetCommandBuffer(const char* DebugName)
     auto err = vkBeginCommandBuffer(CmdBuffer, &CmdBuffBeginInfo);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to begin command buffer");
     (void)err;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     ++m_BuffCounter;
 #endif
     return CmdBuffer;
@@ -119,7 +119,7 @@ void VulkanCommandBufferPool::FreeCommandBuffer(VkCommandBuffer&& CmdBuffer)
     std::lock_guard<std::mutex> Lock{m_Mutex};
     m_CmdBuffers.emplace_back(CmdBuffer);
     CmdBuffer = VK_NULL_HANDLE;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     --m_BuffCounter;
 #endif
 }

@@ -122,7 +122,7 @@ DescriptorHeapAllocation DescriptorHeapAllocationManager::Allocate(uint32_t Coun
 
     m_MaxAllocatedSize = std::max(m_MaxAllocatedSize, m_FreeBlockManager.GetUsedSize());
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     ++m_AllocationsCounter;
 #endif
 
@@ -144,7 +144,7 @@ void DescriptorHeapAllocationManager::FreeAllocation(DescriptorHeapAllocation&& 
 
     // Clear the allocation
     Allocation.Reset();
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     --m_AllocationsCounter;
 #endif
 }
@@ -196,7 +196,7 @@ CPUDescriptorHeap::~CPUDescriptorHeap()
                      " (", std::fixed, std::setprecision(2), m_MaxSize * 100.0 / std::max(TotalDescriptors, 1u), "%).");
 }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 int32_t CPUDescriptorHeap::DvpGetTotalAllocationCount()
 {
     int32_t AllocationCount = 0;

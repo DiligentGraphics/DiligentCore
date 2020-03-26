@@ -92,7 +92,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*      pRefCoun
         m_pStaticVarManagers        = ALLOCATE(ShaderVarMgrAllocator, "Raw memory for ShaderVariableManagerD3D12", ShaderVariableManagerD3D12, m_NumShaders);
     }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)
@@ -348,7 +348,7 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
 
     auto IsSameRootSignature = m_RootSig.IsSameAs(pPSOD3D12->m_RootSig);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     {
         bool IsCompatibleShaders = true;
         if (m_NumShaders != pPSOD3D12->m_NumShaders)
@@ -387,7 +387,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
                                                                                      class CommandContext&                CmdCtx,
                                                                                      CommitAndTransitionResourcesAttribs& Attrib) const
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (Attrib.pShaderResourceBinding == nullptr && ContainsShaderResources())
     {
         LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to ",
@@ -408,7 +408,7 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
         return nullptr;
     }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (IsIncompatibleWith(pResBindingD3D12Impl->GetPipelineState()))
     {
         LOG_ERROR_MESSAGE("Shader resource binding is incompatible with the pipeline state '", m_Desc.Name, "'. Operation will be ignored.");

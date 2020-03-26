@@ -68,7 +68,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     void DvpVerifyDynamicAllocation(DeviceContextVkImpl* pCtx) const;
 #endif
 
@@ -82,7 +82,7 @@ public:
         {
             VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
             VERIFY_EXPR(!m_DynamicAllocations.empty());
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             DvpVerifyDynamicAllocation(pCtx);
 #endif
             auto& DynAlloc = m_DynamicAllocations[CtxId];

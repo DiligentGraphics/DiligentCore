@@ -31,7 +31,7 @@
 #include "../../../Primitives/interface/Errors.hpp"
 #include "BasicPlatformDebug.hpp"
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
 
 #    include <typeinfo>
 
@@ -81,9 +81,9 @@ void CheckDynamicType(SrcType* pSrcPtr)
 
 #endif
 
-#if defined(_DEBUG)
+#if defined(DILIGENT_DEBUG)
 #    define DEV_CHECK_ERR VERIFY
-#elif defined(DEVELOPMENT)
+#elif defined(DILIGENT_DEVELOPMENT)
 #    define DEV_CHECK_ERR CHECK_ERR
 #else
 // clang-format off
@@ -91,7 +91,7 @@ void CheckDynamicType(SrcType* pSrcPtr)
 // clang-format on
 #endif
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 
 #    define DEV_CHECK_WARN CHECK_WARN
 #    define DEV_CHECK_INFO CHECK_INFO

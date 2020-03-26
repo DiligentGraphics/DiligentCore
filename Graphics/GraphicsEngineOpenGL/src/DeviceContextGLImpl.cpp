@@ -416,7 +416,7 @@ void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShade
 
     auto*       pShaderResBindingGL = ValidatedCast<ShaderResourceBindingGLImpl>(pResBinding);
     const auto& ResourceCache       = pShaderResBindingGL->GetResourceCache(m_pPipelineState);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     m_pPipelineState->GetResourceLayout().dvpVerifyBindings(ResourceCache);
 #endif
 
@@ -517,7 +517,7 @@ void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShade
                 m_BoundWritableTextures.push_back(pTextureGL);
             }
 
-#    ifdef _DEBUG
+#    ifdef DILIGENT_DEBUG
             // Check that the texure being bound has immutable storage
             {
                 m_ContextState.BindTexture(-1, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
@@ -655,7 +655,7 @@ void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShade
 
 void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenum& GlTopology)
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
 #endif

@@ -112,7 +112,7 @@ public:
 
     ShaderResourceCacheD3D12(DbgCacheContentType dbgContentType)
     // clang-format off
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         : m_DbgContentType
     {
         dbgContentType
@@ -183,7 +183,7 @@ public:
         // Offset from the start of the descriptor heap allocation to the start of the table
         Uint32 m_TableStartOffset = InvalidDescriptorOffset;
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         void SetDebugAttribs(Uint32                           MaxOffset,
                              const D3D12_DESCRIPTOR_HEAP_TYPE dbgDescriptorHeapType,
                              const SHADER_TYPE                dbgRefShaderType)
@@ -199,7 +199,7 @@ public:
         const Uint32 m_NumResources = 0;
 
     private:
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         D3D12_DESCRIPTOR_HEAP_TYPE m_dbgHeapType   = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
         SHADER_TYPE                m_dbgShaderType = SHADER_TYPE_UNKNOWN;
 #endif
@@ -223,7 +223,7 @@ public:
     void SetDescriptorHeapSpace(DescriptorHeapAllocation&& CbcSrvUavHeapSpace, DescriptorHeapAllocation&& SamplerHeapSpace)
     {
         VERIFY(m_SamplerHeapSpace.GetCpuHandle().ptr == 0 && m_CbvSrvUavHeapSpace.GetCpuHandle().ptr == 0, "Space has already been allocated in GPU descriptor heaps");
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         Uint32 NumSamplerDescriptors = 0, NumSrvCbvUavDescriptors = 0;
         for (Uint32 rt = 0; rt < m_NumTables; ++rt)
         {
@@ -319,7 +319,7 @@ public:
     // Returns the number of dynamic constant buffers bound in the cache regardless of their variable types
     Uint32 GetNumDynamicCBsBound() const { return m_NumDynamicCBsBound; }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
     DbgCacheContentType DbgGetContentType() const { return m_DbgContentType; }
     void                DbgVerifyBoundDynamicCBsCounter() const;
@@ -345,7 +345,7 @@ private:
     // The number of the dynamic buffers bound in the resource cache regardless of their variable type
     Uint32 m_NumDynamicCBsBound = 0;
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     // Only for debug purposes: indicates what types of resources are stored in the cache
     const DbgCacheContentType m_DbgContentType;
 #endif

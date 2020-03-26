@@ -207,7 +207,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
                         0, 0 //
                     };
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
                 attribs[5] |= WGL_CONTEXT_DEBUG_BIT_ARB;
 #endif
 

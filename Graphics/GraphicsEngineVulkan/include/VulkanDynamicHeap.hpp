@@ -65,14 +65,14 @@ struct VulkanDynamicAllocation
         pDynamicMemMgr{rhs.pDynamicMemMgr},
         AlignedOffset {rhs.AlignedOffset },
         Size          {rhs.Size          }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         , dvpFrameNumber{rhs.dvpFrameNumber}
 #endif
     {
         rhs.pDynamicMemMgr = nullptr;
         rhs.AlignedOffset  = 0;
         rhs.Size           = 0;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         rhs.dvpFrameNumber = 0;
 #endif
     }
@@ -86,7 +86,7 @@ struct VulkanDynamicAllocation
         rhs.pDynamicMemMgr = nullptr;
         rhs.AlignedOffset  = 0;
         rhs.Size           = 0;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         dvpFrameNumber     = rhs.dvpFrameNumber;
         rhs.dvpFrameNumber = 0;
 #endif
@@ -96,7 +96,7 @@ struct VulkanDynamicAllocation
     VulkanDynamicMemoryManager* pDynamicMemMgr = nullptr;
     size_t                      AlignedOffset  = 0; // Offset from the start of the buffer
     size_t                      Size           = 0; // Reserved size of this allocation
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     Int64 dvpFrameNumber = 0;
 #endif
 };

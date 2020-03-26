@@ -239,7 +239,7 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
                 if (!SamplerFound)
                 {
                     AssignedSamplerIndex = TexSRVBindInfo::InvalidSamplerIndex;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
                     // Shader error will be logged by the PipelineStateD3D11Impl
                     constexpr bool LogStaticSamplerArrayError = false;
                     if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout, LogStaticSamplerArrayError) < 0)
@@ -250,7 +250,7 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
                 }
                 else
                 {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
                     // Shader error will be logged by the PipelineStateD3D11Impl
                     constexpr bool LogStaticSamplerArrayError = false;
                     if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout, LogStaticSamplerArrayError) >= 0)
@@ -430,7 +430,7 @@ void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* p
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl(pBuffer, IID_BufferD3D11);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedCB = m_ParentResLayout.m_ResourceCache.GetCB(m_Attribs.BindPoint + ArrayIndex);
         VerifyConstantBufferBinding(m_Attribs, GetType(), ArrayIndex, pBuffer, pBuffD3D11Impl.RawPtr(), CachedCB.pBuff.RawPtr(), m_ParentResLayout.GetShaderName());
@@ -449,7 +449,7 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11(pView, IID_TextureViewD3D11);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSRV = ResourceCache.GetSRV(m_Attribs.BindPoint + ArrayIndex);
         VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE}, CachedSRV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
@@ -467,7 +467,7 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
         if (pViewD3D11)
         {
             pSamplerD3D11Impl = ValidatedCast<SamplerD3D11Impl>(pViewD3D11->GetSampler());
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             if (pSamplerD3D11Impl == nullptr)
             {
                 if (Sampler.m_Attribs.BindCount > 1)
@@ -477,7 +477,7 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
             }
 #endif
         }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (Sampler.GetType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
         {
             auto& CachedSampler = ResourceCache.GetSampler(SamplerBindPoint);
@@ -507,7 +507,7 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
     // resource mapping can be of wrong type
     RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11(pSampler, IID_SamplerD3D11);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (pSampler && !pSamplerD3D11)
     {
         LOG_ERROR_MESSAGE("Failed to bind object '", pSampler->GetDesc().Name, "' to variable '", m_Attribs.GetPrintName(ArrayIndex),
@@ -549,7 +549,7 @@ void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pVi
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11(pView, IID_BufferViewD3D11);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSRV = ResourceCache.GetSRV(m_Attribs.BindPoint + ArrayIndex);
         VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE}, CachedSRV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
@@ -569,7 +569,7 @@ void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVie
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11(pView, IID_TextureViewD3D11);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedUAV = ResourceCache.GetUAV(m_Attribs.BindPoint + ArrayIndex);
         VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
@@ -589,7 +589,7 @@ void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pVi
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11(pView, IID_BufferViewD3D11);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedUAV = ResourceCache.GetUAV(m_Attribs.BindPoint + ArrayIndex);
         VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
@@ -752,10 +752,12 @@ public:
     template <typename ResourceType>
     bool TryResource(ShaderResourceLayoutD3D11::OffsetType NextResourceTypeOffset)
     {
-#ifdef _DEBUG
-        VERIFY(Layout.GetResourceOffset<ResourceType>() >= dbgPreviousResourceOffset, "Resource types are processed out of order!");
-        dbgPreviousResourceOffset = Layout.GetResourceOffset<ResourceType>();
-        VERIFY_EXPR(NextResourceTypeOffset >= Layout.GetResourceOffset<ResourceType>());
+#ifdef DILIGENT_DEBUG
+        {
+            VERIFY(Layout.GetResourceOffset<ResourceType>() >= dbgPreviousResourceOffset, "Resource types are processed out of order!");
+            dbgPreviousResourceOffset = Layout.GetResourceOffset<ResourceType>();
+            VERIFY_EXPR(NextResourceTypeOffset >= Layout.GetResourceOffset<ResourceType>());
+        }
 #endif
         if (VarOffset < NextResourceTypeOffset)
         {
@@ -777,7 +779,7 @@ private:
     const ShaderResourceLayoutD3D11& Layout;
     const size_t                     VarOffset;
     Uint32                           Index = 0;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     Uint32 dbgPreviousResourceOffset = 0;
 #endif
 };
@@ -830,9 +832,11 @@ public:
     template <typename ResourceType>
     IShaderResourceVariable* TryResource()
     {
-#ifdef _DEBUG
-        VERIFY(Layout.GetResourceOffset<ResourceType>() >= dbgPreviousResourceOffset, "Resource types are processed out of order!");
-        dbgPreviousResourceOffset = Layout.GetResourceOffset<ResourceType>();
+#ifdef DILIGENT_DEBUG
+        {
+            VERIFY(Layout.GetResourceOffset<ResourceType>() >= dbgPreviousResourceOffset, "Resource types are processed out of order!");
+            dbgPreviousResourceOffset = Layout.GetResourceOffset<ResourceType>();
+        }
 #endif
         auto NumResources = Layout.GetNumResources<ResourceType>();
         if (Index < NumResources)
@@ -847,7 +851,7 @@ public:
 private:
     ShaderResourceLayoutD3D11& Layout;
     Uint32                     Index = 0;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     Uint32 dbgPreviousResourceOffset = 0;
 #endif
 };
@@ -883,7 +887,7 @@ IShaderResourceVariable* ShaderResourceLayoutD3D11::GetShaderVariable(Uint32 Ind
 }
 
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 bool ShaderResourceLayoutD3D11::dvpVerifyBindings() const
 {
 

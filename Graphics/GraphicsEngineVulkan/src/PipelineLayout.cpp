@@ -146,7 +146,7 @@ size_t PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::GetMemor
     }
     VERIFY_EXPR(((NumBindings & (NumBindings - 1)) == 0) && NumBindings == MemSize || NumBindings < MemSize);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     static constexpr size_t MinMemSize = 1;
 #else
     static constexpr size_t MinMemSize = 16;
@@ -442,7 +442,7 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl*    pDeviceVkImpl,
     if (StaticAndMutSet.SetIndex >= 0)
     {
         const char* DescrSetName = "Static/Mutable Descriptor Set";
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         std::string _DescrSetName(DbgPipelineName);
         _DescrSetName.append(" - static/mutable set");
         DescrSetName = _DescrSetName.c_str();
@@ -458,7 +458,7 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkIm
                                            DescriptorSetBindInfo&       BindInfo,
                                            VkDescriptorSet              VkDynamicDescrSet) const
 {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     BindInfo.vkSets.clear();
 #endif
 
@@ -491,7 +491,7 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkIm
         TotalDynamicDescriptors += Set.NumDynamicDescriptors;
     }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     for (const auto& set : BindInfo.vkSets)
         VERIFY(set != VK_NULL_HANDLE, "Descriptor set must not be null");
 #endif
@@ -501,7 +501,7 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkIm
         BindInfo.DynamicOffsets.resize(TotalDynamicDescriptors);
     BindInfo.BindPoint      = IsCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
     BindInfo.pResourceCache = &ResourceCache;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     BindInfo.pDbgPipelineLayout = this;
 #endif
     BindInfo.DynamicBuffersPresent = ResourceCache.GetNumDynamicBuffers() > 0;

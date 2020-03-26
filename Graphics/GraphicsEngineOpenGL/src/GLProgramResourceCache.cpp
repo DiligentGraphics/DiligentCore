@@ -62,7 +62,7 @@ void GLProgramResourceCache::Initialize(Uint32 UBCount, Uint32 SamplerCount, Uin
 
     VERIFY_EXPR(BufferSize == GetRequriedMemorySize(UBCount, SamplerCount, ImageCount, SSBOCount));
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     m_pdbgMemoryAllocator = &MemAllocator;
 #endif
     if (BufferSize > 0)

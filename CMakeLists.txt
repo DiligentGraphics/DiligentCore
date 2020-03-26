@@ -229,13 +229,13 @@ if(MSVC)
     # target_compile_options(Diligent-BuildSettings INTERFACE "$<$<CONFIG:RELEASE>:/Ot>")
     # does not work as expected
 
-    set(DEBUG_MACROS DEVELOPMENT)
+    set(DEBUG_MACROS DILIGENT_DEVELOPMENT DILIGENT_DEBUG)
     target_compile_definitions(Diligent-BuildSettings INTERFACE "$<$<CONFIG:DEBUG>:${DEBUG_MACROS}>")
 else()
     # Todo: use __attribute__((always_inline)), but it needs to be defined in a header file
     target_compile_definitions(Diligent-BuildSettings INTERFACE __forceinline=inline)
 
-    set(DEBUG_MACROS _DEBUG DEBUG DEVELOPMENT)
+    set(DEBUG_MACROS _DEBUG DEBUG DILIGENT_DEVELOPMENT DILIGENT_DEBUG)
     set(RELEASE_MACROS NDEBUG)
 
     foreach(DBG_CONFIG ${DEBUG_CONFIGURATIONS})

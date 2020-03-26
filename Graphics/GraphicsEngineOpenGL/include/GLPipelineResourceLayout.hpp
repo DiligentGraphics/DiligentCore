@@ -283,7 +283,7 @@ public:
     // while Layout is alive
     void BindResources(SHADER_TYPE ShaderStage, IResourceMapping* pResourceMapping, Uint32 Flags, const GLProgramResourceCache& dbgResourceCache);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     bool dvpVerifyBindings(const GLProgramResourceCache& ResourceCache) const;
 #endif
 

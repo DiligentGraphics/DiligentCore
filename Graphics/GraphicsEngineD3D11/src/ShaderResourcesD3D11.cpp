@@ -118,7 +118,7 @@ ShaderResourcesD3D11::~ShaderResourcesD3D11()
 }
 
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 static String DbgMakeResourceName(const D3DShaderResourceAttribs& Attr, Uint32 BindPoint)
 {
     VERIFY(BindPoint >= Uint32{Attr.BindPoint} && BindPoint < Uint32{Attr.BindPoint} + Attr.BindCount, "Bind point is out of allowed range");

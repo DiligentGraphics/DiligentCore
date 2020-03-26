@@ -639,7 +639,7 @@ void RenderDeviceGLImpl::FlagSupportedTexFormats()
     FLAG_FORMAT(TEX_FORMAT_BC7_UNORM_SRGB,             bBPTC );
     // clang-format on
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     bool bGL43OrAbove = DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL &&
         (DeviceCaps.MajorVersion >= 5 || (DeviceCaps.MajorVersion == 4 && DeviceCaps.MinorVersion >= 3));
 

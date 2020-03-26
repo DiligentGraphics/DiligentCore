@@ -207,7 +207,7 @@ RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()
     IdleGPU();
     ReleaseStaleResources(true);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     for (auto i = 0; i < _countof(m_CPUDescriptorHeaps); ++i)
     {
         DEV_CHECK_ERR(m_CPUDescriptorHeaps[i].DvpGetTotalAllocationCount() == 0, "All CPU descriptor heap allocations must be released");
@@ -240,7 +240,7 @@ void RenderDeviceD3D12Impl::FreeCommandContext(PooledCommandContext&& Ctx)
 {
     std::lock_guard<std::mutex> LockGuard(m_ContextPoolMutex);
     m_ContextPool.emplace_back(std::move(Ctx));
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     Atomics::AtomicDecrement(m_AllocatedCtxCounter);
 #endif
 }
@@ -339,7 +339,7 @@ RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateComma
             m_ContextPool.pop_back();
             Ctx->Reset(m_CmdListManager);
             Ctx->SetID(ID);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             Atomics::AtomicIncrement(m_AllocatedCtxCounter);
 #endif
             return Ctx;
@@ -350,7 +350,7 @@ RenderDeviceD3D12Impl::PooledCommandContext RenderDeviceD3D12Impl::AllocateComma
     auto* pRawMem         = ALLOCATE(CmdCtxAllocator, "CommandContext instance", CommandContext, 1);
     auto  pCtx            = new (pRawMem) CommandContext(m_CmdListManager);
     pCtx->SetID(ID);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     Atomics::AtomicIncrement(m_AllocatedCtxCounter);
 #endif
     return PooledCommandContext(pCtx, CmdCtxAllocator);

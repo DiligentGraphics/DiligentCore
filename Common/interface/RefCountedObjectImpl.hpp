@@ -220,7 +220,7 @@ private:
     {
         m_lNumStrongReferences = 0;
         m_lNumWeakReferences   = 0;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         memset(m_ObjectWrapperBuffer, 0, sizeof(m_ObjectWrapperBuffer));
 #endif
     }
@@ -356,9 +356,11 @@ private:
         //                                      |       - Increment m_lNumStrongReferences
         //                                      |   5. Decrement m_lNumStrongReferences
 
-#ifdef _DEBUG
-        Atomics::Long NumStrongRefs = m_lNumStrongReferences;
-        VERIFY(NumStrongRefs == 0 || NumStrongRefs == 1, "Num strong references (", NumStrongRefs, ") is expected to be 0 or 1");
+#ifdef DILIGENT_DEBUG
+        {
+            Atomics::Long NumStrongRefs = m_lNumStrongReferences;
+            VERIFY(NumStrongRefs == 0 || NumStrongRefs == 1, "Num strong references (", NumStrongRefs, ") is expected to be 0 or 1");
+        }
 #endif
 
         // Acquire the lock.
@@ -392,7 +394,7 @@ private:
             size_t ObjectWrapperBufferCopy[ObjectWrapperBufferSize];
             for (size_t i = 0; i < ObjectWrapperBufferSize; ++i)
                 ObjectWrapperBufferCopy[i] = m_ObjectWrapperBuffer[i];
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
             memset(m_ObjectWrapperBuffer, 0, sizeof(m_ObjectWrapperBuffer));
 #endif
             auto* pWrapper = reinterpret_cast<ObjectWrapperBase*>(ObjectWrapperBufferCopy);
@@ -614,7 +616,7 @@ public:
         // clang-format off
         m_pAllocator{&Allocator},
         m_pOwner{pOwner}
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
       , m_dvpDescription{Description}
       , m_dvpFileName   {FileName   }
       , m_dvpLineNumber {LineNumber }
@@ -627,7 +629,7 @@ public:
         // clang-format off
         m_pAllocator    {nullptr},
         m_pOwner        {pOwner }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
       , m_dvpDescription{nullptr}
       , m_dvpFileName   {nullptr}
       , m_dvpLineNumber {0      }
@@ -659,7 +661,7 @@ public:
         ObjectType* pObj = nullptr;
         try
         {
-#ifndef DEVELOPMENT
+#ifndef DILIGENT_DEVELOPMENT
             static constexpr const char* m_dvpDescription = "<Unavailable in release build>";
             static constexpr const char* m_dvpFileName    = "<Unavailable in release build>";
             static constexpr Int32       m_dvpLineNumber  = -1;
@@ -686,7 +688,7 @@ private:
     AllocatorType* const m_pAllocator;
     IObject* const       m_pOwner;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     const Char* const m_dvpDescription;
     const char* const m_dvpFileName;
     Int32 const       m_dvpLineNumber;

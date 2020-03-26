@@ -293,7 +293,7 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
                     if (StaticSamplerInd >= 0)
                     {
                     // Static samplers are never copied, and SamplerId == InvalidSamplerId
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
                         auto SamplerCount = GetTotalSamplerCount();
                         for (Uint32 s = 0; s < SamplerCount; ++s)
                         {
@@ -346,7 +346,7 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
         } //
     );
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     for (SHADER_RESOURCE_VARIABLE_TYPE VarType = SHADER_RESOURCE_VARIABLE_TYPE_STATIC; VarType < SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES; VarType = static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VarType + 1))
     {
         VERIFY(CurrCbvSrvUav[VarType] == CbvSrvUavCount[VarType], "Not all Srv/Cbv/Uavs are initialized, which result in a crash when dtor is called");
@@ -361,7 +361,7 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
         // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-Shader-Objects
         VERIFY_EXPR(pRootSig == nullptr);
         pResourceCache->Initialize(GetRawAllocator(), _countof(StaticResCacheTblSizes), StaticResCacheTblSizes);
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         pResourceCache->GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_SRV).SetDebugAttribs(StaticResCacheTblSizes[D3D12_DESCRIPTOR_RANGE_TYPE_SRV], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
         pResourceCache->GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_UAV).SetDebugAttribs(StaticResCacheTblSizes[D3D12_DESCRIPTOR_RANGE_TYPE_UAV], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
         pResourceCache->GetRootTable(D3D12_DESCRIPTOR_RANGE_TYPE_CBV).SetDebugAttribs(StaticResCacheTblSizes[D3D12_DESCRIPTOR_RANGE_TYPE_CBV], D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_pResources->GetShaderType());
@@ -382,7 +382,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheCB(IDeviceObject*           
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12(pBuffer, IID_BufferD3D12);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     VerifyConstantBufferBinding(Attribs, GetVariableType(), ArrayInd, pBuffer, pBuffD3D12.RawPtr(), DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
 #endif
     if (pBuffD3D12)
@@ -451,7 +451,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheResourceView(IDeviceObject* 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<TResourceViewType> pViewD3D12(pView, ResourceViewTraits<TResourceViewType>::IID);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     VerifyResourceViewBinding(Attribs, GetVariableType(), ArrayIndex, pView, pViewD3D12.RawPtr(), {dbgExpectedViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
 #endif
     if (pViewD3D12)
@@ -563,7 +563,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
         ResourceCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(RootIndex, OffsetFromTableStart + ArrayIndex) :
         ResourceCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(RootIndex, OffsetFromTableStart + ArrayIndex);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     {
         if (ResourceCache.DbgGetContentType() == ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources)
         {
@@ -613,7 +613,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
                             auto ShdrVisibleSamplerHeapCPUDescriptorHandle = ResourceCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(Sam.RootIndex, Sam.OffsetFromTableStart + SamplerArrInd);
 
                             auto& DstSam = ResourceCache.GetRootTable(Sam.RootIndex).GetResource(Sam.OffsetFromTableStart + SamplerArrInd, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, ParentResLayout.m_pResources->GetShaderType());
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
                             {
                                 if (ResourceCache.DbgGetContentType() == ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources)
                                 {
@@ -828,7 +828,7 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
 }
 
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 bool ShaderResourceLayoutD3D12::dvpVerifyBindings(const ShaderResourceCacheD3D12& ResourceCache) const
 {
     bool BindingsOK = true;
@@ -874,7 +874,7 @@ bool ShaderResourceLayoutD3D12::dvpVerifyBindings(const ShaderResourceCacheD3D12
                     }
                 }
 
-#    ifdef _DEBUG
+#    ifdef DILIGENT_DEBUG
                 {
                     const auto ShdrVisibleHeapCPUDescriptorHandle = ResourceCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV>(res.RootIndex, res.OffsetFromTableStart + ArrInd);
                     if (ResourceCache.DbgGetContentType() == ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources)
@@ -923,7 +923,7 @@ bool ShaderResourceLayoutD3D12::dvpVerifyBindings(const ShaderResourceCacheD3D12
                         BindingsOK = false;
                     }
 
-#    ifdef _DEBUG
+#    ifdef DILIGENT_DEBUG
                     {
                         const auto ShdrVisibleHeapCPUDescriptorHandle = ResourceCache.GetShaderVisibleTableCPUDescriptorHandle<D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER>(SamInfo.RootIndex, SamInfo.OffsetFromTableStart + ArrInd);
                         if (ResourceCache.DbgGetContentType() == ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources)

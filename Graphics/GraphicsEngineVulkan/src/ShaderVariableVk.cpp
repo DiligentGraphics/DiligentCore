@@ -74,7 +74,7 @@ ShaderVariableManagerVk::ShaderVariableManagerVk(IObject&                       
     // clang-format off
     m_Owner        {Owner        },
     m_ResourceCache{ResourceCache}
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
   , m_DbgAllocator {Allocator}
 #endif
 // clang-format on

@@ -99,7 +99,7 @@ ShaderResourceCacheD3D12::~ShaderResourceCacheD3D12()
     }
 }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
 void ShaderResourceCacheD3D12::DbgVerifyBoundDynamicCBsCounter() const
 {
     Uint32 NumDynamicCBsBound = 0;

@@ -271,7 +271,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
 
         PipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
         PipelineCI.pNext = nullptr;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 #endif
         PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
@@ -299,7 +299,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
 
         PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         PipelineCI.pNext = nullptr;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
 #endif
 
@@ -512,7 +512,7 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
 
     auto IsSamePipelineLayout = m_PipelineLayout.IsSameAs(pPSOVk->m_PipelineLayout);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     {
         bool IsCompatibleShaders = true;
         if (m_NumShaders != pPSOVk->m_NumShaders)
@@ -559,7 +559,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     if (!m_HasStaticResources && !m_HasNonStaticResources)
         return;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (pShaderResourceBinding == nullptr)
     {
         LOG_ERROR_MESSAGE("Pipeline state '", m_Desc.Name, "' requires shader resource binding object to ",
@@ -570,7 +570,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 
     auto* pResBindingVkImpl = ValidatedCast<ShaderResourceBindingVkImpl>(pShaderResourceBinding);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         auto* pRefPSO = pResBindingVkImpl->GetPipelineState();
         if (IsIncompatibleWith(pRefPSO))
@@ -588,13 +588,13 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 
     auto& ResourceCache = pResBindingVkImpl->GetResourceCache();
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
         m_ShaderResourceLayouts[s].dvpVerifyBindings(ResourceCache);
     }
 #endif
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     ResourceCache.DbgVerifyDynamicBuffersCounter();
 #endif
 
@@ -602,7 +602,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     {
         ResourceCache.TransitionResources<false>(pCtxVkImpl);
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
         ResourceCache.TransitionResources<true>(pCtxVkImpl);
@@ -616,7 +616,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         if (DynamicDescriptorSetVkLayout != VK_NULL_HANDLE)
         {
             const char* DynamicDescrSetName = "Dynamic Descriptor Set";
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             std::string _DynamicDescrSetName(m_Desc.Name);
             _DynamicDescrSetName.append(" - dynamic set");
             DynamicDescrSetName = _DynamicDescrSetName.c_str();
@@ -689,7 +689,7 @@ void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& Re
     {
         const auto& StaticResLayout = GetStaticShaderResLayout(s);
         const auto& StaticResCache  = GetStaticResCache(s);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (!StaticResLayout.dvpVerifyBindings(StaticResCache))
         {
             const auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
@@ -703,7 +703,7 @@ void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& Re
         const auto& ShaderResourceLayouts = GetShaderResLayout(s);
         ShaderResourceLayouts.InitializeStaticResources(StaticResLayout, StaticResCache, ResourceCache);
     }
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     ResourceCache.DbgVerifyDynamicBuffersCounter();
 #endif
 }

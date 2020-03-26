@@ -137,7 +137,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
             EngineD3D11CreateInfo CreateInfo;
             CreateInfo.DebugMessageCallback = MessageCallback;
 
-#    ifdef _DEBUG
+#    ifdef DILIGENT_DEBUG
             CreateInfo.DebugFlags =
                 D3D11_DEBUG_FLAG_CREATE_DEBUG_DEVICE |
                 D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE |

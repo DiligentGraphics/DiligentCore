@@ -60,7 +60,7 @@ public:
 
     CommandPoolWrapper&& Release();
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     int32_t DvpGetBufferCounter() const
     {
         return m_BuffCounter;
@@ -74,7 +74,7 @@ private:
 
     std::mutex                  m_Mutex;
     std::deque<VkCommandBuffer> m_CmdBuffers;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     std::atomic_int32_t m_BuffCounter;
 #endif
 };

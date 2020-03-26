@@ -450,7 +450,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
                                            SamplerInd);
             if (ResType == SPIRVShaderResourceAttribs::ResourceType::SeparateImage && pNewSepImg->IsValidSepSamplerAssigned())
             {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 const auto& SepSmplr = GetSepSmplr(pNewSepImg->GetAssignedSepSamplerInd());
                 DEV_CHECK_ERR(SepSmplr.ArraySize == 1 || SepSmplr.ArraySize == pNewSepImg->ArraySize,
                               "Array size (", SepSmplr.ArraySize, ") of separate sampler variable '",
@@ -488,7 +488,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
 
     //LOG_INFO_MESSAGE(DumpResources());
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (CombinedSamplerSuffix != nullptr)
     {
         for (Uint32 n = 0; n < GetNumSepSmplrs(); ++n)

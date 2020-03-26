@@ -327,7 +327,7 @@ void DeviceContextVkImpl::SetBlendFactors(const float* pBlendFactors)
 
 void DeviceContextVkImpl::CommitVkVertexBuffers()
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (m_NumVertexStreams < m_pPipelineState->GetNumBufferSlotsUsed())
         LOG_ERROR("Currently bound pipeline state '", m_pPipelineState->GetDesc().Name, "' expects ", m_pPipelineState->GetNumBufferSlotsUsed(), " input buffer slots, but only ", m_NumVertexStreams, " is bound");
 #endif
@@ -344,7 +344,7 @@ void DeviceContextVkImpl::CommitVkVertexBuffers()
             if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
             {
                 DynamicBufferPresent = true;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
             }
@@ -414,7 +414,7 @@ void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
 
 void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
 #endif
@@ -426,7 +426,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
         CommitVkVertexBuffers();
     }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
     {
         for (Uint32 slot = 0; slot < m_NumVertexStreams; ++slot)
@@ -451,7 +451,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
         }
     }
 #if 0
-#    ifdef _DEBUG
+#    ifdef DILIGENT_DEBUG
     else
     {
         if ( m_pPipelineState->dbgContainsShaderResources() )
@@ -460,7 +460,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #    endif
 #endif
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pPipelineState->GetVkRenderPass() != m_RenderPass)
     {
         DvpLogRenderPass_PSOMismatch();
@@ -475,7 +475,7 @@ BufferVkImpl* DeviceContextVkImpl::PrepareIndirectDrawAttribsBuffer(IBuffer* pAt
     DEV_CHECK_ERR(pAttribsBuffer, "Indirect draw attribs buffer must not be null");
     auto* pIndirectDrawAttribsVk = ValidatedCast<BufferVkImpl>(pAttribsBuffer);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (pIndirectDrawAttribsVk->GetDesc().Usage == USAGE_DYNAMIC)
         pIndirectDrawAttribsVk->DvpVerifyDynamicAllocation(this);
 #endif
@@ -490,7 +490,7 @@ void DeviceContextVkImpl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE Ind
 {
     PrepareForDraw(Flags);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
     {
         DvpVerifyBufferState(*m_pIndexBuffer, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw call (DeviceContextVkImpl::Draw)");
@@ -570,7 +570,7 @@ void DeviceContextVkImpl::PrepareForDispatchCompute()
         }
     }
 #if 0
-#    ifdef _DEBUG
+#    ifdef DILIGENT_DEBUG
     else
     {
         if ( m_pPipelineState->dbgContainsShaderResources() )
@@ -599,7 +599,7 @@ void DeviceContextVkImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
 
     auto* pBufferVk = ValidatedCast<BufferVkImpl>(pAttribsBuffer);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (pBufferVk->GetDesc().Usage == USAGE_DYNAMIC)
         pBufferVk->DvpVerifyDynamicAllocation(this);
 #endif
@@ -803,7 +803,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
 
 void DeviceContextVkImpl::FinishFrame()
 {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     for (const auto& MappedBuffIt : m_DbgMappedBuffers)
     {
         const auto& BuffDesc = MappedBuffIt.first->GetDesc();
@@ -1107,7 +1107,7 @@ void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
         if (m_Framebuffer != VK_NULL_HANDLE)
         {
             VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             if (VerifyStates)
             {
                 TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
@@ -1197,7 +1197,7 @@ void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuf
                                              Uint64                         SrcOffset,
                                              RESOURCE_STATE_TRANSITION_MODE TransitionMode)
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (DstOffset + NumBytes > pBuffVk->GetDesc().uiSizeInBytes)
     {
         LOG_ERROR("Update region is out of buffer bounds which will result in an undefined behavior");
@@ -1228,7 +1228,7 @@ void DeviceContextVkImpl::UpdateBuffer(IBuffer*                       pBuffer,
     // be resource barrier issues in the cmd list in the device context
     auto* pBuffVk = ValidatedCast<BufferVkImpl>(pBuffer);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (pBuffVk->GetDesc().Usage == USAGE_DYNAMIC)
     {
         LOG_ERROR("Dynamic buffers must be updated via Map()");
@@ -1258,7 +1258,7 @@ void DeviceContextVkImpl::CopyBuffer(IBuffer*                       pSrcBuffer,
     auto* pSrcBuffVk = ValidatedCast<BufferVkImpl>(pSrcBuffer);
     auto* pDstBuffVk = ValidatedCast<BufferVkImpl>(pDstBuffer);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (pDstBuffVk->GetDesc().Usage == USAGE_DYNAMIC)
     {
         LOG_ERROR("Dynamic buffers cannot be copy destinations");
@@ -1634,7 +1634,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
     // pages will be discarded
     VERIFY((Allocation.AlignedOffset % BufferOffsetAlignment) == 0, "Allocation offset must be at least 32-bit algined");
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     {
         VERIFY(SrcStride >= CopyInfo.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", CopyInfo.RowSize, ")");
         const Uint32 PlaneSize = SrcStride * CopyInfo.RowCount;
@@ -2205,7 +2205,7 @@ void DeviceContextVkImpl::TransitionOrVerifyTextureState(TextureVkImpl&         
             VERIFY_EXPR(Texture.GetLayout() == ExpectedLayout);
         }
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
         DvpVerifyTextureState(Texture, RequiredState, OperationName);
@@ -2301,7 +2301,7 @@ void DeviceContextVkImpl::TransitionOrVerifyBufferState(BufferVkImpl&           
             VERIFY_EXPR(Buffer.CheckAccessFlags(ExpectedAccessFlags));
         }
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
         DvpVerifyBufferState(Buffer, RequiredState, OperationName);
@@ -2312,7 +2312,7 @@ void DeviceContextVkImpl::TransitionOrVerifyBufferState(BufferVkImpl&           
 VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInBytes, Uint32 Alignment)
 {
     auto DynAlloc = m_DynamicHeap.Allocate(SizeInBytes, Alignment);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     DynAlloc.dvpFrameNumber = m_ContextFrameNumber;
 #endif
     return DynAlloc;
@@ -2328,7 +2328,7 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTra
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {
         const auto& Barrier = pResourceBarriers[i];
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         DvpVerifyStateTransitionDesc(Barrier);
 #endif
         if (Barrier.TransitionType == STATE_TRANSITION_TYPE_BEGIN)

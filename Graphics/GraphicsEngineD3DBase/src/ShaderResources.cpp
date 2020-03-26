@@ -213,7 +213,7 @@ D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResource
     return Counters;
 }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout,
                                               const ShaderResources* const      pShaderResources[],
                                               Uint32                            NumShaders)

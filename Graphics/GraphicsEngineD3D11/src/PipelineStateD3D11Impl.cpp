@@ -131,7 +131,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCoun
 
     const auto& ResourceLayout = m_Desc.ResourceLayout;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
         for (Uint32 s = 0; s < m_NumShaders; ++s)

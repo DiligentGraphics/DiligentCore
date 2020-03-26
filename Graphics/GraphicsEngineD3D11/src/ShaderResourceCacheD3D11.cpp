@@ -99,7 +99,7 @@ void ShaderResourceCacheD3D11::Initialize(Uint32 CBCount, Uint32 SRVCount, Uint3
                 (sizeof(CachedResource) + sizeof(ID3D11UnorderedAccessView*)) * UAVCount );
     // clang-format on
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     m_pdbgMemoryAllocator = &MemAllocator;
 #endif
     if (BufferSize > 0)

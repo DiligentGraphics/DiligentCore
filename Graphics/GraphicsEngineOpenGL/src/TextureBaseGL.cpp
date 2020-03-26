@@ -517,7 +517,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
         }
 
         auto* pRenderDeviceGL = ValidatedCast<RenderDeviceGLImpl>(GetDevice());
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         {
             auto& TexViewObjAllocator = pRenderDeviceGL->GetTexViewObjAllocator();
             VERIFY(&TexViewObjAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
@@ -582,7 +582,7 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
 void TextureBaseGL::TextureMemoryBarrier(Uint32 RequiredBarriers, GLContextState& GLContextState)
 {
 #if GL_ARB_shader_image_load_store
-#    ifdef _DEBUG
+#    ifdef DILIGENT_DEBUG
     {
         // clang-format off
         constexpr Uint32 TextureBarriers =
@@ -603,27 +603,29 @@ void TextureBaseGL::TextureMemoryBarrier(Uint32 RequiredBarriers, GLContextState
 
 void TextureBaseGL::SetDefaultGLParameters()
 {
-#ifdef _DEBUG
-    GLint BoundTex;
-    GLint TextureBinding = 0;
-    switch (m_BindTarget)
+#ifdef DILIGENT_DEBUG
     {
-        // clang-format off
-        case GL_TEXTURE_1D:         TextureBinding = GL_TEXTURE_BINDING_1D;       break;
-        case GL_TEXTURE_1D_ARRAY:   TextureBinding = GL_TEXTURE_BINDING_1D_ARRAY; break;
-        case GL_TEXTURE_2D:         TextureBinding = GL_TEXTURE_BINDING_2D;       break;
-        case GL_TEXTURE_2D_ARRAY:   TextureBinding = GL_TEXTURE_BINDING_2D_ARRAY; break;
-        case GL_TEXTURE_2D_MULTISAMPLE:         TextureBinding = GL_TEXTURE_BINDING_2D_MULTISAMPLE;       break;
-        case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:   TextureBinding = GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY; break;
-        case GL_TEXTURE_3D:         TextureBinding = GL_TEXTURE_BINDING_3D;       break;
-        case GL_TEXTURE_CUBE_MAP:   TextureBinding = GL_TEXTURE_BINDING_CUBE_MAP; break;
-        case GL_TEXTURE_CUBE_MAP_ARRAY: TextureBinding = GL_TEXTURE_BINDING_CUBE_MAP_ARRAY; break;
-        default: UNEXPECTED("Unknown bind target");
-            // clang-format on
+        GLint BoundTex;
+        GLint TextureBinding = 0;
+        switch (m_BindTarget)
+        {
+                // clang-format off
+            case GL_TEXTURE_1D:                     TextureBinding = GL_TEXTURE_BINDING_1D;                   break;
+            case GL_TEXTURE_1D_ARRAY:               TextureBinding = GL_TEXTURE_BINDING_1D_ARRAY;             break;
+            case GL_TEXTURE_2D:                     TextureBinding = GL_TEXTURE_BINDING_2D;                   break;
+            case GL_TEXTURE_2D_ARRAY:               TextureBinding = GL_TEXTURE_BINDING_2D_ARRAY;             break;
+            case GL_TEXTURE_2D_MULTISAMPLE:         TextureBinding = GL_TEXTURE_BINDING_2D_MULTISAMPLE;       break;
+            case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:   TextureBinding = GL_TEXTURE_BINDING_2D_MULTISAMPLE_ARRAY; break;
+            case GL_TEXTURE_3D:                     TextureBinding = GL_TEXTURE_BINDING_3D;                   break;
+            case GL_TEXTURE_CUBE_MAP:               TextureBinding = GL_TEXTURE_BINDING_CUBE_MAP;             break;
+            case GL_TEXTURE_CUBE_MAP_ARRAY:         TextureBinding = GL_TEXTURE_BINDING_CUBE_MAP_ARRAY;       break;
+            default: UNEXPECTED("Unknown bind target");
+                // clang-format on
+        }
+        glGetIntegerv(TextureBinding, &BoundTex);
+        CHECK_GL_ERROR("Failed to set GL_TEXTURE_MIN_FILTER texture parameter");
+        VERIFY(static_cast<GLuint>(BoundTex) == m_GlTexture, "Current texture is not bound to GL context");
     }
-    glGetIntegerv(TextureBinding, &BoundTex);
-    CHECK_GL_ERROR("Failed to set GL_TEXTURE_MIN_FILTER texture parameter");
-    VERIFY(static_cast<GLuint>(BoundTex) == m_GlTexture, "Current texture is not bound to GL context");
 #endif
 
     if (m_BindTarget != GL_TEXTURE_2D_MULTISAMPLE &&

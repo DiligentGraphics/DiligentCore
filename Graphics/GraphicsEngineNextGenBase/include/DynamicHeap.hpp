@@ -105,7 +105,7 @@ public:
                                 Uint32            Size) :
         m_AllocationsMgr{Size, Allocator}
     {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         m_MasterBlockCounter = 0;
 #endif
     }
@@ -155,7 +155,7 @@ public:
                 if (Mgr != nullptr)
                 {
                     std::lock_guard<std::mutex> Lock{Mgr->m_AllocationsMgrMtx};
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                     --Mgr->m_MasterBlockCounter;
 #endif
                     Mgr->m_AllocationsMgr.Free(std::move(Block));
@@ -174,7 +174,7 @@ public:
     OffsetType GetUsedSize() const { return m_AllocationsMgr.GetUsedSize();}
     // clang-format on
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     int32_t GetMasterBlockCounter() const
     {
         return m_MasterBlockCounter;
@@ -186,7 +186,7 @@ protected:
     {
         std::lock_guard<std::mutex> Lock{m_AllocationsMgrMtx};
         auto                        NewBlock = m_AllocationsMgr.Allocate(SizeInBytes, Alignment);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (NewBlock.IsValid())
         {
             ++m_MasterBlockCounter;
@@ -199,7 +199,7 @@ private:
     std::mutex                     m_AllocationsMgrMtx;
     VariableSizeAllocationsManager m_AllocationsMgr;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     std::atomic_int32_t m_MasterBlockCounter;
 #endif
 };

@@ -119,7 +119,7 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
     Uint32 ImageBindingSlots   = 0;
     Uint32 SSBOBindingSlots    = 0;
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     const Uint32 DbgAllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 #endif
     for (Uint32 prog = 0; prog < NumPrograms; ++prog)
@@ -256,7 +256,7 @@ void GLPipelineResourceLayout::UniformBuffBindInfo::BindResource(IDeviceObject* 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferGLImpl> pBuffGLImpl(pBuffer, IID_BufferGL);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         const auto& CachedUB = ResourceCache.GetConstUB(m_Attribs.Binding + ArrayIndex);
         VerifyConstantBufferBinding(m_Attribs, GetType(), ArrayIndex, pBuffer, pBuffGLImpl.RawPtr(), CachedUB.pBuffer.RawPtr());
@@ -283,7 +283,7 @@ void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pVie
         // We cannot use ValidatedCast<> here as the resource retrieved from the
         // resource mapping can be of wrong type
         RefCntAutoPtr<TextureViewGLImpl> pViewGL(pView, IID_TextureViewGL);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         {
             auto& CachedTexSampler = ResourceCache.GetConstSampler(m_Attribs.Binding + ArrayIndex);
             VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE}, CachedTexSampler.pView.RawPtr());
@@ -300,7 +300,7 @@ void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pVie
         // We cannot use ValidatedCast<> here as the resource retrieved from the
         // resource mapping can be of wrong type
         RefCntAutoPtr<BufferViewGLImpl> pViewGL(pView, IID_BufferViewGL);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         {
             auto& CachedBuffSampler = ResourceCache.GetConstSampler(m_Attribs.Binding + ArrayIndex);
             VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE}, CachedBuffSampler.pView.RawPtr());
@@ -327,7 +327,7 @@ void GLPipelineResourceLayout::ImageBindInfo::BindResource(IDeviceObject* pView,
         // We cannot use ValidatedCast<> here as the resource retrieved from the
         // resource mapping can be of wrong type
         RefCntAutoPtr<TextureViewGLImpl> pViewGL(pView, IID_TextureViewGL);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         {
             auto& CachedUAV = ResourceCache.GetConstImage(m_Attribs.Binding + ArrayIndex);
             VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr());
@@ -340,7 +340,7 @@ void GLPipelineResourceLayout::ImageBindInfo::BindResource(IDeviceObject* pView,
         // We cannot use ValidatedCast<> here as the resource retrieved from the
         // resource mapping can be of wrong type
         RefCntAutoPtr<BufferViewGLImpl> pViewGL(pView, IID_BufferViewGL);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         {
             auto& CachedUAV = ResourceCache.GetConstImage(m_Attribs.Binding + ArrayIndex);
             VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr());
@@ -367,7 +367,7 @@ void GLPipelineResourceLayout::StorageBufferBindInfo::BindResource(IDeviceObject
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
     RefCntAutoPtr<BufferViewGLImpl> pViewGL(pView, IID_BufferViewGL);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSSBO = ResourceCache.GetConstSSBO(m_Attribs.Binding + ArrayIndex);
         // HLSL structured buffers are mapped to SSBOs in GLSL
@@ -521,7 +521,7 @@ Uint32 GLPipelineResourceLayout::GetNumVariables(SHADER_TYPE ShaderStage) const
                      VariableEndOffset.NumStorageBlocks - VariableStartOffset.NumStorageBlocks;
     // clang-format on
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     {
         Uint32 DbgNumVars = 0;
         auto   CountVar   = [&](const GLVariableBase& Var) {
@@ -721,7 +721,7 @@ void GLPipelineResourceLayout::CopyResources(GLProgramResourceCache& DstCache) c
     );
 }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 bool GLPipelineResourceLayout::dvpVerifyBindings(const GLProgramResourceCache& ResourceCache) const
 {
 #    define LOG_MISSING_BINDING(VarType, BindInfo, BindPt) LOG_ERROR_MESSAGE("No resource is bound to ", VarType, " variable '", BindInfo.m_Attribs.GetPrintName(BindPt - BindInfo.m_Attribs.Binding), "'")

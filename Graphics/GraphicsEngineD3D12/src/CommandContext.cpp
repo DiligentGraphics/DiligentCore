@@ -167,7 +167,7 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
         pd3d12Resource   = pBufferD3D12Impl->GetD3D12Resource();
         OldState         = pBufferD3D12Impl->GetState();
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         // Dynamic buffers wtih no SRV/UAV bind flags are suballocated in
         // the upload heap when Map() is called and must always be in
         // D3D12_RESOURCE_STATE_GENERIC_READ state

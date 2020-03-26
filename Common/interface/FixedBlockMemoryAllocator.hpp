@@ -43,7 +43,7 @@
 namespace Diligent
 {
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
 inline void FillWithDebugPattern(void* ptr, Uint8 Pattern, size_t NumBytes)
 {
     memset(ptr, Pattern, NumBytes);
@@ -128,7 +128,7 @@ private:
             return reinterpret_cast<Uint8*>(m_pPageStart) + BlockIndex * m_pOwnerAllocator->m_BlockSize;
         }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         void dbgVerifyAddress(const void* pBlockAddr) const
         {
             size_t Delta = reinterpret_cast<const Uint8*>(pBlockAddr) - reinterpret_cast<Uint8*>(m_pPageStart);
@@ -241,7 +241,7 @@ class ObjectPool
 public:
     static void SetRawAllocator(IMemoryAllocator& Allocator)
     {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         if (m_bPoolInitialized && m_pRawAllocator != &Allocator)
         {
             LOG_WARNING_MESSAGE("Setting pool raw allocator after the pool has been initialized has no effect");
@@ -251,7 +251,7 @@ public:
     }
     static void SetPageSize(Uint32 NumAllocationsInPage)
     {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         if (m_bPoolInitialized && m_NumAllocationsInPage != NumAllocationsInPage)
         {
             LOG_WARNING_MESSAGE("Setting pool page size after the pool has been initialized has no effect");
@@ -262,7 +262,7 @@ public:
     static ObjectPool& GetPool()
     {
         static ObjectPool ThePool;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         m_bPoolInitialized = true;
 #endif
         return ThePool;
@@ -299,7 +299,7 @@ private:
     ObjectPool() :
         m_FixedBlockAlloctor(m_pRawAllocator ? *m_pRawAllocator : GetRawAllocator(), sizeof(ObjectType), m_NumAllocationsInPage)
     {}
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     static bool m_bPoolInitialized;
 #endif
     FixedBlockMemoryAllocator m_FixedBlockAlloctor;
@@ -310,7 +310,7 @@ Uint32 ObjectPool<ObjectType>::m_NumAllocationsInPage = 64;
 template <typename ObjectType>
 IMemoryAllocator* ObjectPool<ObjectType>::m_pRawAllocator = nullptr;
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
 template <typename ObjectType>
 bool ObjectPool<ObjectType>::m_bPoolInitialized = false;
 #endif

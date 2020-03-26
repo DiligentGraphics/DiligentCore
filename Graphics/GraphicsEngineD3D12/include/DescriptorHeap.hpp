@@ -273,7 +273,7 @@ public:
         rhs.m_FirstCPUHandle.ptr         = 0;
         rhs.m_FirstGPUHandle.ptr         = 0;
         rhs.m_MaxAllocatedSize           = 0;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         m_AllocationsCounter.store(rhs.m_AllocationsCounter.load());
         rhs.m_AllocationsCounter = 0;
 #endif
@@ -298,7 +298,7 @@ public:
     size_t GetMaxAllocatedSize()       const { return m_MaxAllocatedSize;               }
     // clang-format on
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     int32_t DvpGetAllocationsCounter() const
     {
         return m_AllocationsCounter;
@@ -337,7 +337,7 @@ private:
 
     size_t m_MaxAllocatedSize = 0;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     std::atomic_int32_t m_AllocationsCounter = 0;
 #endif
 
@@ -384,7 +384,7 @@ public:
     virtual void                     Free(DescriptorHeapAllocation&& Allocation, Uint64 CmdQueueMask) override final;
     virtual Uint32                   GetDescriptorSize() const override final { return m_DescriptorSize; }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     int32_t DvpGetTotalAllocationCount();
 #endif
 
@@ -483,7 +483,7 @@ public:
     Uint32                            GetMaxStaticDescriptors() const { return m_HeapAllocationManager.GetMaxDescriptors(); }
     Uint32                            GetMaxDynamicDescriptors() const { return m_DynamicAllocationsManager.GetMaxDescriptors(); }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     int32_t DvpGetTotalAllocationCount() const
     {
         return m_HeapAllocationManager.DvpGetAllocationsCounter() +

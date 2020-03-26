@@ -155,7 +155,7 @@ IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariableByIndex(SHAD
 }
 
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 void ShaderResourceBindingD3D12Impl::dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO) const
 {
     auto* pRefPSO = GetPipelineState<const PipelineStateD3D12Impl>();
@@ -170,7 +170,7 @@ void ShaderResourceBindingD3D12Impl::dvpVerifyResourceBindings(const PipelineSta
         const auto& ShaderResLayout = pRefPSO->GetShaderResLayout(l);
         ShaderResLayout.dvpVerifyBindings(m_ShaderResourceCache);
     }
-#    ifdef _DEBUG
+#    ifdef DILIGENT_DEBUG
     m_ShaderResourceCache.DbgVerifyBoundDynamicCBsCounter();
 #    endif
 }
@@ -203,7 +203,7 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineSt
         const auto& ShaderResLayout = pPSO12->GetShaderResLayout(s);
         auto&       StaticResLayout = pPSO12->GetStaticShaderResLayout(s);
         auto&       StaticResCache  = pPSO12->GetStaticShaderResCache(s);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (!StaticResLayout.dvpVerifyBindings(StaticResCache))
         {
             auto* pShader = pPSO12->GetShader<ShaderD3D12Impl>(s);
@@ -217,7 +217,7 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineSt
         StaticResLayout.CopyStaticResourceDesriptorHandles(StaticResCache, ShaderResLayout, m_ShaderResourceCache);
     }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     m_ShaderResourceCache.DbgVerifyBoundDynamicCBsCounter();
 #endif
 

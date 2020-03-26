@@ -189,7 +189,7 @@ D3D12_SHADER_VISIBILITY GetShaderVisibility(SHADER_TYPE ShaderType)
 {
     auto ShaderInd        = GetShaderTypeIndex(ShaderType);
     auto ShaderVisibility = ShaderTypeInd2ShaderVisibilityMap[ShaderInd];
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     switch (ShaderType)
     {
         // clang-format off
@@ -222,7 +222,7 @@ SHADER_TYPE ShaderTypeFromShaderVisibility(D3D12_SHADER_VISIBILITY ShaderVisibil
 {
     VERIFY_EXPR(ShaderVisibility >= D3D12_SHADER_VISIBILITY_ALL && ShaderVisibility <= D3D12_SHADER_VISIBILITY_PIXEL);
     auto ShaderType = ShaderVisibility2ShaderTypeMap[ShaderVisibility];
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     switch (ShaderVisibility)
     {
         // clang-format off
@@ -254,7 +254,7 @@ D3D12_DESCRIPTOR_HEAP_TYPE HeapTypeFromRangeType(D3D12_DESCRIPTOR_RANGE_TYPE Ran
     VERIFY_EXPR(RangeType >= D3D12_DESCRIPTOR_RANGE_TYPE_SRV && RangeType <= D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER);
     auto HeapType = RangeType2HeapTypeMap[RangeType];
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     switch (RangeType)
     {
         // clang-format off
@@ -367,7 +367,7 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
 }
 
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
 void RootSignature::dbgVerifyRootParameters() const
 {
     Uint32 dbgTotalSrvCbvUavSlots = 0;
@@ -473,7 +473,7 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
         ++m_TotalRootViews[RootView.GetShaderVariableType()];
     }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     dbgVerifyRootParameters();
 #endif
 
@@ -645,7 +645,7 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
         auto&       RootTableCache = ResourceCache.GetRootTable(RootParam.GetRootIndex());
 
         SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         dbgShaderType = ShaderTypeFromShaderVisibility(D3D12RootParam.ShaderVisibility);
 #endif
         VERIFY_EXPR(D3D12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
@@ -655,7 +655,7 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
 
         auto HeapType = HeapTypeFromRangeType(D3D12RootParam.DescriptorTable.pDescriptorRanges[0].RangeType);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         RootTableCache.SetDebugAttribs(TableSize, HeapType, dbgShaderType);
 #endif
 
@@ -679,7 +679,7 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
         }
     }
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     for (Uint32 rv = 0; rv < m_RootParams.GetNumRootViews(); ++rv)
     {
         auto&       RootParam      = m_RootParams.GetRootView(rv);
@@ -776,7 +776,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
 }
 
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 void RootSignature::DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
                                            D3D12_DESCRIPTOR_RANGE_TYPE               RangeType)
 {
@@ -872,7 +872,7 @@ void RootSignature::DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resou
             VERIFY(Res.pObject == nullptr && Res.CPUDescriptorHandle.ptr == 0, "Bound resource is unexpected");
     }
 }
-#endif // DEVELOPMENT
+#endif // DILIGENT_DEVELOPMENT
 
 template <class TOperation>
 __forceinline void RootSignature::RootParamsManager::ProcessRootTables(TOperation Operation) const
@@ -889,7 +889,7 @@ __forceinline void RootSignature::RootParamsManager::ProcessRootTables(TOperatio
         VERIFY(d3d12Table.NumDescriptorRanges > 0 && RootTable.GetDescriptorTableSize() > 0, "Unexepected empty descriptor table");
         bool                       IsResourceTable = d3d12Table.pDescriptorRanges[0].RangeType != D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
         D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapType     = D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
         dbgHeapType = IsResourceTable ? D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV : D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 #endif
         Operation(RootInd, RootTable, D3D12Param, IsResourceTable, dbgHeapType);
@@ -909,7 +909,7 @@ __forceinline void ProcessCachedTableResources(Uint32                      RootI
         for (UINT d = 0; d < range.NumDescriptors; ++d)
         {
             SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
             dbgShaderType = ShaderTypeFromShaderVisibility(D3D12Param.ShaderVisibility);
             VERIFY(dbgHeapType == HeapTypeFromRangeType(range.RangeType), "Mistmatch between descriptor heap type and descriptor range type");
 #endif
@@ -1016,7 +1016,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
                     {
                         TransitionResource(Ctx, Res, range.RangeType);
                     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                     else if (ValidateStates)
                     {
                         DvpVerifyResourceState(Res, range.RangeType);
@@ -1033,7 +1033,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
                             {
                                 pd3d12Device->CopyDescriptorsSimple(1, DynamicCbvSrvUavDescriptors.GetCpuHandle(DynamicCbvSrvUavTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
                             }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                             else
                             {
                                 LOG_ERROR_MESSAGE("No valid CbvSrvUav descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
@@ -1050,7 +1050,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
                             {
                                 pd3d12Device->CopyDescriptorsSimple(1, DynamicSamplerDescriptors.GetCpuHandle(DynamicSamplerTblOffset), Res.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
                             }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                             else
                             {
                                 LOG_ERROR_MESSAGE("No valid sampler descriptor handle found for root parameter ", RootInd, ", descriptor slot ", OffsetFromTableStart);
@@ -1108,7 +1108,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SM(RenderDeviceD3D12Impl*   
                     } //
                 );
             }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             else if (ValidateStates)
             {
                 ProcessCachedTableResources(

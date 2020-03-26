@@ -404,7 +404,7 @@ void SwapChainVkImpl::InitBuffersAndViews()
     auto* pDeviceVkImpl   = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     auto  LogicalVkDevice = pDeviceVkImpl->GetVkDevice();
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     {
         uint32_t swapchainImageCount = 0;
         auto     err                 = vkGetSwapchainImagesKHR(LogicalVkDevice, m_VkSwapChain, &swapchainImageCount, NULL);

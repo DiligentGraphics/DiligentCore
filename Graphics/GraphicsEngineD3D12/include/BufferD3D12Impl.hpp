@@ -65,7 +65,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     void DvpVerifyDynamicAllocation(class DeviceContextD3D12Impl* pCtx) const;
 #endif
 
@@ -92,7 +92,7 @@ public:
     {
         if (m_Desc.Usage == USAGE_DYNAMIC)
         {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             DvpVerifyDynamicAllocation(pCtx);
 #endif
             return m_DynamicData[ContextId].GPUAddress;

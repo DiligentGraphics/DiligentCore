@@ -39,7 +39,7 @@
 #include "QueryD3D11Impl.hpp"
 #include "DisjointQueryPool.hpp"
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
 #    define VERIFY_CONTEXT_BINDINGS
 #endif
 

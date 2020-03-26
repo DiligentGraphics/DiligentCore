@@ -45,7 +45,7 @@ struct D3D12DynamicAllocation
                            Uint64                    _Size,
                            void*                     _CPUAddress,
                            D3D12_GPU_VIRTUAL_ADDRESS _GPUAddress
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                            ,
                            Uint64 _DvpCtxFrameNumber
 #endif
@@ -56,7 +56,7 @@ struct D3D12DynamicAllocation
         Size       {_Size       },
         CPUAddress {_CPUAddress },
         GPUAddress {_GPUAddress }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
       , DvpCtxFrameNumber(_DvpCtxFrameNumber)
 #endif
     // clang-format on
@@ -67,7 +67,7 @@ struct D3D12DynamicAllocation
     Uint64                    Size       = 0;       // Reserved size of this allocation
     void*                     CPUAddress = nullptr; // The CPU-writeable address
     D3D12_GPU_VIRTUAL_ADDRESS GPUAddress = 0;       // The GPU-visible address
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     Uint64 DvpCtxFrameNumber = static_cast<Uint64>(-1);
 #endif
 };
@@ -141,7 +141,7 @@ public:
 
     D3D12DynamicPage AllocatePage(Uint64 SizeInBytes);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     int32_t GetAllocatedPageCounter() const
     {
         return m_AllocatedPageCounter;
@@ -155,7 +155,7 @@ private:
     using AvailablePagesMapElemType = std::pair<const Uint64, D3D12DynamicPage>;
     std::multimap<Uint64, D3D12DynamicPage, std::less<Uint64>, STDAllocatorRawMem<AvailablePagesMapElemType>> m_AvailablePages;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     std::atomic_int32_t m_AllocatedPageCounter = 0;
 #endif
 };

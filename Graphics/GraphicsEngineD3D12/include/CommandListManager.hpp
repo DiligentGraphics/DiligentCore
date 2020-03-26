@@ -58,7 +58,7 @@ public:
     // allocator
     void FreeAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     Atomics::Long GetAllocatorCounter() const
     {
         return m_AllocatorCounter;
@@ -73,7 +73,7 @@ private:
 
     Atomics::AtomicLong m_NumAllocators = 0; // For debug purposes only
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     Atomics::AtomicLong m_AllocatorCounter = 0;
 #endif
 };

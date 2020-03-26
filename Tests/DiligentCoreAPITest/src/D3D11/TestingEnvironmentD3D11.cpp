@@ -92,7 +92,7 @@ HRESULT CompileD3DShader(const std::string&      Source,
                          ID3DBlob**              ppBlobOut)
 {
     DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-#if defined(DEBUG) || defined(_DEBUG)
+#if defined(DILIGENT_DEBUG)
     // Set the D3D10_SHADER_DEBUG flag to embed debug information in the shaders.
     // Setting this flag improves the shader debugging experience, but still allows
     // the shaders to be optimized and to run exactly the way they will run in

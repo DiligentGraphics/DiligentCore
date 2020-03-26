@@ -511,7 +511,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                 }
                 else
                 {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
                     for (const auto& ub : UniformBlocks)
                         VERIFY(strcmp(ub.Name, Name.data()) != 0, "Uniform block with the name '", ub.Name, "' has already been enumerated");
 #endif
@@ -567,7 +567,7 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
                 }
                 else
                 {
-#    ifdef _DEBUG
+#    ifdef DILIGENT_DEBUG
                     for (const auto& sb : StorageBlocks)
                         VERIFY(strcmp(sb.Name, Name.data()) != 0, "Storage block with the name \"", sb.Name, "\" has already been enumerated");
 #    endif

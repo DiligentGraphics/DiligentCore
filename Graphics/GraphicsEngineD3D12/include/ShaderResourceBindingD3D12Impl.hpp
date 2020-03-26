@@ -67,7 +67,7 @@ public:
 
     ShaderResourceCacheD3D12& GetResourceCache() { return m_ShaderResourceCache; }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     void dvpVerifyResourceBindings(const PipelineStateD3D12Impl* pPSO) const;
 #endif
 

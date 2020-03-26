@@ -317,7 +317,7 @@ void DeviceContextD3D12Impl::CommitD3D12IndexBuffer(GraphicsContext& GraphCtx, V
     //GraphicsCtx.AddReferencedObject(pd3d12Resource);
 
     bool IsDynamic = m_pIndexBuffer->GetDesc().Usage == USAGE_DYNAMIC;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (IsDynamic)
         m_pIndexBuffer->DvpVerifyDynamicAllocation(this);
 #endif
@@ -359,7 +359,7 @@ void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
             if (pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
             {
                 DynamicBufferPresent = true;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 pBufferD3D12->DvpVerifyDynamicAllocation(this);
 #endif
             }
@@ -390,7 +390,7 @@ void DeviceContextD3D12Impl::CommitD3D12VertexBuffers(GraphicsContext& GraphCtx)
 
 void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAGS Flags)
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
 #endif
@@ -400,7 +400,7 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
         CommitD3D12VertexBuffers(GraphCtx);
     }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
     {
         for (Uint32 Buff = 0; Buff < m_NumVertexStreams; ++Buff)
@@ -440,7 +440,7 @@ void DeviceContextD3D12Impl::PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAG
             }
         }
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     else
     {
         if (m_pPipelineState->ContainsShaderResources())
@@ -458,7 +458,7 @@ void DeviceContextD3D12Impl::PrepareForIndexedDraw(GraphicsContext& GraphCtx, DR
     {
         CommitD3D12IndexBuffer(GraphCtx, IndexType);
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
     {
         DvpVerifyBufferState(*m_pIndexBuffer, RESOURCE_STATE_INDEX_BUFFER, "Indexed draw (DeviceContextD3D12Impl::Draw())");
@@ -497,7 +497,7 @@ void DeviceContextD3D12Impl::PrepareDrawIndirectBuffer(GraphicsContext&         
     DEV_CHECK_ERR(pAttribsBuffer != nullptr, "Indirect draw attribs buffer must not be null");
 
     auto* pIndirectDrawAttribsD3D12 = ValidatedCast<BufferD3D12Impl>(pAttribsBuffer);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (pIndirectDrawAttribsD3D12->GetDesc().Usage == USAGE_DYNAMIC)
         pIndirectDrawAttribsD3D12->DvpVerifyDynamicAllocation(this);
 #endif
@@ -563,7 +563,7 @@ void DeviceContextD3D12Impl::PrepareForDispatchCompute(ComputeContext& ComputeCt
                 );
         }
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     else
     {
         if (m_pPipelineState->ContainsShaderResources())
@@ -593,7 +593,7 @@ void DeviceContextD3D12Impl::DispatchComputeIndirect(const DispatchComputeIndire
 
     auto* pBufferD3D12 = ValidatedCast<BufferD3D12Impl>(pAttribsBuffer);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (pBufferD3D12->GetDesc().Usage == USAGE_DYNAMIC)
         pBufferD3D12->DvpVerifyDynamicAllocation(this);
 #endif
@@ -712,7 +712,7 @@ void DeviceContextD3D12Impl::Flush()
 
 void DeviceContextD3D12Impl::FinishFrame()
 {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     for (const auto& MappedBuffIt : m_DbgMappedBuffers)
     {
         const auto& BuffDesc = MappedBuffIt.first->GetDesc();
@@ -1302,7 +1302,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
     {
         StateTransitionRequired = TextureD3D12.IsInKnownState() && !TextureD3D12.CheckState(RESOURCE_STATE_COPY_DEST);
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     else if (TextureTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
         DvpVerifyTextureState(TextureD3D12, RESOURCE_STATE_COPY_DEST, "Using texture as copy destination (DeviceContextD3D12Impl::CopyTextureRegion)");
@@ -1337,7 +1337,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(ID3D12Resource*                pd
 
     Footprint.Footprint.RowPitch = static_cast<UINT>(SrcStride);
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     {
         const auto&  FmtAttribs = GetTextureFormatAttribs(TexDesc.Format);
         const Uint32 RowCount   = std::max((Footprint.Footprint.Height / FmtAttribs.BlockHeight), 1u);
@@ -1388,7 +1388,7 @@ void DeviceContextD3D12Impl::CopyTextureRegion(IBuffer*                       pS
             if (pBufferD3D12->IsInKnownState() && pBufferD3D12->GetState() != RESOURCE_STATE_GENERIC_READ)
                 GetCmdContext().TransitionResource(pBufferD3D12, RESOURCE_STATE_GENERIC_READ);
         }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         else if (BufferTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
         {
             DvpVerifyBufferState(*pBufferD3D12, RESOURCE_STATE_COPY_SOURCE, "Using buffer as copy source (DeviceContextD3D12Impl::CopyTextureRegion)");
@@ -1447,7 +1447,7 @@ void DeviceContextD3D12Impl::UpdateTextureRegion(const void*                    
     const auto& TexDesc           = TextureD3D12.GetDesc();
     auto        UploadSpace       = AllocateTextureUploadSpace(TexDesc.Format, DstBox);
     auto        UpdateRegionDepth = DstBox.MaxZ - DstBox.MinZ;
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     {
         VERIFY(SrcStride >= UploadSpace.RowSize, "Source data stride (", SrcStride, ") is below the image row size (", UploadSpace.RowSize, ")");
         const Uint32 PlaneSize = SrcStride * UploadSpace.RowCount;
@@ -1732,7 +1732,7 @@ void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, State
     auto& CmdCtx = GetCmdContext();
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         DvpVerifyStateTransitionDesc(pResourceBarriers[i]);
 #endif
         CmdCtx.TransitionResource(pResourceBarriers[i]);
@@ -1750,7 +1750,7 @@ void DeviceContextD3D12Impl::TransitionOrVerifyBufferState(CommandContext&      
         if (Buffer.IsInKnownState() && !Buffer.CheckState(RequiredState))
             CmdCtx.TransitionResource(&Buffer, RequiredState);
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
         DvpVerifyBufferState(Buffer, RequiredState, OperationName);
@@ -1769,7 +1769,7 @@ void DeviceContextD3D12Impl::TransitionOrVerifyTextureState(CommandContext&     
         if (Texture.IsInKnownState() && !Texture.CheckState(RequiredState))
             CmdCtx.TransitionResource(&Texture, RequiredState);
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
         DvpVerifyTextureState(Texture, RequiredState, OperationName);

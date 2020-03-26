@@ -85,7 +85,7 @@ IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariableByIndex(SHADER_
 
 const GLProgramResourceCache& ShaderResourceBindingGLImpl::GetResourceCache(PipelineStateGLImpl* pdbgPSO)
 {
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     if (pdbgPSO->IsIncompatibleWith(GetPipelineState()))
     {
         LOG_ERROR("Shader resource binding is incompatible with the currently bound pipeline state.");
@@ -114,7 +114,7 @@ void ShaderResourceBindingGLImpl::InitializeStaticResources(const IPipelineState
     const auto* pPSOGL          = ValidatedCast<const PipelineStateGLImpl>(pPipelineState);
     const auto& StaticResLayout = pPSOGL->GetStaticResourceLayout();
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (!StaticResLayout.dvpVerifyBindings(pPSOGL->GetStaticResourceCache()))
     {
         LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSOGL->GetDesc().Name,

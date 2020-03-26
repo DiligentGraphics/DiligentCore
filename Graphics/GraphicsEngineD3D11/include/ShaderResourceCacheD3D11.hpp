@@ -327,7 +327,7 @@ private:
 
     Uint8* m_pResourceData = nullptr;
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     IMemoryAllocator* m_pdbgMemoryAllocator = nullptr;
 #endif
 };

@@ -388,7 +388,7 @@ ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDe
     {
         VERIFY(m_Desc.Usage == USAGE_DYNAMIC, "Dynamic buffer is expected");
         auto* pCtxD3D12 = ValidatedCast<DeviceContextD3D12Impl>(pContext);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         DvpVerifyDynamicAllocation(pCtxD3D12);
 #endif
         auto ContextId      = pCtxD3D12->GetContextId();
@@ -397,7 +397,7 @@ ID3D12Resource* BufferD3D12Impl::GetD3D12Buffer(Uint64& DataStartByteOffset, IDe
     }
 }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 void BufferD3D12Impl::DvpVerifyDynamicAllocation(DeviceContextD3D12Impl* pCtx) const
 {
     auto ContextId    = pCtx->GetContextId();

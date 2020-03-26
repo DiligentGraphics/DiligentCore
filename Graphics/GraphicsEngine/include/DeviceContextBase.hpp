@@ -225,7 +225,7 @@ protected:
 
     bool EndQuery(IQuery* pQuery, int);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     // clang-format off
     bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs)const;
     bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs)const;
@@ -311,7 +311,7 @@ protected:
 
     const bool m_bIsDeferred = false;
 
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     // std::unordered_map is unbelievably slow. Keeping track of mapped buffers
     // in release builds is not feasible
     struct DbgMappedBufferInfo
@@ -332,7 +332,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode,
                      SET_VERTEX_BUFFERS_FLAGS       Flags)
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (StartSlot >= MAX_BUFFER_SLOTS)
     {
         LOG_ERROR_MESSAGE("Start vertex buffer slot ", StartSlot, " is out of allowed range [0, ", MAX_BUFFER_SLOTS - 1, "].");
@@ -364,7 +364,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
         auto& CurrStream   = m_VertexStreams[StartSlot + Buff];
         CurrStream.pBuffer = ppBuffers ? ValidatedCast<BufferImplType>(ppBuffers[Buff]) : nullptr;
         CurrStream.Offset  = pOffsets ? pOffsets[Buff] : 0;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (CurrStream.pBuffer)
         {
             const auto& BuffDesc = CurrStream.pBuffer->GetDesc();
@@ -391,7 +391,7 @@ template <typename BaseInterface, typename ImplementationTraits>
 inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode, int)
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (!m_pPipelineState)
     {
         LOG_ERROR_MESSAGE("No pipeline state is bound to the pipeline");
@@ -422,7 +422,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 {
     m_pIndexBuffer         = ValidatedCast<BufferImplType>(pIndexBuffer);
     m_IndexDataStartOffset = ByteOffset;
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (m_pIndexBuffer)
     {
         const auto& BuffDesc = m_pIndexBuffer->GetDesc();
@@ -569,7 +569,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         if (pRTView)
         {
             const auto& RTVDesc = pRTView->GetDesc();
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             if (RTVDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
                 LOG_ERROR("Texture view object named '", RTVDesc.Name ? RTVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected");
 #endif
@@ -584,7 +584,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
             }
             else
             {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 const auto& TexDesc = pRTView->GetTexture()->GetDesc();
                 if (m_FramebufferWidth != std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U))
                     LOG_ERROR("Render target width (", std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
@@ -609,7 +609,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     if (pDepthStencil != nullptr)
     {
         const auto& DSVDesc = pDepthStencil->GetDesc();
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (DSVDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
             LOG_ERROR("Texture view object named '", DSVDesc.Name ? DSVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected");
 #endif
@@ -625,7 +625,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         }
         else
         {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             const auto& TexDesc = pDepthStencil->GetTexture()->GetDesc();
             if (m_FramebufferWidth != std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U))
                 LOG_ERROR("Depth-stencil target width (", std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
@@ -688,7 +688,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCa
 {
     for (Uint32 stream = 0; stream < m_NumVertexStreams; ++stream)
         m_VertexStreams[stream] = VertexStreamInfo<BufferImplType>{};
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     for (Uint32 stream = m_NumVertexStreams; stream < _countof(m_VertexStreams); ++stream)
     {
         VERIFY(m_VertexStreams[stream].pBuffer == nullptr, "Unexpected non-null buffer");
@@ -801,7 +801,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets(
 {
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         m_pBoundRenderTargets[rt].Release();
-#ifdef _DEBUG
+#ifdef DILIGENT_DEBUG
     for (Uint32 rt = m_NumBoundRenderTargets; rt < _countof(m_pBoundRenderTargets); ++rt)
     {
         VERIFY(m_pBoundRenderTargets[rt] == nullptr, "Non-null render target found");
@@ -825,7 +825,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearDepthSt
         return false;
     }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         const auto& ViewDesc = pView->GetDesc();
         if (ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
@@ -867,7 +867,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearRenderT
         return false;
     }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     {
         const auto& ViewDesc = pView->GetDesc();
         if (ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
@@ -957,11 +957,13 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const void* pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     VERIFY(pBuffer != nullptr, "Buffer must not be null");
-#ifdef DEVELOPMENT
-    const auto& BuffDesc = ValidatedCast<BufferImplType>(pBuffer)->GetDesc();
-    DEV_CHECK_ERR(BuffDesc.Usage == USAGE_DEFAULT, "Unable to update buffer '", BuffDesc.Name, "': only USAGE_DEFAULT buffers can be updated with UpdateData()");
-    DEV_CHECK_ERR(Offset < BuffDesc.uiSizeInBytes, "Unable to update buffer '", BuffDesc.Name, "': offset (", Offset, ") exceeds the buffer size (", BuffDesc.uiSizeInBytes, ")");
-    DEV_CHECK_ERR(Size + Offset <= BuffDesc.uiSizeInBytes, "Unable to update buffer '", BuffDesc.Name, "': Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,", BuffDesc.uiSizeInBytes, ")");
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        const auto& BuffDesc = ValidatedCast<BufferImplType>(pBuffer)->GetDesc();
+        DEV_CHECK_ERR(BuffDesc.Usage == USAGE_DEFAULT, "Unable to update buffer '", BuffDesc.Name, "': only USAGE_DEFAULT buffers can be updated with UpdateData()");
+        DEV_CHECK_ERR(Offset < BuffDesc.uiSizeInBytes, "Unable to update buffer '", BuffDesc.Name, "': offset (", Offset, ") exceeds the buffer size (", BuffDesc.uiSizeInBytes, ")");
+        DEV_CHECK_ERR(Size + Offset <= BuffDesc.uiSizeInBytes, "Unable to update buffer '", BuffDesc.Name, "': Update region [", Offset, ",", Size + Offset, ") is out of buffer bounds [0,", BuffDesc.uiSizeInBytes, ")");
+    }
 #endif
 }
 
@@ -977,11 +979,13 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 {
     VERIFY(pSrcBuffer != nullptr, "Source buffer must not be null");
     VERIFY(pDstBuffer != nullptr, "Destination buffer must not be null");
-#ifdef DEVELOPMENT
-    const auto& SrcBufferDesc = ValidatedCast<BufferImplType>(pSrcBuffer)->GetDesc();
-    const auto& DstBufferDesc = ValidatedCast<BufferImplType>(pDstBuffer)->GetDesc();
-    DEV_CHECK_ERR(DstOffset + Size <= DstBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Destination range [", DstOffset, ",", DstOffset + Size, ") is out of buffer bounds [0,", DstBufferDesc.uiSizeInBytes, ")");
-    DEV_CHECK_ERR(SrcOffset + Size <= SrcBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,", SrcBufferDesc.uiSizeInBytes, ")");
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        const auto& SrcBufferDesc = ValidatedCast<BufferImplType>(pSrcBuffer)->GetDesc();
+        const auto& DstBufferDesc = ValidatedCast<BufferImplType>(pDstBuffer)->GetDesc();
+        DEV_CHECK_ERR(DstOffset + Size <= DstBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Destination range [", DstOffset, ",", DstOffset + Size, ") is out of buffer bounds [0,", DstBufferDesc.uiSizeInBytes, ")");
+        DEV_CHECK_ERR(SrcOffset + Size <= SrcBufferDesc.uiSizeInBytes, "Failed to copy buffer '", SrcBufferDesc.Name, "' to '", DstBufferDesc.Name, "': Source range [", SrcOffset, ",", SrcOffset + Size, ") is out of buffer bounds [0,", SrcBufferDesc.uiSizeInBytes, ")");
+    }
 #endif
 }
 
@@ -993,9 +997,11 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 
     const auto& BuffDesc = pBuffer->GetDesc();
 
-#ifdef _DEBUG
-    VERIFY(m_DbgMappedBuffers.find(pBuffer) == m_DbgMappedBuffers.end(), "Buffer '", BuffDesc.Name, "' has already been mapped");
-    m_DbgMappedBuffers[pBuffer] = DbgMappedBufferInfo{MapType};
+#ifdef DILIGENT_DEBUG
+    {
+        VERIFY(m_DbgMappedBuffers.find(pBuffer) == m_DbgMappedBuffers.end(), "Buffer '", BuffDesc.Name, "' has already been mapped");
+        m_DbgMappedBuffers[pBuffer] = DbgMappedBufferInfo{MapType};
+    }
 #endif
 
     pMappedData = nullptr;
@@ -1040,11 +1046,13 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 {
     VERIFY(pBuffer, "pBuffer must not be null");
-#ifdef _DEBUG
-    auto MappedBufferIt = m_DbgMappedBuffers.find(pBuffer);
-    VERIFY(MappedBufferIt != m_DbgMappedBuffers.end(), "Buffer '", pBuffer->GetDesc().Name, "' has not been mapped.");
-    VERIFY(MappedBufferIt->second.MapType == MapType, "MapType (", MapType, ") does not match the map type that was used to map the buffer ", MappedBufferIt->second.MapType);
-    m_DbgMappedBuffers.erase(MappedBufferIt);
+#ifdef DILIGENT_DEBUG
+    {
+        auto MappedBufferIt = m_DbgMappedBuffers.find(pBuffer);
+        VERIFY(MappedBufferIt != m_DbgMappedBuffers.end(), "Buffer '", pBuffer->GetDesc().Name, "' has not been mapped.");
+        VERIFY(MappedBufferIt->second.MapType == MapType, "MapType (", MapType, ") does not match the map type that was used to map the buffer ", MappedBufferIt->second.MapType);
+        m_DbgMappedBuffers.erase(MappedBufferIt);
+    }
 #endif
 }
 
@@ -1094,12 +1102,14 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     GenerateMips(ITextureView* pTexView)
 {
     VERIFY(pTexView != nullptr, "pTexView must not be null");
-#ifdef DEVELOPMENT
-    const auto& ViewDesc = pTexView->GetDesc();
-    DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Shader resource view '", ViewDesc.Name,
-                  "' can't be used to generate mipmaps because its type is ", GetTexViewTypeLiteralName(ViewDesc.ViewType), ". Required view type: TEXTURE_VIEW_SHADER_RESOURCE.");
-    DEV_CHECK_ERR((ViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0, "Shader resource view '", ViewDesc.Name,
-                  "' was not created with TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION flag and can't be used to generate mipmaps.");
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        const auto& ViewDesc = pTexView->GetDesc();
+        DEV_CHECK_ERR(ViewDesc.ViewType == TEXTURE_VIEW_SHADER_RESOURCE, "Shader resource view '", ViewDesc.Name,
+                      "' can't be used to generate mipmaps because its type is ", GetTexViewTypeLiteralName(ViewDesc.ViewType), ". Required view type: TEXTURE_VIEW_SHADER_RESOURCE.");
+        DEV_CHECK_ERR((ViewDesc.Flags & TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION) != 0, "Shader resource view '", ViewDesc.Name,
+                      "' was not created with TEXTURE_VIEW_FLAG_ALLOW_MIP_MAP_GENERATION flag and can't be used to generate mipmaps.");
+    }
 #endif
 }
 
@@ -1110,7 +1120,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
                               ITexture*                               pDstTexture,
                               const ResolveTextureSubresourceAttribs& ResolveAttribs)
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     VERIFY_EXPR(pSrcTexture != nullptr && pDstTexture != nullptr);
     const auto& SrcTexDesc = pSrcTexture->GetDesc();
     const auto& DstTexDesc = pDstTexture->GetDesc();
@@ -1151,7 +1161,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
 #endif
 }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
 template <typename BaseInterface, typename ImplementationTraits>
 inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     DvpVerifyDrawArguments(const DrawAttribs& Attribs) const
@@ -1522,6 +1532,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     return true;
 }
 
-#endif // DEVELOPMENT
+#endif // DILIGENT_DEVELOPMENT
 
 } // namespace Diligent

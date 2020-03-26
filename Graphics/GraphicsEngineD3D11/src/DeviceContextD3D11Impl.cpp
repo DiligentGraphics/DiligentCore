@@ -173,7 +173,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
 
     if (pShaderResourceBinding == nullptr)
     {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         bool ResourcesPresent = false;
         for (Uint32 s = 0; s < pPipelineStateD3D11->GetNumShaders(); ++s)
         {
@@ -193,7 +193,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
 
 
     auto pShaderResBindingD3D11 = ValidatedCast<ShaderResourceBindingD3D11Impl>(pShaderResourceBinding);
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (pPipelineStateD3D11->IsIncompatibleWith(pShaderResourceBinding->GetPipelineState()))
     {
         LOG_ERROR_MESSAGE("Shader resource binding does not match Pipeline State");
@@ -204,18 +204,20 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
     auto NumShaders = pShaderResBindingD3D11->GetNumActiveShaders();
     VERIFY(NumShaders == pPipelineStateD3D11->GetNumShaders(), "Number of active shaders in shader resource binding is not consistent with the number of shaders in the pipeline state");
 
-#ifdef DEVELOPMENT
-    bool StaticResourcesPresent = false;
-    for (Uint32 s = 0; s < NumShaders; ++s)
+#ifdef DILIGENT_DEVELOPMENT
     {
-        const auto& StaticResLayout = pPipelineStateD3D11->GetStaticResourceLayout(s);
-        if (StaticResLayout.GetTotalResourceCount() > 0)
-            StaticResourcesPresent = true;
-    }
-    // Static resource bindings are verified in BindStaticShaderResources()
-    if (StaticResourcesPresent && !pShaderResBindingD3D11->IsStaticResourcesBound())
-    {
-        LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", pPSO->GetDesc().Name, "'. Please call IShaderResourceBinding::InitializeStaticResources().");
+        bool StaticResourcesPresent = false;
+        for (Uint32 s = 0; s < NumShaders; ++s)
+        {
+            const auto& StaticResLayout = pPipelineStateD3D11->GetStaticResourceLayout(s);
+            if (StaticResLayout.GetTotalResourceCount() > 0)
+                StaticResourcesPresent = true;
+        }
+        // Static resource bindings are verified in BindStaticShaderResources()
+        if (StaticResourcesPresent && !pShaderResBindingD3D11->IsStaticResourcesBound())
+        {
+            LOG_ERROR_MESSAGE("Static resources have not been initialized in the shader resource binding object being committed for PSO '", pPSO->GetDesc().Name, "'. Please call IShaderResourceBinding::InitializeStaticResources().");
+        }
     }
 #endif
 
@@ -225,7 +227,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
     {
         auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
         VERIFY_EXPR(ShaderTypeInd == static_cast<Int32>(GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType)));
 #endif
@@ -274,7 +276,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                         }
                     }
                 }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 else if (VerifyStates)
                 {
                     if (const auto* pTexture = ValidatedCast<TextureBaseD3D11>(UAVRes.pTexture))
@@ -336,7 +338,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                     }
                 }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 if ((m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE) != 0 && ShaderTypeInd == CSInd)
                 {
                     dbgVerifyCommittedUAVs(pShaderD3D11->GetDesc().ShaderType);
@@ -371,7 +373,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
     {
         auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s);
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
         VERIFY_EXPR(ShaderTypeInd == static_cast<Int32>(GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType)));
 #endif
@@ -414,7 +416,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                         }
                     }
                 }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 else if (VerifyStates)
                 {
                     VERIFY_EXPR(CommitResources);
@@ -446,7 +448,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                     (m_pd3d11DeviceContext->*SetCBMethod)(MinSlot, MaxSlot - MinSlot + 1, CommittedD3D11CBs + MinSlot);
                     m_NumCommittedCBs[ShaderTypeInd] = std::max(m_NumCommittedCBs[ShaderTypeInd], static_cast<Uint8>(NumCBs));
                 }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
                 {
                     dbgVerifyCommittedCBs(pShaderD3D11->GetDesc().ShaderType);
@@ -513,7 +515,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                         }
                     }
                 }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 else if (VerifyStates)
                 {
                     VERIFY_EXPR(CommitResources);
@@ -553,7 +555,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                     (m_pd3d11DeviceContext->*SetSRVMethod)(MinSlot, MaxSlot - MinSlot + 1, CommittedD3D11SRVs + MinSlot);
                     m_NumCommittedSRVs[ShaderTypeInd] = std::max(m_NumCommittedSRVs[ShaderTypeInd], static_cast<Uint8>(NumSRVs));
                 }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
                 {
                     dbgVerifyCommittedSRVs(pShaderD3D11->GetDesc().ShaderType);
@@ -593,7 +595,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                     (m_pd3d11DeviceContext->*SetSamplerMethod)(MinSlot, MaxSlot - MinSlot + 1, CommittedD3D11Samplers + MinSlot);
                     m_NumCommittedSamplers[ShaderTypeInd] = std::max(m_NumCommittedSamplers[ShaderTypeInd], static_cast<Uint8>(NumSamplers));
                 }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
                 {
                     dbgVerifyCommittedSamplers(pShaderD3D11->GetDesc().ShaderType);
@@ -604,7 +606,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
 
 
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (CommitResources && (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_SHADER_RESOURCES) != 0)
         {
             // Use full resource layout to verify that all required resources are committed
@@ -751,7 +753,7 @@ void DeviceContextD3D11Impl::CommitD3D11VertexBuffers(PipelineStateD3D11Impl* pP
 
 void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
 {
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
 #endif
@@ -763,7 +765,7 @@ void DeviceContextD3D11Impl::PrepareForDraw(DRAW_FLAGS Flags)
         CommitD3D11VertexBuffers(m_pPipelineState);
     }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_STATES) != 0)
     {
         for (UINT Slot = 0; Slot < m_NumVertexStreams; ++Slot)
@@ -801,7 +803,7 @@ void DeviceContextD3D11Impl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE 
     {
         CommitD3D11IndexBuffer(IndexType);
     }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (Flags & DRAW_FLAG_VERIFY_STATES)
     {
         if (m_pIndexBuffer->IsInKnownState() && m_pIndexBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
@@ -873,7 +875,7 @@ void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attri
     if (!DvpVerifyDispatchArguments(Attribs))
         return;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
@@ -893,7 +895,7 @@ void DeviceContextD3D11Impl::DispatchComputeIndirect(const DispatchComputeIndire
     if (!DvpVerifyDispatchIndirectArguments(Attribs, pAttribsBuffer))
         return;
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
@@ -1178,7 +1180,7 @@ void DeviceContextD3D11Impl::SetVertexBuffers(Uint32                         Sta
                     pBuffD3D11Impl->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
                 }
             }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
             {
                 if (pBuffD3D11Impl->IsInKnownState() && pBuffD3D11Impl->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
@@ -1208,7 +1210,7 @@ void DeviceContextD3D11Impl::SetIndexBuffer(IBuffer* pIndexBuffer, Uint32 ByteOf
                 m_pIndexBuffer->ClearState(RESOURCE_STATE_UNORDERED_ACCESS);
             }
         }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
         {
             if (m_pIndexBuffer->IsInKnownState() && m_pIndexBuffer->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
@@ -1444,7 +1446,7 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3
             m_bCommittedD3D11IBUpToDate          = false;
             m_pd3d11DeviceContext->IASetIndexBuffer(nullptr, DXGI_FORMAT_R32_UINT, m_CommittedD3D11IndexDataStartOffset);
         }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
             dbgVerifyCommittedIndexBuffer();
@@ -1472,7 +1474,7 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3
                 m_pd3d11DeviceContext->IASetVertexBuffers(Slot, _countof(ppNullBuffer), ppNullBuffer, Zero, Zero);
             }
         }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
             dbgVerifyCommittedVertexBuffers();
@@ -1498,7 +1500,7 @@ void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3
                 }
             }
         }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
         {
             dbgVerifyCommittedCBs();
@@ -1582,7 +1584,7 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
                     if (pTex->IsInKnownState())
                         pTex->SetState(RESOURCE_STATE_RENDER_TARGET);
                 }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
                 else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
                 {
                     DvpVerifyTextureState(*pTex, RESOURCE_STATE_RENDER_TARGET, "Setting render targets (DeviceContextD3D11Impl::SetRenderTargets)");
@@ -1600,7 +1602,7 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
                 if (pTex->IsInKnownState())
                     pTex->SetState(RESOURCE_STATE_DEPTH_WRITE);
             }
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
             else if (StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
             {
                 DvpVerifyTextureState(*pTex, RESOURCE_STATE_DEPTH_WRITE, "Setting depth-stencil buffer (DeviceContextD3D11Impl::SetRenderTargets)");
@@ -1684,7 +1686,7 @@ void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
         m_NumCommittedUAVs[ShaderType]     = 0;
     }
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         dbgVerifyCommittedSRVs();
@@ -1717,7 +1719,7 @@ void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
     // Device context is now in default state
     InvalidateState();
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
@@ -1754,7 +1756,7 @@ void DeviceContextD3D11Impl::ExecuteCommandList(ICommandList* pCommandList)
     // Device context is now in default state
     InvalidateState();
 
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
     if (m_DebugFlags & D3D11_DEBUG_FLAG_VERIFY_COMMITTED_RESOURCE_RELEVANCE)
     {
         // Verify bindings
@@ -1945,7 +1947,7 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, State
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {
         const auto& Barrier = pResourceBarriers[i];
-#ifdef DEVELOPMENT
+#ifdef DILIGENT_DEVELOPMENT
         DvpVerifyStateTransitionDesc(Barrier);
 #endif
         DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer must not be null");
