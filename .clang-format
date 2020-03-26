@@ -232,6 +232,16 @@ BraceWrapping:
   # else
 
 
+  #BeforeLambdaBody: true - not available in 10.0
+  #true:
+  #connect(
+  #  []()
+  #  {
+  #    foo();
+  #    bar();
+  #  });
+  
+
   # Indent the wrapped braces themselves.
   IndentBraces: false
 

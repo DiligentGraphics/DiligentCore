@@ -257,8 +257,10 @@ private:
         T*&      operator*() noexcept { return NewRawPtr; }
         const T* operator*() const noexcept { return NewRawPtr; }
 
+        // clang-format off
         operator T**() noexcept { return &NewRawPtr; }
         operator const T**() const noexcept { return &NewRawPtr; }
+        // clang-format on
 
     private:
         T*             NewRawPtr;
