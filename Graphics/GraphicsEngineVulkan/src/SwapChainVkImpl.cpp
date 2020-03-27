@@ -233,6 +233,24 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     if (!PresentModeSupported)
     {
         VERIFY(swapchainPresentMode != VK_PRESENT_MODE_FIFO_KHR, "The FIFO present mode is guaranteed by the spec to be supported");
+
+        const char* PresentModeName = nullptr;
+
+#define PRESENT_MODE_CASE(Mode) \
+    case Mode: PresentModeName = #Mode; break;
+        switch (swapchainPresentMode)
+        {
+            PRESENT_MODE_CASE(VK_PRESENT_MODE_IMMEDIATE_KHR)
+            PRESENT_MODE_CASE(VK_PRESENT_MODE_MAILBOX_KHR)
+            PRESENT_MODE_CASE(VK_PRESENT_MODE_FIFO_KHR)
+            PRESENT_MODE_CASE(VK_PRESENT_MODE_FIFO_RELAXED_KHR)
+            PRESENT_MODE_CASE(VK_PRESENT_MODE_SHARED_DEMAND_REFRESH_KHR)
+            PRESENT_MODE_CASE(VK_PRESENT_MODE_SHARED_CONTINUOUS_REFRESH_KHR)
+            default: PresentModeName = "<UNKNOWN>";
+        }
+#undef PRESENT_MODE_CASE
+        LOG_WARNING_MESSAGE(PresentModeName, " is not supported. Defaulting to VK_PRESENT_MODE_FIFO_KHR");
+
         swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
         // The FIFO present mode is guaranteed by the spec to be supported
         VERIFY(std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end(), "FIFO present mode must be supported");
