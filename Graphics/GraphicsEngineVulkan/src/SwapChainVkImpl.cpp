@@ -226,12 +226,13 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     m_SwapChainDesc.Width  = swapchainExtent.width;
     m_SwapChainDesc.Height = swapchainExtent.height;
 
-    // Mailbox is the lowest latency non-tearing presentation mode
-    VkPresentModeKHR swapchainPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+    // Mailbox is the lowest latency non-tearing presentation mode.
+    VkPresentModeKHR swapchainPresentMode = m_VSyncEnabled ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR;
 
     bool PresentModeSupported = std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end();
     if (!PresentModeSupported)
     {
+        VERIFY(swapchainPresentMode != VK_PRESENT_MODE_FIFO_KHR, "The FIFO present mode is guaranteed by the spec to be supported");
         swapchainPresentMode = VK_PRESENT_MODE_FIFO_KHR;
         // The FIFO present mode is guaranteed by the spec to be supported
         VERIFY(std::find(presentModes.begin(), presentModes.end(), swapchainPresentMode) != presentModes.end(), "FIFO present mode must be supported");
@@ -542,6 +543,9 @@ IMPLEMENT_QUERY_INTERFACE(SwapChainVkImpl, IID_SwapChainVk, TSwapChainBase)
 
 void SwapChainVkImpl::Present(Uint32 SyncInterval)
 {
+    if (SyncInterval != 0 && SyncInterval != 1)
+        LOG_WARNING_MESSAGE_ONCE("Vulkan only supports 0 and 1 present intervals");
+
     auto pDeviceContext = m_wpDeviceContext.Lock();
     if (!pDeviceContext)
     {
@@ -612,9 +616,12 @@ void SwapChainVkImpl::Present(Uint32 SyncInterval)
         if (m_SemaphoreIndex >= m_SwapChainDesc.BufferCount)
             m_SemaphoreIndex = 0;
 
-        auto res = AcquireNextImage(pImmediateCtxVk);
+        bool EnableVSync = SyncInterval != 0;
+
+        auto res = (m_VSyncEnabled == EnableVSync) ? AcquireNextImage(pImmediateCtxVk) : VK_ERROR_OUT_OF_DATE_KHR;
         if (res == VK_SUBOPTIMAL_KHR || res == VK_ERROR_OUT_OF_DATE_KHR)
         {
+            m_VSyncEnabled = EnableVSync;
             RecreateVulkanSwapchain(pImmediateCtxVk);
             m_SemaphoreIndex = m_SwapChainDesc.BufferCount - 1; // To start with 0 index when acquire next image
 

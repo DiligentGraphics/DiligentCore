@@ -106,6 +106,7 @@ private:
     Uint32   m_SemaphoreIndex  = 0;
     uint32_t m_BackBufferIndex = 0;
     bool     m_IsMinimized     = false;
+    bool     m_VSyncEnabled    = true;
 };
 
 } // namespace Diligent
