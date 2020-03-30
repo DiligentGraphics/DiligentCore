@@ -58,6 +58,8 @@ public:
 
     static std::string OpenFileDialog(const char* Title, const char* Filter);
 
+    static std::string SaveFileDialog(const char* Title, const char* Filter);
+
     static std::string GetCurrentDirectory();
 
 

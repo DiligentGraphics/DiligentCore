@@ -296,6 +296,25 @@ std::string WindowsFileSystem::OpenFileDialog(const char* Title, const char* Fil
     return FileName;
 }
 
+std::string WindowsFileSystem::SaveFileDialog(const char* Title, const char* Filter)
+{
+    std::string   FileName;
+    char          buffer[1024] = {};
+    OPENFILENAMEA ofn          = {};
+    ofn.lStructSize            = sizeof(ofn);
+    ofn.lpstrFilter            = Filter;
+    ofn.lpstrFile              = buffer;
+    ofn.nMaxFile               = _countof(buffer);
+    ofn.lpstrTitle             = Title;
+    ofn.Flags                  = OFN_DONTADDTORECENT | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
+    if (GetSaveFileNameA(&ofn))
+    {
+        FileName = buffer;
+    }
+    return FileName;
+}
+
+
 bool WindowsFileSystem::IsDirectory(const Diligent::Char* strPath)
 {
     if (!PathExists(strPath))
