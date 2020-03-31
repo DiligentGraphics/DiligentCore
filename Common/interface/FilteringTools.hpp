@@ -164,7 +164,7 @@ void _DbgVerifyFilterInfo(const LinearTexFilterSampleInfo& FilterInfo, Uint32 Wi
 }
 
 template <>
-void _DbgVerifyFilterInfo<TEXTURE_ADDRESS_UNKNOWN>(const LinearTexFilterSampleInfo& FilterInfo, Uint32 Width, const char* Direction, float u)
+inline void _DbgVerifyFilterInfo<TEXTURE_ADDRESS_UNKNOWN>(const LinearTexFilterSampleInfo& FilterInfo, Uint32 Width, const char* Direction, float u)
 {
     VERIFY(FilterInfo.i0 >= 0 && FilterInfo.i0 < static_cast<Int32>(Width), "First ", Direction, " sample index (", FilterInfo.i0,
            ") is out of allowed range [0, ", Width - 1, "]. Correct sample coordinate (", u, ") or use one of the texture address modes.");
