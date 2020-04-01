@@ -126,11 +126,14 @@ elseif(PLATFORM_MACOS)
 elseif(PLATFORM_IOS)
     set(GLES_SUPPORTED TRUE CACHE INTERNAL "OpenGLES is supported on iOS platform")
     set(METAL_SUPPORTED TRUE CACHE INTERNAL "Metal is supported on iOS platform")
-    if(VULKAN_SDK)
-        # iOS.toolchain.cmake currently configures cmake to only search iOS SDK for libraries,
-        # thus find_library will be unable to find MoltenVK in VulkanSDK
-        # find_library(MoltenVK_LIBRARY MoltenVK PATHS "${VULKAN_SDK}/MoltenVK/iOS/dynamic")
-        set(MoltenVK_LIBRARY "${VULKAN_SDK}/MoltenVK/iOS/dynamic/libMoltenVK.dylib" CACHE INTERNAL "MoltenVK library")
+    if(VULKAN_SDK OR MoltenVK_LIBRARY)
+        if(NOT MoltenVK_LIBRARY)
+            # iOS.toolchain.cmake currently configures cmake to only search iOS SDK for libraries,
+            # thus find_library will be unable to find MoltenVK in VulkanSDK
+            # find_library(MoltenVK_LIBRARY MoltenVK PATHS "${VULKAN_SDK}/MoltenVK/iOS/dynamic")
+            set(MoltenVK_LIBRARY "${VULKAN_SDK}/MoltenVK/iOS/dynamic/libMoltenVK.dylib" CACHE INTERNAL "MoltenVK library")
+        endif()
+
         if(EXISTS ${MoltenVK_LIBRARY})
             set(VULKAN_SUPPORTED TRUE CACHE INTERNAL "Vulkan is enabled through MoltenVK on iOS platform")
         else()
@@ -138,7 +141,7 @@ elseif(PLATFORM_IOS)
             unset(MoltenVK_LIBRARY CACHE)
         endif()
     else()
-        message("VULKAN_SDK is undefined. Vulkan backend will be disabled.")
+        message("VULKAN_SDK or MoltenVK_LIBRARY is not defined. Vulkan backend will be disabled.")
     endif()
     target_compile_definitions(Diligent-BuildSettings INTERFACE PLATFORM_IOS=1)
 else()
