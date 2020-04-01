@@ -105,8 +105,10 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
     CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
     pDeviceGL->CreateBuffer(CBDesc, nullptr, &m_pConstantBuffer, IsInternalDeviceObject);
 
-    PipelineStateDesc PSODesc;
-    auto&             GraphicsPipeline       = PSODesc.GraphicsPipeline;
+    PipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
+    auto& GraphicsPipeline                   = PSODesc.GraphicsPipeline;
     GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_NONE;
     GraphicsPipeline.RasterizerDesc.FillMode = FILL_MODE_SOLID;
 
@@ -158,7 +160,7 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
             PSODesc.ResourceLayout.NumVariables = _countof(Vars);
             PSODesc.ResourceLayout.Variables    = Vars;
 
-            pDeviceGL->CreatePipelineState(PSODesc, &m_pPSO[Dim * 3 + Fmt], IsInternalDeviceObject);
+            pDeviceGL->CreatePipelineState(PSOCreateInfo, &m_pPSO[Dim * 3 + Fmt], IsInternalDeviceObject);
         }
     }
     m_pPSO[RESOURCE_DIM_TEX_2D * 3]->CreateShaderResourceBinding(&m_pSRB);

@@ -49,10 +49,10 @@ class PipelineStateGLImpl final : public PipelineStateBase<IPipelineStateGL, Ren
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>;
 
-    PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
-                        RenderDeviceGLImpl*      pDeviceGL,
-                        const PipelineStateDesc& PipelineDesc,
-                        bool                     IsDeviceInternal = false);
+    PipelineStateGLImpl(IReferenceCounters*            pRefCounters,
+                        RenderDeviceGLImpl*            pDeviceGL,
+                        const PipelineStateCreateInfo& CreateInfo,
+                        bool                           IsDeviceInternal = false);
     ~PipelineStateGLImpl();
 
     /// Queries the specific interface, see IObject::QueryInterface() for details

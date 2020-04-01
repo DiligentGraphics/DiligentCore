@@ -67,10 +67,10 @@ private:
     std::array<D3D12_PRIMITIVE_TOPOLOGY_TYPE, PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES> m_Map;
 };
 
-PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*      pRefCounters,
-                                               RenderDeviceD3D12Impl*   pDeviceD3D12,
-                                               const PipelineStateDesc& PipelineDesc) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, PipelineDesc},
+PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pRefCounters,
+                                               RenderDeviceD3D12Impl*         pDeviceD3D12,
+                                               const PipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo.PSODesc},
     m_SRBMemAllocator{GetRawAllocator()}
 {
     auto        pd3d12Device   = pDeviceD3D12->GetD3D12Device();

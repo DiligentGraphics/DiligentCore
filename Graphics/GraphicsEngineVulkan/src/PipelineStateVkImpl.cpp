@@ -149,10 +149,10 @@ static std::vector<uint32_t> StripReflection(const std::vector<uint32_t>& Origin
     return StrippedSPIRV;
 }
 
-PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*      pRefCounters,
-                                         RenderDeviceVkImpl*      pDeviceVk,
-                                         const PipelineStateDesc& PipelineDesc) :
-    TPipelineStateBase{pRefCounters, pDeviceVk, PipelineDesc},
+PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCounters,
+                                         RenderDeviceVkImpl*            pDeviceVk,
+                                         const PipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
     m_SRBMemAllocator{GetRawAllocator()}
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();

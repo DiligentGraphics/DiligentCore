@@ -42,7 +42,7 @@ protected:
     static void InitResources();
     static void ReleaseResources();
 
-    static RefCntAutoPtr<IPipelineState> CreateTestPSO(const PipelineStateDesc& PSODesc, bool BindPSO);
+    static RefCntAutoPtr<IPipelineState> CreateTestPSO(const PipelineStateCreateInfo& PSOCreateInfo, bool BindPSO);
 
     static PipelineStateDesc& GetPSODesc()
     {

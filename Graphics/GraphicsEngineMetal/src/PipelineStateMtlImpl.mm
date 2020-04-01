@@ -29,13 +29,13 @@
 namespace Diligent
 {
 
-PipelineStateMtlImpl::PipelineStateMtlImpl(IReferenceCounters*      pRefCounters,
-                                           RenderDeviceMtlImpl*     pRenderDeviceMtl,
-                                           const PipelineStateDesc& PipelineDesc) : 
-    TPipelineStateBase(pRefCounters, pRenderDeviceMtl, PipelineDesc)
+PipelineStateMtlImpl::PipelineStateMtlImpl(IReferenceCounters*            pRefCounters,
+                                           RenderDeviceMtlImpl*           pRenderDeviceMtl,
+                                           const PipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase(pRefCounters, pRenderDeviceMtl, CreateInfo.PSODesc)
 {
     LOG_ERROR_AND_THROW("Pipeline states are not implemented in Metal backend");
-    if (PipelineDesc.IsComputePipeline)
+    if (CreateInfo.PSODesc.IsComputePipeline)
     {
 
     }

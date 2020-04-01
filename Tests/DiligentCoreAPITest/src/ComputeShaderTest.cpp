@@ -138,13 +138,14 @@ TEST(ComputeShaderTest, FillTexture)
     pDevice->CreateShader(ShaderCI, &pCS);
     ASSERT_NE(pCS, nullptr);
 
-    PipelineStateDesc PSODesc;
-    PSODesc.Name                = "Compute shader test";
-    PSODesc.IsComputePipeline   = true;
-    PSODesc.ComputePipeline.pCS = pCS;
+    PipelineStateCreateInfo PSOCreateInfo;
+
+    PSOCreateInfo.PSODesc.Name                = "Compute shader test";
+    PSOCreateInfo.PSODesc.IsComputePipeline   = true;
+    PSOCreateInfo.PSODesc.ComputePipeline.pCS = pCS;
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     const auto& SCDesc = pSwapChain->GetDesc();

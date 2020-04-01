@@ -467,18 +467,18 @@ void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler*
 }
 
 
-void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)
+void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    CreatePipelineState(PipelineDesc, ppPipelineState, false);
+    CreatePipelineState(PSOCreateInfo, ppPipelineState, false);
 }
 
-void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
+void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
 {
     CreateDeviceObject(
-        "Pipeline state", PipelineDesc, ppPipelineState,
+        "Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState,
         [&]() //
         {
-            PipelineStateGLImpl* pPipelineStateOGL(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl)(this, PipelineDesc, bIsDeviceInternal));
+            PipelineStateGLImpl* pPipelineStateOGL(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl)(this, PSOCreateInfo, bIsDeviceInternal));
             pPipelineStateOGL->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
             OnCreateDeviceObject(pPipelineStateOGL);
         } //

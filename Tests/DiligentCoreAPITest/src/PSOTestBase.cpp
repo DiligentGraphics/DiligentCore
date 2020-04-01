@@ -83,14 +83,14 @@ void PSOTestBase::ReleaseResources()
     TestingEnvironment::GetInstance()->Reset();
 }
 
-RefCntAutoPtr<IPipelineState> PSOTestBase::CreateTestPSO(const PipelineStateDesc& PSODesc, bool BindPSO)
+RefCntAutoPtr<IPipelineState> PSOTestBase::CreateTestPSO(const PipelineStateCreateInfo& PSOCreateInfo, bool BindPSO)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
     if (BindPSO && pPSO)
     {
         pContext->SetPipelineState(pPSO);

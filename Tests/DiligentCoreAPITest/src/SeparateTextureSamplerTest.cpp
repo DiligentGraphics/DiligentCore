@@ -93,7 +93,9 @@ TEST(SeparateTextureSampler, CreateSampler)
     pDevice->CreateShader(Attrs, &pPS);
     ASSERT_TRUE(pPS);
 
-    PipelineStateDesc PSODesc;
+    PipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
     PSODesc.GraphicsPipeline.pVS                          = pVS;
     PSODesc.GraphicsPipeline.pPS                          = pPS;
     PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
@@ -121,7 +123,7 @@ TEST(SeparateTextureSampler, CreateSampler)
     PSODesc.ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
     ASSERT_TRUE(pPSO);
 
     TextureDesc TexDesc;

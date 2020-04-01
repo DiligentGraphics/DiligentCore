@@ -55,7 +55,7 @@ public:
 
     virtual void CreateSampler(const SamplerDesc& SamplerDesc, ISampler** ppSampler) override final;
 
-    virtual void CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState) override final;
+    virtual void CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
 
     virtual void CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;
 

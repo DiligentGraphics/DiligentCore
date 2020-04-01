@@ -54,16 +54,19 @@ protected:
 
 TEST_F(RasterizerStateTest, CreatePSO)
 {
-    auto PSODesc = GetPSODesc();
+    PipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
+    PSODesc = GetPSODesc();
 
     RasterizerStateDesc& RSDesc = PSODesc.GraphicsPipeline.RasterizerDesc;
 
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     for (auto FillMode = FILL_MODE_UNDEFINED + 1; FillMode < FILL_MODE_NUM_MODES; ++FillMode)
     {
         RSDesc.FillMode = static_cast<FILL_MODE>(FillMode);
-        auto pPSO       = CreateTestPSO(PSODesc, true);
+        auto pPSO       = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO) << "Fill mode: " << GetFillModeLiteralName(RSDesc.FillMode);
         EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.FillMode, RSDesc.FillMode);
     }
@@ -71,43 +74,43 @@ TEST_F(RasterizerStateTest, CreatePSO)
     for (auto CullMode = CULL_MODE_UNDEFINED + 1; CullMode < CULL_MODE_NUM_MODES; ++CullMode)
     {
         RSDesc.CullMode = static_cast<CULL_MODE>(CullMode);
-        auto pPSO       = CreateTestPSO(PSODesc, true);
+        auto pPSO       = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO) << "Cull mode: " << GetCullModeLiteralName(RSDesc.CullMode);
         EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.CullMode, RSDesc.CullMode);
     }
 
     {
         RSDesc.FrontCounterClockwise = !RSDesc.FrontCounterClockwise;
-        auto pPSO                    = CreateTestPSO(PSODesc, true);
+        auto pPSO                    = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
         EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.FrontCounterClockwise, RSDesc.FrontCounterClockwise);
     }
 
     RSDesc.DepthBias = 100;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     RSDesc.DepthBiasClamp = 1.f;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     RSDesc.SlopeScaledDepthBias = 2.f;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     {
         RSDesc.DepthClipEnable = !RSDesc.DepthClipEnable;
-        auto pPSO              = CreateTestPSO(PSODesc, true);
+        auto pPSO              = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
         EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.DepthClipEnable, RSDesc.DepthClipEnable);
     }
 
     {
         RSDesc.ScissorEnable = !RSDesc.ScissorEnable;
-        auto pPSO            = CreateTestPSO(PSODesc, true);
+        auto pPSO            = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
         EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.ScissorEnable, RSDesc.ScissorEnable);
     }
 
     RSDesc.AntialiasedLineEnable = !RSDesc.AntialiasedLineEnable;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 }
 
 } // namespace

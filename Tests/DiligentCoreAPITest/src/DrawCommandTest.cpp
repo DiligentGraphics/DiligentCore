@@ -223,7 +223,9 @@ protected:
         }
         TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
-        PipelineStateDesc PSODesc;
+        PipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
         PSODesc.Name = "Draw command test - procedural triangles";
 
         PSODesc.IsComputePipeline                             = false;
@@ -281,7 +283,7 @@ protected:
 
         PSODesc.GraphicsPipeline.pVS = pProceduralVS;
         PSODesc.GraphicsPipeline.pPS = pPS;
-        pDevice->CreatePipelineState(PSODesc, &sm_pDrawProceduralPSO);
+        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pDrawProceduralPSO);
         ASSERT_NE(sm_pDrawProceduralPSO, nullptr);
 
         InputLayoutDesc LayoutDesc;
@@ -297,13 +299,13 @@ protected:
         PSODesc.GraphicsPipeline.pVS                        = pVS;
         PSODesc.GraphicsPipeline.pPS                        = pPS;
         PSODesc.GraphicsPipeline.PrimitiveTopology          = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        pDevice->CreatePipelineState(PSODesc, &sm_pDrawPSO);
+        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pDrawPSO);
 
 
         PSODesc.Name = "Draw command test - 2x stride";
 
         Elems[0].Stride = sizeof(Vertex) * 2;
-        pDevice->CreatePipelineState(PSODesc, &sm_pDraw_2xStride_PSO);
+        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pDraw_2xStride_PSO);
 
 
         PSODesc.Name = "Instanced draw command test";
@@ -318,7 +320,7 @@ protected:
         PSODesc.GraphicsPipeline.InputLayout.LayoutElements = InstancedElems;
         PSODesc.GraphicsPipeline.InputLayout.NumElements    = _countof(InstancedElems);
         PSODesc.GraphicsPipeline.pVS                        = pInstancedVS;
-        pDevice->CreatePipelineState(PSODesc, &sm_pDrawInstancedPSO);
+        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pDrawInstancedPSO);
     }
 
     static void TearDownTestSuite()

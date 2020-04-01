@@ -109,7 +109,9 @@ protected:
         sm_pRTV = pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
         ASSERT_NE(sm_pRTV, nullptr);
 
-        PipelineStateDesc PSODesc;
+        PipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
         PSODesc.Name = "Query command test - procedural quad";
 
         PSODesc.IsComputePipeline                             = false;
@@ -145,7 +147,7 @@ protected:
 
         PSODesc.GraphicsPipeline.pVS = pVS;
         PSODesc.GraphicsPipeline.pPS = pPS;
-        pDevice->CreatePipelineState(PSODesc, &sm_pPSO);
+        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pPSO);
         ASSERT_NE(sm_pPSO, nullptr);
     }
 

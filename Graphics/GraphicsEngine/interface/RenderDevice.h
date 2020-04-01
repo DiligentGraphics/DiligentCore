@@ -154,14 +154,14 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
     /// Creates a new pipeline state object
 
-    /// \param [in]  PipelineDesc    - Pipeline state description, see Diligent::PipelineStateDesc for details.
+    /// \param [in]  PSOCreateInfo   - Pipeline state create info, see Diligent::PipelineStateCreateInfo for details.
     /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
     ///                                pipeline state interface will be stored.
     ///                                The function calls AddRef(), so that the new object will contain
     ///                                one reference.
     VIRTUAL void METHOD(CreatePipelineState)(THIS_
-                                             const PipelineStateDesc REF PipelineDesc,
-                                             IPipelineState**            ppPipelineState) PURE;
+                                             const PipelineStateCreateInfo REF PSOCreateInfo,
+                                             IPipelineState**                  ppPipelineState) PURE;
 
 
     /// Creates a new fence object

@@ -289,7 +289,8 @@ TEST(ShaderResourceLayout, VariableAccess)
     }
 
 
-    PipelineStateDesc PSODesc;
+    PipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
 
     PSODesc.ResourceLayout.Variables         = VarDesc.data();
     PSODesc.ResourceLayout.NumVariables      = static_cast<Uint32>(VarDesc.size());
@@ -306,7 +307,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     PSODesc.SRBAllocationGranularity           = 16;
 
     RefCntAutoPtr<IPipelineState> pTestPSO;
-    pDevice->CreatePipelineState(PSODesc, &pTestPSO);
+    pDevice->CreatePipelineState(PSOCreateInfo, &pTestPSO);
     ASSERT_NE(pTestPSO, nullptr);
     EXPECT_EQ(TestPipelineStateCInterface(pTestPSO), 0);
 

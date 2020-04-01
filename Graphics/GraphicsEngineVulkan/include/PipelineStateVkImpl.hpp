@@ -57,7 +57,7 @@ class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, Ren
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>;
 
-    PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const PipelineStateDesc& PipelineDesc);
+    PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const PipelineStateCreateInfo& CreateInfo);
     ~PipelineStateVkImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

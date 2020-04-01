@@ -69,7 +69,9 @@ TEST(ShaderResourceLayout, ResourceArray)
     }
 
 
-    PipelineStateDesc PSODesc;
+    PipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
     StaticSamplerDesc StaticSampler;
     StaticSampler.Desc.MinFilter             = FILTER_TYPE_LINEAR;
     StaticSampler.Desc.MagFilter             = FILTER_TYPE_LINEAR;
@@ -112,7 +114,7 @@ TEST(ShaderResourceLayout, ResourceArray)
     PSODesc.GraphicsPipeline.InputLayout.LayoutElements = Elems;
     PSODesc.GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;

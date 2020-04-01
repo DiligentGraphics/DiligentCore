@@ -101,11 +101,11 @@ public:
                                                   ISampler**         ppSampler) override final;
 
     /// Implementation of IRenderDevice::CreatePipelineState() in OpenGL backend.
-    void                            CreatePipelineState(const PipelineStateDesc& PipelineDesc,
-                                                        IPipelineState**         ppPipelineState,
-                                                        bool                     bIsDeviceInternal);
-    virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateDesc& PipelineDesc,
-                                                        IPipelineState**         ppPipelineState) override final;
+    void                            CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo,
+                                                        IPipelineState**               ppPipelineState,
+                                                        bool                           bIsDeviceInternal);
+    virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo,
+                                                        IPipelineState**               ppPipelineState) override final;
 
     /// Implementation of IRenderDevice::CreateFence() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;

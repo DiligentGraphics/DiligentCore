@@ -201,7 +201,9 @@ void main()
 
 RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IRenderDevice* pDevice, const char* VSSource, const char* PSSource)
 {
-    PipelineStateDesc PSODesc;
+    PipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
     PSODesc.IsComputePipeline                             = false;
     PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
     PSODesc.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM_SRGB;
@@ -234,7 +236,7 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IRenderDevice* pDevice, const ch
     PSODesc.GraphicsPipeline.pPS = pPS;
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
     VERIFY_EXPR(pPSO != nullptr);
 
     return pPSO;
@@ -242,7 +244,9 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IRenderDevice* pDevice, const ch
 
 RefCntAutoPtr<IPipelineState> CreateComputePSO(IRenderDevice* pDevice, const char* CSSource)
 {
-    PipelineStateDesc PSODesc;
+    PipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
     PSODesc.IsComputePipeline = true;
     ShaderCreateInfo CreationAttrs;
     CreationAttrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -259,7 +263,7 @@ RefCntAutoPtr<IPipelineState> CreateComputePSO(IRenderDevice* pDevice, const cha
     PSODesc.ComputePipeline.pCS = pCS;
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
     VERIFY_EXPR(pPSO != nullptr);
 
     return pPSO;

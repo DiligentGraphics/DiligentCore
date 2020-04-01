@@ -43,9 +43,9 @@ class PipelineStateMtlImpl final : public PipelineStateBase<IPipelineStateMtl, R
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateMtl, RenderDeviceMtlImpl>;
 
-    PipelineStateMtlImpl(IReferenceCounters*        pRefCounters,
-                         class RenderDeviceMtlImpl* pDeviceMtl,
-                         const PipelineStateDesc&   PipelineDesc);
+    PipelineStateMtlImpl(IReferenceCounters*            pRefCounters,
+                         class RenderDeviceMtlImpl*     pDeviceMtl,
+                         const PipelineStateCreateInfo& CreateInfo);
     ~PipelineStateMtlImpl();
 
     virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) override final;

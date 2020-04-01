@@ -152,7 +152,10 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
         RefCntAutoPtr<IShader> pCS;
 
         m_DeviceVkImpl.CreateShader(CSCreateInfo, &pCS);
-        PipelineStateDesc PSODesc;
+
+        PipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
         PSODesc.IsComputePipeline   = true;
         PSODesc.Name                = name.c_str();
         PSODesc.ComputePipeline.pCS = pCS;
@@ -166,7 +169,7 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
         PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
         PSODesc.ResourceLayout.NumStaticSamplers = 1;
 
-        m_DeviceVkImpl.CreatePipelineState(PSODesc, &PSOs[NonPowOfTwo]);
+        m_DeviceVkImpl.CreatePipelineState(PSOCreateInfo, &PSOs[NonPowOfTwo]);
         PSOs[NonPowOfTwo]->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "CB")->Set(m_ConstantsCB);
     }
 

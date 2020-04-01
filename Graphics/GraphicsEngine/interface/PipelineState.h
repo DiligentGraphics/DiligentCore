@@ -250,6 +250,42 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 };
 typedef struct PipelineStateDesc PipelineStateDesc;
 
+
+/// Pipeline state creation flags
+DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
+{
+    /// Null flag.
+    PSO_CREATE_FLAG_NONE                                    = 0x00,
+
+    /// Silence missing variable warnings.
+
+    /// By default, the engine outputs a warning for every variable
+    /// provided as part of the pipeline resource layout description
+    /// that is not found in any of the designated shader stages.
+    /// Use this flag to silence these warnings.
+    PSO_CREATE_FLAG_SILENCE_MISSING_VARIABLE_WARNINGS       = 0x01,
+
+    /// Silence missing static sampler warnings.
+
+    /// By default, the engine outputs a warning for every static sampler
+    /// provided as part of the pipeline resource layout description
+    /// that is not found in any of the designated shader stages.
+    /// Use this flag to silence these warnings.
+    PSO_CREATE_FLAG_SILENCE_MISSING_STATIC_SAMPLER_WARNINGS = 0x02,
+};
+
+
+/// Pipeline state creation attributes
+struct PipelineStateCreateInfo
+{
+    /// Pipeline state description
+    PipelineStateDesc PSODesc;
+
+    /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
+    PSO_CREATE_FLAGS Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
+};
+typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
+
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
 static const struct INTERFACE_ID IID_PipelineState =
     {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};

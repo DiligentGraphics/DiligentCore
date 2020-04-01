@@ -145,13 +145,13 @@ void RenderDeviceMtlImpl :: CreateSampler(const SamplerDesc& SamplerDesc, ISampl
 }
 
 
-void RenderDeviceMtlImpl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)
+void RenderDeviceMtlImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    CreateDeviceObject( "Pipeline state", PipelineDesc, ppPipelineState, 
+    CreateDeviceObject( "Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState, 
         [&]()
         {
             PipelineStateMtlImpl* pPipelineStateMtl( NEW_RC_OBJ(m_PSOAllocator, "PipelineStateMtlImpl instance", PipelineStateMtlImpl)
-                                                                   (this, PipelineDesc ) );
+                                                               (this, PSOCreateInfo.PSODesc) );
             pPipelineStateMtl->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState) );
             OnCreateDeviceObject( pPipelineStateMtl );
         } 

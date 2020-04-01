@@ -132,7 +132,9 @@ TEST(TessellationTest, DrawQuad)
     float ClearColor[] = {0.f, 0.f, 0.f, 0.0f};
     pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    PipelineStateDesc PSODesc;
+    PipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
     PSODesc.Name = "Tessellation test";
 
     PSODesc.IsComputePipeline                        = false;
@@ -205,7 +207,7 @@ TEST(TessellationTest, DrawQuad)
     PSODesc.GraphicsPipeline.pDS = pDS;
     PSODesc.GraphicsPipeline.pPS = pPS;
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSODesc, &pPSO);
+    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     pContext->SetPipelineState(pPSO);

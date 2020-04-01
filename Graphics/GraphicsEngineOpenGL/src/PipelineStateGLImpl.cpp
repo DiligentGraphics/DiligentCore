@@ -36,16 +36,16 @@
 namespace Diligent
 {
 
-PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*      pRefCounters,
-                                         RenderDeviceGLImpl*      pDeviceGL,
-                                         const PipelineStateDesc& PipelineDesc,
-                                         bool                     bIsDeviceInternal) :
+PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCounters,
+                                         RenderDeviceGLImpl*            pDeviceGL,
+                                         const PipelineStateCreateInfo& CreateInfo,
+                                         bool                           bIsDeviceInternal) :
     // clang-format off
     TPipelineStateBase
     {
         pRefCounters,
         pDeviceGL,
-        PipelineDesc,
+        CreateInfo.PSODesc,
         bIsDeviceInternal
     },
     m_ResourceLayout      {*this},

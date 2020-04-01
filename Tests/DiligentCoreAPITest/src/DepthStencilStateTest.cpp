@@ -36,7 +36,7 @@ using namespace Diligent::Testing;
 
 extern "C"
 {
-    int TestRenderDeviceCInterface_CreatePipelineState(void* pRenderDevice, void* pPSODesc);
+    int TestRenderDeviceCInterface_CreatePipelineState(void* pRenderDevice, void* pPSOCreateInfo);
 }
 
 namespace
@@ -59,37 +59,38 @@ protected:
 
 TEST_F(DepthStencilStateTest, CreatePSO)
 {
-    auto PSODesc = GetPSODesc();
+    PipelineStateCreateInfo PSOCreateInfo;
+    PSOCreateInfo.PSODesc = GetPSODesc();
 
-    DepthStencilStateDesc& DSSDesc = PSODesc.GraphicsPipeline.DepthStencilDesc;
+    DepthStencilStateDesc& DSSDesc = PSOCreateInfo.PSODesc.GraphicsPipeline.DepthStencilDesc;
 
     DSSDesc.DepthEnable      = False;
     DSSDesc.DepthWriteEnable = False;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
-    EXPECT_EQ(TestRenderDeviceCInterface_CreatePipelineState(pDevice, &PSODesc), 0);
+    EXPECT_EQ(TestRenderDeviceCInterface_CreatePipelineState(pDevice, &PSOCreateInfo), 0);
 
     DSSDesc.DepthEnable = True;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     DSSDesc.DepthWriteEnable = True;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     for (auto CmpFunc = COMPARISON_FUNC_UNKNOWN + 1; CmpFunc < COMPARISON_FUNC_NUM_FUNCTIONS; ++CmpFunc)
     {
         DSSDesc.DepthFunc = static_cast<COMPARISON_FUNCTION>(CmpFunc);
-        ASSERT_TRUE(CreateTestPSO(PSODesc, true)) << "Comparison func: " << GetComparisonFunctionLiteralName(DSSDesc.DepthFunc, true);
+        ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true)) << "Comparison func: " << GetComparisonFunctionLiteralName(DSSDesc.DepthFunc, true);
     }
 
     DSSDesc.StencilEnable = True;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     DSSDesc.StencilReadMask = 0xA9;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     DSSDesc.StencilWriteMask = 0xB8;
-    ASSERT_TRUE(CreateTestPSO(PSODesc, true));
+    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
     for (int Face = 0; Face < 2; ++Face)
     {
@@ -97,25 +98,25 @@ TEST_F(DepthStencilStateTest, CreatePSO)
         for (auto StOp = STENCIL_OP_UNDEFINED + 1; StOp < STENCIL_OP_NUM_OPS; ++StOp)
         {
             FaceOp.StencilFailOp = static_cast<STENCIL_OP>(StOp);
-            ASSERT_TRUE(CreateTestPSO(PSODesc, true)) << "Face: " << Face << "; Stencil fail op: " << GetStencilOpLiteralName(FaceOp.StencilFailOp);
+            ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true)) << "Face: " << Face << "; Stencil fail op: " << GetStencilOpLiteralName(FaceOp.StencilFailOp);
         }
 
         for (auto StOp = STENCIL_OP_UNDEFINED + 1; StOp < STENCIL_OP_NUM_OPS; ++StOp)
         {
             FaceOp.StencilDepthFailOp = static_cast<STENCIL_OP>(StOp);
-            ASSERT_TRUE(CreateTestPSO(PSODesc, true)) << "Face: " << Face << "; Stencil depth fail op: " << GetStencilOpLiteralName(FaceOp.StencilDepthFailOp);
+            ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true)) << "Face: " << Face << "; Stencil depth fail op: " << GetStencilOpLiteralName(FaceOp.StencilDepthFailOp);
         }
 
         for (auto StOp = STENCIL_OP_UNDEFINED + 1; StOp < STENCIL_OP_NUM_OPS; ++StOp)
         {
             FaceOp.StencilPassOp = static_cast<STENCIL_OP>(StOp);
-            ASSERT_TRUE(CreateTestPSO(PSODesc, true)) << "Face: " << Face << "; Stencil pass op: " << GetStencilOpLiteralName(FaceOp.StencilPassOp);
+            ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true)) << "Face: " << Face << "; Stencil pass op: " << GetStencilOpLiteralName(FaceOp.StencilPassOp);
         }
 
         for (auto CmpFunc = COMPARISON_FUNC_UNKNOWN + 1; CmpFunc < COMPARISON_FUNC_NUM_FUNCTIONS; ++CmpFunc)
         {
             FaceOp.StencilFunc = static_cast<COMPARISON_FUNCTION>(CmpFunc);
-            ASSERT_TRUE(CreateTestPSO(PSODesc, true)) << "Face: " << Face << "; Comparison func: " << GetComparisonFunctionLiteralName(FaceOp.StencilFunc, true);
+            ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true)) << "Face: " << Face << "; Comparison func: " << GetComparisonFunctionLiteralName(FaceOp.StencilFunc, true);
         }
     }
 }

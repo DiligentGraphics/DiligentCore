@@ -48,9 +48,9 @@ class PipelineStateD3D11Impl final : public PipelineStateBase<IPipelineStateD3D1
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D11, RenderDeviceD3D11Impl>;
 
-    PipelineStateD3D11Impl(IReferenceCounters*          pRefCounters,
-                           class RenderDeviceD3D11Impl* pDeviceD3D11,
-                           const PipelineStateDesc&     PipelineDesc);
+    PipelineStateD3D11Impl(IReferenceCounters*            pRefCounters,
+                           class RenderDeviceD3D11Impl*   pDeviceD3D11,
+                           const PipelineStateCreateInfo& CreateInfo);
     ~PipelineStateD3D11Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

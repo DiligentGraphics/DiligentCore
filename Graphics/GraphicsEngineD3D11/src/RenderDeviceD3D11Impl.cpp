@@ -339,12 +339,12 @@ void RenderDeviceD3D11Impl::CreateSampler(const SamplerDesc& SamplerDesc, ISampl
                        });
 }
 
-void RenderDeviceD3D11Impl::CreatePipelineState(const PipelineStateDesc& PipelineDesc, IPipelineState** ppPipelineState)
+void RenderDeviceD3D11Impl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    CreateDeviceObject("Pipeline state", PipelineDesc, ppPipelineState,
+    CreateDeviceObject("Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState,
                        [&]() //
                        {
-                           PipelineStateD3D11Impl* pPipelineStateD3D11(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateD3D11Impl instance", PipelineStateD3D11Impl)(this, PipelineDesc));
+                           PipelineStateD3D11Impl* pPipelineStateD3D11(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateD3D11Impl instance", PipelineStateD3D11Impl)(this, PSOCreateInfo));
                            pPipelineStateD3D11->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
                            OnCreateDeviceObject(pPipelineStateD3D11);
                        });

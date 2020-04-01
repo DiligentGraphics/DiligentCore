@@ -36,15 +36,15 @@
 namespace Diligent
 {
 
-PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*      pRefCounters,
-                                               RenderDeviceD3D11Impl*   pRenderDeviceD3D11,
-                                               const PipelineStateDesc& PipelineDesc) :
+PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pRefCounters,
+                                               RenderDeviceD3D11Impl*         pRenderDeviceD3D11,
+                                               const PipelineStateCreateInfo& CreateInfo) :
     // clang-format off
     TPipelineStateBase
     {
         pRefCounters,
         pRenderDeviceD3D11,
-        PipelineDesc
+        CreateInfo.PSODesc
     },
     m_SRBMemAllocator{GetRawAllocator()},
     m_StaticSamplers (STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"))

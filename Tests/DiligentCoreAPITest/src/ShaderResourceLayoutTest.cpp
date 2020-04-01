@@ -170,7 +170,8 @@ protected:
                                   RefCntAutoPtr<IPipelineState>&         pPSO,
                                   RefCntAutoPtr<IShaderResourceBinding>& pSRB)
     {
-        PipelineStateDesc PSODesc;
+        PipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
 
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
@@ -187,7 +188,7 @@ protected:
         PSODesc.SRBAllocationGranularity                      = 16;
         PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-        pDevice->CreatePipelineState(PSODesc, &pPSO);
+        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
         if (pPSO)
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
@@ -238,7 +239,8 @@ protected:
                                  RefCntAutoPtr<IPipelineState>&         pPSO,
                                  RefCntAutoPtr<IShaderResourceBinding>& pSRB)
     {
-        PipelineStateDesc PSODesc;
+        PipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
 
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
@@ -248,7 +250,7 @@ protected:
         PSODesc.ResourceLayout      = ResourceLayout;
         PSODesc.ComputePipeline.pCS = pCS;
 
-        pDevice->CreatePipelineState(PSODesc, &pPSO);
+        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
         if (pPSO)
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
