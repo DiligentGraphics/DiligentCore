@@ -38,8 +38,8 @@ namespace Diligent
 {
 
 template <typename Type>
-Type GetResourceArraySize(const spirv_cross::Compiler& Compiler,
-                          const spirv_cross::Resource& Res)
+Type GetResourceArraySize(const diligent_spirv_cross::Compiler& Compiler,
+                          const diligent_spirv_cross::Resource& Res)
 {
     const auto& type    = Compiler.get_type(Res.type_id);
     uint32_t    arrSize = 1;
@@ -53,9 +53,9 @@ Type GetResourceArraySize(const spirv_cross::Compiler& Compiler,
     return static_cast<Type>(arrSize);
 }
 
-static uint32_t GetDecorationOffset(const spirv_cross::Compiler& Compiler,
-                                    const spirv_cross::Resource& Res,
-                                    spv::Decoration              Decoration)
+static uint32_t GetDecorationOffset(const diligent_spirv_cross::Compiler& Compiler,
+                                    const diligent_spirv_cross::Resource& Res,
+                                    spv::Decoration                       Decoration)
 {
     VERIFY(Compiler.has_decoration(Res.id, Decoration), "Resource \'", Res.name, "\' has no requested decoration");
     uint32_t offset   = 0;
@@ -65,11 +65,11 @@ static uint32_t GetDecorationOffset(const spirv_cross::Compiler& Compiler,
     return offset;
 }
 
-SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const spirv_cross::Compiler& Compiler,
-                                                       const spirv_cross::Resource& Res,
-                                                       const char*                  _Name,
-                                                       ResourceType                 _Type,
-                                                       Uint32                       _SepSmplrOrImgInd) noexcept :
+SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const diligent_spirv_cross::Compiler& Compiler,
+                                                       const diligent_spirv_cross::Resource& Res,
+                                                       const char*                           _Name,
+                                                       ResourceType                          _Type,
+                                                       Uint32                                _SepSmplrOrImgInd) noexcept :
     // clang-format off
     Name                          {_Name},
     ArraySize                     {GetResourceArraySize<decltype(ArraySize)>(Compiler, Res)},
@@ -163,7 +163,9 @@ static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
     }
 }
 
-const std::string& GetUBName(spirv_cross::Compiler& Compiler, const spirv_cross::Resource& UB, const spirv_cross::ParsedIR::Source& IRSource)
+const std::string& GetUBName(diligent_spirv_cross::Compiler&               Compiler,
+                             const diligent_spirv_cross::Resource&         UB,
+                             const diligent_spirv_cross::ParsedIR::Source& IRSource)
 {
     // Consider the following HLSL constant buffer:
     //
@@ -209,10 +211,10 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     m_ShaderType{shaderDesc.ShaderType}
 {
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
-    spirv_cross::Parser parser(move(spirv_binary));
+    diligent_spirv_cross::Parser parser(move(spirv_binary));
     parser.parse();
-    auto                  ParsedIRSource = parser.get_parsed_ir().source;
-    spirv_cross::Compiler Compiler(std::move(parser.get_parsed_ir()));
+    auto                           ParsedIRSource = parser.get_parsed_ir().source;
+    diligent_spirv_cross::Compiler Compiler(std::move(parser.get_parsed_ir()));
 
     spv::ExecutionModel ExecutionModel = ShaderTypeToExecutionModel(shaderDesc.ShaderType);
     auto                EntryPoints    = Compiler.get_entry_points_and_stages();
@@ -237,7 +239,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     Compiler.set_entry_point(EntryPoint, ExecutionModel);
 
     // The SPIR-V is now parsed, and we can perform reflection on it.
-    spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
+    diligent_spirv_cross::ShaderResources resources = Compiler.get_shader_resources();
 
     size_t ResourceNamesPoolSize = 0;
     for (const auto& ub : resources.uniform_buffers)

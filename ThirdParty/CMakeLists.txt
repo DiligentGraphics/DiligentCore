@@ -68,6 +68,7 @@ if(VULKAN_SUPPORTED)
     set(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Enable util module support.")
     set(SPIRV_CROSS_FORCE_PIC ON CACHE BOOL "Force position-independent code.")
     set(SPIRV_CROSS_SKIP_INSTALL ON CACHE BOOL "Skip SPIRV-Cross installation.")
+    set(SPIRV_CROSS_NAMESPACE_OVERRIDE diligent_spirv_cross CACHE STRING "Override the namespace used in the C++ API.")
     add_subdirectory(SPIRV-Cross)
     set_directory_root_folder("SPIRV-Cross" "DiligentCore/ThirdParty/SPIRV-Cross")
 

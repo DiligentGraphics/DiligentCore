@@ -46,11 +46,11 @@
 #include "RefCntAutoPtr.hpp"
 #include "StringPool.hpp"
 
-namespace spirv_cross
+namespace diligent_spirv_cross
 {
 class Compiler;
 struct Resource;
-} // namespace spirv_cross
+} // namespace diligent_spirv_cross
 
 namespace Diligent
 {
@@ -93,11 +93,11 @@ public:
 
     // clang-format on
 
-    SPIRVShaderResourceAttribs(const spirv_cross::Compiler& Compiler,
-                               const spirv_cross::Resource& Res,
-                               const char*                  _Name,
-                               ResourceType                 _Type,
-                               Uint32                       _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd) noexcept;
+    SPIRVShaderResourceAttribs(const diligent_spirv_cross::Compiler& Compiler,
+                               const diligent_spirv_cross::Resource& Res,
+                               const char*                           _Name,
+                               ResourceType                          _Type,
+                               Uint32                                _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd) noexcept;
 
     bool IsValidSepSamplerAssigned() const
     {
