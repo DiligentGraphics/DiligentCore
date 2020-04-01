@@ -221,17 +221,37 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
     auto GetAllowedShadersString = [&](SHADER_TYPE ShaderStages) //
     {
         std::string ShadersStr;
-        for (Uint32 s = 0; s < NumShaders; ++s)
+        while (ShaderStages != SHADER_TYPE_UNKNOWN)
         {
-            const auto& Resources = *pShaderResources[s];
-            if ((ShaderStages & Resources.GetShaderType()) != 0)
+            const auto  ShaderType = ShaderStages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(ShaderStages) - 1));
+            const char* ShaderName = nullptr;
+            for (Uint32 s = 0; s < NumShaders; ++s)
             {
-                ShadersStr.append(ShadersStr.empty() ? "'" : ", '");
-                ShadersStr.append(Resources.GetShaderName());
-                ShadersStr.append("' (");
-                ShadersStr.append(GetShaderTypeLiteralName(Resources.GetShaderType()));
-                ShadersStr.push_back(')');
+                const auto& Resources = *pShaderResources[s];
+                if ((ShaderStages & Resources.GetShaderType()) != 0)
+                {
+                    ShaderName = Resources.GetShaderName();
+                    break;
+                }
             }
+
+            if (!ShadersStr.empty())
+                ShadersStr.append(", ");
+            ShadersStr.append(GetShaderTypeLiteralName(ShaderType));
+            ShadersStr.append(" (");
+            if (ShaderName)
+            {
+                ShadersStr.push_back('\'');
+                ShadersStr.append(ShaderName ? ShaderName : "<Not enabled in PSO>");
+                ShadersStr.push_back('\'');
+            }
+            else
+            {
+                ShadersStr.append("Not enabled in PSO");
+            }
+            ShadersStr.append(")");
+
+            ShaderStages &= ~ShaderType;
         }
         return ShadersStr;
     };
