@@ -151,7 +151,7 @@ void RenderDeviceMtlImpl::CreatePipelineState(const PipelineStateCreateInfo& PSO
         [&]()
         {
             PipelineStateMtlImpl* pPipelineStateMtl( NEW_RC_OBJ(m_PSOAllocator, "PipelineStateMtlImpl instance", PipelineStateMtlImpl)
-                                                               (this, PSOCreateInfo.PSODesc) );
+                                                               (this, PSOCreateInfo) );
             pPipelineStateMtl->QueryInterface( IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState) );
             OnCreateDeviceObject( pPipelineStateMtl );
         } 
