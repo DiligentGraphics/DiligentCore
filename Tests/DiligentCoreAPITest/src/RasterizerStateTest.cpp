@@ -86,14 +86,26 @@ TEST_F(RasterizerStateTest, CreatePSO)
         EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.FrontCounterClockwise, RSDesc.FrontCounterClockwise);
     }
 
-    RSDesc.DepthBias = 100;
-    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+    {
+        RSDesc.DepthBias = 100;
+        auto pPSO        = CreateTestPSO(PSOCreateInfo, true);
+        ASSERT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.DepthBias, RSDesc.DepthBias);
+    }
 
-    RSDesc.DepthBiasClamp = 1.f;
-    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+    {
+        RSDesc.DepthBiasClamp = 1.f;
+        auto pPSO             = CreateTestPSO(PSOCreateInfo, true);
+        ASSERT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.DepthBiasClamp, RSDesc.DepthBiasClamp);
+    }
 
-    RSDesc.SlopeScaledDepthBias = 2.f;
-    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+    {
+        RSDesc.SlopeScaledDepthBias = 2.f;
+        auto pPSO                   = CreateTestPSO(PSOCreateInfo, true);
+        ASSERT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.SlopeScaledDepthBias, RSDesc.SlopeScaledDepthBias);
+    }
 
     {
         RSDesc.DepthClipEnable = !RSDesc.DepthClipEnable;
@@ -109,8 +121,12 @@ TEST_F(RasterizerStateTest, CreatePSO)
         EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.ScissorEnable, RSDesc.ScissorEnable);
     }
 
-    RSDesc.AntialiasedLineEnable = !RSDesc.AntialiasedLineEnable;
-    ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+    {
+        RSDesc.AntialiasedLineEnable = !RSDesc.AntialiasedLineEnable;
+        auto pPSO                    = CreateTestPSO(PSOCreateInfo, true);
+        ASSERT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.AntialiasedLineEnable, RSDesc.AntialiasedLineEnable);
+    }
 }
 
 } // namespace

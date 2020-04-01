@@ -116,7 +116,13 @@ protected:
         pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
         EXPECT_TRUE(pPSO);
         if (pPSO)
+        {
             pDeviceContext->SetPipelineState(pPSO);
+            const auto& RefBlendDesc  = PSOCreateInfo.PSODesc.GraphicsPipeline.BlendDesc;
+            const auto& TestBlendDesc = pPSO->GetDesc().GraphicsPipeline.BlendDesc;
+            EXPECT_EQ(RefBlendDesc, TestBlendDesc);
+        }
+
         return pPSO;
     }
 
@@ -173,23 +179,53 @@ TEST_F(BlendStateBasicTest, CreatePSO)
 
     auto& RT0 = BSDesc.RenderTargets[0];
 
-    RT0.BlendEnable = True;
-    EXPECT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+    {
+        RT0.BlendEnable = True;
 
-    BSDesc.AlphaToCoverageEnable = !BSDesc.AlphaToCoverageEnable;
-    EXPECT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+        auto pPSO = CreateTestPSO(PSOCreateInfo, true);
+        EXPECT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].BlendEnable, RT0.BlendEnable);
+    }
 
-    RT0.RenderTargetWriteMask = COLOR_MASK_BLUE;
-    EXPECT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+    {
+        BSDesc.AlphaToCoverageEnable = !BSDesc.AlphaToCoverageEnable;
 
-    RT0.RenderTargetWriteMask = COLOR_MASK_RED;
-    EXPECT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+        auto pPSO = CreateTestPSO(PSOCreateInfo, true);
+        EXPECT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.AlphaToCoverageEnable, BSDesc.AlphaToCoverageEnable);
+    }
 
-    RT0.RenderTargetWriteMask = COLOR_MASK_GREEN;
-    EXPECT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+    {
+        RT0.RenderTargetWriteMask = COLOR_MASK_BLUE;
 
-    RT0.RenderTargetWriteMask = COLOR_MASK_ALPHA;
-    EXPECT_TRUE(CreateTestPSO(PSOCreateInfo, true));
+        auto pPSO = CreateTestPSO(PSOCreateInfo, true);
+        EXPECT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_BLUE);
+    }
+
+    {
+        RT0.RenderTargetWriteMask = COLOR_MASK_RED;
+
+        auto pPSO = CreateTestPSO(PSOCreateInfo, true);
+        EXPECT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_RED);
+    }
+
+    {
+        RT0.RenderTargetWriteMask = COLOR_MASK_GREEN;
+
+        auto pPSO = CreateTestPSO(PSOCreateInfo, true);
+        EXPECT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_GREEN);
+    }
+
+    {
+        RT0.RenderTargetWriteMask = COLOR_MASK_ALPHA;
+
+        auto pPSO = CreateTestPSO(PSOCreateInfo, true);
+        EXPECT_TRUE(pPSO);
+        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_ALPHA);
+    }
 }
 
 class BlendFactorTest : public BlendStateTestBase, public testing::TestWithParam<std::tuple<int, bool>>
