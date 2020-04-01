@@ -145,7 +145,9 @@ public:
                            IMemoryAllocator&                           LayoutDataAllocator,
                            const PipelineResourceLayoutDesc&           ResourceLayoutDesc,
                            std::vector<uint32_t>                       SPIRVs[],
-                           class PipelineLayout&                       PipelineLayout);
+                           class PipelineLayout&                       PipelineLayout,
+                           bool                                        VerifyVariables,
+                           bool                                        VerifyStaticSamplers);
 
     // sizeof(VkResource) == 24 (x64)
     struct VkResource
@@ -274,7 +276,9 @@ public:
     bool        dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache) const;
     static void dvpVerifyResourceLayoutDesc(Uint32                                            NumShaders,
                                             const std::shared_ptr<const SPIRVShaderResources> pShaderResources[],
-                                            const PipelineResourceLayoutDesc&                 ResourceLayoutDesc);
+                                            const PipelineResourceLayoutDesc&                 ResourceLayoutDesc,
+                                            bool                                              VerifyVariables,
+                                            bool                                              VerifyStaticSamplers);
 #endif
 
     Uint32 GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE VarType) const

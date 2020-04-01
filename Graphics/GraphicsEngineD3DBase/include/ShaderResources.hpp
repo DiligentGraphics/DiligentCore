@@ -379,7 +379,9 @@ public:
 #ifdef DILIGENT_DEVELOPMENT
     static void DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout,
                                         const ShaderResources* const      pShaderResources[],
-                                        Uint32                            NumShaders);
+                                        Uint32                            NumShaders,
+                                        bool                              VerifyVariables,
+                                        bool                              VerifyStaticSamplers);
 #endif
 
     void GetShaderModel(Uint32& Major, Uint32& Minor) const

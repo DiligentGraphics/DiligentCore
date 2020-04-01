@@ -100,7 +100,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             const auto* pShader = GetShader<const ShaderD3D12Impl>(s);
             pResources[s]       = &(*pShader->GetShaderResources());
         }
-        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, m_NumShaders);
+        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, m_NumShaders,
+                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
+                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
     }
 #endif
 

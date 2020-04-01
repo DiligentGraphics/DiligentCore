@@ -255,24 +255,25 @@ typedef struct PipelineStateDesc PipelineStateDesc;
 DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
 {
     /// Null flag.
-    PSO_CREATE_FLAG_NONE                                    = 0x00,
+    PSO_CREATE_FLAG_NONE                          = 0x00,
 
-    /// Silence missing variable warnings.
+    /// Ignore missing variables.
 
     /// By default, the engine outputs a warning for every variable
     /// provided as part of the pipeline resource layout description
     /// that is not found in any of the designated shader stages.
     /// Use this flag to silence these warnings.
-    PSO_CREATE_FLAG_SILENCE_MISSING_VARIABLE_WARNINGS       = 0x01,
+    PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES      = 0x01,
 
-    /// Silence missing static sampler warnings.
+    /// Ignore missing static samplers.
 
     /// By default, the engine outputs a warning for every static sampler
     /// provided as part of the pipeline resource layout description
     /// that is not found in any of the designated shader stages.
     /// Use this flag to silence these warnings.
-    PSO_CREATE_FLAG_SILENCE_MISSING_STATIC_SAMPLER_WARNINGS = 0x02,
+    PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS = 0x02,
 };
+DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 
 
 /// Pipeline state creation attributes

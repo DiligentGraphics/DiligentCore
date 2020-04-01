@@ -139,7 +139,9 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
             auto* pShader = GetShader<const ShaderD3D11Impl>(s);
             pResources[s] = &(*pShader->GetD3D11Resources());
         }
-        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, m_NumShaders);
+        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, m_NumShaders,
+                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
+                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
     }
 #endif
 

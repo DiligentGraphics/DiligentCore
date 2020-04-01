@@ -237,7 +237,9 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(std::shared_ptr<cons
 #ifdef DILIGENT_DEVELOPMENT
 void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(Uint32                                            NumShaders,
                                                          const std::shared_ptr<const SPIRVShaderResources> pShaderResources[],
-                                                         const PipelineResourceLayoutDesc&                 ResourceLayoutDesc)
+                                                         const PipelineResourceLayoutDesc&                 ResourceLayoutDesc,
+                                                         bool                                              VerifyVariables,
+                                                         bool                                              VerifyStaticSamplers)
 {
     auto GetAllowedShadersString = [&](SHADER_TYPE ShaderStages) //
     {
@@ -277,79 +279,85 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(Uint32                 
         return ShadersStr;
     };
 
-    for (Uint32 v = 0; v < ResourceLayoutDesc.NumVariables; ++v)
+    if (VerifyVariables)
     {
-        const auto& VarDesc = ResourceLayoutDesc.Variables[v];
-        if (VarDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
+        for (Uint32 v = 0; v < ResourceLayoutDesc.NumVariables; ++v)
         {
-            LOG_WARNING_MESSAGE("No allowed shader stages are specified for ", GetShaderVariableTypeLiteralName(VarDesc.Type), " variable '", VarDesc.Name, "'.");
-            continue;
-        }
-
-        bool VariableFound = false;
-        for (Uint32 s = 0; s < NumShaders && !VariableFound; ++s)
-        {
-            const auto& Resources = *pShaderResources[s];
-            if ((VarDesc.ShaderStages & Resources.GetShaderType()) != 0)
+            const auto& VarDesc = ResourceLayoutDesc.Variables[v];
+            if (VarDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
             {
-                for (Uint32 res = 0; res < Resources.GetTotalResources() && !VariableFound; ++res)
+                LOG_WARNING_MESSAGE("No allowed shader stages are specified for ", GetShaderVariableTypeLiteralName(VarDesc.Type), " variable '", VarDesc.Name, "'.");
+                continue;
+            }
+
+            bool VariableFound = false;
+            for (Uint32 s = 0; s < NumShaders && !VariableFound; ++s)
+            {
+                const auto& Resources = *pShaderResources[s];
+                if ((VarDesc.ShaderStages & Resources.GetShaderType()) != 0)
                 {
-                    const auto& ResAttribs = Resources.GetResource(res);
-                    VariableFound          = (strcmp(ResAttribs.Name, VarDesc.Name) == 0);
+                    for (Uint32 res = 0; res < Resources.GetTotalResources() && !VariableFound; ++res)
+                    {
+                        const auto& ResAttribs = Resources.GetResource(res);
+                        VariableFound          = (strcmp(ResAttribs.Name, VarDesc.Name) == 0);
+                    }
                 }
             }
-        }
-        if (!VariableFound)
-        {
-            LOG_WARNING_MESSAGE(GetShaderVariableTypeLiteralName(VarDesc.Type), " variable '", VarDesc.Name,
-                                "' is not found in any of the designated shader stages: ",
-                                GetAllowedShadersString(VarDesc.ShaderStages));
+            if (!VariableFound)
+            {
+                LOG_WARNING_MESSAGE(GetShaderVariableTypeLiteralName(VarDesc.Type), " variable '", VarDesc.Name,
+                                    "' is not found in any of the designated shader stages: ",
+                                    GetAllowedShadersString(VarDesc.ShaderStages));
+            }
         }
     }
 
-    for (Uint32 sam = 0; sam < ResourceLayoutDesc.NumStaticSamplers; ++sam)
+    if (VerifyStaticSamplers)
     {
-        const auto& StSamDesc = ResourceLayoutDesc.StaticSamplers[sam];
-        if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
+        for (Uint32 sam = 0; sam < ResourceLayoutDesc.NumStaticSamplers; ++sam)
         {
-            LOG_WARNING_MESSAGE("No allowed shader stages are specified for static sampler '", StSamDesc.SamplerOrTextureName, "'.");
-            continue;
-        }
-
-        bool SamplerFound = false;
-        for (Uint32 s = 0; s < NumShaders && !SamplerFound; ++s)
-        {
-            const auto& Resources = *pShaderResources[s];
-            if ((StSamDesc.ShaderStages & Resources.GetShaderType()) == 0)
-                continue;
-
-            // Irrespective of whether HLSL-style combined image samplers are used,
-            // a static sampler can be assigned to GLSL sampled image (i.e. sampler2D g_tex)
-            for (Uint32 i = 0; i < Resources.GetNumSmpldImgs() && !SamplerFound; ++i)
+            const auto& StSamDesc = ResourceLayoutDesc.StaticSamplers[sam];
+            if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
             {
-                const auto& SmplImg = Resources.GetSmpldImg(i);
-                SamplerFound        = (strcmp(SmplImg.Name, StSamDesc.SamplerOrTextureName) == 0);
+                LOG_WARNING_MESSAGE("No allowed shader stages are specified for static sampler '", StSamDesc.SamplerOrTextureName, "'.");
+                continue;
+            }
+
+            bool SamplerFound = false;
+            for (Uint32 s = 0; s < NumShaders && !SamplerFound; ++s)
+            {
+                const auto& Resources = *pShaderResources[s];
+                if ((StSamDesc.ShaderStages & Resources.GetShaderType()) == 0)
+                    continue;
+
+                // Irrespective of whether HLSL-style combined image samplers are used,
+                // a static sampler can be assigned to GLSL sampled image (i.e. sampler2D g_tex)
+                for (Uint32 i = 0; i < Resources.GetNumSmpldImgs() && !SamplerFound; ++i)
+                {
+                    const auto& SmplImg = Resources.GetSmpldImg(i);
+                    SamplerFound        = (strcmp(SmplImg.Name, StSamDesc.SamplerOrTextureName) == 0);
+                }
+
+                if (!SamplerFound)
+                {
+                    // Check if static sampler is assigned to a separate sampler.
+                    // In case HLSL-style combined image samplers are used, the condition is  SepSmpl.Name == "g_Texture" + "_sampler".
+                    // Otherwise the condition is  SepSmpl.Name == "g_Texture_sampler" + "".
+                    const auto* CombinedSamplerSuffix = Resources.GetCombinedSamplerSuffix();
+                    for (Uint32 i = 0; i < Resources.GetNumSepSmplrs() && !SamplerFound; ++i)
+                    {
+                        const auto& SepSmpl = Resources.GetSepSmplr(i);
+                        SamplerFound        = StreqSuff(SepSmpl.Name, StSamDesc.SamplerOrTextureName, CombinedSamplerSuffix);
+                    }
+                }
             }
 
             if (!SamplerFound)
             {
-                // Check if static sampler is assigned to a separate sampler.
-                // In case HLSL-style combined image samplers are used, the condition is  SepSmpl.Name == "g_Texture" + "_sampler".
-                // Otherwise the condition is  SepSmpl.Name == "g_Texture_sampler" + "".
-                const auto* CombinedSamplerSuffix = Resources.GetCombinedSamplerSuffix();
-                for (Uint32 i = 0; i < Resources.GetNumSepSmplrs() && !SamplerFound; ++i)
-                {
-                    const auto& SepSmpl = Resources.GetSepSmplr(i);
-                    SamplerFound        = StreqSuff(SepSmpl.Name, StSamDesc.SamplerOrTextureName, CombinedSamplerSuffix);
-                }
+                LOG_WARNING_MESSAGE("Static sampler '", StSamDesc.SamplerOrTextureName,
+                                    "' is not found in any of the designated shader stages: ",
+                                    GetAllowedShadersString(StSamDesc.ShaderStages));
             }
-        }
-
-        if (!SamplerFound)
-        {
-            LOG_WARNING_MESSAGE("Static sampler '", StSamDesc.SamplerOrTextureName,
-                                "' is not found in any of the designated shader stages: ",
-                                GetAllowedShadersString(StSamDesc.ShaderStages));
         }
     }
 }
@@ -362,10 +370,12 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
                                         IMemoryAllocator&                           LayoutDataAllocator,
                                         const PipelineResourceLayoutDesc&           ResourceLayoutDesc,
                                         std::vector<uint32_t>                       SPIRVs[],
-                                        class PipelineLayout&                       PipelineLayout)
+                                        class PipelineLayout&                       PipelineLayout,
+                                        bool                                        VerifyVariables,
+                                        bool                                        VerifyStaticSamplers)
 {
 #ifdef DILIGENT_DEVELOPMENT
-    dvpVerifyResourceLayoutDesc(NumShaders, pShaderResources, ResourceLayoutDesc);
+    dvpVerifyResourceLayoutDesc(NumShaders, pShaderResources, ResourceLayoutDesc, VerifyVariables, VerifyStaticSamplers);
 #endif
 
     const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes = nullptr;

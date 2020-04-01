@@ -184,7 +184,9 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
         new (m_StaticVarsMgrs + s) ShaderVariableManagerVk(*this, *pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache);
     }
     ShaderResourceLayoutVk::Initialize(pDeviceVk, m_NumShaders, m_ShaderResourceLayouts, ShaderResources.data(), GetRawAllocator(),
-                                       m_Desc.ResourceLayout, ShaderSPIRVs.data(), m_PipelineLayout);
+                                       m_Desc.ResourceLayout, ShaderSPIRVs.data(), m_PipelineLayout,
+                                       (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
+                                       (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
     m_PipelineLayout.Finalize(LogicalDevice);
 
     if (m_Desc.SRBAllocationGranularity > 1)
