@@ -357,10 +357,12 @@ m_pDevice->CreateShader(ShaderCI, &pShader);
 
 Diligent Engine follows Direct3D12/Vulkan style to configure the graphics/compute pipeline. One monolithic Pipelines State Object (PSO)
 encompasses all required states (all shader stages, input layout description, depth stencil, rasterizer and blend state
-descriptions etc.). To create a pipeline state object, define instance of `PipelineStateDesc` structure:
+descriptions etc.). To create a pipeline state object, define an instance of `PipelineStateCreateInfo` structure:
 
 ```cpp
-PipelineStateDesc PSODesc;
+PipelineStateCreateInfo PSOCreateInfo;
+PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
 PSODesc.Name = "My pipeline state";
 ```
 
@@ -487,7 +489,7 @@ When all required fields of PSO description structure are set, call `IRenderDevi
 to create the PSO object:
 
 ```cpp
-m_pDevice->CreatePipelineState(PSODesc, &m_pPSO);
+m_pDevice->CreatePipelineState(PSOCreateInfo, &m_pPSO);
 ```
 
 <a name="binding_resources"></a>
