@@ -67,7 +67,8 @@ public:
                     MipHeight = Align(MipHeight, Uint32{FmtAttribs.BlockHeight});
                 }
 
-                auto RowStride               = MipWidth / Uint32{FmtAttribs.BlockWidth} * FmtAttribs.GetElementSize();
+                // Stride must be 32-bit aligned in OpenGL
+                auto RowStride               = Align(MipWidth / Uint32{FmtAttribs.BlockWidth} * FmtAttribs.GetElementSize(), Uint32{4});
                 m_SubresourceStrides[SubRes] = RowStride;
 
                 auto MipSize                     = MipHeight / Uint32{FmtAttribs.BlockHeight} * RowStride;
