@@ -1919,6 +1919,29 @@ T min3(const T& x, const T& y, const T& z)
     return std::min(std::min(x, y), z);
 }
 
+inline float4 RGBA8Unorm_To_F4Color(Uint32 RGBA8)
+{
+    // clang-format off
+    return float4
+    {
+            static_cast<float>((RGBA8 >>  0u) & 0xFF) / 255.f,
+            static_cast<float>((RGBA8 >>  8u) & 0xFF) / 255.f,
+            static_cast<float>((RGBA8 >> 16u) & 0xFF) / 255.f,
+            static_cast<float>((RGBA8 >> 24u) & 0xFF) / 255.f
+    };
+    // clang-format on
+}
+
+inline Uint32 F4Color_To_RGBA8Unorm(const float4& f4Color)
+{
+    Uint32 RGBA8U = 0;
+    RGBA8U |= static_cast<Uint32>(clamp(f4Color.r, 0.f, 1.f) * 255.f) << 0u;
+    RGBA8U |= static_cast<Uint32>(clamp(f4Color.g, 0.f, 1.f) * 255.f) << 8u;
+    RGBA8U |= static_cast<Uint32>(clamp(f4Color.b, 0.f, 1.f) * 255.f) << 16u;
+    RGBA8U |= static_cast<Uint32>(clamp(f4Color.a, 0.f, 1.f) * 255.f) << 24u;
+    return RGBA8U;
+}
+
 } // namespace Diligent
 
 
