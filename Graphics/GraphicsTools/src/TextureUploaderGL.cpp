@@ -196,6 +196,10 @@ struct TextureUploaderGL::InternalData
         // clang-format on
     };
 
+    void Execute(IRenderDevice*          pDevice,
+                 IDeviceContext*         pContext,
+                 PendingBufferOperation& OperationInfo);
+
     std::mutex                          m_PendingOperationsMtx;
     std::vector<PendingBufferOperation> m_PendingOperations;
     std::vector<PendingBufferOperation> m_InWorkOperations;
@@ -228,7 +232,7 @@ TextureUploaderGL::~TextureUploaderGL()
             const auto& desc    = BuffQueueIt.first;
             auto&       FmtInfo = m_pDevice->GetTextureFormatInfo(desc.Format);
             LOG_INFO_MESSAGE("TextureUploaderGL: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x',
-                             desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " upload buffer(s) ");
+                             desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " upload buffer", (BuffQueueIt.second.size() != 1 ? "s" : ""));
         }
     }
 }
@@ -240,63 +244,72 @@ void TextureUploaderGL::RenderThreadUpdate(IDeviceContext* pContext)
     {
         for (auto& OperationInfo : m_pInternalData->m_InWorkOperations)
         {
-            auto&       pBuffer        = OperationInfo.pUploadBuffer;
-            const auto& UploadBuffDesc = pBuffer->GetDesc();
-
-            switch (OperationInfo.operation)
-            {
-                case InternalData::PendingBufferOperation::Map:
-                {
-                    if (pBuffer->m_pStagingBuffer == nullptr)
-                    {
-                        BufferDesc BuffDesc;
-                        BuffDesc.Name           = "Staging buffer for UploadBufferGL";
-                        BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
-                        BuffDesc.Usage          = USAGE_STAGING;
-                        BuffDesc.uiSizeInBytes  = pBuffer->GetTotalSize();
-                        RefCntAutoPtr<IBuffer> pStagingBuffer;
-                        m_pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer->m_pStagingBuffer);
-                    }
-
-                    PVoid CpuAddress = nullptr;
-                    pContext->MapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE, MAP_FLAG_DISCARD, CpuAddress);
-                    pBuffer->SetDataPtr(reinterpret_cast<Uint8*>(CpuAddress));
-
-                    pBuffer->SignalMapped();
-                }
-                break;
-
-                case InternalData::PendingBufferOperation::Copy:
-                {
-                    const auto& TexDesc = OperationInfo.pDstTexture->GetDesc();
-                    pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
-                    for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
-                    {
-                        for (Uint32 Mip = 0; Mip < UploadBuffDesc.MipLevels; ++Mip)
-                        {
-                            auto SrcOffset = pBuffer->GetOffset(Mip, Slice);
-                            auto SrcStride = pBuffer->GetMappedData(Mip, Slice).Stride;
-
-                            TextureSubResData SubResData(pBuffer->m_pStagingBuffer, SrcOffset, SrcStride);
-
-                            auto MipLevelProps = GetMipLevelProperties(TexDesc, Mip);
-                            Box  DstBox;
-                            DstBox.MaxX = MipLevelProps.LogicalWidth;
-                            DstBox.MaxY = MipLevelProps.LogicalHeight;
-                            pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip + Mip, OperationInfo.DstSlice + Slice, DstBox,
-                                                    SubResData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-                        }
-                    }
-                    pBuffer->SignalCopyScheduled();
-                }
-                break;
-            }
+            m_pInternalData->Execute(m_pDevice, pContext, OperationInfo);
         }
         m_pInternalData->m_InWorkOperations.clear();
     }
 }
 
-void TextureUploaderGL::AllocateUploadBuffer(const UploadBufferDesc& Desc, bool IsRenderThread, IUploadBuffer** ppBuffer)
+void TextureUploaderGL::InternalData::Execute(IRenderDevice*          pDevice,
+                                              IDeviceContext*         pContext,
+                                              PendingBufferOperation& OperationInfo)
+{
+    auto&       pBuffer        = OperationInfo.pUploadBuffer;
+    const auto& UploadBuffDesc = pBuffer->GetDesc();
+
+    switch (OperationInfo.operation)
+    {
+        case InternalData::PendingBufferOperation::Map:
+        {
+            if (pBuffer->m_pStagingBuffer == nullptr)
+            {
+                BufferDesc BuffDesc;
+                BuffDesc.Name           = "Staging buffer for UploadBufferGL";
+                BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+                BuffDesc.Usage          = USAGE_STAGING;
+                BuffDesc.uiSizeInBytes  = pBuffer->GetTotalSize();
+                RefCntAutoPtr<IBuffer> pStagingBuffer;
+                pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer->m_pStagingBuffer);
+            }
+
+            PVoid CpuAddress = nullptr;
+            pContext->MapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE, MAP_FLAG_DISCARD, CpuAddress);
+            pBuffer->SetDataPtr(reinterpret_cast<Uint8*>(CpuAddress));
+
+            pBuffer->SignalMapped();
+        }
+        break;
+
+        case InternalData::PendingBufferOperation::Copy:
+        {
+            const auto& TexDesc = OperationInfo.pDstTexture->GetDesc();
+            pContext->UnmapBuffer(pBuffer->m_pStagingBuffer, MAP_WRITE);
+            for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
+            {
+                for (Uint32 Mip = 0; Mip < UploadBuffDesc.MipLevels; ++Mip)
+                {
+                    auto SrcOffset = pBuffer->GetOffset(Mip, Slice);
+                    auto SrcStride = pBuffer->GetMappedData(Mip, Slice).Stride;
+
+                    TextureSubResData SubResData(pBuffer->m_pStagingBuffer, SrcOffset, SrcStride);
+
+                    auto MipLevelProps = GetMipLevelProperties(TexDesc, Mip);
+                    Box  DstBox;
+                    DstBox.MaxX = MipLevelProps.LogicalWidth;
+                    DstBox.MaxY = MipLevelProps.LogicalHeight;
+                    pContext->UpdateTexture(OperationInfo.pDstTexture, OperationInfo.DstMip + Mip, OperationInfo.DstSlice + Slice, DstBox,
+                                            SubResData, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+                }
+            }
+            pBuffer->SignalCopyScheduled();
+        }
+        break;
+    }
+}
+
+void TextureUploaderGL::AllocateUploadBuffer(IDeviceContext*         pContext,
+                                             const UploadBufferDesc& Desc,
+                                             IUploadBuffer**         ppBuffer)
 {
     *ppBuffer = nullptr;
     RefCntAutoPtr<UploadBufferGL> pUploadBuffer;
@@ -327,18 +340,46 @@ void TextureUploaderGL::AllocateUploadBuffer(const UploadBufferDesc& Desc, bool 
                          m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " texture");
     }
 
-    m_pInternalData->EnqueMap(pUploadBuffer);
-    pUploadBuffer->WaitForMap();
+    if (pContext != nullptr)
+    {
+        // Render thread
+        InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Operation::Map, pUploadBuffer};
+        m_pInternalData->Execute(m_pDevice, pContext, MapOp);
+    }
+    else
+    {
+        // Worker thread
+        m_pInternalData->EnqueMap(pUploadBuffer);
+        pUploadBuffer->WaitForMap();
+    }
     *ppBuffer = pUploadBuffer.Detach();
 }
 
-void TextureUploaderGL::ScheduleGPUCopy(ITexture*      pDstTexture,
-                                        Uint32         ArraySlice,
-                                        Uint32         MipLevel,
-                                        IUploadBuffer* pUploadBuffer)
+void TextureUploaderGL::ScheduleGPUCopy(IDeviceContext* pContext,
+                                        ITexture*       pDstTexture,
+                                        Uint32          ArraySlice,
+                                        Uint32          MipLevel,
+                                        IUploadBuffer*  pUploadBuffer)
 {
     auto* pUploadBufferGL = ValidatedCast<UploadBufferGL>(pUploadBuffer);
-    m_pInternalData->EnqueCopy(pUploadBufferGL, pDstTexture, ArraySlice, MipLevel);
+    if (pContext != nullptr)
+    {
+        // Render thread
+        InternalData::PendingBufferOperation CopyOp //
+            {
+                InternalData::PendingBufferOperation::Operation::Copy,
+                pUploadBufferGL,
+                pDstTexture,
+                ArraySlice,
+                MipLevel //
+            };
+        m_pInternalData->Execute(m_pDevice, pContext, CopyOp);
+    }
+    else
+    {
+        // Worker thread
+        m_pInternalData->EnqueCopy(pUploadBufferGL, pDstTexture, ArraySlice, MipLevel);
+    }
 }
 
 void TextureUploaderGL::RecycleBuffer(IUploadBuffer* pUploadBuffer)

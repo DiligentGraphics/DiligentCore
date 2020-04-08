@@ -257,6 +257,8 @@ struct TextureUploaderD3D12_Vk::InternalData
         return static_cast<Uint32>(m_PendingOperations.size());
     }
 
+    void Execute(IDeviceContext* pContext, PendingBufferOperation& OperationInfo);
+
 private:
     std::mutex                          m_PendingOperationsMtx;
     std::vector<PendingBufferOperation> m_PendingOperations;
@@ -296,51 +298,9 @@ void TextureUploaderD3D12_Vk::RenderThreadUpdate(IDeviceContext* pContext)
         Uint32 NumCopyOperations = 0;
         for (auto& OperationInfo : InWorkOperations)
         {
-            auto&       pUploadTex     = OperationInfo.pUploadTexture;
-            const auto& StagingTexDesc = pUploadTex->GetDesc();
-
-            switch (OperationInfo.operation)
-            {
-                case InternalData::PendingBufferOperation::Map:
-                {
-                    for (Uint32 Slice = 0; Slice < StagingTexDesc.ArraySize; ++Slice)
-                    {
-                        for (Uint32 Mip = 0; Mip < StagingTexDesc.MipLevels; ++Mip)
-                        {
-                            pUploadTex->Map(pContext, Mip, Slice);
-                        }
-                    }
-                    pUploadTex->SignalMapped();
-                }
-                break;
-
-                case InternalData::PendingBufferOperation::Copy:
-                {
-                    VERIFY(pUploadTex->DbgIsMapped(), "Upload texture must be copied only after it has been mapped");
-                    for (Uint32 Slice = 0; Slice < StagingTexDesc.ArraySize; ++Slice)
-                    {
-                        for (Uint32 Mip = 0; Mip < StagingTexDesc.MipLevels; ++Mip)
-                        {
-                            pUploadTex->Unmap(pContext, Mip, Slice);
-
-                            CopyTextureAttribs CopyInfo //
-                                {
-                                    pUploadTex->GetStagingTexture(),
-                                    RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-                                    OperationInfo.pDstTexture,
-                                    RESOURCE_STATE_TRANSITION_MODE_TRANSITION //
-                                };
-                            CopyInfo.SrcMipLevel = Mip;
-                            CopyInfo.SrcSlice    = Slice;
-                            CopyInfo.DstMipLevel = OperationInfo.DstMip + Mip;
-                            CopyInfo.DstSlice    = OperationInfo.DstSlice + Slice;
-                            pContext->CopyTexture(CopyInfo);
-                        }
-                    }
-                    ++NumCopyOperations;
-                }
-                break;
-            }
+            m_pInternalData->Execute(pContext, OperationInfo);
+            if (OperationInfo.operation == InternalData::PendingBufferOperation::Copy)
+                ++NumCopyOperations;
         }
 
         if (NumCopyOperations > 0)
@@ -363,7 +323,59 @@ void TextureUploaderD3D12_Vk::RenderThreadUpdate(IDeviceContext* pContext)
     m_pInternalData->UpdatedCompletedFenceValue();
 }
 
-void TextureUploaderD3D12_Vk::AllocateUploadBuffer(const UploadBufferDesc& Desc, bool IsRenderThread, IUploadBuffer** ppBuffer)
+
+void TextureUploaderD3D12_Vk::InternalData::Execute(IDeviceContext*         pContext,
+                                                    PendingBufferOperation& OperationInfo)
+{
+    auto&       pUploadTex     = OperationInfo.pUploadTexture;
+    const auto& StagingTexDesc = pUploadTex->GetDesc();
+
+    switch (OperationInfo.operation)
+    {
+        case InternalData::PendingBufferOperation::Map:
+        {
+            for (Uint32 Slice = 0; Slice < StagingTexDesc.ArraySize; ++Slice)
+            {
+                for (Uint32 Mip = 0; Mip < StagingTexDesc.MipLevels; ++Mip)
+                {
+                    pUploadTex->Map(pContext, Mip, Slice);
+                }
+            }
+            pUploadTex->SignalMapped();
+        }
+        break;
+
+        case InternalData::PendingBufferOperation::Copy:
+        {
+            VERIFY(pUploadTex->DbgIsMapped(), "Upload texture must be copied only after it has been mapped");
+            for (Uint32 Slice = 0; Slice < StagingTexDesc.ArraySize; ++Slice)
+            {
+                for (Uint32 Mip = 0; Mip < StagingTexDesc.MipLevels; ++Mip)
+                {
+                    pUploadTex->Unmap(pContext, Mip, Slice);
+
+                    CopyTextureAttribs CopyInfo //
+                        {
+                            pUploadTex->GetStagingTexture(),
+                            RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                            OperationInfo.pDstTexture,
+                            RESOURCE_STATE_TRANSITION_MODE_TRANSITION //
+                        };
+                    CopyInfo.SrcMipLevel = Mip;
+                    CopyInfo.SrcSlice    = Slice;
+                    CopyInfo.DstMipLevel = OperationInfo.DstMip + Mip;
+                    CopyInfo.DstSlice    = OperationInfo.DstSlice + Slice;
+                    pContext->CopyTexture(CopyInfo);
+                }
+            }
+        }
+        break;
+    }
+}
+
+void TextureUploaderD3D12_Vk::AllocateUploadBuffer(IDeviceContext*         pContext,
+                                                   const UploadBufferDesc& Desc,
+                                                   IUploadBuffer**         ppBuffer)
 {
     RefCntAutoPtr<UploadTexture> pUploadTexture = m_pInternalData->FindCachedUploadTexture(Desc);
 
@@ -388,18 +400,53 @@ void TextureUploaderD3D12_Vk::AllocateUploadBuffer(const UploadBufferDesc& Desc,
         pUploadTexture = MakeNewRCObj<UploadTexture>()(Desc, pStagingTexture);
     }
 
-    m_pInternalData->EnqueMap(pUploadTexture);
-    pUploadTexture->WaitForMap();
+    if (pContext != nullptr)
+    {
+        // Render thread
+        InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Operation::Map, pUploadTexture};
+        m_pInternalData->Execute(pContext, MapOp);
+    }
+    else
+    {
+        // Worker thread
+        m_pInternalData->EnqueMap(pUploadTexture);
+        pUploadTexture->WaitForMap();
+    }
     *ppBuffer = pUploadTexture.Detach();
 }
 
-void TextureUploaderD3D12_Vk::ScheduleGPUCopy(ITexture*      pDstTexture,
-                                              Uint32         ArraySlice,
-                                              Uint32         MipLevel,
-                                              IUploadBuffer* pUploadBuffer)
+void TextureUploaderD3D12_Vk::ScheduleGPUCopy(IDeviceContext* pContext,
+                                              ITexture*       pDstTexture,
+                                              Uint32          ArraySlice,
+                                              Uint32          MipLevel,
+                                              IUploadBuffer*  pUploadBuffer)
 {
     auto* pUploadTexture = ValidatedCast<UploadTexture>(pUploadBuffer);
-    m_pInternalData->EnqueCopy(pUploadTexture, pDstTexture, ArraySlice, MipLevel);
+    if (pContext != nullptr)
+    {
+        // Render thread
+        InternalData::PendingBufferOperation CopyOp //
+            {
+                InternalData::PendingBufferOperation::Operation::Copy,
+                pUploadTexture,
+                pDstTexture,
+                ArraySlice,
+                MipLevel //
+            };
+        m_pInternalData->Execute(pContext, CopyOp);
+
+        // The buffer may be recycled immediately after the copy scheduled is signaled,
+        // so we must signal the fence first.
+        auto SignaledFenceValue = m_pInternalData->SignalFence(pContext);
+        pUploadTexture->SignalCopyScheduled(SignaledFenceValue);
+        // This must be called by the same thread that signals the fence
+        m_pInternalData->UpdatedCompletedFenceValue();
+    }
+    else
+    {
+        // Worker thread
+        m_pInternalData->EnqueCopy(pUploadTexture, pDstTexture, ArraySlice, MipLevel);
+    }
 }
 
 void TextureUploaderD3D12_Vk::RecycleBuffer(IUploadBuffer* pUploadBuffer)

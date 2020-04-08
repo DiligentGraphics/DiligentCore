@@ -117,8 +117,7 @@ struct TextureUploaderD3D11::InternalData
         enum Operation
         {
             Map,
-            Copy,
-            MapAndCache
+            Copy
         } operation;
         RefCntAutoPtr<UploadBufferD3D11> pUploadBuffer;
         CComPtr<ID3D11Resource>          pd3d11NativeDstTexture;
@@ -168,6 +167,23 @@ struct TextureUploaderD3D11::InternalData
         m_PendingOperations.emplace_back(Op, pUploadBuffer);
     }
 
+    void Execute(ID3D11DeviceContext* pd3d11NativeCtx, PendingBufferOperation& OperationInfo, bool ExecuteImmediately);
+
+    void ExecuteImmediately(IDeviceContext* pContext, PendingBufferOperation& OperationInfo)
+    {
+        RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11(pContext, IID_DeviceContextD3D11);
+        if (pContextD3D11)
+        {
+            auto* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
+            Execute(pd3d11NativeCtx, OperationInfo, true /*ExecuteImmediately*/);
+        }
+        else
+        {
+            UNEXPECTED("Failed to query IID_DeviceContextD3D11 interface from the device context. "
+                       "Is it really Diligent::IDeviceContextD3D11 interface?");
+        }
+    }
+
     std::mutex                          m_PendingOperationsMtx;
     std::vector<PendingBufferOperation> m_PendingOperations;
     std::vector<PendingBufferOperation> m_InWorkOperations;
@@ -199,7 +215,8 @@ TextureUploaderD3D11::~TextureUploaderD3D11()
         {
             const auto& desc    = BuffQueueIt.first;
             auto&       FmtInfo = m_pDevice->GetTextureFormatInfo(desc.Format);
-            LOG_INFO_MESSAGE("TextureUploaderD3D11: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " staging texture(s) ");
+            LOG_INFO_MESSAGE("TextureUploaderD3D11: releasing ", BuffQueueIt.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name,
+                             " staging texture", (BuffQueueIt.second.size() != 1 ? "s" : ""));
         }
     }
 }
@@ -213,104 +230,113 @@ void TextureUploaderD3D11::RenderThreadUpdate(IDeviceContext* pContext)
 
         auto* pd3d11NativeCtx = pContextD3D11->GetD3D11DeviceContext();
 
-        for (auto& OperationInfo : m_pInternalData->m_InWorkOperations)
+        for (auto& Operation : m_pInternalData->m_InWorkOperations)
         {
-            auto&       pBuffer        = OperationInfo.pUploadBuffer;
-            const auto& UploadBuffDesc = pBuffer->GetDesc();
-
-            switch (OperationInfo.operation)
-            {
-                case InternalData::PendingBufferOperation::MapAndCache:
-                case InternalData::PendingBufferOperation::Map:
-                {
-                    bool AllMapped = true;
-                    for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
-                    {
-                        for (Uint32 Mip = 0; Mip < UploadBuffDesc.MipLevels; ++Mip)
-                        {
-                            if (!pBuffer->IsMapped(Mip, Slice))
-                            {
-                                D3D11_MAPPED_SUBRESOURCE MappedData;
-
-                                UINT Subres = D3D11CalcSubresource(static_cast<UINT>(Mip), static_cast<UINT>(Slice), static_cast<UINT>(UploadBuffDesc.MipLevels));
-                                auto hr     = pd3d11NativeCtx->Map(pBuffer->GetStagingTex(), Subres, D3D11_MAP_WRITE, D3D11_MAP_FLAG_DO_NOT_WAIT, &MappedData);
-                                if (SUCCEEDED(hr))
-                                {
-                                    pBuffer->SetMappedData(Mip, Slice, MappedTextureSubresource{MappedData.pData, MappedData.RowPitch, MappedData.DepthPitch});
-                                }
-                                else
-                                {
-                                    if (hr == DXGI_ERROR_WAS_STILL_DRAWING)
-                                    {
-                                        AllMapped = false;
-                                    }
-                                    else
-                                    {
-                                        LOG_ERROR("Unknown DX error when mapping staging texture: ", hr);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (AllMapped)
-                    {
-                        pBuffer->SignalMapped();
-                        if (OperationInfo.operation == InternalData::PendingBufferOperation::MapAndCache)
-                        {
-                            std::lock_guard<std::mutex> CacheLock(m_pInternalData->m_UploadBuffCacheMtx);
-                            auto&                       Cache = m_pInternalData->m_UploadBufferCache;
-                            Cache[pBuffer->GetDesc()].emplace_back(std::move(pBuffer));
-                        }
-                    }
-                    else
-                    {
-                        m_pInternalData->EnqueMap(pBuffer, OperationInfo.operation);
-                    }
-                }
-                break;
-
-                case InternalData::PendingBufferOperation::Copy:
-                {
-                    VERIFY(pBuffer->DbgIsMapped(), "Upload buffer must be copied only after it has been mapped");
-                    // Unmap all subresources first to avoid D3D11 warnings
-                    for (Uint32 Subres = 0; Subres < UploadBuffDesc.MipLevels * UploadBuffDesc.ArraySize; ++Subres)
-                    {
-                        pd3d11NativeCtx->Unmap(pBuffer->GetStagingTex(), Subres);
-                    }
-
-                    for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
-                    {
-                        for (Uint32 Mip = 0; Mip < UploadBuffDesc.MipLevels; ++Mip)
-                        {
-                            UINT SrcSubres = D3D11CalcSubresource(
-                                static_cast<UINT>(Mip),
-                                static_cast<UINT>(Slice),
-                                static_cast<UINT>(UploadBuffDesc.MipLevels));
-                            UINT DstSubres = D3D11CalcSubresource(
-                                static_cast<UINT>(OperationInfo.DstMip + Mip),
-                                static_cast<UINT>(OperationInfo.DstSlice + Slice),
-                                static_cast<UINT>(OperationInfo.DstMipLevels));
-                            pd3d11NativeCtx->CopySubresourceRegion(OperationInfo.pd3d11NativeDstTexture, DstSubres,
-                                                                   0, 0, 0, // DstX, DstY, DstZ
-                                                                   pBuffer->GetStagingTex(),
-                                                                   SrcSubres,
-                                                                   nullptr // pSrcBox
-                            );
-                        }
-                    }
-                    pBuffer->SignalCopyScheduled();
-                }
-                break;
-            }
+            m_pInternalData->Execute(pd3d11NativeCtx, Operation, false /*ExecuteImmediately*/);
         }
+
         m_pInternalData->m_InWorkOperations.clear();
     }
 }
 
-void TextureUploaderD3D11::AllocateUploadBuffer(const UploadBufferDesc& Desc, bool IsRenderThread, IUploadBuffer** ppBuffer)
+void TextureUploaderD3D11::InternalData::Execute(ID3D11DeviceContext*    pd3d11NativeCtx,
+                                                 PendingBufferOperation& OperationInfo,
+                                                 bool                    ExecuteImmediately)
+{
+    auto&       pBuffer        = OperationInfo.pUploadBuffer;
+    const auto& UploadBuffDesc = pBuffer->GetDesc();
+
+    switch (OperationInfo.operation)
+    {
+        case InternalData::PendingBufferOperation::Map:
+        {
+            bool AllMapped = true;
+            for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
+            {
+                for (Uint32 Mip = 0; Mip < UploadBuffDesc.MipLevels; ++Mip)
+                {
+                    if (!pBuffer->IsMapped(Mip, Slice))
+                    {
+                        D3D11_MAPPED_SUBRESOURCE MappedData;
+
+                        UINT Subres = D3D11CalcSubresource(static_cast<UINT>(Mip), static_cast<UINT>(Slice), static_cast<UINT>(UploadBuffDesc.MipLevels));
+                        auto hr     = pd3d11NativeCtx->Map(pBuffer->GetStagingTex(), Subres, D3D11_MAP_WRITE,
+                                                       ExecuteImmediately ? 0 : D3D11_MAP_FLAG_DO_NOT_WAIT,
+                                                       &MappedData);
+                        if (SUCCEEDED(hr))
+                        {
+                            pBuffer->SetMappedData(Mip, Slice, MappedTextureSubresource{MappedData.pData, MappedData.RowPitch, MappedData.DepthPitch});
+                        }
+                        else
+                        {
+                            VERIFY_EXPR(!ExecuteImmediately);
+                            if (hr == DXGI_ERROR_WAS_STILL_DRAWING)
+                            {
+                                AllMapped = false;
+                            }
+                            else
+                            {
+                                LOG_ERROR("Unknown DX error when mapping staging texture: ", hr);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (AllMapped)
+            {
+                pBuffer->SignalMapped();
+            }
+            else
+            {
+                VERIFY_EXPR(!ExecuteImmediately);
+                EnqueMap(pBuffer, OperationInfo.operation);
+            }
+        }
+        break;
+
+        case InternalData::PendingBufferOperation::Copy:
+        {
+            VERIFY(pBuffer->DbgIsMapped(), "Upload buffer must be copied only after it has been mapped");
+            // Unmap all subresources first to avoid D3D11 warnings
+            for (Uint32 Subres = 0; Subres < UploadBuffDesc.MipLevels * UploadBuffDesc.ArraySize; ++Subres)
+            {
+                pd3d11NativeCtx->Unmap(pBuffer->GetStagingTex(), Subres);
+            }
+
+            for (Uint32 Slice = 0; Slice < UploadBuffDesc.ArraySize; ++Slice)
+            {
+                for (Uint32 Mip = 0; Mip < UploadBuffDesc.MipLevels; ++Mip)
+                {
+                    UINT SrcSubres = D3D11CalcSubresource(
+                        static_cast<UINT>(Mip),
+                        static_cast<UINT>(Slice),
+                        static_cast<UINT>(UploadBuffDesc.MipLevels));
+                    UINT DstSubres = D3D11CalcSubresource(
+                        static_cast<UINT>(OperationInfo.DstMip + Mip),
+                        static_cast<UINT>(OperationInfo.DstSlice + Slice),
+                        static_cast<UINT>(OperationInfo.DstMipLevels));
+                    pd3d11NativeCtx->CopySubresourceRegion(OperationInfo.pd3d11NativeDstTexture, DstSubres,
+                                                           0, 0, 0, // DstX, DstY, DstZ
+                                                           pBuffer->GetStagingTex(),
+                                                           SrcSubres,
+                                                           nullptr // pSrcBox
+                    );
+                }
+            }
+            pBuffer->SignalCopyScheduled();
+        }
+        break;
+    }
+}
+
+void TextureUploaderD3D11::AllocateUploadBuffer(IDeviceContext*         pContext,
+                                                const UploadBufferDesc& Desc,
+                                                IUploadBuffer**         ppBuffer)
 {
     *ppBuffer = nullptr;
+
+    RefCntAutoPtr<UploadBufferD3D11> pUploadBuffer;
 
     {
         std::lock_guard<std::mutex> CacheLock(m_pInternalData->m_UploadBuffCacheMtx);
@@ -324,14 +350,14 @@ void TextureUploaderD3D11::AllocateUploadBuffer(const UploadBufferDesc& Desc, bo
                 auto& Deque = DequeIt->second;
                 if (!Deque.empty())
                 {
-                    *ppBuffer = Deque.front().Detach();
+                    pUploadBuffer = std::move(Deque.front());
                     Deque.pop_front();
                 }
             }
         }
     }
 
-    if (*ppBuffer == nullptr)
+    if (!pUploadBuffer)
     {
         // clang-format off
         D3D11_TEXTURE2D_DESC StagingTexDesc =
@@ -361,23 +387,57 @@ void TextureUploaderD3D11::AllocateUploadBuffer(const UploadBufferDesc& Desc, bo
         LOG_INFO_MESSAGE("TextureUploaderD3D11: created ", Desc.Width, 'x', Desc.Height, 'x', Desc.Depth, ' ', Desc.MipLevels, "-mip ",
                          m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " staging texture");
 
-        RefCntAutoPtr<UploadBufferD3D11> pUploadBuffer(MakeNewRCObj<UploadBufferD3D11>()(Desc, pStagingTex));
-        m_pInternalData->EnqueMap(pUploadBuffer, InternalData::PendingBufferOperation::Map);
-        pUploadBuffer->WaitForMap();
-        *ppBuffer = pUploadBuffer.Detach();
+        pUploadBuffer = MakeNewRCObj<UploadBufferD3D11>()(Desc, pStagingTex);
     }
+
+    if (pUploadBuffer)
+    {
+        if (pContext != nullptr)
+        {
+            // Main thread
+            InternalData::PendingBufferOperation MapOp{InternalData::PendingBufferOperation::Map, pUploadBuffer};
+            m_pInternalData->ExecuteImmediately(pContext, MapOp);
+        }
+        else
+        {
+            // Worker thread
+            m_pInternalData->EnqueMap(pUploadBuffer, InternalData::PendingBufferOperation::Map);
+            pUploadBuffer->WaitForMap();
+        }
+    }
+
+    *ppBuffer = pUploadBuffer.Detach();
 }
 
-void TextureUploaderD3D11::ScheduleGPUCopy(ITexture*      pDstTexture,
-                                           Uint32         ArraySlice,
-                                           Uint32         MipLevel,
-                                           IUploadBuffer* pUploadBuffer)
+void TextureUploaderD3D11::ScheduleGPUCopy(IDeviceContext* pContext,
+                                           ITexture*       pDstTexture,
+                                           Uint32          ArraySlice,
+                                           Uint32          MipLevel,
+                                           IUploadBuffer*  pUploadBuffer)
 {
     auto*                        pUploadBufferD3D11 = ValidatedCast<UploadBufferD3D11>(pUploadBuffer);
     RefCntAutoPtr<ITextureD3D11> pDstTexD3D11(pDstTexture, IID_TextureD3D11);
     auto*                        pd3d11NativeDstTex = pDstTexD3D11->GetD3D11Texture();
     const auto&                  DstTexDesc         = pDstTexture->GetDesc();
-    m_pInternalData->EnqueCopy(pUploadBufferD3D11, pd3d11NativeDstTex, MipLevel, ArraySlice, DstTexDesc.MipLevels);
+    if (pContext != nullptr)
+    {
+        // Main thread
+        InternalData::PendingBufferOperation CopyOp //
+            {
+                InternalData::PendingBufferOperation::Copy,
+                pUploadBufferD3D11,
+                pd3d11NativeDstTex,
+                MipLevel,
+                ArraySlice,
+                DstTexDesc.MipLevels //
+            };
+        m_pInternalData->ExecuteImmediately(pContext, CopyOp);
+    }
+    else
+    {
+        // Worker thread
+        m_pInternalData->EnqueCopy(pUploadBufferD3D11, pd3d11NativeDstTex, MipLevel, ArraySlice, DstTexDesc.MipLevels);
+    }
 }
 
 void TextureUploaderD3D11::RecycleBuffer(IUploadBuffer* pUploadBuffer)
@@ -386,21 +446,16 @@ void TextureUploaderD3D11::RecycleBuffer(IUploadBuffer* pUploadBuffer)
     VERIFY(pUploadBufferD3D11->DbgIsCopyScheduled(), "Upload buffer must be recycled only after copy operation has been scheduled on the GPU");
     pUploadBufferD3D11->Reset();
 
-    m_pInternalData->EnqueMap(pUploadBufferD3D11, InternalData::PendingBufferOperation::MapAndCache);
+    std::lock_guard<std::mutex> CacheLock(m_pInternalData->m_UploadBuffCacheMtx);
+    m_pInternalData->m_UploadBufferCache[pUploadBufferD3D11->GetDesc()].emplace_back(pUploadBufferD3D11);
 }
 
 TextureUploaderStats TextureUploaderD3D11::GetStats()
 {
     TextureUploaderStats        Stats;
     std::lock_guard<std::mutex> QueueLock(m_pInternalData->m_PendingOperationsMtx);
-    for (auto& OperationInfo : m_pInternalData->m_PendingOperations)
-    {
-        // Do not count MapAndCache operations as they are performed as part of the
-        // buffer recycling.
-        if (OperationInfo.operation == InternalData::PendingBufferOperation::Map ||
-            OperationInfo.operation == InternalData::PendingBufferOperation::Copy)
-            ++Stats.NumPendingOperations;
-    }
+    Stats.NumPendingOperations = static_cast<Uint32>(m_pInternalData->m_PendingOperations.size());
+
     return Stats;
 }
 

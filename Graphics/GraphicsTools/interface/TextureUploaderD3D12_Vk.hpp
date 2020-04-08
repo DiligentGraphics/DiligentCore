@@ -42,14 +42,15 @@ public:
 
     virtual void RenderThreadUpdate(IDeviceContext* pContext) override final;
 
-    virtual void AllocateUploadBuffer(const UploadBufferDesc& Desc,
-                                      bool                    IsRenderThread,
+    virtual void AllocateUploadBuffer(IDeviceContext*         pContext,
+                                      const UploadBufferDesc& Desc,
                                       IUploadBuffer**         ppBuffer) override final;
 
-    virtual void ScheduleGPUCopy(ITexture*      pDstTexture,
-                                 Uint32         ArraySlice,
-                                 Uint32         MipLevel,
-                                 IUploadBuffer* pUploadBuffer) override final;
+    virtual void ScheduleGPUCopy(IDeviceContext* pContext,
+                                 ITexture*       pDstTexture,
+                                 Uint32          ArraySlice,
+                                 Uint32          MipLevel,
+                                 IUploadBuffer*  pUploadBuffer) override final;
 
     virtual void RecycleBuffer(IUploadBuffer* pUploadBuffer) override final;
 
