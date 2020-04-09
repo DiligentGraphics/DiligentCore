@@ -135,7 +135,8 @@ void TextureUploaderTest(bool IsRenderThread)
     {
         auto ref_cnt = cnt;
 
-        std::atomic_bool BufferPopulated = false;
+        std::atomic_bool BufferPopulated;
+        BufferPopulated.store(false);
 
         auto PopulateBuffer = [&](IDeviceContext* pCtx) //
         {
@@ -156,7 +157,7 @@ void TextureUploaderTest(bool IsRenderThread)
                 pUploadBuffer->WaitForCopyScheduled();
             }
             pTexUploader->RecycleBuffer(pUploadBuffer);
-            BufferPopulated = true;
+            BufferPopulated.store(true);
         };
 
         if (IsRenderThread)
