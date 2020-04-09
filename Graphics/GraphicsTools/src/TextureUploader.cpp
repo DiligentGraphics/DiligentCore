@@ -26,9 +26,17 @@
  */
 
 #include "pch.h"
-#include "TextureUploaderD3D11.hpp"
-#include "TextureUploaderD3D12_Vk.hpp"
-#include "TextureUploaderGL.hpp"
+#if D3D11_SUPPORTED
+#    include "TextureUploaderD3D11.hpp"
+#endif
+
+#if D3D12_SUPPORTED || VULKAN_SUPPORTED
+#    include "TextureUploaderD3D12_Vk.hpp"
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+#    include "TextureUploaderGL.hpp"
+#endif
 
 namespace Diligent
 {
@@ -38,22 +46,28 @@ void CreateTextureUploader(IRenderDevice* pDevice, const TextureUploaderDesc& De
     *ppUploader = nullptr;
     switch (pDevice->GetDeviceCaps().DevType)
     {
+#if D3D11_SUPPORTED
         case RENDER_DEVICE_TYPE_D3D11:
             *ppUploader = MakeNewRCObj<TextureUploaderD3D11>()(pDevice, Desc);
             break;
+#endif
 
+#if D3D12_SUPPORTED || VULKAN_SUPPORTED
         case RENDER_DEVICE_TYPE_D3D12:
         case RENDER_DEVICE_TYPE_VULKAN:
             *ppUploader = MakeNewRCObj<TextureUploaderD3D12_Vk>()(pDevice, Desc);
             break;
+#endif
 
+#if GL_SUPPORTED || GLES_SUPPORTED
         case RENDER_DEVICE_TYPE_GLES:
         case RENDER_DEVICE_TYPE_GL:
             *ppUploader = MakeNewRCObj<TextureUploaderGL>()(pDevice, Desc);
             break;
+#endif
 
         default:
-            UNEXPECTED("Unexpected device type");
+            UNEXPECTED("Unsupported device type");
     }
     if (*ppUploader != nullptr)
         (*ppUploader)->AddRef();
