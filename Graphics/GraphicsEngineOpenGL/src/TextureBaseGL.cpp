@@ -35,6 +35,7 @@
 #include "DeviceContextGLImpl.hpp"
 #include "EngineMemory.h"
 #include "GraphicsAccessories.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -51,7 +52,7 @@ Uint32 TextureBaseGL::GetPBODataOffset(const TextureDesc& TexDesc, Uint32 ArrayS
         for (Uint32 mip = 0; mip < TexDesc.MipLevels; ++mip)
         {
             auto MipInfo = GetMipLevelProperties(TexDesc, mip);
-            ArraySliceSize += (MipInfo.MipSize + 3) & (~3);
+            ArraySliceSize += Align(MipInfo.MipSize, Uint32{4});
         }
 
         Offset = ArraySliceSize;
@@ -59,13 +60,13 @@ Uint32 TextureBaseGL::GetPBODataOffset(const TextureDesc& TexDesc, Uint32 ArrayS
             TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
             TexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
             TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-            Offset *= TexDesc.ArraySize;
+            Offset *= ArraySlice;
     }
 
     for (Uint32 mip = 0; mip < MipLevel; ++mip)
     {
         auto MipInfo = GetMipLevelProperties(TexDesc, mip);
-        Offset += (MipInfo.MipSize + 3) & (~3);
+        Offset += Align(MipInfo.MipSize, Uint32{4});
     }
 
     return Offset;

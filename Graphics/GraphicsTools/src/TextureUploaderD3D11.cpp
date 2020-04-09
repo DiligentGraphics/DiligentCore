@@ -384,7 +384,8 @@ void TextureUploaderD3D11::AllocateUploadBuffer(IDeviceContext*         pContext
             return;
         }
 
-        LOG_INFO_MESSAGE("TextureUploaderD3D11: created ", Desc.Width, 'x', Desc.Height, 'x', Desc.Depth, ' ', Desc.MipLevels, "-mip ",
+        LOG_INFO_MESSAGE("TextureUploaderD3D11: created ", Desc.Width, 'x', Desc.Height, 'x', Desc.Depth, ' ',
+                         Desc.MipLevels, "-mip ", Desc.ArraySize, "-slice ",
                          m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " staging texture");
 
         pUploadBuffer = MakeNewRCObj<UploadBufferD3D11>()(Desc, pStagingTex);

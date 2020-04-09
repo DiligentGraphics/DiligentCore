@@ -42,7 +42,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel);
+Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel, Uint32 Alignment = 4);
 
 /// Texture object implementation in Vulkan backend.
 class TextureVkImpl final : public TextureBase<ITextureVk, RenderDeviceVkImpl, TextureViewVkImpl, FixedBlockMemoryAllocator>

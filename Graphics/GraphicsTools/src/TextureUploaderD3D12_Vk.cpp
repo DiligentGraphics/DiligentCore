@@ -181,7 +181,9 @@ struct TextureUploaderD3D12_Vk::InternalData
             {
                 const auto& desc    = it.first;
                 auto&       FmtInfo = GetTextureFormatAttribs(desc.Format);
-                LOG_INFO_MESSAGE("TextureUploaderD3D12_Vk: releasing ", it.second.size(), ' ', desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name, " upload buffer(s) ");
+                LOG_INFO_MESSAGE("TextureUploaderD3D12_Vk: releasing ", it.second.size(), ' ',
+                                 desc.Width, 'x', desc.Height, 'x', desc.Depth, ' ', FmtInfo.Name,
+                                 " upload buffer(s)", (it.second.size() == 1 ? "" : "s"));
             }
         }
     }
@@ -383,11 +385,12 @@ void TextureUploaderD3D12_Vk::AllocateUploadBuffer(IDeviceContext*         pCont
     if (!pUploadTexture)
     {
         TextureDesc StagingTexDesc;
-        StagingTexDesc.Type           = RESOURCE_DIM_TEX_2D;
+        StagingTexDesc.Type           = Desc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY;
         StagingTexDesc.Width          = Desc.Width;
         StagingTexDesc.Height         = Desc.Height;
         StagingTexDesc.Format         = Desc.Format;
         StagingTexDesc.MipLevels      = Desc.MipLevels;
+        StagingTexDesc.ArraySize      = Desc.ArraySize;
         StagingTexDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
         StagingTexDesc.Usage          = USAGE_STAGING;
 
@@ -395,6 +398,7 @@ void TextureUploaderD3D12_Vk::AllocateUploadBuffer(IDeviceContext*         pCont
         m_pDevice->CreateTexture(StagingTexDesc, nullptr, &pStagingTexture);
 
         LOG_INFO_MESSAGE("Created ", Desc.Width, "x", Desc.Height, 'x', Desc.Depth, ' ', Desc.MipLevels, "-mip ",
+                         Desc.ArraySize, "-slice ",
                          GetTextureFormatAttribs(Desc.Format).Name, " staging texture");
 
         pUploadTexture = MakeNewRCObj<UploadTexture>()(Desc, pStagingTexture);

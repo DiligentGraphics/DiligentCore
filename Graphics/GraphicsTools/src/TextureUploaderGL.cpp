@@ -53,25 +53,24 @@ public:
         m_SubresourceStrides(Desc.MipLevels * Desc.ArraySize    )
     // clang-format on
     {
-        const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
-        Uint32      SubRes     = 0;
+        TextureDesc TexDesc;
+        TexDesc.Format = Desc.Format;
+        TexDesc.Width  = Desc.Width;
+        TexDesc.Height = Desc.Height;
+        TexDesc.Depth  = Desc.Depth;
+        TexDesc.Type   = Desc.ArraySize == 1 ? RESOURCE_DIM_TEX_2D : RESOURCE_DIM_TEX_2D_ARRAY;
+
+        Uint32 SubRes = 0;
         for (Uint32 Slice = 0; Slice < Desc.ArraySize; ++Slice)
         {
             for (Uint32 Mip = 0; Mip < Desc.MipLevels; ++Mip)
             {
-                auto MipWidth  = std::max(Desc.Width >> Mip, 1u);
-                auto MipHeight = std::max(Desc.Height >> Mip, 1u);
-                if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
-                {
-                    MipWidth  = Align(MipWidth, Uint32{FmtAttribs.BlockWidth});
-                    MipHeight = Align(MipHeight, Uint32{FmtAttribs.BlockHeight});
-                }
-
+                auto MipProps = GetMipLevelProperties(TexDesc, Mip);
                 // Stride must be 32-bit aligned in OpenGL
-                auto RowStride               = Align(MipWidth / Uint32{FmtAttribs.BlockWidth} * FmtAttribs.GetElementSize(), Uint32{4});
+                auto RowStride               = Align(MipProps.RowSize, Uint32{4});
                 m_SubresourceStrides[SubRes] = RowStride;
 
-                auto MipSize                     = MipHeight / Uint32{FmtAttribs.BlockHeight} * RowStride;
+                auto MipSize                     = MipProps.StorageHeight * RowStride;
                 m_SubresourceOffsets[SubRes + 1] = m_SubresourceOffsets[SubRes] + MipSize;
                 ++SubRes;
             }
@@ -293,7 +292,7 @@ void TextureUploaderGL::InternalData::Execute(IRenderDevice*          pDevice,
 
                     TextureSubResData SubResData(pBuffer->m_pStagingBuffer, SrcOffset, SrcStride);
 
-                    auto MipLevelProps = GetMipLevelProperties(TexDesc, Mip);
+                    auto MipLevelProps = GetMipLevelProperties(TexDesc, OperationInfo.DstMip + Mip);
                     Box  DstBox;
                     DstBox.MaxX = MipLevelProps.LogicalWidth;
                     DstBox.MaxY = MipLevelProps.LogicalHeight;
@@ -336,7 +335,7 @@ void TextureUploaderGL::AllocateUploadBuffer(IDeviceContext*         pContext,
     {
         pUploadBuffer = MakeNewRCObj<UploadBufferGL>()(Desc);
         LOG_INFO_MESSAGE("TextureUploaderGL: created upload buffer for ", Desc.Width, 'x', Desc.Height, 'x',
-                         Desc.Depth, ' ', Desc.MipLevels, "-mip ",
+                         Desc.Depth, ' ', Desc.MipLevels, "-mip ", Desc.ArraySize, "-slice ",
                          m_pDevice->GetTextureFormatInfo(Desc.Format).Name, " texture");
     }
 

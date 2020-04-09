@@ -1265,6 +1265,8 @@ void DeviceContextGLImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             SrcTexViewDesc.ViewType        = TEXTURE_VIEW_RENDER_TARGET;
             SrcTexViewDesc.MostDetailedMip = CopyAttribs.SrcMipLevel;
             SrcTexViewDesc.FirstArraySlice = CopyAttribs.SrcSlice;
+            SrcTexViewDesc.NumArraySlices  = 1;
+            SrcTexViewDesc.NumMipLevels    = 1;
             TextureViewGLImpl SrcTexView //
                 {
                     nullptr, // pRefCounters

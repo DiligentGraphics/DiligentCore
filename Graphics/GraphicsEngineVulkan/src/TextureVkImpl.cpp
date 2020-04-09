@@ -417,6 +417,12 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             VkStagingBuffCI.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
             MemProperties |= VK_MEMORY_PROPERTY_HOST_CACHED_BIT;
             SetState(RESOURCE_STATE_COPY_DEST);
+
+            // We do not set HOST_COHERENT bit, so we will have to use InvalidateMappedMemoryRanges,
+            // which requires the ranges to be aligned by nonCoherentAtomSize.
+            const auto& DeviceLimits = pRenderDeviceVk->GetPhysicalDevice().GetProperties().limits;
+            // Align the buffer size to ensure that any aligned range is always in bounds.
+            VkStagingBuffCI.size = Align(VkStagingBuffCI.size, DeviceLimits.nonCoherentAtomSize);
         }
         else if (m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE)
         {
@@ -460,7 +466,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     VERIFY_EXPR(IsInKnownState());
 }
 
-Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel)
+Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel, Uint32 Alignment)
 {
     VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
 
@@ -475,7 +481,7 @@ Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint3
             // If the calling command's VkImage parameter is a compressed image, bufferOffset
             // must be a multiple of the compressed texel block size in bytes (18.4). This
             // is automatically guaranteed as MipWidth and MipHeight are rounded to block size
-            ArraySliceSize += (MipInfo.MipSize + 3) & (~3);
+            ArraySliceSize += Align(MipInfo.MipSize, Alignment);
         }
 
         Offset = ArraySliceSize;
@@ -483,14 +489,14 @@ Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint3
             TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
             TexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
             TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-            Offset *= TexDesc.ArraySize;
+            Offset *= ArraySlice;
     }
 
     for (Uint32 mip = 0; mip < MipLevel; ++mip)
     {
         auto MipInfo = GetMipLevelProperties(TexDesc, mip);
         // bufferOffset must be a multiple of 4 (18.4)
-        Offset += (MipInfo.MipSize + 3) & (~3);
+        Offset += Align(MipInfo.MipSize, Alignment);
     }
 
     return Offset;
@@ -774,15 +780,22 @@ VkImageLayout TextureVkImpl::GetLayout() const
 
 void TextureVkImpl::InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size)
 {
-    const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
+    const auto& LogicalDevice    = m_pDevice->GetLogicalDevice();
+    const auto& PhysDeviceLimits = m_pDevice->GetPhysicalDevice().GetProperties().limits;
 
     VkMappedMemoryRange InvalidateRange = {};
 
     InvalidateRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
     InvalidateRange.pNext  = nullptr;
     InvalidateRange.memory = m_MemoryAllocation.Page->GetVkMemory();
-    InvalidateRange.offset = m_StagingDataAlignedOffset + Offset;
-    InvalidateRange.size   = Size;
+
+    Offset += m_StagingDataAlignedOffset;
+    auto AlignedOffset = AlignDown(Offset, PhysDeviceLimits.nonCoherentAtomSize);
+    Size += Offset - AlignedOffset;
+    auto AlignedSize = Align(Size, PhysDeviceLimits.nonCoherentAtomSize);
+
+    InvalidateRange.offset = AlignedOffset;
+    InvalidateRange.size   = AlignedSize;
 
     auto err = LogicalDevice.InvalidateMappedMemoryRanges(1, &InvalidateRange);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to invalidated mapped texture memory range");
