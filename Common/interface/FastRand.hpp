@@ -42,7 +42,7 @@ public:
 
     static constexpr StateType Max = 0x7FFF;
 
-    FastRand(StateType Seed) :
+    explicit FastRand(StateType Seed) noexcept :
         State{Seed}
     {
     }
@@ -62,7 +62,7 @@ template <typename Type>
 class FastRandReal : private FastRand
 {
 public:
-    FastRandReal(FastRand::StateType Seed) noexcept :
+    explicit FastRandReal(FastRand::StateType Seed) noexcept :
         FastRand{Seed}
     {}
 
