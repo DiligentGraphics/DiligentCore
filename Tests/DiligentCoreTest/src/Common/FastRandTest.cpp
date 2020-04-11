@@ -55,7 +55,7 @@ TEST(Common_FastRand, FastRandFloat)
 {
     std::unordered_map<float, int> Counter;
 
-    FastRandFloat<float> Rnd(1, -1.f, +1.f);
+    FastRandFloat Rnd(1, -1.f, +1.f);
     for (unsigned i = 0; i < FastRand::Max / 4; ++i)
     {
         auto x = Rnd();
@@ -74,7 +74,7 @@ TEST(Common_FastRand, FastRandInt)
 
     std::vector<int> Counter(Max - Min + 1);
 
-    FastRandInt<int> Rnd(1, Min, Max);
+    FastRandInt Rnd(1, Min, Max);
     for (unsigned i = 0; i < (Max - Min) / 4; ++i)
     {
         auto x = Rnd();

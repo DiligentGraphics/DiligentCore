@@ -898,7 +898,7 @@ TEST(Common_BasicMath, VectorRecast)
     EXPECT_EQ(float4(1, 2, 3, 4).Recast<int>(), Vector4<int>(1, 2, 3, 4));
 }
 
-TEST(Common_BasicMath, StdFloorCeil)
+TEST(Common_BasicMath, StdFloorCeilVector)
 {
     EXPECT_EQ(std::floor(float2(0.1f, 1.2f)), float2(0, 1));
     EXPECT_EQ(std::floor(float3(0.1f, 1.2f, 2.3f)), float3(0, 1, 2));
@@ -908,7 +908,7 @@ TEST(Common_BasicMath, StdFloorCeil)
     EXPECT_EQ(std::ceil(float4(0.1f, 1.2f, 2.3f, 3.4f)), float4(1, 2, 3, 4));
 }
 
-TEST(Common_BasicMath, FastFloorCeil)
+TEST(Common_BasicMath, FastFloorCeilVector)
 {
     EXPECT_EQ(FastFloor(float2(-0.1f, 1.2f)), float2(-1, 1));
     EXPECT_EQ(FastFloor(float3(-0.1f, 1.f, 2.3f)), float3(-1, 1, 2));

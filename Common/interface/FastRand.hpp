@@ -57,16 +57,16 @@ private:
     StateType State;
 };
 
-/// Generates random real number in [Min, Max] range
-template <typename Type = float>
-class FastRandFloat : private FastRand
+/// Generates a real random number in [Min, Max] range
+template <typename Type>
+class FastRandReal : private FastRand
 {
 public:
-    FastRandFloat(FastRand::StateType Seed) noexcept :
+    FastRandReal(FastRand::StateType Seed) noexcept :
         FastRand{Seed}
     {}
 
-    FastRandFloat(FastRand::StateType Seed, Type _Min, Type _Max) noexcept :
+    FastRandReal(FastRand::StateType Seed, Type _Min, Type _Max) noexcept :
         FastRand{Seed},
         Min{_Min},
         Range{_Max - _Min}
@@ -74,7 +74,7 @@ public:
 
     Type operator()()
     {
-        return (FastRand::operator()() / static_cast<Type>(FastRand::Max)) * Range + Min;
+        return (static_cast<Type>(FastRand::operator()()) / static_cast<Type>(FastRand::Max)) * Range + Min;
     }
 
 private:
@@ -82,28 +82,30 @@ private:
     const Type Range = 1.f;
 };
 
-/// Generates random integer number in [Min, Max] range
-template <typename Type = int>
+using FastRandFloat  = FastRandReal<float>;
+using FastRandDouble = FastRandReal<double>;
+
+/// Generates an integer random number in [Min, Max] range
 class FastRandInt : private FastRand
 {
 public:
-    FastRandInt(FastRand::StateType Seed, Type _Min, Type _Max) noexcept :
+    FastRandInt(FastRand::StateType Seed, int _Min, int _Max) noexcept :
         FastRand{Seed},
         Min{_Min},
         Range{_Max - _Min + 1}
     {
         VERIFY_EXPR(_Max > _Min);
-        VERIFY(Range <= FastRand::Max, "Range is too large");
+        VERIFY(Range <= static_cast<int>(FastRand::Max), "Range is too large");
     }
 
-    Type operator()()
+    int operator()()
     {
-        return Min + static_cast<Type>(FastRand::operator()()) % Range;
+        return Min + static_cast<int>(FastRand::operator()()) % Range;
     }
 
 private:
-    const Type Min;
-    const Type Range;
+    const int Min;
+    const int Range;
 };
 
 } // namespace Diligent
