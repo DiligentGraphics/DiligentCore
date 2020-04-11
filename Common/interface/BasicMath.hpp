@@ -1942,6 +1942,86 @@ inline Uint32 F4Color_To_RGBA8Unorm(const float4& f4Color)
     return RGBA8U;
 }
 
+
+// At least on MSVC std::floor is an actual function call into ucrtbase.dll.
+// For floats/doubles that fit into Int64 representable range we can do much better.
+template <typename T>
+T FastFloor(T x)
+{
+    auto i   = static_cast<Int64>(x);
+    auto flr = static_cast<T>(i);
+    //   x         flr    floor(x)  flr <= x
+    // +1.0   ->   1.0      1.0       true
+    // +0.5   ->   0.0      0.0       true
+    //  0.0   ->   0.0      0.0       true
+    // -0.5   ->   0.0     -1.0      false
+    // -1.0   ->  -1.0     -1.0       true
+
+    return flr <= x ? flr : flr - 1;
+}
+
+template <typename T>
+T FastCeil(T x)
+{
+    return -FastFloor(-x);
+}
+
+
+template <typename T>
+Diligent::Vector2<T> FastFloor(const Diligent::Vector2<T>& vec)
+{
+    return Diligent::Vector2<T>{
+        FastFloor(vec.x),
+        FastFloor(vec.y)};
+}
+
+template <typename T>
+Diligent::Vector3<T> FastFloor(const Diligent::Vector3<T>& vec)
+{
+    return Diligent::Vector3<T>{
+        FastFloor(vec.x),
+        FastFloor(vec.y),
+        FastFloor(vec.z)};
+}
+
+template <typename T>
+Diligent::Vector4<T> FastFloor(const Diligent::Vector4<T>& vec)
+{
+    return Diligent::Vector4<T>{
+        FastFloor(vec.x),
+        FastFloor(vec.y),
+        FastFloor(vec.z),
+        FastFloor(vec.w)};
+}
+
+
+template <typename T>
+Diligent::Vector2<T> FastCeil(const Diligent::Vector2<T>& vec)
+{
+    return Diligent::Vector2<T>{
+        FastCeil(vec.x),
+        FastCeil(vec.y)};
+}
+
+template <typename T>
+Diligent::Vector3<T> FastCeil(const Diligent::Vector3<T>& vec)
+{
+    return Diligent::Vector3<T>{
+        FastCeil(vec.x),
+        FastCeil(vec.y),
+        FastCeil(vec.z)};
+}
+
+template <typename T>
+Diligent::Vector4<T> FastCeil(const Diligent::Vector4<T>& vec)
+{
+    return Diligent::Vector4<T>{
+        FastCeil(vec.x),
+        FastCeil(vec.y),
+        FastCeil(vec.z),
+        FastCeil(vec.w)};
+}
+
 } // namespace Diligent
 
 
@@ -2002,7 +2082,6 @@ Diligent::Vector4<T> min(const Diligent::Vector4<T>& Left, const Diligent::Vecto
         std::min(Left.z, Right.z),
         std::min(Left.w, Right.w));
 }
-
 
 template <typename T>
 Diligent::Vector2<T> floor(const Diligent::Vector2<T>& vec)

@@ -100,7 +100,7 @@ template <TEXTURE_ADDRESS_MODE AddressMode, bool IsNormalizedCoord>
 LinearTexFilterSampleInfo GetLinearTexFilterSampleInfo(Uint32 Width, float u)
 {
     float x  = IsNormalizedCoord ? u * static_cast<float>(Width) : u;
-    float x0 = std::floor(x - 0.5f);
+    float x0 = FastFloor(x - 0.5f);
 
     // clang-format off
     LinearTexFilterSampleInfo SampleInfo

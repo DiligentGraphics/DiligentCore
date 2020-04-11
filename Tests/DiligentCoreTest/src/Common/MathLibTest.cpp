@@ -893,24 +893,32 @@ TEST(Common_BasicMath, MatrixMultiply)
 
 TEST(Common_BasicMath, VectorRecast)
 {
-    {
-        EXPECT_EQ(float2(1, 2).Recast<int>(), Vector2<int>(1, 2));
-        EXPECT_EQ(float3(1, 2, 3).Recast<int>(), Vector3<int>(1, 2, 3));
-        EXPECT_EQ(float4(1, 2, 3, 4).Recast<int>(), Vector4<int>(1, 2, 3, 4));
-    }
+    EXPECT_EQ(float2(1, 2).Recast<int>(), Vector2<int>(1, 2));
+    EXPECT_EQ(float3(1, 2, 3).Recast<int>(), Vector3<int>(1, 2, 3));
+    EXPECT_EQ(float4(1, 2, 3, 4).Recast<int>(), Vector4<int>(1, 2, 3, 4));
 }
 
 TEST(Common_BasicMath, StdFloorCeil)
 {
-    {
-        EXPECT_EQ(std::floor(float2(0.1f, 1.2f)), float2(0, 1));
-        EXPECT_EQ(std::floor(float3(0.1f, 1.2f, 2.3f)), float3(0, 1, 2));
-        EXPECT_EQ(std::floor(float4(0.1f, 1.2f, 2.3f, 3.4f)), float4(0, 1, 2, 3));
-        EXPECT_EQ(std::ceil(float2(0.1f, 1.2f)), float2(1, 2));
-        EXPECT_EQ(std::ceil(float3(0.1f, 1.2f, 2.3f)), float3(1, 2, 3));
-        EXPECT_EQ(std::ceil(float4(0.1f, 1.2f, 2.3f, 3.4f)), float4(1, 2, 3, 4));
-    }
+    EXPECT_EQ(std::floor(float2(0.1f, 1.2f)), float2(0, 1));
+    EXPECT_EQ(std::floor(float3(0.1f, 1.2f, 2.3f)), float3(0, 1, 2));
+    EXPECT_EQ(std::floor(float4(0.1f, 1.2f, 2.3f, 3.4f)), float4(0, 1, 2, 3));
+    EXPECT_EQ(std::ceil(float2(0.1f, 1.2f)), float2(1, 2));
+    EXPECT_EQ(std::ceil(float3(0.1f, 1.2f, 2.3f)), float3(1, 2, 3));
+    EXPECT_EQ(std::ceil(float4(0.1f, 1.2f, 2.3f, 3.4f)), float4(1, 2, 3, 4));
 }
+
+TEST(Common_BasicMath, FastFloorCeil)
+{
+    EXPECT_EQ(FastFloor(float2(-0.1f, 1.2f)), float2(-1, 1));
+    EXPECT_EQ(FastFloor(float3(-0.1f, 1.f, 2.3f)), float3(-1, 1, 2));
+    EXPECT_EQ(FastFloor(float4(-2.f, -0.875f, 0.f, 0.125f)), float4(-2, -1, 0, 0));
+
+    EXPECT_EQ(FastCeil(float2(-0.1f, 1.2f)), float2(0, 2));
+    EXPECT_EQ(FastCeil(float3(-0.875f, 1.f, 2.3f)), float3(0, 1, 3));
+    EXPECT_EQ(FastCeil(float4(-2.f, -0.875f, 0.f, 0.125f)), float4(-2, 0, 0, 1));
+}
+
 
 TEST(Common_AdvancedMath, Planes)
 {
@@ -1260,6 +1268,36 @@ TEST(Common_AdvancedMath, TraceLineThroughGrid)
     // It is either this line or the previous one that will make the algorithm miss the end point depending on
     // whether 'abs(t + tx) < abs(t + ty)' or 'abs(t + tx) <= abs(t + ty)' condition is used.
     TestLineTrace(float2{3, 1}, float2{1, 3}, {int2{3, 1}, int2{2, 1}, int2{2, 2}, int2{1, 2}, int2{1, 3}});
+}
+
+TEST(Common_BasicMath, FastFloor)
+{
+    EXPECT_EQ(FastFloor(0.f), 0.f);
+
+    EXPECT_EQ(FastFloor(-0.0625f), -1.f);
+    EXPECT_EQ(FastFloor(-0.975f), -1.f);
+    EXPECT_EQ(FastFloor(-1.f), -1.f);
+    EXPECT_EQ(FastFloor(-1.125f), -2.f);
+
+    EXPECT_EQ(FastFloor(0.0625f), 0.f);
+    EXPECT_EQ(FastFloor(0.975f), 0.f);
+    EXPECT_EQ(FastFloor(1.f), 1.f);
+    EXPECT_EQ(FastFloor(1.125f), 1.f);
+}
+
+TEST(Common_BasicMath, FastCeil)
+{
+    EXPECT_EQ(FastCeil(0.f), 0.f);
+
+    EXPECT_EQ(FastCeil(-0.0625f), 0.f);
+    EXPECT_EQ(FastCeil(-0.975f), 0.f);
+    EXPECT_EQ(FastCeil(-1.f), -1.f);
+    EXPECT_EQ(FastCeil(-1.125f), -1.f);
+
+    EXPECT_EQ(FastCeil(0.0625f), 1.f);
+    EXPECT_EQ(FastCeil(0.975f), 1.f);
+    EXPECT_EQ(FastCeil(1.f), 1.f);
+    EXPECT_EQ(FastCeil(1.125f), 2.f);
 }
 
 } // namespace

@@ -93,7 +93,7 @@ public:
         Range{_Max - _Min + 1}
     {
         VERIFY_EXPR(_Max > _Min);
-        VERIFY(Range < FastRand::Max / 8, "Range is too large");
+        VERIFY(Range <= FastRand::Max, "Range is too large");
     }
 
     Type operator()()
