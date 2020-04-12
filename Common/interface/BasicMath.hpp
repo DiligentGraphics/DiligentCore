@@ -2041,7 +2041,7 @@ Diligent::Vector4<T> FastCeil(const Diligent::Vector4<T>& vec)
         FastCeil(vec.w)};
 }
 
-_inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
+inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
 {
     // https://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
 
