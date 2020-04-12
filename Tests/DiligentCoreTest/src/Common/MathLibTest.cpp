@@ -1272,6 +1272,7 @@ TEST(Common_AdvancedMath, TraceLineThroughGrid)
 
 TEST(Common_BasicMath, FastFloor)
 {
+    // float
     EXPECT_EQ(FastFloor(0.f), 0.f);
 
     EXPECT_EQ(FastFloor(-0.0625f), -1.f);
@@ -1283,10 +1284,24 @@ TEST(Common_BasicMath, FastFloor)
     EXPECT_EQ(FastFloor(0.975f), 0.f);
     EXPECT_EQ(FastFloor(1.f), 1.f);
     EXPECT_EQ(FastFloor(1.125f), 1.f);
+
+    // double
+    EXPECT_EQ(FastFloor(0.0), 0.0);
+
+    EXPECT_EQ(FastFloor(-0.03125), -1.0);
+    EXPECT_EQ(FastFloor(-0.96875), -1.0);
+    EXPECT_EQ(FastFloor(-1.0), -1.0);
+    EXPECT_EQ(FastFloor(-1.03125), -2.0);
+
+    EXPECT_EQ(FastFloor(0.03125), 0.0);
+    EXPECT_EQ(FastFloor(0.96875), 0.0);
+    EXPECT_EQ(FastFloor(1.0), 1.0);
+    EXPECT_EQ(FastFloor(1.03125), 1.0);
 }
 
 TEST(Common_BasicMath, FastCeil)
 {
+    // float
     EXPECT_EQ(FastCeil(0.f), 0.f);
 
     EXPECT_EQ(FastCeil(-0.0625f), 0.f);
@@ -1298,6 +1313,19 @@ TEST(Common_BasicMath, FastCeil)
     EXPECT_EQ(FastCeil(0.975f), 1.f);
     EXPECT_EQ(FastCeil(1.f), 1.f);
     EXPECT_EQ(FastCeil(1.125f), 2.f);
+
+    // double
+    EXPECT_EQ(FastCeil(0.0), 0.0);
+
+    EXPECT_EQ(FastCeil(-0.03125), 0.0);
+    EXPECT_EQ(FastCeil(-0.96875), 0.0);
+    EXPECT_EQ(FastCeil(-1.0), -1.0);
+    EXPECT_EQ(FastCeil(-1.03125), -1.0);
+
+    EXPECT_EQ(FastCeil(0.03125), 1.0);
+    EXPECT_EQ(FastCeil(0.96875), 1.0);
+    EXPECT_EQ(FastCeil(1.0), 1.0);
+    EXPECT_EQ(FastCeil(1.03125), 2.0);
 }
 
 } // namespace

@@ -1942,13 +1942,32 @@ inline Uint32 F4Color_To_RGBA8Unorm(const float4& f4Color)
     return RGBA8U;
 }
 
+template <typename T>
+struct _FastFloatIntermediateType
+{
+};
+
+template <>
+struct _FastFloatIntermediateType<float>
+{
+    // All floats that have fractional part are representable as 32-bit int
+    using Type = Int32;
+};
+
+template <>
+struct _FastFloatIntermediateType<double>
+{
+    // All doubles that have fractional part are representable as 64-bit int
+    using Type = Int64;
+};
 
 // At least on MSVC std::floor is an actual function call into ucrtbase.dll.
-// For floats/doubles that fit into Int64 representable range we can do much better.
+// All floats/doubles that have fractional parts also fit into integer
+// representable range, so we can do much better.
 template <typename T>
 T FastFloor(T x)
 {
-    auto i   = static_cast<Int64>(x);
+    auto i   = static_cast<typename _FastFloatIntermediateType<T>::Type>(x);
     auto flr = static_cast<T>(i);
     //   x         flr    floor(x)  flr <= x
     // +1.0   ->   1.0      1.0       true
