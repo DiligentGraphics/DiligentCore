@@ -1328,4 +1328,19 @@ TEST(Common_BasicMath, FastCeil)
     EXPECT_EQ(FastCeil(1.03125), 2.0);
 }
 
+TEST(Common_BasicMath, BitInterleave16)
+{
+    for (Uint32 i = 0; i < 16; ++i)
+    {
+        for (Uint32 j = 0; j < 16; ++j)
+        {
+            Uint16 x = 1 << i;
+            Uint16 y = 1 << j;
+
+            Uint32 res = (Uint32{1} << (i * 2u)) | (Uint32{2} << (j * 2u));
+            EXPECT_EQ(BitInterleave16(x, y), res);
+        }
+    }
+}
+
 } // namespace

@@ -2041,6 +2041,30 @@ Diligent::Vector4<T> FastCeil(const Diligent::Vector4<T>& vec)
         FastCeil(vec.w)};
 }
 
+_inline Uint32 BitInterleave16(Uint16 _x, Uint16 _y)
+{
+    // https://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
+
+    // Interleave lower 16 bits of x and y, so the bits of x
+    // are in the even positions and bits from y in the odd;
+    // x | (y << 1) gets the resulting 32-bit Morton Number.
+    // x and y must initially be less than 65536.
+    Uint32 x = _x;
+    Uint32 y = _y;
+
+    x = (x | (x << 8u)) & 0x00FF00FFu;
+    x = (x | (x << 4u)) & 0x0F0F0F0Fu;
+    x = (x | (x << 2u)) & 0x33333333u;
+    x = (x | (x << 1u)) & 0x55555555u;
+
+    y = (y | (y << 8u)) & 0x00FF00FFu;
+    y = (y | (y << 4u)) & 0x0F0F0F0Fu;
+    y = (y | (y << 2u)) & 0x33333333u;
+    y = (y | (y << 1u)) & 0x55555555u;
+
+    return x | (y << 1u);
+}
+
 } // namespace Diligent
 
 
