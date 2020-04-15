@@ -52,10 +52,13 @@ public:
     virtual void DILIGENT_CALL_TYPE Resize(size_t NewSize) override;
 
     /// Returns the size of the internal data buffer
-    virtual size_t DILIGENT_CALL_TYPE GetSize() override;
+    virtual size_t DILIGENT_CALL_TYPE GetSize() const override;
 
     /// Returns the pointer to the internal data buffer
     virtual void* DILIGENT_CALL_TYPE GetDataPtr() override;
+
+    /// Returns const pointer to the internal data buffer
+    virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr() const override;
 
 private:
     std::vector<Uint8> m_DataBuff;

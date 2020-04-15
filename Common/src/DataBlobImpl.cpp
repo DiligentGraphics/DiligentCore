@@ -45,13 +45,19 @@ void DataBlobImpl::Resize(size_t NewSize)
 }
 
 /// Returns the size of the internal data buffer
-size_t DataBlobImpl::GetSize()
+size_t DataBlobImpl::GetSize() const
 {
     return m_DataBuff.size();
 }
 
 /// Returns the pointer to the internal data buffer
 void* DataBlobImpl::GetDataPtr()
+{
+    return m_DataBuff.data();
+}
+
+/// Returns const pointer to the internal data buffer
+const void* DataBlobImpl::GetConstDataPtr() const
 {
     return m_DataBuff.data();
 }

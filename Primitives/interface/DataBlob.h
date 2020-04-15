@@ -53,13 +53,16 @@ DILIGENT_BEGIN_INTERFACE(IDataBlob, IObject)
 {
     /// Sets the size of the internal data buffer
     VIRTUAL void METHOD(Resize)(THIS_
-                                        size_t NewSize) PURE;
+                                size_t NewSize) PURE;
 
     /// Returns the size of the internal data buffer
-    VIRTUAL size_t METHOD(GetSize)(THIS) PURE;
+    VIRTUAL size_t METHOD(GetSize)(THIS) CONST PURE;
 
     /// Returns the pointer to the internal data buffer
     VIRTUAL void* METHOD(GetDataPtr)(THIS) PURE;
+
+    /// Returns const pointer to the internal data buffer
+    VIRTUAL const void* METHOD(GetConstDataPtr)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -69,9 +72,10 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IDataBlob_Resize(This, ...)  CALL_IFACE_METHOD(DataBlob, Resize,     This, __VA_ARGS__)
-#    define IDataBlob_GetSize(This)      CALL_IFACE_METHOD(DataBlob, GetSize,    This)
-#    define IDataBlob_GetDataPtr(This)   CALL_IFACE_METHOD(DataBlob, GetDataPtr, This)
+#    define IDataBlob_Resize(This, ...)      CALL_IFACE_METHOD(DataBlob, Resize,          This, __VA_ARGS__)
+#    define IDataBlob_GetSize(This)          CALL_IFACE_METHOD(DataBlob, GetSize,         This)
+#    define IDataBlob_GetDataPtr(This)       CALL_IFACE_METHOD(DataBlob, GetDataPtr,      This)
+#    define IDataBlob_GetConstDataPtr(This)  CALL_IFACE_METHOD(DataBlob, GetConstDataPtr, This)
 
 // clang-format on
 

@@ -60,13 +60,19 @@ public:
     }
 
     /// Returns the size of the internal data buffer
-    virtual size_t DILIGENT_CALL_TYPE GetSize() override
+    virtual size_t DILIGENT_CALL_TYPE GetSize() const override
     {
         return m_String.length();
     }
 
     /// Returns the pointer to the internal data buffer
     virtual void* DILIGENT_CALL_TYPE GetDataPtr() override
+    {
+        return &m_String[0];
+    }
+
+    /// Returns the pointer to the internal data buffer
+    virtual const void* DILIGENT_CALL_TYPE GetConstDataPtr() const override
     {
         return &m_String[0];
     }
