@@ -90,18 +90,22 @@ Texture2DArray <uint4>  Tex2D_U_A;
 
 SamplerState Tex2D_F_A1_sampler,Tex2D_F_A3_sampler;
 
+#define SAMPLE_COUNT 4
+
 #if !GLES30
-Texture2DMS < float2 > Tex2DMS_F1;
-Texture2DMS < float, 4 > Tex2DMS_F2;
-Texture2DMS < int >   Tex2DMS_I;
-Texture2DMS < uint > Tex2DMS_U;
+Texture2DMS < float2 >              Tex2DMS_F1;
+Texture2DMS < float, 4 >            Tex2DMS_F2;
+Texture2DMS < float, SAMPLE_COUNT > Tex2DMS_F3;
+Texture2DMS < int >                 Tex2DMS_I;
+Texture2DMS < uint >                Tex2DMS_U;
 #endif
 
 #ifndef GL_ES
-Texture2DMSArray  <  float3  > Tex2DMS_F_A1;
-Texture2DMSArray  <  float, 4>  Tex2DMS_F_A2;
-Texture2DMSArray  <  int2   >  Tex2DMS_I_A;
-Texture2DMSArray  <  uint4  >  Tex2DMS_U_A;
+Texture2DMSArray  <  float3  >             Tex2DMS_F_A1;
+Texture2DMSArray  <  float, 4>             Tex2DMS_F_A2;
+Texture2DMSArray  <  float, SAMPLE_COUNT>  Tex2DMS_F_A3;
+Texture2DMSArray  <  int2   >              Tex2DMS_I_A;
+Texture2DMSArray  <  uint4  >              Tex2DMS_U_A;
 #endif
 
 Texture3D           Tex3D_F1;

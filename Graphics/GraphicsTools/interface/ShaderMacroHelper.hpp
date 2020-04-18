@@ -165,4 +165,10 @@ inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, Uint32 Definitio
     AddShaderMacro<const Char*>(Name, ss.str().c_str());
 }
 
+template <>
+inline void ShaderMacroHelper::AddShaderMacro(const Char* Name, Uint8 Definition)
+{
+    AddShaderMacro(Name, Uint32{Definition});
+}
+
 } // namespace Diligent

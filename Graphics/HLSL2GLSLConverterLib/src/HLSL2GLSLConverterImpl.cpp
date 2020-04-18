@@ -1881,7 +1881,10 @@ void HLSL2GLSLConverterImpl::ConversionStream::ProcessTextureDeclaration(TokenLi
             CHECK_EOF();
             // Texture2DMS < float, 4 > ... ;
             //                      ^
-            VERIFY_PARSER_STATE(Token, Token->Type == TokenType::NumericConstant, "Number of samples is expected in ", TexDeclToken->Literal, " declaration");
+            // Texture2DMS < float, SAMPLE_COUNT > ... ;
+            //                      ^
+            VERIFY_PARSER_STATE(Token, Token->Type == TokenType::NumericConstant || Token->Type == TokenType::Identifier,
+                                "Number of samples is expected in ", TexDeclToken->Literal, " declaration");
 
             // We do not really need the number of samples, so just skip it
             ++Token;
