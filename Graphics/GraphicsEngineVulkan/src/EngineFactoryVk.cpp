@@ -40,6 +40,10 @@
 #include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 #include "EngineFactoryBase.hpp"
 
+#if PLATFORM_ANDROID
+#    include "FileSystem.hpp"
+#endif
+
 namespace Diligent
 {
 
@@ -76,6 +80,10 @@ public:
                                                       const SwapChainDesc& SwapChainDesc,
                                                       const NativeWindow&  Window,
                                                       ISwapChain**         ppSwapChain) override final;
+
+#if PLATFORM_ANDROID
+    virtual void InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const override final;
+#endif
 
 private:
     std::function<void(RenderDeviceVkImpl*)> OnRenderDeviceCreated = nullptr;
@@ -342,6 +350,12 @@ void EngineFactoryVkImpl::CreateSwapChainVk(IRenderDevice*       pDevice,
     }
 }
 
+#if PLATFORM_ANDROID
+void EngineFactoryVkImpl::InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const
+{
+    AndroidFileSystem::Init(Activity, ActivityClassName);
+}
+#endif
 
 #ifdef DOXYGEN
 /// Loads Direct3D12-based engine implementation and exports factory functions
