@@ -32,7 +32,7 @@
 
 #include <mutex>
 #include <deque>
-#include "vulkan.h"
+#include "VulkanUtilities/VulkanHeaders.h"
 #include "CommandQueueVk.h"
 #include "ObjectBase.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"

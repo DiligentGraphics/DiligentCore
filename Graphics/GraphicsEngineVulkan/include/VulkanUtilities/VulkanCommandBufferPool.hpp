@@ -31,7 +31,7 @@
 #include <memory>
 #include <mutex>
 #include <atomic>
-#include "vulkan.h"
+#include "VulkanHeaders.h"
 #include "VulkanLogicalDevice.hpp"
 #include "VulkanObjectWrappers.hpp"
 

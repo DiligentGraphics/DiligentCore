@@ -27,50 +27,19 @@
 
 #pragma once
 
-/// \file
-/// Declaration of Diligent::CommandListVkImpl class
 
-#include "VulkanUtilities/VulkanHeaders.h"
-#include "CommandListBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
+#if PLATFORM_ANDROID
+// Android provides Vulkan loader starting with API level 24. To be
+// compatible with earlier versions, we will use manual loading.
+// On other platforms we link with the loader.
+#    define USE_VOLK 1
+#endif
 
-namespace Diligent
-{
+#if USE_VOLK
+#    define VK_NO_PROTOTYPES
+#endif
+#include "vulkan/vulkan.h"
 
-/// Command list implementation in Vulkan backend.
-class CommandListVkImpl final : public CommandListBase<ICommandList, RenderDeviceVkImpl>
-{
-public:
-    using TCommandListBase = CommandListBase<ICommandList, RenderDeviceVkImpl>;
-
-    CommandListVkImpl(IReferenceCounters* pRefCounters,
-                      RenderDeviceVkImpl* pDevice,
-                      IDeviceContext*     pDeferredCtx,
-                      VkCommandBuffer     vkCmdBuff) :
-        // clang-format off
-        TCommandListBase {pRefCounters, pDevice},
-        m_pDeferredCtx   {pDeferredCtx},
-        m_vkCmdBuff      {vkCmdBuff   }
-    // clang-format on
-    {
-    }
-
-    ~CommandListVkImpl()
-    {
-        VERIFY(m_vkCmdBuff == VK_NULL_HANDLE && !m_pDeferredCtx, "Destroying command list that was never executed");
-    }
-
-    void Close(VkCommandBuffer&               CmdBuff,
-               RefCntAutoPtr<IDeviceContext>& pDeferredCtx)
-    {
-        CmdBuff      = m_vkCmdBuff;
-        m_vkCmdBuff  = VK_NULL_HANDLE;
-        pDeferredCtx = std::move(m_pDeferredCtx);
-    }
-
-private:
-    RefCntAutoPtr<IDeviceContext> m_pDeferredCtx;
-    VkCommandBuffer               m_vkCmdBuff;
-};
-
-} // namespace Diligent
+#if USE_VOLK
+#    include "volk/volk.h"
+#endif

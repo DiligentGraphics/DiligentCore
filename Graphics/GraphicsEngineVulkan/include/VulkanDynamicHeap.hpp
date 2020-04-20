@@ -28,7 +28,7 @@
 #pragma once
 
 #include <mutex>
-#include "vulkan.h"
+#include "VulkanUtilities/VulkanHeaders.h"
 #include "VulkanUtilities/VulkanMemoryManager.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"

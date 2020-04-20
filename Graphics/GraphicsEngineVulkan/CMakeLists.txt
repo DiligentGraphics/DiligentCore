@@ -46,6 +46,7 @@ set(VULKAN_UTILS_INCLUDE
     include/VulkanUtilities/VulkanMemoryManager.hpp
     include/VulkanUtilities/VulkanObjectWrappers.hpp
     include/VulkanUtilities/VulkanPhysicalDevice.hpp
+    include/VulkanUtilities/VulkanHeaders.h
 )
 
 
@@ -163,7 +164,7 @@ endif()
 target_include_directories(Diligent-GraphicsEngineVk-static 
 PRIVATE
     include
-    ../../ThirdParty/vulkan
+    ../../ThirdParty
 )
 
 set(PRIVATE_DEPENDENCIES 
@@ -188,10 +189,15 @@ elseif(PLATFORM_IOS)
     set(Vulkan_LIBRARY ${MoltenVK_LIBRARY})
 elseif(PLATFORM_LINUX)
     find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "../../ThirdParty/vulkan/libs/linux")
+elseif(PLATFORM_ANDROID)
+    set(USE_VOLK TRUE)
 else()
     find_library(Vulkan_LIBRARY NAMES vulkan)
 endif()
-list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
+
+if(NOT USE_VOLK)
+    list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
+endif()
 
 set(PUBLIC_DEPENDENCIES 
     Diligent-GraphicsEngineVkInterface

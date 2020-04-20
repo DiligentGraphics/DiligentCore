@@ -27,6 +27,14 @@
 
 #include <vector>
 #include <cstring>
+
+#if PLATFORM_ANDROID
+// Android provides Vulkan loader starting with API level 24. To be
+// compatible with earlier versions, we will use manual loading.
+#    define VOLK_IMPLEMENTATION
+#    include "volk/volk.h"
+#endif
+
 #include "VulkanErrors.hpp"
 #include "VulkanUtilities/VulkanInstance.hpp"
 #include "VulkanUtilities/VulkanDebug.hpp"
@@ -73,6 +81,13 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
                                VkAllocationCallbacks* pVkAllocator) :
     m_pVkAllocator{pVkAllocator}
 {
+#if PLATFORM_ANDROID
+    if (volkInitialize() != VK_SUCCESS)
+    {
+        LOG_ERROR_AND_THROW("Failed to load Vulkan.");
+    }
+#endif
+
     {
         // Enumerate available layers
         uint32_t LayerCount = 0;
@@ -187,6 +202,10 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
     }
     auto res = vkCreateInstance(&InstanceCreateInfo, m_pVkAllocator, &m_VkInstance);
     CHECK_VK_ERROR_AND_THROW(res, "Failed to create Vulkan instance");
+
+#if PLATFORM_ANDROID
+    volkLoadInstance(m_VkInstance);
+#endif
 
     // If requested, we enable the default validation layers for debugging
     if (m_DebugUtilsEnabled)
