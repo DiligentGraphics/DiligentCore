@@ -1436,7 +1436,16 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 #endif
     ;
 
-    /// Size of the GPU descriptor heap allocations for different heap types.
+    /// The size of the GPU descriptor heap region designated to static/mutable
+    /// shader resource variables.
+    /// Every Shader Resource Binding object allocates one descriptor
+    /// per any static/mutable shader resource variable (every array 
+    /// element counts) when the object is created. All required descriptors
+    /// are allocated in one continuous chunk.
+    /// GPUDescriptorHeapSize defines the total number of all descriptors
+    /// that can be allocated across all SRB objects.
+    /// Note that due to heap fragmentation, releaseing two chunks of sizes
+    /// N and M does not necessarily make the chunk of size N+M available.
     Uint32 GPUDescriptorHeapSize[2]
 #if DILIGENT_CPP_INTERFACE
         {
@@ -1446,7 +1455,20 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 #endif
     ;
 
-    /// Size of the dynamic GPU descriptor heap region for different heap types.
+    /// The size of the GPU descriptor heap region designated to dynamic
+    /// shader resource variables.
+    /// Every Shader Resource Binding object allocates one descriptor
+    /// per any dynamic shader resource variable (every array element counts)
+    /// every time the object is commited via IDeviceContext::CommitShaderResources.
+    /// All used dynamic descriptors are discarded at the end of the frame
+    /// and recycled when they are no longer used by the GPU.
+    /// GPUDescriptorHeapDynamicSize defines the total number of descriptors
+    /// that can be used for dynamic variables across all SRBs and all frames
+    /// currently in flight.
+    /// Note that in Direct3D12, the size of sampler descriptor heap is limited
+    /// by 2048. Since Diligent Engine allocates single heap for all variable types,
+    /// GPUDescriptorHeapSize[1] + GPUDescriptorHeapDynamicSize[1] must not
+    /// exceed 2048.
     Uint32 GPUDescriptorHeapDynamicSize[2]
 #if DILIGENT_CPP_INTERFACE
         {
@@ -1456,8 +1478,15 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 #endif
     ;
 
-    /// This is the size of the chunk that dynamic descriptor allocations manager
-    /// request from the main GPU descriptor heap.
+    /// The size of the chunk that dynamic descriptor allocations manager
+    /// requests from the main GPU descriptor heap.
+    /// The total number of dynamic descriptors avaialble across all frames in flight is 
+    /// defined by GPUDescriptorHeapDynamicSize. Every device context allocates dynamic
+    /// descriptors in two stages: it first requests a chunk from the global heap, and the 
+    /// performs linear suballocations from this chunk in a lock-free manner. The size of 
+    /// this chunk is defined by DynamicDescriptorAllocationChunkSize, thus there will be total
+    /// GPUDescriptorHeapDynamicSize/DynamicDescriptorAllocationChunkSize chunks in
+    /// the heap of each type.
     Uint32 DynamicDescriptorAllocationChunkSize[2]
 #if DILIGENT_CPP_INTERFACE
         {
