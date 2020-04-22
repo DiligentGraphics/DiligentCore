@@ -166,6 +166,12 @@ void GLContext::SwapBuffers(int SwapInterval)
         {
             glXSwapIntervalEXT(display, wnd, SwapInterval);
         }
+#    if GLX_MESA_swap_control
+        else if (glXSwapIntervalMESA != nullptr)
+        {
+            glXSwapIntervalMESA(SwapInterval);
+        }
+#    endif
 #endif
         glXSwapBuffers(display, wnd);
     }
