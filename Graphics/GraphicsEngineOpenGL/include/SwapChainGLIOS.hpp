@@ -47,7 +47,7 @@ public:
 
     virtual void Present(Uint32 SyncInterval) override final;
 
-    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
+    virtual void Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewTransform) override final;
 
     virtual void SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
 

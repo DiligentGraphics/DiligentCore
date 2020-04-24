@@ -109,10 +109,10 @@ void SwapChainGLIOS::InitRenderBuffers(bool InitFromDrawable, Uint32 &Width, Uin
     }
 }
 
-void SwapChainGLIOS::Resize( Uint32 NewWidth, Uint32 NewHeight )
+void SwapChainGLIOS::Resize( Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewTransform )
 {
     InitRenderBuffers(false, NewWidth, NewHeight);
-    TSwapChainGLBase::Resize(NewWidth, NewHeight, 0);
+    TSwapChainGLBase::Resize(NewWidth, NewHeight, NewTransform, 0);
 }
 
 GLuint SwapChainGLIOS::GetDefaultFBO()const
