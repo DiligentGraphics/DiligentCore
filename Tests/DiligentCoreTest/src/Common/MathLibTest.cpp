@@ -758,6 +758,29 @@ TEST(Common_BasicMath, MatrixInverse)
         auto det = m1.Determinant();
         EXPECT_EQ(det, 0);
     }
+
+    {
+        // clang-format off
+        float2x2 m
+        {
+            7,   13,
+            3,   1
+        };
+        // clang-format on
+
+        auto inv      = m.Inverse();
+        auto identity = m * inv;
+
+        for (int j = 0; j < 2; ++j)
+        {
+            for (int i = 0; i < 2; ++i)
+            {
+                float ref = i == j ? 1.f : 0.f;
+                auto  val = identity[i][j];
+                EXPECT_NEAR(val, ref, 1e-6f);
+            }
+        }
+    }
 }
 
 

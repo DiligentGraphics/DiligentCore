@@ -821,6 +821,18 @@ template <class T> struct Matrix2x2
     {
         return _11 * _22 - _12 * _21;
     }
+
+    Matrix2x2 Inverse() const
+    {
+        Matrix2x2 Inv //
+            {
+                +_22, -_12,
+                -_21, +_11 //
+            };
+
+        Inv *= static_cast<T>(1) / Determinant();
+        return Inv;
+    }
 };
 
 
