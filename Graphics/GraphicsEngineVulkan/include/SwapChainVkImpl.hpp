@@ -99,6 +99,9 @@ private:
     // because on Android vkGetPhysicalDeviceSurfaceCapabilitiesKHR is not reliable and
     // starts reporting incorrect dimensions after few rotations.
     VkExtent2D m_SurfaceIdentityExtent = {};
+
+    // Keep track of current surface transform to detect orientation changes.
+    VkSurfaceTransformFlagBitsKHR m_CurrentSurfaceTransform = VK_SURFACE_TRANSFORM_FLAG_BITS_MAX_ENUM_KHR;
 #endif
 
     std::vector<RefCntAutoPtr<ManagedSemaphore>> m_ImageAcquiredSemaphores;

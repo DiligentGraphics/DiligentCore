@@ -273,6 +273,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     {
         swapchainExtent = m_SurfaceIdentityExtent;
     }
+    m_CurrentSurfaceTransform = surfCapabilities.currentTransform;
 #endif
 
     swapchainExtent.width  = std::max(swapchainExtent.width, 1u);
@@ -765,7 +766,7 @@ void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
 {
     auto RecreateSwapChain = TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform);
 
-#if PLATFORM_ANDROID || PLATFORM_IOS
+#if PLATFORM_ANDROID
     if (!RecreateSwapChain && m_VkSurface != VK_NULL_HANDLE)
     {
         // Check orinetation change
@@ -778,8 +779,7 @@ void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
         auto err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkDeviceHandle, m_VkSurface, &surfCapabilities);
         if (err == VK_SUCCESS)
         {
-            auto CurrentTransform = VkSurfaceTransformFlagToSurfaceTransform(surfCapabilities.currentTransform);
-            if (CurrentTransform != m_SwapChainDesc.PreTransform)
+            if (m_CurrentSurfaceTransform != surfCapabilities.currentTransform)
             {
                 RecreateSwapChain = true;
             }
