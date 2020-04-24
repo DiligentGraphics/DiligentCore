@@ -763,7 +763,35 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
 
 void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform)
 {
-    if (TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform))
+    auto RecreateSwapChain = TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform);
+
+#if PLATFORM_ANDROID || PLATFORM_IOS
+    if (!RecreateSwapChain && m_VkSurface != VK_NULL_HANDLE)
+    {
+        // Check orinetation change
+        const auto* pRenderDeviceVk = m_pRenderDevice.RawPtr<const RenderDeviceVkImpl>();
+        const auto& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
+        const auto  vkDeviceHandle  = PhysicalDevice.GetVkDeviceHandle();
+
+        VkSurfaceCapabilitiesKHR surfCapabilities = {};
+
+        auto err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkDeviceHandle, m_VkSurface, &surfCapabilities);
+        if (err == VK_SUCCESS)
+        {
+            auto CurrentTransform = VkSurfaceTransformFlagToSurfaceTransform(surfCapabilities.currentTransform);
+            if (CurrentTransform != m_SwapChainDesc.PreTransform)
+            {
+                RecreateSwapChain = true;
+            }
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE(err, "Failed to query physical device surface capabilities");
+        }
+    }
+#endif
+
+    if (RecreateSwapChain)
     {
         auto pDeviceContext = m_wpDeviceContext.Lock();
         VERIFY(pDeviceContext, "Immediate context has been released");
