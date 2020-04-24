@@ -53,7 +53,17 @@ public:
         m_FSDesc           {FSDesc},
         m_Window           {Window}
     // clang-format on
-    {}
+    {
+        if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL &&
+            m_DesiredPreTransform != SURFACE_TRANSFORM_IDENTITY)
+        {
+            LOG_WARNING_MESSAGE(GetSurfaceTransformString(m_DesiredPreTransform),
+                                " is not an allowed pretransform because Direct3D swap chains only support identity transform. "
+                                "Use SURFACE_TRANSFORM_OPTIMAL (recommended) or SURFACE_TRANSFORM_IDENTITY.");
+        }
+        m_DesiredPreTransform        = SURFACE_TRANSFORM_OPTIMAL;
+        m_SwapChainDesc.PreTransform = SURFACE_TRANSFORM_IDENTITY;
+    }
 
     ~SwapChainD3DBase()
     {
@@ -70,6 +80,20 @@ public:
 
 protected:
     virtual void UpdateSwapChain(bool CreateNew) = 0;
+
+    bool Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform, Int32 Dummy = 0 /*To be different from virtual function*/)
+    {
+        if (NewPreTransform != SURFACE_TRANSFORM_OPTIMAL &&
+            NewPreTransform != SURFACE_TRANSFORM_IDENTITY)
+        {
+            LOG_WARNING_MESSAGE(GetSurfaceTransformString(NewPreTransform),
+                                " is not an allowed pretransform because Direct3D swap chains only support identity transform. "
+                                "Use SURFACE_TRANSFORM_OPTIMAL (recommended) or SURFACE_TRANSFORM_IDENTITY.");
+        }
+        NewPreTransform = SURFACE_TRANSFORM_OPTIMAL;
+
+        return TBase::Resize(NewWidth, NewHeight, NewPreTransform);
+    }
 
     void CreateDXGISwapChain(IUnknown* pD3D11DeviceOrD3D12CmdQueue)
     {
@@ -91,6 +115,11 @@ protected:
             m_SwapChainDesc.Height = rc.bottom - rc.top;
         }
 #endif
+
+        VERIFY(m_DesiredPreTransform == SURFACE_TRANSFORM_OPTIMAL || m_DesiredPreTransform == SURFACE_TRANSFORM_IDENTITY,
+               "Direct3D swap chains only support identity transform.");
+        m_DesiredPreTransform        = SURFACE_TRANSFORM_OPTIMAL;
+        m_SwapChainDesc.PreTransform = SURFACE_TRANSFORM_IDENTITY;
 
         auto DXGIColorBuffFmt = TexFormatToDXGI_Format(m_SwapChainDesc.ColorBufferFormat);
 

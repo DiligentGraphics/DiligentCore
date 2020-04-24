@@ -53,7 +53,7 @@ public:
     virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;
 
     /// Implementation of ISwapChain::Resize() in OpenGL backend.
-    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
+    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform) override final;
 
     /// Implementation of ISwapChain::SetFullscreenMode() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;

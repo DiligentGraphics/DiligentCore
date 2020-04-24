@@ -1083,6 +1083,32 @@ const char* GetQueryTypeString(QUERY_TYPE QueryType)
     // clang-format on
 }
 
+const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform)
+{
+    // clang-format off
+    switch (SrfTransform)
+    {
+#define SRF_TRANSFORM_CASE(Transform) case Transform: return #Transform
+
+        SRF_TRANSFORM_CASE(SURFACE_TRANSFORM_OPTIMAL);
+        SRF_TRANSFORM_CASE(SURFACE_TRANSFORM_IDENTITY);
+        SRF_TRANSFORM_CASE(SURFACE_TRANSFORM_ROTATE_90);
+        SRF_TRANSFORM_CASE(SURFACE_TRANSFORM_ROTATE_180);
+        SRF_TRANSFORM_CASE(SURFACE_TRANSFORM_ROTATE_270);
+        SRF_TRANSFORM_CASE(SURFACE_TRANSFORM_HORIZONTAL_MIRROR);
+        SRF_TRANSFORM_CASE(SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90);
+        SRF_TRANSFORM_CASE(SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180);
+        SRF_TRANSFORM_CASE(SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270);
+
+#undef SRF_TRANSFORM_CASE
+
+        default:
+            UNEXPECTED("Unexpected surface transform");
+            return "UNKNOWN";
+    }
+    // clang-format on
+}
+
 Uint32 ComputeMipLevelsCount(Uint32 Width)
 {
     if (Width == 0)

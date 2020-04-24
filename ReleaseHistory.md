@@ -1,5 +1,6 @@
 ## Current Progress
 
+* Added `PreTransform` parameter to swap chain description (API Version 240057).
 * Added `PipelineStateCreateInfo` struct that is now taken by `IRenderDevice::CreatePipelineState` instead of
   `PipelineStateDesc` struct. Added `PSO_CREATE_FLAGS` enum (API Version 240056).
 

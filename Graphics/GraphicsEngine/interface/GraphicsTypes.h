@@ -1223,6 +1223,39 @@ DILIGENT_TYPED_ENUM(SWAP_CHAIN_USAGE_FLAGS, Uint32)
 };
 DEFINE_FLAG_ENUM_OPERATORS(SWAP_CHAIN_USAGE_FLAGS)
 
+
+/// The transform applied to the image content prior to presentation.
+DILIGENT_TYPED_ENUM(SURFACE_TRANSFORM, Uint32)
+{
+    /// Uset the most optimal surface transform.
+    SURFACE_TRANSFORM_OPTIMAL = 0,
+
+    /// The image content is presented without being transformed.
+    SURFACE_TRANSFORM_IDENTITY,
+
+    /// The image content is rotated 90 degrees clockwise.
+    SURFACE_TRANSFORM_ROTATE_90,
+
+    /// The image content is rotated 180 degrees clockwise.
+    SURFACE_TRANSFORM_ROTATE_180,
+
+    /// The image content is rotated 270 degrees clockwise.
+    SURFACE_TRANSFORM_ROTATE_270,
+
+    /// The image content is mirrored horizontally.
+    SURFACE_TRANSFORM_HORIZONTAL_MIRROR,
+
+    /// The image content is mirrored horizontally, then rotated 90 degrees clockwise.
+    SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90,
+
+    /// The  image content is mirrored horizontally, then rotated 180 degrees clockwise.
+    SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180,
+
+    /// The  image content is mirrored horizontally, then rotated 270 degrees clockwise.
+    SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270
+};
+
+
 /// Swap chain description
 struct SwapChainDesc
 {
@@ -1241,6 +1274,19 @@ struct SwapChainDesc
 
     /// Swap chain usage flags. Default value is Diligent::SWAP_CHAIN_USAGE_RENDER_TARGET
     SWAP_CHAIN_USAGE_FLAGS Usage        DEFAULT_INITIALIZER(SWAP_CHAIN_USAGE_RENDER_TARGET);
+
+    /// The transform, relative to the presentation engine's natural orientation,
+    /// applied to the image content prior to presentation.
+    ///
+    /// \note When default value (SURFACE_TRANSFORM_OPTIMAL) is used, the engine will
+    ///       select the most optimal surface transformation. An application may request
+    ///       specific transform (e.g. SURFACE_TRANSFORM_IDENTITY) and the engine will
+    ///       try to use that. However, if the transform is not available, the engine will
+    ///       select the most optimal transform.
+    ///       After the swap chain has been created, this member will contain the actual
+    ///       transform selected by the engine and can be queried through ISwapChain::GetDesc()
+    ///       method.
+    SURFACE_TRANSFORM PreTransform      DEFAULT_INITIALIZER(SURFACE_TRANSFORM_OPTIMAL);
 
     /// Number of buffers int the swap chain
     Uint32 BufferCount                  DEFAULT_INITIALIZER(2);

@@ -62,10 +62,11 @@ public:
                   IDeviceContext*      pDeviceContext,
                   const SwapChainDesc& SCDesc) :
         // clang-format off
-        TObjectBase       {pRefCounters},
-        m_pRenderDevice   {pDevice       },
-        m_wpDeviceContext {pDeviceContext},
-        m_SwapChainDesc   {SCDesc        }
+        TObjectBase          {pRefCounters       },
+        m_pRenderDevice      {pDevice            },
+        m_wpDeviceContext    {pDeviceContext     },
+        m_SwapChainDesc      {SCDesc             },
+        m_DesiredPreTransform{SCDesc.PreTransform}
     // clang-format on
     {
     }
@@ -90,13 +91,16 @@ public:
     }
 
 protected:
-    bool Resize(Uint32 NewWidth, Uint32 NewHeight, Int32 Dummy = 0 /*To be different from virtual function*/)
+    bool Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform, Int32 Dummy = 0 /*To be different from virtual function*/)
     {
         if (NewWidth != 0 && NewHeight != 0 &&
-            (m_SwapChainDesc.Width != NewWidth || m_SwapChainDesc.Height != NewHeight))
+            (m_SwapChainDesc.Width != NewWidth ||
+             m_SwapChainDesc.Height != NewHeight ||
+             m_DesiredPreTransform != NewPreTransform))
         {
             m_SwapChainDesc.Width  = NewWidth;
             m_SwapChainDesc.Height = NewHeight;
+            m_DesiredPreTransform  = NewPreTransform;
             LOG_INFO_MESSAGE("Resizing the swap chain to ", m_SwapChainDesc.Width, "x", m_SwapChainDesc.Height);
             return true;
         }
@@ -113,6 +117,9 @@ protected:
 
     /// Swap chain description
     SwapChainDesc m_SwapChainDesc;
+
+    /// Desired surface pre-transformation.
+    SURFACE_TRANSFORM m_DesiredPreTransform = SURFACE_TRANSFORM_OPTIMAL;
 };
 
 } // namespace Diligent

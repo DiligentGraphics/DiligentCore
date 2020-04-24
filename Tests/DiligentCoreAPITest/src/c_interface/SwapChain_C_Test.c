@@ -73,7 +73,7 @@ void TestSwapChainC_API(struct ISwapChain* pSwapChain)
     ITextureView*       pDSV         = NULL;
 
     ISwapChain_Present(pSwapChain, 0);
-    ISwapChain_Resize(pSwapChain, 1024, 768);
+    ISwapChain_Resize(pSwapChain, 1024, 768, SURFACE_TRANSFORM_OPTIMAL);
     ISwapChain_SetFullscreenMode(pSwapChain, pDisplayMode);
     ISwapChain_SetWindowedMode(pSwapChain);
     pDSV = ISwapChain_GetDepthBufferDSV(pSwapChain);

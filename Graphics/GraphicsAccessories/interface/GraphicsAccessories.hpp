@@ -376,6 +376,8 @@ inline String GetObjectDescString(const BufferDesc& BuffDesc)
 
 const char* GetQueryTypeString(QUERY_TYPE QueryType);
 
+const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform);
+
 Uint32 ComputeMipLevelsCount(Uint32 Width);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth);

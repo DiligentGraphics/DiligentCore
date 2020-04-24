@@ -207,6 +207,35 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     CHECK_VK_ERROR_AND_THROW(err, "Failed to query surface present modes");
     VERIFY_EXPR(presentModeCount == presentModes.size());
 
+
+    VkSurfaceTransformFlagBitsKHR vkPreTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL)
+    {
+        vkPreTransform = SurfaceTransformToVkSurfaceTransformFlag(m_DesiredPreTransform);
+        if ((surfCapabilities.supportedTransforms & vkPreTransform) != 0)
+        {
+            m_SwapChainDesc.PreTransform = m_DesiredPreTransform;
+        }
+        else
+        {
+            LOG_WARNING_MESSAGE(GetSurfaceTransformString(m_DesiredPreTransform),
+                                " is not supported by the presentation engine. Optimal surface transform will be used instead."
+                                " Query the swap chain description to get the actual surface transform.");
+            m_DesiredPreTransform = SURFACE_TRANSFORM_OPTIMAL;
+        }
+    }
+
+    if (m_DesiredPreTransform == SURFACE_TRANSFORM_OPTIMAL)
+    {
+        // Use current surface transform to avoid extra cost of presenting the image.
+        // If preTransform does not match the currentTransform value returned by vkGetPhysicalDeviceSurfaceCapabilitiesKHR,
+        // the presentation engine will transform the image content as part of the presentation operation.
+        // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
+        // https://community.arm.com/developer/tools-software/graphics/b/blog/posts/appropriate-use-of-surface-rotation
+        vkPreTransform               = surfCapabilities.currentTransform;
+        m_SwapChainDesc.PreTransform = VkSurfaceTransformFlagToSurfaceTransform(vkPreTransform);
+    }
+
     VkExtent2D swapchainExtent = {};
     // width and height are either both 0xFFFFFFFF, or both not 0xFFFFFFFF.
     if (surfCapabilities.currentExtent.width == 0xFFFFFFFF && m_SwapChainDesc.Width != 0 && m_SwapChainDesc.Height != 0)
@@ -221,6 +250,30 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
         // If the surface size is defined, the swap chain size must match
         swapchainExtent = surfCapabilities.currentExtent;
     }
+
+#if PLATFORM_ANDROID
+    // On Android, vkGetPhysicalDeviceSurfaceCapabilitiesKHR is not reliable and starts reporting incorrect
+    // dimensions after few rotations. To alleviate the problem, we store the surface extent corresponding to
+    // identity rotation.
+    // https://android-developers.googleblog.com/2020/02/handling-device-orientation-efficiently.html
+    if (m_SurfaceIdentityExtent.width == 0 || m_SurfaceIdentityExtent.height == 0)
+    {
+        m_SurfaceIdentityExtent = surfCapabilities.currentExtent;
+        constexpr auto Rotate90TransformFlags =
+            VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR |
+            VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR |
+            VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR |
+            VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR;
+        if ((surfCapabilities.currentTransform & Rotate90TransformFlags) != 0)
+            std::swap(m_SurfaceIdentityExtent.width, m_SurfaceIdentityExtent.height);
+    }
+
+    if (m_DesiredPreTransform == SURFACE_TRANSFORM_OPTIMAL)
+    {
+        swapchainExtent = m_SurfaceIdentityExtent;
+    }
+#endif
+
     swapchainExtent.width  = std::max(swapchainExtent.width, 1u);
     swapchainExtent.height = std::max(swapchainExtent.height, 1u);
     m_SwapChainDesc.Width  = swapchainExtent.width;
@@ -273,11 +326,6 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     }
     uint32_t desiredNumberOfSwapChainImages = m_SwapChainDesc.BufferCount;
 
-    VkSurfaceTransformFlagBitsKHR preTransform =
-        (surfCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ?
-        VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR :
-        surfCapabilities.currentTransform;
-
     // Find a supported composite alpha mode - one of these is guaranteed to be set
     VkCompositeAlphaFlagBitsKHR compositeAlpha         = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = //
@@ -308,7 +356,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     swapchain_ci.imageFormat        = m_VkColorFormat;
     swapchain_ci.imageExtent.width  = swapchainExtent.width;
     swapchain_ci.imageExtent.height = swapchainExtent.height;
-    swapchain_ci.preTransform       = preTransform;
+    swapchain_ci.preTransform       = vkPreTransform;
     swapchain_ci.compositeAlpha     = compositeAlpha;
     swapchain_ci.imageArrayLayers   = 1;
     swapchain_ci.presentMode        = swapchainPresentMode;
@@ -705,9 +753,9 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
     InitBuffersAndViews();
 }
 
-void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight)
+void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform)
 {
-    if (TSwapChainBase::Resize(NewWidth, NewHeight))
+    if (TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform))
     {
         auto pDeviceContext = m_wpDeviceContext.Lock();
         VERIFY(pDeviceContext, "Immediate context has been released");

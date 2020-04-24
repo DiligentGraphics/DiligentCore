@@ -29,6 +29,7 @@
 #include "DeviceContextGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "SwapChainGLImpl.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -47,6 +48,16 @@ SwapChainGLImpl::SwapChainGLImpl(IReferenceCounters*       pRefCounters,
     }
 // clang-format on
 {
+    if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL &&
+        m_DesiredPreTransform != SURFACE_TRANSFORM_IDENTITY)
+    {
+        LOG_WARNING_MESSAGE(GetSurfaceTransformString(m_DesiredPreTransform),
+                            " is not an allowed pretransform because OpenGL swap chains only support identity transform. "
+                            "Use SURFACE_TRANSFORM_OPTIMAL (recommended) or SURFACE_TRANSFORM_IDENTITY.");
+    }
+    m_DesiredPreTransform        = SURFACE_TRANSFORM_OPTIMAL;
+    m_SwapChainDesc.PreTransform = SURFACE_TRANSFORM_IDENTITY;
+
 #if PLATFORM_WIN32
     HWND hWnd = reinterpret_cast<HWND>(InitAttribs.Window.hWnd);
     RECT rc;
@@ -104,7 +115,7 @@ void SwapChainGLImpl::Present(Uint32 SyncInterval)
     }
 }
 
-void SwapChainGLImpl::Resize(Uint32 NewWidth, Uint32 NewHeight)
+void SwapChainGLImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform)
 {
 #if PLATFORM_ANDROID
     auto* pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
@@ -114,7 +125,7 @@ void SwapChainGLImpl::Resize(Uint32 NewWidth, Uint32 NewHeight)
     NewHeight = GLContext.GetScreenHeight();
 #endif
 
-    TSwapChainGLBase::Resize(NewWidth, NewHeight, 0);
+    TSwapChainGLBase::Resize(NewWidth, NewHeight, NewPreTransform, 0);
 }
 
 void SwapChainGLImpl::SetFullscreenMode(const DisplayModeAttribs& DisplayMode)

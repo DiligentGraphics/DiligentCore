@@ -176,7 +176,7 @@ public:
         m_pContext->UnmapTextureSubresource(m_pStagingTexture, 0, 0);
     }
 
-    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight) override final
+    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform) override final
     {
         UNEXPECTED("Resizing testing swap chains is not supported");
     }

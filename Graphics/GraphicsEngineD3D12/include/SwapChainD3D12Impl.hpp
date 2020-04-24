@@ -57,7 +57,7 @@ public:
     virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;
 
     /// Implementation of ISwapChain::Resize() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
+    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform) override final;
 
     /// Implementation of ISwapChainD3D12::GetDXGISwapChain().
     virtual IDXGISwapChain* DILIGENT_CALL_TYPE GetDXGISwapChain() override final { return m_pSwapChain; }

@@ -64,14 +64,16 @@ DILIGENT_BEGIN_INTERFACE(ISwapChain, IObject)
 
     /// Changes the swap chain's back buffer size
 
-    /// \param [in] NewWidth - New swap chain width, in pixels
-    /// \param [in] NewHeight - New swap chain height, in pixels
+    /// \param [in] NewWidth     - New swap chain width, in pixels.
+    /// \param [in] NewHeight    - New swap chain height, in pixels.
+    /// \param [in] NewTransform - New surface transform, see Diligent::SURFACE_TRANSFORM.
     ///
     /// \note When resizing non-primary swap chains, the engine unbinds the
     ///       swap chain buffers from the output.
     VIRTUAL void METHOD(Resize)(THIS_
-                                Uint32 NewWidth,
-                                Uint32 NewHeight) PURE;
+                                Uint32            NewWidth,
+                                Uint32            NewHeight,
+                                SURFACE_TRANSFORM NewTransform DEFAULT_VALUE(SURFACE_TRANSFORM_OPTIMAL)) PURE;
 
     /// Sets fullscreen mode (only supported on Win32 platform)
     VIRTUAL void METHOD(SetFullscreenMode)(THIS_ const DisplayModeAttribs REF DisplayMode) PURE;

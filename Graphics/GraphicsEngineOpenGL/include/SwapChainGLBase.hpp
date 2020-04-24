@@ -55,9 +55,18 @@ public:
     virtual ITextureView* DILIGENT_CALL_TYPE GetDepthBufferDSV() override final { return m_pDepthStencilView; }
 
 protected:
-    bool Resize(Uint32 NewWidth, Uint32 NewHeight, Int32 /*To be different from virtual function*/)
+    bool Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform, Int32 /*To be different from virtual function*/)
     {
-        if (TSwapChainBase::Resize(NewWidth, NewHeight, 0))
+        if (NewPreTransform != SURFACE_TRANSFORM_OPTIMAL &&
+            NewPreTransform != SURFACE_TRANSFORM_IDENTITY)
+        {
+            LOG_WARNING_MESSAGE(GetSurfaceTransformString(NewPreTransform),
+                                " is not an allowed pretransform because OpenGL swap chains only support identity transform. "
+                                "Use SURFACE_TRANSFORM_OPTIMAL (recommended) or SURFACE_TRANSFORM_IDENTITY.");
+        }
+        NewPreTransform = SURFACE_TRANSFORM_OPTIMAL;
+
+        if (TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform))
         {
             if (m_pRenderTargetView)
             {

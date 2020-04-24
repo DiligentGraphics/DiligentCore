@@ -31,6 +31,7 @@
 
 #include "VulkanTypeConversions.hpp"
 #include "PlatformMisc.hpp"
+#include "Align.hpp"
 
 namespace Diligent
 {
@@ -1370,6 +1371,54 @@ RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout)
             return RESOURCE_STATE_UNDEFINED;
             // clang-format on
     }
+}
+
+SURFACE_TRANSFORM VkSurfaceTransformFlagToSurfaceTransform(VkSurfaceTransformFlagBitsKHR vkTransformFlag)
+{
+    VERIFY(IsPowerOfTwo(static_cast<Uint32>(vkTransformFlag)), "Only single transform bit is expected");
+
+    // clang-format off
+    switch (vkTransformFlag)
+    {
+        case VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR:                     return SURFACE_TRANSFORM_IDENTITY;
+        case VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR:                    return SURFACE_TRANSFORM_ROTATE_90;
+        case VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR:                   return SURFACE_TRANSFORM_ROTATE_180;
+        case VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR:                   return SURFACE_TRANSFORM_ROTATE_270;
+        case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR:            return SURFACE_TRANSFORM_HORIZONTAL_MIRROR;
+        case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR:  return SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90;
+        case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR: return SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180;
+        case VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR: return SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270;
+
+        default:
+            UNEXPECTED("Unexpected surface transform");
+            return SURFACE_TRANSFORM_IDENTITY;
+    }
+    // clang-format on
+}
+
+VkSurfaceTransformFlagBitsKHR SurfaceTransformToVkSurfaceTransformFlag(SURFACE_TRANSFORM SrfTransform)
+{
+    // clang-format off
+    switch (SrfTransform)
+    {
+        case SURFACE_TRANSFORM_OPTIMAL:
+            UNEXPECTED("Optimal transform does not have corresponding Vulkan flag");
+            return VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+
+        case SURFACE_TRANSFORM_IDENTITY:                      return VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+        case SURFACE_TRANSFORM_ROTATE_90:                     return VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR;
+        case SURFACE_TRANSFORM_ROTATE_180:                    return VK_SURFACE_TRANSFORM_ROTATE_180_BIT_KHR;
+        case SURFACE_TRANSFORM_ROTATE_270:                    return VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR;
+        case SURFACE_TRANSFORM_HORIZONTAL_MIRROR:             return VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_BIT_KHR;
+        case SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90:   return VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR;
+        case SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180:  return VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_180_BIT_KHR;
+        case SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270:  return VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR; 
+
+        default:
+            UNEXPECTED("Unexpected surface transform");
+            return VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    }
+    // clang-format on
 }
 
 } // namespace Diligent

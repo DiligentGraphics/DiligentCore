@@ -58,7 +58,7 @@ public:
     virtual void DILIGENT_CALL_TYPE Present(Uint32 SyncInterval) override final;
 
     /// Implementation of ISwapChain::Resize() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight) override final;
+    virtual void DILIGENT_CALL_TYPE Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform) override final;
 
     /// Implementation of ISwapChain::SetFullscreenMode() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final;
@@ -91,6 +91,13 @@ private:
     VkSurfaceKHR   m_VkSurface     = VK_NULL_HANDLE;
     VkSwapchainKHR m_VkSwapChain   = VK_NULL_HANDLE;
     VkFormat       m_VkColorFormat = VK_FORMAT_UNDEFINED;
+
+#if PLATFORM_ANDROID
+    // Surface extent corresponding to identity transform. We have to store this value,
+    // because on Android vkGetPhysicalDeviceSurfaceCapabilitiesKHR is not reliable and
+    // starts reporting incorrect dimensions after few rotations.
+    VkExtent2D m_SurfaceIdentityExtent = {};
+#endif
 
     std::vector<RefCntAutoPtr<ManagedSemaphore>> m_ImageAcquiredSemaphores;
     std::vector<RefCntAutoPtr<ManagedSemaphore>> m_DrawCompleteSemaphores;

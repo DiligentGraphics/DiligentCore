@@ -50,9 +50,9 @@ void SwapChainMtlImpl::Present(Uint32 SyncInterval)
 }
 
 
-void SwapChainMtlImpl::Resize( Uint32 NewWidth, Uint32 NewHeight )
+void SwapChainMtlImpl::Resize( Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform )
 {
-    if( TSwapChainBase::Resize(NewWidth, NewHeight) )
+    if( TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform) )
     {
         LOG_ERROR_MESSAGE("SwapChainMtlImpl::Resize() is not implemented");
     }

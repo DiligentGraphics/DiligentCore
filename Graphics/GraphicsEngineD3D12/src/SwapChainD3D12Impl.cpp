@@ -231,9 +231,9 @@ void SwapChainD3D12Impl::UpdateSwapChain(bool CreateNew)
     }
 }
 
-void SwapChainD3D12Impl::Resize(Uint32 NewWidth, Uint32 NewHeight)
+void SwapChainD3D12Impl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform)
 {
-    if (TSwapChainBase::Resize(NewWidth, NewHeight))
+    if (TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform))
     {
         UpdateSwapChain(false);
     }

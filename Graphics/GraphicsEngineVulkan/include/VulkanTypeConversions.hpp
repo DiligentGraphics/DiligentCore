@@ -32,6 +32,7 @@
 
 #include <array>
 #include "GraphicsTypes.h"
+#include "InputLayout.h"
 
 namespace Diligent
 {
@@ -41,14 +42,14 @@ TEXTURE_FORMAT VkFormatToTexFormat(VkFormat VkFmt);
 
 VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
 
-VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationStateCI(const RasterizerStateDesc& RasterizerDesc);
-VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const DepthStencilStateDesc& DepthStencilDesc);
+VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationStateCI(const struct RasterizerStateDesc& RasterizerDesc);
+VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const struct DepthStencilStateDesc& DepthStencilDesc);
 
-void BlendStateDesc_To_VkBlendStateCI(const BlendStateDesc&                             BSDesc,
+void BlendStateDesc_To_VkBlendStateCI(const struct BlendStateDesc&                      BSDesc,
                                       VkPipelineColorBlendStateCreateInfo&              ColorBlendStateCI,
                                       std::vector<VkPipelineColorBlendAttachmentState>& ColorBlendAttachments);
 
-void InputLayoutDesc_To_VkVertexInputStateCI(const InputLayoutDesc&                                              LayoutDesc,
+void InputLayoutDesc_To_VkVertexInputStateCI(const struct InputLayoutDesc&                                       LayoutDesc,
                                              VkPipelineVertexInputStateCreateInfo&                               VertexInputStateCI,
                                              std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>&   BindingDescriptions,
                                              std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS>& AttributeDescription);
@@ -68,5 +69,8 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag);
 
 RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlags AccessFlags);
 RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout);
+
+SURFACE_TRANSFORM             VkSurfaceTransformFlagToSurfaceTransform(VkSurfaceTransformFlagBitsKHR vkTransformFlag);
+VkSurfaceTransformFlagBitsKHR SurfaceTransformToVkSurfaceTransformFlag(SURFACE_TRANSFORM SrfTransform);
 
 } // namespace Diligent
