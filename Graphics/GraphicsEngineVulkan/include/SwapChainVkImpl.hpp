@@ -88,6 +88,8 @@ private:
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> m_VulkanInstance;
 
+    Uint32 m_DesiredBufferCount = 0;
+
     VkSurfaceKHR   m_VkSurface     = VK_NULL_HANDLE;
     VkSwapchainKHR m_VkSwapChain   = VK_NULL_HANDLE;
     VkFormat       m_VkColorFormat = VK_FORMAT_UNDEFINED;

@@ -44,6 +44,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
     // clang-format off
     TSwapChainBase               {pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc},
     m_VulkanInstance             {pRenderDeviceVk->GetVulkanInstance()},
+    m_DesiredBufferCount         {SCDesc.BufferCount},
     m_pBackBufferRTV             (STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")),
     m_SwapChainImagesInitialized (STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>")),
     m_ImageAcquiredFenceSubmitted(STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
@@ -314,17 +315,23 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     // Asking for minImageCount images ensures that we can acquire
     // 1 presentable image as long as we present it before attempting
     // to acquire another.
-    if (m_SwapChainDesc.BufferCount < surfCapabilities.minImageCount)
+    if (m_DesiredBufferCount < surfCapabilities.minImageCount)
     {
-        LOG_INFO_MESSAGE("Requested back buffer count (", m_SwapChainDesc.BufferCount, ") is smaller than the minimal image count supported for this surface (", surfCapabilities.minImageCount, "). Resetting to ", surfCapabilities.minImageCount);
-        m_SwapChainDesc.BufferCount = surfCapabilities.minImageCount;
+        LOG_INFO_MESSAGE("Desired back buffer count (", m_DesiredBufferCount, ") is smaller than the minimal image count supported for this surface (", surfCapabilities.minImageCount, "). Resetting to ", surfCapabilities.minImageCount);
+        m_DesiredBufferCount = surfCapabilities.minImageCount;
     }
-    if (surfCapabilities.maxImageCount != 0 && m_SwapChainDesc.BufferCount > surfCapabilities.maxImageCount)
+    if (surfCapabilities.maxImageCount != 0 && m_DesiredBufferCount > surfCapabilities.maxImageCount)
     {
-        LOG_INFO_MESSAGE("Requested back buffer count (", m_SwapChainDesc.BufferCount, ") is greater than the maximal image count supported for this surface (", surfCapabilities.maxImageCount, "). Resetting to ", surfCapabilities.maxImageCount);
-        m_SwapChainDesc.BufferCount = surfCapabilities.maxImageCount;
+        LOG_INFO_MESSAGE("Desired back buffer count (", m_DesiredBufferCount, ") is greater than the maximal image count supported for this surface (", surfCapabilities.maxImageCount, "). Resetting to ", surfCapabilities.maxImageCount);
+        m_DesiredBufferCount = surfCapabilities.maxImageCount;
     }
-    uint32_t desiredNumberOfSwapChainImages = m_SwapChainDesc.BufferCount;
+    // We must use m_DesiredBufferCount instead of m_SwapChainDesc.BufferCount, because Vulkan on Android
+    // may decide to always add extra buffers, causing infinite growth of the swap chain when it is recreated:
+    //                          m_SwapChainDesc.BufferCount
+    // CreateVulkanSwapChain()          2 -> 4
+    // CreateVulkanSwapChain()          4 -> 6
+    // CreateVulkanSwapChain()          6 -> 8
+    uint32_t desiredNumberOfSwapChainImages = m_DesiredBufferCount;
 
     // Find a supported composite alpha mode - one of these is guaranteed to be set
     VkCompositeAlphaFlagBitsKHR compositeAlpha         = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -406,7 +413,8 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     VERIFY_EXPR(swapchainImageCount > 0);
     if (swapchainImageCount != m_SwapChainDesc.BufferCount)
     {
-        LOG_INFO_MESSAGE("Actual number of images in the created swap chain: ", m_SwapChainDesc.BufferCount);
+        LOG_INFO_MESSAGE("Created swap chain with ", swapchainImageCount,
+                         " images vs ", m_SwapChainDesc.BufferCount, " requested.");
         m_SwapChainDesc.BufferCount = swapchainImageCount;
     }
 
