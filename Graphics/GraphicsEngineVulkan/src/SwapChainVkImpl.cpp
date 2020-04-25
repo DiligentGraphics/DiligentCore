@@ -64,7 +64,7 @@ void SwapChainVkImpl::CreateSurface()
     if (m_VkSurface != VK_NULL_HANDLE)
     {
         vkDestroySurfaceKHR(m_VulkanInstance->GetVkInstance(), m_VkSurface, NULL);
-        m_VkSurface = nullptr;
+        m_VkSurface = VK_NULL_HANDLE;
     }
 
     // Create OS-specific surface
