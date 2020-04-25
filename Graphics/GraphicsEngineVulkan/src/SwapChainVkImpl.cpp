@@ -43,6 +43,7 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
                                  const NativeWindow&  Window) :
     // clang-format off
     TSwapChainBase               {pRefCounters, pRenderDeviceVk, pDeviceContextVk, SCDesc},
+    m_Window                     {Window},
     m_VulkanInstance             {pRenderDeviceVk->GetVulkanInstance()},
     m_DesiredBufferCount         {SCDesc.BufferCount},
     m_pBackBufferRTV             (STD_ALLOCATOR_RAW_MEM(RefCntAutoPtr<ITextureView>, GetRawAllocator(), "Allocator for vector<RefCntAutoPtr<ITextureView>>")),
@@ -50,41 +51,57 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
     m_ImageAcquiredFenceSubmitted(STD_ALLOCATOR_RAW_MEM(bool, GetRawAllocator(), "Allocator for vector<bool>"))
 // clang-format on
 {
+    CreateSurface();
+    CreateVulkanSwapChain();
+    InitBuffersAndViews();
+    auto res = AcquireNextImage(pDeviceContextVk);
+    DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the newly created swap chain");
+    (void)res;
+}
+
+void SwapChainVkImpl::CreateSurface()
+{
+    if (m_VkSurface != VK_NULL_HANDLE)
+    {
+        vkDestroySurfaceKHR(m_VulkanInstance->GetVkInstance(), m_VkSurface, NULL);
+        m_VkSurface = nullptr;
+    }
+
     // Create OS-specific surface
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
     VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType     = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     surfaceCreateInfo.hinstance = GetModuleHandle(NULL);
-    surfaceCreateInfo.hwnd      = (HWND)Window.hWnd;
+    surfaceCreateInfo.hwnd      = (HWND)m_Window.hWnd;
 
     auto err = vkCreateWin32SurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_ANDROID_KHR)
     VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType  = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.window = (ANativeWindow*)Window.pAWindow;
+    surfaceCreateInfo.window = (ANativeWindow*)m_Window.pAWindow;
 
     auto err = vkCreateAndroidSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     VkIOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_IOS_SURFACE_CREATE_INFO_MVK;
-    surfaceCreateInfo.pView = Window.pCALayer;
+    surfaceCreateInfo.pView = m_Window.pCALayer;
 
     auto err = vkCreateIOSSurfaceMVK(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_MACOS_MVK)
     VkMacOSSurfaceCreateInfoMVK surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_MACOS_SURFACE_CREATE_INFO_MVK;
-    surfaceCreateInfo.pView = Window.pNSView;
+    surfaceCreateInfo.pView = m_Window.pNSView;
 
     auto err = vkCreateMacOSSurfaceMVK(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, NULL, &m_VkSurface);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
     VkWaylandSurfaceCreateInfoKHR surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType   = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.display = reinterpret_cast<struct wl_display*>(Window.pDisplay);
+    surfaceCreateInfo.display = reinterpret_cast<struct wl_display*>(m_Window.pDisplay);
     surfaceCreateInfo.Surface = reinterpret_cast<struct wl_surface*>(nullptr);
 
     err = vkCreateWaylandSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
@@ -92,13 +109,15 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
     VkXcbSurfaceCreateInfoKHR surfaceCreateInfo = {};
 
     surfaceCreateInfo.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.connection = reinterpret_cast<xcb_connection_t*>(Window.pXCBConnection);
-    surfaceCreateInfo.window     = Window.WindowId;
+    surfaceCreateInfo.connection = reinterpret_cast<xcb_connection_t*>(m_Window.pXCBConnection);
+    surfaceCreateInfo.window     = m_Window.WindowId;
 
     auto err = vkCreateXcbSurfaceKHR(m_VulkanInstance->GetVkInstance(), &surfaceCreateInfo, nullptr, &m_VkSurface);
 #endif
 
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create OS-specific surface");
+
+    auto*       pRenderDeviceVk  = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
     const auto& PhysicalDevice   = pRenderDeviceVk->GetPhysicalDevice();
     auto&       CmdQueueVK       = pRenderDeviceVk->GetCommandQueue(0);
     auto        QueueFamilyIndex = CmdQueueVK.GetQueueFamilyIndex();
@@ -108,12 +127,6 @@ SwapChainVkImpl::SwapChainVkImpl(IReferenceCounters*  pRefCounters,
                             "There could be few ways to mitigate this problem. One is to try to find another queue that supports present, but does not support graphics and compute capabilities."
                             "Another way is to find another physical device that exposes queue family that supports present and graphics capability. Neither apporach is currently implemented in Diligent Engine.");
     }
-
-    CreateVulkanSwapChain();
-    InitBuffersAndViews();
-    auto res = AcquireNextImage(pDeviceContextVk);
-    DEV_CHECK_ERR(res == VK_SUCCESS, "Failed to acquire next image for the newly created swap chain");
-    (void)res;
 }
 
 void SwapChainVkImpl::CreateVulkanSwapChain()
@@ -757,6 +770,27 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
     m_DrawCompleteSemaphores.clear();
     m_ImageAcquiredFences.clear();
     m_SemaphoreIndex = 0;
+
+    // Check if the surface is lost
+    {
+        const auto vkDeviceHandle = pDeviceVk->GetPhysicalDevice().GetVkDeviceHandle();
+
+        VkSurfaceCapabilitiesKHR surfCapabilities;
+        // Call vkGetPhysicalDeviceSurfaceCapabilitiesKHR only to check the return code
+        auto err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(vkDeviceHandle, m_VkSurface, &surfCapabilities);
+        if (err == VK_ERROR_SURFACE_LOST_KHR)
+        {
+            // Destroy the swap chain associated with the surface
+            if (m_VkSwapChain != VK_NULL_HANDLE)
+            {
+                vkDestroySwapchainKHR(pDeviceVk->GetVkDevice(), m_VkSwapChain, NULL);
+                m_VkSwapChain = VK_NULL_HANDLE;
+            }
+
+            // Recreate the surface
+            CreateSurface();
+        }
+    }
 
     CreateVulkanSwapChain();
     InitBuffersAndViews();

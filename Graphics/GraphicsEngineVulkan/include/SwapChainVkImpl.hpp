@@ -80,11 +80,14 @@ public:
     virtual ITextureViewVk* DILIGENT_CALL_TYPE GetDepthBufferDSV() override final { return m_pDepthBufferDSV; }
 
 private:
+    void     CreateSurface();
     void     CreateVulkanSwapChain();
     void     InitBuffersAndViews();
     VkResult AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
     void     RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk);
     void     WaitForImageAcquiredFences();
+
+    const NativeWindow m_Window;
 
     std::shared_ptr<const VulkanUtilities::VulkanInstance> m_VulkanInstance;
 
