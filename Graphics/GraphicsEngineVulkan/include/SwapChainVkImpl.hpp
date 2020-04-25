@@ -86,6 +86,7 @@ private:
     VkResult AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk);
     void     RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk);
     void     WaitForImageAcquiredFences();
+    void     ReleaseSwapChainResources(DeviceContextVkImpl* pImmediateCtxVk, bool DestroyVkSwapChain);
 
     const NativeWindow m_Window;
 

@@ -418,6 +418,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     if (oldSwapchain != VK_NULL_HANDLE)
     {
         vkDestroySwapchainKHR(vkDevice, oldSwapchain, NULL);
+        oldSwapchain = VK_NULL_HANDLE;
     }
 
     uint32_t swapchainImageCount = 0;
@@ -472,16 +473,12 @@ SwapChainVkImpl::~SwapChainVkImpl()
 {
     if (m_VkSwapChain != VK_NULL_HANDLE)
     {
-        auto* pDeviceVkImpl = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
-        pDeviceVkImpl->IdleGPU();
-
-        // We need to explicitly wait for all submitted Image Acquired Fences to signal.
-        // Just idling the GPU is not enough and results in validation warnings.
-        // As a matter of fact, it is only required to check the fence status.
-        WaitForImageAcquiredFences();
-
-        vkDestroySwapchainKHR(pDeviceVkImpl->GetVkDevice(), m_VkSwapChain, NULL);
+        auto  pDeviceContext  = m_wpDeviceContext.Lock();
+        auto* pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();
+        ReleaseSwapChainResources(pImmediateCtxVk, /*DestroyVkSwapChain=*/true);
+        VERIFY_EXPR(m_VkSwapChain == VK_NULL_HANDLE);
     }
+
     if (m_VkSurface != VK_NULL_HANDLE)
     {
         vkDestroySurfaceKHR(m_VulkanInstance->GetVkInstance(), m_VkSurface, NULL);
@@ -733,18 +730,27 @@ void SwapChainVkImpl::WaitForImageAcquiredFences()
     }
 }
 
-void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk)
+void SwapChainVkImpl::ReleaseSwapChainResources(DeviceContextVkImpl* pImmediateCtxVk, bool DestroyVkSwapChain)
 {
-    bool RenderTargetsReset = false;
-    for (Uint32 i = 0; i < m_pBackBufferRTV.size() && !RenderTargetsReset; ++i)
+    if (m_VkSwapChain == VK_NULL_HANDLE)
+        return;
+
+    if (pImmediateCtxVk != nullptr)
     {
-        auto* pCurrentBackBuffer = ValidatedCast<TextureVkImpl>(m_pBackBufferRTV[i]->GetTexture());
-        RenderTargetsReset       = pImmediateCtxVk->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
-    }
-    if (RenderTargetsReset)
-    {
-        LOG_INFO_MESSAGE_ONCE("Resizing the swap chain requires back and depth-stencil buffers to be unbound from the device context. "
-                              "An application should use SetRenderTargets() to restore them.");
+        // Flush to submit all pending commands and semaphores to the queue.
+        pImmediateCtxVk->Flush();
+
+        bool RenderTargetsReset = false;
+        for (Uint32 i = 0; i < m_pBackBufferRTV.size() && !RenderTargetsReset; ++i)
+        {
+            auto* pCurrentBackBuffer = ValidatedCast<TextureVkImpl>(m_pBackBufferRTV[i]->GetTexture());
+            RenderTargetsReset       = pImmediateCtxVk->UnbindTextureFromFramebuffer(pCurrentBackBuffer, false);
+        }
+        if (RenderTargetsReset)
+        {
+            LOG_INFO_MESSAGE_ONCE("The swap chain's back and depth-stencil buffers were unbound from the device context because "
+                                  "the swap chain is being destroyed. An application should use SetRenderTargets() to restore them.");
+        }
     }
 
     RenderDeviceVkImpl* pDeviceVk = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
@@ -758,22 +764,36 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
     // As a matter of fact, it is only required to check the fence status.
     WaitForImageAcquiredFences();
 
-    // All references to the swap chain must be released before it can be resized
+    // All references to the swap chain must be released before it can be destroyed
     m_pBackBufferRTV.clear();
     m_SwapChainImagesInitialized.clear();
     m_ImageAcquiredFenceSubmitted.clear();
     m_pDepthBufferDSV.Release();
 
-    // We must wait unitl GPU is idled before destroying semaphores as they
-    // are destroyed immediately
+    // We must wait unitl GPU is idled before destroying the fences as they
+    // are destroyed immediately. The semaphores are managed and will be kept alive
+    // by the device context they are submitted to.
     m_ImageAcquiredSemaphores.clear();
     m_DrawCompleteSemaphores.clear();
     m_ImageAcquiredFences.clear();
     m_SemaphoreIndex = 0;
 
+    if (DestroyVkSwapChain)
+    {
+        vkDestroySwapchainKHR(pDeviceVk->GetVkDevice(), m_VkSwapChain, NULL);
+        m_VkSwapChain = VK_NULL_HANDLE;
+    }
+}
+
+void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtxVk)
+{
+    // Do not destroy Vulkan swap chain as we will use it as oldSwapchain parameter.
+    ReleaseSwapChainResources(pImmediateCtxVk, /*DestroyVkSwapChain*/ false);
+
     // Check if the surface is lost
     {
-        const auto vkDeviceHandle = pDeviceVk->GetPhysicalDevice().GetVkDeviceHandle();
+        RenderDeviceVkImpl* pDeviceVk      = m_pRenderDevice.RawPtr<RenderDeviceVkImpl>();
+        const auto          vkDeviceHandle = pDeviceVk->GetPhysicalDevice().GetVkDeviceHandle();
 
         VkSurfaceCapabilitiesKHR surfCapabilities;
         // Call vkGetPhysicalDeviceSurfaceCapabilitiesKHR only to check the return code
@@ -831,8 +851,6 @@ void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
         VERIFY(pDeviceContext, "Immediate context has been released");
         if (pDeviceContext)
         {
-            pDeviceContext->Flush();
-
             try
             {
                 auto* pImmediateCtxVk = pDeviceContext.RawPtr<DeviceContextVkImpl>();

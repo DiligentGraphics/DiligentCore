@@ -1306,13 +1306,13 @@ struct SwapChainDesc
 
     /// Constructor intializes the structure members with default values
     SwapChainDesc(Uint32         _Width,
-                    Uint32         _Height,
-                    TEXTURE_FORMAT _ColorBufferFormat,
-                    TEXTURE_FORMAT _DepthBufferFormat,
-                    Uint32         _BufferCount         = SwapChainDesc{}.BufferCount,
-                    Float32        _DefaultDepthValue   = SwapChainDesc{}.DefaultDepthValue,
-                    Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue,
-                    bool           _IsPrimary           = SwapChainDesc{}.IsPrimary) :
+                  Uint32         _Height,
+                  TEXTURE_FORMAT _ColorBufferFormat,
+                  TEXTURE_FORMAT _DepthBufferFormat,
+                  Uint32         _BufferCount         = SwapChainDesc{}.BufferCount,
+                  Float32        _DefaultDepthValue   = SwapChainDesc{}.DefaultDepthValue,
+                  Uint8          _DefaultStencilValue = SwapChainDesc{}.DefaultStencilValue,
+                  bool           _IsPrimary           = SwapChainDesc{}.IsPrimary) :
         Width               {_Width              },
         Height              {_Height             },
         ColorBufferFormat   {_ColorBufferFormat  },
