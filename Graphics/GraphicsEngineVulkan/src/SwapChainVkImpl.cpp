@@ -818,12 +818,12 @@ void SwapChainVkImpl::RecreateVulkanSwapchain(DeviceContextVkImpl* pImmediateCtx
 
 void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform)
 {
-    auto RecreateSwapChain = TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform);
+    bool RecreateSwapChain = false;
 
 #if PLATFORM_ANDROID
-    if (!RecreateSwapChain && m_VkSurface != VK_NULL_HANDLE)
+    if (m_VkSurface != VK_NULL_HANDLE)
     {
-        // Check orinetation change
+        // Check orientation
         const auto* pRenderDeviceVk = m_pRenderDevice.RawPtr<const RenderDeviceVkImpl>();
         const auto& PhysicalDevice  = pRenderDeviceVk->GetPhysicalDevice();
         const auto  vkDeviceHandle  = PhysicalDevice.GetVkDeviceHandle();
@@ -835,7 +835,19 @@ void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
         {
             if (m_CurrentSurfaceTransform != surfCapabilities.currentTransform)
             {
+                // Surface orientation has changed - we need to recreate the swap chain
                 RecreateSwapChain = true;
+            }
+
+            constexpr auto Rotate90TransformFlags =
+                VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR |
+                VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR |
+                VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR |
+                VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR;
+            if ((surfCapabilities.currentTransform & Rotate90TransformFlags) != 0)
+            {
+                // The surface is rotated 90/270 degrees - swap width and height
+                std::swap(NewWidth, NewHeight);
             }
         }
         else
@@ -844,6 +856,9 @@ void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
         }
     }
 #endif
+
+    if (TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform))
+        RecreateSwapChain = true;
 
     if (RecreateSwapChain)
     {
