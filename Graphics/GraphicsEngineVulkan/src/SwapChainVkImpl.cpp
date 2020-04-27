@@ -845,10 +845,38 @@ void SwapChainVkImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
                 VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR |
                 VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90_BIT_KHR |
                 VK_SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270_BIT_KHR;
-            if ((surfCapabilities.currentTransform & Rotate90TransformFlags) != 0)
+
+            if (NewWidth == 0 || NewHeight == 0)
             {
-                // The surface is rotated 90/270 degrees - swap width and height
-                std::swap(NewWidth, NewHeight);
+                NewWidth  = m_SurfaceIdentityExtent.width;
+                NewHeight = m_SurfaceIdentityExtent.height;
+
+                if ((surfCapabilities.currentTransform & Rotate90TransformFlags) != 0)
+                {
+                    // Swap to get logical dimensions as input NewWidth and NewHeight are
+                    // expected to be logical sizes.
+                    std::swap(NewWidth, NewHeight);
+                }
+            }
+
+            if (NewPreTransform == SURFACE_TRANSFORM_OPTIMAL)
+            {
+                if ((surfCapabilities.currentTransform & Rotate90TransformFlags) != 0)
+                {
+                    // Swap to get physical dimensions
+                    std::swap(NewWidth, NewHeight);
+                }
+            }
+            else
+            {
+                // Swap if necessary to get desired sizes after pre-transform
+                if (NewPreTransform == SURFACE_TRANSFORM_ROTATE_90 ||
+                    NewPreTransform == SURFACE_TRANSFORM_ROTATE_270 ||
+                    NewPreTransform == SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_90 ||
+                    NewPreTransform == SURFACE_TRANSFORM_HORIZONTAL_MIRROR_ROTATE_270)
+                {
+                    std::swap(NewWidth, NewHeight);
+                }
             }
         }
         else

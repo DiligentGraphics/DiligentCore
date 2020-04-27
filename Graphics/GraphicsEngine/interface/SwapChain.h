@@ -64,19 +64,20 @@ DILIGENT_BEGIN_INTERFACE(ISwapChain, IObject)
 
     /// Changes the swap chain size
 
-    /// \param [in] NewWidth     - New swap chain width (not accounting for pre-transform), in pixels.
-    /// \param [in] NewHeight    - New swap chain height (not accounting for pre-transform), in pixels.
+    /// \param [in] NewWidth     - New logical swap chain width (not accounting for pre-transform), in pixels.
+    /// \param [in] NewHeight    - New logical swap chain height (not accounting for pre-transform), in pixels.
     /// \param [in] NewTransform - New surface transform, see Diligent::SURFACE_TRANSFORM.
     ///
     /// \note When resizing non-primary swap chains, the engine unbinds the
     ///       swap chain buffers from the output.
     ///
     ///       New width and height should not account for surface pre-transform. For example,
-    ///       if the window size is 1920 x 1080, but the surface is rotated by 90 degrees,
+    ///       if the window size is 1920 x 1080, but the surface is pre-rotated by 90 degrees,
     ///       NewWidth should still be 1920, and NewHeight should still be 1080. It is highly
-    ///       preferable to always use SURFACE_TRANSFORM_OPTIMAL, however SURFACE_TRANSFORM_ROTATE_90
-    ///       will also work in this scenario. After the swap chain has been resized, its width
-    ///       will be 1080, height will be 1920, and PreTransform will be SURFACE_TRANSFORM_ROTATE_90.
+    ///       recommended to always use SURFACE_TRANSFORM_OPTIMAL to let the engine select
+    ///       the most optimal pre-transform. However SURFACE_TRANSFORM_ROTATE_90 will also work in
+    ///       the scenario above. After the swap chain has been resized, its actual width will be 1080,
+    ///       actual height will be 1920, and PreTransform will be SURFACE_TRANSFORM_ROTATE_90.
     VIRTUAL void METHOD(Resize)(THIS_
                                 Uint32            NewWidth,
                                 Uint32            NewHeight,
