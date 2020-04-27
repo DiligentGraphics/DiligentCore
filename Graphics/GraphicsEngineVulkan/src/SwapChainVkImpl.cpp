@@ -248,6 +248,7 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
         // https://community.arm.com/developer/tools-software/graphics/b/blog/posts/appropriate-use-of-surface-rotation
         vkPreTransform               = surfCapabilities.currentTransform;
         m_SwapChainDesc.PreTransform = VkSurfaceTransformFlagToSurfaceTransform(vkPreTransform);
+        LOG_INFO_MESSAGE("Using ", GetSurfaceTransformString(m_SwapChainDesc.PreTransform), " swap chain pretransform");
     }
 
     VkExtent2D swapchainExtent = {};

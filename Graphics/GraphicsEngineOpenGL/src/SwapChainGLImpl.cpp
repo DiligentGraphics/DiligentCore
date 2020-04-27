@@ -121,8 +121,34 @@ void SwapChainGLImpl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFOR
     auto* pDeviceGL = m_pRenderDevice.RawPtr<RenderDeviceGLImpl>();
     auto& GLContext = pDeviceGL->m_GLContext;
     GLContext.UpdateScreenSize();
-    NewWidth  = GLContext.GetScreenWidth();
-    NewHeight = GLContext.GetScreenHeight();
+    const auto ScreenWidth  = GLContext.GetScreenWidth();
+    const auto ScreenHeight = GLContext.GetScreenHeight();
+
+    if (NewWidth == 0)
+    {
+        NewWidth = ScreenWidth;
+    }
+    else
+    {
+        if (NewWidth != ScreenWidth)
+        {
+            LOG_WARNING_MESSAGE("Requested new swap chain width (", NewWidth, ") does not match GLES surface width (", ScreenWidth,
+                                "). This may be the result of calling Resize before the rotation has taken the effect.");
+        }
+    }
+
+    if (NewHeight == 0)
+    {
+        NewHeight = ScreenHeight;
+    }
+    else
+    {
+        if (NewHeight != ScreenHeight)
+        {
+            LOG_WARNING_MESSAGE("Requested new swap chain height (", NewHeight, ") does not match GLES surface height (", ScreenHeight,
+                                "). This may be the result of calling Resize before the rotation has taken the effect.");
+        }
+    }
 #endif
 
     TSwapChainGLBase::Resize(NewWidth, NewHeight, NewPreTransform, 0);

@@ -400,6 +400,7 @@ void DeviceContextGLImpl::ResetRenderTargets()
 {
     TDeviceContextBase::ResetRenderTargets();
     m_IsDefaultFBOBound = false;
+    m_ContextState.InvalidateFBO();
 }
 
 
