@@ -189,7 +189,7 @@ way as on Win32 Platform. The difference is that you first create the render dev
 calling `IEngineFactoryD3D11::CreateDeviceAndContextsD3D11()` or `IEngineFactoryD3D12::CreateDeviceAndContextsD3D12()`.
 The swap chain is created later by a call to `IEngineFactoryD3D11::CreateSwapChainD3D11()` or `IEngineFactoryD3D12::CreateSwapChainD3D12()`.
 Please look at
-[SampleAppUWP.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/Samples/SampleBase/src/UWP/SampleAppUWP.cpp) 
+[SampleAppUWP.cpp](https://github.com/DiligentGraphics/DiligentSamples/blob/master/SampleBase/src/UWP/SampleAppUWP.cpp) 
 file for more details.
 
 <a name="initialization_linux"></a>
@@ -205,9 +205,9 @@ attaches to the one initialized by the app. An example of the engine initializat
 
 On MacOS, Diligent Engine supports OpenGL and Vulkan backends. Initialization of GL context on MacOS is
 performed by the application, and the engine attaches to the context created by the app; see
-[GLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/GLView.m)
+[GLView.m](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/OSX/GLView.m)
 for details. Vulkan backend is initialized similar to other platforms. See 
-[MetalView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/OSX/MetalView.m).
+[MetalView.m](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/OSX/MetalView.m).
 
 <a name="initialization_android"></a>
 ### Android
@@ -242,7 +242,7 @@ static
 
 iOS implementation only supports OpenGLES backend. Initialization of GL context on iOS is
 performed by the application, and the engine attaches to the context initialized by the app; see
-[EAGLView.m](https://github.com/DiligentGraphics/DiligentEngine/blob/master/Common/NativeApp/Apple/Source/Classes/iOS/EAGLView.m)
+[EAGLView.m](https://github.com/DiligentGraphics/DiligentTools/blob/master/NativeApp/Apple/Source/Classes/iOS/EAGLView.m)
 for details.
 
 <a name="initialization_attaching"></a>
