@@ -43,6 +43,16 @@ SwapChainGLIOS::SwapChainGLIOS(IReferenceCounters*          pRefCounters,
     m_DepthRenderBuffer(false),
     m_DefaultFBO(false)
 {
+    if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL &&
+        m_DesiredPreTransform != SURFACE_TRANSFORM_IDENTITY)
+    {
+        LOG_WARNING_MESSAGE(GetSurfaceTransformString(m_DesiredPreTransform),
+                            " is not an allowed pretransform because OpenGL swap chains only support identity transform. "
+                            "Use SURFACE_TRANSFORM_OPTIMAL (recommended) or SURFACE_TRANSFORM_IDENTITY.");
+    }
+    m_DesiredPreTransform        = SURFACE_TRANSFORM_OPTIMAL;
+    m_SwapChainDesc.PreTransform = SURFACE_TRANSFORM_IDENTITY;
+
     m_CALayer = InitAttribs.Window.pCALayer;
     InitRenderBuffers(true, m_SwapChainDesc.Width, m_SwapChainDesc.Height);
     CreateDummyBuffers(m_pRenderDevice.RawPtr<RenderDeviceGLImpl>());
