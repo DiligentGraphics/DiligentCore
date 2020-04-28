@@ -127,8 +127,8 @@ elseif(PLATFORM_IOS)
         if(NOT MoltenVK_LIBRARY)
             # iOS.toolchain.cmake currently configures cmake to only search iOS SDK for libraries,
             # thus find_library will be unable to find MoltenVK in VulkanSDK
-            # find_library(MoltenVK_LIBRARY MoltenVK PATHS "${VULKAN_SDK}/MoltenVK/iOS/dynamic")
-            set(MoltenVK_LIBRARY "${VULKAN_SDK}/MoltenVK/iOS/dynamic/libMoltenVK.dylib" CACHE INTERNAL "MoltenVK library")
+            # find_library(MoltenVK_LIBRARY MoltenVK PATHS "${VULKAN_SDK}/MoltenVK/iOS/static")
+            set(MoltenVK_LIBRARY "${VULKAN_SDK}/MoltenVK/iOS/static/libMoltenVK.a" CACHE FILEPATH "MoltenVK library")
         endif()
 
         if(EXISTS ${MoltenVK_LIBRARY})
