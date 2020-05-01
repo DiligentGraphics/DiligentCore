@@ -218,12 +218,13 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         LINK_FLAGS "-Wl,--no-undefined -Wl,--no-allow-shlib-undefined"
     )
     if(PLATFORM_WIN32)
+        # MinGW
         # Restrict export to GetEngineFactoryOpenGL
         file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
             "{ global: *GetEngineFactoryOpenGL*; local: *; };"
         )
-        set_property(TARGET Diligent-GraphicsEngineOpenGL-shared APPEND_STRING PROPERTY
-            LINK_FLAGS " -Wl,--version-script=export.map"
+        set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
+            LINK_FLAGS "-Wl,--version-script=export.map"
         )
     endif()
 endif()
