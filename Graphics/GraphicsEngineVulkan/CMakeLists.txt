@@ -241,6 +241,15 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         # Disallow missing direct and indirect dependencies to enssure that .so is self-contained
         LINK_FLAGS "-Wl,--no-undefined -Wl,--no-allow-shlib-undefined"
     )
+    if(PLATFORM_WIN32)
+        # Restrict export to GetEngineFactoryVk
+        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
+            "{ global: *GetEngineFactoryVk*; local: *; };"
+        )
+        set_property(TARGET Diligent-GraphicsEngineVk-shared APPEND_STRING PROPERTY
+            LINK_FLAGS " -Wl,--version-script=export.map"
+        )
+    endif()
 endif()
 
 if(PLATFORM_WIN32)

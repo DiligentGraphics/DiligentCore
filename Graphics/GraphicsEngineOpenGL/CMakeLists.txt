@@ -217,6 +217,15 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         # Disallow missing direct and indirect dependencies to enssure that .so is self-contained
         LINK_FLAGS "-Wl,--no-undefined -Wl,--no-allow-shlib-undefined"
     )
+    if(PLATFORM_WIN32)
+        # Restrict export to GetEngineFactoryOpenGL
+        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
+            "{ global: *GetEngineFactoryOpenGL*; local: *; };"
+        )
+        set_property(TARGET Diligent-GraphicsEngineOpenGL-shared APPEND_STRING PROPERTY
+            LINK_FLAGS " -Wl,--version-script=export.map"
+        )
+    endif()
 endif()
 
 target_link_libraries(Diligent-GraphicsEngineOpenGL-static
