@@ -247,8 +247,9 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
             "{ global: *GetEngineFactoryVk*; local: *; };"
         )
-        set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
-            LINK_FLAGS "-Wl,--version-script=export.map"
+        # set_target_properties does not append link flags, but overwrites them
+        set_property(TARGET Diligent-GraphicsEngineVk-shared APPEND_STRING PROPERTY
+            LINK_FLAGS " -Wl,--version-script=export.map"
         )
     endif()
 endif()

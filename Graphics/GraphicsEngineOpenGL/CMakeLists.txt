@@ -223,8 +223,9 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/export.map
             "{ global: *GetEngineFactoryOpenGL*; local: *; };"
         )
-        set_target_properties(Diligent-GraphicsEngineOpenGL-shared PROPERTIES
-            LINK_FLAGS "-Wl,--version-script=export.map"
+        # set_target_properties does not append link flags, but overwrites them
+        set_property(TARGET Diligent-GraphicsEngineOpenGL-shared APPEND_STRING PROPERTY
+            LINK_FLAGS " -Wl,--version-script=export.map"
         )
     endif()
 endif()
