@@ -59,10 +59,16 @@ VkRenderPass RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
             PipelineStateVkImpl::GetRenderPassCreateInfo(Key.NumRenderTargets, Key.RTVFormats, Key.DSVFormat,
                                                          Key.SampleCount, Attachments, AttachmentReferences, Subpass);
         std::stringstream PassNameSS;
-        PassNameSS << "Render pass: rt count: " << Key.NumRenderTargets << "; sample count: " << Key.SampleCount
-                   << "; DSV Format: " << GetTextureFormatAttribs(Key.DSVFormat).Name << "; RTV Formats: ";
-        for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
-            PassNameSS << (rt > 0 ? ", " : "") << GetTextureFormatAttribs(Key.RTVFormats[rt]).Name;
+        PassNameSS << "Render pass: RT count: " << Uint32{Key.NumRenderTargets} << "; sample count: " << Uint32{Key.SampleCount}
+                   << "; DSV Format: " << GetTextureFormatAttribs(Key.DSVFormat).Name;
+        if (Key.NumRenderTargets > 0)
+        {
+            PassNameSS << (Key.NumRenderTargets > 1 ? "; RTV Formats: " : "; RTV Format: ");
+            for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
+            {
+                PassNameSS << (rt > 0 ? ", " : "") << GetTextureFormatAttribs(Key.RTVFormats[rt]).Name;
+            }
+        }
         auto RenderPass = m_DeviceVkImpl.GetLogicalDevice().CreateRenderPass(RenderPassCI, PassNameSS.str().c_str());
         VERIFY_EXPR(RenderPass != VK_NULL_HANDLE);
         it = m_Cache.emplace(Key, std::move(RenderPass)).first;
