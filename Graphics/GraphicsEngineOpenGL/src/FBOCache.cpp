@@ -67,7 +67,6 @@ std::size_t FBOCache::FBOCacheKeyHashFunc::operator()(const FBOCacheKey& Key) co
     if (Key.Hash == 0)
     {
         std::hash<TextureViewDesc> TexViewDescHasher;
-        Key.Hash = 0;
         HashCombine(Key.Hash, Key.NumRenderTargets);
         for (Uint32 rt = 0; rt < Key.NumRenderTargets; ++rt)
         {
