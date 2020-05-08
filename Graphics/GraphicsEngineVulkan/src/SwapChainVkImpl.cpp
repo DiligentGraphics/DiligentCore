@@ -513,7 +513,6 @@ void SwapChainVkImpl::InitBuffersAndViews()
     for (uint32_t i = 0; i < swapchainImageCount; i++)
     {
         TextureDesc BackBufferDesc;
-        BackBufferDesc.Format = m_SwapChainDesc.ColorBufferFormat;
         std::stringstream name_ss;
         name_ss << "Main back buffer " << i;
         auto name                = name_ss.str();
