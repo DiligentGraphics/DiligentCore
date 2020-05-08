@@ -97,7 +97,7 @@ VulkanObjectWrapper<VkObjectType, VkTypeId> VulkanLogicalDevice::CreateVulkanObj
     auto err = VkCreateObject(m_VkDevice, &CreateInfo, m_VkAllocator, &VkObject);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create Vulkan ", ObjectType, " '", DebugName, '\'');
 
-    if (DebugName != nullptr && *DebugName != 0)
+    if (*DebugName != 0)
         SetVulkanObjectName<VkObjectType, VkTypeId>(m_VkDevice, VkObject, DebugName);
 
     return VulkanObjectWrapper<VkObjectType, VkTypeId>{GetSharedPtr(), std::move(VkObject)};
@@ -169,7 +169,7 @@ DeviceMemoryWrapper VulkanLogicalDevice::AllocateDeviceMemory(const VkMemoryAllo
     auto err = vkAllocateMemory(m_VkDevice, &AllocInfo, m_VkAllocator, &vkDeviceMem);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to allocate device memory '", DebugName, '\'');
 
-    if (DebugName != nullptr && *DebugName != 0)
+    if (*DebugName != 0)
         SetDeviceMemoryName(m_VkDevice, vkDeviceMem, DebugName);
 
     return DeviceMemoryWrapper{GetSharedPtr(), std::move(vkDeviceMem)};
@@ -189,7 +189,7 @@ PipelineWrapper VulkanLogicalDevice::CreateComputePipeline(const VkComputePipeli
     auto err = vkCreateComputePipelines(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create compute pipeline '", DebugName, '\'');
 
-    if (DebugName != nullptr && *DebugName != 0)
+    if (*DebugName != 0)
         SetPipelineName(m_VkDevice, vkPipeline, DebugName);
 
     return PipelineWrapper{GetSharedPtr(), std::move(vkPipeline)};
@@ -209,7 +209,7 @@ PipelineWrapper VulkanLogicalDevice::CreateGraphicsPipeline(const VkGraphicsPipe
     auto err = vkCreateGraphicsPipelines(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to create graphics pipeline '", DebugName, '\'');
 
-    if (DebugName != nullptr && *DebugName != 0)
+    if (*DebugName != 0)
         SetPipelineName(m_VkDevice, vkPipeline, DebugName);
 
     return PipelineWrapper{GetSharedPtr(), std::move(vkPipeline)};
@@ -270,7 +270,7 @@ VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBuff
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to allocate command buffer '", DebugName, '\'');
     (void)err;
 
-    if (DebugName != nullptr && *DebugName != 0)
+    if (*DebugName != 0)
         SetCommandBufferName(m_VkDevice, CmdBuff, DebugName);
 
     return CmdBuff;
@@ -290,7 +290,7 @@ VkDescriptorSet VulkanLogicalDevice::AllocateVkDescriptorSet(const VkDescriptorS
     if (err != VK_SUCCESS)
         return VK_NULL_HANDLE;
 
-    if (DebugName != nullptr && *DebugName != 0)
+    if (*DebugName != 0)
         SetDescriptorSetName(m_VkDevice, DescrSet, DebugName);
 
     return DescrSet;

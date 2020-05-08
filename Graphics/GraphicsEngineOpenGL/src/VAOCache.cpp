@@ -190,7 +190,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
 
             constexpr bool ResetVAO = false;
             GLState.BindBuffer(GL_ARRAY_BUFFER, pBufferOGL->m_GlBuffer, ResetVAO);
-            GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>(static_cast<size_t>(CurrStream.Offset + LayoutIt->RelativeOffset));
+            GLvoid* DataStartOffset = reinterpret_cast<GLvoid*>(static_cast<size_t>(CurrStream.Offset) + static_cast<size_t>(LayoutIt->RelativeOffset));
             auto    GlType          = TypeToGLType(LayoutIt->ValueType);
             if (!LayoutIt->IsNormalized &&
                 (LayoutIt->ValueType == VT_INT8 ||
