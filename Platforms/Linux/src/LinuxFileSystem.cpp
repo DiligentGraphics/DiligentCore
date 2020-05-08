@@ -51,7 +51,7 @@ bool LinuxFileSystem::FileExists(const Diligent::Char* strFilePath)
     const auto& Path   = DummyFile.GetPath(); // This is necessary to correct slashes
     FILE*       pFile  = fopen(Path.c_str(), "r");
     bool        Exists = (pFile != nullptr);
-    if (Exists && pFile)
+    if (Exists)
         fclose(pFile);
     return Exists;
 }
