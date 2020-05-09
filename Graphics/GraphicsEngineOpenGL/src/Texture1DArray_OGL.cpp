@@ -109,6 +109,7 @@ Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*        pRefCounters,
                                        GLContextState&            GLState,
                                        const TextureDesc&         TexDesc,
                                        GLuint                     GLTextureHandle,
+                                       GLuint                     GLBindTarget,
                                        bool                       bIsDeviceInternal) :
     // clang-format off
     TextureBaseGL
@@ -119,7 +120,7 @@ Texture1DArray_OGL::Texture1DArray_OGL(IReferenceCounters*        pRefCounters,
         GLState,
         TexDesc,
         GLTextureHandle,
-        GL_TEXTURE_1D_ARRAY,
+        static_cast<GLenum>(GLBindTarget != 0 ? GLBindTarget : GL_TEXTURE_1D_ARRAY),
         bIsDeviceInternal
     }
 // clang-format on

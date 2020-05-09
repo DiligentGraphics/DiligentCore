@@ -53,7 +53,12 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGL, IRenderDevice)
 {
     /// Creates a texture from OpenGL handle
 
-    /// \param [in] GLHandle      - OpenGL texture handle
+    /// \param [in] GLHandle      - OpenGL texture handle.
+    /// \param [in] GLBindTarget  - OpenGL bind target. If this parameter is null, the engine will
+    ///                             automatically select the target based on texture
+    ///                             type (e.g. RESOURCE_DIM_TEX_2D will map to GL_TEXTURE_2D).
+    ///                             An application should typically use this paramter when the texture
+    ///                             has non-standard bind target such as, GL_TEXTURE_EXTERNAL_OES.
     /// \param [in] TexDesc       - Texture description. The engine can automatically
     ///                             set texture width, height, depth, mip levels count, and format.
     ///                             Remaining fields should be set up by the app.
@@ -66,6 +71,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDeviceGL, IRenderDevice)
     ///        and the application must not destroy it while it is in use by the engine.
     VIRTUAL void METHOD(CreateTextureFromGLHandle)(THIS_
                                                    Uint32                GLHandle,
+                                                   Uint32                GLBindTarget,
                                                    const TextureDesc REF TexDesc,
                                                    RESOURCE_STATE        InitialState,
                                                    ITexture**            ppTexture) PURE;

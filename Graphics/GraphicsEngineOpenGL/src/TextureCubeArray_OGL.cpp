@@ -118,6 +118,7 @@ TextureCubeArray_OGL::TextureCubeArray_OGL(IReferenceCounters*        pRefCounte
                                            GLContextState&            GLState,
                                            const TextureDesc&         TexDesc,
                                            GLuint                     GLTextureHandle,
+                                           GLuint                     GLBindTarget,
                                            bool                       bIsDeviceInternal) :
     // clang-format off
     TextureBaseGL
@@ -128,7 +129,7 @@ TextureCubeArray_OGL::TextureCubeArray_OGL(IReferenceCounters*        pRefCounte
         GLState,
         TexDesc,
         GLTextureHandle,
-        GL_TEXTURE_CUBE_MAP_ARRAY,
+        static_cast<GLenum>(GLBindTarget != 0 ? GLBindTarget : GL_TEXTURE_CUBE_MAP_ARRAY),
         bIsDeviceInternal
     }
 // clang-format on

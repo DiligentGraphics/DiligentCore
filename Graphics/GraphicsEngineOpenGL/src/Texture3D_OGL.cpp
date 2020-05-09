@@ -110,6 +110,7 @@ Texture3D_OGL::Texture3D_OGL(IReferenceCounters*        pRefCounters,
                              GLContextState&            GLState,
                              const TextureDesc&         TexDesc,
                              GLuint                     GLTextureHandle,
+                             GLuint                     GLBindTarget,
                              bool                       bIsDeviceInternal) :
     // clang-format off
     TextureBaseGL
@@ -120,7 +121,7 @@ Texture3D_OGL::Texture3D_OGL(IReferenceCounters*        pRefCounters,
         GLState,
         TexDesc,
         GLTextureHandle,
-        GL_TEXTURE_3D,
+        static_cast<GLenum>(GLBindTarget != 0 ? GLBindTarget : GL_TEXTURE_3D),
         bIsDeviceInternal
     }
 // clang-format on

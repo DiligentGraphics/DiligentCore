@@ -133,6 +133,7 @@ Texture2D_OGL::Texture2D_OGL(IReferenceCounters*        pRefCounters,
                              GLContextState&            GLState,
                              const TextureDesc&         TexDesc,
                              GLuint                     GLTextureHandle,
+                             GLuint                     GLBindTarget,
                              bool                       bIsDeviceInternal) :
     // clang-format off
     TextureBaseGL
@@ -143,7 +144,9 @@ Texture2D_OGL::Texture2D_OGL(IReferenceCounters*        pRefCounters,
         GLState,
         TexDesc,
         GLTextureHandle, 
-        static_cast<GLenum>(TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D),
+        GLBindTarget != 0 ?
+            static_cast<GLenum>(GLBindTarget) :
+            static_cast<GLenum>(TexDesc.SampleCount > 1 ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D),
         bIsDeviceInternal
     }
 // clang-format on

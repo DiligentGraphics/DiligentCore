@@ -1,3 +1,10 @@
+## Current Progress
+
+### API Changes
+
+* Added `GLBindTarget` parameter to `IRenderDeviceGL::CreateTextureFromGLHandle` method (API Version 240058).
+
+
 
 ## v2.4.e
 

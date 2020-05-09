@@ -115,6 +115,7 @@ public:
 
     /// Implementation of IRenderDeviceGL::CreateTextureFromGLHandle().
     virtual void DILIGENT_CALL_TYPE CreateTextureFromGLHandle(Uint32             GLHandle,
+                                                              Uint32             GLBindTarget,
                                                               const TextureDesc& TexDesc,
                                                               RESOURCE_STATE     InitialState,
                                                               ITexture**         ppTexture) override final;

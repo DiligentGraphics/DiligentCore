@@ -368,7 +368,11 @@ void RenderDeviceGLImpl::CreateTexture(const TextureDesc& TexDesc, const Texture
     CreateTexture(TexDesc, Data, ppTexture, false);
 }
 
-void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)
+void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32             GLHandle,
+                                                   Uint32             GLBindTarget,
+                                                   const TextureDesc& TexDesc,
+                                                   RESOURCE_STATE     InitialState,
+                                                   ITexture**         ppTexture)
 {
     VERIFY(GLHandle, "GL texture handle must not be null");
     CreateDeviceObject(
@@ -383,31 +387,31 @@ void RenderDeviceGLImpl::CreateTextureFromGLHandle(Uint32 GLHandle, const Textur
             switch (TexDesc.Type)
             {
                 case RESOURCE_DIM_TEX_1D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1D_OGL instance", Texture1D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_1D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture1DArray_OGL instance", Texture1DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_2D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2D_OGL instance", Texture2D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_2D_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture2DArray_OGL instance", Texture2DArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_3D:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "Texture3D_OGL instance", Texture3D_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCube_OGL instance", TextureCube_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 case RESOURCE_DIM_TEX_CUBE_ARRAY:
-                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle);
+                    pTextureOGL = NEW_RC_OBJ(m_TexObjAllocator, "TextureCubeArray_OGL instance", TextureCubeArray_OGL)(m_TexViewObjAllocator, this, GLState, TexDesc, GLHandle, GLBindTarget);
                     break;
 
                 default: LOG_ERROR_AND_THROW("Unknown texture type. (Did you forget to initialize the Type member of TextureDesc structure?)");

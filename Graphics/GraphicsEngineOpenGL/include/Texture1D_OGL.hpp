@@ -50,6 +50,7 @@ public:
                   class GLContextState&      GLState,
                   const TextureDesc&         TexDesc,
                   GLuint                     GLTextureHandle,
+                  GLuint                     GLBindTarget,
                   bool                       bIsDeviceInternal = false);
     ~Texture1D_OGL();
 

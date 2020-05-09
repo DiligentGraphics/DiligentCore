@@ -50,15 +50,17 @@ Below are some of the methods that provide access to internal D3D11 objects:
 
 ## Creating Diligent Engine Objects from OpenGL Handles
 
-* `void IRenderDeviceGL::CreateTextureFromGLHandle(Uint32 GLHandle, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)` -
-    creates a diligent engine texture from OpenGL handle. The method takes OpenGL handle GLHandle, texture description TexDesc,
-    and writes the pointer to the created texture object at the memory address pointed to by ppTexture. The engine can automatically
-    set texture width, height, depth, mip levels count, and format, but the remaining field of TexDesc structure must be populated by
+* `void IRenderDeviceGL::CreateTextureFromGLHandle(Uint32 GLHandle, Uint32 GLBindTarget, const TextureDesc& TexDesc, RESOURCE_STATE InitialState, ITexture** ppTexture)` -
+    creates a diligent engine texture from OpenGL handle. The method takes OpenGL handle `GLHandle`, texture bind target `GLBindTarget`
+    (when null value is provided, the engine automatically selects the target that corresponds to the texture type, e.g. GL_TEXTURE_2D
+    for a 2D texture), texture description `TexDesc`, as well as initial state `InitialState`,
+    and writes the pointer to the created texture object at the memory address pointed to by `ppTexture`. The engine can automatically
+    set texture width, height, depth, mip levels count, and format, but the remaining field of `TexDesc` structure must be populated by
     the application. Note that diligent engine texture object does not take ownership of the GL resource, and the application must
     not destroy it while it is in use by the engine.
 * `void IRenderDeviceGL::CreateBufferFromGLHandle(Uint32 GLHandle, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)` -
-    creates a diligent engine buffer from OpenGL handle. The method takes OpenGL handle GLHandle, buffer description BuffDesc,
-    and writes the pointer to the created buffer object at the memory address pointed to by ppBuffer. The engine can automatically
+    creates a diligent engine buffer from OpenGL handle. The method takes OpenGL handle `GLHandle`, buffer description `BuffDesc`,
+    and writes the pointer to the created buffer object at the memory address pointed to by `ppBuffer`. The engine can automatically
     set the buffer size, but the rest of the fields need to be set by the client. Note that diligent engine buffer object does not
     take ownership of the GL resource, and the application must not destroy it while it is in use by the engine.
 

@@ -50,6 +50,7 @@ public:
                   class GLContextState&      GLState,
                   const TextureDesc&         TexDesc,
                   GLuint                     GLTextureHandle,
+                  GLuint                     GLBindTarget,
                   bool                       bIsDeviceInternal = false);
 
     /// This constructor is used to create a dummy texture object for the default framebuffer.

@@ -121,7 +121,7 @@ void TestCreateObjFromNativeResGL::CreateTexture(Diligent::ITexture* pTexture)
     TmpTexDesc.Format    = TEX_FORMAT_UNKNOWN;
 
     RefCntAutoPtr<ITexture> pAttachedTexture;
-    pDeviceGL->CreateTextureFromGLHandle(GLHandle, TmpTexDesc, RESOURCE_STATE_UNKNOWN, &pAttachedTexture);
+    pDeviceGL->CreateTextureFromGLHandle(GLHandle, 0, TmpTexDesc, RESOURCE_STATE_UNKNOWN, &pAttachedTexture);
     ASSERT_NE(pAttachedTexture, nullptr);
 
     auto TestTexDesc = pAttachedTexture->GetDesc();
