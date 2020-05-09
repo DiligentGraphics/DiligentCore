@@ -32,7 +32,7 @@ add_library(Diligent-Primitives STATIC ${INTERFACE} ${SOURCE})
 set_common_target_properties(Diligent-Primitives)
 
 target_link_libraries(Diligent-Primitives 
-PUBLIC
+PRIVATE
     Diligent-BuildSettings
 )
 

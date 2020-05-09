@@ -60,7 +60,7 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
     SamplerCI.mipLodBias       = m_Desc.MipLODBias;
     SamplerCI.anisotropyEnable = IsAnisotropicFilter(m_Desc.MinFilter);
 #ifdef DILIGENT_DEVELOPMENT
-    if (SamplerCI.anisotropyEnable != IsAnisotropicFilter(m_Desc.MagFilter))
+    if ((SamplerCI.anisotropyEnable != VK_FALSE) != IsAnisotropicFilter(m_Desc.MagFilter))
     {
         LOG_ERROR("Min and mag filters must both be either anisotropic filters or non-anisotropic ones");
     }
@@ -69,7 +69,7 @@ SamplerVkImpl::SamplerVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImp
     SamplerCI.maxAnisotropy = static_cast<float>(m_Desc.MaxAnisotropy);
     SamplerCI.compareEnable = IsComparisonFilter(m_Desc.MinFilter);
 #ifdef DILIGENT_DEVELOPMENT
-    if (SamplerCI.compareEnable != IsComparisonFilter(m_Desc.MagFilter))
+    if ((SamplerCI.compareEnable != VK_FALSE) != IsComparisonFilter(m_Desc.MagFilter))
     {
         LOG_ERROR("Min and mag filters must both be either comparison filters or non-comparison ones");
     }

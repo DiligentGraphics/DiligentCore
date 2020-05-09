@@ -111,12 +111,12 @@ PRIVATE
 
 target_link_libraries(Diligent-GraphicsEngineD3D11-static
 PRIVATE
-    Diligent-BuildSettings 
-    Diligent-GraphicsEngineD3DBase 
+    Diligent-BuildSettings
+    Diligent-GraphicsEngineD3DBase
     Diligent-TargetPlatform
     Diligent-Common
     dxgi.lib
-    d3d11.lib 
+    d3d11.lib
     d3dcompiler.lib
 PUBLIC
     Diligent-GraphicsEngineD3D11Interface

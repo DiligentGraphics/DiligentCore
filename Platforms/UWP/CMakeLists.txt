@@ -26,8 +26,9 @@ PUBLIC
 )
 
 target_link_libraries(Diligent-UniversalWindowsPlatform 
-PUBLIC
+PRIVATE
     Diligent-BuildSettings 
+PUBLIC
     Diligent-BasicPlatform
     Diligent-PlatformInterface
 )

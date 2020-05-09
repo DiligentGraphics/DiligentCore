@@ -787,9 +787,9 @@ TEST(Common_BasicMath, MatrixInverse)
 TEST(Common_BasicMath, Hash)
 {
     {
-        EXPECT_NE(std::hash<float2>{}(float2{1, 2}), 0);
-        EXPECT_NE(std::hash<float3>{}(float3{1, 2, 3}), 0);
-        EXPECT_NE(std::hash<float4>{}(float4{1, 2, 3, 5}), 0);
+        EXPECT_NE(std::hash<float2>{}(float2{1, 2}), size_t{0});
+        EXPECT_NE(std::hash<float3>{}(float3{1, 2, 3}), size_t{0});
+        EXPECT_NE(std::hash<float4>{}(float4{1, 2, 3, 5}), size_t{0});
         // clang-format off
         float4x4 m1
         {
@@ -799,7 +799,7 @@ TEST(Common_BasicMath, Hash)
             13, 14, 15, 16
         };
         // clang-format on
-        EXPECT_NE(std::hash<float4x4>{}(m1), 0);
+        EXPECT_NE(std::hash<float4x4>{}(m1), size_t{0});
 
         // clang-format off
         float3x3 m2
@@ -809,7 +809,7 @@ TEST(Common_BasicMath, Hash)
             9, 10, 11
         };
         // clang-format on
-        EXPECT_NE(std::hash<float3x3>{}(m2), 0);
+        EXPECT_NE(std::hash<float3x3>{}(m2), size_t{0});
 
         // clang-format off
         float2x2 m3
@@ -818,7 +818,7 @@ TEST(Common_BasicMath, Hash)
             5, 6
         };
         // clang-format on
-        EXPECT_NE(std::hash<float2x2>{}(m3), 0);
+        EXPECT_NE(std::hash<float2x2>{}(m3), size_t{0});
     }
 }
 
@@ -946,13 +946,13 @@ TEST(Common_BasicMath, FastFloorCeilVector)
 TEST(Common_AdvancedMath, Planes)
 {
     Plane3D plane = {};
-    EXPECT_NE(std::hash<Plane3D>{}(plane), 0);
+    EXPECT_NE(std::hash<Plane3D>{}(plane), size_t{0});
 
     ViewFrustum frustum = {};
-    EXPECT_NE(std::hash<ViewFrustum>{}(frustum), 0);
+    EXPECT_NE(std::hash<ViewFrustum>{}(frustum), size_t{0});
 
     ViewFrustumExt frustm_ext = {};
-    EXPECT_NE(std::hash<ViewFrustumExt>{}(frustm_ext), 0);
+    EXPECT_NE(std::hash<ViewFrustumExt>{}(frustm_ext), size_t{0});
 }
 
 TEST(Common_AdvancedMath, HermiteSpline)

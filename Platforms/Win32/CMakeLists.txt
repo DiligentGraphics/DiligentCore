@@ -27,10 +27,10 @@ PUBLIC
 
 target_link_libraries(Diligent-Win32Platform 
 PUBLIC
-    Diligent-BuildSettings 
     Diligent-BasicPlatform
     Diligent-PlatformInterface
 PRIVATE
+    Diligent-BuildSettings
     Shlwapi.lib
 )
 

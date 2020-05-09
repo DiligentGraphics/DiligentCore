@@ -24,8 +24,9 @@ PUBLIC
 )
 
 target_link_libraries(Diligent-LinuxPlatform 
-PUBLIC
+PRIVATE
     Diligent-BuildSettings 
+PUBLIC
     Diligent-BasicPlatform
     Diligent-PlatformInterface
 )

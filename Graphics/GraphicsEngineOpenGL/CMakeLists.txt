@@ -159,8 +159,8 @@ PRIVATE
 
 
 set(PRIVATE_DEPENDENCIES 
-    Diligent-BuildSettings 
-    Diligent-Common 
+    Diligent-BuildSettings
+    Diligent-Common
     Diligent-TargetPlatform
     Diligent-GraphicsEngine
     Diligent-GLSLTools

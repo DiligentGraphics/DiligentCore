@@ -29,8 +29,9 @@ PUBLIC
 )
 
 target_link_libraries(Diligent-BasicPlatform 
-PUBLIC
+PRIVATE
     Diligent-BuildSettings 
+PUBLIC
     Diligent-Primitives
 )
 

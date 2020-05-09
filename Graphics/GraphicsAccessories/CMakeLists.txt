@@ -27,8 +27,9 @@ PUBLIC
 )
 
 target_link_libraries(Diligent-GraphicsAccessories 
-PUBLIC
+PRIVATE
     Diligent-BuildSettings
+PUBLIC
     Diligent-Common 
     Diligent-GraphicsEngineInterface
 )

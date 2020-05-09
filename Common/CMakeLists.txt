@@ -53,8 +53,9 @@ PUBLIC
 )
 
 target_link_libraries(Diligent-Common 
-PUBLIC
+PRIVATE
     Diligent-BuildSettings
+PUBLIC
     Diligent-TargetPlatform 
 )
 set_common_target_properties(Diligent-Common)

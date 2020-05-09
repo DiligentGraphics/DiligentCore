@@ -60,8 +60,9 @@ PUBLIC
 )
 
 target_link_libraries(Diligent-GraphicsEngineD3DBase
-PUBLIC
+PRIVATE
     Diligent-BuildSettings 
+PUBLIC
     Diligent-GraphicsEngine 
     Diligent-GraphicsEngineD3DBaseInterface
 )
