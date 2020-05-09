@@ -39,6 +39,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
 {
     // Need to define local variable to avoid vexing linker errors
     const auto InvalidOffset = RingBuffer::InvalidOffset;
+    using OffsetType         = RingBuffer::OffsetType;
 
     auto& Allocator = DefaultRawMemoryAllocator::GetAllocator();
     {
@@ -49,7 +50,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //  O          h
         //  |          |                                      |
         //  0         128
-        EXPECT_EQ(Offset, 0);
+        EXPECT_EQ(Offset, OffsetType{0});
 
 
         Offset = RB.Allocate(10, 1);
@@ -57,28 +58,28 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //  t          O   h
         //  |          |   |                                  |
         //  0         128 138
-        EXPECT_EQ(Offset, 128);
+        EXPECT_EQ(Offset, OffsetType{128});
 
         Offset = RB.Allocate(10, 32);
         //
         //  t                  O   h
         //  |                  |   |                          |
         //  0         128 138 160 192
-        EXPECT_EQ(Offset, 160);
+        EXPECT_EQ(Offset, OffsetType{160});
 
         Offset = RB.Allocate(17, 1);
         //
         //  t                      O   h
         //  |                      |   |                      |
         //  0         128 138 160 192 209
-        EXPECT_EQ(Offset, 192);
+        EXPECT_EQ(Offset, OffsetType{192});
 
         Offset = RB.Allocate(65, 64);
         //
         //  t                               O    h
         //  |                               |    |            |
         //  0         128 138 160 192 209  256  384
-        EXPECT_EQ(Offset, 256);
+        EXPECT_EQ(Offset, OffsetType{256});
 
         RB.FinishCurrentFrame(1);
         //
@@ -92,7 +93,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //  t          h1    O      h
         //  |          |     |      |                         |
         //  0         384   512    768
-        EXPECT_EQ(Offset, 512);
+        EXPECT_EQ(Offset, OffsetType{512});
 
 
         Offset = RB.Allocate(127, 1);
@@ -100,7 +101,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //  t          h1           O         h
         //  |          |            |         |               |
         //  0         384   512    768      895 = 1023-128
-        EXPECT_EQ(Offset, 768);
+        EXPECT_EQ(Offset, OffsetType{768});
 
         Offset = RB.Allocate(128, 2);
         EXPECT_EQ(Offset, InvalidOffset);
@@ -110,7 +111,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //  t          h1                      O              h
         //  |          |                       |              |
         //  0         384   512    768        895           1023
-        EXPECT_EQ(Offset, 895);
+        EXPECT_EQ(Offset, OffsetType{895});
 
         RB.FinishCurrentFrame(2);
         //
@@ -136,14 +137,14 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //  |                                                 |
         //  0                                               1023
         EXPECT_TRUE(RB1.IsEmpty());
-        EXPECT_EQ(RB1.GetUsedSize(), 0);
+        EXPECT_EQ(RB1.GetUsedSize(), OffsetType{0});
 
         Offset = RB1.Allocate(256, 1);
         //
         //  O        h                                        t
         //  |        |                                        |
         //  0       256                                     1023
-        EXPECT_EQ(Offset, 0);
+        EXPECT_EQ(Offset, OffsetType{0});
 
 
         Offset = RB1.Allocate(256, 16);
@@ -152,7 +153,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //           O      h                                 t
         //  |        |      |                                 |
         //  0       256    512                              1023
-        EXPECT_EQ(Offset, 256);
+        EXPECT_EQ(Offset, OffsetType{256});
         RB1.FinishCurrentFrame(2);
         RB1.FinishCurrentFrame(3); // ignored
         //
@@ -167,7 +168,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
 
         RB1.ReleaseCompletedFrames(3);
 
-        EXPECT_EQ(RB1.GetUsedSize(), 0);
+        EXPECT_EQ(RB1.GetUsedSize(), OffsetType{0});
         EXPECT_TRUE(RB1.IsEmpty());
 
         Offset = RB1.Allocate(512, 1);
@@ -175,7 +176,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //  O               h
         //  |               |                                 |
         //  0              512                              1023
-        EXPECT_EQ(Offset, 0);
+        EXPECT_EQ(Offset, OffsetType{0});
 
         RB1.FinishCurrentFrame(4);
         RB1.FinishCurrentFrame(5);
@@ -189,7 +190,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //  t              h4,O       h
         //  |               |         |                       |
         //  0              512       641                    1023
-        EXPECT_EQ(Offset, 512);
+        EXPECT_EQ(Offset, OffsetType{512});
 
         RB1.ReleaseCompletedFrames(4);
         //
@@ -203,7 +204,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //                  t                  O      h
         //  |               |                  |      |       |
         //  0              512       641      768    896    1023
-        EXPECT_EQ(Offset, 768);
+        EXPECT_EQ(Offset, OffsetType{768});
 
         Offset = RB1.Allocate(513, 64);
         EXPECT_EQ(Offset, InvalidOffset);
@@ -216,7 +217,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //  O     h         t
         //  |     |         |                                 |
         //  0    255       512                              1023
-        EXPECT_EQ(Offset, 0);
+        EXPECT_EQ(Offset, OffsetType{0});
 
         RB1.FinishCurrentFrame(6);
         //
@@ -230,7 +231,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //       h6   O    t,h
         //  |     |   |     |                                 |
         //  0    255 256   512                              1023
-        EXPECT_EQ(Offset, 256);
+        EXPECT_EQ(Offset, OffsetType{256});
 
         EXPECT_TRUE(RB1.IsFull());
         Offset = RB1.Allocate(1, 1);
@@ -246,14 +247,14 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //        t         O                                 h
         //  |     |         |                                 |
         //  0    255       512                              1023
-        EXPECT_EQ(Offset, 512);
+        EXPECT_EQ(Offset, OffsetType{512});
 
         Offset = RB1.Allocate(191, 1);
         //
         //  O       h          t
         //  |       |          |                              |
         //  0      191        255                           1023
-        EXPECT_EQ(Offset, 0);
+        EXPECT_EQ(Offset, OffsetType{0});
 
         Offset = RB1.Allocate(64, 2);
         EXPECT_EQ(Offset, InvalidOffset);
@@ -263,7 +264,7 @@ TEST(GraphicsAccessories_RingBuffer, AllocDealloc)
         //          O         t,h
         //  |       |          |                              |
         //  0      191        255                           1023
-        EXPECT_EQ(Offset, 191);
+        EXPECT_EQ(Offset, OffsetType{191});
 
         Offset = RB1.Allocate(1, 1);
         EXPECT_EQ(Offset, InvalidOffset);

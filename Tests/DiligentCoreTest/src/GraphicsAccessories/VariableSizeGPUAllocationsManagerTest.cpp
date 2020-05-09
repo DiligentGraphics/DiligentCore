@@ -40,89 +40,91 @@ TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, AllocateFree)
 {
     auto& Allocator = DefaultRawMemoryAllocator::GetAllocator();
 
+    using OffsetType = VariableSizeAllocationsManager::OffsetType;
+
     {
         VariableSizeAllocationsManager ListMgr(128, Allocator);
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{1});
 
         auto a1 = ListMgr.Allocate(17, 4);
-        EXPECT_EQ(a1.UnalignedOffset, 0);
-        EXPECT_EQ(a1.Size, 20);
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
+        EXPECT_EQ(a1.UnalignedOffset, OffsetType{0});
+        EXPECT_EQ(a1.Size, OffsetType{20});
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{1});
 
         auto a2 = ListMgr.Allocate(17, 8);
-        EXPECT_EQ(a2.UnalignedOffset, 20);
-        EXPECT_EQ(a2.Size, 28);
+        EXPECT_EQ(a2.UnalignedOffset, OffsetType{20});
+        EXPECT_EQ(a2.Size, OffsetType{28});
 
         auto a3 = ListMgr.Allocate(8, 1);
-        EXPECT_EQ(a3.UnalignedOffset, 48);
-        EXPECT_EQ(a3.Size, 8);
+        EXPECT_EQ(a3.UnalignedOffset, OffsetType{48});
+        EXPECT_EQ(a3.Size, OffsetType{8});
 
         auto a4 = ListMgr.Allocate(11, 8);
-        EXPECT_EQ(a4.UnalignedOffset, 56);
-        EXPECT_EQ(a4.Size, 16);
+        EXPECT_EQ(a4.UnalignedOffset, OffsetType{56});
+        EXPECT_EQ(a4.Size, OffsetType{16});
 
         auto a5 = ListMgr.Allocate(64, 1);
         EXPECT_FALSE(a5.IsValid());
-        EXPECT_EQ(a5.Size, 0);
+        EXPECT_EQ(a5.Size, OffsetType{0});
 
         a5 = ListMgr.Allocate(16, 1);
-        EXPECT_EQ(a5.UnalignedOffset, 72);
-        EXPECT_EQ(a5.Size, 16);
+        EXPECT_EQ(a5.UnalignedOffset, OffsetType{72});
+        EXPECT_EQ(a5.Size, OffsetType{16});
 
         auto a6 = ListMgr.Allocate(8, 1);
-        EXPECT_EQ(a6.UnalignedOffset, 88);
-        EXPECT_EQ(a6.Size, 8);
+        EXPECT_EQ(a6.UnalignedOffset, OffsetType{88});
+        EXPECT_EQ(a6.Size, OffsetType{8});
 
         auto a7 = ListMgr.Allocate(16, 1);
-        EXPECT_EQ(a7.UnalignedOffset, 96);
-        EXPECT_EQ(a7.Size, 16);
+        EXPECT_EQ(a7.UnalignedOffset, OffsetType{96});
+        EXPECT_EQ(a7.Size, OffsetType{16});
 
         auto a8 = ListMgr.Allocate(8, 1);
-        EXPECT_EQ(a8.UnalignedOffset, 112);
-        EXPECT_EQ(a8.Size, 8);
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
+        EXPECT_EQ(a8.UnalignedOffset, OffsetType{112});
+        EXPECT_EQ(a8.Size, OffsetType{8});
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{1});
 
         auto a9 = ListMgr.Allocate(8, 1);
-        EXPECT_EQ(a9.UnalignedOffset, 120);
-        EXPECT_EQ(a9.Size, 8);
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 0);
+        EXPECT_EQ(a9.UnalignedOffset, OffsetType{120});
+        EXPECT_EQ(a9.Size, OffsetType{8});
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{0});
 
         EXPECT_TRUE(ListMgr.IsFull());
 
         ListMgr.Free(std::move(a6));
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{1});
 
         ListMgr.Free(a8.UnalignedOffset, a8.Size);
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{2});
 
         ListMgr.Free(std::move(a9));
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{2});
 
         auto a10 = ListMgr.Allocate(16, 1);
-        EXPECT_EQ(a10.UnalignedOffset, 112);
-        EXPECT_EQ(a10.Size, 16);
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
+        EXPECT_EQ(a10.UnalignedOffset, OffsetType{112});
+        EXPECT_EQ(a10.Size, OffsetType{16});
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{1});
 
         ListMgr.Free(a10.UnalignedOffset, a10.Size);
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{2});
 
         ListMgr.Free(std::move(a7));
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{1});
 
         ListMgr.Free(std::move(a4));
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{2});
 
         ListMgr.Free(a2.UnalignedOffset, a2.Size);
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 3);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{3});
 
         ListMgr.Free(std::move(a1));
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 3);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{3});
 
         ListMgr.Free(std::move(a3));
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 2);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{2});
 
         ListMgr.Free(std::move(a5));
-        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), 1);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), OffsetType{1});
 
         EXPECT_TRUE(ListMgr.IsEmpty());
     }
@@ -130,7 +132,9 @@ TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, AllocateFree)
 
 TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, FreeOrder)
 {
-    auto& Allocator = DefaultRawMemoryAllocator::GetAllocator();
+    auto& Allocator  = DefaultRawMemoryAllocator::GetAllocator();
+    using OffsetType = VariableSizeAllocationsManager::OffsetType;
+
     {
         const auto NumAllocs = 6;
         int        NumPerms  = 0;
@@ -147,7 +151,7 @@ TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, FreeOrder)
             {
                 allocs[a] = ListMgr.Allocate(4, 1);
                 EXPECT_EQ(allocs[a].UnalignedOffset, a * 4);
-                EXPECT_EQ(allocs[a].Size, 4);
+                EXPECT_EQ(allocs[a].Size, OffsetType{4});
             }
             for (size_t a = 0; a < NumAllocs; ++a)
             {

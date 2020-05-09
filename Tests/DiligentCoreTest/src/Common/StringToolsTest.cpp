@@ -58,73 +58,73 @@ TEST(Common_StringTools, StreqSuff)
 
 TEST(Common_StringTools, CountFloatNumberChars)
 {
-    EXPECT_EQ(CountFloatNumberChars(nullptr), 0);
-    EXPECT_EQ(CountFloatNumberChars(""), 0);
-    EXPECT_EQ(CountFloatNumberChars("+"), 0);
-    EXPECT_EQ(CountFloatNumberChars("-"), 0);
-    EXPECT_EQ(CountFloatNumberChars("."), 0);
-    EXPECT_EQ(CountFloatNumberChars("e"), 0);
-    EXPECT_EQ(CountFloatNumberChars("+."), 0);
-    EXPECT_EQ(CountFloatNumberChars("-."), 0);
-    EXPECT_EQ(CountFloatNumberChars("+e"), 0);
-    EXPECT_EQ(CountFloatNumberChars("-e"), 0);
-    EXPECT_EQ(CountFloatNumberChars("+.e"), 0);
-    EXPECT_EQ(CountFloatNumberChars("-.e"), 0);
-    EXPECT_EQ(CountFloatNumberChars("e+5"), 0);
-    EXPECT_EQ(CountFloatNumberChars("e-5"), 0);
-    EXPECT_EQ(CountFloatNumberChars("e5"), 0);
+    EXPECT_EQ(CountFloatNumberChars(nullptr), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars(""), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("+"), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("-"), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("."), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("e"), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("+."), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("-."), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("+e"), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("-e"), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("+.e"), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("-.e"), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("e+5"), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("e-5"), size_t{0});
+    EXPECT_EQ(CountFloatNumberChars("e5"), size_t{0});
 
-    EXPECT_EQ(CountFloatNumberChars(".0"), 2);
-    EXPECT_EQ(CountFloatNumberChars("+.0"), 3);
-    EXPECT_EQ(CountFloatNumberChars("-.0"), 3);
+    EXPECT_EQ(CountFloatNumberChars(".0"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("+.0"), size_t{3});
+    EXPECT_EQ(CountFloatNumberChars("-.0"), size_t{3});
 
-    EXPECT_EQ(CountFloatNumberChars("-1"), 2);
-    EXPECT_EQ(CountFloatNumberChars("+1"), 2);
-    EXPECT_EQ(CountFloatNumberChars("-1."), 3);
-    EXPECT_EQ(CountFloatNumberChars("+1."), 3);
+    EXPECT_EQ(CountFloatNumberChars("-1"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("+1"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("-1."), size_t{3});
+    EXPECT_EQ(CountFloatNumberChars("+1."), size_t{3});
 
-    EXPECT_EQ(CountFloatNumberChars("-1x"), 2);
-    EXPECT_EQ(CountFloatNumberChars("+1x"), 2);
-    EXPECT_EQ(CountFloatNumberChars("-1.x"), 3);
-    EXPECT_EQ(CountFloatNumberChars("+1.x"), 3);
+    EXPECT_EQ(CountFloatNumberChars("-1x"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("+1x"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("-1.x"), size_t{3});
+    EXPECT_EQ(CountFloatNumberChars("+1.x"), size_t{3});
 
-    EXPECT_EQ(CountFloatNumberChars("-1e"), 2);
-    EXPECT_EQ(CountFloatNumberChars("+1e"), 2);
-    EXPECT_EQ(CountFloatNumberChars("-1.e"), 3);
-    EXPECT_EQ(CountFloatNumberChars("+1.e"), 3);
+    EXPECT_EQ(CountFloatNumberChars("-1e"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("+1e"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("-1.e"), size_t{3});
+    EXPECT_EQ(CountFloatNumberChars("+1.e"), size_t{3});
 
-    EXPECT_EQ(CountFloatNumberChars("-1e+"), 2);
-    EXPECT_EQ(CountFloatNumberChars("+1e-"), 2);
-    EXPECT_EQ(CountFloatNumberChars("-1.e+"), 3);
-    EXPECT_EQ(CountFloatNumberChars("+1.e-"), 3);
+    EXPECT_EQ(CountFloatNumberChars("-1e+"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("+1e-"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("-1.e+"), size_t{3});
+    EXPECT_EQ(CountFloatNumberChars("+1.e-"), size_t{3});
 
-    EXPECT_EQ(CountFloatNumberChars("-1e+2"), 5);
-    EXPECT_EQ(CountFloatNumberChars("+1e-3"), 5);
-    EXPECT_EQ(CountFloatNumberChars("-1.e+4"), 6);
-    EXPECT_EQ(CountFloatNumberChars("+1.e-5"), 6);
+    EXPECT_EQ(CountFloatNumberChars("-1e+2"), size_t{5});
+    EXPECT_EQ(CountFloatNumberChars("+1e-3"), size_t{5});
+    EXPECT_EQ(CountFloatNumberChars("-1.e+4"), size_t{6});
+    EXPECT_EQ(CountFloatNumberChars("+1.e-5"), size_t{6});
 
-    EXPECT_EQ(CountFloatNumberChars("0"), 1);
-    EXPECT_EQ(CountFloatNumberChars("+0"), 2);
-    EXPECT_EQ(CountFloatNumberChars("-0"), 2);
-    EXPECT_EQ(CountFloatNumberChars("+01"), 2);
-    EXPECT_EQ(CountFloatNumberChars("-01"), 2);
-    EXPECT_EQ(CountFloatNumberChars("+0.1"), 4);
-    EXPECT_EQ(CountFloatNumberChars("-0.1"), 4);
-    EXPECT_EQ(CountFloatNumberChars("1234567890"), 10);
-    EXPECT_EQ(CountFloatNumberChars("1234567890.0123456789"), 21);
-    EXPECT_EQ(CountFloatNumberChars("1234567890e+0123456789"), 22);
-    EXPECT_EQ(CountFloatNumberChars("1234567890.e+0123456789"), 23);
-    EXPECT_EQ(CountFloatNumberChars(".0123456789"), 11);
-    EXPECT_EQ(CountFloatNumberChars("0e+0123456789"), 13);
-    EXPECT_EQ(CountFloatNumberChars("0.e+0123456789"), 14);
+    EXPECT_EQ(CountFloatNumberChars("0"), size_t{1});
+    EXPECT_EQ(CountFloatNumberChars("+0"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("-0"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("+01"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("-01"), size_t{2});
+    EXPECT_EQ(CountFloatNumberChars("+0.1"), size_t{4});
+    EXPECT_EQ(CountFloatNumberChars("-0.1"), size_t{4});
+    EXPECT_EQ(CountFloatNumberChars("1234567890"), size_t{10});
+    EXPECT_EQ(CountFloatNumberChars("1234567890.0123456789"), size_t{21});
+    EXPECT_EQ(CountFloatNumberChars("1234567890e+0123456789"), size_t{22});
+    EXPECT_EQ(CountFloatNumberChars("1234567890.e+0123456789"), size_t{23});
+    EXPECT_EQ(CountFloatNumberChars(".0123456789"), size_t{11});
+    EXPECT_EQ(CountFloatNumberChars("0e+0123456789"), size_t{13});
+    EXPECT_EQ(CountFloatNumberChars("0.e+0123456789"), size_t{14});
 
-    EXPECT_EQ(CountFloatNumberChars("1234567890 "), 10);
-    EXPECT_EQ(CountFloatNumberChars("1234567890.0123456789 "), 21);
-    EXPECT_EQ(CountFloatNumberChars("1234567890e+0123456789 "), 22);
-    EXPECT_EQ(CountFloatNumberChars("1234567890.e+0123456789 "), 23);
-    EXPECT_EQ(CountFloatNumberChars(".0123456789 "), 11);
-    EXPECT_EQ(CountFloatNumberChars("0e+0123456789 "), 13);
-    EXPECT_EQ(CountFloatNumberChars("0.e+0123456789 "), 14);
+    EXPECT_EQ(CountFloatNumberChars("1234567890 "), size_t{10});
+    EXPECT_EQ(CountFloatNumberChars("1234567890.0123456789 "), size_t{21});
+    EXPECT_EQ(CountFloatNumberChars("1234567890e+0123456789 "), size_t{22});
+    EXPECT_EQ(CountFloatNumberChars("1234567890.e+0123456789 "), size_t{23});
+    EXPECT_EQ(CountFloatNumberChars(".0123456789 "), size_t{11});
+    EXPECT_EQ(CountFloatNumberChars("0e+0123456789 "), size_t{13});
+    EXPECT_EQ(CountFloatNumberChars("0.e+0123456789 "), size_t{14});
 }
 
 } // namespace
