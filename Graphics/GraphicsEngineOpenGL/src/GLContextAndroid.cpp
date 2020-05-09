@@ -127,6 +127,9 @@ bool GLContext::InitEGLSurface()
     eglGetConfigAttrib(display_, config_, EGL_NATIVE_VISUAL_ID, &format);
     ANativeWindow_setBuffersGeometry(window_, 0, 0, format);
 
+    eglGetConfigAttrib(display_, config_, EGL_MIN_SWAP_INTERVAL, &min_swap_interval_);
+    eglGetConfigAttrib(display_, config_, EGL_MAX_SWAP_INTERVAL, &max_swap_interval_);
+
     return true;
 }
 
@@ -248,13 +251,17 @@ GLContext::~GLContext()
     Terminate();
 }
 
-void GLContext::SwapBuffers(int /*SwapInterval*/)
+void GLContext::SwapBuffers(int SwapInterval)
 {
     if (surface_ == EGL_NO_SURFACE)
     {
         LOG_WARNING_MESSAGE("No EGL surface when swapping buffers. This happens when SwapBuffers() is called after Suspend(). The operation will be ignored.");
         return;
     }
+
+    SwapInterval = std::max(SwapInterval, min_swap_interval_);
+    SwapInterval = std::min(SwapInterval, max_swap_interval_);
+    eglSwapInterval(display_, SwapInterval);
 
     bool b = eglSwapBuffers(display_, surface_);
     if (!b)

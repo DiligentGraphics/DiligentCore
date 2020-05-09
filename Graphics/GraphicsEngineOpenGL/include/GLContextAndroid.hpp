@@ -69,6 +69,9 @@ private:
     int32_t screen_width_  = 0;
     int32_t screen_height_ = 0;
 
+    EGLint min_swap_interval_ = 0;
+    EGLint max_swap_interval_ = 1;
+
     //Flags
     bool gles_initialized_        = false;
     bool egl_context_initialized_ = false;
