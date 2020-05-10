@@ -155,11 +155,29 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
 #if GL_TEXTURE_WIDTH
     GLint TexWidth = 0;
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_WIDTH, &TexWidth);
-    VERIFY_EXPR(TexWidth > 0);
-    VERIFY(TexDesc.Width == 0 || TexDesc.Width == static_cast<Uint32>(TexWidth), "Specified texture width (", TexDesc.Width, ") does not match the actual width (", TexWidth, ")");
-    TexDesc.Width = static_cast<Uint32>(TexWidth);
+    if (glGetError() == GL_NO_ERROR && TexWidth > 0)
+    {
+        if (TexDesc.Width != 0 && TexDesc.Width != static_cast<Uint32>(TexWidth))
+        {
+            LOG_WARNING_MESSAGE("The width (", TexDesc.Width, ") of texture '", TexDesc.Name,
+                                "' specified by TextureDesc struct does not match the actual width (", TexWidth, ")");
+        }
+        TexDesc.Width = static_cast<Uint32>(TexWidth);
+    }
+    else
+    {
+        if (TexDesc.Width == 0)
+        {
+            LOG_WARNING_MESSAGE("Unable to query the width of texture '", TexDesc.Name,
+                                "' while the Width member of TextureDesc struct is 0.");
+        }
+    }
 #else
-    VERIFY(TexDesc.Width != 0, "Texture width query is not supported; it must be specified by the texture description.");
+    if (TexDesc.Width == 0)
+    {
+        LOG_WARNING_MESSAGE("Texture width query is not supported while the Width member of TextureDesc struct of texture '",
+                            TexDesc.Name, "' is 0.");
+    }
 #endif
 
     if (TexDesc.Type >= RESOURCE_DIM_TEX_2D)
@@ -167,27 +185,64 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
 #if GL_TEXTURE_HEIGHT
         GLint TexHeight = 0;
         glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_HEIGHT, &TexHeight);
-        VERIFY_EXPR(TexHeight > 0);
-
-        VERIFY(TexDesc.Height == 0 || TexDesc.Height == static_cast<Uint32>(TexHeight), "Specified texture height (", TexDesc.Height, ") does not match the actual height (", TexHeight, ")");
-        TexDesc.Height = static_cast<Uint32>(TexHeight);
+        if (glGetError() == GL_NO_ERROR && TexHeight > 0)
+        {
+            if (TexDesc.Height != 0 && TexDesc.Height != static_cast<Uint32>(TexHeight))
+            {
+                LOG_WARNING_MESSAGE("The height (", TexDesc.Height, ") of texture '", TexDesc.Name,
+                                    "' specified by TextureDesc struct does not match the actual height (", TexHeight, ")");
+            }
+            TexDesc.Height = static_cast<Uint32>(TexHeight);
+        }
+        else
+        {
+            if (TexDesc.Height == 0)
+            {
+                LOG_WARNING_MESSAGE("Unable to query the height of texture '", TexDesc.Name,
+                                    "' while the Height member of TextureDesc struct is 0.");
+            }
+        }
 #else
-        VERIFY(TexDesc.Height != 0, "Texture height query is not supported; it must be specified by the texture description.");
+        if (TexDesc.Height == 0)
+        {
+            LOG_WARNING_MESSAGE("Texture height query is not supported while the Height member of TextureDesc struct of texture '",
+                                TexDesc.Name, "' is 0.");
+        }
 #endif
     }
     else
+    {
         TexDesc.Height = 1;
+    }
 
     if (TexDesc.Type == RESOURCE_DIM_TEX_3D)
     {
 #if GL_TEXTURE_DEPTH
         GLint TexDepth = 0;
         glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_DEPTH, &TexDepth);
-        VERIFY_EXPR(TexDepth > 0);
-        VERIFY(TexDesc.Depth == 0 || TexDesc.Depth == static_cast<Uint32>(TexDepth), "Specified texture depth (", TexDesc.Depth, ") does not match the actual depth (", TexDepth, ")");
-        TexDesc.Depth = static_cast<Uint32>(TexDepth);
+        if (glGetError() == GL_NO_ERROR && TexDepth > 0)
+        {
+            if (TexDesc.Depth != 0 && TexDesc.Depth != static_cast<Uint32>(TexDepth))
+            {
+                LOG_WARNING_MESSAGE("The depth (", TexDesc.Depth, ") of texture '", TexDesc.Name,
+                                    "' specified by TextureDesc struct does not match the actual depth (", TexDepth, ")");
+            }
+            TexDesc.Depth = static_cast<Uint32>(TexDepth);
+        }
+        else
+        {
+            if (TexDesc.Depth == 0)
+            {
+                LOG_WARNING_MESSAGE("Unable to query the depth of texture '", TexDesc.Name,
+                                    "' while the Depth member of TextureDesc struct is 0.");
+            }
+        }
 #else
-        VERIFY(TexDesc.Depth != 0, "Texture depth query is not supported; it must be specified by the texture description.");
+        if (TexDesc.Depth == 0)
+        {
+            LOG_WARNING_MESSAGE("Texture depth query is not supported while the Depth member of TextureDesc struct of texture '",
+                                TexDesc.Name, "' is 0.");
+        }
 #endif
     }
 
@@ -197,28 +252,52 @@ static TextureDesc GetTextureDescFromGLHandle(GLContextState& GLState, TextureDe
 #if GL_TEXTURE_INTERNAL_FORMAT
     GLint GlFormat = 0;
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
-    CHECK_GL_ERROR("Failed to get texture level 0 parameters through glGetTexLevelParameteriv()");
+    if (glGetError() == GL_NO_ERROR && GlFormat != 0)
+    {
+        if (TexDesc.Format != TEX_FORMAT_UNKNOWN && static_cast<GLenum>(GlFormat) != TexFormatToGLInternalTexFormat(TexDesc.Format))
+        {
+            LOG_WARNING_MESSAGE("The format (", GetTextureFormatAttribs(TexDesc.Format).Name, ") of texture '", TexDesc.Name,
+                                "' specified by TextureDesc struct does not match GL texture internal format (", GlFormat, ")");
+        }
 
-    VERIFY(GlFormat != 0, "Unable to get texture format");
-    if (TexDesc.Format != TEX_FORMAT_UNKNOWN)
-        VERIFY(static_cast<GLenum>(GlFormat) == TexFormatToGLInternalTexFormat(TexDesc.Format), "Specified texture format (", GetTextureFormatAttribs(TexDesc.Format).Name, ") does not match GL texture internal format (", GlFormat, ")");
-    else
         TexDesc.Format = GLInternalTexFormatToTexFormat(GlFormat);
+    }
+    else
+    {
+        if (TexDesc.Format == TEX_FORMAT_UNKNOWN)
+        {
+            LOG_WARNING_MESSAGE("Unable to query the format of texture '", TexDesc.Name,
+                                "' while the Format member of TextureDesc struct is TEX_FORMAT_UNKNOWN.");
+        }
+    }
 #else
-    VERIFY(TexDesc.Format != TEX_FORMAT_UNKNOWN, "Texture format query is not supported; it must be specified by the texture description.");
+    if (TexDesc.Format == TEX_FORMAT_UNKNOWN)
+    {
+        LOG_WARNING_MESSAGE("Texture format query is not supported while the Format member of TextureDesc struct of texture '",
+                            TexDesc.Name, "' is TEX_FORMAT_UNKNOWN.");
+    }
 #endif
 
     // GL_TEXTURE_IMMUTABLE_LEVELS is only supported in GL4.3+ and GLES3.1+
     GLint MipLevels = 0;
     glGetTexParameteriv(BindTarget, GL_TEXTURE_IMMUTABLE_LEVELS, &MipLevels);
-    if (glGetError() == GL_NO_ERROR)
+    if (glGetError() == GL_NO_ERROR && MipLevels > 0)
     {
-        VERIFY(TexDesc.MipLevels == 0 || TexDesc.MipLevels == static_cast<Uint32>(MipLevels), "Specified number of mip levels (", TexDesc.MipLevels, ") does not match the actual number of mip levels (", MipLevels, ")");
+        if (TexDesc.MipLevels != 0 && TexDesc.MipLevels != static_cast<Uint32>(MipLevels))
+        {
+            LOG_WARNING_MESSAGE("The number of mip levels (", TexDesc.MipLevels, ") of texture '", TexDesc.Name,
+                                "' specified by TextureDesc struct does not match the actual number of mip levels (", MipLevels, ")");
+        }
+
         TexDesc.MipLevels = static_cast<Uint32>(MipLevels);
     }
     else
     {
-        VERIFY(TexDesc.MipLevels != 0, "Unable to query the number of mip levels, so it must be specified by the texture description.");
+        if (TexDesc.MipLevels == 0)
+        {
+            LOG_WARNING_MESSAGE("Unable to query the mip level count of texture '", TexDesc.Name,
+                                "' while the MipLevels member of TextureDesc struct is 0.");
+        }
     }
 
     GLState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj::Null());
