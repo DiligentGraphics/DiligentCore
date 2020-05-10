@@ -126,15 +126,32 @@ static GLenum GetTextureInternalFormat(GLContextState& GLState, GLenum BindTarge
     GLint GlFormat = 0;
 #if GL_TEXTURE_INTERNAL_FORMAT
     glGetTexLevelParameteriv(QueryBindTarget, 0, GL_TEXTURE_INTERNAL_FORMAT, &GlFormat);
-    CHECK_GL_ERROR("Failed to get texture format through glGetTexLevelParameteriv()");
-    VERIFY(GlFormat != 0, "Unable to get texture format");
-    VERIFY(TexFmtFromDesc == TEX_FORMAT_UNKNOWN || static_cast<GLenum>(GlFormat) == TexFormatToGLInternalTexFormat(TexFmtFromDesc), "Texture format does not match the format specified by the texture description");
+    if (glGetError() == GL_NO_ERROR && GlFormat != 0)
+    {
+        VERIFY(TexFmtFromDesc == TEX_FORMAT_UNKNOWN || static_cast<GLenum>(GlFormat) == TexFormatToGLInternalTexFormat(TexFmtFromDesc), "Texture format does not match the format specified by the texture description");
+    }
+    else
+    {
+        if (TexFmtFromDesc != TEX_FORMAT_UNKNOWN)
+        {
+            GlFormat = TexFormatToGLInternalTexFormat(TexFmtFromDesc);
+        }
+        else
+        {
+            LOG_WARNING_MESSAGE("Unable to query internal texture format while the format specified by texture description is TEX_FORMAT_UNKNOWN.");
+        }
+    }
 #else
     if (TexFmtFromDesc != TEX_FORMAT_UNKNOWN)
+    {
         GlFormat = TexFormatToGLInternalTexFormat(TexFmtFromDesc);
+    }
     else
-        UNSUPPORTED("Texture format cannot be queried and must be provided by the texture description");
+    {
+        LOG_WARNING_MESSAGE("Texture format query is not supported while the format specified by texture description is TEX_FORMAT_UNKNOWN.");
+    }
 #endif
+
     GLState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj::Null());
 
     return GlFormat;
