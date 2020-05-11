@@ -35,13 +35,13 @@
 namespace Diligent
 {
 
-void APIENTRY openglCallbackFunction(GLenum        source,
-                                     GLenum        type,
-                                     GLuint        id,
-                                     GLenum        severity,
-                                     GLsizei       length,
-                                     const GLchar* message,
-                                     const void*   userParam)
+static void APIENTRY openglCallbackFunction(GLenum        source,
+                                            GLenum        type,
+                                            GLuint        id,
+                                            GLenum        severity,
+                                            GLsizei       length,
+                                            const GLchar* message,
+                                            const void*   userParam)
 {
     // Note: disabling flood of notifications through glDebugMessageControl() has no effect,
     // so we have to filter them out here

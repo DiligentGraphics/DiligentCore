@@ -195,6 +195,9 @@
     DECLARE_GL_FUNCTION( glDrawElementsBaseVertex, PFNGLDRAWELEMENTSBASEVERTEXPROC, GLenum mode, GLsizei count, GLenum type, const void *indices, GLint basevertex)
 #endif
 
+#ifdef LOAD_DEBUG_MESSAGE_CALLBACK
+    DECLARE_GL_FUNCTION( glDebugMessageCallback, PFNGLDEBUGMESSAGECALLBACKPROC, GLDEBUGPROC callback, const void *userParam)
+#endif
 
 void LoadGLFunctions()
 {
@@ -358,5 +361,9 @@ Func = (FuncType)eglGetProcAddress( #Func );\
 
 #ifdef LOAD_GL_DRAW_ELEMENTS_BASE_VERTEX
     LOAD_GL_FUNCTION( glDrawElementsBaseVertex, PFNGLDRAWELEMENTSBASEVERTEXPROC)
+#endif
+
+#ifdef LOAD_DEBUG_MESSAGE_CALLBACK
+    LOAD_GL_FUNCTION( glDebugMessageCallback, PFNGLDEBUGMESSAGECALLBACKPROC)
 #endif
 }

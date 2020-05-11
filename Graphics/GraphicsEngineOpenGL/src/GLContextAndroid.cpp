@@ -37,6 +37,62 @@
 namespace Diligent
 {
 
+static void openglCallbackFunction(GLenum        source,
+                                   GLenum        type,
+                                   GLuint        id,
+                                   GLenum        severity,
+                                   GLsizei       length,
+                                   const GLchar* message,
+                                   const void*   userParam)
+{
+    std::stringstream MessageSS;
+
+    MessageSS << "OpenGL debug message " << id << " (";
+    switch (source)
+    {
+        // clang-format off
+        case GL_DEBUG_SOURCE_API:             MessageSS << "Source: API.";             break;
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   MessageSS << "Source: Window System.";   break;
+        case GL_DEBUG_SOURCE_SHADER_COMPILER: MessageSS << "Source: Shader Compiler."; break;
+        case GL_DEBUG_SOURCE_THIRD_PARTY:     MessageSS << "Source: Third Party.";     break;
+        case GL_DEBUG_SOURCE_APPLICATION:     MessageSS << "Source: Application.";     break;
+        case GL_DEBUG_SOURCE_OTHER:           MessageSS << "Source: Other.";           break;
+        default:                              MessageSS << "Source: Unknown (" << source << ").";
+            // clang-format on
+    }
+
+    switch (type)
+    {
+        // clang-format off
+        case GL_DEBUG_TYPE_ERROR:               MessageSS << " Type: ERROR.";                break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: MessageSS << " Type: Deprecated Behaviour."; break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  MessageSS << " Type: UNDEFINED BEHAVIOUR.";  break;
+        case GL_DEBUG_TYPE_PORTABILITY:         MessageSS << " Type: Portability.";          break;
+        case GL_DEBUG_TYPE_PERFORMANCE:         MessageSS << " Type: PERFORMANCE.";          break;
+        case GL_DEBUG_TYPE_MARKER:              MessageSS << " Type: Marker.";               break;
+        case GL_DEBUG_TYPE_PUSH_GROUP:          MessageSS << " Type: Push Group.";           break;
+        case GL_DEBUG_TYPE_POP_GROUP:           MessageSS << " Type: Pop Group.";            break;
+        case GL_DEBUG_TYPE_OTHER:               MessageSS << " Type: Other.";                break;
+        default:                                MessageSS << " Type: Unknown (" << type << ").";
+            // clang-format on
+    }
+
+    switch (severity)
+    {
+        // clang-format off
+        case GL_DEBUG_SEVERITY_HIGH:         MessageSS << " Severity: HIGH";         break;
+        case GL_DEBUG_SEVERITY_MEDIUM:       MessageSS << " Severity: Medium";       break;
+        case GL_DEBUG_SEVERITY_LOW:          MessageSS << " Severity: Low";          break;
+        case GL_DEBUG_SEVERITY_NOTIFICATION: MessageSS << " Severity: Notification"; break;
+        default:                             MessageSS << " Severity: Unknown (" << severity << ")"; break;
+            // clang-format on
+    }
+
+    MessageSS << "): " << message;
+
+    LOG_INFO_MESSAGE(MessageSS.str().c_str());
+}
+
 bool GLContext::InitEGLSurface()
 {
     display_ = eglGetDisplay(EGL_DEFAULT_DISPLAY);
@@ -225,6 +281,14 @@ bool GLContext::Init(ANativeWindow* window)
         AttachToCurrentEGLContext();
     }
     InitGLES();
+
+    if (glDebugMessageCallback)
+    {
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(openglCallbackFunction, nullptr);
+        if (glGetError() != GL_NO_ERROR)
+            LOG_ERROR_MESSAGE("Failed to enable debug messages");
+    }
 
     egl_context_initialized_ = true;
 
