@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added `SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM` value (API Version 240059).
 * Added `GLBindTarget` parameter to `IRenderDeviceGL::CreateTextureFromGLHandle` method (API Version 240058).
 
 

@@ -65,7 +65,16 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     SHADER_SOURCE_LANGUAGE_HLSL,
 
     /// The source language is GLSL
-    SHADER_SOURCE_LANGUAGE_GLSL
+    SHADER_SOURCE_LANGUAGE_GLSL,
+
+    /// The source language is GLSL which should be compiled verbatim
+
+    /// By default the engine prepends GLSL shader source code with platform-specific
+    /// definitions. For instance it adds appropriate #version directive (e.g. '#version 430 core' or 
+    /// '#version 310 es') so that the same source will work on different versions of desktop OpenGL and OpenGLES.
+    /// When SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM is used, the source code will be compiled
+    /// as is. Note that shader macro definitions will be ignored in this case.
+    SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM
 };
 
 /// Shader description
