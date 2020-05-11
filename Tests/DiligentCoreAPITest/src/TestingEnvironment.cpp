@@ -277,6 +277,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
             EngineGLCreateInfo CreateInfo;
             CreateInfo.DebugMessageCallback = MessageCallback;
             CreateInfo.Window               = Window;
+            CreateInfo.CreateDebugContext   = true;
 
             if (NumDeferredCtx != 0)
             {

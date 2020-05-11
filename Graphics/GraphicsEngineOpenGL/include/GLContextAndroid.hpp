@@ -61,6 +61,11 @@ private:
     EGLContext     context_ = EGL_NO_CONTEXT;
     EGLConfig      config_;
 
+    const bool create_debug_context_;
+
+    EGLint egl_major_version_ = 0;
+    EGLint egl_minor_version_ = 0;
+
     //Screen parameters
     int32_t color_size_    = 0;
     int32_t depth_size_    = 0;
@@ -76,8 +81,6 @@ private:
     bool gles_initialized_        = false;
     bool egl_context_initialized_ = false;
     bool context_valid_           = false;
-
-    SwapChainDesc SwapChainAttribs_;
 
     void InitGLES();
     void Terminate();

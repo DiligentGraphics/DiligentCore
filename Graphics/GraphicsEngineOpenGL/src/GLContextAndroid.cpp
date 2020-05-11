@@ -23,6 +23,7 @@
 
 #include "pch.h"
 #include <utility>
+#include <vector>
 
 #include "GLContextAndroid.hpp"
 
@@ -101,11 +102,12 @@ bool GLContext::InitEGLSurface()
         LOG_ERROR_AND_THROW("No EGL display found");
     }
 
-    auto success = eglInitialize(display_, 0, 0);
+    auto success = eglInitialize(display_, &egl_major_version_, &egl_minor_version_);
     if (!success)
     {
         LOG_ERROR_AND_THROW("Failed to initialise EGL");
     }
+    LOG_INFO_MESSAGE("Initialized EGL ", egl_major_version_, '.', egl_minor_version_);
 
     /*
      * Here specify the attributes of the desired configuration.
@@ -198,13 +200,34 @@ bool GLContext::InitEGLContext()
         major_version_      = version.first;
         minor_version_      = version.second;
 
-        const EGLint context_attribs[] =
-            {
-                EGL_CONTEXT_CLIENT_VERSION, major_version_,
-                EGL_CONTEXT_MINOR_VERSION_KHR, minor_version_,
-                EGL_NONE};
+        // clang-format off
+        std::vector<EGLint> context_attribs =
+        {
+            EGL_CONTEXT_MAJOR_VERSION, major_version_,
+            EGL_CONTEXT_MINOR_VERSION, minor_version_
+        };
+        // clang-format on
 
-        context_ = eglCreateContext(display_, config_, NULL, context_attribs);
+#if 0
+        // No matter what I do, eglCreateContext fails when EGL_CONTEXT_OPENGL_DEBUG attribute
+        // is present, even when it is EGL 1.5.
+        if (create_debug_context_)
+        {
+            // EGL_CONTEXT_OPENGL_DEBUG is only valid as of EGL 1.5.
+            if (egl_major_version_ >= 2 || (egl_major_version_ == 1 && egl_minor_version_ >= 5))
+            {
+                context_attribs.push_back(EGL_CONTEXT_OPENGL_DEBUG);
+                context_attribs.push_back(EGL_TRUE);
+            }
+            else
+            {
+                LOG_WARNING_MESSAGE("EGL_CONTEXT_OPENGL_DEBUG is only available in EGL 1.5+");
+            }
+        }
+#endif
+        context_attribs.push_back(EGL_NONE);
+
+        context_ = eglCreateContext(display_, config_, NULL, context_attribs.data());
     }
 
     if (context_ == EGL_NO_CONTEXT)
@@ -282,8 +305,9 @@ bool GLContext::Init(ANativeWindow* window)
     }
     InitGLES();
 
-    if (glDebugMessageCallback)
+    if (create_debug_context_ && glDebugMessageCallback != nullptr)
     {
+        glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(openglCallbackFunction, nullptr);
         if (glGetError() != GL_NO_ERROR)
@@ -299,6 +323,7 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     display_(EGL_NO_DISPLAY),
     surface_(EGL_NO_SURFACE),
     context_(EGL_NO_CONTEXT),
+    create_debug_context_(InitAttribs.CreateDebugContext),
     egl_context_initialized_(false),
     gles_initialized_(false),
     major_version_(0),

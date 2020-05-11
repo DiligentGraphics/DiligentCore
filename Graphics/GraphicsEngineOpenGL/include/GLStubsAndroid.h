@@ -924,6 +924,10 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 
 /* ------------------------------ GL_KHR_debug ----------------------------- */
 
+#ifndef GL_DEBUG_OUTPUT
+#   define GL_DEBUG_OUTPUT 0x92E0
+#endif
+
 #ifndef GL_DEBUG_OUTPUT_SYNCHRONOUS
 #   define GL_DEBUG_OUTPUT_SYNCHRONOUS 0x8242
 #endif

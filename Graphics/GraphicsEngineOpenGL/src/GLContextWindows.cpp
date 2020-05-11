@@ -207,9 +207,10 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
                         0, 0 //
                     };
 
-#ifdef DILIGENT_DEBUG
-                attribs[5] |= WGL_CONTEXT_DEBUG_BIT_ARB;
-#endif
+                if (InitAttribs.CreateDebugContext)
+                {
+                    attribs[5] |= WGL_CONTEXT_DEBUG_BIT_ARB;
+                }
 
                 // Create new rendering context
                 // In order to create new OpenGL rendering context we have to call function wglCreateContextAttribsARB(),
@@ -236,8 +237,9 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
             m_Context = tempContext;
         }
 
-        if (glDebugMessageCallback)
+        if (InitAttribs.CreateDebugContext && glDebugMessageCallback != nullptr)
         {
+            glEnable(GL_DEBUG_OUTPUT);
             glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
             glDebugMessageCallback(openglCallbackFunction, nullptr);
             GLuint unusedIds = 0;

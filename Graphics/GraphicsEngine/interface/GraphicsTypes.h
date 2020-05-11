@@ -1374,6 +1374,13 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
 	/// Native window wrapper
 	NativeWindow Window;
+
+    /// Create debug OpenGL context and enable debug output.
+
+    /// Debug contexts are intended for use during application development, and
+    /// provide additional runtime checking, validation, and logging
+    /// functionality while possibly incurring performance penalties
+    bool CreateDebugContext     DEFAULT_INITIALIZER(false);
 };
 typedef struct EngineGLCreateInfo EngineGLCreateInfo;
 

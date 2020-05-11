@@ -103,10 +103,9 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
 
     if (InitAttribs.Window.WindowId != 0 && InitAttribs.Window.pDisplay != nullptr)
     {
-        //glXSwapIntervalEXT(0);
-
-        if (glDebugMessageCallback)
+        if (InitAttribs.CreateDebugContext && glDebugMessageCallback != nullptr)
         {
+            glEnable(GL_DEBUG_OUTPUT);
             glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
             glDebugMessageCallback(openglCallbackFunction, nullptr);
             GLuint unusedIds = 0;
