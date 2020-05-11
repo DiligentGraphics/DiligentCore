@@ -309,6 +309,8 @@ void GLProgramResources::LoadUniforms(SHADER_TYPE                           Shad
             case GL_SAMPLER_2D_ARRAY_SHADOW:
             case GL_SAMPLER_CUBE_SHADOW:
 
+            case GL_SAMPLER_EXTERNAL_OES:
+
             case GL_INT_SAMPLER_1D:
             case GL_INT_SAMPLER_2D:
             case GL_INT_SAMPLER_3D:

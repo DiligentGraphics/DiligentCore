@@ -136,6 +136,11 @@
 #    define GL_UNSIGNED_INT_SAMPLER_BUFFER 0x8DD8
 #endif
 
+#ifndef GL_SAMPLER_EXTERNAL_OES
+#    define GL_SAMPLER_EXTERNAL_OES 0x8D66
+#endif
+
+
 // Polygon mode
 #ifndef GL_POINT
 #    define GL_POINT 0x1B00
