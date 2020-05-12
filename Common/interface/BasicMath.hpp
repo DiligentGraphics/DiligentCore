@@ -1689,7 +1689,7 @@ VectorType normalize(const VectorType& a)
 }
 
 
-// Template Matrix Operations
+// Template Matrix-Matrix multiplications
 
 template <class T>
 Matrix4x4<T> operator*(const Matrix4x4<T>& m1, const Matrix4x4<T>& m2)
@@ -1708,6 +1708,40 @@ Matrix2x2<T> operator*(const Matrix2x2<T>& m1, const Matrix2x2<T>& m2)
 {
     return Matrix2x2<T>::Mul(m1, m2);
 }
+
+
+// Template Matrix-Vector multiplications
+
+template <class T>
+Vector4<T> operator*(const Matrix4x4<T>& m, const Vector4<T>& v)
+{
+    Vector4<T> out;
+    out[0] = m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z + m[0][3] * v.w;
+    out[1] = m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z + m[1][3] * v.w;
+    out[2] = m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z + m[2][3] * v.w;
+    out[3] = m[3][0] * v.x + m[3][1] * v.y + m[3][2] * v.z + m[3][3] * v.w;
+    return out;
+}
+
+template <class T>
+Vector3<T> operator*(const Matrix3x3<T>& m, Vector3<T>& v)
+{
+    Vector3<T> out;
+    out[0] = m[0][0] * v.x + m[0][1] * v.y + m[0][2] * v.z;
+    out[1] = m[1][0] * v.x + m[1][1] * v.y + m[1][2] * v.z;
+    out[2] = m[2][0] * v.x + m[2][1] * v.y + m[2][2] * v.z;
+    return out;
+}
+
+template <class T>
+Vector2<T> operator*(const Matrix2x2<T>& m, const Vector2<T>& v)
+{
+    Vector2<T> out;
+    out[0] = m[0][0] * v.x + m[0][1] * v.y;
+    out[1] = m[1][0] * v.x + m[1][1] * v.y;
+    return out;
+}
+
 // Common HLSL-compatible vector typedefs
 
 using uint  = uint32_t;

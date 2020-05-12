@@ -339,6 +339,79 @@ TEST(Common_BasicMath, ScalarVectorMultiply)
     }
 }
 
+// v * m, m * v
+TEST(Common_BasicMath, VectorMatrixMultiply)
+{
+    {
+        float2 v{1, 2};
+
+        // clang-format off
+        float2x2 m
+        {
+            1, 2,
+            3, 4
+        };
+        // clang-format on
+
+        auto v1 = v * m;
+        EXPECT_EQ(v1.x, 1 * 1 + 2 * 3);
+        EXPECT_EQ(v1.y, 1 * 2 + 2 * 4);
+
+        auto v2 = m * v;
+        EXPECT_EQ(v2.x, 1 * 1 + 2 * 2);
+        EXPECT_EQ(v2.y, 3 * 1 + 4 * 2);
+    }
+
+    {
+        float3 v{1, 2, 3};
+
+        // clang-format off
+        float3x3 m
+        {
+            1, 2, 3,
+            4, 5, 6,
+            7, 8, 9
+        };
+        // clang-format on
+
+        auto v1 = v * m;
+        EXPECT_EQ(v1.x, 1 * 1 + 2 * 4 + 3 * 7);
+        EXPECT_EQ(v1.y, 1 * 2 + 2 * 5 + 3 * 8);
+        EXPECT_EQ(v1.z, 1 * 3 + 2 * 6 + 3 * 9);
+
+        auto v2 = m * v;
+        EXPECT_EQ(v2.x, 1 * 1 + 2 * 2 + 3 * 3);
+        EXPECT_EQ(v2.y, 4 * 1 + 5 * 2 + 6 * 3);
+        EXPECT_EQ(v2.z, 7 * 1 + 8 * 2 + 9 * 3);
+    }
+
+    {
+        float4 v{1, 2, 3, 4};
+
+        // clang-format off
+        float4x4 m
+        {
+            1,   2,  3,  4,
+            5,   6,  7,  8,
+            9,  10, 11, 12,
+            13, 14, 15, 16
+        };
+        // clang-format on
+
+        auto v1 = v * m;
+        EXPECT_EQ(v1.x, 1 * 1 + 2 * 5 + 3 * 9 + 4 * 13);
+        EXPECT_EQ(v1.y, 1 * 2 + 2 * 6 + 3 * 10 + 4 * 14);
+        EXPECT_EQ(v1.z, 1 * 3 + 2 * 7 + 3 * 11 + 4 * 15);
+        EXPECT_EQ(v1.w, 1 * 4 + 2 * 8 + 3 * 12 + 4 * 16);
+
+        auto v2 = m * v;
+        EXPECT_EQ(v2.x, 1 * 1 + 2 * 2 + 3 * 3 + 4 * 4);
+        EXPECT_EQ(v2.y, 5 * 1 + 6 * 2 + 7 * 3 + 8 * 4);
+        EXPECT_EQ(v2.z, 9 * 1 + 10 * 2 + 11 * 3 + 12 * 4);
+        EXPECT_EQ(v2.w, 13 * 1 + 14 * 2 + 15 * 3 + 16 * 4);
+    }
+}
+
 // a / s
 TEST(Common_BasicMath, VectorScalarDivision)
 {
