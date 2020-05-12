@@ -35,11 +35,18 @@ namespace
 class JNIMiniHelper
 {
 public:
-    static void Init(ANativeActivity* activity, std::string activity_class_name)
+    static void Init(ANativeActivity* activity, std::string activity_class_name, AAssetManager* asset_manager)
     {
+        VERIFY(activity != nullptr || asset_manager != nullptr, "Activity and asset manager can't both be null");
+
         auto& TheHelper                = GetInstance();
         TheHelper.activity_            = activity;
         TheHelper.activity_class_name_ = std::move(activity_class_name);
+        TheHelper.asset_manager_       = asset_manager;
+        if (TheHelper.asset_manager_ == nullptr && TheHelper.activity_ != nullptr)
+        {
+            TheHelper.asset_manager_ = TheHelper.activity_->assetManager;
+        }
     }
 
     static JNIMiniHelper& GetInstance()
@@ -51,7 +58,7 @@ public:
 
     bool OpenFile(const char* fileName, std::ifstream& IFS, AAsset*& AssetFile, size_t& FileSize)
     {
-        if (activity_ == nullptr)
+        if (activity_ == nullptr && asset_manager_ == nullptr)
         {
             LOG_ERROR_MESSAGE("JNIMiniHelper has not been initialized. Call init() to initialize the helper");
             return false;
@@ -60,40 +67,43 @@ public:
         // Lock mutex
         std::lock_guard<std::mutex> lock(mutex_);
 
-        // First, try reading from externalFileDir;
-        std::string ExternalFilesPath;
+        if (activity_ != nullptr)
         {
-            JNIEnv* env          = nullptr;
-            bool    DetachThread = AttachCurrentThread(env);
-            if (jstring jstr_path = GetExternalFilesDirJString(env))
+            // First, try reading from externalFileDir;
+            std::string ExternalFilesPath;
             {
-                const char* path  = env->GetStringUTFChars(jstr_path, nullptr);
-                ExternalFilesPath = std::string(path);
-                if (fileName[0] != '/')
+                JNIEnv* env          = nullptr;
+                bool    DetachThread = AttachCurrentThread(env);
+                if (jstring jstr_path = GetExternalFilesDirJString(env))
                 {
-                    ExternalFilesPath.append("/");
+                    const char* path  = env->GetStringUTFChars(jstr_path, nullptr);
+                    ExternalFilesPath = std::string(path);
+                    if (fileName[0] != '/')
+                    {
+                        ExternalFilesPath.append("/");
+                    }
+                    ExternalFilesPath.append(fileName);
+                    env->ReleaseStringUTFChars(jstr_path, path);
+                    env->DeleteLocalRef(jstr_path);
                 }
-                ExternalFilesPath.append(fileName);
-                env->ReleaseStringUTFChars(jstr_path, path);
-                env->DeleteLocalRef(jstr_path);
+                if (DetachThread)
+                    DetachCurrentThread();
             }
-            if (DetachThread)
-                DetachCurrentThread();
+
+            IFS.open(ExternalFilesPath.c_str(), std::ios::binary);
         }
 
-        IFS.open(ExternalFilesPath.c_str(), std::ios::binary);
-        if (IFS)
+        if (IFS && IFS.is_open())
         {
             IFS.seekg(0, std::ifstream::end);
             FileSize = IFS.tellg();
             IFS.seekg(0, std::ifstream::beg);
             return true;
         }
-        else
+        else if (asset_manager_ != nullptr)
         {
             // Fallback to assetManager
-            AAssetManager* assetManager = activity_->assetManager;
-            AssetFile                   = AAssetManager_open(assetManager, fileName, AASSET_MODE_BUFFER);
+            AssetFile = AAssetManager_open(asset_manager_, fileName, AASSET_MODE_BUFFER);
             if (!AssetFile)
             {
                 return false;
@@ -108,6 +118,10 @@ public:
             }
             FileSize = AAsset_getLength(AssetFile);
             return true;
+        }
+        else
+        {
+            return false;
         }
     }
 
@@ -184,6 +198,7 @@ private:
 
     ANativeActivity* activity_ = nullptr;
     std::string      activity_class_name_;
+    AAssetManager*   asset_manager_ = nullptr;
 
     // mutex for synchronization
     // This class uses singleton pattern and can be invoked from multiple threads,
@@ -212,7 +227,7 @@ AndroidFile::AndroidFile(const FileOpenAttribs& OpenAttribs) :
 
 AndroidFile::~AndroidFile()
 {
-    if (m_IFS)
+    if (m_IFS && m_IFS.is_open())
         m_IFS.close();
 
     if (m_AssetFile != nullptr)
@@ -229,7 +244,7 @@ bool AndroidFile::Read(void* Data, size_t BufferSize)
 {
     VERIFY(BufferSize == m_Size, "Only whole file reads are currently supported");
 
-    if (m_IFS)
+    if (m_IFS && m_IFS.is_open())
     {
         m_IFS.read((char*)Data, BufferSize);
         return true;
@@ -237,6 +252,12 @@ bool AndroidFile::Read(void* Data, size_t BufferSize)
     else if (m_AssetFile != nullptr)
     {
         const uint8_t* src_data = (uint8_t*)AAsset_getBuffer(m_AssetFile);
+        auto           FileSize = AAsset_getLength(m_AssetFile);
+        if (FileSize > BufferSize)
+        {
+            LOG_WARNING_MESSAGE("Requested buffer size (", BufferSize, ") exceeds file size (", FileSize, ")");
+            BufferSize = FileSize;
+        }
         memcpy(Data, src_data, BufferSize);
         return true;
     }
@@ -266,9 +287,9 @@ void AndroidFile::SetPos(size_t Offset, FilePosOrigin Origin)
 }
 
 
-void AndroidFileSystem::Init(void* Activity, const char* ActivityClassName)
+void AndroidFileSystem::Init(ANativeActivity* NativeActivity, const char* NativeActivityClassName, AAssetManager* AssetManager)
 {
-    JNIMiniHelper::Init((ANativeActivity*)Activity, ActivityClassName);
+    JNIMiniHelper::Init(NativeActivity, NativeActivityClassName != nullptr ? NativeActivityClassName : "", AssetManager);
 }
 
 AndroidFile* AndroidFileSystem::OpenFile(const FileOpenAttribs& OpenAttribs)
@@ -297,7 +318,7 @@ bool AndroidFileSystem::FileExists(const Diligent::Char* strFilePath)
     const auto& Path   = DummyFile.GetPath(); // This is necessary to correct slashes
     bool        Exists = AndroidFile::Open(Path.c_str(), IFS, AssetFile, Size);
 
-    if (IFS)
+    if (IFS && IFS.is_open())
         IFS.close();
     if (AssetFile != nullptr)
         AAsset_close(AssetFile);

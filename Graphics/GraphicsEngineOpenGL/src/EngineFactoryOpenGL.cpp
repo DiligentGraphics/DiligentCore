@@ -92,7 +92,9 @@ public:
                                                             IDeviceContext**          ppImmediateContext) override final;
 
 #if PLATFORM_ANDROID
-    virtual void InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const override final;
+    virtual void InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
+                                       const char*             NativeActivityClassName,
+                                       struct AAssetManager*   AssetManager) const override final;
 #endif
 };
 
@@ -276,9 +278,11 @@ void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppC
 }
 
 #if PLATFORM_ANDROID
-void EngineFactoryOpenGLImpl::InitAndroidFileSystem(void* Activity, const char* ActivityClassName) const
+void EngineFactoryOpenGLImpl::InitAndroidFileSystem(struct ANativeActivity* NativeActivity,
+                                                    const char*             NativeActivityClassName,
+                                                    struct AAssetManager*   AssetManager) const
 {
-    AndroidFileSystem::Init(Activity, ActivityClassName);
+    AndroidFileSystem::Init(NativeActivity, NativeActivityClassName, AssetManager);
 }
 #endif
 

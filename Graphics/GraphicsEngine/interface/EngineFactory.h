@@ -33,6 +33,12 @@
 #include "../../../Primitives/interface/Object.h"
 #include "APIInfo.h"
 
+
+#if PLATFORM_ANDROID
+struct ANativeActivity;
+struct AAssetManager;
+#endif
+
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 struct IShaderSourceInputStreamFactory;
@@ -67,11 +73,15 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactory, IObject)
 #if PLATFORM_ANDROID
     /// On Android platform, it is necessary to initialize the file system before
     /// CreateDefaultShaderSourceStreamFactory() method can be called.
-    /// \param [in] Activity          - Pointer to the activity.
-    /// \param [in] ActivityClassName - Activity class name.
+    /// \param [in] NativeActivity          - Pointer to the native activity object (ANativeActivity).
+    /// \param [in] NativeActivityClassName - Native activity class name.
+    /// \param [in] AssetManager            - Pointer to the asset manager (AAssetManager).
+    ///
+    /// \remarks See AndroidFileSystem::Init.
     VIRTUAL void METHOD(InitAndroidFileSystem)(THIS_
-                                               void*       Activity,
-                                               const char* ActivityClassName) CONST PURE;
+                                               struct ANativeActivity*  NativeActivity,
+                                               const char*              NativeActivityClassName,
+                                               struct AAssetManager*    AssetManager) CONST PURE;
 #endif
 };
 DILIGENT_END_INTERFACE

@@ -31,6 +31,9 @@
 #include "../../Basic/interface/BasicFileSystem.hpp"
 #include "../../../Primitives/interface/DataBlob.h"
 
+struct ANativeActivity;
+struct AAssetManager;
+
 class AndroidFile : public BasicFile
 {
 public:
@@ -57,10 +60,26 @@ private:
     size_t        m_Size      = 0;
 };
 
+
+/// Android file system implementation.
 struct AndroidFileSystem : public BasicFileSystem
 {
 public:
-    static void Init(void* Activity, const char* ActivityClassName);
+    /// Initializes the file system.
+
+    /// \param [in] NativeActivity          - Pointer to the native activity object (ANativeActivity).
+    /// \param [in] NativeActivityClassName - Native activity class name.
+    /// \param [in] AssetManager            - Pointer to the asset manager (AAssetManager).
+    ///
+    /// \remarks The file system can be initialized to use either native activity or asset manager, or both.
+    ///          When NativeActivity is not null, the file system will try to use it first when openining files.
+    ///          It will then resort to using the asset manager. When NativeActivity is not null, but AssetManager
+    ///          parameter is null, the file system will use the asset manager from the activity.
+    ///          If NativeActivity is null, the file system will only use the asset manager.
+    static void Init(struct ANativeActivity* NativeActivity,
+                     const char*             NativeActivityClassName,
+                     struct AAssetManager*   AssetManager);
+
 
     static AndroidFile*          OpenFile(const FileOpenAttribs& OpenAttribs);
     static inline Diligent::Char GetSlashSymbol() { return '/'; }
