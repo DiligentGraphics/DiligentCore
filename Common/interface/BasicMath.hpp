@@ -734,7 +734,7 @@ template <class T> struct Matrix2x2
     bool operator==(const Matrix2x2& r) const
     {
         for (int i = 0; i < 2; ++i)
-            for (int j = 0; i < 2; ++i)
+            for (int j = 0; j < 2; ++j)
                 if ((*this)[i][j] != r[i][j])
                     return false;
 
@@ -913,7 +913,7 @@ template <class T> struct Matrix3x3
     bool operator==(const Matrix3x3& r) const
     {
         for (int i = 0; i < 3; ++i)
-            for (int j = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
                 if ((*this)[i][j] != r[i][j])
                     return false;
 
@@ -1107,7 +1107,7 @@ template <class T> struct Matrix4x4
     bool operator==(const Matrix4x4& r) const
     {
         for (int i = 0; i < 4; ++i)
-            for (int j = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j)
                 if ((*this)[i][j] != r[i][j])
                     return false;
 
