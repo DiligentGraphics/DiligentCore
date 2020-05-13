@@ -790,6 +790,102 @@ TEST(Common_BasicMath, MatrixConstructors)
     }
 }
 
+TEST(Common_BasicMath, MatrixEquality)
+{
+    // Matrix 2x2
+    {
+        // clang-format off
+        const float2x2 ref
+        {
+            1, 2,
+            5, 6
+        };
+        // clang-format on
+
+        {
+            auto m1 = ref;
+            auto m2 = ref;
+            EXPECT_TRUE(m1 == m2);
+            EXPECT_FALSE(m1 != m2);
+        }
+
+        for (int i = 0; i < 2; ++i)
+        {
+            for (int j = 0; j < 2; ++j)
+            {
+                auto m1  = ref;
+                auto m2  = ref;
+                m1[i][j] = 0;
+                EXPECT_FALSE(m1 == m2);
+                EXPECT_TRUE(m1 != m2);
+            }
+        }
+    }
+
+    // Matrix 3x3
+    {
+        // clang-format off
+        const float3x3 ref
+        {
+             1,  2,  3,
+             5,  6,  7,
+             9, 10, 11
+        };
+        // clang-format on
+
+        {
+            auto m1 = ref;
+            auto m2 = ref;
+            EXPECT_TRUE(m1 == m2);
+            EXPECT_FALSE(m1 != m2);
+        }
+
+        for (int i = 0; i < 3; ++i)
+        {
+            for (int j = 0; j < 3; ++j)
+            {
+                auto m1  = ref;
+                auto m2  = ref;
+                m1[i][j] = 0;
+                EXPECT_FALSE(m1 == m2);
+                EXPECT_TRUE(m1 != m2);
+            }
+        }
+    }
+
+    // Matrix 4x4
+    {
+        // clang-format off
+        const float4x4 ref
+        {
+             1,  2,  3,  4,
+             5,  6,  7,  8,
+             9, 10, 11, 12,
+            13, 14, 15, 16 
+        };
+        // clang-format on
+
+        {
+            auto m1 = ref;
+            auto m2 = ref;
+            EXPECT_TRUE(m1 == m2);
+            EXPECT_FALSE(m1 != m2);
+        }
+
+        for (int i = 0; i < 4; ++i)
+        {
+            for (int j = 0; j < 4; ++j)
+            {
+                auto m1  = ref;
+                auto m2  = ref;
+                m1[i][j] = 0;
+                EXPECT_FALSE(m1 == m2);
+                EXPECT_TRUE(m1 != m2);
+            }
+        }
+    }
+}
+
 TEST(Common_BasicMath, MatrixInverse)
 {
     {
