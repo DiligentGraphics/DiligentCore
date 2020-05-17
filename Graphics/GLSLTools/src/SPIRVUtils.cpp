@@ -44,13 +44,18 @@
 
 #include "spirv-tools/optimizer.hpp"
 
+// clang-format off
 static const char g_HLSLDefinitions[] =
-    {
+{
 #include "../../GraphicsEngineD3DBase/include/HLSLDefinitions_inc.fxh"
 };
+// clang-format on
 
 namespace Diligent
 {
+
+// Implemented in GLSLSourceBuilder.cpp
+const char* GetShaderTypeDefines(SHADER_TYPE Type);
 
 void InitializeGlslang()
 {
@@ -467,7 +472,10 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
         SourceCodeLen = static_cast<int>(pFileData->GetSize());
     }
 
-    std::string Defines;
+    std::string Defines = g_HLSLDefinitions;
+    if (const auto* ShaderTypeDefine = GetShaderTypeDefines(Attribs.Desc.ShaderType))
+        Defines += ShaderTypeDefine;
+
     if (Attribs.Macros != nullptr)
     {
         Defines = g_HLSLDefinitions;
@@ -482,12 +490,9 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
             Defines += "\n";
             ++pMacro;
         }
-        Shader.setPreamble(Defines.c_str());
     }
-    else
-    {
-        Shader.setPreamble(g_HLSLDefinitions);
-    }
+    Shader.setPreamble(Defines.c_str());
+
     const char* ShaderStrings[]       = {SourceCode};
     const int   ShaderStringLenghts[] = {SourceCodeLen};
     const char* Names[]               = {Attribs.FilePath != nullptr ? Attribs.FilePath : ""};

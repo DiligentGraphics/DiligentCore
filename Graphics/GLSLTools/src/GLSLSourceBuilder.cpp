@@ -37,6 +37,38 @@
 namespace Diligent
 {
 
+const char* GetShaderTypeDefines(SHADER_TYPE Type)
+{
+    switch (Type)
+    {
+        case SHADER_TYPE_VERTEX:
+            return "#define VERTEX_SHADER 1\n";
+
+        case SHADER_TYPE_PIXEL:
+            return "#define FRAGMENT_SHADER 1\n"
+                   "#define PIXEL_SHADER 1\n";
+
+        case SHADER_TYPE_GEOMETRY:
+            return "#define GEOMETRY_SHADER 1\n";
+
+        case SHADER_TYPE_HULL:
+            return "#define TESS_CONTROL_SHADER 1\n"
+                   "#define HULL_SHADER 1\n";
+
+        case SHADER_TYPE_DOMAIN:
+            return "#define TESS_EVALUATION_SHADER 1\n"
+                   "#define DOMAIN_SHADER 1\n";
+            break;
+
+        case SHADER_TYPE_COMPUTE:
+            return "#define COMPUTE_SHADER 1\n";
+
+        default:
+            UNEXPECTED("Unexpected shader type");
+            return nullptr;
+    }
+}
+
 String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
                              const DeviceCaps&       deviceCaps,
                              TargetGLSLCompiler      TargetCompiler,
@@ -252,20 +284,8 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
                               "#define gl_InstanceID gl_InstanceIndex\n");
         }
 
-        const Char* ShaderTypeDefine = nullptr;
-        switch (ShaderType)
-        {
-            // clang-format off
-            case SHADER_TYPE_VERTEX:   ShaderTypeDefine = "#define VERTEX_SHADER\n";          break;
-            case SHADER_TYPE_PIXEL:    ShaderTypeDefine = "#define FRAGMENT_SHADER\n";        break;
-            case SHADER_TYPE_GEOMETRY: ShaderTypeDefine = "#define GEOMETRY_SHADER\n";        break;
-            case SHADER_TYPE_HULL:     ShaderTypeDefine = "#define TESS_CONTROL_SHADER\n";    break;
-            case SHADER_TYPE_DOMAIN:   ShaderTypeDefine = "#define TESS_EVALUATION_SHADER\n"; break;
-            case SHADER_TYPE_COMPUTE:  ShaderTypeDefine = "#define COMPUTE_SHADER\n";         break;
-            default: UNEXPECTED("Shader type is not specified");
-                // clang-format on
-        }
-        GLSLSource += ShaderTypeDefine;
+        if (const auto* ShaderTypeDefine = GetShaderTypeDefines(ShaderType))
+            GLSLSource += ShaderTypeDefine;
 
         if (ExtraDefinitions != nullptr)
         {

@@ -173,15 +173,48 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* Shade
 
         const D3D_SHADER_MACRO*       pDefines = nullptr;
         std::vector<D3D_SHADER_MACRO> D3DMacros;
+        switch (ShaderCI.Desc.ShaderType)
+        {
+            case SHADER_TYPE_VERTEX:
+                D3DMacros.push_back({"VERTEX_SHADER", "1"});
+                break;
+
+            case SHADER_TYPE_PIXEL:
+                D3DMacros.push_back({"FRAGMENT_SHADER", "1"});
+                D3DMacros.push_back({"PIXEL_SHADER", "1"});
+                break;
+
+            case SHADER_TYPE_GEOMETRY:
+                D3DMacros.push_back({"GEOMETRY_SHADER", "1"});
+                break;
+
+            case SHADER_TYPE_HULL:
+                D3DMacros.push_back({"TESS_CONTROL_SHADER", "1"});
+                D3DMacros.push_back({"HULL_SHADER", "1"});
+                break;
+
+            case SHADER_TYPE_DOMAIN:
+                D3DMacros.push_back({"TESS_EVALUATION_SHADER", "1"});
+                D3DMacros.push_back({"DOMAIN_SHADER", "1"});
+                break;
+
+            case SHADER_TYPE_COMPUTE:
+                D3DMacros.push_back({"COMPUTE_SHADER", "1"});
+                break;
+
+            default: UNEXPECTED("Unexpected shader type");
+        }
+
         if (ShaderCI.Macros)
         {
             for (auto* pCurrMacro = ShaderCI.Macros; pCurrMacro->Name && pCurrMacro->Definition; ++pCurrMacro)
             {
                 D3DMacros.push_back({pCurrMacro->Name, pCurrMacro->Definition});
             }
-            D3DMacros.push_back({nullptr, nullptr});
-            pDefines = D3DMacros.data();
         }
+
+        D3DMacros.push_back({nullptr, nullptr});
+        pDefines = D3DMacros.data();
 
         DEV_CHECK_ERR(ShaderCI.EntryPoint != nullptr, "Entry point must not be null");
         CComPtr<ID3DBlob> errors;
