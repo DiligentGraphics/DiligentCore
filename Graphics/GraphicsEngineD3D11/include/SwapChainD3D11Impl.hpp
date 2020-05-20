@@ -37,10 +37,10 @@ namespace Diligent
 {
 
 /// Swap chain implementation in Direct3D11 backend.
-class SwapChainD3D11Impl final : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>
+class SwapChainD3D11Impl final : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain2>
 {
 public:
-    using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>;
+    using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain2>;
 
     SwapChainD3D11Impl(IReferenceCounters*           pRefCounters,
                        const SwapChainDesc&          SCDesc,
@@ -70,6 +70,7 @@ public:
 private:
     virtual void UpdateSwapChain(bool CreateNew) override final;
     void         CreateRTVandDSV();
+    virtual void SetDXGIDeviceMaximumFrameLatency() override final;
 
     RefCntAutoPtr<ITextureViewD3D11> m_pRenderTargetView;
     RefCntAutoPtr<ITextureViewD3D11> m_pDepthStencilView;

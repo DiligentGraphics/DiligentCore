@@ -90,6 +90,9 @@ public:
         return m_SwapChainDesc;
     }
 
+    virtual void DILIGENT_CALL_TYPE SetMaximumFrameLatency(Uint32 MaxLatency) override
+    {}
+
 protected:
     bool Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANSFORM NewPreTransform, Int32 Dummy = 0 /*To be different from virtual function*/)
     {

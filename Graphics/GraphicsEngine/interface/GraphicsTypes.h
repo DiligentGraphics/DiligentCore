@@ -1288,9 +1288,9 @@ struct SwapChainDesc
     ///       method.
     SURFACE_TRANSFORM PreTransform      DEFAULT_INITIALIZER(SURFACE_TRANSFORM_OPTIMAL);
 
-    /// Number of buffers int the swap chain
+    /// The number of buffers in the swap chain
     Uint32 BufferCount                  DEFAULT_INITIALIZER(2);
-
+    
     /// Default depth value, which is used as optimized depth clear value in D3D12
     Float32 DefaultDepthValue           DEFAULT_INITIALIZER(1.f);
 

@@ -51,7 +51,8 @@ public:
         // clang-format off
         TBase{pRefCounters, pDevice, pDeviceContext, SCDesc},
         m_FSDesc           {FSDesc},
-        m_Window           {Window}
+        m_Window           {Window},
+        m_MaxFrameLatency  {SCDesc.BufferCount}
     // clang-format on
     {
         if (m_DesiredPreTransform != SURFACE_TRANSFORM_OPTIMAL &&
@@ -186,6 +187,12 @@ protected:
         // mode (or monitor resolution) will be changed to match the dimensions of the application window.
         swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
+        // DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT enables querying a waitable object that can be
+        // used to synchronize presentation with CPU timeline.
+        // The flag is not supported in D3D11 fullscreen mode.
+        if (!(m_FSDesc.Fullscreen && m_pRenderDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D11))
+            swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+
         CComPtr<IDXGISwapChain1> pSwapChain1;
         CComPtr<IDXGIFactory2>   factory;
         HRESULT                  hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory2**>(&factory)));
@@ -229,13 +236,42 @@ protected:
             &pSwapChain1);
         CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI swap chain");
 
-        // Ensure that DXGI does not queue more than one frame at a time. This both reduces latency and
-        // ensures that the application will only render after each VSync, minimizing power consumption.
-        //pDXGIDevice->SetMaximumFrameLatency( 1 );
-
 #endif
 
-        pSwapChain1->QueryInterface(__uuidof(m_pSwapChain), reinterpret_cast<void**>(static_cast<DXGISwapChainType**>(&m_pSwapChain)));
+        hr = pSwapChain1->QueryInterface(__uuidof(m_pSwapChain), reinterpret_cast<void**>(static_cast<DXGISwapChainType**>(&m_pSwapChain)));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to query the required swap chain interface");
+
+        if ((swapChainDesc.Flags & DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT) != 0)
+        {
+            // IMPORTANT: SetMaximumFrameLatency must be called BEFORE GetFrameLatencyWaitableObject!
+            m_pSwapChain->SetMaximumFrameLatency(m_MaxFrameLatency);
+
+            m_FrameLatencyWaitableObject = m_pSwapChain->GetFrameLatencyWaitableObject();
+            VERIFY(m_FrameLatencyWaitableObject != NULL, "Waitable object must not be null");
+        }
+        else
+        {
+            m_FrameLatencyWaitableObject = NULL;
+            SetDXGIDeviceMaximumFrameLatency();
+        }
+    }
+
+    void WaitForFrame()
+    {
+        // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains#step-4-wait-before-rendering-each-frame
+        if (m_FrameLatencyWaitableObject != NULL)
+        {
+            auto Res = WaitForSingleObjectEx(m_FrameLatencyWaitableObject,
+                                             500, // 0.5 second timeout (shouldn't ever occur)
+                                             true);
+            if (Res != WAIT_OBJECT_0)
+            {
+                const char* ErrorMsg = Res == WAIT_TIMEOUT ?
+                    "Timeout elapsed while waiting for the frame waitable object." :
+                    "Waiting for the frame waitable object failed.";
+                LOG_ERROR_MESSAGE(ErrorMsg, " This is a strong indication of a synchronization error.");
+            }
+        }
     }
 
     virtual void DILIGENT_CALL_TYPE SetFullscreenMode(const DisplayModeAttribs& DisplayMode) override final
@@ -269,9 +305,47 @@ protected:
         }
     }
 
+    virtual void DILIGENT_CALL_TYPE SetMaximumFrameLatency(Uint32 MaxLatency) override final
+    {
+        if (m_MaxFrameLatency == MaxLatency)
+            return;
+
+        m_MaxFrameLatency = MaxLatency;
+
+        if (m_FrameLatencyWaitableObject != NULL)
+        {
+            // A swap chain must be in windowed mode when it is released.
+            // https://msdn.microsoft.com/en-us/library/windows/desktop/bb205075(v=vs.85).aspx#Destroying
+            if (m_FSDesc.Fullscreen)
+            {
+                // SetFullscreenState(FALSE) calls Resize that initializes Width and Height
+                // with the window size. We need to save current values and restore them.
+                Uint32 Width  = m_SwapChainDesc.Width;
+                Uint32 Height = m_SwapChainDesc.Height;
+                m_pSwapChain->SetFullscreenState(FALSE, nullptr);
+                m_SwapChainDesc.Width  = Width;
+                m_SwapChainDesc.Height = Height;
+            }
+
+            // Destroying the swap chain and creating a new one is the only reliable way to
+            // change the maximum frame latency of a waitable swap chain.
+            UpdateSwapChain(true);
+        }
+        else
+        {
+            SetDXGIDeviceMaximumFrameLatency();
+        }
+    }
+
+    virtual void SetDXGIDeviceMaximumFrameLatency() {}
+
     FullScreenModeDesc         m_FSDesc;
     CComPtr<DXGISwapChainType> m_pSwapChain;
     NativeWindow               m_Window;
+
+    HANDLE m_FrameLatencyWaitableObject = NULL;
+
+    Uint32 m_MaxFrameLatency = 0;
 };
 
 } // namespace Diligent

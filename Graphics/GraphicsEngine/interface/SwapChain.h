@@ -88,6 +88,16 @@ DILIGENT_BEGIN_INTERFACE(ISwapChain, IObject)
 
     /// Sets windowed mode (only supported on Win32 platform)
     VIRTUAL void METHOD(SetWindowedMode)(THIS) PURE;
+    
+    /// Sets the maximum number of frames that the swap chain is allowed to queue for rendering.
+
+    /// This value is only relevant for D3D11 and D3D12 backends and ignored for others.
+    /// By default it matches the number of buffers in the swap chain. For example, for a 2-buffer
+    /// swap chain, the CPU can enqueue frames 0 and 1, but Present command of frame 2
+    /// will block until frame 0 is presented. If in the example above the maximum frame latency is set
+    /// to 1, then Present command of frame 1 will block until Present of frame 0 is complete.
+    VIRTUAL void METHOD(SetMaximumFrameLatency)(THIS_
+                                                Uint32 MaxLatency) PURE;
 
     /// Returns render target view of the current back buffer in the swap chain
 
@@ -115,13 +125,14 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define ISwapChain_Present(This, ...)            CALL_IFACE_METHOD(SwapChain, Present,                 This, __VA_ARGS__)
-#    define ISwapChain_GetDesc(This)                 CALL_IFACE_METHOD(SwapChain, GetDesc,                 This)
-#    define ISwapChain_Resize(This, ...)             CALL_IFACE_METHOD(SwapChain, Resize,                  This, __VA_ARGS__)
-#    define ISwapChain_SetFullscreenMode(This, ...)  CALL_IFACE_METHOD(SwapChain, SetFullscreenMode,       This, __VA_ARGS__)
-#    define ISwapChain_SetWindowedMode(This)         CALL_IFACE_METHOD(SwapChain, SetWindowedMode,         This)
-#    define ISwapChain_GetCurrentBackBufferRTV(This) CALL_IFACE_METHOD(SwapChain, GetCurrentBackBufferRTV, This)
-#    define ISwapChain_GetDepthBufferDSV(This)       CALL_IFACE_METHOD(SwapChain, GetDepthBufferDSV,       This)
+#    define ISwapChain_Present(This, ...)                CALL_IFACE_METHOD(SwapChain, Present,                 This, __VA_ARGS__)
+#    define ISwapChain_GetDesc(This)                     CALL_IFACE_METHOD(SwapChain, GetDesc,                 This)
+#    define ISwapChain_Resize(This, ...)                 CALL_IFACE_METHOD(SwapChain, Resize,                  This, __VA_ARGS__)
+#    define ISwapChain_SetFullscreenMode(This, ...)      CALL_IFACE_METHOD(SwapChain, SetFullscreenMode,       This, __VA_ARGS__)
+#    define ISwapChain_SetWindowedMode(This)             CALL_IFACE_METHOD(SwapChain, SetWindowedMode,         This)
+#    define ISwapChain_SetMaximumFrameLatency(This, ...) CALL_IFACE_METHOD(SwapChain, SetMaximumFrameLatency,  This, __VA_ARGS__)
+#    define ISwapChain_GetCurrentBackBufferRTV(This)     CALL_IFACE_METHOD(SwapChain, GetCurrentBackBufferRTV, This)
+#    define ISwapChain_GetDepthBufferDSV(This)           CALL_IFACE_METHOD(SwapChain, GetDepthBufferDSV,       This)
 
 // clang-format on
 

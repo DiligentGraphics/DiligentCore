@@ -29,6 +29,10 @@
 /// Routines that initialize D3D11-based engine implementation
 
 #include "pch.h"
+
+#include <Windows.h>
+#include <dxgi1_3.h>
+
 #include "EngineFactoryD3D11.h"
 #include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceContextD3D11Impl.hpp"
@@ -36,8 +40,6 @@
 #include "D3D11TypeConversions.hpp"
 #include "EngineMemory.h"
 #include "EngineFactoryD3DBase.hpp"
-#include <Windows.h>
-#include <dxgi1_2.h>
 
 namespace Diligent
 {

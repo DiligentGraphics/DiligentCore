@@ -26,10 +26,11 @@
  */
 
 #include "pch.h"
+#include <dxgi1_3.h>
+
 #include "SwapChainD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
 #include "DeviceContextD3D11Impl.hpp"
-#include <dxgi1_2.h>
 
 namespace Diligent
 {
@@ -143,6 +144,11 @@ void SwapChainD3D11Impl::Present(Uint32 SyncInterval)
         // as this can explicitly be done by the user
     }
 
+    // In contrast to MSDN sample, we wait for the frame as late as possible - right
+    // before presenting.
+    // https://docs.microsoft.com/en-us/windows/uwp/gaming/reduce-latency-with-dxgi-1-3-swap-chains#step-4-wait-before-rendering-each-frame
+    WaitForFrame();
+
     m_pSwapChain->Present(SyncInterval, 0);
 }
 
@@ -215,6 +221,29 @@ void SwapChainD3D11Impl::Resize(Uint32 NewWidth, Uint32 NewHeight, SURFACE_TRANS
     if (TSwapChainBase::Resize(NewWidth, NewHeight, NewPreTransform))
     {
         UpdateSwapChain(false);
+    }
+}
+
+void SwapChainD3D11Impl::SetDXGIDeviceMaximumFrameLatency()
+{
+    VERIFY(m_FrameLatencyWaitableObject == NULL, "This method should only be used as a workaround for swap chains that are not waitable");
+
+    auto* pd3d11Device = m_pRenderDevice.RawPtr<IRenderDeviceD3D11>()->GetD3D11Device();
+
+    CComPtr<IDXGIDevice1> pDXGIDevice;
+
+    auto hr = pd3d11Device->QueryInterface(__uuidof(pDXGIDevice), reinterpret_cast<void**>(static_cast<IDXGIDevice1**>(&pDXGIDevice)));
+    if (SUCCEEDED(hr) && pDXGIDevice)
+    {
+        hr = pDXGIDevice->SetMaximumFrameLatency(m_MaxFrameLatency);
+        if (FAILED(hr))
+        {
+            LOG_ERROR_MESSAGE("Failed to set the maximum frame latency for DXGI device");
+        }
+    }
+    else
+    {
+        LOG_ERROR("Failed to query IDXGIDevice1 interface from D3D11 device");
     }
 }
 

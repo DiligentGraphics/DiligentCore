@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added `ISwapChain::SetMaximumFrameLatency` function (API Version 240061)
 * Added `EngineGLCreateInfo::CreateDebugContext` member (API Version 240060)
 * Added `SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM` value (API Version 240059).
 * Added `GLBindTarget` parameter to `IRenderDeviceGL::CreateTextureFromGLHandle` method (API Version 240058).

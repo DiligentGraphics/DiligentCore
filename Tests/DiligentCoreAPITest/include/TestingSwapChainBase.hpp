@@ -191,6 +191,11 @@ public:
         UNEXPECTED("Testing swap chain can't switch between windowed and full screen modes");
     }
 
+    virtual void DILIGENT_CALL_TYPE SetMaximumFrameLatency(Uint32 MaxLatency) override final
+    {
+        UNEXPECTED("Testing swap chain can't set the maximum frame latency");
+    }
+
     virtual ITextureView* DILIGENT_CALL_TYPE GetCurrentBackBufferRTV() override final
     {
         return m_pRTV;
