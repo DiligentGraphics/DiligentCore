@@ -1040,7 +1040,7 @@
 "\n"
 "// Helper functions\n"
 "\n"
-"#ifdef TARGET_API_VULKAN\n"
+"#ifdef VULKAN\n"
 "\n"
 "#define NDC_MIN_Z 0.0 // Minimal z in the normalized device space\n"
 "\n"

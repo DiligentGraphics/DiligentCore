@@ -85,7 +85,7 @@ EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
     }
 }
 
-TBuiltInResource InitResources()
+static TBuiltInResource InitResources()
 {
     TBuiltInResource Resources;
 
@@ -435,7 +435,9 @@ private:
     std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
 };
 
-std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob** ppCompilerOutput)
+std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
+                                      const char*             ExtraDefinitions,
+                                      IDataBlob**             ppCompilerOutput)
 {
     EShLanguage      ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
     glslang::TShader Shader{ShLang};
@@ -476,9 +478,11 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs, IDataBlob
     if (const auto* ShaderTypeDefine = GetShaderTypeDefines(Attribs.Desc.ShaderType))
         Defines += ShaderTypeDefine;
 
+    if (ExtraDefinitions != nullptr)
+        Defines += ExtraDefinitions;
+
     if (Attribs.Macros != nullptr)
     {
-        Defines = g_HLSLDefinitions;
         Defines += '\n';
         auto* pMacro = Attribs.Macros;
         while (pMacro->Name != nullptr && pMacro->Definition != nullptr)

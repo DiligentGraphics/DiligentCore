@@ -61,15 +61,19 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
         DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from source code or a file");
 
+        static constexpr char* VulkanDefine =
+            "#ifndef VULKAN\n"
+            "#   define VULKAN 1\n"
+            "#endif\n";
         if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
         {
-            m_SPIRV = HLSLtoSPIRV(CreationAttribs, CreationAttribs.ppCompilerOutput);
+            m_SPIRV = HLSLtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
         }
         else
         {
             auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pRenderDeviceVk->GetDeviceCaps(),
                                                     TargetGLSLCompiler::glslang,
-                                                    "#define TARGET_API_VULKAN 1\n");
+                                                    VulkanDefine);
 
             m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
                                   static_cast<int>(GLSLSource.length()),

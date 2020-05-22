@@ -41,7 +41,7 @@ R"(
 #ifndef GL_ES
 out gl_PerVertex
 {
-	vec4 gl_Position;
+    vec4 gl_Position;
 };
 #endif
 

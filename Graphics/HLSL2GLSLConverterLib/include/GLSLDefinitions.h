@@ -1040,7 +1040,7 @@ vec4 _frexp(vec4 f4, out vec4 fexp4)
 
 // Helper functions
 
-#ifdef TARGET_API_VULKAN
+#ifdef VULKAN
 
 #define NDC_MIN_Z 0.0 // Minimal z in the normalized device space
 
