@@ -70,11 +70,11 @@ struct VSOutput
 struct HS_CONSTANT_DATA_OUTPUT
 {
     float Edges[4]  : SV_TessFactor;
+    float Inside[2] : SV_InsideTessFactor;
 };
 
 HS_CONSTANT_DATA_OUTPUT ConstantHS(InputPatch<VSOutput, 1> p, 
-                                   uint BlockID        : SV_PrimitiveID,
-                                   out float Inside[2] : SV_InsideTessFactor)
+                                   uint BlockID        : SV_PrimitiveID)
 {
     HS_CONSTANT_DATA_OUTPUT Factors;
     Factors.Edges[0] = 2.5;
@@ -82,8 +82,8 @@ HS_CONSTANT_DATA_OUTPUT ConstantHS(InputPatch<VSOutput, 1> p,
     Factors.Edges[2] = 5.75;
     Factors.Edges[3] = 7.5;
 
-    Inside[0] = 6.75;
-    Inside[1] = 7.25;
+    Factors.Inside[0] = 6.75;
+    Factors.Inside[1] = 7.25;
 
     return Factors;
 }

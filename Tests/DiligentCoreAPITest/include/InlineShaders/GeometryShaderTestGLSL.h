@@ -68,6 +68,16 @@ R"(
 layout (points) in;
 layout (triangle_strip, max_vertices = 3) out;
 
+in gl_PerVertex
+{
+    vec4 gl_Position;
+} gl_in[];
+
+out gl_PerVertex
+{
+    vec4 gl_Position;
+};
+
 layout(location = 0) out vec3 out_Color;
 
 void main() {

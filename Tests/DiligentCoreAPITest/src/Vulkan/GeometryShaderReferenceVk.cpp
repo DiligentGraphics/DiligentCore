@@ -200,9 +200,8 @@ void GeometryShaderReferenceVk(ISwapChain* pSwapChain)
     PipelineCI.basePipelineIndex  = 0;              // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
     VkPipeline vkPipeline = VK_NULL_HANDLE;
-    pEnv->SetErrorAllowance(1, "There appears to be a bug in glslang that causes Vulkan validation layers to complain about interface type mismatch:\n");
+
     res = vkCreateGraphicsPipelines(vkDevice, VK_NULL_HANDLE, 1, &PipelineCI, nullptr, &vkPipeline);
-    pEnv->SetErrorAllowance(0);
     ASSERT_GE(res, 0);
     ASSERT_TRUE(vkPipeline != VK_NULL_HANDLE);
 

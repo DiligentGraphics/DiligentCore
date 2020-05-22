@@ -154,8 +154,6 @@ TEST(TessellationTest, DrawQuad)
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.UseCombinedTextureSamplers = true;
 
-    const bool ConvertToGLSL = pDevice->GetDeviceCaps().IsVulkanDevice();
-
     RefCntAutoPtr<IShader> pVS;
     {
         ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
@@ -163,7 +161,7 @@ TEST(TessellationTest, DrawQuad)
         ShaderCI.Desc.Name       = "Tessellation test - VS";
         ShaderCI.Source          = HLSL::TessTest_VS.c_str();
 
-        pVS = pEnv->CreateShader(ShaderCI, ConvertToGLSL);
+        pDevice->CreateShader(ShaderCI, &pVS);
         ASSERT_NE(pVS, nullptr);
     }
 
@@ -174,7 +172,7 @@ TEST(TessellationTest, DrawQuad)
         ShaderCI.Desc.Name       = "Tessellation test - HS";
         ShaderCI.Source          = HLSL::TessTest_HS.c_str();
 
-        pHS = pEnv->CreateShader(ShaderCI, ConvertToGLSL);
+        pDevice->CreateShader(ShaderCI, &pHS);
         ASSERT_NE(pHS, nullptr);
     }
 
@@ -185,7 +183,7 @@ TEST(TessellationTest, DrawQuad)
         ShaderCI.Desc.Name       = "Tessellation test - DS";
         ShaderCI.Source          = HLSL::TessTest_DS.c_str();
 
-        pDS = pEnv->CreateShader(ShaderCI, ConvertToGLSL);
+        pDevice->CreateShader(ShaderCI, &pDS);
         ASSERT_NE(pDS, nullptr);
     }
 
@@ -196,7 +194,7 @@ TEST(TessellationTest, DrawQuad)
         ShaderCI.Desc.Name       = "Tessellation test - PS";
         ShaderCI.Source          = HLSL::TessTest_PS.c_str();
 
-        pPS = pEnv->CreateShader(ShaderCI, ConvertToGLSL);
+        pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
     }
 

@@ -93,8 +93,6 @@ public:
 
     static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
 
-    RefCntAutoPtr<IShader> CreateShader(const ShaderCreateInfo& ShaderCI, bool ConvertToGLSL);
-
 protected:
     NativeWindow CreateNativeWindow();
 

@@ -112,13 +112,6 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
     endif()
 endif()
 
-if(TARGET Diligent-HLSL2GLSLConverterLib)
-    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-HLSL2GLSLConverterLib)
-    target_compile_definitions(DiligentCoreAPITest PRIVATE HLSL2GLSL_CONVERTER_SUPPORTED)
-    get_target_property(HLSL2GLSLConverterLib_SourceDir Diligent-HLSL2GLSLConverterLib SOURCE_DIR)
-    target_include_directories(DiligentCoreAPITest PRIVATE "${HLSL2GLSLConverterLib_SourceDir}/include")
-endif()
-
 if(VULKAN_SUPPORTED)
     target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-GLSLTools)
     target_include_directories(DiligentCoreAPITest PRIVATE ../../ThirdParty)
