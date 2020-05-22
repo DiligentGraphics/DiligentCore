@@ -1108,7 +1108,8 @@ out gl_PerVertex
 // --------------------------------- Fragment shader ---------------------------------
 #ifdef FRAGMENT_SHADER
 
-#define _GET_GL_FRAG_COORD(FragCoord)_ResizeVector(FragCoord, gl_FragCoord)
+// SV_Position.w == w, while gl_FragCoord.w == 1/w
+#define _GET_GL_FRAG_COORD(FragCoord)_ResizeVector(FragCoord, vec4(gl_FragCoord.xyz, 1.0/gl_FragCoord.w))
 #define _GET_GL_FRONT_FACING(FrontFacing)_TypeConvertStore(FrontFacing, gl_FrontFacing)
 #define _SET_GL_FRAG_DEPTH(Depth)_TypeConvertStore(gl_FragDepth, Depth)
 
