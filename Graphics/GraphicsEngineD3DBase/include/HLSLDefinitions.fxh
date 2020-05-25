@@ -12,6 +12,11 @@ float2 NormalizedDeviceXYToTexUV( float2 f2ProjSpaceXY )
     return float2(0.5,0.5) + float2(0.5,-0.5) * f2ProjSpaceXY.xy;
 }
 
+float2 TexUVToNormalizedDeviceXY( float2 TexUV)
+{
+    return (TexUV.xy - float2(0.5, 0.5)) * float2(2.0, -2.0);
+}
+
 float NormalizedDeviceZToDepth(float fNDC_Z)
 {
     return fNDC_Z;
