@@ -187,16 +187,32 @@ protected:
         // mode (or monitor resolution) will be changed to match the dimensions of the application window.
         swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
+
+        CComPtr<IDXGIFactory2> pDXGIFactory;
+
+        HRESULT hr = CreateDXGIFactory1(__uuidof(pDXGIFactory), reinterpret_cast<void**>(static_cast<IDXGIFactory2**>(&pDXGIFactory)));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
+
         // DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT enables querying a waitable object that can be
         // used to synchronize presentation with CPU timeline.
         // The flag is not supported in D3D11 fullscreen mode.
         if (!(m_FSDesc.Fullscreen && m_pRenderDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D11))
-            swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+        {
+            // We do not need pDXGIFactory3 itself, however DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT flag
+            // is only supported starting with Windows 8.1, and so is IDXGIFactory3 interface. We query this
+            // interface to check Windows 8.1.
+            // Note that we can't use IsWindows8Point1OrGreater because unlike IsWindows8OrGreater, it returns
+            // false if an application is not manifested for Windows 8.1 or Windows 10, even if the current
+            // operating system version is Windows 8.1 or Windows 10.
+            CComPtr<IDXGIFactory3> pDXGIFactory3;
+            if (SUCCEEDED(pDXGIFactory->QueryInterface(__uuidof(pDXGIFactory3), reinterpret_cast<void**>(static_cast<IDXGIFactory3**>(&pDXGIFactory3)))))
+            {
+                swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+            }
+        }
+
 
         CComPtr<IDXGISwapChain1> pSwapChain1;
-        CComPtr<IDXGIFactory2>   factory;
-        HRESULT                  hr = CreateDXGIFactory1(__uuidof(factory), reinterpret_cast<void**>(static_cast<IDXGIFactory2**>(&factory)));
-        CHECK_D3D_RESULT_THROW(hr, "Failed to create DXGI factory");
 
 #if PLATFORM_WIN32
 
@@ -208,7 +224,7 @@ protected:
         FullScreenDesc.Scaling                 = static_cast<DXGI_MODE_SCALING>(m_FSDesc.Scaling);
         FullScreenDesc.ScanlineOrdering        = static_cast<DXGI_MODE_SCANLINE_ORDER>(m_FSDesc.ScanlineOrder);
 
-        hr = factory->CreateSwapChainForHwnd(pD3D11DeviceOrD3D12CmdQueue, hWnd, &swapChainDesc, &FullScreenDesc, nullptr, &pSwapChain1);
+        hr = pDXGIFactory->CreateSwapChainForHwnd(pD3D11DeviceOrD3D12CmdQueue, hWnd, &swapChainDesc, &FullScreenDesc, nullptr, &pSwapChain1);
         CHECK_D3D_RESULT_THROW(hr, "Failed to create Swap Chain");
 
         {
@@ -228,7 +244,7 @@ protected:
         if (m_FSDesc.Fullscreen)
             LOG_WARNING_MESSAGE("UWP applications do not support fullscreen mode");
 
-        hr = factory->CreateSwapChainForCoreWindow(
+        hr = pDXGIFactory->CreateSwapChainForCoreWindow(
             pD3D11DeviceOrD3D12CmdQueue,
             reinterpret_cast<IUnknown*>(m_Window.pCoreWindow),
             &swapChainDesc,
