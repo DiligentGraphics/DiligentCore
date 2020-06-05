@@ -25,6 +25,8 @@
  *  of the possibility of such damages.
  */
 
+#include <climits>
+
 #include "BasicMath.hpp"
 #include "AdvancedMath.hpp"
 
