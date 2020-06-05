@@ -1681,6 +1681,30 @@ Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
     return Vector3<T>((a.y * b.z) - (a.z * b.y), (a.z * b.x) - (a.x * b.z), (a.x * b.y) - (a.y * b.x));
 }
 
+template <class T, class Y>
+Vector3<T> cross(const Vector3<T>& a, const Vector3<T>& b)
+{
+    // |   i    j    k   |
+    // |  a.x  a.y  a.z  |
+    // |  b.x  b.y  b.z  |
+    return Vector3<T> //
+        {
+            static_cast<T>(Y{a.y} * Y{b.z} - Y{a.z} * Y{b.y}),
+            static_cast<T>(Y{a.z} * Y{b.x} - Y{a.x} * Y{b.z}),
+            static_cast<T>(Y{a.x} * Y{b.y} - Y{a.y} * Y{b.x}) //
+        };
+}
+
+inline Vector3<float> high_precision_cross(const Vector3<float>& a, const Vector3<float>& b)
+{
+    return cross<float, double>(a, b);
+}
+
+inline Vector3<int32_t> high_precision_cross(const Vector3<int32_t>& a, const Vector3<int32_t>& b)
+{
+    return cross<int32_t, int64_t>(a, b);
+}
+
 template <class VectorType>
 VectorType normalize(const VectorType& a)
 {
