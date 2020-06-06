@@ -1591,4 +1591,112 @@ TEST(Common_BasicMath, BitInterleave16)
     }
 }
 
+TEST(Common_AdvancedMath, IsPointInsideTriangleF)
+{
+    {
+        //              (20,20)
+        //               .'|
+        //             .'  |
+        //    (10,10).'    |
+        //            '.   |
+        //              '. |
+        //                '|
+        //               (20,0)
+
+        float2 V0{10, 10};
+        float2 V1{20, 20};
+        float2 V2{20, 0};
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V0, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V1, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V2, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, (V0 + V1) * 0.5f, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, (V1 + V2) * 0.5f, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, (V2 + V0) * 0.5f, true));
+
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V0, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V1, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V2, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, (V0 + V1) * 0.5f, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, (V1 + V2) * 0.5f, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, (V2 + V0) * 0.5f, false));
+
+
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V0 + float2(+0.125, 0), true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V1 + float2(-0.125, -0.25), true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V2 + float2(-0.125, +0.25), true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V0 + float2(+0.125, 0), false));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V1 + float2(-0.125, -0.25), false));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V2 + float2(-0.125, +0.25), false));
+
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V0 + float2(-0.125, 0), false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V1 + float2(+0.125, +0.25), false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V2 + float2(+0.125, -0.25), false));
+
+        for (int x = -10; x <= +30; ++x)
+        {
+            for (int y = -10; y <= +30; ++y)
+            {
+                bool IsInside = (x + y >= 20) && (y <= x) && (x <= 20);
+                bool IsOnEdge = (x + y == 20) || (y == x) || (x == 20);
+                EXPECT_EQ(IsPointInsideTriangle(V0, V1, V2, float2(static_cast<float>(x), static_cast<float>(y)), true), IsInside) << "(" << x << ", " << y << ")";
+                EXPECT_EQ(IsPointInsideTriangle(V0, V1, V2, float2(static_cast<float>(x), static_cast<float>(y)), false), IsInside && !IsOnEdge) << "(" << x << ", " << y << ")";
+            }
+        }
+    }
+}
+
+TEST(Common_AdvancedMath, IsPointInsideTriangleI)
+{
+    {
+        //              (20,20)
+        //               .'|
+        //             .'  |
+        //    (10,10).'    |
+        //            '.   |
+        //              '. |
+        //                '|
+        //               (20,0)
+
+        int2 V0{10, 10};
+        int2 V1{20, 20};
+        int2 V2{20, 0};
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V0, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V1, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V2, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, (V0 + V1) / 2, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, (V1 + V2) / 2, true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, (V2 + V0) / 2, true));
+
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V0, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V1, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V2, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, (V0 + V1) / 2, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, (V1 + V2) / 2, false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, (V2 + V0) / 2, false));
+
+
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V0 + int2(1, 0), true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V1 + int2(-1, -2), true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V2 + int2(-1, +2), true));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V0 + int2(+1, 0), false));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V1 + int2(-1, -2), false));
+        EXPECT_TRUE(IsPointInsideTriangle(V0, V1, V2, V2 + int2(-1, +2), false));
+
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V0 + int2(-1, 0), false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V1 + int2(+1, +2), false));
+        EXPECT_FALSE(IsPointInsideTriangle(V0, V1, V2, V2 + int2(+1, -2), false));
+
+        for (int x = -10; x <= +30; ++x)
+        {
+            for (int y = -10; y <= +30; ++y)
+            {
+                bool IsInside = (x + y >= 20) && (y <= x) && (x <= 20);
+                bool IsOnEdge = (x + y == 20) || (y == x) || (x == 20);
+                EXPECT_EQ(IsPointInsideTriangle(V0, V1, V2, int2(x, y), true), IsInside) << "(" << x << ", " << y << ")";
+                EXPECT_EQ(IsPointInsideTriangle(V0, V1, V2, int2(x, y), false), IsInside && !IsOnEdge) << "(" << x << ", " << y << ")";
+            }
+        }
+    }
+}
+
 } // namespace

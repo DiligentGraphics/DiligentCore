@@ -660,6 +660,96 @@ void TraceLineThroughGrid(float2    f2Start,
     }
 }
 
+
+/// Tests if a point is inside triangle.
+
+/// \tparam T                - Vector component type
+/// \tparam IntermediateType - Intermediate type used in calculations
+///
+/// \param [in] V0         - First triangle vertex
+/// \param [in] V1         - Second triangle vertex
+/// \param [in] V2         - Third triangle vertex
+/// \param [in] Point      - Point to test
+/// \param [in] AllowEdges - Whether to accept points lying on triangle edges
+/// \return     true if the point lies inside the triangle,
+///             and false otherwise.
+template <typename T, typename IntermediateType>
+bool IsPointInsideTriangle(const Vector2<T>& V0,
+                           const Vector2<T>& V1,
+                           const Vector2<T>& V2,
+                           const Vector2<T>& Point,
+                           bool              AllowEdges)
+{
+    using DirType = Vector2<IntermediateType>;
+
+    const DirType Rib[3] = //
+        {
+            DirType //
+            {
+                IntermediateType{V1.x} - IntermediateType{V0.x},
+                IntermediateType{V1.y} - IntermediateType{V0.y},
+            },
+            DirType //
+            {
+                IntermediateType{V2.x} - IntermediateType{V1.x},
+                IntermediateType{V2.y} - IntermediateType{V1.y},
+            },
+            DirType //
+            {
+                IntermediateType{V0.x} - IntermediateType{V2.x},
+                IntermediateType{V0.y} - IntermediateType{V2.y},
+            } //
+        };
+
+    const DirType VertToPoint[3] = //
+        {
+            DirType //
+            {
+                IntermediateType{Point.x} - IntermediateType{V0.x},
+                IntermediateType{Point.y} - IntermediateType{V0.y} //
+            },
+            DirType //
+            {
+                IntermediateType{Point.x} - IntermediateType{V1.x},
+                IntermediateType{Point.y} - IntermediateType{V1.y} //
+            },
+            DirType //
+            {
+                IntermediateType{Point.x} - IntermediateType{V2.x},
+                IntermediateType{Point.y} - IntermediateType{V2.y} //
+            }                                                      //
+        };
+
+    IntermediateType NormalZ[3];
+    for (int i = 0; i < 3; i++)
+    {
+        NormalZ[i] = Rib[i].x * VertToPoint[i].y - Rib[i].y * VertToPoint[i].x;
+    }
+
+    // clang-format off
+    if (AllowEdges)
+    {
+        return (NormalZ[0] >= 0 && NormalZ[1] >= 0 && NormalZ[2] >= 0) ||
+               (NormalZ[0] <= 0 && NormalZ[1] <= 0 && NormalZ[2] <= 0);
+    }
+    else
+    {
+        return (NormalZ[0] > 0 && NormalZ[1] > 0 && NormalZ[2] > 0) ||
+               (NormalZ[0] < 0 && NormalZ[1] < 0 && NormalZ[2] < 0);
+    }
+    // clang-format on
+}
+
+template <typename T>
+bool IsPointInsideTriangle(const Vector2<T>& V0,
+                           const Vector2<T>& V1,
+                           const Vector2<T>& V2,
+                           const Vector2<T>& Point,
+                           bool              AllowEdges)
+{
+    return IsPointInsideTriangle<T, T>(V0, V1, V2, Point, AllowEdges);
+}
+
 } // namespace Diligent
 
 namespace std
