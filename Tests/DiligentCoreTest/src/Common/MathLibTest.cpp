@@ -1699,4 +1699,215 @@ TEST(Common_AdvancedMath, IsPointInsideTriangleI)
     }
 }
 
+
+static void TestRasterizeTriangle(const float2&                     V0,
+                                  const float2&                     V1,
+                                  const float2&                     V2,
+                                  const std::initializer_list<int2> Reference)
+{
+    const float2 Verts[] = {V0, V1, V2};
+
+    int ids[] = {0, 1, 2};
+    do
+    {
+        auto ref     = Reference.begin();
+        bool TraceOK = true;
+
+        std::vector<int2> trace;
+        RasterizeTriangle(Verts[ids[0]], Verts[ids[1]], Verts[ids[2]],
+                          [&](int2 pos) //
+                          {
+                              if (ref != Reference.end())
+                              {
+                                  if (pos != *ref)
+                                  {
+                                      TraceOK = false;
+                                  }
+                                  ++ref;
+                              }
+                              else
+                              {
+                                  TraceOK = false;
+                              }
+
+                              trace.emplace_back(pos);
+                              return true;
+                          } //
+        );
+
+        if (ref != Reference.end())
+            TraceOK = false;
+
+        if (!TraceOK)
+        {
+            std::stringstream ss;
+            ss << "Expected: ";
+            for (ref = Reference.begin(); ref != Reference.end(); ++ref)
+                ss << "(" << ref->x << ", " << ref->y << ") ";
+            ss << "\n";
+
+            ss << "Actual:   ";
+            for (auto it = trace.begin(); it != trace.end(); ++it)
+                ss << "(" << it->x << ", " << it->y << ") ";
+
+            ADD_FAILURE() << "Failed to rasterize triangle (" << std::setprecision(3) << Verts[ids[0]].x << ", " << Verts[ids[0]].y << ") "
+                          << " - (" << Verts[ids[1]].x << ", " << Verts[ids[1]].y << ") "
+                          << " - (" << Verts[ids[2]].x << ", " << Verts[ids[2]].y << ")\n"
+                          << ss.str();
+        }
+    } while (std::next_permutation(ids, ids + 3));
+}
+
+TEST(Common_AdvancedMath, RasterizeTriangle)
+{
+    {
+        // Empty triangle
+        TestRasterizeTriangle(float2(0.5f, 0.5f), float2(0.5f, 0.5f), float2(0.5f, 0.5f),
+                              {});
+        TestRasterizeTriangle(float2(0.25f, 0.25f), float2(0.785f, 0.5f), float2(0.125f, 0.875f),
+                              {});
+        TestRasterizeTriangle(float2(0.25f, 0.25f), float2(0.785f, 2.5f), float2(0.125f, 10.875f),
+                              {});
+        TestRasterizeTriangle(float2(0.25f, 0.5f), float2(5.125f, 5.5f), float2(1.875f, 2.125f),
+                              {});
+        TestRasterizeTriangle(float2(0.5f, 0.5f), float2(2.5f, 0.5f), float2(5.5f, 0.5f),
+                              {});
+        TestRasterizeTriangle(float2(0.5f, 0.5f), float2(0.5f, 2.5f), float2(0.5f, 5.5f),
+                              {});
+
+        TestRasterizeTriangle(float2(0.25f, 0.0f), float2(0.5f, 1.f), float2(0.75f, 0.f),
+                              {});
+    }
+
+    {
+        // Horizontal degenerate
+        TestRasterizeTriangle(float2(1.f, 1.f), float2(3.f, 1.f), float2(5.f, 1.f),
+                              {int2{1, 1}, int2{2, 1}, int2{3, 1}, int2{4, 1}, int2{5, 1}});
+        TestRasterizeTriangle(float2(0.75f, 1.f), float2(3.125f, 1.f), float2(5.875f, 1.f),
+                              {int2{1, 1}, int2{2, 1}, int2{3, 1}, int2{4, 1}, int2{5, 1}});
+    }
+
+    {
+        // Vertical degenerate
+        TestRasterizeTriangle(float2(1.f, 1.f), float2(1.f, 3.f), float2(1.f, 5.f),
+                              {int2{1, 1}, int2{1, 2}, int2{1, 3}, int2{1, 4}, int2{1, 5}});
+        TestRasterizeTriangle(float2(1.f, 0.125f), float2(1.f, 2.875f), float2(1.f, 5.25f),
+                              {int2{1, 1}, int2{1, 2}, int2{1, 3}, int2{1, 4}, int2{1, 5}});
+    }
+
+    {
+        //  .
+        //  |'.
+        //  |__'.
+        //
+        TestRasterizeTriangle(float2(1, 1), float2(1, 3), float2(3, 1),
+                              {int2{1, 1}, int2{2, 1}, int2{3, 1}, int2{1, 2}, int2{2, 2}, int2{1, 3}});
+        TestRasterizeTriangle(float2(0.75f, 0.875f), float2(1, 3.125f), float2(3.375f, 0.75f),
+                              {int2{1, 1}, int2{2, 1}, int2{3, 1}, int2{1, 2}, int2{2, 2}, int2{1, 3}});
+    }
+
+    {
+        //       .
+        //     .'|
+        //   .'__|
+        //
+        TestRasterizeTriangle(float2(1, 1), float2(3, 1), float2(3, 3),
+                              {int2{1, 1}, int2{2, 1}, int2{3, 1}, int2{2, 2}, int2{3, 2}, int2{3, 3}});
+        TestRasterizeTriangle(float2(0.75f, 0.875f), float2(3.5f, 1), float2(3, 3.25),
+                              {int2{1, 1}, int2{2, 1}, int2{3, 1}, int2{2, 2}, int2{3, 2}, int2{3, 3}});
+    }
+
+    {
+        //    ____
+        //   |  .'
+        //   |.'
+        //
+        TestRasterizeTriangle(float2(1, 1), float2(1, 3), float2(3, 3),
+                              {int2{1, 1}, int2{1, 2}, int2{2, 2}, int2{1, 3}, int2{2, 3}, int2{3, 3}});
+        TestRasterizeTriangle(float2(0.75f, 0.5f), float2(1, 3.75f), float2(3.75f, 3.125f),
+                              {int2{1, 1}, int2{1, 2}, int2{2, 2}, int2{1, 3}, int2{2, 3}, int2{3, 3}});
+    }
+
+    {
+        //   ____
+        //   '.  |
+        //     '.|
+        //
+        TestRasterizeTriangle(float2(3, 1), float2(1, 3), float2(3, 3),
+                              {int2{3, 1}, int2{2, 2}, int2{3, 2}, int2{1, 3}, int2{2, 3}, int2{3, 3}});
+        TestRasterizeTriangle(float2(3.125f, 0.125f), float2(0.5f, 3.125f), float2(3.5f, 3.875f),
+                              {int2{3, 1}, int2{2, 2}, int2{3, 2}, int2{1, 3}, int2{2, 3}, int2{3, 3}});
+    }
+
+    {
+        //                .V2
+        //            . '/
+        //      V1. '   /
+        //        \    /
+        //         \  /
+        //          \/
+        //          V0
+        TestRasterizeTriangle(float2(-5.f, -10.f), float2(-6.f, -8.f), float2(-2.f, -4.f),
+                              {int2{-5, -10},
+                               int2{-5, -9},
+                               int2{-6, -8}, int2{-5, -8}, int2{-4, -8},
+                               int2{-5, -7}, int2{-4, -7},
+                               int2{-4, -6}, int2{-3, -6},
+                               int2{-3, -5},
+                               int2{-2, -4}});
+    }
+
+    {
+        //   V2.
+        //      \' .
+        //       \   ' . V1
+        //        \    /
+        //         \  /
+        //          \/
+        //          V0
+        TestRasterizeTriangle(float2(5.f, 10.f), float2(6.f, 8.f), float2(2.f, 4.f),
+                              {int2{2, 4}, int2{3, 5},
+                               int2{3, 6},
+                               int2{4, 6},
+                               int2{4, 7}, int2{5, 7},
+                               int2{4, 8}, int2{5, 8}, int2{6, 8},
+                               int2{5, 9},
+                               int2{5, 10}});
+    }
+
+    {
+        //     V1 ______ V2
+        //        \    /
+        //         \  /
+        //          \/
+        //          V0
+        TestRasterizeTriangle(float2(-5.f, -10.f), float2(-7.f, -8.f), float2(-3.f, -8.f),
+                              {int2{-5, -10},
+                               int2{-6, -9}, int2{-5, -9}, int2{-4, -9},
+                               int2{-7, -8}, int2{-6, -8}, int2{-5, -8}, int2{-4, -8}, int2{-3, -8}});
+
+        TestRasterizeTriangle(float2(-5.f, -10.25f), float2(-7.875f, -7.25f), float2(-2.5f, -7.875f),
+                              {int2{-5, -10},
+                               int2{-6, -9}, int2{-5, -9}, int2{-4, -9},
+                               int2{-7, -8}, int2{-6, -8}, int2{-5, -8}, int2{-4, -8}, int2{-3, -8}});
+    }
+
+    {
+        //         V2
+        //         /\  
+        //        /  \
+        //       /____\   
+        //     V0      V1
+        TestRasterizeTriangle(float2(-5.f, -10.f), float2(-3.f, -8.f), float2(-1.f, -10.f),
+                              {int2{-5, -10}, int2{-4, -10}, int2{-3, -10}, int2{-2, -10}, int2{-1, -10},
+                               int2{-4, -9}, int2{-3, -9}, int2{-2, -9},
+                               int2{-3, -8}});
+
+        TestRasterizeTriangle(float2(-5.875f, -10.5f), float2(-2.875f, -7.125f), float2(-0.25f, -10.75f),
+                              {int2{-5, -10}, int2{-4, -10}, int2{-3, -10}, int2{-2, -10}, int2{-1, -10},
+                               int2{-4, -9}, int2{-3, -9}, int2{-2, -9},
+                               int2{-3, -8}});
+    }
+}
+
 } // namespace

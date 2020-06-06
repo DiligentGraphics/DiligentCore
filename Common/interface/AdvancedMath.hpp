@@ -750,6 +750,121 @@ bool IsPointInsideTriangle(const Vector2<T>& V0,
     return IsPointInsideTriangle<T, T>(V0, V1, V2, Point, AllowEdges);
 }
 
+
+/// Rasterizes a triangle and calls the callback function for every sample covered.
+
+/// The samples are assumed to be located at integer coordinates. Samples located on
+/// edges are always enumerated. Samples are enumerated row by row, bottom to top,
+/// left to right. For example, for triangle (1, 1)-(1, 3)-(3, 1),
+/// the following locations will be enumerated:
+/// (1, 1), (2, 1), (3, 1), (1, 2), (2, 2), (1, 3).
+///
+///  3 *   *.  *   *
+///        | '.
+///  2 *   *   *.  *
+///        |     '.
+///  1 *   *---*---*
+///
+///  0 *   *   *   *
+///    0   1   2   3
+///
+/// \tparam [in] T    - Vertex component type.
+/// \tparam TCallback - Type of the callback function.
+///
+/// \param [in] V0         - First triangle vertex.
+/// \param [in] V1         - Second triangle vertex.
+/// \param [in] V2         - Third triangle vertex.
+/// \param [in] Callback   - Callback function that will be caled with the argument of type int2
+///                          for every sample covered.
+template <typename T,
+          class TCallback>
+void RasterizeTriangle(Vector2<T> V0,
+                       Vector2<T> V1,
+                       Vector2<T> V2,
+                       TCallback  Callback)
+{
+    if (V1.y < V0.y)
+        std::swap(V1, V0);
+    if (V2.y < V0.y)
+        std::swap(V2, V0);
+    if (V2.y < V1.y)
+        std::swap(V2, V1);
+
+    VERIFY_EXPR(V0.y <= V1.y && V1.y <= V2.y);
+
+    const int iStartRow = static_cast<int>(FastCeil(V0.y));
+    const int iEndRow   = static_cast<int>(FastFloor(V2.y));
+
+    if (iStartRow == iEndRow)
+    {
+        auto iStartCol = static_cast<int>(FastCeil(min3(V0.x, V1.x, V2.x)));
+        auto iEndCol   = static_cast<int>(FastFloor(max3(V0.x, V1.x, V2.x)));
+        for (int iCol = iStartCol; iCol <= iEndCol; ++iCol)
+        {
+            Callback(int2{iCol, iStartRow});
+        }
+        return;
+    }
+
+    auto LerpCol = [](T StartCol, T EndCol, T StartRow, T EndRow, int CurrRow) //
+    {
+        return StartCol +
+            ((EndCol - StartCol) * (static_cast<T>(CurrRow) - StartRow)) / (EndRow - StartRow);
+    };
+
+    for (int iRow = iStartRow; iRow <= iEndRow; ++iRow)
+    {
+        auto dStartCol = LerpCol(V0.x, V2.x, V0.y, V2.y, iRow);
+
+        T dEndCol;
+        if (static_cast<T>(iRow) < V1.y)
+        {
+            //                          V2.
+            //    V2-------V1              \' .
+            //     |     .'   <-            \   ' . V1
+            //     |   .'     <-             \    /      <-
+            //     | .'       <-              \  /       <-
+            //     .'         <-               \/        <-
+            //    V0          <-               V0        <-
+            dEndCol = LerpCol(V0.x, V1.x, V0.y, V1.y, iRow);
+        }
+        else
+        {
+            if (V1.y < V2.y)
+            {
+                //                            V2.             <-
+                //    V2            <-           \' .         <-
+                //     |'.          <-            \   ' . V1  <-
+                //     |  '.        <-             \    /
+                //     |    '.      <-              \  /
+                //     |      '.    <-               \/
+                //    V0-------V1   <-               V0
+                dEndCol = LerpCol(V1.x, V2.x, V1.y, V2.y, iRow);
+            }
+            else
+            {
+                //    V2-------V1   <-
+                //     |     .'
+                //     |   .'
+                //     | .'
+                //     .'
+                //    V0
+                dEndCol = V1.x;
+            }
+        }
+        if (dStartCol > dEndCol)
+            std::swap(dStartCol, dEndCol);
+
+        int iStartCol = static_cast<int>(FastCeil(dStartCol));
+        int iEndCol   = static_cast<int>(FastFloor(dEndCol));
+
+        for (int iCol = iStartCol; iCol <= iEndCol; ++iCol)
+        {
+            Callback(int2{iCol, iRow});
+        }
+    }
+}
+
 } // namespace Diligent
 
 namespace std
