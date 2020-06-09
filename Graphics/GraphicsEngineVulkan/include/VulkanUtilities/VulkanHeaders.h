@@ -43,3 +43,18 @@
 #if USE_VOLK
 #    include "volk/volk.h"
 #endif
+
+#if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(_X11_XLIB_H_)
+
+// Undef symbols defined by XLib
+#    ifdef Bool
+#        undef Bool
+#    endif
+#    ifdef True
+#        undef True
+#    endif
+#    ifdef False
+#        undef False
+#    endif
+
+#endif
