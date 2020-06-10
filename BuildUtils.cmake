@@ -58,8 +58,8 @@ endif(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
 
 function(set_common_target_properties TARGET)
 
-    if(COMMAND custom_configure_target)
-        custom_configure_target(${TARGET})
+    if(COMMAND custom_pre_configure_target)
+        custom_pre_configure_target(${TARGET})
         if(TARGET_CONFIGURATION_COMPLETE)
             return()
         endif()
@@ -128,6 +128,11 @@ function(set_common_target_properties TARGET)
             XCODE_ATTRIBUTE_IPHONEOS_DEPLOYMENT_TARGET 10.0
         )
     endif()
+
+    if(COMMAND custom_post_configure_target)
+        custom_post_configure_target(${TARGET})
+    endif()
+
 endfunction()
 
 function(find_targets_in_directory _RESULT _DIR)
