@@ -26,3 +26,57 @@
  */
 
 #include "DiligentCore/Graphics/GraphicsEngine/interface/GraphicsTypes.h"
+
+#include <cstddef>
+
+namespace Diligent
+{
+
+namespace
+{
+
+// In c++11, the following struct is not an aggregate:
+//      struct S1
+//      {
+//          int a = 0;
+//      };
+// S1 is an aggregate in c++14.
+//
+// Likewise, the following struct is not an aggregate in c++11:
+//      struct S2 : Aggregate
+//      {
+//          int b;
+//      };
+// S2 is an aggregate in c++17
+//
+// When compiling non-aggregates, the compiler may mess with the member placement.
+// For example, consider the example below:
+//      struct S1
+//      {
+//          void* p = nullptr;
+//          int   a = 0;
+//          // <implicit 4-byte padding>
+//      };
+//      struct S2 : S1
+//      {
+//          int b = 0;
+//      };
+//
+// When compiling S2 with x64 gcc, it will place 'b' right after 'a', not after the end of struct S1.
+// We try to catch such issues below
+
+#define CHECK_BASE_STRUCT_ALIGNMENT(StructName) \
+    struct StructName##Test : StructName        \
+    {                                           \
+        Uint8 AlignmentTest;                    \
+    };                                          \
+    static_assert(offsetof(StructName##Test, AlignmentTest) == sizeof(StructName), "Using " #StructName " as a base class causes misalignment")
+
+CHECK_BASE_STRUCT_ALIGNMENT(DeviceObjectAttribs);
+CHECK_BASE_STRUCT_ALIGNMENT(EngineCreateInfo);
+CHECK_BASE_STRUCT_ALIGNMENT(TextureFormatAttribs);
+CHECK_BASE_STRUCT_ALIGNMENT(TextureFormatInfo);
+
+} // namespace
+
+} // namespace Diligent
