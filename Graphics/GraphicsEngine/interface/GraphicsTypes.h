@@ -1351,21 +1351,21 @@ typedef struct FullScreenModeDesc FullScreenModeDesc;
 struct EngineCreateInfo
 {
     /// API version number.
-    Int32                   APIVersion            DEFAULT_INITIALIZER(DILIGENT_API_VERSION);
-
-    /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
-    /// operations in the engine
-    struct IMemoryAllocator* pRawMemAllocator      DEFAULT_INITIALIZER(nullptr);
-
-    /// Pointer to the user-specified debug message callback function
-    DebugMessageCallbackType DebugMessageCallback DEFAULT_INITIALIZER(nullptr);
+    Int32                    APIVersion             DEFAULT_INITIALIZER(DILIGENT_API_VERSION);
 
     /// Number of deferred contexts to create when initializing the engine. If non-zero number 
     /// is given, pointers to the contexts are written to ppContexts array by the engine factory 
     /// functions (IEngineFactoryD3D11::CreateDeviceAndContextsD3D11,
     /// IEngineFactoryD3D12::CreateDeviceAndContextsD3D12, and IEngineFactoryVk::CreateDeviceAndContextsVk)
     /// starting at position 1.
-    Uint32                   NumDeferredContexts  DEFAULT_INITIALIZER(0);
+    Uint32                   NumDeferredContexts    DEFAULT_INITIALIZER(0);
+
+    /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
+    /// operations in the engine
+    struct IMemoryAllocator* pRawMemAllocator       DEFAULT_INITIALIZER(nullptr);
+
+    /// Pointer to the user-specified debug message callback function
+    DebugMessageCallbackType DebugMessageCallback   DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct EngineCreateInfo EngineCreateInfo;
 
