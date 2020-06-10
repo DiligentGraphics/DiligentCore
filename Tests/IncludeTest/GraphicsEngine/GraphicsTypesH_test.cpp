@@ -65,12 +65,19 @@ namespace
 // When compiling S2 with x64 gcc, it will place 'b' right after 'a', not after the end of struct S1.
 // We try to catch such issues below
 
+
+#ifdef __GNUC__
+// Disable GCC warnings like this one:
+//    warning: offsetof within non-standard-layout type ‘Diligent::{anonymous}::DeviceObjectAttribs is conditionally-supported [-Winvalid-offsetof]
+#    pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
+
 #define CHECK_BASE_STRUCT_ALIGNMENT(StructName) \
     struct StructName##Test : StructName        \
     {                                           \
         Uint8 AlignmentTest;                    \
     };                                          \
-    static_assert(offsetof(StructName##Test, AlignmentTest) == sizeof(StructName), "Using " #StructName " as a base class causes misalignment")
+    static_assert(offsetof(StructName##Test, AlignmentTest) == sizeof(StructName), "Using " #StructName " as a base class may result in misalignment")
 
 CHECK_BASE_STRUCT_ALIGNMENT(DeviceObjectAttribs);
 CHECK_BASE_STRUCT_ALIGNMENT(EngineCreateInfo);

@@ -61,7 +61,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
         DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from source code or a file");
 
-        static constexpr char* VulkanDefine =
+        static constexpr char VulkanDefine[] =
             "#ifndef VULKAN\n"
             "#   define VULKAN 1\n"
             "#endif\n";

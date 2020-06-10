@@ -1866,6 +1866,9 @@ struct TextureFormatInfo DILIGENT_DERIVE(TextureFormatAttribs)
 
     /// Indicates if the format is supported by the device
     bool Supported  DEFAULT_INITIALIZER(false);
+
+    // Explicitly pad the structure to 8-byte boundary
+    bool Padding[7];
 };
 typedef struct TextureFormatInfo TextureFormatInfo;
 
