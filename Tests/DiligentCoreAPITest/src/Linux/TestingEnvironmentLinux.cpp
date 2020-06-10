@@ -145,7 +145,7 @@ NativeWindow TestingEnvironment::CreateNativeWindow()
 
     struct TestingEnvironmentLinuxData : PlatformData
     {
-        TestingEnvironmentLinuxData(NativeWindow _LinuxWnd) :
+        explicit TestingEnvironmentLinuxData(NativeWindow _LinuxWnd) :
             LinuxWnd{_LinuxWnd}
         {
         }
