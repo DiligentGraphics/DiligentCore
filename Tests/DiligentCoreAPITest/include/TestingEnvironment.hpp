@@ -28,6 +28,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 
 #include "RenderDevice.h"
 #include "DeviceContext.h"
@@ -103,6 +104,14 @@ protected:
                                 int                    Line);
 
     const RENDER_DEVICE_TYPE m_DeviceType;
+
+    // Any platform-specific data (e.g. window handle) that should
+    // be cleaned-up when the testing environment object is destroyed.
+    struct PlatformData
+    {
+        virtual ~PlatformData() {}
+    };
+    std::unique_ptr<PlatformData> m_pPlatformData;
 
     static TestingEnvironment* m_pTheEnvironment;
 
