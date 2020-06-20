@@ -42,11 +42,43 @@ struct Plane3D
 {
     float3 Normal;
     float  Distance = 0; //Distance from the coordinate system origin to the plane along the normal direction
+
+    operator float4&()
+    {
+        return *reinterpret_cast<float4*>(this);
+    }
+    operator const float4&() const
+    {
+        return *reinterpret_cast<const float4*>(this);
+    }
 };
 
 struct ViewFrustum
 {
-    Plane3D LeftPlane, RightPlane, BottomPlane, TopPlane, NearPlane, FarPlane;
+    enum PLANE_IDX : Uint32
+    {
+        LEFT_PLANE_IDX   = 0,
+        RIGHT_PLANE_IDX  = 1,
+        BOTTOM_PLANE_IDX = 2,
+        TOP_PLANE_IDX    = 3,
+        NEAR_PLANE_IDX   = 4,
+        FAR_PLANE_IDX    = 5,
+        NUM_PLANES       = 6
+    };
+
+    Plane3D LeftPlane;
+    Plane3D RightPlane;
+    Plane3D BottomPlane;
+    Plane3D TopPlane;
+    Plane3D NearPlane;
+    Plane3D FarPlane;
+
+    const Plane3D& GetPlane(PLANE_IDX Idx) const
+    {
+        VERIFY_EXPR(Idx < NUM_PLANES);
+        const Plane3D* Planes = reinterpret_cast<const Plane3D*>(this);
+        return Planes[static_cast<size_t>(Idx)];
+    }
 };
 
 struct ViewFrustumExt : public ViewFrustum
@@ -236,12 +268,12 @@ inline BoxVisibility GetBoxVisibilityAgainstPlane(const Plane3D& Plane, const Bo
 enum FRUSTUM_PLANE_FLAGS : Uint32
 {
     FRUSTUM_PLANE_FLAG_NONE         = 0x00,
-    FRUSTUM_PLANE_FLAG_LEFT_PLANE   = 0x01,
-    FRUSTUM_PLANE_FLAG_RIGHT_PLANE  = 0x02,
-    FRUSTUM_PLANE_FLAG_BOTTOM_PLANE = 0x04,
-    FRUSTUM_PLANE_FLAG_TOP_PLANE    = 0x08,
-    FRUSTUM_PLANE_FLAG_NEAR_PLANE   = 0x10,
-    FRUSTUM_PLANE_FLAG_FAR_PLANE    = 0x20,
+    FRUSTUM_PLANE_FLAG_LEFT_PLANE   = 1 << ViewFrustum::LEFT_PLANE_IDX,
+    FRUSTUM_PLANE_FLAG_RIGHT_PLANE  = 1 << ViewFrustum::RIGHT_PLANE_IDX,
+    FRUSTUM_PLANE_FLAG_BOTTOM_PLANE = 1 << ViewFrustum::BOTTOM_PLANE_IDX,
+    FRUSTUM_PLANE_FLAG_TOP_PLANE    = 1 << ViewFrustum::TOP_PLANE_IDX,
+    FRUSTUM_PLANE_FLAG_NEAR_PLANE   = 1 << ViewFrustum::NEAR_PLANE_IDX,
+    FRUSTUM_PLANE_FLAG_FAR_PLANE    = 1 << ViewFrustum::FAR_PLANE_IDX,
 
     FRUSTUM_PLANE_FLAG_FULL_FRUSTUM = FRUSTUM_PLANE_FLAG_LEFT_PLANE |
         FRUSTUM_PLANE_FLAG_RIGHT_PLANE |
@@ -263,16 +295,14 @@ inline BoxVisibility GetBoxVisibility(const ViewFrustum&  ViewFrustum,
                                       const BoundBox&     Box,
                                       FRUSTUM_PLANE_FLAGS PlaneFlags = FRUSTUM_PLANE_FLAG_FULL_FRUSTUM)
 {
-    const Plane3D* pPlanes = reinterpret_cast<const Plane3D*>(&ViewFrustum);
-
     int NumPlanesInside = 0;
     int TotalPlanes     = 0;
-    for (int iViewFrustumPlane = 0; iViewFrustumPlane < 6; iViewFrustumPlane++)
+    for (Uint32 plane_idx = 0; plane_idx < ViewFrustum::NUM_PLANES; ++plane_idx)
     {
-        if ((PlaneFlags & (1 << iViewFrustumPlane)) == 0)
+        if ((PlaneFlags & (1 << plane_idx)) == 0)
             continue;
 
-        const Plane3D& CurrPlane = pPlanes[iViewFrustumPlane];
+        const Plane3D& CurrPlane = ViewFrustum.GetPlane(static_cast<ViewFrustum::PLANE_IDX>(plane_idx));
 
         auto VisibilityAgainstPlane = GetBoxVisibilityAgainstPlane(CurrPlane, Box);
 
