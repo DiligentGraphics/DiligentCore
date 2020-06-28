@@ -175,6 +175,38 @@ struct BoundBox
 {
     float3 Min;
     float3 Max;
+
+    // Computes new bounding box by applying transform matrix m to the box
+    BoundBox Transform(const float4x4& m) const
+    {
+        BoundBox NewBB;
+        NewBB.Min = float3::MakeVector(m[3]);
+        NewBB.Max = NewBB.Min;
+        float3 v0, v1;
+
+        float3 right = float3::MakeVector(m[0]);
+
+        v0 = right * Min.x;
+        v1 = right * Max.x;
+        NewBB.Min += std::min(v0, v1);
+        NewBB.Max += std::max(v0, v1);
+
+        float3 up = float3::MakeVector(m[1]);
+
+        v0 = up * Min.y;
+        v1 = up * Max.y;
+        NewBB.Min += std::min(v0, v1);
+        NewBB.Max += std::max(v0, v1);
+
+        float3 back = float3::MakeVector(m[2]);
+
+        v0 = back * Min.z;
+        v1 = back * Max.z;
+        NewBB.Min += std::min(v0, v1);
+        NewBB.Max += std::max(v0, v1);
+
+        return NewBB;
+    }
 };
 
 enum class BoxVisibility

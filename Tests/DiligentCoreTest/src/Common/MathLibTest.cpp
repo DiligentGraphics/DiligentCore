@@ -1910,4 +1910,40 @@ TEST(Common_AdvancedMath, RasterizeTriangle)
     }
 }
 
+TEST(Common_AdvancedMath, TransformBoundBox)
+{
+    BoundBox BB;
+    BB.Min = float3{1, 2, 3};
+    BB.Max = float3{2, 4, 6};
+
+    {
+        float3 Offset{2.5f, 3.125f, -7.25f};
+        auto   TransformedBB = BB.Transform(float4x4::Translation(Offset));
+        EXPECT_EQ(TransformedBB.Min, BB.Min + Offset);
+        EXPECT_EQ(TransformedBB.Max, BB.Max + Offset);
+    }
+
+    {
+        float3 Scale{0.5f, 2.125f, 1.25f};
+        auto   TransformedBB = BB.Transform(float4x4::Scale(Scale));
+        EXPECT_EQ(TransformedBB.Min, BB.Min * Scale);
+        EXPECT_EQ(TransformedBB.Max, BB.Max * Scale);
+    }
+
+    {
+        // clang-format off
+        float4x4 Rotation
+        {
+            0,  1,  0,  0,
+            0,  0,  1,  0,
+           -1,  0,  0,  0,
+            0,  0,  0,  1
+        };
+        // clang-format on
+        auto TransformedBB = BB.Transform(Rotation);
+        EXPECT_EQ(TransformedBB.Min, float3(-6, 1, 2));
+        EXPECT_EQ(TransformedBB.Max, float3(-3, 2, 4));
+    }
+}
+
 } // namespace
