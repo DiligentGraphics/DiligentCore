@@ -278,42 +278,57 @@ std::vector<std::unique_ptr<FindFileData>> WindowsFileSystem::Search(const Char*
     return SearchRes;
 }
 
-std::string WindowsFileSystem::OpenFileDialog(const char* Title, const char* Filter)
+static DWORD FileDialogFlagsToOFNFlags(FILE_DIALOG_FLAGS FileDialogFlags)
 {
-    std::string   FileName;
-    char          buffer[1024] = {};
-    OPENFILENAMEA ofn          = {};
-    ofn.lStructSize            = sizeof(ofn);
-    ofn.lpstrFilter            = Filter;
-    ofn.lpstrFile              = buffer;
-    ofn.nMaxFile               = _countof(buffer);
-    ofn.lpstrTitle             = Title;
-    ofn.Flags                  = OFN_DONTADDTORECENT | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
-    if (GetOpenFileNameA(&ofn))
+    DWORD OFNFlags = 0;
+    while (FileDialogFlags != FILE_DIALOG_FLAG_NONE)
+    {
+        auto Flag = FileDialogFlags & ~static_cast<FILE_DIALOG_FLAGS>(static_cast<Uint32>(FileDialogFlags) - 1);
+        switch (Flag)
+        {
+            case FILE_DIALOG_FLAG_DONT_ADD_TO_RECENT:
+                OFNFlags |= OFN_DONTADDTORECENT;
+                break;
+
+            case FILE_DIALOG_FLAG_FILE_MUST_EXIST:
+                OFNFlags |= OFN_FILEMUSTEXIST;
+                break;
+
+            case FILE_DIALOG_FLAG_NO_CHANGE_DIR:
+                OFNFlags |= OFN_NOCHANGEDIR;
+                break;
+
+            case FILE_DIALOG_FLAG_OVERWRITE_PROMPT:
+                OFNFlags |= OFN_OVERWRITEPROMPT;
+                break;
+
+            default:
+                UNEXPECTED("Unknown file dialog flag (", Flag, ")");
+        }
+        FileDialogFlags &= ~Flag;
+    }
+    return OFNFlags;
+}
+
+std::string WindowsFileSystem::FileDialog(const FileDialogAttribs& DialogAttribs)
+{
+    OPENFILENAMEA ofn = {};
+
+    char buffer[1024] = {};
+    ofn.lStructSize   = sizeof(ofn);
+    ofn.lpstrFilter   = DialogAttribs.Filter;
+    ofn.lpstrFile     = buffer;
+    ofn.nMaxFile      = _countof(buffer);
+    ofn.lpstrTitle    = DialogAttribs.Title;
+    ofn.Flags         = FileDialogFlagsToOFNFlags(DialogAttribs.Flags);
+
+    std::string FileName;
+    if (DialogAttribs.Type == FILE_DIALOG_TYPE_OPEN ? GetOpenFileNameA(&ofn) : GetSaveFileNameA(&ofn))
     {
         FileName = buffer;
     }
     return FileName;
 }
-
-std::string WindowsFileSystem::SaveFileDialog(const char* Title, const char* Filter)
-{
-    std::string   FileName;
-    char          buffer[1024] = {};
-    OPENFILENAMEA ofn          = {};
-    ofn.lStructSize            = sizeof(ofn);
-    ofn.lpstrFilter            = Filter;
-    ofn.lpstrFile              = buffer;
-    ofn.nMaxFile               = _countof(buffer);
-    ofn.lpstrTitle             = Title;
-    ofn.Flags                  = OFN_DONTADDTORECENT | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
-    if (GetSaveFileNameA(&ofn))
-    {
-        FileName = buffer;
-    }
-    return FileName;
-}
-
 
 bool WindowsFileSystem::IsDirectory(const Diligent::Char* strPath)
 {
