@@ -381,7 +381,8 @@ public:
                 NewBlockOffset = LastBlockOffset;
                 NewBlockSize += LastBlockSize;
 
-                VERIFY_EXPR(LastBlockIt->second.OrderBySizeIt->first == LastBlockOffset);
+                VERIFY_EXPR(LastBlockIt->second.OrderBySizeIt->first == LastBlockSize &&
+                            LastBlockIt->second.OrderBySizeIt->second == LastBlockIt);
                 m_FreeBlocksBySize.erase(LastBlockIt->second.OrderBySizeIt);
                 m_FreeBlocksByOffset.erase(LastBlockIt);
             }
