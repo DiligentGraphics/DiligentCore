@@ -144,8 +144,8 @@ TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, AllocateFree)
         EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{1});
 
         a2 = ListMgr.Allocate(128, 1);
-        EXPECT_EQ(a2.UnalignedOffset, 64);
-        EXPECT_EQ(a2.Size, 128);
+        EXPECT_EQ(a2.UnalignedOffset, OffsetType{64});
+        EXPECT_EQ(a2.Size, OffsetType{128});
 
         auto a3 = ListMgr.Allocate(64, 1);
         EXPECT_TRUE(ListMgr.IsFull());
