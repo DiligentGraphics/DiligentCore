@@ -175,6 +175,12 @@ public:
             return UnalignedOffset != InvalidAllocation().UnalignedOffset;
         }
 
+        bool operator==(const Allocation& rhs) const
+        {
+            return UnalignedOffset == rhs.UnalignedOffset &&
+                Size == rhs.Size;
+        }
+
         OffsetType UnalignedOffset = InvalidOffset;
         OffsetType Size            = 0;
     };
@@ -355,6 +361,40 @@ public:
     size_t GetNumFreeBlocks() const
     {
         return m_FreeBlocksByOffset.size();
+    }
+
+    void Extend(size_t ExtraSize)
+    {
+        size_t NewBlockOffset = m_MaxSize;
+        size_t NewBlockSize   = ExtraSize;
+
+        if (!m_FreeBlocksByOffset.empty())
+        {
+            auto LastBlockIt = m_FreeBlocksByOffset.end();
+            --LastBlockIt;
+
+            const auto LastBlockOffset = LastBlockIt->first;
+            const auto LastBlockSize   = LastBlockIt->second.Size;
+            if (LastBlockOffset + LastBlockSize == m_MaxSize)
+            {
+                // Extend the last block
+                NewBlockOffset = LastBlockOffset;
+                NewBlockSize += LastBlockSize;
+
+                VERIFY_EXPR(LastBlockIt->second.OrderBySizeIt->first == LastBlockOffset);
+                m_FreeBlocksBySize.erase(LastBlockIt->second.OrderBySizeIt);
+                m_FreeBlocksByOffset.erase(LastBlockIt);
+            }
+        }
+
+        AddNewBlock(NewBlockOffset, NewBlockSize);
+
+        m_MaxSize += ExtraSize;
+        m_FreeSize += ExtraSize;
+
+#ifdef DILIGENT_DEBUG
+        DbgVerifyList();
+#endif
     }
 
 private:

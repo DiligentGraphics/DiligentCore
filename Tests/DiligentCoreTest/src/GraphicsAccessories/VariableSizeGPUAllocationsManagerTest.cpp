@@ -128,6 +128,47 @@ TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, AllocateFree)
 
         EXPECT_TRUE(ListMgr.IsEmpty());
     }
+
+    {
+        VariableSizeAllocationsManager ListMgr(128, Allocator);
+
+        auto a1 = ListMgr.Allocate(64, 1);
+        EXPECT_EQ(a1.UnalignedOffset, OffsetType{0});
+        EXPECT_EQ(a1.Size, OffsetType{64});
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{1});
+
+        auto a2 = ListMgr.Allocate(128, 1);
+        EXPECT_EQ(a2, VariableSizeAllocationsManager::Allocation::InvalidAllocation());
+
+        ListMgr.Extend(128);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{1});
+
+        a2 = ListMgr.Allocate(128, 1);
+        EXPECT_EQ(a2.UnalignedOffset, 64);
+        EXPECT_EQ(a2.Size, 128);
+
+        auto a3 = ListMgr.Allocate(64, 1);
+        EXPECT_TRUE(ListMgr.IsFull());
+
+        ListMgr.Extend(32);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{1});
+
+        auto a4 = ListMgr.Allocate(32, 1);
+        EXPECT_TRUE(ListMgr.IsFull());
+
+        ListMgr.Free(std::move(a1));
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{1});
+
+        ListMgr.Extend(1024);
+        EXPECT_EQ(ListMgr.GetNumFreeBlocks(), size_t{2});
+
+        auto a5 = ListMgr.Allocate(512, 1);
+
+        ListMgr.Free(std::move(a4));
+        ListMgr.Free(std::move(a2));
+        ListMgr.Free(std::move(a5));
+        ListMgr.Free(std::move(a3));
+    }
 }
 
 TEST(GraphicsAccessories_VariableSizeGPUAllocationsManager, FreeOrder)
