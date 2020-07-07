@@ -15,6 +15,7 @@ so it must always be handled first.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](License.txt)
 [![Chat on gitter](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/diligent-engine)
+[![Chat on Discord](https://img.shields.io/discord/730091778081947680?logo=discord)](https://discord.gg/t7HGBK7)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/bb1c00eacb1740d68339d3a45f4c5756)](https://www.codacy.com/manual/DiligentGraphics/DiligentCore?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=DiligentGraphics/DiligentCore&amp;utm_campaign=Badge_Grade)
 
 # Table of Contents
