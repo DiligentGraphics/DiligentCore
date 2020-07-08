@@ -2305,7 +2305,8 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSamplerRegister(TokenListTy
     // SamplerState Tex2D_sampler;
     //              ^
 
-    while (Token != m_Tokens.end() && Token->Type == TokenType::Identifier)
+    bool DeclarationEnded = false;
+    while (Token != m_Tokens.end() && Token->Type == TokenType::Identifier && !DeclarationEnded)
     {
         ++Token;
         VERIFY_PARSER_STATE(Token, Token != m_Tokens.end(), "Unexpected EOF while processing sampler declaration");
@@ -2347,6 +2348,7 @@ void HLSL2GLSLConverterImpl::ConversionStream::RemoveSamplerRegister(TokenListTy
         //                            ^
         // SamplerState Tex2D_sampler ,
         //                            ^
+        DeclarationEnded = Token->Type == TokenType::Semicolon;
         ++Token;
     }
 }
