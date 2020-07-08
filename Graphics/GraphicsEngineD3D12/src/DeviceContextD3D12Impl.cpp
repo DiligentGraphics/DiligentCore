@@ -1085,6 +1085,16 @@ void DeviceContextD3D12Impl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_F
             else
             {
                 VERIFY_EXPR(MapFlags & MAP_FLAG_NO_OVERWRITE);
+
+                if (pd3d12Resource != nullptr)
+                {
+                    LOG_ERROR("Formatted or structured buffers require actual Direct3D12 backing resource and cannot be suballocated "
+                              "from dynamic heap. In current implementation, the entire contents of the backing buffer is updated when the buffer is unmapped. "
+                              "As a consequence, the buffer cannot be mapped with MAP_FLAG_NO_OVERWRITE flag because updating the whole "
+                              "buffer will overwrite regions that may still be in use by the GPU.");
+                    return;
+                }
+
                 // Reuse previously mapped region
             }
             pMappedData = DynamicData.CPUAddress;
