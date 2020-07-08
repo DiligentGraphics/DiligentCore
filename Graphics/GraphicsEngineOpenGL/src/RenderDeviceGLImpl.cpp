@@ -223,7 +223,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         TexCaps.CubemapArraysSupported    = IsGLES32OrAbove || strstr(Extensions, "texture_cube_map_array");
 
         SamCaps.BorderSamplingModeSupported   = GL_TEXTURE_BORDER_COLOR && (IsGLES32OrAbove || strstr(Extensions, "texture_border_clamp"));
-        SamCaps.AnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && (IsGLES31OrAbove || strstr(Extensions, "texture_filter_anisotropic"));
+        SamCaps.AnisotropicFilteringSupported = GL_TEXTURE_MAX_ANISOTROPY_EXT && strstr(Extensions, "texture_filter_anisotropic");
         SamCaps.LODBiasSupported              = GL_TEXTURE_LOD_BIAS && IsGLES31OrAbove;
     }
 
