@@ -11,6 +11,7 @@ set(INTERFACE
     interface/ScopedQueryHelper.hpp
     interface/ScreenCapture.hpp
     interface/ShaderMacroHelper.hpp
+    interface/StreamingBuffer.hpp
     interface/TextureUploader.hpp
     interface/TextureUploaderBase.hpp
 )
