@@ -54,7 +54,7 @@ public:
     GenerateMipsVkHelper& operator = (      GenerateMipsVkHelper&&) = delete;
     // clang-format on
 
-    void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB);
+    void GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding* pSRB);
     void CreateSRB(IShaderResourceBinding** ppSRB);
     void WarmUpCache(TEXTURE_FORMAT Fmt);
 
@@ -63,7 +63,7 @@ private:
     std::array<RefCntAutoPtr<IPipelineState>, 4>& FindPSOs(TEXTURE_FORMAT Fmt);
 
     VkImageLayout GenerateMipsCS(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange);
-    VkImageLayout GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange) const;
+    VkImageLayout GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, VkImageSubresourceRange& SubresRange) const;
 
     RenderDeviceVkImpl& m_DeviceVkImpl;
 

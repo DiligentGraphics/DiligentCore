@@ -1682,7 +1682,7 @@ void DeviceContextVkImpl::UpdateTextureRegion(const void*                    pSr
 void DeviceContextVkImpl::GenerateMips(ITextureView* pTexView)
 {
     TDeviceContextBase::GenerateMips(pTexView);
-    m_GenerateMipsHelper->GenerateMips(*ValidatedCast<TextureViewVkImpl>(pTexView), *this, *m_GenerateMipsSRB);
+    m_GenerateMipsHelper->GenerateMips(*ValidatedCast<TextureViewVkImpl>(pTexView), *this, m_GenerateMipsSRB);
 }
 
 static VkBufferImageCopy GetBufferImageCopyInfo(Uint32             BufferOffset,

@@ -112,9 +112,10 @@ void GenerateMipsVkHelper::GetGlImageFormat(const TextureFormatAttribs& FmtAttri
 
 std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TEXTURE_FORMAT Fmt)
 {
-    ShaderCreateInfo CSCreateInfo;
-
     std::array<RefCntAutoPtr<IPipelineState>, 4> PSOs;
+
+#if !NO_GLSLANG
+    ShaderCreateInfo CSCreateInfo;
 
     CSCreateInfo.Source          = g_GenerateMipsCSSource;
     CSCreateInfo.EntryPoint      = "main";
@@ -172,6 +173,7 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
         m_DeviceVkImpl.CreatePipelineState(PSOCreateInfo, &PSOs[NonPowOfTwo]);
         PSOs[NonPowOfTwo]->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "CB")->Set(m_ConstantsCB);
     }
+#endif
 
     return PSOs;
 }
@@ -179,6 +181,7 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
 GenerateMipsVkHelper::GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl) :
     m_DeviceVkImpl(DeviceVkImpl)
 {
+#if !NO_GLSLANG
     BufferDesc ConstantsCBDesc;
     ConstantsCBDesc.Name           = "Constants CB buffer";
     ConstantsCBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
@@ -189,13 +192,16 @@ GenerateMipsVkHelper::GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl) :
 
     FindPSOs(TEX_FORMAT_RGBA8_UNORM);
     FindPSOs(TEX_FORMAT_BGRA8_UNORM);
+#endif
 }
 
 void GenerateMipsVkHelper::CreateSRB(IShaderResourceBinding** ppSRB)
 {
+#if !NO_GLSLANG
     // All PSOs are compatible
     auto& PSO = FindPSOs(TEX_FORMAT_RGBA8_UNORM);
     PSO[0]->CreateShaderResourceBinding(ppSRB, true);
+#endif
 }
 
 std::array<RefCntAutoPtr<IPipelineState>, 4>& GenerateMipsVkHelper::FindPSOs(TEXTURE_FORMAT Fmt)
@@ -213,7 +219,7 @@ void GenerateMipsVkHelper::WarmUpCache(TEXTURE_FORMAT Fmt)
     FindPSOs(Fmt);
 }
 
-void GenerateMipsVkHelper::GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB)
+void GenerateMipsVkHelper::GenerateMips(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding* pSRB)
 {
     auto* pTexVk = TexView.GetTexture<TextureVkImpl>();
     if (!pTexVk->IsInKnownState())
@@ -254,13 +260,16 @@ void GenerateMipsVkHelper::GenerateMips(TextureViewVkImpl& TexView, DeviceContex
     SubresRange.levelCount     = 1;
 
     VkImageLayout AffectedMipLevelLayout;
+#if !NO_GLSLANG
     if (TexView.HasMipLevelViews())
     {
-        AffectedMipLevelLayout = GenerateMipsCS(TexView, Ctx, SRB, SubresRange);
+        VERIFY_EXPR(pSRB != nullptr);
+        AffectedMipLevelLayout = GenerateMipsCS(TexView, Ctx, *pSRB, SubresRange);
     }
     else
+#endif
     {
-        AffectedMipLevelLayout = GenerateMipsBlit(TexView, Ctx, SRB, SubresRange);
+        AffectedMipLevelLayout = GenerateMipsBlit(TexView, Ctx, SubresRange);
     }
 
     // All affected mip levels are now in VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL state
@@ -403,7 +412,7 @@ VkImageLayout GenerateMipsVkHelper::GenerateMipsCS(TextureViewVkImpl& TexView, D
     return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 }
 
-VkImageLayout GenerateMipsVkHelper::GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, IShaderResourceBinding& SRB, VkImageSubresourceRange& SubresRange) const
+VkImageLayout GenerateMipsVkHelper::GenerateMipsBlit(TextureViewVkImpl& TexView, DeviceContextVkImpl& Ctx, VkImageSubresourceRange& SubresRange) const
 {
     auto*       pTexVk   = TexView.GetTexture<TextureVkImpl>();
     const auto& TexDesc  = pTexVk->GetDesc();
