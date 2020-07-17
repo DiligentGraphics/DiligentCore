@@ -328,6 +328,8 @@ public:
 
     // clang-format on
 
+    bool IsHLSLSource() const { return m_IsHLSLSource; }
+
 private:
     void Initialize(IMemoryAllocator&       Allocator,
                     const ResourceCounters& Counters,
@@ -386,6 +388,9 @@ private:
     OffsetType m_NumShaderStageInputs  = 0;
 
     SHADER_TYPE m_ShaderType = SHADER_TYPE_UNKNOWN;
+
+    // Inidicates if the shader was compiled from HLSL source.
+    bool m_IsHLSLSource = false;
 };
 
 } // namespace Diligent

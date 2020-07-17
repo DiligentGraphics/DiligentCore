@@ -213,7 +213,8 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
     // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide
     diligent_spirv_cross::Parser parser(move(spirv_binary));
     parser.parse();
-    auto                           ParsedIRSource = parser.get_parsed_ir().source;
+    const auto ParsedIRSource = parser.get_parsed_ir().source;
+    m_IsHLSLSource            = ParsedIRSource.hlsl;
     diligent_spirv_cross::Compiler Compiler(std::move(parser.get_parsed_ir()));
 
     spv::ExecutionModel ExecutionModel = ShaderTypeToExecutionModel(shaderDesc.ShaderType);
@@ -270,7 +271,7 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
 
     Uint32 NumShaderStageInputs = 0;
 
-    if (resources.stage_inputs.empty())
+    if (!m_IsHLSLSource || resources.stage_inputs.empty())
         LoadShaderStageInputs = false;
     if (LoadShaderStageInputs)
     {
@@ -302,10 +303,14 @@ SPIRVShaderResources::SPIRVShaderResources(IMemoryAllocator&     Allocator,
         else
         {
             LoadShaderStageInputs = false;
-            LOG_WARNING_MESSAGE("SPIRV byte code of shader '", shaderDesc.Name, "' does not use SPV_GOOGLE_hlsl_functionality1 extension. "
-                                                                                "As a result, it is not possible to get semantics of shader inputs and map them to proper locations. "
-                                                                                "The shader will still work correctly if all attributes are declared in ascending order without any gaps. "
-                                                                                "Enable SPV_GOOGLE_hlsl_functionality1 in your compiler to allow proper mapping of vertex shader inputs.");
+            if (m_IsHLSLSource)
+            {
+                LOG_WARNING_MESSAGE("SPIRV byte code of shader '", shaderDesc.Name,
+                                    "' does not use SPV_GOOGLE_hlsl_functionality1 extension. "
+                                    "As a result, it is not possible to get semantics of shader inputs and map them to proper locations. "
+                                    "The shader will still work correctly if all attributes are declared in ascending order without any gaps. "
+                                    "Enable SPV_GOOGLE_hlsl_functionality1 in your compiler to allow proper mapping of vertex shader inputs.");
+            }
         }
     }
 

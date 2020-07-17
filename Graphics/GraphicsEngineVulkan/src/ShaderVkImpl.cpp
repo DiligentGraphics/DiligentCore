@@ -102,13 +102,22 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
     // pipeline state is created
 
     // Load shader resources
-    auto& Allocator          = GetRawAllocator();
-    auto* pRawMem            = ALLOCATE(Allocator, "Allocator for ShaderResources", SPIRVShaderResources, 1);
-    bool  IsHLSLVertexShader = CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL && m_Desc.ShaderType == SHADER_TYPE_VERTEX;
-    auto* pResources         = new (pRawMem) SPIRVShaderResources(Allocator, pRenderDeviceVk, m_SPIRV, m_Desc, CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr, IsHLSLVertexShader, m_EntryPoint);
+    auto& Allocator        = GetRawAllocator();
+    auto* pRawMem          = ALLOCATE(Allocator, "Allocator for ShaderResources", SPIRVShaderResources, 1);
+    auto  LoadShaderInputs = m_Desc.ShaderType == SHADER_TYPE_VERTEX;
+    auto* pResources       = new (pRawMem) SPIRVShaderResources //
+        {
+            Allocator,
+            pRenderDeviceVk,
+            m_SPIRV,
+            m_Desc,
+            CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr,
+            LoadShaderInputs,
+            m_EntryPoint //
+        };
     m_pShaderResources.reset(pResources, STDDeleterRawMem<SPIRVShaderResources>(Allocator));
 
-    if (IsHLSLVertexShader)
+    if (LoadShaderInputs && m_pShaderResources->IsHLSLSource())
     {
         MapHLSLVertexShaderInputs();
     }
