@@ -77,6 +77,18 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM
 };
 
+/// Describes the flags that can be passed over to IShaderSourceInputStreamFactory::CreateInputStream2() function.
+DILIGENT_TYPED_ENUM(CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS, Uint32)
+{
+    /// No flag.
+    CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE = 0x00,
+
+    /// Do not output any messages if the file is not found or
+    /// other errors occur.
+    CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT = 0x01,
+};
+DEFINE_FLAG_ENUM_OPERATORS(CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS);
+
 /// Shader description
 struct ShaderDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
@@ -107,6 +119,11 @@ DILIGENT_BEGIN_INTERFACE(IShaderSourceInputStreamFactory, IObject)
     VIRTUAL void METHOD(CreateInputStream)(THIS_
                                            const Char*   Name,
                                            IFileStream** ppStream) PURE;
+
+    VIRTUAL void METHOD(CreateInputStream2)(THIS_
+                                            const Char*                             Name,
+                                            CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
+                                            IFileStream**                           ppStream) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -116,7 +133,8 @@ DILIGENT_END_INTERFACE
 
 // clang-format on
 
-#    define IShaderSourceInputStreamFactory_CreateInputStream(This, ...) CALL_IFACE_METHOD(ShaderSourceInputStreamFactory, CreateInputStream, This, __VA_ARGS__)
+#    define IShaderSourceInputStreamFactory_CreateInputStream(This, ...)  CALL_IFACE_METHOD(ShaderSourceInputStreamFactory, CreateInputStream, This, __VA_ARGS__)
+#    define IShaderSourceInputStreamFactory_CreateInputStream2(This, ...) CALL_IFACE_METHOD(ShaderSourceInputStreamFactory, CreateInputStream2, This, __VA_ARGS__)
 
 #endif
 

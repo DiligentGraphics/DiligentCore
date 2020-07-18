@@ -42,6 +42,10 @@ public:
 
     virtual void DILIGENT_CALL_TYPE CreateInputStream(const Char* Name, IFileStream** ppStream) override final;
 
+    virtual void DILIGENT_CALL_TYPE CreateInputStream2(const Char*                             Name,
+                                                       CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
+                                                       IFileStream**                           ppStream) override final;
+
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_IShaderSourceInputStreamFactory, ObjectBase<IShaderSourceInputStreamFactory>);
 
 private:
@@ -76,7 +80,15 @@ DefaultShaderSourceStreamFactory::DefaultShaderSourceStreamFactory(IReferenceCou
     m_SearchDirectories.push_back("");
 }
 
-void DefaultShaderSourceStreamFactory::CreateInputStream(const Diligent::Char* Name, IFileStream** ppStream)
+void DefaultShaderSourceStreamFactory::CreateInputStream(const Char*   Name,
+                                                         IFileStream** ppStream)
+{
+    CreateInputStream2(Name, CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_NONE, ppStream);
+}
+
+void DefaultShaderSourceStreamFactory::CreateInputStream2(const Char*                             Name,
+                                                          CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS Flags,
+                                                          IFileStream**                           ppStream)
 {
     bool                                     bFileCreated = false;
     Diligent::RefCntAutoPtr<BasicFileStream> pBasicFileStream;
@@ -103,7 +115,10 @@ void DefaultShaderSourceStreamFactory::CreateInputStream(const Diligent::Char* N
     else
     {
         *ppStream = nullptr;
-        LOG_ERROR("Failed to create input stream for source file ", Name);
+        if ((Flags & CREATE_SHADER_SOURCE_INPUT_STREAM_FLAG_SILENT) == 0)
+        {
+            LOG_ERROR("Failed to create input stream for source file ", Name);
+        }
     }
 }
 
