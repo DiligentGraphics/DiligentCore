@@ -114,7 +114,7 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
 {
     std::array<RefCntAutoPtr<IPipelineState>, 4> PSOs;
 
-#if !NO_GLSLANG
+#if !DILIGENT_NO_GLSLANG
     ShaderCreateInfo CSCreateInfo;
 
     CSCreateInfo.Source          = g_GenerateMipsCSSource;
@@ -181,7 +181,7 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
 GenerateMipsVkHelper::GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl) :
     m_DeviceVkImpl(DeviceVkImpl)
 {
-#if !NO_GLSLANG
+#if !DILIGENT_NO_GLSLANG
     BufferDesc ConstantsCBDesc;
     ConstantsCBDesc.Name           = "Constants CB buffer";
     ConstantsCBDesc.BindFlags      = BIND_UNIFORM_BUFFER;
@@ -197,7 +197,7 @@ GenerateMipsVkHelper::GenerateMipsVkHelper(RenderDeviceVkImpl& DeviceVkImpl) :
 
 void GenerateMipsVkHelper::CreateSRB(IShaderResourceBinding** ppSRB)
 {
-#if !NO_GLSLANG
+#if !DILIGENT_NO_GLSLANG
     // All PSOs are compatible
     auto& PSO = FindPSOs(TEX_FORMAT_RGBA8_UNORM);
     PSO[0]->CreateShaderResourceBinding(ppSRB, true);
@@ -260,7 +260,7 @@ void GenerateMipsVkHelper::GenerateMips(TextureViewVkImpl& TexView, DeviceContex
     SubresRange.levelCount     = 1;
 
     VkImageLayout AffectedMipLevelLayout;
-#if !NO_GLSLANG
+#if !DILIGENT_NO_GLSLANG
     if (TexView.HasMipLevelViews())
     {
         VERIFY_EXPR(pSRB != nullptr);

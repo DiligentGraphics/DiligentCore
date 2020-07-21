@@ -173,8 +173,13 @@ set(PRIVATE_DEPENDENCIES
     Diligent-TargetPlatform
     Diligent-GraphicsEngineNextGenBase
     Diligent-GLSLTools
-    SPIRV-Tools-opt
 )
+
+if (${DILIGENT_NO_HLSL})
+    message("HLSL support is disabled. Vulkan backend may not be able to consume SPIRV bytecode generated from HLSL.")
+else()
+    list(APPEND PRIVATE_DEPENDENCIES SPIRV-Tools-opt)
+endif()
 
 if(PLATFORM_WIN32)
     if(${ARCH} EQUAL 64)
@@ -272,7 +277,12 @@ if (${DILIGENT_NO_GLSLANG})
     message("GLSLang is not being built. Vulkan backend will only be able to consume SPIRV byte code.")
 endif()
 
-target_compile_definitions(Diligent-GraphicsEngineVk-static PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>)
+target_compile_definitions(Diligent-GraphicsEngineVk-static
+PRIVATE
+    ${PRIVATE_COMPILE_DEFINITIONS}
+    DILIGENT_NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>
+    DILIGENT_NO_HLSL=$<BOOL:${DILIGENT_NO_HLSL}>
+)
 target_compile_definitions(Diligent-GraphicsEngineVk-shared PRIVATE ${PRIVATE_COMPILE_DEFINITIONS} ENGINE_DLL=1)
 
 if(PLATFORM_WIN32)

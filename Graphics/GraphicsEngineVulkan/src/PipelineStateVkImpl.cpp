@@ -35,7 +35,10 @@
 #include "ShaderResourceBindingVkImpl.hpp"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
-#include "spirv-tools/optimizer.hpp"
+
+#if !DILIGENT_NO_HLSL
+#    include "spirv-tools/optimizer.hpp"
+#endif
 
 namespace Diligent
 {
@@ -135,6 +138,9 @@ VkRenderPassCreateInfo PipelineStateVkImpl::GetRenderPassCreateInfo(
 
 static std::vector<uint32_t> StripReflection(const std::vector<uint32_t>& OriginalSPIRV)
 {
+#if DILIGENT_NO_HLSL
+    return OriginalSPIRV;
+#else
     std::vector<uint32_t> StrippedSPIRV;
     spvtools::Optimizer   SpirvOptimizer(SPV_ENV_VULKAN_1_0);
     // Decorations defined in SPV_GOOGLE_hlsl_functionality1 are the only instructions
@@ -147,6 +153,7 @@ static std::vector<uint32_t> StripReflection(const std::vector<uint32_t>& Origin
         StrippedSPIRV.clear();
     }
     return StrippedSPIRV;
+#endif
 }
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCounters,

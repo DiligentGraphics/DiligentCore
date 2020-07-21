@@ -42,7 +42,6 @@ target_include_directories(Diligent-GLSLTools
 PUBLIC
     include
 PRIVATE
-    ../HLSL2GLSLConverterLib/include
     ../GraphicsEngine/include
 )
 
@@ -52,9 +51,14 @@ PRIVATE
     Diligent-GraphicsAccessories
     Diligent-Common
 PUBLIC
-    Diligent-HLSL2GLSLConverterLib
     Diligent-GraphicsEngineInterface
 )
+
+target_compile_definitions(Diligent-GLSLTools PRIVATE DILIGENT_NO_HLSL=$<BOOL:${DILIGENT_NO_HLSL}>)
+if (NOT ${DILIGENT_NO_HLSL})
+    target_include_directories(Diligent-GLSLTools PRIVATE ../HLSL2GLSLConverterLib/include)
+    target_link_libraries(Diligent-GLSLTools PUBLIC Diligent-HLSL2GLSLConverterLib)
+endif()
 
 if(VULKAN_SUPPORTED)
     target_link_libraries(Diligent-GLSLTools 

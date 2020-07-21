@@ -30,7 +30,9 @@
 
 #include "GLSLSourceBuilder.hpp"
 #include "DebugUtilities.hpp"
-#include "HLSL2GLSLConverterImpl.hpp"
+#if !DILIGENT_NO_HLSL
+#    include "HLSL2GLSLConverterImpl.hpp"
+#endif
 #include "RefCntAutoPtr.hpp"
 #include "DataBlobImpl.hpp"
 
@@ -330,6 +332,9 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
 
     if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
+#if DILIGENT_NO_HLSL
+        LOG_ERROR_AND_THROW("Unable to convert HLSL source to GLSL: HLSL support is disabled");
+#else
         if (!CreationAttribs.UseCombinedTextureSamplers)
         {
             LOG_ERROR_AND_THROW("Combined texture samplers are required to convert HLSL source to GLSL");
@@ -355,6 +360,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         auto ConvertedSource               = Converter.Convert(Attribs);
 
         GLSLSource.append(ConvertedSource);
+#endif
     }
     else
         GLSLSource.append(ShaderSource, SourceLen);

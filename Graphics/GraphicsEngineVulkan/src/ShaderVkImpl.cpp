@@ -34,7 +34,7 @@
 #include "DataBlobImpl.hpp"
 #include "GLSLSourceBuilder.hpp"
 
-#if !NO_GLSLANG
+#if !DILIGENT_NO_GLSLANG
 #    include "SPIRVUtils.hpp"
 #endif
 
@@ -55,7 +55,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 {
     if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
     {
-#if NO_GLSLANG
+#if DILIGENT_NO_GLSLANG
         LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang and can only consume compiled SPIRV bytecode.");
 #else
         DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");

@@ -33,7 +33,11 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "EngineMemory.h"
-#include "HLSL2GLSLConverterObject.hpp"
+
+#if !DILIGENT_NO_HLSL
+#    include "HLSL2GLSLConverterObject.hpp"
+#endif
+
 #include "EngineFactoryBase.hpp"
 
 #if PLATFORM_IOS
@@ -273,8 +277,12 @@ GetEngineFactoryOpenGLType LoadGraphicsEngineOpenGL()
 
 void EngineFactoryOpenGLImpl::CreateHLSL2GLSLConverter(IHLSL2GLSLConverter** ppConverter)
 {
+#if DILIGENT_NO_HLSL
+    LOG_ERROR_MESSAGE("Unable to create HLSL2GLSL converter: HLSL support is disabled.");
+#else
     HLSL2GLSLConverterObject* pConverter(NEW_RC_OBJ(GetRawAllocator(), "HLSL2GLSLConverterObject instance", HLSL2GLSLConverterObject)());
     pConverter->QueryInterface(IID_HLSL2GLSLConverter, reinterpret_cast<IObject**>(ppConverter));
+#endif
 }
 
 #if PLATFORM_ANDROID

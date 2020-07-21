@@ -39,7 +39,7 @@
 #include "VulkanUtilities/VulkanInstance.hpp"
 #include "VulkanUtilities/VulkanDebug.hpp"
 
-#if !NO_GLSLANG
+#if !DILIGENT_NO_GLSLANG
 #    include "SPIRVUtils.hpp"
 #endif
 
@@ -244,7 +244,7 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
         CHECK_VK_ERROR(err, "Failed to enumerate physical devices");
         VERIFY_EXPR(m_PhysicalDevices.size() == PhysicalDeviceCount);
     }
-#if !NO_GLSLANG
+#if !DILIGENT_NO_GLSLANG
     Diligent::InitializeGlslang();
 #endif
 }
@@ -257,7 +257,7 @@ VulkanInstance::~VulkanInstance()
     }
     vkDestroyInstance(m_VkInstance, m_pVkAllocator);
 
-#if !NO_GLSLANG
+#if !DILIGENT_NO_GLSLANG
     Diligent::FinalizeGlslang();
 #endif
 }

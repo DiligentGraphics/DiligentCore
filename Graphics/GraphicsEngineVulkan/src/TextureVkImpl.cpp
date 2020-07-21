@@ -754,7 +754,7 @@ VulkanUtilities::ImageViewWrapper TextureVkImpl::CreateImageView(TextureViewDesc
 
 bool TextureVkImpl::CheckCSBasedMipGenerationSupport(VkFormat vkFmt) const
 {
-#if !NO_GLSLANG
+#if !DILIGENT_NO_GLSLANG
     VERIFY_EXPR(m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS);
     if (m_Desc.Type == RESOURCE_DIM_TEX_2D || m_Desc.Type == RESOURCE_DIM_TEX_2D_ARRAY)
     {
