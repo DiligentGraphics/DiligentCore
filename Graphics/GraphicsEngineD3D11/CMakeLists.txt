@@ -17,6 +17,7 @@ set(INCLUDE
     include/PipelineStateD3D11Impl.hpp
     include/QueryD3D11Impl.hpp
     include/RenderDeviceD3D11Impl.hpp
+    include/RenderPassD3D11Impl.hpp
     include/SamplerD3D11Impl.hpp
     include/ShaderD3D11Impl.hpp
     include/ShaderResourceBindingD3D11Impl.hpp
@@ -62,6 +63,7 @@ set(SRC
     src/PipelineStateD3D11Impl.cpp
     src/QueryD3D11Impl.cpp
     src/RenderDeviceD3D11Impl.cpp
+    src/RenderPassD3D11Impl.cpp
     src/SamplerD3D11Impl.cpp
     src/ShaderD3D11Impl.cpp
     src/ShaderResourceBindingD3D11Impl.cpp

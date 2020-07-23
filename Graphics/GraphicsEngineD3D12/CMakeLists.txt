@@ -24,6 +24,7 @@ set(INCLUDE
     include/QueryD3D12Impl.hpp
     include/QueryManagerD3D12.hpp
     include/RenderDeviceD3D12Impl.hpp
+    include/RenderPassD3D12Impl.hpp
     include/RootSignature.hpp
     include/SamplerD3D12Impl.hpp
     include/ShaderD3D12Impl.hpp
@@ -74,6 +75,7 @@ set(SRC
     src/QueryD3D12Impl.cpp
     src/QueryManagerD3D12.cpp
     src/RenderDeviceD3D12Impl.cpp
+    src/RenderPassD3D12Impl.cpp
     src/RootSignature.cpp
     src/SamplerD3D12Impl.cpp
     src/ShaderD3D12Impl.cpp

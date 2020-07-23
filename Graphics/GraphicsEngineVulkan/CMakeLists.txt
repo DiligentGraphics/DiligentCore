@@ -20,6 +20,7 @@ set(INCLUDE
     include/QueryManagerVk.hpp
     include/QueryVkImpl.hpp
     include/RenderDeviceVkImpl.hpp
+    include/RenderPassVkImpl.hpp
     include/RenderPassCache.hpp
     include/SamplerVkImpl.hpp
     include/ShaderVkImpl.hpp
@@ -86,6 +87,7 @@ set(SRC
     src/QueryManagerVk.cpp
     src/QueryVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
+    src/RenderPassVkImpl.cpp
     src/RenderPassCache.cpp
     src/SamplerVkImpl.cpp
     src/ShaderVkImpl.cpp

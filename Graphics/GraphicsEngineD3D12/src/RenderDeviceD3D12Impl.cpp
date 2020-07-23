@@ -38,6 +38,7 @@
 #include "DeviceContextD3D12Impl.hpp"
 #include "FenceD3D12Impl.hpp"
 #include "QueryD3D12Impl.hpp"
+#include "RenderPassD3D12Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -109,7 +110,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             sizeof(PipelineStateD3D12Impl),
             sizeof(ShaderResourceBindingD3D12Impl),
             sizeof(FenceD3D12Impl),
-            sizeof(QueryD3D12Impl)
+            sizeof(QueryD3D12Impl),
+            sizeof(RenderPassD3D12Impl)
         }
     },
     m_pd3d12Device  {pd3d12Device},
@@ -524,13 +526,13 @@ void RenderDeviceD3D12Impl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
 
 void RenderDeviceD3D12Impl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
 {
-    //CreateDeviceObject("RenderPass", Desc, ppRenderPass,
-    //                   [&]() //
-    //                   {
-    //                       RenderPassD3D12Impl* pRenderPassD3D12(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassD3D12Impl instance", RenderPassD3D12Impl)(this, Desc));
-    //                       pRenderPassD3D12->RenderPassInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
-    //                       OnCreateDeviceObject(pRenderPassD3D12);
-    //                   });
+    CreateDeviceObject("RenderPass", Desc, ppRenderPass,
+                       [&]() //
+                       {
+                           RenderPassD3D12Impl* pRenderPassD3D12(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassD3D12Impl instance", RenderPassD3D12Impl)(this, Desc));
+                           pRenderPassD3D12->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+                           OnCreateDeviceObject(pRenderPassD3D12);
+                       });
 }
 
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)

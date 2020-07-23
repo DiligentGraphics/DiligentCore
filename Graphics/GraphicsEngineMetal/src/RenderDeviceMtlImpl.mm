@@ -32,6 +32,7 @@
 #include "PipelineStateMtlImpl.h"
 #include "ShaderResourceBindingMtlImpl.h"
 #include "FenceMtlImpl.h"
+#include "RenderPassMtlImpl.h"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -58,7 +59,8 @@ RenderDeviceMtlImpl :: RenderDeviceMtlImpl(IReferenceCounters*        pRefCounte
             sizeof(SamplerMtlImpl),
             sizeof(PipelineStateMtlImpl),
             sizeof(ShaderResourceBindingMtlImpl),
-            sizeof(FenceMtlImpl)
+            sizeof(FenceMtlImpl),
+            sizeof(RenderPassMtlImpl)
         }
     },
     m_EngineAttribs(EngineAttribs)
@@ -186,15 +188,15 @@ void RenderDeviceMtlImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
 
 void RenderDeviceMtlImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
 {
-//    CreateDeviceObject( "RenderPass", Desc, ppRenderPass, 
-//        [&]()
-//        {
-//            RenderPassMtlImpl* pRenderPassMtl( NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassMtlImpl instance", RenderPassMtlImpl)
-//                                               (this, Desc) );
-//            pRenderPassMtl->RenderPassInterface( IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass) );
-//            OnCreateDeviceObject( pRenderPassMtl );
-//        }
-//    );
+    CreateDeviceObject( "RenderPass", Desc, ppRenderPass, 
+        [&]()
+        {
+            RenderPassMtlImpl* pRenderPassMtl( NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassMtlImpl instance", RenderPassMtlImpl)
+                                               (this, Desc) );
+            pRenderPassMtl->QueryInterface( IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass) );
+            OnCreateDeviceObject( pRenderPassMtl );
+        }
+    );
 }
 
 void RenderDeviceMtlImpl::IdleGPU()

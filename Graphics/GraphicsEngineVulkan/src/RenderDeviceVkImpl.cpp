@@ -37,6 +37,7 @@
 #include "DeviceContextVkImpl.hpp"
 #include "FenceVkImpl.hpp"
 #include "QueryVkImpl.hpp"
+#include "RenderPassVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -71,7 +72,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             sizeof(PipelineStateVkImpl),
             sizeof(ShaderResourceBindingVkImpl),
             sizeof(FenceVkImpl),
-            sizeof(QueryVkImpl)
+            sizeof(QueryVkImpl),
+            sizeof(RenderPassVkImpl)
         }
     },
     m_VulkanInstance    {Instance                 },
@@ -620,15 +622,15 @@ void RenderDeviceVkImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
 
 void RenderDeviceVkImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
 {
-    //CreateDeviceObject(
-    //    "RenderPass", Desc, ppRenderPass,
-    //    [&]() //
-    //    {
-    //        RenderPassVkImpl* pRenderPassVk(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassVkImpl instance", RenderPassVkImpl)(this, Desc));
-    //        pRenderPassVk->RenderPassInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
-    //        OnCreateDeviceObject(pRenderPassVk);
-    //    } //
-    //);
+    CreateDeviceObject(
+        "RenderPass", Desc, ppRenderPass,
+        [&]() //
+        {
+            RenderPassVkImpl* pRenderPassVk(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassVkImpl instance", RenderPassVkImpl)(this, Desc));
+            pRenderPassVk->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+            OnCreateDeviceObject(pRenderPassVk);
+        } //
+    );
 }
 
 } // namespace Diligent

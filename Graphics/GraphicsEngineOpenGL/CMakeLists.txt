@@ -20,6 +20,7 @@ set(INCLUDE
     include/PipelineStateGLImpl.hpp
     include/QueryGLImpl.hpp
     include/RenderDeviceGLImpl.hpp
+    include/RenderPassGLImpl.hpp
     include/SamplerGLImpl.hpp
     include/ShaderGLImpl.hpp
     include/ShaderResourceBindingGLImpl.hpp
@@ -71,6 +72,7 @@ set(SOURCE
     src/PipelineStateGLImpl.cpp
     src/QueryGLImpl.cpp
     src/RenderDeviceGLImpl.cpp
+    src/RenderPassGLImpl.cpp
     src/SamplerGLImpl.cpp
     src/ShaderGLImpl.cpp
     src/ShaderResourceBindingGLImpl.cpp

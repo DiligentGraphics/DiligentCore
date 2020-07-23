@@ -46,6 +46,7 @@
 #include "ShaderResourceBindingGLImpl.hpp"
 #include "FenceGLImpl.hpp"
 #include "QueryGLImpl.hpp"
+#include "RenderPassGLImpl.hpp"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 
@@ -75,7 +76,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
             sizeof(PipelineStateGLImpl),
             sizeof(ShaderResourceBindingGLImpl),
             sizeof(FenceGLImpl),
-            sizeof(QueryGLImpl)
+            sizeof(QueryGLImpl),
+            sizeof(RenderPassGLImpl)
         }
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
@@ -517,15 +519,15 @@ void RenderDeviceGLImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
 
 void RenderDeviceGLImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
 {
-    //CreateDeviceObject(
-    //    "RenderPass", Desc, ppRenderPass,
-    //    [&]() //
-    //    {
-    //        RenderPassGLImpl* pRenderPassOGL(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassGLImpl instance", RenderPassGLImpl)(this, Desc));
-    //        pRenderPassOGL->RenderPassInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
-    //        OnCreateDeviceObject(pRenderPassOGL);
-    //    } //
-    //);
+    CreateDeviceObject(
+        "RenderPass", Desc, ppRenderPass,
+        [&]() //
+        {
+            RenderPassGLImpl* pRenderPassOGL(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassGLImpl instance", RenderPassGLImpl)(this, Desc));
+            pRenderPassOGL->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+            OnCreateDeviceObject(pRenderPassOGL);
+        } //
+    );
 }
 
 bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString)

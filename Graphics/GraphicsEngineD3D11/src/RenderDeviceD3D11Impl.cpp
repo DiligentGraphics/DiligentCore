@@ -40,6 +40,7 @@
 #include "ShaderResourceBindingD3D11Impl.hpp"
 #include "FenceD3D11Impl.hpp"
 #include "QueryD3D11Impl.hpp"
+#include "RenderPassD3D11Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -97,7 +98,8 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
             sizeof(PipelineStateD3D11Impl),
             sizeof(ShaderResourceBindingD3D11Impl),
             sizeof(FenceD3D11Impl),
-            sizeof(QueryD3D11Impl)
+            sizeof(QueryD3D11Impl),
+            sizeof(RenderPassD3D11Impl)
         }
     },
     m_EngineAttribs{EngineAttribs},
@@ -374,13 +376,13 @@ void RenderDeviceD3D11Impl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
 
 void RenderDeviceD3D11Impl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
 {
-    //CreateDeviceObject("RenderPass", Desc, ppRenderPass,
-    //                   [&]() //
-    //                   {
-    //                       RenderPassD3D11Impl* pRenderPassD3D11(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassD3D11Impl instance", RenderPassD3D11Impl)(this, Desc));
-    //                       pRenderPassD3D11->RenderPassInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
-    //                       OnCreateDeviceObject(pRenderPassD3D11);
-    //                   });
+    CreateDeviceObject("RenderPass", Desc, ppRenderPass,
+                       [&]() //
+                       {
+                           RenderPassD3D11Impl* pRenderPassD3D11(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassD3D11Impl instance", RenderPassD3D11Impl)(this, Desc));
+                           pRenderPassD3D11->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+                           OnCreateDeviceObject(pRenderPassD3D11);
+                       });
 }
 
 void RenderDeviceD3D11Impl::IdleGPU()

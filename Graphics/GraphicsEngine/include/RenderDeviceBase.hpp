@@ -220,6 +220,9 @@ public:
 
         /// Size of the query object (QueryD3D12Impl, QueryVkImpl, etc.), in bytes
         const size_t QuerySize;
+
+        /// Size of the render pass object (RenderPassD3D12Impl, RenderPassVkImpl, etc.), in bytes
+        const size_t RenderPassObjSize;
     };
 
     /// \param pRefCounters        - reference counters object that controls the lifetime of this render device
@@ -243,17 +246,18 @@ public:
         m_TexFmtInfoInitFlags   (TEX_FORMAT_NUM_FORMATS, false, STD_ALLOCATOR_RAW_MEM(bool, RawMemAllocator, "Allocator for vector<bool>")),
         m_wpDeferredContexts    (NumDeferredContexts, RefCntWeakPtr<IDeviceContext>(), STD_ALLOCATOR_RAW_MEM(RefCntWeakPtr<IDeviceContext>, RawMemAllocator, "Allocator for vector< RefCntWeakPtr<IDeviceContext> >")),
         m_RawMemAllocator       {RawMemAllocator},
-        m_TexObjAllocator       {RawMemAllocator, ObjectSizes.TextureObjSize,   64  },
-        m_TexViewObjAllocator   {RawMemAllocator, ObjectSizes.TexViewObjSize,   64  },
-        m_BufObjAllocator       {RawMemAllocator, ObjectSizes.BufferObjSize,    128 },
-        m_BuffViewObjAllocator  {RawMemAllocator, ObjectSizes.BuffViewObjSize,  128 },
-        m_ShaderObjAllocator    {RawMemAllocator, ObjectSizes.ShaderObjSize,    32  },
-        m_SamplerObjAllocator   {RawMemAllocator, ObjectSizes.SamplerObjSize,   32  },
-        m_PSOAllocator          {RawMemAllocator, ObjectSizes.PSOSize,          128 },
-        m_SRBAllocator          {RawMemAllocator, ObjectSizes.SRBSize,          1024},
-        m_ResMappingAllocator   {RawMemAllocator, sizeof(ResourceMappingImpl),  16  },
-        m_FenceAllocator        {RawMemAllocator, ObjectSizes.FenceSize,        16  },
-        m_QueryAllocator        {RawMemAllocator, ObjectSizes.QuerySize,        16  }
+        m_TexObjAllocator       {RawMemAllocator, ObjectSizes.TextureObjSize,    64  },
+        m_TexViewObjAllocator   {RawMemAllocator, ObjectSizes.TexViewObjSize,    64  },
+        m_BufObjAllocator       {RawMemAllocator, ObjectSizes.BufferObjSize,     128 },
+        m_BuffViewObjAllocator  {RawMemAllocator, ObjectSizes.BuffViewObjSize,   128 },
+        m_ShaderObjAllocator    {RawMemAllocator, ObjectSizes.ShaderObjSize,     32  },
+        m_SamplerObjAllocator   {RawMemAllocator, ObjectSizes.SamplerObjSize,    32  },
+        m_PSOAllocator          {RawMemAllocator, ObjectSizes.PSOSize,           128 },
+        m_SRBAllocator          {RawMemAllocator, ObjectSizes.SRBSize,           1024},
+        m_ResMappingAllocator   {RawMemAllocator, sizeof(ResourceMappingImpl),   16  },
+        m_FenceAllocator        {RawMemAllocator, ObjectSizes.FenceSize,         16  },
+        m_QueryAllocator        {RawMemAllocator, ObjectSizes.QuerySize,         16  },
+        m_RenderPassAllocator   {RawMemAllocator, ObjectSizes.RenderPassObjSize, 16  }
     // clang-format on
     {
         // Initialize texture format info
@@ -426,6 +430,7 @@ protected:
     FixedBlockMemoryAllocator m_ResMappingAllocator;  ///< Allocator for resource mapping objects
     FixedBlockMemoryAllocator m_FenceAllocator;       ///< Allocator for fence objects
     FixedBlockMemoryAllocator m_QueryAllocator;       ///< Allocator for query objects
+    FixedBlockMemoryAllocator m_RenderPassAllocator;  ///< Allocator for render pass objects
 };
 
 

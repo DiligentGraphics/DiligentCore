@@ -17,6 +17,7 @@ set(INCLUDE
     include/PipelineStateBase.hpp
     include/QueryBase.hpp
     include/RenderDeviceBase.hpp
+    include/RenderPassBase.hpp
     include/ResourceMappingImpl.hpp
     include/SamplerBase.hpp
     include/ShaderBase.hpp
