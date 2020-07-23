@@ -61,6 +61,8 @@ public:
 
     virtual void CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
 
+    virtual void CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass) override final;
+
     virtual void ReleaseStaleResources(bool ForceRelease = false) override final {}
 
     virtual void IdleGPU() override final;

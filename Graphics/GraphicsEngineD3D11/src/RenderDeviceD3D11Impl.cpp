@@ -372,6 +372,17 @@ void RenderDeviceD3D11Impl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
                        });
 }
 
+void RenderDeviceD3D11Impl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
+{
+    //CreateDeviceObject("RenderPass", Desc, ppRenderPass,
+    //                   [&]() //
+    //                   {
+    //                       RenderPassD3D11Impl* pRenderPassD3D11(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassD3D11Impl instance", RenderPassD3D11Impl)(this, Desc));
+    //                       pRenderPassD3D11->RenderPassInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+    //                       OnCreateDeviceObject(pRenderPassD3D11);
+    //                   });
+}
+
 void RenderDeviceD3D11Impl::IdleGPU()
 {
     if (auto pImmediateCtx = m_wpImmediateContext.Lock())

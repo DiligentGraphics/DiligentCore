@@ -81,6 +81,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateQuery(const QueryDesc& Desc,
                                                 IQuery**         ppQuery) override final;
 
+    /// Implementation of IRenderDevice::CreateRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
+                                                     IRenderPass**         ppRenderPass) override final;
+
     /// Implementation of IRenderDeviceD3D11::GetD3D11Device() in Direct3D11 backend.
     ID3D11Device* DILIGENT_CALL_TYPE GetD3D11Device() override final { return m_pd3d11Device; }
 

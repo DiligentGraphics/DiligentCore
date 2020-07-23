@@ -618,4 +618,17 @@ void RenderDeviceVkImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
     );
 }
 
+void RenderDeviceVkImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
+{
+    //CreateDeviceObject(
+    //    "RenderPass", Desc, ppRenderPass,
+    //    [&]() //
+    //    {
+    //        RenderPassVkImpl* pRenderPassVk(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassVkImpl instance", RenderPassVkImpl)(this, Desc));
+    //        pRenderPassVk->RenderPassInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+    //        OnCreateDeviceObject(pRenderPassVk);
+    //    } //
+    //);
+}
+
 } // namespace Diligent

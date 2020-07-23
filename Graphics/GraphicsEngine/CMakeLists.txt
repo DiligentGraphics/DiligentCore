@@ -47,6 +47,7 @@ set(INTERFACE
     interface/Query.h
     interface/RasterizerState.h
     interface/RenderDevice.h
+    interface/RenderPass.h
     interface/ResourceMapping.h
     interface/Sampler.h
     interface/Shader.h

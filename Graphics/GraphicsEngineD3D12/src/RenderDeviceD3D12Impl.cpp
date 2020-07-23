@@ -522,6 +522,17 @@ void RenderDeviceD3D12Impl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
                        });
 }
 
+void RenderDeviceD3D12Impl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
+{
+    //CreateDeviceObject("RenderPass", Desc, ppRenderPass,
+    //                   [&]() //
+    //                   {
+    //                       RenderPassD3D12Impl* pRenderPassD3D12(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassD3D12Impl instance", RenderPassD3D12Impl)(this, Desc));
+    //                       pRenderPassD3D12->RenderPassInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+    //                       OnCreateDeviceObject(pRenderPassD3D12);
+    //                   });
+}
+
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
 {
     VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, "Invalid heap type");

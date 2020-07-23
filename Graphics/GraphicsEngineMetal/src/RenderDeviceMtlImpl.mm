@@ -184,6 +184,19 @@ void RenderDeviceMtlImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
     );
 }
 
+void RenderDeviceMtlImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
+{
+//    CreateDeviceObject( "RenderPass", Desc, ppRenderPass, 
+//        [&]()
+//        {
+//            RenderPassMtlImpl* pRenderPassMtl( NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassMtlImpl instance", RenderPassMtlImpl)
+//                                               (this, Desc) );
+//            pRenderPassMtl->RenderPassInterface( IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass) );
+//            OnCreateDeviceObject( pRenderPassMtl );
+//        }
+//    );
+}
+
 void RenderDeviceMtlImpl::IdleGPU()
 {
     LOG_ERROR_MESSAGE("RenderDeviceMtlImpl::IdleGPU() is not implemented");

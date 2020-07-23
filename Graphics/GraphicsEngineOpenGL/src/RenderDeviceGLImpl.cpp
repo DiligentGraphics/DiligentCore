@@ -515,6 +515,19 @@ void RenderDeviceGLImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
     );
 }
 
+void RenderDeviceGLImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
+{
+    //CreateDeviceObject(
+    //    "RenderPass", Desc, ppRenderPass,
+    //    [&]() //
+    //    {
+    //        RenderPassGLImpl* pRenderPassOGL(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassGLImpl instance", RenderPassGLImpl)(this, Desc));
+    //        pRenderPassOGL->RenderPassInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+    //        OnCreateDeviceObject(pRenderPassOGL);
+    //    } //
+    //);
+}
+
 bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString)
 {
     return m_ExtensionStrings.find(ExtensionString) != m_ExtensionStrings.end();

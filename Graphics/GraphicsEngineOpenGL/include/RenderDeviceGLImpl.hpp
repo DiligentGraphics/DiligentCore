@@ -113,6 +113,10 @@ public:
     /// Implementation of IRenderDevice::CreateQuery() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
 
+    /// Implementation of IRenderDevice::CreateRenderPass() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
+                                                     IRenderPass**         ppRenderPass) override final;
+
     /// Implementation of IRenderDeviceGL::CreateTextureFromGLHandle().
     virtual void DILIGENT_CALL_TYPE CreateTextureFromGLHandle(Uint32             GLHandle,
                                                               Uint32             GLBindTarget,
