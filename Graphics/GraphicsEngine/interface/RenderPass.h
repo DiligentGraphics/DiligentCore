@@ -276,7 +276,7 @@ typedef struct SubpassDesc SubpassDesc;
 /// Subpass dependency description
 struct SubpassDependencyDesc
 {
-    int Dummy;
+    void* TBD;
 };
 typedef struct SubpassDependencyDesc SubpassDependencyDesc;
 

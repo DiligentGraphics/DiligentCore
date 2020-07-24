@@ -42,6 +42,7 @@ set(INTERFACE
     interface/DeviceObject.h
     interface/EngineFactory.h
     interface/Fence.h
+    interface/Framebuffer.h
     interface/GraphicsTypes.h
     interface/InputLayout.h
     interface/PipelineState.h
