@@ -13,6 +13,7 @@ set(INCLUDE
     include/PipelineStateMtlImpl.h
     include/QueryMtlImpl.h
     include/RenderDeviceMtlImpl.h
+    include/RenderPassMtlImpl.h
     include/SamplerMtlImpl.h
     include/ShaderMtlImpl.h
     include/ShaderResourceBindingMtlImpl.h
