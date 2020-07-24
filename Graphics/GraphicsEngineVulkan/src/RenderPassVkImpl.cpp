@@ -26,7 +26,7 @@
  */
 
 #include "pch.h"
-#include <array>
+#include <vector>
 
 #include "RenderPassVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
@@ -45,14 +45,14 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
     RenderPassCI.pNext = nullptr;
     RenderPassCI.flags = 0;
 
-    std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1> vkAttachments = {};
+    std::vector<VkAttachmentDescription> vkAttachments(m_Desc.AttachmentCount);
     for (Uint32 i = 0; i < m_Desc.AttachmentCount; ++i)
     {
         const auto& Attachment      = m_Desc.pAttachments[i];
         auto&       vkAttachment    = vkAttachments[i];
         vkAttachment.flags          = 0;
         vkAttachment.format         = TexFormatToVkFormat(Attachment.Format);
-        vkAttachment.samples        = static_cast<VkSampleCountFlagBits>(0x01 << Attachment.SampleCount);
+        vkAttachment.samples        = static_cast<VkSampleCountFlagBits>(0x01 << (Attachment.SampleCount - 1));
         vkAttachment.loadOp         = AttachmentLoadOpToVkAttachmentLoadOp(Attachment.LoadOp);
         vkAttachment.storeOp        = AttachmentStoreOpToVkAttachmentStoreOp(Attachment.StoreOp);
         vkAttachment.stencilLoadOp  = AttachmentLoadOpToVkAttachmentLoadOp(Attachment.StencilLoadOp);
@@ -64,11 +64,82 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
     RenderPassCI.pAttachments    = vkAttachments.data();
 
 
+    Uint32 TotalAttachmentReferencesCount = 0;
+    Uint32 TotalPreserveAttachmentsCount  = 0;
+    CountSubpassAttachmentReferences(Desc, TotalAttachmentReferencesCount, TotalPreserveAttachmentsCount);
+    std::vector<VkAttachmentReference> vkAttachmentReferences(TotalAttachmentReferencesCount);
+    std::vector<Uint32>                vkPreserveAttachments(TotalPreserveAttachmentsCount);
+
+    Uint32 CurrAttachmentReferenceInd = 0;
+    Uint32 CurrPreserveAttachmentInd  = 0;
+
+    std::vector<VkSubpassDescription> vkSubpasses(Desc.SubpassCount);
+    for (Uint32 i = 0; i < m_Desc.SubpassCount; ++i)
+    {
+        const auto& SubpassDesc        = m_Desc.pSubpasses[i];
+        auto&       vkSubpass          = vkSubpasses[i];
+        vkSubpass.flags                = 0;
+        vkSubpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        vkSubpass.inputAttachmentCount = SubpassDesc.InputAttachmentCount;
+
+        auto ConvertAttachmentReferences = [&](Uint32 NumAttachments, const AttachmentReference* pSrcAttachments) //
+        {
+            auto* pCurrVkAttachmentReference = &vkAttachmentReferences[CurrAttachmentReferenceInd];
+            for (Uint32 attachment = 0; attachment < NumAttachments; ++attachment, ++CurrAttachmentReferenceInd)
+            {
+                vkAttachmentReferences[CurrAttachmentReferenceInd].attachment = pSrcAttachments[attachment].AttachmentIndex;
+                vkAttachmentReferences[CurrAttachmentReferenceInd].layout     = ResourceStateToVkImageLayout(pSrcAttachments[attachment].State);
+            }
+
+            return pCurrVkAttachmentReference;
+        };
+
+        if (SubpassDesc.InputAttachmentCount != 0)
+        {
+            vkSubpass.pInputAttachments = ConvertAttachmentReferences(SubpassDesc.InputAttachmentCount, SubpassDesc.pInputAttachments);
+        }
+
+        vkSubpass.colorAttachmentCount = SubpassDesc.RenderTargetAttachmentCount;
+        if (SubpassDesc.RenderTargetAttachmentCount != 0)
+        {
+            vkSubpass.pColorAttachments = ConvertAttachmentReferences(SubpassDesc.RenderTargetAttachmentCount, SubpassDesc.pRenderTargetAttachments);
+            if (SubpassDesc.pResolveAttachments != nullptr)
+            {
+                vkSubpass.pResolveAttachments = ConvertAttachmentReferences(SubpassDesc.RenderTargetAttachmentCount, SubpassDesc.pResolveAttachments);
+            }
+        }
+
+        if (SubpassDesc.pDepthStencilAttachment != nullptr)
+        {
+            vkSubpass.pDepthStencilAttachment = ConvertAttachmentReferences(1, SubpassDesc.pDepthStencilAttachment);
+        }
+
+        vkSubpass.preserveAttachmentCount = SubpassDesc.PreserveAttachmentCount;
+        if (SubpassDesc.PreserveAttachmentCount != 0)
+        {
+            vkSubpass.pPreserveAttachments = &vkPreserveAttachments[CurrPreserveAttachmentInd];
+            for (Uint32 prsv_attachment = 0; prsv_attachment < SubpassDesc.PreserveAttachmentCount; ++prsv_attachment, ++CurrPreserveAttachmentInd)
+            {
+                vkPreserveAttachments[CurrPreserveAttachmentInd] = SubpassDesc.pPreserveAttachments[prsv_attachment];
+            }
+        }
+    }
+    VERIFY_EXPR(CurrAttachmentReferenceInd == vkAttachmentReferences.size());
+    VERIFY_EXPR(CurrPreserveAttachmentInd == vkPreserveAttachments.size());
     RenderPassCI.subpassCount = Desc.SubpassCount;
-    RenderPassCI.pSubpasses;
+    RenderPassCI.pSubpasses   = vkSubpasses.data();
+
 
     RenderPassCI.dependencyCount = Desc.DependencyCount;
     RenderPassCI.pDependencies;
+
+    const auto& LogicalDevice = pDevice->GetLogicalDevice();
+
+    m_VkRenderPass = LogicalDevice.CreateRenderPass(RenderPassCI, Desc.Name);
+    if (!m_VkRenderPass)
+    {
+        LOG_ERROR_AND_THROW("Failed to create Vulkan render pass");
+    }
 }
 
 RenderPassVkImpl::~RenderPassVkImpl()

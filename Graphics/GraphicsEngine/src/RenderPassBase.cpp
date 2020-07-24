@@ -94,6 +94,26 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc)
             }
         }
     }
+
+    for (Uint32 i = 0; i < Desc.SubpassCount; ++i)
+    {
+        const auto& Subpass = Desc.pSubpasses[i];
+        if (Subpass.InputAttachmentCount != 0 && Subpass.pInputAttachments == nullptr)
+        {
+            LOG_RENDER_PASS_ERROR_AND_THROW("the input attachment count (", Subpass.InputAttachmentCount, ") of subpass ", i,
+                                            " is not zero, while pInputAttachments is null");
+        }
+        if (Subpass.RenderTargetAttachmentCount != 0 && Subpass.pRenderTargetAttachments == nullptr)
+        {
+            LOG_RENDER_PASS_ERROR_AND_THROW("the render target attachment count (", Subpass.RenderTargetAttachmentCount, ") of subpass ", i,
+                                            " is not zero, while pRenderTargetAttachments is null");
+        }
+        if (Subpass.PreserveAttachmentCount != 0 && Subpass.pPreserveAttachments == nullptr)
+        {
+            LOG_RENDER_PASS_ERROR_AND_THROW("the preserve attachment count (", Subpass.PreserveAttachmentCount, ") of subpass ", i,
+                                            " is not zero, while pPreserveAttachments is null");
+        }
+    }
 }
 
 } // namespace Diligent

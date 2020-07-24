@@ -124,11 +124,151 @@ struct RenderPassAttachmentDesc
 };
 typedef struct RenderPassAttachmentDesc RenderPassAttachmentDesc;
 
+#define ATTACHMENT_UNUSED (~0U)
+
+/// Attachment reference description.
+struct AttachmentReference
+{
+    /// Either an integer value identifying an attachment at the corresponding index in RenderPassDesc::pAttachments,
+    /// or ATTACHMENT_UNUSED to signify that this attachment is not used.
+    Uint32          AttachmentIndex DEFAULT_INITIALIZER(0);
+
+    /// The state of the attachment during the subpass.
+    RESOURCE_STATE  State           DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
+
+#if DILIGENT_CPP_INTERFACE
+    AttachmentReference()noexcept{}
+
+    AttachmentReference(Uint32          _AttachmentIndex,
+                        RESOURCE_STATE  _State)noexcept : 
+        AttachmentIndex{_AttachmentIndex},
+        State          {_State}
+    {}
+
+    /// Tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return 
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise
+    bool operator == (const AttachmentReference& RHS) const
+    {
+        return  AttachmentIndex == RHS.AttachmentIndex &&
+                State           == RHS.State;
+    }
+
+    bool operator != (const AttachmentReference& RHS) const
+    {
+        return !(*this == RHS);
+    }
+#endif
+};
+typedef struct AttachmentReference AttachmentReference;
+
 
 /// Render pass subpass decription.
 struct SubpassDesc
 {
-    int Dummy;
+    /// The number of input attachments the subpass uses.
+    Uint32                      InputAttachmentCount        DEFAULT_INITIALIZER(0);
+
+    /// Pointer to the array of input attachments, see Diligent::AttachmentReference.
+    const AttachmentReference*  pInputAttachments           DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of color render target attachments.
+    Uint32                      RenderTargetAttachmentCount DEFAULT_INITIALIZER(0);
+
+    /// Pointer to the array of color render target attachments, see Diligent::AttachmentReference.
+
+    /// Each element of the pRenderTargetAttachments array corresponds to an output in the pixel shader,
+    /// i.e. if the shader declares an output variable decorated with a render target index X, then it uses
+    /// the attachment provided in pRenderTargetAttachments[X]. If the attachment index is ATTACHMENT_UNUSED,
+    /// writes to this render target are ignored.
+    const AttachmentReference*  pRenderTargetAttachments    DEFAULT_INITIALIZER(nullptr);
+
+    /// Pointer to the array of resolve attachments, see Diligent::AttachmentReference.
+
+    /// If pResolveAttachments is not NULL, each of its elements corresponds to a render target attachment
+    /// (the element in pRenderTargetAttachments at the same index), and a multisample resolve operation is
+    /// defined for each attachment. At the end of each subpass, multisample resolve operations read the subpass's
+    /// color attachments, and resolve the samples for each pixel within the render area to the same pixel location
+    /// in the corresponding resolve attachments, unless the resolve attachment index is ATTACHMENT_UNUSED.
+    const AttachmentReference*  pResolveAttachments         DEFAULT_INITIALIZER(nullptr);
+
+    /// Pointer to the depth-stencil attachment, see Diligent::AttachmentReference.
+    const AttachmentReference*  pDepthStencilAttachment     DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of preserve attachments.
+    Uint32                      PreserveAttachmentCount     DEFAULT_INITIALIZER(0);
+
+    /// Pointer to the array of preserve attachments, see Diligent::AttachmentReference.
+    const Uint32*               pPreserveAttachments        DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return 
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise
+    bool operator == (const SubpassDesc& RHS)const
+    {
+        if (InputAttachmentCount        != RHS.InputAttachmentCount ||
+            RenderTargetAttachmentCount != RHS.RenderTargetAttachmentCount ||
+            PreserveAttachmentCount     != RHS.PreserveAttachmentCount)
+            return false;
+
+        for(Uint32 i=0; i < InputAttachmentCount; ++i)
+        {
+            if (pInputAttachments[i] != RHS.pInputAttachments[i])
+                return false;
+        }
+
+        for(Uint32 i=0; i < RenderTargetAttachmentCount; ++i)
+        {
+            if (pRenderTargetAttachments[i] != RHS.pRenderTargetAttachments[i])
+                return false;
+        }
+
+        if ((pResolveAttachments == nullptr && RHS.pResolveAttachments != nullptr) ||
+            (pResolveAttachments != nullptr && RHS.pResolveAttachments == nullptr))
+            return false;
+
+        if (pResolveAttachments != nullptr && RHS.pResolveAttachments != nullptr)
+        {
+            for(Uint32 i=0; i < RenderTargetAttachmentCount; ++i)
+            {
+                if (pResolveAttachments[i] != RHS.pResolveAttachments[i])
+                    return false;
+            }
+        }
+
+        if ((pDepthStencilAttachment == nullptr && RHS.pDepthStencilAttachment != nullptr) ||
+            (pDepthStencilAttachment != nullptr && RHS.pDepthStencilAttachment == nullptr))
+            return false;
+
+        if (pDepthStencilAttachment != nullptr && RHS.pDepthStencilAttachment != nullptr)
+        {
+            if (*pDepthStencilAttachment != *RHS.pDepthStencilAttachment)
+                return false;
+        }
+
+        if ((pPreserveAttachments == nullptr && RHS.pPreserveAttachments != nullptr) ||
+            (pPreserveAttachments != nullptr && RHS.pPreserveAttachments == nullptr))
+            return false;
+
+        if (pPreserveAttachments != nullptr && RHS.pPreserveAttachments != nullptr)
+        {
+            for(Uint32 i=0; i < PreserveAttachmentCount; ++i)
+            {
+                if (pPreserveAttachments[i] != RHS.pPreserveAttachments[i])
+                    return false;
+            }
+        }
+
+        return true;
+    }
+#endif
 };
 typedef struct SubpassDesc SubpassDesc;
 
