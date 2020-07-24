@@ -37,6 +37,8 @@
 namespace Diligent
 {
 
+void ValidateRenderPassDesc(const RenderPassDesc& Desc);
+
 /// Template class implementing base functionality for the render pass object.
 
 /// \tparam BaseInterface - base interface that this class will inheret
@@ -60,10 +62,52 @@ public:
                    const RenderPassDesc& Desc,
                    bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
-    {}
+    {
+        ValidateRenderPassDesc(Desc);
+
+        if (Desc.AttachmentCount != 0)
+        {
+            auto* pAttachments =
+                ALLOCATE(GetRawAllocator(), "Memory for RenderPassAttachmentDesc array", RenderPassAttachmentDesc, Desc.AttachmentCount);
+            this->m_Desc.pAttachments = pAttachments;
+            for (Uint32 i = 0; i < Desc.AttachmentCount; ++i)
+            {
+                pAttachments[i] = Desc.pAttachments[i];
+            }
+        }
+
+        if (Desc.SubpassCount != 0)
+        {
+            auto* pSubpasses =
+                ALLOCATE(GetRawAllocator(), "Memory for SubpassDesc array", SubpassDesc, Desc.SubpassCount);
+            this->m_Desc.pSubpasses = pSubpasses;
+            for (Uint32 i = 0; i < Desc.SubpassCount; ++i)
+            {
+                pSubpasses[i] = Desc.pSubpasses[i];
+            }
+        }
+
+        if (Desc.DependencyCount != 0)
+        {
+            auto* pDependencies =
+                ALLOCATE(GetRawAllocator(), "Memory for SubpassDependencyDesc array", SubpassDependencyDesc, Desc.DependencyCount);
+            this->m_Desc.pDependencies = pDependencies;
+            for (Uint32 i = 0; i < Desc.DependencyCount; ++i)
+            {
+                pDependencies[i] = Desc.pDependencies[i];
+            }
+        }
+    }
 
     ~RenderPassBase()
     {
+        auto& RawAllocator = GetRawAllocator();
+        if (this->m_Desc.pAttachments != nullptr)
+            RawAllocator.Free(const_cast<RenderPassAttachmentDesc*>(this->m_Desc.pAttachments));
+        if (this->m_Desc.pSubpasses != nullptr)
+            RawAllocator.Free(const_cast<SubpassDesc*>(this->m_Desc.pSubpasses));
+        if (this->m_Desc.pDependencies != nullptr)
+            RawAllocator.Free(const_cast<SubpassDependencyDesc*>(this->m_Desc.pDependencies));
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderPass, TDeviceObjectBase)

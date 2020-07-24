@@ -1421,4 +1421,24 @@ VkSurfaceTransformFlagBitsKHR SurfaceTransformToVkSurfaceTransformFlag(SURFACE_T
     // clang-format on
 }
 
+VkAttachmentLoadOp AttachmentLoadOpToVkAttachmentLoadOp(ATTACHMENT_LOAD_OP LoadOp)
+{
+    return static_cast<VkAttachmentLoadOp>(LoadOp);
+}
+
+ATTACHMENT_LOAD_OP VkAttachmentLoadOpToAttachmentLoadOp(VkAttachmentLoadOp VkLoadOp)
+{
+    return static_cast<ATTACHMENT_LOAD_OP>(VkLoadOp);
+}
+
+VkAttachmentStoreOp AttachmentStoreOpToVkAttachmentStoreOp(ATTACHMENT_STORE_OP StoreOp)
+{
+    return static_cast<VkAttachmentStoreOp>(StoreOp);
+}
+
+ATTACHMENT_STORE_OP VkAttachmentStoreOpToAttachmentStoreOp(VkAttachmentStoreOp VkStoreOp)
+{
+    return static_cast<ATTACHMENT_STORE_OP>(VkStoreOp);
+}
+
 } // namespace Diligent

@@ -63,8 +63,9 @@ set(SOURCE
     src/APIInfo.cpp
     src/DefaultShaderSourceStreamFactory.cpp
     src/EngineMemory.cpp
-    src/ResourceMapping.cpp
-    src/Texture.cpp
+    src/ResourceMappingBase.cpp
+    src/RenderPassBase.cpp
+    src/TextureBase.cpp
 )
 
 add_library(Diligent-GraphicsEngine STATIC ${SOURCE} ${INTERFACE} ${INCLUDE})

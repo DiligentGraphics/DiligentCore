@@ -73,4 +73,10 @@ RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout);
 SURFACE_TRANSFORM             VkSurfaceTransformFlagToSurfaceTransform(VkSurfaceTransformFlagBitsKHR vkTransformFlag);
 VkSurfaceTransformFlagBitsKHR SurfaceTransformToVkSurfaceTransformFlag(SURFACE_TRANSFORM SrfTransform);
 
+VkAttachmentLoadOp AttachmentLoadOpToVkAttachmentLoadOp(ATTACHMENT_LOAD_OP LoadOp);
+ATTACHMENT_LOAD_OP VkAttachmentLoadOpToAttachmentLoadOp(VkAttachmentLoadOp VkLoadOp);
+
+VkAttachmentStoreOp AttachmentStoreOpToVkAttachmentStoreOp(ATTACHMENT_STORE_OP StoreOp);
+ATTACHMENT_STORE_OP VkAttachmentStoreOpToAttachmentStoreOp(VkAttachmentStoreOp VkStoreOp);
+
 } // namespace Diligent

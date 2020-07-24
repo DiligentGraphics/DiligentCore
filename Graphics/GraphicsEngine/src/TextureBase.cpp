@@ -34,7 +34,7 @@ namespace Diligent
 
 void ValidateTextureDesc(const TextureDesc& Desc)
 {
-#define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture \"", Desc.Name ? Desc.Name : "", "\": ", ##__VA_ARGS__)
+#define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
 
     if (Desc.Type == RESOURCE_DIM_UNDEFINED)
     {
@@ -90,7 +90,7 @@ void ValidateTextureDesc(const TextureDesc& Desc)
         MaxDim = std::max(Desc.Width, Desc.Height);
     else if (Desc.Type == RESOURCE_DIM_TEX_3D)
         MaxDim = std::max(std::max(Desc.Width, Desc.Height), Desc.Depth);
-    VERIFY(MaxDim >= (1U << (Desc.MipLevels - 1)), "Texture \"", Desc.Name ? Desc.Name : "", "\": Incorrect number of Mip levels (", Desc.MipLevels, ")");
+    VERIFY(MaxDim >= (1U << (Desc.MipLevels - 1)), "Texture '", Desc.Name ? Desc.Name : "", "': Incorrect number of Mip levels (", Desc.MipLevels, ")");
 
     if (Desc.SampleCount > 1)
     {
@@ -138,7 +138,7 @@ void ValidateTextureRegion(const TextureDesc& TexDesc, Uint32 MipLevel, Uint32 S
     {                                                                                         \
         if (!(Expr))                                                                          \
         {                                                                                     \
-            LOG_ERROR("Texture \"", TexDesc.Name ? TexDesc.Name : "", "\": ", ##__VA_ARGS__); \
+            LOG_ERROR("Texture '", (TexDesc.Name ? TexDesc.Name : ""), "': ", ##__VA_ARGS__); \
         }                                                                                     \
     } while (false)
 
