@@ -61,6 +61,7 @@ set(INTERFACE
     interface/PipelineStateVk.h
     interface/QueryVk.h
     interface/RenderDeviceVk.h
+    interface/RenderPassVk.h
     interface/SamplerVk.h
     interface/ShaderVk.h
     interface/ShaderResourceBindingVk.h

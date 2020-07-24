@@ -28,35 +28,37 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::RenderPassVkImpl class
+/// Definition of the Diligent::IRenderPassVk interface
 
-#include "RenderDeviceVk.h"
-#include "RenderPassVk.h"
-#include "RenderPassBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "../../GraphicsEngine/interface/RenderPass.h"
 
-namespace Diligent
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+// {3DE6938F-D34D-4135-A6FA-15A89E9525D0}
+static const INTERFACE_ID IID_RenderPassVk =
+    {0x3de6938f, 0xd34d, 0x4135, {0xa6, 0xfa, 0x15, 0xa8, 0x9e, 0x95, 0x25, 0xd0}};
+
+#define DILIGENT_INTERFACE_NAME IRenderPassVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IRenderPassVkInclusiveMethods                              \
+    /*IRenderPassInclusiveMethods*/ IDeviceObjectInclusiveMethods; \
+    IRenderPassVkMethods RenderPassVk
+
+/// Exposes Vulkan-specific functionality of a RenderPass object.
+DILIGENT_BEGIN_INTERFACE(IRenderPassVk, IRenderPass)
 {
-
-class FixedBlockMemoryAllocator;
-
-/// Render pass implementation in Direct3D11 backend.
-class RenderPassVkImpl final : public RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>
-{
-public:
-    using TRenderPassBase = RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>;
-
-    RenderPassVkImpl(IReferenceCounters*   pRefCounters,
-                     RenderDeviceVkImpl*   pDevice,
-                     const RenderPassDesc& Desc);
-    ~RenderPassVkImpl();
-
-    /// Implementation of ISamplerVk::GetVkRenderPass().
-    virtual VkRenderPass DILIGENT_CALL_TYPE GetVkRenderPass() const override final { return m_VkRenderPass; }
-
-private:
-    VulkanUtilities::RenderPassWrapper m_VkRenderPass;
+    /// Returns a Vulkan RenderPass object handle
+    VIRTUAL VkRenderPass METHOD(GetVkRenderPass)() CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+#    define IRenderPassVk_GetVkRenderPass(This) CALL_IFACE_METHOD(RenderPassVk, GetVkRenderPass, This)
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

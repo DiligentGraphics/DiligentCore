@@ -25,38 +25,5 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-/// \file
-/// Declaration of Diligent::RenderPassVkImpl class
-
-#include "RenderDeviceVk.h"
-#include "RenderPassVk.h"
-#include "RenderPassBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
-
-namespace Diligent
-{
-
-class FixedBlockMemoryAllocator;
-
-/// Render pass implementation in Direct3D11 backend.
-class RenderPassVkImpl final : public RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>
-{
-public:
-    using TRenderPassBase = RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>;
-
-    RenderPassVkImpl(IReferenceCounters*   pRefCounters,
-                     RenderDeviceVkImpl*   pDevice,
-                     const RenderPassDesc& Desc);
-    ~RenderPassVkImpl();
-
-    /// Implementation of ISamplerVk::GetVkRenderPass().
-    virtual VkRenderPass DILIGENT_CALL_TYPE GetVkRenderPass() const override final { return m_VkRenderPass; }
-
-private:
-    VulkanUtilities::RenderPassWrapper m_VkRenderPass;
-};
-
-} // namespace Diligent
+#include "DiligentCore/ThirdParty/vulkan/vulkan.h"
+#include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/RenderPassVk.h"
