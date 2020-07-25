@@ -52,7 +52,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
         auto&       vkAttachment    = vkAttachments[i];
         vkAttachment.flags          = 0;
         vkAttachment.format         = TexFormatToVkFormat(Attachment.Format);
-        vkAttachment.samples        = static_cast<VkSampleCountFlagBits>(0x01 << (Attachment.SampleCount - 1));
+        vkAttachment.samples        = static_cast<VkSampleCountFlagBits>(Attachment.SampleCount);
         vkAttachment.loadOp         = AttachmentLoadOpToVkAttachmentLoadOp(Attachment.LoadOp);
         vkAttachment.storeOp        = AttachmentStoreOpToVkAttachmentStoreOp(Attachment.StoreOp);
         vkAttachment.stencilLoadOp  = AttachmentLoadOpToVkAttachmentLoadOp(Attachment.StencilLoadOp);

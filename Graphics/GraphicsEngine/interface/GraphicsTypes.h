@@ -84,7 +84,8 @@ DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
     BIND_RENDER_TARGET	    = 0x20L,///< A texture can be bound as a render target
     BIND_DEPTH_STENCIL	    = 0x40L,///< A texture can be bound as a depth-stencil target
     BIND_UNORDERED_ACCESS	= 0x80L,///< A buffer or a texture can be bound as an unordered access view
-    BIND_INDIRECT_DRAW_ARGS	= 0x100L///< A buffer can be bound as the source buffer for indirect draw commands
+    BIND_INDIRECT_DRAW_ARGS	= 0x100L,///< A buffer can be bound as the source buffer for indirect draw commands
+    BIND_INPUT_ATTACHMENT   = 0x200L ///< A texture can be used as render pass input attachment
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
 
@@ -1372,8 +1373,8 @@ typedef struct EngineCreateInfo EngineCreateInfo;
 /// Attributes of the OpenGL-based engine implementation
 struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
-	/// Native window wrapper
-	NativeWindow Window;
+    /// Native window wrapper
+    NativeWindow Window;
 
     /// Create debug OpenGL context and enable debug output.
 

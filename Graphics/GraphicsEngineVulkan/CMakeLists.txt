@@ -59,6 +59,7 @@ set(INTERFACE
     interface/DeviceContextVk.h
     interface/EngineFactoryVk.h
     interface/FenceVk.h
+    interface/FramebufferVk.h
     interface/PipelineStateVk.h
     interface/QueryVk.h
     interface/RenderDeviceVk.h

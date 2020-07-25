@@ -125,6 +125,51 @@ TEST(RenderDeviceTest, CreateRenderPass)
     EXPECT_EQ(RPDesc.DependencyCount, RPDesc2.DependencyCount);
     //for (Uint32 i = 0; i < std::min(RPDesc.DependencyCount, RPDesc2.DependencyCount); ++i)
     //    EXPECT_EQ(RPDesc.pDependencies[i], RPDesc2.pDependencies[i]);
+
+    RefCntAutoPtr<ITexture> pTextures[_countof(Attachments)];
+    ITextureView*           pTexViews[_countof(Attachments)] = {};
+    for (Uint32 i = 0; i < _countof(pTextures); ++i)
+    {
+        TextureDesc TexDesc;
+        TexDesc.Name        = "Test framebuffer attachment";
+        TexDesc.Type        = RESOURCE_DIM_TEX_2D;
+        TexDesc.Format      = Attachments[i].Format;
+        TexDesc.Width       = 1024;
+        TexDesc.Height      = 1024;
+        TexDesc.SampleCount = Attachments[i].SampleCount;
+
+        const auto FmtAttribs = pDevice->GetTextureFormatInfo(TexDesc.Format);
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
+            FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            TexDesc.BindFlags = BIND_DEPTH_STENCIL;
+        else
+            TexDesc.BindFlags = BIND_RENDER_TARGET;
+
+        if (i == 2 || i == 3)
+            TexDesc.BindFlags |= BIND_INPUT_ATTACHMENT;
+
+        pDevice->CreateTexture(TexDesc, nullptr, &pTextures[i]);
+
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
+            FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            pTexViews[i] = pTextures[i]->GetDefaultView(TEXTURE_VIEW_DEPTH_STENCIL);
+        else
+            pTexViews[i] = pTextures[i]->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
+    }
+
+    FramebufferDesc FBDesc;
+    FBDesc.Name            = "Test framebuffer";
+    FBDesc.pRenderPass     = pRenderPass;
+    FBDesc.AttachmentCount = _countof(Attachments);
+    FBDesc.ppAttachments   = pTexViews;
+    RefCntAutoPtr<IFramebuffer> pFramebuffer;
+    pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
+    ASSERT_TRUE(pFramebuffer);
+
+    const auto& FBDesc2 = pFramebuffer->GetDesc();
+    EXPECT_EQ(FBDesc2.AttachmentCount, FBDesc.AttachmentCount);
+    for (Uint32 i = 0; i < std::min(FBDesc.AttachmentCount, FBDesc2.AttachmentCount); ++i)
+        EXPECT_EQ(FBDesc2.ppAttachments[i], FBDesc.ppAttachments[i]);
 }
 
 } // namespace

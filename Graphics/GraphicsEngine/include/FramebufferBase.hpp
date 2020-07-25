@@ -33,6 +33,8 @@
 #include "Framebuffer.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
+#include "TextureView.h"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -63,15 +65,57 @@ public:
                     bool                   bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
+        if (Desc.pRenderPass == nullptr)
+        {
+            LOG_ERROR_AND_THROW("Render pass must not be null");
+        }
+
+        if (this->m_Desc.AttachmentCount > 0)
+        {
+            m_ppAttachments =
+                ALLOCATE(GetRawAllocator(), "Memory for framebuffer attachment array", ITextureView*, this->m_Desc.AttachmentCount);
+            this->m_Desc.ppAttachments = m_ppAttachments;
+            for (Uint32 i = 0; i < this->m_Desc.AttachmentCount; ++i)
+            {
+                m_ppAttachments[i] = Desc.ppAttachments[i];
+                m_ppAttachments[i]->AddRef();
+
+                if ((this->m_Desc.Width == 0 || this->m_Desc.Height == 0 || this->m_Desc.NumArraySlices == 0) && m_ppAttachments[i] != nullptr)
+                {
+                    const auto& ViewDesc = m_ppAttachments[i]->GetDesc();
+                    const auto& TexDesc  = m_ppAttachments[i]->GetTexture()->GetDesc();
+
+                    auto MipLevelProps = GetMipLevelProperties(TexDesc, ViewDesc.MostDetailedMip);
+                    if (this->m_Desc.Width == 0)
+                        this->m_Desc.Width = MipLevelProps.LogicalWidth;
+                    if (this->m_Desc.Height == 0)
+                        this->m_Desc.Height = MipLevelProps.LogicalHeight;
+                    if (this->m_Desc.NumArraySlices == 0)
+                        this->m_Desc.NumArraySlices = ViewDesc.NumArraySlices;
+                }
+            }
+        }
+        Desc.pRenderPass->AddRef();
     }
 
     ~FramebufferBase()
     {
+        if (this->m_Desc.AttachmentCount > 0)
+        {
+            VERIFY_EXPR(m_ppAttachments != nullptr);
+            for (Uint32 i = 0; i < this->m_Desc.AttachmentCount; ++i)
+            {
+                m_ppAttachments[i]->Release();
+            }
+            GetRawAllocator().Free(m_ppAttachments);
+        }
+        this->m_Desc.pRenderPass->Release();
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Framebuffer, TDeviceObjectBase)
 
 private:
+    ITextureView** m_ppAttachments = nullptr;
 };
 
 } // namespace Diligent

@@ -28,36 +28,37 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::FramebufferVkImpl class
+/// Definition of the Diligent::IFramebufferVk interface
 
-#include "FramebufferVk.h"
-#include "FramebufferBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "../../GraphicsEngine/interface/Framebuffer.h"
 
-namespace Diligent
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+// {846BE360-D89B-41AD-B089-7F2439ADCE3A}
+static const INTERFACE_ID IID_FramebufferVk =
+    {0x846be360, 0xd89b, 0x41ad, {0xb0, 0x89, 0x7f, 0x24, 0x39, 0xad, 0xce, 0x3a}};
+
+#define DILIGENT_INTERFACE_NAME IFramebufferVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IFramebufferVkInclusiveMethods                              \
+    /*IFramebufferInclusiveMethods*/ IDeviceObjectInclusiveMethods; \
+    IFramebufferVkMethods FramebufferVk
+
+/// Exposes Vulkan-specific functionality of a Framebuffer object.
+DILIGENT_BEGIN_INTERFACE(IFramebufferVk, IFramebuffer)
 {
-
-class FixedBlockMemoryAllocator;
-
-/// Render pass implementation in Direct3D11 backend.
-class FramebufferVkImpl final : public FramebufferBase<IFramebufferVk, RenderDeviceVkImpl>
-{
-public:
-    using TFramebufferBase = FramebufferBase<IFramebufferVk, RenderDeviceVkImpl>;
-
-    FramebufferVkImpl(IReferenceCounters*    pRefCounters,
-                      RenderDeviceVkImpl*    pDevice,
-                      const FramebufferDesc& Desc);
-    ~FramebufferVkImpl();
-
-    VkFramebuffer GetVkFramebuffer() const override final
-    {
-        return m_VkFramebuffer;
-    }
-
-private:
-    VulkanUtilities::FramebufferWrapper m_VkFramebuffer;
+    /// Returns a Vulkan framebuffer object handle
+    VIRTUAL VkFramebuffer METHOD(GetVkFramebuffer)() CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+#    define IFramebufferVk_GetVkFramebuffer(This) CALL_IFACE_METHOD(FramebufferVk, GetVkFramebuffer, This)
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

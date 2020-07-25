@@ -46,22 +46,22 @@ static const struct INTERFACE_ID IID_Framebuffer =
 struct FramebufferDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Render pass that the framebuffer will be compatible with.
-    IRenderPass*        pRenderPass     DEFAULT_INITIALIZER(nullptr);
+    IRenderPass*         pRenderPass     DEFAULT_INITIALIZER(nullptr);
 
     /// The number of attachments.
-    Uint32              AttachmentCount DEFAULT_INITIALIZER(0);
+    Uint32               AttachmentCount DEFAULT_INITIALIZER(0);
 
     /// Pointer to the array of attachments.
-    const ITextureView* pAttachments    DEFAULT_INITIALIZER(nullptr);
+    ITextureView* const* ppAttachments   DEFAULT_INITIALIZER(nullptr);
 
     /// Width of the framebuffer.
-    Uint32              Width           DEFAULT_INITIALIZER(0);
+    Uint32               Width           DEFAULT_INITIALIZER(0);
 
     /// Height of the framebuffer.
-    Uint32              Height          DEFAULT_INITIALIZER(0);
+    Uint32               Height          DEFAULT_INITIALIZER(0);
 
-    /// The number of layers in the framebuffer.
-    Uint32              Layers          DEFAULT_INITIALIZER(0);
+    /// The number of array slices in the framebuffer.
+    Uint32               NumArraySlices  DEFAULT_INITIALIZER(0);
 };
 typedef struct FramebufferDesc FramebufferDesc;
 

@@ -27,8 +27,12 @@
 
 #include "pch.h"
 
+#include <vector>
+
 #include "FramebufferVkImpl.hpp"
 #include "EngineMemory.h"
+#include "RenderPassVkImpl.hpp"
+#include "TextureViewVkImpl.hpp"
 
 namespace Diligent
 {
@@ -38,6 +42,38 @@ FramebufferVkImpl::FramebufferVkImpl(IReferenceCounters*    pRefCounters,
                                      const FramebufferDesc& Desc) :
     TFramebufferBase{pRefCounters, pDevice, Desc}
 {
+    VkFramebufferCreateInfo FramebufferCI = {};
+
+    FramebufferCI.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    FramebufferCI.pNext = nullptr;
+    FramebufferCI.flags = 0;
+
+    auto* pRenderPassVkImpl  = ValidatedCast<RenderPassVkImpl>(m_Desc.pRenderPass);
+    FramebufferCI.renderPass = pRenderPassVkImpl->GetVkRenderPass();
+
+    FramebufferCI.attachmentCount = m_Desc.AttachmentCount;
+
+    std::vector<VkImageView> vkImgViews(m_Desc.AttachmentCount);
+    for (Uint32 i = 0; i < m_Desc.AttachmentCount; ++i)
+    {
+        if (auto* pView = m_Desc.ppAttachments[i])
+        {
+            vkImgViews[i] = ValidatedCast<TextureViewVkImpl>(pView)->GetVulkanImageView();
+        }
+    }
+    FramebufferCI.pAttachments = vkImgViews.data();
+
+    FramebufferCI.width  = m_Desc.Width;
+    FramebufferCI.height = m_Desc.Height;
+    FramebufferCI.layers = m_Desc.NumArraySlices;
+
+    const auto& LogicalDevice = pDevice->GetLogicalDevice();
+
+    m_VkFramebuffer = LogicalDevice.CreateFramebuffer(FramebufferCI, m_Desc.Name);
+    if (!m_VkFramebuffer)
+    {
+        LOG_ERROR_AND_THROW("Failed to create Vulkan framebuffer");
+    }
 }
 
 FramebufferVkImpl::~FramebufferVkImpl()

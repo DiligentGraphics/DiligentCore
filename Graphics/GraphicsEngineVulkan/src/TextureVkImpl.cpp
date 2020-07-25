@@ -139,6 +139,10 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         {
             ImageCI.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
         }
+        if (m_Desc.BindFlags & BIND_INPUT_ATTACHMENT)
+        {
+            ImageCI.usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+        }
 
         if (m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS)
         {
