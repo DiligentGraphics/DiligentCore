@@ -41,6 +41,7 @@
 #include "FenceD3D11Impl.hpp"
 #include "QueryD3D11Impl.hpp"
 #include "RenderPassD3D11Impl.hpp"
+#include "FramebufferD3D11Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -99,7 +100,8 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
             sizeof(ShaderResourceBindingD3D11Impl),
             sizeof(FenceD3D11Impl),
             sizeof(QueryD3D11Impl),
-            sizeof(RenderPassD3D11Impl)
+            sizeof(RenderPassD3D11Impl),
+            sizeof(FramebufferD3D11Impl)
         }
     },
     m_EngineAttribs{EngineAttribs},
@@ -382,6 +384,17 @@ void RenderDeviceD3D11Impl::CreateRenderPass(const RenderPassDesc& Desc, IRender
                            RenderPassD3D11Impl* pRenderPassD3D11(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassD3D11Impl instance", RenderPassD3D11Impl)(this, Desc));
                            pRenderPassD3D11->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
                            OnCreateDeviceObject(pRenderPassD3D11);
+                       });
+}
+
+void RenderDeviceD3D11Impl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
+{
+    CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
+                       [&]() //
+                       {
+                           FramebufferD3D11Impl* pFramebufferD3D11(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferD3D11Impl instance", FramebufferD3D11Impl)(this, Desc));
+                           pFramebufferD3D11->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
+                           OnCreateDeviceObject(pFramebufferD3D11);
                        });
 }
 

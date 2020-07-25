@@ -9,6 +9,7 @@ set(INCLUDE
     include/DeviceContextGLImpl.hpp 
     include/FBOCache.hpp
     include/FenceGLImpl.hpp
+    include/FramebufferGLImpl.hpp
     include/GLContext.hpp
     include/GLContextState.hpp
     include/GLObjectWrapper.hpp
@@ -63,6 +64,7 @@ set(SOURCE
     src/EngineFactoryOpenGL.cpp
     src/FBOCache.cpp
     src/FenceGLImpl.cpp
+    src/FramebufferGLImpl.cpp
     src/GLContextState.cpp
     src/GLObjectWrapper.cpp
     src/GLProgramResourceCache.cpp

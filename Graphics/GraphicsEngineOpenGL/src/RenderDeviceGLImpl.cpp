@@ -47,6 +47,7 @@
 #include "FenceGLImpl.hpp"
 #include "QueryGLImpl.hpp"
 #include "RenderPassGLImpl.hpp"
+#include "FramebufferGLImpl.hpp"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 
@@ -77,7 +78,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
             sizeof(ShaderResourceBindingGLImpl),
             sizeof(FenceGLImpl),
             sizeof(QueryGLImpl),
-            sizeof(RenderPassGLImpl)
+            sizeof(RenderPassGLImpl),
+            sizeof(FramebufferGLImpl)
         }
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
@@ -528,6 +530,17 @@ void RenderDeviceGLImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPas
             OnCreateDeviceObject(pRenderPassOGL);
         } //
     );
+}
+
+void RenderDeviceGLImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
+{
+    CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
+                       [&]() //
+                       {
+                           FramebufferGLImpl* pFramebufferGL(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferGLImpl instance", FramebufferGLImpl)(this, Desc));
+                           pFramebufferGL->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
+                           OnCreateDeviceObject(pFramebufferGL);
+                       });
 }
 
 bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString)

@@ -14,6 +14,7 @@ set(INCLUDE
     include/EngineD3D11Defines.h
     include/pch.h
 	include/FenceD3D11Impl.hpp
+    include/FramebufferD3D11Impl.hpp
     include/PipelineStateD3D11Impl.hpp
     include/QueryD3D11Impl.hpp
     include/RenderDeviceD3D11Impl.hpp
@@ -59,6 +60,7 @@ set(SRC
     src/DeviceContextD3D11Impl.cpp
     src/EngineFactoryD3D11.cpp
     src/FenceD3D11Impl.cpp
+    src/FramebufferD3D11Impl.cpp
     src/GUIDDef.cpp
     src/PipelineStateD3D11Impl.cpp
     src/QueryD3D11Impl.cpp

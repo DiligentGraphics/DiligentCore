@@ -33,6 +33,7 @@
 #include "ShaderResourceBindingMtlImpl.h"
 #include "FenceMtlImpl.h"
 #include "RenderPassMtlImpl.h"
+#include "FramebufferMtlImpl.h"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -60,7 +61,8 @@ RenderDeviceMtlImpl :: RenderDeviceMtlImpl(IReferenceCounters*        pRefCounte
             sizeof(PipelineStateMtlImpl),
             sizeof(ShaderResourceBindingMtlImpl),
             sizeof(FenceMtlImpl),
-            sizeof(RenderPassMtlImpl)
+            sizeof(RenderPassMtlImpl),
+			sizeof(FramebufferMtlImpl)
         }
     },
     m_EngineAttribs(EngineAttribs)
@@ -195,6 +197,19 @@ void RenderDeviceMtlImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPa
                                                (this, Desc) );
             pRenderPassMtl->QueryInterface( IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass) );
             OnCreateDeviceObject( pRenderPassMtl );
+        }
+    );
+}
+
+void RenderDeviceMtlImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
+{
+    CreateDeviceObject( "Framebuffer", Desc, ppFramebuffer, 
+        [&]()
+        {
+            FramebufferMtlImpl* pFramebufferMtl( NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferMtlImpl instance", FramebufferMtlImpl)
+                                               (this, Desc) );
+            pFramebufferMtl->QueryInterface( IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer) );
+            OnCreateDeviceObject( pFramebufferMtl );
         }
     );
 }

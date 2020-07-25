@@ -102,6 +102,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
                                                      IRenderPass**         ppRenderPass) override final;
 
+    /// Implementation of IRenderDevice::CreateFramebuffer() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
+                                                      IFramebuffer**         ppFramebuffer) override final;
+
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 

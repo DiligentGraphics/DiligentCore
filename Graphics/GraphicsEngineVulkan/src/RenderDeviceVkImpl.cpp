@@ -38,6 +38,7 @@
 #include "FenceVkImpl.hpp"
 #include "QueryVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
+#include "FramebufferVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -73,7 +74,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             sizeof(ShaderResourceBindingVkImpl),
             sizeof(FenceVkImpl),
             sizeof(QueryVkImpl),
-            sizeof(RenderPassVkImpl)
+            sizeof(RenderPassVkImpl),
+            sizeof(FramebufferVkImpl)
         }
     },
     m_VulkanInstance    {Instance                 },
@@ -631,6 +633,17 @@ void RenderDeviceVkImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPas
             OnCreateDeviceObject(pRenderPassVk);
         } //
     );
+}
+
+void RenderDeviceVkImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
+{
+    CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
+                       [&]() //
+                       {
+                           FramebufferVkImpl* pFramebufferVk(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferVkImpl instance", FramebufferVkImpl)(this, Desc));
+                           pFramebufferVk->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
+                           OnCreateDeviceObject(pFramebufferVk);
+                       });
 }
 
 } // namespace Diligent

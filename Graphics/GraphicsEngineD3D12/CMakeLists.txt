@@ -18,6 +18,7 @@ set(INCLUDE
     include/DeviceContextD3D12Impl.hpp
     include/D3D12DynamicHeap.hpp
     include/FenceD3D12Impl.hpp
+    include/FramebufferD3D12Impl.hpp
     include/GenerateMips.hpp
     include/pch.h
     include/PipelineStateD3D12Impl.hpp
@@ -70,6 +71,7 @@ set(SRC
     src/D3D12DynamicHeap.cpp
     src/EngineFactoryD3D12.cpp
     src/FenceD3D12Impl.cpp
+    src/FramebufferD3D12Impl.cpp
     src/GenerateMips.cpp
     src/PipelineStateD3D12Impl.cpp
     src/QueryD3D12Impl.cpp

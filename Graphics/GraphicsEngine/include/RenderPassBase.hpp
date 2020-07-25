@@ -42,7 +42,7 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc);
 /// Template class implementing base functionality for the render pass object.
 
 /// \tparam BaseInterface - base interface that this class will inheret
-///                         (Diligent::IRenderPassVk).
+///                         (e.g. Diligent::IRenderPassVk).
 /// \tparam RenderDeviceImplType - type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D11Impl, Diligent::RenderDeviceD3D12Impl,
 ///                                 Diligent::RenderDeviceGLImpl, or Diligent::RenderDeviceVkImpl)

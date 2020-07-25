@@ -13,6 +13,7 @@ set(INCLUDE
     include/EngineFactoryBase.hpp
     include/EngineMemory.h
     include/FenceBase.hpp
+    include/FramebufferBase.hpp
     include/pch.h
     include/PipelineStateBase.hpp
     include/QueryBase.hpp

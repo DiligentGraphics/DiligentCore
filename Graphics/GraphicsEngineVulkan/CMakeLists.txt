@@ -11,6 +11,7 @@ set(INCLUDE
     include/DescriptorPoolManager.hpp
     include/DeviceContextVkImpl.hpp
     include/FenceVkImpl.hpp
+    include/FramebufferVkImpl.hpp
     include/VulkanDynamicHeap.hpp
     include/FramebufferCache.hpp
     include/GenerateMipsVkHelper.hpp
@@ -80,6 +81,7 @@ set(SRC
     src/DeviceContextVkImpl.cpp
     src/EngineFactoryVk.cpp
     src/FenceVkImpl.cpp
+    src/FramebufferVkImpl.cpp
     src/VulkanDynamicHeap.cpp
     src/FramebufferCache.cpp
     src/GenerateMipsVkHelper.cpp
