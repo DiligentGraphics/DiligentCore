@@ -65,6 +65,7 @@ set(SOURCE
     src/APIInfo.cpp
     src/DefaultShaderSourceStreamFactory.cpp
     src/EngineMemory.cpp
+    src/FramebufferBase.cpp
     src/ResourceMappingBase.cpp
     src/RenderPassBase.cpp
     src/TextureBase.cpp

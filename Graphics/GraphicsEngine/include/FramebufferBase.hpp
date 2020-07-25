@@ -65,10 +65,7 @@ public:
                     bool                   bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
-        if (Desc.pRenderPass == nullptr)
-        {
-            LOG_ERROR_AND_THROW("Render pass must not be null");
-        }
+        ValidateFramebufferDesc(Desc);
 
         if (this->m_Desc.AttachmentCount > 0)
         {
@@ -80,7 +77,7 @@ public:
                 m_ppAttachments[i] = Desc.ppAttachments[i];
                 m_ppAttachments[i]->AddRef();
 
-                if ((this->m_Desc.Width == 0 || this->m_Desc.Height == 0 || this->m_Desc.NumArraySlices == 0) && m_ppAttachments[i] != nullptr)
+                if (this->m_Desc.Width == 0 || this->m_Desc.Height == 0 || this->m_Desc.NumArraySlices == 0)
                 {
                     const auto& ViewDesc = m_ppAttachments[i]->GetDesc();
                     const auto& TexDesc  = m_ppAttachments[i]->GetTexture()->GetDesc();
