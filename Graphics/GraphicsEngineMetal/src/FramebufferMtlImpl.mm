@@ -30,7 +30,7 @@ namespace Diligent
 FramebufferMtlImpl :: FramebufferMtlImpl(IReferenceCounters*   pRefCounters,
                                          RenderDeviceMtlImpl*  pDevice,
                                          const FramebufferDesc& Desc) : 
-    TQueryBase(pRefCounters, pDevice, Desc)
+    TFramebufferBase(pRefCounters, pDevice, Desc)
 {
 }
 

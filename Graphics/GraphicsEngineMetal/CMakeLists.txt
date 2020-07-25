@@ -10,6 +10,7 @@ set(INCLUDE
     include/MtlTypeConversions.h
     include/DeviceContextMtlImpl.h
     include/FenceMtlImpl.h
+    include/FramebufferMtlImpl.h
     include/PipelineStateMtlImpl.h
     include/QueryMtlImpl.h
     include/RenderDeviceMtlImpl.h
@@ -48,9 +49,11 @@ set(SRC
     src/DeviceContextMtlImpl.mm
     src/EngineFactoryMtl.mm
     src/FenceMtlImpl.mm
+    src/FramebufferMtlImpl.mm
     src/PipelineStateMtlImpl.mm
     src/QueryMtlImpl.mm
     src/RenderDeviceMtlImpl.mm
+    src/RenderPassMtlImpl.mm
     src/SamplerMtlImpl.mm
     src/ShaderMtlImpl.mm
     src/ShaderResourceBindingMtlImpl.mm

@@ -30,7 +30,7 @@ namespace Diligent
 RenderPassMtlImpl :: RenderPassMtlImpl(IReferenceCounters*   pRefCounters,
                                        RenderDeviceMtlImpl*  pDevice,
                                        const RenderPassDesc& Desc) : 
-    TQueryBase(pRefCounters, pDevice, Desc)
+    TRenderPassBase(pRefCounters, pDevice, Desc)
 {
 }
 

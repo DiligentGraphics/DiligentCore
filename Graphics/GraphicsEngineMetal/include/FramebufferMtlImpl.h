@@ -32,7 +32,7 @@
 
 #include "RenderDeviceMtl.h"
 #include "FramebufferBase.hpp"
-#include "RenderDeviceMtlImpl.hpp"
+#include "RenderDeviceMtlImpl.h"
 
 namespace Diligent
 {
