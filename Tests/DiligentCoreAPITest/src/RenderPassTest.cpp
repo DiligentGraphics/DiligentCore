@@ -102,12 +102,30 @@ TEST(RenderDeviceTest, CreateRenderPass)
     AttachmentReference RT2AttachmentRef{4, RESOURCE_STATE_RENDER_TARGET};
     Subpasses[1].pRenderTargetAttachments = &RT2AttachmentRef;
 
+    SubpassDependencyDesc Dependencies[2] = {};
+    Dependencies[0].SrcSubpass            = 0;
+    Dependencies[0].DstSubpass            = 1;
+    Dependencies[0].SrcStageMask          = PIPELINE_STAGE_FLAG_VERTEX_SHADER;
+    Dependencies[0].DstStageMask          = PIPELINE_STAGE_FLAG_PIXEL_SHADER;
+    Dependencies[0].SrcAccessMask         = ACCESS_FLAG_SHADER_WRITE;
+    Dependencies[0].DstAccessMask         = ACCESS_FLAG_SHADER_READ;
+
+    Dependencies[1].SrcSubpass    = 0;
+    Dependencies[1].DstSubpass    = 1;
+    Dependencies[1].SrcStageMask  = PIPELINE_STAGE_FLAG_VERTEX_INPUT;
+    Dependencies[1].DstStageMask  = PIPELINE_STAGE_FLAG_PIXEL_SHADER;
+    Dependencies[1].SrcAccessMask = ACCESS_FLAG_INDEX_READ;
+    Dependencies[1].DstAccessMask = ACCESS_FLAG_SHADER_READ;
+
+
     RenderPassDesc RPDesc;
     RPDesc.Name            = "Test renader pass";
     RPDesc.AttachmentCount = _countof(Attachments);
     RPDesc.pAttachments    = Attachments;
     RPDesc.SubpassCount    = _countof(Subpasses);
     RPDesc.pSubpasses      = Subpasses;
+    RPDesc.DependencyCount = _countof(Dependencies);
+    RPDesc.pDependencies   = Dependencies;
 
     RefCntAutoPtr<IRenderPass> pRenderPass;
     pDevice->CreateRenderPass(RPDesc, &pRenderPass);

@@ -1913,6 +1913,9 @@ typedef struct TextureFormatInfoExt TextureFormatInfoExt;
 /// enum and only have effect in Vulkan backend.
 DILIGENT_TYPED_ENUM(PIPELINE_STAGE_FLAGS, Uint32)
 {
+    /// Undefined stage
+    PIPELINE_STAGE_FLAG_UNDEFINED                    = 0x00000000,
+
     /// The top of the pipeline.
     PIPELINE_STAGE_FLAG_TOP_OF_PIPE                  = 0x00000001,
 
@@ -1934,8 +1937,8 @@ DILIGENT_TYPED_ENUM(PIPELINE_STAGE_FLAGS, Uint32)
     /// Geometry shader stage.
     PIPELINE_STAGE_FLAG_GEOMETRY_SHADER              = 0x00000040,
     
-    /// Fragment shader stage.
-    PIPELINE_STAGE_FLAG_FRAGMENT_SHADER              = 0x00000080,
+    /// Pixel shader stage.
+    PIPELINE_STAGE_FLAG_PIXEL_SHADER                 = 0x00000080,
     
     /// The stage of the pipeline where early fragment tests (depth and
     /// stencil tests before fragment shading) are performed. This stage

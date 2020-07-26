@@ -273,10 +273,28 @@ struct SubpassDesc
 typedef struct SubpassDesc SubpassDesc;
 
 
+#define SUBPASS_EXTERNAL (~0U)
+
 /// Subpass dependency description
 struct SubpassDependencyDesc
 {
-    void* TBD;
+    /// The subpass index of the first subpass in the dependency, or SUBPASS_EXTERNAL.
+    Uint32                SrcSubpass    DEFAULT_INITIALIZER(0);
+
+    /// The subpass index of the second subpass in the dependency, or SUBPASS_EXTERNAL.
+    Uint32                DstSubpass    DEFAULT_INITIALIZER(0);
+
+    /// A bitmask of PIPELINE_STAGE_FLAGS specifying the source stage mask.
+    PIPELINE_STAGE_FLAGS  SrcStageMask  DEFAULT_INITIALIZER(PIPELINE_STAGE_FLAG_UNDEFINED);
+
+    /// A bitmask of PIPELINE_STAGE_FLAGS specifying the destination stage mask.
+    PIPELINE_STAGE_FLAGS  DstStageMask  DEFAULT_INITIALIZER(PIPELINE_STAGE_FLAG_UNDEFINED);
+
+    /// A bitmask of ACCESS_FLAGS specifying a source access mask.
+    ACCESS_FLAGS          SrcAccessMask DEFAULT_INITIALIZER(ACCESS_FLAG_NONE);
+
+    /// A bitmask of ACCESS_FLAGS specifying a destination access mask.
+    ACCESS_FLAGS          DstAccessMask DEFAULT_INITIALIZER(ACCESS_FLAG_NONE);
 };
 typedef struct SubpassDependencyDesc SubpassDependencyDesc;
 

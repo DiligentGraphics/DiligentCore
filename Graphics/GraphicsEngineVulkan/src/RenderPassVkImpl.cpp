@@ -129,9 +129,21 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
     RenderPassCI.subpassCount = Desc.SubpassCount;
     RenderPassCI.pSubpasses   = vkSubpasses.data();
 
-
+    std::vector<VkSubpassDependency> vkDependencies(Desc.DependencyCount);
+    for (Uint32 i = 0; i < Desc.DependencyCount; ++i)
+    {
+        const auto& DependencyDesc   = m_Desc.pDependencies[i];
+        auto&       vkDependency     = vkDependencies[i];
+        vkDependency.srcSubpass      = DependencyDesc.SrcSubpass;
+        vkDependency.dstSubpass      = DependencyDesc.DstSubpass;
+        vkDependency.srcStageMask    = DependencyDesc.SrcStageMask;
+        vkDependency.dstStageMask    = DependencyDesc.DstStageMask;
+        vkDependency.srcAccessMask   = DependencyDesc.SrcAccessMask;
+        vkDependency.dstAccessMask   = DependencyDesc.DstAccessMask;
+        vkDependency.dependencyFlags = 0;
+    }
     RenderPassCI.dependencyCount = Desc.DependencyCount;
-    RenderPassCI.pDependencies;
+    RenderPassCI.pDependencies   = vkDependencies.data();
 
     const auto& LogicalDevice = pDevice->GetLogicalDevice();
 

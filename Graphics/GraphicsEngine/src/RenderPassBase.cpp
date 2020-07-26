@@ -37,6 +37,15 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc)
 {
 #define LOG_RENDER_PASS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Render pass '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
 
+    if (Desc.AttachmentCount != 0 && Desc.pAttachments == nullptr)
+        LOG_RENDER_PASS_ERROR_AND_THROW("The attachment count (", Desc.AttachmentCount, ") is not zero, but pAttachments is null");
+
+    if (Desc.SubpassCount != 0 && Desc.pSubpasses == nullptr)
+        LOG_RENDER_PASS_ERROR_AND_THROW("The subpass count (", Desc.SubpassCount, ") is not zero, but pSubpasses is null");
+
+    if (Desc.DependencyCount != 0 && Desc.pDependencies == nullptr)
+        LOG_RENDER_PASS_ERROR_AND_THROW("The dependency count (", Desc.DependencyCount, ") is not zero, but pDependencies is null");
+
     for (Uint32 i = 0; i < Desc.AttachmentCount; ++i)
     {
         const auto& Attachment = Desc.pAttachments[i];
@@ -112,6 +121,20 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc)
         {
             LOG_RENDER_PASS_ERROR_AND_THROW("the preserve attachment count (", Subpass.PreserveAttachmentCount, ") of subpass ", i,
                                             " is not zero, while pPreserveAttachments is null");
+        }
+    }
+
+    for (Uint32 i = 0; i < Desc.DependencyCount; ++i)
+    {
+        const auto& Dependency = Desc.pDependencies[i];
+
+        if (Dependency.SrcStageMask == PIPELINE_STAGE_FLAG_UNDEFINED)
+        {
+            LOG_RENDER_PASS_ERROR_AND_THROW("the source stage mask of subpass dependency ", i, " is undefined");
+        }
+        if (Dependency.DstStageMask == PIPELINE_STAGE_FLAG_UNDEFINED)
+        {
+            LOG_RENDER_PASS_ERROR_AND_THROW("the destination stage mask of subpass dependency ", i, " is undefined");
         }
     }
 }
