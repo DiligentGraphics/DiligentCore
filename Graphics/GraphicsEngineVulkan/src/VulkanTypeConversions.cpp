@@ -1421,21 +1421,25 @@ VkSurfaceTransformFlagBitsKHR SurfaceTransformToVkSurfaceTransformFlag(SURFACE_T
     // clang-format on
 }
 
+static_assert(ATTACHMENT_LOAD_OP_LOAD == VK_ATTACHMENT_LOAD_OP_LOAD, "ATTACHMENT_LOAD_OP_LOAD is not equal to VK_ATTACHMENT_LOAD_OP_LOAD");
+static_assert(ATTACHMENT_LOAD_OP_CLEAR == VK_ATTACHMENT_LOAD_OP_CLEAR, "ATTACHMENT_LOAD_OP_CLEAR is not equal to VK_ATTACHMENT_LOAD_OP_CLEAR");
+static_assert(ATTACHMENT_LOAD_OP_DONT_CARE == VK_ATTACHMENT_LOAD_OP_DONT_CARE, "ATTACHMENT_LOAD_OP_DONT_CARE is not equal to VK_ATTACHMENT_LOAD_OP_DONT_CARE");
 VkAttachmentLoadOp AttachmentLoadOpToVkAttachmentLoadOp(ATTACHMENT_LOAD_OP LoadOp)
 {
     return static_cast<VkAttachmentLoadOp>(LoadOp);
 }
-
 ATTACHMENT_LOAD_OP VkAttachmentLoadOpToAttachmentLoadOp(VkAttachmentLoadOp VkLoadOp)
 {
     return static_cast<ATTACHMENT_LOAD_OP>(VkLoadOp);
 }
 
+
+static_assert(ATTACHMENT_STORE_OP_STORE == VK_ATTACHMENT_STORE_OP_STORE, "ATTACHMENT_STORE_OP_STORE is not equal to VK_ATTACHMENT_STORE_OP_STORE");
+static_assert(ATTACHMENT_STORE_OP_DONT_CARE == VK_ATTACHMENT_STORE_OP_DONT_CARE, "ATTACHMENT_STORE_OP_DONT_CARE is not equal to VK_ATTACHMENT_STORE_OP_DONT_CARE");
 VkAttachmentStoreOp AttachmentStoreOpToVkAttachmentStoreOp(ATTACHMENT_STORE_OP StoreOp)
 {
     return static_cast<VkAttachmentStoreOp>(StoreOp);
 }
-
 ATTACHMENT_STORE_OP VkAttachmentStoreOpToAttachmentStoreOp(VkAttachmentStoreOp VkStoreOp)
 {
     return static_cast<ATTACHMENT_STORE_OP>(VkStoreOp);
