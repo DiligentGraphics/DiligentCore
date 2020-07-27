@@ -403,6 +403,20 @@ void DeviceContextGLImpl::ResetRenderTargets()
     m_ContextState.InvalidateFBO();
 }
 
+void DeviceContextGLImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+{
+    UNEXPECTED("Method not implemented");
+}
+
+void DeviceContextGLImpl::NextSubpass()
+{
+    UNEXPECTED("Method not implemented");
+}
+
+void DeviceContextGLImpl::EndRenderPass()
+{
+    UNEXPECTED("Method not implemented");
+}
 
 void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding)
 {

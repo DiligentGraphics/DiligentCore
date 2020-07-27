@@ -1617,6 +1617,22 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
     }
 }
 
+void DeviceContextD3D11Impl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+{
+    UNEXPECTED("Method not implemented");
+}
+
+void DeviceContextD3D11Impl::NextSubpass()
+{
+    UNEXPECTED("Method not implemented");
+}
+
+void DeviceContextD3D11Impl::EndRenderPass()
+{
+    UNEXPECTED("Method not implemented");
+}
+
+
 template <typename TD3D11ResourceType, typename TSetD3D11ResMethodType>
 void SetD3D11ResourcesHelper(ID3D11DeviceContext*   pDeviceCtx,
                              TSetD3D11ResMethodType SetD3D11ResMethod,

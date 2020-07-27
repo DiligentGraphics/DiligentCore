@@ -371,6 +371,21 @@ namespace Diligent
         }
     }
 
+    void DeviceContextMtlImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+    {
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::BeginRenderPass() is not implemented");
+    }
+
+    void DeviceContextMtlImpl::NextSubpass()
+    {
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::NextSubpass() is not implemented");
+    }
+
+    void DeviceContextMtlImpl::EndRenderPass()
+    {
+        LOG_ERROR_MESSAGE("DeviceContextMtlImpl::EndRenderPass() is not implemented");
+    }
+
     void DeviceContextMtlImpl::FinishCommandList(ICommandList **ppCommandList)
     {
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::FinishCommandList() is not implemented");

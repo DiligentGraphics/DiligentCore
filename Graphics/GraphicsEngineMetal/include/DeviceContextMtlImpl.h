@@ -92,6 +92,12 @@ public:
                                   ITextureView*                  pDepthStencil,
                                   RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
+    virtual void BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
+
+    virtual void NextSubpass() override final;
+
+    virtual void EndRenderPass() override final;
+
     virtual void Draw(const DrawAttribs& Attribs) override final;
     virtual void DrawIndexed(const DrawIndexedAttribs& Attribs) override final;
     virtual void DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;

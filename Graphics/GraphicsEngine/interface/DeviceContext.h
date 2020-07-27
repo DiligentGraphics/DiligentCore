@@ -609,6 +609,16 @@ struct CopyTextureAttribs
 };
 typedef struct CopyTextureAttribs CopyTextureAttribs;
 
+
+/// BeginRenderPass command attributes.
+
+/// This structure is used by IDeviceContext::BeginRenderPass().
+struct BeginRenderPassAttribs
+{
+    int TBD;
+};
+typedef struct BeginRenderPassAttribs BeginRenderPassAttribs;
+
 #define DILIGENT_INTERFACE_NAME IDeviceContext
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -862,6 +872,21 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                           ITextureView*                  ppRenderTargets[],
                                           ITextureView*                  pDepthStencil,
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
+
+
+    /// Begins a new render pass.
+
+    /// \param [in] Attribs - The command attributes, see Diligent::BeginRenderPassAttribs for details.
+    VIRTUAL void METHOD(BeginRenderPass)(THIS_
+                                         const BeginRenderPassAttribs REF Attribs) PURE;
+    
+
+    /// Transitions to the next subpass in the render pass instance.
+    VIRTUAL void METHOD(NextSubpass)(THIS) PURE;
+
+
+    /// Ends current render pass.
+    VIRTUAL void METHOD(EndRenderPass)(THIS) PURE;
 
 
     /// Executes a draw command.

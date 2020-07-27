@@ -133,6 +133,15 @@ public:
                                                      ITextureView*                  pDepthStencil,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
+    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::NextSubpass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
+
+    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
+
     // clang-format off
     /// Implementation of IDeviceContext::Draw() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE Draw               (const DrawAttribs& Attribs) override final;

@@ -1190,6 +1190,21 @@ void DeviceContextVkImpl::ResetRenderTargets()
         m_CommandBuffer.EndRenderPass();
 }
 
+void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+{
+    UNEXPECTED("Method not implemented");
+}
+
+void DeviceContextVkImpl::NextSubpass()
+{
+    UNEXPECTED("Method not implemented");
+}
+
+void DeviceContextVkImpl::EndRenderPass()
+{
+    UNEXPECTED("Method not implemented");
+}
+
 void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuffVk,
                                              Uint64                         DstOffset,
                                              Uint64                         NumBytes,

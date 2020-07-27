@@ -969,6 +969,21 @@ void DeviceContextD3D12Impl::SetRenderTargets(Uint32                         Num
     }
 }
 
+void DeviceContextD3D12Impl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+{
+    UNEXPECTED("Method not implemented");
+}
+
+void DeviceContextD3D12Impl::NextSubpass()
+{
+    UNEXPECTED("Method not implemented");
+}
+
+void DeviceContextD3D12Impl::EndRenderPass()
+{
+    UNEXPECTED("Method not implemented");
+}
+
 D3D12DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes, size_t Alignment)
 {
     return m_DynamicHeap.Allocate(NumBytes, Alignment, m_ContextFrameNumber);
