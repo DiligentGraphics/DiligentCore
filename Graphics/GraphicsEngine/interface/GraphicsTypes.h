@@ -1079,6 +1079,55 @@ DILIGENT_TYPED_ENUM(PRIMITIVE_TOPOLOGY, Uint8)
     PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES
 };
 
+
+/// Defines optimized depth-stencil clear value.
+struct DepthStencilClearValue
+{
+    /// Depth clear value
+    Float32 Depth   DEFAULT_INITIALIZER(1.f);
+    /// Stencil clear value
+    Uint8 Stencil   DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    DepthStencilClearValue()noexcept{}
+
+    DepthStencilClearValue(Float32 _Depth,
+                           Uint8   _Stencil)noexcept : 
+        Depth   {_Depth  },
+        Stencil {_Stencil}
+    {}
+#endif
+};
+typedef struct DepthStencilClearValue DepthStencilClearValue;
+
+/// Defines optimized clear value.
+struct OptimizedClearValue
+{
+    /// Format
+    TEXTURE_FORMAT Format       DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+
+    /// Render target clear value
+    Float32        Color[4]     DEFAULT_INITIALIZER({});
+
+    /// Depth stencil clear value
+    DepthStencilClearValue DepthStencil;
+
+#if DILIGENT_CPP_INTERFACE
+    bool operator == (const OptimizedClearValue& rhs)const
+    {
+        return Format == rhs.Format &&
+               Color[0] == rhs.Color[0] &&
+               Color[1] == rhs.Color[1] &&
+               Color[2] == rhs.Color[2] &&
+               Color[3] == rhs.Color[3] &&
+               DepthStencil.Depth   == rhs.DepthStencil.Depth &&
+               DepthStencil.Stencil == rhs.DepthStencil.Stencil;
+    }
+#endif
+};
+typedef struct OptimizedClearValue OptimizedClearValue;
+
+
 /// Describes common device object attributes
 struct DeviceObjectAttribs
 {

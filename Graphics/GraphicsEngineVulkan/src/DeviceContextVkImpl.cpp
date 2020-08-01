@@ -115,6 +115,8 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
     RefCntAutoPtr<IBuffer> pDummyVB;
     m_pDevice->CreateBuffer(DummyVBDesc, nullptr, &pDummyVB);
     m_DummyVB = pDummyVB.RawPtr<BufferVkImpl>();
+
+    m_VkClearValues.reserve(16);
 }
 
 DeviceContextVkImpl::~DeviceContextVkImpl()
@@ -279,7 +281,14 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         {
             m_CommandBuffer.SetStencilReference(m_StencilRef);
             m_CommandBuffer.SetBlendConstants(m_BlendFactors);
-            CommitRenderPassAndFramebuffer(true);
+            if (PSODesc.GraphicsPipeline.pRenderPass == nullptr)
+            {
+                CommitRenderPassAndFramebuffer(true);
+            }
+            else
+            {
+                // Render pass must be committed explicitly
+            }
             CommitViewports();
         }
 
@@ -468,7 +477,10 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
     }
 #endif
 
-    CommitRenderPassAndFramebuffer((Flags & DRAW_FLAG_VERIFY_STATES) != 0);
+    if (m_pPipelineState->GetDesc().GraphicsPipeline.pRenderPass == nullptr)
+    {
+        CommitRenderPassAndFramebuffer((Flags & DRAW_FLAG_VERIFY_STATES) != 0);
+    }
 }
 
 BufferVkImpl* DeviceContextVkImpl::PrepareIndirectDrawAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode)
@@ -1194,19 +1206,54 @@ void DeviceContextVkImpl::ResetRenderTargets()
 void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
     TDeviceContextBase::BeginRenderPass(Attribs);
-    UNEXPECTED("Method not implemented");
+
+    auto vkRenderPass = m_pActiveRenderPass->GetVkRenderPass();
+
+    VkFramebuffer vkFramebuffer     = VK_NULL_HANDLE;
+    uint32_t      FramebufferWidth  = 0;
+    uint32_t      FramebufferHeight = 0;
+    if (m_pBoundFramebuffer)
+    {
+        vkFramebuffer      = m_pBoundFramebuffer->GetVkFramebuffer();
+        const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+        FramebufferWidth   = FBDesc.Width;
+        FramebufferHeight  = FBDesc.Height;
+    }
+
+    VkClearValue* pVkClearValues = nullptr;
+    if (Attribs.ClearValueCount > 0)
+    {
+        m_VkClearValues.resize(Attribs.ClearValueCount);
+        const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+        for (Uint32 i = 0; i < std::min(RPDesc.AttachmentCount, Attribs.ClearValueCount); ++i)
+        {
+            const auto& ClearVal   = Attribs.pClearValues[i];
+            auto&       vkClearVal = m_VkClearValues[i];
+
+            vkClearVal.color.float32[0] = ClearVal.Color[0];
+            vkClearVal.color.float32[1] = ClearVal.Color[1];
+            vkClearVal.color.float32[2] = ClearVal.Color[2];
+            vkClearVal.color.float32[3] = ClearVal.Color[3];
+
+            vkClearVal.depthStencil.depth   = ClearVal.DepthStencil.Depth;
+            vkClearVal.depthStencil.stencil = ClearVal.DepthStencil.Stencil;
+        }
+        pVkClearValues = m_VkClearValues.data();
+    }
+
+    m_CommandBuffer.BeginRenderPass(vkRenderPass, vkFramebuffer, FramebufferWidth, FramebufferHeight, Attribs.ClearValueCount, pVkClearValues);
 }
 
 void DeviceContextVkImpl::NextSubpass()
 {
     TDeviceContextBase::NextSubpass();
-    UNEXPECTED("Method not implemented");
+    m_CommandBuffer.NextSubpass();
 }
 
 void DeviceContextVkImpl::EndRenderPass()
 {
     TDeviceContextBase::EndRenderPass();
-    UNEXPECTED("Method not implemented");
+    m_CommandBuffer.EndRenderPass();
 }
 
 void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuffVk,

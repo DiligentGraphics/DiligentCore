@@ -500,6 +500,8 @@ private:
 
     std::unique_ptr<QueryManagerVk> m_QueryMgr;
     Int32                           m_ActiveQueriesCounter = 0;
+
+    std::vector<VkClearValue> m_VkClearValues;
 };
 
 } // namespace Diligent

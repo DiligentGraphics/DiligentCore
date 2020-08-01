@@ -617,9 +617,21 @@ typedef struct CopyTextureAttribs CopyTextureAttribs;
 /// This structure is used by IDeviceContext::BeginRenderPass().
 struct BeginRenderPassAttribs
 {
+    /// Render pass to begin.
     IRenderPass*    pRenderPass     DEFAULT_INITIALIZER(nullptr);
 
+    /// Framebuffer containing the attachments that are used with the render pass.
     IFramebuffer*   pFramebuffer    DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of elements in pClearValues array.
+    Uint32 ClearValueCount          DEFAULT_INITIALIZER(0);
+
+    /// A pointer to an array of ClearValueCount OptimizedClearValue structures that contains
+    /// clear values for each attachment, if the attachment uses a LoadOp value of ATTACHMENT_LOAD_OP_CLEAR
+    /// or if the attachment has a depth/stencil format and uses a StencilLoadOp value of ATTACHMENT_LOAD_OP_CLEAR.
+    /// The array is indexed by attachment number. Only elements corresponding to cleared attachments are used.
+    /// Other elements of pClearValues are ignored.
+    OptimizedClearValue* pClearValues   DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct BeginRenderPassAttribs BeginRenderPassAttribs;
 
