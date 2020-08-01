@@ -119,7 +119,7 @@ TEST(RenderDeviceTest, CreateRenderPass)
 
 
     RenderPassDesc RPDesc;
-    RPDesc.Name            = "Test renader pass";
+    RPDesc.Name            = "Test render pass";
     RPDesc.AttachmentCount = _countof(Attachments);
     RPDesc.pAttachments    = Attachments;
     RPDesc.SubpassCount    = _countof(Subpasses);

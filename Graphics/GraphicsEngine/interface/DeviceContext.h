@@ -632,6 +632,9 @@ struct BeginRenderPassAttribs
     /// The array is indexed by attachment number. Only elements corresponding to cleared attachments are used.
     /// Other elements of pClearValues are ignored.
     OptimizedClearValue* pClearValues   DEFAULT_INITIALIZER(nullptr);
+
+    /// Framebuffer attachments state transition mode.
+    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 };
 typedef struct BeginRenderPassAttribs BeginRenderPassAttribs;
 

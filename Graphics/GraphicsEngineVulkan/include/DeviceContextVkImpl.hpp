@@ -438,11 +438,11 @@ private:
 
     /// Render pass that matches currently bound render targets.
     /// This render pass may or may not be currently set in the command buffer
-    VkRenderPass m_RenderPass = VK_NULL_HANDLE;
+    VkRenderPass m_vkRenderPass = VK_NULL_HANDLE;
 
     /// Framebuffer that matches currently bound render targets.
     /// This framebuffer may or may not be currently set in the command buffer
-    VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
+    VkFramebuffer m_vkFramebuffer = VK_NULL_HANDLE;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
@@ -501,7 +501,7 @@ private:
     std::unique_ptr<QueryManagerVk> m_QueryMgr;
     Int32                           m_ActiveQueriesCounter = 0;
 
-    std::vector<VkClearValue> m_VkClearValues;
+    std::vector<VkClearValue> m_vkClearValues;
 };
 
 } // namespace Diligent

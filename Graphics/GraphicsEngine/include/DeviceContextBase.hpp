@@ -855,10 +855,43 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
 {
     VERIFY(m_pActiveRenderPass == nullptr, "Attempting to begin render pass while another render pass ('", m_pActiveRenderPass->GetDesc().Name, "') is active.");
     VERIFY(Attribs.pRenderPass != nullptr, "Render pass must not be null");
+    VERIFY(Attribs.pFramebuffer != nullptr, "Framebuffer must not be null");
     ResetRenderTargets();
+
     m_pActiveRenderPass = ValidatedCast<RenderPassImplType>(Attribs.pRenderPass);
     m_pBoundFramebuffer = ValidatedCast<FramebufferImplType>(Attribs.pFramebuffer);
     m_SubpassIndex      = 0;
+
+    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
+    m_FramebufferWidth  = FBDesc.Width;
+    m_FramebufferHeight = FBDesc.Height;
+    m_FramebufferSlices = FBDesc.NumArraySlices;
+
+    if (Attribs.StateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_NONE)
+    {
+        const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+        VERIFY(RPDesc.AttachmentCount <= FBDesc.AttachmentCount,
+               "The number of attachments (", FBDesc.AttachmentCount,
+               ") in currently bound framebuffer is smaller than the number of attachments in the render pass (", RPDesc.AttachmentCount, ")");
+        for (Uint32 i = 0; i < FBDesc.AttachmentCount; ++i)
+        {
+            auto* pView = FBDesc.ppAttachments[i];
+            if (pView == nullptr)
+                return;
+
+            auto* pTex          = ValidatedCast<TextureImplType>(pView->GetTexture());
+            auto  RequiredState = RPDesc.pAttachments[i].InitialState;
+            if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+            {
+                StateTransitionDesc Barrier{pTex, RESOURCE_STATE_UNKNOWN, RequiredState, true};
+                TransitionResourceStates(1, &Barrier);
+            }
+            else if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+            {
+                DvpVerifyTextureState(*pTex, RequiredState, "BeginRenderPass");
+            }
+        }
+    }
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
