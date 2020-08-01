@@ -69,6 +69,8 @@ public:
         TDeviceObjectBase{pRefCounters, pDevice, PSODesc, bIsDeviceInternal},
         m_NumShaders{0}
     {
+        ValidateDesc();
+
         const auto& SrcLayout      = PSODesc.ResourceLayout;
         size_t      StringPoolSize = 0;
         if (SrcLayout.Variables != nullptr)
@@ -186,6 +188,8 @@ public:
             if (GraphicsPipeline.pDS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pDS;
 
             DEV_CHECK_ERR(m_NumShaders > 0, "There must be at least one shader in the Pipeline State");
+
+            m_pRenderPass = PSODesc.GraphicsPipeline.pRenderPass;
 
             for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(GraphicsPipeline.RTVFormats); ++rt)
             {
@@ -395,13 +399,52 @@ protected:
     size_t   m_ShaderResourceLayoutHash = 0;  ///< Hash computed from the shader resource layout
 
 private:
+#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", (this->m_Desc.IsComputePipeline ? "compute" : "graphics"), " PSO '", this->m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)
+
+    void ValidateDesc() const
+    {
+        if (this->m_Desc.IsComputePipeline)
+        {
+            if (this->m_Desc.GraphicsPipeline.pRenderPass != nullptr)
+            {
+                LOG_PSO_ERROR_AND_THROW("GraphicsPipeline.pRenderPass must be null");
+            }
+        }
+        else
+        {
+            const auto& GraphicsPipeline = this->m_Desc.GraphicsPipeline;
+            if (GraphicsPipeline.pRenderPass != nullptr)
+            {
+                if (GraphicsPipeline.NumRenderTargets != 0)
+                    LOG_PSO_ERROR_AND_THROW("NumRenderTargets must be 0 when explicit render pass is used");
+                if (GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN)
+                    LOG_PSO_ERROR_AND_THROW("DSVFormat must be TEX_FORMAT_UNKNOWN when explicit render pass is used");
+
+                for (Uint32 rt = 0; rt < MAX_RENDER_TARGETS; ++rt)
+                {
+                    if (GraphicsPipeline.RTVFormats[rt] != TEX_FORMAT_UNKNOWN)
+                        LOG_PSO_ERROR_AND_THROW("RTVFormats[", rt, "] must be TEX_FORMAT_UNKNOWN when explicit render pass is used");
+                }
+
+                const auto& RPDesc = GraphicsPipeline.pRenderPass->GetDesc();
+                if (GraphicsPipeline.SubpassIndex >= RPDesc.SubpassCount)
+                    LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") exceeds the number of subpasses (", Uint32{RPDesc.SubpassCount}, ") in render pass '", RPDesc.Name, "'");
+            }
+            else
+            {
+                if (GraphicsPipeline.SubpassIndex != 0)
+                    LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") must be 0 when explicit render pass is not used");
+            }
+        }
+    }
+
     void CheckRasterizerStateDesc() const
     {
         const auto& RSDesc = this->m_Desc.GraphicsPipeline.RasterizerDesc;
         if (RSDesc.FillMode == FILL_MODE_UNDEFINED)
-            LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: RasterizerDesc.FillMode must not be FILL_MODE_UNDEFINED");
+            LOG_PSO_ERROR_AND_THROW("RasterizerDesc.FillMode must not be FILL_MODE_UNDEFINED");
         if (RSDesc.CullMode == CULL_MODE_UNDEFINED)
-            LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: RasterizerDesc.CullMode must not be CULL_MODE_UNDEFINED");
+            LOG_PSO_ERROR_AND_THROW("RasterizerDesc.CullMode must not be CULL_MODE_UNDEFINED");
     }
 
     void CheckAndCorrectDepthStencilDesc()
@@ -410,7 +453,7 @@ private:
         if (DSSDesc.DepthFunc == COMPARISON_FUNC_UNKNOWN)
         {
             if (DSSDesc.DepthEnable)
-                LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: DepthStencilDesc.DepthFunc must not be COMPARISON_FUNC_UNKNOWN when depth is enabled");
+                LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.DepthFunc must not be COMPARISON_FUNC_UNKNOWN when depth is enabled");
             else
                 DSSDesc.DepthFunc = DepthStencilStateDesc{}.DepthFunc;
         }
@@ -420,13 +463,13 @@ private:
             if (DSSDesc.StencilEnable)
             {
                 if (OpDesc.StencilFailOp == STENCIL_OP_UNDEFINED)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: DepthStencilDesc.", FaceName, ".StencilFailOp must not be STENCIL_OP_UNDEFINED when stencil is enabled");
+                    LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilFailOp must not be STENCIL_OP_UNDEFINED when stencil is enabled");
                 if (OpDesc.StencilDepthFailOp == STENCIL_OP_UNDEFINED)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: DepthStencilDesc.", FaceName, ".StencilDepthFailOp must not be STENCIL_OP_UNDEFINED when stencil is enabled");
+                    LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilDepthFailOp must not be STENCIL_OP_UNDEFINED when stencil is enabled");
                 if (OpDesc.StencilPassOp == STENCIL_OP_UNDEFINED)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: DepthStencilDesc.", FaceName, ".StencilPassOp must not be STENCIL_OP_UNDEFINED when stencil is enabled");
+                    LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilPassOp must not be STENCIL_OP_UNDEFINED when stencil is enabled");
                 if (OpDesc.StencilFunc == COMPARISON_FUNC_UNKNOWN)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: DepthStencilDesc.", FaceName, ".StencilFunc must not be COMPARISON_FUNC_UNKNOWN when stencil is enabled");
+                    LOG_PSO_ERROR_AND_THROW("DepthStencilDesc.", FaceName, ".StencilFunc must not be COMPARISON_FUNC_UNKNOWN when stencil is enabled");
             }
             else
             {
@@ -457,18 +500,18 @@ private:
             if (BlendEnable)
             {
                 if (RTDesc.SrcBlend == BLEND_FACTOR_UNDEFINED)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: BlendDesc.RenderTargets[", rt, "].SrcBlend must not be BLEND_FACTOR_UNDEFINED");
+                    LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].SrcBlend must not be BLEND_FACTOR_UNDEFINED");
                 if (RTDesc.DestBlend == BLEND_FACTOR_UNDEFINED)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: BlendDesc.RenderTargets[", rt, "].DestBlend must not be BLEND_FACTOR_UNDEFINED");
+                    LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].DestBlend must not be BLEND_FACTOR_UNDEFINED");
                 if (RTDesc.BlendOp == BLEND_OPERATION_UNDEFINED)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: BlendDesc.RenderTargets[", rt, "].BlendOp must not be BLEND_OPERATION_UNDEFINED");
+                    LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].BlendOp must not be BLEND_OPERATION_UNDEFINED");
 
                 if (RTDesc.SrcBlendAlpha == BLEND_FACTOR_UNDEFINED)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: BlendDesc.RenderTargets[", rt, "].SrcBlendAlpha must not be BLEND_FACTOR_UNDEFINED");
+                    LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].SrcBlendAlpha must not be BLEND_FACTOR_UNDEFINED");
                 if (RTDesc.DestBlendAlpha == BLEND_FACTOR_UNDEFINED)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: BlendDesc.RenderTargets[", rt, "].DestBlendAlpha must not be BLEND_FACTOR_UNDEFINED");
+                    LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].DestBlendAlpha must not be BLEND_FACTOR_UNDEFINED");
                 if (RTDesc.BlendOpAlpha == BLEND_OPERATION_UNDEFINED)
-                    LOG_ERROR_AND_THROW("Description of graphics PSO '", this->m_Desc.Name, "' is invalid: BlendDesc.RenderTargets[", rt, "].BlendOpAlpha must not be BLEND_OPERATION_UNDEFINED");
+                    LOG_PSO_ERROR_AND_THROW("BlendDesc.RenderTargets[", rt, "].BlendOpAlpha must not be BLEND_OPERATION_UNDEFINED");
             }
             else
             {
@@ -491,6 +534,7 @@ private:
                 RTDesc.LogicOp = RenderTargetBlendDesc{}.LogicOp;
         }
     }
+#undef LOG_PSO_ERROR_AND_THROW
 };
 
 } // namespace Diligent

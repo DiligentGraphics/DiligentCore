@@ -290,12 +290,15 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
         auto&       GraphicsPipeline = m_Desc.GraphicsPipeline;
         auto&       RPCache          = pDeviceVk->GetImplicitRenderPassCache();
 
-        RenderPassCache::RenderPassCacheKey Key{
-            GraphicsPipeline.NumRenderTargets,
-            GraphicsPipeline.SmplDesc.Count,
-            GraphicsPipeline.RTVFormats,
-            GraphicsPipeline.DSVFormat};
-        m_pRenderPass = RPCache.GetRenderPass(Key);
+        if (m_pRenderPass == nullptr)
+        {
+            RenderPassCache::RenderPassCacheKey Key{
+                GraphicsPipeline.NumRenderTargets,
+                GraphicsPipeline.SmplDesc.Count,
+                GraphicsPipeline.RTVFormats,
+                GraphicsPipeline.DSVFormat};
+            m_pRenderPass = RPCache.GetRenderPass(Key);
+        }
 
         VkGraphicsPipelineCreateInfo PipelineCI = {};
 
@@ -436,7 +439,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
 
 
         PipelineCI.renderPass         = GetRenderPass()->GetVkRenderPass();
-        PipelineCI.subpass            = 0;
+        PipelineCI.subpass            = m_Desc.GraphicsPipeline.SubpassIndex;
         PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
         PipelineCI.basePipelineIndex  = 0;              // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
