@@ -45,6 +45,8 @@
 #include "TextureVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
 #include "QueryVkImpl.hpp"
+#include "FramebufferVkImpl.hpp"
+#include "RenderpassVkImpl.hpp"
 #include "HashUtils.hpp"
 #include "ManagedVulkanObject.hpp"
 #include "QueryManagerVk.hpp"
@@ -52,8 +54,6 @@
 
 namespace Diligent
 {
-
-class RenderDeviceVkImpl;
 
 struct DeviceContextVkImplTraits
 {
@@ -63,6 +63,8 @@ struct DeviceContextVkImplTraits
     using DeviceType        = RenderDeviceVkImpl;
     using ICommandQueueType = ICommandQueueVk;
     using QueryType         = QueryVkImpl;
+    using FramebufferType   = FramebufferVkImpl;
+    using RenderPassType    = RenderPassVkImpl;
 };
 
 /// Device context implementation in Vulkan backend.

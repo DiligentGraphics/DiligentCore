@@ -49,6 +49,8 @@
 #include "PipelineState.h"
 #include "Fence.h"
 #include "Query.h"
+#include "RenderPass.h"
+#include "Framebuffer.h"
 #include "CommandList.h"
 #include "SwapChain.h"
 
@@ -615,7 +617,9 @@ typedef struct CopyTextureAttribs CopyTextureAttribs;
 /// This structure is used by IDeviceContext::BeginRenderPass().
 struct BeginRenderPassAttribs
 {
-    int TBD;
+    IRenderPass*    pRenderPass     DEFAULT_INITIALIZER(nullptr);
+
+    IFramebuffer*   pFramebuffer    DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct BeginRenderPassAttribs BeginRenderPassAttribs;
 

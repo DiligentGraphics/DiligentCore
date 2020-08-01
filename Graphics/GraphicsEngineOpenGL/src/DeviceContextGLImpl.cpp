@@ -405,16 +405,19 @@ void DeviceContextGLImpl::ResetRenderTargets()
 
 void DeviceContextGLImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
+    TDeviceContextBase::BeginRenderPass(Attribs);
     UNEXPECTED("Method not implemented");
 }
 
 void DeviceContextGLImpl::NextSubpass()
 {
+    TDeviceContextBase::NextSubpass();
     UNEXPECTED("Method not implemented");
 }
 
 void DeviceContextGLImpl::EndRenderPass()
 {
+    TDeviceContextBase::EndRenderPass();
     UNEXPECTED("Method not implemented");
 }
 

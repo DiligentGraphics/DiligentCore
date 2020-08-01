@@ -373,16 +373,19 @@ namespace Diligent
 
     void DeviceContextMtlImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
     {
+        TDeviceContextBase::BeginRenderPass(Attribs);
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::BeginRenderPass() is not implemented");
     }
 
     void DeviceContextMtlImpl::NextSubpass()
     {
+        TDeviceContextBase::NextSubpass();
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::NextSubpass() is not implemented");
     }
 
     void DeviceContextMtlImpl::EndRenderPass()
     {
+        TDeviceContextBase::EndRenderPass();
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::EndRenderPass() is not implemented");
     }
 

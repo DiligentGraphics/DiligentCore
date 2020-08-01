@@ -33,6 +33,8 @@
 #include "TextureMtlImpl.h"
 #include "PipelineStateMtlImpl.h"
 #include "QueryMtlImpl.h"
+#include "FramebufferMtlImpl.h"
+#include "RenderPassMtlImpl.h"
 
 namespace Diligent
 {
@@ -46,6 +48,8 @@ struct DeviceContextMtlImplTraits
     using PipelineStateType = PipelineStateMtlImpl;
     using DeviceType        = RenderDeviceMtlImpl;
     using QueryType         = QueryMtlImpl;
+    using FramebufferType   = FramebufferMtlImpl;
+    using RenderPassType    = RenderPassMtlImpl;
 };
 
 /// Implementation of the Diligent::IDeviceContextMtl interface

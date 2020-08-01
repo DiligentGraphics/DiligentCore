@@ -1193,16 +1193,19 @@ void DeviceContextVkImpl::ResetRenderTargets()
 
 void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
+    TDeviceContextBase::BeginRenderPass(Attribs);
     UNEXPECTED("Method not implemented");
 }
 
 void DeviceContextVkImpl::NextSubpass()
 {
+    TDeviceContextBase::NextSubpass();
     UNEXPECTED("Method not implemented");
 }
 
 void DeviceContextVkImpl::EndRenderPass()
 {
+    TDeviceContextBase::EndRenderPass();
     UNEXPECTED("Method not implemented");
 }
 

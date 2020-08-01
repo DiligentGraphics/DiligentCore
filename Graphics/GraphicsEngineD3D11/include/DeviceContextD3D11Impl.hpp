@@ -37,6 +37,8 @@
 #include "TextureBaseD3D11.hpp"
 #include "PipelineStateD3D11Impl.hpp"
 #include "QueryD3D11Impl.hpp"
+#include "FramebufferD3D11Impl.hpp"
+#include "RenderPassD3D11Impl.hpp"
 #include "DisjointQueryPool.hpp"
 
 #ifdef DILIGENT_DEBUG
@@ -46,8 +48,6 @@
 namespace Diligent
 {
 
-class RenderDeviceD3D11Impl;
-
 struct DeviceContextD3D11ImplTraits
 {
     using BufferType        = BufferD3D11Impl;
@@ -55,6 +55,8 @@ struct DeviceContextD3D11ImplTraits
     using PipelineStateType = PipelineStateD3D11Impl;
     using DeviceType        = RenderDeviceD3D11Impl;
     using QueryType         = QueryD3D11Impl;
+    using FramebufferType   = FramebufferD3D11Impl;
+    using RenderPassType    = RenderPassD3D11Impl;
 };
 
 /// Device context implementation in Direct3D11 backend.

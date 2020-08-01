@@ -35,6 +35,8 @@
 #include "BufferGLImpl.hpp"
 #include "TextureBaseGL.hpp"
 #include "QueryGLImpl.hpp"
+#include "FramebufferGLImpl.hpp"
+#include "RenderPassGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
 
 namespace Diligent
@@ -47,6 +49,8 @@ struct DeviceContextGLImplTraits
     using PipelineStateType = PipelineStateGLImpl;
     using DeviceType        = RenderDeviceGLImpl;
     using QueryType         = QueryGLImpl;
+    using FramebufferType   = FramebufferGLImpl;
+    using RenderPassType    = RenderPassGLImpl;
 };
 
 /// Device context implementation in OpenGL backend.

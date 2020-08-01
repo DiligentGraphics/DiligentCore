@@ -1619,16 +1619,19 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
 
 void DeviceContextD3D11Impl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
+    TDeviceContextBase::BeginRenderPass(Attribs);
     UNEXPECTED("Method not implemented");
 }
 
 void DeviceContextD3D11Impl::NextSubpass()
 {
+    TDeviceContextBase::NextSubpass();
     UNEXPECTED("Method not implemented");
 }
 
 void DeviceContextD3D11Impl::EndRenderPass()
 {
+    TDeviceContextBase::EndRenderPass();
     UNEXPECTED("Method not implemented");
 }
 

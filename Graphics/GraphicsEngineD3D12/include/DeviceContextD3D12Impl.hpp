@@ -37,13 +37,13 @@
 #include "BufferD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
 #include "QueryD3D12Impl.hpp"
+#include "FramebufferD3D12Impl.hpp"
+#include "RenderPassD3D12Impl.hpp"
 #include "PipelineStateD3D12Impl.hpp"
 #include "D3D12DynamicHeap.hpp"
 
 namespace Diligent
 {
-
-class RenderDeviceD3D12Impl;
 
 struct DeviceContextD3D12ImplTraits
 {
@@ -53,6 +53,8 @@ struct DeviceContextD3D12ImplTraits
     using DeviceType        = RenderDeviceD3D12Impl;
     using ICommandQueueType = ICommandQueueD3D12;
     using QueryType         = QueryD3D12Impl;
+    using FramebufferType   = FramebufferD3D12Impl;
+    using RenderPassType    = RenderPassD3D12Impl;
 };
 
 /// Device context implementation in Direct3D12 backend.
