@@ -108,14 +108,20 @@ struct WindowsMisc : public BasicPlatformMisc
 
     inline static Diligent::Uint32 CountOneBits(Diligent::Uint32 Val)
     {
+#if _M_ARM
+        auto Bits = _CountOneBits(Val);
+#else
         auto Bits = __popcnt(Val);
+#endif
         VERIFY_EXPR(Bits == BasicPlatformMisc::CountOneBits(Val));
         return Bits;
     }
 
     inline static Diligent::Uint32 CountOneBits(Diligent::Uint64 Val)
     {
-#if _WIN64
+#if _M_ARM
+        auto Bits = _CountOneBits64(Val);
+#elif _WIN64
         auto Bits = __popcnt64(Val);
 #else
         auto Bits =
