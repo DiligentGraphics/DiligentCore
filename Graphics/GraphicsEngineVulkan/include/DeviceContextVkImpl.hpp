@@ -46,7 +46,7 @@
 #include "PipelineStateVkImpl.hpp"
 #include "QueryVkImpl.hpp"
 #include "FramebufferVkImpl.hpp"
-#include "RenderpassVkImpl.hpp"
+#include "RenderPassVkImpl.hpp"
 #include "HashUtils.hpp"
 #include "ManagedVulkanObject.hpp"
 #include "QueryManagerVk.hpp"
