@@ -644,13 +644,37 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
     const auto& ViewDesc = pVkDSV->GetDesc();
     VERIFY(ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D, "Depth-stencil view of a 3D texture should've been created as 2D texture array view");
 
-    if (pVkDSV == m_pBoundDepthStencil)
+    bool ClearAsAttachment = false;
+    if (m_pActiveRenderPass != nullptr)
+    {
+        const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+        for (Uint32 i = 0; i < FBDesc.AttachmentCount && !ClearAsAttachment; ++i)
+        {
+            ClearAsAttachment = FBDesc.ppAttachments[i] == pView;
+        }
+
+        if (!ClearAsAttachment)
+        {
+            UNEXPECTED("DSV was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearDepthStencil "
+                       "checks if the DSV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
+            return;
+        }
+    }
+    else
+    {
+        ClearAsAttachment = pVkDSV == m_pBoundDepthStencil;
+    }
+
+    if (ClearAsAttachment)
     {
         // Render pass may not be currently committed
         VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
-        TransitionRenderTargets(StateTransitionMode);
-        // No need to verify states again
-        CommitRenderPassAndFramebuffer(false);
+        if (m_pActiveRenderPass == nullptr)
+        {
+            TransitionRenderTargets(StateTransitionMode);
+            // No need to verify states again
+            CommitRenderPassAndFramebuffer(false);
+        }
 
         VkClearAttachment ClearAttachment = {};
         ClearAttachment.aspectMask        = 0;
@@ -748,22 +772,48 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     static constexpr const Uint32 InvalidAttachmentIndex = static_cast<Uint32>(-1);
 
     Uint32 attachmentIndex = InvalidAttachmentIndex;
-    for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+    if (m_pActiveRenderPass != nullptr)
     {
-        if (m_pBoundRenderTargets[rt] == pVkRTV)
+        const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+        for (Uint32 i = 0; i < FBDesc.AttachmentCount; ++i)
         {
-            attachmentIndex = rt;
-            break;
+            if (FBDesc.ppAttachments[i] == pView)
+            {
+                attachmentIndex = i;
+                break;
+            }
+        }
+
+        if (attachmentIndex == InvalidAttachmentIndex)
+        {
+            UNEXPECTED("RTV was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearRenderTarget "
+                       "checks if the RTV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
+            return;
         }
     }
+    else
+    {
+        for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+        {
+            if (m_pBoundRenderTargets[rt] == pVkRTV)
+            {
+                attachmentIndex = rt;
+                break;
+            }
+        }
+    }
+
 
     if (attachmentIndex != InvalidAttachmentIndex)
     {
         // Render pass may not be currently committed
         VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
-        TransitionRenderTargets(StateTransitionMode);
-        // No need to verify states again
-        CommitRenderPassAndFramebuffer(false);
+        if (m_pActiveRenderPass == nullptr)
+        {
+            TransitionRenderTargets(StateTransitionMode);
+            // No need to verify states again
+            CommitRenderPassAndFramebuffer(false);
+        }
 
         VkClearAttachment ClearAttachment = {};
         ClearAttachment.aspectMask        = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -786,6 +836,8 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     }
     else
     {
+        VERIFY(m_pActiveRenderPass == nullptr, "This branch should never execute inside a render pass.");
+
         // End current render pass and clear the image with vkCmdClearColorImage
         if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
             m_CommandBuffer.EndRenderPass();
@@ -1111,6 +1163,8 @@ void DeviceContextVkImpl::TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE
 
 void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "This method should not be called inside an active render pass.");
+
     const auto& CmdBufferState = m_CommandBuffer.GetState();
     if (CmdBufferState.Framebuffer != m_Framebuffer)
     {

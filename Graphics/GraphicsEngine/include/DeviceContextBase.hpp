@@ -888,8 +888,6 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearDepthSt
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    VERIFY(m_pActiveRenderPass == nullptr, "ClearDepthStencil command must be used outside of render pass. Inside the render pass, use ClearDepthStencilAttachment command.");
-
     {
         const auto& ViewDesc = pView->GetDesc();
         if (ViewDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
@@ -899,21 +897,44 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearDepthSt
             return false;
         }
 
-        if (pView != m_pBoundDepthStencil)
+        if (m_pActiveRenderPass != nullptr)
         {
-            if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            bool AttachmentFound = false;
+            if (m_pBoundFramebuffer != nullptr)
+            {
+                const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+                for (Uint32 i = 0; i < FBDesc.AttachmentCount && !AttachmentFound; ++i)
+                {
+                    AttachmentFound = FBDesc.ppAttachments[i] == pView;
+                }
+            }
+
+            if (!AttachmentFound)
             {
                 LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
-                                  "' is not bound to the device context. ClearDepthStencil command requires "
-                                  "depth-stencil view be bound to the device contex in OpenGL backend");
+                                  "' is not bound as framebuffer attachment. ClearDepthStencil command inside a render pass "
+                                  "requires depth-stencil view be bound as framebuffer attachment.");
                 return false;
             }
-            else
+        }
+        else
+        {
+            if (pView != m_pBoundDepthStencil)
             {
-                LOG_WARNING_MESSAGE("Depth-stencil view '", ViewDesc.Name,
-                                    "' is not bound to the device context. "
-                                    "ClearDepthStencil command is more efficient when depth-stencil "
-                                    "view is bound to the context. In OpenGL backend this is a requirement.");
+                if (m_pDevice->GetDeviceCaps().IsGLDevice())
+                {
+                    LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
+                                      "' is not bound to the device context. ClearDepthStencil command requires "
+                                      "depth-stencil view be bound to the device contex in OpenGL backend");
+                    return false;
+                }
+                else
+                {
+                    LOG_WARNING_MESSAGE("Depth-stencil view '", ViewDesc.Name,
+                                        "' is not bound to the device context. "
+                                        "ClearDepthStencil command is more efficient when depth-stencil "
+                                        "view is bound to the context. In OpenGL backend this is a requirement.");
+                }
             }
         }
     }
@@ -932,8 +953,6 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearRenderT
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    VERIFY(m_pActiveRenderPass == nullptr, "ClearRenderTarget command must be used outside of render pass. Inside the render pass, use ClearRenderTargetAttachment command.");
-
     {
         const auto& ViewDesc = pView->GetDesc();
         if (ViewDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
@@ -943,25 +962,48 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearRenderT
             return false;
         }
 
-        bool RTFound = false;
-        for (Uint32 i = 0; i < m_NumBoundRenderTargets && !RTFound; ++i)
+        if (m_pActiveRenderPass != nullptr)
         {
-            RTFound = m_pBoundRenderTargets[i] == pView;
-        }
-        if (!RTFound)
-        {
-            if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            bool AttachmentFound = false;
+            if (m_pBoundFramebuffer != nullptr)
+            {
+                const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+                for (Uint32 i = 0; i < FBDesc.AttachmentCount && !AttachmentFound; ++i)
+                {
+                    AttachmentFound = FBDesc.ppAttachments[i] == pView;
+                }
+            }
+
+            if (!AttachmentFound)
             {
                 LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
-                                  "' is not bound to the device context. ClearRenderTarget command "
-                                  "requires render target view be bound to the device contex in OpenGL backend");
+                                  "' is not bound as framebuffer attachment. ClearRenderTarget command inside a render pass "
+                                  "requires render target view be bound as framebuffer attachment.");
                 return false;
             }
-            else
+        }
+        else
+        {
+            bool RTFound = false;
+            for (Uint32 i = 0; i < m_NumBoundRenderTargets && !RTFound; ++i)
             {
-                LOG_WARNING_MESSAGE("Render target view '", ViewDesc.Name,
-                                    "' is not bound to the device context. ClearRenderTarget command is more efficient "
-                                    "if render target view is bound to the device context. In OpenGL backend this is a requirement.");
+                RTFound = m_pBoundRenderTargets[i] == pView;
+            }
+            if (!RTFound)
+            {
+                if (m_pDevice->GetDeviceCaps().IsGLDevice())
+                {
+                    LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
+                                      "' is not bound to the device context. ClearRenderTarget command "
+                                      "requires render target view be bound to the device contex in OpenGL backend");
+                    return false;
+                }
+                else
+                {
+                    LOG_WARNING_MESSAGE("Render target view '", ViewDesc.Name,
+                                        "' is not bound to the device context. ClearRenderTarget command is more efficient "
+                                        "if render target view is bound to the device context. In OpenGL backend this is a requirement.");
+                }
             }
         }
     }
