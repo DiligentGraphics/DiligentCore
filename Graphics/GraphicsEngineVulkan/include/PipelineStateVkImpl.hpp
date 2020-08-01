@@ -68,8 +68,8 @@ public:
     /// Implementation of IPipelineState::IsCompatibleWith() in Vulkan backend.
     virtual bool DILIGENT_CALL_TYPE IsCompatibleWith(const IPipelineState* pPSO) const override final;
 
-    /// Implementation of IPipelineStateVk::GetVkRenderPass().
-    virtual VkRenderPass DILIGENT_CALL_TYPE GetVkRenderPass() const override final { return m_RenderPass; }
+    /// Implementation of IPipelineStateVk::GetRenderPass().
+    virtual IRenderPassVk* DILIGENT_CALL_TYPE GetRenderPass() const override final { return m_pRenderPass.RawPtr<IRenderPassVk>(); }
 
     /// Implementation of IPipelineStateVk::GetVkPipeline().
     virtual VkPipeline DILIGENT_CALL_TYPE GetVkPipeline() const override final { return m_Pipeline; }
@@ -113,13 +113,13 @@ public:
         return m_SRBMemAllocator;
     }
 
-    static VkRenderPassCreateInfo GetRenderPassCreateInfo(Uint32                                                       NumRenderTargets,
-                                                          const TEXTURE_FORMAT                                         RTVFormats[],
-                                                          TEXTURE_FORMAT                                               DSVFormat,
-                                                          Uint32                                                       SampleCount,
-                                                          std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1>& Attachments,
-                                                          std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>&   AttachmentReferences,
-                                                          VkSubpassDescription&                                        SubpassDesc);
+    static RenderPassDesc GetImplicitRenderPassDesc(Uint32                                                        NumRenderTargets,
+                                                    const TEXTURE_FORMAT                                          RTVFormats[],
+                                                    TEXTURE_FORMAT                                                DSVFormat,
+                                                    Uint8                                                         SampleCount,
+                                                    std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 1>& Attachments,
+                                                    std::array<AttachmentReference, MAX_RENDER_TARGETS + 1>&      AttachmentReferences,
+                                                    SubpassDesc&                                                  SubpassDesc);
 
 
     void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
@@ -152,7 +152,6 @@ private:
 
     std::array<VulkanUtilities::ShaderModuleWrapper, MAX_SHADERS_IN_PIPELINE> m_ShaderModules;
 
-    VkRenderPass                     m_RenderPass = VK_NULL_HANDLE; // Render passes are managed by the render device
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayout                   m_PipelineLayout;
 

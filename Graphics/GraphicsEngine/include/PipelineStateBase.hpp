@@ -389,6 +389,8 @@ protected:
     RefCntAutoPtr<IShader> m_pHS; ///< Strong reference to the hull shader
     RefCntAutoPtr<IShader> m_pCS; ///< Strong reference to the compute shader
 
+    RefCntAutoPtr<IRenderPass> m_pRenderPass; ///< Strong reference to the render pass object
+
     IShader* m_ppShaders[5]             = {}; ///< Array of pointers to the shaders used by this PSO
     size_t   m_ShaderResourceLayoutHash = 0;  ///< Hash computed from the shader resource layout
 

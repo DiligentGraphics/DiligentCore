@@ -32,6 +32,7 @@
 #include "PipelineStateVkImpl.hpp"
 #include "TextureVkImpl.hpp"
 #include "BufferVkImpl.hpp"
+#include "RenderPassVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "CommandListVkImpl.hpp"
 #include "FenceVkImpl.hpp"
@@ -461,7 +462,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #endif
 
 #ifdef DILIGENT_DEVELOPMENT
-    if (m_pPipelineState->GetVkRenderPass() != m_RenderPass)
+    if (m_pPipelineState->GetRenderPass()->GetVkRenderPass() != m_RenderPass)
     {
         DvpLogRenderPass_PSOMismatch();
     }
@@ -1163,9 +1164,9 @@ void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRen
         }
 
         auto& FBCache = m_pDevice->GetFramebufferCache();
-        auto& RPCache = m_pDevice->GetRenderPassCache();
+        auto& RPCache = m_pDevice->GetImplicitRenderPassCache();
 
-        m_RenderPass           = RPCache.GetRenderPass(RenderPassKey);
+        m_RenderPass           = RPCache.GetRenderPass(RenderPassKey)->GetVkRenderPass();
         FBKey.Pass             = m_RenderPass;
         FBKey.CommandQueueMask = ~Uint64{0};
         m_Framebuffer          = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);

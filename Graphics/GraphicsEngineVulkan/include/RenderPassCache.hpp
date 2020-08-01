@@ -36,17 +36,18 @@
 #include "Constants.h"
 #include "HashUtils.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
 
 class RenderDeviceVkImpl;
+class RenderPassVkImpl;
+
 class RenderPassCache
 {
 public:
-    RenderPassCache(RenderDeviceVkImpl& DeviceVk) noexcept :
-        m_DeviceVkImpl{DeviceVk}
-    {}
+    RenderPassCache(RenderDeviceVkImpl& DeviceVk) noexcept;
 
     // clang-format off
     RenderPassCache             (const RenderPassCache&) = delete;
@@ -123,7 +124,7 @@ public:
         mutable size_t Hash = 0;
     };
 
-    VkRenderPass GetRenderPass(const RenderPassCacheKey& Key);
+    RenderPassVkImpl* GetRenderPass(const RenderPassCacheKey& Key);
 
 private:
     struct RenderPassCacheKeyHash
@@ -136,8 +137,8 @@ private:
 
     RenderDeviceVkImpl& m_DeviceVkImpl;
 
-    std::mutex                                                                                         m_Mutex;
-    std::unordered_map<RenderPassCacheKey, VulkanUtilities::RenderPassWrapper, RenderPassCacheKeyHash> m_Cache;
+    std::mutex                                                                                      m_Mutex;
+    std::unordered_map<RenderPassCacheKey, RefCntAutoPtr<RenderPassVkImpl>, RenderPassCacheKeyHash> m_Cache;
 };
 
 } // namespace Diligent

@@ -49,7 +49,8 @@ public:
 
     RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                      RenderDeviceVkImpl*   pDevice,
-                     const RenderPassDesc& Desc);
+                     const RenderPassDesc& Desc,
+                     bool                  IsDeviceInternal);
     ~RenderPassVkImpl();
 
     /// Implementation of ISamplerVk::GetVkRenderPass().

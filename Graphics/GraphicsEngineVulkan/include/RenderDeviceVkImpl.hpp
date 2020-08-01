@@ -102,6 +102,11 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
                                                      IRenderPass**         ppRenderPass) override final;
 
+    void CreateRenderPass(const RenderPassDesc& Desc,
+                          IRenderPass**         ppRenderPass,
+                          bool                  IsDeviceInternal);
+
+
     /// Implementation of IRenderDevice::CreateFramebuffer() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
                                                       IFramebuffer**         ppFramebuffer) override final;
@@ -152,7 +157,7 @@ public:
     const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice() { return *m_LogicalVkDevice; }
 
     FramebufferCache& GetFramebufferCache() { return m_FramebufferCache; }
-    RenderPassCache&  GetRenderPassCache() { return m_RenderPassCache; }
+    RenderPassCache&  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache; }
 
     VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)
     {
@@ -181,7 +186,7 @@ private:
     EngineVkCreateInfo m_EngineAttribs;
 
     FramebufferCache       m_FramebufferCache;
-    RenderPassCache        m_RenderPassCache;
+    RenderPassCache        m_ImplicitRenderPassCache;
     DescriptorSetAllocator m_DescriptorSetAllocator;
     DescriptorPoolManager  m_DynamicDescriptorPool;
 

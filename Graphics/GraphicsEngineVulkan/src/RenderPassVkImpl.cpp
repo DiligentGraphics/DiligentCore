@@ -36,8 +36,9 @@ namespace Diligent
 
 RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
                                    RenderDeviceVkImpl*   pDevice,
-                                   const RenderPassDesc& Desc) :
-    TRenderPassBase{pRefCounters, pDevice, Desc}
+                                   const RenderPassDesc& Desc,
+                                   bool                  IsDeviceInternal) :
+    TRenderPassBase{pRefCounters, pDevice, Desc, IsDeviceInternal}
 {
     VkRenderPassCreateInfo RenderPassCI = {};
 

@@ -43,6 +43,7 @@
 #include "ShaderResourceVariable.h"
 #include "Shader.h"
 #include "Sampler.h"
+#include "RenderPass.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
