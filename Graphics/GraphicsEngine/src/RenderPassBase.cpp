@@ -38,13 +38,33 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc)
 #define LOG_RENDER_PASS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Render pass '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
 
     if (Desc.AttachmentCount != 0 && Desc.pAttachments == nullptr)
+    {
+        // If attachmentCount is not 0, pAttachments must be a valid pointer to an
+        // array of attachmentCount valid VkAttachmentDescription structures.
+        // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-pAttachments-parameter
         LOG_RENDER_PASS_ERROR_AND_THROW("The attachment count (", Desc.AttachmentCount, ") is not zero, but pAttachments is null");
+    }
 
-    if (Desc.SubpassCount != 0 && Desc.pSubpasses == nullptr)
-        LOG_RENDER_PASS_ERROR_AND_THROW("The subpass count (", Desc.SubpassCount, ") is not zero, but pSubpasses is null");
+    if (Desc.SubpassCount == 0)
+    {
+        // subpassCount must be greater than 0.
+        // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-subpassCount-arraylength
+        LOG_RENDER_PASS_ERROR_AND_THROW("Render pass must have at least one subpass");
+    }
+    if (Desc.pSubpasses == nullptr)
+    {
+        // pSubpasses must be a valid pointer to an array of subpassCount valid VkSubpassDescription structures.
+        // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-pSubpasses-parameter
+        LOG_RENDER_PASS_ERROR_AND_THROW("pSubpasses must not be null");
+    }
 
     if (Desc.DependencyCount != 0 && Desc.pDependencies == nullptr)
+    {
+        // If dependencyCount is not 0, pDependencies must be a valid pointer to an array of
+        // dependencyCount valid VkSubpassDependency structures.
+        // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-pDependencies-parameter
         LOG_RENDER_PASS_ERROR_AND_THROW("The dependency count (", Desc.DependencyCount, ") is not zero, but pDependencies is null");
+    }
 
     for (Uint32 i = 0; i < Desc.AttachmentCount; ++i)
     {

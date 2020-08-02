@@ -171,7 +171,7 @@ TEST(ClearRenderTargetTest, AsAttachment)
     Attachments[0].SampleCount  = static_cast<Uint8>(BackBufferDesc.SampleCount);
     Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
     Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
-    Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_DONT_CARE;
+    Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_DISCARD;
     Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
 
     SubpassDesc Subpasses[1] = {};

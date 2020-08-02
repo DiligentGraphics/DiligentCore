@@ -97,6 +97,10 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
             if (AttchRef.AttachmentIndex == ATTACHMENT_UNUSED)
                 continue;
 
+            // If the attachment member of any element of pInputAttachments, pColorAttachments, pResolveAttachments
+            // or pDepthStencilAttachment, or any element of pPreserveAttachments in any element of pSubpasses is not
+            // VK_ATTACHMENT_UNUSED, it must be less than attachmentCount
+            // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-attachment-00834
             if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
             {
                 LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment index (", AttchRef.AttachmentIndex, ") of input attachment reference ", input_attachment,
@@ -125,6 +129,10 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
             if (AttchRef.AttachmentIndex == ATTACHMENT_UNUSED)
                 continue;
 
+            // If the attachment member of any element of pInputAttachments, pColorAttachments, pResolveAttachments
+            // or pDepthStencilAttachment, or any element of pPreserveAttachments in any element of pSubpasses is not
+            // VK_ATTACHMENT_UNUSED, it must be less than attachmentCount
+            // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-attachment-00834
             if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
             {
                 LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment index (", AttchRef.AttachmentIndex, ") of render target attachment reference ", rt_attachment,
@@ -155,6 +163,10 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                 if (AttchRef.AttachmentIndex == ATTACHMENT_UNUSED)
                     continue;
 
+                // If the attachment member of any element of pInputAttachments, pColorAttachments, pResolveAttachments
+                // or pDepthStencilAttachment, or any element of pPreserveAttachments in any element of pSubpasses is not
+                // VK_ATTACHMENT_UNUSED, it must be less than attachmentCount
+                // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-attachment-00834
                 if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
                 {
                     LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment index (", AttchRef.AttachmentIndex, ") of resolve attachment reference ", rslv_attachment,
@@ -183,6 +195,10 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
             const auto& AttchRef = *Subpass.pDepthStencilAttachment;
             if (AttchRef.AttachmentIndex != ATTACHMENT_UNUSED)
             {
+                // If the attachment member of any element of pInputAttachments, pColorAttachments, pResolveAttachments
+                // or pDepthStencilAttachment, or any element of pPreserveAttachments in any element of pSubpasses is not
+                // VK_ATTACHMENT_UNUSED, it must be less than attachmentCount
+                // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-attachment-00834
                 if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
                 {
                     LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment index (", AttchRef.AttachmentIndex, ") of depth-stencil attachment reference of subpass ", i,

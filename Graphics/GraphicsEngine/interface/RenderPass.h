@@ -40,30 +40,46 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const struct INTERFACE_ID IID_RenderPass =
     { 0xb818dec7, 0x174d, 0x447a, { 0xa8, 0xe4, 0x94, 0xd2, 0x1c, 0x57, 0xb4, 0xa } };
 
+
 /// Render pass attachment load operation
+/// Vulkan counterpart: [VkAttachmentLoadOp](https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VkAttachmentLoadOp).
+/// D3D12 counterpart: [D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE](https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_render_pass_beginning_access_type).
 DILIGENT_TYPED_ENUM(ATTACHMENT_LOAD_OP, Uint8)
 {
     /// The previous contents of the texture within the render area will be preserved.
+    /// Vulkan counterpart: VK_ATTACHMENT_LOAD_OP_LOAD.
+    /// D3D12 counterpart: D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE.
     ATTACHMENT_LOAD_OP_LOAD = 0,
 
     /// The contents within the render area will be cleared to a uniform value, which is
-    /// specified when a render pass instance is begun
+    /// specified when a render pass instance is begun.
+    /// Vulkan counterpart: VK_ATTACHMENT_LOAD_OP_CLEAR.
+    /// D3D12 counterpart: D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR.
     ATTACHMENT_LOAD_OP_CLEAR,
 
     /// The previous contents within the area need not be preserved; the contents of
     /// the attachment will be undefined inside the render area.
-    ATTACHMENT_LOAD_OP_DONT_CARE
+    /// Vulkan counterpart: VK_ATTACHMENT_LOAD_OP_DONT_CARE.
+    /// D3D12 counterpart: D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD.
+    ATTACHMENT_LOAD_OP_DISCARD
 };
 
+
 /// Render pass attachment store operation
+/// Vulkan counterpart: [VkAttachmentStoreOp](https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VkAttachmentStoreOp).
+/// D3D12 counterpart: [D3D12_RENDER_PASS_ENDING_ACCESS_TYPE](https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_render_pass_ending_access_type).
 DILIGENT_TYPED_ENUM(ATTACHMENT_STORE_OP, Uint8)
 {
     /// The contents generated during the render pass and within the render area are written to memory.
+    /// Vulkan counterpart: VK_ATTACHMENT_STORE_OP_STORE.
+    /// D3D12 counterpart: D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE.
     ATTACHMENT_STORE_OP_STORE = 0,
 
     /// The contents within the render area are not needed after rendering, and may be discarded;
     /// the contents of the attachment will be undefined inside the render area.
-    ATTACHMENT_STORE_OP_DONT_CARE
+    /// Vulkan counterpart: VK_ATTACHMENT_STORE_OP_DONT_CARE.
+    /// D3D12 counterpart: D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD.
+    ATTACHMENT_STORE_OP_DISCARD
 };
 
 

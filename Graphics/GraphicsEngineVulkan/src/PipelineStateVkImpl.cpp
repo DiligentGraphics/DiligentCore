@@ -99,8 +99,8 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
         ColorAttachment.StoreOp = ATTACHMENT_STORE_OP_STORE;   // the contents generated during the render pass and within the render
                                                                // area are written to memory. For attachments with a color format,
                                                                // this uses the access type VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT.
-        ColorAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_DONT_CARE;
-        ColorAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_DONT_CARE;
+        ColorAttachment.StencilLoadOp  = ATTACHMENT_LOAD_OP_DISCARD;
+        ColorAttachment.StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
         ColorAttachment.InitialState   = RESOURCE_STATE_RENDER_TARGET;
         ColorAttachment.FinalState     = RESOURCE_STATE_RENDER_TARGET;
 

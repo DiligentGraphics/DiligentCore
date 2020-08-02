@@ -37,7 +37,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-TEST(RenderDeviceTest, CreateRenderPass)
+TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
 {
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
 
@@ -54,15 +54,15 @@ TEST(RenderDeviceTest, CreateRenderPass)
     Attachments[1].InitialState   = RESOURCE_STATE_SHADER_RESOURCE;
     Attachments[1].FinalState     = RESOURCE_STATE_DEPTH_WRITE;
     Attachments[1].LoadOp         = ATTACHMENT_LOAD_OP_CLEAR;
-    Attachments[1].StoreOp        = ATTACHMENT_STORE_OP_DONT_CARE;
+    Attachments[1].StoreOp        = ATTACHMENT_STORE_OP_DISCARD;
     Attachments[1].StencilLoadOp  = ATTACHMENT_LOAD_OP_CLEAR;
-    Attachments[1].StencilStoreOp = ATTACHMENT_STORE_OP_DONT_CARE;
+    Attachments[1].StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
 
     Attachments[2].Format       = TEX_FORMAT_RGBA8_UNORM;
     Attachments[2].SampleCount  = 1;
     Attachments[2].InitialState = RESOURCE_STATE_SHADER_RESOURCE;
     Attachments[2].FinalState   = RESOURCE_STATE_RENDER_TARGET;
-    Attachments[2].LoadOp       = ATTACHMENT_LOAD_OP_DONT_CARE;
+    Attachments[2].LoadOp       = ATTACHMENT_LOAD_OP_DISCARD;
     Attachments[2].StoreOp      = ATTACHMENT_STORE_OP_STORE;
 
     Attachments[3].Format       = TEX_FORMAT_RGBA32_FLOAT;
