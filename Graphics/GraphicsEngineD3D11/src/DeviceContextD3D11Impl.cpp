@@ -1629,9 +1629,9 @@ void DeviceContextD3D11Impl::NextSubpass()
     UNEXPECTED("Method not implemented");
 }
 
-void DeviceContextD3D11Impl::EndRenderPass()
+void DeviceContextD3D11Impl::EndRenderPass(bool UpdateResourceStates)
 {
-    TDeviceContextBase::EndRenderPass();
+    TDeviceContextBase::EndRenderPass(UpdateResourceStates);
     UNEXPECTED("Method not implemented");
 }
 

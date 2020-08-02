@@ -130,7 +130,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE NextSubpass() override = 0;
 
-    virtual void DILIGENT_CALL_TYPE EndRenderPass() override = 0;
+    virtual void DILIGENT_CALL_TYPE EndRenderPass(bool UpdateResourceStates) override = 0;
 
     /// Base implementation of IDeviceContext::UpdateBuffer(); validates input parameters.
     virtual void DILIGENT_CALL_TYPE UpdateBuffer(IBuffer*                       pBuffer,
@@ -902,9 +902,25 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::NextSubpass(
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPass()
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPass(bool UpdateResourceStates)
 {
     VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
+    VERIFY(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
+    if (UpdateResourceStates)
+    {
+        const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+        const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+        VERIFY(FBDesc.AttachmentCount >= RPDesc.AttachmentCount,
+               "Framebuffer attachment count (", FBDesc.AttachmentCount, ") is smaller than the render pass attachment count (", RPDesc.AttachmentCount, ")");
+        for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
+        {
+            if (auto* pView = FBDesc.ppAttachments[i])
+            {
+                auto* pTex = ValidatedCast<TextureImplType>(pView->GetTexture());
+                pTex->SetState(RPDesc.pAttachments[i].FinalState);
+            }
+        }
+    }
     m_pActiveRenderPass.Release();
     m_pBoundFramebuffer.Release();
     m_SubpassIndex = 0;

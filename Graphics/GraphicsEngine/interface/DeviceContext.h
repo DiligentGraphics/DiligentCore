@@ -905,7 +905,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
 
     /// Ends current render pass.
-    VIRTUAL void METHOD(EndRenderPass)(THIS) PURE;
+
+    /// \param [in] UpdateResourceStates - Indicates whether to update resource states so that they match
+    ///                                    the final states specified by the render pass attachments.
+    ///                                    Note that resources are always transitioned to the final states.
+    ///                                    The flag only indicates if the internal state variables should be
+    ///                                    updated to match the actual final states.
+    VIRTUAL void METHOD(EndRenderPass)(THIS_
+                                       bool UpdateResourceStates) PURE;
 
 
     /// Executes a draw command.
