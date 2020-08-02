@@ -55,6 +55,12 @@ VulkanLogicalDevice::VulkanLogicalDevice(VkPhysicalDevice             vkPhysical
     auto res = vkCreateDevice(vkPhysicalDevice, &DeviceCI, vkAllocator, &m_VkDevice);
     CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
 
+#if DILIGENT_USE_VOLK
+    // Since we only use one device at this time, load device function entries
+    // https://github.com/zeux/volk#optimizing-device-calls
+    volkLoadDevice(m_VkDevice);
+#endif
+
     m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     if (DeviceCI.pEnabledFeatures->geometryShader)
         m_EnabledGraphicsShaderStages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;

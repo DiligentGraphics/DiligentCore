@@ -27,20 +27,12 @@
 
 #pragma once
 
-
-#if PLATFORM_ANDROID
-// Android provides Vulkan loader starting with API level 24. To be
-// compatible with earlier versions, we will use manual loading.
-// On other platforms we link with the loader.
-#    define USE_VOLK 1
-#endif
-
-#if USE_VOLK
+#if DILIGENT_USE_VOLK
 #    define VK_NO_PROTOTYPES
 #endif
 #include "vulkan/vulkan.h"
 
-#if USE_VOLK
+#if DILIGENT_USE_VOLK
 #    include "volk/volk.h"
 #endif
 
