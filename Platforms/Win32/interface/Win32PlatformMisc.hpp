@@ -108,8 +108,12 @@ struct WindowsMisc : public BasicPlatformMisc
 
     inline static Diligent::Uint32 CountOneBits(Diligent::Uint32 Val)
     {
-#if _M_ARM
-        auto Bits = _CountOneBits(Val);
+#if defined _M_ARM || defined _M_ARM64
+        // MSVC _CountOneBits intrinsics undefined for ARM64
+        // Cast bits to 8x8 datatype and use VCNT on result
+        const uint8x8_t Vsum = vcnt_u8(vcreate_u8(static_cast<uint64_t>(Val)));
+        // Pairwise sums: 8x8 -> 16x4 -> 32x2
+        auto Bits = static_cast<Diligent::Uint32>(vget_lane_u32(vpaddl_u16(vpaddl_u8(Vsum)), 0));
 #else
         auto Bits = __popcnt(Val);
 #endif
@@ -119,8 +123,11 @@ struct WindowsMisc : public BasicPlatformMisc
 
     inline static Diligent::Uint32 CountOneBits(Diligent::Uint64 Val)
     {
-#if _M_ARM
-        auto Bits = _CountOneBits64(Val);
+#if defined _M_ARM || defined _M_ARM64
+        // Cast bits to 8x8 datatype and use VCNT on result
+        const uint8x8_t Vsum = vcnt_u8(vcreate_u8(Val));
+        // Pairwise sums: 8x8 -> 16x4 -> 32x2 -> 64x1
+        auto Bits = static_cast<Diligent::Uint32>(vget_lane_u64(vpaddl_u32(vpaddl_u16(vpaddl_u8(Vsum))), 0));
 #elif _WIN64
         auto Bits = __popcnt64(Val);
 #else
