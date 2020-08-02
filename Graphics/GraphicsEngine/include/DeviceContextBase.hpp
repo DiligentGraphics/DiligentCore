@@ -884,7 +884,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
             if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             {
                 StateTransitionDesc Barrier{pTex, RESOURCE_STATE_UNKNOWN, RequiredState, true};
-                TransitionResourceStates(1, &Barrier);
+                this->TransitionResourceStates(1, &Barrier);
             }
             else if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
             {
