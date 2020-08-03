@@ -87,7 +87,9 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc)
                 Attachment.InitialState != RESOURCE_STATE_UNORDERED_ACCESS &&
                 Attachment.InitialState != RESOURCE_STATE_SHADER_RESOURCE &&
                 Attachment.InitialState != RESOURCE_STATE_RESOLVE_DEST &&
-                Attachment.InitialState != RESOURCE_STATE_RESOLVE_SOURCE)
+                Attachment.InitialState != RESOURCE_STATE_RESOLVE_SOURCE &&
+                Attachment.InitialState != RESOURCE_STATE_COPY_DEST &&
+                Attachment.InitialState != RESOURCE_STATE_COPY_SOURCE)
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the initial state of depth-stencil attachment ", i, " (", GetResourceStateString(Attachment.InitialState), ") is invalid.");
             }
@@ -97,7 +99,9 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc)
                 Attachment.FinalState != RESOURCE_STATE_UNORDERED_ACCESS &&
                 Attachment.FinalState != RESOURCE_STATE_SHADER_RESOURCE &&
                 Attachment.FinalState != RESOURCE_STATE_RESOLVE_DEST &&
-                Attachment.FinalState != RESOURCE_STATE_RESOLVE_SOURCE)
+                Attachment.FinalState != RESOURCE_STATE_RESOLVE_SOURCE &&
+                Attachment.FinalState != RESOURCE_STATE_COPY_DEST &&
+                Attachment.FinalState != RESOURCE_STATE_COPY_SOURCE)
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the final state of depth-stencil attachment ", i, " (", GetResourceStateString(Attachment.FinalState), ") is invalid.");
             }
@@ -108,7 +112,9 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc)
                 Attachment.InitialState != RESOURCE_STATE_UNORDERED_ACCESS &&
                 Attachment.InitialState != RESOURCE_STATE_SHADER_RESOURCE &&
                 Attachment.InitialState != RESOURCE_STATE_RESOLVE_DEST &&
-                Attachment.InitialState != RESOURCE_STATE_RESOLVE_SOURCE)
+                Attachment.InitialState != RESOURCE_STATE_RESOLVE_SOURCE &&
+                Attachment.InitialState != RESOURCE_STATE_COPY_SOURCE &&
+                Attachment.InitialState != RESOURCE_STATE_PRESENT)
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the initial state of color attachment ", i, " (", GetResourceStateString(Attachment.InitialState), ") is invalid.");
             }
@@ -117,7 +123,9 @@ void ValidateRenderPassDesc(const RenderPassDesc& Desc)
                 Attachment.FinalState != RESOURCE_STATE_UNORDERED_ACCESS &&
                 Attachment.FinalState != RESOURCE_STATE_SHADER_RESOURCE &&
                 Attachment.FinalState != RESOURCE_STATE_RESOLVE_DEST &&
-                Attachment.FinalState != RESOURCE_STATE_RESOLVE_SOURCE)
+                Attachment.FinalState != RESOURCE_STATE_RESOLVE_SOURCE &&
+                Attachment.FinalState != RESOURCE_STATE_COPY_SOURCE &&
+                Attachment.FinalState != RESOURCE_STATE_PRESENT)
             {
                 LOG_RENDER_PASS_ERROR_AND_THROW("the final state of color attachment ", i, " (", GetResourceStateString(Attachment.FinalState), ") is invalid.");
             }
