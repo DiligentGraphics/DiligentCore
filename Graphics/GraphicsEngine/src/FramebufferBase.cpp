@@ -34,11 +34,11 @@ namespace Diligent
 
 void ValidateFramebufferDesc(const FramebufferDesc& Desc)
 {
-#define LOG_FRAMEBUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Framebuffer '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
+#define LOG_FRAMEBUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of framebuffer '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
     if (Desc.pRenderPass == nullptr)
     {
-        LOG_FRAMEBUFFER_ERROR_AND_THROW("Render pass must not be null");
+        LOG_FRAMEBUFFER_ERROR_AND_THROW("render pass must not be null.");
     }
 
     for (Uint32 i = 0; i < Desc.AttachmentCount; ++i)
@@ -48,30 +48,31 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
             // If flags does not include VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT, and attachmentCount is not 0,
             // pAttachments must be a valid pointer to an array of attachmentCount valid VkImageView handles.
             // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-flags-02778
-            LOG_FRAMEBUFFER_ERROR_AND_THROW("Framebuffer attachment ", i, " is null");
+            LOG_FRAMEBUFFER_ERROR_AND_THROW("framebuffer attachment ", i, " is null.");
         }
     }
 
     const auto& RPDesc = Desc.pRenderPass->GetDesc();
     if (Desc.AttachmentCount < RPDesc.AttachmentCount)
     {
-        LOG_FRAMEBUFFER_ERROR_AND_THROW("The number of framebuffer attachments (", Desc.AttachmentCount,
+        LOG_FRAMEBUFFER_ERROR_AND_THROW("the number of framebuffer attachments (", Desc.AttachmentCount,
                                         ") is smaller than the number of attachments (", RPDesc.AttachmentCount,
                                         ") in the render pass '", RPDesc.Name, "'.");
     }
 
     for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
     {
-        const auto& AttDesc = RPDesc.pAttachments[i];
-        const auto& TexDesc = Desc.ppAttachments[i]->GetTexture()->GetDesc();
+        const auto& AttDesc  = RPDesc.pAttachments[i];
+        const auto& ViewDesc = Desc.ppAttachments[i]->GetDesc();
+        const auto& TexDesc  = Desc.ppAttachments[i]->GetTexture()->GetDesc();
 
         // If flags does not include VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT, each element of pAttachments
         // must have been created with a VkFormat value that matches the VkFormat specified by the corresponding
         // VkAttachmentDescription in renderPass
         // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-pAttachments-00880
-        if (TexDesc.Format != AttDesc.Format)
+        if (ViewDesc.Format != AttDesc.Format)
         {
-            LOG_FRAMEBUFFER_ERROR_AND_THROW("The format (", GetTextureFormatAttribs(TexDesc.Format).Name, ") of attachment ", i,
+            LOG_FRAMEBUFFER_ERROR_AND_THROW("the format (", GetTextureFormatAttribs(ViewDesc.Format).Name, ") of attachment ", i,
                                             " does not match the format (", GetTextureFormatAttribs(AttDesc.Format).Name,
                                             ") defined by the render pass for the same attachment.");
         }
@@ -82,7 +83,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
         // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-pAttachments-00881
         if (TexDesc.SampleCount != AttDesc.SampleCount)
         {
-            LOG_FRAMEBUFFER_ERROR_AND_THROW("The sample count (", Uint32{TexDesc.SampleCount}, ") of attachment ", i,
+            LOG_FRAMEBUFFER_ERROR_AND_THROW("the sample count (", Uint32{TexDesc.SampleCount}, ") of attachment ", i,
                                             " does not match the sample count (", Uint32{AttDesc.SampleCount},
                                             ") defined by the render pass for the same attachment.");
         }
@@ -97,16 +98,9 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
             if (AttchRef.AttachmentIndex == ATTACHMENT_UNUSED)
                 continue;
 
-            // If the attachment member of any element of pInputAttachments, pColorAttachments, pResolveAttachments
-            // or pDepthStencilAttachment, or any element of pPreserveAttachments in any element of pSubpasses is not
-            // VK_ATTACHMENT_UNUSED, it must be less than attachmentCount
-            // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-attachment-00834
-            if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
-            {
-                LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment index (", AttchRef.AttachmentIndex, ") of input attachment reference ", input_attachment,
-                                                " of subpass ", i, " of render pass '", RPDesc.Name,
-                                                "' exceeds the number of attachments in the framebuffer (", Desc.AttachmentCount, ")");
-            }
+            VERIFY(AttchRef.AttachmentIndex < Desc.AttachmentCount,
+                   "Input attachment index (", AttchRef.AttachmentIndex, ") must be less than the attachment count (",
+                   Desc.AttachmentCount, ") as this is ensured by ValidateRenderPassDesc.");
 
             const auto& TexDesc = Desc.ppAttachments[AttchRef.AttachmentIndex]->GetTexture()->GetDesc();
 
@@ -116,7 +110,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
             // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-pAttachments-00879
             if ((TexDesc.BindFlags & BIND_INPUT_ATTACHMENT) == 0)
             {
-                LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
+                LOG_FRAMEBUFFER_ERROR_AND_THROW("the attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
                                                 " is used as input attachment by subpass ",
                                                 i, " of render pass '", RPDesc.Name,
                                                 "', but was not created with BIND_INPUT_ATTACHMENT bind flag");
@@ -129,16 +123,9 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
             if (AttchRef.AttachmentIndex == ATTACHMENT_UNUSED)
                 continue;
 
-            // If the attachment member of any element of pInputAttachments, pColorAttachments, pResolveAttachments
-            // or pDepthStencilAttachment, or any element of pPreserveAttachments in any element of pSubpasses is not
-            // VK_ATTACHMENT_UNUSED, it must be less than attachmentCount
-            // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-attachment-00834
-            if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
-            {
-                LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment index (", AttchRef.AttachmentIndex, ") of render target attachment reference ", rt_attachment,
-                                                " of subpass ", i, " of render pass '", RPDesc.Name,
-                                                "' exceeds the number of attachments in the framebuffer (", Desc.AttachmentCount, ")");
-            }
+            VERIFY(AttchRef.AttachmentIndex < Desc.AttachmentCount,
+                   "Render target attachment index (", AttchRef.AttachmentIndex, ") must be less than the attachment count (",
+                   Desc.AttachmentCount, ") as this is ensured by ValidateRenderPassDesc.");
 
             const auto& TexDesc = Desc.ppAttachments[AttchRef.AttachmentIndex]->GetTexture()->GetDesc();
 
@@ -148,7 +135,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
             // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-pAttachments-00877
             if ((TexDesc.BindFlags & BIND_RENDER_TARGET) == 0)
             {
-                LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
+                LOG_FRAMEBUFFER_ERROR_AND_THROW("the attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
                                                 " is used as render target attachment by subpass ",
                                                 i, " of render pass '", RPDesc.Name,
                                                 "', but was not created with BIND_RENDER_TARGET bind flag");
@@ -163,16 +150,9 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                 if (AttchRef.AttachmentIndex == ATTACHMENT_UNUSED)
                     continue;
 
-                // If the attachment member of any element of pInputAttachments, pColorAttachments, pResolveAttachments
-                // or pDepthStencilAttachment, or any element of pPreserveAttachments in any element of pSubpasses is not
-                // VK_ATTACHMENT_UNUSED, it must be less than attachmentCount
-                // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-attachment-00834
-                if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
-                {
-                    LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment index (", AttchRef.AttachmentIndex, ") of resolve attachment reference ", rslv_attachment,
-                                                    " of subpass ", i, " of render pass '", RPDesc.Name,
-                                                    "' exceeds the number of attachments in the framebuffer (", Desc.AttachmentCount, ")");
-                }
+                VERIFY(AttchRef.AttachmentIndex < Desc.AttachmentCount,
+                       "Resolve attachment index (", AttchRef.AttachmentIndex, ") must be less than the attachment count (",
+                       Desc.AttachmentCount, ") as this is ensured by ValidateRenderPassDesc.");
 
                 const auto& TexDesc = Desc.ppAttachments[AttchRef.AttachmentIndex]->GetTexture()->GetDesc();
 
@@ -182,7 +162,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                 // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-pAttachments-00877
                 if ((TexDesc.BindFlags & BIND_RENDER_TARGET) == 0)
                 {
-                    LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
+                    LOG_FRAMEBUFFER_ERROR_AND_THROW("the attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
                                                     " is used as resolve attachment by subpass ",
                                                     i, " of render pass '", RPDesc.Name,
                                                     "', but was not created with BIND_RENDER_TARGET bind flag");
@@ -195,16 +175,9 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
             const auto& AttchRef = *Subpass.pDepthStencilAttachment;
             if (AttchRef.AttachmentIndex != ATTACHMENT_UNUSED)
             {
-                // If the attachment member of any element of pInputAttachments, pColorAttachments, pResolveAttachments
-                // or pDepthStencilAttachment, or any element of pPreserveAttachments in any element of pSubpasses is not
-                // VK_ATTACHMENT_UNUSED, it must be less than attachmentCount
-                // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkRenderPassCreateInfo-attachment-00834
-                if (AttchRef.AttachmentIndex >= Desc.AttachmentCount)
-                {
-                    LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment index (", AttchRef.AttachmentIndex, ") of depth-stencil attachment reference of subpass ", i,
-                                                    " of render pass '", RPDesc.Name,
-                                                    "' exceeds the number of attachments in the framebuffer (", Desc.AttachmentCount, ")");
-                }
+                VERIFY(AttchRef.AttachmentIndex < Desc.AttachmentCount,
+                       "Depth-stencil attachment index (", AttchRef.AttachmentIndex, ") must be less than the attachment count (",
+                       Desc.AttachmentCount, ") as this is ensured by ValidateRenderPassDesc.");
 
                 const auto& TexDesc = Desc.ppAttachments[AttchRef.AttachmentIndex]->GetTexture()->GetDesc();
 
@@ -214,16 +187,13 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                 // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-pAttachments-02633
                 if ((TexDesc.BindFlags & BIND_DEPTH_STENCIL) == 0)
                 {
-                    LOG_FRAMEBUFFER_ERROR_AND_THROW("The attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
+                    LOG_FRAMEBUFFER_ERROR_AND_THROW("the attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
                                                     " is used as detph-stencil attachment by subpass ",
                                                     i, " of render pass '", RPDesc.Name,
                                                     "', but was not created with BIND_DEPTH_STENCIL bind flag");
                 }
             }
         }
-
-        //for (Uint32 prsv_attachment = 0; prsv_attachment < Subpass.PreserveAttachmentCount; ++prsv_attachment)
-        //    ;
     }
 }
 
