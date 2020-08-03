@@ -41,27 +41,29 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
         LOG_FRAMEBUFFER_ERROR_AND_THROW("render pass must not be null.");
     }
 
-    for (Uint32 i = 0; i < Desc.AttachmentCount; ++i)
+    if (Desc.AttachmentCount != 0 && Desc.ppAttachments == nullptr)
     {
-        if (Desc.ppAttachments[i] == nullptr)
-        {
-            // If flags does not include VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT, and attachmentCount is not 0,
-            // pAttachments must be a valid pointer to an array of attachmentCount valid VkImageView handles.
-            // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-flags-02778
-            LOG_FRAMEBUFFER_ERROR_AND_THROW("framebuffer attachment ", i, " is null.");
-        }
+        // If flags does not include VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT, and attachmentCount is not 0,
+        // pAttachments must be a valid pointer to an array of attachmentCount valid VkImageView handles.
+        // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-flags-02778
+        LOG_FRAMEBUFFER_ERROR_AND_THROW("attachment count is not zero, but ppAttachments is null.");
     }
 
     const auto& RPDesc = Desc.pRenderPass->GetDesc();
-    if (Desc.AttachmentCount < RPDesc.AttachmentCount)
+    if (Desc.AttachmentCount != RPDesc.AttachmentCount)
     {
+        // AttachmentCount must be equal to the attachment count specified in renderPass.
+        // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-attachmentCount-00876
         LOG_FRAMEBUFFER_ERROR_AND_THROW("the number of framebuffer attachments (", Desc.AttachmentCount,
-                                        ") is smaller than the number of attachments (", RPDesc.AttachmentCount,
+                                        ") must be equal to the number of attachments (", RPDesc.AttachmentCount,
                                         ") in the render pass '", RPDesc.Name, "'.");
     }
 
     for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
     {
+        if (Desc.ppAttachments[i] == nullptr)
+            continue;
+
         const auto& AttDesc  = RPDesc.pAttachments[i];
         const auto& ViewDesc = Desc.ppAttachments[i]->GetDesc();
         const auto& TexDesc  = Desc.ppAttachments[i]->GetTexture()->GetDesc();
@@ -102,6 +104,14 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                    "Input attachment index (", AttchRef.AttachmentIndex, ") must be less than the attachment count (",
                    Desc.AttachmentCount, ") as this is ensured by ValidateRenderPassDesc.");
 
+            if (Desc.ppAttachments[AttchRef.AttachmentIndex] == nullptr)
+            {
+                LOG_FRAMEBUFFER_ERROR_AND_THROW("attachment at index ", AttchRef.AttachmentIndex,
+                                                " is used as input attachment by subpass ",
+                                                i, " of render pass '", RPDesc.Name,
+                                                "', and must not be null.");
+            }
+
             const auto& TexDesc = Desc.ppAttachments[AttchRef.AttachmentIndex]->GetTexture()->GetDesc();
 
             // If flags does not include VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT, each element of pAttachments that
@@ -113,7 +123,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                 LOG_FRAMEBUFFER_ERROR_AND_THROW("the attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
                                                 " is used as input attachment by subpass ",
                                                 i, " of render pass '", RPDesc.Name,
-                                                "', but was not created with BIND_INPUT_ATTACHMENT bind flag");
+                                                "', but was not created with BIND_INPUT_ATTACHMENT bind flag.");
             }
         }
 
@@ -127,6 +137,14 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                    "Render target attachment index (", AttchRef.AttachmentIndex, ") must be less than the attachment count (",
                    Desc.AttachmentCount, ") as this is ensured by ValidateRenderPassDesc.");
 
+            if (Desc.ppAttachments[AttchRef.AttachmentIndex] == nullptr)
+            {
+                LOG_FRAMEBUFFER_ERROR_AND_THROW("attachment at index ", AttchRef.AttachmentIndex,
+                                                " is used as render target attachment by subpass ",
+                                                i, " of render pass '", RPDesc.Name,
+                                                "', and must not be null.");
+            }
+
             const auto& TexDesc = Desc.ppAttachments[AttchRef.AttachmentIndex]->GetTexture()->GetDesc();
 
             // If flags does not include VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT, each element of pAttachments that is used
@@ -138,7 +156,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                 LOG_FRAMEBUFFER_ERROR_AND_THROW("the attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
                                                 " is used as render target attachment by subpass ",
                                                 i, " of render pass '", RPDesc.Name,
-                                                "', but was not created with BIND_RENDER_TARGET bind flag");
+                                                "', but was not created with BIND_RENDER_TARGET bind flag.");
             }
         }
 
@@ -154,6 +172,14 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                        "Resolve attachment index (", AttchRef.AttachmentIndex, ") must be less than the attachment count (",
                        Desc.AttachmentCount, ") as this is ensured by ValidateRenderPassDesc.");
 
+                if (Desc.ppAttachments[AttchRef.AttachmentIndex] == nullptr)
+                {
+                    LOG_FRAMEBUFFER_ERROR_AND_THROW("attachment at index ", AttchRef.AttachmentIndex,
+                                                    " is used as resolve attachment by subpass ",
+                                                    i, " of render pass '", RPDesc.Name,
+                                                    "', and must not be null.");
+                }
+
                 const auto& TexDesc = Desc.ppAttachments[AttchRef.AttachmentIndex]->GetTexture()->GetDesc();
 
                 // If flags does not include VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT, each element of pAttachments that is used
@@ -165,7 +191,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                     LOG_FRAMEBUFFER_ERROR_AND_THROW("the attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
                                                     " is used as resolve attachment by subpass ",
                                                     i, " of render pass '", RPDesc.Name,
-                                                    "', but was not created with BIND_RENDER_TARGET bind flag");
+                                                    "', but was not created with BIND_RENDER_TARGET bind flag.");
                 }
             }
         }
@@ -179,6 +205,14 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                        "Depth-stencil attachment index (", AttchRef.AttachmentIndex, ") must be less than the attachment count (",
                        Desc.AttachmentCount, ") as this is ensured by ValidateRenderPassDesc.");
 
+                if (Desc.ppAttachments[AttchRef.AttachmentIndex] == nullptr)
+                {
+                    LOG_FRAMEBUFFER_ERROR_AND_THROW("attachment at index ", AttchRef.AttachmentIndex,
+                                                    " is used as detph-stencil attachment by subpass ",
+                                                    i, " of render pass '", RPDesc.Name,
+                                                    "', and must not be null.");
+                }
+
                 const auto& TexDesc = Desc.ppAttachments[AttchRef.AttachmentIndex]->GetTexture()->GetDesc();
 
                 // If flags does not include VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT, each element of pAttachments that is
@@ -190,7 +224,7 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
                     LOG_FRAMEBUFFER_ERROR_AND_THROW("the attachment '", TexDesc.Name, "' at index ", AttchRef.AttachmentIndex,
                                                     " is used as detph-stencil attachment by subpass ",
                                                     i, " of render pass '", RPDesc.Name,
-                                                    "', but was not created with BIND_DEPTH_STENCIL bind flag");
+                                                    "', but was not created with BIND_DEPTH_STENCIL bind flag.");
                 }
             }
         }

@@ -74,6 +74,9 @@ public:
             this->m_Desc.ppAttachments = m_ppAttachments;
             for (Uint32 i = 0; i < this->m_Desc.AttachmentCount; ++i)
             {
+                if (Desc.ppAttachments[i] == nullptr)
+                    continue;
+
                 m_ppAttachments[i] = Desc.ppAttachments[i];
                 m_ppAttachments[i]->AddRef();
 
@@ -92,6 +95,18 @@ public:
                 }
             }
         }
+
+        // It is legal for a subpass to use no color or depth/stencil attachments, either because it has no attachment
+        // references or because all of them are VK_ATTACHMENT_UNUSED. This kind of subpass can use shader side effects
+        // such as image stores and atomics to produce an output. In this case, the subpass continues to use the width,
+        // height, and layers of the framebuffer to define the dimensions of the rendering area.
+        if (this->m_Desc.Width == 0)
+            LOG_ERROR_AND_THROW("The framebuffer width is zero and can't be automatically determined as there are no non-null attachments");
+        if (this->m_Desc.Height == 0)
+            LOG_ERROR_AND_THROW("The framebuffer height is zero and can't be automatically determined as there are no non-null attachments");
+        if (this->m_Desc.NumArraySlices == 0)
+            LOG_ERROR_AND_THROW("The framebuffer array slice count is zero and can't be automatically determined as there are no non-null attachments");
+
         Desc.pRenderPass->AddRef();
     }
 
