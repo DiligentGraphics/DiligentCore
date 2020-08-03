@@ -168,8 +168,8 @@ TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
         EXPECT_EQ(RPDesc.pSubpasses[i], RPDesc2.pSubpasses[i]);
 
     EXPECT_EQ(RPDesc.DependencyCount, RPDesc2.DependencyCount);
-    //for (Uint32 i = 0; i < std::min(RPDesc.DependencyCount, RPDesc2.DependencyCount); ++i)
-    //    EXPECT_EQ(RPDesc.pDependencies[i], RPDesc2.pDependencies[i]);
+    for (Uint32 i = 0; i < std::min(RPDesc.DependencyCount, RPDesc2.DependencyCount); ++i)
+        EXPECT_EQ(RPDesc.pDependencies[i], RPDesc2.pDependencies[i]);
 
     RefCntAutoPtr<ITexture> pTextures[_countof(Attachments)];
     ITextureView*           pTexViews[_countof(Attachments)] = {};

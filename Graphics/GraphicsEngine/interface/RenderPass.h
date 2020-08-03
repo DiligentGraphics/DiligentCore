@@ -311,6 +311,29 @@ struct SubpassDependencyDesc
 
     /// A bitmask of ACCESS_FLAGS specifying a destination access mask.
     ACCESS_FLAGS          DstAccessMask DEFAULT_INITIALIZER(ACCESS_FLAG_NONE);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Tests if two structures are equivalent
+
+    /// \param [in] RHS - reference to the structure to perform comparison with
+    /// \return 
+    /// - True if all members of the two structures are equal.
+    /// - False otherwise
+    bool operator == (const SubpassDependencyDesc& RHS) const
+    {
+        return  SrcSubpass    == RHS.SrcSubpass    &&
+                DstSubpass    == RHS.DstSubpass    &&
+                SrcStageMask  == RHS.SrcStageMask  &&
+                DstStageMask  == RHS.DstStageMask  &&
+                SrcAccessMask == RHS.SrcAccessMask &&
+                DstAccessMask == RHS.DstAccessMask;
+    }
+
+    bool operator != (const SubpassDependencyDesc& RHS) const
+    {
+        return !(*this == RHS);
+    }
+#endif
 };
 typedef struct SubpassDependencyDesc SubpassDependencyDesc;
 
