@@ -49,6 +49,17 @@ void ValidateFramebufferDesc(const FramebufferDesc& Desc)
         LOG_FRAMEBUFFER_ERROR_AND_THROW("attachment count is not zero, but ppAttachments is null.");
     }
 
+    for (Uint32 i = 0; i < Desc.AttachmentCount; ++i)
+    {
+        if (Desc.ppAttachments[i] == nullptr)
+        {
+            // If flags does not include VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT, and attachmentCount is not 0,
+            // pAttachments must be a valid pointer to an array of attachmentCount valid VkImageView handles.
+            // https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkFramebufferCreateInfo-flags-02778
+            LOG_FRAMEBUFFER_ERROR_AND_THROW("framebuffer attachment ", i, " is null.");
+        }
+    }
+
     const auto& RPDesc = Desc.pRenderPass->GetDesc();
     if (Desc.AttachmentCount != RPDesc.AttachmentCount)
     {
