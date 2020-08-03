@@ -1133,7 +1133,7 @@ Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth)
 
 bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "Please update this function to handle the new resource state");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "Please update this function to handle the new resource state");
 
     // clang-format off
 #define VERIFY_EXCLUSIVE_STATE(ExclusiveState)\
@@ -1165,7 +1165,7 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
         {
             LOG_ERROR_MESSAGE("State ", GetResourceStateString(State), " is invalid: states RESOURCE_STATE_VERTEX_BUFFER, "
                               "RESOURCE_STATE_CONSTANT_BUFFER, RESOURCE_STATE_INDEX_BUFFER, RESOURCE_STATE_STREAM_OUT, "
-                              "RESOURCE_STATE_INDIRECT_ARGUMENT are not applicable to a texture");
+                              "RESOURCE_STATE_INDIRECT_ARGUMENT are not applicable to textures");
             return false;
         }
         // clang-format on
@@ -1179,11 +1179,13 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
              RESOURCE_STATE_DEPTH_READ     |
              RESOURCE_STATE_RESOLVE_SOURCE |
              RESOURCE_STATE_RESOLVE_DEST   |
-             RESOURCE_STATE_PRESENT))
+             RESOURCE_STATE_PRESENT        |
+             RESOURCE_STATE_INPUT_ATTACHMENT))
         {
             LOG_ERROR_MESSAGE("State ", GetResourceStateString(State), " is invalid: states RESOURCE_STATE_RENDER_TARGET, "
                               "RESOURCE_STATE_DEPTH_WRITE, RESOURCE_STATE_DEPTH_READ, RESOURCE_STATE_RESOLVE_SOURCE, "
-                              "RESOURCE_STATE_RESOLVE_DEST, RESOURCE_STATE_PRESENT are not applicable to a buffer");
+                              "RESOURCE_STATE_RESOLVE_DEST, RESOURCE_STATE_PRESENT, RESOURCE_STATE_INPUT_ATTACHMENT "
+                              "are not applicable to buffers");
             return false;
         }
         // clang-format on

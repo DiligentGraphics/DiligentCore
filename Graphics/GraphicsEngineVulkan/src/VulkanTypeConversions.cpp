@@ -1140,7 +1140,6 @@ VkBorderColor BorderColorToVkBorderColor(const Float32 BorderColor[])
 static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
 {
     // Currently not used:
-    //VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
     //VK_ACCESS_HOST_READ_BIT
     //VK_ACCESS_HOST_WRITE_BIT
     //VK_ACCESS_MEMORY_READ_BIT
@@ -1155,7 +1154,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
     //VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NVX
     //VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NVX
 
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1175,6 +1174,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_COPY_SOURCE:       return VK_ACCESS_TRANSFER_READ_BIT;
         case RESOURCE_STATE_RESOLVE_DEST:      return VK_ACCESS_MEMORY_READ_BIT;
         case RESOURCE_STATE_RESOLVE_SOURCE:    return VK_ACCESS_MEMORY_WRITE_BIT;
+        case RESOURCE_STATE_INPUT_ATTACHMENT:  return VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         case RESOURCE_STATE_PRESENT:           return VK_ACCESS_MEMORY_READ_BIT;
             // clang-format on
 
@@ -1203,7 +1203,7 @@ public:
     }
 
 private:
-    static constexpr const Uint32                MaxFlagBitPos = 15;
+    static constexpr const Uint32                MaxFlagBitPos = 16;
     std::array<VkAccessFlags, MaxFlagBitPos + 1> FlagBitPosToVkAccessFlagsMap;
 };
 
@@ -1235,7 +1235,7 @@ RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlagBits AccessFlagBit)
         case VK_ACCESS_INDEX_READ_BIT:                            return RESOURCE_STATE_INDEX_BUFFER;
         case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:                 return RESOURCE_STATE_VERTEX_BUFFER;
         case VK_ACCESS_UNIFORM_READ_BIT:                          return RESOURCE_STATE_CONSTANT_BUFFER;
-        case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:                 return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:                 return RESOURCE_STATE_INPUT_ATTACHMENT;
         case VK_ACCESS_SHADER_READ_BIT:                           return RESOURCE_STATE_SHADER_RESOURCE;
         case VK_ACCESS_SHADER_WRITE_BIT:                          return RESOURCE_STATE_UNORDERED_ACCESS;
         case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:                 return RESOURCE_STATE_RENDER_TARGET;
@@ -1317,7 +1317,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag)
     //VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
     //VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
 
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1337,6 +1337,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_COPY_SOURCE:       return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         case RESOURCE_STATE_RESOLVE_DEST:      return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         case RESOURCE_STATE_RESOLVE_SOURCE:    return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        case RESOURCE_STATE_INPUT_ATTACHMENT:  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         case RESOURCE_STATE_PRESENT:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             // clang-format on
 
@@ -1348,7 +1349,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag)
 
 RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
     switch (Layout)
     {
         // clang-format off

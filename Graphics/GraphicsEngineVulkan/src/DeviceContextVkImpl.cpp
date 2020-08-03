@@ -1298,18 +1298,21 @@ void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
         pVkClearValues = m_vkClearValues.data();
     }
 
+    EnsureVkCmdBuffer();
     m_CommandBuffer.BeginRenderPass(m_vkRenderPass, m_vkFramebuffer, m_FramebufferWidth, m_FramebufferHeight, Attribs.ClearValueCount, pVkClearValues);
 }
 
 void DeviceContextVkImpl::NextSubpass()
 {
     TDeviceContextBase::NextSubpass();
+    EnsureVkCmdBuffer();
     m_CommandBuffer.NextSubpass();
 }
 
 void DeviceContextVkImpl::EndRenderPass(bool UpdateResourceStates)
 {
     TDeviceContextBase::EndRenderPass(UpdateResourceStates);
+    EnsureVkCmdBuffer();
     m_CommandBuffer.EndRenderPass();
 }
 

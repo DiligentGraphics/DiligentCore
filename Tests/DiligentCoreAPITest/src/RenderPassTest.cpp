@@ -39,9 +39,10 @@ namespace
 
 TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
 {
-    auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pDevice  = TestingEnvironment::GetInstance()->GetDevice();
+    auto* pContext = TestingEnvironment::GetInstance()->GetDeviceContext();
 
-    RenderPassAttachmentDesc Attachments[5];
+    RenderPassAttachmentDesc Attachments[6];
     Attachments[0].Format       = TEX_FORMAT_RGBA8_UNORM;
     Attachments[0].SampleCount  = 4;
     Attachments[0].InitialState = RESOURCE_STATE_SHADER_RESOURCE;
@@ -49,14 +50,12 @@ TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
     Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_LOAD;
     Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_STORE;
 
-    Attachments[1].Format         = TEX_FORMAT_D32_FLOAT_S8X24_UINT;
-    Attachments[1].SampleCount    = 4;
-    Attachments[1].InitialState   = RESOURCE_STATE_SHADER_RESOURCE;
-    Attachments[1].FinalState     = RESOURCE_STATE_DEPTH_WRITE;
-    Attachments[1].LoadOp         = ATTACHMENT_LOAD_OP_CLEAR;
-    Attachments[1].StoreOp        = ATTACHMENT_STORE_OP_DISCARD;
-    Attachments[1].StencilLoadOp  = ATTACHMENT_LOAD_OP_CLEAR;
-    Attachments[1].StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
+    Attachments[1].Format       = TEX_FORMAT_RGBA8_UNORM;
+    Attachments[1].SampleCount  = 4;
+    Attachments[1].InitialState = RESOURCE_STATE_SHADER_RESOURCE;
+    Attachments[1].FinalState   = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[1].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[1].StoreOp      = ATTACHMENT_STORE_OP_DISCARD;
 
     Attachments[2].Format       = TEX_FORMAT_RGBA8_UNORM;
     Attachments[2].SampleCount  = 1;
@@ -65,42 +64,70 @@ TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
     Attachments[2].LoadOp       = ATTACHMENT_LOAD_OP_DISCARD;
     Attachments[2].StoreOp      = ATTACHMENT_STORE_OP_STORE;
 
-    Attachments[3].Format       = TEX_FORMAT_RGBA32_FLOAT;
-    Attachments[3].SampleCount  = 1;
-    Attachments[3].InitialState = RESOURCE_STATE_SHADER_RESOURCE;
-    Attachments[3].FinalState   = RESOURCE_STATE_SHADER_RESOURCE;
-    Attachments[3].LoadOp       = ATTACHMENT_LOAD_OP_LOAD;
-    Attachments[3].StoreOp      = ATTACHMENT_STORE_OP_STORE;
+    Attachments[3].Format         = TEX_FORMAT_D32_FLOAT_S8X24_UINT;
+    Attachments[3].SampleCount    = 4;
+    Attachments[3].InitialState   = RESOURCE_STATE_SHADER_RESOURCE;
+    Attachments[3].FinalState     = RESOURCE_STATE_DEPTH_WRITE;
+    Attachments[3].LoadOp         = ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[3].StoreOp        = ATTACHMENT_STORE_OP_DISCARD;
+    Attachments[3].StencilLoadOp  = ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[3].StencilStoreOp = ATTACHMENT_STORE_OP_DISCARD;
 
-    Attachments[4].Format       = TEX_FORMAT_RGBA8_UNORM;
+    Attachments[4].Format       = TEX_FORMAT_RGBA32_FLOAT;
     Attachments[4].SampleCount  = 1;
     Attachments[4].InitialState = RESOURCE_STATE_SHADER_RESOURCE;
     Attachments[4].FinalState   = RESOURCE_STATE_SHADER_RESOURCE;
-    Attachments[4].LoadOp       = ATTACHMENT_LOAD_OP_LOAD;
+    Attachments[4].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
     Attachments[4].StoreOp      = ATTACHMENT_STORE_OP_STORE;
 
-    SubpassDesc Subpasses[2] = {};
+    Attachments[5].Format       = TEX_FORMAT_RGBA8_UNORM;
+    Attachments[5].SampleCount  = 1;
+    Attachments[5].InitialState = RESOURCE_STATE_SHADER_RESOURCE;
+    Attachments[5].FinalState   = RESOURCE_STATE_SHADER_RESOURCE;
+    Attachments[5].LoadOp       = ATTACHMENT_LOAD_OP_LOAD;
+    Attachments[5].StoreOp      = ATTACHMENT_STORE_OP_STORE;
 
-    Subpasses[0].InputAttachmentCount = 1;
-    AttachmentReference InputAttachmentRef{3, RESOURCE_STATE_SHADER_RESOURCE};
-    Subpasses[0].pInputAttachments           = &InputAttachmentRef;
-    Subpasses[0].RenderTargetAttachmentCount = 1;
-    AttachmentReference RTAttachmentRef{0, RESOURCE_STATE_RENDER_TARGET};
-    Subpasses[0].pRenderTargetAttachments = &RTAttachmentRef;
-    AttachmentReference ResolveAttachmentRef{2, RESOURCE_STATE_RESOLVE_DEST};
-    Subpasses[0].pResolveAttachments = &ResolveAttachmentRef;
-    AttachmentReference DSAttachmentRef{1, RESOURCE_STATE_DEPTH_WRITE};
-    Subpasses[0].pDepthStencilAttachment = &DSAttachmentRef;
-    Uint32 PreserveAttachment            = 4;
-    Subpasses[0].PreserveAttachmentCount = 1;
-    Subpasses[0].pPreserveAttachments    = &PreserveAttachment;
+    SubpassDesc Subpasses[2];
 
-    Subpasses[1].InputAttachmentCount = 1;
-    AttachmentReference InputAttachment2Ref{2, RESOURCE_STATE_SHADER_RESOURCE};
-    Subpasses[1].pInputAttachments           = &InputAttachment2Ref;
-    Subpasses[1].RenderTargetAttachmentCount = 1;
-    AttachmentReference RT2AttachmentRef{4, RESOURCE_STATE_RENDER_TARGET};
-    Subpasses[1].pRenderTargetAttachments = &RT2AttachmentRef;
+    // clang-format off
+    AttachmentReference RTAttachmentRefs0[] = 
+    {
+        {0, RESOURCE_STATE_RENDER_TARGET},
+        {1, RESOURCE_STATE_RENDER_TARGET}
+    };
+    AttachmentReference RslvAttachmentRefs0[] = 
+    {
+        {ATTACHMENT_UNUSED, RESOURCE_STATE_RENDER_TARGET},
+        {2, RESOURCE_STATE_RENDER_TARGET}
+    };
+    // clang-format on
+    AttachmentReference DSAttachmentRef0{3, RESOURCE_STATE_DEPTH_WRITE};
+    Subpasses[0].RenderTargetAttachmentCount = _countof(RTAttachmentRefs0);
+    Subpasses[0].pRenderTargetAttachments    = RTAttachmentRefs0;
+    Subpasses[0].pResolveAttachments         = RslvAttachmentRefs0;
+    Subpasses[0].pDepthStencilAttachment     = &DSAttachmentRef0;
+
+    // clang-format off
+    AttachmentReference RTAttachmentRefs1[] = 
+    {
+        {4, RESOURCE_STATE_RENDER_TARGET}
+    };
+    AttachmentReference InptAttachmentRefs1[] = 
+    {
+        {2, RESOURCE_STATE_INPUT_ATTACHMENT},
+        {5, RESOURCE_STATE_INPUT_ATTACHMENT}
+    };
+    Uint32 PrsvAttachmentRefs1[] =
+    {
+        0
+    };
+    // clang-format on
+    Subpasses[1].InputAttachmentCount        = _countof(InptAttachmentRefs1);
+    Subpasses[1].pInputAttachments           = InptAttachmentRefs1;
+    Subpasses[1].RenderTargetAttachmentCount = _countof(RTAttachmentRefs1);
+    Subpasses[1].pRenderTargetAttachments    = RTAttachmentRefs1;
+    Subpasses[1].PreserveAttachmentCount     = _countof(PrsvAttachmentRefs1);
+    Subpasses[1].pPreserveAttachments        = PrsvAttachmentRefs1;
 
     SubpassDependencyDesc Dependencies[2] = {};
     Dependencies[0].SrcSubpass            = 0;
@@ -149,7 +176,9 @@ TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
     for (Uint32 i = 0; i < _countof(pTextures); ++i)
     {
         TextureDesc TexDesc;
-        TexDesc.Name        = "Test framebuffer attachment";
+        std::string Name = "Test framebuffer attachment ";
+        Name += std::to_string(i);
+        TexDesc.Name        = Name.c_str();
         TexDesc.Type        = RESOURCE_DIM_TEX_2D;
         TexDesc.Format      = Attachments[i].Format;
         TexDesc.Width       = 1024;
@@ -163,8 +192,12 @@ TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
         else
             TexDesc.BindFlags = BIND_RENDER_TARGET;
 
-        if (i == 2 || i == 3)
+        if (i == 2 || i == 5)
             TexDesc.BindFlags |= BIND_INPUT_ATTACHMENT;
+
+        const auto InitialState = Attachments[i].InitialState;
+        if (InitialState == RESOURCE_STATE_SHADER_RESOURCE)
+            TexDesc.BindFlags |= BIND_SHADER_RESOURCE;
 
         pDevice->CreateTexture(TexDesc, nullptr, &pTextures[i]);
 
@@ -188,6 +221,17 @@ TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
     EXPECT_EQ(FBDesc2.AttachmentCount, FBDesc.AttachmentCount);
     for (Uint32 i = 0; i < std::min(FBDesc.AttachmentCount, FBDesc2.AttachmentCount); ++i)
         EXPECT_EQ(FBDesc2.ppAttachments[i], FBDesc.ppAttachments[i]);
+
+    BeginRenderPassAttribs RPBeginInfo;
+    RPBeginInfo.pRenderPass  = pRenderPass;
+    RPBeginInfo.pFramebuffer = pFramebuffer;
+    OptimizedClearValue ClearValues[5];
+    RPBeginInfo.pClearValues        = ClearValues;
+    RPBeginInfo.ClearValueCount     = _countof(ClearValues);
+    RPBeginInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    pContext->BeginRenderPass(RPBeginInfo);
+    pContext->NextSubpass();
+    pContext->EndRenderPass(true);
 }
 
 } // namespace

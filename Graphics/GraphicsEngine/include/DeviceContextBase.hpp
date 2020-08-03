@@ -856,6 +856,32 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
     VERIFY(m_pActiveRenderPass == nullptr, "Attempting to begin render pass while another render pass ('", m_pActiveRenderPass->GetDesc().Name, "') is active.");
     VERIFY(Attribs.pRenderPass != nullptr, "Render pass must not be null");
     VERIFY(Attribs.pFramebuffer != nullptr, "Framebuffer must not be null");
+#ifdef DILIGENT_DEBUG
+    {
+        const auto& RPDesc = Attribs.pRenderPass->GetDesc();
+
+        Uint32 NumRequiredClearValues = 0;
+        for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
+        {
+            const auto& Attchmnt = RPDesc.pAttachments[i];
+            if (Attchmnt.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+                NumRequiredClearValues = i + 1;
+
+            const auto& FmtAttribs = GetTextureFormatAttribs(Attchmnt.Format);
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                if (Attchmnt.StencilLoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+                    NumRequiredClearValues = i + 1;
+            }
+        }
+        VERIFY(Attribs.ClearValueCount >= NumRequiredClearValues,
+               "Begin render pass operation requiers at least ", NumRequiredClearValues,
+               " clear values, but only ", Attribs.ClearValueCount, " are given.");
+        VERIFY(Attribs.ClearValueCount == 0 || Attribs.pClearValues != nullptr,
+               "pClearValues must not be null when ClearValueCount is not zero");
+    }
+#endif
+
     ResetRenderTargets();
 
     m_pActiveRenderPass = ValidatedCast<RenderPassImplType>(Attribs.pRenderPass);

@@ -78,6 +78,7 @@ FramebufferVkImpl::FramebufferVkImpl(IReferenceCounters*    pRefCounters,
 
 FramebufferVkImpl::~FramebufferVkImpl()
 {
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_VkFramebuffer), ~Uint64{0});
 }
 
 } // namespace Diligent

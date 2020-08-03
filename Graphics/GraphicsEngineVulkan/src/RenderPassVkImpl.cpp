@@ -157,6 +157,7 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
 
 RenderPassVkImpl::~RenderPassVkImpl()
 {
+    m_pDevice->SafeReleaseDeviceObject(std::move(m_VkRenderPass), ~Uint64{0});
 }
 
 } // namespace Diligent

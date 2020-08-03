@@ -2152,57 +2152,60 @@ DEFINE_FLAG_ENUM_OPERATORS(ACCESS_FLAGS)
 DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
 {
     /// The resource state is not known to the engine and is managed by the application
-    RESOURCE_STATE_UNKNOWN              = 0x0000,
+    RESOURCE_STATE_UNKNOWN              = 0x00000,
 
     /// The resource state is known to the engine, but is undefined. A resource is typically in an undefined state right after initialization.
-    RESOURCE_STATE_UNDEFINED            = 0x0001,
+    RESOURCE_STATE_UNDEFINED            = 0x00001,
 
     /// The resource is accessed as vertex buffer
-    RESOURCE_STATE_VERTEX_BUFFER        = 0x0002,
+    RESOURCE_STATE_VERTEX_BUFFER        = 0x00002,
 
     /// The resource is accessed as constant (uniform) buffer
-    RESOURCE_STATE_CONSTANT_BUFFER      = 0x0004,
+    RESOURCE_STATE_CONSTANT_BUFFER      = 0x00004,
 
     /// The resource is accessed as index buffer
-    RESOURCE_STATE_INDEX_BUFFER         = 0x0008,
+    RESOURCE_STATE_INDEX_BUFFER         = 0x00008,
 
     /// The resource is accessed as render target
-    RESOURCE_STATE_RENDER_TARGET        = 0x0010,
+    RESOURCE_STATE_RENDER_TARGET        = 0x00010,
         
     /// The resource is used for unordered access
-    RESOURCE_STATE_UNORDERED_ACCESS     = 0x0020,
+    RESOURCE_STATE_UNORDERED_ACCESS     = 0x00020,
 
     /// The resource is used in a writable depth-stencil view or in clear operation
-    RESOURCE_STATE_DEPTH_WRITE          = 0x0040,
+    RESOURCE_STATE_DEPTH_WRITE          = 0x00040,
 
     /// The resource is used in a read-only depth-stencil view
-    RESOURCE_STATE_DEPTH_READ           = 0x0080,
+    RESOURCE_STATE_DEPTH_READ           = 0x00080,
 
     /// The resource is accessed from a shader
-    RESOURCE_STATE_SHADER_RESOURCE      = 0x0100,
+    RESOURCE_STATE_SHADER_RESOURCE      = 0x00100,
         
     /// The resource is used as the destination for stream output
-    RESOURCE_STATE_STREAM_OUT           = 0x0200,
+    RESOURCE_STATE_STREAM_OUT           = 0x00200,
 
     /// The resource is used as indirect draw/dispatch arguments buffer
-    RESOURCE_STATE_INDIRECT_ARGUMENT    = 0x0400,
+    RESOURCE_STATE_INDIRECT_ARGUMENT    = 0x00400,
 
     /// The resource is used as the destination in a copy operation
-    RESOURCE_STATE_COPY_DEST            = 0x0800,
+    RESOURCE_STATE_COPY_DEST            = 0x00800,
 
     /// The resource is used as the source in a copy operation 
-    RESOURCE_STATE_COPY_SOURCE          = 0x1000,
+    RESOURCE_STATE_COPY_SOURCE          = 0x01000,
         
     /// The resource is used as the destination in a resolve operation 
-    RESOURCE_STATE_RESOLVE_DEST         = 0x2000,
+    RESOURCE_STATE_RESOLVE_DEST         = 0x02000,
         
     /// The resource is used as the source in a resolve operation 
-    RESOURCE_STATE_RESOLVE_SOURCE       = 0x4000,
+    RESOURCE_STATE_RESOLVE_SOURCE       = 0x04000,
+
+    /// The resource is used as input attachment in a render pass subpass
+    RESOURCE_STATE_INPUT_ATTACHMENT     = 0x08000,
 
     /// The resource is used for present
-    RESOURCE_STATE_PRESENT              = 0x8000,
+    RESOURCE_STATE_PRESENT              = 0x10000,
 
-    RESOURCE_STATE_MAX_BIT              = 0x8000,
+    RESOURCE_STATE_MAX_BIT              = 0x10000,
 
     RESOURCE_STATE_GENERIC_READ         = RESOURCE_STATE_VERTEX_BUFFER     |
                                           RESOURCE_STATE_CONSTANT_BUFFER   |
