@@ -47,7 +47,10 @@ namespace
 
 struct ReferenceTriangleRenderer
 {
-    ReferenceTriangleRenderer(ISwapChain* pSwapChain, VkRenderPass vkRenderPass, VkSampleCountFlagBits SampleCount = VK_SAMPLE_COUNT_1_BIT)
+    ReferenceTriangleRenderer(ISwapChain*           pSwapChain,
+                              VkRenderPass          vkRenderPass,
+                              VkSampleCountFlagBits SampleCount         = VK_SAMPLE_COUNT_1_BIT,
+                              VkImageView           InputAttachmentView = VK_NULL_HANDLE)
     {
         auto* pEnv     = TestingEnvironmentVk::GetInstance();
         auto  vkDevice = pEnv->GetVkDevice();
@@ -59,7 +62,7 @@ struct ReferenceTriangleRenderer
 
         vkVSModule = pEnv->CreateShaderModule(SHADER_TYPE_VERTEX, GLSL::DrawTest_ProceduralTriangleVS);
         VERIFY_EXPR(vkVSModule != VK_NULL_HANDLE);
-        vkPSModule = pEnv->CreateShaderModule(SHADER_TYPE_PIXEL, GLSL::DrawTest_FS);
+        vkPSModule = pEnv->CreateShaderModule(SHADER_TYPE_PIXEL, InputAttachmentView != VK_NULL_HANDLE ? GLSL::InputAttachmentTest_FS : GLSL::DrawTest_FS);
         VERIFY_EXPR(vkPSModule != VK_NULL_HANDLE);
 
         VkGraphicsPipelineCreateInfo PipelineCI = {};
@@ -85,8 +88,76 @@ struct ReferenceTriangleRenderer
         VkPipelineLayoutCreateInfo PipelineLayoutCI = {};
 
         PipelineLayoutCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+        VkDescriptorSetLayout vkSetLayout[1] = {};
+        if (InputAttachmentView != VK_NULL_HANDLE)
+        {
+            VkDescriptorSetLayoutBinding Bindings[1] = {};
+            Bindings[0].binding                      = 0;
+            Bindings[0].descriptorType               = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+            Bindings[0].descriptorCount              = 1;
+            Bindings[0].stageFlags                   = VK_SHADER_STAGE_FRAGMENT_BIT;
+            Bindings[0].pImmutableSamplers           = nullptr;
+
+            VkDescriptorSetLayoutCreateInfo SetLayoutCI = {};
+
+            SetLayoutCI.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            SetLayoutCI.pNext        = nullptr;
+            SetLayoutCI.flags        = 0;
+            SetLayoutCI.bindingCount = 1;
+            SetLayoutCI.pBindings    = Bindings;
+
+            vkCreateDescriptorSetLayout(vkDevice, &SetLayoutCI, nullptr, &vkSetLayout[0]);
+            VERIFY_EXPR(vkSetLayout[0] != VK_NULL_HANDLE);
+
+            PipelineLayoutCI.setLayoutCount = 1;
+            PipelineLayoutCI.pSetLayouts    = vkSetLayout;
+
+            VkDescriptorPoolCreateInfo DescriptorPoolCI = {};
+            DescriptorPoolCI.sType                      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+            DescriptorPoolCI.pNext                      = nullptr;
+            DescriptorPoolCI.flags                      = 0;
+            DescriptorPoolCI.maxSets                    = 1;
+            VkDescriptorPoolSize PoolSizes[]            = {{VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1}};
+            DescriptorPoolCI.poolSizeCount              = _countof(PoolSizes);
+            DescriptorPoolCI.pPoolSizes                 = PoolSizes;
+
+            vkCreateDescriptorPool(vkDevice, &DescriptorPoolCI, nullptr, &vkDescriptorPool);
+            VERIFY_EXPR(vkDescriptorPool != VK_NULL_HANDLE);
+
+            VkDescriptorSetAllocateInfo SetAllocateInfo = {};
+            SetAllocateInfo.sType                       = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            SetAllocateInfo.pNext                       = nullptr;
+            SetAllocateInfo.descriptorPool              = vkDescriptorPool;
+            SetAllocateInfo.descriptorSetCount          = 1;
+            SetAllocateInfo.pSetLayouts                 = vkSetLayout;
+
+            vkAllocateDescriptorSets(vkDevice, &SetAllocateInfo, &vkDescriptorSet);
+            VERIFY_EXPR(vkDescriptorSet != VK_NULL_HANDLE);
+
+            VkWriteDescriptorSet DescriptorWrites[1] = {};
+
+            DescriptorWrites[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            DescriptorWrites[0].pNext           = nullptr;
+            DescriptorWrites[0].dstSet          = vkDescriptorSet;
+            DescriptorWrites[0].dstBinding      = 0;
+            DescriptorWrites[0].dstArrayElement = 0;
+            DescriptorWrites[0].descriptorCount = 1;
+            DescriptorWrites[0].descriptorType  = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+            VkDescriptorImageInfo ImageInfo[1]  = {};
+            ImageInfo[0].sampler                = VK_NULL_HANDLE;
+            ImageInfo[0].imageView              = InputAttachmentView;
+            ImageInfo[0].imageLayout            = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            DescriptorWrites[0].pImageInfo      = ImageInfo;
+
+            vkUpdateDescriptorSets(vkDevice, 1, DescriptorWrites, 0, nullptr);
+        }
         vkCreatePipelineLayout(vkDevice, &PipelineLayoutCI, nullptr, &vkLayout);
         VERIFY_EXPR(vkLayout != VK_NULL_HANDLE);
+        if (vkSetLayout[0] != VK_NULL_HANDLE)
+        {
+            vkDestroyDescriptorSetLayout(vkDevice, vkSetLayout[0], nullptr);
+        }
         PipelineCI.layout = vkLayout;
 
         VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
@@ -191,7 +262,7 @@ struct ReferenceTriangleRenderer
         PipelineCI.pDynamicState = &DynamicStateCI;
 
         PipelineCI.renderPass         = vkRenderPass;
-        PipelineCI.subpass            = 0;
+        PipelineCI.subpass            = InputAttachmentView != VK_NULL_HANDLE ? 1 : 0;
         PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
         PipelineCI.basePipelineIndex  = 0;              // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
@@ -202,6 +273,8 @@ struct ReferenceTriangleRenderer
 
     void Draw(VkCommandBuffer vkCmdBuffer)
     {
+        if (vkDescriptorSet != VK_NULL_HANDLE)
+            vkCmdBindDescriptorSets(vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkLayout, 0, 1, &vkDescriptorSet, 0, nullptr);
         vkCmdBindPipeline(vkCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline);
         vkCmdDraw(vkCmdBuffer, 6, 1, 0, 0);
     }
@@ -215,13 +288,17 @@ struct ReferenceTriangleRenderer
         vkDestroyPipelineLayout(vkDevice, vkLayout, nullptr);
         vkDestroyShaderModule(vkDevice, vkVSModule, nullptr);
         vkDestroyShaderModule(vkDevice, vkPSModule, nullptr);
+        if (vkDescriptorPool != VK_NULL_HANDLE)
+            vkDestroyDescriptorPool(vkDevice, vkDescriptorPool, nullptr);
     }
 
 private:
-    VkShaderModule   vkVSModule = VK_NULL_HANDLE;
-    VkShaderModule   vkPSModule = VK_NULL_HANDLE;
-    VkPipeline       vkPipeline = VK_NULL_HANDLE;
-    VkPipelineLayout vkLayout   = VK_NULL_HANDLE;
+    VkShaderModule   vkVSModule       = VK_NULL_HANDLE;
+    VkShaderModule   vkPSModule       = VK_NULL_HANDLE;
+    VkPipeline       vkPipeline       = VK_NULL_HANDLE;
+    VkPipelineLayout vkLayout         = VK_NULL_HANDLE;
+    VkDescriptorPool vkDescriptorPool = VK_NULL_HANDLE;
+    VkDescriptorSet  vkDescriptorSet  = VK_NULL_HANDLE;
 };
 
 } // namespace
@@ -290,8 +367,8 @@ void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, const float* pClearC
     Attachments[1].finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 
-    VkAttachmentReference ColorAttachmentRef[1] = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
-    VkAttachmentReference RslvAttachmentRef[1]  = {1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+    VkAttachmentReference ColorAttachmentRef[] = {{0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}};
+    VkAttachmentReference RslvAttachmentRef[]  = {{1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}};
 
     VkSubpassDescription Subpasses[1] = {};
     Subpasses[0].flags                = 0;
@@ -384,9 +461,8 @@ void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, const float* pClearC
     BeginInfo.pClearValues    = ClearValues;
 
     vkCmdBeginRenderPass(vkCmdBuffer, &BeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
     TriRenderer.Draw(vkCmdBuffer);
-    pTestingSwapChainVk->EndRenderPass(vkCmdBuffer);
+    vkCmdEndRenderPass(vkCmdBuffer);
     vkEndCommandBuffer(vkCmdBuffer);
     pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 
@@ -396,8 +472,177 @@ void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, const float* pClearC
 
 void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* pClearColor)
 {
-}
+    auto* pEnv     = TestingEnvironmentVk::GetInstance();
+    auto* pDevice  = pEnv->GetDevice();
+    auto  vkDevice = pEnv->GetVkDevice();
 
+    auto*       pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    const auto& SCDesc              = pTestingSwapChainVk->GetDesc();
+
+    VkRenderPassCreateInfo RenderPassCI = {};
+
+    RenderPassCI.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    RenderPassCI.pNext           = nullptr;
+    RenderPassCI.flags           = 0; // reserved for future use
+    RenderPassCI.attachmentCount = 2;
+
+    VkAttachmentDescription Attachments[2] = {};
+
+    Attachments[0].flags          = 0;
+    Attachments[0].samples        = VK_SAMPLE_COUNT_1_BIT;
+    Attachments[0].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[0].storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    Attachments[0].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    Attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    Attachments[0].initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    Attachments[0].finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    switch (SCDesc.ColorBufferFormat)
+    {
+        case TEX_FORMAT_RGBA8_UNORM:
+            Attachments[0].format = VK_FORMAT_R8G8B8A8_UNORM;
+            break;
+
+        default:
+            UNSUPPORTED("Unsupported swap chain format");
+    }
+
+    Attachments[1].flags          = 0;
+    Attachments[1].samples        = VK_SAMPLE_COUNT_1_BIT;
+    Attachments[1].format         = Attachments[0].format;
+    Attachments[1].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[1].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+    Attachments[1].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    Attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    Attachments[1].initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    Attachments[1].finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference ColorAttachmentRef0[] = {{0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}};
+    VkAttachmentReference InputAttachmentRef1[] = {{0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL}};
+    VkAttachmentReference ColorAttachmentRef1[] = {{1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL}};
+
+    VkSubpassDescription Subpasses[2] = {};
+    Subpasses[0].flags                = 0;
+    Subpasses[0].pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    Subpasses[0].colorAttachmentCount = _countof(ColorAttachmentRef0);
+    Subpasses[0].pColorAttachments    = ColorAttachmentRef0;
+
+    Subpasses[1].flags                = 0;
+    Subpasses[1].pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    Subpasses[1].colorAttachmentCount = _countof(ColorAttachmentRef1);
+    Subpasses[1].pColorAttachments    = ColorAttachmentRef1;
+    Subpasses[1].inputAttachmentCount = _countof(InputAttachmentRef1);
+    Subpasses[1].pInputAttachments    = InputAttachmentRef1;
+
+    VkSubpassDependency dependencies[1] = {};
+    dependencies[0].srcSubpass          = 0;
+    dependencies[0].dstSubpass          = 1;
+    dependencies[0].srcStageMask        = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependencies[0].dstStageMask        = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependencies[0].srcAccessMask       = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependencies[0].dstAccessMask       = VK_ACCESS_SHADER_READ_BIT;
+
+    RenderPassCI.attachmentCount = _countof(Attachments);
+    RenderPassCI.pAttachments    = Attachments;
+    RenderPassCI.subpassCount    = _countof(Subpasses);
+    RenderPassCI.pSubpasses      = Subpasses;
+    RenderPassCI.dependencyCount = _countof(dependencies);
+    RenderPassCI.pDependencies   = dependencies;
+
+    VkRenderPass vkRenderPass = VK_NULL_HANDLE;
+    vkCreateRenderPass(vkDevice, &RenderPassCI, nullptr, &vkRenderPass);
+    ASSERT_TRUE(vkRenderPass != VK_NULL_HANDLE);
+
+    ReferenceTriangleRenderer TriRenderer{pSwapChain, vkRenderPass};
+    RefCntAutoPtr<ITexture>   pTex;
+    {
+        TextureDesc TexDesc;
+        TexDesc.Type      = RESOURCE_DIM_TEX_2D;
+        TexDesc.Format    = SCDesc.ColorBufferFormat;
+        TexDesc.Width     = SCDesc.Width;
+        TexDesc.Height    = SCDesc.Height;
+        TexDesc.BindFlags = BIND_RENDER_TARGET | BIND_INPUT_ATTACHMENT;
+        TexDesc.MipLevels = 1;
+        TexDesc.Usage     = USAGE_DEFAULT;
+
+        pDevice->CreateTexture(TexDesc, nullptr, &pTex);
+        ASSERT_NE(pTex, nullptr);
+    }
+    RefCntAutoPtr<ITextureVk> pTexVK{pTex, IID_TextureVk};
+    ASSERT_NE(pTexVK, nullptr);
+    RefCntAutoPtr<ITextureViewVk> pTexViewVK{pTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_TextureViewVk};
+    ASSERT_NE(pTexViewVK, nullptr);
+
+    ReferenceTriangleRenderer TriRenderer2{pSwapChain, vkRenderPass, VK_SAMPLE_COUNT_1_BIT, pTexViewVK->GetVulkanImageView()};
+
+    VkFramebufferCreateInfo FramebufferCI = {};
+
+    FramebufferCI.sType      = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    FramebufferCI.pNext      = nullptr;
+    FramebufferCI.flags      = 0;
+    FramebufferCI.renderPass = vkRenderPass;
+
+    VkImageView FramebufferAttachments[2];
+    FramebufferAttachments[0]     = pTexViewVK->GetVulkanImageView();
+    FramebufferAttachments[1]     = pTestingSwapChainVk->GetVkRenderTargetImageView();
+    FramebufferCI.pAttachments    = FramebufferAttachments;
+    FramebufferCI.attachmentCount = _countof(FramebufferAttachments);
+
+    FramebufferCI.width  = SCDesc.Width;
+    FramebufferCI.height = SCDesc.Height;
+    FramebufferCI.layers = 1;
+
+    VkFramebuffer vkFramebuffer = VK_NULL_HANDLE;
+    vkCreateFramebuffer(vkDevice, &FramebufferCI, nullptr, &vkFramebuffer);
+    ASSERT_TRUE(vkFramebuffer != VK_NULL_HANDLE);
+
+    VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
+    pTestingSwapChainVk->TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    {
+        auto CurrLayout = pTexVK->GetLayout();
+
+        VkImageSubresourceRange SubResRange;
+        SubResRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        SubResRange.baseMipLevel   = 0;
+        SubResRange.levelCount     = 1;
+        SubResRange.baseArrayLayer = 0;
+        SubResRange.layerCount     = 1;
+        pEnv->TransitionImageLayout(vkCmdBuffer, pTexVK->GetVkImage(), CurrLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, SubResRange, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
+
+    VkRenderPassBeginInfo BeginInfo = {};
+
+    BeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    BeginInfo.renderPass        = vkRenderPass;
+    BeginInfo.framebuffer       = vkFramebuffer;
+    BeginInfo.renderArea.extent = VkExtent2D{SCDesc.Width, SCDesc.Height};
+
+    VkClearValue ClearValues[2] = {};
+
+    ClearValues[0].color.float32[0] = 0;
+    ClearValues[0].color.float32[1] = 0;
+    ClearValues[0].color.float32[2] = 0;
+    ClearValues[0].color.float32[3] = 0;
+
+    ClearValues[1].color.float32[0] = pClearColor[0];
+    ClearValues[1].color.float32[1] = pClearColor[1];
+    ClearValues[1].color.float32[2] = pClearColor[2];
+    ClearValues[1].color.float32[3] = pClearColor[3];
+
+    BeginInfo.clearValueCount = _countof(ClearValues);
+    BeginInfo.pClearValues    = ClearValues;
+
+    vkCmdBeginRenderPass(vkCmdBuffer, &BeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    TriRenderer.Draw(vkCmdBuffer);
+    vkCmdNextSubpass(vkCmdBuffer, VK_SUBPASS_CONTENTS_INLINE);
+    TriRenderer2.Draw(vkCmdBuffer);
+    vkCmdEndRenderPass(vkCmdBuffer);
+    vkEndCommandBuffer(vkCmdBuffer);
+    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
+
+    vkDestroyRenderPass(vkDevice, vkRenderPass, nullptr);
+    vkDestroyFramebuffer(vkDevice, vkFramebuffer, nullptr);
+}
 
 } // namespace Testing
 

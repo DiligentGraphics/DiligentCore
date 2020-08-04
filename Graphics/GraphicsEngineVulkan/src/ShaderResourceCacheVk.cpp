@@ -155,6 +155,7 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
     for (Uint32 res = 0; res < m_TotalResources; ++res)
     {
         auto& Res = pResources[res];
+        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 11, "Please handle the new resource type below");
         switch (Res.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
@@ -309,6 +310,14 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
             case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
             {
                 // Nothing to do with samplers
+            }
+            break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::InputAttachment:
+            {
+                // Nothing to do with input attachments - they are transitioned by the render pass.
+                // There is nothing we can validate here - a texture may be in different state at
+                // the beginning of the render pass before being transitioned to INPUT_ATTACHMENT state.
             }
             break;
 
@@ -469,6 +478,22 @@ VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetSamplerDescriptorWrite
     DescrImgInfo.sampler     = pSamplerVk->GetVkSampler();
     DescrImgInfo.imageView   = VK_NULL_HANDLE;
     DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    return DescrImgInfo;
+}
+
+VkDescriptorImageInfo ShaderResourceCacheVk::Resource::GetInputAttachmentDescriptorWriteInfo() const
+{
+    VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::InputAttachment, "Input attachment resource is expected");
+    DEV_CHECK_ERR(pObject != nullptr, "Unable to get input attachment write info: cached object is null");
+
+    auto* pTexViewVk = pObject.RawPtr<const TextureViewVkImpl>();
+    VERIFY_EXPR(pTexViewVk->GetDesc().ViewType == TEXTURE_VIEW_SHADER_RESOURCE);
+
+    VkDescriptorImageInfo DescrImgInfo;
+    DescrImgInfo.sampler     = VK_NULL_HANDLE;
+    DescrImgInfo.imageView   = pTexViewVk->GetVulkanImageView();
+    DescrImgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
     return DescrImgInfo;
 }
 

@@ -1019,6 +1019,7 @@ String GetBufferDescString(const BufferDesc& Desc)
 const Char* GetResourceStateFlagString(RESOURCE_STATE State)
 {
     VERIFY((State & (State - 1)) == 0, "Single state is expected");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "Please update this function to handle the new resource state");
     switch (State)
     {
         // clang-format off
@@ -1038,6 +1039,7 @@ const Char* GetResourceStateFlagString(RESOURCE_STATE State)
         case RESOURCE_STATE_COPY_SOURCE:       return "COPY_SOURCE";
         case RESOURCE_STATE_RESOLVE_DEST:      return "RESOLVE_DEST";
         case RESOURCE_STATE_RESOLVE_SOURCE:    return "RESOLVE_SOURCE";
+        case RESOURCE_STATE_INPUT_ATTACHMENT:  return "INPUT_ATTACHMENT";
         case RESOURCE_STATE_PRESENT:           return "PRESENT";
         // clang-format on
         default:
