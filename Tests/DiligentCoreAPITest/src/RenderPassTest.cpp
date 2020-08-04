@@ -51,7 +51,10 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain);
 #endif
 
 #if VULKAN_SUPPORTED
-void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
+void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
+
 #endif
 
 #if METAL_SUPPORTED
@@ -70,7 +73,131 @@ using namespace Diligent::Testing;
 namespace
 {
 
-TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
+
+class RenderPassTest : public ::testing::Test
+{
+protected:
+    static void SetUpTestSuite()
+    {
+        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pDevice = pEnv->GetDevice();
+
+        ShaderCreateInfo ShaderCI;
+        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.UseCombinedTextureSamplers = true;
+
+        {
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Render pass test vertex shader";
+            ShaderCI.Source          = HLSL::DrawTest_ProceduralTriangleVS.c_str();
+            pDevice->CreateShader(ShaderCI, &sm_pVS);
+            ASSERT_NE(sm_pVS, nullptr);
+        }
+
+        {
+            ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
+            ShaderCI.EntryPoint      = "main";
+            ShaderCI.Desc.Name       = "Render pass test pixel shader";
+            ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
+            pDevice->CreateShader(ShaderCI, &sm_pPS);
+            ASSERT_NE(sm_pPS, nullptr);
+        }
+    }
+
+    static void TearDownTestSuite()
+    {
+        sm_pVS.Release();
+        sm_pPS.Release();
+
+        auto* pEnv = TestingEnvironment::GetInstance();
+        pEnv->Reset();
+    }
+
+    static void CreateDrawTrisPSO(IRenderPass*                           pRenderPass,
+                                  Uint8                                  SampleCount,
+                                  RefCntAutoPtr<IPipelineState>&         pPSO,
+                                  RefCntAutoPtr<IShaderResourceBinding>& pSRB)
+    {
+        auto* pEnv    = TestingEnvironment::GetInstance();
+        auto* pDevice = pEnv->GetDevice();
+
+        PipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
+        PSODesc.Name = "Render pass test - draw triangles";
+
+        PSODesc.IsComputePipeline                             = false;
+        PSODesc.GraphicsPipeline.pRenderPass                  = pRenderPass;
+        PSODesc.GraphicsPipeline.SubpassIndex                 = 0;
+        PSODesc.GraphicsPipeline.SmplDesc.Count               = SampleCount;
+        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+
+        PSODesc.GraphicsPipeline.pVS = sm_pVS;
+        PSODesc.GraphicsPipeline.pPS = sm_pPS;
+
+        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+        ASSERT_NE(pPSO, nullptr);
+        pPSO->CreateShaderResourceBinding(&pSRB);
+        ASSERT_NE(pSRB, nullptr);
+    }
+
+    static void DrawTris(IRenderPass*            pRenderPass,
+                         IFramebuffer*           pFramebuffer,
+                         IPipelineState*         pPSO,
+                         IShaderResourceBinding* pSRB,
+                         const float             ClearColor[])
+    {
+        auto* pEnv     = TestingEnvironment::GetInstance();
+        auto* pContext = pEnv->GetDeviceContext();
+
+        pContext->SetPipelineState(pPSO);
+        pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+        BeginRenderPassAttribs RPBeginInfo;
+        RPBeginInfo.pRenderPass  = pRenderPass;
+        RPBeginInfo.pFramebuffer = pFramebuffer;
+
+        OptimizedClearValue ClearValues[1];
+        ClearValues[0].Color[0] = ClearColor[0];
+        ClearValues[0].Color[1] = ClearColor[1];
+        ClearValues[0].Color[2] = ClearColor[2];
+        ClearValues[0].Color[3] = ClearColor[3];
+
+        RPBeginInfo.pClearValues        = ClearValues;
+        RPBeginInfo.ClearValueCount     = _countof(ClearValues);
+        RPBeginInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+        pContext->BeginRenderPass(RPBeginInfo);
+
+        DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
+        pContext->Draw(DrawAttrs);
+
+        pContext->EndRenderPass(true);
+    }
+
+    static void Present()
+    {
+        auto* pEnv       = TestingEnvironment::GetInstance();
+        auto* pSwapChain = pEnv->GetSwapChain();
+        auto* pContext   = pEnv->GetDeviceContext();
+
+        pSwapChain->Present();
+
+        pContext->Flush();
+        pContext->InvalidateState();
+    }
+
+    static RefCntAutoPtr<IShader> sm_pVS;
+    static RefCntAutoPtr<IShader> sm_pPS;
+};
+
+RefCntAutoPtr<IShader> RenderPassTest::sm_pVS;
+RefCntAutoPtr<IShader> RenderPassTest::sm_pPS;
+
+TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
 {
     auto* pDevice  = TestingEnvironment::GetInstance()->GetDevice();
     auto* pContext = TestingEnvironment::GetInstance()->GetDeviceContext();
@@ -267,57 +394,7 @@ TEST(RenderPassTest, CreateRenderPassAndFramebuffer)
     pContext->EndRenderPass(true);
 }
 
-static void CreateDrawTrisPSO(IRenderDevice*                         pDevice,
-                              IRenderPass*                           pRenderPass,
-                              RefCntAutoPtr<IPipelineState>&         pPSO,
-                              RefCntAutoPtr<IShaderResourceBinding>& pSRB)
-{
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
-
-    PSODesc.Name = "Render pass test - draw triangles";
-
-    PSODesc.IsComputePipeline                             = false;
-    PSODesc.GraphicsPipeline.pRenderPass                  = pRenderPass;
-    PSODesc.GraphicsPipeline.SubpassIndex                 = 0;
-    PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
-
-    ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.UseCombinedTextureSamplers = true;
-
-    RefCntAutoPtr<IShader> pVS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "Render pass test vertex shader";
-        ShaderCI.Source          = HLSL::DrawTest_ProceduralTriangleVS.c_str();
-        pDevice->CreateShader(ShaderCI, &pVS);
-        ASSERT_NE(pVS, nullptr);
-    }
-
-    RefCntAutoPtr<IShader> pPS;
-    {
-        ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.EntryPoint      = "main";
-        ShaderCI.Desc.Name       = "Render pass test pixel shader";
-        ShaderCI.Source          = HLSL::DrawTest_PS.c_str();
-        pDevice->CreateShader(ShaderCI, &pPS);
-        ASSERT_NE(pPS, nullptr);
-    }
-
-    PSODesc.GraphicsPipeline.pVS = pVS;
-    PSODesc.GraphicsPipeline.pPS = pPS;
-
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
-    ASSERT_NE(pPSO, nullptr);
-    pPSO->CreateShaderResourceBinding(&pSRB);
-    ASSERT_NE(pSRB, nullptr);
-}
-
-TEST(RenderPassTest, Draw)
+TEST_F(RenderPassTest, Draw)
 {
     auto* pEnv       = TestingEnvironment::GetInstance();
     auto* pDevice    = pEnv->GetDevice();
@@ -401,7 +478,7 @@ TEST(RenderPassTest, Draw)
 
     RefCntAutoPtr<IPipelineState>         pPSO;
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
-    CreateDrawTrisPSO(pDevice, pRenderPass, pPSO, pSRB);
+    CreateDrawTrisPSO(pRenderPass, 1, pPSO, pSRB);
     ASSERT_TRUE(pPSO != nullptr && pSRB != nullptr);
 
     ITextureView* pRTAttachments[] = {pSwapChain->GetCurrentBackBufferRTV()};
@@ -415,39 +492,149 @@ TEST(RenderPassTest, Draw)
     pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
     ASSERT_TRUE(pFramebuffer);
 
-    pContext->SetPipelineState(pPSO);
-    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+    DrawTris(pRenderPass, pFramebuffer, pPSO, pSRB, ClearColor);
 
-    BeginRenderPassAttribs RPBeginInfo;
-    RPBeginInfo.pRenderPass  = pRenderPass;
-    RPBeginInfo.pFramebuffer = pFramebuffer;
-
-    OptimizedClearValue ClearValues[1];
-    ClearValues[0].Color[0] = ClearColor[0];
-    ClearValues[0].Color[1] = ClearColor[1];
-    ClearValues[0].Color[2] = ClearColor[2];
-    ClearValues[0].Color[3] = ClearColor[3];
-
-    RPBeginInfo.pClearValues        = ClearValues;
-    RPBeginInfo.ClearValueCount     = _countof(ClearValues);
-    RPBeginInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
-    pContext->BeginRenderPass(RPBeginInfo);
-
-    DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
-    pContext->Draw(DrawAttrs);
-
-    pContext->EndRenderPass(true);
-    pSwapChain->Present();
-
-    pContext->Flush();
-    pContext->InvalidateState();
+    Present();
 }
 
-TEST(RenderPassTest, MSResolve)
+TEST_F(RenderPassTest, MSResolve)
 {
+    auto* pEnv       = TestingEnvironment::GetInstance();
+    auto* pDevice    = pEnv->GetDevice();
+    auto* pSwapChain = pEnv->GetSwapChain();
+    auto* pContext   = pEnv->GetDeviceContext();
+
+    constexpr float ClearColor[] = {0.25f, 0.5f, 0.375f, 0.5f};
+
+    RefCntAutoPtr<ITestingSwapChain> pTestingSwapChain(pSwapChain, IID_TestingSwapChain);
+    if (pTestingSwapChain)
+    {
+        pContext->Flush();
+        pContext->InvalidateState();
+
+        auto deviceType = pDevice->GetDeviceCaps().DevType;
+        switch (deviceType)
+        {
+#if D3D11_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D11:
+                RenderDrawCommandReferenceD3D11(pSwapChain);
+                break;
+#endif
+
+#if D3D12_SUPPORTED
+            case RENDER_DEVICE_TYPE_D3D12:
+                RenderDrawCommandReferenceD3D12(pSwapChain);
+                break;
+#endif
+
+#if GL_SUPPORTED || GLES_SUPPORTED
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
+                RenderDrawCommandReferenceGL(pSwapChain);
+                break;
+
+#endif
+
+#if VULKAN_SUPPORTED
+            case RENDER_DEVICE_TYPE_VULKAN:
+                RenderPassMSResolveReferenceVk(pSwapChain, ClearColor);
+                break;
+#endif
+
+            default:
+                LOG_ERROR_AND_THROW("Unsupported device type");
+        }
+
+        pTestingSwapChain->TakeSnapshot();
+    }
+    TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
+
+    const auto& SCDesc = pSwapChain->GetDesc();
+
+    RenderPassAttachmentDesc Attachments[2];
+    Attachments[0].Format       = SCDesc.ColorBufferFormat;
+    Attachments[0].SampleCount  = 4;
+    Attachments[0].InitialState = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[0].FinalState   = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[0].LoadOp       = ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[0].StoreOp      = ATTACHMENT_STORE_OP_DISCARD;
+
+    Attachments[1].Format       = SCDesc.ColorBufferFormat;
+    Attachments[1].SampleCount  = 1;
+    Attachments[1].InitialState = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[1].FinalState   = RESOURCE_STATE_RENDER_TARGET;
+    Attachments[1].LoadOp       = ATTACHMENT_LOAD_OP_DISCARD;
+    Attachments[1].StoreOp      = ATTACHMENT_STORE_OP_STORE;
+
+    RefCntAutoPtr<ITexture> pMSTex;
+    {
+        TextureDesc TexDesc;
+        TexDesc.Type        = RESOURCE_DIM_TEX_2D;
+        TexDesc.Format      = SCDesc.ColorBufferFormat;
+        TexDesc.Width       = SCDesc.Width;
+        TexDesc.Height      = SCDesc.Height;
+        TexDesc.BindFlags   = BIND_RENDER_TARGET;
+        TexDesc.MipLevels   = 1;
+        TexDesc.SampleCount = Attachments[0].SampleCount;
+        TexDesc.Usage       = USAGE_DEFAULT;
+
+        pDevice->CreateTexture(TexDesc, nullptr, &pMSTex);
+        ASSERT_NE(pMSTex, nullptr);
+    }
+
+    SubpassDesc Subpasses[1];
+
+    // clang-format off
+    AttachmentReference RTAttachmentRefs0[] = 
+    {
+        {0, RESOURCE_STATE_RENDER_TARGET}
+    };
+    AttachmentReference RslvAttachmentRefs0[] = 
+    {
+        {1, RESOURCE_STATE_RENDER_TARGET}
+    };
+    // clang-format on
+    Subpasses[0].RenderTargetAttachmentCount = _countof(RTAttachmentRefs0);
+    Subpasses[0].pRenderTargetAttachments    = RTAttachmentRefs0;
+    Subpasses[0].pResolveAttachments         = RslvAttachmentRefs0;
+
+    RenderPassDesc RPDesc;
+    RPDesc.Name            = "Render pass MS resolve test";
+    RPDesc.AttachmentCount = _countof(Attachments);
+    RPDesc.pAttachments    = Attachments;
+    RPDesc.SubpassCount    = _countof(Subpasses);
+    RPDesc.pSubpasses      = Subpasses;
+
+    RefCntAutoPtr<IRenderPass> pRenderPass;
+    pDevice->CreateRenderPass(RPDesc, &pRenderPass);
+    ASSERT_NE(pRenderPass, nullptr);
+
+    RefCntAutoPtr<IPipelineState>         pPSO;
+    RefCntAutoPtr<IShaderResourceBinding> pSRB;
+    CreateDrawTrisPSO(pRenderPass, 4, pPSO, pSRB);
+    ASSERT_TRUE(pPSO != nullptr && pSRB != nullptr);
+
+    ITextureView* pRTAttachments[] = //
+        {
+            pMSTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET),
+            pSwapChain->GetCurrentBackBufferRTV() //
+        };
+
+    FramebufferDesc FBDesc;
+    FBDesc.Name            = "Render pass resolve test framebuffer";
+    FBDesc.pRenderPass     = pRenderPass;
+    FBDesc.AttachmentCount = _countof(Attachments);
+    FBDesc.ppAttachments   = pRTAttachments;
+    RefCntAutoPtr<IFramebuffer> pFramebuffer;
+    pDevice->CreateFramebuffer(FBDesc, &pFramebuffer);
+    ASSERT_TRUE(pFramebuffer);
+
+    DrawTris(pRenderPass, pFramebuffer, pPSO, pSRB, ClearColor);
+
+    Present();
 }
 
-TEST(RenderPassTest, InputAttachments)
+TEST_F(RenderPassTest, InputAttachments)
 {
 }
 

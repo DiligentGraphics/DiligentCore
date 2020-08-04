@@ -29,6 +29,8 @@
 #include "Vulkan/TestingSwapChainVk.hpp"
 
 #include "DeviceContextVk.h"
+#include "TextureViewVk.h"
+#include "TextureVk.h"
 
 #include "volk/volk.h"
 
@@ -45,7 +47,7 @@ namespace
 
 struct ReferenceTriangleRenderer
 {
-    ReferenceTriangleRenderer(ISwapChain* pSwapChain, VkRenderPass vkRenderPass)
+    ReferenceTriangleRenderer(ISwapChain* pSwapChain, VkRenderPass vkRenderPass, VkSampleCountFlagBits SampleCount = VK_SAMPLE_COUNT_1_BIT)
     {
         auto* pEnv     = TestingEnvironmentVk::GetInstance();
         auto  vkDevice = pEnv->GetVkDevice();
@@ -152,7 +154,7 @@ struct ReferenceTriangleRenderer
         MSStateCI.flags = 0; // reserved for future use
         // If subpass uses color and/or depth/stencil attachments, then the rasterizationSamples member of
         // pMultisampleState must be the same as the sample count for those subpass attachments
-        MSStateCI.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        MSStateCI.rasterizationSamples = SampleCount;
         MSStateCI.sampleShadingEnable  = VK_FALSE;
         MSStateCI.minSampleShading     = 0;               // a minimum fraction of sample shading if sampleShadingEnable is set to VK_TRUE.
         uint32_t SampleMask[]          = {0xFFFFFFFF, 0}; // Vulkan spec allows up to 64 samples
@@ -241,11 +243,158 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearCol
     pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 }
 
-void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, float ClearColor[])
+void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, const float* pClearColor)
 {
+    auto* pEnv     = TestingEnvironmentVk::GetInstance();
+    auto* pDevice  = pEnv->GetDevice();
+    auto  vkDevice = pEnv->GetVkDevice();
+
+    auto*       pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
+    const auto& SCDesc              = pTestingSwapChainVk->GetDesc();
+
+    VkRenderPassCreateInfo RenderPassCI = {};
+
+    RenderPassCI.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    RenderPassCI.pNext           = nullptr;
+    RenderPassCI.flags           = 0; // reserved for future use
+    RenderPassCI.attachmentCount = 2;
+
+    VkAttachmentDescription Attachments[2] = {};
+
+    Attachments[0].flags          = 0;
+    Attachments[0].samples        = VK_SAMPLE_COUNT_4_BIT;
+    Attachments[0].loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    Attachments[0].storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    Attachments[0].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    Attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    Attachments[0].initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    Attachments[0].finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    switch (SCDesc.ColorBufferFormat)
+    {
+        case TEX_FORMAT_RGBA8_UNORM:
+            Attachments[0].format = VK_FORMAT_R8G8B8A8_UNORM;
+            break;
+
+        default:
+            UNSUPPORTED("Unsupported swap chain format");
+    }
+
+    Attachments[1].flags          = 0;
+    Attachments[1].samples        = VK_SAMPLE_COUNT_1_BIT;
+    Attachments[1].format         = Attachments[0].format;
+    Attachments[1].loadOp         = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    Attachments[1].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+    Attachments[1].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    Attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    Attachments[1].initialLayout  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    Attachments[1].finalLayout    = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+
+    VkAttachmentReference ColorAttachmentRef[1] = {0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+    VkAttachmentReference RslvAttachmentRef[1]  = {1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL};
+
+    VkSubpassDescription Subpasses[1] = {};
+    Subpasses[0].flags                = 0;
+    Subpasses[0].pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    Subpasses[0].colorAttachmentCount = _countof(ColorAttachmentRef);
+    Subpasses[0].pColorAttachments    = ColorAttachmentRef;
+    Subpasses[0].pResolveAttachments  = RslvAttachmentRef;
+
+    RenderPassCI.attachmentCount = _countof(Attachments);
+    RenderPassCI.pAttachments    = Attachments;
+    RenderPassCI.subpassCount    = _countof(Subpasses);
+    RenderPassCI.pSubpasses      = Subpasses;
+
+    VkRenderPass vkRenderPass = VK_NULL_HANDLE;
+    vkCreateRenderPass(vkDevice, &RenderPassCI, nullptr, &vkRenderPass);
+    ASSERT_TRUE(vkRenderPass != VK_NULL_HANDLE);
+
+    ReferenceTriangleRenderer TriRenderer{pSwapChain, vkRenderPass, Attachments[0].samples};
+
+    RefCntAutoPtr<ITexture> pMSTex;
+    {
+        TextureDesc TexDesc;
+        TexDesc.Type        = RESOURCE_DIM_TEX_2D;
+        TexDesc.Format      = SCDesc.ColorBufferFormat;
+        TexDesc.Width       = SCDesc.Width;
+        TexDesc.Height      = SCDesc.Height;
+        TexDesc.BindFlags   = BIND_RENDER_TARGET;
+        TexDesc.MipLevels   = 1;
+        TexDesc.SampleCount = 4;
+        TexDesc.Usage       = USAGE_DEFAULT;
+
+        pDevice->CreateTexture(TexDesc, nullptr, &pMSTex);
+        ASSERT_NE(pMSTex, nullptr);
+    }
+    RefCntAutoPtr<ITextureVk> pMSTexVK{pMSTex, IID_TextureVk};
+    ASSERT_NE(pMSTexVK, nullptr);
+    RefCntAutoPtr<ITextureViewVk> pMSTexViewVK{pMSTex->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET), IID_TextureViewVk};
+    ASSERT_NE(pMSTexViewVK, nullptr);
+
+    VkFramebufferCreateInfo FramebufferCI = {};
+
+    FramebufferCI.sType      = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    FramebufferCI.pNext      = nullptr;
+    FramebufferCI.flags      = 0;
+    FramebufferCI.renderPass = vkRenderPass;
+
+    VkImageView FramebufferAttachments[2];
+    FramebufferAttachments[0]     = pMSTexViewVK->GetVulkanImageView();
+    FramebufferAttachments[1]     = pTestingSwapChainVk->GetVkRenderTargetImageView();
+    FramebufferCI.pAttachments    = FramebufferAttachments;
+    FramebufferCI.attachmentCount = _countof(FramebufferAttachments);
+
+    FramebufferCI.width  = SCDesc.Width;
+    FramebufferCI.height = SCDesc.Height;
+    FramebufferCI.layers = 1;
+
+    VkFramebuffer vkFramebuffer = VK_NULL_HANDLE;
+    vkCreateFramebuffer(vkDevice, &FramebufferCI, nullptr, &vkFramebuffer);
+    ASSERT_TRUE(vkFramebuffer != VK_NULL_HANDLE);
+
+    VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
+    pTestingSwapChainVk->TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    {
+        auto CurrLayout = pMSTexVK->GetLayout();
+
+        VkImageSubresourceRange SubResRange;
+        SubResRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        SubResRange.baseMipLevel   = 0;
+        SubResRange.levelCount     = 1;
+        SubResRange.baseArrayLayer = 0;
+        SubResRange.layerCount     = 1;
+        pEnv->TransitionImageLayout(vkCmdBuffer, pMSTexVK->GetVkImage(), CurrLayout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, SubResRange, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
+
+    VkRenderPassBeginInfo BeginInfo = {};
+
+    BeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    BeginInfo.renderPass        = vkRenderPass;
+    BeginInfo.framebuffer       = vkFramebuffer;
+    BeginInfo.renderArea.extent = VkExtent2D{SCDesc.Width, SCDesc.Height};
+
+    VkClearValue ClearValues[1] = {};
+
+    ClearValues[0].color.float32[0] = pClearColor[0];
+    ClearValues[0].color.float32[1] = pClearColor[1];
+    ClearValues[0].color.float32[2] = pClearColor[2];
+    ClearValues[0].color.float32[3] = pClearColor[3];
+
+    BeginInfo.clearValueCount = _countof(ClearValues);
+    BeginInfo.pClearValues    = ClearValues;
+
+    vkCmdBeginRenderPass(vkCmdBuffer, &BeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    TriRenderer.Draw(vkCmdBuffer);
+    pTestingSwapChainVk->EndRenderPass(vkCmdBuffer);
+    vkEndCommandBuffer(vkCmdBuffer);
+    pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
+
+    vkDestroyRenderPass(vkDevice, vkRenderPass, nullptr);
+    vkDestroyFramebuffer(vkDevice, vkFramebuffer, nullptr);
 }
 
-void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, float ClearColor[])
+void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* pClearColor)
 {
 }
 

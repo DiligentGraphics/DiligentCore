@@ -394,15 +394,16 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
             DepthStencilStateDesc_To_VkDepthStencilStateCI(GraphicsPipeline.DepthStencilDesc);
         PipelineCI.pDepthStencilState = &DepthStencilStateCI;
 
-        const auto& RPDesc = m_pRenderPass->GetDesc();
-        VERIFY_EXPR(GraphicsPipeline.pRenderPass != nullptr || GraphicsPipeline.NumRenderTargets == RPDesc.AttachmentCount);
-        std::vector<VkPipelineColorBlendAttachmentState> ColorBlendAttachmentStates(RPDesc.AttachmentCount);
+        const auto& RPDesc           = m_pRenderPass->GetDesc();
+        const auto  NumRTAttachments = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex].RenderTargetAttachmentCount;
+        VERIFY_EXPR(GraphicsPipeline.pRenderPass != nullptr || GraphicsPipeline.NumRenderTargets == NumRTAttachments);
+        std::vector<VkPipelineColorBlendAttachmentState> ColorBlendAttachmentStates(NumRTAttachments);
 
         VkPipelineColorBlendStateCreateInfo BlendStateCI = {};
 
         BlendStateCI.pAttachments    = !ColorBlendAttachmentStates.empty() ? ColorBlendAttachmentStates.data() : nullptr;
-        BlendStateCI.attachmentCount = RPDesc.AttachmentCount; //  must equal the colorAttachmentCount for the subpass
-                                                               // in which this pipeline is used.
+        BlendStateCI.attachmentCount = NumRTAttachments; // must equal the colorAttachmentCount for the subpass
+                                                         // in which this pipeline is used.
         BlendStateDesc_To_VkBlendStateCI(GraphicsPipeline.BlendDesc, BlendStateCI, ColorBlendAttachmentStates);
         PipelineCI.pColorBlendState = &BlendStateCI;
 
