@@ -353,6 +353,23 @@ VkCommandBuffer TestingEnvironmentVk::AllocateCommandBuffer()
     return vkCmdBuff;
 }
 
+void TestingEnvironmentVk::SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool WaitForIdle)
+{
+    RefCntAutoPtr<IDeviceContextVk> pContextVk{m_pDeviceContext, IID_DeviceContextVk};
+
+    auto* pQeueVk = pContextVk->LockCommandQueue();
+    auto  vkQueue = pQeueVk->GetVkQueue();
+
+    VkSubmitInfo SubmitInfo       = {};
+    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    SubmitInfo.pCommandBuffers    = &vkCmdBuffer;
+    SubmitInfo.commandBufferCount = 1;
+    vkQueueSubmit(vkQueue, 1, &SubmitInfo, VK_NULL_HANDLE);
+    if (WaitForIdle)
+        vkQueueWaitIdle(vkQueue);
+
+    pContextVk->UnlockCommandQueue();
+}
 
 static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags              AccessFlags,
                                                          const VkPipelineStageFlags EnabledGraphicsShaderStages)

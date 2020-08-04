@@ -206,7 +206,7 @@ void TestingSwapChainVk::TransitionDepthBuffer(VkCommandBuffer vkCmdBuffer, VkIm
                                                 Layout, SubresRange, GraphicsShaderStages);
 }
 
-void TestingSwapChainVk::BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages)
+void TestingSwapChainVk::BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages, float* pClearColor)
 {
     TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, GraphicsShaderStages);
     TransitionDepthBuffer(vkCmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, GraphicsShaderStages);
@@ -221,10 +221,10 @@ void TestingSwapChainVk::BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipeline
     VkClearValue ClearValues[2] = {};
 
     ClearValues[0].depthStencil.depth = 1;
-    ClearValues[1].color.float32[0]   = 0;
-    ClearValues[1].color.float32[1]   = 0;
-    ClearValues[1].color.float32[2]   = 0;
-    ClearValues[1].color.float32[3]   = 0;
+    ClearValues[1].color.float32[0]   = (pClearColor != nullptr) ? pClearColor[0] : 0;
+    ClearValues[1].color.float32[1]   = (pClearColor != nullptr) ? pClearColor[1] : 0;
+    ClearValues[1].color.float32[2]   = (pClearColor != nullptr) ? pClearColor[2] : 0;
+    ClearValues[1].color.float32[3]   = (pClearColor != nullptr) ? pClearColor[3] : 0;
 
     BeginInfo.clearValueCount = 2;
     BeginInfo.pClearValues    = ClearValues;
@@ -236,7 +236,6 @@ void TestingSwapChainVk::EndRenderPass(VkCommandBuffer vkCmdBuffer)
 {
     vkCmdEndRenderPass(vkCmdBuffer);
 }
-
 
 void TestingSwapChainVk::TakeSnapshot()
 {
