@@ -224,7 +224,7 @@ private:
 
 } // namespace
 
-void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain)
+void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor)
 {
     auto* pEnv = TestingEnvironmentVk::GetInstance();
 
@@ -234,12 +234,21 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain)
 
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
-    pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    pTestingSwapChainVk->BeginRenderPass(vkCmdBuffer, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, pClearColor);
     TriRenderer.Draw(vkCmdBuffer);
     pTestingSwapChainVk->EndRenderPass(vkCmdBuffer);
     vkEndCommandBuffer(vkCmdBuffer);
     pEnv->SubmitCommandBuffer(vkCmdBuffer, true);
 }
+
+void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, float ClearColor[])
+{
+}
+
+void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, float ClearColor[])
+{
+}
+
 
 } // namespace Testing
 

@@ -1300,6 +1300,9 @@ void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 
     EnsureVkCmdBuffer();
     m_CommandBuffer.BeginRenderPass(m_vkRenderPass, m_vkFramebuffer, m_FramebufferWidth, m_FramebufferHeight, Attribs.ClearValueCount, pVkClearValues);
+
+    // Set the viewport to match the framebuffer size
+    SetViewports(1, nullptr, 0, 0);
 }
 
 void DeviceContextVkImpl::NextSubpass()

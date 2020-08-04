@@ -50,7 +50,7 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain);
 #endif
 
 #if VULKAN_SUPPORTED
-void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
 #endif
 
 #if METAL_SUPPORTED

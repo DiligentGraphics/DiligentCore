@@ -206,7 +206,7 @@ void TestingSwapChainVk::TransitionDepthBuffer(VkCommandBuffer vkCmdBuffer, VkIm
                                                 Layout, SubresRange, GraphicsShaderStages);
 }
 
-void TestingSwapChainVk::BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages, float* pClearColor)
+void TestingSwapChainVk::BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages, const float* pClearColor)
 {
     TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, GraphicsShaderStages);
     TransitionDepthBuffer(vkCmdBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, GraphicsShaderStages);
