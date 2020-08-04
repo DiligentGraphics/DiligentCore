@@ -126,6 +126,8 @@ public:
 
     RenderPassVkImpl* GetRenderPass(const RenderPassCacheKey& Key);
 
+    void Destroy();
+
 private:
     struct RenderPassCacheKeyHash
     {

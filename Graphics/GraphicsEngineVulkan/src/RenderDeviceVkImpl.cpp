@@ -211,6 +211,9 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     // the heap into release queues
     m_DynamicMemoryManager.Destroy();
 
+    // Explicitly destroy render pass cache
+    m_ImplicitRenderPassCache.Destroy();
+
     // Wait for the GPU to complete all its operations
     IdleGPU();
 

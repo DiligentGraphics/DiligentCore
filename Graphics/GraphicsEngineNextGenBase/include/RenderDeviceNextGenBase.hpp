@@ -100,6 +100,8 @@ public:
     template <typename ObjectType, typename = typename std::enable_if<std::is_object<ObjectType>::value>::type>
     void SafeReleaseDeviceObject(ObjectType&& Object, Uint64 QueueMask)
     {
+        VERIFY(m_CommandQueues != nullptr, "Command queues have been destroyed. Are you releasing an object from the render device destructor?");
+
         QueueMask &= GetCommandQueueMask();
 
         VERIFY(QueueMask != 0, "At least one bit should be set in the command queue mask");

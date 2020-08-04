@@ -42,12 +42,22 @@ RenderPassCache::RenderPassCache(RenderDeviceVkImpl& DeviceVk) noexcept :
 
 RenderPassCache::~RenderPassCache()
 {
+    // Render pass cache is part of the render device, so we can't release
+    // render pass objects from here as their destructors will attmept to
+    // call SafeReleaseDeviceObject.
+    VERIFY(m_Cache.empty(), "Render pass cache is not empty. Did you call Destroy?");
+}
+
+void RenderPassCache::Destroy()
+{
     auto& FBCache = m_DeviceVkImpl.GetFramebufferCache();
     for (auto it = m_Cache.begin(); it != m_Cache.end(); ++it)
     {
         FBCache.OnDestroyRenderPass(it->second->GetVkRenderPass());
     }
+    m_Cache.clear();
 }
+
 
 RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
 {
