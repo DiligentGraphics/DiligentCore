@@ -205,7 +205,7 @@ protected:
             // false if an application is not manifested for Windows 8.1 or Windows 10, even if the current
             // operating system version is Windows 8.1 or Windows 10.
             CComPtr<IDXGIFactory3> pDXGIFactory3;
-            if (SUCCEEDED(pDXGIFactory->QueryInterface(__uuidof(pDXGIFactory3), reinterpret_cast<void**>(static_cast<IDXGIFactory3**>(&pDXGIFactory3)))))
+            if (SUCCEEDED(pDXGIFactory.QueryInterface(&pDXGIFactory3)))
             {
                 swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
             }
@@ -254,16 +254,20 @@ protected:
 
 #endif
 
-        hr = pSwapChain1->QueryInterface(__uuidof(m_pSwapChain), reinterpret_cast<void**>(static_cast<DXGISwapChainType**>(&m_pSwapChain)));
+        hr = pSwapChain1.QueryInterface(&m_pSwapChain);
         CHECK_D3D_RESULT_THROW(hr, "Failed to query the required swap chain interface");
 
         if ((swapChainDesc.Flags & DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT) != 0)
         {
-            // IMPORTANT: SetMaximumFrameLatency must be called BEFORE GetFrameLatencyWaitableObject!
-            m_pSwapChain->SetMaximumFrameLatency(m_MaxFrameLatency);
+            CComPtr<IDXGISwapChain2> pSwapChain2;
+            if (SUCCEEDED(pSwapChain1.QueryInterface(&pSwapChain2)))
+            {
+                // IMPORTANT: SetMaximumFrameLatency must be called BEFORE GetFrameLatencyWaitableObject!
+                pSwapChain2->SetMaximumFrameLatency(m_MaxFrameLatency);
 
-            m_FrameLatencyWaitableObject = m_pSwapChain->GetFrameLatencyWaitableObject();
-            VERIFY(m_FrameLatencyWaitableObject != NULL, "Waitable object must not be null");
+                m_FrameLatencyWaitableObject = pSwapChain2->GetFrameLatencyWaitableObject();
+                VERIFY(m_FrameLatencyWaitableObject != NULL, "Waitable object must not be null");
+            }
         }
         else
         {

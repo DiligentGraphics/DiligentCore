@@ -37,10 +37,10 @@ namespace Diligent
 {
 
 /// Swap chain implementation in Direct3D11 backend.
-class SwapChainD3D11Impl final : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain2>
+class SwapChainD3D11Impl final : public SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>
 {
 public:
-    using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain2>;
+    using TSwapChainBase = SwapChainD3DBase<ISwapChainD3D11, IDXGISwapChain>;
 
     SwapChainD3D11Impl(IReferenceCounters*           pRefCounters,
                        const SwapChainDesc&          SCDesc,
