@@ -438,6 +438,9 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::InvalidateState()
 {
+    if (m_pActiveRenderPass != nullptr)
+        LOG_ERROR_MESSAGE("Invalidating context inside an active render pass. Call EndRenderPass() to finish the pass.");
+
     DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCache();
 }
 
@@ -778,7 +781,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CheckIfBoundAsDepth
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage)
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside render pass");
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass.");
 
     if (pTexture == nullptr)
         return false;
@@ -884,18 +887,18 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
 
     ResetRenderTargets();
 
-    m_pActiveRenderPass = ValidatedCast<RenderPassImplType>(Attribs.pRenderPass);
-    m_pBoundFramebuffer = ValidatedCast<FramebufferImplType>(Attribs.pFramebuffer);
-    m_SubpassIndex      = 0;
+    auto* pNewRenderPass  = ValidatedCast<RenderPassImplType>(Attribs.pRenderPass);
+    auto* pNewFramebuffer = ValidatedCast<FramebufferImplType>(Attribs.pFramebuffer);
+    m_SubpassIndex        = 0;
 
-    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
+    const auto& FBDesc  = pNewFramebuffer->GetDesc();
     m_FramebufferWidth  = FBDesc.Width;
     m_FramebufferHeight = FBDesc.Height;
     m_FramebufferSlices = FBDesc.NumArraySlices;
 
     if (Attribs.StateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_NONE)
     {
-        const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+        const auto& RPDesc = pNewRenderPass->GetDesc();
         VERIFY(RPDesc.AttachmentCount <= FBDesc.AttachmentCount,
                "The number of attachments (", FBDesc.AttachmentCount,
                ") in currently bound framebuffer is smaller than the number of attachments in the render pass (", RPDesc.AttachmentCount, ")");
@@ -918,12 +921,17 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
             }
         }
     }
+
+    m_pActiveRenderPass = pNewRenderPass;
+    m_pBoundFramebuffer = pNewFramebuffer;
+    m_SubpassIndex      = 0;
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::NextSubpass()
 {
     VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
+    VERIFY(m_SubpassIndex + 1 < m_pActiveRenderPass->GetDesc().SubpassCount, "The render pass has reached the final subpass already");
     ++m_SubpassIndex;
 }
 
@@ -932,6 +940,9 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPas
 {
     VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
     VERIFY(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
+    VERIFY(m_pActiveRenderPass->GetDesc().SubpassCount == m_SubpassIndex + 1,
+           "Ending render pass at subpass ", m_SubpassIndex, " before reaching the final subpass");
+
     if (UpdateResourceStates)
     {
         const auto& RPDesc = m_pActiveRenderPass->GetDesc();
@@ -1247,7 +1258,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData, RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode, RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
 {
     VERIFY(pTexture != nullptr, "pTexture must not be null");
-    VERIFY(m_pActiveRenderPass == nullptr, "UpdateTexture must be used outside of render pass.");
+    VERIFY(m_pActiveRenderPass == nullptr, "UpdateTexture command must be used outside of render pass.");
     ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData);
 }
 
@@ -1257,7 +1268,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 {
     VERIFY(CopyAttribs.pSrcTexture, "Src texture must not be null");
     VERIFY(CopyAttribs.pDstTexture, "Dst texture must not be null");
-    VERIFY(m_pActiveRenderPass == nullptr, "CopyTexture must be used outside of render pass.");
+    VERIFY(m_pActiveRenderPass == nullptr, "CopyTexture command must be used outside of render pass.");
     ValidateCopyTextureParams(CopyAttribs);
 }
 
@@ -1289,7 +1300,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     GenerateMips(ITextureView* pTexView)
 {
     VERIFY(pTexView != nullptr, "pTexView must not be null");
-    VERIFY(m_pActiveRenderPass == nullptr, "GenerateMips must be used outside of render pass.");
+    VERIFY(m_pActiveRenderPass == nullptr, "GenerateMips command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& ViewDesc = pTexView->GetDesc();
@@ -1346,7 +1357,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
         DEV_CHECK_ERR(!ResolveFmtAttribs.IsTypeless,
                       "Format of a resolve operation must not be typeless when one of the texture formats is typeless");
     }
-    VERIFY(m_pActiveRenderPass == nullptr, "ResolveTextureSubresource must be used outside of render pass.");
+    VERIFY(m_pActiveRenderPass == nullptr, "ResolveTextureSubresource command must be used outside of render pass.");
 #endif
 }
 
@@ -1448,14 +1459,17 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
                               pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
             return false;
         }
-
-        VERIFY(!(m_pActiveRenderPass != nullptr && Attribs.IndirectAttribsBufferStateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
-               "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
-               "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
     }
     else
     {
         LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: indirect draw arguments buffer is null.");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr && Attribs.IndirectAttribsBufferStateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+    {
+        LOG_ERROR_MESSAGE("Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                          "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
         return false;
     }
 
@@ -1503,14 +1517,17 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
                               pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
             return false;
         }
-
-        VERIFY(!(m_pActiveRenderPass != nullptr && Attribs.IndirectAttribsBufferStateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
-               "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
-               "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
     }
     else
     {
         LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: indirect draw arguments buffer is null.");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr && Attribs.IndirectAttribsBufferStateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+    {
+        LOG_ERROR_MESSAGE("Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                          "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
         return false;
     }
 
@@ -1588,6 +1605,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("DispatchCompute command must be performed outside of render pass");
+        return false;
+    }
+
     if (Attribs.ThreadGroupCountX == 0)
         LOG_WARNING_MESSAGE("DispatchCompute command arguments are invalid: ThreadGroupCountX is zero.");
 
@@ -1614,6 +1637,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     {
         LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: pipeline state '",
                           m_pPipelineState->GetDesc().Name, "' is a graphics pipeline.");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("DispatchComputeIndirect command must be performed outside of render pass");
         return false;
     }
 

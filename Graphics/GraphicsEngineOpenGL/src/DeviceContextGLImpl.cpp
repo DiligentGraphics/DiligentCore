@@ -147,6 +147,11 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 
 void DeviceContextGLImpl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
+    if (m_pActiveRenderPass)
+    {
+        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
+        return;
+    }
 }
 
 void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
@@ -1037,6 +1042,11 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
 
 void DeviceContextGLImpl::Flush()
 {
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
+    }
+
     glFlush();
 }
 
@@ -1396,6 +1406,7 @@ void DeviceContextGLImpl::GenerateMips(ITextureView* pTexView)
 
 void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
 }
 
 void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                               pSrcTexture,

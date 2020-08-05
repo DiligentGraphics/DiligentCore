@@ -627,6 +627,12 @@ void DeviceContextD3D11Impl::TransitionShaderResources(IPipelineState* pPipeline
 {
     DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must not be null");
     DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "Shader resource binding must not be null");
+    if (m_pActiveRenderPass)
+    {
+        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
+        return;
+    }
+
     TransitionAndCommitShaderResources<true, false>(pPipelineState, pShaderResourceBinding, false);
 }
 
@@ -955,6 +961,11 @@ void DeviceContextD3D11Impl::ClearRenderTarget(ITextureView* pView, const float*
 
 void DeviceContextD3D11Impl::Flush()
 {
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
+    }
+
     m_pd3d11DeviceContext->Flush();
 }
 
@@ -1721,6 +1732,8 @@ void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
 
 void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
+
     CComPtr<ID3D11CommandList> pd3d11CmdList;
     m_pd3d11DeviceContext->FinishCommandList(
         FALSE, // A Boolean flag that determines whether the runtime saves deferred context state before it
@@ -1963,6 +1976,8 @@ void DeviceContextD3D11Impl::InvalidateState()
 
 void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
+
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {
         const auto& Barrier = pResourceBarriers[i];

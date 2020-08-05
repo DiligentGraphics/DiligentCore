@@ -179,7 +179,7 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vk
     public:
         // clang-format off
         CmdBufferDeleter(VkCommandBuffer                           _vkCmdBuff, 
-                            VulkanUtilities::VulkanCommandBufferPool& _Pool) noexcept :
+                         VulkanUtilities::VulkanCommandBufferPool& _Pool) noexcept :
             vkCmdBuff {_vkCmdBuff},
             Pool      {&_Pool    }
         {
@@ -236,7 +236,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
     if (m_State.NumCommands >= m_NumCommandsToFlush &&
         !m_bIsDeferred &&           // Never flush deferred context
-        !m_pActiveRenderPass &&     // Never flush inside active render pass
+        !m_pActiveRenderPass &&     // Never flush inside active render pass (https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#VUID-vkEndCommandBuffer-commandBuffer-00060)
         m_ActiveQueriesCounter == 0 // A query must begin and end in the same command buffer (17.2)
     )
     {
@@ -305,7 +305,12 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
 void DeviceContextVkImpl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
-    VERIFY_EXPR(pPipelineState != nullptr);
+    DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must mot be null");
+    if (m_pActiveRenderPass)
+    {
+        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
+        return;
+    }
 
     auto* pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
     pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, nullptr);
@@ -935,14 +940,19 @@ void DeviceContextVkImpl::Flush()
 {
     if (m_bIsDeferred)
     {
-        LOG_ERROR_MESSAGE("Flush() should only be called for immediate contexts");
+        LOG_ERROR_MESSAGE("Flush() should only be called for immediate contexts.");
         return;
     }
 
     if (m_ActiveQueriesCounter > 0)
     {
         LOG_ERROR_MESSAGE("Flushing device context that has ", m_ActiveQueriesCounter,
-                          " active queries. Vulkan requires that queries are begun and ended in the same command buffer");
+                          " active queries. Vulkan requires that queries are begun and ended in the same command buffer.");
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
     }
 
     VkSubmitInfo SubmitInfo = {};
@@ -1147,6 +1157,9 @@ void DeviceContextVkImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
 
 void DeviceContextVkImpl::TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+    VERIFY(StateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION || m_pActiveRenderPass == nullptr,
+           "State transitions are not allowed inside a render pass.");
+
     if (m_pBoundDepthStencil)
     {
         auto* pDepthBufferVk = ValidatedCast<TextureVkImpl>(m_pBoundDepthStencil->GetTexture());
@@ -1167,7 +1180,7 @@ void DeviceContextVkImpl::TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE
 
 void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "This method should not be called inside an active render pass.");
+    VERIFY(m_pActiveRenderPass == nullptr, "This method must not be called inside an active render pass.");
 
     const auto& CmdBufferState = m_CommandBuffer.GetState();
     if (CmdBufferState.Framebuffer != m_vkFramebuffer)
@@ -1265,8 +1278,11 @@ void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
     TDeviceContextBase::BeginRenderPass(Attribs);
 
-    VERIFY_EXPR(m_pActiveRenderPass);
-    VERIFY_EXPR(m_pBoundFramebuffer);
+    VERIFY_EXPR(m_pActiveRenderPass != nullptr);
+    VERIFY_EXPR(m_pBoundFramebuffer != nullptr);
+    VERIFY_EXPR(m_vkRenderPass == VK_NULL_HANDLE);
+    VERIFY_EXPR(m_vkFramebuffer == VK_NULL_HANDLE);
+
     m_vkRenderPass  = m_pActiveRenderPass->GetVkRenderPass();
     m_vkFramebuffer = m_pBoundFramebuffer->GetVkFramebuffer();
 
@@ -1317,6 +1333,14 @@ void DeviceContextVkImpl::EndRenderPass(bool UpdateResourceStates)
     TDeviceContextBase::EndRenderPass(UpdateResourceStates);
     EnsureVkCmdBuffer();
     m_CommandBuffer.EndRenderPass();
+
+    if (m_State.NumCommands >= m_NumCommandsToFlush &&
+        !m_bIsDeferred &&           // Never flush deferred context
+        m_ActiveQueriesCounter == 0 // A query must begin and end in the same command buffer (17.2)
+    )
+    {
+        Flush();
+    }
 }
 
 void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuffVk,
@@ -2077,6 +2101,8 @@ void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
 
 void DeviceContextVkImpl::FinishCommandList(class ICommandList** ppCommandList)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
+
     if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
     {
         m_CommandBuffer.EndRenderPass();
@@ -2241,6 +2267,7 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
 void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)
 {
     VERIFY_EXPR(pTexture != nullptr);
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
     auto pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
     if (!pTextureVk->IsInKnownState())
     {
@@ -2260,6 +2287,7 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
                                                  bool                     UpdateTextureState,
                                                  VkImageSubresourceRange* pSubresRange /* = nullptr*/)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
     if (OldState == RESOURCE_STATE_UNKNOWN)
     {
         if (TextureVk.IsInKnownState())
@@ -2335,6 +2363,7 @@ void DeviceContextVkImpl::TransitionOrVerifyTextureState(TextureVkImpl&         
 {
     if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
+        VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
         if (Texture.IsInKnownState())
         {
             if (!Texture.CheckState(RequiredState))
@@ -2382,6 +2411,7 @@ void DeviceContextVkImpl::BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags Ne
 
 void DeviceContextVkImpl::TransitionBufferState(BufferVkImpl& BufferVk, RESOURCE_STATE OldState, RESOURCE_STATE NewState, bool UpdateBufferState)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
     if (OldState == RESOURCE_STATE_UNKNOWN)
     {
         if (BufferVk.IsInKnownState())
@@ -2431,6 +2461,7 @@ void DeviceContextVkImpl::TransitionOrVerifyBufferState(BufferVkImpl&           
 {
     if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
+        VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
         if (Buffer.IsInKnownState())
         {
             if (!Buffer.CheckState(RequiredState))
@@ -2459,6 +2490,8 @@ VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInB
 
 void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
+
     if (BarrierCount == 0)
         return;
 

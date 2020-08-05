@@ -245,7 +245,12 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 
 void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
-    VERIFY_EXPR(pPipelineState != nullptr);
+    DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must mot be null");
+    if (m_pActiveRenderPass)
+    {
+        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
+        return;
+    }
 
     auto& Ctx = GetCmdContext();
 
@@ -705,6 +710,11 @@ void DeviceContextD3D12Impl::Flush()
     {
         LOG_ERROR_MESSAGE("Flush() should only be called for immediate contexts");
         return;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
     }
 
     Flush(true);
@@ -1670,6 +1680,8 @@ void DeviceContextD3D12Impl::GenerateMips(ITextureView* pTexView)
 
 void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
+
     CommandListD3D12Impl* pCmdListD3D12(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)(m_pDevice, this, std::move(m_CurrCmdCtx)));
     pCmdListD3D12->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
     Flush(true);
@@ -1757,6 +1769,8 @@ void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
 
 void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
+
     auto& CmdCtx = GetCmdContext();
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {
