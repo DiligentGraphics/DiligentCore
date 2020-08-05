@@ -57,7 +57,7 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D11Device(ID3D11Device* pd3d11Dev
         if (SUCCEEDED(hr))
         {
             CComPtr<IDXGIAdapter1> pDXGIAdapter1;
-            pDXGIAdapter->QueryInterface(__uuidof(pDXGIAdapter1), reinterpret_cast<void**>(static_cast<IDXGIAdapter1**>(&pDXGIAdapter1)));
+            pDXGIAdapter.QueryInterface(&pDXGIAdapter1);
             return pDXGIAdapter1;
         }
         else

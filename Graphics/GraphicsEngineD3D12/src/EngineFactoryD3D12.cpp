@@ -295,7 +295,7 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
         if (EngineCI.EnableDebugLayer)
         {
             CComPtr<ID3D12InfoQueue> pInfoQueue;
-            hr = d3d12Device->QueryInterface(__uuidof(pInfoQueue), reinterpret_cast<void**>(static_cast<ID3D12InfoQueue**>(&pInfoQueue)));
+            hr = d3d12Device.QueryInterface(&pInfoQueue);
             if (SUCCEEDED(hr))
             {
                 // Suppress whole categories of messages
