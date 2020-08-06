@@ -911,6 +911,11 @@ void DeviceContextVkImpl::FinishFrame()
                           "All queries must be ended before the frame is finished.");
     }
 
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Finishing frame inside an active render pass.");
+    }
+
     if (!m_MappedTextures.empty())
         LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
 
@@ -1012,7 +1017,9 @@ void DeviceContextVkImpl::Flush()
     m_State = ContextState{};
     m_DescrSetBindInfo.Reset();
     m_CommandBuffer.Reset();
-    m_pPipelineState = nullptr;
+    m_pPipelineState    = nullptr;
+    m_pActiveRenderPass = nullptr;
+    m_pBoundFramebuffer = nullptr;
 }
 
 void DeviceContextVkImpl::SetVertexBuffers(Uint32                         StartSlot,

@@ -750,6 +750,9 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCa
     m_NumScissorRects = 0;
 
     ResetRenderTargets();
+
+    m_pActiveRenderPass = nullptr;
+    m_pBoundFramebuffer = nullptr;
 }
 
 template <typename BaseInterface, typename ImplementationTraits>

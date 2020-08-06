@@ -758,6 +758,11 @@ void DeviceContextD3D12Impl::FinishFrame()
                           "All queries must be ended before the frame is finished.");
     }
 
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Finishing frame inside an active render pass.");
+    }
+
     VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1} << m_CommandQueueId));
 
     // Released pages are returned to the global dynamic memory manager hosted by render device.
