@@ -392,7 +392,14 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     RPBeginInfo.ClearValueCount     = _countof(ClearValues);
     RPBeginInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     pContext->BeginRenderPass(RPBeginInfo);
+
+    pContext->ClearDepthStencil(pTexViews[3], CLEAR_DEPTH_FLAG, 1.0, 0, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
     pContext->NextSubpass();
+
+    float ClearColor[] = {0, 0, 0, 0};
+    pContext->ClearRenderTarget(pTexViews[4], ClearColor, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
     pContext->EndRenderPass(true);
 }
 

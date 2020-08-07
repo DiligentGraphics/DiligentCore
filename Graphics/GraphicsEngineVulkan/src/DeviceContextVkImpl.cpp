@@ -651,27 +651,10 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
     const auto& ViewDesc = pVkDSV->GetDesc();
     VERIFY(ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D, "Depth-stencil view of a 3D texture should've been created as 2D texture array view");
 
-    bool ClearAsAttachment = false;
-    if (m_pActiveRenderPass != nullptr)
-    {
-        const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
-        for (Uint32 i = 0; i < FBDesc.AttachmentCount && !ClearAsAttachment; ++i)
-        {
-            ClearAsAttachment = FBDesc.ppAttachments[i] == pView;
-        }
-
-        if (!ClearAsAttachment)
-        {
-            UNEXPECTED("DSV was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearDepthStencil "
-                       "checks if the DSV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
-            return;
-        }
-    }
-    else
-    {
-        ClearAsAttachment = pVkDSV == m_pBoundDepthStencil;
-    }
-
+    bool ClearAsAttachment = pVkDSV == m_pBoundDepthStencil;
+    VERIFY(m_pActiveRenderPass == nullptr || ClearAsAttachment,
+           "DSV was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearDepthStencil "
+           "checks if the DSV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
     if (ClearAsAttachment)
     {
         VERIFY_EXPR(m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE);
@@ -777,40 +760,21 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     VERIFY(ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D, "Render target view of a 3D texture should've been created as 2D texture array view");
 
     // Check if the texture is one of the currently bound render targets
-    static constexpr const Uint32 InvalidAttachmentIndex = static_cast<Uint32>(-1);
+    static constexpr const Uint32 InvalidAttachmentIndex = ~Uint32{0};
 
     Uint32 attachmentIndex = InvalidAttachmentIndex;
-    if (m_pActiveRenderPass != nullptr)
+    for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
-        const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
-        for (Uint32 i = 0; i < FBDesc.AttachmentCount; ++i)
+        if (m_pBoundRenderTargets[rt] == pVkRTV)
         {
-            if (FBDesc.ppAttachments[i] == pView)
-            {
-                attachmentIndex = i;
-                break;
-            }
-        }
-
-        if (attachmentIndex == InvalidAttachmentIndex)
-        {
-            UNEXPECTED("RTV was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearRenderTarget "
-                       "checks if the RTV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
-            return;
-        }
-    }
-    else
-    {
-        for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
-        {
-            if (m_pBoundRenderTargets[rt] == pVkRTV)
-            {
-                attachmentIndex = rt;
-                break;
-            }
+            attachmentIndex = rt;
+            break;
         }
     }
 
+    VERIFY(m_pActiveRenderPass == nullptr || attachmentIndex != InvalidAttachmentIndex,
+           "Render target was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearRenderTarget "
+           "checks if the RTV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
 
     if (attachmentIndex != InvalidAttachmentIndex)
     {
