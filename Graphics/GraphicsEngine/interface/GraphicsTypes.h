@@ -2217,6 +2217,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
                                           RESOURCE_STATE_INDIRECT_ARGUMENT |
                                           RESOURCE_STATE_COPY_SOURCE
 };
+DEFINE_FLAG_ENUM_OPERATORS(RESOURCE_STATE);
 
 /// State transition barrier type
 DILIGENT_TYPED_ENUM(STATE_TRANSITION_TYPE, Uint8)

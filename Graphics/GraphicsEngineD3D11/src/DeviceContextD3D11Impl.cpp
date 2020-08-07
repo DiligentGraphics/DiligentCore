@@ -1430,7 +1430,7 @@ void DeviceContextD3D11Impl::UnbindTextureFromInput(TextureBaseD3D11* pTexture, 
     if (!pTexture) return;
 
     UnbindResourceView(m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pd3d11Resource, SetSRVMethods);
-    pTexture->ClearState(RESOURCE_STATE_SHADER_RESOURCE);
+    pTexture->ClearState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT);
 }
 
 void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3D11Resource* pd3d11Buffer)
@@ -1677,6 +1677,8 @@ void DeviceContextD3D11Impl::BeginRenderPass(const BeginRenderPassAttribs& Attri
     TDeviceContextBase::BeginRenderPass(Attribs);
     // BeginRenderPass() transitions resources to required states
 
+    m_RenderPassAttachmentsTransitionMode = Attribs.StateTransitionMode;
+
     CommitRenderTargets();
 
     // Set the viewport to match the framebuffer size
@@ -1759,6 +1761,25 @@ void DeviceContextD3D11Impl::NextSubpass()
 
     TDeviceContextBase::NextSubpass();
 
+    if (m_RenderPassAttachmentsTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+    {
+        for (Uint32 att = 0; att < RPDesc.AttachmentCount; ++att)
+        {
+            auto* pTexView = ValidatedCast<TextureViewD3D11Impl>(FBDesc.ppAttachments[att]);
+            if (pTexView == nullptr)
+                continue;
+
+            auto* pTex = ValidatedCast<TextureBaseD3D11>(pTexView->GetTexture());
+            if (pTex->IsInKnownState())
+            {
+                auto CurrState = m_pActiveRenderPass->GetAttachmentState(m_SubpassIndex, att);
+                if ((CurrState & RESOURCE_STATE_INPUT_ATTACHMENT) != 0)
+                    CurrState |= RESOURCE_STATE_SHADER_RESOURCE;
+                pTex->SetState(CurrState);
+            }
+        }
+    }
+
     CommitRenderTargets();
 }
 
@@ -1766,6 +1787,7 @@ void DeviceContextD3D11Impl::EndRenderPass(bool UpdateResourceStates)
 {
     EndSubpass();
     TDeviceContextBase::EndRenderPass(UpdateResourceStates);
+    m_RenderPassAttachmentsTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 }
 
 

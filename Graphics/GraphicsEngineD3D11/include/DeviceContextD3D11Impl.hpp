@@ -390,6 +390,8 @@ private:
     /// Strong references to committed D3D11 shaders
     CComPtr<ID3D11DeviceChild> m_CommittedD3DShaders[NumShaderTypes];
 
+    RESOURCE_STATE_TRANSITION_MODE m_RenderPassAttachmentsTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
     const Uint32 m_DebugFlags;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
