@@ -305,9 +305,6 @@ private:
     /// Prepares for an indexed draw command
     __forceinline void PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
 
-    /// Prepares for current subpass
-    void BeginSubpass();
-
     /// Ends current subpass
     void EndSubpass();
 
