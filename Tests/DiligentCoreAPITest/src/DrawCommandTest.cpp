@@ -38,7 +38,7 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
 #endif
 
 #if D3D12_SUPPORTED

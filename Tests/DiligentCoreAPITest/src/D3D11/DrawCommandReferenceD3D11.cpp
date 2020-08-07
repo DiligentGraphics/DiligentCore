@@ -73,7 +73,7 @@ static void DrawProceduralTriangles(ID3D11DeviceContext*    pd3d11Context,
     pd3d11Context->Draw(6, 0);
 }
 
-void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain)
+void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor)
 {
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
@@ -81,9 +81,9 @@ void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain)
 
     pd3d11Context->ClearState();
 
-    const auto& SCDesc       = pTestingSwapChainD3D11->GetDesc();
-    float       ClearColor[] = {0, 0, 0, 0};
-    DrawProceduralTriangles(pd3d11Context, pTestingSwapChainD3D11, pTestingSwapChainD3D11->GetD3D11RTV(), SCDesc.Width, SCDesc.Height, ClearColor);
+    const auto& SCDesc = pTestingSwapChainD3D11->GetDesc();
+    float       Zero[] = {0, 0, 0, 0};
+    DrawProceduralTriangles(pd3d11Context, pTestingSwapChainD3D11, pTestingSwapChainD3D11->GetD3D11RTV(), SCDesc.Width, SCDesc.Height, pClearColor != nullptr ? pClearColor : Zero);
 
     pd3d11Context->ClearState();
 }
@@ -138,6 +138,66 @@ void RenderPassMSResolveReferenceD3D11(ISwapChain* pSwapChain, const float* pCle
 
 void RenderPassInputAttachmentReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor)
 {
+    auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
+    auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
+    auto* pd3d11Device           = pEnvD3D11->GetD3D11Device();
+    auto* pTestingSwapChainD3D11 = ValidatedCast<TestingSwapChainD3D11>(pSwapChain);
+
+    const auto& SCDesc = pTestingSwapChainD3D11->GetDesc();
+
+    D3D11_TEXTURE2D_DESC InptAttTexDesc = {};
+
+    InptAttTexDesc.Width     = SCDesc.Width;
+    InptAttTexDesc.Height    = SCDesc.Height;
+    InptAttTexDesc.MipLevels = 1;
+    InptAttTexDesc.ArraySize = 1;
+    switch (SCDesc.ColorBufferFormat)
+    {
+        case TEX_FORMAT_RGBA8_UNORM:
+            InptAttTexDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            break;
+
+        default:
+            UNSUPPORTED("Unsupported swap chain format");
+    }
+    InptAttTexDesc.SampleDesc.Count   = 1;
+    InptAttTexDesc.SampleDesc.Quality = 0;
+    InptAttTexDesc.Usage              = D3D11_USAGE_DEFAULT;
+    InptAttTexDesc.BindFlags          = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+    InptAttTexDesc.CPUAccessFlags     = 0;
+    InptAttTexDesc.MiscFlags          = 0;
+
+    CComPtr<ID3D11Texture2D> pd3d11InptAtt;
+    pd3d11Device->CreateTexture2D(&InptAttTexDesc, nullptr, &pd3d11InptAtt);
+    ASSERT_TRUE(pd3d11InptAtt != nullptr);
+
+    CComPtr<ID3D11RenderTargetView> pd3d11RTV;
+    pd3d11Device->CreateRenderTargetView(pd3d11InptAtt, nullptr, &pd3d11RTV);
+    ASSERT_TRUE(pd3d11RTV != nullptr);
+
+    CComPtr<ID3D11ShaderResourceView> pd3d11SRV;
+    pd3d11Device->CreateShaderResourceView(pd3d11InptAtt, nullptr, &pd3d11SRV);
+    ASSERT_TRUE(pd3d11SRV != nullptr);
+
+    pd3d11Context->ClearState();
+
+    float Zero[] = {0, 0, 0, 0};
+    DrawProceduralTriangles(pd3d11Context, pTestingSwapChainD3D11, pd3d11RTV, SCDesc.Width, SCDesc.Height, Zero);
+
+    ID3D11RenderTargetView* pd3d11RTVs[] = {pTestingSwapChainD3D11->GetD3D11RTV()};
+    pd3d11Context->OMSetRenderTargets(1, pd3d11RTVs, nullptr);
+    pd3d11Context->ClearRenderTargetView(pd3d11RTVs[0], pClearColor);
+
+    auto pInputAttachmentPS = pEnvD3D11->CreatePixelShader(HLSL::InputAttachmentTest_PS);
+    ASSERT_NE(pInputAttachmentPS, nullptr);
+    pd3d11Context->PSSetShader(pInputAttachmentPS, nullptr, 0);
+
+    ID3D11ShaderResourceView* pSRVs[] = {pd3d11SRV};
+    pd3d11Context->PSSetShaderResources(0, 1, pSRVs);
+
+    pd3d11Context->Draw(6, 0);
+
+    pd3d11Context->ClearState();
 }
 
 } // namespace Testing

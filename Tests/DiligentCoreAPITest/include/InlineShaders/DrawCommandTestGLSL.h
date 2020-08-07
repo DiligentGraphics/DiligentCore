@@ -97,14 +97,14 @@ const std::string InputAttachmentTest_FS{
 R"(
 #version 420 core
 
-layout(input_attachment_index = 0, binding = 0) uniform subpassInput in_Color;
+layout(input_attachment_index = 0, binding = 0) uniform subpassInput g_SubpassInput;
 layout(location = 0) in  vec3 in_VSOutColor;
 layout(location = 0) out vec4 out_Color;
 
 void main()
 {
     out_Color.rgb = in_VSOutColor.rgb * 0.125;
-    out_Color.rgb += (vec3(1.0, 1.0, 1.0) - subpassLoad(in_Color).brg) * 0.875;
+    out_Color.rgb += (vec3(1.0, 1.0, 1.0) - subpassLoad(g_SubpassInput).brg) * 0.875;
     out_Color.a   = 1.0;
 }
 )"

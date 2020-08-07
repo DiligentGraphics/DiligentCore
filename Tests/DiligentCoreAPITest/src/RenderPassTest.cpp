@@ -41,7 +41,7 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassMSResolveReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassInputAttachmentReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
@@ -424,7 +424,7 @@ TEST_F(RenderPassTest, Draw)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                RenderDrawCommandReferenceD3D11(pSwapChain);
+                RenderDrawCommandReferenceD3D11(pSwapChain, ClearColor);
                 break;
 #endif
 
@@ -794,8 +794,13 @@ TEST_F(RenderPassTest, InputAttachment)
         PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
         PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
+        auto DeviceType = pEnv->GetDevice()->GetDeviceCaps().DevType;
+
         ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM;
+        ShaderCI.SourceLanguage = DeviceType == RENDER_DEVICE_TYPE_VULKAN ?
+            SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM :
+            SHADER_SOURCE_LANGUAGE_HLSL;
+
         ShaderCI.UseCombinedTextureSamplers = true;
 
         RefCntAutoPtr<IShader> pVS;
@@ -803,7 +808,9 @@ TEST_F(RenderPassTest, InputAttachment)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Input attachment test VS";
-            ShaderCI.Source          = GLSL::DrawTest_ProceduralTriangleVS.c_str();
+            ShaderCI.Source          = DeviceType == RENDER_DEVICE_TYPE_VULKAN ?
+                GLSL::DrawTest_ProceduralTriangleVS.c_str() :
+                HLSL::DrawTest_ProceduralTriangleVS.c_str();
             pDevice->CreateShader(ShaderCI, &pVS);
             ASSERT_NE(pVS, nullptr);
         }
@@ -813,7 +820,9 @@ TEST_F(RenderPassTest, InputAttachment)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Input attachment test PS";
-            ShaderCI.Source          = GLSL::InputAttachmentTest_FS.c_str();
+            ShaderCI.Source          = DeviceType == RENDER_DEVICE_TYPE_VULKAN ?
+                GLSL::InputAttachmentTest_FS.c_str() :
+                HLSL::InputAttachmentTest_PS.c_str();
             pDevice->CreateShader(ShaderCI, &pPS);
             ASSERT_NE(pPS, nullptr);
         }
@@ -823,7 +832,7 @@ TEST_F(RenderPassTest, InputAttachment)
 
         pDevice->CreatePipelineState(PSOCreateInfo, &pInputAttachmentPSO);
         ASSERT_NE(pInputAttachmentPSO, nullptr);
-        pInputAttachmentPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "in_Color")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
+        pInputAttachmentPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
         pInputAttachmentPSO->CreateShaderResourceBinding(&pInputAttachmentSRB, true);
         ASSERT_NE(pInputAttachmentSRB, nullptr);
         pContext->TransitionShaderResources(pInputAttachmentPSO, pInputAttachmentSRB);
