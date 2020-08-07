@@ -935,6 +935,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
     }
 #endif
 
+    // Reset current render targets (in Vulkan backend, this may end current render pass).
     ResetRenderTargets();
 
     auto* pNewRenderPass  = ValidatedCast<RenderPassImplType>(Attribs.pRenderPass);
@@ -1003,7 +1004,8 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPas
             if (auto* pView = FBDesc.ppAttachments[i])
             {
                 auto* pTex = ValidatedCast<TextureImplType>(pView->GetTexture());
-                pTex->SetState(RPDesc.pAttachments[i].FinalState);
+                if (pTex->IsInKnownState())
+                    pTex->SetState(RPDesc.pAttachments[i].FinalState);
             }
         }
     }

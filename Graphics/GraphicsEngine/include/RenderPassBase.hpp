@@ -30,6 +30,7 @@
 /// \file
 /// Implementation of the Diligent::RenderPassBase template class
 
+#include <vector>
 #include "RenderPass.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
@@ -88,62 +89,88 @@ public:
             m_pPreserveAttachments = ALLOCATE(GetRawAllocator(), "Memory for subpass preserve attachments array", Uint32, TotalPreserveAttachmentsCount);
         }
 
+        m_AttachmentStates.resize(Desc.AttachmentCount * Desc.SubpassCount);
+        m_AttachmentFirstUseSubpass.resize(Desc.AttachmentCount, ATTACHMENT_UNUSED);
+
         auto* pCurrAttachmentRef      = m_pAttachmentReferences;
         auto* pCurrPreserveAttachment = m_pPreserveAttachments;
-        if (Desc.SubpassCount != 0)
+        VERIFY(Desc.SubpassCount != 0, "Render pass must have at least one subpass");
+        auto* pSubpasses =
+            ALLOCATE(GetRawAllocator(), "Memory for SubpassDesc array", SubpassDesc, Desc.SubpassCount);
+        this->m_Desc.pSubpasses = pSubpasses;
+        for (Uint32 i = 0; i < Desc.SubpassCount; ++i)
         {
-            auto* pSubpasses =
-                ALLOCATE(GetRawAllocator(), "Memory for SubpassDesc array", SubpassDesc, Desc.SubpassCount);
-            this->m_Desc.pSubpasses = pSubpasses;
-            for (Uint32 i = 0; i < Desc.SubpassCount; ++i)
+            for (Uint32 att = 0; att < Desc.AttachmentCount; ++att)
             {
-                const auto& SrcSubpass = Desc.pSubpasses[i];
-                auto&       DstSubpass = pSubpasses[i];
-
-                DstSubpass = SrcSubpass;
-                if (SrcSubpass.InputAttachmentCount != 0)
-                {
-                    DstSubpass.pInputAttachments = pCurrAttachmentRef;
-                    for (Uint32 input_attachment = 0; input_attachment < SrcSubpass.InputAttachmentCount; ++input_attachment)
-                        *(pCurrAttachmentRef++) = SrcSubpass.pInputAttachments[input_attachment];
-                }
-                else
-                    DstSubpass.pInputAttachments = nullptr;
-
-                if (SrcSubpass.RenderTargetAttachmentCount != 0)
-                {
-                    DstSubpass.pRenderTargetAttachments = pCurrAttachmentRef;
-                    for (Uint32 rt_attachment = 0; rt_attachment < SrcSubpass.RenderTargetAttachmentCount; ++rt_attachment)
-                        *(pCurrAttachmentRef++) = SrcSubpass.pRenderTargetAttachments[rt_attachment];
-                    if (DstSubpass.pResolveAttachments)
-                    {
-                        for (Uint32 rslv_attachment = 0; rslv_attachment < SrcSubpass.RenderTargetAttachmentCount; ++rslv_attachment)
-                            *(pCurrAttachmentRef++) = SrcSubpass.pResolveAttachments[rslv_attachment];
-                    }
-                    else
-                        DstSubpass.pResolveAttachments = nullptr;
-                }
-                else
-                {
-                    DstSubpass.pRenderTargetAttachments = nullptr;
-                    DstSubpass.pResolveAttachments      = nullptr;
-                }
-
-                if (SrcSubpass.pDepthStencilAttachment != nullptr)
-                {
-                    DstSubpass.pDepthStencilAttachment = pCurrAttachmentRef;
-                    *(pCurrAttachmentRef++)            = *SrcSubpass.pDepthStencilAttachment;
-                }
-
-                if (SrcSubpass.PreserveAttachmentCount != 0)
-                {
-                    DstSubpass.pPreserveAttachments = pCurrPreserveAttachment;
-                    for (Uint32 prsv_attachment = 0; prsv_attachment < SrcSubpass.PreserveAttachmentCount; ++prsv_attachment)
-                        *(pCurrPreserveAttachment++) = SrcSubpass.pPreserveAttachments[prsv_attachment];
-                }
-                else
-                    DstSubpass.pPreserveAttachments = nullptr;
+                SetAttachmentState(i, att, i > 0 ? GetAttachmentState(i - 1, att) : Desc.pAttachments[i].InitialState);
             }
+
+            const auto& SrcSubpass = Desc.pSubpasses[i];
+            auto&       DstSubpass = pSubpasses[i];
+
+            auto UpdateAttachmentStateAndFirstUseSubpass = [this, i](const AttachmentReference& AttRef) //
+            {
+                if (AttRef.AttachmentIndex != ATTACHMENT_UNUSED)
+                {
+                    SetAttachmentState(i, AttRef.AttachmentIndex, AttRef.State);
+                    if (m_AttachmentFirstUseSubpass[AttRef.AttachmentIndex] == ATTACHMENT_UNUSED)
+                        m_AttachmentFirstUseSubpass[AttRef.AttachmentIndex] = i;
+                }
+            };
+
+            DstSubpass = SrcSubpass;
+            if (SrcSubpass.InputAttachmentCount != 0)
+            {
+                DstSubpass.pInputAttachments = pCurrAttachmentRef;
+                for (Uint32 input_attachment = 0; input_attachment < SrcSubpass.InputAttachmentCount; ++input_attachment, ++pCurrAttachmentRef)
+                {
+                    *pCurrAttachmentRef = SrcSubpass.pInputAttachments[input_attachment];
+                    UpdateAttachmentStateAndFirstUseSubpass(*pCurrAttachmentRef);
+                }
+            }
+            else
+                DstSubpass.pInputAttachments = nullptr;
+
+            if (SrcSubpass.RenderTargetAttachmentCount != 0)
+            {
+                DstSubpass.pRenderTargetAttachments = pCurrAttachmentRef;
+                for (Uint32 rt_attachment = 0; rt_attachment < SrcSubpass.RenderTargetAttachmentCount; ++rt_attachment, ++pCurrAttachmentRef)
+                {
+                    *pCurrAttachmentRef = SrcSubpass.pRenderTargetAttachments[rt_attachment];
+                    UpdateAttachmentStateAndFirstUseSubpass(*pCurrAttachmentRef);
+                }
+
+                if (DstSubpass.pResolveAttachments)
+                {
+                    DstSubpass.pResolveAttachments = pCurrAttachmentRef;
+                    for (Uint32 rslv_attachment = 0; rslv_attachment < SrcSubpass.RenderTargetAttachmentCount; ++rslv_attachment, ++pCurrAttachmentRef)
+                    {
+                        *pCurrAttachmentRef = SrcSubpass.pResolveAttachments[rslv_attachment];
+                        UpdateAttachmentStateAndFirstUseSubpass(*pCurrAttachmentRef);
+                    }
+                }
+            }
+            else
+            {
+                DstSubpass.pRenderTargetAttachments = nullptr;
+                DstSubpass.pResolveAttachments      = nullptr;
+            }
+
+            if (SrcSubpass.pDepthStencilAttachment != nullptr)
+            {
+                DstSubpass.pDepthStencilAttachment = pCurrAttachmentRef;
+                *(pCurrAttachmentRef++)            = *SrcSubpass.pDepthStencilAttachment;
+                UpdateAttachmentStateAndFirstUseSubpass(*SrcSubpass.pDepthStencilAttachment);
+            }
+
+            if (SrcSubpass.PreserveAttachmentCount != 0)
+            {
+                DstSubpass.pPreserveAttachments = pCurrPreserveAttachment;
+                for (Uint32 prsv_attachment = 0; prsv_attachment < SrcSubpass.PreserveAttachmentCount; ++prsv_attachment)
+                    *(pCurrPreserveAttachment++) = SrcSubpass.pPreserveAttachments[prsv_attachment];
+            }
+            else
+                DstSubpass.pPreserveAttachments = nullptr;
         }
         VERIFY_EXPR(pCurrAttachmentRef - m_pAttachmentReferences == TotalAttachmentReferencesCount);
         VERIFY_EXPR(pCurrPreserveAttachment - m_pPreserveAttachments == TotalPreserveAttachmentsCount);
@@ -177,6 +204,18 @@ public:
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_RenderPass, TDeviceObjectBase)
 
+    RESOURCE_STATE GetAttachmentState(Uint32 Subpass, Uint32 Attachment) const
+    {
+        VERIFY_EXPR(Attachment < this->m_Desc.AttachmentCount);
+        VERIFY_EXPR(Subpass < this->m_Desc.SubpassCount);
+        return m_AttachmentStates[this->m_Desc.AttachmentCount * Subpass + Attachment];
+    }
+
+    Uint32 GetAttachmentFirstUseSubpass(Uint32 Attachment) const
+    {
+        return m_AttachmentFirstUseSubpass[Attachment];
+    }
+
 protected:
     static void CountSubpassAttachmentReferences(const RenderPassDesc& Desc,
                                                  Uint32&               TotalAttachmentReferencesCount,
@@ -198,8 +237,21 @@ protected:
     }
 
 private:
+    void SetAttachmentState(Uint32 Subpass, Uint32 Attachment, RESOURCE_STATE State)
+    {
+        VERIFY_EXPR(Attachment < this->m_Desc.AttachmentCount);
+        VERIFY_EXPR(Subpass < this->m_Desc.SubpassCount);
+        m_AttachmentStates[this->m_Desc.AttachmentCount * Subpass + Attachment] = State;
+    }
+
     AttachmentReference* m_pAttachmentReferences = nullptr;
     Uint32*              m_pPreserveAttachments  = nullptr;
+
+    // Attachment states during each subpass
+    std::vector<RESOURCE_STATE> m_AttachmentStates;
+
+    // The index of the subpass where the attachment is first used
+    std::vector<Uint32> m_AttachmentFirstUseSubpass;
 };
 
 } // namespace Diligent

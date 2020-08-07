@@ -1582,6 +1582,14 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
                                               ITextureView*                  pDepthStencil,
                                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
+        return;
+    }
+#endif
+
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
         for (Uint32 RT = 0; RT < NumRenderTargets; ++RT)
@@ -1628,22 +1636,100 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
     }
 }
 
+void DeviceContextD3D11Impl::BeginSubpass()
+{
+    VERIFY_EXPR(m_pActiveRenderPass);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+
+    for (Uint32 att = 0; att < RPDesc.AttachmentCount; ++att)
+    {
+        auto* pTex = ValidatedCast<TextureBaseD3D11>(FBDesc.ppAttachments[att]->GetTexture());
+        if (pTex == nullptr)
+            continue;
+
+        const auto NewState  = m_pActiveRenderPass->GetAttachmentState(m_SubpassIndex, att);
+        const auto PrevState = m_SubpassIndex > 0 ?
+            m_pActiveRenderPass->GetAttachmentState(m_SubpassIndex - 1, att) :
+            RPDesc.pAttachments[att].InitialState;
+
+        if (NewState == PrevState)
+            continue;
+
+        switch (NewState)
+        {
+            case RESOURCE_STATE_RENDER_TARGET:
+            case RESOURCE_STATE_DEPTH_WRITE:
+            case RESOURCE_STATE_RESOLVE_DEST:
+                UnbindTextureFromInput(pTex, pTex->GetD3D11Texture());
+                break;
+
+            case RESOURCE_STATE_SHADER_RESOURCE:
+            case RESOURCE_STATE_INPUT_ATTACHMENT:
+                UnbindTextureFromFramebuffer(pTex, false);
+                break;
+
+            default:
+                UNEXPECTED("Unexpected attachment state ", GetResourceStateString(NewState));
+        }
+    }
+
+    CommitRenderTargets();
+}
+
+void DeviceContextD3D11Impl::EndSubpass()
+{
+}
+
 void DeviceContextD3D11Impl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
     TDeviceContextBase::BeginRenderPass(Attribs);
-    UNEXPECTED("Method not implemented");
+    BeginSubpass();
+    // Set the viewport to match the framebuffer size
+    SetViewports(1, nullptr, 0, 0);
+
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+
+    for (Uint32 att = 0; att < RPDesc.AttachmentCount; ++att)
+    {
+        auto* pTexView = FBDesc.ppAttachments[att];
+        if (pTexView == nullptr)
+            continue;
+        if (RPDesc.pAttachments[att].LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+        {
+            auto*      pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pTexView);
+            const auto FmtAttribs = GetTextureFormatAttribs(pTexView->GetDesc().Format);
+            VERIFY_EXPR(att < Attribs.ClearValueCount);
+            const auto& ClearValue = Attribs.pClearValues[att];
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
+                FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                auto* pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
+                m_pd3d11DeviceContext->ClearDepthStencilView(pd3d11DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, ClearValue.DepthStencil.Depth, ClearValue.DepthStencil.Stencil);
+            }
+            else
+            {
+                auto* pd3d11RTV = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
+                m_pd3d11DeviceContext->ClearRenderTargetView(pd3d11RTV, ClearValue.Color);
+            }
+        }
+    }
 }
 
 void DeviceContextD3D11Impl::NextSubpass()
 {
+    EndSubpass();
     TDeviceContextBase::NextSubpass();
-    UNEXPECTED("Method not implemented");
+    BeginSubpass();
 }
 
 void DeviceContextD3D11Impl::EndRenderPass(bool UpdateResourceStates)
 {
+    EndSubpass();
     TDeviceContextBase::EndRenderPass(UpdateResourceStates);
-    UNEXPECTED("Method not implemented");
+    // Nothing needs to be done
 }
 
 
