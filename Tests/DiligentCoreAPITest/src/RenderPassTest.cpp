@@ -794,10 +794,10 @@ TEST_F(RenderPassTest, InputAttachment)
         PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
         PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-        auto DeviceType = pEnv->GetDevice()->GetDeviceCaps().DevType;
+        auto IsVulkan = pEnv->GetDevice()->GetDeviceCaps().IsVulkanDevice();
 
         ShaderCreateInfo ShaderCI;
-        ShaderCI.SourceLanguage = DeviceType == RENDER_DEVICE_TYPE_VULKAN ?
+        ShaderCI.SourceLanguage = IsVulkan ?
             SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM :
             SHADER_SOURCE_LANGUAGE_HLSL;
 
@@ -808,7 +808,7 @@ TEST_F(RenderPassTest, InputAttachment)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Input attachment test VS";
-            ShaderCI.Source          = DeviceType == RENDER_DEVICE_TYPE_VULKAN ?
+            ShaderCI.Source          = IsVulkan ?
                 GLSL::DrawTest_ProceduralTriangleVS.c_str() :
                 HLSL::DrawTest_ProceduralTriangleVS.c_str();
             pDevice->CreateShader(ShaderCI, &pVS);
@@ -820,7 +820,7 @@ TEST_F(RenderPassTest, InputAttachment)
             ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
             ShaderCI.EntryPoint      = "main";
             ShaderCI.Desc.Name       = "Input attachment test PS";
-            ShaderCI.Source          = DeviceType == RENDER_DEVICE_TYPE_VULKAN ?
+            ShaderCI.Source          = IsVulkan ?
                 GLSL::InputAttachmentTest_FS.c_str() :
                 HLSL::InputAttachmentTest_PS.c_str();
             pDevice->CreateShader(ShaderCI, &pPS);
