@@ -1214,6 +1214,14 @@ void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRen
                                            ITextureView*                  pDepthStencil,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
+        return;
+    }
+#endif
+
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
         FramebufferCache::FramebufferCacheKey FBKey;
@@ -1331,15 +1339,15 @@ void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 void DeviceContextVkImpl::NextSubpass()
 {
     TDeviceContextBase::NextSubpass();
-    EnsureVkCmdBuffer();
+    VERIFY_EXPR(m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE && m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE);
     m_CommandBuffer.NextSubpass();
 }
 
 void DeviceContextVkImpl::EndRenderPass(bool UpdateResourceStates)
 {
     TDeviceContextBase::EndRenderPass(UpdateResourceStates);
-    EnsureVkCmdBuffer();
-    m_CommandBuffer.EndRenderPass();
+    // TDeviceContextBase::EndRenderPass calls ResetRenderTargets() that in turn
+    // calls m_CommandBuffer.EndRenderPass()
 
     if (m_State.NumCommands >= m_NumCommandsToFlush &&
         !m_bIsDeferred &&           // Never flush deferred context

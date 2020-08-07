@@ -122,10 +122,6 @@ public:
     /// Caches the scissor rects
     inline void SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32& RTWidth, Uint32& RTHeight);
 
-    /// Caches the render target and depth stencil views. Returns true if any view is different
-    /// from the cached value and false otherwise.
-    inline bool SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil);
-
     virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override = 0;
 
     virtual void DILIGENT_CALL_TYPE NextSubpass() override = 0;
@@ -210,6 +206,13 @@ public:
     bool UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage);
 
 protected:
+    /// Caches the render target and depth stencil views. Returns true if any view is different
+    /// from the cached value and false otherwise.
+    inline bool SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil);
+
+    /// Initializes render targets for the current subpass
+    inline bool SetSubpassRenderTargets();
+
     inline bool SetBlendFactors(const float* BlendFactors, int Dummy);
 
     inline bool SetStencilRef(Uint32 StencilRef, int Dummy);
@@ -581,8 +584,6 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    VERIFY(m_pActiveRenderPass == nullptr, "Setting render targets inside the render pass is not allowed. The render pass must be ended first.");
-
     bool bBindRenderTargets = false;
     m_FramebufferWidth      = 0;
     m_FramebufferHeight     = 0;
@@ -684,6 +685,49 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetSubpassRenderTargets()
+{
+    VERIFY_EXPR(m_pBoundFramebuffer);
+    VERIFY_EXPR(m_pActiveRenderPass);
+
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
+
+    ITextureView* ppRTVs[MAX_RENDER_TARGETS] = {};
+    ITextureView* pDSV                       = nullptr;
+    for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
+    {
+        const auto& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
+        if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            VERIFY_EXPR(RTAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
+            ppRTVs[rt] = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
+        }
+    }
+
+    if (Subpass.pDepthStencilAttachment != nullptr)
+    {
+        const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
+        if (DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            VERIFY_EXPR(DSAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
+            pDSV = FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex];
+        }
+    }
+    bool BindRenderTargets = SetRenderTargets(Subpass.RenderTargetAttachmentCount, ppRTVs, pDSV);
+
+    // Use framebuffer dimensions (override what was set by SetRenderTargets)
+    m_FramebufferWidth  = FBDesc.Width;
+    m_FramebufferHeight = FBDesc.Height;
+    m_FramebufferSlices = FBDesc.NumArraySlices;
+
+    return BindRenderTargets;
+}
+
+
+template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     GetRenderTargets(Uint32& NumRenderTargets, ITextureView** ppRTVs, ITextureView** ppDSV)
 {
@@ -751,6 +795,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCa
 
     ResetRenderTargets();
 
+    VERIFY(!m_pActiveRenderPass, "Clearing state cache inside an active render pass");
     m_pActiveRenderPass = nullptr;
     m_pBoundFramebuffer = nullptr;
 }
@@ -838,8 +883,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::UnbindTextureFromFr
 template <typename BaseInterface, typename ImplementationTraits>
 void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets()
 {
-    VERIFY(m_pActiveRenderPass == nullptr, "Resetting render targets inside the render pass may result in undefined behavior.");
-
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
         m_pBoundRenderTargets[rt].Release();
 #ifdef DILIGENT_DEBUG
@@ -854,12 +897,16 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets(
     m_FramebufferSlices     = 0;
 
     m_pBoundDepthStencil.Release();
+
+    // Do not reset framebuffer here as there may potentially
+    // be a subpass without any render target attachments.
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
     VERIFY(m_pActiveRenderPass == nullptr, "Attempting to begin render pass while another render pass ('", m_pActiveRenderPass->GetDesc().Name, "') is active.");
+    VERIFY(m_pBoundFramebuffer == nullptr, "Attempting to begin render pass while another framebuffer ('", m_pBoundFramebuffer->GetDesc().Name, "') is bound.");
     VERIFY(Attribs.pRenderPass != nullptr, "Render pass must not be null");
     VERIFY(Attribs.pFramebuffer != nullptr, "Framebuffer must not be null");
 #ifdef DILIGENT_DEBUG
@@ -892,16 +939,10 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
 
     auto* pNewRenderPass  = ValidatedCast<RenderPassImplType>(Attribs.pRenderPass);
     auto* pNewFramebuffer = ValidatedCast<FramebufferImplType>(Attribs.pFramebuffer);
-    m_SubpassIndex        = 0;
-
-    const auto& FBDesc  = pNewFramebuffer->GetDesc();
-    m_FramebufferWidth  = FBDesc.Width;
-    m_FramebufferHeight = FBDesc.Height;
-    m_FramebufferSlices = FBDesc.NumArraySlices;
-
     if (Attribs.StateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_NONE)
     {
         const auto& RPDesc = pNewRenderPass->GetDesc();
+        const auto& FBDesc = pNewFramebuffer->GetDesc();
         VERIFY(RPDesc.AttachmentCount <= FBDesc.AttachmentCount,
                "The number of attachments (", FBDesc.AttachmentCount,
                ") in currently bound framebuffer is smaller than the number of attachments in the render pass (", RPDesc.AttachmentCount, ")");
@@ -915,8 +956,11 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
             auto  RequiredState = RPDesc.pAttachments[i].InitialState;
             if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
             {
-                StateTransitionDesc Barrier{pTex, RESOURCE_STATE_UNKNOWN, RequiredState, true};
-                this->TransitionResourceStates(1, &Barrier);
+                if (pTex->IsInKnownState() && !pTex->CheckState(RequiredState))
+                {
+                    StateTransitionDesc Barrier{pTex, RESOURCE_STATE_UNKNOWN, RequiredState, true};
+                    this->TransitionResourceStates(1, &Barrier);
+                }
             }
             else if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
             {
@@ -928,6 +972,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
     m_pActiveRenderPass = pNewRenderPass;
     m_pBoundFramebuffer = pNewFramebuffer;
     m_SubpassIndex      = 0;
+    SetSubpassRenderTargets();
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
@@ -936,6 +981,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::NextSubpass(
     VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
     VERIFY(m_SubpassIndex + 1 < m_pActiveRenderPass->GetDesc().SubpassCount, "The render pass has reached the final subpass already");
     ++m_SubpassIndex;
+    SetSubpassRenderTargets();
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
@@ -964,6 +1010,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPas
     m_pActiveRenderPass.Release();
     m_pBoundFramebuffer.Release();
     m_SubpassIndex = 0;
+    ResetRenderTargets();
 }
 
 
@@ -986,44 +1033,28 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearDepthSt
             return false;
         }
 
-        if (m_pActiveRenderPass != nullptr)
+        if (pView != m_pBoundDepthStencil)
         {
-            bool AttachmentFound = false;
-            if (m_pBoundFramebuffer != nullptr)
-            {
-                const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
-                for (Uint32 i = 0; i < FBDesc.AttachmentCount && !AttachmentFound; ++i)
-                {
-                    AttachmentFound = FBDesc.ppAttachments[i] == pView;
-                }
-            }
-
-            if (!AttachmentFound)
+            if (m_pActiveRenderPass != nullptr)
             {
                 LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
                                   "' is not bound as framebuffer attachment. ClearDepthStencil command inside a render pass "
-                                  "requires depth-stencil view be bound as framebuffer attachment.");
+                                  "requires depth-stencil view to be bound as a framebuffer attachment.");
                 return false;
             }
-        }
-        else
-        {
-            if (pView != m_pBoundDepthStencil)
+            else if (m_pDevice->GetDeviceCaps().IsGLDevice())
             {
-                if (m_pDevice->GetDeviceCaps().IsGLDevice())
-                {
-                    LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
-                                      "' is not bound to the device context. ClearDepthStencil command requires "
-                                      "depth-stencil view be bound to the device contex in OpenGL backend");
-                    return false;
-                }
-                else
-                {
-                    LOG_WARNING_MESSAGE("Depth-stencil view '", ViewDesc.Name,
-                                        "' is not bound to the device context. "
-                                        "ClearDepthStencil command is more efficient when depth-stencil "
-                                        "view is bound to the context. In OpenGL backend this is a requirement.");
-                }
+                LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
+                                  "' is not bound to the device context. ClearDepthStencil command requires "
+                                  "depth-stencil view be bound to the device contex in OpenGL backend");
+                return false;
+            }
+            else
+            {
+                LOG_WARNING_MESSAGE("Depth-stencil view '", ViewDesc.Name,
+                                    "' is not bound to the device context. "
+                                    "ClearDepthStencil command is more efficient when depth-stencil "
+                                    "view is bound to the context. In OpenGL backend this is a requirement.");
             }
         }
     }
@@ -1051,48 +1082,33 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearRenderT
             return false;
         }
 
-        if (m_pActiveRenderPass != nullptr)
+        bool RTFound = false;
+        for (Uint32 i = 0; i < m_NumBoundRenderTargets && !RTFound; ++i)
         {
-            bool AttachmentFound = false;
-            if (m_pBoundFramebuffer != nullptr)
-            {
-                const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
-                for (Uint32 i = 0; i < FBDesc.AttachmentCount && !AttachmentFound; ++i)
-                {
-                    AttachmentFound = FBDesc.ppAttachments[i] == pView;
-                }
-            }
+            RTFound = m_pBoundRenderTargets[i] == pView;
+        }
 
-            if (!AttachmentFound)
+        if (!RTFound)
+        {
+            if (m_pActiveRenderPass != nullptr)
             {
                 LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
                                   "' is not bound as framebuffer attachment. ClearRenderTarget command inside a render pass "
-                                  "requires render target view be bound as framebuffer attachment.");
+                                  "requires render target view to be bound as a framebuffer attachment.");
                 return false;
             }
-        }
-        else
-        {
-            bool RTFound = false;
-            for (Uint32 i = 0; i < m_NumBoundRenderTargets && !RTFound; ++i)
+            else if (m_pDevice->GetDeviceCaps().IsGLDevice())
             {
-                RTFound = m_pBoundRenderTargets[i] == pView;
+                LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
+                                  "' is not bound to the device context. ClearRenderTarget command "
+                                  "requires render target view to be bound to the device contex in OpenGL backend");
+                return false;
             }
-            if (!RTFound)
+            else
             {
-                if (m_pDevice->GetDeviceCaps().IsGLDevice())
-                {
-                    LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
-                                      "' is not bound to the device context. ClearRenderTarget command "
-                                      "requires render target view be bound to the device contex in OpenGL backend");
-                    return false;
-                }
-                else
-                {
-                    LOG_WARNING_MESSAGE("Render target view '", ViewDesc.Name,
-                                        "' is not bound to the device context. ClearRenderTarget command is more efficient "
-                                        "if render target view is bound to the device context. In OpenGL backend this is a requirement.");
-                }
+                LOG_WARNING_MESSAGE("Render target view '", ViewDesc.Name,
+                                    "' is not bound to the device context. ClearRenderTarget command is more efficient "
+                                    "if render target view is bound to the device context. In OpenGL backend this is a requirement.");
             }
         }
     }
@@ -1564,7 +1580,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     const auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
     if (GraphicsPipeline.NumRenderTargets != m_NumBoundRenderTargets)
     {
-        LOG_WARNING_MESSAGE("Number of currently bound render targets (", m_NumBoundRenderTargets,
+        LOG_WARNING_MESSAGE("The number of currently bound render targets (", m_NumBoundRenderTargets,
                             ") does not match the number of outputs specified by the PSO '", PSODesc.Name,
                             "' (", Uint32{GraphicsPipeline.NumRenderTargets}, ").");
     }

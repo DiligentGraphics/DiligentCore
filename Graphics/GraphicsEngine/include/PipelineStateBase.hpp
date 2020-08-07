@@ -201,6 +201,34 @@ public:
                 }
             }
 
+            if (m_pRenderPass)
+            {
+                const auto& RPDesc = m_pRenderPass->GetDesc();
+                VERIFY_EXPR(GraphicsPipeline.SubpassIndex < RPDesc.SubpassCount);
+                const auto& Subpass = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex];
+
+                this->m_Desc.GraphicsPipeline.NumRenderTargets = static_cast<Uint8>(Subpass.RenderTargetAttachmentCount);
+                for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
+                {
+                    const auto& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
+                    if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+                    {
+                        VERIFY_EXPR(RTAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
+                        this->m_Desc.GraphicsPipeline.RTVFormats[rt] = RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex].Format;
+                    }
+                }
+
+                if (Subpass.pDepthStencilAttachment != nullptr)
+                {
+                    const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
+                    if (DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+                    {
+                        VERIFY_EXPR(DSAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
+                        this->m_Desc.GraphicsPipeline.DSVFormat = RPDesc.pAttachments[DSAttachmentRef.AttachmentIndex].Format;
+                    }
+                }
+            }
+
             const auto&    InputLayout     = PSODesc.GraphicsPipeline.InputLayout;
             LayoutElement* pLayoutElements = nullptr;
             if (InputLayout.NumElements > 0)
@@ -407,7 +435,7 @@ private:
         {
             if (this->m_Desc.GraphicsPipeline.pRenderPass != nullptr)
             {
-                LOG_PSO_ERROR_AND_THROW("GraphicsPipeline.pRenderPass must be null");
+                LOG_PSO_ERROR_AND_THROW("GraphicsPipeline.pRenderPass must be null for compute pipelines");
             }
         }
         else

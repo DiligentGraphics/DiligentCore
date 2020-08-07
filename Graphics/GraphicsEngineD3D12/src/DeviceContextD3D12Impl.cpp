@@ -975,6 +975,14 @@ void DeviceContextD3D12Impl::SetRenderTargets(Uint32                         Num
                                               ITextureView*                  pDepthStencil,
                                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
+        return;
+    }
+#endif
+
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
         CommitRenderTargets(StateTransitionMode);
