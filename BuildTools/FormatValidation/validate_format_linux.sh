@@ -23,7 +23,7 @@ if [ $? -ne 0 ]; then
   fi
 fi
 
-if [ ! -z $BIN ]; then
+if [ ! -z "$BIN" ]; then
   python clang-format-validate.py --clang-format-executable "$BIN" \
   -r ../../Common ../../Graphics ../../Platforms ../../Primitives ../../Tests \
   --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions.h \
