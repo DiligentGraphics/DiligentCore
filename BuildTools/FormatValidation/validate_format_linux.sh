@@ -10,7 +10,7 @@ SKIP=0
 
 if [ "$SKIP" -eq 0 ]; then
   ## Try to get the version
-  eval "$BIN" --version 2> /dev/null  
+  eval "$BIN" --version > /dev/null 2>&1
   if [ $? -ne 0 ]; then
     ## Try to get a system installed clang-format
     BIN=$(which clang-format 2> /dev/null)
