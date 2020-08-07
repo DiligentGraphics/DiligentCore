@@ -1638,6 +1638,38 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
 
 void DeviceContextD3D11Impl::EndSubpass()
 {
+    VERIFY_EXPR(m_pActiveRenderPass);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
+    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
+
+    if (Subpass.pResolveAttachments != nullptr)
+    {
+        for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
+        {
+            const auto& RslvAttachmentRef = Subpass.pResolveAttachments[rt];
+            if (RslvAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+            {
+                const auto& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
+                VERIFY_EXPR(RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED);
+                auto* pSrcView     = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
+                auto* pDstView     = FBDesc.ppAttachments[RslvAttachmentRef.AttachmentIndex];
+                auto* pSrcTexD3D11 = ValidatedCast<TextureBaseD3D11>(pSrcView->GetTexture());
+                auto* pDstTexD3D11 = ValidatedCast<TextureBaseD3D11>(pDstView->GetTexture());
+
+                const auto& SrcViewDesc = pSrcView->GetDesc();
+                const auto& DstViewDesc = pDstView->GetDesc();
+                const auto& SrcTexDesc  = pSrcTexD3D11->GetDesc();
+                const auto& DstTexDesc  = pDstTexD3D11->GetDesc();
+
+                auto DXGIFmt        = TexFormatToDXGI_Format(RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex].Format);
+                auto SrcSubresIndex = D3D11CalcSubresource(SrcViewDesc.MostDetailedMip, SrcViewDesc.FirstArraySlice, SrcTexDesc.MipLevels);
+                auto DstSubresIndex = D3D11CalcSubresource(DstViewDesc.MostDetailedMip, DstViewDesc.FirstArraySlice, DstTexDesc.MipLevels);
+                m_pd3d11DeviceContext->ResolveSubresource(pDstTexD3D11->GetD3D11Texture(), DstSubresIndex, pSrcTexD3D11->GetD3D11Texture(), SrcSubresIndex, DXGIFmt);
+            }
+        }
+    }
 }
 
 void DeviceContextD3D11Impl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
@@ -1687,8 +1719,8 @@ void DeviceContextD3D11Impl::NextSubpass()
     VERIFY_EXPR(m_pActiveRenderPass);
     const auto& RPDesc = m_pActiveRenderPass->GetDesc();
     VERIFY_EXPR(m_SubpassIndex + 1 < RPDesc.SubpassCount);
-    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex + 1];
-    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
+    const auto& NextSubpass = RPDesc.pSubpasses[m_SubpassIndex + 1];
+    const auto& FBDesc      = m_pBoundFramebuffer->GetDesc();
 
     // Unbind these attachments that will be used for output by the next subpass.
     // There is no need to unbind textures from output as the new subpass atachments
@@ -1705,25 +1737,24 @@ void DeviceContextD3D11Impl::NextSubpass()
                 if (auto* pTexView = FBDesc.ppAttachments[AttachmentRef.AttachmentIndex])
                 {
                     auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexView->GetTexture());
-                    if ((pTexD3D11->GetDesc().BindFlags & (BIND_SHADER_RESOURCE | BIND_INPUT_ATTACHMENT)) != 0)
-                        UnbindResourceView(m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pTexD3D11->GetD3D11Texture(), SetSRVMethods);
+                    UnbindResourceView(m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pTexD3D11->GetD3D11Texture(), SetSRVMethods);
                 }
             }
         }
     };
 
-    for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
+    for (Uint32 rt = 0; rt < NextSubpass.RenderTargetAttachmentCount; ++rt)
     {
-        UnbindAttachmentFromInput(Subpass.pRenderTargetAttachments[rt]);
-        if (Subpass.pResolveAttachments != nullptr)
+        UnbindAttachmentFromInput(NextSubpass.pRenderTargetAttachments[rt]);
+        if (NextSubpass.pResolveAttachments != nullptr)
         {
-            UnbindAttachmentFromInput(Subpass.pResolveAttachments[rt]);
+            UnbindAttachmentFromInput(NextSubpass.pResolveAttachments[rt]);
         }
     }
 
-    if (Subpass.pDepthStencilAttachment != nullptr)
+    if (NextSubpass.pDepthStencilAttachment != nullptr)
     {
-        UnbindAttachmentFromInput(*Subpass.pDepthStencilAttachment);
+        UnbindAttachmentFromInput(*NextSubpass.pDepthStencilAttachment);
     }
 
     TDeviceContextBase::NextSubpass();
@@ -1735,7 +1766,6 @@ void DeviceContextD3D11Impl::EndRenderPass(bool UpdateResourceStates)
 {
     EndSubpass();
     TDeviceContextBase::EndRenderPass(UpdateResourceStates);
-    // Nothing needs to be done
 }
 
 

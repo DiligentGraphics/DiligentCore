@@ -42,6 +42,8 @@ namespace Testing
 
 #if D3D11_SUPPORTED
 void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain);
+void RenderPassMSResolveReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassInputAttachmentReferenceD3D11(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if D3D12_SUPPORTED
@@ -56,7 +58,6 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain);
 void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassMSResolveReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
 void RenderPassInputAttachmentReferenceVk(ISwapChain* pSwapChain, const float* pClearColor);
-
 #endif
 
 #if METAL_SUPPORTED
@@ -526,7 +527,7 @@ TEST_F(RenderPassTest, MSResolve)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                RenderDrawCommandReferenceD3D11(pSwapChain);
+                RenderPassMSResolveReferenceD3D11(pSwapChain, ClearColor);
                 break;
 #endif
 
@@ -663,7 +664,7 @@ TEST_F(RenderPassTest, InputAttachment)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                RenderDrawCommandReferenceD3D11(pSwapChain);
+                RenderPassInputAttachmentReferenceD3D11(pSwapChain, ClearColor);
                 break;
 #endif
 
