@@ -88,8 +88,11 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
             auto* pCurrVkAttachmentReference = &vkAttachmentReferences[CurrAttachmentReferenceInd];
             for (Uint32 attachment = 0; attachment < NumAttachments; ++attachment, ++CurrAttachmentReferenceInd)
             {
-                vkAttachmentReferences[CurrAttachmentReferenceInd].attachment = pSrcAttachments[attachment].AttachmentIndex;
-                vkAttachmentReferences[CurrAttachmentReferenceInd].layout     = ResourceStateToVkImageLayout(pSrcAttachments[attachment].State);
+                const auto& AttachmnetRef = pSrcAttachments[attachment];
+
+                vkAttachmentReferences[CurrAttachmentReferenceInd].attachment = AttachmnetRef.AttachmentIndex;
+                vkAttachmentReferences[CurrAttachmentReferenceInd].layout =
+                    ResourceStateToVkImageLayout(AttachmnetRef.State, /*IsInsideRenderPass = */ true);
             }
 
             return pCurrVkAttachmentReference;

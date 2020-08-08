@@ -264,8 +264,8 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     };
     AttachmentReference RslvAttachmentRefs0[] = 
     {
-        {ATTACHMENT_UNUSED, RESOURCE_STATE_RENDER_TARGET},
-        {2, RESOURCE_STATE_RENDER_TARGET}
+        {ATTACHMENT_UNUSED, RESOURCE_STATE_RESOLVE_DEST},
+        {2, RESOURCE_STATE_RESOLVE_DEST}
     };
     // clang-format on
     AttachmentReference DSAttachmentRef0{3, RESOURCE_STATE_DEPTH_WRITE};
@@ -614,7 +614,7 @@ TEST_F(RenderPassTest, MSResolve)
     };
     AttachmentReference RslvAttachmentRefs0[] = 
     {
-        {1, RESOURCE_STATE_RENDER_TARGET}
+        {1, RESOURCE_STATE_RESOLVE_DEST}
     };
     // clang-format on
     Subpasses[0].RenderTargetAttachmentCount = _countof(RTAttachmentRefs0);

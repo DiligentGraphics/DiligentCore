@@ -1004,12 +1004,47 @@ void DeviceContextD3D12Impl::SetRenderTargets(Uint32                         Num
     }
 }
 
-void DeviceContextD3D12Impl::TransitionSubpassAttachments()
+void DeviceContextD3D12Impl::TransitionSubpassAttachments(Uint32 NextSubpass)
 {
     VERIFY_EXPR(m_pActiveRenderPass);
-    //const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
     VERIFY_EXPR(m_pBoundFramebuffer);
-    //const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+    VERIFY_EXPR(RPDesc.AttachmentCount == FBDesc.AttachmentCount);
+    for (Uint32 att = 0; att < RPDesc.AttachmentCount; ++att)
+    {
+        const auto& AttDesc  = RPDesc.pAttachments[att];
+        auto        OldState = NextSubpass > 0 ? m_pActiveRenderPass->GetAttachmentState(NextSubpass - 1, att) : AttDesc.InitialState;
+        auto        NewState = NextSubpass < RPDesc.SubpassCount ? m_pActiveRenderPass->GetAttachmentState(NextSubpass, att) : AttDesc.FinalState;
+        if (OldState != NewState)
+        {
+            auto& CmdCtx = GetCmdContext();
+
+            auto* pViewD3D12 = ValidatedCast<TextureViewD3D12Impl>(FBDesc.ppAttachments[att]);
+            if (pViewD3D12 == nullptr)
+                continue;
+
+            auto* pTexD3D12 = pViewD3D12->GetTexture<TextureD3D12Impl>();
+
+            const auto& ViewDesc = pViewD3D12->GetDesc();
+            const auto& TexDesc  = pTexD3D12->GetDesc();
+
+            D3D12_RESOURCE_BARRIER BarrierDesc;
+            BarrierDesc.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            BarrierDesc.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            BarrierDesc.Transition.pResource   = pTexD3D12->GetD3D12Resource();
+            BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(OldState);
+            BarrierDesc.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState);
+            for (Uint32 mip = ViewDesc.MostDetailedMip; mip < ViewDesc.MostDetailedMip + ViewDesc.NumDepthSlices; ++mip)
+            {
+                for (Uint32 slice = ViewDesc.FirstArraySlice; slice < ViewDesc.FirstArraySlice + ViewDesc.NumArraySlices; ++slice)
+                {
+                    BarrierDesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
+                    CmdCtx.ResourceBarrier(BarrierDesc);
+                }
+            }
+        }
+    }
 }
 
 void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
@@ -1190,7 +1225,7 @@ void DeviceContextD3D12Impl::BeginRenderPass(const BeginRenderPassAttribs& Attri
     for (Uint32 i = 0; i < Attribs.ClearValueCount; ++i)
         m_AttachmentClearValues[i] = Attribs.pClearValues[i];
 
-    TransitionSubpassAttachments();
+    TransitionSubpassAttachments(m_SubpassIndex);
     CommitSubpassRenderTargets();
 }
 
@@ -1199,17 +1234,16 @@ void DeviceContextD3D12Impl::NextSubpass()
     auto& CmdCtx = GetCmdContext();
     CmdCtx.AsGraphicsContext().EndRenderPass();
     TDeviceContextBase::NextSubpass();
-    TransitionSubpassAttachments();
+    TransitionSubpassAttachments(m_SubpassIndex);
     CommitSubpassRenderTargets();
-    //auto& CmdCtx = GetCmdContext();
 }
 
 void DeviceContextD3D12Impl::EndRenderPass(bool UpdateResourceStates)
 {
     auto& CmdCtx = GetCmdContext();
     CmdCtx.AsGraphicsContext().EndRenderPass();
+    TransitionSubpassAttachments(m_SubpassIndex + 1);
     TDeviceContextBase::EndRenderPass(UpdateResourceStates);
-    TransitionSubpassAttachments();
 }
 
 D3D12DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes, size_t Alignment)

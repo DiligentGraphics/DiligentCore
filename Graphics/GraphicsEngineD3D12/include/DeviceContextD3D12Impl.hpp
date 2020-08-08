@@ -319,7 +319,7 @@ private:
     void CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
     void CommitViewports();
     void CommitScissorRects(class GraphicsContext& GraphCtx, bool ScissorEnable);
-    void TransitionSubpassAttachments();
+    void TransitionSubpassAttachments(Uint32 NextSubpass);
     void CommitSubpassRenderTargets();
     void Flush(bool RequestNewCmdCtx);
 
