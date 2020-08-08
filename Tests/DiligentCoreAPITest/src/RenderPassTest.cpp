@@ -47,11 +47,15 @@ void RenderPassInputAttachmentReferenceD3D11(ISwapChain* pSwapChain, const float
 #endif
 
 #if D3D12_SUPPORTED
-void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassInputAttachmentReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassMSResolveReferenceGL(ISwapChain* pSwapChain, const float* pClearColor);
+void RenderPassInputAttachmentReferenceGL(ISwapChain* pSwapChain, const float* pClearColor);
 #endif
 
 #if VULKAN_SUPPORTED
@@ -430,14 +434,14 @@ TEST_F(RenderPassTest, Draw)
 
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-                RenderDrawCommandReferenceD3D12(pSwapChain);
+                RenderDrawCommandReferenceD3D12(pSwapChain, ClearColor);
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                RenderDrawCommandReferenceGL(pSwapChain);
+                RenderDrawCommandReferenceGL(pSwapChain, ClearColor);
                 break;
 
 #endif
@@ -533,14 +537,14 @@ TEST_F(RenderPassTest, MSResolve)
 
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-                RenderDrawCommandReferenceD3D12(pSwapChain);
+                RenderPassMSResolveReferenceD3D12(pSwapChain, ClearColor);
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                RenderDrawCommandReferenceGL(pSwapChain);
+                RenderPassMSResolveReferenceGL(pSwapChain, ClearColor);
                 break;
 
 #endif
@@ -670,14 +674,14 @@ TEST_F(RenderPassTest, InputAttachment)
 
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-                RenderDrawCommandReferenceD3D12(pSwapChain);
+                RenderPassInputAttachmentReferenceD3D12(pSwapChain, ClearColor);
                 break;
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
-                RenderDrawCommandReferenceGL(pSwapChain);
+                RenderPassInputAttachmentReferenceGL(pSwapChain, ClearColor);
                 break;
 
 #endif

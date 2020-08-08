@@ -36,7 +36,7 @@ namespace Diligent
 namespace Testing
 {
 
-void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain)
+void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearColor)
 {
     auto* pEnv                = TestingEnvironmentGL::GetInstance();
     auto* pContext            = pEnv->GetDeviceContext();
@@ -64,7 +64,10 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain)
     }
     pTestingSwapChainGL->BindFramebuffer();
     glViewport(0, 0, SCDesc.Width, SCDesc.Height);
-    glClearColor(0.f, 0.f, 0.f, 0.f);
+    if (pClearColor != nullptr)
+        glClearColor(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
+    else
+        glClearColor(0.f, 0.f, 0.f, 0.f);
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(glProg);
     glBindVertexArray(pEnv->GetDummyVAO());
@@ -84,6 +87,14 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain)
 
     // Make sure Diligent Engine will reset all GL states
     pContext->InvalidateState();
+}
+
+void RenderPassMSResolveReferenceGL(ISwapChain* pSwapChain, const float* pClearColor)
+{
+}
+
+void RenderPassInputAttachmentReferenceGL(ISwapChain* pSwapChain, const float* pClearColor)
+{
 }
 
 } // namespace Testing

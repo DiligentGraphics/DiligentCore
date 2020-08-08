@@ -42,11 +42,11 @@ void RenderDrawCommandReferenceD3D11(ISwapChain* pSwapChain, const float* pClear
 #endif
 
 #if D3D12_SUPPORTED
-void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain);
+void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
 #endif
 
 #if VULKAN_SUPPORTED

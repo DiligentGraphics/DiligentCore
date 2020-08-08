@@ -41,7 +41,7 @@ namespace Diligent
 namespace Testing
 {
 
-void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain)
+void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor)
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pContext               = pEnv->GetDeviceContext();
@@ -113,8 +113,8 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain)
 
     pCmdList->OMSetRenderTargets(1, &RTVDesriptorHandle, FALSE, nullptr);
 
-    float ClearColor[] = {0, 0, 0, 0};
-    pCmdList->ClearRenderTargetView(RTVDesriptorHandle, ClearColor, 0, nullptr);
+    float Zero[] = {0, 0, 0, 0};
+    pCmdList->ClearRenderTargetView(RTVDesriptorHandle, pClearColor != nullptr ? pClearColor : Zero, 0, nullptr);
 
     pCmdList->SetPipelineState(pd3d12PSO);
     pCmdList->SetGraphicsRootSignature(pd3d12RootSignature);
@@ -133,6 +133,14 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain)
     pEnv->IdleCommandQueue(pd3d12Queue);
 
     pContextD3D12->UnlockCommandQueue();
+}
+
+void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor)
+{
+}
+
+void RenderPassInputAttachmentReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor)
+{
 }
 
 } // namespace Testing
