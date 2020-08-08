@@ -50,7 +50,7 @@ void CommandListManager::CreateNewCommandList(ID3D12GraphicsCommandList** List, 
 {
     RequestAllocator(Allocator);
     auto* pd3d12Device = m_DeviceD3D12Impl.GetD3D12Device();
-    auto  hr           = pd3d12Device->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, *Allocator, nullptr, __uuidof(*List), reinterpret_cast<void**>(List));
+    auto  hr           = pd3d12Device->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, *Allocator, nullptr, __uuidof(ID3D12GraphicsCommandList4), reinterpret_cast<void**>(List));
     VERIFY(SUCCEEDED(hr), "Failed to create command list");
     (*List)->SetName(L"CommandList");
 }

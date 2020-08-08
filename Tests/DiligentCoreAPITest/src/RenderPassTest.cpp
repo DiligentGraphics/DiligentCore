@@ -398,12 +398,21 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     RPBeginInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     pContext->BeginRenderPass(RPBeginInfo);
 
-    pContext->ClearDepthStencil(pTexViews[3], CLEAR_DEPTH_FLAG, 1.0, 0, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    auto IsD3D12 = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12;
+    if (!IsD3D12)
+    {
+        // ClearDepthStencil is not allowed inside a render pass in Direct3D12
+        pContext->ClearDepthStencil(pTexViews[3], CLEAR_DEPTH_FLAG, 1.0, 0, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    }
 
     pContext->NextSubpass();
 
-    float ClearColor[] = {0, 0, 0, 0};
-    pContext->ClearRenderTarget(pTexViews[4], ClearColor, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    if (!IsD3D12)
+    {
+        // ClearRenderTarget is not allowed inside a render pass in Direct3D12
+        float ClearColor[] = {0, 0, 0, 0};
+        pContext->ClearRenderTarget(pTexViews[4], ClearColor, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+    }
 
     pContext->EndRenderPass(true);
 }

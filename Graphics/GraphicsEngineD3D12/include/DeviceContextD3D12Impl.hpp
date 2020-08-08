@@ -31,6 +31,7 @@
 /// Declaration of Diligent::DeviceContextD3D12Impl class
 
 #include <unordered_map>
+#include <vector>
 
 #include "DeviceContextD3D12.h"
 #include "DeviceContextNextGenBase.hpp"
@@ -318,6 +319,8 @@ private:
     void CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
     void CommitViewports();
     void CommitScissorRects(class GraphicsContext& GraphCtx, bool ScissorEnable);
+    void TransitionSubpassAttachments();
+    void CommitSubpassRenderTargets();
     void Flush(bool RequestNewCmdCtx);
 
     __forceinline void RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl);
@@ -425,6 +428,10 @@ private:
     std::unordered_map<MappedTextureKey, TextureUploadSpace, MappedTextureKey::Hasher> m_MappedTextures;
 
     Int32 m_ActiveQueriesCounter = 0;
+
+    std::vector<OptimizedClearValue> m_AttachmentClearValues;
+
+    std::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> m_AttachmentResolveInfo;
 };
 
 } // namespace Diligent

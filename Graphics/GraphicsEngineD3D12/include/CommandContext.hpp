@@ -339,6 +339,19 @@ public:
         FlushResourceBarriers();
         m_pCommandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
     }
+
+    void BeginRenderPass(UINT                                        NumRenderTargets,
+                         const D3D12_RENDER_PASS_RENDER_TARGET_DESC* pRenderTargets,
+                         const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* pDepthStencil,
+                         D3D12_RENDER_PASS_FLAGS                     Flags)
+    {
+        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->BeginRenderPass(NumRenderTargets, pRenderTargets, pDepthStencil, Flags);
+    }
+
+    void EndRenderPass()
+    {
+        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->EndRenderPass();
+    }
 };
 
 class ComputeContext : public CommandContext

@@ -31,6 +31,8 @@
 /// Implementation of the Diligent::RenderPassBase template class
 
 #include <vector>
+#include <utility>
+
 #include "RenderPass.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
@@ -90,7 +92,7 @@ public:
         }
 
         m_AttachmentStates.resize(Desc.AttachmentCount * Desc.SubpassCount);
-        m_AttachmentFirstUseSubpass.resize(Desc.AttachmentCount, ATTACHMENT_UNUSED);
+        m_AttachmentFirstLastUse.resize(Desc.AttachmentCount, std::pair<Uint32, Uint32>{ATTACHMENT_UNUSED, 0});
 
         auto* pCurrAttachmentRef      = m_pAttachmentReferences;
         auto* pCurrPreserveAttachment = m_pPreserveAttachments;
@@ -98,23 +100,25 @@ public:
         auto* pSubpasses =
             ALLOCATE(GetRawAllocator(), "Memory for SubpassDesc array", SubpassDesc, Desc.SubpassCount);
         this->m_Desc.pSubpasses = pSubpasses;
-        for (Uint32 i = 0; i < Desc.SubpassCount; ++i)
+        for (Uint32 subpass = 0; subpass < Desc.SubpassCount; ++subpass)
         {
             for (Uint32 att = 0; att < Desc.AttachmentCount; ++att)
             {
-                SetAttachmentState(i, att, i > 0 ? GetAttachmentState(i - 1, att) : Desc.pAttachments[i].InitialState);
+                SetAttachmentState(subpass, att, subpass > 0 ? GetAttachmentState(subpass - 1, att) : Desc.pAttachments[subpass].InitialState);
             }
 
-            const auto& SrcSubpass = Desc.pSubpasses[i];
-            auto&       DstSubpass = pSubpasses[i];
+            const auto& SrcSubpass = Desc.pSubpasses[subpass];
+            auto&       DstSubpass = pSubpasses[subpass];
 
-            auto UpdateAttachmentStateAndFirstUseSubpass = [this, i](const AttachmentReference& AttRef) //
+            auto UpdateAttachmentStateAndFirstUseSubpass = [this, subpass](const AttachmentReference& AttRef) //
             {
                 if (AttRef.AttachmentIndex != ATTACHMENT_UNUSED)
                 {
-                    SetAttachmentState(i, AttRef.AttachmentIndex, AttRef.State);
-                    if (m_AttachmentFirstUseSubpass[AttRef.AttachmentIndex] == ATTACHMENT_UNUSED)
-                        m_AttachmentFirstUseSubpass[AttRef.AttachmentIndex] = i;
+                    SetAttachmentState(subpass, AttRef.AttachmentIndex, AttRef.State);
+                    auto& FirstLastUse = m_AttachmentFirstLastUse[AttRef.AttachmentIndex];
+                    if (FirstLastUse.first == ATTACHMENT_UNUSED)
+                        FirstLastUse.first = subpass;
+                    FirstLastUse.second = subpass;
                 }
             };
 
@@ -211,9 +215,9 @@ public:
         return m_AttachmentStates[this->m_Desc.AttachmentCount * Subpass + Attachment];
     }
 
-    Uint32 GetAttachmentFirstUseSubpass(Uint32 Attachment) const
+    std::pair<Uint32, Uint32> GetAttachmentFirstLastUse(Uint32 Attachment) const
     {
-        return m_AttachmentFirstUseSubpass[Attachment];
+        return m_AttachmentFirstLastUse[Attachment];
     }
 
 protected:
@@ -251,7 +255,7 @@ private:
     std::vector<RESOURCE_STATE> m_AttachmentStates;
 
     // The index of the subpass where the attachment is first used
-    std::vector<Uint32> m_AttachmentFirstUseSubpass;
+    std::vector<std::pair<Uint32, Uint32>> m_AttachmentFirstLastUse;
 };
 
 } // namespace Diligent
