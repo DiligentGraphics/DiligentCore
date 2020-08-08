@@ -502,4 +502,35 @@ D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType)
     // clang-format on
 }
 
+D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE AttachmentLoadOpToD3D12BeginningAccessType(ATTACHMENT_LOAD_OP LoadOp)
+{
+    // clang-format off
+    switch (LoadOp)
+    {
+        case ATTACHMENT_LOAD_OP_LOAD:    return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+        case ATTACHMENT_LOAD_OP_CLEAR:   return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+        case ATTACHMENT_LOAD_OP_DISCARD: return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+
+        default:
+            UNEXPECTED("Unexpected attachment load op");
+            return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+    }
+    // clang-format on
+}
+
+D3D12_RENDER_PASS_ENDING_ACCESS_TYPE AttachmentStoreOpToD3D12EndingAccessType(ATTACHMENT_STORE_OP StoreOp)
+{
+    // clang-format off
+    switch (StoreOp)
+    {
+        case ATTACHMENT_STORE_OP_STORE:    return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+        case ATTACHMENT_STORE_OP_DISCARD:  return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+
+        default:
+            UNEXPECTED("Unexpected attachment store op");
+            return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+    }
+    // clang-format on
+}
+
 } // namespace Diligent
