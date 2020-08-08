@@ -1307,9 +1307,9 @@ void DeviceContextVkImpl::NextSubpass()
     m_CommandBuffer.NextSubpass();
 }
 
-void DeviceContextVkImpl::EndRenderPass(bool UpdateResourceStates)
+void DeviceContextVkImpl::EndRenderPass()
 {
-    TDeviceContextBase::EndRenderPass(UpdateResourceStates);
+    TDeviceContextBase::EndRenderPass();
     // TDeviceContextBase::EndRenderPass calls ResetRenderTargets() that in turn
     // calls m_CommandBuffer.EndRenderPass()
 

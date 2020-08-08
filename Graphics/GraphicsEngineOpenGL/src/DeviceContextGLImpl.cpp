@@ -428,9 +428,9 @@ void DeviceContextGLImpl::NextSubpass()
     UNEXPECTED("Method not implemented");
 }
 
-void DeviceContextGLImpl::EndRenderPass(bool UpdateResourceStates)
+void DeviceContextGLImpl::EndRenderPass()
 {
-    TDeviceContextBase::EndRenderPass(UpdateResourceStates);
+    TDeviceContextBase::EndRenderPass();
     UNEXPECTED("Method not implemented");
 }
 

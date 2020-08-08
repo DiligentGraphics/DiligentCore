@@ -1238,12 +1238,12 @@ void DeviceContextD3D12Impl::NextSubpass()
     CommitSubpassRenderTargets();
 }
 
-void DeviceContextD3D12Impl::EndRenderPass(bool UpdateResourceStates)
+void DeviceContextD3D12Impl::EndRenderPass()
 {
     auto& CmdCtx = GetCmdContext();
     CmdCtx.AsGraphicsContext().EndRenderPass();
     TransitionSubpassAttachments(m_SubpassIndex + 1);
-    TDeviceContextBase::EndRenderPass(UpdateResourceStates);
+    TDeviceContextBase::EndRenderPass();
 }
 
 D3D12DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes, size_t Alignment)

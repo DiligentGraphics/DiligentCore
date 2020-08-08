@@ -184,6 +184,12 @@ public:
         return (this->m_State & State) == State;
     }
 
+    bool CheckAnyState(RESOURCE_STATE States) const
+    {
+        VERIFY(IsInKnownState(), "Texture state is unknown");
+        return (this->m_State & States) != 0;
+    }
+
     /// Implementation of ITexture::GetDefaultView().
     virtual ITextureView* DILIGENT_CALL_TYPE GetDefaultView(TEXTURE_VIEW_TYPE ViewType) override
     {

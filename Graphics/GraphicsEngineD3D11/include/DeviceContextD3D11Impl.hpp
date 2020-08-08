@@ -131,7 +131,7 @@ public:
     virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
 
     /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE EndRenderPass(bool UpdateResourceStates) override final;
+    virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     /// Implementation of IDeviceContext::Draw() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE Draw(const DrawAttribs& Attribs) override final;
@@ -389,8 +389,6 @@ private:
 
     /// Strong references to committed D3D11 shaders
     CComPtr<ID3D11DeviceChild> m_CommittedD3DShaders[NumShaderTypes];
-
-    RESOURCE_STATE_TRANSITION_MODE m_RenderPassAttachmentsTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     const Uint32 m_DebugFlags;
 

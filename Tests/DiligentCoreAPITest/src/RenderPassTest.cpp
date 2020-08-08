@@ -182,7 +182,7 @@ protected:
         DrawAttribs DrawAttrs{6, DRAW_FLAG_VERIFY_ALL};
         pContext->Draw(DrawAttrs);
 
-        pContext->EndRenderPass(true);
+        pContext->EndRenderPass();
     }
 
     static void Present()
@@ -414,7 +414,7 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
         pContext->ClearRenderTarget(pTexViews[4], ClearColor, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
     }
 
-    pContext->EndRenderPass(true);
+    pContext->EndRenderPass();
 }
 
 TEST_F(RenderPassTest, Draw)
@@ -899,7 +899,7 @@ TEST_F(RenderPassTest, InputAttachment)
 
     pContext->Draw(DrawAttrs);
 
-    pContext->EndRenderPass(true);
+    pContext->EndRenderPass();
 
     Present();
 }

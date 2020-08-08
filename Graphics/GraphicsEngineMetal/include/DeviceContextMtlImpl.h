@@ -100,7 +100,7 @@ public:
 
     virtual void NextSubpass() override final;
 
-    virtual void EndRenderPass(bool UpdateResourceStates) override final;
+    virtual void EndRenderPass() override final;
 
     virtual void Draw(const DrawAttribs& Attribs) override final;
     virtual void DrawIndexed(const DrawIndexedAttribs& Attribs) override final;

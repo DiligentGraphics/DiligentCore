@@ -633,7 +633,18 @@ struct BeginRenderPassAttribs
     /// Other elements of pClearValues are ignored.
     OptimizedClearValue* pClearValues   DEFAULT_INITIALIZER(nullptr);
 
-    /// Framebuffer attachments state transition mode.
+    /// Framebuffer attachments state transition mode before the render pass begins.
+
+    /// This parameter also indicates how attachment states should be handled when
+    /// transitioning between subpasses as well as after the render pass ends.
+    /// When RESOURCE_STATE_TRANSITION_MODE_TRANSITION is used, attachment states will be
+    /// updated so that they match the state in the current subpass as well as the final states
+    /// specified by the render pass when the pass ends.
+    /// Note that resources are always transitioned. The flag only indicates if the internal
+    /// state variables should be updated.
+    /// When RESOURCE_STATE_TRANSITION_MODE_NONE or RESOURCE_STATE_TRANSITION_MODE_VERIFY is used,
+    /// internal state variables are not updated and it is the application responsibility to set them
+    /// manually to match the actual states.
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 };
 typedef struct BeginRenderPassAttribs BeginRenderPassAttribs;
@@ -905,14 +916,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
 
     /// Ends current render pass.
-
-    /// \param [in] UpdateResourceStates - Indicates whether to update resource states so that they match
-    ///                                    the final states specified by the render pass attachments.
-    ///                                    Note that resources are always transitioned to the final states.
-    ///                                    The flag only indicates if the internal state variables should be
-    ///                                    updated to match the actual final states.
-    VIRTUAL void METHOD(EndRenderPass)(THIS_
-                                       bool UpdateResourceStates) PURE;
+    VIRTUAL void METHOD(EndRenderPass)(THIS) PURE;
 
 
     /// Executes a draw command.

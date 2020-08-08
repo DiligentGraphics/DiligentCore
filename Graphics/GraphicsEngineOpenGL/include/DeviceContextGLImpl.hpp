@@ -121,7 +121,7 @@ public:
     virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
 
     /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE EndRenderPass(bool UpdateResourceStates) override final;
+    virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     // clang-format off
 

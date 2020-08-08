@@ -126,7 +126,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE NextSubpass() override = 0;
 
-    virtual void DILIGENT_CALL_TYPE EndRenderPass(bool UpdateResourceStates) override = 0;
+    virtual void DILIGENT_CALL_TYPE EndRenderPass() override = 0;
 
     /// Base implementation of IDeviceContext::UpdateBuffer(); validates input parameters.
     virtual void DILIGENT_CALL_TYPE UpdateBuffer(IBuffer*                       pBuffer,
@@ -228,6 +228,9 @@ protected:
     /// Checks if the texture is currently bound as depth-stencil buffer.
     bool CheckIfBoundAsDepthStencil(TextureImplType* pTexture);
 
+    /// Updates the states of render pass attachments to match states within the gievn subpass
+    void UpdateAttachmentStates(Uint32 SubpassIndex);
+
     bool ClearDepthStencil(ITextureView* pView);
 
     bool ClearRenderTarget(ITextureView* pView);
@@ -328,6 +331,9 @@ protected:
 
     /// Current subpass index.
     Uint32 m_SubpassIndex = 0;
+
+    /// Render pass attachments transition mode.
+    RESOURCE_STATE_TRANSITION_MODE m_RenderPassAttachmentsTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
 
     const bool m_bIsDeferred = false;
 
@@ -970,9 +976,11 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderP
         }
     }
 
-    m_pActiveRenderPass = pNewRenderPass;
-    m_pBoundFramebuffer = pNewFramebuffer;
-    m_SubpassIndex      = 0;
+    m_pActiveRenderPass                   = pNewRenderPass;
+    m_pBoundFramebuffer                   = pNewFramebuffer;
+    m_SubpassIndex                        = 0;
+    m_RenderPassAttachmentsTransitionMode = Attribs.StateTransitionMode;
+    UpdateAttachmentStates(m_SubpassIndex);
     SetSubpassRenderTargets();
 }
 
@@ -982,36 +990,54 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::NextSubpass(
     VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
     VERIFY(m_SubpassIndex + 1 < m_pActiveRenderPass->GetDesc().SubpassCount, "The render pass has reached the final subpass already");
     ++m_SubpassIndex;
+    UpdateAttachmentStates(m_SubpassIndex);
     SetSubpassRenderTargets();
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPass(bool UpdateResourceStates)
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateAttachmentStates(Uint32 SubpassIndex)
+{
+    if (m_RenderPassAttachmentsTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+        return;
+
+    VERIFY_EXPR(m_pActiveRenderPass != nullptr);
+    VERIFY_EXPR(m_pBoundFramebuffer != nullptr);
+
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+    VERIFY(FBDesc.AttachmentCount == RPDesc.AttachmentCount,
+           "Framebuffer attachment count (", FBDesc.AttachmentCount, ") is not consistent with the render pass attachment count (", RPDesc.AttachmentCount, ")");
+    VERIFY_EXPR(SubpassIndex <= RPDesc.SubpassCount);
+    for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
+    {
+        if (auto* pView = FBDesc.ppAttachments[i])
+        {
+            auto* pTex = ValidatedCast<TextureImplType>(pView->GetTexture());
+            if (pTex->IsInKnownState())
+            {
+                auto CurrState = SubpassIndex < RPDesc.SubpassCount ?
+                    m_pActiveRenderPass->GetAttachmentState(SubpassIndex, i) :
+                    RPDesc.pAttachments[i].FinalState;
+                pTex->SetState(CurrState);
+            }
+        }
+    }
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPass()
 {
     VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
     VERIFY(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
     VERIFY(m_pActiveRenderPass->GetDesc().SubpassCount == m_SubpassIndex + 1,
            "Ending render pass at subpass ", m_SubpassIndex, " before reaching the final subpass");
 
-    if (UpdateResourceStates)
-    {
-        const auto& RPDesc = m_pActiveRenderPass->GetDesc();
-        const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
-        VERIFY(FBDesc.AttachmentCount >= RPDesc.AttachmentCount,
-               "Framebuffer attachment count (", FBDesc.AttachmentCount, ") is smaller than the render pass attachment count (", RPDesc.AttachmentCount, ")");
-        for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
-        {
-            if (auto* pView = FBDesc.ppAttachments[i])
-            {
-                auto* pTex = ValidatedCast<TextureImplType>(pView->GetTexture());
-                if (pTex->IsInKnownState())
-                    pTex->SetState(RPDesc.pAttachments[i].FinalState);
-            }
-        }
-    }
+    UpdateAttachmentStates(m_SubpassIndex + 1);
+
     m_pActiveRenderPass.Release();
     m_pBoundFramebuffer.Release();
-    m_SubpassIndex = 0;
+    m_SubpassIndex                        = 0;
+    m_RenderPassAttachmentsTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
     ResetRenderTargets();
 }
 

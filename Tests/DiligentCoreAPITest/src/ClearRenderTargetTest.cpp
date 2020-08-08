@@ -212,7 +212,7 @@ TEST(ClearRenderTargetTest, AsAttachment)
 
     pContext->ClearRenderTarget(pRTV, ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    pContext->EndRenderPass(true);
+    pContext->EndRenderPass();
 
     pSwapChain->Present();
 }
@@ -293,7 +293,7 @@ TEST(ClearRenderTargetTest, LoadOpClear)
 
     pContext->BeginRenderPass(BeginRPInfo);
 
-    pContext->EndRenderPass(true);
+    pContext->EndRenderPass();
 
     pSwapChain->Present();
 }

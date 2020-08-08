@@ -261,7 +261,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                     {
                         if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                         {
-                            if (pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                            if (pTexture->CheckAnyState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT))
                                 UnbindTextureFromInput(pTexture, UAVRes.pd3d11Resource);
                             pTexture->SetState(RESOURCE_STATE_UNORDERED_ACCESS);
                         }
@@ -482,7 +482,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                 {
                     if (auto* pTexture = ValidatedCast<TextureBaseD3D11>(SRVRes.pTexture))
                     {
-                        if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                        if (pTexture->IsInKnownState() && !pTexture->CheckAnyState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT))
                         {
                             if (pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                             {
@@ -521,7 +521,8 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                     VERIFY_EXPR(CommitResources);
                     if (const auto* pTexture = ValidatedCast<TextureBaseD3D11>(SRVRes.pTexture))
                     {
-                        if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                        if (pTexture->IsInKnownState() &&
+                            !(pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE) || m_pActiveRenderPass != nullptr && pTexture->CheckState(RESOURCE_STATE_INPUT_ATTACHMENT)))
                         {
                             LOG_ERROR_MESSAGE("Texture '", pTexture->GetDesc().Name, "' has not been transitioned to Shader Resource state. Call TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the texture to required state.");
                         }
@@ -1677,8 +1678,6 @@ void DeviceContextD3D11Impl::BeginRenderPass(const BeginRenderPassAttribs& Attri
     TDeviceContextBase::BeginRenderPass(Attribs);
     // BeginRenderPass() transitions resources to required states
 
-    m_RenderPassAttachmentsTransitionMode = Attribs.StateTransitionMode;
-
     CommitRenderTargets();
 
     // Set the viewport to match the framebuffer size
@@ -1761,33 +1760,13 @@ void DeviceContextD3D11Impl::NextSubpass()
 
     TDeviceContextBase::NextSubpass();
 
-    if (m_RenderPassAttachmentsTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
-    {
-        for (Uint32 att = 0; att < RPDesc.AttachmentCount; ++att)
-        {
-            auto* pTexView = ValidatedCast<TextureViewD3D11Impl>(FBDesc.ppAttachments[att]);
-            if (pTexView == nullptr)
-                continue;
-
-            auto* pTex = ValidatedCast<TextureBaseD3D11>(pTexView->GetTexture());
-            if (pTex->IsInKnownState())
-            {
-                auto CurrState = m_pActiveRenderPass->GetAttachmentState(m_SubpassIndex, att);
-                if ((CurrState & RESOURCE_STATE_INPUT_ATTACHMENT) != 0)
-                    CurrState |= RESOURCE_STATE_SHADER_RESOURCE;
-                pTex->SetState(CurrState);
-            }
-        }
-    }
-
     CommitRenderTargets();
 }
 
-void DeviceContextD3D11Impl::EndRenderPass(bool UpdateResourceStates)
+void DeviceContextD3D11Impl::EndRenderPass()
 {
     EndSubpass();
-    TDeviceContextBase::EndRenderPass(UpdateResourceStates);
-    m_RenderPassAttachmentsTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    TDeviceContextBase::EndRenderPass();
 }
 
 

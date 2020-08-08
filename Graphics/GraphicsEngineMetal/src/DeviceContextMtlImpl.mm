@@ -383,9 +383,9 @@ namespace Diligent
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::NextSubpass() is not implemented");
     }
 
-    void DeviceContextMtlImpl::EndRenderPass(bool UpdateResourceStates)
+    void DeviceContextMtlImpl::EndRenderPass()
     {
-        TDeviceContextBase::EndRenderPass(UpdateResourceStates);
+        TDeviceContextBase::EndRenderPass();
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::EndRenderPass() is not implemented");
     }
 
