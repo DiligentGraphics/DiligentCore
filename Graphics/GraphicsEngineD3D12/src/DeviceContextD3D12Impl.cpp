@@ -1134,17 +1134,17 @@ void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
                         ARI.SrcRect.bottom = MipProps.LogicalHeight;
                     }
 
-                    RPRT.EndingAccess.Type       = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
-                    auto& ResolveInfo            = RPRT.EndingAccess.Resolve;
-                    ResolveInfo.pSrcResource     = pSrcTexD3D12->GetD3D12Resource();
-                    ResolveInfo.pDstResource     = pDstTexD3D12->GetD3D12Resource();
-                    ResolveInfo.SubresourceCount = SubresourceCount;
+                    RPRT.EndingAccess.Type         = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
+                    auto& ResolveParams            = RPRT.EndingAccess.Resolve;
+                    ResolveParams.pSrcResource     = pSrcTexD3D12->GetD3D12Resource();
+                    ResolveParams.pDstResource     = pDstTexD3D12->GetD3D12Resource();
+                    ResolveParams.SubresourceCount = SubresourceCount;
                     // This pointer is directly referenced by the command list, and the memory for this array
                     // must remain alive and intact until EndRenderPass is called.
-                    ResolveInfo.pSubresourceParameters = m_AttachmentResolveInfo.data();
-                    ResolveInfo.Format                 = TexFormatToDXGI_Format(RTAttachmentDesc.Format);
-                    ResolveInfo.ResolveMode            = D3D12_RESOLVE_MODE_AVERAGE;
-                    ResolveInfo.PreserveResolveSource  = RTAttachmentDesc.StoreOp == ATTACHMENT_STORE_OP_STORE;
+                    ResolveParams.pSubresourceParameters = m_AttachmentResolveInfo.data();
+                    ResolveParams.Format                 = TexFormatToDXGI_Format(RTAttachmentDesc.Format);
+                    ResolveParams.ResolveMode            = D3D12_RESOLVE_MODE_AVERAGE;
+                    ResolveParams.PreserveResolveSource  = RTAttachmentDesc.StoreOp == ATTACHMENT_STORE_OP_STORE;
                 }
                 else
                 {
