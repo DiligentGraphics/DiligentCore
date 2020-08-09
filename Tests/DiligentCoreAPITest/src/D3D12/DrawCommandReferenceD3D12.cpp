@@ -46,31 +46,23 @@ namespace
 class TriangleRenderer
 {
 public:
-    TriangleRenderer(ID3D12Device*        pd3d12Device,
-                     DXGI_FORMAT          RTVFmt,
-                     UINT                 SampleCount,
-                     ID3D12RootSignature* pd3d12RootSignature) :
-        m_pd3d12RootSignature{pd3d12RootSignature}
+    TriangleRenderer(ID3D12Device*                    pd3d12Device,
+                     const std::string&               PSSource,
+                     DXGI_FORMAT                      RTVFmt,
+                     UINT                             SampleCount,
+                     const D3D12_ROOT_SIGNATURE_DESC& RootSignatureDesc)
     {
         CComPtr<ID3DBlob> pVSByteCode, pPSByteCode;
 
         auto hr = CompileD3DShader(HLSL::DrawTest_ProceduralTriangleVS, "main", nullptr, "vs_5_0", &pVSByteCode);
         VERIFY_EXPR(SUCCEEDED(hr));
 
-        hr = CompileD3DShader(HLSL::DrawTest_PS, "main", nullptr, "ps_5_0", &pPSByteCode);
+        hr = CompileD3DShader(PSSource, "main", nullptr, "ps_5_0", &pPSByteCode);
         VERIFY_EXPR(SUCCEEDED(hr));
 
-
-        D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
-
-        RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-        if (!m_pd3d12RootSignature)
-        {
-            CComPtr<ID3DBlob> signature;
-            D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
-            pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
-        }
+        CComPtr<ID3DBlob> signature;
+        D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, nullptr);
+        pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
 
         D3D12_GRAPHICS_PIPELINE_STATE_DESC PSODesc = {};
 
@@ -102,7 +94,7 @@ public:
         VERIFY_EXPR(SUCCEEDED(hr));
     }
 
-    void Draw(ID3D12GraphicsCommandList* pCmdList, Uint32 ViewportWidth, Uint32 ViewportHeight)
+    void Draw(ID3D12GraphicsCommandList* pCmdList, Uint32 ViewportWidth, Uint32 ViewportHeight, D3D12_GPU_DESCRIPTOR_HANDLE DescriptorTable = D3D12_GPU_DESCRIPTOR_HANDLE{})
     {
         D3D12_VIEWPORT d3d12VP = {};
         d3d12VP.Width          = static_cast<float>(ViewportWidth);
@@ -114,6 +106,8 @@ public:
 
         pCmdList->SetPipelineState(m_pd3d12PSO);
         pCmdList->SetGraphicsRootSignature(m_pd3d12RootSignature);
+        if (DescriptorTable.ptr != 0)
+            pCmdList->SetGraphicsRootDescriptorTable(0, DescriptorTable);
         pCmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         pCmdList->DrawInstanced(6, 1, 0, 0);
     }
@@ -133,7 +127,10 @@ void RenderDrawCommandReferenceD3D12(ISwapChain* pSwapChain, const float* pClear
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
-    TriangleRenderer TriRenderer{pd3d12Device, TexFormatToDXGI_Format(SCDesc.ColorBufferFormat), 1, nullptr};
+    D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
+    RootSignatureDesc.Flags                     = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    TriangleRenderer TriRenderer{pd3d12Device, HLSL::DrawTest_PS, TexFormatToDXGI_Format(SCDesc.ColorBufferFormat), 1, RootSignatureDesc};
 
     auto pCmdList = pEnv->CreateGraphicsCommandList();
     pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -169,7 +166,10 @@ void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pCle
 
     const auto& SCDesc = pSwapChain->GetDesc();
 
-    TriangleRenderer TriRenderer{pd3d12Device, TexFormatToDXGI_Format(SCDesc.ColorBufferFormat), 4, nullptr};
+    D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
+    RootSignatureDesc.Flags                     = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    TriangleRenderer TriRenderer{pd3d12Device, HLSL::DrawTest_PS, TexFormatToDXGI_Format(SCDesc.ColorBufferFormat), 4, RootSignatureDesc};
 
     // Create multisample texture
     D3D12_HEAP_PROPERTIES HeapProps = {};
@@ -280,6 +280,178 @@ void RenderPassMSResolveReferenceD3D12(ISwapChain* pSwapChain, const float* pCle
 
 void RenderPassInputAttachmentReferenceD3D12(ISwapChain* pSwapChain, const float* pClearColor)
 {
+    auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
+    auto* pContext               = pEnv->GetDeviceContext();
+    auto* pd3d12Device           = pEnv->GetD3D12Device();
+    auto* pTestingSwapChainD3D12 = ValidatedCast<TestingSwapChainD3D12>(pSwapChain);
+
+    const auto& SCDesc = pSwapChain->GetDesc();
+
+    D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {};
+    RootSignatureDesc.Flags                     = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+    TriangleRenderer TriRenderer{pd3d12Device, HLSL::DrawTest_PS, TexFormatToDXGI_Format(SCDesc.ColorBufferFormat), 1, RootSignatureDesc};
+
+    // Prepare root signature desc
+    D3D12_ROOT_PARAMETER RootParams[1] = {};
+    RootParams[0].ParameterType        = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+
+    D3D12_DESCRIPTOR_RANGE DescriptorRange[1]            = {};
+    DescriptorRange[0].RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    DescriptorRange[0].NumDescriptors                    = 1;
+    DescriptorRange[0].BaseShaderRegister                = 0;
+    DescriptorRange[0].RegisterSpace                     = 0;
+    DescriptorRange[0].OffsetInDescriptorsFromTableStart = 0;
+
+    RootParams[0].DescriptorTable.NumDescriptorRanges = _countof(DescriptorRange);
+    RootParams[0].DescriptorTable.pDescriptorRanges   = DescriptorRange;
+    RootParams[0].ShaderVisibility                    = D3D12_SHADER_VISIBILITY_PIXEL;
+
+    RootSignatureDesc.NumParameters = _countof(RootParams);
+    RootSignatureDesc.pParameters   = RootParams;
+
+    TriangleRenderer TriRendererInptAtt{pd3d12Device, HLSL::InputAttachmentTest_PS, TexFormatToDXGI_Format(SCDesc.ColorBufferFormat), 1, RootSignatureDesc};
+
+    // Create input attachment texture
+    D3D12_HEAP_PROPERTIES HeapProps = {};
+    HeapProps.Type                  = D3D12_HEAP_TYPE_DEFAULT;
+    HeapProps.CPUPageProperty       = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+    HeapProps.MemoryPoolPreference  = D3D12_MEMORY_POOL_UNKNOWN;
+    HeapProps.CreationNodeMask      = 1;
+    HeapProps.VisibleNodeMask       = 1;
+
+    D3D12_RESOURCE_DESC TexDesc = {};
+    TexDesc.Dimension           = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    TexDesc.Alignment           = 0;
+    TexDesc.Width               = SCDesc.Width;
+    TexDesc.Height              = SCDesc.Height;
+    TexDesc.DepthOrArraySize    = 1;
+    TexDesc.MipLevels           = 1;
+    TexDesc.Format              = TexFormatToDXGI_Format(SCDesc.ColorBufferFormat);
+    TexDesc.SampleDesc.Count    = 1;
+    TexDesc.SampleDesc.Quality  = 0;
+    TexDesc.Layout              = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    TexDesc.Flags               = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+
+    float Zero[4] = {};
+    if (pClearColor == nullptr)
+        pClearColor = Zero;
+
+    D3D12_CLEAR_VALUE ClearColorValue = {};
+
+    ClearColorValue.Format = TexDesc.Format;
+    for (Uint32 i = 0; i < 4; ++i)
+        ClearColorValue.Color[i] = 0;
+
+    RefCntAutoPtr<ID3D12Resource> pd3d12Tex;
+
+    auto hr = pd3d12Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &TexDesc, D3D12_RESOURCE_STATE_RENDER_TARGET, &ClearColorValue,
+                                                    __uuidof(pd3d12Tex),
+                                                    reinterpret_cast<void**>(static_cast<ID3D12Resource**>(&pd3d12Tex)));
+    VERIFY(SUCCEEDED(hr), "Failed to create D3D12 MS render target texture");
+
+
+    // Create RTV descriptor heap
+    CComPtr<ID3D12DescriptorHeap> pd3d12RTVDescriptorHeap;
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {};
+        DescriptorHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        DescriptorHeapDesc.NumDescriptors             = 1;
+        DescriptorHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        DescriptorHeapDesc.NodeMask                   = 0;
+
+        hr = pd3d12Device->CreateDescriptorHeap(&DescriptorHeapDesc,
+                                                __uuidof(pd3d12RTVDescriptorHeap),
+                                                reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&pd3d12RTVDescriptorHeap)));
+    }
+    // Init RTV descriptor handle
+    VERIFY(SUCCEEDED(hr), "Failed to create D3D12 RTV descriptor heap");
+    auto RTVDescriptorHandle = pd3d12RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    pd3d12Device->CreateRenderTargetView(pd3d12Tex, nullptr, RTVDescriptorHandle);
+
+
+    // Create SRV descriptor head
+    CComPtr<ID3D12DescriptorHeap> pd3d12SRVDescriptorHeap;
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {};
+        DescriptorHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        DescriptorHeapDesc.NumDescriptors             = 1;
+        DescriptorHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        DescriptorHeapDesc.NodeMask                   = 0;
+
+        hr = pd3d12Device->CreateDescriptorHeap(&DescriptorHeapDesc,
+                                                __uuidof(pd3d12SRVDescriptorHeap),
+                                                reinterpret_cast<void**>(static_cast<ID3D12DescriptorHeap**>(&pd3d12SRVDescriptorHeap)));
+    }
+    auto SrvCpuDescriptorHandle = pd3d12SRVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    auto SrvGpuDescriptorHandle = pd3d12SRVDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+    pd3d12Device->CreateShaderResourceView(pd3d12Tex, nullptr, SrvCpuDescriptorHandle);
+
+    auto  pCmdList  = pEnv->CreateGraphicsCommandList();
+    auto* pCmdList4 = static_cast<ID3D12GraphicsCommandList4*>(pCmdList.p);
+
+    {
+        // Start the first subpass
+        D3D12_RENDER_PASS_RENDER_TARGET_DESC RenderPassRT    = {};
+        RenderPassRT.cpuDescriptor                           = RTVDescriptorHandle;
+        RenderPassRT.BeginningAccess.Type                    = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+        RenderPassRT.BeginningAccess.Clear.ClearValue.Format = TexDesc.Format;
+        for (Uint32 i = 0; i < 4; ++i)
+            RenderPassRT.BeginningAccess.Clear.ClearValue.Color[i] = 0;
+
+        RenderPassRT.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+
+        pCmdList4->BeginRenderPass(1, &RenderPassRT, nullptr, D3D12_RENDER_PASS_FLAG_NONE);
+
+        TriRenderer.Draw(pCmdList, SCDesc.Width, SCDesc.Height);
+
+        pCmdList4->EndRenderPass();
+    }
+
+    // Transition input attachment texture from render target to shader resource
+    {
+        D3D12_RESOURCE_BARRIER Barrier = {};
+        Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        Barrier.Transition.pResource   = pd3d12Tex;
+        Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        Barrier.Transition.Subresource = 0;
+        pCmdList->ResourceBarrier(1, &Barrier);
+    }
+
+    pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+    {
+        // Start the second subpass
+        D3D12_RENDER_PASS_RENDER_TARGET_DESC RenderPassRT    = {};
+        RenderPassRT.cpuDescriptor                           = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
+        RenderPassRT.BeginningAccess.Type                    = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+        RenderPassRT.BeginningAccess.Clear.ClearValue.Format = TexDesc.Format;
+        for (Uint32 i = 0; i < 4; ++i)
+            RenderPassRT.BeginningAccess.Clear.ClearValue.Color[i] = pClearColor[i];
+
+        RenderPassRT.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+
+        pCmdList4->BeginRenderPass(1, &RenderPassRT, nullptr, D3D12_RENDER_PASS_FLAG_NONE);
+
+        pCmdList4->SetDescriptorHeaps(1, &pd3d12SRVDescriptorHeap.p);
+        TriRendererInptAtt.Draw(pCmdList, SCDesc.Width, SCDesc.Height, SrvGpuDescriptorHandle);
+
+        pCmdList4->EndRenderPass();
+    }
+
+    pCmdList->Close();
+    ID3D12CommandList* pCmdLits[] = {pCmdList};
+
+    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pContext, IID_DeviceContextD3D12};
+
+    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
+    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
+
+    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
+    pEnv->IdleCommandQueue(pd3d12Queue);
+
+    pContextD3D12->UnlockCommandQueue();
 }
 
 } // namespace Testing
