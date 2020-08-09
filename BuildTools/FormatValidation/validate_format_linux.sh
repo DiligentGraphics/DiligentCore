@@ -7,4 +7,3 @@ validate_format ../../Common ../../Graphics ../../Platforms ../../Primitives ../
   --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions_inc.h \
   --exclude ../../Graphics/GraphicsEngineVulkan/shaders/GenerateMipsCS_inc.h \
   --exclude ../../Tests/DiligentCoreAPITest/assets/*
-
