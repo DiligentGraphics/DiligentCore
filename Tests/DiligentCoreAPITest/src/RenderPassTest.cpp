@@ -801,6 +801,7 @@ TEST_F(RenderPassTest, InputAttachment)
     RefCntAutoPtr<ITexture> pTex;
     {
         TextureDesc TexDesc;
+        TexDesc.Name      = "Input attachment test texture";
         TexDesc.Type      = RESOURCE_DIM_TEX_2D;
         TexDesc.Format    = SCDesc.ColorBufferFormat;
         TexDesc.Width     = SCDesc.Width;
@@ -920,7 +921,6 @@ TEST_F(RenderPassTest, InputAttachment)
         pInputAttachmentPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
         pInputAttachmentPSO->CreateShaderResourceBinding(&pInputAttachmentSRB, true);
         ASSERT_NE(pInputAttachmentSRB, nullptr);
-        pContext->TransitionShaderResources(pInputAttachmentPSO, pInputAttachmentSRB);
     }
 
     ITextureView* pRTAttachments[] = //
