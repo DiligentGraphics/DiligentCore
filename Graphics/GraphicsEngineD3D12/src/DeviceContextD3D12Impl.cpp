@@ -230,7 +230,10 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         {
             GraphicsCtx.SetStencilRef(m_StencilRef);
             GraphicsCtx.SetBlendFactor(m_BlendFactors);
-            CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            if (PSODesc.GraphicsPipeline.pRenderPass == nullptr)
+            {
+                CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            }
             CommitViewports();
         }
 
@@ -932,6 +935,8 @@ void DeviceContextD3D12Impl::SetScissorRects(Uint32 NumRects, const Rect* pRects
 
 void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "This method must not be called inside a render pass");
+
     const Uint32 MaxD3D12RTs      = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
     Uint32       NumRenderTargets = m_NumBoundRenderTargets;
     VERIFY(NumRenderTargets <= MaxD3D12RTs, "D3D12 only allows 8 simultaneous render targets");

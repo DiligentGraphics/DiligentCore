@@ -2215,8 +2215,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
                                           RESOURCE_STATE_INDEX_BUFFER      |
                                           RESOURCE_STATE_SHADER_RESOURCE   |
                                           RESOURCE_STATE_INDIRECT_ARGUMENT |
-                                          RESOURCE_STATE_COPY_SOURCE       |
-                                          RESOURCE_STATE_INPUT_ATTACHMENT
+                                          RESOURCE_STATE_COPY_SOURCE
 };
 DEFINE_FLAG_ENUM_OPERATORS(RESOURCE_STATE);
 
