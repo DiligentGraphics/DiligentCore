@@ -58,8 +58,8 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
         vkAttachment.storeOp        = AttachmentStoreOpToVkAttachmentStoreOp(Attachment.StoreOp);
         vkAttachment.stencilLoadOp  = AttachmentLoadOpToVkAttachmentLoadOp(Attachment.StencilLoadOp);
         vkAttachment.stencilStoreOp = AttachmentStoreOpToVkAttachmentStoreOp(Attachment.StencilStoreOp);
-        vkAttachment.initialLayout  = ResourceStateToVkImageLayout(Attachment.InitialState);
-        vkAttachment.finalLayout    = ResourceStateToVkImageLayout(Attachment.FinalState);
+        vkAttachment.initialLayout  = ResourceStateToVkImageLayout(Attachment.InitialState, /*IsInsideRenderPass = */ false);
+        vkAttachment.finalLayout    = ResourceStateToVkImageLayout(Attachment.FinalState, /*IsInsideRenderPass = */ true);
     }
     RenderPassCI.attachmentCount = Desc.AttachmentCount;
     RenderPassCI.pAttachments    = vkAttachments.data();

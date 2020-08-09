@@ -42,6 +42,21 @@ namespace Diligent
 
 void ValidateRenderPassDesc(const RenderPassDesc& Desc);
 
+template <typename RenderDeviceImplType>
+void _CorrectAttachmentState(RESOURCE_STATE& State) {}
+
+template <>
+inline void _CorrectAttachmentState<class RenderDeviceVkImpl>(RESOURCE_STATE& State)
+{
+    if (State == RESOURCE_STATE_RESOLVE_DEST)
+    {
+        // In Vulkan resolve attachments must be in VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL state.
+        // It is important to correct the state because outside of render pass RESOURCE_STATE_RESOLVE_DEST maps
+        // to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.
+        State = RESOURCE_STATE_RENDER_TARGET;
+    }
+}
+
 /// Template class implementing base functionality for the render pass object.
 
 /// \tparam BaseInterface - base interface that this class will inheret
@@ -76,6 +91,7 @@ public:
             for (Uint32 i = 0; i < Desc.AttachmentCount; ++i)
             {
                 pAttachments[i] = Desc.pAttachments[i];
+                _CorrectAttachmentState<RenderDeviceImplType>(pAttachments[i].FinalState);
             }
         }
 
@@ -150,6 +166,7 @@ public:
                     for (Uint32 rslv_attachment = 0; rslv_attachment < SrcSubpass.RenderTargetAttachmentCount; ++rslv_attachment, ++pCurrAttachmentRef)
                     {
                         *pCurrAttachmentRef = SrcSubpass.pResolveAttachments[rslv_attachment];
+                        _CorrectAttachmentState<RenderDeviceImplType>(pCurrAttachmentRef->State);
                         UpdateAttachmentStateAndFirstUseSubpass(*pCurrAttachmentRef);
                     }
                 }

@@ -206,8 +206,9 @@ RefCntAutoPtr<IShader> RenderPassTest::sm_pPS;
 
 TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
 {
-    auto* pDevice  = TestingEnvironment::GetInstance()->GetDevice();
-    auto* pContext = TestingEnvironment::GetInstance()->GetDeviceContext();
+    auto*      pDevice    = TestingEnvironment::GetInstance()->GetDevice();
+    auto*      pContext   = TestingEnvironment::GetInstance()->GetDeviceContext();
+    const auto DeviceType = pDevice->GetDeviceCaps().DevType;
 
     RenderPassAttachmentDesc Attachments[6];
     Attachments[0].Format       = TEX_FORMAT_RGBA8_UNORM;
@@ -331,8 +332,80 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
         EXPECT_EQ(RPDesc.pAttachments[i], RPDesc2.pAttachments[i]);
 
     EXPECT_EQ(RPDesc.SubpassCount, RPDesc2.SubpassCount);
-    for (Uint32 i = 0; i < std::min(RPDesc.SubpassCount, RPDesc2.SubpassCount); ++i)
-        EXPECT_EQ(RPDesc.pSubpasses[i], RPDesc2.pSubpasses[i]);
+    if (DeviceType != RENDER_DEVICE_TYPE_VULKAN)
+    {
+        for (Uint32 i = 0; i < std::min(RPDesc.SubpassCount, RPDesc2.SubpassCount); ++i)
+            EXPECT_EQ(RPDesc.pSubpasses[i], RPDesc2.pSubpasses[i]);
+    }
+    else
+    {
+        auto CompareSubpassDescVk = [](const SubpassDesc& SP1, const SubpassDesc& SP2) //
+        {
+            if (SP1.InputAttachmentCount != SP2.InputAttachmentCount ||
+                SP1.RenderTargetAttachmentCount != SP2.RenderTargetAttachmentCount ||
+                SP1.PreserveAttachmentCount != SP2.PreserveAttachmentCount)
+                return false;
+
+            for (Uint32 i = 0; i < SP1.InputAttachmentCount; ++i)
+            {
+                if (SP1.pInputAttachments[i] != SP2.pInputAttachments[i])
+                    return false;
+            }
+
+            for (Uint32 i = 0; i < SP1.RenderTargetAttachmentCount; ++i)
+            {
+                if (SP1.pRenderTargetAttachments[i] != SP2.pRenderTargetAttachments[i])
+                    return false;
+            }
+
+            if ((SP1.pResolveAttachments == nullptr && SP2.pResolveAttachments != nullptr) ||
+                (SP1.pResolveAttachments != nullptr && SP2.pResolveAttachments == nullptr))
+                return false;
+
+            if (SP1.pResolveAttachments != nullptr && SP2.pResolveAttachments != nullptr)
+            {
+                for (Uint32 i = 0; i < SP1.RenderTargetAttachmentCount; ++i)
+                {
+                    if (SP1.pResolveAttachments[i].AttachmentIndex != SP2.pResolveAttachments[i].AttachmentIndex)
+                        return false;
+
+                    if (!(SP1.pResolveAttachments[i].State == SP2.pResolveAttachments[i].State ||
+                          SP1.pResolveAttachments[i].State == RESOURCE_STATE_RESOLVE_DEST && SP2.pResolveAttachments[i].State == RESOURCE_STATE_RENDER_TARGET))
+                        return false;
+                }
+            }
+
+            if ((SP1.pDepthStencilAttachment == nullptr && SP2.pDepthStencilAttachment != nullptr) ||
+                (SP1.pDepthStencilAttachment != nullptr && SP2.pDepthStencilAttachment == nullptr))
+                return false;
+
+            if (SP1.pDepthStencilAttachment != nullptr && SP2.pDepthStencilAttachment != nullptr)
+            {
+                if (*SP1.pDepthStencilAttachment != *SP2.pDepthStencilAttachment)
+                    return false;
+            }
+
+            if ((SP1.pPreserveAttachments == nullptr && SP2.pPreserveAttachments != nullptr) ||
+                (SP1.pPreserveAttachments != nullptr && SP2.pPreserveAttachments == nullptr))
+                return false;
+
+            if (SP1.pPreserveAttachments != nullptr && SP2.pPreserveAttachments != nullptr)
+            {
+                for (Uint32 i = 0; i < SP1.PreserveAttachmentCount; ++i)
+                {
+                    if (SP1.pPreserveAttachments[i] != SP2.pPreserveAttachments[i])
+                        return false;
+                }
+            }
+
+            return true;
+        };
+        // Resolve attachment states may be corrected in Vulkan, so we can't use comparison operator
+        for (Uint32 i = 0; i < std::min(RPDesc.SubpassCount, RPDesc2.SubpassCount); ++i)
+        {
+            EXPECT_TRUE(CompareSubpassDescVk(RPDesc.pSubpasses[i], RPDesc2.pSubpasses[i]));
+        }
+    }
 
     EXPECT_EQ(RPDesc.DependencyCount, RPDesc2.DependencyCount);
     for (Uint32 i = 0; i < std::min(RPDesc.DependencyCount, RPDesc2.DependencyCount); ++i)
@@ -398,8 +471,7 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
     RPBeginInfo.StateTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     pContext->BeginRenderPass(RPBeginInfo);
 
-    auto IsD3D12 = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12;
-    if (!IsD3D12)
+    if (DeviceType != RENDER_DEVICE_TYPE_D3D12)
     {
         // ClearDepthStencil is not allowed inside a render pass in Direct3D12
         pContext->ClearDepthStencil(pTexViews[3], CLEAR_DEPTH_FLAG, 1.0, 0, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
@@ -407,7 +479,7 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
 
     pContext->NextSubpass();
 
-    if (!IsD3D12)
+    if (DeviceType != RENDER_DEVICE_TYPE_D3D12)
     {
         // ClearRenderTarget is not allowed inside a render pass in Direct3D12
         float ClearColor[] = {0, 0, 0, 0};
