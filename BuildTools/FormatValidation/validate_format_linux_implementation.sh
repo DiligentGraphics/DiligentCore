@@ -29,7 +29,7 @@ function find_validator_bin() {
       BIN="$SYS_BIN"
     fi
   fi
-  echo $BIN
+  echo "$BIN"
 }
 
 function validate_format() {
@@ -42,7 +42,7 @@ function validate_format() {
 ## Example usage:
 #
 # #!/bin/bash
-# source validate_format_linux_implementation.sh 
+# source /PATH/TO/THIS/FILE/validate_format_linux_implementation.sh 
 #
 # validate_format ../../Common ../../Graphics ../../Platforms ../../Primitives ../../Tests \
 #   --exclude ../../Graphics/HLSL2GLSLConverterLib/include/GLSLDefinitions.h \
