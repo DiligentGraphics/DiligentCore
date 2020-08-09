@@ -1134,7 +1134,11 @@ void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
                         ARI.SrcRect.bottom = MipProps.LogicalHeight;
                     }
 
-                    RPRT.EndingAccess.Type         = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
+                    // The resolve source is left in its initial resource state at the time the render pass ends.
+                    // A resolve operation submitted by a render pass doesn't implicitly change the state of any resource.
+                    // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_render_pass_ending_access_type
+                    RPRT.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
+
                     auto& ResolveParams            = RPRT.EndingAccess.Resolve;
                     ResolveParams.pSrcResource     = pSrcTexD3D12->GetD3D12Resource();
                     ResolveParams.pDstResource     = pDstTexD3D12->GetD3D12Resource();
