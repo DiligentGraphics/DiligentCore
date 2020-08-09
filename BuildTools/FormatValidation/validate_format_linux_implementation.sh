@@ -1,6 +1,9 @@
 #!/bin/bash
 
+## Get the path of this file no matter where it is called from
+## Solution from: https://stackoverflow.com/a/246128/2140449
 VALIDATE_FORMAT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
 errcho(){ echo "$@" 1>&2; }
 
 function find_validator_bin() {
