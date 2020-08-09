@@ -1184,6 +1184,11 @@ void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
             RenderPassDS.DepthBeginningAccess.Type   = AttachmentLoadOpToD3D12BeginningAccessType(DSAttachmentDesc.LoadOp);
             RenderPassDS.StencilBeginningAccess.Type = AttachmentLoadOpToD3D12BeginningAccessType(DSAttachmentDesc.StencilLoadOp);
         }
+        else
+        {
+            RenderPassDS.DepthBeginningAccess.Type   = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+            RenderPassDS.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+        }
 
         if (RenderPassDS.DepthBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
         {
