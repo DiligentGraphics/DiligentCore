@@ -308,15 +308,26 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
                     };
 
                 // Suppress individual messages by their ID
-                //D3D12_MESSAGE_ID DenyIds[] = {};
+                D3D12_MESSAGE_ID DenyIds[] =
+                    {
+                        // D3D12 WARNING: ID3D12CommandList::ClearRenderTargetView: The clear values do not match those passed to resource creation.
+                        // The clear operation is typically slower as a result; but will still clear to the desired value.
+                        // [ EXECUTION WARNING #820: CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE]
+                        D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,
+
+                        // D3D12 WARNING: ID3D12CommandList::ClearDepthStencilView: The clear values do not match those passed to resource creation.
+                        // The clear operation is typically slower as a result; but will still clear to the desired value.
+                        // [ EXECUTION WARNING #821: CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE]
+                        D3D12_MESSAGE_ID_CLEARDEPTHSTENCILVIEW_MISMATCHINGCLEARVALUE //
+                    };
 
                 D3D12_INFO_QUEUE_FILTER NewFilter = {};
                 //NewFilter.DenyList.NumCategories = _countof(Categories);
                 //NewFilter.DenyList.pCategoryList = Categories;
                 NewFilter.DenyList.NumSeverities = _countof(Severities);
                 NewFilter.DenyList.pSeverityList = Severities;
-                //NewFilter.DenyList.NumIDs = _countof(DenyIds);
-                //NewFilter.DenyList.pIDList = DenyIds;
+                NewFilter.DenyList.NumIDs        = _countof(DenyIds);
+                NewFilter.DenyList.pIDList       = DenyIds;
 
                 hr = pInfoQueue->PushStorageFilter(&NewFilter);
                 VERIFY(SUCCEEDED(hr), "Failed to push storage filter");
