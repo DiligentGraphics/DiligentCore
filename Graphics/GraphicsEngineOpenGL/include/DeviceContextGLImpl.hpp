@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "DeviceContextGL.h"
 #include "DeviceContextBase.hpp"
 #include "BaseInterfacesGL.h"
@@ -264,6 +266,8 @@ private:
     __forceinline void PrepareForIndirectDraw(IBuffer* pAttribsBuffer);
     __forceinline void PostDraw();
 
+    void BeginSubpass();
+
     Uint32 m_CommitedResourcesTentativeBarriers = 0;
 
     std::vector<class TextureBaseGL*> m_BoundWritableTextures;
@@ -274,6 +278,8 @@ private:
     bool m_IsDefaultFBOBound = false;
 
     GLObjectWrappers::GLFrameBufferObj m_DefaultFBO;
+
+    std::vector<OptimizedClearValue> m_AttachmentClearValues;
 };
 
 } // namespace Diligent

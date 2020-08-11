@@ -30,9 +30,12 @@
 /// \file
 /// Declaration of Diligent::FramebufferGLImpl class
 
+#include <vector>
+
 #include "RenderDeviceGL.h"
 #include "FramebufferBase.hpp"
 #include "RenderDeviceGLImpl.hpp"
+#include "GLObjectWrapper.hpp"
 
 namespace Diligent
 {
@@ -47,8 +50,17 @@ public:
 
     FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                       RenderDeviceGLImpl*    pDevice,
+                      GLContextState&        CtxState,
                       const FramebufferDesc& Desc);
     ~FramebufferGLImpl();
+
+    const GLObjectWrappers::GLFrameBufferObj& GetSubpassFramebuffer(Uint32 subpass)
+    {
+        return m_SubpassFramebuffers[subpass];
+    }
+
+private:
+    std::vector<GLObjectWrappers::GLFrameBufferObj> m_SubpassFramebuffers;
 };
 
 } // namespace Diligent

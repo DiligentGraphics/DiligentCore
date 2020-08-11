@@ -28,16 +28,43 @@
 #include "pch.h"
 
 #include "FramebufferGLImpl.hpp"
-#include "EngineMemory.h"
+#include "FBOCache.hpp"
+#include "TextureViewGLImpl.hpp"
 
 namespace Diligent
 {
 
 FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                                      RenderDeviceGLImpl*    pDevice,
+                                     GLContextState&        CtxState,
                                      const FramebufferDesc& Desc) :
     TFramebufferBase{pRefCounters, pDevice, Desc}
 {
+    const auto& RPDesc = m_Desc.pRenderPass->GetDesc();
+    m_SubpassFramebuffers.reserve(RPDesc.SubpassCount);
+    for (Uint32 subpass = 0; subpass < RPDesc.SubpassCount; ++subpass)
+    {
+        const auto& SubpassDesc = RPDesc.pSubpasses[subpass];
+
+        TextureViewGLImpl* ppRTVs[MAX_RENDER_TARGETS] = {};
+        TextureViewGLImpl* pDSV                       = nullptr;
+
+        for (Uint32 rt = 0; rt < SubpassDesc.RenderTargetAttachmentCount; ++rt)
+        {
+            const auto& RTAttachmentRef = SubpassDesc.pRenderTargetAttachments[rt];
+            if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+            {
+                ppRTVs[rt] = ValidatedCast<TextureViewGLImpl>(m_Desc.ppAttachments[RTAttachmentRef.AttachmentIndex]);
+            }
+        }
+
+        if (SubpassDesc.pDepthStencilAttachment != nullptr && SubpassDesc.pDepthStencilAttachment->AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            pDSV = ValidatedCast<TextureViewGLImpl>(m_Desc.ppAttachments[SubpassDesc.pDepthStencilAttachment->AttachmentIndex]);
+        }
+        auto FBO = FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRTVs, pDSV);
+        m_SubpassFramebuffers.emplace_back(std::move(FBO));
+    }
 }
 
 FramebufferGLImpl::~FramebufferGLImpl()

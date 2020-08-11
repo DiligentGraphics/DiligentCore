@@ -63,7 +63,8 @@ public:
                     RenderDeviceImplType*  pDevice,
                     const FramebufferDesc& Desc,
                     bool                   bIsDeviceInternal = false) :
-        TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
+        TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal},
+        m_pRenderPass{Desc.pRenderPass}
     {
         ValidateFramebufferDesc(Desc);
 
@@ -127,6 +128,8 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Framebuffer, TDeviceObjectBase)
 
 private:
+    RefCntAutoPtr<IRenderPass> m_pRenderPass;
+
     ITextureView** m_ppAttachments = nullptr;
 };
 

@@ -416,22 +416,70 @@ void DeviceContextGLImpl::ResetRenderTargets()
     m_ContextState.InvalidateFBO();
 }
 
+void DeviceContextGLImpl::BeginSubpass()
+{
+    VERIFY_EXPR(m_pActiveRenderPass);
+    VERIFY_EXPR(m_pBoundFramebuffer);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& SubpassDesc = RPDesc.pSubpasses[m_SubpassIndex];
+    const auto& FBDesc      = m_pBoundFramebuffer->GetDesc();
+    for (Uint32 rt = 0; rt < SubpassDesc.RenderTargetAttachmentCount; ++rt)
+    {
+        const auto& RTAttachmentRef = SubpassDesc.pRenderTargetAttachments[rt];
+        if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            const auto& AttachmentDesc = RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex];
+            auto        FirstLastUse   = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTAttachmentRef.AttachmentIndex);
+            if (FirstLastUse.first == m_SubpassIndex && AttachmentDesc.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+            {
+                auto* pRTV = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
+                ClearRenderTarget(pRTV, m_AttachmentClearValues[RTAttachmentRef.AttachmentIndex].Color, RESOURCE_STATE_TRANSITION_MODE_NONE);
+            }
+        }
+    }
+
+    if (SubpassDesc.pDepthStencilAttachment != nullptr && SubpassDesc.pDepthStencilAttachment->AttachmentIndex != ATTACHMENT_UNUSED)
+    {
+        auto        DepthAttachmentIndex = SubpassDesc.pDepthStencilAttachment->AttachmentIndex;
+        const auto& AttachmentDesc       = RPDesc.pAttachments[DepthAttachmentIndex];
+        auto        FirstLastUse         = m_pActiveRenderPass->GetAttachmentFirstLastUse(DepthAttachmentIndex);
+        if (FirstLastUse.first == m_SubpassIndex && AttachmentDesc.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+        {
+            auto*       pDSV     = FBDesc.ppAttachments[DepthAttachmentIndex];
+            const auto& ClearVal = m_AttachmentClearValues[DepthAttachmentIndex].DepthStencil;
+            ClearDepthStencil(pDSV, CLEAR_DEPTH_FLAG | CLEAR_STENCIL_FLAG, ClearVal.Depth, ClearVal.Stencil, RESOURCE_STATE_TRANSITION_MODE_NONE);
+        }
+    }
+}
+
 void DeviceContextGLImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
     TDeviceContextBase::BeginRenderPass(Attribs);
-    UNEXPECTED("Method not implemented");
+
+    m_AttachmentClearValues.resize(Attribs.ClearValueCount);
+    for (Uint32 i = 0; i < Attribs.ClearValueCount; ++i)
+        m_AttachmentClearValues[i] = Attribs.pClearValues[i];
+
+    VERIFY_EXPR(m_pBoundFramebuffer);
+    m_ContextState.BindFBO(m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex));
+    SetViewports(1, nullptr, 0, 0);
+
+    BeginSubpass();
 }
 
 void DeviceContextGLImpl::NextSubpass()
 {
     TDeviceContextBase::NextSubpass();
-    UNEXPECTED("Method not implemented");
+
+    m_ContextState.BindFBO(m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex));
+
+    BeginSubpass();
 }
 
 void DeviceContextGLImpl::EndRenderPass()
 {
     TDeviceContextBase::EndRenderPass();
-    UNEXPECTED("Method not implemented");
 }
 
 void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding)

@@ -537,7 +537,11 @@ void RenderDeviceGLImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebu
     CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
                        [&]() //
                        {
-                           FramebufferGLImpl* pFramebufferGL(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferGLImpl instance", FramebufferGLImpl)(this, Desc));
+                           auto spDeviceContext = GetImmediateContext();
+                           VERIFY(spDeviceContext, "Immediate device context has been destroyed");
+                           auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
+
+                           FramebufferGLImpl* pFramebufferGL(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferGLImpl instance", FramebufferGLImpl)(this, GLState, Desc));
                            pFramebufferGL->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
                            OnCreateDeviceObject(pFramebufferGL);
                        });
