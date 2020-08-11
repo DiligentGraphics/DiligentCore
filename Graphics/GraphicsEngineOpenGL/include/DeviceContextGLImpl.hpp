@@ -267,6 +267,7 @@ private:
     __forceinline void PostDraw();
 
     void BeginSubpass();
+    void EndSubpass();
 
     Uint32 m_CommitedResourcesTentativeBarriers = 0;
 

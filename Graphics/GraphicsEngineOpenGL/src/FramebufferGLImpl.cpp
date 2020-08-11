@@ -62,8 +62,24 @@ FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
         {
             pDSV = ValidatedCast<TextureViewGLImpl>(m_Desc.ppAttachments[SubpassDesc.pDepthStencilAttachment->AttachmentIndex]);
         }
-        auto FBO = FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRTVs, pDSV);
-        m_SubpassFramebuffers.emplace_back(std::move(FBO));
+        auto RenderTargetFBO = FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRTVs, pDSV);
+
+        GLObjectWrappers::GLFrameBufferObj ResolveFBO{false};
+        if (SubpassDesc.pResolveAttachments != nullptr)
+        {
+            TextureViewGLImpl* ppRsvlViews[MAX_RENDER_TARGETS] = {};
+            for (Uint32 rt = 0; rt < SubpassDesc.RenderTargetAttachmentCount; ++rt)
+            {
+                const auto& RslvAttachmentRef = SubpassDesc.pResolveAttachments[rt];
+                if (RslvAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+                {
+                    ppRsvlViews[rt] = ValidatedCast<TextureViewGLImpl>(m_Desc.ppAttachments[RslvAttachmentRef.AttachmentIndex]);
+                }
+            }
+            ResolveFBO = FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr);
+        }
+
+        m_SubpassFramebuffers.emplace_back(std::move(RenderTargetFBO), std::move(ResolveFBO));
     }
 }
 

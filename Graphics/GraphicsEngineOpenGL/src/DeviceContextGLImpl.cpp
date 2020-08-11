@@ -453,6 +453,39 @@ void DeviceContextGLImpl::BeginSubpass()
     }
 }
 
+void DeviceContextGLImpl::EndSubpass()
+{
+    VERIFY_EXPR(m_pActiveRenderPass);
+    VERIFY_EXPR(m_pBoundFramebuffer);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& SubpassDesc = RPDesc.pSubpasses[m_SubpassIndex];
+    if (SubpassDesc.pResolveAttachments != nullptr)
+    {
+        const auto& SubpassFBOs = m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex);
+
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, SubpassFBOs.RenderTarget);
+        DEV_CHECK_GL_ERROR("Failed to bind subpass render target FBO as draw framebuffer");
+
+        GLuint ResolveDstFBO = SubpassFBOs.Resolve;
+        if (ResolveDstFBO == 0)
+        {
+            ResolveDstFBO = m_pSwapChain.RawPtr<ISwapChainGL>()->GetDefaultFBO();
+        }
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, ResolveDstFBO);
+        DEV_CHECK_GL_ERROR("Failed to bind resolve destination FBO as draw framebuffer");
+
+        const auto& FBODesc = m_pBoundFramebuffer->GetDesc();
+        glBlitFramebuffer(0, 0, static_cast<GLint>(FBODesc.Width), static_cast<GLint>(FBODesc.Height),
+                          0, 0, static_cast<GLint>(FBODesc.Width), static_cast<GLint>(FBODesc.Height),
+                          GL_COLOR_BUFFER_BIT,
+                          GL_NEAREST // Filter is ignored
+        );
+        DEV_CHECK_GL_ERROR("glBlitFramebuffer() failed when resolving multi-sampled texture");
+    }
+    m_ContextState.InvalidateFBO();
+}
+
 void DeviceContextGLImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 {
     TDeviceContextBase::BeginRenderPass(Attribs);
@@ -462,7 +495,7 @@ void DeviceContextGLImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
         m_AttachmentClearValues[i] = Attribs.pClearValues[i];
 
     VERIFY_EXPR(m_pBoundFramebuffer);
-    m_ContextState.BindFBO(m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex));
+    m_ContextState.BindFBO(m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex).RenderTarget);
     SetViewports(1, nullptr, 0, 0);
 
     BeginSubpass();
@@ -470,16 +503,22 @@ void DeviceContextGLImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
 
 void DeviceContextGLImpl::NextSubpass()
 {
+    EndSubpass();
+
     TDeviceContextBase::NextSubpass();
 
-    m_ContextState.BindFBO(m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex));
+    m_ContextState.BindFBO(m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex).RenderTarget);
 
     BeginSubpass();
 }
 
 void DeviceContextGLImpl::EndRenderPass()
 {
+    EndSubpass();
+
     TDeviceContextBase::EndRenderPass();
+
+    m_ContextState.InvalidateFBO();
 }
 
 void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding)

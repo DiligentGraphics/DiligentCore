@@ -54,13 +54,25 @@ public:
                       const FramebufferDesc& Desc);
     ~FramebufferGLImpl();
 
-    const GLObjectWrappers::GLFrameBufferObj& GetSubpassFramebuffer(Uint32 subpass)
+    struct SubpassFramebuffers
+    {
+        SubpassFramebuffers(GLObjectWrappers::GLFrameBufferObj&& _RenderTarget,
+                            GLObjectWrappers::GLFrameBufferObj&& _Resolve) :
+            RenderTarget{std::move(_RenderTarget)},
+            Resolve{std::move(_Resolve)}
+        {}
+
+        GLObjectWrappers::GLFrameBufferObj RenderTarget;
+        GLObjectWrappers::GLFrameBufferObj Resolve;
+    };
+
+    const SubpassFramebuffers& GetSubpassFramebuffer(Uint32 subpass)
     {
         return m_SubpassFramebuffers[subpass];
     }
 
 private:
-    std::vector<GLObjectWrappers::GLFrameBufferObj> m_SubpassFramebuffers;
+    std::vector<SubpassFramebuffers> m_SubpassFramebuffers;
 };
 
 } // namespace Diligent
