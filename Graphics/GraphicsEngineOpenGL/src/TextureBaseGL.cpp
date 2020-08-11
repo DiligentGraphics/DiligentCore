@@ -579,7 +579,10 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
     }
 
 #if GL_ARB_copy_image
-    if (glCopyImageSubData)
+    const bool IsDefaultBackBuffer = GetGLHandle() == 0;
+    // We can't use glCopyImageSubData with the proxy texture of a default framebuffer
+    // because we don't have the texture handle. Resort to quad rendering in this case.
+    if (glCopyImageSubData && !IsDefaultBackBuffer)
     {
         GLint SrcSliceY = (SrcTexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY) ? SrcSlice : 0;
         GLint SrcSliceZ = (SrcTexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY) ? SrcSlice : 0;
