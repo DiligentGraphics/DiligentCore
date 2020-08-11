@@ -33,6 +33,12 @@
 #include "RefCntAutoPtr.hpp"
 #include <atlcomcli.h>
 #include "ShaderD3DBase.hpp"
+#include <locale>
+#include <cwchar>
+
+#ifdef HAS_DXIL_COMPILER
+#include "dxcapi.h"
+#endif
 
 namespace Diligent
 {
@@ -41,6 +47,220 @@ static const Char* g_HLSLDefinitions =
     {
 #include "HLSLDefinitions_inc.fxh"
 };
+
+
+#ifdef HAS_DXIL_COMPILER
+class DxcIncludeHandlerImpl final : public IDxcIncludeHandler
+{
+public:
+    explicit DxcIncludeHandlerImpl(IShaderSourceInputStreamFactory* pStreamFactory, CComPtr<IDxcLibrary> pLibrary) :
+        m_pLibrary{pLibrary},
+        m_pStreamFactory{pStreamFactory},
+        m_RefCount{1}
+    {
+    }
+
+    HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob **ppIncludeSource) override
+    {
+        String fileName = std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>, wchar_t>{}.to_bytes(pFilename);
+        if (fileName.empty())
+        {
+            LOG_ERROR("Failed to convert shader include file name ", fileName, ". File name must be ANSI string");
+            return E_FAIL;
+        }
+
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        m_pStreamFactory->CreateInputStream(fileName.c_str(), &pSourceStream);
+        if (pSourceStream == nullptr)
+        {
+            LOG_ERROR("Failed to open shader include file ", fileName, ". Check that the file exists");
+            return E_FAIL;
+        }
+        
+        RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
+        pSourceStream->ReadBlob(pFileData);
+        
+        CComPtr<IDxcBlobEncoding> sourceBlob;
+        HRESULT hr = m_pLibrary->CreateBlobWithEncodingFromPinned(pFileData->GetDataPtr(), UINT32(pFileData->GetSize()), CP_UTF8, &sourceBlob);
+        if (FAILED(hr))
+        {
+            LOG_ERROR("Failed to allocate space for shader include file ", fileName, ".");
+            return E_FAIL;
+        }
+        
+        m_FileDataCache.push_back(pFileData);
+
+        sourceBlob->QueryInterface(__uuidof(*ppIncludeSource), reinterpret_cast<void**>(ppIncludeSource));
+        return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR *__RPC_FAR *ppvObject) override
+    {
+        return E_FAIL;
+    }
+
+    ULONG STDMETHODCALLTYPE AddRef(void) override
+    {
+        return m_RefCount++;
+    }
+
+    ULONG STDMETHODCALLTYPE Release(void) override
+    {
+        --m_RefCount;
+        VERIFY(m_RefCount > 0, "Inconsistent call to Release()");
+        return m_RefCount;
+    }
+
+private:
+    CComPtr<IDxcLibrary>                  m_pLibrary;
+    IShaderSourceInputStreamFactory*      m_pStreamFactory;
+    ULONG                                 m_RefCount;
+    std::vector<RefCntAutoPtr<IDataBlob>> m_FileDataCache;
+};
+#endif
+
+static HRESULT CompileDxilShader(const char*             Source,
+                                 const ShaderCreateInfo& ShaderCI,
+                                 LPCSTR                  profile,
+                                 ID3DBlob**              ppBlobOut,
+                                 ID3DBlob**              ppCompilerOutput)
+{
+#ifdef HAS_DXIL_COMPILER
+    std::vector<WCHAR> unicodeBuffer; unicodeBuffer.resize(1u << 15);
+    size_t             unicodeBufferOffset = 0;
+
+    const auto ToUnicode = [&unicodeBuffer, &unicodeBufferOffset](const char* str) {
+        auto len = strlen(str) + 1;
+        auto pos = unicodeBufferOffset;
+        unicodeBufferOffset += len;
+        VERIFY(unicodeBufferOffset < unicodeBuffer.size(), "buffer overflow");
+        for (size_t i = 0; i < len; ++i) {
+            unicodeBuffer[pos + i] = str[i];
+        }
+        return &unicodeBuffer[pos];
+    };
+    
+    std::vector<DxcDefine> D3DMacros;
+    switch (ShaderCI.Desc.ShaderType)
+    {
+        case SHADER_TYPE_VERTEX:
+            D3DMacros.push_back({L"VERTEX_SHADER", L"1"});
+            break;
+
+        case SHADER_TYPE_PIXEL:
+            D3DMacros.push_back({L"FRAGMENT_SHADER", L"1"});
+            D3DMacros.push_back({L"PIXEL_SHADER", L"1"});
+            break;
+
+        case SHADER_TYPE_GEOMETRY:
+            D3DMacros.push_back({L"GEOMETRY_SHADER", L"1"});
+            break;
+
+        case SHADER_TYPE_HULL:
+            D3DMacros.push_back({L"TESS_CONTROL_SHADER", L"1"});
+            D3DMacros.push_back({L"HULL_SHADER", L"1"});
+            break;
+
+        case SHADER_TYPE_DOMAIN:
+            D3DMacros.push_back({L"TESS_EVALUATION_SHADER", L"1"});
+            D3DMacros.push_back({L"DOMAIN_SHADER", L"1"});
+            break;
+
+        case SHADER_TYPE_COMPUTE:
+            D3DMacros.push_back({L"COMPUTE_SHADER", L"1"});
+            break;
+                
+        case SHADER_TYPE_AMPLIFICATION:
+            D3DMacros.push_back({L"TASK_SHADER", L"1"});
+            D3DMacros.push_back({L"AMPLIFICATION_SHADER", L"1"});
+            break;
+
+        case SHADER_TYPE_MESH:
+            D3DMacros.push_back({L"MESH_SHADER", L"1"});
+            break;
+
+        default: UNEXPECTED("Unexpected shader type");
+    }
+
+    if (ShaderCI.Macros)
+    {
+        for (auto* pCurrMacro = ShaderCI.Macros; pCurrMacro->Name && pCurrMacro->Definition; ++pCurrMacro)
+        {
+            D3DMacros.push_back({ToUnicode(pCurrMacro->Name), ToUnicode(pCurrMacro->Definition)});
+        }
+    }
+
+    HRESULT hr;
+
+    CComPtr<IDxcLibrary> library;
+    hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
+    if (FAILED(hr))
+        return hr;
+
+    CComPtr<IDxcCompiler> compiler;
+    hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+    if (FAILED(hr))
+        return hr;
+
+    CComPtr<IDxcBlobEncoding> sourceBlob;
+    hr = library->CreateBlobWithEncodingFromPinned(Source, UINT32(strlen(Source)), CP_UTF8, &sourceBlob);
+    if (FAILED(hr))
+        return hr;
+    
+    const wchar_t* pArgs[] =
+    {
+        L"-Zpc",            // Matrices in column-major order
+        L"-WX",             // Warnings as errors
+#   ifdef DILIGENT_DEBUG
+        L"-Zi",             // Debug info
+        //L"-Qembed_debug",   // Embed debug info into the shader (some compilers do not recognize this flag)
+        L"-Od",             // Disable optimization
+#   else
+        L"-O3",             // Optimization level 3
+#   endif
+    };
+
+    DxcIncludeHandlerImpl IncludeHandler{ShaderCI.pShaderSourceStreamFactory, library};
+
+    CComPtr<IDxcOperationResult> result;
+    hr = compiler->Compile(
+        sourceBlob,
+        L"",
+        ToUnicode(ShaderCI.EntryPoint),
+        ToUnicode(profile),
+        pArgs, UINT32(std::size(pArgs)),
+        D3DMacros.data(), UINT32(D3DMacros.size()),
+        &IncludeHandler,
+        &result);
+
+    if (SUCCEEDED(hr))
+    {
+        HRESULT status;
+        if (SUCCEEDED(result->GetStatus(&status)))
+            hr = status;
+    }
+
+    if (FAILED(hr))
+    {
+        if (result)
+        {
+            CComPtr<IDxcBlobEncoding> errorsBlob;
+            if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)) && errorsBlob)
+            {
+                errorsBlob->QueryInterface(__uuidof(*ppCompilerOutput), reinterpret_cast<void**>(ppCompilerOutput));
+            }
+        }
+        return hr;
+    }
+
+    hr = result->GetResult(reinterpret_cast<IDxcBlob**>(ppBlobOut));
+    return hr;
+#else
+    UNSUPPORTED("Shader model 6 and above requires DXIL compiler");
+    return E_FAIL;
+#endif
+}
+
 
 class D3DIncludeImpl : public ID3DInclude
 {
@@ -83,14 +303,55 @@ private:
     std::unordered_map<LPCVOID, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
 };
 
-static HRESULT CompileShader(const char*                      Source,
-                             LPCSTR                           strFunctionName,
-                             const D3D_SHADER_MACRO*          pDefines,
-                             IShaderSourceInputStreamFactory* pIncludeStreamFactory,
-                             LPCSTR                           profile,
-                             ID3DBlob**                       ppBlobOut,
-                             ID3DBlob**                       ppCompilerOutput)
+static HRESULT CompileShader(const char*             Source,
+                             const ShaderCreateInfo& ShaderCI,
+                             LPCSTR                  profile,
+                             ID3DBlob**              ppBlobOut,
+                             ID3DBlob**              ppCompilerOutput)
 {
+    std::vector<D3D_SHADER_MACRO> D3DMacros;
+    switch (ShaderCI.Desc.ShaderType)
+    {
+        case SHADER_TYPE_VERTEX:
+            D3DMacros.push_back({"VERTEX_SHADER", "1"});
+            break;
+
+        case SHADER_TYPE_PIXEL:
+            D3DMacros.push_back({"FRAGMENT_SHADER", "1"});
+            D3DMacros.push_back({"PIXEL_SHADER", "1"});
+            break;
+
+        case SHADER_TYPE_GEOMETRY:
+            D3DMacros.push_back({"GEOMETRY_SHADER", "1"});
+            break;
+
+        case SHADER_TYPE_HULL:
+            D3DMacros.push_back({"TESS_CONTROL_SHADER", "1"});
+            D3DMacros.push_back({"HULL_SHADER", "1"});
+            break;
+
+        case SHADER_TYPE_DOMAIN:
+            D3DMacros.push_back({"TESS_EVALUATION_SHADER", "1"});
+            D3DMacros.push_back({"DOMAIN_SHADER", "1"});
+            break;
+
+        case SHADER_TYPE_COMPUTE:
+            D3DMacros.push_back({"COMPUTE_SHADER", "1"});
+            break;
+
+        default: UNEXPECTED("Unexpected shader type");
+    }
+
+    if (ShaderCI.Macros)
+    {
+        for (auto* pCurrMacro = ShaderCI.Macros; pCurrMacro->Name && pCurrMacro->Definition; ++pCurrMacro)
+        {
+            D3DMacros.push_back({pCurrMacro->Name, pCurrMacro->Definition});
+        }
+    }
+
+    D3DMacros.push_back({nullptr, nullptr});
+
     DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined(DILIGENT_DEBUG)
     // Set the D3D10_SHADER_DEBUG flag to embed debug information in the shaders.
@@ -103,13 +364,13 @@ static HRESULT CompileShader(const char*                      Source,
     // report strange errors:
     // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
 #endif
-    HRESULT hr;
+
     //	do
     //	{
-    auto SourceLen = strlen(Source);
 
-    D3DIncludeImpl IncludeImpl(pIncludeStreamFactory);
-    hr = D3DCompile(Source, SourceLen, NULL, pDefines, &IncludeImpl, strFunctionName, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
+    D3DIncludeImpl IncludeImpl(ShaderCI.pShaderSourceStreamFactory);
+    auto SourceLen = strlen(Source);
+    auto hr = D3DCompile(Source, SourceLen, NULL, D3DMacros.data(), &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
 
     //		if( FAILED(hr) || errors )
     //		{
@@ -126,7 +387,8 @@ static HRESULT CompileShader(const char*                      Source,
     return hr;
 }
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* ShaderModel)
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, Uint8 ShaderModel) :
+    m_isDXIL{false}
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
     {
@@ -137,18 +399,24 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* Shade
         switch (ShaderCI.Desc.ShaderType)
         {
             // clang-format off
-            case SHADER_TYPE_VERTEX:  strShaderProfile="vs"; break;
-            case SHADER_TYPE_PIXEL:   strShaderProfile="ps"; break;
-            case SHADER_TYPE_GEOMETRY:strShaderProfile="gs"; break;
-            case SHADER_TYPE_HULL:    strShaderProfile="hs"; break;
-            case SHADER_TYPE_DOMAIN:  strShaderProfile="ds"; break;
-            case SHADER_TYPE_COMPUTE: strShaderProfile="cs"; break;
+            case SHADER_TYPE_VERTEX:        strShaderProfile="vs"; break;
+            case SHADER_TYPE_PIXEL:         strShaderProfile="ps"; break;
+            case SHADER_TYPE_GEOMETRY:      strShaderProfile="gs"; break;
+            case SHADER_TYPE_HULL:          strShaderProfile="hs"; break;
+            case SHADER_TYPE_DOMAIN:        strShaderProfile="ds"; break;
+            case SHADER_TYPE_COMPUTE:       strShaderProfile="cs"; break;
+            case SHADER_TYPE_AMPLIFICATION: strShaderProfile="as"; break;
+            case SHADER_TYPE_MESH:          strShaderProfile="ms"; break;
                 // clang-format on
 
             default: UNEXPECTED("Unknown shader type");
         }
         strShaderProfile += "_";
-        strShaderProfile += ShaderModel;
+        strShaderProfile += '0' + ((ShaderModel >> 4) & 0xF);
+        strShaderProfile += "_";
+        strShaderProfile += ((ShaderModel & 0xF) == 0xF) ? 'x' : ('0' + (ShaderModel & 0xF));
+
+        m_isDXIL = (ShaderModel >= 0x60);
 
         String ShaderSource(g_HLSLDefinitions);
         if (ShaderCI.Source)
@@ -171,56 +439,17 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* Shade
             ShaderSource.append(FileDataPtr, FileDataPtr + Size / sizeof(*FileDataPtr));
         }
 
-        const D3D_SHADER_MACRO*       pDefines = nullptr;
-        std::vector<D3D_SHADER_MACRO> D3DMacros;
-        switch (ShaderCI.Desc.ShaderType)
-        {
-            case SHADER_TYPE_VERTEX:
-                D3DMacros.push_back({"VERTEX_SHADER", "1"});
-                break;
-
-            case SHADER_TYPE_PIXEL:
-                D3DMacros.push_back({"FRAGMENT_SHADER", "1"});
-                D3DMacros.push_back({"PIXEL_SHADER", "1"});
-                break;
-
-            case SHADER_TYPE_GEOMETRY:
-                D3DMacros.push_back({"GEOMETRY_SHADER", "1"});
-                break;
-
-            case SHADER_TYPE_HULL:
-                D3DMacros.push_back({"TESS_CONTROL_SHADER", "1"});
-                D3DMacros.push_back({"HULL_SHADER", "1"});
-                break;
-
-            case SHADER_TYPE_DOMAIN:
-                D3DMacros.push_back({"TESS_EVALUATION_SHADER", "1"});
-                D3DMacros.push_back({"DOMAIN_SHADER", "1"});
-                break;
-
-            case SHADER_TYPE_COMPUTE:
-                D3DMacros.push_back({"COMPUTE_SHADER", "1"});
-                break;
-
-            default: UNEXPECTED("Unexpected shader type");
-        }
-
-        if (ShaderCI.Macros)
-        {
-            for (auto* pCurrMacro = ShaderCI.Macros; pCurrMacro->Name && pCurrMacro->Definition; ++pCurrMacro)
-            {
-                D3DMacros.push_back({pCurrMacro->Name, pCurrMacro->Definition});
-            }
-        }
-
-        D3DMacros.push_back({nullptr, nullptr});
-        pDefines = D3DMacros.data();
-
         DEV_CHECK_ERR(ShaderCI.EntryPoint != nullptr, "Entry point must not be null");
-        CComPtr<ID3DBlob> errors;
-        auto              hr = CompileShader(ShaderSource.c_str(), ShaderCI.EntryPoint, pDefines, ShaderCI.pShaderSourceStreamFactory, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
 
-        const char* CompilerMsg = errors ? reinterpret_cast<const char*>(errors->GetBufferPointer()) : nullptr;
+        CComPtr<ID3DBlob> errors;
+        HRESULT           hr;
+        
+        if (m_isDXIL)
+            hr = CompileDxilShader(ShaderSource.c_str(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
+        else
+            hr = CompileShader(ShaderSource.c_str(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
+
+        const char* CompilerMsg = errors ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
         if (CompilerMsg != nullptr && ShaderCI.ppCompilerOutput != nullptr)
         {
             auto  ErrorMsgLen     = strlen(CompilerMsg);

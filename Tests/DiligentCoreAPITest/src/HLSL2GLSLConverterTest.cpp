@@ -53,6 +53,7 @@ RefCntAutoPtr<IShader> CreateTestShader(const char*                  FileName,
     ShaderCI.EntryPoint                 = EntryPoint;
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.HLSLVersion                = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12 ? ShaderVersion{5,1} : ShaderVersion{0, 0}; // DXIL compilaer can't compile this shaders
     ShaderCI.Desc.Name                  = "Test converted shader";
     ShaderCI.Desc.ShaderType            = ShaderType;
     ShaderCI.UseCombinedTextureSamplers = pDevice->GetDeviceCaps().IsGLDevice();

@@ -131,6 +131,10 @@ public:
     virtual void DILIGENT_CALL_TYPE DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
     /// Implementation of IDeviceContext::DrawIndexedIndirect() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+    /// Implementation of IDeviceContext::DrawMesh() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE DrawMesh           (const DrawMeshAttribs& Attribs) override final;
+    /// Implementation of IDeviceContext::DrawMeshIndirect() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE DrawMeshIndirect   (const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
     
 
     /// Implementation of IDeviceContext::DispatchCompute() in Direct3D12 backend.
@@ -382,6 +386,7 @@ private:
     CComPtr<ID3D12CommandSignature> m_pDrawIndirectSignature;
     CComPtr<ID3D12CommandSignature> m_pDrawIndexedIndirectSignature;
     CComPtr<ID3D12CommandSignature> m_pDispatchIndirectSignature;
+    CComPtr<ID3D12CommandSignature> m_pDrawMeshIndirectSignature;
 
     D3D12DynamicHeap m_DynamicHeap;
 

@@ -41,10 +41,11 @@ namespace Diligent
 class ShaderD3DBase
 {
 public:
-    ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const char* ShaderModel);
+    ShaderD3DBase(const ShaderCreateInfo& ShaderCI, Uint8 ShaderModel);
 
 protected:
     CComPtr<ID3DBlob> m_pShaderByteCode;
+    bool              m_isDXIL;
 };
 
 } // namespace Diligent

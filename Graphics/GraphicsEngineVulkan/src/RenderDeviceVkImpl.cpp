@@ -156,6 +156,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 
     auto&       Features         = m_DeviceCaps.Features;
     const auto& vkDeviceFeatures = m_PhysicalDevice->GetFeatures();
+    const auto& vkExtFeatures    = m_PhysicalDevice->GetExtFeatures();
 
     Features.SeparablePrograms                 = True;
     Features.IndirectRendering                 = True;
@@ -178,6 +179,9 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.VertexPipelineUAVWritesAndAtomics = vkDeviceFeatures.vertexPipelineStoresAndAtomics != VK_FALSE;
     Features.PixelUAVWritesAndAtomics          = vkDeviceFeatures.fragmentStoresAndAtomics != VK_FALSE;
     Features.TextureUAVExtendedFormats         = vkDeviceFeatures.shaderStorageImageExtendedFormats != VK_FALSE;
+
+    // All devices that supports mesh shader also supports task shader, so it is not necessary to use two separate features.
+    Features.MeshShaders                       = vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE;
 
     const auto& vkDeviceLimits = m_PhysicalDevice->GetProperties().limits;
     auto&       TexCaps        = m_DeviceCaps.TexCaps;

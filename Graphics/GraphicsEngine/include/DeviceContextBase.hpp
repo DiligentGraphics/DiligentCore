@@ -229,8 +229,10 @@ protected:
     // clang-format off
     bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs)const;
     bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs)const;
+    bool DvpVerifyDrawMeshArguments           (const DrawMeshAttribs&            Attribs)const;
     bool DvpVerifyDrawIndirectArguments       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer)const;
     bool DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const;
+    bool DvpVerifyDrawMeshIndirectArguments   (const DrawMeshIndirectAttribs&    Attribs, const IBuffer* pAttribsBuffer)const;
 
     bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const;
     bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const;
@@ -242,8 +244,10 @@ protected:
 #else
     bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs)const {return true;}
     bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs)const {return true;}
+    bool DvpVerifyDrawMeshArguments           (const DrawMeshAttribs&            Attribs)const {return true;}
     bool DvpVerifyDrawIndirectArguments       (const DrawIndirectAttribs&        Attribs, const IBuffer* pAttribsBuffer)const {return true;}
     bool DvpVerifyDrawIndexedIndirectArguments(const DrawIndexedIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {return true;}
+    bool DvpVerifyDrawMeshIndirectArguments   (const DrawMeshIndirectAttribs&    Attribs, const IBuffer* pAttribsBuffer)const {return true;}
 
     bool DvpVerifyDispatchArguments        (const DispatchComputeAttribs& Attribs)const {return true;}
     bool DvpVerifyDispatchIndirectArguments(const DispatchComputeIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer)const {return true;}
@@ -1175,7 +1179,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (m_pPipelineState->GetDesc().IsComputePipeline)
+    if (m_pPipelineState->GetDesc().PipelineType != GRAPHICS_PIPELINE)
     {
         LOG_ERROR_MESSAGE("Draw command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
         return false;
@@ -1201,8 +1205,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: no pipeline state is bound.");
         return false;
     }
-
-    if (m_pPipelineState->GetDesc().IsComputePipeline)
+    
+    if (m_pPipelineState->GetDesc().PipelineType != GRAPHICS_PIPELINE)
     {
         LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: pipeline state '",
                           m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
@@ -1232,6 +1236,34 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 
 template <typename BaseInterface, typename ImplementationTraits>
 inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
+    DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs)const
+{
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
+        return true;
+
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("DrawMesh command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (m_pPipelineState->GetDesc().PipelineType != MESH_PIPELINE)
+    {
+        LOG_ERROR_MESSAGE("DrawMesh command arguments are invalid: pipeline state '",
+                          m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+        return false;
+    }
+
+    if (Attribs.ThreadGroupCount == 0)
+    {
+        LOG_WARNING_MESSAGE("DrawMesh command arguments are invalid: number of groups to dispatch is zero.");
+    }
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     DvpVerifyDrawIndirectArguments(const DrawIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
@@ -1242,8 +1274,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: no pipeline state is bound.");
         return false;
     }
-
-    if (m_pPipelineState->GetDesc().IsComputePipeline)
+    
+    if (m_pPipelineState->GetDesc().PipelineType != GRAPHICS_PIPELINE)
     {
 
         LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: pipeline state '",
@@ -1281,8 +1313,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
         return false;
     }
-
-    if (m_pPipelineState->GetDesc().IsComputePipeline)
+    
+    if (m_pPipelineState->GetDesc().PipelineType != GRAPHICS_PIPELINE)
     {
         LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: pipeline state '",
                           m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
@@ -1314,6 +1346,44 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     else
     {
         LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: indirect draw arguments buffer is null.");
+        return false;
+    }
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
+    DvpVerifyDrawMeshIndirectArguments(const DrawMeshIndirectAttribs& Attribs, const IBuffer* pAttribsBuffer) const
+{
+    if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
+        return true;
+    
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (m_pPipelineState->GetDesc().PipelineType != MESH_PIPELINE)
+    {
+        LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: pipeline state '",
+                          m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+        return false;
+    }
+
+    if (pAttribsBuffer != nullptr)
+    {
+        if ((pAttribsBuffer->GetDesc().BindFlags & BIND_INDIRECT_DRAW_ARGS) == 0)
+        {
+            LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: indirect draw arguments buffer '",
+                              pAttribsBuffer->GetDesc().Name, "' was not created with BIND_INDIRECT_DRAW_ARGS flag.");
+            return false;
+        }
+    }
+    else
+    {
+        LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: indirect draw arguments buffer is null.");
         return false;
     }
 
@@ -1384,7 +1454,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
-    if (!m_pPipelineState->GetDesc().IsComputePipeline)
+    if (m_pPipelineState->GetDesc().PipelineType != COMPUTE_PIPELINE)
     {
         LOG_ERROR_MESSAGE("DispatchCompute command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name,
                           "' is a graphics pipeline.");
@@ -1412,8 +1482,8 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: no pipeline state is bound.");
         return false;
     }
-
-    if (!m_pPipelineState->GetDesc().IsComputePipeline)
+    
+    if (m_pPipelineState->GetDesc().PipelineType != COMPUTE_PIPELINE)
     {
         LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: pipeline state '",
                           m_pPipelineState->GetDesc().Name, "' is a graphics pipeline.");

@@ -204,7 +204,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         // This is necessary because if the command list had been flushed
         // and the first PSO set on the command list was a compute pipeline,
         // the states would otherwise never be committed (since m_pPipelineState != nullptr)
-        CommitStates = OldPSODesc.IsComputePipeline;
+        CommitStates = OldPSODesc.IsComputePipeline();
         // We also need to update scissor rect if ScissorEnable state has changed
         CommitScissor = OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable != PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
     }
@@ -214,7 +214,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
     auto& CmdCtx = GetCmdContext();
 
     auto* pd3d12PSO = pPipelineStateD3D12->GetD3D12PipelineState();
-    if (PSODesc.IsComputePipeline)
+    if (PSODesc.IsComputePipeline())
     {
         CmdCtx.AsComputeContext().SetPipelineState(pd3d12PSO);
     }
@@ -538,6 +538,34 @@ void DeviceContextD3D12Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
     PrepareDrawIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset);
 
     GraphCtx.ExecuteIndirect(m_pDrawIndexedIndirectSignature, pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
+    ++m_State.NumCommands;
+}
+
+void DeviceContextD3D12Impl::DrawMesh(const DrawMeshAttribs& Attribs)
+{
+    if (!DvpVerifyDrawMeshArguments(Attribs))
+        return;
+
+    auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+    PrepareForDraw(GraphCtx, Attribs.Flags);
+
+    GraphCtx.DrawMesh(Attribs.ThreadGroupCount, 1, 1);
+    ++m_State.NumCommands;
+}
+
+void DeviceContextD3D12Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+{
+    if (!DvpVerifyDrawMeshIndirectArguments(Attribs, pAttribsBuffer))
+        return;
+    
+    auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+    PrepareForDraw(GraphCtx, Attribs.Flags);
+    
+    ID3D12Resource* pd3d12ArgsBuff;
+    Uint64          BuffDataStartByteOffset;
+    PrepareDrawIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset);
+
+    GraphCtx.ExecuteIndirect(m_pDrawMeshIndirectSignature, pd3d12ArgsBuff, Attribs.IndirectDrawArgsOffset + BuffDataStartByteOffset);
     ++m_State.NumCommands;
 }
 
@@ -894,7 +922,7 @@ void DeviceContextD3D12Impl::SetScissorRects(Uint32 NumRects, const Rect* pRects
     if (m_pPipelineState)
     {
         const auto& PSODesc = m_pPipelineState->GetDesc();
-        if (!PSODesc.IsComputePipeline && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
+        if (PSODesc.IsAnyGraphicsPipeline() && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
         {
             VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
             auto& Ctx = GetCmdContext().AsGraphicsContext();

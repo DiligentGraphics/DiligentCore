@@ -34,24 +34,24 @@
 namespace Diligent
 {
 
-static const std::string HLSLVersionToShaderModelString(const ShaderVersion& Version, Uint8 MaxMajorRevision, Uint8 MaxMinorRevision)
+static const Uint8 HLSLVersionToShaderModelString(const ShaderVersion& Version, Uint8 MaxMajorRevision, Uint8 MaxMinorRevision)
 {
-    std::string ModelStr;
+    Uint8 ModelVer;
     if (Version.Major > MaxMajorRevision || Version.Major == MaxMajorRevision && Version.Minor > MaxMinorRevision)
     {
-        ModelStr = std::to_string(Uint32{MaxMajorRevision}) + '_' + std::to_string(Uint32{MaxMinorRevision});
+        ModelVer = Uint8((MaxMajorRevision << 4) | MaxMinorRevision);
         LOG_ERROR_MESSAGE("Shader model ", Uint32{Version.Major}, "_", Uint32{Version.Minor},
                           " is not supported by this device. Maximum supported model: ",
-                          ModelStr, ". Attempting to use ", ModelStr, '.');
+                          MaxMajorRevision, "_", MaxMinorRevision, ". Attempting to use ", MaxMajorRevision, "_", MaxMinorRevision, '.');
     }
     else
     {
-        ModelStr = std::to_string(Uint32{Version.Major}) + '_' + std::to_string(Uint32{Version.Minor});
+        ModelVer = Uint8((Version.Major << 4) | Version.Minor);
     }
-    return ModelStr;
+    return ModelVer;
 }
 
-static const std::string GetD3D11ShaderModel(ID3D11Device* pd3d11Device, const ShaderVersion& HLSLVersion)
+static const Uint8 GetD3D11ShaderModel(ID3D11Device* pd3d11Device, const ShaderVersion& HLSLVersion)
 {
     auto d3dDeviceFeatureLevel = pd3d11Device->GetFeatureLevel();
     switch (d3dDeviceFeatureLevel)
@@ -66,22 +66,22 @@ static const std::string GetD3D11ShaderModel(ID3D11Device* pd3d11Device, const S
         case D3D_FEATURE_LEVEL_11_1:
         case D3D_FEATURE_LEVEL_11_0:
             return (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0) ?
-                std::string{"5_0"} :
+                Uint8(0x50) :
                 HLSLVersionToShaderModelString(HLSLVersion, 5, 0);
 
         case D3D_FEATURE_LEVEL_10_1:
             return (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0) ?
-                std::string{"4_1"} :
+                Uint8(0x41) :
                 HLSLVersionToShaderModelString(HLSLVersion, 4, 1);
 
         case D3D_FEATURE_LEVEL_10_0:
             return (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0) ?
-                std::string{"4_0"} :
+                Uint8(0x40) :
                 HLSLVersionToShaderModelString(HLSLVersion, 4, 0);
 
         default:
             UNEXPECTED("Unexpected D3D feature level ", static_cast<Uint32>(d3dDeviceFeatureLevel));
-            return "4_0";
+            return Uint8(0x40);
     }
 }
 
@@ -95,7 +95,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
         pRenderDeviceD3D11,
         ShaderCI.Desc
     },
-    ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device(), ShaderCI.HLSLVersion).c_str()}
+    ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device(), ShaderCI.HLSLVersion)}
 // clang-format on
 {
     auto* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();

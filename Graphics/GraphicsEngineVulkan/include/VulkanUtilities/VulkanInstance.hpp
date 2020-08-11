@@ -63,6 +63,7 @@ public:
     // clang-format off
     bool IsLayerAvailable    (const char* LayerName)    const;
     bool IsExtensionAvailable(const char* ExtensionName)const;
+    bool IsExtensionEnabled  (const char* ExtensionName)const;
 
     VkPhysicalDevice SelectPhysicalDevice()const;
 
@@ -82,6 +83,7 @@ private:
 
     std::vector<VkLayerProperties>     m_Layers;
     std::vector<VkExtensionProperties> m_Extensions;
+    std::vector<const char*>           m_EnabledExtensions;
     std::vector<VkPhysicalDevice>      m_PhysicalDevices;
 };
 

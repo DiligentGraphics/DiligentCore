@@ -164,6 +164,9 @@ struct DeviceFeatures
 
     /// Specifies whether all the extended UAV texture formats are available in shader code.
     Bool TextureUAVExtendedFormats         DEFAULT_INITIALIZER(False);
+    
+    /// Indicates if device supports mesh and amplification shaders
+    Bool MeshShaders                   DEFAULT_INITIALIZER(False);
 };
 typedef struct DeviceFeatures DeviceFeatures;
 

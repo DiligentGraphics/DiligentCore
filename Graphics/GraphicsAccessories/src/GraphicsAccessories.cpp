@@ -480,13 +480,15 @@ const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
 #define RETURN_SHADER_TYPE_NAME(ShaderType)\
         case ShaderType: return #ShaderType;
 
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_UNKNOWN )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_VERTEX  )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_PIXEL   )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_GEOMETRY)
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_HULL    )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_DOMAIN  )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_COMPUTE )
+        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_UNKNOWN      )
+        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_VERTEX       )
+        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_PIXEL        )
+        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_GEOMETRY     )
+        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_HULL         )
+        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_DOMAIN       )
+        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_COMPUTE      )
+        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_AMPLIFICATION)
+        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_MESH         )
 #undef  RETURN_SHADER_TYPE_NAME
             // clang-format on
 
@@ -497,7 +499,7 @@ const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
 String GetShaderStagesString(SHADER_TYPE ShaderStages)
 {
     String StagesStr;
-    for (Uint32 Stage = SHADER_TYPE_VERTEX; ShaderStages != 0 && Stage <= SHADER_TYPE_COMPUTE; Stage <<= 1)
+    for (Uint32 Stage = SHADER_TYPE_VERTEX; ShaderStages != 0 && Stage < SHADER_TYPE_LAST; Stage <<= 1)
     {
         if (ShaderStages & Stage)
         {

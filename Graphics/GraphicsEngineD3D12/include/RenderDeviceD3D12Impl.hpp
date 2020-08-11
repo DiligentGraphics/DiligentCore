@@ -143,6 +143,7 @@ public:
     const GenerateMipsHelper& GetMipsGenerator() const { return m_MipsGenerator; }
     QueryManagerD3D12&        GetQueryManager() { return m_QueryMgr; }
 
+    D3D_SHADER_MODEL  GetShaderModel() const;
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
 private:

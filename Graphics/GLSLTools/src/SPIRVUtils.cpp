@@ -72,12 +72,14 @@ EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
     switch (ShaderType)
     {
         // clang-format off
-        case SHADER_TYPE_VERTEX:    return EShLangVertex;
-        case SHADER_TYPE_HULL:      return EShLangTessControl;
-        case SHADER_TYPE_DOMAIN:    return EShLangTessEvaluation;
-        case SHADER_TYPE_GEOMETRY:  return EShLangGeometry;
-        case SHADER_TYPE_PIXEL:     return EShLangFragment;
-        case SHADER_TYPE_COMPUTE:   return EShLangCompute;
+        case SHADER_TYPE_VERTEX:        return EShLangVertex;
+        case SHADER_TYPE_HULL:          return EShLangTessControl;
+        case SHADER_TYPE_DOMAIN:        return EShLangTessEvaluation;
+        case SHADER_TYPE_GEOMETRY:      return EShLangGeometry;
+        case SHADER_TYPE_PIXEL:         return EShLangFragment;
+        case SHADER_TYPE_COMPUTE:       return EShLangCompute;
+        case SHADER_TYPE_AMPLIFICATION: return EShLangTaskNV;
+        case SHADER_TYPE_MESH:          return EShLangMeshNV;
         // clang-format on
         default:
             UNEXPECTED("Unexpected shader type");

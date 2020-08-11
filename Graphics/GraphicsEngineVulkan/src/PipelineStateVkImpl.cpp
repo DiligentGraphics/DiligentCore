@@ -173,6 +173,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
     m_ShaderResourceLayouts = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", ShaderResourceLayoutVk, m_NumShaders * 2);
     m_StaticResCaches       = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheVk", ShaderResourceCacheVk, m_NumShaders);
     m_StaticVarsMgrs        = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerVk", ShaderVariableManagerVk, m_NumShaders);
+    m_ResourceLayoutIndex.fill(-1);
+
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
         new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk(LogicalDevice);
@@ -228,12 +230,16 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
         switch (ShaderType)
         {
             // clang-format off
-            case SHADER_TYPE_VERTEX:   StageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;                  break;
-            case SHADER_TYPE_HULL:     StageCI.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;    break;
-            case SHADER_TYPE_DOMAIN:   StageCI.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT; break;
-            case SHADER_TYPE_GEOMETRY: StageCI.stage = VK_SHADER_STAGE_GEOMETRY_BIT;                break;
-            case SHADER_TYPE_PIXEL:    StageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;                break;
-            case SHADER_TYPE_COMPUTE:  StageCI.stage = VK_SHADER_STAGE_COMPUTE_BIT;                 break;
+            case SHADER_TYPE_VERTEX:        StageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;                  break;
+            case SHADER_TYPE_HULL:          StageCI.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;    break;
+            case SHADER_TYPE_DOMAIN:        StageCI.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT; break;
+            case SHADER_TYPE_GEOMETRY:      StageCI.stage = VK_SHADER_STAGE_GEOMETRY_BIT;                break;
+            case SHADER_TYPE_PIXEL:         StageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;                break;
+            case SHADER_TYPE_COMPUTE:       StageCI.stage = VK_SHADER_STAGE_COMPUTE_BIT;                 break;
+#ifdef VK_NV_mesh_shader
+            case SHADER_TYPE_AMPLIFICATION: StageCI.stage = VK_SHADER_STAGE_TASK_BIT_NV;                 break;
+            case SHADER_TYPE_MESH:          StageCI.stage = VK_SHADER_STAGE_MESH_BIT_NV;                 break;
+#endif
             default: UNEXPECTED("Unknown shader type");
                 // clang-format on
         }
@@ -269,7 +275,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
     }
 
     // Create pipeline
-    if (m_Desc.IsComputePipeline)
+    if (m_Desc.IsComputePipeline())
     {
         auto& ComputePipeline = m_Desc.ComputePipeline;
 
@@ -642,7 +648,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
         }
         // Prepare descriptor sets, and also bind them if there are no dynamic descriptors
         VERIFY_EXPR(pDescrSetBindInfo != nullptr);
-        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline, ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
+        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, m_Desc.IsComputePipeline(), ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
         // Dynamic descriptor sets are not released individually. Instead, all dynamic descriptor pools
         // are released at the end of the frame by DeviceContextVkImpl::FinishFrame().
     }

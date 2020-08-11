@@ -362,6 +362,68 @@ struct DrawIndexedIndirectAttribs
 };
 typedef struct DrawIndexedIndirectAttribs DrawIndexedIndirectAttribs;
 
+/// Defines the mesh draw command attributes.
+
+/// This structure is used by IDeviceContext::DrawMesh().
+struct DrawMeshAttribs
+{
+    ///< Number of dispatched groups
+    Uint32 ThreadGroupCount DEFAULT_INITIALIZER(1);
+
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags        DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Initializes the structure members with default values.
+    DrawMeshAttribs()noexcept{}
+
+    /// Initializes the structure with user-specified values.
+    DrawMeshAttribs(Uint32     _ThreadGroupCount,
+                    DRAW_FLAGS _Flags)noexcept :
+        ThreadGroupCount {_ThreadGroupCount},
+        Flags            {_Flags}
+    {}
+#endif
+};
+typedef struct DrawMeshAttribs DrawMeshAttribs;
+
+/// Defines the mesh indirect draw command attributes.
+
+/// This structure is used by IDeviceContext::DrawMeshIndirect().
+struct DrawMeshIndirectAttribs
+{
+    /// Additional flags, see Diligent::DRAW_FLAGS.
+    DRAW_FLAGS Flags                DEFAULT_INITIALIZER(DRAW_FLAG_NONE);
+    
+    /// State transition mode for indirect draw arguments buffer.
+    RESOURCE_STATE_TRANSITION_MODE IndirectAttribsBufferStateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// Offset from the beginning of the buffer to the location of draw command attributes.
+    Uint32 IndirectDrawArgsOffset        DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    /// Initializes the structure members with default values
+
+    /// Default values:
+    /// Member                                   | Default value
+    /// -----------------------------------------|--------------------------------------
+    /// Flags                                    | DRAW_FLAG_NONE
+    /// IndirectAttribsBufferStateTransitionMode | RESOURCE_STATE_TRANSITION_MODE_NONE
+    /// IndirectDrawArgsOffset                   | 0
+    DrawMeshIndirectAttribs()noexcept{}
+
+    /// Initializes the structure members with user-specified values.
+    DrawMeshIndirectAttribs(DRAW_FLAGS                     _Flags,
+                            RESOURCE_STATE_TRANSITION_MODE _IndirectAttribsBufferStateTransitionMode,
+                            Uint32                         _IndirectDrawArgsOffset = 0)noexcept : 
+        Flags                                   {_Flags                                   },
+        IndirectAttribsBufferStateTransitionMode{_IndirectAttribsBufferStateTransitionMode},
+        IndirectDrawArgsOffset                  {_IndirectDrawArgsOffset                  }
+    {}
+#endif
+};
+typedef struct DrawMeshIndirectAttribs DrawMeshIndirectAttribs;
+
 /// Defines which parts of the depth-stencil buffer to clear.
 
 /// These flags are used by IDeviceContext::ClearDepthStencil().
@@ -930,6 +992,29 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     VIRTUAL void METHOD(DrawIndexedIndirect)(THIS_
                                              const DrawIndexedIndirectAttribs REF Attribs,
                                              IBuffer*                             pAttribsBuffer) PURE;
+    
+
+    /// Executes an mesh draw command.
+    
+    /// \param [in] Attribs - Draw command attributes, see Diligent::DrawMeshAttribs for details.
+    VIRTUAL void METHOD(DrawMesh)(THIS_
+                                  const DrawMeshAttribs REF Attribs) PURE;
+    
+
+    /// Executes an mesh indirect draw command.
+    
+    /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawMeshIndirectAttribs for details.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    /// 
+    /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+    ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
+    ///           so no other thread is allowed to read or write the state of the buffer.
+    /// 
+    ///           If the application intends to use the same resources in other threads simultaneously, it needs to 
+    ///           explicitly manage the states using IDeviceContext::TransitionResourceStates() method.
+    VIRTUAL void METHOD(DrawMeshIndirect)(THIS_
+                                          const DrawMeshIndirectAttribs REF Attribs,
+                                          IBuffer*                          pAttribsBuffer) PURE;
 
 
     /// Executes a dispatch compute command.

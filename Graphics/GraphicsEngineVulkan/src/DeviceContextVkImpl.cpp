@@ -256,7 +256,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         // This is necessary because if the command list had been flushed
         // and the first PSO set on the command list was a compute pipeline,
         // the states would otherwise never be committed (since m_pPipelineState != nullptr)
-        CommitStates = OldPSODesc.IsComputePipeline;
+        CommitStates = OldPSODesc.IsComputePipeline();
         // We also need to update scissor rect if ScissorEnable state was disabled in previous pipeline
         CommitScissor = !OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
     }
@@ -264,7 +264,7 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     TDeviceContextBase::SetPipelineState(pPipelineStateVk, 0 /*Dummy*/);
     EnsureVkCmdBuffer();
 
-    if (PSODesc.IsComputePipeline)
+    if (PSODesc.IsComputePipeline())
     {
         auto vkPipeline = pPipelineStateVk->GetVkPipeline();
         m_CommandBuffer.BindComputePipeline(vkPipeline);
@@ -553,6 +553,31 @@ void DeviceContextVkImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
     ++m_State.NumCommands;
 }
 
+void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
+{
+    if (!DvpVerifyDrawMeshArguments(Attribs))
+        return;
+
+    PrepareForDraw(Attribs.Flags);
+
+    m_CommandBuffer.DrawMesh(Attribs.ThreadGroupCount, 0);
+    ++m_State.NumCommands;
+}
+
+void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+{
+    if (!DvpVerifyDrawMeshIndirectArguments(Attribs, pAttribsBuffer))
+        return;
+
+    // We must prepare indirect draw attribs buffer first because state transitions must
+    // be performed outside of render pass, and PrepareForDraw commits render pass
+    BufferVkImpl* pIndirectDrawAttribsVk = PrepareIndirectDrawAttribsBuffer(pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode);
+
+    PrepareForDraw(Attribs.Flags);
+
+    m_CommandBuffer.DrawMeshIndirect(pIndirectDrawAttribsVk->GetVkBuffer(), pIndirectDrawAttribsVk->GetDynamicOffset(m_ContextId, this) + Attribs.IndirectDrawArgsOffset, 1, 0);
+    ++m_State.NumCommands;
+}
 
 void DeviceContextVkImpl::PrepareForDispatchCompute()
 {
@@ -1067,7 +1092,7 @@ void DeviceContextVkImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
     if (m_pPipelineState)
     {
         const auto& PSODesc = m_pPipelineState->GetDesc();
-        if (!PSODesc.IsComputePipeline && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
+        if (PSODesc.IsAnyGraphicsPipeline() && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
         {
             VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
             CommitScissorRects();

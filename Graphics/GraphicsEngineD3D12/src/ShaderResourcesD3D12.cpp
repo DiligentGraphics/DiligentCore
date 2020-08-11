@@ -32,11 +32,15 @@
 #include "ShaderD3DBase.hpp"
 #include "ShaderBase.hpp"
 
+#ifdef HAS_DXIL_COMPILER
+#include "dxcapi.h"
+#endif
+
 namespace Diligent
 {
 
 
-ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const ShaderDesc& ShdrDesc, const char* CombinedSamplerSuffix) :
+ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, bool isDXIL, const ShaderDesc& ShdrDesc, const char* CombinedSamplerSuffix) :
     ShaderResources{ShdrDesc.ShaderType}
 {
     class NewResourceHandler
@@ -51,8 +55,36 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const Shad
         void OnNewTexSRV (const D3DShaderResourceAttribs& TexAttribs)    {}
         // clang-format on
     };
+    
+    CComPtr<ID3D12ShaderReflection> pShaderReflection;
+
+    HRESULT hr;
+
+    if (isDXIL)
+    {
+#ifdef HAS_DXIL_COMPILER
+        const uint32_t DFCC_DXIL = uint32_t('D') | (uint32_t('X') << 8) | (uint32_t('I') << 16) | (uint32_t('L') << 24);
+        CComPtr<IDxcContainerReflection> pReflection;
+        UINT32 shaderIdx;
+        DxcCreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
+        hr = pReflection->Load(reinterpret_cast<IDxcBlob*>(pShaderBytecode));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create shader reflection instance");
+        hr = pReflection->FindFirstPartKind(DFCC_DXIL, &shaderIdx);
+        CHECK_D3D_RESULT_THROW(hr, "Failed to find DXIL part");
+        hr = pReflection->GetPartReflection(shaderIdx, __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
+#else
+        LOG_ERROR_AND_THROW("DXIL compiler is not supported");
+#endif
+    }
+    else
+    {
+        hr = D3DReflect(pShaderBytecode->GetBufferPointer(), pShaderBytecode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
+    }
+
     Initialize<D3D12_SHADER_DESC, D3D12_SHADER_INPUT_BIND_DESC, ID3D12ShaderReflection>(
-        pShaderBytecode,
+        static_cast<ID3D12ShaderReflection*>(pShaderReflection),
         NewResourceHandler{},
         ShdrDesc.Name,
         CombinedSamplerSuffix);

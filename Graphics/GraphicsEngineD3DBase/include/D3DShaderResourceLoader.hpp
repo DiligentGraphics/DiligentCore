@@ -52,8 +52,8 @@ struct D3DShaderResourceCounters
 
 template <typename D3D_SHADER_DESC,
           typename D3D_SHADER_INPUT_BIND_DESC,
-          typename TShaderReflection,
 
+          typename TShaderReflection,
           typename THandleShaderDesc,
           typename TOnResourcesCounted,
           typename TOnNewCB,
@@ -62,7 +62,7 @@ template <typename D3D_SHADER_DESC,
           typename TOnNewBuffSRV,
           typename TOnNewSampler,
           typename TOnNewTexSRV>
-void LoadD3DShaderResources(ID3DBlob*           pShaderByteCode,
+void LoadD3DShaderResources(TShaderReflection*  pShaderReflection,
                             THandleShaderDesc   HandleShaderDesc,
                             TOnResourcesCounted OnResourcesCounted,
                             TOnNewCB            OnNewCB,
@@ -72,11 +72,6 @@ void LoadD3DShaderResources(ID3DBlob*           pShaderByteCode,
                             TOnNewSampler       OnNewSampler,
                             TOnNewTexSRV        OnNewTexSRV)
 {
-    CComPtr<TShaderReflection> pShaderReflection;
-
-    auto hr = D3DReflect(pShaderByteCode->GetBufferPointer(), pShaderByteCode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(static_cast<TShaderReflection**>(&pShaderReflection)));
-    CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
-
     D3D_SHADER_DESC shaderDesc = {};
     pShaderReflection->GetDesc(&shaderDesc);
 

@@ -395,7 +395,7 @@ protected:
               typename D3D_SHADER_INPUT_BIND_DESC,
               typename TShaderReflection,
               typename TNewResourceHandler>
-    void Initialize(ID3DBlob*           pShaderByteCode,
+    void Initialize(TShaderReflection*  pShaderReflection,
                     TNewResourceHandler NewResHandler,
                     const Char*         ShaderName,
                     const Char*         SamplerSuffix);
@@ -460,14 +460,14 @@ template <typename D3D_SHADER_DESC,
           typename D3D_SHADER_INPUT_BIND_DESC,
           typename TShaderReflection,
           typename TNewResourceHandler>
-void ShaderResources::Initialize(ID3DBlob*           pShaderByteCode,
+void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
                                  TNewResourceHandler NewResHandler,
                                  const Char*         ShaderName,
                                  const Char*         CombinedSamplerSuffix)
 {
     Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
-    LoadD3DShaderResources<D3D_SHADER_DESC, D3D_SHADER_INPUT_BIND_DESC, TShaderReflection>(
-        pShaderByteCode,
+    LoadD3DShaderResources<D3D_SHADER_DESC, D3D_SHADER_INPUT_BIND_DESC>(
+        pShaderReflection,
 
         [&](const D3D_SHADER_DESC& d3dShaderDesc) //
         {

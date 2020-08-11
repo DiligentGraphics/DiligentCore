@@ -165,6 +165,12 @@ struct GraphicsPipelineDesc
     /// Geometry shader to be used with the pipeline
     IShader* pGS DEFAULT_INITIALIZER(nullptr);
     
+    /// Amplification shader to be used with the pipeline
+    IShader* pAS DEFAULT_INITIALIZER(nullptr);
+    
+    /// Mesh shader to be used with the pipeline
+    IShader* pMS DEFAULT_INITIALIZER(nullptr);
+    
     //D3D12_STREAM_OUTPUT_DESC StreamOutput;
     
     /// Blend state description
@@ -182,11 +188,11 @@ struct GraphicsPipelineDesc
     /// Depth-stencil state description
     DepthStencilStateDesc DepthStencilDesc;
 
-    /// Input layout
+    /// Input layout, ignored in mesh pipeline
     InputLayoutDesc InputLayout;
     //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
-    /// Primitive topology type
+    /// Primitive topology type, ignored in mesh pipeline
     PRIMITIVE_TOPOLOGY PrimitiveTopology DEFAULT_INITIALIZER(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
     /// Number of viewports used by this pipeline
@@ -223,12 +229,25 @@ struct ComputePipelineDesc
 };
 typedef struct ComputePipelineDesc ComputePipelineDesc;
 
+/// Pipeline type
+DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
+{
+    /// Graphics pipeline used in IDeviceContext::Draw(), IDeviceContext::DrawIndexed(),
+    /// IDeviceContext::DrawIndirect(), IDeviceContext::DrawIndexedIndirect().
+    GRAPHICS_PIPELINE,
+
+    /// Compute pipeline used in IDeviceContext::DispatchCompute(), IDeviceContext::DispatchComputeIndirect().
+    COMPUTE_PIPELINE,
+
+    // Mesh pipeline used in IDeviceContext::DrawMesh(), IDeviceContext::DrawMeshIndirect().
+    MESH_PIPELINE,
+};
 
 /// Pipeline state description
 struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
-    /// Flag indicating if pipeline state is a compute pipeline state
-    bool IsComputePipeline          DEFAULT_INITIALIZER(false);
+    /// Pipeline type
+    PIPELINE_TYPE PipelineType      DEFAULT_INITIALIZER(GRAPHICS_PIPELINE);
 
     /// Shader resource binding allocation granularity
 
@@ -242,11 +261,16 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Pipeline layout description
     PipelineResourceLayoutDesc ResourceLayout;
 
-    /// Graphics pipeline state description. This memeber is ignored if IsComputePipeline == True
+    /// Graphics pipeline state description. This memeber is ignored if PipelineType == GRAPHICS_PIPELINE or MESH_PIPELINE
     GraphicsPipelineDesc GraphicsPipeline;
 
-    /// Compute pipeline state description. This memeber is ignored if IsComputePipeline == False
+    /// Compute pipeline state description. This memeber is ignored if PipelineType == COMPUTE_PIPELINE
     ComputePipelineDesc ComputePipeline;
+    
+#if DILIGENT_CPP_INTERFACE
+    bool IsAnyGraphicsPipeline() const { return PipelineType == GRAPHICS_PIPELINE || PipelineType == MESH_PIPELINE; }
+    bool IsComputePipeline ()    const { return PipelineType == COMPUTE_PIPELINE; }
+#endif
 };
 typedef struct PipelineStateDesc PipelineStateDesc;
 

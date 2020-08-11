@@ -75,7 +75,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 
     TDeviceContextBase::SetPipelineState(pPipelineStateD3D11, 0 /*Dummy*/);
     auto& Desc = pPipelineStateD3D11->GetDesc();
-    if (Desc.IsComputePipeline)
+    if (Desc.IsComputePipeline())
     {
         auto* pd3d11CS = pPipelineStateD3D11->GetD3D11ComputeShader();
         if (pd3d11CS == nullptr)
@@ -868,6 +868,16 @@ void DeviceContextD3D11Impl::DrawIndexedIndirect(const DrawIndexedIndirectAttrib
     auto*         pIndirectDrawAttribsD3D11 = ValidatedCast<BufferD3D11Impl>(pAttribsBuffer);
     ID3D11Buffer* pd3d11ArgsBuff            = pIndirectDrawAttribsD3D11->m_pd3d11Buffer;
     m_pd3d11DeviceContext->DrawIndexedInstancedIndirect(pd3d11ArgsBuff, Attribs.IndirectDrawArgsOffset);
+}
+
+void DeviceContextD3D11Impl::DrawMesh(const DrawMeshAttribs& Attribs)
+{
+    UNSUPPORTED("DrawMesh is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+{
+    UNSUPPORTED("DrawMeshIndirect is not supported in DirectX 11");
 }
 
 void DeviceContextD3D11Impl::DispatchCompute(const DispatchComputeAttribs& Attribs)

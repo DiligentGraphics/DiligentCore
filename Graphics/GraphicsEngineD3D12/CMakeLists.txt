@@ -171,6 +171,14 @@ PUBLIC
 )
 target_compile_definitions(Diligent-GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL=1)
 
+if(${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} STRGREATER_EQUAL "10.0.19041.0")
+    target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE D12_H_HAS_MESH_SHADER)
+endif()
+if(${HAS_DXIL_COMPILER})
+    target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE HAS_DXIL_COMPILER)
+    target_link_libraries(Diligent-GraphicsEngineD3D12-static PRIVATE dxcompiler.lib)
+endif()
+
 # Set output name to GraphicsEngineD3D12_{32|64}{r|d}
 set_dll_output_name(Diligent-GraphicsEngineD3D12-shared GraphicsEngineD3D12)
 

@@ -920,7 +920,7 @@ DEFINE_FLAG_ENUM_OPERATORS(MISC_TEXTURE_FLAGS)
 
 /// Input primitive topology.
 
-/// This enumeration is used by DrawAttribs structure to define input primitive topology.
+/// This enumeration is used by GraphicsPipelineDesc structure to define input primitive topology.
 DILIGENT_TYPED_ENUM(PRIMITIVE_TOPOLOGY, Uint8)
 {
     /// Undefined topology

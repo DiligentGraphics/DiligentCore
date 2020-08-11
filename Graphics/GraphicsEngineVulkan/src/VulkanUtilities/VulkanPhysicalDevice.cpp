@@ -33,13 +33,15 @@
 namespace VulkanUtilities
 {
 
-std::unique_ptr<VulkanPhysicalDevice> VulkanPhysicalDevice::Create(VkPhysicalDevice vkDevice)
+std::unique_ptr<VulkanPhysicalDevice> VulkanPhysicalDevice::Create(VkPhysicalDevice                 vkDevice,
+                                                                   std::shared_ptr<VulkanInstance>  Instance)
 {
-    auto* PhysicalDevice = new VulkanPhysicalDevice{vkDevice};
+    auto* PhysicalDevice = new VulkanPhysicalDevice{vkDevice, Instance};
     return std::unique_ptr<VulkanPhysicalDevice>{PhysicalDevice};
 }
 
-VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice vkDevice) :
+VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice                 vkDevice,
+                                           std::shared_ptr<VulkanInstance>  Instance) :
     m_VkDevice{vkDevice}
 {
     VERIFY_EXPR(m_VkDevice != VK_NULL_HANDLE);
@@ -64,6 +66,29 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice vkDevice) :
         VERIFY_EXPR(res == VK_SUCCESS);
         (void)res;
         VERIFY_EXPR(ExtensionCount == m_SupportedExtensions.size());
+    }
+
+    if (Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+    {
+        VkPhysicalDeviceFeatures2   Feats2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+        VkPhysicalDeviceProperties2 Props2 = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+        void** NextFeat = &Feats2.pNext;
+        //void** NextProp = &Props2.pNext;
+
+        // Enable mesh shader extension.
+#ifdef VK_NV_mesh_shader
+        if (IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.MeshShader;
+            NextFeat = &m_ExtFeatures.MeshShader.pNext;
+            m_ExtFeatures.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+        }
+#endif
+
+        // Initialize device extension features by current physical device features.
+        // Some flags may not be supported by hardware.
+        vkGetPhysicalDeviceFeatures2KHR(m_VkDevice, &Feats2);
+        vkGetPhysicalDeviceProperties2KHR(m_VkDevice, &Props2);
     }
 }
 

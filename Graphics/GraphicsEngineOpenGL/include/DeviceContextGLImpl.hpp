@@ -120,6 +120,10 @@ public:
     virtual void DILIGENT_CALL_TYPE DrawIndirect       (const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
     /// Implementation of IDeviceContext::DrawIndexedIndirect() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+    /// Implementation of IDeviceContext::DrawMesh() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE DrawMesh           (const DrawMeshAttribs& Attribs) override final;
+    /// Implementation of IDeviceContext::DrawMeshIndirect() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE DrawMeshIndirect   (const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
 
     /// Implementation of IDeviceContext::DispatchCompute() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE DispatchCompute        (const DispatchComputeAttribs& Attribs) override final;

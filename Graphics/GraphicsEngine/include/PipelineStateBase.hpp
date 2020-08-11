@@ -83,7 +83,7 @@ public:
                 StringPoolSize += strlen(SrcLayout.StaticSamplers[i].SamplerOrTextureName) + 1;
         }
 
-        if (!PSODesc.IsComputePipeline)
+        if (PSODesc.IsAnyGraphicsPipeline())
         {
             CheckAndCorrectBlendStateDesc();
             CheckRasterizerStateDesc();
@@ -142,7 +142,7 @@ public:
         }
 
 
-        if (this->m_Desc.IsComputePipeline)
+        if (this->m_Desc.IsComputePipeline())
         {
             const auto& ComputePipeline = PSODesc.ComputePipeline;
             if (ComputePipeline.pCS == nullptr)
@@ -171,20 +171,40 @@ public:
             VALIDATE_SHADER_TYPE(GraphicsPipeline.pGS, SHADER_TYPE_GEOMETRY, "geometry")
             VALIDATE_SHADER_TYPE(GraphicsPipeline.pHS, SHADER_TYPE_HULL, "hull")
             VALIDATE_SHADER_TYPE(GraphicsPipeline.pDS, SHADER_TYPE_DOMAIN, "domain")
+            VALIDATE_SHADER_TYPE(GraphicsPipeline.pAS, SHADER_TYPE_AMPLIFICATION, "amplification")
+            VALIDATE_SHADER_TYPE(GraphicsPipeline.pMS, SHADER_TYPE_MESH, "mesh")
 #undef VALIDATE_SHADER_TYPE
 
-            m_pVS = GraphicsPipeline.pVS;
-            m_pPS = GraphicsPipeline.pPS;
-            m_pGS = GraphicsPipeline.pGS;
-            m_pDS = GraphicsPipeline.pDS;
-            m_pHS = GraphicsPipeline.pHS;
+            if (PSODesc.PipelineType == GRAPHICS_PIPELINE)
+            {
+                CHECK_THROW(GraphicsPipeline.pVS, "Vertex shader must be defined");
+                CHECK_THROW(!GraphicsPipeline.pAS && !GraphicsPipeline.pMS, "Mesh shaders are not supported in graphics pipeline");
+                m_pVS = GraphicsPipeline.pVS;
+                m_pPS = GraphicsPipeline.pPS;
+                m_pGS = GraphicsPipeline.pGS;
+                m_pDS = GraphicsPipeline.pDS;
+                m_pHS = GraphicsPipeline.pHS;
+            }
+            else
+            if (PSODesc.PipelineType == MESH_PIPELINE)
+            {
+                CHECK_THROW(GraphicsPipeline.pMS, "Mesh shader must be defined");
+                CHECK_THROW(!GraphicsPipeline.pVS && !GraphicsPipeline.pGS && !GraphicsPipeline.pDS && !GraphicsPipeline.pHS,
+                            "Vertex, geometry and tessellation shaders are not supported in mesh pipeline");
+                DEV_CHECK_ERR(GraphicsPipeline.InputLayout.NumElements == 0, "Input layout ignored in mesh shader");
+                m_pAS = GraphicsPipeline.pAS;
+                m_pMS = GraphicsPipeline.pMS;
+                m_pPS = GraphicsPipeline.pPS;
+            }
 
             if (GraphicsPipeline.pVS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pVS;
             if (GraphicsPipeline.pPS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pPS;
             if (GraphicsPipeline.pGS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pGS;
             if (GraphicsPipeline.pHS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pHS;
             if (GraphicsPipeline.pDS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pDS;
-
+            if (GraphicsPipeline.pAS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pAS;
+            if (GraphicsPipeline.pMS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pMS;
+            
             DEV_CHECK_ERR(m_NumShaders > 0, "There must be at least one shader in the Pipeline State");
 
             for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(GraphicsPipeline.RTVFormats); ++rt)
@@ -388,9 +408,11 @@ protected:
     RefCntAutoPtr<IShader> m_pDS; ///< Strong reference to the domain shader
     RefCntAutoPtr<IShader> m_pHS; ///< Strong reference to the hull shader
     RefCntAutoPtr<IShader> m_pCS; ///< Strong reference to the compute shader
+    RefCntAutoPtr<IShader> m_pAS; ///< Strong reference to the amplification shader
+    RefCntAutoPtr<IShader> m_pMS; ///< Strong reference to the mesh shader
 
-    IShader* m_ppShaders[5]             = {}; ///< Array of pointers to the shaders used by this PSO
-    size_t   m_ShaderResourceLayoutHash = 0;  ///< Hash computed from the shader resource layout
+    IShader* m_ppShaders[MAX_SHADERS_IN_PIPELINE] = {}; ///< Array of pointers to the shaders used by this PSO
+    size_t   m_ShaderResourceLayoutHash           = 0;  ///< Hash computed from the shader resource layout
 
 private:
     void CheckRasterizerStateDesc() const

@@ -137,7 +137,7 @@ TEST(TessellationTest, DrawQuad)
 
     PSODesc.Name = "Tessellation test";
 
-    PSODesc.IsComputePipeline                        = false;
+    PSODesc.PipelineType                             = GRAPHICS_PIPELINE;
     PSODesc.GraphicsPipeline.NumRenderTargets        = 1;
     PSODesc.GraphicsPipeline.RTVFormats[0]           = pSwapChain->GetDesc().ColorBufferFormat;
     PSODesc.GraphicsPipeline.PrimitiveTopology       = PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;

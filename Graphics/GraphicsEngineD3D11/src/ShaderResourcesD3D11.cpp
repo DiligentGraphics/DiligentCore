@@ -104,9 +104,14 @@ ShaderResourcesD3D11::ShaderResourcesD3D11(RenderDeviceD3D11Impl* pDeviceD3D11Im
         const char*                  CombinedSamplerSuffix;
         ShaderResourcesD3D11&        Resources;
     };
+    
+    CComPtr<ID3D11ShaderReflection> pShaderReflection;
+    HRESULT hr = D3DReflect(pShaderBytecode->GetBufferPointer(), pShaderBytecode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
+    CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
+    
 
-    Initialize<D3D11_SHADER_DESC, D3D11_SHADER_INPUT_BIND_DESC, ID3D11ShaderReflection>(
-        pShaderBytecode,
+    Initialize<D3D11_SHADER_DESC, D3D11_SHADER_INPUT_BIND_DESC>(
+        static_cast<ID3D11ShaderReflection*>(pShaderReflection),
         NewResourceHandler{pDeviceD3D11Impl, ShdrDesc, CombinedSamplerSuffix, *this},
         ShdrDesc.Name,
         CombinedSamplerSuffix);

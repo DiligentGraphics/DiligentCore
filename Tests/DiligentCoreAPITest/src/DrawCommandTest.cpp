@@ -228,7 +228,7 @@ protected:
 
         PSODesc.Name = "Draw command test - procedural triangles";
 
-        PSODesc.IsComputePipeline                             = false;
+        PSODesc.PipelineType                                  = GRAPHICS_PIPELINE;
         PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
         PSODesc.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
         PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;

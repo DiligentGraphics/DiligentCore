@@ -246,7 +246,7 @@ protected:
         auto* pDevice = pEnv->GetDevice();
 
         PSODesc.Name                = "Shader resource layout test";
-        PSODesc.IsComputePipeline   = true;
+        PSODesc.PipelineType        = COMPUTE_PIPELINE;
         PSODesc.ResourceLayout      = ResourceLayout;
         PSODesc.ComputePipeline.pCS = pCS;
 

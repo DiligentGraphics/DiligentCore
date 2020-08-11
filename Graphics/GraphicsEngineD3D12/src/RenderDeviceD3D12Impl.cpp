@@ -63,6 +63,34 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Dev
     return nullptr;
 }
 
+D3D_SHADER_MODEL RenderDeviceD3D12Impl::GetShaderModel() const
+{
+#ifdef HAS_DXIL_COMPILER
+    // Header may not have constants for D3D_SHADER_MODEL_6_5 and above.
+    const D3D_SHADER_MODEL Models[] = {
+        D3D_SHADER_MODEL(0x65),     // for mesh shader
+        D3D_SHADER_MODEL(0x64),
+        D3D_SHADER_MODEL(0x60)
+    };
+
+    // Get maximum supported shader model
+    D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = {};
+    if (m_pd3d12Device)
+    {
+        for (auto Model : Models)
+        {
+            ShaderModel.HighestShaderModel = Model;
+            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(ShaderModel))))
+                return ShaderModel.HighestShaderModel;
+        }
+    }
+#endif
+    
+    // Direct3D12 supports shader model 5.1 on all feature levels.
+    // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
+    return D3D_SHADER_MODEL_5_1;
+}
+
 D3D_FEATURE_LEVEL RenderDeviceD3D12Impl::GetD3DFeatureLevel() const
 {
     D3D_FEATURE_LEVEL FeatureLevels[] =
@@ -180,6 +208,19 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     m_DeviceCaps.Features.BindlessResources = True;
 
     m_DeviceCaps.Features.VertexPipelineUAVWritesAndAtomics = True;
+    
+    const D3D_SHADER_MODEL ShaderModel = GetShaderModel();
+
+    // Check if mesh shader is supported.
+#ifdef D12_H_HAS_MESH_SHADER
+    {
+        D3D12_FEATURE_DATA_D3D12_OPTIONS7 FeatureData = {};
+        bool SupportsMeshShader = SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureData, sizeof(FeatureData))) &&
+                                  FeatureData.MeshShaderTier != D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
+
+        m_DeviceCaps.Features.MeshShaders = (ShaderModel >= D3D_SHADER_MODEL_6_5 && SupportsMeshShader);
+    }
+#endif
 
     auto& TexCaps = m_DeviceCaps.TexCaps;
 

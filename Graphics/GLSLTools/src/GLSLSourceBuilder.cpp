@@ -64,6 +64,13 @@ const char* GetShaderTypeDefines(SHADER_TYPE Type)
 
         case SHADER_TYPE_COMPUTE:
             return "#define COMPUTE_SHADER 1\n";
+            
+        case SHADER_TYPE_AMPLIFICATION:
+            return "#define TASK_SHADER 1\n"
+                   "#define AMPLIFICATION_SHADER 1\n";
+
+        case SHADER_TYPE_MESH:
+            return "#define MESH_SHADER 1\n";
 
         default:
             UNEXPECTED("Unexpected shader type");

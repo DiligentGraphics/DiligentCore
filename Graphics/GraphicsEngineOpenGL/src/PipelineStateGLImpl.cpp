@@ -52,7 +52,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
     m_StaticResourceLayout{*this}
 // clang-format on
 {
-    if (!m_Desc.IsComputePipeline && m_pPS == nullptr)
+    if (m_Desc.IsAnyGraphicsPipeline() && m_pPS == nullptr)
     {
         // Some OpenGL implementations fail if fragment shader is not present, so
         // create a dummy one.

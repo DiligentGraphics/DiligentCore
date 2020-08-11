@@ -74,7 +74,7 @@ int TestPipelineStateCInterface(struct IPipelineState* pPSO)
         ++num_errors;
 
     PSODesc = *IPipelineState_GetDesc(pPSO);
-    if (PSODesc.IsComputePipeline)
+    if (PSODesc.PipelineType == COMPUTE_PIPELINE)
         ++num_errors;
 
     StaticVarCount = IPipelineState_GetStaticVariableCount(pPSO, SHADER_TYPE_VERTEX);

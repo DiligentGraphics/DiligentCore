@@ -84,7 +84,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     TDeviceContextBase::SetPipelineState(pPipelineStateGLImpl, 0 /*Dummy*/);
 
     const auto& Desc = pPipelineStateGLImpl->GetDesc();
-    if (Desc.IsComputePipeline)
+    if (Desc.IsComputePipeline())
     {
     }
     else
@@ -872,6 +872,16 @@ void DeviceContextGLImpl::DrawIndexedIndirect(const DrawIndexedIndirectAttribs& 
 #else
     LOG_ERROR_MESSAGE("Indirect rendering is not supported");
 #endif
+}
+
+void DeviceContextGLImpl::DrawMesh(const DrawMeshAttribs& Attribs)
+{
+    UNSUPPORTED("DrawMesh is not supported in OpenGL");
+}
+
+void DeviceContextGLImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+{
+    UNSUPPORTED("DrawMeshIndirect is not supported in OpenGL");
 }
 
 

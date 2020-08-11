@@ -138,6 +138,32 @@ public:
         vkCmdDrawIndexedIndirect(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
     }
 
+    __forceinline void DrawMesh(uint32_t TaskCount, uint32_t FirstTask)
+    {
+#ifdef VK_NV_mesh_shader
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksNV() must be called inside render pass (19.3)");
+        VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
+
+        vkCmdDrawMeshTasksNV(m_VkCmdBuffer, TaskCount, FirstTask);
+#else
+        UNSUPPORTED("DrawMesh is not supported in current Vulkan headers");
+#endif
+    }
+
+    __forceinline void DrawMeshIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
+    {
+#ifdef VK_NV_mesh_shader
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksNV() must be called inside render pass (19.3)");
+        VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
+
+        vkCmdDrawMeshTasksIndirectNV(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
+#else
+        UNSUPPORTED("DrawMeshIndirect is not supported in current Vulkan headers");
+#endif
+    }
+
     __forceinline void Dispatch(uint32_t GroupCountX, uint32_t GroupCountY, uint32_t GroupCountZ)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);

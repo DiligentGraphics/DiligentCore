@@ -36,19 +36,16 @@
 namespace Diligent
 {
 
-static const std::string GetD3D12ShaderModel(RenderDeviceD3D12Impl* /*pDevice*/, const ShaderVersion& HLSLVersion)
+static const Uint8 GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const ShaderVersion& HLSLVersion)
 {
     if (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0)
     {
-        //auto d3dDeviceFeatureLevel = pDevice->GetD3DFeatureLevel();
-
-        // Direct3D12 supports shader model 5.1 on all feature levels.
-        // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-        return "5_1";
+        D3D_SHADER_MODEL ver = pDevice->GetShaderModel();
+        return Uint8((ver & 0xF0) | (ver & 0x0F));
     }
     else
     {
-        return std::to_string(Uint32{HLSLVersion.Major}) + '_' + std::to_string(Uint32{HLSLVersion.Minor});
+        return Uint8(((HLSLVersion.Major & 0xF) << 4) | (HLSLVersion.Minor & 0xF));
     }
 }
 
@@ -62,13 +59,13 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
         pRenderDeviceD3D12,
         ShaderCI.Desc
     },
-    ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12, ShaderCI.HLSLVersion).c_str()}
+    ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12, ShaderCI.HLSLVersion)}
 // clang-format on
 {
     // Load shader resources
     auto& Allocator  = GetRawAllocator();
     auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
-    auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
+    auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_isDXIL, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
 }
 

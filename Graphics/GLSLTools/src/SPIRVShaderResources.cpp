@@ -149,13 +149,15 @@ static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
     switch (ShaderType)
     {
         // clang-format off
-        case SHADER_TYPE_VERTEX:    return spv::ExecutionModelVertex;
-        case SHADER_TYPE_HULL:      return spv::ExecutionModelTessellationControl;
-        case SHADER_TYPE_DOMAIN:    return spv::ExecutionModelTessellationEvaluation;
-        case SHADER_TYPE_GEOMETRY:  return spv::ExecutionModelGeometry;
-        case SHADER_TYPE_PIXEL:     return spv::ExecutionModelFragment;
-        case SHADER_TYPE_COMPUTE:   return spv::ExecutionModelGLCompute;
-            // clang-format on
+        case SHADER_TYPE_VERTEX:        return spv::ExecutionModelVertex;
+        case SHADER_TYPE_HULL:          return spv::ExecutionModelTessellationControl;
+        case SHADER_TYPE_DOMAIN:        return spv::ExecutionModelTessellationEvaluation;
+        case SHADER_TYPE_GEOMETRY:      return spv::ExecutionModelGeometry;
+        case SHADER_TYPE_PIXEL:         return spv::ExecutionModelFragment;
+        case SHADER_TYPE_COMPUTE:       return spv::ExecutionModelGLCompute;
+        case SHADER_TYPE_AMPLIFICATION: return spv::ExecutionModelTaskNV;
+        case SHADER_TYPE_MESH:          return spv::ExecutionModelMeshNV;
+        // clang-format on
 
         default:
             UNEXPECTED("Unexpected shader type");

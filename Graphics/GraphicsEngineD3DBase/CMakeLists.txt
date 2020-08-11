@@ -69,6 +69,14 @@ PUBLIC
 
 set_common_target_properties(Diligent-GraphicsEngineD3DBase)
 
+if(${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} STRGREATER_EQUAL "10.0.17763.0")
+    set(HAS_DXIL_COMPILER TRUE CACHE INTERNAL "" FORCE)
+    target_compile_definitions(Diligent-GraphicsEngineD3DBase PRIVATE HAS_DXIL_COMPILER)
+    target_link_libraries(Diligent-GraphicsEngineD3DBase PRIVATE dxcompiler.lib)
+else()
+    set(HAS_DXIL_COMPILER FALSE CACHE INTERNAL "" FORCE)
+endif()
+
 source_group("src" FILES ${SOURCE})
 source_group("include" FILES ${INCLUDE})
 source_group("interface" FILES ${INTERFACE})

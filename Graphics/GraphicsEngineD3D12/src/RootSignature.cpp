@@ -177,12 +177,16 @@ RootSignature::RootSignature() :
 // clang-format off
 static D3D12_SHADER_VISIBILITY ShaderTypeInd2ShaderVisibilityMap[]
 {
-    D3D12_SHADER_VISIBILITY_VERTEX,     // 0
-    D3D12_SHADER_VISIBILITY_PIXEL,      // 1
-    D3D12_SHADER_VISIBILITY_GEOMETRY,   // 2
-    D3D12_SHADER_VISIBILITY_HULL,       // 3
-    D3D12_SHADER_VISIBILITY_DOMAIN,     // 4
-    D3D12_SHADER_VISIBILITY_ALL         // 5
+    D3D12_SHADER_VISIBILITY_VERTEX,        // 0
+    D3D12_SHADER_VISIBILITY_PIXEL,         // 1
+    D3D12_SHADER_VISIBILITY_GEOMETRY,      // 2
+    D3D12_SHADER_VISIBILITY_HULL,          // 3
+    D3D12_SHADER_VISIBILITY_DOMAIN,        // 4
+    D3D12_SHADER_VISIBILITY_ALL,           // 5
+#ifdef D12_H_HAS_MESH_SHADER
+    D3D12_SHADER_VISIBILITY_AMPLIFICATION, // 6
+    D3D12_SHADER_VISIBILITY_MESH           // 7
+#endif
 };
 // clang-format on
 D3D12_SHADER_VISIBILITY GetShaderVisibility(SHADER_TYPE ShaderType)
@@ -193,12 +197,16 @@ D3D12_SHADER_VISIBILITY GetShaderVisibility(SHADER_TYPE ShaderType)
     switch (ShaderType)
     {
         // clang-format off
-        case SHADER_TYPE_VERTEX:    VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_VERTEX);    break;
-        case SHADER_TYPE_PIXEL:     VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_PIXEL);     break;
-        case SHADER_TYPE_GEOMETRY:  VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_GEOMETRY);  break;
-        case SHADER_TYPE_HULL:      VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_HULL);      break;
-        case SHADER_TYPE_DOMAIN:    VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_DOMAIN);    break;
-        case SHADER_TYPE_COMPUTE:   VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_ALL);       break;
+        case SHADER_TYPE_VERTEX:        VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_VERTEX);        break;
+        case SHADER_TYPE_PIXEL:         VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_PIXEL);         break;
+        case SHADER_TYPE_GEOMETRY:      VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_GEOMETRY);      break;
+        case SHADER_TYPE_HULL:          VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_HULL);          break;
+        case SHADER_TYPE_DOMAIN:        VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_DOMAIN);        break;
+        case SHADER_TYPE_COMPUTE:       VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_ALL);           break;
+#   ifdef D12_H_HAS_MESH_SHADER
+        case SHADER_TYPE_AMPLIFICATION: VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_AMPLIFICATION); break;
+        case SHADER_TYPE_MESH:          VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_MESH);          break;
+#   endif
         // clang-format on
         default: LOG_ERROR("Unknown shader type (", ShaderType, ")"); break;
     }
@@ -209,29 +217,35 @@ D3D12_SHADER_VISIBILITY GetShaderVisibility(SHADER_TYPE ShaderType)
 // clang-format off
 static SHADER_TYPE ShaderVisibility2ShaderTypeMap[] = 
 {
-    SHADER_TYPE_COMPUTE,    // D3D12_SHADER_VISIBILITY_ALL	    = 0
-    SHADER_TYPE_VERTEX,     // D3D12_SHADER_VISIBILITY_VERTEX	= 1
-    SHADER_TYPE_HULL,       // D3D12_SHADER_VISIBILITY_HULL	    = 2
-    SHADER_TYPE_DOMAIN,     // D3D12_SHADER_VISIBILITY_DOMAIN	= 3
-    SHADER_TYPE_GEOMETRY,   // D3D12_SHADER_VISIBILITY_GEOMETRY	= 4
-    SHADER_TYPE_PIXEL       // D3D12_SHADER_VISIBILITY_PIXEL	= 5
+    SHADER_TYPE_COMPUTE,       // D3D12_SHADER_VISIBILITY_ALL           = 0
+    SHADER_TYPE_VERTEX,        // D3D12_SHADER_VISIBILITY_VERTEX        = 1
+    SHADER_TYPE_HULL,          // D3D12_SHADER_VISIBILITY_HULL          = 2
+    SHADER_TYPE_DOMAIN,        // D3D12_SHADER_VISIBILITY_DOMAIN        = 3
+    SHADER_TYPE_GEOMETRY,      // D3D12_SHADER_VISIBILITY_GEOMETRY      = 4
+    SHADER_TYPE_PIXEL,         // D3D12_SHADER_VISIBILITY_PIXEL         = 5
+    SHADER_TYPE_AMPLIFICATION, // D3D12_SHADER_VISIBILITY_AMPLIFICATION = 6
+    SHADER_TYPE_MESH           // D3D12_SHADER_VISIBILITY_MESH          = 7
 };
 // clang-format on
 
 SHADER_TYPE ShaderTypeFromShaderVisibility(D3D12_SHADER_VISIBILITY ShaderVisibility)
 {
-    VERIFY_EXPR(ShaderVisibility >= D3D12_SHADER_VISIBILITY_ALL && ShaderVisibility <= D3D12_SHADER_VISIBILITY_PIXEL);
+    VERIFY_EXPR(uint32_t(ShaderVisibility) < std::size(ShaderVisibility2ShaderTypeMap));
     auto ShaderType = ShaderVisibility2ShaderTypeMap[ShaderVisibility];
 #ifdef DILIGENT_DEBUG
     switch (ShaderVisibility)
     {
         // clang-format off
-        case D3D12_SHADER_VISIBILITY_VERTEX:    VERIFY_EXPR(ShaderType == SHADER_TYPE_VERTEX);   break;
-        case D3D12_SHADER_VISIBILITY_PIXEL:     VERIFY_EXPR(ShaderType == SHADER_TYPE_PIXEL);    break;
-        case D3D12_SHADER_VISIBILITY_GEOMETRY:  VERIFY_EXPR(ShaderType == SHADER_TYPE_GEOMETRY); break;
-        case D3D12_SHADER_VISIBILITY_HULL:      VERIFY_EXPR(ShaderType == SHADER_TYPE_HULL);     break;
-        case D3D12_SHADER_VISIBILITY_DOMAIN:    VERIFY_EXPR(ShaderType == SHADER_TYPE_DOMAIN);   break;
-        case D3D12_SHADER_VISIBILITY_ALL:       VERIFY_EXPR(ShaderType == SHADER_TYPE_COMPUTE);  break;
+        case D3D12_SHADER_VISIBILITY_VERTEX:        VERIFY_EXPR(ShaderType == SHADER_TYPE_VERTEX);        break;
+        case D3D12_SHADER_VISIBILITY_PIXEL:         VERIFY_EXPR(ShaderType == SHADER_TYPE_PIXEL);         break;
+        case D3D12_SHADER_VISIBILITY_GEOMETRY:      VERIFY_EXPR(ShaderType == SHADER_TYPE_GEOMETRY);      break;
+        case D3D12_SHADER_VISIBILITY_HULL:          VERIFY_EXPR(ShaderType == SHADER_TYPE_HULL);          break;
+        case D3D12_SHADER_VISIBILITY_DOMAIN:        VERIFY_EXPR(ShaderType == SHADER_TYPE_DOMAIN);        break;
+        case D3D12_SHADER_VISIBILITY_ALL:           VERIFY_EXPR(ShaderType == SHADER_TYPE_COMPUTE);       break;
+#   ifdef D12_H_HAS_MESH_SHADER
+        case D3D12_SHADER_VISIBILITY_AMPLIFICATION: VERIFY_EXPR(ShaderType == SHADER_TYPE_AMPLIFICATION); break;
+        case D3D12_SHADER_VISIBILITY_MESH:          VERIFY_EXPR(ShaderType == SHADER_TYPE_MESH);          break;
+#   endif
         // clang-format on
         default: LOG_ERROR("Unknown shader visibility (", ShaderVisibility, ")"); break;
     }

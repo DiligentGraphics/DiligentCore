@@ -27,6 +27,7 @@
 
 #include <vector>
 #include <cstring>
+#include "VulkanUtilities/VulkanInstance.hpp"
 
 #if DILIGENT_USE_VOLK
 #    define VOLK_IMPLEMENTATION
@@ -34,7 +35,6 @@
 #endif
 
 #include "VulkanErrors.hpp"
-#include "VulkanUtilities/VulkanInstance.hpp"
 #include "VulkanUtilities/VulkanDebug.hpp"
 
 #if !DILIGENT_NO_GLSLANG
@@ -59,6 +59,15 @@ bool VulkanInstance::IsExtensionAvailable(const char* ExtensionName) const
 {
     for (const auto& Extension : m_Extensions)
         if (strcmp(Extension.extensionName, ExtensionName) == 0)
+            return true;
+
+    return false;
+}
+
+bool VulkanInstance::IsExtensionEnabled(const char* ExtensionName) const
+{
+    for (const auto& Extension : m_EnabledExtensions)
+        if (strcmp(Extension, ExtensionName) == 0)
             return true;
 
     return false;
@@ -138,6 +147,14 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
 #endif
     };
 
+    // This extension added to core in 1.1, but current version is 1.0
+#ifdef VK_KHR_get_physical_device_properties2
+    if (IsExtensionAvailable(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+    {
+        GlobalExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+    }
+#endif
+
     if (ppGlobalExtensionNames != nullptr)
     {
         for (uint32_t ext = 0; ext < GlobalExtensionCount; ++ext)
@@ -212,6 +229,8 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
 #if DILIGENT_USE_VOLK
     volkLoadInstance(m_VkInstance);
 #endif
+
+    m_EnabledExtensions = std::move(GlobalExtensions);
 
     // If requested, we enable the default validation layers for debugging
     if (m_DebugUtilsEnabled)

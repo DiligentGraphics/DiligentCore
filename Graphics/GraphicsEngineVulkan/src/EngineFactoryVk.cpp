@@ -144,7 +144,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator));
 
         auto        vkDevice               = Instance->SelectPhysicalDevice();
-        auto        PhysicalDevice         = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice);
+        auto        PhysicalDevice         = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, Instance);
         const auto& PhysicalDeviceFeatures = PhysicalDevice->GetFeatures();
 
         // If an implementation exposes any queue family that supports graphics operations,
@@ -155,7 +155,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         QueueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         QueueInfo.flags = 0; // reserved for future use
         // All commands that are allowed on a queue that supports transfer operations are also allowed on a
-        // queue that supports either graphics or compute operations.Thus, if the capabilities of a queue family
+        // queue that supports either graphics or compute operations. Thus, if the capabilities of a queue family
         // include VK_QUEUE_GRAPHICS_BIT or VK_QUEUE_COMPUTE_BIT, then reporting the VK_QUEUE_TRANSFER_BIT
         // capability separately for that queue family is optional (4.1).
         QueueInfo.queueFamilyIndex       = PhysicalDevice->FindQueueFamily(VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT);
@@ -200,6 +200,24 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 VK_KHR_SWAPCHAIN_EXTENSION_NAME,
                 VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
             };
+
+        // To enable some device extensions you must enable instance extension VK_KHR_get_physical_device_properties2
+        // and add feature description to DeviceCreateInfo.pNext.
+        bool   SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        void** NextExt = const_cast<void **>(&DeviceCreateInfo.pNext);
+
+        // Enable mesh shader extension.
+#ifdef VK_NV_mesh_shader
+        VkPhysicalDeviceMeshShaderFeaturesNV  MeshShaderFeats = PhysicalDevice->GetExtFeatures().MeshShader;
+
+        if (SupportsFeatures2 && PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
+        {
+            DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+            *NextExt = &MeshShaderFeats;
+            NextExt = &MeshShaderFeats.pNext;
+        }
+#endif
+
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();
         DeviceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(DeviceExtensions.size());
 

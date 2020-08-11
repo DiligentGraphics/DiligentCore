@@ -29,13 +29,25 @@
 
 #include <memory>
 #include <vector>
-#include "VulkanHeaders.h"
+#include "VulkanInstance.hpp"
 
 namespace VulkanUtilities
 {
 
 class VulkanPhysicalDevice
 {
+public:
+    struct ExtensionFeatures
+    {
+#ifdef VK_NV_mesh_shader
+        VkPhysicalDeviceMeshShaderFeaturesNV  MeshShader;
+#endif
+    };
+
+    struct ExtensionProperties
+    {
+    };
+
 public:
     // clang-format off
     VulkanPhysicalDevice             (const VulkanPhysicalDevice&) = delete;
@@ -44,7 +56,8 @@ public:
     VulkanPhysicalDevice& operator = (VulkanPhysicalDevice&&)      = delete;
     // clang-format on
 
-    static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice vkDevice);
+    static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice                 vkDevice,
+                                                        std::shared_ptr<VulkanInstance>  Instance);
 
     // clang-format off
     uint32_t         FindQueueFamily     (VkQueueFlags QueueFlags)                           const;
@@ -59,15 +72,20 @@ public:
 
     const VkPhysicalDeviceProperties& GetProperties() const { return m_Properties; }
     const VkPhysicalDeviceFeatures&   GetFeatures() const { return m_Features; }
+    const ExtensionProperties&        GetExtProperties() const { return m_ExtProperties; }
+    const ExtensionFeatures&          GetExtFeatures() const { return m_ExtFeatures; }
     VkFormatProperties                GetPhysicalDeviceFormatProperties(VkFormat imageFormat) const;
 
 private:
-    VulkanPhysicalDevice(VkPhysicalDevice vkDevice);
+    VulkanPhysicalDevice(VkPhysicalDevice                 vkDevice,
+                         std::shared_ptr<VulkanInstance>  Instance);
 
     const VkPhysicalDevice               m_VkDevice;
     VkPhysicalDeviceProperties           m_Properties       = {};
     VkPhysicalDeviceFeatures             m_Features         = {};
     VkPhysicalDeviceMemoryProperties     m_MemoryProperties = {};
+    ExtensionProperties                  m_ExtProperties    = {};
+    ExtensionFeatures                    m_ExtFeatures      = {};
     std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
     std::vector<VkExtensionProperties>   m_SupportedExtensions;
 };
