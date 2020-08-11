@@ -34,6 +34,50 @@
 namespace Diligent
 {
 
+static bool UseDefaultFBO(Uint32             NumRenderTargets,
+                          TextureViewGLImpl* ppRTVs[],
+                          TextureViewGLImpl* pDSV)
+{
+    bool useDefaultFBO = false;
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
+    {
+        if (ppRTVs[rt] != nullptr && ppRTVs[rt]->GetHandle() == 0)
+        {
+            if (rt == 0)
+            {
+                useDefaultFBO = true;
+            }
+            else
+            {
+                LOG_ERROR_AND_THROW("In OpenGL, swap chain back buffer can be the only render target in the framebuffer "
+                                    "and cannot be combined with any other render target.");
+            }
+        }
+    }
+
+    if (pDSV != nullptr)
+    {
+        if (useDefaultFBO && pDSV->GetHandle() != 0)
+        {
+            LOG_ERROR_AND_THROW("In OpenGL, swap chain back buffer can only be paired with the default depth-stencil buffer.");
+        }
+
+        if (pDSV->GetHandle() == 0)
+        {
+            if (!useDefaultFBO && NumRenderTargets > 0)
+            {
+                LOG_ERROR_AND_THROW("In OpenGL, the swap chain's depth-stencil buffer can only be paired with its back buffer.");
+            }
+            else
+            {
+                useDefaultFBO = true;
+            }
+        }
+    }
+
+    return useDefaultFBO;
+}
+
 FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                                      RenderDeviceGLImpl*    pDevice,
                                      GLContextState&        CtxState,
@@ -62,7 +106,9 @@ FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
         {
             pDSV = ValidatedCast<TextureViewGLImpl>(m_Desc.ppAttachments[SubpassDesc.pDepthStencilAttachment->AttachmentIndex]);
         }
-        auto RenderTargetFBO = FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRTVs, pDSV);
+        auto RenderTargetFBO = UseDefaultFBO(SubpassDesc.RenderTargetAttachmentCount, ppRTVs, pDSV) ?
+            GLObjectWrappers::GLFrameBufferObj{false} :
+            FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRTVs, pDSV);
 
         GLObjectWrappers::GLFrameBufferObj ResolveFBO{false};
         if (SubpassDesc.pResolveAttachments != nullptr)
@@ -76,7 +122,9 @@ FramebufferGLImpl::FramebufferGLImpl(IReferenceCounters*    pRefCounters,
                     ppRsvlViews[rt] = ValidatedCast<TextureViewGLImpl>(m_Desc.ppAttachments[RslvAttachmentRef.AttachmentIndex]);
                 }
             }
-            ResolveFBO = FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr);
+            ResolveFBO = UseDefaultFBO(SubpassDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr) ?
+                GLObjectWrappers::GLFrameBufferObj{false} :
+                FBOCache::CreateFBO(CtxState, SubpassDesc.RenderTargetAttachmentCount, ppRsvlViews, nullptr);
         }
 
         m_SubpassFramebuffers.emplace_back(std::move(RenderTargetFBO), std::move(ResolveFBO));
