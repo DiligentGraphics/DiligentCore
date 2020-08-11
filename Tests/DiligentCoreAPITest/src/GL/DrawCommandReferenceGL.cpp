@@ -128,6 +128,59 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearCol
 
 void RenderPassMSResolveReferenceGL(ISwapChain* pSwapChain, const float* pClearColor)
 {
+    auto* pEnv                = TestingEnvironmentGL::GetInstance();
+    auto* pContext            = pEnv->GetDeviceContext();
+    auto* pTestingSwapChainGL = ValidatedCast<TestingSwapChainGL>(pSwapChain);
+
+    const auto& SCDesc = pTestingSwapChainGL->GetDesc();
+
+    TriangleRenderer TriRenderer{GLSL::DrawTest_FS};
+
+    GLuint glMSTex = 0;
+    glGenTextures(1, &glMSTex);
+    ASSERT_EQ(glGetError(), GLenum{GL_NO_ERROR});
+
+    GLenum fmt = 0;
+    switch (SCDesc.ColorBufferFormat)
+    {
+        case TEX_FORMAT_RGBA8_UNORM:
+            fmt = GL_RGBA8;
+            break;
+
+        default:
+            UNSUPPORTED("Unsupported swap chain format");
+    }
+    glBindTexture(GL_TEXTURE_2D_MULTISAMPLE, glMSTex);
+    glTexStorage2DMultisample(GL_TEXTURE_2D_MULTISAMPLE, 4, fmt, SCDesc.Width, SCDesc.Height, GL_TRUE);
+    ASSERT_EQ(glGetError(), GLenum{GL_NO_ERROR});
+
+    GLuint glMSFB = 0;
+    glGenFramebuffers(1, &glMSFB);
+    ASSERT_EQ(glGetError(), GLenum{GL_NO_ERROR});
+
+    glBindFramebuffer(GL_FRAMEBUFFER, glMSFB);
+    ASSERT_EQ(glGetError(), GLenum{GL_NO_ERROR});
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D_MULTISAMPLE, glMSTex, 0);
+    ASSERT_EQ(glCheckFramebufferStatus(GL_FRAMEBUFFER), GLenum{GL_FRAMEBUFFER_COMPLETE});
+
+    TriRenderer.Draw(SCDesc.Width, SCDesc.Height, pClearColor);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, glMSFB);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pTestingSwapChainGL->GetFBO());
+
+    // Blit will perform MS resolve
+    glBlitFramebuffer(0, 0, static_cast<GLint>(SCDesc.Width), static_cast<GLint>(SCDesc.Height),
+                      0, 0, static_cast<GLint>(SCDesc.Width), static_cast<GLint>(SCDesc.Height),
+                      GL_COLOR_BUFFER_BIT,
+                      GL_NEAREST // Filter is ignored
+    );
+    ASSERT_EQ(glGetError(), GLenum{GL_NO_ERROR});
+
+    glDeleteFramebuffers(1, &glMSFB);
+    glDeleteTextures(1, &glMSTex);
+
+    // Make sure Diligent Engine will reset all GL states
+    pContext->InvalidateState();
 }
 
 void RenderPassInputAttachmentReferenceGL(ISwapChain* pSwapChain, const float* pClearColor)
