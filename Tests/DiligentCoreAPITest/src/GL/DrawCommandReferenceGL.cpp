@@ -36,6 +36,78 @@ namespace Diligent
 namespace Testing
 {
 
+namespace
+{
+
+class TriangleRenderer
+{
+
+public:
+    TriangleRenderer(const std::string& FSSource)
+    {
+        auto* pEnv = TestingEnvironmentGL::GetInstance();
+
+        GLuint glShaders[2] = {};
+        for (int i = 0; i < _countof(glShaders); ++i)
+        {
+            if (glShaders[i] != 0)
+                glDeleteShader(glShaders[i]);
+        }
+
+        glShaders[0] = pEnv->CompileGLShader(GLSL::DrawTest_ProceduralTriangleVS, GL_VERTEX_SHADER);
+        VERIFY_EXPR(glShaders[0] != 0u);
+        glShaders[1] = pEnv->CompileGLShader(FSSource, GL_FRAGMENT_SHADER);
+        VERIFY_EXPR(glShaders[1] != 0u);
+        m_glProg = pEnv->LinkProgram(glShaders, 2);
+        VERIFY_EXPR(m_glProg != 0u);
+
+        for (int i = 0; i < _countof(glShaders); ++i)
+        {
+            if (glShaders[i] != 0)
+                glDeleteShader(glShaders[i]);
+        }
+    }
+
+    ~TriangleRenderer()
+    {
+        if (m_glProg != 0)
+            glDeleteProgram(m_glProg);
+    }
+
+    void Draw(Uint32 Width, Uint32 Height, const float* pClearColor)
+    {
+        auto* pEnv = TestingEnvironmentGL::GetInstance();
+
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_BLEND);
+        glDisable(GL_CULL_FACE);
+        if (glPolygonMode != nullptr)
+        {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+        glViewport(0, 0, Width, Height);
+        if (pClearColor != nullptr)
+            glClearColor(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
+        else
+            glClearColor(0.f, 0.f, 0.f, 0.f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glUseProgram(m_glProg);
+        glBindVertexArray(pEnv->GetDummyVAO());
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
+        glUseProgram(0);
+
+        ASSERT_TRUE(glGetError() == GL_NO_ERROR);
+    }
+
+private:
+    GLuint m_glProg = 0;
+};
+
+} // namespace
+
 void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearColor)
 {
     auto* pEnv                = TestingEnvironmentGL::GetInstance();
@@ -44,46 +116,11 @@ void RenderDrawCommandReferenceGL(ISwapChain* pSwapChain, const float* pClearCol
 
     const auto& SCDesc = pTestingSwapChainGL->GetDesc();
 
-    GLuint glShaders[2] = {};
+    TriangleRenderer TriRenderer{GLSL::DrawTest_FS};
 
-    glShaders[0] = pEnv->CompileGLShader(GLSL::DrawTest_ProceduralTriangleVS, GL_VERTEX_SHADER);
-    ASSERT_NE(glShaders[0], 0u);
-    glShaders[1] = pEnv->CompileGLShader(GLSL::DrawTest_FS, GL_FRAGMENT_SHADER);
-    ASSERT_NE(glShaders[1], 0u);
-    auto glProg = pEnv->LinkProgram(glShaders, 2);
-    ASSERT_NE(glProg, 0u);
-
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_SCISSOR_TEST);
-    glDisable(GL_BLEND);
-    glDisable(GL_CULL_FACE);
-    if (glPolygonMode != nullptr)
-    {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
     pTestingSwapChainGL->BindFramebuffer();
-    glViewport(0, 0, SCDesc.Width, SCDesc.Height);
-    if (pClearColor != nullptr)
-        glClearColor(pClearColor[0], pClearColor[1], pClearColor[2], pClearColor[3]);
-    else
-        glClearColor(0.f, 0.f, 0.f, 0.f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glUseProgram(glProg);
-    glBindVertexArray(pEnv->GetDummyVAO());
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-    glBindVertexArray(0);
-    glUseProgram(0);
 
-    ASSERT_TRUE(glGetError() == GL_NO_ERROR);
-
-    for (int i = 0; i < _countof(glShaders); ++i)
-    {
-        if (glShaders[i] != 0)
-            glDeleteShader(glShaders[i]);
-    }
-    if (glProg != 0)
-        glDeleteProgram(glProg);
+    TriRenderer.Draw(SCDesc.Width, SCDesc.Height, pClearColor);
 
     // Make sure Diligent Engine will reset all GL states
     pContext->InvalidateState();
@@ -95,6 +132,57 @@ void RenderPassMSResolveReferenceGL(ISwapChain* pSwapChain, const float* pClearC
 
 void RenderPassInputAttachmentReferenceGL(ISwapChain* pSwapChain, const float* pClearColor)
 {
+    auto* pEnv                = TestingEnvironmentGL::GetInstance();
+    auto* pContext            = pEnv->GetDeviceContext();
+    auto* pTestingSwapChainGL = ValidatedCast<TestingSwapChainGL>(pSwapChain);
+
+    const auto& SCDesc = pTestingSwapChainGL->GetDesc();
+
+    TriangleRenderer TriRenderer{GLSL::DrawTest_FS};
+
+    TriangleRenderer TriRendererInptAtt{GLSL::InputAttachmentTestGL_FS};
+
+    GLuint glInputAttTex = 0;
+    glGenTextures(1, &glInputAttTex);
+    ASSERT_EQ(glGetError(), GLenum{GL_NO_ERROR});
+
+    GLenum fmt = 0;
+    switch (SCDesc.ColorBufferFormat)
+    {
+        case TEX_FORMAT_RGBA8_UNORM:
+            fmt = GL_RGBA8;
+            break;
+
+        default:
+            UNSUPPORTED("Unsupported swap chain format");
+    }
+    glBindTexture(GL_TEXTURE_2D, glInputAttTex);
+    glTexStorage2D(GL_TEXTURE_2D, 1, fmt, SCDesc.Width, SCDesc.Height);
+    ASSERT_EQ(glGetError(), GLenum{GL_NO_ERROR});
+
+    GLuint glInputAttFB = 0;
+    glGenFramebuffers(1, &glInputAttFB);
+    ASSERT_EQ(glGetError(), GLenum{GL_NO_ERROR});
+
+    glBindFramebuffer(GL_FRAMEBUFFER, glInputAttFB);
+    ASSERT_EQ(glGetError(), GLenum{GL_NO_ERROR});
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glInputAttTex, 0);
+    ASSERT_EQ(glCheckFramebufferStatus(GL_FRAMEBUFFER), GLenum{GL_FRAMEBUFFER_COMPLETE});
+
+    TriRenderer.Draw(SCDesc.Width, SCDesc.Height, nullptr);
+
+    pTestingSwapChainGL->BindFramebuffer();
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, glInputAttTex);
+
+    TriRendererInptAtt.Draw(SCDesc.Width, SCDesc.Height, pClearColor);
+
+    glDeleteFramebuffers(1, &glInputAttFB);
+    glDeleteTextures(1, &glInputAttTex);
+
+    // Make sure Diligent Engine will reset all GL states
+    pContext->InvalidateState();
 }
 
 } // namespace Testing
