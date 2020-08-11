@@ -445,26 +445,46 @@ void DeviceContextGLImpl::BeginSubpass()
         const auto& RTAttachmentRef = SubpassDesc.pRenderTargetAttachments[rt];
         if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
         {
+            auto* const pRTV = ValidatedCast<TextureViewGLImpl>(FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex]);
+            if (pRTV == nullptr)
+                continue;
+
+            auto* const pColorTexGL = pRTV->GetTexture<TextureBaseGL>();
+            pColorTexGL->TextureMemoryBarrier(
+                GL_FRAMEBUFFER_BARRIER_BIT, // Reads and writes via framebuffer object attachments after the
+                                            // barrier will reflect data written by shaders prior to the barrier.
+                                            // Additionally, framebuffer writes issued after the barrier will wait
+                                            // on the completion of all shader writes issued prior to the barrier.
+                m_ContextState);
+
             const auto& AttachmentDesc = RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex];
             auto        FirstLastUse   = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTAttachmentRef.AttachmentIndex);
             if (FirstLastUse.first == m_SubpassIndex && AttachmentDesc.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
             {
-                auto* pRTV = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
                 ClearRenderTarget(pRTV, m_AttachmentClearValues[RTAttachmentRef.AttachmentIndex].Color, RESOURCE_STATE_TRANSITION_MODE_NONE);
             }
         }
     }
 
-    if (SubpassDesc.pDepthStencilAttachment != nullptr && SubpassDesc.pDepthStencilAttachment->AttachmentIndex != ATTACHMENT_UNUSED)
+    if (SubpassDesc.pDepthStencilAttachment != nullptr)
     {
-        auto        DepthAttachmentIndex = SubpassDesc.pDepthStencilAttachment->AttachmentIndex;
-        const auto& AttachmentDesc       = RPDesc.pAttachments[DepthAttachmentIndex];
-        auto        FirstLastUse         = m_pActiveRenderPass->GetAttachmentFirstLastUse(DepthAttachmentIndex);
-        if (FirstLastUse.first == m_SubpassIndex && AttachmentDesc.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+        const auto DepthAttachmentIndex = SubpassDesc.pDepthStencilAttachment->AttachmentIndex;
+        if (DepthAttachmentIndex != ATTACHMENT_UNUSED)
         {
-            auto*       pDSV     = FBDesc.ppAttachments[DepthAttachmentIndex];
-            const auto& ClearVal = m_AttachmentClearValues[DepthAttachmentIndex].DepthStencil;
-            ClearDepthStencil(pDSV, CLEAR_DEPTH_FLAG | CLEAR_STENCIL_FLAG, ClearVal.Depth, ClearVal.Stencil, RESOURCE_STATE_TRANSITION_MODE_NONE);
+            auto* const pDSV = ValidatedCast<TextureViewGLImpl>(FBDesc.ppAttachments[DepthAttachmentIndex]);
+            if (pDSV != nullptr)
+            {
+                auto* pDepthTexGL = pDSV->GetTexture<TextureBaseGL>();
+                pDepthTexGL->TextureMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT, m_ContextState);
+
+                const auto& AttachmentDesc = RPDesc.pAttachments[DepthAttachmentIndex];
+                auto        FirstLastUse   = m_pActiveRenderPass->GetAttachmentFirstLastUse(DepthAttachmentIndex);
+                if (FirstLastUse.first == m_SubpassIndex && AttachmentDesc.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+                {
+                    const auto& ClearVal = m_AttachmentClearValues[DepthAttachmentIndex].DepthStencil;
+                    ClearDepthStencil(pDSV, CLEAR_DEPTH_FLAG | CLEAR_STENCIL_FLAG, ClearVal.Depth, ClearVal.Stencil, RESOURCE_STATE_TRANSITION_MODE_NONE);
+                }
+            }
         }
     }
 }
