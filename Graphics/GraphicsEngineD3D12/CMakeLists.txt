@@ -106,12 +106,15 @@ set(SHADERS
     shaders/GenerateMips/GenerateMipsLinearOddYCS.hlsl
 )
 
+set(COMPILED_SHADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips)
+file(MAKE_DIRECTORY "${COMPILED_SHADERS_DIR}")
+
 set_source_files_properties(${SHADERS} PROPERTIES 
     VS_SHADER_TYPE Compute
     VS_SHADER_ENTRYPOINT main
     VS_SHADER_MODEL 5.0
     VS_SHADER_VARIABLE_NAME "g_p%(Filename)"
-    VS_SHADER_OUTPUT_HEADER_FILE "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips/%(Filename).h"
+    VS_SHADER_OUTPUT_HEADER_FILE "${COMPILED_SHADERS_DIR}/%(Filename).h"
     #VS_SHADER_FLAGS "/O3"
 )
 
