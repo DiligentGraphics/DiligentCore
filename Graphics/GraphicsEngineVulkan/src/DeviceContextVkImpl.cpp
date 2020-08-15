@@ -283,14 +283,6 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         {
             m_CommandBuffer.SetStencilReference(m_StencilRef);
             m_CommandBuffer.SetBlendConstants(m_BlendFactors);
-            if (PSODesc.GraphicsPipeline.pRenderPass == nullptr)
-            {
-                CommitRenderPassAndFramebuffer(true);
-            }
-            else
-            {
-                // Render pass must be committed explicitly
-            }
             CommitViewports();
         }
 
@@ -434,6 +426,9 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
+
+    VERIFY(m_vkRenderPass != VK_NULL_HANDLE, "No render pass is active while executing draw command");
+    VERIFY(m_vkFramebuffer != VK_NULL_HANDLE, "No framebuffer is bound while executing draw command");
 #endif
 
     EnsureVkCmdBuffer();
@@ -477,15 +472,17 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #    endif
 #endif
 
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pPipelineState->GetRenderPass()->GetVkRenderPass() != m_vkRenderPass)
-    {
-        DvpLogRenderPass_PSOMismatch();
-    }
-#endif
-
     if (m_pPipelineState->GetDesc().GraphicsPipeline.pRenderPass == nullptr)
     {
+#ifdef DILIGENT_DEVELOPMENT
+        if (m_pPipelineState->GetRenderPass()->GetVkRenderPass() != m_vkRenderPass)
+        {
+            // Note that different Vulkan render passes may still be compatible,
+            // so we should only verify implicit render passes
+            DvpLogRenderPass_PSOMismatch();
+        }
+#endif
+
         CommitRenderPassAndFramebuffer((Flags & DRAW_FLAG_VERIFY_STATES) != 0);
     }
 }
