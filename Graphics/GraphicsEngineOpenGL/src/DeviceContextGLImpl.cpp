@@ -255,10 +255,10 @@ void DeviceContextGLImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
             // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glViewportIndexed.xhtml
             glViewportIndexedf(0, BottomLeftX, BottomLeftY, vp.Width, vp.Height);
         }
-        CHECK_GL_ERROR("Failed to set viewport");
+        DEV_CHECK_GL_ERROR("Failed to set viewport");
 
         glDepthRangef(vp.MinDepth, vp.MaxDepth);
-        CHECK_GL_ERROR("Failed to set depth range");
+        DEV_CHECK_GL_ERROR("Failed to set depth range");
     }
     else
     {
@@ -268,9 +268,9 @@ void DeviceContextGLImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
             float       BottomLeftY = static_cast<float>(RTHeight) - (vp.TopLeftY + vp.Height);
             float       BottomLeftX = vp.TopLeftX;
             glViewportIndexedf(i, BottomLeftX, BottomLeftY, vp.Width, vp.Height);
-            CHECK_GL_ERROR("Failed to set viewport #", i);
+            DEV_CHECK_GL_ERROR("Failed to set viewport #", i);
             glDepthRangef(vp.MinDepth, vp.MaxDepth);
-            CHECK_GL_ERROR("Failed to set depth range for viewport #", i);
+            DEV_CHECK_GL_ERROR("Failed to set depth range for viewport #", i);
         }
     }
 }
@@ -301,7 +301,7 @@ void DeviceContextGLImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
         auto width  = Rect.right - Rect.left;
         auto height = Rect.bottom - Rect.top;
         glScissor(Rect.left, glBottom, width, height);
-        CHECK_GL_ERROR("Failed to set scissor rect");
+        DEV_CHECK_GL_ERROR("Failed to set scissor rect");
     }
     else
     {
@@ -312,7 +312,7 @@ void DeviceContextGLImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
             auto        width    = Rect.right - Rect.left;
             auto        height   = Rect.bottom - Rect.top;
             glScissorIndexed(sr, Rect.left, glBottom, width, height);
-            CHECK_GL_ERROR("Failed to set scissor rect #", sr);
+            DEV_CHECK_GL_ERROR("Failed to set scissor rect #", sr);
         }
     }
 }
@@ -324,6 +324,8 @@ void DeviceContextGLImpl::SetSwapChain(ISwapChainGL* pSwapChain)
 
 void DeviceContextGLImpl::CommitRenderTargets()
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "This method must not be called inside render pass");
+
     if (!m_IsDefaultFBOBound && m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
         return;
 
@@ -332,7 +334,7 @@ void DeviceContextGLImpl::CommitRenderTargets()
         GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
         if (m_DefaultFBO != DefaultFBOHandle)
         {
-            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj(true, GLObjectWrappers::GLFBOCreateReleaseHelper(DefaultFBOHandle));
+            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper(DefaultFBOHandle)};
         }
         m_ContextState.BindFBO(m_DefaultFBO);
     }
@@ -671,7 +673,7 @@ void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShade
                 m_ContextState.BindTexture(-1, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
                 GLint IsImmutable = 0;
                 glGetTexParameteriv(pTexViewGL->GetBindTarget(), GL_TEXTURE_IMMUTABLE_FORMAT, &IsImmutable);
-                CHECK_GL_ERROR("glGetTexParameteriv() failed");
+                DEV_CHECK_GL_ERROR("glGetTexParameteriv() failed");
                 VERIFY(IsImmutable, "Only immutable textures can be bound to pipeline using glBindImageTexture()");
                 m_ContextState.BindTexture(-1, pTexViewGL->GetBindTarget(), GLObjectWrappers::GLTextureObj::Null());
             }
@@ -1030,7 +1032,7 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 #if GL_ARB_compute_shader
     m_pPipelineState->CommitProgram(m_ContextState);
     glDispatchCompute(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
-    CHECK_GL_ERROR("glDispatchCompute() failed");
+    DEV_CHECK_GL_ERROR("glDispatchCompute() failed");
 
     PostDraw();
 #else
@@ -1057,10 +1059,10 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
 
     constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
     m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, pBufferGL->m_GlBuffer, ResetVAO);
-    CHECK_GL_ERROR("Failed to bind a buffer for dispatch indirect command");
+    DEV_CHECK_GL_ERROR("Failed to bind a buffer for dispatch indirect command");
 
     glDispatchComputeIndirect(Attribs.DispatchArgsByteOffset);
-    CHECK_GL_ERROR("glDispatchComputeIndirect() failed");
+    DEV_CHECK_GL_ERROR("glDispatchComputeIndirect() failed");
 
     m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 
@@ -1106,7 +1108,7 @@ void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView
     // blend function, logical operation, stenciling, texture mapping, and depth-buffering
     // are ignored by glClear.
     glClear(glClearFlags);
-    CHECK_GL_ERROR("glClear() failed");
+    DEV_CHECK_GL_ERROR("glClear() failed");
     m_ContextState.EnableDepthWrites(DepthWritesEnabled);
     m_ContextState.EnableScissorTest(ScissorTestEnabled);
 }
@@ -1119,8 +1121,6 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     VERIFY_EXPR(pView != nullptr);
 
     Int32 RTIndex = -1;
-    VERIFY(pView->GetDesc().ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected");
-    CHECK_DYNAMIC_TYPE(TextureViewGLImpl, pView);
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
         if (m_pBoundRenderTargets[rt] == pView)
@@ -1159,7 +1159,7 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     m_ContextState.SetColorWriteMask(RTIndex, COLOR_MASK_ALL, bIndependentBlend);
 
     glClearBufferfv(GL_COLOR, RTIndex, RGBA);
-    CHECK_GL_ERROR("glClearBufferfv() failed");
+    DEV_CHECK_GL_ERROR("glClearBufferfv() failed");
 
     m_ContextState.SetColorWriteMask(RTIndex, WriteMask, bIndependentBlend);
     m_ContextState.EnableScissorTest(ScissorTestEnabled);
@@ -1196,7 +1196,7 @@ void DeviceContextGLImpl::SignalFence(IFence* pFence, Uint64 Value)
         GL_SYNC_GPU_COMMANDS_COMPLETE, // Condition must always be GL_SYNC_GPU_COMMANDS_COMPLETE
         0                              // Flags, must be 0
         )};
-    CHECK_GL_ERROR("Failed to create gl fence");
+    DEV_CHECK_GL_ERROR("Failed to create gl fence");
     auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
     pFenceGLImpl->AddPendingFence(std::move(GLFence), Value);
 }
@@ -1229,7 +1229,7 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
         case QUERY_TYPE_OCCLUSION:
 #if GL_SAMPLES_PASSED
             glBeginQuery(GL_SAMPLES_PASSED, glQuery);
-            CHECK_GL_ERROR("Failed to begin GL_SAMPLES_PASSED query");
+            DEV_CHECK_GL_ERROR("Failed to begin GL_SAMPLES_PASSED query");
 #else
             LOG_ERROR_MESSAGE_ONCE("GL_SAMPLES_PASSED query is not supported by this device");
 #endif
@@ -1237,13 +1237,13 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
 
         case QUERY_TYPE_BINARY_OCCLUSION:
             glBeginQuery(GL_ANY_SAMPLES_PASSED, glQuery);
-            CHECK_GL_ERROR("Failed to begin GL_ANY_SAMPLES_PASSED query");
+            DEV_CHECK_GL_ERROR("Failed to begin GL_ANY_SAMPLES_PASSED query");
             break;
 
         case QUERY_TYPE_PIPELINE_STATISTICS:
 #if GL_PRIMITIVES_GENERATED
             glBeginQuery(GL_PRIMITIVES_GENERATED, glQuery);
-            CHECK_GL_ERROR("Failed to begin GL_PRIMITIVES_GENERATED query");
+            DEV_CHECK_GL_ERROR("Failed to begin GL_PRIMITIVES_GENERATED query");
 #else
             LOG_ERROR_MESSAGE_ONCE("GL_PRIMITIVES_GENERATED query is not supported by this device");
 #endif
@@ -1266,26 +1266,26 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
         case QUERY_TYPE_OCCLUSION:
 #if GL_SAMPLES_PASSED
             glEndQuery(GL_SAMPLES_PASSED);
-            CHECK_GL_ERROR("Failed to end GL_SAMPLES_PASSED query");
+            DEV_CHECK_GL_ERROR("Failed to end GL_SAMPLES_PASSED query");
 #endif
             break;
 
         case QUERY_TYPE_BINARY_OCCLUSION:
             glEndQuery(GL_ANY_SAMPLES_PASSED);
-            CHECK_GL_ERROR("Failed to end GL_ANY_SAMPLES_PASSED query");
+            DEV_CHECK_GL_ERROR("Failed to end GL_ANY_SAMPLES_PASSED query");
             break;
 
         case QUERY_TYPE_PIPELINE_STATISTICS:
 #if GL_PRIMITIVES_GENERATED
             glEndQuery(GL_PRIMITIVES_GENERATED);
-            CHECK_GL_ERROR("Failed to end GL_PRIMITIVES_GENERATED query");
+            DEV_CHECK_GL_ERROR("Failed to end GL_PRIMITIVES_GENERATED query");
 #endif
             break;
 
         case QUERY_TYPE_TIMESTAMP:
 #if GL_ARB_timer_query
             glQueryCounter(pQueryGLImpl->GetGlQueryHandle(), GL_TIMESTAMP);
-            CHECK_GL_ERROR("glQueryCounter failed");
+            DEV_CHECK_GL_ERROR("glQueryCounter failed");
 #else
             LOG_ERROR_MESSAGE_ONCE("Timer queries are not supported by this device");
 #endif
@@ -1525,7 +1525,7 @@ void DeviceContextGLImpl::GenerateMips(ITextureView* pTexView)
     auto  BindTarget = pTexViewGL->GetBindTarget();
     m_ContextState.BindTexture(-1, BindTarget, pTexViewGL->GetHandle());
     glGenerateMipmap(BindTarget);
-    CHECK_GL_ERROR("Failed to generate mip maps");
+    DEV_CHECK_GL_ERROR("Failed to generate mip maps");
     m_ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
