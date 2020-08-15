@@ -31,6 +31,7 @@
 /// Type conversion routines
 
 #include "GraphicsTypes.h"
+#include "RenderPass.h"
 
 namespace Diligent
 {
@@ -70,5 +71,8 @@ RESOURCE_STATE            D3D12ResourceStatesToResourceStateFlags(D3D12_RESOURCE
 
 D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType);
 D3D12_QUERY_TYPE      QueryTypeToD3D12QueryType(QUERY_TYPE QueryType);
+
+D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE AttachmentLoadOpToD3D12BeginningAccessType(ATTACHMENT_LOAD_OP LoadOp);
+D3D12_RENDER_PASS_ENDING_ACCESS_TYPE    AttachmentStoreOpToD3D12EndingAccessType(ATTACHMENT_STORE_OP StoreOp);
 
 } // namespace Diligent

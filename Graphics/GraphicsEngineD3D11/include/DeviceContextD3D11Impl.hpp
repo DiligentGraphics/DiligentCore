@@ -37,6 +37,8 @@
 #include "TextureBaseD3D11.hpp"
 #include "PipelineStateD3D11Impl.hpp"
 #include "QueryD3D11Impl.hpp"
+#include "FramebufferD3D11Impl.hpp"
+#include "RenderPassD3D11Impl.hpp"
 #include "DisjointQueryPool.hpp"
 
 #ifdef DILIGENT_DEBUG
@@ -46,8 +48,6 @@
 namespace Diligent
 {
 
-class RenderDeviceD3D11Impl;
-
 struct DeviceContextD3D11ImplTraits
 {
     using BufferType        = BufferD3D11Impl;
@@ -55,6 +55,8 @@ struct DeviceContextD3D11ImplTraits
     using PipelineStateType = PipelineStateD3D11Impl;
     using DeviceType        = RenderDeviceD3D11Impl;
     using QueryType         = QueryD3D11Impl;
+    using FramebufferType   = FramebufferD3D11Impl;
+    using RenderPassType    = RenderPassD3D11Impl;
 };
 
 /// Device context implementation in Direct3D11 backend.
@@ -121,6 +123,15 @@ public:
                                                      ITextureView*                  ppRenderTargets[],
                                                      ITextureView*                  pDepthStencil,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
+
+    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::NextSubpass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
+
+    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     /// Implementation of IDeviceContext::Draw() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE Draw(const DrawAttribs& Attribs) override final;
@@ -294,6 +305,8 @@ private:
     /// Prepares for an indexed draw command
     __forceinline void PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
 
+    /// Ends current subpass
+    void EndSubpass();
 
     template <bool TransitionResources,
               bool CommitResources>

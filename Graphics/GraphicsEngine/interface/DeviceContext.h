@@ -49,6 +49,8 @@
 #include "PipelineState.h"
 #include "Fence.h"
 #include "Query.h"
+#include "RenderPass.h"
+#include "Framebuffer.h"
 #include "CommandList.h"
 #include "SwapChain.h"
 
@@ -609,6 +611,44 @@ struct CopyTextureAttribs
 };
 typedef struct CopyTextureAttribs CopyTextureAttribs;
 
+
+/// BeginRenderPass command attributes.
+
+/// This structure is used by IDeviceContext::BeginRenderPass().
+struct BeginRenderPassAttribs
+{
+    /// Render pass to begin.
+    IRenderPass*    pRenderPass     DEFAULT_INITIALIZER(nullptr);
+
+    /// Framebuffer containing the attachments that are used with the render pass.
+    IFramebuffer*   pFramebuffer    DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of elements in pClearValues array.
+    Uint32 ClearValueCount          DEFAULT_INITIALIZER(0);
+
+    /// A pointer to an array of ClearValueCount OptimizedClearValue structures that contains
+    /// clear values for each attachment, if the attachment uses a LoadOp value of ATTACHMENT_LOAD_OP_CLEAR
+    /// or if the attachment has a depth/stencil format and uses a StencilLoadOp value of ATTACHMENT_LOAD_OP_CLEAR.
+    /// The array is indexed by attachment number. Only elements corresponding to cleared attachments are used.
+    /// Other elements of pClearValues are ignored.
+    OptimizedClearValue* pClearValues   DEFAULT_INITIALIZER(nullptr);
+
+    /// Framebuffer attachments state transition mode before the render pass begins.
+
+    /// This parameter also indicates how attachment states should be handled when
+    /// transitioning between subpasses as well as after the render pass ends.
+    /// When RESOURCE_STATE_TRANSITION_MODE_TRANSITION is used, attachment states will be
+    /// updated so that they match the state in the current subpass as well as the final states
+    /// specified by the render pass when the pass ends.
+    /// Note that resources are always transitioned. The flag only indicates if the internal
+    /// state variables should be updated.
+    /// When RESOURCE_STATE_TRANSITION_MODE_NONE or RESOURCE_STATE_TRANSITION_MODE_VERIFY is used,
+    /// internal state variables are not updated and it is the application responsibility to set them
+    /// manually to match the actual states.
+    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+};
+typedef struct BeginRenderPassAttribs BeginRenderPassAttribs;
+
 #define DILIGENT_INTERFACE_NAME IDeviceContext
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -862,6 +902,21 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                           ITextureView*                  ppRenderTargets[],
                                           ITextureView*                  pDepthStencil,
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
+
+
+    /// Begins a new render pass.
+
+    /// \param [in] Attribs - The command attributes, see Diligent::BeginRenderPassAttribs for details.
+    VIRTUAL void METHOD(BeginRenderPass)(THIS_
+                                         const BeginRenderPassAttribs REF Attribs) PURE;
+    
+
+    /// Transitions to the next subpass in the render pass instance.
+    VIRTUAL void METHOD(NextSubpass)(THIS) PURE;
+
+
+    /// Ends current render pass.
+    VIRTUAL void METHOD(EndRenderPass)(THIS) PURE;
 
 
     /// Executes a draw command.

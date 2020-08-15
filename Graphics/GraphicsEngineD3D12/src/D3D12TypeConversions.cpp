@@ -329,7 +329,7 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
 
 static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STATE StateFlag)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -349,6 +349,7 @@ static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STAT
         case RESOURCE_STATE_COPY_SOURCE:       return D3D12_RESOURCE_STATE_COPY_SOURCE;
         case RESOURCE_STATE_RESOLVE_DEST:      return D3D12_RESOURCE_STATE_RESOLVE_DEST;
         case RESOURCE_STATE_RESOLVE_SOURCE:    return D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
+        case RESOURCE_STATE_INPUT_ATTACHMENT:  return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         case RESOURCE_STATE_PRESENT:           return D3D12_RESOURCE_STATE_PRESENT;
         // clang-format on
         default:
@@ -376,7 +377,7 @@ public:
     }
 
 private:
-    static constexpr Uint32                              MaxFlagBitPos = 15;
+    static constexpr Uint32                              MaxFlagBitPos = 16;
     std::array<D3D12_RESOURCE_STATES, MaxFlagBitPos + 1> FlagBitPosToResStateMap;
 };
 
@@ -398,7 +399,7 @@ D3D12_RESOURCE_STATES ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE Sta
 
 static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STATES state)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x8000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
     VERIFY((state & (state - 1)) == 0, "Only single state must be set");
     switch (state)
     {
@@ -497,6 +498,37 @@ D3D12_QUERY_HEAP_TYPE QueryTypeToD3D12QueryHeapType(QUERY_TYPE QueryType)
         default:
             UNEXPECTED("Unexpected query type");
             return static_cast<D3D12_QUERY_HEAP_TYPE>(-1);
+    }
+    // clang-format on
+}
+
+D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE AttachmentLoadOpToD3D12BeginningAccessType(ATTACHMENT_LOAD_OP LoadOp)
+{
+    // clang-format off
+    switch (LoadOp)
+    {
+        case ATTACHMENT_LOAD_OP_LOAD:    return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+        case ATTACHMENT_LOAD_OP_CLEAR:   return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+        case ATTACHMENT_LOAD_OP_DISCARD: return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_DISCARD;
+
+        default:
+            UNEXPECTED("Unexpected attachment load op");
+            return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+    }
+    // clang-format on
+}
+
+D3D12_RENDER_PASS_ENDING_ACCESS_TYPE AttachmentStoreOpToD3D12EndingAccessType(ATTACHMENT_STORE_OP StoreOp)
+{
+    // clang-format off
+    switch (StoreOp)
+    {
+        case ATTACHMENT_STORE_OP_STORE:    return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+        case ATTACHMENT_STORE_OP_DISCARD:  return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD;
+
+        default:
+            UNEXPECTED("Unexpected attachment store op");
+            return D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
     }
     // clang-format on
 }

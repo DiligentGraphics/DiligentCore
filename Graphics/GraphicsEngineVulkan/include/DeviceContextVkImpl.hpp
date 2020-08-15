@@ -45,6 +45,8 @@
 #include "TextureVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
 #include "QueryVkImpl.hpp"
+#include "FramebufferVkImpl.hpp"
+#include "RenderPassVkImpl.hpp"
 #include "HashUtils.hpp"
 #include "ManagedVulkanObject.hpp"
 #include "QueryManagerVk.hpp"
@@ -52,8 +54,6 @@
 
 namespace Diligent
 {
-
-class RenderDeviceVkImpl;
 
 struct DeviceContextVkImplTraits
 {
@@ -63,6 +63,8 @@ struct DeviceContextVkImplTraits
     using DeviceType        = RenderDeviceVkImpl;
     using ICommandQueueType = ICommandQueueVk;
     using QueryType         = QueryVkImpl;
+    using FramebufferType   = FramebufferVkImpl;
+    using RenderPassType    = RenderPassVkImpl;
 };
 
 /// Device context implementation in Vulkan backend.
@@ -132,6 +134,15 @@ public:
                                                      ITextureView*                  ppRenderTargets[],
                                                      ITextureView*                  pDepthStencil,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
+
+    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::NextSubpass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
+
+    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     // clang-format off
     /// Implementation of IDeviceContext::Draw() in Vulkan backend.
@@ -427,11 +438,11 @@ private:
 
     /// Render pass that matches currently bound render targets.
     /// This render pass may or may not be currently set in the command buffer
-    VkRenderPass m_RenderPass = VK_NULL_HANDLE;
+    VkRenderPass m_vkRenderPass = VK_NULL_HANDLE;
 
     /// Framebuffer that matches currently bound render targets.
     /// This framebuffer may or may not be currently set in the command buffer
-    VkFramebuffer m_Framebuffer = VK_NULL_HANDLE;
+    VkFramebuffer m_vkFramebuffer = VK_NULL_HANDLE;
 
     FixedBlockMemoryAllocator m_CmdListAllocator;
 
@@ -489,6 +500,8 @@ private:
 
     std::unique_ptr<QueryManagerVk> m_QueryMgr;
     Int32                           m_ActiveQueriesCounter = 0;
+
+    std::vector<VkClearValue> m_vkClearValues;
 };
 
 } // namespace Diligent

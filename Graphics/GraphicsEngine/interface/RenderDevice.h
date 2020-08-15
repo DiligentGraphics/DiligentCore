@@ -46,6 +46,8 @@
 #include "PipelineState.h"
 #include "Fence.h"
 #include "Query.h"
+#include "RenderPass.h"
+#include "Framebuffer.h"
 
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
@@ -186,6 +188,31 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreateQuery)(THIS_
                                      const QueryDesc REF Desc,
                                      IQuery**            ppQuery) PURE;
+
+
+    /// Creates a render pass object
+
+    /// \param [in]  Desc         - Render pass description, see Diligent::RenderPassDesc for details.
+    /// \param [out] ppRenderPass - Address of the memory location where the pointer to the
+    ///                             render pass interface will be stored.
+    ///                             The function calls AddRef(), so that the new object will contain
+    ///                             one reference.
+    VIRTUAL void METHOD(CreateRenderPass)(THIS_
+                                          const RenderPassDesc REF Desc,
+                                          IRenderPass**            ppRenderPass) PURE;
+
+
+
+    /// Creates a framebuffer object
+
+    /// \param [in]  Desc          - Framebuffer description, see Diligent::FramebufferDesc for details.
+    /// \param [out] ppFramebuffer - Address of the memory location where the pointer to the
+    ///                              framebuffer interface will be stored.
+    ///                              The function calls AddRef(), so that the new object will contain
+    ///                              one reference.
+    VIRTUAL void METHOD(CreateFramebuffer)(THIS_
+                                           const FramebufferDesc REF Desc,
+                                           IFramebuffer**            ppFramebuffer) PURE;
 
 
     /// Gets the device capabilities, see Diligent::DeviceCaps for details

@@ -83,6 +83,30 @@ float4 main(in PSInput PSIn) : SV_Target
 }
 )"
 };
+
+const std::string InputAttachmentTest_PS{
+R"(
+
+Texture2D<float4> g_SubpassInput;
+SamplerState      g_SubpassInput_sampler;
+
+struct PSInput 
+{ 
+    float4 Pos   : SV_POSITION; 
+    float3 Color : COLOR; 
+};
+
+float4 main(in PSInput PSIn) : SV_Target
+{
+    float4 Color;
+    Color.rgb = PSIn.Color.rgb * 0.125;
+    Color.rgb += (float3(1.0, 1.0, 1.0) - g_SubpassInput.Load(int3(PSIn.Pos.xy, 0)).brg) * 0.875;
+    Color.a = 1.0;
+    return Color;
+}
+)"
+};
+
 // clang-format on
 
 } // namespace HLSL

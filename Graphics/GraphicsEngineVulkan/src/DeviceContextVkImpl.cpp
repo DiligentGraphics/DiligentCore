@@ -32,6 +32,7 @@
 #include "PipelineStateVkImpl.hpp"
 #include "TextureVkImpl.hpp"
 #include "BufferVkImpl.hpp"
+#include "RenderPassVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 #include "CommandListVkImpl.hpp"
 #include "FenceVkImpl.hpp"
@@ -114,6 +115,8 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
     RefCntAutoPtr<IBuffer> pDummyVB;
     m_pDevice->CreateBuffer(DummyVBDesc, nullptr, &pDummyVB);
     m_DummyVB = pDummyVB.RawPtr<BufferVkImpl>();
+
+    m_vkClearValues.reserve(16);
 }
 
 DeviceContextVkImpl::~DeviceContextVkImpl()
@@ -176,7 +179,7 @@ void DeviceContextVkImpl::DisposeVkCmdBuffer(Uint32 CmdQueue, VkCommandBuffer vk
     public:
         // clang-format off
         CmdBufferDeleter(VkCommandBuffer                           _vkCmdBuff, 
-                            VulkanUtilities::VulkanCommandBufferPool& _Pool) noexcept :
+                         VulkanUtilities::VulkanCommandBufferPool& _Pool) noexcept :
             vkCmdBuff {_vkCmdBuff},
             Pool      {&_Pool    }
         {
@@ -231,9 +234,11 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     if (PipelineStateVkImpl::IsSameObject(m_pPipelineState, pPipelineStateVk))
         return;
 
-    // Never flush deferred context!
-    // A query must begin and end in the same command buffer (17.2)
-    if (!m_bIsDeferred && m_State.NumCommands >= m_NumCommandsToFlush && m_ActiveQueriesCounter == 0)
+    if (m_State.NumCommands >= m_NumCommandsToFlush &&
+        !m_bIsDeferred &&           // Never flush deferred context
+        !m_pActiveRenderPass &&     // Never flush inside active render pass (https://www.khronos.org/registry/vulkan/specs/1.2-extensions/html/vkspec.html#VUID-vkEndCommandBuffer-commandBuffer-00060)
+        m_ActiveQueriesCounter == 0 // A query must begin and end in the same command buffer (17.2)
+    )
     {
         Flush();
     }
@@ -278,7 +283,6 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
         {
             m_CommandBuffer.SetStencilReference(m_StencilRef);
             m_CommandBuffer.SetBlendConstants(m_BlendFactors);
-            CommitRenderPassAndFramebuffer(true);
             CommitViewports();
         }
 
@@ -293,7 +297,12 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
 
 void DeviceContextVkImpl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
-    VERIFY_EXPR(pPipelineState != nullptr);
+    DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must mot be null");
+    if (m_pActiveRenderPass)
+    {
+        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
+        return;
+    }
 
     auto* pPipelineStateVk = ValidatedCast<PipelineStateVkImpl>(pPipelineState);
     pPipelineStateVk->CommitAndTransitionShaderResources(pShaderResourceBinding, this, false, RESOURCE_STATE_TRANSITION_MODE_TRANSITION, nullptr);
@@ -417,6 +426,9 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #ifdef DILIGENT_DEVELOPMENT
     if ((Flags & DRAW_FLAG_VERIFY_RENDER_TARGETS) != 0)
         DvpVerifyRenderTargets();
+
+    VERIFY(m_vkRenderPass != VK_NULL_HANDLE, "No render pass is active while executing draw command");
+    VERIFY(m_vkFramebuffer != VK_NULL_HANDLE, "No framebuffer is bound while executing draw command");
 #endif
 
     EnsureVkCmdBuffer();
@@ -460,14 +472,19 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #    endif
 #endif
 
-#ifdef DILIGENT_DEVELOPMENT
-    if (m_pPipelineState->GetVkRenderPass() != m_RenderPass)
+    if (m_pPipelineState->GetDesc().GraphicsPipeline.pRenderPass == nullptr)
     {
-        DvpLogRenderPass_PSOMismatch();
-    }
+#ifdef DILIGENT_DEVELOPMENT
+        if (m_pPipelineState->GetRenderPass()->GetVkRenderPass() != m_vkRenderPass)
+        {
+            // Note that different Vulkan render passes may still be compatible,
+            // so we should only verify implicit render passes
+            DvpLogRenderPass_PSOMismatch();
+        }
 #endif
 
-    CommitRenderPassAndFramebuffer((Flags & DRAW_FLAG_VERIFY_STATES) != 0);
+        CommitRenderPassAndFramebuffer((Flags & DRAW_FLAG_VERIFY_STATES) != 0);
+    }
 }
 
 BufferVkImpl* DeviceContextVkImpl::PrepareIndirectDrawAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode)
@@ -631,13 +648,21 @@ void DeviceContextVkImpl::ClearDepthStencil(ITextureView*                  pView
     const auto& ViewDesc = pVkDSV->GetDesc();
     VERIFY(ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D, "Depth-stencil view of a 3D texture should've been created as 2D texture array view");
 
-    if (pVkDSV == m_pBoundDepthStencil)
+    bool ClearAsAttachment = pVkDSV == m_pBoundDepthStencil;
+    VERIFY(m_pActiveRenderPass == nullptr || ClearAsAttachment,
+           "DSV was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearDepthStencil "
+           "checks if the DSV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
+    if (ClearAsAttachment)
     {
-        // Render pass may not be currently committed
-        VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
-        TransitionRenderTargets(StateTransitionMode);
-        // No need to verify states again
-        CommitRenderPassAndFramebuffer(false);
+        VERIFY_EXPR(m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE);
+        if (m_pActiveRenderPass == nullptr)
+        {
+            // Render pass may not be currently committed
+
+            TransitionRenderTargets(StateTransitionMode);
+            // No need to verify states again
+            CommitRenderPassAndFramebuffer(false);
+        }
 
         VkClearAttachment ClearAttachment = {};
         ClearAttachment.aspectMask        = 0;
@@ -732,7 +757,7 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     VERIFY(ViewDesc.TextureDim != RESOURCE_DIM_TEX_3D, "Render target view of a 3D texture should've been created as 2D texture array view");
 
     // Check if the texture is one of the currently bound render targets
-    static constexpr const Uint32 InvalidAttachmentIndex = static_cast<Uint32>(-1);
+    static constexpr const Uint32 InvalidAttachmentIndex = ~Uint32{0};
 
     Uint32 attachmentIndex = InvalidAttachmentIndex;
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
@@ -744,13 +769,21 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
         }
     }
 
+    VERIFY(m_pActiveRenderPass == nullptr || attachmentIndex != InvalidAttachmentIndex,
+           "Render target was not found in the framebuffer. This is unexpected because TDeviceContextBase::ClearRenderTarget "
+           "checks if the RTV is bound as a framebuffer attachment and returns false otherwise (in development mode).");
+
     if (attachmentIndex != InvalidAttachmentIndex)
     {
-        // Render pass may not be currently committed
-        VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE && m_Framebuffer != VK_NULL_HANDLE);
-        TransitionRenderTargets(StateTransitionMode);
-        // No need to verify states again
-        CommitRenderPassAndFramebuffer(false);
+        VERIFY_EXPR(m_vkRenderPass != VK_NULL_HANDLE && m_vkFramebuffer != VK_NULL_HANDLE);
+        if (m_pActiveRenderPass == nullptr)
+        {
+            // Render pass may not be currently committed
+
+            TransitionRenderTargets(StateTransitionMode);
+            // No need to verify states again
+            CommitRenderPassAndFramebuffer(false);
+        }
 
         VkClearAttachment ClearAttachment = {};
         ClearAttachment.aspectMask        = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -773,6 +806,8 @@ void DeviceContextVkImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     }
     else
     {
+        VERIFY(m_pActiveRenderPass == nullptr, "This branch should never execute inside a render pass.");
+
         // End current render pass and clear the image with vkCmdClearColorImage
         if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
             m_CommandBuffer.EndRenderPass();
@@ -837,6 +872,11 @@ void DeviceContextVkImpl::FinishFrame()
                           "All queries must be ended before the frame is finished.");
     }
 
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Finishing frame inside an active render pass.");
+    }
+
     if (!m_MappedTextures.empty())
         LOG_ERROR_MESSAGE("There are mapped textures in the device context when finishing the frame. All dynamic resources must be used in the same frame in which they are mapped.");
 
@@ -866,14 +906,19 @@ void DeviceContextVkImpl::Flush()
 {
     if (m_bIsDeferred)
     {
-        LOG_ERROR_MESSAGE("Flush() should only be called for immediate contexts");
+        LOG_ERROR_MESSAGE("Flush() should only be called for immediate contexts.");
         return;
     }
 
     if (m_ActiveQueriesCounter > 0)
     {
         LOG_ERROR_MESSAGE("Flushing device context that has ", m_ActiveQueriesCounter,
-                          " active queries. Vulkan requires that queries are begun and ended in the same command buffer");
+                          " active queries. Vulkan requires that queries are begun and ended in the same command buffer.");
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
     }
 
     VkSubmitInfo SubmitInfo = {};
@@ -933,7 +978,9 @@ void DeviceContextVkImpl::Flush()
     m_State = ContextState{};
     m_DescrSetBindInfo.Reset();
     m_CommandBuffer.Reset();
-    m_pPipelineState = nullptr;
+    m_pPipelineState    = nullptr;
+    m_pActiveRenderPass = nullptr;
+    m_pBoundFramebuffer = nullptr;
 }
 
 void DeviceContextVkImpl::SetVertexBuffers(Uint32                         StartSlot,
@@ -962,9 +1009,9 @@ void DeviceContextVkImpl::InvalidateState()
         LOG_WARNING_MESSAGE("Invalidating context that has outstanding commands in it. Call Flush() to submit commands for execution");
 
     TDeviceContextBase::InvalidateState();
-    m_State       = ContextState{};
-    m_RenderPass  = VK_NULL_HANDLE;
-    m_Framebuffer = VK_NULL_HANDLE;
+    m_State         = ContextState{};
+    m_vkRenderPass  = VK_NULL_HANDLE;
+    m_vkFramebuffer = VK_NULL_HANDLE;
     m_DescrSetBindInfo.Reset();
     VERIFY(m_CommandBuffer.GetState().RenderPass == VK_NULL_HANDLE, "Invalidating context with unifinished render pass");
     m_CommandBuffer.Reset();
@@ -1078,6 +1125,9 @@ void DeviceContextVkImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
 
 void DeviceContextVkImpl::TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+    VERIFY(StateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION || m_pActiveRenderPass == nullptr,
+           "State transitions are not allowed inside a render pass.");
+
     if (m_pBoundDepthStencil)
     {
         auto* pDepthBufferVk = ValidatedCast<TextureVkImpl>(m_pBoundDepthStencil->GetTexture());
@@ -1098,22 +1148,24 @@ void DeviceContextVkImpl::TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE
 
 void DeviceContextVkImpl::CommitRenderPassAndFramebuffer(bool VerifyStates)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "This method must not be called inside an active render pass.");
+
     const auto& CmdBufferState = m_CommandBuffer.GetState();
-    if (CmdBufferState.Framebuffer != m_Framebuffer)
+    if (CmdBufferState.Framebuffer != m_vkFramebuffer)
     {
         if (CmdBufferState.RenderPass != VK_NULL_HANDLE)
             m_CommandBuffer.EndRenderPass();
 
-        if (m_Framebuffer != VK_NULL_HANDLE)
+        if (m_vkFramebuffer != VK_NULL_HANDLE)
         {
-            VERIFY_EXPR(m_RenderPass != VK_NULL_HANDLE);
+            VERIFY_EXPR(m_vkRenderPass != VK_NULL_HANDLE);
 #ifdef DILIGENT_DEVELOPMENT
             if (VerifyStates)
             {
                 TransitionRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
             }
 #endif
-            m_CommandBuffer.BeginRenderPass(m_RenderPass, m_Framebuffer, m_FramebufferWidth, m_FramebufferHeight);
+            m_CommandBuffer.BeginRenderPass(m_vkRenderPass, m_vkFramebuffer, m_FramebufferWidth, m_FramebufferHeight);
         }
     }
 }
@@ -1123,6 +1175,14 @@ void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRen
                                            ITextureView*                  pDepthStencil,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
+        return;
+    }
+#endif
+
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
         FramebufferCache::FramebufferCacheKey FBKey;
@@ -1163,12 +1223,12 @@ void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRen
         }
 
         auto& FBCache = m_pDevice->GetFramebufferCache();
-        auto& RPCache = m_pDevice->GetRenderPassCache();
+        auto& RPCache = m_pDevice->GetImplicitRenderPassCache();
 
-        m_RenderPass           = RPCache.GetRenderPass(RenderPassKey);
-        FBKey.Pass             = m_RenderPass;
+        m_vkRenderPass         = RPCache.GetRenderPass(RenderPassKey)->GetVkRenderPass();
+        FBKey.Pass             = m_vkRenderPass;
         FBKey.CommandQueueMask = ~Uint64{0};
-        m_Framebuffer          = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
+        m_vkFramebuffer        = FBCache.GetFramebuffer(FBKey, m_FramebufferWidth, m_FramebufferHeight, m_FramebufferSlices);
 
         // Set the viewport to match the render target size
         SetViewports(1, nullptr, 0, 0);
@@ -1184,10 +1244,79 @@ void DeviceContextVkImpl::SetRenderTargets(Uint32                         NumRen
 void DeviceContextVkImpl::ResetRenderTargets()
 {
     TDeviceContextBase::ResetRenderTargets();
-    m_RenderPass  = VK_NULL_HANDLE;
-    m_Framebuffer = VK_NULL_HANDLE;
+    m_vkRenderPass  = VK_NULL_HANDLE;
+    m_vkFramebuffer = VK_NULL_HANDLE;
     if (m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE && m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
         m_CommandBuffer.EndRenderPass();
+}
+
+void DeviceContextVkImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+{
+    TDeviceContextBase::BeginRenderPass(Attribs);
+
+    VERIFY_EXPR(m_pActiveRenderPass != nullptr);
+    VERIFY_EXPR(m_pBoundFramebuffer != nullptr);
+    VERIFY_EXPR(m_vkRenderPass == VK_NULL_HANDLE);
+    VERIFY_EXPR(m_vkFramebuffer == VK_NULL_HANDLE);
+
+    m_vkRenderPass  = m_pActiveRenderPass->GetVkRenderPass();
+    m_vkFramebuffer = m_pBoundFramebuffer->GetVkFramebuffer();
+
+    VkClearValue* pVkClearValues = nullptr;
+    if (Attribs.ClearValueCount > 0)
+    {
+        m_vkClearValues.resize(Attribs.ClearValueCount);
+        const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+        for (Uint32 i = 0; i < std::min(RPDesc.AttachmentCount, Attribs.ClearValueCount); ++i)
+        {
+            const auto& ClearVal   = Attribs.pClearValues[i];
+            auto&       vkClearVal = m_vkClearValues[i];
+
+            const auto& FmtAttribs = GetTextureFormatAttribs(RPDesc.pAttachments[i].Format);
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
+                FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                vkClearVal.depthStencil.depth   = ClearVal.DepthStencil.Depth;
+                vkClearVal.depthStencil.stencil = ClearVal.DepthStencil.Stencil;
+            }
+            else
+            {
+                vkClearVal.color.float32[0] = ClearVal.Color[0];
+                vkClearVal.color.float32[1] = ClearVal.Color[1];
+                vkClearVal.color.float32[2] = ClearVal.Color[2];
+                vkClearVal.color.float32[3] = ClearVal.Color[3];
+            }
+        }
+        pVkClearValues = m_vkClearValues.data();
+    }
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.BeginRenderPass(m_vkRenderPass, m_vkFramebuffer, m_FramebufferWidth, m_FramebufferHeight, Attribs.ClearValueCount, pVkClearValues);
+
+    // Set the viewport to match the framebuffer size
+    SetViewports(1, nullptr, 0, 0);
+}
+
+void DeviceContextVkImpl::NextSubpass()
+{
+    TDeviceContextBase::NextSubpass();
+    VERIFY_EXPR(m_CommandBuffer.GetVkCmdBuffer() != VK_NULL_HANDLE && m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE);
+    m_CommandBuffer.NextSubpass();
+}
+
+void DeviceContextVkImpl::EndRenderPass()
+{
+    TDeviceContextBase::EndRenderPass();
+    // TDeviceContextBase::EndRenderPass calls ResetRenderTargets() that in turn
+    // calls m_CommandBuffer.EndRenderPass()
+
+    if (m_State.NumCommands >= m_NumCommandsToFlush &&
+        !m_bIsDeferred &&           // Never flush deferred context
+        m_ActiveQueriesCounter == 0 // A query must begin and end in the same command buffer (17.2)
+    )
+    {
+        Flush();
+    }
 }
 
 void DeviceContextVkImpl::UpdateBufferRegion(BufferVkImpl*                  pBuffVk,
@@ -1948,6 +2077,8 @@ void DeviceContextVkImpl::UnmapTextureSubresource(ITexture* pTexture,
 
 void DeviceContextVkImpl::FinishCommandList(class ICommandList** ppCommandList)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
+
     if (m_CommandBuffer.GetState().RenderPass != VK_NULL_HANDLE)
     {
         m_CommandBuffer.EndRenderPass();
@@ -2112,6 +2243,7 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
 void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayout NewLayout)
 {
     VERIFY_EXPR(pTexture != nullptr);
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
     auto pTextureVk = ValidatedCast<TextureVkImpl>(pTexture);
     if (!pTextureVk->IsInKnownState())
     {
@@ -2131,6 +2263,7 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
                                                  bool                     UpdateTextureState,
                                                  VkImageSubresourceRange* pSubresRange /* = nullptr*/)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
     if (OldState == RESOURCE_STATE_UNKNOWN)
     {
         if (TextureVk.IsInKnownState())
@@ -2206,6 +2339,7 @@ void DeviceContextVkImpl::TransitionOrVerifyTextureState(TextureVkImpl&         
 {
     if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
+        VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
         if (Texture.IsInKnownState())
         {
             if (!Texture.CheckState(RequiredState))
@@ -2253,6 +2387,7 @@ void DeviceContextVkImpl::BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags Ne
 
 void DeviceContextVkImpl::TransitionBufferState(BufferVkImpl& BufferVk, RESOURCE_STATE OldState, RESOURCE_STATE NewState, bool UpdateBufferState)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
     if (OldState == RESOURCE_STATE_UNKNOWN)
     {
         if (BufferVk.IsInKnownState())
@@ -2302,6 +2437,7 @@ void DeviceContextVkImpl::TransitionOrVerifyBufferState(BufferVkImpl&           
 {
     if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
+        VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
         if (Buffer.IsInKnownState())
         {
             if (!Buffer.CheckState(RequiredState))
@@ -2330,6 +2466,8 @@ VulkanDynamicAllocation DeviceContextVkImpl::AllocateDynamicSpace(Uint32 SizeInB
 
 void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
+
     if (BarrierCount == 0)
         return;
 

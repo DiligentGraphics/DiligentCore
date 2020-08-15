@@ -64,7 +64,7 @@ class ResourceTypeToVkDescriptorType
 public:
     ResourceTypeToVkDescriptorType()
     {
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 10, "Please add corresponding decriptor type");
+        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 11, "Please add the corresponding decriptor type");
         m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]      = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer]    = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer]    = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
@@ -75,6 +75,7 @@ public:
         m_Map[SPIRVShaderResourceAttribs::ResourceType::AtomicCounter]      = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateImage]      = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateSampler]    = VK_DESCRIPTOR_TYPE_SAMPLER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::InputAttachment]    = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
     }
 
     VkDescriptorType operator[](SPIRVShaderResourceAttribs::ResourceType ResType) const

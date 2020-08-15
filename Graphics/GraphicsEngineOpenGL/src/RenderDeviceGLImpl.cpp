@@ -46,6 +46,8 @@
 #include "ShaderResourceBindingGLImpl.hpp"
 #include "FenceGLImpl.hpp"
 #include "QueryGLImpl.hpp"
+#include "RenderPassGLImpl.hpp"
+#include "FramebufferGLImpl.hpp"
 #include "EngineMemory.h"
 #include "StringTools.hpp"
 
@@ -75,7 +77,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
             sizeof(PipelineStateGLImpl),
             sizeof(ShaderResourceBindingGLImpl),
             sizeof(FenceGLImpl),
-            sizeof(QueryGLImpl)
+            sizeof(QueryGLImpl),
+            sizeof(RenderPassGLImpl),
+            sizeof(FramebufferGLImpl)
         }
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
@@ -513,6 +517,34 @@ void RenderDeviceGLImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
             OnCreateDeviceObject(pQueryOGL);
         } //
     );
+}
+
+void RenderDeviceGLImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
+{
+    CreateDeviceObject(
+        "RenderPass", Desc, ppRenderPass,
+        [&]() //
+        {
+            RenderPassGLImpl* pRenderPassOGL(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassGLImpl instance", RenderPassGLImpl)(this, Desc));
+            pRenderPassOGL->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+            OnCreateDeviceObject(pRenderPassOGL);
+        } //
+    );
+}
+
+void RenderDeviceGLImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
+{
+    CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
+                       [&]() //
+                       {
+                           auto spDeviceContext = GetImmediateContext();
+                           VERIFY(spDeviceContext, "Immediate device context has been destroyed");
+                           auto& GLState = spDeviceContext.RawPtr<DeviceContextGLImpl>()->GetContextState();
+
+                           FramebufferGLImpl* pFramebufferGL(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferGLImpl instance", FramebufferGLImpl)(this, GLState, Desc));
+                           pFramebufferGL->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
+                           OnCreateDeviceObject(pFramebufferGL);
+                       });
 }
 
 bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString)

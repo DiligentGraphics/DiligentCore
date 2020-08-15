@@ -260,6 +260,11 @@ public:
                                   VkDescriptorSet                  vkDescrSet,
                                   Uint32                           ArrayInd) const;
 
+        void CacheInputAttachment(IDeviceObject*                   pTexView,
+                                  ShaderResourceCacheVk::Resource& DstRes,
+                                  VkDescriptorSet                  vkDescrSet,
+                                  Uint32                           ArrayInd) const;
+
         template <typename ObjectType, typename TPreUpdateObject>
         bool UpdateCachedResource(ShaderResourceCacheVk::Resource& DstRes,
                                   RefCntAutoPtr<ObjectType>&&      pObject,

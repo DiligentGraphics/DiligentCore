@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added render passes (API Version 240065)
 * Added `CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS` enum and `IShaderSourceInputStreamFactory::CreateInputStream2` method (API Version 240064)
 * Added `ISwapChain::SetMaximumFrameLatency` function (API Version 240061)
 * Added `EngineGLCreateInfo::CreateDebugContext` member (API Version 240060)

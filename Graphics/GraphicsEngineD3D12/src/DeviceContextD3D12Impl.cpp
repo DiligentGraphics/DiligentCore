@@ -230,7 +230,10 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         {
             GraphicsCtx.SetStencilRef(m_StencilRef);
             GraphicsCtx.SetBlendFactor(m_BlendFactors);
-            CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            if (PSODesc.GraphicsPipeline.pRenderPass == nullptr)
+            {
+                CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+            }
             CommitViewports();
         }
 
@@ -245,7 +248,12 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 
 void DeviceContextD3D12Impl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
-    VERIFY_EXPR(pPipelineState != nullptr);
+    DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must mot be null");
+    if (m_pActiveRenderPass)
+    {
+        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
+        return;
+    }
 
     auto& Ctx = GetCmdContext();
 
@@ -612,6 +620,12 @@ void DeviceContextD3D12Impl::ClearDepthStencil(ITextureView*                  pV
                                                Uint8                          Stencil,
                                                RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Direct3D12 does not allow depth-stencil clears inside a render pass");
+        return;
+    }
+
     if (!TDeviceContextBase::ClearDepthStencil(pView))
         return;
 
@@ -634,6 +648,12 @@ void DeviceContextD3D12Impl::ClearDepthStencil(ITextureView*                  pV
 
 void DeviceContextD3D12Impl::ClearRenderTarget(ITextureView* pView, const float* RGBA, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Direct3D12 does not allow render target clears inside a render pass");
+        return;
+    }
+
     if (!TDeviceContextBase::ClearRenderTarget(pView))
         return;
 
@@ -707,6 +727,11 @@ void DeviceContextD3D12Impl::Flush()
         return;
     }
 
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
+    }
+
     Flush(true);
 }
 
@@ -746,6 +771,11 @@ void DeviceContextD3D12Impl::FinishFrame()
         LOG_ERROR_MESSAGE("There are ", m_ActiveQueriesCounter,
                           " active queries in the device context when finishing the frame. "
                           "All queries must be ended before the frame is finished.");
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Finishing frame inside an active render pass.");
     }
 
     VERIFY_EXPR(m_bIsDeferred || m_SubmittedBuffersCmdQueueMask == (Uint64{1} << m_CommandQueueId));
@@ -905,6 +935,8 @@ void DeviceContextD3D12Impl::SetScissorRects(Uint32 NumRects, const Rect* pRects
 
 void DeviceContextD3D12Impl::CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "This method must not be called inside a render pass");
+
     const Uint32 MaxD3D12RTs      = D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT;
     Uint32       NumRenderTargets = m_NumBoundRenderTargets;
     VERIFY(NumRenderTargets <= MaxD3D12RTs, "D3D12 only allows 8 simultaneous render targets");
@@ -960,6 +992,14 @@ void DeviceContextD3D12Impl::SetRenderTargets(Uint32                         Num
                                               ITextureView*                  pDepthStencil,
                                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
+        return;
+    }
+#endif
+
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
         CommitRenderTargets(StateTransitionMode);
@@ -967,6 +1007,257 @@ void DeviceContextD3D12Impl::SetRenderTargets(Uint32                         Num
         // Set the viewport to match the render target size
         SetViewports(1, nullptr, 0, 0);
     }
+}
+
+void DeviceContextD3D12Impl::TransitionSubpassAttachments(Uint32 NextSubpass)
+{
+    VERIFY_EXPR(m_pActiveRenderPass);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_pBoundFramebuffer);
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+    VERIFY_EXPR(RPDesc.AttachmentCount == FBDesc.AttachmentCount);
+    for (Uint32 att = 0; att < RPDesc.AttachmentCount; ++att)
+    {
+        const auto& AttDesc  = RPDesc.pAttachments[att];
+        auto        OldState = NextSubpass > 0 ? m_pActiveRenderPass->GetAttachmentState(NextSubpass - 1, att) : AttDesc.InitialState;
+        auto        NewState = NextSubpass < RPDesc.SubpassCount ? m_pActiveRenderPass->GetAttachmentState(NextSubpass, att) : AttDesc.FinalState;
+        if (OldState != NewState)
+        {
+            auto& CmdCtx = GetCmdContext();
+
+            auto* pViewD3D12 = ValidatedCast<TextureViewD3D12Impl>(FBDesc.ppAttachments[att]);
+            if (pViewD3D12 == nullptr)
+                continue;
+
+            auto* pTexD3D12 = pViewD3D12->GetTexture<TextureD3D12Impl>();
+
+            const auto& ViewDesc = pViewD3D12->GetDesc();
+            const auto& TexDesc  = pTexD3D12->GetDesc();
+
+            D3D12_RESOURCE_BARRIER BarrierDesc;
+            BarrierDesc.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            BarrierDesc.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            BarrierDesc.Transition.pResource   = pTexD3D12->GetD3D12Resource();
+            BarrierDesc.Transition.StateBefore = ResourceStateFlagsToD3D12ResourceStates(OldState);
+            BarrierDesc.Transition.StateAfter  = ResourceStateFlagsToD3D12ResourceStates(NewState);
+            for (Uint32 mip = ViewDesc.MostDetailedMip; mip < ViewDesc.MostDetailedMip + ViewDesc.NumDepthSlices; ++mip)
+            {
+                for (Uint32 slice = ViewDesc.FirstArraySlice; slice < ViewDesc.FirstArraySlice + ViewDesc.NumArraySlices; ++slice)
+                {
+                    BarrierDesc.Transition.Subresource = D3D12CalcSubresource(mip, slice, 0, TexDesc.MipLevels, TexDesc.ArraySize);
+                    CmdCtx.ResourceBarrier(BarrierDesc);
+                }
+            }
+        }
+    }
+}
+
+void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
+{
+    VERIFY_EXPR(m_pActiveRenderPass);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_pBoundFramebuffer);
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
+    VERIFY(Subpass.RenderTargetAttachmentCount == m_NumBoundRenderTargets,
+           "The number of currently bound render targets (", m_NumBoundRenderTargets,
+           ") is not consistent with the number of redner target attachments (", Subpass.RenderTargetAttachmentCount,
+           ") in current subpass");
+
+    D3D12_RENDER_PASS_RENDER_TARGET_DESC RenderPassRTs[MAX_RENDER_TARGETS];
+    for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
+    {
+        const auto& RTRef = Subpass.pRenderTargetAttachments[rt];
+        if (RTRef.AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            TextureViewD3D12Impl* pRTV = m_pBoundRenderTargets[rt];
+            VERIFY(pRTV == FBDesc.ppAttachments[RTRef.AttachmentIndex],
+                   "Render target bound in the device context at slot ", rt, " is not consistent with the corresponding framebuffer attachment");
+            const auto  FirstLastUse     = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTRef.AttachmentIndex);
+            const auto& RTAttachmentDesc = RPDesc.pAttachments[RTRef.AttachmentIndex];
+
+            auto& RPRT = RenderPassRTs[rt];
+            RPRT       = D3D12_RENDER_PASS_RENDER_TARGET_DESC{};
+
+            RPRT.cpuDescriptor = pRTV->GetCPUDescriptorHandle();
+            if (FirstLastUse.first == m_SubpassIndex)
+            {
+                // This is the first use of this attachment - use LoadOp
+                RPRT.BeginningAccess.Type = AttachmentLoadOpToD3D12BeginningAccessType(RTAttachmentDesc.LoadOp);
+            }
+            else
+            {
+                // Preserve the attachment contents
+                RPRT.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+            }
+
+            if (RPRT.BeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+            {
+                RPRT.BeginningAccess.Clear.ClearValue.Format = TexFormatToDXGI_Format(RTAttachmentDesc.Format);
+
+                const auto ClearColor = m_AttachmentClearValues[RTRef.AttachmentIndex].Color;
+                for (Uint32 i = 0; i < 4; ++i)
+                    RPRT.BeginningAccess.Clear.ClearValue.Color[i] = ClearColor[i];
+            }
+
+            if (FirstLastUse.second == m_SubpassIndex)
+            {
+                // This is the last use of this attachment - use StoreOp or resolve parameters
+                if (Subpass.pResolveAttachments != nullptr && Subpass.pResolveAttachments[rt].AttachmentIndex != ATTACHMENT_UNUSED)
+                {
+                    VERIFY_EXPR(Subpass.pResolveAttachments[rt].AttachmentIndex < RPDesc.AttachmentCount);
+                    auto* pDstView     = FBDesc.ppAttachments[Subpass.pResolveAttachments[rt].AttachmentIndex];
+                    auto* pSrcTexD3D12 = pRTV->GetTexture<TextureD3D12Impl>();
+                    auto* pDstTexD3D12 = ValidatedCast<TextureViewD3D12Impl>(pDstView)->GetTexture<TextureD3D12Impl>();
+
+                    const auto& SrcRTVDesc  = pRTV->GetDesc();
+                    const auto& DstViewDesc = pDstView->GetDesc();
+                    const auto& SrcTexDesc  = pSrcTexD3D12->GetDesc();
+                    const auto& DstTexDesc  = pDstTexD3D12->GetDesc();
+
+                    VERIFY_EXPR(SrcRTVDesc.NumArraySlices == 1);
+                    Uint32 SubresourceCount = SrcRTVDesc.NumArraySlices;
+                    m_AttachmentResolveInfo.resize(SubresourceCount);
+                    const auto MipProps = GetMipLevelProperties(SrcTexDesc, SrcRTVDesc.MostDetailedMip);
+                    for (Uint32 slice = 0; slice < SrcRTVDesc.NumArraySlices; ++slice)
+                    {
+                        auto& ARI = m_AttachmentResolveInfo[slice];
+
+                        ARI.SrcSubresource = D3D12CalcSubresource(SrcRTVDesc.MostDetailedMip, SrcRTVDesc.FirstArraySlice + slice, 0, SrcTexDesc.MipLevels, SrcTexDesc.ArraySize);
+                        ARI.DstSubresource = D3D12CalcSubresource(DstViewDesc.MostDetailedMip, DstViewDesc.FirstArraySlice + slice, 0, DstTexDesc.MipLevels, DstTexDesc.ArraySize);
+                        ARI.DstX           = 0;
+                        ARI.DstY           = 0;
+                        ARI.SrcRect.left   = 0;
+                        ARI.SrcRect.top    = 0;
+                        ARI.SrcRect.right  = MipProps.LogicalWidth;
+                        ARI.SrcRect.bottom = MipProps.LogicalHeight;
+                    }
+
+                    // The resolve source is left in its initial resource state at the time the render pass ends.
+                    // A resolve operation submitted by a render pass doesn't implicitly change the state of any resource.
+                    // https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_render_pass_ending_access_type
+                    RPRT.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_RESOLVE;
+
+                    auto& ResolveParams            = RPRT.EndingAccess.Resolve;
+                    ResolveParams.pSrcResource     = pSrcTexD3D12->GetD3D12Resource();
+                    ResolveParams.pDstResource     = pDstTexD3D12->GetD3D12Resource();
+                    ResolveParams.SubresourceCount = SubresourceCount;
+                    // This pointer is directly referenced by the command list, and the memory for this array
+                    // must remain alive and intact until EndRenderPass is called.
+                    ResolveParams.pSubresourceParameters = m_AttachmentResolveInfo.data();
+                    ResolveParams.Format                 = TexFormatToDXGI_Format(RTAttachmentDesc.Format);
+                    ResolveParams.ResolveMode            = D3D12_RESOLVE_MODE_AVERAGE;
+                    ResolveParams.PreserveResolveSource  = RTAttachmentDesc.StoreOp == ATTACHMENT_STORE_OP_STORE;
+                }
+                else
+                {
+                    RPRT.EndingAccess.Type = AttachmentStoreOpToD3D12EndingAccessType(RTAttachmentDesc.StoreOp);
+                }
+            }
+            else
+            {
+                // The attachment will be used in subsequent subpasses - preserve its contents
+                RPRT.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+            }
+        }
+        else
+        {
+            // Attachment is not used
+            RenderPassRTs[rt].BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_NO_ACCESS;
+            RenderPassRTs[rt].EndingAccess.Type    = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_NO_ACCESS;
+            continue;
+        }
+    }
+
+    D3D12_RENDER_PASS_DEPTH_STENCIL_DESC RenderPassDS;
+    if (m_pBoundDepthStencil)
+    {
+        RenderPassDS = D3D12_RENDER_PASS_DEPTH_STENCIL_DESC{};
+
+        const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
+        VERIFY_EXPR(Subpass.pDepthStencilAttachment != nullptr && DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED);
+        VERIFY(m_pBoundDepthStencil == FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex],
+               "Depth-stencil bufer in the device context is inconsistent with the framebuffer");
+        const auto  FirstLastUse     = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentRef.AttachmentIndex);
+        const auto& DSAttachmentDesc = RPDesc.pAttachments[DSAttachmentRef.AttachmentIndex];
+
+        RenderPassDS.cpuDescriptor = m_pBoundDepthStencil->GetCPUDescriptorHandle();
+        if (FirstLastUse.first == m_SubpassIndex)
+        {
+            RenderPassDS.DepthBeginningAccess.Type   = AttachmentLoadOpToD3D12BeginningAccessType(DSAttachmentDesc.LoadOp);
+            RenderPassDS.StencilBeginningAccess.Type = AttachmentLoadOpToD3D12BeginningAccessType(DSAttachmentDesc.StencilLoadOp);
+        }
+        else
+        {
+            RenderPassDS.DepthBeginningAccess.Type   = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+            RenderPassDS.StencilBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
+        }
+
+        if (RenderPassDS.DepthBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+        {
+            RenderPassDS.DepthBeginningAccess.Clear.ClearValue.Format = TexFormatToDXGI_Format(DSAttachmentDesc.Format);
+            RenderPassDS.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth =
+                m_AttachmentClearValues[DSAttachmentRef.AttachmentIndex].DepthStencil.Depth;
+        }
+
+        if (RenderPassDS.StencilBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR)
+        {
+            RenderPassDS.StencilBeginningAccess.Clear.ClearValue.Format = TexFormatToDXGI_Format(DSAttachmentDesc.Format);
+            RenderPassDS.StencilBeginningAccess.Clear.ClearValue.DepthStencil.Stencil =
+                m_AttachmentClearValues[DSAttachmentRef.AttachmentIndex].DepthStencil.Stencil;
+        }
+
+        if (FirstLastUse.second == m_SubpassIndex)
+        {
+            RenderPassDS.DepthEndingAccess.Type   = AttachmentStoreOpToD3D12EndingAccessType(DSAttachmentDesc.StoreOp);
+            RenderPassDS.StencilEndingAccess.Type = AttachmentStoreOpToD3D12EndingAccessType(DSAttachmentDesc.StencilStoreOp);
+        }
+        else
+        {
+            RenderPassDS.DepthEndingAccess.Type   = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+            RenderPassDS.StencilEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+        }
+    }
+
+    auto& CmdCtx = GetCmdContext();
+    CmdCtx.AsGraphicsContext().BeginRenderPass(
+        Subpass.RenderTargetAttachmentCount,
+        RenderPassRTs,
+        m_pBoundDepthStencil ? &RenderPassDS : nullptr,
+        D3D12_RENDER_PASS_FLAG_NONE);
+
+    // Set the viewport to match the framebuffer size
+    SetViewports(1, nullptr, 0, 0);
+}
+
+void DeviceContextD3D12Impl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+{
+    TDeviceContextBase::BeginRenderPass(Attribs);
+
+    m_AttachmentClearValues.resize(Attribs.ClearValueCount);
+    for (Uint32 i = 0; i < Attribs.ClearValueCount; ++i)
+        m_AttachmentClearValues[i] = Attribs.pClearValues[i];
+
+    TransitionSubpassAttachments(m_SubpassIndex);
+    CommitSubpassRenderTargets();
+}
+
+void DeviceContextD3D12Impl::NextSubpass()
+{
+    auto& CmdCtx = GetCmdContext();
+    CmdCtx.AsGraphicsContext().EndRenderPass();
+    TDeviceContextBase::NextSubpass();
+    TransitionSubpassAttachments(m_SubpassIndex);
+    CommitSubpassRenderTargets();
+}
+
+void DeviceContextD3D12Impl::EndRenderPass()
+{
+    auto& CmdCtx = GetCmdContext();
+    CmdCtx.AsGraphicsContext().EndRenderPass();
+    TransitionSubpassAttachments(m_SubpassIndex + 1);
+    TDeviceContextBase::EndRenderPass();
 }
 
 D3D12DynamicAllocation DeviceContextD3D12Impl::AllocateDynamicSpace(size_t NumBytes, size_t Alignment)
@@ -1652,6 +1943,8 @@ void DeviceContextD3D12Impl::GenerateMips(ITextureView* pTexView)
 
 void DeviceContextD3D12Impl::FinishCommandList(ICommandList** ppCommandList)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
+
     CommandListD3D12Impl* pCmdListD3D12(NEW_RC_OBJ(m_CmdListAllocator, "CommandListD3D12Impl instance", CommandListD3D12Impl)(m_pDevice, this, std::move(m_CurrCmdCtx)));
     pCmdListD3D12->QueryInterface(IID_CommandList, reinterpret_cast<IObject**>(ppCommandList));
     Flush(true);
@@ -1739,6 +2032,8 @@ void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
 
 void DeviceContextD3D12Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
+
     auto& CmdCtx = GetCmdContext();
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {

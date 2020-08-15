@@ -745,7 +745,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
             auto* pTexViewD3D12    = Res.pObject.RawPtr<TextureViewD3D12Impl>();
             auto* pTexToTransition = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
-            if (pTexToTransition->IsInKnownState() && !pTexToTransition->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+            if (pTexToTransition->IsInKnownState() && !pTexToTransition->CheckAnyState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT))
                 Ctx.TransitionResource(pTexToTransition, RESOURCE_STATE_SHADER_RESOURCE);
         }
         break;
@@ -835,7 +835,7 @@ void RootSignature::DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resou
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
             const auto* pTexViewD3D12 = Res.pObject.RawPtr<const TextureViewD3D12Impl>();
             const auto* pTexD3D12     = pTexViewD3D12->GetTexture<TextureD3D12Impl>();
-            if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+            if (pTexD3D12->IsInKnownState() && !pTexD3D12->CheckAnyState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT))
             {
                 LOG_ERROR_MESSAGE("Texture '", pTexD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_SHADER_RESOURCE state. Actual state: ",
                                   GetResourceStateString(pTexD3D12->GetState()),

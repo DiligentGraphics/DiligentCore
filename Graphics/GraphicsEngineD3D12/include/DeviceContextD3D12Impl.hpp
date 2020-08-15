@@ -31,19 +31,20 @@
 /// Declaration of Diligent::DeviceContextD3D12Impl class
 
 #include <unordered_map>
+#include <vector>
 
 #include "DeviceContextD3D12.h"
 #include "DeviceContextNextGenBase.hpp"
 #include "BufferD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
 #include "QueryD3D12Impl.hpp"
+#include "FramebufferD3D12Impl.hpp"
+#include "RenderPassD3D12Impl.hpp"
 #include "PipelineStateD3D12Impl.hpp"
 #include "D3D12DynamicHeap.hpp"
 
 namespace Diligent
 {
-
-class RenderDeviceD3D12Impl;
 
 struct DeviceContextD3D12ImplTraits
 {
@@ -53,6 +54,8 @@ struct DeviceContextD3D12ImplTraits
     using DeviceType        = RenderDeviceD3D12Impl;
     using ICommandQueueType = ICommandQueueD3D12;
     using QueryType         = QueryD3D12Impl;
+    using FramebufferType   = FramebufferD3D12Impl;
+    using RenderPassType    = RenderPassD3D12Impl;
 };
 
 /// Device context implementation in Direct3D12 backend.
@@ -121,6 +124,15 @@ public:
                                                      ITextureView*                  ppRenderTargets[],
                                                      ITextureView*                  pDepthStencil,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
+
+    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::NextSubpass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
+
+    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     // clang-format off
     /// Implementation of IDeviceContext::Draw() in Direct3D12 backend.
@@ -307,6 +319,8 @@ private:
     void CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE StateTransitionMode);
     void CommitViewports();
     void CommitScissorRects(class GraphicsContext& GraphCtx, bool ScissorEnable);
+    void TransitionSubpassAttachments(Uint32 NextSubpass);
+    void CommitSubpassRenderTargets();
     void Flush(bool RequestNewCmdCtx);
 
     __forceinline void RequestCommandContext(RenderDeviceD3D12Impl* pDeviceD3D12Impl);
@@ -414,6 +428,10 @@ private:
     std::unordered_map<MappedTextureKey, TextureUploadSpace, MappedTextureKey::Hasher> m_MappedTextures;
 
     Int32 m_ActiveQueriesCounter = 0;
+
+    std::vector<OptimizedClearValue> m_AttachmentClearValues;
+
+    std::vector<D3D12_RENDER_PASS_ENDING_ACCESS_RESOLVE_SUBRESOURCE_PARAMETERS> m_AttachmentResolveInfo;
 };
 
 } // namespace Diligent

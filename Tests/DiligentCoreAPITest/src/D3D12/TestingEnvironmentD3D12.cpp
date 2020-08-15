@@ -68,7 +68,7 @@ TestingEnvironmentD3D12::~TestingEnvironmentD3D12()
 CComPtr<ID3D12GraphicsCommandList> TestingEnvironmentD3D12::CreateGraphicsCommandList()
 {
     CComPtr<ID3D12GraphicsCommandList> pd3d12CmdList;
-    m_pd3d12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3d12CmdAllocator, nullptr, __uuidof(pd3d12CmdList),
+    m_pd3d12Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pd3d12CmdAllocator, nullptr, __uuidof(ID3D12GraphicsCommandList4),
                                       reinterpret_cast<void**>(static_cast<ID3D12GraphicsCommandList**>(&pd3d12CmdList)));
     return pd3d12CmdList;
 }

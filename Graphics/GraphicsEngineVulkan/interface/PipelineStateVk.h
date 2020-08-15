@@ -31,6 +31,7 @@
 /// Definition of the Diligent::IPipeplineStateVk interface
 
 #include "../../GraphicsEngine/interface/PipelineState.h"
+#include "RenderPassVk.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -48,8 +49,8 @@ static const INTERFACE_ID IID_PipelineStateVk =
 /// Exposes Vulkan-specific functionality of a pipeline state object.
 DILIGENT_BEGIN_INTERFACE(IPipelineStateVk, IPipelineState)
 {
-    /// Returns handle to a vulkan render pass object.
-    VIRTUAL VkRenderPass METHOD(GetVkRenderPass)(THIS) CONST PURE;
+    /// Returns the pointer to the internal render pass object.
+    VIRTUAL IRenderPassVk* METHOD(GetRenderPass)(THIS) CONST PURE;
 
     /// Returns handle to a vulkan pipeline pass object.
     VIRTUAL VkPipeline METHOD(GetVkPipeline)(THIS) CONST PURE;
@@ -62,8 +63,8 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IPipelineStateVk_GetVkRenderPass(This) CALL_IFACE_METHOD(PipelineStateVk, GetVkRenderPass, This)
-#    define IPipelineStateVk_GetVkPipeline(This)   CALL_IFACE_METHOD(PipelineStateVk, GetVkPipeline,   This)
+#    define IPipelineStateVk_GetRenderPass(This) CALL_IFACE_METHOD(PipelineStateVk, GetRenderPass, This)
+#    define IPipelineStateVk_GetVkPipeline(This) CALL_IFACE_METHOD(PipelineStateVk, GetVkPipeline, This)
 
 // clang-format on
 

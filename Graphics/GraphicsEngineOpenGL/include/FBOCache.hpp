@@ -51,6 +51,11 @@ public:
     FBOCache& operator = (      FBOCache&&) = delete;
     // clang-format on
 
+    static GLObjectWrappers::GLFrameBufferObj CreateFBO(class GLContextState& ContextState,
+                                                        Uint32                NumRenderTargets,
+                                                        TextureViewGLImpl*    ppRTVs[],
+                                                        TextureViewGLImpl*    pDSV);
+
     const GLObjectWrappers::GLFrameBufferObj& GetFBO(Uint32                NumRenderTargets,
                                                      TextureViewGLImpl*    ppRTVs[],
                                                      TextureViewGLImpl*    pDSV,
@@ -91,7 +96,7 @@ private:
 
     // Multimap that sets up correspondence between unique texture id and all
     // FBOs it is used in
-    std::unordered_multimap<Diligent::UniqueIdentifier, FBOCacheKey> m_TexIdToKey;
+    std::unordered_multimap<UniqueIdentifier, FBOCacheKey> m_TexIdToKey;
 };
 
 } // namespace Diligent

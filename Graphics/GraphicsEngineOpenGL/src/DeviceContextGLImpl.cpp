@@ -147,6 +147,11 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
 
 void DeviceContextGLImpl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
+    if (m_pActiveRenderPass)
+    {
+        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
+        return;
+    }
 }
 
 void DeviceContextGLImpl::CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
@@ -250,10 +255,10 @@ void DeviceContextGLImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
             // https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glViewportIndexed.xhtml
             glViewportIndexedf(0, BottomLeftX, BottomLeftY, vp.Width, vp.Height);
         }
-        CHECK_GL_ERROR("Failed to set viewport");
+        DEV_CHECK_GL_ERROR("Failed to set viewport");
 
         glDepthRangef(vp.MinDepth, vp.MaxDepth);
-        CHECK_GL_ERROR("Failed to set depth range");
+        DEV_CHECK_GL_ERROR("Failed to set depth range");
     }
     else
     {
@@ -263,9 +268,9 @@ void DeviceContextGLImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
             float       BottomLeftY = static_cast<float>(RTHeight) - (vp.TopLeftY + vp.Height);
             float       BottomLeftX = vp.TopLeftX;
             glViewportIndexedf(i, BottomLeftX, BottomLeftY, vp.Width, vp.Height);
-            CHECK_GL_ERROR("Failed to set viewport #", i);
+            DEV_CHECK_GL_ERROR("Failed to set viewport #", i);
             glDepthRangef(vp.MinDepth, vp.MaxDepth);
-            CHECK_GL_ERROR("Failed to set depth range for viewport #", i);
+            DEV_CHECK_GL_ERROR("Failed to set depth range for viewport #", i);
         }
     }
 }
@@ -296,7 +301,7 @@ void DeviceContextGLImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
         auto width  = Rect.right - Rect.left;
         auto height = Rect.bottom - Rect.top;
         glScissor(Rect.left, glBottom, width, height);
-        CHECK_GL_ERROR("Failed to set scissor rect");
+        DEV_CHECK_GL_ERROR("Failed to set scissor rect");
     }
     else
     {
@@ -307,7 +312,7 @@ void DeviceContextGLImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
             auto        width    = Rect.right - Rect.left;
             auto        height   = Rect.bottom - Rect.top;
             glScissorIndexed(sr, Rect.left, glBottom, width, height);
-            CHECK_GL_ERROR("Failed to set scissor rect #", sr);
+            DEV_CHECK_GL_ERROR("Failed to set scissor rect #", sr);
         }
     }
 }
@@ -319,6 +324,8 @@ void DeviceContextGLImpl::SetSwapChain(ISwapChainGL* pSwapChain)
 
 void DeviceContextGLImpl::CommitRenderTargets()
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "This method must not be called inside render pass");
+
     if (!m_IsDefaultFBOBound && m_NumBoundRenderTargets == 0 && !m_pBoundDepthStencil)
         return;
 
@@ -327,7 +334,7 @@ void DeviceContextGLImpl::CommitRenderTargets()
         GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
         if (m_DefaultFBO != DefaultFBOHandle)
         {
-            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj(true, GLObjectWrappers::GLFBOCreateReleaseHelper(DefaultFBOHandle));
+            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper(DefaultFBOHandle)};
         }
         m_ContextState.BindFBO(m_DefaultFBO);
     }
@@ -373,6 +380,14 @@ void DeviceContextGLImpl::SetRenderTargets(Uint32                         NumRen
                                            ITextureView*                  pDepthStencil,
                                            RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
+        return;
+    }
+#endif
+
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
         if (m_NumBoundRenderTargets == 1 && m_pBoundRenderTargets[0] && m_pBoundRenderTargets[0]->GetTexture<TextureBaseGL>()->GetGLHandle() == 0)
@@ -403,6 +418,140 @@ void DeviceContextGLImpl::ResetRenderTargets()
     m_ContextState.InvalidateFBO();
 }
 
+void DeviceContextGLImpl::BeginSubpass()
+{
+    VERIFY_EXPR(m_pActiveRenderPass);
+    VERIFY_EXPR(m_pBoundFramebuffer);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& SubpassDesc = RPDesc.pSubpasses[m_SubpassIndex];
+    const auto& FBDesc      = m_pBoundFramebuffer->GetDesc();
+
+    const auto& RenderTargetFBO = m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex).RenderTarget;
+    if (RenderTargetFBO != 0)
+    {
+        m_ContextState.BindFBO(RenderTargetFBO);
+    }
+    else
+    {
+        GLuint DefaultFBOHandle = m_pSwapChain->GetDefaultFBO();
+        if (m_DefaultFBO != DefaultFBOHandle)
+        {
+            m_DefaultFBO = GLObjectWrappers::GLFrameBufferObj{true, GLObjectWrappers::GLFBOCreateReleaseHelper(DefaultFBOHandle)};
+        }
+        m_ContextState.BindFBO(m_DefaultFBO);
+    }
+
+    for (Uint32 rt = 0; rt < SubpassDesc.RenderTargetAttachmentCount; ++rt)
+    {
+        const auto& RTAttachmentRef = SubpassDesc.pRenderTargetAttachments[rt];
+        if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            auto* const pRTV = ValidatedCast<TextureViewGLImpl>(FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex]);
+            if (pRTV == nullptr)
+                continue;
+
+            auto* const pColorTexGL = pRTV->GetTexture<TextureBaseGL>();
+            pColorTexGL->TextureMemoryBarrier(
+                GL_FRAMEBUFFER_BARRIER_BIT, // Reads and writes via framebuffer object attachments after the
+                                            // barrier will reflect data written by shaders prior to the barrier.
+                                            // Additionally, framebuffer writes issued after the barrier will wait
+                                            // on the completion of all shader writes issued prior to the barrier.
+                m_ContextState);
+
+            const auto& AttachmentDesc = RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex];
+            auto        FirstLastUse   = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTAttachmentRef.AttachmentIndex);
+            if (FirstLastUse.first == m_SubpassIndex && AttachmentDesc.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+            {
+                ClearRenderTarget(pRTV, m_AttachmentClearValues[RTAttachmentRef.AttachmentIndex].Color, RESOURCE_STATE_TRANSITION_MODE_NONE);
+            }
+        }
+    }
+
+    if (SubpassDesc.pDepthStencilAttachment != nullptr)
+    {
+        const auto DepthAttachmentIndex = SubpassDesc.pDepthStencilAttachment->AttachmentIndex;
+        if (DepthAttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            auto* const pDSV = ValidatedCast<TextureViewGLImpl>(FBDesc.ppAttachments[DepthAttachmentIndex]);
+            if (pDSV != nullptr)
+            {
+                auto* pDepthTexGL = pDSV->GetTexture<TextureBaseGL>();
+                pDepthTexGL->TextureMemoryBarrier(GL_FRAMEBUFFER_BARRIER_BIT, m_ContextState);
+
+                const auto& AttachmentDesc = RPDesc.pAttachments[DepthAttachmentIndex];
+                auto        FirstLastUse   = m_pActiveRenderPass->GetAttachmentFirstLastUse(DepthAttachmentIndex);
+                if (FirstLastUse.first == m_SubpassIndex && AttachmentDesc.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+                {
+                    const auto& ClearVal = m_AttachmentClearValues[DepthAttachmentIndex].DepthStencil;
+                    ClearDepthStencil(pDSV, CLEAR_DEPTH_FLAG | CLEAR_STENCIL_FLAG, ClearVal.Depth, ClearVal.Stencil, RESOURCE_STATE_TRANSITION_MODE_NONE);
+                }
+            }
+        }
+    }
+}
+
+void DeviceContextGLImpl::EndSubpass()
+{
+    VERIFY_EXPR(m_pActiveRenderPass);
+    VERIFY_EXPR(m_pBoundFramebuffer);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& SubpassDesc = RPDesc.pSubpasses[m_SubpassIndex];
+    if (SubpassDesc.pResolveAttachments != nullptr)
+    {
+        const auto& SubpassFBOs = m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex);
+
+        glBindFramebuffer(GL_READ_FRAMEBUFFER, SubpassFBOs.RenderTarget);
+        DEV_CHECK_GL_ERROR("Failed to bind subpass render target FBO as read framebuffer");
+
+        GLuint ResolveDstFBO = SubpassFBOs.Resolve;
+        if (ResolveDstFBO == 0)
+        {
+            ResolveDstFBO = m_pSwapChain.RawPtr<ISwapChainGL>()->GetDefaultFBO();
+        }
+        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, ResolveDstFBO);
+        DEV_CHECK_GL_ERROR("Failed to bind resolve destination FBO as draw framebuffer");
+
+        const auto& FBODesc = m_pBoundFramebuffer->GetDesc();
+        glBlitFramebuffer(0, 0, static_cast<GLint>(FBODesc.Width), static_cast<GLint>(FBODesc.Height),
+                          0, 0, static_cast<GLint>(FBODesc.Width), static_cast<GLint>(FBODesc.Height),
+                          GL_COLOR_BUFFER_BIT,
+                          GL_NEAREST // Filter is ignored
+        );
+        DEV_CHECK_GL_ERROR("glBlitFramebuffer() failed when resolving multi-sampled attachments");
+    }
+    m_ContextState.InvalidateFBO();
+}
+
+void DeviceContextGLImpl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+{
+    TDeviceContextBase::BeginRenderPass(Attribs);
+
+    m_AttachmentClearValues.resize(Attribs.ClearValueCount);
+    for (Uint32 i = 0; i < Attribs.ClearValueCount; ++i)
+        m_AttachmentClearValues[i] = Attribs.pClearValues[i];
+
+    VERIFY_EXPR(m_pBoundFramebuffer);
+
+    SetViewports(1, nullptr, 0, 0);
+
+    BeginSubpass();
+}
+
+void DeviceContextGLImpl::NextSubpass()
+{
+    EndSubpass();
+    TDeviceContextBase::NextSubpass();
+    BeginSubpass();
+}
+
+void DeviceContextGLImpl::EndRenderPass()
+{
+    EndSubpass();
+    TDeviceContextBase::EndRenderPass();
+    m_ContextState.InvalidateFBO();
+}
 
 void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShaderResourceBinding* pResBinding)
 {
@@ -524,7 +673,7 @@ void DeviceContextGLImpl::BindProgramResources(Uint32& NewMemoryBarriers, IShade
                 m_ContextState.BindTexture(-1, pTexViewGL->GetBindTarget(), pTexViewGL->GetHandle());
                 GLint IsImmutable = 0;
                 glGetTexParameteriv(pTexViewGL->GetBindTarget(), GL_TEXTURE_IMMUTABLE_FORMAT, &IsImmutable);
-                CHECK_GL_ERROR("glGetTexParameteriv() failed");
+                DEV_CHECK_GL_ERROR("glGetTexParameteriv() failed");
                 VERIFY(IsImmutable, "Only immutable textures can be bound to pipeline using glBindImageTexture()");
                 m_ContextState.BindTexture(-1, pTexViewGL->GetBindTarget(), GLObjectWrappers::GLTextureObj::Null());
             }
@@ -883,7 +1032,7 @@ void DeviceContextGLImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)
 #if GL_ARB_compute_shader
     m_pPipelineState->CommitProgram(m_ContextState);
     glDispatchCompute(Attribs.ThreadGroupCountX, Attribs.ThreadGroupCountY, Attribs.ThreadGroupCountZ);
-    CHECK_GL_ERROR("glDispatchCompute() failed");
+    DEV_CHECK_GL_ERROR("glDispatchCompute() failed");
 
     PostDraw();
 #else
@@ -910,10 +1059,10 @@ void DeviceContextGLImpl::DispatchComputeIndirect(const DispatchComputeIndirectA
 
     constexpr bool ResetVAO = false; // GL_DISPATCH_INDIRECT_BUFFER does not affect VAO
     m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, pBufferGL->m_GlBuffer, ResetVAO);
-    CHECK_GL_ERROR("Failed to bind a buffer for dispatch indirect command");
+    DEV_CHECK_GL_ERROR("Failed to bind a buffer for dispatch indirect command");
 
     glDispatchComputeIndirect(Attribs.DispatchArgsByteOffset);
-    CHECK_GL_ERROR("glDispatchComputeIndirect() failed");
+    DEV_CHECK_GL_ERROR("glDispatchComputeIndirect() failed");
 
     m_ContextState.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, GLObjectWrappers::GLBufferObj::Null(), ResetVAO);
 
@@ -959,7 +1108,7 @@ void DeviceContextGLImpl::ClearDepthStencil(ITextureView*                  pView
     // blend function, logical operation, stenciling, texture mapping, and depth-buffering
     // are ignored by glClear.
     glClear(glClearFlags);
-    CHECK_GL_ERROR("glClear() failed");
+    DEV_CHECK_GL_ERROR("glClear() failed");
     m_ContextState.EnableDepthWrites(DepthWritesEnabled);
     m_ContextState.EnableScissorTest(ScissorTestEnabled);
 }
@@ -972,8 +1121,6 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     VERIFY_EXPR(pView != nullptr);
 
     Int32 RTIndex = -1;
-    VERIFY(pView->GetDesc().ViewType == TEXTURE_VIEW_RENDER_TARGET, "Incorrect view type: render target is expected");
-    CHECK_DYNAMIC_TYPE(TextureViewGLImpl, pView);
     for (Uint32 rt = 0; rt < m_NumBoundRenderTargets; ++rt)
     {
         if (m_pBoundRenderTargets[rt] == pView)
@@ -1012,7 +1159,7 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
     m_ContextState.SetColorWriteMask(RTIndex, COLOR_MASK_ALL, bIndependentBlend);
 
     glClearBufferfv(GL_COLOR, RTIndex, RGBA);
-    CHECK_GL_ERROR("glClearBufferfv() failed");
+    DEV_CHECK_GL_ERROR("glClearBufferfv() failed");
 
     m_ContextState.SetColorWriteMask(RTIndex, WriteMask, bIndependentBlend);
     m_ContextState.EnableScissorTest(ScissorTestEnabled);
@@ -1020,6 +1167,11 @@ void DeviceContextGLImpl::ClearRenderTarget(ITextureView* pView, const float* RG
 
 void DeviceContextGLImpl::Flush()
 {
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
+    }
+
     glFlush();
 }
 
@@ -1044,7 +1196,7 @@ void DeviceContextGLImpl::SignalFence(IFence* pFence, Uint64 Value)
         GL_SYNC_GPU_COMMANDS_COMPLETE, // Condition must always be GL_SYNC_GPU_COMMANDS_COMPLETE
         0                              // Flags, must be 0
         )};
-    CHECK_GL_ERROR("Failed to create gl fence");
+    DEV_CHECK_GL_ERROR("Failed to create gl fence");
     auto* pFenceGLImpl = ValidatedCast<FenceGLImpl>(pFence);
     pFenceGLImpl->AddPendingFence(std::move(GLFence), Value);
 }
@@ -1077,7 +1229,7 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
         case QUERY_TYPE_OCCLUSION:
 #if GL_SAMPLES_PASSED
             glBeginQuery(GL_SAMPLES_PASSED, glQuery);
-            CHECK_GL_ERROR("Failed to begin GL_SAMPLES_PASSED query");
+            DEV_CHECK_GL_ERROR("Failed to begin GL_SAMPLES_PASSED query");
 #else
             LOG_ERROR_MESSAGE_ONCE("GL_SAMPLES_PASSED query is not supported by this device");
 #endif
@@ -1085,13 +1237,13 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
 
         case QUERY_TYPE_BINARY_OCCLUSION:
             glBeginQuery(GL_ANY_SAMPLES_PASSED, glQuery);
-            CHECK_GL_ERROR("Failed to begin GL_ANY_SAMPLES_PASSED query");
+            DEV_CHECK_GL_ERROR("Failed to begin GL_ANY_SAMPLES_PASSED query");
             break;
 
         case QUERY_TYPE_PIPELINE_STATISTICS:
 #if GL_PRIMITIVES_GENERATED
             glBeginQuery(GL_PRIMITIVES_GENERATED, glQuery);
-            CHECK_GL_ERROR("Failed to begin GL_PRIMITIVES_GENERATED query");
+            DEV_CHECK_GL_ERROR("Failed to begin GL_PRIMITIVES_GENERATED query");
 #else
             LOG_ERROR_MESSAGE_ONCE("GL_PRIMITIVES_GENERATED query is not supported by this device");
 #endif
@@ -1114,26 +1266,26 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
         case QUERY_TYPE_OCCLUSION:
 #if GL_SAMPLES_PASSED
             glEndQuery(GL_SAMPLES_PASSED);
-            CHECK_GL_ERROR("Failed to end GL_SAMPLES_PASSED query");
+            DEV_CHECK_GL_ERROR("Failed to end GL_SAMPLES_PASSED query");
 #endif
             break;
 
         case QUERY_TYPE_BINARY_OCCLUSION:
             glEndQuery(GL_ANY_SAMPLES_PASSED);
-            CHECK_GL_ERROR("Failed to end GL_ANY_SAMPLES_PASSED query");
+            DEV_CHECK_GL_ERROR("Failed to end GL_ANY_SAMPLES_PASSED query");
             break;
 
         case QUERY_TYPE_PIPELINE_STATISTICS:
 #if GL_PRIMITIVES_GENERATED
             glEndQuery(GL_PRIMITIVES_GENERATED);
-            CHECK_GL_ERROR("Failed to end GL_PRIMITIVES_GENERATED query");
+            DEV_CHECK_GL_ERROR("Failed to end GL_PRIMITIVES_GENERATED query");
 #endif
             break;
 
         case QUERY_TYPE_TIMESTAMP:
 #if GL_ARB_timer_query
             glQueryCounter(pQueryGLImpl->GetGlQueryHandle(), GL_TIMESTAMP);
-            CHECK_GL_ERROR("glQueryCounter failed");
+            DEV_CHECK_GL_ERROR("glQueryCounter failed");
 #else
             LOG_ERROR_MESSAGE_ONCE("Timer queries are not supported by this device");
 #endif
@@ -1373,12 +1525,13 @@ void DeviceContextGLImpl::GenerateMips(ITextureView* pTexView)
     auto  BindTarget = pTexViewGL->GetBindTarget();
     m_ContextState.BindTexture(-1, BindTarget, pTexViewGL->GetHandle());
     glGenerateMipmap(BindTarget);
-    CHECK_GL_ERROR("Failed to generate mip maps");
+    DEV_CHECK_GL_ERROR("Failed to generate mip maps");
     m_ContextState.BindTexture(-1, BindTarget, GLObjectWrappers::GLTextureObj::Null());
 }
 
 void DeviceContextGLImpl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
 }
 
 void DeviceContextGLImpl::ResolveTextureSubresource(ITexture*                               pSrcTexture,

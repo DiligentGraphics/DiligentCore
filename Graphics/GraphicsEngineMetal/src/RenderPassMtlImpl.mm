@@ -1,4 +1,4 @@
-/*     Copyright 2015-2018 Egor Yusov
+/*     Copyright 2015-2019 Egor Yusov
  *  
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,11 +21,21 @@
  *  of the possibility of such damages.
  */
 
-// stdafx.cpp : source file that includes just the standard includes
-// RenderEngine.pch will be the pre-compiled header
-// stdafx.obj will contain the pre-compiled type information
+#include "RenderPassMtlImpl.h"
+#include "EngineMemory.h"
 
-#include "pch.h"
+namespace Diligent
+{
+    
+RenderPassMtlImpl :: RenderPassMtlImpl(IReferenceCounters*   pRefCounters,
+                                       RenderDeviceMtlImpl*  pDevice,
+                                       const RenderPassDesc& Desc) : 
+    TRenderPassBase(pRefCounters, pDevice, Desc)
+{
+}
 
-// TODO: reference any additional headers you need in STDAFX.H
-// and not in this file
+RenderPassMtlImpl :: ~RenderPassMtlImpl()
+{
+}
+
+}

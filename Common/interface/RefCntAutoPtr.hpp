@@ -284,8 +284,13 @@ public:
         return DoublePtrHelper(*this);
     }
 
-    T**       GetRawDblPtr() { return &m_pObject; }
-    const T** GetRawDblPtr() const { return &m_pObject; }
+    T**       GetRawDblPtr() noexcept { return &m_pObject; }
+    const T** GetRawDblPtr() const noexcept { return &m_pObject; }
+
+    template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
+    DstType** GetRawDblPtr() noexcept { return reinterpret_cast<DstType**>(&m_pObject); }
+    template <typename DstType, typename = typename std::enable_if<std::is_convertible<T*, DstType*>::value>::type>
+    DstType** GetRawDblPtr() const noexcept { return reinterpret_cast<DstType**>(&m_pObject); }
 
 private:
     template <typename OtherType>

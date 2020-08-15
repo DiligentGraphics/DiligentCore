@@ -261,7 +261,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                     {
                         if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                         {
-                            if (pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                            if (pTexture->CheckAnyState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT))
                                 UnbindTextureFromInput(pTexture, UAVRes.pd3d11Resource);
                             pTexture->SetState(RESOURCE_STATE_UNORDERED_ACCESS);
                         }
@@ -482,7 +482,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                 {
                     if (auto* pTexture = ValidatedCast<TextureBaseD3D11>(SRVRes.pTexture))
                     {
-                        if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                        if (pTexture->IsInKnownState() && !pTexture->CheckAnyState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT))
                         {
                             if (pTexture->CheckState(RESOURCE_STATE_UNORDERED_ACCESS))
                             {
@@ -521,7 +521,8 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
                     VERIFY_EXPR(CommitResources);
                     if (const auto* pTexture = ValidatedCast<TextureBaseD3D11>(SRVRes.pTexture))
                     {
-                        if (pTexture->IsInKnownState() && !pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE))
+                        if (pTexture->IsInKnownState() &&
+                            !(pTexture->CheckState(RESOURCE_STATE_SHADER_RESOURCE) || m_pActiveRenderPass != nullptr && pTexture->CheckState(RESOURCE_STATE_INPUT_ATTACHMENT)))
                         {
                             LOG_ERROR_MESSAGE("Texture '", pTexture->GetDesc().Name, "' has not been transitioned to Shader Resource state. Call TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION mode or explicitly transition the texture to required state.");
                         }
@@ -627,6 +628,12 @@ void DeviceContextD3D11Impl::TransitionShaderResources(IPipelineState* pPipeline
 {
     DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must not be null");
     DEV_CHECK_ERR(pShaderResourceBinding != nullptr, "Shader resource binding must not be null");
+    if (m_pActiveRenderPass)
+    {
+        LOG_ERROR_MESSAGE("State transitions are not allowed inside a render pass.");
+        return;
+    }
+
     TransitionAndCommitShaderResources<true, false>(pPipelineState, pShaderResourceBinding, false);
 }
 
@@ -955,6 +962,11 @@ void DeviceContextD3D11Impl::ClearRenderTarget(ITextureView* pView, const float*
 
 void DeviceContextD3D11Impl::Flush()
 {
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Flushing device context inside an active render pass.");
+    }
+
     m_pd3d11DeviceContext->Flush();
 }
 
@@ -1419,7 +1431,7 @@ void DeviceContextD3D11Impl::UnbindTextureFromInput(TextureBaseD3D11* pTexture, 
     if (!pTexture) return;
 
     UnbindResourceView(m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pd3d11Resource, SetSRVMethods);
-    pTexture->ClearState(RESOURCE_STATE_SHADER_RESOURCE);
+    pTexture->ClearState(RESOURCE_STATE_SHADER_RESOURCE | RESOURCE_STATE_INPUT_ATTACHMENT);
 }
 
 void DeviceContextD3D11Impl::UnbindBufferFromInput(BufferD3D11Impl* pBuffer, ID3D11Resource* pd3d11Buffer)
@@ -1571,6 +1583,14 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
                                               ITextureView*                  pDepthStencil,
                                               RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
+#ifdef DILIGENT_DEVELOPMENT
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("Calling SetRenderTargets inside active render pass is invalid. End the render pass first");
+        return;
+    }
+#endif
+
     if (TDeviceContextBase::SetRenderTargets(NumRenderTargets, ppRenderTargets, pDepthStencil))
     {
         for (Uint32 RT = 0; RT < NumRenderTargets; ++RT)
@@ -1616,6 +1636,139 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
         SetViewports(1, nullptr, 0, 0);
     }
 }
+
+void DeviceContextD3D11Impl::EndSubpass()
+{
+    VERIFY_EXPR(m_pActiveRenderPass);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
+    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
+
+    if (Subpass.pResolveAttachments != nullptr)
+    {
+        for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
+        {
+            const auto& RslvAttachmentRef = Subpass.pResolveAttachments[rt];
+            if (RslvAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+            {
+                const auto& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
+                VERIFY_EXPR(RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED);
+                auto* pSrcView     = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
+                auto* pDstView     = FBDesc.ppAttachments[RslvAttachmentRef.AttachmentIndex];
+                auto* pSrcTexD3D11 = ValidatedCast<TextureBaseD3D11>(pSrcView->GetTexture());
+                auto* pDstTexD3D11 = ValidatedCast<TextureBaseD3D11>(pDstView->GetTexture());
+
+                const auto& SrcViewDesc = pSrcView->GetDesc();
+                const auto& DstViewDesc = pDstView->GetDesc();
+                const auto& SrcTexDesc  = pSrcTexD3D11->GetDesc();
+                const auto& DstTexDesc  = pDstTexD3D11->GetDesc();
+
+                auto DXGIFmt        = TexFormatToDXGI_Format(RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex].Format);
+                auto SrcSubresIndex = D3D11CalcSubresource(SrcViewDesc.MostDetailedMip, SrcViewDesc.FirstArraySlice, SrcTexDesc.MipLevels);
+                auto DstSubresIndex = D3D11CalcSubresource(DstViewDesc.MostDetailedMip, DstViewDesc.FirstArraySlice, DstTexDesc.MipLevels);
+                m_pd3d11DeviceContext->ResolveSubresource(pDstTexD3D11->GetD3D11Texture(), DstSubresIndex, pSrcTexD3D11->GetD3D11Texture(), SrcSubresIndex, DXGIFmt);
+            }
+        }
+    }
+}
+
+void DeviceContextD3D11Impl::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+{
+    TDeviceContextBase::BeginRenderPass(Attribs);
+    // BeginRenderPass() transitions resources to required states
+
+    CommitRenderTargets();
+
+    // Set the viewport to match the framebuffer size
+    SetViewports(1, nullptr, 0, 0);
+
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+
+    // Clear attachments
+    for (Uint32 att = 0; att < RPDesc.AttachmentCount; ++att)
+    {
+        auto* pTexView = FBDesc.ppAttachments[att];
+        if (pTexView == nullptr)
+            continue;
+        if (RPDesc.pAttachments[att].LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+        {
+            auto*      pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pTexView);
+            const auto FmtAttribs = GetTextureFormatAttribs(pTexView->GetDesc().Format);
+            VERIFY_EXPR(att < Attribs.ClearValueCount);
+            const auto& ClearValue = Attribs.pClearValues[att];
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
+                FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                auto* pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
+                m_pd3d11DeviceContext->ClearDepthStencilView(pd3d11DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, ClearValue.DepthStencil.Depth, ClearValue.DepthStencil.Stencil);
+            }
+            else
+            {
+                auto* pd3d11RTV = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
+                m_pd3d11DeviceContext->ClearRenderTargetView(pd3d11RTV, ClearValue.Color);
+            }
+        }
+    }
+}
+
+void DeviceContextD3D11Impl::NextSubpass()
+{
+    EndSubpass();
+
+    VERIFY_EXPR(m_pActiveRenderPass);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex + 1 < RPDesc.SubpassCount);
+    const auto& NextSubpass = RPDesc.pSubpasses[m_SubpassIndex + 1];
+    const auto& FBDesc      = m_pBoundFramebuffer->GetDesc();
+
+    // Unbind these attachments that will be used for output by the next subpass.
+    // There is no need to unbind textures from output as the new subpass atachments
+    // will be set as render target/depth stencil anyway, so these that can be used for
+    // input will be unbound.
+
+    auto UnbindAttachmentFromInput = [&](const AttachmentReference& AttachmentRef) //
+    {
+        if (AttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            auto CurrAttachmentState = m_pActiveRenderPass->GetAttachmentState(m_SubpassIndex, AttachmentRef.AttachmentIndex);
+            if (CurrAttachmentState == RESOURCE_STATE_SHADER_RESOURCE || CurrAttachmentState == RESOURCE_STATE_INPUT_ATTACHMENT)
+            {
+                if (auto* pTexView = FBDesc.ppAttachments[AttachmentRef.AttachmentIndex])
+                {
+                    auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexView->GetTexture());
+                    UnbindResourceView(m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pTexD3D11->GetD3D11Texture(), SetSRVMethods);
+                }
+            }
+        }
+    };
+
+    for (Uint32 rt = 0; rt < NextSubpass.RenderTargetAttachmentCount; ++rt)
+    {
+        UnbindAttachmentFromInput(NextSubpass.pRenderTargetAttachments[rt]);
+        if (NextSubpass.pResolveAttachments != nullptr)
+        {
+            UnbindAttachmentFromInput(NextSubpass.pResolveAttachments[rt]);
+        }
+    }
+
+    if (NextSubpass.pDepthStencilAttachment != nullptr)
+    {
+        UnbindAttachmentFromInput(*NextSubpass.pDepthStencilAttachment);
+    }
+
+    TDeviceContextBase::NextSubpass();
+
+    CommitRenderTargets();
+}
+
+void DeviceContextD3D11Impl::EndRenderPass()
+{
+    EndSubpass();
+    TDeviceContextBase::EndRenderPass();
+}
+
 
 template <typename TD3D11ResourceType, typename TSetD3D11ResMethodType>
 void SetD3D11ResourcesHelper(ID3D11DeviceContext*   pDeviceCtx,
@@ -1702,6 +1855,8 @@ void DeviceContextD3D11Impl::ReleaseCommittedShaderResources()
 
 void DeviceContextD3D11Impl::FinishCommandList(ICommandList** ppCommandList)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "Finishing command list inside an active render pass.");
+
     CComPtr<ID3D11CommandList> pd3d11CmdList;
     m_pd3d11DeviceContext->FinishCommandList(
         FALSE, // A Boolean flag that determines whether the runtime saves deferred context state before it
@@ -1944,6 +2099,8 @@ void DeviceContextD3D11Impl::InvalidateState()
 
 void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, StateTransitionDesc* pResourceBarriers)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
+
     for (Uint32 i = 0; i < BarrierCount; ++i)
     {
         const auto& Barrier = pResourceBarriers[i];

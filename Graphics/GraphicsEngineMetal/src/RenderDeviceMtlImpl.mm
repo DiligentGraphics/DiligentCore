@@ -32,6 +32,8 @@
 #include "PipelineStateMtlImpl.h"
 #include "ShaderResourceBindingMtlImpl.h"
 #include "FenceMtlImpl.h"
+#include "RenderPassMtlImpl.h"
+#include "FramebufferMtlImpl.h"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -58,7 +60,9 @@ RenderDeviceMtlImpl :: RenderDeviceMtlImpl(IReferenceCounters*        pRefCounte
             sizeof(SamplerMtlImpl),
             sizeof(PipelineStateMtlImpl),
             sizeof(ShaderResourceBindingMtlImpl),
-            sizeof(FenceMtlImpl)
+            sizeof(FenceMtlImpl),
+            sizeof(RenderPassMtlImpl),
+			sizeof(FramebufferMtlImpl)
         }
     },
     m_EngineAttribs(EngineAttribs)
@@ -180,6 +184,32 @@ void RenderDeviceMtlImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
                                                (this, Desc) );
             pQueryMtl->QueryInterface( IID_Query, reinterpret_cast<IObject**>(ppQuery) );
             OnCreateDeviceObject( pQueryMtl );
+        }
+    );
+}
+
+void RenderDeviceMtlImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
+{
+    CreateDeviceObject( "RenderPass", Desc, ppRenderPass, 
+        [&]()
+        {
+            RenderPassMtlImpl* pRenderPassMtl( NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassMtlImpl instance", RenderPassMtlImpl)
+                                               (this, Desc) );
+            pRenderPassMtl->QueryInterface( IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass) );
+            OnCreateDeviceObject( pRenderPassMtl );
+        }
+    );
+}
+
+void RenderDeviceMtlImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
+{
+    CreateDeviceObject( "Framebuffer", Desc, ppFramebuffer, 
+        [&]()
+        {
+            FramebufferMtlImpl* pFramebufferMtl( NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferMtlImpl instance", FramebufferMtlImpl)
+                                               (this, Desc) );
+            pFramebufferMtl->QueryInterface( IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer) );
+            OnCreateDeviceObject( pFramebufferMtl );
         }
     );
 }
