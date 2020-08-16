@@ -193,8 +193,8 @@ public:
             else
                 DstSubpass.pPreserveAttachments = nullptr;
         }
-        VERIFY_EXPR(pCurrAttachmentRef - m_pAttachmentReferences == TotalAttachmentReferencesCount);
-        VERIFY_EXPR(pCurrPreserveAttachment - m_pPreserveAttachments == TotalPreserveAttachmentsCount);
+        VERIFY_EXPR(pCurrAttachmentRef - m_pAttachmentReferences == static_cast<ptrdiff_t>(TotalAttachmentReferencesCount));
+        VERIFY_EXPR(pCurrPreserveAttachment - m_pPreserveAttachments == static_cast<ptrdiff_t>(TotalPreserveAttachmentsCount));
 
         if (Desc.DependencyCount != 0)
         {

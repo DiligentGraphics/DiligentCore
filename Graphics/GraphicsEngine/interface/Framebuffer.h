@@ -73,7 +73,7 @@ typedef struct FramebufferDesc FramebufferDesc;
 class IFramebuffer : public IDeviceObject
 {
 public:
-    virtual const FramebufferDesc& GetDesc() const override = 0;
+    virtual const FramebufferDesc& DILIGENT_CALL_TYPE GetDesc() const override = 0;
 };
 
 #else

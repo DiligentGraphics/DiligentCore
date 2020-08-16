@@ -369,7 +369,7 @@ typedef struct RenderPassDesc RenderPassDesc;
 class IRenderPass : public IDeviceObject
 {
 public:
-    virtual const RenderPassDesc& GetDesc() const override = 0;
+    virtual const RenderPassDesc& DILIGENT_CALL_TYPE GetDesc() const override = 0;
 };
 
 #else
