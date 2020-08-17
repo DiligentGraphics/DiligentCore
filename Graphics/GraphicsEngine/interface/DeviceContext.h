@@ -951,6 +951,11 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawIndirectAttribs for details.
     /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                  Uint32 NumVertices;
+    ///                                  Uint32 NumInstances;
+    ///                                  Uint32 StartVertexLocation;
+    ///                                  Uint32 FirstInstanceLocation;
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
@@ -971,6 +976,12 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawIndexedIndirectAttribs for details.
     /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                  Uint32 NumIndices;
+    ///                                  Uint32 NumInstances;
+    ///                                  Uint32 FirstIndexLocation;
+    ///                                  Uint32 BaseVertex;
+    ///                                  Uint32 FirstInstanceLocation
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
@@ -997,7 +1008,11 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Executes an indirect dispatch compute command.
     
     /// \param [in] Attribs        - The command attributes, see Diligent::DispatchComputeIndirectAttribs for details.
-    /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect dispatch arguments.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect dispatch attributes.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                 Uint32 ThreadGroupCountX;
+    ///                                 Uint32 ThreadGroupCountY;
+    ///                                 Uint32 ThreadGroupCountZ;
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of indirect dispatch arguments buffer. This is not a thread safe operation, 
