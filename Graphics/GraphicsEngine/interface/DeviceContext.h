@@ -1071,6 +1071,14 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     
     /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawMeshIndirectAttribs for details.
     /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                for Direct3D12:
+    ///                                     Uint32 ThreadGroupCountX; // should be same as TaskCount for compatibility with Vulkan
+    ///                                     Uint32 ThreadGroupCountY; // should be 1 for compatibility with Vulkan
+    ///                                     Uint32 ThreadGroupCountZ; // should be 1 for compatibility with Vulkan
+    ///                                for Vulkan:
+    ///                                     Uint32 TaskCount; // should be same as ThreadGroupCountX for compatibility with D3D12
+    ///                                     Uint32 FirstTask; // should be 0 for compatibility with D3D12
     /// 
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
