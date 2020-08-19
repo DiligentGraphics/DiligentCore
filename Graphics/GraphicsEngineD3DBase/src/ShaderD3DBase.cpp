@@ -45,16 +45,48 @@ static const Char* g_HLSLDefinitions =
 };
 
 
+namespace
+{
 struct DXILCompilerLib
 {
     HMODULE               Module         = nullptr;
     DxcCreateInstanceProc CreateInstance = nullptr;
+    ShaderVersion         MaxShaderModel{6, 5};
 
     DXILCompilerLib()
     {
         Module = LoadLibraryA("dxcompiler.dll");
         if (Module)
+        {
             CreateInstance = reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance"));
+
+            if (CreateInstance)
+            {
+                CComPtr<IDxcValidator> validator;
+                if (SUCCEEDED(CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator))))
+                {
+                    CComPtr<IDxcVersionInfo> info;
+                    if (SUCCEEDED(validator->QueryInterface(IID_PPV_ARGS(&info))))
+                    {
+                        UINT32 ver = 0, minor = 0;
+                        info->GetVersion(&ver, &minor);
+
+                        LOG_INFO_MESSAGE("Loaded D3D12 DXIL compiler, version ", ver, ".", minor);
+
+                        ver = (ver << 16) | (minor & 0xFFFF);
+
+                        // map known DXC version to maximum SM
+                        switch (ver)
+                        {
+                            case 0x10005: MaxShaderModel = {6, 5}; break;
+                            case 0x10004: MaxShaderModel = {6, 4}; break;                                                 // SM 6.4 and SM 6.5 preview ???
+                            case 0x10002: MaxShaderModel = {6, 2}; break;                                                 // SM 6.1 and SM 6.2 preview
+                            default: MaxShaderModel = (ver > 0x10005 ? ShaderVersion{6, 6} : ShaderVersion{6, 0}); break; // unknown version
+                        }
+                    }
+                }
+            }
+        }
     }
 
     ~DXILCompilerLib()
@@ -68,6 +100,7 @@ struct DXILCompilerLib
         return inst;
     }
 };
+} // namespace
 
 HRESULT DXILCreateInstance(
     _In_ REFCLSID rclsid,
@@ -82,6 +115,8 @@ HRESULT DXILCreateInstance(
 }
 
 
+namespace
+{
 class DxcIncludeHandlerImpl final : public IDxcIncludeHandler
 {
 public:
@@ -265,29 +300,29 @@ static HRESULT CompileDxilShader(const char*             Source,
     CComPtr<IDxcLibrary> library;
     hr = DXILCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
     if (FAILED(hr))
-        return hr;
+        return E_FAIL;
 
     CComPtr<IDxcCompiler> compiler;
     hr = DXILCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
     if (FAILED(hr))
-        return hr;
+        return E_FAIL;
 
     CComPtr<IDxcBlobEncoding> sourceBlob;
     hr = library->CreateBlobWithEncodingFromPinned(Source, UINT32(strlen(Source)), CP_UTF8, &sourceBlob);
     if (FAILED(hr))
-        return hr;
+        return E_FAIL;
 
     const wchar_t* pArgs[] =
         {
             L"-Zpc", // Matrices in column-major order
             L"-WX",  // Warnings as errors
-#    ifdef DILIGENT_DEBUG
-            L"-Zi",           // Debug info
-            L"-Qembed_debug", // Embed debug info into the shader (some compilers do not recognize this flag)
-            L"-Od",           // Disable optimization
-#    else
+#ifdef DILIGENT_DEBUG
+            L"-Zi", // Debug info
+            //L"-Qembed_debug", // Embed debug info into the shader (some compilers do not recognize this flag)
+            L"-Od", // Disable optimization
+#else
             L"-O3", // Optimization level 3
-#    endif
+#endif
         };
 
     DxcIncludeHandlerImpl IncludeHandler{ShaderCI.pShaderSourceStreamFactory, library};
@@ -313,20 +348,56 @@ static HRESULT CompileDxilShader(const char*             Source,
     if (result)
     {
         CComPtr<IDxcBlobEncoding> errorsBlob;
-        if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)))
+        CComPtr<IDxcBlobEncoding> errorsBlobUtf8;
+        if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)) && SUCCEEDED(library->GetBlobAsUtf8(errorsBlob, &errorsBlobUtf8)))
         {
-            errorsBlob->QueryInterface(IID_PPV_ARGS(ppCompilerOutput));
+            errorsBlobUtf8->QueryInterface(IID_PPV_ARGS(ppCompilerOutput));
         }
     }
 
     if (FAILED(hr))
-        return hr;
+        return hr; // compilation failed
 
-    hr = result->GetResult(reinterpret_cast<IDxcBlob**>(ppBlobOut));
-    return hr;
+    CComPtr<IDxcBlob> compiled;
+    hr = result->GetResult(&compiled);
+    if (FAILED(hr))
+        return E_FAIL;
+
+    CComPtr<IDxcValidator> validator;
+    hr = DXILCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
+    if (FAILED(hr))
+        return E_FAIL;
+
+    CComPtr<IDxcOperationResult> validationResult;
+    hr = validator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &validationResult);
+
+    if (FAILED(hr))
+        return hr; // validation failed
+
+    HRESULT status;
+    if (SUCCEEDED(validationResult->GetStatus(&status)) && FAILED(status))
+    {
+        CComPtr<IDxcBlobEncoding> validationOutput;
+        CComPtr<IDxcBlobEncoding> validationOutputUtf8;
+        validationResult->GetErrorBuffer(&validationOutput);
+        library->GetBlobAsUtf8(validationOutput, &validationOutputUtf8);
+
+        size_t      ValidationMsgLen = validationOutputUtf8 ? validationOutputUtf8->GetBufferSize() : 0;
+        const char* ValidationMsg    = ValidationMsgLen > 0 ? static_cast<const char*>(validationOutputUtf8->GetBufferPointer()) : "";
+
+        LOG_ERROR("Shader validation failed: ", ValidationMsg);
+        return E_FAIL;
+    }
+
+    VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
+
+    *ppBlobOut = reinterpret_cast<ID3DBlob*>(compiled.Detach());
+    return S_OK;
 }
+} // namespace
 
-
+namespace
+{
 class D3DIncludeImpl : public ID3DInclude
 {
 public:
@@ -425,9 +496,9 @@ static HRESULT CompileShader(const char*             Source,
     // the release configuration of this program.
     dwShaderFlags |= D3DCOMPILE_DEBUG;
 #else
-    // Warning: do not use this flag as it causes shader compiler to fail the compilation and
-    // report strange errors:
-    // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
+                    // Warning: do not use this flag as it causes shader compiler to fail the compilation and
+                    // report strange errors:
+                    // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
 #endif
 
     //	do
@@ -451,8 +522,10 @@ static HRESULT CompileShader(const char*             Source,
     //	} while( FAILED(hr) );
     return hr;
 }
+} // namespace
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersion& ShaderModel) :
+
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel) :
     m_isDXIL{false}
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
@@ -476,12 +549,29 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
 
             default: UNEXPECTED("Unknown shader type");
         }
+
+        if (ShaderModel.Major >= 6)
+        {
+            auto& DxilLib = DXILCompilerLib::Instance();
+
+            m_isDXIL = DxilLib.CreateInstance != nullptr;
+
+            // clamp to maximum supported version
+            if (ShaderModel.Major > DxilLib.MaxShaderModel.Major || (ShaderModel.Major == DxilLib.MaxShaderModel.Major && ShaderModel.Minor > DxilLib.MaxShaderModel.Minor))
+                ShaderModel = DxilLib.MaxShaderModel;
+
+            if (ShaderModel.Major == 0 || ShaderModel.Major < 6)
+                ShaderModel = DxilLib.MaxShaderModel;
+
+            // if DXIL is not loaded then try to compile as SM 5.1
+            if (!m_isDXIL)
+                ShaderModel = {5, 1};
+        }
+
         strShaderProfile += "_";
         strShaderProfile += '0' + (ShaderModel.Major % 10);
         strShaderProfile += "_";
         strShaderProfile += '0' + (ShaderModel.Minor % 10);
-
-        m_isDXIL = (ShaderModel.Major >= 6);
 
         String ShaderSource(g_HLSLDefinitions);
         if (ShaderCI.Source)
@@ -514,8 +604,8 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
         else
             hr = CompileShader(ShaderSource.c_str(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
 
-        const size_t CompilerMsgLen = errors->GetBufferSize();
-        const char*  CompilerMsg    = errors && CompilerMsgLen > 0 ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
+        const size_t CompilerMsgLen = errors ? errors->GetBufferSize() : 0;
+        const char*  CompilerMsg    = CompilerMsgLen > 0 ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
 
         if (CompilerMsg != nullptr && CompilerMsgLen > 0 && ShaderCI.ppCompilerOutput != nullptr)
         {

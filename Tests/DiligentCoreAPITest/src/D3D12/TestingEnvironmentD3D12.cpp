@@ -172,10 +172,10 @@ HRESULT CompileDXILShader(const std::string&           Source,
     if (result)
     {
         CComPtr<IDxcBlobEncoding> errorsBlob;
-        if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)))
+        CComPtr<IDxcBlobEncoding> errorsBlobUtf8;
+        if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)) && SUCCEEDED(library->GetBlobAsUtf8(errorsBlob, &errorsBlobUtf8)))
         {
-            const size_t CompilerMsgLen = errorsBlob->GetBufferSize();
-            const char*  CompilerMsg    = CompilerMsgLen > 0 ? reinterpret_cast<const char*>(errorsBlob->GetBufferPointer()) : nullptr;
+            const char* CompilerMsg = errorsBlobUtf8 ? static_cast<const char*>(errorsBlobUtf8->GetBufferPointer()) : nullptr;
 
             if (FAILED(hr))
             {
