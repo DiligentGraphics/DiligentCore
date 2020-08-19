@@ -204,7 +204,7 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IRenderDevice* pDevice, const ch
     PipelineStateCreateInfo PSOCreateInfo;
     PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
 
-    PSODesc.PipelineType                                  = GRAPHICS_PIPELINE;
+    PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
     PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
     PSODesc.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM_SRGB;
     PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
@@ -247,7 +247,7 @@ RefCntAutoPtr<IPipelineState> CreateComputePSO(IRenderDevice* pDevice, const cha
     PipelineStateCreateInfo PSOCreateInfo;
     PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
 
-    PSODesc.PipelineType = COMPUTE_PIPELINE;
+    PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
     ShaderCreateInfo CreationAttrs;
     CreationAttrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     CreationAttrs.UseCombinedTextureSamplers = true;

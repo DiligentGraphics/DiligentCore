@@ -114,7 +114,7 @@ protected:
 
         PSODesc.Name = "Query command test - procedural quad";
 
-        PSODesc.PipelineType                                  = GRAPHICS_PIPELINE;
+        PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
         PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
         PSODesc.GraphicsPipeline.RTVFormats[0]                = TexDesc.Format;
         PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;

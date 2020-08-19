@@ -177,7 +177,7 @@ public:
             VALIDATE_SHADER_TYPE(GraphicsPipeline.pMS, SHADER_TYPE_MESH, "mesh")
 #undef VALIDATE_SHADER_TYPE
 
-            if (PSODesc.PipelineType == GRAPHICS_PIPELINE)
+            if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
             {
                 CHECK_THROW(GraphicsPipeline.pVS, "Vertex shader must be defined");
                 CHECK_THROW(!GraphicsPipeline.pAS && !GraphicsPipeline.pMS, "Mesh shaders are not supported in graphics pipeline");
@@ -187,7 +187,7 @@ public:
                 m_pDS = GraphicsPipeline.pDS;
                 m_pHS = GraphicsPipeline.pHS;
             }
-            else if (PSODesc.PipelineType == MESH_PIPELINE)
+            else if (PSODesc.PipelineType == PIPELINE_TYPE_MESH)
             {
                 CHECK_THROW(GraphicsPipeline.pMS, "Mesh shader must be defined");
                 CHECK_THROW(!GraphicsPipeline.pVS && !GraphicsPipeline.pGS && !GraphicsPipeline.pDS && !GraphicsPipeline.pHS,
@@ -448,7 +448,18 @@ protected:
     size_t   m_ShaderResourceLayoutHash           = 0;  ///< Hash computed from the shader resource layout
 
 private:
-#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", (this->m_Desc.IsComputePipeline() ? "compute" : "graphics"), " PSO '", this->m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)
+#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", PipelineTypeToString(), " PSO '", this->m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)
+
+    const char* PipelineTypeToString() const
+    {
+        switch (this->m_Desc.PipelineType)
+        {
+            case PIPELINE_TYPE_COMPUTE: return "compute";
+            case PIPELINE_TYPE_GRAPHICS: return "graphics";
+            case PIPELINE_TYPE_MESH: return "mesh";
+        }
+        return "unknown";
+    }
 
     void ValidateDesc() const
     {

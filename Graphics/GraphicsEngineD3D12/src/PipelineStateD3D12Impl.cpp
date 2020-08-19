@@ -191,7 +191,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
 
     switch (m_Desc.PipelineType)
     {
-        case COMPUTE_PIPELINE:
+        case PIPELINE_TYPE_COMPUTE:
         {
             auto& ComputePipeline = m_Desc.ComputePipeline;
 
@@ -225,7 +225,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             break;
         }
 
-        case GRAPHICS_PIPELINE:
+        case PIPELINE_TYPE_GRAPHICS:
         {
             const auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
 
@@ -312,7 +312,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
         }
 
 #ifdef D12_H_HAS_MESH_SHADER
-        case MESH_PIPELINE:
+        case PIPELINE_TYPE_MESH:
         {
             const auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
 

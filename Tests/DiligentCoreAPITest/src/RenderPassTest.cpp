@@ -134,7 +134,7 @@ protected:
 
         PSODesc.Name = "Render pass test - draw triangles";
 
-        PSODesc.PipelineType                                  = GRAPHICS_PIPELINE;
+        PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
         PSODesc.GraphicsPipeline.pRenderPass                  = pRenderPass;
         PSODesc.GraphicsPipeline.SubpassIndex                 = 0;
         PSODesc.GraphicsPipeline.SmplDesc.Count               = SampleCount;
@@ -871,8 +871,8 @@ TEST_F(RenderPassTest, InputAttachment)
         PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
 
         PSODesc.Name = "Render pass test - input attachment";
-        
-        PSODesc.PipelineType                                  = GRAPHICS_PIPELINE;
+
+        PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
         PSODesc.GraphicsPipeline.pRenderPass                  = pRenderPass;
         PSODesc.GraphicsPipeline.SubpassIndex                 = 1;
         PSODesc.GraphicsPipeline.SmplDesc.Count               = 1;

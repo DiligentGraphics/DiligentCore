@@ -141,7 +141,7 @@ TEST(ComputeShaderTest, FillTexture)
     PipelineStateCreateInfo PSOCreateInfo;
 
     PSOCreateInfo.PSODesc.Name                = "Compute shader test";
-    PSOCreateInfo.PSODesc.PipelineType        = COMPUTE_PIPELINE;
+    PSOCreateInfo.PSODesc.PipelineType        = PIPELINE_TYPE_COMPUTE;
     PSOCreateInfo.PSODesc.ComputePipeline.pCS = pCS;
 
     RefCntAutoPtr<IPipelineState> pPSO;

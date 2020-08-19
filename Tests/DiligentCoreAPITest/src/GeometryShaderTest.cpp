@@ -138,7 +138,7 @@ TEST(GeometryShaderTest, DrawTriangles)
 
     PSODesc.Name = "Geometry shader test";
 
-    PSODesc.PipelineType                                  = GRAPHICS_PIPELINE;
+    PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
     PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
     PSODesc.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
     PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_POINT_LIST;

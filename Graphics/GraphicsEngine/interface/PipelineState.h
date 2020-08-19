@@ -249,20 +249,20 @@ DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
 {
     /// Graphics pipeline used in IDeviceContext::Draw(), IDeviceContext::DrawIndexed(),
     /// IDeviceContext::DrawIndirect(), IDeviceContext::DrawIndexedIndirect().
-    GRAPHICS_PIPELINE,
+    PIPELINE_TYPE_GRAPHICS,
 
     /// Compute pipeline used in IDeviceContext::DispatchCompute(), IDeviceContext::DispatchComputeIndirect().
-    COMPUTE_PIPELINE,
+    PIPELINE_TYPE_COMPUTE,
 
     // Mesh pipeline used in IDeviceContext::DrawMesh(), IDeviceContext::DrawMeshIndirect().
-    MESH_PIPELINE,
+    PIPELINE_TYPE_MESH,
 };
 
 /// Pipeline state description
 struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Pipeline type
-    PIPELINE_TYPE PipelineType      DEFAULT_INITIALIZER(GRAPHICS_PIPELINE);
+    PIPELINE_TYPE PipelineType      DEFAULT_INITIALIZER(PIPELINE_TYPE_GRAPHICS);
 
     /// Shader resource binding allocation granularity
 
@@ -276,15 +276,15 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Pipeline layout description
     PipelineResourceLayoutDesc ResourceLayout;
 
-    /// Graphics pipeline state description. This memeber is ignored if PipelineType == GRAPHICS_PIPELINE or MESH_PIPELINE
+    /// Graphics pipeline state description. This memeber is ignored if PipelineType == PIPELINE_TYPE_GRAPHICS or PIPELINE_TYPE_MESH
     GraphicsPipelineDesc GraphicsPipeline;
 
-    /// Compute pipeline state description. This memeber is ignored if PipelineType == COMPUTE_PIPELINE
+    /// Compute pipeline state description. This memeber is ignored if PipelineType == PIPELINE_TYPE_COMPUTE
     ComputePipelineDesc ComputePipeline;
     
 #if DILIGENT_CPP_INTERFACE
-    bool IsAnyGraphicsPipeline() const { return PipelineType == GRAPHICS_PIPELINE || PipelineType == MESH_PIPELINE; }
-    bool IsComputePipeline ()    const { return PipelineType == COMPUTE_PIPELINE; }
+    bool IsAnyGraphicsPipeline() const { return PipelineType == PIPELINE_TYPE_GRAPHICS || PipelineType == PIPELINE_TYPE_MESH; }
+    bool IsComputePipeline ()    const { return PipelineType == PIPELINE_TYPE_COMPUTE; }
 #endif
 };
 typedef struct PipelineStateDesc PipelineStateDesc;

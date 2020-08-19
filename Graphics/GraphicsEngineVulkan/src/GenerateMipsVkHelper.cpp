@@ -157,7 +157,7 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
         PipelineStateCreateInfo PSOCreateInfo;
         PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
 
-        PSODesc.PipelineType        = COMPUTE_PIPELINE;
+        PSODesc.PipelineType        = PIPELINE_TYPE_COMPUTE;
         PSODesc.Name                = name.c_str();
         PSODesc.ComputePipeline.pCS = pCS;
 
