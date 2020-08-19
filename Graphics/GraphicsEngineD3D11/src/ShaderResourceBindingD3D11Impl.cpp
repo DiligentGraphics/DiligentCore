@@ -30,6 +30,7 @@
 #include "PipelineStateD3D11Impl.hpp"
 #include "DeviceContextD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
+#include "ShaderD3D11Impl.hpp"
 
 namespace Diligent
 {

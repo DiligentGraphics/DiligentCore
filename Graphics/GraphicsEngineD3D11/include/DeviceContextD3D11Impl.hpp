@@ -32,7 +32,6 @@
 
 #include "DeviceContextD3D11.h"
 #include "DeviceContextBase.hpp"
-#include "ShaderD3D11Impl.hpp"
 #include "BufferD3D11Impl.hpp"
 #include "TextureBaseD3D11.hpp"
 #include "PipelineStateD3D11Impl.hpp"

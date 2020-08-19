@@ -30,7 +30,6 @@
 /// \file
 /// Declaration of Diligent::RootSignature class
 #include <array>
-#include "ShaderD3DBase.hpp"
 #include "ShaderResourceLayoutD3D12.hpp"
 #include "BufferD3D12Impl.hpp"
 

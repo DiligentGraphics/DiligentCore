@@ -46,6 +46,43 @@ static const Char* g_HLSLDefinitions =
 
 
 #ifdef HAS_D12_DXIL_COMPILER
+struct DXILCompilerLib
+{
+    HMODULE               Module         = nullptr;
+    DxcCreateInstanceProc CreateInstance = nullptr;
+
+    DXILCompilerLib()
+    {
+        Module = LoadLibraryA("dxcompiler.dll");
+        if (Module)
+            CreateInstance = reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance"));
+    }
+
+    ~DXILCompilerLib()
+    {
+        FreeLibrary(Module);
+    }
+
+    static DXILCompilerLib& Instance()
+    {
+        static DXILCompilerLib inst;
+        return inst;
+    }
+};
+
+HRESULT DXILCreateInstance(
+    _In_ REFCLSID rclsid,
+    _In_ REFIID   riid,
+    _Out_ LPVOID* ppv)
+{
+    auto proc = DXILCompilerLib::Instance().CreateInstance;
+    if (proc)
+        return proc(rclsid, riid, ppv);
+    else
+        return E_NOTIMPL;
+}
+
+
 class DxcIncludeHandlerImpl final : public IDxcIncludeHandler
 {
 public:
@@ -86,7 +123,7 @@ public:
 
         m_FileDataCache.push_back(pFileData);
 
-        sourceBlob->QueryInterface(__uuidof(*ppIncludeSource), reinterpret_cast<void**>(ppIncludeSource));
+        sourceBlob->QueryInterface(IID_PPV_ARGS(ppIncludeSource));
         return S_OK;
     }
 
@@ -121,21 +158,59 @@ static HRESULT CompileDxilShader(const char*             Source,
                                  ID3DBlob**              ppBlobOut,
                                  ID3DBlob**              ppCompilerOutput)
 {
-    std::vector<WCHAR> unicodeBuffer;
-    unicodeBuffer.resize(1u << 15);
-    size_t unicodeBufferOffset = 0;
 #ifdef HAS_D12_DXIL_COMPILER
+    if (DXILCompilerLib::Instance().CreateInstance == nullptr)
+    {
+        LOG_ERROR("Failed to load dxcompiler.dll");
+        return E_FAIL;
+    }
 
-    const auto ToUnicode = [&unicodeBuffer, &unicodeBufferOffset](const char* str) {
-        auto len = strlen(str) + 1;
-        auto pos = unicodeBufferOffset;
-        unicodeBufferOffset += len;
-        VERIFY(unicodeBufferOffset < unicodeBuffer.size(), "buffer overflow");
-        for (size_t i = 0; i < len; ++i)
+    struct WStringChunk
+    {
+        WCHAR* Buffer;
+        size_t Size     = 0;
+        size_t Capacity = 0;
+
+        WStringChunk()
         {
-            unicodeBuffer[pos + i] = str[i];
+            Capacity = 1u << 12;
+            Buffer   = new WCHAR[Capacity];
         }
-        return &unicodeBuffer[pos];
+
+        WStringChunk(WStringChunk&& other) :
+            Buffer{other.Buffer}, Size{other.Size}, Capacity{other.Capacity}
+        {
+            other.Buffer = nullptr;
+        }
+
+        ~WStringChunk()
+        {
+            delete[] Buffer;
+        }
+    };
+    std::vector<WStringChunk> wstringPool;
+
+    const auto ToUnicode = [&wstringPool](const char* str) {
+        const auto ConvertString = [](const char* src, WCHAR* dst, size_t len) {
+            for (size_t i = 0; i < len; ++i)
+                dst[i] = static_cast<WCHAR>(src[i]);
+            return dst;
+        };
+
+        auto len = strlen(str) + 1;
+        for (auto& chunk : wstringPool)
+        {
+            if (chunk.Size + len <= chunk.Capacity)
+            {
+                auto pos = chunk.Size;
+                chunk.Size += len;
+                return ConvertString(str, chunk.Buffer + pos, len);
+            }
+        }
+        wstringPool.emplace_back();
+        auto& chunk = wstringPool.back();
+        chunk.Size += len;
+        return ConvertString(str, chunk.Buffer, len);
     };
 
     std::vector<DxcDefine> D3DMacros;
@@ -191,12 +266,12 @@ static HRESULT CompileDxilShader(const char*             Source,
     HRESULT hr;
 
     CComPtr<IDxcLibrary> library;
-    hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
+    hr = DXILCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
     if (FAILED(hr))
         return hr;
 
     CComPtr<IDxcCompiler> compiler;
-    hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+    hr = DXILCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
     if (FAILED(hr))
         return hr;
 
@@ -210,9 +285,9 @@ static HRESULT CompileDxilShader(const char*             Source,
             L"-Zpc", // Matrices in column-major order
             L"-WX",  // Warnings as errors
 #    ifdef DILIGENT_DEBUG
-            L"-Zi", // Debug info
-            //L"-Qembed_debug",   // Embed debug info into the shader (some compilers do not recognize this flag)
-            L"-Od", // Disable optimization
+            L"-Zi",           // Debug info
+            L"-Qembed_debug", // Embed debug info into the shader (some compilers do not recognize this flag)
+            L"-Od",           // Disable optimization
 #    else
             L"-O3", // Optimization level 3
 #    endif
@@ -238,18 +313,17 @@ static HRESULT CompileDxilShader(const char*             Source,
             hr = status;
     }
 
-    if (FAILED(hr))
+    if (result)
     {
-        if (result)
+        CComPtr<IDxcBlobEncoding> errorsBlob;
+        if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)))
         {
-            CComPtr<IDxcBlobEncoding> errorsBlob;
-            if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)) && errorsBlob)
-            {
-                errorsBlob->QueryInterface(__uuidof(*ppCompilerOutput), reinterpret_cast<void**>(ppCompilerOutput));
-            }
+            errorsBlob->QueryInterface(IID_PPV_ARGS(ppCompilerOutput));
         }
-        return hr;
     }
+
+    if (FAILED(hr))
+        return hr;
 
     hr = result->GetResult(reinterpret_cast<IDxcBlob**>(ppBlobOut));
     return hr;
@@ -432,7 +506,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
                 LOG_ERROR_AND_THROW("Failed to open shader source file");
             pSourceStream->ReadBlob(pFileData);
             // Null terminator is not read from the stream!
-            auto* FileDataPtr = reinterpret_cast<Char*>(pFileData->GetDataPtr());
+            auto* FileDataPtr = static_cast<Char*>(pFileData->GetDataPtr());
             auto  Size        = pFileData->GetSize();
             ShaderSource.append(FileDataPtr, FileDataPtr + Size / sizeof(*FileDataPtr));
         }
@@ -447,14 +521,15 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
         else
             hr = CompileShader(ShaderSource.c_str(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
 
-        const char* CompilerMsg = errors ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
-        if (CompilerMsg != nullptr && ShaderCI.ppCompilerOutput != nullptr)
+        const size_t CompilerMsgLen = errors->GetBufferSize();
+        const char*  CompilerMsg    = errors && CompilerMsgLen > 0 ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
+
+        if (CompilerMsg != nullptr && CompilerMsgLen > 0 && ShaderCI.ppCompilerOutput != nullptr)
         {
-            auto  ErrorMsgLen     = strlen(CompilerMsg);
-            auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(ErrorMsgLen + 1 + ShaderSource.length() + 1);
-            char* DataPtr         = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
-            memcpy(DataPtr, CompilerMsg, ErrorMsgLen + 1);
-            memcpy(DataPtr + ErrorMsgLen + 1, ShaderSource.data(), ShaderSource.length() + 1);
+            auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(CompilerMsgLen + 1 + ShaderSource.length() + 1);
+            char* DataPtr         = static_cast<char*>(pOutputDataBlob->GetDataPtr());
+            memcpy(DataPtr, CompilerMsg, CompilerMsgLen + 1);
+            memcpy(DataPtr + CompilerMsgLen + 1, ShaderSource.data(), ShaderSource.length() + 1);
             pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
         }
 

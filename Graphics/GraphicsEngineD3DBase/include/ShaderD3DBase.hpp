@@ -52,4 +52,12 @@ protected:
     bool              m_isDXIL;
 };
 
+#ifdef HAS_D12_DXIL_COMPILER
+// calls DxcCreateInstance
+HRESULT DXILCreateInstance(
+    _In_ REFCLSID rclsid,
+    _In_ REFIID   riid,
+    _Out_ LPVOID* ppv);
+#endif
+
 } // namespace Diligent

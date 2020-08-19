@@ -33,7 +33,7 @@
 #include "PipelineStateD3D11.h"
 #include "RenderDeviceD3D11.h"
 #include "PipelineStateBase.hpp"
-#include "ShaderD3D11Impl.hpp"
+#include "ShaderResourceLayoutD3D11.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
 
