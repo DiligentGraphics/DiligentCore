@@ -85,6 +85,8 @@ public:
 
     VkCommandBuffer AllocateCommandBuffer();
 
+    void SubmitCommandBuffer(VkCommandBuffer vkCmdBuffer, bool WaitForIdle);
+
     static void TransitionImageLayout(VkCommandBuffer                CmdBuffer,
                                       VkImage                        Image,
                                       VkImageLayout&                 CurrentLayout,

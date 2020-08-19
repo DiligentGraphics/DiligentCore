@@ -11,6 +11,7 @@ set(INCLUDE
     include/DescriptorPoolManager.hpp
     include/DeviceContextVkImpl.hpp
     include/FenceVkImpl.hpp
+    include/FramebufferVkImpl.hpp
     include/VulkanDynamicHeap.hpp
     include/FramebufferCache.hpp
     include/GenerateMipsVkHelper.hpp
@@ -20,6 +21,7 @@ set(INCLUDE
     include/QueryManagerVk.hpp
     include/QueryVkImpl.hpp
     include/RenderDeviceVkImpl.hpp
+    include/RenderPassVkImpl.hpp
     include/RenderPassCache.hpp
     include/SamplerVkImpl.hpp
     include/ShaderVkImpl.hpp
@@ -57,9 +59,11 @@ set(INTERFACE
     interface/DeviceContextVk.h
     interface/EngineFactoryVk.h
     interface/FenceVk.h
+    interface/FramebufferVk.h
     interface/PipelineStateVk.h
     interface/QueryVk.h
     interface/RenderDeviceVk.h
+    interface/RenderPassVk.h
     interface/SamplerVk.h
     interface/ShaderVk.h
     interface/ShaderResourceBindingVk.h
@@ -78,6 +82,7 @@ set(SRC
     src/DeviceContextVkImpl.cpp
     src/EngineFactoryVk.cpp
     src/FenceVkImpl.cpp
+    src/FramebufferVkImpl.cpp
     src/VulkanDynamicHeap.cpp
     src/FramebufferCache.cpp
     src/GenerateMipsVkHelper.cpp
@@ -86,6 +91,7 @@ set(SRC
     src/QueryManagerVk.cpp
     src/QueryVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
+    src/RenderPassVkImpl.cpp
     src/RenderPassCache.cpp
     src/SamplerVkImpl.cpp
     src/ShaderVkImpl.cpp

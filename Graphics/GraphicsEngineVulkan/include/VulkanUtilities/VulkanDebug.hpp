@@ -7,25 +7,11 @@ namespace VulkanUtilities
 {
 
 // clang-format off
-// Default validation layers
-#if !PLATFORM_ANDROID
-// On desktop the LunarG loaders exposes a meta layer that contains all layers
+// Unified validation layer used on Desktop and Mobile platforms
 static constexpr const char* ValidationLayerNames[] = 
 {
     "VK_LAYER_KHRONOS_validation"
 };
-#else
-// On Android we need to explicitly select all layers
-static constexpr const char *ValidationLayerNames[] = 
-{
-    "VK_LAYER_GOOGLE_threading",
-    "VK_LAYER_LUNARG_parameter_validation",
-    "VK_LAYER_LUNARG_object_tracker",
-    "VK_LAYER_LUNARG_core_validation",
-    "VK_LAYER_LUNARG_swapchain",
-    "VK_LAYER_GOOGLE_unique_objects"
-};
-#endif
 // clang-format on
 
 // Load debug function pointers and set debug callback

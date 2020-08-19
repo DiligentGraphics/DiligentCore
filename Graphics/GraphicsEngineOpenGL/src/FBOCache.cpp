@@ -109,6 +109,116 @@ void FBOCache::OnReleaseTexture(ITexture* pTexture)
     m_TexIdToKey.erase(EqualRange.first, EqualRange.second);
 }
 
+GLObjectWrappers::GLFrameBufferObj FBOCache::CreateFBO(GLContextState&    ContextState,
+                                                       Uint32             NumRenderTargets,
+                                                       TextureViewGLImpl* ppRTVs[],
+                                                       TextureViewGLImpl* pDSV)
+{
+    GLObjectWrappers::GLFrameBufferObj FBO{true};
+
+    ContextState.BindFBO(FBO);
+
+    // Initialize the FBO
+    for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
+    {
+        if (auto* pRTView = ppRTVs[rt])
+        {
+            const auto& RTVDesc     = pRTView->GetDesc();
+            auto*       pColorTexGL = pRTView->GetTexture<TextureBaseGL>();
+            pColorTexGL->AttachToFramebuffer(RTVDesc, GL_COLOR_ATTACHMENT0 + rt);
+        }
+    }
+
+    if (pDSV != nullptr)
+    {
+        const auto& DSVDesc         = pDSV->GetDesc();
+        auto*       pDepthTexGL     = pDSV->GetTexture<TextureBaseGL>();
+        GLenum      AttachmentPoint = 0;
+        if (DSVDesc.Format == TEX_FORMAT_D32_FLOAT ||
+            DSVDesc.Format == TEX_FORMAT_D16_UNORM)
+        {
+#ifdef DILIGENT_DEBUG
+            {
+                const auto GLTexFmt = pDepthTexGL->GetGLTexFormat();
+                VERIFY(GLTexFmt == GL_DEPTH_COMPONENT32F || GLTexFmt == GL_DEPTH_COMPONENT16,
+                       "Inappropriate internal texture format (", GLTexFmt,
+                       ") for depth attachment. GL_DEPTH_COMPONENT32F or GL_DEPTH_COMPONENT16 is expected");
+            }
+#endif
+            AttachmentPoint = GL_DEPTH_ATTACHMENT;
+        }
+        else if (DSVDesc.Format == TEX_FORMAT_D32_FLOAT_S8X24_UINT ||
+                 DSVDesc.Format == TEX_FORMAT_D24_UNORM_S8_UINT)
+        {
+#ifdef DILIGENT_DEBUG
+            {
+                const auto GLTexFmt = pDepthTexGL->GetGLTexFormat();
+                VERIFY(GLTexFmt == GL_DEPTH24_STENCIL8 || GLTexFmt == GL_DEPTH32F_STENCIL8,
+                       "Inappropriate internal texture format (", GLTexFmt,
+                       ") for depth-stencil attachment. GL_DEPTH24_STENCIL8 or GL_DEPTH32F_STENCIL8 is expected");
+            }
+#endif
+            AttachmentPoint = GL_DEPTH_STENCIL_ATTACHMENT;
+        }
+        else
+        {
+            UNEXPECTED(GetTextureFormatAttribs(DSVDesc.Format).Name, " is not valid depth-stencil view format");
+        }
+        pDepthTexGL->AttachToFramebuffer(DSVDesc, AttachmentPoint);
+    }
+
+    // We now need to set mapping between shader outputs and
+    // color attachments. This largely redundant step is performed
+    // by glDrawBuffers()
+    // clang-format off
+    static const GLenum DrawBuffers[] = 
+    { 
+        GL_COLOR_ATTACHMENT0, 
+        GL_COLOR_ATTACHMENT1, 
+        GL_COLOR_ATTACHMENT2, 
+        GL_COLOR_ATTACHMENT3,
+        GL_COLOR_ATTACHMENT4,
+        GL_COLOR_ATTACHMENT5,
+        GL_COLOR_ATTACHMENT6,
+        GL_COLOR_ATTACHMENT7,
+        GL_COLOR_ATTACHMENT8,
+        GL_COLOR_ATTACHMENT9,
+        GL_COLOR_ATTACHMENT10,
+        GL_COLOR_ATTACHMENT11,
+        GL_COLOR_ATTACHMENT12,
+        GL_COLOR_ATTACHMENT13,
+        GL_COLOR_ATTACHMENT14,
+        GL_COLOR_ATTACHMENT15
+    };
+    // clang-format on
+
+    // The state set by glDrawBuffers() is part of the state of the framebuffer.
+    // So it can be set up once and left it set.
+    glDrawBuffers(NumRenderTargets, DrawBuffers);
+    CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
+
+    GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (Status != GL_FRAMEBUFFER_COMPLETE)
+    {
+        const Char* StatusString = "Unknown";
+        switch (Status)
+        {
+            // clang-format off
+            case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:         StatusString = "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";         break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: StatusString = "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT"; break;
+            case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:        StatusString = "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";        break;
+            case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:        StatusString = "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";        break;
+            case GL_FRAMEBUFFER_UNSUPPORTED:                   StatusString = "GL_FRAMEBUFFER_UNSUPPORTED";                   break;
+            case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:        StatusString = "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";        break;
+            case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:      StatusString = "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";      break;
+                // clang-format on
+        }
+        LOG_ERROR("Framebuffer is incomplete. FB status: ", StatusString);
+        UNEXPECTED("Framebuffer is incomplete");
+    }
+    return FBO;
+}
+
 const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             NumRenderTargets,
                                                            TextureViewGLImpl* ppRTVs[],
                                                            TextureViewGLImpl* pDSV,
@@ -163,108 +273,7 @@ const GLObjectWrappers::GLFrameBufferObj& FBOCache::GetFBO(Uint32             Nu
     else
     {
         // Create a new FBO
-        GLObjectWrappers::GLFrameBufferObj NewFBO(true);
-
-        ContextState.BindFBO(NewFBO);
-
-        // Initialize the FBO
-        for (Uint32 rt = 0; rt < NumRenderTargets; ++rt)
-        {
-            if (auto* pRTView = ppRTVs[rt])
-            {
-                const auto& RTVDesc     = pRTView->GetDesc();
-                auto*       pColorTexGL = pRTView->GetTexture<TextureBaseGL>();
-                pColorTexGL->AttachToFramebuffer(RTVDesc, GL_COLOR_ATTACHMENT0 + rt);
-            }
-        }
-
-        if (pDSV != nullptr)
-        {
-            const auto& DSVDesc         = pDSV->GetDesc();
-            auto*       pDepthTexGL     = pDSV->GetTexture<TextureBaseGL>();
-            GLenum      AttachmentPoint = 0;
-            if (DSVDesc.Format == TEX_FORMAT_D32_FLOAT ||
-                DSVDesc.Format == TEX_FORMAT_D16_UNORM)
-            {
-#ifdef DILIGENT_DEBUG
-                {
-                    const auto GLTexFmt = pDepthTexGL->GetGLTexFormat();
-                    VERIFY(GLTexFmt == GL_DEPTH_COMPONENT32F || GLTexFmt == GL_DEPTH_COMPONENT16,
-                           "Inappropriate internal texture format (", GLTexFmt,
-                           ") for depth attachment. GL_DEPTH_COMPONENT32F or GL_DEPTH_COMPONENT16 is expected");
-                }
-#endif
-                AttachmentPoint = GL_DEPTH_ATTACHMENT;
-            }
-            else if (DSVDesc.Format == TEX_FORMAT_D32_FLOAT_S8X24_UINT ||
-                     DSVDesc.Format == TEX_FORMAT_D24_UNORM_S8_UINT)
-            {
-#ifdef DILIGENT_DEBUG
-                {
-                    const auto GLTexFmt = pDepthTexGL->GetGLTexFormat();
-                    VERIFY(GLTexFmt == GL_DEPTH24_STENCIL8 || GLTexFmt == GL_DEPTH32F_STENCIL8,
-                           "Inappropriate internal texture format (", GLTexFmt,
-                           ") for depth-stencil attachment. GL_DEPTH24_STENCIL8 or GL_DEPTH32F_STENCIL8 is expected");
-                }
-#endif
-                AttachmentPoint = GL_DEPTH_STENCIL_ATTACHMENT;
-            }
-            else
-            {
-                UNEXPECTED(GetTextureFormatAttribs(DSVDesc.Format).Name, " is not valid depth-stencil view format");
-            }
-            pDepthTexGL->AttachToFramebuffer(DSVDesc, AttachmentPoint);
-        }
-
-        // We now need to set mapping between shader outputs and
-        // color attachments. This largely redundant step is performed
-        // by glDrawBuffers()
-        // clang-format off
-        static const GLenum DrawBuffers[] = 
-        { 
-            GL_COLOR_ATTACHMENT0, 
-            GL_COLOR_ATTACHMENT1, 
-            GL_COLOR_ATTACHMENT2, 
-            GL_COLOR_ATTACHMENT3,
-            GL_COLOR_ATTACHMENT4,
-            GL_COLOR_ATTACHMENT5,
-            GL_COLOR_ATTACHMENT6,
-            GL_COLOR_ATTACHMENT7,
-            GL_COLOR_ATTACHMENT8,
-            GL_COLOR_ATTACHMENT9,
-            GL_COLOR_ATTACHMENT10,
-            GL_COLOR_ATTACHMENT11,
-            GL_COLOR_ATTACHMENT12,
-            GL_COLOR_ATTACHMENT13,
-            GL_COLOR_ATTACHMENT14,
-            GL_COLOR_ATTACHMENT15
-        };
-        // clang-format on
-
-        // The state set by glDrawBuffers() is part of the state of the framebuffer.
-        // So it can be set up once and left it set.
-        glDrawBuffers(NumRenderTargets, DrawBuffers);
-        CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
-
-        GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-        if (Status != GL_FRAMEBUFFER_COMPLETE)
-        {
-            const Char* StatusString = "Unknown";
-            switch (Status)
-            {
-                // clang-format off
-                case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:         StatusString = "GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT";         break;
-                case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT: StatusString = "GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT"; break;
-                case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:        StatusString = "GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER";        break;
-                case GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER:        StatusString = "GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER";        break;
-                case GL_FRAMEBUFFER_UNSUPPORTED:                   StatusString = "GL_FRAMEBUFFER_UNSUPPORTED";                   break;
-                case GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE:        StatusString = "GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE";        break;
-                case GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS:      StatusString = "GL_FRAMEBUFFER_INCOMPLETE_LAYER_TARGETS";      break;
-                    // clang-format on
-            }
-            LOG_ERROR("Framebuffer is incomplete. FB status: ", StatusString);
-            UNEXPECTED("Framebuffer is incomplete");
-        }
+        auto NewFBO = CreateFBO(ContextState, NumRenderTargets, ppRTVs, pDSV);
 
         auto NewElems = m_Cache.emplace(std::make_pair(Key, std::move(NewFBO)));
         // New element must be actually inserted

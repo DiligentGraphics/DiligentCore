@@ -72,7 +72,7 @@ public:
     void TransitionRenderTarget(VkCommandBuffer vkCmdBuffer, VkImageLayout Layout, VkPipelineStageFlags GraphicsShaderStages);
     void TransitionDepthBuffer(VkCommandBuffer vkCmdBuffer, VkImageLayout Layout, VkPipelineStageFlags GraphicsShaderStages);
 
-    void BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages);
+    void BeginRenderPass(VkCommandBuffer vkCmdBuffer, VkPipelineStageFlags GraphicsShaderStages, const float* pClearColor = nullptr);
     void EndRenderPass(VkCommandBuffer vkCmdBuffer);
 
 private:

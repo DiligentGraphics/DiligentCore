@@ -123,6 +123,9 @@ public:
                       ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");
         this->m_Desc.CommandQueueMask &= DeviceQueuesMask;
 
+        if ((this->m_Desc.BindFlags & BIND_INPUT_ATTACHMENT) != 0)
+            this->m_Desc.BindFlags |= BIND_SHADER_RESOURCE;
+
         // Validate correctness of texture description
         ValidateTextureDesc(this->m_Desc);
     }
@@ -179,6 +182,12 @@ public:
         VERIFY((State & (State - 1)) == 0, "Single state is expected");
         VERIFY(IsInKnownState(), "Texture state is unknown");
         return (this->m_State & State) == State;
+    }
+
+    bool CheckAnyState(RESOURCE_STATE States) const
+    {
+        VERIFY(IsInKnownState(), "Texture state is unknown");
+        return (this->m_State & States) != 0;
     }
 
     /// Implementation of ITexture::GetDefaultView().

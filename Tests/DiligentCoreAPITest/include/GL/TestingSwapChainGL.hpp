@@ -52,6 +52,11 @@ public:
 
     void BindFramebuffer();
 
+    GLuint GetFBO() const
+    {
+        return m_FBO;
+    }
+
 private:
     GLuint m_RenderTarget = 0;
     GLuint m_DepthBuffer  = 0;

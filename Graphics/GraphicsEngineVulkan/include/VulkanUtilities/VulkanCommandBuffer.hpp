@@ -182,7 +182,12 @@ public:
         vkCmdDispatchIndirect(m_VkCmdBuffer, Buffer, Offset);
     }
 
-    __forceinline void BeginRenderPass(VkRenderPass RenderPass, VkFramebuffer Framebuffer, uint32_t FramebufferWidth, uint32_t FramebufferHeight)
+    __forceinline void BeginRenderPass(VkRenderPass        RenderPass,
+                                       VkFramebuffer       Framebuffer,
+                                       uint32_t            FramebufferWidth,
+                                       uint32_t            FramebufferHeight,
+                                       uint32_t            ClearValueCount = 0,
+                                       const VkClearValue* pClearValues    = nullptr)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RenderPass == VK_NULL_HANDLE, "Current pass has not been ended");
@@ -196,13 +201,13 @@ public:
             BeginInfo.framebuffer = Framebuffer;
             // The render area MUST be contained within the framebuffer dimensions (7.4)
             BeginInfo.renderArea      = {{0, 0}, {FramebufferWidth, FramebufferHeight}};
-            BeginInfo.clearValueCount = 0;
-            BeginInfo.pClearValues    = nullptr; // an array of VkClearValue structures that contains clear values for
-                                                 // each attachment, if the attachment uses a loadOp value of VK_ATTACHMENT_LOAD_OP_CLEAR
-                                                 // or if the attachment has a depth/stencil format and uses a stencilLoadOp value of
-                                                 // VK_ATTACHMENT_LOAD_OP_CLEAR. The array is indexed by attachment number. Only elements
-                                                 // corresponding to cleared attachments are used. Other elements of pClearValues are
-                                                 // ignored (7.4)
+            BeginInfo.clearValueCount = ClearValueCount;
+            BeginInfo.pClearValues    = pClearValues; // an array of VkClearValue structures that contains clear values for
+                                                      // each attachment, if the attachment uses a loadOp value of VK_ATTACHMENT_LOAD_OP_CLEAR
+                                                      // or if the attachment has a depth/stencil format and uses a stencilLoadOp value of
+                                                      // VK_ATTACHMENT_LOAD_OP_CLEAR. The array is indexed by attachment number. Only elements
+                                                      // corresponding to cleared attachments are used. Other elements of pClearValues are
+                                                      // ignored (7.4)
 
             vkCmdBeginRenderPass(m_VkCmdBuffer, &BeginInfo,
                                  VK_SUBPASS_CONTENTS_INLINE // the contents of the subpass will be recorded inline in the
@@ -232,6 +237,13 @@ public:
                               "subpass of a render pass instance, or must both begin and end outside of a render pass "
                               "instance (i.e. contain entire render pass instances). (17.2)");
         }
+    }
+
+    __forceinline void NextSubpass()
+    {
+        VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "Render pass has not been started");
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        vkCmdNextSubpass(m_VkCmdBuffer, VK_SUBPASS_CONTENTS_INLINE);
     }
 
     __forceinline void EndCommandBuffer()

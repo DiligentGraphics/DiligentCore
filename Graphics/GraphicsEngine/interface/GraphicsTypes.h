@@ -65,7 +65,7 @@ DILIGENT_TYPED_ENUM(VALUE_TYPE, Uint8)
 
 /// Resource binding flags
 
-/// [D3D11_BIND_FLAG]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476085(v=vs.85).aspx
+/// [D3D11_BIND_FLAG]: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_bind_flag
 ///
 /// This enumeration describes which parts of the pipeline a resource can be bound to.
 /// It generally mirrors [D3D11_BIND_FLAG][] enumeration. It is used by
@@ -84,13 +84,14 @@ DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
     BIND_RENDER_TARGET	    = 0x20L,///< A texture can be bound as a render target
     BIND_DEPTH_STENCIL	    = 0x40L,///< A texture can be bound as a depth-stencil target
     BIND_UNORDERED_ACCESS	= 0x80L,///< A buffer or a texture can be bound as an unordered access view
-    BIND_INDIRECT_DRAW_ARGS	= 0x100L///< A buffer can be bound as the source buffer for indirect draw commands
+    BIND_INDIRECT_DRAW_ARGS	= 0x100L,///< A buffer can be bound as the source buffer for indirect draw commands
+    BIND_INPUT_ATTACHMENT   = 0x200L ///< A texture can be used as render pass input attachment
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
 
 /// Resource usage
 
-/// [D3D11_USAGE]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476259(v=vs.85).aspx
+/// [D3D11_USAGE]: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_usage
 /// This enumeration describes expected resource usage. It generally mirrors [D3D11_USAGE] enumeration.
 /// The enumeration is used by
 /// - BufferDesc to describe usage for a buffer
@@ -133,7 +134,7 @@ DEFINE_FLAG_ENUM_OPERATORS(CPU_ACCESS_FLAGS)
 
 /// Resource mapping type
 
-/// [D3D11_MAP]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476181(v=vs.85).aspx
+/// [D3D11_MAP]: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_map
 /// Describes how a mapped resource will be accessed. This enumeration generally
 /// mirrors [D3D11_MAP][] enumeration. It is used by
 /// - IBuffer::Map to describe buffer mapping type
@@ -257,7 +258,7 @@ DILIGENT_TYPED_ENUM(BUFFER_VIEW_TYPE, Uint8)
 /// This enumeration describes available texture formats and generally mirrors DXGI_FORMAT enumeration.
 /// The table below provides detailed information on each format. Most of the formats are widely supported 
 /// by all modern APIs (DX10+, OpenGL3.3+ and OpenGLES3.0+). Specific requirements are additionally indicated.
-/// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173059(v=vs.85).aspx">DXGI_FORMAT enumeration on MSDN</a>, 
+/// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/api/dxgiformat/ne-dxgiformat-dxgi_format">DXGI_FORMAT enumeration on MSDN</a>, 
 ///     <a href = "https://www.opengl.org/wiki/Image_Format">OpenGL Texture Formats</a>
 ///
 DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
@@ -568,7 +569,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC1_TYPELESS. OpenGL does not have direct counterpart, GL_COMPRESSED_RGB_S3TC_DXT1_EXT is used. \n
     /// [GL_EXT_texture_compression_s3tc]: https://www.khronos.org/registry/gles/extensions/EXT/texture_compression_s3tc.txt
     /// OpenGL & OpenGLES: [GL_EXT_texture_compression_s3tc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC1">BC1 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1">BC1 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/S3_Texture_Compression#DXT1_Format">DXT1 on OpenGL.org </a>
     TEX_FORMAT_BC1_TYPELESS, 
         
@@ -577,7 +578,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC1_UNORM. OpenGL counterpart: GL_COMPRESSED_RGB_S3TC_DXT1_EXT.\n
     /// [GL_EXT_texture_compression_s3tc]: https://www.khronos.org/registry/gles/extensions/EXT/texture_compression_s3tc.txt
     /// OpenGL & OpenGLES: [GL_EXT_texture_compression_s3tc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC1">BC1 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1">BC1 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/S3_Texture_Compression#DXT1_Format">DXT1 on OpenGL.org </a>
     TEX_FORMAT_BC1_UNORM,
         
@@ -586,7 +587,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC1_UNORM_SRGB. OpenGL counterpart: GL_COMPRESSED_SRGB_S3TC_DXT1_EXT.\n
     /// [GL_EXT_texture_compression_s3tc]: https://www.khronos.org/registry/gles/extensions/EXT/texture_compression_s3tc.txt
     /// OpenGL & OpenGLES: [GL_EXT_texture_compression_s3tc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC1">BC1 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc1">BC1 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/S3_Texture_Compression#DXT1_Format">DXT1 on OpenGL.org </a>
     TEX_FORMAT_BC1_UNORM_SRGB,
         
@@ -594,7 +595,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC2_TYPELESS. OpenGL does not have direct counterpart, GL_COMPRESSED_RGBA_S3TC_DXT3_EXT is used. \n 
     /// [GL_EXT_texture_compression_s3tc]: https://www.khronos.org/registry/gles/extensions/EXT/texture_compression_s3tc.txt
     /// OpenGL & OpenGLES: [GL_EXT_texture_compression_s3tc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC2">BC2 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc2">BC2 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/S3_Texture_Compression#DXT3_Format">DXT3 on OpenGL.org </a>
     TEX_FORMAT_BC2_TYPELESS, 
         
@@ -603,7 +604,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC2_UNORM. OpenGL counterpart: GL_COMPRESSED_RGBA_S3TC_DXT3_EXT. \n
     /// [GL_EXT_texture_compression_s3tc]: https://www.khronos.org/registry/gles/extensions/EXT/texture_compression_s3tc.txt
     /// OpenGL & OpenGLES: [GL_EXT_texture_compression_s3tc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC2">BC2 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc2">BC2 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/S3_Texture_Compression#DXT3_Format">DXT3 on OpenGL.org </a>
     TEX_FORMAT_BC2_UNORM,
         
@@ -612,7 +613,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC2_UNORM_SRGB. OpenGL counterpart: GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT. \n
     /// [GL_EXT_texture_compression_s3tc]: https://www.khronos.org/registry/gles/extensions/EXT/texture_compression_s3tc.txt
     /// OpenGL & OpenGLES: [GL_EXT_texture_compression_s3tc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC2">BC2 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc2">BC2 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/S3_Texture_Compression#DXT3_Format">DXT3 on OpenGL.org </a>
     TEX_FORMAT_BC2_UNORM_SRGB,
         
@@ -620,7 +621,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC3_TYPELESS. OpenGL does not have direct counterpart, GL_COMPRESSED_RGBA_S3TC_DXT5_EXT is used. \n
     /// [GL_EXT_texture_compression_s3tc]: https://www.khronos.org/registry/gles/extensions/EXT/texture_compression_s3tc.txt
     /// OpenGL & OpenGLES: [GL_EXT_texture_compression_s3tc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC3">BC3 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc3">BC3 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/S3_Texture_Compression#DXT5_Format">DXT5 on OpenGL.org </a>
     TEX_FORMAT_BC3_TYPELESS, 
         
@@ -629,7 +630,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC3_UNORM. OpenGL counterpart: GL_COMPRESSED_RGBA_S3TC_DXT5_EXT. \n
     /// [GL_EXT_texture_compression_s3tc]: https://www.khronos.org/registry/gles/extensions/EXT/texture_compression_s3tc.txt
     /// OpenGL & OpenGLES: [GL_EXT_texture_compression_s3tc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC3">BC3 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc3">BC3 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/S3_Texture_Compression#DXT5_Format">DXT5 on OpenGL.org </a>
     TEX_FORMAT_BC3_UNORM,
         
@@ -638,7 +639,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC3_UNORM_SRGB. OpenGL counterpart: GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT. \n
     /// [GL_EXT_texture_compression_s3tc]: https://www.khronos.org/registry/gles/extensions/EXT/texture_compression_s3tc.txt
     /// OpenGL & OpenGLES: [GL_EXT_texture_compression_s3tc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC3">BC3 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc3">BC3 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/S3_Texture_Compression#DXT5_Format">DXT5 on OpenGL.org </a>
     TEX_FORMAT_BC3_UNORM_SRGB,
         
@@ -646,7 +647,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC4_TYPELESS. OpenGL does not have direct counterpart, GL_COMPRESSED_RED_RGTC1 is used. \n
     /// [GL_ARB_texture_compression_rgtc]: https://www.opengl.org/registry/specs/ARB/texture_compression_rgtc.txt
     /// OpenGL & OpenGLES: [GL_ARB_texture_compression_rgtc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC4">BC4 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc4">BC4 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/Image_Format#Compressed_formats">Compressed formats on OpenGL.org </a>
     TEX_FORMAT_BC4_TYPELESS, 
         
@@ -655,7 +656,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC4_UNORM. OpenGL counterpart: GL_COMPRESSED_RED_RGTC1. \n
     /// [GL_ARB_texture_compression_rgtc]: https://www.opengl.org/registry/specs/ARB/texture_compression_rgtc.txt
     /// OpenGL & OpenGLES: [GL_ARB_texture_compression_rgtc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC4">BC4 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc4">BC4 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/Image_Format#Compressed_formats">Compressed formats on OpenGL.org </a>
     TEX_FORMAT_BC4_UNORM,
         
@@ -664,7 +665,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC4_SNORM. OpenGL counterpart: GL_COMPRESSED_SIGNED_RED_RGTC1. \n
     /// [GL_ARB_texture_compression_rgtc]: https://www.opengl.org/registry/specs/ARB/texture_compression_rgtc.txt
     /// OpenGL & OpenGLES: [GL_ARB_texture_compression_rgtc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC4">BC4 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc4">BC4 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/Image_Format#Compressed_formats">Compressed formats on OpenGL.org </a>
     TEX_FORMAT_BC4_SNORM,
         
@@ -672,7 +673,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC5_TYPELESS. OpenGL does not have direct counterpart, GL_COMPRESSED_RG_RGTC2 is used. \n
     /// [GL_ARB_texture_compression_rgtc]: https://www.opengl.org/registry/specs/ARB/texture_compression_rgtc.txt
     /// OpenGL & OpenGLES: [GL_ARB_texture_compression_rgtc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC5">BC5 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc5">BC5 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/Image_Format#Compressed_formats">Compressed formats on OpenGL.org </a>
     TEX_FORMAT_BC5_TYPELESS,
         
@@ -681,7 +682,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC5_UNORM. OpenGL counterpart: GL_COMPRESSED_RG_RGTC2. \n
     /// [GL_ARB_texture_compression_rgtc]: https://www.opengl.org/registry/specs/ARB/texture_compression_rgtc.txt
     /// OpenGL & OpenGLES: [GL_ARB_texture_compression_rgtc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC5">BC5 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc5">BC5 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/Image_Format#Compressed_formats">Compressed formats on OpenGL.org </a>
     TEX_FORMAT_BC5_UNORM,
         
@@ -690,7 +691,7 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
     /// D3D counterpart: DXGI_FORMAT_BC5_SNORM. OpenGL counterpart: GL_COMPRESSED_SIGNED_RG_RGTC2. \n
     /// [GL_ARB_texture_compression_rgtc]: https://www.opengl.org/registry/specs/ARB/texture_compression_rgtc.txt
     /// OpenGL & OpenGLES: [GL_ARB_texture_compression_rgtc][] extension is required
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb694531(v=vs.85).aspx#BC5">BC5 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d10/d3d10-graphics-programming-guide-resources-block-compression#bc5">BC5 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/Image_Format#Compressed_formats">Compressed formats on OpenGL.org </a>
     TEX_FORMAT_BC5_SNORM,
         
@@ -741,49 +742,49 @@ DILIGENT_TYPED_ENUM(TEXTURE_FORMAT, Uint16)
         
     /// Three-component typeless block-compression format. \n
     /// D3D counterpart: DXGI_FORMAT_BC6H_TYPELESS. OpenGL does not have direct counterpart, GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT is used. \n
-    /// [GL_ARB_texture_compression_bptc]: https://cvs.khronos.org/svn/repos/ogl/trunk/doc/registry/public/specs/ARB/texture_compression_bptc.txt
+    /// [GL_ARB_texture_compression_bptc]: https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
     /// OpenGL: [GL_ARB_texture_compression_bptc][] extension is required. Not supported in at least OpenGLES3.1
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh308952(v=vs.85).aspx">BC6H on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d11/bc6h-format">BC6H on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/BPTC_Texture_Compression">BPTC Texture Compression on OpenGL.org </a>
     TEX_FORMAT_BC6H_TYPELESS,
         
     /// Three-component unsigned half-precision floating-point format with 16 bits for each channel. \n
     /// D3D counterpart: DXGI_FORMAT_BC6H_UF16. OpenGL counterpart: GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT. \n
-    /// [GL_ARB_texture_compression_bptc]: https://cvs.khronos.org/svn/repos/ogl/trunk/doc/registry/public/specs/ARB/texture_compression_bptc.txt
+    /// [GL_ARB_texture_compression_bptc]: https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
     /// OpenGL: [GL_ARB_texture_compression_bptc][] extension is required. Not supported in at least OpenGLES3.1
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh308952(v=vs.85).aspx">BC6H on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d11/bc6h-format">BC6H on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/BPTC_Texture_Compression">BPTC Texture Compression on OpenGL.org </a>
     TEX_FORMAT_BC6H_UF16,
         
     /// Three-channel signed half-precision floating-point format with 16 bits per each channel. \n
     /// D3D counterpart: DXGI_FORMAT_BC6H_SF16. OpenGL counterpart: GL_COMPRESSED_RGB_BPTC_SIGNED_FLOAT. \n
-    /// [GL_ARB_texture_compression_bptc]: https://cvs.khronos.org/svn/repos/ogl/trunk/doc/registry/public/specs/ARB/texture_compression_bptc.txt
+    /// [GL_ARB_texture_compression_bptc]: https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
     /// OpenGL: [GL_ARB_texture_compression_bptc][] extension is required. Not supported in at least OpenGLES3.1
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh308952(v=vs.85).aspx">BC6H on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d11/bc6h-format">BC6H on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/BPTC_Texture_Compression">BPTC Texture Compression on OpenGL.org </a>
     TEX_FORMAT_BC6H_SF16,
         
     /// Three-component typeless block-compression format. \n
     /// D3D counterpart: DXGI_FORMAT_BC7_TYPELESS. OpenGL does not have direct counterpart, GL_COMPRESSED_RGBA_BPTC_UNORM is used. \n
-    /// [GL_ARB_texture_compression_bptc]: https://cvs.khronos.org/svn/repos/ogl/trunk/doc/registry/public/specs/ARB/texture_compression_bptc.txt
+    /// [GL_ARB_texture_compression_bptc]: https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
     /// OpenGL: [GL_ARB_texture_compression_bptc][] extension is required. Not supported in at least OpenGLES3.1
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh308953(v=vs.85).aspx">BC7 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d11/bc7-format">BC7 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/BPTC_Texture_Compression">BPTC Texture Compression on OpenGL.org </a>
     TEX_FORMAT_BC7_TYPELESS,
         
     /// Three-component block-compression unsigned-normalized-integer format with 4 to 7 bits per color channel and 0 to 8 bits of alpha. \n
     /// D3D counterpart: DXGI_FORMAT_BC7_UNORM. OpenGL counterpart: GL_COMPRESSED_RGBA_BPTC_UNORM. \n
-    /// [GL_ARB_texture_compression_bptc]: https://cvs.khronos.org/svn/repos/ogl/trunk/doc/registry/public/specs/ARB/texture_compression_bptc.txt
+    /// [GL_ARB_texture_compression_bptc]: https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
     /// OpenGL: [GL_ARB_texture_compression_bptc][] extension is required. Not supported in at least OpenGLES3.1
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh308953(v=vs.85).aspx">BC7 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d11/bc7-format">BC7 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/BPTC_Texture_Compression">BPTC Texture Compression on OpenGL.org </a>
     TEX_FORMAT_BC7_UNORM,
         
     /// Three-component block-compression unsigned-normalized-integer sRGB format with 4 to 7 bits per color channel and 0 to 8 bits of alpha. \n
     /// D3D counterpart: DXGI_FORMAT_BC7_UNORM_SRGB. OpenGL counterpart: GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM. \n
-    /// [GL_ARB_texture_compression_bptc]: https://cvs.khronos.org/svn/repos/ogl/trunk/doc/registry/public/specs/ARB/texture_compression_bptc.txt
+    /// [GL_ARB_texture_compression_bptc]: https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_texture_compression_bptc.txt
     /// OpenGL: [GL_ARB_texture_compression_bptc][] extension is required. Not supported in at least OpenGLES3.1
-    /// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh308953(v=vs.85).aspx">BC7 on MSDN </a>, 
+    /// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/direct3d11/bc7-format">BC7 on MSDN </a>, 
     ///     <a href = "https://www.opengl.org/wiki/BPTC_Texture_Compression">BPTC Texture Compression on OpenGL.org </a>
     TEX_FORMAT_BC7_UNORM_SRGB,
         
@@ -816,8 +817,8 @@ DILIGENT_TYPED_ENUM(FILTER_TYPE, Uint8)
 
 /// Texture address mode
 
-/// [D3D11_TEXTURE_ADDRESS_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476256(v=vs.85).aspx
-/// [D3D12_TEXTURE_ADDRESS_MODE]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770441(v=vs.85).aspx
+/// [D3D11_TEXTURE_ADDRESS_MODE]: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_texture_address_mode
+/// [D3D12_TEXTURE_ADDRESS_MODE]: https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode
 /// Defines a technique for resolving texture coordinates that are outside of 
 /// the boundaries of a texture. The enumeration generally mirrors [D3D11_TEXTURE_ADDRESS_MODE][]/[D3D12_TEXTURE_ADDRESS_MODE][] enumeration. 
 /// It is used by SamplerDesc structure to define the address mode for U,V and W texture coordinates.
@@ -857,8 +858,8 @@ DILIGENT_TYPED_ENUM(TEXTURE_ADDRESS_MODE, Uint8)
 
 /// Comparison function
 
-/// [D3D11_COMPARISON_FUNC]: https://msdn.microsoft.com/en-us/library/windows/desktop/ff476101(v=vs.85).aspx
-/// [D3D12_COMPARISON_FUNC]: https://msdn.microsoft.com/en-us/library/windows/desktop/dn770349(v=vs.85).aspx
+/// [D3D11_COMPARISON_FUNC]: https://docs.microsoft.com/en-us/windows/win32/api/d3d11/ne-d3d11-d3d11_comparison_func
+/// [D3D12_COMPARISON_FUNC]: https://docs.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func
 /// This enumeartion defines a comparison function. It generally mirrors [D3D11_COMPARISON_FUNC]/[D3D12_COMPARISON_FUNC] enum and is used by
 /// - SamplerDesc to define a comparison function if one of the comparison mode filters is used
 /// - StencilOpDesc to define a stencil function
@@ -1078,6 +1079,55 @@ DILIGENT_TYPED_ENUM(PRIMITIVE_TOPOLOGY, Uint8)
     PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES
 };
 
+
+/// Defines optimized depth-stencil clear value.
+struct DepthStencilClearValue
+{
+    /// Depth clear value
+    Float32 Depth   DEFAULT_INITIALIZER(1.f);
+    /// Stencil clear value
+    Uint8 Stencil   DEFAULT_INITIALIZER(0);
+
+#if DILIGENT_CPP_INTERFACE
+    DepthStencilClearValue()noexcept{}
+
+    DepthStencilClearValue(Float32 _Depth,
+                           Uint8   _Stencil)noexcept : 
+        Depth   {_Depth  },
+        Stencil {_Stencil}
+    {}
+#endif
+};
+typedef struct DepthStencilClearValue DepthStencilClearValue;
+
+/// Defines optimized clear value.
+struct OptimizedClearValue
+{
+    /// Format
+    TEXTURE_FORMAT Format       DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
+
+    /// Render target clear value
+    Float32        Color[4]     DEFAULT_INITIALIZER({});
+
+    /// Depth stencil clear value
+    DepthStencilClearValue DepthStencil;
+
+#if DILIGENT_CPP_INTERFACE
+    bool operator == (const OptimizedClearValue& rhs)const
+    {
+        return Format == rhs.Format &&
+               Color[0] == rhs.Color[0] &&
+               Color[1] == rhs.Color[1] &&
+               Color[2] == rhs.Color[2] &&
+               Color[3] == rhs.Color[3] &&
+               DepthStencil.Depth   == rhs.DepthStencil.Depth &&
+               DepthStencil.Stencil == rhs.DepthStencil.Stencil;
+    }
+#endif
+};
+typedef struct OptimizedClearValue OptimizedClearValue;
+
+
 /// Describes common device object attributes
 struct DeviceObjectAttribs
 {
@@ -1141,7 +1191,7 @@ typedef struct AdapterAttribs AdapterAttribs;
 
 
 /// Flags indicating how an image is stretched to fit a given monitor's resolution.
-/// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173066(v=vs.85).aspx">DXGI_MODE_SCALING enumeration on MSDN</a>, 
+/// \sa <a href = "https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/bb173066(v=vs.85)">DXGI_MODE_SCALING enumeration on MSDN</a>, 
 enum SCALING_MODE
 {
     /// Unspecified scaling.
@@ -1160,7 +1210,7 @@ enum SCALING_MODE
 
 
 /// Flags indicating the method the raster uses to create an image on a surface.
-/// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/bb173067">DXGI_MODE_SCANLINE_ORDER enumeration on MSDN</a>, 
+/// \sa <a href = "https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/bb173067(v=vs.85)">DXGI_MODE_SCANLINE_ORDER enumeration on MSDN</a>, 
 enum SCANLINE_ORDER
 {
     /// Scanline order is unspecified
@@ -1327,7 +1377,7 @@ struct SwapChainDesc
 typedef struct SwapChainDesc SwapChainDesc;
 
 /// Full screen mode description
-/// \sa <a href = "https://msdn.microsoft.com/en-us/library/windows/desktop/hh404531(v=vs.85).aspx">DXGI_SWAP_CHAIN_FULLSCREEN_DESC structure on MSDN</a>, 
+/// \sa <a href = "https://docs.microsoft.com/en-us/windows/win32/api/dxgi1_2/ns-dxgi1_2-dxgi_swap_chain_fullscreen_desc">DXGI_SWAP_CHAIN_FULLSCREEN_DESC structure on MSDN</a>, 
 struct FullScreenModeDesc
 {
     /// A Boolean value that specifies whether the swap chain is in fullscreen mode.
@@ -1594,6 +1644,7 @@ struct VulkanDescriptorPoolSize
     Uint32 NumStorageBufferDescriptors      DEFAULT_INITIALIZER(0);
     Uint32 NumUniformTexelBufferDescriptors DEFAULT_INITIALIZER(0);
     Uint32 NumStorageTexelBufferDescriptors DEFAULT_INITIALIZER(0);
+    Uint32 NumInputAttachmentDescriptors    DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     VulkanDescriptorPoolSize()noexcept {}
@@ -1606,7 +1657,8 @@ struct VulkanDescriptorPoolSize
                              Uint32 _NumUniformBufferDescriptors,
                              Uint32 _NumStorageBufferDescriptors,
                              Uint32 _NumUniformTexelBufferDescriptors,
-                             Uint32 _NumStorageTexelBufferDescriptors)noexcept :
+                             Uint32 _NumStorageTexelBufferDescriptors,
+                             Uint32 _NumInputAttachmentDescriptors)noexcept :
         MaxDescriptorSets               {_MaxDescriptorSets               },
         NumSeparateSamplerDescriptors   {_NumSeparateSamplerDescriptors   },
         NumCombinedSamplerDescriptors   {_NumCombinedSamplerDescriptors   },
@@ -1615,7 +1667,8 @@ struct VulkanDescriptorPoolSize
         NumUniformBufferDescriptors     {_NumUniformBufferDescriptors     },
         NumStorageBufferDescriptors     {_NumStorageBufferDescriptors     },
         NumUniformTexelBufferDescriptors{_NumUniformTexelBufferDescriptors},
-        NumStorageTexelBufferDescriptors{_NumStorageTexelBufferDescriptors}
+        NumStorageTexelBufferDescriptors{_NumStorageTexelBufferDescriptors},
+        NumInputAttachmentDescriptors   {_NumInputAttachmentDescriptors   }
     {
         // On clang aggregate initialization fails to compile if 
         // structure members have default initializers
@@ -1650,8 +1703,8 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// the engine creates another one.
     VulkanDescriptorPoolSize MainDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
-        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB
-        {8192,  1024,  8192,  8192,  1024,  4096,  4096,  1024,  1024}
+        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt
+        {8192,  1024,  8192,  8192,  1024,  4096,  4096,  1024,  1024,   256}
 #endif
     ;
 
@@ -1662,8 +1715,8 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     
     VulkanDescriptorPoolSize DynamicDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
-        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB
-        {2048,   256,  2048,  2048,   256,  1024,  1024,   256,   256}
+        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt
+        {2048,   256,  2048,  2048,   256,  1024,  1024,   256,   256,    64}
 #endif
     ;
 
@@ -1906,61 +1959,256 @@ struct TextureFormatInfoExt DILIGENT_DERIVE(TextureFormatInfo)
 typedef struct TextureFormatInfoExt TextureFormatInfoExt;
 
 
+/// Pipeline stage flags.
+
+/// These flags mirror [VkPipelineStageFlagBits](https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VkPipelineStageFlagBits)
+/// enum and only have effect in Vulkan backend.
+DILIGENT_TYPED_ENUM(PIPELINE_STAGE_FLAGS, Uint32)
+{
+    /// Undefined stage
+    PIPELINE_STAGE_FLAG_UNDEFINED                    = 0x00000000,
+
+    /// The top of the pipeline.
+    PIPELINE_STAGE_FLAG_TOP_OF_PIPE                  = 0x00000001,
+
+    /// The stage of the pipeline where Draw/DispatchIndirect data structures are consumed.
+    PIPELINE_STAGE_FLAG_DRAW_INDIRECT                = 0x00000002,
+
+    /// The stage of the pipeline where vertex and index buffers are consumed.
+    PIPELINE_STAGE_FLAG_VERTEX_INPUT                 = 0x00000004,
+
+    /// Vertex shader stage.
+    PIPELINE_STAGE_FLAG_VERTEX_SHADER                = 0x00000008,
+    
+    /// Hull shader stage.
+    PIPELINE_STAGE_FLAG_HULL_SHADER                  = 0x00000010,
+    
+    /// Domain shader stage.
+    PIPELINE_STAGE_FLAG_DOMAIN_SHADER                = 0x00000020,
+    
+    /// Geometry shader stage.
+    PIPELINE_STAGE_FLAG_GEOMETRY_SHADER              = 0x00000040,
+    
+    /// Pixel shader stage.
+    PIPELINE_STAGE_FLAG_PIXEL_SHADER                 = 0x00000080,
+    
+    /// The stage of the pipeline where early fragment tests (depth and
+    /// stencil tests before fragment shading) are performed. This stage
+    /// also includes subpass load operations for framebuffer attachments
+    /// with a depth/stencil format.
+    PIPELINE_STAGE_FLAG_EARLY_FRAGMENT_TESTS         = 0x00000100,
+    
+    /// The stage of the pipeline where late fragment tests (depth and 
+    /// stencil tests after fragment shading) are performed. This stage
+    /// also includes subpass store operations for framebuffer attachments
+    /// with a depth/stencil format.
+    PIPELINE_STAGE_FLAG_LATE_FRAGMENT_TESTS          = 0x00000200,
+    
+    /// The stage of the pipeline after blending where the final color values
+    /// are output from the pipeline. This stage also includes subpass load
+    /// and store operations and multisample resolve operations for framebuffer
+    /// attachments with a color or depth/stencil format.
+    PIPELINE_STAGE_FLAG_RENDER_TARGET                = 0x00000400,
+    
+    /// Compute shader stage.
+    PIPELINE_STAGE_FLAG_COMPUTE_SHADER               = 0x00000800,
+    
+    /// The stage where all copy and outside-of-renderpass
+    /// resolve and clear operations happen.
+    PIPELINE_STAGE_FLAG_TRANSFER                     = 0x00001000,
+    
+    /// The bottom of the pipeline.
+    PIPELINE_STAGE_FLAG_BOTTOM_OF_PIPE               = 0x00002000,
+    
+    /// A pseudo-stage indicating execution on the host of reads/writes
+    /// of device memory. This stage is not invoked by any commands recorded
+    /// in a command buffer.
+    PIPELINE_STAGE_FLAG_HOST                         = 0x00004000,
+    
+    /// The stage of the pipeline where the predicate of conditional rendering is consumed.
+    PIPELINE_STAGE_FLAG_CONDITIONAL_RENDERING        = 0x00040000,
+
+    /// The stage of the pipeline where the shading rate texture is
+    /// read to determine the shading rate for portions of a rasterized primitive.
+    PIPELINE_STAGE_FLAG_SHADING_RATE_TEXTURE         = 0x00400000,
+    
+    /// Ray tracing shader.
+    PIPELINE_STAGE_FLAG_RAY_TRACING_SHADER           = 0x00200000,
+    
+    /// Acceleration structure build shader.
+    PIPELINE_STAGE_FLAG_ACCELERATION_STRUCTURE_BUILD = 0x02000000,
+    
+    /// Task shader stage.
+    PIPELINE_STAGE_FLAG_TASK_SHADER                  = 0x00080000,
+    
+    /// Mesh shader stage.
+    PIPELINE_STAGE_FLAG_MESH_SHADER                  = 0x00100000,
+    
+    /// 
+    PIPELINE_STAGE_FLAG_FRAGMENT_DENSITY_PROCESS     = 0x00800000,
+    
+    /// Default pipeline stage that is determined by the resource state.
+    /// For example, RESOURCE_STATE_RENDER_TARGET corresponds to
+    /// PIPELINE_STAGE_FLAG_RENDER_TARGET pipeline stage.
+    PIPELINE_STAGE_FLAG_DEFAULT                      = 0x80000000
+};
+DEFINE_FLAG_ENUM_OPERATORS(PIPELINE_STAGE_FLAGS)
+
+
+/// Access flag.
+
+/// The flags mirror [VkAccessFlags](https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VkAccessFlags) enum
+/// and only have effect in Vulkan backend.
+DILIGENT_TYPED_ENUM(ACCESS_FLAGS, Uint32)
+{
+    /// No access
+    ACCESS_FLAG_NONE                         = 0x00000000,
+
+    /// Read access to indirect command data read as part of an indirect
+    /// drawing or dispatch command.
+    ACCESS_FLAG_INDIRECT_COMMAND_READ        = 0x00000001,
+
+    /// Read access to an index buffer as part of an indexed drawing command
+    ACCESS_FLAG_INDEX_READ                   = 0x00000002,
+
+    /// Read access to a vertex buffer as part of a drawing command
+    ACCESS_FLAG_VERTEX_READ                  = 0x00000004,
+
+    /// Read access to a uniform buffer
+    ACCESS_FLAG_UNIFORM_READ                 = 0x00000008,
+
+    /// Read access to an input attachment within a render pass during fragment shading
+    ACCESS_FLAG_INPUT_ATTACHMENT_READ        = 0x00000010,
+
+    /// Read access from a shader resource, formatted buffer, UAV
+    ACCESS_FLAG_SHADER_READ                  = 0x00000020,
+
+    /// Write access to a UAV
+    ACCESS_FLAG_SHADER_WRITE                 = 0x00000040,
+
+    /// Read access to a color render target, such as via blending,
+    /// logic operations, or via certain subpass load operations.
+    ACCESS_FLAG_RENDER_TARGET_READ           = 0x00000080,
+    
+    /// Write access to a color render target, resolve, or depth/stencil resolve
+    /// attachment during a render pass or via certain subpass load and store operations.
+    ACCESS_FLAG_RENDER_TARGET_WRITE          = 0x00000100,
+
+    /// Read access to a depth/stencil buffer, via depth or stencil operations
+    /// or via certain subpass load operations
+    ACCESS_FLAG_DEPTH_STENCIL_READ           = 0x00000200,
+
+    /// Write access to a depth/stencil buffer, via depth or stencil operations
+    /// or via certain subpass load and store operations
+    ACCESS_FLAG_DEPTH_STENCIL_WRITE          = 0x00000400,
+
+    /// Read access to an texture or buffer in a copy operation.
+    ACCESS_FLAG_COPY_SRC                     = 0x00000800,
+
+    /// Write access to an texture or buffer in a copy operation.
+    ACCESS_FLAG_COPY_DST                     = 0x00001000,
+
+    /// Read access by a host operation. Accesses of this type are
+    /// not performed through a resource, but directly on memory.
+    ACCESS_FLAG_HOST_READ                    = 0x00002000,
+
+    /// Write access by a host operation. Accesses of this type are
+    /// not performed through a resource, but directly on memory.
+    ACCESS_FLAG_HOST_WRITE                   = 0x00004000,
+
+    /// All read accesses. It is always valid in any access mask,
+    /// and is treated as equivalent to setting all READ access flags
+    /// that are valid where it is used.
+    ACCESS_FLAG_MEMORY_READ                  = 0x00008000,
+
+    /// All write accesses. It is always valid in any access mask,
+    /// and is treated as equivalent to setting all WRITE access
+    // flags that are valid where it is used.
+    ACCESS_FLAG_MEMORY_WRITE                 = 0x00010000,
+
+    /// Read access to a predicate as part of conditional rendering.
+    ACCESS_FLAG_CONDITIONAL_RENDERING_READ   = 0x00100000,
+
+    /// Read access to a shading rate texture as part of a drawing comman.
+    ACCESS_FLAG_SHADING_RATE_TEXTURE_READ    = 0x00800000,
+
+    /// Read access to an acceleration structure as part of a trace or build command.
+    ACCESS_FLAG_ACCELERATION_STRUCTURE_READ  = 0x00200000,
+
+    /// Write access to an acceleration structure or acceleration structure
+    /// scratch buffer as part of a build command.
+    ACCESS_FLAG_ACCELERATION_STRUCTURE_WRITE = 0x00400000,
+
+    /// Read access to a fragment density map attachment during
+    /// dynamic fragment density map operations.
+    ACCESS_FLAG_FRAGMENT_DENSITY_MAP_READ    = 0x01000000,
+
+    /// Default access type that is determined by the resource state.
+    /// For example, RESOURCE_STATE_RENDER_TARGET corresponds to
+    /// ACCESS_FLAG_RENDER_TARGET_WRITE access type.
+    ACCESS_FLAG_DEFAULT                      = 0x80000000
+};
+DEFINE_FLAG_ENUM_OPERATORS(ACCESS_FLAGS)
+
+
 /// Resource usage state
 DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
 {
     /// The resource state is not known to the engine and is managed by the application
-    RESOURCE_STATE_UNKNOWN              = 0x0000,
+    RESOURCE_STATE_UNKNOWN              = 0x00000,
 
     /// The resource state is known to the engine, but is undefined. A resource is typically in an undefined state right after initialization.
-    RESOURCE_STATE_UNDEFINED            = 0x0001,
+    RESOURCE_STATE_UNDEFINED            = 0x00001,
 
     /// The resource is accessed as vertex buffer
-    RESOURCE_STATE_VERTEX_BUFFER        = 0x0002,
+    RESOURCE_STATE_VERTEX_BUFFER        = 0x00002,
 
     /// The resource is accessed as constant (uniform) buffer
-    RESOURCE_STATE_CONSTANT_BUFFER      = 0x0004,
+    RESOURCE_STATE_CONSTANT_BUFFER      = 0x00004,
 
     /// The resource is accessed as index buffer
-    RESOURCE_STATE_INDEX_BUFFER         = 0x0008,
+    RESOURCE_STATE_INDEX_BUFFER         = 0x00008,
 
     /// The resource is accessed as render target
-    RESOURCE_STATE_RENDER_TARGET        = 0x0010,
+    RESOURCE_STATE_RENDER_TARGET        = 0x00010,
         
     /// The resource is used for unordered access
-    RESOURCE_STATE_UNORDERED_ACCESS     = 0x0020,
+    RESOURCE_STATE_UNORDERED_ACCESS     = 0x00020,
 
     /// The resource is used in a writable depth-stencil view or in clear operation
-    RESOURCE_STATE_DEPTH_WRITE          = 0x0040,
+    RESOURCE_STATE_DEPTH_WRITE          = 0x00040,
 
     /// The resource is used in a read-only depth-stencil view
-    RESOURCE_STATE_DEPTH_READ           = 0x0080,
+    RESOURCE_STATE_DEPTH_READ           = 0x00080,
 
     /// The resource is accessed from a shader
-    RESOURCE_STATE_SHADER_RESOURCE      = 0x0100,
+    RESOURCE_STATE_SHADER_RESOURCE      = 0x00100,
         
     /// The resource is used as the destination for stream output
-    RESOURCE_STATE_STREAM_OUT           = 0x0200,
+    RESOURCE_STATE_STREAM_OUT           = 0x00200,
 
     /// The resource is used as indirect draw/dispatch arguments buffer
-    RESOURCE_STATE_INDIRECT_ARGUMENT    = 0x0400,
+    RESOURCE_STATE_INDIRECT_ARGUMENT    = 0x00400,
 
     /// The resource is used as the destination in a copy operation
-    RESOURCE_STATE_COPY_DEST            = 0x0800,
+    RESOURCE_STATE_COPY_DEST            = 0x00800,
 
     /// The resource is used as the source in a copy operation 
-    RESOURCE_STATE_COPY_SOURCE          = 0x1000,
+    RESOURCE_STATE_COPY_SOURCE          = 0x01000,
         
     /// The resource is used as the destination in a resolve operation 
-    RESOURCE_STATE_RESOLVE_DEST         = 0x2000,
+    RESOURCE_STATE_RESOLVE_DEST         = 0x02000,
         
     /// The resource is used as the source in a resolve operation 
-    RESOURCE_STATE_RESOLVE_SOURCE       = 0x4000,
+    RESOURCE_STATE_RESOLVE_SOURCE       = 0x04000,
+
+    /// The resource is used as input attachment in a render pass subpass
+    RESOURCE_STATE_INPUT_ATTACHMENT     = 0x08000,
 
     /// The resource is used for present
-    RESOURCE_STATE_PRESENT              = 0x8000,
+    RESOURCE_STATE_PRESENT              = 0x10000,
 
-    RESOURCE_STATE_MAX_BIT              = 0x8000,
+    RESOURCE_STATE_MAX_BIT              = 0x10000,
 
     RESOURCE_STATE_GENERIC_READ         = RESOURCE_STATE_VERTEX_BUFFER     |
                                           RESOURCE_STATE_CONSTANT_BUFFER   |
@@ -1969,6 +2217,7 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
                                           RESOURCE_STATE_INDIRECT_ARGUMENT |
                                           RESOURCE_STATE_COPY_SOURCE
 };
+DEFINE_FLAG_ENUM_OPERATORS(RESOURCE_STATE);
 
 /// State transition barrier type
 DILIGENT_TYPED_ENUM(STATE_TRANSITION_TYPE, Uint8)

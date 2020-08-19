@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "DeviceContextGL.h"
 #include "DeviceContextBase.hpp"
 #include "BaseInterfacesGL.h"
@@ -35,6 +37,8 @@
 #include "BufferGLImpl.hpp"
 #include "TextureBaseGL.hpp"
 #include "QueryGLImpl.hpp"
+#include "FramebufferGLImpl.hpp"
+#include "RenderPassGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
 
 namespace Diligent
@@ -47,6 +51,8 @@ struct DeviceContextGLImplTraits
     using PipelineStateType = PipelineStateGLImpl;
     using DeviceType        = RenderDeviceGLImpl;
     using QueryType         = QueryGLImpl;
+    using FramebufferType   = FramebufferGLImpl;
+    using RenderPassType    = RenderPassGLImpl;
 };
 
 /// Device context implementation in OpenGL backend.
@@ -109,6 +115,15 @@ public:
                                                      ITextureView*                  ppRenderTargets[],
                                                      ITextureView*                  pDepthStencil,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
+
+    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::NextSubpass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
+
+    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     // clang-format off
 
@@ -255,6 +270,9 @@ private:
     __forceinline void PrepareForIndirectDraw(IBuffer* pAttribsBuffer);
     __forceinline void PostDraw();
 
+    void BeginSubpass();
+    void EndSubpass();
+
     Uint32 m_CommitedResourcesTentativeBarriers = 0;
 
     std::vector<class TextureBaseGL*> m_BoundWritableTextures;
@@ -265,6 +283,8 @@ private:
     bool m_IsDefaultFBOBound = false;
 
     GLObjectWrappers::GLFrameBufferObj m_DefaultFBO;
+
+    std::vector<OptimizedClearValue> m_AttachmentClearValues;
 };
 
 } // namespace Diligent

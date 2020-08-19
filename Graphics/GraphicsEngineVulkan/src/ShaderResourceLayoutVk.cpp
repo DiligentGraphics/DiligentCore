@@ -526,6 +526,11 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                          
             {
                 VERIFY_EXPR(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage || SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer);
                 AddResource(s, Layout, Resources, SepImg);
+            },
+            [&](const SPIRVShaderResourceAttribs& InputAtt, Uint32)
+            {
+                VERIFY_EXPR(InputAtt.Type == SPIRVShaderResourceAttribs::ResourceType::InputAttachment);
+                AddResource(s, Layout, Resources, InputAtt);
             }
         );
         // clang-format on
@@ -640,7 +645,7 @@ void ShaderResourceLayoutVk::VkResource::CacheUniformBuffer(IDeviceObject*      
                                                             Uint16&                          DynamicBuffersCounter) const
 {
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::UniformBuffer, "Uniform buffer resource is expected");
-    RefCntAutoPtr<BufferVkImpl> pBufferVk(pBuffer, IID_BufferVk);
+    RefCntAutoPtr<BufferVkImpl> pBufferVk{pBuffer, IID_BufferVk};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyConstantBufferBinding(SpirvAttribs, GetVariableType(), ArrayInd, pBuffer, pBufferVk.RawPtr(), DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
 #endif
@@ -681,7 +686,7 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
            "Storage buffer resource is expected");
     // clang-format on
 
-    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk(pBufferView, IID_BufferViewVk);
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{pBufferView, IID_BufferViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
@@ -727,7 +732,7 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
            "Uniform or storage buffer resource is expected");
     // clang-format on
 
-    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk(pBufferView, IID_BufferViewVk);
+    RefCntAutoPtr<BufferViewVkImpl> pBufferViewVk{pBufferView, IID_BufferViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
@@ -776,7 +781,7 @@ void ShaderResourceLayoutVk::VkResource::CacheImage(IDeviceObject*              
            "Storage image, separate image or sampled image resource is expected");
     // clang-format on
 
-    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0(pTexView, IID_TextureViewVk);
+    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0{pTexView, IID_TextureViewVk};
 #ifdef DILIGENT_DEVELOPMENT
     {
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
@@ -840,7 +845,7 @@ void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject*    
     VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Separate sampler resource is expected");
     VERIFY(!IsImmutableSamplerAssigned(), "This separate sampler is assigned an immutable sampler");
 
-    RefCntAutoPtr<SamplerVkImpl> pSamplerVk(pSampler, IID_Sampler);
+    RefCntAutoPtr<SamplerVkImpl> pSamplerVk{pSampler, IID_Sampler};
 #ifdef DILIGENT_DEVELOPMENT
     if (pSampler != nullptr && pSamplerVk == nullptr)
     {
@@ -868,6 +873,28 @@ void ShaderResourceLayoutVk::VkResource::CacheSeparateSampler(IDeviceObject*    
     }
 }
 
+void ShaderResourceLayoutVk::VkResource::CacheInputAttachment(IDeviceObject*                   pTexView,
+                                                              ShaderResourceCacheVk::Resource& DstRes,
+                                                              VkDescriptorSet                  vkDescrSet,
+                                                              Uint32                           ArrayInd) const
+{
+    VERIFY(SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::InputAttachment, "Input attachment resource is expected");
+    RefCntAutoPtr<TextureViewVkImpl> pTexViewVk0{pTexView, IID_TextureViewVk};
+#ifdef DILIGENT_DEVELOPMENT
+    VerifyResourceViewBinding(SpirvAttribs, GetVariableType(), ArrayInd, pTexView, pTexViewVk0.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+#endif
+    if (UpdateCachedResource(DstRes, std::move(pTexViewVk0), [](const TextureViewVkImpl*, const TextureViewVkImpl*) {}))
+    {
+        // Do not update descriptor for a dynamic image. All dynamic resource descriptors
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkDescriptorImageInfo DescrImgInfo = DstRes.GetInputAttachmentDescriptorWriteInfo();
+            UpdateDescriptorHandle(vkDescrSet, ArrayInd, &DescrImgInfo, nullptr, nullptr);
+        }
+        //
+    }
+}
 
 void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex, ShaderResourceCacheVk& ResourceCache) const
 {
@@ -898,6 +925,7 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject* pObj, Uint3
 
     if (pObj)
     {
+        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 11, "Please handle the new resource type below");
         switch (SpirvAttribs.Type)
         {
             case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
@@ -943,6 +971,10 @@ void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject* pObj, Uint3
                     // into an immutable sampler slot in a descriptor set is not allowed (13.2.1)
                     LOG_ERROR_MESSAGE("Attempting to assign a sampler to an immutable sampler '", SpirvAttribs.Name, '\'');
                 }
+                break;
+
+            case SPIRVShaderResourceAttribs::ResourceType::InputAttachment:
+                CacheInputAttachment(pObj, DstRes, vkDescrSet, ArrayIndex);
                 break;
 
             default: UNEXPECTED("Unknown resource type ", static_cast<Int32>(SpirvAttribs.Type));

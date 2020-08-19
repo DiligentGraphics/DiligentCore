@@ -37,6 +37,8 @@
 #include "DeviceContextVkImpl.hpp"
 #include "FenceVkImpl.hpp"
 #include "QueryVkImpl.hpp"
+#include "RenderPassVkImpl.hpp"
+#include "FramebufferVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -71,15 +73,17 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             sizeof(PipelineStateVkImpl),
             sizeof(ShaderResourceBindingVkImpl),
             sizeof(FenceVkImpl),
-            sizeof(QueryVkImpl)
+            sizeof(QueryVkImpl),
+            sizeof(RenderPassVkImpl),
+            sizeof(FramebufferVkImpl)
         }
     },
-    m_VulkanInstance    {Instance                 },
-    m_PhysicalDevice    {std::move(PhysicalDevice)},
-    m_LogicalVkDevice   {std::move(LogicalDevice) },
-    m_EngineAttribs     {EngineCI                 },
-    m_FramebufferCache  {*this                    },
-    m_RenderPassCache   {*this                    },
+    m_VulkanInstance         {Instance                 },
+    m_PhysicalDevice         {std::move(PhysicalDevice)},
+    m_LogicalVkDevice        {std::move(LogicalDevice) },
+    m_EngineAttribs          {EngineCI                 },
+    m_FramebufferCache       {*this                    },
+    m_ImplicitRenderPassCache{*this                    },
     m_DescriptorSetAllocator
     {
         *this,
@@ -210,6 +214,9 @@ RenderDeviceVkImpl::~RenderDeviceVkImpl()
     // Explicitly destroy dynamic heap. This will move resources owned by
     // the heap into release queues
     m_DynamicMemoryManager.Destroy();
+
+    // Explicitly destroy render pass cache
+    m_ImplicitRenderPassCache.Destroy();
 
     // Wait for the GPU to complete all its operations
     IdleGPU();
@@ -620,6 +627,37 @@ void RenderDeviceVkImpl::CreateQuery(const QueryDesc& Desc, IQuery** ppQuery)
             OnCreateDeviceObject(pQueryVk);
         } //
     );
+}
+
+void RenderDeviceVkImpl::CreateRenderPass(const RenderPassDesc& Desc,
+                                          IRenderPass**         ppRenderPass,
+                                          bool                  IsDeviceInternal)
+{
+    CreateDeviceObject(
+        "RenderPass", Desc, ppRenderPass,
+        [&]() //
+        {
+            RenderPassVkImpl* pRenderPassVk(NEW_RC_OBJ(m_RenderPassAllocator, "RenderPassVkImpl instance", RenderPassVkImpl)(this, Desc, IsDeviceInternal));
+            pRenderPassVk->QueryInterface(IID_RenderPass, reinterpret_cast<IObject**>(ppRenderPass));
+            OnCreateDeviceObject(pRenderPassVk);
+        } //
+    );
+}
+
+void RenderDeviceVkImpl::CreateRenderPass(const RenderPassDesc& Desc, IRenderPass** ppRenderPass)
+{
+    CreateRenderPass(Desc, ppRenderPass, /*IsDeviceInternal = */ false);
+}
+
+void RenderDeviceVkImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebuffer** ppFramebuffer)
+{
+    CreateDeviceObject("Framebuffer", Desc, ppFramebuffer,
+                       [&]() //
+                       {
+                           FramebufferVkImpl* pFramebufferVk(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferVkImpl instance", FramebufferVkImpl)(this, Desc));
+                           pFramebufferVk->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
+                           OnCreateDeviceObject(pFramebufferVk);
+                       });
 }
 
 } // namespace Diligent

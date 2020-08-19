@@ -98,6 +98,19 @@ public:
     /// Implementation of IRenderDevice::CreateQuery() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateQuery(const QueryDesc& Desc, IQuery** ppQuery) override final;
 
+    /// Implementation of IRenderDevice::CreateRenderPass() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateRenderPass(const RenderPassDesc& Desc,
+                                                     IRenderPass**         ppRenderPass) override final;
+
+    void CreateRenderPass(const RenderPassDesc& Desc,
+                          IRenderPass**         ppRenderPass,
+                          bool                  IsDeviceInternal);
+
+
+    /// Implementation of IRenderDevice::CreateFramebuffer() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
+                                                      IFramebuffer**         ppFramebuffer) override final;
+
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 
@@ -144,7 +157,7 @@ public:
     const VulkanUtilities::VulkanLogicalDevice&  GetLogicalDevice() { return *m_LogicalVkDevice; }
 
     FramebufferCache& GetFramebufferCache() { return m_FramebufferCache; }
-    RenderPassCache&  GetRenderPassCache() { return m_RenderPassCache; }
+    RenderPassCache&  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache; }
 
     VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)
     {
@@ -173,7 +186,7 @@ private:
     EngineVkCreateInfo m_EngineAttribs;
 
     FramebufferCache       m_FramebufferCache;
-    RenderPassCache        m_RenderPassCache;
+    RenderPassCache        m_ImplicitRenderPassCache;
     DescriptorSetAllocator m_DescriptorSetAllocator;
     DescriptorPoolManager  m_DynamicDescriptorPool;
 

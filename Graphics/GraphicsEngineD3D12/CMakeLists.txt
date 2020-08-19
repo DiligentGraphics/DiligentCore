@@ -18,12 +18,14 @@ set(INCLUDE
     include/DeviceContextD3D12Impl.hpp
     include/D3D12DynamicHeap.hpp
     include/FenceD3D12Impl.hpp
+    include/FramebufferD3D12Impl.hpp
     include/GenerateMips.hpp
     include/pch.h
     include/PipelineStateD3D12Impl.hpp
     include/QueryD3D12Impl.hpp
     include/QueryManagerD3D12.hpp
     include/RenderDeviceD3D12Impl.hpp
+    include/RenderPassD3D12Impl.hpp
     include/RootSignature.hpp
     include/SamplerD3D12Impl.hpp
     include/ShaderD3D12Impl.hpp
@@ -69,11 +71,13 @@ set(SRC
     src/D3D12DynamicHeap.cpp
     src/EngineFactoryD3D12.cpp
     src/FenceD3D12Impl.cpp
+    src/FramebufferD3D12Impl.cpp
     src/GenerateMips.cpp
     src/PipelineStateD3D12Impl.cpp
     src/QueryD3D12Impl.cpp
     src/QueryManagerD3D12.cpp
     src/RenderDeviceD3D12Impl.cpp
+    src/RenderPassD3D12Impl.cpp
     src/RootSignature.cpp
     src/SamplerD3D12Impl.cpp
     src/ShaderD3D12Impl.cpp
@@ -106,12 +110,15 @@ set(SHADERS
     shaders/GenerateMips/GenerateMipsLinearOddYCS.hlsl
 )
 
+set(COMPILED_SHADERS_DIR ${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips)
+file(MAKE_DIRECTORY "${COMPILED_SHADERS_DIR}")
+
 set_source_files_properties(${SHADERS} PROPERTIES 
     VS_SHADER_TYPE Compute
     VS_SHADER_ENTRYPOINT main
     VS_SHADER_MODEL 5.0
     VS_SHADER_VARIABLE_NAME "g_p%(Filename)"
-    VS_SHADER_OUTPUT_HEADER_FILE "${CMAKE_CURRENT_BINARY_DIR}/CompiledShaders/GenerateMips/%(Filename).h"
+    VS_SHADER_OUTPUT_HEADER_FILE "${COMPILED_SHADERS_DIR}/%(Filename).h"
     #VS_SHADER_FLAGS "/O3"
 )
 

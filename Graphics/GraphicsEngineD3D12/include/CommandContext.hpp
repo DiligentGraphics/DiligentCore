@@ -166,6 +166,11 @@ public:
         return m_DynamicGPUDescriptorAllocators[Type].Allocate(Count);
     }
 
+    void ResourceBarrier(const D3D12_RESOURCE_BARRIER& Barrier)
+    {
+        m_PendingResourceBarriers.emplace_back(Barrier);
+    }
+
     void InsertUAVBarrier(ID3D12Resource* pd3d12Resource);
 
     void SetPipelineState(ID3D12PipelineState* pPSO)
@@ -338,6 +343,20 @@ public:
     {
         FlushResourceBarriers();
         m_pCommandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
+    }
+
+    void BeginRenderPass(UINT                                        NumRenderTargets,
+                         const D3D12_RENDER_PASS_RENDER_TARGET_DESC* pRenderTargets,
+                         const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* pDepthStencil,
+                         D3D12_RENDER_PASS_FLAGS                     Flags)
+    {
+        FlushResourceBarriers();
+        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->BeginRenderPass(NumRenderTargets, pRenderTargets, pDepthStencil, Flags);
+    }
+
+    void EndRenderPass()
+    {
+        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->EndRenderPass();
     }
 
     void DrawMesh(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)

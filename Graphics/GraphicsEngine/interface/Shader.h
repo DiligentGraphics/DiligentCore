@@ -286,8 +286,10 @@ struct ShaderCreateInfo
 };
 typedef struct ShaderCreateInfo ShaderCreateInfo;
 
+// clang-format off
 /// Describes shader resource type
-DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8){
+DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8)
+{
     /// Shader resource type is unknown
     SHADER_RESOURCE_TYPE_UNKNOWN = 0,
 
@@ -307,7 +309,12 @@ DILIGENT_TYPED_ENUM(SHADER_RESOURCE_TYPE, Uint8){
     SHADER_RESOURCE_TYPE_BUFFER_UAV,
 
     /// Sampler (separate sampler)
-    SHADER_RESOURCE_TYPE_SAMPLER};
+    SHADER_RESOURCE_TYPE_SAMPLER,
+
+    /// Input attachment in a render pass
+    SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT
+};
+// clang-format on
 
 /// Shader resource description
 struct ShaderResourceDesc

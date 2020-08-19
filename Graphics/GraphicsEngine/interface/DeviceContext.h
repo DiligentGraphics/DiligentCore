@@ -49,6 +49,8 @@
 #include "PipelineState.h"
 #include "Fence.h"
 #include "Query.h"
+#include "RenderPass.h"
+#include "Framebuffer.h"
 #include "CommandList.h"
 #include "SwapChain.h"
 
@@ -671,6 +673,44 @@ struct CopyTextureAttribs
 };
 typedef struct CopyTextureAttribs CopyTextureAttribs;
 
+
+/// BeginRenderPass command attributes.
+
+/// This structure is used by IDeviceContext::BeginRenderPass().
+struct BeginRenderPassAttribs
+{
+    /// Render pass to begin.
+    IRenderPass*    pRenderPass     DEFAULT_INITIALIZER(nullptr);
+
+    /// Framebuffer containing the attachments that are used with the render pass.
+    IFramebuffer*   pFramebuffer    DEFAULT_INITIALIZER(nullptr);
+
+    /// The number of elements in pClearValues array.
+    Uint32 ClearValueCount          DEFAULT_INITIALIZER(0);
+
+    /// A pointer to an array of ClearValueCount OptimizedClearValue structures that contains
+    /// clear values for each attachment, if the attachment uses a LoadOp value of ATTACHMENT_LOAD_OP_CLEAR
+    /// or if the attachment has a depth/stencil format and uses a StencilLoadOp value of ATTACHMENT_LOAD_OP_CLEAR.
+    /// The array is indexed by attachment number. Only elements corresponding to cleared attachments are used.
+    /// Other elements of pClearValues are ignored.
+    OptimizedClearValue* pClearValues   DEFAULT_INITIALIZER(nullptr);
+
+    /// Framebuffer attachments state transition mode before the render pass begins.
+
+    /// This parameter also indicates how attachment states should be handled when
+    /// transitioning between subpasses as well as after the render pass ends.
+    /// When RESOURCE_STATE_TRANSITION_MODE_TRANSITION is used, attachment states will be
+    /// updated so that they match the state in the current subpass as well as the final states
+    /// specified by the render pass when the pass ends.
+    /// Note that resources are always transitioned. The flag only indicates if the internal
+    /// state variables should be updated.
+    /// When RESOURCE_STATE_TRANSITION_MODE_NONE or RESOURCE_STATE_TRANSITION_MODE_VERIFY is used,
+    /// internal state variables are not updated and it is the application responsibility to set them
+    /// manually to match the actual states.
+    RESOURCE_STATE_TRANSITION_MODE StateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+};
+typedef struct BeginRenderPassAttribs BeginRenderPassAttribs;
+
 #define DILIGENT_INTERFACE_NAME IDeviceContext
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -926,6 +966,21 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) PURE;
 
 
+    /// Begins a new render pass.
+
+    /// \param [in] Attribs - The command attributes, see Diligent::BeginRenderPassAttribs for details.
+    VIRTUAL void METHOD(BeginRenderPass)(THIS_
+                                         const BeginRenderPassAttribs REF Attribs) PURE;
+    
+
+    /// Transitions to the next subpass in the render pass instance.
+    VIRTUAL void METHOD(NextSubpass)(THIS) PURE;
+
+
+    /// Ends current render pass.
+    VIRTUAL void METHOD(EndRenderPass)(THIS) PURE;
+
+
     /// Executes a draw command.
 
     /// \param [in] Attribs - Draw command attributes, see Diligent::DrawAttribs for details.
@@ -958,6 +1013,11 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawIndirectAttribs for details.
     /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                  Uint32 NumVertices;
+    ///                                  Uint32 NumInstances;
+    ///                                  Uint32 StartVertexLocation;
+    ///                                  Uint32 FirstInstanceLocation;
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
@@ -978,6 +1038,12 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
 
     /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawIndexedIndirectAttribs for details.
     /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                  Uint32 NumIndices;
+    ///                                  Uint32 NumInstances;
+    ///                                  Uint32 FirstIndexLocation;
+    ///                                  Uint32 BaseVertex;
+    ///                                  Uint32 FirstInstanceLocation
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 
@@ -1027,7 +1093,11 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Executes an indirect dispatch compute command.
     
     /// \param [in] Attribs        - The command attributes, see Diligent::DispatchComputeIndirectAttribs for details.
-    /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect dispatch arguments.
+    /// \param [in] pAttribsBuffer - Pointer to the buffer containing indirect dispatch attributes.
+    ///                              The buffer must contain the following arguments at the specified offset:
+    ///                                 Uint32 ThreadGroupCountX;
+    ///                                 Uint32 ThreadGroupCountY;
+    ///                                 Uint32 ThreadGroupCountZ;
     ///
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of indirect dispatch arguments buffer. This is not a thread safe operation, 

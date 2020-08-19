@@ -43,6 +43,7 @@
 #include "ShaderResourceVariable.h"
 #include "Shader.h"
 #include "Sampler.h"
+#include "RenderPass.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -150,19 +151,19 @@ typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
 /// This structure describes the graphics pipeline state and is part of the PipelineStateDesc structure.
 struct GraphicsPipelineDesc
 {
-    /// Vertex shader to be used with the pipeline
+    /// Vertex shader to be used with the pipeline.
     IShader* pVS DEFAULT_INITIALIZER(nullptr);
 
-    /// Pixel shader to be used with the pipeline
+    /// Pixel shader to be used with the pipeline.
     IShader* pPS DEFAULT_INITIALIZER(nullptr);
 
-    /// Domain shader to be used with the pipeline
+    /// Domain shader to be used with the pipeline.
     IShader* pDS DEFAULT_INITIALIZER(nullptr);
 
-    /// Hull shader to be used with the pipeline
+    /// Hull shader to be used with the pipeline.
     IShader* pHS DEFAULT_INITIALIZER(nullptr);
 
-    /// Geometry shader to be used with the pipeline
+    /// Geometry shader to be used with the pipeline.
     IShader* pGS DEFAULT_INITIALIZER(nullptr);
     
     /// Amplification shader to be used with the pipeline
@@ -173,7 +174,7 @@ struct GraphicsPipelineDesc
     
     //D3D12_STREAM_OUTPUT_DESC StreamOutput;
     
-    /// Blend state description
+    /// Blend state description.
     BlendStateDesc BlendDesc;
 
     /// 32-bit sample mask that determines which samples get updated 
@@ -182,33 +183,47 @@ struct GraphicsPipelineDesc
     /// depend on whether an application uses multisample render targets.
     Uint32 SampleMask DEFAULT_INITIALIZER(0xFFFFFFFF);
 
-    /// Rasterizer state description
+    /// Rasterizer state description.
     RasterizerStateDesc RasterizerDesc;
 
-    /// Depth-stencil state description
+    /// Depth-stencil state description.
     DepthStencilStateDesc DepthStencilDesc;
 
-    /// Input layout, ignored in mesh pipeline
+    /// Input layout, ignored in mesh pipeline.
     InputLayoutDesc InputLayout;
     //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
-    /// Primitive topology type, ignored in mesh pipeline
+    /// Primitive topology type, ignored in mesh pipeline.
     PRIMITIVE_TOPOLOGY PrimitiveTopology DEFAULT_INITIALIZER(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
-    /// Number of viewports used by this pipeline
+    /// The number of viewports used by this pipeline
     Uint8 NumViewports           DEFAULT_INITIALIZER(1);
 
-    /// Number of render targets in the RTVFormats member
+    /// The number of render targets in the RTVFormats array.
+    /// Must be 0 when pRenderPass is not null.
     Uint8 NumRenderTargets       DEFAULT_INITIALIZER(0);
 
-    /// Render target formats
+    /// When pRenderPass is not null, the subpass
+    /// index within the render pass.
+    /// When pRenderPass is null, this member must be 0.
+    Uint8 SubpassIndex           DEFAULT_INITIALIZER(0);
+
+    /// Render target formats.
+    /// All formats must be TEX_FORMAT_UNKNOWN when pRenderPass is not null.
     TEXTURE_FORMAT RTVFormats[8] DEFAULT_INITIALIZER({});
 
-    /// Depth-stencil format
+    /// Depth-stencil format.
+    /// Must be TEX_FORMAT_UNKNOWN when pRenderPass is not null.
     TEXTURE_FORMAT DSVFormat     DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
 
-    /// Multisampling parameters
+    /// Multisampling parameters.
     SampleDesc SmplDesc;
+
+    /// Pointer to the render pass object.
+
+    /// When non-null render pass is specified, NumRenderTargets must be 0,
+    /// and all RTV formats as well as DSV format must be TEX_FORMAT_UNKNOWN.
+    IRenderPass* pRenderPass     DEFAULT_INITIALIZER(nullptr);
 
     /// Node mask.
     Uint32 NodeMask DEFAULT_INITIALIZER(0);

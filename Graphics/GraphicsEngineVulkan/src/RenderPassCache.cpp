@@ -30,36 +30,52 @@
 #include "RenderPassCache.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
+#include "RenderPassVkImpl.hpp"
 
 namespace Diligent
 {
 
+RenderPassCache::RenderPassCache(RenderDeviceVkImpl& DeviceVk) noexcept :
+    m_DeviceVkImpl{DeviceVk}
+{}
+
+
 RenderPassCache::~RenderPassCache()
+{
+    // Render pass cache is part of the render device, so we can't release
+    // render pass objects from here as their destructors will attmept to
+    // call SafeReleaseDeviceObject.
+    VERIFY(m_Cache.empty(), "Render pass cache is not empty. Did you call Destroy?");
+}
+
+void RenderPassCache::Destroy()
 {
     auto& FBCache = m_DeviceVkImpl.GetFramebufferCache();
     for (auto it = m_Cache.begin(); it != m_Cache.end(); ++it)
     {
-        FBCache.OnDestroyRenderPass(it->second);
+        FBCache.OnDestroyRenderPass(it->second->GetVkRenderPass());
     }
+    m_Cache.clear();
 }
 
-VkRenderPass RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
+
+RenderPassVkImpl* RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
 {
     std::lock_guard<std::mutex> Lock{m_Mutex};
     auto                        it = m_Cache.find(Key);
     if (it == m_Cache.end())
     {
         // Do not zero-intitialize arrays
-        std::array<VkAttachmentDescription, MAX_RENDER_TARGETS + 1> Attachments;
-        std::array<VkAttachmentReference, MAX_RENDER_TARGETS + 1>   AttachmentReferences;
+        std::array<RenderPassAttachmentDesc, MAX_RENDER_TARGETS + 1> Attachments;
+        std::array<AttachmentReference, MAX_RENDER_TARGETS + 1>      AttachmentReferences;
 
-        VkSubpassDescription Subpass;
+        SubpassDesc Subpass;
 
-        auto RenderPassCI =
-            PipelineStateVkImpl::GetRenderPassCreateInfo(Key.NumRenderTargets, Key.RTVFormats, Key.DSVFormat,
-                                                         Key.SampleCount, Attachments, AttachmentReferences, Subpass);
+        auto RPDesc =
+            PipelineStateVkImpl::GetImplicitRenderPassDesc(Key.NumRenderTargets, Key.RTVFormats, Key.DSVFormat,
+                                                           Key.SampleCount, Attachments, AttachmentReferences, Subpass);
         std::stringstream PassNameSS;
-        PassNameSS << "Render pass: RT count: " << Uint32{Key.NumRenderTargets} << "; sample count: " << Uint32{Key.SampleCount}
+        PassNameSS << "Implicit render pass: RT count: " << Uint32{Key.NumRenderTargets} << "; sample count: " << Uint32{Key.SampleCount}
                    << "; DSV Format: " << GetTextureFormatAttribs(Key.DSVFormat).Name;
         if (Key.NumRenderTargets > 0)
         {
@@ -69,9 +85,11 @@ VkRenderPass RenderPassCache::GetRenderPass(const RenderPassCacheKey& Key)
                 PassNameSS << (rt > 0 ? ", " : "") << GetTextureFormatAttribs(Key.RTVFormats[rt]).Name;
             }
         }
-        auto RenderPass = m_DeviceVkImpl.GetLogicalDevice().CreateRenderPass(RenderPassCI, PassNameSS.str().c_str());
-        VERIFY_EXPR(RenderPass != VK_NULL_HANDLE);
-        it = m_Cache.emplace(Key, std::move(RenderPass)).first;
+
+        RefCntAutoPtr<RenderPassVkImpl> pRenderPass;
+        m_DeviceVkImpl.CreateRenderPass(RPDesc, pRenderPass.GetRawDblPtr<IRenderPass>(), /* IsDeviceInternal = */ true);
+        VERIFY_EXPR(pRenderPass != nullptr);
+        it = m_Cache.emplace(Key, std::move(pRenderPass)).first;
     }
 
     return it->second;

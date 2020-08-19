@@ -36,7 +36,7 @@ namespace Diligent
 namespace Testing
 {
 
-void ClearRenderTargetReferenceD3D12(ISwapChain* pSwapChain)
+void ClearRenderTargetReferenceD3D12(ISwapChain* pSwapChain, const float ClearColor[])
 {
     auto* pEnv                   = TestingEnvironmentD3D12::GetInstance();
     auto* pContext               = pEnv->GetDeviceContext();
@@ -47,7 +47,6 @@ void ClearRenderTargetReferenceD3D12(ISwapChain* pSwapChain)
 
     auto RTVDesriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
 
-    float ClearColor[] = {0.25, 0.5, 0.75, 1.0};
     pCmdList->ClearRenderTargetView(RTVDesriptorHandle, ClearColor, 0, nullptr);
 
     pCmdList->Close();

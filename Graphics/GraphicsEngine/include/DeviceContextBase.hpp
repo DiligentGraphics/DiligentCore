@@ -76,6 +76,8 @@ public:
     using PipelineStateImplType = typename ImplementationTraits::PipelineStateType;
     using TextureViewImplType   = typename TextureImplType::ViewImplType;
     using QueryImplType         = typename ImplementationTraits::QueryType;
+    using FramebufferImplType   = typename ImplementationTraits::FramebufferType;
+    using RenderPassImplType    = typename ImplementationTraits::RenderPassType;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - render device.
@@ -120,9 +122,11 @@ public:
     /// Caches the scissor rects
     inline void SetScissorRects(Uint32 NumRects, const Rect* pRects, Uint32& RTWidth, Uint32& RTHeight);
 
-    /// Caches the render target and depth stencil views. Returns true if any view is different
-    /// from the cached value and false otherwise.
-    inline bool SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil);
+    virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override = 0;
+
+    virtual void DILIGENT_CALL_TYPE NextSubpass() override = 0;
+
+    virtual void DILIGENT_CALL_TYPE EndRenderPass() override = 0;
 
     /// Base implementation of IDeviceContext::UpdateBuffer(); validates input parameters.
     virtual void DILIGENT_CALL_TYPE UpdateBuffer(IBuffer*                       pBuffer,
@@ -202,6 +206,13 @@ public:
     bool UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage);
 
 protected:
+    /// Caches the render target and depth stencil views. Returns true if any view is different
+    /// from the cached value and false otherwise.
+    inline bool SetRenderTargets(Uint32 NumRenderTargets, ITextureView* ppRenderTargets[], ITextureView* pDepthStencil);
+
+    /// Initializes render targets for the current subpass
+    inline bool SetSubpassRenderTargets();
+
     inline bool SetBlendFactors(const float* BlendFactors, int Dummy);
 
     inline bool SetStencilRef(Uint32 StencilRef, int Dummy);
@@ -216,6 +227,9 @@ protected:
 
     /// Checks if the texture is currently bound as depth-stencil buffer.
     bool CheckIfBoundAsDepthStencil(TextureImplType* pTexture);
+
+    /// Updates the states of render pass attachments to match states within the gievn subpass
+    void UpdateAttachmentStates(Uint32 SubpassIndex);
 
     bool ClearDepthStencil(ITextureView* pView);
 
@@ -313,6 +327,18 @@ protected:
     /// Use final texture view implementation type to avoid virtual calls to AddRef()/Release()
     RefCntAutoPtr<TextureViewImplType> m_pBoundDepthStencil;
 
+    /// Strong reference to the bound framebuffer.
+    RefCntAutoPtr<FramebufferImplType> m_pBoundFramebuffer;
+
+    /// Strong reference to the render pass.
+    RefCntAutoPtr<RenderPassImplType> m_pActiveRenderPass;
+
+    /// Current subpass index.
+    Uint32 m_SubpassIndex = 0;
+
+    /// Render pass attachments transition mode.
+    RESOURCE_STATE_TRANSITION_MODE m_RenderPassAttachmentsTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+
     const bool m_bIsDeferred = false;
 
 #ifdef DILIGENT_DEBUG
@@ -348,6 +374,10 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_ERROR_MESSAGE("The range of vertex buffer slots being set [", StartSlot, ", ", StartSlot + NumBuffersSet - 1, "] is out of allowed range  [0, ", MAX_BUFFER_SLOTS - 1, "].");
         NumBuffersSet = MAX_BUFFER_SLOTS - StartSlot;
     }
+
+    VERIFY(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
+           "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+           "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
 #endif
 
     if (Flags & SET_VERTEX_BUFFERS_FLAG_RESET)
@@ -396,6 +426,10 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     CommitShaderResources(IShaderResourceBinding* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode, int)
 {
 #ifdef DILIGENT_DEVELOPMENT
+    VERIFY(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
+           "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+           "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
+
     if (!m_pPipelineState)
     {
         LOG_ERROR_MESSAGE("No pipeline state is bound to the pipeline");
@@ -417,6 +451,9 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::InvalidateState()
 {
+    if (m_pActiveRenderPass != nullptr)
+        LOG_ERROR_MESSAGE("Invalidating context inside an active render pass. Call EndRenderPass() to finish the pass.");
+
     DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCache();
 }
 
@@ -427,6 +464,10 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     m_pIndexBuffer         = ValidatedCast<BufferImplType>(pIndexBuffer);
     m_IndexDataStartOffset = ByteOffset;
 #ifdef DILIGENT_DEVELOPMENT
+    VERIFY(!(m_pActiveRenderPass != nullptr && StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION),
+           "Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+           "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
+
     if (m_pIndexBuffer)
     {
         const auto& BuffDesc = m_pIndexBuffer->GetDesc();
@@ -575,7 +616,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
             const auto& RTVDesc = pRTView->GetDesc();
 #ifdef DILIGENT_DEVELOPMENT
             if (RTVDesc.ViewType != TEXTURE_VIEW_RENDER_TARGET)
-                LOG_ERROR("Texture view object named '", RTVDesc.Name ? RTVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected");
+                LOG_ERROR_MESSAGE("Texture view object named '", RTVDesc.Name ? RTVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(RTVDesc.ViewType), "). Render target view is expected");
 #endif
             // Use this RTV to set the render target size
             if (m_FramebufferWidth == 0)
@@ -591,11 +632,11 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 #ifdef DILIGENT_DEVELOPMENT
                 const auto& TexDesc = pRTView->GetTexture()->GetDesc();
                 if (m_FramebufferWidth != std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U))
-                    LOG_ERROR("Render target width (", std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
+                    LOG_ERROR_MESSAGE("Render target width (", std::max(TexDesc.Width >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
                 if (m_FramebufferHeight != std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U))
-                    LOG_ERROR("Render target height (", std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
+                    LOG_ERROR_MESSAGE("Render target height (", std::max(TexDesc.Height >> RTVDesc.MostDetailedMip, 1U), ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
                 if (m_FramebufferSlices != RTVDesc.NumArraySlices)
-                    LOG_ERROR("Number of slices (", RTVDesc.NumArraySlices, ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
+                    LOG_ERROR_MESSAGE("Number of slices (", RTVDesc.NumArraySlices, ") specified by RTV '", RTVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
 #endif
             }
         }
@@ -615,7 +656,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         const auto& DSVDesc = pDepthStencil->GetDesc();
 #ifdef DILIGENT_DEVELOPMENT
         if (DSVDesc.ViewType != TEXTURE_VIEW_DEPTH_STENCIL)
-            LOG_ERROR("Texture view object named '", DSVDesc.Name ? DSVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected");
+            LOG_ERROR_MESSAGE("Texture view object named '", DSVDesc.Name ? DSVDesc.Name : "", "' has incorrect view type (", GetTexViewTypeLiteralName(DSVDesc.ViewType), "). Depth stencil view is expected");
 #endif
 
         // Use depth stencil size to set render target size
@@ -632,11 +673,11 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 #ifdef DILIGENT_DEVELOPMENT
             const auto& TexDesc = pDepthStencil->GetTexture()->GetDesc();
             if (m_FramebufferWidth != std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U))
-                LOG_ERROR("Depth-stencil target width (", std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
+                LOG_ERROR_MESSAGE("Depth-stencil target width (", std::max(TexDesc.Width >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the width of previously bound render targets (", m_FramebufferWidth, ")");
             if (m_FramebufferHeight != std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U))
-                LOG_ERROR("Depth-stencil target height (", std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
+                LOG_ERROR_MESSAGE("Depth-stencil target height (", std::max(TexDesc.Height >> DSVDesc.MostDetailedMip, 1U), ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the height of previously bound render targets (", m_FramebufferHeight, ")");
             if (m_FramebufferSlices != DSVDesc.NumArraySlices)
-                LOG_ERROR("Number of slices (", DSVDesc.NumArraySlices, ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
+                LOG_ERROR_MESSAGE("Number of slices (", DSVDesc.NumArraySlices, ") specified by DSV '", DSVDesc.Name, "' is inconsistent with the number of slices in previously bound render targets (", m_FramebufferSlices, ")");
 #endif
         }
     }
@@ -652,6 +693,49 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 
     return bBindRenderTargets;
 }
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::SetSubpassRenderTargets()
+{
+    VERIFY_EXPR(m_pBoundFramebuffer);
+    VERIFY_EXPR(m_pActiveRenderPass);
+
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
+
+    ITextureView* ppRTVs[MAX_RENDER_TARGETS] = {};
+    ITextureView* pDSV                       = nullptr;
+    for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
+    {
+        const auto& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
+        if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            VERIFY_EXPR(RTAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
+            ppRTVs[rt] = FBDesc.ppAttachments[RTAttachmentRef.AttachmentIndex];
+        }
+    }
+
+    if (Subpass.pDepthStencilAttachment != nullptr)
+    {
+        const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
+        if (DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            VERIFY_EXPR(DSAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
+            pDSV = FBDesc.ppAttachments[DSAttachmentRef.AttachmentIndex];
+        }
+    }
+    bool BindRenderTargets = SetRenderTargets(Subpass.RenderTargetAttachmentCount, ppRTVs, pDSV);
+
+    // Use framebuffer dimensions (override what was set by SetRenderTargets)
+    m_FramebufferWidth  = FBDesc.Width;
+    m_FramebufferHeight = FBDesc.Height;
+    m_FramebufferSlices = FBDesc.NumArraySlices;
+
+    return BindRenderTargets;
+}
+
 
 template <typename BaseInterface, typename ImplementationTraits>
 inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
@@ -720,6 +804,10 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::ClearStateCa
     m_NumScissorRects = 0;
 
     ResetRenderTargets();
+
+    VERIFY(!m_pActiveRenderPass, "Clearing state cache inside an active render pass");
+    m_pActiveRenderPass = nullptr;
+    m_pBoundFramebuffer = nullptr;
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
@@ -751,6 +839,8 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CheckIfBoundAsDepth
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::UnbindTextureFromFramebuffer(TextureImplType* pTexture, bool bShowMessage)
 {
+    VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass.");
+
     if (pTexture == nullptr)
         return false;
 
@@ -817,6 +907,142 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::ResetRenderTargets(
     m_FramebufferSlices     = 0;
 
     m_pBoundDepthStencil.Release();
+
+    // Do not reset framebuffer here as there may potentially
+    // be a subpass without any render target attachments.
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::BeginRenderPass(const BeginRenderPassAttribs& Attribs)
+{
+    VERIFY(m_pActiveRenderPass == nullptr, "Attempting to begin render pass while another render pass ('", m_pActiveRenderPass->GetDesc().Name, "') is active.");
+    VERIFY(m_pBoundFramebuffer == nullptr, "Attempting to begin render pass while another framebuffer ('", m_pBoundFramebuffer->GetDesc().Name, "') is bound.");
+    VERIFY(Attribs.pRenderPass != nullptr, "Render pass must not be null");
+    VERIFY(Attribs.pFramebuffer != nullptr, "Framebuffer must not be null");
+#ifdef DILIGENT_DEBUG
+    {
+        const auto& RPDesc = Attribs.pRenderPass->GetDesc();
+
+        Uint32 NumRequiredClearValues = 0;
+        for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
+        {
+            const auto& Attchmnt = RPDesc.pAttachments[i];
+            if (Attchmnt.LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+                NumRequiredClearValues = i + 1;
+
+            const auto& FmtAttribs = GetTextureFormatAttribs(Attchmnt.Format);
+            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+            {
+                if (Attchmnt.StencilLoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+                    NumRequiredClearValues = i + 1;
+            }
+        }
+        VERIFY(Attribs.ClearValueCount >= NumRequiredClearValues,
+               "Begin render pass operation requiers at least ", NumRequiredClearValues,
+               " clear values, but only ", Attribs.ClearValueCount, " are given.");
+        VERIFY(Attribs.ClearValueCount == 0 || Attribs.pClearValues != nullptr,
+               "pClearValues must not be null when ClearValueCount is not zero");
+    }
+#endif
+
+    // Reset current render targets (in Vulkan backend, this may end current render pass).
+    ResetRenderTargets();
+
+    auto* pNewRenderPass  = ValidatedCast<RenderPassImplType>(Attribs.pRenderPass);
+    auto* pNewFramebuffer = ValidatedCast<FramebufferImplType>(Attribs.pFramebuffer);
+    if (Attribs.StateTransitionMode != RESOURCE_STATE_TRANSITION_MODE_NONE)
+    {
+        const auto& RPDesc = pNewRenderPass->GetDesc();
+        const auto& FBDesc = pNewFramebuffer->GetDesc();
+        VERIFY(RPDesc.AttachmentCount <= FBDesc.AttachmentCount,
+               "The number of attachments (", FBDesc.AttachmentCount,
+               ") in currently bound framebuffer is smaller than the number of attachments in the render pass (", RPDesc.AttachmentCount, ")");
+        for (Uint32 i = 0; i < FBDesc.AttachmentCount; ++i)
+        {
+            auto* pView = FBDesc.ppAttachments[i];
+            if (pView == nullptr)
+                return;
+
+            auto* pTex          = ValidatedCast<TextureImplType>(pView->GetTexture());
+            auto  RequiredState = RPDesc.pAttachments[i].InitialState;
+            if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+            {
+                if (pTex->IsInKnownState() && !pTex->CheckState(RequiredState))
+                {
+                    StateTransitionDesc Barrier{pTex, RESOURCE_STATE_UNKNOWN, RequiredState, true};
+                    this->TransitionResourceStates(1, &Barrier);
+                }
+            }
+            else if (Attribs.StateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
+            {
+                DvpVerifyTextureState(*pTex, RequiredState, "BeginRenderPass");
+            }
+        }
+    }
+
+    m_pActiveRenderPass                   = pNewRenderPass;
+    m_pBoundFramebuffer                   = pNewFramebuffer;
+    m_SubpassIndex                        = 0;
+    m_RenderPassAttachmentsTransitionMode = Attribs.StateTransitionMode;
+    UpdateAttachmentStates(m_SubpassIndex);
+    SetSubpassRenderTargets();
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::NextSubpass()
+{
+    VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
+    VERIFY(m_SubpassIndex + 1 < m_pActiveRenderPass->GetDesc().SubpassCount, "The render pass has reached the final subpass already");
+    ++m_SubpassIndex;
+    UpdateAttachmentStates(m_SubpassIndex);
+    SetSubpassRenderTargets();
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::UpdateAttachmentStates(Uint32 SubpassIndex)
+{
+    if (m_RenderPassAttachmentsTransitionMode != RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+        return;
+
+    VERIFY_EXPR(m_pActiveRenderPass != nullptr);
+    VERIFY_EXPR(m_pBoundFramebuffer != nullptr);
+
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
+    VERIFY(FBDesc.AttachmentCount == RPDesc.AttachmentCount,
+           "Framebuffer attachment count (", FBDesc.AttachmentCount, ") is not consistent with the render pass attachment count (", RPDesc.AttachmentCount, ")");
+    VERIFY_EXPR(SubpassIndex <= RPDesc.SubpassCount);
+    for (Uint32 i = 0; i < RPDesc.AttachmentCount; ++i)
+    {
+        if (auto* pView = FBDesc.ppAttachments[i])
+        {
+            auto* pTex = ValidatedCast<TextureImplType>(pView->GetTexture());
+            if (pTex->IsInKnownState())
+            {
+                auto CurrState = SubpassIndex < RPDesc.SubpassCount ?
+                    m_pActiveRenderPass->GetAttachmentState(SubpassIndex, i) :
+                    RPDesc.pAttachments[i].FinalState;
+                pTex->SetState(CurrState);
+            }
+        }
+    }
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+inline void DeviceContextBase<BaseInterface, ImplementationTraits>::EndRenderPass()
+{
+    VERIFY(m_pActiveRenderPass != nullptr, "There is no active render pass");
+    VERIFY(m_pBoundFramebuffer != nullptr, "There is no active framebuffer");
+    VERIFY(m_pActiveRenderPass->GetDesc().SubpassCount == m_SubpassIndex + 1,
+           "Ending render pass at subpass ", m_SubpassIndex, " before reaching the final subpass");
+
+    UpdateAttachmentStates(m_SubpassIndex + 1);
+
+    m_pActiveRenderPass.Release();
+    m_pBoundFramebuffer.Release();
+    m_SubpassIndex                        = 0;
+    m_RenderPassAttachmentsTransitionMode = RESOURCE_STATE_TRANSITION_MODE_NONE;
+    ResetRenderTargets();
 }
 
 
@@ -841,7 +1067,14 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearDepthSt
 
         if (pView != m_pBoundDepthStencil)
         {
-            if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            if (m_pActiveRenderPass != nullptr)
+            {
+                LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
+                                  "' is not bound as framebuffer attachment. ClearDepthStencil command inside a render pass "
+                                  "requires depth-stencil view to be bound as a framebuffer attachment.");
+                return false;
+            }
+            else if (m_pDevice->GetDeviceCaps().IsGLDevice())
             {
                 LOG_ERROR_MESSAGE("Depth-stencil view '", ViewDesc.Name,
                                   "' is not bound to the device context. ClearDepthStencil command requires "
@@ -886,13 +1119,21 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::ClearRenderT
         {
             RTFound = m_pBoundRenderTargets[i] == pView;
         }
+
         if (!RTFound)
         {
-            if (m_pDevice->GetDeviceCaps().IsGLDevice())
+            if (m_pActiveRenderPass != nullptr)
+            {
+                LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
+                                  "' is not bound as framebuffer attachment. ClearRenderTarget command inside a render pass "
+                                  "requires render target view to be bound as a framebuffer attachment.");
+                return false;
+            }
+            else if (m_pDevice->GetDeviceCaps().IsGLDevice())
             {
                 LOG_ERROR_MESSAGE("Render target view '", ViewDesc.Name,
                                   "' is not bound to the device context. ClearRenderTarget command "
-                                  "requires render target view be bound to the device contex in OpenGL backend");
+                                  "requires render target view to be bound to the device contex in OpenGL backend");
                 return false;
             }
             else
@@ -961,6 +1202,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     UpdateBuffer(IBuffer* pBuffer, Uint32 Offset, Uint32 Size, const void* pData, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
 {
     VERIFY(pBuffer != nullptr, "Buffer must not be null");
+    VERIFY(m_pActiveRenderPass == nullptr, "UpdateBuffer command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& BuffDesc = ValidatedCast<BufferImplType>(pBuffer)->GetDesc();
@@ -983,6 +1225,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 {
     VERIFY(pSrcBuffer != nullptr, "Source buffer must not be null");
     VERIFY(pDstBuffer != nullptr, "Destination buffer must not be null");
+    VERIFY(m_pActiveRenderPass == nullptr, "CopyBuffer command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& SrcBufferDesc = ValidatedCast<BufferImplType>(pSrcBuffer)->GetDesc();
@@ -1066,6 +1309,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     UpdateTexture(ITexture* pTexture, Uint32 MipLevel, Uint32 Slice, const Box& DstBox, const TextureSubResData& SubresData, RESOURCE_STATE_TRANSITION_MODE SrcBufferTransitionMode, RESOURCE_STATE_TRANSITION_MODE TextureTransitionMode)
 {
     VERIFY(pTexture != nullptr, "pTexture must not be null");
+    VERIFY(m_pActiveRenderPass == nullptr, "UpdateTexture command must be used outside of render pass.");
     ValidateUpdateTextureParams(pTexture->GetDesc(), MipLevel, Slice, DstBox, SubresData);
 }
 
@@ -1075,6 +1319,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 {
     VERIFY(CopyAttribs.pSrcTexture, "Src texture must not be null");
     VERIFY(CopyAttribs.pDstTexture, "Dst texture must not be null");
+    VERIFY(m_pActiveRenderPass == nullptr, "CopyTexture command must be used outside of render pass.");
     ValidateCopyTextureParams(CopyAttribs);
 }
 
@@ -1106,6 +1351,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     GenerateMips(ITextureView* pTexView)
 {
     VERIFY(pTexView != nullptr, "pTexView must not be null");
+    VERIFY(m_pActiveRenderPass == nullptr, "GenerateMips command must be used outside of render pass.");
 #ifdef DILIGENT_DEVELOPMENT
     {
         const auto& ViewDesc = pTexView->GetDesc();
@@ -1162,6 +1408,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
         DEV_CHECK_ERR(!ResolveFmtAttribs.IsTypeless,
                       "Format of a resolve operation must not be typeless when one of the texture formats is typeless");
     }
+    VERIFY(m_pActiveRenderPass == nullptr, "ResolveTextureSubresource command must be used outside of render pass.");
 #endif
 }
 
@@ -1298,6 +1545,13 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
+    if (m_pActiveRenderPass != nullptr && Attribs.IndirectAttribsBufferStateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+    {
+        LOG_ERROR_MESSAGE("Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                          "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
+        return false;
+    }
+
     return true;
 }
 
@@ -1349,6 +1603,13 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
+    if (m_pActiveRenderPass != nullptr && Attribs.IndirectAttribsBufferStateTransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
+    {
+        LOG_ERROR_MESSAGE("Resource state transitons are not allowed inside a render pass and may result in an undefined behavior. "
+                          "Do not use RESOURCE_STATE_TRANSITION_MODE_TRANSITION or end the render pass first.");
+        return false;
+    }
+
     return true;
 }
 
@@ -1396,7 +1657,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 {
     if (!m_pPipelineState)
     {
-        LOG_ERROR("No pipeline state is bound");
+        LOG_ERROR_MESSAGE("No pipeline state is bound");
         return;
     }
 
@@ -1417,7 +1678,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     const auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
     if (GraphicsPipeline.NumRenderTargets != m_NumBoundRenderTargets)
     {
-        LOG_WARNING_MESSAGE("Number of currently bound render targets (", m_NumBoundRenderTargets,
+        LOG_WARNING_MESSAGE("The number of currently bound render targets (", m_NumBoundRenderTargets,
                             ") does not match the number of outputs specified by the PSO '", PSODesc.Name,
                             "' (", Uint32{GraphicsPipeline.NumRenderTargets}, ").");
     }
@@ -1461,6 +1722,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         return false;
     }
 
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("DispatchCompute command must be performed outside of render pass");
+        return false;
+    }
+
     if (Attribs.ThreadGroupCountX == 0)
         LOG_WARNING_MESSAGE("DispatchCompute command arguments are invalid: ThreadGroupCountX is zero.");
 
@@ -1487,6 +1754,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     {
         LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: pipeline state '",
                           m_pPipelineState->GetDesc().Name, "' is a graphics pipeline.");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("DispatchComputeIndirect command must be performed outside of render pass");
         return false;
     }
 

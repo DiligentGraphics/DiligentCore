@@ -34,7 +34,7 @@ namespace Diligent
 namespace Testing
 {
 
-void ClearRenderTargetReferenceGL(ISwapChain* pSwapChain)
+void ClearRenderTargetReferenceGL(ISwapChain* pSwapChain, const float ClearColor[])
 {
     auto* pEnv                = TestingEnvironmentGL::GetInstance();
     auto* pContext            = pEnv->GetDeviceContext();
@@ -46,7 +46,7 @@ void ClearRenderTargetReferenceGL(ISwapChain* pSwapChain)
     glDisable(GL_SCISSOR_TEST);
     pTestingSwapChainGL->BindFramebuffer();
     glViewport(0, 0, SCDesc.Width, SCDesc.Height);
-    glClearColor(0.25, 0.5f, 0.75f, 1.0f);
+    glClearColor(ClearColor[0], ClearColor[1], ClearColor[2], ClearColor[3]);
     glClear(GL_COLOR_BUFFER_BIT);
 
     // Make sure Diligent Engine will reset all GL states

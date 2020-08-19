@@ -30,8 +30,8 @@
 
 void TestPipelineStateVk_CInterface(IPipelineStateVk* pPSO)
 {
-    VkRenderPass vkPass     = IPipelineStateVk_GetVkRenderPass(pPSO);
-    VkPipeline   vkPipeline = IPipelineStateVk_GetVkPipeline(pPSO);
-    (void)vkPass;
+    IRenderPassVk* pRenderPass = IPipelineStateVk_GetRenderPass(pPSO);
+    VkPipeline     vkPipeline  = IPipelineStateVk_GetVkPipeline(pPSO);
+    (void)pRenderPass;
     (void)vkPipeline;
 }

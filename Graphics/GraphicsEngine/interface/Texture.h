@@ -32,6 +32,7 @@
 /// \file
 /// Definition of the Diligent::ITexture interface and related data structures
 
+#include "GraphicsTypes.h"
 #include "DeviceObject.h"
 #include "TextureView.h"
 
@@ -41,53 +42,6 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 // {A64B0E60-1B5E-4CFD-B880-663A1ADCBE98}
 static const INTERFACE_ID IID_Texture =
     {0xa64b0e60, 0x1b5e, 0x4cfd,{0xb8, 0x80, 0x66, 0x3a, 0x1a, 0xdc, 0xbe, 0x98}};
-
-/// Defines optimized depth-stencil clear value.
-struct DepthStencilClearValue
-{
-    /// Depth clear value
-    Float32 Depth   DEFAULT_INITIALIZER(1.f);
-    /// Stencil clear value
-    Uint8 Stencil   DEFAULT_INITIALIZER(0);
-
-#if DILIGENT_CPP_INTERFACE
-    DepthStencilClearValue()noexcept{}
-
-    DepthStencilClearValue(Float32 _Depth,
-                           Uint8   _Stencil)noexcept : 
-        Depth   {_Depth  },
-        Stencil {_Stencil}
-    {}
-#endif
-};
-typedef struct DepthStencilClearValue DepthStencilClearValue;
-
-/// Defines optimized clear value.
-struct OptimizedClearValue
-{
-    /// Format
-    TEXTURE_FORMAT Format       DEFAULT_INITIALIZER(TEX_FORMAT_UNKNOWN);
-
-    /// Render target clear value
-    Float32        Color[4]     DEFAULT_INITIALIZER({});
-
-    /// Depth stencil clear value
-    DepthStencilClearValue DepthStencil;
-
-#if DILIGENT_CPP_INTERFACE
-    bool operator == (const OptimizedClearValue& rhs)const
-    {
-        return Format == rhs.Format &&
-               Color[0] == rhs.Color[0] &&
-               Color[1] == rhs.Color[1] &&
-               Color[2] == rhs.Color[2] &&
-               Color[3] == rhs.Color[3] &&
-               DepthStencil.Depth   == rhs.DepthStencil.Depth &&
-               DepthStencil.Stencil == rhs.DepthStencil.Stencil;
-    }
-#endif
-};
-typedef struct OptimizedClearValue OptimizedClearValue;
 
 /// Texture description
 struct TextureDesc DILIGENT_DERIVE(DeviceObjectAttribs)

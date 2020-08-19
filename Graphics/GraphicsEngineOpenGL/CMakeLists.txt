@@ -9,6 +9,7 @@ set(INCLUDE
     include/DeviceContextGLImpl.hpp 
     include/FBOCache.hpp
     include/FenceGLImpl.hpp
+    include/FramebufferGLImpl.hpp
     include/GLContext.hpp
     include/GLContextState.hpp
     include/GLObjectWrapper.hpp
@@ -20,6 +21,7 @@ set(INCLUDE
     include/PipelineStateGLImpl.hpp
     include/QueryGLImpl.hpp
     include/RenderDeviceGLImpl.hpp
+    include/RenderPassGLImpl.hpp
     include/SamplerGLImpl.hpp
     include/ShaderGLImpl.hpp
     include/ShaderResourceBindingGLImpl.hpp
@@ -62,6 +64,7 @@ set(SOURCE
     src/EngineFactoryOpenGL.cpp
     src/FBOCache.cpp
     src/FenceGLImpl.cpp
+    src/FramebufferGLImpl.cpp
     src/GLContextState.cpp
     src/GLObjectWrapper.cpp
     src/GLProgramResourceCache.cpp
@@ -71,6 +74,7 @@ set(SOURCE
     src/PipelineStateGLImpl.cpp
     src/QueryGLImpl.cpp
     src/RenderDeviceGLImpl.cpp
+    src/RenderPassGLImpl.cpp
     src/SamplerGLImpl.cpp
     src/ShaderGLImpl.cpp
     src/ShaderResourceBindingGLImpl.cpp

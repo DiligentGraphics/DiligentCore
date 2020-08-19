@@ -38,7 +38,7 @@ namespace Diligent
 namespace Testing
 {
 
-void ClearRenderTargetReferenceVk(ISwapChain* pSwapChain)
+void ClearRenderTargetReferenceVk(ISwapChain* pSwapChain, const float ClearColor[])
 {
     auto* pEnv     = TestingEnvironmentVk::GetInstance();
     auto* pContext = pEnv->GetDeviceContext();
@@ -51,19 +51,19 @@ void ClearRenderTargetReferenceVk(ISwapChain* pSwapChain)
     VkCommandBuffer vkCmdBuffer = pEnv->AllocateCommandBuffer();
 
     pTestingSwapChainVk->TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    VkClearColorValue ClearColor = {};
+    VkClearColorValue vkClearColor = {};
 
-    ClearColor.float32[0] = 0.25f;
-    ClearColor.float32[1] = 0.5f;
-    ClearColor.float32[2] = 0.75f;
-    ClearColor.float32[3] = 1.0f;
+    vkClearColor.float32[0] = ClearColor[0];
+    vkClearColor.float32[1] = ClearColor[1];
+    vkClearColor.float32[2] = ClearColor[2];
+    vkClearColor.float32[3] = ClearColor[3];
 
     VkImageSubresourceRange SubResRange = {};
 
     SubResRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     SubResRange.layerCount = 1;
     SubResRange.levelCount = 1;
-    vkCmdClearColorImage(vkCmdBuffer, pTestingSwapChainVk->GetVkRenderTargetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearColor, 1, &SubResRange);
+    vkCmdClearColorImage(vkCmdBuffer, pTestingSwapChainVk->GetVkRenderTargetImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &vkClearColor, 1, &SubResRange);
 
     res = vkEndCommandBuffer(vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");

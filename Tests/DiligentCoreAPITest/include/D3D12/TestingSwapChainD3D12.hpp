@@ -78,6 +78,11 @@ public:
         return m_pd3d12CbvSrvUavDescriptorHeap;
     }
 
+    ID3D12Resource* GetD3D12RenderTarget()
+    {
+        return m_pd3d12RenderTaget;
+    }
+
 private:
     CComPtr<ID3D12Resource> m_pd3d12RenderTaget;
     CComPtr<ID3D12Resource> m_pd3d12DepthBuffer;

@@ -117,6 +117,7 @@ public:
         VkDescriptorImageInfo  GetImageDescriptorWriteInfo  (bool IsImmutableSampler)const;
         VkBufferView           GetBufferViewWriteInfo       ()                       const;
         VkDescriptorImageInfo  GetSamplerDescriptorWriteInfo()                       const;
+        VkDescriptorImageInfo  GetInputAttachmentDescriptorWriteInfo()               const;
         // clang-format on
     };
 

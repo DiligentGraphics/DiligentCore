@@ -34,13 +34,12 @@ namespace Diligent
 namespace Testing
 {
 
-void ClearRenderTargetReferenceD3D11(ISwapChain* pSwapChain)
+void ClearRenderTargetReferenceD3D11(ISwapChain* pSwapChain, const float ClearColor[])
 {
     auto* pEnvD3D11              = TestingEnvironmentD3D11::GetInstance();
     auto* pd3d11Context          = pEnvD3D11->GetD3D11Context();
     auto* pTestingSwapChainD3D11 = ValidatedCast<TestingSwapChainD3D11>(pSwapChain);
 
-    float ClearColor[] = {0.25, 0.5, 0.75, 1.0};
     pd3d11Context->ClearRenderTargetView(pTestingSwapChainD3D11->GetD3D11RTV(), ClearColor);
 
     pd3d11Context->ClearState();

@@ -13,10 +13,12 @@ set(INCLUDE
     include/EngineFactoryBase.hpp
     include/EngineMemory.h
     include/FenceBase.hpp
+    include/FramebufferBase.hpp
     include/pch.h
     include/PipelineStateBase.hpp
     include/QueryBase.hpp
     include/RenderDeviceBase.hpp
+    include/RenderPassBase.hpp
     include/ResourceMappingImpl.hpp
     include/SamplerBase.hpp
     include/ShaderBase.hpp
@@ -41,12 +43,14 @@ set(INTERFACE
     interface/DeviceObject.h
     interface/EngineFactory.h
     interface/Fence.h
+    interface/Framebuffer.h
     interface/GraphicsTypes.h
     interface/InputLayout.h
     interface/PipelineState.h
     interface/Query.h
     interface/RasterizerState.h
     interface/RenderDevice.h
+    interface/RenderPass.h
     interface/ResourceMapping.h
     interface/Sampler.h
     interface/Shader.h
@@ -61,8 +65,10 @@ set(SOURCE
     src/APIInfo.cpp
     src/DefaultShaderSourceStreamFactory.cpp
     src/EngineMemory.cpp
-    src/ResourceMapping.cpp
-    src/Texture.cpp
+    src/FramebufferBase.cpp
+    src/ResourceMappingBase.cpp
+    src/RenderPassBase.cpp
+    src/TextureBase.cpp
 )
 
 add_library(Diligent-GraphicsEngine STATIC ${SOURCE} ${INTERFACE} ${INCLUDE})
