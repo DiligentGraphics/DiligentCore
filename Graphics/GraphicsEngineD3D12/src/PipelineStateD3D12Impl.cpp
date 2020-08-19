@@ -390,14 +390,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             streamDesc.SizeInBytes                   = sizeof(d3d12PSODesc);
             streamDesc.pPipelineStateSubobjectStream = &d3d12PSODesc;
 
-            CComPtr<ID3D12Device2> device2;
-            HRESULT                hr = pd3d12Device->QueryInterface(IID_PPV_ARGS(&device2));
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to get ID3D12Device2");
+            auto* device2 = pDeviceD3D12->GetD3D12Device2();
 
-            hr = device2->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_pd3d12PSO));
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to create pipeline state");
+            CHECK_D3D_RESULT_THROW(device2->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_pd3d12PSO)), "Failed to create pipeline state");
             break;
         }
 #endif // D12_H_HAS_MESH_SHADER

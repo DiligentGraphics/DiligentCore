@@ -151,6 +151,10 @@ public:
     const GenerateMipsHelper& GetMipsGenerator() const { return m_MipsGenerator; }
     QueryManagerD3D12&        GetQueryManager() { return m_QueryMgr; }
 
+#ifdef D12_H_HAS_MESH_SHADER
+    ID3D12Device2* GetD3D12Device2();
+#endif
+
     D3D_SHADER_MODEL  GetShaderModel() const;
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
@@ -159,6 +163,10 @@ private:
     void         FreeCommandContext(PooledCommandContext&& Ctx);
 
     CComPtr<ID3D12Device> m_pd3d12Device;
+
+#ifdef D12_H_HAS_MESH_SHADER
+    CComPtr<ID3D12Device2> m_pd3d12Device2;
+#endif
 
     EngineD3D12CreateInfo m_EngineAttribs;
 

@@ -109,6 +109,17 @@ D3D_FEATURE_LEVEL RenderDeviceD3D12Impl::GetD3DFeatureLevel() const
     return FeatureLevelsData.MaxSupportedFeatureLevel;
 }
 
+#ifdef D12_H_HAS_MESH_SHADER
+ID3D12Device2* RenderDeviceD3D12Impl::GetD3D12Device2()
+{
+    if (!m_pd3d12Device2)
+    {
+        CHECK_D3D_RESULT_THROW(m_pd3d12Device->QueryInterface(IID_PPV_ARGS(&m_pd3d12Device2)), "Failed to get ID3D12Device2");
+    }
+    return m_pd3d12Device2;
+}
+#endif
+
 RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
                                              IMemoryAllocator&            RawMemAllocator,
                                              IEngineFactory*              pEngineFactory,

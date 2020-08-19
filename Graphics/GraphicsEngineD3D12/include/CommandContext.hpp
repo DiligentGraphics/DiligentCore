@@ -227,6 +227,10 @@ protected:
     String m_ID;
 
     D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+
+#ifdef D12_H_HAS_MESH_SHADER
+    CComPtr<ID3D12GraphicsCommandList6> m_pCommandList6;
+#endif
 };
 
 
@@ -363,9 +367,14 @@ public:
     {
 #ifdef D12_H_HAS_MESH_SHADER
         FlushResourceBarriers();
-        CComPtr<ID3D12GraphicsCommandList6> CmdList;
-        if (SUCCEEDED(m_pCommandList->QueryInterface(__uuidof(CmdList), reinterpret_cast<void**>(&CmdList))))
-            CmdList->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
+
+        if (!m_pCommandList6)
+        {
+            CHECK_D3D_RESULT_THROW(m_pCommandList->QueryInterface(IID_PPV_ARGS(&m_pCommandList6)),
+                                   "Failed to get ID3D12GraphicsCommandList6, can't call DrawMesh()");
+        }
+
+        m_pCommandList6->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 #else
         UNSUPPORTED("DrawMesh is not supported in current D3D12 header");
 #endif
