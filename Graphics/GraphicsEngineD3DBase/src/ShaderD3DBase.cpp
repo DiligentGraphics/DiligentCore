@@ -389,7 +389,7 @@ static HRESULT CompileShader(const char*             Source,
     return hr;
 }
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, Uint8 ShaderModel) :
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersion& ShaderModel) :
     m_isDXIL{false}
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
@@ -414,11 +414,11 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, Uint8 ShaderModel
             default: UNEXPECTED("Unknown shader type");
         }
         strShaderProfile += "_";
-        strShaderProfile += '0' + ((ShaderModel >> 4) & 0xF);
+        strShaderProfile += '0' + (ShaderModel.Major % 10);
         strShaderProfile += "_";
-        strShaderProfile += ((ShaderModel & 0xF) == 0xF) ? 'x' : ('0' + (ShaderModel & 0xF));
+        strShaderProfile += '0' + (ShaderModel.Minor % 10);
 
-        m_isDXIL = (ShaderModel >= 0x60);
+        m_isDXIL = (ShaderModel.Major >= 6);
 
         String ShaderSource(g_HLSLDefinitions);
         if (ShaderCI.Source)

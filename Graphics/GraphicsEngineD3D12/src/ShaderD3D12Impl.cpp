@@ -36,16 +36,21 @@
 namespace Diligent
 {
 
-static const Uint8 GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const ShaderVersion& HLSLVersion)
+static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const ShaderVersion& HLSLVersion)
 {
     if (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0)
     {
+#ifdef HAS_D12_DXIL_COMPILER
         D3D_SHADER_MODEL ver = pDevice->GetShaderModel();
-        return Uint8((ver & 0xF0) | (ver & 0x0F));
+        return ShaderVersion{Uint8((ver >> 4) & 0xF), Uint8(ver & 0xF)};
+#else
+        // without DXIL compiler you can use only SM 5.1
+        return ShaderVersion{5, 1};
+#endif
     }
     else
     {
-        return Uint8(((HLSLVersion.Major & 0xF) << 4) | (HLSLVersion.Minor & 0xF));
+        return HLSLVersion;
     }
 }
 

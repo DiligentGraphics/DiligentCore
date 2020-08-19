@@ -67,25 +67,23 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Dev
 
 D3D_SHADER_MODEL RenderDeviceD3D12Impl::GetShaderModel() const
 {
-#ifdef HAS_DXIL_COMPILER
     // Header may not have constants for D3D_SHADER_MODEL_6_5 and above.
     const D3D_SHADER_MODEL Models[] = {
         D3D_SHADER_MODEL(0x65), // for mesh shader
         D3D_SHADER_MODEL(0x64),
-        D3D_SHADER_MODEL(0x60)};
+        D3D_SHADER_MODEL(0x63),
+        D3D_SHADER_MODEL(0x62),
+        D3D_SHADER_MODEL(0x61),
+        D3D_SHADER_MODEL_6_0};
 
-    // Get maximum supported shader model
+    // Get maximum supported shader model.
     D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = {};
-    if (m_pd3d12Device)
+    for (auto Model : Models)
     {
-        for (auto Model : Models)
-        {
-            ShaderModel.HighestShaderModel = Model;
-            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(ShaderModel))))
-                return ShaderModel.HighestShaderModel;
-        }
+        ShaderModel.HighestShaderModel = Model;
+        if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(ShaderModel))))
+            return ShaderModel.HighestShaderModel;
     }
-#endif
 
     // Direct3D12 supports shader model 5.1 on all feature levels.
     // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
