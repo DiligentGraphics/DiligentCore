@@ -37,6 +37,17 @@
 #    include "SPIRV/GlslangToSpv.h"
 #endif
 
+#if 1
+#    include <Unknwn.h>
+#    include <guiddef.h>
+#    include "../../ThirdParty/dxc/dxcapi.h"
+
+#    include <atlbase.h>
+#    include <atlcom.h>
+#    include <locale>
+#    include <cwchar>
+#endif
+
 #include "SPIRVUtils.hpp"
 #include "DebugUtilities.hpp"
 #include "DataBlobImpl.hpp"
@@ -437,23 +448,291 @@ private:
     std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
 };
 
+std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen, IDataBlob** ppCompilerOutput)
+{
+    EShLanguage      ShLang = ShaderTypeToShLanguage(ShaderType);
+    glslang::TShader Shader(ShLang);
+
+    EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
+
+    const char* ShaderStrings[] = {ShaderSource};
+    int         Lenghts[]       = {SourceCodeLen};
+    Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
+
+    auto SPIRV = CompileShaderInternal(Shader, messages, nullptr, ShaderSource, SourceCodeLen, ppCompilerOutput);
+
+    spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
+    SpirvOptimizer.RegisterPerformancePasses();
+    std::vector<uint32_t> OptimizedSPIRV;
+    if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &OptimizedSPIRV))
+    {
+        return std::move(OptimizedSPIRV);
+    }
+    else
+    {
+        LOG_ERROR("Failed to optimize SPIR-V.");
+        return std::move(SPIRV);
+    }
+}
+
+struct VkDXILCompilerLib
+{
+    HMODULE               Module         = nullptr;
+    DxcCreateInstanceProc CreateInstance = nullptr;
+
+    VkDXILCompilerLib()
+    {
+        Module = LoadLibraryA("vk_dxcompiler.dll");
+        if (Module)
+            CreateInstance = reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance"));
+    }
+
+    ~VkDXILCompilerLib()
+    {
+        FreeLibrary(Module);
+    }
+
+    static VkDXILCompilerLib& Instance()
+    {
+        static VkDXILCompilerLib inst;
+        return inst;
+    }
+
+    static bool IsLoaded()
+    {
+        auto& inst = Instance();
+        return inst.Module && inst.CreateInstance;
+    }
+};
+
+class DxcIncludeHandlerImpl final : public IDxcIncludeHandler
+{
+public:
+    explicit DxcIncludeHandlerImpl(IShaderSourceInputStreamFactory* pStreamFactory, CComPtr<IDxcLibrary> pLibrary) :
+        m_pLibrary{pLibrary},
+        m_pStreamFactory{pStreamFactory},
+        m_RefCount{1}
+    {
+    }
+
+    HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
+    {
+        String fileName = std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>, wchar_t>{}.to_bytes(pFilename);
+        if (fileName.empty())
+        {
+            LOG_ERROR("Failed to convert shader include file name ", fileName, ". File name must be ANSI string");
+            return E_FAIL;
+        }
+
+        RefCntAutoPtr<IFileStream> pSourceStream;
+        m_pStreamFactory->CreateInputStream(fileName.c_str(), &pSourceStream);
+        if (pSourceStream == nullptr)
+        {
+            LOG_ERROR("Failed to open shader include file ", fileName, ". Check that the file exists");
+            return E_FAIL;
+        }
+
+        RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
+        pSourceStream->ReadBlob(pFileData);
+
+        CComPtr<IDxcBlobEncoding> sourceBlob;
+        HRESULT                   hr = m_pLibrary->CreateBlobWithEncodingFromPinned(pFileData->GetDataPtr(), UINT32(pFileData->GetSize()), CP_UTF8, &sourceBlob);
+        if (FAILED(hr))
+        {
+            LOG_ERROR("Failed to allocate space for shader include file ", fileName, ".");
+            return E_FAIL;
+        }
+
+        m_FileDataCache.push_back(pFileData);
+
+        sourceBlob->QueryInterface(IID_PPV_ARGS(ppIncludeSource));
+        return S_OK;
+    }
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override
+    {
+        return E_FAIL;
+    }
+
+    ULONG STDMETHODCALLTYPE AddRef(void) override
+    {
+        return m_RefCount++;
+    }
+
+    ULONG STDMETHODCALLTYPE Release(void) override
+    {
+        --m_RefCount;
+        VERIFY(m_RefCount > 0, "Inconsistent call to Release()");
+        return m_RefCount;
+    }
+
+private:
+    CComPtr<IDxcLibrary>                  m_pLibrary;
+    IShaderSourceInputStreamFactory*      m_pStreamFactory;
+    ULONG                                 m_RefCount;
+    std::vector<RefCntAutoPtr<IDataBlob>> m_FileDataCache;
+};
+
+static HRESULT CompileDxilShader(const std::string&         Source,
+                                 const ShaderCreateInfo&    ShaderCI,
+                                 std::vector<unsigned int>& SPIRV,
+                                 IDataBlob**                ppCompilerOutput)
+{
+    auto CreateInstance = VkDXILCompilerLib::Instance().CreateInstance;
+
+    if (CreateInstance == nullptr)
+    {
+        LOG_ERROR("Failed to load vk_dxcompiler.dll");
+        return E_FAIL;
+    }
+
+    struct WStringChunk
+    {
+        WCHAR* Buffer;
+        size_t Size     = 0;
+        size_t Capacity = 0;
+
+        WStringChunk()
+        {
+            Capacity = 1u << 12;
+            Buffer   = new WCHAR[Capacity];
+        }
+
+        WStringChunk(WStringChunk&& other) :
+            Buffer{other.Buffer}, Size{other.Size}, Capacity{other.Capacity}
+        {
+            other.Buffer = nullptr;
+        }
+
+        ~WStringChunk()
+        {
+            delete[] Buffer;
+        }
+    };
+    std::vector<WStringChunk> wstringPool;
+
+    const auto ToUnicode = [&wstringPool](const char* str) {
+        const auto ConvertString = [](const char* src, WCHAR* dst, size_t len) {
+            for (size_t i = 0; i < len; ++i)
+                dst[i] = static_cast<WCHAR>(src[i]);
+            return dst;
+        };
+
+        auto len = strlen(str) + 1;
+        for (auto& chunk : wstringPool)
+        {
+            if (chunk.Size + len <= chunk.Capacity)
+            {
+                auto pos = chunk.Size;
+                chunk.Size += len;
+                return ConvertString(str, chunk.Buffer + pos, len);
+            }
+        }
+        wstringPool.emplace_back();
+        auto& chunk = wstringPool.back();
+        chunk.Size += len;
+        return ConvertString(str, chunk.Buffer, len);
+    };
+
+    LPCWSTR Profile = L"";
+    switch (ShaderCI.Desc.ShaderType)
+    {
+        case SHADER_TYPE_VERTEX: Profile = L"vs_6_5"; break;
+        case SHADER_TYPE_PIXEL: Profile = L"ps_6_5"; break;
+        case SHADER_TYPE_GEOMETRY: Profile = L"gs_6_5"; break;
+        case SHADER_TYPE_HULL: Profile = L"hs_6_5"; break;
+        case SHADER_TYPE_DOMAIN: Profile = L"ds_6_5"; break;
+        case SHADER_TYPE_COMPUTE: Profile = L"cs_6_5"; break;
+        case SHADER_TYPE_AMPLIFICATION: Profile = L"as_6_5"; break;
+        case SHADER_TYPE_MESH: Profile = L"ms_6_5"; break;
+        default: UNEXPECTED("Unexpected shader type");
+    }
+
+    HRESULT hr;
+
+    CComPtr<IDxcLibrary> library;
+    hr = CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
+    if (FAILED(hr))
+        return hr;
+
+    CComPtr<IDxcCompiler> compiler;
+    hr = CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+    if (FAILED(hr))
+        return hr;
+
+    CComPtr<IDxcBlobEncoding> sourceBlob;
+    hr = library->CreateBlobWithEncodingFromPinned(Source.c_str(), UINT32(Source.length()), CP_UTF8, &sourceBlob);
+    if (FAILED(hr))
+        return hr;
+
+    const wchar_t* pArgs[] =
+        {
+            L"-spirv",
+            L"-WX", // Warnings as errors
+            L"-O3", // Optimization level 3
+        };
+
+    DxcIncludeHandlerImpl IncludeHandler{ShaderCI.pShaderSourceStreamFactory, library};
+
+    CComPtr<IDxcOperationResult> result;
+    hr = compiler->Compile(
+        sourceBlob,
+        L"",
+        ToUnicode(ShaderCI.EntryPoint),
+        Profile,
+        pArgs, UINT32(std::size(pArgs)),
+        nullptr, 0,
+        &IncludeHandler,
+        &result);
+
+    if (SUCCEEDED(hr))
+    {
+        HRESULT status;
+        if (SUCCEEDED(result->GetStatus(&status)))
+            hr = status;
+    }
+
+    if (FAILED(hr))
+    {
+        if (result)
+        {
+            CComPtr<IDxcBlobEncoding> errorsBlob;
+            if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)))
+            {
+                std::string ErrorLog;
+
+                if (errorsBlob->GetBufferSize())
+                    ErrorLog.assign(static_cast<const char*>(errorsBlob->GetBufferPointer()), errorsBlob->GetBufferSize());
+
+                LOG_ERROR_MESSAGE("Failed to compile shader with DXIL", ErrorLog);
+
+                if (ppCompilerOutput != nullptr)
+                {
+                    auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(Source.length() + 1 + ErrorLog.length() + 1);
+                    char* DataPtr         = reinterpret_cast<char*>(pOutputDataBlob->GetDataPtr());
+                    memcpy(DataPtr, ErrorLog.data(), ErrorLog.length() + 1);
+                    memcpy(DataPtr + ErrorLog.length() + 1, Source.data(), Source.length() + 1);
+                    pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
+                }
+            }
+        }
+        return hr;
+    }
+
+    CComPtr<IDxcBlob> spirvBlob;
+    hr = result->GetResult(&spirvBlob);
+    if (FAILED(hr))
+        return hr;
+
+    auto* ptr = static_cast<unsigned int*>(spirvBlob->GetBufferPointer());
+    SPIRV.assign(ptr, ptr + (spirvBlob->GetBufferSize() / sizeof(ptr[0])));
+    return S_OK;
+}
+
 std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
                                       const char*             ExtraDefinitions,
                                       IDataBlob**             ppCompilerOutput)
 {
-    EShLanguage      ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
-    glslang::TShader Shader{ShLang};
-    EShMessages      messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
-
-    VERIFY_EXPR(Attribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
-
-    Shader.setEnvInput(glslang::EShSourceHlsl, ShLang, glslang::EShClientVulkan, 100);
-    Shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
-    Shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
-    Shader.setHlslIoMapping(true);
-    Shader.setEntryPoint(Attribs.EntryPoint);
-    Shader.setEnvTargetHlslFunctionality1();
-
     RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
 
     const char* SourceCode    = 0;
@@ -497,60 +776,63 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
             ++pMacro;
         }
     }
-    Shader.setPreamble(Defines.c_str());
 
-    const char* ShaderStrings[]       = {SourceCode};
-    const int   ShaderStringLenghts[] = {SourceCodeLen};
-    const char* Names[]               = {Attribs.FilePath != nullptr ? Attribs.FilePath : ""};
-    Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLenghts, Names, 1);
+    // Use DXIL compiler
+    if (VkDXILCompilerLib::IsLoaded() && (Attribs.HLSLVersion.Major == 0 || Attribs.HLSLVersion.Major > 5))
+    {
+        std::string Source;
+        Source.assign(SourceCode, SourceCodeLen);
+        Source = Defines + Source;
 
-    IncluderImpl Includer(Attribs.pShaderSourceStreamFactory);
+        std::vector<unsigned int> SPIRV;
+        if (FAILED(CompileDxilShader(Source, Attribs, SPIRV, ppCompilerOutput)))
+            return {};
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
-    if (SPIRV.empty())
         return SPIRV;
-
-    // SPIR-V bytecode generated from HLSL must be legalized to
-    // turn it into a valid vulkan SPIR-V shader
-    spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
-    SpirvOptimizer.RegisterLegalizationPasses();
-    SpirvOptimizer.RegisterPerformancePasses();
-    std::vector<uint32_t> LegalizedSPIRV;
-    if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &LegalizedSPIRV))
-    {
-        return std::move(LegalizedSPIRV);
     }
     else
+    // Use deprecated HLSL compiler from glslang
     {
-        LOG_ERROR("Failed to legalize SPIR-V shader generated by HLSL front-end. This may result in undefined behavior.");
-        return std::move(SPIRV);
-    }
-}
+        EShLanguage      ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
+        glslang::TShader Shader{ShLang};
+        EShMessages      messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
 
-std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen, IDataBlob** ppCompilerOutput)
-{
-    EShLanguage      ShLang = ShaderTypeToShLanguage(ShaderType);
-    glslang::TShader Shader(ShLang);
+        VERIFY_EXPR(Attribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
 
-    EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
+        Shader.setEnvInput(glslang::EShSourceHlsl, ShLang, glslang::EShClientVulkan, 100);
+        Shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
+        Shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
+        Shader.setHlslIoMapping(true);
+        Shader.setEntryPoint(Attribs.EntryPoint);
+        Shader.setEnvTargetHlslFunctionality1();
+        Shader.setPreamble(Defines.c_str());
 
-    const char* ShaderStrings[] = {ShaderSource};
-    int         Lenghts[]       = {SourceCodeLen};
-    Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
+        const char* ShaderStrings[]       = {SourceCode};
+        const int   ShaderStringLenghts[] = {SourceCodeLen};
+        const char* Names[]               = {Attribs.FilePath != nullptr ? Attribs.FilePath : ""};
+        Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLenghts, Names, 1);
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, nullptr, ShaderSource, SourceCodeLen, ppCompilerOutput);
+        IncluderImpl Includer(Attribs.pShaderSourceStreamFactory);
 
-    spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
-    SpirvOptimizer.RegisterPerformancePasses();
-    std::vector<uint32_t> OptimizedSPIRV;
-    if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &OptimizedSPIRV))
-    {
-        return std::move(OptimizedSPIRV);
-    }
-    else
-    {
-        LOG_ERROR("Failed to optimize SPIR-V.");
-        return std::move(SPIRV);
+        auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
+        if (SPIRV.empty())
+            return SPIRV;
+
+        // SPIR-V bytecode generated from HLSL must be legalized to
+        // turn it into a valid vulkan SPIR-V shader
+        spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
+        SpirvOptimizer.RegisterLegalizationPasses();
+        SpirvOptimizer.RegisterPerformancePasses();
+        std::vector<uint32_t> LegalizedSPIRV;
+        if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &LegalizedSPIRV))
+        {
+            return std::move(LegalizedSPIRV);
+        }
+        else
+        {
+            LOG_ERROR("Failed to legalize SPIR-V shader generated by HLSL front-end. This may result in undefined behavior.");
+            return std::move(SPIRV);
+        }
     }
 }
 

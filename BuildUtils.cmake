@@ -40,7 +40,7 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                     ${D3D_COMPILER_PATH}
                     "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
                     
-            if (${HAS_DXIL_COMPILER})
+            if(${HAS_D12_DXIL_COMPILER})
                 # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in the same folder as the dxcompiler.dll at runtime.
                 add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -50,6 +50,13 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                         ${DXIL_PATH}
                         "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
             endif ()
+            if(${HAS_VK_DXIL_COMPILER})
+                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        ${DXC_VK_COMPILER_PATH}
+                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/vk_dxcompiler.dll\""
+                    COMMENT "Copy dxcompiler.dll for target ${TARGET_NAME}")
+            endif()
         endif()
     endfunction()
 
