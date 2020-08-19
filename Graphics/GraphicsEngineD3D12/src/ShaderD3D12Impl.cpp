@@ -40,13 +40,8 @@ static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const S
 {
     if (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0)
     {
-#ifdef HAS_D12_DXIL_COMPILER
         D3D_SHADER_MODEL ver = pDevice->GetShaderModel();
         return ShaderVersion{Uint8((ver >> 4) & 0xF), Uint8(ver & 0xF)};
-#else
-        // without DXIL compiler you can use only SM 5.1
-        return ShaderVersion{5, 1};
-#endif
     }
     else
     {

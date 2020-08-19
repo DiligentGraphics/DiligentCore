@@ -45,7 +45,6 @@ static const Char* g_HLSLDefinitions =
 };
 
 
-#ifdef HAS_D12_DXIL_COMPILER
 struct DXILCompilerLib
 {
     HMODULE               Module         = nullptr;
@@ -150,7 +149,6 @@ private:
     ULONG                                 m_RefCount;
     std::vector<RefCntAutoPtr<IDataBlob>> m_FileDataCache;
 };
-#endif
 
 static HRESULT CompileDxilShader(const char*             Source,
                                  const ShaderCreateInfo& ShaderCI,
@@ -158,7 +156,6 @@ static HRESULT CompileDxilShader(const char*             Source,
                                  ID3DBlob**              ppBlobOut,
                                  ID3DBlob**              ppCompilerOutput)
 {
-#ifdef HAS_D12_DXIL_COMPILER
     if (DXILCompilerLib::Instance().CreateInstance == nullptr)
     {
         LOG_ERROR("Failed to load dxcompiler.dll");
@@ -327,10 +324,6 @@ static HRESULT CompileDxilShader(const char*             Source,
 
     hr = result->GetResult(reinterpret_cast<IDxcBlob**>(ppBlobOut));
     return hr;
-#else
-    UNSUPPORTED("Shader model 6 and above requires DXIL compiler");
-    return E_FAIL;
-#endif
 }
 
 

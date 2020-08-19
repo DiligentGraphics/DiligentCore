@@ -71,7 +71,6 @@ set_common_target_properties(Diligent-GraphicsEngineD3DBase)
 
 if(${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} STRGREATER_EQUAL "10.0.17763.0")
     set(HAS_D12_DXIL_COMPILER TRUE CACHE INTERNAL "" FORCE)
-    target_compile_definitions(Diligent-GraphicsEngineD3DBase PRIVATE HAS_D12_DXIL_COMPILER)
 else()
     set(HAS_D12_DXIL_COMPILER FALSE CACHE INTERNAL "" FORCE)
 endif()

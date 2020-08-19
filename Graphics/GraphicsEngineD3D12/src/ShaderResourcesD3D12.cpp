@@ -58,7 +58,6 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, bool isDXI
 
     if (isDXIL)
     {
-#ifdef HAS_D12_DXIL_COMPILER
         const uint32_t                   DFCC_DXIL = uint32_t('D') | (uint32_t('X') << 8) | (uint32_t('I') << 16) | (uint32_t('L') << 24);
         CComPtr<IDxcContainerReflection> pReflection;
         UINT32                           shaderIdx;
@@ -70,9 +69,6 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, bool isDXI
         CHECK_D3D_RESULT_THROW(hr, "Failed to find DXIL part");
         hr = pReflection->GetPartReflection(shaderIdx, __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
         CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
-#else
-        LOG_ERROR_AND_THROW("DXIL compiler is not supported");
-#endif
     }
     else
     {
