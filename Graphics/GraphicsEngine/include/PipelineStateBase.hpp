@@ -185,8 +185,7 @@ public:
                 m_pDS = GraphicsPipeline.pDS;
                 m_pHS = GraphicsPipeline.pHS;
             }
-            else
-            if (PSODesc.PipelineType == MESH_PIPELINE)
+            else if (PSODesc.PipelineType == MESH_PIPELINE)
             {
                 CHECK_THROW(GraphicsPipeline.pMS, "Mesh shader must be defined");
                 CHECK_THROW(!GraphicsPipeline.pVS && !GraphicsPipeline.pGS && !GraphicsPipeline.pDS && !GraphicsPipeline.pHS,
@@ -204,7 +203,7 @@ public:
             if (GraphicsPipeline.pDS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pDS;
             if (GraphicsPipeline.pAS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pAS;
             if (GraphicsPipeline.pMS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pMS;
-            
+
             DEV_CHECK_ERR(m_NumShaders > 0, "There must be at least one shader in the Pipeline State");
 
             for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(GraphicsPipeline.RTVFormats); ++rt)

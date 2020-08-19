@@ -204,17 +204,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         // To enable some device extensions you must enable instance extension VK_KHR_get_physical_device_properties2
         // and add feature description to DeviceCreateInfo.pNext.
         bool   SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-        void** NextExt = const_cast<void **>(&DeviceCreateInfo.pNext);
+        void** NextExt           = const_cast<void**>(&DeviceCreateInfo.pNext);
 
         // Enable mesh shader extension.
 #ifdef VK_NV_mesh_shader
-        VkPhysicalDeviceMeshShaderFeaturesNV  MeshShaderFeats = PhysicalDevice->GetExtFeatures().MeshShader;
+        VkPhysicalDeviceMeshShaderFeaturesNV MeshShaderFeats = PhysicalDevice->GetExtFeatures().MeshShader;
 
         if (SupportsFeatures2 && PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
         {
             DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
             *NextExt = &MeshShaderFeats;
-            NextExt = &MeshShaderFeats.pNext;
+            NextExt  = &MeshShaderFeats.pNext;
         }
 #endif
 

@@ -157,7 +157,7 @@ static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
         case SHADER_TYPE_COMPUTE:       return spv::ExecutionModelGLCompute;
         case SHADER_TYPE_AMPLIFICATION: return spv::ExecutionModelTaskNV;
         case SHADER_TYPE_MESH:          return spv::ExecutionModelMeshNV;
-        // clang-format on
+            // clang-format on
 
         default:
             UNEXPECTED("Unexpected shader type");

@@ -43,27 +43,31 @@ namespace Diligent
 namespace
 {
 #ifdef _MSC_VER
-#   pragma warning(push)
-#   pragma warning(disable: 4324)
+#    pragma warning(push)
+#    pragma warning(disable : 4324)
 #endif
 
-    template <typename InnerStructType, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE SubObjType>
-    struct alignas(void*) PSS_SubObject
+template <typename InnerStructType, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE SubObjType>
+struct alignas(void*) PSS_SubObject
+{
+    const D3D12_PIPELINE_STATE_SUBOBJECT_TYPE Type{SubObjType};
+    InnerStructType                           Obj{};
+
+    PSS_SubObject() {}
+
+    PSS_SubObject& operator=(const InnerStructType& obj)
     {
-        const D3D12_PIPELINE_STATE_SUBOBJECT_TYPE Type {SubObjType};
-        InnerStructType                           Obj  {};
+        Obj = obj;
+        return *this;
+    }
 
-        PSS_SubObject() {}
-
-        PSS_SubObject& operator= (const InnerStructType &obj) { Obj = obj; return *this; }
-
-        InnerStructType* operator-> () { return &Obj; }
-        InnerStructType* operator&  () { return &Obj; }
-        InnerStructType& operator*  () { return Obj; }
-    };
+    InnerStructType* operator->() { return &Obj; }
+    InnerStructType* operator&() { return &Obj; }
+    InnerStructType& operator*() { return Obj; }
+};
 
 #ifdef _MSC_VER
-#   pragma warning(pop)
+#    pragma warning(pop)
 #endif
 
 } // namespace
@@ -306,31 +310,31 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
                 LOG_ERROR_AND_THROW("Failed to create pipeline state");
             break;
         }
-        
+
 #ifdef D12_H_HAS_MESH_SHADER
         case MESH_PIPELINE:
         {
             const auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
-            
+
             struct MESH_SHADER_PIPELINE_STATE_DESC
             {
-                PSS_SubObject<D3D12_PIPELINE_STATE_FLAGS,  D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS>                 Flags;
-                PSS_SubObject<UINT,                        D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_NODE_MASK>             NodeMask;
-                PSS_SubObject<ID3D12RootSignature*,        D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE>        pRootSignature;
-                PSS_SubObject<D3D12_SHADER_BYTECODE,       D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS>                    PS;
-                PSS_SubObject<D3D12_SHADER_BYTECODE,       D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS>                    AS;
-                PSS_SubObject<D3D12_SHADER_BYTECODE,       D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS>                    MS;
-                PSS_SubObject<D3D12_BLEND_DESC,            D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND>                 BlendState;
-                PSS_SubObject<D3D12_DEPTH_STENCIL_DESC,    D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL>         DepthStencilState;
-                PSS_SubObject<D3D12_RASTERIZER_DESC,       D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER>            RasterizerState;
-                PSS_SubObject<DXGI_SAMPLE_DESC,            D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC>           SampleDesc;
-                PSS_SubObject<UINT,                        D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK>           SampleMask;
-                PSS_SubObject<DXGI_FORMAT,                 D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT>  DSVFormat;
-                PSS_SubObject<D3D12_RT_FORMAT_ARRAY,       D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS> RTVFormatArray;
-                PSS_SubObject<D3D12_CACHED_PIPELINE_STATE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO>            CachedPSO;
+                PSS_SubObject<D3D12_PIPELINE_STATE_FLAGS, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS>            Flags;
+                PSS_SubObject<UINT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_NODE_MASK>                              NodeMask;
+                PSS_SubObject<ID3D12RootSignature*, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE>         pRootSignature;
+                PSS_SubObject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS>                    PS;
+                PSS_SubObject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS>                    AS;
+                PSS_SubObject<D3D12_SHADER_BYTECODE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS>                    MS;
+                PSS_SubObject<D3D12_BLEND_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND>                      BlendState;
+                PSS_SubObject<D3D12_DEPTH_STENCIL_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL>      DepthStencilState;
+                PSS_SubObject<D3D12_RASTERIZER_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER>            RasterizerState;
+                PSS_SubObject<DXGI_SAMPLE_DESC, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC>                SampleDesc;
+                PSS_SubObject<UINT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK>                            SampleMask;
+                PSS_SubObject<DXGI_FORMAT, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT>            DSVFormat;
+                PSS_SubObject<D3D12_RT_FORMAT_ARRAY, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS> RTVFormatArray;
+                PSS_SubObject<D3D12_CACHED_PIPELINE_STATE, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO>      CachedPSO;
             };
             MESH_SHADER_PIPELINE_STATE_DESC d3d12PSODesc = {};
-            
+
             for (Uint32 s = 0; s < m_NumShaders; ++s)
             {
                 auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
@@ -351,7 +355,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
                 pd3d12ShaderBytecode->pShaderBytecode = pByteCode->GetBufferPointer();
                 pd3d12ShaderBytecode->BytecodeLength  = pByteCode->GetBufferSize();
             }
-            
+
             d3d12PSODesc.pRootSignature = m_RootSig.GetD3D12RootSignature();
 
             BlendStateDesc_To_D3D12_BLEND_DESC(GraphicsPipeline.BlendDesc, *d3d12PSODesc.BlendState);
@@ -387,7 +391,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             streamDesc.pPipelineStateSubobjectStream = &d3d12PSODesc;
 
             CComPtr<ID3D12Device2> device2;
-            HRESULT hr = pd3d12Device->QueryInterface(IID_PPV_ARGS(&device2));
+            HRESULT                hr = pd3d12Device->QueryInterface(IID_PPV_ARGS(&device2));
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to get ID3D12Device2");
 

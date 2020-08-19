@@ -157,8 +157,8 @@ private:
     PipelineLayout                   m_PipelineLayout;
 
     std::array<Int8, 8> m_ResourceLayoutIndex;
-    bool m_HasStaticResources     = false;
-    bool m_HasNonStaticResources  = false;
+    bool                m_HasStaticResources    = false;
+    bool                m_HasNonStaticResources = false;
 };
 
 } // namespace Diligent

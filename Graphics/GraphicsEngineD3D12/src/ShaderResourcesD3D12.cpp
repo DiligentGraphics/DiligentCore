@@ -33,7 +33,7 @@
 #include "ShaderBase.hpp"
 
 #ifdef HAS_DXIL_COMPILER
-#include "dxcapi.h"
+#    include "dxcapi.h"
 #endif
 
 namespace Diligent
@@ -55,7 +55,7 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, bool isDXI
         void OnNewTexSRV (const D3DShaderResourceAttribs& TexAttribs)    {}
         // clang-format on
     };
-    
+
     CComPtr<ID3D12ShaderReflection> pShaderReflection;
 
     HRESULT hr;
@@ -63,9 +63,9 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, bool isDXI
     if (isDXIL)
     {
 #ifdef HAS_DXIL_COMPILER
-        const uint32_t DFCC_DXIL = uint32_t('D') | (uint32_t('X') << 8) | (uint32_t('I') << 16) | (uint32_t('L') << 24);
+        const uint32_t                   DFCC_DXIL = uint32_t('D') | (uint32_t('X') << 8) | (uint32_t('I') << 16) | (uint32_t('L') << 24);
         CComPtr<IDxcContainerReflection> pReflection;
-        UINT32 shaderIdx;
+        UINT32                           shaderIdx;
         DxcCreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
         hr = pReflection->Load(reinterpret_cast<IDxcBlob*>(pShaderBytecode));
         CHECK_D3D_RESULT_THROW(hr, "Failed to create shader reflection instance");

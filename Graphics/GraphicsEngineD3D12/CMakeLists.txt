@@ -90,9 +90,9 @@ set(SRC
 if(PLATFORM_WIN32)
     list(APPEND INCLUDE include/D3D12Loader.hpp)
     list(APPEND SRC src/D3D12Loader.cpp)
-	set(USE_D3D12_LOADER 1)
+    set(USE_D3D12_LOADER 1)
 else()
-	set(USE_D3D12_LOADER 0)
+    set(USE_D3D12_LOADER 0)
 endif()
 
 set(SHADERS
@@ -158,8 +158,8 @@ PUBLIC
 
 target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE USE_D3D12_LOADER=${USE_D3D12_LOADER})
 if(NOT ${USE_D3D12_LOADER})
-	# Link with d3d12.lib if we don't use d3d12 loader
-	target_link_libraries(Diligent-GraphicsEngineD3D12-static PRIVATE d3d12.lib)
+    # Link with d3d12.lib if we don't use d3d12 loader
+    target_link_libraries(Diligent-GraphicsEngineD3D12-static PRIVATE d3d12.lib)
 endif()
 
 target_link_libraries(Diligent-GraphicsEngineD3D12-shared

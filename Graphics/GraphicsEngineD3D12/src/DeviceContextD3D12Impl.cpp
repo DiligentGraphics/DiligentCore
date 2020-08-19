@@ -557,10 +557,10 @@ void DeviceContextD3D12Impl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Att
 {
     if (!DvpVerifyDrawMeshIndirectArguments(Attribs, pAttribsBuffer))
         return;
-    
+
     auto& GraphCtx = GetCmdContext().AsGraphicsContext();
     PrepareForDraw(GraphCtx, Attribs.Flags);
-    
+
     ID3D12Resource* pd3d12ArgsBuff;
     Uint64          BuffDataStartByteOffset;
     PrepareDrawIndirectBuffer(GraphCtx, pAttribsBuffer, Attribs.IndirectAttribsBufferStateTransitionMode, pd3d12ArgsBuff, BuffDataStartByteOffset);

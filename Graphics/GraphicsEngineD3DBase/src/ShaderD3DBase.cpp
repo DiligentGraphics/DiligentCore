@@ -37,7 +37,7 @@
 #include <cwchar>
 
 #ifdef HAS_DXIL_COMPILER
-#include "dxcapi.h"
+#    include "dxcapi.h"
 #endif
 
 namespace Diligent
@@ -60,7 +60,7 @@ public:
     {
     }
 
-    HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob **ppIncludeSource) override
+    HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
     {
         String fileName = std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>, wchar_t>{}.to_bytes(pFilename);
         if (fileName.empty())
@@ -76,25 +76,25 @@ public:
             LOG_ERROR("Failed to open shader include file ", fileName, ". Check that the file exists");
             return E_FAIL;
         }
-        
+
         RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
         pSourceStream->ReadBlob(pFileData);
-        
+
         CComPtr<IDxcBlobEncoding> sourceBlob;
-        HRESULT hr = m_pLibrary->CreateBlobWithEncodingFromPinned(pFileData->GetDataPtr(), UINT32(pFileData->GetSize()), CP_UTF8, &sourceBlob);
+        HRESULT                   hr = m_pLibrary->CreateBlobWithEncodingFromPinned(pFileData->GetDataPtr(), UINT32(pFileData->GetSize()), CP_UTF8, &sourceBlob);
         if (FAILED(hr))
         {
             LOG_ERROR("Failed to allocate space for shader include file ", fileName, ".");
             return E_FAIL;
         }
-        
+
         m_FileDataCache.push_back(pFileData);
 
         sourceBlob->QueryInterface(__uuidof(*ppIncludeSource), reinterpret_cast<void**>(ppIncludeSource));
         return S_OK;
     }
 
-    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR *__RPC_FAR *ppvObject) override
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override
     {
         return E_FAIL;
     }
@@ -126,20 +126,22 @@ static HRESULT CompileDxilShader(const char*             Source,
                                  ID3DBlob**              ppCompilerOutput)
 {
 #ifdef HAS_DXIL_COMPILER
-    std::vector<WCHAR> unicodeBuffer; unicodeBuffer.resize(1u << 15);
-    size_t             unicodeBufferOffset = 0;
+    std::vector<WCHAR> unicodeBuffer;
+    unicodeBuffer.resize(1u << 15);
+    size_t unicodeBufferOffset = 0;
 
     const auto ToUnicode = [&unicodeBuffer, &unicodeBufferOffset](const char* str) {
         auto len = strlen(str) + 1;
         auto pos = unicodeBufferOffset;
         unicodeBufferOffset += len;
         VERIFY(unicodeBufferOffset < unicodeBuffer.size(), "buffer overflow");
-        for (size_t i = 0; i < len; ++i) {
+        for (size_t i = 0; i < len; ++i)
+        {
             unicodeBuffer[pos + i] = str[i];
         }
         return &unicodeBuffer[pos];
     };
-    
+
     std::vector<DxcDefine> D3DMacros;
     switch (ShaderCI.Desc.ShaderType)
     {
@@ -169,7 +171,7 @@ static HRESULT CompileDxilShader(const char*             Source,
         case SHADER_TYPE_COMPUTE:
             D3DMacros.push_back({L"COMPUTE_SHADER", L"1"});
             break;
-                
+
         case SHADER_TYPE_AMPLIFICATION:
             D3DMacros.push_back({L"TASK_SHADER", L"1"});
             D3DMacros.push_back({L"AMPLIFICATION_SHADER", L"1"});
@@ -206,19 +208,19 @@ static HRESULT CompileDxilShader(const char*             Source,
     hr = library->CreateBlobWithEncodingFromPinned(Source, UINT32(strlen(Source)), CP_UTF8, &sourceBlob);
     if (FAILED(hr))
         return hr;
-    
+
     const wchar_t* pArgs[] =
-    {
-        L"-Zpc",            // Matrices in column-major order
-        L"-WX",             // Warnings as errors
-#   ifdef DILIGENT_DEBUG
-        L"-Zi",             // Debug info
-        //L"-Qembed_debug",   // Embed debug info into the shader (some compilers do not recognize this flag)
-        L"-Od",             // Disable optimization
-#   else
-        L"-O3",             // Optimization level 3
-#   endif
-    };
+        {
+            L"-Zpc", // Matrices in column-major order
+            L"-WX",  // Warnings as errors
+#    ifdef DILIGENT_DEBUG
+            L"-Zi", // Debug info
+            //L"-Qembed_debug",   // Embed debug info into the shader (some compilers do not recognize this flag)
+            L"-Od", // Disable optimization
+#    else
+            L"-O3", // Optimization level 3
+#    endif
+        };
 
     DxcIncludeHandlerImpl IncludeHandler{ShaderCI.pShaderSourceStreamFactory, library};
 
@@ -369,8 +371,8 @@ static HRESULT CompileShader(const char*             Source,
     //	{
 
     D3DIncludeImpl IncludeImpl(ShaderCI.pShaderSourceStreamFactory);
-    auto SourceLen = strlen(Source);
-    auto hr = D3DCompile(Source, SourceLen, NULL, D3DMacros.data(), &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
+    auto           SourceLen = strlen(Source);
+    auto           hr        = D3DCompile(Source, SourceLen, NULL, D3DMacros.data(), &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
 
     //		if( FAILED(hr) || errors )
     //		{
@@ -443,7 +445,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, Uint8 ShaderModel
 
         CComPtr<ID3DBlob> errors;
         HRESULT           hr;
-        
+
         if (m_isDXIL)
             hr = CompileDxilShader(ShaderSource.c_str(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
         else

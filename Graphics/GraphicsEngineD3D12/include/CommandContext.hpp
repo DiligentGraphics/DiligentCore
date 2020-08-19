@@ -345,7 +345,7 @@ public:
 #ifdef D12_H_HAS_MESH_SHADER
         FlushResourceBarriers();
         CComPtr<ID3D12GraphicsCommandList6> CmdList;
-        if (SUCCEEDED(m_pCommandList->QueryInterface(__uuidof(CmdList), reinterpret_cast<void **>(&CmdList))))
+        if (SUCCEEDED(m_pCommandList->QueryInterface(__uuidof(CmdList), reinterpret_cast<void**>(&CmdList))))
             CmdList->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 #else
         UNSUPPORTED("DrawMesh is not supported in current D3D12 header");

@@ -40,7 +40,7 @@ public:
     struct ExtensionFeatures
     {
 #ifdef VK_NV_mesh_shader
-        VkPhysicalDeviceMeshShaderFeaturesNV  MeshShader;
+        VkPhysicalDeviceMeshShaderFeaturesNV MeshShader;
 #endif
     };
 
@@ -56,8 +56,8 @@ public:
     VulkanPhysicalDevice& operator = (VulkanPhysicalDevice&&)      = delete;
     // clang-format on
 
-    static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice                 vkDevice,
-                                                        std::shared_ptr<VulkanInstance>  Instance);
+    static std::unique_ptr<VulkanPhysicalDevice> Create(VkPhysicalDevice                vkDevice,
+                                                        std::shared_ptr<VulkanInstance> Instance);
 
     // clang-format off
     uint32_t         FindQueueFamily     (VkQueueFlags QueueFlags)                           const;
@@ -77,8 +77,8 @@ public:
     VkFormatProperties                GetPhysicalDeviceFormatProperties(VkFormat imageFormat) const;
 
 private:
-    VulkanPhysicalDevice(VkPhysicalDevice                 vkDevice,
-                         std::shared_ptr<VulkanInstance>  Instance);
+    VulkanPhysicalDevice(VkPhysicalDevice                vkDevice,
+                         std::shared_ptr<VulkanInstance> Instance);
 
     const VkPhysicalDevice               m_VkDevice;
     VkPhysicalDeviceProperties           m_Properties       = {};

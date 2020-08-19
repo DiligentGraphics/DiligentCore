@@ -1205,7 +1205,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: no pipeline state is bound.");
         return false;
     }
-    
+
     if (m_pPipelineState->GetDesc().PipelineType != GRAPHICS_PIPELINE)
     {
         LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: pipeline state '",
@@ -1236,7 +1236,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 
 template <typename BaseInterface, typename ImplementationTraits>
 inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
-    DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs)const
+    DvpVerifyDrawMeshArguments(const DrawMeshAttribs& Attribs) const
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
@@ -1274,7 +1274,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: no pipeline state is bound.");
         return false;
     }
-    
+
     if (m_pPipelineState->GetDesc().PipelineType != GRAPHICS_PIPELINE)
     {
 
@@ -1313,7 +1313,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: no pipeline state is bound.");
         return false;
     }
-    
+
     if (m_pPipelineState->GetDesc().PipelineType != GRAPHICS_PIPELINE)
     {
         LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: pipeline state '",
@@ -1358,7 +1358,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
-    
+
     if (!m_pPipelineState)
     {
         LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: no pipeline state is bound.");
@@ -1482,7 +1482,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
         LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: no pipeline state is bound.");
         return false;
     }
-    
+
     if (m_pPipelineState->GetDesc().PipelineType != COMPUTE_PIPELINE)
     {
         LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: pipeline state '",

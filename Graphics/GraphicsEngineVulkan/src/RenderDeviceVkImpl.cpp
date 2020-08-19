@@ -181,7 +181,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.TextureUAVExtendedFormats         = vkDeviceFeatures.shaderStorageImageExtendedFormats != VK_FALSE;
 
     // All devices that supports mesh shader also supports task shader, so it is not necessary to use two separate features.
-    Features.MeshShaders                       = vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE;
+    Features.MeshShaders = vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE;
 
     const auto& vkDeviceLimits = m_PhysicalDevice->GetProperties().limits;
     auto&       TexCaps        = m_DeviceCaps.TexCaps;
