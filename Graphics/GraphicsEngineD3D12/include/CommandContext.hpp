@@ -43,13 +43,13 @@ namespace Diligent
 struct DWParam
 {
     // clang-format off
-	DWParam( FLOAT f ) : Float{f} {}
-	DWParam( UINT u )  : Uint {u} {}
-	DWParam( INT i )   : Int  {i} {}
+    DWParam( FLOAT f ) : Float{f} {}
+    DWParam( UINT u )  : Uint {u} {}
+    DWParam( INT i )   : Int  {i} {}
 
-	void operator= ( FLOAT f ) { Float = f; }
-	void operator= ( UINT u )  { Uint = u; }
-	void operator= ( INT i )   { Int = i; }
+    void operator= ( FLOAT f ) { Float = f; }
+    void operator= ( UINT u )  { Uint = u; }
+    void operator= ( INT i )   { Int = i; }
     // clang-format on
 
     union

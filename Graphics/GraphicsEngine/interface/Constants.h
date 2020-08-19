@@ -38,7 +38,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 
 /// Maximum number of input buffer slots.
 /// D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT == 32
-#define DILIGENT_MAX_BUFFER_SOLTS 32
+#define DILIGENT_MAX_BUFFER_SLOTS 32
 
 /// Maximum number of simultaneous render targets.
 #define DILIGENT_MAX_RENDER_TARGETS 8
@@ -46,7 +46,7 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 /// Maximum number of viewports.
 #define DILIGENT_MAX_VIEWPORTS 16
 
-static const Uint32 MAX_BUFFER_SLOTS   = DILIGENT_MAX_BUFFER_SOLTS;
+static const Uint32 MAX_BUFFER_SLOTS   = DILIGENT_MAX_BUFFER_SLOTS;
 static const Uint32 MAX_RENDER_TARGETS = DILIGENT_MAX_RENDER_TARGETS;
 static const Uint32 MAX_VIEWPORTS      = DILIGENT_MAX_VIEWPORTS;
 

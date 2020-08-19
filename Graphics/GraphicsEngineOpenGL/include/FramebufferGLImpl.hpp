@@ -42,7 +42,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Render pass implementation in Direct3D11 backend.
+/// Render pass implementation in OpenGL backend.
 class FramebufferGLImpl final : public FramebufferBase<IFramebuffer, RenderDeviceGLImpl>
 {
 public:

@@ -188,7 +188,7 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
             "precision highp usampler3D;\n"
             "precision highp usamplerCube;\n"
             "precision highp usampler2DArray;\n" // clang-format off
-    ); // clang-format on
+        ); // clang-format on
 
         if (IsES32OrAbove)
         {

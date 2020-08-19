@@ -287,8 +287,8 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             d3d12PSODesc.NumRenderTargets = GraphicsPipeline.NumRenderTargets;
             for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
                 d3d12PSODesc.RTVFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
-            for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < 8; ++rt)
-                d3d12PSODesc.RTVFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
+            for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < std::size(d3d12PSODesc.RTVFormats); ++rt)
+                d3d12PSODesc.RTVFormats[rt] = DXGI_FORMAT_UNKNOWN;
             d3d12PSODesc.DSVFormat = TexFormatToDXGI_Format(GraphicsPipeline.DSVFormat);
 
             d3d12PSODesc.SampleDesc.Count   = GraphicsPipeline.SmplDesc.Count;
@@ -368,8 +368,8 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             d3d12PSODesc.RTVFormatArray->NumRenderTargets = GraphicsPipeline.NumRenderTargets;
             for (Uint32 rt = 0; rt < GraphicsPipeline.NumRenderTargets; ++rt)
                 d3d12PSODesc.RTVFormatArray->RTFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
-            for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < 8; ++rt)
-                d3d12PSODesc.RTVFormatArray->RTFormats[rt] = TexFormatToDXGI_Format(GraphicsPipeline.RTVFormats[rt]);
+            for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < std::size(d3d12PSODesc.RTVFormatArray->RTFormats); ++rt)
+                d3d12PSODesc.RTVFormatArray->RTFormats[rt] = DXGI_FORMAT_UNKNOWN;
             d3d12PSODesc.DSVFormat = TexFormatToDXGI_Format(GraphicsPipeline.DSVFormat);
 
             d3d12PSODesc.SampleDesc->Count   = GraphicsPipeline.SmplDesc.Count;
