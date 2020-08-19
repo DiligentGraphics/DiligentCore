@@ -40,6 +40,14 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                     ${D3D_COMPILER_PATH}
                     "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
                     
+            # make sure that global variables defined before being used here
+            if(NOT DEFINED HAS_D12_DXIL_COMPILER)
+                message(FATAL_ERROR "HAS_D12_DXIL_COMPILER is undefined, check order of cmake includes")
+            endif()
+            if(NOT DEFINED HAS_VK_DXIL_COMPILER)
+                message(FATAL_ERROR "HAS_VK_DXIL_COMPILER is undefined, check order of cmake includes")
+            endif()
+
             if(${HAS_D12_DXIL_COMPILER})
                 # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in the same folder as the dxcompiler.dll at runtime.
                 add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
@@ -54,8 +62,7 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                 add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
                         ${DXC_VK_COMPILER_PATH}
-                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/vk_dxcompiler.dll\""
-                    COMMENT "Copy dxcompiler.dll for target ${TARGET_NAME}")
+                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/vk_dxcompiler.dll\"")
             endif()
         endif()
     endfunction()

@@ -37,6 +37,7 @@
 #if !DILIGENT_NO_GLSLANG
 #    include "SPIRVUtils.hpp"
 #endif
+#include "DXILUtils.hpp"
 
 namespace Diligent
 {
@@ -55,9 +56,6 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 {
     if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
     {
-#if DILIGENT_NO_GLSLANG
-        LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang and can only consume compiled SPIRV bytecode.");
-#else
         DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
         DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from source code or a file");
 
@@ -65,26 +63,39 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
             "#ifndef VULKAN\n"
             "#   define VULKAN 1\n"
             "#endif\n";
-        if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+
+        if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL &&
+            (CreationAttribs.HLSLVersion.Major == 0 || CreationAttribs.HLSLVersion.Major > 5) &&
+            HasDXILCompilerForVulkan())
         {
-            m_SPIRV = HLSLtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
+            m_SPIRV = HLSLtoSPIRVusingDXIL(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
         }
         else
         {
-            auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pRenderDeviceVk->GetDeviceCaps(),
-                                                    TargetGLSLCompiler::glslang,
-                                                    VulkanDefine);
+#if DILIGENT_NO_GLSLANG
+            LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang and can only consume compiled SPIRV bytecode.");
+#else
+            if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+            {
+                m_SPIRV = HLSLtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
+            }
+            else
+            {
+                auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pRenderDeviceVk->GetDeviceCaps(),
+                                                        TargetGLSLCompiler::glslang,
+                                                        VulkanDefine);
 
-            m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
-                                  static_cast<int>(GLSLSource.length()),
-                                  CreationAttribs.ppCompilerOutput);
+                m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
+                                      static_cast<int>(GLSLSource.length()),
+                                      CreationAttribs.ppCompilerOutput);
+            }
+#endif
         }
 
         if (m_SPIRV.empty())
         {
             LOG_ERROR_AND_THROW("Failed to compile shader");
         }
-#endif
     }
     else if (CreationAttribs.ByteCode != nullptr)
     {

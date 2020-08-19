@@ -230,6 +230,8 @@ if(EXISTS ${Vulkan_BINARY})
     set(DXC_VK_COMPILER_PATH "${Vulkan_BINARY}" CACHE INTERNAL "" FORCE)
     target_compile_definitions(Diligent-GraphicsEngineVk-static PRIVATE HAS_VK_DXIL_COMPILER)
     message(STATUS "Found DXIL compiler for Vulkan")
+else()
+    set(HAS_VK_DXIL_COMPILER FALSE CACHE INTERNAL "" FORCE)
 endif()
 
 if(PLATFORM_WIN32)
