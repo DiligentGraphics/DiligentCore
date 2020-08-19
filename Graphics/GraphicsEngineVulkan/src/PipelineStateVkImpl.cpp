@@ -342,8 +342,20 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
         TessStateCI.flags             = 0; // reserved for future use
         PipelineCI.pTessellationState = &TessStateCI;
 
-        PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(GraphicsPipeline.PrimitiveTopology, InputAssemblyCI.topology, TessStateCI.patchControlPoints);
+        if (m_Desc.PipelineType == PIPELINE_TYPE_MESH)
+        {
+            // Input assembly doesn't used during mesh pipeline creation, so topology may contain any value.
+            // Validation layers may generate warning if used point_list topology, so set another value.
+            InputAssemblyCI.topology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 
+            // Vertex input state and tessellation state are ignored in mesh pipeline and shuld be null.
+            PipelineCI.pVertexInputState  = nullptr;
+            PipelineCI.pTessellationState = nullptr;
+        }
+        else
+        {
+            PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(GraphicsPipeline.PrimitiveTopology, InputAssemblyCI.topology, TessStateCI.patchControlPoints);
+        }
 
         VkPipelineViewportStateCreateInfo ViewPortStateCI = {};
 

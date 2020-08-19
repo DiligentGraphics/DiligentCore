@@ -118,6 +118,9 @@ public:
 
         if (ShdrDesc.ShaderType == SHADER_TYPE_COMPUTE && !deviceFeatures.ComputeShaders)
             LOG_ERROR_AND_THROW("Compute shaders are not supported by this device");
+
+        if ((ShdrDesc.ShaderType == SHADER_TYPE_AMPLIFICATION || ShdrDesc.ShaderType == SHADER_TYPE_MESH) && !deviceFeatures.MeshShaders)
+            LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device");
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_Shader, TDeviceObjectBase)

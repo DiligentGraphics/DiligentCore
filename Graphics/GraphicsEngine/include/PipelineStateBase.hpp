@@ -193,6 +193,9 @@ public:
                 CHECK_THROW(!GraphicsPipeline.pVS && !GraphicsPipeline.pGS && !GraphicsPipeline.pDS && !GraphicsPipeline.pHS,
                             "Vertex, geometry and tessellation shaders are not supported in mesh pipeline");
                 DEV_CHECK_ERR(GraphicsPipeline.InputLayout.NumElements == 0, "Input layout ignored in mesh shader");
+                DEV_CHECK_ERR(GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
+                                  GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_UNDEFINED,
+                              "Primitive topology ignored in mesh pipeline, set it to undefined or keep default value (triangle list)");
                 m_pAS = GraphicsPipeline.pAS;
                 m_pMS = GraphicsPipeline.pMS;
                 m_pPS = GraphicsPipeline.pPS;
