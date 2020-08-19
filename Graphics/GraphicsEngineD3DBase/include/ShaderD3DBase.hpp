@@ -29,6 +29,10 @@
 
 #include <d3dcommon.h>
 
+#ifdef HAS_D12_DXIL_COMPILER
+#    include "dxcapi.h"
+#endif
+
 #include "Shader.h"
 
 /// \file

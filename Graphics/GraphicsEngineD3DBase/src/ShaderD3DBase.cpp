@@ -36,10 +36,6 @@
 #include <locale>
 #include <cwchar>
 
-#ifdef HAS_DXIL_COMPILER
-#    include "dxcapi.h"
-#endif
-
 namespace Diligent
 {
 
@@ -49,7 +45,7 @@ static const Char* g_HLSLDefinitions =
 };
 
 
-#ifdef HAS_DXIL_COMPILER
+#ifdef HAS_D12_DXIL_COMPILER
 class DxcIncludeHandlerImpl final : public IDxcIncludeHandler
 {
 public:
@@ -125,10 +121,10 @@ static HRESULT CompileDxilShader(const char*             Source,
                                  ID3DBlob**              ppBlobOut,
                                  ID3DBlob**              ppCompilerOutput)
 {
-#ifdef HAS_DXIL_COMPILER
     std::vector<WCHAR> unicodeBuffer;
     unicodeBuffer.resize(1u << 15);
     size_t unicodeBufferOffset = 0;
+#ifdef HAS_D12_DXIL_COMPILER
 
     const auto ToUnicode = [&unicodeBuffer, &unicodeBufferOffset](const char* str) {
         auto len = strlen(str) + 1;

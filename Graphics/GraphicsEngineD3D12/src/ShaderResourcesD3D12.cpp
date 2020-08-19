@@ -32,10 +32,6 @@
 #include "ShaderD3DBase.hpp"
 #include "ShaderBase.hpp"
 
-#ifdef HAS_DXIL_COMPILER
-#    include "dxcapi.h"
-#endif
-
 namespace Diligent
 {
 
@@ -62,7 +58,7 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, bool isDXI
 
     if (isDXIL)
     {
-#ifdef HAS_DXIL_COMPILER
+#ifdef HAS_D12_DXIL_COMPILER
         const uint32_t                   DFCC_DXIL = uint32_t('D') | (uint32_t('X') << 8) | (uint32_t('I') << 16) | (uint32_t('L') << 24);
         CComPtr<IDxcContainerReflection> pReflection;
         UINT32                           shaderIdx;
