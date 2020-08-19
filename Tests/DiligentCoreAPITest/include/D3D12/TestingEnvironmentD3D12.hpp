@@ -38,6 +38,7 @@
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <atlcomcli.h>
+#include "dxcapi.h"
 
 namespace Diligent
 {
@@ -51,6 +52,12 @@ HRESULT CompileD3DShader(const std::string&      Source,
                          const D3D_SHADER_MACRO* pDefines,
                          LPCSTR                  profile,
                          ID3DBlob**              ppBlobOut);
+
+HRESULT CompileDXILShader(const std::string&           Source,
+                          LPCWSTR                      strFunctionName,
+                          const std::vector<DxcDefine> Defines,
+                          LPCWSTR                      profile,
+                          ID3DBlob**                   ppBlobOut);
 
 class TestingEnvironmentD3D12 final : public TestingEnvironment
 {

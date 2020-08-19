@@ -93,6 +93,108 @@ TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType,
     return new TestingEnvironmentD3D12{deviceType, AdapterType, SCDesc};
 }
 
+struct DXILCompilerLib
+{
+    HMODULE               Module         = nullptr;
+    DxcCreateInstanceProc CreateInstance = nullptr;
+
+    DXILCompilerLib()
+    {
+        Module = LoadLibraryA("dxcompiler.dll");
+        if (Module)
+            CreateInstance = reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance"));
+    }
+
+    ~DXILCompilerLib()
+    {
+        FreeLibrary(Module);
+    }
+
+    static DXILCompilerLib& Instance()
+    {
+        static DXILCompilerLib inst;
+        return inst;
+    }
+};
+
+HRESULT CompileDXILShader(const std::string&           Source,
+                          LPCWSTR                      strFunctionName,
+                          const std::vector<DxcDefine> Defines,
+                          LPCWSTR                      profile,
+                          ID3DBlob**                   ppBlobOut)
+{
+    auto DXILCreateInstance = DXILCompilerLib::Instance().CreateInstance;
+    if (DXILCreateInstance == nullptr)
+        return E_FAIL;
+
+    HRESULT hr;
+
+    CComPtr<IDxcLibrary> library;
+    hr = DXILCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
+    if (FAILED(hr))
+        return hr;
+
+    CComPtr<IDxcCompiler> compiler;
+    hr = DXILCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+    if (FAILED(hr))
+        return hr;
+
+    CComPtr<IDxcBlobEncoding> sourceBlob;
+    hr = library->CreateBlobWithEncodingFromPinned(Source.c_str(), UINT32(Source.length()), CP_UTF8, &sourceBlob);
+    if (FAILED(hr))
+        return hr;
+
+    const wchar_t* pArgs[] =
+        {
+            L"-Zpc", // Matrices in column-major order
+            L"-WX",  // Warnings as errors
+            L"-Od"   // Disable optimization
+        };
+
+    CComPtr<IDxcOperationResult> result;
+    hr = compiler->Compile(
+        sourceBlob,
+        L"",
+        strFunctionName,
+        profile,
+        pArgs, UINT32(std::size(pArgs)),
+        Defines.data(), UINT32(Defines.size()),
+        nullptr,
+        &result);
+
+    if (SUCCEEDED(hr))
+    {
+        HRESULT status;
+        if (SUCCEEDED(result->GetStatus(&status)))
+            hr = status;
+    }
+
+    if (result)
+    {
+        CComPtr<IDxcBlobEncoding> errorsBlob;
+        if (SUCCEEDED(result->GetErrorBuffer(&errorsBlob)))
+        {
+            const size_t CompilerMsgLen = errorsBlob->GetBufferSize();
+            const char*  CompilerMsg    = CompilerMsgLen > 0 ? reinterpret_cast<const char*>(errorsBlob->GetBufferPointer()) : nullptr;
+
+            if (FAILED(hr))
+            {
+                LOG_INFO_MESSAGE("Failed to compile DXIL shader :\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>"));
+                return hr;
+            }
+            else if (CompilerMsg != nullptr)
+            {
+                LOG_INFO_MESSAGE("Shader compiler output:\n", CompilerMsg);
+            }
+        }
+    }
+
+    if (SUCCEEDED(hr))
+        hr = result->GetResult(reinterpret_cast<IDxcBlob**>(ppBlobOut));
+
+    return hr;
+}
+
 } // namespace Testing
 
 } // namespace Diligent

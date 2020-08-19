@@ -152,6 +152,9 @@ if(PLATFORM_WIN32)
     copy_required_dlls(DiligentCoreAPITest)
 endif()
 
+if(${D12_H_HAS_MESH_SHADER})
+    target_compile_definitions(DiligentCoreAPITest PRIVATE D12_H_HAS_MESH_SHADER)
+endif()
 
 source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${ALL_SOURCE})
 
