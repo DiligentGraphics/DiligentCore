@@ -80,8 +80,9 @@ public:
     ID3D12GraphicsCommandList* Close(CComPtr<ID3D12CommandAllocator>& pAllocator);
     void                       Reset(CommandListManager& CmdListManager);
 
-    class GraphicsContext& AsGraphicsContext();
-    class ComputeContext&  AsComputeContext();
+    class GraphicsContext&  AsGraphicsContext();
+    class GraphicsContext4& AsGraphicsContext4();
+    class ComputeContext&   AsComputeContext();
 
     void ClearUAVFloat(D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle,
                        D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle,
@@ -227,6 +228,10 @@ protected:
     String m_ID;
 
     D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+
+#ifdef DILIGENT_DEBUG
+    Uint32 m_DbgMaxInterfaceVer = 0;
+#endif
 };
 
 
@@ -344,7 +349,11 @@ public:
         FlushResourceBarriers();
         m_pCommandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
     }
+};
 
+class GraphicsContext4 : public GraphicsContext
+{
+public:
     void BeginRenderPass(UINT                                        NumRenderTargets,
                          const D3D12_RENDER_PASS_RENDER_TARGET_DESC* pRenderTargets,
                          const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* pDepthStencil,
@@ -423,6 +432,12 @@ public:
 inline GraphicsContext& CommandContext::AsGraphicsContext()
 {
     return static_cast<GraphicsContext&>(*this);
+}
+
+inline GraphicsContext4& CommandContext::AsGraphicsContext4()
+{
+    VERIFY(m_DbgMaxInterfaceVer >= 4, "Maximum supported interface version is ", m_DbgMaxInterfaceVer);
+    return static_cast<GraphicsContext4&>(*this);
 }
 
 inline ComputeContext& CommandContext::AsComputeContext()
