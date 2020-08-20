@@ -81,6 +81,9 @@ public:
     void                       Reset(CommandListManager& CmdListManager);
 
     class GraphicsContext&  AsGraphicsContext();
+    class GraphicsContext1& AsGraphicsContext1();
+    class GraphicsContext2& AsGraphicsContext2();
+    class GraphicsContext3& AsGraphicsContext3();
     class GraphicsContext4& AsGraphicsContext4();
     class ComputeContext&   AsComputeContext();
 
@@ -229,9 +232,7 @@ protected:
 
     D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
-#ifdef DILIGENT_DEBUG
-    Uint32 m_DbgMaxInterfaceVer = 0;
-#endif
+    Uint32 m_MaxInterfaceVer = 0;
 };
 
 
@@ -351,7 +352,20 @@ public:
     }
 };
 
-class GraphicsContext4 : public GraphicsContext
+class GraphicsContext1 : public GraphicsContext
+{
+};
+
+class GraphicsContext2 : public GraphicsContext1
+{
+};
+
+class GraphicsContext3 : public GraphicsContext2
+{
+};
+
+
+class GraphicsContext4 : public GraphicsContext3
 {
 public:
     void BeginRenderPass(UINT                                        NumRenderTargets,
@@ -434,9 +448,27 @@ inline GraphicsContext& CommandContext::AsGraphicsContext()
     return static_cast<GraphicsContext&>(*this);
 }
 
+inline GraphicsContext1& CommandContext::AsGraphicsContext1()
+{
+    VERIFY(m_MaxInterfaceVer >= 1, "Maximum supported interface version is ", m_MaxInterfaceVer);
+    return static_cast<GraphicsContext1&>(*this);
+}
+
+inline GraphicsContext2& CommandContext::AsGraphicsContext2()
+{
+    VERIFY(m_MaxInterfaceVer >= 2, "Maximum supported interface version is ", m_MaxInterfaceVer);
+    return static_cast<GraphicsContext2&>(*this);
+}
+
+inline GraphicsContext3& CommandContext::AsGraphicsContext3()
+{
+    VERIFY(m_MaxInterfaceVer >= 3, "Maximum supported interface version is ", m_MaxInterfaceVer);
+    return static_cast<GraphicsContext3&>(*this);
+}
+
 inline GraphicsContext4& CommandContext::AsGraphicsContext4()
 {
-    VERIFY(m_DbgMaxInterfaceVer >= 4, "Maximum supported interface version is ", m_DbgMaxInterfaceVer);
+    VERIFY(m_MaxInterfaceVer >= 4, "Maximum supported interface version is ", m_MaxInterfaceVer);
     return static_cast<GraphicsContext4&>(*this);
 }
 

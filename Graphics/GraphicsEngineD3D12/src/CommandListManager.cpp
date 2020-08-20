@@ -46,11 +46,31 @@ CommandListManager::~CommandListManager()
     LOG_INFO_MESSAGE("Command list manager: created ", m_FreeAllocators.size(), " allocators");
 }
 
-void CommandListManager::CreateNewCommandList(ID3D12GraphicsCommandList** List, ID3D12CommandAllocator** Allocator)
+void CommandListManager::CreateNewCommandList(ID3D12GraphicsCommandList** List, ID3D12CommandAllocator** Allocator, Uint32& IfaceVersion)
 {
     RequestAllocator(Allocator);
     auto* pd3d12Device = m_DeviceD3D12Impl.GetD3D12Device();
-    auto  hr           = pd3d12Device->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, *Allocator, nullptr, __uuidof(ID3D12GraphicsCommandList4), reinterpret_cast<void**>(List));
+
+    const IID CmdListIIDs[] =
+        {
+            __uuidof(ID3D12GraphicsCommandList4),
+            __uuidof(ID3D12GraphicsCommandList3),
+            __uuidof(ID3D12GraphicsCommandList2),
+            __uuidof(ID3D12GraphicsCommandList1),
+            __uuidof(ID3D12GraphicsCommandList) //
+        };
+
+    HRESULT hr = E_FAIL;
+    for (Uint32 i = 0; i < _countof(CmdListIIDs); ++i)
+    {
+        hr = pd3d12Device->CreateCommandList(1, D3D12_COMMAND_LIST_TYPE_DIRECT, *Allocator, nullptr, CmdListIIDs[i], reinterpret_cast<void**>(List));
+        if (SUCCEEDED(hr))
+        {
+            IfaceVersion = _countof(CmdListIIDs) - 1 - i;
+            break;
+        }
+    }
+
     VERIFY(SUCCEEDED(hr), "Failed to create command list");
     (*List)->SetName(L"CommandList");
 }

@@ -46,17 +46,7 @@ CommandContext::CommandContext(CommandListManager& CmdListManager) :
 // clang-format on
 {
     m_PendingResourceBarriers.reserve(MaxPendingBarriers);
-    CmdListManager.CreateNewCommandList(&m_pCommandList, &m_pCurrentAllocator);
-#ifdef DILIGENT_DEBUG
-    if (CComQIPtr<ID3D12GraphicsCommandList4>(m_pCommandList))
-        m_DbgMaxInterfaceVer = 4;
-    else if (CComQIPtr<ID3D12GraphicsCommandList3>(m_pCommandList))
-        m_DbgMaxInterfaceVer = 3;
-    else if (CComQIPtr<ID3D12GraphicsCommandList2>(m_pCommandList))
-        m_DbgMaxInterfaceVer = 2;
-    else
-        m_DbgMaxInterfaceVer = 1;
-#endif
+    CmdListManager.CreateNewCommandList(&m_pCommandList, &m_pCurrentAllocator, m_MaxInterfaceVer);
 }
 
 CommandContext::~CommandContext(void)

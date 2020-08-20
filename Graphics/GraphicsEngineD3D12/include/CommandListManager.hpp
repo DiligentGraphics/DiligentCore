@@ -49,7 +49,8 @@ public:
     CommandListManager& operator = (      CommandListManager&&) = delete;
     // clang-format on
 
-    void CreateNewCommandList(ID3D12GraphicsCommandList** ppList, ID3D12CommandAllocator** ppAllocator);
+    // Returns the maximum supported interface version
+    void CreateNewCommandList(ID3D12GraphicsCommandList** ppList, ID3D12CommandAllocator** ppAllocator, Uint32& IfaceVersion);
 
     void RequestAllocator(ID3D12CommandAllocator** ppAllocator);
     void ReleaseAllocator(CComPtr<ID3D12CommandAllocator>&& Allocator, Uint32 CmdQueue, Uint64 FenceValue);
