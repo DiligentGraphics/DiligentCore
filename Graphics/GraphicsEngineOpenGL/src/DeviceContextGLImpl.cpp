@@ -29,6 +29,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <array>
 
 #include "SwapChainGL.h"
 #include "DeviceContextGLImpl.hpp"
@@ -498,13 +499,20 @@ void DeviceContextGLImpl::EndSubpass()
     const auto& RPDesc = m_pActiveRenderPass->GetDesc();
     VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
     const auto& SubpassDesc = RPDesc.pSubpasses[m_SubpassIndex];
+
+    const auto& SubpassFBOs = m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex);
+#ifdef DILIGENT_DEBUG
+    {
+        GLint glCurrReadFB = 0;
+        glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &glCurrReadFB);
+        CHECK_GL_ERROR("Failed to get current read framebuffer");
+        GLuint glExpectedReadFB = SubpassFBOs.RenderTarget != 0 ? static_cast<GLuint>(SubpassFBOs.RenderTarget) : m_pSwapChain->GetDefaultFBO();
+        VERIFY(static_cast<GLuint>(glCurrReadFB) == glExpectedReadFB, "Unexpected read framebuffer");
+    }
+#endif
+
     if (SubpassDesc.pResolveAttachments != nullptr)
     {
-        const auto& SubpassFBOs = m_pBoundFramebuffer->GetSubpassFramebuffer(m_SubpassIndex);
-
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, SubpassFBOs.RenderTarget);
-        DEV_CHECK_GL_ERROR("Failed to bind subpass render target FBO as read framebuffer");
-
         GLuint ResolveDstFBO = SubpassFBOs.Resolve;
         if (ResolveDstFBO == 0)
         {
@@ -521,6 +529,68 @@ void DeviceContextGLImpl::EndSubpass()
         );
         DEV_CHECK_GL_ERROR("glBlitFramebuffer() failed when resolving multi-sampled attachments");
     }
+
+    if (glInvalidateFramebuffer != nullptr)
+    {
+        // It is crucially important to invalidate the framebuffer while it is bound
+        // https://community.arm.com/developer/tools-software/graphics/b/blog/posts/mali-performance-2-how-to-correctly-handle-framebuffers
+        GLsizei InvalidateAttachmentsCount = 0;
+
+        std::array<GLenum, MAX_RENDER_TARGETS + 1> InvalidateAttachments;
+        for (Uint32 rt = 0; rt < SubpassDesc.RenderTargetAttachmentCount; ++rt)
+        {
+            const auto RTAttachmentIdx = SubpassDesc.pRenderTargetAttachments[rt].AttachmentIndex;
+            if (RTAttachmentIdx != ATTACHMENT_UNUSED)
+            {
+                auto AttachmentLastUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTAttachmentIdx).second;
+                if (AttachmentLastUse == m_SubpassIndex && RPDesc.pAttachments[RTAttachmentIdx].StoreOp == ATTACHMENT_STORE_OP_DISCARD)
+                {
+                    if (SubpassFBOs.RenderTarget == 0)
+                    {
+                        VERIFY(rt == 0, "Default framebuffer can only have single color attachment");
+                        InvalidateAttachments[InvalidateAttachmentsCount++] = GL_COLOR;
+                    }
+                    else
+                    {
+                        InvalidateAttachments[InvalidateAttachmentsCount++] = GL_COLOR_ATTACHMENT0 + rt;
+                    }
+                }
+            }
+        }
+
+        if (SubpassDesc.pDepthStencilAttachment != nullptr)
+        {
+            const auto DSAttachmentIdx = SubpassDesc.pDepthStencilAttachment->AttachmentIndex;
+            if (DSAttachmentIdx != ATTACHMENT_UNUSED)
+            {
+                auto AttachmentLastUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentIdx).second;
+                if (AttachmentLastUse == m_SubpassIndex && RPDesc.pAttachments[DSAttachmentIdx].StoreOp == ATTACHMENT_STORE_OP_DISCARD)
+                {
+                    const auto& FmtAttribs = GetTextureFormatAttribs(RPDesc.pAttachments[DSAttachmentIdx].Format);
+                    VERIFY_EXPR(FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH || FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL);
+                    if (SubpassFBOs.RenderTarget == 0)
+                    {
+                        InvalidateAttachments[InvalidateAttachmentsCount++] = GL_DEPTH;
+                        if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
+                            InvalidateAttachments[InvalidateAttachmentsCount++] = GL_STENCIL;
+                    }
+                    else
+                    {
+                        InvalidateAttachments[InvalidateAttachmentsCount++] = FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ? GL_DEPTH_ATTACHMENT : GL_DEPTH_STENCIL_ATTACHMENT;
+                    }
+                }
+            }
+        }
+
+        if (InvalidateAttachmentsCount > 0)
+        {
+            glInvalidateFramebuffer(GL_READ_FRAMEBUFFER, InvalidateAttachmentsCount, InvalidateAttachments.data());
+            DEV_CHECK_GL_ERROR("glInvalidateFramebuffer() failed");
+        }
+    }
+
+    // TODO: invalidate input attachments using glInvalidateTexImage
+
     m_ContextState.InvalidateFBO();
 }
 
