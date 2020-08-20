@@ -1637,6 +1637,87 @@ void DeviceContextD3D11Impl::SetRenderTargets(Uint32                         Num
     }
 }
 
+void DeviceContextD3D11Impl::BeginSubpass()
+{
+    VERIFY_EXPR(m_pActiveRenderPass);
+    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
+    VERIFY_EXPR(m_SubpassIndex < RPDesc.SubpassCount);
+    const auto& Subpass = RPDesc.pSubpasses[m_SubpassIndex];
+    const auto& FBDesc  = m_pBoundFramebuffer->GetDesc();
+
+    // Unbind these attachments that will be used for output by the subpass.
+    // There is no need to unbind textures from output as the new subpass atachments
+    // will be committed as render target/depth stencil anyway, so these that can be used for
+    // input will be unbound.
+
+    auto UnbindAttachmentFromInput = [&](const AttachmentReference& AttachmentRef) //
+    {
+        if (AttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+        {
+            if (auto* pTexView = FBDesc.ppAttachments[AttachmentRef.AttachmentIndex])
+            {
+                auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexView->GetTexture());
+                UnbindResourceView(m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pTexD3D11->GetD3D11Texture(), SetSRVMethods);
+            }
+        }
+    };
+
+    for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
+    {
+        UnbindAttachmentFromInput(Subpass.pRenderTargetAttachments[rt]);
+        if (Subpass.pResolveAttachments != nullptr)
+        {
+            UnbindAttachmentFromInput(Subpass.pResolveAttachments[rt]);
+        }
+    }
+
+    if (Subpass.pDepthStencilAttachment != nullptr)
+    {
+        UnbindAttachmentFromInput(*Subpass.pDepthStencilAttachment);
+    }
+
+    CommitRenderTargets();
+
+    for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
+    {
+        const auto& AttachmentRef   = Subpass.pRenderTargetAttachments[rt];
+        const auto  RTAttachmentIdx = AttachmentRef.AttachmentIndex;
+        if (RTAttachmentIdx != ATTACHMENT_UNUSED)
+        {
+            const auto AttachmentFirstUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(RTAttachmentIdx).first;
+            if (AttachmentFirstUse == m_SubpassIndex && RPDesc.pAttachments[RTAttachmentIdx].LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+            {
+                if (auto* pTexView = FBDesc.ppAttachments[RTAttachmentIdx])
+                {
+                    auto* const pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pTexView);
+                    auto* const pd3d11RTV  = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
+                    const auto& ClearValue = m_AttachmentClearValues[RTAttachmentIdx];
+                    m_pd3d11DeviceContext->ClearRenderTargetView(pd3d11RTV, ClearValue.Color);
+                }
+            }
+        }
+    }
+
+    if (Subpass.pDepthStencilAttachment)
+    {
+        auto DSAttachmentIdx = Subpass.pDepthStencilAttachment->AttachmentIndex;
+        if (DSAttachmentIdx != ATTACHMENT_UNUSED)
+        {
+            const auto AttachmentFirstUse = m_pActiveRenderPass->GetAttachmentFirstLastUse(DSAttachmentIdx).first;
+            if (AttachmentFirstUse == m_SubpassIndex && RPDesc.pAttachments[DSAttachmentIdx].LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
+            {
+                if (auto* pTexView = FBDesc.ppAttachments[DSAttachmentIdx])
+                {
+                    auto* const pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pTexView);
+                    auto* const pd3d11DSV  = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
+                    const auto& ClearValue = m_AttachmentClearValues[DSAttachmentIdx];
+                    m_pd3d11DeviceContext->ClearDepthStencilView(pd3d11DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, ClearValue.DepthStencil.Depth, ClearValue.DepthStencil.Stencil);
+                }
+            }
+        }
+    }
+}
+
 void DeviceContextD3D11Impl::EndSubpass()
 {
     VERIFY_EXPR(m_pActiveRenderPass);
@@ -1678,95 +1759,30 @@ void DeviceContextD3D11Impl::BeginRenderPass(const BeginRenderPassAttribs& Attri
     TDeviceContextBase::BeginRenderPass(Attribs);
     // BeginRenderPass() transitions resources to required states
 
-    CommitRenderTargets();
+    m_AttachmentClearValues.resize(Attribs.ClearValueCount);
+    for (Uint32 i = 0; i < Attribs.ClearValueCount; ++i)
+        m_AttachmentClearValues[i] = Attribs.pClearValues[i];
+
+    BeginSubpass();
 
     // Set the viewport to match the framebuffer size
     SetViewports(1, nullptr, 0, 0);
-
-    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
-    const auto& FBDesc = m_pBoundFramebuffer->GetDesc();
-
-    // Clear attachments
-    for (Uint32 att = 0; att < RPDesc.AttachmentCount; ++att)
-    {
-        auto* pTexView = FBDesc.ppAttachments[att];
-        if (pTexView == nullptr)
-            continue;
-        if (RPDesc.pAttachments[att].LoadOp == ATTACHMENT_LOAD_OP_CLEAR)
-        {
-            auto*      pViewD3D11 = ValidatedCast<TextureViewD3D11Impl>(pTexView);
-            const auto FmtAttribs = GetTextureFormatAttribs(pTexView->GetDesc().Format);
-            VERIFY_EXPR(att < Attribs.ClearValueCount);
-            const auto& ClearValue = Attribs.pClearValues[att];
-            if (FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH ||
-                FmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL)
-            {
-                auto* pd3d11DSV = static_cast<ID3D11DepthStencilView*>(pViewD3D11->GetD3D11View());
-                m_pd3d11DeviceContext->ClearDepthStencilView(pd3d11DSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, ClearValue.DepthStencil.Depth, ClearValue.DepthStencil.Stencil);
-            }
-            else
-            {
-                auto* pd3d11RTV = static_cast<ID3D11RenderTargetView*>(pViewD3D11->GetD3D11View());
-                m_pd3d11DeviceContext->ClearRenderTargetView(pd3d11RTV, ClearValue.Color);
-            }
-        }
-    }
 }
 
 void DeviceContextD3D11Impl::NextSubpass()
 {
     EndSubpass();
 
-    VERIFY_EXPR(m_pActiveRenderPass);
-    const auto& RPDesc = m_pActiveRenderPass->GetDesc();
-    VERIFY_EXPR(m_SubpassIndex + 1 < RPDesc.SubpassCount);
-    const auto& NextSubpass = RPDesc.pSubpasses[m_SubpassIndex + 1];
-    const auto& FBDesc      = m_pBoundFramebuffer->GetDesc();
-
-    // Unbind these attachments that will be used for output by the next subpass.
-    // There is no need to unbind textures from output as the new subpass atachments
-    // will be set as render target/depth stencil anyway, so these that can be used for
-    // input will be unbound.
-
-    auto UnbindAttachmentFromInput = [&](const AttachmentReference& AttachmentRef) //
-    {
-        if (AttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
-        {
-            auto CurrAttachmentState = m_pActiveRenderPass->GetAttachmentState(m_SubpassIndex, AttachmentRef.AttachmentIndex);
-            if (CurrAttachmentState == RESOURCE_STATE_SHADER_RESOURCE || CurrAttachmentState == RESOURCE_STATE_INPUT_ATTACHMENT)
-            {
-                if (auto* pTexView = FBDesc.ppAttachments[AttachmentRef.AttachmentIndex])
-                {
-                    auto* pTexD3D11 = ValidatedCast<TextureBaseD3D11>(pTexView->GetTexture());
-                    UnbindResourceView(m_CommittedD3D11SRVs, m_CommittedD3D11SRVResources, m_NumCommittedSRVs, pTexD3D11->GetD3D11Texture(), SetSRVMethods);
-                }
-            }
-        }
-    };
-
-    for (Uint32 rt = 0; rt < NextSubpass.RenderTargetAttachmentCount; ++rt)
-    {
-        UnbindAttachmentFromInput(NextSubpass.pRenderTargetAttachments[rt]);
-        if (NextSubpass.pResolveAttachments != nullptr)
-        {
-            UnbindAttachmentFromInput(NextSubpass.pResolveAttachments[rt]);
-        }
-    }
-
-    if (NextSubpass.pDepthStencilAttachment != nullptr)
-    {
-        UnbindAttachmentFromInput(*NextSubpass.pDepthStencilAttachment);
-    }
-
     TDeviceContextBase::NextSubpass();
 
-    CommitRenderTargets();
+    BeginSubpass();
 }
 
 void DeviceContextD3D11Impl::EndRenderPass()
 {
     EndSubpass();
     TDeviceContextBase::EndRenderPass();
+    m_AttachmentClearValues.clear();
 }
 
 
@@ -2146,11 +2162,11 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, State
 
             if ((Barrier.NewState & RESOURCE_STATE_UNORDERED_ACCESS) != 0)
             {
-                DEV_CHECK_ERR((Barrier.NewState & RESOURCE_STATE_GENERIC_READ) == 0, "Unordered access state is not compatible with any input state");
+                DEV_CHECK_ERR((Barrier.NewState & (RESOURCE_STATE_GENERIC_READ | RESOURCE_STATE_INPUT_ATTACHMENT)) == 0, "Unordered access state is not compatible with any input state");
                 UnbindTextureFromInput(pTextureD3D11Impl, pTextureD3D11Impl->GetD3D11Texture());
             }
 
-            if ((Barrier.NewState & RESOURCE_STATE_GENERIC_READ) != 0)
+            if ((Barrier.NewState & (RESOURCE_STATE_GENERIC_READ | RESOURCE_STATE_INPUT_ATTACHMENT)) != 0)
             {
                 if ((OldState & RESOURCE_STATE_RENDER_TARGET) != 0)
                     UnbindTextureFromRenderTarget(pTextureD3D11Impl);

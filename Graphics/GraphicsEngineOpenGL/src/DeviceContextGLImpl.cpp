@@ -544,6 +544,7 @@ void DeviceContextGLImpl::NextSubpass()
     EndSubpass();
     TDeviceContextBase::NextSubpass();
     BeginSubpass();
+    m_AttachmentClearValues.clear();
 }
 
 void DeviceContextGLImpl::EndRenderPass()
