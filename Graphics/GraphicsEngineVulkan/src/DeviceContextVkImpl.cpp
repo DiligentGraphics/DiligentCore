@@ -1494,13 +1494,13 @@ void DeviceContextVkImpl::UnmapBuffer(IBuffer* pBuffer, MAP_TYPE MapType)
 
     if (MapType == MAP_READ)
     {
-        // We are currently using cache-coherent memory, so there is no need to invalidated mapped range
+        // We are currently using host-cached memory, so there is no need to invalidated mapped range
     }
     else if (MapType == MAP_WRITE)
     {
-        if (BuffDesc.Usage == USAGE_STAGING)
+        if (BuffDesc.Usage == USAGE_STAGING || BuffDesc.Usage == USAGE_UNIFIED)
         {
-            // We are currently using cache-coherent memory, so there is no need to flush mapped range
+            // We are currently using host-coherent memory, so there is no need to flush mapped range
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
