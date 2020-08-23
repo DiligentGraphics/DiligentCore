@@ -124,13 +124,17 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
 
     /// A resource residing in a unified memory (e.g. memory shared between CPU and GPU),
     /// that can be read and written by GPU and can also be directly accessed by CPU.
-    /// \remarks Unified buffers must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.\n
+    ///
+    /// \remarks Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.\n
     /// If it is not possible to create a unified resource, the engine will attempt to create a non-unified
-    /// resource as below:
+    /// resource as follows:
     /// - If CPU_ACCESS_WRITE flag is specified, default-usage resource will be created.
     /// - If CPU_ACCESS_READ flag is specified, staging resource will be created.
     /// - If both CPU_ACCESS_WRITE and CPU_ACCESS_READ flags are used, an error will be generated.
     /// An application must check the actual usage after the resource has been created.
+    ///
+    /// Unified buffers are natively supported in Vulkan backend only. In other backends
+    /// they decay into default or staging buffers as described above.
     USAGE_UNIFIED,
 
     /// Helper value indicating the total number of elements in the enum
