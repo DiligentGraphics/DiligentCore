@@ -328,7 +328,7 @@ const Char* GetResourceDimString(RESOURCE_DIMENSION TexType);
 const Char* GetBindFlagString(Uint32 BindFlag);
 
 /// Returns the string containing the bind flags
-String GetBindFlagsString(Uint32 BindFlags);
+String GetBindFlagsString(Uint32 BindFlags, const char* Delimeter = "|");
 
 /// Returns the string containing the CPU access flags
 String GetCPUAccessFlagsString(Uint32 CpuAccessFlags);

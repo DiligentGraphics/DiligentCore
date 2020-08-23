@@ -89,8 +89,15 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
     m_GLUsageHint {UsageToGLUsage(BuffDesc)}
 // clang-format on
 {
-    if (BuffDesc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr))
-        LOG_ERROR_AND_THROW("Static buffer must be initialized with data at creation time");
+    ValidateBufferInitData(BuffDesc, pBuffData);
+
+    if (m_Desc.Usage == USAGE_UNIFIED)
+    {
+        DecayUnifiedBuffer();
+    }
+
+    if (m_Desc.Usage == USAGE_STATIC)
+        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for static buffers");
 
     // TODO: find out if it affects performance if the buffer is originally bound to one target
     // and then bound to another (such as first to GL_ARRAY_BUFFER and then to GL_UNIFORM_BUFFER)

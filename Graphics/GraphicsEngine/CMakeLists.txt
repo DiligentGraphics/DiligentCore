@@ -63,6 +63,7 @@ set(INTERFACE
 
 set(SOURCE
     src/APIInfo.cpp
+    src/BufferBase.cpp
     src/DefaultShaderSourceStreamFactory.cpp
     src/EngineMemory.cpp
     src/FramebufferBase.cpp

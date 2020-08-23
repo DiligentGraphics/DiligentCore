@@ -754,7 +754,9 @@ const Char* GetMapTypeString(MAP_TYPE MapType)
 /// Returns the string containing the usage
 const Char* GetUsageString(USAGE Usage)
 {
-    static const Char* UsageStrings[4];
+    static_assert(USAGE_NUM_USAGES == 5, "Please update the function to handle the new usage type");
+
+    static const Char* UsageStrings[USAGE_NUM_USAGES];
     static bool        bUsageStringsInit = false;
     if (!bUsageStringsInit)
     {
@@ -764,11 +766,12 @@ const Char* GetUsageString(USAGE Usage)
         INIT_USGAGE_STR( USAGE_DEFAULT );
         INIT_USGAGE_STR( USAGE_DYNAMIC );
         INIT_USGAGE_STR( USAGE_STAGING );
+        INIT_USGAGE_STR( USAGE_UNIFIED );
 #undef  INIT_USGAGE_STR
         // clang-format on
         bUsageStringsInit = true;
     }
-    if (Usage >= USAGE_STATIC && Usage <= USAGE_STAGING)
+    if (Usage >= USAGE_STATIC && Usage < USAGE_NUM_USAGES)
         return UsageStrings[Usage];
     else
     {
@@ -827,7 +830,7 @@ const Char* GetBindFlagString(Uint32 BindFlag)
     }
 }
 
-String GetBindFlagsString(Uint32 BindFlags)
+String GetBindFlagsString(Uint32 BindFlags, const char* Delimeter)
 {
     if (BindFlags == 0)
         return "0";
@@ -836,8 +839,8 @@ String GetBindFlagsString(Uint32 BindFlags)
     {
         if (BindFlags & Flag)
         {
-            if (Str.length())
-                Str += '|';
+            if (!Str.empty())
+                Str += Delimeter;
             Str += GetBindFlagString(Flag);
             BindFlags &= ~Flag;
         }

@@ -71,6 +71,8 @@ inline GLenum TypeToGLType(VALUE_TYPE Value)
 
 inline GLenum UsageToGLUsage(const BufferDesc& Desc)
 {
+    static_assert(USAGE_NUM_USAGES == 5, "Please update this function to handle the new usage type");
+
     // http://www.informit.com/articles/article.aspx?p=2033340&seqNum=2
     // https://www.khronos.org/registry/OpenGL-Refpages/gl2.1/xhtml/glBufferData.xml
     switch (Desc.Usage)
@@ -82,6 +84,7 @@ inline GLenum UsageToGLUsage(const BufferDesc& Desc)
         // clang-format off
         case USAGE_STATIC:      return GL_STATIC_DRAW;
         case USAGE_DEFAULT:     return GL_STATIC_DRAW;
+        case USAGE_UNIFIED:     return GL_STATIC_DRAW;
         case USAGE_DYNAMIC:     return GL_DYNAMIC_DRAW;
         case USAGE_STAGING:
             if(Desc.CPUAccessFlags & CPU_ACCESS_READ)

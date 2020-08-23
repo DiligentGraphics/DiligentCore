@@ -55,10 +55,15 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
     }
 // clang-format on
 {
-#define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", m_Desc.Name ? m_Desc.Name : "", "\": ", ##__VA_ARGS__);
+    ValidateBufferInitData(BuffDesc, pBuffData);
 
-    if (m_Desc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr))
-        LOG_BUFFER_ERROR_AND_THROW("Static buffer must be initialized with data at creation time");
+    if (m_Desc.Usage == USAGE_UNIFIED)
+    {
+        DecayUnifiedBuffer();
+    }
+
+    if (m_Desc.Usage == USAGE_STATIC)
+        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for static buffers");
 
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
     {

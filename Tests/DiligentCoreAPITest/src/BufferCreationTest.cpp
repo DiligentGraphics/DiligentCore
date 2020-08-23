@@ -267,4 +267,120 @@ TEST_F(BufferCreationTest, CreateRawBuffer)
     pCreateObjFromNativeRes->CreateBuffer(pBuffer);
 }
 
+TEST_F(BufferCreationTest, CreateStagingBuffer)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    auto* pCtx    = pEnv->GetDeviceContext();
+
+    BufferDesc BuffDesc;
+    BuffDesc.Name           = "Staging vertex buffer";
+    BuffDesc.Usage          = USAGE_STAGING;
+    BuffDesc.uiSizeInBytes  = 256;
+    BuffDesc.BindFlags      = BIND_NONE;
+    BuffDesc.CPUAccessFlags = CPU_ACCESS_READ;
+
+    {
+        RefCntAutoPtr<IBuffer> pReadBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pReadBuffer);
+        ASSERT_NE(pReadBuffer, nullptr) << GetObjectDescString(BuffDesc);
+
+        void* pMappedData = nullptr;
+        pCtx->MapBuffer(pReadBuffer, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pMappedData);
+        EXPECT_NE(pMappedData, nullptr);
+        pCtx->UnmapBuffer(pReadBuffer, MAP_READ);
+    }
+
+    {
+        BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+        RefCntAutoPtr<IBuffer> pWriteBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pWriteBuffer);
+        ASSERT_NE(pWriteBuffer, nullptr) << GetObjectDescString(BuffDesc);
+
+        void* pMappedData = nullptr;
+        pCtx->MapBuffer(pWriteBuffer, MAP_WRITE, MAP_FLAG_NONE, pMappedData);
+        EXPECT_NE(pMappedData, nullptr);
+        pCtx->UnmapBuffer(pWriteBuffer, MAP_WRITE);
+    }
+}
+
+
+TEST_F(BufferCreationTest, CreateDynamicBuffer)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    auto* pCtx    = pEnv->GetDeviceContext();
+
+    BufferDesc BuffDesc;
+    BuffDesc.Name           = "Dynamic vertex buffer";
+    BuffDesc.Usage          = USAGE_DYNAMIC;
+    BuffDesc.uiSizeInBytes  = 256;
+    BuffDesc.BindFlags      = BIND_VERTEX_BUFFER;
+    BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+    {
+        RefCntAutoPtr<IBuffer> pBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
+        ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
+
+        void* pMappedData = nullptr;
+        pCtx->MapBuffer(pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+        EXPECT_NE(pMappedData, nullptr);
+        pCtx->UnmapBuffer(pBuffer, MAP_WRITE);
+    }
+
+    BuffDesc.Name              = "Dynamic structured buffer";
+    BuffDesc.BindFlags         = BIND_SHADER_RESOURCE;
+    BuffDesc.Mode              = BUFFER_MODE_STRUCTURED;
+    BuffDesc.ElementByteStride = 16;
+
+    {
+        RefCntAutoPtr<IBuffer> pBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
+        ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
+
+        void* pMappedData = nullptr;
+        pCtx->MapBuffer(pBuffer, MAP_WRITE, MAP_FLAG_DISCARD, pMappedData);
+        EXPECT_NE(pMappedData, nullptr);
+        pCtx->UnmapBuffer(pBuffer, MAP_WRITE);
+    }
+}
+
+TEST_F(BufferCreationTest, CreateUnifiedVertexBuffer)
+{
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+    auto* pCtx    = pEnv->GetDeviceContext();
+
+    BufferDesc BuffDesc;
+    BuffDesc.Name           = "Unified vertex buffer";
+    BuffDesc.Usage          = USAGE_UNIFIED;
+    BuffDesc.uiSizeInBytes  = 256;
+    BuffDesc.BindFlags      = BIND_VERTEX_BUFFER;
+    BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
+
+    {
+        BufferData InitData;
+        InitData.DataSize = BuffDesc.uiSizeInBytes;
+        std::vector<Uint8> DummyData(InitData.DataSize);
+        InitData.pData = DummyData.data();
+        RefCntAutoPtr<IBuffer> pBuffer;
+        pDevice->CreateBuffer(BuffDesc, &InitData, &pBuffer);
+        ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
+    }
+
+    {
+        BuffDesc.BindFlags      = BIND_NONE;
+        BuffDesc.CPUAccessFlags = CPU_ACCESS_READ;
+        RefCntAutoPtr<IBuffer> pBuffer;
+        pDevice->CreateBuffer(BuffDesc, nullptr, &pBuffer);
+        ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
+
+        void* pMappedData = nullptr;
+        pCtx->MapBuffer(pBuffer, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pMappedData);
+        EXPECT_NE(pMappedData, nullptr);
+        pCtx->UnmapBuffer(pBuffer, MAP_READ);
+    }
+}
+
 } // namespace
