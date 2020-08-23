@@ -1417,7 +1417,8 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
 
     if (MapType == MAP_READ)
     {
-        DEV_CHECK_ERR(BuffDesc.Usage == USAGE_STAGING, "Buffer must be created as USAGE_STAGING to be mapped for reading");
+        DEV_CHECK_ERR(BuffDesc.Usage == USAGE_STAGING || BuffDesc.Usage == USAGE_UNIFIED,
+                      "Buffer must be created as USAGE_STAGING or USAGE_UNIFIED to be mapped for reading");
 
         if ((MapFlags & MAP_FLAG_DO_NOT_WAIT) == 0)
         {
@@ -1426,13 +1427,13 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
                                 "access and use MAP_FLAG_DO_NOT_WAIT flag.");
         }
 
-        pMappedData = pBufferVk->GetStagingCPUAddress();
+        pMappedData = pBufferVk->GetCPUAddress();
     }
     else if (MapType == MAP_WRITE)
     {
-        if (BuffDesc.Usage == USAGE_STAGING)
+        if (BuffDesc.Usage == USAGE_STAGING || BuffDesc.Usage == USAGE_UNIFIED)
         {
-            pMappedData = pBufferVk->GetStagingCPUAddress();
+            pMappedData = pBufferVk->GetCPUAddress();
         }
         else if (BuffDesc.Usage == USAGE_DYNAMIC)
         {
@@ -1472,7 +1473,7 @@ void DeviceContextVkImpl::MapBuffer(IBuffer* pBuffer, MAP_TYPE MapType, MAP_FLAG
         }
         else
         {
-            LOG_ERROR("Only USAGE_DYNAMIC and USAGE_STAGING Vk buffers can be mapped for writing");
+            LOG_ERROR("Only USAGE_DYNAMIC, USAGE_STAGING and USAGE_UNIFIED Vulkan buffers can be mapped for writing");
         }
     }
     else if (MapType == MAP_READ_WRITE)

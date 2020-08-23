@@ -248,12 +248,9 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             if ((MemoryPropFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0)
             {
                 // Memory is directly accessible by CPU
-                auto AlignedMemOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
-                VERIFY_EXPR(m_MemoryAllocation.Size >= MemReqs.size + (AlignedMemOffset - m_MemoryAllocation.UnalignedOffset));
-
                 auto* pData = reinterpret_cast<uint8_t*>(m_MemoryAllocation.Page->GetCPUMemory());
                 VERIFY_EXPR(pData != nullptr);
-                memcpy(pData + AlignedMemOffset, pBuffData->pData, pBuffData->DataSize);
+                memcpy(pData + m_BufferMemoryAlignedOffset, pBuffData->pData, pBuffData->DataSize);
 
                 if ((MemoryPropFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0)
                 {
@@ -263,7 +260,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                     FlushRange.sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
                     FlushRange.pNext  = nullptr;
                     FlushRange.memory = m_MemoryAllocation.Page->GetVkMemory();
-                    FlushRange.offset = AlignedMemOffset;
+                    FlushRange.offset = m_BufferMemoryAlignedOffset;
                     FlushRange.size   = MemReqs.size;
                     LogicalDevice.FlushMappedMemoryRanges(1, &FlushRange);
                 }

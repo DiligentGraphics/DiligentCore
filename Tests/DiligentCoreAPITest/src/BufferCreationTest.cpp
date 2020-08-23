@@ -195,7 +195,7 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
     EXPECT_EQ(TestBufferCInterface(pBuffer.RawPtr()), 0);
 }
 
-TEST_F(BufferCreationTest, CreateStructuedBuffer)
+TEST_F(BufferCreationTest, CreateStructuredBuffer)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
@@ -274,7 +274,7 @@ TEST_F(BufferCreationTest, CreateStagingBuffer)
     auto* pCtx    = pEnv->GetDeviceContext();
 
     BufferDesc BuffDesc;
-    BuffDesc.Name           = "Staging vertex buffer";
+    BuffDesc.Name           = "Staging buffer";
     BuffDesc.Usage          = USAGE_STAGING;
     BuffDesc.uiSizeInBytes  = 256;
     BuffDesc.BindFlags      = BIND_NONE;
@@ -346,7 +346,7 @@ TEST_F(BufferCreationTest, CreateDynamicBuffer)
     }
 }
 
-TEST_F(BufferCreationTest, CreateUnifiedVertexBuffer)
+TEST_F(BufferCreationTest, CreateUnifiedBuffer)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
