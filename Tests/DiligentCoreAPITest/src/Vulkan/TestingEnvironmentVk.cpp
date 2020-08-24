@@ -45,8 +45,11 @@ void CreateTestingSwapChainVk(TestingEnvironmentVk* pEnv,
                               const SwapChainDesc&  SCDesc,
                               ISwapChain**          ppSwapChain);
 
-TestingEnvironmentVk::TestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
-    TestingEnvironment{deviceType, AdapterType, SCDesc}
+TestingEnvironmentVk::TestingEnvironmentVk(RENDER_DEVICE_TYPE   deviceType,
+                                           ADAPTER_TYPE         AdapterType,
+                                           Uint32               AdapterId,
+                                           const SwapChainDesc& SCDesc) :
+    TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc}
 {
     InitializeGlslang();
 
@@ -653,9 +656,12 @@ void TestingEnvironmentVk::TransitionImageLayout(VkCommandBuffer                
     CurrentLayout = NewLayout;
 }
 
-TestingEnvironment* CreateTestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
+TestingEnvironment* CreateTestingEnvironmentVk(RENDER_DEVICE_TYPE   deviceType,
+                                               ADAPTER_TYPE         AdapterType,
+                                               Uint32               AdapterId,
+                                               const SwapChainDesc& SCDesc)
 {
-    return new TestingEnvironmentVk{deviceType, AdapterType, SCDesc};
+    return new TestingEnvironmentVk{deviceType, AdapterType, AdapterId, SCDesc};
 }
 
 } // namespace Testing

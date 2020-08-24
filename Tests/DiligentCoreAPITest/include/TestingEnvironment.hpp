@@ -29,6 +29,7 @@
 
 #include <atomic>
 #include <memory>
+#include <vector>
 
 #include "RenderDevice.h"
 #include "DeviceContext.h"
@@ -48,7 +49,10 @@ namespace Testing
 class TestingEnvironment : public ::testing::Environment
 {
 public:
-    TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+    TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
+                       ADAPTER_TYPE         AdapterType,
+                       Uint32               AdapterId,
+                       const SwapChainDesc& SCDesc);
 
     ~TestingEnvironment() override;
 
@@ -102,6 +106,10 @@ protected:
                                 const char*            Function,
                                 const char*            File,
                                 int                    Line);
+
+    static Uint32 FindAdapater(const std::vector<AdapterAttribs>& Adapters,
+                               ADAPTER_TYPE                       AdapterType,
+                               Uint32                             AdapterId);
 
     const RENDER_DEVICE_TYPE m_DeviceType;
 

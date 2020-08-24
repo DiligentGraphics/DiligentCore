@@ -44,8 +44,11 @@ void CreateTestingSwapChainD3D11(IRenderDevice*       pDevice,
                                  ISwapChain**         ppSwapChain);
 
 
-TestingEnvironmentD3D11::TestingEnvironmentD3D11(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
-    TestingEnvironment{deviceType, AdapterType, SCDesc}
+TestingEnvironmentD3D11::TestingEnvironmentD3D11(RENDER_DEVICE_TYPE   deviceType,
+                                                 ADAPTER_TYPE         AdapterType,
+                                                 Uint32               AdapterId,
+                                                 const SwapChainDesc& SCDesc) :
+    TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc}
 {
     RefCntAutoPtr<IRenderDeviceD3D11>  pRenderDeviceD3D11{m_pDevice, IID_RenderDeviceD3D11};
     RefCntAutoPtr<IDeviceContextD3D11> pContextD3D11{m_pDeviceContext, IID_DeviceContextD3D11};
@@ -266,9 +269,12 @@ void TestingEnvironmentD3D11::Reset()
     m_pd3d11Context->ClearState();
 }
 
-TestingEnvironment* CreateTestingEnvironmentD3D11(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
+TestingEnvironment* CreateTestingEnvironmentD3D11(RENDER_DEVICE_TYPE   deviceType,
+                                                  ADAPTER_TYPE         AdapterType,
+                                                  Uint32               AdapterId,
+                                                  const SwapChainDesc& SCDesc)
 {
-    return new TestingEnvironmentD3D11{deviceType, AdapterType, SCDesc};
+    return new TestingEnvironmentD3D11{deviceType, AdapterType, AdapterId, SCDesc};
 }
 
 } // namespace Testing
