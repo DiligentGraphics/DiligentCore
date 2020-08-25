@@ -169,7 +169,17 @@ public:
         m_pContext->CopyTexture(CopyInfo);
         m_pContext->WaitForIdle();
         MappedTextureSubresource MapData;
-        m_pContext->MapTextureSubresource(m_pStagingTexture, 0, 0, MAP_READ, MAP_FLAG_DO_NOT_WAIT, nullptr, MapData);
+
+        auto MapFlag = MAP_FLAG_DO_NOT_WAIT;
+        if (m_pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D11)
+        {
+            // As a matter of fact, we should be able to always use MAP_FLAG_DO_NOT_WAIT flag
+            // as we flush the context and idle the GPU before mapping the staging texture.
+            // Intel driver, however, still returns null unless we don't use D3D11_MAP_FLAG_DO_NOT_WAIT flag.
+            MapFlag = MAP_FLAG_NONE;
+        }
+
+        m_pContext->MapTextureSubresource(m_pStagingTexture, 0, 0, MAP_READ, MapFlag, nullptr, MapData);
         CompareTestImages(m_ReferenceData.data(), m_ReferenceDataPitch, reinterpret_cast<const Uint8*>(MapData.pData), MapData.Stride,
                           m_SwapChainDesc.Width, m_SwapChainDesc.Height, m_SwapChainDesc.ColorBufferFormat);
 
