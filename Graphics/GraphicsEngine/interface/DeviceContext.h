@@ -1063,6 +1063,10 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// Executes an mesh draw command.
     
     /// \param [in] Attribs - Draw command attributes, see Diligent::DrawMeshAttribs for details.
+    /// 
+    /// \remarks  For compatibility between Direct3D12 and Vulkan used only single work group dimension.
+    ///           Also in shader numthreads and local_size attributes must use only single dimension,
+    ///           example: '[numthreads(ThreadCount, 1, 1)]' or 'layout(local_size_x = ThreadCount) in'.
     VIRTUAL void METHOD(DrawMesh)(THIS_
                                   const DrawMeshAttribs REF Attribs) PURE;
     
@@ -1072,13 +1076,16 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     /// \param [in] Attribs        - Structure describing the command attributes, see Diligent::DrawMeshIndirectAttribs for details.
     /// \param [in] pAttribsBuffer - Pointer to the buffer, from which indirect draw attributes will be read.
     ///                              The buffer must contain the following arguments at the specified offset:
-    ///                                for Direct3D12:
-    ///                                     Uint32 ThreadGroupCountX; // should be same as TaskCount for compatibility with Vulkan
-    ///                                     Uint32 ThreadGroupCountY; // should be 1 for compatibility with Vulkan
-    ///                                     Uint32 ThreadGroupCountZ; // should be 1 for compatibility with Vulkan
-    ///                                for Vulkan:
-    ///                                     Uint32 TaskCount; // should be same as ThreadGroupCountX for compatibility with D3D12
-    ///                                     Uint32 FirstTask; // should be 0 for compatibility with D3D12
+    ///                                Direct3D12:
+    ///                                     Uint32 ThreadGroupCountX;
+    ///                                     Uint32 ThreadGroupCountY;
+    ///                                     Uint32 ThreadGroupCountZ;
+    ///                                Vulkan:
+    ///                                     Uint32 TaskCount;
+    ///                                     Uint32 FirstTask;
+    /// 
+    /// \remarks  For compatibility between Direct3D12 and Vulkan and with direct call (DrawMesh) use only first element in structure,
+    ///           example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
     /// 
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 

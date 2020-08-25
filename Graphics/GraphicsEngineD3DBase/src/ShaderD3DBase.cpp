@@ -310,7 +310,7 @@ static HRESULT CompileShader(const char*             Source,
 } // namespace
 
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, bool IsD3D12) :
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersion RequiredVersion, bool IsD3D12) :
     m_isDXIL{false}
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
@@ -330,6 +330,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion Sha
         }
 
         // validate shader model
+        ShaderVersion ShaderModel = RequiredVersion;
         if (m_isDXIL)
         {
             ShaderModel = (ShaderModel.Major >= 6 ? ShaderModel : ShaderVersion{6, 0});
@@ -350,6 +351,9 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion Sha
             ShaderModel = (ShaderModel.Major < 6 ? ShaderModel : (IsD3D12 ? ShaderVersion{5, 1} : ShaderVersion{5, 0}));
         }
 
+        if (RequiredVersion.Major != 0 && (ShaderModel.Major != RequiredVersion.Major || ShaderModel.Minor != RequiredVersion.Minor))
+            LOG_INFO_MESSAGE("Shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "': version changed to ", ShaderModel.Major, ".", ShaderModel.Minor);
+
         std::string strShaderProfile;
         switch (ShaderCI.Desc.ShaderType)
         {
@@ -363,7 +367,6 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion Sha
             case SHADER_TYPE_AMPLIFICATION: strShaderProfile="as"; break;
             case SHADER_TYPE_MESH:          strShaderProfile="ms"; break;
                 // clang-format on
-
             default: UNEXPECTED("Unknown shader type");
         }
 
