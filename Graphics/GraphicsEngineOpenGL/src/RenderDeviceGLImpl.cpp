@@ -156,10 +156,10 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.GeometryShaders               = MajorVersion >= 4 || CheckExtension("GL_ARB_geometry_shader4");
         Features.Tessellation                  = MajorVersion >= 4 || CheckExtension("GL_ARB_tessellation_shader");
         Features.BindlessResources             = False;
-        Features.OcclusionQueries              = True;
-        Features.BinaryOcclusionQueries        = True;
-        Features.TimestampQueries              = True;
-        Features.PipelineStatisticsQueries     = True;
+        Features.OcclusionQueries              = True;  // Present since 3.3
+        Features.BinaryOcclusionQueries        = True;  // Present since 3.3
+        Features.TimestampQueries              = True;  // Present since 3.3
+        Features.PipelineStatisticsQueries     = True;  // Present since 3.3
         Features.DepthBiasClamp                = False; // There is no depth bias clamp in OpenGL
         Features.DepthClamp                    = MajorVersion >= 4 || CheckExtension("GL_ARB_depth_clamp");
         Features.IndependentBlend              = True;
@@ -203,8 +203,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.Tessellation                  = IsGLES32OrAbove || strstr(Extensions, "tessellation_shader");
         Features.BindlessResources             = False;
         Features.OcclusionQueries              = False;
-        Features.BinaryOcclusionQueries        = False;
-        Features.TimestampQueries              = False;
+        Features.BinaryOcclusionQueries        = True; // Supported in GLES3.0
+        Features.TimestampQueries              = strstr(Extensions, "disjoint_timer_query") && glQueryCounter != nullptr;
         Features.PipelineStatisticsQueries     = False;
         Features.DepthBiasClamp                = False; // There is no depth bias clamp in OpenGL
         Features.DepthClamp                    = strstr(Extensions, "depth_clamp");

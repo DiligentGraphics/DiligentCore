@@ -1013,6 +1013,16 @@ extern PFNGLMEMORYBARRIERPROC glMemoryBarrier;
 #endif
 
 
+/* ------------------------------ GL_EXT_disjoint_timer_query ----------------------------- */
+#ifndef GL_TIMESTAMP
+#   define GL_TIMESTAMP 0x8E28
+#endif
+
+#ifndef GL_TIME_ELAPSED
+#   define GL_TIME_ELAPSED 0x88BF
+#endif
+
+
 
 // Define unsupported GL function stubs
 template<typename T>
@@ -1176,6 +1186,16 @@ extern PFNGLDRAWARRAYSINSTANCEDBASEINSTANCEPROC glDrawArraysInstancedBaseInstanc
 #define LOAD_GL_DRAW_ELEMENTS_BASE_VERTEX
 typedef void (GL_APIENTRY* PFNGLDRAWELEMENTSBASEVERTEXPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices, GLint basevertex);
 extern PFNGLDRAWELEMENTSBASEVERTEXPROC glDrawElementsBaseVertex;
+
+
+#define LOAD_GL_GET_QUERY_OBJECT_UI64V
+typedef void (GL_APIENTRY* PFNGLGETQUERYOBJECTUI64VPROC) (GLuint id, GLenum pname, GLuint64* params);
+extern PFNGLGETQUERYOBJECTUI64VPROC glGetQueryObjectui64v;
+
+#define LOAD_GL_QUERY_COUNTER
+typedef void (GL_APIENTRY* PFNGLQUERYCOUNTERPROC) (GLuint id, GLenum target);
+extern PFNGLQUERYCOUNTERPROC glQueryCounter;
+
 
 #ifndef GL_ES_VERSION_3_2
 
