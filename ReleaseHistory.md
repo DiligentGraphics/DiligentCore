@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added `USAGE_UNIFIED` usage type (API Version 240066)
 * Added render passes (API Version 240065)
 * Added `CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS` enum and `IShaderSourceInputStreamFactory::CreateInputStream2` method (API Version 240064)
 * Added `ISwapChain::SetMaximumFrameLatency` function (API Version 240061)

@@ -40,6 +40,9 @@
 namespace Diligent
 {
 
+void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData);
+void ValidateBufferDesc(const BufferDesc& Desc);
+
 /// Template class implementing base functionality for a buffer object
 
 /// \tparam BaseInterface - base interface that this class will inheret
@@ -58,13 +61,13 @@ class BufferBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, 
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BufferDesc>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this buffer.
+    /// \param pRefCounters         - reference counters object that controls the lifetime of this buffer.
     /// \param BuffViewObjAllocator - allocator that is used to allocate memory for the buffer view instances.
     ///                               This parameter is only used for debug purposes.
-    /// \param pDevice - pointer to the device.
-    /// \param BuffDesc - buffer description.
-    /// \param bIsDeviceInternal - flag indicating if the buffer is an internal device object and
-    ///							   must not keep a strong reference to the device.
+    /// \param pDevice              - pointer to the device.
+    /// \param BuffDesc             - buffer description.
+    /// \param bIsDeviceInternal    - flag indicating if the buffer is an internal device object and
+    ///							      must not keep a strong reference to the device.
     BufferBase(IReferenceCounters*    pRefCounters,
                TBuffViewObjAllocator& BuffViewObjAllocator,
                RenderDeviceImplType*  pDevice,
@@ -77,40 +80,7 @@ public:
         m_pDefaultUAV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)},
         m_pDefaultSRV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)}
     {
-#define VERIFY_BUFFER(Expr, ...)                                                                               \
-    do                                                                                                         \
-    {                                                                                                          \
-        if (!(Expr))                                                                                           \
-        {                                                                                                      \
-            LOG_ERROR_AND_THROW("Buffer '", this->m_Desc.Name ? this->m_Desc.Name : "", "': ", ##__VA_ARGS__); \
-        }                                                                                                      \
-    } while (false)
-
-        Uint32 AllowedBindFlags =
-            BIND_VERTEX_BUFFER | BIND_INDEX_BUFFER | BIND_UNIFORM_BUFFER |
-            BIND_SHADER_RESOURCE | BIND_STREAM_OUTPUT | BIND_UNORDERED_ACCESS |
-            BIND_INDIRECT_DRAW_ARGS;
-        const Char* strAllowedBindFlags =
-            "BIND_VERTEX_BUFFER (1), BIND_INDEX_BUFFER (2), BIND_UNIFORM_BUFFER (4), "
-            "BIND_SHADER_RESOURCE (8), BIND_STREAM_OUTPUT (16), BIND_UNORDERED_ACCESS (128), "
-            "BIND_INDIRECT_DRAW_ARGS (256)";
-
-        VERIFY_BUFFER((BuffDesc.BindFlags & ~AllowedBindFlags) == 0, "Incorrect bind flags specified (", BuffDesc.BindFlags & ~AllowedBindFlags, "). Only the following flags are allowed:\n", strAllowedBindFlags);
-
-        if ((this->m_Desc.BindFlags & BIND_UNORDERED_ACCESS) ||
-            (this->m_Desc.BindFlags & BIND_SHADER_RESOURCE))
-        {
-            VERIFY_BUFFER(this->m_Desc.Mode > BUFFER_MODE_UNDEFINED && this->m_Desc.Mode < BUFFER_MODE_NUM_MODES, GetBufferModeString(this->m_Desc.Mode), " is not a valid mode for a buffer created with BIND_SHADER_RESOURCE or BIND_UNORDERED_ACCESS flags");
-            if (this->m_Desc.Mode == BUFFER_MODE_STRUCTURED || this->m_Desc.Mode == BUFFER_MODE_FORMATTED)
-            {
-                VERIFY_BUFFER(this->m_Desc.ElementByteStride != 0, "Element stride must not be zero for structured and formatted buffers");
-            }
-            else if (this->m_Desc.Mode == BUFFER_MODE_RAW)
-            {
-            }
-        }
-
-#undef VERIFY_BUFFER
+        ValidateBufferDesc(this->m_Desc);
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.CommandQueueMask & DeviceQueuesMask) != 0, "No bits in the command queue mask (0x", std::hex, this->m_Desc.CommandQueueMask, ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");
@@ -163,6 +133,27 @@ protected:
 
     /// Corrects buffer view description and validates view parameters.
     void CorrectBufferViewDesc(struct BufferViewDesc& ViewDesc);
+
+    void DecayUnifiedBuffer()
+    {
+        VERIFY_EXPR(this->m_Desc.Usage == USAGE_UNIFIED);
+        VERIFY_EXPR(this->m_Desc.CPUAccessFlags != CPU_ACCESS_NONE);
+        if (this->m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
+        {
+            this->m_Desc.Usage          = USAGE_DEFAULT;
+            this->m_Desc.CPUAccessFlags = CPU_ACCESS_NONE;
+        }
+        else if (this->m_Desc.CPUAccessFlags == CPU_ACCESS_READ)
+        {
+            this->m_Desc.Usage = USAGE_STAGING;
+        }
+        else
+        {
+            LOG_ERROR_AND_THROW("Unified buffer '", this->m_Desc.Name,
+                                "' cannot be automatically converted to a non-unified buffer "
+                                "because it uses both CPU_ACCESS_WRITE and CPU_ACCESS_READ flags");
+        }
+    }
 
 #ifdef DILIGENT_DEBUG
     TBuffViewObjAllocator& m_dbgBuffViewAllocator;

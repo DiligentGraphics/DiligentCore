@@ -564,7 +564,7 @@ void DeviceContextD3D12Impl::DrawMesh(const DrawMeshAttribs& Attribs)
     if (!DvpVerifyDrawMeshArguments(Attribs))
         return;
 
-    auto& GraphCtx = GetCmdContext().AsGraphicsContext();
+    auto& GraphCtx = GetCmdContext().AsGraphicsContext6();
     PrepareForDraw(GraphCtx, Attribs.Flags);
 
     GraphCtx.DrawMesh(Attribs.ThreadGroupCount, 1, 1);
@@ -1259,7 +1259,7 @@ void DeviceContextD3D12Impl::CommitSubpassRenderTargets()
     }
 
     auto& CmdCtx = GetCmdContext();
-    CmdCtx.AsGraphicsContext().BeginRenderPass(
+    CmdCtx.AsGraphicsContext4().BeginRenderPass(
         Subpass.RenderTargetAttachmentCount,
         RenderPassRTs,
         m_pBoundDepthStencil ? &RenderPassDS : nullptr,
@@ -1284,7 +1284,7 @@ void DeviceContextD3D12Impl::BeginRenderPass(const BeginRenderPassAttribs& Attri
 void DeviceContextD3D12Impl::NextSubpass()
 {
     auto& CmdCtx = GetCmdContext();
-    CmdCtx.AsGraphicsContext().EndRenderPass();
+    CmdCtx.AsGraphicsContext4().EndRenderPass();
     TDeviceContextBase::NextSubpass();
     TransitionSubpassAttachments(m_SubpassIndex);
     CommitSubpassRenderTargets();
@@ -1293,7 +1293,7 @@ void DeviceContextD3D12Impl::NextSubpass()
 void DeviceContextD3D12Impl::EndRenderPass()
 {
     auto& CmdCtx = GetCmdContext();
-    CmdCtx.AsGraphicsContext().EndRenderPass();
+    CmdCtx.AsGraphicsContext4().EndRenderPass();
     TransitionSubpassAttachments(m_SubpassIndex + 1);
     TDeviceContextBase::EndRenderPass();
 }

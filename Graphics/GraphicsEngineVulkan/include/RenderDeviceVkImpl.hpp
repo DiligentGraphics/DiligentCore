@@ -163,6 +163,13 @@ public:
     {
         return m_MemoryMgr.Allocate(MemReqs, MemoryProperties);
     }
+    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex)
+    {
+        const auto& MemoryProps = m_PhysicalDevice->GetMemoryProperties();
+        VERIFY_EXPR(MemoryTypeIndex < MemoryProps.memoryTypeCount);
+        const auto MemoryFlags = MemoryProps.memoryTypes[MemoryTypeIndex].propertyFlags;
+        return m_MemoryMgr.Allocate(Size, Alignment, MemoryTypeIndex, (MemoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0);
+    }
     VulkanUtilities::VulkanMemoryManager& GetGlobalMemoryManager() { return m_MemoryMgr; }
 
     VulkanDynamicMemoryManager& GetDynamicMemoryManager() { return m_DynamicMemoryManager; }

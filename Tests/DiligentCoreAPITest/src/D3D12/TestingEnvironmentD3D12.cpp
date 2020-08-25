@@ -39,8 +39,11 @@ void CreateTestingSwapChainD3D12(IRenderDevice*       pDevice,
                                  const SwapChainDesc& SCDesc,
                                  ISwapChain**         ppSwapChain);
 
-TestingEnvironmentD3D12::TestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
-    TestingEnvironment{deviceType, AdapterType, SCDesc},
+TestingEnvironmentD3D12::TestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceType,
+                                                 ADAPTER_TYPE         AdapterType,
+                                                 Uint32               AdapterId,
+                                                 const SwapChainDesc& SCDesc) :
+    TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc},
     m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)}
 {
     RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{m_pDevice, IID_RenderDeviceD3D12};
@@ -88,9 +91,12 @@ void TestingEnvironmentD3D12::IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue)
     }
 }
 
-TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc)
+TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceType,
+                                                  ADAPTER_TYPE         AdapterType,
+                                                  Uint32               AdapterId,
+                                                  const SwapChainDesc& SCDesc)
 {
-    return new TestingEnvironmentD3D12{deviceType, AdapterType, SCDesc};
+    return new TestingEnvironmentD3D12{deviceType, AdapterType, AdapterId, SCDesc};
 }
 
 struct DXILCompilerLib

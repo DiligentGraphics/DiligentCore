@@ -111,9 +111,9 @@ public:
         return (GetAccessFlags() & AccessFlags) == AccessFlags;
     }
 
-    void* GetStagingCPUAddress()
+    void* GetCPUAddress()
     {
-        VERIFY_EXPR(m_Desc.Usage == USAGE_STAGING);
+        VERIFY_EXPR(m_Desc.Usage == USAGE_STAGING || m_Desc.Usage == USAGE_UNIFIED);
         return reinterpret_cast<Uint8*>(m_MemoryAllocation.Page->GetCPUMemory()) + m_BufferMemoryAlignedOffset;
     }
 

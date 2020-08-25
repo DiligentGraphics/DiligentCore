@@ -43,7 +43,10 @@ namespace Testing
 class TestingEnvironmentVk final : public TestingEnvironment
 {
 public:
-    TestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+    TestingEnvironmentVk(RENDER_DEVICE_TYPE   deviceType,
+                         ADAPTER_TYPE         AdapterType,
+                         Uint32               AdapterId,
+                         const SwapChainDesc& SCDesc);
     ~TestingEnvironmentVk();
 
     static TestingEnvironmentVk* GetInstance() { return ValidatedCast<TestingEnvironmentVk>(TestingEnvironment::GetInstance()); }

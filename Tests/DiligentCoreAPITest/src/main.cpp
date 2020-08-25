@@ -26,6 +26,7 @@
  */
 
 #include <iostream>
+#include <string>
 
 #include "gtest/gtest.h"
 #include "TestingEnvironment.hpp"
@@ -42,19 +43,19 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentD3D11(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+TestingEnvironment* CreateTestingEnvironmentD3D11(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
 #endif
 
 #if D3D12_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentGL(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+TestingEnvironment* CreateTestingEnvironmentGL(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
 #endif
 
 #if VULKAN_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc);
+TestingEnvironment* CreateTestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
 #endif
 
 #if METAL_SUPPORTED
@@ -79,8 +80,11 @@ int main(int argc, char** argv)
 
     RENDER_DEVICE_TYPE deviceType  = RENDER_DEVICE_TYPE_UNDEFINED;
     ADAPTER_TYPE       AdapterType = ADAPTER_TYPE_UNKNOWN;
+    Uint32             AdapterId   = DEFAULT_ADAPTER_ID;
     for (int i = 1; i < argc; ++i)
     {
+        const std::string AdapterArgName = "--adapter=";
+
         const auto* arg = argv[i];
         if (strcmp(arg, "--mode=d3d11") == 0)
         {
@@ -108,6 +112,10 @@ int main(int argc, char** argv)
         {
             deviceType = RENDER_DEVICE_TYPE_GL;
         }
+        else if (AdapterArgName.compare(0, AdapterArgName.length(), arg, AdapterArgName.length()) == 0)
+        {
+            AdapterId = static_cast<Uint32>(atoi(arg + AdapterArgName.length()));
+        }
     }
 
     if (deviceType == RENDER_DEVICE_TYPE_UNDEFINED)
@@ -133,7 +141,7 @@ int main(int argc, char** argv)
                     std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D11-SW mode =================\n\n";
                 else
                     std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D11 mode ==================\n\n";
-                pEnv = CreateTestingEnvironmentD3D11(deviceType, AdapterType, SCDesc);
+                pEnv = CreateTestingEnvironmentD3D11(deviceType, AdapterType, AdapterId, SCDesc);
                 break;
 #endif
 
@@ -143,7 +151,7 @@ int main(int argc, char** argv)
                     std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D12-SW mode =================\n\n";
                 else
                     std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D12 mode ==================\n\n";
-                pEnv = CreateTestingEnvironmentD3D12(deviceType, AdapterType, SCDesc);
+                pEnv = CreateTestingEnvironmentD3D12(deviceType, AdapterType, AdapterId, SCDesc);
                 break;
 #endif
 
@@ -151,7 +159,7 @@ int main(int argc, char** argv)
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
                 std::cout << "\n\n\n==================== Testing Diligent Core API in OpenGL mode ====================\n\n";
-                pEnv = CreateTestingEnvironmentGL(deviceType, AdapterType, SCDesc);
+                pEnv = CreateTestingEnvironmentGL(deviceType, AdapterType, AdapterId, SCDesc);
                 break;
 
 #endif
@@ -159,7 +167,7 @@ int main(int argc, char** argv)
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 std::cout << "\n\n\n==================== Testing Diligent Core API in Vulkan mode ====================\n\n";
-                pEnv = CreateTestingEnvironmentVk(deviceType, AdapterType, SCDesc);
+                pEnv = CreateTestingEnvironmentVk(deviceType, AdapterType, AdapterId, SCDesc);
                 break;
 
 #endif

@@ -61,13 +61,17 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
     )
 // clang-format on
 {
-#define LOG_BUFFER_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Buffer \"", BuffDesc.Name ? BuffDesc.Name : "", "\": ", ##__VA_ARGS__)
+    ValidateBufferInitData(BuffDesc, pBuffData);
 
-    if (m_Desc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr))
-        LOG_BUFFER_ERROR_AND_THROW("Static buffer must be initialized with data at creation time");
+    if (m_Desc.Usage == USAGE_UNIFIED)
+    {
+        DecayUnifiedBuffer();
+    }
 
-    if (m_Desc.Usage == USAGE_DYNAMIC && pBuffData != nullptr && pBuffData->pData != nullptr)
-        LOG_BUFFER_ERROR_AND_THROW("Dynamic buffer must be initialized via Map()");
+    if (m_Desc.Usage == USAGE_STATIC)
+        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for static buffers");
+    if (m_Desc.Usage == USAGE_DYNAMIC)
+        VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr, "Initial data must be null for dynamic buffers");
 
     Uint32 AlignmentMask = 1;
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
@@ -75,13 +79,12 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.Usage == USAGE_STAGING)
     {
-        if (m_Desc.CPUAccessFlags != CPU_ACCESS_WRITE && m_Desc.CPUAccessFlags != CPU_ACCESS_READ)
-            LOG_BUFFER_ERROR_AND_THROW("Exactly one of the CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a cpu-accessible buffer");
+        VERIFY(m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE || m_Desc.CPUAccessFlags == CPU_ACCESS_READ,
+               "Exactly one of the CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a staging buffer");
 
         if (m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
         {
-            if (pBuffData != nullptr && pBuffData->pData != nullptr)
-                LOG_BUFFER_ERROR_AND_THROW("CPU-writable staging buffers must be updated via map");
+            VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr, "CPU-writable staging buffers must be updated via map");
 
             AlignmentMask = D3D12_TEXTURE_DATA_PITCH_ALIGNMENT - 1;
         }

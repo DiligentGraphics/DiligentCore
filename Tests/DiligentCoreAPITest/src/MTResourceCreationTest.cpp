@@ -140,9 +140,9 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
         for (Uint32 i = 0; i < NumBuffersToCreate; ++i)
         {
             BufferDesc BuffDesc;
+            BuffDesc.Name          = "MT creation test uniform buffer";
             BuffDesc.Usage         = USAGE_DEFAULT;
             BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
-            BuffDesc.Name          = "MT creation test buffer";
             BuffDesc.uiSizeInBytes = static_cast<Uint32>(RawBufferData.size());
 
             BufferData BuffData;
@@ -154,6 +154,7 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
             EXPECT_NE(pBuffer1, nullptr) << "Failed to create the following buffer:\n"
                                          << BuffDesc;
 
+            BuffDesc.Name              = "MT creation test formatted buffer";
             BuffDesc.Mode              = BUFFER_MODE_FORMATTED;
             BuffDesc.ElementByteStride = 16;
             BuffDesc.BindFlags         = BIND_SHADER_RESOURCE | BIND_UNORDERED_ACCESS;
@@ -164,7 +165,7 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
 
             BufferViewDesc ViewDesc;
             ViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
-            ViewDesc.ByteOffset           = 16;
+            ViewDesc.ByteOffset           = 64;
             ViewDesc.Format.NumComponents = 4;
             ViewDesc.Format.IsNormalized  = False;
             ViewDesc.Format.ValueType     = VT_FLOAT32;
@@ -176,6 +177,7 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
                                                << BuffDesc;
             }
 
+            BuffDesc.Name      = "MT creation test vertex buffer";
             BuffDesc.BindFlags = BIND_VERTEX_BUFFER | BIND_UNORDERED_ACCESS;
             RefCntAutoPtr<IBuffer> pBuffer3;
             pDevice->CreateBuffer(BuffDesc, &BuffData, &pBuffer3);
@@ -190,6 +192,7 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
                                                << BuffDesc;
             }
 
+            BuffDesc.Name      = "MT creation test raw buffer";
             BuffDesc.Mode      = BUFFER_MODE_RAW;
             BuffDesc.BindFlags = BIND_INDEX_BUFFER | BIND_UNORDERED_ACCESS;
             RefCntAutoPtr<IBuffer> pBuffer4;

@@ -102,20 +102,43 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// and cannot be accessed at all by the CPU. This type of resource must be initialized 
     /// when it is created, since it cannot be changed after creation. \n
     /// D3D11 Counterpart: D3D11_USAGE_IMMUTABLE. OpenGL counterpart: GL_STATIC_DRAW
+    /// \remarks Static buffers do not allow CPU access and must use CPU_ACCESS_NONE flag.
     USAGE_STATIC = 0, 
 
     /// A resource that requires read and write access by the GPU and can also be occasionally
     /// written by the CPU.  \n
-    /// D3D11 Counterpart: D3D11_USAGE_DEFAULT. OpenGL counterpart: GL_DYNAMIC_DRAW
+    /// D3D11 Counterpart: D3D11_USAGE_DEFAULT. OpenGL counterpart: GL_DYNAMIC_DRAW.
+    /// \remarks Default buffers do not allow CPU access and must use CPU_ACCESS_NONE flag.
     USAGE_DEFAULT,
 
     /// A resource that can be read by the GPU and written at least once per frame by the CPU.  \n
     /// D3D11 Counterpart: D3D11_USAGE_DYNAMIC. OpenGL counterpart: GL_STREAM_DRAW
+    /// \remarks Dynamic buffers must use CPU_ACCESS_WRITE flag.
     USAGE_DYNAMIC,
 
-    /// A resource that facilitates transferring data from GPU to CPU. \n
-    /// D3D11 Counterpart: D3D11_USAGE_STAGING. OpenGL counterpart: GL_DYNAMIC_READ
-    USAGE_STAGING
+    /// A resource that facilitates transferring data between GPU and CPU. \n
+    /// D3D11 Counterpart: D3D11_USAGE_STAGING. OpenGL counterpart: GL_STATIC_READ or
+    /// GL_STATIC_COPY depending on the CPU access flags.
+    /// \remarks Staging buffers must use exactly one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
+    USAGE_STAGING,
+
+    /// A resource residing in a unified memory (e.g. memory shared between CPU and GPU),
+    /// that can be read and written by GPU and can also be directly accessed by CPU.
+    ///
+    /// \remarks Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.\n
+    /// If it is not possible to create a unified resource, the engine will attempt to create a non-unified
+    /// resource as follows:
+    /// - If CPU_ACCESS_WRITE flag is specified, default-usage resource will be created.
+    /// - If CPU_ACCESS_READ flag is specified, staging resource will be created.
+    /// - If both CPU_ACCESS_WRITE and CPU_ACCESS_READ flags are used, an error will be generated.
+    /// An application must check the actual usage after the resource has been created.
+    ///
+    /// Unified buffers are natively supported in Vulkan backend only. In other backends
+    /// they decay into default or staging buffers as described above.
+    USAGE_UNIFIED,
+
+    /// Helper value indicating the total number of elements in the enum
+    USAGE_NUM_USAGES
 };
 
 /// Allowed CPU access mode flags when mapping a resource

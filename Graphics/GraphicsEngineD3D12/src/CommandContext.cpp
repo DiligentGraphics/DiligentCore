@@ -46,7 +46,7 @@ CommandContext::CommandContext(CommandListManager& CmdListManager) :
 // clang-format on
 {
     m_PendingResourceBarriers.reserve(MaxPendingBarriers);
-    CmdListManager.CreateNewCommandList(&m_pCommandList, &m_pCurrentAllocator);
+    CmdListManager.CreateNewCommandList(&m_pCommandList, &m_pCurrentAllocator, m_MaxInterfaceVer);
 }
 
 CommandContext::~CommandContext(void)

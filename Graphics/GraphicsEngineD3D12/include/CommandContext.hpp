@@ -80,8 +80,14 @@ public:
     ID3D12GraphicsCommandList* Close(CComPtr<ID3D12CommandAllocator>& pAllocator);
     void                       Reset(CommandListManager& CmdListManager);
 
-    class GraphicsContext& AsGraphicsContext();
-    class ComputeContext&  AsComputeContext();
+    class GraphicsContext&  AsGraphicsContext();
+    class GraphicsContext1& AsGraphicsContext1();
+    class GraphicsContext2& AsGraphicsContext2();
+    class GraphicsContext3& AsGraphicsContext3();
+    class GraphicsContext4& AsGraphicsContext4();
+    class GraphicsContext5& AsGraphicsContext5();
+    class GraphicsContext6& AsGraphicsContext6();
+    class ComputeContext&   AsComputeContext();
 
     void ClearUAVFloat(D3D12_GPU_DESCRIPTOR_HANDLE GpuHandle,
                        D3D12_CPU_DESCRIPTOR_HANDLE CpuHandle,
@@ -228,9 +234,7 @@ protected:
 
     D3D12_PRIMITIVE_TOPOLOGY m_PrimitiveTopology = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 
-#ifdef D12_H_HAS_MESH_SHADER
-    CComPtr<ID3D12GraphicsCommandList6> m_pCommandList6;
-#endif
+    Uint32 m_MaxInterfaceVer = 0;
 };
 
 
@@ -348,7 +352,24 @@ public:
         FlushResourceBarriers();
         m_pCommandList->DrawIndexedInstanced(IndexCountPerInstance, InstanceCount, StartIndexLocation, BaseVertexLocation, StartInstanceLocation);
     }
+};
 
+class GraphicsContext1 : public GraphicsContext
+{
+};
+
+class GraphicsContext2 : public GraphicsContext1
+{
+};
+
+class GraphicsContext3 : public GraphicsContext2
+{
+};
+
+
+class GraphicsContext4 : public GraphicsContext3
+{
+public:
     void BeginRenderPass(UINT                                        NumRenderTargets,
                          const D3D12_RENDER_PASS_RENDER_TARGET_DESC* pRenderTargets,
                          const D3D12_RENDER_PASS_DEPTH_STENCIL_DESC* pDepthStencil,
@@ -362,19 +383,21 @@ public:
     {
         static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->EndRenderPass();
     }
+};
 
+class GraphicsContext5 : public GraphicsContext4
+{
+};
+
+class GraphicsContext6 : public GraphicsContext5
+{
+public:
     void DrawMesh(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)
     {
 #ifdef D12_H_HAS_MESH_SHADER
         FlushResourceBarriers();
-
-        if (!m_pCommandList6)
-        {
-            CHECK_D3D_RESULT_THROW(m_pCommandList->QueryInterface(IID_PPV_ARGS(&m_pCommandList6)),
-                                   "Failed to get ID3D12GraphicsCommandList6, can't call DrawMesh()");
-        }
-
         m_pCommandList6->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
+        static_cast<ID3D12GraphicsCommandList6*>(m_pCommandList.p)->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 #else
         UNSUPPORTED("DrawMesh is not supported in current D3D12 header");
 #endif
@@ -444,6 +467,42 @@ public:
 inline GraphicsContext& CommandContext::AsGraphicsContext()
 {
     return static_cast<GraphicsContext&>(*this);
+}
+
+inline GraphicsContext1& CommandContext::AsGraphicsContext1()
+{
+    VERIFY(m_MaxInterfaceVer >= 1, "Maximum supported interface version is ", m_MaxInterfaceVer);
+    return static_cast<GraphicsContext1&>(*this);
+}
+
+inline GraphicsContext2& CommandContext::AsGraphicsContext2()
+{
+    VERIFY(m_MaxInterfaceVer >= 2, "Maximum supported interface version is ", m_MaxInterfaceVer);
+    return static_cast<GraphicsContext2&>(*this);
+}
+
+inline GraphicsContext3& CommandContext::AsGraphicsContext3()
+{
+    VERIFY(m_MaxInterfaceVer >= 3, "Maximum supported interface version is ", m_MaxInterfaceVer);
+    return static_cast<GraphicsContext3&>(*this);
+}
+
+inline GraphicsContext4& CommandContext::AsGraphicsContext4()
+{
+    VERIFY(m_MaxInterfaceVer >= 4, "Maximum supported interface version is ", m_MaxInterfaceVer);
+    return static_cast<GraphicsContext4&>(*this);
+}
+
+inline GraphicsContext5& CommandContext::AsGraphicsContext5()
+{
+    VERIFY(m_MaxInterfaceVer >= 5, "Maximum supported interface version is ", m_MaxInterfaceVer);
+    return static_cast<GraphicsContext5&>(*this);
+}
+
+inline GraphicsContext6& CommandContext::AsGraphicsContext6()
+{
+    VERIFY(m_MaxInterfaceVer >= 6, "Maximum supported interface version is ", m_MaxInterfaceVer);
+    return static_cast<GraphicsContext6&>(*this);
 }
 
 inline ComputeContext& CommandContext::AsComputeContext()

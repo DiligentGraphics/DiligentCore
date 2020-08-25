@@ -30,6 +30,8 @@
 /// \file
 /// Declaration of Diligent::DeviceContextD3D11Impl class
 
+#include <vector>
+
 #include "DeviceContextD3D11.h"
 #include "DeviceContextBase.hpp"
 #include "BufferD3D11Impl.hpp"
@@ -308,6 +310,8 @@ private:
     /// Prepares for an indexed draw command
     __forceinline void PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
 
+    /// Performs operations required to begin current subpass (e.g. bind render targets)
+    void BeginSubpass();
     /// Ends current subpass
     void EndSubpass();
 
@@ -399,6 +403,8 @@ private:
 
     DisjointQueryPool                                        m_DisjointQueryPool;
     std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> m_ActiveDisjointQuery;
+
+    std::vector<OptimizedClearValue> m_AttachmentClearValues;
 
 #ifdef VERIFY_CONTEXT_BINDINGS
 

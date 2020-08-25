@@ -88,8 +88,40 @@ void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* Inf
     }
 }
 
+Uint32 TestingEnvironment::FindAdapater(const std::vector<AdapterAttribs>& Adapters,
+                                        ADAPTER_TYPE                       AdapterType,
+                                        Uint32                             AdapterId)
+{
+    if (AdapterId != DEFAULT_ADAPTER_ID && AdapterId >= Adapters.size())
+    {
+        LOG_ERROR_MESSAGE("Adapter ID (", AdapterId, ") is invalid. Only ", Adapters.size(), " adapter(s) found on the system");
+        AdapterId = DEFAULT_ADAPTER_ID;
+    }
 
-TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, const SwapChainDesc& SCDesc) :
+    if (AdapterId == DEFAULT_ADAPTER_ID && AdapterType != ADAPTER_TYPE_UNKNOWN)
+    {
+        for (Uint32 i = 0; i < Adapters.size(); ++i)
+        {
+            if (Adapters[i].AdapterType == AdapterType)
+            {
+                AdapterId = i;
+                break;
+            }
+        }
+        if (AdapterId == DEFAULT_ADAPTER_ID)
+            LOG_WARNING_MESSAGE("Unable to find the requested adapter type. Using default adapter.");
+    }
+
+    if (AdapterId != DEFAULT_ADAPTER_ID)
+        LOG_INFO_MESSAGE("Using adapter ", AdapterId, ": '", Adapters[AdapterId].Description, "'");
+
+    return AdapterId;
+}
+
+TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
+                                       ADAPTER_TYPE         AdapterType,
+                                       Uint32               AdapterId,
+                                       const SwapChainDesc& SCDesc) :
     m_DeviceType{deviceType}
 {
     VERIFY(m_pTheEnvironment == nullptr, "Testing environment object has already been initialized!");
@@ -161,20 +193,8 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
 
                 PrintAdapterInfo(i, AdapterInfo, DisplayModes);
             }
-            if (AdapterType != ADAPTER_TYPE_UNKNOWN)
-            {
-                for (Uint32 i = 0; i < Adapters.size(); ++i)
-                {
-                    if (Adapters[i].AdapterType == AdapterType &&
-                        CreateInfo.AdapterId == DEFAULT_ADAPTER_ID)
-                    {
-                        CreateInfo.AdapterId = i;
-                        LOG_INFO_MESSAGE("Using adapter ", i, ": '", Adapters[i].Description, "'");
-                        break;
-                    }
-                }
-            }
 
+            CreateInfo.AdapterId = FindAdapater(Adapters, AdapterType, AdapterId);
 
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);
@@ -224,19 +244,9 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE deviceType, ADAPTER_TY
 
                 PrintAdapterInfo(i, AdapterInfo, DisplayModes);
             }
-            if (AdapterType != ADAPTER_TYPE_UNKNOWN)
-            {
-                for (Uint32 i = 0; i < Adapters.size(); ++i)
-                {
-                    if (Adapters[i].AdapterType == AdapterType &&
-                        CreateInfo.AdapterId == DEFAULT_ADAPTER_ID)
-                    {
-                        CreateInfo.AdapterId = i;
-                        LOG_INFO_MESSAGE("Using adapter ", i, ": '", Adapters[i].Description, "'");
-                        break;
-                    }
-                }
-            }
+
+            CreateInfo.AdapterId = FindAdapater(Adapters, AdapterType, AdapterId);
+
             CreateInfo.EnableDebugLayer = true;
             //CreateInfo.EnableGPUBasedValidation                = true;
             CreateInfo.CPUDescriptorHeapAllocationSize[0]      = 64; // D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
