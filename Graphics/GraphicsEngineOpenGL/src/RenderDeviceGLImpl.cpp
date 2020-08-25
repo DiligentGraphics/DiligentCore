@@ -160,6 +160,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.BinaryOcclusionQueries        = True;  // Present since 3.3
         Features.TimestampQueries              = True;  // Present since 3.3
         Features.PipelineStatisticsQueries     = True;  // Present since 3.3
+        Features.DurationQueries               = True;  // Present since 3.3
         Features.DepthBiasClamp                = False; // There is no depth bias clamp in OpenGL
         Features.DepthClamp                    = MajorVersion >= 4 || CheckExtension("GL_ARB_depth_clamp");
         Features.IndependentBlend              = True;
@@ -206,6 +207,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.BinaryOcclusionQueries        = True; // Supported in GLES3.0
         Features.TimestampQueries              = strstr(Extensions, "disjoint_timer_query") && glQueryCounter != nullptr;
         Features.PipelineStatisticsQueries     = False;
+        Features.DurationQueries               = strstr(Extensions, "disjoint_timer_query") && glGetQueryObjectui64v != nullptr;
         Features.DepthBiasClamp                = False; // There is no depth bias clamp in OpenGL
         Features.DepthClamp                    = strstr(Extensions, "depth_clamp");
         Features.IndependentBlend              = IsGLES32OrAbove;

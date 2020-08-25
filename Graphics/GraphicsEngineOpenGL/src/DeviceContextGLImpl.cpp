@@ -1331,6 +1331,11 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
 #endif
             break;
 
+        case QUERY_TYPE_DURATION:
+            glBeginQuery(GL_TIME_ELAPSED, glQuery);
+            DEV_CHECK_GL_ERROR("Failed to begin GL_TIME_ELAPSED query");
+            break;
+
         default:
             UNEXPECTED("Unexpected query type");
     }
@@ -1374,6 +1379,11 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
             {
                 LOG_ERROR_MESSAGE_ONCE("Timer queries are not supported by this device");
             }
+            break;
+
+        case QUERY_TYPE_DURATION:
+            glEndQuery(GL_TIME_ELAPSED);
+            DEV_CHECK_GL_ERROR("Failed to end GL_TIME_ELAPSED query");
             break;
 
         default:

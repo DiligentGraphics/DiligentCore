@@ -71,6 +71,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
         case QUERY_TYPE_PIPELINE_STATISTICS:
 #endif
 
+        case QUERY_TYPE_DURATION:
         case QUERY_TYPE_TIMESTAMP:
             glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT_AVAILABLE, &ResultAvailable);
             CHECK_GL_ERROR("Failed to get query result");
@@ -118,16 +119,28 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             break;
 
             case QUERY_TYPE_TIMESTAMP:
+            case QUERY_TYPE_DURATION:
             {
                 if (glGetQueryObjectui64v != nullptr)
                 {
-                    auto&    QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                    GLuint64 Counter   = 0;
+                    GLuint64 Counter = 0;
                     glGetQueryObjectui64v(m_GlQuery, GL_QUERY_RESULT, &Counter);
                     CHECK_GL_ERROR("Failed to get query result");
-                    QueryData.Counter = Counter;
-                    // Counter is always measured in nanoseconds (10^-9 seconds)
-                    QueryData.Frequency = 1000000000;
+                    if (m_Desc.Type == QUERY_TYPE_TIMESTAMP)
+                    {
+                        auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                        QueryData.Counter = Counter;
+                        // Counter is always measured in nanoseconds (10^-9 seconds)
+                        QueryData.Frequency = 1000000000;
+                    }
+                    else
+                    {
+                        VERIFY_EXPR(m_Desc.Type == QUERY_TYPE_DURATION);
+                        auto& QueryData    = *reinterpret_cast<QueryDataDuration*>(pData);
+                        QueryData.Duration = Counter;
+                        // Counter is always measured in nanoseconds (10^-9 seconds)
+                        QueryData.Frequency = 1000000000;
+                    }
                 }
             }
             break;
