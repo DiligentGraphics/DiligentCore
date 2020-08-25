@@ -71,9 +71,7 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
         case QUERY_TYPE_PIPELINE_STATISTICS:
 #endif
 
-#if GL_ARB_timer_query
         case QUERY_TYPE_TIMESTAMP:
-#endif
             glGetQueryObjectuiv(m_GlQuery, GL_QUERY_RESULT_AVAILABLE, &ResultAvailable);
             CHECK_GL_ERROR("Failed to get query result");
             break;
@@ -121,15 +119,16 @@ bool QueryGLImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
             case QUERY_TYPE_TIMESTAMP:
             {
-#if GL_ARB_timer_query
-                auto&    QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                GLuint64 Counter   = 0;
-                glGetQueryObjectui64v(m_GlQuery, GL_QUERY_RESULT, &Counter);
-                CHECK_GL_ERROR("Failed to get query result");
-                QueryData.Counter = Counter;
-                // Counter is always measured in nanoseconds (10^-9 seconds)
-                QueryData.Frequency = 1000000000;
-#endif
+                if (glGetQueryObjectui64v != nullptr)
+                {
+                    auto&    QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    GLuint64 Counter   = 0;
+                    glGetQueryObjectui64v(m_GlQuery, GL_QUERY_RESULT, &Counter);
+                    CHECK_GL_ERROR("Failed to get query result");
+                    QueryData.Counter = Counter;
+                    // Counter is always measured in nanoseconds (10^-9 seconds)
+                    QueryData.Frequency = 1000000000;
+                }
             }
             break;
 
