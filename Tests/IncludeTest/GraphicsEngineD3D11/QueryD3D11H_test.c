@@ -30,6 +30,6 @@
 
 void TestQueryD3D11_CInterface(struct IQueryD3D11* pQuery)
 {
-    ID3D11Query* pd3d11Query = IQueryD3D11_GetD3D11Query(pQuery);
+    ID3D11Query* pd3d11Query = IQueryD3D11_GetD3D11Query(pQuery, 0);
     (void)pd3d11Query;
 }

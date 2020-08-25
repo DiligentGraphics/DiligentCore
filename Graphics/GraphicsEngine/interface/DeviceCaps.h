@@ -136,6 +136,9 @@ struct DeviceFeatures
     /// Indicates if device supports pipeline statistics queries (see Diligent::QUERY_TYPE_PIPELINE_STATISTICS).
     Bool PipelineStatisticsQueries     DEFAULT_INITIALIZER(False);
 
+    /// Indicates if device supports duration queries (see Diligent::QUERY_TYPE_DURATION).
+    Bool DurationQueries               DEFAULT_INITIALIZER(False);
+
     /// Indicates if device supports depth bias clamping
     Bool DepthBiasClamp                DEFAULT_INITIALIZER(False);
 

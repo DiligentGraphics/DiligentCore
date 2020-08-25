@@ -69,6 +69,7 @@ public:
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
         const auto& deviceFeatures = pDevice->GetDeviceCaps().Features;
+        static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
         switch (Desc.Type)
         {
             case QUERY_TYPE_OCCLUSION:
@@ -89,6 +90,11 @@ public:
             case QUERY_TYPE_PIPELINE_STATISTICS:
                 if (!deviceFeatures.PipelineStatisticsQueries)
                     LOG_ERROR_AND_THROW("Pipeline statistics queries are not supported by this device");
+                break;
+
+            case QUERY_TYPE_DURATION:
+                if (!deviceFeatures.DurationQueries)
+                    LOG_ERROR_AND_THROW("Duration queries are not supported by this device");
                 break;
 
             default:
@@ -185,6 +191,7 @@ public:
                 return false;
             }
 
+            static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled below");
             switch (this->m_Desc.Type)
             {
                 case QUERY_TYPE_UNDEFINED:
@@ -219,6 +226,14 @@ public:
                     if (DataSize != sizeof(QueryDataPipelineStatistics))
                     {
                         LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataPipelineStatistics), " (aka sizeof(QueryDataPipelineStatistics)) is expected");
+                        return false;
+                    }
+                    break;
+
+                case QUERY_TYPE_DURATION:
+                    if (DataSize != sizeof(QueryDataDuration))
+                    {
+                        LOG_ERROR_MESSAGE("The size of query data (", DataSize, ") is incorrect: ", sizeof(QueryDataDuration), " (aka sizeof(QueryDataDuration)) is expected");
                         return false;
                     }
                     break;
