@@ -80,6 +80,28 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM
 };
 
+/// Describes shader compiler
+DILIGENT_TYPED_ENUM(SHADER_COMPILER, Uint32)
+{
+    /// Default compiler for specific language and API:
+    ///     for Direct3D11 - external FXC
+    ///     for Direct3D12 - external DXC
+    ///     for OpenGL(ES) GLSL - native compiler
+    ///     for OpenGL(ES) HLSL - HLSL2GLSL and native compiler
+    ///     for Vulkan GLSL - builtin glslang
+    ///     for Vulkan HLSL - builtin glslang (with limitted support for Shader Model 6.x)
+    SHADER_COMPILER_DEFAULT = 0,
+
+    /// Builtin glslang compiler for GLSL and HLSL.
+    SHADER_COMPILER_GLSLANG,
+
+    /// External HLSL compiler for Direct3D12 and Vulkan with Shader Model 6.x support.
+    SHADER_COMPILER_DXC,
+        
+    /// External HLSL compiler for Direct3D11 and Direct3D12 before Shader Model 6.
+    SHADER_COMPILER_FXC,
+};
+
 /// Describes the flags that can be passed over to IShaderSourceInputStreamFactory::CreateInputStream2() function.
 DILIGENT_TYPED_ENUM(CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS, Uint32)
 {
@@ -257,6 +279,9 @@ struct ShaderCreateInfo
 
     /// Shader source language. See Diligent::SHADER_SOURCE_LANGUAGE.
     SHADER_SOURCE_LANGUAGE SourceLanguage DEFAULT_INITIALIZER(SHADER_SOURCE_LANGUAGE_DEFAULT);
+
+    /// Shader compiler. See Diligent::SHADER_COMPILER.
+    SHADER_COMPILER ShaderCompiler DEFAULT_INITIALIZER(SHADER_COMPILER_DEFAULT);
 
     /// HLSL shader model to use when compiling the shader. When default value
     /// is given (0, 0), the engine will attempt to use the highest HLSL shader model

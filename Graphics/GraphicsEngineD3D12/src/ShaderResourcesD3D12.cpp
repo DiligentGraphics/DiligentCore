@@ -31,6 +31,8 @@
 #include "ShaderResourcesD3D12.hpp"
 #include "ShaderD3DBase.hpp"
 #include "ShaderBase.hpp"
+#include "DXILUtils.hpp"
+#include "dxc/dxcapi.h"
 
 namespace Diligent
 {
@@ -61,7 +63,7 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, bool isDXI
         const uint32_t                   DFCC_DXIL = uint32_t('D') | (uint32_t('X') << 8) | (uint32_t('I') << 16) | (uint32_t('L') << 24);
         CComPtr<IDxcContainerReflection> pReflection;
         UINT32                           shaderIdx;
-        hr = DXILCreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
+        hr = D3D12DxcCreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
         CHECK_D3D_RESULT_THROW(hr, "Failed to create shader reflection instance");
         hr = pReflection->Load(reinterpret_cast<IDxcBlob*>(pShaderBytecode));
         CHECK_D3D_RESULT_THROW(hr, "Failed to load shader reflection from bytecode");

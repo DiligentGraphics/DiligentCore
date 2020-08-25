@@ -27,24 +27,50 @@
 
 #pragma once
 
-#include <d3dcommon.h>
+#include <vector>
+#include <string>
 #include "Shader.h"
+#include "DataBlob.h"
 
-/// \file
-/// Base implementation of a D3D shader
+// defined in dxcapi.h
+struct DxcDefine;
+struct IDxcBlob;
 
 namespace Diligent
 {
 
-/// Base implementation of a D3D shader
-class ShaderD3DBase
+enum class DXILCompilerTarget
 {
-public:
-    ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, bool IsD3D12);
-
-protected:
-    CComPtr<ID3DBlob> m_pShaderByteCode;
-    bool              m_isDXIL;
+    Direct3D12,
+    Vulkan,
 };
+
+bool DXILGetMaxShaderModel(DXILCompilerTarget Target,
+                           ShaderVersion&     Version);
+
+bool DXILCompile(DXILCompilerTarget               Target,
+                 const char*                      Source,
+                 size_t                           SourceLength,
+                 const wchar_t*                   EntryPoint,
+                 const wchar_t*                   Profile,
+                 const DxcDefine*                 pDefines,
+                 size_t                           DefinesCount,
+                 const wchar_t**                  pArgs,
+                 size_t                           ArgsCount,
+                 IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                 IDxcBlob**                       ppBlobOut,
+                 IDxcBlob**                       ppCompilerOutput);
+
+std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
+                                  const char*             ExtraDefinitions,
+                                  IDataBlob**             ppCompilerOutput);
+
+#ifdef D3D12_SUPPORTED
+// calls DxcCreateInstance
+HRESULT D3D12DxcCreateInstance(
+    _In_ REFCLSID rclsid,
+    _In_ REFIID   riid,
+    _Out_ LPVOID* ppv);
+#endif
 
 } // namespace Diligent

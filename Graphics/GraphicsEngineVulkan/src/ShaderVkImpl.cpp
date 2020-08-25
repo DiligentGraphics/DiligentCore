@@ -64,32 +64,38 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
             "#   define VULKAN 1\n"
             "#endif\n";
 
-        if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL &&
-            (CreationAttribs.HLSLVersion.Major == 0 || CreationAttribs.HLSLVersion.Major > 5) &&
-            HasDXILCompilerForVulkan())
+        switch (CreationAttribs.ShaderCompiler)
         {
-            m_SPIRV = HLSLtoSPIRVusingDXIL(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
-        }
-        else
-        {
-#if DILIGENT_NO_GLSLANG
-            LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang and can only consume compiled SPIRV bytecode.");
-#else
-            if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
-            {
-                m_SPIRV = HLSLtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
-            }
-            else
-            {
-                auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pRenderDeviceVk->GetDeviceCaps(),
-                                                        TargetGLSLCompiler::glslang,
-                                                        VulkanDefine);
+            case SHADER_COMPILER_DXC:
+                m_SPIRV = DXILtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
+                break;
 
-                m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
-                                      static_cast<int>(GLSLSource.length()),
-                                      CreationAttribs.ppCompilerOutput);
-            }
+            case SHADER_COMPILER_DEFAULT:
+            case SHADER_COMPILER_GLSLANG:
+            {
+#if DILIGENT_NO_GLSLANG
+                LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXIL compiler or precompiled SPIRV bytecode.");
+#else
+                if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+                {
+                    m_SPIRV = HLSLtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
+                }
+                else
+                {
+                    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pRenderDeviceVk->GetDeviceCaps(),
+                                                            TargetGLSLCompiler::glslang,
+                                                            VulkanDefine);
+
+                    m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
+                                          static_cast<int>(GLSLSource.length()),
+                                          CreationAttribs.ppCompilerOutput);
+                }
 #endif
+                break;
+            }
+
+            default:
+                LOG_ERROR_AND_THROW("Unsupported shader compiler");
         }
 
         if (m_SPIRV.empty())

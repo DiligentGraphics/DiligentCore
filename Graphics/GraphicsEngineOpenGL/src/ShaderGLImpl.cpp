@@ -53,6 +53,10 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     m_GLShaderObj{true, GLObjectWrappers::GLShaderObjCreateReleaseHelper{GetGLShaderType(m_Desc.ShaderType)}}
 // clang-format on
 {
+    DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
+    DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
+    DEV_CHECK_ERR(CreationAttribs.ShaderCompiler == SHADER_COMPILER_DEFAULT, "only default compiler supported on OpenGL");
+
     const auto& deviceCaps = pDeviceGL->GetDeviceCaps();
 
     auto GLSLSource = BuildGLSLSourceString(CreationAttribs, deviceCaps, TargetGLSLCompiler::driver);

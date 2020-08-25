@@ -49,6 +49,14 @@ TEST(ShaderResourceLayout, ResourceArray)
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
     ShaderCI.UseCombinedTextureSamplers = true;
     ShaderCI.HLSLVersion                = ShaderVersion{5, 0};
+
+    // DXIL compilaer can't compile this shaders
+    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
+        ShaderCI.ShaderCompiler = SHADER_COMPILER_FXC;
+
+    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN)
+        ShaderCI.ShaderCompiler = SHADER_COMPILER_GLSLANG;
+
     RefCntAutoPtr<IShader> pVS, pPS;
     {
         ShaderCI.Desc.Name       = "ShaderResourceArrayTest: VS";

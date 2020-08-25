@@ -95,7 +95,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
         pRenderDeviceD3D11,
         ShaderCI.Desc
     },
-    ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device(), ShaderCI.HLSLVersion)}
+    ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device(), ShaderCI.HLSLVersion), false}
 // clang-format on
 {
     auto* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();

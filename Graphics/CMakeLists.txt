@@ -36,6 +36,10 @@ if(GL_SUPPORTED OR GLES_SUPPORTED OR VULKAN_SUPPORTED)
     add_subdirectory(GLSLTools)
 endif()
 
+if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
+    add_subdirectory(HLSLTools)
+endif()
+
 if(VULKAN_SUPPORTED)
     add_subdirectory(GraphicsEngineVulkan)
 endif()

@@ -96,7 +96,7 @@ if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
 endif()
 
 if(D3D12_SUPPORTED)
-    target_link_libraries(DiligentCoreAPITest PRIVATE d3d12.lib)
+    target_link_libraries(DiligentCoreAPITest PRIVATE d3d12.lib Diligent-HLSLTools)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)

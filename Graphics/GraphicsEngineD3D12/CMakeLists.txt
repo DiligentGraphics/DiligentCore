@@ -157,6 +157,7 @@ PRIVATE
     Diligent-GraphicsEngineD3DBase
     Diligent-GraphicsEngineNextGenBase
     Diligent-TargetPlatform 
+    Diligent-HLSLTools 
     dxgi.lib
     d3dcompiler.lib
 PUBLIC

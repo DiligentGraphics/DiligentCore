@@ -49,13 +49,17 @@ RefCntAutoPtr<IShader> CreateTestShader(const char*                  FileName,
     RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
     pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/HLSL2GLSLConverter", &pShaderSourceFactory);
 
-    bool CompiledWithDXIL = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12 || pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
+    // DXIL compilaer can't compile this shaders
+    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
+        ShaderCI.ShaderCompiler = SHADER_COMPILER_FXC;
+
+    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN)
+        ShaderCI.ShaderCompiler = SHADER_COMPILER_GLSLANG;
 
     ShaderCI.FilePath                   = FileName;
     ShaderCI.EntryPoint                 = EntryPoint;
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
-    ShaderCI.HLSLVersion                = CompiledWithDXIL ? ShaderVersion{5, 1} : ShaderVersion{0, 0}; // DXIL compilaer can't compile this shaders
     ShaderCI.Desc.Name                  = "Test converted shader";
     ShaderCI.Desc.ShaderType            = ShaderType;
     ShaderCI.UseCombinedTextureSamplers = pDevice->GetDeviceCaps().IsGLDevice();

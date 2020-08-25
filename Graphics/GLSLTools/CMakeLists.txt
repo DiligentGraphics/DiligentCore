@@ -13,11 +13,9 @@ set(SOURCE
 if(VULKAN_SUPPORTED)
     list(APPEND SOURCE 
         src/SPIRVShaderResources.cpp
-        src/DXILUtils.cpp
     )
     list(APPEND INCLUDE 
         include/SPIRVShaderResources.hpp
-        include/DXILUtils.hpp
     )
 
     if (NOT ${DILIGENT_NO_GLSLANG})
