@@ -204,15 +204,19 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         Features.BindlessResources             = False;
         Features.OcclusionQueries              = False;
         Features.BinaryOcclusionQueries        = True; // Supported in GLES3.0
-        Features.TimestampQueries              = strstr(Extensions, "disjoint_timer_query") && glQueryCounter != nullptr;
-        Features.PipelineStatisticsQueries     = False;
-        Features.DepthBiasClamp                = False; // There is no depth bias clamp in OpenGL
-        Features.DepthClamp                    = strstr(Extensions, "depth_clamp");
-        Features.IndependentBlend              = IsGLES32OrAbove;
-        Features.DualSourceBlend               = strstr(Extensions, "blend_func_extended");
-        Features.MultiViewport                 = strstr(Extensions, "viewport_array");
-        Features.PixelUAVWritesAndAtomics      = IsGLES31OrAbove || strstr(Extensions, "shader_image_load_store");
-        Features.TextureUAVExtendedFormats     = False;
+#if GL_TIMESTAMP
+        Features.TimestampQueries = strstr(Extensions, "disjoint_timer_query");
+#else
+        Features.TimestampQueries = False;
+#endif
+        Features.PipelineStatisticsQueries = False;
+        Features.DepthBiasClamp            = False; // There is no depth bias clamp in OpenGL
+        Features.DepthClamp                = strstr(Extensions, "depth_clamp");
+        Features.IndependentBlend          = IsGLES32OrAbove;
+        Features.DualSourceBlend           = strstr(Extensions, "blend_func_extended");
+        Features.MultiViewport             = strstr(Extensions, "viewport_array");
+        Features.PixelUAVWritesAndAtomics  = IsGLES31OrAbove || strstr(Extensions, "shader_image_load_store");
+        Features.TextureUAVExtendedFormats = False;
 
 
         TexCaps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
