@@ -311,6 +311,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
 #    endif
 
             EngineVkCreateInfo CreateInfo;
+            CreateInfo.AdapterId                 = AdapterId;
             CreateInfo.DebugMessageCallback      = MessageCallback;
             CreateInfo.EnableValidation          = true;
             CreateInfo.MainDescriptorPoolSize    = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16};

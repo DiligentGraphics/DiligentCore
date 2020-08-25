@@ -65,7 +65,7 @@ public:
     bool IsExtensionAvailable(const char* ExtensionName)const;
     bool IsExtensionEnabled  (const char* ExtensionName)const;
 
-    VkPhysicalDevice SelectPhysicalDevice()const;
+    VkPhysicalDevice SelectPhysicalDevice(uint32_t AdapterId)const;
 
     VkAllocationCallbacks* GetVkAllocator()const{return m_pVkAllocator;}
     VkInstance             GetVkInstance() const{return m_VkInstance;  }

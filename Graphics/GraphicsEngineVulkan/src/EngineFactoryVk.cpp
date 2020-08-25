@@ -143,7 +143,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             EngineCI.ppGlobalExtensionNames,
             reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator));
 
-        auto        vkDevice               = Instance->SelectPhysicalDevice();
+        auto        vkDevice               = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
         auto        PhysicalDevice         = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, Instance);
         const auto& PhysicalDeviceFeatures = PhysicalDevice->GetFeatures();
 

@@ -279,17 +279,9 @@ VulkanInstance::~VulkanInstance()
 #endif
 }
 
-VkPhysicalDevice VulkanInstance::SelectPhysicalDevice() const
+VkPhysicalDevice VulkanInstance::SelectPhysicalDevice(uint32_t AdapterId) const
 {
-    VkPhysicalDevice SelectedPhysicalDevice = VK_NULL_HANDLE;
-
-    // Select a device that exposes a queue family that suppors both compute and graphics operations
-    // Prefer discrete GPU
-    for (auto Device : m_PhysicalDevices)
-    {
-        VkPhysicalDeviceProperties DeviceProps;
-        vkGetPhysicalDeviceProperties(Device, &DeviceProps);
-
+    const auto IsGraphicsAndComputeQueueSupported = [](VkPhysicalDevice Device) {
         uint32_t QueueFamilyCount = 0;
         vkGetPhysicalDeviceQueueFamilyProperties(Device, &QueueFamilyCount, nullptr);
         VERIFY_EXPR(QueueFamilyCount > 0);
@@ -300,21 +292,40 @@ VkPhysicalDevice VulkanInstance::SelectPhysicalDevice() const
         // If an implementation exposes any queue family that supports graphics operations,
         // at least one queue family of at least one physical device exposed by the implementation
         // must support both graphics and compute operations.
-        bool GraphicsAndComputeQueueSupported = false;
         for (const auto& QueueFamilyProps : QueueFamilyProperties)
         {
             if ((QueueFamilyProps.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 &&
                 (QueueFamilyProps.queueFlags & VK_QUEUE_COMPUTE_BIT) != 0)
             {
-                GraphicsAndComputeQueueSupported = true;
-                break;
+                return true;
             }
         }
-        if (GraphicsAndComputeQueueSupported)
+        return false;
+    };
+
+    VkPhysicalDevice SelectedPhysicalDevice = VK_NULL_HANDLE;
+
+    if (AdapterId < m_PhysicalDevices.size() &&
+        IsGraphicsAndComputeQueueSupported(m_PhysicalDevices[AdapterId]))
+    {
+        SelectedPhysicalDevice = m_PhysicalDevices[AdapterId];
+    }
+
+    // Select a device that exposes a queue family that suppors both compute and graphics operations.
+    // Prefer discrete GPU.
+    if (SelectedPhysicalDevice == VK_NULL_HANDLE)
+    {
+        for (auto Device : m_PhysicalDevices)
         {
-            SelectedPhysicalDevice = Device;
-            if (DeviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-                break;
+            VkPhysicalDeviceProperties DeviceProps;
+            vkGetPhysicalDeviceProperties(Device, &DeviceProps);
+
+            if (IsGraphicsAndComputeQueueSupported(Device))
+            {
+                SelectedPhysicalDevice = Device;
+                if (DeviceProps.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+                    break;
+            }
         }
     }
 
