@@ -77,7 +77,7 @@ int TestBufferCInterface(struct IBuffer* pBuffer)
 
     ViewDesc._DeviceObjectAttribs.Name = "Test SRV";
     ViewDesc.ViewType                  = BUFFER_VIEW_SHADER_RESOURCE;
-    ViewDesc.ByteOffset                = 32;
+    ViewDesc.ByteOffset                = 64;
     ViewDesc.ByteWidth                 = 0;
     ViewDesc.Format.NumComponents      = 4;
     ViewDesc.Format.ValueType          = VT_FLOAT32;

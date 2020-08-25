@@ -70,6 +70,13 @@ struct TextureTestAttribs
     Bool           TestDataUpload;
 };
 
+inline std::ostream& operator<<(std::ostream& os, const TextureTestAttribs& TestAttribs)
+{
+    return os << "Pixel Size: " << TestAttribs.PixelSize
+              << ", Bind Flags: " << GetBindFlagsString(TestAttribs.BindFlags)
+              << ", test data upload: " << (TestAttribs.TestDataUpload ? "yes" : "no");
+}
+
 class TextureCreationTest : public testing::TestWithParam<TextureTestAttribs>
 {
 protected:

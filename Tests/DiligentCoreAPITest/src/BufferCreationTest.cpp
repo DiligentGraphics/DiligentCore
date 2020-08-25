@@ -175,7 +175,7 @@ TEST_F(BufferCreationTest, CreateFormattedBuffer)
 
     BufferViewDesc ViewDesc;
     ViewDesc.ViewType             = BUFFER_VIEW_SHADER_RESOURCE;
-    ViewDesc.ByteOffset           = 32;
+    ViewDesc.ByteOffset           = 64;
     ViewDesc.Format.NumComponents = 4;
     ViewDesc.Format.ValueType     = VT_FLOAT32;
     ViewDesc.Format.IsNormalized  = false;
@@ -252,7 +252,7 @@ TEST_F(BufferCreationTest, CreateRawBuffer)
 
     BufferViewDesc ViewDesc;
     ViewDesc.ViewType             = BUFFER_VIEW_UNORDERED_ACCESS;
-    ViewDesc.ByteOffset           = 32;
+    ViewDesc.ByteOffset           = 64;
     ViewDesc.Format.NumComponents = 4;
     ViewDesc.Format.ValueType     = VT_FLOAT32;
     RefCntAutoPtr<IBufferView> pBufferUAV;
