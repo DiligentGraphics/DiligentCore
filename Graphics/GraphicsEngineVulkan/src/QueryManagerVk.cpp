@@ -61,7 +61,8 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
         static_assert(QUERY_TYPE_BINARY_OCCLUSION   == 2, "Unexpected value of QUERY_TYPE_BINARY_OCCLUSION. EngineVkCreateInfo::QueryPoolSizes must be updated");
         static_assert(QUERY_TYPE_TIMESTAMP          == 3, "Unexpected value of QUERY_TYPE_TIMESTAMP. EngineVkCreateInfo::QueryPoolSizes must be updated");
         static_assert(QUERY_TYPE_PIPELINE_STATISTICS== 4, "Unexpected value of QUERY_TYPE_PIPELINE_STATISTICS. EngineVkCreateInfo::QueryPoolSizes must be updated");
-        static_assert(QUERY_TYPE_NUM_TYPES          == 5, "Unexpected value of QUERY_TYPE_NUM_TYPES. EngineVkCreateInfo::QueryPoolSizes must be updated");
+        static_assert(QUERY_TYPE_DURATION           == 5, "Unexpected value of QUERY_TYPE_DURATION. EngineVkCreateInfo::QueryPoolSizes must be updated");
+        static_assert(QUERY_TYPE_NUM_TYPES          == 6, "Unexpected value of QUERY_TYPE_NUM_TYPES. EngineVkCreateInfo::QueryPoolSizes must be updated");
         // clang-format on
 
         auto& HeapInfo    = m_Heaps[QueryType];
@@ -80,6 +81,7 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
                 break;
 
             case QUERY_TYPE_TIMESTAMP:
+            case QUERY_TYPE_DURATION:
                 QueryPoolCI.queryType = VK_QUERY_TYPE_TIMESTAMP;
                 break;
 
@@ -114,6 +116,8 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
         }
 
         QueryPoolCI.queryCount = HeapInfo.PoolSize;
+        if (QueryType == QUERY_TYPE_DURATION)
+            QueryPoolCI.queryCount *= 2;
 
         HeapInfo.vkQueryPool = LogicalDevice.CreateQueryPool(QueryPoolCI, "QueryManagerVk: query pool");
 

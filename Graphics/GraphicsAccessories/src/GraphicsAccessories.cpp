@@ -1081,6 +1081,10 @@ const char* GetQueryTypeString(QUERY_TYPE QueryType)
         case QUERY_TYPE_BINARY_OCCLUSION:    return "QUERY_TYPE_BINARY_OCCLUSION";
         case QUERY_TYPE_TIMESTAMP:           return "QUERY_TYPE_TIMESTAMP";
         case QUERY_TYPE_PIPELINE_STATISTICS: return "QUERY_TYPE_PIPELINE_STATISTICS";
+        case QUERY_TYPE_DURATION:            return "QUERY_TYPE_DURATION";
+
+        static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled");
+
         default:
             UNEXPECTED("Unepxected query type");
             return "Unknown";

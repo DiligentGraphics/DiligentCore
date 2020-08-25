@@ -1420,6 +1420,39 @@ struct FullScreenModeDesc
 };
 typedef struct FullScreenModeDesc FullScreenModeDesc;
 
+
+/// Query type.
+enum QUERY_TYPE
+{
+    /// Query type is undefined.
+    QUERY_TYPE_UNDEFINED = 0,
+
+    /// Gets the number of samples that passed the depth and stencil tests in between IDeviceContext::BeginQuery
+    /// and IDeviceContext::EndQuery. IQuery::GetData fills a Diligent::QueryDataOcclusion struct.
+    QUERY_TYPE_OCCLUSION,
+
+    /// Acts like QUERY_TYPE_OCCLUSION except that it returns simply a binary true/false result: false indicates that no samples
+    /// passed depth and stencil testing, true indicates that at least one sample passed depth and stencil testing.
+    /// IQuery::GetData fills a Diligent::QueryDataBinaryOcclusion struct.
+    QUERY_TYPE_BINARY_OCCLUSION,
+
+    /// Gets the GPU timestamp corresponding to IDeviceContext::EndQuery call. Fot this query
+    /// type IDeviceContext::BeginQuery is disabled. IQuery::GetData fills a Diligent::QueryDataTimestamp struct.
+    QUERY_TYPE_TIMESTAMP,
+
+    /// Gets pipeline statistics, such as the number of pixel shader invocations in between IDeviceContext::BeginQuery
+    /// and IDeviceContext::EndQuery. IQuery::GetData fills a Diligent::QueryDataPipelineStatistics struct.
+    QUERY_TYPE_PIPELINE_STATISTICS,
+
+    /// Gets the number of high-frequency counter ticks between IDeviceContext::BeginQuery and
+    /// IDeviceContext::EndQuery calls. IQuery::GetData fills a Diligent::QueryDataDuration struct.
+    QUERY_TYPE_DURATION,
+
+    /// The number of query types in the enum
+    QUERY_TYPE_NUM_TYPES
+};
+
+
 /// Engine creation attibutes
 struct EngineCreateInfo
 {
@@ -1640,14 +1673,15 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     Uint32 NumDynamicHeapPagesToReserve DEFAULT_INITIALIZER(1);
 
     /// Query pool size for each query type.
-    Uint32 QueryPoolSizes[5]
+    Uint32 QueryPoolSizes[QUERY_TYPE_NUM_TYPES]
 #if DILIGENT_CPP_INTERFACE
         {
             0,   // Ignored
             128, // QUERY_TYPE_OCCLUSION
             128, // QUERY_TYPE_BINARY_OCCLUSION
             512, // QUERY_TYPE_TIMESTAMP
-            128  // QUERY_TYPE_PIPELINE_STATISTICS
+            128, // QUERY_TYPE_PIPELINE_STATISTICS
+            256, // QUERY_TYPE_DURATION
         }
 #endif
     ;
@@ -1774,14 +1808,15 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     Uint32 DynamicHeapPageSize              DEFAULT_INITIALIZER(256 << 10);
 
     /// Query pool size for each query type.
-    Uint32 QueryPoolSizes[5]
+    Uint32 QueryPoolSizes[QUERY_TYPE_NUM_TYPES]
 #if DILIGENT_CPP_INTERFACE
     {
         0,   // Ignored
         128, // QUERY_TYPE_OCCLUSION
         128, // QUERY_TYPE_BINARY_OCCLUSION
         512, // QUERY_TYPE_TIMESTAMP
-        128  // QUERY_TYPE_PIPELINE_STATISTICS
+        128, // QUERY_TYPE_PIPELINE_STATISTICS
+        256  // QUERY_TYPE_DURATION
     }
 #endif
     ;

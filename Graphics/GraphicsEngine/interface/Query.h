@@ -31,40 +31,13 @@
 /// Defines Diligent::IQuery interface and related data structures
 
 #include "DeviceObject.h"
+#include "GraphicsTypes.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
-
 
 // {70F2A88A-F8BE-4901-8F05-2F72FA695BA0}
 static const INTERFACE_ID IID_Query =
     {0x70f2a88a, 0xf8be, 0x4901, {0x8f, 0x5, 0x2f, 0x72, 0xfa, 0x69, 0x5b, 0xa0}};
-
-/// Query type.
-enum QUERY_TYPE
-{
-    /// Query type is undefined.
-    QUERY_TYPE_UNDEFINED = 0,
-
-    /// Gets the number of samples that passed the depth and stencil tests in between IDeviceContext::BeginQuery
-    /// and IDeviceContext::EndQuery. IQuery::GetData fills a Diligent::QueryDataOcclusion struct.
-    QUERY_TYPE_OCCLUSION,
-
-    /// Acts like QUERY_TYPE_OCCLUSION except that it returns simply a binary true/false result: false indicates that no samples
-    /// passed depth and stencil testing, true indicates that at least one sample passed depth and stencil testing.
-    /// IQuery::GetData fills a Diligent::QueryDataBinaryOcclusion struct.
-    QUERY_TYPE_BINARY_OCCLUSION,
-
-    /// Gets the GPU timestamp corresponding to IDeviceContext::EndQuery call. Fot this query
-    /// type IDeviceContext::BeginQuery is disabled. IQuery::GetData fills a Diligent::QueryDataTimestamp struct.
-    QUERY_TYPE_TIMESTAMP,
-
-    /// Gets pipeline statistics, such as the number of pixel shader invocations in between IDeviceContext::BeginQuery
-    /// and IDeviceContext::EndQuery. IQuery::GetData will fills a Diligent::QueryDataPipelineStatistics struct.
-    QUERY_TYPE_PIPELINE_STATISTICS,
-
-    /// The number of query types in the enum
-    QUERY_TYPE_NUM_TYPES
-};
 
 /// Occlusion query data.
 /// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_OCCLUSION query type.
@@ -153,6 +126,23 @@ struct QueryDataPipelineStatistics
     Uint64 CSInvocations DEFAULT_INITIALIZER(0);
 };
 typedef struct QueryDataPipelineStatistics QueryDataPipelineStatistics;
+
+/// Duration query data.
+/// This structure is filled by IQuery::GetData() for Diligent::QUERY_TYPE_DURATION query type.
+struct QueryDataDuration
+{
+    /// Query type - must be Diligent::QUERY_TYPE_DURATION
+    const enum QUERY_TYPE Type DEFAULT_INITIALIZER(QUERY_TYPE_DURATION);
+
+    /// The number of high-frequency counter ticks between
+    /// BeginQuery and EndQuery calls.
+    Uint64 Duration DEFAULT_INITIALIZER(0);
+
+    /// The counter frequency, in Hz (ticks/second). If there was an error
+    /// while getting the timestamp, this value will be 0.
+    Uint64 Frequency DEFAULT_INITIALIZER(0);
+};
+typedef struct QueryDataDuration QueryDataDuration;
 
 // clang-format off
 
