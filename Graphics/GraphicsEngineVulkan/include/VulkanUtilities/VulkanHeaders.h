@@ -34,6 +34,10 @@
 
 #if DILIGENT_USE_VOLK
 #    include "volk/volk.h"
+#else
+// Don't use extensions when statically linked with Vulkan
+#    undef VK_KHR_get_physical_device_properties2
+#    undef VK_NV_mesh_shader
 #endif
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(_X11_XLIB_H_)

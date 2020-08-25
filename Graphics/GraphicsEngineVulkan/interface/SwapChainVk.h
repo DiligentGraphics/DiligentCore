@@ -30,8 +30,6 @@
 /// \file
 /// Definition of the Diligent::ISwapChainVk interface
 
-#include "../../../ThirdParty/vulkan/vulkan.h"
-
 #include "../../GraphicsEngine/interface/SwapChain.h"
 #include "TextureViewVk.h"
 
