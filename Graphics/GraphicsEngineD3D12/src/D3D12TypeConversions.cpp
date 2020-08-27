@@ -477,7 +477,9 @@ D3D12_QUERY_TYPE QueryTypeToD3D12QueryType(QUERY_TYPE QueryType)
         case QUERY_TYPE_BINARY_OCCLUSION:    return D3D12_QUERY_TYPE_BINARY_OCCLUSION;
         case QUERY_TYPE_TIMESTAMP:           return D3D12_QUERY_TYPE_TIMESTAMP;
         case QUERY_TYPE_PIPELINE_STATISTICS: return D3D12_QUERY_TYPE_PIPELINE_STATISTICS;
+        case QUERY_TYPE_DURATION:            return D3D12_QUERY_TYPE_TIMESTAMP;
 
+        static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled");
         default:
             UNEXPECTED("Unexpected query type");
             return static_cast<D3D12_QUERY_TYPE>(-1);

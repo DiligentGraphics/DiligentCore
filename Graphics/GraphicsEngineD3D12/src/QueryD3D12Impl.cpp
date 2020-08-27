@@ -41,19 +41,32 @@ QueryD3D12Impl::QueryD3D12Impl(IReferenceCounters*    pRefCounters,
                                const QueryDesc&       Desc) :
     TQueryBase{pRefCounters, pDevice, Desc}
 {
-    auto& QueryMgr   = pDevice->GetQueryManager();
-    m_QueryHeapIndex = QueryMgr.AllocateQuery(m_Desc.Type);
-    if (m_QueryHeapIndex == QueryManagerD3D12::InvalidIndex)
+    auto& QueryMgr = pDevice->GetQueryManager();
+    for (Uint32 i = 0; i < (m_Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++i)
     {
-        LOG_ERROR_AND_THROW("Failed to allocate D3D12 query for type ", GetQueryTypeString(m_Desc.Type),
-                            ". Increase the query pool size in EngineD3D12CreateInfo.");
+        m_QueryHeapIndex[i] = QueryMgr.AllocateQuery(m_Desc.Type);
+        if (m_QueryHeapIndex[i] == QueryManagerD3D12::InvalidIndex)
+        {
+            for (Uint32 j = 0; j < i; ++j)
+            {
+                QueryMgr.ReleaseQuery(m_Desc.Type, m_QueryHeapIndex[j]);
+            }
+            LOG_ERROR_AND_THROW("Failed to allocate D3D12 query for type ", GetQueryTypeString(m_Desc.Type),
+                                ". Increase the query pool size in EngineD3D12CreateInfo.");
+        }
     }
 }
 
 QueryD3D12Impl::~QueryD3D12Impl()
 {
     auto& QueryMgr = m_pDevice->GetQueryManager();
-    QueryMgr.ReleaseQuery(m_Desc.Type, m_QueryHeapIndex);
+    for (Uint32 i = 0; i < _countof(m_QueryHeapIndex); ++i)
+    {
+        if (m_QueryHeapIndex[i] != QueryManagerD3D12::InvalidIndex)
+        {
+            QueryMgr.ReleaseQuery(m_Desc.Type, m_QueryHeapIndex[i]);
+        }
+    }
 }
 
 bool QueryD3D12Impl::OnEndQuery(IDeviceContext* pContext)
@@ -75,12 +88,23 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
     {
         auto& QueryMgr = m_pDevice->GetQueryManager();
 
+        auto GetTimestampFrequency = [this](Uint32 CmdQueueId) //
+        {
+            const auto& CmdQueue    = m_pDevice->GetCommandQueue(CmdQueueId);
+            auto*       pd3d12Queue = const_cast<ICommandQueueD3D12&>(CmdQueue).GetD3D12CommandQueue();
+
+            // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#timestamp-frequency
+            UINT64 TimestampFrequency = 0;
+            pd3d12Queue->GetTimestampFrequency(&TimestampFrequency);
+            return TimestampFrequency;
+        };
+
         switch (m_Desc.Type)
         {
             case QUERY_TYPE_OCCLUSION:
             {
                 UINT64 NumSamples;
-                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &NumSamples, sizeof(NumSamples));
+                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex[0], &NumSamples, sizeof(NumSamples));
                 if (pData != nullptr)
                 {
                     auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
@@ -92,7 +116,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             case QUERY_TYPE_BINARY_OCCLUSION:
             {
                 UINT64 AnySamplePassed;
-                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &AnySamplePassed, sizeof(AnySamplePassed));
+                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex[0], &AnySamplePassed, sizeof(AnySamplePassed));
                 if (pData != nullptr)
                 {
                     auto& QueryData = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
@@ -106,19 +130,12 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             case QUERY_TYPE_TIMESTAMP:
             {
                 UINT64 Counter;
-                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &Counter, sizeof(Counter));
+                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex[0], &Counter, sizeof(Counter));
                 if (pData != nullptr)
                 {
-                    auto& QueryData   = *reinterpret_cast<QueryDataTimestamp*>(pData);
-                    QueryData.Counter = Counter;
-
-                    const auto& CmdQueue    = m_pDevice->GetCommandQueue(CmdQueueId);
-                    auto*       pd3d12Queue = const_cast<ICommandQueueD3D12&>(CmdQueue).GetD3D12CommandQueue();
-
-                    // https://microsoft.github.io/DirectX-Specs/d3d/CountersAndQueries.html#timestamp-frequency
-                    UINT64 TimestampFrequency = 0;
-                    pd3d12Queue->GetTimestampFrequency(&TimestampFrequency);
-                    QueryData.Frequency = TimestampFrequency;
+                    auto& QueryData     = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    QueryData.Counter   = Counter;
+                    QueryData.Frequency = GetTimestampFrequency(CmdQueueId);
                 }
             }
             break;
@@ -126,7 +143,7 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             case QUERY_TYPE_PIPELINE_STATISTICS:
             {
                 D3D12_QUERY_DATA_PIPELINE_STATISTICS d3d12QueryData;
-                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex, &d3d12QueryData, sizeof(d3d12QueryData));
+                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex[0], &d3d12QueryData, sizeof(d3d12QueryData));
                 if (pData != nullptr)
                 {
                     auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
@@ -142,6 +159,20 @@ bool QueryD3D12Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                     QueryData.HSInvocations       = d3d12QueryData.HSInvocations;
                     QueryData.DSInvocations       = d3d12QueryData.DSInvocations;
                     QueryData.CSInvocations       = d3d12QueryData.CSInvocations;
+                }
+            }
+            break;
+
+            case QUERY_TYPE_DURATION:
+            {
+                UINT64 StartCounter, EndCounter;
+                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex[0], &StartCounter, sizeof(StartCounter));
+                QueryMgr.ReadQueryData(m_Desc.Type, m_QueryHeapIndex[1], &EndCounter, sizeof(EndCounter));
+                if (pData != nullptr)
+                {
+                    auto& QueryData     = *reinterpret_cast<QueryDataDuration*>(pData);
+                    QueryData.Duration  = EndCounter - StartCounter;
+                    QueryData.Frequency = GetTimestampFrequency(CmdQueueId);
                 }
             }
             break;

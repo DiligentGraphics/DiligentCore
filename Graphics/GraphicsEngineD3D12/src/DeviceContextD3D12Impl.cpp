@@ -2007,8 +2007,11 @@ void DeviceContextD3D12Impl::BeginQuery(IQuery* pQuery)
 
     auto& QueryMgr = m_pDevice->GetQueryManager();
     auto& Ctx      = GetCmdContext();
-    auto  Idx      = pQueryD3D12Impl->GetQueryHeapIndex();
-    QueryMgr.BeginQuery(Ctx, QueryType, Idx);
+    auto  Idx      = pQueryD3D12Impl->GetQueryHeapIndex(0);
+    if (QueryType != QUERY_TYPE_DURATION)
+        QueryMgr.BeginQuery(Ctx, QueryType, Idx);
+    else
+        QueryMgr.EndQuery(Ctx, QueryType, Idx);
 }
 
 void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
@@ -2026,7 +2029,7 @@ void DeviceContextD3D12Impl::EndQuery(IQuery* pQuery)
 
     auto& QueryMgr = m_pDevice->GetQueryManager();
     auto& Ctx      = GetCmdContext();
-    auto  Idx      = pQueryD3D12Impl->GetQueryHeapIndex();
+    auto  Idx      = pQueryD3D12Impl->GetQueryHeapIndex(QueryType == QUERY_TYPE_DURATION ? 1 : 0);
     QueryMgr.EndQuery(Ctx, QueryType, Idx);
 }
 

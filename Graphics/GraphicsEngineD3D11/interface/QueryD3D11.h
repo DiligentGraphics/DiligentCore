@@ -51,6 +51,7 @@ static const struct INTERFACE_ID IID_QueryD3D11 =
 DILIGENT_BEGIN_INTERFACE(IQueryD3D11, IQuery)
 {
     /// Returns a pointer to the internal ID3D11Query object.
+
     /// \param [in] QueryId - Query Id. For most query types this must be 0. An exception is
     ///                       QUERY_TYPE_DURATION, in which case allowed values are 0 for the
     ///                       beginning timestamp query, and 1 for the ending query.

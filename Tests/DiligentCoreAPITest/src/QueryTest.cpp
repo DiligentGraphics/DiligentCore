@@ -211,6 +211,7 @@ protected:
         if (queryDesc.Type == QUERY_TYPE_DURATION)
         {
             // FinishFrame() must be called to finish the disjoint query
+            pContext->Flush();
             pContext->FinishFrame();
         }
         pContext->WaitForIdle();

@@ -33,6 +33,6 @@ void TestQueryD3D12_CInterface(struct IQueryD3D12* pQuery)
     ID3D12QueryHeap* pd3d12QueryHeap = IQueryD3D12_GetD3D12QueryHeap(pQuery);
     (void)pd3d12QueryHeap;
 
-    Uint32 Idx = IQueryD3D12_GetQueryHeapIndex(pQuery);
+    Uint32 Idx = IQueryD3D12_GetQueryHeapIndex(pQuery, 0);
     (void)Idx;
 }
