@@ -60,11 +60,11 @@ QueryD3D12Impl::QueryD3D12Impl(IReferenceCounters*    pRefCounters,
 QueryD3D12Impl::~QueryD3D12Impl()
 {
     auto& QueryMgr = m_pDevice->GetQueryManager();
-    for (Uint32 i = 0; i < _countof(m_QueryHeapIndex); ++i)
+    for (auto HeapIdx : m_QueryHeapIndex)
     {
-        if (m_QueryHeapIndex[i] != QueryManagerD3D12::InvalidIndex)
+        if (HeapIdx != QueryManagerD3D12::InvalidIndex)
         {
-            QueryMgr.ReleaseQuery(m_Desc.Type, m_QueryHeapIndex[i]);
+            QueryMgr.ReleaseQuery(m_Desc.Type, HeapIdx);
         }
     }
 }

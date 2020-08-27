@@ -1377,15 +1377,19 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
                 DEV_CHECK_GL_ERROR("glQueryCounter failed");
             }
             else
+#endif
             {
                 LOG_ERROR_MESSAGE_ONCE("Timer queries are not supported by this device");
             }
-#endif
             break;
 
         case QUERY_TYPE_DURATION:
+#if GL_TIME_ELAPSED
             glEndQuery(GL_TIME_ELAPSED);
             DEV_CHECK_GL_ERROR("Failed to end GL_TIME_ELAPSED query");
+#else
+            LOG_ERROR_MESSAGE_ONCE("Duration queries are not supported by this device");
+#endif
             break;
 
         default:

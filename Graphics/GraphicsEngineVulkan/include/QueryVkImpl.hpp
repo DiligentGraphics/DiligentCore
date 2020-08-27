@@ -30,6 +30,8 @@
 /// \file
 /// Declaration of Diligent::QueryVkImpl class
 
+#include <array>
+
 #include "QueryVk.h"
 #include "QueryBase.hpp"
 #include "RenderDeviceVkImpl.hpp"
@@ -60,19 +62,21 @@ public:
     /// Implementation of IQuery::Invalidate().
     virtual void DILIGENT_CALL_TYPE Invalidate() override final;
 
-    Uint32 GetQueryPoolIndex() const
+    Uint32 GetQueryPoolIndex(Uint32 QueryId) const
     {
-        return m_QueryPoolIndex;
+        VERIFY_EXPR(QueryId == 0 || m_Desc.Type == QUERY_TYPE_DURATION && QueryId == 1);
+        return m_QueryPoolIndex[QueryId];
     }
 
     bool OnEndQuery(IDeviceContext* pContext);
     bool OnBeginQuery(IDeviceContext* pContext);
 
 private:
-    bool AllocateQuery();
-    void DiscardQuery();
+    bool AllocateQueries();
+    void DiscardQueries();
 
-    Uint32 m_QueryPoolIndex     = QueryManagerVk::InvalidIndex;
+    std::array<Uint32, 2> m_QueryPoolIndex = {QueryManagerVk::InvalidIndex, QueryManagerVk::InvalidIndex};
+
     Uint64 m_QueryEndFenceValue = 0;
 };
 

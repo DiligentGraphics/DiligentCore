@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added `QUERY_TYPE_DURATION` query type (API Version 240067)
 * Added `USAGE_UNIFIED` usage type (API Version 240066)
 * Added render passes (API Version 240065)
 * Added `CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS` enum and `IShaderSourceInputStreamFactory::CreateInputStream2` method (API Version 240064)

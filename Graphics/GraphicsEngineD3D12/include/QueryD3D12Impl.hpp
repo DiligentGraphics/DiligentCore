@@ -30,6 +30,7 @@
 /// \file
 /// Declaration of Diligent::QueryD3D12Impl class
 
+#include <array>
 #include "QueryD3D12.h"
 #include "QueryBase.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
@@ -73,7 +74,8 @@ public:
     bool OnEndQuery(IDeviceContext* pContext);
 
 private:
-    Uint32 m_QueryHeapIndex[2]  = {~Uint32{0}, ~Uint32{0}};
+    std::array<Uint32, 2> m_QueryHeapIndex = {QueryManagerD3D12::InvalidIndex, QueryManagerD3D12::InvalidIndex};
+
     Uint64 m_QueryEndFenceValue = 0;
 };
 

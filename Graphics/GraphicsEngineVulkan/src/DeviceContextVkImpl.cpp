@@ -2165,12 +2165,17 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
 
     auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
-    auto       Idx          = pQueryVkImpl->GetQueryPoolIndex();
+    auto       vkQueryPool  = m_QueryMgr->GetQueryPool(QueryType);
+    auto       Idx          = pQueryVkImpl->GetQueryPoolIndex(0);
 
     EnsureVkCmdBuffer();
     if (QueryType == QUERY_TYPE_TIMESTAMP)
     {
         LOG_ERROR_MESSAGE("BeginQuery() is disabled for timestamp queries");
+    }
+    else if (QueryType == QUERY_TYPE_DURATION)
+    {
+        m_CommandBuffer.WriteTimestamp(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vkQueryPool, Idx);
     }
     else
     {
@@ -2187,7 +2192,7 @@ void DeviceContextVkImpl::BeginQuery(IQuery* pQuery)
         // both begin and end outside of a render pass instance (i.e. contain entire render pass instances). (17.2)
 
         ++m_ActiveQueriesCounter;
-        m_CommandBuffer.BeginQuery(m_QueryMgr->GetQueryPool(QueryType),
+        m_CommandBuffer.BeginQuery(vkQueryPool,
                                    Idx,
                                    // If flags does not contain VK_QUERY_CONTROL_PRECISE_BIT an implementation
                                    // may generate any non-zero result value for the query if the count of
@@ -2205,10 +2210,10 @@ void DeviceContextVkImpl::EndQuery(IQuery* pQuery)
     auto*      pQueryVkImpl = ValidatedCast<QueryVkImpl>(pQuery);
     const auto QueryType    = pQueryVkImpl->GetDesc().Type;
     auto       vkQueryPool  = m_QueryMgr->GetQueryPool(QueryType);
-    auto       Idx          = pQueryVkImpl->GetQueryPoolIndex();
+    auto       Idx          = pQueryVkImpl->GetQueryPoolIndex(QueryType == QUERY_TYPE_DURATION ? 1 : 0);
 
     EnsureVkCmdBuffer();
-    if (QueryType == QUERY_TYPE_TIMESTAMP)
+    if (QueryType == QUERY_TYPE_TIMESTAMP || QueryType == QUERY_TYPE_DURATION)
     {
         m_CommandBuffer.WriteTimestamp(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, vkQueryPool, Idx);
     }
