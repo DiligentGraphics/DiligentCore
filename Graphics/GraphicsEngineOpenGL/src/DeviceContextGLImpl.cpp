@@ -1332,8 +1332,12 @@ void DeviceContextGLImpl::BeginQuery(IQuery* pQuery)
             break;
 
         case QUERY_TYPE_DURATION:
+#if GL_TIME_ELAPSED
             glBeginQuery(GL_TIME_ELAPSED, glQuery);
             DEV_CHECK_GL_ERROR("Failed to begin GL_TIME_ELAPSED query");
+#else
+            LOG_ERROR_MESSAGE_ONCE("Duration queries are not supported by this device");
+#endif
             break;
 
         default:
