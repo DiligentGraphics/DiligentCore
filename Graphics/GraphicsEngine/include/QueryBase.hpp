@@ -52,7 +52,7 @@ public:
     {
         Inactive,
         Querying,
-        Complete
+        Ended
     };
 
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, QueryDesc>;
@@ -166,7 +166,7 @@ public:
             return false;
         }
 
-        m_State = QueryState::Complete;
+        m_State = QueryState::Ended;
         return true;
     }
 
@@ -177,7 +177,7 @@ public:
 
     bool CheckQueryDataPtr(void* pData, Uint32 DataSize)
     {
-        if (m_State != QueryState::Complete)
+        if (m_State != QueryState::Ended)
         {
             LOG_ERROR_MESSAGE("Attempting to get data of query '", this->m_Desc.Name, "' that has not been ended");
             return false;
