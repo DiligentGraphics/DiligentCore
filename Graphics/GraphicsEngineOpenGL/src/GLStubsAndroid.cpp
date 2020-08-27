@@ -378,11 +378,11 @@ Func = (FuncType)eglGetProcAddress( #Func );\
 
 #ifdef LOAD_GL_GET_QUERY_OBJECT_UI64V
     // Do not use stub
-    glGetQueryObjectui64v = (PFNGLGETQUERYOBJECTUI64VPROC)eglGetProcAddress( "glGetQueryObjectui64v" );
+    glGetQueryObjectui64v = (PFNGLGETQUERYOBJECTUI64VPROC)eglGetProcAddress( "glGetQueryObjectui64vEXT" );
 #endif
 
 #ifdef LOAD_GL_QUERY_COUNTER
     // Do not use stub
-    glQueryCounter = (PFNGLQUERYCOUNTERPROC)eglGetProcAddress( "glQueryCounter" );
+    glQueryCounter = (PFNGLQUERYCOUNTERPROC)eglGetProcAddress( "glQueryCounterEXT" );
 #endif
 }

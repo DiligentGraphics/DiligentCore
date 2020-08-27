@@ -1370,6 +1370,7 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
             break;
 
         case QUERY_TYPE_TIMESTAMP:
+#if GL_TIMESTAMP
             if (glQueryCounter != nullptr)
             {
                 glQueryCounter(pQueryGLImpl->GetGlQueryHandle(), GL_TIMESTAMP);
@@ -1379,6 +1380,7 @@ void DeviceContextGLImpl::EndQuery(IQuery* pQuery)
             {
                 LOG_ERROR_MESSAGE_ONCE("Timer queries are not supported by this device");
             }
+#endif
             break;
 
         case QUERY_TYPE_DURATION:
