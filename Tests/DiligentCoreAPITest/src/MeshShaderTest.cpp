@@ -125,8 +125,10 @@ TEST(MeshShaderTest, DrawQuad)
 
     PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
+    const bool IsVulkan = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
+
     ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.UseCombinedTextureSamplers = true;
 
     RefCntAutoPtr<IShader> pMS;
@@ -134,7 +136,7 @@ TEST(MeshShaderTest, DrawQuad)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_MESH;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Mesh shader test - MS";
-        ShaderCI.Source          = HLSL::MeshShaderTest_MS.c_str();
+        ShaderCI.Source          = IsVulkan ? GLSL::MeshShaderTest_MS.c_str() : HLSL::MeshShaderTest_MS.c_str();
 
         pDevice->CreateShader(ShaderCI, &pMS);
         ASSERT_NE(pMS, nullptr);
@@ -145,7 +147,7 @@ TEST(MeshShaderTest, DrawQuad)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Mesh shader test - PS";
-        ShaderCI.Source          = HLSL::MeshShaderTest_PS.c_str();
+        ShaderCI.Source          = IsVulkan ? GLSL::MeshShaderTest_FS.c_str() : HLSL::MeshShaderTest_PS.c_str();
 
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
@@ -233,8 +235,10 @@ TEST(MeshShaderTest, DrawQuadIndirect)
 
     PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
+    const bool IsVulkan = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
+
     ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.UseCombinedTextureSamplers = true;
 
     RefCntAutoPtr<IShader> pMS;
@@ -242,7 +246,7 @@ TEST(MeshShaderTest, DrawQuadIndirect)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_MESH;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Mesh shader test - MS";
-        ShaderCI.Source          = HLSL::MeshShaderTest_MS.c_str();
+        ShaderCI.Source          = IsVulkan ? GLSL::MeshShaderTest_MS.c_str() : HLSL::MeshShaderTest_MS.c_str();
 
         pDevice->CreateShader(ShaderCI, &pMS);
         ASSERT_NE(pMS, nullptr);
@@ -253,7 +257,7 @@ TEST(MeshShaderTest, DrawQuadIndirect)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Mesh shader test - PS";
-        ShaderCI.Source          = HLSL::MeshShaderTest_PS.c_str();
+        ShaderCI.Source          = IsVulkan ? GLSL::MeshShaderTest_FS.c_str() : HLSL::MeshShaderTest_PS.c_str();
 
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
@@ -368,8 +372,10 @@ TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
 
     PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
+    const bool IsVulkan = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
+
     ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.UseCombinedTextureSamplers = true;
 
     RefCntAutoPtr<IShader> pAS;
@@ -377,7 +383,7 @@ TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_AMPLIFICATION;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Amplification shader test - AS";
-        ShaderCI.Source          = HLSL::AmplificationShaderTest_AS.c_str();
+        ShaderCI.Source          = IsVulkan ? GLSL::AmplificationShaderTest_TS.c_str() : HLSL::AmplificationShaderTest_AS.c_str();
 
         pDevice->CreateShader(ShaderCI, &pAS);
         ASSERT_NE(pAS, nullptr);
@@ -388,7 +394,7 @@ TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_MESH;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Amplification shader test - MS";
-        ShaderCI.Source          = HLSL::AmplificationShaderTest_MS.c_str();
+        ShaderCI.Source          = IsVulkan ? GLSL::AmplificationShaderTest_MS.c_str() : HLSL::AmplificationShaderTest_MS.c_str();
 
         pDevice->CreateShader(ShaderCI, &pMS);
         ASSERT_NE(pMS, nullptr);
@@ -399,7 +405,7 @@ TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.EntryPoint      = "main";
         ShaderCI.Desc.Name       = "Amplification shader test - PS";
-        ShaderCI.Source          = HLSL::AmplificationShaderTest_PS.c_str();
+        ShaderCI.Source          = IsVulkan ? GLSL::AmplificationShaderTest_FS.c_str() : HLSL::AmplificationShaderTest_PS.c_str();
 
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
