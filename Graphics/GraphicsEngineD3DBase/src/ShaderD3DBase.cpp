@@ -156,7 +156,7 @@ static HRESULT CompileDxilShader(const char*             Source,
     const wchar_t* pArgs[] =
         {
             L"-Zpc", // Matrices in column-major order
-            L"-WX",  // Warnings as errors
+                     //L"-WX",  // Warnings as errors
 #ifdef DILIGENT_DEBUG
             L"-Zi", // Debug info
             //L"-Qembed_debug", // Embed debug info into the shader (some compilers do not recognize this flag)

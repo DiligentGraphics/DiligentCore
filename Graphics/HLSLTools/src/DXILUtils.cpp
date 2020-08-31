@@ -177,6 +177,10 @@ public:
             return E_FAIL;
         }
 
+        // validate file name
+        if (fileName.size() > 2 && fileName[0] == '.' && (fileName[1] == '\\' || fileName[1] == '/'))
+            fileName.erase(0, 2);
+
         RefCntAutoPtr<IFileStream> pSourceStream;
         m_pStreamFactory->CreateInputStream(fileName.c_str(), &pSourceStream);
         if (pSourceStream == nullptr)
@@ -487,7 +491,8 @@ std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
         {
             L"-spirv",
             L"-fspv-reflect",
-            L"-WX", // Warnings as errors
+            L"-fspv-target-env=vulkan1.0",
+            //L"-WX", // Warnings as errors
             L"-O3", // Optimization level 3
         };
 
@@ -517,6 +522,18 @@ std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
     }
 
     std::vector<uint32_t> SPIRV;
+
+    if (!result)
+    {
+        if (ppCompilerOutput != nullptr)
+        {
+            LOG_ERROR_AND_THROW("Failed to compile Vulkan shader \"", (Attribs.Desc.Name != nullptr ? Attribs.Desc.Name : ""), "\".");
+        }
+        else
+        {
+            LOG_ERROR_AND_THROW("Failed to compile Vukan shader \"", (Attribs.Desc.Name != nullptr ? Attribs.Desc.Name : ""), "\":\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>"));
+        }
+    }
 
     if (result && compiled && compiled->GetBufferSize() > 0)
     {
