@@ -25,11 +25,22 @@
  *  of the possibility of such damages.
  */
 
-#include <d3d11.h>
-#include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/QueryD3D11.h"
+#include "DiligentCore/Primitives/interface/ReferenceCounters.h"
+#include "DiligentCore/Primitives/interface/Object.h"
 
-void TestQueryD3D11_CInterface(struct IQueryD3D11* pQuery)
+void TestReferenceCounters_CInterface(IReferenceCounters* pRefCounters)
 {
-    ID3D11Query* pd3d11Query = IQueryD3D11_GetD3D11Query(pQuery, 0);
-    (void)pd3d11Query;
+    ReferenceCounterValueType rc = 0;
+
+    rc = IReferenceCounters_AddStrongRef(pRefCounters);
+    rc = IReferenceCounters_ReleaseStrongRef(pRefCounters);
+    rc = IReferenceCounters_AddWeakRef(pRefCounters);
+    rc = IReferenceCounters_ReleaseWeakRef(pRefCounters);
+
+    struct IObject* pObject = NULL;
+    IReferenceCounters_GetObject(pRefCounters, &pObject);
+    IObject_Release(pObject);
+
+    rc = IReferenceCounters_GetNumStrongRefs(pRefCounters);
+    rc = IReferenceCounters_GetNumWeakRefs(pRefCounters);
 }

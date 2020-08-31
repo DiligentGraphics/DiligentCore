@@ -208,6 +208,12 @@ protected:
             Queries[i]->GetData(nullptr, 0);
         }
 
+        if (queryDesc.Type == QUERY_TYPE_DURATION)
+        {
+            // FinishFrame() must be called to finish the disjoint query
+            pContext->Flush();
+            pContext->FinishFrame();
+        }
         pContext->WaitForIdle();
         if (pDevice->GetDeviceCaps().IsGLDevice())
         {
@@ -351,14 +357,15 @@ TEST_F(QueryTest, BinaryOcclusion)
 
 TEST_F(QueryTest, Timestamp)
 {
-    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    auto* pEnv    = TestingEnvironment::GetInstance();
+    auto* pDevice = pEnv->GetDevice();
+
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
     if (!deviceCaps.Features.TimestampQueries)
     {
         GTEST_SKIP() << "Timestamp queries are not supported by this device";
     }
 
-    auto* pEnv     = TestingEnvironment::GetInstance();
-    auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
@@ -407,6 +414,39 @@ TEST_F(QueryTest, Timestamp)
         ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
         EXPECT_EQ(TestQueryCInterface(pQueryEnd.RawPtr()), 0);
         EXPECT_TRUE(QueryStartData.Frequency == 0 || QueryEndData.Frequency == 0 || QueryEndData.Counter > QueryStartData.Counter);
+    }
+}
+
+
+TEST_F(QueryTest, Duration)
+{
+    const auto& deviceCaps = TestingEnvironment::GetInstance()->GetDevice()->GetDeviceCaps();
+    if (!deviceCaps.Features.DurationQueries)
+    {
+        GTEST_SKIP() << "Duration queries are not supported by this device";
+    }
+
+    TestingEnvironment::ScopedReset EnvironmentAutoReset;
+
+    QueryDesc queryDesc;
+    queryDesc.Name = "Duration query";
+    queryDesc.Type = QUERY_TYPE_DURATION;
+
+    std::vector<RefCntAutoPtr<IQuery>> Queries;
+    for (Uint32 frame = 0; frame < sm_NumFrames; ++frame)
+    {
+        InitTestQueries(Queries, queryDesc);
+
+        for (Uint32 i = 0; i < sm_NumTestQueries; ++i)
+        {
+            QueryDataDuration QueryData;
+
+            auto QueryReady = Queries[i]->GetData(nullptr, 0);
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            Queries[i]->GetData(&QueryData, sizeof(QueryData));
+            ASSERT_TRUE(QueryReady) << "Query data must be available after idling the context";
+            EXPECT_TRUE(QueryData.Frequency == 0 || QueryData.Duration > 0);
+        }
     }
 }
 

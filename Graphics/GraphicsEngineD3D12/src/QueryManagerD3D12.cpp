@@ -45,12 +45,15 @@ static Uint32 GetQueryDataSize(QUERY_TYPE QueryType)
         case QUERY_TYPE_OCCLUSION:
         case QUERY_TYPE_BINARY_OCCLUSION:
         case QUERY_TYPE_TIMESTAMP:
+        case QUERY_TYPE_DURATION:
             return sizeof(Uint64);
             break;
 
         case QUERY_TYPE_PIPELINE_STATISTICS:
             return sizeof(D3D12_QUERY_DATA_PIPELINE_STATISTICS);
             break;
+
+        static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are tested");
 
         default:
             UNEXPECTED("Unexpected query type");
@@ -70,7 +73,8 @@ QueryManagerD3D12::QueryManagerD3D12(ID3D12Device* pd3d12Device,
         static_assert(QUERY_TYPE_BINARY_OCCLUSION   == 2, "Unexpected value of QUERY_TYPE_BINARY_OCCLUSION. EngineD3D12CreateInfo::QueryPoolSizes must be updated");
         static_assert(QUERY_TYPE_TIMESTAMP          == 3, "Unexpected value of QUERY_TYPE_TIMESTAMP. EngineD3D12CreateInfo::QueryPoolSizes must be updated");
         static_assert(QUERY_TYPE_PIPELINE_STATISTICS== 4, "Unexpected value of QUERY_TYPE_PIPELINE_STATISTICS. EngineD3D12CreateInfo::QueryPoolSizes must be updated");
-        static_assert(QUERY_TYPE_NUM_TYPES          == 5, "Unexpected value of QUERY_TYPE_NUM_TYPES. EngineD3D12CreateInfo::QueryPoolSizes must be updated");
+        static_assert(QUERY_TYPE_DURATION           == 5, "Unexpected value of QUERY_TYPE_DURATION. EngineD3D12CreateInfo::QueryPoolSizes must be updated");
+        static_assert(QUERY_TYPE_NUM_TYPES          == 6, "Unexpected value of QUERY_TYPE_NUM_TYPES. EngineD3D12CreateInfo::QueryPoolSizes must be updated");
         // clang-format on
         auto& HeapInfo = m_Heaps[QueryType];
 
@@ -79,6 +83,8 @@ QueryManagerD3D12::QueryManagerD3D12(ID3D12Device* pd3d12Device,
         HeapInfo.HeapSize   = QueryHeapSizes[QueryType];
         d3d12HeapDesc.Type  = QueryTypeToD3D12QueryHeapType(static_cast<QUERY_TYPE>(QueryType));
         d3d12HeapDesc.Count = HeapInfo.HeapSize;
+        if (QueryType == QUERY_TYPE_DURATION)
+            d3d12HeapDesc.Count *= 2;
 
         auto hr = pd3d12Device->CreateQueryHeap(&d3d12HeapDesc, __uuidof(HeapInfo.pd3d12QueryHeap), reinterpret_cast<void**>(&HeapInfo.pd3d12QueryHeap));
         CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D12 query heap of type");

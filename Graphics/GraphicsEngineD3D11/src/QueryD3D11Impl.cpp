@@ -53,6 +53,7 @@ QueryD3D11Impl::QueryD3D11Impl(IReferenceCounters*    pRefCounters,
             break;
 
         case QUERY_TYPE_TIMESTAMP:
+        case QUERY_TYPE_DURATION:
             d3d11QueryDesc.Query = D3D11_QUERY_TIMESTAMP;
             break;
 
@@ -65,9 +66,12 @@ QueryD3D11Impl::QueryD3D11Impl(IReferenceCounters*    pRefCounters,
     }
     auto* pd3d11Device = pDevice->GetD3D11Device();
 
-    auto hr = pd3d11Device->CreateQuery(&d3d11QueryDesc, &m_pd3d11Query);
-    CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 query object");
-    VERIFY_EXPR(m_pd3d11Query != nullptr);
+    for (Uint32 i = 0; i < (Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++i)
+    {
+        auto hr = pd3d11Device->CreateQuery(&d3d11QueryDesc, &m_pd3d11Query[i]);
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create D3D11 query object");
+        VERIFY_EXPR(m_pd3d11Query[i] != nullptr);
+    }
 }
 
 QueryD3D11Impl::~QueryD3D11Impl()
@@ -90,7 +94,7 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
         case QUERY_TYPE_OCCLUSION:
         {
             UINT64 NumSamples;
-            DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &NumSamples, sizeof(NumSamples), 0) == S_OK;
+            DataReady = pd3d11Ctx->GetData(m_pd3d11Query[0], &NumSamples, sizeof(NumSamples), 0) == S_OK;
             if (DataReady && pData != nullptr)
             {
                 auto& QueryData      = *reinterpret_cast<QueryDataOcclusion*>(pData);
@@ -102,7 +106,7 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
         case QUERY_TYPE_BINARY_OCCLUSION:
         {
             BOOL AnySamplePassed;
-            DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &AnySamplePassed, sizeof(AnySamplePassed), 0) == S_OK;
+            DataReady = pd3d11Ctx->GetData(m_pd3d11Query[0], &AnySamplePassed, sizeof(AnySamplePassed), 0) == S_OK;
             if (DataReady && pData != nullptr)
             {
                 auto& QueryData           = *reinterpret_cast<QueryDataBinaryOcclusion*>(pData);
@@ -123,8 +127,9 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
             if (DataReady)
             {
                 UINT64 Counter = 0;
-                DataReady      = pd3d11Ctx->GetData(m_pd3d11Query, &Counter, sizeof(Counter), 0) == S_OK;
+                DataReady      = pd3d11Ctx->GetData(m_pd3d11Query[0], &Counter, sizeof(Counter), 0) == S_OK;
 
+                // Note: DataReady is a return value, so we query the counter first, and then check pData for null.
                 if (DataReady && pData != nullptr)
                 {
                     D3D11_QUERY_DATA_TIMESTAMP_DISJOINT DisjointQueryData;
@@ -145,7 +150,7 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
         case QUERY_TYPE_PIPELINE_STATISTICS:
         {
             D3D11_QUERY_DATA_PIPELINE_STATISTICS d3d11QueryData;
-            DataReady = pd3d11Ctx->GetData(m_pd3d11Query, &d3d11QueryData, sizeof(d3d11QueryData), 0) == S_OK;
+            DataReady = pd3d11Ctx->GetData(m_pd3d11Query[0], &d3d11QueryData, sizeof(d3d11QueryData), 0) == S_OK;
             if (DataReady && pData != nullptr)
             {
                 auto& QueryData = *reinterpret_cast<QueryDataPipelineStatistics*>(pData);
@@ -161,6 +166,45 @@ bool QueryD3D11Impl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 QueryData.HSInvocations       = d3d11QueryData.HSInvocations;
                 QueryData.DSInvocations       = d3d11QueryData.DSInvocations;
                 QueryData.CSInvocations       = d3d11QueryData.CSInvocations;
+            }
+        }
+        break;
+
+        case QUERY_TYPE_DURATION:
+        {
+            // Timestamp query is only useful if two timestamp queries are done in the middle of a D3D11_QUERY_TIMESTAMP_DISJOINT query.
+            // Timestamp disjoint query is begun by the device context when the first timestamp query is begun and ended
+            // by FinishFrame. Thus timestamp queries will only become available after FinishFrame.
+
+            VERIFY_EXPR(m_DisjointQuery);
+
+            DataReady = m_DisjointQuery->IsEnded;
+            if (DataReady)
+            {
+                UINT64 StartCounter = 0;
+                UINT64 EndCounter   = 0;
+
+                DataReady = pd3d11Ctx->GetData(m_pd3d11Query[0], &StartCounter, sizeof(StartCounter), 0) == S_OK;
+                if (DataReady)
+                {
+                    DataReady = pd3d11Ctx->GetData(m_pd3d11Query[1], &EndCounter, sizeof(EndCounter), 0) == S_OK;
+
+                    // Note: DataReady is a return value, so we query the counters first, and then check pData for null.
+                    if (DataReady && pData != nullptr)
+                    {
+                        D3D11_QUERY_DATA_TIMESTAMP_DISJOINT DisjointQueryData;
+                        DataReady = pd3d11Ctx->GetData(m_DisjointQuery->pd3d11Query, &DisjointQueryData, sizeof(DisjointQueryData), 0) == S_OK;
+
+                        if (DataReady)
+                        {
+                            auto& QueryData = *reinterpret_cast<QueryDataDuration*>(pData);
+                            VERIFY_EXPR(EndCounter >= StartCounter);
+                            QueryData.Duration = EndCounter - StartCounter;
+                            // The timestamp returned by ID3D11DeviceContext::GetData for a timestamp query is only reliable if Disjoint is FALSE.
+                            QueryData.Frequency = DisjointQueryData.Disjoint ? 0 : DisjointQueryData.Frequency;
+                        }
+                    }
+                }
             }
         }
         break;

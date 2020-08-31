@@ -25,11 +25,4 @@
  *  of the possibility of such damages.
  */
 
-#include <d3d11.h>
-#include "DiligentCore/Graphics/GraphicsEngineD3D11/interface/QueryD3D11.h"
-
-void TestQueryD3D11_CInterface(struct IQueryD3D11* pQuery)
-{
-    ID3D11Query* pd3d11Query = IQueryD3D11_GetD3D11Query(pQuery, 0);
-    (void)pd3d11Query;
-}
+#include "DiligentCore/Primitives/interface/ReferenceCounters.h"

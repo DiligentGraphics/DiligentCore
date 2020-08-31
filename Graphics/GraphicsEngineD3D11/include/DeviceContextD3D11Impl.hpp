@@ -321,6 +321,8 @@ private:
 
     void ClearStateCache();
 
+    std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> BeginDisjointQuery();
+
     CComPtr<ID3D11DeviceContext> m_pd3d11DeviceContext; ///< D3D11 device context
 
     // clang-format off

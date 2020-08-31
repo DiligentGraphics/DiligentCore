@@ -66,9 +66,10 @@ public:
     }
 
     /// Implementation of IQueryD3D11::GetD3D11Query().
-    virtual ID3D11Query* DILIGENT_CALL_TYPE GetD3D11Query() override final
+    virtual ID3D11Query* DILIGENT_CALL_TYPE GetD3D11Query(Uint32 QueryId) override final
     {
-        return m_pd3d11Query;
+        VERIFY_EXPR(QueryId == 0 || m_Desc.Type == QUERY_TYPE_DURATION && QueryId == 1);
+        return m_pd3d11Query[QueryId];
     }
 
     void SetDisjointQuery(std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> DisjointQuery)
@@ -77,7 +78,7 @@ public:
     }
 
 private:
-    CComPtr<ID3D11Query> m_pd3d11Query;
+    CComPtr<ID3D11Query> m_pd3d11Query[2];
 
     std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> m_DisjointQuery;
 };

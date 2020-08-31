@@ -30,6 +30,7 @@
 /// \file
 /// Declaration of Diligent::QueryD3D12Impl class
 
+#include <array>
 #include "QueryD3D12.h"
 #include "QueryBase.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
@@ -64,15 +65,17 @@ public:
     }
 
     /// Implementation of IQueryD3D12::GetQueryHeapIndex().
-    virtual Uint32 DILIGENT_CALL_TYPE GetQueryHeapIndex() const override final
+    virtual Uint32 DILIGENT_CALL_TYPE GetQueryHeapIndex(Uint32 QueryId) const override final
     {
-        return m_QueryHeapIndex;
+        VERIFY_EXPR(QueryId == 0 || m_Desc.Type == QUERY_TYPE_DURATION && QueryId == 1);
+        return m_QueryHeapIndex[QueryId];
     }
 
     bool OnEndQuery(IDeviceContext* pContext);
 
 private:
-    Uint32 m_QueryHeapIndex     = static_cast<Uint32>(-1);
+    std::array<Uint32, 2> m_QueryHeapIndex = {QueryManagerD3D12::InvalidIndex, QueryManagerD3D12::InvalidIndex};
+
     Uint64 m_QueryEndFenceValue = 0;
 };
 

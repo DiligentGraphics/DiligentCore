@@ -45,19 +45,29 @@ static const struct INTERFACE_ID IID_QueryD3D11 =
     IQueryInclusiveMethods;         \
     IQueryD3D11Methods QueryD3D11
 
+// clang-format off
+
 /// Exposes Direct3D11-specific functionality of a Query object.
 DILIGENT_BEGIN_INTERFACE(IQueryD3D11, IQuery)
 {
     /// Returns a pointer to the internal ID3D11Query object.
-    VIRTUAL ID3D11Query* METHOD(GetD3D11Query)(THIS) PURE;
+
+    /// \param [in] QueryId - Query Id. For most query types this must be 0. An exception is
+    ///                       QUERY_TYPE_DURATION, in which case allowed values are 0 for the
+    ///                       beginning timestamp query, and 1 for the ending query.
+    /// \return               pointer to the ID3D11Query object.
+    VIRTUAL ID3D11Query* METHOD(GetD3D11Query)(THIS_
+                                               Uint32 QueryId) PURE;
 };
 DILIGENT_END_INTERFACE
+
+// clang-format on
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
 
-#    define IQueryD3D11_GetD3D11Query(This) CALL_IFACE_METHOD(QueryD3D11, GetD3D11Query, This)
+#    define IQueryD3D11_GetD3D11Query(This, ...) CALL_IFACE_METHOD(QueryD3D11, GetD3D11Query, This, __VA_ARGS__)
 
 #endif
 

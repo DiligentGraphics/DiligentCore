@@ -53,47 +53,49 @@ QueryVkImpl::QueryVkImpl(IReferenceCounters* pRefCounters,
 
 QueryVkImpl::~QueryVkImpl()
 {
-    if (m_QueryPoolIndex != QueryManagerVk::InvalidIndex)
-    {
-        VERIFY(m_pContext != nullptr, "Device context is not initialized");
-        auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
-        VERIFY_EXPR(pQueryMgr != nullptr);
-        pQueryMgr->DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
-    }
+    DiscardQueries();
 }
 
-void QueryVkImpl::DiscardQuery()
+void QueryVkImpl::DiscardQueries()
 {
-    if (m_QueryPoolIndex != QueryManagerVk::InvalidIndex)
+    for (auto& QueryPoolIdx : m_QueryPoolIndex)
     {
-        VERIFY_EXPR(m_pContext);
-        auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
-        VERIFY_EXPR(pQueryMgr != nullptr);
-        pQueryMgr->DiscardQuery(m_Desc.Type, m_QueryPoolIndex);
-        m_QueryPoolIndex = QueryManagerVk::InvalidIndex;
+        if (QueryPoolIdx != QueryManagerVk::InvalidIndex)
+        {
+            VERIFY_EXPR(m_pContext);
+            auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
+            VERIFY_EXPR(pQueryMgr != nullptr);
+            pQueryMgr->DiscardQuery(m_Desc.Type, QueryPoolIdx);
+            QueryPoolIdx = QueryManagerVk::InvalidIndex;
+        }
     }
 }
 
 void QueryVkImpl::Invalidate()
 {
-    DiscardQuery();
+    DiscardQueries();
     TQueryBase::Invalidate();
 }
 
-bool QueryVkImpl::AllocateQuery()
+bool QueryVkImpl::AllocateQueries()
 {
-    DiscardQuery();
+    DiscardQueries();
     VERIFY_EXPR(m_pContext);
     auto* pQueryMgr = m_pContext.RawPtr<DeviceContextVkImpl>()->GetQueryManager();
     VERIFY_EXPR(pQueryMgr != nullptr);
-    VERIFY_EXPR(m_QueryPoolIndex == QueryManagerVk::InvalidIndex);
-
-    m_QueryPoolIndex = pQueryMgr->AllocateQuery(m_Desc.Type);
-    if (m_QueryPoolIndex == QueryManagerVk::InvalidIndex)
+    for (Uint32 i = 0; i < (m_Desc.Type == QUERY_TYPE_DURATION ? Uint32{2} : Uint32{1}); ++i)
     {
-        LOG_ERROR_MESSAGE("Failed to allocate Vulkan query for type ", GetQueryTypeString(m_Desc.Type),
-                          ". Increase the query pool size in EngineVkCreateInfo.");
-        return false;
+        auto& QueryPoolIdx = m_QueryPoolIndex[i];
+        VERIFY_EXPR(QueryPoolIdx == QueryManagerVk::InvalidIndex);
+
+        QueryPoolIdx = pQueryMgr->AllocateQuery(m_Desc.Type);
+        if (QueryPoolIdx == QueryManagerVk::InvalidIndex)
+        {
+            LOG_ERROR_MESSAGE("Failed to allocate Vulkan query for type ", GetQueryTypeString(m_Desc.Type),
+                              ". Increase the query pool size in EngineVkCreateInfo.");
+            DiscardQueries();
+            return false;
+        }
     }
 
     return true;
@@ -104,7 +106,7 @@ bool QueryVkImpl::OnBeginQuery(IDeviceContext* pContext)
     if (!TQueryBase::OnBeginQuery(pContext))
         return false;
 
-    return AllocateQuery();
+    return AllocateQueries();
 }
 
 bool QueryVkImpl::OnEndQuery(IDeviceContext* pContext)
@@ -114,11 +116,11 @@ bool QueryVkImpl::OnEndQuery(IDeviceContext* pContext)
 
     if (m_Desc.Type == QUERY_TYPE_TIMESTAMP)
     {
-        if (!AllocateQuery())
+        if (!AllocateQueries())
             return false;
     }
 
-    if (m_QueryPoolIndex == QueryManagerVk::InvalidIndex)
+    if (m_QueryPoolIndex[0] == QueryManagerVk::InvalidIndex || (m_Desc.Type == QUERY_TYPE_DURATION && m_QueryPoolIndex[1] == QueryManagerVk::InvalidIndex))
     {
         LOG_ERROR_MESSAGE("Query '", m_Desc.Name, "' is invalid: Vulkan query allocation failed");
         return false;
@@ -146,7 +148,7 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
         {
             case QUERY_TYPE_OCCLUSION:
             {
-                uint64_t Results[2];
+                std::array<uint64_t, 2> Results = {};
                 // If VK_QUERY_RESULT_WITH_AVAILABILITY_BIT is set, the final integer value written for each query
                 // is non-zero if the query's status was available or zero if the status was unavailable.
 
@@ -158,7 +160,9 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 // command executes on a queue. Applications can use fences or events to ensure that a query has
                 // already been reset before checking for its results or availability status. Otherwise, a stale
                 // value could be returned from a previous use of the query.
-                auto res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                auto res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex[0], 1,
+                                                             sizeof(Results[0]) * Results.size(), Results.data(), 0,
+                                                             VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
                 DataAvailable = (res == VK_SUCCESS && Results[1] != 0);
                 if (DataAvailable && pData != nullptr)
@@ -171,8 +175,11 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
             case QUERY_TYPE_BINARY_OCCLUSION:
             {
-                uint64_t Results[2];
-                auto     res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                std::array<uint64_t, 2> Results = {};
+
+                auto res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex[0], 1,
+                                                             sizeof(Results[0]) * Results.size(), Results.data(), 0,
+                                                             VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
                 DataAvailable = (res == VK_SUCCESS && Results[1] != 0);
                 if (DataAvailable && pData != nullptr)
@@ -185,8 +192,11 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
 
             case QUERY_TYPE_TIMESTAMP:
             {
-                uint64_t Results[2];
-                auto     res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                std::array<uint64_t, 2> Results = {};
+
+                auto res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex[0], 1,
+                                                             sizeof(Results[0]) * Results.size(), Results.data(), 0,
+                                                             VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
                 DataAvailable = (res == VK_SUCCESS && Results[1] != 0);
                 if (DataAvailable && pData != nullptr)
@@ -204,8 +214,11 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                 // pipelineStatistics when the pool is created, and the statistics values are written in bit
                 // order starting from the least significant bit. (17.2)
 
-                Uint64 Results[12];
-                auto   res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex, 1, sizeof(Results), Results, 0, VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+                std::array<Uint64, 12> Results;
+
+                auto res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex[0], 1,
+                                                             sizeof(Results[0]) * Results.size(), Results.data(), 0,
+                                                             VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
 
                 DataAvailable = (res == VK_SUCCESS);
                 if (DataAvailable && pData != nullptr)
@@ -237,6 +250,37 @@ bool QueryVkImpl::GetData(void* pData, Uint32 DataSize, bool AutoInvalidate)
                     QueryData.CSInvocations = Results[Idx++]; // COMPUTE_SHADER_INVOCATIONS_BIT = 0x00000400
 
                     DataAvailable = Results[Idx] != 0;
+                }
+            }
+            break;
+
+
+            case QUERY_TYPE_DURATION:
+            {
+                uint64_t StartCounter = 0;
+                uint64_t EndCounter   = 0;
+
+                DataAvailable = true;
+                for (Uint32 i = 0; i < 2; ++i)
+                {
+                    std::array<uint64_t, 2> Results = {};
+
+                    auto res = LogicalDevice.GetQueryPoolResults(vkQueryPool, m_QueryPoolIndex[i], 1,
+                                                                 sizeof(Results[0]) * Results.size(), Results.data(), 0,
+                                                                 VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+
+                    if (res != VK_SUCCESS || Results[1] == 0)
+                        DataAvailable = false;
+
+                    (i == 0 ? StartCounter : EndCounter) = Results[0];
+                }
+
+                if (DataAvailable && pData != nullptr)
+                {
+                    auto& QueryData = *reinterpret_cast<QueryDataTimestamp*>(pData);
+                    VERIFY_EXPR(EndCounter >= StartCounter);
+                    QueryData.Counter   = EndCounter - StartCounter;
+                    QueryData.Frequency = pQueryMgr->GetCounterFrequency();
                 }
             }
             break;

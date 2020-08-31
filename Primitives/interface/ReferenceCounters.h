@@ -120,6 +120,46 @@ public:
 
 #else
 
+struct IObject;
+struct IReferenceCounters;
+
+// clang-format off
+
+typedef struct IReferenceCountersMethods
+{
+    ReferenceCounterValueType (*AddStrongRef)      (struct IReferenceCounters*);
+    ReferenceCounterValueType (*ReleaseStrongRef)  (struct IReferenceCounters*);
+    ReferenceCounterValueType (*AddWeakRef)        (struct IReferenceCounters*);
+    ReferenceCounterValueType (*ReleaseWeakRef)    (struct IReferenceCounters*);
+    void                      (*GetObject)         (struct IReferenceCounters*, struct IObject** ppObject);
+    ReferenceCounterValueType (*GetNumStrongRefs)  (struct IReferenceCounters*);
+    ReferenceCounterValueType (*GetNumWeakRefs)    (struct IReferenceCounters*);
+} IReferenceCountersMethods;
+
+typedef struct IReferenceCountersVtbl
+{
+    IReferenceCountersMethods ReferenceCounters;
+} IReferenceCountersVtbl;
+
+// clang-format on
+
+typedef struct IReferenceCounters
+{
+    struct IReferenceCountersVtbl* pVtbl;
+} IReferenceCounters;
+
+// clang-format off
+
+#    define IReferenceCounters_AddStrongRef(This)      CALL_IFACE_METHOD(ReferenceCounters, AddStrongRef,     This)
+#    define IReferenceCounters_ReleaseStrongRef(This)  CALL_IFACE_METHOD(ReferenceCounters, ReleaseStrongRef, This)
+#    define IReferenceCounters_AddWeakRef(This)        CALL_IFACE_METHOD(ReferenceCounters, AddWeakRef,       This)
+#    define IReferenceCounters_ReleaseWeakRef(This)    CALL_IFACE_METHOD(ReferenceCounters, ReleaseWeakRef,   This)
+#    define IReferenceCounters_GetObject(This, ...)    CALL_IFACE_METHOD(ReferenceCounters, GetObject,        This, __VA_ARGS__)
+#    define IReferenceCounters_GetNumStrongRefs(This)  CALL_IFACE_METHOD(ReferenceCounters, GetNumStrongRefs, This)
+#    define IReferenceCounters_GetNumWeakRefs(This)    CALL_IFACE_METHOD(ReferenceCounters, GetNumWeakRefs,   This)
+
+// clang-format on
+
 #endif
 
 DILIGENT_END_NAMESPACE // namespace Diligent

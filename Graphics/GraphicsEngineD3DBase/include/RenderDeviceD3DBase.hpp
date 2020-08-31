@@ -168,6 +168,7 @@ public:
         Features.BinaryOcclusionQueries        = True;
         Features.TimestampQueries              = True;
         Features.PipelineStatisticsQueries     = True;
+        Features.DurationQueries               = True;
         Features.DepthBiasClamp                = True;
         Features.DepthClamp                    = True;
         Features.IndependentBlend              = True;

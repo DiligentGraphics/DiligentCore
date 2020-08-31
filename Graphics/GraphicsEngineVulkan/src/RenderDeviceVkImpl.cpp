@@ -176,6 +176,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.OcclusionQueries                  = vkDeviceFeatures.occlusionQueryPrecise != VK_FALSE;
     Features.BinaryOcclusionQueries            = True;
     Features.TimestampQueries                  = True;
+    Features.DurationQueries                   = True;
     Features.PipelineStatisticsQueries         = vkDeviceFeatures.pipelineStatisticsQuery != VK_FALSE;
     Features.DepthBiasClamp                    = vkDeviceFeatures.depthBiasClamp != VK_FALSE;
     Features.DepthClamp                        = vkDeviceFeatures.depthClamp != VK_FALSE;

@@ -201,7 +201,8 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetQueryTypeString)
     TEST_QUERY_TYPE_ENUM(QUERY_TYPE_BINARY_OCCLUSION);
     TEST_QUERY_TYPE_ENUM(QUERY_TYPE_TIMESTAMP);
     TEST_QUERY_TYPE_ENUM(QUERY_TYPE_PIPELINE_STATISTICS);
-    static_assert(QUERY_TYPE_NUM_TYPES == 5, "Not all QUERY_TYPE enum values are tested");
+    TEST_QUERY_TYPE_ENUM(QUERY_TYPE_DURATION);
+    static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are tested");
 #undef TEST_QUERY_TYPE_ENUM
 }
 

@@ -2000,13 +2000,33 @@ void DeviceContextD3D11Impl::WaitForIdle()
         std::this_thread::yield();
 }
 
+std::shared_ptr<DisjointQueryPool::DisjointQueryWrapper> DeviceContextD3D11Impl::BeginDisjointQuery()
+{
+    if (!m_ActiveDisjointQuery)
+    {
+        m_ActiveDisjointQuery = m_DisjointQueryPool.GetDisjointQuery(m_pDevice->GetD3D11Device());
+        // Disjoint timestamp queries should only be invoked once per frame or less.
+        m_pd3d11DeviceContext->Begin(m_ActiveDisjointQuery->pd3d11Query);
+        m_ActiveDisjointQuery->IsEnded = false;
+    }
+    return m_ActiveDisjointQuery;
+}
+
 void DeviceContextD3D11Impl::BeginQuery(IQuery* pQuery)
 {
     if (!TDeviceContextBase::BeginQuery(pQuery, 0))
         return;
 
-    auto* pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
-    m_pd3d11DeviceContext->Begin(pQueryD3D11Impl->GetD3D11Query());
+    auto* const pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
+    if (pQueryD3D11Impl->GetDesc().Type == QUERY_TYPE_DURATION)
+    {
+        pQueryD3D11Impl->SetDisjointQuery(BeginDisjointQuery());
+        m_pd3d11DeviceContext->End(pQueryD3D11Impl->GetD3D11Query(0));
+    }
+    else
+    {
+        m_pd3d11DeviceContext->Begin(pQueryD3D11Impl->GetD3D11Query(0));
+    }
 }
 
 void DeviceContextD3D11Impl::EndQuery(IQuery* pQuery)
@@ -2014,20 +2034,16 @@ void DeviceContextD3D11Impl::EndQuery(IQuery* pQuery)
     if (!TDeviceContextBase::EndQuery(pQuery, 0))
         return;
 
-    auto* pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
-    if (pQueryD3D11Impl->GetDesc().Type == QUERY_TYPE_TIMESTAMP)
-    {
-        if (!m_ActiveDisjointQuery)
-        {
-            m_ActiveDisjointQuery = m_DisjointQueryPool.GetDisjointQuery(m_pDevice->GetD3D11Device());
-            // Disjoint timestamp queries should only be invoked once per frame or less.
-            m_pd3d11DeviceContext->Begin(m_ActiveDisjointQuery->pd3d11Query);
-            m_ActiveDisjointQuery->IsEnded = false;
-        }
-        pQueryD3D11Impl->SetDisjointQuery(m_ActiveDisjointQuery);
-    }
+    auto* const pQueryD3D11Impl = ValidatedCast<QueryD3D11Impl>(pQuery);
 
-    m_pd3d11DeviceContext->End(pQueryD3D11Impl->GetD3D11Query());
+    const auto QueryType = pQueryD3D11Impl->GetDesc().Type;
+    VERIFY(QueryType != QUERY_TYPE_DURATION || m_ActiveDisjointQuery,
+           "There is no active disjoint query. Did you forget to call BeginQuery for the duration query?");
+    if (QueryType == QUERY_TYPE_TIMESTAMP)
+    {
+        pQueryD3D11Impl->SetDisjointQuery(BeginDisjointQuery());
+    }
+    m_pd3d11DeviceContext->End(pQueryD3D11Impl->GetD3D11Query(QueryType == QUERY_TYPE_DURATION ? 1 : 0));
 }
 
 void DeviceContextD3D11Impl::ClearStateCache()
