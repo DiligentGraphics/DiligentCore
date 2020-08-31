@@ -59,9 +59,9 @@ struct DXILCompilerWin32
     HMODULE               Module         = nullptr;
     DxcCreateInstanceProc CreateInstance = nullptr;
 
-    DXILCompilerWin32(const std::string& name)
+    explicit DXILCompilerWin32(const std::string& name) :
+        Module{LoadLibraryA((name + ".dll").c_str())}
     {
-        Module = LoadLibraryA((name + ".dll").c_str());
         if (Module)
         {
             CreateInstance = reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance"));
@@ -83,7 +83,7 @@ struct DXILCompilerLinux
     void*                 Module         = nullptr;
     DxcCreateInstanceProc CreateInstance = nullptr;
 
-    DXILCompilerLinux(const std::string& name)
+    explicit DXILCompilerLinux(const std::string& name)
     {
         Module = dlopen((name + ".so").c_str(), RTLD_NOW | RTLD_LOCAL);
         if (Module)
@@ -106,7 +106,7 @@ struct DXILCompilerImpl : DXILCompilerBase
 {
     ShaderVersion MaxShaderModel{6, 0};
 
-    DXILCompilerImpl(const std::string& name) :
+    explicit DXILCompilerImpl(const std::string& name) :
         DXILCompilerBase{name}
     {
         if (CreateInstance)
@@ -235,7 +235,7 @@ HRESULT D3D12DxcCreateInstance(
     _Out_ LPVOID* ppv)
 {
     DXILCompilerImpl* DxilCompiler = D3D12CompilerLib();
-    if (DxilCompiler != nullptr || DxilCompiler->CreateInstance != nullptr)
+    if (DxilCompiler != nullptr && DxilCompiler->CreateInstance != nullptr)
         return DxilCompiler->CreateInstance(rclsid, riid, ppv);
     else
         return E_NOTIMPL;

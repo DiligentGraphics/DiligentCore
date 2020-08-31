@@ -100,11 +100,11 @@ TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceTyp
     return new TestingEnvironmentD3D12{deviceType, AdapterType, AdapterId, SCDesc};
 }
 
-HRESULT CompileDXILShader(const std::string&           Source,
-                          LPCWSTR                      strFunctionName,
-                          const std::vector<DxcDefine> Defines,
-                          LPCWSTR                      profile,
-                          ID3DBlob**                   ppBlobOut)
+HRESULT CompileDXILShader(const std::string&            Source,
+                          LPCWSTR                       strFunctionName,
+                          const std::vector<DxcDefine>& Defines,
+                          LPCWSTR                       profile,
+                          ID3DBlob**                    ppBlobOut)
 {
     const wchar_t* pArgs[] =
         {

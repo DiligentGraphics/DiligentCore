@@ -939,12 +939,15 @@ String HLSL2GLSLConverterImpl::ConversionStream::PrintTokenContext(IteratorType&
 }
 
 
-#define VERIFY_PARSER_STATE(Token, Condition, ...)                   \
-    if (!(Condition))                                                \
-    {                                                                \
-        auto err = FormatString(__VA_ARGS__);                        \
-        LOG_ERROR_AND_THROW(err, "\n", PrintTokenContext(Token, 4)); \
-    }
+#define VERIFY_PARSER_STATE(Token, Condition, ...)                       \
+    do                                                                   \
+    {                                                                    \
+        if (!(Condition))                                                \
+        {                                                                \
+            auto err = FormatString(__VA_ARGS__);                        \
+            LOG_ERROR_AND_THROW(err, "\n", PrintTokenContext(Token, 4)); \
+        }                                                                \
+    } while (false)
 
 template <typename IterType>
 bool SkipPrefix(const Char* RefStr, IterType& begin, IterType end)

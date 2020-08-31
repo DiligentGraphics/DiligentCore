@@ -31,7 +31,7 @@ PUBLIC
 
 target_include_directories(Diligent-HLSLTools 
 PUBLIC
-	../../ThirdParty/DirectXShaderCompiler
+    ../../ThirdParty/DirectXShaderCompiler
 )
 
 set_common_target_properties(Diligent-HLSLTools)

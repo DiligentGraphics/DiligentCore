@@ -396,7 +396,6 @@ public:
     {
 #ifdef D12_H_HAS_MESH_SHADER
         FlushResourceBarriers();
-        m_pCommandList6->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
         static_cast<ID3D12GraphicsCommandList6*>(m_pCommandList.p)->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 #else
         UNSUPPORTED("DrawMesh is not supported in current D3D12 header");

@@ -54,7 +54,7 @@ DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
     SHADER_TYPE_COMPUTE       = 0x020, ///< Compute shader
     SHADER_TYPE_AMPLIFICATION = 0x040, ///< Amplification (task) shader
     SHADER_TYPE_MESH          = 0x080, ///< Mesh shader
-    SHADER_TYPE_LAST
+    SHADER_TYPE_LAST          = SHADER_TYPE_MESH
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
 

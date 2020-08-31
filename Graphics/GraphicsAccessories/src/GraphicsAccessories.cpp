@@ -499,7 +499,7 @@ const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
 String GetShaderStagesString(SHADER_TYPE ShaderStages)
 {
     String StagesStr;
-    for (Uint32 Stage = SHADER_TYPE_VERTEX; ShaderStages != 0 && Stage < SHADER_TYPE_LAST; Stage <<= 1)
+    for (Uint32 Stage = SHADER_TYPE_VERTEX; ShaderStages != 0 && Stage <= SHADER_TYPE_LAST; Stage <<= 1)
     {
         if (ShaderStages & Stage)
         {

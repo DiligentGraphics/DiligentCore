@@ -53,11 +53,11 @@ HRESULT CompileD3DShader(const std::string&      Source,
                          LPCSTR                  profile,
                          ID3DBlob**              ppBlobOut);
 
-HRESULT CompileDXILShader(const std::string&           Source,
-                          LPCWSTR                      strFunctionName,
-                          const std::vector<DxcDefine> Defines,
-                          LPCWSTR                      profile,
-                          ID3DBlob**                   ppBlobOut);
+HRESULT CompileDXILShader(const std::string&            Source,
+                          LPCWSTR                       strFunctionName,
+                          const std::vector<DxcDefine>& Defines,
+                          LPCWSTR                       profile,
+                          ID3DBlob**                    ppBlobOut);
 
 class TestingEnvironmentD3D12 final : public TestingEnvironment
 {
