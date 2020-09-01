@@ -173,7 +173,7 @@ static HRESULT CompileDxilShader(const char*             Source,
                      ToUnicode(ShaderCI.EntryPoint),
                      ToUnicode(profile),
                      D3DMacros.data(), D3DMacros.size(),
-                     pArgs, std::size(pArgs),
+                     pArgs, _countof(pArgs),
                      ShaderCI.pShaderSourceStreamFactory,
                      reinterpret_cast<IDxcBlob**>(ppBlobOut),
                      reinterpret_cast<IDxcBlob**>(ppCompilerOutput)))
@@ -352,7 +352,10 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
         }
 
         if (RequiredVersion.Major != 0 && (ShaderModel.Major != RequiredVersion.Major || ShaderModel.Minor != RequiredVersion.Minor))
-            LOG_INFO_MESSAGE("Shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "': version changed to ", ShaderModel.Major, ".", ShaderModel.Minor);
+        {
+            LOG_INFO_MESSAGE("Shader '", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "': version changed from ",
+                             Uint32(RequiredVersion.Major), ".", Uint32(RequiredVersion.Minor), " to ", Uint32(ShaderModel.Major), ".", Uint32(ShaderModel.Minor));
+        }
 
         std::string strShaderProfile;
         switch (ShaderCI.Desc.ShaderType)

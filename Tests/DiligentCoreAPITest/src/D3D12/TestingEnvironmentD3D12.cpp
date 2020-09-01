@@ -120,7 +120,7 @@ HRESULT CompileDXILShader(const std::string&            Source,
                      strFunctionName,
                      profile,
                      Defines.data(), Defines.size(),
-                     pArgs, std::size(pArgs),
+                     pArgs, _countof(pArgs),
                      nullptr,
                      reinterpret_cast<IDxcBlob**>(ppBlobOut),
                      &errors))

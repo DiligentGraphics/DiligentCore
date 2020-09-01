@@ -179,8 +179,11 @@ set(PRIVATE_DEPENDENCIES
     Diligent-TargetPlatform
     Diligent-GraphicsEngineNextGenBase
     Diligent-GLSLTools
-    Diligent-HLSLTools
 )
+
+if(NOT ${DILIGENT_NO_VK_DXIL})
+    list(APPEND PRIVATE_DEPENDENCIES Diligent-HLSLTools)
+endif()
 
 if (${DILIGENT_NO_HLSL})
     message("HLSL support is disabled. Vulkan backend may not be able to consume SPIRV bytecode generated from HLSL.")
@@ -226,7 +229,8 @@ if(NOT Vulkan_FOUND)
         endif()
     endif()
 endif()
-if(EXISTS ${Vulkan_BINARY})
+
+if(NOT ${DILIGENT_NO_VK_DXIL} AND EXISTS ${Vulkan_BINARY})
     set(DILIGENT_HAS_VK_DXIL_COMPILER TRUE CACHE INTERNAL "" FORCE)
     set(DXC_VK_COMPILER_PATH "${Vulkan_BINARY}" CACHE INTERNAL "" FORCE)
     target_compile_definitions(Diligent-GraphicsEngineVk-static PRIVATE DILIGENT_HAS_VK_DXIL_COMPILER)
@@ -249,6 +253,7 @@ elseif(PLATFORM_IOS)
     list(APPEND PRIVATE_DEPENDENCIES ${CORE_GRAPHICS} ${METAL_LIBRARY} ${QUARTZ_CORE} ${UI_KIT})
 elseif(PLATFORM_LINUX)
     # Use Volk
+    list(APPEND PRIVATE_DEPENDENCIES dl)
 elseif(PLATFORM_ANDROID)
     # Use Volk
 else()

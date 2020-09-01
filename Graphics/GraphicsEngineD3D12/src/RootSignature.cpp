@@ -230,7 +230,7 @@ static SHADER_TYPE ShaderVisibility2ShaderTypeMap[] =
 
 SHADER_TYPE ShaderTypeFromShaderVisibility(D3D12_SHADER_VISIBILITY ShaderVisibility)
 {
-    VERIFY_EXPR(uint32_t(ShaderVisibility) < std::size(ShaderVisibility2ShaderTypeMap));
+    VERIFY_EXPR(uint32_t(ShaderVisibility) < _countof(ShaderVisibility2ShaderTypeMap));
     auto ShaderType = ShaderVisibility2ShaderTypeMap[ShaderVisibility];
 #ifdef DILIGENT_DEBUG
     switch (ShaderVisibility)

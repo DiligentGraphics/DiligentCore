@@ -37,7 +37,9 @@
 #if !DILIGENT_NO_GLSLANG
 #    include "SPIRVUtils.hpp"
 #endif
-#include "DXILUtils.hpp"
+#ifdef DILIGENT_HAS_VK_DXIL_COMPILER
+#    include "DXILUtils.hpp"
+#endif
 
 namespace Diligent
 {
@@ -66,9 +68,11 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 
         switch (CreationAttribs.ShaderCompiler)
         {
+#ifdef DILIGENT_HAS_VK_DXIL_COMPILER
             case SHADER_COMPILER_DXC:
                 m_SPIRV = DXILtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
                 break;
+#endif
 
             case SHADER_COMPILER_DEFAULT:
             case SHADER_COMPILER_GLSLANG:

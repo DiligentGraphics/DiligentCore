@@ -29,8 +29,6 @@
 #include <unordered_map>
 #include <memory>
 #include <array>
-#include <locale>
-#include <cwchar>
 
 #ifdef WIN32
 #    include <Unknwn.h>
@@ -40,6 +38,9 @@
 #endif
 
 #include "dxc/dxcapi.h"
+#ifdef PLATFORM_LINUX
+#    undef _countof
+#endif
 
 #include "DXILUtils.hpp"
 #include "DataBlobImpl.hpp"
@@ -170,7 +171,16 @@ public:
 
     HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
     {
-        String fileName = std::wstring_convert<std::codecvt<wchar_t, char, std::mbstate_t>, wchar_t>{}.to_bytes(pFilename);
+        if (pFilename == nullptr)
+            return E_FAIL;
+
+        String fileName;
+        fileName.resize(wcslen(pFilename));
+        for (size_t i = 0; i < fileName.size(); ++i)
+        {
+            fileName[i] = char(pFilename[i]);
+        }
+
         if (fileName.empty())
         {
             LOG_ERROR("Failed to convert shader include file name ", fileName, ". File name must be ANSI string");
@@ -206,7 +216,7 @@ public:
         return S_OK;
     }
 
-    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObject) override
     {
         return E_FAIL;
     }
@@ -504,7 +514,7 @@ std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
                               std::wstring{Attribs.EntryPoint, Attribs.EntryPoint + strlen(Attribs.EntryPoint)}.c_str(),
                               Profile.c_str(),
                               nullptr, 0,
-                              pArgs, std::size(pArgs),
+                              pArgs, _countof(pArgs),
                               Attribs.pShaderSourceStreamFactory,
                               &compiled,
                               &errors);

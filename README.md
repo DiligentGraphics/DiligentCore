@@ -372,7 +372,7 @@ of render targets as well as depth-stencil format:
 
 ```cpp
 // This is a graphics pipeline
-PSODesc.IsComputePipeline                 = false;
+PSODesc.PipelineType                      = PIPELINE_TYPE_GRAPHICS;
 PSODesc.GraphicsPipeline.NumRenderTargets = 1;
 PSODesc.GraphicsPipeline.RTVFormats[0]    = TEX_FORMAT_RGBA8_UNORM_SRGB;
 PSODesc.GraphicsPipeline.DSVFormat        = TEX_FORMAT_D32_FLOAT;
