@@ -129,6 +129,7 @@ TEST(MeshShaderTest, DrawQuad)
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = IsVulkan ? SHADER_COMPILER_DEFAULT : SHADER_COMPILER_DXC;
     ShaderCI.UseCombinedTextureSamplers = true;
 
     RefCntAutoPtr<IShader> pMS;
@@ -239,6 +240,7 @@ TEST(MeshShaderTest, DrawQuadIndirect)
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = IsVulkan ? SHADER_COMPILER_DEFAULT : SHADER_COMPILER_DXC;
     ShaderCI.UseCombinedTextureSamplers = true;
 
     RefCntAutoPtr<IShader> pMS;
@@ -376,6 +378,7 @@ TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = IsVulkan ? SHADER_COMPILER_DEFAULT : SHADER_COMPILER_DXC;
     ShaderCI.UseCombinedTextureSamplers = true;
 
     RefCntAutoPtr<IShader> pAS;

@@ -252,9 +252,10 @@ void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
     CmdSignatureDesc.ByteStride       = sizeof(UINT) * 3;
     IndirectArg.Type                  = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH;
     hr                                = pd3d12Device->CreateCommandSignature(&CmdSignatureDesc, nullptr, IID_PPV_ARGS(&pDrawMeshSignature));
+
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create draw mesh indirect command signature";
 
-    DrawMeshIndirectCommand::D12Specific IndirectBufferData{1, 1, 1};
+    Uint32 IndirectBufferData[3] = {1, 1, 1};
 
     BufferDesc IndirectBufferDesc;
     IndirectBufferDesc.Name          = "Indirect buffer";

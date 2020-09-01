@@ -85,7 +85,7 @@ DILIGENT_TYPED_ENUM(SHADER_COMPILER, Uint32)
 {
     /// Default compiler for specific language and API:
     ///     for Direct3D11 - external FXC
-    ///     for Direct3D12 - external DXC
+    ///     for Direct3D12 - external FXC
     ///     for OpenGL(ES) GLSL - native compiler
     ///     for OpenGL(ES) HLSL - HLSL2GLSL and native compiler
     ///     for Vulkan GLSL - builtin glslang

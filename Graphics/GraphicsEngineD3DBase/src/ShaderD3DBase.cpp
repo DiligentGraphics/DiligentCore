@@ -323,11 +323,11 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
         switch (ShaderCI.ShaderCompiler)
         {
             // clang-format off
-            case SHADER_COMPILER_DEFAULT: m_isDXIL = IsD3D12; break;
-            case SHADER_COMPILER_DXC:     m_isDXIL = true;    break;
-            case SHADER_COMPILER_FXC:     m_isDXIL = false;   break;
+            case SHADER_COMPILER_DEFAULT: m_isDXIL = false; break;
+            case SHADER_COMPILER_DXC:     m_isDXIL = true;  break;
+            case SHADER_COMPILER_FXC:     m_isDXIL = false; break;
                 // clang-format on
-            default: UNEXPECTED("Unsupported shader compiler"); m_isDXIL = IsD3D12;
+            default: UNEXPECTED("Unsupported shader compiler"); m_isDXIL = false;
         }
 
         // validate shader model

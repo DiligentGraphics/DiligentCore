@@ -24,10 +24,13 @@ PRIVATE
     Diligent-BuildSettings
     Diligent-GraphicsAccessories
     Diligent-Common
-    Diligent-GLSLTools
 PUBLIC
     Diligent-GraphicsEngineInterface
 )
+
+if(VULKAN_SUPPORTED)
+    target_link_libraries(Diligent-HLSLTools PRIVATE Diligent-GLSLTools)
+endif()
 
 target_include_directories(Diligent-HLSLTools 
 PUBLIC

@@ -133,10 +133,11 @@ struct DXILCompilerImpl : DXILCompilerBase
                     // map known DXC version to maximum SM
                     switch (ver)
                     {
-                        case 0x10005: MaxShaderModel = {6, 5}; break;
-                        case 0x10004: MaxShaderModel = {6, 4}; break;                                                 // SM 6.4 and SM 6.5 preview
-                        case 0x10002: MaxShaderModel = {6, 2}; break;                                                 // SM 6.1 and SM 6.2 preview
-                        default: MaxShaderModel = (ver > 0x10005 ? ShaderVersion{6, 6} : ShaderVersion{6, 0}); break; // unknown version
+                        case 0x10005: MaxShaderModel = {6, 5}; break; // SM 6.5 and SM 6.6 preview
+                        case 0x10004: MaxShaderModel = {6, 4}; break; // SM 6.4 and SM 6.5 preview
+                        case 0x10003:
+                        case 0x10002: MaxShaderModel = {6, 1}; break; // SM 6.1 and SM 6.2 preview
+                        default: MaxShaderModel = (ver > 0x10005 ? ShaderVersion{6, 6} : ShaderVersion{6, 0}); break;
                     }
                 }
             }
@@ -146,7 +147,7 @@ struct DXILCompilerImpl : DXILCompilerBase
 
 static DXILCompilerImpl* D3D12CompilerLib()
 {
-#    ifdef D3D12_SUPPORTED
+#    if D3D12_SUPPORTED
     static DXILCompilerImpl inst{"dxcompiler"};
     return &inst;
 #    else
@@ -156,7 +157,7 @@ static DXILCompilerImpl* D3D12CompilerLib()
 
 static DXILCompilerImpl* SPIRVCompilerLib()
 {
-#    ifdef VULKAN_SUPPORTED
+#    if VULKAN_SUPPORTED
     static DXILCompilerImpl inst{"vk_dxcompiler"};
     return &inst;
 #    else
@@ -413,6 +414,7 @@ bool DXILCompile(DXILCompilerTarget               Target,
     return true;
 }
 
+#    if VULKAN_SUPPORTED
 // Implemented in GLSLSourceBuilder.cpp
 const char* GetShaderTypeDefines(SHADER_TYPE Type);
 
@@ -569,6 +571,8 @@ std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
     }
     return SPIRV;
 }
+
+#    endif // VULKAN_SUPPORTED
 
 } // namespace Diligent
 

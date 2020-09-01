@@ -41,28 +41,32 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                     "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
                     
             # make sure that global variables defined before being used here
-            if(NOT DEFINED DILIGENT_HAS_DX12_DXIL_COMPILER)
-                message(FATAL_ERROR "DILIGENT_HAS_DX12_DXIL_COMPILER is undefined, check order of cmake includes")
-            endif()
-            if(NOT DEFINED DILIGENT_HAS_VK_DXIL_COMPILER)
-                message(FATAL_ERROR "DILIGENT_HAS_VK_DXIL_COMPILER is undefined, check order of cmake includes")
+            if(D3D12_SUPPORTED)
+                if(NOT DEFINED DILIGENT_HAS_DX12_DXIL_COMPILER)
+                    message(FATAL_ERROR "DILIGENT_HAS_DX12_DXIL_COMPILER is undefined, check order of cmake includes")
+                endif()
+                if(${DILIGENT_HAS_DX12_DXIL_COMPILER})
+                    # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in the same folder as the dxcompiler.dll at runtime.
+                    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            ${DXC_COMPILER_PATH}
+                            "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            ${DXIL_PATH}
+                            "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+                endif()
             endif()
 
-            if(${DILIGENT_HAS_DX12_DXIL_COMPILER})
-                # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in the same folder as the dxcompiler.dll at runtime.
-                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${DXC_COMPILER_PATH}
-                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${DXIL_PATH}
-                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
-            endif ()
-            if(${DILIGENT_HAS_VK_DXIL_COMPILER})
-                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${DXC_VK_COMPILER_PATH}
-                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/vk_dxcompiler.dll\"")
+            if(VULKAN_SUPPORTED)
+                if(NOT DEFINED DILIGENT_HAS_VK_DXIL_COMPILER)
+                    message(FATAL_ERROR "DILIGENT_HAS_VK_DXIL_COMPILER is undefined, check order of cmake includes")
+                endif()
+                if(${DILIGENT_HAS_VK_DXIL_COMPILER})
+                    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            ${DXC_VK_COMPILER_PATH}
+                            "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/vk_dxcompiler.dll\"")
+                endif()
             endif()
         endif()
     endfunction()
