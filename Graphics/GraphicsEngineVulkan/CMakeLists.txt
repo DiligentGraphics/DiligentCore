@@ -353,13 +353,6 @@ else()
     )
 endif()
 
-if(PLATFORM_LINUX)
-    get_filename_component(VULKAN_LIBRARY_PATH ${Vulkan_LIBRARY} DIRECTORY)
-    set_target_properties(Diligent-GraphicsEngineVk-shared PROPERTIES
-        INSTALL_RPATH "${VULKAN_LIBRARY_PATH}"
-    )
-endif()
-
 set_common_target_properties(Diligent-GraphicsEngineVk-shared)
 set_common_target_properties(Diligent-GraphicsEngineVk-static)
 

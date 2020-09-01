@@ -106,6 +106,8 @@ public:
     virtual void DrawIndexed(const DrawIndexedAttribs& Attribs) override final;
     virtual void DrawIndirect(const DrawIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
     virtual void DrawIndexedIndirect(const DrawIndexedIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
+    virtual void DrawMesh(const DrawMeshAttribs& Attribs) override final;
+    virtual void DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;
 
     virtual void DispatchCompute(const DispatchComputeAttribs& Attribs) override final;
     virtual void DispatchComputeIndirect(const DispatchComputeIndirectAttribs& Attribs, IBuffer* pAttribsBuffer) override final;

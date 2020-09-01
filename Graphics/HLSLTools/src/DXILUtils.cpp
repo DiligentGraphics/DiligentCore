@@ -49,6 +49,11 @@
 // Platforms that has DXIL compiler.
 #if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX)
 
+#    ifdef _WIN32
+__declspec(dllimport) HMODULE __stdcall LoadLibraryA(LPCSTR);
+__declspec(dllimport) FARPROC __stdcall GetProcAddress(HMODULE, LPCSTR);
+#    endif
+
 namespace Diligent
 {
 namespace
@@ -362,22 +367,34 @@ bool DXILCompile(DXILCompilerTarget               Target,
     if (FAILED(hr))
         return false;
 
-    CComPtr<IDxcValidator> validator;
-    hr = DxilCompiler->CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
-    if (FAILED(hr))
-        return false;
-
-    CComPtr<IDxcOperationResult> validationResult;
-    hr = validator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &validationResult);
-
-    if (FAILED(hr))
-        return false; // validation failed
-
     // validate and sign in
     if (Target == DXILCompilerTarget::Direct3D12)
     {
-        HRESULT status;
-        if (SUCCEEDED(validationResult->GetStatus(&status)) && FAILED(status))
+        CComPtr<IDxcValidator> validator;
+        hr = DxilCompiler->CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
+        if (FAILED(hr))
+            return false;
+
+        CComPtr<IDxcOperationResult> validationResult;
+        hr = validator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &validationResult);
+
+        if (validationResult == nullptr || FAILED(hr))
+            return false; // validation failed
+
+        HRESULT status = E_FAIL;
+        validationResult->GetStatus(&status);
+
+        if (SUCCEEDED(status))
+        {
+            CComPtr<IDxcBlob> validated;
+            hr = validationResult->GetResult(&validated);
+            if (FAILED(hr))
+                return false;
+
+            *ppBlobOut = validated ? validated.Detach() : compiled.Detach();
+            return true;
+        }
+        else
         {
             CComPtr<IDxcBlobEncoding> validationOutput;
             CComPtr<IDxcBlobEncoding> validationOutputUtf8;

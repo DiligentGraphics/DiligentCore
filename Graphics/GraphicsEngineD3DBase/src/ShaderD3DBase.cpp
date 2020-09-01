@@ -162,7 +162,8 @@ static HRESULT CompileDxilShader(const char*             Source,
             //L"-Qembed_debug", // Embed debug info into the shader (some compilers do not recognize this flag)
             L"-Od", // Disable optimization
 #else
-            L"-O3", // Optimization level 3
+            L"-Od", // TODO: something goes wrong if used any optimizations
+                    //L"-O3", // Optimization level 3
 #endif
         };
 

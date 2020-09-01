@@ -55,7 +55,7 @@ namespace Diligent
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::SetPipelineState() is not implemented");
 
         auto& Desc = pPipelineStateMtl->GetDesc();
-        if (Desc.IsComputePipeline)
+        if (Desc.IsComputePipeline())
         {
 
         }
@@ -136,6 +136,16 @@ namespace Diligent
             return;
     
         LOG_ERROR_MESSAGE("DeviceContextMtlImpl::DrawIndexedIndirect() is not implemented");
+    }
+
+    void DeviceContextMtlImpl::DrawMesh(const DrawMeshAttribs& Attribs)
+    {
+        UNSUPPORTED("DrawMesh is not supported in Metal");
+    }
+
+    void DeviceContextMtlImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attribs, IBuffer* pAttribsBuffer)
+    {
+        UNSUPPORTED("DrawMeshIndirect is not supported in Metal");
     }
 
     void DeviceContextMtlImpl::DispatchCompute(const DispatchComputeAttribs& Attribs)

@@ -35,7 +35,7 @@ PipelineStateMtlImpl::PipelineStateMtlImpl(IReferenceCounters*            pRefCo
     TPipelineStateBase(pRefCounters, pRenderDeviceMtl, CreateInfo.PSODesc)
 {
     LOG_ERROR_AND_THROW("Pipeline states are not implemented in Metal backend");
-    if (CreateInfo.PSODesc.IsComputePipeline)
+    if (CreateInfo.PSODesc.IsComputePipeline())
     {
 
     }
