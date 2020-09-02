@@ -80,6 +80,13 @@ if(VULKAN_SUPPORTED)
     endif()
 endif()
 
+if(NOT ${DILIGENT_NO_GLSLANG})
+    target_include_directories(Diligent-GLSLTools
+    PRIVATE
+        ${spirv-tools_BINARY_DIR}
+        ../../ThirdParty/SPIRV-Tools)
+endif()
+
 set_common_target_properties(Diligent-GLSLTools)
 
 source_group("src" FILES ${SOURCE})

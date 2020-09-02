@@ -39,7 +39,7 @@
 
 
 #if !DILIGENT_NO_HLSL
-#    include "spirv-tools/optimizer.hpp"
+#    include "SPIRVUtils.hpp"
 #endif
 
 namespace Diligent
@@ -129,25 +129,12 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
     return RPDesc;
 }
 
+#if DILIGENT_NO_HLSL
 static std::vector<uint32_t> StripReflection(const std::vector<uint32_t>& OriginalSPIRV)
 {
-#if DILIGENT_NO_HLSL
     return OriginalSPIRV;
-#else
-    std::vector<uint32_t> StrippedSPIRV;
-    spvtools::Optimizer   SpirvOptimizer(SPV_ENV_VULKAN_1_0);
-    // Decorations defined in SPV_GOOGLE_hlsl_functionality1 are the only instructions
-    // removed by strip-reflect-info pass. SPIRV offsets become INVALID after this operation.
-    SpirvOptimizer.RegisterPass(spvtools::CreateStripReflectInfoPass());
-    auto res = SpirvOptimizer.Run(OriginalSPIRV.data(), OriginalSPIRV.size(), &StrippedSPIRV);
-    if (!res)
-    {
-        // Optimized SPIRV may be invalid
-        StrippedSPIRV.clear();
-    }
-    return StrippedSPIRV;
-#endif
 }
+#endif
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCounters,
                                          RenderDeviceVkImpl*            pDeviceVk,
