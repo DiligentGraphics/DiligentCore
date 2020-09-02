@@ -49,6 +49,7 @@ TEST(ShaderResourceLayout, ResourceArray)
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
     ShaderCI.UseCombinedTextureSamplers = true;
     ShaderCI.HLSLVersion                = ShaderVersion{5, 0};
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(SHADER_SOURCE_LANGUAGE_HLSL);
 
     // DXIL compilaer can't compile this shaders
     if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)

@@ -123,6 +123,7 @@ protected:
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         ShaderCI.UseCombinedTextureSamplers = true;
 
         RefCntAutoPtr<IShader> pVS;

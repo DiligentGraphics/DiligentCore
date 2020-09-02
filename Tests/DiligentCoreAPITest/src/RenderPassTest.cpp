@@ -91,6 +91,7 @@ protected:
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         ShaderCI.UseCombinedTextureSamplers = true;
 
         {
@@ -886,6 +887,7 @@ TEST_F(RenderPassTest, InputAttachment)
         ShaderCI.SourceLanguage = IsVulkan ?
             SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM :
             SHADER_SOURCE_LANGUAGE_HLSL;
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
         ShaderCI.UseCombinedTextureSamplers = true;
 

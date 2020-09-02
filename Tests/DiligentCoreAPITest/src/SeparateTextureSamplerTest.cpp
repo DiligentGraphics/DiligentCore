@@ -80,6 +80,7 @@ TEST(SeparateTextureSampler, CreateSampler)
     Attrs.Desc.ShaderType = SHADER_TYPE_VERTEX;
     Attrs.Desc.Name       = "VSMain (TestSeparateTextureSampler)";
     Attrs.SourceLanguage  = SHADER_SOURCE_LANGUAGE_HLSL;
+    Attrs.ShaderCompiler  = pEnv->GetDefaultCompiler(Attrs.SourceLanguage);
     RefCntAutoPtr<IShader> pVS;
     pDevice->CreateShader(Attrs, &pVS);
     ASSERT_TRUE(pVS);

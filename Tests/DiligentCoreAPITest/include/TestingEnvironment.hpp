@@ -98,6 +98,9 @@ public:
 
     static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
 
+    void            SetDefaultCompiler(SHADER_COMPILER value);
+    SHADER_COMPILER GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const;
+
 protected:
     NativeWindow CreateNativeWindow();
 
@@ -126,6 +129,7 @@ protected:
     RefCntAutoPtr<IRenderDevice>  m_pDevice;
     RefCntAutoPtr<IDeviceContext> m_pDeviceContext;
     RefCntAutoPtr<ISwapChain>     m_pSwapChain;
+    SHADER_COMPILER               m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
 
     static std::atomic_int m_NumAllowedErrors;
 };

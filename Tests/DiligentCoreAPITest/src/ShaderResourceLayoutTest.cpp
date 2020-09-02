@@ -129,6 +129,7 @@ protected:
         ShaderCI.Desc.ShaderType = ShaderType;
         ShaderCI.SourceLanguage  = SrcLang;
         ShaderCI.Macros          = Macros;
+        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
         ModifyShaderCI(ShaderCI);
 
@@ -327,11 +328,12 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
     }
     // clang-format on
 
-    auto ModifyShaderCI = [TestStaticSamplers, pDevice](ShaderCreateInfo& ShaderCI) {
+    auto ModifyShaderCI = [TestStaticSamplers, pEnv, pDevice](ShaderCreateInfo& ShaderCI) {
         if (TestStaticSamplers)
         {
             ShaderCI.UseCombinedTextureSamplers = true;
             ShaderCI.HLSLVersion                = ShaderVersion{5, 0};
+            ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
             // DXIL compilaer can't compile this shaders
             if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)

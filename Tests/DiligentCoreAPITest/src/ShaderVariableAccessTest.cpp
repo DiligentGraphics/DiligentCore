@@ -237,6 +237,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         ShaderCI.Desc.Name       = "Shader variable access test VS";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
         ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_DEFAULT;
+        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         ShaderCI.FilePath        = pDevice->GetDeviceCaps().IsD3DDevice() ? "ShaderVariableAccessTestDX.vsh" : "ShaderVariableAccessTestGL.vsh";
 
         pDevice->CreateShader(ShaderCI, &pVS);
@@ -281,6 +282,7 @@ TEST(ShaderResourceLayout, VariableAccess)
         ShaderCI.Desc.Name       = "Shader variable access test PS";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_DEFAULT;
+        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         ShaderCI.FilePath        = pDevice->GetDeviceCaps().IsD3DDevice() ? "ShaderVariableAccessTestDX.psh" : "ShaderVariableAccessTestGL.psh";
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);

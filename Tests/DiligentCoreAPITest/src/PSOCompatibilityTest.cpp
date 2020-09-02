@@ -199,8 +199,9 @@ void main()
 )";
 
 
-RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IRenderDevice* pDevice, const char* VSSource, const char* PSSource)
+RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(TestingEnvironment* pEnv, const char* VSSource, const char* PSSource)
 {
+    auto*                   pDevice = pEnv->GetDevice();
     PipelineStateCreateInfo PSOCreateInfo;
     PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
 
@@ -211,6 +212,7 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IRenderDevice* pDevice, const ch
 
     ShaderCreateInfo CreationAttrs;
     CreationAttrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    CreationAttrs.ShaderCompiler             = pEnv->GetDefaultCompiler(CreationAttrs.SourceLanguage);
     CreationAttrs.UseCombinedTextureSamplers = true;
     RefCntAutoPtr<IShader> pVS;
     {
@@ -242,14 +244,16 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(IRenderDevice* pDevice, const ch
     return pPSO;
 }
 
-RefCntAutoPtr<IPipelineState> CreateComputePSO(IRenderDevice* pDevice, const char* CSSource)
+RefCntAutoPtr<IPipelineState> CreateComputePSO(TestingEnvironment* pEnv, const char* CSSource)
 {
+    auto*                   pDevice = pEnv->GetDevice();
     PipelineStateCreateInfo PSOCreateInfo;
     PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
 
     PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
     ShaderCreateInfo CreationAttrs;
     CreationAttrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    CreationAttrs.ShaderCompiler             = pEnv->GetDefaultCompiler(CreationAttrs.SourceLanguage);
     CreationAttrs.UseCombinedTextureSamplers = true;
     RefCntAutoPtr<IShader> pCS;
     {
@@ -277,18 +281,18 @@ TEST(PSOCompatibility, CompilationFailure)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     auto DevType = pDevice->GetDeviceCaps().DevType;
-    auto PSO0    = CreateGraphicsPSO(pDevice, VS0, PS0);
+    auto PSO0    = CreateGraphicsPSO(pEnv, VS0, PS0);
     ASSERT_TRUE(PSO0);
     EXPECT_TRUE(PSO0->IsCompatibleWith(PSO0));
-    auto PSO0_1 = CreateGraphicsPSO(pDevice, VS0, PS0);
+    auto PSO0_1 = CreateGraphicsPSO(pEnv, VS0, PS0);
     ASSERT_TRUE(PSO0_1);
     EXPECT_TRUE(PSO0->IsCompatibleWith(PSO0_1));
     EXPECT_TRUE(PSO0_1->IsCompatibleWith(PSO0));
 
-    auto PSO_Tex      = CreateGraphicsPSO(pDevice, VS0, PS_Tex);
-    auto PSO_Tex2     = CreateGraphicsPSO(pDevice, VS0, PS_Tex2);
-    auto PSO_TexArr   = CreateGraphicsPSO(pDevice, VS0, PS_TexArr);
-    auto PSO_ArrOfTex = CreateGraphicsPSO(pDevice, VS0, PS_ArrOfTex);
+    auto PSO_Tex      = CreateGraphicsPSO(pEnv, VS0, PS_Tex);
+    auto PSO_Tex2     = CreateGraphicsPSO(pEnv, VS0, PS_Tex2);
+    auto PSO_TexArr   = CreateGraphicsPSO(pEnv, VS0, PS_TexArr);
+    auto PSO_ArrOfTex = CreateGraphicsPSO(pEnv, VS0, PS_ArrOfTex);
     ASSERT_TRUE(PSO_Tex);
     ASSERT_TRUE(PSO_Tex2);
     ASSERT_TRUE(PSO_TexArr);
@@ -306,22 +310,22 @@ TEST(PSOCompatibility, CompilationFailure)
     EXPECT_FALSE(PSO_Tex2->IsCompatibleWith(PSO_ArrOfTex));
     EXPECT_FALSE(PSO_TexArr->IsCompatibleWith(PSO_ArrOfTex));
 
-    auto PSO_CB  = CreateGraphicsPSO(pDevice, VS0, PS_CB);
-    auto PSO1_CB = CreateGraphicsPSO(pDevice, VS0, PS1_CB);
-    auto PSO_2CB = CreateGraphicsPSO(pDevice, VS0, PS_2CB);
+    auto PSO_CB  = CreateGraphicsPSO(pEnv, VS0, PS_CB);
+    auto PSO1_CB = CreateGraphicsPSO(pEnv, VS0, PS1_CB);
+    auto PSO_2CB = CreateGraphicsPSO(pEnv, VS0, PS_2CB);
     EXPECT_TRUE(PSO_CB->IsCompatibleWith(PSO1_CB));
     EXPECT_FALSE(PSO_CB->IsCompatibleWith(PSO_2CB));
 
-    auto PSO_TexCB  = CreateGraphicsPSO(pDevice, VS0, PS_TexCB);
-    auto PSO_TexCB2 = CreateGraphicsPSO(pDevice, VS0, PS_TexCB2);
+    auto PSO_TexCB  = CreateGraphicsPSO(pEnv, VS0, PS_TexCB);
+    auto PSO_TexCB2 = CreateGraphicsPSO(pEnv, VS0, PS_TexCB2);
     EXPECT_TRUE(PSO_TexCB->IsCompatibleWith(PSO_TexCB2));
     EXPECT_TRUE(PSO_TexCB2->IsCompatibleWith(PSO_TexCB));
 
     if (pDevice->GetDeviceCaps().Features.ComputeShaders)
     {
-        auto PSO_RWBuff  = CreateComputePSO(pDevice, CS_RwBuff);
-        auto PSO_RWBuff2 = CreateComputePSO(pDevice, CS_RwBuff2);
-        auto PSO_RWBuff3 = CreateComputePSO(pDevice, CS_RwBuff3);
+        auto PSO_RWBuff  = CreateComputePSO(pEnv, CS_RwBuff);
+        auto PSO_RWBuff2 = CreateComputePSO(pEnv, CS_RwBuff2);
+        auto PSO_RWBuff3 = CreateComputePSO(pEnv, CS_RwBuff3);
         EXPECT_TRUE(PSO_RWBuff);
         EXPECT_TRUE(PSO_RWBuff2);
         EXPECT_TRUE(PSO_RWBuff3);

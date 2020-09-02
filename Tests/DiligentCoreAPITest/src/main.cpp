@@ -81,6 +81,7 @@ int main(int argc, char** argv)
     RENDER_DEVICE_TYPE deviceType  = RENDER_DEVICE_TYPE_UNDEFINED;
     ADAPTER_TYPE       AdapterType = ADAPTER_TYPE_UNKNOWN;
     Uint32             AdapterId   = DEFAULT_ADAPTER_ID;
+    SHADER_COMPILER    ShCompiler  = SHADER_COMPILER_DEFAULT;
     for (int i = 1; i < argc; ++i)
     {
         const std::string AdapterArgName = "--adapter=";
@@ -115,6 +116,10 @@ int main(int argc, char** argv)
         else if (AdapterArgName.compare(0, AdapterArgName.length(), arg, AdapterArgName.length()) == 0)
         {
             AdapterId = static_cast<Uint32>(atoi(arg + AdapterArgName.length()));
+        }
+        else if (strcmp(arg, "--comp=dxc") == 0)
+        {
+            ShCompiler = SHADER_COMPILER_DXC;
         }
     }
 
@@ -180,6 +185,7 @@ int main(int argc, char** argv)
     {
         return -1;
     }
+    pEnv->SetDefaultCompiler(ShCompiler);
     ::testing::AddGlobalTestEnvironment(pEnv);
 
     auto ret_val = RUN_ALL_TESTS();

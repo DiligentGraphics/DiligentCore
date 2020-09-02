@@ -403,6 +403,63 @@ RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXT
     return pTexture;
 }
 
+void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER value)
+{
+    switch (m_pDevice->GetDeviceCaps().DevType)
+    {
+        case RENDER_DEVICE_TYPE_D3D12:
+        {
+            if (value == SHADER_COMPILER_FXC || value == SHADER_COMPILER_DXC)
+                m_ShaderCompiler = value;
+            else
+                m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            break;
+        }
+        case RENDER_DEVICE_TYPE_VULKAN:
+        {
+            if (value == SHADER_COMPILER_GLSLANG || value == SHADER_COMPILER_DXC)
+                m_ShaderCompiler = value;
+            else
+                m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            break;
+        }
+        default:
+            m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+    }
+
+    String msg{"Selected shader compiler: "};
+    switch (m_ShaderCompiler)
+    {
+        // clang-format off
+        case SHADER_COMPILER_DEFAULT: msg += "Default"; break;
+        case SHADER_COMPILER_GLSLANG: msg += "glslang"; break;
+        case SHADER_COMPILER_DXC:     msg += "DXC";     break;
+        case SHADER_COMPILER_FXC:     msg += "FXC";     break;
+            // clang-format on
+    }
+    LOG_INFO_MESSAGE(msg);
+}
+
+SHADER_COMPILER TestingEnvironment::GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const
+{
+    switch (m_pDevice->GetDeviceCaps().DevType)
+    {
+        case RENDER_DEVICE_TYPE_D3D12:
+        {
+            return m_ShaderCompiler;
+        }
+        case RENDER_DEVICE_TYPE_VULKAN:
+        {
+            // all available compilers supports HLSL
+            if (lang == SHADER_SOURCE_LANGUAGE_HLSL)
+                return m_ShaderCompiler;
+
+            return SHADER_COMPILER_GLSLANG;
+        }
+    }
+    return SHADER_COMPILER_DEFAULT;
+}
+
 } // namespace Testing
 
 } // namespace Diligent

@@ -129,6 +129,7 @@ TEST(ComputeShaderTest, FillTexture)
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
     ShaderCI.UseCombinedTextureSamplers = true;
     ShaderCI.Desc.ShaderType            = SHADER_TYPE_COMPUTE;
     ShaderCI.EntryPoint                 = "main";

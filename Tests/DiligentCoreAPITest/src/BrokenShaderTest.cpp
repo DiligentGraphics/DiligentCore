@@ -55,6 +55,7 @@ TEST(Shader, CompilationFailure)
     Attrs.Desc.ShaderType            = SHADER_TYPE_VERTEX;
     Attrs.Desc.Name                  = "Broken shader test";
     Attrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
+    Attrs.ShaderCompiler             = pEnv->GetDefaultCompiler(Attrs.SourceLanguage);
     Attrs.UseCombinedTextureSamplers = true;
 
     IDataBlob* pErrors     = nullptr;
