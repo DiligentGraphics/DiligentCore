@@ -49,17 +49,12 @@
 // Platforms that has DXIL compiler.
 #if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX)
 
-#    ifdef _WIN32
-__declspec(dllimport) HMODULE __stdcall LoadLibraryA(LPCSTR);
-__declspec(dllimport) FARPROC __stdcall GetProcAddress(HMODULE, LPCSTR);
-#    endif
-
 namespace Diligent
 {
 namespace
 {
 
-#    if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS)
+#    ifdef PLATFORM_WIN32
 struct DXILCompilerWin32
 {
     HMODULE               Module         = nullptr;
@@ -82,6 +77,32 @@ struct DXILCompilerWin32
 };
 using DXILCompilerBase = DXILCompilerWin32;
 #    endif // PLATFORM_WIN32
+
+#    ifdef PLATFORM_UNIVERSAL_WINDOWS
+struct DXILCompilerUWP
+{
+    HMODULE               Module         = nullptr;
+    DxcCreateInstanceProc CreateInstance = nullptr;
+
+    explicit DXILCompilerUWP(const std::string& name)
+    {
+        std::wstring wname{name.begin(), name.end()};
+        wname += L".dll";
+        Module = LoadPackagedLibrary(wname.c_str(), 0);
+        if (Module)
+        {
+            CreateInstance = reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance"));
+        }
+    }
+
+    ~DXILCompilerUWP()
+    {
+        if (Module)
+            FreeLibrary(Module);
+    }
+};
+using DXILCompilerBase = DXILCompilerUWP;
+#    endif
 
 #    ifdef PLATFORM_LINUX
 struct DXILCompilerLinux
@@ -272,7 +293,7 @@ bool DXILGetMaxShaderModel(DXILCompilerTarget Target,
         case DXILCompilerTarget::Vulkan: DxilCompiler = SPIRVCompilerLib(); break;
     }
 
-    if (DxilCompiler == nullptr)
+    if (DxilCompiler == nullptr || DxilCompiler->Module == nullptr)
         return false;
 
     Version = DxilCompiler->MaxShaderModel;

@@ -346,8 +346,11 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
                 if (ShaderModel.Major == MaxSM.Major && ShaderModel.Minor > MaxSM.Minor)
                     ShaderModel = MaxSM;
             }
+            else
+                m_isDXIL = false;
         }
-        else
+
+        if (!m_isDXIL)
         {
             ShaderModel = (ShaderModel.Major < 6 ? ShaderModel : (IsD3D12 ? ShaderVersion{5, 1} : ShaderVersion{5, 0}));
         }
