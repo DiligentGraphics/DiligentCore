@@ -320,6 +320,7 @@ public:
     __forceinline VulkanUtilities::VulkanCommandBuffer& GetCommandBuffer()
     {
         EnsureVkCmdBuffer();
+        m_CommandBuffer.FlushBarriers();
         return m_CommandBuffer;
     }
 
