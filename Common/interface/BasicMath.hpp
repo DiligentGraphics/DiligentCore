@@ -94,7 +94,7 @@ template <class T> struct Vector2
 
     Vector2 operator-(const Vector2<T>& right) const
     {
-        return Vector2(x - right.x, y - right.y);
+        return Vector2{x - right.x, y - right.y};
     }
 
     Vector2& operator-=(const Vector2<T>& right)
@@ -106,12 +106,12 @@ template <class T> struct Vector2
 
     Vector2 operator-() const
     {
-        return Vector2(-x, -y);
+        return Vector2{-x, -y};
     }
 
     Vector2 operator+(const Vector2<T>& right) const
     {
-        return Vector2(x + right.x, y + right.y);
+        return Vector2{x + right.x, y + right.y};
     }
 
     Vector2& operator+=(const Vector2<T>& right)
@@ -123,12 +123,12 @@ template <class T> struct Vector2
 
     Vector2 operator*(T s) const
     {
-        return Vector2(x * s, y * s);
+        return Vector2{x * s, y * s};
     }
 
     Vector2 operator*(const Vector2& right) const
     {
-        return Vector2(x * right.x, y * right.y);
+        return Vector2{x * right.x, y * right.y};
     }
 
     Vector2& operator*=(const Vector2& right)
@@ -155,7 +155,7 @@ template <class T> struct Vector2
 
     Vector2 operator/(const Vector2& right) const
     {
-        return Vector2(x / right.x, y / right.y);
+        return Vector2{x / right.x, y / right.y};
     }
 
     Vector2& operator/=(const Vector2& right)
@@ -167,7 +167,7 @@ template <class T> struct Vector2
 
     Vector2 operator/(T s) const
     {
-        return Vector2(x / s, y / s);
+        return Vector2{x / s, y / s};
     }
 
     Vector2& operator/=(T s)
@@ -189,26 +189,26 @@ template <class T> struct Vector2
 
     Vector2 operator<(const Vector2& right) const
     {
-        return Vector2(x < right.x ? static_cast<T>(1) : static_cast<T>(0),
-                       y < right.y ? static_cast<T>(1) : static_cast<T>(0));
+        return Vector2{x < right.x ? static_cast<T>(1) : static_cast<T>(0),
+                       y < right.y ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     Vector2 operator>(const Vector2& right) const
     {
-        return Vector2(x > right.x ? static_cast<T>(1) : static_cast<T>(0),
-                       y > right.y ? static_cast<T>(1) : static_cast<T>(0));
+        return Vector2{x > right.x ? static_cast<T>(1) : static_cast<T>(0),
+                       y > right.y ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     Vector2 operator<=(const Vector2& right) const
     {
-        return Vector2(x <= right.x ? static_cast<T>(1) : static_cast<T>(0),
-                       y <= right.y ? static_cast<T>(1) : static_cast<T>(0));
+        return Vector2{x <= right.x ? static_cast<T>(1) : static_cast<T>(0),
+                       y <= right.y ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     Vector2 operator>=(const Vector2& right) const
     {
-        return Vector2(x >= right.x ? static_cast<T>(1) : static_cast<T>(0),
-                       y >= right.y ? static_cast<T>(1) : static_cast<T>(0));
+        return Vector2{x >= right.x ? static_cast<T>(1) : static_cast<T>(0),
+                       y >= right.y ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     T* Data() { return reinterpret_cast<T*>(this); }
@@ -226,15 +226,18 @@ template <class T> struct Vector2
     }
 
     Vector2() :
-        x(0), y(0) {}
+        x{0}, y{0} {}
     Vector2(T _x, T _y) :
-        x(_x), y(_y) {}
+        x{_x}, y{_y} {}
 
     template <typename Y>
-    static Vector2 MakeVector(Y it)
+    static Vector2 MakeVector(const Y& vals)
     {
-        return Vector2{static_cast<T>(*it++),
-                       static_cast<T>(*it++)};
+        return Vector2 //
+            {
+                static_cast<T>(vals[0]),
+                static_cast<T>(vals[1]) //
+            };
     }
 
     template <typename Y>
@@ -279,12 +282,12 @@ template <class T> struct Vector3
 
     Vector3 operator-(const Vector3& right) const
     {
-        return Vector3(x - right.x, y - right.y, z - right.z);
+        return Vector3{x - right.x, y - right.y, z - right.z};
     }
 
     Vector3 operator-() const
     {
-        return Vector3(-x, -y, -z);
+        return Vector3{-x, -y, -z};
     }
 
     Vector3& operator-=(const Vector3<T>& right)
@@ -297,7 +300,7 @@ template <class T> struct Vector3
 
     Vector3 operator+(const Vector3& right) const
     {
-        return Vector3(x + right.x, y + right.y, z + right.z);
+        return Vector3{x + right.x, y + right.y, z + right.z};
     }
 
     Vector3& operator+=(const Vector3<T>& right)
@@ -310,7 +313,7 @@ template <class T> struct Vector3
 
     Vector3 operator*(T s) const
     {
-        return Vector3(x * s, y * s, z * s);
+        return Vector3{x * s, y * s, z * s};
     }
 
     Vector3& operator*=(T s)
@@ -323,13 +326,13 @@ template <class T> struct Vector3
 
     Vector3 operator*(const Vector3& right) const
     {
-        return Vector3(x * right.x, y * right.y, z * right.z);
+        return Vector3{x * right.x, y * right.y, z * right.z};
     }
 
     Vector3 operator*(const Matrix4x4<T>& m) const
     {
         Vector4<T> out4 = Vector4<T>(x, y, z, 1) * m;
-        return Vector3(out4.x / out4.w, out4.y / out4.w, out4.z / out4.w);
+        return Vector3{out4.x / out4.w, out4.y / out4.w, out4.z / out4.w};
     }
 
     Vector3& operator*=(const Vector3& right)
@@ -351,7 +354,7 @@ template <class T> struct Vector3
 
     Vector3 operator/(T s) const
     {
-        return Vector3(x / s, y / s, z / s);
+        return Vector3{x / s, y / s, z / s};
     }
 
     Vector3& operator/=(T s)
@@ -364,7 +367,7 @@ template <class T> struct Vector3
 
     Vector3 operator/(const Vector3& right) const
     {
-        return Vector3(x / right.x, y / right.y, z / right.z);
+        return Vector3{x / right.x, y / right.y, z / right.z};
     }
 
     Vector3& operator/=(const Vector3& right)
@@ -387,30 +390,30 @@ template <class T> struct Vector3
 
     Vector3 operator<(const Vector3& right) const
     {
-        return Vector3(x < right.x ? static_cast<T>(1) : static_cast<T>(0),
+        return Vector3{x < right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y < right.y ? static_cast<T>(1) : static_cast<T>(0),
-                       z < right.z ? static_cast<T>(1) : static_cast<T>(0));
+                       z < right.z ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     Vector3 operator>(const Vector3& right) const
     {
-        return Vector3(x > right.x ? static_cast<T>(1) : static_cast<T>(0),
+        return Vector3{x > right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y > right.y ? static_cast<T>(1) : static_cast<T>(0),
-                       z > right.z ? static_cast<T>(1) : static_cast<T>(0));
+                       z > right.z ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     Vector3 operator<=(const Vector3& right) const
     {
-        return Vector3(x <= right.x ? static_cast<T>(1) : static_cast<T>(0),
+        return Vector3{x <= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y <= right.y ? static_cast<T>(1) : static_cast<T>(0),
-                       z <= right.z ? static_cast<T>(1) : static_cast<T>(0));
+                       z <= right.z ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     Vector3 operator>=(const Vector3& right) const
     {
-        return Vector3(x >= right.x ? static_cast<T>(1) : static_cast<T>(0),
+        return Vector3{x >= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y >= right.y ? static_cast<T>(1) : static_cast<T>(0),
-                       z >= right.z ? static_cast<T>(1) : static_cast<T>(0));
+                       z >= right.z ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     T* Data() { return reinterpret_cast<T*>(this); }
@@ -428,16 +431,19 @@ template <class T> struct Vector3
     }
 
     Vector3() :
-        x(0), y(0), z(0) {}
+        x{0}, y{0}, z{0} {}
     Vector3(T _x, T _y, T _z) :
-        x(_x), y(_y), z(_z) {}
+        x{_x}, y{_y}, z{_z} {}
 
     template <typename Y>
-    static Vector3 MakeVector(Y it)
+    static Vector3 MakeVector(const Y& vals)
     {
-        return Vector3{static_cast<T>(*it++),
-                       static_cast<T>(*it++),
-                       static_cast<T>(*it++)};
+        return Vector3 //
+            {
+                static_cast<T>(vals[0]),
+                static_cast<T>(vals[1]),
+                static_cast<T>(vals[2]) //
+            };
     }
 
     template <typename Y>
@@ -480,12 +486,12 @@ template <class T> struct Vector4
 
     Vector4 operator-(const Vector4& right) const
     {
-        return Vector4(x - right.x, y - right.y, z - right.z, w - right.w);
+        return Vector4{x - right.x, y - right.y, z - right.z, w - right.w};
     }
 
     Vector4 operator-() const
     {
-        return Vector4(-x, -y, -z, -w);
+        return Vector4{-x, -y, -z, -w};
     }
 
     Vector4& operator-=(const Vector4<T>& right)
@@ -499,7 +505,7 @@ template <class T> struct Vector4
 
     Vector4 operator+(const Vector4& right) const
     {
-        return Vector4(x + right.x, y + right.y, z + right.z, w + right.w);
+        return Vector4{x + right.x, y + right.y, z + right.z, w + right.w};
     }
 
     Vector4& operator+=(const Vector4<T>& right)
@@ -513,7 +519,7 @@ template <class T> struct Vector4
 
     Vector4 operator*(T s) const
     {
-        return Vector4(x * s, y * s, z * s, w * s);
+        return Vector4{x * s, y * s, z * s, w * s};
     }
 
     Vector4& operator*=(T s)
@@ -527,7 +533,7 @@ template <class T> struct Vector4
 
     Vector4 operator*(const Vector4& right) const
     {
-        return Vector4(x * right.x, y * right.y, z * right.z, w * right.w);
+        return Vector4{x * right.x, y * right.y, z * right.z, w * right.w};
     }
 
     Vector4& operator*=(const Vector4& right)
@@ -541,7 +547,7 @@ template <class T> struct Vector4
 
     Vector4 operator/(T s) const
     {
-        return Vector4(x / s, y / s, z / s, w / s);
+        return Vector4{x / s, y / s, z / s, w / s};
     }
 
     Vector4& operator/=(T s)
@@ -555,7 +561,7 @@ template <class T> struct Vector4
 
     Vector4 operator/(const Vector4& right) const
     {
-        return Vector4(x / right.x, y / right.y, z / right.z, w / right.w);
+        return Vector4{x / right.x, y / right.y, z / right.z, w / right.w};
     }
 
     Vector4& operator/=(const Vector4& right)
@@ -599,34 +605,34 @@ template <class T> struct Vector4
 
     Vector4 operator<(const Vector4& right) const
     {
-        return Vector4(x < right.x ? static_cast<T>(1) : static_cast<T>(0),
+        return Vector4{x < right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y < right.y ? static_cast<T>(1) : static_cast<T>(0),
                        z < right.z ? static_cast<T>(1) : static_cast<T>(0),
-                       w < right.w ? static_cast<T>(1) : static_cast<T>(0));
+                       w < right.w ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     Vector4 operator>(const Vector4& right) const
     {
-        return Vector4(x > right.x ? static_cast<T>(1) : static_cast<T>(0),
+        return Vector4{x > right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y > right.y ? static_cast<T>(1) : static_cast<T>(0),
                        z > right.z ? static_cast<T>(1) : static_cast<T>(0),
-                       w > right.w ? static_cast<T>(1) : static_cast<T>(0));
+                       w > right.w ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     Vector4 operator<=(const Vector4& right) const
     {
-        return Vector4(x <= right.x ? static_cast<T>(1) : static_cast<T>(0),
+        return Vector4{x <= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y <= right.y ? static_cast<T>(1) : static_cast<T>(0),
                        z <= right.z ? static_cast<T>(1) : static_cast<T>(0),
-                       w <= right.w ? static_cast<T>(1) : static_cast<T>(0));
+                       w <= right.w ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     Vector4 operator>=(const Vector4& right) const
     {
-        return Vector4(x >= right.x ? static_cast<T>(1) : static_cast<T>(0),
+        return Vector4{x >= right.x ? static_cast<T>(1) : static_cast<T>(0),
                        y >= right.y ? static_cast<T>(1) : static_cast<T>(0),
                        z >= right.z ? static_cast<T>(1) : static_cast<T>(0),
-                       w >= right.w ? static_cast<T>(1) : static_cast<T>(0));
+                       w >= right.w ? static_cast<T>(1) : static_cast<T>(0)};
     }
 
     T* Data() { return reinterpret_cast<T*>(this); }
@@ -644,19 +650,22 @@ template <class T> struct Vector4
     }
 
     Vector4() :
-        x(0), y(0), z(0), w(0) {}
+        x{0}, y{0}, z{0}, w{0} {}
     Vector4(T _x, T _y, T _z, T _w) :
-        x(_x), y(_y), z(_z), w(_w) {}
+        x{_x}, y{_y}, z{_z}, w{_w} {}
     Vector4(const Vector3<T>& v3, T _w) :
-        x(v3.x), y(v3.y), z(v3.z), w(_w) {}
+        x{v3.x}, y{v3.y}, z{v3.z}, w{_w} {}
 
     template <typename Y>
-    static Vector4 MakeVector(Y it)
+    static Vector4 MakeVector(const Y& vals)
     {
-        return Vector4{static_cast<T>(*it++),
-                       static_cast<T>(*it++),
-                       static_cast<T>(*it++),
-                       static_cast<T>(*it++)};
+        return Vector4 //
+            {
+                static_cast<T>(vals[0]),
+                static_cast<T>(vals[1]),
+                static_cast<T>(vals[2]),
+                static_cast<T>(vals[3]) //
+            };
     }
 
     template <typename Y>
@@ -703,32 +712,34 @@ template <class T> struct Matrix2x2
         T m[2][2];
     };
 
-    explicit Matrix2x2(T value)
+    explicit Matrix2x2(T value) :
+        // clang-format off
+        _11{value}, _12{value},
+        _21{value}, _22{value}
+    // clang-format on
     {
-        _11 = _12 = value;
-        _21 = _22 = value;
     }
 
     Matrix2x2() :
-        Matrix2x2(0) {}
+        Matrix2x2{0} {}
 
-    Matrix2x2(
-        T i11,
-        T i12,
-        T i21,
-        T i22)
+    // clang-format off
+    Matrix2x2(T i11, T i12,
+              T i21, T i22) :
+        _11{i11}, _12{i12},
+        _21{i21}, _22{i22}
+    // clang-format on
     {
-        _11 = i11;
-        _12 = i12;
-        _21 = i21;
-        _22 = i22;
     }
 
     template <typename Y>
-    static Matrix2x2 MakeMatrix(Y it)
+    static Matrix2x2 MakeMatrix(const Y& vals)
     {
-        return Matrix2x2{static_cast<T>(*it++), static_cast<T>(*it++),
-                         static_cast<T>(*it++), static_cast<T>(*it++)};
+        return Matrix2x2 //
+            {
+                static_cast<T>(vals[0]), static_cast<T>(vals[1]),
+                static_cast<T>(vals[2]), static_cast<T>(vals[3]) //
+            };
     }
 
     bool operator==(const Matrix2x2& r) const
@@ -867,46 +878,37 @@ template <class T> struct Matrix3x3
         T m[3][3];
     };
 
-    explicit Matrix3x3(T value)
+    explicit Matrix3x3(T value) :
+        // clang-format off
+        _11{value}, _12{value}, _13{value},
+        _21{value}, _22{value}, _23{value},
+        _31{value}, _32{value}, _33{value}
+    // clang-format on
     {
-        _11 = _12 = _13 = value;
-        _21 = _22 = _23 = value;
-        _31 = _32 = _33 = value;
     }
 
     Matrix3x3() :
-        Matrix3x3(0) {}
+        Matrix3x3{0} {}
 
-    Matrix3x3(
-        T i11,
-        T i12,
-        T i13,
-        T i21,
-        T i22,
-        T i23,
-        T i31,
-        T i32,
-        T i33)
+    // clang-format off
+    Matrix3x3(T i11, T i12, T i13,
+              T i21, T i22, T i23,
+              T i31, T i32, T i33) :
+        _11{i11}, _12{i12}, _13{i13}, 
+        _21{i21}, _22{i22}, _23{i23}, 
+        _31{i31}, _32{i32}, _33{i33}
+    // clang-format on
     {
-        _11 = i11;
-        _12 = i12;
-        _13 = i13;
-        _21 = i21;
-        _22 = i22;
-        _23 = i23;
-        _31 = i31;
-        _32 = i32;
-        _33 = i33;
     }
 
     template <typename Y>
-    static Matrix3x3 MakeMatrix(Y it)
+    static Matrix3x3 MakeMatrix(const Y& vals)
     {
         return Matrix3x3 //
             {
-                static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
-                static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
-                static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++) //
+                static_cast<T>(vals[0]), static_cast<T>(vals[1]), static_cast<T>(vals[2]),
+                static_cast<T>(vals[3]), static_cast<T>(vals[4]), static_cast<T>(vals[5]),
+                static_cast<T>(vals[6]), static_cast<T>(vals[7]), static_cast<T>(vals[8]) //
             };
     }
 
@@ -1045,63 +1047,44 @@ template <class T> struct Matrix4x4
         T m[4][4];
     };
 
-    explicit Matrix4x4(T value)
+    explicit Matrix4x4(T value) :
+        // clang-format off
+        _11{value}, _12{value}, _13{value}, _14{value},
+        _21{value}, _22{value}, _23{value}, _24{value},
+        _31{value}, _32{value}, _33{value}, _34{value},
+        _41{value}, _42{value}, _43{value}, _44{value}
+    // clang-format on
     {
-        _11 = _12 = _13 = _14 = value;
-        _21 = _22 = _23 = _24 = value;
-        _31 = _32 = _33 = _34 = value;
-        _41 = _42 = _43 = _44 = value;
     }
 
     Matrix4x4() :
-        Matrix4x4(0) {}
+        Matrix4x4{0} {}
 
-    Matrix4x4(
-        T i11,
-        T i12,
-        T i13,
-        T i14,
-        T i21,
-        T i22,
-        T i23,
-        T i24,
-        T i31,
-        T i32,
-        T i33,
-        T i34,
-        T i41,
-        T i42,
-        T i43,
-        T i44)
+    // clang-format off
+    Matrix4x4(T i11, T i12, T i13, T i14,
+              T i21, T i22, T i23, T i24,
+              T i31, T i32, T i33, T i34,
+              T i41, T i42, T i43, T i44) :
+        _11{i11}, _12{i12}, _13{i13}, _14{i14}, 
+        _21{i21}, _22{i22}, _23{i23}, _24{i24}, 
+        _31{i31}, _32{i32}, _33{i33}, _34{i34}, 
+        _41{i41}, _42{i42}, _43{i43}, _44{i44}
     {
-        _11 = i11;
-        _12 = i12;
-        _13 = i13;
-        _14 = i14;
-        _21 = i21;
-        _22 = i22;
-        _23 = i23;
-        _24 = i24;
-        _31 = i31;
-        _32 = i32;
-        _33 = i33;
-        _34 = i34;
-        _41 = i41;
-        _42 = i42;
-        _43 = i43;
-        _44 = i44;
     }
+    // clang-format on
 
     template <typename Y>
-    static Matrix4x4 MakeMatrix(Y it)
+    static Matrix4x4 MakeMatrix(const Y& vals)
     {
-        return Matrix4x4 //
+        // clang-format off
+        return Matrix4x4
             {
-                static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
-                static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
-                static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++),
-                static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++), static_cast<T>(*it++) //
+                static_cast<T>(vals[ 0]), static_cast<T>(vals[ 1]), static_cast<T>(vals[ 2]), static_cast<T>(vals[ 3]),
+                static_cast<T>(vals[ 4]), static_cast<T>(vals[ 5]), static_cast<T>(vals[ 6]), static_cast<T>(vals[ 7]),
+                static_cast<T>(vals[ 8]), static_cast<T>(vals[ 9]), static_cast<T>(vals[10]), static_cast<T>(vals[11]),
+                static_cast<T>(vals[12]), static_cast<T>(vals[13]), static_cast<T>(vals[14]), static_cast<T>(vals[15])
             };
+        // clang-format on
     }
 
     bool operator==(const Matrix4x4& r) const
@@ -1813,9 +1796,9 @@ struct Quaternion
     }
 
     template <typename Y>
-    static Quaternion MakeQuaternion(Y it)
+    static Quaternion MakeQuaternion(const Y& vals)
     {
-        return Quaternion{float4::MakeVector(it)};
+        return Quaternion{float4::MakeVector(vals)};
     }
 
     static Quaternion RotationFromAxisAngle(const float3& axis, float angle)
