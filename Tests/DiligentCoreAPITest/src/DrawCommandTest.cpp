@@ -347,8 +347,6 @@ protected:
         pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
         pContext->SetPipelineState(pPSO);
-        // Commit shader resources. We don't really have any resources, but this call also sets the shaders in OpenGL backend.
-        pContext->CommitShaderResources(nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
     }
 
     static void Present()
