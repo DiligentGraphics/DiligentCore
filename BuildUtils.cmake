@@ -27,45 +27,44 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
         # Copy D3Dcompiler_47.dll and dxcompiler.dll
         if(MSVC)
             if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-                set(D3D_COMPILER_PATH "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64\\D3Dcompiler_47.dll\"")
-                set(DXC_COMPILER_PATH "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64\\dxcompiler.dll\"")
-                set(DXIL_PATH         "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64\\dxil.dll\"")
+                set(FX_COMPILER_PATH   "\"$(VC_ExecutablePath_x64_x64)\\D3Dcompiler_47.dll\"")
+                set(DXIL_COMPILER_PATH "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64\\dxcompiler.dll\"")
+                set(DXIL_SIGNER_PATH   "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64\\dxil.dll\"")
             else()
-                set(D3D_COMPILER_PATH "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x86\\D3Dcompiler_47.dll\"")
-                set(DXC_COMPILER_PATH "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x86\\dxcompiler.dll\"")
-                set(DXIL_PATH         "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x86\\dxil.dll\"")
+                set(FX_COMPILER_PATH   "\"$(VC_ExecutablePath_x86_x86)\\D3Dcompiler_47.dll\"")
+                set(DXIL_COMPILER_PATH "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x86\\dxcompiler.dll\"")
+                set(DXIL_SIGNER_PATH   "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x86\\dxil.dll\"")
             endif()
             add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    ${D3D_COMPILER_PATH}
+                    ${FX_COMPILER_PATH}
                     "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
-                    
-            # make sure that global variables defined before being used here
+            
             if(D3D12_SUPPORTED)
-                if(NOT DEFINED DILIGENT_HAS_DX12_DXIL_COMPILER)
-                    message(FATAL_ERROR "DILIGENT_HAS_DX12_DXIL_COMPILER is undefined, check order of cmake includes")
+                if(NOT DEFINED DILIGENT_HAS_D3D12_DXIL_COMPILER)
+                    message(FATAL_ERROR "DILIGENT_HAS_D3D12_DXIL_COMPILER is undefined, check order of cmake includes")
                 endif()
-                if(${DILIGENT_HAS_DX12_DXIL_COMPILER})
+                if(${DILIGENT_HAS_D3D12_DXIL_COMPILER})
                     # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in the same folder as the dxcompiler.dll at runtime.
                     add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                            ${DXC_COMPILER_PATH}
+                            ${DXIL_COMPILER_PATH}
                             "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
                         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                            ${DXIL_PATH}
+                            ${DXIL_SIGNER_PATH}
                             "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
                 endif()
             endif()
 
             if(VULKAN_SUPPORTED)
-                if(NOT DEFINED DILIGENT_HAS_VK_DXIL_COMPILER)
-                    message(FATAL_ERROR "DILIGENT_HAS_VK_DXIL_COMPILER is undefined, check order of cmake includes")
+                if(NOT DEFINED DILIGENT_HAS_SPIRV_DXCOMPILER)
+                    message(FATAL_ERROR "DILIGENT_HAS_SPIRV_DXCOMPILER is undefined, check order of cmake includes")
                 endif()
-                if(${DILIGENT_HAS_VK_DXIL_COMPILER})
+                if(${DILIGENT_HAS_SPIRV_DXCOMPILER})
                     add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                            ${DXC_VK_COMPILER_PATH}
-                            "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/vk_dxcompiler.dll\"")
+                            ${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}
+                            "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/spv_dxcompiler.dll\"")
                 endif()
             endif()
         endif()

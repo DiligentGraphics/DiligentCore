@@ -61,7 +61,7 @@ DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
 /// Describes shader source code language
 DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
 {
-    /// Default language (GLSL for OpenGL/OpenGLES devices, HLSL for Direct3D11/Direct3D12 devices)
+    /// Default language (GLSL for OpenGL/OpenGLES/Vulkan devices, HLSL for Direct3D11/Direct3D12 devices)
     SHADER_SOURCE_LANGUAGE_DEFAULT = 0,
 
     /// The source language is HLSL

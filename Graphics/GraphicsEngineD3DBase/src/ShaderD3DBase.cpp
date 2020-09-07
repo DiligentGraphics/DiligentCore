@@ -169,15 +169,15 @@ static HRESULT CompileDxilShader(const char*             Source,
 
     VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
 
-    if (!DXILCompile(DXILCompilerTarget::Direct3D12,
-                     Source, SourceLength,
-                     ToUnicode(ShaderCI.EntryPoint),
-                     ToUnicode(profile),
-                     D3DMacros.data(), D3DMacros.size(),
-                     pArgs, _countof(pArgs),
-                     ShaderCI.pShaderSourceStreamFactory,
-                     reinterpret_cast<IDxcBlob**>(ppBlobOut),
-                     reinterpret_cast<IDxcBlob**>(ppCompilerOutput)))
+    if (!DxcCompile(DXCompilerTarget::Direct3D12,
+                    Source, SourceLength,
+                    ToUnicode(ShaderCI.EntryPoint),
+                    ToUnicode(profile),
+                    D3DMacros.data(), D3DMacros.size(),
+                    pArgs, _countof(pArgs),
+                    ShaderCI.pShaderSourceStreamFactory,
+                    reinterpret_cast<IDxcBlob**>(ppBlobOut),
+                    reinterpret_cast<IDxcBlob**>(ppCompilerOutput)))
     {
         return E_FAIL;
     }
@@ -338,7 +338,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
 
             // clamp to maximum supported version
             ShaderVersion MaxSM;
-            if (DXILGetMaxShaderModel(DXILCompilerTarget::Direct3D12, MaxSM))
+            if (DxcGetMaxShaderModel(DXCompilerTarget::Direct3D12, MaxSM))
             {
                 if (ShaderModel.Major > MaxSM.Major)
                     ShaderModel = MaxSM;

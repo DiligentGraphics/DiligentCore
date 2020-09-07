@@ -115,15 +115,15 @@ HRESULT CompileDXILShader(const std::string&            Source,
 
     CComPtr<IDxcBlob> errors;
 
-    if (!DXILCompile(DXILCompilerTarget::Direct3D12,
-                     Source.c_str(), Source.length(),
-                     strFunctionName,
-                     profile,
-                     Defines.data(), Defines.size(),
-                     pArgs, _countof(pArgs),
-                     nullptr,
-                     reinterpret_cast<IDxcBlob**>(ppBlobOut),
-                     &errors))
+    if (!DxcCompile(DXCompilerTarget::Direct3D12,
+                    Source.c_str(), Source.length(),
+                    strFunctionName,
+                    profile,
+                    Defines.data(), Defines.size(),
+                    pArgs, _countof(pArgs),
+                    nullptr,
+                    reinterpret_cast<IDxcBlob**>(ppBlobOut),
+                    &errors))
     {
         const char* CompilerMsg = errors ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
 

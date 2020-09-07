@@ -42,6 +42,7 @@
 #include "StringTools.hpp"
 #include "EngineMemory.h"
 #include "CommandQueueD3D12Impl.hpp"
+#include "DXILUtils.hpp"
 
 #ifndef NOMINMAX
 #    define NOMINMAX
@@ -379,6 +380,8 @@ void EngineFactoryD3D12Impl::CreateDeviceAndContextsD3D12(const EngineD3D12Creat
 
     std::array<ICommandQueueD3D12*, 1> CmdQueues = {pCmdQueueD3D12};
     AttachToD3D12Device(d3d12Device, CmdQueues.size(), CmdQueues.data(), EngineCI, ppDevice, ppContexts);
+
+    DxcLoadLibrary(DXCompilerTarget::Direct3D12, EngineCI.pDxCompilerPath);
 }
 
 

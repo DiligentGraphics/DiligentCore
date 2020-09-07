@@ -571,10 +571,10 @@ public:                                                                        \
   static REFIID uuidof() { return reinterpret_cast<REFIID>(T##_ID); }          \
                                                                                \
 private:                                                                       \
-  __attribute__((visibility("default"))) static const size_t T##_ID;
+  __attribute__((visibility("hidden"))) static const size_t T##_ID;
 
 #define DEFINE_CROSS_PLATFORM_UUIDOF(T)                                        \
-  __attribute__((visibility("default"))) const size_t T::T##_ID =              \
+  __attribute__((visibility("hidden"))) const size_t T::T##_ID =              \
       UuidStrHash(#T);
 #define __uuidof(T) T::uuidof()
 #define IID_PPV_ARGS(ppType)                                                   \

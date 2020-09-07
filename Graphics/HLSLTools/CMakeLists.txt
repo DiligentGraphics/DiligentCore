@@ -10,6 +10,16 @@ set(SOURCE
     src/DXILUtils.cpp
 )
 
+if(PLATFORM_LINUX)
+    list(APPEND INCLUDE
+        ../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h
+        ../../ThirdParty/DirectXShaderCompiler/dxc/Support/WinAdapter.h
+        ../../ThirdParty/DirectXShaderCompiler/dxc/Support/WinFunctions.h)
+    list(APPEND SOURCE
+        ../../ThirdParty/DirectXShaderCompiler/dxc/Support/dxcapi.cpp
+        ../../ThirdParty/DirectXShaderCompiler/dxc/Support/WinAdapter.cpp)
+endif()
+
 add_library(Diligent-HLSLTools STATIC ${SOURCE} ${INCLUDE})
 
 target_include_directories(Diligent-HLSLTools 

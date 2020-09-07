@@ -567,7 +567,9 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* 
 }
 } // namespace Diligent
 
-// this is modified version of StripReflectInfoPass from SPIRV-Tools
+// This is modified version of StripReflectInfoPass from SPIRV-Tools
+// Original source code licensed under the Apache License, Version 2.0
+// For full license text see "ThirdParty\SPIRV-Tools\LICENSE".
 class StripReflectInfoPass2 : public spvtools::opt::Pass
 {
 public:
@@ -699,7 +701,7 @@ public:
 
 struct spvtools::Optimizer::PassToken::Impl
 {
-    Impl(std::unique_ptr<opt::Pass> p) :
+    explicit Impl(std::unique_ptr<opt::Pass> p) :
         pass(std::move(p)) {}
 
     std::unique_ptr<opt::Pass> pass; // Internal implementation pass.

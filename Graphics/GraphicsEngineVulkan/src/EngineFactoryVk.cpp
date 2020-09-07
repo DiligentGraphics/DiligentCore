@@ -43,6 +43,9 @@
 #if PLATFORM_ANDROID
 #    include "FileSystem.hpp"
 #endif
+#ifdef DILIGENT_HAS_SPIRV_DXCOMPILER
+#    include "DXILUtils.hpp"
+#endif
 
 namespace Diligent
 {
@@ -247,6 +250,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
         std::array<ICommandQueueVk*, 1> CommandQueues = {{pCmdQueueVk}};
         AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), EngineCI, ppDevice, ppContexts);
+
+#ifdef DILIGENT_HAS_SPIRV_DXCOMPILER
+        DxcLoadLibrary(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath);
+#endif
     }
     catch (std::runtime_error&)
     {

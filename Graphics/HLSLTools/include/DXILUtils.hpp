@@ -39,33 +39,37 @@ struct IDxcBlob;
 namespace Diligent
 {
 
-enum class DXILCompilerTarget
+enum class DXCompilerTarget
 {
     Direct3D12,
     Vulkan,
 };
 
-bool DXILGetMaxShaderModel(DXILCompilerTarget Target,
-                           ShaderVersion&     Version);
+// Use this function to load specific library,
+// otherwise default library will be implicitly loaded.
+bool DxcLoadLibrary(DXCompilerTarget Target, const char* name);
 
-bool DXILCompile(DXILCompilerTarget               Target,
-                 const char*                      Source,
-                 size_t                           SourceLength,
-                 const wchar_t*                   EntryPoint,
-                 const wchar_t*                   Profile,
-                 const DxcDefine*                 pDefines,
-                 size_t                           DefinesCount,
-                 const wchar_t**                  pArgs,
-                 size_t                           ArgsCount,
-                 IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                 IDxcBlob**                       ppBlobOut,
-                 IDxcBlob**                       ppCompilerOutput);
+bool DxcGetMaxShaderModel(DXCompilerTarget Target,
+                          ShaderVersion&   Version);
+
+bool DxcCompile(DXCompilerTarget                 Target,
+                const char*                      Source,
+                size_t                           SourceLength,
+                const wchar_t*                   EntryPoint,
+                const wchar_t*                   Profile,
+                const DxcDefine*                 pDefines,
+                size_t                           DefinesCount,
+                const wchar_t**                  pArgs,
+                size_t                           ArgsCount,
+                IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                IDxcBlob**                       ppBlobOut,
+                IDxcBlob**                       ppCompilerOutput);
 
 std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
                                   const char*             ExtraDefinitions,
                                   IDataBlob**             ppCompilerOutput);
 
-#ifdef D3D12_SUPPORTED
+#if D3D12_SUPPORTED
 // calls DxcCreateInstance
 HRESULT D3D12DxcCreateInstance(
     _In_ REFCLSID rclsid,

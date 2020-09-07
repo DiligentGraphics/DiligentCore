@@ -1685,6 +1685,10 @@ struct EngineD3D12CreateInfo DILIGENT_DERIVE(EngineCreateInfo)
         }
 #endif
     ;
+
+    /// Path to DirectX Shader Compiler, which required to use Shader Module 6 features.
+    /// By default engine will search for "dxcompiler.dll".
+    const char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct EngineD3D12CreateInfo EngineD3D12CreateInfo;
 
@@ -1823,6 +1827,9 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     }
 #endif
     ;
+
+    /// Path to DirectX Shader Compiler, which required to use Shader Module 6 features for HLSL.
+    const char* pDxCompilerPath DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct EngineVkCreateInfo EngineVkCreateInfo;
 
