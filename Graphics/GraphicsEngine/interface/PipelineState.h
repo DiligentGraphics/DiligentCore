@@ -276,10 +276,10 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Pipeline layout description
     PipelineResourceLayoutDesc ResourceLayout;
 
-    /// Graphics pipeline state description. This memeber is ignored if PipelineType == PIPELINE_TYPE_GRAPHICS or PIPELINE_TYPE_MESH
+    /// Graphics pipeline state description. This memeber is ignored if PipelineType != PIPELINE_TYPE_GRAPHICS or PIPELINE_TYPE_MESH
     GraphicsPipelineDesc GraphicsPipeline;
 
-    /// Compute pipeline state description. This memeber is ignored if PipelineType == PIPELINE_TYPE_COMPUTE
+    /// Compute pipeline state description. This memeber is ignored if PipelineType != PIPELINE_TYPE_COMPUTE
     ComputePipelineDesc ComputePipeline;
     
 #if DILIGENT_CPP_INTERFACE

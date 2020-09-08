@@ -1431,7 +1431,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 
     if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_GRAPHICS)
     {
-        LOG_ERROR_MESSAGE("Draw command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+        LOG_ERROR_MESSAGE("Draw command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
         return false;
     }
 
@@ -1459,7 +1459,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_GRAPHICS)
     {
         LOG_ERROR_MESSAGE("DrawIndexed command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+                          m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
         return false;
     }
 
@@ -1500,7 +1500,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_MESH)
     {
         LOG_ERROR_MESSAGE("DrawMesh command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+                          m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
         return false;
     }
 
@@ -1529,7 +1529,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     {
 
         LOG_ERROR_MESSAGE("DrawIndirect command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+                          m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
         return false;
     }
 
@@ -1574,7 +1574,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_GRAPHICS)
     {
         LOG_ERROR_MESSAGE("DrawIndexedIndirect command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+                          m_pPipelineState->GetDesc().Name, "' is not a graphics pipeline.");
         return false;
     }
 
@@ -1632,7 +1632,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_MESH)
     {
         LOG_ERROR_MESSAGE("DrawMeshIndirect command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is a compute pipeline.");
+                          m_pPipelineState->GetDesc().Name, "' is not a mesh pipeline.");
         return false;
     }
 
@@ -1721,7 +1721,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_COMPUTE)
     {
         LOG_ERROR_MESSAGE("DispatchCompute command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name,
-                          "' is a graphics pipeline.");
+                          "' is not a compute pipeline.");
         return false;
     }
 
@@ -1756,7 +1756,7 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     if (m_pPipelineState->GetDesc().PipelineType != PIPELINE_TYPE_COMPUTE)
     {
         LOG_ERROR_MESSAGE("DispatchComputeIndirect command arguments are invalid: pipeline state '",
-                          m_pPipelineState->GetDesc().Name, "' is a graphics pipeline.");
+                          m_pPipelineState->GetDesc().Name, "' is not a compute pipeline.");
         return false;
     }
 
