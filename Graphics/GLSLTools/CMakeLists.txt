@@ -71,6 +71,7 @@ if(VULKAN_SUPPORTED)
         PRIVATE
             glslang
             SPIRV
+            SPIRV-Tools-opt
         )
 
         target_include_directories(Diligent-GLSLTools 

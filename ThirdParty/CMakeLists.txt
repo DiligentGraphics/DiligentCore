@@ -35,12 +35,12 @@ if(VULKAN_SUPPORTED)
         set(CMAKE_MACOSX_RPATH TRUE)
         add_subdirectory(SPIRV-Tools)
         set_directory_root_folder("SPIRV-Tools" "DiligentCore/ThirdParty/SPIRV-Tools")
-        # We only need SPIRV-Tools-opt for glslang that also depends on SPIRV-Tools.
-        # Exclude all other targets from build to save build time
+        # We only need SPIRV-Tools-opt for glslang that also depends on SPIRV-Tools-static.
+        # Exclude all other targets from the build to save build time
         set(SPIRV_TOOLS_EXCLUDE_TARGETS SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared)
         set_target_properties(${SPIRV_TOOLS_EXCLUDE_TARGETS} PROPERTIES EXCLUDE_FROM_ALL 1 EXCLUDE_FROM_DEFAULT_BUILD 1)
 
-        set(INSTALL_TARGETS SPIRV-Tools SPIRV-Tools-opt)
+        set(INSTALL_TARGETS SPIRV-Tools-static SPIRV-Tools-opt)
         install(FILES SPIRV-Tools/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Tools-License.txt)
     endif()
 
@@ -55,7 +55,7 @@ if(VULKAN_SUPPORTED)
         # glslang "kindly" sets global CMAKE_DEBUG_POSTFIX to "d", which we have to unset now
         unset(CMAKE_DEBUG_POSTFIX CACHE)
 
-        list(APPEND INSTALL_TARGETS glslang OGLCompiler OSDependent SPIRV HLSL)
+        list(APPEND INSTALL_TARGETS GenericCodeGen glslang OGLCompiler OSDependent SPIRV HLSL)
         install(FILES glslang/LICENSE.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME GLSLang-License.txt)
     endif()
 
