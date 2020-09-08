@@ -369,8 +369,8 @@ TEST_F(RenderPassTest, CreateRenderPassAndFramebuffer)
                     if (SP1.pResolveAttachments[i].AttachmentIndex != SP2.pResolveAttachments[i].AttachmentIndex)
                         return false;
 
-                    if (!(SP1.pResolveAttachments[i].State == SP2.pResolveAttachments[i].State ||
-                          SP1.pResolveAttachments[i].State == RESOURCE_STATE_RESOLVE_DEST && SP2.pResolveAttachments[i].State == RESOURCE_STATE_RENDER_TARGET))
+                    if (!((SP1.pResolveAttachments[i].State == SP2.pResolveAttachments[i].State) ||
+                          (SP1.pResolveAttachments[i].State == RESOURCE_STATE_RESOLVE_DEST && SP2.pResolveAttachments[i].State == RESOURCE_STATE_RENDER_TARGET)))
                         return false;
                 }
             }
