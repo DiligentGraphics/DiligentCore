@@ -179,11 +179,8 @@ set(PRIVATE_DEPENDENCIES
     Diligent-TargetPlatform
     Diligent-GraphicsEngineNextGenBase
     Diligent-GLSLTools
+    Diligent-HLSLTools
 )
-
-if(NOT ${DILIGENT_NO_DXC_SPIRV})
-    list(APPEND PRIVATE_DEPENDENCIES Diligent-HLSLTools)
-endif()
 
 if (${DILIGENT_NO_HLSL})
     message("HLSL support is disabled. Vulkan backend may not be able to consume SPIRV bytecode generated from HLSL.")
@@ -194,51 +191,43 @@ endif()
 # Use DirectX shader compiler for SPIRV.
 # This is another implementation of DXC that can compile only to SPIRV.
 # DXC for D3D12 can compile only to DXIL.
-if(NOT ${DILIGENT_NO_DXC_SPIRV})
-    if(PLATFORM_WIN32)
-        # find Vulkan SDK
-        if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.7")
-            find_package(Vulkan)
-            if(Vulkan_FOUND)
-                get_filename_component(VulkanSDKPath ${Vulkan_LIBRARY} DIRECTORY)
-                set(VulkanSDKPath "${VulkanSDKPath}/..")
-                if(NOT EXISTS "${VulkanSDKPath}")
-                    message(STATUS "can't get Vulkan SDK path")
-                endif()
-                if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-                    set(DXC_SPIRV_PATH "${VulkanSDKPath}/Bin/dxcompiler.dll")
-                else()
-                    set(DXC_SPIRV_PATH "${VulkanSDKPath}/Bin32/dxcompiler.dll")
-                endif()
+if(PLATFORM_WIN32)
+    # find Vulkan SDK
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.7")
+        find_package(Vulkan)
+        if(Vulkan_FOUND)
+            get_filename_component(VulkanSDKPath ${Vulkan_LIBRARY} DIRECTORY)
+            set(VulkanSDKPath "${VulkanSDKPath}/..")
+            if(NOT EXISTS "${VulkanSDKPath}")
+                message(STATUS "can't get Vulkan SDK path")
+            endif()
+            if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+                set(DXC_SPIRV_PATH "${VulkanSDKPath}/Bin/dxcompiler.dll")
+            else()
+                set(DXC_SPIRV_PATH "${VulkanSDKPath}/Bin32/dxcompiler.dll")
             endif()
         endif()
-        # Try to find Vulkan SDK from environment variable
-        if(NOT Vulkan_FOUND)
-            if(EXISTS "$ENV{VULKAN_SDK}")
-                if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-                    set(DXC_SPIRV_PATH "$ENV{VULKAN_SDK}/Bin/dxcompiler.dll")
-                else()
-                    set(DXC_SPIRV_PATH "$ENV{VULKAN_SDK}/Bin32/dxcompiler.dll")
-                endif()
-            endif()
-        endif()
-    endif(PLATFORM_WIN32)
- 
-    if(PLATFORM_LINUX)
-        # VulkanSDK installs dxc to this path
-        set(DXC_SPIRV_PATH "/usr/lib/dxc/libdxcompiler.so")
     endif()
+    # Try to find Vulkan SDK from environment variable
+    if(NOT Vulkan_FOUND)
+        if(EXISTS "$ENV{VULKAN_SDK}")
+            if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
+                set(DXC_SPIRV_PATH "$ENV{VULKAN_SDK}/Bin/dxcompiler.dll")
+            else()
+                set(DXC_SPIRV_PATH "$ENV{VULKAN_SDK}/Bin32/dxcompiler.dll")
+            endif()
+        endif()
+    endif()
+endif(PLATFORM_WIN32)
 
-    if(EXISTS ${DXC_SPIRV_PATH})
-        set(DILIGENT_HAS_SPIRV_DXCOMPILER TRUE CACHE INTERNAL "" FORCE)
-        set(DILIGENT_DXCOMPILER_FOR_SPIRV_PATH "${DXC_SPIRV_PATH}" CACHE INTERNAL "" FORCE)
-        target_compile_definitions(Diligent-GraphicsEngineVk-static PRIVATE DILIGENT_HAS_SPIRV_DXCOMPILER)
-        message(STATUS "Found DXCompiler for Vulkan")
-    else()
-        set(DILIGENT_HAS_SPIRV_DXCOMPILER FALSE CACHE INTERNAL "" FORCE)
-    endif()
-else()
-    set(DILIGENT_HAS_SPIRV_DXCOMPILER FALSE CACHE INTERNAL "" FORCE)
+if(PLATFORM_LINUX)
+    # VulkanSDK installs dxc to this path
+    set(DXC_SPIRV_PATH "/usr/lib/dxc/libdxcompiler.so")
+endif()
+
+if(EXISTS ${DXC_SPIRV_PATH})
+    set(DILIGENT_DXCOMPILER_FOR_SPIRV_PATH "${DXC_SPIRV_PATH}" CACHE INTERNAL "" FORCE)
+    message(STATUS "Found DXCompiler for Vulkan")
 endif()
 
 if(PLATFORM_WIN32)

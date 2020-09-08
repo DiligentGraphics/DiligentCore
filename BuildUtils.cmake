@@ -57,10 +57,10 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
             endif()
 
             if(VULKAN_SUPPORTED)
-                if(NOT DEFINED DILIGENT_HAS_SPIRV_DXCOMPILER)
-                    message(FATAL_ERROR "DILIGENT_HAS_SPIRV_DXCOMPILER is undefined, check order of cmake includes")
+                if(NOT DEFINED DILIGENT_DXCOMPILER_FOR_SPIRV_PATH)
+                    message(FATAL_ERROR "DILIGENT_DXCOMPILER_FOR_SPIRV_PATH is undefined, check order of cmake includes")
                 endif()
-                if(${DILIGENT_HAS_SPIRV_DXCOMPILER})
+                if(EXISTS ${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH})
                     add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                         COMMAND ${CMAKE_COMMAND} -E copy_if_different
                             ${DILIGENT_DXCOMPILER_FOR_SPIRV_PATH}

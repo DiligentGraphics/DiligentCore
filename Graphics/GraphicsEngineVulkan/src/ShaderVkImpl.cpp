@@ -33,12 +33,10 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "DataBlobImpl.hpp"
 #include "GLSLSourceBuilder.hpp"
+#include "DXILUtils.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "SPIRVUtils.hpp"
-#endif
-#ifdef DILIGENT_HAS_SPIRV_DXCOMPILER
-#    include "DXILUtils.hpp"
 #endif
 
 namespace Diligent
@@ -68,11 +66,9 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 
         switch (CreationAttribs.ShaderCompiler)
         {
-#ifdef DILIGENT_HAS_SPIRV_DXCOMPILER
             case SHADER_COMPILER_DXC:
                 m_SPIRV = DXILtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
                 break;
-#endif
 
             case SHADER_COMPILER_DEFAULT:
             case SHADER_COMPILER_GLSLANG:

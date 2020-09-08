@@ -37,17 +37,18 @@
 #    include <atlcom.h>
 #endif
 
-#include "dxc/dxcapi.h"
-#ifdef PLATFORM_LINUX
-#    undef _countof
-#endif
-
 #include "DXILUtils.hpp"
-#include "DataBlobImpl.hpp"
-#include "RefCntAutoPtr.hpp"
 
 // Platforms that has DXCompiler.
 #if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX)
+
+#    include "dxc/dxcapi.h"
+#    ifdef PLATFORM_LINUX
+#        undef _countof
+#    endif
+
+#    include "DataBlobImpl.hpp"
+#    include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
@@ -637,19 +638,38 @@ std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
 namespace Diligent
 {
 
-bool DXILCompile(DXCompilerTarget                 Target,
-                 const char*                      Source,
-                 const wchar_t*                   EntryPoint,
-                 const wchar_t*                   Profile,
-                 const DxcDefine*                 pDefines,
-                 size_t                           DefinesCount,
-                 const wchar_t**                  pArgs,
-                 size_t                           ArgsCount,
-                 IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                 IDxcBlob**                       ppBlobOut,
-                 IDxcBlob**                       ppCompilerOutput)
+bool DxcLoadLibrary(DXCompilerTarget Target, const char* name)
 {
     return false;
+}
+
+bool DxcGetMaxShaderModel(DXCompilerTarget Target,
+                          ShaderVersion&   Version)
+{
+    return false;
+}
+
+bool DxcCompile(DXCompilerTarget                 Target,
+                const char*                      Source,
+                size_t                           SourceLength,
+                const wchar_t*                   EntryPoint,
+                const wchar_t*                   Profile,
+                const DxcDefine*                 pDefines,
+                size_t                           DefinesCount,
+                const wchar_t**                  pArgs,
+                size_t                           ArgsCount,
+                IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                IDxcBlob**                       ppBlobOut,
+                IDxcBlob**                       ppCompilerOutput)
+{
+    return false;
+}
+
+std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
+                                  const char*             ExtraDefinitions,
+                                  IDataBlob**             ppCompilerOutput)
+{
+    return {};
 }
 
 } // namespace Diligent
