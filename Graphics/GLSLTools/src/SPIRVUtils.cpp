@@ -44,18 +44,6 @@
 
 #include "spirv-tools/optimizer.hpp"
 
-// SPIRV-Tools source
-#ifdef _MSC_VER
-#    pragma warning(push, 0)
-#endif
-#include "source/opt/ir_context.h"
-#include "source/opt/module.h"
-#include "source/opt/pass.h"
-#include "source/opt/instruction.h"
-#ifdef _MSC_VER
-#    pragma warning(pop)
-#endif
-
 // clang-format off
 static const char g_HLSLDefinitions[] =
 {
