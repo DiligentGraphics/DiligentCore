@@ -32,16 +32,13 @@
 #include "ShaderD3DBase.hpp"
 #include "ShaderBase.hpp"
 #include "DXILUtils.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
+#include "dxc/dxcapi.h"
 
 namespace Diligent
 {
 
 
-ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob*              pShaderBytecode,
-                                           const ShaderDesc&      ShdrDesc,
-                                           const char*            CombinedSamplerSuffix,
-                                           RenderDeviceD3D12Impl* pRenderDeviceD3D12) :
+ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, bool isDXIL, const ShaderDesc& ShdrDesc, const char* CombinedSamplerSuffix) :
     ShaderResources{ShdrDesc.ShaderType}
 {
     class NewResourceHandler
@@ -58,13 +55,29 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob*              pShaderBytecod
     };
 
     CComPtr<ID3D12ShaderReflection> pShaderReflection;
-    auto*                           DxCompiler = pRenderDeviceD3D12->GetDxCompiler();
 
-    // At first try to get shader reflection with a DXC.
-    if (!DxcGetShaderReflection(DxCompiler, reinterpret_cast<IDxcBlob*>(pShaderBytecode), &pShaderReflection))
+    if (isDXIL)
     {
-        // Use FXC to get reflection.
-        HRESULT hr = D3DReflect(pShaderBytecode->GetBufferPointer(), pShaderBytecode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
+        CComPtr<IDxcContainerReflection> pReflection;
+
+        auto hr = D3D12DxcCreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to create shader reflection instance");
+
+        hr = pReflection->Load(reinterpret_cast<IDxcBlob*>(pShaderBytecode));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to load shader reflection from bytecode");
+
+        UINT32           shaderIdx = 0;
+        constexpr UINT32 DFCC_DXIL = UINT32{'D'} | (UINT32{'X'} << 8) | (UINT32{'I'} << 16) | (UINT32{'L'} << 24);
+
+        hr = pReflection->FindFirstPartKind(DFCC_DXIL, &shaderIdx);
+        CHECK_D3D_RESULT_THROW(hr, "Failed to find DXIL part");
+
+        hr = pReflection->GetPartReflection(shaderIdx, __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
+        CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
+    }
+    else
+    {
+        auto hr = D3DReflect(pShaderBytecode->GetBufferPointer(), pShaderBytecode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
         CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
     }
 
