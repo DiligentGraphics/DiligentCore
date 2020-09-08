@@ -189,11 +189,11 @@ struct GraphicsPipelineDesc
     /// Depth-stencil state description.
     DepthStencilStateDesc DepthStencilDesc;
 
-    /// Input layout, ignored in mesh pipeline.
+    /// Input layout, ignored in a mesh pipeline.
     InputLayoutDesc InputLayout;
     //D3D12_INDEX_BUFFER_STRIP_CUT_VALUE IBStripCutValue;
 
-    /// Primitive topology type, ignored in mesh pipeline.
+    /// Primitive topology type, ignored in a mesh pipeline.
     PRIMITIVE_TOPOLOGY PrimitiveTopology DEFAULT_INITIALIZER(PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
 
     /// The number of viewports used by this pipeline
@@ -244,19 +244,21 @@ struct ComputePipelineDesc
 };
 typedef struct ComputePipelineDesc ComputePipelineDesc;
 
+
 /// Pipeline type
 DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
 {
-    /// Graphics pipeline used in IDeviceContext::Draw(), IDeviceContext::DrawIndexed(),
+    /// Graphics pipeline, which is used by IDeviceContext::Draw(), IDeviceContext::DrawIndexed(),
     /// IDeviceContext::DrawIndirect(), IDeviceContext::DrawIndexedIndirect().
     PIPELINE_TYPE_GRAPHICS,
 
-    /// Compute pipeline used in IDeviceContext::DispatchCompute(), IDeviceContext::DispatchComputeIndirect().
+    /// Compute pipeline, which is used by IDeviceContext::DispatchCompute(), IDeviceContext::DispatchComputeIndirect().
     PIPELINE_TYPE_COMPUTE,
 
-    // Mesh pipeline used in IDeviceContext::DrawMesh(), IDeviceContext::DrawMeshIndirect().
+    /// Mesh pipeline, which is used by IDeviceContext::DrawMesh(), IDeviceContext::DrawMeshIndirect().
     PIPELINE_TYPE_MESH,
 };
+
 
 /// Pipeline state description
 struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
@@ -276,10 +278,10 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Pipeline layout description
     PipelineResourceLayoutDesc ResourceLayout;
 
-    /// Graphics pipeline state description. This memeber is ignored if PipelineType != PIPELINE_TYPE_GRAPHICS or PIPELINE_TYPE_MESH
+    /// Graphics pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_GRAPHICS or PIPELINE_TYPE_MESH
     GraphicsPipelineDesc GraphicsPipeline;
 
-    /// Compute pipeline state description. This memeber is ignored if PipelineType != PIPELINE_TYPE_COMPUTE
+    /// Compute pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_COMPUTE
     ComputePipelineDesc ComputePipeline;
     
 #if DILIGENT_CPP_INTERFACE

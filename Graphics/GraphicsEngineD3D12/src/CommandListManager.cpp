@@ -53,7 +53,7 @@ void CommandListManager::CreateNewCommandList(ID3D12GraphicsCommandList** List, 
 
     const IID CmdListIIDs[] =
         {
-#ifdef D12_H_HAS_MESH_SHADER
+#ifdef D3D12_H_HAS_MESH_SHADER
             __uuidof(ID3D12GraphicsCommandList6),
             __uuidof(ID3D12GraphicsCommandList5),
 #endif

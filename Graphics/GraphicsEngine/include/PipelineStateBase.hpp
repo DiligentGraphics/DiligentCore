@@ -191,11 +191,11 @@ public:
             {
                 DEV_CHECK_ERR(GraphicsPipeline.pMS, "Mesh shader must be defined");
                 DEV_CHECK_ERR(!GraphicsPipeline.pVS && !GraphicsPipeline.pGS && !GraphicsPipeline.pDS && !GraphicsPipeline.pHS,
-                              "Vertex, geometry and tessellation shaders are not supported in mesh pipeline");
+                              "Vertex, geometry and tessellation shaders are not supported in a mesh pipeline");
                 DEV_CHECK_ERR(GraphicsPipeline.InputLayout.NumElements == 0, "Input layout ignored in mesh shader");
                 DEV_CHECK_ERR(GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
                                   GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_UNDEFINED,
-                              "Primitive topology ignored in mesh pipeline, set it to undefined or keep default value (triangle list)");
+                              "Primitive topology is ignored in a mesh pipeline, set it to undefined or keep default value (triangle list)");
                 m_pAS = GraphicsPipeline.pAS;
                 m_pMS = GraphicsPipeline.pMS;
                 m_pPS = GraphicsPipeline.pPS;
@@ -451,18 +451,7 @@ protected:
     size_t   m_ShaderResourceLayoutHash           = 0;  ///< Hash computed from the shader resource layout
 
 private:
-#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", PipelineTypeToString(), " PSO '", this->m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)
-
-    const char* PipelineTypeToString() const
-    {
-        switch (this->m_Desc.PipelineType)
-        {
-            case PIPELINE_TYPE_COMPUTE: return "compute";
-            case PIPELINE_TYPE_GRAPHICS: return "graphics";
-            case PIPELINE_TYPE_MESH: return "mesh";
-        }
-        return "unknown";
-    }
+#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", GetPipelineTypeString(this->m_Desc.PipelineType), " PSO '", this->m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)
 
     void ValidateDesc() const
     {

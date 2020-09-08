@@ -55,7 +55,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
 {
     DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
     DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
-    DEV_CHECK_ERR(CreationAttribs.ShaderCompiler == SHADER_COMPILER_DEFAULT, "only default compiler supported on OpenGL");
+    DEV_CHECK_ERR(CreationAttribs.ShaderCompiler == SHADER_COMPILER_DEFAULT, "only default compiler is supported in OpenGL");
 
     const auto& deviceCaps = pDeviceGL->GetDeviceCaps();
 

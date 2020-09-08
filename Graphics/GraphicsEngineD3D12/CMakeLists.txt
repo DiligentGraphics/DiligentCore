@@ -180,8 +180,8 @@ PUBLIC
 target_compile_definitions(Diligent-GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL=1)
 
 if(${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} STRGREATER_EQUAL "10.0.19041.0")
-    set(D12_H_HAS_MESH_SHADER ON CACHE INTERNAL "" FORCE)
-    target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE D12_H_HAS_MESH_SHADER)
+    set(D3D12_H_HAS_MESH_SHADER ON CACHE INTERNAL "" FORCE)
+    target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE D3D12_H_HAS_MESH_SHADER)
 endif()
 if(${DILIGENT_HAS_D3D12_DXIL_COMPILER})
     target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE DILIGENT_HAS_D3D12_DXIL_COMPILER)

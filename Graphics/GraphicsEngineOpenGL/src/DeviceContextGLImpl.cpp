@@ -88,7 +88,7 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     if (Desc.IsComputePipeline())
     {
     }
-    else
+    else if (Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
         const auto& GraphicsPipeline = Desc.GraphicsPipeline;
         // Set rasterizer state
@@ -143,6 +143,11 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
             }
         }
         m_ContextState.InvalidateVAO();
+    }
+    else
+    {
+        LOG_ERROR_MESSAGE(GetPipelineTypeString(Desc.PipelineType), " pipeline '", Desc.Name, "' is not supported in OpenGL");
+        return;
     }
 
     // Note that the program may change if a shader is created after the call

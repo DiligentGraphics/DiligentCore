@@ -155,6 +155,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
     TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
     m_SRBMemAllocator{GetRawAllocator()}
 {
+    m_ResourceLayoutIndex.fill(-1);
+
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
     // Initialize shader resource layouts
@@ -166,7 +168,6 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
     m_ShaderResourceLayouts = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", ShaderResourceLayoutVk, m_NumShaders * 2);
     m_StaticResCaches       = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheVk", ShaderResourceCacheVk, m_NumShaders);
     m_StaticVarsMgrs        = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerVk", ShaderVariableManagerVk, m_NumShaders);
-    m_ResourceLayoutIndex.fill(-1);
 
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {

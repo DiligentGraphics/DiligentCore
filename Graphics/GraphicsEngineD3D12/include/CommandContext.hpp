@@ -394,7 +394,7 @@ class GraphicsContext6 : public GraphicsContext5
 public:
     void DrawMesh(UINT ThreadGroupCountX, UINT ThreadGroupCountY, UINT ThreadGroupCountZ)
     {
-#ifdef D12_H_HAS_MESH_SHADER
+#ifdef D3D12_H_HAS_MESH_SHADER
         FlushResourceBarriers();
         static_cast<ID3D12GraphicsCommandList6*>(m_pCommandList.p)->DispatchMesh(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 #else

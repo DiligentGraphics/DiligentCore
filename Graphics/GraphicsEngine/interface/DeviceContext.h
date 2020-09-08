@@ -281,6 +281,7 @@ struct DrawIndexedAttribs
 };
 typedef struct DrawIndexedAttribs DrawIndexedAttribs;
 
+
 /// Defines the indirect draw command attributes.
 
 /// This structure is used by IDeviceContext::DrawIndirect().
@@ -318,6 +319,7 @@ struct DrawIndirectAttribs
 #endif
 };
 typedef struct DrawIndirectAttribs DrawIndirectAttribs;
+
 
 /// Defines the indexed indirect draw command attributes.
 
@@ -364,12 +366,13 @@ struct DrawIndexedIndirectAttribs
 };
 typedef struct DrawIndexedIndirectAttribs DrawIndexedIndirectAttribs;
 
+
 /// Defines the mesh draw command attributes.
 
 /// This structure is used by IDeviceContext::DrawMesh().
 struct DrawMeshAttribs
 {
-    ///< Number of dispatched groups
+    /// The number of dispatched groups
     Uint32 ThreadGroupCount DEFAULT_INITIALIZER(1);
 
     /// Additional flags, see Diligent::DRAW_FLAGS.
@@ -388,6 +391,7 @@ struct DrawMeshAttribs
 #endif
 };
 typedef struct DrawMeshAttribs DrawMeshAttribs;
+
 
 /// Defines the mesh indirect draw command attributes.
 
@@ -425,6 +429,7 @@ struct DrawMeshIndirectAttribs
 #endif
 };
 typedef struct DrawMeshIndirectAttribs DrawMeshIndirectAttribs;
+
 
 /// Defines which parts of the depth-stencil buffer to clear.
 
@@ -1060,13 +1065,13 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                              IBuffer*                             pAttribsBuffer) PURE;
     
 
-    /// Executes an mesh draw command.
+    /// Executes a mesh draw command.
     
     /// \param [in] Attribs - Draw command attributes, see Diligent::DrawMeshAttribs for details.
     /// 
-    /// \remarks  For compatibility between Direct3D12 and Vulkan used only single work group dimension.
-    ///           Also in shader numthreads and local_size attributes must use only single dimension,
-    ///           example: '[numthreads(ThreadCount, 1, 1)]' or 'layout(local_size_x = ThreadCount) in'.
+    /// \remarks  For compatibility between Direct3D12 and Vulkan, only a single work group dimension is used.
+    ///           Also in the shader, 'numthreads' and 'local_size' attributes must define only the first dimension,
+    ///           for example: '[numthreads(ThreadCount, 1, 1)]' or 'layout(local_size_x = ThreadCount) in'.
     VIRTUAL void METHOD(DrawMesh)(THIS_
                                   const DrawMeshAttribs REF Attribs) PURE;
     
@@ -1084,8 +1089,8 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                     Uint32 TaskCount;
     ///                                     Uint32 FirstTask;
     /// 
-    /// \remarks  For compatibility between Direct3D12 and Vulkan and with direct call (DrawMesh) use only first element in structure,
-    ///           example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
+    /// \remarks  For compatibility between Direct3D12 and Vulkan and with direct call (DrawMesh) use define the first element in the structure,
+    ///           for example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
     /// 
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
     ///           the method may transition the state of the indirect draw arguments buffer. This is not a thread safe operation, 

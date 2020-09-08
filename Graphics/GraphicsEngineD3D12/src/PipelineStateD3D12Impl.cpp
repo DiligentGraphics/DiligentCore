@@ -311,7 +311,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             break;
         }
 
-#ifdef D12_H_HAS_MESH_SHADER
+#ifdef D3D12_H_HAS_MESH_SHADER
         case PIPELINE_TYPE_MESH:
         {
             const auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
@@ -395,7 +395,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             CHECK_D3D_RESULT_THROW(device2->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_pd3d12PSO)), "Failed to create pipeline state");
             break;
         }
-#endif // D12_H_HAS_MESH_SHADER
+#endif // D3D12_H_HAS_MESH_SHADER
 
         default:
             LOG_ERROR_AND_THROW("Unknown shader type");

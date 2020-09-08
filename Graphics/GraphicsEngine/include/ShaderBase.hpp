@@ -54,6 +54,7 @@ inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
     Int32 ShaderIndex = PlatformMisc::GetLSB(Type);
 
 #ifdef DILIGENT_DEBUG
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_MESH, "Please update the switch below to handle the new shader type");
     switch (Type)
     {
         // clang-format off

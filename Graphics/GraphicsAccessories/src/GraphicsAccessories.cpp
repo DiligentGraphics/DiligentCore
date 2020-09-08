@@ -474,21 +474,22 @@ const Char* GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType)
 
 const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
 {
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_MESH, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
         // clang-format off
 #define RETURN_SHADER_TYPE_NAME(ShaderType)\
         case ShaderType: return #ShaderType;
 
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_UNKNOWN      )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_VERTEX       )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_PIXEL        )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_GEOMETRY     )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_HULL         )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_DOMAIN       )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_COMPUTE      )
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_AMPLIFICATION)
-        RETURN_SHADER_TYPE_NAME( SHADER_TYPE_MESH         )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_UNKNOWN      )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_VERTEX       )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_PIXEL        )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_GEOMETRY     )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_HULL         )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_DOMAIN       )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_COMPUTE      )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_AMPLIFICATION)
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_MESH         )
 #undef  RETURN_SHADER_TYPE_NAME
             // clang-format on
 
@@ -1119,6 +1120,23 @@ const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform)
     }
     // clang-format on
 }
+
+const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
+{
+    // clang-format off
+    switch (PipelineType)
+    {
+        case PIPELINE_TYPE_COMPUTE:  return "compute";
+        case PIPELINE_TYPE_GRAPHICS: return "graphics";
+        case PIPELINE_TYPE_MESH:     return "mesh";
+
+        default:
+            UNEXPECTED("Unexpected pipeline type");
+            return "unknown";
+    }
+    // clang-format on
+}
+
 
 Uint32 ComputeMipLevelsCount(Uint32 Width)
 {

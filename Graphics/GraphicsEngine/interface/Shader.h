@@ -58,7 +58,8 @@ DILIGENT_TYPED_ENUM(SHADER_TYPE, Uint32)
 };
 DEFINE_FLAG_ENUM_OPERATORS(SHADER_TYPE);
 
-/// Describes shader source code language
+
+/// Describes the shader source code language
 DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
 {
     /// Default language (GLSL for OpenGL/OpenGLES/Vulkan devices, HLSL for Direct3D11/Direct3D12 devices)
@@ -70,7 +71,7 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     /// The source language is GLSL
     SHADER_SOURCE_LANGUAGE_GLSL,
 
-    /// The source language is GLSL which should be compiled verbatim
+    /// The source language is GLSL that should be compiled verbatim
 
     /// By default the engine prepends GLSL shader source code with platform-specific
     /// definitions. For instance it adds appropriate #version directive (e.g. '#version 430 core' or 
@@ -80,27 +81,29 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
     SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM
 };
 
-/// Describes shader compiler
+
+/// Describes the shader compiler that will be used to compile the shader source code
 DILIGENT_TYPED_ENUM(SHADER_COMPILER, Uint32)
 {
-    /// Default compiler for specific language and API:
-    ///     for Direct3D11 - external FXC
-    ///     for Direct3D12 - external FXC
-    ///     for OpenGL(ES) GLSL - native compiler
-    ///     for OpenGL(ES) HLSL - HLSL2GLSL and native compiler
-    ///     for Vulkan GLSL - builtin glslang
-    ///     for Vulkan HLSL - builtin glslang (with limitted support for Shader Model 6.x)
+    /// Default compiler for specific language and API that is chosen as follows:
+    ///     - Direct3D11:      legacy HLSL compiler (FXC)
+    ///     - Direct3D12:      legacy HLSL compiler (FXC)
+    ///     - OpenGL(ES) GLSL: native compiler
+    ///     - OpenGL(ES) HLSL: HLSL2GLSL converter and native compiler
+    ///     - Vulkan GLSL:     built-in glslang
+    ///     - Vulkan HLSL:     built-in glslang (with limitted support for Shader Model 6.x)
     SHADER_COMPILER_DEFAULT = 0,
 
-    /// Builtin glslang compiler for GLSL and HLSL.
+    /// Built-in glslang compiler for GLSL and HLSL.
     SHADER_COMPILER_GLSLANG,
 
-    /// External HLSL compiler for Direct3D12 and Vulkan with Shader Model 6.x support.
+    /// Modern HLSL compiler (DXC) for Direct3D12 and Vulkan with Shader Model 6.x support.
     SHADER_COMPILER_DXC,
         
-    /// External HLSL compiler for Direct3D11 and Direct3D12 before Shader Model 6.
+    /// Legacy HLSL compiler (FXC) for Direct3D11 and Direct3D12 supporting shader models up to 5.1.
     SHADER_COMPILER_FXC,
 };
+
 
 /// Describes the flags that can be passed over to IShaderSourceInputStreamFactory::CreateInputStream2() function.
 DILIGENT_TYPED_ENUM(CREATE_SHADER_SOURCE_INPUT_STREAM_FLAGS, Uint32)

@@ -155,7 +155,7 @@ private:
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayout                   m_PipelineLayout;
 
-    std::array<Int8, 8> m_ResourceLayoutIndex;
+    std::array<Int8, 8> m_ResourceLayoutIndex   = {};
     bool                m_HasStaticResources    = false;
     bool                m_HasNonStaticResources = false;
 };

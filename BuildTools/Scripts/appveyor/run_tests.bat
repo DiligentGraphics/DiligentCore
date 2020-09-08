@@ -26,7 +26,7 @@ if "%RUN_CORE_API_D3D11_TEST%"=="true" (
 
 if "%RUN_CORE_API_D3D12_TEST%"=="true" (
     ("%1\Tests\DiligentCoreAPITest\%CONFIGURATION%\DiligentCoreAPITest.exe" --mode=d3d12_sw) || set /a ERROR=%ERROR%+100
-    ("%1\Tests\DiligentCoreAPITest\%CONFIGURATION%\DiligentCoreAPITest.exe" --mode=d3d12_sw --comp=dxc) || set /a ERROR=%ERROR%+100
+    ("%1\Tests\DiligentCoreAPITest\%CONFIGURATION%\DiligentCoreAPITest.exe" --mode=d3d12_sw --comp=dxc) || set /a ERROR=%ERROR%+1000
 )
 
 exit /B %ERROR% REM use /B to exit the current batch script context, and not the command prompt process

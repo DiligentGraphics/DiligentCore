@@ -65,7 +65,7 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Dev
     return nullptr;
 }
 
-ShaderVersion RenderDeviceD3D12Impl::GetShaderModel() const
+ShaderVersion RenderDeviceD3D12Impl::GetMaxShaderModel() const
 {
     return ShaderVersion{Uint8((m_ShaderModel >> 4) & 0xF), Uint8(m_ShaderModel & 0xF)};
 }
@@ -89,7 +89,7 @@ D3D_FEATURE_LEVEL RenderDeviceD3D12Impl::GetD3DFeatureLevel() const
     return FeatureLevelsData.MaxSupportedFeatureLevel;
 }
 
-#ifdef D12_H_HAS_MESH_SHADER
+#ifdef D3D12_H_HAS_MESH_SHADER
 ID3D12Device2* RenderDeviceD3D12Impl::GetD3D12Device2()
 {
     if (!m_pd3d12Device2)
@@ -230,7 +230,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     }
 
     // Check if mesh shader is supported.
-#ifdef D12_H_HAS_MESH_SHADER
+#ifdef D3D12_H_HAS_MESH_SHADER
     {
         D3D12_FEATURE_DATA_D3D12_OPTIONS7 FeatureData        = {};
         bool                              SupportsMeshShader = SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureData, sizeof(FeatureData))) &&

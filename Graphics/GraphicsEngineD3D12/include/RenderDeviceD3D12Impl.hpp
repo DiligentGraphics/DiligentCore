@@ -154,11 +154,11 @@ public:
 
     IDxCompilerLibrary* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
-#ifdef D12_H_HAS_MESH_SHADER
+#ifdef D3D12_H_HAS_MESH_SHADER
     ID3D12Device2* GetD3D12Device2();
 #endif
 
-    ShaderVersion     GetShaderModel() const;
+    D3D_SHADER_MODEL  GetMaxShaderModel() const;
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
 private:
@@ -167,7 +167,7 @@ private:
 
     CComPtr<ID3D12Device> m_pd3d12Device;
 
-#ifdef D12_H_HAS_MESH_SHADER
+#ifdef D3D12_H_HAS_MESH_SHADER
     CComPtr<ID3D12Device2> m_pd3d12Device2;
 #endif
 

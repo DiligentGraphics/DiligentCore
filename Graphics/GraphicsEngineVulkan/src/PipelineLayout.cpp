@@ -43,6 +43,7 @@ namespace Diligent
 
 static VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
 {
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_MESH, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
         // clang-format off

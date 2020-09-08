@@ -378,6 +378,8 @@ const char* GetQueryTypeString(QUERY_TYPE QueryType);
 
 const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform);
 
+const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType);
+
 Uint32 ComputeMipLevelsCount(Uint32 Width);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth);

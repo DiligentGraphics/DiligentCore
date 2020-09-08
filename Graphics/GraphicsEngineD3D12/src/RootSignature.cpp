@@ -183,7 +183,7 @@ static D3D12_SHADER_VISIBILITY ShaderTypeInd2ShaderVisibilityMap[]
     D3D12_SHADER_VISIBILITY_HULL,          // 3
     D3D12_SHADER_VISIBILITY_DOMAIN,        // 4
     D3D12_SHADER_VISIBILITY_ALL,           // 5
-#ifdef D12_H_HAS_MESH_SHADER
+#ifdef D3D12_H_HAS_MESH_SHADER
     D3D12_SHADER_VISIBILITY_AMPLIFICATION, // 6
     D3D12_SHADER_VISIBILITY_MESH           // 7
 #endif
@@ -203,7 +203,7 @@ D3D12_SHADER_VISIBILITY GetShaderVisibility(SHADER_TYPE ShaderType)
         case SHADER_TYPE_HULL:          VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_HULL);          break;
         case SHADER_TYPE_DOMAIN:        VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_DOMAIN);        break;
         case SHADER_TYPE_COMPUTE:       VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_ALL);           break;
-#   ifdef D12_H_HAS_MESH_SHADER
+#   ifdef D3D12_H_HAS_MESH_SHADER
         case SHADER_TYPE_AMPLIFICATION: VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_AMPLIFICATION); break;
         case SHADER_TYPE_MESH:          VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_MESH);          break;
 #   endif
@@ -242,7 +242,7 @@ SHADER_TYPE ShaderTypeFromShaderVisibility(D3D12_SHADER_VISIBILITY ShaderVisibil
         case D3D12_SHADER_VISIBILITY_HULL:          VERIFY_EXPR(ShaderType == SHADER_TYPE_HULL);          break;
         case D3D12_SHADER_VISIBILITY_DOMAIN:        VERIFY_EXPR(ShaderType == SHADER_TYPE_DOMAIN);        break;
         case D3D12_SHADER_VISIBILITY_ALL:           VERIFY_EXPR(ShaderType == SHADER_TYPE_COMPUTE);       break;
-#   ifdef D12_H_HAS_MESH_SHADER
+#   ifdef D3D12_H_HAS_MESH_SHADER
         case D3D12_SHADER_VISIBILITY_AMPLIFICATION: VERIFY_EXPR(ShaderType == SHADER_TYPE_AMPLIFICATION); break;
         case D3D12_SHADER_VISIBILITY_MESH:          VERIFY_EXPR(ShaderType == SHADER_TYPE_MESH);          break;
 #   endif

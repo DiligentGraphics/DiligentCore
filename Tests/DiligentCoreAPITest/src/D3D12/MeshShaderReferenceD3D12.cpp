@@ -40,7 +40,7 @@ namespace Diligent
 namespace Testing
 {
 
-#ifdef D12_H_HAS_MESH_SHADER
+#ifdef D3D12_H_HAS_MESH_SHADER
 
 namespace
 {
@@ -393,7 +393,7 @@ void AmplificationShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
     LOG_ERROR_AND_THROW("Direct12 headers doesn't support mesh shader");
 }
 
-#endif // D12_H_HAS_MESH_SHADER
+#endif // D3D12_H_HAS_MESH_SHADER
 
 } // namespace Testing
 
