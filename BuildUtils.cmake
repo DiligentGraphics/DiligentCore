@@ -345,6 +345,10 @@ endfunction()
 
 function(add_format_validation_target MODULE_NAME MODULE_ROOT_PATH IDE_FOLDER)
 
+    if(${DILIGENT_NO_FORMAT_VALIDATION})
+        return()
+    endif()
+
     # Start by copying .clang-format file to the module's root folder
     add_custom_target(${MODULE_NAME}-ValidateFormatting ALL
         COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DILIGENT_CORE_SOURCE_DIR}/.clang-format" "${MODULE_ROOT_PATH}/.clang-format"

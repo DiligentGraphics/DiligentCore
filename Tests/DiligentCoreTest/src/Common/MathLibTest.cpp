@@ -1034,17 +1034,33 @@ TEST(Common_BasicMath, OrthoProjection)
 
 TEST(Common_BasicMath, MakeObject)
 {
-    double data[] = {1, 2, 3, 4,
-                     5, 6, 7, 8,
-                     9, 10, 11, 12,
-                     13, 14, 15, 16};
-    EXPECT_EQ(float2::MakeVector(data), float2(1, 2));
-    EXPECT_EQ(float3::MakeVector(data), float3(1, 2, 3));
-    EXPECT_EQ(float4::MakeVector(data), float4(1, 2, 3, 4));
-    EXPECT_EQ(Quaternion::MakeQuaternion(data), Quaternion(1, 2, 3, 4));
-    EXPECT_EQ(float4x4::MakeMatrix(data), float4x4(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16));
-    EXPECT_EQ(float3x3::MakeMatrix(data), float3x3(1, 2, 3, 4, 5, 6, 7, 8, 9));
-    EXPECT_EQ(float2x2::MakeMatrix(data), float2x2(1, 2, 3, 4));
+    {
+        double data[] = {1, 2, 3, 4,
+                         5, 6, 7, 8,
+                         9, 10, 11, 12,
+                         13, 14, 15, 16};
+        EXPECT_EQ(float2::MakeVector(data), float2(1, 2));
+        EXPECT_EQ(float3::MakeVector(data), float3(1, 2, 3));
+        EXPECT_EQ(float4::MakeVector(data), float4(1, 2, 3, 4));
+        EXPECT_EQ(Quaternion::MakeQuaternion(data), Quaternion(1, 2, 3, 4));
+        EXPECT_EQ(float4x4::MakeMatrix(data), float4x4(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16));
+        EXPECT_EQ(float3x3::MakeMatrix(data), float3x3(1, 2, 3, 4, 5, 6, 7, 8, 9));
+        EXPECT_EQ(float2x2::MakeMatrix(data), float2x2(1, 2, 3, 4));
+    }
+
+    {
+        std::vector<int> data = {10, 20, 30, 40,
+                                 50, 60, 70, 80,
+                                 90, 100, 110, 120,
+                                 130, 140, 150, 160};
+        EXPECT_EQ(float2::MakeVector(data), float2(10, 20));
+        EXPECT_EQ(float3::MakeVector(data.begin()), float3(10, 20, 30));
+        EXPECT_EQ(float4::MakeVector(data.cbegin()), float4(10, 20, 30, 40));
+        EXPECT_EQ(Quaternion::MakeQuaternion(data.rbegin()), Quaternion(160, 150, 140, 130));
+        EXPECT_EQ(float4x4::MakeMatrix(data.begin()), float4x4(10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160));
+        EXPECT_EQ(float3x3::MakeMatrix(data.cbegin()), float3x3(10, 20, 30, 40, 50, 60, 70, 80, 90));
+        EXPECT_EQ(float2x2::MakeMatrix(data.crbegin()), float2x2(160, 150, 140, 130));
+    }
 }
 
 TEST(Common_BasicMath, MatrixMultiply)

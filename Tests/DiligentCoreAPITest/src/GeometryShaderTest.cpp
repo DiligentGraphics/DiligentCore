@@ -190,8 +190,6 @@ TEST(GeometryShaderTest, DrawTriangles)
     ASSERT_NE(pPSO, nullptr);
 
     pContext->SetPipelineState(pPSO);
-    // Commit shader resources. We don't really have any resources, but this call also sets the shaders in OpenGL backend.
-    pContext->CommitShaderResources(nullptr, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     DrawAttribs drawAttrs(2, DRAW_FLAG_VERIFY_ALL);
     pContext->Draw(drawAttrs);

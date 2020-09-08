@@ -2142,6 +2142,7 @@ void DeviceContextD3D12Impl::TransitionBufferState(IBuffer* pBuffer, D3D12_RESOU
 ID3D12GraphicsCommandList* DeviceContextD3D12Impl::GetD3D12CommandList()
 {
     auto& CmdCtx = GetCmdContext();
+    CmdCtx.FlushResourceBarriers();
     return CmdCtx.GetCommandList();
 }
 

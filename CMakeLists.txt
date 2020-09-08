@@ -156,6 +156,7 @@ endif()
 
 
 option(DILIGENT_NO_HLSL "Disable HLSL support in non-Direct3D backends" OFF)
+option(DILIGENT_NO_FORMAT_VALIDATION "Disable source code format validation" OFF)
 
 option(DILIGENT_NO_DIRECT3D11 "Disable Direct3D11 backend" OFF)
 option(DILIGENT_NO_DIRECT3D12 "Disable Direct3D12 backend" OFF)
