@@ -46,6 +46,4 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
                                       const char*             ExtraDefinitions,
                                       IDataBlob**             ppCompilerOutput);
 
-std::vector<uint32_t> StripReflection(const std::vector<uint32_t>& OriginalSPIRV);
-
 } // namespace Diligent
