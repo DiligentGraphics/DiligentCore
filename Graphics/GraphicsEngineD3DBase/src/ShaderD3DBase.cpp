@@ -311,27 +311,28 @@ static HRESULT CompileShader(const char*             Source,
 } // namespace
 
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, bool IsD3D12) :
-    m_isDXIL{false}
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, bool IsD3D12)
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
         DEV_CHECK_ERR(ShaderCI.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
 
+        bool IsDXIL = false;
+
         // validate compiler type
         switch (ShaderCI.ShaderCompiler)
         {
             // clang-format off
-            case SHADER_COMPILER_DEFAULT: m_isDXIL = false; break;
-            case SHADER_COMPILER_DXC:     m_isDXIL = true;  break;
-            case SHADER_COMPILER_FXC:     m_isDXIL = false; break;
+            case SHADER_COMPILER_DEFAULT: IsDXIL = false; break;
+            case SHADER_COMPILER_DXC:     IsDXIL = true;  break;
+            case SHADER_COMPILER_FXC:     IsDXIL = false; break;
                 // clang-format on
-            default: UNEXPECTED("Unsupported shader compiler"); m_isDXIL = false;
+            default: UNEXPECTED("Unsupported shader compiler");
         }
 
         // validate shader model
-        if (m_isDXIL)
+        if (IsDXIL)
         {
             ShaderModel = (ShaderModel.Major >= 6 ? ShaderModel : ShaderVersion{6, 0});
 
@@ -346,10 +347,10 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion Sha
                     ShaderModel = MaxSM;
             }
             else
-                m_isDXIL = false;
+                IsDXIL = false;
         }
 
-        if (!m_isDXIL)
+        if (!IsDXIL)
         {
             ShaderModel = (ShaderModel.Major < 6 ? ShaderModel : (IsD3D12 ? ShaderVersion{5, 1} : ShaderVersion{5, 0}));
         }
@@ -401,7 +402,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion Sha
         CComPtr<ID3DBlob> errors;
         HRESULT           hr;
 
-        if (m_isDXIL)
+        if (IsDXIL)
             hr = CompileDxilShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
         else
             hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);

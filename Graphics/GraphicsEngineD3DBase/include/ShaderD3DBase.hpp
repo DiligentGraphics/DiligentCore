@@ -44,7 +44,6 @@ public:
 
 protected:
     CComPtr<ID3DBlob> m_pShaderByteCode;
-    bool              m_isDXIL;
 };
 
 } // namespace Diligent

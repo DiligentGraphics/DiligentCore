@@ -36,6 +36,9 @@
 struct DxcDefine;
 struct IDxcBlob;
 
+// defined in d3d12shader.h
+struct ID3D12ShaderReflection;
+
 namespace Diligent
 {
 
@@ -67,14 +70,13 @@ bool DxcCompile(DXCompilerTarget                 Target,
 
 std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
                                   const char*             ExtraDefinitions,
-                                  IDataBlob**             ppCompilerOutput);
+                                  IDataBlob**             ppCompilerOutput) noexcept(false);
 
 #if D3D12_SUPPORTED
-// calls DxcCreateInstance
-HRESULT D3D12DxcCreateInstance(
-    _In_ REFCLSID rclsid,
-    _In_ REFIID   riid,
-    _Out_ LPVOID* ppv);
+// Returns false if pShaderBytecode hasn't DXIL bytecode.
+// Throws exception on error.
+bool DxcGetShaderReflection(IDxcBlob*                pShaderBytecode,
+                            ID3D12ShaderReflection** ppShaderReflection) noexcept(false);
 #endif
 
 } // namespace Diligent

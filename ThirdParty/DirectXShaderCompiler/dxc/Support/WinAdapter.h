@@ -51,6 +51,7 @@
 
 #define ARRAYSIZE(array) (sizeof(array) / sizeof(array[0]))
 
+#undef _countof
 #define _countof(a) (sizeof(a) / sizeof(*(a)))
 
 // If it is GCC, there is no UUID support and we must emulate it.

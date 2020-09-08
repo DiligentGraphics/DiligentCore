@@ -42,10 +42,11 @@
 // Platforms that has DXCompiler.
 #if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX)
 
-#    include "dxc/dxcapi.h"
-#    ifdef PLATFORM_LINUX
-#        undef _countof
+#    if D3D12_SUPPORTED
+#        include <d3d12shader.h>
 #    endif
+
+#    include "dxc/dxcapi.h"
 
 #    include "DataBlobImpl.hpp"
 #    include "RefCntAutoPtr.hpp"
@@ -270,20 +271,6 @@ private:
 
 } // namespace
 
-#    if D3D12_SUPPORTED
-HRESULT D3D12DxcCreateInstance(
-    _In_ REFCLSID rclsid,
-    _In_ REFIID   riid,
-    _Out_ LPVOID* ppv)
-{
-    DXCompilerImpl* DxCompiler = DXILCompilerLib();
-    if (DxCompiler != nullptr && DxCompiler->CreateInstance != nullptr)
-        return DxCompiler->CreateInstance(rclsid, riid, ppv);
-    else
-        return E_NOTIMPL;
-}
-#    endif
-
 bool DxcLoadLibrary(DXCompilerTarget Target, const char* name)
 {
     DXCompilerImpl* DxCompiler = nullptr;
@@ -471,6 +458,44 @@ bool DxcCompile(DXCompilerTarget                 Target,
     return true;
 }
 
+#    if D3D12_SUPPORTED
+#        define FOURCC(a, b, c, d) (uint32_t{((d) << 24) | ((c) << 16) | ((b) << 8) | (a)})
+
+bool DxcGetShaderReflection(IDxcBlob*                pShaderBytecode,
+                            ID3D12ShaderReflection** ppShaderReflection) noexcept(false)
+{
+    HRESULT hr;
+    auto    DXCompiler = DXILCompilerLib();
+    bool    IsDXIL     = false;
+
+    if (DXCompiler != nullptr && DXCompiler->CreateInstance != nullptr)
+    {
+        const uint32_t                   DFCC_DXIL = FOURCC('D', 'X', 'I', 'L');
+        CComPtr<IDxcContainerReflection> pReflection;
+        UINT32                           shaderIdx;
+
+        hr = DXCompiler->CreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
+        if (FAILED(hr))
+            LOG_ERROR_AND_THROW("Failed to create shader reflection instance");
+
+        hr = pReflection->Load(pShaderBytecode);
+        if (FAILED(hr))
+            LOG_ERROR_AND_THROW("Failed to load shader reflection from bytecode");
+
+        hr     = pReflection->FindFirstPartKind(DFCC_DXIL, &shaderIdx);
+        IsDXIL = SUCCEEDED(hr);
+        if (IsDXIL)
+        {
+            hr = pReflection->GetPartReflection(shaderIdx, __uuidof(*ppShaderReflection), reinterpret_cast<void**>(ppShaderReflection));
+            if (FAILED(hr))
+                LOG_ERROR_AND_THROW("Failed to get the shader reflection");
+        }
+    }
+    return IsDXIL;
+}
+#    endif
+
+
 #    if VULKAN_SUPPORTED
 // Implemented in GLSLSourceBuilder.cpp
 const char* GetShaderTypeDefines(SHADER_TYPE Type);
@@ -489,7 +514,7 @@ static const char g_HLSLDefinitions[] =
 
 std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
                                   const char*             ExtraDefinitions,
-                                  IDataBlob**             ppCompilerOutput)
+                                  IDataBlob**             ppCompilerOutput) noexcept(false)
 {
     RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
 
@@ -667,7 +692,7 @@ bool DxcCompile(DXCompilerTarget                 Target,
 
 std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
                                   const char*             ExtraDefinitions,
-                                  IDataBlob**             ppCompilerOutput)
+                                  IDataBlob**             ppCompilerOutput) noexcept(false)
 {
     return {};
 }
