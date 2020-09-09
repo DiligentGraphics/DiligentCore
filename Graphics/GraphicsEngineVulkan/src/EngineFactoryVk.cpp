@@ -39,7 +39,6 @@
 #include "VulkanUtilities/VulkanInstance.hpp"
 #include "VulkanUtilities/VulkanPhysicalDevice.hpp"
 #include "EngineFactoryBase.hpp"
-#include "DXILUtils.hpp"
 
 #if PLATFORM_ANDROID
 #    include "FileSystem.hpp"
@@ -248,8 +247,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
         std::array<ICommandQueueVk*, 1> CommandQueues = {{pCmdQueueVk}};
         AttachToVulkanDevice(Instance, std::move(PhysicalDevice), LogicalDevice, CommandQueues.size(), CommandQueues.data(), EngineCI, ppDevice, ppContexts);
-
-        DxcLoadLibrary(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath);
     }
     catch (std::runtime_error&)
     {

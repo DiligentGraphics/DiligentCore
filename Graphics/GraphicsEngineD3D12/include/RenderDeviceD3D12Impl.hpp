@@ -40,6 +40,7 @@
 #include "CommandQueueD3D12.h"
 #include "GenerateMips.hpp"
 #include "QueryManagerD3D12.hpp"
+#include "DXILUtils.hpp"
 
 namespace Diligent
 {
@@ -151,11 +152,13 @@ public:
     const GenerateMipsHelper& GetMipsGenerator() const { return m_MipsGenerator; }
     QueryManagerD3D12&        GetQueryManager() { return m_QueryMgr; }
 
+    IDxCompilerLibrary* GetDxCompiler() const { return m_pDxCompiler.get(); }
+
 #ifdef D12_H_HAS_MESH_SHADER
     ID3D12Device2* GetD3D12Device2();
 #endif
 
-    D3D_SHADER_MODEL  GetShaderModel() const;
+    ShaderVersion     GetShaderModel() const;
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
 private:
@@ -188,6 +191,10 @@ private:
     GenerateMipsHelper m_MipsGenerator;
 
     QueryManagerD3D12 m_QueryMgr;
+
+    D3D_SHADER_MODEL m_ShaderModel = D3D_SHADER_MODEL_5_1;
+
+    std::unique_ptr<IDxCompilerLibrary> m_pDxCompiler;
 };
 
 } // namespace Diligent

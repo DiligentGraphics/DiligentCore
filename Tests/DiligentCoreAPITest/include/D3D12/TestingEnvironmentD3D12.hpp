@@ -39,6 +39,7 @@
 #include <d3dcompiler.h>
 #include <atlcomcli.h>
 #include "dxc/dxcapi.h"
+#include "DXILUtils.hpp"
 
 namespace Diligent
 {
@@ -52,12 +53,6 @@ HRESULT CompileD3DShader(const std::string&      Source,
                          const D3D_SHADER_MACRO* pDefines,
                          LPCSTR                  profile,
                          ID3DBlob**              ppBlobOut);
-
-HRESULT CompileDXILShader(const std::string&            Source,
-                          LPCWSTR                       strFunctionName,
-                          const std::vector<DxcDefine>& Defines,
-                          LPCWSTR                       profile,
-                          ID3DBlob**                    ppBlobOut);
 
 class TestingEnvironmentD3D12 final : public TestingEnvironment
 {
@@ -80,6 +75,12 @@ public:
 
     void IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue);
 
+    HRESULT CompileDXILShader(const std::string&            Source,
+                              LPCWSTR                       strFunctionName,
+                              const std::vector<DxcDefine>& Defines,
+                              LPCWSTR                       profile,
+                              ID3DBlob**                    ppBlobOut);
+
 private:
     CComPtr<ID3D12Device>           m_pd3d12Device;
     CComPtr<ID3D12CommandAllocator> m_pd3d12CmdAllocator;
@@ -88,6 +89,8 @@ private:
     UINT64 m_NextFenceValue = 1;
 
     HANDLE m_WaitForGPUEventHandle = {};
+
+    std::unique_ptr<IDxCompilerLibrary> m_pDxCompiler;
 };
 
 } // namespace Testing

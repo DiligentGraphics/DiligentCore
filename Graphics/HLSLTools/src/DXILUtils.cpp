@@ -29,24 +29,14 @@
 #include <unordered_map>
 #include <memory>
 #include <array>
-
-#ifdef WIN32
-#    include <Unknwn.h>
-#    include <guiddef.h>
-#    include <atlbase.h>
-#    include <atlcom.h>
-#endif
-
-#include "DXILUtils.hpp"
+#include <mutex>
 
 // Platforms that has DXCompiler.
 #if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX)
 
-#    if D3D12_SUPPORTED
-#        include <d3d12shader.h>
-#    endif
-
-#    include "dxc/dxcapi.h"
+#    include "DXCompilerBaseLiunx.hpp"
+#    include "DXCompilerBaseUWP.hpp"
+#    include "DXCompilerBaseWin32.hpp"
 
 #    include "DataBlobImpl.hpp"
 #    include "RefCntAutoPtr.hpp"
@@ -56,92 +46,60 @@ namespace Diligent
 namespace
 {
 
-#    ifdef PLATFORM_WIN32
-struct DXCompilerBase
+class DXCompilerImpl final : public DXCompilerBase
 {
-    HMODULE               Module         = nullptr;
-    DxcCreateInstanceProc CreateInstance = nullptr;
+public:
+    DXCompilerImpl(DXCompilerTarget Target, const char* pLibName) :
+        m_Target{Target},
+        m_LibName{pLibName ? pLibName : ""}
+    {}
 
-    ~DXCompilerBase()
+    ShaderVersion GetMaxShaderModel() override
     {
-        if (Module)
-            FreeLibrary(Module);
+        Load();
+        // mutex is not needed here
+        return m_MaxShaderModel;
     }
 
-    void Load(const char* libName)
+    bool IsLoaded() override
     {
-        if (Module)
-            FreeLibrary(Module);
-
-        Module         = LoadLibraryA(libName);
-        CreateInstance = Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
-    }
-};
-#    endif // PLATFORM_WIN32
-
-#    ifdef PLATFORM_UNIVERSAL_WINDOWS
-struct DXCompilerBase
-{
-    HMODULE               Module         = nullptr;
-    DxcCreateInstanceProc CreateInstance = nullptr;
-
-    ~DXCompilerBase()
-    {
-        if (Module)
-            FreeLibrary(Module);
+        return GetCreateInstaceProc() != nullptr;
     }
 
-    void Load(const char* libName)
+    DxcCreateInstanceProc GetCreateInstaceProc()
     {
-        if (Module)
-            FreeLibrary(Module);
-
-        std::wstring wname{libName, libName + strlen(libName)};
-        wname += L".dll";
-
-        Module         = LoadPackagedLibrary(wname.c_str(), 0);
-        CreateInstance = Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
-    }
-};
-#    endif // PLATFORM_UNIVERSAL_WINDOWS
-
-#    ifdef PLATFORM_LINUX
-struct DXCompilerBase
-{
-    void*                 Module         = nullptr;
-    DxcCreateInstanceProc CreateInstance = nullptr;
-
-    ~DXCompilerBase()
-    {
-        if (Module)
-            dlclose(Module);
+        Load();
+        // mutex is not needed here
+        return m_pCreateInstance;
     }
 
-    void Load(const char* libName)
+    bool Compile(const char*                      Source,
+                 size_t                           SourceLength,
+                 const wchar_t*                   EntryPoint,
+                 const wchar_t*                   Profile,
+                 const DxcDefine*                 pDefines,
+                 size_t                           DefinesCount,
+                 const wchar_t**                  pArgs,
+                 size_t                           ArgsCount,
+                 IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                 IDxcBlob**                       ppBlobOut,
+                 IDxcBlob**                       ppCompilerOutput) override;
+
+private:
+    void Load()
     {
-        if (Module)
-            dlclose(Module);
+        std::unique_lock<std::mutex> lock{m_Guard};
 
-        Module         = dlopen(libName, RTLD_LOCAL | RTLD_LAZY);
-        CreateInstance = Module ? reinterpret_cast<DxcCreateInstanceProc>(dlsym(Module, "DxcCreateInstance")) : nullptr;
-    }
-};
-#    endif // PLATFORM_LINUX
+        if (m_IsInitialized)
+            return;
 
+        m_IsInitialized   = true;
+        m_pCreateInstance = DXCompilerBase::Load(m_Target, m_LibName);
 
-struct DXCompilerImpl : DXCompilerBase
-{
-    ShaderVersion MaxShaderModel{6, 0};
-
-    DXCompilerImpl() = default;
-
-    void Load(const char* libName)
-    {
-        DXCompilerBase::Load(libName);
-        if (CreateInstance)
+        if (m_pCreateInstance)
         {
             CComPtr<IDxcValidator> validator;
-            if (SUCCEEDED(CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator))))
+            if (SUCCEEDED(m_pCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator))))
             {
                 CComPtr<IDxcVersionInfo> info;
                 if (SUCCEEDED(validator->QueryInterface(IID_PPV_ARGS(&info))))
@@ -156,37 +114,26 @@ struct DXCompilerImpl : DXCompilerBase
                     // map known DXC version to maximum SM
                     switch (ver)
                     {
-                        case 0x10005: MaxShaderModel = {6, 5}; break; // SM 6.5 and SM 6.6 preview
-                        case 0x10004: MaxShaderModel = {6, 4}; break; // SM 6.4 and SM 6.5 preview
+                        case 0x10005: m_MaxShaderModel = {6, 5}; break; // SM 6.5 and SM 6.6 preview
+                        case 0x10004: m_MaxShaderModel = {6, 4}; break; // SM 6.4 and SM 6.5 preview
                         case 0x10003:
-                        case 0x10002: MaxShaderModel = {6, 1}; break; // SM 6.1 and SM 6.2 preview
-                        default: MaxShaderModel = (ver > 0x10005 ? ShaderVersion{6, 6} : ShaderVersion{6, 0}); break;
+                        case 0x10002: m_MaxShaderModel = {6, 1}; break; // SM 6.1 and SM 6.2 preview
+                        default: m_MaxShaderModel = (ver > 0x10005 ? ShaderVersion{6, 6} : ShaderVersion{6, 0}); break;
                     }
                 }
             }
         }
     }
+
+private:
+    DxcCreateInstanceProc  m_pCreateInstance = nullptr;
+    bool                   m_IsInitialized   = false;
+    ShaderVersion          m_MaxShaderModel;
+    std::mutex             m_Guard;
+    const String           m_LibName;
+    const DXCompilerTarget m_Target;
 };
 
-static DXCompilerImpl* DXILCompilerLib()
-{
-#    if D3D12_SUPPORTED
-    static DXCompilerImpl inst;
-    return &inst;
-#    else
-    return nullptr;
-#    endif
-}
-
-static DXCompilerImpl* SPIRVCompilerLib()
-{
-#    if VULKAN_SUPPORTED
-    static DXCompilerImpl inst;
-    return &inst;
-#    else
-    return nullptr;
-#    endif
-}
 
 class DxcIncludeHandlerImpl final : public IDxcIncludeHandler
 {
@@ -271,79 +218,27 @@ private:
 
 } // namespace
 
-bool DxcLoadLibrary(DXCompilerTarget Target, const char* name)
+
+IDxCompilerLibrary* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
 {
-    DXCompilerImpl* DxCompiler = nullptr;
-    switch (Target)
-    {
-        case DXCompilerTarget::Direct3D12: DxCompiler = DXILCompilerLib(); break;
-        case DXCompilerTarget::Vulkan: DxCompiler = SPIRVCompilerLib(); break;
-    }
-    if (DxCompiler == nullptr)
-        return false;
-
-    if (name != nullptr)
-        DxCompiler->Load(name);
-
-    if (DxCompiler->CreateInstance == nullptr)
-    {
-        switch (Target)
-        {
-            case DXCompilerTarget::Direct3D12:
-                name = "dxcompiler.dll";
-                break;
-            case DXCompilerTarget::Vulkan:
-#    ifdef PLATFORM_LINUX
-                name = "/usr/lib/dxc/libdxcompiler.so";
-#    else
-                name = "spv_dxcompiler.dll";
-#    endif
-                break;
-        }
-        DxCompiler->Load(name);
-    }
-
-    return DxCompiler->CreateInstance != nullptr;
+    return new DXCompilerImpl{Target, pLibraryName};
 }
 
-bool DxcGetMaxShaderModel(DXCompilerTarget Target,
-                          ShaderVersion&   Version)
+bool DXCompilerImpl::Compile(const char*                      Source,
+                             size_t                           SourceLength,
+                             const wchar_t*                   EntryPoint,
+                             const wchar_t*                   Profile,
+                             const DxcDefine*                 pDefines,
+                             size_t                           DefinesCount,
+                             const wchar_t**                  pArgs,
+                             size_t                           ArgsCount,
+                             IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                             IDxcBlob**                       ppBlobOut,
+                             IDxcBlob**                       ppCompilerOutput)
 {
-    DXCompilerImpl* DxCompiler = nullptr;
-    switch (Target)
-    {
-        case DXCompilerTarget::Direct3D12: DxCompiler = DXILCompilerLib(); break;
-        case DXCompilerTarget::Vulkan: DxCompiler = SPIRVCompilerLib(); break;
-    }
+    auto CreateInstance = GetCreateInstaceProc();
 
-    if (DxCompiler == nullptr || DxCompiler->Module == nullptr)
-        return false;
-
-    Version = DxCompiler->MaxShaderModel;
-    return true;
-}
-
-bool DxcCompile(DXCompilerTarget                 Target,
-                const char*                      Source,
-                size_t                           SourceLength,
-                const wchar_t*                   EntryPoint,
-                const wchar_t*                   Profile,
-                const DxcDefine*                 pDefines,
-                size_t                           DefinesCount,
-                const wchar_t**                  pArgs,
-                size_t                           ArgsCount,
-                IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                IDxcBlob**                       ppBlobOut,
-                IDxcBlob**                       ppCompilerOutput)
-{
-    DXCompilerImpl* DxCompiler = nullptr;
-    switch (Target)
-    {
-        case DXCompilerTarget::Direct3D12: DxCompiler = DXILCompilerLib(); break;
-        case DXCompilerTarget::Vulkan: DxCompiler = SPIRVCompilerLib(); break;
-    }
-
-    if (DxCompiler == nullptr || DxCompiler->CreateInstance == nullptr)
+    if (CreateInstance == nullptr)
     {
         LOG_ERROR("Failed to load DXCompiler");
         return false;
@@ -360,12 +255,12 @@ bool DxcCompile(DXCompilerTarget                 Target,
     HRESULT hr;
 
     CComPtr<IDxcLibrary> library;
-    hr = DxCompiler->CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
+    hr = CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
     if (FAILED(hr))
         return false;
 
     CComPtr<IDxcCompiler> compiler;
-    hr = DxCompiler->CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+    hr = CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
     if (FAILED(hr))
         return false;
 
@@ -413,10 +308,10 @@ bool DxcCompile(DXCompilerTarget                 Target,
         return false;
 
     // validate and sign in
-    if (Target == DXCompilerTarget::Direct3D12)
+    if (m_Target == DXCompilerTarget::Direct3D12)
     {
         CComPtr<IDxcValidator> validator;
-        hr = DxCompiler->CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
+        hr = CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
         if (FAILED(hr))
             return false;
 
@@ -461,20 +356,21 @@ bool DxcCompile(DXCompilerTarget                 Target,
 #    if D3D12_SUPPORTED
 #        define FOURCC(a, b, c, d) (uint32_t{((d) << 24) | ((c) << 16) | ((b) << 8) | (a)})
 
-bool DxcGetShaderReflection(IDxcBlob*                pShaderBytecode,
+bool DxcGetShaderReflection(IDxCompilerLibrary*      pLibrary,
+                            IDxcBlob*                pShaderBytecode,
                             ID3D12ShaderReflection** ppShaderReflection) noexcept(false)
 {
     HRESULT hr;
-    auto    DXCompiler = DXILCompilerLib();
-    bool    IsDXIL     = false;
+    bool    IsDXIL         = false;
+    auto    CreateInstance = pLibrary ? static_cast<DXCompilerImpl*>(pLibrary)->GetCreateInstaceProc() : nullptr;
 
-    if (DXCompiler != nullptr && DXCompiler->CreateInstance != nullptr)
+    if (CreateInstance != nullptr)
     {
         const uint32_t                   DFCC_DXIL = FOURCC('D', 'X', 'I', 'L');
         CComPtr<IDxcContainerReflection> pReflection;
         UINT32                           shaderIdx;
 
-        hr = DXCompiler->CreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
+        hr = CreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to create shader reflection instance");
 
@@ -512,7 +408,8 @@ static const char g_HLSLDefinitions[] =
 
 } // namespace
 
-std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
+std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
+                                  const ShaderCreateInfo& Attribs,
                                   const char*             ExtraDefinitions,
                                   IDataBlob**             ppCompilerOutput) noexcept(false)
 {
@@ -567,16 +464,13 @@ std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
 
     // validate shader version
     ShaderVersion ShaderModel = Attribs.HLSLVersion;
-    ShaderVersion MaxSM;
+    ShaderVersion MaxSM       = pLibrary->GetMaxShaderModel();
 
-    if (DxcGetMaxShaderModel(DXCompilerTarget::Vulkan, MaxSM))
-    {
-        if (ShaderModel.Major < 6 || ShaderModel.Major > MaxSM.Major)
-            ShaderModel = MaxSM;
+    if (ShaderModel.Major < 6 || ShaderModel.Major > MaxSM.Major)
+        ShaderModel = MaxSM;
 
-        if (ShaderModel.Major == MaxSM.Major && ShaderModel.Minor > MaxSM.Minor)
-            ShaderModel = MaxSM;
-    }
+    if (ShaderModel.Major == MaxSM.Major && ShaderModel.Minor > MaxSM.Minor)
+        ShaderModel = MaxSM;
 
     std::wstring Profile;
     switch (Attribs.Desc.ShaderType)
@@ -610,15 +504,14 @@ std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
     CComPtr<IDxcBlob> compiled;
     CComPtr<IDxcBlob> errors;
 
-    bool result = DxcCompile(DXCompilerTarget::Vulkan,
-                             Source.c_str(), Source.length(),
-                             std::wstring{Attribs.EntryPoint, Attribs.EntryPoint + strlen(Attribs.EntryPoint)}.c_str(),
-                             Profile.c_str(),
-                             nullptr, 0,
-                             pArgs, _countof(pArgs),
-                             Attribs.pShaderSourceStreamFactory,
-                             &compiled,
-                             &errors);
+    bool result = pLibrary->Compile(Source.c_str(), Source.length(),
+                                    std::wstring{Attribs.EntryPoint, Attribs.EntryPoint + strlen(Attribs.EntryPoint)}.c_str(),
+                                    Profile.c_str(),
+                                    nullptr, 0,
+                                    pArgs, _countof(pArgs),
+                                    Attribs.pShaderSourceStreamFactory,
+                                    &compiled,
+                                    &errors);
 
     const size_t CompilerMsgLen = errors ? errors->GetBufferSize() : 0;
     const char*  CompilerMsg    = CompilerMsgLen > 0 ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
@@ -660,37 +553,18 @@ std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
 
 #else
 
+#    include "DXILUtils.hpp"
+
 namespace Diligent
 {
 
-bool DxcLoadLibrary(DXCompilerTarget Target, const char* name)
+IDxCompilerLibrary* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
 {
-    return false;
+    return nullptr;
 }
 
-bool DxcGetMaxShaderModel(DXCompilerTarget Target,
-                          ShaderVersion&   Version)
-{
-    return false;
-}
-
-bool DxcCompile(DXCompilerTarget                 Target,
-                const char*                      Source,
-                size_t                           SourceLength,
-                const wchar_t*                   EntryPoint,
-                const wchar_t*                   Profile,
-                const DxcDefine*                 pDefines,
-                size_t                           DefinesCount,
-                const wchar_t**                  pArgs,
-                size_t                           ArgsCount,
-                IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                IDxcBlob**                       ppBlobOut,
-                IDxcBlob**                       ppCompilerOutput)
-{
-    return false;
-}
-
-std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
+std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
+                                  const ShaderCreateInfo& Attribs,
                                   const char*             ExtraDefinitions,
                                   IDataBlob**             ppCompilerOutput) noexcept(false)
 {

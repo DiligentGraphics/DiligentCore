@@ -36,17 +36,25 @@
 namespace Diligent
 {
 
-static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const ShaderVersion& HLSLVersion)
+static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const ShaderVersion& HLSLVersion, SHADER_COMPILER ShaderCompiler)
 {
+    if (ShaderCompiler != SHADER_COMPILER_DXC)
+        return HLSLVersion.Major == 0 ? ShaderVersion{5, 1} : HLSLVersion;
+
+    ShaderVersion DeviceSM   = pDevice->GetShaderModel();
+    ShaderVersion CompilerSM = pDevice->GetDxCompiler() && pDevice->GetDxCompiler()->IsLoaded() ? pDevice->GetDxCompiler()->GetMaxShaderModel() : ShaderVersion{5, 1};
+    ShaderVersion MaxSM;
+
+    MaxSM = DeviceSM.Major == CompilerSM.Major ?
+        (DeviceSM.Minor > CompilerSM.Minor ? CompilerSM : DeviceSM) :
+        (DeviceSM.Major > CompilerSM.Major ? CompilerSM : DeviceSM);
+
     if (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0)
-    {
-        D3D_SHADER_MODEL ver = pDevice->GetShaderModel();
-        return ShaderVersion{Uint8((ver >> 4) & 0xF), Uint8(ver & 0xF)};
-    }
-    else
-    {
-        return HLSLVersion;
-    }
+        return MaxSM;
+
+    return HLSLVersion.Major == MaxSM.Major ?
+        (HLSLVersion.Minor > MaxSM.Minor ? MaxSM : HLSLVersion) :
+        (HLSLVersion.Major > MaxSM.Major ? MaxSM : HLSLVersion);
 }
 
 ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
@@ -59,13 +67,13 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
         pRenderDeviceD3D12,
         ShaderCI.Desc
     },
-    ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12, ShaderCI.HLSLVersion), true}
+    ShaderD3DBase{ShaderCI, GetD3D12ShaderModel(pRenderDeviceD3D12, ShaderCI.HLSLVersion, ShaderCI.ShaderCompiler), pRenderDeviceD3D12->GetDxCompiler()}
 // clang-format on
 {
     // Load shader resources
     auto& Allocator  = GetRawAllocator();
     auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
-    auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr);
+    auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr, pRenderDeviceD3D12);
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
 }
 

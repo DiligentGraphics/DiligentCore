@@ -27,7 +27,6 @@
 
 #include "D3D12/TestingEnvironmentD3D12.hpp"
 #include "RenderDeviceD3D12.h"
-#include "DXILUtils.hpp"
 
 namespace Diligent
 {
@@ -45,7 +44,8 @@ TestingEnvironmentD3D12::TestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceType
                                                  Uint32               AdapterId,
                                                  const SwapChainDesc& SCDesc) :
     TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc},
-    m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)}
+    m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)},
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, nullptr)}
 {
     RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{m_pDevice, IID_RenderDeviceD3D12};
     m_pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
@@ -100,11 +100,11 @@ TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceTyp
     return new TestingEnvironmentD3D12{deviceType, AdapterType, AdapterId, SCDesc};
 }
 
-HRESULT CompileDXILShader(const std::string&            Source,
-                          LPCWSTR                       strFunctionName,
-                          const std::vector<DxcDefine>& Defines,
-                          LPCWSTR                       profile,
-                          ID3DBlob**                    ppBlobOut)
+HRESULT TestingEnvironmentD3D12::CompileDXILShader(const std::string&            Source,
+                                                   LPCWSTR                       strFunctionName,
+                                                   const std::vector<DxcDefine>& Defines,
+                                                   LPCWSTR                       profile,
+                                                   ID3DBlob**                    ppBlobOut)
 {
     const wchar_t* pArgs[] =
         {
@@ -115,15 +115,14 @@ HRESULT CompileDXILShader(const std::string&            Source,
 
     CComPtr<IDxcBlob> errors;
 
-    if (!DxcCompile(DXCompilerTarget::Direct3D12,
-                    Source.c_str(), Source.length(),
-                    strFunctionName,
-                    profile,
-                    Defines.data(), Defines.size(),
-                    pArgs, _countof(pArgs),
-                    nullptr,
-                    reinterpret_cast<IDxcBlob**>(ppBlobOut),
-                    &errors))
+    if (!m_pDxCompiler->Compile(Source.c_str(), Source.length(),
+                                strFunctionName,
+                                profile,
+                                Defines.data(), Defines.size(),
+                                pArgs, _countof(pArgs),
+                                nullptr,
+                                reinterpret_cast<IDxcBlob**>(ppBlobOut),
+                                &errors))
     {
         const char* CompilerMsg = errors ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
 

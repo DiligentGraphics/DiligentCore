@@ -25,26 +25,60 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#ifdef PLATFORM_WIN32
 
-#include <d3dcommon.h>
-#include "Shader.h"
-#include "DXILUtils.hpp"
+#    ifdef WIN32
+#        include <Unknwn.h>
+#        include <guiddef.h>
+#        include <atlbase.h>
+#        include <atlcom.h>
+#    endif
 
-/// \file
-/// Base implementation of a D3D shader
+#    include "dxc/dxcapi.h"
+
+#    include "DXILUtils.hpp"
+
+#    if D3D12_SUPPORTED
+#        include <d3d12shader.h>
+#    endif
 
 namespace Diligent
 {
+namespace
+{
 
-/// Base implementation of a D3D shader
-class ShaderD3DBase
+class DXCompilerBase : public IDxCompilerLibrary
 {
 public:
-    ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, IDxCompilerLibrary* DxCompiler);
+    ~DXCompilerBase() override
+    {
+        if (Module)
+            FreeLibrary(Module);
+    }
 
 protected:
-    CComPtr<ID3DBlob> m_pShaderByteCode;
+    DxcCreateInstanceProc Load(DXCompilerTarget Target, const String& LibName)
+    {
+        if (LibName.size())
+            Module = LoadLibraryA(LibName.c_str());
+
+        if (Module == nullptr)
+        {
+            switch (Target)
+            {
+                case DXCompilerTarget::Direct3D12: Module = LoadLibraryA("dxcompiler.dll"); break;
+                case DXCompilerTarget::Vulkan: Module = LoadLibraryA("spv_dxcompiler.dll"); break;
+            }
+        }
+
+        return Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
+    }
+
+private:
+    HMODULE Module = nullptr;
 };
 
+} // namespace
 } // namespace Diligent
+
+#endif // PLATFORM_WIN32

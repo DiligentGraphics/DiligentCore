@@ -25,26 +25,59 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#ifdef PLATFORM_UNIVERSAL_WINDOWS
 
-#include <d3dcommon.h>
-#include "Shader.h"
-#include "DXILUtils.hpp"
+#    ifdef WIN32
+#        include <Unknwn.h>
+#        include <guiddef.h>
+#        include <atlbase.h>
+#        include <atlcom.h>
+#    endif
 
-/// \file
-/// Base implementation of a D3D shader
+#    include "dxc/dxcapi.h"
+
+#    include "DXILUtils.hpp"
+
+#    if D3D12_SUPPORTED
+#        include <d3d12shader.h>
+#    endif
 
 namespace Diligent
 {
+namespace
+{
 
-/// Base implementation of a D3D shader
-class ShaderD3DBase
+class DXCompilerBase : public IDxCompilerLibrary
 {
 public:
-    ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, IDxCompilerLibrary* DxCompiler);
+    ~DXCompilerBase() override
+    {
+        if (Module)
+            FreeLibrary(Module);
+    }
 
 protected:
-    CComPtr<ID3DBlob> m_pShaderByteCode;
+    DxcCreateInstanceProc Load(DXCompilerTarget, const String& LibName)
+    {
+        if (LibName.size())
+        {
+            std::wstring wname{LibName.begin(), LibName.end()};
+            wname += L".dll";
+
+            Module = LoadPackagedLibrary(wname.c_str(), 0);
+        }
+
+        if (Module == nullptr)
+            Module = LoadPackagedLibrary(L"dxcompiler.dll", 0);
+
+        return Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
+    }
+
+private:
+    HMODULE Module = nullptr;
 };
 
+} // namespace
 } // namespace Diligent
+
+#endif // PLATFORM_UNIVERSAL_WINDOWS

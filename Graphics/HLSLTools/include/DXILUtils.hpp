@@ -44,38 +44,49 @@ namespace Diligent
 
 enum class DXCompilerTarget
 {
-    Direct3D12,
-    Vulkan,
+    Direct3D12, // compiles to DXIL
+    Vulkan,     // compiles to SPIRV
+};
+
+class IDxCompilerLibrary
+{
+public:
+    virtual ~IDxCompilerLibrary() {}
+
+    virtual ShaderVersion GetMaxShaderModel() = 0;
+
+    virtual bool IsLoaded() = 0;
+
+    virtual bool Compile(const char*                      Source,
+                         size_t                           SourceLength,
+                         const wchar_t*                   EntryPoint,
+                         const wchar_t*                   Profile,
+                         const DxcDefine*                 pDefines,
+                         size_t                           DefinesCount,
+                         const wchar_t**                  pArgs,
+                         size_t                           ArgsCount,
+                         IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                         IDxcBlob**                       ppBlobOut,
+                         IDxcBlob**                       ppCompilerOutput) = 0;
 };
 
 // Use this function to load specific library,
 // otherwise default library will be implicitly loaded.
-bool DxcLoadLibrary(DXCompilerTarget Target, const char* name);
+IDxCompilerLibrary* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName);
 
-bool DxcGetMaxShaderModel(DXCompilerTarget Target,
-                          ShaderVersion&   Version);
 
-bool DxcCompile(DXCompilerTarget                 Target,
-                const char*                      Source,
-                size_t                           SourceLength,
-                const wchar_t*                   EntryPoint,
-                const wchar_t*                   Profile,
-                const DxcDefine*                 pDefines,
-                size_t                           DefinesCount,
-                const wchar_t**                  pArgs,
-                size_t                           ArgsCount,
-                IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                IDxcBlob**                       ppBlobOut,
-                IDxcBlob**                       ppCompilerOutput);
-
-std::vector<uint32_t> DXILtoSPIRV(const ShaderCreateInfo& Attribs,
+#if VULKAN_SUPPORTED
+std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
+                                  const ShaderCreateInfo& Attribs,
                                   const char*             ExtraDefinitions,
                                   IDataBlob**             ppCompilerOutput) noexcept(false);
+#endif
 
 #if D3D12_SUPPORTED
 // Returns false if pShaderBytecode hasn't DXIL bytecode.
 // Throws exception on error.
-bool DxcGetShaderReflection(IDxcBlob*                pShaderBytecode,
+bool DxcGetShaderReflection(IDxCompilerLibrary*      pLibrary,
+                            IDxcBlob*                pShaderBytecode,
                             ID3D12ShaderReflection** ppShaderReflection) noexcept(false);
 #endif
 

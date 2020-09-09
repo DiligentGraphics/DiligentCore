@@ -33,7 +33,6 @@
 #include "RefCntAutoPtr.hpp"
 #include <atlcomcli.h>
 #include "ShaderD3DBase.hpp"
-#include "DXILUtils.hpp"
 #include "dxc/dxcapi.h"
 #include <locale>
 #include <cwchar>
@@ -48,7 +47,8 @@ static const Char* g_HLSLDefinitions =
 #include "HLSLDefinitions_inc.fxh"
 };
 
-static HRESULT CompileDxilShader(const char*             Source,
+static HRESULT CompileDxilShader(IDxCompilerLibrary*     DxCompiler,
+                                 const char*             Source,
                                  size_t                  SourceLength,
                                  const ShaderCreateInfo& ShaderCI,
                                  LPCSTR                  profile,
@@ -169,15 +169,14 @@ static HRESULT CompileDxilShader(const char*             Source,
 
     VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
 
-    if (!DxcCompile(DXCompilerTarget::Direct3D12,
-                    Source, SourceLength,
-                    ToUnicode(ShaderCI.EntryPoint),
-                    ToUnicode(profile),
-                    D3DMacros.data(), D3DMacros.size(),
-                    pArgs, _countof(pArgs),
-                    ShaderCI.pShaderSourceStreamFactory,
-                    reinterpret_cast<IDxcBlob**>(ppBlobOut),
-                    reinterpret_cast<IDxcBlob**>(ppCompilerOutput)))
+    if (!DxCompiler->Compile(Source, SourceLength,
+                             ToUnicode(ShaderCI.EntryPoint),
+                             ToUnicode(profile),
+                             D3DMacros.data(), D3DMacros.size(),
+                             pArgs, _countof(pArgs),
+                             ShaderCI.pShaderSourceStreamFactory,
+                             reinterpret_cast<IDxcBlob**>(ppBlobOut),
+                             reinterpret_cast<IDxcBlob**>(ppCompilerOutput)))
     {
         return E_FAIL;
     }
@@ -311,7 +310,7 @@ static HRESULT CompileShader(const char*             Source,
 } // namespace
 
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, bool IsD3D12)
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersion ShaderModel, IDxCompilerLibrary* DxCompiler)
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
     {
@@ -324,35 +323,11 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion Sha
         switch (ShaderCI.ShaderCompiler)
         {
             // clang-format off
-            case SHADER_COMPILER_DEFAULT: IsDXIL = false; break;
-            case SHADER_COMPILER_DXC:     IsDXIL = true;  break;
-            case SHADER_COMPILER_FXC:     IsDXIL = false; break;
+            case SHADER_COMPILER_DEFAULT: IsDXIL = false;                                            break;
+            case SHADER_COMPILER_DXC:     IsDXIL = DxCompiler != nullptr && DxCompiler->IsLoaded();  break;
+            case SHADER_COMPILER_FXC:     IsDXIL = false;                                            break;
                 // clang-format on
             default: UNEXPECTED("Unsupported shader compiler");
-        }
-
-        // validate shader model
-        if (IsDXIL)
-        {
-            ShaderModel = (ShaderModel.Major >= 6 ? ShaderModel : ShaderVersion{6, 0});
-
-            // clamp to maximum supported version
-            ShaderVersion MaxSM;
-            if (DxcGetMaxShaderModel(DXCompilerTarget::Direct3D12, MaxSM))
-            {
-                if (ShaderModel.Major > MaxSM.Major)
-                    ShaderModel = MaxSM;
-
-                if (ShaderModel.Major == MaxSM.Major && ShaderModel.Minor > MaxSM.Minor)
-                    ShaderModel = MaxSM;
-            }
-            else
-                IsDXIL = false;
-        }
-
-        if (!IsDXIL)
-        {
-            ShaderModel = (ShaderModel.Major < 6 ? ShaderModel : (IsD3D12 ? ShaderVersion{5, 1} : ShaderVersion{5, 0}));
         }
 
         std::string strShaderProfile;
@@ -403,7 +378,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion Sha
         HRESULT           hr;
 
         if (IsDXIL)
-            hr = CompileDxilShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
+            hr = CompileDxilShader(DxCompiler, ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
         else
             hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
 

@@ -8,6 +8,9 @@ set(INCLUDE
 
 set(SOURCE 
     src/DXILUtils.cpp
+    src/DXCompilerBaseLiunx.hpp
+    src/DXCompilerBaseUWP.hpp
+    src/DXCompilerBaseWin32.hpp
 )
 
 if(PLATFORM_LINUX)

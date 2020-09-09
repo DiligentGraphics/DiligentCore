@@ -39,9 +39,7 @@ class VulkanPhysicalDevice
 public:
     struct ExtensionFeatures
     {
-#ifdef VK_NV_mesh_shader
-        VkPhysicalDeviceMeshShaderFeaturesNV MeshShader;
-#endif
+        VkPhysicalDeviceMeshShaderFeaturesNV MeshShader = {};
     };
 
     struct ExtensionProperties

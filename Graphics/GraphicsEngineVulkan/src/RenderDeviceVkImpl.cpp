@@ -148,7 +148,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         *this,
         EngineCI.DynamicHeapSize,
         ~Uint64{0}
-    }
+    },
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath)}
 // clang-format on
 {
     m_DeviceCaps.DevType      = RENDER_DEVICE_TYPE_VULKAN;

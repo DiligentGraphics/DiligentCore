@@ -48,6 +48,7 @@
 #include "FramebufferCache.hpp"
 #include "RenderPassCache.hpp"
 #include "CommandPoolManager.hpp"
+#include "DXILUtils.hpp"
 
 namespace Diligent
 {
@@ -176,6 +177,8 @@ public:
 
     void FlushStaleResources(Uint32 CmdQueueIndex);
 
+    IDxCompilerLibrary* GetDxCompiler() const { return m_pDxCompiler.get(); }
+
 private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
@@ -205,6 +208,8 @@ private:
     VulkanUtilities::VulkanMemoryManager m_MemoryMgr;
 
     VulkanDynamicMemoryManager m_DynamicMemoryManager;
+
+    std::unique_ptr<IDxCompilerLibrary> m_pDxCompiler;
 };
 
 } // namespace Diligent

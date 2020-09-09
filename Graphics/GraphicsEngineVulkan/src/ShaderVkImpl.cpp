@@ -67,7 +67,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         switch (CreationAttribs.ShaderCompiler)
         {
             case SHADER_COMPILER_DXC:
-                m_SPIRV = DXILtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
+                m_SPIRV = DXILtoSPIRV(pRenderDeviceVk->GetDxCompiler(), CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
                 break;
 
             case SHADER_COMPILER_DEFAULT:

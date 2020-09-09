@@ -32,12 +32,16 @@
 #include "ShaderD3DBase.hpp"
 #include "ShaderBase.hpp"
 #include "DXILUtils.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {
 
 
-ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const ShaderDesc& ShdrDesc, const char* CombinedSamplerSuffix) :
+ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob*              pShaderBytecode,
+                                           const ShaderDesc&      ShdrDesc,
+                                           const char*            CombinedSamplerSuffix,
+                                           RenderDeviceD3D12Impl* pRenderDeviceD3D12) :
     ShaderResources{ShdrDesc.ShaderType}
 {
     class NewResourceHandler
@@ -54,9 +58,12 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob* pShaderBytecode, const Shad
     };
 
     CComPtr<ID3D12ShaderReflection> pShaderReflection;
+    auto*                           DxCompiler = pRenderDeviceD3D12->GetDxCompiler();
 
-    if (!DxcGetShaderReflection(reinterpret_cast<IDxcBlob*>(pShaderBytecode), &pShaderReflection))
+    // At first try to get shader reflection with a DXC.
+    if (!DxcGetShaderReflection(DxCompiler, reinterpret_cast<IDxcBlob*>(pShaderBytecode), &pShaderReflection))
     {
+        // Use FXC to get reflection.
         HRESULT hr = D3DReflect(pShaderBytecode->GetBufferPointer(), pShaderBytecode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
         CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
     }
