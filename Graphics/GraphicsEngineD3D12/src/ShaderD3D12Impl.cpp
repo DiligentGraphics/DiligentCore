@@ -38,15 +38,23 @@ namespace Diligent
 
 static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const ShaderVersion& HLSLVersion, SHADER_COMPILER ShaderCompiler)
 {
+    if (ShaderCompiler != SHADER_COMPILER_DXC)
+        return HLSLVersion.Major == 0 ? ShaderVersion{5, 1} : HLSLVersion;
+
+    ShaderVersion DeviceSM   = pDevice->GetMaxShaderModel();
+    ShaderVersion CompilerSM = pDevice->GetDxCompiler() && pDevice->GetDxCompiler()->IsLoaded() ? pDevice->GetDxCompiler()->GetMaxShaderModel() : ShaderVersion{5, 1};
+    ShaderVersion MaxSM;
+
+    MaxSM = DeviceSM.Major == CompilerSM.Major ?
+        (DeviceSM.Minor > CompilerSM.Minor ? CompilerSM : DeviceSM) :
+        (DeviceSM.Major > CompilerSM.Major ? CompilerSM : DeviceSM);
+
     if (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0)
-    {
-        D3D_SHADER_MODEL ver = pDevice->GetMaxShaderModel();
-        return ShaderVersion{Uint8((ver >> 4) & 0xF), Uint8(ver & 0xF)};
-    }
-    else
-    {
-        return HLSLVersion;
-    }
+        return MaxSM;
+
+    return HLSLVersion.Major == MaxSM.Major ?
+        (HLSLVersion.Minor > MaxSM.Minor ? MaxSM : HLSLVersion) :
+        (HLSLVersion.Major > MaxSM.Major ? MaxSM : HLSLVersion);
 }
 
 ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,

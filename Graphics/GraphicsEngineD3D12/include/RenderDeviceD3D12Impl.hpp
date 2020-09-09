@@ -158,7 +158,7 @@ public:
     ID3D12Device2* GetD3D12Device2();
 #endif
 
-    D3D_SHADER_MODEL  GetMaxShaderModel() const;
+    ShaderVersion     GetMaxShaderModel() const;
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
 private:
