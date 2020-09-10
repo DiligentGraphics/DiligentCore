@@ -128,7 +128,7 @@ TEST(MeshShaderTest, DrawQuad)
     const bool IsVulkan = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM : SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler             = IsVulkan ? SHADER_COMPILER_DEFAULT : SHADER_COMPILER_DXC;
     ShaderCI.UseCombinedTextureSamplers = true;
 
@@ -237,7 +237,7 @@ TEST(MeshShaderTest, DrawQuadIndirect)
     const bool IsVulkan = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM : SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler             = IsVulkan ? SHADER_COMPILER_DEFAULT : SHADER_COMPILER_DXC;
     ShaderCI.UseCombinedTextureSamplers = true;
 
@@ -373,7 +373,7 @@ TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
     const bool IsVulkan = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
 
     ShaderCreateInfo ShaderCI;
-    ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL : SHADER_SOURCE_LANGUAGE_HLSL;
+    ShaderCI.SourceLanguage             = IsVulkan ? SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM : SHADER_SOURCE_LANGUAGE_HLSL;
     ShaderCI.ShaderCompiler             = IsVulkan ? SHADER_COMPILER_DEFAULT : SHADER_COMPILER_DXC;
     ShaderCI.UseCombinedTextureSamplers = true;
 

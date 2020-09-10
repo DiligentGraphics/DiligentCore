@@ -474,7 +474,7 @@ const Char* GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType)
 
 const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_MESH, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x080, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off

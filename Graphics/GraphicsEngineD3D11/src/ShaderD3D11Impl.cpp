@@ -41,8 +41,8 @@ static const ShaderVersion HLSLValidateShaderVersion(const ShaderVersion& Versio
     {
         ModelVer = MaxVersion;
         LOG_ERROR_MESSAGE("Shader model ", Uint32{Version.Major}, "_", Uint32{Version.Minor},
-                          " is not supported by this device. Maximum supported model: ",
-                          MaxVersion.Major, "_", MaxVersion.Minor, ". Attempting to use ", MaxVersion.Major, "_", MaxVersion.Minor, '.');
+                          " is not supported by this device. Attempting to use the maximum supported model ",
+                          Uint32{MaxVersion.Major}, "_", Uint32{MaxVersion.Minor}, '.');
     }
     else
     {
@@ -66,22 +66,22 @@ static const ShaderVersion GetD3D11ShaderModel(ID3D11Device* pd3d11Device, const
         case D3D_FEATURE_LEVEL_11_1:
         case D3D_FEATURE_LEVEL_11_0:
             return (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0) ?
-                ShaderVersion(5, 0) :
+                ShaderVersion{5, 0} :
                 HLSLValidateShaderVersion(HLSLVersion, {5, 0});
 
         case D3D_FEATURE_LEVEL_10_1:
             return (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0) ?
-                ShaderVersion(4, 1) :
+                ShaderVersion{4, 1} :
                 HLSLValidateShaderVersion(HLSLVersion, {4, 1});
 
         case D3D_FEATURE_LEVEL_10_0:
             return (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0) ?
-                ShaderVersion(4, 0) :
+                ShaderVersion{4, 0} :
                 HLSLValidateShaderVersion(HLSLVersion, {4, 0});
 
         default:
             UNEXPECTED("Unexpected D3D feature level ", static_cast<Uint32>(d3dDeviceFeatureLevel));
-            return ShaderVersion(4, 0);
+            return ShaderVersion{4, 0};
     }
 }
 
@@ -95,7 +95,7 @@ ShaderD3D11Impl::ShaderD3D11Impl(IReferenceCounters*     pRefCounters,
         pRenderDeviceD3D11,
         ShaderCI.Desc
     },
-    ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device(), ShaderCI.HLSLVersion), false}
+    ShaderD3DBase{ShaderCI, GetD3D11ShaderModel(pRenderDeviceD3D11->GetD3D11Device(), ShaderCI.HLSLVersion), nullptr}
 // clang-format on
 {
     auto* pDeviceD3D11 = pRenderDeviceD3D11->GetD3D11Device();

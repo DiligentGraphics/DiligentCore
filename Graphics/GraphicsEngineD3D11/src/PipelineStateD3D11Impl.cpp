@@ -65,7 +65,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
         }
         m_ShaderResourceLayoutHash = pCS->GetD3D11Resources()->GetHash();
     }
-    else
+    else if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
 
 #define INIT_SHADER(ShortName, ExpectedType)                                                                                                                                         \
@@ -124,6 +124,10 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
             CHECK_D3D_RESULT_THROW(pDeviceD3D11->CreateInputLayout(d311InputElements.data(), static_cast<UINT>(d311InputElements.size()), pVSByteCode->GetBufferPointer(), pVSByteCode->GetBufferSize(), &m_pd3d11InputLayout),
                                    "Failed to create the Direct3D11 input layout");
         }
+    }
+    else
+    {
+        UNEXPECTED(GetPipelineTypeString(m_Desc.PipelineType), " pipelines are not supported by Direct3D11 backend");
     }
 
     m_pStaticResourceLayouts = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11", ShaderResourceLayoutD3D11, m_NumShaders);

@@ -345,11 +345,11 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
 
         if (m_Desc.PipelineType == PIPELINE_TYPE_MESH)
         {
-            // Input assembly doesn't used during mesh pipeline creation, so topology may contain any value.
-            // Validation layers may generate warning if used point_list topology, so set another value.
+            // Input assembly is not used in the mesh pipeline, so topology may contain any value.
+            // Validation layers may generate a warning if point_list topology is used, so use MAX_ENUM value.
             InputAssemblyCI.topology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
 
-            // Vertex input state and tessellation state are ignored in mesh pipeline and shuld be null.
+            // Vertex input state and tessellation state are ignored in a mesh pipeline and should be null.
             PipelineCI.pVertexInputState  = nullptr;
             PipelineCI.pTessellationState = nullptr;
         }

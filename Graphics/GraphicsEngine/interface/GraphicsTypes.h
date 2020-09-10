@@ -1743,10 +1743,10 @@ typedef struct VulkanDescriptorPoolSize VulkanDescriptorPoolSize;
 struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     
     /// Id of the hardware adapter the engine should be initialized on.
-    Uint32      AdapterId          DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
+    Uint32             AdapterId                DEFAULT_INITIALIZER(DEFAULT_ADAPTER_ID);
 
     /// Enable Vulkan validation layers.
-    bool EnableValidation                       DEFAULT_INITIALIZER(false);
+    bool               EnableValidation         DEFAULT_INITIALIZER(false);
         
     /// Number of global Vulkan extensions
     Uint32             GlobalExtensionCount     DEFAULT_INITIALIZER(0);

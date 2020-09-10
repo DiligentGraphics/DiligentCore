@@ -85,7 +85,7 @@ DILIGENT_TYPED_ENUM(SHADER_SOURCE_LANGUAGE, Uint32)
 /// Describes the shader compiler that will be used to compile the shader source code
 DILIGENT_TYPED_ENUM(SHADER_COMPILER, Uint32)
 {
-    /// Default compiler for specific language and API that is chosen as follows:
+    /// Default compiler for specific language and API that is selected as follows:
     ///     - Direct3D11:      legacy HLSL compiler (FXC)
     ///     - Direct3D12:      legacy HLSL compiler (FXC)
     ///     - OpenGL(ES) GLSL: native compiler

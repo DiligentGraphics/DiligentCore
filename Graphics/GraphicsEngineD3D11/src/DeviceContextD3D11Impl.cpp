@@ -97,7 +97,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 
         COMMIT_SHADER(CS, ComputeShader);
     }
-    else
+    else if (Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
         COMMIT_SHADER(VS, VertexShader);
         COMMIT_SHADER(PS, PixelShader);
@@ -126,6 +126,10 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
             m_CommittedD3D11PrimTopology = TopologyToD3D11Topology(PrimTopology);
             m_pd3d11DeviceContext->IASetPrimitiveTopology(m_CommittedD3D11PrimTopology);
         }
+    }
+    else
+    {
+        UNEXPECTED(GetPipelineTypeString(Desc.PipelineType), " pipelines '", Desc.Name, "' are not supported in OpenGL");
     }
 }
 

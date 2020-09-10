@@ -1089,7 +1089,7 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
     ///                                     Uint32 TaskCount;
     ///                                     Uint32 FirstTask;
     /// 
-    /// \remarks  For compatibility between Direct3D12 and Vulkan and with direct call (DrawMesh) use define the first element in the structure,
+    /// \remarks  For compatibility between Direct3D12 and Vulkan and with direct call (DrawMesh) use the first element in the structure,
     ///           for example: Direct3D12 {TaskCount, 1, 1}, Vulkan {TaskCount, 0}.
     /// 
     /// \remarks  If IndirectAttribsBufferStateTransitionMode member is Diligent::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,

@@ -166,10 +166,10 @@ struct GraphicsPipelineDesc
     /// Geometry shader to be used with the pipeline.
     IShader* pGS DEFAULT_INITIALIZER(nullptr);
     
-    /// Amplification shader to be used with the pipeline
+    /// Amplification shader to be used with the pipeline.
     IShader* pAS DEFAULT_INITIALIZER(nullptr);
     
-    /// Mesh shader to be used with the pipeline
+    /// Mesh shader to be used with the pipeline.
     IShader* pMS DEFAULT_INITIALIZER(nullptr);
     
     //D3D12_STREAM_OUTPUT_DESC StreamOutput;
