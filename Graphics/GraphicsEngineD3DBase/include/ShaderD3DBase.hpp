@@ -29,7 +29,6 @@
 
 #include <d3dcommon.h>
 #include "Shader.h"
-#include "DXILUtils.hpp"
 
 /// \file
 /// Base implementation of a D3D shader
@@ -41,7 +40,7 @@ namespace Diligent
 class ShaderD3DBase
 {
 public:
-    ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, IDxCompilerLibrary* DxCompiler);
+    ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, class IDxCompilerLibrary* DxCompiler);
 
 protected:
     CComPtr<ID3DBlob> m_pShaderByteCode;
