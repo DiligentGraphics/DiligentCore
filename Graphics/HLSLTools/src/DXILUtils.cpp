@@ -102,7 +102,8 @@ private:
             CComPtr<IDxcValidator> validator;
             if (SUCCEEDED(m_pCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator))))
             {
-                if (CComQIPtr<IDxcVersionInfo> info{validator})
+                CComPtr<IDxcVersionInfo> info;
+                if (SUCCEEDED(validator->QueryInterface(IID_PPV_ARGS(&info))))
                 {
                     UINT32 ver = 0, minor = 0;
                     info->GetVersion(&ver, &minor);
