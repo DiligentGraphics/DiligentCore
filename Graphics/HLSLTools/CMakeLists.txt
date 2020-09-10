@@ -7,11 +7,16 @@ set(INCLUDE
 )
 
 set(SOURCE 
-    src/DXILUtils.cpp
     src/DXCompilerBaseLiunx.hpp
     src/DXCompilerBaseUWP.hpp
     src/DXCompilerBaseWin32.hpp
 )
+
+if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_LINUX)
+    list(APPEND SOURCE src/DXILUtils.cpp)
+else()
+    list(APPEND SOURCE src/DXILUtilsStub.cpp)
+endif()
 
 if(PLATFORM_LINUX)
     list(APPEND INCLUDE

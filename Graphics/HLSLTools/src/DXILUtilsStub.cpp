@@ -25,46 +25,22 @@
  *  of the possibility of such damages.
  */
 
-
 #include "DXILUtils.hpp"
-
-#include "dxc/dxcapi.h"
 
 namespace Diligent
 {
 
-namespace
+IDxCompilerLibrary* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
 {
+    return nullptr;
+}
 
-class DXCompilerBase : public IDxCompilerLibrary
+std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
+                                  const ShaderCreateInfo& Attribs,
+                                  const char*             ExtraDefinitions,
+                                  IDataBlob**             ppCompilerOutput) noexcept(false)
 {
-public:
-    ~DXCompilerBase() override
-    {
-        if (Module)
-            dlclose(Module);
-    }
-
-protected:
-    DxcCreateInstanceProc Load(DXCompilerTarget, const String& LibName)
-    {
-        if (!LibName.empty())
-            Module = dlopen(LibName.c_str(), RTLD_LOCAL | RTLD_LAZY);
-
-        if (Module == nullptr)
-            Module = dlopen("libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
-
-        // try to load from default path
-        if (Module == nullptr)
-            Module = dlopen("/usr/lib/dxc/libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
-
-        return Module ? reinterpret_cast<DxcCreateInstanceProc>(dlsym(Module, "DxcCreateInstance")) : nullptr;
-    }
-
-private:
-    void* Module = nullptr;
-};
-
-} // namespace
+    return {};
+}
 
 } // namespace Diligent

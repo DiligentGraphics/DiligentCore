@@ -25,25 +25,23 @@
  *  of the possibility of such damages.
  */
 
-#ifdef PLATFORM_UNIVERSAL_WINDOWS
 
-#    ifdef WIN32
-#        include <Unknwn.h>
-#        include <guiddef.h>
-#        include <atlbase.h>
-#        include <atlcom.h>
-#    endif
+#include <Unknwn.h>
+#include <guiddef.h>
+#include <atlbase.h>
+#include <atlcom.h>
 
-#    include "dxc/dxcapi.h"
+#include "dxc/dxcapi.h"
 
-#    include "DXILUtils.hpp"
+#include "DXILUtils.hpp"
 
-#    if D3D12_SUPPORTED
-#        include <d3d12shader.h>
-#    endif
+#if D3D12_SUPPORTED
+#    include <d3d12shader.h>
+#endif
 
 namespace Diligent
 {
+
 namespace
 {
 
@@ -78,6 +76,5 @@ private:
 };
 
 } // namespace
-} // namespace Diligent
 
-#endif // PLATFORM_UNIVERSAL_WINDOWS
+} // namespace Diligent

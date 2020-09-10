@@ -31,18 +31,23 @@
 #include <array>
 #include <mutex>
 
-// Platforms that has DXCompiler.
-#if defined(PLATFORM_WIN32) || defined(PLATFORM_UNIVERSAL_WINDOWS) || defined(PLATFORM_LINUX)
-
-#    include "DXCompilerBaseLiunx.hpp"
-#    include "DXCompilerBaseUWP.hpp"
+// Platforms that support DXCompiler.
+#if PLATFORM_WIN32
 #    include "DXCompilerBaseWin32.hpp"
+#elif PLATFORM_UNIVERSAL_WINDOWS
+#    include "DXCompilerBaseUWP.hpp"
+#elif PLATFORM_LINUX
+#    include "DXCompilerBaseLiunx.hpp"
+#else
+#    error DXC is not supported on this platform
+#endif
 
-#    include "DataBlobImpl.hpp"
-#    include "RefCntAutoPtr.hpp"
+#include "DataBlobImpl.hpp"
+#include "RefCntAutoPtr.hpp"
 
 namespace Diligent
 {
+
 namespace
 {
 
@@ -51,7 +56,7 @@ class DXCompilerImpl final : public DXCompilerBase
 public:
     DXCompilerImpl(DXCompilerTarget Target, const char* pLibName) :
         m_Target{Target},
-        m_LibName{pLibName ? pLibName : ""}
+        m_LibName{pLibName ? pLibName : "dxcompiler.dll"}
     {}
 
     ShaderVersion GetMaxShaderModel() override
@@ -353,8 +358,8 @@ bool DXCompilerImpl::Compile(const char*                      Source,
     return true;
 }
 
-#    if D3D12_SUPPORTED
-#        define FOURCC(a, b, c, d) (uint32_t{((d) << 24) | ((c) << 16) | ((b) << 8) | (a)})
+#if D3D12_SUPPORTED
+#    define FOURCC(a, b, c, d) (uint32_t{((d) << 24) | ((c) << 16) | ((b) << 8) | (a)})
 
 bool DxcGetShaderReflection(IDxCompilerLibrary*      pLibrary,
                             IDxcBlob*                pShaderBytecode,
@@ -389,10 +394,10 @@ bool DxcGetShaderReflection(IDxCompilerLibrary*      pLibrary,
     }
     return IsDXIL;
 }
-#    endif
+#endif
 
 
-#    if VULKAN_SUPPORTED
+#if VULKAN_SUPPORTED
 // Implemented in GLSLSourceBuilder.cpp
 const char* GetShaderTypeDefines(SHADER_TYPE Type);
 
@@ -547,29 +552,6 @@ std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
     return SPIRV;
 }
 
-#    endif // VULKAN_SUPPORTED
+#endif // VULKAN_SUPPORTED
 
 } // namespace Diligent
-
-#else
-
-#    include "DXILUtils.hpp"
-
-namespace Diligent
-{
-
-IDxCompilerLibrary* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
-{
-    return nullptr;
-}
-
-std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
-                                  const ShaderCreateInfo& Attribs,
-                                  const char*             ExtraDefinitions,
-                                  IDataBlob**             ppCompilerOutput) noexcept(false)
-{
-    return {};
-}
-
-} // namespace Diligent
-#endif
