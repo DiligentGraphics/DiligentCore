@@ -144,7 +144,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             reinterpret_cast<VkAllocationCallbacks*>(EngineCI.pVkAllocator));
 
         auto        vkDevice               = Instance->SelectPhysicalDevice(EngineCI.AdapterId);
-        auto        PhysicalDevice         = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, Instance);
+        auto        PhysicalDevice         = VulkanUtilities::VulkanPhysicalDevice::Create(vkDevice, *Instance);
         const auto& PhysicalDeviceFeatures = PhysicalDevice->GetFeatures();
 
         // If an implementation exposes any queue family that supports graphics operations,

@@ -44,7 +44,7 @@ namespace
 {
 #ifdef _MSC_VER
 #    pragma warning(push)
-#    pragma warning(disable : 4324)
+#    pragma warning(disable : 4324) //  warning C4324: structure was padded due to alignment specifier
 #endif
 
 template <typename InnerStructType, D3D12_PIPELINE_STATE_SUBOBJECT_TYPE SubObjType>
@@ -199,8 +199,6 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
                 LOG_ERROR_AND_THROW("Compute shader is not set in the pipeline desc");
 
             D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
-
-            d3d12PSODesc.pRootSignature = nullptr;
 
             auto* pByteCode                 = ValidatedCast<ShaderD3D12Impl>(ComputePipeline.pCS)->GetShaderByteCode();
             d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
@@ -359,7 +357,6 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             d3d12PSODesc.pRootSignature = m_RootSig.GetD3D12RootSignature();
 
             BlendStateDesc_To_D3D12_BLEND_DESC(GraphicsPipeline.BlendDesc, *d3d12PSODesc.BlendState);
-            // The sample mask for the blend state.
             d3d12PSODesc.SampleMask = GraphicsPipeline.SampleMask;
 
             RasterizerStateDesc_To_D3D12_RASTERIZER_DESC(GraphicsPipeline.RasterizerDesc, *d3d12PSODesc.RasterizerState);
@@ -398,7 +395,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
 #endif // D3D12_H_HAS_MESH_SHADER
 
         default:
-            LOG_ERROR_AND_THROW("Unknown shader type");
+            LOG_ERROR_AND_THROW("Unsupported pipeline type");
     }
 
     if (*m_Desc.Name != 0)

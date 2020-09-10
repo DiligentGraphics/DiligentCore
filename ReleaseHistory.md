@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Enabled mesh shaders (API Version 240068)
 * Added `QUERY_TYPE_DURATION` query type (API Version 240067)
 * Added `USAGE_UNIFIED` usage type (API Version 240066)
 * Added render passes (API Version 240065)

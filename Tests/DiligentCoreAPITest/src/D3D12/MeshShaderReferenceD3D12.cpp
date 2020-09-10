@@ -380,17 +380,17 @@ void AmplificationShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
 
 void MeshShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
 {
-    LOG_ERROR_AND_THROW("Direct12 headers doesn't support mesh shader");
+    LOG_ERROR_AND_THROW("Direct12 headers don't support mesh shader");
 }
 
 void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
 {
-    LOG_ERROR_AND_THROW("Direct12 headers doesn't support mesh shader");
+    LOG_ERROR_AND_THROW("Direct12 headers don't support mesh shader");
 }
 
 void AmplificationShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
 {
-    LOG_ERROR_AND_THROW("Direct12 headers doesn't support mesh shader");
+    LOG_ERROR_AND_THROW("Direct12 headers don't support mesh shader");
 }
 
 #endif // D3D12_H_HAS_MESH_SHADER

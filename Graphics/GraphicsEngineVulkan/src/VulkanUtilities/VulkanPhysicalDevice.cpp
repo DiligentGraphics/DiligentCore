@@ -33,15 +33,15 @@
 namespace VulkanUtilities
 {
 
-std::unique_ptr<VulkanPhysicalDevice> VulkanPhysicalDevice::Create(VkPhysicalDevice                vkDevice,
-                                                                   std::shared_ptr<VulkanInstance> Instance)
+std::unique_ptr<VulkanPhysicalDevice> VulkanPhysicalDevice::Create(VkPhysicalDevice      vkDevice,
+                                                                   const VulkanInstance& Instance)
 {
     auto* PhysicalDevice = new VulkanPhysicalDevice{vkDevice, Instance};
     return std::unique_ptr<VulkanPhysicalDevice>{PhysicalDevice};
 }
 
-VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice                vkDevice,
-                                           std::shared_ptr<VulkanInstance> Instance) :
+VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
+                                           const VulkanInstance& Instance) :
     m_VkDevice{vkDevice}
 {
     VERIFY_EXPR(m_VkDevice != VK_NULL_HANDLE);
@@ -69,7 +69,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice                vkDev
     }
 
 #ifdef VK_KHR_get_physical_device_properties2
-    if (Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+    if (Instance.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
         VkPhysicalDeviceFeatures2   Feats2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
         VkPhysicalDeviceProperties2 Props2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};

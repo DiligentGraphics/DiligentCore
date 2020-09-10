@@ -54,7 +54,7 @@ class DXCompilerImpl final : public DXCompilerBase
 public:
     DXCompilerImpl(DXCompilerTarget Target, const char* pLibName) :
         m_Target{Target},
-        m_LibName{pLibName ? pLibName : "dxcompiler"}
+        m_LibName{pLibName ? pLibName : (Target == DXCompilerTarget::Direct3D12 ? "dxcompiler" : "spv_dxcompiler")}
     {}
 
     ShaderVersion GetMaxShaderModel() override

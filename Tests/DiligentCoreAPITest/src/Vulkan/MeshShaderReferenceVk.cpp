@@ -574,17 +574,17 @@ void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain)
 
 void MeshShaderDrawReferenceVk(ISwapChain*)
 {
-    LOG_ERROR_AND_THROW("Vulkan headers doesn't contains VK_NV_mesh_shader extension");
+    LOG_ERROR_AND_THROW("Vulkan headers don't contains VK_NV_mesh_shader extension");
 }
 
 void MeshShaderIndirectDrawReferenceVk(ISwapChain*)
 {
-    LOG_ERROR_AND_THROW("Vulkan headers doesn't contains VK_NV_mesh_shader extension");
+    LOG_ERROR_AND_THROW("Vulkan headers don't contains VK_NV_mesh_shader extension");
 }
 
 void AmplificationShaderDrawReferenceVk(ISwapChain*)
 {
-    LOG_ERROR_AND_THROW("Vulkan headers doesn't contains VK_NV_mesh_shader extension");
+    LOG_ERROR_AND_THROW("Vulkan headers don't contains VK_NV_mesh_shader extension");
 }
 
 #endif // VK_NV_mesh_shader

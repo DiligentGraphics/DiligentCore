@@ -49,14 +49,6 @@ TEST(ShaderResourceLayout, ResourceArray)
     ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
     ShaderCI.UseCombinedTextureSamplers = true;
     ShaderCI.HLSLVersion                = ShaderVersion{5, 0};
-    ShaderCI.ShaderCompiler             = pEnv->GetDefaultCompiler(SHADER_SOURCE_LANGUAGE_HLSL);
-
-    // DXIL compilaer can't compile this shaders
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12)
-        ShaderCI.ShaderCompiler = SHADER_COMPILER_FXC;
-
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN)
-        ShaderCI.ShaderCompiler = SHADER_COMPILER_GLSLANG;
 
     RefCntAutoPtr<IShader> pVS, pPS;
     {
