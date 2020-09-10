@@ -98,7 +98,7 @@ public:
 
     static void SetErrorAllowance(int NumErrorsToAllow, const char* InfoMessage = nullptr);
 
-    void            SetDefaultCompiler(SHADER_COMPILER value);
+    void            SetDefaultCompiler(SHADER_COMPILER compiler);
     SHADER_COMPILER GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const;
 
 protected:

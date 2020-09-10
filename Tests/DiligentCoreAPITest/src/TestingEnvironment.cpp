@@ -403,61 +403,83 @@ RefCntAutoPtr<ITexture> TestingEnvironment::CreateTexture(const char* Name, TEXT
     return pTexture;
 }
 
-void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER value)
+void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
 {
     switch (m_pDevice->GetDeviceCaps().DevType)
     {
         case RENDER_DEVICE_TYPE_D3D12:
-        {
-            if (value == SHADER_COMPILER_FXC || value == SHADER_COMPILER_DXC)
-                m_ShaderCompiler = value;
-            else
-                m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            switch (compiler)
+            {
+                case SHADER_COMPILER_DEFAULT:
+                case SHADER_COMPILER_FXC:
+                case SHADER_COMPILER_DXC:
+                    m_ShaderCompiler = compiler;
+                    break;
+
+                default:
+                    LOG_WARNING_MESSAGE(GetShaderCompilerTypeString(compiler), " is not supported by Direct3D12 backend. Using default compiler");
+                    m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            }
             break;
-        }
+
+        case RENDER_DEVICE_TYPE_D3D11:
+            switch (compiler)
+            {
+                case SHADER_COMPILER_DEFAULT:
+                case SHADER_COMPILER_FXC:
+                    m_ShaderCompiler = compiler;
+                    break;
+
+                default:
+                    LOG_WARNING_MESSAGE(GetShaderCompilerTypeString(compiler), " is not supported by Direct3D11 backend. Using default compiler");
+                    m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            }
+            break;
+
+        case RENDER_DEVICE_TYPE_GL:
+        case RENDER_DEVICE_TYPE_GLES:
+            switch (compiler)
+            {
+                case SHADER_COMPILER_DEFAULT:
+                    m_ShaderCompiler = compiler;
+                    break;
+
+                default:
+                    LOG_WARNING_MESSAGE(GetShaderCompilerTypeString(compiler), " is not supported by OpenGL/GLES backend. Using default compiler");
+                    m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            }
+            break;
+
         case RENDER_DEVICE_TYPE_VULKAN:
-        {
-            if (value == SHADER_COMPILER_GLSLANG || value == SHADER_COMPILER_DXC)
-                m_ShaderCompiler = value;
-            else
-                m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            switch (compiler)
+            {
+                case SHADER_COMPILER_DEFAULT:
+                case SHADER_COMPILER_GLSLANG:
+                case SHADER_COMPILER_DXC:
+                    m_ShaderCompiler = compiler;
+                    break;
+
+                default:
+                    LOG_WARNING_MESSAGE(GetShaderCompilerTypeString(compiler), " is not supported by Vulkan backend. Using default compiler");
+                    m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            }
             break;
-        }
+
         default:
+            LOG_WARNING_MESSAGE("Unepxected device type");
             m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
     }
 
-    String msg{"Selected shader compiler: "};
-    switch (m_ShaderCompiler)
-    {
-        // clang-format off
-        case SHADER_COMPILER_DEFAULT: msg += "Default"; break;
-        case SHADER_COMPILER_GLSLANG: msg += "glslang"; break;
-        case SHADER_COMPILER_DXC:     msg += "DXC";     break;
-        case SHADER_COMPILER_FXC:     msg += "FXC";     break;
-            // clang-format on
-    }
-    LOG_INFO_MESSAGE(msg);
+    LOG_INFO_MESSAGE("Selected shader compiler: ", GetShaderCompilerTypeString(m_ShaderCompiler));
 }
 
 SHADER_COMPILER TestingEnvironment::GetDefaultCompiler(SHADER_SOURCE_LANGUAGE lang) const
 {
-    switch (m_pDevice->GetDeviceCaps().DevType)
-    {
-        case RENDER_DEVICE_TYPE_D3D12:
-        {
-            return m_ShaderCompiler;
-        }
-        case RENDER_DEVICE_TYPE_VULKAN:
-        {
-            // all available compilers supports HLSL
-            if (lang == SHADER_SOURCE_LANGUAGE_HLSL)
-                return m_ShaderCompiler;
-
-            return SHADER_COMPILER_GLSLANG;
-        }
-    }
-    return SHADER_COMPILER_DEFAULT;
+    if (m_pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN &&
+        lang != SHADER_SOURCE_LANGUAGE_HLSL)
+        return SHADER_COMPILER_GLSLANG;
+    else
+        return m_ShaderCompiler;
 }
 
 } // namespace Testing

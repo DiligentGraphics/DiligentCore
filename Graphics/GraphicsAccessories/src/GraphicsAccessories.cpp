@@ -1137,6 +1137,20 @@ const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
     // clang-format on
 }
 
+const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
+{
+    switch (Compiler)
+    {
+        case SHADER_COMPILER_DEFAULT: return "Default";
+        case SHADER_COMPILER_GLSLANG: return "glslang";
+        case SHADER_COMPILER_DXC: return "DXC";
+        case SHADER_COMPILER_FXC: return "FXC";
+
+        default:
+            UNEXPECTED("Unexpected shader compiler");
+            return "UNKNOWN";
+    };
+}
 
 Uint32 ComputeMipLevelsCount(Uint32 Width)
 {

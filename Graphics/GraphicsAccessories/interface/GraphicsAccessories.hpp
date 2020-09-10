@@ -380,6 +380,9 @@ const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform);
 
 const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType);
 
+const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler);
+
+
 Uint32 ComputeMipLevelsCount(Uint32 Width);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height);
 Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth);
