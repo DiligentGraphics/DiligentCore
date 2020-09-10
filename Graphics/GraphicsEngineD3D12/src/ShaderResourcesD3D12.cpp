@@ -32,16 +32,15 @@
 #include "ShaderD3DBase.hpp"
 #include "ShaderBase.hpp"
 #include "DXILUtils.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
 
 namespace Diligent
 {
 
 
-ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob*              pShaderBytecode,
-                                           const ShaderDesc&      ShdrDesc,
-                                           const char*            CombinedSamplerSuffix,
-                                           RenderDeviceD3D12Impl* pRenderDeviceD3D12) :
+ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob*                 pShaderBytecode,
+                                           const ShaderDesc&         ShdrDesc,
+                                           const char*               CombinedSamplerSuffix,
+                                           class IDxCompilerLibrary* pCompilerLibrary) :
     ShaderResources{ShdrDesc.ShaderType}
 {
     class NewResourceHandler
@@ -58,18 +57,21 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob*              pShaderBytecod
     };
 
     CComPtr<ID3D12ShaderReflection> pShaderReflection;
-    auto*                           DxCompiler = pRenderDeviceD3D12->GetDxCompiler();
+    if (pCompilerLibrary != nullptr)
+    {
+        // Try to get shader reflection with DXC.
+        DxcGetShaderReflection(pCompilerLibrary, reinterpret_cast<IDxcBlob*>(pShaderBytecode), &pShaderReflection);
+    }
 
-    // At first try to get shader reflection with a DXC.
-    if (!DxcGetShaderReflection(DxCompiler, reinterpret_cast<IDxcBlob*>(pShaderBytecode), &pShaderReflection))
+    if (!pShaderReflection)
     {
         // Use FXC to get reflection.
-        HRESULT hr = D3DReflect(pShaderBytecode->GetBufferPointer(), pShaderBytecode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
+        auto hr = D3DReflect(pShaderBytecode->GetBufferPointer(), pShaderBytecode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
         CHECK_D3D_RESULT_THROW(hr, "Failed to get the shader reflection");
     }
 
     Initialize<D3D12_SHADER_DESC, D3D12_SHADER_INPUT_BIND_DESC, ID3D12ShaderReflection>(
-        static_cast<ID3D12ShaderReflection*>(pShaderReflection),
+        pShaderReflection,
         NewResourceHandler{},
         ShdrDesc.Name,
         CombinedSamplerSuffix);

@@ -161,7 +161,7 @@ option(DILIGENT_NO_FORMAT_VALIDATION "Disable source code format validation" OFF
 if(PLATFORM_ANDROID)
     set(DILIGENT_NO_DXC_SPIRV ON CACHE INTERNAL "" FORCE)
 else()
-    option(DILIGENT_NO_DXC_SPIRV "Disable DXCompiler for Vulkan backends" OFF)
+    option(DILIGENT_NO_DXC_SPIRV "Disable DXCompiler for Vulkan backend" OFF)
 endif()
 
 option(DILIGENT_NO_DIRECT3D11 "Disable Direct3D11 backend" OFF)

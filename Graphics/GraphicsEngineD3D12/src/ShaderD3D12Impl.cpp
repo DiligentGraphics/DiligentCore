@@ -38,23 +38,50 @@ namespace Diligent
 
 static ShaderVersion GetD3D12ShaderModel(RenderDeviceD3D12Impl* pDevice, const ShaderVersion& HLSLVersion, SHADER_COMPILER ShaderCompiler)
 {
-    if (ShaderCompiler != SHADER_COMPILER_DXC)
-        return HLSLVersion.Major == 0 ? ShaderVersion{5, 1} : HLSLVersion;
+    ShaderVersion CompilerSM;
+    if (ShaderCompiler == SHADER_COMPILER_DXC)
+    {
+        if (pDevice->GetDxCompiler() && pDevice->GetDxCompiler()->IsLoaded())
+        {
+            CompilerSM = pDevice->GetDxCompiler()->GetMaxShaderModel();
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("DXC compiler is not loaded");
+            CompilerSM = ShaderVersion{5, 1};
+        }
+    }
+    else
+    {
+        VERIFY(ShaderCompiler == SHADER_COMPILER_FXC || ShaderCompiler == SHADER_COMPILER_DEFAULT, "Unexpected compiler");
+        // Direct3D12 supports shader model 5.1 on all feature levels.
+        // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
+        CompilerSM = ShaderVersion{5, 1};
+    }
 
-    ShaderVersion DeviceSM   = pDevice->GetMaxShaderModel();
-    ShaderVersion CompilerSM = pDevice->GetDxCompiler() && pDevice->GetDxCompiler()->IsLoaded() ? pDevice->GetDxCompiler()->GetMaxShaderModel() : ShaderVersion{5, 1};
-    ShaderVersion MaxSM;
+    ShaderVersion DeviceSM = pDevice->GetMaxShaderModel();
 
-    MaxSM = DeviceSM.Major == CompilerSM.Major ?
-        (DeviceSM.Minor > CompilerSM.Minor ? CompilerSM : DeviceSM) :
-        (DeviceSM.Major > CompilerSM.Major ? CompilerSM : DeviceSM);
+    ShaderVersion MaxSupportedSM = DeviceSM.Major == CompilerSM.Major ?
+        (DeviceSM.Minor < CompilerSM.Minor ? DeviceSM : CompilerSM) :
+        (DeviceSM.Major < CompilerSM.Major ? DeviceSM : CompilerSM);
 
     if (HLSLVersion.Major == 0 && HLSLVersion.Minor == 0)
-        return MaxSM;
-
-    return HLSLVersion.Major == MaxSM.Major ?
-        (HLSLVersion.Minor > MaxSM.Minor ? MaxSM : HLSLVersion) :
-        (HLSLVersion.Major > MaxSM.Major ? MaxSM : HLSLVersion);
+    {
+        return MaxSupportedSM;
+    }
+    else
+    {
+        if (HLSLVersion.Major > MaxSupportedSM.Major ||
+            HLSLVersion.Major == MaxSupportedSM.Major && HLSLVersion.Minor > MaxSupportedSM.Minor)
+        {
+            LOG_WARNING_MESSAGE("Requested shader model ", Uint32{HLSLVersion.Major}, '_', Uint32{HLSLVersion.Minor},
+                                " is not supported by the device/compiler. Downgrading to maximum supported version ",
+                                Uint32{MaxSupportedSM.Major}, '_', Uint32{MaxSupportedSM.Minor});
+            return MaxSupportedSM;
+        }
+        else
+            return HLSLVersion;
+    }
 }
 
 ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
@@ -73,7 +100,13 @@ ShaderD3D12Impl::ShaderD3D12Impl(IReferenceCounters*     pRefCounters,
     // Load shader resources
     auto& Allocator  = GetRawAllocator();
     auto* pRawMem    = ALLOCATE(Allocator, "Allocator for ShaderResources", ShaderResourcesD3D12, 1);
-    auto* pResources = new (pRawMem) ShaderResourcesD3D12(m_pShaderByteCode, m_Desc, ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr, pRenderDeviceD3D12);
+    auto* pResources = new (pRawMem) ShaderResourcesD3D12 //
+        {
+            m_pShaderByteCode,
+            m_Desc,
+            ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr,
+            pRenderDeviceD3D12->GetDxCompiler() //
+        };
     m_pShaderResources.reset(pResources, STDDeleterRawMem<ShaderResourcesD3D12>(Allocator));
 }
 

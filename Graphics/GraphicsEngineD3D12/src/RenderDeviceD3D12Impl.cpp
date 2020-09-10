@@ -67,7 +67,7 @@ static CComPtr<IDXGIAdapter1> DXGIAdapterFromD3D12Device(ID3D12Device* pd3d12Dev
 
 ShaderVersion RenderDeviceD3D12Impl::GetMaxShaderModel() const
 {
-    return ShaderVersion{Uint8((m_ShaderModel >> 4) & 0xF), Uint8(m_ShaderModel & 0xF)};
+    return ShaderVersion{static_cast<Uint8>((m_MaxShaderModel >> 4) & 0xF), static_cast<Uint8>(m_MaxShaderModel & 0xF)};
 }
 
 D3D_FEATURE_LEVEL RenderDeviceD3D12Impl::GetD3DFeatureLevel() const
@@ -206,24 +206,25 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     {
         // Direct3D12 supports shader model 5.1 on all feature levels.
         // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-        m_ShaderModel = D3D_SHADER_MODEL_5_1;
+        m_MaxShaderModel = D3D_SHADER_MODEL_5_1;
 
         // Header may not have constants for D3D_SHADER_MODEL_6_1 and above.
-        const D3D_SHADER_MODEL Models[] = {
-            D3D_SHADER_MODEL(0x65), // for mesh shader
-            D3D_SHADER_MODEL(0x64),
-            D3D_SHADER_MODEL(0x63),
-            D3D_SHADER_MODEL(0x62),
-            D3D_SHADER_MODEL(0x61),
-            D3D_SHADER_MODEL_6_0};
+        const D3D_SHADER_MODEL Models[] = //
+            {
+                static_cast<D3D_SHADER_MODEL>(0x65), // minimum required for mesh shader
+                static_cast<D3D_SHADER_MODEL>(0x64),
+                static_cast<D3D_SHADER_MODEL>(0x63),
+                static_cast<D3D_SHADER_MODEL>(0x62),
+                static_cast<D3D_SHADER_MODEL>(0x61),
+                D3D_SHADER_MODEL_6_0 //
+            };
 
-        D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = {};
         for (auto Model : Models)
         {
-            ShaderModel.HighestShaderModel = Model;
+            D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = {Model};
             if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(ShaderModel))))
             {
-                m_ShaderModel = ShaderModel.HighestShaderModel;
+                m_MaxShaderModel = ShaderModel.HighestShaderModel;
                 break;
             }
         }
@@ -232,11 +233,13 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     // Check if mesh shader is supported.
 #ifdef D3D12_H_HAS_MESH_SHADER
     {
-        D3D12_FEATURE_DATA_D3D12_OPTIONS7 FeatureData        = {};
-        bool                              SupportsMeshShader = SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureData, sizeof(FeatureData))) &&
+        D3D12_FEATURE_DATA_D3D12_OPTIONS7 FeatureData = {};
+
+        bool SupportsMeshShader =
+            SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureData, sizeof(FeatureData))) &&
             FeatureData.MeshShaderTier != D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
 
-        m_DeviceCaps.Features.MeshShaders = (m_ShaderModel >= D3D_SHADER_MODEL_6_5 && SupportsMeshShader);
+        m_DeviceCaps.Features.MeshShaders = (m_MaxShaderModel >= D3D_SHADER_MODEL_6_5 && SupportsMeshShader);
     }
 #endif
 

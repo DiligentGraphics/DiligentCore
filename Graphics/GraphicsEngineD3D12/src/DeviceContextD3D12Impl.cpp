@@ -227,6 +227,8 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
     }
     else
     {
+        VERIFY_EXPR(PSODesc.IsAnyGraphicsPipeline());
+
         auto& GraphicsCtx = CmdCtx.AsGraphicsContext();
         GraphicsCtx.SetPipelineState(pd3d12PSO);
 

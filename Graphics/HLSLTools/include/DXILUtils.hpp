@@ -83,9 +83,9 @@ std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
 #endif
 
 #if D3D12_SUPPORTED
-// Returns false if pShaderBytecode hasn't DXIL bytecode.
+// Attempts to extract shader reflection from the bytecode using DXC.
 // Throws exception on error.
-bool DxcGetShaderReflection(IDxCompilerLibrary*      pLibrary,
+void DxcGetShaderReflection(IDxCompilerLibrary*      pLibrary,
                             IDxcBlob*                pShaderBytecode,
                             ID3D12ShaderReflection** ppShaderReflection) noexcept(false);
 #endif

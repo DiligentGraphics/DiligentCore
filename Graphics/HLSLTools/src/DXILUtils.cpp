@@ -25,8 +25,6 @@
  *  of the possibility of such damages.
  */
 
-#include <unordered_set>
-#include <unordered_map>
 #include <memory>
 #include <array>
 #include <mutex>
@@ -56,7 +54,7 @@ class DXCompilerImpl final : public DXCompilerBase
 public:
     DXCompilerImpl(DXCompilerTarget Target, const char* pLibName) :
         m_Target{Target},
-        m_LibName{pLibName ? pLibName : "dxcompiler.dll"}
+        m_LibName{pLibName ? pLibName : "dxcompiler"}
     {}
 
     ShaderVersion GetMaxShaderModel() override
@@ -73,9 +71,7 @@ public:
 
     DxcCreateInstanceProc GetCreateInstaceProc()
     {
-        Load();
-        // mutex is not needed here
-        return m_pCreateInstance;
+        return Load();
     }
 
     bool Compile(const char*                      Source,
@@ -91,12 +87,12 @@ public:
                  IDxcBlob**                       ppCompilerOutput) override;
 
 private:
-    void Load()
+    DxcCreateInstanceProc Load()
     {
         std::unique_lock<std::mutex> lock{m_Guard};
 
         if (m_IsInitialized)
-            return;
+            return m_pCreateInstance;
 
         m_IsInitialized   = true;
         m_pCreateInstance = DXCompilerBase::Load(m_Target, m_LibName);
@@ -106,8 +102,7 @@ private:
             CComPtr<IDxcValidator> validator;
             if (SUCCEEDED(m_pCreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator))))
             {
-                CComPtr<IDxcVersionInfo> info;
-                if (SUCCEEDED(validator->QueryInterface(IID_PPV_ARGS(&info))))
+                if (CComQIPtr<IDxcVersionInfo> info{validator})
                 {
                     UINT32 ver = 0, minor = 0;
                     info->GetVersion(&ver, &minor);
@@ -128,6 +123,8 @@ private:
                 }
             }
         }
+
+        return m_pCreateInstance;
     }
 
 private:
@@ -262,17 +259,26 @@ bool DXCompilerImpl::Compile(const char*                      Source,
     CComPtr<IDxcLibrary> library;
     hr = CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
     if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create DXC Library");
         return false;
+    }
 
     CComPtr<IDxcCompiler> compiler;
     hr = CreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
     if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create DXC Compiler");
         return false;
+    }
 
     CComPtr<IDxcBlobEncoding> sourceBlob;
     hr = library->CreateBlobWithEncodingFromPinned(Source, UINT32(SourceLength), CP_UTF8, &sourceBlob);
     if (FAILED(hr))
+    {
+        LOG_ERROR("Failed to create DXC Blob encoding");
         return false;
+    }
 
     DxcIncludeHandlerImpl IncludeHandler{pShaderSourceStreamFactory, library};
 
@@ -305,26 +311,35 @@ bool DXCompilerImpl::Compile(const char*                      Source,
     }
 
     if (FAILED(hr))
-        return false; // compilation failed
+    {
+        LOG_ERROR("Failed to compile shader");
+        return false;
+    }
 
     CComPtr<IDxcBlob> compiled;
     hr = result->GetResult(&compiled);
     if (FAILED(hr))
         return false;
 
-    // validate and sign in
+    // validate and sign
     if (m_Target == DXCompilerTarget::Direct3D12)
     {
         CComPtr<IDxcValidator> validator;
         hr = CreateInstance(CLSID_DxcValidator, IID_PPV_ARGS(&validator));
         if (FAILED(hr))
+        {
+            LOG_ERROR("Failed to create  DXC Validator");
             return false;
+        }
 
         CComPtr<IDxcOperationResult> validationResult;
         hr = validator->Validate(compiled, DxcValidatorFlags_InPlaceEdit, &validationResult);
 
         if (validationResult == nullptr || FAILED(hr))
-            return false; // validation failed
+        {
+            LOG_ERROR("Failed to validate shader bytecode");
+            return false;
+        }
 
         HRESULT status = E_FAIL;
         validationResult->GetStatus(&status);
@@ -361,38 +376,36 @@ bool DXCompilerImpl::Compile(const char*                      Source,
 #if D3D12_SUPPORTED
 #    define FOURCC(a, b, c, d) (uint32_t{((d) << 24) | ((c) << 16) | ((b) << 8) | (a)})
 
-bool DxcGetShaderReflection(IDxCompilerLibrary*      pLibrary,
+void DxcGetShaderReflection(IDxCompilerLibrary*      pLibrary,
                             IDxcBlob*                pShaderBytecode,
                             ID3D12ShaderReflection** ppShaderReflection) noexcept(false)
 {
-    HRESULT hr;
-    bool    IsDXIL         = false;
-    auto    CreateInstance = pLibrary ? static_cast<DXCompilerImpl*>(pLibrary)->GetCreateInstaceProc() : nullptr;
+    VERIFY_EXPR(pLibrary != nullptr);
 
-    if (CreateInstance != nullptr)
+    auto CreateInstance = static_cast<DXCompilerImpl*>(pLibrary)->GetCreateInstaceProc();
+    if (CreateInstance == nullptr)
+        return;
+
+    const uint32_t DFCC_DXIL = FOURCC('D', 'X', 'I', 'L');
+
+    CComPtr<IDxcContainerReflection> pReflection;
+    UINT32                           shaderIdx;
+
+    auto hr = CreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
+    if (FAILED(hr))
+        LOG_ERROR_AND_THROW("Failed to create shader reflection instance");
+
+    hr = pReflection->Load(pShaderBytecode);
+    if (FAILED(hr))
+        LOG_ERROR_AND_THROW("Failed to load shader reflection from bytecode");
+
+    hr = pReflection->FindFirstPartKind(DFCC_DXIL, &shaderIdx);
+    if (SUCCEEDED(hr))
     {
-        const uint32_t                   DFCC_DXIL = FOURCC('D', 'X', 'I', 'L');
-        CComPtr<IDxcContainerReflection> pReflection;
-        UINT32                           shaderIdx;
-
-        hr = CreateInstance(CLSID_DxcContainerReflection, IID_PPV_ARGS(&pReflection));
+        hr = pReflection->GetPartReflection(shaderIdx, __uuidof(*ppShaderReflection), reinterpret_cast<void**>(ppShaderReflection));
         if (FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to create shader reflection instance");
-
-        hr = pReflection->Load(pShaderBytecode);
-        if (FAILED(hr))
-            LOG_ERROR_AND_THROW("Failed to load shader reflection from bytecode");
-
-        hr     = pReflection->FindFirstPartKind(DFCC_DXIL, &shaderIdx);
-        IsDXIL = SUCCEEDED(hr);
-        if (IsDXIL)
-        {
-            hr = pReflection->GetPartReflection(shaderIdx, __uuidof(*ppShaderReflection), reinterpret_cast<void**>(ppShaderReflection));
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to get the shader reflection");
-        }
+            LOG_ERROR_AND_THROW("Failed to get the shader reflection");
     }
-    return IsDXIL;
 }
 #endif
 
@@ -418,7 +431,7 @@ std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
                                   const char*             ExtraDefinitions,
                                   IDataBlob**             ppCompilerOutput) noexcept(false)
 {
-    RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
+    RefCntAutoPtr<IDataBlob> pFileData{MakeNewRCObj<DataBlobImpl>()(0)};
 
     const char* SourceCode    = 0;
     int         SourceCodeLen = 0;
@@ -530,8 +543,6 @@ std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
         pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
     }
 
-    std::vector<uint32_t> SPIRV;
-
     if (!result)
     {
         if (ppCompilerOutput != nullptr)
@@ -540,10 +551,11 @@ std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
         }
         else
         {
-            LOG_ERROR_AND_THROW("Failed to compile Vukan shader \"", (Attribs.Desc.Name != nullptr ? Attribs.Desc.Name : ""), "\":\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>"));
+            LOG_ERROR_AND_THROW("Failed to compile Vukan shader \"", (Attribs.Desc.Name != nullptr ? Attribs.Desc.Name : ""), "\":\n", (CompilerMsg != nullptr ? std::string(CompilerMsg, CompilerMsgLen) : "<no compiler log available>"));
         }
     }
 
+    std::vector<uint32_t> SPIRV;
     if (result && compiled && compiled->GetBufferSize() > 0)
     {
         SPIRV.assign(static_cast<uint32_t*>(compiled->GetBufferPointer()),

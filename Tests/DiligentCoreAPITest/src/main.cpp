@@ -117,7 +117,7 @@ int main(int argc, char** argv)
         {
             AdapterId = static_cast<Uint32>(atoi(arg + AdapterArgName.length()));
         }
-        else if (strcmp(arg, "--comp=dxc") == 0)
+        else if (strcmp(arg, "--shader_compiler=dxc") == 0)
         {
             ShCompiler = SHADER_COMPILER_DXC;
         }

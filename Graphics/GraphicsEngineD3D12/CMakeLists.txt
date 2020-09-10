@@ -181,10 +181,10 @@ target_compile_definitions(Diligent-GraphicsEngineD3D12-shared PUBLIC ENGINE_DLL
 
 if(${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} STRGREATER_EQUAL "10.0.19041.0")
     set(D3D12_H_HAS_MESH_SHADER ON CACHE INTERNAL "" FORCE)
-    target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE D3D12_H_HAS_MESH_SHADER)
+    target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE D3D12_H_HAS_MESH_SHADER=1)
 endif()
 if(${DILIGENT_HAS_D3D12_DXIL_COMPILER})
-    target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE DILIGENT_HAS_D3D12_DXIL_COMPILER)
+    target_compile_definitions(Diligent-GraphicsEngineD3D12-static PRIVATE DILIGENT_HAS_D3D12_DXIL_COMPILE=1)
 endif()
 
 # Set output name to GraphicsEngineD3D12_{32|64}{r|d}

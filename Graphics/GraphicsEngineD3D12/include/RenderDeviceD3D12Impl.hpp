@@ -192,7 +192,7 @@ private:
 
     QueryManagerD3D12 m_QueryMgr;
 
-    D3D_SHADER_MODEL m_ShaderModel = D3D_SHADER_MODEL_5_1;
+    D3D_SHADER_MODEL m_MaxShaderModel = D3D_SHADER_MODEL_5_1;
 
     std::unique_ptr<IDxCompilerLibrary> m_pDxCompiler;
 };

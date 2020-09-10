@@ -175,7 +175,7 @@ RootSignature::RootSignature() :
 }
 
 // clang-format off
-static D3D12_SHADER_VISIBILITY ShaderTypeInd2ShaderVisibilityMap[]
+static constexpr D3D12_SHADER_VISIBILITY ShaderTypeInd2ShaderVisibilityMap[]
 {
     D3D12_SHADER_VISIBILITY_VERTEX,        // 0
     D3D12_SHADER_VISIBILITY_PIXEL,         // 1
