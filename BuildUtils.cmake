@@ -24,13 +24,23 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                     "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
         endforeach(DLL)
 
-        # Copy D3Dcompiler_47.dll and dxcompiler.dll
+        # Copy D3Dcompiler_47.dll, dxcompiler.dll, and dxil.dll
         if(MSVC)
-            if (DEFINED CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
+            # Note that CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION is stated to be defined when targeting Windows 10
+            # and above, however it is also defined when targeting 8.1 and Visual Studio 2019 (but not VS2017)
+            if(CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL "10.0")
+                if (DEFINED CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
+                    set(WIN_SDK_BIN_PATH "$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}")
+                endif()
+            elseif(CMAKE_SYSTEM_VERSION VERSION_EQUAL "8.1")
+                set(WIN_SDK_BIN_PATH "$(WindowsSdkDir)\\bin")
+            endif()
+
+            if (WIN_SDK_BIN_PATH)
                 if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-                    set(WIN_SDK_BIN_PATH "$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64")
+                    set(WIN_SDK_BIN_PATH "${WIN_SDK_BIN_PATH}\\x64")
                 else()
-                    set(WIN_SDK_BIN_PATH "$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x86")
+                    set(WIN_SDK_BIN_PATH "${WIN_SDK_BIN_PATH}\\x86")
                 endif()
 
                 set(D3D_COMPILER_PATH "\"${WIN_SDK_BIN_PATH}\\D3Dcompiler_47.dll\"")
@@ -39,19 +49,21 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                         ${D3D_COMPILER_PATH}
                         "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
             
-                # DXC is only present in Windows SDK starting with version 10.0.17763.0
-                if(D3D12_SUPPORTED AND ${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} STRGREATER_EQUAL "10.0.17763.0")
-                    set(DXC_COMPILER_PATH "\"${WIN_SDK_BIN_PATH}\\dxcompiler.dll\"")
-                    set(DXIL_SIGNER_PATH  "\"${WIN_SDK_BIN_PATH}\\dxil.dll\"")
+                if(D3D12_SUPPORTED)
+                    # DXC is only present in Windows SDK starting with version 10.0.17763.0
+                    if(${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} VERSION_GREATER_EQUAL "10.0.17763.0")
+                        set(DXC_COMPILER_PATH "\"${WIN_SDK_BIN_PATH}\\dxcompiler.dll\"")
+                        set(DXIL_SIGNER_PATH  "\"${WIN_SDK_BIN_PATH}\\dxil.dll\"")
 
-                    # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in the same folder as the dxcompiler.dll at runtime.
-                    add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                            ${DXC_COMPILER_PATH}
-                            "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
-                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                            ${DXIL_SIGNER_PATH}
-                            "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+                        # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in the same folder as the dxcompiler.dll at runtime.
+                        add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+                            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                                ${DXC_COMPILER_PATH}
+                                "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
+                            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                                ${DXIL_SIGNER_PATH}
+                                "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
+                    endif()
                 endif()
             endif()
 
