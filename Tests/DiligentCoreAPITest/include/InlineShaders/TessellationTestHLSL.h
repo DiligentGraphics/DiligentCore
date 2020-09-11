@@ -99,7 +99,7 @@ struct HSOutput
 [outputtopology("triangle_ccw")]
 [outputcontrolpoints(1)]
 [patchconstantfunc("ConstantHS")]
-[maxtessfactor( 34.0f )]
+[maxtessfactor( 34.0 )]
 HSOutput main(InputPatch<VSOutput, 1> inputPatch, uint uCPID : SV_OutputControlPointID)
 {
     HSOutput Out;

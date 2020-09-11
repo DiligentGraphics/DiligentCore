@@ -129,6 +129,7 @@ protected:
         ShaderCI.Desc.ShaderType = ShaderType;
         ShaderCI.SourceLanguage  = SrcLang;
         ShaderCI.Macros          = Macros;
+        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
         ModifyShaderCI(ShaderCI);
 
@@ -331,7 +332,9 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
         if (TestStaticSamplers)
         {
             ShaderCI.UseCombinedTextureSamplers = true;
-            ShaderCI.HLSLVersion                = ShaderVersion{5, 0};
+            // Static sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
+            ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
     };
     auto pVS = CreateShader(TestStaticSamplers ? "ShaderResourceLayoutTest.StaticSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",

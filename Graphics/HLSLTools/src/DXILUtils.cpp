@@ -313,7 +313,6 @@ bool DXCompilerImpl::Compile(const char*                      Source,
 
     if (FAILED(hr))
     {
-        LOG_ERROR("Failed to compile shader");
         return false;
     }
 
