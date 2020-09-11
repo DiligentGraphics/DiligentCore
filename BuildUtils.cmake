@@ -27,14 +27,15 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
         # Copy D3Dcompiler_47.dll and dxcompiler.dll
         if(MSVC)
             if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-                set(D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x64_x64)\\D3Dcompiler_47.dll\"")
-                set(DXC_COMPILER_PATH "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64\\dxcompiler.dll\"")
-                set(DXIL_SIGNER_PATH  "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64\\dxil.dll\"")
+                set(WIN_SDK_BIN_PATH "$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x64")
             else()
-                set(D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x86_x86)\\D3Dcompiler_47.dll\"")
-                set(DXC_COMPILER_PATH "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x86\\dxcompiler.dll\"")
-                set(DXIL_SIGNER_PATH  "\"$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x86\\dxil.dll\"")
+                set(WIN_SDK_BIN_PATH "$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\x86")
             endif()
+
+            set(D3D_COMPILER_PATH "\"${WIN_SDK_BIN_PATH}\\D3Dcompiler_47.dll\"")
+            set(DXC_COMPILER_PATH "\"${WIN_SDK_BIN_PATH}\\dxcompiler.dll\"")
+            set(DXIL_SIGNER_PATH  "\"${WIN_SDK_BIN_PATH}\\dxil.dll\"")
+
             add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     ${D3D_COMPILER_PATH}
