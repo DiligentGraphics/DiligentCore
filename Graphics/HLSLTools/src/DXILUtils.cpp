@@ -538,7 +538,8 @@ std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
     {
         auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(Source.length() + 1 + CompilerMsgLen + 1);
         char* DataPtr         = static_cast<char*>(pOutputDataBlob->GetDataPtr());
-        memcpy(DataPtr, CompilerMsg, CompilerMsgLen + 1);
+        memcpy(DataPtr, CompilerMsg, CompilerMsgLen);
+        DataPtr[CompilerMsgLen] = 0; // Set null terminator as CompilerMsgLen may not account for it
         memcpy(DataPtr + CompilerMsgLen + 1, Source.data(), Source.length() + 1);
         pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
     }

@@ -207,7 +207,8 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         void** NextExt           = const_cast<void**>(&DeviceCreateInfo.pNext);
 
         // Variables may be unused if extensions are disabled.
-        (void)(SupportsFeatures2, NextExt);
+        (void)SupportsFeatures2;
+        (void)NextExt;
 
         // Enable mesh shader extension.
 #ifdef VK_NV_mesh_shader

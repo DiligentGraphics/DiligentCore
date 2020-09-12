@@ -321,7 +321,8 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
         {
             auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(CompilerMsgLen + 1 + ShaderSource.length() + 1);
             char* DataPtr         = static_cast<char*>(pOutputDataBlob->GetDataPtr());
-            memcpy(DataPtr, CompilerMsg, CompilerMsgLen + 1);
+            memcpy(DataPtr, CompilerMsg, CompilerMsgLen);
+            DataPtr[CompilerMsgLen] = 0; // Set null terminator
             memcpy(DataPtr + CompilerMsgLen + 1, ShaderSource.data(), ShaderSource.length() + 1);
             pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
         }
