@@ -1757,13 +1757,6 @@ struct EngineCreateInfo
     /// starting at position 1.
     Uint32                   NumDeferredContexts    DEFAULT_INITIALIZER(0);
 
-    /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
-    /// operations in the engine
-    struct IMemoryAllocator* pRawMemAllocator       DEFAULT_INITIALIZER(nullptr);
-
-    /// Pointer to the user-specified debug message callback function
-    DebugMessageCallbackType DebugMessageCallback   DEFAULT_INITIALIZER(nullptr);
-
     /// Requested device features.
 
     /// \remarks    If a feature is requested to be enabled, but is not supported
@@ -1774,6 +1767,13 @@ struct EngineCreateInfo
     ///             the engine will successfully be initialized, but the feature will be disabled.
     ///             The actual feature state can be queried from DeviceCaps structure.
     DeviceFeatures Features;
+
+    /// Pointer to the raw memory allocator that will be used for all memory allocation/deallocation
+    /// operations in the engine
+    struct IMemoryAllocator* pRawMemAllocator       DEFAULT_INITIALIZER(nullptr);
+
+    /// Pointer to the user-specified debug message callback function
+    DebugMessageCallbackType DebugMessageCallback   DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct EngineCreateInfo EngineCreateInfo;
 
