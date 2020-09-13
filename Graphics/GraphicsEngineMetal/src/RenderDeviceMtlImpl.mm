@@ -70,10 +70,10 @@ RenderDeviceMtlImpl :: RenderDeviceMtlImpl(IReferenceCounters*        pRefCounte
     m_DeviceCaps.DevType      = RENDER_DEVICE_TYPE_METAL;
     m_DeviceCaps.MajorVersion = 1;
     m_DeviceCaps.MinorVersion = 0;
-    m_DeviceCaps.Features.SeparablePrograms             = True;
-    m_DeviceCaps.Features.MultithreadedResourceCreation = True;
-    m_DeviceCaps.Features.GeometryShaders               = False;
-    m_DeviceCaps.Features.Tessellation                  = False;
+    m_DeviceCaps.Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
+    m_DeviceCaps.Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
+    m_DeviceCaps.Features.GeometryShaders               = DEVICE_FEATURE_STATE_DISABLED;
+    m_DeviceCaps.Features.Tessellation                  = DEVICE_FEATURE_STATE_DISABLED;
 }
 
 void RenderDeviceMtlImpl::TestTextureFormat( TEXTURE_FORMAT TexFormat )
