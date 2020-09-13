@@ -24,7 +24,7 @@
 #include "pch.h"
 
 #include "GLContextLinux.hpp"
-#include "DeviceCaps.h"
+#include "GraphicsTypes.h"
 #include "GLTypeConversions.hpp"
 
 namespace Diligent

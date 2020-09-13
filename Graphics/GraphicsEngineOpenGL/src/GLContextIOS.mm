@@ -26,7 +26,7 @@
 #import <OpenGLES/EAGL.h>
 
 #include "GLContextIOS.hpp"
-#include "DeviceCaps.h"
+#include "GraphicsTypes.h"
 #include "GLTypeConversions.hpp"
 
 namespace Diligent
