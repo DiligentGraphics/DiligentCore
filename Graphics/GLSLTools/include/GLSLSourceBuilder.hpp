@@ -28,7 +28,7 @@
 #pragma once
 
 #include "BasicTypes.h"
-#include "DeviceCaps.h"
+#include "GraphicsTypes.h"
 #include "Shader.h"
 
 namespace Diligent

@@ -48,7 +48,7 @@ public:
                           IEngineFactory*              pEngineFactory,
                           const EngineD3D11CreateInfo& EngineAttribs,
                           ID3D11Device*                pd3d11Device,
-                          Uint32                       NumDeferredContexts);
+                          Uint32                       NumDeferredContexts) noexcept(false);
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     /// Implementation of IRenderDevice::CreateBuffer() in Direct3D11 backend.

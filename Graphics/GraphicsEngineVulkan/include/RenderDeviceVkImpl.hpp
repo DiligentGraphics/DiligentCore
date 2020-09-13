@@ -67,7 +67,7 @@ public:
                        ICommandQueueVk**                                      pCmdQueues,
                        std::shared_ptr<VulkanUtilities::VulkanInstance>       Instance,
                        std::unique_ptr<VulkanUtilities::VulkanPhysicalDevice> PhysicalDevice,
-                       std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice);
+                       std::shared_ptr<VulkanUtilities::VulkanLogicalDevice>  LogicalDevice) noexcept(false);
     ~RenderDeviceVkImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

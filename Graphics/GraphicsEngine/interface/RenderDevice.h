@@ -33,7 +33,6 @@
 #include "../../../Primitives/interface/Object.h"
 #include "EngineFactory.h"
 #include "GraphicsTypes.h"
-#include "DeviceCaps.h"
 #include "Constants.h"
 #include "Buffer.h"
 #include "InputLayout.h"

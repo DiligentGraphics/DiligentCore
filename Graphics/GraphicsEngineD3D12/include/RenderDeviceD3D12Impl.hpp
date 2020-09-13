@@ -57,7 +57,7 @@ public:
                           const EngineD3D12CreateInfo& EngineCI,
                           ID3D12Device*                pD3D12Device,
                           size_t                       CommandQueueCount,
-                          ICommandQueueD3D12**         ppCmdQueues);
+                          ICommandQueueD3D12**         ppCmdQueues) noexcept(false);
     ~RenderDeviceD3D12Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

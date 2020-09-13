@@ -167,33 +167,58 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         DeviceCreateInfo.sType              = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
         DeviceCreateInfo.flags              = 0; // Reserved for future use
         // https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#extended-functionality-device-layer-deprecation
-        DeviceCreateInfo.enabledLayerCount      = 0;       // Deprecated and ignored.
-        DeviceCreateInfo.ppEnabledLayerNames    = nullptr; // Deprecated and ignored
-        DeviceCreateInfo.queueCreateInfoCount   = 1;
-        DeviceCreateInfo.pQueueCreateInfos      = &QueueInfo;
-        VkPhysicalDeviceFeatures DeviceFeatures = {};
+        DeviceCreateInfo.enabledLayerCount       = 0;       // Deprecated and ignored.
+        DeviceCreateInfo.ppEnabledLayerNames     = nullptr; // Deprecated and ignored
+        DeviceCreateInfo.queueCreateInfoCount    = 1;
+        DeviceCreateInfo.pQueueCreateInfos       = &QueueInfo;
+        VkPhysicalDeviceFeatures EnabledFeatures = {};
+        EnabledFeatures.fullDrawIndexUint32      = PhysicalDeviceFeatures.fullDrawIndexUint32;
 
-#define ENABLE_FEATURE(Feature) DeviceFeatures.Feature = PhysicalDeviceFeatures.Feature
-        ENABLE_FEATURE(geometryShader);
-        ENABLE_FEATURE(tessellationShader);
-        ENABLE_FEATURE(pipelineStatisticsQuery);
-        ENABLE_FEATURE(occlusionQueryPrecise);
-        ENABLE_FEATURE(imageCubeArray);
-        ENABLE_FEATURE(fillModeNonSolid);
-        ENABLE_FEATURE(samplerAnisotropy);
-        ENABLE_FEATURE(depthBiasClamp);
-        ENABLE_FEATURE(depthClamp);
-        ENABLE_FEATURE(independentBlend);
-        ENABLE_FEATURE(dualSrcBlend);
-        ENABLE_FEATURE(multiViewport);
-        ENABLE_FEATURE(textureCompressionBC);
-        ENABLE_FEATURE(vertexPipelineStoresAndAtomics);
-        ENABLE_FEATURE(fragmentStoresAndAtomics);
-        ENABLE_FEATURE(shaderStorageImageExtendedFormats);
+#define ENABLE_FEATURE(Feature, RequestedState, FeatureName)                           \
+    do                                                                                 \
+    {                                                                                  \
+        switch (RequestedState)                                                        \
+        {                                                                              \
+            case DEVICE_FEATURE_STATE_DISABLED:                                        \
+                EnabledFeatures.Feature = VK_FALSE;                                    \
+                break;                                                                 \
+            case DEVICE_FEATURE_STATE_ENABLED:                                         \
+            {                                                                          \
+                if (PhysicalDeviceFeatures.Feature == VK_FALSE)                        \
+                    LOG_ERROR_AND_THROW(FeatureName, " not supported by this device"); \
+                else                                                                   \
+                    EnabledFeatures.Feature = VK_TRUE;                                 \
+            }                                                                          \
+            break;                                                                     \
+            case DEVICE_FEATURE_STATE_OPTIONAL:                                        \
+                EnabledFeatures.Feature = PhysicalDeviceFeatures.Feature;              \
+                break;                                                                 \
+            default: UNEXPECTED("Unexpected feature state");                           \
+        }                                                                              \
+    } while (false)
+
+        // clang-format off
+        ENABLE_FEATURE(geometryShader,                    EngineCI.Features.GeometryShaders,                   "Geometry shaders are");
+        ENABLE_FEATURE(tessellationShader,                EngineCI.Features.Tessellation,                      "Tessellation is");
+        ENABLE_FEATURE(pipelineStatisticsQuery,           EngineCI.Features.PipelineStatisticsQueries,         "Pipeline statistics queries are");
+        ENABLE_FEATURE(occlusionQueryPrecise,             EngineCI.Features.OcclusionQueries,                  "Occlusion queries are");
+        ENABLE_FEATURE(imageCubeArray,                    DEVICE_FEATURE_STATE_OPTIONAL,                       "Image cube arrays");
+        ENABLE_FEATURE(fillModeNonSolid,                  EngineCI.Features.WireframeFill,                     "Wireframe fill is");
+        ENABLE_FEATURE(samplerAnisotropy,                 DEVICE_FEATURE_STATE_OPTIONAL,                       "Anisotropic texture filtering is");
+        ENABLE_FEATURE(depthBiasClamp,                    EngineCI.Features.DepthBiasClamp,                    "Depth bias clamp is");
+        ENABLE_FEATURE(depthClamp,                        EngineCI.Features.DepthClamp,                        "Depth clamp is");
+        ENABLE_FEATURE(independentBlend,                  EngineCI.Features.IndependentBlend,                  "Independent blend is");
+        ENABLE_FEATURE(dualSrcBlend,                      EngineCI.Features.DualSourceBlend,                   "Dual-source blend is");
+        ENABLE_FEATURE(multiViewport,                     EngineCI.Features.MultiViewport,                     "Multiviewport is");
+        ENABLE_FEATURE(textureCompressionBC,              EngineCI.Features.TextureCompressionBC,              "BC texture compression is");
+        ENABLE_FEATURE(vertexPipelineStoresAndAtomics,    EngineCI.Features.VertexPipelineUAVWritesAndAtomics, "Vertex pipeline UAV writes and atomics are");
+        ENABLE_FEATURE(fragmentStoresAndAtomics,          EngineCI.Features.PixelUAVWritesAndAtomics,          "Pixel UAV writes and atomics are");
+        ENABLE_FEATURE(shaderStorageImageExtendedFormats, EngineCI.Features.TextureUAVExtendedFormats,         "Texture UAV extended formats are");
+        // clang-format on
 #undef ENABLE_FEATURE
 
-        DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains
-                                                             // boolean indicators of all the features to be enabled.
+        DeviceCreateInfo.pEnabledFeatures = &EnabledFeatures; // NULL or a pointer to a VkPhysicalDeviceFeatures structure that contains
+                                                              // boolean indicators of all the features to be enabled.
 
         std::vector<const char*> DeviceExtensions =
             {
@@ -211,15 +236,24 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         (void)NextExt;
 
         // Enable mesh shader extension.
+        bool MeshShadersSupported = false;
 #ifdef VK_NV_mesh_shader
         VkPhysicalDeviceMeshShaderFeaturesNV MeshShaderFeats = PhysicalDevice->GetExtFeatures().MeshShader;
 
         if (SupportsFeatures2 && PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
         {
+            MeshShadersSupported = true;
             DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
             *NextExt = &MeshShaderFeats;
             NextExt  = &MeshShaderFeats.pNext;
         }
+#endif
+
+        if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED && !MeshShadersSupported)
+            LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device");
+
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();

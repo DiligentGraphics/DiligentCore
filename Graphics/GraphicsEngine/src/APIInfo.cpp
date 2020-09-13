@@ -30,7 +30,7 @@
 #include "Buffer.h"
 #include "BufferView.h"
 #include "DepthStencilState.h"
-#include "DeviceCaps.h"
+#include "GraphicsTypes.h"
 #include "DeviceContext.h"
 #include "InputLayout.h"
 #include "PipelineState.h"

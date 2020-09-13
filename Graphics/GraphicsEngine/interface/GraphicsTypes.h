@@ -1453,6 +1453,297 @@ enum QUERY_TYPE
 };
 
 
+
+/// Device type
+enum RENDER_DEVICE_TYPE
+{
+    RENDER_DEVICE_TYPE_UNDEFINED = 0,  ///< Undefined device
+    RENDER_DEVICE_TYPE_D3D11,          ///< D3D11 device
+    RENDER_DEVICE_TYPE_D3D12,          ///< D3D12 device
+    RENDER_DEVICE_TYPE_GL,             ///< OpenGL device 
+    RENDER_DEVICE_TYPE_GLES,           ///< OpenGLES device
+    RENDER_DEVICE_TYPE_VULKAN,         ///< Vulkan device
+    RENDER_DEVICE_TYPE_METAL           ///< Metal device (not yet implemented)
+};
+
+
+/// Texture sampler capabilities
+struct SamplerCaps
+{
+    /// Indicates if device supports border texture addressing mode
+    Bool BorderSamplingModeSupported   DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports anisotrpoic filtering
+    Bool AnisotropicFilteringSupported DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports MIP load bias
+    Bool LODBiasSupported              DEFAULT_INITIALIZER(False);
+};
+typedef struct SamplerCaps SamplerCaps;
+
+
+/// Texture capabilities
+struct TextureCaps
+{
+    /// Maximum dimension (width) of a 1D texture, or 0 if 1D textures are not supported.
+    Uint32 MaxTexture1DDimension   DEFAULT_INITIALIZER(0);
+
+    /// Maximum number of slices in a 1D texture array, or 0 if 1D texture arrays are not supported.
+    Uint32 MaxTexture1DArraySlices DEFAULT_INITIALIZER(0);
+
+    /// Maximum dimension (width or height) of a 2D texture.
+    Uint32 MaxTexture2DDimension   DEFAULT_INITIALIZER(0);
+
+    /// Maximum number of slices in a 2D texture array, or 0 if 2D texture arrays are not supported.
+    Uint32 MaxTexture2DArraySlices DEFAULT_INITIALIZER(0);
+
+    /// Maximum dimension (width, height, or depth) of a 3D texture, or 0 if 3D textures are not supported.
+    Uint32 MaxTexture3DDimension   DEFAULT_INITIALIZER(0);
+
+    /// Maximum dimension (width or height) of a cubemap face, or 0 if cubemap textures are not supported.
+    Uint32 MaxTextureCubeDimension DEFAULT_INITIALIZER(0);
+
+    /// Indicates if device supports 2D multisampled textures
+    Bool Texture2DMSSupported      DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports 2D multisampled texture arrays
+    Bool Texture2DMSArraySupported DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports texture views
+    Bool TextureViewSupported      DEFAULT_INITIALIZER(False);
+
+    /// Indicates if device supports cubemap arrays
+    Bool CubemapArraysSupported    DEFAULT_INITIALIZER(False);
+};
+typedef struct TextureCaps TextureCaps;
+    
+
+/// Device feature state
+DILIGENT_TYPED_ENUM(DEVICE_FEATURE_STATE, Uint8)
+{
+    /// Device feature is disabled.
+    DEVICE_FEATURE_STATE_DISABLED = 0,
+
+    /// Device feature is enabled.
+
+    /// If a feature is requested to be enabled during the initialization through
+    /// EngineCreateInfo::Feautures, but is not supported by the device/driver/platform,
+    /// the engine will fail to initialize.
+    DEVICE_FEATURE_STATE_ENABLED = 1,
+
+    /// Device feature is optional. 
+
+    /// During the initialization the engine will attempt to enable the feature.
+    /// If the feature is not supported by the device/driver/platform,
+    /// the engine will successfully be initialized, but the feature will be disabled.
+    /// The actual feature state can be queried from DeviceCaps structure.
+    DEVICE_FEATURE_STATE_OPTIONAL = 2
+};
+
+
+/// Describes the device features
+struct DeviceFeatures
+{
+    /// Indicates if device supports separable programs
+    DEVICE_FEATURE_STATE SeparablePrograms             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports indirect draw commands
+    DEVICE_FEATURE_STATE IndirectRendering             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports wireframe fill mode
+    DEVICE_FEATURE_STATE WireframeFill                 DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports multithreaded resource creation
+    DEVICE_FEATURE_STATE MultithreadedResourceCreation DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports compute shaders
+    DEVICE_FEATURE_STATE ComputeShaders                DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports geometry shaders
+    DEVICE_FEATURE_STATE GeometryShaders               DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+        
+    /// Indicates if device supports tessellation
+    DEVICE_FEATURE_STATE Tessellation                  DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+        
+    /// Indicates if device supports mesh and amplification shaders
+    DEVICE_FEATURE_STATE MeshShaders                   DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports bindless resources
+    DEVICE_FEATURE_STATE BindlessResources             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports occlusion queries (see Diligent::QUERY_TYPE_OCCLUSION).
+    DEVICE_FEATURE_STATE OcclusionQueries              DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports binary occlusion queries (see Diligent::QUERY_TYPE_BINARY_OCCLUSION).
+    DEVICE_FEATURE_STATE BinaryOcclusionQueries        DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports timestamp queries (see Diligent::QUERY_TYPE_TIMESTAMP).
+    DEVICE_FEATURE_STATE TimestampQueries              DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports pipeline statistics queries (see Diligent::QUERY_TYPE_PIPELINE_STATISTICS).
+    DEVICE_FEATURE_STATE PipelineStatisticsQueries     DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports duration queries (see Diligent::QUERY_TYPE_DURATION).
+    DEVICE_FEATURE_STATE DurationQueries               DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports depth bias clamping
+    DEVICE_FEATURE_STATE DepthBiasClamp                DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports depth clamping
+    DEVICE_FEATURE_STATE DepthClamp                    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports depth clamping
+    DEVICE_FEATURE_STATE IndependentBlend              DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports dual-source blend
+    DEVICE_FEATURE_STATE DualSourceBlend               DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports multiviewport
+    DEVICE_FEATURE_STATE MultiViewport                 DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports all BC-compressed formats
+    DEVICE_FEATURE_STATE TextureCompressionBC          DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports writes to UAVs as well as atomic operations in vertex,
+    /// tessellation, and geometry shader stages.
+    DEVICE_FEATURE_STATE VertexPipelineUAVWritesAndAtomics DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports writes to UAVs as well as atomic operations in pixel
+    /// shader stage.
+    DEVICE_FEATURE_STATE PixelUAVWritesAndAtomics          DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Specifies whether all the extended UAV texture formats are available in shader code.
+    DEVICE_FEATURE_STATE TextureUAVExtendedFormats         DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+#if DILIGENT_CPP_INTERFACE
+    DeviceFeatures() noexcept {}
+
+    explicit DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept :
+        SeparablePrograms                 {State},
+        IndirectRendering                 {State},
+        WireframeFill                     {State},
+        MultithreadedResourceCreation     {State},
+        ComputeShaders                    {State},
+        GeometryShaders                   {State},
+        Tessellation                      {State},
+        MeshShaders                       {State},
+        BindlessResources                 {State},
+        OcclusionQueries                  {State},
+        BinaryOcclusionQueries            {State},
+        TimestampQueries                  {State},
+        PipelineStatisticsQueries         {State},
+        DurationQueries                   {State},
+        DepthBiasClamp                    {State},
+        DepthClamp                        {State},
+        IndependentBlend                  {State},
+        DualSourceBlend                   {State},
+        MultiViewport                     {State},
+        TextureCompressionBC              {State},
+        VertexPipelineUAVWritesAndAtomics {State},
+        PixelUAVWritesAndAtomics          {State},
+        TextureUAVExtendedFormats         {State}
+    {
+#   if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(*this) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus above.");
+#   endif
+    }
+#endif
+};
+typedef struct DeviceFeatures DeviceFeatures;
+
+
+/// Device capabilities
+struct DeviceCaps
+{
+    /// Device type. See Diligent::DeviceType.
+    enum RENDER_DEVICE_TYPE DevType DEFAULT_INITIALIZER(RENDER_DEVICE_TYPE_UNDEFINED);
+
+    /// Major revision of the graphics API supported by the graphics adapter.
+    /// Note that this value indicates the maximum supported feature level, so,
+    /// for example, if the device type is D3D11, this value will be 10 when 
+    /// the maximum supported Direct3D feature level of the graphics adapter is 10.0.
+    Int32 MajorVersion DEFAULT_INITIALIZER(0);
+
+    /// Minor revision of the graphics API supported by the graphics adapter.
+    /// Similar to MajorVersion, this value indicates the maximum supported feature level.
+    Int32 MinorVersion DEFAULT_INITIALIZER(0);
+
+    /// Adapter type. See Diligent::ADAPTER_TYPE.
+    ADAPTER_TYPE AdaterType DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
+
+    /// Texture sampling capabilities. See Diligent::SamplerCaps.
+    SamplerCaps SamCaps;
+
+    /// Texture capabilities. See Diligent::TextureCaps.
+    TextureCaps TexCaps;
+
+    /// Device features. See Diligent::DeviceFeatures.
+
+    /// \note For optional features requested during the initialization, the
+    ///       struct will indicate the actual feature state (enabled or disabled).
+    DeviceFeatures Features;
+
+#if DILIGENT_CPP_INTERFACE
+    bool IsGLDevice()const
+    {
+        return DevType == RENDER_DEVICE_TYPE_GL || DevType == RENDER_DEVICE_TYPE_GLES;
+    }
+    bool IsD3DDevice()const
+    {
+        return DevType == RENDER_DEVICE_TYPE_D3D11 || DevType == RENDER_DEVICE_TYPE_D3D12;
+    }
+    bool IsVulkanDevice()const
+    {
+        return DevType == RENDER_DEVICE_TYPE_VULKAN;
+    }
+
+    struct NDCAttribs
+    {
+        const float MinZ;          // Minimum z value of normalized device coordinate space
+        const float ZtoDepthScale; // NDC z to depth scale
+        const float YtoVScale;     // Scale to transform NDC y coordinate to texture V coordinate
+
+        float GetZtoDepthBias() const
+        {
+            // Returns ZtoDepthBias such that given NDC z coordinate, depth value can be
+            // computed as follows:
+            // d = z * ZtoDepthScale + ZtoDepthBias
+            return -MinZ * ZtoDepthScale;
+        }
+    };
+
+    const NDCAttribs& GetNDCAttribs()const
+    {
+        if (IsVulkanDevice())
+        {
+            // Note that Vulkan itself does not invert Y coordinate when transforming
+            // normalized device Y to window space. However, we use negative viewport
+            // height which achieves the same effect as in D3D, thererfore we need to
+            // invert y (see comments in DeviceContextVkImpl::CommitViewports() for details)
+            static constexpr const NDCAttribs NDCAttribsVk {0.0f, 1.0f, -0.5f};
+            return NDCAttribsVk;
+        }
+        else if (IsD3DDevice())
+        {
+            static constexpr const NDCAttribs NDCAttribsD3D {0.0f, 1.0f, -0.5f};
+            return NDCAttribsD3D;
+        }
+        else if (IsGLDevice())
+        {
+            static constexpr const NDCAttribs NDCAttribsGL {-1.0f, 0.5f, 0.5f};
+            return NDCAttribsGL;
+        }
+        else
+        {
+            static constexpr const NDCAttribs NDCAttribsDefault {0.0f, 1.0f, 0.5f};
+            return NDCAttribsDefault;
+        }
+    }
+#endif
+};
+typedef struct DeviceCaps DeviceCaps;
+
+
 /// Engine creation attibutes
 struct EngineCreateInfo
 {
@@ -1472,6 +1763,17 @@ struct EngineCreateInfo
 
     /// Pointer to the user-specified debug message callback function
     DebugMessageCallbackType DebugMessageCallback   DEFAULT_INITIALIZER(nullptr);
+
+    /// Requested device features.
+
+    /// \remarks    If a feature is requested to be enabled, but is not supported
+    ///             by the device/driver/platform, the engine will fail to initialize.
+    ///
+    ///             If a feature is requested to be optioanl, the engine will attempt to enable the feature.
+    ///             If the feature is not supported by the device/driver/platform,
+    ///             the engine will successfully be initialized, but the feature will be disabled.
+    ///             The actual feature state can be queried from DeviceCaps structure.
+    DeviceFeatures Features;
 };
 typedef struct EngineCreateInfo EngineCreateInfo;
 

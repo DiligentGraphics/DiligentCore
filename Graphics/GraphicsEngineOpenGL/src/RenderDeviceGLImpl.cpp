@@ -98,7 +98,6 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     }
 
     FlagSupportedTexFormats();
-    QueryDeviceCaps();
 
     std::basic_string<GLubyte> glstrVendor = glGetString(GL_VENDOR);
     std::string                Vendor      = StrToLower(std::string(glstrVendor.begin(), glstrVendor.end()));
@@ -139,7 +138,49 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &MaxLayers);
     CHECK_GL_ERROR("Failed to get maximum number of texture array layers");
 
-    Features.VertexPipelineUAVWritesAndAtomics = False;
+#define SET_FEATURE_STATE(Feature, IsSupported, FeatureName)                           \
+    do                                                                                 \
+    {                                                                                  \
+        switch (InitAttribs.Features.Feature)                                          \
+        {                                                                              \
+            case DEVICE_FEATURE_STATE_ENABLED:                                         \
+            {                                                                          \
+                if (!(IsSupported))                                                    \
+                    LOG_ERROR_AND_THROW(FeatureName, " not supported by this device"); \
+                else                                                                   \
+                    Features.Feature = DEVICE_FEATURE_STATE_ENABLED;                   \
+            }                                                                          \
+            break;                                                                     \
+            case DEVICE_FEATURE_STATE_DISABLED:                                        \
+            case DEVICE_FEATURE_STATE_OPTIONAL:                                        \
+                Features.Feature = (IsSupported) ?                                     \
+                    DEVICE_FEATURE_STATE_ENABLED :                                     \
+                    DEVICE_FEATURE_STATE_DISABLED;                                     \
+                break;                                                                 \
+            default: UNEXPECTED("Unexpected feature state");                           \
+        }                                                                              \
+    } while (false)
+
+    SET_FEATURE_STATE(VertexPipelineUAVWritesAndAtomics, false, "Vertex pipeline UAV writes and atomics are");
+    SET_FEATURE_STATE(MeshShaders, false, "Mesh shaders are");
+
+    {
+        bool WireframeFillSupported = (glPolygonMode != nullptr);
+        if (WireframeFillSupported)
+        {
+            // Test glPolygonMode() function to check if it fails
+            // (It does fail on NVidia Shield tablet, but works fine
+            // on Intel hw)
+            VERIFY(glGetError() == GL_NO_ERROR, "Unhandled gl error encountered");
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            if (glGetError() != GL_NO_ERROR)
+                WireframeFillSupported = false;
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            if (glGetError() != GL_NO_ERROR)
+                WireframeFillSupported = false;
+        }
+        SET_FEATURE_STATE(WireframeFill, WireframeFillSupported, "Wireframe fill is");
+    }
 
     if (m_DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL)
     {
@@ -148,27 +189,30 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         const bool IsGL42OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 2);
         const bool IsGL41OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 1);
 
-        Features.SeparablePrograms             = True;
-        Features.IndirectRendering             = True;
-        Features.WireframeFill                 = True;
-        Features.MultithreadedResourceCreation = False;
-        Features.ComputeShaders                = IsGL43OrAbove || CheckExtension("GL_ARB_compute_shader");
-        Features.GeometryShaders               = MajorVersion >= 4 || CheckExtension("GL_ARB_geometry_shader4");
-        Features.Tessellation                  = MajorVersion >= 4 || CheckExtension("GL_ARB_tessellation_shader");
-        Features.BindlessResources             = False;
-        Features.OcclusionQueries              = True;  // Present since 3.3
-        Features.BinaryOcclusionQueries        = True;  // Present since 3.3
-        Features.TimestampQueries              = True;  // Present since 3.3
-        Features.PipelineStatisticsQueries     = True;  // Present since 3.3
-        Features.DurationQueries               = True;  // Present since 3.3
-        Features.DepthBiasClamp                = False; // There is no depth bias clamp in OpenGL
-        Features.DepthClamp                    = MajorVersion >= 4 || CheckExtension("GL_ARB_depth_clamp");
-        Features.IndependentBlend              = True;
-        Features.DualSourceBlend               = IsGL41OrAbove || CheckExtension("GL_ARB_blend_func_extended");
-        Features.MultiViewport                 = IsGL41OrAbove || CheckExtension("GL_ARB_viewport_array");
-        Features.PixelUAVWritesAndAtomics      = IsGL42OrAbove || CheckExtension("GL_ARB_shader_image_load_store");
-        Features.TextureUAVExtendedFormats     = False;
-
+        Features.SeparablePrograms = DEVICE_FEATURE_STATE_ENABLED;
+        Features.IndirectRendering = DEVICE_FEATURE_STATE_ENABLED;
+        Features.WireframeFill     = DEVICE_FEATURE_STATE_ENABLED;
+        // clang-format off
+        SET_FEATURE_STATE(MultithreadedResourceCreation, false,                                                             "Multithreaded resource creation is");
+        SET_FEATURE_STATE(ComputeShaders,                IsGL43OrAbove     || CheckExtension("GL_ARB_compute_shader"),      "Compute shaders are");
+        SET_FEATURE_STATE(GeometryShaders,               MajorVersion >= 4 || CheckExtension("GL_ARB_geometry_shader4"),    "Geometry shaders are");
+        SET_FEATURE_STATE(Tessellation,                  MajorVersion >= 4 || CheckExtension("GL_ARB_tessellation_shader"), "Tessellation is");
+        SET_FEATURE_STATE(BindlessResources,             false,                                                             "Bindless resources are");
+        // clang-format on
+        Features.OcclusionQueries          = DEVICE_FEATURE_STATE_ENABLED; // Present since 3.3
+        Features.BinaryOcclusionQueries    = DEVICE_FEATURE_STATE_ENABLED; // Present since 3.3
+        Features.TimestampQueries          = DEVICE_FEATURE_STATE_ENABLED; // Present since 3.3
+        Features.PipelineStatisticsQueries = DEVICE_FEATURE_STATE_ENABLED; // Present since 3.3
+        Features.DurationQueries           = DEVICE_FEATURE_STATE_ENABLED; // Present since 3.3
+        // clang-format off
+        SET_FEATURE_STATE(DepthBiasClamp,            false,                                                             "Depth bias clamp is");                        // There is no depth bias clamp in OpenGL
+        SET_FEATURE_STATE(DepthClamp,                MajorVersion >= 4 || CheckExtension("GL_ARB_depth_clamp"),         "Depth clamp is");
+        SET_FEATURE_STATE(IndependentBlend,          true,                                                              "Independent blend is");
+        SET_FEATURE_STATE(DualSourceBlend,           IsGL41OrAbove || CheckExtension("GL_ARB_blend_func_extended"),     "Dual source blend is");
+        SET_FEATURE_STATE(MultiViewport,             IsGL41OrAbove || CheckExtension("GL_ARB_viewport_array"),          "Multi viewport is");
+        SET_FEATURE_STATE(PixelUAVWritesAndAtomics,  IsGL42OrAbove || CheckExtension("GL_ARB_shader_image_load_store"), "Pixel UAV writes and atomics are");
+        SET_FEATURE_STATE(TextureUAVExtendedFormats, false,                                                             "Texture UAV extended formats are");
+        // clang-format on
 
         TexCaps.MaxTexture1DDimension     = MaxTextureSize;
         TexCaps.MaxTexture1DArraySlices   = MaxLayers;
@@ -195,32 +239,33 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         bool IsGLES31OrAbove = (MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 1);
         bool IsGLES32OrAbove = (MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 2);
 
-        Features.SeparablePrograms             = IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects");
-        Features.IndirectRendering             = IsGLES31OrAbove || strstr(Extensions, "draw_indirect");
-        Features.WireframeFill                 = False;
-        Features.MultithreadedResourceCreation = False;
-        Features.ComputeShaders                = IsGLES31OrAbove || strstr(Extensions, "compute_shader");
-        Features.GeometryShaders               = IsGLES32OrAbove || strstr(Extensions, "geometry_shader");
-        Features.Tessellation                  = IsGLES32OrAbove || strstr(Extensions, "tessellation_shader");
-        Features.BindlessResources             = False;
-        Features.OcclusionQueries              = False;
-        Features.BinaryOcclusionQueries        = True; // Supported in GLES3.0
+        // clang-format off
+        SET_FEATURE_STATE(SeparablePrograms,             IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects"), "Separable programs are");
+        SET_FEATURE_STATE(IndirectRendering,             IsGLES31OrAbove || strstr(Extensions, "draw_indirect"),           "Indirect rendering is");
+        SET_FEATURE_STATE(WireframeFill,                 false, "Wireframe fill is");
+        SET_FEATURE_STATE(MultithreadedResourceCreation, false, "Multithreaded resource creation is");
+        SET_FEATURE_STATE(ComputeShaders,                IsGLES31OrAbove || strstr(Extensions, "compute_shader"),      "Compute shaders are");
+        SET_FEATURE_STATE(GeometryShaders,               IsGLES32OrAbove || strstr(Extensions, "geometry_shader"),     "Geometry shaders are");
+        SET_FEATURE_STATE(Tessellation,                  IsGLES32OrAbove || strstr(Extensions, "tessellation_shader"), "Tessellation is");
+        SET_FEATURE_STATE(BindlessResources,             false, "Bindless resources are");
+        SET_FEATURE_STATE(OcclusionQueries,              false, "Occlusion queries are");
+        SET_FEATURE_STATE(BinaryOcclusionQueries,        true,  "Binary occlusion queries are"); // Supported in GLES3.0
 #if GL_TIMESTAMP
-        Features.TimestampQueries = strstr(Extensions, "disjoint_timer_query");
-        Features.DurationQueries  = Features.TimestampQueries;
+        SET_FEATURE_STATE(TimestampQueries, strstr(Extensions, "disjoint_timer_query"), "Timestamp queries are");
+        SET_FEATURE_STATE(DurationQueries,  Features.TimestampQueries,                  "Duration queries are");
 #else
-        Features.TimestampQueries = False;
-        Features.DurationQueries  = False;
+        SET_FEATURE_STATE(TimestampQueries, false, "Timestamp queries are");
+        SET_FEATURE_STATE(DurationQueries,  false, "Duration queries are");
 #endif
-        Features.PipelineStatisticsQueries = False;
-        Features.DepthBiasClamp            = False; // There is no depth bias clamp in OpenGL
-        Features.DepthClamp                = strstr(Extensions, "depth_clamp");
-        Features.IndependentBlend          = IsGLES32OrAbove;
-        Features.DualSourceBlend           = strstr(Extensions, "blend_func_extended");
-        Features.MultiViewport             = strstr(Extensions, "viewport_array");
-        Features.PixelUAVWritesAndAtomics  = IsGLES31OrAbove || strstr(Extensions, "shader_image_load_store");
-        Features.TextureUAVExtendedFormats = False;
-
+        SET_FEATURE_STATE(PipelineStatisticsQueries, false, "Pipeline atatistics queries are");
+        SET_FEATURE_STATE(DepthBiasClamp,            false, "Depth bias clamp is"); // There is no depth bias clamp in OpenGL
+        SET_FEATURE_STATE(DepthClamp,                strstr(Extensions, "depth_clamp"), "Depth clamp is");
+        SET_FEATURE_STATE(IndependentBlend,          IsGLES32OrAbove,                   "Independent blend is");
+        SET_FEATURE_STATE(DualSourceBlend,           strstr(Extensions, "blend_func_extended"), "Dual source blend");
+        SET_FEATURE_STATE(MultiViewport,             strstr(Extensions, "viewport_array"),      "Multi viewport");
+        SET_FEATURE_STATE(PixelUAVWritesAndAtomics,  IsGLES31OrAbove || strstr(Extensions, "shader_image_load_store"), "Pixel UAV writes and atomics");
+        SET_FEATURE_STATE(TextureUAVExtendedFormats, false, "Texture UAV extended formats");
+        // clang-format on
 
         TexCaps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
         TexCaps.MaxTexture1DArraySlices   = 0; // Not supported in GLES 3.2
@@ -242,7 +287,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     const bool bBPTC = CheckExtension("GL_ARB_texture_compression_bptc");
     const bool bS3TC = CheckExtension("GL_EXT_texture_compression_s3tc");
 
-    Features.TextureCompressionBC = bRGTC && bBPTC && bS3TC;
+    SET_FEATURE_STATE(TextureCompressionBC, bRGTC && bBPTC && bS3TC, "BC texture compression is");
+
+#undef SET_FEATURE_STATE
 }
 
 RenderDeviceGLImpl::~RenderDeviceGLImpl()
@@ -944,28 +991,6 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
         );
     }
 }
-
-void RenderDeviceGLImpl::QueryDeviceCaps()
-{
-    if (glPolygonMode == nullptr)
-        m_DeviceCaps.Features.WireframeFill = false;
-
-    if (m_DeviceCaps.Features.WireframeFill)
-    {
-        // Test glPolygonMode() function to check if it fails
-        // (It does fail on NVidia Shield tablet, but works fine
-        // on Intel hw)
-        VERIFY(glGetError() == GL_NO_ERROR, "Unhandled gl error encountered");
-        m_DeviceCaps.Features.WireframeFill = True;
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        if (glGetError() != GL_NO_ERROR)
-            m_DeviceCaps.Features.WireframeFill = False;
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        if (glGetError() != GL_NO_ERROR)
-            m_DeviceCaps.Features.WireframeFill = False;
-    }
-}
-
 
 FBOCache& RenderDeviceGLImpl::GetFBOCache(GLContext::NativeGLContextType Context)
 {

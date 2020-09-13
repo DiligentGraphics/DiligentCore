@@ -154,113 +154,141 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     m_pDxCompiler         {CreateDXCompiler(DXCompilerTarget::Direct3D12, EngineCI.pDxCompilerPath)}
 // clang-format on
 {
-    m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D12;
-    auto FeatureLevel    = GetD3DFeatureLevel();
-    switch (FeatureLevel)
+    try
     {
-        case D3D_FEATURE_LEVEL_12_0:
-        case D3D_FEATURE_LEVEL_12_1:
-            m_DeviceCaps.MajorVersion = 12;
-            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_12_1 ? 1 : 0;
-            break;
-
-        case D3D_FEATURE_LEVEL_11_0:
-        case D3D_FEATURE_LEVEL_11_1:
-            m_DeviceCaps.MajorVersion = 11;
-            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_11_1 ? 1 : 0;
-            break;
-
-        case D3D_FEATURE_LEVEL_10_0:
-        case D3D_FEATURE_LEVEL_10_1:
-            m_DeviceCaps.MajorVersion = 10;
-            m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_10_1 ? 1 : 0;
-            break;
-
-        default:
-            UNEXPECTED("Unexpected D3D feature level");
-    }
-
-    if (auto pDXGIAdapter1 = DXGIAdapterFromD3D12Device(pd3d12Device))
-    {
-        DXGI_ADAPTER_DESC1 AdapterDesc = {};
-
-        auto hr = pDXGIAdapter1->GetDesc1(&AdapterDesc);
-        if (SUCCEEDED(hr))
+        m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D12;
+        auto FeatureLevel    = GetD3DFeatureLevel();
+        switch (FeatureLevel)
         {
-            m_DeviceCaps.AdaterType = (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
-        }
-        else
-        {
-            LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter type will be unknown.");
-        }
-    }
-
-    // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),
-    // so bindless resources are always available.
-    // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-    m_DeviceCaps.Features.BindlessResources = True;
-
-    m_DeviceCaps.Features.VertexPipelineUAVWritesAndAtomics = True;
-
-    // Detect maximum  shader model.
-    {
-        // Direct3D12 supports shader model 5.1 on all feature levels.
-        // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
-        m_MaxShaderModel = D3D_SHADER_MODEL_5_1;
-
-        // Header may not have constants for D3D_SHADER_MODEL_6_1 and above.
-        const D3D_SHADER_MODEL Models[] = //
-            {
-                static_cast<D3D_SHADER_MODEL>(0x65), // minimum required for mesh shader
-                static_cast<D3D_SHADER_MODEL>(0x64),
-                static_cast<D3D_SHADER_MODEL>(0x63),
-                static_cast<D3D_SHADER_MODEL>(0x62),
-                static_cast<D3D_SHADER_MODEL>(0x61),
-                D3D_SHADER_MODEL_6_0 //
-            };
-
-        for (auto Model : Models)
-        {
-            D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = {Model};
-            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(ShaderModel))))
-            {
-                m_MaxShaderModel = ShaderModel.HighestShaderModel;
+            case D3D_FEATURE_LEVEL_12_0:
+            case D3D_FEATURE_LEVEL_12_1:
+                m_DeviceCaps.MajorVersion = 12;
+                m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_12_1 ? 1 : 0;
                 break;
+
+            case D3D_FEATURE_LEVEL_11_0:
+            case D3D_FEATURE_LEVEL_11_1:
+                m_DeviceCaps.MajorVersion = 11;
+                m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_11_1 ? 1 : 0;
+                break;
+
+            case D3D_FEATURE_LEVEL_10_0:
+            case D3D_FEATURE_LEVEL_10_1:
+                m_DeviceCaps.MajorVersion = 10;
+                m_DeviceCaps.MinorVersion = FeatureLevel == D3D_FEATURE_LEVEL_10_1 ? 1 : 0;
+                break;
+
+            default:
+                UNEXPECTED("Unexpected D3D feature level");
+        }
+
+        if (auto pDXGIAdapter1 = DXGIAdapterFromD3D12Device(pd3d12Device))
+        {
+            DXGI_ADAPTER_DESC1 AdapterDesc = {};
+
+            auto hr = pDXGIAdapter1->GetDesc1(&AdapterDesc);
+            if (SUCCEEDED(hr))
+            {
+                m_DeviceCaps.AdaterType = (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
+            }
+            else
+            {
+                LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter type will be unknown.");
             }
         }
-    }
 
-    // Check if mesh shader is supported.
+        // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),
+        // so bindless resources are always available.
+        // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
+        m_DeviceCaps.Features.BindlessResources = DEVICE_FEATURE_STATE_ENABLED;
+
+        m_DeviceCaps.Features.VertexPipelineUAVWritesAndAtomics = DEVICE_FEATURE_STATE_ENABLED;
+
+        // Detect maximum  shader model.
+        {
+            // Direct3D12 supports shader model 5.1 on all feature levels.
+            // https://docs.microsoft.com/en-us/windows/win32/direct3d12/hardware-feature-levels#feature-level-support
+            m_MaxShaderModel = D3D_SHADER_MODEL_5_1;
+
+            // Header may not have constants for D3D_SHADER_MODEL_6_1 and above.
+            const D3D_SHADER_MODEL Models[] = //
+                {
+                    static_cast<D3D_SHADER_MODEL>(0x65), // minimum required for mesh shader
+                    static_cast<D3D_SHADER_MODEL>(0x64),
+                    static_cast<D3D_SHADER_MODEL>(0x63),
+                    static_cast<D3D_SHADER_MODEL>(0x62),
+                    static_cast<D3D_SHADER_MODEL>(0x61),
+                    D3D_SHADER_MODEL_6_0 //
+                };
+
+            for (auto Model : Models)
+            {
+                D3D12_FEATURE_DATA_SHADER_MODEL ShaderModel = {Model};
+                if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &ShaderModel, sizeof(ShaderModel))))
+                {
+                    m_MaxShaderModel = ShaderModel.HighestShaderModel;
+                    break;
+                }
+            }
+            LOG_INFO_MESSAGE("Max device shader model: ", (m_MaxShaderModel >> 4) & 0xF, '_', m_MaxShaderModel & 0xF);
+        }
+
+        // Check if mesh shader is supported.
+        bool MeshShadersSupported = false;
 #ifdef D3D12_H_HAS_MESH_SHADER
-    {
-        D3D12_FEATURE_DATA_D3D12_OPTIONS7 FeatureData = {};
+        {
+            D3D12_FEATURE_DATA_D3D12_OPTIONS7 FeatureData = {};
 
-        bool SupportsMeshShader =
-            SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureData, sizeof(FeatureData))) &&
-            FeatureData.MeshShaderTier != D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
+            MeshShadersSupported =
+                SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &FeatureData, sizeof(FeatureData))) &&
+                FeatureData.MeshShaderTier != D3D12_MESH_SHADER_TIER_NOT_SUPPORTED;
 
-        m_DeviceCaps.Features.MeshShaders = (m_MaxShaderModel >= D3D_SHADER_MODEL_6_5 && SupportsMeshShader);
-    }
+            MeshShadersSupported = (m_MaxShaderModel >= D3D_SHADER_MODEL_6_5 && MeshShadersSupported);
+        }
+#else
+        if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED)
+        {
+            LOG_ERROR_AND_THROW("Mesh shaders are requested to be enabled, but the engine was built with the Windows SDK that does "
+                                "not support the feature. Please update the SDK to version 10.0.19041.0 or later and rebuild the engine.");
+        }
 #endif
 
-    auto& TexCaps = m_DeviceCaps.TexCaps;
+        if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED && !MeshShadersSupported)
+        {
+            LOG_ERROR_AND_THROW("This device/driver does not support mesh shaders. Please make sure that you have compatible GPU and that your "
+                                "Winodws is up to date (version 2004 or later is required)");
+        }
 
-    TexCaps.MaxTexture1DDimension     = D3D12_REQ_TEXTURE1D_U_DIMENSION;
-    TexCaps.MaxTexture1DArraySlices   = D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
-    TexCaps.MaxTexture2DDimension     = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
-    TexCaps.MaxTexture2DArraySlices   = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
-    TexCaps.MaxTexture3DDimension     = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
-    TexCaps.MaxTextureCubeDimension   = D3D12_REQ_TEXTURECUBE_DIMENSION;
-    TexCaps.Texture2DMSSupported      = True;
-    TexCaps.Texture2DMSArraySupported = True;
-    TexCaps.TextureViewSupported      = True;
-    TexCaps.CubemapArraysSupported    = True;
+        m_DeviceCaps.Features.MeshShaders = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
 
-    auto& SamCaps = m_DeviceCaps.SamCaps;
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+#endif
 
-    SamCaps.BorderSamplingModeSupported   = True;
-    SamCaps.AnisotropicFilteringSupported = True;
-    SamCaps.LODBiasSupported              = True;
+        auto& TexCaps = m_DeviceCaps.TexCaps;
+
+        TexCaps.MaxTexture1DDimension     = D3D12_REQ_TEXTURE1D_U_DIMENSION;
+        TexCaps.MaxTexture1DArraySlices   = D3D12_REQ_TEXTURE1D_ARRAY_AXIS_DIMENSION;
+        TexCaps.MaxTexture2DDimension     = D3D12_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+        TexCaps.MaxTexture2DArraySlices   = D3D12_REQ_TEXTURE2D_ARRAY_AXIS_DIMENSION;
+        TexCaps.MaxTexture3DDimension     = D3D12_REQ_TEXTURE3D_U_V_OR_W_DIMENSION;
+        TexCaps.MaxTextureCubeDimension   = D3D12_REQ_TEXTURECUBE_DIMENSION;
+        TexCaps.Texture2DMSSupported      = True;
+        TexCaps.Texture2DMSArraySupported = True;
+        TexCaps.TextureViewSupported      = True;
+        TexCaps.CubemapArraysSupported    = True;
+
+        auto& SamCaps = m_DeviceCaps.SamCaps;
+
+        SamCaps.BorderSamplingModeSupported   = True;
+        SamCaps.AnisotropicFilteringSupported = True;
+        SamCaps.LODBiasSupported              = True;
+    }
+    catch (...)
+    {
+        m_DynamicMemoryManager.Destroy();
+        throw;
+    }
 }
 
 RenderDeviceD3D12Impl::~RenderDeviceD3D12Impl()

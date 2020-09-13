@@ -164,6 +164,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
 
             EngineD3D11CreateInfo CreateInfo;
             CreateInfo.DebugMessageCallback = MessageCallback;
+            CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 
 #    ifdef DILIGENT_DEBUG
             CreateInfo.DebugFlags =
@@ -227,6 +228,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
 
             EngineD3D12CreateInfo CreateInfo;
             CreateInfo.DebugMessageCallback = MessageCallback;
+            CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 
             LOG_INFO_MESSAGE("Found ", Adapters.size(), " compatible adapters");
             for (Uint32 i = 0; i < Adapters.size(); ++i)
@@ -284,6 +286,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
             CreateInfo.DebugMessageCallback = MessageCallback;
             CreateInfo.Window               = Window;
             CreateInfo.CreateDebugContext   = true;
+            CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 
             if (NumDeferredCtx != 0)
             {
@@ -319,6 +322,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
             CreateInfo.UploadHeapPageSize        = 32 * 1024;
             //CreateInfo.DeviceLocalMemoryReserveSize = 32 << 20;
             //CreateInfo.HostVisibleMemoryReserveSize = 48 << 20;
+            CreateInfo.Features = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
 
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);

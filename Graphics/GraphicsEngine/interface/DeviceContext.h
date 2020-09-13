@@ -34,7 +34,7 @@
 
 #include "../../../Primitives/interface/Object.h"
 #include "../../../Primitives/interface/FlagEnum.h"
-#include "DeviceCaps.h"
+#include "GraphicsTypes.h"
 #include "Constants.h"
 #include "Buffer.h"
 #include "InputLayout.h"

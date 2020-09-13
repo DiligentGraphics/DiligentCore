@@ -38,7 +38,6 @@ set(INTERFACE
     interface/CommandList.h
     interface/Constants.h
     interface/DepthStencilState.h
-    interface/DeviceCaps.h
     interface/DeviceContext.h
     interface/DeviceObject.h
     interface/EngineFactory.h

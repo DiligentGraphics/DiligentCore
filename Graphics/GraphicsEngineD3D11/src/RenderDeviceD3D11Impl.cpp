@@ -143,12 +143,25 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
         }
     }
 
+#define UNSUPPORTED_FEATURE(Feature, Name)                                   \
+    do                                                                       \
+    {                                                                        \
+        if (EngineAttribs.Features.Feature == DEVICE_FEATURE_STATE_ENABLED)  \
+            LOG_ERROR_AND_THROW(Name " not supported by Direct3D11 device"); \
+        m_DeviceCaps.Features.Feature = DEVICE_FEATURE_STATE_DISABLED;       \
+    } while (false)
+
     // Direct3D11 only supports shader model 5.0 even if the device feature level is
     // above 11.0 (for example, 11.1 or 12.0), so bindless resources are never available.
     // https://docs.microsoft.com/en-us/windows/win32/direct3d11/overviews-direct3d-11-devices-downlevel-intro#overview-for-each-feature-level
-    m_DeviceCaps.Features.BindlessResources = False;
+    UNSUPPORTED_FEATURE(BindlessResources, "Bindless resources are");
+    UNSUPPORTED_FEATURE(VertexPipelineUAVWritesAndAtomics, "Vertex pipeline UAV writes and atomics are");
+    UNSUPPORTED_FEATURE(MeshShaders, "Mesh shaders are");
+#undef UNSUPPORTED_FEATURE
 
-    m_DeviceCaps.Features.VertexPipelineUAVWritesAndAtomics = False;
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+#endif
 
     auto& TexCaps = m_DeviceCaps.TexCaps;
 

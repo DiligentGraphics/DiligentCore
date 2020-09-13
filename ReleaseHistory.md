@@ -2,6 +2,7 @@
 
 ### API Changes
 
+* Added option to disable/enable device features during initialization (API Version 240069)
 * Enabled mesh shaders (API Version 240068)
 * Added `QUERY_TYPE_DURATION` query type (API Version 240067)
 * Added `USAGE_UNIFIED` usage type (API Version 240066)

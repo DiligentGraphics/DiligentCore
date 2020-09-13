@@ -63,7 +63,7 @@ public:
                        IMemoryAllocator&         RawMemAllocator,
                        IEngineFactory*           pEngineFactory,
                        const EngineGLCreateInfo& InitAttribs,
-                       const SwapChainDesc*      pSCDesc = nullptr);
+                       const SwapChainDesc*      pSCDesc = nullptr) noexcept(false);
     ~RenderDeviceGLImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override;
@@ -188,7 +188,6 @@ private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     bool         CheckExtension(const Char* ExtensionString);
     void         FlagSupportedTexFormats();
-    void         QueryDeviceCaps();
 };
 
 } // namespace Diligent

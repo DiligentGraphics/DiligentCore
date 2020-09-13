@@ -166,34 +166,43 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     // May be unused if extensions are disabled.
     (void)(vkExtFeatures);
 
-    Features.SeparablePrograms                 = True;
-    Features.IndirectRendering                 = True;
-    Features.WireframeFill                     = vkDeviceFeatures.fillModeNonSolid != VK_FALSE;
-    Features.MultithreadedResourceCreation     = True;
-    Features.ComputeShaders                    = True;
-    Features.GeometryShaders                   = vkDeviceFeatures.geometryShader != VK_FALSE;
-    Features.Tessellation                      = vkDeviceFeatures.tessellationShader != VK_FALSE;
-    Features.BindlessResources                 = True;
-    Features.OcclusionQueries                  = vkDeviceFeatures.occlusionQueryPrecise != VK_FALSE;
-    Features.BinaryOcclusionQueries            = True;
-    Features.TimestampQueries                  = True;
-    Features.DurationQueries                   = True;
-    Features.PipelineStatisticsQueries         = vkDeviceFeatures.pipelineStatisticsQuery != VK_FALSE;
-    Features.DepthBiasClamp                    = vkDeviceFeatures.depthBiasClamp != VK_FALSE;
-    Features.DepthClamp                        = vkDeviceFeatures.depthClamp != VK_FALSE;
-    Features.IndependentBlend                  = vkDeviceFeatures.independentBlend != VK_FALSE;
-    Features.DualSourceBlend                   = vkDeviceFeatures.dualSrcBlend != VK_FALSE;
-    Features.MultiViewport                     = vkDeviceFeatures.multiViewport != VK_FALSE;
-    Features.TextureCompressionBC              = vkDeviceFeatures.textureCompressionBC != VK_FALSE;
-    Features.VertexPipelineUAVWritesAndAtomics = vkDeviceFeatures.vertexPipelineStoresAndAtomics != VK_FALSE;
-    Features.PixelUAVWritesAndAtomics          = vkDeviceFeatures.fragmentStoresAndAtomics != VK_FALSE;
-    Features.TextureUAVExtendedFormats         = vkDeviceFeatures.shaderStorageImageExtendedFormats != VK_FALSE;
+    auto GetFeatureState = [](VkBool32 vkFeatureState) //
+    {
+        return vkFeatureState != VK_FALSE ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+    };
+
+    Features.SeparablePrograms                 = DEVICE_FEATURE_STATE_ENABLED;
+    Features.IndirectRendering                 = DEVICE_FEATURE_STATE_ENABLED;
+    Features.WireframeFill                     = GetFeatureState(vkDeviceFeatures.fillModeNonSolid);
+    Features.MultithreadedResourceCreation     = DEVICE_FEATURE_STATE_ENABLED;
+    Features.ComputeShaders                    = DEVICE_FEATURE_STATE_ENABLED;
+    Features.GeometryShaders                   = GetFeatureState(vkDeviceFeatures.geometryShader);
+    Features.Tessellation                      = GetFeatureState(vkDeviceFeatures.tessellationShader);
+    Features.BindlessResources                 = DEVICE_FEATURE_STATE_ENABLED;
+    Features.OcclusionQueries                  = GetFeatureState(vkDeviceFeatures.occlusionQueryPrecise);
+    Features.BinaryOcclusionQueries            = DEVICE_FEATURE_STATE_ENABLED;
+    Features.TimestampQueries                  = DEVICE_FEATURE_STATE_ENABLED;
+    Features.DurationQueries                   = DEVICE_FEATURE_STATE_ENABLED;
+    Features.PipelineStatisticsQueries         = GetFeatureState(vkDeviceFeatures.pipelineStatisticsQuery);
+    Features.DepthBiasClamp                    = GetFeatureState(vkDeviceFeatures.depthBiasClamp);
+    Features.DepthClamp                        = GetFeatureState(vkDeviceFeatures.depthClamp);
+    Features.IndependentBlend                  = GetFeatureState(vkDeviceFeatures.independentBlend);
+    Features.DualSourceBlend                   = GetFeatureState(vkDeviceFeatures.dualSrcBlend);
+    Features.MultiViewport                     = GetFeatureState(vkDeviceFeatures.multiViewport);
+    Features.TextureCompressionBC              = GetFeatureState(vkDeviceFeatures.textureCompressionBC);
+    Features.VertexPipelineUAVWritesAndAtomics = GetFeatureState(vkDeviceFeatures.vertexPipelineStoresAndAtomics);
+    Features.PixelUAVWritesAndAtomics          = GetFeatureState(vkDeviceFeatures.fragmentStoresAndAtomics);
+    Features.TextureUAVExtendedFormats         = GetFeatureState(vkDeviceFeatures.shaderStorageImageExtendedFormats);
 
 #ifdef VK_NV_mesh_shader
-    // All devices that supports mesh shader also supports task shader, so it is not necessary to use two separate features.
-    Features.MeshShaders = vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE;
+    // All devices that support mesh shaders also support task shaders, so it is not necessary to use two separate features.
+    Features.MeshShaders = GetFeatureState(vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE);
 #else
-    Features.MeshShaders = False;
+    Features.MeshShaders = DEVICE_FEATURE_STATE_DISABLED;
+#endif
+
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
     const auto& vkDeviceLimits = m_PhysicalDevice->GetProperties().limits;

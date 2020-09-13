@@ -157,26 +157,26 @@ public:
 
         auto& Features = this->m_DeviceCaps.Features;
 
-        Features.SeparablePrograms             = True;
-        Features.IndirectRendering             = True;
-        Features.WireframeFill                 = True;
-        Features.MultithreadedResourceCreation = True;
-        Features.ComputeShaders                = True;
-        Features.GeometryShaders               = True;
-        Features.Tessellation                  = True;
-        Features.OcclusionQueries              = True;
-        Features.BinaryOcclusionQueries        = True;
-        Features.TimestampQueries              = True;
-        Features.PipelineStatisticsQueries     = True;
-        Features.DurationQueries               = True;
-        Features.DepthBiasClamp                = True;
-        Features.DepthClamp                    = True;
-        Features.IndependentBlend              = True;
-        Features.DualSourceBlend               = True;
-        Features.MultiViewport                 = True;
-        Features.TextureCompressionBC          = True;
-        Features.PixelUAVWritesAndAtomics      = True;
-        Features.TextureUAVExtendedFormats     = True;
+        Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.WireframeFill                 = DEVICE_FEATURE_STATE_ENABLED;
+        Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
+        Features.GeometryShaders               = DEVICE_FEATURE_STATE_ENABLED;
+        Features.Tessellation                  = DEVICE_FEATURE_STATE_ENABLED;
+        Features.OcclusionQueries              = DEVICE_FEATURE_STATE_ENABLED;
+        Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
+        Features.TimestampQueries              = DEVICE_FEATURE_STATE_ENABLED;
+        Features.PipelineStatisticsQueries     = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DepthBiasClamp                = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DepthClamp                    = DEVICE_FEATURE_STATE_ENABLED;
+        Features.IndependentBlend              = DEVICE_FEATURE_STATE_ENABLED;
+        Features.DualSourceBlend               = DEVICE_FEATURE_STATE_ENABLED;
+        Features.MultiViewport                 = DEVICE_FEATURE_STATE_ENABLED;
+        Features.TextureCompressionBC          = DEVICE_FEATURE_STATE_ENABLED;
+        Features.PixelUAVWritesAndAtomics      = DEVICE_FEATURE_STATE_ENABLED;
+        Features.TextureUAVExtendedFormats     = DEVICE_FEATURE_STATE_ENABLED;
     }
 };
 
