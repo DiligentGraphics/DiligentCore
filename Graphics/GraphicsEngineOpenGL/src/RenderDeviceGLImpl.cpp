@@ -251,8 +251,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(OcclusionQueries,              false, "Occlusion queries are");
         SET_FEATURE_STATE(BinaryOcclusionQueries,        true,  "Binary occlusion queries are"); // Supported in GLES3.0
 #if GL_TIMESTAMP
-        SET_FEATURE_STATE(TimestampQueries, strstr(Extensions, "disjoint_timer_query"), "Timestamp queries are");
-        SET_FEATURE_STATE(DurationQueries,  Features.TimestampQueries,                  "Duration queries are");
+        const bool DisjointTimerQueriesSupported = strstr(Extensions, "disjoint_timer_query");
+        SET_FEATURE_STATE(TimestampQueries, DisjointTimerQueriesSupported, "Timestamp queries are");
+        SET_FEATURE_STATE(DurationQueries,  DisjointTimerQueriesSupported, "Duration queries are");
 #else
         SET_FEATURE_STATE(TimestampQueries, false, "Timestamp queries are");
         SET_FEATURE_STATE(DurationQueries,  false, "Duration queries are");
