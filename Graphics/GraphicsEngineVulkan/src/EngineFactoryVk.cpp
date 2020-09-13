@@ -238,14 +238,17 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         // Enable mesh shader extension.
         bool MeshShadersSupported = false;
 #ifdef VK_NV_mesh_shader
-        VkPhysicalDeviceMeshShaderFeaturesNV MeshShaderFeats = PhysicalDevice->GetExtFeatures().MeshShader;
-
-        if (SupportsFeatures2 && PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
+        if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
         {
-            MeshShadersSupported = true;
-            DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-            *NextExt = &MeshShaderFeats;
-            NextExt  = &MeshShaderFeats.pNext;
+            VkPhysicalDeviceMeshShaderFeaturesNV MeshShaderFeats = PhysicalDevice->GetExtFeatures().MeshShader;
+
+            if (SupportsFeatures2 && PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
+            {
+                MeshShadersSupported = true;
+                DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+                *NextExt = &MeshShaderFeats;
+                NextExt  = &MeshShaderFeats.pNext;
+            }
         }
 #endif
 

@@ -209,6 +209,8 @@ public:
 
     VkPipelineStageFlags GetEnabledGraphicsShaderStages() const { return m_EnabledGraphicsShaderStages; }
 
+    const VkPhysicalDeviceFeatures& GetEnabledFeatures() const { return m_EnabledFeatures; }
+
 private:
     VulkanLogicalDevice(VkPhysicalDevice             vkPhysicalDevice,
                         const VkDeviceCreateInfo&    DeviceCI,
@@ -226,6 +228,7 @@ private:
     VkDevice                           m_VkDevice = VK_NULL_HANDLE;
     const VkAllocationCallbacks* const m_VkAllocator;
     VkPipelineStageFlags               m_EnabledGraphicsShaderStages = 0;
+    const VkPhysicalDeviceFeatures     m_EnabledFeatures;
 };
 
 } // namespace VulkanUtilities

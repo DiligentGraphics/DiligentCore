@@ -50,7 +50,8 @@ VulkanLogicalDevice::~VulkanLogicalDevice()
 VulkanLogicalDevice::VulkanLogicalDevice(VkPhysicalDevice             vkPhysicalDevice,
                                          const VkDeviceCreateInfo&    DeviceCI,
                                          const VkAllocationCallbacks* vkAllocator) :
-    m_VkAllocator{vkAllocator}
+    m_VkAllocator{vkAllocator},
+    m_EnabledFeatures{*DeviceCI.pEnabledFeatures}
 {
     auto res = vkCreateDevice(vkPhysicalDevice, &DeviceCI, vkAllocator, &m_VkDevice);
     CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");

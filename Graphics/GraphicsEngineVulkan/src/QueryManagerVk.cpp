@@ -48,12 +48,12 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
     VkCommandBuffer                     vkCmdBuff;
     pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to reset queries before first use");
 
-    const auto& deviceFeatures = PhysicalDevice.GetFeatures();
+    const auto& EnabledFeatures = LogicalDevice.GetEnabledFeatures();
 
     for (Uint32 QueryType = QUERY_TYPE_UNDEFINED + 1; QueryType < QUERY_TYPE_NUM_TYPES; ++QueryType)
     {
-        if ((QueryType == QUERY_TYPE_OCCLUSION && !deviceFeatures.occlusionQueryPrecise) ||
-            (QueryType == QUERY_TYPE_PIPELINE_STATISTICS && !deviceFeatures.pipelineStatisticsQuery))
+        if ((QueryType == QUERY_TYPE_OCCLUSION && !EnabledFeatures.occlusionQueryPrecise) ||
+            (QueryType == QUERY_TYPE_PIPELINE_STATISTICS && !EnabledFeatures.pipelineStatisticsQuery))
             continue;
 
         // clang-format off
