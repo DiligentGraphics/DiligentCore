@@ -15,6 +15,7 @@ INTERFACE
 
 add_subdirectory(GraphicsAccessories)
 add_subdirectory(GraphicsEngine)
+add_subdirectory(ShaderTools)
 
 if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
     add_subdirectory(GraphicsEngineNextGenBase)
@@ -30,14 +31,6 @@ endif()
 
 if(D3D12_SUPPORTED)
     add_subdirectory(GraphicsEngineD3D12)
-endif()
-
-if(GL_SUPPORTED OR GLES_SUPPORTED OR VULKAN_SUPPORTED)
-    add_subdirectory(GLSLTools)
-endif()
-
-if(D3D12_SUPPORTED OR VULKAN_SUPPORTED)
-    add_subdirectory(HLSLTools)
 endif()
 
 if(VULKAN_SUPPORTED)

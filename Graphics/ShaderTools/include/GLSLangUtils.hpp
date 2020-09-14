@@ -25,56 +25,30 @@
  *  of the possibility of such damages.
  */
 
+#pragma once
 
-#include <Unknwn.h>
-#include <guiddef.h>
-#include <atlbase.h>
-#include <atlcom.h>
-
-#include "dxc/dxcapi.h"
-
-#include "DXILUtils.hpp"
-
-#if D3D12_SUPPORTED
-#    include <d3d12shader.h>
-#endif
+#include <vector>
+#include "Shader.h"
+#include "DataBlob.h"
 
 namespace Diligent
 {
 
-namespace
+namespace GLSLangUtils
 {
 
-class DXCompilerBase : public IDxCompilerLibrary
-{
-public:
-    ~DXCompilerBase() override
-    {
-        if (Module)
-            FreeLibrary(Module);
-    }
+void InitializeGlslang();
+void FinalizeGlslang();
 
-protected:
-    DxcCreateInstanceProc Load(DXCompilerTarget, const String& LibName)
-    {
-        if (LibName.size())
-        {
-            std::wstring wname{LibName.begin(), LibName.end()};
-            wname += L".dll";
+std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE ShaderType,
+                                      const char* ShaderSource,
+                                      int         SourceCodeLen,
+                                      IDataBlob** ppCompilerOutput);
 
-            Module = LoadPackagedLibrary(wname.c_str(), 0);
-        }
+std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
+                                      const char*             ExtraDefinitions,
+                                      IDataBlob**             ppCompilerOutput);
 
-        if (Module == nullptr)
-            Module = LoadPackagedLibrary(L"dxcompiler.dll", 0);
-
-        return Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
-    }
-
-private:
-    HMODULE Module = nullptr;
-};
-
-} // namespace
+} // namespace GLSLangUtils
 
 } // namespace Diligent

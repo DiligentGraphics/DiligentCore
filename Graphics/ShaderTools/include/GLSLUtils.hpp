@@ -25,46 +25,24 @@
  *  of the possibility of such damages.
  */
 
+#pragma once
 
-#include "DXILUtils.hpp"
-
-#include "dxc/dxcapi.h"
+#include "BasicTypes.h"
+#include "GraphicsTypes.h"
+#include "Shader.h"
 
 namespace Diligent
 {
 
-namespace
+enum TargetGLSLCompiler
 {
-
-class DXCompilerBase : public IDxCompilerLibrary
-{
-public:
-    ~DXCompilerBase() override
-    {
-        if (Module)
-            dlclose(Module);
-    }
-
-protected:
-    DxcCreateInstanceProc Load(DXCompilerTarget, const String& LibName)
-    {
-        if (!LibName.empty())
-            Module = dlopen(LibName.c_str(), RTLD_LOCAL | RTLD_LAZY);
-
-        if (Module == nullptr)
-            Module = dlopen("libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
-
-        // try to load from default path
-        if (Module == nullptr)
-            Module = dlopen("/usr/lib/dxc/libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
-
-        return Module ? reinterpret_cast<DxcCreateInstanceProc>(dlsym(Module, "DxcCreateInstance")) : nullptr;
-    }
-
-private:
-    void* Module = nullptr;
+    glslang,
+    driver
 };
 
-} // namespace
+String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
+                             const DeviceCaps&       deviceCaps,
+                             TargetGLSLCompiler      TargetCompiler,
+                             const char*             ExtraDefinitions = nullptr);
 
 } // namespace Diligent

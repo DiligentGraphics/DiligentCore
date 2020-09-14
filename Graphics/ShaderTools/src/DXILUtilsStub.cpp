@@ -25,25 +25,22 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
-
-#include <d3dcommon.h>
-#include "Shader.h"
-
-/// \file
-/// Base implementation of a D3D shader
+#include "DXILUtils.hpp"
 
 namespace Diligent
 {
 
-/// Base implementation of a D3D shader
-class ShaderD3DBase
+IDXCompiler* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
 {
-public:
-    ShaderD3DBase(const ShaderCreateInfo& ShaderCI, ShaderVersion ShaderModel, class IDXCompiler* DxCompiler);
+    return nullptr;
+}
 
-protected:
-    CComPtr<ID3DBlob> m_pShaderByteCode;
-};
+std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
+                                  const ShaderCreateInfo& Attribs,
+                                  const char*             ExtraDefinitions,
+                                  IDataBlob**             ppCompilerOutput) noexcept(false)
+{
+    return {};
+}
 
 } // namespace Diligent

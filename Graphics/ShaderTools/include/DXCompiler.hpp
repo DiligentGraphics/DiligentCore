@@ -28,7 +28,7 @@
 #pragma once
 
 #include <vector>
-#include <string>
+
 #include "Shader.h"
 #include "DataBlob.h"
 
@@ -48,46 +48,47 @@ enum class DXCompilerTarget
     Vulkan,     // compiles to SPIRV
 };
 
-class IDxCompilerLibrary
+class IDXCompiler
 {
 public:
-    virtual ~IDxCompilerLibrary() {}
+    virtual ~IDXCompiler() {}
 
     virtual ShaderVersion GetMaxShaderModel() = 0;
 
     virtual bool IsLoaded() = 0;
 
-    virtual bool Compile(const char*                      Source,
-                         size_t                           SourceLength,
-                         const wchar_t*                   EntryPoint,
-                         const wchar_t*                   Profile,
-                         const DxcDefine*                 pDefines,
-                         size_t                           DefinesCount,
-                         const wchar_t**                  pArgs,
-                         size_t                           ArgsCount,
-                         IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
-                         IDxcBlob**                       ppBlobOut,
-                         IDxcBlob**                       ppCompilerOutput) = 0;
+    struct CompileAttribs
+    {
+        const char*                      Source                     = nullptr;
+        Uint32                           SourceLength               = 0;
+        const wchar_t*                   EntryPoint                 = nullptr;
+        const wchar_t*                   Profile                    = nullptr;
+        const DxcDefine*                 pDefines                   = nullptr;
+        Uint32                           DefinesCount               = 0;
+        const wchar_t**                  pArgs                      = nullptr;
+        Uint32                           ArgsCount                  = 0;
+        IShaderSourceInputStreamFactory* pShaderSourceStreamFactory = nullptr;
+        IDxcBlob**                       ppBlobOut                  = nullptr;
+        IDxcBlob**                       ppCompilerOutput           = nullptr;
+    };
+    virtual bool Compile(const CompileAttribs& Attribs) = 0;
+
+    // Attempts to extract shader reflection from the bytecode using DXC.
+    virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
+                                          ID3D12ShaderReflection** ppShaderReflection) = 0;
 };
 
 // Use this function to load specific library,
 // otherwise default library will be implicitly loaded.
-IDxCompilerLibrary* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName);
+IDXCompiler* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName);
 
 
 #if VULKAN_SUPPORTED
-std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
+std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
                                   const ShaderCreateInfo& Attribs,
                                   const char*             ExtraDefinitions,
                                   IDataBlob**             ppCompilerOutput) noexcept(false);
 #endif
 
-#if D3D12_SUPPORTED
-// Attempts to extract shader reflection from the bytecode using DXC.
-// Throws exception on error.
-void DxcGetShaderReflection(IDxCompilerLibrary*      pLibrary,
-                            IDxcBlob*                pShaderBytecode,
-                            ID3D12ShaderReflection** ppShaderReflection) noexcept(false);
-#endif
 
 } // namespace Diligent

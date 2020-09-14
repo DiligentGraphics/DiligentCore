@@ -32,11 +32,11 @@
 #include "ShaderVkImpl.hpp"
 #include "RenderDeviceVkImpl.hpp"
 #include "DataBlobImpl.hpp"
-#include "GLSLSourceBuilder.hpp"
-#include "DXILUtils.hpp"
+#include "GLSLUtils.hpp"
+#include "DXCompiler.hpp"
 
 #if !DILIGENT_NO_GLSLANG
-#    include "SPIRVUtils.hpp"
+#    include "GLSLangUtils.hpp"
 #endif
 
 namespace Diligent
@@ -78,7 +78,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 #else
                 if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
                 {
-                    m_SPIRV = HLSLtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
+                    m_SPIRV = GLSLangUtils::HLSLtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
                 }
                 else
                 {
@@ -86,9 +86,9 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                                                             TargetGLSLCompiler::glslang,
                                                             VulkanDefine);
 
-                    m_SPIRV = GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
-                                          static_cast<int>(GLSLSource.length()),
-                                          CreationAttribs.ppCompilerOutput);
+                    m_SPIRV = GLSLangUtils::GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
+                                                        static_cast<int>(GLSLSource.length()),
+                                                        CreationAttribs.ppCompilerOutput);
                 }
 #endif
                 break;

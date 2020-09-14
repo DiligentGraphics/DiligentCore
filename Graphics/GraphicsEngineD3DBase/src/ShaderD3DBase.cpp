@@ -32,13 +32,13 @@
 #include <D3Dcompiler.h>
 
 #include <atlcomcli.h>
-#include "dxc/dxcapi.h"
+#include "../../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h"
 
 #include "D3DErrors.hpp"
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
 #include "ShaderD3DBase.hpp"
-#include "DXILUtils.hpp"
+#include "DXCompiler.hpp"
 
 namespace Diligent
 {
@@ -108,7 +108,7 @@ static std::vector<D3D_SHADER_MACRO> GetD3DShaderMacros(const ShaderCreateInfo& 
 }
 
 
-static HRESULT CompileDxilShader(IDxCompilerLibrary*     DxCompiler,
+static HRESULT CompileDxilShader(IDXCompiler*            DxCompiler,
                                  const char*             Source,
                                  size_t                  SourceLength,
                                  const ShaderCreateInfo& ShaderCI,
@@ -158,14 +158,19 @@ static HRESULT CompileDxilShader(IDxCompilerLibrary*     DxCompiler,
 
     VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
 
-    if (!DxCompiler->Compile(Source, SourceLength,
-                             UTF8ToUTF16(ShaderCI.EntryPoint),
-                             UTF8ToUTF16(profile),
-                             DxcMacros.data(), DxcMacros.size(),
-                             pArgs, _countof(pArgs),
-                             ShaderCI.pShaderSourceStreamFactory,
-                             reinterpret_cast<IDxcBlob**>(ppBlobOut),
-                             reinterpret_cast<IDxcBlob**>(ppCompilerOutput)))
+    IDXCompiler::CompileAttribs CA;
+    CA.Source                     = Source;
+    CA.SourceLength               = static_cast<Uint32>(SourceLength);
+    CA.EntryPoint                 = UTF8ToUTF16(ShaderCI.EntryPoint);
+    CA.Profile                    = UTF8ToUTF16(profile);
+    CA.pDefines                   = DxcMacros.data();
+    CA.DefinesCount               = static_cast<Uint32>(DxcMacros.size());
+    CA.pArgs                      = pArgs;
+    CA.ArgsCount                  = _countof(pArgs);
+    CA.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
+    CA.ppBlobOut                  = reinterpret_cast<IDxcBlob**>(ppBlobOut);
+    CA.ppCompilerOutput           = reinterpret_cast<IDxcBlob**>(ppCompilerOutput);
+    if (!DxCompiler->Compile(CA))
     {
         return E_FAIL;
     }
@@ -242,7 +247,7 @@ static HRESULT CompileShader(const char*             Source,
 } // namespace
 
 
-ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersion ShaderModel, IDxCompilerLibrary* DxCompiler)
+ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersion ShaderModel, IDXCompiler* DxCompiler)
 {
     if (ShaderCI.Source || ShaderCI.FilePath)
     {

@@ -119,7 +119,7 @@ PRIVATE
     Diligent-GraphicsEngineD3DBase
     Diligent-TargetPlatform
     Diligent-Common
-    Diligent-HLSLTools 
+    Diligent-ShaderTools 
     dxgi.lib
     d3d11.lib
     d3dcompiler.lib

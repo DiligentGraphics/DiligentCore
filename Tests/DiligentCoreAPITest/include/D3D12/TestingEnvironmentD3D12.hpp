@@ -38,8 +38,7 @@
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <atlcomcli.h>
-#include "dxc/dxcapi.h"
-#include "DXILUtils.hpp"
+#include "DXCompiler.hpp"
 
 namespace Diligent
 {
@@ -90,7 +89,7 @@ private:
 
     HANDLE m_WaitForGPUEventHandle = {};
 
-    std::unique_ptr<IDxCompilerLibrary> m_pDxCompiler;
+    std::unique_ptr<IDXCompiler> m_pDxCompiler;
 };
 
 } // namespace Testing

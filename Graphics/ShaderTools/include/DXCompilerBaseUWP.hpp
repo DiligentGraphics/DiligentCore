@@ -25,22 +25,52 @@
  *  of the possibility of such damages.
  */
 
-#include "DXILUtils.hpp"
+
+#include <Unknwn.h>
+#include <guiddef.h>
+#include <atlbase.h>
+#include <atlcom.h>
+
+#include "../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h"
+
+#include "DXCompiler.hpp"
 
 namespace Diligent
 {
 
-IDxCompilerLibrary* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
+namespace
 {
-    return nullptr;
-}
 
-std::vector<uint32_t> DXILtoSPIRV(IDxCompilerLibrary*     pLibrary,
-                                  const ShaderCreateInfo& Attribs,
-                                  const char*             ExtraDefinitions,
-                                  IDataBlob**             ppCompilerOutput) noexcept(false)
+class DXCompilerBase : public IDXCompiler
 {
-    return {};
-}
+public:
+    ~DXCompilerBase() override
+    {
+        if (Module)
+            FreeLibrary(Module);
+    }
+
+protected:
+    DxcCreateInstanceProc Load(DXCompilerTarget, const String& LibName)
+    {
+        if (LibName.size())
+        {
+            std::wstring wname{LibName.begin(), LibName.end()};
+            wname += L".dll";
+
+            Module = LoadPackagedLibrary(wname.c_str(), 0);
+        }
+
+        if (Module == nullptr)
+            Module = LoadPackagedLibrary(L"dxcompiler.dll", 0);
+
+        return Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
+    }
+
+private:
+    HMODULE Module = nullptr;
+};
+
+} // namespace
 
 } // namespace Diligent

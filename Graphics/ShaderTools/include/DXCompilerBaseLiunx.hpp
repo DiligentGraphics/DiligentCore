@@ -25,25 +25,46 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
 
-#include <vector>
-#include "Shader.h"
-#include "DataBlob.h"
+#include "DXCompiler.hpp"
+
+#include "../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h"
 
 namespace Diligent
 {
 
-void InitializeGlslang();
-void FinalizeGlslang();
+namespace
+{
 
-std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE ShaderType,
-                                      const char* ShaderSource,
-                                      int         SourceCodeLen,
-                                      IDataBlob** ppCompilerOutput);
+class DXCompilerBase : public IDXCompiler
+{
+public:
+    ~DXCompilerBase() override
+    {
+        if (Module)
+            dlclose(Module);
+    }
 
-std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
-                                      const char*             ExtraDefinitions,
-                                      IDataBlob**             ppCompilerOutput);
+protected:
+    DxcCreateInstanceProc Load(DXCompilerTarget, const String& LibName)
+    {
+        if (!LibName.empty())
+            Module = dlopen(LibName.c_str(), RTLD_LOCAL | RTLD_LAZY);
+
+        if (Module == nullptr)
+            Module = dlopen("libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
+
+        // try to load from default path
+        if (Module == nullptr)
+            Module = dlopen("/usr/lib/dxc/libdxcompiler.so", RTLD_LOCAL | RTLD_LAZY);
+
+        return Module ? reinterpret_cast<DxcCreateInstanceProc>(dlsym(Module, "DxcCreateInstance")) : nullptr;
+    }
+
+private:
+    void* Module = nullptr;
+};
+
+} // namespace
 
 } // namespace Diligent

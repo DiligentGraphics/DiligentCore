@@ -38,7 +38,7 @@
 #include "VulkanUtilities/VulkanDebug.hpp"
 
 #if !DILIGENT_NO_GLSLANG
-#    include "SPIRVUtils.hpp"
+#    include "GLSLangUtils.hpp"
 #endif
 
 #include "PlatformDefinitions.h"
@@ -262,7 +262,7 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
         VERIFY_EXPR(m_PhysicalDevices.size() == PhysicalDeviceCount);
     }
 #if !DILIGENT_NO_GLSLANG
-    Diligent::InitializeGlslang();
+    Diligent::GLSLangUtils::InitializeGlslang();
 #endif
 }
 
@@ -275,7 +275,7 @@ VulkanInstance::~VulkanInstance()
     vkDestroyInstance(m_VkInstance, m_pVkAllocator);
 
 #if !DILIGENT_NO_GLSLANG
-    Diligent::FinalizeGlslang();
+    Diligent::GLSLangUtils::FinalizeGlslang();
 #endif
 }
 

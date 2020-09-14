@@ -27,6 +27,7 @@
 
 #include "D3D12/TestingEnvironmentD3D12.hpp"
 #include "RenderDeviceD3D12.h"
+#include "../../../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h"
 
 namespace Diligent
 {
@@ -115,14 +116,19 @@ HRESULT TestingEnvironmentD3D12::CompileDXILShader(const std::string&           
 
     CComPtr<IDxcBlob> errors;
 
-    if (!m_pDxCompiler->Compile(Source.c_str(), Source.length(),
-                                strFunctionName,
-                                profile,
-                                Defines.data(), Defines.size(),
-                                pArgs, _countof(pArgs),
-                                nullptr,
-                                reinterpret_cast<IDxcBlob**>(ppBlobOut),
-                                &errors))
+    IDXCompiler::CompileAttribs CA;
+    CA.Source                     = Source.c_str();
+    CA.SourceLength               = static_cast<Uint32>(Source.length());
+    CA.EntryPoint                 = strFunctionName;
+    CA.Profile                    = profile;
+    CA.pDefines                   = Defines.data();
+    CA.DefinesCount               = static_cast<Uint32>(Defines.size());
+    CA.pArgs                      = pArgs;
+    CA.ArgsCount                  = _countof(pArgs);
+    CA.pShaderSourceStreamFactory = nullptr;
+    CA.ppBlobOut                  = reinterpret_cast<IDxcBlob**>(ppBlobOut);
+    CA.ppCompilerOutput           = &errors;
+    if (!m_pDxCompiler->Compile(CA))
     {
         const char* CompilerMsg = errors ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
 

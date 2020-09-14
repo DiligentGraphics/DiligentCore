@@ -273,7 +273,7 @@ RefCntAutoPtr<IPipelineState> CreateComputePSO(TestingEnvironment* pEnv, const c
     return pPSO;
 }
 
-TEST(PSOCompatibility, CompilationFailure)
+TEST(PSOCompatibility, IsCompatibleWith)
 {
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();

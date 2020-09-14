@@ -25,56 +25,44 @@
  *  of the possibility of such damages.
  */
 
-#include <Unknwn.h>
-#include <guiddef.h>
-#include <atlbase.h>
-#include <atlcom.h>
+#pragma once
 
-#include "dxc/dxcapi.h"
-
-#include "DXILUtils.hpp"
-
-#if D3D12_SUPPORTED
-#    include <d3d12shader.h>
-#endif
+#include "GraphicsTypes.h"
+#include "Shader.h"
 
 namespace Diligent
 {
 
-namespace
-{
+/// Returns shader type definition macro(s), e.g., for a vertex shader:
+///
+///     {"VERTEX_SHADER", "1"}, {nullptr, nullptr}
+///
+/// or, for a fragment shader:
+///
+///     {"FRAGMENT_SHADER", "1"}, {"PIXEL_SHADER", "1"}, {nullptr, nullptr}
+///
+/// etc.
+const ShaderMacro* GetShaderTypeMacros(SHADER_TYPE Type);
 
-class DXCompilerBase : public IDxCompilerLibrary
-{
-public:
-    ~DXCompilerBase() override
-    {
-        if (Module)
-            FreeLibrary(Module);
-    }
 
-protected:
-    DxcCreateInstanceProc Load(DXCompilerTarget Target, const String& LibName)
-    {
-        if (LibName.size())
-            Module = LoadLibraryA(LibName.c_str());
+/// Appends shader macro definitions to the end of the source string:
+///
+///     #define Name[0] Definitoin[0]
+///     #define Name[1] Definitoin[1]
+///     ...
+void AppendShaderMacros(std::string& Source, const ShaderMacro* Macros);
 
-        if (Module == nullptr)
-        {
-            switch (Target)
-            {
-                case DXCompilerTarget::Direct3D12: Module = LoadLibraryA("dxcompiler.dll"); break;
-                case DXCompilerTarget::Vulkan: Module = LoadLibraryA("spv_dxcompiler.dll"); break;
-            }
-        }
 
-        return Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
-    }
-
-private:
-    HMODULE Module = nullptr;
-};
-
-} // namespace
+/// Appends the shader type definition macro(s), e.g., for a vertex shader:
+///
+///     #define VERTEX_SHADER 1
+///
+/// or, for a fragment shader:
+///
+///     #define FRAGMENT_SHADER 1
+///     #define PIXEL_SHADER 1
+///
+/// etc.
+void AppendShaderTypeDefinitions(std::string& Source, SHADER_TYPE Type);
 
 } // namespace Diligent

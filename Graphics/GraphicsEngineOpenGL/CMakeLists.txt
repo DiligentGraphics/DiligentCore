@@ -165,7 +165,7 @@ set(PRIVATE_DEPENDENCIES
     Diligent-Common
     Diligent-TargetPlatform
     Diligent-GraphicsEngine
-    Diligent-GLSLTools
+    Diligent-ShaderTools
 )
 
 if(${DILIGENT_NO_HLSL})

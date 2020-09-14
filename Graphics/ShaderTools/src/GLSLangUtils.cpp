@@ -37,10 +37,11 @@
 #    include "SPIRV/GlslangToSpv.h"
 #endif
 
-#include "SPIRVUtils.hpp"
+#include "GLSLangUtils.hpp"
 #include "DebugUtilities.hpp"
 #include "DataBlobImpl.hpp"
 #include "RefCntAutoPtr.hpp"
+#include "ShaderToolsCommon.hpp"
 
 #include "spirv-tools/optimizer.hpp"
 
@@ -54,20 +55,20 @@ static const char g_HLSLDefinitions[] =
 namespace Diligent
 {
 
-// Implemented in GLSLSourceBuilder.cpp
-const char* GetShaderTypeDefines(SHADER_TYPE Type);
+namespace GLSLangUtils
+{
 
 void InitializeGlslang()
 {
-    glslang::InitializeProcess();
+    ::glslang::InitializeProcess();
 }
 
 void FinalizeGlslang()
 {
-    glslang::FinalizeProcess();
+    ::glslang::FinalizeProcess();
 }
 
-EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
+static EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
 {
     static_assert(SHADER_TYPE_LAST == 0x080, "Please handle the new shader type in the switch below");
     switch (ShaderType)
@@ -198,19 +199,19 @@ static TBuiltInResource InitResources()
     return Resources;
 }
 
-class IoMapResolver final : public glslang::TIoMapResolver
+class IoMapResolver final : public ::glslang::TIoMapResolver
 {
 public:
     // Should return true if the resulting/current binding would be okay.
     // Basic idea is to do aliasing binding checks with this.
-    virtual bool validateBinding(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual bool validateBinding(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
         return true;
     }
 
     // Should return a value >= 0 if the current binding should be overridden.
     // Return -1 if the current binding (including no binding) should be kept.
-    virtual int resolveBinding(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual int resolveBinding(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
         // We do not care about actual binding value here.
         // We only need decoration to be present in SPIRV
@@ -219,7 +220,7 @@ public:
 
     // Should return a value >= 0 if the current set should be overridden.
     // Return -1 if the current set (including no set) should be kept.
-    virtual int resolveSet(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual int resolveSet(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
         // We do not care about actual descriptor set value here.
         // We only need decoration to be present in SPIRV
@@ -228,46 +229,46 @@ public:
 
     // Should return a value >= 0 if the current location should be overridden.
     // Return -1 if the current location (including no location) should be kept.
-    virtual int resolveUniformLocation(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual int resolveUniformLocation(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
         return -1;
     }
 
     // Should return true if the resulting/current setup would be okay.
     // Basic idea is to do aliasing checks and reject invalid semantic names.
-    virtual bool validateInOut(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual bool validateInOut(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
         return true;
     }
 
     // Should return a value >= 0 if the current location should be overridden.
     // Return -1 if the current location (including no location) should be kept.
-    virtual int resolveInOutLocation(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual int resolveInOutLocation(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
         return -1;
     }
 
     // Should return a value >= 0 if the current component index should be overridden.
     // Return -1 if the current component index (including no index) should be kept.
-    virtual int resolveInOutComponent(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual int resolveInOutComponent(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
         return -1;
     }
 
     // Should return a value >= 0 if the current color index should be overridden.
     // Return -1 if the current color index (including no index) should be kept.
-    virtual int resolveInOutIndex(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual int resolveInOutIndex(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
         return -1;
     }
 
     // Notification of a uniform variable
-    virtual void notifyBinding(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual void notifyBinding(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
     }
 
     // Notification of a in or out variable
-    virtual void notifyInOut(EShLanguage stage, glslang::TVarEntryInfo& ent) override final
+    virtual void notifyInOut(EShLanguage stage, ::glslang::TVarEntryInfo& ent) override final
     {
     }
 
@@ -302,12 +303,12 @@ public:
     }
 
     // Called by TSlotCollector to resolve storage locations or bindings
-    virtual void reserverStorageSlot(glslang::TVarEntryInfo& ent, TInfoSink& infoSink) override final
+    virtual void reserverStorageSlot(::glslang::TVarEntryInfo& ent, TInfoSink& infoSink) override final
     {
     }
 
     // Called by TSlotCollector to resolve resource locations or bindings
-    virtual void reserverResourceSlot(glslang::TVarEntryInfo& ent, TInfoSink& infoSink) override final
+    virtual void reserverResourceSlot(::glslang::TVarEntryInfo& ent, TInfoSink& infoSink) override final
     {
     }
 
@@ -342,12 +343,12 @@ static void LogCompilerError(const char* DebugOutputMessage,
     }
 }
 
-static std::vector<unsigned int> CompileShaderInternal(glslang::TShader&           Shader,
-                                                       EShMessages                 messages,
-                                                       glslang::TShader::Includer* pIncluder,
-                                                       const char*                 ShaderSource,
-                                                       size_t                      SourceCodeLen,
-                                                       IDataBlob**                 ppCompilerOutput)
+static std::vector<unsigned int> CompileShaderInternal(::glslang::TShader&           Shader,
+                                                       EShMessages                   messages,
+                                                       ::glslang::TShader::Includer* pIncluder,
+                                                       const char*                   ShaderSource,
+                                                       size_t                        SourceCodeLen,
+                                                       IDataBlob**                   ppCompilerOutput)
 {
     Shader.setAutoMapBindings(true);
     TBuiltInResource Resources = InitResources();
@@ -361,7 +362,7 @@ static std::vector<unsigned int> CompileShaderInternal(glslang::TShader&        
         return {};
     }
 
-    glslang::TProgram Program;
+    ::glslang::TProgram Program;
     Program.addShader(&Shader);
     if (!Program.link(messages))
     {
@@ -374,13 +375,13 @@ static std::vector<unsigned int> CompileShaderInternal(glslang::TShader&        
     Program.mapIO(&Resovler);
 
     std::vector<unsigned int> spirv;
-    glslang::GlslangToSpv(*Program.getIntermediate(Shader.getStage()), spirv);
+    ::glslang::GlslangToSpv(*Program.getIntermediate(Shader.getStage()), spirv);
 
     return std::move(spirv);
 }
 
 
-class IncluderImpl : public glslang::TShader::Includer
+class IncluderImpl : public ::glslang::TShader::Includer
 {
 public:
     IncluderImpl(IShaderSourceInputStreamFactory* pInputStreamFactory) :
@@ -442,15 +443,15 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
                                       const char*             ExtraDefinitions,
                                       IDataBlob**             ppCompilerOutput)
 {
-    EShLanguage      ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
-    glslang::TShader Shader{ShLang};
-    EShMessages      messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
+    EShLanguage        ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
+    ::glslang::TShader Shader{ShLang};
+    EShMessages        messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
 
     VERIFY_EXPR(Attribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
 
-    Shader.setEnvInput(glslang::EShSourceHlsl, ShLang, glslang::EShClientVulkan, 100);
-    Shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_0);
-    Shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_0);
+    Shader.setEnvInput(::glslang::EShSourceHlsl, ShLang, ::glslang::EShClientVulkan, 100);
+    Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_0);
+    Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
     Shader.setHlslIoMapping(true);
     Shader.setEntryPoint(Attribs.EntryPoint);
     Shader.setEnvTargetHlslFunctionality1();
@@ -478,8 +479,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
     }
 
     std::string Defines = g_HLSLDefinitions;
-    if (const auto* ShaderTypeDefine = GetShaderTypeDefines(Attribs.Desc.ShaderType))
-        Defines += ShaderTypeDefine;
+    AppendShaderTypeDefinitions(Defines, Attribs.Desc.ShaderType);
 
     if (ExtraDefinitions != nullptr)
         Defines += ExtraDefinitions;
@@ -487,16 +487,7 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
     if (Attribs.Macros != nullptr)
     {
         Defines += '\n';
-        auto* pMacro = Attribs.Macros;
-        while (pMacro->Name != nullptr && pMacro->Definition != nullptr)
-        {
-            Defines += "#define ";
-            Defines += pMacro->Name;
-            Defines += ' ';
-            Defines += pMacro->Definition;
-            Defines += "\n";
-            ++pMacro;
-        }
+        AppendShaderMacros(Defines, Attribs.Macros);
     }
     Shader.setPreamble(Defines.c_str());
 
@@ -530,8 +521,8 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
 
 std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen, IDataBlob** ppCompilerOutput)
 {
-    EShLanguage      ShLang = ShaderTypeToShLanguage(ShaderType);
-    glslang::TShader Shader(ShLang);
+    EShLanguage        ShLang = ShaderTypeToShLanguage(ShaderType);
+    ::glslang::TShader Shader(ShLang);
 
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
@@ -554,5 +545,7 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* 
         return std::move(SPIRV);
     }
 }
+
+} // namespace GLSLangUtils
 
 } // namespace Diligent

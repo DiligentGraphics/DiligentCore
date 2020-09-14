@@ -30,7 +30,7 @@
 #include "RenderDeviceVk.h"
 #include "DeviceContextVk.h"
 
-#include "SPIRVUtils.hpp"
+#include "GLSLangUtils.hpp"
 
 #define VOLK_IMPLEMENTATION
 #include "volk/volk.h"
@@ -51,7 +51,7 @@ TestingEnvironmentVk::TestingEnvironmentVk(RENDER_DEVICE_TYPE   deviceType,
                                            const SwapChainDesc& SCDesc) :
     TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc}
 {
-    InitializeGlslang();
+    GLSLangUtils::InitializeGlslang();
 
     // We have to use dynamic Vulkan loader because if an application is statically linked with vulkan-1.lib
     // and the Vulkan library is not present on the system, the app will instantly crash.
@@ -90,7 +90,7 @@ TestingEnvironmentVk::~TestingEnvironmentVk()
         vkDestroyCommandPool(m_vkDevice, m_vkCmdPool, nullptr);
     }
 
-    FinalizeGlslang();
+    GLSLangUtils::FinalizeGlslang();
 }
 
 uint32_t TestingEnvironmentVk::GetMemoryTypeIndex(uint32_t              memoryTypeBitsRequirement,
@@ -312,7 +312,7 @@ VkRenderPassCreateInfo TestingEnvironmentVk::GetRenderPassCreateInfo(
 
 VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource)
 {
-    auto Bytecode = GLSLtoSPIRV(ShaderType, ShaderSource.c_str(), static_cast<int>(ShaderSource.length()), nullptr);
+    auto Bytecode = GLSLangUtils::GLSLtoSPIRV(ShaderType, ShaderSource.c_str(), static_cast<int>(ShaderSource.length()), nullptr);
     VERIFY_EXPR(!Bytecode.empty());
     if (Bytecode.empty())
         return VK_NULL_HANDLE;

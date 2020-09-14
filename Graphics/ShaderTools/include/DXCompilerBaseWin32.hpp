@@ -25,24 +25,52 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <Unknwn.h>
+#include <guiddef.h>
+#include <atlbase.h>
+#include <atlcom.h>
 
-#include "BasicTypes.h"
-#include "GraphicsTypes.h"
-#include "Shader.h"
+#include "../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h"
+
+#include "DXCompiler.hpp"
 
 namespace Diligent
 {
 
-enum TargetGLSLCompiler
+namespace
 {
-    glslang,
-    driver
+
+class DXCompilerBase : public IDXCompiler
+{
+public:
+    ~DXCompilerBase() override
+    {
+        if (Module)
+            FreeLibrary(Module);
+    }
+
+protected:
+    DxcCreateInstanceProc Load(DXCompilerTarget Target, const String& LibName)
+    {
+        if (LibName.size())
+            Module = LoadLibraryA(LibName.c_str());
+
+        if (Module == nullptr)
+        {
+            switch (Target)
+            {
+                case DXCompilerTarget::Direct3D12: Module = LoadLibraryA("dxcompiler.dll"); break;
+                case DXCompilerTarget::Vulkan: Module = LoadLibraryA("spv_dxcompiler.dll"); break;
+            }
+        }
+
+        return Module ? reinterpret_cast<DxcCreateInstanceProc>(GetProcAddress(Module, "DxcCreateInstance")) : nullptr;
+    }
+
+private:
+    HMODULE Module = nullptr;
 };
 
-String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
-                             const DeviceCaps&       deviceCaps,
-                             TargetGLSLCompiler      TargetCompiler,
-                             const char*             ExtraDefinitions = nullptr);
+} // namespace
 
 } // namespace Diligent

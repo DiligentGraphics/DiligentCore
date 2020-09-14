@@ -31,7 +31,7 @@
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "DataBlobImpl.hpp"
-#include "GLSLSourceBuilder.hpp"
+#include "GLSLUtils.hpp"
 
 using namespace Diligent;
 

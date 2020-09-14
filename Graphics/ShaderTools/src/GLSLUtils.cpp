@@ -28,55 +28,17 @@
 #include <cstring>
 #include <sstream>
 
-#include "GLSLSourceBuilder.hpp"
+#include "GLSLUtils.hpp"
 #include "DebugUtilities.hpp"
 #if !DILIGENT_NO_HLSL
 #    include "HLSL2GLSLConverterImpl.hpp"
 #endif
 #include "RefCntAutoPtr.hpp"
 #include "DataBlobImpl.hpp"
+#include "ShaderToolsCommon.hpp"
 
 namespace Diligent
 {
-
-const char* GetShaderTypeDefines(SHADER_TYPE Type)
-{
-    switch (Type)
-    {
-        case SHADER_TYPE_VERTEX:
-            return "#define VERTEX_SHADER 1\n";
-
-        case SHADER_TYPE_PIXEL:
-            return "#define FRAGMENT_SHADER 1\n"
-                   "#define PIXEL_SHADER 1\n";
-
-        case SHADER_TYPE_GEOMETRY:
-            return "#define GEOMETRY_SHADER 1\n";
-
-        case SHADER_TYPE_HULL:
-            return "#define TESS_CONTROL_SHADER 1\n"
-                   "#define HULL_SHADER 1\n";
-
-        case SHADER_TYPE_DOMAIN:
-            return "#define TESS_EVALUATION_SHADER 1\n"
-                   "#define DOMAIN_SHADER 1\n";
-            break;
-
-        case SHADER_TYPE_COMPUTE:
-            return "#define COMPUTE_SHADER 1\n";
-
-        case SHADER_TYPE_AMPLIFICATION:
-            return "#define TASK_SHADER 1\n"
-                   "#define AMPLIFICATION_SHADER 1\n";
-
-        case SHADER_TYPE_MESH:
-            return "#define MESH_SHADER 1\n";
-
-        default:
-            UNEXPECTED("Unexpected shader type");
-            return nullptr;
-    }
-}
 
 String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
                              const DeviceCaps&       deviceCaps,
@@ -293,27 +255,14 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
                               "#define gl_InstanceID gl_InstanceIndex\n");
         }
 
-        if (const auto* ShaderTypeDefine = GetShaderTypeDefines(ShaderType))
-            GLSLSource += ShaderTypeDefine;
+        AppendShaderTypeDefinitions(GLSLSource, ShaderType);
 
         if (ExtraDefinitions != nullptr)
         {
             GLSLSource.append(ExtraDefinitions);
         }
 
-        if (CreationAttribs.Macros != nullptr)
-        {
-            auto* pMacro = CreationAttribs.Macros;
-            while (pMacro->Name != nullptr && pMacro->Definition != nullptr)
-            {
-                GLSLSource += "#define ";
-                GLSLSource += pMacro->Name;
-                GLSLSource += ' ';
-                GLSLSource += pMacro->Definition;
-                GLSLSource += "\n";
-                ++pMacro;
-            }
-        }
+        AppendShaderMacros(GLSLSource, CreationAttribs.Macros);
     }
 
     RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));

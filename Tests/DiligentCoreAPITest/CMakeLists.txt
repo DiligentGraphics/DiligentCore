@@ -88,6 +88,7 @@ PRIVATE
     Diligent-GraphicsAccessories
     Diligent-Common
     Diligent-GraphicsTools
+    Diligent-ShaderTools
     ${ENGINE_LIBRARIES}
 )
 
@@ -96,7 +97,7 @@ if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
 endif()
 
 if(D3D12_SUPPORTED)
-    target_link_libraries(DiligentCoreAPITest PRIVATE d3d12.lib Diligent-HLSLTools)
+    target_link_libraries(DiligentCoreAPITest PRIVATE d3d12.lib)
 endif()
 
 if(GL_SUPPORTED OR GLES_SUPPORTED)
@@ -113,7 +114,6 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
 endif()
 
 if(VULKAN_SUPPORTED)
-    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-GLSLTools)
     target_include_directories(DiligentCoreAPITest PRIVATE ../../ThirdParty)
     if(PLATFORM_LINUX)
         target_link_libraries(DiligentCoreAPITest

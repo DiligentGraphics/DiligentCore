@@ -61,10 +61,10 @@ PUBLIC
 
 target_link_libraries(Diligent-GraphicsEngineD3DBase
 PRIVATE
-    Diligent-BuildSettings 
-    Diligent-HLSLTools 
+    Diligent-BuildSettings
+    Diligent-ShaderTools
 PUBLIC
-    Diligent-GraphicsEngine 
+    Diligent-GraphicsEngine
     Diligent-GraphicsEngineD3DBaseInterface
 )
 
