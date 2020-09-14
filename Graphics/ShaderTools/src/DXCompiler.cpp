@@ -48,6 +48,8 @@
 #    include <d3d12shader.h>
 #endif
 
+#include "HLSLUtils.hpp"
+
 namespace Diligent
 {
 
@@ -403,67 +405,16 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
 
 
 #if VULKAN_SUPPORTED
-// Implemented in GLSLSourceBuilder.cpp
-const char* GetShaderTypeDefines(SHADER_TYPE Type);
-
-namespace
-{
-
-// clang-format off
-static const char g_HLSLDefinitions[] =
-{
-#include "../../GraphicsEngineD3DBase/include/HLSLDefinitions_inc.fxh"
-};
-// clang-format on
-
-} // namespace
 
 std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
-                                  const ShaderCreateInfo& Attribs,
+                                  const ShaderCreateInfo& ShaderCI,
                                   const char*             ExtraDefinitions,
                                   IDataBlob**             ppCompilerOutput) noexcept(false)
 {
-    RefCntAutoPtr<IDataBlob> pFileData{MakeNewRCObj<DataBlobImpl>()(0)};
 
-    const char* SourceCode    = 0;
-    int         SourceCodeLen = 0;
-    if (Attribs.Source)
-    {
-        SourceCode    = Attribs.Source;
-        SourceCodeLen = static_cast<int>(strlen(Attribs.Source));
-    }
-    else
-    {
-        VERIFY(Attribs.pShaderSourceStreamFactory, "Input stream factory is null");
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        Attribs.pShaderSourceStreamFactory->CreateInputStream(Attribs.FilePath, &pSourceStream);
-        if (pSourceStream == nullptr)
-            LOG_ERROR_AND_THROW("Failed to open shader source file");
-
-        pSourceStream->ReadBlob(pFileData);
-        SourceCode    = reinterpret_cast<char*>(pFileData->GetDataPtr());
-        SourceCodeLen = static_cast<int>(pFileData->GetSize());
-    }
-
-    std::string Source;
-    Source.reserve(SourceCodeLen + sizeof(g_HLSLDefinitions));
-
-    Source.append(g_HLSLDefinitions);
-    AppendShaderTypeDefinitions(Source, Attribs.Desc.ShaderType);
-
-    if (ExtraDefinitions != nullptr)
-        Source += ExtraDefinitions;
-
-    if (Attribs.Macros != nullptr)
-    {
-        Source += '\n';
-        AppendShaderMacros(Source, Attribs.Macros);
-    }
-
-    Source.append(SourceCode, SourceCodeLen);
 
     // validate shader version
-    ShaderVersion ShaderModel = Attribs.HLSLVersion;
+    ShaderVersion ShaderModel = ShaderCI.HLSLVersion;
     ShaderVersion MaxSM       = pLibrary->GetMaxShaderModel();
 
     if (ShaderModel.Major < 6 || ShaderModel.Major > MaxSM.Major)
@@ -473,7 +424,7 @@ std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
         ShaderModel = MaxSM;
 
     std::wstring Profile;
-    switch (Attribs.Desc.ShaderType)
+    switch (ShaderCI.Desc.ShaderType)
     {
         // clang-format off
         case SHADER_TYPE_VERTEX:        Profile = L"vs_"; break;
@@ -506,16 +457,18 @@ std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
 
     IDXCompiler::CompileAttribs CA;
 
+    auto Source = BuildHLSLSourceString(ShaderCI, ExtraDefinitions);
+
     CA.Source                     = Source.c_str();
     CA.SourceLength               = static_cast<Uint32>(Source.length());
-    auto wstrEntryPoint           = std::wstring{Attribs.EntryPoint, Attribs.EntryPoint + strlen(Attribs.EntryPoint)};
+    auto wstrEntryPoint           = std::wstring{ShaderCI.EntryPoint, ShaderCI.EntryPoint + strlen(ShaderCI.EntryPoint)};
     CA.EntryPoint                 = wstrEntryPoint.c_str();
     CA.Profile                    = Profile.c_str();
     CA.pDefines                   = nullptr;
     CA.DefinesCount               = 0;
     CA.pArgs                      = pArgs;
     CA.ArgsCount                  = _countof(pArgs);
-    CA.pShaderSourceStreamFactory = Attribs.pShaderSourceStreamFactory;
+    CA.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
     CA.ppBlobOut                  = &compiled;
     CA.ppCompilerOutput           = &errors;
 
@@ -538,11 +491,11 @@ std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
     {
         if (ppCompilerOutput != nullptr)
         {
-            LOG_ERROR_AND_THROW("Failed to compile Vulkan shader \"", (Attribs.Desc.Name != nullptr ? Attribs.Desc.Name : ""), "\".");
+            LOG_ERROR_AND_THROW("Failed to compile Vulkan shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\".");
         }
         else
         {
-            LOG_ERROR_AND_THROW("Failed to compile Vukan shader \"", (Attribs.Desc.Name != nullptr ? Attribs.Desc.Name : ""), "\":\n", (CompilerMsg != nullptr ? std::string(CompilerMsg, CompilerMsgLen) : "<no compiler log available>"));
+            LOG_ERROR_AND_THROW("Failed to compile Vukan shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\":\n", (CompilerMsg != nullptr ? std::string(CompilerMsg, CompilerMsgLen) : "<no compiler log available>"));
         }
     }
 

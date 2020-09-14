@@ -398,7 +398,7 @@ public:
         m_pInputStreamFactory->CreateInputStream(headerName, &pSourceStream);
         if (pSourceStream == nullptr)
         {
-            LOG_ERROR("Failed to open shader include file \"", headerName, "\". Check that the file exists");
+            LOG_ERROR("Failed to open shader include file '", headerName, "'. Check that the file exists");
             return nullptr;
         }
 
@@ -439,64 +439,47 @@ private:
     std::unordered_map<IncludeResult*, RefCntAutoPtr<IDataBlob>> m_DataBlobs;
 };
 
-std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
+std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
                                       const char*             ExtraDefinitions,
                                       IDataBlob**             ppCompilerOutput)
 {
-    EShLanguage        ShLang = ShaderTypeToShLanguage(Attribs.Desc.ShaderType);
+    EShLanguage        ShLang = ShaderTypeToShLanguage(ShaderCI.Desc.ShaderType);
     ::glslang::TShader Shader{ShLang};
     EShMessages        messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules | EShMsgReadHlsl | EShMsgHlslLegalization);
 
-    VERIFY_EXPR(Attribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
+    VERIFY_EXPR(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
 
     Shader.setEnvInput(::glslang::EShSourceHlsl, ShLang, ::glslang::EShClientVulkan, 100);
     Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_0);
     Shader.setEnvTarget(::glslang::EShTargetSpv, ::glslang::EShTargetSpv_1_0);
     Shader.setHlslIoMapping(true);
-    Shader.setEntryPoint(Attribs.EntryPoint);
+    Shader.setEntryPoint(ShaderCI.EntryPoint);
     Shader.setEnvTargetHlslFunctionality1();
 
-    RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
+    RefCntAutoPtr<IDataBlob> pFileData;
+    size_t                   SourceCodeLen = 0;
 
-    const char* SourceCode    = 0;
-    int         SourceCodeLen = 0;
-    if (Attribs.Source)
-    {
-        SourceCode    = Attribs.Source;
-        SourceCodeLen = static_cast<int>(strlen(Attribs.Source));
-    }
-    else
-    {
-        VERIFY(Attribs.pShaderSourceStreamFactory, "Input stream factory is null");
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        Attribs.pShaderSourceStreamFactory->CreateInputStream(Attribs.FilePath, &pSourceStream);
-        if (pSourceStream == nullptr)
-            LOG_ERROR_AND_THROW("Failed to open shader source file");
-
-        pSourceStream->ReadBlob(pFileData);
-        SourceCode    = reinterpret_cast<char*>(pFileData->GetDataPtr());
-        SourceCodeLen = static_cast<int>(pFileData->GetSize());
-    }
+    const char* SourceCode = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pFileData, SourceCodeLen);
 
     std::string Defines = g_HLSLDefinitions;
-    AppendShaderTypeDefinitions(Defines, Attribs.Desc.ShaderType);
+    AppendShaderTypeDefinitions(Defines, ShaderCI.Desc.ShaderType);
 
     if (ExtraDefinitions != nullptr)
         Defines += ExtraDefinitions;
 
-    if (Attribs.Macros != nullptr)
+    if (ShaderCI.Macros != nullptr)
     {
         Defines += '\n';
-        AppendShaderMacros(Defines, Attribs.Macros);
+        AppendShaderMacros(Defines, ShaderCI.Macros);
     }
     Shader.setPreamble(Defines.c_str());
 
     const char* ShaderStrings[]       = {SourceCode};
-    const int   ShaderStringLenghts[] = {SourceCodeLen};
-    const char* Names[]               = {Attribs.FilePath != nullptr ? Attribs.FilePath : ""};
+    const int   ShaderStringLenghts[] = {static_cast<int>(SourceCodeLen)};
+    const char* Names[]               = {ShaderCI.FilePath != nullptr ? ShaderCI.FilePath : ""};
     Shader.setStringsWithLengthsAndNames(ShaderStrings, ShaderStringLenghts, Names, 1);
 
-    IncluderImpl Includer(Attribs.pShaderSourceStreamFactory);
+    IncluderImpl Includer{ShaderCI.pShaderSourceStreamFactory};
 
     auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, SourceCode, SourceCodeLen, ppCompilerOutput);
     if (SPIRV.empty())

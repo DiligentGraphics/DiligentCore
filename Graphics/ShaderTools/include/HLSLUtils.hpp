@@ -34,15 +34,7 @@
 namespace Diligent
 {
 
-enum TargetGLSLCompiler
-{
-    glslang,
-    driver
-};
-
-String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
-                             const DeviceCaps&       deviceCaps,
-                             TargetGLSLCompiler      TargetCompiler,
+String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI,
                              const char*             ExtraDefinitions = nullptr);
 
 } // namespace Diligent

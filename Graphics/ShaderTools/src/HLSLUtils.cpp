@@ -25,24 +25,44 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <cstring>
+#include <sstream>
 
-#include "BasicTypes.h"
-#include "GraphicsTypes.h"
-#include "Shader.h"
+#include "HLSLUtils.hpp"
+#include "DebugUtilities.hpp"
+#include "ShaderToolsCommon.hpp"
 
 namespace Diligent
 {
 
-enum TargetGLSLCompiler
+// clang-format off
+static const char g_HLSLDefinitions[] =
 {
-    glslang,
-    driver
+#include "../../GraphicsEngineD3DBase/include/HLSLDefinitions_inc.fxh"
 };
+// clang-format on
 
-String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
-                             const DeviceCaps&       deviceCaps,
-                             TargetGLSLCompiler      TargetCompiler,
-                             const char*             ExtraDefinitions = nullptr);
+
+String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI,
+                             const char*             ExtraDefinitions)
+{
+    String HLSLSource;
+
+    HLSLSource.append(g_HLSLDefinitions);
+    AppendShaderTypeDefinitions(HLSLSource, ShaderCI.Desc.ShaderType);
+
+    if (ExtraDefinitions != nullptr)
+        HLSLSource += ExtraDefinitions;
+
+    if (ShaderCI.Macros != nullptr)
+    {
+        HLSLSource += '\n';
+        AppendShaderMacros(HLSLSource, ShaderCI.Macros);
+    }
+
+    AppendShaderSourceCode(HLSLSource, ShaderCI);
+
+    return HLSLSource;
+}
 
 } // namespace Diligent

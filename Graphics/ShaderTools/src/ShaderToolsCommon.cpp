@@ -27,6 +27,7 @@
 
 #include "ShaderToolsCommon.hpp"
 #include "DebugUtilities.hpp"
+#include "DataBlobImpl.hpp"
 
 namespace Diligent
 {
@@ -83,6 +84,61 @@ void AppendShaderMacros(std::string& Source, const ShaderMacro* Macros)
 void AppendShaderTypeDefinitions(std::string& Source, SHADER_TYPE Type)
 {
     AppendShaderMacros(Source, GetShaderTypeMacros(Type));
+}
+
+
+const char* ReadShaderSourceFile(const char*                      SourceCode,
+                                 IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                                 const char*                      FilePath,
+                                 RefCntAutoPtr<IDataBlob>&        pFileData,
+                                 size_t&                          SourceCodeLen) noexcept(false)
+{
+    SourceCodeLen = 0;
+    if (SourceCode != nullptr)
+    {
+        VERIFY(pShaderSourceStreamFactory == nullptr, "pShaderSourceStreamFactory must be null when SourceCode is not null");
+        SourceCodeLen = strlen(SourceCode);
+    }
+    else
+    {
+        if (pShaderSourceStreamFactory != nullptr)
+        {
+            if (FilePath != nullptr)
+            {
+                RefCntAutoPtr<IFileStream> pSourceStream;
+                pShaderSourceStreamFactory->CreateInputStream(FilePath, &pSourceStream);
+                if (pSourceStream == nullptr)
+                    LOG_ERROR_AND_THROW("Failed to load shader source file '", FilePath, '\'');
+
+                pFileData = MakeNewRCObj<DataBlobImpl>{}(0);
+                pSourceStream->ReadBlob(pFileData);
+                SourceCode    = reinterpret_cast<char*>(pFileData->GetDataPtr());
+                SourceCodeLen = pFileData->GetSize();
+            }
+            else
+            {
+                UNEXPECTED("FilePath is null");
+            }
+        }
+        else
+        {
+            UNEXPECTED("Input stream factory is null");
+        }
+    }
+
+    return SourceCode;
+}
+
+void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderCI) noexcept(false)
+{
+    RefCntAutoPtr<IDataBlob> pFileData;
+
+    size_t SourceCodeLen = 0;
+
+    const auto* SourceCode =
+        ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory,
+                             ShaderCI.FilePath, pFileData, SourceCodeLen);
+    Source.append(SourceCode, SourceCodeLen);
 }
 
 } // namespace Diligent

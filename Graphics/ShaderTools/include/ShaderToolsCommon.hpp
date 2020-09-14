@@ -29,6 +29,8 @@
 
 #include "GraphicsTypes.h"
 #include "Shader.h"
+#include "RefCntAutoPtr.hpp"
+#include "DataBlob.h"
 
 namespace Diligent
 {
@@ -64,5 +66,17 @@ void AppendShaderMacros(std::string& Source, const ShaderMacro* Macros);
 ///
 /// etc.
 void AppendShaderTypeDefinitions(std::string& Source, SHADER_TYPE Type);
+
+
+/// Reads shader source code from a file or uses the one from the shader create info
+const char* ReadShaderSourceFile(const char*                      SourceCode,
+                                 IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                                 const char*                      FilePath,
+                                 RefCntAutoPtr<IDataBlob>&        pFileData,
+                                 size_t&                          SourceCodeLen) noexcept(false);
+
+/// Appends shader source code to the source string
+void AppendShaderSourceCode(std::string& Source, const ShaderCreateInfo& ShaderCI) noexcept(false);
+
 
 } // namespace Diligent

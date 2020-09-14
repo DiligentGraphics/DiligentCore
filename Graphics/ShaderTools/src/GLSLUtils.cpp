@@ -265,26 +265,10 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
         AppendShaderMacros(GLSLSource, ShaderCI.Macros);
     }
 
-    RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
+    RefCntAutoPtr<IDataBlob> pFileData;
+    size_t                   SourceLen = 0;
 
-    auto   ShaderSource = ShaderCI.Source;
-    size_t SourceLen    = 0;
-    if (ShaderSource)
-    {
-        SourceLen = strlen(ShaderSource);
-    }
-    else
-    {
-        VERIFY(ShaderCI.pShaderSourceStreamFactory, "Input stream factory is null");
-        RefCntAutoPtr<IFileStream> pSourceStream;
-        ShaderCI.pShaderSourceStreamFactory->CreateInputStream(ShaderCI.FilePath, &pSourceStream);
-        if (pSourceStream == nullptr)
-            LOG_ERROR_AND_THROW("Failed to open shader source file");
-
-        pSourceStream->ReadBlob(pFileData);
-        ShaderSource = reinterpret_cast<char*>(pFileData->GetDataPtr());
-        SourceLen    = pFileData->GetSize();
-    }
+    const auto* ShaderSource = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pFileData, SourceLen);
 
     if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
@@ -319,7 +303,9 @@ String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
 #endif
     }
     else
+    {
         GLSLSource.append(ShaderSource, SourceLen);
+    }
 
     return GLSLSource;
 }
