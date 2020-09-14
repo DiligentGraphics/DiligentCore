@@ -73,6 +73,12 @@ public:
     };
     virtual bool Compile(const CompileAttribs& Attribs) = 0;
 
+    virtual void Compile(const ShaderCreateInfo& ShaderCI,
+                         const char*             ExtraDefinitions,
+                         IDxcBlob**              ppByteCodeBlob,
+                         std::vector<uint32_t>*  pByteCode,
+                         IDataBlob**             ppCompilerOutput) noexcept(false) = 0;
+
     // Attempts to extract shader reflection from the bytecode using DXC.
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) = 0;
@@ -81,14 +87,6 @@ public:
 // Use this function to load specific library,
 // otherwise default library will be implicitly loaded.
 IDXCompiler* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName);
-
-
-#if VULKAN_SUPPORTED
-std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
-                                  const ShaderCreateInfo& Attribs,
-                                  const char*             ExtraDefinitions,
-                                  IDataBlob**             ppCompilerOutput) noexcept(false);
-#endif
 
 
 } // namespace Diligent

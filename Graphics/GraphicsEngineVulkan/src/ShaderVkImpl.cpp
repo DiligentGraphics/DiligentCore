@@ -67,8 +67,18 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
         switch (CreationAttribs.ShaderCompiler)
         {
             case SHADER_COMPILER_DXC:
-                m_SPIRV = DXILtoSPIRV(pRenderDeviceVk->GetDxCompiler(), CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
-                break;
+            {
+                auto* pDXComiler = pRenderDeviceVk->GetDxCompiler();
+                if (pDXComiler != nullptr && pDXComiler->IsLoaded())
+                {
+                    pDXComiler->Compile(CreationAttribs, VulkanDefine, nullptr, &m_SPIRV, CreationAttribs.ppCompilerOutput);
+                }
+                else
+                {
+                    LOG_ERROR_AND_THROW("DX Compiler is not loaded");
+                }
+            }
+            break;
 
             case SHADER_COMPILER_DEFAULT:
             case SHADER_COMPILER_GLSLANG:

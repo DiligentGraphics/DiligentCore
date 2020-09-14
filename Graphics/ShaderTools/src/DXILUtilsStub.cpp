@@ -35,12 +35,4 @@ IDXCompiler* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName)
     return nullptr;
 }
 
-std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
-                                  const ShaderCreateInfo& Attribs,
-                                  const char*             ExtraDefinitions,
-                                  IDataBlob**             ppCompilerOutput) noexcept(false)
-{
-    return {};
-}
-
 } // namespace Diligent

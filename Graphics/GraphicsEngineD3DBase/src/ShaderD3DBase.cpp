@@ -44,62 +44,6 @@
 namespace Diligent
 {
 
-static HRESULT CompileDxilShader(IDXCompiler*            DxCompiler,
-                                 const char*             Source,
-                                 size_t                  SourceLength,
-                                 const ShaderCreateInfo& ShaderCI,
-                                 LPCSTR                  profile,
-                                 ID3DBlob**              ppBlobOut,
-                                 ID3DBlob**              ppCompilerOutput)
-{
-    VERIFY_EXPR(DxCompiler != nullptr);
-
-    std::vector<std::unique_ptr<wchar_t[]>> StringPool;
-
-    auto UTF8ToUTF16 = [&StringPool](LPCSTR lpUTF8) //
-    {
-        // When last parameter is 0, the function returns the required buffer size, in characters,
-        // including any terminating null character.
-        const auto                 nChars = MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, NULL, 0);
-        std::unique_ptr<wchar_t[]> wstr{new wchar_t[nChars]};
-        MultiByteToWideChar(CP_UTF8, 0, lpUTF8, -1, wstr.get(), nChars);
-        StringPool.emplace_back(std::move(wstr));
-        return StringPool.back().get();
-    };
-
-    const wchar_t* pArgs[] =
-        {
-            L"-Zpc", // Matrices in column-major order
-                     //L"-WX",  // Warnings as errors
-#ifdef DILIGENT_DEBUG
-            L"-Zi", // Debug info
-            //L"-Qembed_debug", // Embed debug info into the shader (some compilers do not recognize this flag)
-            L"-Od", // Disable optimization
-#else
-            L"-Od", // TODO: something goes wrong if optimization is enabled
-                    //L"-O3", // Optimization level 3
-#endif
-        };
-
-    VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
-
-    IDXCompiler::CompileAttribs CA;
-    CA.Source                     = Source;
-    CA.SourceLength               = static_cast<Uint32>(SourceLength);
-    CA.EntryPoint                 = UTF8ToUTF16(ShaderCI.EntryPoint);
-    CA.Profile                    = UTF8ToUTF16(profile);
-    CA.pArgs                      = pArgs;
-    CA.ArgsCount                  = _countof(pArgs);
-    CA.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
-    CA.ppBlobOut                  = reinterpret_cast<IDxcBlob**>(ppBlobOut);
-    CA.ppCompilerOutput           = reinterpret_cast<IDxcBlob**>(ppCompilerOutput);
-    if (!DxCompiler->Compile(CA))
-    {
-        return E_FAIL;
-    }
-    return S_OK;
-}
-
 class D3DIncludeImpl : public ID3DInclude
 {
 public:
@@ -156,12 +100,12 @@ static HRESULT CompileShader(const char*             Source,
     // the release configuration of this program.
     dwShaderFlags |= D3DCOMPILE_DEBUG;
 #else
-                    // Warning: do not use this flag as it causes shader compiler to fail the compilation and
-                    // report strange errors:
-                    // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
+    // Warning: do not use this flag as it causes shader compiler to fail the compilation and
+    // report strange errors:
+    // dwShaderFlags |= D3D10_SHADER_OPTIMIZATION_LEVEL3;
 #endif
 
-    D3DIncludeImpl IncludeImpl(ShaderCI.pShaderSourceStreamFactory);
+    D3DIncludeImpl IncludeImpl{ShaderCI.pShaderSourceStreamFactory};
     return D3DCompile(Source, SourceLength, NULL, nullptr, &IncludeImpl, ShaderCI.EntryPoint, profile, dwShaderFlags, 0, ppBlobOut, ppCompilerOutput);
 }
 
@@ -181,66 +125,51 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
             case SHADER_COMPILER_DEFAULT: UseDXC = false;                                            break;
             case SHADER_COMPILER_DXC:     UseDXC = DxCompiler != nullptr && DxCompiler->IsLoaded();  break;
             case SHADER_COMPILER_FXC:     UseDXC = false;                                            break;
-                // clang-format on
+            // clang-format on
             default: UNEXPECTED("Unsupported shader compiler");
         }
 
-        std::string strShaderProfile;
-        switch (ShaderCI.Desc.ShaderType)
-        {
-            // clang-format off
-            case SHADER_TYPE_VERTEX:        strShaderProfile="vs"; break;
-            case SHADER_TYPE_PIXEL:         strShaderProfile="ps"; break;
-            case SHADER_TYPE_GEOMETRY:      strShaderProfile="gs"; break;
-            case SHADER_TYPE_HULL:          strShaderProfile="hs"; break;
-            case SHADER_TYPE_DOMAIN:        strShaderProfile="ds"; break;
-            case SHADER_TYPE_COMPUTE:       strShaderProfile="cs"; break;
-            case SHADER_TYPE_AMPLIFICATION: strShaderProfile="as"; break;
-            case SHADER_TYPE_MESH:          strShaderProfile="ms"; break;
-                // clang-format on
-            default: UNEXPECTED("Unknown shader type");
-        }
-
-        strShaderProfile += "_";
-        strShaderProfile += std::to_string(ShaderModel.Major);
-        strShaderProfile += "_";
-        strShaderProfile += std::to_string(ShaderModel.Minor);
-
-        String ShaderSource = BuildHLSLSourceString(ShaderCI);
-
-        DEV_CHECK_ERR(ShaderCI.EntryPoint != nullptr, "Entry point must not be null");
-
-        CComPtr<ID3DBlob> errors;
-        HRESULT           hr;
-
         if (UseDXC)
-            hr = CompileDxilShader(DxCompiler, ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
-        else
-            hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
-
-        const size_t CompilerMsgLen = errors ? errors->GetBufferSize() : 0;
-        const char*  CompilerMsg    = CompilerMsgLen > 0 ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
-
-        if (CompilerMsg != nullptr && ShaderCI.ppCompilerOutput != nullptr)
         {
-            auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(CompilerMsgLen + 1 + ShaderSource.length() + 1);
-            char* DataPtr         = static_cast<char*>(pOutputDataBlob->GetDataPtr());
-            memcpy(DataPtr, CompilerMsg, CompilerMsgLen);
-            DataPtr[CompilerMsgLen] = 0; // Set null terminator
-            memcpy(DataPtr + CompilerMsgLen + 1, ShaderSource.data(), ShaderSource.length() + 1);
-            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
+            VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
+            DxCompiler->Compile(ShaderCI, nullptr, reinterpret_cast<IDxcBlob**>(&m_pShaderByteCode), nullptr, ShaderCI.ppCompilerOutput);
         }
-
-        if (FAILED(hr))
+        else
         {
-            ComErrorDesc ErrDesc(hr);
-            if (ShaderCI.ppCompilerOutput != nullptr)
+            std::string strShaderProfile = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel);
+
+            String ShaderSource = BuildHLSLSourceString(ShaderCI);
+
+            DEV_CHECK_ERR(ShaderCI.EntryPoint != nullptr, "Entry point must not be null");
+
+            CComPtr<ID3DBlob> errors;
+
+            auto hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
+
+            const size_t CompilerMsgLen = errors ? errors->GetBufferSize() : 0;
+            const char*  CompilerMsg    = CompilerMsgLen > 0 ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
+
+            if (CompilerMsg != nullptr && ShaderCI.ppCompilerOutput != nullptr)
             {
-                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\" (", ErrDesc.Get(), ").");
+                auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(CompilerMsgLen + 1 + ShaderSource.length() + 1);
+                char* DataPtr         = static_cast<char*>(pOutputDataBlob->GetDataPtr());
+                memcpy(DataPtr, CompilerMsg, CompilerMsgLen);
+                DataPtr[CompilerMsgLen] = 0; // Set null terminator
+                memcpy(DataPtr + CompilerMsgLen + 1, ShaderSource.data(), ShaderSource.length() + 1);
+                pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
             }
-            else
+
+            if (FAILED(hr))
             {
-                LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\" (", ErrDesc.Get(), "):\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>"));
+                ComErrorDesc ErrDesc(hr);
+                if (ShaderCI.ppCompilerOutput != nullptr)
+                {
+                    LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\" (", ErrDesc.Get(), ").");
+                }
+                else
+                {
+                    LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\" (", ErrDesc.Get(), "):\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>"));
+                }
             }
         }
     }

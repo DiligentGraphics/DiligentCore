@@ -65,4 +65,30 @@ String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI,
     return HLSLSource;
 }
 
+String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel)
+{
+    String strShaderProfile;
+    switch (ShaderType)
+    {
+        // clang-format off
+        case SHADER_TYPE_VERTEX:        strShaderProfile = "vs"; break;
+        case SHADER_TYPE_PIXEL:         strShaderProfile = "ps"; break;
+        case SHADER_TYPE_GEOMETRY:      strShaderProfile = "gs"; break;
+        case SHADER_TYPE_HULL:          strShaderProfile = "hs"; break;
+        case SHADER_TYPE_DOMAIN:        strShaderProfile = "ds"; break;
+        case SHADER_TYPE_COMPUTE:       strShaderProfile = "cs"; break;
+        case SHADER_TYPE_AMPLIFICATION: strShaderProfile = "as"; break;
+        case SHADER_TYPE_MESH:          strShaderProfile = "ms"; break;
+        // clang-format on
+        default: UNEXPECTED("Unknown shader type");
+    }
+
+    strShaderProfile += "_";
+    strShaderProfile += std::to_string(ShaderModel.Major);
+    strShaderProfile += "_";
+    strShaderProfile += std::to_string(ShaderModel.Minor);
+
+    return strShaderProfile;
+}
+
 } // namespace Diligent

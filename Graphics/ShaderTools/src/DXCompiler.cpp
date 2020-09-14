@@ -83,6 +83,12 @@ public:
 
     bool Compile(const CompileAttribs& Attribs) override final;
 
+    virtual void Compile(const ShaderCreateInfo& ShaderCI,
+                         const char*             ExtraDefinitions,
+                         IDxcBlob**              ppByteCodeBlob,
+                         std::vector<uint32_t>*  pByteCode,
+                         IDataBlob**             ppCompilerOutput) noexcept(false) override final;
+
     virtual void GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                           ID3D12ShaderReflection** ppShaderReflection) override final;
 
@@ -404,18 +410,21 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
 
 
 
-#if VULKAN_SUPPORTED
-
-std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
-                                  const ShaderCreateInfo& ShaderCI,
-                                  const char*             ExtraDefinitions,
-                                  IDataBlob**             ppCompilerOutput) noexcept(false)
+void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
+                             const char*             ExtraDefinitions,
+                             IDxcBlob**              ppByteCodeBlob,
+                             std::vector<uint32_t>*  pByteCode,
+                             IDataBlob**             ppCompilerOutput) noexcept(false)
 {
-
+    if (!IsLoaded())
+    {
+        UNEXPECTED("DX compiler is not loaded");
+        return;
+    }
 
     // validate shader version
     ShaderVersion ShaderModel = ShaderCI.HLSLVersion;
-    ShaderVersion MaxSM       = pLibrary->GetMaxShaderModel();
+    ShaderVersion MaxSM       = GetMaxShaderModel();
 
     if (ShaderModel.Major < 6 || ShaderModel.Major > MaxSM.Major)
         ShaderModel = MaxSM;
@@ -423,33 +432,31 @@ std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
     if (ShaderModel.Major == MaxSM.Major && ShaderModel.Minor > MaxSM.Minor)
         ShaderModel = MaxSM;
 
-    std::wstring Profile;
-    switch (ShaderCI.Desc.ShaderType)
-    {
-        // clang-format off
-        case SHADER_TYPE_VERTEX:        Profile = L"vs_"; break;
-        case SHADER_TYPE_PIXEL:         Profile = L"ps_"; break;
-        case SHADER_TYPE_GEOMETRY:      Profile = L"gs_"; break;
-        case SHADER_TYPE_HULL:          Profile = L"hs_"; break;
-        case SHADER_TYPE_DOMAIN:        Profile = L"ds_"; break;
-        case SHADER_TYPE_COMPUTE:       Profile = L"cs_"; break;
-        case SHADER_TYPE_AMPLIFICATION: Profile = L"as_"; break;
-        case SHADER_TYPE_MESH:          Profile = L"ms_"; break;
-        default: UNEXPECTED("Unexpected shader type");
-            // clang-format on
-    }
+    const auto         Profile = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel);
+    const std::wstring wstrProfile{Profile.begin(), Profile.end()};
+    const std::wstring wstrEntryPoint{ShaderCI.EntryPoint, ShaderCI.EntryPoint + strlen(ShaderCI.EntryPoint)};
 
-    Profile += L'0' + (ShaderModel.Major % 10);
-    Profile += L'_';
-    Profile += L'0' + (ShaderModel.Minor % 10);
-
-    const wchar_t* pArgs[] =
+    const wchar_t* pSpirvArgs[] =
         {
             L"-spirv",
             L"-fspv-reflect",
             L"-fspv-target-env=vulkan1.0",
             //L"-WX", // Warnings as errors
             L"-O3", // Optimization level 3
+        };
+
+    const wchar_t* pDxbcArgs[] =
+        {
+            L"-Zpc", // Matrices in column-major order
+                     //L"-WX",  // Warnings as errors
+#ifdef DILIGENT_DEBUG
+            L"-Zi", // Debug info
+            //L"-Qembed_debug", // Embed debug info into the shader (some compilers do not recognize this flag)
+            L"-Od", // Disable optimization
+#else
+            L"-Od", // TODO: something goes wrong if optimization is enabled
+                    //L"-O3", // Optimization level 3
+#endif
         };
 
     CComPtr<IDxcBlob> compiled;
@@ -461,18 +468,17 @@ std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
 
     CA.Source                     = Source.c_str();
     CA.SourceLength               = static_cast<Uint32>(Source.length());
-    auto wstrEntryPoint           = std::wstring{ShaderCI.EntryPoint, ShaderCI.EntryPoint + strlen(ShaderCI.EntryPoint)};
     CA.EntryPoint                 = wstrEntryPoint.c_str();
-    CA.Profile                    = Profile.c_str();
+    CA.Profile                    = wstrProfile.c_str();
     CA.pDefines                   = nullptr;
     CA.DefinesCount               = 0;
-    CA.pArgs                      = pArgs;
-    CA.ArgsCount                  = _countof(pArgs);
+    CA.pArgs                      = m_Target == DXCompilerTarget::Direct3D12 ? pDxbcArgs : pSpirvArgs;
+    CA.ArgsCount                  = m_Target == DXCompilerTarget::Direct3D12 ? _countof(pDxbcArgs) : _countof(pSpirvArgs);
     CA.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
     CA.ppBlobOut                  = &compiled;
     CA.ppCompilerOutput           = &errors;
 
-    auto result = pLibrary->Compile(CA);
+    auto result = Compile(CA);
 
     const size_t CompilerMsgLen = errors ? errors->GetBufferSize() : 0;
     const char*  CompilerMsg    = CompilerMsgLen > 0 ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
@@ -499,15 +505,15 @@ std::vector<uint32_t> DXILtoSPIRV(IDXCompiler*            pLibrary,
         }
     }
 
-    std::vector<uint32_t> SPIRV;
     if (result && compiled && compiled->GetBufferSize() > 0)
     {
-        SPIRV.assign(static_cast<uint32_t*>(compiled->GetBufferPointer()),
-                     static_cast<uint32_t*>(compiled->GetBufferPointer()) + compiled->GetBufferSize() / sizeof(uint32_t));
-    }
-    return SPIRV;
-}
+        if (pByteCode != nullptr)
+            pByteCode->assign(static_cast<uint32_t*>(compiled->GetBufferPointer()),
+                              static_cast<uint32_t*>(compiled->GetBufferPointer()) + compiled->GetBufferSize() / sizeof(uint32_t));
 
-#endif // VULKAN_SUPPORTED
+        if (ppByteCodeBlob != nullptr)
+            *ppByteCodeBlob = compiled.Detach();
+    }
+}
 
 } // namespace Diligent

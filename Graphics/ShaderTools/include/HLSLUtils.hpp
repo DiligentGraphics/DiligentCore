@@ -37,4 +37,6 @@ namespace Diligent
 String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI,
                              const char*             ExtraDefinitions = nullptr);
 
+String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel);
+
 } // namespace Diligent
