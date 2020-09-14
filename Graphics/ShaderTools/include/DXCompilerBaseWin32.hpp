@@ -30,7 +30,7 @@
 #include <atlbase.h>
 #include <atlcom.h>
 
-#include "../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h"
+#include "dxc/dxcapi.h"
 
 #include "DXCompiler.hpp"
 

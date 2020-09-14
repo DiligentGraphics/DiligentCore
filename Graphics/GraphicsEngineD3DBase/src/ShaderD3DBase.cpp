@@ -32,7 +32,7 @@
 #include <D3Dcompiler.h>
 
 #include <atlcomcli.h>
-#include "../../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h"
+#include "dxc/dxcapi.h"
 
 #include "D3DErrors.hpp"
 #include "DataBlobImpl.hpp"

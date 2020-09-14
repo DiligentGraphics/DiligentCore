@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "DXILUtils.hpp"
+#include "DXCompiler.hpp"
 
 namespace Diligent
 {

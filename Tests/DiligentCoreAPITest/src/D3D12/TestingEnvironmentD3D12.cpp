@@ -27,7 +27,7 @@
 
 #include "D3D12/TestingEnvironmentD3D12.hpp"
 #include "RenderDeviceD3D12.h"
-#include "../../../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h"
+#include "dxc/dxcapi.h"
 
 namespace Diligent
 {

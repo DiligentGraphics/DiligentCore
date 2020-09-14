@@ -74,6 +74,10 @@ PRIVATE
     ../GraphicsEngine/include
 )
 
+if (DXC_SUPPORTED)
+    target_include_directories(Diligent-ShaderTools PUBLIC ../../ThirdParty/DirectXShaderCompiler)
+endif()
+
 target_link_libraries(Diligent-ShaderTools 
 PRIVATE 
     Diligent-BuildSettings

@@ -40,19 +40,19 @@
 namespace Diligent
 {
 
-String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
+String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
                              const DeviceCaps&       deviceCaps,
                              TargetGLSLCompiler      TargetCompiler,
                              const char*             ExtraDefinitions)
 {
     String GLSLSource;
 
-    if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM && CreationAttribs.Macros != nullptr)
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM && ShaderCI.Macros != nullptr)
         LOG_WARNING_MESSAGE("Shader macros are ignored when compiling GLSL verbatim");
 
-    if (CreationAttribs.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+    if (ShaderCI.SourceLanguage != SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
     {
-        auto ShaderType = CreationAttribs.Desc.ShaderType;
+        auto ShaderType = ShaderCI.Desc.ShaderType;
 
 #if PLATFORM_WIN32 || PLATFORM_LINUX
         GLSLSource.append(
@@ -262,12 +262,12 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
             GLSLSource.append(ExtraDefinitions);
         }
 
-        AppendShaderMacros(GLSLSource, CreationAttribs.Macros);
+        AppendShaderMacros(GLSLSource, ShaderCI.Macros);
     }
 
     RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
 
-    auto   ShaderSource = CreationAttribs.Source;
+    auto   ShaderSource = ShaderCI.Source;
     size_t SourceLen    = 0;
     if (ShaderSource)
     {
@@ -275,9 +275,9 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
     }
     else
     {
-        VERIFY(CreationAttribs.pShaderSourceStreamFactory, "Input stream factory is null");
+        VERIFY(ShaderCI.pShaderSourceStreamFactory, "Input stream factory is null");
         RefCntAutoPtr<IFileStream> pSourceStream;
-        CreationAttribs.pShaderSourceStreamFactory->CreateInputStream(CreationAttribs.FilePath, &pSourceStream);
+        ShaderCI.pShaderSourceStreamFactory->CreateInputStream(ShaderCI.FilePath, &pSourceStream);
         if (pSourceStream == nullptr)
             LOG_ERROR_AND_THROW("Failed to open shader source file");
 
@@ -286,12 +286,12 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         SourceLen    = pFileData->GetSize();
     }
 
-    if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
     {
 #if DILIGENT_NO_HLSL
         LOG_ERROR_AND_THROW("Unable to convert HLSL source to GLSL: HLSL support is disabled");
 #else
-        if (!CreationAttribs.UseCombinedTextureSamplers)
+        if (!ShaderCI.UseCombinedTextureSamplers)
         {
             LOG_ERROR_AND_THROW("Combined texture samplers are required to convert HLSL source to GLSL");
         }
@@ -299,15 +299,15 @@ String BuildGLSLSourceString(const ShaderCreateInfo& CreationAttribs,
         const auto& Converter = HLSL2GLSLConverterImpl::GetInstance();
 
         HLSL2GLSLConverterImpl::ConversionAttribs Attribs;
-        Attribs.pSourceStreamFactory = CreationAttribs.pShaderSourceStreamFactory;
-        Attribs.ppConversionStream   = CreationAttribs.ppConversionStream;
+        Attribs.pSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
+        Attribs.ppConversionStream   = ShaderCI.ppConversionStream;
         Attribs.HLSLSource           = ShaderSource;
         Attribs.NumSymbols           = SourceLen;
-        Attribs.EntryPoint           = CreationAttribs.EntryPoint;
-        Attribs.ShaderType           = CreationAttribs.Desc.ShaderType;
+        Attribs.EntryPoint           = ShaderCI.EntryPoint;
+        Attribs.ShaderType           = ShaderCI.Desc.ShaderType;
         Attribs.IncludeDefinitions   = true;
-        Attribs.InputFileName        = CreationAttribs.FilePath;
-        Attribs.SamplerSuffix        = CreationAttribs.CombinedSamplerSuffix;
+        Attribs.InputFileName        = ShaderCI.FilePath;
+        Attribs.SamplerSuffix        = ShaderCI.CombinedSamplerSuffix;
         // Separate shader objects extension also allows input/output layout qualifiers for
         // all shader stages.
         // https://www.khronos.org/registry/OpenGL/extensions/ARB/ARB_separate_shader_objects.txt

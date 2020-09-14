@@ -28,7 +28,7 @@
 
 #include "DXCompiler.hpp"
 
-#include "../../ThirdParty/DirectXShaderCompiler/dxc/dxcapi.h"
+#include "dxc/dxcapi.h"
 
 namespace Diligent
 {
