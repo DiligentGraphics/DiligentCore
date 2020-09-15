@@ -34,6 +34,7 @@
 #include "Shader.h"
 #include "RefCountedObjectImpl.hpp"
 #include "Errors.hpp"
+#include "DataBlobImpl.hpp"
 
 namespace Diligent
 {
