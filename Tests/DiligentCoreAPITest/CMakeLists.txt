@@ -13,10 +13,12 @@ set_source_files_properties(${SHADERS} PROPERTIES VS_TOOL_OVERRIDE "None")
 set(SOURCE ${COMMON_SOURCE} ${C_INTERFACE_SOURCE})
 set(INCLUDE ${COMMON_INCLUDE})
 
-if(NOT GL_SUPPORTED AND NOT GLES_SUPPORTED)
+if(NOT TARGET Diligent-HLSL2GLSLConverterLib)
     list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/HLSL2GLSLConverterTest.cpp)
+endif()
+
+if(NOT GL_SUPPORTED AND NOT GLES_SUPPORTED)
     list(REMOVE_ITEM SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/CreateObjFromNativeResGL.cpp)
-    
     list(REMOVE_ITEM INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/include/CreateObjFromNativeResGL.hpp)
 endif()
 
@@ -92,6 +94,10 @@ PRIVATE
     ${ENGINE_LIBRARIES}
 )
 
+if(TARGET Diligent-HLSL2GLSLConverterLib)
+    target_link_libraries(DiligentCoreAPITest PRIVATE Diligent-HLSL2GLSLConverterLib)
+endif()
+
 if(D3D11_SUPPORTED OR D3D12_SUPPORTED)
     target_link_libraries(DiligentCoreAPITest PRIVATE d3dcompiler.lib)
 endif()
@@ -152,6 +158,7 @@ if(PLATFORM_WIN32)
     copy_required_dlls(DiligentCoreAPITest)
 endif()
 
+target_compile_definitions(DiligentCoreAPITest PRIVATE DILIGENT_NO_GLSLANG=$<BOOL:${DILIGENT_NO_GLSLANG}>)
 if(${D3D12_H_HAS_MESH_SHADER})
     target_compile_definitions(DiligentCoreAPITest PRIVATE D3D12_H_HAS_MESH_SHADER)
 endif()

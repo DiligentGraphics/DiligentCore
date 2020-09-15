@@ -203,6 +203,10 @@ TEST(MeshShaderTest, DrawQuadIndirect)
                 break;
 #endif
 
+            case RENDER_DEVICE_TYPE_D3D11:
+            case RENDER_DEVICE_TYPE_GL:
+            case RENDER_DEVICE_TYPE_GLES:
+            case RENDER_DEVICE_TYPE_METAL:
             default:
                 LOG_ERROR_AND_THROW("Unsupported device type");
         }

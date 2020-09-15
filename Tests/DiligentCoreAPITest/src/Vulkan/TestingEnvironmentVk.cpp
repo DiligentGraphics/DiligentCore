@@ -51,7 +51,9 @@ TestingEnvironmentVk::TestingEnvironmentVk(RENDER_DEVICE_TYPE   deviceType,
                                            const SwapChainDesc& SCDesc) :
     TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc}
 {
+#if !DILIGENT_NO_GLSLANG
     GLSLangUtils::InitializeGlslang();
+#endif
 
     // We have to use dynamic Vulkan loader because if an application is statically linked with vulkan-1.lib
     // and the Vulkan library is not present on the system, the app will instantly crash.
@@ -89,8 +91,9 @@ TestingEnvironmentVk::~TestingEnvironmentVk()
     {
         vkDestroyCommandPool(m_vkDevice, m_vkCmdPool, nullptr);
     }
-
+#if !DILIGENT_NO_GLSLANG
     GLSLangUtils::FinalizeGlslang();
+#endif
 }
 
 uint32_t TestingEnvironmentVk::GetMemoryTypeIndex(uint32_t              memoryTypeBitsRequirement,
@@ -312,6 +315,10 @@ VkRenderPassCreateInfo TestingEnvironmentVk::GetRenderPassCreateInfo(
 
 VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource)
 {
+#if DILIGENT_NO_GLSLANG
+    LOG_ERROR("GLSLang was not built. Shader compilaton is not possible.");
+    return VK_NULL_HANDLE;
+#else
     auto Bytecode = GLSLangUtils::GLSLtoSPIRV(ShaderType, ShaderSource.c_str(), static_cast<int>(ShaderSource.length()), nullptr);
     VERIFY_EXPR(!Bytecode.empty());
     if (Bytecode.empty())
@@ -330,6 +337,7 @@ VkShaderModule TestingEnvironmentVk::CreateShaderModule(const SHADER_TYPE Shader
     VERIFY_EXPR(vkShaderModule != VK_NULL_HANDLE);
 
     return vkShaderModule;
+#endif
 }
 
 VkCommandBuffer TestingEnvironmentVk::AllocateCommandBuffer()

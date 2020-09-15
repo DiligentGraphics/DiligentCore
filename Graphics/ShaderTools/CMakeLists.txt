@@ -96,7 +96,7 @@ if (VULKAN_SUPPORTED OR GL_SUPPORTED OR GLES_SUPPORTED)
     target_compile_definitions(Diligent-ShaderTools PRIVATE DILIGENT_NO_HLSL=$<BOOL:${DILIGENT_NO_HLSL}>)
     if (NOT ${DILIGENT_NO_HLSL})
         target_include_directories(Diligent-ShaderTools PRIVATE ../HLSL2GLSLConverterLib/include)
-        target_link_libraries(Diligent-ShaderTools PUBLIC Diligent-HLSL2GLSLConverterLib)
+        target_link_libraries(Diligent-ShaderTools PRIVATE Diligent-HLSL2GLSLConverterLib)
     endif()
 endif()
 
