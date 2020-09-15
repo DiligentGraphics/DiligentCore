@@ -42,10 +42,8 @@ void TestLoad()
 
 
 
-void TestStore()
+void TestStore(uint3 Location)
 {
-    int4 Location = int4(2, 5, 1, 10);
-
     //Buffer
     {
         TexBuff_F[Location.x] = 1.0;
@@ -56,7 +54,7 @@ void TestStore()
     Data0.Data = float4(0.0, 1.0, 2.0, 3.0);
     RWStructBuff0[Location.x] = Data0;
     RWStructBuff1[Location.z] = Data0;
-    RWStructBuff2[Location.w] = Data0;
+    RWStructBuff2[Location.y] = Data0;
 
 }
 
@@ -77,5 +75,5 @@ void TestCS(CSInput In,
 {
     TestGetDimensions();
     TestLoad();
-    TestStore();
+    TestStore(GTid);
 }

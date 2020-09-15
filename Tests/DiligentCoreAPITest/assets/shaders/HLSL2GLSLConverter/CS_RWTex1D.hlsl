@@ -93,10 +93,8 @@ void TestLoad()
 
 
 
-void TestStore()
+void TestStore(uint2 Location)
 {
-    int4 Location = int4(2, 5, 1, 10);
-
     // Texture1D 
     {
         Tex1D_F1[Location.x] = 1.0;
@@ -130,5 +128,5 @@ void TestCS(CSInput In,
 {
     TestGetDimensions();
     TestLoad();
-    TestStore();
+    TestStore(GTid.xy);
 }
