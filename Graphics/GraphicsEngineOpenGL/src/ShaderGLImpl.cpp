@@ -40,26 +40,26 @@ namespace Diligent
 
 ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceGLImpl*     pDeviceGL,
-                           const ShaderCreateInfo& CreationAttribs,
+                           const ShaderCreateInfo& ShaderCI,
                            bool                    bIsDeviceInternal) :
     // clang-format off
     TShaderBase
     {
         pRefCounters,
         pDeviceGL,
-        CreationAttribs.Desc,
+        ShaderCI.Desc,
         bIsDeviceInternal
     },
     m_GLShaderObj{true, GLObjectWrappers::GLShaderObjCreateReleaseHelper{GetGLShaderType(m_Desc.ShaderType)}}
 // clang-format on
 {
-    DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
-    DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
-    DEV_CHECK_ERR(CreationAttribs.ShaderCompiler == SHADER_COMPILER_DEFAULT, "only default compiler is supported in OpenGL");
+    DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
+    DEV_CHECK_ERR(ShaderCI.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
+    DEV_CHECK_ERR(ShaderCI.ShaderCompiler == SHADER_COMPILER_DEFAULT, "only default compiler is supported in OpenGL");
 
     const auto& deviceCaps = pDeviceGL->GetDeviceCaps();
 
-    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, deviceCaps, TargetGLSLCompiler::driver);
+    auto GLSLSource = BuildGLSLSourceString(ShaderCI, deviceCaps, TargetGLSLCompiler::driver);
 
     // Note: there is a simpler way to create the program:
     //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);
@@ -92,7 +92,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
             FullSource.append(str);
 
         std::stringstream ErrorMsgSS;
-        ErrorMsgSS << "Failed to compile shader file '" << (CreationAttribs.Desc.Name != nullptr ? CreationAttribs.Desc.Name : "") << '\'' << std::endl;
+        ErrorMsgSS << "Failed to compile shader file '" << (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : "") << '\'' << std::endl;
         int infoLogLen = 0;
         // The function glGetShaderiv() tells how many bytes to allocate; the length includes the NULL terminator.
         glGetShaderiv(m_GLShaderObj, GL_INFO_LOG_LENGTH, &infoLogLen);
@@ -110,7 +110,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
                        << infoLog.data() << std::endl;
         }
 
-        if (CreationAttribs.ppCompilerOutput != nullptr)
+        if (ShaderCI.ppCompilerOutput != nullptr)
         {
             // infoLogLen accounts for null terminator
             auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(infoLogLen + FullSource.length() + 1);
@@ -118,7 +118,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
             if (infoLogLen > 0)
                 memcpy(DataPtr, infoLog.data(), infoLogLen);
             memcpy(DataPtr + infoLogLen, FullSource.data(), FullSource.length() + 1);
-            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(CreationAttribs.ppCompilerOutput));
+            pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
         }
         else
         {

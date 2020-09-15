@@ -64,19 +64,24 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
             "#   define VULKAN 1\n"
             "#endif\n";
 
-        switch (CreationAttribs.ShaderCompiler)
+        auto ShaderCompiler = CreationAttribs.ShaderCompiler;
+        if (ShaderCompiler == SHADER_COMPILER_DXC)
+        {
+            auto* pDXComiler = pRenderDeviceVk->GetDxCompiler();
+            if (pDXComiler == nullptr || !pDXComiler->IsLoaded())
+            {
+                LOG_WARNING_MESSAGE("DX Compiler is not loaded. Using default shader compiler");
+                ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            }
+        }
+
+        switch (ShaderCompiler)
         {
             case SHADER_COMPILER_DXC:
             {
                 auto* pDXComiler = pRenderDeviceVk->GetDxCompiler();
-                if (pDXComiler != nullptr && pDXComiler->IsLoaded())
-                {
-                    pDXComiler->Compile(CreationAttribs, VulkanDefine, nullptr, &m_SPIRV, CreationAttribs.ppCompilerOutput);
-                }
-                else
-                {
-                    LOG_ERROR_AND_THROW("DX Compiler is not loaded");
-                }
+                VERIFY_EXPR(pDXComiler != nullptr && pDXComiler->IsLoaded());
+                pDXComiler->Compile(CreationAttribs, VulkanDefine, nullptr, &m_SPIRV, CreationAttribs.ppCompilerOutput);
             }
             break;
 
@@ -84,7 +89,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
             case SHADER_COMPILER_GLSLANG:
             {
 #if DILIGENT_NO_GLSLANG
-                LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXIL compiler or precompiled SPIRV bytecode.");
+                LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
 #else
                 if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
                 {

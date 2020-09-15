@@ -459,8 +459,8 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 #endif
         };
 
-    CComPtr<IDxcBlob> compiled;
-    CComPtr<IDxcBlob> errors;
+    CComPtr<IDxcBlob> pCompiledShader;
+    CComPtr<IDxcBlob> pDxcLog;
 
     IDXCompiler::CompileAttribs CA;
 
@@ -475,44 +475,20 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     CA.pArgs                      = m_Target == DXCompilerTarget::Direct3D12 ? pDxbcArgs : pSpirvArgs;
     CA.ArgsCount                  = m_Target == DXCompilerTarget::Direct3D12 ? _countof(pDxbcArgs) : _countof(pSpirvArgs);
     CA.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
-    CA.ppBlobOut                  = &compiled;
-    CA.ppCompilerOutput           = &errors;
+    CA.ppBlobOut                  = &pCompiledShader;
+    CA.ppCompilerOutput           = &pDxcLog;
 
     auto result = Compile(CA);
+    HandleHLSLCompilerResult(result, pDxcLog.p, Source, ShaderCI.Desc.Name, ppCompilerOutput);
 
-    const size_t CompilerMsgLen = errors ? errors->GetBufferSize() : 0;
-    const char*  CompilerMsg    = CompilerMsgLen > 0 ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
-
-    if (CompilerMsg != nullptr && ppCompilerOutput != nullptr)
-    {
-        auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(Source.length() + 1 + CompilerMsgLen + 1);
-        char* DataPtr         = static_cast<char*>(pOutputDataBlob->GetDataPtr());
-        memcpy(DataPtr, CompilerMsg, CompilerMsgLen);
-        DataPtr[CompilerMsgLen] = 0; // Set null terminator as CompilerMsgLen may not account for it
-        memcpy(DataPtr + CompilerMsgLen + 1, Source.data(), Source.length() + 1);
-        pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppCompilerOutput));
-    }
-
-    if (!result)
-    {
-        if (ppCompilerOutput != nullptr)
-        {
-            LOG_ERROR_AND_THROW("Failed to compile Vulkan shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\".");
-        }
-        else
-        {
-            LOG_ERROR_AND_THROW("Failed to compile Vukan shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\":\n", (CompilerMsg != nullptr ? std::string(CompilerMsg, CompilerMsgLen) : "<no compiler log available>"));
-        }
-    }
-
-    if (result && compiled && compiled->GetBufferSize() > 0)
+    if (result && pCompiledShader && pCompiledShader->GetBufferSize() > 0)
     {
         if (pByteCode != nullptr)
-            pByteCode->assign(static_cast<uint32_t*>(compiled->GetBufferPointer()),
-                              static_cast<uint32_t*>(compiled->GetBufferPointer()) + compiled->GetBufferSize() / sizeof(uint32_t));
+            pByteCode->assign(static_cast<uint32_t*>(pCompiledShader->GetBufferPointer()),
+                              static_cast<uint32_t*>(pCompiledShader->GetBufferPointer()) + pCompiledShader->GetBufferSize() / sizeof(uint32_t));
 
         if (ppByteCodeBlob != nullptr)
-            *ppByteCodeBlob = compiled.Detach();
+            *ppByteCodeBlob = pCompiledShader.Detach();
     }
 }
 

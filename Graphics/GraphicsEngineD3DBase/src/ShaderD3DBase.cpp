@@ -63,7 +63,7 @@ public:
             return E_FAIL;
         }
 
-        RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>()(0));
+        RefCntAutoPtr<IDataBlob> pFileData(MakeNewRCObj<DataBlobImpl>{}(0));
         pSourceStream->ReadBlob(pFileData);
         *ppData = pFileData->GetDataPtr();
         *pBytes = static_cast<UINT>(pFileData->GetSize());
@@ -115,17 +115,27 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
     {
         DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from the source code or a file");
         DEV_CHECK_ERR(ShaderCI.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from the source code or a file");
+        DEV_CHECK_ERR(ShaderCI.EntryPoint != nullptr, "Entry point must not be null");
 
         bool UseDXC = false;
 
         // validate compiler type
         switch (ShaderCI.ShaderCompiler)
         {
-            // clang-format off
-            case SHADER_COMPILER_DEFAULT: UseDXC = false;                                            break;
-            case SHADER_COMPILER_DXC:     UseDXC = DxCompiler != nullptr && DxCompiler->IsLoaded();  break;
-            case SHADER_COMPILER_FXC:     UseDXC = false;                                            break;
-            // clang-format on
+            case SHADER_COMPILER_DEFAULT:
+                UseDXC = false;
+                break;
+
+            case SHADER_COMPILER_DXC:
+                UseDXC = DxCompiler != nullptr && DxCompiler->IsLoaded();
+                if (!UseDXC)
+                    LOG_WARNING_MESSAGE("DXC compiler is not available. Using default shader compiler");
+                break;
+
+            case SHADER_COMPILER_FXC:
+                UseDXC = false;
+                break;
+
             default: UNEXPECTED("Unsupported shader compiler");
         }
 
@@ -140,37 +150,10 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
 
             String ShaderSource = BuildHLSLSourceString(ShaderCI);
 
-            DEV_CHECK_ERR(ShaderCI.EntryPoint != nullptr, "Entry point must not be null");
+            CComPtr<ID3DBlob> CompilerOutput;
 
-            CComPtr<ID3DBlob> errors;
-
-            auto hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &errors);
-
-            const size_t CompilerMsgLen = errors ? errors->GetBufferSize() : 0;
-            const char*  CompilerMsg    = CompilerMsgLen > 0 ? static_cast<const char*>(errors->GetBufferPointer()) : nullptr;
-
-            if (CompilerMsg != nullptr && ShaderCI.ppCompilerOutput != nullptr)
-            {
-                auto* pOutputDataBlob = MakeNewRCObj<DataBlobImpl>()(CompilerMsgLen + 1 + ShaderSource.length() + 1);
-                char* DataPtr         = static_cast<char*>(pOutputDataBlob->GetDataPtr());
-                memcpy(DataPtr, CompilerMsg, CompilerMsgLen);
-                DataPtr[CompilerMsgLen] = 0; // Set null terminator
-                memcpy(DataPtr + CompilerMsgLen + 1, ShaderSource.data(), ShaderSource.length() + 1);
-                pOutputDataBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ShaderCI.ppCompilerOutput));
-            }
-
-            if (FAILED(hr))
-            {
-                ComErrorDesc ErrDesc(hr);
-                if (ShaderCI.ppCompilerOutput != nullptr)
-                {
-                    LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\" (", ErrDesc.Get(), ").");
-                }
-                else
-                {
-                    LOG_ERROR_AND_THROW("Failed to compile D3D shader \"", (ShaderCI.Desc.Name != nullptr ? ShaderCI.Desc.Name : ""), "\" (", ErrDesc.Get(), "):\n", (CompilerMsg != nullptr ? CompilerMsg : "<no compiler log available>"));
-                }
-            }
+            auto hr = CompileShader(ShaderSource.c_str(), ShaderSource.length(), ShaderCI, strShaderProfile.c_str(), &m_pShaderByteCode, &CompilerOutput);
+            HandleHLSLCompilerResult(SUCCEEDED(hr), CompilerOutput.p, ShaderSource, ShaderCI.Desc.Name, ShaderCI.ppCompilerOutput);
         }
     }
     else if (ShaderCI.ByteCode)

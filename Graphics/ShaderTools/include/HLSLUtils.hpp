@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <sstream>
+
 #include "BasicTypes.h"
 #include "GraphicsTypes.h"
 #include "Shader.h"
@@ -38,5 +40,56 @@ String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI,
                              const char*             ExtraDefinitions = nullptr);
 
 String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel);
+
+template <typename BlobType>
+void HandleHLSLCompilerResult(bool               CompilationSucceeded,
+                              BlobType*          pCompilerMsgBlob,
+                              const std::string& ShaderSource,
+                              const char*        ShaderName,
+                              IDataBlob**        ppOutputLog) noexcept(false)
+{
+    const char*  CompilerMsg    = pCompilerMsgBlob ? static_cast<const char*>(pCompilerMsgBlob->GetBufferPointer()) : nullptr;
+    const size_t CompilerMsgLen = CompilerMsg ? pCompilerMsgBlob->GetBufferSize() : 0;
+
+    if (ppOutputLog != nullptr)
+    {
+        const auto ShaderSourceLen = ShaderSource.length();
+        auto*      pOutputLogBlob  = MakeNewRCObj<DataBlobImpl>{}(ShaderSourceLen + 1 + CompilerMsgLen + 1);
+
+        auto* log = static_cast<char*>(pOutputLogBlob->GetDataPtr());
+
+        if (CompilerMsg != nullptr)
+            memcpy(log, CompilerMsg, CompilerMsgLen);
+        log[CompilerMsgLen] = 0; // Explicitly set null terminator
+        log += CompilerMsgLen + 1;
+
+        memcpy(log, ShaderSource.data(), ShaderSourceLen);
+        log[ShaderSourceLen] = 0;
+
+        pOutputLogBlob->QueryInterface(IID_DataBlob, reinterpret_cast<IObject**>(ppOutputLog));
+    }
+
+    if (!CompilationSucceeded || CompilerMsgLen != 0)
+    {
+        std::stringstream ss;
+        ss << (CompilationSucceeded ? "Compiler output for shader '" : "Failed to compile shader '")
+           << (ShaderName != nullptr ? ShaderName : "<unknown>")
+           << "'";
+        if (CompilerMsg != nullptr && CompilerMsgLen != 0)
+        {
+            ss << ":" << std::endl
+               << CompilerMsg;
+        }
+        else if (!CompilationSucceeded)
+        {
+            ss << " (no shader log available).";
+        }
+
+        if (CompilationSucceeded)
+            LOG_INFO_MESSAGE(ss.str());
+        else
+            LOG_ERROR_AND_THROW(ss.str());
+    }
+}
 
 } // namespace Diligent

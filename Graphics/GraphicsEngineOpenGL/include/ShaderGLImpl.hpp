@@ -80,7 +80,7 @@ public:
 
     ShaderGLImpl(IReferenceCounters*     pRefCounters,
                  RenderDeviceGLImpl*     pDeviceGL,
-                 const ShaderCreateInfo& ShaderCreateInfo,
+                 const ShaderCreateInfo& ShaderCI,
                  bool                    bIsDeviceInternal = false);
     ~ShaderGLImpl();
 
