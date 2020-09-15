@@ -26,7 +26,6 @@
  */
 
 #include <memory>
-#include <array>
 #include <mutex>
 
 // Platforms that support DXCompiler.
@@ -163,7 +162,7 @@ public:
         fileName.resize(wcslen(pFilename));
         for (size_t i = 0; i < fileName.size(); ++i)
         {
-            fileName[i] = char(pFilename[i]);
+            fileName[i] = static_cast<char>(pFilename[i]);
         }
 
         if (fileName.empty())
@@ -188,7 +187,8 @@ public:
         pSourceStream->ReadBlob(pFileData);
 
         CComPtr<IDxcBlobEncoding> sourceBlob;
-        HRESULT                   hr = m_pLibrary->CreateBlobWithEncodingFromPinned(pFileData->GetDataPtr(), UINT32(pFileData->GetSize()), CP_UTF8, &sourceBlob);
+
+        HRESULT hr = m_pLibrary->CreateBlobWithEncodingFromPinned(pFileData->GetDataPtr(), UINT32(pFileData->GetSize()), CP_UTF8, &sourceBlob);
         if (FAILED(hr))
         {
             LOG_ERROR("Failed to allocate space for shader include file ", fileName, ".");
@@ -409,7 +409,6 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
 }
 
 
-
 void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
                              const char*             ExtraDefinitions,
                              IDxcBlob**              ppByteCodeBlob,
@@ -445,7 +444,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
             L"-O3", // Optimization level 3
         };
 
-    const wchar_t* pDxbcArgs[] =
+    const wchar_t* pDxilArgs[] =
         {
             L"-Zpc", // Matrices in column-major order
                      //L"-WX",  // Warnings as errors
@@ -459,7 +458,7 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
 #endif
         };
 
-    CComPtr<IDxcBlob> pCompiledShader;
+    CComPtr<IDxcBlob> pDXIL;
     CComPtr<IDxcBlob> pDxcLog;
 
     IDXCompiler::CompileAttribs CA;
@@ -472,23 +471,23 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     CA.Profile                    = wstrProfile.c_str();
     CA.pDefines                   = nullptr;
     CA.DefinesCount               = 0;
-    CA.pArgs                      = m_Target == DXCompilerTarget::Direct3D12 ? pDxbcArgs : pSpirvArgs;
-    CA.ArgsCount                  = m_Target == DXCompilerTarget::Direct3D12 ? _countof(pDxbcArgs) : _countof(pSpirvArgs);
+    CA.pArgs                      = m_Target == DXCompilerTarget::Direct3D12 ? pDxilArgs : pSpirvArgs;
+    CA.ArgsCount                  = m_Target == DXCompilerTarget::Direct3D12 ? _countof(pDxilArgs) : _countof(pSpirvArgs);
     CA.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
-    CA.ppBlobOut                  = &pCompiledShader;
+    CA.ppBlobOut                  = &pDXIL;
     CA.ppCompilerOutput           = &pDxcLog;
 
     auto result = Compile(CA);
     HandleHLSLCompilerResult(result, pDxcLog.p, Source, ShaderCI.Desc.Name, ppCompilerOutput);
 
-    if (result && pCompiledShader && pCompiledShader->GetBufferSize() > 0)
+    if (result && pDXIL && pDXIL->GetBufferSize() > 0)
     {
         if (pByteCode != nullptr)
-            pByteCode->assign(static_cast<uint32_t*>(pCompiledShader->GetBufferPointer()),
-                              static_cast<uint32_t*>(pCompiledShader->GetBufferPointer()) + pCompiledShader->GetBufferSize() / sizeof(uint32_t));
+            pByteCode->assign(static_cast<uint32_t*>(pDXIL->GetBufferPointer()),
+                              static_cast<uint32_t*>(pDXIL->GetBufferPointer()) + pDXIL->GetBufferSize() / sizeof(uint32_t));
 
         if (ppByteCodeBlob != nullptr)
-            *ppByteCodeBlob = pCompiledShader.Detach();
+            *ppByteCodeBlob = pDXIL.Detach();
     }
 }
 

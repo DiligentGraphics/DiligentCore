@@ -32,6 +32,8 @@
 #include "BasicTypes.h"
 #include "GraphicsTypes.h"
 #include "Shader.h"
+#include "RefCountedObjectImpl.hpp"
+#include "Errors.hpp"
 
 namespace Diligent
 {

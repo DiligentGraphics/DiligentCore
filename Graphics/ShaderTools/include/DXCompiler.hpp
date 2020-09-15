@@ -84,8 +84,9 @@ public:
                                           ID3D12ShaderReflection** ppShaderReflection) = 0;
 };
 
-// Use this function to load specific library,
-// otherwise default library will be implicitly loaded.
+// Use this function to load the DX Compiler library.
+// pLibraryName is an optional path to the library. If not provided, default
+// path is used.
 IDXCompiler* CreateDXCompiler(DXCompilerTarget Target, const char* pLibraryName);
 
 
