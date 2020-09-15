@@ -36,6 +36,8 @@ void ValidateTextureDesc(const TextureDesc& Desc)
 {
 #define LOG_TEXTURE_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Texture '", (Desc.Name ? Desc.Name : ""), "': ", ##__VA_ARGS__)
 
+    const auto& FmtAttribs = GetTextureFormatAttribs(Desc.Format);
+
     if (Desc.Type == RESOURCE_DIM_UNDEFINED)
     {
         LOG_TEXTURE_ERROR_AND_THROW("Resource dimension is undefined");
@@ -54,8 +56,19 @@ void ValidateTextureDesc(const TextureDesc& Desc)
     // Perform some parameter correctness check
     if (Desc.Type == RESOURCE_DIM_TEX_1D || Desc.Type == RESOURCE_DIM_TEX_1D_ARRAY)
     {
-        if (Desc.Height != 1)
-            LOG_TEXTURE_ERROR_AND_THROW("Height (", Desc.Height, ") of Texture 1D/Texture 1D Array must be 1");
+        if (Desc.Height != FmtAttribs.BlockHeight)
+        {
+            if (FmtAttribs.BlockHeight == 1)
+            {
+                LOG_TEXTURE_ERROR_AND_THROW("Height (", Desc.Height, ") of a Texture 1D/Texture 1D Array must be 1");
+            }
+            else
+            {
+                LOG_TEXTURE_ERROR_AND_THROW("For block-compressed formats, the height (", Desc.Height,
+                                            ") of a Texture 1D/Texture 1D Array must be equal to the compressed block height (",
+                                            Uint32{FmtAttribs.BlockHeight}, ")");
+            }
+        }
     }
     else
     {
