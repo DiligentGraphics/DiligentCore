@@ -167,10 +167,10 @@ void MeshShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
 
     CComPtr<ID3DBlob> pMSByteCode, pPSByteCode;
 
-    auto hr = pEnv->CompileDXILShader(HLSL::MeshShaderTest_MS, L"main", {}, L"ms_6_5", &pMSByteCode);
+    auto hr = pEnv->CompileDXILShader(HLSL::MeshShaderTest_MS, L"main", nullptr, 0, L"ms_6_5", &pMSByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile mesh shader";
 
-    hr = pEnv->CompileDXILShader(HLSL::MeshShaderTest_PS, L"main", {}, L"ps_6_5", &pPSByteCode);
+    hr = pEnv->CompileDXILShader(HLSL::MeshShaderTest_PS, L"main", nullptr, 0, L"ps_6_5", &pPSByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile pixel shader";
 
     CComPtr<ID3D12RootSignature> pd3d12RootSignature;
@@ -231,10 +231,10 @@ void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
 
     CComPtr<ID3DBlob> pMSByteCode, pPSByteCode;
 
-    auto hr = pEnv->CompileDXILShader(HLSL::MeshShaderTest_MS, L"main", {}, L"ms_6_5", &pMSByteCode);
+    auto hr = pEnv->CompileDXILShader(HLSL::MeshShaderTest_MS, L"main", nullptr, 0, L"ms_6_5", &pMSByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile mesh shader";
 
-    hr = pEnv->CompileDXILShader(HLSL::MeshShaderTest_PS, L"main", {}, L"ps_6_5", &pPSByteCode);
+    hr = pEnv->CompileDXILShader(HLSL::MeshShaderTest_PS, L"main", nullptr, 0, L"ps_6_5", &pPSByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile pixel shader";
 
     CComPtr<ID3D12RootSignature> pd3d12RootSignature;
@@ -321,13 +321,13 @@ void AmplificationShaderDrawReferenceD3D12(ISwapChain* pSwapChain)
 
     CComPtr<ID3DBlob> pASByteCode, pMSByteCode, pPSByteCode;
 
-    auto hr = pEnv->CompileDXILShader(HLSL::AmplificationShaderTest_AS, L"main", {}, L"as_6_5", &pASByteCode);
+    auto hr = pEnv->CompileDXILShader(HLSL::AmplificationShaderTest_AS, L"main", nullptr, 0, L"as_6_5", &pASByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile amplification shader";
 
-    hr = pEnv->CompileDXILShader(HLSL::AmplificationShaderTest_MS, L"main", {}, L"ms_6_5", &pMSByteCode);
+    hr = pEnv->CompileDXILShader(HLSL::AmplificationShaderTest_MS, L"main", nullptr, 0, L"ms_6_5", &pMSByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile mesh shader";
 
-    hr = pEnv->CompileDXILShader(HLSL::AmplificationShaderTest_PS, L"main", {}, L"ps_6_5", &pPSByteCode);
+    hr = pEnv->CompileDXILShader(HLSL::AmplificationShaderTest_PS, L"main", nullptr, 0, L"ps_6_5", &pPSByteCode);
     ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile pixel shader";
 
     CComPtr<ID3D12RootSignature> pd3d12RootSignature;

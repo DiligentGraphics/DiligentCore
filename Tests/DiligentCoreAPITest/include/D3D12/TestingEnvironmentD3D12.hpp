@@ -74,11 +74,12 @@ public:
 
     void IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue);
 
-    HRESULT CompileDXILShader(const std::string&            Source,
-                              LPCWSTR                       strFunctionName,
-                              const std::vector<DxcDefine>& Defines,
-                              LPCWSTR                       profile,
-                              ID3DBlob**                    ppBlobOut);
+    HRESULT CompileDXILShader(const std::string& Source,
+                              LPCWSTR            strFunctionName,
+                              const DxcDefine*   Defines,
+                              Uint32             DefinesCount,
+                              LPCWSTR            profile,
+                              ID3DBlob**         ppBlobOut);
 
 private:
     CComPtr<ID3D12Device>           m_pd3d12Device;

@@ -81,7 +81,7 @@ void HandleHLSLCompilerResult(bool               CompilationSucceeded,
         if (CompilerMsg != nullptr && CompilerMsgLen != 0)
         {
             ss << ":" << std::endl
-               << CompilerMsg;
+               << std::string{CompilerMsg, CompilerMsgLen};
         }
         else if (!CompilationSucceeded)
         {

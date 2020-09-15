@@ -46,7 +46,7 @@ TestingEnvironmentD3D12::TestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceType
                                                  const SwapChainDesc& SCDesc) :
     TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc},
     m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)},
-    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, nullptr)}
+    m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Direct3D12, nullptr)}
 {
     RefCntAutoPtr<IRenderDeviceD3D12> pRenderDeviceD3D12{m_pDevice, IID_RenderDeviceD3D12};
     m_pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
@@ -101,11 +101,12 @@ TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceTyp
     return new TestingEnvironmentD3D12{deviceType, AdapterType, AdapterId, SCDesc};
 }
 
-HRESULT TestingEnvironmentD3D12::CompileDXILShader(const std::string&            Source,
-                                                   LPCWSTR                       strFunctionName,
-                                                   const std::vector<DxcDefine>& Defines,
-                                                   LPCWSTR                       profile,
-                                                   ID3DBlob**                    ppBlobOut)
+HRESULT TestingEnvironmentD3D12::CompileDXILShader(const std::string& Source,
+                                                   LPCWSTR            strFunctionName,
+                                                   const DxcDefine*   Defines,
+                                                   Uint32             DefinesCount,
+                                                   LPCWSTR            profile,
+                                                   ID3DBlob**         ppBlobOut)
 {
     const wchar_t* pArgs[] =
         {
@@ -121,8 +122,8 @@ HRESULT TestingEnvironmentD3D12::CompileDXILShader(const std::string&           
     CA.SourceLength               = static_cast<Uint32>(Source.length());
     CA.EntryPoint                 = strFunctionName;
     CA.Profile                    = profile;
-    CA.pDefines                   = Defines.data();
-    CA.DefinesCount               = static_cast<Uint32>(Defines.size());
+    CA.pDefines                   = Defines;
+    CA.DefinesCount               = DefinesCount;
     CA.pArgs                      = pArgs;
     CA.ArgsCount                  = _countof(pArgs);
     CA.pShaderSourceStreamFactory = nullptr;
