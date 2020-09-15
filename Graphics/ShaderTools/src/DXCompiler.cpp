@@ -110,12 +110,11 @@ private:
                 CComPtr<IDxcVersionInfo> info;
                 if (SUCCEEDED(validator->QueryInterface(IID_PPV_ARGS(&info))))
                 {
-                    UINT32 ver = 0, minor = 0;
-                    info->GetVersion(&ver, &minor);
+                    info->GetVersion(&m_MajorVer, &m_MinorVer);
 
-                    LOG_INFO_MESSAGE("Loaded DX Shader Compiler, version ", ver, ".", minor);
+                    LOG_INFO_MESSAGE("Loaded DX Shader Compiler, version ", m_MajorVer, ".", m_MinorVer);
 
-                    ver = (ver << 16) | (minor & 0xFFFF);
+                    auto ver = (m_MajorVer << 16) | (m_MinorVer & 0xFFFF);
 
                     // map known DXC version to maximum SM
                     switch (ver)
@@ -140,6 +139,9 @@ private:
     std::mutex             m_Guard;
     const String           m_LibName;
     const DXCompilerTarget m_Target;
+    // Compiler version
+    UINT32 m_MajorVer = 0;
+    UINT32 m_MinorVer = 0;
 };
 
 
@@ -435,28 +437,41 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     const std::wstring wstrProfile{Profile.begin(), Profile.end()};
     const std::wstring wstrEntryPoint{ShaderCI.EntryPoint, ShaderCI.EntryPoint + strlen(ShaderCI.EntryPoint)};
 
-    const wchar_t* pSpirvArgs[] =
-        {
-            L"-spirv",
-            L"-fspv-reflect",
-            L"-fspv-target-env=vulkan1.0",
-            //L"-WX", // Warnings as errors
-            L"-O3", // Optimization level 3
-        };
+    std::vector<const wchar_t*> DxilArgs;
+    if (m_Target == DXCompilerTarget::Direct3D12)
+    {
+        DxilArgs.push_back(L"-Zpc"); // Matrices in column-major order
 
-    const wchar_t* pDxilArgs[] =
-        {
-            L"-Zpc", // Matrices in column-major order
-                     //L"-WX",  // Warnings as errors
+        //DxilArgs.push_back(L"-WX");  // Warnings as errors
 #ifdef DILIGENT_DEBUG
-            L"-Zi", // Debug info
-            //L"-Qembed_debug", // Embed debug info into the shader (some compilers do not recognize this flag)
-            L"-Od", // Disable optimization
+        DxilArgs.push_back(L"-Zi"); // Debug info
+        DxilArgs.push_back(L"-Od"); // Disable optimization
+        if (m_MajorVer > 1 || m_MajorVer == 1 && m_MinorVer >= 5)
+        {
+            // Silence the following warning:
+            // no output provided for debug - embedding PDB in shader container.  Use -Qembed_debug to silence this warning.
+            DxilArgs.push_back(L"-Qembed_debug");
+        }
 #else
-            L"-Od", // TODO: something goes wrong if optimization is enabled
-                    //L"-O3", // Optimization level 3
+        DxilArgs.push_back(L"-Od"); // TODO: something goes wrong if optimization is enabled
 #endif
-        };
+    }
+    else if (m_Target == DXCompilerTarget::Vulkan)
+    {
+        DxilArgs.assign(
+            {
+                L"-spirv",
+                L"-fspv-reflect",
+                L"-fspv-target-env=vulkan1.0",
+                //L"-WX", // Warnings as errors
+                L"-O3", // Optimization level 3
+            });
+    }
+    else
+    {
+        UNEXPECTED("Unknown compiler target");
+    }
+
 
     CComPtr<IDxcBlob> pDXIL;
     CComPtr<IDxcBlob> pDxcLog;
@@ -471,8 +486,8 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
     CA.Profile                    = wstrProfile.c_str();
     CA.pDefines                   = nullptr;
     CA.DefinesCount               = 0;
-    CA.pArgs                      = m_Target == DXCompilerTarget::Direct3D12 ? pDxilArgs : pSpirvArgs;
-    CA.ArgsCount                  = m_Target == DXCompilerTarget::Direct3D12 ? _countof(pDxilArgs) : _countof(pSpirvArgs);
+    CA.pArgs                      = DxilArgs.data();
+    CA.ArgsCount                  = static_cast<Uint32>(DxilArgs.size());
     CA.pShaderSourceStreamFactory = ShaderCI.pShaderSourceStreamFactory;
     CA.ppBlobOut                  = &pDXIL;
     CA.ppCompilerOutput           = &pDxcLog;
