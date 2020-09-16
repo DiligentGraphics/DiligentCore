@@ -25,6 +25,10 @@
 
 #include "Errors.hpp"
 
+#ifndef GLAPIENTRY
+#    define GLAPIENTRY
+#endif
+
 #define glUseProgramStages          glUseProgramStagesEXT
 #define glActiveShaderProgram       glActiveShaderProgramEXT
 #define glCreateShaderProgramv      glCreateShaderProgramvEXT

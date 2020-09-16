@@ -27,6 +27,10 @@
 
 // clang-format off
 
+#ifndef GLAPIENTRY
+#   define GLAPIENTRY GL_APIENTRY
+#endif
+
 // Define unsupported formats for OpenGL ES
 #ifndef GL_RGBA16
 #   define GL_RGBA16 0x805B
