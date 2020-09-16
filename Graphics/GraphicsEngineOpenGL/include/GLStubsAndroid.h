@@ -1208,6 +1208,9 @@ extern PFNGLQUERYCOUNTERPROC glQueryCounter;
     typedef void (GL_APIENTRY* PFNGLDEBUGMESSAGECALLBACKPROC) (GLDEBUGPROC callback, const void *userParam);
     extern PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback;
 
+    #define LOAD_DEBUG_MESSAGE_CONTROL
+    typedef void (GL_APIENTRY* PFNGLDEBUGMESSAGECONTROLPROC) (GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint* ids, GLboolean enabled);
+    extern PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl;
 #endif
 
 void LoadGLFunctions();

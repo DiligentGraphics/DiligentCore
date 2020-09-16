@@ -81,6 +81,8 @@ public:
     void GetColorWriteMask(Uint32 RTIndex, Uint32& WriteMask, Bool& bIsIndependent);
     void SetColorWriteMask(Uint32 RTIndex, Uint32 WriteMask, Bool bIsIndependent);
 
+    void GetBoundImage(Uint32 Index, GLuint& GLHandle, GLint& MipLevel, GLboolean& IsLayered, GLint& Layer, GLenum& Access, GLenum& Format) const;
+
     // clang-format on
 
     void SetNumPatchVertices(Int32 NumVertices);
@@ -131,6 +133,7 @@ private:
     struct BoundImageInfo
     {
         UniqueIdentifier InterfaceID = -1;
+        GLuint           GLHandle    = 0;
         GLint            MipLevel    = 0;
         GLboolean        IsLayered   = 0;
         GLint            Layer       = 0;
@@ -140,6 +143,7 @@ private:
         BoundImageInfo(){};
 
         BoundImageInfo(UniqueIdentifier _UniqueID,
+                       GLuint           _GLHandle,
                        GLint            _MipLevel,
                        GLboolean        _IsLayered,
                        GLint            _Layer,
@@ -147,6 +151,7 @@ private:
                        GLenum           _Format) :
             // clang-format off
             InterfaceID{_UniqueID},
+            GLHandle   {_GLHandle},
             MipLevel   {_MipLevel},
             IsLayered  {_IsLayered},
             Layer      {_Layer},
@@ -159,6 +164,7 @@ private:
         {
             // clang-format off
             return InterfaceID == rhs.InterfaceID &&
+                   GLHandle    == rhs.GLHandle &&
                    MipLevel    == rhs.MipLevel &&
                    IsLayered   == rhs.IsLayered &&
                    Layer       == rhs.Layer &&

@@ -199,6 +199,10 @@
     DECLARE_GL_FUNCTION( glDebugMessageCallback, PFNGLDEBUGMESSAGECALLBACKPROC, GLDEBUGPROC callback, const void *userParam)
 #endif
 
+#ifdef LOAD_DEBUG_MESSAGE_CONTROL
+    DECLARE_GL_FUNCTION( glDebugMessageControl, PFNGLDEBUGMESSAGECONTROLPROC, GLenum source, GLenum type, GLenum severity, GLsizei count, const GLuint* ids, GLboolean enabled);
+#endif
+
 #ifdef LOAD_GL_GET_QUERY_OBJECT_UI64V
     DECLARE_GL_FUNCTION( glGetQueryObjectui64v, PFNGLGETQUERYOBJECTUI64VPROC, GLuint id, GLenum pname, GLuint64* params)
 #endif
@@ -374,6 +378,10 @@ Func = (FuncType)eglGetProcAddress( #Func );\
 
 #ifdef LOAD_DEBUG_MESSAGE_CALLBACK
     LOAD_GL_FUNCTION(glDebugMessageCallback, PFNGLDEBUGMESSAGECALLBACKPROC)
+#endif
+
+#ifdef LOAD_DEBUG_MESSAGE_CONTROL
+    LOAD_GL_FUNCTION(glDebugMessageControl, PFNGLDEBUGMESSAGECONTROLPROC);
 #endif
 
 #ifdef LOAD_GL_GET_QUERY_OBJECT_UI64V

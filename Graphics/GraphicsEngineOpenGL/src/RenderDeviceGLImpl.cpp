@@ -174,14 +174,17 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(openglCallbackFunction, &m_ShowDebugGLOutput);
         GLuint unusedIds = 0;
-        glDebugMessageControl(
-            GL_DONT_CARE, // Source of debug messages to enable or disable
-            GL_DONT_CARE, // Type of debug messages to enable or disable
-            GL_DONT_CARE, // Severity of debug messages to enable or disable
-            0,            // The length of the array ids
-            &unusedIds,   // Array of unsigned integers contianing the ids of the messages to enable or disable
-            GL_TRUE       // Flag determining whether the selected messages should be enabled or disabled
-        );
+        if (glDebugMessageControl != nullptr)
+        {
+            glDebugMessageControl(
+                GL_DONT_CARE, // Source of debug messages to enable or disable
+                GL_DONT_CARE, // Type of debug messages to enable or disable
+                GL_DONT_CARE, // Severity of debug messages to enable or disable
+                0,            // The length of the array ids
+                &unusedIds,   // Array of unsigned integers contianing the ids of the messages to enable or disable
+                GL_TRUE       // Flag determining whether the selected messages should be enabled or disabled
+            );
+        }
         if (glGetError() != GL_NO_ERROR)
             LOG_ERROR_MESSAGE("Failed to enable debug messages");
     }
@@ -1086,19 +1089,13 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
 #if GL_ARB_shader_image_load_store
         {
-            GLint     CurrentImg     = 0;
+            GLuint    CurrentImg     = 0;
             GLint     CurrentLevel   = 0;
             GLboolean CurrentLayered = 0;
             GLint     CurrentLayer   = 0;
-            GLint     CurrenAccess   = 0;
-            GLint     CurrenFormat   = 0;
-            glGetIntegeri_v(GL_IMAGE_BINDING_NAME, 0, &CurrentImg);
-            glGetIntegeri_v(GL_IMAGE_BINDING_LEVEL, 0, &CurrentLevel);
-            glGetBooleani_v(GL_IMAGE_BINDING_LAYERED, 0, &CurrentLayered);
-            glGetIntegeri_v(GL_IMAGE_BINDING_LAYER, 0, &CurrentLayer);
-            glGetIntegeri_v(GL_IMAGE_BINDING_ACCESS, 0, &CurrenAccess);
-            glGetIntegeri_v(GL_IMAGE_BINDING_FORMAT, 0, &CurrenFormat);
-            CHECK_GL_ERROR("Failed to get current image properties");
+            GLenum    CurrenAccess   = 0;
+            GLenum    CurrenFormat   = 0;
+            ContextState.GetBoundImage(0, CurrentImg, CurrentLevel, CurrentLayered, CurrentLayer, CurrenAccess, CurrenFormat);
 
             glBindImageTexture(0, TestGLTex2D, 0, GL_FALSE, 0, GL_READ_WRITE, GLFmt);
             if (glGetError() == GL_NO_ERROR)

@@ -249,6 +249,7 @@ void GLContextState::BindImage(Uint32             Index,
     BoundImageInfo NewImageInfo //
         {
             pTexView->GetUniqueID(),
+            pTexView->GetHandle(),
             MipLevel,
             IsLayered,
             Layer,
@@ -260,8 +261,7 @@ void GLContextState::BindImage(Uint32             Index,
     if (!(m_BoundImages[Index] == NewImageInfo))
     {
         m_BoundImages[Index] = NewImageInfo;
-        GLint GLTexHandle    = pTexView->GetHandle();
-        glBindImageTexture(Index, GLTexHandle, MipLevel, IsLayered, Layer, Access, Format);
+        glBindImageTexture(Index, NewImageInfo.GLHandle, MipLevel, IsLayered, Layer, Access, Format);
         DEV_CHECK_GL_ERROR("glBindImageTexture() failed");
     }
 #else
@@ -275,6 +275,7 @@ void GLContextState::BindImage(Uint32 Index, BufferViewGLImpl* pBuffView, GLenum
     BoundImageInfo NewImageInfo //
         {
             pBuffView->GetUniqueID(),
+            pBuffView->GetTexBufferHandle(),
             0,
             GL_FALSE,
             0,
@@ -286,13 +287,42 @@ void GLContextState::BindImage(Uint32 Index, BufferViewGLImpl* pBuffView, GLenum
     if (!(m_BoundImages[Index] == NewImageInfo))
     {
         m_BoundImages[Index] = NewImageInfo;
-        GLint GLBuffHandle   = pBuffView->GetTexBufferHandle();
-        glBindImageTexture(Index, GLBuffHandle, 0, GL_FALSE, 0, Access, Format);
+        glBindImageTexture(Index, NewImageInfo.GLHandle, 0, GL_FALSE, 0, Access, Format);
         DEV_CHECK_GL_ERROR("glBindImageTexture() failed");
     }
 #else
     UNSUPPORTED("GL_ARB_shader_image_load_store is not supported");
 #endif
+}
+
+void GLContextState::GetBoundImage(Uint32     Index,
+                                   GLuint&    ImgHandle,
+                                   GLint&     MipLevel,
+                                   GLboolean& IsLayered,
+                                   GLint&     Layer,
+                                   GLenum&    Access,
+                                   GLenum&    Format) const
+{
+    if (Index < m_BoundImages.size())
+    {
+        const auto& BoundImg = m_BoundImages[Index];
+
+        ImgHandle = BoundImg.GLHandle;
+        MipLevel  = BoundImg.MipLevel;
+        IsLayered = BoundImg.IsLayered;
+        Layer     = BoundImg.Layer;
+        Access    = BoundImg.Access;
+        Format    = BoundImg.Format;
+    }
+    else
+    {
+        ImgHandle = 0;
+        MipLevel  = 0;
+        IsLayered = GL_FALSE;
+        Layer     = 0;
+        Access    = GL_READ_ONLY;
+        Format    = GL_R8;
+    }
 }
 
 void GLContextState::BindUniformBuffer(Int32 Index, const GLObjectWrappers::GLBufferObj& Buff)
