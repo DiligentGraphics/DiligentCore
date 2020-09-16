@@ -467,11 +467,10 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
             if (vkRtvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
             {
-                TexFormatInfo.BindFlags |= BIND_RENDER_TARGET;
-
                 VkImageFormatProperties ImgFmtProps = {};
                 if (CheckFormatProperties(vkRtvFormat, VK_IMAGE_TYPE_2D, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT, ImgFmtProps))
                 {
+                    TexFormatInfo.BindFlags |= BIND_RENDER_TARGET;
                     TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
                 }
             }
@@ -487,11 +486,12 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
             vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkDsvFormat, &vkDsvFmtProps);
             if (vkDsvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
             {
-                TexFormatInfo.BindFlags |= BIND_DEPTH_STENCIL;
-
                 VkImageFormatProperties ImgFmtProps = {};
                 if (CheckFormatProperties(vkDsvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, ImgFmtProps))
                 {
+                    // MoltenVK reports VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT for
+                    // VK_FORMAT_D24_UNORM_S8_UINT even though the format is not supported.
+                    TexFormatInfo.BindFlags |= BIND_DEPTH_STENCIL;
                     TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
                 }
             }
@@ -507,7 +507,11 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
             vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkUavFormat, &vkUavFmtProps);
             if (vkUavFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
             {
-                TexFormatInfo.BindFlags |= BIND_UNORDERED_ACCESS;
+                VkImageFormatProperties ImgFmtProps = {};
+                if (CheckFormatProperties(vkUavFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_STORAGE_BIT, ImgFmtProps))
+                {
+                    TexFormatInfo.BindFlags |= BIND_UNORDERED_ACCESS;
+                }
             }
         }
     }
