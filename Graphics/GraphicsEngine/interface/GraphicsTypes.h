@@ -1652,6 +1652,58 @@ struct DeviceFeatures
 typedef struct DeviceFeatures DeviceFeatures;
 
 
+/// Graphics adapter vendor
+enum ADAPTER_VENDOR
+{
+    /// Adapter vendor is unknown
+    ADAPTER_VENDOR_UNKNOWN = 0,
+
+    /// Adapter vendor is NVidia
+    ADAPTER_VENDOR_NVIDIA,
+
+    /// Adapter vendor is AMD
+    ADAPTER_VENDOR_AMD,
+
+    /// Adapter vendor is Intel
+    ADAPTER_VENDOR_INTEL,
+
+    /// Adapter vendor is ARM
+    ADAPTER_VENDOR_ARM,
+
+    /// Adapter vendor is Qualcomm
+    ADAPTER_VENDOR_QUALCOMM,
+
+    /// Adapter vendor is Imagination Technologies
+    ADAPTER_VENDOR_IMGTECH,
+
+    /// Adapter vendor is Microsoft (software rasterizer)
+    ADAPTER_VENDOR_MSFT
+};
+
+/// Graphics adapter properties
+struct GraphicsAdapterInfo
+{
+    /// Adapter type, see Diligent::ADAPTER_TYPE.
+    enum ADAPTER_TYPE   Type    DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
+
+    /// Adapter vendor, see Diligent::ADAPTER_VENDOR.
+    enum ADAPTER_VENDOR Vendor  DEFAULT_INITIALIZER(ADAPTER_VENDOR_UNKNOWN);
+
+    /// The amount of local video memory, in bytes, that is not accessible by CPU.
+
+    /// \note On some devices it may not be possible to query the memory size,
+    ///       in which case all memory sizes will be zero.
+    Uint64  DeviceLocalMemory   DEFAULT_INITIALIZER(0);
+
+    /// The amount of host-visible memory, in bytes, that can be accessed by CPU.
+    Uint64  HostVisibileMemory  DEFAULT_INITIALIZER(0);
+
+    /// The amount of unified memory, in bytes, that can be directly accessed by both CPU and GPU.
+    Uint64  UnifiedMemory       DEFAULT_INITIALIZER(0);
+};
+typedef struct GraphicsAdapterInfo GraphicsAdapterInfo;
+
+
 /// Device capabilities
 struct DeviceCaps
 {
@@ -1668,8 +1720,8 @@ struct DeviceCaps
     /// Similar to MajorVersion, this value indicates the maximum supported feature level.
     Int32 MinorVersion DEFAULT_INITIALIZER(0);
 
-    /// Adapter type. See Diligent::ADAPTER_TYPE.
-    ADAPTER_TYPE AdaterType DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
+    /// Adapter info, see Diligent::GraphicsAdapterInfo.
+    GraphicsAdapterInfo AdapterInfo;
 
     /// Texture sampling capabilities. See Diligent::SamplerCaps.
     SamplerCaps SamCaps;

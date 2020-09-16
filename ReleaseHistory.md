@@ -2,8 +2,23 @@
 
 ### API Changes
 
+* Added GPU vendor and memory size detection (API Version 240071)
+   * Added `ADAPTER_VENDOR` enum
+   * Added `GraphicsAdapterInfo` struct
+   * Added `GraphicsAdapterInfo AdapterInfo` member to `DeviceCaps` struct
+   * Removed `ADAPTER_TYPE AdaterType` from `DeviceCaps` struct 
+* Reworked texture format properties (API Version 240070)
+   * Added `RESOURCE_DIMENSION_SUPPORT` enum
+   * Reworked `TextureFormatInfoExt` struct
 * Added option to disable/enable device features during initialization (API Version 240069)
+   * Added `DEVICE_FEATURE_STATE` enum
+   * Changed the types of members of `DeviceFeatures` struct from bool to `DEVICE_FEATURE_STATE`
+   * Added `DeviceFeatures Features` member to `EngineCreateInfo` struct
 * Enabled mesh shaders (API Version 240068)
+   * Added `PIPELINE_TYPE` enum
+   * Replaced `IsComputePipline` member of `PipelineStateDesc` struct with `PIPELINE_TYPE PipelineType`
+   * Added new mesh shader types
+   * Added mesh shader draw commands
 * Added `QUERY_TYPE_DURATION` query type (API Version 240067)
 * Added `USAGE_UNIFIED` usage type (API Version 240066)
 * Added render passes (API Version 240065)

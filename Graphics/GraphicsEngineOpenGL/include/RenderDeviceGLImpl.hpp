@@ -35,20 +35,6 @@
 #include "FBOCache.hpp"
 #include "TexRegionRender.hpp"
 
-enum class GPU_VENDOR
-{
-    UNKNOWN,
-    INTEL,
-    ATI,
-    NVIDIA,
-    QUALCOMM
-};
-
-struct GPUInfo
-{
-    GPU_VENDOR Vendor = GPU_VENDOR::UNKNOWN;
-};
-
 namespace Diligent
 {
 
@@ -145,8 +131,6 @@ public:
     /// Implementation of IRenderDevice::IdleGPU() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE IdleGPU() override final;
 
-    const GPUInfo& GetGPUInfo() { return m_GPUInfo; }
-
     FBOCache& GetFBOCache(GLContext::NativeGLContextType Context);
     void      OnReleaseTexture(ITexture* pTexture);
 
@@ -179,8 +163,6 @@ protected:
 
     ThreadingTools::LockFlag                                     m_FBOCacheLockFlag;
     std::unordered_map<GLContext::NativeGLContextType, FBOCache> m_FBOCache;
-
-    GPUInfo m_GPUInfo;
 
     std::unique_ptr<TexRegionRender> m_pTexRegionRender;
 

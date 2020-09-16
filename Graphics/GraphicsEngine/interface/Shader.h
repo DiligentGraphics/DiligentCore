@@ -200,6 +200,11 @@ struct ShaderVersion
         Major{_Major},
         Minor{_Minor}
     {}
+
+    bool operator==(const ShaderVersion& rhs) const
+    {
+        return Major == rhs.Major && Minor == rhs.Minor;
+    }
 #endif
 };
 typedef struct ShaderVersion ShaderVersion;

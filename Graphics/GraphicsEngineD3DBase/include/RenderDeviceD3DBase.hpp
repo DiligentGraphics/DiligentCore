@@ -30,7 +30,10 @@
 /// \file
 /// Implementation of the Diligent::RenderDeviceBase template class and related structures
 
+#include <dxgi.h>
+
 #include "RenderDeviceBase.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -177,6 +180,28 @@ public:
         Features.TextureCompressionBC          = DEVICE_FEATURE_STATE_ENABLED;
         Features.PixelUAVWritesAndAtomics      = DEVICE_FEATURE_STATE_ENABLED;
         Features.TextureUAVExtendedFormats     = DEVICE_FEATURE_STATE_ENABLED;
+    }
+
+protected:
+    void ReadAdapterInfo(IDXGIAdapter1* pdxgiAdapter)
+    {
+        DXGI_ADAPTER_DESC1 dxgiAdapterDesc = {};
+
+        auto hr = pdxgiAdapter->GetDesc1(&dxgiAdapterDesc);
+        if (SUCCEEDED(hr))
+        {
+            auto& AdapterInfo = m_DeviceCaps.AdapterInfo;
+
+            AdapterInfo.Type               = (dxgiAdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
+            AdapterInfo.Vendor             = VendorIdToAdapterVendor(dxgiAdapterDesc.VendorId);
+            AdapterInfo.DeviceLocalMemory  = dxgiAdapterDesc.DedicatedVideoMemory;
+            AdapterInfo.HostVisibileMemory = dxgiAdapterDesc.SharedSystemMemory;
+            AdapterInfo.UnifiedMemory      = 0;
+        }
+        else
+        {
+            LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter properties will be unknown.");
+        }
     }
 };
 

@@ -419,4 +419,6 @@ struct MipLevelProperties
 
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);
 
+ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId);
+
 } // namespace Diligent

@@ -130,17 +130,7 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
 
     if (auto pDXGIAdapter1 = DXGIAdapterFromD3D11Device(pd3d11Device))
     {
-        DXGI_ADAPTER_DESC1 AdapterDesc = {};
-
-        auto hr = pDXGIAdapter1->GetDesc1(&AdapterDesc);
-        if (SUCCEEDED(hr))
-        {
-            m_DeviceCaps.AdaterType = (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
-        }
-        else
-        {
-            LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter type will be unknown.");
-        }
+        ReadAdapterInfo(pDXGIAdapter1);
     }
 
 #define UNSUPPORTED_FEATURE(Feature, Name)                                   \

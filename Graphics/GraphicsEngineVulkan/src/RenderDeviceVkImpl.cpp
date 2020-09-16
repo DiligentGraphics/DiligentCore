@@ -155,7 +155,44 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_DeviceCaps.DevType      = RENDER_DEVICE_TYPE_VULKAN;
     m_DeviceCaps.MajorVersion = 1;
     m_DeviceCaps.MinorVersion = 0;
-    m_DeviceCaps.AdaterType   = ADAPTER_TYPE_HARDWARE;
+
+    auto& AdapterInfo = m_DeviceCaps.AdapterInfo;
+
+    const auto& DeviceProps = m_PhysicalDevice->GetProperties();
+
+    AdapterInfo.Vendor             = VendorIdToAdapterVendor(DeviceProps.vendorID);
+    AdapterInfo.Type               = ADAPTER_TYPE_HARDWARE;
+    AdapterInfo.DeviceLocalMemory  = 0;
+    AdapterInfo.HostVisibileMemory = 0;
+    AdapterInfo.UnifiedMemory      = 0;
+
+    const auto& MemoryProps = m_PhysicalDevice->GetMemoryProperties();
+    for (uint32_t heap = 0; heap < MemoryProps.memoryHeapCount; ++heap)
+    {
+        const auto& HeapInfo = MemoryProps.memoryHeaps[heap];
+        if (HeapInfo.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT)
+        {
+            bool IsUnified = false;
+            for (uint32_t type = 0; type < MemoryProps.memoryTypeCount; ++type)
+            {
+                const auto& MemTypeInfo = MemoryProps.memoryTypes[type];
+                if (MemTypeInfo.heapIndex != heap)
+                    continue;
+                constexpr auto UnifiedMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+                if ((MemTypeInfo.propertyFlags & UnifiedMemoryFlags) == UnifiedMemoryFlags)
+                {
+                    IsUnified = true;
+                    break;
+                }
+            }
+            (IsUnified ? AdapterInfo.UnifiedMemory : AdapterInfo.DeviceLocalMemory) += static_cast<Uint64>(HeapInfo.size);
+        }
+        else
+        {
+            AdapterInfo.HostVisibileMemory += static_cast<Uint64>(HeapInfo.size);
+        }
+    }
+
     for (Uint32 fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
         m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
 

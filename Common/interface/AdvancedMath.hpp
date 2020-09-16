@@ -88,6 +88,14 @@ struct ViewFrustumExt : public ViewFrustum
 
 // For OpenGL, matrix is still considered row-major. The only difference is that
 // near clip plane is at -1, not 0.
+//
+// Note that returned plane normal vectors are not normalized, which does not make a difference
+// when testing a point against the plane:
+//
+//      IsPointInsidePlane = dot(Plane.Normal, Point) < Plane.Distance
+//
+// However, to use the planes with other distances (e.g. for testing a sphere against the plane),
+// the normal vectors must be normalized and the distances scaled accordingly.
 inline void ExtractViewFrustumPlanesFromMatrix(const float4x4& Matrix, ViewFrustum& Frustum, bool bIsOpenGL)
 {
     // For more details, see Gribb G., Hartmann K., "Fast Extraction of Viewing Frustum Planes from the

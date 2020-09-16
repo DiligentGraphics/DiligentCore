@@ -83,6 +83,7 @@ public:
     bool Compile(const CompileAttribs& Attribs) override final;
 
     virtual void Compile(const ShaderCreateInfo& ShaderCI,
+                         ShaderVersion           ShaderModel,
                          const char*             ExtraDefinitions,
                          IDxcBlob**              ppByteCodeBlob,
                          std::vector<uint32_t>*  pByteCode,
@@ -412,6 +413,7 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
 
 
 void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
+                             ShaderVersion           ShaderModel,
                              const char*             ExtraDefinitions,
                              IDxcBlob**              ppByteCodeBlob,
                              std::vector<uint32_t>*  pByteCode,
@@ -423,15 +425,26 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
         return;
     }
 
+    ShaderVersion MaxSM = GetMaxShaderModel();
+
     // validate shader version
-    ShaderVersion ShaderModel = ShaderCI.HLSLVersion;
-    ShaderVersion MaxSM       = GetMaxShaderModel();
-
-    if (ShaderModel.Major < 6 || ShaderModel.Major > MaxSM.Major)
+    if (ShaderModel == ShaderVersion{})
+    {
         ShaderModel = MaxSM;
-
-    if (ShaderModel.Major == MaxSM.Major && ShaderModel.Minor > MaxSM.Minor)
+    }
+    else if (ShaderModel.Major < 6)
+    {
+        LOG_INFO_MESSAGE("DXC only supports shader model 6.0+. Upgrading the specified shader model ",
+                         Uint32{ShaderModel.Major}, '_', Uint32{ShaderModel.Minor}, " to 6_0");
+        ShaderModel = ShaderVersion{6, 0};
+    }
+    else if ((ShaderModel.Major > MaxSM.Major) ||
+             (ShaderModel.Major == MaxSM.Major && ShaderModel.Minor > MaxSM.Minor))
+    {
+        LOG_WARNING_MESSAGE("The maximum supported shader model by DXC is ", Uint32{MaxSM.Major}, '_', Uint32{MaxSM.Minor},
+                            ". The specified shader model ", Uint32{ShaderModel.Major}, '_', Uint32{ShaderModel.Minor}, " will be downgraded.");
         ShaderModel = MaxSM;
+    }
 
     const auto         Profile = GetHLSLProfileString(ShaderCI.Desc.ShaderType, ShaderModel);
     const std::wstring wstrProfile{Profile.begin(), Profile.end()};

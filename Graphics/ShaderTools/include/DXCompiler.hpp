@@ -74,6 +74,7 @@ public:
     virtual bool Compile(const CompileAttribs& Attribs) = 0;
 
     virtual void Compile(const ShaderCreateInfo& ShaderCI,
+                         ShaderVersion           ShaderModel,
                          const char*             ExtraDefinitions,
                          IDxcBlob**              ppByteCodeBlob,
                          std::vector<uint32_t>*  pByteCode,

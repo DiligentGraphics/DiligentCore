@@ -351,6 +351,44 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
             break;
     }
     m_pDeviceContext.Attach(ppContexts[0]);
+
+    const auto& AdapterInfo = m_pDevice->GetDeviceCaps().AdapterInfo;
+    std::string AdapterInfoStr;
+    AdapterInfoStr = "Vendor: ";
+    switch (AdapterInfo.Vendor)
+    {
+        case ADAPTER_VENDOR_NVIDIA:
+            AdapterInfoStr += "NVidia";
+            break;
+        case ADAPTER_VENDOR_AMD:
+            AdapterInfoStr += "AMD";
+            break;
+        case ADAPTER_VENDOR_INTEL:
+            AdapterInfoStr += "Intel";
+            break;
+        case ADAPTER_VENDOR_ARM:
+            AdapterInfoStr += "ARM";
+            break;
+        case ADAPTER_VENDOR_QUALCOMM:
+            AdapterInfoStr += "Qualcomm";
+            break;
+        case ADAPTER_VENDOR_IMGTECH:
+            AdapterInfoStr += "Imagination tech";
+            break;
+        case ADAPTER_VENDOR_MSFT:
+            AdapterInfoStr += "Microsoft";
+            break;
+        default:
+            AdapterInfoStr += "Unknown";
+    }
+    AdapterInfoStr += ". Local memory: ";
+    AdapterInfoStr += std::to_string(AdapterInfo.DeviceLocalMemory >> 20);
+    AdapterInfoStr += " MB. Host-visible memory: ";
+    AdapterInfoStr += std::to_string(AdapterInfo.HostVisibileMemory >> 20);
+    AdapterInfoStr += " MB. Unified memory: ";
+    AdapterInfoStr += std::to_string(AdapterInfo.UnifiedMemory >> 20);
+    AdapterInfoStr += " MB.";
+    LOG_INFO_MESSAGE("Adapter info: ", AdapterInfoStr);
 }
 
 TestingEnvironment::~TestingEnvironment()

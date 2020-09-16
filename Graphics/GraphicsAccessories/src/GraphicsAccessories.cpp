@@ -1269,4 +1269,21 @@ MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipL
     return MipProps;
 }
 
+ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId)
+{
+    switch (VendorId)
+    {
+        case 0x01002: return ADAPTER_VENDOR_AMD;
+        case 0x010DE: return ADAPTER_VENDOR_NVIDIA;
+        case 0x08086: return ADAPTER_VENDOR_INTEL;
+        case 0x013B5: return ADAPTER_VENDOR_ARM;
+        case 0x05143: return ADAPTER_VENDOR_QUALCOMM;
+        case 0x01010: return ADAPTER_VENDOR_IMGTECH;
+        case 0x01414: return ADAPTER_VENDOR_MSFT;
+
+        default:
+            return ADAPTER_VENDOR_UNKNOWN;
+    }
+}
+
 } // namespace Diligent

@@ -196,17 +196,65 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     std::string                Vendor      = StrToLower(std::string(glstrVendor.begin(), glstrVendor.end()));
     LOG_INFO_MESSAGE("GPU Vendor: ", Vendor);
 
+    auto& AdapterInfo = m_DeviceCaps.AdapterInfo;
+
+    AdapterInfo.Type               = ADAPTER_TYPE_HARDWARE;
+    AdapterInfo.DeviceLocalMemory  = 0;
+    AdapterInfo.HostVisibileMemory = 0;
+    AdapterInfo.UnifiedMemory      = 0;
+
     if (Vendor.find("intel") != std::string::npos)
-        m_GPUInfo.Vendor = GPU_VENDOR::INTEL;
+        AdapterInfo.Vendor = ADAPTER_VENDOR_INTEL;
     else if (Vendor.find("nvidia") != std::string::npos)
-        m_GPUInfo.Vendor = GPU_VENDOR::NVIDIA;
+    {
+        AdapterInfo.Vendor = ADAPTER_VENDOR_NVIDIA;
+
+#ifndef GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX
+        static constexpr GLenum GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX = 0x9048;
+#endif
+
+        GLint AvailableMemoryKb = 0;
+        glGetIntegerv(GL_GPU_MEM_INFO_TOTAL_AVAILABLE_MEM_NVX, &AvailableMemoryKb);
+        if (glGetError() == GL_NO_ERROR)
+        {
+            AdapterInfo.DeviceLocalMemory = static_cast<Uint64>(AvailableMemoryKb) * Uint64{1024};
+        }
+        else
+        {
+            LOG_WARNING_MESSAGE("Unable to read available memory size for NVidia GPU");
+        }
+    }
     else if (Vendor.find("ati") != std::string::npos ||
              Vendor.find("amd") != std::string::npos)
-        m_GPUInfo.Vendor = GPU_VENDOR::ATI;
-    else if (Vendor.find("qualcomm"))
-        m_GPUInfo.Vendor = GPU_VENDOR::QUALCOMM;
+    {
+        AdapterInfo.Vendor = ADAPTER_VENDOR_AMD;
 
-    m_DeviceCaps.AdaterType = ADAPTER_TYPE_HARDWARE;
+#ifndef GL_TEXTURE_FREE_MEMORY_ATI
+        static constexpr GLenum GL_TEXTURE_FREE_MEMORY_ATI = 0x87FC;
+#endif
+        // https://www.khronos.org/registry/OpenGL/extensions/ATI/ATI_meminfo.txt
+        // param[0] - total memory free in the pool
+        // param[1] - largest available free block in the pool
+        // param[2] - total auxiliary memory free
+        // param[3] - largest auxiliary free block
+        GLint MemoryParamsKb[4] = {};
+
+        glGetIntegerv(GL_TEXTURE_FREE_MEMORY_ATI, MemoryParamsKb);
+        if (glGetError() == GL_NO_ERROR)
+        {
+            AdapterInfo.DeviceLocalMemory = static_cast<Uint64>(MemoryParamsKb[0]) * Uint64{1024};
+        }
+        else
+        {
+            LOG_WARNING_MESSAGE("Unable to read free memory size for AMD GPU");
+        }
+    }
+    else if (Vendor.find("qualcomm"))
+        AdapterInfo.Vendor = ADAPTER_VENDOR_QUALCOMM;
+    else if (Vendor.find("arm"))
+        AdapterInfo.Vendor = ADAPTER_VENDOR_ARM;
+    else
+        AdapterInfo.Vendor = ADAPTER_VENDOR_UNKNOWN;
 
     auto MajorVersion = m_DeviceCaps.MajorVersion;
     auto MinorVersion = m_DeviceCaps.MinorVersion;

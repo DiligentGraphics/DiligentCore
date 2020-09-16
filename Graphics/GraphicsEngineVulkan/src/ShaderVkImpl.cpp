@@ -81,7 +81,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
             {
                 auto* pDXComiler = pRenderDeviceVk->GetDxCompiler();
                 VERIFY_EXPR(pDXComiler != nullptr && pDXComiler->IsLoaded());
-                pDXComiler->Compile(CreationAttribs, VulkanDefine, nullptr, &m_SPIRV, CreationAttribs.ppCompilerOutput);
+                pDXComiler->Compile(CreationAttribs, ShaderVersion{}, VulkanDefine, nullptr, &m_SPIRV, CreationAttribs.ppCompilerOutput);
             }
             break;
 

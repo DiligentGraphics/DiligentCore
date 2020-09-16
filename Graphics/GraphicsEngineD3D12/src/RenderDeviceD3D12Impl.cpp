@@ -184,17 +184,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
         if (auto pDXGIAdapter1 = DXGIAdapterFromD3D12Device(pd3d12Device))
         {
-            DXGI_ADAPTER_DESC1 AdapterDesc = {};
-
-            auto hr = pDXGIAdapter1->GetDesc1(&AdapterDesc);
-            if (SUCCEEDED(hr))
-            {
-                m_DeviceCaps.AdaterType = (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
-            }
-            else
-            {
-                LOG_ERROR_MESSAGE("Failed to get DXGIDevice adapter desc. Adapter type will be unknown.");
-            }
+            ReadAdapterInfo(pDXGIAdapter1);
         }
 
         // Direct3D12 supports shader model 5.1 on all feature levels (even on 11.0),

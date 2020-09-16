@@ -142,7 +142,7 @@ ShaderD3DBase::ShaderD3DBase(const ShaderCreateInfo& ShaderCI, const ShaderVersi
         if (UseDXC)
         {
             VERIFY_EXPR(__uuidof(ID3DBlob) == __uuidof(IDxcBlob));
-            DxCompiler->Compile(ShaderCI, nullptr, reinterpret_cast<IDxcBlob**>(&m_pShaderByteCode), nullptr, ShaderCI.ppCompilerOutput);
+            DxCompiler->Compile(ShaderCI, ShaderModel, nullptr, reinterpret_cast<IDxcBlob**>(&m_pShaderByteCode), nullptr, ShaderCI.ppCompilerOutput);
         }
         else
         {
