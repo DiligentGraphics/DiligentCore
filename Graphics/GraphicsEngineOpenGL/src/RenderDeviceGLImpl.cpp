@@ -1088,6 +1088,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
         }
 
 #if GL_ARB_shader_image_load_store
+        if (m_DeviceCaps.Features.PixelUAVWritesAndAtomics)
         {
             GLuint    CurrentImg     = 0;
             GLint     CurrentLevel   = 0;
