@@ -1910,9 +1910,9 @@ TEST(Common_AdvancedMath, RasterizeTriangle)
 
     {
         //         V2
-        //         /\  
+        //         /\
         //        /  \
-        //       /____\   
+        //       /____\
         //     V0      V1
         TestRasterizeTriangle(float2(-5.f, -10.f), float2(-3.f, -8.f), float2(-1.f, -10.f),
                               {int2{-5, -10}, int2{-4, -10}, int2{-3, -10}, int2{-2, -10}, int2{-1, -10},

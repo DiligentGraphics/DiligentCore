@@ -54,13 +54,14 @@
 namespace Diligent
 {
 
-static void APIENTRY openglCallbackFunction(GLenum        source,
-                                            GLenum        type,
-                                            GLuint        id,
-                                            GLenum        severity,
-                                            GLsizei       length,
-                                            const GLchar* message,
-                                            const void*   userParam)
+#if GL_KHR_debug
+static void openglCallbackFunction(GLenum        source,
+                                   GLenum        type,
+                                   GLuint        id,
+                                   GLenum        severity,
+                                   GLsizei       length,
+                                   const GLchar* message,
+                                   const void*   userParam)
 {
     auto* ShowDebugOutput = reinterpret_cast<const int*>(userParam);
     if (*ShowDebugOutput == 0)
@@ -121,6 +122,7 @@ static void APIENTRY openglCallbackFunction(GLenum        source,
 
     LOG_INFO_MESSAGE(MessageSS.str().c_str());
 }
+#endif
 
 RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                                        IMemoryAllocator&         RawMemAllocator,
@@ -165,6 +167,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         m_ExtensionStrings.emplace(reinterpret_cast<const Char*>(CurrExtension));
     }
 
+#if GL_KHR_debug
     if (InitAttribs.CreateDebugContext && glDebugMessageCallback != nullptr)
     {
         glEnable(GL_DEBUG_OUTPUT);
@@ -182,6 +185,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         if (glGetError() != GL_NO_ERROR)
             LOG_ERROR_MESSAGE("Failed to enable debug messages");
     }
+#endif
 
     FlagSupportedTexFormats();
 
