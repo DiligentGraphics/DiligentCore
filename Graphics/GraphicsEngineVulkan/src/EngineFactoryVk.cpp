@@ -231,26 +231,22 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         bool   SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
         void** NextExt           = const_cast<void**>(&DeviceCreateInfo.pNext);
 
-        // Variables may be unused if extensions are disabled.
-        (void)SupportsFeatures2;
-        (void)NextExt;
-
         // Enable mesh shader extension.
         bool MeshShadersSupported = false;
-#ifdef VK_NV_mesh_shader
         if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
         {
             VkPhysicalDeviceMeshShaderFeaturesNV MeshShaderFeats = PhysicalDevice->GetExtFeatures().MeshShader;
 
             if (SupportsFeatures2 && PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
             {
-                MeshShadersSupported = true;
+                MeshShadersSupported = MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE;
                 DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
                 *NextExt = &MeshShaderFeats;
                 NextExt  = &MeshShaderFeats.pNext;
             }
+
+            *NextExt = nullptr;
         }
-#endif
 
         if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED && !MeshShadersSupported)
             LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device");

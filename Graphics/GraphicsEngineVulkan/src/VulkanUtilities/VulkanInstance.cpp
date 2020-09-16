@@ -148,12 +148,10 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
     };
 
     // This extension added to core in 1.1, but current version is 1.0
-#ifdef VK_KHR_get_physical_device_properties2
     if (IsExtensionAvailable(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
         GlobalExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
     }
-#endif
 
     if (ppGlobalExtensionNames != nullptr)
     {

@@ -40,8 +40,6 @@ namespace Diligent
 namespace Testing
 {
 
-#ifdef VK_NV_mesh_shader
-
 void MeshShaderDrawReferenceVk(ISwapChain* pSwapChain)
 {
     auto* pEnv     = TestingEnvironmentVk::GetInstance();
@@ -569,25 +567,6 @@ void AmplificationShaderDrawReferenceVk(ISwapChain* pSwapChain)
     vkDestroyShaderModule(vkDevice, vkMSModule, nullptr);
     vkDestroyShaderModule(vkDevice, vkFSModule, nullptr);
 }
-
-#else
-
-void MeshShaderDrawReferenceVk(ISwapChain*)
-{
-    LOG_ERROR_AND_THROW("Vulkan headers don't contains VK_NV_mesh_shader extension");
-}
-
-void MeshShaderIndirectDrawReferenceVk(ISwapChain*)
-{
-    LOG_ERROR_AND_THROW("Vulkan headers don't contains VK_NV_mesh_shader extension");
-}
-
-void AmplificationShaderDrawReferenceVk(ISwapChain*)
-{
-    LOG_ERROR_AND_THROW("Vulkan headers don't contains VK_NV_mesh_shader extension");
-}
-
-#endif // VK_NV_mesh_shader
 
 } // namespace Testing
 

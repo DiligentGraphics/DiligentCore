@@ -195,12 +195,8 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.PixelUAVWritesAndAtomics          = GetFeatureState(vkEnabledFeatures.fragmentStoresAndAtomics);
     Features.TextureUAVExtendedFormats         = GetFeatureState(vkEnabledFeatures.shaderStorageImageExtendedFormats);
 
-#ifdef VK_NV_mesh_shader
     // All devices that support mesh shaders also support task shaders, so it is not necessary to use two separate features.
     Features.MeshShaders = GetFeatureState(EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED && vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE);
-#else
-    Features.MeshShaders = DEVICE_FEATURE_STATE_DISABLED;
-#endif
 
 #if defined(_MSC_VER) && defined(_WIN64)
     static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
