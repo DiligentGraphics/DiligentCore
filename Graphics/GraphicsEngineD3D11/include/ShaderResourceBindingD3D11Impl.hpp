@@ -36,6 +36,7 @@
 #include "ShaderResourceCacheD3D11.hpp"
 #include "ShaderResourceLayoutD3D11.hpp"
 #include "STDAllocator.hpp"
+#include <array>
 
 namespace Diligent
 {
@@ -98,11 +99,11 @@ private:
     ShaderResourceCacheD3D11*  m_pBoundResourceCaches = nullptr;
     ShaderResourceLayoutD3D11* m_pResourceLayouts     = nullptr;
 
-    Int8 m_ShaderTypeIndex[6] = {};
+    std::array<Int8, NUM_SHADER_TYPES> m_ShaderTypeIndex = {};
 
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
-    Int8  m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
-    Uint8 m_NumActiveShaders       = 0;
+    std::array<Int8, NUM_SHADER_TYPES> m_ResourceLayoutIndex;
+    Uint8                              m_NumActiveShaders = 0;
 
     bool m_bIsStaticResourcesBound = false;
 };

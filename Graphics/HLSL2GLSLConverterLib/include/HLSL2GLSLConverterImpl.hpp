@@ -38,6 +38,7 @@
 #include "Shader.h"
 #include "HashUtils.hpp"
 #include "HLSLKeywords.h"
+#include "Constants.h"
 
 namespace Diligent
 {
@@ -540,7 +541,7 @@ private:
     //          [fragment, input] SV_Position -> gl_FragCoord
     static constexpr int                                                   InVar  = 0;
     static constexpr int                                                   OutVar = 1;
-    std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher> m_HLSLSemanticToGLSLVar[6][2];
+    std::unordered_map<HashMapStringKey, String, HashMapStringKey::Hasher> m_HLSLSemanticToGLSLVar[NUM_SHADER_TYPES][2];
 };
 
 } // namespace Diligent

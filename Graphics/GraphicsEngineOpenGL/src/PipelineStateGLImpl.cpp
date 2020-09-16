@@ -102,7 +102,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         }
         else
         {
-            m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(m_ppShaders, m_NumShaders, false));
+            m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(m_ppShaders.data(), m_NumShaders, false));
             m_ProgramResources.resize(1);
             SHADER_TYPE ShaderStages = SHADER_TYPE_UNKNOWN;
             for (Uint32 i = 0; i < m_NumShaders; ++i)

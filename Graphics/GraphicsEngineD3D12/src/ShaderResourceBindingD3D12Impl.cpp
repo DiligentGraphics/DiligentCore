@@ -48,6 +48,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
     m_NumShaders         {static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaders())}
 // clang-format on
 {
+    m_ResourceLayoutIndex.fill(-1);
     auto* ppShaders = pPSO->GetShaders();
 
     auto* pRenderDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(pPSO->GetDevice());

@@ -406,7 +406,7 @@ public:
     IShader* GetHS() { return m_pHS; }
     IShader* GetCS() { return m_pCS; }
 
-    IShader* const* GetShaders() const { return m_ppShaders; }
+    IShader* const* GetShaders() const { return m_ppShaders.data(); }
     Uint32          GetNumShaders() const { return m_NumShaders; }
 
     template <typename ShaderType>
@@ -447,8 +447,8 @@ protected:
 
     RefCntAutoPtr<IRenderPass> m_pRenderPass; ///< Strong reference to the render pass object
 
-    IShader* m_ppShaders[MAX_SHADERS_IN_PIPELINE] = {}; ///< Array of pointers to the shaders used by this PSO
-    size_t   m_ShaderResourceLayoutHash           = 0;  ///< Hash computed from the shader resource layout
+    std::array<IShader*, MAX_SHADERS_IN_PIPELINE> m_ppShaders                = {}; ///< Array of pointers to the shaders used by this PSO
+    size_t                                        m_ShaderResourceLayoutHash = 0;  ///< Hash computed from the shader resource layout
 
 private:
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", GetPipelineTypeString(this->m_Desc.PipelineType), " PSO '", this->m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)

@@ -50,6 +50,8 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
     m_StaticSamplers (STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"))
 // clang-format on
 {
+    m_ResourceLayoutIndex.fill(-1);
+
     if (m_Desc.IsComputePipeline())
     {
         auto* pCS = ValidatedCast<ShaderD3D11Impl>(m_Desc.ComputePipeline.pCS);
