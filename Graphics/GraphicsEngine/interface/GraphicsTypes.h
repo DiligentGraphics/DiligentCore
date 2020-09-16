@@ -1653,7 +1653,7 @@ typedef struct DeviceFeatures DeviceFeatures;
 
 
 /// Graphics adapter vendor
-enum ADAPTER_VENDOR
+DILIGENT_TYPED_ENUM(ADAPTER_VENDOR, Uint8)
 {
     /// Adapter vendor is unknown
     ADAPTER_VENDOR_UNKNOWN = 0,
@@ -1684,10 +1684,10 @@ enum ADAPTER_VENDOR
 struct GraphicsAdapterInfo
 {
     /// Adapter type, see Diligent::ADAPTER_TYPE.
-    enum ADAPTER_TYPE   Type    DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
+    ADAPTER_TYPE   Type    DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
 
     /// Adapter vendor, see Diligent::ADAPTER_VENDOR.
-    enum ADAPTER_VENDOR Vendor  DEFAULT_INITIALIZER(ADAPTER_VENDOR_UNKNOWN);
+    ADAPTER_VENDOR Vendor  DEFAULT_INITIALIZER(ADAPTER_VENDOR_UNKNOWN);
 
     /// The amount of local video memory, in bytes, that is not accessible by CPU.
 
