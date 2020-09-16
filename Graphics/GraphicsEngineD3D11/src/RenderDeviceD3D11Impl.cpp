@@ -201,18 +201,31 @@ void RenderDeviceD3D11Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     TexFormatInfo.Filterable =
         ((FormatSupport & D3D11_FORMAT_SUPPORT_SHADER_SAMPLE) != 0) ||
         ((FormatSupport & D3D11_FORMAT_SUPPORT_SHADER_SAMPLE_COMPARISON) != 0);
-    TexFormatInfo.ColorRenderable = (FormatSupport & D3D11_FORMAT_SUPPORT_RENDER_TARGET) != 0;
-    TexFormatInfo.DepthRenderable = (FormatSupport & D3D11_FORMAT_SUPPORT_DEPTH_STENCIL) != 0;
-    TexFormatInfo.Tex1DFmt        = (FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURE1D) != 0;
-    TexFormatInfo.Tex2DFmt        = (FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURE2D) != 0;
-    TexFormatInfo.Tex3DFmt        = (FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURE3D) != 0;
-    TexFormatInfo.TexCubeFmt      = (FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURECUBE) != 0;
+
+    TexFormatInfo.BindFlags = BIND_SHADER_RESOURCE;
+    if ((FormatSupport & D3D11_FORMAT_SUPPORT_RENDER_TARGET) != 0)
+        TexFormatInfo.BindFlags |= BIND_RENDER_TARGET;
+    if ((FormatSupport & D3D11_FORMAT_SUPPORT_DEPTH_STENCIL) != 0)
+        TexFormatInfo.BindFlags |= BIND_DEPTH_STENCIL;
+    if ((FormatSupport & D3D11_FORMAT_SUPPORT_TYPED_UNORDERED_ACCESS_VIEW) != 0)
+        TexFormatInfo.BindFlags |= BIND_UNORDERED_ACCESS;
+
+    TexFormatInfo.Dimensions = RESOURCE_DIMENSION_SUPPORT_NONE;
+    if ((FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURE1D) != 0)
+        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_1D | RESOURCE_DIMENSION_SUPPORT_TEX_1D_ARRAY;
+    if ((FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURE2D) != 0)
+        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_2D | RESOURCE_DIMENSION_SUPPORT_TEX_2D_ARRAY;
+    if ((FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURE3D) != 0)
+        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_3D;
+    if ((FormatSupport & D3D11_FORMAT_SUPPORT_TEXTURECUBE) != 0)
+        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE | RESOURCE_DIMENSION_SUPPORT_TEX_CUBE_ARRAY;
 
     TexFormatInfo.SampleCounts = 0x0;
     for (Uint32 SampleCount = 1; SampleCount <= D3D11_MAX_MULTISAMPLE_SAMPLE_COUNT; SampleCount *= 2)
     {
         UINT QualityLevels = 0;
-        hr                 = m_pd3d11Device->CheckMultisampleQualityLevels(DXGIFormat, SampleCount, &QualityLevels);
+
+        hr = m_pd3d11Device->CheckMultisampleQualityLevels(DXGIFormat, SampleCount, &QualityLevels);
         if (SUCCEEDED(hr) && QualityLevels > 0)
             TexFormatInfo.SampleCounts |= SampleCount;
     }

@@ -412,87 +412,102 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
     auto vkPhysicalDevice = m_PhysicalDevice->GetVkDeviceHandle();
 
-    auto SRVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_SHADER_RESOURCE, BIND_SHADER_RESOURCE);
-    auto RTVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_RENDER_TARGET, BIND_RENDER_TARGET);
-    auto DSVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_DEPTH_STENCIL, BIND_DEPTH_STENCIL);
-
-    if (SRVFormat != TEX_FORMAT_UNKNOWN)
+    auto CheckFormatProperties =
+        [vkPhysicalDevice](VkFormat vkFmt, VkImageType vkImgType, VkImageUsageFlags vkUsage, VkImageFormatProperties& ImgFmtProps) //
     {
-        VkFormat           vkSrvFormat   = TexFormatToVkFormat(SRVFormat);
-        VkFormatProperties vkSrvFmtProps = {};
-        vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkSrvFormat, &vkSrvFmtProps);
+        auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkFmt, vkImgType, VK_IMAGE_TILING_OPTIMAL,
+                                                            vkUsage, 0, &ImgFmtProps);
+        return err == VK_SUCCESS;
+    };
 
-        if (vkSrvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
+
+    TexFormatInfo.BindFlags  = BIND_NONE;
+    TexFormatInfo.Dimensions = RESOURCE_DIMENSION_SUPPORT_NONE;
+
+    {
+        auto SRVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_SHADER_RESOURCE, BIND_SHADER_RESOURCE);
+        if (SRVFormat != TEX_FORMAT_UNKNOWN)
         {
-            TexFormatInfo.Filterable = true;
+            VkFormat           vkSrvFormat   = TexFormatToVkFormat(SRVFormat);
+            VkFormatProperties vkSrvFmtProps = {};
+            vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkSrvFormat, &vkSrvFmtProps);
 
+            if (vkSrvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
             {
+                TexFormatInfo.Filterable = true;
+                TexFormatInfo.BindFlags |= BIND_SHADER_RESOURCE;
+
                 VkImageFormatProperties ImgFmtProps = {};
+                if (CheckFormatProperties(vkSrvFormat, VK_IMAGE_TYPE_1D, VK_IMAGE_USAGE_SAMPLED_BIT, ImgFmtProps))
+                    TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_1D | RESOURCE_DIMENSION_SUPPORT_TEX_1D_ARRAY;
 
-                auto err               = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_1D, VK_IMAGE_TILING_OPTIMAL,
-                                                                    VK_IMAGE_USAGE_SAMPLED_BIT, 0, &ImgFmtProps);
-                TexFormatInfo.Tex1DFmt = err == VK_SUCCESS;
-            }
+                if (CheckFormatProperties(vkSrvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_SAMPLED_BIT, ImgFmtProps))
+                    TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_2D | RESOURCE_DIMENSION_SUPPORT_TEX_2D_ARRAY;
 
-            {
-                VkImageFormatProperties ImgFmtProps = {};
+                if (CheckFormatProperties(vkSrvFormat, VK_IMAGE_TYPE_3D, VK_IMAGE_USAGE_SAMPLED_BIT, ImgFmtProps))
+                    TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_3D;
 
-                auto err               = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-                                                                    VK_IMAGE_USAGE_SAMPLED_BIT, 0, &ImgFmtProps);
-                TexFormatInfo.Tex2DFmt = err == VK_SUCCESS;
-            }
-
-            {
-                VkImageFormatProperties ImgFmtProps = {};
-
-                auto err               = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_3D, VK_IMAGE_TILING_OPTIMAL,
-                                                                    VK_IMAGE_USAGE_SAMPLED_BIT, 0, &ImgFmtProps);
-                TexFormatInfo.Tex3DFmt = err == VK_SUCCESS;
-            }
-
-            {
-                VkImageFormatProperties ImgFmtProps = {};
-
-                auto err                 = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-                                                                    VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, &ImgFmtProps);
-                TexFormatInfo.TexCubeFmt = err == VK_SUCCESS;
+                {
+                    auto err = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkSrvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
+                                                                        VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT, &ImgFmtProps);
+                    if (err == VK_SUCCESS)
+                        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE | RESOURCE_DIMENSION_SUPPORT_TEX_CUBE_ARRAY;
+                }
             }
         }
     }
 
-    if (RTVFormat != TEX_FORMAT_UNKNOWN)
     {
-        VkFormat           vkRtvFormat   = TexFormatToVkFormat(RTVFormat);
-        VkFormatProperties vkRtvFmtProps = {};
-        vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkRtvFormat, &vkRtvFmtProps);
-        if (vkRtvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
+        auto RTVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_RENDER_TARGET, BIND_RENDER_TARGET);
+        if (RTVFormat != TEX_FORMAT_UNKNOWN)
         {
-            VkImageFormatProperties ImgFmtProps = {};
+            VkFormat           vkRtvFormat   = TexFormatToVkFormat(RTVFormat);
+            VkFormatProperties vkRtvFmtProps = {};
+            vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkRtvFormat, &vkRtvFmtProps);
 
-            auto err                      = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkRtvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-                                                                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT, 0, &ImgFmtProps);
-            TexFormatInfo.ColorRenderable = err == VK_SUCCESS;
-            if (TexFormatInfo.ColorRenderable)
+            if (vkRtvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)
             {
-                TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
+                TexFormatInfo.BindFlags |= BIND_RENDER_TARGET;
+
+                VkImageFormatProperties ImgFmtProps = {};
+                if (CheckFormatProperties(vkRtvFormat, VK_IMAGE_TYPE_2D, VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT, ImgFmtProps))
+                {
+                    TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
+                }
             }
         }
     }
 
-    if (DSVFormat != TEX_FORMAT_UNKNOWN)
     {
-        VkFormat           vkDsvFormat   = TexFormatToVkFormat(DSVFormat);
-        VkFormatProperties vkDsvFmtProps = {};
-        vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkDsvFormat, &vkDsvFmtProps);
-        if (vkDsvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        auto DSVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_DEPTH_STENCIL, BIND_DEPTH_STENCIL);
+        if (DSVFormat != TEX_FORMAT_UNKNOWN)
         {
-            VkImageFormatProperties ImgFmtProps = {};
-            auto                    err         = vkGetPhysicalDeviceImageFormatProperties(vkPhysicalDevice, vkDsvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_TILING_OPTIMAL,
-                                                                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 0, &ImgFmtProps);
-            TexFormatInfo.DepthRenderable       = err == VK_SUCCESS;
-            if (TexFormatInfo.DepthRenderable)
+            VkFormat           vkDsvFormat   = TexFormatToVkFormat(DSVFormat);
+            VkFormatProperties vkDsvFmtProps = {};
+            vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkDsvFormat, &vkDsvFmtProps);
+            if (vkDsvFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
             {
-                TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
+                TexFormatInfo.BindFlags |= BIND_DEPTH_STENCIL;
+
+                VkImageFormatProperties ImgFmtProps = {};
+                if (CheckFormatProperties(vkDsvFormat, VK_IMAGE_TYPE_2D, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, ImgFmtProps))
+                {
+                    TexFormatInfo.SampleCounts = ImgFmtProps.sampleCounts;
+                }
+            }
+        }
+    }
+
+    {
+        auto UAVFormat = GetDefaultTextureViewFormat(TexFormat, TEXTURE_VIEW_UNORDERED_ACCESS, BIND_DEPTH_STENCIL);
+        if (UAVFormat != TEX_FORMAT_UNKNOWN)
+        {
+            VkFormat           vkUavFormat   = TexFormatToVkFormat(UAVFormat);
+            VkFormatProperties vkUavFmtProps = {};
+            vkGetPhysicalDeviceFormatProperties(vkPhysicalDevice, vkUavFormat, &vkUavFmtProps);
+            if (vkUavFmtProps.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
+            {
+                TexFormatInfo.BindFlags |= BIND_UNORDERED_ACCESS;
             }
         }
     }

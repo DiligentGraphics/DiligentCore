@@ -2297,35 +2297,64 @@ struct TextureFormatInfo DILIGENT_DERIVE(TextureFormatAttribs)
 typedef struct TextureFormatInfo TextureFormatInfo;
 
 
-/// Extended texture format description
+/// Describes device support of a particular resource dimension for a given texture format.
+DILIGENT_TYPED_ENUM(RESOURCE_DIMENSION_SUPPORT, Uint32)
+{
+    /// The device does not support any resources for this format.
+    RESOURCE_DIMENSION_SUPPORT_NONE           = 0,
+
+    /// Indicates if the device supports buffer resources for a particular texture format.
+    RESOURCE_DIMENSION_SUPPORT_BUFFER         = 1 << RESOURCE_DIM_BUFFER,
+
+    /// Indicates if the device supports 1D textures for a particular texture format.
+    RESOURCE_DIMENSION_SUPPORT_TEX_1D         = 1 << RESOURCE_DIM_TEX_1D,
+
+    /// Indicates if the device supports 1D texture arrays for a particular texture format.
+    RESOURCE_DIMENSION_SUPPORT_TEX_1D_ARRAY   = 1 << RESOURCE_DIM_TEX_1D_ARRAY,
+
+    /// Indicates if the device supports 2D textures for a particular texture format.
+    RESOURCE_DIMENSION_SUPPORT_TEX_2D         = 1 << RESOURCE_DIM_TEX_2D,
+
+    /// Indicates if the device supports 2D texture arrays for a particular texture format.
+    RESOURCE_DIMENSION_SUPPORT_TEX_2D_ARRAY   = 1 << RESOURCE_DIM_TEX_2D_ARRAY,
+
+    /// Indicates if the device supports 3D textures for a particular texture format.
+    RESOURCE_DIMENSION_SUPPORT_TEX_3D         = 1 << RESOURCE_DIM_TEX_3D,
+
+    /// Indicates if the device supports cube textures for a particular texture format.
+    RESOURCE_DIMENSION_SUPPORT_TEX_CUBE       = 1 << RESOURCE_DIM_TEX_CUBE,
+
+    /// Indicates if the device supports cube texture arrays for a particular texture format.
+    RESOURCE_DIMENSION_SUPPORT_TEX_CUBE_ARRAY = 1 << RESOURCE_DIM_TEX_CUBE_ARRAY
+};
+DEFINE_FLAG_ENUM_OPERATORS(RESOURCE_DIMENSION_SUPPORT);
+
+
+/// Extended texture format information.
 
 /// This structure is returned by IRenderDevice::GetTextureFormatInfoExt()
 struct TextureFormatInfoExt DILIGENT_DERIVE(TextureFormatInfo)
 
-    /// Indicates if the format can be filtered
-    bool Filterable         DEFAULT_INITIALIZER(false);
+    /// Allowed bind flags for this format.
+    BIND_FLAGS BindFlags    DEFAULT_INITIALIZER(BIND_NONE);
 
-    /// Indicates if the format can be used as a render target format
-    bool ColorRenderable    DEFAULT_INITIALIZER(false);
+    /// A bitmask specifying all the supported resource dimensions for this texture format,
+    /// see Diligent::RESOURCE_DIMENSION_SUPPORT.
 
-    /// Indicates if the format can be used as a depth format
-    bool DepthRenderable    DEFAULT_INITIALIZER(false);
-
-    /// Indicates if the format can be used to create a 1D texture 
-    bool Tex1DFmt           DEFAULT_INITIALIZER(false);
-
-    /// Indicates if the format can be used to create a 2D texture 
-    bool Tex2DFmt           DEFAULT_INITIALIZER(false);
-
-    /// Indicates if the format can be used to create a 3D texture 
-    bool Tex3DFmt           DEFAULT_INITIALIZER(false);
-
-    /// Indicates if the format can be used to create a cube texture 
-    bool TexCubeFmt         DEFAULT_INITIALIZER(false);
+    /// For every supported resource dimension in RESOURCE_DIMENSION enum,
+    /// the corresponding bit in the mask will be set to 1.
+    /// For example, support for Texture2D resource dimension can be checked as follows:
+    ///
+    ///     (Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_2D) != 0
+    ///
+    RESOURCE_DIMENSION_SUPPORT Dimensions DEFAULT_INITIALIZER(RESOURCE_DIMENSION_SUPPORT_NONE);
 
     /// A bitmask specifying all the supported sample counts for this texture format.
     /// If the format supports n samples, then (SampleCounts & n) != 0
-    Uint32 SampleCounts     DEFAULT_INITIALIZER(0);
+    Uint32     SampleCounts DEFAULT_INITIALIZER(0);
+
+    /// Indicates if the format can be filtered in the shader.
+    Bool       Filterable   DEFAULT_INITIALIZER(false);
 };
 typedef struct TextureFormatInfoExt TextureFormatInfoExt;
 

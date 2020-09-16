@@ -825,6 +825,13 @@ bool CreateTestGLTexture(GLContextState& GlCtxState, GLenum BindTarget, const GL
     return bSuccess;
 }
 
+template <typename CreateFuncType>
+bool CreateTestGLTexture(GLContextState& GlCtxState, GLenum BindTarget, CreateFuncType CreateFunc)
+{
+    GLObjectWrappers::GLTextureObj GLTexObj{true};
+    return CreateTestGLTexture(GlCtxState, BindTarget, GLTexObj, CreateFunc);
+}
+
 void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 {
     auto& TexFormatInfo = m_TextureFormatsInfo[TexFormat];
@@ -839,49 +846,78 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     auto& ContextState = pContextGL->GetContextState();
 
     const int TestTextureDim   = 32;
+    const int TestArraySlices  = 8;
     const int TestTextureDepth = 8;
 
+    TexFormatInfo.BindFlags  = BIND_SHADER_RESOURCE;
+    TexFormatInfo.Dimensions = RESOURCE_DIMENSION_SUPPORT_NONE;
+
     // Create test texture 1D
-    TexFormatInfo.Tex1DFmt = false;
     if (m_DeviceCaps.TexCaps.MaxTexture1DDimension != 0 &&
         TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED)
     {
-        GLObjectWrappers::GLTextureObj TestGLTex(true);
-        TexFormatInfo.Tex1DFmt = CreateTestGLTexture(
-            ContextState, GL_TEXTURE_1D, TestGLTex,
-            [&]() //
+        if (CreateTestGLTexture(ContextState, GL_TEXTURE_1D,
+                                [&]() //
+                                {
+                                    glTexStorage1D(GL_TEXTURE_1D, 1, GLFmt, TestTextureDim);
+                                }))
+
+        {
+            TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_1D;
+
+            if (CreateTestGLTexture(ContextState, GL_TEXTURE_1D_ARRAY,
+                                    [&]() //
+                                    {
+                                        glTexStorage2D(GL_TEXTURE_1D_ARRAY, 1, GLFmt, TestTextureDim, TestArraySlices);
+                                    }))
+
             {
-                glTexStorage1D(GL_TEXTURE_1D, 1, GLFmt, TestTextureDim);
-            } //
-        );
+                TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_1D_ARRAY;
+            }
+        }
     }
 
     // Create test texture 2D
-    TexFormatInfo.Tex2DFmt        = false;
-    TexFormatInfo.TexCubeFmt      = false;
-    TexFormatInfo.ColorRenderable = false;
-    TexFormatInfo.DepthRenderable = false;
     {
-        GLObjectWrappers::GLTextureObj TestGLTex(true);
-        TexFormatInfo.Tex2DFmt = CreateTestGLTexture(
-            ContextState, GL_TEXTURE_2D, TestGLTex,
-            [&]() //
-            {
-                glTexStorage2D(GL_TEXTURE_2D, 1, GLFmt, TestTextureDim, TestTextureDim);
-            } //
-        );
-
-        if (TexFormatInfo.Tex2DFmt)
+        GLObjectWrappers::GLTextureObj TestGLTex2D{true};
+        if (CreateTestGLTexture(ContextState, GL_TEXTURE_2D, TestGLTex2D,
+                                [&]() //
+                                {
+                                    glTexStorage2D(GL_TEXTURE_2D, 1, GLFmt, TestTextureDim, TestTextureDim);
+                                }))
         {
+            TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_2D;
+
+            if (CreateTestGLTexture(ContextState, GL_TEXTURE_2D_ARRAY,
+                                    [&]() //
+                                    {
+                                        glTexStorage3D(GL_TEXTURE_2D_ARRAY, 1, GLFmt, TestTextureDim, TestTextureDim, TestArraySlices);
+                                    }))
             {
-                GLObjectWrappers::GLTextureObj TestGLCubeTex(true);
-                TexFormatInfo.TexCubeFmt = CreateTestGLTexture(
-                    ContextState, GL_TEXTURE_CUBE_MAP, TestGLCubeTex,
+                TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_2D_ARRAY;
+            }
+        }
+
+        if (TexFormatInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_2D)
+        {
+            if (CreateTestGLTexture(
+                    ContextState, GL_TEXTURE_CUBE_MAP,
                     [&]() //
                     {
                         glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GLFmt, TestTextureDim, TestTextureDim);
-                    } //
-                );
+                    }))
+            {
+                TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE;
+
+                if (CreateTestGLTexture(
+                        ContextState, GL_TEXTURE_CUBE_MAP_ARRAY,
+                        [&]() //
+                        {
+                            glTexStorage3D(GL_TEXTURE_CUBE_MAP_ARRAY, 1, GLFmt, TestTextureDim, TestTextureDim, 6);
+                        }))
+                {
+                    TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE_ARRAY;
+                }
             }
 
             bool bTestDepthAttachment =
@@ -889,7 +925,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                 TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL;
             bool bTestColorAttachment = !bTestDepthAttachment && TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED;
 
-            GLObjectWrappers::GLFrameBufferObj NewFBO(false);
+            GLObjectWrappers::GLFrameBufferObj NewFBO{false};
 
             GLint CurrentFramebuffer = -1;
             if (bTestColorAttachment || bTestDepthAttachment)
@@ -905,7 +941,7 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
             if (bTestDepthAttachment)
             {
                 GLenum Attachment = TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ? GL_DEPTH_ATTACHMENT : GL_DEPTH_STENCIL_ATTACHMENT;
-                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, Attachment, GL_TEXTURE_2D, TestGLTex, 0);
+                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, Attachment, GL_TEXTURE_2D, TestGLTex2D, 0);
                 if (glGetError() == GL_NO_ERROR)
                 {
                     // Create dummy texture2D since some older version do not allow depth only
@@ -928,21 +964,23 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                     glDrawBuffers(_countof(DrawBuffers), DrawBuffers);
                     CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
 
-                    GLenum Status                 = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-                    TexFormatInfo.DepthRenderable = (glGetError() == GL_NO_ERROR) && (Status == GL_FRAMEBUFFER_COMPLETE);
+                    GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                    if ((glGetError() == GL_NO_ERROR) && (Status == GL_FRAMEBUFFER_COMPLETE))
+                        TexFormatInfo.BindFlags |= BIND_DEPTH_STENCIL;
                 }
             }
             else if (bTestColorAttachment)
             {
-                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TestGLTex, 0);
+                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, TestGLTex2D, 0);
                 if (glGetError() == GL_NO_ERROR)
                 {
                     static const GLenum DrawBuffers[] = {GL_COLOR_ATTACHMENT0};
                     glDrawBuffers(_countof(DrawBuffers), DrawBuffers);
                     CHECK_GL_ERROR("Failed to set draw buffers via glDrawBuffers()");
 
-                    GLenum Status                 = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-                    TexFormatInfo.ColorRenderable = (glGetError() == GL_NO_ERROR) && (Status == GL_FRAMEBUFFER_COMPLETE);
+                    GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+                    if ((glGetError() == GL_NO_ERROR) && (Status == GL_FRAMEBUFFER_COMPLETE))
+                        TexFormatInfo.BindFlags |= BIND_RENDER_TARGET;
                 }
             }
 
@@ -952,6 +990,14 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
                 CHECK_GL_ERROR("Failed to bind the framebuffer");
             }
         }
+
+#if GL_ARB_shader_image_load_store
+        {
+            glBindImageTexture(0, TestGLTex2D, 0, GL_FALSE, 0, GL_READ_WRITE, GLFmt);
+            if (glGetError() == GL_NO_ERROR)
+                TexFormatInfo.BindFlags |= BIND_UNORDERED_ACCESS;
+        }
+#endif
     }
 
     TexFormatInfo.SampleCounts = 0x01;
@@ -976,20 +1022,20 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 #endif
     }
 
-    // Create test texture 3D
-    TexFormatInfo.Tex3DFmt = false;
-    // 3D textures do not support depth formats
+    // Create test texture 3D.
+    // 3D textures do not support depth formats.
     if (!(TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH ||
           TexFormatInfo.ComponentType == COMPONENT_TYPE_DEPTH_STENCIL))
     {
-        GLObjectWrappers::GLTextureObj TestGLTex(true);
-        TexFormatInfo.Tex3DFmt = CreateTestGLTexture(
-            ContextState, GL_TEXTURE_3D, TestGLTex,
-            [&]() //
-            {
-                glTexStorage3D(GL_TEXTURE_3D, 1, GLFmt, TestTextureDim, TestTextureDim, TestTextureDepth);
-            } //
-        );
+        if (CreateTestGLTexture(
+                ContextState, GL_TEXTURE_3D,
+                [&]() //
+                {
+                    glTexStorage3D(GL_TEXTURE_3D, 1, GLFmt, TestTextureDim, TestTextureDim, TestTextureDepth);
+                }))
+        {
+            TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_3D;
+        }
     }
 }
 

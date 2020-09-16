@@ -463,16 +463,27 @@ void RenderDeviceD3D12Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
         return;
     }
 
-    // clang-format off
-    TexFormatInfo.Filterable      = ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE) != 0) || 
-                                    ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE_COMPARISON) != 0);
-    TexFormatInfo.ColorRenderable = (FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_RENDER_TARGET) != 0;
-    TexFormatInfo.DepthRenderable = (FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL) != 0;
-    TexFormatInfo.Tex1DFmt        = (FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE1D)   != 0;
-    TexFormatInfo.Tex2DFmt        = (FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D)   != 0;
-    TexFormatInfo.Tex3DFmt        = (FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE3D)   != 0;
-    TexFormatInfo.TexCubeFmt      = (FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURECUBE) != 0;
-    // clang-format on
+    TexFormatInfo.Filterable =
+        ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE) != 0) ||
+        ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_SHADER_SAMPLE_COMPARISON) != 0);
+
+    TexFormatInfo.BindFlags = BIND_SHADER_RESOURCE;
+    if ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_RENDER_TARGET) != 0)
+        TexFormatInfo.BindFlags |= BIND_RENDER_TARGET;
+    if ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_DEPTH_STENCIL) != 0)
+        TexFormatInfo.BindFlags |= BIND_DEPTH_STENCIL;
+    if ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TYPED_UNORDERED_ACCESS_VIEW) != 0)
+        TexFormatInfo.BindFlags |= BIND_UNORDERED_ACCESS;
+
+    TexFormatInfo.Dimensions = RESOURCE_DIMENSION_SUPPORT_NONE;
+    if ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE1D) != 0)
+        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_1D | RESOURCE_DIMENSION_SUPPORT_TEX_1D_ARRAY;
+    if ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE2D) != 0)
+        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_2D | RESOURCE_DIMENSION_SUPPORT_TEX_2D_ARRAY;
+    if ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURE3D) != 0)
+        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_3D;
+    if ((FormatSupport.Support1 & D3D12_FORMAT_SUPPORT1_TEXTURECUBE) != 0)
+        TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_CUBE | RESOURCE_DIMENSION_SUPPORT_TEX_CUBE_ARRAY;
 
     TexFormatInfo.SampleCounts = 0x0;
     for (Uint32 SampleCount = 1; SampleCount <= D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; SampleCount *= 2)

@@ -610,9 +610,9 @@ void TextureBaseGL::CopyData(DeviceContextGLImpl* pDeviceCtxGL,
 #endif
     {
         const auto& FmtAttribs = GetDevice()->GetTextureFormatInfoExt(m_Desc.Format);
-        if (!FmtAttribs.ColorRenderable)
+        if ((FmtAttribs.BindFlags & BIND_RENDER_TARGET) == 0)
         {
-            LOG_ERROR_MESSAGE("Unable to perform copy operation because ", FmtAttribs.Name, " is not color renderable format");
+            LOG_ERROR_MESSAGE("Unable to perform copy operation because ", FmtAttribs.Name, " is not a color renderable format");
             return;
         }
 

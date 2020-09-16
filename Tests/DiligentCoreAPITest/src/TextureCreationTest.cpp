@@ -565,7 +565,7 @@ TEST_P(TextureCreationTest, CreateTexture)
     // Test texture 1D / texture 1D array
     if (TexCaps.MaxTexture1DDimension != 0)
     {
-        if (FmtInfo.Tex1DFmt)
+        if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_1D)
             CreateTestTexture(RESOURCE_DIM_TEX_1D, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
     }
     else
@@ -575,7 +575,7 @@ TEST_P(TextureCreationTest, CreateTexture)
 
     if (TexCaps.MaxTexture1DArraySlices != 0)
     {
-        if (FmtInfo.Tex1DFmt)
+        if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_1D_ARRAY)
             CreateTestTexture(RESOURCE_DIM_TEX_1D_ARRAY, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
     }
     else
@@ -584,11 +584,20 @@ TEST_P(TextureCreationTest, CreateTexture)
     }
 
     // Test texture 2D / texture 2D array
-    CreateTestTexture(RESOURCE_DIM_TEX_2D, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
-    CreateTestTexture(RESOURCE_DIM_TEX_2D, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
-    CreateTestTexture(RESOURCE_DIM_TEX_2D_ARRAY, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
-    CreateTestTexture(RESOURCE_DIM_TEX_2D_ARRAY, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
-    CreateTestCubemap(TestInfo.Fmt, TestInfo.BindFlags, TestInfo.TestDataUpload);
+    if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_2D)
+    {
+        CreateTestTexture(RESOURCE_DIM_TEX_2D, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
+        CreateTestTexture(RESOURCE_DIM_TEX_2D, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
+    }
+    if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_2D_ARRAY)
+    {
+        CreateTestTexture(RESOURCE_DIM_TEX_2D_ARRAY, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
+        CreateTestTexture(RESOURCE_DIM_TEX_2D_ARRAY, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
+    }
+    if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_CUBE)
+    {
+        CreateTestCubemap(TestInfo.Fmt, TestInfo.BindFlags, TestInfo.TestDataUpload);
+    }
 
     if (TestInfo.Fmt != TEX_FORMAT_RGB9E5_SHAREDEXP &&
         FmtInfo.ComponentType != COMPONENT_TYPE_COMPRESSED)
@@ -621,7 +630,7 @@ TEST_P(TextureCreationTest, CreateTexture)
     }
 
     // Test texture 3D
-    if (FmtInfo.Tex3DFmt)
+    if (FmtInfo.Dimensions & RESOURCE_DIMENSION_SUPPORT_TEX_3D)
         CreateTestTexture(RESOURCE_DIM_TEX_3D, TestInfo.Fmt, TestInfo.BindFlags, 1, TestInfo.TestDataUpload);
 }
 
