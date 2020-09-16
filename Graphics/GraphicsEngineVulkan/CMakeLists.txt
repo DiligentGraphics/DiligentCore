@@ -233,8 +233,10 @@ if(PLATFORM_WIN32)
     # Use Volk
 elseif(PLATFORM_MACOS)
     find_library(Vulkan_LIBRARY NAMES vulkan.1 vulkan PATHS "../../ThirdParty/vulkan/libs/macOS")
+    list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 elseif(PLATFORM_IOS)
     set(Vulkan_LIBRARY ${MoltenVK_LIBRARY})
+    list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(METAL_LIBRARY Metal)
@@ -248,9 +250,6 @@ elseif(PLATFORM_ANDROID)
     # Use Volk
 else()
     find_library(Vulkan_LIBRARY NAMES vulkan)
-endif()
-
-if(Vulkan_LIBRARY)
     list(APPEND PRIVATE_DEPENDENCIES ${Vulkan_LIBRARY})
 endif()
 
