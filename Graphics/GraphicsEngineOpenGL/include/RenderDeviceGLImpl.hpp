@@ -188,6 +188,8 @@ private:
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     bool         CheckExtension(const Char* ExtensionString);
     void         FlagSupportedTexFormats();
+
+    int m_ShowDebugGLOutput = 1;
 };
 
 } // namespace Diligent

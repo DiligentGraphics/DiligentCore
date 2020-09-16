@@ -30,61 +30,6 @@
 namespace Diligent
 {
 
-static void openglCallbackFunction(GLenum        source,
-                                   GLenum        type,
-                                   GLuint        id,
-                                   GLenum        severity,
-                                   GLsizei       length,
-                                   const GLchar* message,
-                                   const void*   userParam)
-{
-    std::stringstream MessageSS;
-
-    MessageSS << "OpenGL debug message (";
-    switch (type)
-    {
-        case GL_DEBUG_TYPE_ERROR:
-            MessageSS << "ERROR";
-            break;
-        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-            MessageSS << "DEPRECATED_BEHAVIOR";
-            break;
-        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-            MessageSS << "UNDEFINED_BEHAVIOR";
-            break;
-        case GL_DEBUG_TYPE_PORTABILITY:
-            MessageSS << "PORTABILITY";
-            break;
-        case GL_DEBUG_TYPE_PERFORMANCE:
-            MessageSS << "PERFORMANCE";
-            break;
-        case GL_DEBUG_TYPE_OTHER:
-            MessageSS << "OTHER";
-            break;
-    }
-
-    switch (severity)
-    {
-        case GL_DEBUG_SEVERITY_LOW:
-            MessageSS << ", low severity";
-            break;
-        case GL_DEBUG_SEVERITY_MEDIUM:
-            MessageSS << ", medium severity";
-            break;
-        case GL_DEBUG_SEVERITY_HIGH:
-            MessageSS << ", HIGH severity";
-            break;
-        case GL_DEBUG_SEVERITY_NOTIFICATION:
-            MessageSS << ", notification";
-            break;
-    }
-
-    MessageSS << ")" << std::endl
-              << message << std::endl;
-
-    LOG_INFO_MESSAGE(MessageSS.str().c_str());
-}
-
 GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCaps, const struct SwapChainDesc* /*pSCDesc*/) :
     m_Context(0),
     m_WindowId(InitAttribs.Window.WindowId),
@@ -100,23 +45,6 @@ GLContext::GLContext(const EngineGLCreateInfo& InitAttribs, DeviceCaps& deviceCa
     GLenum err = glewInit();
     if (GLEW_OK != err)
         LOG_ERROR_AND_THROW("Failed to initialize GLEW");
-
-    if (InitAttribs.Window.WindowId != 0 && InitAttribs.Window.pDisplay != nullptr)
-    {
-        if (InitAttribs.CreateDebugContext && glDebugMessageCallback != nullptr)
-        {
-            glEnable(GL_DEBUG_OUTPUT);
-            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-            glDebugMessageCallback(openglCallbackFunction, nullptr);
-            GLuint unusedIds = 0;
-            glDebugMessageControl(GL_DONT_CARE,
-                                  GL_DONT_CARE,
-                                  GL_DONT_CARE,
-                                  0,
-                                  &unusedIds,
-                                  true);
-        }
-    }
 
     //Checking GL version
     const GLubyte* GLVersionString = glGetString(GL_VERSION);

@@ -54,6 +54,74 @@
 namespace Diligent
 {
 
+static void APIENTRY openglCallbackFunction(GLenum        source,
+                                            GLenum        type,
+                                            GLuint        id,
+                                            GLenum        severity,
+                                            GLsizei       length,
+                                            const GLchar* message,
+                                            const void*   userParam)
+{
+    auto* ShowDebugOutput = reinterpret_cast<const int*>(userParam);
+    if (*ShowDebugOutput == 0)
+        return;
+
+    // Note: disabling flood of notifications through glDebugMessageControl() has no effect,
+    // so we have to filter them out here
+    if (id == 131185 || // Buffer detailed info: Buffer object <X> (bound to GL_XXXX ... , usage hint is GL_DYNAMIC_DRAW)
+                        // will use VIDEO memory as the source for buffer object operations.
+        id == 131186    // Buffer object <X> (bound to GL_XXXX, usage hint is GL_DYNAMIC_DRAW) is being copied/moved from VIDEO memory to HOST memory.
+    )
+        return;
+
+    std::stringstream MessageSS;
+
+    MessageSS << "OpenGL debug message " << id << " (";
+    switch (source)
+    {
+        // clang-format off
+        case GL_DEBUG_SOURCE_API:             MessageSS << "Source: API.";             break;
+        case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   MessageSS << "Source: Window System.";   break;
+        case GL_DEBUG_SOURCE_SHADER_COMPILER: MessageSS << "Source: Shader Compiler."; break;
+        case GL_DEBUG_SOURCE_THIRD_PARTY:     MessageSS << "Source: Third Party.";     break;
+        case GL_DEBUG_SOURCE_APPLICATION:     MessageSS << "Source: Application.";     break;
+        case GL_DEBUG_SOURCE_OTHER:           MessageSS << "Source: Other.";           break;
+        default:                              MessageSS << "Source: Unknown (" << source << ").";
+            // clang-format on
+    }
+
+    switch (type)
+    {
+        // clang-format off
+        case GL_DEBUG_TYPE_ERROR:               MessageSS << " Type: ERROR.";                break;
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: MessageSS << " Type: Deprecated Behaviour."; break;
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  MessageSS << " Type: UNDEFINED BEHAVIOUR.";  break; 
+        case GL_DEBUG_TYPE_PORTABILITY:         MessageSS << " Type: Portability.";          break;
+        case GL_DEBUG_TYPE_PERFORMANCE:         MessageSS << " Type: PERFORMANCE.";          break;
+        case GL_DEBUG_TYPE_MARKER:              MessageSS << " Type: Marker.";               break;
+        case GL_DEBUG_TYPE_PUSH_GROUP:          MessageSS << " Type: Push Group.";           break;
+        case GL_DEBUG_TYPE_POP_GROUP:           MessageSS << " Type: Pop Group.";            break;
+        case GL_DEBUG_TYPE_OTHER:               MessageSS << " Type: Other.";                break;
+        default:                                MessageSS << " Type: Unknown (" << type << ").";
+            // clang-format on
+    }
+
+    switch (severity)
+    {
+        // clang-format off
+        case GL_DEBUG_SEVERITY_HIGH:         MessageSS << " Severity: HIGH";         break;
+        case GL_DEBUG_SEVERITY_MEDIUM:       MessageSS << " Severity: Medium";       break;
+        case GL_DEBUG_SEVERITY_LOW:          MessageSS << " Severity: Low";          break;
+        case GL_DEBUG_SEVERITY_NOTIFICATION: MessageSS << " Severity: Notification"; break;
+        default:                             MessageSS << " Severity: Unknown (" << severity << ")"; break;
+            // clang-format on
+    }
+
+    MessageSS << "): " << message;
+
+    LOG_INFO_MESSAGE(MessageSS.str().c_str());
+}
+
 RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
                                        IMemoryAllocator&         RawMemAllocator,
                                        IEngineFactory*           pEngineFactory,
@@ -95,6 +163,24 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         auto CurrExtension = glGetStringi(GL_EXTENSIONS, Ext);
         CHECK_GL_ERROR("Failed to get extension string #", Ext);
         m_ExtensionStrings.emplace(reinterpret_cast<const Char*>(CurrExtension));
+    }
+
+    if (InitAttribs.CreateDebugContext && glDebugMessageCallback != nullptr)
+    {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(openglCallbackFunction, &m_ShowDebugGLOutput);
+        GLuint unusedIds = 0;
+        glDebugMessageControl(
+            GL_DONT_CARE, // Source of debug messages to enable or disable
+            GL_DONT_CARE, // Type of debug messages to enable or disable
+            GL_DONT_CARE, // Severity of debug messages to enable or disable
+            0,            // The length of the array ids
+            &unusedIds,   // Array of unsigned integers contianing the ids of the messages to enable or disable
+            GL_TRUE       // Flag determining whether the selected messages should be enabled or disabled
+        );
+        if (glGetError() != GL_NO_ERROR)
+            LOG_ERROR_MESSAGE("Failed to enable debug messages");
     }
 
     FlagSupportedTexFormats();
@@ -852,6 +938,9 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
     TexFormatInfo.BindFlags  = BIND_SHADER_RESOURCE;
     TexFormatInfo.Dimensions = RESOURCE_DIMENSION_SUPPORT_NONE;
 
+    // Disable debug messages - errors are exepcted
+    m_ShowDebugGLOutput = 0;
+
     // Create test texture 1D
     if (m_DeviceCaps.TexCaps.MaxTexture1DDimension != 0 &&
         TexFormatInfo.ComponentType != COMPONENT_TYPE_COMPRESSED)
@@ -993,9 +1082,26 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
 #if GL_ARB_shader_image_load_store
         {
+            GLint     CurrentImg     = 0;
+            GLint     CurrentLevel   = 0;
+            GLboolean CurrentLayered = 0;
+            GLint     CurrentLayer   = 0;
+            GLint     CurrenAccess   = 0;
+            GLint     CurrenFormat   = 0;
+            glGetIntegeri_v(GL_IMAGE_BINDING_NAME, 0, &CurrentImg);
+            glGetIntegeri_v(GL_IMAGE_BINDING_LEVEL, 0, &CurrentLevel);
+            glGetBooleani_v(GL_IMAGE_BINDING_LAYERED, 0, &CurrentLayered);
+            glGetIntegeri_v(GL_IMAGE_BINDING_LAYER, 0, &CurrentLayer);
+            glGetIntegeri_v(GL_IMAGE_BINDING_ACCESS, 0, &CurrenAccess);
+            glGetIntegeri_v(GL_IMAGE_BINDING_FORMAT, 0, &CurrenFormat);
+            CHECK_GL_ERROR("Failed to get current image properties");
+
             glBindImageTexture(0, TestGLTex2D, 0, GL_FALSE, 0, GL_READ_WRITE, GLFmt);
             if (glGetError() == GL_NO_ERROR)
                 TexFormatInfo.BindFlags |= BIND_UNORDERED_ACCESS;
+
+            glBindImageTexture(0, CurrentImg, CurrentLevel, CurrentLayered, CurrentLayer, CurrenAccess, CurrenFormat);
+            CHECK_GL_ERROR("Failed to restore original image");
         }
 #endif
     }
@@ -1037,6 +1143,9 @@ void RenderDeviceGLImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
             TexFormatInfo.Dimensions |= RESOURCE_DIMENSION_SUPPORT_TEX_3D;
         }
     }
+
+    // Enable debug messages
+    m_ShowDebugGLOutput = 1;
 }
 
 FBOCache& RenderDeviceGLImpl::GetFBOCache(GLContext::NativeGLContextType Context)
