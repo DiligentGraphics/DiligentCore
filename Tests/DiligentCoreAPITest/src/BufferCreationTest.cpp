@@ -348,10 +348,11 @@ TEST_F(BufferCreationTest, CreateDynamicBuffer)
 
 TEST_F(BufferCreationTest, CreateUnifiedBuffer)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    auto* pCtx    = pEnv->GetDeviceContext();
-    if (pDevice->GetDeviceCaps().AdapterInfo.UnifiedMemory == 0)
+    auto*       pEnv        = TestingEnvironment::GetInstance();
+    auto*       pDevice     = pEnv->GetDevice();
+    auto*       pCtx        = pEnv->GetDeviceContext();
+    const auto& AdapterInfo = pDevice->GetDeviceCaps().AdapterInfo;
+    if (AdapterInfo.UnifiedMemory == 0)
     {
         GTEST_SKIP() << "Unified memory is not available on this device";
     }
@@ -363,6 +364,7 @@ TEST_F(BufferCreationTest, CreateUnifiedBuffer)
     BuffDesc.BindFlags      = BIND_VERTEX_BUFFER;
     BuffDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
 
+    if (AdapterInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_WRITE)
     {
         BufferData InitData;
         InitData.DataSize = BuffDesc.uiSizeInBytes;
@@ -372,7 +374,12 @@ TEST_F(BufferCreationTest, CreateUnifiedBuffer)
         pDevice->CreateBuffer(BuffDesc, &InitData, &pBuffer);
         ASSERT_NE(pBuffer, nullptr) << GetObjectDescString(BuffDesc);
     }
+    else
+    {
+        LOG_INFO_MESSAGE("Unified memory on this device does not support write access");
+    }
 
+    if (AdapterInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_READ)
     {
         BuffDesc.BindFlags      = BIND_NONE;
         BuffDesc.CPUAccessFlags = CPU_ACCESS_READ;
@@ -384,6 +391,10 @@ TEST_F(BufferCreationTest, CreateUnifiedBuffer)
         pCtx->MapBuffer(pBuffer, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pMappedData);
         EXPECT_NE(pMappedData, nullptr);
         pCtx->UnmapBuffer(pBuffer, MAP_READ);
+    }
+    else
+    {
+        LOG_INFO_MESSAGE("Unified memory on this device does not read access");
     }
 }
 

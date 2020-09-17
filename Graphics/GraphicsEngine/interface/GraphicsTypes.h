@@ -125,11 +125,13 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// A resource residing in a unified memory (e.g. memory shared between CPU and GPU),
     /// that can be read and written by GPU and can also be directly accessed by CPU.
     ///
-    /// \remarks Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.\n
-    ///
-    ///          An application should check if unified memory is available on the device by quering
+    /// \remarks An application should check if unified memory is available on the device by quering
     ///          the device caps (see Diligent::IRenderDevice::GetDeviceCaps and Diligent::GraphicsAdapterInfo).
     ///          If there is no unified memory, an application should choose another usage type (typically, USAGE_DEFAULT).
+    /// 
+    ///          Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.
+    ///          An application should check supported unified memory CPU access types by quering the device caps.
+    ///          (see Diligent::GraphicsAdapterInfo::UnifiedMemoryCPUAccess).
     USAGE_UNIFIED,
 
     /// Helper value indicating the total number of elements in the enum
@@ -1690,6 +1692,9 @@ struct GraphicsAdapterInfo
     ///       resourecs with other usages may be allocated as well if there is no corresponding
     ///       memory type.
     Uint64  UnifiedMemory       DEFAULT_INITIALIZER(0);
+
+    /// Supported access types for the unified memory.
+    CPU_ACCESS_FLAGS UnifiedMemoryCPUAccess DEFAULT_INITIALIZER(CPU_ACCESS_NONE);
 };
 typedef struct GraphicsAdapterInfo GraphicsAdapterInfo;
 

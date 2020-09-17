@@ -93,6 +93,18 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
                           "in the device caps before creating unified buffers.");
             VERIFY_BUFFER(Desc.CPUAccessFlags != CPU_ACCESS_NONE,
                           "at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a unified buffer.");
+            if (Desc.CPUAccessFlags & CPU_ACCESS_WRITE)
+            {
+                VERIFY_BUFFER(deviceCaps.AdapterInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_WRITE,
+                              "Unified memory on this device does not support write access. Check the available access flags "
+                              "in the device caps before creating unified buffers.");
+            }
+            if (Desc.CPUAccessFlags & CPU_ACCESS_READ)
+            {
+                VERIFY_BUFFER(deviceCaps.AdapterInfo.UnifiedMemoryCPUAccess & CPU_ACCESS_READ,
+                              "Unified memory on this device does not support read access. Check the available access flags "
+                              "in the device caps before creating unified buffers.");
+            }
             break;
 
         default:

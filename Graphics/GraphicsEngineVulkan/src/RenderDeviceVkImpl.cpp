@@ -189,7 +189,10 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
                 if ((MemTypeInfo.propertyFlags & UnifiedMemoryFlags) == UnifiedMemoryFlags)
                 {
                     IsUnified = true;
-                    break;
+                    if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+                        AdapterInfo.UnifiedMemoryCPUAccess |= CPU_ACCESS_WRITE;
+                    if (MemTypeInfo.propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+                        AdapterInfo.UnifiedMemoryCPUAccess |= CPU_ACCESS_READ;
                 }
             }
             (IsUnified ? AdapterInfo.UnifiedMemory : AdapterInfo.DeviceLocalMemory) += static_cast<Uint64>(HeapInfo.size);

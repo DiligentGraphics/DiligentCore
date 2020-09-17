@@ -2,6 +2,8 @@
 
 ### API Changes
 
+* Added `UnifiedMemoryCPUAccess` member to `GraphicsAdapterInfo` struct (API Version 240072)
+   * An application should check allowed unified memory access types before creating unified buffers
 * Added GPU vendor and memory size detection (API Version 240071)
    * Added `ADAPTER_VENDOR` enum
    * Added `GraphicsAdapterInfo` struct
