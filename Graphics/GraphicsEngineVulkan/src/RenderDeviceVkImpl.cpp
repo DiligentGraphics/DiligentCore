@@ -26,8 +26,6 @@
  */
 
 #include "pch.h"
-#include <string.h>
-
 #include "RenderDeviceVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
 #include "ShaderVkImpl.hpp"
@@ -162,7 +160,10 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 
     const auto& DeviceProps = m_PhysicalDevice->GetProperties();
 
-    strncpy_s(AdapterInfo.Description, DeviceProps.deviceName, _countof(AdapterInfo.Description) - 1);
+    static_assert(_countof(AdapterInfo.Description) <= _countof(DeviceProps.deviceName), "");
+    for (size_t i = 0; i < _countof(AdapterInfo.Description) - 1 && DeviceProps.deviceName[i] != 0; ++i)
+        AdapterInfo.Description[i] = DeviceProps.deviceName[i];
+
     AdapterInfo.Type               = ADAPTER_TYPE_HARDWARE;
     AdapterInfo.Vendor             = VendorIdToAdapterVendor(DeviceProps.vendorID);
     AdapterInfo.VendorId           = DeviceProps.vendorID;

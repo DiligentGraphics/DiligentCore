@@ -26,7 +26,6 @@
  */
 
 #include "pch.h"
-#include <string.h>
 
 #include "RenderDeviceGLImpl.hpp"
 
@@ -199,7 +198,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 
     auto& AdapterInfo = m_DeviceCaps.AdapterInfo;
 
-    strncpy_s(AdapterInfo.Description, reinterpret_cast<const char*>(glstrVendor.data()), _countof(AdapterInfo.Description) - 1);
+    for (size_t i = 0; i < _countof(AdapterInfo.Description) - 1 && i < glstrVendor.length(); ++i)
+        AdapterInfo.Description[i] = glstrVendor[i];
+
     AdapterInfo.Type               = ADAPTER_TYPE_HARDWARE;
     AdapterInfo.VendorId           = 0;
     AdapterInfo.DeviceId           = 0;
