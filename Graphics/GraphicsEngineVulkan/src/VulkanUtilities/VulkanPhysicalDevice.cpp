@@ -77,14 +77,14 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         (void)NextFeat;
 
         // Enable mesh shader extension.
-#    ifdef VK_NV_mesh_shader
         if (IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
         {
             *NextFeat                      = &m_ExtFeatures.MeshShader;
             NextFeat                       = &m_ExtFeatures.MeshShader.pNext;
             m_ExtFeatures.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
         }
-#    endif
+
+        *NextFeat = nullptr;
 
         // Initialize device extension features by current physical device features.
         // Some flags may not be supported by hardware.

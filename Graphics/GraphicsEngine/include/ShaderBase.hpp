@@ -38,9 +38,12 @@
 #include "PlatformMisc.hpp"
 #include "EngineMemory.h"
 #include "Align.hpp"
+#include "Constants.h"
 
 namespace Diligent
 {
+
+static_assert((1u << (NUM_SHADER_TYPES - 1)) == SHADER_TYPE_LAST, "check shader type enum or shader count");
 
 inline SHADER_TYPE GetShaderTypeFromIndex(Int32 Index)
 {

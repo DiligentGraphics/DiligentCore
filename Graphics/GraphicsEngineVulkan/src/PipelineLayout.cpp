@@ -53,10 +53,8 @@ static VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE Shader
         case SHADER_TYPE_GEOMETRY:      return VK_SHADER_STAGE_GEOMETRY_BIT;
         case SHADER_TYPE_PIXEL:         return VK_SHADER_STAGE_FRAGMENT_BIT;
         case SHADER_TYPE_COMPUTE:       return VK_SHADER_STAGE_COMPUTE_BIT;
-#ifdef VK_NV_mesh_shader
         case SHADER_TYPE_AMPLIFICATION: return VK_SHADER_STAGE_TASK_BIT_NV;
         case SHADER_TYPE_MESH:          return VK_SHADER_STAGE_MESH_BIT_NV;
-#endif
         // clang-format on
         default:
             UNEXPECTED("Unknown shader type");

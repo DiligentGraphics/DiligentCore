@@ -260,9 +260,6 @@ public:
     /// Implementation of IDeviceContextD3D12::ID3D12GraphicsCommandList() in Direct3D12 backend.
     virtual ID3D12GraphicsCommandList* DILIGENT_CALL_TYPE GetD3D12CommandList() override final;
 
-    ///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute)
-    //static constexpr int NumShaderTypes = 6;
-
     void UpdateBufferRegion(class BufferD3D12Impl*         pBuffD3D12,
                             D3D12DynamicAllocation&        Allocation,
                             Uint64                         DstOffset,

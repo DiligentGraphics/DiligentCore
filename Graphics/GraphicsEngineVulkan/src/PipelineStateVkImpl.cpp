@@ -230,10 +230,8 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
             case SHADER_TYPE_GEOMETRY:      StageCI.stage = VK_SHADER_STAGE_GEOMETRY_BIT;                break;
             case SHADER_TYPE_PIXEL:         StageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;                break;
             case SHADER_TYPE_COMPUTE:       StageCI.stage = VK_SHADER_STAGE_COMPUTE_BIT;                 break;
-#ifdef VK_NV_mesh_shader
             case SHADER_TYPE_AMPLIFICATION: StageCI.stage = VK_SHADER_STAGE_TASK_BIT_NV;                 break;
             case SHADER_TYPE_MESH:          StageCI.stage = VK_SHADER_STAGE_MESH_BIT_NV;                 break;
-#endif
             default: UNEXPECTED("Unknown shader type");
                 // clang-format on
         }

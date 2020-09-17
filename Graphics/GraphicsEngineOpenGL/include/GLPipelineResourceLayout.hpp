@@ -82,7 +82,10 @@ class GLPipelineResourceLayout
 public:
     GLPipelineResourceLayout(IObject& Owner) :
         m_Owner(Owner)
-    {}
+    {
+        m_ProgramIndex.fill(-1);
+    }
+
     ~GLPipelineResourceLayout();
 
     // No copies, only moves are allowed
@@ -328,9 +331,9 @@ private:
 /*34*/ OffsetType m_ImageOffset         = 0;
 /*36*/ OffsetType m_StorageBufferOffset = 0;
 /*38*/ OffsetType m_VariableEndOffset   = 0;
-/*40*/ std::array<Int8, 6> m_ProgramIndex = {{-1, -1, -1, -1, -1, -1}};
-/*46*/ Uint8      m_NumPrograms         = 0;
-/*48*/
+/*40*/ std::array<Int8, NUM_SHADER_TYPES> m_ProgramIndex;
+/*48*/ Uint8      m_NumPrograms         = 0;
+/*49*/
     // clang-format on
 
     template <typename ResourceType> OffsetType GetResourceOffset() const;

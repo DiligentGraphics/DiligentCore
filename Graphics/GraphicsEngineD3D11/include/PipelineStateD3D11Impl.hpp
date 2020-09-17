@@ -142,9 +142,9 @@ private:
     // SRB memory allocator must be defined before the default shader res binding
     SRBMemoryAllocator m_SRBMemAllocator;
 
-    Int8 m_ResourceLayoutIndex[6] = {-1, -1, -1, -1, -1, -1};
+    std::array<Int8, NUM_SHADER_TYPES> m_ResourceLayoutIndex;
 
-    Uint16 m_StaticSamplerOffsets[MAX_SHADERS_IN_PIPELINE + 1] = {};
+    std::array<Uint16, MAX_SHADERS_IN_PIPELINE + 1> m_StaticSamplerOffsets = {};
     struct StaticSamplerInfo
     {
         const D3DShaderResourceAttribs& Attribs;

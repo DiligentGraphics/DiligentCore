@@ -47,6 +47,8 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*  pR
     m_ShaderResourceCache{ShaderResourceCacheVk::DbgCacheContentType::SRBResources}
 // clang-format on
 {
+    m_ResourceLayoutIndex.fill(-1);
+
     auto* ppShaders = pPSO->GetShaders();
     m_NumShaders    = static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaders());
 

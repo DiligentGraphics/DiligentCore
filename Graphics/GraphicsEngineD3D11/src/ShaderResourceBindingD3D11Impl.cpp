@@ -49,6 +49,7 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl(IReferenceCounter
     m_bIsStaticResourcesBound{false}
 // clang-format on
 {
+    m_ResourceLayoutIndex.fill(-1);
     m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaders());
 
     // clang-format off
@@ -183,7 +184,7 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
 IShaderResourceVariable* ShaderResourceBindingD3D11Impl::GetVariableByName(SHADER_TYPE ShaderType, const char* Name)
 {
     auto Ind = GetShaderTypeIndex(ShaderType);
-    VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));
+    VERIFY_EXPR(Ind >= 0 && Ind < m_ResourceLayoutIndex.size());
     auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
     if (ResLayoutIndex < 0)
     {
@@ -199,7 +200,7 @@ IShaderResourceVariable* ShaderResourceBindingD3D11Impl::GetVariableByName(SHADE
 Uint32 ShaderResourceBindingD3D11Impl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
     auto Ind = GetShaderTypeIndex(ShaderType);
-    VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));
+    VERIFY_EXPR(Ind >= 0 && Ind < m_ResourceLayoutIndex.size());
     auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
     if (ResLayoutIndex < 0)
     {
@@ -215,7 +216,7 @@ Uint32 ShaderResourceBindingD3D11Impl::GetVariableCount(SHADER_TYPE ShaderType) 
 IShaderResourceVariable* ShaderResourceBindingD3D11Impl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
     auto Ind = GetShaderTypeIndex(ShaderType);
-    VERIFY_EXPR(Ind >= 0 && Ind < _countof(m_ResourceLayoutIndex));
+    VERIFY_EXPR(Ind >= 0 && Ind < m_ResourceLayoutIndex.size());
     auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
     if (ResLayoutIndex < 0)
     {

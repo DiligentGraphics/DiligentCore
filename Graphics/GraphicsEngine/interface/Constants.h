@@ -51,7 +51,11 @@ static const Uint32 MAX_RENDER_TARGETS = DILIGENT_MAX_RENDER_TARGETS;
 static const Uint32 MAX_VIEWPORTS      = DILIGENT_MAX_VIEWPORTS;
 
 /// Maximum number of shader stages in a pipeline.
+/// (Vertex, Pixel, Geometry, Domain, Hull) or (Amplification, Mesh, Pixel)
 static const Uint32 MAX_SHADERS_IN_PIPELINE = 5;
+
+///// Number of different shader types (Vertex, Pixel, Geometry, Domain, Hull, Compute, Amplification, Mesh)
+static const Uint32 NUM_SHADER_TYPES = 8;
 
 // clang-format on
 
