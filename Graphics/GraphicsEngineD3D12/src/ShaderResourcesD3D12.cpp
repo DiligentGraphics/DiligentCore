@@ -33,9 +33,68 @@
 #include "ShaderBase.hpp"
 #include "DXCompiler.hpp"
 
+#include "dxc/DxilContainer/DxilContainer.h"
+
 namespace Diligent
 {
 
+static bool IsDXILBytecode(ID3DBlob* pBytecodeBlob)
+{
+    const auto* data_begin = reinterpret_cast<const uint8_t*>(pBytecodeBlob->GetBufferPointer());
+    const auto* data_end   = data_begin + pBytecodeBlob->GetBufferSize();
+    const auto* ptr        = data_begin;
+
+    if (ptr + sizeof(hlsl::DxilContainerHeader) > data_end)
+    {
+        // No space for the container header
+        return false;
+    }
+
+    // A DXIL container is composed of a header, a sequence of part lengths, and a sequence of parts.
+    // https://github.com/microsoft/DirectXShaderCompiler/blob/master/docs/DXIL.rst#dxil-container-format
+    const auto& ContainerHeader = *reinterpret_cast<const hlsl::DxilContainerHeader*>(ptr);
+    if (ContainerHeader.HeaderFourCC != hlsl::DFCC_Container)
+    {
+        // Incorrect FourCC
+        return false;
+    }
+
+    if (ContainerHeader.Version.Major != hlsl::DxilContainerVersionMajor)
+    {
+        LOG_WARNING_MESSAGE("Unable to parse DXIL container: the container major version is ", Uint32{ContainerHeader.Version.Major},
+                            " while ", Uint32{hlsl::DxilContainerVersionMajor}, " is expected");
+        return false;
+    }
+
+    // The header is followed by uint32_t PartOffset[PartCount];
+    // The offset is to a DxilPartHeader.
+    ptr += sizeof(hlsl::DxilContainerHeader);
+    if (ptr + sizeof(uint32_t) * ContainerHeader.PartCount > data_end)
+    {
+        // No space for offsets
+        return false;
+    }
+
+    const auto* PartOffsets = reinterpret_cast<const uint32_t*>(ptr);
+    for (uint32_t part = 0; part < ContainerHeader.PartCount; ++part)
+    {
+        const auto Offset = PartOffsets[part];
+        if (data_begin + Offset + sizeof(hlsl::DxilPartHeader) > data_end)
+        {
+            // No space for the part header
+            return false;
+        }
+
+        const auto& PartHeader = *reinterpret_cast<const hlsl::DxilPartHeader*>(data_begin + Offset);
+        if (PartHeader.PartFourCC == hlsl::DFCC_DXIL)
+        {
+            // We found DXIL part
+            return true;
+        }
+    }
+
+    return false;
+}
 
 ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob*         pShaderBytecode,
                                            const ShaderDesc& ShdrDesc,
@@ -57,13 +116,16 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob*         pShaderBytecode,
     };
 
     CComPtr<ID3D12ShaderReflection> pShaderReflection;
-    if (pDXCompiler != nullptr)
+    if (IsDXILBytecode(pShaderBytecode))
     {
-        // Try to get shader reflection with DXC.
+        VERIFY(pDXCompiler != nullptr, "DXC is not initialized");
         pDXCompiler->GetD3D12ShaderReflection(reinterpret_cast<IDxcBlob*>(pShaderBytecode), &pShaderReflection);
+        if (!pShaderReflection)
+        {
+            LOG_ERROR_AND_THROW("Failed to read shader reflection from DXIL container");
+        }
     }
-
-    if (!pShaderReflection)
+    else
     {
         // Use D3D compiler to get reflection.
         auto hr = D3DReflect(pShaderBytecode->GetBufferPointer(), pShaderBytecode->GetBufferSize(), __uuidof(pShaderReflection), reinterpret_cast<void**>(&pShaderReflection));
