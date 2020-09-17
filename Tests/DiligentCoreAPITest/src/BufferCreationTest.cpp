@@ -351,6 +351,10 @@ TEST_F(BufferCreationTest, CreateUnifiedBuffer)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
     auto* pCtx    = pEnv->GetDeviceContext();
+    if (pDevice->GetDeviceCaps().AdapterInfo.UnifiedMemory == 0)
+    {
+        GTEST_SKIP() << "Unified memory is not available on this device";
+    }
 
     BufferDesc BuffDesc;
     BuffDesc.Name           = "Unified vertex buffer";

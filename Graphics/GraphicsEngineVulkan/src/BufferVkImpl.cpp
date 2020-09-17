@@ -182,25 +182,6 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         VkMemoryRequirements MemReqs = LogicalDevice.GetBufferMemoryRequirements(m_VulkanBuffer);
 
         uint32_t MemoryTypeIndex = VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex;
-        if (m_Desc.Usage == USAGE_UNIFIED)
-        {
-            // Attempt to find device-local and CPU-visible memory type
-            // clang-format off
-            MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(
-                MemReqs.memoryTypeBits,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                (((m_Desc.CPUAccessFlags & CPU_ACCESS_READ)  != 0) ? VK_MEMORY_PROPERTY_HOST_CACHED_BIT   : 0) |
-                (((m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE) != 0) ? VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : 0)
-            );
-            // clang-format on
-            if (MemoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
-            {
-                DecayUnifiedBuffer();
-            }
-        }
-
-        if (MemoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
         {
             VkMemoryPropertyFlags vkMemoryFlags = 0;
             switch (m_Desc.Usage)
@@ -212,12 +193,18 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                     break;
 
                 case USAGE_STAGING:
-                    // clang-format off
-                    vkMemoryFlags = 
+                    vkMemoryFlags =
                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                        (((m_Desc.CPUAccessFlags & CPU_ACCESS_READ)  != 0) ? VK_MEMORY_PROPERTY_HOST_CACHED_BIT   : 0) |
+                        (((m_Desc.CPUAccessFlags & CPU_ACCESS_READ) != 0) ? VK_MEMORY_PROPERTY_HOST_CACHED_BIT : 0) |
                         (((m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE) != 0) ? VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : 0);
-                    // clang-format on
+                    break;
+
+                case USAGE_UNIFIED:
+                    vkMemoryFlags =
+                        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                        (((m_Desc.CPUAccessFlags & CPU_ACCESS_READ) != 0) ? VK_MEMORY_PROPERTY_HOST_CACHED_BIT : 0) |
+                        (((m_Desc.CPUAccessFlags & CPU_ACCESS_WRITE) != 0) ? VK_MEMORY_PROPERTY_HOST_COHERENT_BIT : 0);
                     break;
 
                 default:

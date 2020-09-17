@@ -126,15 +126,10 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// that can be read and written by GPU and can also be directly accessed by CPU.
     ///
     /// \remarks Unified resources must use at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags.\n
-    /// If it is not possible to create a unified resource, the engine will attempt to create a non-unified
-    /// resource as follows:
-    /// - If CPU_ACCESS_WRITE flag is specified, default-usage resource will be created.
-    /// - If CPU_ACCESS_READ flag is specified, staging resource will be created.
-    /// - If both CPU_ACCESS_WRITE and CPU_ACCESS_READ flags are used, an error will be generated.
-    /// An application must check the actual usage after the resource has been created.
     ///
-    /// Unified buffers are natively supported in Vulkan backend only. In other backends
-    /// they decay into default or staging buffers as described above.
+    ///          An application should check if unified memory is available on the device by quering
+    ///          the device caps (see Diligent::IRenderDevice::GetDeviceCaps and Diligent::GraphicsAdapterInfo).
+    ///          If there is no unified memory, an application should choose another usage type (typically, USAGE_DEFAULT).
     USAGE_UNIFIED,
 
     /// Helper value indicating the total number of elements in the enum

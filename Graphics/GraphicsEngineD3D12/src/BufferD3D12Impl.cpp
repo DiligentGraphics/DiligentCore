@@ -65,7 +65,7 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.Usage == USAGE_UNIFIED)
     {
-        DecayUnifiedBuffer();
+        LOG_ERROR_AND_THROW("Unified resources are not supported in Direct3D12");
     }
 
     if (m_Desc.Usage == USAGE_STATIC)

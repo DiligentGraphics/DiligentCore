@@ -41,7 +41,7 @@ namespace Diligent
 {
 
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData);
-void ValidateBufferDesc(const BufferDesc& Desc);
+void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps);
 
 /// Template class implementing base functionality for a buffer object
 
@@ -80,7 +80,7 @@ public:
         m_pDefaultUAV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)},
         m_pDefaultSRV{nullptr, STDDeleter<BufferViewImplType, TBuffViewObjAllocator>(BuffViewObjAllocator)}
     {
-        ValidateBufferDesc(this->m_Desc);
+        ValidateBufferDesc(this->m_Desc, pDevice->GetDeviceCaps());
 
         Uint64 DeviceQueuesMask = pDevice->GetCommandQueueMask();
         DEV_CHECK_ERR((this->m_Desc.CommandQueueMask & DeviceQueuesMask) != 0, "No bits in the command queue mask (0x", std::hex, this->m_Desc.CommandQueueMask, ") correspond to one of ", pDevice->GetCommandQueueCount(), " available device command queues");
@@ -133,27 +133,6 @@ protected:
 
     /// Corrects buffer view description and validates view parameters.
     void CorrectBufferViewDesc(struct BufferViewDesc& ViewDesc);
-
-    void DecayUnifiedBuffer()
-    {
-        VERIFY_EXPR(this->m_Desc.Usage == USAGE_UNIFIED);
-        VERIFY_EXPR(this->m_Desc.CPUAccessFlags != CPU_ACCESS_NONE);
-        if (this->m_Desc.CPUAccessFlags == CPU_ACCESS_WRITE)
-        {
-            this->m_Desc.Usage          = USAGE_DEFAULT;
-            this->m_Desc.CPUAccessFlags = CPU_ACCESS_NONE;
-        }
-        else if (this->m_Desc.CPUAccessFlags == CPU_ACCESS_READ)
-        {
-            this->m_Desc.Usage = USAGE_STAGING;
-        }
-        else
-        {
-            LOG_ERROR_AND_THROW("Unified buffer '", this->m_Desc.Name,
-                                "' cannot be automatically converted to a non-unified buffer "
-                                "because it uses both CPU_ACCESS_WRITE and CPU_ACCESS_READ flags");
-        }
-    }
 
 #ifdef DILIGENT_DEBUG
     TBuffViewObjAllocator& m_dbgBuffViewAllocator;

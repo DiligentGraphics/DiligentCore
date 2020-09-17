@@ -93,7 +93,7 @@ BufferGLImpl::BufferGLImpl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.Usage == USAGE_UNIFIED)
     {
-        DecayUnifiedBuffer();
+        LOG_ERROR_AND_THROW("Unified resources are not supported in OpenGL/GLES");
     }
 
     if (m_Desc.Usage == USAGE_STATIC)

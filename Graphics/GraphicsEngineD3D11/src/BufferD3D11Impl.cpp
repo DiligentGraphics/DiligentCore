@@ -59,7 +59,7 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
 
     if (m_Desc.Usage == USAGE_UNIFIED)
     {
-        DecayUnifiedBuffer();
+        LOG_ERROR_AND_THROW("Unified resources are not supported in Direct3D11");
     }
 
     if (m_Desc.Usage == USAGE_STATIC)

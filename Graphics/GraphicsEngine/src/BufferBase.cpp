@@ -43,7 +43,7 @@ namespace Diligent
     } while (false)
 
 
-void ValidateBufferDesc(const BufferDesc& Desc)
+void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
 {
     constexpr Uint32 AllowedBindFlags =
         BIND_VERTEX_BUFFER |
@@ -88,6 +88,9 @@ void ValidateBufferDesc(const BufferDesc& Desc)
             break;
 
         case USAGE_UNIFIED:
+            VERIFY_BUFFER(deviceCaps.AdapterInfo.UnifiedMemory != 0,
+                          "Unified memory is not present on this device. Check the amount of available unified memory "
+                          "in the device caps before creating unified buffers.");
             VERIFY_BUFFER(Desc.CPUAccessFlags != CPU_ACCESS_NONE,
                           "at least one of CPU_ACCESS_WRITE or CPU_ACCESS_READ flags must be specified for a unified buffer.");
             break;
