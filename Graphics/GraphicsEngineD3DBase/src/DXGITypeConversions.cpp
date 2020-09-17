@@ -28,6 +28,7 @@
 #include "DXGITypeConversions.hpp"
 #include "BasicTypes.h"
 #include "DebugUtilities.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -451,6 +452,23 @@ TEXTURE_FORMAT DXGI_FormatToTexFormat(DXGI_FORMAT DXGIFormat)
         UNEXPECTED("DXGI texture format (", DXGIFormat, ") is out of allowed range [0, ", DXGI_FORMAT_BC7_UNORM_SRGB, "]");
         return TEX_FORMAT_UNKNOWN;
     }
+}
+
+GraphicsAdapterInfo DXGI_ADAPTER_DESC_To_GraphicsAdapterInfo(const DXGI_ADAPTER_DESC1& dxgiAdapterDesc)
+{
+    GraphicsAdapterInfo AdapterInfo;
+
+    WideCharToMultiByte(CP_ACP, 0, dxgiAdapterDesc.Description, -1, AdapterInfo.Description, _countof(AdapterInfo.Description), NULL, FALSE);
+    AdapterInfo.Type               = (dxgiAdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
+    AdapterInfo.Vendor             = VendorIdToAdapterVendor(dxgiAdapterDesc.VendorId);
+    AdapterInfo.VendorId           = dxgiAdapterDesc.VendorId;
+    AdapterInfo.DeviceId           = dxgiAdapterDesc.DeviceId;
+    AdapterInfo.NumOutputs         = 0;
+    AdapterInfo.DeviceLocalMemory  = dxgiAdapterDesc.DedicatedVideoMemory;
+    AdapterInfo.HostVisibileMemory = dxgiAdapterDesc.SharedSystemMemory;
+    AdapterInfo.UnifiedMemory      = 0;
+
+    return AdapterInfo;
 }
 
 } // namespace Diligent

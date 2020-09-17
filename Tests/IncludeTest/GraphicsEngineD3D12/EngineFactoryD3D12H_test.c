@@ -59,8 +59,8 @@ void TestEngineFactoryD3D12CInterface()
     struct ICommandQueueD3D12* pd3d12CmdQueues    = NULL;
     IEngineFactoryD3D12_AttachToD3D12Device(pFactory, pd3d12NativeDevice, (size_t)1, &pd3d12CmdQueues, &EngineCI, &pDevice, &pCtx);
 
-    Uint32                 NumAdapters = 0;
-    struct AdapterAttribs* Adapters    = NULL;
+    Uint32                      NumAdapters = 0;
+    struct GraphicsAdapterInfo* Adapters    = NULL;
     IEngineFactoryD3D12_EnumerateAdapters(pFactory, DIRECT3D_FEATURE_LEVEL_11_0, &NumAdapters, Adapters);
 
     Uint32                     NumDisplayModes = 0;

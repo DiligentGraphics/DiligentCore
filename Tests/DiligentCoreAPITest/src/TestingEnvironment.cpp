@@ -88,9 +88,9 @@ void TestingEnvironment::SetErrorAllowance(int NumErrorsToAllow, const char* Inf
     }
 }
 
-Uint32 TestingEnvironment::FindAdapater(const std::vector<AdapterAttribs>& Adapters,
-                                        ADAPTER_TYPE                       AdapterType,
-                                        Uint32                             AdapterId)
+Uint32 TestingEnvironment::FindAdapater(const std::vector<GraphicsAdapterInfo>& Adapters,
+                                        ADAPTER_TYPE                            AdapterType,
+                                        Uint32                                  AdapterId)
 {
     if (AdapterId != DEFAULT_ADAPTER_ID && AdapterId >= Adapters.size())
     {
@@ -102,7 +102,7 @@ Uint32 TestingEnvironment::FindAdapater(const std::vector<AdapterAttribs>& Adapt
     {
         for (Uint32 i = 0; i < Adapters.size(); ++i)
         {
-            if (Adapters[i].AdapterType == AdapterType)
+            if (Adapters[i].Type == AdapterType)
             {
                 AdapterId = i;
                 break;
@@ -129,21 +129,21 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
 
     Uint32 NumDeferredCtx = 0;
 
-    std::vector<IDeviceContext*> ppContexts;
-    std::vector<AdapterAttribs>  Adapters;
+    std::vector<IDeviceContext*>     ppContexts;
+    std::vector<GraphicsAdapterInfo> Adapters;
 
 #if D3D11_SUPPORTED || D3D12_SUPPORTED
-    auto PrintAdapterInfo = [](Uint32 AdapterId, const AdapterAttribs& AdapterInfo, const std::vector<DisplayModeAttribs>& DisplayModes) //
+    auto PrintAdapterInfo = [](Uint32 AdapterId, const GraphicsAdapterInfo& AdapterInfo, const std::vector<DisplayModeAttribs>& DisplayModes) //
     {
         const char* AdapterTypeStr = nullptr;
-        switch (AdapterInfo.AdapterType)
+        switch (AdapterInfo.Type)
         {
             case ADAPTER_TYPE_HARDWARE: AdapterTypeStr = "HW"; break;
             case ADAPTER_TYPE_SOFTWARE: AdapterTypeStr = "SW"; break;
             default: AdapterTypeStr = "Type unknown";
         }
         LOG_INFO_MESSAGE("Adapter ", AdapterId, ": '", AdapterInfo.Description, "' (",
-                         AdapterTypeStr, ", ", AdapterInfo.DedicatedVideoMemory / (1 << 20), " MB); ",
+                         AdapterTypeStr, ", ", AdapterInfo.DeviceLocalMemory / (1 << 20), " MB); ",
                          DisplayModes.size(), (DisplayModes.size() == 1 ? " display mode" : " display modes"));
     };
 #endif
@@ -354,7 +354,9 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
 
     const auto& AdapterInfo = m_pDevice->GetDeviceCaps().AdapterInfo;
     std::string AdapterInfoStr;
-    AdapterInfoStr = "Vendor: ";
+    AdapterInfoStr = "Adapter description: ";
+    AdapterInfoStr += AdapterInfo.Description;
+    AdapterInfoStr += ". Vendor: ";
     switch (AdapterInfo.Vendor)
     {
         case ADAPTER_VENDOR_NVIDIA:
@@ -388,7 +390,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
     AdapterInfoStr += " MB. Unified memory: ";
     AdapterInfoStr += std::to_string(AdapterInfo.UnifiedMemory >> 20);
     AdapterInfoStr += " MB.";
-    LOG_INFO_MESSAGE("Adapter info: ", AdapterInfoStr);
+    LOG_INFO_MESSAGE(AdapterInfoStr);
 }
 
 TestingEnvironment::~TestingEnvironment()

@@ -90,7 +90,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
                                                       Uint32&                NumAdapters,
-                                                      AdapterAttribs*        Adapters) override final;
+                                                      GraphicsAdapterInfo*   Adapters) override final;
 
     virtual void DILIGENT_CALL_TYPE EnumerateDisplayModes(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
                                                           Uint32                 AdapterId,
@@ -490,7 +490,7 @@ void EngineFactoryD3D12Impl::CreateSwapChainD3D12(IRenderDevice*            pDev
 
 void EngineFactoryD3D12Impl::EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
                                                Uint32&                NumAdapters,
-                                               AdapterAttribs*        Adapters)
+                                               GraphicsAdapterInfo*   Adapters)
 {
 #if USE_D3D12_LOADER
     if (m_hD3D12Dll == NULL)

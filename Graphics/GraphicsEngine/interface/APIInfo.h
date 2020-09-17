@@ -58,7 +58,7 @@ struct APIInfo
     size_t RectSize                       DEFAULT_INITIALIZER(0);
     size_t CopyTextureAttribsSize         DEFAULT_INITIALIZER(0);
     size_t DeviceObjectAttribsSize        DEFAULT_INITIALIZER(0);
-    size_t AdapterAttribsSize             DEFAULT_INITIALIZER(0);
+    size_t GraphicsAdapterInfoSize        DEFAULT_INITIALIZER(0);
     size_t DisplayModeAttribsSize         DEFAULT_INITIALIZER(0);
     size_t SwapChainDescSize              DEFAULT_INITIALIZER(0);
     size_t FullScreenModeDescSize         DEFAULT_INITIALIZER(0);

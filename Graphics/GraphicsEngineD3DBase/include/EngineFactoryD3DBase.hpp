@@ -49,7 +49,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE EnumerateAdapters(DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
                                                       Uint32&                NumAdapters,
-                                                      AdapterAttribs*        Adapters) override
+                                                      GraphicsAdapterInfo*   Adapters) override
     {
         auto DXGIAdapters = FindCompatibleAdapters(MinFeatureLevel);
 
@@ -66,13 +66,7 @@ public:
 
                 auto& Attribs = Adapters[adapter];
 
-                Attribs.AdapterType = (AdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
-                WideCharToMultiByte(CP_ACP, 0, AdapterDesc.Description, -1, Attribs.Description, _countof(Attribs.Description), NULL, FALSE);
-                Attribs.DedicatedVideoMemory  = AdapterDesc.DedicatedVideoMemory;
-                Attribs.DedicatedSystemMemory = AdapterDesc.DedicatedSystemMemory;
-                Attribs.SharedSystemMemory    = AdapterDesc.SharedSystemMemory;
-                Attribs.VendorId              = AdapterDesc.VendorId;
-                Attribs.DeviceId              = AdapterDesc.DeviceId;
+                Attribs = DXGI_ADAPTER_DESC_To_GraphicsAdapterInfo(AdapterDesc);
 
                 Attribs.NumOutputs = 0;
                 CComPtr<IDXGIOutput> pOutput;

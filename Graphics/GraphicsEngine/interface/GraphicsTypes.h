@@ -1183,35 +1183,6 @@ DILIGENT_TYPED_ENUM(ADAPTER_TYPE, Uint8)
     ADAPTER_TYPE_HARDWARE
 };
 
-/// Adapter attributes
-struct AdapterAttribs
-{
-    /// Adapter type. See Diligent::ADAPTER_TYPE.
-    ADAPTER_TYPE AdapterType        DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
-
-    /// A string that contains the adapter description
-    char Description[128]           DEFAULT_INITIALIZER({});
-
-    /// Dedicated video memory, in bytes
-    size_t DedicatedVideoMemory     DEFAULT_INITIALIZER(0);
-
-    /// Dedicated system memory, in bytes
-    size_t DedicatedSystemMemory    DEFAULT_INITIALIZER(0);
-
-    /// Dedicated shared memory, in bytes
-    size_t SharedSystemMemory       DEFAULT_INITIALIZER(0);
-
-    /// The PCI ID of the hardware vendor
-    Uint32 VendorId                 DEFAULT_INITIALIZER(0);
-
-    /// The PCI ID of the hardware device
-    Uint32 DeviceId                 DEFAULT_INITIALIZER(0);
-
-    /// Number of outputs this device has
-    Uint32 NumOutputs               DEFAULT_INITIALIZER(0);
-};
-typedef struct AdapterAttribs AdapterAttribs;
-
 
 /// Flags indicating how an image is stretched to fit a given monitor's resolution.
 /// \sa <a href = "https://docs.microsoft.com/en-us/previous-versions/windows/desktop/legacy/bb173066(v=vs.85)">DXGI_MODE_SCALING enumeration on MSDN</a>, 
@@ -1683,22 +1654,46 @@ DILIGENT_TYPED_ENUM(ADAPTER_VENDOR, Uint8)
 /// Graphics adapter properties
 struct GraphicsAdapterInfo
 {
+    /// A string that contains the adapter description.
+    char Description[128]   DEFAULT_INITIALIZER({});
+
     /// Adapter type, see Diligent::ADAPTER_TYPE.
-    ADAPTER_TYPE   Type    DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
+    ADAPTER_TYPE   Type     DEFAULT_INITIALIZER(ADAPTER_TYPE_UNKNOWN);
 
     /// Adapter vendor, see Diligent::ADAPTER_VENDOR.
-    ADAPTER_VENDOR Vendor  DEFAULT_INITIALIZER(ADAPTER_VENDOR_UNKNOWN);
+    ADAPTER_VENDOR Vendor   DEFAULT_INITIALIZER(ADAPTER_VENDOR_UNKNOWN);
 
-    /// The amount of local video memory, in bytes, that is not accessible by CPU.
+    /// The PCI ID of the hardware vendor (if available).
+    Uint32 VendorId         DEFAULT_INITIALIZER(0);
 
-    /// \note On some devices it may not be possible to query the memory size,
+    /// The PCI ID of the hardware device (if available).
+    Uint32 DeviceId         DEFAULT_INITIALIZER(0);
+
+    /// Number of video outputs this adapter has (if available).
+    Uint32 NumOutputs       DEFAULT_INITIALIZER(0);
+
+    /// The amount of local video memory that is inaccessible by CPU, in bytes.
+
+    /// \note Device-local memory is where USAGE_DEFAULT and USAGE_STATIC resources
+    ///       are typically allocated.
+    ///
+    ///       On some devices it may not be possible to query the memory size,
     ///       in which case all memory sizes will be zero.
     Uint64  DeviceLocalMemory   DEFAULT_INITIALIZER(0);
 
-    /// The amount of host-visible memory, in bytes, that can be accessed by CPU.
+
+    /// The amount of host-visible memory that can be accessed by CPU and is visible by GPU, in bytes.
+
+    /// \note Host-visible memory is where USAGE_DYNAMIC and USAGE_STAGING resources
+    ///       are typically allocated.
     Uint64  HostVisibileMemory  DEFAULT_INITIALIZER(0);
 
-    /// The amount of unified memory, in bytes, that can be directly accessed by both CPU and GPU.
+
+    /// The amount of unified memory that can be directly accessed by both CPU and GPU, in bytes.
+
+    /// \note Unified memory is where USAGE_UNIFIED resources are typically allocated, but
+    ///       resourecs with other usages may be allocated as well if there is no corresponding
+    ///       memory type.
     Uint64  UnifiedMemory       DEFAULT_INITIALIZER(0);
 };
 typedef struct GraphicsAdapterInfo GraphicsAdapterInfo;

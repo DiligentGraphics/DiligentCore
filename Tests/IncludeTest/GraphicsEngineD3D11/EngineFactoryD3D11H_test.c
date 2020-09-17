@@ -56,8 +56,8 @@ void TestEngineFactoryD3D11CInterface()
     void* pd3d11ImmediateContext = NULL;
     IEngineFactoryD3D11_AttachToD3D11Device(pFactory, pd3d11NativeDevice, pd3d11ImmediateContext, &EngineCI, &pDevice, &pCtx);
 
-    Uint32                 NumAdapters = 0;
-    struct AdapterAttribs* Adapters    = NULL;
+    Uint32                      NumAdapters = 0;
+    struct GraphicsAdapterInfo* Adapters    = NULL;
     IEngineFactoryD3D11_EnumerateAdapters(pFactory, DIRECT3D_FEATURE_LEVEL_11_0, &NumAdapters, Adapters);
 
     Uint32                     NumDisplayModes = 0;

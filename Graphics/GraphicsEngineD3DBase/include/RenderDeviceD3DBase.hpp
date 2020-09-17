@@ -33,7 +33,6 @@
 #include <dxgi.h>
 
 #include "RenderDeviceBase.hpp"
-#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -190,13 +189,7 @@ protected:
         auto hr = pdxgiAdapter->GetDesc1(&dxgiAdapterDesc);
         if (SUCCEEDED(hr))
         {
-            auto& AdapterInfo = m_DeviceCaps.AdapterInfo;
-
-            AdapterInfo.Type               = (dxgiAdapterDesc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) ? ADAPTER_TYPE_SOFTWARE : ADAPTER_TYPE_HARDWARE;
-            AdapterInfo.Vendor             = VendorIdToAdapterVendor(dxgiAdapterDesc.VendorId);
-            AdapterInfo.DeviceLocalMemory  = dxgiAdapterDesc.DedicatedVideoMemory;
-            AdapterInfo.HostVisibileMemory = dxgiAdapterDesc.SharedSystemMemory;
-            AdapterInfo.UnifiedMemory      = 0;
+            m_DeviceCaps.AdapterInfo = DXGI_ADAPTER_DESC_To_GraphicsAdapterInfo(dxgiAdapterDesc);
         }
         else
         {

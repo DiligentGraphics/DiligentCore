@@ -130,7 +130,7 @@ DILIGENT_BEGIN_INTERFACE(IEngineFactoryD3D11, IEngineFactory)
     VIRTUAL void METHOD(EnumerateAdapters)(THIS_
                                            DIRECT3D_FEATURE_LEVEL MinFeatureLevel,
                                            Uint32 REF             NumAdapters,
-                                           AdapterAttribs*        Adapters) PURE;
+                                           GraphicsAdapterInfo*   Adapters) PURE;
 
 
     /// Enumerates available display modes for the specified output of the specified adapter.
