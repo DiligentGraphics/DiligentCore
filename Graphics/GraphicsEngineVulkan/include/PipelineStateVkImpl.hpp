@@ -150,12 +150,14 @@ private:
     // SRB memory allocator must be declared before m_pDefaultShaderResBinding
     SRBMemoryAllocator m_SRBMemAllocator;
 
-    std::array<VulkanUtilities::ShaderModuleWrapper, MAX_SHADERS_IN_PIPELINE> m_ShaderModules;
+    std::array<VulkanUtilities::ShaderModuleWrapper, MAX_SHADERS_IN_PIPELINE> m_ShaderModules = {};
 
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayout                   m_PipelineLayout;
 
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {};
+    // Resource layout index in m_ShaderResourceLayouts array for every shader stage,
+    // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1};
 
     bool m_HasStaticResources    = false;
     bool m_HasNonStaticResources = false;

@@ -107,7 +107,9 @@ void ShaderResourceBindingD3D12Impl::BindResources(Uint32 ShaderFlags, IResource
         auto ResLayoutInd = m_ResourceLayoutIndex[ShaderInd];
         if (ResLayoutInd >= 0)
         {
-            if (ShaderFlags & GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType))
+            // ShaderInd is the shader type pipeline index here
+            const auto ShaderType = GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType);
+            if (ShaderFlags & ShaderType)
             {
                 m_pShaderVarMgrs[ResLayoutInd].BindResources(pResMapping, Flags);
             }
@@ -118,19 +120,31 @@ void ShaderResourceBindingD3D12Impl::BindResources(Uint32 ShaderFlags, IResource
 IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariableByName(SHADER_TYPE ShaderType, const char* Name)
 {
     auto ResLayoutInd = GetVariableByNameHelper(ShaderType, Name, m_ResourceLayoutIndex);
-    return ResLayoutInd >= 0 ? m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name) : nullptr;
+    if (ResLayoutInd < 0)
+        return nullptr;
+
+    VERIFY_EXPR(static_cast<Uint32>(ResLayoutInd) < Uint32{m_NumShaders});
+    return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Name);
 }
 
 Uint32 ShaderResourceBindingD3D12Impl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
     auto ResLayoutInd = GetVariableCountHelper(ShaderType, m_ResourceLayoutIndex);
-    return ResLayoutInd >= 0 ? m_pShaderVarMgrs[ResLayoutInd].GetVariableCount() : 0;
+    if (ResLayoutInd < 0)
+        return 0;
+
+    VERIFY_EXPR(static_cast<Uint32>(ResLayoutInd) < Uint32{m_NumShaders});
+    return m_pShaderVarMgrs[ResLayoutInd].GetVariableCount();
 }
 
 IShaderResourceVariable* ShaderResourceBindingD3D12Impl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
     auto ResLayoutInd = GetVariableByIndexHelper(ShaderType, Index, m_ResourceLayoutIndex);
-    return ResLayoutInd >= 0 ? m_pShaderVarMgrs[ResLayoutInd].GetVariable(Index) : 0;
+    if (ResLayoutInd < 0)
+        return nullptr;
+
+    VERIFY_EXPR(static_cast<Uint32>(ResLayoutInd) < Uint32{m_NumShaders});
+    return m_pShaderVarMgrs[ResLayoutInd].GetVariable(Index);
 }
 
 

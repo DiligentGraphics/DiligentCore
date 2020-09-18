@@ -90,7 +90,7 @@ public:
 
     Uint32 GetNumActiveShaders() const
     {
-        return static_cast<Uint32>(m_NumActiveShaders);
+        return Uint32{m_NumActiveShaders};
     }
 
     SHADER_TYPE GetActiveShaderType(Uint32 s) const
@@ -106,9 +106,11 @@ private:
 
     std::array<SHADER_TYPE, MAX_SHADERS_IN_PIPELINE> m_ShaderTypes = {};
 
-    // Resource layout index in m_ResourceLayouts[] array for every shader stage
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex;
-    Uint8                                     m_NumActiveShaders = 0;
+    // Resource layout index in m_pResourceLayouts array for every shader stage,
+    // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1};
+
+    Uint8 m_NumActiveShaders = 0;
 
     bool m_bIsStaticResourcesBound = false;
 };

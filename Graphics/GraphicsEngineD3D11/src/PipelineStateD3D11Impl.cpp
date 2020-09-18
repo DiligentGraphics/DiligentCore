@@ -156,8 +156,10 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
     std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResCacheDataSizes  = {};
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto*       pShader         = GetShader<const ShaderD3D11Impl>(s);
+        const auto* pShader         = GetShader<const ShaderD3D11Impl>(s);
+        const auto& ShaderDesc      = pShader->GetDesc();
         const auto& ShaderResources = *pShader->GetD3D11Resources();
+        VERIFY_EXPR(ShaderDesc.ShaderType == ShaderResources.GetShaderType());
 
         new (m_pStaticResourceCaches + s) ShaderResourceCacheD3D11;
         // Do not initialize the cache as this will be performed by the resource layout
@@ -197,12 +199,16 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
 
         if (m_Desc.SRBAllocationGranularity > 1)
         {
-            const SHADER_RESOURCE_VARIABLE_TYPE SRBVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-            ShaderResLayoutDataSizes[s]                       = ShaderResourceLayoutD3D11::GetRequiredMemorySize(ShaderResources, ResourceLayout, SRBVarTypes, _countof(SRBVarTypes));
-            ShaderResCacheDataSizes[s]                        = ShaderResourceCacheD3D11::GetRequriedMemorySize(ShaderResources);
+            const SHADER_RESOURCE_VARIABLE_TYPE SRBVarTypes[] = //
+                {
+                    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE,
+                    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC //
+                };
+            ShaderResLayoutDataSizes[s] = ShaderResourceLayoutD3D11::GetRequiredMemorySize(ShaderResources, ResourceLayout, SRBVarTypes, _countof(SRBVarTypes));
+            ShaderResCacheDataSizes[s]  = ShaderResourceCacheD3D11::GetRequriedMemorySize(ShaderResources);
         }
 
-        auto ShaderInd                   = GetShaderTypePipelineIndex(pShader->GetDesc().ShaderType, m_Desc.PipelineType);
+        auto ShaderInd                   = GetShaderTypePipelineIndex(ShaderDesc.ShaderType, m_Desc.PipelineType);
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
     }
 

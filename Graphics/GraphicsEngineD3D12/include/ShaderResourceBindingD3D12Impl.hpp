@@ -80,8 +80,10 @@ public:
 private:
     ShaderResourceCacheD3D12    m_ShaderResourceCache;
     ShaderVariableManagerD3D12* m_pShaderVarMgrs = nullptr;
-    // Resource layout index in m_ResourceLayouts[] array for every shader stage
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex;
+
+    // Resource layout index in m_ShaderResourceCache array for every shader stage,
+    // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1};
 
     bool        m_bStaticResourcesInitialized = false;
     const Uint8 m_NumShaders                  = 0;

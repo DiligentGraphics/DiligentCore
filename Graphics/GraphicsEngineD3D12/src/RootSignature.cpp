@@ -168,10 +168,8 @@ RootSignature::RootSignature() :
     m_MemAllocator{GetRawAllocator()},
     m_StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerAttribs, GetRawAllocator(), "Allocator for vector<StaticSamplerAttribs>"))
 {
-    for (size_t i = 0; i < m_SrvCbvUavRootTablesMap.size(); ++i)
-        m_SrvCbvUavRootTablesMap[i] = InvalidRootTableIndex;
-    for (size_t i = 0; i < m_SamplerRootTablesMap.size(); ++i)
-        m_SamplerRootTablesMap[i] = InvalidRootTableIndex;
+    m_SrvCbvUavRootTablesMap.fill(InvalidRootTableIndex);
+    m_SamplerRootTablesMap.fill(InvalidRootTableIndex);
 }
 
 // clang-format off

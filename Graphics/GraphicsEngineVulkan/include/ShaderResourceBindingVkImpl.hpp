@@ -79,8 +79,9 @@ private:
     ShaderResourceCacheVk    m_ShaderResourceCache;
     ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
 
-    // Shader variable manager index in m_pShaderVarMgrs[] array for every shader stage
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex;
+    // Resource layout index in m_ShaderResourceCache array for every shader stage,
+    // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1};
 
     bool  m_bStaticResourcesInitialized = false;
     Uint8 m_NumShaders                  = 0;

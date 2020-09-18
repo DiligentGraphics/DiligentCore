@@ -92,11 +92,12 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl(IReferenceCounter
             };
         // clang-format on
 
-        const auto ShaderType   = pShaderD3D11->GetDesc().ShaderType;
-        const auto ResLayoutInd = GetShaderTypePipelineIndex(ShaderType, PSODesc.PipelineType);
-        m_ShaderTypes[s]        = ShaderType;
+        const auto ShaderType = pShaderD3D11->GetDesc().ShaderType;
+        const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, PSODesc.PipelineType);
+        VERIFY_EXPR(ShaderType == m_pResourceLayouts[s].GetShaderType());
+        m_ShaderTypes[s] = ShaderType;
 
-        m_ResourceLayoutIndex[ResLayoutInd] = s;
+        m_ResourceLayoutIndex[ShaderInd] = s;
     }
 }
 
@@ -186,19 +187,31 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
 IShaderResourceVariable* ShaderResourceBindingD3D11Impl::GetVariableByName(SHADER_TYPE ShaderType, const char* Name)
 {
     auto ResLayoutInd = GetVariableByNameHelper(ShaderType, Name, m_ResourceLayoutIndex);
-    return ResLayoutInd >= 0 ? m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Name) : nullptr;
+    if (ResLayoutInd < 0)
+        return nullptr;
+
+    VERIFY_EXPR(static_cast<Uint32>(ResLayoutInd) < Uint32{m_NumActiveShaders});
+    return m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Name);
 }
 
 Uint32 ShaderResourceBindingD3D11Impl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
     auto ResLayoutInd = GetVariableCountHelper(ShaderType, m_ResourceLayoutIndex);
-    return ResLayoutInd >= 0 ? m_pResourceLayouts[ResLayoutInd].GetTotalResourceCount() : 0;
+    if (ResLayoutInd < 0)
+        return 0;
+
+    VERIFY_EXPR(static_cast<Uint32>(ResLayoutInd) < Uint32{m_NumActiveShaders});
+    return m_pResourceLayouts[ResLayoutInd].GetTotalResourceCount();
 }
 
 IShaderResourceVariable* ShaderResourceBindingD3D11Impl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
     auto ResLayoutInd = GetVariableByIndexHelper(ShaderType, Index, m_ResourceLayoutIndex);
-    return ResLayoutInd >= 0 ? m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Index) : nullptr;
+    if (ResLayoutInd < 0)
+        return nullptr;
+
+    VERIFY_EXPR(static_cast<Uint32>(ResLayoutInd) < Uint32{m_NumActiveShaders});
+    return m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Index);
 }
 
 } // namespace Diligent

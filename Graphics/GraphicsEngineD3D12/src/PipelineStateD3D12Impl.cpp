@@ -618,22 +618,31 @@ void PipelineStateD3D12Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMa
 Uint32 PipelineStateD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
     const auto LayoutInd = GetStaticVariableCountHelper(ShaderType, m_ResourceLayoutIndex);
-    VERIFY_EXPR(LayoutInd < 0 || static_cast<Uint32>(LayoutInd) <= m_NumShaders);
-    return LayoutInd >= 0 ? m_pStaticVarManagers[LayoutInd].GetVariableCount() : 0;
+    if (LayoutInd < 0)
+        return 0;
+
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < m_NumShaders);
+    return m_pStaticVarManagers[LayoutInd].GetVariableCount();
 }
 
 IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
     const auto LayoutInd = GetStaticVariableByNameHelper(ShaderType, Name, m_ResourceLayoutIndex);
-    VERIFY_EXPR(LayoutInd < 0 || static_cast<Uint32>(LayoutInd) <= m_NumShaders);
-    return LayoutInd >= 0 ? m_pStaticVarManagers[LayoutInd].GetVariable(Name) : nullptr;
+    if (LayoutInd < 0)
+        return nullptr;
+
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < m_NumShaders);
+    return m_pStaticVarManagers[LayoutInd].GetVariable(Name);
 }
 
 IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
     const auto LayoutInd = GetStaticVariableByIndexHelper(ShaderType, Index, m_ResourceLayoutIndex);
-    VERIFY_EXPR(LayoutInd < 0 || static_cast<Uint32>(LayoutInd) <= m_NumShaders);
-    return LayoutInd >= 0 ? m_pStaticVarManagers[LayoutInd].GetVariable(Index) : nullptr;
+    if (LayoutInd < 0)
+        return nullptr;
+
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < m_NumShaders);
+    return m_pStaticVarManagers[LayoutInd].GetVariable(Index);
 }
 
 } // namespace Diligent
