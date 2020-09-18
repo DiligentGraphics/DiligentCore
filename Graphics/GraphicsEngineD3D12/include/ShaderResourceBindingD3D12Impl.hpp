@@ -33,7 +33,6 @@
 #include "ShaderResourceBindingD3D12.h"
 #include "RenderDeviceD3D12.h"
 #include "ShaderResourceBindingBase.hpp"
-#include "ShaderBase.hpp"
 #include "ShaderResourceCacheD3D12.hpp"
 #include "ShaderResourceLayoutD3D12.hpp"
 #include "ShaderVariableD3D12.hpp"
@@ -80,9 +79,10 @@ private:
     ShaderResourceCacheD3D12    m_ShaderResourceCache;
     ShaderVariableManagerD3D12* m_pShaderVarMgrs = nullptr;
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
-    std::array<Int8, NUM_SHADER_TYPES> m_ResourceLayoutIndex;
-    bool                               m_bStaticResourcesInitialized = false;
-    const Uint8                        m_NumShaders                  = 0;
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex;
+
+    bool        m_bStaticResourcesInitialized = false;
+    const Uint8 m_NumShaders                  = 0;
 };
 
 } // namespace Diligent

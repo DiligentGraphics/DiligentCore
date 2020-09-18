@@ -1286,4 +1286,113 @@ ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId)
     }
 }
 
+bool IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType)
+{
+    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the switch below to handle the new shader type");
+    switch (PipelineType)
+    {
+        case PIPELINE_TYPE_GRAPHICS:
+            return ShaderType == SHADER_TYPE_VERTEX ||
+                ShaderType == SHADER_TYPE_HULL ||
+                ShaderType == SHADER_TYPE_DOMAIN ||
+                ShaderType == SHADER_TYPE_GEOMETRY ||
+                ShaderType == SHADER_TYPE_PIXEL;
+
+        case PIPELINE_TYPE_COMPUTE:
+            return ShaderType == SHADER_TYPE_COMPUTE;
+
+        case PIPELINE_TYPE_MESH:
+            return ShaderType == SHADER_TYPE_AMPLIFICATION ||
+                ShaderType == SHADER_TYPE_MESH ||
+                ShaderType == SHADER_TYPE_PIXEL;
+
+        default:
+            UNEXPECTED("Unexpected pipeline type");
+            return false;
+    }
+}
+
+Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType)
+{
+    VERIFY(IsConsistentShaderType(ShaderType, PipelineType), "Shader type ", GetShaderTypeLiteralName(ShaderType),
+           " is inconsistent with pipeline type ", GetPipelineTypeString(PipelineType));
+    VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "Only single shader stage should be provided");
+
+    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the switch below to handle the new shader type");
+    switch (ShaderType)
+    {
+        case SHADER_TYPE_UNKNOWN:
+            return -1;
+
+        case SHADER_TYPE_VERTEX:        // Graphics
+        case SHADER_TYPE_AMPLIFICATION: // Mesh
+        case SHADER_TYPE_COMPUTE:       // Compute
+            return 0;
+
+        case SHADER_TYPE_HULL: // Graphics
+        case SHADER_TYPE_MESH: // Mesh
+            return 1;
+
+        case SHADER_TYPE_DOMAIN: // Graphics
+            return 2;
+
+        case SHADER_TYPE_GEOMETRY: // Graphics
+            return 3;
+
+        case SHADER_TYPE_PIXEL: // Graphics or Mesh
+            return 4;
+
+        default:
+            UNEXPECTED("Unexpected shader type (", ShaderType, ")");
+            return -1;
+    }
+}
+
+SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineType)
+{
+    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the switch below to handle the new shader type");
+    switch (PipelineType)
+    {
+        case PIPELINE_TYPE_GRAPHICS:
+            switch (Index)
+            {
+                case 0: return SHADER_TYPE_VERTEX;
+                case 1: return SHADER_TYPE_HULL;
+                case 2: return SHADER_TYPE_DOMAIN;
+                case 3: return SHADER_TYPE_GEOMETRY;
+                case 4: return SHADER_TYPE_PIXEL;
+
+                default:
+                    UNEXPECTED("Index ", Index, " is not a valid graphics pipeline shader index");
+                    return SHADER_TYPE_UNKNOWN;
+            }
+
+        case PIPELINE_TYPE_COMPUTE:
+            switch (Index)
+            {
+                case 0: return SHADER_TYPE_COMPUTE;
+
+                default:
+                    UNEXPECTED("Index ", Index, " is not a valid compute pipeline shader index");
+                    return SHADER_TYPE_UNKNOWN;
+            }
+
+        case PIPELINE_TYPE_MESH:
+            switch (Index)
+            {
+                case 0: return SHADER_TYPE_AMPLIFICATION;
+                case 1: return SHADER_TYPE_MESH;
+                case 4: return SHADER_TYPE_PIXEL;
+
+                default:
+                    UNEXPECTED("Index ", Index, " is not a valid mesh pipeline shader index");
+                    return SHADER_TYPE_UNKNOWN;
+            }
+
+        default:
+            UNEXPECTED("Unexpected pipeline type");
+            return SHADER_TYPE_UNKNOWN;
+    }
+}
+
 } // namespace Diligent

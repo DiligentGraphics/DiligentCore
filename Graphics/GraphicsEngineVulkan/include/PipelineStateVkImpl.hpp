@@ -155,9 +155,10 @@ private:
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayout                   m_PipelineLayout;
 
-    std::array<Int8, 8> m_ResourceLayoutIndex   = {};
-    bool                m_HasStaticResources    = false;
-    bool                m_HasNonStaticResources = false;
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {};
+
+    bool m_HasStaticResources    = false;
+    bool m_HasNonStaticResources = false;
 };
 
 } // namespace Diligent

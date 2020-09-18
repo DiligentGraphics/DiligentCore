@@ -313,6 +313,29 @@ TEST(ShaderResourceLayout, VariableAccess)
     ASSERT_NE(pTestPSO, nullptr);
     EXPECT_EQ(TestPipelineStateCInterface(pTestPSO), 0);
 
+    LOG_INFO_MESSAGE("No worries, warnings below are expected - testing variable queries from inactive/invalid shader stages\n");
+
+    EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_GEOMETRY), 0u);
+    EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_DOMAIN), 0u);
+    EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_HULL), 0u);
+    EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_COMPUTE), 0u);
+    EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_AMPLIFICATION), 0u);
+    EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_MESH), 0u);
+
+    EXPECT_EQ(pTestPSO->GetStaticVariableByName(SHADER_TYPE_GEOMETRY, "g_tex2D_Static"), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByName(SHADER_TYPE_DOMAIN, "g_tex2D_Static"), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByName(SHADER_TYPE_HULL, "g_tex2D_Static"), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "g_tex2D_Static"), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByName(SHADER_TYPE_AMPLIFICATION, "g_tex2D_Static"), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByName(SHADER_TYPE_MESH, "g_tex2D_Static"), nullptr);
+
+    EXPECT_EQ(pTestPSO->GetStaticVariableByIndex(SHADER_TYPE_GEOMETRY, 0), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByIndex(SHADER_TYPE_DOMAIN, 0), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByIndex(SHADER_TYPE_HULL, 0), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByIndex(SHADER_TYPE_COMPUTE, 0), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByIndex(SHADER_TYPE_AMPLIFICATION, 0), nullptr);
+    EXPECT_EQ(pTestPSO->GetStaticVariableByIndex(SHADER_TYPE_MESH, 0), nullptr);
+
     {
         EXPECT_EQ(pTestPSO->GetStaticVariableCount(SHADER_TYPE_VERTEX), 6u);
 
@@ -562,6 +585,27 @@ TEST(ShaderResourceLayout, VariableAccess)
     pTestPSO->CreateShaderResourceBinding(&pSRB, false);
     ASSERT_NE(pSRB, nullptr);
     EXPECT_EQ(TestShaderResourceBindingCInterface(pSRB.RawPtr()), 0);
+
+    EXPECT_EQ(pSRB->GetVariableCount(SHADER_TYPE_GEOMETRY), 0u);
+    EXPECT_EQ(pSRB->GetVariableCount(SHADER_TYPE_HULL), 0u);
+    EXPECT_EQ(pSRB->GetVariableCount(SHADER_TYPE_DOMAIN), 0u);
+    EXPECT_EQ(pSRB->GetVariableCount(SHADER_TYPE_COMPUTE), 0u);
+    EXPECT_EQ(pSRB->GetVariableCount(SHADER_TYPE_AMPLIFICATION), 0u);
+    EXPECT_EQ(pSRB->GetVariableCount(SHADER_TYPE_MESH), 0u);
+
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_GEOMETRY, "g_tex2D_Mut"), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_HULL, "g_tex2D_Mut"), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_DOMAIN, "g_tex2D_Mut"), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_COMPUTE, "g_tex2D_Mut"), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_AMPLIFICATION, "g_tex2D_Mut"), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByName(SHADER_TYPE_MESH, "g_tex2D_Mut"), nullptr);
+
+    EXPECT_EQ(pSRB->GetVariableByIndex(SHADER_TYPE_GEOMETRY, 0), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByIndex(SHADER_TYPE_HULL, 0), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByIndex(SHADER_TYPE_DOMAIN, 0), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByIndex(SHADER_TYPE_COMPUTE, 0), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByIndex(SHADER_TYPE_AMPLIFICATION, 0), nullptr);
+    EXPECT_EQ(pSRB->GetVariableByIndex(SHADER_TYPE_MESH, 0), nullptr);
 
     {
         {

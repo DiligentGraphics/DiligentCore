@@ -202,7 +202,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
             ShaderResCacheDataSizes[s]                        = ShaderResourceCacheD3D11::GetRequriedMemorySize(ShaderResources);
         }
 
-        auto ShaderInd                   = GetShaderTypeIndex(pShader->GetDesc().ShaderType);
+        auto ShaderInd                   = GetShaderTypePipelineIndex(pShader->GetDesc().ShaderType, m_Desc.PipelineType);
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
     }
 
@@ -356,28 +356,31 @@ void PipelineStateD3D11Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMa
 
 Uint32 PipelineStateD3D11Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
-    const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
+    const auto LayoutInd = GetStaticVariableCountHelper(ShaderType, m_ResourceLayoutIndex);
     if (LayoutInd < 0)
         return 0;
 
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= m_NumShaders);
     return m_pStaticResourceLayouts[LayoutInd].GetTotalResourceCount();
 }
 
 IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
-    const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
+    const auto LayoutInd = GetStaticVariableByNameHelper(ShaderType, Name, m_ResourceLayoutIndex);
     if (LayoutInd < 0)
         return nullptr;
 
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= m_NumShaders);
     return m_pStaticResourceLayouts[LayoutInd].GetShaderVariable(Name);
 }
 
 IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
+    const auto LayoutInd = GetStaticVariableByIndexHelper(ShaderType, Index, m_ResourceLayoutIndex);
     if (LayoutInd < 0)
         return nullptr;
 
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= m_NumShaders);
     return m_pStaticResourceLayouts[LayoutInd].GetShaderVariable(Index);
 }
 

@@ -312,6 +312,7 @@ void RootSignature::InitStaticSampler(SHADER_TYPE                     ShaderType
 
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
 void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderType,
+                                         PIPELINE_TYPE                   PipelineType,
                                          const D3DShaderResourceAttribs& ShaderResAttribs,
                                          SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
                                          D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
@@ -319,8 +320,7 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
                                          Uint32&                         OffsetFromTableStart // Output parameter
 )
 {
-    auto ShaderInd        = GetShaderTypeIndex(ShaderType);
-    auto ShaderVisibility = GetShaderVisibility(ShaderType);
+    const auto ShaderVisibility = GetShaderVisibility(ShaderType);
     if (RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV && ShaderResAttribs.BindCount == 1)
     {
         // Allocate single CBV directly in the root signature
@@ -334,9 +334,10 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
     }
     else
     {
+        const auto ShaderInd = GetShaderTypePipelineIndex(ShaderType, PipelineType);
         // Use the same table for static and mutable resources. Treat both as static
-        auto RootTableType = (VariableType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) ? SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC : SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
-        auto TableIndKey   = ShaderInd * SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + RootTableType;
+        const auto RootTableType = (VariableType == SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) ? SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC : SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+        const auto TableIndKey   = ShaderInd * SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + RootTableType;
         // Get the table array index (this is not the root index!)
         auto& RootTableArrayInd = ((RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER) ? m_SamplerRootTablesMap : m_SrvCbvUavRootTablesMap)[TableIndKey];
         if (RootTableArrayInd == InvalidRootTableIndex)

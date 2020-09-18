@@ -30,10 +30,14 @@
 /// \file
 /// Implementation of the Diligent::ShaderResourceBindingBase template class
 
+#include <array>
+
 #include "ShaderResourceBinding.h"
 #include "ObjectBase.hpp"
 #include "GraphicsTypes.h"
+#include "Constants.h"
 #include "RefCntAutoPtr.hpp"
+#include "GraphicsAccessories.hpp"
 
 namespace Diligent
 {
@@ -80,6 +84,69 @@ public:
     }
 
 protected:
+    Int8 GetVariableByNameHelper(SHADER_TYPE ShaderType, const char* Name, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
+    {
+        const auto PipelineType = m_pPSO->GetDesc().PipelineType;
+        if (!IsConsistentShaderType(ShaderType, PipelineType))
+        {
+            LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'");
+            return -1;
+        }
+
+        const auto ShaderInd    = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+        const auto ResLayoutInd = ResourceLayoutIndex[ShaderInd];
+        if (ResLayoutInd < 0)
+        {
+            LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'");
+        }
+
+        return ResLayoutInd;
+    }
+
+    Int8 GetVariableCountHelper(SHADER_TYPE ShaderType, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
+    {
+        const auto PipelineType = m_pPSO->GetDesc().PipelineType;
+        if (!IsConsistentShaderType(ShaderType, PipelineType))
+        {
+            LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'");
+            return -1;
+        }
+
+        const auto ShaderInd    = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+        const auto ResLayoutInd = ResourceLayoutIndex[ShaderInd];
+        if (ResLayoutInd < 0)
+        {
+            LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'");
+        }
+
+        return ResLayoutInd;
+    }
+
+    Int8 GetVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex)
+    {
+        const auto PipelineType = m_pPSO->GetDesc().PipelineType;
+        if (!IsConsistentShaderType(ShaderType, PipelineType))
+        {
+            LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'");
+            return -1;
+        }
+
+        const auto ShaderInd    = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+        const auto ResLayoutInd = ResourceLayoutIndex[ShaderInd];
+        if (ResLayoutInd < 0)
+        {
+            LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                                " as the stage is inactive in PSO '", m_pPSO->GetDesc().Name, "'");
+        }
+
+        return ResLayoutInd;
+    }
+
     /// Strong reference to PSO. We must use strong reference, because
     /// shader resource binding uses PSO's memory allocator to allocate
     /// memory for shader resource cache.

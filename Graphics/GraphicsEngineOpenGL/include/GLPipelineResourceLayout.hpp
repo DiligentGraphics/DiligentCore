@@ -98,6 +98,7 @@ public:
 
     void Initialize(GLProgramResources*                  ProgramResources,
                     Uint32                               NumPrograms,
+                    PIPELINE_TYPE                        PipelineType,
                     const PipelineResourceLayoutDesc&    ResourceLayout,
                     const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                     Uint32                               NumAllowedTypes,
@@ -331,9 +332,11 @@ private:
 /*34*/ OffsetType m_ImageOffset         = 0;
 /*36*/ OffsetType m_StorageBufferOffset = 0;
 /*38*/ OffsetType m_VariableEndOffset   = 0;
-/*40*/ std::array<Int8, NUM_SHADER_TYPES> m_ProgramIndex;
-/*48*/ Uint8      m_NumPrograms         = 0;
-/*49*/
+/*40*/ std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ProgramIndex = {};
+/*45*/ Uint8      m_NumPrograms         = 0;
+/*46*/ Uint8      m_PipelineType        = 255u;
+/*47*/
+/*48*/ // End of structure
     // clang-format on
 
     template <typename ResourceType> OffsetType GetResourceOffset() const;

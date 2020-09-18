@@ -60,6 +60,7 @@ size_t GLPipelineResourceLayout::GetRequiredMemorySize(GLProgramResources*      
 
 void GLPipelineResourceLayout::Initialize(GLProgramResources*                  ProgramResources,
                                           Uint32                               NumPrograms,
+                                          PIPELINE_TYPE                        PipelineType,
                                           const PipelineResourceLayoutDesc&    ResourceLayout,
                                           const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                           Uint32                               NumAllowedTypes,
@@ -96,6 +97,8 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
     VERIFY_EXPR(m_NumPrograms == NumPrograms);
     auto TotalMemorySize = m_VariableEndOffset + m_NumPrograms * sizeof(GLProgramResources::ResourceCounters);
     VERIFY_EXPR(TotalMemorySize == GetRequiredMemorySize(ProgramResources, NumPrograms, ResourceLayout, AllowedVarTypes, NumAllowedTypes));
+
+    m_PipelineType = PipelineType;
 
     auto& ResLayoutDataAllocator = GetRawAllocator();
     if (TotalMemorySize)
@@ -195,7 +198,7 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
         while (ShaderStages != SHADER_TYPE_UNKNOWN)
         {
             auto Stage                = static_cast<SHADER_TYPE>(Uint32{ShaderStages} & ~(Uint32{ShaderStages} - 1));
-            auto ShaderInd            = GetShaderTypeIndex(Stage);
+            auto ShaderInd            = GetShaderTypePipelineIndex(Stage, PipelineType);
             m_ProgramIndex[ShaderInd] = static_cast<Int8>(prog);
             ShaderStages              = static_cast<SHADER_TYPE>(Uint32{ShaderStages} & ~Stage);
         }
@@ -487,6 +490,8 @@ IShaderResourceVariable* GLPipelineResourceLayout::GetResourceByName(SHADER_TYPE
 
 IShaderResourceVariable* GLPipelineResourceLayout::GetShaderVariable(SHADER_TYPE ShaderStage, const Char* Name)
 {
+    VERIFY_EXPR(IsConsistentShaderType(ShaderStage, static_cast<PIPELINE_TYPE>(m_PipelineType)));
+
     if (auto* pUB = GetResourceByName<UniformBuffBindInfo>(ShaderStage, Name))
         return pUB;
 
@@ -504,12 +509,17 @@ IShaderResourceVariable* GLPipelineResourceLayout::GetShaderVariable(SHADER_TYPE
 
 Uint32 GLPipelineResourceLayout::GetNumVariables(SHADER_TYPE ShaderStage) const
 {
+    VERIFY_EXPR(IsConsistentShaderType(ShaderStage, static_cast<PIPELINE_TYPE>(m_PipelineType)));
     VERIFY(IsPowerOfTwo(Uint32{ShaderStage}), "Only one shader stage must be specified");
-    auto ShaderInd = GetShaderTypeIndex(ShaderStage);
+    auto ShaderInd = GetShaderTypePipelineIndex(ShaderStage, static_cast<PIPELINE_TYPE>(m_PipelineType));
     auto ProgIdx   = m_ProgramIndex[ShaderInd];
 
     if (ProgIdx < 0)
+    {
+        LOG_WARNING_MESSAGE("Unable to get the number of variables in shader stage ", GetShaderTypeLiteralName(ShaderStage),
+                            " as the stage is inactive");
         return 0;
+    }
 
     const auto& VariableEndOffset   = GetProgramVarEndOffsets(ProgIdx);
     const auto& VariableStartOffset = ProgIdx > 0 ? GetProgramVarEndOffsets(ProgIdx - 1) : GLProgramResources::ResourceCounters{};
@@ -569,7 +579,7 @@ private:
 IShaderResourceVariable* GLPipelineResourceLayout::GetShaderVariable(SHADER_TYPE ShaderStage, Uint32 Index)
 {
     VERIFY(IsPowerOfTwo(Uint32{ShaderStage}), "Only one shader stage must be specified");
-    auto ShaderInd = GetShaderTypeIndex(ShaderStage);
+    auto ShaderInd = GetShaderTypePipelineIndex(ShaderStage, static_cast<PIPELINE_TYPE>(m_PipelineType));
     auto ProgIdx   = m_ProgramIndex[ShaderInd];
 
     if (ProgIdx < 0)
@@ -647,7 +657,7 @@ Uint32 GLPipelineResourceLayout::GetVariableIndex(const GLVariableBase& Var) con
     }
 
     auto FirstStage = static_cast<SHADER_TYPE>(Uint32{Var.m_Attribs.ShaderStages} & ~(Uint32{Var.m_Attribs.ShaderStages} - 1));
-    auto ProgIdx    = m_ProgramIndex[GetShaderTypeIndex(FirstStage)];
+    auto ProgIdx    = m_ProgramIndex[GetShaderTypePipelineIndex(FirstStage, static_cast<PIPELINE_TYPE>(m_PipelineType))];
     VERIFY(ProgIdx >= 0, "This shader stage is not initialized in the resource layout");
 
     const auto& VariableEndOffset   = GetProgramVarEndOffsets(ProgIdx);

@@ -104,6 +104,8 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo.PSODesc},
     m_SRBMemAllocator{GetRawAllocator()}
 {
+    m_ResourceLayoutIndex.fill(-1);
+
     auto        pd3d12Device   = pDeviceD3D12->GetD3D12Device();
     const auto& ResourceLayout = m_Desc.ResourceLayout;
     m_RootSig.AllocateStaticSamplers(ResourceLayout);
@@ -141,7 +143,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
     {
         auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
         auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
-        auto  ShaderInd    = GetShaderTypeIndex(ShaderType);
+        auto  ShaderInd    = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
 
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
 
@@ -150,6 +152,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             {
                 *this,
                 pDeviceD3D12->GetD3D12Device(),
+                m_Desc.PipelineType,
                 ResourceLayout,
                 pShaderD3D12->GetShaderResources(),
                 GetRawAllocator(),
@@ -167,6 +170,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             {
                 *this,
                 pDeviceD3D12->GetD3D12Device(),
+                m_Desc.PipelineType,
                 ResourceLayout,
                 pShaderD3D12->GetShaderResources(),
                 GetRawAllocator(),
@@ -613,29 +617,23 @@ void PipelineStateD3D12Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMa
 
 Uint32 PipelineStateD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
-    const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
-    if (LayoutInd < 0)
-        return 0;
-
-    return m_pStaticVarManagers[LayoutInd].GetVariableCount();
+    const auto LayoutInd = GetStaticVariableCountHelper(ShaderType, m_ResourceLayoutIndex);
+    VERIFY_EXPR(LayoutInd < 0 || static_cast<Uint32>(LayoutInd) <= m_NumShaders);
+    return LayoutInd >= 0 ? m_pStaticVarManagers[LayoutInd].GetVariableCount() : 0;
 }
 
 IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
-    const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
-    if (LayoutInd < 0)
-        return nullptr;
-
-    return m_pStaticVarManagers[LayoutInd].GetVariable(Name);
+    const auto LayoutInd = GetStaticVariableByNameHelper(ShaderType, Name, m_ResourceLayoutIndex);
+    VERIFY_EXPR(LayoutInd < 0 || static_cast<Uint32>(LayoutInd) <= m_NumShaders);
+    return LayoutInd >= 0 ? m_pStaticVarManagers[LayoutInd].GetVariable(Name) : nullptr;
 }
 
 IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    const auto LayoutInd = m_ResourceLayoutIndex[GetShaderTypeIndex(ShaderType)];
-    if (LayoutInd < 0)
-        return nullptr;
-
-    return m_pStaticVarManagers[LayoutInd].GetVariable(Index);
+    const auto LayoutInd = GetStaticVariableByIndexHelper(ShaderType, Index, m_ResourceLayoutIndex);
+    VERIFY_EXPR(LayoutInd < 0 || static_cast<Uint32>(LayoutInd) <= m_NumShaders);
+    return LayoutInd >= 0 ? m_pStaticVarManagers[LayoutInd].GetVariable(Index) : nullptr;
 }
 
 } // namespace Diligent

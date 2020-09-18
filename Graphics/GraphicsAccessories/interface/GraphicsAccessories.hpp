@@ -36,6 +36,7 @@
 #include "../../GraphicsEngine/interface/Buffer.h"
 #include "../../GraphicsEngine/interface/RenderDevice.h"
 #include "../../../Platforms/Basic/interface/DebugUtilities.hpp"
+#include "../../../Platforms/interface/PlatformMisc.hpp"
 
 namespace Diligent
 {
@@ -420,5 +421,54 @@ struct MipLevelProperties
 MipLevelProperties GetMipLevelProperties(const TextureDesc& TexDesc, Uint32 MipLevel);
 
 ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId);
+
+
+inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
+{
+    if (Type == SHADER_TYPE_UNKNOWN)
+        return -1;
+
+    VERIFY(Type > SHADER_TYPE_UNKNOWN && Type <= SHADER_TYPE_LAST, "Value ", Uint32{Type}, " is not a valid SHADER_TYPE enum value");
+    VERIFY(((Uint32{Type} & (Uint32{Type} - 1)) == 0), "Only single shader stage should be provided");
+
+    return PlatformMisc::GetLSB(Type);
+}
+
+static_assert(SHADER_TYPE_LAST == 0x080, "Please add the new shader type index below");
+
+static constexpr Int32 VSInd = 0;
+static constexpr Int32 PSInd = 1;
+static constexpr Int32 GSInd = 2;
+static constexpr Int32 HSInd = 3;
+static constexpr Int32 DSInd = 4;
+static constexpr Int32 CSInd = 5;
+static constexpr Int32 ASInd = 6;
+static constexpr Int32 MSInd = 7;
+
+static constexpr Int32 LastShaderInd = MSInd;
+
+// clang-format off
+static_assert(SHADER_TYPE_VERTEX        == (1 << VSInd), "VSInd is not consistent with SHADER_TYPE_VERTEX");
+static_assert(SHADER_TYPE_PIXEL         == (1 << PSInd), "PSInd is not consistent with SHADER_TYPE_PIXEL");
+static_assert(SHADER_TYPE_GEOMETRY      == (1 << GSInd), "GSInd is not consistent with SHADER_TYPE_GEOMETRY");
+static_assert(SHADER_TYPE_HULL          == (1 << HSInd), "HSInd is not consistent with SHADER_TYPE_HULL");
+static_assert(SHADER_TYPE_DOMAIN        == (1 << DSInd), "DSInd is not consistent with SHADER_TYPE_DOMAIN");
+static_assert(SHADER_TYPE_COMPUTE       == (1 << CSInd), "CSInd is not consistent with SHADER_TYPE_COMPUTE");
+static_assert(SHADER_TYPE_AMPLIFICATION == (1 << ASInd), "ASInd is not consistent with SHADER_TYPE_AMPLIFICATION");
+static_assert(SHADER_TYPE_MESH          == (1 << MSInd), "MSInd is not consistent with SHADER_TYPE_MESH");
+
+static_assert(SHADER_TYPE_LAST == (1 << LastShaderInd), "LastShaderInd is not consistent with SHADER_TYPE_LAST");
+// clang-format off
+
+inline SHADER_TYPE GetShaderTypeFromIndex(Int32 Index)
+{
+    VERIFY(Index >= 0 && Index <= LastShaderInd, "Shader type index is out of range");
+    return static_cast<SHADER_TYPE>(1 << Index);
+}
+
+
+bool        IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType);
+Int32       GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType);
+SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineType);
 
 } // namespace Diligent

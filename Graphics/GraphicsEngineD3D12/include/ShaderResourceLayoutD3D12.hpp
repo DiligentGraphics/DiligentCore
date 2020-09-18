@@ -119,6 +119,7 @@ public:
     //    no shader resource cache is provided
     ShaderResourceLayoutD3D12(IObject&                                    Owner,
                               ID3D12Device*                               pd3d12Device,
+                              PIPELINE_TYPE                               PipelineType,
                               const PipelineResourceLayoutDesc&           ResourceLayout,
                               std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
                               IMemoryAllocator&                           LayoutDataAllocator,

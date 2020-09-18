@@ -358,10 +358,11 @@
 #include <string>
 
 #include "HLSL2GLSLConverterImpl.hpp"
-#include "ShaderBase.hpp"
+#include "GraphicsAccessories.hpp"
 #include "DataBlobImpl.hpp"
 #include "StringDataBlobImpl.hpp"
 #include "StringTools.hpp"
+#include "EngineMemory.h"
 
 using namespace std;
 

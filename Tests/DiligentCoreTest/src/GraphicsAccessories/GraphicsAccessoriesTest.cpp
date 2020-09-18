@@ -25,6 +25,8 @@
  *  of the possibility of such damages.
  */
 
+#include <array>
+
 #include "GraphicsAccessories.hpp"
 
 #include "gtest/gtest.h"
@@ -484,5 +486,138 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetTextureFormatAttribs)
     CheckComponentType(std::begin(CompressedFormats), std::end(CompressedFormats), COMPONENT_TYPE_COMPRESSED);
 }
 
+TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
+{
+    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the test below to handle the new shader type");
+
+    // clang-format off
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_UNKNOWN),          -1);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_VERTEX),        VSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_PIXEL),         PSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_GEOMETRY),      GSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_HULL),          HSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_DOMAIN),        DSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_COMPUTE),       CSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_AMPLIFICATION), ASInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_MESH),          MSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_LAST),          LastShaderInd);
+    // clang-format on
+
+    for (Int32 i = 0; i <= LastShaderInd; ++i)
+    {
+        auto ShaderType = static_cast<SHADER_TYPE>(1 << i);
+        EXPECT_EQ(GetShaderTypeIndex(ShaderType), i);
+    }
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromIndex)
+{
+    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the test below to handle the new shader type");
+
+    EXPECT_EQ(GetShaderTypeFromIndex(VSInd), SHADER_TYPE_VERTEX);
+    EXPECT_EQ(GetShaderTypeFromIndex(PSInd), SHADER_TYPE_PIXEL);
+    EXPECT_EQ(GetShaderTypeFromIndex(GSInd), SHADER_TYPE_GEOMETRY);
+    EXPECT_EQ(GetShaderTypeFromIndex(HSInd), SHADER_TYPE_HULL);
+    EXPECT_EQ(GetShaderTypeFromIndex(DSInd), SHADER_TYPE_DOMAIN);
+    EXPECT_EQ(GetShaderTypeFromIndex(CSInd), SHADER_TYPE_COMPUTE);
+    EXPECT_EQ(GetShaderTypeFromIndex(ASInd), SHADER_TYPE_AMPLIFICATION);
+    EXPECT_EQ(GetShaderTypeFromIndex(MSInd), SHADER_TYPE_MESH);
+
+    EXPECT_EQ(GetShaderTypeFromIndex(LastShaderInd), SHADER_TYPE_LAST);
+
+    for (Int32 i = 0; i <= LastShaderInd; ++i)
+    {
+        auto ShaderType = static_cast<SHADER_TYPE>(1 << i);
+        EXPECT_EQ(GetShaderTypeFromIndex(i), ShaderType);
+    }
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, IsConsistentShaderType)
+{
+    {
+        std::array<bool, LastShaderInd + 1> ValidGraphicsStages;
+        ValidGraphicsStages.fill(false);
+        ValidGraphicsStages[VSInd] = true;
+        ValidGraphicsStages[HSInd] = true;
+        ValidGraphicsStages[DSInd] = true;
+        ValidGraphicsStages[GSInd] = true;
+        ValidGraphicsStages[PSInd] = true;
+
+        for (Int32 i = 0; i <= LastShaderInd; ++i)
+        {
+            auto ShaderType = GetShaderTypeFromIndex(i);
+            EXPECT_EQ(IsConsistentShaderType(ShaderType, PIPELINE_TYPE_GRAPHICS), ValidGraphicsStages[i]);
+        }
+    }
+
+    {
+        std::array<bool, LastShaderInd + 1> ValidComputeStages;
+        ValidComputeStages.fill(false);
+        ValidComputeStages[CSInd] = true;
+
+        for (Int32 i = 0; i <= LastShaderInd; ++i)
+        {
+            auto ShaderType = GetShaderTypeFromIndex(i);
+            EXPECT_EQ(IsConsistentShaderType(ShaderType, PIPELINE_TYPE_COMPUTE), ValidComputeStages[i]);
+        }
+    }
+
+    {
+        std::array<bool, LastShaderInd + 1> ValidMeshStages;
+        ValidMeshStages.fill(false);
+        ValidMeshStages[ASInd] = true;
+        ValidMeshStages[MSInd] = true;
+        ValidMeshStages[PSInd] = true;
+
+        for (Int32 i = 0; i <= LastShaderInd; ++i)
+        {
+            auto ShaderType = GetShaderTypeFromIndex(i);
+            EXPECT_EQ(IsConsistentShaderType(ShaderType, PIPELINE_TYPE_MESH), ValidMeshStages[i]);
+        }
+    }
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypePipelineIndex)
+{
+    auto TestPipelineType = [](PIPELINE_TYPE PipelineType) {
+        std::array<Int32, MAX_SHADERS_IN_PIPELINE> IndexUsed;
+        IndexUsed.fill(false);
+
+        for (Int32 i = 0; i <= LastShaderInd; ++i)
+        {
+            auto ShaderType = GetShaderTypeFromIndex(i);
+            if (IsConsistentShaderType(ShaderType, PipelineType))
+            {
+                auto Index = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+                ASSERT_LE(Index, static_cast<Int32>(MAX_SHADERS_IN_PIPELINE)) << " shader pipeline type index " << Index << " is out of range";
+                EXPECT_FALSE(IndexUsed[Index]) << " shader pipeline type index " << Index << " is already used for another shader stage";
+                IndexUsed[Index] = true;
+            }
+        }
+    };
+
+    TestPipelineType(PIPELINE_TYPE_GRAPHICS);
+    TestPipelineType(PIPELINE_TYPE_COMPUTE);
+    TestPipelineType(PIPELINE_TYPE_MESH);
+}
+
+TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromPipelineIndex)
+{
+    auto TestPipelineType = [](PIPELINE_TYPE PipelineType) {
+        for (Int32 i = 0; i <= LastShaderInd; ++i)
+        {
+            auto ShaderType = GetShaderTypeFromIndex(i);
+            if (IsConsistentShaderType(ShaderType, PipelineType))
+            {
+                auto Index = GetShaderTypePipelineIndex(ShaderType, PipelineType);
+                EXPECT_EQ(GetShaderTypeFromPipelineIndex(Index, PipelineType), ShaderType);
+            }
+        }
+    };
+
+    TestPipelineType(PIPELINE_TYPE_GRAPHICS);
+    TestPipelineType(PIPELINE_TYPE_COMPUTE);
+    TestPipelineType(PIPELINE_TYPE_MESH);
+}
 
 } // namespace

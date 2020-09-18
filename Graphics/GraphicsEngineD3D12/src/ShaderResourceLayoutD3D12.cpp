@@ -114,6 +114,7 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-Shader-Resource-Layouts-in-a-Pipeline-State
 ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                                    Owner,
                                                      ID3D12Device*                               pd3d12Device,
+                                                     PIPELINE_TYPE                               PipelineType,
                                                      const PipelineResourceLayoutDesc&           ResourceLayout,
                                                      std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
                                                      IMemoryAllocator&                           LayoutDataAllocator,
@@ -211,7 +212,7 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
 
         if (pRootSig)
         {
-            pRootSig->AllocateResourceSlot(m_pResources->GetShaderType(), Attribs, VarType, DescriptorRangeType, RootIndex, Offset);
+            pRootSig->AllocateResourceSlot(m_pResources->GetShaderType(), PipelineType, Attribs, VarType, DescriptorRangeType, RootIndex, Offset);
             VERIFY(RootIndex <= D3D12Resource::MaxRootIndex, "Root index excceeds allowed limit");
         }
         else

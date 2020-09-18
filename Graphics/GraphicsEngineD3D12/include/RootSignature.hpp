@@ -318,6 +318,7 @@ public:
                            const D3DShaderResourceAttribs& ShaderResAttribs);
 
     void AllocateResourceSlot(SHADER_TYPE                     ShaderType,
+                              PIPELINE_TYPE                   PipelineType,
                               const D3DShaderResourceAttribs& ShaderResAttribs,
                               SHADER_RESOURCE_VARIABLE_TYPE   VariableType,
                               D3D12_DESCRIPTOR_RANGE_TYPE     RangeType,
@@ -474,9 +475,9 @@ private:
     // in m_RootParams (NOT the Root Index!), for every variable type
     // (static, mutable, dynamic) and every shader type,
     // or -1, if the table is not yet assigned to the combination
-    std::array<Uint8, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES * NUM_SHADER_TYPES> m_SrvCbvUavRootTablesMap;
+    std::array<Uint8, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES * MAX_SHADERS_IN_PIPELINE> m_SrvCbvUavRootTablesMap;
     // This array contains the same data for Sampler root table
-    std::array<Uint8, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES * NUM_SHADER_TYPES> m_SamplerRootTablesMap;
+    std::array<Uint8, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES * MAX_SHADERS_IN_PIPELINE> m_SamplerRootTablesMap;
 
     RootParamsManager m_RootParams;
 

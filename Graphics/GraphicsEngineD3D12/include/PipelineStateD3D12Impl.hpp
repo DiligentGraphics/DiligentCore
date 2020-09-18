@@ -129,7 +129,7 @@ private:
     ShaderResourceCacheD3D12*   m_pStaticResourceCaches  = nullptr;
     ShaderVariableManagerD3D12* m_pStaticVarManagers     = nullptr;
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
-    std::array<Int8, NUM_SHADER_TYPES> m_ResourceLayoutIndex;
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex;
 };
 
 } // namespace Diligent

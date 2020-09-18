@@ -229,11 +229,12 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
     // First, commit all UAVs for all shader stages. This will unbind them from input
     for (Uint32 s = 0; s < NumShaders; ++s)
     {
-        auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s);
+        const auto ShaderType    = pShaderResBindingD3D11->GetActiveShaderType(s);
+        const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
 
 #ifdef DILIGENT_DEVELOPMENT
         auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
-        VERIFY_EXPR(ShaderTypeInd == static_cast<Int32>(GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType)));
+        VERIFY_EXPR(ShaderType == pShaderD3D11->GetDesc().ShaderType);
 #endif
 
         auto& Cache   = pShaderResBindingD3D11->GetResourceCache(s);
@@ -375,11 +376,12 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
     // Commit input resources (CBs, SRVs and Samplers)
     for (Uint32 s = 0; s < NumShaders; ++s)
     {
-        auto ShaderTypeInd = pShaderResBindingD3D11->GetActiveShaderTypeIndex(s);
+        const auto ShaderType    = pShaderResBindingD3D11->GetActiveShaderType(s);
+        const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
 
 #ifdef DILIGENT_DEVELOPMENT
         auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
-        VERIFY_EXPR(ShaderTypeInd == static_cast<Int32>(GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType)));
+        VERIFY_EXPR(ShaderType == pShaderD3D11->GetDesc().ShaderType);
 #endif
 
         auto& Cache = pShaderResBindingD3D11->GetResourceCache(s);

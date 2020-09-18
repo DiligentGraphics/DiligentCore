@@ -38,55 +38,9 @@
 #include "PlatformMisc.hpp"
 #include "EngineMemory.h"
 #include "Align.hpp"
-#include "Constants.h"
 
 namespace Diligent
 {
-
-static_assert((1u << (NUM_SHADER_TYPES - 1)) == SHADER_TYPE_LAST, "check shader type enum or shader count");
-
-inline SHADER_TYPE GetShaderTypeFromIndex(Int32 Index)
-{
-    return static_cast<SHADER_TYPE>(1 << Index);
-}
-
-inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
-{
-    VERIFY(IsPowerOfTwo(Uint32{Type}), "Only single shader stage should be provided");
-
-    Int32 ShaderIndex = PlatformMisc::GetLSB(Type);
-
-#ifdef DILIGENT_DEBUG
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the switch below to handle the new shader type");
-    switch (Type)
-    {
-        // clang-format off
-        case SHADER_TYPE_UNKNOWN:       VERIFY_EXPR(ShaderIndex == -1); break;
-        case SHADER_TYPE_VERTEX:        VERIFY_EXPR(ShaderIndex ==  0); break;
-        case SHADER_TYPE_PIXEL:         VERIFY_EXPR(ShaderIndex ==  1); break;
-        case SHADER_TYPE_GEOMETRY:      VERIFY_EXPR(ShaderIndex ==  2); break;
-        case SHADER_TYPE_HULL:          VERIFY_EXPR(ShaderIndex ==  3); break;
-        case SHADER_TYPE_DOMAIN:        VERIFY_EXPR(ShaderIndex ==  4); break;
-        case SHADER_TYPE_COMPUTE:       VERIFY_EXPR(ShaderIndex ==  5); break;
-        case SHADER_TYPE_AMPLIFICATION: VERIFY_EXPR(ShaderIndex ==  6); break;
-        case SHADER_TYPE_MESH:          VERIFY_EXPR(ShaderIndex ==  7); break;
-        // clang-format on
-        default: UNEXPECTED("Unexpected shader type (", Type, ")"); break;
-    }
-    VERIFY(Type == GetShaderTypeFromIndex(ShaderIndex), "Incorrect shader type index");
-#endif
-    return ShaderIndex;
-}
-
-static const int VSInd = GetShaderTypeIndex(SHADER_TYPE_VERTEX);
-static const int PSInd = GetShaderTypeIndex(SHADER_TYPE_PIXEL);
-static const int GSInd = GetShaderTypeIndex(SHADER_TYPE_GEOMETRY);
-static const int HSInd = GetShaderTypeIndex(SHADER_TYPE_HULL);
-static const int DSInd = GetShaderTypeIndex(SHADER_TYPE_DOMAIN);
-static const int CSInd = GetShaderTypeIndex(SHADER_TYPE_COMPUTE);
-static const int ASInd = GetShaderTypeIndex(SHADER_TYPE_AMPLIFICATION);
-static const int MSInd = GetShaderTypeIndex(SHADER_TYPE_MESH);
-
 
 /// Template class implementing base functionality for a shader object
 

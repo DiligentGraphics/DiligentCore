@@ -78,9 +78,10 @@ private:
     ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
 
     // Shader variable manager index in m_pShaderVarMgrs[] array for every shader stage
-    std::array<Int8, NUM_SHADER_TYPES> m_ResourceLayoutIndex;
-    bool                               m_bStaticResourcesInitialized = false;
-    Uint8                              m_NumShaders                  = 0;
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex;
+
+    bool  m_bStaticResourcesInitialized = false;
+    Uint8 m_NumShaders                  = 0;
 };
 
 } // namespace Diligent

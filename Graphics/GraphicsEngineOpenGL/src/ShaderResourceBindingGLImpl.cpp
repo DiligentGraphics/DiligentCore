@@ -53,7 +53,7 @@ ShaderResourceBindingGLImpl::ShaderResourceBindingGLImpl(IReferenceCounters*  pR
     const SHADER_RESOURCE_VARIABLE_TYPE SRBVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
 
     const auto& ResourceLayout = pPSO->GetDesc().ResourceLayout;
-    m_ResourceLayout.Initialize(ProgramResources, NumPrograms, ResourceLayout, SRBVarTypes, _countof(SRBVarTypes), &m_ResourceCache);
+    m_ResourceLayout.Initialize(ProgramResources, NumPrograms, pPSO->GetDesc().PipelineType, ResourceLayout, SRBVarTypes, _countof(SRBVarTypes), &m_ResourceCache);
 }
 
 ShaderResourceBindingGLImpl::~ShaderResourceBindingGLImpl()
@@ -70,16 +70,37 @@ void ShaderResourceBindingGLImpl::BindResources(Uint32 ShaderFlags, IResourceMap
 
 IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariableByName(SHADER_TYPE ShaderType, const char* Name)
 {
+    if (!IsConsistentShaderType(ShaderType, m_pPSO->GetDesc().PipelineType))
+    {
+        LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                            " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'");
+        return nullptr;
+    }
+
     return m_ResourceLayout.GetShaderVariable(ShaderType, Name);
 }
 
 Uint32 ShaderResourceBindingGLImpl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
+    if (!IsConsistentShaderType(ShaderType, m_pPSO->GetDesc().PipelineType))
+    {
+        LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                            " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'");
+        return 0;
+    }
+
     return m_ResourceLayout.GetNumVariables(ShaderType);
 }
 
 IShaderResourceVariable* ShaderResourceBindingGLImpl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
+    if (!IsConsistentShaderType(ShaderType, m_pPSO->GetDesc().PipelineType))
+    {
+        LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                            " as the stage is invalid for ", GetPipelineTypeString(m_pPSO->GetDesc().PipelineType), " pipeline '", m_pPSO->GetDesc().Name, "'");
+        return nullptr;
+    }
+
     return m_ResourceLayout.GetShaderVariable(ShaderType, Index);
 }
 

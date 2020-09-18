@@ -63,7 +63,6 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl(IReferenceCounter
     for (Uint8 s = 0; s < m_NumActiveShaders; ++s)
     {
         auto* pShaderD3D11 = pPSO->GetShader<ShaderD3D11Impl>(s);
-        auto  ShaderInd    = GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType);
 
         auto& SRBMemAllocator        = pPSO->GetSRBMemoryAllocator();
         auto& ResCacheDataAllocator  = SRBMemAllocator.GetResourceCacheDataAllocator(s);
@@ -93,8 +92,11 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl(IReferenceCounter
             };
         // clang-format on
 
-        m_ResourceLayoutIndex[ShaderInd] = s;
-        m_ShaderTypeIndex[s]             = static_cast<Int8>(ShaderInd);
+        const auto ShaderType   = pShaderD3D11->GetDesc().ShaderType;
+        const auto ResLayoutInd = GetShaderTypePipelineIndex(ShaderType, PSODesc.PipelineType);
+        m_ShaderTypes[s]        = ShaderType;
+
+        m_ResourceLayoutIndex[ResLayoutInd] = s;
     }
 }
 
@@ -169,7 +171,7 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
 
 #ifdef DILIGENT_DEBUG
         {
-            auto ShaderTypeInd     = GetShaderTypeIndex(pShaderD3D11->GetDesc().ShaderType);
+            auto ShaderTypeInd     = GetShaderTypePipelineIndex(pShaderD3D11->GetDesc().ShaderType, pPSOD3D11->GetDesc().PipelineType);
             auto ResourceLayoutInd = m_ResourceLayoutIndex[ShaderTypeInd];
             VERIFY_EXPR(ResourceLayoutInd == static_cast<Int8>(shader));
         }
@@ -183,50 +185,20 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
 
 IShaderResourceVariable* ShaderResourceBindingD3D11Impl::GetVariableByName(SHADER_TYPE ShaderType, const char* Name)
 {
-    auto Ind = GetShaderTypeIndex(ShaderType);
-    VERIFY_EXPR(Ind >= 0 && Ind < m_ResourceLayoutIndex.size());
-    auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
-    if (ResLayoutIndex < 0)
-    {
-        LOG_WARNING_MESSAGE("Unable to find mutable/dynamic variable '", Name, "': shader stage ",
-                            GetShaderTypeLiteralName(ShaderType), " is inactive in Pipeline State '",
-                            m_pPSO->GetDesc().Name, "'");
-        return nullptr;
-    }
-
-    return m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Name);
+    auto ResLayoutInd = GetVariableByNameHelper(ShaderType, Name, m_ResourceLayoutIndex);
+    return ResLayoutInd >= 0 ? m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Name) : nullptr;
 }
 
 Uint32 ShaderResourceBindingD3D11Impl::GetVariableCount(SHADER_TYPE ShaderType) const
 {
-    auto Ind = GetShaderTypeIndex(ShaderType);
-    VERIFY_EXPR(Ind >= 0 && Ind < m_ResourceLayoutIndex.size());
-    auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
-    if (ResLayoutIndex < 0)
-    {
-        LOG_WARNING_MESSAGE("Unable to get the number of mutable/dynamic variables: shader stage ",
-                            GetShaderTypeLiteralName(ShaderType), " is inactive in Pipeline State '",
-                            m_pPSO->GetDesc().Name, "'");
-        return 0;
-    }
-
-    return m_pResourceLayouts[ResLayoutIndex].GetTotalResourceCount();
+    auto ResLayoutInd = GetVariableCountHelper(ShaderType, m_ResourceLayoutIndex);
+    return ResLayoutInd >= 0 ? m_pResourceLayouts[ResLayoutInd].GetTotalResourceCount() : 0;
 }
 
 IShaderResourceVariable* ShaderResourceBindingD3D11Impl::GetVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
-    auto Ind = GetShaderTypeIndex(ShaderType);
-    VERIFY_EXPR(Ind >= 0 && Ind < m_ResourceLayoutIndex.size());
-    auto ResLayoutIndex = m_ResourceLayoutIndex[Ind];
-    if (ResLayoutIndex < 0)
-    {
-        LOG_WARNING_MESSAGE("Unable to get mutable/dynamic variable at index ", Index, ": shader stage ",
-                            GetShaderTypeLiteralName(ShaderType), " is inactive in Pipeline State '",
-                            m_pPSO->GetDesc().Name, "'");
-        return nullptr;
-    }
-
-    return m_pResourceLayouts[ResLayoutIndex].GetShaderVariable(Index);
+    auto ResLayoutInd = GetVariableByIndexHelper(ShaderType, Index, m_ResourceLayoutIndex);
+    return ResLayoutInd >= 0 ? m_pResourceLayouts[ResLayoutInd].GetShaderVariable(Index) : nullptr;
 }
 
 } // namespace Diligent

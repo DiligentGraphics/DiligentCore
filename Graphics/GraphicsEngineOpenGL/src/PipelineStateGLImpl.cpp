@@ -120,7 +120,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         }
 
         // Initialize master resource layout that keeps all variable types and does not reference a resource cache
-        m_ResourceLayout.Initialize(m_ProgramResources.data(), static_cast<Uint32>(m_GLPrograms.size()), m_Desc.ResourceLayout, nullptr, 0, nullptr);
+        m_ResourceLayout.Initialize(m_ProgramResources.data(), static_cast<Uint32>(m_GLPrograms.size()), m_Desc.PipelineType, m_Desc.ResourceLayout, nullptr, 0, nullptr);
     }
 
     m_StaticSamplers.resize(m_Desc.ResourceLayout.NumStaticSamplers);
@@ -132,7 +132,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
     {
         // Clone only static variables into static resource layout, assign and initialize static resource cache
         const SHADER_RESOURCE_VARIABLE_TYPE StaticVars[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-        m_StaticResourceLayout.Initialize(m_ProgramResources.data(), static_cast<Uint32>(m_GLPrograms.size()), m_Desc.ResourceLayout, StaticVars, _countof(StaticVars), &m_StaticResourceCache);
+        m_StaticResourceLayout.Initialize(m_ProgramResources.data(), static_cast<Uint32>(m_GLPrograms.size()), m_Desc.PipelineType, m_Desc.ResourceLayout, StaticVars, _countof(StaticVars), &m_StaticResourceCache);
         InitStaticSamplersInResourceCache(m_StaticResourceLayout, m_StaticResourceCache);
     }
 }
@@ -254,16 +254,37 @@ void PipelineStateGLImpl::BindStaticResources(Uint32 ShaderFlags, IResourceMappi
 
 Uint32 PipelineStateGLImpl::GetStaticVariableCount(SHADER_TYPE ShaderType) const
 {
+    if (!IsConsistentShaderType(ShaderType, m_Desc.PipelineType))
+    {
+        LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                            " as the stage is invalid for ", GetPipelineTypeString(m_Desc.PipelineType), " pipeline '", m_Desc.Name, "'");
+        return 0;
+    }
+
     return m_StaticResourceLayout.GetNumVariables(ShaderType);
 }
 
 IShaderResourceVariable* PipelineStateGLImpl::GetStaticVariableByName(SHADER_TYPE ShaderType, const Char* Name)
 {
+    if (!IsConsistentShaderType(ShaderType, m_Desc.PipelineType))
+    {
+        LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                            " as the stage is invalid for ", GetPipelineTypeString(m_Desc.PipelineType), " pipeline '", m_Desc.Name, "'");
+        return nullptr;
+    }
+
     return m_StaticResourceLayout.GetShaderVariable(ShaderType, Name);
 }
 
 IShaderResourceVariable* PipelineStateGLImpl::GetStaticVariableByIndex(SHADER_TYPE ShaderType, Uint32 Index)
 {
+    if (!IsConsistentShaderType(ShaderType, m_Desc.PipelineType))
+    {
+        LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
+                            " as the stage is invalid for ", GetPipelineTypeString(m_Desc.PipelineType), " pipeline '", m_Desc.Name, "'");
+        return nullptr;
+    }
+
     return m_StaticResourceLayout.GetShaderVariable(ShaderType, Index);
 }
 

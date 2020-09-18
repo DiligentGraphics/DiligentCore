@@ -30,13 +30,14 @@
 /// \file
 /// Declaration of Diligent::ShaderResourceBindingD3D11Impl class
 
+#include <array>
+
 #include "ShaderResourceBindingD3D11.h"
 #include "RenderDeviceD3D11.h"
 #include "ShaderResourceBindingBase.hpp"
 #include "ShaderResourceCacheD3D11.hpp"
 #include "ShaderResourceLayoutD3D11.hpp"
 #include "STDAllocator.hpp"
-#include <array>
 
 namespace Diligent
 {
@@ -85,25 +86,29 @@ public:
         return m_pResourceLayouts[Ind];
     }
 
-    inline bool IsStaticResourcesBound() { return m_bIsStaticResourcesBound; }
+    inline bool IsStaticResourcesBound() const { return m_bIsStaticResourcesBound; }
 
-    Uint32 GetNumActiveShaders()
+    Uint32 GetNumActiveShaders() const
     {
         return static_cast<Uint32>(m_NumActiveShaders);
     }
 
-    Int32 GetActiveShaderTypeIndex(Uint32 s) { return m_ShaderTypeIndex[s]; }
+    SHADER_TYPE GetActiveShaderType(Uint32 s) const
+    {
+        VERIFY_EXPR(s < m_NumActiveShaders);
+        return m_ShaderTypes[s];
+    }
 
 private:
     // The caches are indexed by the shader order in the PSO, not shader index
     ShaderResourceCacheD3D11*  m_pBoundResourceCaches = nullptr;
     ShaderResourceLayoutD3D11* m_pResourceLayouts     = nullptr;
 
-    std::array<Int8, NUM_SHADER_TYPES> m_ShaderTypeIndex = {};
+    std::array<SHADER_TYPE, MAX_SHADERS_IN_PIPELINE> m_ShaderTypes = {};
 
     // Resource layout index in m_ResourceLayouts[] array for every shader stage
-    std::array<Int8, NUM_SHADER_TYPES> m_ResourceLayoutIndex;
-    Uint8                              m_NumActiveShaders = 0;
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex;
+    Uint8                                     m_NumActiveShaders = 0;
 
     bool m_bIsStaticResourcesBound = false;
 };
