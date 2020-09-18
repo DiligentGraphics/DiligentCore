@@ -34,16 +34,16 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
+class PipelineStateMtlImpl;
 /// Implementation of the Diligent::IShaderResourceBindingMtl interface
-class ShaderResourceBindingMtlImpl final : public ShaderResourceBindingBase<IShaderResourceBindingMtl>
+class ShaderResourceBindingMtlImpl final : public ShaderResourceBindingBase<IShaderResourceBindingMtl, PipelineStateMtlImpl>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingMtl>;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingMtl, PipelineStateMtlImpl>;
 
-    ShaderResourceBindingMtlImpl(IReferenceCounters*         pRefCounters,
-                                 class PipelineStateMtlImpl* pPSO,
-                                 bool                        IsInternal);
+    ShaderResourceBindingMtlImpl(IReferenceCounters*   pRefCounters,
+                                 PipelineStateMtlImpl* pPSO,
+                                 bool                  IsInternal);
     ~ShaderResourceBindingMtlImpl();
 
     virtual void QueryInterface(const Diligent::INTERFACE_ID& IID, IObject** ppInterface) override final;

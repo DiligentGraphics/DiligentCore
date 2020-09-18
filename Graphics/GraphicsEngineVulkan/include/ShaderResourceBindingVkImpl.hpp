@@ -40,16 +40,18 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
+class PipelineStateVkImpl;
 
 /// Implementation of the Diligent::IShaderResourceBindingVk interface
 // sizeof(ShaderResourceBindingVkImpl) == 72 (x64, msvc, Release)
-class ShaderResourceBindingVkImpl final : public ShaderResourceBindingBase<IShaderResourceBindingVk>
+class ShaderResourceBindingVkImpl final : public ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineStateVkImpl>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingVk>;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingVk, PipelineStateVkImpl>;
 
-    ShaderResourceBindingVkImpl(IReferenceCounters* pRefCounters, class PipelineStateVkImpl* pPSO, bool IsPSOInternal);
+    ShaderResourceBindingVkImpl(IReferenceCounters*  pRefCounters,
+                                PipelineStateVkImpl* pPSO,
+                                bool                 IsPSOInternal);
     ~ShaderResourceBindingVkImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

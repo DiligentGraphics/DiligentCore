@@ -40,16 +40,18 @@
 namespace Diligent
 {
 
+class PipelineStateD3D12Impl;
+
 /// Implementation of the Diligent::IShaderResourceBindingD3D12 interface
 // sizeof(ShaderResourceBindingD3D12Impl) == 152 (x64, msvc, Release)
-class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D12>
+class ShaderResourceBindingD3D12Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineStateD3D12Impl>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D12>;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D12, PipelineStateD3D12Impl>;
 
-    ShaderResourceBindingD3D12Impl(IReferenceCounters*           pRefCounters,
-                                   class PipelineStateD3D12Impl* pPSO,
-                                   bool                          IsPSOInternal);
+    ShaderResourceBindingD3D12Impl(IReferenceCounters*     pRefCounters,
+                                   PipelineStateD3D12Impl* pPSO,
+                                   bool                    IsPSOInternal);
     ~ShaderResourceBindingD3D12Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

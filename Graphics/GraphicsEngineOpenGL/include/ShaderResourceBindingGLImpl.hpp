@@ -41,14 +41,13 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
 class PipelineStateGLImpl;
 
 /// Shader resource binding object implementation in OpenGL backend.
-class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<IShaderResourceBindingGL>
+class ShaderResourceBindingGLImpl final : public ShaderResourceBindingBase<IShaderResourceBindingGL, PipelineStateGLImpl>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingGL>;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingGL, PipelineStateGLImpl>;
 
     ShaderResourceBindingGLImpl(IReferenceCounters*  pRefCounters,
                                 PipelineStateGLImpl* pPSO,

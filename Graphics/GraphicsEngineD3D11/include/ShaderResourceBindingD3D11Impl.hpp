@@ -42,17 +42,17 @@
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
+class PipelineStateD3D11Impl;
 
 /// Implementation of shader resource binding object in Direct3D11 backend.
-class ShaderResourceBindingD3D11Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D11>
+class ShaderResourceBindingD3D11Impl final : public ShaderResourceBindingBase<IShaderResourceBindingD3D11, PipelineStateD3D11Impl>
 {
 public:
-    using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D11>;
+    using TBase = ShaderResourceBindingBase<IShaderResourceBindingD3D11, PipelineStateD3D11Impl>;
 
-    ShaderResourceBindingD3D11Impl(IReferenceCounters*           pRefCounters,
-                                   class PipelineStateD3D11Impl* pPSO,
-                                   bool                          IsInternal);
+    ShaderResourceBindingD3D11Impl(IReferenceCounters*     pRefCounters,
+                                   PipelineStateD3D11Impl* pPSO,
+                                   bool                    IsInternal);
     ~ShaderResourceBindingD3D11Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;

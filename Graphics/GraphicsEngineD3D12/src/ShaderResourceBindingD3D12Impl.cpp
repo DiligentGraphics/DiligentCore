@@ -109,7 +109,6 @@ void ShaderResourceBindingD3D12Impl::BindResources(Uint32 ShaderFlags, IResource
         {
             if (ShaderFlags & GetShaderTypeFromPipelineIndex(ShaderInd, PipelineType))
             {
-
                 m_pShaderVarMgrs[ResLayoutInd].BindResources(pResMapping, Flags);
             }
         }
