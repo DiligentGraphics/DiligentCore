@@ -454,19 +454,19 @@ protected:
 protected:
     Int8 GetStaticVariableCountHelper(SHADER_TYPE ShaderType, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
     {
-        if (!IsConsistentShaderType(ShaderType, m_Desc.PipelineType))
+        if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_Desc.PipelineType), " pipeline '", m_Desc.Name, "'");
+                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'");
             return -1;
         }
 
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
+        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, this->m_Desc.PipelineType);
         const auto LayoutInd     = ResourceLayoutIndex[ShaderTypeInd];
         if (LayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get the number of static variables in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", m_Desc.Name, "'");
+                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'");
         }
 
         return LayoutInd;
@@ -474,19 +474,19 @@ protected:
 
     Int8 GetStaticVariableByNameHelper(SHADER_TYPE ShaderType, const Char* Name, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
     {
-        if (!IsConsistentShaderType(ShaderType, m_Desc.PipelineType))
+        if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_Desc.PipelineType), " pipeline '", m_Desc.Name, "'");
+                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'");
             return -1;
         }
 
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
+        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, this->m_Desc.PipelineType);
         const auto LayoutInd     = ResourceLayoutIndex[ShaderTypeInd];
         if (LayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to find static variable '", Name, "' in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", m_Desc.Name, "'");
+                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'");
         }
 
         return LayoutInd;
@@ -494,19 +494,19 @@ protected:
 
     Int8 GetStaticVariableByIndexHelper(SHADER_TYPE ShaderType, Uint32 Index, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
     {
-        if (!IsConsistentShaderType(ShaderType, m_Desc.PipelineType))
+        if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
         {
             LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is invalid for ", GetPipelineTypeString(m_Desc.PipelineType), " pipeline '", m_Desc.Name, "'");
+                                " as the stage is invalid for ", GetPipelineTypeString(this->m_Desc.PipelineType), " pipeline '", this->m_Desc.Name, "'");
             return -1;
         }
 
-        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
+        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, this->m_Desc.PipelineType);
         const auto LayoutInd     = ResourceLayoutIndex[ShaderTypeInd];
         if (LayoutInd < 0)
         {
             LOG_WARNING_MESSAGE("Unable to get static variable at index ", Index, " in shader stage ", GetShaderTypeLiteralName(ShaderType),
-                                " as the stage is inactive in PSO '", m_Desc.Name, "'");
+                                " as the stage is inactive in PSO '", this->m_Desc.Name, "'");
         }
 
         return LayoutInd;
