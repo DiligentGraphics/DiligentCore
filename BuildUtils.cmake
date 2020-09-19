@@ -205,9 +205,9 @@ endfunction()
 
 # Returns default backend library type (static/dynamic) for the current platform
 function(get_backend_libraries_type _LIB_TYPE)
-    if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_ANDROID)
+    if(PLATFORM_WIN32 OR PLATFORM_LINUX OR PLATFORM_ANDROID OR PLATFORM_UNIVERSAL_WINDOWS)
         set(LIB_TYPE "shared")
-    elseif(PLATFORM_UNIVERSAL_WINDOWS OR PLATFORM_MACOS)
+    elseif(PLATFORM_MACOS)
         set(LIB_TYPE "static")
     elseif(PLATFORM_IOS)
         # Statically link with the engine on iOS.
