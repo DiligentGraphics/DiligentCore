@@ -26,49 +26,28 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
 
         # Copy D3Dcompiler_47.dll, dxcompiler.dll, and dxil.dll
         if(MSVC)
-            if (${CMAKE_SIZEOF_VOID_P} EQUAL 8)
-                set(ARCH_SUFFIX "x64")
-            else()
-                set(ARCH_SUFFIX "x86")
+            if ((D3D11_SUPPORTED OR D3D12_SUPPORTED) AND VS_D3D_COMPILER_PATH)
+                # Note that VS_D3D_COMPILER_PATH can only be used in a Visual Studio command
+                # and is not a valid path during CMake configuration
+                list(APPEND SHADER_COMPILER_DLLS ${VS_D3D_COMPILER_PATH})
             endif()
 
-            # Note that CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION is stated to be defined when targeting Windows 10
-            # and above, however it is also defined when targeting 8.1 and Visual Studio 2019 (but not VS2017)
-            if(CMAKE_SYSTEM_VERSION VERSION_GREATER_EQUAL "10.0")
-                if (DEFINED CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION)
-                    set(WIN_SDK_BIN_PATH "$(WindowsSdkDir)\\bin\\${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION}\\${ARCH_SUFFIX}")
-                    set(D3D_COMPILER_PATH "\"${WIN_SDK_BIN_PATH}\\D3Dcompiler_47.dll\"")
+            if(D3D12_SUPPORTED AND VS_DXC_COMPILER_PATH AND VS_DXIL_SIGNER_PATH)
+                # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in 
+                # the same folder as the dxcompiler.dll at runtime.
 
-                    # DXC is only present in Windows SDK starting with version 10.0.17763.0
-                    if(${CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION} VERSION_GREATER_EQUAL "10.0.17763.0")
-                        set(DXC_COMPILER_PATH "\"${WIN_SDK_BIN_PATH}\\dxcompiler.dll\"")
-                        set(DXIL_SIGNER_PATH  "\"${WIN_SDK_BIN_PATH}\\dxil.dll\"")
-                    endif()
-                endif()
-            elseif(CMAKE_SYSTEM_VERSION VERSION_EQUAL "8.1")
-                # D3Dcompiler_47.dll from Win8.1 SDK is ancient (from 2013) and fails to
-                # compile a number of test shaders. Use the compiler from Visual Studio 
-                # executable path instead
-                set(D3D_COMPILER_PATH "\"$(VC_ExecutablePath_x64_${ARCH_SUFFIX})\\D3Dcompiler_47.dll\"")
+                # Note that VS_DXC_COMPILER_PATH and VS_DXIL_SIGNER_PATH can only be used in a Visual Studio command
+                # and are not valid paths during CMake configuration
+                list(APPEND SHADER_COMPILER_DLLS ${VS_DXC_COMPILER_PATH})
+                list(APPEND SHADER_COMPILER_DLLS ${VS_DXIL_SIGNER_PATH})
             endif()
 
-            if ((D3D11_SUPPORTED OR D3D12_SUPPORTED) AND D3D_COMPILER_PATH)
+            foreach(DLL ${SHADER_COMPILER_DLLS})
                 add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${D3D_COMPILER_PATH}
+                        ${DLL}
                         "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
-            endif()
-
-            if(D3D12_SUPPORTED AND DXC_COMPILER_PATH AND DXIL_SIGNER_PATH)
-                # For the compiler to sign the bytecode, you have to have a copy of dxil.dll in the same folder as the dxcompiler.dll at runtime.
-                add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${DXC_COMPILER_PATH}
-                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\""
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                        ${DXIL_SIGNER_PATH}
-                        "\"$<TARGET_FILE_DIR:${TARGET_NAME}>\"")
-            endif()
+            endforeach(DLL)
 
             if(VULKAN_SUPPORTED)
                 if(NOT DEFINED DILIGENT_DXCOMPILER_FOR_SPIRV_PATH)
@@ -81,6 +60,32 @@ if(PLATFORM_WIN32 OR PLATFORM_UNIVERSAL_WINDOWS)
                             "\"$<TARGET_FILE_DIR:${TARGET_NAME}>/spv_dxcompiler.dll\"")
                 endif()
             endif()
+        endif()
+    endfunction()
+
+    function(package_required_dlls TARGET_NAME)
+        if(D3D12_SUPPORTED AND VS_DXC_COMPILER_PATH AND VS_DXIL_SIGNER_PATH)
+            # Copy the dlls to the project's CMake binary dir
+
+            # Note that VS_DXC_COMPILER_PATH and VS_DXIL_SIGNER_PATH can only be used in a Visual Studio command
+            # and are not valid paths during CMake configuration
+            add_custom_command(TARGET ${TARGET_NAME} PRE_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${VS_DXC_COMPILER_PATH}
+                    "\"${CMAKE_CURRENT_BINARY_DIR}/dxcompiler.dll\""
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    ${VS_DXIL_SIGNER_PATH}
+                    "\"${CMAKE_CURRENT_BINARY_DIR}/dxil.dll\"")
+            set(DLLS "${CMAKE_CURRENT_BINARY_DIR}/dxcompiler.dll" "${CMAKE_CURRENT_BINARY_DIR}/dxil.dll")
+
+            # Add the dlls to the target project as source files
+            target_sources(${TARGET_NAME} PRIVATE ${DLLS})
+
+            # Label them as content
+            set_source_files_properties(${DLLS} PROPERTIES 
+                GENERATED TRUE
+                VS_DEPLOYMENT_CONTENT 1
+                VS_DEPLOYMENT_LOCATION ".")
         endif()
     endfunction()
 

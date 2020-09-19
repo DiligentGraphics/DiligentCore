@@ -256,6 +256,10 @@ bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
 
     HRESULT hr;
 
+    // NOTE: The call to DxcCreateInstance is thread-safe, but objects created by DxcCreateInstance aren't thread-safe.
+    // Compiler objects should be created and then used on the same thread.
+    // https://github.com/microsoft/DirectXShaderCompiler/wiki/Using-dxc.exe-and-dxcompiler.dll#dxcompiler-dll-interface
+
     CComPtr<IDxcLibrary> library;
     hr = CreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
     if (FAILED(hr))
