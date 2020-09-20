@@ -423,7 +423,7 @@ public:
                                         const char* includerName,
                                         size_t      inclusionDepth)
     {
-        return includeSystem(headerName, includerName, inclusionDepth);
+        return nullptr;
     }
 
     // Signals that the parser will no longer use the contents of the
