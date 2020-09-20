@@ -27,11 +27,14 @@
 
 #include "pch.h"
 
+#include <array>
+
 #include "ShaderGLImpl.hpp"
 #include "RenderDeviceGLImpl.hpp"
 #include "DeviceContextGLImpl.hpp"
 #include "DataBlobImpl.hpp"
 #include "GLSLUtils.hpp"
+#include "ShaderToolsCommon.hpp"
 
 using namespace Diligent;
 
@@ -59,8 +62,6 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
 
     const auto& deviceCaps = pDeviceGL->GetDeviceCaps();
 
-    auto GLSLSource = BuildGLSLSourceString(ShaderCI, deviceCaps, TargetGLSLCompiler::driver);
-
     // Note: there is a simpler way to create the program:
     //m_uiShaderSeparateProg = glCreateShaderProgramv(GL_VERTEX_SHADER, _countof(ShaderStrings), ShaderStrings);
     // NOTE: glCreateShaderProgramv() is considered equivalent to both a shader compilation and a program linking
@@ -75,11 +76,35 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
     // Each element in the length array may contain the length of the corresponding string
     // (the null character is not counted as part of the string length).
     // Not specifying lengths causes shader compilation errors on Android
-    const char* ShaderStrings[] = {GLSLSource.c_str()};
-    GLint       Lenghts[]       = {static_cast<GLint>(GLSLSource.length())};
+    std::array<const char*, 1> ShaderStrings = {};
+    std::array<GLint, 1>       Lenghts       = {};
+
+    std::string              GLSLSourceString;
+    RefCntAutoPtr<IDataBlob> pSourceFileData;
+    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+    {
+        if (ShaderCI.Macros != nullptr)
+        {
+            LOG_WARNING_MESSAGE("Shader macros are ignored when compiling GLSL verbatim in OpenGL backend");
+        }
+
+        // Read the source file directly and use it as is
+        size_t SourceLen = 0;
+        ShaderStrings[0] = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceFileData, SourceLen);
+        Lenghts[0]       = static_cast<GLint>(SourceLen);
+    }
+    else
+    {
+        // Build the full source code string that will contain GLSL version declaration,
+        // platform definitions, user-provided shader macros, etc.
+        GLSLSourceString = BuildGLSLSourceString(ShaderCI, deviceCaps, TargetGLSLCompiler::driver);
+        ShaderStrings[0] = GLSLSourceString.c_str();
+        Lenghts[0]       = static_cast<GLint>(GLSLSourceString.length());
+    }
+
 
     // Provide source strings (the strings will be saved in internal OpenGL memory)
-    glShaderSource(m_GLShaderObj, _countof(ShaderStrings), ShaderStrings, Lenghts);
+    glShaderSource(m_GLShaderObj, static_cast<GLsizei>(ShaderStrings.size()), ShaderStrings.data(), Lenghts.data());
     // When the shader is compiled, it will be compiled as if all of the given strings were concatenated end-to-end.
     glCompileShader(m_GLShaderObj);
     GLint compiled = GL_FALSE;

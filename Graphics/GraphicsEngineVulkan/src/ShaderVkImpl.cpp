@@ -34,6 +34,7 @@
 #include "DataBlobImpl.hpp"
 #include "GLSLUtils.hpp"
 #include "DXCompiler.hpp"
+#include "ShaderToolsCommon.hpp"
 
 #if !DILIGENT_NO_GLSLANG
 #    include "GLSLangUtils.hpp"
@@ -44,27 +45,27 @@ namespace Diligent
 
 ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
                            RenderDeviceVkImpl*     pRenderDeviceVk,
-                           const ShaderCreateInfo& CreationAttribs) :
+                           const ShaderCreateInfo& ShaderCI) :
     // clang-format off
     TShaderBase
     {
         pRefCounters,
         pRenderDeviceVk,
-        CreationAttribs.Desc
+        ShaderCI.Desc
     }
 // clang-format on
 {
-    if (CreationAttribs.Source != nullptr || CreationAttribs.FilePath != nullptr)
+    if (ShaderCI.Source != nullptr || ShaderCI.FilePath != nullptr)
     {
-        DEV_CHECK_ERR(CreationAttribs.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
-        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from source code or a file");
+        DEV_CHECK_ERR(ShaderCI.ByteCode == nullptr, "'ByteCode' must be null when shader is created from source code or a file");
+        DEV_CHECK_ERR(ShaderCI.ByteCodeSize == 0, "'ByteCodeSize' must be 0 when shader is created from source code or a file");
 
         static constexpr char VulkanDefine[] =
             "#ifndef VULKAN\n"
             "#   define VULKAN 1\n"
             "#endif\n";
 
-        auto ShaderCompiler = CreationAttribs.ShaderCompiler;
+        auto ShaderCompiler = ShaderCI.ShaderCompiler;
         if (ShaderCompiler == SHADER_COMPILER_DXC)
         {
             auto* pDXComiler = pRenderDeviceVk->GetDxCompiler();
@@ -81,7 +82,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
             {
                 auto* pDXComiler = pRenderDeviceVk->GetDxCompiler();
                 VERIFY_EXPR(pDXComiler != nullptr && pDXComiler->IsLoaded());
-                pDXComiler->Compile(CreationAttribs, ShaderVersion{}, VulkanDefine, nullptr, &m_SPIRV, CreationAttribs.ppCompilerOutput);
+                pDXComiler->Compile(ShaderCI, ShaderVersion{}, VulkanDefine, nullptr, &m_SPIRV, ShaderCI.ppCompilerOutput);
             }
             break;
 
@@ -91,20 +92,40 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 #if DILIGENT_NO_GLSLANG
                 LOG_ERROR_AND_THROW("Diligent engine was not linked with glslang, use DXC or precompiled SPIRV bytecode.");
 #else
-                if (CreationAttribs.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
+                if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL)
                 {
-                    m_SPIRV = GLSLangUtils::HLSLtoSPIRV(CreationAttribs, VulkanDefine, CreationAttribs.ppCompilerOutput);
+                    m_SPIRV = GLSLangUtils::HLSLtoSPIRV(ShaderCI, VulkanDefine, ShaderCI.ppCompilerOutput);
                 }
                 else
                 {
-                    auto GLSLSource = BuildGLSLSourceString(CreationAttribs, pRenderDeviceVk->GetDeviceCaps(),
-                                                            TargetGLSLCompiler::glslang,
-                                                            VulkanDefine);
+                    std::string              GLSLSourceString;
+                    RefCntAutoPtr<IDataBlob> pSourceFileData;
 
-                    m_SPIRV = GLSLangUtils::GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
-                                                        static_cast<int>(GLSLSource.length()),
-                                                        CreationAttribs.pShaderSourceStreamFactory,
-                                                        CreationAttribs.ppCompilerOutput);
+                    const char*        ShaderSource = nullptr;
+                    size_t             SourceLength = 0;
+                    const ShaderMacro* Macros       = nullptr;
+                    if (ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_GLSL_VERBATIM)
+                    {
+                        // Read the source file directly and use it as is
+                        ShaderSource = ReadShaderSourceFile(ShaderCI.Source, ShaderCI.pShaderSourceStreamFactory, ShaderCI.FilePath, pSourceFileData, SourceLength);
+
+                        // Add user macros.
+                        // BuildGLSLSourceString adds the macros to the source string, so we don't need to do this for SHADER_SOURCE_LANGUAGE_GLSL
+                        Macros = ShaderCI.Macros;
+                    }
+                    else
+                    {
+                        // Build the full source code string that will contain GLSL version declaration,
+                        // platform definitions, user-provided shader macros, etc.
+                        GLSLSourceString = BuildGLSLSourceString(ShaderCI, pRenderDeviceVk->GetDeviceCaps(), TargetGLSLCompiler::glslang, VulkanDefine);
+                        ShaderSource     = GLSLSourceString.c_str();
+                        SourceLength     = GLSLSourceString.length();
+                    }
+
+                    m_SPIRV = GLSLangUtils::GLSLtoSPIRV(m_Desc.ShaderType, ShaderSource,
+                                                        static_cast<int>(SourceLength), Macros,
+                                                        ShaderCI.pShaderSourceStreamFactory,
+                                                        ShaderCI.ppCompilerOutput);
                 }
 #endif
                 break;
@@ -116,15 +137,15 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 
         if (m_SPIRV.empty())
         {
-            LOG_ERROR_AND_THROW("Failed to compile shader '", CreationAttribs.Desc.Name, '\'');
+            LOG_ERROR_AND_THROW("Failed to compile shader '", ShaderCI.Desc.Name, '\'');
         }
     }
-    else if (CreationAttribs.ByteCode != nullptr)
+    else if (ShaderCI.ByteCode != nullptr)
     {
-        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize != 0, "ByteCodeSize must not be 0");
-        DEV_CHECK_ERR(CreationAttribs.ByteCodeSize % 4 == 0, "Byte code size (", CreationAttribs.ByteCodeSize, ") is not multiple of 4");
-        m_SPIRV.resize(CreationAttribs.ByteCodeSize / 4);
-        memcpy(m_SPIRV.data(), CreationAttribs.ByteCode, CreationAttribs.ByteCodeSize);
+        DEV_CHECK_ERR(ShaderCI.ByteCodeSize != 0, "ByteCodeSize must not be 0");
+        DEV_CHECK_ERR(ShaderCI.ByteCodeSize % 4 == 0, "Byte code size (", ShaderCI.ByteCodeSize, ") is not multiple of 4");
+        m_SPIRV.resize(ShaderCI.ByteCodeSize / 4);
+        memcpy(m_SPIRV.data(), ShaderCI.ByteCode, ShaderCI.ByteCodeSize);
     }
     else
     {
@@ -144,7 +165,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
             pRenderDeviceVk,
             m_SPIRV,
             m_Desc,
-            CreationAttribs.UseCombinedTextureSamplers ? CreationAttribs.CombinedSamplerSuffix : nullptr,
+            ShaderCI.UseCombinedTextureSamplers ? ShaderCI.CombinedSamplerSuffix : nullptr,
             LoadShaderInputs,
             m_EntryPoint //
         };

@@ -43,10 +43,11 @@ void FinalizeGlslang();
 std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderType,
                                       const char*                      ShaderSource,
                                       int                              SourceCodeLen,
+                                      const ShaderMacro*               Macros,
                                       IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
                                       IDataBlob**                      ppCompilerOutput);
 
-std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& Attribs,
+std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
                                       const char*             ExtraDefinitions,
                                       IDataBlob**             ppCompilerOutput);
 

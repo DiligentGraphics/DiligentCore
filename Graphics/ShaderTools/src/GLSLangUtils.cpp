@@ -505,9 +505,12 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
 std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderType,
                                       const char*                      ShaderSource,
                                       int                              SourceCodeLen,
+                                      const ShaderMacro*               Macros,
                                       IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
                                       IDataBlob**                      ppCompilerOutput)
 {
+    VERIFY_EXPR(ShaderSource != nullptr && SourceCodeLen > 0);
+
     EShLanguage        ShLang = ShaderTypeToShLanguage(ShaderType);
     ::glslang::TShader Shader(ShLang);
 
@@ -516,6 +519,13 @@ std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderTyp
     const char* ShaderStrings[] = {ShaderSource};
     int         Lenghts[]       = {SourceCodeLen};
     Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
+
+    std::string Defines;
+    if (Macros != nullptr)
+    {
+        AppendShaderMacros(Defines, Macros);
+        Shader.setPreamble(Defines.c_str());
+    }
 
     IncluderImpl Includer{pShaderSourceStreamFactory};
 
