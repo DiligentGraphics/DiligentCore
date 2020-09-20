@@ -419,11 +419,11 @@ public:
     // For the "local"-only aspect of a "" include. Should not search in the
     // "system" paths, because on returning a failure, the parser will
     // call includeSystem() to look in the "system" locations.
-    virtual IncludeResult* includeLocal(const char* /*headerName*/,
-                                        const char* /*includerName*/,
-                                        size_t /*inclusionDepth*/)
+    virtual IncludeResult* includeLocal(const char* headerName,
+                                        const char* includerName,
+                                        size_t      inclusionDepth)
     {
-        return nullptr;
+        return includeSystem(headerName, includerName, inclusionDepth);
     }
 
     // Signals that the parser will no longer use the contents of the
@@ -502,7 +502,11 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     }
 }
 
-std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* ShaderSource, int SourceCodeLen, IDataBlob** ppCompilerOutput)
+std::vector<unsigned int> GLSLtoSPIRV(SHADER_TYPE                      ShaderType,
+                                      const char*                      ShaderSource,
+                                      int                              SourceCodeLen,
+                                      IShaderSourceInputStreamFactory* pShaderSourceStreamFactory,
+                                      IDataBlob**                      ppCompilerOutput)
 {
     EShLanguage        ShLang = ShaderTypeToShLanguage(ShaderType);
     ::glslang::TShader Shader(ShLang);
@@ -513,7 +517,11 @@ std::vector<unsigned int> GLSLtoSPIRV(const SHADER_TYPE ShaderType, const char* 
     int         Lenghts[]       = {SourceCodeLen};
     Shader.setStringsWithLengths(ShaderStrings, Lenghts, 1);
 
-    auto SPIRV = CompileShaderInternal(Shader, messages, nullptr, ShaderSource, SourceCodeLen, ppCompilerOutput);
+    IncluderImpl Includer{pShaderSourceStreamFactory};
+
+    auto SPIRV = CompileShaderInternal(Shader, messages, &Includer, ShaderSource, SourceCodeLen, ppCompilerOutput);
+    if (SPIRV.empty())
+        return SPIRV;
 
     spvtools::Optimizer SpirvOptimizer(SPV_ENV_VULKAN_1_0);
     SpirvOptimizer.RegisterPerformancePasses();

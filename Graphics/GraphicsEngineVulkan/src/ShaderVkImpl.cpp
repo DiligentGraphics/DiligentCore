@@ -103,6 +103,7 @@ ShaderVkImpl::ShaderVkImpl(IReferenceCounters*     pRefCounters,
 
                     m_SPIRV = GLSLangUtils::GLSLtoSPIRV(m_Desc.ShaderType, GLSLSource.c_str(),
                                                         static_cast<int>(GLSLSource.length()),
+                                                        CreationAttribs.pShaderSourceStreamFactory,
                                                         CreationAttribs.ppCompilerOutput);
                 }
 #endif
