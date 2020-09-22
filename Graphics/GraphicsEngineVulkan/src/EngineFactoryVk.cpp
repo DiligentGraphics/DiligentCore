@@ -236,8 +236,6 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         if (SupportsFeatures2)
         {
             void** NextExt = const_cast<void**>(&DeviceCreateInfo.pNext);
-            *NextExt       = nullptr;
-
             if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
             {
                 MeshShaderFeats      = PhysicalDevice->GetExtFeatures().MeshShader;
@@ -249,6 +247,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                     NextExt  = &MeshShaderFeats.pNext;
                 }
             }
+            *NextExt = nullptr;
         }
 
         if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED && !MeshShadersSupported)
