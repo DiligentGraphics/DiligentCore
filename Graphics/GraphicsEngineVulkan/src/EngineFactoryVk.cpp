@@ -228,28 +228,33 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
         // To enable some device extensions you must enable instance extension VK_KHR_get_physical_device_properties2
         // and add feature description to DeviceCreateInfo.pNext.
-        bool   SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-        void** NextExt           = const_cast<void**>(&DeviceCreateInfo.pNext);
+        const auto SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
         // Enable mesh shader extension.
-        bool MeshShadersSupported = false;
-        if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
+        bool                                 MeshShadersSupported = false;
+        VkPhysicalDeviceMeshShaderFeaturesNV MeshShaderFeats      = {};
+        if (SupportsFeatures2)
         {
-            VkPhysicalDeviceMeshShaderFeaturesNV MeshShaderFeats = PhysicalDevice->GetExtFeatures().MeshShader;
+            void** NextExt = const_cast<void**>(&DeviceCreateInfo.pNext);
+            *NextExt       = nullptr;
 
-            if (SupportsFeatures2 && PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
+            if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
             {
+                MeshShaderFeats      = PhysicalDevice->GetExtFeatures().MeshShader;
                 MeshShadersSupported = MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE;
-                DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-                *NextExt = &MeshShaderFeats;
-                NextExt  = &MeshShaderFeats.pNext;
+                if (PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME) && MeshShadersSupported)
+                {
+                    DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+                    *NextExt = &MeshShaderFeats;
+                    NextExt  = &MeshShaderFeats.pNext;
+                }
             }
-
-            *NextExt = nullptr;
         }
 
         if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED && !MeshShadersSupported)
             LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device");
+
+            // The actual state of Features.MeshShaders in device caps is set by VulkanLogicalDevice
 
 #if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
