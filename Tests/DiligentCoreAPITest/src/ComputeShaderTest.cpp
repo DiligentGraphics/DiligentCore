@@ -55,7 +55,7 @@ void ComputeShaderReferenceVk(ISwapChain* pSwapChain);
 #endif
 
 #if METAL_SUPPORTED
-
+void ComputeShaderReferenceMtl(ISwapChain* pSwapChain);
 #endif
 
 } // namespace Testing
@@ -116,7 +116,12 @@ TEST(ComputeShaderTest, FillTexture)
         case RENDER_DEVICE_TYPE_VULKAN:
             ComputeShaderReferenceVk(pSwapChain);
             break;
+#endif
 
+#if METAL_SUPPORTED
+        case RENDER_DEVICE_TYPE_METAL:
+            ComputeShaderReferenceMtl(pSwapChain);
+            break;
 #endif
 
         default:

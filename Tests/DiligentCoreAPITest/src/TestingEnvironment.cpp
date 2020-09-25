@@ -509,6 +509,19 @@ void TestingEnvironment::SetDefaultCompiler(SHADER_COMPILER compiler)
             }
             break;
 
+        case RENDER_DEVICE_TYPE_METAL:
+            switch (compiler)
+            {
+                case SHADER_COMPILER_DEFAULT:
+                    m_ShaderCompiler = compiler;
+                    break;
+
+                default:
+                    LOG_WARNING_MESSAGE(GetShaderCompilerTypeString(compiler), " is not supported by Metal backend. Using default compiler");
+                    m_ShaderCompiler = SHADER_COMPILER_DEFAULT;
+            }
+            break;
+
         default:
             LOG_WARNING_MESSAGE("Unepxected device type");
             m_ShaderCompiler = SHADER_COMPILER_DEFAULT;

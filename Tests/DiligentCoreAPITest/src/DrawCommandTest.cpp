@@ -54,7 +54,7 @@ void RenderDrawCommandReferenceVk(ISwapChain* pSwapChain, const float* pClearCol
 #endif
 
 #if METAL_SUPPORTED
-
+void RenderDrawCommandReferenceMtl(ISwapChain* pSwapChain, const float* pClearColor = nullptr);
 #endif
 
 } // namespace Testing
@@ -212,7 +212,12 @@ protected:
                 case RENDER_DEVICE_TYPE_VULKAN:
                     RenderDrawCommandReferenceVk(pSwapChain);
                     break;
+#endif
 
+#if METAL_SUPPORTED
+                case RENDER_DEVICE_TYPE_METAL:
+                    RenderDrawCommandReferenceMtl(pSwapChain);
+                    break;
 #endif
 
                 default:

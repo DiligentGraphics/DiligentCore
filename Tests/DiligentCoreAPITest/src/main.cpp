@@ -59,7 +59,7 @@ TestingEnvironment* CreateTestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, AD
 #endif
 
 #if METAL_SUPPORTED
-
+TestingEnvironment* CreateTestingEnvironmentMtl(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
 #endif
 
 } // namespace Testing
@@ -112,6 +112,10 @@ int main(int argc, char** argv)
         else if (strcmp(arg, "--mode=gl") == 0)
         {
             deviceType = RENDER_DEVICE_TYPE_GL;
+        }
+        else if (strcmp(arg, "--mode=mtl") == 0)
+        {
+            deviceType = RENDER_DEVICE_TYPE_METAL;
         }
         else if (AdapterArgName.compare(0, AdapterArgName.length(), arg, AdapterArgName.length()) == 0)
         {
@@ -174,7 +178,13 @@ int main(int argc, char** argv)
                 std::cout << "\n\n\n==================== Testing Diligent Core API in Vulkan mode ====================\n\n";
                 pEnv = CreateTestingEnvironmentVk(deviceType, AdapterType, AdapterId, SCDesc);
                 break;
+#endif
 
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                std::cout << "\n\n\n==================== Testing Diligent Core API in Metal mode ====================\n\n";
+                pEnv = CreateTestingEnvironmentMtl(deviceType, AdapterType, AdapterId, SCDesc);
+                break;
 #endif
 
             default:
