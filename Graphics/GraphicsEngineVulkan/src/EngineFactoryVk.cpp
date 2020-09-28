@@ -253,7 +253,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED && !MeshShadersSupported)
             LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device");
 
-            // The actual state of Features.MeshShaders in device caps is set by VulkanLogicalDevice
+            // The actual state of Features.MeshShaders in device caps is set by RenderDeviceVkImpl
 
 #if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");

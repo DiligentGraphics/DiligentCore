@@ -136,15 +136,22 @@ RenderPassVkImpl::RenderPassVkImpl(IReferenceCounters*   pRefCounters,
     std::vector<VkSubpassDependency> vkDependencies(Desc.DependencyCount);
     for (Uint32 i = 0; i < Desc.DependencyCount; ++i)
     {
-        const auto& DependencyDesc   = m_Desc.pDependencies[i];
-        auto&       vkDependency     = vkDependencies[i];
-        vkDependency.srcSubpass      = DependencyDesc.SrcSubpass;
-        vkDependency.dstSubpass      = DependencyDesc.DstSubpass;
-        vkDependency.srcStageMask    = DependencyDesc.SrcStageMask;
-        vkDependency.dstStageMask    = DependencyDesc.DstStageMask;
-        vkDependency.srcAccessMask   = DependencyDesc.SrcAccessMask;
-        vkDependency.dstAccessMask   = DependencyDesc.DstAccessMask;
-        vkDependency.dependencyFlags = 0;
+        const auto& DependencyDesc = m_Desc.pDependencies[i];
+        auto&       vkDependency   = vkDependencies[i];
+        vkDependency.srcSubpass    = DependencyDesc.SrcSubpass;
+        vkDependency.dstSubpass    = DependencyDesc.DstSubpass;
+        vkDependency.srcStageMask  = DependencyDesc.SrcStageMask;
+        vkDependency.dstStageMask  = DependencyDesc.DstStageMask;
+        vkDependency.srcAccessMask = DependencyDesc.SrcAccessMask;
+        vkDependency.dstAccessMask = DependencyDesc.DstAccessMask;
+
+        // VK_DEPENDENCY_BY_REGION_BIT specifies that dependencies will be framebuffer-local.
+        // Framebuffer-local dependencies are more optimal for most architectures; particularly
+        // tile-based architectures - which can keep framebuffer-regions entirely in on-chip registers
+        // and thus avoid external bandwidth across such a dependency. Including a framebuffer-global
+        // dependency in your rendering will usually force all implementations to flush data to memory,
+        // or to a higher level cache, breaking any potential locality optimizations.
+        vkDependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
     }
     RenderPassCI.dependencyCount = Desc.DependencyCount;
     RenderPassCI.pDependencies   = vkDependencies.data();
