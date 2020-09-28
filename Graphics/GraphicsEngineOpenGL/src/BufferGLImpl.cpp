@@ -385,7 +385,7 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
         auto ViewDesc = OrigViewDesc;
         CorrectBufferViewDesc(ViewDesc);
 
-        auto* pDeviceGLImpl     = ValidatedCast<RenderDeviceGLImpl>(GetDevice());
+        auto* pDeviceGLImpl     = GetDevice();
         auto& BuffViewAllocator = pDeviceGLImpl->GetBuffViewObjAllocator();
         VERIFY(&BuffViewAllocator == &m_dbgBuffViewAllocator, "Buff view allocator does not match allocator provided at buffer initialization");
 
@@ -400,7 +400,7 @@ void BufferGLImpl::CreateViewInternal(const BufferViewDesc& OrigViewDesc, IBuffe
     catch (const std::runtime_error&)
     {
         const auto* ViewTypeName = GetBufferViewTypeLiteralName(OrigViewDesc.ViewType);
-        LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for buffer \"", m_Desc.Name ? m_Desc.Name : "", "\"");
+        LOG_ERROR("Failed to create view '", (OrigViewDesc.Name ? OrigViewDesc.Name : ""), "' (", ViewTypeName, ") for buffer '", (m_Desc.Name ? m_Desc.Name : ""), "'");
     }
 }
 

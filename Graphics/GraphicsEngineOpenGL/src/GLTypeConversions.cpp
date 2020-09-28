@@ -26,10 +26,15 @@
  */
 
 #include "pch.h"
+#include <array>
+
 #include "GLTypeConversions.hpp"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent
+{
+
+namespace
 {
 
 class FormatToGLInternalTexFormatMap
@@ -158,17 +163,21 @@ public:
         m_FmtToGLFmtMap[TEX_FORMAT_BC7_UNORM]              = GL_COMPRESSED_RGBA_BPTC_UNORM;
         m_FmtToGLFmtMap[TEX_FORMAT_BC7_UNORM_SRGB]         = GL_COMPRESSED_SRGB_ALPHA_BPTC_UNORM;
         // clang-format on
+
+        static_assert(TEX_FORMAT_NUM_FORMATS == 100, "Please enter the new format information above");
     }
 
     GLenum operator[](TEXTURE_FORMAT TexFormat) const
     {
-        VERIFY_EXPR(TexFormat < _countof(m_FmtToGLFmtMap));
+        VERIFY_EXPR(TexFormat < m_FmtToGLFmtMap.size());
         return m_FmtToGLFmtMap[TexFormat];
     }
 
 private:
-    GLenum m_FmtToGLFmtMap[TEX_FORMAT_NUM_FORMATS] = {0};
+    std::array<GLenum, TEX_FORMAT_NUM_FORMATS> m_FmtToGLFmtMap = {};
 };
+
+} // namespace
 
 GLenum TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags)
 {
@@ -182,10 +191,13 @@ GLenum TexFormatToGLInternalTexFormat(TEXTURE_FORMAT TexFormat, Uint32 BindFlags
     }
     else
     {
-        UNEXPECTED("Texture format (", int{TexFormat}, ") out of allowed range [0, ", int{TEX_FORMAT_NUM_FORMATS} - 1, "]");
+        UNEXPECTED("Texture format (", int{TexFormat}, ") is out of allowed range [0, ", int{TEX_FORMAT_NUM_FORMATS} - 1, "]");
         return 0;
     }
 }
+
+namespace
+{
 
 class InternalTexFormatToTexFormatMap
 {
@@ -238,6 +250,8 @@ private:
     std::unordered_map<GLenum, TEXTURE_FORMAT> m_FormatMap;
 };
 
+} // namespace
+
 TEXTURE_FORMAT GLInternalTexFormatToTexFormat(GLenum GlFormat)
 {
     static const InternalTexFormatToTexFormatMap FormatMap;
@@ -248,8 +262,9 @@ NativePixelAttribs GetNativePixelTransferAttribs(TEXTURE_FORMAT TexFormat)
 {
     // http://www.opengl.org/wiki/Pixel_Transfer
 
-    static Bool               bAttribsMapIntialized = false;
-    static NativePixelAttribs FmtToGLPixelFmt[TEX_FORMAT_NUM_FORMATS];
+    static std::array<NativePixelAttribs, TEX_FORMAT_NUM_FORMATS> FmtToGLPixelFmt;
+
+    static bool bAttribsMapIntialized = false;
     if (!bAttribsMapIntialized)
     {
         // clang-format off

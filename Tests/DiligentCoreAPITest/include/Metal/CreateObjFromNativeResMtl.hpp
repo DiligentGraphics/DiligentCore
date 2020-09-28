@@ -38,8 +38,8 @@ namespace Testing
 class TestCreateObjFromNativeResMtl : public CreateObjFromNativeResTestBase
 {
 public:
-    TestCreateObjFromNativeResMtl(IRenderDevice* pDevice) :
-        CreateObjFromNativeResTestBase(pDevice)
+    explicit TestCreateObjFromNativeResMtl(IRenderDevice* pDevice) :
+        CreateObjFromNativeResTestBase{pDevice}
     {}
 
     virtual void CreateTexture(ITexture* pTexture) override final;

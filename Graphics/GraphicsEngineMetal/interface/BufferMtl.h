@@ -41,6 +41,8 @@ static const INTERFACE_ID IID_BufferMtl =
 class IBufferMtl : public IBuffer
 {
 public:
+    /// Returns a pointer to Metal buffer (MTLBuffer)
+    virtual void* GetMtlBuffer() const = 0;
 };
 
 } // namespace Diligent

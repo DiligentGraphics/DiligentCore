@@ -41,6 +41,8 @@ static const INTERFACE_ID IID_RenderDeviceMtl =
 class IRenderDeviceMtl : public IRenderDevice
 {
 public:
+    /// Returns the pointer to MTLDevice object
+    virtual void* GetMtlDevice() const = 0;
 };
 
 } // namespace Diligent

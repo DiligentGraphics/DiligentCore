@@ -41,6 +41,11 @@ static const INTERFACE_ID IID_PipelineStateMtl =
 class IPipelineStateMtl : public IPipelineState
 {
 public:
+    /// Returns a pointer to Metal render or compute pipeline (MTLRenderPipelineState or MTLComputePipelineState)
+    virtual void* GetMtlPipeline() const = 0;
+
+    /// Returns a pointer to Metal depth-stencil state (MTLDepthStencilState)
+    virtual void* GetMtlDepthStencilState() const = 0;
 };
 
 } // namespace Diligent

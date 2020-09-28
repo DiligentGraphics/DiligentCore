@@ -55,6 +55,55 @@ public:
     void Draw(Uint32 Width, Uint32 Height, const float* pClearColor)
     {
         //auto* pEnv = TestingEnvironmentGL::GetInstance();
+        /*
+        id <MTLDevice> device = MTLCreateSystemDefaultDevice();
+         
+        id <MTLCommandQueue> commandQueue = [device newCommandQueue];
+        id <MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+         
+        MTLRenderPassDescriptor *renderPassDesc
+                                       = [MTLRenderPassDescriptor renderPassDescriptor];
+        renderPassDesc.colorAttachments[0].texture = currentTexture;
+        renderPassDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
+        renderPassDesc.colorAttachments[0].clearColor = MTLClearColorMake(0.0,1.0,1.0,1.0);
+        id <MTLRenderCommandEncoder> renderEncoder =
+                   [commandBuffer renderCommandEncoderWithDescriptor:renderPassDesc];
+         
+        static const float posData[] = {
+                0.0f, 0.33f, 0.0f, 1.f,
+                -0.33f, -0.33f, 0.0f, 1.f,
+                0.33f, -0.33f, 0.0f, 1.f,
+        };
+        static const float colData[] = {
+                1.f, 0.f, 0.f, 1.f,
+                0.f, 1.f, 0.f, 1.f,
+                0.f, 0.f, 1.f, 1.f,
+        };
+        id <MTLBuffer> posBuf = [device newBufferWithBytes:posData
+                length:sizeof(posData) options:nil];
+        id <MTLBuffer> colBuf = [device newBufferWithBytes:colorData
+                length:sizeof(colData) options:nil];
+        [renderEncoder setVertexBuffer:posBuf offset:0 atIndex:0];
+        [renderEncoder setVertexBuffer:colBuf offset:0 atIndex:1];
+         
+        NSError *errors;
+        id <MTLLibrary> library = [device newLibraryWithSource:progSrc options:nil
+                                   error:&errors];
+        id <MTLFunction> vertFunc = [library newFunctionWithName:@"hello_vertex"];
+        id <MTLFunction> fragFunc = [library newFunctionWithName:@"hello_fragment"];
+        MTLRenderPipelineDescriptor *renderPipelineDesc
+                                           = [[MTLRenderPipelineDescriptor alloc] init];
+        renderPipelineDesc.vertexFunction = vertFunc;
+        renderPipelineDesc.fragmentFunction = fragFunc;
+        renderPipelineDesc.colorAttachments[0].pixelFormat = currentTexture.pixelFormat;
+        id <MTLRenderPipelineState> pipeline = [device
+                     newRenderPipelineStateWithDescriptor:renderPipelineDesc error:&errors];
+        [renderEncoder setRenderPipelineState:pipeline];
+        [renderEncoder drawPrimitives:MTLPrimitiveTypeTriangle
+                       vertexStart:0 vertexCount:3];
+        [renderEncoder endEncoding];
+        [commandBuffer commit];
+        */
     }
 
 private:

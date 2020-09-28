@@ -500,11 +500,11 @@ void RenderDeviceBase<BaseInterface>::CreateDeviceObject(const Char* ObjectTypeN
         auto ObjectDescString = GetObjectDescString(Desc);
         if (ObjectDescString.length())
         {
-            LOG_ERROR("Failed to create ", ObjectTypeName, " object '", Desc.Name ? Desc.Name : "", "'\n", ObjectDescString);
+            LOG_ERROR("Failed to create ", ObjectTypeName, " object '", (Desc.Name ? Desc.Name : ""), "'\n", ObjectDescString);
         }
         else
         {
-            LOG_ERROR("Failed to create ", ObjectTypeName, " object '", Desc.Name ? Desc.Name : "", "'");
+            LOG_ERROR("Failed to create ", ObjectTypeName, " object '", (Desc.Name ? Desc.Name : ""), "'");
         }
     }
 }

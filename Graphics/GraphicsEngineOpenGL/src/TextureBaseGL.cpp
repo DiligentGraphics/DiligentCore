@@ -393,7 +393,7 @@ void TextureBaseGL::CreateViewInternal(const struct TextureViewDesc& OrigViewDes
         auto ViewDesc = OrigViewDesc;
         CorrectTextureViewDesc(ViewDesc);
 
-        auto* pDeviceGLImpl    = ValidatedCast<RenderDeviceGLImpl>(GetDevice());
+        auto* pDeviceGLImpl    = GetDevice();
         auto& TexViewAllocator = pDeviceGLImpl->GetTexViewObjAllocator();
         VERIFY(&TexViewAllocator == &m_dbgTexViewObjAllocator, "Texture view allocator does not match allocator provided during texture initialization");
 
@@ -522,7 +522,7 @@ void TextureBaseGL::CreateViewInternal(const struct TextureViewDesc& OrigViewDes
     catch (const std::runtime_error&)
     {
         const auto* ViewTypeName = GetTexViewTypeLiteralName(OrigViewDesc.ViewType);
-        LOG_ERROR("Failed to create view \"", OrigViewDesc.Name ? OrigViewDesc.Name : "", "\" (", ViewTypeName, ") for texture \"", m_Desc.Name ? m_Desc.Name : "", "\"");
+        LOG_ERROR("Failed to create view '", (OrigViewDesc.Name ? OrigViewDesc.Name : ""), "' (", ViewTypeName, ") for texture '", (m_Desc.Name ? m_Desc.Name : ""), "'");
     }
 }
 

@@ -41,6 +41,8 @@ static const INTERFACE_ID IID_TextureViewMtl =
 class ITextureViewMtl : public ITextureView
 {
 public:
+    /// Returns a pointer to Metal texture view (MTLTexture)
+    virtual void* GetMtlTexture() const = 0;
 };
 
 } // namespace Diligent
