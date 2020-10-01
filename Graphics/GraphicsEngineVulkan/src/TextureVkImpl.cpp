@@ -408,7 +408,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         VkStagingBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         VkStagingBuffCI.pNext = nullptr;
         VkStagingBuffCI.flags = 0;
-        VkStagingBuffCI.size  = GetStagingTextureSubresOffset(m_Desc, m_Desc.ArraySize, 0, StagingDataAlignment);
+        VkStagingBuffCI.size  = GetStagingTextureSubresourceOffset(m_Desc, m_Desc.ArraySize, 0, StagingBufferOffsetAlignment);
 
         // clang-format off
         DEV_CHECK_ERR((m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_READ ||

@@ -40,38 +40,6 @@
 namespace Diligent
 {
 
-
-Uint32 TextureBaseGL::GetPBODataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel)
-{
-    VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
-
-    Uint32 Offset = 0;
-    if (ArraySlice > 0)
-    {
-        Uint32 ArraySliceSize = 0;
-        for (Uint32 mip = 0; mip < TexDesc.MipLevels; ++mip)
-        {
-            auto MipInfo = GetMipLevelProperties(TexDesc, mip);
-            ArraySliceSize += Align(MipInfo.MipSize, Uint32{4});
-        }
-
-        Offset = ArraySliceSize;
-        if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
-            TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
-            TexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
-            TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-            Offset *= ArraySlice;
-    }
-
-    for (Uint32 mip = 0; mip < MipLevel; ++mip)
-    {
-        auto MipInfo = GetMipLevelProperties(TexDesc, mip);
-        Offset += Align(MipInfo.MipSize, Uint32{4});
-    }
-
-    return Offset;
-}
-
 TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
                              FixedBlockMemoryAllocator& TexViewObjAllocator,
                              RenderDeviceGLImpl*        pDeviceGL,
@@ -106,7 +74,7 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
         StagingBuffName += '\'';
         StagingBufferDesc.Name = StagingBuffName.c_str();
 
-        StagingBufferDesc.uiSizeInBytes  = GetPBODataOffset(m_Desc, m_Desc.ArraySize, 0);
+        StagingBufferDesc.uiSizeInBytes  = GetStagingTextureSubresourceOffset(m_Desc, m_Desc.ArraySize, 0, PBOOffsetAlignment);
         StagingBufferDesc.Usage          = USAGE_STAGING;
         StagingBufferDesc.CPUAccessFlags = TexDesc.CPUAccessFlags;
 

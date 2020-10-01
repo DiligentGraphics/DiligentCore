@@ -458,7 +458,7 @@ static_assert(SHADER_TYPE_AMPLIFICATION == (1 << ASInd), "ASInd is not consisten
 static_assert(SHADER_TYPE_MESH          == (1 << MSInd), "MSInd is not consistent with SHADER_TYPE_MESH");
 
 static_assert(SHADER_TYPE_LAST == (1 << LastShaderInd), "LastShaderInd is not consistent with SHADER_TYPE_LAST");
-// clang-format off
+// clang-format on
 
 inline SHADER_TYPE GetShaderTypeFromIndex(Int32 Index)
 {
@@ -471,9 +471,61 @@ bool        IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE Pipelin
 Int32       GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType);
 SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineType);
 
-Uint32 GetStagingTextureSubresOffset(const TextureDesc& TexDesc,
-                                     Uint32             ArraySlice,
-                                     Uint32             MipLevel,
-                                     Uint32             Alignment);
+/// Returns an offset from the beginning of the buffer backing a staging texture
+/// to the specified location within the given subresource.
+///
+/// \param [in] TexDesc     - Staging texture description.
+/// \param [in] ArraySlice  - Array slice.
+/// \param [in] MipLevel    - Mip level.
+/// \param [in] Alignment   - Subresource alignment. The alignment is applied
+///                           to whole subresources only, but not to the row/depth strides.
+///                           In other words, there may be padding between subresources, but
+///                           texels in every subresource are assumed to be tightly packed.
+/// \param [in] LocationX   - X location within the subresoure.
+/// \param [in] LocationY   - Y location within the subresoure.
+/// \param [in] LocationZ   - Z location within the subresoure.
+///
+/// \return     Offset from the beginning of the buffer to the given location.
+///
+/// \remarks    Alignment is applied to the subresource sizes, such that the beginning of data
+///             of every subresource starts at an offset aligned by 'Alignment'. The alignment
+///             is not applied to the row/depth strides and texels in all subresources are assumed
+///             to be tightly packed.
+///
+///             Subres 0
+///              stride
+///       |<-------------->|
+///       |________________|       Subres 1
+///       |                |        stride
+///       |                |     |<------->|
+//        |                |     |_________|
+///       |    Subres 0    |     |         |
+///       |                |     | Subres 1|
+///       |                |     |         |                     _
+///       |________________|     |_________|         ...        |_|
+///       A                      A                              A
+///       |                      |                              |
+///     Buffer start            Subres 1 offset,               Subres N offset,
+///                          aligned by 'Alignment'         aligned by 'Alignment'
+///
+Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
+                                       Uint32             ArraySlice,
+                                       Uint32             MipLevel,
+                                       Uint32             Alignment,
+                                       Uint32             LocationX,
+                                       Uint32             LocationY,
+                                       Uint32             LocationZ);
+
+/// Returns an offset from the beginning of the buffer backing a staging texture
+/// to the given subresource.
+/// Texels within subresources are assumed to be tightly packed. There is no padding
+/// except between whole subresources.
+inline Uint32 GetStagingTextureSubresourceOffset(const TextureDesc& TexDesc,
+                                                 Uint32             ArraySlice,
+                                                 Uint32             MipLevel,
+                                                 Uint32             Alignment)
+{
+    return GetStagingTextureLocationOffset(TexDesc, ArraySlice, MipLevel, Alignment, 0, 0, 0);
+}
 
 } // namespace Diligent

@@ -99,11 +99,8 @@ public:
 
     void InvalidateStagingRange(VkDeviceSize Offset, VkDeviceSize Size);
 
-    // bufferOffset must be a multiple of 4 (18.4)
-    // If the calling command's VkImage parameter is a compressed image, bufferOffset
-    // must be a multiple of the compressed texel block size in bytes (18.4). This
-    // is automatically guaranteed as MipWidth and MipHeight are rounded to block size.
-    static constexpr Uint32 StagingDataAlignment = 4;
+    // Buffer offset must be a multiple of 4 (18.4)
+    static constexpr Uint32 StagingBufferOffsetAlignment = 4;
 
 protected:
     void CreateViewInternal(const struct TextureViewDesc& ViewDesc, ITextureView** ppView, bool bIsDefaultView) override;

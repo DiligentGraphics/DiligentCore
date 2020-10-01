@@ -114,7 +114,7 @@ public:
                             const Box&               DstBox,
                             const TextureSubResData& SubresData) = 0;
 
-    static Uint32 GetPBODataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel);
+    static constexpr Uint32 PBOOffsetAlignment = 4;
 
     IBuffer* GetPBO()
     {

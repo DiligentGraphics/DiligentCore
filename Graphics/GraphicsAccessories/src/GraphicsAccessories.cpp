@@ -1396,10 +1396,13 @@ SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineTy
 }
 
 
-Uint32 GetStagingTextureSubresOffset(const TextureDesc& TexDesc,
-                                     Uint32             ArraySlice,
-                                     Uint32             MipLevel,
-                                     Uint32             Alignment)
+Uint32 GetStagingTextureLocationOffset(const TextureDesc& TexDesc,
+                                       Uint32             ArraySlice,
+                                       Uint32             MipLevel,
+                                       Uint32             Alignment,
+                                       Uint32             LocationX,
+                                       Uint32             LocationY,
+                                       Uint32             LocationZ)
 {
     VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
 
@@ -1425,6 +1428,34 @@ Uint32 GetStagingTextureSubresOffset(const TextureDesc& TexDesc,
     {
         auto MipInfo = GetMipLevelProperties(TexDesc, mip);
         Offset += Align(MipInfo.MipSize, Alignment);
+    }
+
+    if (ArraySlice == TexDesc.ArraySize)
+    {
+        VERIFY(LocationX == 0 && LocationY == 0 && LocationZ == 0,
+               "Staging buffer size is requested: location must be (0,0,0).");
+    }
+    else if (LocationX != 0 || LocationY != 0 || LocationZ != 0)
+    {
+        const auto& MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
+        const auto& FmtAttribs      = GetTextureFormatAttribs(TexDesc.Format);
+        VERIFY(LocationX < MipLevelAttribs.LogicalWidth && LocationY < MipLevelAttribs.LogicalHeight && LocationZ < MipLevelAttribs.Depth,
+               "Specified location is out of bounds");
+        if (FmtAttribs.ComponentType == COMPONENT_TYPE_COMPRESSED)
+        {
+            VERIFY((LocationX % FmtAttribs.BlockWidth) == 0 && (LocationY % FmtAttribs.BlockHeight) == 0,
+                   "For compressed texture formats, location must be a multiple of compressed block size.");
+        }
+
+        // For compressed-block formats, RowSize is the size of one compressed row.
+        // For non-compressed formats, BlockHeight is 1.
+        Offset += (LocationZ * MipLevelAttribs.StorageHeight + LocationY) / FmtAttribs.BlockHeight * MipLevelAttribs.RowSize;
+
+        // For non-compressed formats, BlockWidth is 1.
+        Offset += (LocationX / FmtAttribs.BlockWidth) * FmtAttribs.GetElementSize();
+
+        // Note: this addressing complies with how Vulkan addresses textures when copying data to/from buffer:
+        //      address of (x,y,z) = bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
     }
 
     return Offset;

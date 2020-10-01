@@ -1590,8 +1590,7 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         FullMipBox.MaxZ      = MipLevelAttribs.Depth;
         pSrcBox              = &FullMipBox;
     }
-    const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
-    const auto& SrcFmtAttribs = GetTextureFormatAttribs(SrcTexDesc.Format);
+
     if (SrcTexDesc.Usage != USAGE_STAGING && DstTexDesc.Usage != USAGE_STAGING)
     {
         VkImageCopy CopyRegion = {};
@@ -1602,6 +1601,8 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         CopyRegion.extent.width  = pSrcBox->MaxX - pSrcBox->MinX;
         CopyRegion.extent.height = std::max(pSrcBox->MaxY - pSrcBox->MinY, 1u);
         CopyRegion.extent.depth  = std::max(pSrcBox->MaxZ - pSrcBox->MinZ, 1u);
+
+        const auto& DstFmtAttribs = GetTextureFormatAttribs(DstTexDesc.Format);
 
         VkImageAspectFlags aspectMask = 0;
         if (DstFmtAttribs.ComponentType == COMPONENT_TYPE_DEPTH)
@@ -1634,15 +1635,18 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         DEV_CHECK_ERR((SrcTexDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Attempting to copy from staging texture that was not created with CPU_ACCESS_WRITE flag");
         DEV_CHECK_ERR(pSrcTexVk->GetState() == RESOURCE_STATE_COPY_SOURCE, "Source staging texture must permanently be in RESOURCE_STATE_COPY_SOURCE state");
 
-        auto SrcBufferOffset    = GetStagingTextureSubresOffset(SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel, TextureVkImpl::StagingDataAlignment);
-        auto SrcMipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
         // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
-        SrcBufferOffset +=
-            // For compressed-block formats, RowSize is the size of one compressed row.
-            // For non-compressed formats, BlockHeight is 1.
-            (pSrcBox->MinZ * SrcMipLevelAttribs.StorageHeight + pSrcBox->MinY) / SrcFmtAttribs.BlockHeight * SrcMipLevelAttribs.RowSize +
-            // For non-compressed formats, BlockWidth is 1.
-            (pSrcBox->MinX / SrcFmtAttribs.BlockWidth) * SrcFmtAttribs.GetElementSize();
+
+        // bufferOffset must be a multiple of 4 (18.4)
+        // If the calling command's VkImage parameter is a compressed image, bufferOffset
+        // must be a multiple of the compressed texel block size in bytes (18.4). This
+        // is automatically guaranteed as MipWidth and MipHeight are rounded to block size.
+
+        const auto SrcBufferOffset =
+            GetStagingTextureLocationOffset(SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel,
+                                            TextureVkImpl::StagingBufferOffsetAlignment,
+                                            pSrcBox->MinX, pSrcBox->MinY, pSrcBox->MinZ);
+        const auto SrcMipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
 
         Box DstBox;
         DstBox.MinX = CopyAttribs.DstX;
@@ -1655,7 +1659,7 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         CopyBufferToTexture(
             pSrcTexVk->GetVkStagingBuffer(),
             SrcBufferOffset,
-            SrcMipLevelAttribs.StorageWidth,
+            SrcMipLevelAttribs.StorageWidth, // GetStagingTextureLocationOffset assumes texels are tightly packed
             *pDstTexVk,
             DstBox,
             CopyAttribs.DstMipLevel,
@@ -1667,17 +1671,12 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         DEV_CHECK_ERR((DstTexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Attempting to copy to staging texture that was not created with CPU_ACCESS_READ flag");
         DEV_CHECK_ERR(pDstTexVk->GetState() == RESOURCE_STATE_COPY_DEST, "Destination staging texture must permanently be in RESOURCE_STATE_COPY_DEST state");
 
-        auto DstBufferOffset =
-            GetStagingTextureSubresOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel,
-                                          TextureVkImpl::StagingDataAlignment);
-        const auto DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
         // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
-        DstBufferOffset +=
-            // For compressed-block formats, RowSize is the size of one compressed row.
-            // For non-compressed formats, BlockHeight is 1.
-            (CopyAttribs.DstZ * DstMipLevelAttribs.StorageHeight + CopyAttribs.DstY) / DstFmtAttribs.BlockHeight * DstMipLevelAttribs.RowSize *
-            // For non-compressed formats, BlockWidth is 1.
-            (CopyAttribs.DstX / DstFmtAttribs.BlockWidth) * DstFmtAttribs.GetElementSize();
+        const auto DstBufferOffset =
+            GetStagingTextureLocationOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel,
+                                            TextureVkImpl::StagingBufferOffsetAlignment,
+                                            CopyAttribs.DstX, CopyAttribs.DstY, CopyAttribs.DstZ);
+        const auto DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
 
         CopyTextureToBuffer(
             *pSrcTexVk,
@@ -1687,7 +1686,8 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
             CopyAttribs.SrcTextureTransitionMode,
             pDstTexVk->GetVkStagingBuffer(),
             DstBufferOffset,
-            DstMipLevelAttribs.StorageWidth);
+            DstMipLevelAttribs.StorageWidth // GetStagingTextureLocationOffset assumes texels are tightly packed
+        );
     }
     else
     {
@@ -2010,8 +2010,7 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
     else if (TexDesc.Usage == USAGE_STAGING)
     {
         auto SubresourceOffset =
-            GetStagingTextureSubresOffset(TexDesc, ArraySlice, MipLevel,
-                                          TextureVkImpl::StagingDataAlignment);
+            GetStagingTextureSubresourceOffset(TexDesc, ArraySlice, MipLevel, TextureVkImpl::StagingBufferOffsetAlignment);
         const auto MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
         // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
         auto MapStartOffset = SubresourceOffset +
