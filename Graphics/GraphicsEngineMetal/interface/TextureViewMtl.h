@@ -42,7 +42,7 @@ class ITextureViewMtl : public ITextureView
 {
 public:
     /// Returns a pointer to Metal texture view (MTLTexture)
-    virtual void* GetMtlTexture() const = 0;
+    virtual id<MTLTexture> GetMtlTexture() const = 0;
 };
 
 } // namespace Diligent
