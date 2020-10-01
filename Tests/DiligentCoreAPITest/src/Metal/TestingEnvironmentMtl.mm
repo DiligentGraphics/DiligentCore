@@ -68,6 +68,11 @@ TestingEnvironment* CreateTestingEnvironmentMtl(RENDER_DEVICE_TYPE   deviceType,
     return new TestingEnvironmentMtl{deviceType, AdapterType, AdapterId, SCDesc};
 }
 
+void* TestingEnvironmentMtl::GetMtlDevice() const
+{
+    return m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlDevice();
+}
+
 } // namespace Testing
 
 } // namespace Diligent

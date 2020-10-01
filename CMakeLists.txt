@@ -7,6 +7,9 @@ include(GNUInstallDirs)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+# Generate XCode schema files
+set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
+
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "" FORCE)
     message(STATUS "CMAKE_BUILD_TYPE is not specified, default to Debug. Note that this is only relevant for single-configuration generators (such as Makefile Generators and Ninja).")

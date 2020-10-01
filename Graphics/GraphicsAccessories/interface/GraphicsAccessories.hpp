@@ -471,4 +471,9 @@ bool        IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE Pipelin
 Int32       GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType);
 SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineType);
 
+Uint32 GetStagingTextureSubresOffset(const TextureDesc& TexDesc,
+                                     Uint32             ArraySlice,
+                                     Uint32             MipLevel,
+                                     Uint32             Alignment);
+
 } // namespace Diligent

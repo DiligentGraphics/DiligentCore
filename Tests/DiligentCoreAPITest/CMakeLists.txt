@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.6)
+cmake_minimum_required (VERSION 3.17)
 
 project(DiligentCoreAPITest)
 
@@ -159,6 +159,7 @@ PRIVATE
 set_target_properties(DiligentCoreAPITest
 PROPERTIES
     VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
+    XCODE_SCHEME_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/assets"
 )
 
 if(PLATFORM_WIN32)

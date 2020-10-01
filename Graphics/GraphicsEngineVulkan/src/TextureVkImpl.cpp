@@ -408,7 +408,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
         VkStagingBuffCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         VkStagingBuffCI.pNext = nullptr;
         VkStagingBuffCI.flags = 0;
-        VkStagingBuffCI.size  = GetStagingDataOffset(m_Desc, m_Desc.ArraySize, 0);
+        VkStagingBuffCI.size  = GetStagingTextureSubresOffset(m_Desc, m_Desc.ArraySize, 0, StagingDataAlignment);
 
         // clang-format off
         DEV_CHECK_ERR((m_Desc.CPUAccessFlags & (CPU_ACCESS_READ | CPU_ACCESS_WRITE)) == CPU_ACCESS_READ ||
@@ -468,42 +468,6 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
     }
 
     VERIFY_EXPR(IsInKnownState());
-}
-
-Uint32 GetStagingDataOffset(const TextureDesc& TexDesc, Uint32 ArraySlice, Uint32 MipLevel, Uint32 Alignment)
-{
-    VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
-
-    Uint32 Offset = 0;
-    if (ArraySlice > 0)
-    {
-        Uint32 ArraySliceSize = 0;
-        for (Uint32 mip = 0; mip < TexDesc.MipLevels; ++mip)
-        {
-            auto MipInfo = GetMipLevelProperties(TexDesc, mip);
-            // bufferOffset must be a multiple of 4 (18.4)
-            // If the calling command's VkImage parameter is a compressed image, bufferOffset
-            // must be a multiple of the compressed texel block size in bytes (18.4). This
-            // is automatically guaranteed as MipWidth and MipHeight are rounded to block size
-            ArraySliceSize += Align(MipInfo.MipSize, Alignment);
-        }
-
-        Offset = ArraySliceSize;
-        if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
-            TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
-            TexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
-            TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
-            Offset *= ArraySlice;
-    }
-
-    for (Uint32 mip = 0; mip < MipLevel; ++mip)
-    {
-        auto MipInfo = GetMipLevelProperties(TexDesc, mip);
-        // bufferOffset must be a multiple of 4 (18.4)
-        Offset += Align(MipInfo.MipSize, Alignment);
-    }
-
-    return Offset;
 }
 
 TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,

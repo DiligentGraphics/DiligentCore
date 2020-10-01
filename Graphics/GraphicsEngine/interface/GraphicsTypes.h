@@ -1743,6 +1743,10 @@ struct DeviceCaps
     {
         return DevType == RENDER_DEVICE_TYPE_VULKAN;
     }
+    bool IsMetalDevice()const
+    {
+        return DevType == RENDER_DEVICE_TYPE_METAL;
+    }
 
     struct NDCAttribs
     {

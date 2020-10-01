@@ -1395,4 +1395,40 @@ SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineTy
     }
 }
 
+
+Uint32 GetStagingTextureSubresOffset(const TextureDesc& TexDesc,
+                                     Uint32             ArraySlice,
+                                     Uint32             MipLevel,
+                                     Uint32             Alignment)
+{
+    VERIFY_EXPR(ArraySlice < TexDesc.ArraySize && MipLevel < TexDesc.MipLevels || ArraySlice == TexDesc.ArraySize && MipLevel == 0);
+
+    Uint32 Offset = 0;
+    if (ArraySlice > 0)
+    {
+        Uint32 ArraySliceSize = 0;
+        for (Uint32 mip = 0; mip < TexDesc.MipLevels; ++mip)
+        {
+            auto MipInfo = GetMipLevelProperties(TexDesc, mip);
+            ArraySliceSize += Align(MipInfo.MipSize, Alignment);
+        }
+
+        Offset = ArraySliceSize;
+        if (TexDesc.Type == RESOURCE_DIM_TEX_1D_ARRAY ||
+            TexDesc.Type == RESOURCE_DIM_TEX_2D_ARRAY ||
+            TexDesc.Type == RESOURCE_DIM_TEX_CUBE ||
+            TexDesc.Type == RESOURCE_DIM_TEX_CUBE_ARRAY)
+            Offset *= ArraySlice;
+    }
+
+    for (Uint32 mip = 0; mip < MipLevel; ++mip)
+    {
+        auto MipInfo = GetMipLevelProperties(TexDesc, mip);
+        Offset += Align(MipInfo.MipSize, Alignment);
+    }
+
+    return Offset;
+}
+
+
 } // namespace Diligent

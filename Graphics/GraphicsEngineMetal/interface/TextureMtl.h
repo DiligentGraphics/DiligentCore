@@ -41,6 +41,10 @@ static const INTERFACE_ID IID_TextureMtl =
 class ITextureMtl : public ITexture
 {
 public:
+    /// Returns a pointer to a Metal resource.
+    /// For a staging texture, this will be a pointer to a MTLStorageModeShared buffer (MTLBuffer).
+    /// For all other texture types, this will be a pointer to Metal texture object (MTLTexture).
+    virtual void* GetMtlResource() const = 0;
 };
 
 } // namespace Diligent

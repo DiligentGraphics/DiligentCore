@@ -1634,7 +1634,7 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         DEV_CHECK_ERR((SrcTexDesc.CPUAccessFlags & CPU_ACCESS_WRITE), "Attempting to copy from staging texture that was not created with CPU_ACCESS_WRITE flag");
         DEV_CHECK_ERR(pSrcTexVk->GetState() == RESOURCE_STATE_COPY_SOURCE, "Source staging texture must permanently be in RESOURCE_STATE_COPY_SOURCE state");
 
-        auto SrcBufferOffset    = GetStagingDataOffset(SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel);
+        auto SrcBufferOffset    = GetStagingTextureSubresOffset(SrcTexDesc, CopyAttribs.SrcSlice, CopyAttribs.SrcMipLevel, TextureVkImpl::StagingDataAlignment);
         auto SrcMipLevelAttribs = GetMipLevelProperties(SrcTexDesc, CopyAttribs.SrcMipLevel);
         // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
         SrcBufferOffset +=
@@ -1667,8 +1667,10 @@ void DeviceContextVkImpl::CopyTexture(const CopyTextureAttribs& CopyAttribs)
         DEV_CHECK_ERR((DstTexDesc.CPUAccessFlags & CPU_ACCESS_READ), "Attempting to copy to staging texture that was not created with CPU_ACCESS_READ flag");
         DEV_CHECK_ERR(pDstTexVk->GetState() == RESOURCE_STATE_COPY_DEST, "Destination staging texture must permanently be in RESOURCE_STATE_COPY_DEST state");
 
-        auto DstBufferOffset    = GetStagingDataOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel);
-        auto DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
+        auto DstBufferOffset =
+            GetStagingTextureSubresOffset(DstTexDesc, CopyAttribs.DstSlice, CopyAttribs.DstMipLevel,
+                                          TextureVkImpl::StagingDataAlignment);
+        const auto DstMipLevelAttribs = GetMipLevelProperties(DstTexDesc, CopyAttribs.DstMipLevel);
         // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
         DstBufferOffset +=
             // For compressed-block formats, RowSize is the size of one compressed row.
@@ -2007,8 +2009,10 @@ void DeviceContextVkImpl::MapTextureSubresource(ITexture*                 pTextu
     }
     else if (TexDesc.Usage == USAGE_STAGING)
     {
-        auto SubresourceOffset = GetStagingDataOffset(TexDesc, ArraySlice, MipLevel);
-        auto MipLevelAttribs   = GetMipLevelProperties(TexDesc, MipLevel);
+        auto SubresourceOffset =
+            GetStagingTextureSubresOffset(TexDesc, ArraySlice, MipLevel,
+                                          TextureVkImpl::StagingDataAlignment);
+        const auto MipLevelAttribs = GetMipLevelProperties(TexDesc, MipLevel);
         // address of (x,y,z) = region->bufferOffset + (((z * imageHeight) + y) * rowLength + x) * texelBlockSize; (18.4.1)
         auto MapStartOffset = SubresourceOffset +
             // For compressed-block formats, RowSize is the size of one compressed row.

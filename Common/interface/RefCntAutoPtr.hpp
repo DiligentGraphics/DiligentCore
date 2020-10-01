@@ -220,7 +220,7 @@ public:
     const T* operator->() const noexcept { return m_pObject; }
 
     template <typename InterfaceType>
-    RefCntAutoPtr<InterfaceType> Cast(const INTERFACE_ID& IID)
+    RefCntAutoPtr<InterfaceType> Cast(const INTERFACE_ID& IID) const
     {
         return RefCntAutoPtr<InterfaceType>{m_pObject, IID};
     }

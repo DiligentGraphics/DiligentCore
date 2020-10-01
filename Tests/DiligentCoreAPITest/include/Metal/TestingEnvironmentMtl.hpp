@@ -48,6 +48,8 @@ public:
 
     virtual void Reset() override final;
 
+    void* GetMtlDevice() const;
+
 private:
 };
 
