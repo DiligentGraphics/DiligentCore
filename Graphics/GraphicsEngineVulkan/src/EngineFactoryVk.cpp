@@ -254,27 +254,32 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             }
 
             // Ray tracing
-            if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED &&
-                RayTracingFeats.rayTracing != VK_FALSE)
+            if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
             {
-                DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-                *NextExt = &MeshShaderFeats;
-                NextExt  = &MeshShaderFeats.pNext;
-                // required extensions
-                DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
-                DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-                DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-                DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-                DeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-                DeviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
+                if (Features.RayTracingNV)
+                {
+                    DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+                    RayTracingSupported = true;
+                }
+                else if (RayTracingFeats.rayTracing != VK_FALSE)
+                {
+                    // required extensions
+                    DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
 
-                RayTracingSupported = true;
-                *NextExt            = &RayTracingFeats;
-                NextExt             = &RayTracingFeats.pNext;
-                *NextExt            = &DescriptorIndexingFeats;
-                NextExt             = &DescriptorIndexingFeats.pNext;
-                *NextExt            = &BufferDeviceAddressFeats;
-                NextExt             = &BufferDeviceAddressFeats.pNext;
+                    RayTracingSupported = true;
+                    *NextExt            = &RayTracingFeats;
+                    NextExt             = &RayTracingFeats.pNext;
+                    *NextExt            = &DescriptorIndexingFeats;
+                    NextExt             = &DescriptorIndexingFeats.pNext;
+                    *NextExt            = &BufferDeviceAddressFeats;
+                    NextExt             = &BufferDeviceAddressFeats.pNext;
+                }
             }
 
             // make sure that last pNext is null

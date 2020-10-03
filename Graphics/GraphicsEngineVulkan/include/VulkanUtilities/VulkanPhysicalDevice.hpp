@@ -41,6 +41,7 @@ public:
     {
         VkPhysicalDeviceMeshShaderFeaturesNV           MeshShader          = {};
         VkPhysicalDeviceRayTracingFeaturesKHR          RayTracing          = {};
+        bool                                           RayTracingNV        = false; // indicates that KHR extension emulated by NV extension
         VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddress = {};
         VkPhysicalDeviceDescriptorIndexingFeaturesEXT  DescriptorIndexing  = {};
     };
