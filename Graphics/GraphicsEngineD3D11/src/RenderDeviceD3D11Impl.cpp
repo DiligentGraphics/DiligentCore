@@ -147,10 +147,16 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     UNSUPPORTED_FEATURE(BindlessResources, "Bindless resources are");
     UNSUPPORTED_FEATURE(VertexPipelineUAVWritesAndAtomics, "Vertex pipeline UAV writes and atomics are");
     UNSUPPORTED_FEATURE(MeshShaders, "Mesh shaders are");
+
+    // Explicit fp16 is only supported in DXC through Shader Model 6.2, so there's no support for FXC or D3D11.
+    UNSUPPORTED_FEATURE(ShaderFloat16, "16-bit float shader operations are");
+    UNSUPPORTED_FEATURE(ResourceBuffer16BitAccess, "16-bit native access to resource buffers is");
+    UNSUPPORTED_FEATURE(UniformBuffer16BitAccess, "16-bit native access to uniform buffers is");
+    UNSUPPORTED_FEATURE(ShaderInputOutput16, "16-bit shader input/output is");
 #undef UNSUPPORTED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 27, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
     auto& TexCaps = m_DeviceCaps.TexCaps;

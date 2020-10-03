@@ -74,13 +74,30 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         VkPhysicalDeviceFeatures2   Feats2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
         VkPhysicalDeviceProperties2 Props2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
         void**                      NextFeat = &Feats2.pNext;
-        (void)NextFeat;
+
+        if (IsExtensionSupported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.ShaderFloat16Int8;
+            NextFeat  = &m_ExtFeatures.ShaderFloat16Int8.pNext;
+
+            m_ExtFeatures.ShaderFloat16Int8.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR;
+        }
+
+        // VK_KHR_16bit_storage extension requires VK_KHR_storage_buffer_storage_class extension.
+        if (IsExtensionSupported(VK_KHR_16BIT_STORAGE_EXTENSION_NAME) && IsExtensionSupported(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME))
+        {
+            *NextFeat = &m_ExtFeatures.Storage16Bit;
+            NextFeat  = &m_ExtFeatures.Storage16Bit.pNext;
+
+            m_ExtFeatures.Storage16Bit.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
+        }
 
         // Enable mesh shader extension.
         if (IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
         {
-            *NextFeat                      = &m_ExtFeatures.MeshShader;
-            NextFeat                       = &m_ExtFeatures.MeshShader.pNext;
+            *NextFeat = &m_ExtFeatures.MeshShader;
+            NextFeat  = &m_ExtFeatures.MeshShader.pNext;
+
             m_ExtFeatures.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
         }
 

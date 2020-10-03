@@ -251,8 +251,29 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
         m_DeviceCaps.Features.MeshShaders = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
 
+        D3D12_FEATURE_DATA_D3D12_OPTIONS4 d3d12Options4 = {};
+        m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &d3d12Options4, sizeof(d3d12Options4));
+
+        if (d3d12Options4.Native16BitShaderOpsSupported)
+        {
+            m_DeviceCaps.Features.ShaderFloat16             = DEVICE_FEATURE_STATE_ENABLED;
+            m_DeviceCaps.Features.ResourceBuffer16BitAccess = DEVICE_FEATURE_STATE_ENABLED;
+            m_DeviceCaps.Features.UniformBuffer16BitAccess  = DEVICE_FEATURE_STATE_ENABLED;
+            m_DeviceCaps.Features.ShaderInputOutput16       = DEVICE_FEATURE_STATE_ENABLED;
+        }
+        else
+        {
+            if (EngineCI.Features.ShaderFloat16 == DEVICE_FEATURE_STATE_ENABLED ||
+                EngineCI.Features.ResourceBuffer16BitAccess == DEVICE_FEATURE_STATE_ENABLED ||
+                EngineCI.Features.UniformBuffer16BitAccess == DEVICE_FEATURE_STATE_ENABLED ||
+                EngineCI.Features.ShaderInputOutput16 == DEVICE_FEATURE_STATE_ENABLED)
+            {
+                LOG_ERROR_AND_THROW("This device/driver does not natively support 16-bit floats and ints.");
+            }
+        }
+
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 27, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         auto& TexCaps = m_DeviceCaps.TexCaps;

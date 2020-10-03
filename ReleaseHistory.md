@@ -1,3 +1,7 @@
+## Current progress
+
+* Added `ShaderFloat16`, `ResourceBuffer16BitAccess`, `UniformBuffer16BitAccess`, and `ShaderInputOutput16` device features.
+
 ## v2.4.f
 
 ### API Changes

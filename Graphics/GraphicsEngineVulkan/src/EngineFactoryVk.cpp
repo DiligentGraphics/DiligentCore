@@ -174,37 +174,49 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         VkPhysicalDeviceFeatures EnabledFeatures = {};
         EnabledFeatures.fullDrawIndexUint32      = PhysicalDeviceFeatures.fullDrawIndexUint32;
 
-#define ENABLE_FEATURE(Feature, RequestedState, FeatureName)                           \
-    do                                                                                 \
-    {                                                                                  \
-        switch (RequestedState)                                                        \
-        {                                                                              \
-            case DEVICE_FEATURE_STATE_DISABLED:                                        \
-                EnabledFeatures.Feature = VK_FALSE;                                    \
-                break;                                                                 \
-            case DEVICE_FEATURE_STATE_ENABLED:                                         \
-            {                                                                          \
-                if (PhysicalDeviceFeatures.Feature == VK_FALSE)                        \
-                    LOG_ERROR_AND_THROW(FeatureName, " not supported by this device"); \
-                else                                                                   \
-                    EnabledFeatures.Feature = VK_TRUE;                                 \
-            }                                                                          \
-            break;                                                                     \
-            case DEVICE_FEATURE_STATE_OPTIONAL:                                        \
-                EnabledFeatures.Feature = PhysicalDeviceFeatures.Feature;              \
-                break;                                                                 \
-            default: UNEXPECTED("Unexpected feature state");                           \
-        }                                                                              \
+        auto GetFeatureState = [&](DEVICE_FEATURE_STATE RequestedState, bool IsFeatureSupported, const char* FeatureName) //
+        {
+            switch (RequestedState)
+            {
+                case DEVICE_FEATURE_STATE_DISABLED:
+                    return DEVICE_FEATURE_STATE_DISABLED;
+
+                case DEVICE_FEATURE_STATE_ENABLED:
+                {
+                    if (IsFeatureSupported)
+                        return DEVICE_FEATURE_STATE_ENABLED;
+                    else
+                        LOG_ERROR_AND_THROW(FeatureName, " not supported by this device");
+                }
+
+                case DEVICE_FEATURE_STATE_OPTIONAL:
+                    return IsFeatureSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+
+                default:
+                    UNEXPECTED("Unexpected feature state");
+                    return DEVICE_FEATURE_STATE_DISABLED;
+            }
+        };
+
+#define ENABLE_FEATURE(vkFeature, State, FeatureName)                                          \
+    do                                                                                         \
+    {                                                                                          \
+        State =                                                                                \
+            GetFeatureState(State, PhysicalDeviceFeatures.vkFeature != VK_FALSE, FeatureName); \
+        EnabledFeatures.vkFeature =                                                            \
+            State == DEVICE_FEATURE_STATE_ENABLED ? VK_TRUE : VK_FALSE;                        \
     } while (false)
 
+        auto ImageCubeArrayFeature    = DEVICE_FEATURE_STATE_OPTIONAL;
+        auto SamplerAnisotropyFeature = DEVICE_FEATURE_STATE_OPTIONAL;
         // clang-format off
         ENABLE_FEATURE(geometryShader,                    EngineCI.Features.GeometryShaders,                   "Geometry shaders are");
         ENABLE_FEATURE(tessellationShader,                EngineCI.Features.Tessellation,                      "Tessellation is");
         ENABLE_FEATURE(pipelineStatisticsQuery,           EngineCI.Features.PipelineStatisticsQueries,         "Pipeline statistics queries are");
         ENABLE_FEATURE(occlusionQueryPrecise,             EngineCI.Features.OcclusionQueries,                  "Occlusion queries are");
-        ENABLE_FEATURE(imageCubeArray,                    DEVICE_FEATURE_STATE_OPTIONAL,                       "Image cube arrays");
+        ENABLE_FEATURE(imageCubeArray,                    ImageCubeArrayFeature,                               "Image cube arrays are");
         ENABLE_FEATURE(fillModeNonSolid,                  EngineCI.Features.WireframeFill,                     "Wireframe fill is");
-        ENABLE_FEATURE(samplerAnisotropy,                 DEVICE_FEATURE_STATE_OPTIONAL,                       "Anisotropic texture filtering is");
+        ENABLE_FEATURE(samplerAnisotropy,                 SamplerAnisotropyFeature,                            "Anisotropic texture filtering is");
         ENABLE_FEATURE(depthBiasClamp,                    EngineCI.Features.DepthBiasClamp,                    "Depth bias clamp is");
         ENABLE_FEATURE(depthClamp,                        EngineCI.Features.DepthClamp,                        "Depth clamp is");
         ENABLE_FEATURE(independentBlend,                  EngineCI.Features.IndependentBlend,                  "Independent blend is");
@@ -226,37 +238,103 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
             };
 
+        const auto& DeiceExtFeatures = PhysicalDevice->GetExtFeatures();
+
+#define ENABLE_FEATURE(IsFeatureSupported, Feature, FeatureName)                         \
+    do                                                                                   \
+    {                                                                                    \
+        EngineCI.Features.Feature =                                                      \
+            GetFeatureState(EngineCI.Features.Feature, IsFeatureSupported, FeatureName); \
+    } while (false)
+
+
+        auto MeshShaderFeats = DeiceExtFeatures.MeshShader;
+        ENABLE_FEATURE(MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE, MeshShaders, "Mesh shaders are");
+
+        auto ShaderFloat16Int8 = DeiceExtFeatures.ShaderFloat16Int8;
+        ENABLE_FEATURE(ShaderFloat16Int8.shaderFloat16 != VK_FALSE, ShaderFloat16, "16-bit float shader operations are");
+
+        auto Storage16BitFeats = DeiceExtFeatures.Storage16Bit;
+        // clang-format off
+        ENABLE_FEATURE(Storage16BitFeats.storageBuffer16BitAccess           != VK_FALSE, ResourceBuffer16BitAccess, "16-bit resoure buffer access is");
+        ENABLE_FEATURE(Storage16BitFeats.uniformAndStorageBuffer16BitAccess != VK_FALSE, UniformBuffer16BitAccess,  "16-bit uniform buffer access is");
+        ENABLE_FEATURE(Storage16BitFeats.storageInputOutput16               != VK_FALSE, ShaderInputOutput16,       "16-bit shader inputs/outputs are");
+        // clang-format on
+#undef FeatureSupport
+
+
         // To enable some device extensions you must enable instance extension VK_KHR_get_physical_device_properties2
         // and add feature description to DeviceCreateInfo.pNext.
         const auto SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-
-        // Enable mesh shader extension.
-        bool                                 MeshShadersSupported = false;
-        VkPhysicalDeviceMeshShaderFeaturesNV MeshShaderFeats      = {};
         if (SupportsFeatures2)
         {
             void** NextExt = const_cast<void**>(&DeviceCreateInfo.pNext);
             if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
             {
-                MeshShaderFeats      = PhysicalDevice->GetExtFeatures().MeshShader;
-                MeshShadersSupported = MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE;
-                if (PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME) && MeshShadersSupported)
-                {
-                    DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-                    *NextExt = &MeshShaderFeats;
-                    NextExt  = &MeshShaderFeats.pNext;
-                }
+                VERIFY_EXPR(MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE);
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME),
+                       "VK_NV_mesh_shader extension must be supported as it has already been checked by VulkanPhysicalDevice and "
+                       "both taskShader and meshShader features are TRUE");
+                DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+                *NextExt = &MeshShaderFeats;
+                NextExt  = &MeshShaderFeats.pNext;
             }
+
+            if (EngineCI.Features.ShaderFloat16 != DEVICE_FEATURE_STATE_DISABLED)
+            {
+                VERIFY_EXPR(ShaderFloat16Int8.shaderFloat16 != VK_FALSE);
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME),
+                       "VK_KHR_shader_float16_int8 extension must be supported as it has already been checked by VulkanPhysicalDevice "
+                       "and shaderFloat16 feature is TRUE");
+                DeviceExtensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
+
+                *NextExt = &ShaderFloat16Int8;
+                NextExt  = &ShaderFloat16Int8.pNext;
+            }
+
+            // clang-format off
+            if (EngineCI.Features.ResourceBuffer16BitAccess != DEVICE_FEATURE_STATE_DISABLED  ||
+                EngineCI.Features.UniformBuffer16BitAccess  != DEVICE_FEATURE_STATE_DISABLED  ||
+                EngineCI.Features.ShaderInputOutput16       != DEVICE_FEATURE_STATE_DISABLED)
+            // clang-format on
+            {
+                // clang-format off
+                VERIFY_EXPR(EngineCI.Features.ResourceBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED || Storage16BitFeats.storageBuffer16BitAccess           != VK_FALSE);
+                VERIFY_EXPR(EngineCI.Features.UniformBuffer16BitAccess  == DEVICE_FEATURE_STATE_DISABLED || Storage16BitFeats.uniformAndStorageBuffer16BitAccess != VK_FALSE);
+                VERIFY_EXPR(EngineCI.Features.ShaderInputOutput16       == DEVICE_FEATURE_STATE_DISABLED || Storage16BitFeats.storageInputOutput16               != VK_FALSE);
+                // clang-format on
+
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_16BIT_STORAGE_EXTENSION_NAME),
+                       "VK_KHR_16bit_storage must be supported as it has already been checked by VulkanPhysicalDevice and at least one of "
+                       "storageBuffer16BitAccess, uniformAndStorageBuffer16BitAccess, or storagePushConstant16 features is TRUE");
+                DeviceExtensions.push_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
+
+                // VK_KHR_16bit_storage extension requires VK_KHR_storage_buffer_storage_class extension.
+                // All required extensions for each extension in the VkDeviceCreateInfo::ppEnabledExtensionNames
+                // list must also be present in that list.
+                VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME),
+                       "VK_KHR_storage_buffer_storage_class must be supported as it has already been checked by VulkanPhysicalDevice and at least one of "
+                       "storageBuffer16BitAccess, uniformAndStorageBuffer16BitAccess, or storagePushConstant16 features is TRUE");
+                DeviceExtensions.push_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
+
+                if (EngineCI.Features.ResourceBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED)
+                    Storage16BitFeats.storageBuffer16BitAccess = VK_FALSE;
+                if (EngineCI.Features.UniformBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED)
+                    Storage16BitFeats.uniformAndStorageBuffer16BitAccess = VK_FALSE;
+                if (EngineCI.Features.ShaderInputOutput16 == DEVICE_FEATURE_STATE_DISABLED)
+                    Storage16BitFeats.storageInputOutput16 = VK_FALSE;
+
+                *NextExt = &Storage16BitFeats;
+                NextExt  = &Storage16BitFeats.pNext;
+            }
+
             *NextExt = nullptr;
         }
 
-        if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED && !MeshShadersSupported)
-            LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device");
 
-            // The actual state of Features.MeshShaders in device caps is set by RenderDeviceVkImpl
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 27, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();

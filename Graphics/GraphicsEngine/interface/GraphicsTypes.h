@@ -1583,6 +1583,21 @@ struct DeviceFeatures
     /// Specifies whether all the extended UAV texture formats are available in shader code.
     DEVICE_FEATURE_STATE TextureUAVExtendedFormats         DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports native 16-bit float operations. Note that there are separate features
+    /// that indicate if device supports loading 16-bit floats from buffers and passing them between shader stages.
+    DEVICE_FEATURE_STATE ShaderFloat16                     DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports reading and writing 16-bit floats and ints from buffers bound
+    /// as shader resource or unordered access views.
+    DEVICE_FEATURE_STATE ResourceBuffer16BitAccess         DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports reading 16-bit floats and ints from uniform buffers.
+    DEVICE_FEATURE_STATE UniformBuffer16BitAccess          DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if 16-bit floats and ints can be used as input/output of a shader entry point.
+    DEVICE_FEATURE_STATE ShaderInputOutput16               DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+
 #if DILIGENT_CPP_INTERFACE
     DeviceFeatures() noexcept {}
 
@@ -1609,10 +1624,14 @@ struct DeviceFeatures
         TextureCompressionBC              {State},
         VertexPipelineUAVWritesAndAtomics {State},
         PixelUAVWritesAndAtomics          {State},
-        TextureUAVExtendedFormats         {State}
+        TextureUAVExtendedFormats         {State},
+        ShaderFloat16                     {State},
+        ResourceBuffer16BitAccess         {State},
+        UniformBuffer16BitAccess          {State},
+        ShaderInputOutput16               {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus above.");
+        static_assert(sizeof(*this) == 27, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif

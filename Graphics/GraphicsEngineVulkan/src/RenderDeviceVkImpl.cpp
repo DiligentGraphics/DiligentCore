@@ -206,51 +206,27 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     for (Uint32 fmt = 1; fmt < m_TextureFormatsInfo.size(); ++fmt)
         m_TextureFormatsInfo[fmt].Supported = true; // We will test every format on a specific hardware device
 
-    auto&       Features      = m_DeviceCaps.Features;
-    const auto& vkExtFeatures = m_PhysicalDevice->GetExtFeatures();
+    auto& Features = m_DeviceCaps.Features;
+    Features       = EngineCI.Features;
 
-    // May be unused if extensions are disabled.
-    (void)(vkExtFeatures);
-
-    const auto& vkEnabledFeatures = m_LogicalVkDevice->GetEnabledFeatures();
-
-    auto GetFeatureState = [](VkBool32 vkFeatureState) //
-    {
-        return vkFeatureState != VK_FALSE ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
-    };
-
-    Features.SeparablePrograms                 = DEVICE_FEATURE_STATE_ENABLED;
-    Features.IndirectRendering                 = DEVICE_FEATURE_STATE_ENABLED;
-    Features.WireframeFill                     = GetFeatureState(vkEnabledFeatures.fillModeNonSolid);
-    Features.MultithreadedResourceCreation     = DEVICE_FEATURE_STATE_ENABLED;
-    Features.ComputeShaders                    = DEVICE_FEATURE_STATE_ENABLED;
-    Features.GeometryShaders                   = GetFeatureState(vkEnabledFeatures.geometryShader);
-    Features.Tessellation                      = GetFeatureState(vkEnabledFeatures.tessellationShader);
-    Features.BindlessResources                 = DEVICE_FEATURE_STATE_ENABLED;
-    Features.OcclusionQueries                  = GetFeatureState(vkEnabledFeatures.occlusionQueryPrecise);
-    Features.BinaryOcclusionQueries            = DEVICE_FEATURE_STATE_ENABLED;
-    Features.TimestampQueries                  = DEVICE_FEATURE_STATE_ENABLED;
-    Features.DurationQueries                   = DEVICE_FEATURE_STATE_ENABLED;
-    Features.PipelineStatisticsQueries         = GetFeatureState(vkEnabledFeatures.pipelineStatisticsQuery);
-    Features.DepthBiasClamp                    = GetFeatureState(vkEnabledFeatures.depthBiasClamp);
-    Features.DepthClamp                        = GetFeatureState(vkEnabledFeatures.depthClamp);
-    Features.IndependentBlend                  = GetFeatureState(vkEnabledFeatures.independentBlend);
-    Features.DualSourceBlend                   = GetFeatureState(vkEnabledFeatures.dualSrcBlend);
-    Features.MultiViewport                     = GetFeatureState(vkEnabledFeatures.multiViewport);
-    Features.TextureCompressionBC              = GetFeatureState(vkEnabledFeatures.textureCompressionBC);
-    Features.VertexPipelineUAVWritesAndAtomics = GetFeatureState(vkEnabledFeatures.vertexPipelineStoresAndAtomics);
-    Features.PixelUAVWritesAndAtomics          = GetFeatureState(vkEnabledFeatures.fragmentStoresAndAtomics);
-    Features.TextureUAVExtendedFormats         = GetFeatureState(vkEnabledFeatures.shaderStorageImageExtendedFormats);
-
-    // All devices that support mesh shaders also support task shaders, so it is not necessary to use two separate features.
-    Features.MeshShaders = GetFeatureState(EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED && vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE);
+    // The following features are always enabled
+    Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
+    Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
+    Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
+    Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
+    Features.BindlessResources             = DEVICE_FEATURE_STATE_ENABLED;
+    Features.BinaryOcclusionQueries        = DEVICE_FEATURE_STATE_ENABLED;
+    Features.TimestampQueries              = DEVICE_FEATURE_STATE_ENABLED;
+    Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 27, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
-    const auto& vkDeviceLimits = m_PhysicalDevice->GetProperties().limits;
-    auto&       TexCaps        = m_DeviceCaps.TexCaps;
+    const auto& vkDeviceLimits    = m_PhysicalDevice->GetProperties().limits;
+    const auto& vkEnabledFeatures = m_LogicalVkDevice->GetEnabledFeatures();
+
+    auto& TexCaps = m_DeviceCaps.TexCaps;
 
     TexCaps.MaxTexture1DDimension     = vkDeviceLimits.maxImageDimension1D;
     TexCaps.MaxTexture1DArraySlices   = vkDeviceLimits.maxImageArrayLayers;
