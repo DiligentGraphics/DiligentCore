@@ -58,15 +58,16 @@
 
 #include <memory>
 
-#define NOMINMAX
-#include <d3dcommon.h>
-
 #include "ShaderD3D.h"
 #include "STDAllocator.hpp"
 #include "HashUtils.hpp"
 #include "StringPool.hpp"
 #include "D3DShaderResourceLoader.hpp"
 #include "PipelineState.h"
+
+#define NOMINMAX
+#undef THIS
+#include <d3dcommon.h>
 
 namespace Diligent
 {

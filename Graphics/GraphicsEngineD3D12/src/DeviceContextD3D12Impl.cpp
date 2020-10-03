@@ -2185,4 +2185,25 @@ void DeviceContextD3D12Impl::ResolveTextureSubresource(ITexture*                
 
     CmdCtx.ResolveSubresource(pDstTexD3D12->GetD3D12Resource(), DstSubresIndex, pSrcTexD3D12->GetD3D12Resource(), SrcSubresIndex, DXGIFmt);
 }
+
+void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
+{
+}
+
+void DeviceContextD3D12Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
+{
+}
+
+void DeviceContextD3D12Impl::CopyBLAS(const CopyBLASAttribs& Attribs)
+{
+}
+
+void DeviceContextD3D12Impl::CopyTLAS(const CopyTLASAttribs& Attribs)
+{
+}
+
+void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
+{
+}
+
 } // namespace Diligent

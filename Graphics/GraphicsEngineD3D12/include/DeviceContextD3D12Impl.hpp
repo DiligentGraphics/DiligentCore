@@ -257,6 +257,21 @@ public:
     /// Implementation of IDeviceContext::TransitionBufferState() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE TransitionBufferState(IBuffer* pBuffer, D3D12_RESOURCE_STATES State) override final;
 
+    /// Implementation of IDeviceContext::BuildBLAS() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE BuildBLAS(const BLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::BuildTLAS() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE BuildTLAS(const TLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyBLAS() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyTLAS() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::TraceRays() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
+
     /// Implementation of IDeviceContextD3D12::ID3D12GraphicsCommandList() in Direct3D12 backend.
     virtual ID3D12GraphicsCommandList* DILIGENT_CALL_TYPE GetD3D12CommandList() override final;
 

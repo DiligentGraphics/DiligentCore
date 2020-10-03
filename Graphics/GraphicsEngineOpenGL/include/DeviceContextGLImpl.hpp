@@ -243,6 +243,21 @@ public:
     /// Implementation of IDeviceContext::Flush() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE Flush() override final;
 
+    /// Implementation of IDeviceContext::BuildBLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE BuildBLAS(const BLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::BuildTLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE BuildTLAS(const TLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyBLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyTLAS() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::TraceRays() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
+
     /// Implementation of IDeviceContextGL::UpdateCurrentGLContext().
     virtual bool DILIGENT_CALL_TYPE UpdateCurrentGLContext() override final;
 

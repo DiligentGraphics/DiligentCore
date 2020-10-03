@@ -147,10 +147,11 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     UNSUPPORTED_FEATURE(BindlessResources, "Bindless resources are");
     UNSUPPORTED_FEATURE(VertexPipelineUAVWritesAndAtomics, "Vertex pipeline UAV writes and atomics are");
     UNSUPPORTED_FEATURE(MeshShaders, "Mesh shaders are");
+    UNSUPPORTED_FEATURE(RayTracing, "Ray tracing are");
 #undef UNSUPPORTED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 24, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
     auto& TexCaps = m_DeviceCaps.TexCaps;
@@ -412,6 +413,27 @@ void RenderDeviceD3D11Impl::CreateFramebuffer(const FramebufferDesc& Desc, IFram
                            pFramebufferD3D11->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
                            OnCreateDeviceObject(pFramebufferD3D11);
                        });
+}
+
+void RenderDeviceD3D11Impl::CreateBLAS(const BottomLevelASDesc& Desc,
+                                       IBottomLevelAS**         ppBLAS)
+{
+    UNSUPPORTED("CreateBLAS is not supported in DirectX 11");
+    *ppBLAS = nullptr;
+}
+
+void RenderDeviceD3D11Impl::CreateTLAS(const TopLevelASDesc& Desc,
+                                       ITopLevelAS**         ppTLAS)
+{
+    UNSUPPORTED("CreateTLAS is not supported in DirectX 11");
+    *ppTLAS = nullptr;
+}
+
+void RenderDeviceD3D11Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
+                                      IShaderBindingTable**         ppSBT)
+{
+    UNSUPPORTED("CreateSBT is not supported in DirectX 11");
+    *ppSBT = nullptr;
 }
 
 void RenderDeviceD3D11Impl::IdleGPU()

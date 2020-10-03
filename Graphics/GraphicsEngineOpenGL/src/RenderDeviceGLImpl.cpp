@@ -749,6 +749,27 @@ void RenderDeviceGLImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebu
                        });
 }
 
+void RenderDeviceGLImpl::CreateBLAS(const BottomLevelASDesc& Desc,
+                                    IBottomLevelAS**         ppBLAS)
+{
+    UNSUPPORTED("CreateBLAS is not supported in OpenGL");
+    *ppBLAS = nullptr;
+}
+
+void RenderDeviceGLImpl::CreateTLAS(const TopLevelASDesc& Desc,
+                                    ITopLevelAS**         ppTLAS)
+{
+    UNSUPPORTED("CreateTLAS is not supported in OpenGL");
+    *ppTLAS = nullptr;
+}
+
+void RenderDeviceGLImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
+                                   IShaderBindingTable**         ppSBT)
+{
+    UNSUPPORTED("CreateSBT is not supported in OpenGL");
+    *ppSBT = nullptr;
+}
+
 bool RenderDeviceGLImpl::CheckExtension(const Char* ExtensionString)
 {
     return m_ExtensionStrings.find(ExtensionString) != m_ExtensionStrings.end();

@@ -2297,6 +2297,31 @@ void DeviceContextD3D11Impl::ResolveTextureSubresource(ITexture*                
     m_pd3d11DeviceContext->ResolveSubresource(pDstTexD3D11->GetD3D11Texture(), DstSubresIndex, pSrcTexD3D11->GetD3D11Texture(), SrcSubresIndex, DXGIFmt);
 }
 
+void DeviceContextD3D11Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
+{
+    UNSUPPORTED("BuildBLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
+{
+    UNSUPPORTED("BuildTLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::CopyBLAS(const CopyBLASAttribs& Attribs)
+{
+    UNSUPPORTED("CopyBLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::CopyTLAS(const CopyTLASAttribs& Attribs)
+{
+    UNSUPPORTED("CopyTLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::TraceRays(const TraceRaysAttribs& Attribs)
+{
+    UNSUPPORTED("TraceRays is not supported in DirectX 11");
+}
+
 // clang-format off
 #ifdef VERIFY_CONTEXT_BINDINGS
     DEFINE_D3D11CTX_FUNC_POINTERS(GetCBMethods,      GetConstantBuffers)

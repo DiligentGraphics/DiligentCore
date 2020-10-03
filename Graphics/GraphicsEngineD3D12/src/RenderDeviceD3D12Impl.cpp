@@ -635,6 +635,25 @@ void RenderDeviceD3D12Impl::CreateFramebuffer(const FramebufferDesc& Desc, IFram
                        });
 }
 
+
+void RenderDeviceD3D12Impl::CreateBLAS(const BottomLevelASDesc& Desc,
+                                       IBottomLevelAS**         ppBLAS)
+{
+    // AZ TODO
+}
+
+void RenderDeviceD3D12Impl::CreateTLAS(const TopLevelASDesc& Desc,
+                                       ITopLevelAS**         ppTLAS)
+{
+    // AZ TODO
+}
+
+void RenderDeviceD3D12Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
+                                      IShaderBindingTable**         ppSBT)
+{
+    // AZ TODO
+}
+
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
 {
     VERIFY(Type >= D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV && Type < D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES, "Invalid heap type");
