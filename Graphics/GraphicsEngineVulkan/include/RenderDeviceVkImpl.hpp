@@ -75,6 +75,9 @@ public:
     /// Implementation of IRenderDevice::CreatePipelineState() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
 
+    /// Implementation of IRenderDevice::CreatePipelineState2() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreatePipelineState2(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState2** ppPipelineState) override final;
+
     /// Implementation of IRenderDevice::CreateBuffer() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
                                                  const BufferData* pBuffData,
@@ -111,6 +114,18 @@ public:
     /// Implementation of IRenderDevice::CreateFramebuffer() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
                                                       IFramebuffer**         ppFramebuffer) override final;
+
+    /// Implementation of IRenderDevice::CreateFramebuffer() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateBLAS(const BottomLevelASDesc& Desc,
+                                               IBottomLevelAS**         ppBLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateFramebuffer() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateTLAS(const TopLevelASDesc& Desc,
+                                               ITopLevelAS**         ppTLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateFramebuffer() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
+                                              IShaderBindingTable**         ppSBT) override final;
 
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }

@@ -39,7 +39,17 @@ class VulkanPhysicalDevice
 public:
     struct ExtensionFeatures
     {
-        VkPhysicalDeviceMeshShaderFeaturesNV MeshShader = {};
+        VkPhysicalDeviceMeshShaderFeaturesNV           MeshShader          = {};
+        VkPhysicalDeviceRayTracingFeaturesKHR          RayTracing          = {};
+        VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddress = {};
+        VkPhysicalDeviceDescriptorIndexingFeaturesEXT  DescriptorIndexing  = {};
+    };
+
+    struct ExtensionProperties
+    {
+        VkPhysicalDeviceMeshShaderPropertiesNV          MeshShader         = {};
+        VkPhysicalDeviceRayTracingPropertiesKHR         RayTracing         = {};
+        VkPhysicalDeviceDescriptorIndexingPropertiesEXT DescriptorIndexing = {};
     };
 
 public:
@@ -67,6 +77,7 @@ public:
     const VkPhysicalDeviceProperties&       GetProperties() const { return m_Properties; }
     const VkPhysicalDeviceFeatures&         GetFeatures() const { return m_Features; }
     const ExtensionFeatures&                GetExtFeatures() const { return m_ExtFeatures; }
+    const ExtensionProperties&              GetExtProperties() const { return m_ExtProperties; }
     const VkPhysicalDeviceMemoryProperties& GetMemoryProperties() const { return m_MemoryProperties; }
     VkFormatProperties                      GetPhysicalDeviceFormatProperties(VkFormat imageFormat) const;
 
@@ -79,6 +90,7 @@ private:
     VkPhysicalDeviceFeatures             m_Features         = {};
     VkPhysicalDeviceMemoryProperties     m_MemoryProperties = {};
     ExtensionFeatures                    m_ExtFeatures      = {};
+    ExtensionProperties                  m_ExtProperties    = {};
     std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
     std::vector<VkExtensionProperties>   m_SupportedExtensions;
 };

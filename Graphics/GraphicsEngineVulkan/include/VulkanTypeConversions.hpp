@@ -40,7 +40,8 @@ namespace Diligent
 VkFormat       TexFormatToVkFormat(TEXTURE_FORMAT TexFmt);
 TEXTURE_FORMAT VkFormatToTexFormat(VkFormat VkFmt);
 
-VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
+VkFormat    TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormalized);
+VkIndexType TypeToVkIndexType(VALUE_TYPE IndexType);
 
 VkPipelineRasterizationStateCreateInfo RasterizerStateDesc_To_VkRasterizationStateCI(const struct RasterizerStateDesc& RasterizerDesc);
 VkPipelineDepthStencilStateCreateInfo  DepthStencilStateDesc_To_VkDepthStencilStateCI(const struct DepthStencilStateDesc& DepthStencilDesc);
@@ -81,5 +82,9 @@ ATTACHMENT_STORE_OP VkAttachmentStoreOpToAttachmentStoreOp(VkAttachmentStoreOp V
 
 VkPipelineStageFlags PipelineStageFlagsToVkPipelineStageFlags(PIPELINE_STAGE_FLAGS PipelineStageFlags);
 VkAccessFlags        AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags);
+
+VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags);
+VkGeometryFlagsKHR                   GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags);
+VkGeometryInstanceFlagsKHR           InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags);
 
 } // namespace Diligent

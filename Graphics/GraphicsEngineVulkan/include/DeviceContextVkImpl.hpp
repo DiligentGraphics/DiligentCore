@@ -44,6 +44,7 @@
 #include "BufferVkImpl.hpp"
 #include "TextureVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
+#include "PipelineState2VkImpl.hpp"
 #include "QueryVkImpl.hpp"
 #include "FramebufferVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
@@ -57,14 +58,15 @@ namespace Diligent
 
 struct DeviceContextVkImplTraits
 {
-    using BufferType        = BufferVkImpl;
-    using TextureType       = TextureVkImpl;
-    using PipelineStateType = PipelineStateVkImpl;
-    using DeviceType        = RenderDeviceVkImpl;
-    using ICommandQueueType = ICommandQueueVk;
-    using QueryType         = QueryVkImpl;
-    using FramebufferType   = FramebufferVkImpl;
-    using RenderPassType    = RenderPassVkImpl;
+    using BufferType         = BufferVkImpl;
+    using TextureType        = TextureVkImpl;
+    using PipelineStateType  = PipelineStateVkImpl;
+    using PipelineStateType2 = PipelineState2VkImpl;
+    using DeviceType         = RenderDeviceVkImpl;
+    using ICommandQueueType  = ICommandQueueVk;
+    using QueryType          = QueryVkImpl;
+    using FramebufferType    = FramebufferVkImpl;
+    using RenderPassType     = RenderPassVkImpl;
 };
 
 /// Device context implementation in Vulkan backend.
@@ -86,6 +88,7 @@ public:
 
     /// Implementation of IDeviceContext::SetPipelineState() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE SetPipelineState(IPipelineState* pPipelineState) override final;
+    virtual void DILIGENT_CALL_TYPE SetPipelineState2(IPipelineState2* pPipelineState) override final;
 
     /// Implementation of IDeviceContext::TransitionShaderResources() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE TransitionShaderResources(IPipelineState*         pPipelineState,
@@ -94,6 +97,9 @@ public:
     /// Implementation of IDeviceContext::CommitShaderResources() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CommitShaderResources(IShaderResourceBinding*        pShaderResourceBinding,
                                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
+
+    virtual void DILIGENT_CALL_TYPE CommitShaderResources2(IShaderResourceBinding2*       pShaderResourceBinding,
+                                                           RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
     /// Implementation of IDeviceContext::SetStencilRef() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE SetStencilRef(Uint32 StencilRef) override final;
@@ -135,13 +141,13 @@ public:
                                                      ITextureView*                  pDepthStencil,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
-    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::BeginRenderPass() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::NextSubpass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::NextSubpass() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
 
-    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::EndRenderPass() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     // clang-format off
@@ -248,6 +254,21 @@ public:
 
     /// Implementation of IDeviceContext::Flush() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE Flush() override final;
+
+    /// Implementation of IDeviceContext::BuildBLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE BuildBLAS(const BLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::BuildTLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE BuildTLAS(const TLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyBLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyTLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::TraceRays() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.

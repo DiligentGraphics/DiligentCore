@@ -39,6 +39,10 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const INTERFACE_ID IID_PipelineStateVk =
     {0x2fea0868, 0x932, 0x412a, {0x9f, 0xa, 0x7c, 0xea, 0x7e, 0x61, 0xb5, 0xe0}};
 
+// {2DD3FFC8-C798-41ED-ACE7-4FC983159056}
+static const INTERFACE_ID IID_PipelineState2Vk =
+    {0x2dd3ffc8, 0xc798, 0x41ed, {0xac, 0xe7, 0x4f, 0xc9, 0x83, 0x15, 0x90, 0x56}};
+
 #define DILIGENT_INTERFACE_NAME IPipelineStateVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -57,6 +61,26 @@ DILIGENT_BEGIN_INTERFACE(IPipelineStateVk, IPipelineState)
 };
 DILIGENT_END_INTERFACE
 
+#undef DILIGENT_INTERFACE_NAME
+#define DILIGENT_INTERFACE_NAME IPipelineState2Vk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IPipelineState2VkInclusiveMethods \
+    IPipelineState2InclusiveMethods;      \
+    IPipelineState2VkMethods PipelineStateVk
+
+/// Exposes Vulkan-specific functionality of a pipeline state object.
+DILIGENT_BEGIN_INTERFACE(IPipelineState2Vk, IPipelineState2)
+{
+    /// Returns the pointer to the internal render pass object.
+    VIRTUAL IRenderPassVk* METHOD(GetRenderPass)(THIS) CONST PURE;
+
+    /// Returns handle to a vulkan pipeline pass object.
+    VIRTUAL VkPipeline METHOD(GetVkPipeline)(THIS) CONST PURE;
+};
+DILIGENT_END_INTERFACE
+
+
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
@@ -65,6 +89,9 @@ DILIGENT_END_INTERFACE
 
 #    define IPipelineStateVk_GetRenderPass(This) CALL_IFACE_METHOD(PipelineStateVk, GetRenderPass, This)
 #    define IPipelineStateVk_GetVkPipeline(This) CALL_IFACE_METHOD(PipelineStateVk, GetVkPipeline, This)
+
+#    define IPipelineState2Vk_GetRenderPass(This) CALL_IFACE_METHOD(PipelineState2Vk, GetRenderPass, This)
+#    define IPipelineState2Vk_GetVkPipeline(This) CALL_IFACE_METHOD(PipelineState2Vk, GetVkPipeline, This)
 
 // clang-format on
 

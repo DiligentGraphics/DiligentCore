@@ -400,6 +400,11 @@ void SetQueryPoolName(VkDevice device, VkQueryPool queryPool, const char* name)
     SetObjectName(device, (uint64_t)queryPool, VK_OBJECT_TYPE_QUERY_POOL, name);
 }
 
+void SetAccelStructName(VkDevice device, VkAccelerationStructureKHR accelStruct, const char* name)
+{
+    SetObjectName(device, (uint64_t)accelStruct, VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR, name);
+}
+
 
 template <>
 void SetVulkanObjectName<VkCommandPool, VulkanHandleTypeId::CommandPool>(VkDevice device, VkCommandPool cmdPool, const char* name)
@@ -527,6 +532,11 @@ void SetVulkanObjectName<VkQueryPool, VulkanHandleTypeId::QueryPool>(VkDevice de
     SetQueryPoolName(device, queryPool, name);
 }
 
+template <>
+void SetVulkanObjectName<VkAccelerationStructureKHR, VulkanHandleTypeId::AccelerationStructureKHR>(VkDevice device, VkAccelerationStructureKHR accelStruct, const char* name)
+{
+    SetAccelStructName(device, accelStruct, name);
+}
 
 
 const char* VkResultToString(VkResult errorCode)
@@ -558,6 +568,21 @@ const char* VkResultToString(VkResult errorCode)
         STR(ERROR_INCOMPATIBLE_DISPLAY_KHR);
         STR(ERROR_VALIDATION_FAILED_EXT);
         STR(ERROR_INVALID_SHADER_NV);
+        STR(ERROR_FRAGMENTED_POOL);
+        STR(ERROR_UNKNOWN);
+        STR(ERROR_OUT_OF_POOL_MEMORY);
+        STR(ERROR_INVALID_EXTERNAL_HANDLE);
+        STR(ERROR_FRAGMENTATION);
+        STR(ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS);
+        STR(ERROR_INCOMPATIBLE_VERSION_KHR);
+        STR(ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT);
+        STR(ERROR_NOT_PERMITTED_EXT);
+        STR(ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT);
+        STR(THREAD_IDLE_KHR);
+        STR(THREAD_DONE_KHR);
+        STR(OPERATION_DEFERRED_KHR);
+        STR(OPERATION_NOT_DEFERRED_KHR);
+        STR(PIPELINE_COMPILE_REQUIRED_EXT);
 #undef STR
             // clang-format on
         default:
@@ -589,6 +614,8 @@ const char* VkAccessFlagBitToString(VkAccessFlagBits Bit)
         ACCESS_FLAG_BIT_TO_STRING(VK_ACCESS_HOST_WRITE_BIT)
         ACCESS_FLAG_BIT_TO_STRING(VK_ACCESS_MEMORY_READ_BIT)
         ACCESS_FLAG_BIT_TO_STRING(VK_ACCESS_MEMORY_WRITE_BIT)
+        ACCESS_FLAG_BIT_TO_STRING(VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR)
+        ACCESS_FLAG_BIT_TO_STRING(VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR)
 #undef ACCESS_FLAG_BIT_TO_STRING
         default: UNEXPECTED("Unexpected bit"); return "";
             // clang-format on
@@ -672,11 +699,13 @@ const char* VkObjectTypeToString(VkObjectType ObjectType)
         case VK_OBJECT_TYPE_DISPLAY_KHR:                    return "display KHR";
         case VK_OBJECT_TYPE_DISPLAY_MODE_KHR:               return "display mode KHR";
         case VK_OBJECT_TYPE_DEBUG_REPORT_CALLBACK_EXT:      return "debug report callback";
-        case VK_OBJECT_TYPE_OBJECT_TABLE_NVX:               return "object tabke NVX";
-        case VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX:   return "indirect cmd layout NVX";
+        case VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NV:    return "indirect cmd layout NV";
         case VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT:      return "debug utils messenger";
         case VK_OBJECT_TYPE_VALIDATION_CACHE_EXT:           return "validation cache";
-        case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV:      return "acceleration structure NVX";
+        case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV:      return "acceleration structure";
+        case VK_OBJECT_TYPE_PERFORMANCE_CONFIGURATION_INTEL:return "performance configuration intel";
+        case VK_OBJECT_TYPE_DEFERRED_OPERATION_KHR:         return "deferred operation";
+        case VK_OBJECT_TYPE_PRIVATE_DATA_SLOT_EXT:          return "private data slot";
         default: return "unknown";
             // clang-format on
     }

@@ -41,6 +41,7 @@ namespace Diligent
 {
 
 class PipelineStateVkImpl;
+class PipelineState2VkImpl;
 
 /// Implementation of the Diligent::IShaderResourceBindingVk interface
 // sizeof(ShaderResourceBindingVkImpl) == 72 (x64, msvc, Release)
@@ -85,6 +86,48 @@ private:
 
     bool  m_bStaticResourcesInitialized = false;
     Uint8 m_NumShaders                  = 0;
+};
+
+
+
+/// Implementation of the Diligent::IShaderResourceBinding2Vk interface.
+class ShaderResourceBinding2VkImpl final : public ObjectBase<IShaderResourceBinding2Vk>
+{
+public:
+    ShaderResourceBinding2VkImpl(IReferenceCounters*   pRefCounters,
+                                 PipelineState2VkImpl* pPSO,
+                                 bool                  IsPSOInternal);
+    ~ShaderResourceBinding2VkImpl();
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
+
+    /// Implementation of IShaderResourceBinding2::GetPipelineState() in Vulkan backend.
+    virtual IPipelineState2* DILIGENT_CALL_TYPE GetPipelineState() override final
+    {
+        return m_pPSO;
+    }
+
+    /// Implementation of IShaderResourceBinding2::BindResources() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE BindResources(IResourceMapping* pResMapping, Uint32 Flags) override final;
+
+    /// Implementation of IShaderResourceBinding2::GetVariableByName() in Vulkan backend.
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByName(const char* Name) override final;
+
+    /// Implementation of IShaderResourceBinding2::GetVariableCount() in Vulkan backend.
+    virtual Uint32 DILIGENT_CALL_TYPE GetVariableCount() const override final;
+
+    /// Implementation of IShaderResourceBinding2::GetVariableByIndex() in Vulkan backend.
+    virtual IShaderResourceVariable* DILIGENT_CALL_TYPE GetVariableByIndex(Uint32 Index) override final;
+
+    /// Implementation of IShaderResourceBinding2::InitializeStaticResources() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE InitializeStaticResources(const IPipelineState2* pPipelineState) override final;
+
+    //ShaderResourceCacheVk& GetResourceCache() { return m_ShaderResourceCache; }
+
+    //bool StaticResourcesInitialized() const { return m_bStaticResourcesInitialized; }
+
+private:
+    RefCntAutoPtr<IPipelineState2> m_pPSO;
 };
 
 } // namespace Diligent

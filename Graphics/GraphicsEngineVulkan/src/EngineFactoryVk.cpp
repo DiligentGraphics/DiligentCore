@@ -228,43 +228,77 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
         // To enable some device extensions you must enable instance extension VK_KHR_get_physical_device_properties2
         // and add feature description to DeviceCreateInfo.pNext.
-        const auto SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        bool   SupportsFeatures2    = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        void** NextExt              = const_cast<void**>(&DeviceCreateInfo.pNext);
+        bool   MeshShadersSupported = false;
+        bool   RayTracingSupported  = false;
 
-        // Enable mesh shader extension.
-        bool                                 MeshShadersSupported = false;
-        VkPhysicalDeviceMeshShaderFeaturesNV MeshShaderFeats      = {};
+        // Features has been initialized in VulkanPhysicalDevice constructor.
+        const auto&                                    Features                 = PhysicalDevice->GetExtFeatures();
+        VkPhysicalDeviceMeshShaderFeaturesNV           MeshShaderFeats          = Features.MeshShader;
+        VkPhysicalDeviceRayTracingFeaturesKHR          RayTracingFeats          = Features.RayTracing;
+        VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddressFeats = Features.BufferDeviceAddress;
+        VkPhysicalDeviceDescriptorIndexingFeaturesEXT  DescriptorIndexingFeats  = Features.DescriptorIndexing;
+
+        // Enable extensions
         if (SupportsFeatures2)
         {
-            void** NextExt = const_cast<void**>(&DeviceCreateInfo.pNext);
-            if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
+            // Mesh shader
+            if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED &&
+                MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE)
             {
-                MeshShaderFeats      = PhysicalDevice->GetExtFeatures().MeshShader;
-                MeshShadersSupported = MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE;
-                if (PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME) && MeshShadersSupported)
-                {
-                    DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-                    *NextExt = &MeshShaderFeats;
-                    NextExt  = &MeshShaderFeats.pNext;
-                }
+                DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+                MeshShadersSupported = true;
+                *NextExt             = &MeshShaderFeats;
+                NextExt              = &MeshShaderFeats.pNext;
             }
+
+            // Ray tracing
+            if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED &&
+                RayTracingFeats.rayTracing != VK_FALSE)
+            {
+                DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
+                *NextExt = &MeshShaderFeats;
+                NextExt  = &MeshShaderFeats.pNext;
+                // required extensions
+                DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+                DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+                DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+                DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+                DeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+                DeviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
+
+                RayTracingSupported = true;
+                *NextExt            = &RayTracingFeats;
+                NextExt             = &RayTracingFeats.pNext;
+                *NextExt            = &DescriptorIndexingFeats;
+                NextExt             = &DescriptorIndexingFeats.pNext;
+                *NextExt            = &BufferDeviceAddressFeats;
+                NextExt             = &BufferDeviceAddressFeats.pNext;
+            }
+
+            // make sure that last pNext is null
             *NextExt = nullptr;
         }
 
         if (EngineCI.Features.MeshShaders == DEVICE_FEATURE_STATE_ENABLED && !MeshShadersSupported)
             LOG_ERROR_AND_THROW("Mesh shaders are not supported by this device");
 
+        if (EngineCI.Features.RayTracing == DEVICE_FEATURE_STATE_ENABLED && !RayTracingSupported)
+            LOG_ERROR_AND_THROW("Ray tracing is not supported by this device");
+
             // The actual state of Features.MeshShaders in device caps is set by RenderDeviceVkImpl
+            // The actual state of Features.RayTracing in device caps is set by RenderDeviceVkImpl
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 24, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();
         DeviceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(DeviceExtensions.size());
 
-        auto vkAllocator      = Instance->GetVkAllocator();
-        auto vkPhysicalDevice = PhysicalDevice->GetVkDeviceHandle();
-        auto LogicalDevice    = VulkanUtilities::VulkanLogicalDevice::Create(vkPhysicalDevice, DeviceCreateInfo, vkAllocator);
+        auto vkAllocator   = Instance->GetVkAllocator();
+        auto LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create(*PhysicalDevice, DeviceCreateInfo, vkAllocator);
 
         auto& RawMemAllocator = GetRawAllocator();
 

@@ -29,6 +29,7 @@
 
 #ifndef NOMINMAX
 #    define NOMINMAX
+#    undef THIS
 #endif
 #include <Windows.h>
 

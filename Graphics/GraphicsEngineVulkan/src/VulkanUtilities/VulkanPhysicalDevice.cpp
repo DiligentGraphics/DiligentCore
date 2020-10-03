@@ -68,30 +68,68 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         VERIFY_EXPR(ExtensionCount == m_SupportedExtensions.size());
     }
 
-#ifdef VK_KHR_get_physical_device_properties2
+#if DILIGENT_USE_VOLK
     if (Instance.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
         VkPhysicalDeviceFeatures2   Feats2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
         VkPhysicalDeviceProperties2 Props2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
         void**                      NextFeat = &Feats2.pNext;
-        (void)NextFeat;
+        void**                      NextProp = &Props2.pNext;
 
-        // Enable mesh shader extension.
+        // Get mesh shader features and properties.
         if (IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME))
         {
             *NextFeat                      = &m_ExtFeatures.MeshShader;
             NextFeat                       = &m_ExtFeatures.MeshShader.pNext;
             m_ExtFeatures.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV;
+
+            *NextProp                        = &m_ExtProperties.MeshShader;
+            NextProp                         = &m_ExtProperties.MeshShader.pNext;
+            m_ExtProperties.MeshShader.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV;
         }
 
+        // Get ray tracing features and properties.
+        if (IsExtensionSupported(VK_KHR_RAY_TRACING_EXTENSION_NAME))
+        {
+            *NextFeat                      = &m_ExtFeatures.RayTracing;
+            NextFeat                       = &m_ExtFeatures.RayTracing.pNext;
+            m_ExtFeatures.RayTracing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_FEATURES_KHR;
+
+            *NextProp                        = &m_ExtProperties.RayTracing;
+            NextProp                         = &m_ExtProperties.RayTracing.pNext;
+            m_ExtProperties.RayTracing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
+        }
+
+        // Additional extension that required for ray tracing.
+        if (IsExtensionSupported(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
+        {
+            *NextFeat                               = &m_ExtFeatures.BufferDeviceAddress;
+            NextFeat                                = &m_ExtFeatures.BufferDeviceAddress.pNext;
+            m_ExtFeatures.BufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
+        }
+
+        // Additional extension that required for ray tracing.
+        if (IsExtensionSupported(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME))
+        {
+            *NextFeat                              = &m_ExtFeatures.DescriptorIndexing;
+            NextFeat                               = &m_ExtFeatures.DescriptorIndexing.pNext;
+            m_ExtFeatures.DescriptorIndexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+
+            *NextProp                                = &m_ExtProperties.DescriptorIndexing;
+            NextProp                                 = &m_ExtProperties.DescriptorIndexing.pNext;
+            m_ExtProperties.DescriptorIndexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
+        }
+
+        // make sure that last pNext is null
         *NextFeat = nullptr;
+        *NextProp = nullptr;
 
         // Initialize device extension features by current physical device features.
         // Some flags may not be supported by hardware.
         vkGetPhysicalDeviceFeatures2KHR(m_VkDevice, &Feats2);
         vkGetPhysicalDeviceProperties2KHR(m_VkDevice, &Props2);
     }
-#endif
+#endif // DILIGENT_USE_VOLK
 }
 
 uint32_t VulkanPhysicalDevice::FindQueueFamily(VkQueueFlags QueueFlags) const

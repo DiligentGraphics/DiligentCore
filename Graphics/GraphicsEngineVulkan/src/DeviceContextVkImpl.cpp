@@ -36,6 +36,7 @@
 #include "VulkanTypeConversions.hpp"
 #include "CommandListVkImpl.hpp"
 #include "FenceVkImpl.hpp"
+#include "RayTracingVk.h"
 #include "GraphicsAccessories.hpp"
 
 namespace Diligent
@@ -295,6 +296,11 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     m_DescrSetBindInfo.Reset();
 }
 
+void DeviceContextVkImpl::SetPipelineState2(IPipelineState2* pPipelineState)
+{
+    // AZ TODO
+}
+
 void DeviceContextVkImpl::TransitionShaderResources(IPipelineState* pPipelineState, IShaderResourceBinding* pShaderResourceBinding)
 {
     DEV_CHECK_ERR(pPipelineState != nullptr, "Pipeline state must mot be null");
@@ -314,6 +320,11 @@ void DeviceContextVkImpl::CommitShaderResources(IShaderResourceBinding* pShaderR
         return;
 
     m_pPipelineState->CommitAndTransitionShaderResources(pShaderResourceBinding, this, true, StateTransitionMode, &m_DescrSetBindInfo);
+}
+
+void DeviceContextVkImpl::CommitShaderResources2(IShaderResourceBinding2* pShaderResourceBinding, RESOURCE_STATE_TRANSITION_MODE StateTransitionMode)
+{
+    // AZ TODO
 }
 
 void DeviceContextVkImpl::SetStencilRef(Uint32 StencilRef)
@@ -514,7 +525,7 @@ void DeviceContextVkImpl::PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE Ind
     }
 #endif
     DEV_CHECK_ERR(IndexType == VT_UINT16 || IndexType == VT_UINT32, "Unsupported index format. Only R16_UINT and R32_UINT are allowed.");
-    VkIndexType vkIndexType = IndexType == VT_UINT16 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32;
+    VkIndexType vkIndexType = TypeToVkIndexType(IndexType);
     m_CommandBuffer.BindIndexBuffer(m_pIndexBuffer->GetVkBuffer(), m_IndexDataStartOffset + m_pIndexBuffer->GetDynamicOffset(m_ContextId, this), vkIndexType);
 }
 
@@ -575,6 +586,10 @@ void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
     if (!DvpVerifyDrawMeshArguments(Attribs))
         return;
 
+    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().MeshShader.meshShader == VK_TRUE && PhysicalDevice.GetExtFeatures().MeshShader.taskShader == VK_TRUE);
+    VERIFY_EXPR(Attribs.ThreadGroupCount <= PhysicalDevice.GetExtProperties().MeshShader.maxDrawMeshTasksCount);
+
     PrepareForDraw(Attribs.Flags);
 
     m_CommandBuffer.DrawMesh(Attribs.ThreadGroupCount, 0);
@@ -585,6 +600,9 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
 {
     if (!DvpVerifyDrawMeshIndirectArguments(Attribs, pAttribsBuffer))
         return;
+
+    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().MeshShader.meshShader == VK_TRUE && PhysicalDevice.GetExtFeatures().MeshShader.taskShader == VK_TRUE);
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
@@ -2592,6 +2610,277 @@ void DeviceContextVkImpl::ResolveTextureSubresource(ITexture*                   
     m_CommandBuffer.ResolveImage(pSrcTexVk->GetVkImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                                  pDstTexVk->GetVkImage(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                                  1, &ResolveRegion);
+}
+
+void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
+{
+    if (!TDeviceContextBase::BuildBLAS(Attribs, 0))
+        return;
+
+
+    // AZ TODO: transitions
+
+    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+    auto& LogicalDevice  = m_pDevice->GetLogicalDevice();
+    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+
+    auto* pBLASVk    = ValidatedCast<IBottomLevelASVk>(Attribs.pBLAS);
+    auto* pScratchVk = ValidatedCast<IBufferVk>(Attribs.pScratchBuffer);
+    auto& BLASDesc   = pBLASVk->GetDesc();
+
+    VkAccelerationStructureBuildGeometryInfoKHR            Info = {};
+    std::vector<VkAccelerationStructureBuildOffsetInfoKHR> Offsets;
+    std::vector<VkAccelerationStructureGeometryKHR>        Geometries;
+    VkBufferDeviceAddressInfoKHR                           BufferInfo = {VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR};
+
+    if (Attribs.pTriangleData != nullptr)
+    {
+        Geometries.resize(Attribs.TriangleDataCount);
+        Offsets.resize(Attribs.TriangleDataCount);
+
+        for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
+        {
+            auto&  src = Attribs.pTriangleData[i];
+            Uint32 j   = pBLASVk->GetGeometryIndex(src.GeometryName);
+            auto&  dst = Geometries.data()[j];
+            auto&  tri = dst.geometry.triangles;
+            auto&  off = Offsets.data()[j];
+
+            if (j >= Geometries.size())
+            {
+                UNEXPECTED("Failed to find geometry by name");
+                continue;
+            }
+
+            dst.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+            dst.pNext        = nullptr;
+            dst.flags        = GeometryFlagsToVkGeometryFlags(src.Flags);
+            dst.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+            tri.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+            tri.pNext        = nullptr;
+
+            auto* pVB                    = ValidatedCast<IBufferVk>(src.pVertexBuffer);
+            tri.vertexFormat             = TypeToVkFormat(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
+            tri.vertexStride             = src.VertexStride;
+            BufferInfo.buffer            = pVB->GetVkBuffer();
+            tri.vertexData.deviceAddress = vkGetBufferDeviceAddressKHR(LogicalDevice.GetVkDevice(), &BufferInfo) + src.VertexOffset;
+            VERIFY_EXPR(tri.vertexData.deviceAddress > src.VertexOffset);
+
+            if (src.pIndexBuffer)
+            {
+                auto* pIB                   = ValidatedCast<IBufferVk>(src.pIndexBuffer);
+                tri.indexType               = TypeToVkIndexType(src.IndexType);
+                BufferInfo.buffer           = pIB->GetVkBuffer();
+                tri.indexData.deviceAddress = vkGetBufferDeviceAddressKHR(LogicalDevice.GetVkDevice(), &BufferInfo) + src.IndexOffset;
+                VERIFY_EXPR(tri.indexData.deviceAddress > src.IndexOffset);
+
+                off.primitiveCount = src.IndexCount / 3;
+            }
+            else
+            {
+                tri.indexType               = VK_INDEX_TYPE_NONE_KHR;
+                tri.indexData.deviceAddress = 0;
+                off.primitiveCount          = src.VertexCount / 3;
+            }
+
+            if (src.pTransformBuffer)
+            {
+                auto* pTB                       = ValidatedCast<IBufferVk>(src.pTransformBuffer);
+                BufferInfo.buffer               = pTB->GetVkBuffer();
+                tri.transformData.deviceAddress = vkGetBufferDeviceAddressKHR(LogicalDevice.GetVkDevice(), &BufferInfo) + src.TransformBufferOffset;
+                VERIFY_EXPR(tri.transformData.deviceAddress > src.TransformBufferOffset);
+            }
+            else
+                tri.transformData.deviceAddress = 0;
+
+            off.firstVertex     = 0;
+            off.primitiveOffset = 0;
+            off.transformOffset = 0;
+        }
+    }
+    else if (Attribs.pBoxData != nullptr)
+    {
+        Geometries.resize(Attribs.BoxDataCount);
+        Offsets.resize(Attribs.BoxDataCount);
+
+        for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
+        {
+            auto&  src = Attribs.pBoxData[i];
+            Uint32 j   = pBLASVk->GetGeometryIndex(src.GeometryName);
+            auto&  dst = Geometries.data()[j];
+            auto&  box = dst.geometry.aabbs;
+            auto&  off = Offsets.data()[j];
+
+            if (j >= Geometries.size())
+            {
+                UNEXPECTED("Failed to find geometry by name");
+                continue;
+            }
+
+            auto* pBB              = ValidatedCast<IBufferVk>(src.pBoxBuffer);
+            box.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+            box.pNext              = nullptr;
+            box.stride             = src.BoxStride;
+            BufferInfo.buffer      = pBB->GetVkBuffer();
+            box.data.deviceAddress = vkGetBufferDeviceAddressKHR(LogicalDevice.GetVkDevice(), &BufferInfo) + src.BoxOffset;
+            VERIFY_EXPR(box.data.deviceAddress > src.BoxOffset);
+
+            off.firstVertex     = 0;
+            off.transformOffset = 0;
+            off.primitiveOffset = 0;
+            off.primitiveCount  = src.BoxCount;
+        }
+    }
+
+    VkAccelerationStructureGeometryKHR const*        GeometriesPtr = Geometries.data();
+    VkAccelerationStructureBuildOffsetInfoKHR const* OffsetsPtr    = Offsets.data();
+
+    Info.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    Info.type                     = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;                 // type must be compatible with create info
+    Info.flags                    = BuildASFlagsToVkBuildAccelerationStructureFlags(BLASDesc.Flags); // flags must be compatible with create info
+    Info.update                   = VK_FALSE;
+    Info.srcAccelerationStructure = VK_NULL_HANDLE;
+    Info.dstAccelerationStructure = pBLASVk->GetVkBLAS();
+    Info.geometryArrayOfPointers  = VK_FALSE;
+    Info.geometryCount            = static_cast<uint32_t>(Geometries.size());
+    Info.ppGeometries             = &GeometriesPtr;
+
+    BufferInfo.buffer              = pScratchVk->GetVkBuffer();
+    Info.scratchData.deviceAddress = vkGetBufferDeviceAddressKHR(LogicalDevice.GetVkDevice(), &BufferInfo) + Attribs.ScratchBufferOffset;
+    VERIFY_EXPR(Info.scratchData.deviceAddress > Attribs.ScratchBufferOffset);
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.BuildAccelerationStructure(1, &Info, &OffsetsPtr);
+}
+
+void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
+{
+    if (!TDeviceContextBase::BuildTLAS(Attribs, 0))
+        return;
+
+    static_assert(TLASInstanceDataSizeof == sizeof(VkAccelerationStructureInstanceKHR), "AZ TODO");
+
+    // AZ TODO: transitions
+
+    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+    auto& LogicalDevice  = m_pDevice->GetLogicalDevice();
+    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+
+    auto* pTLASVk      = ValidatedCast<ITopLevelASVk>(Attribs.pTLAS);
+    auto* pScratchVk   = ValidatedCast<IBufferVk>(Attribs.pScratchBuffer);
+    auto* pInstancesVk = ValidatedCast<BufferVkImpl>(Attribs.pInstanceBuffer);
+    auto& TLASDesc     = pTLASVk->GetDesc();
+
+    // copy instance data into instance buffer
+    {
+        size_t Size             = Attribs.InstanceCount * sizeof(VkAccelerationStructureInstanceKHR);
+        auto   TmpSpace         = m_UploadHeap.Allocate(Size, 16);
+        void*  pMappedInstances = TmpSpace.CPUAddress;
+
+        for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
+        {
+            auto& src     = Attribs.pInstances[i];
+            auto& dst     = static_cast<VkAccelerationStructureInstanceKHR*>(pMappedInstances)[i];
+            auto* pBLASVk = ValidatedCast<IBottomLevelASVk>(src.pBLAS);
+
+            static_assert(sizeof(dst.transform) == sizeof(src.Transform), "size mismatch");
+            std::memcpy(&dst.transform, src.Transform, sizeof(dst.transform));
+
+            dst.instanceCustomIndex                    = src.customId;
+            dst.instanceShaderBindingTableRecordOffset = src.contributionToHitGroupIndex;
+            dst.mask                                   = src.Mask;
+            dst.flags                                  = InstanceFlagsToVkGeometryInstanceFlags(src.Flags);
+            dst.accelerationStructureReference         = pBLASVk->GetVkDeviceAddress();
+        }
+
+        UpdateBufferRegion(pInstancesVk, Attribs.InstanceBufferOffset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset, Attribs.InstanceBufferTransitionMode);
+    }
+
+    VkAccelerationStructureBuildGeometryInfoKHR      Info          = {};
+    VkAccelerationStructureBuildOffsetInfoKHR        Offset        = {};
+    VkAccelerationStructureBuildOffsetInfoKHR const* OffsetsPtr    = &Offset;
+    VkAccelerationStructureGeometryKHR               Geometry      = {VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR};
+    VkAccelerationStructureGeometryKHR const*        GeometriesPtr = &Geometry;
+    VkBufferDeviceAddressInfoKHR                     BufferInfo    = {VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR};
+
+    Offset.primitiveCount = Attribs.InstanceCount;
+
+    Geometry.geometryType   = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+    auto& inst              = Geometry.geometry.instances;
+    inst.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+    inst.arrayOfPointers    = VK_FALSE;
+    BufferInfo.buffer       = pInstancesVk->GetVkBuffer();
+    inst.data.deviceAddress = vkGetBufferDeviceAddressKHR(LogicalDevice.GetVkDevice(), &BufferInfo) + Attribs.InstanceBufferOffset;
+    VERIFY_EXPR(inst.data.deviceAddress > Attribs.InstanceBufferOffset);
+
+    Info.sType                    = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    Info.type                     = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;                    // type must be compatible with create info
+    Info.flags                    = BuildASFlagsToVkBuildAccelerationStructureFlags(TLASDesc.Flags); // flags must be compatible with create info
+    Info.update                   = VK_FALSE;
+    Info.srcAccelerationStructure = VK_NULL_HANDLE;
+    Info.dstAccelerationStructure = pTLASVk->GetVkTLAS();
+    Info.geometryArrayOfPointers  = VK_FALSE;
+    Info.geometryCount            = 1;
+    Info.ppGeometries             = &GeometriesPtr;
+
+    BufferInfo.buffer              = pScratchVk->GetVkBuffer();
+    Info.scratchData.deviceAddress = vkGetBufferDeviceAddressKHR(LogicalDevice.GetVkDevice(), &BufferInfo) + Attribs.ScratchBufferOffset;
+    VERIFY_EXPR(Info.scratchData.deviceAddress > Attribs.ScratchBufferOffset);
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.BuildAccelerationStructure(1, &Info, &OffsetsPtr);
+}
+
+void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
+{
+    if (!TDeviceContextBase::CopyBLAS(Attribs, 0))
+        return;
+
+    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+
+    VkCopyAccelerationStructureInfoKHR Info = {};
+
+    // AZ TODO
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.CopyAccelerationStructure(Info);
+}
+
+void DeviceContextVkImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
+{
+    if (!TDeviceContextBase::CopyTLAS(Attribs, 0))
+        return;
+
+    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+
+    VkCopyAccelerationStructureInfoKHR Info = {};
+
+    // AZ TODO
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.CopyAccelerationStructure(Info);
+}
+
+void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
+{
+    if (!TDeviceContextBase::TraceRays(Attribs, 0))
+        return;
+
+    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+
+    VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
+    VkStridedBufferRegionKHR MissShaderBindingTable     = {};
+    VkStridedBufferRegionKHR HitShaderBindingTable      = {};
+    VkStridedBufferRegionKHR CallableShaderBindingTable = {};
+
+    // AZ TODO
+
+    EnsureVkCmdBuffer();
+    m_CommandBuffer.TraceRays(RaygenShaderBindingTable, MissShaderBindingTable, HitShaderBindingTable, CallableShaderBindingTable,
+                              Attribs.DimensionX, Attribs.DimensionY, Attribs.DimensionZ);
 }
 
 } // namespace Diligent

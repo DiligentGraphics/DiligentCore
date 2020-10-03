@@ -28,6 +28,7 @@
 #include "pch.h"
 #include "RenderDeviceVkImpl.hpp"
 #include "PipelineStateVkImpl.hpp"
+#include "PipelineState2VkImpl.hpp"
 #include "ShaderVkImpl.hpp"
 #include "TextureVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
@@ -39,6 +40,7 @@
 #include "QueryVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
 #include "FramebufferVkImpl.hpp"
+#include "RayTracingVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -75,7 +77,11 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             sizeof(FenceVkImpl),
             sizeof(QueryVkImpl),
             sizeof(RenderPassVkImpl),
-            sizeof(FramebufferVkImpl)
+            sizeof(FramebufferVkImpl),
+            sizeof(PipelineState2VkImpl),
+            sizeof(BottomLevelASVkImpl),
+            sizeof(TopLevelASVkImpl),
+            sizeof(ShaderBindingTableVkImpl)
         }
     },
     m_VulkanInstance         {Instance                 },
@@ -245,8 +251,10 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     // All devices that support mesh shaders also support task shaders, so it is not necessary to use two separate features.
     Features.MeshShaders = GetFeatureState(EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED && vkExtFeatures.MeshShader.meshShader != VK_FALSE && vkExtFeatures.MeshShader.taskShader != VK_FALSE);
 
+    Features.RayTracing = GetFeatureState(EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED && vkExtFeatures.RayTracing.rayTracing != VK_FALSE);
+
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 24, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
     const auto& vkDeviceLimits = m_PhysicalDevice->GetProperties().limits;
@@ -577,6 +585,20 @@ void RenderDeviceVkImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOC
 }
 
 
+void RenderDeviceVkImpl::CreatePipelineState2(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState2** ppPipelineState)
+{
+    CreateDeviceObject(
+        "Pipeline State", PSOCreateInfo.PSODesc, ppPipelineState,
+        [&]() //
+        {
+            PipelineState2VkImpl* pPipelineStateVk(NEW_RC_OBJ(m_PSO2Allocator, "PipelineState2VkImpl instance", PipelineState2VkImpl)(this, PSOCreateInfo));
+            pPipelineStateVk->QueryInterface(IID_PipelineState2, reinterpret_cast<IObject**>(ppPipelineState));
+            OnCreateDeviceObject(pPipelineStateVk);
+        } //
+    );
+}
+
+
 void RenderDeviceVkImpl::CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {
     CreateDeviceObject(
@@ -738,6 +760,42 @@ void RenderDeviceVkImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebu
                            FramebufferVkImpl* pFramebufferVk(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferVkImpl instance", FramebufferVkImpl)(this, Desc));
                            pFramebufferVk->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
                            OnCreateDeviceObject(pFramebufferVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreateBLAS(const BottomLevelASDesc& Desc,
+                                    IBottomLevelAS**         ppBLAS)
+{
+    CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
+                       [&]() //
+                       {
+                           BottomLevelASVkImpl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASVkImpl instance", BottomLevelASVkImpl)(this, Desc));
+                           pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+                           OnCreateDeviceObject(pBottomLevelASVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreateTLAS(const TopLevelASDesc& Desc,
+                                    ITopLevelAS**         ppTLAS)
+{
+    CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
+                       [&]() //
+                       {
+                           TopLevelASVkImpl* pTopLevelASVk(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASVkImpl instance", TopLevelASVkImpl)(this, Desc));
+                           pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+                           OnCreateDeviceObject(pTopLevelASVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
+                                   IShaderBindingTable**         ppSBT)
+{
+    CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
+                       [&]() //
+                       {
+                           ShaderBindingTableVkImpl* pSBTVk(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableVkImpl instance", ShaderBindingTableVkImpl)(this, Desc));
+                           pSBTVk->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
+                           OnCreateDeviceObject(pSBTVk);
                        });
 }
 

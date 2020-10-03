@@ -18,8 +18,10 @@ set(INCLUDE
     include/pch.h
     include/PipelineLayout.hpp
     include/PipelineStateVkImpl.hpp
+    include/PipelineState2VkImpl.hpp
     include/QueryManagerVk.hpp
     include/QueryVkImpl.hpp
+    include/RayTracingVkImpl.hpp
     include/RenderDeviceVkImpl.hpp
     include/RenderPassVkImpl.hpp
     include/RenderPassCache.hpp
@@ -62,6 +64,7 @@ set(INTERFACE
     interface/FramebufferVk.h
     interface/PipelineStateVk.h
     interface/QueryVk.h
+    interface/RayTracingVk.h
     interface/RenderDeviceVk.h
     interface/RenderPassVk.h
     interface/SamplerVk.h
@@ -88,8 +91,10 @@ set(SRC
     src/GenerateMipsVkHelper.cpp
     src/PipelineLayout.cpp
     src/PipelineStateVkImpl.cpp
+    src/PipelineState2VkImpl.cpp
     src/QueryManagerVk.cpp
     src/QueryVkImpl.cpp
+    src/RayTracingVkImpl.cpp
     src/RenderDeviceVkImpl.cpp
     src/RenderPassVkImpl.cpp
     src/RenderPassCache.cpp

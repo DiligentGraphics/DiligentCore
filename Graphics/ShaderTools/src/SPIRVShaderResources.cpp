@@ -150,18 +150,24 @@ ShaderResourceDesc SPIRVShaderResourceAttribs::GetResourceDesc() const
 
 static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please handle the new shader type in the switch below");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off
-        case SHADER_TYPE_VERTEX:        return spv::ExecutionModelVertex;
-        case SHADER_TYPE_HULL:          return spv::ExecutionModelTessellationControl;
-        case SHADER_TYPE_DOMAIN:        return spv::ExecutionModelTessellationEvaluation;
-        case SHADER_TYPE_GEOMETRY:      return spv::ExecutionModelGeometry;
-        case SHADER_TYPE_PIXEL:         return spv::ExecutionModelFragment;
-        case SHADER_TYPE_COMPUTE:       return spv::ExecutionModelGLCompute;
-        case SHADER_TYPE_AMPLIFICATION: return spv::ExecutionModelTaskNV;
-        case SHADER_TYPE_MESH:          return spv::ExecutionModelMeshNV;
+        case SHADER_TYPE_VERTEX:           return spv::ExecutionModelVertex;
+        case SHADER_TYPE_HULL:             return spv::ExecutionModelTessellationControl;
+        case SHADER_TYPE_DOMAIN:           return spv::ExecutionModelTessellationEvaluation;
+        case SHADER_TYPE_GEOMETRY:         return spv::ExecutionModelGeometry;
+        case SHADER_TYPE_PIXEL:            return spv::ExecutionModelFragment;
+        case SHADER_TYPE_COMPUTE:          return spv::ExecutionModelGLCompute;
+        case SHADER_TYPE_AMPLIFICATION:    return spv::ExecutionModelTaskNV;
+        case SHADER_TYPE_MESH:             return spv::ExecutionModelMeshNV;
+        case SHADER_TYPE_RAY_GEN:          return spv::ExecutionModelRayGenerationKHR;
+        case SHADER_TYPE_RAY_MISS:         return spv::ExecutionModelMissKHR;
+        case SHADER_TYPE_RAY_CLOSEST_HIT:  return spv::ExecutionModelClosestHitKHR;
+        case SHADER_TYPE_RAY_ANY_HIT:      return spv::ExecutionModelAnyHitKHR;
+        case SHADER_TYPE_RAY_INTERSECTION: return spv::ExecutionModelIntersectionKHR;
+        case SHADER_TYPE_CALLABLE:         return spv::ExecutionModelCallableKHR;
         // clang-format on
         default:
             UNEXPECTED("Unexpected shader type");

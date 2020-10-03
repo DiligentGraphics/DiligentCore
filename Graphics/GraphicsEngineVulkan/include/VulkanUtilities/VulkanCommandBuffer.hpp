@@ -140,27 +140,27 @@ public:
 
     __forceinline void DrawMesh(uint32_t TaskCount, uint32_t FirstTask)
     {
-#ifdef VK_NV_mesh_shader
+#if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksNV() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawMeshTasksNV(m_VkCmdBuffer, TaskCount, FirstTask);
 #else
-        UNSUPPORTED("DrawMesh is not supported in current Vulkan headers");
+        UNSUPPORTED("DrawMesh is not supported when vulkan library linked statically");
 #endif
     }
 
     __forceinline void DrawMeshIndirect(VkBuffer Buffer, VkDeviceSize Offset, uint32_t DrawCount, uint32_t Stride)
     {
-#ifdef VK_NV_mesh_shader
+#if DILIGENT_USE_VOLK
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
         VERIFY(m_State.RenderPass != VK_NULL_HANDLE, "vkCmdDrawMeshTasksNV() must be called inside render pass");
         VERIFY(m_State.GraphicsPipeline != VK_NULL_HANDLE, "No graphics pipeline bound");
 
         vkCmdDrawMeshTasksIndirectNV(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
 #else
-        UNSUPPORTED("DrawMeshIndirect is not supported in current Vulkan headers");
+        UNSUPPORTED("DrawMeshIndirect is not supported when vulkan library linked statically");
 #endif
     }
 
@@ -568,6 +568,41 @@ public:
         }
         vkCmdCopyQueryPoolResults(m_VkCmdBuffer, queryPool, firstQuery, queryCount,
                                   dstBuffer, dstOffset, stride, flags);
+    }
+
+    __forceinline void BuildAccelerationStructure(uint32_t                                                infoCount,
+                                                  const VkAccelerationStructureBuildGeometryInfoKHR*      pInfos,
+                                                  const VkAccelerationStructureBuildOffsetInfoKHR* const* ppOffsetInfos)
+    {
+#if DILIGENT_USE_VOLK
+        vkCmdBuildAccelerationStructureKHR(m_VkCmdBuffer, infoCount, pInfos, ppOffsetInfos);
+#else
+        UNSUPPORTED("Ray tracing is not supported when vulkan library linked statically");
+#endif
+    }
+
+    __forceinline void CopyAccelerationStructure(const VkCopyAccelerationStructureInfoKHR& Info)
+    {
+#if DILIGENT_USE_VOLK
+        vkCmdCopyAccelerationStructureKHR(m_VkCmdBuffer, &Info);
+#else
+        UNSUPPORTED("Ray tracing is not supported when vulkan library linked statically");
+#endif
+    }
+
+    __forceinline void TraceRays(const VkStridedBufferRegionKHR& RaygenShaderBindingTable,
+                                 const VkStridedBufferRegionKHR& MissShaderBindingTable,
+                                 const VkStridedBufferRegionKHR& HitShaderBindingTable,
+                                 const VkStridedBufferRegionKHR& CallableShaderBindingTable,
+                                 uint32_t                        width,
+                                 uint32_t                        height,
+                                 uint32_t                        depth)
+    {
+#if DILIGENT_USE_VOLK
+        vkCmdTraceRaysKHR(m_VkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, width, height, depth);
+#else
+        UNSUPPORTED("Ray tracing is not supported when vulkan library linked statically");
+#endif
     }
 
     void FlushBarriers();

@@ -70,18 +70,24 @@ void FinalizeGlslang()
 
 static EShLanguage ShaderTypeToShLanguage(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please handle the new shader type in the switch below");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off
-        case SHADER_TYPE_VERTEX:        return EShLangVertex;
-        case SHADER_TYPE_HULL:          return EShLangTessControl;
-        case SHADER_TYPE_DOMAIN:        return EShLangTessEvaluation;
-        case SHADER_TYPE_GEOMETRY:      return EShLangGeometry;
-        case SHADER_TYPE_PIXEL:         return EShLangFragment;
-        case SHADER_TYPE_COMPUTE:       return EShLangCompute;
-        case SHADER_TYPE_AMPLIFICATION: return EShLangTaskNV;
-        case SHADER_TYPE_MESH:          return EShLangMeshNV;
+        case SHADER_TYPE_VERTEX:           return EShLangVertex;
+        case SHADER_TYPE_HULL:             return EShLangTessControl;
+        case SHADER_TYPE_DOMAIN:           return EShLangTessEvaluation;
+        case SHADER_TYPE_GEOMETRY:         return EShLangGeometry;
+        case SHADER_TYPE_PIXEL:            return EShLangFragment;
+        case SHADER_TYPE_COMPUTE:          return EShLangCompute;
+        case SHADER_TYPE_AMPLIFICATION:    return EShLangTaskNV;
+        case SHADER_TYPE_MESH:             return EShLangMeshNV;
+        case SHADER_TYPE_RAY_GEN:          return EShLangRayGen;
+        case SHADER_TYPE_RAY_MISS:         return EShLangMiss;
+        case SHADER_TYPE_RAY_CLOSEST_HIT:  return EShLangClosestHit;
+        case SHADER_TYPE_RAY_ANY_HIT:      return EShLangAnyHit;
+        case SHADER_TYPE_RAY_INTERSECTION: return EShLangIntersect;
+        case SHADER_TYPE_CALLABLE:         return EShLangCallable;
         // clang-format on
         default:
             UNEXPECTED("Unexpected shader type");

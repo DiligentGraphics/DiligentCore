@@ -444,7 +444,7 @@ public:
 
     TEXTURE_FORMAT operator[](VkFormat VkFmt) const
     {
-        if (VkFmt < VK_FORMAT_RANGE_SIZE)
+        if (VkFmt < _countof(m_VkFmtToTexFmtMap))
         {
             return m_VkFmtToTexFmtMap[VkFmt];
         }
@@ -456,7 +456,7 @@ public:
     }
 
 private:
-    TEXTURE_FORMAT                               m_VkFmtToTexFmtMap[VK_FORMAT_RANGE_SIZE] = {};
+    TEXTURE_FORMAT                               m_VkFmtToTexFmtMap[VK_FORMAT_ASTC_12x12_SRGB_BLOCK + 1] = {};
     std::unordered_map<VkFormat, TEXTURE_FORMAT> m_VkFmtToTexFmtMapExt;
 };
 
@@ -629,6 +629,21 @@ VkFormat TypeToVkFormat(VALUE_TYPE ValType, Uint32 NumComponents, Bool bIsNormal
         }
 
         default: UNEXPECTED("Unusupported format"); return VK_FORMAT_UNDEFINED;
+    }
+}
+
+VkIndexType TypeToVkIndexType(VALUE_TYPE IndexType)
+{
+    switch (IndexType)
+    {
+        // clang-format off
+        case VT_UNDEFINED: return VK_INDEX_TYPE_NONE_KHR; // only for ray tracing
+        case VT_UINT16:    return VK_INDEX_TYPE_UINT16;
+        case VT_UINT32:    return VK_INDEX_TYPE_UINT32;
+            // clang-format on
+        default:
+            UNEXPECTED("Unexpected index type");
+            return VK_INDEX_TYPE_UINT32;
     }
 }
 
@@ -1151,10 +1166,8 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
     //VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX
     //VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT
     //VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV
-    //VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NVX
-    //VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NVX
 
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1176,6 +1189,8 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_RESOLVE_SOURCE:    return VK_ACCESS_TRANSFER_READ_BIT;
         case RESOURCE_STATE_INPUT_ATTACHMENT:  return VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
         case RESOURCE_STATE_PRESENT:           return 0;
+        case RESOURCE_STATE_BUILD_AS:          return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+        case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
             // clang-format on
 
         default:
@@ -1203,7 +1218,7 @@ public:
     }
 
 private:
-    static constexpr const Uint32                MaxFlagBitPos = 16;
+    static constexpr const Uint32                MaxFlagBitPos = 18;
     std::array<VkAccessFlags, MaxFlagBitPos + 1> FlagBitPosToVkAccessFlagsMap;
 };
 
@@ -1252,12 +1267,12 @@ RESOURCE_STATE VkAccessFlagsToResourceStates(VkAccessFlagBits AccessFlagBit)
         case VK_ACCESS_TRANSFORM_FEEDBACK_COUNTER_READ_BIT_EXT:   return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_TRANSFORM_FEEDBACK_COUNTER_WRITE_BIT_EXT:  return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_CONDITIONAL_RENDERING_READ_BIT_EXT:        return RESOURCE_STATE_UNKNOWN;
-        case VK_ACCESS_COMMAND_PROCESS_READ_BIT_NVX:              return RESOURCE_STATE_UNKNOWN;
-        case VK_ACCESS_COMMAND_PROCESS_WRITE_BIT_NVX:             return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_COMMAND_PREPROCESS_READ_BIT_NV:            return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_COMMAND_PREPROCESS_WRITE_BIT_NV:           return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT: return RESOURCE_STATE_UNKNOWN;
         case VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV:            return RESOURCE_STATE_UNKNOWN;
-        case VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV:        return RESOURCE_STATE_UNKNOWN;
-        case VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV:       return RESOURCE_STATE_UNKNOWN;
+        case VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR:       return RESOURCE_STATE_RAY_TRACING;
+        case VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR:      return RESOURCE_STATE_BUILD_AS;
             // clang-format on
         default:
             UNEXPECTED("Unknown access flag");
@@ -1317,7 +1332,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
     //VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
     //VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
 
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1339,6 +1354,8 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
         case RESOURCE_STATE_RESOLVE_SOURCE:    return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         case RESOURCE_STATE_INPUT_ATTACHMENT:  return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         case RESOURCE_STATE_PRESENT:           return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        case RESOURCE_STATE_BUILD_AS:          UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
+        case RESOURCE_STATE_RAY_TRACING:       UNEXPECTED("Invalid resource state"); return VK_IMAGE_LAYOUT_UNDEFINED;
             // clang-format on
 
         default:
@@ -1349,7 +1366,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
 
 RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "This function must be updated to handle new resource state flag");
     switch (Layout)
     {
         // clang-format off
@@ -1359,7 +1376,7 @@ RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout)
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:           return RESOURCE_STATE_DEPTH_WRITE;
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:            return RESOURCE_STATE_DEPTH_READ;
         case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:                   return RESOURCE_STATE_SHADER_RESOURCE;
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:                       return RESOURCE_STATE_COPY_SOURCE;
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:                       return RESOURCE_STATE_COPY_SOURCE; // AZ TODO: check for resolve state
         case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:                       return RESOURCE_STATE_COPY_DEST;
         case VK_IMAGE_LAYOUT_PREINITIALIZED:                             UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
         case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL: UNEXPECTED("This layout is not supported"); return RESOURCE_STATE_UNDEFINED;
@@ -1510,5 +1527,76 @@ VkAccessFlags AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags)
     return static_cast<VkAccessFlags>(AccessFlags);
 }
 #undef ASSERT_SAME
+
+VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags)
+{
+    static_assert(RAYTRACING_BUILD_AS_FLAGS_LAST == 0x10, "AZ TODO");
+
+    VkBuildAccelerationStructureFlagsKHR Result = 0;
+    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    {
+        if ((Flags & Bit) != Bit)
+            continue;
+
+        switch (RAYTRACING_BUILD_AS_FLAGS(Bit))
+        {
+            // clang-format off
+            case RAYTRACING_BUILD_AS_ALLOW_UPDATE:      Result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;      break;
+            case RAYTRACING_BUILD_AS_ALLOW_COMPACTION:  Result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;  break;
+            case RAYTRACING_BUILD_AS_PREFER_FAST_TRACE: Result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR; break;
+            case RAYTRACING_BUILD_AS_PREFER_FAST_BUILD: Result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR; break;
+            case RAYTRACING_BUILD_AS_LOW_MEMORY:        Result |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;        break;
+            default: UNEXPECTED("unknown build AS flag");
+                // clang-format on
+        }
+    }
+    return Result;
+}
+
+VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags)
+{
+    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == 0x02, "AZ TODO");
+
+    VkGeometryFlagsKHR Result = 0;
+    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    {
+        if ((Flags & Bit) != Bit)
+            continue;
+
+        switch (RAYTRACING_GEOMETRY_FLAGS(Bit))
+        {
+            // clang-format off
+            case RAYTRACING_GEOMETRY_OPAQUE:                          Result |= VK_GEOMETRY_OPAQUE_BIT_KHR; break;
+            case RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR; break;
+            default: UNEXPECTED("unknown geometry flag");
+                // clang-format on
+        }
+    }
+    return Result;
+}
+
+VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags)
+{
+    static_assert(RAYTRACING_INSTANCE_FLAGS_LAST == 0x08, "AZ TODO");
+
+    VkGeometryInstanceFlagsKHR Result = 0;
+    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    {
+        if ((Flags & Bit) != Bit)
+            continue;
+
+        switch (RAYTRACING_INSTANCE_FLAGS(Bit))
+        {
+            // clang-format off
+            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    return VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+            case RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE: return VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR;
+            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    return VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
+            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 return VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR;
+            default: UNEXPECTED("unknown instance flag");
+                // clang-format on
+        }
+    }
+    return Result;
+}
 
 } // namespace Diligent

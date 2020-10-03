@@ -38,6 +38,11 @@ DILIGENT_BEGIN_NAMESPACE(Diligent)
 static const INTERFACE_ID IID_ShaderResourceBindingVk =
     {0x1e8c82dc, 0x5b3a, 0x47d5, {0x8a, 0xe9, 0x19, 0x7c, 0xae, 0x8d, 0xb7, 0x1f}};
 
+// {E835FCD8-8E8C-4CB0-80F2-F18088B0BC57}
+static const INTERFACE_ID IID_ShaderResourceBinding2Vk =
+    {0xe835fcd8, 0x8e8c, 0x4cb0, {0x80, 0xf2, 0xf1, 0x80, 0x88, 0xb0, 0xbc, 0x57}};
+
+
 #define DILIGENT_INTERFACE_NAME IShaderResourceBindingVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
@@ -53,6 +58,22 @@ DILIGENT_END_INTERFACE
 
 #endif
 
+#undef DILIGENT_INTERFACE_NAME
+#define DILIGENT_INTERFACE_NAME IShaderResourceBinding2Vk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IShaderResourceBinding2VkInclusiveMethods \
+    IShaderResourceBinding2InclusiveMethods
+//IShaderResourceBinding2VkMethods ShaderResourceBinding2Vk
+
+#if DILIGENT_CPP_INTERFACE
+
+/// Exposes Vulkan-specific functionality of a shader resource binding object.
+DILIGENT_BEGIN_INTERFACE(IShaderResourceBinding2Vk, IShaderResourceBinding2){};
+DILIGENT_END_INTERFACE
+
+#endif
+
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
@@ -61,6 +82,11 @@ typedef struct IShaderResourceBindingVkVtbl
 {
     IShaderResourceBindingVkInclusiveMethods;
 } IShaderResourceBindingVkVtbl;
+
+typedef struct IShaderResourceBinding2VkVtbl
+{
+    IShaderResourceBinding2VkInclusiveMethods;
+} IShaderResourceBinding2VkVtbl;
 
 #endif
 
