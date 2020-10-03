@@ -16,3 +16,6 @@
 [submodule "ThirdParty/Vulkan-Headers"]
 	path = ThirdParty/Vulkan-Headers
 	url = https://github.com/DiligentGraphics/Vulkan-Headers.git
+[submodule "ThirdParty/volk"]
+	path = ThirdParty/volk
+	url = https://github.com/DiligentGraphics/volk.git
