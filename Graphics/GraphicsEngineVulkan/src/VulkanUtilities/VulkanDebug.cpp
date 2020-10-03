@@ -672,11 +672,13 @@ const char* VkObjectTypeToString(VkObjectType ObjectType)
         case VK_OBJECT_TYPE_DISPLAY_KHR:                    return "display KHR";
         case VK_OBJECT_TYPE_DISPLAY_MODE_KHR:               return "display mode KHR";
         case VK_OBJECT_TYPE_DEBUG_REPORT_CALLBACK_EXT:      return "debug report callback";
-        case VK_OBJECT_TYPE_OBJECT_TABLE_NVX:               return "object tabke NVX";
-        case VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NVX:   return "indirect cmd layout NVX";
         case VK_OBJECT_TYPE_DEBUG_UTILS_MESSENGER_EXT:      return "debug utils messenger";
-        case VK_OBJECT_TYPE_VALIDATION_CACHE_EXT:           return "validation cache";
-        case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV:      return "acceleration structure NVX";
+        case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR:     return "acceleration structure KHR";
+        case VK_OBJECT_TYPE_VALIDATION_CACHE_EXT:           return "validation cache EXT";
+        case VK_OBJECT_TYPE_PERFORMANCE_CONFIGURATION_INTEL:return "performance configuration INTEL";
+        case VK_OBJECT_TYPE_DEFERRED_OPERATION_KHR:         return "deferred operation KHR";
+        case VK_OBJECT_TYPE_INDIRECT_COMMANDS_LAYOUT_NV:    return "indirect commands layout NV";
+        case VK_OBJECT_TYPE_PRIVATE_DATA_SLOT_EXT:          return "private data slot EXT";
         default: return "unknown";
             // clang-format on
     }

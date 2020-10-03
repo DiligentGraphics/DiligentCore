@@ -28,7 +28,7 @@
 #include "TestingSwapChainBase.hpp"
 
 #define VK_NO_PROTOTYPES
-#include "vulkan/vulkan.h"
+#include "Vulkan-Headers/include/vulkan/vulkan.h"
 
 namespace Diligent
 {

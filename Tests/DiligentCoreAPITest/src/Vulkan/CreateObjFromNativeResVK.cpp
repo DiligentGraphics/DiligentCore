@@ -27,7 +27,7 @@
 
 #if VULKAN_SUPPORTED
 #    define VK_NO_PROTOTYPES
-#    include "vulkan/vulkan.h"
+#    include "Vulkan-Headers/include/vulkan/vulkan.h"
 #endif
 
 #include "RenderDeviceVk.h"

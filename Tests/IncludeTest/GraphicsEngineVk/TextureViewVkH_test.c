@@ -25,7 +25,7 @@
  *  of the possibility of such damages.
  */
 
-#include "DiligentCore/ThirdParty/vulkan/vulkan.h"
+#include "DiligentCore/ThirdParty/Vulkan-Headers/include/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/TextureViewVk.h"
 
 void TestTextureViewVk_CInterface(ITextureViewVk* pView)

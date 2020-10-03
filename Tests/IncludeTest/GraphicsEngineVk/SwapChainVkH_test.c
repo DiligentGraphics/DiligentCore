@@ -24,7 +24,7 @@
  *  all other commercial damages or losses), even if such Contributor has been advised 
  *  of the possibility of such damages.
  */
-#include "DiligentCore/ThirdParty/vulkan/vulkan.h"
+#include "DiligentCore/ThirdParty/Vulkan-Headers/include/vulkan/vulkan.h"
 #include "DiligentCore/Graphics/GraphicsEngineVulkan/interface/SwapChainVk.h"
 
 void TestSwapChainVk_CInterface(ISwapChainVk* pSwapChain)

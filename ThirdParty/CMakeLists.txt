@@ -19,6 +19,8 @@ if(VULKAN_SUPPORTED)
     #set_directory_root_folder("SPIRV-Headers" "ThirdParty/DiligentCore/SPIRV-Headers")
     install(FILES SPIRV-Headers/LICENSE DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME SPIRV-Headers-License.txt)
 
+    install(FILES Vulkan-Headers/LICENSE.txt DESTINATION "Licenses/ThirdParty/${DILIGENT_CORE_DIR}" RENAME Vulkan-Headers-License.txt)
+
     option(DILIGENT_NO_GLSLANG "Do NOT build glslang compiler" OFF)
     option(DILIGENT_IMPROVE_SPIRV_TOOLS_DEBUG_PERF "Enable some optimizations for SPIRV-Tools, glslang, SPIRV-Cross and related projects in debug build to improve performance" ON)
 
