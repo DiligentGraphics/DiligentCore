@@ -359,6 +359,11 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(MultiViewport,             IsGL41OrAbove || CheckExtension("GL_ARB_viewport_array"),          "Multi viewport is");
         SET_FEATURE_STATE(PixelUAVWritesAndAtomics,  IsGL42OrAbove || CheckExtension("GL_ARB_shader_image_load_store"), "Pixel UAV writes and atomics are");
         SET_FEATURE_STATE(TextureUAVExtendedFormats, false,                                                             "Texture UAV extended formats are");
+
+        SET_FEATURE_STATE(ShaderFloat16,             CheckExtension("GL_EXT_shader_explicit_arithmetic_types_float16"), "16-bit float shader operations are");
+        SET_FEATURE_STATE(ResourceBuffer16BitAccess, CheckExtension("GL_EXT_shader_16bit_storage"),                     "16-bit resoure buffer access is");
+        SET_FEATURE_STATE(UniformBuffer16BitAccess,  CheckExtension("GL_EXT_shader_16bit_storage"),                     "16-bit uniform buffer access is");
+        SET_FEATURE_STATE(ShaderInputOutput16,       false,                                                             "16-bit shader inputs/outputs are");
         // clang-format on
 
         TexCaps.MaxTexture1DDimension     = MaxTextureSize;
@@ -413,6 +418,11 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(MultiViewport,             strstr(Extensions, "viewport_array"),      "Multi viewport");
         SET_FEATURE_STATE(PixelUAVWritesAndAtomics,  IsGLES31OrAbove || strstr(Extensions, "shader_image_load_store"), "Pixel UAV writes and atomics");
         SET_FEATURE_STATE(TextureUAVExtendedFormats, false, "Texture UAV extended formats");
+
+        SET_FEATURE_STATE(ShaderFloat16,             strstr(Extensions, "shader_explicit_arithmetic_types_float16"), "16-bit float shader operations are");
+        SET_FEATURE_STATE(ResourceBuffer16BitAccess, strstr(Extensions, "shader_16bit_storage"),                     "16-bit resoure buffer access is");
+        SET_FEATURE_STATE(UniformBuffer16BitAccess,  strstr(Extensions, "shader_16bit_storage"),                     "16-bit uniform buffer access is");
+        SET_FEATURE_STATE(ShaderInputOutput16,       false,                                                          "16-bit shader inputs/outputs are");
         // clang-format on
 
         TexCaps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
@@ -438,6 +448,10 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
     SET_FEATURE_STATE(TextureCompressionBC, bRGTC && bBPTC && bS3TC, "BC texture compression is");
 
 #undef SET_FEATURE_STATE
+
+#if defined(_MSC_VER) && defined(_WIN64)
+    static_assert(sizeof(DeviceFeatures) == 27, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+#endif
 }
 
 RenderDeviceGLImpl::~RenderDeviceGLImpl()
