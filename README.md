@@ -702,15 +702,16 @@ See [Apache 2.0 license](License.txt).
 
 This project has some third-party dependencies, each of which may have independent licensing:
 
-* [Vulkan-Headers](https://github.com/KhronosGroup/SPIRV-Headers): Vulkan Header files and API registry.
-* [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross): SPIRV parsing and cross-compilation tools.
-* [SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers): SPIRV header files.
-* [SPIRV-Tools](https://github.com/KhronosGroup/SPIRV-Tools): SPIRV optimization and validation tools.
-* [glslang](https://github.com/KhronosGroup/glslang): Khronos reference compiler and validator for GLSL, ESSL, and HLSL.
-* [glew](http://glew.sourceforge.net/): OpenGL Extension Wrangler Library.
-* [volk](https://github.com/zeux/volk): Meta loader for Vulkan API.
-* [stb](https://github.com/nothings/stb): stb single-file public domain libraries for C/C++.
-* [googletest](https://github.com/google/googletest): Google Testing and Mocking Framework.
+* [Vulkan-Headers](https://github.com/KhronosGroup/SPIRV-Headers): Vulkan Header files and API registry (Khronos MIT-like license).
+* [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross): SPIRV parsing and cross-compilation tools (Apache License 2.0).
+* [SPIRV-Headers](https://github.com/KhronosGroup/SPIRV-Headers): SPIRV header files (Apache License 2.0).
+* [SPIRV-Tools](https://github.com/KhronosGroup/SPIRV-Tools): SPIRV optimization and validation tools (Apache License 2.0).
+* [glslang](https://github.com/KhronosGroup/glslang): Khronos reference compiler and validator for GLSL, ESSL, and HLSL (3-Clause BSD License, 2-Clause BSD License, MIT, Apache License 2.0).
+* [glew](http://glew.sourceforge.net/): OpenGL Extension Wrangler Library (Mesa 3-D graphics library, Khronos MIT-like license).
+* [volk](https://github.com/zeux/volk): Meta loader for Vulkan API (Arseny Kapoulkine MIT-like license).
+* [stb](https://github.com/nothings/stb): stb single-file public domain libraries for C/C++ (MIT License or public domain).
+* [googletest](https://github.com/google/googletest): Google Testing and Mocking Framework (Google MIT-like license).
+* [DirectXShaderCompiler](https://github.com/microsoft/DirectXShaderCompiler): LLVM/Clang-based DirectX Shader Compiler (LLVM Release License).
 
 <a name="contributing"></a>
 # Contributing
