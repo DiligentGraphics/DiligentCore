@@ -47,6 +47,7 @@
 #include "Query.h"
 #include "RenderPass.h"
 #include "Framebuffer.h"
+#include "RayTracing.h"
 
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
@@ -163,7 +164,11 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     VIRTUAL void METHOD(CreatePipelineState)(THIS_
                                              const PipelineStateCreateInfo REF PSOCreateInfo,
                                              IPipelineState**                  ppPipelineState) PURE;
-
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(CreatePipelineState2)(THIS_
+                                              const PipelineStateCreateInfo REF PSOCreateInfo,
+                                              IPipelineState2**                 ppPipelineState) PURE;
 
     /// Creates a new fence object
 
@@ -213,6 +218,20 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                            const FramebufferDesc REF Desc,
                                            IFramebuffer**            ppFramebuffer) PURE;
 
+    /// AZ TODO
+    VIRTUAL void METHOD(CreateBLAS)(THIS_
+                                    const BottomLevelASDesc REF Desc,
+                                    IBottomLevelAS**            ppBLAS) PURE;
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(CreateTLAS)(THIS_
+                                    const TopLevelASDesc REF Desc,
+                                    ITopLevelAS**            ppTLAS) PURE;
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(CreateSBT)(THIS_
+                                   const ShaderBindingTableDesc REF Desc,
+                                   IShaderBindingTable**            ppSBT) PURE;
 
     /// Gets the device capabilities, see Diligent::DeviceCaps for details
     VIRTUAL const DeviceCaps REF METHOD(GetDeviceCaps)(THIS) CONST PURE;

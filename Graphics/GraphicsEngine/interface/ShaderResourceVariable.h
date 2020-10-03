@@ -69,6 +69,16 @@ DILIGENT_TYPED_ENUM(SHADER_RESOURCE_VARIABLE_TYPE, Uint8)
 static_assert(SHADER_RESOURCE_VARIABLE_TYPE_STATIC == 0 && SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE == 1 && SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC == 2 && SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES == 3, "BIND_SHADER_RESOURCES_UPDATE_* flags rely on shader variable SHADER_RESOURCE_VARIABLE_TYPE_* values being 0,1,2");
 #endif
 
+/// AZ TODO
+DILIGENT_TYPED_ENUM(SHADER_RESOURCE_VARIABLE_FLAGS, Uint8)
+{
+    /// Used flags from PipelineResourceLayoutDesc::DefaultVariableFlags
+    SHADER_RESOURCE_VARIABLE_FLAG_DEFAULT  = 0,
+
+    /// Resource will be merged with resource in another shader if they have the same name and type.
+    SHADER_RESOURCE_VARIABLE_FLAG_MERGABLE = 0x01,
+};
+
 /// Shader resource binding flags
 DILIGENT_TYPED_ENUM(BIND_SHADER_RESOURCES_FLAGS, Uint32)
 {

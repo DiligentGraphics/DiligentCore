@@ -17,6 +17,7 @@ set(INCLUDE
     include/pch.h
     include/PipelineStateBase.hpp
     include/QueryBase.hpp
+    include/RayTracingBase.hpp
     include/RenderDeviceBase.hpp
     include/RenderPassBase.hpp
     include/ResourceMappingImpl.hpp
@@ -58,6 +59,7 @@ set(INTERFACE
     interface/SwapChain.h
     interface/Texture.h
     interface/TextureView.h
+    interface/RayTracing.h
 )
 
 set(SOURCE
@@ -66,6 +68,7 @@ set(SOURCE
     src/DefaultShaderSourceStreamFactory.cpp
     src/EngineMemory.cpp
     src/FramebufferBase.cpp
+    src/RayTracingBase.cpp
     src/ResourceMappingBase.cpp
     src/RenderPassBase.cpp
     src/TextureBase.cpp

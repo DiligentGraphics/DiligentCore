@@ -488,19 +488,25 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetTextureFormatAttribs)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
 {
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the test below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the test below to handle the new shader type");
 
     // clang-format off
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_UNKNOWN),          -1);
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_VERTEX),        VSInd);
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_PIXEL),         PSInd);
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_GEOMETRY),      GSInd);
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_HULL),          HSInd);
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_DOMAIN),        DSInd);
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_COMPUTE),       CSInd);
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_AMPLIFICATION), ASInd);
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_MESH),          MSInd);
-    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_LAST),          LastShaderInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_UNKNOWN),             -1);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_VERTEX),           VSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_PIXEL),            PSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_GEOMETRY),         GSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_HULL),             HSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_DOMAIN),           DSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_COMPUTE),          CSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_AMPLIFICATION),    ASInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_MESH),             MSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_RAY_GEN),          RGSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_RAY_MISS),         RMSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_RAY_CLOSEST_HIT),  RCHSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_RAY_ANY_HIT),      RAHSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_RAY_INTERSECTION), RISInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_CALLABLE),         RCSInd);
+    EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_LAST),             LastShaderInd);
     // clang-format on
 
     for (Int32 i = 0; i <= LastShaderInd; ++i)
@@ -512,7 +518,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromIndex)
 {
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the test below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the test below to handle the new shader type");
 
     EXPECT_EQ(GetShaderTypeFromIndex(VSInd), SHADER_TYPE_VERTEX);
     EXPECT_EQ(GetShaderTypeFromIndex(PSInd), SHADER_TYPE_PIXEL);
@@ -522,6 +528,12 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromIndex)
     EXPECT_EQ(GetShaderTypeFromIndex(CSInd), SHADER_TYPE_COMPUTE);
     EXPECT_EQ(GetShaderTypeFromIndex(ASInd), SHADER_TYPE_AMPLIFICATION);
     EXPECT_EQ(GetShaderTypeFromIndex(MSInd), SHADER_TYPE_MESH);
+    EXPECT_EQ(GetShaderTypeFromIndex(RGSInd), SHADER_TYPE_RAY_GEN);
+    EXPECT_EQ(GetShaderTypeFromIndex(RMSInd), SHADER_TYPE_RAY_MISS);
+    EXPECT_EQ(GetShaderTypeFromIndex(RCHSInd), SHADER_TYPE_RAY_CLOSEST_HIT);
+    EXPECT_EQ(GetShaderTypeFromIndex(RAHSInd), SHADER_TYPE_RAY_ANY_HIT);
+    EXPECT_EQ(GetShaderTypeFromIndex(RISInd), SHADER_TYPE_RAY_INTERSECTION);
+    EXPECT_EQ(GetShaderTypeFromIndex(RCSInd), SHADER_TYPE_CALLABLE);
 
     EXPECT_EQ(GetShaderTypeFromIndex(LastShaderInd), SHADER_TYPE_LAST);
 
@@ -573,6 +585,23 @@ TEST(GraphicsAccessories_GraphicsAccessories, IsConsistentShaderType)
         {
             auto ShaderType = GetShaderTypeFromIndex(i);
             EXPECT_EQ(IsConsistentShaderType(ShaderType, PIPELINE_TYPE_MESH), ValidMeshStages[i]);
+        }
+    }
+
+    {
+        std::array<bool, LastShaderInd + 1> ValidRayTracingStages;
+        ValidRayTracingStages.fill(false);
+        ValidRayTracingStages[RGSInd]  = true;
+        ValidRayTracingStages[RMSInd]  = true;
+        ValidRayTracingStages[RCHSInd] = true;
+        ValidRayTracingStages[RAHSInd] = true;
+        ValidRayTracingStages[RISInd]  = true;
+        ValidRayTracingStages[RCSInd]  = true;
+
+        for (Int32 i = 0; i <= LastShaderInd; ++i)
+        {
+            auto ShaderType = GetShaderTypeFromIndex(i);
+            EXPECT_EQ(IsConsistentShaderType(ShaderType, PIPELINE_TYPE_RAY_TRACING), ValidRayTracingStages[i]);
         }
     }
 }

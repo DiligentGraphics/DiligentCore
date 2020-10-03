@@ -75,21 +75,28 @@ typedef struct SampleDesc SampleDesc;
 struct ShaderResourceVariableDesc
 {
     /// Shader stages this resources variable applies to. More than one shader stage can be specified.
-    SHADER_TYPE                   ShaderStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
+    SHADER_TYPE                    ShaderStages DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// Shader variable name
-    const Char*                   Name         DEFAULT_INITIALIZER(nullptr);
+    const Char*                    Name         DEFAULT_INITIALIZER(nullptr);
 
     /// Shader variable type. See Diligent::SHADER_RESOURCE_VARIABLE_TYPE for a list of allowed types
-    SHADER_RESOURCE_VARIABLE_TYPE Type         DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    SHADER_RESOURCE_VARIABLE_TYPE  Type         DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    
+    /// AZ TODO
+    SHADER_RESOURCE_VARIABLE_FLAGS Flags        DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_FLAG_DEFAULT);
 
 #if DILIGENT_CPP_INTERFACE
     ShaderResourceVariableDesc()noexcept{}
 
-    ShaderResourceVariableDesc(SHADER_TYPE _ShaderStages, const Char* _Name, SHADER_RESOURCE_VARIABLE_TYPE _Type)noexcept : 
+    ShaderResourceVariableDesc(SHADER_TYPE                    _ShaderStages,
+                               const Char*                    _Name,
+                               SHADER_RESOURCE_VARIABLE_TYPE  _Type,
+                               SHADER_RESOURCE_VARIABLE_FLAGS _Flags = SHADER_RESOURCE_VARIABLE_FLAG_DEFAULT)noexcept : 
         ShaderStages{_ShaderStages},
         Name        {_Name        },
-        Type        {_Type        }
+        Type        {_Type        },
+        Flags       {_Flags       }
     {}
 #endif
 };
@@ -129,19 +136,22 @@ struct PipelineResourceLayoutDesc
     /// Default shader resource variable type. This type will be used if shader
     /// variable description is not found in the Variables array
     /// or if Variables == nullptr
-    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType  DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    
+    /// AZ TODO
+    SHADER_RESOURCE_VARIABLE_FLAGS      DefaultVariableFlags DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_FLAG_MERGABLE);
 
     /// Number of elements in Variables array            
-    Uint32                              NumVariables        DEFAULT_INITIALIZER(0);
+    Uint32                              NumVariables         DEFAULT_INITIALIZER(0);
 
     /// Array of shader resource variable descriptions               
-    const ShaderResourceVariableDesc*   Variables           DEFAULT_INITIALIZER(nullptr);
+    const ShaderResourceVariableDesc*   Variables            DEFAULT_INITIALIZER(nullptr);
                                                             
     /// Number of static samplers in StaticSamplers array   
-    Uint32                              NumStaticSamplers   DEFAULT_INITIALIZER(0);
+    Uint32                              NumStaticSamplers    DEFAULT_INITIALIZER(0);
                                                             
     /// Array of static sampler descriptions                
-    const StaticSamplerDesc*            StaticSamplers      DEFAULT_INITIALIZER(nullptr);
+    const StaticSamplerDesc*            StaticSamplers       DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
 
@@ -244,6 +254,73 @@ struct ComputePipelineDesc
 };
 typedef struct ComputePipelineDesc ComputePipelineDesc;
 
+/// AZ TODO
+struct RayTracingGeneralShaderGroup
+{
+    /// AZ TODO
+    const char* Name   DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    Shader DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct RayTracingGeneralShaderGroup RayTracingGeneralShaderGroup;
+
+/// AZ TODO
+struct RayTracingTriangleHitShaderGroup
+{
+    /// AZ TODO
+    const char* Name             DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    ClosestHitShader DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    AnyHitShader     DEFAULT_INITIALIZER(nullptr); // can be null
+};
+typedef struct RayTracingTriangleHitShaderGroup RayTracingTriangleHitShaderGroup;
+
+/// AZ TODO
+struct RayTracingProceduralHitShaderGroup
+{
+    /// AZ TODO
+    const char* Name               DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    IntersectionShader DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    ClosestHitShader   DEFAULT_INITIALIZER(nullptr); // can be null
+
+    /// AZ TODO
+    IShader*    AnyHitShader       DEFAULT_INITIALIZER(nullptr);     // can be null
+};
+typedef struct RayTracingProceduralHitShaderGroup RayTracingProceduralHitShaderGroup;
+
+/// AZ TODO
+struct RayTracingPipelineDesc
+{
+    /// AZ TODO
+    const RayTracingGeneralShaderGroup*       pGeneralShaders          DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    const RayTracingTriangleHitShaderGroup*   pTriangleHitShaders      DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    const RayTracingProceduralHitShaderGroup* pProceduralHitShaders    DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint16                                    GeneralShaderCount       DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint16                                    TriangleHitShaderCount   DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint16                                    ProceduralHitShaderCount DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint8                                     MaxRecursionDepth        DEFAULT_INITIALIZER(0); // must be 0..31 (check current device limits)
+};
+typedef struct RayTracingPipelineDesc RayTracingPipelineDesc;
 
 /// Pipeline type
 DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
@@ -257,6 +334,9 @@ DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
 
     /// Mesh pipeline, which is used by IDeviceContext::DrawMesh(), IDeviceContext::DrawMeshIndirect().
     PIPELINE_TYPE_MESH,
+
+    /// Ray tracing pipeline, which is used by IDeviceContext::TraceRays().
+    PIPELINE_TYPE_RAY_TRACING,
 };
 
 
@@ -278,11 +358,14 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Pipeline layout description
     PipelineResourceLayoutDesc ResourceLayout;
 
-    /// Graphics pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_GRAPHICS or PIPELINE_TYPE_MESH
+    /// Graphics pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_GRAPHICS or PIPELINE_TYPE_MESH.
     GraphicsPipelineDesc GraphicsPipeline;
 
-    /// Compute pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_COMPUTE
+    /// Compute pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_COMPUTE.
     ComputePipelineDesc ComputePipeline;
+    
+    /// Ray tracing pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_RAY_TRACING.
+    RayTracingPipelineDesc RayTracingPipeline;
     
 #if DILIGENT_CPP_INTERFACE
     bool IsAnyGraphicsPipeline() const { return PipelineType == PIPELINE_TYPE_GRAPHICS || PipelineType == PIPELINE_TYPE_MESH; }
@@ -331,6 +414,11 @@ typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
 static const struct INTERFACE_ID IID_PipelineState =
     {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};
+
+// {309CB617-E432-4D8B-86EC-C4766C54D4FB}
+static const struct INTERFACE_ID IID_PipelineState2 = 
+    {0x309cb617, 0xe432, 0x4d8b, {0x86, 0xec, 0xc4, 0x76, 0x6c, 0x54, 0xd4, 0xfb}};
+
 
 #define DILIGENT_INTERFACE_NAME IPipelineState
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
@@ -430,6 +518,92 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 };
 DILIGENT_END_INTERFACE
 
+#undef DILIGENT_INTERFACE_NAME
+#define DILIGENT_INTERFACE_NAME IPipelineState2
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IPipelineState2InclusiveMethods \
+    IDeviceObjectInclusiveMethods;      \
+    IPipelineState2Methods PipelineState2
+
+/// Pipeline state interface
+DILIGENT_BEGIN_INTERFACE(IPipelineState2, IDeviceObject)
+{
+#if DILIGENT_CPP_INTERFACE
+    /// Returns the blend state description used to create the object
+    virtual const PipelineStateDesc& METHOD(GetDesc)()const override = 0;
+#endif
+
+
+    /// Binds resources for all shaders in the pipeline state
+
+    /// \param [in] pResourceMapping - Pointer to the resource mapping interface.
+    /// \param [in] Flags - Additional flags. See Diligent::BIND_SHADER_RESOURCES_FLAGS.
+    VIRTUAL void METHOD(BindStaticResources)(THIS_
+                                             IResourceMapping*  pResourceMapping,
+                                             Uint32             Flags) PURE;
+
+
+    /// Returns the number of static shader resource variables.
+
+    /// \remark Only static variables (that can be accessed directly through the PSO) are counted.
+    ///         Mutable and dynamic variables are accessed through Shader Resource Binding object.
+    VIRTUAL Uint32 METHOD(GetStaticVariableCount)(THIS) CONST PURE;
+
+
+    /// Returns static shader resource variable. If the variable is not found,
+    /// returns nullptr.
+    
+    /// \param [in] Name - Name of the variable.
+    /// \remark The method does not increment the reference counter
+    ///         of the returned interface.
+    VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByName)(THIS_
+                                                                     const Char* Name) PURE;
+
+
+    /// Returns static shader resource variable by its index.
+
+    /// \param [in] Index - Shader variable index. The index must be between
+    ///                     0 and the total number of variables returned by 
+    ///                     GetStaticVariableCount().
+    /// \remark Only static shader resource variables can be accessed through this method.
+    ///         Mutable and dynamic variables are accessed through Shader Resource 
+    ///         Binding object
+    VIRTUAL IShaderResourceVariable* METHOD(GetStaticVariableByIndex)(THIS_
+                                                                      Uint32 Index) PURE;
+
+
+    /// Creates a shader resource binding object
+
+    /// \param [out] ppShaderResourceBinding - memory location where pointer to the new shader resource
+    ///                                        binding object is written.
+    /// \param [in] InitStaticResources      - if set to true, the method will initialize static resources in
+    ///                                        the created object, which has the exact same effect as calling 
+    ///                                        IShaderResourceBinding::InitializeStaticResources().
+    VIRTUAL void METHOD(CreateShaderResourceBinding)(THIS_
+                                                     IShaderResourceBinding2** ppShaderResourceBinding,
+                                                     bool                      InitStaticResources DEFAULT_VALUE(false)) PURE;
+
+
+    /// Checks if this pipeline state object is compatible with another PSO
+
+    /// If two pipeline state objects are compatible, they can use shader resource binding
+    /// objects interchangebly, i.e. SRBs created by one PSO can be committed
+    /// when another PSO is bound.
+    /// \param [in] pPSO - Pointer to the pipeline state object to check compatibility with
+    /// \return     true if this PSO is compatbile with pPSO. false otherwise.
+    /// \remarks    The function only checks that shader resource layouts are compatible, but 
+    ///             does not check if resource types match. For instance, if a pixel shader in one PSO
+    ///             uses a texture at slot 0, and a pixel shader in another PSO uses texture array at slot 0,
+    ///             the pipelines will be compatible. However, if you try to use SRB object from the first pipeline
+    ///             to commit resources for the second pipeline, a runtime error will occur.\n
+    ///             The function only checks compatibility of shader resource layouts. It does not take
+    ///             into account vertex shader input layout, number of outputs, etc.
+    VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
+                                          const struct IPipelineState2* pPSO) CONST PURE;
+};
+DILIGENT_END_INTERFACE
+
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
@@ -444,6 +618,15 @@ DILIGENT_END_INTERFACE
 #    define IPipelineState_GetStaticVariableByIndex(This, ...)    CALL_IFACE_METHOD(PipelineState, GetStaticVariableByIndex,    This, __VA_ARGS__)
 #    define IPipelineState_CreateShaderResourceBinding(This, ...) CALL_IFACE_METHOD(PipelineState, CreateShaderResourceBinding, This, __VA_ARGS__)
 #    define IPipelineState_IsCompatibleWith(This, ...)            CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,            This, __VA_ARGS__)
+
+#    define IPipelineState2_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
+
+#    define IPipelineState2_BindStaticResources(This, ...)         CALL_IFACE_METHOD(PipelineState2, BindStaticResources,         This, __VA_ARGS__)
+#    define IPipelineState2_GetStaticVariableCount(This)           CALL_IFACE_METHOD(PipelineState2, GetStaticVariableCount,      This)
+#    define IPipelineState2_GetStaticVariableByName(This, ...)     CALL_IFACE_METHOD(PipelineState2, GetStaticVariableByName,     This, __VA_ARGS__)
+#    define IPipelineState2_GetStaticVariableByIndex(This, ...)    CALL_IFACE_METHOD(PipelineState2, GetStaticVariableByIndex,    This, __VA_ARGS__)
+#    define IPipelineState2_CreateShaderResourceBinding(This, ...) CALL_IFACE_METHOD(PipelineState2, CreateShaderResourceBinding, This, __VA_ARGS__)
+#    define IPipelineState2_IsCompatibleWith(This, ...)            CALL_IFACE_METHOD(PipelineState2, IsCompatibleWith,            This, __VA_ARGS__)
 
 // clang-format on
 

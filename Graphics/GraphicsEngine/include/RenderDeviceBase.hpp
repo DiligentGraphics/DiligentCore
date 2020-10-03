@@ -226,6 +226,18 @@ public:
 
         /// Size of the framebuffer object (FramebufferD3D12Impl, FramebufferVkImpl, etc.), in bytes
         const size_t FramebufferObjSize;
+
+        /// Size of the pipeline state object (PipelineState2D3D12Impl, PipelineState2VkImpl, etc.), in bytes
+        const size_t PSO2Size;
+
+        /// Size of the BLAS object (BottomLevelASD3D12Impl, BottomLevelASVkImpl, etc.), in bytes
+        const size_t BLASObjSize;
+
+        /// Size of the TLAS object (TopLevelASD3D12Impl, TopLevelASVkImpl, etc.), in bytes
+        const size_t TLASObjSize;
+
+        /// Size of the SBT object (ShaderBindingTableD3D12Impl, ShaderBindingtableVkImpl, etc.), in bytes
+        const size_t SBTObjSize;
     };
 
     /// \param pRefCounters        - reference counters object that controls the lifetime of this render device
@@ -256,12 +268,16 @@ public:
         m_ShaderObjAllocator    {RawMemAllocator, ObjectSizes.ShaderObjSize,      32  },
         m_SamplerObjAllocator   {RawMemAllocator, ObjectSizes.SamplerObjSize,     32  },
         m_PSOAllocator          {RawMemAllocator, ObjectSizes.PSOSize,            128 },
+        m_PSO2Allocator         {RawMemAllocator, ObjectSizes.PSO2Size,           128 },
         m_SRBAllocator          {RawMemAllocator, ObjectSizes.SRBSize,            1024},
         m_ResMappingAllocator   {RawMemAllocator, sizeof(ResourceMappingImpl),    16  },
         m_FenceAllocator        {RawMemAllocator, ObjectSizes.FenceSize,          16  },
         m_QueryAllocator        {RawMemAllocator, ObjectSizes.QuerySize,          16  },
         m_RenderPassAllocator   {RawMemAllocator, ObjectSizes.RenderPassObjSize,  16  },
-        m_FramebufferAllocator  {RawMemAllocator, ObjectSizes.FramebufferObjSize, 16  }
+        m_FramebufferAllocator  {RawMemAllocator, ObjectSizes.FramebufferObjSize, 16  },
+        m_BLASAllocator         {RawMemAllocator, ObjectSizes.BLASObjSize,        16  },
+        m_TLASAllocator         {RawMemAllocator, ObjectSizes.TLASObjSize,        16  },
+        m_SBTAllocator          {RawMemAllocator, ObjectSizes.SBTObjSize,         16  }
     // clang-format on
     {
         // Initialize texture format info
@@ -430,12 +446,16 @@ protected:
     FixedBlockMemoryAllocator m_ShaderObjAllocator;   ///< Allocator for shader objects
     FixedBlockMemoryAllocator m_SamplerObjAllocator;  ///< Allocator for sampler objects
     FixedBlockMemoryAllocator m_PSOAllocator;         ///< Allocator for pipeline state objects
+    FixedBlockMemoryAllocator m_PSO2Allocator;        ///< Allocator for pipeline state objects
     FixedBlockMemoryAllocator m_SRBAllocator;         ///< Allocator for shader resource binding objects
     FixedBlockMemoryAllocator m_ResMappingAllocator;  ///< Allocator for resource mapping objects
     FixedBlockMemoryAllocator m_FenceAllocator;       ///< Allocator for fence objects
     FixedBlockMemoryAllocator m_QueryAllocator;       ///< Allocator for query objects
     FixedBlockMemoryAllocator m_RenderPassAllocator;  ///< Allocator for render pass objects
     FixedBlockMemoryAllocator m_FramebufferAllocator; ///< Allocator for framebuffer objects
+    FixedBlockMemoryAllocator m_BLASAllocator;        ///< Allocator for bottom-level acceleration structure objects
+    FixedBlockMemoryAllocator m_TLASAllocator;        ///< Allocator for top-level acceleration structure objects
+    FixedBlockMemoryAllocator m_SBTAllocator;         ///< Allocator for shader binding table objects
 };
 
 

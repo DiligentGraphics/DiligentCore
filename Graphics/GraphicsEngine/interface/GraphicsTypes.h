@@ -73,19 +73,21 @@ DILIGENT_TYPED_ENUM(VALUE_TYPE, Uint8)
 /// - TextureDesc to describe bind flags for a texture
 DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
 {
-    BIND_NONE               = 0x0L, ///< Undefined binding
-    BIND_VERTEX_BUFFER	    = 0x1L, ///< A buffer can be bound as a vertex buffer
-    BIND_INDEX_BUFFER	    = 0x2L, ///< A buffer can be bound as an index buffer
-    BIND_UNIFORM_BUFFER	    = 0x4L, ///< A buffer can be bound as a uniform buffer
-                                    ///  \warning This flag may not be combined with any other bind flag
-    BIND_SHADER_RESOURCE	= 0x8L, ///< A buffer or a texture can be bound as a shader resource
-                                    ///  \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag 
-    BIND_STREAM_OUTPUT	    = 0x10L,///< A buffer can be bound as a target for stream output stage
-    BIND_RENDER_TARGET	    = 0x20L,///< A texture can be bound as a render target
-    BIND_DEPTH_STENCIL	    = 0x40L,///< A texture can be bound as a depth-stencil target
-    BIND_UNORDERED_ACCESS	= 0x80L,///< A buffer or a texture can be bound as an unordered access view
-    BIND_INDIRECT_DRAW_ARGS	= 0x100L,///< A buffer can be bound as the source buffer for indirect draw commands
-    BIND_INPUT_ATTACHMENT   = 0x200L ///< A texture can be used as render pass input attachment
+    BIND_NONE                = 0x0L,   ///< Undefined binding
+    BIND_VERTEX_BUFFER	     = 0x1L,   ///< A buffer can be bound as a vertex buffer
+    BIND_INDEX_BUFFER	     = 0x2L,   ///< A buffer can be bound as an index buffer
+    BIND_UNIFORM_BUFFER	     = 0x4L,   ///< A buffer can be bound as a uniform buffer
+                                       ///  \warning This flag may not be combined with any other bind flag
+    BIND_SHADER_RESOURCE	 = 0x8L,   ///< A buffer or a texture can be bound as a shader resource
+                                       ///  \warning This flag cannot be used with MAP_WRITE_NO_OVERWRITE flag 
+    BIND_STREAM_OUTPUT	     = 0x10L,  ///< A buffer can be bound as a target for stream output stage
+    BIND_RENDER_TARGET	     = 0x20L,  ///< A texture can be bound as a render target
+    BIND_DEPTH_STENCIL	     = 0x40L,  ///< A texture can be bound as a depth-stencil target
+    BIND_UNORDERED_ACCESS	 = 0x80L,  ///< A buffer or a texture can be bound as an unordered access view
+    BIND_INDIRECT_DRAW_ARGS	 = 0x100L, ///< A buffer can be bound as the source buffer for indirect draw commands
+    BIND_INPUT_ATTACHMENT    = 0x200L, ///< A texture can be used as render pass input attachment
+    BIND_RAY_TRACING         = 0x400L, ///< AZ TODO
+    BIND_FLAGS_LAST          = 0x400L
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
 
@@ -1535,6 +1537,9 @@ struct DeviceFeatures
         
     /// Indicates if device supports mesh and amplification shaders
     DEVICE_FEATURE_STATE MeshShaders                   DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+    
+    /// Indicates if device supports ray tracing shaders
+    DEVICE_FEATURE_STATE RayTracing                    DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports bindless resources
     DEVICE_FEATURE_STATE BindlessResources             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
@@ -1595,6 +1600,7 @@ struct DeviceFeatures
         GeometryShaders                   {State},
         Tessellation                      {State},
         MeshShaders                       {State},
+        RayTracing                        {State},
         BindlessResources                 {State},
         OcclusionQueries                  {State},
         BinaryOcclusionQueries            {State},
@@ -1612,7 +1618,7 @@ struct DeviceFeatures
         TextureUAVExtendedFormats         {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 23, "Did you add a new feature to DeviceFeatures? Please handle its satus above.");
+        static_assert(sizeof(*this) == 24, "Did you add a new feature to DeviceFeatures? Please handle its satus above.");
 #   endif
     }
 #endif
@@ -1827,8 +1833,8 @@ typedef struct EngineCreateInfo EngineCreateInfo;
 /// Attributes of the OpenGL-based engine implementation
 struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
 
-	/// Native window wrapper
-	NativeWindow Window;
+    /// Native window wrapper
+    NativeWindow Window;
 
     /// Create debug OpenGL context and enable debug output.
 
@@ -2655,7 +2661,10 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource is used for present
     RESOURCE_STATE_PRESENT              = 0x10000,
 
-    RESOURCE_STATE_MAX_BIT              = 0x10000,
+    RESOURCE_STATE_BUILD_AS             = 0x20000,
+    RESOURCE_STATE_RAY_TRACING          = 0x40000,
+
+    RESOURCE_STATE_MAX_BIT              = 0x40000,
 
     RESOURCE_STATE_GENERIC_READ         = RESOURCE_STATE_VERTEX_BUFFER     |
                                           RESOURCE_STATE_CONSTANT_BUFFER   |
