@@ -1585,6 +1585,9 @@ struct DeviceFeatures
 
     /// Indicates if device supports native 16-bit float operations. Note that there are separate features
     /// that indicate if device supports loading 16-bit floats from buffers and passing them between shader stages.
+    /// 
+    /// \note   16-bit support is quite tricky, the following post should help understand it better:
+    ///         https://therealmjp.github.io/posts/shader-fp16/
     DEVICE_FEATURE_STATE ShaderFloat16                     DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
     /// Indicates if device supports reading and writing 16-bit floats and ints from buffers bound

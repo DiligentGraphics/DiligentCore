@@ -251,26 +251,46 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
         m_DeviceCaps.Features.MeshShaders = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
 
-        D3D12_FEATURE_DATA_D3D12_OPTIONS4 d3d12Options4 = {};
-        m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &d3d12Options4, sizeof(d3d12Options4));
 
-        if (d3d12Options4.Native16BitShaderOpsSupported)
         {
-            m_DeviceCaps.Features.ShaderFloat16             = DEVICE_FEATURE_STATE_ENABLED;
-            m_DeviceCaps.Features.ResourceBuffer16BitAccess = DEVICE_FEATURE_STATE_ENABLED;
-            m_DeviceCaps.Features.UniformBuffer16BitAccess  = DEVICE_FEATURE_STATE_ENABLED;
-            m_DeviceCaps.Features.ShaderInputOutput16       = DEVICE_FEATURE_STATE_ENABLED;
-        }
-        else
-        {
-            if (EngineCI.Features.ShaderFloat16 == DEVICE_FEATURE_STATE_ENABLED ||
-                EngineCI.Features.ResourceBuffer16BitAccess == DEVICE_FEATURE_STATE_ENABLED ||
-                EngineCI.Features.UniformBuffer16BitAccess == DEVICE_FEATURE_STATE_ENABLED ||
-                EngineCI.Features.ShaderInputOutput16 == DEVICE_FEATURE_STATE_ENABLED)
+            D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features = {};
+            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &d3d12Features, sizeof(d3d12Features))))
             {
-                LOG_ERROR_AND_THROW("This device/driver does not natively support 16-bit floats and ints.");
+                if (d3d12Features.MinPrecisionSupport & D3D12_SHADER_MIN_PRECISION_SUPPORT_16_BIT)
+                {
+                    m_DeviceCaps.Features.ShaderFloat16 = DEVICE_FEATURE_STATE_ENABLED;
+                }
             }
         }
+
+        {
+            D3D12_FEATURE_DATA_D3D12_OPTIONS4 d3d12Features4 = {};
+            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS4, &d3d12Features4, sizeof(d3d12Features4))))
+            {
+                if (d3d12Features4.Native16BitShaderOpsSupported)
+                {
+                    m_DeviceCaps.Features.ResourceBuffer16BitAccess = DEVICE_FEATURE_STATE_ENABLED;
+                    m_DeviceCaps.Features.UniformBuffer16BitAccess  = DEVICE_FEATURE_STATE_ENABLED;
+                    m_DeviceCaps.Features.ShaderInputOutput16       = DEVICE_FEATURE_STATE_ENABLED;
+                }
+            }
+        }
+
+#define CHECK_REQUIRED_FEATURE(Feature, FeatureName)                          \
+    do                                                                        \
+    {                                                                         \
+        if (EngineCI.Features.Feature == DEVICE_FEATURE_STATE_ENABLED &&      \
+            m_DeviceCaps.Features.Feature != DEVICE_FEATURE_STATE_ENABLED)    \
+            LOG_ERROR_AND_THROW(FeatureName, "not supported by this device"); \
+    } while (false)
+
+        // clang-format off
+        CHECK_REQUIRED_FEATURE(ShaderFloat16,             "16-bit float shader operations are");
+        CHECK_REQUIRED_FEATURE(ResourceBuffer16BitAccess, "16-bit resoure buffer access is");
+        CHECK_REQUIRED_FEATURE(UniformBuffer16BitAccess,  "16-bit uniform buffer access is");
+        CHECK_REQUIRED_FEATURE(ShaderInputOutput16,       "16-bit shader inputs/outputs are");
+        // clang-format on
+#undef CHECK_REQUIRED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
         static_assert(sizeof(DeviceFeatures) == 27, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");

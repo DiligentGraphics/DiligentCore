@@ -148,8 +148,22 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     UNSUPPORTED_FEATURE(VertexPipelineUAVWritesAndAtomics, "Vertex pipeline UAV writes and atomics are");
     UNSUPPORTED_FEATURE(MeshShaders, "Mesh shaders are");
 
+    {
+        bool ShaderFloat16Supported = false;
+
+        D3D11_FEATURE_DATA_SHADER_MIN_PRECISION_SUPPORT d3d11MinPrecisionSupport = {};
+        if (SUCCEEDED(m_pd3d11Device->CheckFeatureSupport(D3D11_FEATURE_SHADER_MIN_PRECISION_SUPPORT, &d3d11MinPrecisionSupport, sizeof(d3d11MinPrecisionSupport))))
+        {
+            ShaderFloat16Supported =
+                (d3d11MinPrecisionSupport.PixelShaderMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0 &&
+                (d3d11MinPrecisionSupport.AllOtherShaderStagesMinPrecision & D3D11_SHADER_MIN_PRECISION_16_BIT) != 0;
+        }
+        if (EngineAttribs.Features.ShaderFloat16 == DEVICE_FEATURE_STATE_ENABLED && !ShaderFloat16Supported)
+            LOG_ERROR_AND_THROW("16-bit float shader operations are");
+        m_DeviceCaps.Features.ShaderFloat16 = ShaderFloat16Supported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
+    }
+
     // Explicit fp16 is only supported in DXC through Shader Model 6.2, so there's no support for FXC or D3D11.
-    UNSUPPORTED_FEATURE(ShaderFloat16, "16-bit float shader operations are");
     UNSUPPORTED_FEATURE(ResourceBuffer16BitAccess, "16-bit native access to resource buffers is");
     UNSUPPORTED_FEATURE(UniformBuffer16BitAccess, "16-bit native access to uniform buffers is");
     UNSUPPORTED_FEATURE(ShaderInputOutput16, "16-bit shader input/output is");
