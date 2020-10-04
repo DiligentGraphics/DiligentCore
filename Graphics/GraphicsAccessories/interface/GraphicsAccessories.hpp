@@ -434,28 +434,40 @@ inline Int32 GetShaderTypeIndex(SHADER_TYPE Type)
     return PlatformMisc::GetLSB(Type);
 }
 
-static_assert(SHADER_TYPE_LAST == 0x080, "Please add the new shader type index below");
+static_assert(SHADER_TYPE_LAST == 0x2000, "Please add the new shader type index below");
 
-static constexpr Int32 VSInd = 0;
-static constexpr Int32 PSInd = 1;
-static constexpr Int32 GSInd = 2;
-static constexpr Int32 HSInd = 3;
-static constexpr Int32 DSInd = 4;
-static constexpr Int32 CSInd = 5;
-static constexpr Int32 ASInd = 6;
-static constexpr Int32 MSInd = 7;
+static constexpr Int32 VSInd   = 0;
+static constexpr Int32 PSInd   = 1;
+static constexpr Int32 GSInd   = 2;
+static constexpr Int32 HSInd   = 3;
+static constexpr Int32 DSInd   = 4;
+static constexpr Int32 CSInd   = 5;
+static constexpr Int32 ASInd   = 6;
+static constexpr Int32 MSInd   = 7;
+static constexpr Int32 RGSInd  = 8;
+static constexpr Int32 RMSInd  = 9;
+static constexpr Int32 RCHSInd = 10;
+static constexpr Int32 RAHSInd = 11;
+static constexpr Int32 RISInd  = 12;
+static constexpr Int32 RCSInd  = 13;
 
-static constexpr Int32 LastShaderInd = MSInd;
+static constexpr Int32 LastShaderInd = RCSInd;
 
 // clang-format off
-static_assert(SHADER_TYPE_VERTEX        == (1 << VSInd), "VSInd is not consistent with SHADER_TYPE_VERTEX");
-static_assert(SHADER_TYPE_PIXEL         == (1 << PSInd), "PSInd is not consistent with SHADER_TYPE_PIXEL");
-static_assert(SHADER_TYPE_GEOMETRY      == (1 << GSInd), "GSInd is not consistent with SHADER_TYPE_GEOMETRY");
-static_assert(SHADER_TYPE_HULL          == (1 << HSInd), "HSInd is not consistent with SHADER_TYPE_HULL");
-static_assert(SHADER_TYPE_DOMAIN        == (1 << DSInd), "DSInd is not consistent with SHADER_TYPE_DOMAIN");
-static_assert(SHADER_TYPE_COMPUTE       == (1 << CSInd), "CSInd is not consistent with SHADER_TYPE_COMPUTE");
-static_assert(SHADER_TYPE_AMPLIFICATION == (1 << ASInd), "ASInd is not consistent with SHADER_TYPE_AMPLIFICATION");
-static_assert(SHADER_TYPE_MESH          == (1 << MSInd), "MSInd is not consistent with SHADER_TYPE_MESH");
+static_assert(SHADER_TYPE_VERTEX           == (1 << VSInd),   "VSInd is not consistent with SHADER_TYPE_VERTEX");
+static_assert(SHADER_TYPE_PIXEL            == (1 << PSInd),   "PSInd is not consistent with SHADER_TYPE_PIXEL");
+static_assert(SHADER_TYPE_GEOMETRY         == (1 << GSInd),   "GSInd is not consistent with SHADER_TYPE_GEOMETRY");
+static_assert(SHADER_TYPE_HULL             == (1 << HSInd),   "HSInd is not consistent with SHADER_TYPE_HULL");
+static_assert(SHADER_TYPE_DOMAIN           == (1 << DSInd),   "DSInd is not consistent with SHADER_TYPE_DOMAIN");
+static_assert(SHADER_TYPE_COMPUTE          == (1 << CSInd),   "CSInd is not consistent with SHADER_TYPE_COMPUTE");
+static_assert(SHADER_TYPE_AMPLIFICATION    == (1 << ASInd),   "ASInd is not consistent with SHADER_TYPE_AMPLIFICATION");
+static_assert(SHADER_TYPE_MESH             == (1 << MSInd),   "MSInd is not consistent with SHADER_TYPE_MESH");
+static_assert(SHADER_TYPE_RAY_GEN          == (1 << RGSInd),  "RGSInd is not consistent with SHADER_TYPE_RAY_GEN");
+static_assert(SHADER_TYPE_RAY_MISS         == (1 << RMSInd),  "RMSInd is not consistent with SHADER_TYPE_RAY_MISS");
+static_assert(SHADER_TYPE_RAY_CLOSEST_HIT  == (1 << RCHSInd), "RCHSInd is not consistent with SHADER_TYPE_RAY_CLOSEST_HIT");
+static_assert(SHADER_TYPE_RAY_ANY_HIT      == (1 << RAHSInd), "RAHSInd is not consistent with SHADER_TYPE_RAY_ANY_HIT");
+static_assert(SHADER_TYPE_RAY_INTERSECTION == (1 << RISInd),  "RISInd is not consistent with SHADER_TYPE_RAY_INTERSECTION");
+static_assert(SHADER_TYPE_CALLABLE         == (1 << RCSInd),  "RCSInd is not consistent with SHADER_TYPE_CALLABLE");
 
 static_assert(SHADER_TYPE_LAST == (1 << LastShaderInd), "LastShaderInd is not consistent with SHADER_TYPE_LAST");
 // clang-format on

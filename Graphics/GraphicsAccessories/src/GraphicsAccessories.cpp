@@ -474,22 +474,28 @@ const Char* GetBufferViewTypeLiteralName(BUFFER_VIEW_TYPE ViewType)
 
 const Char* GetShaderTypeLiteralName(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please handle the new shader type in the switch below");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off
 #define RETURN_SHADER_TYPE_NAME(ShaderType)\
         case ShaderType: return #ShaderType;
 
-        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_UNKNOWN      )
-        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_VERTEX       )
-        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_PIXEL        )
-        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_GEOMETRY     )
-        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_HULL         )
-        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_DOMAIN       )
-        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_COMPUTE      )
-        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_AMPLIFICATION)
-        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_MESH         )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_UNKNOWN         )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_VERTEX          )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_PIXEL           )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_GEOMETRY        )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_HULL            )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_DOMAIN          )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_COMPUTE         )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_AMPLIFICATION   )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_MESH            )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_RAY_GEN         )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_RAY_MISS        )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_RAY_CLOSEST_HIT )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_RAY_ANY_HIT     )
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_RAY_INTERSECTION)
+        RETURN_SHADER_TYPE_NAME(SHADER_TYPE_CALLABLE        )
 #undef  RETURN_SHADER_TYPE_NAME
             // clang-format on
 
@@ -813,6 +819,8 @@ const Char* GetResourceDimString(RESOURCE_DIMENSION TexType)
 
 const Char* GetBindFlagString(Uint32 BindFlag)
 {
+    static_assert(BIND_FLAGS_LAST == 0x400L, "AZ TODO");
+
     VERIFY((BindFlag & (BindFlag - 1)) == 0, "More than one bind flag specified");
     switch (BindFlag)
     {
@@ -827,6 +835,7 @@ const Char* GetBindFlagString(Uint32 BindFlag)
 	    BIND_FLAG_STR_CASE( BIND_DEPTH_STENCIL )
 	    BIND_FLAG_STR_CASE( BIND_UNORDERED_ACCESS )
         BIND_FLAG_STR_CASE( BIND_INDIRECT_DRAW_ARGS )
+        BIND_FLAG_STR_CASE( BIND_RAY_TRACING )
 #undef  BIND_FLAG_STR_CASE
         // clang-format on
         default: UNEXPECTED("Unexpected bind flag ", BindFlag); return "";
@@ -838,7 +847,7 @@ String GetBindFlagsString(Uint32 BindFlags, const char* Delimeter)
     if (BindFlags == 0)
         return "0";
     String Str;
-    for (Uint32 Flag = BIND_VERTEX_BUFFER; BindFlags && Flag <= BIND_INDIRECT_DRAW_ARGS; Flag <<= 1)
+    for (Uint32 Flag = 1; BindFlags && Flag <= BIND_FLAGS_LAST; Flag <<= 1)
     {
         if (BindFlags & Flag)
         {
@@ -1025,7 +1034,7 @@ String GetBufferDescString(const BufferDesc& Desc)
 const Char* GetResourceStateFlagString(RESOURCE_STATE State)
 {
     VERIFY((State & (State - 1)) == 0, "Single state is expected");
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "Please update this function to handle the new resource state");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "Please update this function to handle the new resource state");
     switch (State)
     {
         // clang-format off
@@ -1047,6 +1056,8 @@ const Char* GetResourceStateFlagString(RESOURCE_STATE State)
         case RESOURCE_STATE_RESOLVE_SOURCE:    return "RESOLVE_SOURCE";
         case RESOURCE_STATE_INPUT_ATTACHMENT:  return "INPUT_ATTACHMENT";
         case RESOURCE_STATE_PRESENT:           return "PRESENT";
+        case RESOURCE_STATE_BUILD_AS:          return "BUILD_AS";
+        case RESOURCE_STATE_RAY_TRACING:       return "RAY_TRACING";
         // clang-format on
         default:
             UNEXPECTED("Unknown resource state");
@@ -1176,7 +1187,7 @@ Uint32 ComputeMipLevelsCount(Uint32 Width, Uint32 Height, Uint32 Depth)
 
 bool VerifyResourceStates(RESOURCE_STATE State, bool IsTexture)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "Please update this function to handle the new resource state");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "Please update this function to handle the new resource state");
 
     // clang-format off
 #define VERIFY_EXCLUSIVE_STATE(ExclusiveState)\
@@ -1193,6 +1204,8 @@ if ( (State & ExclusiveState) != 0 && (State & ~ExclusiveState) != 0 )\
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_COPY_DEST);
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_RESOLVE_DEST);
     VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_PRESENT);
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_BUILD_AS);
+    VERIFY_EXCLUSIVE_STATE(RESOURCE_STATE_RAY_TRACING);
 #undef VERIFY_EXCLUSIVE_STATE
     // clang-format on
 
@@ -1288,7 +1301,7 @@ ADAPTER_VENDOR VendorIdToAdapterVendor(Uint32 VendorId)
 
 bool IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
     switch (PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:
@@ -1306,6 +1319,14 @@ bool IsConsistentShaderType(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineType)
                 ShaderType == SHADER_TYPE_MESH ||
                 ShaderType == SHADER_TYPE_PIXEL;
 
+        case PIPELINE_TYPE_RAY_TRACING:
+            return ShaderType == SHADER_TYPE_RAY_GEN ||
+                ShaderType == SHADER_TYPE_RAY_MISS ||
+                ShaderType == SHADER_TYPE_RAY_CLOSEST_HIT ||
+                ShaderType == SHADER_TYPE_RAY_ANY_HIT ||
+                ShaderType == SHADER_TYPE_RAY_INTERSECTION ||
+                ShaderType == SHADER_TYPE_CALLABLE;
+
         default:
             UNEXPECTED("Unexpected pipeline type");
             return false;
@@ -1318,7 +1339,7 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
            " is inconsistent with pipeline type ", GetPipelineTypeString(PipelineType));
     VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "Only single shader stage should be provided");
 
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
         case SHADER_TYPE_UNKNOWN:
@@ -1350,7 +1371,7 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
 
 SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x080, "Please update the switch below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the switch below to handle the new shader type");
     switch (PipelineType)
     {
         case PIPELINE_TYPE_GRAPHICS:

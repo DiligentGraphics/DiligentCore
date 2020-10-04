@@ -45,6 +45,8 @@ namespace Diligent
 
 void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
 {
+    static_assert(BIND_FLAGS_LAST == 0x400L, "AZ TODO");
+
     constexpr Uint32 AllowedBindFlags =
         BIND_VERTEX_BUFFER |
         BIND_INDEX_BUFFER |
@@ -52,7 +54,8 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
         BIND_SHADER_RESOURCE |
         BIND_STREAM_OUTPUT |
         BIND_UNORDERED_ACCESS |
-        BIND_INDIRECT_DRAW_ARGS;
+        BIND_INDIRECT_DRAW_ARGS |
+        BIND_RAY_TRACING;
 
     VERIFY_BUFFER((Desc.BindFlags & ~AllowedBindFlags) == 0, "the following bind flags are not allowed for a buffer: ", GetBindFlagsString(Desc.BindFlags & ~AllowedBindFlags, ", "), '.');
 

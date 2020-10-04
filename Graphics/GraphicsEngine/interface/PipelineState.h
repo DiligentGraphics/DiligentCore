@@ -244,6 +244,73 @@ struct ComputePipelineDesc
 };
 typedef struct ComputePipelineDesc ComputePipelineDesc;
 
+/// AZ TODO
+struct RayTracingGeneralShaderGroup
+{
+    /// AZ TODO
+    const char* Name   DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    Shader DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct RayTracingGeneralShaderGroup RayTracingGeneralShaderGroup;
+
+/// AZ TODO
+struct RayTracingTriangleHitShaderGroup
+{
+    /// AZ TODO
+    const char* Name             DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    ClosestHitShader DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    AnyHitShader     DEFAULT_INITIALIZER(nullptr); // can be null
+};
+typedef struct RayTracingTriangleHitShaderGroup RayTracingTriangleHitShaderGroup;
+
+/// AZ TODO
+struct RayTracingProceduralHitShaderGroup
+{
+    /// AZ TODO
+    const char* Name               DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    IntersectionShader DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    IShader*    ClosestHitShader   DEFAULT_INITIALIZER(nullptr); // can be null
+
+    /// AZ TODO
+    IShader*    AnyHitShader       DEFAULT_INITIALIZER(nullptr);     // can be null
+};
+typedef struct RayTracingProceduralHitShaderGroup RayTracingProceduralHitShaderGroup;
+
+/// AZ TODO
+struct RayTracingPipelineDesc
+{
+    /// AZ TODO
+    const RayTracingGeneralShaderGroup*       pGeneralShaders          DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    const RayTracingTriangleHitShaderGroup*   pTriangleHitShaders      DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    const RayTracingProceduralHitShaderGroup* pProceduralHitShaders    DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint16                                    GeneralShaderCount       DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint16                                    TriangleHitShaderCount   DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint16                                    ProceduralHitShaderCount DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint8                                     MaxRecursionDepth        DEFAULT_INITIALIZER(0); // must be 0..31 (check current device limits)
+};
+typedef struct RayTracingPipelineDesc RayTracingPipelineDesc;
 
 /// Pipeline type
 DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
@@ -257,6 +324,9 @@ DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
 
     /// Mesh pipeline, which is used by IDeviceContext::DrawMesh(), IDeviceContext::DrawMeshIndirect().
     PIPELINE_TYPE_MESH,
+
+    /// Ray tracing pipeline, which is used by IDeviceContext::TraceRays().
+    PIPELINE_TYPE_RAY_TRACING,
 };
 
 
@@ -283,6 +353,9 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Compute pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_COMPUTE
     ComputePipelineDesc ComputePipeline;
+    
+    /// Ray tracing pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_RAY_TRACING.
+    RayTracingPipelineDesc RayTracingPipeline;
     
 #if DILIGENT_CPP_INTERFACE
     bool IsAnyGraphicsPipeline() const { return PipelineType == PIPELINE_TYPE_GRAPHICS || PipelineType == PIPELINE_TYPE_MESH; }

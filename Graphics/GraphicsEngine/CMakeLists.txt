@@ -28,6 +28,9 @@ set(INCLUDE
     include/SwapChainBase.hpp
     include/TextureBase.hpp
     include/TextureViewBase.hpp
+    include/BottomLevelASBase.hpp
+    include/TopLevelASBase.hpp
+    include/ShaderBindingTableBase.hpp
 )
 
 set(INTERFACE 
@@ -58,6 +61,9 @@ set(INTERFACE
     interface/SwapChain.h
     interface/Texture.h
     interface/TextureView.h
+    interface/BottomLevelAS.h
+    interface/TopLevelAS.h
+    interface/ShaderBindingTable.h
 )
 
 set(SOURCE

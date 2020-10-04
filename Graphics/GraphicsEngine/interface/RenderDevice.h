@@ -47,6 +47,9 @@
 #include "Query.h"
 #include "RenderPass.h"
 #include "Framebuffer.h"
+#include "BottomLevelAS.h"
+#include "TopLevelAS.h"
+#include "ShaderBindingTable.h"
 
 #include "DepthStencilState.h"
 #include "RasterizerState.h"
@@ -213,6 +216,20 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                            const FramebufferDesc REF Desc,
                                            IFramebuffer**            ppFramebuffer) PURE;
 
+    /// AZ TODO
+    VIRTUAL void METHOD(CreateBLAS)(THIS_
+                                    const BottomLevelASDesc REF Desc,
+                                    IBottomLevelAS**            ppBLAS) PURE;
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(CreateTLAS)(THIS_
+                                    const TopLevelASDesc REF Desc,
+                                    ITopLevelAS**            ppTLAS) PURE;
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(CreateSBT)(THIS_
+                                   const ShaderBindingTableDesc REF Desc,
+                                   IShaderBindingTable**            ppSBT) PURE;
 
     /// Gets the device capabilities, see Diligent::DeviceCaps for details
     VIRTUAL const DeviceCaps REF METHOD(GetDeviceCaps)(THIS) CONST PURE;

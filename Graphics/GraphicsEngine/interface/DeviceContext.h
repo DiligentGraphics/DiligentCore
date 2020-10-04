@@ -53,6 +53,9 @@
 #include "Framebuffer.h"
 #include "CommandList.h"
 #include "SwapChain.h"
+#include "BottomLevelAS.h"
+#include "TopLevelAS.h"
+#include "ShaderBindingTable.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -715,6 +718,326 @@ struct BeginRenderPassAttribs
     RESOURCE_STATE_TRANSITION_MODE StateTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 };
 typedef struct BeginRenderPassAttribs BeginRenderPassAttribs;
+
+/// AZ TODO
+DILIGENT_TYPED_ENUM(RAYTRACING_INSTANCE_FLAGS, Uint8)
+{
+    /// AZ TODO
+    RAYTRACING_INSTANCE_NONE = 0,
+
+    // Disables face culling for this instance.
+    RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE = 0x01,
+
+    // Indicates that the front face of the triangle for culling purposes is the face that is counter clockwise in object space relative to the ray origin.
+    // Because the facing is determined in object space, an instance transform matrix does not change the winding, but a geometry transform does.
+    RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE = 0x02,
+
+    // Causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were specified on all geometries referenced by this instance.
+    // This behavior can be overridden by the SPIR-V NoOpaqueKHR ray flag.
+    RAYTRACING_INSTANCE_FORCE_OPAQUE = 0x04,
+
+    // causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were not specified on all geometries referenced by this instance.
+    // This behavior can be overridden by the SPIR-V OpaqueKHR ray flag.
+    RAYTRACING_INSTANCE_FORCE_NO_OPAQUE = 0x08,
+
+    RAYTRACING_INSTANCE_FLAGS_LAST = 0x08
+};
+
+/// AZ TODO
+DILIGENT_TYPED_ENUM(COPY_AS_MODE, Uint8)
+{
+    // creates a direct copy of the acceleration structure specified in src into the one specified by dst.
+    // The dst acceleration structure must have been created with the same parameters as src.
+    COPY_AS_MODE_CLONE = 0,
+
+    // creates a more compact version of an acceleration structure src into dst.
+    // The acceleration structure dst must have been created with a compactedSize corresponding to the one returned by vkCmdWriteAccelerationStructuresPropertiesKHR
+    // after the build of the acceleration structure specified by src.
+    //COPY_AS_MODE_COMPACT,
+
+    COPY_AS_MODE_LAST = 0,
+};
+
+/// Defines geometry flags for ray tracing.
+
+/// AZ TODO
+DILIGENT_TYPED_ENUM(RAYTRACING_GEOMETRY_FLAGS, Uint8)
+{
+    /// AZ TODO
+    RAYTRACING_GEOMETRY_NONE = 0,
+
+    // Indicates that this geometry does not invoke the any-hit shaders even if present in a hit group.
+    RAYTRACING_GEOMETRY_OPAQUE = 0x01,
+
+    // Indicates that the implementation must only call the any-hit shader a single time for each primitive in this geometry.
+    // If this bit is absent an implementation may invoke the any-hit shader more than once for this geometry.
+    RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION = 0x02,
+
+    RAYTRACING_GEOMETRY_FLAGS_LAST = 0x02
+};
+DEFINE_FLAG_ENUM_OPERATORS(RAYTRACING_GEOMETRY_FLAGS)
+
+/// AZ TODO
+struct BLASBuildTriangleData
+{
+    // put geometry data to geometry that allocated by BLASTriangleDesc
+    const char* GeometryName          DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    IBuffer*    pVertexBuffer         DEFAULT_INITIALIZER(nullptr); // specs: Triangles are considered "inactive" (but legal input to acceleration structure build) if the x component of each vertex is NaN
+    
+    /// AZ TODO
+    Uint32      VertexOffset          DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint32      VertexStride          DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint32      VertexCount           DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    VALUE_TYPE  VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);      // optional, value may be taken from declaration
+    Uint8       VertexComponentCount  DEFAULT_INITIALIZER(0); // optional, value may be taken from declaration
+
+    // optional
+    
+    /// AZ TODO
+    IBuffer*    pIndexBuffer          DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32      IndexOffset           DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint32      IndexCount            DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    VALUE_TYPE  IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED); // optional, value may be taken from declaration
+
+    // optional, buffer that contains 3x4 matrix with local transformation for this triangles/mesh
+    
+    /// AZ TODO
+    IBuffer*    pTransformBuffer      DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32      TransformBufferOffset DEFAULT_INITIALIZER(0);
+
+    /// AZ TODO
+    RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_NONE);
+    
+#if DILIGENT_CPP_INTERFACE
+    /// AZ TODO
+    BLASBuildTriangleData() noexcept {}
+#endif
+};
+typedef struct BLASBuildTriangleData BLASBuildTriangleData;
+
+/// AZ TODO
+struct BLASBuildBoundingBoxData
+{
+    /// AZ TODO
+    // put geometry data to geometry that allocated by BLASBoundingBoxDesc
+    const char* GeometryName DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    IBuffer*    pBoxBuffer   DEFAULT_INITIALIZER(nullptr); // specs: AABBs are considered inactive if AABB.MinX is NaN
+    
+    /// AZ TODO
+    Uint32      BoxOffset    DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint32      BoxStride    DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint32      BoxCount     DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    RAYTRACING_GEOMETRY_FLAGS Flags DEFAULT_INITIALIZER(RAYTRACING_GEOMETRY_NONE);
+    
+#if DILIGENT_CPP_INTERFACE
+    /// AZ TODO
+    BLASBuildBoundingBoxData() noexcept {}
+#endif
+};
+typedef struct BLASBuildBoundingBoxData BLASBuildBoundingBoxData;
+
+/// AZ TODO
+struct BLASBuildAttribs
+{
+    /// AZ TODO
+    IBottomLevelAS*                 pBLAS                       DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE  BLASTransitionMode          DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+    /// AZ TODO
+    BLASBuildTriangleData const*    pTriangleData               DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32                          TriangleDataCount           DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    BLASBuildBoundingBoxData const* pBoxData                    DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32                          BoxDataCount                DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    IBuffer*                        pScratchBuffer              DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32                          ScratchBufferOffset         DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+#if DILIGENT_CPP_INTERFACE
+    /// AZ TODO
+    BLASBuildAttribs() noexcept {}
+#endif
+};
+typedef struct BLASBuildAttribs BLASBuildAttribs;
+
+/// AZ TODO
+const Uint32 TLAS_INSTANCE_OFFSET_AUTO = ~0u;
+
+/// AZ TODO
+struct TLASBuildInstanceData
+{
+    /// AZ TODO
+    const char*               InstanceName    DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    IBottomLevelAS*           pBLAS           DEFAULT_INITIALIZER(nullptr);           // can be null to deactive instance
+    
+    /// AZ TODO
+    float                     Transform[3][4] DEFAULT_INITIALIZER({});
+    
+    /// AZ TODO
+    Uint32                    customId        DEFAULT_INITIALIZER(0);        // 24 bits, in shader: gl_InstanceCustomIndexNV for GLSL, InstanceID() for HLSL
+    
+    /// AZ TODO
+    RAYTRACING_INSTANCE_FLAGS Flags           DEFAULT_INITIALIZER(RAYTRACING_INSTANCE_NONE);
+
+    /// AZ TODO
+    Uint8                     Mask            DEFAULT_INITIALIZER(0xFF);            // visibility mask for the geometry, the instance may only be hit if rayMask & instance.mask != 0
+    
+    /// AZ TODO
+    Uint32                    contributionToHitGroupIndex DEFAULT_INITIALIZER(TLAS_INSTANCE_OFFSET_AUTO); // used when TLAS created with SHADER_BINDING_USER_DEFINED, see IShaderBindingTangle::BindAll()
+    
+#if DILIGENT_CPP_INTERFACE
+    /// AZ TODO
+    TLASBuildInstanceData() noexcept {}
+#endif
+};
+typedef struct TLASBuildInstanceData TLASBuildInstanceData;
+
+/// AZ TODO
+struct TLASBuildAttribs
+{
+    /// AZ TODO
+    ITopLevelAS*                    pTLAS                        DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE  TLASTransitionMode           DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+    /// AZ TODO
+    TLASBuildInstanceData const*    pInstances                   DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32                          InstanceCount                DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    IBuffer*                        pInstancesBuffer             DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    Uint32                          InstancesBufferOffset        DEFAULT_INITIALIZER(0);
+
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE  InstanceBufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// AZ TODO
+    Uint32                          HitShadersPerInstance        DEFAULT_INITIALIZER(1);
+
+    /// AZ TODO
+    IBuffer*                        pScratchBuffer               DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32                          ScratchBufferOffset          DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode  DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+#if DILIGENT_CPP_INTERFACE
+    /// AZ TODO
+    TLASBuildAttribs() noexcept {}
+#endif
+};
+typedef struct TLASBuildAttribs TLASBuildAttribs;
+
+/// AZ TODO
+struct CopyBLASAttribs
+{
+    /// AZ TODO
+    IBottomLevelAS*                pSrc           DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    IBottomLevelAS*                pDst           DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    COPY_AS_MODE                   Mode           DEFAULT_INITIALIZER(COPY_AS_MODE_CLONE);
+    
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE TransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+#if DILIGENT_CPP_INTERFACE
+    /// AZ TODO
+    CopyBLASAttribs() noexcept {}
+#endif
+};
+typedef struct CopyBLASAttribs CopyBLASAttribs;
+
+/// AZ TODO
+struct CopyTLASAttribs
+{
+    /// AZ TODO
+    ITopLevelAS*                   pSrc           DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    ITopLevelAS*                   pDst           DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    COPY_AS_MODE                   Mode           DEFAULT_INITIALIZER(COPY_AS_MODE_CLONE);
+    
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE TransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+#if DILIGENT_CPP_INTERFACE
+    /// AZ TODO
+    CopyTLASAttribs() noexcept {}
+#endif
+};
+typedef struct CopyTLASAttribs CopyTLASAttribs;
+
+/// AZ TODO
+struct TraceRaysAttribs
+{
+    /// AZ TODO
+    IShaderBindingTable*           pSBT           DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32                         DimensionX     DEFAULT_INITIALIZER(1);
+    Uint32                         DimensionY     DEFAULT_INITIALIZER(1);
+    Uint32                         DimensionZ     DEFAULT_INITIALIZER(1);
+    
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE TransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    
+#if DILIGENT_CPP_INTERFACE
+    /// AZ TODO
+    TraceRaysAttribs() noexcept {}
+#endif
+};
+typedef struct TraceRaysAttribs TraceRaysAttribs;
 
 #define DILIGENT_INTERFACE_NAME IDeviceContext
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
@@ -1491,6 +1814,26 @@ DILIGENT_BEGIN_INTERFACE(IDeviceContext, IObject)
                                                    ITexture*                                  pSrcTexture,
                                                    ITexture*                                  pDstTexture,
                                                    const ResolveTextureSubresourceAttribs REF ResolveAttribs) PURE;
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(BuildBLAS)(THIS_
+                                   const BLASBuildAttribs REF Attribs) PURE;
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(BuildTLAS)(THIS_
+                                   const TLASBuildAttribs REF Attribs) PURE;
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(CopyBLAS)(THIS_
+                                  const CopyBLASAttribs REF Attribs) PURE;
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(CopyTLAS)(THIS_
+                                  const CopyTLASAttribs REF Attribs) PURE;
+    
+    /// AZ TODO
+    VIRTUAL void METHOD(TraceRays)(THIS_
+                                   const TraceRaysAttribs REF Attribs) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -1515,6 +1858,8 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_DrawIndexed(This, ...)               CALL_IFACE_METHOD(DeviceContext, DrawIndexed,               This, __VA_ARGS__)
 #    define IDeviceContext_DrawIndirect(This, ...)              CALL_IFACE_METHOD(DeviceContext, DrawIndirect,              This, __VA_ARGS__)
 #    define IDeviceContext_DrawIndexedIndirect(This, ...)       CALL_IFACE_METHOD(DeviceContext, DrawIndexedIndirect,       This, __VA_ARGS__)
+#    define IDeviceContext_DrawMesh(This, ...)                  CALL_IFACE_METHOD(DeviceContext, DrawMesh,                  This, __VA_ARGS__)
+#    define IDeviceContext_DrawMeshIndirect(This, ...)          CALL_IFACE_METHOD(DeviceContext, DrawMeshIndirect,          This, __VA_ARGS__)
 #    define IDeviceContext_DispatchCompute(This, ...)           CALL_IFACE_METHOD(DeviceContext, DispatchCompute,           This, __VA_ARGS__)
 #    define IDeviceContext_DispatchComputeIndirect(This, ...)   CALL_IFACE_METHOD(DeviceContext, DispatchComputeIndirect,   This, __VA_ARGS__)
 #    define IDeviceContext_ClearDepthStencil(This, ...)         CALL_IFACE_METHOD(DeviceContext, ClearDepthStencil,         This, __VA_ARGS__)
@@ -1539,6 +1884,11 @@ DILIGENT_END_INTERFACE
 #    define IDeviceContext_FinishFrame(This)                    CALL_IFACE_METHOD(DeviceContext, FinishFrame,               This)
 #    define IDeviceContext_TransitionResourceStates(This, ...)  CALL_IFACE_METHOD(DeviceContext, TransitionResourceStates,  This, __VA_ARGS__)
 #    define IDeviceContext_ResolveTextureSubresource(This, ...) CALL_IFACE_METHOD(DeviceContext, ResolveTextureSubresource, This, __VA_ARGS__)
+#    define IDeviceContext_BuildBLAS(This, ...)                 CALL_IFACE_METHOD(DeviceContext, BuildBLAS,                 This, __VA_ARGS__)
+#    define IDeviceContext_BuildTLAS(This, ...)                 CALL_IFACE_METHOD(DeviceContext, BuildTLAS,                 This, __VA_ARGS__)
+#    define IDeviceContext_CopyBLAS(This, ...)                  CALL_IFACE_METHOD(DeviceContext, CopyBLAS,                  This, __VA_ARGS__)
+#    define IDeviceContext_CopyTLAS(This, ...)                  CALL_IFACE_METHOD(DeviceContext, CopyTLAS,                  This, __VA_ARGS__)
+#    define IDeviceContext_TraceRays(This, ...)                 CALL_IFACE_METHOD(DeviceContext, TraceRays,                 This, __VA_ARGS__)
 
 // clang-format on
 
