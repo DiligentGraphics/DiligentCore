@@ -49,10 +49,10 @@ static const INTERFACE_ID IID_BottomLevelASVk =
 /// Exposes Vulkan-specific functionality of a Bottom-level acceleration structure object.
 DILIGENT_BEGIN_INTERFACE(IBottomLevelASVk, IBottomLevelAS)
 {
-    /// Returns a Vulkan BLAS object handle
+    /// Returns a Vulkan BLAS object handle.
     VIRTUAL VkAccelerationStructureKHR METHOD(GetVkBLAS)(THIS) CONST PURE;
 
-    /// Returns a Vulkan BLAS device address
+    /// Returns a Vulkan BLAS device address.
     VIRTUAL VkDeviceAddress METHOD(GetVkDeviceAddress)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

@@ -31,7 +31,7 @@
 #    define VK_NO_PROTOTYPES
 #endif
 
-// TODO: remove it when ray tracing will be released
+// TODO: remove when ray tracing is released
 #define VK_ENABLE_BETA_EXTENSIONS
 
 #include "vulkan/vulkan.h"

@@ -36,17 +36,11 @@ ShaderBindingTableVkImpl::ShaderBindingTableVkImpl(IReferenceCounters*          
                                                    RenderDeviceVkImpl*           pRenderDeviceVk,
                                                    const ShaderBindingTableDesc& Desc,
                                                    bool                          bIsDeviceInternal) :
-    TShaderBindingTableBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal},
-    m_MissShadersOffset{0},
-    m_HitGroupsOffset{0},
-    m_CallbaleShadersOffset{0},
-    m_MissShaderCount{0},
-    m_HitGroupCount{0},
-    m_CallableShaderCount{0}
+    TShaderBindingTableBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal}
 {
     ValidateDesc(Desc);
 
-    auto& Props = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
+    const auto& Props = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
 
     m_ShaderGroupHandleSize    = Props.shaderGroupHandleSize;
     m_ShaderGroupBaseAlignment = Props.shaderGroupBaseAlignment;
@@ -58,7 +52,7 @@ ShaderBindingTableVkImpl::~ShaderBindingTableVkImpl()
 
 void ShaderBindingTableVkImpl::ValidateDesc(const ShaderBindingTableDesc& Desc) const
 {
-    auto& Props = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
+    const auto& Props = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
 
     if (Desc.ShaderRecordSize + Props.shaderGroupHandleSize > Props.maxShaderGroupStride)
     {
@@ -87,7 +81,7 @@ void ShaderBindingTableVkImpl::Reset(const ShaderBindingTableDesc& Desc)
     m_Desc = Desc;
 
     // free memory
-    decltype(m_ShaderRecords) temp;
+    decltype(m_ShaderRecords) temp{};
     std::swap(temp, m_ShaderRecords);
 
     m_MissShadersOffset     = 0;
@@ -152,7 +146,7 @@ void ShaderBindingTableVkImpl::GetVkStridedBufferRegions(VkStridedBufferRegionKH
                                                          VkStridedBufferRegionKHR& HitShaderBindingTable,
                                                          VkStridedBufferRegionKHR& CallableShaderBindingTable)
 {
-    auto& Props = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
+    const auto& Props = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
 
     const VkDeviceSize Stride = m_Desc.ShaderRecordSize + Props.shaderGroupHandleSize;
     VERIFY_EXPR(Stride <= Props.maxShaderGroupStride);

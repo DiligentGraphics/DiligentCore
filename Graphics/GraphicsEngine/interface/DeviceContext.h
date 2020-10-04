@@ -725,19 +725,20 @@ DILIGENT_TYPED_ENUM(RAYTRACING_INSTANCE_FLAGS, Uint8)
     /// AZ TODO
     RAYTRACING_INSTANCE_NONE = 0,
 
-    // Disables face culling for this instance.
+    /// Disables face culling for this instance.
     RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE = 0x01,
 
-    // Indicates that the front face of the triangle for culling purposes is the face that is counter clockwise in object space relative to the ray origin.
-    // Because the facing is determined in object space, an instance transform matrix does not change the winding, but a geometry transform does.
+    /// Indicates that the front face of the triangle for culling purposes is the face that is counter
+    /// clockwise in object space relative to the ray origin. Because the facing is determined in object
+    /// space, an instance transform matrix does not change the winding, but a geometry transform does.
     RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE = 0x02,
 
-    // Causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were specified on all geometries referenced by this instance.
-    // This behavior can be overridden by the SPIR-V NoOpaqueKHR ray flag.
+    /// Causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were specified on all 
+    /// geometries referenced by this instance. This behavior can be overridden by the SPIR-V NoOpaqueKHR ray flag.
     RAYTRACING_INSTANCE_FORCE_OPAQUE = 0x04,
 
-    // causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were not specified on all geometries referenced by this instance.
-    // This behavior can be overridden by the SPIR-V OpaqueKHR ray flag.
+    /// causes this instance to act as though RAYTRACING_GEOMETRY_FLAGS_OPAQUE were not specified on all
+    /// geometries referenced by this instance. This behavior can be overridden by the SPIR-V OpaqueKHR ray flag.
     RAYTRACING_INSTANCE_FORCE_NO_OPAQUE = 0x08,
 
     RAYTRACING_INSTANCE_FLAGS_LAST = 0x08
@@ -746,8 +747,8 @@ DILIGENT_TYPED_ENUM(RAYTRACING_INSTANCE_FLAGS, Uint8)
 /// AZ TODO
 DILIGENT_TYPED_ENUM(COPY_AS_MODE, Uint8)
 {
-    // creates a direct copy of the acceleration structure specified in src into the one specified by dst.
-    // The dst acceleration structure must have been created with the same parameters as src.
+    /// Creates a direct copy of the acceleration structure specified in src into the one specified by dst.
+    /// The dst acceleration structure must have been created with the same parameters as src.
     COPY_AS_MODE_CLONE = 0,
 
     // creates a more compact version of an acceleration structure src into dst.
@@ -766,11 +767,11 @@ DILIGENT_TYPED_ENUM(RAYTRACING_GEOMETRY_FLAGS, Uint8)
     /// AZ TODO
     RAYTRACING_GEOMETRY_NONE = 0,
 
-    // Indicates that this geometry does not invoke the any-hit shaders even if present in a hit group.
+    /// Indicates that this geometry does not invoke the any-hit shaders even if present in a hit group.
     RAYTRACING_GEOMETRY_OPAQUE = 0x01,
 
-    // Indicates that the implementation must only call the any-hit shader a single time for each primitive in this geometry.
-    // If this bit is absent an implementation may invoke the any-hit shader more than once for this geometry.
+    /// Indicates that the implementation must only call the any-hit shader a single time for each primitive in this geometry.
+    /// If this bit is absent an implementation may invoke the any-hit shader more than once for this geometry.
     RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION = 0x02,
 
     RAYTRACING_GEOMETRY_FLAGS_LAST = 0x02
@@ -860,6 +861,7 @@ struct BLASBuildBoundingBoxData
 };
 typedef struct BLASBuildBoundingBoxData BLASBuildBoundingBoxData;
 
+
 /// AZ TODO
 struct BLASBuildAttribs
 {
@@ -897,8 +899,10 @@ struct BLASBuildAttribs
 };
 typedef struct BLASBuildAttribs BLASBuildAttribs;
 
+
 /// AZ TODO
-const Uint32 TLAS_INSTANCE_OFFSET_AUTO = ~0u;
+static const Uint32 TLAS_INSTANCE_OFFSET_AUTO = ~0u;
+
 
 /// AZ TODO
 struct TLASBuildInstanceData
@@ -930,6 +934,7 @@ struct TLASBuildInstanceData
 #endif
 };
 typedef struct TLASBuildInstanceData TLASBuildInstanceData;
+
 
 /// AZ TODO
 struct TLASBuildAttribs
@@ -974,6 +979,7 @@ struct TLASBuildAttribs
 };
 typedef struct TLASBuildAttribs TLASBuildAttribs;
 
+
 /// AZ TODO
 struct CopyBLASAttribs
 {
@@ -995,6 +1001,7 @@ struct CopyBLASAttribs
 #endif
 };
 typedef struct CopyBLASAttribs CopyBLASAttribs;
+
 
 /// AZ TODO
 struct CopyTLASAttribs
@@ -1018,6 +1025,7 @@ struct CopyTLASAttribs
 };
 typedef struct CopyTLASAttribs CopyTLASAttribs;
 
+
 /// AZ TODO
 struct TraceRaysAttribs
 {
@@ -1038,6 +1046,7 @@ struct TraceRaysAttribs
 #endif
 };
 typedef struct TraceRaysAttribs TraceRaysAttribs;
+
 
 #define DILIGENT_INTERFACE_NAME IDeviceContext
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"

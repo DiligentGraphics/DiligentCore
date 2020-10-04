@@ -25,44 +25,49 @@
  *  of the possibility of such damages.
  */
 
-#include "VulkanErrors.hpp"
-#include "VulkanUtilities/VulkanLogicalDevice.hpp"
 
-// for KHR ray tracing emulation
+// KHR ray tracing emulation through NVidia extension.
+// Will be deprecated after the release of KHR extension.
+
 #include <mutex>
 #include <unordered_map>
+#include <vector>
+
+#include "VulkanErrors.hpp"
+#include "VulkanUtilities/VulkanLogicalDevice.hpp"
 
 namespace VulkanUtilities
 {
 
-// KHR ray tracing emulation.
-// Will be deprecated after the release of KHR extension.
 #if DILIGENT_USE_VOLK
-static_assert(sizeof(VkAccelerationStructureKHR) == sizeof(VkAccelerationStructureNV), "not compatible with NV extension");
-static_assert(sizeof(VkDeviceAddress) == 8, "not compatible with NV extension");
+static_assert(sizeof(VkAccelerationStructureKHR) == sizeof(VkAccelerationStructureNV), "KHR is incompatible with NV extension");
+static_assert(sizeof(VkDeviceAddress) == 8, "KHR is incompatible with NV extension");
 
-static std::mutex                                    g_BufferDeviceAddressGuard;
-static std::unordered_map<VkDeviceAddress, VkBuffer> g_DeviceAddressToBuffer;
-static std::unordered_map<VkBuffer, VkDeviceAddress> g_BufferToDeviceAddress;
-static uint32_t                                      g_BufferDeviceAddressCounter = 0;
-static const VkDeviceAddress                         g_BufferMask                 = 0xFFFFFFFF00000000ull;
+namespace
+{
 
-static PFN_vkCreateBuffer              Origin_vkCreateBuffer              = nullptr;
-static PFN_vkDestroyBuffer             Origin_vkDestroyBuffer             = nullptr;
-static PFN_vkGetBufferDeviceAddressKHR Origin_vkGetBufferDeviceAddressKHR = nullptr;
+std::mutex                                    g_BufferDeviceAddressGuard;
+std::unordered_map<VkDeviceAddress, VkBuffer> g_DeviceAddressToBuffer;
+std::unordered_map<VkBuffer, VkDeviceAddress> g_BufferToDeviceAddress;
+uint32_t                                      g_BufferDeviceAddressCounter = 0;
+constexpr VkDeviceAddress                     g_BufferMask                 = 0xFFFFFFFF00000000ull;
 
-static VkResult VKAPI_CALL Wrap_vkCreateBuffer(VkDevice                     device,
-                                               const VkBufferCreateInfo*    pCreateInfo,
-                                               const VkAllocationCallbacks* pAllocator,
-                                               VkBuffer*                    pBuffer)
+PFN_vkCreateBuffer              Origin_vkCreateBuffer              = nullptr;
+PFN_vkDestroyBuffer             Origin_vkDestroyBuffer             = nullptr;
+PFN_vkGetBufferDeviceAddressKHR Origin_vkGetBufferDeviceAddressKHR = nullptr;
+
+VkResult VKAPI_CALL Wrap_vkCreateBuffer(VkDevice                     device,
+                                        const VkBufferCreateInfo*    pCreateInfo,
+                                        const VkAllocationCallbacks* pAllocator,
+                                        VkBuffer*                    pBuffer)
 {
     const_cast<VkBufferCreateInfo*>(pCreateInfo)->usage &= ~VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
     return Origin_vkCreateBuffer(device, pCreateInfo, pAllocator, pBuffer);
 }
 
-static void VKAPI_CALL Wrap_vkDestroyBuffer(VkDevice                     device,
-                                            VkBuffer                     buffer,
-                                            const VkAllocationCallbacks* pAllocator)
+void VKAPI_CALL Wrap_vkDestroyBuffer(VkDevice                     device,
+                                     VkBuffer                     buffer,
+                                     const VkAllocationCallbacks* pAllocator)
 {
     Origin_vkDestroyBuffer(device, buffer, pAllocator);
 
@@ -76,8 +81,8 @@ static void VKAPI_CALL Wrap_vkDestroyBuffer(VkDevice                     device,
     }
 }
 
-static VkDeviceAddress VKAPI_CALL Wrap_vkGetBufferDeviceAddressKHR(VkDevice                         device,
-                                                                   const VkBufferDeviceAddressInfo* pInfo)
+VkDeviceAddress VKAPI_CALL Wrap_vkGetBufferDeviceAddressKHR(VkDevice                         device,
+                                                            const VkBufferDeviceAddressInfo* pInfo)
 {
     VERIFY_EXPR(pInfo->sType == VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR);
     VERIFY_EXPR(pInfo->pNext == nullptr);
@@ -90,9 +95,9 @@ static VkDeviceAddress VKAPI_CALL Wrap_vkGetBufferDeviceAddressKHR(VkDevice     
         return iter->second;
 
     // create new device address
-    VkDeviceAddress Addr = VkDeviceAddress(++g_BufferDeviceAddressCounter) << 32;
-    g_BufferToDeviceAddress.insert_or_assign(pInfo->buffer, Addr);
-    g_DeviceAddressToBuffer.insert_or_assign(Addr, pInfo->buffer);
+    VkDeviceAddress Addr                   = VkDeviceAddress{++g_BufferDeviceAddressCounter} << 32;
+    g_BufferToDeviceAddress[pInfo->buffer] = Addr;
+    g_DeviceAddressToBuffer[Addr]          = pInfo->buffer;
     return Addr;
 }
 
@@ -101,7 +106,7 @@ struct BufferAndOffset
     VkBuffer     Buffer;
     VkDeviceSize Offset;
 };
-static BufferAndOffset DeviceAddressToBuffer(VkDeviceAddress Addr)
+BufferAndOffset DeviceAddressToBuffer(VkDeviceAddress Addr)
 {
     if (Addr == 0)
         return {VK_NULL_HANDLE, 0};
@@ -118,21 +123,21 @@ static BufferAndOffset DeviceAddressToBuffer(VkDeviceAddress Addr)
     return {iter->second, Addr & ~g_BufferMask};
 }
 
-static BufferAndOffset DeviceAddressToBuffer(const VkDeviceOrHostAddressConstKHR& Addr)
+BufferAndOffset DeviceAddressToBuffer(const VkDeviceOrHostAddressConstKHR& Addr)
 {
     return DeviceAddressToBuffer(Addr.deviceAddress);
 }
 
-static BufferAndOffset DeviceAddressToBuffer(const VkDeviceOrHostAddressKHR& Addr)
+BufferAndOffset DeviceAddressToBuffer(const VkDeviceOrHostAddressKHR& Addr)
 {
     return DeviceAddressToBuffer(Addr.deviceAddress);
 }
 
 
-static VkResult VKAPI_CALL Redirect_vkCreateAccelerationStructureKHR(VkDevice                                    device,
-                                                                     const VkAccelerationStructureCreateInfoKHR* pCreateInfo,
-                                                                     const VkAllocationCallbacks*                pAllocator,
-                                                                     VkAccelerationStructureKHR*                 pAccelerationStructure)
+VkResult VKAPI_CALL Redirect_vkCreateAccelerationStructureKHR(VkDevice                                    device,
+                                                              const VkAccelerationStructureCreateInfoKHR* pCreateInfo,
+                                                              const VkAllocationCallbacks*                pAllocator,
+                                                              VkAccelerationStructureKHR*                 pAccelerationStructure)
 {
     VERIFY_EXPR(pCreateInfo->sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR);
     VERIFY_EXPR(pCreateInfo->pNext == nullptr);
@@ -219,9 +224,9 @@ static VkResult VKAPI_CALL Redirect_vkCreateAccelerationStructureKHR(VkDevice   
     return vkCreateAccelerationStructureNV(device, &CreateInfo, pAllocator, reinterpret_cast<VkAccelerationStructureNV*>(pAccelerationStructure));
 }
 
-static void VKAPI_CALL Redirect_vkGetAccelerationStructureMemoryRequirementsKHR(VkDevice                                                device,
-                                                                                const VkAccelerationStructureMemoryRequirementsInfoKHR* pInfo,
-                                                                                VkMemoryRequirements2*                                  pMemoryRequirements)
+void VKAPI_CALL Redirect_vkGetAccelerationStructureMemoryRequirementsKHR(VkDevice                                                device,
+                                                                         const VkAccelerationStructureMemoryRequirementsInfoKHR* pInfo,
+                                                                         VkMemoryRequirements2*                                  pMemoryRequirements)
 {
     VERIFY_EXPR(pInfo->sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR);
     VERIFY_EXPR(pInfo->pNext == nullptr);
@@ -236,16 +241,16 @@ static void VKAPI_CALL Redirect_vkGetAccelerationStructureMemoryRequirementsKHR(
     return vkGetAccelerationStructureMemoryRequirementsNV(device, &Info, pMemoryRequirements);
 }
 
-static VkResult VKAPI_CALL Redirect_vkBindAccelerationStructureMemoryKHR(VkDevice                                        device,
-                                                                         uint32_t                                        bindInfoCount,
-                                                                         const VkBindAccelerationStructureMemoryInfoKHR* pBindInfos)
+VkResult VKAPI_CALL Redirect_vkBindAccelerationStructureMemoryKHR(VkDevice                                        device,
+                                                                  uint32_t                                        bindInfoCount,
+                                                                  const VkBindAccelerationStructureMemoryInfoKHR* pBindInfos)
 {
     VERIFY_EXPR(pBindInfos->sType == VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV);
     return vkBindAccelerationStructureMemoryNV(device, bindInfoCount, pBindInfos);
 }
 
-static VkDeviceAddress VKAPI_CALL Redirect_vkGetAccelerationStructureDeviceAddressKHR(VkDevice                                           device,
-                                                                                      const VkAccelerationStructureDeviceAddressInfoKHR* pInfo)
+VkDeviceAddress VKAPI_CALL Redirect_vkGetAccelerationStructureDeviceAddressKHR(VkDevice                                           device,
+                                                                               const VkAccelerationStructureDeviceAddressInfoKHR* pInfo)
 {
     VERIFY_EXPR(pInfo->sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR);
     VERIFY_EXPR(pInfo->pNext == nullptr);
@@ -255,10 +260,10 @@ static VkDeviceAddress VKAPI_CALL Redirect_vkGetAccelerationStructureDeviceAddre
     return result;
 }
 
-static void VKAPI_CALL Redirect_vkCmdBuildAccelerationStructureKHR(VkCommandBuffer                                         commandBuffer,
-                                                                   uint32_t                                                infoCount,
-                                                                   const VkAccelerationStructureBuildGeometryInfoKHR*      pInfos,
-                                                                   const VkAccelerationStructureBuildOffsetInfoKHR* const* ppOffsetInfos)
+void VKAPI_CALL Redirect_vkCmdBuildAccelerationStructureKHR(VkCommandBuffer                                         commandBuffer,
+                                                            uint32_t                                                infoCount,
+                                                            const VkAccelerationStructureBuildGeometryInfoKHR*      pInfos,
+                                                            const VkAccelerationStructureBuildOffsetInfoKHR* const* ppOffsetInfos)
 {
     std::vector<VkGeometryNV> Geometries;
 
@@ -384,8 +389,8 @@ static void VKAPI_CALL Redirect_vkCmdBuildAccelerationStructureKHR(VkCommandBuff
     }
 }
 
-static void VKAPI_CALL Redirect_vkCmdCopyAccelerationStructureKHR(VkCommandBuffer                           commandBuffer,
-                                                                  const VkCopyAccelerationStructureInfoKHR* pInfo)
+void VKAPI_CALL Redirect_vkCmdCopyAccelerationStructureKHR(VkCommandBuffer                           commandBuffer,
+                                                           const VkCopyAccelerationStructureInfoKHR* pInfo)
 {
     VERIFY_EXPR(pInfo->sType == VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR);
     VERIFY_EXPR(pInfo->pNext == nullptr);
@@ -393,14 +398,14 @@ static void VKAPI_CALL Redirect_vkCmdCopyAccelerationStructureKHR(VkCommandBuffe
     vkCmdCopyAccelerationStructureNV(commandBuffer, pInfo->dst, pInfo->src, pInfo->mode);
 }
 
-static void VKAPI_CALL Redirect_vkCmdTraceRaysKHR(VkCommandBuffer                 commandBuffer,
-                                                  const VkStridedBufferRegionKHR* pRaygenShaderBindingTable,
-                                                  const VkStridedBufferRegionKHR* pMissShaderBindingTable,
-                                                  const VkStridedBufferRegionKHR* pHitShaderBindingTable,
-                                                  const VkStridedBufferRegionKHR* pCallableShaderBindingTable,
-                                                  uint32_t                        width,
-                                                  uint32_t                        height,
-                                                  uint32_t                        depth)
+void VKAPI_CALL Redirect_vkCmdTraceRaysKHR(VkCommandBuffer                 commandBuffer,
+                                           const VkStridedBufferRegionKHR* pRaygenShaderBindingTable,
+                                           const VkStridedBufferRegionKHR* pMissShaderBindingTable,
+                                           const VkStridedBufferRegionKHR* pHitShaderBindingTable,
+                                           const VkStridedBufferRegionKHR* pCallableShaderBindingTable,
+                                           uint32_t                        width,
+                                           uint32_t                        height,
+                                           uint32_t                        depth)
 {
     vkCmdTraceRaysNV(commandBuffer,
                      pRaygenShaderBindingTable->buffer, pRaygenShaderBindingTable->offset,
@@ -410,22 +415,22 @@ static void VKAPI_CALL Redirect_vkCmdTraceRaysKHR(VkCommandBuffer               
                      width, height, depth);
 }
 
-static VkResult VKAPI_CALL Redirect_vkGetRayTracingShaderGroupHandlesKHR(VkDevice   device,
-                                                                         VkPipeline pipeline,
-                                                                         uint32_t   firstGroup,
-                                                                         uint32_t   groupCount,
-                                                                         size_t     dataSize,
-                                                                         void*      pData)
+VkResult VKAPI_CALL Redirect_vkGetRayTracingShaderGroupHandlesKHR(VkDevice   device,
+                                                                  VkPipeline pipeline,
+                                                                  uint32_t   firstGroup,
+                                                                  uint32_t   groupCount,
+                                                                  size_t     dataSize,
+                                                                  void*      pData)
 {
     return vkGetRayTracingShaderGroupHandlesNV(device, pipeline, firstGroup, groupCount, dataSize, pData);
 }
 
-static VkResult VKAPI_CALL Redirect_vkCreateRayTracingPipelinesKHR(VkDevice                                 device,
-                                                                   VkPipelineCache                          pipelineCache,
-                                                                   uint32_t                                 createInfoCount,
-                                                                   const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
-                                                                   const VkAllocationCallbacks*             pAllocator,
-                                                                   VkPipeline*                              pPipelines)
+VkResult VKAPI_CALL Redirect_vkCreateRayTracingPipelinesKHR(VkDevice                                 device,
+                                                            VkPipelineCache                          pipelineCache,
+                                                            uint32_t                                 createInfoCount,
+                                                            const VkRayTracingPipelineCreateInfoKHR* pCreateInfos,
+                                                            const VkAllocationCallbacks*             pAllocator,
+                                                            VkPipeline*                              pPipelines)
 {
     std::vector<VkRayTracingPipelineCreateInfoNV>    Infos;
     std::vector<VkRayTracingShaderGroupCreateInfoNV> Groups;
@@ -487,6 +492,8 @@ static VkResult VKAPI_CALL Redirect_vkCreateRayTracingPipelinesKHR(VkDevice     
 
     return vkCreateRayTracingPipelinesNV(device, pipelineCache, createInfoCount, Infos.data(), pAllocator, pPipelines);
 }
+
+} // namespace
 
 void EnableRayTracingKHRviaNV()
 {

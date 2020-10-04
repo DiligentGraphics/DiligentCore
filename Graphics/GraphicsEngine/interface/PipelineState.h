@@ -354,6 +354,7 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Compute pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_COMPUTE
     ComputePipelineDesc ComputePipeline;
     
+    // TODO (AZ): use pointer
     /// Ray tracing pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_RAY_TRACING.
     RayTracingPipelineDesc RayTracingPipeline;
     

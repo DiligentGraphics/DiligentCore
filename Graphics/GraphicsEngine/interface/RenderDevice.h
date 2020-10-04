@@ -216,20 +216,42 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                            const FramebufferDesc REF Desc,
                                            IFramebuffer**            ppFramebuffer) PURE;
 
-    /// AZ TODO
+
+    /// Creates a bottom-level acceleration structure object (BLAS).
+
+    /// \param [in]  Desc    - BLAS description, see Diligent::BottomLevelASDesc for details.
+    /// \param [out] ppBLAS  - Address of the memory location where the pointer to the
+    ///                        BLAS interface will be stored.
+    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        one reference.
     VIRTUAL void METHOD(CreateBLAS)(THIS_
                                     const BottomLevelASDesc REF Desc,
                                     IBottomLevelAS**            ppBLAS) PURE;
     
-    /// AZ TODO
+
+    /// Creates a top-level acceleration structure object (TLAS).
+
+    /// \param [in]  Desc    - TLAS description, see Diligent::TopLevelASDesc for details.
+    /// \param [out] ppTLAS  - Address of the memory location where the pointer to the
+    ///                        TLAS interface will be stored.
+    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        one reference.
     VIRTUAL void METHOD(CreateTLAS)(THIS_
                                     const TopLevelASDesc REF Desc,
                                     ITopLevelAS**            ppTLAS) PURE;
     
-    /// AZ TODO
+    
+    /// Creates a shader resource binding table object (SBT).
+
+    /// \param [in]  Desc    - SBT description, see Diligent::ShaderBindingTableDesc for details.
+    /// \param [out] ppSBT   - Address of the memory location where the pointer to the
+    ///                        SBT interface will be stored.
+    ///                        The function calls AddRef(), so that the new object will contain
+    ///                        one reference.
     VIRTUAL void METHOD(CreateSBT)(THIS_
                                    const ShaderBindingTableDesc REF Desc,
                                    IShaderBindingTable**            ppSBT) PURE;
+
 
     /// Gets the device capabilities, see Diligent::DeviceCaps for details
     VIRTUAL const DeviceCaps REF METHOD(GetDeviceCaps)(THIS) CONST PURE;

@@ -444,7 +444,7 @@ public:
 
     TEXTURE_FORMAT operator[](VkFormat VkFmt) const
     {
-        if (VkFmt < _countof(m_VkFmtToTexFmtMap))
+        if (VkFmt < VK_FORMAT_RANGE_SIZE)
         {
             return m_VkFmtToTexFmtMap[VkFmt];
         }
@@ -456,7 +456,7 @@ public:
     }
 
 private:
-    TEXTURE_FORMAT                               m_VkFmtToTexFmtMap[VK_FORMAT_ASTC_12x12_SRGB_BLOCK + 1] = {};
+    TEXTURE_FORMAT                               m_VkFmtToTexFmtMap[VK_FORMAT_RANGE_SIZE] = {};
     std::unordered_map<VkFormat, TEXTURE_FORMAT> m_VkFmtToTexFmtMapExt;
 };
 
@@ -640,7 +640,7 @@ VkIndexType TypeToVkIndexType(VALUE_TYPE IndexType)
         case VT_UNDEFINED: return VK_INDEX_TYPE_NONE_KHR; // only for ray tracing
         case VT_UINT16:    return VK_INDEX_TYPE_UINT16;
         case VT_UINT32:    return VK_INDEX_TYPE_UINT32;
-            // clang-format on
+        // clang-format on
         default:
             UNEXPECTED("Unexpected index type");
             return VK_INDEX_TYPE_UINT32;
@@ -1167,7 +1167,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
     //VK_ACCESS_COLOR_ATTACHMENT_READ_NONCOHERENT_BIT_EXT
     //VK_ACCESS_SHADING_RATE_IMAGE_READ_BIT_NV
 
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1332,7 +1332,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
     //VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
     //VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
 
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -1366,7 +1366,7 @@ VkImageLayout ResourceStateToVkImageLayout(RESOURCE_STATE StateFlag, bool IsInsi
 
 RESOURCE_STATE VkImageLayoutToResourceState(VkImageLayout Layout)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
     switch (Layout)
     {
         // clang-format off
@@ -1530,7 +1530,8 @@ VkAccessFlags AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags)
 
 VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureFlags(RAYTRACING_BUILD_AS_FLAGS Flags)
 {
-    static_assert(RAYTRACING_BUILD_AS_FLAGS_LAST == 0x10, "AZ TODO");
+    static_assert(RAYTRACING_BUILD_AS_FLAGS_LAST == RAYTRACING_BUILD_AS_LOW_MEMORY,
+                  "Please update the switch below to handle the new ray tracing build flag");
 
     VkBuildAccelerationStructureFlagsKHR Result = 0;
     for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
@@ -1538,7 +1539,7 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
         if ((Flags & Bit) != Bit)
             continue;
 
-        switch (RAYTRACING_BUILD_AS_FLAGS(Bit))
+        switch (static_cast<RAYTRACING_BUILD_AS_FLAGS>(Bit))
         {
             // clang-format off
             case RAYTRACING_BUILD_AS_ALLOW_UPDATE:      Result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;      break;
@@ -1546,8 +1547,8 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
             case RAYTRACING_BUILD_AS_PREFER_FAST_TRACE: Result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR; break;
             case RAYTRACING_BUILD_AS_PREFER_FAST_BUILD: Result |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR; break;
             case RAYTRACING_BUILD_AS_LOW_MEMORY:        Result |= VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR;        break;
+            // clang-format on
             default: UNEXPECTED("unknown build AS flag");
-                // clang-format on
         }
     }
     return Result;
@@ -1555,7 +1556,8 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
 
 VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags)
 {
-    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == 0x02, "AZ TODO");
+    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION,
+                  "Please update the switch below to handle the new ray tracing geometry flag");
 
     VkGeometryFlagsKHR Result = 0;
     for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
@@ -1563,13 +1565,13 @@ VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flag
         if ((Flags & Bit) != Bit)
             continue;
 
-        switch (RAYTRACING_GEOMETRY_FLAGS(Bit))
+        switch (static_cast<RAYTRACING_GEOMETRY_FLAGS>(Bit))
         {
             // clang-format off
             case RAYTRACING_GEOMETRY_OPAQUE:                          Result |= VK_GEOMETRY_OPAQUE_BIT_KHR; break;
             case RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR; break;
+            // clang-format on
             default: UNEXPECTED("unknown geometry flag");
-                // clang-format on
         }
     }
     return Result;
@@ -1577,7 +1579,8 @@ VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flag
 
 VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags)
 {
-    static_assert(RAYTRACING_INSTANCE_FLAGS_LAST == 0x08, "AZ TODO");
+    static_assert(RAYTRACING_INSTANCE_FLAGS_LAST == RAYTRACING_INSTANCE_FORCE_NO_OPAQUE,
+                  "Please update the switch below to handle the new ray tracing instance flag");
 
     VkGeometryInstanceFlagsKHR Result = 0;
     for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
@@ -1585,15 +1588,15 @@ VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INS
         if ((Flags & Bit) != Bit)
             continue;
 
-        switch (RAYTRACING_INSTANCE_FLAGS(Bit))
+        switch (static_cast<RAYTRACING_INSTANCE_FLAGS>(Bit))
         {
             // clang-format off
-            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    return VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-            case RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE: return VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR;
-            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    return VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR;
-            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 return VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR;
+            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    Result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR; break;
+            case RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE: Result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR; break;
+            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    Result |= VK_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR; break;
+            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 Result |= VK_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR; break;
+            // clang-format on
             default: UNEXPECTED("unknown instance flag");
-                // clang-format on
         }
     }
     return Result;
@@ -1601,17 +1604,18 @@ VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INS
 
 VkCopyAccelerationStructureModeKHR CopyASModeToVkCopyAccelerationStructureMode(COPY_AS_MODE Mode)
 {
-    static_assert(COPY_AS_MODE_LAST == 0, "AZ TODO");
+    static_assert(COPY_AS_MODE_LAST == COPY_AS_MODE_CLONE,
+                  "Please update the switch below to handle the new copy AS mode");
 
     switch (Mode)
     {
         // clang-format off
         case COPY_AS_MODE_CLONE: return VK_COPY_ACCELERATION_STRUCTURE_MODE_CLONE_KHR;
-            // clang-format on
+        // clang-format on
+        default:
+            UNEXPECTED("unknown AS copy mode");
+            return static_cast<VkCopyAccelerationStructureModeKHR>(0);
     }
-
-    UNEXPECTED("unknown AS copy mode");
-    return VkCopyAccelerationStructureModeKHR(0);
 }
 
 } // namespace Diligent

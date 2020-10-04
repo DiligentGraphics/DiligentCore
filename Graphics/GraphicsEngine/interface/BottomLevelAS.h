@@ -49,15 +49,15 @@ static const INTERFACE_ID IID_BottomLevelAS =
 /// AZ TODO
 struct BLASTriangleDesc
 {
-    /// The geometry name.
-    /// Name used only to map BLASBuildTriangleData to this geometry.
+    /// Geometry name.
+    /// The name is used to map BLASBuildTriangleData to this geometry.
     const char*               GeometryName          DEFAULT_INITIALIZER(nullptr);
 
     /// The maximum vertex count for this geometry.
-    /// Current number of vertices defined in BLASBuildTriangleData::VertexCount.
+    /// Current number of vertices is defined in BLASBuildTriangleData::VertexCount.
     Uint32                    MaxVertexCount        DEFAULT_INITIALIZER(0);
 
-    /// The vertices value type of this geometry.
+    /// The type of vertices in this geometry.
     /// Float, Int16 are supported.
     VALUE_TYPE                VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
@@ -66,11 +66,11 @@ struct BLASTriangleDesc
     Uint8                     VertexComponentCount  DEFAULT_INITIALIZER(0);
 
     /// The maximum index count for this geometry.
-    /// Current number of indices defined in BLASBuildTriangleData::IndexCount.
-    /// Must be 0 if IndexType is VT_UNDEFINED and greater than zero otherwise.
+    /// The current number of indices is defined in BLASBuildTriangleData::IndexCount.
+    /// It must be 0 if IndexType is VT_UNDEFINED and greater than zero otherwise.
     Uint32                    MaxIndexCount         DEFAULT_INITIALIZER(0);
 
-    /// The indices type of this geometry.
+    /// Index type of this geometry.
     /// Must be VT_UINT16, VT_UINT32 or VT_UNDEFINED.
     VALUE_TYPE                IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED);
 
@@ -90,8 +90,8 @@ typedef struct BLASTriangleDesc BLASTriangleDesc;
 /// AZ TODO
 struct BLASBoundingBoxDesc
 {
-    /// The geometry name.
-    /// Name used only to map BLASBuildBoundingBoxData to this geometry.
+    /// Geometry name.
+    /// The name is used to map BLASBuildBoundingBoxData to this geometry.
     const char*               GeometryName  DEFAULT_INITIALIZER(nullptr);
     
     /// The maximum AABBs count.
@@ -127,7 +127,8 @@ DILIGENT_TYPED_ENUM(RAYTRACING_BUILD_AS_FLAGS, Uint8)
     /// Indicates that the given acceleration structure build should prioritize build time over trace performance.
     RAYTRACING_BUILD_AS_PREFER_FAST_BUILD = 0x08,
 
-    /// Indicates that this acceleration structure should minimize the size of the scratch memory and the final result build, potentially at the expense of build time or trace performance.
+    /// Indicates that this acceleration structure should minimize the size of the scratch memory and the final
+    /// result build, potentially at the expense of build time or trace performance.
     RAYTRACING_BUILD_AS_LOW_MEMORY        = 0x10,
 
     RAYTRACING_BUILD_AS_FLAGS_LAST        = 0x10
@@ -144,16 +145,16 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Array of triangle geometry descriptions.
     const BLASTriangleDesc*    pTriangles       DEFAULT_INITIALIZER(nullptr);
 
-    /// Number of triangle geometries.
+    /// The number of triangle geometries in pTriangles array.
     Uint32                     TriangleCount    DEFAULT_INITIALIZER(0);
 
     /// Array of AABB geometry descriptions.
     const BLASBoundingBoxDesc* pBoxes           DEFAULT_INITIALIZER(nullptr);
 
-    /// Number of AABB geometries;
+    /// The number of AABB geometries in pBoxes array.
     Uint32                     BoxCount         DEFAULT_INITIALIZER(0);
     
-    /// AZ TODO
+    /// Ray tracing build flags, see Diligent::RAYTRACING_BUILD_AS_FLAGS.
     RAYTRACING_BUILD_AS_FLAGS  Flags            DEFAULT_INITIALIZER(RAYTRACING_BUILD_AS_NONE);
     
     /// Defines which command queues this BLAS can be used with

@@ -44,7 +44,7 @@ public:
         VkPhysicalDevice8BitStorageFeaturesKHR         Storage8Bit         = {};
         VkPhysicalDeviceShaderFloat16Int8FeaturesKHR   ShaderFloat16Int8   = {};
         VkPhysicalDeviceRayTracingFeaturesKHR          RayTracing          = {};
-        bool                                           RayTracingNV        = false; // indicates that KHR extension emulated by NV extension
+        bool                                           RayTracingNV        = false; // indicates that KHR extension is emulated by NV extension
         VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddress = {};
         VkPhysicalDeviceDescriptorIndexingFeaturesEXT  DescriptorIndexing  = {};
     };

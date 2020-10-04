@@ -59,7 +59,7 @@ public:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASVk, TBottomLevelASBase);
 
 private:
-    VkDeviceAddress                         m_DeviceAddress;
+    VkDeviceAddress                         m_DeviceAddress = 0;
     VulkanUtilities::AccelStructWrapper     m_VulkanBLAS;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
     ScratchBufferSizes                      m_ScratchSize;

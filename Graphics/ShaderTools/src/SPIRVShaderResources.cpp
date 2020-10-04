@@ -150,7 +150,7 @@ ShaderResourceDesc SPIRVShaderResourceAttribs::GetResourceDesc() const
 
 static spv::ExecutionModel ShaderTypeToExecutionModel(SHADER_TYPE ShaderType)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please handle the new shader type in the switch below");
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please handle the new shader type in the switch below");
     switch (ShaderType)
     {
         // clang-format off

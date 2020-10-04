@@ -45,16 +45,19 @@ static const INTERFACE_ID IID_ShaderBindingTableVk =
     IShaderBindingTableInclusiveMethods;      \
     IShaderBindingTableVkMethods ShaderBindingTableVk
 
+// clang-format off
 /// Exposes Vulkan-specific functionality of a Shader binding table object.
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTableVk, IShaderBindingTable)
 {
     /// AZ TODO
-    VIRTUAL void METHOD(GetVkStridedBufferRegions)(VkStridedBufferRegionKHR & RaygenShaderBindingTable,
-                                                   VkStridedBufferRegionKHR & MissShaderBindingTable,
-                                                   VkStridedBufferRegionKHR & HitShaderBindingTable,
-                                                   VkStridedBufferRegionKHR & CallableShaderBindingTable) PURE;
+    VIRTUAL void METHOD(GetVkStridedBufferRegions)(THIS_
+                                                   VkStridedBufferRegionKHR REF RaygenShaderBindingTable,
+                                                   VkStridedBufferRegionKHR REF MissShaderBindingTable,
+                                                   VkStridedBufferRegionKHR REF HitShaderBindingTable,
+                                                   VkStridedBufferRegionKHR REF CallableShaderBindingTable) PURE;
 };
 DILIGENT_END_INTERFACE
+// clang-format on
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 

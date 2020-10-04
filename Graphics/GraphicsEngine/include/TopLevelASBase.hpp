@@ -52,12 +52,15 @@ class TopLevelASBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplTy
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, TopLevelASDesc>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this BLAS.
-    /// \param pDevice - pointer to the device.
-    /// \param Desc - TLAS description.
+    /// \param pRefCounters      - reference counters object that controls the lifetime of this BLAS.
+    /// \param pDevice           - pointer to the device.
+    /// \param Desc              - TLAS description.
     /// \param bIsDeviceInternal - flag indicating if the BLAS is an internal device object and
     ///							   must not keep a strong reference to the device.
-    TopLevelASBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const TopLevelASDesc& Desc, bool bIsDeviceInternal = false) :
+    TopLevelASBase(IReferenceCounters*   pRefCounters,
+                   RenderDeviceImplType* pDevice,
+                   const TopLevelASDesc& Desc,
+                   bool                  bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
         ValidateTopLevelASDesc(Desc);
@@ -89,7 +92,7 @@ public:
             Desc.contributionToHitGroupIndex = inst.contributionToHitGroupIndex;
             Desc.pBLAS                       = inst.pBLAS;
 
-            bool IsUniqueName = m_Instances.insert_or_assign(StringView{NameCopy}, Desc).second;
+            bool IsUniqueName = m_Instances.emplace(StringView{NameCopy}, Desc).second;
             if (!IsUniqueName)
                 LOG_ERROR_AND_THROW("Instance name must be unique!");
         }
@@ -104,12 +107,14 @@ public:
         auto iter = m_Instances.find(StringView{Name});
         if (iter != m_Instances.end())
         {
-            Result.contributionToHitGroupIndex = iter->second.contributionToHitGroupIndex;
+            Result.ContributionToHitGroupIndex = iter->second.contributionToHitGroupIndex;
             Result.pBLAS                       = iter->second.pBLAS;
-            return Result;
+        }
+        else
+        {
+            UNEXPECTED("Can't find instance with the specified name ('", Name, "')");
         }
 
-        UNEXPECTED("Can't find instance with specified name");
         return Result;
     }
 
@@ -123,9 +128,10 @@ protected:
             LOG_TLAS_ERROR_AND_THROW("MaxInstanceCount must not be zero");
         }
 
-        if (!!(Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) + !!(Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD))
+        if ((Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) != 0 ||
+            (Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD) != 0)
         {
-            LOG_TLAS_ERROR_AND_THROW("Used incompatible flags: RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD");
+            LOG_TLAS_ERROR_AND_THROW("RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD are invalid");
         }
 
 #undef LOG_TLAS_ERROR_AND_THROW
@@ -141,7 +147,7 @@ protected:
     };
 
     StringPool                         m_StringPool;
-    std::map<StringView, InstanceDesc> m_Instances;
+    std::map<StringView, InstanceDesc> m_Instances; // TODO(AZ): use unordered_map?
 };
 
 } // namespace Diligent

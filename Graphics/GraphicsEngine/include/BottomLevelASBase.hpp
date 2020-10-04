@@ -30,12 +30,14 @@
 /// \file
 /// Implementation of the Diligent::BottomLevelASBase template class
 
+#include <map>
+#include <memory>
+
 #include "BottomLevelAS.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
 #include "StringPool.hpp"
 #include "StringView.hpp"
-#include <map>
 
 namespace Diligent
 {
@@ -52,27 +54,24 @@ class BottomLevelASBase : public DeviceObjectBase<BaseInterface, RenderDeviceImp
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, BottomLevelASDesc>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this BLAS.
-    /// \param pDevice - pointer to the device.
-    /// \param Desc - BLAS description.
+    /// \param pRefCounters      - reference counters object that controls the lifetime of this BLAS.
+    /// \param pDevice           - pointer to the device.
+    /// \param Desc              - BLAS description.
     /// \param bIsDeviceInternal - flag indicating if the BLAS is an internal device object and
     ///							   must not keep a strong reference to the device.
-    BottomLevelASBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const BottomLevelASDesc& Desc, bool bIsDeviceInternal = false) :
+    BottomLevelASBase(IReferenceCounters*      pRefCounters,
+                      RenderDeviceImplType*    pDevice,
+                      const BottomLevelASDesc& Desc,
+                      bool                     bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
         ValidateBottomLevelASDesc(Desc);
 
-        // Memory must be released even if exception was thrown.
-        struct MemOwner
-        {
-            void* ptr = nullptr;
-
-            ~MemOwner()
-            {
-                if (ptr != nullptr)
-                    GetRawAllocator().Free(ptr);
-            }
-        } memOwner;
+        // Memory must be released if an exception is thrown.
+        auto RawMemDeleter = [](void* ptr) {
+            if (ptr != nullptr)
+                GetRawAllocator().Free(ptr);
+        };
 
         if (Desc.pTriangles != nullptr)
         {
@@ -87,12 +86,12 @@ public:
 
             m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
 
-            auto* pTriangles = ALLOCATE(GetRawAllocator(), "Memory for BLASTriangleDesc array", BLASTriangleDesc, Desc.TriangleCount);
-            memOwner.ptr     = pTriangles;
+            std::unique_ptr<BLASTriangleDesc[], decltype(RawMemDeleter)> pTriangles{
+                ALLOCATE(GetRawAllocator(), "Memory for BLASTriangleDesc array", BLASTriangleDesc, Desc.TriangleCount),
+                RawMemDeleter};
 
-            std::memcpy(pTriangles, Desc.pTriangles, sizeof(*Desc.pTriangles) * Desc.TriangleCount);
-            this->m_Desc.pTriangles = pTriangles;
-            this->m_Desc.pBoxes     = nullptr;
+            std::memcpy(pTriangles.get(), Desc.pTriangles, sizeof(*Desc.pTriangles) * Desc.TriangleCount);
+            this->m_Desc.pBoxes = nullptr;
 
             // copy strings
             for (Uint32 i = 0; i < Desc.TriangleCount; ++i)
@@ -102,6 +101,7 @@ public:
                 if (!IsUniqueName)
                     LOG_ERROR_AND_THROW("Geometry name must be unique!");
             }
+            this->m_Desc.pTriangles = pTriangles.release();
         }
         else if (Desc.pBoxes != nullptr)
         {
@@ -116,11 +116,11 @@ public:
 
             m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
 
-            auto* pBoxes = ALLOCATE(GetRawAllocator(), "Memory for BLASBoundingBoxDesc array", BLASBoundingBoxDesc, Desc.BoxCount);
-            memOwner.ptr = pBoxes;
+            std::unique_ptr<BLASBoundingBoxDesc[], decltype(RawMemDeleter)> pBoxes{
+                ALLOCATE(GetRawAllocator(), "Memory for BLASBoundingBoxDesc array", BLASBoundingBoxDesc, Desc.BoxCount),
+                RawMemDeleter};
 
-            std::memcpy(pBoxes, Desc.pBoxes, sizeof(*Desc.pBoxes) * Desc.BoxCount);
-            this->m_Desc.pBoxes     = pBoxes;
+            std::memcpy(pBoxes.get(), Desc.pBoxes, sizeof(*Desc.pBoxes) * Desc.BoxCount);
             this->m_Desc.pTriangles = nullptr;
 
             // copy strings
@@ -131,10 +131,8 @@ public:
                 if (!IsUniqueName)
                     LOG_ERROR_AND_THROW("Geometry name must be unique!");
             }
+            this->m_Desc.pBoxes = pBoxes.release();
         }
-
-        // Constructor completed successfully and memory will be released in destructor.
-        memOwner.ptr = nullptr;
     }
 
     ~BottomLevelASBase()
@@ -168,7 +166,7 @@ protected:
 
         if (!((Desc.pBoxes != nullptr) ^ (Desc.pTriangles != nullptr)))
         {
-            LOG_BLAS_ERROR_AND_THROW("Only one of pTriangles and pBoxes must be defined");
+            LOG_BLAS_ERROR_AND_THROW("Exactly one of pTriangles and pBoxes must be defined");
         }
 
         if (Desc.pBoxes == nullptr && Desc.BoxCount > 0)
@@ -187,7 +185,7 @@ protected:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
 
 protected:
-    std::map<StringView, Uint32> m_NameToIndex;
+    std::map<StringView, Uint32> m_NameToIndex; // TODO (AZ): use unordered_map?
     StringPool                   m_StringPool;
 };
 

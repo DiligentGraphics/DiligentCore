@@ -30,12 +30,13 @@
 /// \file
 /// Implementation of the Diligent::ShaderBindingTableBase template class
 
+#include <map>
+
 #include "ShaderBindingTable.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
 #include "StringPool.hpp"
 #include "StringView.hpp"
-#include <map>
 
 namespace Diligent
 {
@@ -52,12 +53,15 @@ class ShaderBindingTableBase : public DeviceObjectBase<BaseInterface, RenderDevi
 public:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderBindingTableDesc>;
 
-    /// \param pRefCounters - reference counters object that controls the lifetime of this SBT.
-    /// \param pDevice - pointer to the device.
-    /// \param Desc - SBT description.
+    /// \param pRefCounters      - reference counters object that controls the lifetime of this SBT.
+    /// \param pDevice           - pointer to the device.
+    /// \param Desc              - SBT description.
     /// \param bIsDeviceInternal - flag indicating if the BLAS is an internal device object and
     ///							   must not keep a strong reference to the device.
-    ShaderBindingTableBase(IReferenceCounters* pRefCounters, RenderDeviceImplType* pDevice, const ShaderBindingTableDesc& Desc, bool bIsDeviceInternal = false) :
+    ShaderBindingTableBase(IReferenceCounters*           pRefCounters,
+                           RenderDeviceImplType*         pDevice,
+                           const ShaderBindingTableDesc& Desc,
+                           bool                          bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
         ValidateShaderBindingTableDesc(Desc);
@@ -74,12 +78,12 @@ protected:
 
         if (Desc.pPSO == nullptr)
         {
-            LOG_SBT_ERROR_AND_THROW("PipelineState must not be null");
+            LOG_SBT_ERROR_AND_THROW("pPSO must not be null");
         }
 
         if (Desc.pPSO->GetDesc().PipelineType != PIPELINE_TYPE_RAY_TRACING)
         {
-            LOG_SBT_ERROR_AND_THROW("PipelineState must be ray tracing pipeline");
+            LOG_SBT_ERROR_AND_THROW("pPSO must be ray tracing pipeline");
         }
 
 #undef LOG_SBT_ERROR_AND_THROW
@@ -88,9 +92,9 @@ protected:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTable, TDeviceObjectBase)
 
 protected:
-    std::map<StringView, Uint32>           m_NameToIndex;
+    std::map<StringView, Uint32>           m_NameToIndex; // TODO (AZ): use unordered_map?
     StringPool                             m_StringPool;
-    std::map<StringView, TLASInstanceDesc> m_Instances;
+    std::map<StringView, TLASInstanceDesc> m_Instances; // TODO (AZ): use unordered_map?
 };
 
 } // namespace Diligent

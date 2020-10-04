@@ -273,7 +273,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         auto RayTracingFeats          = DeiceExtFeatures.RayTracing;
         auto BufferDeviceAddressFeats = DeiceExtFeatures.BufferDeviceAddress;
         auto DescriptorIndexingFeats  = DeiceExtFeatures.DescriptorIndexing;
-        ENABLE_FEATURE(RayTracingFeats.rayTracing != VK_FALSE || DeiceExtFeatures.RayTracingNV, MeshShaders, "Ray tracing are");
+        ENABLE_FEATURE(RayTracingFeats.rayTracing != VK_FALSE || DeiceExtFeatures.RayTracingNV, RayTracing, "Ray tracing is");
 #undef FeatureSupport
 
 
@@ -417,6 +417,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                     NextExt  = &DescriptorIndexingFeats.pNext;
                     *NextExt = &BufferDeviceAddressFeats;
                     NextExt  = &BufferDeviceAddressFeats.pNext;
+                }
+                else
+                {
+                    UNEXPECTED("Either KHR or NV extension must be enabled");
                 }
             }
 

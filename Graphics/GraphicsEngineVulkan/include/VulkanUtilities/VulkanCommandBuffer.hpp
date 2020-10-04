@@ -147,7 +147,7 @@ public:
 
         vkCmdDrawMeshTasksNV(m_VkCmdBuffer, TaskCount, FirstTask);
 #else
-        UNSUPPORTED("DrawMesh is not supported when vulkan library linked statically");
+        UNSUPPORTED("DrawMesh is not supported when vulkan library is linked statically");
 #endif
     }
 
@@ -160,7 +160,7 @@ public:
 
         vkCmdDrawMeshTasksIndirectNV(m_VkCmdBuffer, Buffer, Offset, DrawCount, Stride);
 #else
-        UNSUPPORTED("DrawMeshIndirect is not supported when vulkan library linked statically");
+        UNSUPPORTED("DrawMeshIndirect is not supported when vulkan library is linked statically");
 #endif
     }
 
@@ -577,7 +577,7 @@ public:
 #if DILIGENT_USE_VOLK
         vkCmdBuildAccelerationStructureKHR(m_VkCmdBuffer, infoCount, pInfos, ppOffsetInfos);
 #else
-        UNSUPPORTED("Ray tracing is not supported when vulkan library linked statically");
+        UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
 #endif
     }
 
@@ -586,7 +586,7 @@ public:
 #if DILIGENT_USE_VOLK
         vkCmdCopyAccelerationStructureKHR(m_VkCmdBuffer, &Info);
 #else
-        UNSUPPORTED("Ray tracing is not supported when vulkan library linked statically");
+        UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
 #endif
     }
 
@@ -601,7 +601,7 @@ public:
 #if DILIGENT_USE_VOLK
         vkCmdTraceRaysKHR(m_VkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, width, height, depth);
 #else
-        UNSUPPORTED("Ray tracing is not supported when vulkan library linked statically");
+        UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
 #endif
     }
 

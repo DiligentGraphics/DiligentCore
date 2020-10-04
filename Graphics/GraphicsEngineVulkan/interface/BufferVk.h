@@ -63,7 +63,7 @@ DILIGENT_BEGIN_INTERFACE(IBufferVk, IBuffer)
     /// returns Vulkan access flags corresponding to the state. If the state is unknown, returns 0.
     VIRTUAL VkAccessFlags METHOD(GetAccessFlags)(THIS) CONST PURE;
 
-    /// Returns a vulkan device address
+    /// Returns a Vulkan device address.
     VIRTUAL VkDeviceAddress METHOD(GetVkDeviceAddress)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE

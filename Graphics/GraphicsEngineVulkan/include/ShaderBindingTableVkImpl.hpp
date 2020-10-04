@@ -96,17 +96,15 @@ private:
 private:
     RefCntAutoPtr<BufferVkImpl> m_pBuffer;
     std::vector<Uint32>         m_ShaderRecords;
-    Uint32                      m_MissShadersOffset;
-    Uint32                      m_HitGroupsOffset;
-    Uint32                      m_CallbaleShadersOffset;
-    Uint32                      m_MissShaderCount;
-    Uint32                      m_HitGroupCount;
-    Uint32                      m_CallableShaderCount;
-    Uint32                      m_ShaderGroupHandleSize;
-    Uint32                      m_ShaderGroupBaseAlignment;
 
-#ifdef DILIGENT_DEBUG
-#endif
+    Uint32 m_MissShadersOffset        = 0;
+    Uint32 m_HitGroupsOffset          = 0;
+    Uint32 m_CallbaleShadersOffset    = 0;
+    Uint32 m_MissShaderCount          = 0;
+    Uint32 m_HitGroupCount            = 0;
+    Uint32 m_CallableShaderCount      = 0;
+    Uint32 m_ShaderGroupHandleSize    = 0;
+    Uint32 m_ShaderGroupBaseAlignment = 0;
 };
 
 } // namespace Diligent

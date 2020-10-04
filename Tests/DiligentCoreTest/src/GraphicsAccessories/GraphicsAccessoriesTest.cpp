@@ -488,7 +488,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetTextureFormatAttribs)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the test below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the test below to handle the new shader type");
 
     // clang-format off
     EXPECT_EQ(GetShaderTypeIndex(SHADER_TYPE_UNKNOWN),             -1);
@@ -518,7 +518,7 @@ TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeIndex)
 
 TEST(GraphicsAccessories_GraphicsAccessories, GetShaderTypeFromIndex)
 {
-    static_assert(SHADER_TYPE_LAST == 0x2000, "Please update the test below to handle the new shader type");
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the test below to handle the new shader type");
 
     EXPECT_EQ(GetShaderTypeFromIndex(VSInd), SHADER_TYPE_VERTEX);
     EXPECT_EQ(GetShaderTypeFromIndex(PSInd), SHADER_TYPE_PIXEL);

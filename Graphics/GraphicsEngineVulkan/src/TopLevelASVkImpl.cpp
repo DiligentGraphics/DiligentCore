@@ -36,8 +36,7 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
                                    RenderDeviceVkImpl*   pRenderDeviceVk,
                                    const TopLevelASDesc& Desc,
                                    bool                  bIsDeviceInternal) :
-    TTopLevelASBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal},
-    m_DeviceAddress{0}
+    TTopLevelASBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal}
 {
     const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();

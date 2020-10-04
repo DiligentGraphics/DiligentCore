@@ -48,21 +48,21 @@ static const INTERFACE_ID IID_TopLevelAS =
 /// AZ TODO
 DILIGENT_TYPED_ENUM(SHADER_BINDING_MODE, Uint8)
 {
-    /// Each geometry in each instance can have unique shader.
+    /// Each geometry in each instance can have a unique shader.
     SHADER_BINDING_MODE_PER_GEOMETRY = 0,
 
-    /// Each instance can have unique shader. In this mode SBT buffer will use less memory.
+    /// Each instance can have a unique shader. In this mode SBT buffer will use less memory.
     SHADER_BINDING_MODE_PER_INSTANCE,
 
-    // User must specify TLASBuildInstanceData::InstanceContributionToHitGroupIndex and use only IShaderBindingTable::BindAll()
+    /// The user must specify TLASBuildInstanceData::InstanceContributionToHitGroupIndex and only use IShaderBindingTable::BindAll().
     SHADER_BINDING_USER_DEFINED,
 };
 
 /// AZ TODO
 struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
-    // Here we allocate space for instances.
-    // Instances can be dynamicaly updated.
+    /// Here we allocate space for instances.
+    /// Instances can be dynamicaly updated.
     Uint32                    MaxInstanceCount DEFAULT_INITIALIZER(0);
 
     /// AZ TODO
@@ -86,7 +86,7 @@ typedef struct TopLevelASDesc TopLevelASDesc;
 struct TLASInstanceDesc
 {
     /// AZ TODO
-    Uint32          contributionToHitGroupIndex DEFAULT_INITIALIZER(0);
+    Uint32          ContributionToHitGroupIndex DEFAULT_INITIALIZER(0);
 
     /// AZ TODO
     IBottomLevelAS* pBLAS                       DEFAULT_INITIALIZER(nullptr);

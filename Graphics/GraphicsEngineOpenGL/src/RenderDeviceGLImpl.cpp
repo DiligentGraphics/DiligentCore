@@ -310,6 +310,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 
     SET_FEATURE_STATE(VertexPipelineUAVWritesAndAtomics, false, "Vertex pipeline UAV writes and atomics are");
     SET_FEATURE_STATE(MeshShaders, false, "Mesh shaders are");
+    SET_FEATURE_STATE(RayTracing, false, "Ray tracing is");
 
     {
         bool WireframeFillSupported = (glPolygonMode != nullptr);

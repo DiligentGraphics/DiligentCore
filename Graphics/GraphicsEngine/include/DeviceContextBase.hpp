@@ -1909,7 +1909,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
 
     if ((Attribs.pTriangleData != nullptr) ^ (Attribs.pBoxData != nullptr))
     {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: only one of pTriangles and pBoxes must be defined");
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: exactly one of pTriangles and pBoxes must be defined");
         return false;
     }
 
@@ -2164,14 +2164,16 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
             auto& SrcTri = SrcDesc.pTriangles[i];
             auto& DstTri = DstDesc.pTriangles[i];
 
-            if (SrcTri.MaxVertexCount != DstTri.MaxVertexCount ||
-                SrcTri.VertexValueType != DstTri.VertexValueType ||
+            // clang-format off
+            if (SrcTri.MaxVertexCount       != DstTri.MaxVertexCount       ||
+                SrcTri.VertexValueType      != DstTri.VertexValueType      ||
                 SrcTri.VertexComponentCount != DstTri.VertexComponentCount ||
-                SrcTri.MaxIndexCount != DstTri.MaxIndexCount ||
-                SrcTri.IndexType != DstTri.IndexType ||
-                SrcTri.AllowsTransforms != DstTri.AllowsTransforms)
+                SrcTri.MaxIndexCount        != DstTri.MaxIndexCount        ||
+                SrcTri.IndexType            != DstTri.IndexType            ||
+                SrcTri.AllowsTransforms     != DstTri.AllowsTransforms)
+            // clang-format on
             {
-                LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: different triangles description at index: ", i, ", pDst must have been created with the same parameters as pSrc");
+                LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: different triangle descriptions at index: ", i, ", pDst must have been created with the same parameters as pSrc");
                 return false;
             }
         }
@@ -2180,7 +2182,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
         {
             if (SrcDesc.pBoxes[i].MaxBoxCount != DstDesc.pBoxes[i].MaxBoxCount)
             {
-                LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: different boxes description at index: ", i, ", pDst must have been created with the same parameters as pSrc");
+                LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: different box descriptions at index: ", i, ", pDst must have been created with the same parameters as pSrc");
                 return false;
             }
         }

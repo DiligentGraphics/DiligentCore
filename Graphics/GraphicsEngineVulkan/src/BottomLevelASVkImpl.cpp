@@ -36,8 +36,7 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
                                          RenderDeviceVkImpl*      pRenderDeviceVk,
                                          const BottomLevelASDesc& Desc,
                                          bool                     bIsDeviceInternal) :
-    TBottomLevelASBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal},
-    m_DeviceAddress{0}
+    TBottomLevelASBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal}
 {
     const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
@@ -99,6 +98,10 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
             MaxBoxCount += dst.maxPrimitiveCount;
         }
         VERIFY_EXPR(MaxBoxCount <= Limits.maxPrimitiveCount);
+    }
+    else
+    {
+        UNEXPECTED("Either pTriangles or pBoxes must not be null");
     }
 
     m_VulkanBLAS = LogicalDevice.CreateAccelStruct(CreateInfo, m_Desc.Name);

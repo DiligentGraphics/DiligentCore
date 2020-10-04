@@ -143,7 +143,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             RayTracingNV.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
         }
 
-        // Additional extension that required for ray tracing.
+        // Additional extension that is required for ray tracing.
         if (IsExtensionSupported(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
         {
             *NextFeat = &m_ExtFeatures.BufferDeviceAddress;
@@ -152,7 +152,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtFeatures.BufferDeviceAddress.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES_KHR;
         }
 
-        // Additional extension that required for ray tracing.
+        // Additional extension that is required for ray tracing.
         if (IsExtensionSupported(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME))
         {
             *NextFeat = &m_ExtFeatures.DescriptorIndexing;

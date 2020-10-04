@@ -147,7 +147,7 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
     UNSUPPORTED_FEATURE(BindlessResources, "Bindless resources are");
     UNSUPPORTED_FEATURE(VertexPipelineUAVWritesAndAtomics, "Vertex pipeline UAV writes and atomics are");
     UNSUPPORTED_FEATURE(MeshShaders, "Mesh shaders are");
-    UNSUPPORTED_FEATURE(RayTracing, "Ray tracing are");
+    UNSUPPORTED_FEATURE(RayTracing, "Ray tracing is");
 
     {
         bool ShaderFloat16Supported = false;

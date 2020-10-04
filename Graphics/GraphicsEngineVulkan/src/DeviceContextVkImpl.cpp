@@ -579,9 +579,12 @@ void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
         return;
 
 #ifdef DILIGENT_DEBUG
-    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
-    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().MeshShader.meshShader == VK_TRUE && PhysicalDevice.GetExtFeatures().MeshShader.taskShader == VK_TRUE);
-    VERIFY_EXPR(Attribs.ThreadGroupCount <= PhysicalDevice.GetExtProperties().MeshShader.maxDrawMeshTasksCount);
+    {
+        const auto& PhysicalDevice  = m_pDevice->GetPhysicalDevice();
+        const auto& MeshShaderFeats = PhysicalDevice.GetExtFeatures().MeshShader;
+        VERIFY_EXPR(MeshShaderFeats.meshShader != VK_FALSE && MeshShaderFeats.taskShader != VK_FALSE);
+        VERIFY_EXPR(Attribs.ThreadGroupCount <= PhysicalDevice.GetExtProperties().MeshShader.maxDrawMeshTasksCount);
+    }
 #endif
 
     PrepareForDraw(Attribs.Flags);
@@ -596,8 +599,10 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
         return;
 
 #ifdef DILIGENT_DEBUG
-    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
-    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().MeshShader.meshShader == VK_TRUE && PhysicalDevice.GetExtFeatures().MeshShader.taskShader == VK_TRUE);
+    {
+        const auto& MeshShaderFeats = m_pDevice->GetPhysicalDevice().GetExtFeatures().MeshShader;
+        VERIFY_EXPR(MeshShaderFeats.meshShader != VK_FALSE && MeshShaderFeats.taskShader != VK_FALSE);
+    }
 #endif
 
     // We must prepare indirect draw attribs buffer first because state transitions must
@@ -2620,8 +2625,10 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
         // AZ TODO: transitions
 
 #ifdef DILIGENT_DEBUG
-    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
-    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+    {
+        const auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+        VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing != VK_FALSE);
+    }
 #endif
 
     auto* pBLASVk    = ValidatedCast<BottomLevelASVkImpl>(Attribs.pBLAS);
@@ -2721,6 +2728,10 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
             off.primitiveCount  = src.BoxCount;
         }
     }
+    else
+    {
+        UNEXPECTED("pTriangleData or pBoxData must not be null");
+    }
 
     VkAccelerationStructureGeometryKHR const*        GeometriesPtr = Geometries.data();
     VkAccelerationStructureBuildOffsetInfoKHR const* OffsetsPtr    = Offsets.data();
@@ -2750,8 +2761,10 @@ void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
     // AZ TODO: transitions
 
 #ifdef DILIGENT_DEBUG
-    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
-    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+    {
+        const auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+        VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing != VK_FALSE);
+    }
 #endif
 
     auto* pTLASVk      = ValidatedCast<TopLevelASVkImpl>(Attribs.pTLAS);
@@ -2823,8 +2836,10 @@ void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
         // AZ TODO: transitions
 
 #ifdef DILIGENT_DEBUG
-    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
-    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+    {
+        const auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+        VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing != VK_FALSE);
+    }
 #endif
 
     auto* pSrcVk = ValidatedCast<BottomLevelASVkImpl>(Attribs.pSrc);
@@ -2875,8 +2890,10 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
         // AZ TODO: transitions
 
 #ifdef DILIGENT_DEBUG
-    auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
-    VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+    {
+        const auto& PhysicalDevice = m_pDevice->GetPhysicalDevice();
+        VERIFY_EXPR(PhysicalDevice.GetExtFeatures().RayTracing.rayTracing == VK_TRUE);
+    }
 #endif
 
     VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
