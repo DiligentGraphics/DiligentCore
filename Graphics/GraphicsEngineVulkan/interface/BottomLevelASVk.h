@@ -28,36 +28,41 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::RenderPassVkImpl class
+/// Definition of the Diligent::IBottomLevelASVk interface
 
-#include "RenderDeviceVk.h"
-#include "RenderPassVk.h"
-#include "RenderPassBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "../../GraphicsEngine/interface/BottomLevelAS.h"
 
-namespace Diligent
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+
+// {7212AFC9-02E2-4D7F-81A8-1CE5353CEA2D}
+static const INTERFACE_ID IID_BottomLevelASVk =
+    {0x7212afc9, 0x2e2, 0x4d7f, {0x81, 0xa8, 0x1c, 0xe5, 0x35, 0x3c, 0xea, 0x2d}};
+
+#define DILIGENT_INTERFACE_NAME IBottomLevelASVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IBottomLevelASVkInclusiveMethods \
+    IBottomLevelASInclusiveMethods;      \
+    IBottomLevelASVkMethods BottomLevelASVk
+
+/// Exposes Vulkan-specific functionality of a Bottom-level acceleration structure object.
+DILIGENT_BEGIN_INTERFACE(IBottomLevelASVk, IBottomLevelAS)
 {
+    /// Returns a Vulkan BLAS object handle
+    VIRTUAL VkAccelerationStructureKHR METHOD(GetVkBLAS)(THIS) CONST PURE;
 
-class FixedBlockMemoryAllocator;
-
-/// Render pass implementation in Vulkan backend.
-class RenderPassVkImpl final : public RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>
-{
-public:
-    using TRenderPassBase = RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>;
-
-    RenderPassVkImpl(IReferenceCounters*   pRefCounters,
-                     RenderDeviceVkImpl*   pDevice,
-                     const RenderPassDesc& Desc,
-                     bool                  IsDeviceInternal);
-    ~RenderPassVkImpl();
-
-    /// Implementation of ISamplerVk::GetVkRenderPass().
-    virtual VkRenderPass DILIGENT_CALL_TYPE GetVkRenderPass() const override final { return m_VkRenderPass; }
-
-private:
-    VulkanUtilities::RenderPassWrapper m_VkRenderPass;
+    /// Returns a Vulkan BLAS device address
+    VIRTUAL VkDeviceAddress METHOD(GetVkDeviceAddress)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+#    define IBottomLevelASVk_GetVkBLAS(This) CALL_IFACE_METHOD(BottomLevelASVk, GetVkBLAS, This)
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

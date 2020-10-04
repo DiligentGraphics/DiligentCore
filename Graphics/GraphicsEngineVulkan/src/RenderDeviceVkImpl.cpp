@@ -39,6 +39,9 @@
 #include "QueryVkImpl.hpp"
 #include "RenderPassVkImpl.hpp"
 #include "FramebufferVkImpl.hpp"
+#include "BottomLevelASVkImpl.hpp"
+#include "TopLevelASVkImpl.hpp"
+#include "ShaderBindingTableVkImpl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -75,7 +78,10 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             sizeof(FenceVkImpl),
             sizeof(QueryVkImpl),
             sizeof(RenderPassVkImpl),
-            sizeof(FramebufferVkImpl)
+            sizeof(FramebufferVkImpl),
+            sizeof(BottomLevelASVkImpl),
+            sizeof(TopLevelASVkImpl),
+            sizeof(ShaderBindingTableVkImpl)
         }
     },
     m_VulkanInstance         {Instance                 },
@@ -220,7 +226,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 30, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     const auto& vkDeviceLimits    = m_PhysicalDevice->GetProperties().limits;
@@ -714,6 +720,42 @@ void RenderDeviceVkImpl::CreateFramebuffer(const FramebufferDesc& Desc, IFramebu
                            FramebufferVkImpl* pFramebufferVk(NEW_RC_OBJ(m_FramebufferAllocator, "FramebufferVkImpl instance", FramebufferVkImpl)(this, Desc));
                            pFramebufferVk->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
                            OnCreateDeviceObject(pFramebufferVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreateBLAS(const BottomLevelASDesc& Desc,
+                                    IBottomLevelAS**         ppBLAS)
+{
+    CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
+                       [&]() //
+                       {
+                           BottomLevelASVkImpl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASVkImpl instance", BottomLevelASVkImpl)(this, Desc));
+                           pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+                           OnCreateDeviceObject(pBottomLevelASVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreateTLAS(const TopLevelASDesc& Desc,
+                                    ITopLevelAS**         ppTLAS)
+{
+    CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
+                       [&]() //
+                       {
+                           TopLevelASVkImpl* pTopLevelASVk(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASVkImpl instance", TopLevelASVkImpl)(this, Desc));
+                           pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+                           OnCreateDeviceObject(pTopLevelASVk);
+                       });
+}
+
+void RenderDeviceVkImpl::CreateSBT(const ShaderBindingTableDesc& Desc,
+                                   IShaderBindingTable**         ppSBT)
+{
+    CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
+                       [&]() //
+                       {
+                           ShaderBindingTableVkImpl* pSBTVk(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableVkImpl instance", ShaderBindingTableVkImpl)(this, Desc));
+                           pSBTVk->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
+                           OnCreateDeviceObject(pSBTVk);
                        });
 }
 

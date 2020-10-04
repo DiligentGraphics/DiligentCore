@@ -36,6 +36,9 @@ set(INCLUDE
     include/VulkanErrors.hpp
     include/VulkanTypeConversions.hpp
     include/VulkanUploadHeap.hpp
+    include/BottomLevelASVkImpl.hpp
+    include/TopLevelASVkImpl.hpp
+    include/ShaderBindingTableVkImpl.hpp
 )
 
 set(VULKAN_UTILS_INCLUDE 
@@ -70,6 +73,9 @@ set(INTERFACE
     interface/SwapChainVk.h
     interface/TextureVk.h
     interface/TextureViewVk.h
+    interface/BottomLevelASVk.h
+    interface/TopLevelASVk.h
+    interface/ShaderBindingTableVk.h
 )
 
 
@@ -104,6 +110,9 @@ set(SRC
     src/TextureViewVkImpl.cpp
     src/VulkanTypeConversions.cpp
     src/VulkanUploadHeap.cpp
+    src/BottomLevelASVkImpl.cpp
+    src/TopLevelASVkImpl.cpp
+    src/ShaderBindingTableVkImpl.cpp
 )
 
 set(VULKAN_UTILS_SRC

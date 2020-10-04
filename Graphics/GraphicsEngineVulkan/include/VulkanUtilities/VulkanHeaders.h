@@ -30,15 +30,17 @@
 #if DILIGENT_USE_VOLK
 #    define VK_NO_PROTOTYPES
 #endif
+
+// TODO: remove it when ray tracing will be released
+#define VK_ENABLE_BETA_EXTENSIONS
+
 #include "vulkan/vulkan.h"
+#include "vulkan/vulkan_beta.h"
+
 #define VK_FORMAT_RANGE_SIZE (VK_FORMAT_ASTC_12x12_SRGB_BLOCK - VK_FORMAT_UNDEFINED + 1)
 
 #if DILIGENT_USE_VOLK
 #    include "volk/volk.h"
-#else
-// Don't use extensions when statically linked with Vulkan
-#    undef VK_KHR_get_physical_device_properties2
-#    undef VK_NV_mesh_shader
 #endif
 
 #if defined(VK_USE_PLATFORM_XLIB_KHR) || defined(_X11_XLIB_H_)

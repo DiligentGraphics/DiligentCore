@@ -28,7 +28,7 @@
 #pragma once
 
 #include <memory>
-#include "VulkanHeaders.h"
+#include "VulkanPhysicalDevice.hpp"
 
 namespace VulkanUtilities
 {
@@ -57,7 +57,8 @@ enum class VulkanHandleTypeId : uint32_t
     Semaphore,
     Queue,
     Event,
-    QueryPool
+    QueryPool,
+    AccelerationStructureKHR
 };
 
 template <typename VulkanObjectType, VulkanHandleTypeId>
@@ -81,12 +82,13 @@ using DescriptorPoolWrapper      = DEFINE_VULKAN_OBJECT_WRAPPER(DescriptorPool);
 using DescriptorSetLayoutWrapper = DEFINE_VULKAN_OBJECT_WRAPPER(DescriptorSetLayout);
 using SemaphoreWrapper           = DEFINE_VULKAN_OBJECT_WRAPPER(Semaphore);
 using QueryPoolWrapper           = DEFINE_VULKAN_OBJECT_WRAPPER(QueryPool);
+using AccelStructWrapper         = DEFINE_VULKAN_OBJECT_WRAPPER(AccelerationStructureKHR);
 #undef DEFINE_VULKAN_OBJECT_WRAPPER
 
 class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
 {
 public:
-    static std::shared_ptr<VulkanLogicalDevice> Create(VkPhysicalDevice             vkPhysicalDevice,
+    static std::shared_ptr<VulkanLogicalDevice> Create(const VulkanPhysicalDevice&  PhysicalDevice,
                                                        const VkDeviceCreateInfo&    DeviceCI,
                                                        const VkAllocationCallbacks* vkAllocator);
 
@@ -140,6 +142,7 @@ public:
 
     SemaphoreWrapper    CreateSemaphore(const VkSemaphoreCreateInfo& SemaphoreCI, const char* DebugName = "") const;
     QueryPoolWrapper    CreateQueryPool(const VkQueryPoolCreateInfo& QueryPoolCI, const char* DebugName = "") const;
+    AccelStructWrapper  CreateAccelStruct(const VkAccelerationStructureCreateInfoKHR& CI, const char* DebugName = "") const;
 
     VkCommandBuffer     AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName = "") const;
     VkDescriptorSet     AllocateVkDescriptorSet(const VkDescriptorSetAllocateInfo& AllocInfo, const char* DebugName = "") const;
@@ -161,14 +164,19 @@ public:
     void ReleaseVulkanObject(DescriptorSetLayoutWrapper&& DescriptorSetLayout) const;
     void ReleaseVulkanObject(SemaphoreWrapper&&     Semaphore) const;
     void ReleaseVulkanObject(QueryPoolWrapper&&     QueryPool) const;
+    void ReleaseVulkanObject(AccelStructWrapper&&   AccelStruct) const;
 
     void FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const;
 
     VkMemoryRequirements GetBufferMemoryRequirements(VkBuffer vkBuffer) const;
-    VkMemoryRequirements GetImageMemoryRequirements (VkImage vkImage  ) const;
+    VkMemoryRequirements GetImageMemoryRequirements (VkImage  vkImage ) const;
+
+    VkMemoryRequirements GetASMemoryRequirements(const VkAccelerationStructureMemoryRequirementsInfoKHR& Info) const;
+    VkDeviceAddress      GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR AS) const;
 
     VkResult BindBufferMemory(VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset) const;
     VkResult BindImageMemory (VkImage image,   VkDeviceMemory memory, VkDeviceSize memoryOffset) const;
+    VkResult BindASMemory    (VkAccelerationStructureKHR AS, VkDeviceMemory memory, VkDeviceSize memoryOffset) const;
     // clang-format on
 
     VkResult MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) const;
@@ -212,7 +220,7 @@ public:
     const VkPhysicalDeviceFeatures& GetEnabledFeatures() const { return m_EnabledFeatures; }
 
 private:
-    VulkanLogicalDevice(VkPhysicalDevice             vkPhysicalDevice,
+    VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDevice,
                         const VkDeviceCreateInfo&    DeviceCI,
                         const VkAllocationCallbacks* vkAllocator);
 

@@ -135,13 +135,13 @@ public:
                                                      ITextureView*                  pDepthStencil,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
-    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::BeginRenderPass() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::NextSubpass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::NextSubpass() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
 
-    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::EndRenderPass() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     // clang-format off
@@ -248,6 +248,21 @@ public:
 
     /// Implementation of IDeviceContext::Flush() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE Flush() override final;
+
+    /// Implementation of IDeviceContext::BuildBLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE BuildBLAS(const BLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::BuildTLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE BuildTLAS(const TLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyBLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyTLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::TraceRays() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
     // Transitions texture subresources from OldState to NewState, and optionally updates
     // internal texture state.

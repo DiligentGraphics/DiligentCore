@@ -269,15 +269,24 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         ENABLE_FEATURE(Storage8BitFeats.storageBuffer8BitAccess           != VK_FALSE, ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
         ENABLE_FEATURE(Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE, UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
         // clang-format on
+
+        auto RayTracingFeats          = DeiceExtFeatures.RayTracing;
+        auto BufferDeviceAddressFeats = DeiceExtFeatures.BufferDeviceAddress;
+        auto DescriptorIndexingFeats  = DeiceExtFeatures.DescriptorIndexing;
+        ENABLE_FEATURE(RayTracingFeats.rayTracing != VK_FALSE, MeshShaders, "Ray tracing are");
 #undef FeatureSupport
 
 
         // To enable some device extensions you must enable instance extension VK_KHR_get_physical_device_properties2
         // and add feature description to DeviceCreateInfo.pNext.
-        const auto SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        bool SupportsFeatures2 = Instance->IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+
+        // Enable extensions
         if (SupportsFeatures2)
         {
             void** NextExt = const_cast<void**>(&DeviceCreateInfo.pNext);
+
+            // Mesh shader
             if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
             {
                 VERIFY_EXPR(MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE);
@@ -383,21 +392,42 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 DeviceExtensions.push_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
             }
 
+
+            // Ray tracing
+            if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
+            {
+                if (RayTracingFeats.rayTracing != VK_FALSE)
+                {
+                    // required extensions
+                    DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
+
+                    *NextExt = &RayTracingFeats;
+                    NextExt  = &RayTracingFeats.pNext;
+                    *NextExt = &DescriptorIndexingFeats;
+                    NextExt  = &DescriptorIndexingFeats.pNext;
+                    *NextExt = &BufferDeviceAddressFeats;
+                    NextExt  = &BufferDeviceAddressFeats.pNext;
+                }
+            }
+
+            // make sure that last pNext is null
             *NextExt = nullptr;
         }
 
-
-
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 30, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();
         DeviceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(DeviceExtensions.size());
 
-        auto vkAllocator      = Instance->GetVkAllocator();
-        auto vkPhysicalDevice = PhysicalDevice->GetVkDeviceHandle();
-        auto LogicalDevice    = VulkanUtilities::VulkanLogicalDevice::Create(vkPhysicalDevice, DeviceCreateInfo, vkAllocator);
+        auto vkAllocator   = Instance->GetVkAllocator();
+        auto LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create(*PhysicalDevice, DeviceCreateInfo, vkAllocator);
 
         auto& RawMemAllocator = GetRawAllocator();
 

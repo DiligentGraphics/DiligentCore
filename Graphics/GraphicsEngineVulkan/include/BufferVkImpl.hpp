@@ -106,6 +106,9 @@ public:
     /// Implementation of IBufferVk::GetAccessFlags().
     virtual VkAccessFlags DILIGENT_CALL_TYPE GetAccessFlags() const override final;
 
+    /// Implementation of IBufferVk::GetVkDeviceAddress().
+    virtual VkDeviceAddress DILIGENT_CALL_TYPE GetVkDeviceAddress() const override final;
+
     bool CheckAccessFlags(VkAccessFlags AccessFlags) const
     {
         return (GetAccessFlags() & AccessFlags) == AccessFlags;

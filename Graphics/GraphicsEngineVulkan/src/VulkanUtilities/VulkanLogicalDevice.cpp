@@ -34,11 +34,11 @@
 namespace VulkanUtilities
 {
 
-std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(VkPhysicalDevice             vkPhysicalDevice,
+std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(const VulkanPhysicalDevice&  PhysicalDevice,
                                                                  const VkDeviceCreateInfo&    DeviceCI,
                                                                  const VkAllocationCallbacks* vkAllocator)
 {
-    auto* LogicalDevice = new VulkanLogicalDevice{vkPhysicalDevice, DeviceCI, vkAllocator};
+    auto* LogicalDevice = new VulkanLogicalDevice{PhysicalDevice, DeviceCI, vkAllocator};
     return std::shared_ptr<VulkanLogicalDevice>{LogicalDevice};
 }
 
@@ -47,13 +47,13 @@ VulkanLogicalDevice::~VulkanLogicalDevice()
     vkDestroyDevice(m_VkDevice, m_VkAllocator);
 }
 
-VulkanLogicalDevice::VulkanLogicalDevice(VkPhysicalDevice             vkPhysicalDevice,
+VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDevice,
                                          const VkDeviceCreateInfo&    DeviceCI,
                                          const VkAllocationCallbacks* vkAllocator) :
     m_VkAllocator{vkAllocator},
     m_EnabledFeatures{*DeviceCI.pEnabledFeatures}
 {
-    auto res = vkCreateDevice(vkPhysicalDevice, &DeviceCI, vkAllocator, &m_VkDevice);
+    auto res = vkCreateDevice(PhysicalDevice.GetVkDeviceHandle(), &DeviceCI, vkAllocator, &m_VkDevice);
     CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
 
 #if DILIGENT_USE_VOLK
@@ -264,6 +264,12 @@ QueryPoolWrapper VulkanLogicalDevice::CreateQueryPool(const VkQueryPoolCreateInf
     return CreateVulkanObject<VkQueryPool, VulkanHandleTypeId::QueryPool>(vkCreateQueryPool, QueryPoolCI, DebugName, "query pool");
 }
 
+AccelStructWrapper VulkanLogicalDevice::CreateAccelStruct(const VkAccelerationStructureCreateInfoKHR& CI, const char* DebugName) const
+{
+    VERIFY_EXPR(CI.sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR);
+    return CreateVulkanObject<VkAccelerationStructureKHR, VulkanHandleTypeId::AccelerationStructureKHR>(vkCreateAccelerationStructureKHR, CI, DebugName, "acceleration structure");
+}
+
 VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName) const
 {
     VERIFY_EXPR(AllocInfo.sType == VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO);
@@ -405,6 +411,12 @@ void VulkanLogicalDevice::ReleaseVulkanObject(QueryPoolWrapper&& QueryPool) cons
     QueryPool.m_VkObject = VK_NULL_HANDLE;
 }
 
+void VulkanLogicalDevice::ReleaseVulkanObject(AccelStructWrapper&& AccelStruct) const
+{
+    vkDestroyAccelerationStructureKHR(m_VkDevice, AccelStruct.m_VkObject, m_VkAllocator);
+    AccelStruct.m_VkObject = VK_NULL_HANDLE;
+}
+
 void VulkanLogicalDevice::FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const
 {
     VERIFY_EXPR(Pool != VK_NULL_HANDLE && Set != VK_NULL_HANDLE);
@@ -428,6 +440,13 @@ VkMemoryRequirements VulkanLogicalDevice::GetImageMemoryRequirements(VkImage vkI
     return MemReqs;
 }
 
+VkMemoryRequirements VulkanLogicalDevice::GetASMemoryRequirements(const VkAccelerationStructureMemoryRequirementsInfoKHR& Info) const
+{
+    VkMemoryRequirements2 MemReqs = {};
+    vkGetAccelerationStructureMemoryRequirementsKHR(m_VkDevice, &Info, &MemReqs);
+    return MemReqs.memoryRequirements;
+}
+
 VkResult VulkanLogicalDevice::BindBufferMemory(VkBuffer buffer, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
 {
     return vkBindBufferMemory(m_VkDevice, buffer, memory, memoryOffset);
@@ -436,6 +455,30 @@ VkResult VulkanLogicalDevice::BindBufferMemory(VkBuffer buffer, VkDeviceMemory m
 VkResult VulkanLogicalDevice::BindImageMemory(VkImage image, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
 {
     return vkBindImageMemory(m_VkDevice, image, memory, memoryOffset);
+}
+
+VkResult VulkanLogicalDevice::BindASMemory(VkAccelerationStructureKHR AS, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
+{
+    VkBindAccelerationStructureMemoryInfoKHR Info = {};
+
+    Info.sType                 = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
+    Info.memory                = memory;
+    Info.memoryOffset          = memoryOffset;
+    Info.deviceIndexCount      = 0;
+    Info.pDeviceIndices        = nullptr;
+    Info.accelerationStructure = AS;
+
+    return vkBindAccelerationStructureMemoryKHR(m_VkDevice, 1, &Info);
+}
+
+VkDeviceAddress VulkanLogicalDevice::GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR AS) const
+{
+    VkAccelerationStructureDeviceAddressInfoKHR Info = {};
+
+    Info.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
+    Info.accelerationStructure = AS;
+
+    return vkGetAccelerationStructureDeviceAddressKHR(m_VkDevice, &Info);
 }
 
 VkResult VulkanLogicalDevice::MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) const

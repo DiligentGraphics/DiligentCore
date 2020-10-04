@@ -28,36 +28,41 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::RenderPassVkImpl class
+/// Definition of the Diligent::BottomLevelASVkImpl class
 
 #include "RenderDeviceVk.h"
-#include "RenderPassVk.h"
-#include "RenderPassBase.hpp"
 #include "RenderDeviceVkImpl.hpp"
+#include "BottomLevelASVk.h"
+#include "BottomLevelASBase.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
-/// Render pass implementation in Vulkan backend.
-class RenderPassVkImpl final : public RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>
+class BottomLevelASVkImpl final : public BottomLevelASBase<IBottomLevelASVk, RenderDeviceVkImpl>
 {
 public:
-    using TRenderPassBase = RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>;
+    using TBottomLevelASBase = BottomLevelASBase<IBottomLevelASVk, RenderDeviceVkImpl>;
 
-    RenderPassVkImpl(IReferenceCounters*   pRefCounters,
-                     RenderDeviceVkImpl*   pDevice,
-                     const RenderPassDesc& Desc,
-                     bool                  IsDeviceInternal);
-    ~RenderPassVkImpl();
+    BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
+                        RenderDeviceVkImpl*      pRenderDeviceVk,
+                        const BottomLevelASDesc& Desc,
+                        bool                     bIsDeviceInternal = false);
+    ~BottomLevelASVkImpl();
 
-    /// Implementation of ISamplerVk::GetVkRenderPass().
-    virtual VkRenderPass DILIGENT_CALL_TYPE GetVkRenderPass() const override final { return m_VkRenderPass; }
+    virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override { return m_ScratchSize; }
+
+    virtual VkAccelerationStructureKHR DILIGENT_CALL_TYPE GetVkBLAS() const override { return m_VulkanBLAS; }
+
+    virtual VkDeviceAddress DILIGENT_CALL_TYPE GetVkDeviceAddress() const override { return m_DeviceAddress; }
+
+    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASVk, TBottomLevelASBase);
 
 private:
-    VulkanUtilities::RenderPassWrapper m_VkRenderPass;
+    VkDeviceAddress                         m_DeviceAddress;
+    VulkanUtilities::AccelStructWrapper     m_VulkanBLAS;
+    VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
+    ScratchBufferSizes                      m_ScratchSize;
 };
 
 } // namespace Diligent

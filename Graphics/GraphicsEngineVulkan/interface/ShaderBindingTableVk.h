@@ -28,43 +28,31 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::IBufferVk interface
+/// Definition of the Diligent::IShaderBindingTableVk interface
 
-#include "../../GraphicsEngine/interface/Buffer.h"
+#include "../../GraphicsEngine/interface/ShaderBindingTable.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-// {12D8EC02-96F4-431E-9695-C5F572CC7587}
-static const INTERFACE_ID IID_BufferVk =
-    {0x12d8ec02, 0x96f4, 0x431e, {0x96, 0x95, 0xc5, 0xf5, 0x72, 0xcc, 0x75, 0x87}};
+// {31ED9B4B-4FF4-44D8-AE71-12B5D8AF7F93}
+static const INTERFACE_ID IID_ShaderBindingTableVk =
+    {0x31ed9b4b, 0x4ff4, 0x44d8, {0xae, 0x71, 0x12, 0xb5, 0xd8, 0xaf, 0x7f, 0x93}};
 
-#define DILIGENT_INTERFACE_NAME IBufferVk
+#define DILIGENT_INTERFACE_NAME IShaderBindingTableVk
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-#define IBufferVkInclusiveMethods \
-    IBufferInclusiveMethods;      \
-    IBufferVkMethods BufferVk
+#define IShaderBindingTableVkInclusiveMethods \
+    IShaderBindingTableInclusiveMethods;      \
+    IShaderBindingTableVkMethods ShaderBindingTableVk
 
-// clang-format off
-
-/// Exposes Vulkan-specific functionality of a buffer object.
-DILIGENT_BEGIN_INTERFACE(IBufferVk, IBuffer)
+/// Exposes Vulkan-specific functionality of a Shader binding table object.
+DILIGENT_BEGIN_INTERFACE(IShaderBindingTableVk, IShaderBindingTable)
 {
-    /// Returns a vulkan buffer handle
-    VIRTUAL VkBuffer METHOD(GetVkBuffer)(THIS) CONST PURE;
-
-    /// Sets vulkan access flags
-
-    /// \param [in] AccessFlags - Vulkan access flags to be set for this buffer
-    VIRTUAL void METHOD(SetAccessFlags)(THIS_
-                                        VkAccessFlags AccessFlags) PURE;
-
-    /// If the buffer state is known to the engine (i.e. not Diligent::RESOURCE_STATE_UNKNOWN),
-    /// returns Vulkan access flags corresponding to the state. If the state is unknown, returns 0.
-    VIRTUAL VkAccessFlags METHOD(GetAccessFlags)(THIS) CONST PURE;
-
-    /// Returns a vulkan device address
-    VIRTUAL VkDeviceAddress METHOD(GetVkDeviceAddress)(THIS) CONST PURE;
+    /// AZ TODO
+    VIRTUAL void METHOD(GetVkStridedBufferRegions)(VkStridedBufferRegionKHR & RaygenShaderBindingTable,
+                                                   VkStridedBufferRegionKHR & MissShaderBindingTable,
+                                                   VkStridedBufferRegionKHR & HitShaderBindingTable,
+                                                   VkStridedBufferRegionKHR & CallableShaderBindingTable) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -72,10 +60,7 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-#    define IBufferVk_GetVkBuffer(This)         CALL_IFACE_METHOD(BufferVk, GetVkBuffer, This)
-#    define IBufferVk_SetAccessFlags(This, ...) CALL_IFACE_METHOD(BufferVk, SetAccessFlags, This, __VA_ARGS__)
-#    define IBufferVk_GetAccessFlags(This)      CALL_IFACE_METHOD(BufferVk, GetAccessFlags, This)
-#    define IBufferVk_GetVkDeviceAddress(This)  CALL_IFACE_METHOD(BufferVk, GetVkDeviceAddress, This)
+#    define IShaderBindingTableVk_GetVkStridedBufferRegions(This, ...) CALL_IFACE_METHOD(ShaderBindingTableVk, GetVkStridedBufferRegions, This, __VA_ARGS__)
 
 #endif
 

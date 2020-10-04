@@ -226,6 +226,15 @@ public:
 
         /// Size of the framebuffer object (FramebufferD3D12Impl, FramebufferVkImpl, etc.), in bytes
         const size_t FramebufferObjSize;
+
+        /// Size of the BLAS object (BottomLevelASD3D12Impl, BottomLevelASVkImpl, etc.), in bytes
+        const size_t BLASObjSize;
+
+        /// Size of the TLAS object (TopLevelASD3D12Impl, TopLevelASVkImpl, etc.), in bytes
+        const size_t TLASObjSize;
+
+        /// Size of the SBT object (ShaderBindingTableD3D12Impl, ShaderBindingtableVkImpl, etc.), in bytes
+        const size_t SBTObjSize;
     };
 
     /// \param pRefCounters        - reference counters object that controls the lifetime of this render device
@@ -261,7 +270,10 @@ public:
         m_FenceAllocator        {RawMemAllocator, ObjectSizes.FenceSize,          16  },
         m_QueryAllocator        {RawMemAllocator, ObjectSizes.QuerySize,          16  },
         m_RenderPassAllocator   {RawMemAllocator, ObjectSizes.RenderPassObjSize,  16  },
-        m_FramebufferAllocator  {RawMemAllocator, ObjectSizes.FramebufferObjSize, 16  }
+        m_FramebufferAllocator  {RawMemAllocator, ObjectSizes.FramebufferObjSize, 16  },
+        m_BLASAllocator         {RawMemAllocator, ObjectSizes.BLASObjSize,        16  },
+        m_TLASAllocator         {RawMemAllocator, ObjectSizes.TLASObjSize,        16  },
+        m_SBTAllocator          {RawMemAllocator, ObjectSizes.SBTObjSize,         16  }
     // clang-format on
     {
         // Initialize texture format info
@@ -436,6 +448,9 @@ protected:
     FixedBlockMemoryAllocator m_QueryAllocator;       ///< Allocator for query objects
     FixedBlockMemoryAllocator m_RenderPassAllocator;  ///< Allocator for render pass objects
     FixedBlockMemoryAllocator m_FramebufferAllocator; ///< Allocator for framebuffer objects
+    FixedBlockMemoryAllocator m_BLASAllocator;        ///< Allocator for bottom-level acceleration structure objects
+    FixedBlockMemoryAllocator m_TLASAllocator;        ///< Allocator for top-level acceleration structure objects
+    FixedBlockMemoryAllocator m_SBTAllocator;         ///< Allocator for shader binding table objects
 };
 
 

@@ -112,6 +112,18 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateFramebuffer(const FramebufferDesc& Desc,
                                                       IFramebuffer**         ppFramebuffer) override final;
 
+    /// Implementation of IRenderDevice::CreateBLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateBLAS(const BottomLevelASDesc& Desc,
+                                               IBottomLevelAS**         ppBLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateTLAS() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateTLAS(const TopLevelASDesc& Desc,
+                                               ITopLevelAS**         ppTLAS) override final;
+
+    /// Implementation of IRenderDevice::CreateSBT() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateSBT(const ShaderBindingTableDesc& Desc,
+                                              IShaderBindingTable**         ppSBT) override final;
+
     /// Implementation of IRenderDeviceVk::GetVkDevice().
     virtual VkDevice DILIGENT_CALL_TYPE GetVkDevice() override final { return m_LogicalVkDevice->GetVkDevice(); }
 

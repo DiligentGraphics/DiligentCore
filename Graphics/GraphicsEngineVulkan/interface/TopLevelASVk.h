@@ -28,36 +28,40 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::RenderPassVkImpl class
+/// Definition of the Diligent::ITopLevelASVk interface
 
-#include "RenderDeviceVk.h"
-#include "RenderPassVk.h"
-#include "RenderPassBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "../../GraphicsEngine/interface/TopLevelAS.h"
 
-namespace Diligent
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+// {356FFFFA-9E57-49F7-8FF4-7017B61BE6A8}
+static const INTERFACE_ID IID_TopLevelASVk =
+    {0x356ffffa, 0x9e57, 0x49f7, {0x8f, 0xf4, 0x70, 0x17, 0xb6, 0x1b, 0xe6, 0xa8}};
+
+#define DILIGENT_INTERFACE_NAME ITopLevelASVk
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define ITopLevelASVkInclusiveMethods \
+    ITopLevelASInclusiveMethods;      \
+    ITopLevelASVkMethods TopLevelASVk
+
+/// Exposes Vulkan-specific functionality of a Top-level acceleration structure object.
+DILIGENT_BEGIN_INTERFACE(ITopLevelASVk, ITopLevelAS)
 {
+    /// Returns a Vulkan TLAS object handle
+    VIRTUAL VkAccelerationStructureKHR METHOD(GetVkTLAS)(THIS) CONST PURE;
 
-class FixedBlockMemoryAllocator;
-
-/// Render pass implementation in Vulkan backend.
-class RenderPassVkImpl final : public RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>
-{
-public:
-    using TRenderPassBase = RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>;
-
-    RenderPassVkImpl(IReferenceCounters*   pRefCounters,
-                     RenderDeviceVkImpl*   pDevice,
-                     const RenderPassDesc& Desc,
-                     bool                  IsDeviceInternal);
-    ~RenderPassVkImpl();
-
-    /// Implementation of ISamplerVk::GetVkRenderPass().
-    virtual VkRenderPass DILIGENT_CALL_TYPE GetVkRenderPass() const override final { return m_VkRenderPass; }
-
-private:
-    VulkanUtilities::RenderPassWrapper m_VkRenderPass;
+    /// Returns a Vulkan TLAS device address
+    VIRTUAL VkDeviceAddress METHOD(GetVkDeviceAddress)(THIS) CONST PURE;
 };
+DILIGENT_END_INTERFACE
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+#    define ITopLevelASVk_GetVkTLAS(This) CALL_IFACE_METHOD(TopLevelASVk, GetVkTLAS, This)
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

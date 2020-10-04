@@ -27,37 +27,48 @@
 
 #pragma once
 
-/// \file
-/// Declaration of Diligent::RenderPassVkImpl class
-
-#include "RenderDeviceVk.h"
-#include "RenderPassVk.h"
-#include "RenderPassBase.hpp"
-#include "RenderDeviceVkImpl.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include <cstring>
 
 namespace Diligent
 {
 
-class FixedBlockMemoryAllocator;
-
-/// Render pass implementation in Vulkan backend.
-class RenderPassVkImpl final : public RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>
+// AZ TODO
+struct StringView
 {
-public:
-    using TRenderPassBase = RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>;
+    const char* Str;
+    size_t      Len;
 
-    RenderPassVkImpl(IReferenceCounters*   pRefCounters,
-                     RenderDeviceVkImpl*   pDevice,
-                     const RenderPassDesc& Desc,
-                     bool                  IsDeviceInternal);
-    ~RenderPassVkImpl();
+    explicit StringView(const char* _Str) :
+        Str{_Str}, Len{strlen(_Str)} {}
 
-    /// Implementation of ISamplerVk::GetVkRenderPass().
-    virtual VkRenderPass DILIGENT_CALL_TYPE GetVkRenderPass() const override final { return m_VkRenderPass; }
+    StringView(const char* _Str, size_t _Len) :
+        Str{_Str}, Len{_Len} {}
 
-private:
-    VulkanUtilities::RenderPassWrapper m_VkRenderPass;
+    bool operator==(const StringView& RHS) const
+    {
+        if (Len != RHS.Len)
+            return false;
+
+        for (size_t i = 0; i < Len; ++i)
+        {
+            if (Str[i] != RHS.Str[i])
+                return false;
+        }
+        return true;
+    }
+
+    bool operator<(const StringView& RHS) const
+    {
+        if (Len != RHS.Len)
+            return Len < RHS.Len;
+
+        for (size_t i = 0; i < Len; ++i)
+        {
+            if (Str[i] != RHS.Str[i])
+                return Str[i] < RHS.Str[i];
+        }
+        return false;
+    }
 };
 
 } // namespace Diligent

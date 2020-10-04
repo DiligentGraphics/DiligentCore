@@ -40,7 +40,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Render pass implementation in Direct3D11 backend.
+/// Framebuffer implementation in Vulkan backend.
 class FramebufferVkImpl final : public FramebufferBase<IFramebufferVk, RenderDeviceVkImpl>
 {
 public:
