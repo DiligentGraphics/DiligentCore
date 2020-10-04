@@ -273,7 +273,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         auto RayTracingFeats          = DeiceExtFeatures.RayTracing;
         auto BufferDeviceAddressFeats = DeiceExtFeatures.BufferDeviceAddress;
         auto DescriptorIndexingFeats  = DeiceExtFeatures.DescriptorIndexing;
-        ENABLE_FEATURE(RayTracingFeats.rayTracing != VK_FALSE, MeshShaders, "Ray tracing are");
+        ENABLE_FEATURE(RayTracingFeats.rayTracing != VK_FALSE || DeiceExtFeatures.RayTracingNV, MeshShaders, "Ray tracing are");
 #undef FeatureSupport
 
 
@@ -396,7 +396,12 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // Ray tracing
             if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
             {
-                if (RayTracingFeats.rayTracing != VK_FALSE)
+                if (DeiceExtFeatures.RayTracingNV)
+                {
+                    DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+                }
+                else if (RayTracingFeats.rayTracing != VK_FALSE)
                 {
                     // required extensions
                     DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);

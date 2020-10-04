@@ -71,6 +71,8 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
 #if DILIGENT_USE_VOLK
     if (Instance.IsExtensionEnabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
     {
+        VkPhysicalDeviceRayTracingPropertiesNV RayTracingNV = {};
+
         VkPhysicalDeviceFeatures2   Feats2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
         VkPhysicalDeviceProperties2 Props2   = {VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
         void**                      NextFeat = &Feats2.pNext;
@@ -131,7 +133,15 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
 
             m_ExtProperties.RayTracing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_KHR;
         }
+        else if (IsExtensionSupported(VK_NV_RAY_TRACING_EXTENSION_NAME))
+        {
+            m_ExtFeatures.RayTracingNV = true;
 
+            *NextProp = &RayTracingNV;
+            NextProp  = &RayTracingNV.pNext;
+
+            RayTracingNV.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PROPERTIES_NV;
+        }
 
         // Additional extension that required for ray tracing.
         if (IsExtensionSupported(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME))
@@ -164,6 +174,24 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         // Some flags may not be supported by hardware.
         vkGetPhysicalDeviceFeatures2KHR(m_VkDevice, &Feats2);
         vkGetPhysicalDeviceProperties2KHR(m_VkDevice, &Props2);
+
+        // Emulate KHR extension
+        if (m_ExtFeatures.RayTracingNV)
+        {
+            //m_ExtFeatures.RayTracing.sType
+            //m_ExtFeatures.RayTracing.rayTracingPrimitiveCulling = true; // AZ TODO
+            m_ExtFeatures.RayTracing.rayTracing = VK_TRUE;
+
+            m_ExtProperties.RayTracing.shaderGroupHandleSize                  = RayTracingNV.shaderGroupHandleSize;
+            m_ExtProperties.RayTracing.maxRecursionDepth                      = RayTracingNV.maxRecursionDepth;
+            m_ExtProperties.RayTracing.maxShaderGroupStride                   = RayTracingNV.maxShaderGroupStride;
+            m_ExtProperties.RayTracing.shaderGroupBaseAlignment               = RayTracingNV.shaderGroupBaseAlignment;
+            m_ExtProperties.RayTracing.maxGeometryCount                       = RayTracingNV.maxGeometryCount;
+            m_ExtProperties.RayTracing.maxInstanceCount                       = RayTracingNV.maxInstanceCount;
+            m_ExtProperties.RayTracing.maxPrimitiveCount                      = RayTracingNV.maxTriangleCount;
+            m_ExtProperties.RayTracing.maxDescriptorSetAccelerationStructures = RayTracingNV.maxDescriptorSetAccelerationStructures;
+            m_ExtProperties.RayTracing.shaderGroupHandleCaptureReplaySize     = 0;
+        }
     }
 #endif // DILIGENT_USE_VOLK
 }

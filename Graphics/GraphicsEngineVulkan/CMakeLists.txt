@@ -124,6 +124,7 @@ set(VULKAN_UTILS_SRC
     src/VulkanUtilities/VulkanLogicalDevice.cpp
     src/VulkanUtilities/VulkanMemoryManager.cpp
     src/VulkanUtilities/VulkanPhysicalDevice.cpp
+    src/VulkanUtilities/VulkanRayTracingKHRviaNV.cpp
 )
 
 set(GENERATE_MIPS_SHADER shaders/GenerateMipsCS.csh)

@@ -239,4 +239,6 @@ private:
     const VkPhysicalDeviceFeatures     m_EnabledFeatures;
 };
 
+void EnableRayTracingKHRviaNV();
+
 } // namespace VulkanUtilities

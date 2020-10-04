@@ -60,6 +60,9 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
     // Since we only use one device at this time, load device function entries
     // https://github.com/zeux/volk#optimizing-device-calls
     volkLoadDevice(m_VkDevice);
+
+    if (PhysicalDevice.GetExtFeatures().RayTracingNV)
+        EnableRayTracingKHRviaNV();
 #endif
 
     m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
