@@ -246,6 +246,21 @@ public:
     /// Implementation of IDeviceContext::Flush() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE Flush() override final;
 
+    /// Implementation of IDeviceContext::BuildBLAS().
+    virtual void DILIGENT_CALL_TYPE BuildBLAS(const BLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::BuildTLAS().
+    virtual void DILIGENT_CALL_TYPE BuildTLAS(const TLASBuildAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyBLAS().
+    virtual void DILIGENT_CALL_TYPE CopyBLAS(const CopyBLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::CopyTLAS().
+    virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::TraceRays().
+    virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
+
     /// Implementation of IDeviceContextD3D11::GetD3D11DeviceContext().
     virtual ID3D11DeviceContext* DILIGENT_CALL_TYPE GetD3D11DeviceContext() override final { return m_pd3d11DeviceContext; }
 

@@ -329,7 +329,7 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
 
 static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STATE StateFlag)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "This function must be updated to handle new resource state flag");
     VERIFY((StateFlag & (StateFlag - 1)) == 0, "Only single bit must be set");
     switch (StateFlag)
     {
@@ -351,6 +351,8 @@ static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STAT
         case RESOURCE_STATE_RESOLVE_SOURCE:    return D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
         case RESOURCE_STATE_INPUT_ATTACHMENT:  return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         case RESOURCE_STATE_PRESENT:           return D3D12_RESOURCE_STATE_PRESENT;
+        case RESOURCE_STATE_BUILD_AS:          return D3D12_RESOURCE_STATES(0);
+        case RESOURCE_STATE_RAY_TRACING:       return D3D12_RESOURCE_STATES(0); // AZ TODO
         // clang-format on
         default:
             UNEXPECTED("Unexpected resource state flag");
@@ -377,7 +379,7 @@ public:
     }
 
 private:
-    static constexpr Uint32                              MaxFlagBitPos = 16;
+    static constexpr Uint32                              MaxFlagBitPos = 18;
     std::array<D3D12_RESOURCE_STATES, MaxFlagBitPos + 1> FlagBitPosToResStateMap;
 };
 
@@ -399,7 +401,7 @@ D3D12_RESOURCE_STATES ResourceStateFlagsToD3D12ResourceStates(RESOURCE_STATE Sta
 
 static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STATES state)
 {
-    static_assert(RESOURCE_STATE_MAX_BIT == 0x10000, "This function must be updated to handle new resource state flag");
+    static_assert(RESOURCE_STATE_MAX_BIT == 0x40000, "This function must be updated to handle new resource state flag");
     VERIFY((state & (state - 1)) == 0, "Only single state must be set");
     switch (state)
     {
@@ -420,6 +422,7 @@ static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STAT
         case D3D12_RESOURCE_STATE_COPY_SOURCE:                return RESOURCE_STATE_COPY_SOURCE;
         case D3D12_RESOURCE_STATE_RESOLVE_DEST:               return RESOURCE_STATE_RESOLVE_DEST;
         case D3D12_RESOURCE_STATE_RESOLVE_SOURCE:             return RESOURCE_STATE_RESOLVE_SOURCE;
+            // AZ TODO
         // clang-format on
         default:
             UNEXPECTED("Unexpected D3D12 resource state");

@@ -251,6 +251,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
         m_DeviceCaps.Features.MeshShaders = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
 
+        // AZ TODO: ray tracing
 
         {
             D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features = {};
@@ -297,7 +298,7 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 #undef CHECK_REQUIRED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 30, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         auto& TexCaps = m_DeviceCaps.TexCaps;
@@ -678,6 +679,25 @@ void RenderDeviceD3D12Impl::CreateFramebuffer(const FramebufferDesc& Desc, IFram
                            pFramebufferD3D12->QueryInterface(IID_Framebuffer, reinterpret_cast<IObject**>(ppFramebuffer));
                            OnCreateDeviceObject(pFramebufferD3D12);
                        });
+}
+
+
+void RenderDeviceD3D12Impl::CreateBLAS(const BottomLevelASDesc& Desc,
+                                       IBottomLevelAS**         ppBLAS)
+{
+    // AZ TODO
+}
+
+void RenderDeviceD3D12Impl::CreateTLAS(const TopLevelASDesc& Desc,
+                                       ITopLevelAS**         ppTLAS)
+{
+    // AZ TODO
+}
+
+void RenderDeviceD3D12Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
+                                      IShaderBindingTable**         ppSBT)
+{
+    // AZ TODO
 }
 
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)
