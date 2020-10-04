@@ -1600,6 +1600,16 @@ struct DeviceFeatures
     /// Indicates if 16-bit floats and ints can be used as input/output of a shader entry point.
     DEVICE_FEATURE_STATE ShaderInputOutput16               DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports native 8-bit integer operations.
+    DEVICE_FEATURE_STATE ShaderInt8                        DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports reading and writing 8-bit types from buffers bound
+    /// as shader resource or unordered access views.
+    DEVICE_FEATURE_STATE ResourceBuffer8BitAccess         DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
+    /// Indicates if device supports reading 8-bit types from uniform buffers.
+    DEVICE_FEATURE_STATE UniformBuffer8BitAccess          DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
 
 #if DILIGENT_CPP_INTERFACE
     DeviceFeatures() noexcept {}
@@ -1631,10 +1641,13 @@ struct DeviceFeatures
         ShaderFloat16                     {State},
         ResourceBuffer16BitAccess         {State},
         UniformBuffer16BitAccess          {State},
-        ShaderInputOutput16               {State}
+        ShaderInputOutput16               {State},
+        ShaderInt8                        {State},
+        ResourceBuffer8BitAccess          {State},
+        UniformBuffer8BitAccess           {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 27, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 30, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif

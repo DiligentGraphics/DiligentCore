@@ -364,6 +364,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(ResourceBuffer16BitAccess, CheckExtension("GL_EXT_shader_16bit_storage"),                     "16-bit resoure buffer access is");
         SET_FEATURE_STATE(UniformBuffer16BitAccess,  CheckExtension("GL_EXT_shader_16bit_storage"),                     "16-bit uniform buffer access is");
         SET_FEATURE_STATE(ShaderInputOutput16,       false,                                                             "16-bit shader inputs/outputs are");
+        SET_FEATURE_STATE(ShaderInt8,                CheckExtension("GL_EXT_shader_explicit_arithmetic_types_int8"),    "8-bit integer shader operations are");
+        SET_FEATURE_STATE(ResourceBuffer8BitAccess,  CheckExtension("GL_EXT_shader_8bit_storage"),                      "8-bit resoure buffer access is");
+        SET_FEATURE_STATE(UniformBuffer8BitAccess,   CheckExtension("GL_EXT_shader_8bit_storage"),                      "8-bit uniform buffer access is");
         // clang-format on
 
         TexCaps.MaxTexture1DDimension     = MaxTextureSize;
@@ -423,6 +426,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(ResourceBuffer16BitAccess, strstr(Extensions, "shader_16bit_storage"),                     "16-bit resoure buffer access is");
         SET_FEATURE_STATE(UniformBuffer16BitAccess,  strstr(Extensions, "shader_16bit_storage"),                     "16-bit uniform buffer access is");
         SET_FEATURE_STATE(ShaderInputOutput16,       false,                                                          "16-bit shader inputs/outputs are");
+        SET_FEATURE_STATE(ShaderInt8,                strstr(Extensions, "shader_explicit_arithmetic_types_int8"),    "8-bit integer shader operations are");
+        SET_FEATURE_STATE(ResourceBuffer8BitAccess,  strstr(Extensions, "shader_8bit_storage"),                      "8-bit resoure buffer access is");
+        SET_FEATURE_STATE(UniformBuffer8BitAccess,   strstr(Extensions, "shader_8bit_storage"),                      "8-bit uniform buffer access is");
         // clang-format on
 
         TexCaps.MaxTexture1DDimension     = 0; // Not supported in GLES 3.2
@@ -450,7 +456,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #undef SET_FEATURE_STATE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 27, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 30, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 }
 

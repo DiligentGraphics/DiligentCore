@@ -83,13 +83,24 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtFeatures.ShaderFloat16Int8.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR;
         }
 
-        // VK_KHR_16bit_storage extension requires VK_KHR_storage_buffer_storage_class extension.
-        if (IsExtensionSupported(VK_KHR_16BIT_STORAGE_EXTENSION_NAME) && IsExtensionSupported(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME))
+        // VK_KHR_16bit_storage and VK_KHR_8bit_storage extensions require VK_KHR_storage_buffer_storage_class extension.
+        if (IsExtensionSupported(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME))
         {
-            *NextFeat = &m_ExtFeatures.Storage16Bit;
-            NextFeat  = &m_ExtFeatures.Storage16Bit.pNext;
+            if (IsExtensionSupported(VK_KHR_16BIT_STORAGE_EXTENSION_NAME))
+            {
+                *NextFeat = &m_ExtFeatures.Storage16Bit;
+                NextFeat  = &m_ExtFeatures.Storage16Bit.pNext;
 
-            m_ExtFeatures.Storage16Bit.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
+                m_ExtFeatures.Storage16Bit.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES;
+            }
+
+            if (IsExtensionSupported(VK_KHR_8BIT_STORAGE_EXTENSION_NAME))
+            {
+                *NextFeat = &m_ExtFeatures.Storage8Bit;
+                NextFeat  = &m_ExtFeatures.Storage8Bit.pNext;
+
+                m_ExtFeatures.Storage8Bit.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES;
+            }
         }
 
         // Enable mesh shader extension.

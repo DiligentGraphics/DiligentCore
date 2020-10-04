@@ -220,7 +220,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 27, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 30, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     const auto& vkDeviceLimits    = m_PhysicalDevice->GetProperties().limits;

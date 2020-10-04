@@ -1,6 +1,7 @@
 ## Current progress
 
-* Added `ShaderFloat16`, `ResourceBuffer16BitAccess`, `UniformBuffer16BitAccess`, and `ShaderInputOutput16` device features.
+* Added `ShaderInt8`, `ResourceBuffer8BitAccess`, and `UniformBuffer8BitAccess` device features. (API Version 240074)
+* Added `ShaderFloat16`, `ResourceBuffer16BitAccess`, `UniformBuffer16BitAccess`, and `ShaderInputOutput16` device features. (API Version 240073)
 
 ## v2.4.f
 

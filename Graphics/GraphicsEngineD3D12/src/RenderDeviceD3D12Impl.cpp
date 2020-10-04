@@ -289,11 +289,15 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         CHECK_REQUIRED_FEATURE(ResourceBuffer16BitAccess, "16-bit resoure buffer access is");
         CHECK_REQUIRED_FEATURE(UniformBuffer16BitAccess,  "16-bit uniform buffer access is");
         CHECK_REQUIRED_FEATURE(ShaderInputOutput16,       "16-bit shader inputs/outputs are");
+
+        CHECK_REQUIRED_FEATURE(ShaderInt8,               "8-bit shader operations are");
+        CHECK_REQUIRED_FEATURE(ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
+        CHECK_REQUIRED_FEATURE(UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
         // clang-format on
 #undef CHECK_REQUIRED_FEATURE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 27, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 30, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         auto& TexCaps = m_DeviceCaps.TexCaps;
