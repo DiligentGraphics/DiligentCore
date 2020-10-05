@@ -44,7 +44,6 @@ GLProgramResources::GLProgramResources(GLProgramResources&& Program) noexcept :
     m_Samplers         {Program.m_Samplers             },
     m_Images           {Program.m_Images               },
     m_StorageBlocks    {Program.m_StorageBlocks        },
-    m_StringPool       {std::move(Program.m_StringPool)},
     m_NumUniformBuffers{Program.m_NumUniformBuffers    },
     m_NumSamplers      {Program.m_NumSamplers          },
     m_NumImages        {Program.m_NumImages            },        
@@ -141,33 +140,35 @@ void GLProgramResources::AllocateResources(std::vector<UniformBufferInfo>& Unifo
     Char* StringPoolData = reinterpret_cast<Char*>(EndOfResourceData);
     // clang-format on
 
-    m_StringPool.AssignMemory(StringPoolData, StringPoolDataSize);
+    // The pool is only needed to facilitate string allocation.
+    StringPool TmpStringPool;
+    TmpStringPool.AssignMemory(StringPoolData, StringPoolDataSize);
 
     for (Uint32 ub = 0; ub < m_NumUniformBuffers; ++ub)
     {
         auto& SrcUB = UniformBlocks[ub];
-        new (m_UniformBuffers + ub) UniformBufferInfo{SrcUB, m_StringPool};
+        new (m_UniformBuffers + ub) UniformBufferInfo{SrcUB, TmpStringPool};
     }
 
     for (Uint32 s = 0; s < m_NumSamplers; ++s)
     {
         auto& SrcSam = Samplers[s];
-        new (m_Samplers + s) SamplerInfo{SrcSam, m_StringPool};
+        new (m_Samplers + s) SamplerInfo{SrcSam, TmpStringPool};
     }
 
     for (Uint32 img = 0; img < m_NumImages; ++img)
     {
         auto& SrcImg = Images[img];
-        new (m_Images + img) ImageInfo{SrcImg, m_StringPool};
+        new (m_Images + img) ImageInfo{SrcImg, TmpStringPool};
     }
 
     for (Uint32 sb = 0; sb < m_NumStorageBlocks; ++sb)
     {
         auto& SrcSB = StorageBlocks[sb];
-        new (m_StorageBlocks + sb) StorageBlockInfo{SrcSB, m_StringPool};
+        new (m_StorageBlocks + sb) StorageBlockInfo{SrcSB, TmpStringPool};
     }
 
-    VERIFY_EXPR(m_StringPool.GetRemainingSize() == 0);
+    VERIFY_EXPR(TmpStringPool.GetRemainingSize() == 0);
 }
 
 GLProgramResources::~GLProgramResources()

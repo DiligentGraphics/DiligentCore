@@ -500,8 +500,6 @@ private:
     ImageInfo*          m_Images         = nullptr;
     StorageBlockInfo*   m_StorageBlocks  = nullptr;
 
-    StringPool          m_StringPool;
-
     Uint32              m_NumUniformBuffers = 0;
     Uint32              m_NumSamplers       = 0;
     Uint32              m_NumImages         = 0;
