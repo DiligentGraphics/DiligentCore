@@ -30,14 +30,14 @@
 /// \file
 /// Implementation of the Diligent::BottomLevelASBase template class
 
-#include <map>
+#include <unordered_map>
 #include <memory>
 
 #include "BottomLevelAS.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
 #include "StringPool.hpp"
-#include "StringView.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
@@ -97,7 +97,7 @@ public:
             for (Uint32 i = 0; i < Desc.TriangleCount; ++i)
             {
                 pTriangles[i].GeometryName = m_StringPool.CopyString(pTriangles[i].GeometryName);
-                bool IsUniqueName          = m_NameToIndex.insert({StringView{pTriangles[i].GeometryName}, i}).second;
+                bool IsUniqueName          = m_NameToIndex.emplace(pTriangles[i].GeometryName, i).second;
                 if (!IsUniqueName)
                     LOG_ERROR_AND_THROW("Geometry name must be unique!");
             }
@@ -127,7 +127,7 @@ public:
             for (Uint32 i = 0; i < Desc.TriangleCount; ++i)
             {
                 pBoxes[i].GeometryName = m_StringPool.CopyString(pBoxes[i].GeometryName);
-                bool IsUniqueName      = m_NameToIndex.insert({StringView{pBoxes[i].GeometryName}, i}).second;
+                bool IsUniqueName      = m_NameToIndex.emplace(pBoxes[i].GeometryName, i).second;
                 if (!IsUniqueName)
                     LOG_ERROR_AND_THROW("Geometry name must be unique!");
             }
@@ -151,7 +151,7 @@ public:
     {
         VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
 
-        auto iter = m_NameToIndex.find(StringView{Name});
+        auto iter = m_NameToIndex.find(Name);
         if (iter != m_NameToIndex.end())
             return iter->second;
 
@@ -185,8 +185,9 @@ protected:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
 
 protected:
-    std::map<StringView, Uint32> m_NameToIndex; // TODO (AZ): use unordered_map?
-    StringPool                   m_StringPool;
+    std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher> m_NameToIndex;
+
+    StringPool m_StringPool;
 };
 
 } // namespace Diligent

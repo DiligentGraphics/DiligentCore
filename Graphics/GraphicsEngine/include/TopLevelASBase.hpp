@@ -30,12 +30,13 @@
 /// \file
 /// Implementation of the Diligent::TopLevelASBase template class
 
+#include <unordered_map>
+
 #include "TopLevelAS.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
 #include "StringPool.hpp"
-#include "StringView.hpp"
-#include <map>
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
@@ -92,7 +93,7 @@ public:
             Desc.contributionToHitGroupIndex = inst.contributionToHitGroupIndex;
             Desc.pBLAS                       = inst.pBLAS;
 
-            bool IsUniqueName = m_Instances.emplace(StringView{NameCopy}, Desc).second;
+            bool IsUniqueName = m_Instances.emplace(NameCopy, Desc).second;
             if (!IsUniqueName)
                 LOG_ERROR_AND_THROW("Instance name must be unique!");
         }
@@ -104,7 +105,7 @@ public:
 
         TLASInstanceDesc Result = {};
 
-        auto iter = m_Instances.find(StringView{Name});
+        auto iter = m_Instances.find(Name);
         if (iter != m_Instances.end())
         {
             Result.ContributionToHitGroupIndex = iter->second.contributionToHitGroupIndex;
@@ -146,8 +147,9 @@ protected:
         mutable RefCntAutoPtr<IBottomLevelAS> pBLAS;
     };
 
-    StringPool                         m_StringPool;
-    std::map<StringView, InstanceDesc> m_Instances; // TODO(AZ): use unordered_map?
+    StringPool m_StringPool;
+
+    std::unordered_map<HashMapStringKey, InstanceDesc, HashMapStringKey::Hasher> m_Instances;
 };
 
 } // namespace Diligent

@@ -30,13 +30,13 @@
 /// \file
 /// Implementation of the Diligent::ShaderBindingTableBase template class
 
-#include <map>
+#include <unordered_map>
 
 #include "ShaderBindingTable.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
 #include "StringPool.hpp"
-#include "StringView.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
@@ -92,9 +92,10 @@ protected:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTable, TDeviceObjectBase)
 
 protected:
-    std::map<StringView, Uint32>           m_NameToIndex; // TODO (AZ): use unordered_map?
-    StringPool                             m_StringPool;
-    std::map<StringView, TLASInstanceDesc> m_Instances; // TODO (AZ): use unordered_map?
+    StringPool m_StringPool;
+
+    std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>           m_NameToIndex;
+    std::unordered_map<HashMapStringKey, TLASInstanceDesc, HashMapStringKey::Hasher> m_Instances;
 };
 
 } // namespace Diligent
