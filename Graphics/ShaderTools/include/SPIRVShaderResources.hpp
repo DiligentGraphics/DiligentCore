@@ -348,7 +348,8 @@ private:
     void Initialize(IMemoryAllocator&       Allocator,
                     const ResourceCounters& Counters,
                     Uint32                  NumShaderStageInputs,
-                    size_t                  ResourceNamesPoolSize);
+                    size_t                  ResourceNamesPoolSize,
+                    StringPool&             ResourceNamesPool);
 
     SPIRVShaderResourceAttribs& GetResAttribs(Uint32 n, Uint32 NumResources, Uint32 Offset) noexcept
     {
@@ -386,8 +387,6 @@ private:
     // Memory buffer that holds all resources as continuous chunk of memory:
     // |  UBs  |  SBs  |  StrgImgs  |  SmplImgs  |  ACs  |  SepSamplers  |  SepImgs  | Stage Inputs | Resource Names |
     std::unique_ptr<void, STDDeleterRawMem<void>> m_MemoryBuffer;
-
-    StringPool m_ResourceNames;
 
     const char* m_CombinedSamplerSuffix = nullptr;
     const char* m_ShaderName            = nullptr;

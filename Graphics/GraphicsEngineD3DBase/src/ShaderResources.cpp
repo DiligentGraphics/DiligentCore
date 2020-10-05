@@ -59,7 +59,8 @@ ShaderResources::~ShaderResources()
 
 void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
                                      const D3DShaderResourceCounters& ResCounters,
-                                     size_t                           ResourceNamesPoolSize)
+                                     size_t                           ResourceNamesPoolSize,
+                                     StringPool&                      ResourceNamesPool)
 {
     Uint32 CurrentOffset = 0;
 
@@ -97,7 +98,7 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
         auto* pRawMem   = ALLOCATE_RAW(Allocator, "Allocator for shader resources", MemorySize);
         m_MemoryBuffer  = std::unique_ptr<void, STDDeleterRawMem<void>>(pRawMem, Allocator);
         char* NamesPool = reinterpret_cast<char*>(reinterpret_cast<D3DShaderResourceAttribs*>(pRawMem) + m_TotalResources);
-        m_ResourceNames.AssignMemory(NamesPool, ResourceNamesPoolSize);
+        ResourceNamesPool.AssignMemory(NamesPool, ResourceNamesPoolSize);
     }
 }
 

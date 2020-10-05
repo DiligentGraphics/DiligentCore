@@ -427,7 +427,8 @@ protected:
 private:
     void AllocateMemory(IMemoryAllocator&                Allocator,
                         const D3DShaderResourceCounters& ResCounters,
-                        size_t                           ResourceNamesPoolSize);
+                        size_t                           ResourceNamesPoolSize,
+                        StringPool&                      ResourceNamesPool);
 
     Uint32 FindAssignedSamplerId(const D3DShaderResourceAttribs& TexSRV, const char* SamplerSuffix) const;
 
@@ -437,9 +438,8 @@ private:
 
     std::unique_ptr<void, STDDeleterRawMem<void>> m_MemoryBuffer;
 
-    StringPool  m_ResourceNames;
     const char* m_SamplerSuffix = nullptr; // The suffix and the shader name
-    const char* m_ShaderName    = nullptr; // are put into the m_ResourceNames
+    const char* m_ShaderName    = nullptr; // are put into the Resource Names section
 
     // Offsets in elements of D3DShaderResourceAttribs
     typedef Uint16 OffsetType;
@@ -466,6 +466,10 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
                                  const Char*         CombinedSamplerSuffix)
 {
     Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
+
+    // Resource names pool is only needed to facilitate string allocation.
+    StringPool ResourceNamesPool;
+
     LoadD3DShaderResources<D3D_SHADER_DESC, D3D_SHADER_INPUT_BIND_DESC>(
         pShaderReflection,
 
@@ -482,41 +486,41 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
             if (CombinedSamplerSuffix != nullptr)
                 ResourceNamesPoolSize += strlen(CombinedSamplerSuffix) + 1;
 
-            AllocateMemory(GetRawAllocator(), ResCounters, ResourceNamesPoolSize);
+            AllocateMemory(GetRawAllocator(), ResCounters, ResourceNamesPoolSize, ResourceNamesPool);
         },
 
         [&](const D3DShaderResourceAttribs& CBAttribs) //
         {
             VERIFY_EXPR(CBAttribs.GetInputType() == D3D_SIT_CBUFFER);
-            auto* pNewCB = new (&GetCB(CurrCB++)) D3DShaderResourceAttribs(m_ResourceNames, CBAttribs);
+            auto* pNewCB = new (&GetCB(CurrCB++)) D3DShaderResourceAttribs{ResourceNamesPool, CBAttribs};
             NewResHandler.OnNewCB(*pNewCB);
         },
 
         [&](const D3DShaderResourceAttribs& TexUAV) //
         {
             VERIFY_EXPR(TexUAV.GetInputType() == D3D_SIT_UAV_RWTYPED && TexUAV.GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER);
-            auto* pNewTexUAV = new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs(m_ResourceNames, TexUAV);
+            auto* pNewTexUAV = new (&GetTexUAV(CurrTexUAV++)) D3DShaderResourceAttribs{ResourceNamesPool, TexUAV};
             NewResHandler.OnNewTexUAV(*pNewTexUAV);
         },
 
         [&](const D3DShaderResourceAttribs& BuffUAV) //
         {
             VERIFY_EXPR(BuffUAV.GetInputType() == D3D_SIT_UAV_RWTYPED && BuffUAV.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER || BuffUAV.GetInputType() == D3D_SIT_UAV_RWSTRUCTURED || BuffUAV.GetInputType() == D3D_SIT_UAV_RWBYTEADDRESS);
-            auto* pNewBufUAV = new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs(m_ResourceNames, BuffUAV);
+            auto* pNewBufUAV = new (&GetBufUAV(CurrBufUAV++)) D3DShaderResourceAttribs{ResourceNamesPool, BuffUAV};
             NewResHandler.OnNewBuffUAV(*pNewBufUAV);
         },
 
         [&](const D3DShaderResourceAttribs& BuffSRV) //
         {
             VERIFY_EXPR(BuffSRV.GetInputType() == D3D_SIT_TEXTURE && BuffSRV.GetSRVDimension() == D3D_SRV_DIMENSION_BUFFER || BuffSRV.GetInputType() == D3D_SIT_STRUCTURED || BuffSRV.GetInputType() == D3D_SIT_BYTEADDRESS);
-            auto* pNewBuffSRV = new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs(m_ResourceNames, BuffSRV);
+            auto* pNewBuffSRV = new (&GetBufSRV(CurrBufSRV++)) D3DShaderResourceAttribs{ResourceNamesPool, BuffSRV};
             NewResHandler.OnNewBuffSRV(*pNewBuffSRV);
         },
 
         [&](const D3DShaderResourceAttribs& SamplerAttribs) //
         {
             VERIFY_EXPR(SamplerAttribs.GetInputType() == D3D_SIT_SAMPLER);
-            auto* pNewSampler = new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs(m_ResourceNames, SamplerAttribs);
+            auto* pNewSampler = new (&GetSampler(CurrSampler++)) D3DShaderResourceAttribs{ResourceNamesPool, SamplerAttribs};
             NewResHandler.OnNewSampler(*pNewSampler);
         },
 
@@ -526,7 +530,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
             VERIFY(CurrSampler == GetNumSamplers(), "All samplers must be initialized before texture SRVs");
 
             auto  SamplerId  = CombinedSamplerSuffix != nullptr ? FindAssignedSamplerId(TexAttribs, CombinedSamplerSuffix) : D3DShaderResourceAttribs::InvalidSamplerId;
-            auto* pNewTexSRV = new (&GetTexSRV(CurrTexSRV)) D3DShaderResourceAttribs(m_ResourceNames, TexAttribs, SamplerId);
+            auto* pNewTexSRV = new (&GetTexSRV(CurrTexSRV)) D3DShaderResourceAttribs{ResourceNamesPool, TexAttribs, SamplerId};
             if (SamplerId != D3DShaderResourceAttribs::InvalidSamplerId)
             {
                 GetSampler(SamplerId).SetTexSRVId(CurrTexSRV);
@@ -536,11 +540,11 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
         } //
     );
 
-    m_ShaderName = m_ResourceNames.CopyString(ShaderName);
+    m_ShaderName = ResourceNamesPool.CopyString(ShaderName);
 
     if (CombinedSamplerSuffix != nullptr)
     {
-        m_SamplerSuffix = m_ResourceNames.CopyString(CombinedSamplerSuffix);
+        m_SamplerSuffix = ResourceNamesPool.CopyString(CombinedSamplerSuffix);
 
 #ifdef DILIGENT_DEVELOPMENT
         for (Uint32 n = 0; n < GetNumSamplers(); ++n)
@@ -552,7 +556,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
 #endif
     }
 
-    VERIFY_EXPR(m_ResourceNames.GetRemainingSize() == 0);
+    VERIFY_EXPR(ResourceNamesPool.GetRemainingSize() == 0);
     // clang-format off
     VERIFY(CurrCB      == GetNumCBs(),      "Not all CBs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called");
     VERIFY(CurrTexSRV  == GetNumTexSRV(),   "Not all Tex SRVs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
