@@ -269,8 +269,13 @@ QueryPoolWrapper VulkanLogicalDevice::CreateQueryPool(const VkQueryPoolCreateInf
 
 AccelStructWrapper VulkanLogicalDevice::CreateAccelStruct(const VkAccelerationStructureCreateInfoKHR& CI, const char* DebugName) const
 {
+#if DILIGENT_USE_VOLK
     VERIFY_EXPR(CI.sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR);
     return CreateVulkanObject<VkAccelerationStructureKHR, VulkanHandleTypeId::AccelerationStructureKHR>(vkCreateAccelerationStructureKHR, CI, DebugName, "acceleration structure");
+#else
+    UNSUPPORTED("vkCreateAccelerationStructureKHR is only available through Volk");
+    return AccelStructWrapper{};
+#endif
 }
 
 VkCommandBuffer VulkanLogicalDevice::AllocateVkCommandBuffer(const VkCommandBufferAllocateInfo& AllocInfo, const char* DebugName) const
@@ -416,8 +421,12 @@ void VulkanLogicalDevice::ReleaseVulkanObject(QueryPoolWrapper&& QueryPool) cons
 
 void VulkanLogicalDevice::ReleaseVulkanObject(AccelStructWrapper&& AccelStruct) const
 {
+#if DILIGENT_USE_VOLK
     vkDestroyAccelerationStructureKHR(m_VkDevice, AccelStruct.m_VkObject, m_VkAllocator);
     AccelStruct.m_VkObject = VK_NULL_HANDLE;
+#else
+    UNSUPPORTED("vkDestroyAccelerationStructureKHR is only available through Volk");
+#endif
 }
 
 void VulkanLogicalDevice::FreeDescriptorSet(VkDescriptorPool Pool, VkDescriptorSet Set) const
@@ -446,7 +455,11 @@ VkMemoryRequirements VulkanLogicalDevice::GetImageMemoryRequirements(VkImage vkI
 VkMemoryRequirements VulkanLogicalDevice::GetASMemoryRequirements(const VkAccelerationStructureMemoryRequirementsInfoKHR& Info) const
 {
     VkMemoryRequirements2 MemReqs = {};
+#if DILIGENT_USE_VOLK
     vkGetAccelerationStructureMemoryRequirementsKHR(m_VkDevice, &Info, &MemReqs);
+#else
+    UNSUPPORTED("vkGetAccelerationStructureMemoryRequirementsKHR is only available through Volk");
+#endif
     return MemReqs.memoryRequirements;
 }
 
@@ -462,6 +475,7 @@ VkResult VulkanLogicalDevice::BindImageMemory(VkImage image, VkDeviceMemory memo
 
 VkResult VulkanLogicalDevice::BindASMemory(VkAccelerationStructureKHR AS, VkDeviceMemory memory, VkDeviceSize memoryOffset) const
 {
+#if DILIGENT_USE_VOLK
     VkBindAccelerationStructureMemoryInfoKHR Info = {};
 
     Info.sType                 = VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_KHR;
@@ -472,16 +486,25 @@ VkResult VulkanLogicalDevice::BindASMemory(VkAccelerationStructureKHR AS, VkDevi
     Info.accelerationStructure = AS;
 
     return vkBindAccelerationStructureMemoryKHR(m_VkDevice, 1, &Info);
+#else
+    UNSUPPORTED("vkBindAccelerationStructureMemoryKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
 }
 
 VkDeviceAddress VulkanLogicalDevice::GetAccelerationStructureDeviceAddress(VkAccelerationStructureKHR AS) const
 {
+#if DILIGENT_USE_VOLK
     VkAccelerationStructureDeviceAddressInfoKHR Info = {};
 
     Info.sType                 = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR;
     Info.accelerationStructure = AS;
 
     return vkGetAccelerationStructureDeviceAddressKHR(m_VkDevice, &Info);
+#else
+    UNSUPPORTED("vkGetAccelerationStructureDeviceAddressKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
 }
 
 VkResult VulkanLogicalDevice::MapMemory(VkDeviceMemory memory, VkDeviceSize offset, VkDeviceSize size, VkMemoryMapFlags flags, void** ppData) const

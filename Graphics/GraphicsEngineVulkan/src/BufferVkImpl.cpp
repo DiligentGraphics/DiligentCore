@@ -493,8 +493,9 @@ VkDeviceAddress BufferVkImpl::GetVkDeviceAddress() const
 {
     constexpr auto DeviceAddressFlags = BIND_RAY_TRACING;
 
-    if (m_VulkanBuffer != VK_NULL_HANDLE && !!(m_Desc.BindFlags & DeviceAddressFlags))
+    if (m_VulkanBuffer != VK_NULL_HANDLE && (m_Desc.BindFlags & DeviceAddressFlags) != 0)
     {
+#if DILIGENT_USE_VOLK
         VkBufferDeviceAddressInfoKHR BufferInfo = {};
 
         BufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO_KHR;
@@ -502,6 +503,10 @@ VkDeviceAddress BufferVkImpl::GetVkDeviceAddress() const
         VkDeviceAddress Result = vkGetBufferDeviceAddressKHR(m_pDevice->GetLogicalDevice().GetVkDevice(), &BufferInfo);
         VERIFY_EXPR(Result > 0);
         return Result;
+#else
+        UNSUPPORTED("vkGetBufferDeviceAddressKHR is only available through Volk");
+        return VkDeviceAddress{};
+#endif
     }
     else
     {
