@@ -87,10 +87,9 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*  pR
 
 ShaderResourceBindingVkImpl::~ShaderResourceBindingVkImpl()
 {
-    PipelineStateVkImpl* pPSO = ValidatedCast<PipelineStateVkImpl>(m_pPSO);
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
+        auto& VarDataAllocator = m_pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
         m_pShaderVarMgrs[s].DestroyVariables(VarDataAllocator);
         m_pShaderVarMgrs[s].~ShaderVariableManagerVk();
     }

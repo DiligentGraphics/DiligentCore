@@ -32,6 +32,7 @@
 
 #include <vector>
 
+#include "Atomics.hpp"
 #include "ShaderResourceVariable.h"
 #include "PipelineState.h"
 #include "StringTools.hpp"
@@ -340,7 +341,7 @@ template <typename ResourceLayoutType,
 struct ShaderVariableBase : public ResourceVariableBaseInterface
 {
     ShaderVariableBase(ResourceLayoutType& ParentResLayout) :
-        m_ParentResLayout(ParentResLayout)
+        m_ParentResLayout{ParentResLayout}
     {
     }
 
