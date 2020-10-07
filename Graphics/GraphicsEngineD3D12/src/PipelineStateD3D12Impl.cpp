@@ -110,20 +110,18 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
     const auto& ResourceLayout = m_Desc.ResourceLayout;
     m_RootSig.AllocateStaticSamplers(ResourceLayout);
 
-    {
-        auto& ShaderResLayoutAllocator = GetRawAllocator();
-        m_pShaderResourceLayouts       = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutD3D12", ShaderResourceLayoutD3D12, m_NumShaders * 2);
-    }
+    // clang-format off
+    static_assert((sizeof(ShaderResourceLayoutD3D12)  % sizeof(void*)) == 0, "sizeof(ShaderResourceLayoutD3D12) is expected to be a multiple of sizeof(void*)");
+    static_assert((sizeof(ShaderResourceCacheD3D12)   % sizeof(void*)) == 0, "sizeof(ShaderResourceCacheD3D12) is expected to be a multiple of sizeof(void*)");
+    static_assert((sizeof(ShaderVariableManagerD3D12) % sizeof(void*)) == 0, "sizeof(ShaderVariableManagerD3D12) is expected to be a multiple of sizeof(void*)");
+    // clang-format on
+    const auto  MemSize = (sizeof(ShaderResourceLayoutD3D12) * 2 + sizeof(ShaderResourceCacheD3D12) + sizeof(ShaderVariableManagerD3D12)) * m_NumShaders;
+    auto* const pRawMem =
+        ALLOCATE_RAW(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D12, ShaderResourceCacheD3D12, and ShaderVariableManagerD3D12 arrays", MemSize);
 
-    {
-        auto& ShaderResCacheAllocator = GetRawAllocator();
-        m_pStaticResourceCaches       = ALLOCATE(ShaderResCacheAllocator, "Raw memory for ShaderResourceCacheD3D12", ShaderResourceCacheD3D12, m_NumShaders);
-    }
-
-    {
-        auto& ShaderVarMgrAllocator = GetRawAllocator();
-        m_pStaticVarManagers        = ALLOCATE(ShaderVarMgrAllocator, "Raw memory for ShaderVariableManagerD3D12", ShaderVariableManagerD3D12, m_NumShaders);
-    }
+    m_pShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D12*>(pRawMem);
+    m_pStaticResourceCaches  = reinterpret_cast<ShaderResourceCacheD3D12*>(m_pShaderResourceLayouts + m_NumShaders * 2);
+    m_pStaticVarManagers     = reinterpret_cast<ShaderVariableManagerD3D12*>(m_pStaticResourceCaches + m_NumShaders);
 
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -444,9 +442,10 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
         m_pShaderResourceLayouts[s].~ShaderResourceLayoutD3D12();
         m_pShaderResourceLayouts[m_NumShaders + s].~ShaderResourceLayoutD3D12();
     }
-    ShaderResLayoutAllocator.Free(m_pStaticVarManagers);
-    ShaderResLayoutAllocator.Free(m_pStaticResourceCaches);
-    ShaderResLayoutAllocator.Free(m_pShaderResourceLayouts);
+    // m_pShaderResourceLayouts, m_pStaticResourceCaches, and m_pShaderResourceLayouts are allocated in
+    // contiguous chunks of memory.
+    auto* pRawMem = m_pShaderResourceLayouts;
+    ShaderResLayoutAllocator.Free(pRawMem);
 
     // D3D12 object can only be destroyed when it is no longer used by the GPU
     m_pDevice->SafeReleaseDeviceObject(std::move(m_pd3d12PSO), m_Desc.CommandQueueMask);

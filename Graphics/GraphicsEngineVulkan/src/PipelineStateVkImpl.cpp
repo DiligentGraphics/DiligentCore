@@ -159,15 +159,21 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
 
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
-    // Initialize shader resource layouts
-    auto& ShaderResLayoutAllocator = GetRawAllocator();
-
     std::array<std::shared_ptr<const SPIRVShaderResources>, MAX_SHADERS_IN_PIPELINE> ShaderResources;
     std::array<std::vector<uint32_t>, MAX_SHADERS_IN_PIPELINE>                       ShaderSPIRVs;
 
-    m_ShaderResourceLayouts = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", ShaderResourceLayoutVk, m_NumShaders * 2);
-    m_StaticResCaches       = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheVk", ShaderResourceCacheVk, m_NumShaders);
-    m_StaticVarsMgrs        = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerVk", ShaderVariableManagerVk, m_NumShaders);
+    // clang-format off
+    static_assert((sizeof(ShaderResourceLayoutVk)  % sizeof(void*)) == 0, "sizeof(ShaderResourceLayoutVk) is expected to be a multiple of sizeof(void*)");
+    static_assert((sizeof(ShaderResourceCacheVk)   % sizeof(void*)) == 0, "sizeof(ShaderResourceCacheVk) is expected to be a multiple of sizeof(void*)");
+    static_assert((sizeof(ShaderVariableManagerVk) % sizeof(void*)) == 0, "sizeof(ShaderVariableManagerVk) is expected to be a multiple of sizeof(void*)");
+    // clang-format on
+    const auto  MemSize = (sizeof(ShaderResourceLayoutVk) * 2 + sizeof(ShaderResourceCacheVk) + sizeof(ShaderVariableManagerVk)) * m_NumShaders;
+    auto* const pRawMem =
+        ALLOCATE_RAW(GetRawAllocator(), "Raw memory for ShaderResourceLayoutVk, ShaderResourceCacheVk, and ShaderVariableManagerVk arrays", MemSize);
+
+    m_ShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutVk*>(pRawMem);
+    m_StaticResCaches       = reinterpret_cast<ShaderResourceCacheVk*>(m_ShaderResourceLayouts + m_NumShaders * 2);
+    m_StaticVarsMgrs        = reinterpret_cast<ShaderVariableManagerVk*>(m_StaticResCaches + m_NumShaders);
 
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
@@ -182,7 +188,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
 
         auto* pStaticResLayout = new (m_ShaderResourceLayouts + m_NumShaders + s) ShaderResourceLayoutVk{LogicalDevice};
         auto* pStaticResCache  = new (m_StaticResCaches + s) ShaderResourceCacheVk{ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources};
-        pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], ShaderResLayoutAllocator, m_Desc.ResourceLayout, m_StaticResCaches[s]);
+        pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], GetRawAllocator(), m_Desc.ResourceLayout, m_StaticResCaches[s]);
 
         new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, *pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache};
     }
@@ -507,9 +513,10 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
         m_StaticVarsMgrs[s].DestroyVariables(GetRawAllocator());
         m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
     }
-    RawAllocator.Free(m_ShaderResourceLayouts);
-    RawAllocator.Free(m_StaticResCaches);
-    RawAllocator.Free(m_StaticVarsMgrs);
+    // m_ShaderResourceLayouts, m_StaticResCaches and m_StaticVarsMgrs are allocted in
+    // contiguous chunks of memory.
+    void* pRawMem = m_ShaderResourceLayouts;
+    RawAllocator.Free(pRawMem);
 }
 
 IMPLEMENT_QUERY_INTERFACE(PipelineStateVkImpl, IID_PipelineStateVk, TPipelineStateBase)

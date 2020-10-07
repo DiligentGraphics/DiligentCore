@@ -132,8 +132,16 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
         UNEXPECTED(GetPipelineTypeString(m_Desc.PipelineType), " pipelines are not supported by Direct3D11 backend");
     }
 
-    m_pStaticResourceLayouts = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11", ShaderResourceLayoutD3D11, m_NumShaders);
-    m_pStaticResourceCaches  = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheD3D11", ShaderResourceCacheD3D11, m_NumShaders);
+    // clang-format off
+    static_assert((sizeof(ShaderResourceLayoutD3D11) % sizeof(void*)) == 0, "sizeof(ShaderResourceLayoutD3D11) is expected to be a multiple of sizeof(void*)");
+    static_assert((sizeof(ShaderResourceCacheD3D11)  % sizeof(void*)) == 0, "sizeof(ShaderResourceCacheD3D11) is expected to be a multiple of sizeof(void*)");
+    // clang-format on
+    const auto  MemSize = (sizeof(ShaderResourceLayoutD3D11) + sizeof(ShaderResourceCacheD3D11)) * m_NumShaders;
+    auto* const pRawMem =
+        ALLOCATE_RAW(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11 and ShaderResourceCacheD3D11 arrays", MemSize);
+
+    m_pStaticResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D11*>(pRawMem);
+    m_pStaticResourceCaches  = reinterpret_cast<ShaderResourceCacheD3D11*>(m_pStaticResourceLayouts + m_NumShaders);
 
     const auto& ResourceLayout = m_Desc.ResourceLayout;
 
@@ -236,13 +244,14 @@ PipelineStateD3D11Impl::~PipelineStateD3D11Impl()
         m_pStaticResourceCaches[s].Destroy(GetRawAllocator());
         m_pStaticResourceCaches[s].~ShaderResourceCacheD3D11();
     }
-    GetRawAllocator().Free(m_pStaticResourceCaches);
 
     for (Uint32 l = 0; l < m_NumShaders; ++l)
     {
         m_pStaticResourceLayouts[l].~ShaderResourceLayoutD3D11();
     }
-    GetRawAllocator().Free(m_pStaticResourceLayouts);
+    // m_pStaticResourceLayouts and m_pStaticResourceCaches are allocated in contiguous chunks of memory.
+    auto* pRawMem = m_pStaticResourceLayouts;
+    GetRawAllocator().Free(pRawMem);
 }
 
 IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D11Impl, IID_PipelineStateD3D11, TPipelineStateBase)
