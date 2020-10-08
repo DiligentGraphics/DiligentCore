@@ -489,14 +489,14 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
                     IsCompatibleShaders = false;
                     break;
                 }
-                // AZ TODO
-                /*const ShaderResourcesD3D12* pRes0 = pShader0->GetShaderResources().get();
-                const ShaderResourcesD3D12* pRes1 = pShader1->GetShaderResources().get();
-                if (!pRes0->IsCompatibleWith(*pRes1))
+
+                const auto& Res0 = GetShaderResLayout(s).GetResources();
+                const auto& Res1 = pPSOD3D12->GetShaderResLayout(s).GetResources();
+                if (!Res0.IsCompatibleWith(Res1))
                 {
                     IsCompatibleShaders = false;
                     break;
-                }*/
+                }
             }
         }
 

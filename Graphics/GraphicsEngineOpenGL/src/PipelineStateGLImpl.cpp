@@ -112,23 +112,23 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         }
         else
         {
-            UNEXPECTED("TODO");
-            // AZ TODO
-            /*m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(m_ppShaders.data(), ShaderStages.size(), false));
-            m_ProgramResources.resize(1);
-            SHADER_TYPE ShaderStages = SHADER_TYPE_UNKNOWN;
+            std::vector<IShader*> Shaders;
+            SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
             for (size_t i = 0; i < ShaderStages.size(); ++i)
             {
-                const auto& ShaderDesc = m_ppShaders[i]->GetDesc();
-                ShaderStages |= ShaderDesc.ShaderType;
+                Shaders.push_back(ShaderStages[i].second);
+                ActiveStages |= ShaderStages[i].first;
             }
-            m_ProgramResources[0].LoadUniforms(ShaderStages, m_GLPrograms[0], GLState,
+
+            m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(Shaders.data(), static_cast<Uint32>(ShaderStages.size()), false));
+            m_ProgramResources.resize(1);
+            m_ProgramResources[0].LoadUniforms(ActiveStages, m_GLPrograms[0], GLState,
                                                m_TotalUniformBufferBindings,
                                                m_TotalSamplerBindings,
                                                m_TotalImageBindings,
                                                m_TotalStorageBufferBindings);
 
-            m_ShaderResourceLayoutHash = m_ProgramResources[0].GetHash();*/
+            m_ShaderResourceLayoutHash = m_ProgramResources[0].GetHash();
         }
 
         // Initialize master resource layout that keeps all variable types and does not reference a resource cache

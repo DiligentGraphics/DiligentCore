@@ -177,20 +177,32 @@ public:
 /* 7.5 */ const Uint32 VariableType             : VariableTypeBits;  
 /* 7.7 */ const Uint32 ImmutableSamplerAssigned : ImmutableSamplerFlagBits;
 
-/* 8   */ const SPIRVShaderResourceAttribs  SpirvAttribs;
-/* 16  */ const ShaderResourceLayoutVk&     ParentResLayout;
+/* 8   */ const SPIRVShaderResourceAttribs&  SpirvAttribs;
+/* 16  */ const ShaderResourceLayoutVk&      ParentResLayout;
+
+        VkResource(const ShaderResourceLayoutVk&        _ParentLayout,
+                   const SPIRVShaderResourceAttribs&    _SpirvAttribs,
+                   SHADER_RESOURCE_VARIABLE_TYPE        _VariableType,
+                   uint32_t                             _Binding,
+                   uint32_t                             _DescriptorSet,
+                   Uint32                               _CacheOffset,
+                   Uint32                               _SamplerInd,
+                   bool                                 _ImmutableSamplerAssigned = false)noexcept :
+            Binding                  {static_cast<decltype(Binding)>(_Binding)            },
+            DescriptorSet            {static_cast<decltype(DescriptorSet)>(_DescriptorSet)},
+            CacheOffset              {_CacheOffset  },
+            SamplerInd               {_SamplerInd   },
+            VariableType             {_VariableType },
+            ImmutableSamplerAssigned {_ImmutableSamplerAssigned ? 1U : 0U},
+            SpirvAttribs             {_SpirvAttribs },
+            ParentResLayout          {_ParentLayout }
+        {
+            VERIFY(_CacheOffset   < (1 << CacheOffsetBits),                               "Cache offset (", _CacheOffset, ") exceeds max representable value ", (1 << CacheOffsetBits) );
+            VERIFY(_SamplerInd    < (1 << SamplerIndBits),                                "Sampler index  (", _SamplerInd, ") exceeds max representable value ", (1 << SamplerIndBits) );
+            VERIFY(_Binding       <= std::numeric_limits<decltype(Binding)>::max(),       "Binding (", _Binding, ") exceeds max representable value ", std::numeric_limits<decltype(Binding)>::max() );
+            VERIFY(_DescriptorSet <= std::numeric_limits<decltype(DescriptorSet)>::max(), "Descriptor set (", _DescriptorSet, ") exceeds max representable value ", std::numeric_limits<decltype(DescriptorSet)>::max());
+        }
         // clang-format on
-
-        VkResource(const ShaderResourceLayoutVk&     _ParentLayout,
-                   const SPIRVShaderResourceAttribs& _SpirvAttribs,
-                   SHADER_RESOURCE_VARIABLE_TYPE     _VariableType,
-                   uint32_t                          _Binding,
-                   uint32_t                          _DescriptorSet,
-                   Uint32                            _CacheOffset,
-                   Uint32                            _SamplerInd,
-                   bool                              _ImmutableSamplerAssigned = false) noexcept;
-
-        ~VkResource();
 
         // Checks if a resource is bound in ResourceCache at the given ArrayIndex
         bool IsBound(Uint32 ArrayIndex, const ShaderResourceCacheVk& ResourceCache) const;
@@ -289,10 +301,15 @@ public:
 
     const Char* GetShaderName() const
     {
-        return ""; // AZ TODO
+        return m_pResources->GetShaderName();
     }
 
-    SHADER_TYPE GetShaderType() const { return m_ShaderType; }
+    SHADER_TYPE GetShaderType() const
+    {
+        return m_pResources->GetShaderType();
+    }
+    
+    const SPIRVShaderResources& GetResources() const { return *m_pResources; }
 
     const VkResource& GetResource(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r) const
     {
@@ -301,7 +318,7 @@ public:
         return Resources[GetResourceOffset(VarType, r)];
     }
 
-    bool IsUsingSeparateSamplers() const { return m_IsUsingSeparateSamplers; }
+    bool IsUsingSeparateSamplers() const { return !m_pResources->IsUsingCombinedSamplers(); }
 
 private:
     Uint32 GetResourceOffset(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r) const
@@ -348,16 +365,16 @@ private:
     }
 
     // clang-format off
-/* 0 */ const VulkanUtilities::VulkanLogicalDevice&     m_LogicalDevice;
-/* 8 */ std::unique_ptr<void, STDDeleterRawMem<void> >  m_ResourceBuffer;
+/* 0 */ const VulkanUtilities::VulkanLogicalDevice&         m_LogicalDevice;
+/* 8 */ std::unique_ptr<void, STDDeleterRawMem<void> >      m_ResourceBuffer;
 
-/*24 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES+1>  m_NumResources = {};
+        // We must use shared_ptr to reference ShaderResources instance, because
+        // there may be multiple objects referencing the same set of resources
+/*24 */ std::shared_ptr<const SPIRVShaderResources>         m_pResources;
 
-/*32 */ Uint32      m_NumImmutableSamplers    = 0;
-/*36 */ bool        m_IsUsingSeparateSamplers = false;
-/*37 */ SHADER_TYPE m_ShaderType              = SHADER_TYPE_UNKNOWN;
-
-/*40 */  // End of class
+/*40 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES+1>  m_NumResources = {};
+/*48 */ Uint32 m_NumImmutableSamplers = 0;
+/*56*/  // End of class
     // clang-format on
 };
 

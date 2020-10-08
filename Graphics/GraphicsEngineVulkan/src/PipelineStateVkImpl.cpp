@@ -575,15 +575,14 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
                     IsCompatibleShaders = false;
                     break;
                 }
-
-                // AZ TODO
-                /*const auto* pRes0 = pShader0->GetShaderResources().get();
-                const auto* pRes1 = pShader1->GetShaderResources().get();
-                if (!pRes0->IsCompatibleWith(*pRes1))
+                
+                const auto& Res0 = GetShaderResLayout(s).GetResources();
+                const auto& Res1 = pPSOVk->GetShaderResLayout(s).GetResources();
+                if (!Res0.IsCompatibleWith(Res1))
                 {
                     IsCompatibleShaders = false;
                     break;
-                }*/
+                }
             }
         }
 
