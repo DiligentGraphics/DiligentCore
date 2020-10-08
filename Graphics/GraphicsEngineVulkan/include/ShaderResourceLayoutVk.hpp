@@ -308,7 +308,7 @@ public:
     {
         return m_pResources->GetShaderType();
     }
-    
+
     const SPIRVShaderResources& GetResources() const { return *m_pResources; }
 
     const VkResource& GetResource(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r) const

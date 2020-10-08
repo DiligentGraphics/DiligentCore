@@ -113,7 +113,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         else
         {
             std::vector<IShader*> Shaders;
-            SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
+            SHADER_TYPE           ActiveStages = SHADER_TYPE_UNKNOWN;
             for (size_t i = 0; i < ShaderStages.size(); ++i)
             {
                 Shaders.push_back(ShaderStages[i].second);
