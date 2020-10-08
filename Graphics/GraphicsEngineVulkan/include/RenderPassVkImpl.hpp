@@ -41,7 +41,7 @@ namespace Diligent
 
 class FixedBlockMemoryAllocator;
 
-/// Render pass implementation in Direct3D11 backend.
+/// Render pass implementation in Vulkan backend.
 class RenderPassVkImpl final : public RenderPassBase<IRenderPassVk, RenderDeviceVkImpl>
 {
 public:

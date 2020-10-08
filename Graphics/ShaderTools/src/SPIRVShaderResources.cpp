@@ -582,6 +582,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     VERIFY_EXPR(GetNumACs()       == Counters.NumACs);
     VERIFY_EXPR(GetNumSepSmplrs() == Counters.NumSepSmplrs);
     VERIFY_EXPR(GetNumSepImgs()   == Counters.NumSepImgs);
+    VERIFY_EXPR(GetNumInptAtts()  == Counters.NumInptAtts);
     // clang-format on
 
     if (MemorySize)
@@ -617,6 +618,9 @@ SPIRVShaderResources::~SPIRVShaderResources()
 
     for (Uint32 n = 0; n < GetNumSepImgs(); ++n)
         GetSepImg(n).~SPIRVShaderResourceAttribs();
+
+    for (Uint32 n = 0; n < GetNumInptAtts(); ++n)
+        GetInptAtt(n).~SPIRVShaderResourceAttribs();
 
     for (Uint32 n = 0; n < GetNumShaderStageInputs(); ++n)
         GetShaderStageInputAttribs(n).~SPIRVShaderStageInputAttribs();
@@ -748,7 +752,8 @@ bool SPIRVShaderResources::IsCompatibleWith(const SPIRVShaderResources& Resource
         GetNumSmpldImgs()         != Resources.GetNumSmpldImgs()  ||
         GetNumACs()               != Resources.GetNumACs()        ||
         GetNumSepImgs()           != Resources.GetNumSepImgs()    ||
-        GetNumSepSmplrs()         != Resources.GetNumSepSmplrs())
+        GetNumSepSmplrs()         != Resources.GetNumSepSmplrs()  ||
+        GetNumInptAtts()          != Resources.GetNumInptAtts())
         return false;
     // clang-format on
     VERIFY_EXPR(GetTotalResources() == Resources.GetTotalResources());

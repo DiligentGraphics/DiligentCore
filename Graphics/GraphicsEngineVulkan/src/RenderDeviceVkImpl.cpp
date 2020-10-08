@@ -100,6 +100,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
         },
         EngineCI.MainDescriptorPoolSize.MaxDescriptorSets,
         true
@@ -120,6 +121,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
         },
         EngineCI.DynamicDescriptorPoolSize.MaxDescriptorSets,
         false // Pools can only be reset
