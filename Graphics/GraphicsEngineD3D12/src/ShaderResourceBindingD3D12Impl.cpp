@@ -45,11 +45,10 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         IsPSOInternal
     },
     m_ShaderResourceCache{ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources},
-    m_NumShaders         {static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaders())}
+    m_NumShaders         {static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaderTypes())}
 // clang-format on
 {
     m_ResourceLayoutIndex.fill(-1);
-    auto* ppShaders = pPSO->GetShaders();
 
     auto* pRenderDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(pPSO->GetDevice());
     auto& ResCacheDataAllocator  = pPSO->GetSRBMemoryAllocator().GetResourceCacheDataAllocator(0);
@@ -59,9 +58,8 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
 
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto* pShader    = ppShaders[s];
-        auto  ShaderType = pShader->GetDesc().ShaderType;
-        auto  ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPSO->GetDesc().PipelineType);
+        auto ShaderType = pPSO->GetShaderTypes()[s];
+        auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPSO->GetDesc().PipelineType);
 
         auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
 
@@ -189,20 +187,20 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineSt
     }
 
     auto* pPSO12     = ValidatedCast<const PipelineStateD3D12Impl>(pPSO);
-    auto  NumShaders = pPSO12->GetNumShaders();
+    auto  NumShaders = pPSO12->GetNumShaderTypes();
     // Copy static resources
     for (Uint32 s = 0; s < NumShaders; ++s)
     {
         const auto& ShaderResLayout = pPSO12->GetShaderResLayout(s);
         auto&       StaticResLayout = pPSO12->GetStaticShaderResLayout(s);
         auto&       StaticResCache  = pPSO12->GetStaticShaderResCache(s);
+
 #ifdef DILIGENT_DEVELOPMENT
         if (!StaticResLayout.dvpVerifyBindings(StaticResCache))
         {
-            auto* pShader = pPSO12->GetShader<ShaderD3D12Impl>(s);
             LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSO12->GetDesc().Name,
-                              "' will not be successfully initialized because not all static resource bindings in shader '",
-                              pShader->GetDesc().Name,
+                              "' will not be successfully initialized because not all static resource bindings in shader type '",
+                              GetShaderTypeLiteralName(pPSO12->GetShaderTypes()[s]),
                               "' are valid. Please make sure you bind all static resources to PSO before calling InitializeStaticResources() "
                               "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
         }

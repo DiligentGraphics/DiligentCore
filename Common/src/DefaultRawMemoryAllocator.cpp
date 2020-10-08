@@ -37,6 +37,7 @@ DefaultRawMemoryAllocator::DefaultRawMemoryAllocator()
 
 void* DefaultRawMemoryAllocator::Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
 {
+    VERIFY_EXPR(Size > 0);
     return new Uint8[Size];
 }
 

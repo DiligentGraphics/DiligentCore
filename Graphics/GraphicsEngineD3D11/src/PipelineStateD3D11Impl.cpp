@@ -31,7 +31,6 @@
 #include "RenderDeviceD3D11Impl.hpp"
 #include "ShaderResourceBindingD3D11Impl.hpp"
 #include "EngineMemory.h"
-#include "ShaderD3D11Impl.hpp"
 
 namespace Diligent
 {
@@ -136,24 +135,24 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
     static_assert((sizeof(ShaderResourceLayoutD3D11) % sizeof(void*)) == 0, "sizeof(ShaderResourceLayoutD3D11) is expected to be a multiple of sizeof(void*)");
     static_assert((sizeof(ShaderResourceCacheD3D11)  % sizeof(void*)) == 0, "sizeof(ShaderResourceCacheD3D11) is expected to be a multiple of sizeof(void*)");
     // clang-format on
-    const auto  MemSize = (sizeof(ShaderResourceLayoutD3D11) + sizeof(ShaderResourceCacheD3D11)) * m_NumShaders;
+    const auto  MemSize = (sizeof(ShaderResourceLayoutD3D11) + sizeof(ShaderResourceCacheD3D11)) * GetNumShaderTypes();
     auto* const pRawMem =
         ALLOCATE_RAW(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11 and ShaderResourceCacheD3D11 arrays", MemSize);
 
     m_pStaticResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D11*>(pRawMem);
-    m_pStaticResourceCaches  = reinterpret_cast<ShaderResourceCacheD3D11*>(m_pStaticResourceLayouts + m_NumShaders);
+    m_pStaticResourceCaches  = reinterpret_cast<ShaderResourceCacheD3D11*>(m_pStaticResourceLayouts + GetNumShaderTypes());
 
     const auto& ResourceLayout = m_Desc.ResourceLayout;
 
 #ifdef DILIGENT_DEVELOPMENT
     {
         const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
         {
-            auto* pShader = GetShader<const ShaderD3D11Impl>(s);
+            auto* pShader = GetShader(s);
             pResources[s] = &(*pShader->GetD3D11Resources());
         }
-        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, m_NumShaders,
+        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, GetNumShaderTypes(),
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
     }
@@ -162,9 +161,9 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
     decltype(m_StaticSamplers)                  StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"));
     std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResLayoutDataSizes = {};
     std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResCacheDataSizes  = {};
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
     {
-        const auto* pShader         = GetShader<const ShaderD3D11Impl>(s);
+        const auto* pShader         = GetShader(s);
         const auto& ShaderDesc      = pShader->GetDesc();
         const auto& ShaderResources = *pShader->GetD3D11Resources();
         VERIFY_EXPR(ShaderDesc.ShaderType == ShaderResources.GetShaderType());
@@ -222,14 +221,14 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
 
     if (m_Desc.SRBAllocationGranularity > 1)
     {
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, m_NumShaders, ShaderResLayoutDataSizes.data(), m_NumShaders, ShaderResCacheDataSizes.data());
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderTypes(), ShaderResLayoutDataSizes.data(), GetNumShaderTypes(), ShaderResCacheDataSizes.data());
     }
 
     m_StaticSamplers.reserve(StaticSamplers.size());
     for (auto& Sam : StaticSamplers)
         m_StaticSamplers.emplace_back(std::move(Sam));
 
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
     {
         // Initialize static samplers in the static resource cache to avoid warning messages
         SetStaticSamplers(m_pStaticResourceCaches[s], s);
@@ -239,13 +238,13 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
 
 PipelineStateD3D11Impl::~PipelineStateD3D11Impl()
 {
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
     {
         m_pStaticResourceCaches[s].Destroy(GetRawAllocator());
         m_pStaticResourceCaches[s].~ShaderResourceCacheD3D11();
     }
 
-    for (Uint32 l = 0; l < m_NumShaders; ++l)
+    for (Uint32 l = 0; l < GetNumShaderTypes(); ++l)
     {
         m_pStaticResourceLayouts[l].~ShaderResourceLayoutD3D11();
     }
@@ -298,13 +297,13 @@ bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState* pPSO) const
     if (m_ShaderResourceLayoutHash != pPSOD3D11->m_ShaderResourceLayoutHash)
         return false;
 
-    if (m_NumShaders != pPSOD3D11->m_NumShaders)
+    if (GetNumShaderTypes() != pPSOD3D11->GetNumShaderTypes())
         return false;
 
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
     {
-        auto* pShader0 = GetShader<const ShaderD3D11Impl>(s);
-        auto* pShader1 = pPSOD3D11->GetShader<const ShaderD3D11Impl>(s);
+        auto* pShader0 = GetShader(s);
+        auto* pShader1 = pPSOD3D11->GetShader(s);
         if (pShader0->GetDesc().ShaderType != pShader1->GetDesc().ShaderType)
             return false;
         const auto& Res0 = *pShader0->GetD3D11Resources();
@@ -361,7 +360,7 @@ ID3D11ComputeShader* PipelineStateD3D11Impl::GetD3D11ComputeShader()
 
 void PipelineStateD3D11Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
     {
         auto& StaticResLayout = m_pStaticResourceLayouts[s];
         if ((ShaderFlags & StaticResLayout.GetShaderType()) != 0)
@@ -375,7 +374,7 @@ Uint32 PipelineStateD3D11Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) co
     if (LayoutInd < 0)
         return 0;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= m_NumShaders);
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= GetNumShaderTypes());
     return m_pStaticResourceLayouts[LayoutInd].GetTotalResourceCount();
 }
 
@@ -385,7 +384,7 @@ IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticVariableByName(SHADER_
     if (LayoutInd < 0)
         return nullptr;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= m_NumShaders);
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= GetNumShaderTypes());
     return m_pStaticResourceLayouts[LayoutInd].GetShaderVariable(Name);
 }
 
@@ -395,7 +394,7 @@ IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticVariableByIndex(SHADER
     if (LayoutInd < 0)
         return nullptr;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= m_NumShaders);
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= GetNumShaderTypes());
     return m_pStaticResourceLayouts[LayoutInd].GetShaderVariable(Index);
 }
 
@@ -412,6 +411,31 @@ void PipelineStateD3D11Impl::SetStaticSamplers(ShaderResourceCacheD3D11& Resourc
         for (Uint32 BindPoint = SamAttribs.BindPoint; BindPoint < EndBindPoint; ++BindPoint)
             ResourceCache.SetSampler(BindPoint, pSamplerD3D11Impl);
     }
+}
+
+const ShaderD3D11Impl* PipelineStateD3D11Impl::GetShaderByType(SHADER_TYPE ShaderType) const
+{
+    switch (ShaderType)
+    {
+        // clang-format off
+        case SHADER_TYPE_VERTEX:   return m_pVS;
+        case SHADER_TYPE_PIXEL:    return m_pPS;
+        case SHADER_TYPE_GEOMETRY: return m_pGS;
+        case SHADER_TYPE_HULL:     return m_pHS;
+        case SHADER_TYPE_DOMAIN:   return m_pDS;
+        case SHADER_TYPE_COMPUTE:  return m_pCS;
+        default:                   UNEXPECTED("unsupported shader type"); return nullptr;
+            // clang-format on
+    }
+}
+
+const ShaderD3D11Impl* PipelineStateD3D11Impl::GetShader(Uint32 Index) const
+{
+    if (Index < GetNumShaderTypes())
+        return GetShaderByType(GetShaderTypes()[Index]);
+
+    UNEXPECTED("Shader index is out of range");
+    return nullptr;
 }
 
 } // namespace Diligent

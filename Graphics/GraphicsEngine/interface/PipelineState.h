@@ -286,7 +286,7 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     
 #if DILIGENT_CPP_INTERFACE
     bool IsAnyGraphicsPipeline() const { return PipelineType == PIPELINE_TYPE_GRAPHICS || PipelineType == PIPELINE_TYPE_MESH; }
-    bool IsComputePipeline ()    const { return PipelineType == PIPELINE_TYPE_COMPUTE; }
+    bool IsComputePipeline()     const { return PipelineType == PIPELINE_TYPE_COMPUTE; }
 #endif
 };
 typedef struct PipelineStateDesc PipelineStateDesc;

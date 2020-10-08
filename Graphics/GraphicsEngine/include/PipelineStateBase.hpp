@@ -60,44 +60,42 @@ public:
     /// \param pRefCounters - reference counters object that controls the lifetime of this PSO
     /// \param pDevice - pointer to the device.
     /// \param PSODesc - pipeline state description.
-    /// \param bIsDeviceInternal - flag indicating if the blend state is an internal device object and
+    /// \param bIsDeviceInternal - flag indicating if the pipeline state is an internal device object and
     ///							   must not keep a strong reference to the device.
     PipelineStateBase(IReferenceCounters*      pRefCounters,
                       RenderDeviceImplType*    pDevice,
                       const PipelineStateDesc& PSODesc,
                       bool                     bIsDeviceInternal = false) :
-        TDeviceObjectBase{pRefCounters, pDevice, PSODesc, bIsDeviceInternal},
-        m_NumShaders{0}
+        TDeviceObjectBase{pRefCounters, pDevice, PSODesc, bIsDeviceInternal}
     {
-        ValidateDesc();
-
         const auto& SrcLayout      = PSODesc.ResourceLayout;
         size_t      StringPoolSize = 0;
         if (SrcLayout.Variables != nullptr)
         {
             for (Uint32 i = 0; i < SrcLayout.NumVariables; ++i)
+            {
+                VERIFY(SrcLayout.Variables[i].Name != nullptr, "Variable name can't be null");
                 StringPoolSize += strlen(SrcLayout.Variables[i].Name) + 1;
+            }
         }
 
         if (SrcLayout.StaticSamplers != nullptr)
         {
             for (Uint32 i = 0; i < SrcLayout.NumStaticSamplers; ++i)
+            {
+                VERIFY(SrcLayout.StaticSamplers[i].SamplerOrTextureName != nullptr, "Static sampler or texture name can't be null");
                 StringPoolSize += strlen(SrcLayout.StaticSamplers[i].SamplerOrTextureName) + 1;
+            }
         }
 
-        if (PSODesc.IsAnyGraphicsPipeline())
+        switch (PSODesc.PipelineType)
         {
-            CheckAndCorrectBlendStateDesc();
-            CheckRasterizerStateDesc();
-            CheckAndCorrectDepthStencilDesc();
-
-            const auto& InputLayout = PSODesc.GraphicsPipeline.InputLayout;
-            for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
-                StringPoolSize += strlen(InputLayout.LayoutElements[i].HLSLSemantic) + 1;
-        }
-        else
-        {
-            DEV_CHECK_ERR(PSODesc.GraphicsPipeline.InputLayout.NumElements == 0, "Compute pipelines must not have input layout elements");
+            // clang-format off
+            case PIPELINE_TYPE_GRAPHICS:
+            case PIPELINE_TYPE_MESH:     ValidateGraphicsPipeline(  StringPoolSize); break;
+            case PIPELINE_TYPE_COMPUTE:  ValidateComputePipeline(   StringPoolSize); break;
+            default:                     UNEXPECTED("unknown pipeline type");
+                // clang-format on
         }
 
         m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
@@ -110,7 +108,6 @@ public:
             DstLayout.Variables = Variables;
             for (Uint32 i = 0; i < SrcLayout.NumVariables; ++i)
             {
-                VERIFY(SrcLayout.Variables[i].Name != nullptr, "Variable name can't be null");
                 Variables[i]      = SrcLayout.Variables[i];
                 Variables[i].Name = m_StringPool.CopyString(SrcLayout.Variables[i].Name);
             }
@@ -123,7 +120,6 @@ public:
             DstLayout.StaticSamplers = StaticSamplers;
             for (Uint32 i = 0; i < SrcLayout.NumStaticSamplers; ++i)
             {
-                VERIFY(SrcLayout.StaticSamplers[i].SamplerOrTextureName != nullptr, "Static sampler or texture name can't be null");
 #ifdef DILIGENT_DEVELOPMENT
                 {
                     const auto& BorderColor = SrcLayout.StaticSamplers[i].Desc.BorderColor;
@@ -143,208 +139,14 @@ public:
             }
         }
 
-
-        if (this->m_Desc.IsComputePipeline())
+        switch (PSODesc.PipelineType)
         {
-            const auto& ComputePipeline = PSODesc.ComputePipeline;
-            if (ComputePipeline.pCS == nullptr)
-            {
-                LOG_ERROR_AND_THROW("Compute shader is not provided");
-            }
-
-#define VALIDATE_SHADER_TYPE(Shader, ExpectedType, ShaderName)                                                                           \
-    if (Shader && Shader->GetDesc().ShaderType != ExpectedType)                                                                          \
-    {                                                                                                                                    \
-        LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(Shader->GetDesc().ShaderType), " is not a valid type for ", ShaderName, " shader"); \
-    }
-
-            VALIDATE_SHADER_TYPE(ComputePipeline.pCS, SHADER_TYPE_COMPUTE, "compute")
-
-            m_pCS          = ComputePipeline.pCS;
-            m_ppShaders[0] = ComputePipeline.pCS;
-            m_NumShaders   = 1;
-        }
-        else
-        {
-            const auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
-
-            VALIDATE_SHADER_TYPE(GraphicsPipeline.pVS, SHADER_TYPE_VERTEX, "vertex")
-            VALIDATE_SHADER_TYPE(GraphicsPipeline.pPS, SHADER_TYPE_PIXEL, "pixel")
-            VALIDATE_SHADER_TYPE(GraphicsPipeline.pGS, SHADER_TYPE_GEOMETRY, "geometry")
-            VALIDATE_SHADER_TYPE(GraphicsPipeline.pHS, SHADER_TYPE_HULL, "hull")
-            VALIDATE_SHADER_TYPE(GraphicsPipeline.pDS, SHADER_TYPE_DOMAIN, "domain")
-            VALIDATE_SHADER_TYPE(GraphicsPipeline.pAS, SHADER_TYPE_AMPLIFICATION, "amplification")
-            VALIDATE_SHADER_TYPE(GraphicsPipeline.pMS, SHADER_TYPE_MESH, "mesh")
-#undef VALIDATE_SHADER_TYPE
-
-            if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
-            {
-                DEV_CHECK_ERR(GraphicsPipeline.pVS, "Vertex shader must be defined");
-                DEV_CHECK_ERR(!GraphicsPipeline.pAS && !GraphicsPipeline.pMS, "Mesh shaders are not supported in graphics pipeline");
-                m_pVS = GraphicsPipeline.pVS;
-                m_pPS = GraphicsPipeline.pPS;
-                m_pGS = GraphicsPipeline.pGS;
-                m_pDS = GraphicsPipeline.pDS;
-                m_pHS = GraphicsPipeline.pHS;
-            }
-            else if (PSODesc.PipelineType == PIPELINE_TYPE_MESH)
-            {
-                DEV_CHECK_ERR(GraphicsPipeline.pMS, "Mesh shader must be defined");
-                DEV_CHECK_ERR(!GraphicsPipeline.pVS && !GraphicsPipeline.pGS && !GraphicsPipeline.pDS && !GraphicsPipeline.pHS,
-                              "Vertex, geometry and tessellation shaders are not supported in a mesh pipeline");
-                DEV_CHECK_ERR(GraphicsPipeline.InputLayout.NumElements == 0, "Input layout ignored in mesh shader");
-                DEV_CHECK_ERR(GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
-                                  GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_UNDEFINED,
-                              "Primitive topology is ignored in a mesh pipeline, set it to undefined or keep default value (triangle list)");
-                m_pAS = GraphicsPipeline.pAS;
-                m_pMS = GraphicsPipeline.pMS;
-                m_pPS = GraphicsPipeline.pPS;
-            }
-
-            if (GraphicsPipeline.pVS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pVS;
-            if (GraphicsPipeline.pPS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pPS;
-            if (GraphicsPipeline.pGS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pGS;
-            if (GraphicsPipeline.pHS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pHS;
-            if (GraphicsPipeline.pDS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pDS;
-            if (GraphicsPipeline.pAS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pAS;
-            if (GraphicsPipeline.pMS) m_ppShaders[m_NumShaders++] = GraphicsPipeline.pMS;
-
-            DEV_CHECK_ERR(m_NumShaders > 0, "There must be at least one shader in the Pipeline State");
-
-            m_pRenderPass = PSODesc.GraphicsPipeline.pRenderPass;
-
-            for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(GraphicsPipeline.RTVFormats); ++rt)
-            {
-                auto RTVFmt = GraphicsPipeline.RTVFormats[rt];
-                if (RTVFmt != TEX_FORMAT_UNKNOWN)
-                {
-                    LOG_ERROR_MESSAGE("Render target format (", GetTextureFormatAttribs(RTVFmt).Name, ") of unused slot ", rt,
-                                      " must be set to TEX_FORMAT_UNKNOWN");
-                }
-            }
-
-            if (m_pRenderPass)
-            {
-                const auto& RPDesc = m_pRenderPass->GetDesc();
-                VERIFY_EXPR(GraphicsPipeline.SubpassIndex < RPDesc.SubpassCount);
-                const auto& Subpass = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex];
-
-                this->m_Desc.GraphicsPipeline.NumRenderTargets = static_cast<Uint8>(Subpass.RenderTargetAttachmentCount);
-                for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
-                {
-                    const auto& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
-                    if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
-                    {
-                        VERIFY_EXPR(RTAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
-                        this->m_Desc.GraphicsPipeline.RTVFormats[rt] = RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex].Format;
-                    }
-                }
-
-                if (Subpass.pDepthStencilAttachment != nullptr)
-                {
-                    const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
-                    if (DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
-                    {
-                        VERIFY_EXPR(DSAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
-                        this->m_Desc.GraphicsPipeline.DSVFormat = RPDesc.pAttachments[DSAttachmentRef.AttachmentIndex].Format;
-                    }
-                }
-            }
-
-            const auto&    InputLayout     = PSODesc.GraphicsPipeline.InputLayout;
-            LayoutElement* pLayoutElements = nullptr;
-            if (InputLayout.NumElements > 0)
-            {
-                pLayoutElements = ALLOCATE(GetRawAllocator(), "Raw memory for input layout elements", LayoutElement, InputLayout.NumElements);
-            }
-            this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = pLayoutElements;
-            for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
-            {
-                pLayoutElements[Elem]              = InputLayout.LayoutElements[Elem];
-                pLayoutElements[Elem].HLSLSemantic = m_StringPool.CopyString(InputLayout.LayoutElements[Elem].HLSLSemantic);
-            }
-
-
-            // Correct description and compute offsets and tight strides
-            std::array<Uint32, MAX_BUFFER_SLOTS> Strides, TightStrides = {};
-            // Set all strides to an invalid value because an application may want to use 0 stride
-            for (auto& Stride : Strides)
-                Stride = LAYOUT_ELEMENT_AUTO_STRIDE;
-
-            for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
-            {
-                auto& LayoutElem = pLayoutElements[i];
-
-                if (LayoutElem.ValueType == VT_FLOAT32 || LayoutElem.ValueType == VT_FLOAT16)
-                    LayoutElem.IsNormalized = false; // Floating point values cannot be normalized
-
-                auto BuffSlot = LayoutElem.BufferSlot;
-                if (BuffSlot >= Strides.size())
-                {
-                    UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds maximum allowed value (", Strides.size() - 1, ")");
-                    continue;
-                }
-                m_BufferSlotsUsed = std::max(m_BufferSlotsUsed, BuffSlot + 1);
-
-                auto& CurrAutoStride = TightStrides[BuffSlot];
-                // If offset is not explicitly specified, use current auto stride value
-                if (LayoutElem.RelativeOffset == LAYOUT_ELEMENT_AUTO_OFFSET)
-                {
-                    LayoutElem.RelativeOffset = CurrAutoStride;
-                }
-
-                // If stride is explicitly specified, use it for the current buffer slot
-                if (LayoutElem.Stride != LAYOUT_ELEMENT_AUTO_STRIDE)
-                {
-                    // Verify that the value is consistent with the previously specified stride, if any
-                    if (Strides[BuffSlot] != LAYOUT_ELEMENT_AUTO_STRIDE && Strides[BuffSlot] != LayoutElem.Stride)
-                    {
-                        LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot,
-                                          ". Input element at index ", LayoutElem.InputIndex, " explicitly specifies stride ",
-                                          LayoutElem.Stride, ", while current value is ", Strides[BuffSlot],
-                                          ". Specify consistent strides or use LAYOUT_ELEMENT_AUTO_STRIDE to allow "
-                                          "the engine compute strides automatically.");
-                    }
-                    Strides[BuffSlot] = LayoutElem.Stride;
-                }
-
-                CurrAutoStride = std::max(CurrAutoStride, LayoutElem.RelativeOffset + LayoutElem.NumComponents * GetValueSize(LayoutElem.ValueType));
-            }
-
-            for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
-            {
-                auto& LayoutElem = pLayoutElements[i];
-
-                auto BuffSlot = LayoutElem.BufferSlot;
-                // If no input elements explicitly specified stride for this buffer slot, use automatic stride
-                if (Strides[BuffSlot] == LAYOUT_ELEMENT_AUTO_STRIDE)
-                {
-                    Strides[BuffSlot] = TightStrides[BuffSlot];
-                }
-                else
-                {
-                    if (Strides[BuffSlot] < TightStrides[BuffSlot])
-                    {
-                        LOG_ERROR_MESSAGE("Stride ", Strides[BuffSlot], " explicitly specified for slot ", BuffSlot,
-                                          " is smaller than the minimum stride ", TightStrides[BuffSlot],
-                                          " required to accomodate all input elements.");
-                    }
-                }
-                if (LayoutElem.Stride == LAYOUT_ELEMENT_AUTO_STRIDE)
-                    LayoutElem.Stride = Strides[BuffSlot];
-            }
-
-            if (m_BufferSlotsUsed > 0)
-            {
-                m_pStrides = ALLOCATE(GetRawAllocator(), "Raw memory for buffer strides", Uint32, m_BufferSlotsUsed);
-
-                // Set strides for all unused slots to 0
-                for (Uint32 i = 0; i < m_BufferSlotsUsed; ++i)
-                {
-                    auto Stride   = Strides[i];
-                    m_pStrides[i] = Stride != LAYOUT_ELEMENT_AUTO_STRIDE ? Stride : 0;
-                }
-            }
+            // clang-format off
+            case PIPELINE_TYPE_GRAPHICS:
+            case PIPELINE_TYPE_MESH:     InitGraphicsPipeline();   break;
+            case PIPELINE_TYPE_COMPUTE:  InitComputePipeline();    break;
+            default:                     UNEXPECTED("unknown pipeline type");
+                // clang-format on
         }
 
         VERIFY_EXPR(m_StringPool.GetRemainingSize() == 0);
@@ -399,28 +201,8 @@ public:
         return m_BufferSlotsUsed;
     }
 
-    IShader* GetVS() { return m_pVS; }
-    IShader* GetPS() { return m_pPS; }
-    IShader* GetGS() { return m_pGS; }
-    IShader* GetDS() { return m_pDS; }
-    IShader* GetHS() { return m_pHS; }
-    IShader* GetCS() { return m_pCS; }
-
-    IShader* const* GetShaders() const { return m_ppShaders.data(); }
-    Uint32          GetNumShaders() const { return m_NumShaders; }
-
-    template <typename ShaderType>
-    ShaderType* GetShader(Uint32 ShaderInd)
-    {
-        VERIFY_EXPR(ShaderInd < m_NumShaders);
-        return ValidatedCast<ShaderType>(m_ppShaders[ShaderInd]);
-    }
-    template <typename ShaderType>
-    ShaderType* GetShader(Uint32 ShaderInd) const
-    {
-        VERIFY_EXPR(ShaderInd < m_NumShaders);
-        return ValidatedCast<ShaderType>(m_ppShaders[ShaderInd]);
-    }
+    SHADER_TYPE const* GetShaderTypes() const { return m_pShaderTypes.data(); }
+    Uint32             GetNumShaderTypes() const { return m_NumShaderTypes; }
 
     // This function only compares shader resource layout hashes, so
     // it can potentially give false negatives
@@ -431,27 +213,20 @@ public:
 
 protected:
     Uint32  m_BufferSlotsUsed = 0;
-    Uint32  m_NumShaders      = 0; ///< Number of shaders that this PSO uses
     Uint32* m_pStrides        = nullptr;
 
     StringPool m_StringPool;
 
-    RefCntAutoPtr<IShader> m_pVS; ///< Strong reference to the vertex shader
-    RefCntAutoPtr<IShader> m_pPS; ///< Strong reference to the pixel shader
-    RefCntAutoPtr<IShader> m_pGS; ///< Strong reference to the geometry shader
-    RefCntAutoPtr<IShader> m_pDS; ///< Strong reference to the domain shader
-    RefCntAutoPtr<IShader> m_pHS; ///< Strong reference to the hull shader
-    RefCntAutoPtr<IShader> m_pCS; ///< Strong reference to the compute shader
-    RefCntAutoPtr<IShader> m_pAS; ///< Strong reference to the amplification shader
-    RefCntAutoPtr<IShader> m_pMS; ///< Strong reference to the mesh shader
-
     RefCntAutoPtr<IRenderPass> m_pRenderPass; ///< Strong reference to the render pass object
 
-    std::array<IShader*, MAX_SHADERS_IN_PIPELINE> m_ppShaders                = {}; ///< Array of pointers to the shaders used by this PSO
-    size_t                                        m_ShaderResourceLayoutHash = 0;  ///< Hash computed from the shader resource layout
+    Uint8 m_NumShaderTypes = 0; ///< Number of shader types that this PSO uses
 
+    std::array<SHADER_TYPE, MAX_SHADERS_IN_PIPELINE> m_pShaderTypes             = {}; ///< Array of shader types used by this PSO
+    size_t                                           m_ShaderResourceLayoutHash = 0;  ///< Hash computed from the shader resource layout
 
 protected:
+#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", GetPipelineTypeString(this->m_Desc.PipelineType), " PSO '", this->m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)
+
     Int8 GetStaticVariableCountHelper(SHADER_TYPE ShaderType, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
     {
         if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
@@ -512,46 +287,70 @@ protected:
         return LayoutInd;
     }
 
-private:
-#define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", GetPipelineTypeString(this->m_Desc.PipelineType), " PSO '", this->m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)
+public:
+    using ShaderStages_t = std::vector<std::pair<SHADER_TYPE, IShader*>>;
 
-    void ValidateDesc() const
+protected:
+    void ExtractShaders(ShaderStages_t& ShaderStages)
     {
-        if (this->m_Desc.IsComputePipeline())
+        auto& Desc = this->m_Desc;
+        switch (Desc.PipelineType)
         {
-            if (this->m_Desc.GraphicsPipeline.pRenderPass != nullptr)
+            case PIPELINE_TYPE_COMPUTE:
             {
-                LOG_PSO_ERROR_AND_THROW("GraphicsPipeline.pRenderPass must be null for compute pipelines");
+                if (Desc.ComputePipeline.pCS) ShaderStages.push_back({SHADER_TYPE_COMPUTE, Desc.ComputePipeline.pCS});
+
+                // reset shader pointers because we don't keep strong references to shaders
+                Desc.ComputePipeline.pCS = nullptr;
+                break;
             }
+
+            case PIPELINE_TYPE_GRAPHICS:
+            {
+                if (Desc.GraphicsPipeline.pVS) ShaderStages.push_back({SHADER_TYPE_VERTEX, Desc.GraphicsPipeline.pVS});
+                if (Desc.GraphicsPipeline.pHS) ShaderStages.push_back({SHADER_TYPE_HULL, Desc.GraphicsPipeline.pHS});
+                if (Desc.GraphicsPipeline.pDS) ShaderStages.push_back({SHADER_TYPE_DOMAIN, Desc.GraphicsPipeline.pDS});
+                if (Desc.GraphicsPipeline.pGS) ShaderStages.push_back({SHADER_TYPE_GEOMETRY, Desc.GraphicsPipeline.pGS});
+                if (Desc.GraphicsPipeline.pPS) ShaderStages.push_back({SHADER_TYPE_PIXEL, Desc.GraphicsPipeline.pPS});
+
+                // reset shader pointers because we don't keep strong references to shaders
+                Desc.GraphicsPipeline.pVS = nullptr;
+                Desc.GraphicsPipeline.pHS = nullptr;
+                Desc.GraphicsPipeline.pDS = nullptr;
+                Desc.GraphicsPipeline.pGS = nullptr;
+                Desc.GraphicsPipeline.pPS = nullptr;
+                break;
+            }
+
+            case PIPELINE_TYPE_MESH:
+            {
+                if (Desc.GraphicsPipeline.pAS) ShaderStages.push_back({SHADER_TYPE_AMPLIFICATION, Desc.GraphicsPipeline.pAS});
+                if (Desc.GraphicsPipeline.pMS) ShaderStages.push_back({SHADER_TYPE_MESH, Desc.GraphicsPipeline.pMS});
+                if (Desc.GraphicsPipeline.pPS) ShaderStages.push_back({SHADER_TYPE_PIXEL, Desc.GraphicsPipeline.pPS});
+
+                // reset shader pointers because we don't keep strong references to shaders
+                Desc.GraphicsPipeline.pAS = nullptr;
+                Desc.GraphicsPipeline.pMS = nullptr;
+                Desc.GraphicsPipeline.pPS = nullptr;
+                break;
+            }
+
+            default:
+                UNEXPECTED("unknown pipeline type");
         }
-        else
+
+#ifdef DILIGENT_DEVELOPMENT
+        VERIFY_EXPR(ShaderStages.size() == m_NumShaderTypes);
+
+        for (Uint32 s = 0; s < m_NumShaderTypes; ++s)
         {
-            const auto& GraphicsPipeline = this->m_Desc.GraphicsPipeline;
-            if (GraphicsPipeline.pRenderPass != nullptr)
-            {
-                if (GraphicsPipeline.NumRenderTargets != 0)
-                    LOG_PSO_ERROR_AND_THROW("NumRenderTargets must be 0 when explicit render pass is used");
-                if (GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN)
-                    LOG_PSO_ERROR_AND_THROW("DSVFormat must be TEX_FORMAT_UNKNOWN when explicit render pass is used");
-
-                for (Uint32 rt = 0; rt < MAX_RENDER_TARGETS; ++rt)
-                {
-                    if (GraphicsPipeline.RTVFormats[rt] != TEX_FORMAT_UNKNOWN)
-                        LOG_PSO_ERROR_AND_THROW("RTVFormats[", rt, "] must be TEX_FORMAT_UNKNOWN when explicit render pass is used");
-                }
-
-                const auto& RPDesc = GraphicsPipeline.pRenderPass->GetDesc();
-                if (GraphicsPipeline.SubpassIndex >= RPDesc.SubpassCount)
-                    LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") exceeds the number of subpasses (", Uint32{RPDesc.SubpassCount}, ") in render pass '", RPDesc.Name, "'");
-            }
-            else
-            {
-                if (GraphicsPipeline.SubpassIndex != 0)
-                    LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") must be 0 when explicit render pass is not used");
-            }
+            VERIFY_EXPR(ShaderStages[s].first == m_pShaderTypes[s]);
         }
+#endif
     }
 
+
+private:
     void CheckRasterizerStateDesc() const
     {
         const auto& RSDesc = this->m_Desc.GraphicsPipeline.RasterizerDesc;
@@ -648,6 +447,246 @@ private:
                 RTDesc.LogicOp = RenderTargetBlendDesc{}.LogicOp;
         }
     }
+
+    void ValidateGraphicsPipeline(size_t& StringPoolSize)
+    {
+        const auto& GraphicsPipeline = this->m_Desc.GraphicsPipeline;
+        if (GraphicsPipeline.pRenderPass != nullptr)
+        {
+            if (GraphicsPipeline.NumRenderTargets != 0)
+                LOG_PSO_ERROR_AND_THROW("NumRenderTargets must be 0 when explicit render pass is used");
+            if (GraphicsPipeline.DSVFormat != TEX_FORMAT_UNKNOWN)
+                LOG_PSO_ERROR_AND_THROW("DSVFormat must be TEX_FORMAT_UNKNOWN when explicit render pass is used");
+
+            for (Uint32 rt = 0; rt < MAX_RENDER_TARGETS; ++rt)
+            {
+                if (GraphicsPipeline.RTVFormats[rt] != TEX_FORMAT_UNKNOWN)
+                    LOG_PSO_ERROR_AND_THROW("RTVFormats[", rt, "] must be TEX_FORMAT_UNKNOWN when explicit render pass is used");
+            }
+
+            const auto& RPDesc = GraphicsPipeline.pRenderPass->GetDesc();
+            if (GraphicsPipeline.SubpassIndex >= RPDesc.SubpassCount)
+                LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") exceeds the number of subpasses (", Uint32{RPDesc.SubpassCount}, ") in render pass '", RPDesc.Name, "'");
+        }
+        else
+        {
+            if (GraphicsPipeline.SubpassIndex != 0)
+                LOG_PSO_ERROR_AND_THROW("Subpass index (", Uint32{GraphicsPipeline.SubpassIndex}, ") must be 0 when explicit render pass is not used");
+        }
+
+        CheckAndCorrectBlendStateDesc();
+        CheckRasterizerStateDesc();
+        CheckAndCorrectDepthStencilDesc();
+
+        const auto& InputLayout = this->m_Desc.GraphicsPipeline.InputLayout;
+        for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
+            StringPoolSize += strlen(InputLayout.LayoutElements[i].HLSLSemantic) + 1;
+    }
+
+    void ValidateComputePipeline(size_t& StringPoolSize)
+    {
+        if (this->m_Desc.GraphicsPipeline.pRenderPass != nullptr)
+        {
+            LOG_PSO_ERROR_AND_THROW("GraphicsPipeline.pRenderPass must be null for compute pipelines");
+        }
+        DEV_CHECK_ERR(this->m_Desc.GraphicsPipeline.InputLayout.NumElements == 0, "Compute pipelines must not have input layout elements");
+    }
+
+#define VALIDATE_SHADER_TYPE(Shader, ExpectedType, ShaderName)                                                                           \
+    if (Shader && Shader->GetDesc().ShaderType != ExpectedType)                                                                          \
+    {                                                                                                                                    \
+        LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(Shader->GetDesc().ShaderType), " is not a valid type for ", ShaderName, " shader"); \
+    }
+
+    void InitGraphicsPipeline()
+    {
+        const auto& PSODesc          = this->m_Desc;
+        const auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
+
+        VALIDATE_SHADER_TYPE(GraphicsPipeline.pVS, SHADER_TYPE_VERTEX, "vertex")
+        VALIDATE_SHADER_TYPE(GraphicsPipeline.pPS, SHADER_TYPE_PIXEL, "pixel")
+        VALIDATE_SHADER_TYPE(GraphicsPipeline.pGS, SHADER_TYPE_GEOMETRY, "geometry")
+        VALIDATE_SHADER_TYPE(GraphicsPipeline.pHS, SHADER_TYPE_HULL, "hull")
+        VALIDATE_SHADER_TYPE(GraphicsPipeline.pDS, SHADER_TYPE_DOMAIN, "domain")
+        VALIDATE_SHADER_TYPE(GraphicsPipeline.pAS, SHADER_TYPE_AMPLIFICATION, "amplification")
+        VALIDATE_SHADER_TYPE(GraphicsPipeline.pMS, SHADER_TYPE_MESH, "mesh")
+
+        if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
+        {
+            DEV_CHECK_ERR(GraphicsPipeline.pVS, "Vertex shader must be defined");
+            DEV_CHECK_ERR(!GraphicsPipeline.pAS && !GraphicsPipeline.pMS, "Mesh shaders are not supported in graphics pipeline");
+        }
+        else if (PSODesc.PipelineType == PIPELINE_TYPE_MESH)
+        {
+            DEV_CHECK_ERR(GraphicsPipeline.pMS, "Mesh shader must be defined");
+            DEV_CHECK_ERR(!GraphicsPipeline.pVS && !GraphicsPipeline.pGS && !GraphicsPipeline.pDS && !GraphicsPipeline.pHS,
+                          "Vertex, geometry and tessellation shaders are not supported in a mesh pipeline");
+            DEV_CHECK_ERR(GraphicsPipeline.InputLayout.NumElements == 0, "Input layout ignored in mesh shader");
+            DEV_CHECK_ERR(GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_TRIANGLE_LIST ||
+                              GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_UNDEFINED,
+                          "Primitive topology is ignored in a mesh pipeline, set it to undefined or keep default value (triangle list)");
+        }
+
+        if (GraphicsPipeline.pVS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_VERTEX;
+        if (GraphicsPipeline.pHS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_HULL;
+        if (GraphicsPipeline.pDS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_DOMAIN;
+        if (GraphicsPipeline.pGS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_GEOMETRY;
+        if (GraphicsPipeline.pAS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_AMPLIFICATION;
+        if (GraphicsPipeline.pMS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_MESH;
+        if (GraphicsPipeline.pPS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_PIXEL;
+
+        DEV_CHECK_ERR(m_NumShaderTypes > 0, "There must be at least one shader in the Pipeline State");
+
+        m_pRenderPass = PSODesc.GraphicsPipeline.pRenderPass;
+
+        for (Uint32 rt = GraphicsPipeline.NumRenderTargets; rt < _countof(GraphicsPipeline.RTVFormats); ++rt)
+        {
+            auto RTVFmt = GraphicsPipeline.RTVFormats[rt];
+            if (RTVFmt != TEX_FORMAT_UNKNOWN)
+            {
+                LOG_ERROR_MESSAGE("Render target format (", GetTextureFormatAttribs(RTVFmt).Name, ") of unused slot ", rt,
+                                  " must be set to TEX_FORMAT_UNKNOWN");
+            }
+        }
+
+        if (m_pRenderPass)
+        {
+            const auto& RPDesc = m_pRenderPass->GetDesc();
+            VERIFY_EXPR(GraphicsPipeline.SubpassIndex < RPDesc.SubpassCount);
+            const auto& Subpass = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex];
+
+            this->m_Desc.GraphicsPipeline.NumRenderTargets = static_cast<Uint8>(Subpass.RenderTargetAttachmentCount);
+            for (Uint32 rt = 0; rt < Subpass.RenderTargetAttachmentCount; ++rt)
+            {
+                const auto& RTAttachmentRef = Subpass.pRenderTargetAttachments[rt];
+                if (RTAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+                {
+                    VERIFY_EXPR(RTAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
+                    this->m_Desc.GraphicsPipeline.RTVFormats[rt] = RPDesc.pAttachments[RTAttachmentRef.AttachmentIndex].Format;
+                }
+            }
+
+            if (Subpass.pDepthStencilAttachment != nullptr)
+            {
+                const auto& DSAttachmentRef = *Subpass.pDepthStencilAttachment;
+                if (DSAttachmentRef.AttachmentIndex != ATTACHMENT_UNUSED)
+                {
+                    VERIFY_EXPR(DSAttachmentRef.AttachmentIndex < RPDesc.AttachmentCount);
+                    this->m_Desc.GraphicsPipeline.DSVFormat = RPDesc.pAttachments[DSAttachmentRef.AttachmentIndex].Format;
+                }
+            }
+        }
+
+        const auto&    InputLayout     = PSODesc.GraphicsPipeline.InputLayout;
+        LayoutElement* pLayoutElements = nullptr;
+        if (InputLayout.NumElements > 0)
+        {
+            pLayoutElements = ALLOCATE(GetRawAllocator(), "Raw memory for input layout elements", LayoutElement, InputLayout.NumElements);
+        }
+        for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
+        {
+            pLayoutElements[Elem]              = InputLayout.LayoutElements[Elem];
+            pLayoutElements[Elem].HLSLSemantic = m_StringPool.CopyString(InputLayout.LayoutElements[Elem].HLSLSemantic);
+        }
+        this->m_Desc.GraphicsPipeline.InputLayout.LayoutElements = pLayoutElements;
+
+
+        // Correct description and compute offsets and tight strides
+        std::array<Uint32, MAX_BUFFER_SLOTS> Strides, TightStrides = {};
+        // Set all strides to an invalid value because an application may want to use 0 stride
+        for (auto& Stride : Strides)
+            Stride = LAYOUT_ELEMENT_AUTO_STRIDE;
+
+        for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
+        {
+            auto& LayoutElem = pLayoutElements[i];
+
+            if (LayoutElem.ValueType == VT_FLOAT32 || LayoutElem.ValueType == VT_FLOAT16)
+                LayoutElem.IsNormalized = false; // Floating point values cannot be normalized
+
+            auto BuffSlot = LayoutElem.BufferSlot;
+            if (BuffSlot >= Strides.size())
+            {
+                UNEXPECTED("Buffer slot (", BuffSlot, ") exceeds maximum allowed value (", Strides.size() - 1, ")");
+                continue;
+            }
+            m_BufferSlotsUsed = std::max(m_BufferSlotsUsed, BuffSlot + 1);
+
+            auto& CurrAutoStride = TightStrides[BuffSlot];
+            // If offset is not explicitly specified, use current auto stride value
+            if (LayoutElem.RelativeOffset == LAYOUT_ELEMENT_AUTO_OFFSET)
+            {
+                LayoutElem.RelativeOffset = CurrAutoStride;
+            }
+
+            // If stride is explicitly specified, use it for the current buffer slot
+            if (LayoutElem.Stride != LAYOUT_ELEMENT_AUTO_STRIDE)
+            {
+                // Verify that the value is consistent with the previously specified stride, if any
+                if (Strides[BuffSlot] != LAYOUT_ELEMENT_AUTO_STRIDE && Strides[BuffSlot] != LayoutElem.Stride)
+                {
+                    LOG_ERROR_MESSAGE("Inconsistent strides are specified for buffer slot ", BuffSlot,
+                                      ". Input element at index ", LayoutElem.InputIndex, " explicitly specifies stride ",
+                                      LayoutElem.Stride, ", while current value is ", Strides[BuffSlot],
+                                      ". Specify consistent strides or use LAYOUT_ELEMENT_AUTO_STRIDE to allow "
+                                      "the engine compute strides automatically.");
+                }
+                Strides[BuffSlot] = LayoutElem.Stride;
+            }
+
+            CurrAutoStride = std::max(CurrAutoStride, LayoutElem.RelativeOffset + LayoutElem.NumComponents * GetValueSize(LayoutElem.ValueType));
+        }
+
+        for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
+        {
+            auto& LayoutElem = pLayoutElements[i];
+
+            auto BuffSlot = LayoutElem.BufferSlot;
+            // If no input elements explicitly specified stride for this buffer slot, use automatic stride
+            if (Strides[BuffSlot] == LAYOUT_ELEMENT_AUTO_STRIDE)
+            {
+                Strides[BuffSlot] = TightStrides[BuffSlot];
+            }
+            else
+            {
+                if (Strides[BuffSlot] < TightStrides[BuffSlot])
+                {
+                    LOG_ERROR_MESSAGE("Stride ", Strides[BuffSlot], " explicitly specified for slot ", BuffSlot,
+                                      " is smaller than the minimum stride ", TightStrides[BuffSlot],
+                                      " required to accomodate all input elements.");
+                }
+            }
+            if (LayoutElem.Stride == LAYOUT_ELEMENT_AUTO_STRIDE)
+                LayoutElem.Stride = Strides[BuffSlot];
+        }
+
+        if (m_BufferSlotsUsed > 0)
+        {
+            m_pStrides = ALLOCATE(GetRawAllocator(), "Raw memory for buffer strides", Uint32, m_BufferSlotsUsed);
+
+            // Set strides for all unused slots to 0
+            for (Uint32 i = 0; i < m_BufferSlotsUsed; ++i)
+            {
+                auto Stride   = Strides[i];
+                m_pStrides[i] = Stride != LAYOUT_ELEMENT_AUTO_STRIDE ? Stride : 0;
+            }
+        }
+    }
+
+    void InitComputePipeline()
+    {
+        const auto& ComputePipeline = this->m_Desc.ComputePipeline;
+        if (ComputePipeline.pCS == nullptr)
+        {
+            LOG_ERROR_AND_THROW("Compute shader is not provided");
+        }
+
+        VALIDATE_SHADER_TYPE(ComputePipeline.pCS, SHADER_TYPE_COMPUTE, "compute");
+
+        m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_COMPUTE;
+    }
+
+#undef VALIDATE_SHADER_TYPE
 #undef LOG_PSO_ERROR_AND_THROW
 };
 

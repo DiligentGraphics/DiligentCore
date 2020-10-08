@@ -179,9 +179,9 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
     {
 #ifdef DILIGENT_DEVELOPMENT
         bool ResourcesPresent = false;
-        for (Uint32 s = 0; s < pPipelineStateD3D11->GetNumShaders(); ++s)
+        for (Uint32 s = 0; s < pPipelineStateD3D11->GetNumShaderTypes(); ++s)
         {
-            auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
+            auto* pShaderD3D11 = pPipelineStateD3D11->GetShader(s);
             if (pShaderD3D11->GetD3D11Resources()->GetTotalResources() > 0)
                 ResourcesPresent = true;
         }
@@ -206,7 +206,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
 #endif
 
     auto NumShaders = pShaderResBindingD3D11->GetNumActiveShaders();
-    VERIFY(NumShaders == pPipelineStateD3D11->GetNumShaders(), "Number of active shaders in shader resource binding is not consistent with the number of shaders in the pipeline state");
+    VERIFY(NumShaders == pPipelineStateD3D11->GetNumShaderTypes(), "Number of active shaders in shader resource binding is not consistent with the number of shaders in the pipeline state");
 
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -233,7 +233,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
         const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
 
 #ifdef DILIGENT_DEVELOPMENT
-        auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
+        auto* pShaderD3D11 = pPipelineStateD3D11->GetShader(s);
         VERIFY_EXPR(ShaderType == pShaderD3D11->GetDesc().ShaderType);
 #endif
 
@@ -380,7 +380,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
         const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
 
 #ifdef DILIGENT_DEVELOPMENT
-        auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
+        auto* pShaderD3D11 = pPipelineStateD3D11->GetShader(s);
         VERIFY_EXPR(ShaderType == pShaderD3D11->GetDesc().ShaderType);
 #endif
 

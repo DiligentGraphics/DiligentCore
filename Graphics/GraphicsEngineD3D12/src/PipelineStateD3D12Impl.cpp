@@ -106,6 +106,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
 {
     m_ResourceLayoutIndex.fill(-1);
 
+    ShaderStages_t ShaderStages;
+    ExtractShaders(ShaderStages);
+
     auto        pd3d12Device   = pDeviceD3D12->GetD3D12Device();
     const auto& ResourceLayout = m_Desc.ResourceLayout;
     m_RootSig.AllocateStaticSamplers(ResourceLayout);
@@ -115,31 +118,31 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
     static_assert((sizeof(ShaderResourceCacheD3D12)   % sizeof(void*)) == 0, "sizeof(ShaderResourceCacheD3D12) is expected to be a multiple of sizeof(void*)");
     static_assert((sizeof(ShaderVariableManagerD3D12) % sizeof(void*)) == 0, "sizeof(ShaderVariableManagerD3D12) is expected to be a multiple of sizeof(void*)");
     // clang-format on
-    const auto  MemSize = (sizeof(ShaderResourceLayoutD3D12) * 2 + sizeof(ShaderResourceCacheD3D12) + sizeof(ShaderVariableManagerD3D12)) * m_NumShaders;
+    const auto  MemSize = (sizeof(ShaderResourceLayoutD3D12) * 2 + sizeof(ShaderResourceCacheD3D12) + sizeof(ShaderVariableManagerD3D12)) * GetNumShaderTypes();
     auto* const pRawMem =
         ALLOCATE_RAW(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D12, ShaderResourceCacheD3D12, and ShaderVariableManagerD3D12 arrays", MemSize);
 
     m_pShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D12*>(pRawMem);
-    m_pStaticResourceCaches  = reinterpret_cast<ShaderResourceCacheD3D12*>(m_pShaderResourceLayouts + m_NumShaders * 2);
-    m_pStaticVarManagers     = reinterpret_cast<ShaderVariableManagerD3D12*>(m_pStaticResourceCaches + m_NumShaders);
+    m_pStaticResourceCaches  = reinterpret_cast<ShaderResourceCacheD3D12*>(m_pShaderResourceLayouts + GetNumShaderTypes() * 2);
+    m_pStaticVarManagers     = reinterpret_cast<ShaderVariableManagerD3D12*>(m_pStaticResourceCaches + GetNumShaderTypes());
 
 #ifdef DILIGENT_DEVELOPMENT
     {
         const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        for (size_t s = 0; s < ShaderStages.size(); ++s)
         {
-            const auto* pShader = GetShader<const ShaderD3D12Impl>(s);
+            const auto* pShader = ValidatedCast<ShaderD3D12Impl>(ShaderStages[s].second);
             pResources[s]       = &(*pShader->GetShaderResources());
         }
-        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, m_NumShaders,
+        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, GetNumShaderTypes(),
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
     }
 #endif
 
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
+        auto* pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(ShaderStages[s].second);
         auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
         auto  ShaderInd    = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
 
@@ -163,7 +166,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
         new (m_pStaticResourceCaches + s) ShaderResourceCacheD3D12{ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources};
 
         const SHADER_RESOURCE_VARIABLE_TYPE StaticVarType[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-        new (m_pShaderResourceLayouts + m_NumShaders + s)
+        new (m_pShaderResourceLayouts + GetNumShaderTypes() + s)
             ShaderResourceLayoutD3D12 //
             {
                 *this,
@@ -182,11 +185,11 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             ShaderVariableManagerD3D12 //
             {
                 *this,
-                GetStaticShaderResLayout(s),
+                GetStaticShaderResLayout(static_cast<Uint32>(s)),
                 GetRawAllocator(),
                 nullptr,
                 0,
-                GetStaticShaderResCache(s) //
+                GetStaticShaderResCache(static_cast<Uint32>(s)) //
             };
     }
     m_RootSig.Finalize(pd3d12Device);
@@ -195,14 +198,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
     {
         case PIPELINE_TYPE_COMPUTE:
         {
-            auto& ComputePipeline = m_Desc.ComputePipeline;
-
-            if (ComputePipeline.pCS == nullptr)
-                LOG_ERROR_AND_THROW("Compute shader is not set in the pipeline desc");
-
             D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
-            auto* pByteCode                 = ValidatedCast<ShaderD3D12Impl>(ComputePipeline.pCS)->GetShaderByteCode();
+            auto* pByteCode                 = ValidatedCast<ShaderD3D12Impl>(ShaderStages[0].second)->GetShaderByteCode();
             d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
             d3d12PSODesc.CS.BytecodeLength  = pByteCode->GetBufferSize();
 
@@ -231,9 +229,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
-            for (Uint32 s = 0; s < m_NumShaders; ++s)
+            for (size_t s = 0; s < ShaderStages.size(); ++s)
             {
-                auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
+                auto* pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(ShaderStages[s].second);
                 auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
 
                 D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
@@ -335,9 +333,9 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             };
             MESH_SHADER_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
-            for (Uint32 s = 0; s < m_NumShaders; ++s)
+            for (size_t s = 0; s < ShaderStages.size(); ++s)
             {
-                auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
+                auto* pShaderD3D12 = ValidatedCast<ShaderD3D12Impl>(ShaderStages[s].second);
                 auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
 
                 D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
@@ -412,7 +410,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
     if (m_Desc.SRBAllocationGranularity > 1)
     {
         std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVarMgrDataSizes = {};
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
         {
             std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes =
                 {
@@ -425,7 +423,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
         }
 
         auto CacheMemorySize = m_RootSig.GetResourceCacheRequiredMemSize();
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, m_NumShaders, ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderTypes(), ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
     }
 
     m_ShaderResourceLayoutHash = m_RootSig.GetHash();
@@ -434,13 +432,13 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
 PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
 {
     auto& ShaderResLayoutAllocator = GetRawAllocator();
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
     {
         m_pStaticVarManagers[s].Destroy(GetRawAllocator());
         m_pStaticVarManagers[s].~ShaderVariableManagerD3D12();
         m_pStaticResourceCaches[s].~ShaderResourceCacheD3D12();
         m_pShaderResourceLayouts[s].~ShaderResourceLayoutD3D12();
-        m_pShaderResourceLayouts[m_NumShaders + s].~ShaderResourceLayoutD3D12();
+        m_pShaderResourceLayouts[GetNumShaderTypes() + s].~ShaderResourceLayoutD3D12();
     }
     // m_pShaderResourceLayouts, m_pStaticResourceCaches, and m_pShaderResourceLayouts are allocated in
     // contiguous chunks of memory.
@@ -479,27 +477,26 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
 #ifdef DILIGENT_DEBUG
     {
         bool IsCompatibleShaders = true;
-        if (m_NumShaders != pPSOD3D12->m_NumShaders)
+        if (GetNumShaderTypes() != pPSOD3D12->GetNumShaderTypes())
             IsCompatibleShaders = false;
 
         if (IsCompatibleShaders)
         {
-            for (Uint32 s = 0; s < m_NumShaders; ++s)
+            for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
             {
-                auto* pShader0 = GetShader<const ShaderD3D12Impl>(s);
-                auto* pShader1 = pPSOD3D12->GetShader<const ShaderD3D12Impl>(s);
-                if (pShader0->GetDesc().ShaderType != pShader1->GetDesc().ShaderType)
+                if (GetShaderTypes()[s] != pPSOD3D12->GetShaderTypes()[s])
                 {
                     IsCompatibleShaders = false;
                     break;
                 }
-                const ShaderResourcesD3D12* pRes0 = pShader0->GetShaderResources().get();
+                // AZ TODO
+                /*const ShaderResourcesD3D12* pRes0 = pShader0->GetShaderResources().get();
                 const ShaderResourcesD3D12* pRes1 = pShader1->GetShaderResources().get();
                 if (!pRes0->IsCompatibleWith(*pRes1))
                 {
                     IsCompatibleShaders = false;
                     break;
-                }
+                }*/
             }
         }
 
@@ -606,7 +603,7 @@ bool PipelineStateD3D12Impl::ContainsShaderResources() const
 
 void PipelineStateD3D12Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
     {
         auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
         if ((ShaderFlags & ShaderType) != 0)
@@ -620,7 +617,7 @@ Uint32 PipelineStateD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) co
     if (LayoutInd < 0)
         return 0;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < m_NumShaders);
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < GetNumShaderTypes());
     return m_pStaticVarManagers[LayoutInd].GetVariableCount();
 }
 
@@ -630,7 +627,7 @@ IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByName(SHADER_
     if (LayoutInd < 0)
         return nullptr;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < m_NumShaders);
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < GetNumShaderTypes());
     return m_pStaticVarManagers[LayoutInd].GetVariable(Name);
 }
 
@@ -640,7 +637,7 @@ IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByIndex(SHADER
     if (LayoutInd < 0)
         return nullptr;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < m_NumShaders);
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < GetNumShaderTypes());
     return m_pStaticVarManagers[LayoutInd].GetVariable(Index);
 }
 

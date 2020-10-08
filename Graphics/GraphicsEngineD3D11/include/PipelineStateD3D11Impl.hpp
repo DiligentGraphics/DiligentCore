@@ -36,6 +36,7 @@
 #include "ShaderResourceLayoutD3D11.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
+#include "ShaderD3D11Impl.hpp"
 
 namespace Diligent
 {
@@ -117,15 +118,18 @@ public:
 
     const ShaderResourceLayoutD3D11& GetStaticResourceLayout(Uint32 s) const
     {
-        VERIFY_EXPR(s < m_NumShaders);
+        VERIFY_EXPR(s < GetNumShaderTypes());
         return m_pStaticResourceLayouts[s];
     }
 
     ShaderResourceCacheD3D11& GetStaticResourceCache(Uint32 s)
     {
-        VERIFY_EXPR(s < m_NumShaders);
+        VERIFY_EXPR(s < GetNumShaderTypes());
         return m_pStaticResourceCaches[s];
     }
+
+    const ShaderD3D11Impl* GetShaderByType(SHADER_TYPE ShaderType) const;
+    const ShaderD3D11Impl* GetShader(Uint32 Index) const;
 
     void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const;
 
@@ -134,6 +138,13 @@ private:
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
     CComPtr<ID3D11InputLayout>       m_pd3d11InputLayout;
+
+    RefCntAutoPtr<ShaderD3D11Impl> m_pVS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pPS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pGS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pDS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pHS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pCS;
 
     // The caches are indexed by the shader order in the PSO, not shader index
     ShaderResourceCacheD3D11*  m_pStaticResourceCaches  = nullptr;

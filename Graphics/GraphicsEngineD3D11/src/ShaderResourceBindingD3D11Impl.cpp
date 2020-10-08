@@ -50,7 +50,7 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl(IReferenceCounter
 // clang-format on
 {
     m_ResourceLayoutIndex.fill(-1);
-    m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaders());
+    m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaderTypes());
 
     // clang-format off
     m_pResourceLayouts     = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11", ShaderResourceLayoutD3D11, m_NumActiveShaders);
@@ -62,7 +62,7 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl(IReferenceCounter
     // Reserve memory for resource layouts
     for (Uint8 s = 0; s < m_NumActiveShaders; ++s)
     {
-        auto* pShaderD3D11 = pPSO->GetShader<ShaderD3D11Impl>(s);
+        auto* pShaderD3D11 = pPSO->GetShader(s);
 
         auto& SRBMemAllocator        = pPSO->GetSRBMemoryAllocator();
         auto& ResCacheDataAllocator  = SRBMemAllocator.GetResourceCacheDataAllocator(s);
@@ -151,14 +151,13 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
     }
 
     const auto* pPSOD3D11  = ValidatedCast<const PipelineStateD3D11Impl>(pPipelineState);
-    auto        ppShaders  = pPSOD3D11->GetShaders();
-    auto        NumShaders = pPSOD3D11->GetNumShaders();
+    auto        NumShaders = pPSOD3D11->GetNumShaderTypes();
     VERIFY_EXPR(NumShaders == m_NumActiveShaders);
 
     for (Uint32 shader = 0; shader < NumShaders; ++shader)
     {
         const auto& StaticResLayout = pPSOD3D11->GetStaticResourceLayout(shader);
-        auto*       pShaderD3D11    = ValidatedCast<ShaderD3D11Impl>(ppShaders[shader]);
+        auto*       pShaderD3D11    = pPSOD3D11->GetShader(shader);
 #ifdef DILIGENT_DEVELOPMENT
         if (!StaticResLayout.dvpVerifyBindings())
         {

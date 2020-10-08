@@ -56,6 +56,7 @@ class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, Ren
 {
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>;
+    using ShaderSPIRVs_t     = std::vector<std::vector<uint32_t>>;
 
     PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const PipelineStateCreateInfo& CreateInfo);
     ~PipelineStateVkImpl();
@@ -104,7 +105,7 @@ public:
 
     const ShaderResourceLayoutVk& GetShaderResLayout(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        VERIFY_EXPR(ShaderInd < m_NumShaderTypes);
         return m_ShaderResourceLayouts[ShaderInd];
     }
 
@@ -127,19 +128,19 @@ public:
 private:
     const ShaderResourceLayoutVk& GetStaticShaderResLayout(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < m_NumShaders);
-        return m_ShaderResourceLayouts[m_NumShaders + ShaderInd];
+        VERIFY_EXPR(ShaderInd < m_NumShaderTypes);
+        return m_ShaderResourceLayouts[m_NumShaderTypes + ShaderInd];
     }
 
     const ShaderResourceCacheVk& GetStaticResCache(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        VERIFY_EXPR(ShaderInd < m_NumShaderTypes);
         return m_StaticResCaches[ShaderInd];
     }
 
     ShaderVariableManagerVk& GetStaticVarMgr(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        VERIFY_EXPR(ShaderInd < m_NumShaderTypes);
         return m_StaticVarsMgrs[ShaderInd];
     }
 
@@ -150,14 +151,12 @@ private:
     // SRB memory allocator must be declared before m_pDefaultShaderResBinding
     SRBMemoryAllocator m_SRBMemAllocator;
 
-    std::array<VulkanUtilities::ShaderModuleWrapper, MAX_SHADERS_IN_PIPELINE> m_ShaderModules = {};
-
     VulkanUtilities::PipelineWrapper m_Pipeline;
     PipelineLayout                   m_PipelineLayout;
 
     // Resource layout index in m_ShaderResourceLayouts array for every shader stage,
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
-    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1};
+    std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex;
 
     bool m_HasStaticResources    = false;
     bool m_HasNonStaticResources = false;

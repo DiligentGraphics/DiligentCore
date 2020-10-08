@@ -52,7 +52,9 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
     m_StaticResourceLayout{*this}
 // clang-format on
 {
-    if (m_Desc.IsAnyGraphicsPipeline() && m_pPS == nullptr)
+    RefCntAutoPtr<IShader> pTempPS;
+
+    if (m_Desc.IsAnyGraphicsPipeline() && m_Desc.GraphicsPipeline.pPS == nullptr)
     {
         // Some OpenGL implementations fail if fragment shader is not present, so
         // create a dummy one.
@@ -61,9 +63,16 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         ShaderCI.Source          = "void main(){}";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.Desc.Name       = "Dummy fragment shader";
-        pDeviceGL->CreateShader(ShaderCI, &m_pPS);
-        m_Desc.GraphicsPipeline.pPS = m_pPS;
-        m_ppShaders[m_NumShaders++] = m_pPS;
+        pDeviceGL->CreateShader(ShaderCI, &pTempPS);
+    }
+
+    ShaderStages_t ShaderStages;
+    ExtractShaders(ShaderStages);
+
+    if (pTempPS)
+    {
+        m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_PIXEL;
+        ShaderStages.push_back({SHADER_TYPE_PIXEL, pTempPS});
     }
 
     auto& DeviceCaps = pDeviceGL->GetDeviceCaps();
@@ -83,13 +92,14 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
             // Program pipelines are not shared between GL contexts, so we cannot create
             // it now
             m_ShaderResourceLayoutHash = 0;
-            m_ProgramResources.resize(m_NumShaders);
-            m_GLPrograms.reserve(m_NumShaders);
-            for (Uint32 i = 0; i < m_NumShaders; ++i)
+            m_ProgramResources.resize(ShaderStages.size());
+            m_GLPrograms.reserve(ShaderStages.size());
+            for (size_t i = 0; i < ShaderStages.size(); ++i)
             {
-                auto*       pShaderGL  = GetShader<ShaderGLImpl>(i);
+                auto*       pShader    = ShaderStages[i].second;
+                auto*       pShaderGL  = ValidatedCast<ShaderGLImpl>(pShader);
                 const auto& ShaderDesc = pShaderGL->GetDesc();
-                m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(&m_ppShaders[i], 1, true));
+                m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(&pShader, 1, true));
                 // Load uniforms and assign bindings
                 m_ProgramResources[i].LoadUniforms(ShaderDesc.ShaderType, m_GLPrograms[i], GLState,
                                                    m_TotalUniformBufferBindings,
@@ -102,10 +112,12 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         }
         else
         {
-            m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(m_ppShaders.data(), m_NumShaders, false));
+            UNEXPECTED("TODO");
+            // AZ TODO
+            /*m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(m_ppShaders.data(), ShaderStages.size(), false));
             m_ProgramResources.resize(1);
             SHADER_TYPE ShaderStages = SHADER_TYPE_UNKNOWN;
-            for (Uint32 i = 0; i < m_NumShaders; ++i)
+            for (size_t i = 0; i < ShaderStages.size(); ++i)
             {
                 const auto& ShaderDesc = m_ppShaders[i]->GetDesc();
                 ShaderStages |= ShaderDesc.ShaderType;
@@ -116,7 +128,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
                                                m_TotalImageBindings,
                                                m_TotalStorageBufferBindings);
 
-            m_ShaderResourceLayoutHash = m_ProgramResources[0].GetHash();
+            m_ShaderResourceLayoutHash = m_ProgramResources[0].GetHash();*/
         }
 
         // Initialize master resource layout that keeps all variable types and does not reference a resource cache
@@ -214,10 +226,9 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
     m_GLProgPipelines.emplace_back(Context, true);
     auto&  ctx_pipeline = m_GLProgPipelines.back();
     GLuint Pipeline     = ctx_pipeline.second;
-    for (Uint32 i = 0; i < m_NumShaders; ++i)
+    for (Uint32 i = 0; i < GetNumShaderTypes(); ++i)
     {
-        auto* pCurrShader = GetShader<ShaderGLImpl>(i);
-        auto  GLShaderBit = ShaderTypeToGLShaderBit(pCurrShader->GetDesc().ShaderType);
+        auto GLShaderBit = ShaderTypeToGLShaderBit(GetShaderTypes()[i]);
         // If the program has an active code for each stage mentioned in set flags,
         // then that code will be used by the pipeline. If program is 0, then the given
         // stages are cleared from the pipeline.

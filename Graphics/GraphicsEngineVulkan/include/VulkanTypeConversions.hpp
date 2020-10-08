@@ -82,4 +82,7 @@ ATTACHMENT_STORE_OP VkAttachmentStoreOpToAttachmentStoreOp(VkAttachmentStoreOp V
 VkPipelineStageFlags PipelineStageFlagsToVkPipelineStageFlags(PIPELINE_STAGE_FLAGS PipelineStageFlags);
 VkAccessFlags        AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags);
 
+
+VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType);
+
 } // namespace Diligent

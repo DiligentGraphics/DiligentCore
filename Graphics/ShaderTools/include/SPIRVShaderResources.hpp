@@ -78,7 +78,7 @@ struct SPIRVShaderResourceAttribs
 
     static constexpr const Uint32   InvalidSepSmplrOrImgInd = static_cast<Uint32>(-1);
 
-/*  0 */const char* const           Name;
+/*  0 */const char*                 Name;
 /*  8 */const Uint16                ArraySize;
 /* 10 */const ResourceType          Type;
 /* 11 */ // unused
