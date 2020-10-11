@@ -118,13 +118,13 @@ public:
 
     const ShaderResourceLayoutD3D11& GetStaticResourceLayout(Uint32 s) const
     {
-        VERIFY_EXPR(s < GetNumShaderTypes());
+        VERIFY_EXPR(s < GetNumShaderStages());
         return m_pStaticResourceLayouts[s];
     }
 
     ShaderResourceCacheD3D11& GetStaticResourceCache(Uint32 s)
     {
-        VERIFY_EXPR(s < GetNumShaderTypes());
+        VERIFY_EXPR(s < GetNumShaderStages());
         return m_pStaticResourceCaches[s];
     }
 

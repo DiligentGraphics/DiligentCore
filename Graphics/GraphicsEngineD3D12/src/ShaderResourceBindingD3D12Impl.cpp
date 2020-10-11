@@ -45,7 +45,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         IsPSOInternal
     },
     m_ShaderResourceCache{ShaderResourceCacheD3D12::DbgCacheContentType::SRBResources},
-    m_NumShaders         {static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaderTypes())}
+    m_NumShaders         {static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaderStages())}
 // clang-format on
 {
     m_ResourceLayoutIndex.fill(-1);
@@ -58,7 +58,7 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
 
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto ShaderType = pPSO->GetShaderTypes()[s];
+        auto ShaderType = pPSO->GetShaderStageType(s);
         auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPSO->GetDesc().PipelineType);
 
         auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
@@ -187,7 +187,7 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineSt
     }
 
     auto* pPSO12     = ValidatedCast<const PipelineStateD3D12Impl>(pPSO);
-    auto  NumShaders = pPSO12->GetNumShaderTypes();
+    auto  NumShaders = pPSO12->GetNumShaderStages();
     // Copy static resources
     for (Uint32 s = 0; s < NumShaders; ++s)
     {
@@ -200,7 +200,7 @@ void ShaderResourceBindingD3D12Impl::InitializeStaticResources(const IPipelineSt
         {
             LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", pPSO12->GetDesc().Name,
                               "' will not be successfully initialized because not all static resource bindings in shader type '",
-                              GetShaderTypeLiteralName(pPSO12->GetShaderTypes()[s]),
+                              GetShaderTypeLiteralName(pPSO12->GetShaderStageType(s)),
                               "' are valid. Please make sure you bind all static resources to PSO before calling InitializeStaticResources() "
                               "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
         }

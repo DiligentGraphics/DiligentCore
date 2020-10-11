@@ -50,6 +50,8 @@ FixedBlockMemoryAllocator::FixedBlockMemoryAllocator(IMemoryAllocator& RawMemory
     m_NumBlocksInPage   {NumBlocksInPage           }
 // clang-format on
 {
+    VERIFY_EXPR(BlockSize > 0);
+
     // Allocate one page
     CreateNewPage();
 }
@@ -74,8 +76,6 @@ void FixedBlockMemoryAllocator::CreateNewPage()
 
 void* FixedBlockMemoryAllocator::Allocate(size_t Size, const Char* dbgDescription, const char* dbgFileName, const Int32 dbgLineNumber)
 {
-    VERIFY_EXPR(Size > 0);
-
     Size = AdjustBlockSize(Size);
     VERIFY(m_BlockSize == Size, "Requested size (", Size, ") does not match the block size (", m_BlockSize, ")");
 

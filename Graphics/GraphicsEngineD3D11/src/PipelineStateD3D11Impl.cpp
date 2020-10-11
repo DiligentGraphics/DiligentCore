@@ -131,28 +131,35 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
         UNEXPECTED(GetPipelineTypeString(m_Desc.PipelineType), " pipelines are not supported by Direct3D11 backend");
     }
 
+    // We do not really need ShaderStages, but ExtractShaders() also initializes
+    // shader stage types and shader stage counter.
+    std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>> ShaderStages;
+    ExtractShaders<ShaderD3D11Impl>(ShaderStages);
+    VERIFY_EXPR(GetNumShaderStages() == ShaderStages.size());
+
     // clang-format off
     static_assert((sizeof(ShaderResourceLayoutD3D11) % sizeof(void*)) == 0, "sizeof(ShaderResourceLayoutD3D11) is expected to be a multiple of sizeof(void*)");
     static_assert((sizeof(ShaderResourceCacheD3D11)  % sizeof(void*)) == 0, "sizeof(ShaderResourceCacheD3D11) is expected to be a multiple of sizeof(void*)");
     // clang-format on
-    const auto  MemSize = (sizeof(ShaderResourceLayoutD3D11) + sizeof(ShaderResourceCacheD3D11)) * GetNumShaderTypes();
+
+    const auto  MemSize = (sizeof(ShaderResourceLayoutD3D11) + sizeof(ShaderResourceCacheD3D11)) * GetNumShaderStages();
     auto* const pRawMem =
         ALLOCATE_RAW(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11 and ShaderResourceCacheD3D11 arrays", MemSize);
 
     m_pStaticResourceLayouts = reinterpret_cast<ShaderResourceLayoutD3D11*>(pRawMem);
-    m_pStaticResourceCaches  = reinterpret_cast<ShaderResourceCacheD3D11*>(m_pStaticResourceLayouts + GetNumShaderTypes());
+    m_pStaticResourceCaches  = reinterpret_cast<ShaderResourceCacheD3D11*>(m_pStaticResourceLayouts + GetNumShaderStages());
 
     const auto& ResourceLayout = m_Desc.ResourceLayout;
 
 #ifdef DILIGENT_DEVELOPMENT
     {
         const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
-        for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
         {
             auto* pShader = GetShader(s);
             pResources[s] = &(*pShader->GetD3D11Resources());
         }
-        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, GetNumShaderTypes(),
+        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, GetNumShaderStages(),
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
     }
@@ -161,7 +168,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
     decltype(m_StaticSamplers)                  StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"));
     std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResLayoutDataSizes = {};
     std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResCacheDataSizes  = {};
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         const auto* pShader         = GetShader(s);
         const auto& ShaderDesc      = pShader->GetDesc();
@@ -221,14 +228,14 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
 
     if (m_Desc.SRBAllocationGranularity > 1)
     {
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderTypes(), ShaderResLayoutDataSizes.data(), GetNumShaderTypes(), ShaderResCacheDataSizes.data());
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderResLayoutDataSizes.data(), GetNumShaderStages(), ShaderResCacheDataSizes.data());
     }
 
     m_StaticSamplers.reserve(StaticSamplers.size());
     for (auto& Sam : StaticSamplers)
         m_StaticSamplers.emplace_back(std::move(Sam));
 
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         // Initialize static samplers in the static resource cache to avoid warning messages
         SetStaticSamplers(m_pStaticResourceCaches[s], s);
@@ -238,19 +245,19 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*            pR
 
 PipelineStateD3D11Impl::~PipelineStateD3D11Impl()
 {
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         m_pStaticResourceCaches[s].Destroy(GetRawAllocator());
         m_pStaticResourceCaches[s].~ShaderResourceCacheD3D11();
     }
 
-    for (Uint32 l = 0; l < GetNumShaderTypes(); ++l)
+    for (Uint32 l = 0; l < GetNumShaderStages(); ++l)
     {
         m_pStaticResourceLayouts[l].~ShaderResourceLayoutD3D11();
     }
     // m_pStaticResourceLayouts and m_pStaticResourceCaches are allocated in contiguous chunks of memory.
-    auto* pRawMem = m_pStaticResourceLayouts;
-    GetRawAllocator().Free(pRawMem);
+    if (auto* pRawMem = m_pStaticResourceLayouts)
+        GetRawAllocator().Free(pRawMem);
 }
 
 IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D11Impl, IID_PipelineStateD3D11, TPipelineStateBase)
@@ -297,10 +304,10 @@ bool PipelineStateD3D11Impl::IsCompatibleWith(const IPipelineState* pPSO) const
     if (m_ShaderResourceLayoutHash != pPSOD3D11->m_ShaderResourceLayoutHash)
         return false;
 
-    if (GetNumShaderTypes() != pPSOD3D11->GetNumShaderTypes())
+    if (GetNumShaderStages() != pPSOD3D11->GetNumShaderStages())
         return false;
 
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         auto* pShader0 = GetShader(s);
         auto* pShader1 = pPSOD3D11->GetShader(s);
@@ -360,7 +367,7 @@ ID3D11ComputeShader* PipelineStateD3D11Impl::GetD3D11ComputeShader()
 
 void PipelineStateD3D11Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         auto& StaticResLayout = m_pStaticResourceLayouts[s];
         if ((ShaderFlags & StaticResLayout.GetShaderType()) != 0)
@@ -374,7 +381,7 @@ Uint32 PipelineStateD3D11Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) co
     if (LayoutInd < 0)
         return 0;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= GetNumShaderTypes());
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= GetNumShaderStages());
     return m_pStaticResourceLayouts[LayoutInd].GetTotalResourceCount();
 }
 
@@ -384,7 +391,7 @@ IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticVariableByName(SHADER_
     if (LayoutInd < 0)
         return nullptr;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= GetNumShaderTypes());
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= GetNumShaderStages());
     return m_pStaticResourceLayouts[LayoutInd].GetShaderVariable(Name);
 }
 
@@ -394,7 +401,7 @@ IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticVariableByIndex(SHADER
     if (LayoutInd < 0)
         return nullptr;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= GetNumShaderTypes());
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) <= GetNumShaderStages());
     return m_pStaticResourceLayouts[LayoutInd].GetShaderVariable(Index);
 }
 
@@ -431,8 +438,8 @@ const ShaderD3D11Impl* PipelineStateD3D11Impl::GetShaderByType(SHADER_TYPE Shade
 
 const ShaderD3D11Impl* PipelineStateD3D11Impl::GetShader(Uint32 Index) const
 {
-    if (Index < GetNumShaderTypes())
-        return GetShaderByType(GetShaderTypes()[Index]);
+    if (Index < GetNumShaderStages())
+        return GetShaderByType(GetShaderStageType(Index));
 
     UNEXPECTED("Shader index is out of range");
     return nullptr;

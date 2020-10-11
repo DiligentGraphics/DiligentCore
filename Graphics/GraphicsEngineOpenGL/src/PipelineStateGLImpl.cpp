@@ -52,8 +52,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
     m_StaticResourceLayout{*this}
 // clang-format on
 {
-    RefCntAutoPtr<IShader> pTempPS;
-
+    RefCntAutoPtr<ShaderGLImpl> pTempPS;
     if (m_Desc.IsAnyGraphicsPipeline() && m_Desc.GraphicsPipeline.pPS == nullptr)
     {
         // Some OpenGL implementations fail if fragment shader is not present, so
@@ -63,17 +62,23 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         ShaderCI.Source          = "void main(){}";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
         ShaderCI.Desc.Name       = "Dummy fragment shader";
-        pDeviceGL->CreateShader(ShaderCI, &pTempPS);
+        pDeviceGL->CreateShader(ShaderCI, reinterpret_cast<IShader**>(static_cast<ShaderGLImpl**>(&pTempPS)));
+
+        m_Desc.GraphicsPipeline.pPS = pTempPS;
     }
 
-    ShaderStages_t ShaderStages;
-    ExtractShaders(ShaderStages);
-
-    if (pTempPS)
+    struct GLPipelineShaderStageInfo
     {
-        m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_PIXEL;
-        ShaderStages.push_back({SHADER_TYPE_PIXEL, pTempPS});
-    }
+        const SHADER_TYPE   Type;
+        ShaderGLImpl* const pShader;
+        GLPipelineShaderStageInfo(SHADER_TYPE   _Type,
+                                  ShaderGLImpl* _pShader) :
+            Type{_Type},
+            pShader{_pShader}
+        {}
+    };
+    std::vector<GLPipelineShaderStageInfo> ShaderStages;
+    ExtractShaders<ShaderGLImpl>(ShaderStages);
 
     auto& DeviceCaps = pDeviceGL->GetDeviceCaps();
     VERIFY(DeviceCaps.DevType != RENDER_DEVICE_TYPE_UNDEFINED, "Device caps are not initialized");
@@ -96,10 +101,9 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
             m_GLPrograms.reserve(ShaderStages.size());
             for (size_t i = 0; i < ShaderStages.size(); ++i)
             {
-                auto*       pShader    = ShaderStages[i].second;
-                auto*       pShaderGL  = ValidatedCast<ShaderGLImpl>(pShader);
+                auto*       pShaderGL  = ShaderStages[i].pShader;
                 const auto& ShaderDesc = pShaderGL->GetDesc();
-                m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(&pShader, 1, true));
+                m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(&pShaderGL, 1, true));
                 // Load uniforms and assign bindings
                 m_ProgramResources[i].LoadUniforms(ShaderDesc.ShaderType, m_GLPrograms[i], GLState,
                                                    m_TotalUniformBufferBindings,
@@ -112,12 +116,14 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         }
         else
         {
-            std::vector<IShader*> Shaders;
-            SHADER_TYPE           ActiveStages = SHADER_TYPE_UNKNOWN;
-            for (size_t i = 0; i < ShaderStages.size(); ++i)
+            std::vector<ShaderGLImpl*> Shaders;
+
+            SHADER_TYPE ActiveStages = SHADER_TYPE_UNKNOWN;
+            for (const auto& Stage : ShaderStages)
             {
-                Shaders.push_back(ShaderStages[i].second);
-                ActiveStages |= ShaderStages[i].first;
+                Shaders.push_back(Stage.pShader);
+                VERIFY((ActiveStages & Stage.Type) == 0, "Shader stage ", GetShaderTypeLiteralName(Stage.Type), " is already active");
+                ActiveStages |= Stage.Type;
             }
 
             m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(Shaders.data(), static_cast<Uint32>(ShaderStages.size()), false));
@@ -226,9 +232,9 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
     m_GLProgPipelines.emplace_back(Context, true);
     auto&  ctx_pipeline = m_GLProgPipelines.back();
     GLuint Pipeline     = ctx_pipeline.second;
-    for (Uint32 i = 0; i < GetNumShaderTypes(); ++i)
+    for (Uint32 i = 0; i < GetNumShaderStages(); ++i)
     {
-        auto GLShaderBit = ShaderTypeToGLShaderBit(GetShaderTypes()[i]);
+        auto GLShaderBit = ShaderTypeToGLShaderBit(GetShaderStageType(i));
         // If the program has an active code for each stage mentioned in set flags,
         // then that code will be used by the pipeline. If program is 0, then the given
         // stages are cleared from the pipeline.

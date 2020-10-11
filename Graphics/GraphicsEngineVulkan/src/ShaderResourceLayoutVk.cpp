@@ -93,6 +93,14 @@ static SHADER_RESOURCE_VARIABLE_TYPE FindShaderVariableType(SHADER_TYPE         
     }
 }
 
+ShaderResourceLayoutVk::ShaderStageInfo::ShaderStageInfo(SHADER_TYPE         _Type,
+                                                         const ShaderVkImpl* _pShader) :
+    Type{_Type},
+    pShader{_pShader},
+    SPIRV{pShader->GetSPIRV()}
+{
+}
+
 
 ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
 {
@@ -103,7 +111,7 @@ ShaderResourceLayoutVk::~ShaderResourceLayoutVk()
         GetImmutableSampler(s).~ImmutableSamplerPtrType();
 }
 
-void ShaderResourceLayoutVk::AllocateMemory(IShader*                             pShader,
+void ShaderResourceLayoutVk::AllocateMemory(const ShaderVkImpl*                  pShader,
                                             IMemoryAllocator&                    Allocator,
                                             const PipelineResourceLayoutDesc&    ResourceLayoutDesc,
                                             const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
@@ -112,16 +120,14 @@ void ShaderResourceLayoutVk::AllocateMemory(IShader*                            
 {
     VERIFY(!m_ResourceBuffer, "Memory has already been initialized");
     VERIFY_EXPR(!m_pResources);
+    m_pResources = pShader->GetShaderResources();
 
-    const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
-    const auto   ShaderType      = pShader->GetDesc().ShaderType;
+    const auto ShaderType = pShader->GetDesc().ShaderType;
+    VERIFY_EXPR(m_pResources->GetShaderType() == ShaderType);
     // Count the number of resources to allocate all needed memory
     {
-        auto*       pShaderVk             = ValidatedCast<ShaderVkImpl>(pShader);
-        auto        pResources            = pShaderVk->GetShaderResources();
-        const auto* CombinedSamplerSuffix = pResources->GetCombinedSamplerSuffix();
-        VERIFY_EXPR(pResources->GetShaderType() == ShaderType);
-        m_pResources = pResources;
+        const Uint32 AllowedTypeBits       = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+        const auto*  CombinedSamplerSuffix = m_pResources->GetCombinedSamplerSuffix();
         m_pResources->ProcessResources(
             [&](const SPIRVShaderResourceAttribs& ResAttribs, Uint32) //
             {
@@ -172,11 +178,11 @@ void ShaderResourceLayoutVk::AllocateMemory(IShader*                            
 }
 
 
-Uint32 FindAssignedSampler(const ShaderResourceLayoutVk&     Layout,
-                           const SPIRVShaderResources&       Resources,
-                           const SPIRVShaderResourceAttribs& SepImg,
-                           Uint32                            CurrResourceCount,
-                           SHADER_RESOURCE_VARIABLE_TYPE     ImgVarType)
+static Uint32 FindAssignedSampler(const ShaderResourceLayoutVk&     Layout,
+                                  const SPIRVShaderResources&       Resources,
+                                  const SPIRVShaderResourceAttribs& SepImg,
+                                  Uint32                            CurrResourceCount,
+                                  SHADER_RESOURCE_VARIABLE_TYPE     ImgVarType)
 {
     using VkResource = ShaderResourceLayoutVk::VkResource;
     VERIFY_EXPR(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage);
@@ -211,7 +217,7 @@ Uint32 FindAssignedSampler(const ShaderResourceLayoutVk&     Layout,
 }
 
 
-void ShaderResourceLayoutVk::InitializeStaticResourceLayout(IShader*                          pShader,
+void ShaderResourceLayoutVk::InitializeStaticResourceLayout(const ShaderVkImpl*               pShader,
                                                             IMemoryAllocator&                 LayoutDataAllocator,
                                                             const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                                             ShaderResourceCacheVk&            StaticResourceCache)
@@ -277,7 +283,7 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(IShader*            
 }
 
 #ifdef DILIGENT_DEVELOPMENT
-void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const ShaderStages_t&             ShaderStages,
+void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const TShaderStages&              ShaderStages,
                                                          const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                                          bool                              VerifyVariables,
                                                          bool                              VerifyStaticSamplers)
@@ -290,11 +296,11 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const ShaderStages_t&  
             const auto  ShaderType = Stages & static_cast<SHADER_TYPE>(~(static_cast<Uint32>(Stages) - 1));
             const char* ShaderName = nullptr;
 
-            for (size_t s = 0; s < ShaderStages.size(); ++s)
+            for (const auto& StageInfo : ShaderStages)
             {
-                if ((Stages & ShaderStages[s].first) != 0)
+                if ((Stages & StageInfo.Type) != 0)
                 {
-                    ShaderName = ShaderStages[s].second->GetDesc().Name;
+                    ShaderName = StageInfo.pShader->GetDesc().Name;
                     break;
                 }
             }
@@ -334,8 +340,7 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const ShaderStages_t&  
             bool VariableFound = false;
             for (size_t s = 0; s < ShaderStages.size() && !VariableFound; ++s)
             {
-                const auto* pShaderVk = ValidatedCast<ShaderVkImpl>(ShaderStages[s].second);
-                const auto& Resources = *pShaderVk->GetShaderResources();
+                const auto& Resources = *ShaderStages[s].pShader->GetShaderResources();
                 if ((VarDesc.ShaderStages & Resources.GetShaderType()) != 0)
                 {
                     for (Uint32 res = 0; res < Resources.GetTotalResources() && !VariableFound; ++res)
@@ -368,8 +373,7 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const ShaderStages_t&  
             bool SamplerFound = false;
             for (size_t s = 0; s < ShaderStages.size() && !SamplerFound; ++s)
             {
-                const auto* pShaderVk = ValidatedCast<ShaderVkImpl>(ShaderStages[s].second);
-                const auto& Resources = *pShaderVk->GetShaderResources();
+                const auto& Resources = *ShaderStages[s].pShader->GetShaderResources();
                 if ((StSamDesc.ShaderStages & Resources.GetShaderType()) == 0)
                     continue;
 
@@ -407,11 +411,10 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const ShaderStages_t&  
 #endif
 
 void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRenderDevice,
-                                        const ShaderStages_t&             ShaderStages,
+                                        TShaderStages&                    ShaderStages,
                                         ShaderResourceLayoutVk            Layouts[],
                                         IMemoryAllocator&                 LayoutDataAllocator,
                                         const PipelineResourceLayoutDesc& ResourceLayoutDesc,
-                                        ShaderSPIRVs_t&                   SPIRVs,
                                         class PipelineLayout&             PipelineLayout,
                                         bool                              VerifyVariables,
                                         bool                              VerifyStaticSamplers)
@@ -427,7 +430,8 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
 
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        Layouts[s].AllocateMemory(ShaderStages[s].second, LayoutDataAllocator, ResourceLayoutDesc, AllowedVarTypes, NumAllowedTypes, AllocateImmutableSamplers);
+        Layouts[s].AllocateMemory(ShaderStages[s].pShader, LayoutDataAllocator, ResourceLayoutDesc,
+                                  AllowedVarTypes, NumAllowedTypes, AllocateImmutableSamplers);
     }
 
     //VERIFY_EXPR(NumShaders <= MAX_SHADERS_IN_PIPELINE);
@@ -475,7 +479,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
             }
         }
 
-        auto& ShaderSPIRV = SPIRVs[ShaderInd];
+        auto& ShaderSPIRV = ShaderStages[ShaderInd].SPIRV;
         PipelineLayout.AllocateResourceSlot(Attribs, VarType, vkImmutableSampler, Resources.GetShaderType(), DescriptorSet, Binding, CacheOffset, ShaderSPIRV);
         VERIFY(DescriptorSet <= std::numeric_limits<decltype(VkResource::DescriptorSet)>::max(), "Descriptor set (", DescriptorSet, ") excceeds maximum representable value");
         VERIFY(Binding <= std::numeric_limits<decltype(VkResource::Binding)>::max(), "Binding (", Binding, ") excceeds maximum representable value");
@@ -498,9 +502,8 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
     // First process uniform buffers for all shader stages to make sure all UBs go first in every descriptor set
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        auto& pShader   = ShaderStages[s].second;
         auto& Layout    = Layouts[s];
-        auto* pShaderVk = ValidatedCast<ShaderVkImpl>(pShader);
+        auto* pShaderVk = ShaderStages[s].pShader;
         auto& Resources = *pShaderVk->GetShaderResources();
         for (Uint32 n = 0; n < Resources.GetNumUBs(); ++n)
         {
@@ -516,10 +519,8 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
     // Second, process all storage buffers
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        auto& pShader   = ShaderStages[s].second;
         auto& Layout    = Layouts[s];
-        auto* pShaderVk = ValidatedCast<ShaderVkImpl>(pShader);
-        auto& Resources = *pShaderVk->GetShaderResources();
+        auto& Resources = *ShaderStages[s].pShader->GetShaderResources();
         for (Uint32 n = 0; n < Resources.GetNumSBs(); ++n)
         {
             const auto& SB      = Resources.GetSB(n);
@@ -534,10 +535,8 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
     // Finally, process all other resource types
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        auto& pShader   = ShaderStages[s].second;
         auto& Layout    = Layouts[s];
-        auto* pShaderVk = ValidatedCast<ShaderVkImpl>(pShader);
-        auto& Resources = *pShaderVk->GetShaderResources();
+        auto& Resources = *ShaderStages[s].pShader->GetShaderResources();
         // clang-format off
         Resources.ProcessResources(
             [&](const SPIRVShaderResourceAttribs& UB, Uint32)

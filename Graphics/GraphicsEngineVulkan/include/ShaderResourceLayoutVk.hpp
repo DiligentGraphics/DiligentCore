@@ -110,13 +110,23 @@
 namespace Diligent
 {
 
+class ShaderVkImpl;
+
 /// Diligent::ShaderResourceLayoutVk class
 // sizeof(ShaderResourceLayoutVk)==56 (MS compiler, x64)
 class ShaderResourceLayoutVk
 {
 public:
-    using ShaderStages_t = std::vector<std::pair<SHADER_TYPE, IShader*>>;
-    using ShaderSPIRVs_t = std::vector<std::vector<uint32_t>>;
+    struct ShaderStageInfo
+    {
+        ShaderStageInfo(SHADER_TYPE         _Type,
+                        const ShaderVkImpl* _pShader);
+
+        const SHADER_TYPE         Type;
+        const ShaderVkImpl* const pShader;
+        std::vector<uint32_t>     SPIRV;
+    };
+    using TShaderStages = std::vector<ShaderStageInfo>;
 
     ShaderResourceLayoutVk(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) :
         m_LogicalDevice{LogicalDevice}
@@ -134,7 +144,7 @@ public:
 
     // This method is called by PipelineStateVkImpl class instance to initialize static
     // shader resource layout and the cache
-    void InitializeStaticResourceLayout(IShader*                          pShader,
+    void InitializeStaticResourceLayout(const ShaderVkImpl*               pShader,
                                         IMemoryAllocator&                 LayoutDataAllocator,
                                         const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                         ShaderResourceCacheVk&            StaticResourceCache);
@@ -142,11 +152,10 @@ public:
     // This method is called by PipelineStateVkImpl class instance to initialize resource
     // layouts for all shader stages in the pipeline.
     static void Initialize(IRenderDevice*                    pRenderDevice,
-                           const ShaderStages_t&             ShaderStages,
+                           TShaderStages&                    ShaderStages,
                            ShaderResourceLayoutVk            Layouts[],
                            IMemoryAllocator&                 LayoutDataAllocator,
                            const PipelineResourceLayoutDesc& ResourceLayoutDesc,
-                           ShaderSPIRVs_t&                   SPIRVs,
                            class PipelineLayout&             PipelineLayout,
                            bool                              VerifyVariables,
                            bool                              VerifyStaticSamplers);
@@ -281,7 +290,7 @@ public:
 
 #ifdef DILIGENT_DEVELOPMENT
     bool        dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache) const;
-    static void dvpVerifyResourceLayoutDesc(const ShaderStages_t&             ShaderStages,
+    static void dvpVerifyResourceLayoutDesc(const TShaderStages&              ShaderStages,
                                             const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                             bool                              VerifyVariables,
                                             bool                              VerifyStaticSamplers);
@@ -349,7 +358,7 @@ private:
         return m_NumResources[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
     }
 
-    void AllocateMemory(IShader*                             pShader,
+    void AllocateMemory(const ShaderVkImpl*                  pShader,
                         IMemoryAllocator&                    Allocator,
                         const PipelineResourceLayoutDesc&    ResourceLayoutDesc,
                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,

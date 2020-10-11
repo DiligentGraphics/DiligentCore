@@ -92,7 +92,7 @@ public:
     /// Implementation of IShader::GetResource() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(Uint32 Index, ShaderResourceDesc& ResourceDesc) const override final;
 
-    static GLObjectWrappers::GLProgramObj LinkProgram(IShader** ppShaders, Uint32 NumShaders, bool IsSeparableProgram);
+    static GLObjectWrappers::GLProgramObj LinkProgram(ShaderGLImpl** ppShaders, Uint32 NumShaders, bool IsSeparableProgram);
 
 private:
     GLObjectWrappers::GLShaderObj m_GLShaderObj;

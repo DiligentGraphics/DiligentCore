@@ -149,26 +149,21 @@ static bool StripReflection(std::vector<uint32_t>& SPIRV)
 #endif
 }
 
-static void InitializeShaderStages(const VulkanUtilities::VulkanLogicalDevice&        LogicalDevice,
-                                   const PipelineStateVkImpl::ShaderStages_t&         ShaderStages,
-                                   PipelineStateVkImpl::ShaderSPIRVs_t&               ShaderSPIRVs,
-                                   std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
-                                   std::vector<VkPipelineShaderStageCreateInfo>&      Stages)
+static void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&        LogicalDevice,
+                                     ShaderResourceLayoutVk::TShaderStages&             ShaderStages,
+                                     std::vector<VulkanUtilities::ShaderModuleWrapper>& vkShaderModules,
+                                     std::vector<VkPipelineShaderStageCreateInfo>&      vkPipelineShaderStages)
 {
-    VERIFY_EXPR(ShaderStages.size() == ShaderSPIRVs.size());
-
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
-        auto*      pShaderVk  = ValidatedCast<ShaderVkImpl>(ShaderStages[s].second);
-        auto&      SPIRV      = ShaderSPIRVs[s];
-        const auto ShaderType = ShaderStages[s].first;
+        auto& StageInfo = ShaderStages[s];
 
         VkPipelineShaderStageCreateInfo StageCI = {};
 
         StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
         StageCI.pNext = nullptr;
         StageCI.flags = 0; //  reserved for future use
-        StageCI.stage = ShaderTypeToVkShaderStageFlagBit(ShaderType);
+        StageCI.stage = ShaderTypeToVkShaderStageFlagBit(StageInfo.Type);
 
         VkShaderModuleCreateInfo ShaderModuleCI = {};
 
@@ -179,22 +174,22 @@ static void InitializeShaderStages(const VulkanUtilities::VulkanLogicalDevice&  
         // We have to strip reflection instructions to fix the follownig validation error:
         //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string
         // Optimizer also performs validation and may catch problems with the byte code.
-        if (!StripReflection(SPIRV))
-            LOG_ERROR("Failed to strip reflection information from shader '", pShaderVk->GetDesc().Name, "'. This may indicate a problem with the byte code.");
+        if (!StripReflection(StageInfo.SPIRV))
+            LOG_ERROR("Failed to strip reflection information from shader '", StageInfo.pShader->GetDesc().Name, "'. This may indicate a problem with the byte code.");
 
-        ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
-        ShaderModuleCI.pCode    = SPIRV.data();
+        ShaderModuleCI.codeSize = StageInfo.SPIRV.size() * sizeof(uint32_t);
+        ShaderModuleCI.pCode    = StageInfo.SPIRV.data();
 
-        ShaderModules.push_back(LogicalDevice.CreateShaderModule(ShaderModuleCI, pShaderVk->GetDesc().Name));
+        vkShaderModules.push_back(LogicalDevice.CreateShaderModule(ShaderModuleCI, StageInfo.pShader->GetDesc().Name));
 
-        StageCI.module              = ShaderModules.back();
-        StageCI.pName               = pShaderVk->GetEntryPoint();
+        StageCI.module              = vkShaderModules.back();
+        StageCI.pName               = StageInfo.pShader->GetEntryPoint();
         StageCI.pSpecializationInfo = nullptr;
 
-        Stages.push_back(StageCI);
+        vkPipelineShaderStages.push_back(StageCI);
     }
 
-    VERIFY_EXPR(ShaderModules.size() == Stages.size());
+    VERIFY_EXPR(vkShaderModules.size() == vkPipelineShaderStages.size());
 }
 
 
@@ -417,47 +412,41 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
 
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
-    ShaderStages_t ShaderStages;
-    ShaderSPIRVs_t ShaderSPIRVs;
-    ExtractShaders(ShaderStages);
-
-    ShaderSPIRVs.resize(ShaderStages.size());
-    for (size_t s = 0; s < ShaderSPIRVs.size(); ++s)
-    {
-        auto* pShaderVk = ValidatedCast<ShaderVkImpl>(ShaderStages[s].second);
-        ShaderSPIRVs[s] = pShaderVk->GetSPIRV();
-    }
+    ShaderResourceLayoutVk::TShaderStages ShaderStages;
+    ExtractShaders<ShaderVkImpl>(ShaderStages);
 
     // clang-format off
     static_assert((sizeof(ShaderResourceLayoutVk)  % sizeof(void*)) == 0, "sizeof(ShaderResourceLayoutVk) is expected to be a multiple of sizeof(void*)");
     static_assert((sizeof(ShaderResourceCacheVk)   % sizeof(void*)) == 0, "sizeof(ShaderResourceCacheVk) is expected to be a multiple of sizeof(void*)");
     static_assert((sizeof(ShaderVariableManagerVk) % sizeof(void*)) == 0, "sizeof(ShaderVariableManagerVk) is expected to be a multiple of sizeof(void*)");
     // clang-format on
-    const auto  MemSize = (sizeof(ShaderResourceLayoutVk) * 2 + sizeof(ShaderResourceCacheVk) + sizeof(ShaderVariableManagerVk)) * GetNumShaderTypes();
+    const auto  MemSize = (sizeof(ShaderResourceLayoutVk) * 2 + sizeof(ShaderResourceCacheVk) + sizeof(ShaderVariableManagerVk)) * GetNumShaderStages();
     auto* const pRawMem =
         ALLOCATE_RAW(GetRawAllocator(), "Raw memory for ShaderResourceLayoutVk, ShaderResourceCacheVk, and ShaderVariableManagerVk arrays", MemSize);
 
     m_ShaderResourceLayouts = reinterpret_cast<ShaderResourceLayoutVk*>(pRawMem);
-    m_StaticResCaches       = reinterpret_cast<ShaderResourceCacheVk*>(m_ShaderResourceLayouts + GetNumShaderTypes() * 2);
-    m_StaticVarsMgrs        = reinterpret_cast<ShaderVariableManagerVk*>(m_StaticResCaches + GetNumShaderTypes());
+    m_StaticResCaches       = reinterpret_cast<ShaderResourceCacheVk*>(m_ShaderResourceLayouts + GetNumShaderStages() * 2);
+    m_StaticVarsMgrs        = reinterpret_cast<ShaderVariableManagerVk*>(m_StaticResCaches + GetNumShaderStages());
 
     for (size_t s = 0; s < ShaderStages.size(); ++s)
     {
+        auto&      StageInfo     = ShaderStages[s];
+        const auto ShaderType    = StageInfo.Type;
+        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
+
         new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk{LogicalDevice};
 
-        const auto ShaderType                = ShaderStages[s].first;
-        auto&      Shaders                   = ShaderStages[s].second;
-        const auto ShaderTypeInd             = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
+
         m_ResourceLayoutIndex[ShaderTypeInd] = static_cast<Int8>(s);
 
         auto* pStaticResLayout = new (m_ShaderResourceLayouts + ShaderStages.size() + s) ShaderResourceLayoutVk{LogicalDevice};
         auto* pStaticResCache  = new (m_StaticResCaches + s) ShaderResourceCacheVk{ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources};
-        pStaticResLayout->InitializeStaticResourceLayout(Shaders, GetRawAllocator(), m_Desc.ResourceLayout, m_StaticResCaches[s]);
+        pStaticResLayout->InitializeStaticResourceLayout(StageInfo.pShader, GetRawAllocator(), m_Desc.ResourceLayout, m_StaticResCaches[s]);
 
         new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, *pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache};
     }
     ShaderResourceLayoutVk::Initialize(pDeviceVk, ShaderStages, m_ShaderResourceLayouts, GetRawAllocator(),
-                                       m_Desc.ResourceLayout, ShaderSPIRVs, m_PipelineLayout,
+                                       m_Desc.ResourceLayout, m_PipelineLayout,
                                        (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
                                        (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
     m_PipelineLayout.Finalize(LogicalDevice);
@@ -465,7 +454,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
     if (m_Desc.SRBAllocationGranularity > 1)
     {
         std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
-        for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
         {
             const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
 
@@ -477,13 +466,13 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
         auto   DescriptorSetSizes = m_PipelineLayout.GetDescriptorSetSizes(NumSets);
         auto   CacheMemorySize    = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes.data());
 
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderTypes(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
     }
 
     // Create shader modules and initialize shader stages
     std::vector<VkPipelineShaderStageCreateInfo>      VkShaderStages;
     std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
-    InitializeShaderStages(LogicalDevice, ShaderStages, ShaderSPIRVs, ShaderModules, VkShaderStages);
+    InitPipelineShaderStages(LogicalDevice, ShaderStages, ShaderModules, VkShaderStages);
 
     // Create pipeline
     switch (m_Desc.PipelineType)
@@ -498,7 +487,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
 
     m_HasStaticResources    = false;
     m_HasNonStaticResources = false;
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         const auto& Layout = m_ShaderResourceLayouts[s];
         if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0)
@@ -518,12 +507,12 @@ PipelineStateVkImpl::~PipelineStateVkImpl()
     m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
 
     auto& RawAllocator = GetRawAllocator();
-    for (Uint32 s = 0; s < GetNumShaderTypes() * 2; ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages() * 2; ++s)
     {
         m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
     }
 
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         m_StaticResCaches[s].~ShaderResourceCacheVk();
         m_StaticVarsMgrs[s].DestroyVariables(GetRawAllocator());
@@ -563,14 +552,14 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
 #ifdef DILIGENT_DEBUG
     {
         bool IsCompatibleShaders = true;
-        if (GetNumShaderTypes() != pPSOVk->GetNumShaderTypes())
+        if (GetNumShaderStages() != pPSOVk->GetNumShaderStages())
             IsCompatibleShaders = false;
 
         if (IsCompatibleShaders)
         {
-            for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+            for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
             {
-                if (GetShaderTypes()[s] != pPSOVk->GetShaderTypes()[s])
+                if (GetShaderStageType(s) != pPSOVk->GetShaderStageType(s))
                 {
                     IsCompatibleShaders = false;
                     break;
@@ -636,7 +625,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     auto& ResourceCache = pResBindingVkImpl->GetResourceCache();
 
 #ifdef DILIGENT_DEVELOPMENT
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         m_ShaderResourceLayouts[s].dvpVerifyBindings(ResourceCache);
     }
@@ -671,7 +660,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
             // Allocate vulkan descriptor set for dynamic resources
             DynamicDescrSet = pCtxVkImpl->AllocateDynamicDescriptorSet(DynamicDescriptorSetVkLayout, DynamicDescrSetName);
             // Commit all dynamic resource descriptors
-            for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+            for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
             {
                 const auto& Layout = m_ShaderResourceLayouts[s];
                 if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) != 0)
@@ -688,7 +677,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 
 void PipelineStateVkImpl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
         if ((ShaderType & ShaderFlags) != 0)
@@ -732,7 +721,7 @@ IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByIndex(SHADER_TY
 
 void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const
 {
-    for (Uint32 s = 0; s < GetNumShaderTypes(); ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         const auto& StaticResLayout = GetStaticShaderResLayout(s);
         const auto& StaticResCache  = GetStaticResCache(s);
@@ -742,7 +731,7 @@ void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& Re
         {
             LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", GetDesc().Name,
                               "' will not be successfully initialized because not all static resource bindings in shader '",
-                              GetShaderTypeLiteralName(GetShaderTypes()[s]),
+                              GetShaderTypeLiteralName(GetShaderStageType(s)),
                               "' are valid. Please make sure you bind all static resources to PSO before calling InitializeStaticResources() "
                               "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
         }

@@ -49,8 +49,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*  pR
 {
     m_ResourceLayoutIndex.fill(-1);
 
-    auto* pShaderTypes = pPSO->GetShaderTypes();
-    m_NumShaders       = static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaderTypes());
+    m_NumShaders = static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaderStages());
 
     auto* pRenderDeviceVkImpl = pPSO->GetDevice();
     // This will only allocate memory and initialize descriptor sets in the resource cache
@@ -62,7 +61,7 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*  pR
 
     for (Uint32 s = 0; s < m_NumShaders; ++s)
     {
-        auto ShaderInd = GetShaderTypePipelineIndex(pShaderTypes[s], pPSO->GetDesc().PipelineType);
+        auto ShaderInd = GetShaderTypePipelineIndex(pPSO->GetShaderStageType(s), pPSO->GetDesc().PipelineType);
 
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
 

@@ -95,19 +95,19 @@ public:
 
     const ShaderResourceLayoutD3D12& GetShaderResLayout(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < GetNumShaderTypes());
+        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
         return m_pShaderResourceLayouts[ShaderInd];
     }
 
     const ShaderResourceLayoutD3D12& GetStaticShaderResLayout(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < GetNumShaderTypes());
-        return m_pShaderResourceLayouts[GetNumShaderTypes() + ShaderInd];
+        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
+        return m_pShaderResourceLayouts[GetNumShaderStages() + ShaderInd];
     }
 
     ShaderResourceCacheD3D12& GetStaticShaderResCache(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < GetNumShaderTypes());
+        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
         return m_pStaticResourceCaches[ShaderInd];
     }
 

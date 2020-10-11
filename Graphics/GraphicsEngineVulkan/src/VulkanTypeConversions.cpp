@@ -1515,7 +1515,7 @@ VkAccessFlags AccessFlagsToVkAccessFlags(ACCESS_FLAGS AccessFlags)
 VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
 {
     static_assert(SHADER_TYPE_LAST == SHADER_TYPE_MESH, "Please update the switch below to handle the new shader type");
-    VERIFY((ShaderType & (ShaderType - 1)) == 0, "More than one shader type specified");
+    VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "More than one shader type is specified");
     switch (ShaderType)
     {
         // clang-format off

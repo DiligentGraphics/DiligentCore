@@ -50,7 +50,7 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl(IReferenceCounter
 // clang-format on
 {
     m_ResourceLayoutIndex.fill(-1);
-    m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaderTypes());
+    m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaderStages());
 
     // clang-format off
     m_pResourceLayouts     = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11", ShaderResourceLayoutD3D11, m_NumActiveShaders);
@@ -151,7 +151,7 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
     }
 
     const auto* pPSOD3D11  = ValidatedCast<const PipelineStateD3D11Impl>(pPipelineState);
-    auto        NumShaders = pPSOD3D11->GetNumShaderTypes();
+    auto        NumShaders = pPSOD3D11->GetNumShaderStages();
     VERIFY_EXPR(NumShaders == m_NumActiveShaders);
 
     for (Uint32 shader = 0; shader < NumShaders; ++shader)

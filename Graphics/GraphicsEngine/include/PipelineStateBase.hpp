@@ -68,6 +68,16 @@ public:
                       bool                     bIsDeviceInternal = false) :
         TDeviceObjectBase{pRefCounters, pDevice, PSODesc, bIsDeviceInternal}
     {
+        switch (PSODesc.PipelineType)
+        {
+            // clang-format off
+            case PIPELINE_TYPE_GRAPHICS:
+            case PIPELINE_TYPE_MESH:     ValidateGraphicsPipeline(); break;
+            case PIPELINE_TYPE_COMPUTE:  ValidateComputePipeline();  break;
+            default:                     UNEXPECTED("unknown pipeline type");
+                // clang-format on
+        }
+
         const auto& SrcLayout      = PSODesc.ResourceLayout;
         size_t      StringPoolSize = 0;
         if (SrcLayout.Variables != nullptr)
@@ -88,14 +98,11 @@ public:
             }
         }
 
-        switch (PSODesc.PipelineType)
+        if (PSODesc.IsAnyGraphicsPipeline())
         {
-            // clang-format off
-            case PIPELINE_TYPE_GRAPHICS:
-            case PIPELINE_TYPE_MESH:     ValidateGraphicsPipeline(  StringPoolSize); break;
-            case PIPELINE_TYPE_COMPUTE:  ValidateComputePipeline(   StringPoolSize); break;
-            default:                     UNEXPECTED("unknown pipeline type");
-                // clang-format on
+            const auto& InputLayout = this->m_Desc.GraphicsPipeline.InputLayout;
+            for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
+                StringPoolSize += strlen(InputLayout.LayoutElements[i].HLSLSemantic) + 1;
         }
 
         m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
@@ -143,8 +150,8 @@ public:
         {
             // clang-format off
             case PIPELINE_TYPE_GRAPHICS:
-            case PIPELINE_TYPE_MESH:     InitGraphicsPipeline();   break;
-            case PIPELINE_TYPE_COMPUTE:  InitComputePipeline();    break;
+            case PIPELINE_TYPE_MESH:     InitGraphicsPipeline(); break;
+            case PIPELINE_TYPE_COMPUTE:  InitComputePipeline();  break;
             default:                     UNEXPECTED("unknown pipeline type");
                 // clang-format on
         }
@@ -201,8 +208,8 @@ public:
         return m_BufferSlotsUsed;
     }
 
-    SHADER_TYPE const* GetShaderTypes() const { return m_pShaderTypes.data(); }
-    Uint32             GetNumShaderTypes() const { return m_NumShaderTypes; }
+    SHADER_TYPE GetShaderStageType(Uint32 Stage) const { return m_ShaderStageTypes[Stage]; }
+    Uint32      GetNumShaderStages() const { return m_NumShaderStages; }
 
     // This function only compares shader resource layout hashes, so
     // it can potentially give false negatives
@@ -219,10 +226,12 @@ protected:
 
     RefCntAutoPtr<IRenderPass> m_pRenderPass; ///< Strong reference to the render pass object
 
-    Uint8 m_NumShaderTypes = 0; ///< Number of shader types that this PSO uses
+    Uint8 m_NumShaderStages = 0; ///< Number of shader stages in this PSO
 
-    std::array<SHADER_TYPE, MAX_SHADERS_IN_PIPELINE> m_pShaderTypes             = {}; ///< Array of shader types used by this PSO
-    size_t                                           m_ShaderResourceLayoutHash = 0;  ///< Hash computed from the shader resource layout
+    /// Array of shader types for every shader stage used by this PSO
+    std::array<SHADER_TYPE, MAX_SHADERS_IN_PIPELINE> m_ShaderStageTypes = {};
+
+    size_t m_ShaderResourceLayoutHash = 0; ///< Hash computed from the shader resource layout
 
 protected:
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ", GetPipelineTypeString(this->m_Desc.PipelineType), " PSO '", this->m_Desc.Name, "' is invalid: ", ##__VA_ARGS__)
@@ -287,51 +296,50 @@ protected:
         return LayoutInd;
     }
 
-public:
-    using ShaderStages_t = std::vector<std::pair<SHADER_TYPE, IShader*>>;
 
 protected:
-    void ExtractShaders(ShaderStages_t& ShaderStages)
+    template <typename ShaderImplType, typename TShaderStages>
+    void ExtractShaders(TShaderStages& ShaderStages)
     {
+        VERIFY(m_NumShaderStages == 0, "The number of shader stages is not zero! ExtractShaders must only be called once.");
+
+        ShaderStages.clear();
+        auto AddShaderStage = [&](IShader*& pShader) {
+            if (pShader != nullptr)
+            {
+                auto ShaderType = pShader->GetDesc().ShaderType;
+                ShaderStages.emplace_back(ShaderType, ValidatedCast<ShaderImplType>(pShader));
+                m_ShaderStageTypes[m_NumShaderStages++] = ShaderType;
+
+                // Reset shader pointers in PSO desc because we don't keep strong references to shaders.
+                pShader = nullptr;
+            }
+        };
+
         auto& Desc = this->m_Desc;
         switch (Desc.PipelineType)
         {
             case PIPELINE_TYPE_COMPUTE:
             {
-                if (Desc.ComputePipeline.pCS) ShaderStages.push_back({SHADER_TYPE_COMPUTE, Desc.ComputePipeline.pCS});
-
-                // reset shader pointers because we don't keep strong references to shaders
-                Desc.ComputePipeline.pCS = nullptr;
+                AddShaderStage(Desc.ComputePipeline.pCS);
                 break;
             }
 
             case PIPELINE_TYPE_GRAPHICS:
             {
-                if (Desc.GraphicsPipeline.pVS) ShaderStages.push_back({SHADER_TYPE_VERTEX, Desc.GraphicsPipeline.pVS});
-                if (Desc.GraphicsPipeline.pHS) ShaderStages.push_back({SHADER_TYPE_HULL, Desc.GraphicsPipeline.pHS});
-                if (Desc.GraphicsPipeline.pDS) ShaderStages.push_back({SHADER_TYPE_DOMAIN, Desc.GraphicsPipeline.pDS});
-                if (Desc.GraphicsPipeline.pGS) ShaderStages.push_back({SHADER_TYPE_GEOMETRY, Desc.GraphicsPipeline.pGS});
-                if (Desc.GraphicsPipeline.pPS) ShaderStages.push_back({SHADER_TYPE_PIXEL, Desc.GraphicsPipeline.pPS});
-
-                // reset shader pointers because we don't keep strong references to shaders
-                Desc.GraphicsPipeline.pVS = nullptr;
-                Desc.GraphicsPipeline.pHS = nullptr;
-                Desc.GraphicsPipeline.pDS = nullptr;
-                Desc.GraphicsPipeline.pGS = nullptr;
-                Desc.GraphicsPipeline.pPS = nullptr;
+                AddShaderStage(Desc.GraphicsPipeline.pVS);
+                AddShaderStage(Desc.GraphicsPipeline.pHS);
+                AddShaderStage(Desc.GraphicsPipeline.pDS);
+                AddShaderStage(Desc.GraphicsPipeline.pGS);
+                AddShaderStage(Desc.GraphicsPipeline.pPS);
                 break;
             }
 
             case PIPELINE_TYPE_MESH:
             {
-                if (Desc.GraphicsPipeline.pAS) ShaderStages.push_back({SHADER_TYPE_AMPLIFICATION, Desc.GraphicsPipeline.pAS});
-                if (Desc.GraphicsPipeline.pMS) ShaderStages.push_back({SHADER_TYPE_MESH, Desc.GraphicsPipeline.pMS});
-                if (Desc.GraphicsPipeline.pPS) ShaderStages.push_back({SHADER_TYPE_PIXEL, Desc.GraphicsPipeline.pPS});
-
-                // reset shader pointers because we don't keep strong references to shaders
-                Desc.GraphicsPipeline.pAS = nullptr;
-                Desc.GraphicsPipeline.pMS = nullptr;
-                Desc.GraphicsPipeline.pPS = nullptr;
+                AddShaderStage(Desc.GraphicsPipeline.pAS);
+                AddShaderStage(Desc.GraphicsPipeline.pMS);
+                AddShaderStage(Desc.GraphicsPipeline.pPS);
                 break;
             }
 
@@ -339,14 +347,7 @@ protected:
                 UNEXPECTED("unknown pipeline type");
         }
 
-#ifdef DILIGENT_DEVELOPMENT
-        VERIFY_EXPR(ShaderStages.size() == m_NumShaderTypes);
-
-        for (Uint32 s = 0; s < m_NumShaderTypes; ++s)
-        {
-            VERIFY_EXPR(ShaderStages[s].first == m_pShaderTypes[s]);
-        }
-#endif
+        VERIFY_EXPR(!ShaderStages.empty() && ShaderStages.size() == m_NumShaderStages);
     }
 
 
@@ -448,7 +449,7 @@ private:
         }
     }
 
-    void ValidateGraphicsPipeline(size_t& StringPoolSize)
+    void ValidateGraphicsPipeline()
     {
         const auto& GraphicsPipeline = this->m_Desc.GraphicsPipeline;
         if (GraphicsPipeline.pRenderPass != nullptr)
@@ -477,13 +478,9 @@ private:
         CheckAndCorrectBlendStateDesc();
         CheckRasterizerStateDesc();
         CheckAndCorrectDepthStencilDesc();
-
-        const auto& InputLayout = this->m_Desc.GraphicsPipeline.InputLayout;
-        for (Uint32 i = 0; i < InputLayout.NumElements; ++i)
-            StringPoolSize += strlen(InputLayout.LayoutElements[i].HLSLSemantic) + 1;
     }
 
-    void ValidateComputePipeline(size_t& StringPoolSize)
+    void ValidateComputePipeline()
     {
         if (this->m_Desc.GraphicsPipeline.pRenderPass != nullptr)
         {
@@ -526,16 +523,6 @@ private:
                               GraphicsPipeline.PrimitiveTopology == PRIMITIVE_TOPOLOGY_UNDEFINED,
                           "Primitive topology is ignored in a mesh pipeline, set it to undefined or keep default value (triangle list)");
         }
-
-        if (GraphicsPipeline.pVS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_VERTEX;
-        if (GraphicsPipeline.pHS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_HULL;
-        if (GraphicsPipeline.pDS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_DOMAIN;
-        if (GraphicsPipeline.pGS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_GEOMETRY;
-        if (GraphicsPipeline.pAS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_AMPLIFICATION;
-        if (GraphicsPipeline.pMS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_MESH;
-        if (GraphicsPipeline.pPS) m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_PIXEL;
-
-        DEV_CHECK_ERR(m_NumShaderTypes > 0, "There must be at least one shader in the Pipeline State");
 
         m_pRenderPass = PSODesc.GraphicsPipeline.pRenderPass;
 
@@ -682,8 +669,6 @@ private:
         }
 
         VALIDATE_SHADER_TYPE(ComputePipeline.pCS, SHADER_TYPE_COMPUTE, "compute");
-
-        m_pShaderTypes[m_NumShaderTypes++] = SHADER_TYPE_COMPUTE;
     }
 
 #undef VALIDATE_SHADER_TYPE

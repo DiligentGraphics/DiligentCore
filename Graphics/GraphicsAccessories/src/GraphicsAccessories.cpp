@@ -1316,7 +1316,7 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
 {
     VERIFY(IsConsistentShaderType(ShaderType, PipelineType), "Shader type ", GetShaderTypeLiteralName(ShaderType),
            " is inconsistent with pipeline type ", GetPipelineTypeString(PipelineType));
-    VERIFY((ShaderType & (ShaderType - 1)) == 0, "More than one shader type specified");
+    VERIFY(IsPowerOfTwo(Uint32{ShaderType}), "More than one shader type is specified");
 
     static_assert(SHADER_TYPE_LAST == 0x080, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
