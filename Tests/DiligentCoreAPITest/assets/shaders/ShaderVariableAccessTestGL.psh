@@ -40,7 +40,12 @@ layout(rgba32f) uniform imageBuffer g_rwBuff_Dyn;
 
 uniform samplerBuffer  g_Buffer_Static;
 uniform samplerBuffer  g_Buffer_StaticArr[2];
-uniform samplerBuffer  g_Buffer_Mut;
+
+layout(std140) readonly buffer g_Buffer_Mut
+{
+    vec4 data[];
+}Buff_Mut;
+
 uniform samplerBuffer  g_Buffer_MutArr[2];
 uniform samplerBuffer  g_Buffer_Dyn;
 uniform samplerBuffer  g_Buffer_DynArr[2];
@@ -73,7 +78,7 @@ void main()
     
     out_Color += texelFetch(g_Buffer_Static, 0);
     out_Color += texelFetch(g_Buffer_StaticArr[0], 0) + texelFetch(g_Buffer_StaticArr[1],0);
-    out_Color += texelFetch(g_Buffer_Mut, 0);
+    out_Color += Buff_Mut.data[0];
     out_Color += texelFetch(g_Buffer_MutArr[0], 0) + texelFetch(g_Buffer_MutArr[1], 0);
     out_Color += texelFetch(g_Buffer_Dyn, 0);
     out_Color += texelFetch(g_Buffer_DynArr[0], 0) + texelFetch(g_Buffer_DynArr[1], 0);

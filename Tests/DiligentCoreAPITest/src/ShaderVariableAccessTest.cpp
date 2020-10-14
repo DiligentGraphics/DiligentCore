@@ -854,7 +854,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             Buffer_Mut->GetResourceDesc(ResDesc);
             EXPECT_EQ(ResDesc.ArraySize, 1u);
             EXPECT_EQ(Buffer_Mut, pSRB->GetVariableByName(SHADER_TYPE_PIXEL, ResDesc.Name));
-            Buffer_Mut->Set(deviceCaps.IsMetalDevice() ? pFormattedBuffSRV : spRawBuffSRVs[1]);
+            Buffer_Mut->Set(spRawBuffSRVs[1]);
         }
 
         {
