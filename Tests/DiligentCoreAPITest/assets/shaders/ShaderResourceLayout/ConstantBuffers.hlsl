@@ -14,13 +14,21 @@ cbuffer UniformBuff_Dyn
 }
 
 #if ARRAYS_SUPPORTED
-struct CBData
+struct CBDataStat
 {
     float4 Data;
 };
-ConstantBuffer<CBData> UniformBuffArr_Stat[STATIC_CB_ARRAY_SIZE];  // 2
-ConstantBuffer<CBData> UniformBuffArr_Mut [MUTABLE_CB_ARRAY_SIZE]; // 4
-ConstantBuffer<CBData> UniformBuffArr_Dyn [DYNAMIC_CB_ARRAY_SIZE]; // 3
+struct CBDataMut
+{
+    float4 Data;
+};
+struct CBDataDyn
+{
+    float4 Data;
+};
+ConstantBuffer<CBDataStat> UniformBuffArr_Stat[STATIC_CB_ARRAY_SIZE];  // 2
+ConstantBuffer<CBDataMut>  UniformBuffArr_Mut [MUTABLE_CB_ARRAY_SIZE]; // 4
+ConstantBuffer<CBDataDyn>  UniformBuffArr_Dyn [DYNAMIC_CB_ARRAY_SIZE]; // 3
 #endif
 
 float4 UseResources()

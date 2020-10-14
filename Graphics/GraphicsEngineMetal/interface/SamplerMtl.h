@@ -41,6 +41,7 @@ static const INTERFACE_ID IID_SamplerMtl =
 class ISamplerMtl : public ISampler
 {
 public:
+    virtual id<MTLSamplerState> GetMtlSampler() = 0;
 };
 
 } // namespace Diligent

@@ -41,6 +41,7 @@ static const INTERFACE_ID IID_BufferViewMtl =
 class IBufferViewMtl : public IBufferView
 {
 public:
+    virtual id<MTLTexture> GetMtlTextureView() const = 0;
 };
 
 } // namespace Diligent

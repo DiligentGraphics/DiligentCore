@@ -135,7 +135,8 @@ protected:
 
         RefCntAutoPtr<IShader> pShader;
         pDevice->CreateShader(ShaderCI, &pShader);
-        if (pShader)
+        // Shader resource queries are not supported in Metal
+        if (pShader && !pDevice->GetDeviceCaps().IsMetalDevice())
         {
             VerifyShaderResources(pShader, ExpectedResources, NumExpectedResources);
             Diligent::Test::PrintShaderResources(pShader);
@@ -467,9 +468,11 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
     // Vulkan only allows 16 dynamic storage buffer bindings among all stages, so
     // use arrays only in fragment shader for structured buffer test.
-    const auto UseArraysInPSOnly = !IsFormatted && pDevice->GetDeviceCaps().IsVulkanDevice();
+    const auto UseArraysInPSOnly = !IsFormatted && (deviceCaps.IsVulkanDevice() || deviceCaps.IsMetalDevice());
 
     // clang-format off
     std::vector<ShaderResourceDesc> Resources = 
@@ -478,7 +481,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         {"g_Buff_Mut",    SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
         {"g_Buff_Dyn",    SHADER_RESOURCE_TYPE_BUFFER_SRV, 1}
     };
-    
+
     auto AddArrayResources = [&Resources]()
     {
         Resources.emplace_back("g_BuffArr_Static", SHADER_RESOURCE_TYPE_BUFFER_SRV, StaticBuffArraySize);
@@ -498,7 +501,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
-    else if (pDevice->GetDeviceCaps().IsVulkanDevice() || pDevice->GetDeviceCaps().IsGLDevice())
+    else if (pDevice->GetDeviceCaps().IsVulkanDevice() || pDevice->GetDeviceCaps().IsGLDevice() || pDevice->GetDeviceCaps().IsMetalDevice())
     {
         ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.glsl";
         SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
@@ -508,7 +511,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         GTEST_FAIL() << "Unexpected device type";
     }
     auto pVS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - VS" : "ShaderResourceLayoutTest.StructuredBuffers - VS",
-                            ShaderFileName, "VSMain",
+                            ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "VSMain" : "main",
                             SHADER_TYPE_VERTEX, SrcLang, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()));
     if (UseArraysInPSOnly)
@@ -516,7 +519,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         AddArrayResources();
     }
     auto pPS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - PS" : "ShaderResourceLayoutTest.StructuredBuffers - PS",
-                            ShaderFileName, "PSMain",
+                            ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "PSMain" : "main",
                             SHADER_TYPE_PIXEL, SrcLang, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()));
     ASSERT_NE(pVS, nullptr);
@@ -672,7 +675,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
         ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
-    else if (pDevice->GetDeviceCaps().IsVulkanDevice() || pDevice->GetDeviceCaps().IsGLDevice())
+    else if (deviceCaps.IsVulkanDevice() || deviceCaps.IsGLDevice() || deviceCaps.IsMetalDevice())
     {
         ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.glsl";
         SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
@@ -686,7 +689,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
                             SHADER_TYPE_COMPUTE, SrcLang, Macros,
                             Resources, _countof(Resources));
     ASSERT_NE(pCS, nullptr);
-    
+
     // clang-format off
     ShaderResourceVariableDesc Vars[] =
     {
@@ -880,7 +883,10 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     Macros.AddShaderMacro("MUTABLE_CB_ARRAY_SIZE", static_cast<int>(MutableCBArraySize));
     Macros.AddShaderMacro("DYNAMIC_CB_ARRAY_SIZE", static_cast<int>(DynamicCBArraySize));
 
-    const auto CBArraysSupported = deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12 || deviceCaps.IsVulkanDevice();
+    const auto CBArraysSupported =
+        deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12 ||
+        deviceCaps.DevType == RENDER_DEVICE_TYPE_VULKAN ||
+        deviceCaps.DevType == RENDER_DEVICE_TYPE_METAL;
     Macros.AddShaderMacro("ARRAYS_SUPPORTED", CBArraysSupported);
 
     // clang-format off
@@ -1123,6 +1129,8 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Sam_Dyn", Set, pSamObjs[1]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_SamArr_Dyn", SetArray, pSamObjs.data(), 1, DynamicSamArraySize - 1);
+
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->Draw(DrawAttrs);
 }
