@@ -553,6 +553,7 @@ void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pVi
     {
         auto& CachedSRV = ResourceCache.GetSRV(m_Attribs.BindPoint + ArrayIndex);
         VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE}, CachedSRV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
+        VerifyBufferViewModeD3D(pViewD3D11.RawPtr(), m_Attribs, m_ParentResLayout.GetShaderName());
     }
 #endif
     ResourceCache.SetBufSRV(m_Attribs.BindPoint + ArrayIndex, std::move(pViewD3D11));
@@ -593,6 +594,7 @@ void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pVi
     {
         auto& CachedUAV = ResourceCache.GetUAV(m_Attribs.BindPoint + ArrayIndex);
         VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
+        VerifyBufferViewModeD3D(pViewD3D11.RawPtr(), m_Attribs, m_ParentResLayout.GetShaderName());
     }
 #endif
     ResourceCache.SetBufUAV(m_Attribs.BindPoint + ArrayIndex, std::move(pViewD3D11));

@@ -702,6 +702,16 @@ void ShaderResourceLayoutVk::VkResource::CacheStorageBuffer(IDeviceObject*      
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
         auto RequiredViewType = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer ? BUFFER_VIEW_SHADER_RESOURCE : BUFFER_VIEW_UNORDERED_ACCESS;
         VerifyResourceViewBinding(SpirvAttribs, GetVariableType(), ArrayInd, pBufferView, pBufferViewVk.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+        if (pBufferViewVk != nullptr)
+        {
+            const auto& ViewDesc = pBufferViewVk->GetDesc();
+            const auto& BuffDesc = pBufferViewVk->GetBuffer()->GetDesc();
+            if (BuffDesc.Mode != BUFFER_MODE_STRUCTURED && BuffDesc.Mode != BUFFER_MODE_RAW)
+            {
+                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                  SpirvAttribs.Name, "' in shader '", ParentResLayout.GetShaderName(), "': structured buffer view is expected.");
+            }
+        }
     }
 #endif
 
@@ -748,6 +758,16 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
         // HLSL buffer SRVs are mapped to storge buffers in GLSL
         auto RequiredViewType = SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer ? BUFFER_VIEW_UNORDERED_ACCESS : BUFFER_VIEW_SHADER_RESOURCE;
         VerifyResourceViewBinding(SpirvAttribs, GetVariableType(), ArrayInd, pBufferView, pBufferViewVk.RawPtr(), {RequiredViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+        if (pBufferViewVk != nullptr)
+        {
+            const auto& ViewDesc = pBufferViewVk->GetDesc();
+            const auto& BuffDesc = pBufferViewVk->GetBuffer()->GetDesc();
+            if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_RAW))
+            {
+                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                  SpirvAttribs.Name, "' in shader '", ParentResLayout.GetShaderName(), "': formatted buffer view is expected.");
+            }
+        }
     }
 #endif
 

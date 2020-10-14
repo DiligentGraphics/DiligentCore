@@ -86,4 +86,53 @@ protected:
     const SHADER_RESOURCE_VARIABLE_TYPE m_VariableType;
 };
 
+
+template <typename BufferViewImplType>
+bool VerifyBufferViewModeD3D(BufferViewImplType* pViewD3D11, const D3DShaderResourceAttribs& Attribs, const char* ShaderName)
+{
+    if (pViewD3D11 == nullptr)
+        return true;
+
+    const auto& ViewDesc = pViewD3D11->GetDesc();
+    const auto& BuffDesc = pViewD3D11->GetBuffer()->GetDesc();
+
+    auto LogBufferBindingError = [&](const char* Msg) //
+    {
+        LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name,
+                          "' to shader variable '", Attribs.Name, "' in shader '", ShaderName, "': ", Msg);
+    };
+
+    switch (Attribs.GetInputType())
+    {
+        case D3D_SIT_TEXTURE:
+        case D3D_SIT_UAV_RWTYPED:
+            if (BuffDesc.Mode != BUFFER_MODE_FORMATTED || ViewDesc.Format.ValueType == VT_UNDEFINED)
+            {
+                LogBufferBindingError("formatted buffer view is expected.");
+                return false;
+            }
+            break;
+
+        case D3D_SIT_STRUCTURED:
+        case D3D_SIT_UAV_RWSTRUCTURED:
+            if (BuffDesc.Mode != BUFFER_MODE_STRUCTURED)
+            {
+                LogBufferBindingError("structured buffer view is expected.");
+                return false;
+            }
+            break;
+
+        case D3D_SIT_BYTEADDRESS:
+        case D3D_SIT_UAV_RWBYTEADDRESS:
+            if (BuffDesc.Mode != BUFFER_MODE_RAW)
+            {
+                LogBufferBindingError("raw buffer view is expected.");
+                return false;
+            }
+            break;
+    }
+
+    return true;
+}
+
 } // namespace Diligent
