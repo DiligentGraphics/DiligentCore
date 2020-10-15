@@ -94,7 +94,7 @@ protected:
 
         auto& PSODesc = sm_Resources.PSODesc;
 
-        PSODesc.GraphicsPipeline.pVS               = sm_Resources.pTrivialVS;
+        PSODesc.pVS                                = sm_Resources.pTrivialVS;
         PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         PSODesc.GraphicsPipeline.NumRenderTargets  = 1;
         PSODesc.GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
@@ -107,31 +107,31 @@ protected:
         TestingEnvironment::GetInstance()->Reset();
     }
 
-    static RefCntAutoPtr<IPipelineState> CreateTestPSO(const PipelineStateCreateInfo& PSOCreateInfo, bool BindPSO)
+    static RefCntAutoPtr<IPipelineState> CreateTestPSO(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, bool BindPSO)
     {
         auto* pEnv           = TestingEnvironment::GetInstance();
         auto* pDevice        = pEnv->GetDevice();
         auto* pDeviceContext = pEnv->GetDeviceContext();
 
         RefCntAutoPtr<IPipelineState> pPSO;
-        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
         EXPECT_TRUE(pPSO);
         if (pPSO)
         {
             pDeviceContext->SetPipelineState(pPSO);
-            const auto& RefBlendDesc  = PSOCreateInfo.PSODesc.GraphicsPipeline.BlendDesc;
-            const auto& TestBlendDesc = pPSO->GetDesc().GraphicsPipeline.BlendDesc;
+            const auto& RefBlendDesc  = PSOCreateInfo.GraphicsPipeline.BlendDesc;
+            const auto& TestBlendDesc = pPSO->GetGraphicsPipelineDesc().BlendDesc;
             EXPECT_EQ(RefBlendDesc, TestBlendDesc);
         }
 
         return pPSO;
     }
 
-    static PipelineStateDesc GetPSODesc(Uint32 NumRenderTargets)
+    static GraphicsPipelineStateCreateInfo GetPSODesc(Uint32 NumRenderTargets)
     {
         auto PSODesc                              = sm_Resources.PSODesc;
         PSODesc.GraphicsPipeline.NumRenderTargets = static_cast<Uint8>(NumRenderTargets);
-        PSODesc.GraphicsPipeline.pPS              = sm_Resources.pTrivialPS[NumRenderTargets];
+        PSODesc.pPS                               = sm_Resources.pTrivialPS[NumRenderTargets];
         for (Uint32 rt = 1; rt < NumRenderTargets; ++rt)
             PSODesc.GraphicsPipeline.RTVFormats[rt] = PSODesc.GraphicsPipeline.RTVFormats[0];
 
@@ -144,7 +144,7 @@ private:
         RefCntAutoPtr<IShader> pTrivialVS;
         RefCntAutoPtr<IShader> pTrivialPS[MAX_RENDER_TARGETS + 1];
 
-        PipelineStateDesc PSODesc;
+        GraphicsPipelineStateCreateInfo PSODesc;
     };
 
     static Resources sm_Resources;
@@ -169,14 +169,11 @@ protected:
 
 TEST_F(BlendStateBasicTest, CreatePSO)
 {
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc(1);
 
-    PSODesc = GetPSODesc(1);
+    PSOCreateInfo.PSODesc.Name = "BlendStateBasicTest";
 
-    PSODesc.Name = "BlendStateBasicTest";
-
-    BlendStateDesc& BSDesc = PSODesc.GraphicsPipeline.BlendDesc;
+    BlendStateDesc& BSDesc = PSOCreateInfo.GraphicsPipeline.BlendDesc;
 
     auto& RT0 = BSDesc.RenderTargets[0];
 
@@ -185,7 +182,7 @@ TEST_F(BlendStateBasicTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].BlendEnable, RT0.BlendEnable);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].BlendEnable, RT0.BlendEnable);
     }
 
     {
@@ -193,7 +190,7 @@ TEST_F(BlendStateBasicTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.AlphaToCoverageEnable, BSDesc.AlphaToCoverageEnable);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.AlphaToCoverageEnable, BSDesc.AlphaToCoverageEnable);
     }
 
     {
@@ -201,7 +198,7 @@ TEST_F(BlendStateBasicTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_BLUE);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_BLUE);
     }
 
     {
@@ -209,7 +206,7 @@ TEST_F(BlendStateBasicTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_RED);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_RED);
     }
 
     {
@@ -217,7 +214,7 @@ TEST_F(BlendStateBasicTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_GREEN);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_GREEN);
     }
 
     {
@@ -225,7 +222,7 @@ TEST_F(BlendStateBasicTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_ALPHA);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_ALPHA);
     }
 }
 
@@ -275,14 +272,11 @@ TEST_P(BlendFactorTest, CreatePSO)
 
     for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc(NumRenderTarges);
 
-        PSODesc = GetPSODesc(NumRenderTarges);
+        PSOCreateInfo.PSODesc.Name = "SrcBlendFactorTest";
 
-        PSODesc.Name = "SrcBlendFactorTest";
-
-        BlendStateDesc& BSDesc = PSODesc.GraphicsPipeline.BlendDesc;
+        BlendStateDesc& BSDesc = PSOCreateInfo.GraphicsPipeline.BlendDesc;
 
         BSDesc.IndependentBlendEnable = True;
         for (Uint32 i = 0; i < NumRenderTarges; ++i)
@@ -300,7 +294,7 @@ TEST_P(BlendFactorTest, CreatePSO)
         ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTarges;
         for (Uint32 i = 0; i < NumRenderTarges; ++i)
         {
-            auto& RT = pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[i];
+            auto& RT = pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[i];
 
             EXPECT_EQ(RT.BlendEnable, True) << "Render target: " << i;
             if (TestingAlpha)
@@ -316,14 +310,11 @@ TEST_P(BlendFactorTest, CreatePSO)
 
     for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc(NumRenderTarges);
 
-        PSODesc = GetPSODesc(NumRenderTarges);
+        PSOCreateInfo.PSODesc.Name = "DstBlendFactorTest";
 
-        PSODesc.Name = "DstBlendFactorTest";
-
-        BlendStateDesc& BSDesc = PSODesc.GraphicsPipeline.BlendDesc;
+        BlendStateDesc& BSDesc = PSOCreateInfo.GraphicsPipeline.BlendDesc;
 
         BSDesc.IndependentBlendEnable = True;
         for (Uint32 i = 0; i < NumRenderTarges; ++i)
@@ -341,7 +332,7 @@ TEST_P(BlendFactorTest, CreatePSO)
         ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTarges;
         for (Uint32 i = 0; i < NumRenderTarges; ++i)
         {
-            auto& RT = pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[i];
+            auto& RT = pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[i];
 
             EXPECT_EQ(RT.BlendEnable, True) << "Render target: " << i;
             if (TestingAlpha)
@@ -422,14 +413,11 @@ TEST_P(BlendOperationTest, CreatePSO)
 
     for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc(NumRenderTarges);
 
-        PSODesc = GetPSODesc(NumRenderTarges);
+        PSOCreateInfo.PSODesc.Name = "BlendOperationTest";
 
-        PSODesc.Name = "BlendOperationTest";
-
-        BlendStateDesc& BSDesc = PSODesc.GraphicsPipeline.BlendDesc;
+        BlendStateDesc& BSDesc = PSOCreateInfo.GraphicsPipeline.BlendDesc;
 
         BSDesc.IndependentBlendEnable = True;
         for (Uint32 i = 0; i < NumRenderTarges; ++i)
@@ -450,7 +438,7 @@ TEST_P(BlendOperationTest, CreatePSO)
         ASSERT_TRUE(pPSO) << "Number of render targets: " << NumRenderTarges;
         for (Uint32 i = 0; i < NumRenderTarges; ++i)
         {
-            auto& RT = pPSO->GetDesc().GraphicsPipeline.BlendDesc.RenderTargets[i];
+            auto& RT = pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[i];
 
             EXPECT_EQ(RT.BlendEnable, True) << "Render target: " << i;
             if (TestingAlpha)

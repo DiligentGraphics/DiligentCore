@@ -75,7 +75,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 
     TDeviceContextBase::SetPipelineState(pPipelineStateD3D11, 0 /*Dummy*/);
     auto& Desc = pPipelineStateD3D11->GetDesc();
-    if (Desc.IsComputePipeline())
+    if (Desc.PipelineType == PIPELINE_TYPE_COMPUTE)
     {
         auto* pd3d11CS = pPipelineStateD3D11->GetD3D11ComputeShader();
         if (pd3d11CS == nullptr)
@@ -106,7 +106,9 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
         COMMIT_SHADER(DS, DomainShader);
 #undef COMMIT_SHADER
 
-        m_pd3d11DeviceContext->OMSetBlendState(pPipelineStateD3D11->GetD3D11BlendState(), m_BlendFactors, Desc.GraphicsPipeline.SampleMask);
+        auto& GraphicsPipeline = pPipelineStateD3D11->GetGraphicsPipelineDesc();
+
+        m_pd3d11DeviceContext->OMSetBlendState(pPipelineStateD3D11->GetD3D11BlendState(), m_BlendFactors, GraphicsPipeline.SampleMask);
         m_pd3d11DeviceContext->RSSetState(pPipelineStateD3D11->GetD3D11RasterizerState());
         m_pd3d11DeviceContext->OMSetDepthStencilState(pPipelineStateD3D11->GetD3D11DepthStencilState(), m_StencilRef);
 
@@ -119,7 +121,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
             m_CommittedD3D11InputLayout = pd3d11InputLayout;
         }
 
-        auto PrimTopology = Desc.GraphicsPipeline.PrimitiveTopology;
+        auto PrimTopology = GraphicsPipeline.PrimitiveTopology;
         if (m_CommittedPrimitiveTopology != PrimTopology)
         {
             m_CommittedPrimitiveTopology = PrimTopology;
@@ -673,7 +675,7 @@ void DeviceContextD3D11Impl::SetBlendFactors(const float* pBlendFactors)
         ID3D11BlendState* pd3d11BS   = nullptr;
         if (m_pPipelineState)
         {
-            SampleMask = m_pPipelineState->GetDesc().GraphicsPipeline.SampleMask;
+            SampleMask = m_pPipelineState->GetGraphicsPipelineDesc().SampleMask;
             pd3d11BS   = m_pPipelineState->GetD3D11BlendState();
         }
         m_pd3d11DeviceContext->OMSetBlendState(pd3d11BS, m_BlendFactors, SampleMask);

@@ -19,6 +19,7 @@ set(INTERFACE
     interface/FixedBlockMemoryAllocator.hpp
     interface/HashUtils.hpp
     interface/LockHelper.hpp 
+    interface/LinearAllocator.hpp 
     interface/MemoryFileStream.hpp 
     interface/ObjectBase.hpp
     interface/RefCntAutoPtr.hpp

@@ -228,17 +228,16 @@ protected:
         }
         TestingEnvironment::ScopedReleaseResources EnvironmentAutoReset;
 
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-        PSODesc.Name = "Draw command test - procedural triangles";
+        PSOCreateInfo.PSODesc.Name = "Draw command test - procedural triangles";
 
-        PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
-        PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-        PSODesc.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
-        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-        PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        PSOCreateInfo.PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+        PSOCreateInfo.GraphicsPipeline.NumRenderTargets             = 1;
+        PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+        PSOCreateInfo.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -285,11 +284,11 @@ protected:
             ASSERT_NE(pPS, nullptr);
         }
 
-        PSODesc.Name = "Draw command test";
+        PSOCreateInfo.PSODesc.Name = "Draw command test";
 
-        PSODesc.GraphicsPipeline.pVS = pProceduralVS;
-        PSODesc.GraphicsPipeline.pPS = pPS;
-        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pDrawProceduralPSO);
+        PSOCreateInfo.pVS = pProceduralVS;
+        PSOCreateInfo.pPS = pPS;
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawProceduralPSO);
         ASSERT_NE(sm_pDrawProceduralPSO, nullptr);
 
         InputLayoutDesc LayoutDesc;
@@ -300,21 +299,21 @@ protected:
             LayoutElement{ 1, 0, 3, VT_FLOAT32}
         };
         // clang-format on
-        PSODesc.GraphicsPipeline.InputLayout.LayoutElements = Elems;
-        PSODesc.GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
-        PSODesc.GraphicsPipeline.pVS                        = pVS;
-        PSODesc.GraphicsPipeline.pPS                        = pPS;
-        PSODesc.GraphicsPipeline.PrimitiveTopology          = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pDrawPSO);
+        PSOCreateInfo.GraphicsPipeline.InputLayout.LayoutElements = Elems;
+        PSOCreateInfo.GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
+        PSOCreateInfo.pVS                                         = pVS;
+        PSOCreateInfo.pPS                                         = pPS;
+        PSOCreateInfo.GraphicsPipeline.PrimitiveTopology          = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawPSO);
 
 
-        PSODesc.Name = "Draw command test - 2x stride";
+        PSOCreateInfo.PSODesc.Name = "Draw command test - 2x stride";
 
         Elems[0].Stride = sizeof(Vertex) * 2;
-        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pDraw_2xStride_PSO);
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDraw_2xStride_PSO);
 
 
-        PSODesc.Name = "Instanced draw command test";
+        PSOCreateInfo.PSODesc.Name = "Instanced draw command test";
         // clang-format off
         LayoutElement InstancedElems[] =
         {
@@ -323,10 +322,10 @@ protected:
             LayoutElement{ 2, 1, 4, VT_FLOAT32, false, INPUT_ELEMENT_FREQUENCY_PER_INSTANCE}
         };
         // clang-format on
-        PSODesc.GraphicsPipeline.InputLayout.LayoutElements = InstancedElems;
-        PSODesc.GraphicsPipeline.InputLayout.NumElements    = _countof(InstancedElems);
-        PSODesc.GraphicsPipeline.pVS                        = pInstancedVS;
-        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pDrawInstancedPSO);
+        PSOCreateInfo.GraphicsPipeline.InputLayout.LayoutElements = InstancedElems;
+        PSOCreateInfo.GraphicsPipeline.InputLayout.NumElements    = _countof(InstancedElems);
+        PSOCreateInfo.pVS                                         = pInstancedVS;
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pDrawInstancedPSO);
     }
 
     static void TearDownTestSuite()

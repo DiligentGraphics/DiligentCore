@@ -49,9 +49,12 @@ class PipelineStateD3D11Impl final : public PipelineStateBase<IPipelineStateD3D1
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D11, RenderDeviceD3D11Impl>;
 
-    PipelineStateD3D11Impl(IReferenceCounters*            pRefCounters,
-                           class RenderDeviceD3D11Impl*   pDeviceD3D11,
-                           const PipelineStateCreateInfo& CreateInfo);
+    PipelineStateD3D11Impl(IReferenceCounters*                    pRefCounters,
+                           class RenderDeviceD3D11Impl*           pDeviceD3D11,
+                           const GraphicsPipelineStateCreateInfo& CreateInfo);
+    PipelineStateD3D11Impl(IReferenceCounters*                   pRefCounters,
+                           class RenderDeviceD3D11Impl*          pDeviceD3D11,
+                           const ComputePipelineStateCreateInfo& CreateInfo);
     ~PipelineStateD3D11Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
@@ -134,6 +137,10 @@ public:
     void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const;
 
 private:
+    void InitResourceLayouts(RenderDeviceD3D11Impl*                                       pRenderDeviceD3D11,
+                             const PipelineStateCreateInfo&                               CreateInfo,
+                             const std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>>& ShaderStages);
+
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
@@ -147,8 +154,8 @@ private:
     RefCntAutoPtr<ShaderD3D11Impl> m_pCS;
 
     // The caches are indexed by the shader order in the PSO, not shader index
-    ShaderResourceCacheD3D11*  m_pStaticResourceCaches  = nullptr;
-    ShaderResourceLayoutD3D11* m_pStaticResourceLayouts = nullptr;
+    ShaderResourceCacheD3D11*  m_pStaticResourceCaches  = nullptr; // [m_NumShaderStages]
+    ShaderResourceLayoutD3D11* m_pStaticResourceLayouts = nullptr; // [m_NumShaderStages]
 
     // SRB memory allocator must be defined before the default shader res binding
     SRBMemoryAllocator m_SRBMemAllocator;

@@ -151,29 +151,6 @@ typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
 /// This structure describes the graphics pipeline state and is part of the PipelineStateDesc structure.
 struct GraphicsPipelineDesc
 {
-    /// Vertex shader to be used with the pipeline.
-    IShader* pVS DEFAULT_INITIALIZER(nullptr);
-
-    /// Pixel shader to be used with the pipeline.
-    IShader* pPS DEFAULT_INITIALIZER(nullptr);
-
-    /// Domain shader to be used with the pipeline.
-    IShader* pDS DEFAULT_INITIALIZER(nullptr);
-
-    /// Hull shader to be used with the pipeline.
-    IShader* pHS DEFAULT_INITIALIZER(nullptr);
-
-    /// Geometry shader to be used with the pipeline.
-    IShader* pGS DEFAULT_INITIALIZER(nullptr);
-    
-    /// Amplification shader to be used with the pipeline.
-    IShader* pAS DEFAULT_INITIALIZER(nullptr);
-    
-    /// Mesh shader to be used with the pipeline.
-    IShader* pMS DEFAULT_INITIALIZER(nullptr);
-    
-    //D3D12_STREAM_OUTPUT_DESC StreamOutput;
-    
     /// Blend state description.
     BlendStateDesc BlendDesc;
 
@@ -234,17 +211,6 @@ struct GraphicsPipelineDesc
 typedef struct GraphicsPipelineDesc GraphicsPipelineDesc;
 
 
-/// Compute pipeline state description
-
-/// This structure describes the compute pipeline state and is part of the PipelineStateDesc structure.
-struct ComputePipelineDesc
-{
-    /// Compute shader to be used with the pipeline
-    IShader* pCS DEFAULT_INITIALIZER(nullptr);
-};
-typedef struct ComputePipelineDesc ComputePipelineDesc;
-
-
 /// Pipeline type
 DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
 {
@@ -278,12 +244,6 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Pipeline layout description
     PipelineResourceLayoutDesc ResourceLayout;
 
-    /// Graphics pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_GRAPHICS or PIPELINE_TYPE_MESH
-    GraphicsPipelineDesc GraphicsPipeline;
-
-    /// Compute pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_COMPUTE
-    ComputePipelineDesc ComputePipeline;
-    
 #if DILIGENT_CPP_INTERFACE
     bool IsAnyGraphicsPipeline() const { return PipelineType == PIPELINE_TYPE_GRAPHICS || PipelineType == PIPELINE_TYPE_MESH; }
     bool IsComputePipeline()     const { return PipelineType == PIPELINE_TYPE_COMPUTE; }
@@ -324,9 +284,49 @@ struct PipelineStateCreateInfo
     PipelineStateDesc PSODesc;
 
     /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
-    PSO_CREATE_FLAGS Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
+    PSO_CREATE_FLAGS  Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
 };
 typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
+
+
+/// Graphics pipeline state creation attributes
+struct GraphicsPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
+    
+    /// Graphics pipeline state description.
+    GraphicsPipelineDesc GraphicsPipeline; 
+     
+    /// Vertex shader to be used with the pipeline.
+    IShader* pVS DEFAULT_INITIALIZER(nullptr);
+
+    /// Pixel shader to be used with the pipeline.
+    IShader* pPS DEFAULT_INITIALIZER(nullptr);
+
+    /// Domain shader to be used with the pipeline.
+    IShader* pDS DEFAULT_INITIALIZER(nullptr);
+
+    /// Hull shader to be used with the pipeline.
+    IShader* pHS DEFAULT_INITIALIZER(nullptr);
+
+    /// Geometry shader to be used with the pipeline.
+    IShader* pGS DEFAULT_INITIALIZER(nullptr);
+    
+    /// Amplification shader to be used with the pipeline.
+    IShader* pAS DEFAULT_INITIALIZER(nullptr);
+    
+    /// Mesh shader to be used with the pipeline.
+    IShader* pMS DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct GraphicsPipelineStateCreateInfo GraphicsPipelineStateCreateInfo;
+
+
+/// Compute pipeline state description.
+struct ComputePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
+    
+    /// Compute shader to be used with the pipeline
+    IShader* pCS DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct ComputePipelineStateCreateInfo ComputePipelineStateCreateInfo;
+
 
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
 static const struct INTERFACE_ID IID_PipelineState =
@@ -345,10 +345,12 @@ static const struct INTERFACE_ID IID_PipelineState =
 DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
-    /// Returns the blend state description used to create the object
-    virtual const PipelineStateDesc& METHOD(GetDesc)()const override = 0;
+    /// Returns the pipeline description used to create the object
+    virtual const PipelineStateDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
+    /// Returns the graphics pipeline description used to create the object
+    VIRTUAL const GraphicsPipelineDesc REF METHOD(GetGraphicsPipelineDesc)(THIS) CONST PURE;
 
     /// Binds resources for all shaders in the pipeline state
 
@@ -438,6 +440,7 @@ DILIGENT_END_INTERFACE
 
 #    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
 
+#    define IPipelineState_GetGraphicsPipelineDesc(This)          CALL_IFACE_METHOD(PipelineState, GetGraphicsPipelineDesc,     This)
 #    define IPipelineState_BindStaticResources(This, ...)         CALL_IFACE_METHOD(PipelineState, BindStaticResources,         This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableCount(This, ...)      CALL_IFACE_METHOD(PipelineState, GetStaticVariableCount,      This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableByName(This, ...)     CALL_IFACE_METHOD(PipelineState, GetStaticVariableByName,     This, __VA_ARGS__)

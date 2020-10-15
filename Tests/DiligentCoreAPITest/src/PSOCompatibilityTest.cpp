@@ -201,14 +201,13 @@ void main()
 
 RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(TestingEnvironment* pEnv, const char* VSSource, const char* PSSource)
 {
-    auto*                   pDevice = pEnv->GetDevice();
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    auto*                           pDevice = pEnv->GetDevice();
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
-    PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-    PSODesc.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM_SRGB;
-    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    PSOCreateInfo.PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+    PSOCreateInfo.GraphicsPipeline.NumRenderTargets             = 1;
+    PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM_SRGB;
+    PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     ShaderCreateInfo CreationAttrs;
     CreationAttrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -234,11 +233,11 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(TestingEnvironment* pEnv, const 
         VERIFY_EXPR(pPS != nullptr);
     }
 
-    PSODesc.GraphicsPipeline.pVS = pVS;
-    PSODesc.GraphicsPipeline.pPS = pPS;
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pPS = pPS;
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     VERIFY_EXPR(pPSO != nullptr);
 
     return pPSO;
@@ -246,11 +245,10 @@ RefCntAutoPtr<IPipelineState> CreateGraphicsPSO(TestingEnvironment* pEnv, const 
 
 RefCntAutoPtr<IPipelineState> CreateComputePSO(TestingEnvironment* pEnv, const char* CSSource)
 {
-    auto*                   pDevice = pEnv->GetDevice();
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    auto*                          pDevice = pEnv->GetDevice();
+    ComputePipelineStateCreateInfo PSOCreateInfo;
 
-    PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+    PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
     ShaderCreateInfo CreationAttrs;
     CreationAttrs.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
     CreationAttrs.ShaderCompiler             = pEnv->GetDefaultCompiler(CreationAttrs.SourceLanguage);
@@ -264,10 +262,10 @@ RefCntAutoPtr<IPipelineState> CreateComputePSO(TestingEnvironment* pEnv, const c
         pDevice->CreateShader(CreationAttrs, &pCS);
         VERIFY_EXPR(pCS != nullptr);
     }
-    PSODesc.ComputePipeline.pCS = pCS;
+    PSOCreateInfo.pCS = pCS;
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
     VERIFY_EXPR(pPSO != nullptr);
 
     return pPSO;

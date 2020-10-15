@@ -86,12 +86,20 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateSampler(const SamplerDesc& SamplerDesc,
                                                   ISampler**         ppSampler) override final;
 
-    /// Implementation of IRenderDevice::CreatePipelineState() in OpenGL backend.
-    void                            CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo,
-                                                        IPipelineState**               ppPipelineState,
-                                                        bool                           bIsDeviceInternal);
-    virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo,
-                                                        IPipelineState**               ppPipelineState) override final;
+    /// Implementation of IRenderDevice::CreateGraphicsPipelineState() in OpenGL backend.
+    virtual void CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
+                                             IPipelineState**                       ppPipelineState) override final;
+
+    /// Implementation of IRenderDevice::CreateComputePipelineState() in OpenGL backend.
+    virtual void CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
+                                            IPipelineState**                      ppPipelineState) override final;
+
+    void CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
+                                     IPipelineState**                       ppPipelineState,
+                                     bool                                   bIsDeviceInternal);
+    void CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
+                                    IPipelineState**                      ppPipelineState,
+                                    bool                                  bIsDeviceInternal);
 
     /// Implementation of IRenderDevice::CreateFence() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE CreateFence(const FenceDesc& Desc, IFence** ppFence) override final;

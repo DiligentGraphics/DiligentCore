@@ -541,7 +541,21 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
 IMPLEMENT_QUERY_INTERFACE(RenderDeviceVkImpl, IID_RenderDeviceVk, TRenderDeviceBase)
 
-void RenderDeviceVkImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+void RenderDeviceVkImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    CreateDeviceObject(
+        "Pipeline State", PSOCreateInfo.PSODesc, ppPipelineState,
+        [&]() //
+        {
+            PipelineStateVkImpl* pPipelineStateVk(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateVkImpl instance", PipelineStateVkImpl)(this, PSOCreateInfo));
+            pPipelineStateVk->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
+            OnCreateDeviceObject(pPipelineStateVk);
+        } //
+    );
+}
+
+
+void RenderDeviceVkImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
     CreateDeviceObject(
         "Pipeline State", PSOCreateInfo.PSODesc, ppPipelineState,

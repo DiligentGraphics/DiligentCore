@@ -70,8 +70,8 @@ void PSOTestBase::InitResources()
 
     auto& PSODesc = sm_Resources.PSODesc;
 
-    PSODesc.GraphicsPipeline.pVS               = sm_Resources.pTrivialVS;
-    PSODesc.GraphicsPipeline.pPS               = sm_Resources.pTrivialPS;
+    PSODesc.pVS                                = sm_Resources.pTrivialVS;
+    PSODesc.pPS                                = sm_Resources.pTrivialPS;
     PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     PSODesc.GraphicsPipeline.NumRenderTargets  = 1;
     PSODesc.GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
@@ -84,14 +84,14 @@ void PSOTestBase::ReleaseResources()
     TestingEnvironment::GetInstance()->Reset();
 }
 
-RefCntAutoPtr<IPipelineState> PSOTestBase::CreateTestPSO(const PipelineStateCreateInfo& PSOCreateInfo, bool BindPSO)
+RefCntAutoPtr<IPipelineState> PSOTestBase::CreateTestPSO(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, bool BindPSO)
 {
     auto* pEnv     = TestingEnvironment::GetInstance();
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     if (BindPSO && pPSO)
     {
         pContext->SetPipelineState(pPSO);

@@ -57,7 +57,8 @@ class PipelineStateVkImpl final : public PipelineStateBase<IPipelineStateVk, Ren
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateVk, RenderDeviceVkImpl>;
 
-    PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const PipelineStateCreateInfo& CreateInfo);
+    PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const GraphicsPipelineStateCreateInfo& CreateInfo);
+    PipelineStateVkImpl(IReferenceCounters* pRefCounters, RenderDeviceVkImpl* pDeviceVk, const ComputePipelineStateCreateInfo& CreateInfo);
     ~PipelineStateVkImpl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
@@ -125,6 +126,11 @@ public:
     void InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const;
 
 private:
+    using TShaderStages = ShaderResourceLayoutVk::TShaderStages;
+    void InitResourceLayouts(RenderDeviceVkImpl*            pDeviceVk,
+                             const PipelineStateCreateInfo& CreateInfo,
+                             TShaderStages&                 ShaderStages);
+
     const ShaderResourceLayoutVk& GetStaticShaderResLayout(Uint32 ShaderInd) const
     {
         VERIFY_EXPR(ShaderInd < GetNumShaderStages());
@@ -143,9 +149,9 @@ private:
         return m_StaticVarsMgrs[ShaderInd];
     }
 
-    ShaderResourceLayoutVk*  m_ShaderResourceLayouts = nullptr;
-    ShaderResourceCacheVk*   m_StaticResCaches       = nullptr;
-    ShaderVariableManagerVk* m_StaticVarsMgrs        = nullptr;
+    ShaderResourceLayoutVk*  m_ShaderResourceLayouts = nullptr; // [m_NumShaderStages * 2]
+    ShaderResourceCacheVk*   m_StaticResCaches       = nullptr; // [m_NumShaderStages]
+    ShaderVariableManagerVk* m_StaticVarsMgrs        = nullptr; // [m_NumShaderStages]
 
     // SRB memory allocator must be declared before m_pDefaultShaderResBinding
     SRBMemoryAllocator m_SRBMemAllocator;

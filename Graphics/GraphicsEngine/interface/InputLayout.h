@@ -179,7 +179,7 @@ typedef struct LayoutElement LayoutElement;
 
 /// Layout description
 
-/// This structure is used by IRenderDevice::CreatePipelineState().
+/// This structure is used by IRenderDevice::CreateGraphicsPipelineState().
 struct InputLayoutDesc
 {
     /// Array of layout elements

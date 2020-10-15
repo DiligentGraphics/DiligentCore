@@ -70,17 +70,16 @@ TEST(ShaderResourceLayout, ResourceArray)
     }
 
 
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
     StaticSamplerDesc StaticSampler;
-    StaticSampler.Desc.MinFilter             = FILTER_TYPE_LINEAR;
-    StaticSampler.Desc.MagFilter             = FILTER_TYPE_LINEAR;
-    StaticSampler.Desc.MipFilter             = FILTER_TYPE_LINEAR;
-    StaticSampler.ShaderStages               = SHADER_TYPE_PIXEL;
-    StaticSampler.SamplerOrTextureName       = "g_tex2DTest";
-    PSODesc.ResourceLayout.NumStaticSamplers = 1;
-    PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
+    StaticSampler.Desc.MinFilter                           = FILTER_TYPE_LINEAR;
+    StaticSampler.Desc.MagFilter                           = FILTER_TYPE_LINEAR;
+    StaticSampler.Desc.MipFilter                           = FILTER_TYPE_LINEAR;
+    StaticSampler.ShaderStages                             = SHADER_TYPE_PIXEL;
+    StaticSampler.SamplerOrTextureName                     = "g_tex2DTest";
+    PSOCreateInfo.PSODesc.ResourceLayout.NumStaticSamplers = 1;
+    PSOCreateInfo.PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
     // clang-format off
     ShaderResourceVariableDesc Vars[] = 
     {
@@ -89,22 +88,22 @@ TEST(ShaderResourceLayout, ResourceArray)
         {SHADER_TYPE_PIXEL, "g_tex2D",      SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
     };
     // clang-format on
-    PSODesc.ResourceLayout.Variables                                = Vars;
-    PSODesc.ResourceLayout.NumVariables                             = _countof(Vars);
-    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable           = False;
-    PSODesc.GraphicsPipeline.RasterizerDesc.CullMode                = CULL_MODE_NONE;
-    PSODesc.GraphicsPipeline.BlendDesc.IndependentBlendEnable       = False;
-    PSODesc.GraphicsPipeline.BlendDesc.RenderTargets[0].BlendEnable = False;
-    PSODesc.GraphicsPipeline.NumRenderTargets                       = 1;
+    PSOCreateInfo.PSODesc.ResourceLayout.Variables                        = Vars;
+    PSOCreateInfo.PSODesc.ResourceLayout.NumVariables                     = _countof(Vars);
+    PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable           = False;
+    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode                = CULL_MODE_NONE;
+    PSOCreateInfo.GraphicsPipeline.BlendDesc.IndependentBlendEnable       = False;
+    PSOCreateInfo.GraphicsPipeline.BlendDesc.RenderTargets[0].BlendEnable = False;
+    PSOCreateInfo.GraphicsPipeline.NumRenderTargets                       = 1;
 
-    constexpr TEXTURE_FORMAT RTVFormat     = TEX_FORMAT_RGBA8_UNORM;
-    constexpr TEXTURE_FORMAT DSVFormat     = TEX_FORMAT_D32_FLOAT;
-    PSODesc.GraphicsPipeline.RTVFormats[0] = RTVFormat;
-    PSODesc.GraphicsPipeline.DSVFormat     = DSVFormat;
-    PSODesc.GraphicsPipeline.pVS           = pVS;
-    PSODesc.GraphicsPipeline.pPS           = pPS;
+    constexpr TEXTURE_FORMAT RTVFormat           = TEX_FORMAT_RGBA8_UNORM;
+    constexpr TEXTURE_FORMAT DSVFormat           = TEX_FORMAT_D32_FLOAT;
+    PSOCreateInfo.GraphicsPipeline.RTVFormats[0] = RTVFormat;
+    PSOCreateInfo.GraphicsPipeline.DSVFormat     = DSVFormat;
+    PSOCreateInfo.pVS                            = pVS;
+    PSOCreateInfo.pPS                            = pPS;
 
-    PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    PSOCreateInfo.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
     // clang-format off
     LayoutElement Elems[] =
     {
@@ -112,10 +111,10 @@ TEST(ShaderResourceLayout, ResourceArray)
         LayoutElement{ 1, 0, 2, VT_FLOAT32, false, sizeof( float ) * 3 }
     };
     // clang-format on
-    PSODesc.GraphicsPipeline.InputLayout.LayoutElements = Elems;
-    PSODesc.GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
+    PSOCreateInfo.GraphicsPipeline.InputLayout.LayoutElements = Elems;
+    PSOCreateInfo.GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;

@@ -72,8 +72,11 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    /// Implementation of IRenderDevice::CreatePipelineState() in Vulkan backend.
-    virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
+    /// Implementation of IRenderDevice::CreateGraphicsPipelineState() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
+
+    /// Implementation of IRenderDevice::CreateComputePipelineState() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
 
     /// Implementation of IRenderDevice::CreateBuffer() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,

@@ -1678,7 +1678,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
     BoundDSVFormat = m_pBoundDepthStencil ? m_pBoundDepthStencil->GetDesc().Format : TEX_FORMAT_UNKNOWN;
 
     const auto& PSODesc          = m_pPipelineState->GetDesc();
-    const auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
+    const auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
     if (GraphicsPipeline.NumRenderTargets != m_NumBoundRenderTargets)
     {
         LOG_WARNING_MESSAGE("The number of currently bound render targets (", m_NumBoundRenderTargets,

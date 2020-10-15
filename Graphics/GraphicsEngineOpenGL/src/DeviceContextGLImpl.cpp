@@ -85,12 +85,12 @@ void DeviceContextGLImpl::SetPipelineState(IPipelineState* pPipelineState)
     TDeviceContextBase::SetPipelineState(pPipelineStateGLImpl, 0 /*Dummy*/);
 
     const auto& Desc = pPipelineStateGLImpl->GetDesc();
-    if (Desc.IsComputePipeline())
+    if (Desc.PipelineType == PIPELINE_TYPE_COMPUTE)
     {
     }
     else if (Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
-        const auto& GraphicsPipeline = Desc.GraphicsPipeline;
+        const auto& GraphicsPipeline = pPipelineStateGLImpl->GetGraphicsPipelineDesc();
         // Set rasterizer state
         {
             const auto& RasterizerDesc = GraphicsPipeline.RasterizerDesc;
@@ -896,7 +896,7 @@ void DeviceContextGLImpl::PrepareForDraw(DRAW_FLAGS Flags, bool IsIndexed, GLenu
     m_pPipelineState->CommitProgram(m_ContextState);
 
     auto        CurrNativeGLContext = m_pDevice->m_GLContext.GetCurrentNativeGLContext();
-    const auto& PipelineDesc        = m_pPipelineState->GetDesc().GraphicsPipeline;
+    const auto& PipelineDesc        = m_pPipelineState->GetGraphicsPipelineDesc();
     if (!m_ContextState.IsValidVAOBound())
     {
         auto&    VAOCache     = m_pDevice->GetVAOCache(CurrNativeGLContext);

@@ -696,13 +696,7 @@ void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler*
     CreateSampler(SamplerDesc, ppSampler, false);
 }
 
-
-void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
-{
-    CreatePipelineState(PSOCreateInfo, ppPipelineState, false);
-}
-
-void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
+void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
 {
     CreateDeviceObject(
         "Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState,
@@ -713,6 +707,29 @@ void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOC
             OnCreateDeviceObject(pPipelineStateOGL);
         } //
     );
+}
+
+void RenderDeviceGLImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
+{
+    CreateDeviceObject(
+        "Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState,
+        [&]() //
+        {
+            PipelineStateGLImpl* pPipelineStateOGL(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl)(this, PSOCreateInfo, bIsDeviceInternal));
+            pPipelineStateOGL->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
+            OnCreateDeviceObject(pPipelineStateOGL);
+        } //
+    );
+}
+
+void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    return CreateGraphicsPipelineState(PSOCreateInfo, ppPipelineState, false);
+}
+
+void RenderDeviceGLImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    return CreateComputePipelineState(PSOCreateInfo, ppPipelineState, false);
 }
 
 void RenderDeviceGLImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)

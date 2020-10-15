@@ -534,7 +534,18 @@ void RenderDeviceD3D12Impl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
 IMPLEMENT_QUERY_INTERFACE(RenderDeviceD3D12Impl, IID_RenderDeviceD3D12, TRenderDeviceBase)
 
-void RenderDeviceD3D12Impl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+void RenderDeviceD3D12Impl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    CreateDeviceObject("Pipeline State", PSOCreateInfo.PSODesc, ppPipelineState,
+                       [&]() //
+                       {
+                           PipelineStateD3D12Impl* pPipelineStateD3D12(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateD3D12Impl instance", PipelineStateD3D12Impl)(this, PSOCreateInfo));
+                           pPipelineStateD3D12->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
+                           OnCreateDeviceObject(pPipelineStateD3D12);
+                       });
+}
+
+void RenderDeviceD3D12Impl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
     CreateDeviceObject("Pipeline State", PSOCreateInfo.PSODesc, ppPipelineState,
                        [&]() //

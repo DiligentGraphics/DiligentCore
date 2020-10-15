@@ -130,24 +130,22 @@ protected:
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-        PSODesc.Name = "Render pass test - draw triangles";
+        PSOCreateInfo.PSODesc.Name = "Render pass test - draw triangles";
 
-        PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
-        PSODesc.GraphicsPipeline.pRenderPass                  = pRenderPass;
-        PSODesc.GraphicsPipeline.SubpassIndex                 = 0;
-        PSODesc.GraphicsPipeline.SmplDesc.Count               = SampleCount;
-        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-        PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        PSOCreateInfo.PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+        PSOCreateInfo.GraphicsPipeline.pRenderPass                  = pRenderPass;
+        PSOCreateInfo.GraphicsPipeline.SubpassIndex                 = 0;
+        PSOCreateInfo.GraphicsPipeline.SmplDesc.Count               = SampleCount;
+        PSOCreateInfo.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
+        PSOCreateInfo.pVS = sm_pVS;
+        PSOCreateInfo.pPS = sm_pPS;
 
-        PSODesc.GraphicsPipeline.pVS = sm_pVS;
-        PSODesc.GraphicsPipeline.pPS = sm_pPS;
-
-        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
         ASSERT_NE(pPSO, nullptr);
         pPSO->CreateShaderResourceBinding(&pSRB);
         ASSERT_NE(pSRB, nullptr);
@@ -868,18 +866,17 @@ TEST_F(RenderPassTest, InputAttachment)
     RefCntAutoPtr<IPipelineState>         pInputAttachmentPSO;
     RefCntAutoPtr<IShaderResourceBinding> pInputAttachmentSRB;
     {
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-        PSODesc.Name = "Render pass test - input attachment";
+        PSOCreateInfo.PSODesc.Name = "Render pass test - input attachment";
 
-        PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
-        PSODesc.GraphicsPipeline.pRenderPass                  = pRenderPass;
-        PSODesc.GraphicsPipeline.SubpassIndex                 = 1;
-        PSODesc.GraphicsPipeline.SmplDesc.Count               = 1;
-        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-        PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        PSOCreateInfo.PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+        PSOCreateInfo.GraphicsPipeline.pRenderPass                  = pRenderPass;
+        PSOCreateInfo.GraphicsPipeline.SubpassIndex                 = 1;
+        PSOCreateInfo.GraphicsPipeline.SmplDesc.Count               = 1;
+        PSOCreateInfo.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
         auto IsVulkan = pEnv->GetDevice()->GetDeviceCaps().IsVulkanDevice();
 
@@ -915,10 +912,10 @@ TEST_F(RenderPassTest, InputAttachment)
             ASSERT_NE(pPS, nullptr);
         }
 
-        PSODesc.GraphicsPipeline.pVS = pVS;
-        PSODesc.GraphicsPipeline.pPS = pPS;
+        PSOCreateInfo.pVS = pVS;
+        PSOCreateInfo.pPS = pPS;
 
-        pDevice->CreatePipelineState(PSOCreateInfo, &pInputAttachmentPSO);
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pInputAttachmentPSO);
         ASSERT_NE(pInputAttachmentPSO, nullptr);
         pInputAttachmentPSO->GetStaticVariableByName(SHADER_TYPE_PIXEL, "g_SubpassInput")->Set(pTex->GetDefaultView(TEXTURE_VIEW_SHADER_RESOURCE));
         pInputAttachmentPSO->CreateShaderResourceBinding(&pInputAttachmentSRB, true);

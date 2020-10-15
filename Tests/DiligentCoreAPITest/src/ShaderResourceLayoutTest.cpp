@@ -171,25 +171,24 @@ protected:
                                   RefCntAutoPtr<IPipelineState>&         pPSO,
                                   RefCntAutoPtr<IShaderResourceBinding>& pSRB)
     {
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        PSODesc.ResourceLayout = ResourceLayout;
+        PSOCreateInfo.PSODesc.ResourceLayout = ResourceLayout;
 
-        PSODesc.Name                                          = "Shader resource layout test";
-        PSODesc.GraphicsPipeline.pVS                          = pVS;
-        PSODesc.GraphicsPipeline.pPS                          = pPS;
-        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-        PSODesc.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
-        PSODesc.GraphicsPipeline.DSVFormat                    = TEX_FORMAT_UNKNOWN;
-        PSODesc.SRBAllocationGranularity                      = 16;
-        PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        PSOCreateInfo.PSODesc.Name                                  = "Shader resource layout test";
+        PSOCreateInfo.pVS                                           = pVS;
+        PSOCreateInfo.pPS                                           = pPS;
+        PSOCreateInfo.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        PSOCreateInfo.GraphicsPipeline.NumRenderTargets             = 1;
+        PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
+        PSOCreateInfo.GraphicsPipeline.DSVFormat                    = TEX_FORMAT_UNKNOWN;
+        PSOCreateInfo.PSODesc.SRBAllocationGranularity              = 16;
+        PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
-        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
         if (pPSO)
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
@@ -240,18 +239,17 @@ protected:
                                  RefCntAutoPtr<IPipelineState>&         pPSO,
                                  RefCntAutoPtr<IShaderResourceBinding>& pSRB)
     {
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        ComputePipelineStateCreateInfo PSOCreateInfo;
 
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        PSODesc.Name                = "Shader resource layout test";
-        PSODesc.PipelineType        = PIPELINE_TYPE_COMPUTE;
-        PSODesc.ResourceLayout      = ResourceLayout;
-        PSODesc.ComputePipeline.pCS = pCS;
+        PSOCreateInfo.PSODesc.Name           = "Shader resource layout test";
+        PSOCreateInfo.PSODesc.PipelineType   = PIPELINE_TYPE_COMPUTE;
+        PSOCreateInfo.PSODesc.ResourceLayout = ResourceLayout;
+        PSOCreateInfo.pCS                    = pCS;
 
-        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
         if (pPSO)
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }

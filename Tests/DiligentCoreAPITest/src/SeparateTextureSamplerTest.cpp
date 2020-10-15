@@ -94,16 +94,15 @@ TEST(SeparateTextureSampler, CreateSampler)
     pDevice->CreateShader(Attrs, &pPS);
     ASSERT_TRUE(pPS);
 
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    PSODesc.GraphicsPipeline.pVS                          = pVS;
-    PSODesc.GraphicsPipeline.pPS                          = pPS;
-    PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-    PSODesc.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
-    PSODesc.GraphicsPipeline.DSVFormat                    = TEX_FORMAT_UNKNOWN;
-    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
+    PSOCreateInfo.pVS                                           = pVS;
+    PSOCreateInfo.pPS                                           = pPS;
+    PSOCreateInfo.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    PSOCreateInfo.GraphicsPipeline.NumRenderTargets             = 1;
+    PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
+    PSOCreateInfo.GraphicsPipeline.DSVFormat                    = TEX_FORMAT_UNKNOWN;
+    PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
 
     ShaderResourceVariableDesc Vars[] =
         {
@@ -113,18 +112,18 @@ TEST(SeparateTextureSampler, CreateSampler)
             {SHADER_TYPE_PIXEL, "g_Sam2", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
             {SHADER_TYPE_PIXEL, "g_Sam4", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
         };
-    PSODesc.ResourceLayout.Variables    = Vars;
-    PSODesc.ResourceLayout.NumVariables = _countof(Vars);
+    PSOCreateInfo.PSODesc.ResourceLayout.Variables    = Vars;
+    PSOCreateInfo.PSODesc.ResourceLayout.NumVariables = _countof(Vars);
 
     StaticSamplerDesc StaticSamplers[] =
         {
             {SHADER_TYPE_PIXEL, "g_Sam2", SamplerDesc{}} //
         };
-    PSODesc.ResourceLayout.StaticSamplers    = StaticSamplers;
-    PSODesc.ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
+    PSOCreateInfo.PSODesc.ResourceLayout.StaticSamplers    = StaticSamplers;
+    PSOCreateInfo.PSODesc.ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_TRUE(pPSO);
 
     TextureDesc TexDesc;

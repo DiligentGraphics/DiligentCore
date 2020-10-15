@@ -69,9 +69,13 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateSampler(const SamplerDesc& SamplerDesc,
                                                   ISampler**         ppSampler) override final;
 
-    /// Implementation of IRenderDevice::CreatePipelineState() in Direct3D11 backend.
-    virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo,
-                                                        IPipelineState**               ppPipelineState) override final;
+    /// Implementation of IRenderDevice::CreateGraphicsPipelineState() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
+                                                                IPipelineState**                       ppPipelineState) override final;
+
+    /// Implementation of IRenderDevice::CreateComputePipelineState() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
+                                                               IPipelineState**                      ppPipelineState) override final;
 
     /// Implementation of IRenderDevice::CreateFence() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CreateFence(const FenceDesc& Desc,

@@ -133,17 +133,16 @@ TEST(GeometryShaderTest, DrawTriangles)
     pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
 
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    PSODesc.Name = "Geometry shader test";
+    PSOCreateInfo.PSODesc.Name = "Geometry shader test";
 
-    PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
-    PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-    PSODesc.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
-    PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_POINT_LIST;
-    PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    PSOCreateInfo.PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+    PSOCreateInfo.GraphicsPipeline.NumRenderTargets             = 1;
+    PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+    PSOCreateInfo.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_POINT_LIST;
+    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -180,13 +179,13 @@ TEST(GeometryShaderTest, DrawTriangles)
         ASSERT_NE(pPS, nullptr);
     }
 
-    PSODesc.Name = "Geometry shader test";
+    PSOCreateInfo.PSODesc.Name = "Geometry shader test";
 
-    PSODesc.GraphicsPipeline.pVS = pVS;
-    PSODesc.GraphicsPipeline.pGS = pGS;
-    PSODesc.GraphicsPipeline.pPS = pPS;
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pGS = pGS;
+    PSOCreateInfo.pPS = pPS;
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     pContext->SetPipelineState(pPSO);

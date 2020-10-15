@@ -36,10 +36,10 @@
 namespace Diligent
 {
 
-PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCounters,
-                                         RenderDeviceGLImpl*            pDeviceGL,
-                                         const PipelineStateCreateInfo& CreateInfo,
-                                         bool                           bIsDeviceInternal) :
+PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    pRefCounters,
+                                         RenderDeviceGLImpl*                    pDeviceGL,
+                                         const GraphicsPipelineStateCreateInfo& CreateInfo,
+                                         bool                                   bIsDeviceInternal) :
     // clang-format off
     TPipelineStateBase
     {
@@ -52,8 +52,11 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
     m_StaticResourceLayout{*this}
 // clang-format on
 {
+    std::vector<GLPipelineShaderStageInfo> ShaderStages;
+    ExtractShaders<ShaderGLImpl>(CreateInfo, ShaderStages);
+
     RefCntAutoPtr<ShaderGLImpl> pTempPS;
-    if (m_Desc.IsAnyGraphicsPipeline() && m_Desc.GraphicsPipeline.pPS == nullptr)
+    if (CreateInfo.pPS == nullptr)
     {
         // Some OpenGL implementations fail if fragment shader is not present, so
         // create a dummy one.
@@ -64,22 +67,92 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         ShaderCI.Desc.Name       = "Dummy fragment shader";
         pDeviceGL->CreateShader(ShaderCI, reinterpret_cast<IShader**>(static_cast<ShaderGLImpl**>(&pTempPS)));
 
-        m_Desc.GraphicsPipeline.pPS = pTempPS;
+        ShaderStages.emplace_back(SHADER_TYPE_PIXEL, pTempPS);
+        m_ShaderStageTypes[m_NumShaderStages++] = SHADER_TYPE_PIXEL;
     }
 
-    struct GLPipelineShaderStageInfo
-    {
-        const SHADER_TYPE   Type;
-        ShaderGLImpl* const pShader;
-        GLPipelineShaderStageInfo(SHADER_TYPE   _Type,
-                                  ShaderGLImpl* _pShader) :
-            Type{_Type},
-            pShader{_pShader}
-        {}
-    };
-    std::vector<GLPipelineShaderStageInfo> ShaderStages;
-    ExtractShaders<ShaderGLImpl>(ShaderStages);
+    // Memory must be released if an exception is thrown.
+    LinearAllocator MemPool{GetRawAllocator()};
 
+    MemPool.AddRequiredSize<GLProgramObj>(GetNumShaderStages());
+    MemPool.AddRequiredSize<GLProgramResources>(GetNumShaderStages());
+    MemPool.AddRequiredSize<SamplerPtr>(m_Desc.ResourceLayout.NumStaticSamplers);
+
+    ValidateAndReserveSpace(CreateInfo, MemPool);
+
+    MemPool.Reserve();
+
+    InitResourceLayouts(pDeviceGL, ShaderStages, MemPool);
+    InitGraphicsPipeline(CreateInfo, MemPool);
+
+    void* Ptr = MemPool.Release();
+    VERIFY_EXPR(Ptr == m_GLPrograms);
+}
+
+PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                   pRefCounters,
+                                         RenderDeviceGLImpl*                   pDeviceGL,
+                                         const ComputePipelineStateCreateInfo& CreateInfo,
+                                         bool                                  bIsDeviceInternal) :
+    // clang-format off
+    TPipelineStateBase
+    {
+        pRefCounters,
+        pDeviceGL,
+        CreateInfo.PSODesc,
+        bIsDeviceInternal
+    },
+    m_ResourceLayout      {*this},
+    m_StaticResourceLayout{*this}
+// clang-format on
+{
+    std::vector<GLPipelineShaderStageInfo> ShaderStages;
+    ExtractShaders<ShaderGLImpl>(CreateInfo, ShaderStages);
+
+    // Memory must be released if an exception is thrown.
+    LinearAllocator MemPool{GetRawAllocator()};
+
+    MemPool.AddRequiredSize<GLProgramObj>(GetNumShaderStages());
+    MemPool.AddRequiredSize<GLProgramResources>(GetNumShaderStages());
+    MemPool.AddRequiredSize<SamplerPtr>(m_Desc.ResourceLayout.NumStaticSamplers);
+
+    ValidateAndReserveSpace(CreateInfo, MemPool);
+
+    MemPool.Reserve();
+
+    InitResourceLayouts(pDeviceGL, ShaderStages, MemPool);
+    InitComputePipeline(CreateInfo, MemPool);
+
+    void* Ptr = MemPool.Release();
+    VERIFY_EXPR(Ptr == m_GLPrograms);
+}
+
+PipelineStateGLImpl::~PipelineStateGLImpl()
+{
+    auto& RawAllocator = GetRawAllocator();
+    m_StaticResourceCache.Destroy(RawAllocator);
+    GetDevice()->OnDestroyPSO(this);
+
+    for (Uint32 i = 0; i < GetNumShaderStages(); ++i)
+    {
+        m_GLPrograms[i].~GLProgramObj();
+        m_ProgramResources[i].~GLProgramResources();
+    }
+    for (Uint32 i = 0; i < m_Desc.ResourceLayout.NumStaticSamplers; ++i)
+    {
+        m_StaticSamplers[i].~SamplerPtr();
+    }
+
+    void* pRawMem = m_GLPrograms;
+    RawAllocator.Free(pRawMem);
+}
+
+IMPLEMENT_QUERY_INTERFACE(PipelineStateGLImpl, IID_PipelineStateGL, TPipelineStateBase)
+
+
+void PipelineStateGLImpl::InitResourceLayouts(RenderDeviceGLImpl*                           pDeviceGL,
+                                              const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
+                                              LinearAllocator&                              MemPool)
+{
     auto& DeviceCaps = pDeviceGL->GetDeviceCaps();
     VERIFY(DeviceCaps.DevType != RENDER_DEVICE_TYPE_UNDEFINED, "Device caps are not initialized");
 
@@ -97,13 +170,13 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
             // Program pipelines are not shared between GL contexts, so we cannot create
             // it now
             m_ShaderResourceLayoutHash = 0;
-            m_ProgramResources.resize(ShaderStages.size());
-            m_GLPrograms.reserve(ShaderStages.size());
+            m_GLPrograms               = MemPool.Allocate<GLProgramObj>(ShaderStages.size());
+            m_ProgramResources         = MemPool.ConstructArray<GLProgramResources>(ShaderStages.size());
             for (size_t i = 0; i < ShaderStages.size(); ++i)
             {
                 auto*       pShaderGL  = ShaderStages[i].pShader;
                 const auto& ShaderDesc = pShaderGL->GetDesc();
-                m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(&pShaderGL, 1, true));
+                new (m_GLPrograms + i) GLProgramObj{ShaderGLImpl::LinkProgram(&pShaderGL, 1, true)};
                 // Load uniforms and assign bindings
                 m_ProgramResources[i].LoadUniforms(ShaderDesc.ShaderType, m_GLPrograms[i], GLState,
                                                    m_TotalUniformBufferBindings,
@@ -126,8 +199,9 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
                 ActiveStages |= Stage.Type;
             }
 
-            m_GLPrograms.emplace_back(ShaderGLImpl::LinkProgram(Shaders.data(), static_cast<Uint32>(ShaderStages.size()), false));
-            m_ProgramResources.resize(1);
+            m_GLPrograms       = MemPool.Construct<GLProgramObj>(ShaderGLImpl::LinkProgram(Shaders.data(), static_cast<Uint32>(ShaderStages.size()), false));
+            m_ProgramResources = MemPool.Construct<GLProgramResources>();
+
             m_ProgramResources[0].LoadUniforms(ActiveStages, m_GLPrograms[0], GLState,
                                                m_TotalUniformBufferBindings,
                                                m_TotalSamplerBindings,
@@ -138,10 +212,10 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
         }
 
         // Initialize master resource layout that keeps all variable types and does not reference a resource cache
-        m_ResourceLayout.Initialize(m_ProgramResources.data(), static_cast<Uint32>(m_GLPrograms.size()), m_Desc.PipelineType, m_Desc.ResourceLayout, nullptr, 0, nullptr);
+        m_ResourceLayout.Initialize(m_ProgramResources, static_cast<Uint32>(ShaderStages.size()), m_Desc.PipelineType, m_Desc.ResourceLayout, nullptr, 0, nullptr);
     }
 
-    m_StaticSamplers.resize(m_Desc.ResourceLayout.NumStaticSamplers);
+    m_StaticSamplers = MemPool.ConstructArray<SamplerPtr>(m_Desc.ResourceLayout.NumStaticSamplers);
     for (Uint32 s = 0; s < m_Desc.ResourceLayout.NumStaticSamplers; ++s)
     {
         pDeviceGL->CreateSampler(m_Desc.ResourceLayout.StaticSamplers[s].Desc, &m_StaticSamplers[s]);
@@ -150,26 +224,16 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*            pRefCoun
     {
         // Clone only static variables into static resource layout, assign and initialize static resource cache
         const SHADER_RESOURCE_VARIABLE_TYPE StaticVars[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-        m_StaticResourceLayout.Initialize(m_ProgramResources.data(), static_cast<Uint32>(m_GLPrograms.size()), m_Desc.PipelineType, m_Desc.ResourceLayout, StaticVars, _countof(StaticVars), &m_StaticResourceCache);
+        m_StaticResourceLayout.Initialize(m_ProgramResources, static_cast<Uint32>(ShaderStages.size()), m_Desc.PipelineType, m_Desc.ResourceLayout, StaticVars, _countof(StaticVars), &m_StaticResourceCache);
         InitStaticSamplersInResourceCache(m_StaticResourceLayout, m_StaticResourceCache);
     }
 }
-
-
-PipelineStateGLImpl::~PipelineStateGLImpl()
-{
-    m_StaticResourceCache.Destroy(GetRawAllocator());
-    GetDevice()->OnDestroyPSO(this);
-}
-
-IMPLEMENT_QUERY_INTERFACE(PipelineStateGLImpl, IID_PipelineStateGL, TPipelineStateBase)
-
 
 void PipelineStateGLImpl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
 {
     auto* pRenderDeviceGL = GetDevice();
     auto& SRBAllocator    = pRenderDeviceGL->GetSRBAllocator();
-    auto  pResBinding     = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingGLImpl instance", ShaderResourceBindingGLImpl)(this, m_ProgramResources.data(), static_cast<Uint32>(m_ProgramResources.size()));
+    auto  pResBinding     = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingGLImpl instance", ShaderResourceBindingGLImpl)(this, m_ProgramResources, GetNumShaderStages());
     if (InitStaticResources)
         pResBinding->InitializeStaticResources(this);
     pResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(ppShaderResourceBinding));
@@ -186,10 +250,10 @@ bool PipelineStateGLImpl::IsCompatibleWith(const IPipelineState* pPSO) const
     if (m_ShaderResourceLayoutHash != pPSOGL->m_ShaderResourceLayoutHash)
         return false;
 
-    if (m_ProgramResources.size() != pPSOGL->m_ProgramResources.size())
+    if (GetNumShaderStages() != pPSOGL->GetNumShaderStages())
         return false;
 
-    for (size_t i = 0; i < m_ProgramResources.size(); ++i)
+    for (size_t i = 0; i < GetNumShaderStages(); ++i)
     {
         if (!m_ProgramResources[i].IsCompatibleWith(pPSOGL->m_ProgramResources[i]))
             return false;
@@ -214,7 +278,7 @@ void PipelineStateGLImpl::CommitProgram(GLContextState& State)
     }
     else
     {
-        VERIFY_EXPR(m_GLPrograms.size() == 1);
+        VERIFY_EXPR(m_GLPrograms != nullptr);
         State.SetProgram(m_GLPrograms[0]);
     }
 }
