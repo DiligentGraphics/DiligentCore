@@ -27,6 +27,7 @@
 
 #include "DefaultRawMemoryAllocator.hpp"
 #include "FixedBlockMemoryAllocator.hpp"
+#include "LinearAllocator.hpp"
 
 #include "gtest/gtest.h"
 
@@ -118,6 +119,30 @@ TEST(Common_FixedBlockMemoryAllocator, UnalignedSize)
         TestAllocator.Free(pRawMem0);
         TestAllocator.Free(pRawMem1);
     }
+}
+
+TEST(Common_LinearAllocator, PointerAlignment)
+{
+    LinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
+
+    const std::string SrcStr = "123456789";
+
+    Allocator.AddRequiredSize<char>(SrcStr.length() + 1);
+    Allocator.AddRequiredSize<uint32_t>(5);
+    Allocator.AddRequiredSize<uint64_t>(3);
+    Allocator.AddRequiredSize<float>(6);
+
+    Allocator.Reserve();
+
+    char* DstStr = Allocator.CopyString(SrcStr.c_str());
+    size_t IntPtrUint32 = reinterpret_cast<size_t>(Allocator.Allocate<uint32_t>(5));
+    size_t IntPtrUint64 = reinterpret_cast<size_t>(Allocator.Allocate<uint64_t>(3));
+    size_t IntPtrFloat  = reinterpret_cast<size_t>(Allocator.Allocate<float>(6));
+
+    EXPECT_EQ(SrcStr, DstStr);
+    EXPECT_EQ(IntPtrUint32, Align(IntPtrUint32, alignof(uint32_t)));
+    EXPECT_EQ(IntPtrUint64, Align(IntPtrUint64, alignof(uint64_t)));
+    EXPECT_EQ(IntPtrFloat, Align(IntPtrFloat, alignof(float)));
 }
 
 } // namespace
