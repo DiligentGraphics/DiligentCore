@@ -118,7 +118,7 @@ public:
         return m_ShaderResourceLayoutHash != ValidatedCast<const PipelineStateBase>(pPSO)->m_ShaderResourceLayoutHash;
     }
 
-    const GraphicsPipelineDesc& GetGraphicsPipelineDesc() const override final
+    virtual const GraphicsPipelineDesc& DILIGENT_CALL_TYPE GetGraphicsPipelineDesc() const override final
     {
         VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
         VERIFY_EXPR(m_pGraphicsPipelineDesc != nullptr);

@@ -87,12 +87,12 @@ public:
                                                   ISampler**         ppSampler) override final;
 
     /// Implementation of IRenderDevice::CreateGraphicsPipelineState() in OpenGL backend.
-    virtual void CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
-                                             IPipelineState**                       ppPipelineState) override final;
+    virtual void DILIGENT_CALL_TYPE CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
+                                                                IPipelineState**                       ppPipelineState) override final;
 
     /// Implementation of IRenderDevice::CreateComputePipelineState() in OpenGL backend.
-    virtual void CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
-                                            IPipelineState**                      ppPipelineState) override final;
+    virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
+                                                               IPipelineState**                      ppPipelineState) override final;
 
     void CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
                                      IPipelineState**                       ppPipelineState,

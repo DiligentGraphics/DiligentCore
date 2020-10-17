@@ -123,6 +123,11 @@ TEST(Common_FixedBlockMemoryAllocator, UnalignedSize)
 
 TEST(Common_LinearAllocator, PointerAlignment)
 {
+    struct alignas(32) TObj32
+    {
+        char data[64];
+    };
+
     LinearAllocator Allocator{DefaultRawMemoryAllocator::GetAllocator()};
 
     const std::string SrcStr = "123456789";
@@ -131,18 +136,21 @@ TEST(Common_LinearAllocator, PointerAlignment)
     Allocator.AddRequiredSize<uint32_t>(5);
     Allocator.AddRequiredSize<uint64_t>(3);
     Allocator.AddRequiredSize<float>(6);
+    Allocator.AddRequiredSize<TObj32>(4);
 
     Allocator.Reserve();
 
-    char* DstStr = Allocator.CopyString(SrcStr.c_str());
+    char*  DstStr       = Allocator.CopyString(SrcStr.c_str());
     size_t IntPtrUint32 = reinterpret_cast<size_t>(Allocator.Allocate<uint32_t>(5));
     size_t IntPtrUint64 = reinterpret_cast<size_t>(Allocator.Allocate<uint64_t>(3));
     size_t IntPtrFloat  = reinterpret_cast<size_t>(Allocator.Allocate<float>(6));
+    size_t IntPtrTObj32 = reinterpret_cast<size_t>(Allocator.Allocate<TObj32>(4));
 
     EXPECT_EQ(SrcStr, DstStr);
     EXPECT_EQ(IntPtrUint32, Align(IntPtrUint32, alignof(uint32_t)));
     EXPECT_EQ(IntPtrUint64, Align(IntPtrUint64, alignof(uint64_t)));
     EXPECT_EQ(IntPtrFloat, Align(IntPtrFloat, alignof(float)));
+    EXPECT_EQ(IntPtrTObj32, Align(IntPtrTObj32, alignof(TObj32)));
 }
 
 } // namespace

@@ -98,10 +98,11 @@ public:
         VERIFY(m_pBuffer == nullptr, "Memory already allocated");
         if (size > 0)
         {
+            size           = Align(size, align);
             m_RequiredSize = Align(m_RequiredSize, align) + size;
 
             // Reserve additional space for pointer alignment
-            m_RequiredSize += (align > sizeof(void*) ? align : 0);
+            m_RequiredSize += (align > sizeof(void*) ? align - sizeof(void*) : 0);
         }
     }
 
