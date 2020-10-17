@@ -454,6 +454,39 @@ HLSLShaderResourceDesc D3DShaderResourceAttribs::GetHLSLResourceDesc() const
     return ResourceDesc;
 }
 
+RESOURCE_DIMENSION D3DShaderResourceAttribs::GetResourceDimension() const
+{
+    switch (GetSRVDimension())
+    {
+        // clang-format off
+        case D3D_SRV_DIMENSION_BUFFER:           return RESOURCE_DIM_BUFFER;
+        case D3D_SRV_DIMENSION_TEXTURE1D:        return RESOURCE_DIM_TEX_1D;
+        case D3D_SRV_DIMENSION_TEXTURE1DARRAY:   return RESOURCE_DIM_TEX_1D_ARRAY;
+        case D3D_SRV_DIMENSION_TEXTURE2D:        return RESOURCE_DIM_TEX_2D;
+        case D3D_SRV_DIMENSION_TEXTURE2DARRAY:   return RESOURCE_DIM_TEX_2D_ARRAY;
+        case D3D_SRV_DIMENSION_TEXTURE2DMS:      return RESOURCE_DIM_TEX_2D;
+        case D3D_SRV_DIMENSION_TEXTURE2DMSARRAY: return RESOURCE_DIM_TEX_2D_ARRAY;
+        case D3D_SRV_DIMENSION_TEXTURE3D:        return RESOURCE_DIM_TEX_3D;
+        case D3D_SRV_DIMENSION_TEXTURECUBE:      return RESOURCE_DIM_TEX_CUBE;
+        case D3D_SRV_DIMENSION_TEXTURECUBEARRAY: return RESOURCE_DIM_TEX_CUBE_ARRAY;
+        // clang-format on
+        default:
+            return RESOURCE_DIM_BUFFER;
+    }
+}
+
+bool D3DShaderResourceAttribs::IsMultisample() const
+{
+    switch (GetSRVDimension())
+    {
+        case D3D_SRV_DIMENSION_TEXTURE2DMS:
+        case D3D_SRV_DIMENSION_TEXTURE2DMSARRAY:
+            return true;
+        default:
+            return false;
+    }
+}
+
 HLSLShaderResourceDesc ShaderResources::GetHLSLShaderResourceDesc(Uint32 Index) const
 {
     DEV_CHECK_ERR(Index < m_TotalResources, "Resource index (", Index, ") is out of range");

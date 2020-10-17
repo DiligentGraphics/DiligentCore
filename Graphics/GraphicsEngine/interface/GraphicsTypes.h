@@ -211,16 +211,16 @@ DEFINE_FLAG_ENUM_OPERATORS(MAP_FLAGS)
 /// - TextureViewDesc to describe texture view type
 DILIGENT_TYPED_ENUM(RESOURCE_DIMENSION, Uint8)
 {
-    RESOURCE_DIM_UNDEFINED = 0, ///< Texture type undefined
-    RESOURCE_DIM_BUFFER,            ///< Buffer
-    RESOURCE_DIM_TEX_1D,            ///< One-dimensional texture
-    RESOURCE_DIM_TEX_1D_ARRAY,      ///< One-dimensional texture array
-    RESOURCE_DIM_TEX_2D,            ///< Two-dimensional texture
-    RESOURCE_DIM_TEX_2D_ARRAY,      ///< Two-dimensional texture array
-    RESOURCE_DIM_TEX_3D,            ///< Three-dimensional texture
-    RESOURCE_DIM_TEX_CUBE,          ///< Cube-map texture
-    RESOURCE_DIM_TEX_CUBE_ARRAY,    ///< Cube-map array texture
-    RESOURCE_DIM_NUM_DIMENSIONS     ///< Helper value that stores the total number of texture types in the enumeration
+    RESOURCE_DIM_UNDEFINED = 0,  ///< Texture type undefined
+    RESOURCE_DIM_BUFFER,         ///< Buffer
+    RESOURCE_DIM_TEX_1D,         ///< One-dimensional texture
+    RESOURCE_DIM_TEX_1D_ARRAY,   ///< One-dimensional texture array
+    RESOURCE_DIM_TEX_2D,         ///< Two-dimensional texture
+    RESOURCE_DIM_TEX_2D_ARRAY,   ///< Two-dimensional texture array
+    RESOURCE_DIM_TEX_3D,         ///< Three-dimensional texture
+    RESOURCE_DIM_TEX_CUBE,       ///< Cube-map texture
+    RESOURCE_DIM_TEX_CUBE_ARRAY, ///< Cube-map array texture
+    RESOURCE_DIM_NUM_DIMENSIONS  ///< Helper value that stores the total number of texture types in the enumeration
 };
 
 /// Texture view type
