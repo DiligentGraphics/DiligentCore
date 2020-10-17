@@ -38,6 +38,7 @@
 #include "RootSignature.hpp"
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderResourceVariableBase.hpp"
+#include "ShaderVariableD3DBase.hpp"
 
 namespace Diligent
 {
@@ -429,6 +430,11 @@ template <>
 struct ResourceViewTraits<ITextureViewD3D12>
 {
     static const INTERFACE_ID& IID;
+
+    static bool VerifyView(ITextureViewD3D12* pViewD3D12, const D3DShaderResourceAttribs& Attribs, const char* ShaderName)
+    {
+        return true;
+    }
 };
 const INTERFACE_ID& ResourceViewTraits<ITextureViewD3D12>::IID = IID_TextureViewD3D12;
 
@@ -436,6 +442,11 @@ template <>
 struct ResourceViewTraits<IBufferViewD3D12>
 {
     static const INTERFACE_ID& IID;
+
+    static bool VerifyView(IBufferViewD3D12* pViewD3D12, const D3DShaderResourceAttribs& Attribs, const char* ShaderName)
+    {
+        return VerifyBufferViewModeD3D(pViewD3D12, Attribs, ShaderName);
+    }
 };
 const INTERFACE_ID& ResourceViewTraits<IBufferViewD3D12>::IID = IID_BufferViewD3D12;
 
@@ -451,9 +462,10 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheResourceView(IDeviceObject* 
 {
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<TResourceViewType> pViewD3D12(pView, ResourceViewTraits<TResourceViewType>::IID);
+    RefCntAutoPtr<TResourceViewType> pViewD3D12{pView, ResourceViewTraits<TResourceViewType>::IID};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyResourceViewBinding(Attribs, GetVariableType(), ArrayIndex, pView, pViewD3D12.RawPtr(), {dbgExpectedViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+    ResourceViewTraits<TResourceViewType>::VerifyView(pViewD3D12, Attribs, ParentResLayout.GetShaderName());
 #endif
     if (pViewD3D12)
     {

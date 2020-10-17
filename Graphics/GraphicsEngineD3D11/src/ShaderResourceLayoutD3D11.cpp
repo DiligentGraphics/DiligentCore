@@ -429,7 +429,7 @@ void ShaderResourceLayoutD3D11::ConstBuffBindInfo::BindResource(IDeviceObject* p
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl(pBuffer, IID_BufferD3D11);
+    RefCntAutoPtr<BufferD3D11Impl> pBuffD3D11Impl{pBuffer, IID_BufferD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedCB = m_ParentResLayout.m_ResourceCache.GetCB(m_Attribs.BindPoint + ArrayIndex);
@@ -448,11 +448,12 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11(pView, IID_TextureViewD3D11);
+    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSRV = ResourceCache.GetSRV(m_Attribs.BindPoint + ArrayIndex);
-        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE}, CachedSRV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
+        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE},
+                                  CachedSRV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
     }
 #endif
 
@@ -505,7 +506,7 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11(pSampler, IID_SamplerD3D11);
+    RefCntAutoPtr<SamplerD3D11Impl> pSamplerD3D11{pSampler, IID_SamplerD3D11};
 
 #ifdef DILIGENT_DEVELOPMENT
     if (pSampler && !pSamplerD3D11)
@@ -548,11 +549,13 @@ void ShaderResourceLayoutD3D11::BuffSRVBindInfo::BindResource(IDeviceObject* pVi
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11(pView, IID_BufferViewD3D11);
+    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedSRV = ResourceCache.GetSRV(m_Attribs.BindPoint + ArrayIndex);
-        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE}, CachedSRV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
+        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE},
+                                  CachedSRV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
+        VerifyBufferViewModeD3D(pViewD3D11.RawPtr(), m_Attribs, m_ParentResLayout.GetShaderName());
     }
 #endif
     ResourceCache.SetBufSRV(m_Attribs.BindPoint + ArrayIndex, std::move(pViewD3D11));
@@ -568,11 +571,12 @@ void ShaderResourceLayoutD3D11::TexUAVBindInfo::BindResource(IDeviceObject* pVie
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11(pView, IID_TextureViewD3D11);
+    RefCntAutoPtr<TextureViewD3D11Impl> pViewD3D11{pView, IID_TextureViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedUAV = ResourceCache.GetUAV(m_Attribs.BindPoint + ArrayIndex);
-        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
+        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {TEXTURE_VIEW_UNORDERED_ACCESS},
+                                  CachedUAV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
     }
 #endif
     ResourceCache.SetTexUAV(m_Attribs.BindPoint + ArrayIndex, std::move(pViewD3D11));
@@ -588,11 +592,13 @@ void ShaderResourceLayoutD3D11::BuffUAVBindInfo::BindResource(IDeviceObject* pVi
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11(pView, IID_BufferViewD3D11);
+    RefCntAutoPtr<BufferViewD3D11Impl> pViewD3D11{pView, IID_BufferViewD3D11};
 #ifdef DILIGENT_DEVELOPMENT
     {
         auto& CachedUAV = ResourceCache.GetUAV(m_Attribs.BindPoint + ArrayIndex);
-        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
+        VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewD3D11.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS},
+                                  CachedUAV.pView.RawPtr(), m_ParentResLayout.GetShaderName());
+        VerifyBufferViewModeD3D(pViewD3D11.RawPtr(), m_Attribs, m_ParentResLayout.GetShaderName());
     }
 #endif
     ResourceCache.SetBufUAV(m_Attribs.BindPoint + ArrayIndex, std::move(pViewD3D11));

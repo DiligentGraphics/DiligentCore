@@ -88,8 +88,7 @@ TEST(ShaderResourceLayout, VariableAccess)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_GLES)
-        return;
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -236,15 +235,27 @@ TEST(ShaderResourceLayout, VariableAccess)
     {
         ShaderCI.Desc.Name       = "Shader variable access test VS";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_DEFAULT;
-        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.FilePath        = pDevice->GetDeviceCaps().IsD3DDevice() ? "ShaderVariableAccessTestDX.vsh" : "ShaderVariableAccessTestGL.vsh";
+        if (deviceCaps.IsD3DDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestDX.vsh";
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestGL.vsh";
+        }
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
         pDevice->CreateShader(ShaderCI, &pVS);
         ASSERT_NE(pVS, nullptr);
         TestShaderCInterface(pVS);
 
-        Diligent::Test::PrintShaderResources(pVS);
+        if (!deviceCaps.IsMetalDevice())
+        {
+            // Resource queries from shader are not supported in Metal
+            Diligent::Test::PrintShaderResources(pVS);
+        }
     }
 
     std::vector<ShaderResourceVariableDesc> VarDesc =
@@ -281,13 +292,25 @@ TEST(ShaderResourceLayout, VariableAccess)
     {
         ShaderCI.Desc.Name       = "Shader variable access test PS";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_DEFAULT;
-        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.FilePath        = pDevice->GetDeviceCaps().IsD3DDevice() ? "ShaderVariableAccessTestDX.psh" : "ShaderVariableAccessTestGL.psh";
+        if (deviceCaps.IsD3DDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestDX.psh";
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestGL.psh";
+        }
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
 
-        Diligent::Test::PrintShaderResources(pPS);
+        if (!deviceCaps.IsMetalDevice())
+        {
+            // Resource queries from shader are not supported in Metal
+            Diligent::Test::PrintShaderResources(pPS);
+        }
     }
 
 

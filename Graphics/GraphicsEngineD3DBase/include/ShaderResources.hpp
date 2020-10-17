@@ -192,6 +192,10 @@ public:
         return static_cast<D3D_SRV_DIMENSION>(SRVDimension);
     }
 
+    RESOURCE_DIMENSION GetResourceDimension() const;
+
+    bool IsMultisample() const;
+
     bool IsCombinedWithSampler() const
     {
         return GetCombinedSamplerId() != InvalidSamplerId;

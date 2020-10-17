@@ -147,6 +147,16 @@ public:
             ResourceDesc.Type      = ResourceType;
             return ResourceDesc;
         }
+
+        RESOURCE_DIMENSION GetResourceDimension() const
+        {
+            return RESOURCE_DIM_UNDEFINED;
+        }
+
+        bool IsMultisample() const
+        {
+            return false;
+        }
     };
 
     struct UniformBufferInfo final : GLResourceAttribs

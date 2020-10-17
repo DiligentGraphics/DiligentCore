@@ -307,6 +307,16 @@ void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pVie
         {
             auto& CachedBuffSampler = ResourceCache.GetConstSampler(m_Attribs.Binding + ArrayIndex);
             VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE}, CachedBuffSampler.pView.RawPtr());
+            if (pViewGL != nullptr)
+            {
+                const auto& ViewDesc = pViewGL->GetDesc();
+                const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
+                if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_RAW))
+                {
+                    LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                      m_Attribs.Name, ": formatted buffer view is expected.");
+                }
+            }
         }
 #endif
         ResourceCache.SetBufSampler(m_Attribs.Binding + ArrayIndex, std::move(pViewGL));
@@ -347,6 +357,16 @@ void GLPipelineResourceLayout::ImageBindInfo::BindResource(IDeviceObject* pView,
         {
             auto& CachedUAV = ResourceCache.GetConstImage(m_Attribs.Binding + ArrayIndex);
             VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {BUFFER_VIEW_UNORDERED_ACCESS}, CachedUAV.pView.RawPtr());
+            if (pViewGL != nullptr)
+            {
+                const auto& ViewDesc = pViewGL->GetDesc();
+                const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
+                if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_RAW))
+                {
+                    LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                      m_Attribs.Name, ": formatted buffer view is expected.");
+                }
+            }
         }
 #endif
         ResourceCache.SetBufImage(m_Attribs.Binding + ArrayIndex, std::move(pViewGL));
@@ -375,6 +395,16 @@ void GLPipelineResourceLayout::StorageBufferBindInfo::BindResource(IDeviceObject
         auto& CachedSSBO = ResourceCache.GetConstSSBO(m_Attribs.Binding + ArrayIndex);
         // HLSL structured buffers are mapped to SSBOs in GLSL
         VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {BUFFER_VIEW_SHADER_RESOURCE, BUFFER_VIEW_UNORDERED_ACCESS}, CachedSSBO.pBufferView.RawPtr());
+        if (pViewGL != nullptr)
+        {
+            const auto& ViewDesc = pViewGL->GetDesc();
+            const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
+            if (BuffDesc.Mode != BUFFER_MODE_STRUCTURED && BuffDesc.Mode != BUFFER_MODE_RAW)
+            {
+                LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
+                                  m_Attribs.Name, ": structured buffer view is expected.");
+            }
+        }
     }
 #endif
     ResourceCache.SetSSBO(m_Attribs.Binding + ArrayIndex, std::move(pViewGL));
