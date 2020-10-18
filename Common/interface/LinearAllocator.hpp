@@ -56,16 +56,14 @@ public:
 
     LinearAllocator(LinearAllocator&& Other) :
         // clang-format off
-        m_pDataStart {Other.m_pDataStart},
-        m_pCurrPtr   {Other.m_pCurrPtr  },
-        m_pDataEnd   {Other.m_pDataEnd  },
-        m_pAllocator {Other.m_pAllocator}
+        m_pDataStart   {Other.m_pDataStart   },
+        m_pCurrPtr     {Other.m_pCurrPtr     },
+        m_ReservedSize {Other.m_ReservedSize },
+        m_CurrAlignment{Other.m_CurrAlignment},
+        m_pAllocator   {Other.m_pAllocator   }
     // clang-format on
     {
-        Other.m_pDataStart = nullptr;
-        Other.m_pCurrPtr   = nullptr;
-        Other.m_pDataEnd   = nullptr;
-        Other.m_pAllocator = nullptr;
+        Other.Reset();
     }
 
     ~LinearAllocator()
@@ -75,31 +73,47 @@ public:
 
     void Free()
     {
-        if (m_pDataStart != nullptr && m_pDataStart != GetDummyMemory() && m_pAllocator != nullptr)
+        if (m_pDataStart != nullptr && m_pAllocator != nullptr)
         {
             m_pAllocator->Free(m_pDataStart);
         }
-
-        m_pDataStart = nullptr;
-        m_pCurrPtr   = nullptr;
-        m_pDataEnd   = nullptr;
-        m_pAllocator = nullptr;
+        Reset();
     }
 
     void* Release()
     {
-        void* Ptr    = m_pDataStart;
-        m_pDataStart = nullptr;
-        m_pCurrPtr   = nullptr;
-        m_pDataEnd   = nullptr;
-        m_pAllocator = nullptr;
+        void* Ptr = m_pDataStart;
+        Reset();
         return Ptr;
     }
 
-    void AddSpace(size_t size, size_t align)
+    void AddSpace(size_t size, size_t alignment)
     {
-        VERIFY(m_pDataStart == nullptr || m_pDataStart == GetDummyMemory(), "Memory has already been allocated");
-        AllocateInternal(size, align);
+        VERIFY(m_pDataStart == nullptr, "Memory has already been allocated");
+        VERIFY(IsPowerOfTwo(alignment), "Alignment is not a power of two!");
+
+        if (size == 0)
+            return;
+
+        if (m_CurrAlignment == 0)
+        {
+            VERIFY(m_ReservedSize == 0, "This is expected to be a very first time the space is added");
+            m_CurrAlignment = sizeof(void*);
+        }
+
+        if (alignment > m_CurrAlignment)
+        {
+            // Reserve extra space that may be needed for alignment
+            m_ReservedSize += alignment - m_CurrAlignment;
+        }
+        m_CurrAlignment = alignment;
+
+        size = Align(size, alignment);
+        m_ReservedSize += size;
+
+#if DILIGENT_DEBUG
+        m_DbgAllocations.emplace_back(size, alignment, m_ReservedSize);
+#endif
     }
 
     template <typename T>
@@ -121,35 +135,58 @@ public:
 
     void Reserve(size_t size)
     {
-        VERIFY(m_pDataStart == nullptr || m_pDataStart == GetDummyMemory(), "Memory has already been allocated");
-        VERIFY(m_pCurrPtr == nullptr, "Space has been added to the allocator and will be overriden");
-        m_pCurrPtr = m_pDataStart + size;
+        VERIFY(m_pDataStart == nullptr, "Memory has already been allocated");
+        VERIFY(m_ReservedSize == 0, "Space has been added to the allocator and will be overriden");
+        m_ReservedSize = size;
         Reserve();
     }
 
     void Reserve()
     {
-        VERIFY(m_pDataStart == nullptr || m_pDataStart == GetDummyMemory(), "Memory has already been allocated");
+        VERIFY(m_pDataStart == nullptr, "Memory has already been allocated");
         VERIFY(m_pAllocator != nullptr, "Allocator must not be null");
         // Make sure the data size is at least sizeof(void*)-aligned
-        auto DataSize = Align(static_cast<size_t>(m_pCurrPtr - m_pDataStart), sizeof(void*));
-        if (DataSize > 0)
+        m_ReservedSize = Align(m_ReservedSize, sizeof(void*));
+        if (m_ReservedSize > 0)
         {
-            m_pDataStart = reinterpret_cast<uint8_t*>(m_pAllocator->Allocate(DataSize, "Raw memory for linear allocator", __FILE__, __LINE__));
+            m_pDataStart = reinterpret_cast<uint8_t*>(m_pAllocator->Allocate(m_ReservedSize, "Raw memory for linear allocator", __FILE__, __LINE__));
             VERIFY(m_pDataStart == Align(m_pDataStart, sizeof(void*)), "Memory pointer must be at least sizeof(void*)-aligned");
 
             m_pCurrPtr = m_pDataStart;
-            m_pDataEnd = m_pDataStart + DataSize;
         }
+        m_CurrAlignment = sizeof(void*);
     }
 
-    void* Allocate(size_t size, size_t align)
+    void* Allocate(size_t size, size_t alignment)
     {
+        VERIFY(size == 0 || m_pDataStart != nullptr, "Memory has not been allocated");
+        VERIFY(IsPowerOfTwo(alignment), "Alignment is not a power of two!");
+
         if (size == 0)
             return nullptr;
 
-        VERIFY(m_pDataStart != nullptr && m_pDataStart != GetDummyMemory(), "Memory has not been allocated");
-        return AllocateInternal(size, align);
+        size = Align(size, alignment);
+
+#if DILIGENT_DEBUG
+        VERIFY(m_DbgCurrAllocation < m_DbgAllocations.size(), "Allocation number exceed the number of allocations that were originally reserved.");
+        const auto& CurrAllocation = m_DbgAllocations[m_DbgCurrAllocation++];
+        VERIFY(CurrAllocation.size == size, "Allocation size (", size, ") does not match the initially requested size (", CurrAllocation.size, ")");
+        VERIFY(CurrAllocation.alignment == alignment, "Allocation alignment (", alignment, ") does not match the initially requested alignment (", CurrAllocation.alignment, ")");
+#endif
+
+        VERIFY(Align(m_pCurrPtr, m_CurrAlignment) == m_pCurrPtr, "Current pointer is not aligned as expected");
+        m_pCurrPtr      = Align(m_pCurrPtr, alignment);
+        m_CurrAlignment = alignment;
+
+        VERIFY(m_pCurrPtr + size <= m_pDataStart + CurrAllocation.reserved_size,
+               "Allocation size exceeds the initially reserved space. This is likely a bug.");
+
+        auto* ptr = m_pCurrPtr;
+        m_pCurrPtr += size;
+
+        VERIFY(m_pCurrPtr <= m_pDataStart + m_ReservedSize, "Allocation size exceeds the reserved space");
+
+        return ptr;
     }
 
     template <typename T>
@@ -199,16 +236,19 @@ public:
         if (Str == nullptr)
             return nullptr;
 
-        auto* Ptr = reinterpret_cast<Char*>(AllocateInternal(strlen(Str) + 1, 1));
+        auto* Ptr = reinterpret_cast<Char*>(Allocate(strlen(Str) + 1, 1));
         Char* Dst = Ptr;
-        while (*Str != 0 && Dst < reinterpret_cast<Char*>(m_pDataEnd))
+
+        const auto* pDataEnd = reinterpret_cast<Char*>(m_pDataStart) + m_ReservedSize;
+        while (*Str != 0 && Dst < pDataEnd)
         {
             *(Dst++) = *(Str++);
         }
-        if (Dst < reinterpret_cast<Char*>(m_pDataEnd))
+        if (Dst < pDataEnd)
             *(Dst++) = 0;
         else
             UNEXPECTED("Not enough space reserved for the string");
+
         VERIFY_EXPR(reinterpret_cast<Char*>(m_pCurrPtr) == Dst);
         return Ptr;
     }
@@ -225,76 +265,37 @@ public:
 
     size_t GetReservedSize() const
     {
-        return static_cast<size_t>(m_pDataEnd - m_pDataStart);
+        return m_ReservedSize;
     }
 
 private:
-    void* AllocateInternal(size_t size, size_t align)
+    void Reset()
     {
-        VERIFY(IsPowerOfTwo(align), "Alignment is not a power of two!");
-        if (size == 0)
-            return m_pCurrPtr;
-
-        if (m_pCurrPtr == nullptr)
-        {
-            VERIFY_EXPR(m_pDataStart == nullptr);
-            m_pDataStart = m_pCurrPtr = GetDummyMemory();
-        }
-
-        m_pCurrPtr = Align(m_pCurrPtr, align);
-        auto* ptr  = m_pCurrPtr;
-
-#if DILIGENT_DEBUG
-        if (m_pDataStart == GetDummyMemory())
-        {
-            m_DbgAllocations.emplace_back(size, align, m_pCurrPtr - m_pDataStart);
-        }
-        else
-        {
-            VERIFY(m_DbgCurrAllocation < m_DbgAllocations.size(), "Allocation number exceed the number of allocations that were originally reserved.");
-            const auto& CurrAllocation = m_DbgAllocations[m_DbgCurrAllocation++];
-            VERIFY(CurrAllocation.size == size, "Allocation size (", size, ") does not match the initially requested size (", CurrAllocation.size, ")");
-            VERIFY(CurrAllocation.alignment == align, "Allocation alignment (", align, ") does not match initially requested alignment (", CurrAllocation.alignment, ")");
-
-            auto CurrOffset = m_pCurrPtr - m_pDataStart;
-            VERIFY(CurrOffset <= CurrAllocation.offset,
-                   "Allocation offset exceed the offset that was initially computed. "
-                   "This should never happen as long as the allocated memory is sizeof(void*)-aligned.");
-        }
-#endif
-
-        m_pCurrPtr += size;
-
-        VERIFY(m_pDataEnd == nullptr || m_pCurrPtr <= m_pDataEnd, "Allocation size exceeds the reserved space");
-
-        return ptr;
+        m_pDataStart    = nullptr;
+        m_pCurrPtr      = nullptr;
+        m_ReservedSize  = 0;
+        m_CurrAlignment = 0;
+        m_pAllocator    = nullptr;
     }
 
-    static uint8_t* GetDummyMemory()
-    {
-        // Simulate that allocated memory is only sizeof(void*)-aligned
-        auto* DummyMemory = reinterpret_cast<uint8_t*>(sizeof(void*));
-        VERIFY_EXPR(DummyMemory != nullptr);
-        return DummyMemory;
-    }
-
-    uint8_t*          m_pDataStart = nullptr;
-    uint8_t*          m_pCurrPtr   = nullptr;
-    uint8_t*          m_pDataEnd   = nullptr;
-    IMemoryAllocator* m_pAllocator = nullptr;
+    uint8_t*          m_pDataStart    = nullptr;
+    uint8_t*          m_pCurrPtr      = nullptr;
+    size_t            m_ReservedSize  = 0;
+    size_t            m_CurrAlignment = 0;
+    IMemoryAllocator* m_pAllocator    = nullptr;
 
 #if DILIGENT_DEBUG
     size_t m_DbgCurrAllocation = 0;
     struct DbgAllocationInfo
     {
-        const size_t    size;
-        const size_t    alignment;
-        const ptrdiff_t offset;
+        const size_t size;
+        const size_t alignment;
+        const size_t reserved_size;
 
-        DbgAllocationInfo(size_t _size, size_t _alignment, ptrdiff_t _offset) :
+        DbgAllocationInfo(size_t _size, size_t _alignment, size_t _reserved_size) :
             size{_size},
             alignment{_alignment},
-            offset{_offset}
+            reserved_size{_reserved_size}
         {
         }
     };

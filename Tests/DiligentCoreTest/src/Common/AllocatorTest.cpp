@@ -154,19 +154,19 @@ TEST(Common_LinearAllocator, ObjectConstruction)
     const std::string SrcStr = "123456789";
 
     Allocator.AddSpace<uint8_t>();
-    EXPECT_EQ(Allocator.GetCurrentSize(), size_t{1});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{1});
     Allocator.AddSpace<uint16_t>();
-    EXPECT_EQ(Allocator.GetCurrentSize(), size_t{1 + 1 + 2});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{1 + 1 + 2});
     Allocator.AddSpace(0, 16);
-    EXPECT_EQ(Allocator.GetCurrentSize(), size_t{4});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{4});
     Allocator.AddSpaceForString(SrcStr);
-    EXPECT_EQ(Allocator.GetCurrentSize(), size_t{4 + 10});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{4 + 10});
     Allocator.AddSpace<uint32_t>(5);
-    EXPECT_EQ(Allocator.GetCurrentSize(), size_t{14 + 2 + 5 * 4});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{14 + 3 + 5 * 4});
     Allocator.AddSpace<uint64_t>(3);
-    EXPECT_EQ(Allocator.GetCurrentSize(), size_t{36 + 4 + 3 * 8});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{37 + 4 + 3 * 8});
     Allocator.AddSpace(0, 16);
-    EXPECT_EQ(Allocator.GetCurrentSize(), size_t{64});
+    EXPECT_EQ(Allocator.GetReservedSize(), size_t{65});
     Allocator.AddSpace<TObj1k>(4);
 
     Allocator.Reserve();
