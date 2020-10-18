@@ -134,20 +134,21 @@ TEST(TessellationTest, DrawQuad)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    PSOCreateInfo.PSODesc.Name = "Tessellation test";
+    PSOCreateInfo.PSODesc.Name         = "Tessellation test";
+    PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_GRAPHICS;
 
-    PSOCreateInfo.PSODesc.PipelineType                     = PIPELINE_TYPE_GRAPHICS;
-    PSOCreateInfo.GraphicsPipeline.NumRenderTargets        = 1;
-    PSOCreateInfo.GraphicsPipeline.RTVFormats[0]           = pSwapChain->GetDesc().ColorBufferFormat;
-    PSOCreateInfo.GraphicsPipeline.PrimitiveTopology       = PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_BACK;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.FillMode =
+    auto& GraphicsPipeline                   = PSOCreateInfo.GraphicsPipeline;
+    GraphicsPipeline.NumRenderTargets        = 1;
+    GraphicsPipeline.RTVFormats[0]           = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology       = PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;
+    GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_BACK;
+    GraphicsPipeline.RasterizerDesc.FillMode =
         pDevice->GetDeviceCaps().Features.WireframeFill ?
         FILL_MODE_WIREFRAME :
         FILL_MODE_SOLID;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
 
-    PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;

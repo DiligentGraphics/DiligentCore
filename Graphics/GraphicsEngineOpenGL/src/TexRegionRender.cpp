@@ -151,13 +151,15 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
             pDeviceGL->CreateShader(ShaderAttrs, &FragmetShader, IsInternalDeviceObject);
             PSOCreateInfo.pPS = FragmetShader;
 
-            PSOCreateInfo.PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+            auto& ResourceLayout = PSOCreateInfo.PSODesc.ResourceLayout;
+
+            ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
             ShaderResourceVariableDesc Vars[] =
                 {
                     {SHADER_TYPE_PIXEL, "cbConstants", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
                 };
-            PSOCreateInfo.PSODesc.ResourceLayout.NumVariables = _countof(Vars);
-            PSOCreateInfo.PSODesc.ResourceLayout.Variables    = Vars;
+            ResourceLayout.NumVariables = _countof(Vars);
+            ResourceLayout.Variables    = Vars;
 
             pDeviceGL->CreateGraphicsPipelineState(PSOCreateInfo, &m_pPSO[Dim * 3 + Fmt], IsInternalDeviceObject);
         }

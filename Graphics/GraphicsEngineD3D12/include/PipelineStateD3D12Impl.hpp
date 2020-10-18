@@ -131,8 +131,11 @@ private:
             pShader{_pShader}
         {}
     };
-    void InitResourceLayouts(RenderDeviceD3D12Impl*                     pDeviceD3D12,
-                             const PipelineStateCreateInfo&             CreateInfo,
+
+    template <typename PSOCreateInfoType>
+    LinearAllocator InitInternalObjects(const PSOCreateInfoType& CreateInfo, std::vector<D3D12PipelineShaderStageInfo>& ShaderStages);
+
+    void InitResourceLayouts(const PipelineStateCreateInfo&             CreateInfo,
                              std::vector<D3D12PipelineShaderStageInfo>& ShaderStages);
 
     CComPtr<ID3D12PipelineState> m_pd3d12PSO;

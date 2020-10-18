@@ -92,13 +92,14 @@ protected:
             pDevice->CreateShader(Attrs, &sm_Resources.pTrivialPS[NumRTs]);
         }
 
-        auto& PSODesc = sm_Resources.PSODesc;
+        auto& PSOCreateInfo    = sm_Resources.PSOCreateInfo;
+        auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-        PSODesc.pVS                                = sm_Resources.pTrivialVS;
-        PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSODesc.GraphicsPipeline.NumRenderTargets  = 1;
-        PSODesc.GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
-        PSODesc.GraphicsPipeline.DSVFormat         = TEX_FORMAT_D32_FLOAT;
+        PSOCreateInfo.pVS                  = sm_Resources.pTrivialVS;
+        GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.NumRenderTargets  = 1;
+        GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
+        GraphicsPipeline.DSVFormat         = TEX_FORMAT_D32_FLOAT;
     }
 
     static void ReleaseResources()
@@ -127,15 +128,16 @@ protected:
         return pPSO;
     }
 
-    static GraphicsPipelineStateCreateInfo GetPSODesc(Uint32 NumRenderTargets)
+    static GraphicsPipelineStateCreateInfo GetPSOCreateInfo(Uint32 NumRenderTargets)
     {
-        auto PSODesc                              = sm_Resources.PSODesc;
-        PSODesc.GraphicsPipeline.NumRenderTargets = static_cast<Uint8>(NumRenderTargets);
-        PSODesc.pPS                               = sm_Resources.pTrivialPS[NumRenderTargets];
+        auto  PSOCreateInfo               = sm_Resources.PSOCreateInfo;
+        auto& GraphicsPipeline            = PSOCreateInfo.GraphicsPipeline;
+        GraphicsPipeline.NumRenderTargets = static_cast<Uint8>(NumRenderTargets);
+        PSOCreateInfo.pPS                 = sm_Resources.pTrivialPS[NumRenderTargets];
         for (Uint32 rt = 1; rt < NumRenderTargets; ++rt)
-            PSODesc.GraphicsPipeline.RTVFormats[rt] = PSODesc.GraphicsPipeline.RTVFormats[0];
+            GraphicsPipeline.RTVFormats[rt] = GraphicsPipeline.RTVFormats[0];
 
-        return PSODesc;
+        return PSOCreateInfo;
     }
 
 private:
@@ -144,7 +146,7 @@ private:
         RefCntAutoPtr<IShader> pTrivialVS;
         RefCntAutoPtr<IShader> pTrivialPS[MAX_RENDER_TARGETS + 1];
 
-        GraphicsPipelineStateCreateInfo PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
     };
 
     static Resources sm_Resources;
@@ -169,7 +171,7 @@ protected:
 
 TEST_F(BlendStateBasicTest, CreatePSO)
 {
-    GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc(1);
+    GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(1);
 
     PSOCreateInfo.PSODesc.Name = "BlendStateBasicTest";
 
@@ -272,7 +274,7 @@ TEST_P(BlendFactorTest, CreatePSO)
 
     for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {
-        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc(NumRenderTarges);
+        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(NumRenderTarges);
 
         PSOCreateInfo.PSODesc.Name = "SrcBlendFactorTest";
 
@@ -310,7 +312,7 @@ TEST_P(BlendFactorTest, CreatePSO)
 
     for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {
-        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc(NumRenderTarges);
+        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(NumRenderTarges);
 
         PSOCreateInfo.PSODesc.Name = "DstBlendFactorTest";
 
@@ -413,7 +415,7 @@ TEST_P(BlendOperationTest, CreatePSO)
 
     for (Uint32 NumRenderTarges = 1; NumRenderTarges < MaxTestRenderTargets; ++NumRenderTarges)
     {
-        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc(NumRenderTarges);
+        GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo(NumRenderTarges);
 
         PSOCreateInfo.PSODesc.Name = "BlendOperationTest";
 

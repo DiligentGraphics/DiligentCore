@@ -107,8 +107,11 @@ private:
             pShader{_pShader}
         {}
     };
-    void InitResourceLayouts(RenderDeviceGLImpl*                           pDeviceVk,
-                             const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
+
+    template <typename PSOCreateInfoType>
+    void Initialize(const PSOCreateInfoType& CreateInfo, const std::vector<GLPipelineShaderStageInfo>& ShaderStages);
+
+    void InitResourceLayouts(const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
                              LinearAllocator&                              MemPool);
 
     // Linked GL programs for every shader stage. Every pipeline needs to have its own programs

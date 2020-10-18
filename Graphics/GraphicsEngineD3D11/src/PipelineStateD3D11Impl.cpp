@@ -35,6 +35,34 @@
 namespace Diligent
 {
 
+template <typename PSOCreateInfoType>
+LinearAllocator PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& CreateInfo)
+{
+    m_ResourceLayoutIndex.fill(-1);
+
+    std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>> ShaderStages;
+    ExtractShaders<ShaderD3D11Impl>(CreateInfo, ShaderStages);
+
+    // Memory must be released if an exception is thrown.
+    LinearAllocator MemPool{GetRawAllocator()};
+
+    MemPool.AddSpace<ShaderResourceLayoutD3D11>(GetNumShaderStages());
+    MemPool.AddSpace<ShaderResourceCacheD3D11>(GetNumShaderStages());
+
+    ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
+
+    MemPool.Reserve();
+
+    m_pStaticResourceLayouts = MemPool.Allocate<ShaderResourceLayoutD3D11>(GetNumShaderStages());
+    m_pStaticResourceCaches  = MemPool.Allocate<ShaderResourceCacheD3D11>(GetNumShaderStages());
+
+    InitializePipelineDesc(CreateInfo, MemPool);
+    InitResourceLayouts(CreateInfo, ShaderStages);
+
+    return MemPool;
+}
+
+
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                    pRefCounters,
                                                RenderDeviceD3D11Impl*                 pRenderDeviceD3D11,
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
@@ -43,34 +71,13 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
     {
         pRefCounters,
         pRenderDeviceD3D11,
-        CreateInfo.PSODesc
+        CreateInfo
     },
     m_SRBMemAllocator{GetRawAllocator()},
     m_StaticSamplers (STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"))
 // clang-format on
 {
-    m_ResourceLayoutIndex.fill(-1);
-
-    // We do not really need ShaderStages, but ExtractShaders() also initializes
-    // shader stage types and shader stage counter.
-    std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>> ShaderStages;
-    ExtractShaders<ShaderD3D11Impl>(CreateInfo, ShaderStages);
-
-    // Memory must be released if an exception is thrown.
-    LinearAllocator MemPool{GetRawAllocator()};
-
-    MemPool.AddRequiredSize<ShaderResourceLayoutD3D11>(GetNumShaderStages());
-    MemPool.AddRequiredSize<ShaderResourceCacheD3D11>(GetNumShaderStages());
-
-    ValidateAndReserveSpace(CreateInfo, MemPool);
-
-    MemPool.Reserve();
-
-    m_pStaticResourceLayouts = MemPool.Allocate<ShaderResourceLayoutD3D11>(GetNumShaderStages());
-    m_pStaticResourceCaches  = MemPool.Allocate<ShaderResourceCacheD3D11>(GetNumShaderStages());
-
-    InitGraphicsPipeline(CreateInfo, MemPool);
-    InitResourceLayouts(pRenderDeviceD3D11, CreateInfo, ShaderStages);
+    auto MemPool = InitInternalObjects(CreateInfo);
 
     auto& GraphicsPipeline = GetGraphicsPipelineDesc();
 
@@ -131,7 +138,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
                                "Failed to create the Direct3D11 input layout");
     }
 
-    void* Ptr = MemPool.Release();
+    auto* Ptr = MemPool.Release();
     VERIFY_EXPR(Ptr == m_pStaticResourceLayouts);
 }
 
@@ -143,49 +150,27 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
     {
         pRefCounters,
         pRenderDeviceD3D11,
-        CreateInfo.PSODesc
+        CreateInfo
     },
     m_SRBMemAllocator{GetRawAllocator()},
     m_StaticSamplers (STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"))
 // clang-format on
 {
-    m_ResourceLayoutIndex.fill(-1);
+    auto MemPool = InitInternalObjects(CreateInfo);
 
-    // We do not really need ShaderStages, but ExtractShaders() also initializes
-    // shader stage types and shader stage counter.
-    std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>> ShaderStages;
-    ExtractShaders<ShaderD3D11Impl>(CreateInfo, ShaderStages);
-
-    // Memory must be released if an exception is thrown.
-    LinearAllocator MemPool{GetRawAllocator()};
-
-    MemPool.AddRequiredSize<ShaderResourceLayoutD3D11>(GetNumShaderStages());
-    MemPool.AddRequiredSize<ShaderResourceCacheD3D11>(GetNumShaderStages());
-
-    ValidateAndReserveSpace(CreateInfo, MemPool);
-
-    MemPool.Reserve();
-
-    m_pStaticResourceLayouts = MemPool.Allocate<ShaderResourceLayoutD3D11>(GetNumShaderStages());
-    m_pStaticResourceCaches  = MemPool.Allocate<ShaderResourceCacheD3D11>(GetNumShaderStages());
-
-    InitComputePipeline(CreateInfo, MemPool);
-    InitResourceLayouts(pRenderDeviceD3D11, CreateInfo, ShaderStages);
-
-    auto* pCS = ValidatedCast<ShaderD3D11Impl>(CreateInfo.pCS);
-    m_pCS     = pCS;
+    m_pCS = ValidatedCast<ShaderD3D11Impl>(CreateInfo.pCS);
     if (m_pCS == nullptr)
     {
         LOG_ERROR_AND_THROW("Compute shader is null");
     }
 
-    if (m_pCS && m_pCS->GetDesc().ShaderType != SHADER_TYPE_COMPUTE)
+    if (m_pCS->GetDesc().ShaderType != SHADER_TYPE_COMPUTE)
     {
         LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(SHADER_TYPE_COMPUTE), " shader is expeceted while ", GetShaderTypeLiteralName(m_pCS->GetDesc().ShaderType), " provided");
     }
-    m_ShaderResourceLayoutHash = pCS->GetD3D11Resources()->GetHash();
+    m_ShaderResourceLayoutHash = m_pCS->GetD3D11Resources()->GetHash();
 
-    void* Ptr = MemPool.Release();
+    auto* Ptr = MemPool.Release();
     VERIFY_EXPR(Ptr == m_pStaticResourceLayouts);
 }
 
@@ -209,8 +194,7 @@ PipelineStateD3D11Impl::~PipelineStateD3D11Impl()
 IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D11Impl, IID_PipelineStateD3D11, TPipelineStateBase)
 
 
-void PipelineStateD3D11Impl::InitResourceLayouts(RenderDeviceD3D11Impl*                                       pRenderDeviceD3D11,
-                                                 const PipelineStateCreateInfo&                               CreateInfo,
+void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo&                               CreateInfo,
                                                  const std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>>& ShaderStages)
 {
     const auto& ResourceLayout = m_Desc.ResourceLayout;
@@ -269,7 +253,7 @@ void PipelineStateD3D11Impl::InitResourceLayouts(RenderDeviceD3D11Impl*         
             {
                 const auto&             SrcStaticSamplerInfo = ResourceLayout.StaticSamplers[SrcStaticSamplerInd];
                 RefCntAutoPtr<ISampler> pStaticSampler;
-                pRenderDeviceD3D11->CreateSampler(SrcStaticSamplerInfo.Desc, &pStaticSampler);
+                GetDevice()->CreateSampler(SrcStaticSamplerInfo.Desc, &pStaticSampler);
                 StaticSamplers.emplace_back(SamplerAttribs, std::move(pStaticSampler));
             }
         }
@@ -328,9 +312,8 @@ ID3D11InputLayout* PipelineStateD3D11Impl::GetD3D11InputLayout()
 
 void PipelineStateD3D11Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
 {
-    auto* pRenderDeviceD3D11 = ValidatedCast<RenderDeviceD3D11Impl>(GetDevice());
-    auto& SRBAllocator       = pRenderDeviceD3D11->GetSRBAllocator();
-    auto  pShaderResBinding  = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl)(this, false);
+    auto& SRBAllocator      = GetDevice()->GetSRBAllocator();
+    auto  pShaderResBinding = NEW_RC_OBJ(SRBAllocator, "ShaderResourceBindingD3D11Impl instance", ShaderResourceBindingD3D11Impl)(this, false);
     if (InitStaticResources)
         pShaderResBinding->InitializeStaticResources(nullptr);
     pShaderResBinding->QueryInterface(IID_ShaderResourceBinding, reinterpret_cast<IObject**>(static_cast<IShaderResourceBinding**>(ppShaderResourceBinding)));

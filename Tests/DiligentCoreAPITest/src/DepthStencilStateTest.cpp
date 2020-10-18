@@ -59,7 +59,7 @@ protected:
 
 TEST_F(DepthStencilStateTest, CreatePSO)
 {
-    GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc();
+    GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo();
 
     DepthStencilStateDesc& DSSDesc = PSOCreateInfo.GraphicsPipeline.DepthStencilDesc;
 

@@ -696,7 +696,8 @@ void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler*
     CreateSampler(SamplerDesc, ppSampler, false);
 }
 
-void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
+template <typename PSOCreateInfoType>
+void RenderDeviceGLImpl::CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
 {
     CreateDeviceObject(
         "Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState,
@@ -709,17 +710,14 @@ void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineState
     );
 }
 
+void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
+{
+    CreatePipelineState(PSOCreateInfo, ppPipelineState, bIsDeviceInternal);
+}
+
 void RenderDeviceGLImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
 {
-    CreateDeviceObject(
-        "Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState,
-        [&]() //
-        {
-            PipelineStateGLImpl* pPipelineStateOGL(NEW_RC_OBJ(m_PSOAllocator, "PipelineStateGLImpl instance", PipelineStateGLImpl)(this, PSOCreateInfo, bIsDeviceInternal));
-            pPipelineStateOGL->QueryInterface(IID_PipelineState, reinterpret_cast<IObject**>(ppPipelineState));
-            OnCreateDeviceObject(pPipelineStateOGL);
-        } //
-    );
+    CreatePipelineState(PSOCreateInfo, ppPipelineState, bIsDeviceInternal);
 }
 
 void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)

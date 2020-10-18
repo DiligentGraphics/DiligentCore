@@ -324,6 +324,13 @@ struct ComputePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
     
     /// Compute shader to be used with the pipeline
     IShader* pCS DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    ComputePipelineStateCreateInfo() noexcept
+    {
+        PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+    }
+#endif
 };
 typedef struct ComputePipelineStateCreateInfo ComputePipelineStateCreateInfo;
 
@@ -349,7 +356,8 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     virtual const PipelineStateDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
-    /// Returns the graphics pipeline description used to create the object
+    /// Returns the graphics pipeline description used to create the object.
+    /// This method must only be called for a graphics or mesh pipeline.
     VIRTUAL const GraphicsPipelineDesc REF METHOD(GetGraphicsPipelineDesc)(THIS) CONST PURE;
 
     /// Binds resources for all shaders in the pipeline state

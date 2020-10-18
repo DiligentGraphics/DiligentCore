@@ -254,11 +254,13 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
             }
             break;
         }
+
         case PIPELINE_TYPE_COMPUTE:
         {
             CmdCtx.AsComputeContext().SetPipelineState(pd3d12PSO);
             break;
         }
+
         default:
             UNEXPECTED("unknown pipeline type");
     }

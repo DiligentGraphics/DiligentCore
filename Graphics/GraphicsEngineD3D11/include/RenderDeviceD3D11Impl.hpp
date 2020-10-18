@@ -124,6 +124,9 @@ public:
     Uint64 GetCommandQueueMask() const { return Uint64{1}; }
 
 private:
+    template <typename PSOCreateInfoType>
+    void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState);
+
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
     EngineD3D11CreateInfo m_EngineAttribs;

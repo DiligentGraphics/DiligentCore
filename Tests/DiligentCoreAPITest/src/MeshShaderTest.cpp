@@ -112,17 +112,20 @@ TEST(MeshShaderTest, DrawQuad)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    PSOCreateInfo.PSODesc.Name = "Mesh shader test";
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    PSOCreateInfo.PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
-    PSOCreateInfo.GraphicsPipeline.NumRenderTargets                     = 1;
-    PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
-    PSOCreateInfo.GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_UNDEFINED; // unused
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
+    PSODesc.Name = "Mesh shader test";
 
-    PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
+    GraphicsPipeline.NumRenderTargets                     = 1;
+    GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_UNDEFINED; // unused
+    GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
+    GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
+
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     const bool IsVulkan = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
 
@@ -153,7 +156,7 @@ TEST(MeshShaderTest, DrawQuad)
         ASSERT_NE(pPS, nullptr);
     }
 
-    PSOCreateInfo.PSODesc.Name = "Mesh shader test";
+    PSODesc.Name = "Mesh shader test";
 
     PSOCreateInfo.pMS = pMS;
     PSOCreateInfo.pPS = pPS;
@@ -224,17 +227,20 @@ TEST(MeshShaderTest, DrawQuadIndirect)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    PSOCreateInfo.PSODesc.Name = "Mesh shader test";
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    PSOCreateInfo.PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
-    PSOCreateInfo.GraphicsPipeline.NumRenderTargets                     = 1;
-    PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
-    PSOCreateInfo.GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
+    PSODesc.Name = "Mesh shader test";
 
-    PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
+    GraphicsPipeline.NumRenderTargets                     = 1;
+    GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
+    GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
+
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     const bool IsVulkan = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
 
@@ -357,17 +363,20 @@ TEST(MeshShaderTest, DrawQuadsWithAmplificationShader)
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    PSOCreateInfo.PSODesc.Name = "Amplification shader test";
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    PSOCreateInfo.PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
-    PSOCreateInfo.GraphicsPipeline.NumRenderTargets                     = 1;
-    PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
-    PSOCreateInfo.GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_UNDEFINED; // unused
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
-    PSOCreateInfo.GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
+    PSODesc.Name = "Amplification shader test";
 
-    PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    PSODesc.PipelineType                                  = PIPELINE_TYPE_MESH;
+    GraphicsPipeline.NumRenderTargets                     = 1;
+    GraphicsPipeline.RTVFormats[0]                        = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology                    = PRIMITIVE_TOPOLOGY_UNDEFINED; // unused
+    GraphicsPipeline.RasterizerDesc.CullMode              = CULL_MODE_BACK;
+    GraphicsPipeline.RasterizerDesc.FillMode              = FILL_MODE_SOLID;
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = False;
+
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     const bool IsVulkan = pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_VULKAN;
 

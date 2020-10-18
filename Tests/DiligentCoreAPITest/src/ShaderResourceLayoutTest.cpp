@@ -174,20 +174,25 @@ protected:
     {
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
+        auto& PSODesc          = PSOCreateInfo.PSODesc;
+        auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
+
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        PSOCreateInfo.PSODesc.ResourceLayout = ResourceLayout;
+        PSODesc.Name                     = "Shader resource layout test";
+        PSODesc.ResourceLayout           = ResourceLayout;
+        PSODesc.SRBAllocationGranularity = 16;
 
-        PSOCreateInfo.PSODesc.Name                                  = "Shader resource layout test";
-        PSOCreateInfo.pVS                                           = pVS;
-        PSOCreateInfo.pPS                                           = pPS;
-        PSOCreateInfo.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSOCreateInfo.GraphicsPipeline.NumRenderTargets             = 1;
-        PSOCreateInfo.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
-        PSOCreateInfo.GraphicsPipeline.DSVFormat                    = TEX_FORMAT_UNKNOWN;
-        PSOCreateInfo.PSODesc.SRBAllocationGranularity              = 16;
-        PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        PSOCreateInfo.pVS = pVS;
+        PSOCreateInfo.pPS = pPS;
+
+        GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.NumRenderTargets  = 1;
+        GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
+        GraphicsPipeline.DSVFormat         = TEX_FORMAT_UNKNOWN;
+
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
         pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
         if (pPSO)
@@ -245,10 +250,11 @@ protected:
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        PSOCreateInfo.PSODesc.Name           = "Shader resource layout test";
-        PSOCreateInfo.PSODesc.PipelineType   = PIPELINE_TYPE_COMPUTE;
-        PSOCreateInfo.PSODesc.ResourceLayout = ResourceLayout;
-        PSOCreateInfo.pCS                    = pCS;
+        auto& PSODesc          = PSOCreateInfo.PSODesc;
+        PSODesc.Name           = "Shader resource layout test";
+        PSODesc.PipelineType   = PIPELINE_TYPE_COMPUTE;
+        PSODesc.ResourceLayout = ResourceLayout;
+        PSOCreateInfo.pCS      = pCS;
 
         pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
         if (pPSO)

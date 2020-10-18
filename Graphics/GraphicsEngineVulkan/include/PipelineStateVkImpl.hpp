@@ -127,8 +127,13 @@ public:
 
 private:
     using TShaderStages = ShaderResourceLayoutVk::TShaderStages;
-    void InitResourceLayouts(RenderDeviceVkImpl*            pDeviceVk,
-                             const PipelineStateCreateInfo& CreateInfo,
+
+    template <typename PSOCreateInfoType>
+    LinearAllocator InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
+                                        std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
+                                        std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules);
+
+    void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
                              TShaderStages&                 ShaderStages);
 
     const ShaderResourceLayoutVk& GetStaticShaderResLayout(Uint32 ShaderInd) const

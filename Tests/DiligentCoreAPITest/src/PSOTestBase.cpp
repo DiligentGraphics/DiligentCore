@@ -68,14 +68,14 @@ void PSOTestBase::InitResources()
     Attrs.Desc.Name       = "TrivialPS (TestPipelineStateBase)";
     pDevice->CreateShader(Attrs, &sm_Resources.pTrivialPS);
 
-    auto& PSODesc = sm_Resources.PSODesc;
+    auto& PSOCreateInfo = sm_Resources.PSOCreateInfo;
 
-    PSODesc.pVS                                = sm_Resources.pTrivialVS;
-    PSODesc.pPS                                = sm_Resources.pTrivialPS;
-    PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    PSODesc.GraphicsPipeline.NumRenderTargets  = 1;
-    PSODesc.GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
-    PSODesc.GraphicsPipeline.DSVFormat         = TEX_FORMAT_D32_FLOAT;
+    PSOCreateInfo.pVS                                = sm_Resources.pTrivialVS;
+    PSOCreateInfo.pPS                                = sm_Resources.pTrivialPS;
+    PSOCreateInfo.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    PSOCreateInfo.GraphicsPipeline.NumRenderTargets  = 1;
+    PSOCreateInfo.GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
+    PSOCreateInfo.GraphicsPipeline.DSVFormat         = TEX_FORMAT_D32_FLOAT;
 }
 
 void PSOTestBase::ReleaseResources()

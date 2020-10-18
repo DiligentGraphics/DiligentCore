@@ -66,6 +66,7 @@ set(SOURCE
     src/DefaultShaderSourceStreamFactory.cpp
     src/EngineMemory.cpp
     src/FramebufferBase.cpp
+    src/PipelineStateBase.cpp
     src/ResourceMappingBase.cpp
     src/RenderPassBase.cpp
     src/TextureBase.cpp

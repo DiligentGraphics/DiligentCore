@@ -165,6 +165,9 @@ public:
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
 private:
+    template <typename PSOCreateInfoType>
+    void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState);
+
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     void         FreeCommandContext(PooledCommandContext&& Ctx);
 

@@ -155,7 +155,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
 
     /// Creates a new graphics pipeline state object
 
-    /// \param [in]  PSOCreateInfo   - Pipeline state create info, see Diligent::GraphicsPipelineStateCreateInfo for details.
+    /// \param [in]  PSOCreateInfo   - Graphics pipeline state create info, see Diligent::GraphicsPipelineStateCreateInfo for details.
     /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
     ///                                pipeline state interface will be stored.
     ///                                The function calls AddRef(), so that the new object will contain
@@ -166,7 +166,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     
     /// Creates a new compute pipeline state object
 
-    /// \param [in]  PSOCreateInfo   - Pipeline state create info, see Diligent::ComputePipelineStateCreateInfo for details.
+    /// \param [in]  PSOCreateInfo   - Compute pipeline state create info, see Diligent::ComputePipelineStateCreateInfo for details.
     /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
     ///                                pipeline state interface will be stored.
     ///                                The function calls AddRef(), so that the new object will contain

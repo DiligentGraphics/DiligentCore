@@ -98,38 +98,49 @@ private:
     std::array<D3D12_PRIMITIVE_TOPOLOGY_TYPE, PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES> m_Map;
 };
 
+template <typename PSOCreateInfoType>
+LinearAllocator PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType&                   CreateInfo,
+                                                            std::vector<D3D12PipelineShaderStageInfo>& ShaderStages)
+{
+    m_ResourceLayoutIndex.fill(-1);
+
+    ExtractShaders<ShaderD3D12Impl>(CreateInfo, ShaderStages);
+
+    // Memory must be released if an exception is thrown.
+    LinearAllocator MemPool{GetRawAllocator()};
+
+    MemPool.AddSpace<ShaderResourceLayoutD3D12>(GetNumShaderStages() * 2);
+    MemPool.AddSpace<ShaderResourceCacheD3D12>(GetNumShaderStages());
+    MemPool.AddSpace<ShaderVariableManagerD3D12>(GetNumShaderStages());
+
+    ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
+
+    MemPool.Reserve();
+
+    m_RootSig.AllocateStaticSamplers(CreateInfo.PSODesc.ResourceLayout);
+
+    m_pShaderResourceLayouts = MemPool.Allocate<ShaderResourceLayoutD3D12>(GetNumShaderStages() * 2);
+    m_pStaticResourceCaches  = MemPool.Allocate<ShaderResourceCacheD3D12>(GetNumShaderStages());
+    m_pStaticVarManagers     = MemPool.Allocate<ShaderVariableManagerD3D12>(GetNumShaderStages());
+
+    InitializePipelineDesc(CreateInfo, MemPool);
+    InitResourceLayouts(CreateInfo, ShaderStages);
+
+    return MemPool;
+}
+
+
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                    pRefCounters,
                                                RenderDeviceD3D12Impl*                 pDeviceD3D12,
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo.PSODesc},
     m_SRBMemAllocator{GetRawAllocator()}
 {
-    m_ResourceLayoutIndex.fill(-1);
-
     std::vector<D3D12PipelineShaderStageInfo> ShaderStages;
-    ExtractShaders<ShaderD3D12Impl>(CreateInfo, ShaderStages);
 
-    // Memory must be released if an exception is thrown.
-    LinearAllocator MemPool{GetRawAllocator()};
-
-    MemPool.AddRequiredSize<ShaderResourceLayoutD3D12>(GetNumShaderStages() * 2);
-    MemPool.AddRequiredSize<ShaderResourceCacheD3D12>(GetNumShaderStages());
-    MemPool.AddRequiredSize<ShaderVariableManagerD3D12>(GetNumShaderStages());
-
-    ValidateAndReserveSpace(CreateInfo, MemPool);
-
-    MemPool.Reserve();
+    auto MemPool = InitInternalObjects(CreateInfo, ShaderStages);
 
     auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
-    m_RootSig.AllocateStaticSamplers(m_Desc.ResourceLayout);
-
-    m_pShaderResourceLayouts = MemPool.Allocate<ShaderResourceLayoutD3D12>(GetNumShaderStages() * 2);
-    m_pStaticResourceCaches  = MemPool.Allocate<ShaderResourceCacheD3D12>(GetNumShaderStages());
-    m_pStaticVarManagers     = MemPool.Allocate<ShaderVariableManagerD3D12>(GetNumShaderStages());
-
-    InitGraphicsPipeline(CreateInfo, MemPool);
-    InitResourceLayouts(pDeviceD3D12, CreateInfo, ShaderStages);
-
     if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
     {
         const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
@@ -324,31 +335,11 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
     TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo.PSODesc},
     m_SRBMemAllocator{GetRawAllocator()}
 {
-    m_ResourceLayoutIndex.fill(-1);
-
     std::vector<D3D12PipelineShaderStageInfo> ShaderStages;
-    ExtractShaders<ShaderD3D12Impl>(CreateInfo, ShaderStages);
 
-    // Memory must be released if an exception is thrown.
-    LinearAllocator MemPool{GetRawAllocator()};
-
-    MemPool.AddRequiredSize<ShaderResourceLayoutD3D12>(GetNumShaderStages() * 2);
-    MemPool.AddRequiredSize<ShaderResourceCacheD3D12>(GetNumShaderStages());
-    MemPool.AddRequiredSize<ShaderVariableManagerD3D12>(GetNumShaderStages());
-
-    ValidateAndReserveSpace(CreateInfo, MemPool);
-
-    MemPool.Reserve();
+    auto MemPool = InitInternalObjects(CreateInfo, ShaderStages);
 
     auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
-    m_RootSig.AllocateStaticSamplers(m_Desc.ResourceLayout);
-
-    m_pShaderResourceLayouts = MemPool.Allocate<ShaderResourceLayoutD3D12>(GetNumShaderStages() * 2);
-    m_pStaticResourceCaches  = MemPool.Allocate<ShaderResourceCacheD3D12>(GetNumShaderStages());
-    m_pStaticVarManagers     = MemPool.Allocate<ShaderVariableManagerD3D12>(GetNumShaderStages());
-
-    InitComputePipeline(CreateInfo, MemPool);
-    InitResourceLayouts(pDeviceD3D12, CreateInfo, ShaderStages);
 
     D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
@@ -410,11 +401,10 @@ PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
 IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipelineStateBase)
 
 
-void PipelineStateD3D12Impl::InitResourceLayouts(RenderDeviceD3D12Impl*                     pDeviceD3D12,
-                                                 const PipelineStateCreateInfo&             CreateInfo,
+void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo&             CreateInfo,
                                                  std::vector<D3D12PipelineShaderStageInfo>& ShaderStages)
 {
-    auto        pd3d12Device   = pDeviceD3D12->GetD3D12Device();
+    auto        pd3d12Device   = GetDevice()->GetD3D12Device();
     const auto& ResourceLayout = m_Desc.ResourceLayout;
 
 #ifdef DILIGENT_DEVELOPMENT
@@ -443,7 +433,7 @@ void PipelineStateD3D12Impl::InitResourceLayouts(RenderDeviceD3D12Impl*         
             ShaderResourceLayoutD3D12 //
             {
                 *this,
-                pDeviceD3D12->GetD3D12Device(),
+                pd3d12Device,
                 m_Desc.PipelineType,
                 ResourceLayout,
                 pShaderD3D12->GetShaderResources(),
@@ -461,7 +451,7 @@ void PipelineStateD3D12Impl::InitResourceLayouts(RenderDeviceD3D12Impl*         
             ShaderResourceLayoutD3D12 //
             {
                 *this,
-                pDeviceD3D12->GetD3D12Device(),
+                pd3d12Device,
                 m_Desc.PipelineType,
                 ResourceLayout,
                 pShaderD3D12->GetShaderResources(),

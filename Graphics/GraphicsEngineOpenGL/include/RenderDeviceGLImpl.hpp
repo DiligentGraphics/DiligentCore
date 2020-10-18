@@ -175,6 +175,9 @@ protected:
     std::unique_ptr<TexRegionRender> m_pTexRegionRender;
 
 private:
+    template <typename PSOCreateInfoType>
+    void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal);
+
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     bool         CheckExtension(const Char* ExtensionString);
     void         FlagSupportedTexFormats();

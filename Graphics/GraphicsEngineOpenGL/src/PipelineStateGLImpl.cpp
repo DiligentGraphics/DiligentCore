@@ -36,6 +36,28 @@
 namespace Diligent
 {
 
+
+template <typename PSOCreateInfoType>
+void PipelineStateGLImpl::Initialize(const PSOCreateInfoType& CreateInfo, const std::vector<GLPipelineShaderStageInfo>& ShaderStages)
+{
+    // Memory must be released if an exception is thrown.
+    LinearAllocator MemPool{GetRawAllocator()};
+
+    MemPool.AddSpace<GLProgramObj>(GetNumShaderStages());
+    MemPool.AddSpace<GLProgramResources>(GetNumShaderStages());
+    MemPool.AddSpace<SamplerPtr>(m_Desc.ResourceLayout.NumStaticSamplers);
+
+    ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
+
+    MemPool.Reserve();
+
+    InitResourceLayouts(ShaderStages, MemPool);
+    InitializePipelineDesc(CreateInfo, MemPool);
+
+    void* Ptr = MemPool.Release();
+    VERIFY_EXPR(Ptr == m_GLPrograms);
+}
+
 PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    pRefCounters,
                                          RenderDeviceGLImpl*                    pDeviceGL,
                                          const GraphicsPipelineStateCreateInfo& CreateInfo,
@@ -71,22 +93,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    
         m_ShaderStageTypes[m_NumShaderStages++] = SHADER_TYPE_PIXEL;
     }
 
-    // Memory must be released if an exception is thrown.
-    LinearAllocator MemPool{GetRawAllocator()};
-
-    MemPool.AddRequiredSize<GLProgramObj>(GetNumShaderStages());
-    MemPool.AddRequiredSize<GLProgramResources>(GetNumShaderStages());
-    MemPool.AddRequiredSize<SamplerPtr>(m_Desc.ResourceLayout.NumStaticSamplers);
-
-    ValidateAndReserveSpace(CreateInfo, MemPool);
-
-    MemPool.Reserve();
-
-    InitResourceLayouts(pDeviceGL, ShaderStages, MemPool);
-    InitGraphicsPipeline(CreateInfo, MemPool);
-
-    void* Ptr = MemPool.Release();
-    VERIFY_EXPR(Ptr == m_GLPrograms);
+    Initialize(CreateInfo, ShaderStages);
 }
 
 PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                   pRefCounters,
@@ -108,22 +115,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                   p
     std::vector<GLPipelineShaderStageInfo> ShaderStages;
     ExtractShaders<ShaderGLImpl>(CreateInfo, ShaderStages);
 
-    // Memory must be released if an exception is thrown.
-    LinearAllocator MemPool{GetRawAllocator()};
-
-    MemPool.AddRequiredSize<GLProgramObj>(GetNumShaderStages());
-    MemPool.AddRequiredSize<GLProgramResources>(GetNumShaderStages());
-    MemPool.AddRequiredSize<SamplerPtr>(m_Desc.ResourceLayout.NumStaticSamplers);
-
-    ValidateAndReserveSpace(CreateInfo, MemPool);
-
-    MemPool.Reserve();
-
-    InitResourceLayouts(pDeviceGL, ShaderStages, MemPool);
-    InitComputePipeline(CreateInfo, MemPool);
-
-    void* Ptr = MemPool.Release();
-    VERIFY_EXPR(Ptr == m_GLPrograms);
+    Initialize(CreateInfo, ShaderStages);
 }
 
 PipelineStateGLImpl::~PipelineStateGLImpl()
@@ -149,11 +141,11 @@ PipelineStateGLImpl::~PipelineStateGLImpl()
 IMPLEMENT_QUERY_INTERFACE(PipelineStateGLImpl, IID_PipelineStateGL, TPipelineStateBase)
 
 
-void PipelineStateGLImpl::InitResourceLayouts(RenderDeviceGLImpl*                           pDeviceGL,
-                                              const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
+void PipelineStateGLImpl::InitResourceLayouts(const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
                                               LinearAllocator&                              MemPool)
 {
-    auto& DeviceCaps = pDeviceGL->GetDeviceCaps();
+    auto* const pDeviceGL  = GetDevice();
+    const auto& DeviceCaps = pDeviceGL->GetDeviceCaps();
     VERIFY(DeviceCaps.DevType != RENDER_DEVICE_TYPE_UNDEFINED, "Device caps are not initialized");
 
     auto pImmediateCtx = m_pDevice->GetImmediateContext();

@@ -54,7 +54,7 @@ protected:
 
 TEST_F(RasterizerStateTest, CreatePSO)
 {
-    GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSODesc();
+    GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo();
 
     RasterizerStateDesc& RSDesc = PSOCreateInfo.GraphicsPipeline.RasterizerDesc;
 

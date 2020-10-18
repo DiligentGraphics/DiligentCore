@@ -137,8 +137,10 @@ public:
     void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const;
 
 private:
-    void InitResourceLayouts(RenderDeviceD3D11Impl*                                       pRenderDeviceD3D11,
-                             const PipelineStateCreateInfo&                               CreateInfo,
+    template <typename PSOCreateInfoType>
+    LinearAllocator InitInternalObjects(const PSOCreateInfoType& CreateInfo);
+
+    void InitResourceLayouts(const PipelineStateCreateInfo&                               CreateInfo,
                              const std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>>& ShaderStages);
 
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;

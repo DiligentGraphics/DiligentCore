@@ -44,9 +44,9 @@ protected:
 
     static RefCntAutoPtr<IPipelineState> CreateTestPSO(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, bool BindPSO);
 
-    static GraphicsPipelineStateCreateInfo& GetPSODesc()
+    static GraphicsPipelineStateCreateInfo& GetPSOCreateInfo()
     {
-        return sm_Resources.PSODesc;
+        return sm_Resources.PSOCreateInfo;
     }
 
 private:
@@ -55,7 +55,7 @@ private:
         RefCntAutoPtr<IShader> pTrivialVS;
         RefCntAutoPtr<IShader> pTrivialPS;
 
-        GraphicsPipelineStateCreateInfo PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
     };
 
     static Resources sm_Resources;

@@ -106,7 +106,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
         COMMIT_SHADER(DS, DomainShader);
 #undef COMMIT_SHADER
 
-        auto& GraphicsPipeline = pPipelineStateD3D11->GetGraphicsPipelineDesc();
+        const auto& GraphicsPipeline = pPipelineStateD3D11->GetGraphicsPipelineDesc();
 
         m_pd3d11DeviceContext->OMSetBlendState(pPipelineStateD3D11->GetD3D11BlendState(), m_BlendFactors, GraphicsPipeline.SampleMask);
         m_pd3d11DeviceContext->RSSetState(pPipelineStateD3D11->GetD3D11RasterizerState());
@@ -673,7 +673,7 @@ void DeviceContextD3D11Impl::SetBlendFactors(const float* pBlendFactors)
     {
         Uint32            SampleMask = 0xFFFFFFFF;
         ID3D11BlendState* pd3d11BS   = nullptr;
-        if (m_pPipelineState)
+        if (m_pPipelineState && m_pPipelineState->GetDesc().IsAnyGraphicsPipeline())
         {
             SampleMask = m_pPipelineState->GetGraphicsPipelineDesc().SampleMask;
             pd3d11BS   = m_pPipelineState->GetD3D11BlendState();

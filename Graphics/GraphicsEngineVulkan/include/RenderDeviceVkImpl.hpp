@@ -183,6 +183,9 @@ public:
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
 private:
+    template <typename PSOCreateInfoType>
+    void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState);
+
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
 
     // Submits command buffer for execution to the command queue

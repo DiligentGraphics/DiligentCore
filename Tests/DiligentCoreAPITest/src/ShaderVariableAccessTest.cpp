@@ -315,21 +315,24 @@ TEST(ShaderResourceLayout, VariableAccess)
 
 
     GraphicsPipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&              PSODesc = PSOCreateInfo.PSODesc;
 
-    PSODesc.ResourceLayout.Variables         = VarDesc.data();
-    PSODesc.ResourceLayout.NumVariables      = static_cast<Uint32>(VarDesc.size());
-    PSODesc.ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
-    PSODesc.ResourceLayout.StaticSamplers    = StaticSamplers;
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& ResourceLayout   = PSODesc.ResourceLayout;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    PSODesc.Name                                     = "Shader variable access test PSO";
-    PSOCreateInfo.pVS                                = pVS;
-    PSOCreateInfo.pPS                                = pPS;
-    PSOCreateInfo.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    PSOCreateInfo.GraphicsPipeline.NumRenderTargets  = 1;
-    PSOCreateInfo.GraphicsPipeline.RTVFormats[0]     = RTVFormat;
-    PSOCreateInfo.GraphicsPipeline.DSVFormat         = DSVFormat;
-    PSODesc.SRBAllocationGranularity                 = 16;
+    ResourceLayout.Variables         = VarDesc.data();
+    ResourceLayout.NumVariables      = static_cast<Uint32>(VarDesc.size());
+    ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
+    ResourceLayout.StaticSamplers    = StaticSamplers;
+
+    PSODesc.Name                       = "Shader variable access test PSO";
+    PSOCreateInfo.pVS                  = pVS;
+    PSOCreateInfo.pPS                  = pPS;
+    GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.NumRenderTargets  = 1;
+    GraphicsPipeline.RTVFormats[0]     = RTVFormat;
+    GraphicsPipeline.DSVFormat         = DSVFormat;
+    PSODesc.SRBAllocationGranularity   = 16;
 
     RefCntAutoPtr<IPipelineState> pTestPSO;
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pTestPSO);

@@ -131,16 +131,18 @@ protected:
         auto* pDevice = pEnv->GetDevice();
 
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
+        GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-        PSOCreateInfo.PSODesc.Name = "Render pass test - draw triangles";
+        PSODesc.Name = "Render pass test - draw triangles";
 
-        PSOCreateInfo.PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
-        PSOCreateInfo.GraphicsPipeline.pRenderPass                  = pRenderPass;
-        PSOCreateInfo.GraphicsPipeline.SubpassIndex                 = 0;
-        PSOCreateInfo.GraphicsPipeline.SmplDesc.Count               = SampleCount;
-        PSOCreateInfo.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-        PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+        GraphicsPipeline.pRenderPass                  = pRenderPass;
+        GraphicsPipeline.SubpassIndex                 = 0;
+        GraphicsPipeline.SmplDesc.Count               = SampleCount;
+        GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
         PSOCreateInfo.pVS = sm_pVS;
         PSOCreateInfo.pPS = sm_pPS;
@@ -867,16 +869,18 @@ TEST_F(RenderPassTest, InputAttachment)
     RefCntAutoPtr<IShaderResourceBinding> pInputAttachmentSRB;
     {
         GraphicsPipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
+        GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-        PSOCreateInfo.PSODesc.Name = "Render pass test - input attachment";
+        PSODesc.Name = "Render pass test - input attachment";
 
-        PSOCreateInfo.PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
-        PSOCreateInfo.GraphicsPipeline.pRenderPass                  = pRenderPass;
-        PSOCreateInfo.GraphicsPipeline.SubpassIndex                 = 1;
-        PSOCreateInfo.GraphicsPipeline.SmplDesc.Count               = 1;
-        PSOCreateInfo.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSOCreateInfo.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-        PSOCreateInfo.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+        GraphicsPipeline.pRenderPass                  = pRenderPass;
+        GraphicsPipeline.SubpassIndex                 = 1;
+        GraphicsPipeline.SmplDesc.Count               = 1;
+        GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
         auto IsVulkan = pEnv->GetDevice()->GetDeviceCaps().IsVulkanDevice();
 
