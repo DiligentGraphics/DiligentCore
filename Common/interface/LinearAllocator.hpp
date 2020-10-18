@@ -30,6 +30,8 @@
 /// \file
 /// Defines Diligent::LinearAllocator class
 
+#include <vector>
+
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
@@ -54,16 +56,16 @@ public:
 
     LinearAllocator(LinearAllocator&& Other) :
         // clang-format off
-        m_pBuffer     {Other.m_pBuffer     },
-        m_pCurrPtr    {Other.m_pCurrPtr    },
-        m_RequiredSize{Other.m_RequiredSize},
-        m_pAllocator  {Other.m_pAllocator  }
+        m_pDataStart {Other.m_pDataStart},
+        m_pCurrPtr   {Other.m_pCurrPtr  },
+        m_pDataEnd   {Other.m_pDataEnd  },
+        m_pAllocator {Other.m_pAllocator}
     // clang-format on
     {
-        Other.m_pBuffer      = nullptr;
-        Other.m_pCurrPtr     = nullptr;
-        Other.m_RequiredSize = 0;
-        Other.m_pAllocator   = nullptr;
+        Other.m_pDataStart = nullptr;
+        Other.m_pCurrPtr   = nullptr;
+        Other.m_pDataEnd   = nullptr;
+        Other.m_pAllocator = nullptr;
     }
 
     ~LinearAllocator()
@@ -73,60 +75,71 @@ public:
 
     void Free()
     {
-        if (m_pBuffer != nullptr && m_pAllocator != nullptr)
+        if (m_pDataStart != nullptr && m_pDataStart != GetDummyMemory() && m_pAllocator != nullptr)
         {
-            m_pAllocator->Free(m_pBuffer);
+            m_pAllocator->Free(m_pDataStart);
         }
 
-        m_pBuffer      = nullptr;
-        m_pCurrPtr     = nullptr;
-        m_RequiredSize = 0;
-        m_pAllocator   = nullptr;
+        m_pDataStart = nullptr;
+        m_pCurrPtr   = nullptr;
+        m_pDataEnd   = nullptr;
+        m_pAllocator = nullptr;
     }
 
     void* Release()
     {
-        void* Ptr      = m_pBuffer;
-        m_pBuffer      = nullptr;
-        m_pCurrPtr     = nullptr;
-        m_RequiredSize = 0;
+        void* Ptr    = m_pDataStart;
+        m_pDataStart = nullptr;
+        m_pCurrPtr   = nullptr;
+        m_pDataEnd   = nullptr;
+        m_pAllocator = nullptr;
         return Ptr;
     }
 
-    void AddRequiredSize(size_t size, size_t align)
+    void AddSpace(size_t size, size_t align)
     {
-        VERIFY(m_pBuffer == nullptr, "Memory already allocated");
-        if (size > 0)
-        {
-            size           = Align(size, align);
-            m_RequiredSize = Align(m_RequiredSize, align) + size;
-
-            // Reserve additional space for pointer alignment
-            m_RequiredSize += (align > sizeof(void*) ? align - sizeof(void*) : 0);
-        }
+        VERIFY(m_pDataStart == nullptr || m_pDataStart == GetDummyMemory(), "Memory has already been allocated");
+        AllocateInternal(size, align);
     }
 
     template <typename T>
-    void AddRequiredSize(size_t count)
+    void AddSpace(size_t count = 1)
     {
-        AddRequiredSize(sizeof(T) * count, alignof(T));
+        AddSpace(sizeof(T) * count, alignof(T));
+    }
+
+    void AddSpaceForString(const Char* str)
+    {
+        VERIFY_EXPR(str != nullptr);
+        AddSpace(strlen(str) + 1, 1);
+    }
+
+    void AddSpaceForString(const String& str)
+    {
+        AddSpaceForString(str.c_str());
     }
 
     void Reserve(size_t size)
     {
-        VERIFY(m_RequiredSize == 0, "Required size will be overrided by input argument");
-        m_RequiredSize = size;
+        VERIFY(m_pDataStart == nullptr || m_pDataStart == GetDummyMemory(), "Memory has already been allocated");
+        VERIFY(m_pCurrPtr == nullptr, "Space has been added to the allocator and will be overriden");
+        m_pCurrPtr = m_pDataStart + size;
         Reserve();
     }
 
     void Reserve()
     {
-        VERIFY(m_pBuffer == nullptr, "Memory already allocated");
+        VERIFY(m_pDataStart == nullptr || m_pDataStart == GetDummyMemory(), "Memory has already been allocated");
         VERIFY(m_pAllocator != nullptr, "Allocator must not be null");
-        if (m_RequiredSize > 0)
+        // Make sure the data size is at least sizeof(void*)-aligned
+        auto DataSize = Align(static_cast<size_t>(m_pCurrPtr - m_pDataStart), sizeof(void*));
+        if (DataSize > 0)
         {
-            m_pBuffer  = reinterpret_cast<uint8_t*>(m_pAllocator->Allocate(m_RequiredSize, "Memory for linear allocator", __FILE__, __LINE__));
-            m_pCurrPtr = m_pBuffer;
+            m_pDataStart = reinterpret_cast<uint8_t*>(m_pAllocator->Allocate(DataSize, "Raw memory for linear allocator", __FILE__, __LINE__));
+            VERIFY(m_pDataStart == Align(m_pDataStart, sizeof(void*)), "Memory pointer must be at least sizeof(void*)-aligned");
+
+            m_pCurrPtr = m_pDataStart;
+            m_pDataEnd = m_pDataStart + DataSize;
         }
     }
 
@@ -135,14 +148,12 @@ public:
         if (size == 0)
             return nullptr;
 
-        uint8_t* Ptr = reinterpret_cast<uint8_t*>(Align(reinterpret_cast<size_t>(m_pCurrPtr), align));
-        m_pCurrPtr   = Ptr + size;
-        VERIFY(m_pCurrPtr <= m_pBuffer + m_RequiredSize, "Not enough space in the buffer");
-        return Ptr;
+        VERIFY(m_pDataStart != nullptr && m_pDataStart != GetDummyMemory(), "Memory has not been allocated");
+        return AllocateInternal(size, align);
     }
 
     template <typename T>
-    T* Allocate(size_t count)
+    T* Allocate(size_t count = 1)
     {
         return reinterpret_cast<T*>(Allocate(sizeof(T) * count, alignof(T)));
     }
@@ -150,29 +161,32 @@ public:
     template <typename T, typename... Args>
     T* Construct(Args&&... args)
     {
-        T* Ptr = Allocate<T>(1);
+        T* Ptr = Allocate<T>();
         new (Ptr) T{std::forward<Args>(args)...};
         return Ptr;
     }
 
     template <typename T, typename... Args>
-    T* ConstructArray(size_t count, Args&&... args)
+    T* ConstructArray(size_t count, const Args&... args)
     {
         T* Ptr = Allocate<T>(count);
         for (size_t i = 0; i < count; ++i)
         {
-            new (Ptr + i) T{std::forward<Args>(args)...};
+            new (Ptr + i) T{args...};
         }
         return Ptr;
     }
 
     template <typename T>
+    T* Copy(const T& Src)
+    {
+        return Construct<T>(Src);
+    }
+
+    template <typename T>
     T* CopyArray(const T* Src, size_t count)
     {
-        T* Dst     = reinterpret_cast<T*>(Align(reinterpret_cast<size_t>(m_pCurrPtr), alignof(T)));
-        m_pCurrPtr = reinterpret_cast<uint8_t*>(Dst + count);
-        VERIFY(m_pCurrPtr <= m_pBuffer + m_RequiredSize, "Not enough space in the buffer");
-
+        T* Dst = Allocate<T>(count);
         for (size_t i = 0; i < count; ++i)
         {
             new (Dst + i) T{Src[i]};
@@ -185,25 +199,107 @@ public:
         if (Str == nullptr)
             return nullptr;
 
-        Char* Ptr = reinterpret_cast<Char*>(m_pCurrPtr);
+        auto* Ptr = reinterpret_cast<Char*>(AllocateInternal(strlen(Str) + 1, 1));
         Char* Dst = Ptr;
-        while (*Str != 0 && Dst < reinterpret_cast<Char*>(m_pBuffer + m_RequiredSize))
+        while (*Str != 0 && Dst < reinterpret_cast<Char*>(m_pDataEnd))
         {
             *(Dst++) = *(Str++);
         }
-        if (Dst < reinterpret_cast<Char*>(m_pBuffer + m_RequiredSize))
+        if (Dst < reinterpret_cast<Char*>(m_pDataEnd))
             *(Dst++) = 0;
         else
-            UNEXPECTED("Not enough space reserved in the string pool");
-        m_pCurrPtr = reinterpret_cast<uint8_t*>(Dst);
+            UNEXPECTED("Not enough space reserved for the string");
+        VERIFY_EXPR(reinterpret_cast<Char*>(m_pCurrPtr) == Dst);
         return Ptr;
     }
 
+    Char* CopyString(const std::string& Str)
+    {
+        return CopyString(Str.c_str());
+    }
+
+    size_t GetCurrentSize() const
+    {
+        return static_cast<size_t>(m_pCurrPtr - m_pDataStart);
+    }
+
+    size_t GetReservedSize() const
+    {
+        return static_cast<size_t>(m_pDataEnd - m_pDataStart);
+    }
+
 private:
-    uint8_t*          m_pBuffer      = nullptr;
-    uint8_t*          m_pCurrPtr     = nullptr;
-    size_t            m_RequiredSize = 0;
-    IMemoryAllocator* m_pAllocator   = nullptr;
+    void* AllocateInternal(size_t size, size_t align)
+    {
+        VERIFY(IsPowerOfTwo(align), "Alignment is not a power of two!");
+        if (size == 0)
+            return m_pCurrPtr;
+
+        if (m_pCurrPtr == nullptr)
+        {
+            VERIFY_EXPR(m_pDataStart == nullptr);
+            m_pDataStart = m_pCurrPtr = GetDummyMemory();
+        }
+
+        m_pCurrPtr = Align(m_pCurrPtr, align);
+        auto* ptr  = m_pCurrPtr;
+
+#if DILIGENT_DEBUG
+        if (m_pDataStart == GetDummyMemory())
+        {
+            m_DbgAllocations.emplace_back(size, align, m_pCurrPtr - m_pDataStart);
+        }
+        else
+        {
+            VERIFY(m_DbgCurrAllocation < m_DbgAllocations.size(), "Allocation number exceed the number of allocations that were originally reserved.");
+            const auto& CurrAllocation = m_DbgAllocations[m_DbgCurrAllocation++];
+            VERIFY(CurrAllocation.size == size, "Allocation size (", size, ") does not match the initially requested size (", CurrAllocation.size, ")");
+            VERIFY(CurrAllocation.alignment == align, "Allocation alignment (", align, ") does not match initially requested alignment (", CurrAllocation.alignment, ")");
+
+            auto CurrOffset = m_pCurrPtr - m_pDataStart;
+            VERIFY(CurrOffset <= CurrAllocation.offset,
+                   "Allocation offset exceed the offset that was initially computed. "
+                   "This should never happen as long as the allocated memory is sizeof(void*)-aligned.");
+        }
+#endif
+
+        m_pCurrPtr += size;
+
+        VERIFY(m_pDataEnd == nullptr || m_pCurrPtr <= m_pDataEnd, "Allocation size exceeds the reserved space");
+
+        return ptr;
+    }
+
+    static uint8_t* GetDummyMemory()
+    {
+        // Simulate that allocated memory is only sizeof(void*)-aligned
+        auto* DummyMemory = reinterpret_cast<uint8_t*>(sizeof(void*));
+        VERIFY_EXPR(DummyMemory != nullptr);
+        return DummyMemory;
+    }
+
+    uint8_t*          m_pDataStart = nullptr;
+    uint8_t*          m_pCurrPtr   = nullptr;
+    uint8_t*          m_pDataEnd   = nullptr;
+    IMemoryAllocator* m_pAllocator = nullptr;
+
+#if DILIGENT_DEBUG
+    size_t m_DbgCurrAllocation = 0;
+    struct DbgAllocationInfo
+    {
+        const size_t    size;
+        const size_t    alignment;
+        const ptrdiff_t offset;
+
+        DbgAllocationInfo(size_t _size, size_t _alignment, ptrdiff_t _offset) :
+            size{_size},
+            alignment{_alignment},
+            offset{_offset}
+        {
+        }
+    };
+    std::vector<DbgAllocationInfo> m_DbgAllocations;
+#endif
 };
 
 } // namespace Diligent
