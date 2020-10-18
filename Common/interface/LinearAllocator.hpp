@@ -50,7 +50,7 @@ public:
     LinearAllocator& operator=(LinearAllocator&&)      = delete;
     // clang-format on
 
-    LinearAllocator(IMemoryAllocator& Allocator) :
+    explicit LinearAllocator(IMemoryAllocator& Allocator) :
         m_pAllocator{&Allocator}
     {}
 
