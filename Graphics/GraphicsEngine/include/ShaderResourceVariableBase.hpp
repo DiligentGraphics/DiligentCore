@@ -115,15 +115,15 @@ inline Uint32 GetAllowedTypeBits(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVar
     return AllowedTypeBits;
 }
 
-inline Int32 FindStaticSampler(const StaticSamplerDesc* StaticSamplers,
-                               Uint32                   NumStaticSamplers,
-                               SHADER_TYPE              ShaderType,
-                               const char*              ResourceName,
-                               const char*              SamplerSuffix)
+inline Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
+                                  Uint32                      NumImtblSamplers,
+                                  SHADER_TYPE                 ShaderType,
+                                  const char*                 ResourceName,
+                                  const char*                 SamplerSuffix)
 {
-    for (Uint32 s = 0; s < NumStaticSamplers; ++s)
+    for (Uint32 s = 0; s < NumImtblSamplers; ++s)
     {
-        const auto& StSam = StaticSamplers[s];
+        const auto& StSam = ImtblSamplers[s];
         if (((StSam.ShaderStages & ShaderType) != 0) && StreqSuff(ResourceName, StSam.SamplerOrTextureName, SamplerSuffix))
             return s;
     }

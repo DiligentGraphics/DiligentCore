@@ -147,11 +147,11 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
             {
                 auto VarType = GetShaderVariableType(ShaderStages, Sam.Name, ResourceLayout);
                 VERIFY_EXPR(IsAllowedType(VarType, DbgAllowedTypeBits));
-                Int32 StaticSamplerIdx = -1;
+                Int32 ImtblSamplerIdx = -1;
                 if (Sam.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV)
                 {
-                    StaticSamplerIdx = FindStaticSampler(ResourceLayout.StaticSamplers, ResourceLayout.NumStaticSamplers, ShaderStages,
-                                                         Sam.Name, nullptr);
+                    ImtblSamplerIdx = FindImmutableSampler(ResourceLayout.ImmutableSamplers, ResourceLayout.NumImmutableSamplers, ShaderStages,
+                                                           Sam.Name, nullptr);
                 }
                 auto* pSamVar = new (&GetResource<SamplerBindInfo>(VarCounters.NumSamplers++))
                     SamplerBindInfo //
@@ -159,7 +159,7 @@ void GLPipelineResourceLayout::Initialize(GLProgramResources*                  P
                         Sam,
                         *this,
                         VarType,
-                        StaticSamplerIdx //
+                        ImtblSamplerIdx //
                     };
                 SamplerBindingSlots = std::max(SamplerBindingSlots, pSamVar->m_Attribs.Binding + pSamVar->m_Attribs.ArraySize);
             },
@@ -290,13 +290,13 @@ void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pVie
         {
             auto& CachedTexSampler = ResourceCache.GetConstSampler(m_Attribs.Binding + ArrayIndex);
             VerifyResourceViewBinding(m_Attribs, GetType(), ArrayIndex, pView, pViewGL.RawPtr(), {TEXTURE_VIEW_SHADER_RESOURCE}, CachedTexSampler.pView.RawPtr());
-            if (m_StaticSamplerIdx >= 0)
+            if (m_ImtblSamplerIdx >= 0)
             {
-                VERIFY(CachedTexSampler.pSampler != nullptr, "Static samplers must be initialized by PipelineStateGLImpl::InitializeSRBResourceCache!");
+                VERIFY(CachedTexSampler.pSampler != nullptr, "Immutable samplers must be initialized by PipelineStateGLImpl::InitializeSRBResourceCache!");
             }
         }
 #endif
-        ResourceCache.SetTexSampler(m_Attribs.Binding + ArrayIndex, std::move(pViewGL), m_StaticSamplerIdx < 0);
+        ResourceCache.SetTexSampler(m_Attribs.Binding + ArrayIndex, std::move(pViewGL), m_ImtblSamplerIdx < 0);
     }
     else if (m_Attribs.ResourceType == SHADER_RESOURCE_TYPE_BUFFER_SRV)
     {
@@ -794,9 +794,9 @@ bool GLPipelineResourceLayout::dvpVerifyBindings(const GLProgramResourceCache& R
                 else
                 {
                     const auto& CachedSampler = ResourceCache.GetConstSampler(BindPoint);
-                    if (sam.m_StaticSamplerIdx >= 0 && CachedSampler.pSampler == nullptr)
+                    if (sam.m_ImtblSamplerIdx >= 0 && CachedSampler.pSampler == nullptr)
                     {
-                        LOG_ERROR_MESSAGE("Static sampler is not initialized for texture '", sam.m_Attribs.Name, "'");
+                        LOG_ERROR_MESSAGE("Immutable sampler is not initialized for texture '", sam.m_Attribs.Name, "'");
                         BindingsOK = false;
                     }
                 }

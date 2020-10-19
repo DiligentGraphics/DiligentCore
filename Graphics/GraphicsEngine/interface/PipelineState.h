@@ -96,32 +96,36 @@ struct ShaderResourceVariableDesc
 typedef struct ShaderResourceVariableDesc ShaderResourceVariableDesc;
 
 
-/// Static sampler description
-struct StaticSamplerDesc
+/// Immutable sampler description.
+
+/// An immutable sampler is compiled into the pipeline state and can't be changed.
+/// It is generally more efficient than a regular sampler and should be used
+/// whenever possible.
+struct ImmutableSamplerDesc
 {
-    /// Shader stages that this static sampler applies to. More than one shader stage can be specified.
+    /// Shader stages that this immutable sampler applies to. More than one shader stage can be specified.
     SHADER_TYPE ShaderStages         DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// The name of the sampler itself or the name of the texture variable that 
-    /// this static sampler is assigned to if combined texture samplers are used.
+    /// this immutable sampler is assigned to if combined texture samplers are used.
     const Char* SamplerOrTextureName DEFAULT_INITIALIZER(nullptr);
 
     /// Sampler description
     struct SamplerDesc Desc;
 
 #if DILIGENT_CPP_INTERFACE
-    StaticSamplerDesc()noexcept{}
+    ImmutableSamplerDesc()noexcept{}
 
-    StaticSamplerDesc(SHADER_TYPE        _ShaderStages,
-                      const Char*        _SamplerOrTextureName,
-                      const SamplerDesc& _Desc)noexcept : 
+    ImmutableSamplerDesc(SHADER_TYPE        _ShaderStages,
+                         const Char*        _SamplerOrTextureName,
+                         const SamplerDesc& _Desc)noexcept : 
         ShaderStages        {_ShaderStages        },
         SamplerOrTextureName{_SamplerOrTextureName},
         Desc                {_Desc                }
     {}
 #endif
 };
-typedef struct StaticSamplerDesc StaticSamplerDesc;
+typedef struct ImmutableSamplerDesc ImmutableSamplerDesc;
 
 /// Pipeline layout description
 struct PipelineResourceLayoutDesc
@@ -129,19 +133,19 @@ struct PipelineResourceLayoutDesc
     /// Default shader resource variable type. This type will be used if shader
     /// variable description is not found in the Variables array
     /// or if Variables == nullptr
-    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType  DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
     /// Number of elements in Variables array            
-    Uint32                              NumVariables        DEFAULT_INITIALIZER(0);
+    Uint32                              NumVariables         DEFAULT_INITIALIZER(0);
 
     /// Array of shader resource variable descriptions               
-    const ShaderResourceVariableDesc*   Variables           DEFAULT_INITIALIZER(nullptr);
+    const ShaderResourceVariableDesc*   Variables            DEFAULT_INITIALIZER(nullptr);
                                                             
-    /// Number of static samplers in StaticSamplers array   
-    Uint32                              NumStaticSamplers   DEFAULT_INITIALIZER(0);
+    /// Number of immutable samplers in ImmutableSamplers array   
+    Uint32                              NumImmutableSamplers DEFAULT_INITIALIZER(0);
                                                             
-    /// Array of static sampler descriptions                
-    const StaticSamplerDesc*            StaticSamplers      DEFAULT_INITIALIZER(nullptr);
+    /// Array of immutable sampler descriptions                
+    const ImmutableSamplerDesc*         ImmutableSamplers    DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
 
@@ -256,7 +260,7 @@ typedef struct PipelineStateDesc PipelineStateDesc;
 DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
 {
     /// Null flag.
-    PSO_CREATE_FLAG_NONE                          = 0x00,
+    PSO_CREATE_FLAG_NONE                              = 0x00,
 
     /// Ignore missing variables.
 
@@ -264,15 +268,15 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// provided as part of the pipeline resource layout description
     /// that is not found in any of the designated shader stages.
     /// Use this flag to silence these warnings.
-    PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES      = 0x01,
+    PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES          = 0x01,
 
-    /// Ignore missing static samplers.
+    /// Ignore missing immutable samplers.
 
-    /// By default, the engine outputs a warning for every static sampler
+    /// By default, the engine outputs a warning for every immutable sampler
     /// provided as part of the pipeline resource layout description
     /// that is not found in any of the designated shader stages.
     /// Use this flag to silence these warnings.
-    PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS = 0x02,
+    PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS = 0x02,
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 

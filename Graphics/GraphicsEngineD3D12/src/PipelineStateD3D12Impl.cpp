@@ -117,7 +117,7 @@ LinearAllocator PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoT
 
     MemPool.Reserve();
 
-    m_RootSig.AllocateStaticSamplers(CreateInfo.PSODesc.ResourceLayout);
+    m_RootSig.AllocateImmutableSamplers(CreateInfo.PSODesc.ResourceLayout);
 
     m_pShaderResourceLayouts = MemPool.Allocate<ShaderResourceLayoutD3D12>(GetNumShaderStages() * 2);
     m_pStaticResourceCaches  = MemPool.Allocate<ShaderResourceCacheD3D12>(GetNumShaderStages());
@@ -417,7 +417,7 @@ void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         }
         ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, GetNumShaderStages(),
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
-                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
+                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS) == 0);
     }
 #endif
 

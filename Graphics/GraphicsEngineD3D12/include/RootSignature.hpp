@@ -302,7 +302,7 @@ class RootSignature
 public:
     RootSignature();
 
-    void AllocateStaticSamplers(const PipelineResourceLayoutDesc& ResourceLayout);
+    void AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout);
 
     void Finalize(ID3D12Device* pd3d12Device);
 
@@ -312,10 +312,10 @@ public:
 
     void InitResourceCache(class RenderDeviceD3D12Impl* pDeviceD3D12Impl, class ShaderResourceCacheD3D12& ResourceCache, IMemoryAllocator& CacheMemAllocator) const;
 
-    void InitStaticSampler(SHADER_TYPE                     ShaderType,
-                           const char*                     SamplerName,
-                           const char*                     SamplerSuffix,
-                           const D3DShaderResourceAttribs& ShaderResAttribs);
+    void InitImmutableSampler(SHADER_TYPE                     ShaderType,
+                              const char*                     SamplerName,
+                              const char*                     SamplerSuffix,
+                              const D3DShaderResourceAttribs& ShaderResAttribs);
 
     void AllocateResourceSlot(SHADER_TYPE                     ShaderType,
                               PIPELINE_TYPE                   PipelineType,
@@ -481,22 +481,22 @@ private:
 
     RootParamsManager m_RootParams;
 
-    struct StaticSamplerAttribs
+    struct ImmutableSamplerAttribs
     {
-        StaticSamplerDesc       SamplerDesc;
+        ImmutableSamplerDesc    SamplerDesc;
         UINT                    ShaderRegister   = static_cast<UINT>(-1);
         UINT                    ArraySize        = 0;
         UINT                    RegisterSpace    = 0;
         D3D12_SHADER_VISIBILITY ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(-1);
 
-        StaticSamplerAttribs() noexcept {}
-        StaticSamplerAttribs(const StaticSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility) noexcept :
+        ImmutableSamplerAttribs() noexcept {}
+        ImmutableSamplerAttribs(const ImmutableSamplerDesc& SamDesc, D3D12_SHADER_VISIBILITY Visibility) noexcept :
             SamplerDesc(SamDesc),
             ShaderVisibility(Visibility)
         {}
     };
-    // Note: sizeof(m_StaticSamplers) == 56 (MS compiler, release x64)
-    std::vector<StaticSamplerAttribs, STDAllocatorRawMem<StaticSamplerAttribs>> m_StaticSamplers;
+    // Note: sizeof(m_ImmutableSamplers) == 56 (MS compiler, release x64)
+    std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> m_ImmutableSamplers;
 
     IMemoryAllocator& m_MemAllocator;
 

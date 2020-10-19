@@ -74,14 +74,14 @@ TEST(ShaderResourceLayout, ResourceArray)
     PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
     GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    StaticSamplerDesc StaticSampler;
-    StaticSampler.Desc.MinFilter             = FILTER_TYPE_LINEAR;
-    StaticSampler.Desc.MagFilter             = FILTER_TYPE_LINEAR;
-    StaticSampler.Desc.MipFilter             = FILTER_TYPE_LINEAR;
-    StaticSampler.ShaderStages               = SHADER_TYPE_PIXEL;
-    StaticSampler.SamplerOrTextureName       = "g_tex2DTest";
-    PSODesc.ResourceLayout.NumStaticSamplers = 1;
-    PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
+    ImmutableSamplerDesc ImtblSampler;
+    ImtblSampler.Desc.MinFilter                 = FILTER_TYPE_LINEAR;
+    ImtblSampler.Desc.MagFilter                 = FILTER_TYPE_LINEAR;
+    ImtblSampler.Desc.MipFilter                 = FILTER_TYPE_LINEAR;
+    ImtblSampler.ShaderStages                   = SHADER_TYPE_PIXEL;
+    ImtblSampler.SamplerOrTextureName           = "g_tex2DTest";
+    PSODesc.ResourceLayout.NumImmutableSamplers = 1;
+    PSODesc.ResourceLayout.ImmutableSamplers    = &ImtblSampler;
     // clang-format off
     ShaderResourceVariableDesc Vars[] = 
     {

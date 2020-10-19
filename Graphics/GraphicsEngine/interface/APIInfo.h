@@ -30,7 +30,7 @@
 /// \file
 /// Diligent API information
 
-#define DILIGENT_API_VERSION 240075
+#define DILIGENT_API_VERSION 240076
 
 #include "../../../Primitives/interface/BasicTypes.h"
 
@@ -77,7 +77,7 @@ struct APIInfo
     size_t InputLayoutDescSize                 DEFAULT_INITIALIZER(0);
     size_t SampleDescSize                      DEFAULT_INITIALIZER(0);
     size_t ShaderResourceVariableDescSize      DEFAULT_INITIALIZER(0);
-    size_t StaticSamplerDescSize               DEFAULT_INITIALIZER(0);
+    size_t ImmutableSamplerDescSize            DEFAULT_INITIALIZER(0);
     size_t PipelineResourceLayoutDescSize      DEFAULT_INITIALIZER(0);
     size_t GraphicsPipelineDescSize            DEFAULT_INITIALIZER(0);
     size_t GraphicsPipelineStateCreateInfoSize DEFAULT_INITIALIZER(0);

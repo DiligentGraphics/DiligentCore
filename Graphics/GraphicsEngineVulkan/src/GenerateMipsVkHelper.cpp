@@ -166,9 +166,9 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
         PSODesc.ResourceLayout.Variables    = &VarDesc;
         PSODesc.ResourceLayout.NumVariables = 1;
 
-        const StaticSamplerDesc StaticSampler(SHADER_TYPE_COMPUTE, "SrcMip", Sam_LinearClamp);
-        PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
-        PSODesc.ResourceLayout.NumStaticSamplers = 1;
+        const ImmutableSamplerDesc ImtblSampler{SHADER_TYPE_COMPUTE, "SrcMip", Sam_LinearClamp};
+        PSODesc.ResourceLayout.ImmutableSamplers    = &ImtblSampler;
+        PSODesc.ResourceLayout.NumImmutableSamplers = 1;
 
         m_DeviceVkImpl.CreateComputePipelineState(PSOCreateInfo, &PSOs[NonPowOfTwo]);
         PSOs[NonPowOfTwo]->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "CB")->Set(m_ConstantsCB);

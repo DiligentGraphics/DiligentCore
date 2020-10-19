@@ -321,7 +321,7 @@ D3D12_STATIC_BORDER_COLOR BorderColorToD3D12StaticBorderColor(const Float32 Bord
         StaticBorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE;
     else
     {
-        LOG_ERROR_MESSAGE("Static samplers only allow transparent black (0,0,0,0), opaque black (0,0,0,1) or opaque white (1,1,1,1) as border colors.");
+        LOG_ERROR_MESSAGE("D3D12 static samplers only allow transparent black (0,0,0,0), opaque black (0,0,0,1) or opaque white (1,1,1,1) as border colors.");
     }
     return StaticBorderColor;
 }

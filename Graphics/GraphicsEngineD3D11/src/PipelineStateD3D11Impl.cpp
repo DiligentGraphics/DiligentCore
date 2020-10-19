@@ -74,7 +74,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
         CreateInfo
     },
     m_SRBMemAllocator{GetRawAllocator()},
-    m_StaticSamplers (STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"))
+    m_ImmutableSamplers (STD_ALLOCATOR_RAW_MEM(ImmutableSamplerInfo, GetRawAllocator(), "Allocator for vector<ImmutableSamplerInfo>"))
 // clang-format on
 {
     auto MemPool = InitInternalObjects(CreateInfo);
@@ -153,7 +153,7 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
         CreateInfo
     },
     m_SRBMemAllocator{GetRawAllocator()},
-    m_StaticSamplers (STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"))
+    m_ImmutableSamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerInfo, GetRawAllocator(), "Allocator for vector<ImmutableSamplerInfo>"))
 // clang-format on
 {
     auto MemPool = InitInternalObjects(CreateInfo);
@@ -209,11 +209,11 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         }
         ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, GetNumShaderStages(),
                                                  (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
-                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
+                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS) == 0);
     }
 #endif
 
-    decltype(m_StaticSamplers)                  StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerInfo, GetRawAllocator(), "Allocator for vector<StaticSamplerInfo>"));
+    decltype(m_ImmutableSamplers)               ImmutableSamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerInfo, GetRawAllocator(), "Allocator for vector<ImmutableSamplerInfo>"));
     std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResLayoutDataSizes = {};
     std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderResCacheDataSizes  = {};
     for (Uint32 s = 0; s < ShaderStages.size(); ++s)
@@ -243,21 +243,22 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
             };
         // clang-format on
 
-        // Initialize static samplers
+        // Initialize immutable samplers
         for (Uint32 sam = 0; sam < ShaderResources.GetNumSamplers(); ++sam)
         {
-            const auto&    SamplerAttribs             = ShaderResources.GetSampler(sam);
-            constexpr bool LogStaticSamplerArrayError = true;
-            auto           SrcStaticSamplerInd        = ShaderResources.FindStaticSampler(SamplerAttribs, ResourceLayout, LogStaticSamplerArrayError);
-            if (SrcStaticSamplerInd >= 0)
+            const auto&    SamplerAttribs            = ShaderResources.GetSampler(sam);
+            constexpr bool LogImtblSamplerArrayError = true;
+            auto           SrcImtblSamplerInd        = ShaderResources.FindImmutableSampler(SamplerAttribs, ResourceLayout, LogImtblSamplerArrayError);
+            if (SrcImtblSamplerInd >= 0)
             {
-                const auto&             SrcStaticSamplerInfo = ResourceLayout.StaticSamplers[SrcStaticSamplerInd];
-                RefCntAutoPtr<ISampler> pStaticSampler;
-                GetDevice()->CreateSampler(SrcStaticSamplerInfo.Desc, &pStaticSampler);
-                StaticSamplers.emplace_back(SamplerAttribs, std::move(pStaticSampler));
+                const auto& SrcImtblSamplerInfo = ResourceLayout.ImmutableSamplers[SrcImtblSamplerInd];
+
+                RefCntAutoPtr<ISampler> pImbtlSampler;
+                GetDevice()->CreateSampler(SrcImtblSamplerInfo.Desc, &pImbtlSampler);
+                ImmutableSamplers.emplace_back(SamplerAttribs, std::move(pImbtlSampler));
             }
         }
-        m_StaticSamplerOffsets[s + 1] = static_cast<Uint16>(StaticSamplers.size());
+        m_ImmutableSamplerOffsets[s + 1] = static_cast<Uint16>(ImmutableSamplers.size());
 
         if (m_Desc.SRBAllocationGranularity > 1)
         {
@@ -279,14 +280,14 @@ void PipelineStateD3D11Impl::InitResourceLayouts(const PipelineStateCreateInfo& 
         m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderResLayoutDataSizes.data(), GetNumShaderStages(), ShaderResCacheDataSizes.data());
     }
 
-    m_StaticSamplers.reserve(StaticSamplers.size());
-    for (auto& Sam : StaticSamplers)
-        m_StaticSamplers.emplace_back(std::move(Sam));
+    m_ImmutableSamplers.reserve(ImmutableSamplers.size());
+    for (auto& ImtblSam : ImmutableSamplers)
+        m_ImmutableSamplers.emplace_back(std::move(ImtblSam));
 
     for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
-        // Initialize static samplers in the static resource cache to avoid warning messages
-        SetStaticSamplers(m_pStaticResourceCaches[s], s);
+        // Initialize immutable samplers in the static resource cache to avoid warning messages
+        SetImmutableSamplers(m_pStaticResourceCaches[s], s);
     }
 }
 
@@ -431,15 +432,15 @@ IShaderResourceVariable* PipelineStateD3D11Impl::GetStaticVariableByIndex(SHADER
     return m_pStaticResourceLayouts[LayoutInd].GetShaderVariable(Index);
 }
 
-void PipelineStateD3D11Impl::SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const
+void PipelineStateD3D11Impl::SetImmutableSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const
 {
     auto NumCachedSamplers = ResourceCache.GetSamplerCount();
-    for (Uint32 s = m_StaticSamplerOffsets[ShaderInd]; s < m_StaticSamplerOffsets[ShaderInd + 1]; ++s)
+    for (Uint32 s = m_ImmutableSamplerOffsets[ShaderInd]; s < m_ImmutableSamplerOffsets[ShaderInd + 1]; ++s)
     {
-        auto&       SamplerInfo       = m_StaticSamplers[s];
+        auto&       SamplerInfo       = m_ImmutableSamplers[s];
         const auto& SamAttribs        = SamplerInfo.Attribs;
         auto*       pSamplerD3D11Impl = SamplerInfo.pSampler.RawPtr<SamplerD3D11Impl>();
-        // Limiting EndBindPoint is required when initializing static samplers in a Shader's static cache
+        // Limiting EndBindPoint is required when initializing immutable samplers in a Shader's static cache
         auto EndBindPoint = std::min(static_cast<Uint32>(SamAttribs.BindPoint) + SamAttribs.BindCount, NumCachedSamplers);
         for (Uint32 BindPoint = SamAttribs.BindPoint; BindPoint < EndBindPoint; ++BindPoint)
             ResourceCache.SetSampler(BindPoint, pSamplerD3D11Impl);

@@ -426,7 +426,7 @@ void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
     ShaderResourceLayoutVk::Initialize(pDeviceVk, ShaderStages, m_ShaderResourceLayouts, GetRawAllocator(),
                                        m_Desc.ResourceLayout, m_PipelineLayout,
                                        (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
-                                       (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
+                                       (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS) == 0);
     m_PipelineLayout.Finalize(LogicalDevice);
 
     if (m_Desc.SRBAllocationGranularity > 1)

@@ -122,44 +122,44 @@ SHADER_RESOURCE_VARIABLE_TYPE ShaderResources::FindVariableType(const D3DShaderR
     }
 }
 
-Int32 ShaderResources::FindStaticSampler(const D3DShaderResourceAttribs&   ResourceAttribs,
-                                         const PipelineResourceLayoutDesc& ResourceLayoutDesc,
-                                         bool                              LogStaticSamplerArrayError) const
+Int32 ShaderResources::FindImmutableSampler(const D3DShaderResourceAttribs&   ResourceAttribs,
+                                            const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                                            bool                              LogImmutableSamplerArrayError) const
 {
     VERIFY(ResourceAttribs.GetInputType() == D3D_SIT_SAMPLER, "Sampler is expected");
 
-    auto StaticSamplerInd =
-        Diligent::FindStaticSampler(ResourceLayoutDesc.StaticSamplers,
-                                    ResourceLayoutDesc.NumStaticSamplers,
-                                    m_ShaderType,
-                                    ResourceAttribs.Name,
-                                    m_SamplerSuffix);
+    auto ImtblSamplerInd =
+        Diligent::FindImmutableSampler(ResourceLayoutDesc.ImmutableSamplers,
+                                       ResourceLayoutDesc.NumImmutableSamplers,
+                                       m_ShaderType,
+                                       ResourceAttribs.Name,
+                                       m_SamplerSuffix);
 
-    if (StaticSamplerInd >= 0 && ResourceAttribs.BindCount > 1)
+    if (ImtblSamplerInd >= 0 && ResourceAttribs.BindCount > 1)
     {
         Uint32 ShaderMajorVersion = 0;
         Uint32 ShaderMinorVersion = 0;
         GetShaderModel(ShaderMajorVersion, ShaderMinorVersion);
         if (ShaderMajorVersion >= 6 || ShaderMajorVersion >= 5 && ShaderMinorVersion >= 1)
         {
-            if (LogStaticSamplerArrayError)
+            if (LogImmutableSamplerArrayError)
             {
-                LOG_ERROR_MESSAGE("Static sampler '", ResourceAttribs.Name, '[', ResourceAttribs.BindCount,
+                LOG_ERROR_MESSAGE("Immutable sampler '", ResourceAttribs.Name, '[', ResourceAttribs.BindCount,
                                   "]' will be ignored because static sampler arrays are not allowed in shader model 5.1 and above. "
                                   "Compile the shader using shader model 5.0 or use non-array sampler variable.");
             }
-            StaticSamplerInd = -1;
+            ImtblSamplerInd = -1;
         }
     }
 
-    return StaticSamplerInd;
+    return ImtblSamplerInd;
 }
 
 
 D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
                                                           const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                                           Uint32                               NumAllowedTypes,
-                                                          bool                                 CountStaticSamplers) const noexcept
+                                                          bool                                 CountImmutableSamplers) const noexcept
 {
     auto AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
 
@@ -176,11 +176,11 @@ D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResource
             auto VarType = FindVariableType(Sam, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                if (!CountStaticSamplers)
+                if (!CountImmutableSamplers)
                 {
-                    constexpr bool LogStaticSamplerArrayError = false;
-                    if (FindStaticSampler(Sam, ResourceLayout, LogStaticSamplerArrayError) >= 0)
-                        return; // Skip static sampler if requested
+                    constexpr bool LogImtblSamplerArrayError = false;
+                    if (FindImmutableSampler(Sam, ResourceLayout, LogImtblSamplerArrayError) >= 0)
+                        return; // Skip immutable sampler if requested
                 }
                 ++Counters.NumSamplers;
             }
@@ -219,7 +219,7 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
                                               const ShaderResources* const      pShaderResources[],
                                               Uint32                            NumShaders,
                                               bool                              VerifyVariables,
-                                              bool                              VerifyStaticSamplers)
+                                              bool                              VerifyImmutableSamplers)
 {
     auto GetAllowedShadersString = [&](SHADER_TYPE ShaderStages) //
     {
@@ -300,40 +300,40 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
         }
     }
 
-    if (VerifyStaticSamplers)
+    if (VerifyImmutableSamplers)
     {
-        for (Uint32 sam = 0; sam < ResourceLayout.NumStaticSamplers; ++sam)
+        for (Uint32 sam = 0; sam < ResourceLayout.NumImmutableSamplers; ++sam)
         {
-            const auto& StSamDesc = ResourceLayout.StaticSamplers[sam];
+            const auto& StSamDesc = ResourceLayout.ImmutableSamplers[sam];
             if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
             {
-                LOG_WARNING_MESSAGE("No allowed shader stages are specified for static sampler '", StSamDesc.SamplerOrTextureName, "'.");
+                LOG_WARNING_MESSAGE("No allowed shader stages are specified for immutable sampler '", StSamDesc.SamplerOrTextureName, "'.");
                 continue;
             }
 
             const auto* TexOrSamName = StSamDesc.SamplerOrTextureName;
 
-            bool StaticSamplerFound = false;
-            for (Uint32 s = 0; s < NumShaders && !StaticSamplerFound; ++s)
+            bool ImtblSamplerFound = false;
+            for (Uint32 s = 0; s < NumShaders && !ImtblSamplerFound; ++s)
             {
                 const auto& Resources = *pShaderResources[s];
                 if ((StSamDesc.ShaderStages & Resources.GetShaderType()) == 0)
                     continue;
 
-                // Look for static sampler.
+                // Look for immutable sampler.
                 // In case HLSL-style combined image samplers are used, the condition is  Sampler.Name == "g_Texture" + "_sampler".
                 // Otherwise the condition is  Sampler.Name == "g_Texture_sampler" + "".
                 const auto* CombinedSamplerSuffix = Resources.GetCombinedSamplerSuffix();
-                for (Uint32 n = 0; n < Resources.GetNumSamplers() && !StaticSamplerFound; ++n)
+                for (Uint32 n = 0; n < Resources.GetNumSamplers() && !ImtblSamplerFound; ++n)
                 {
                     const auto& Sampler = Resources.GetSampler(n);
-                    StaticSamplerFound  = StreqSuff(Sampler.Name, TexOrSamName, CombinedSamplerSuffix);
+                    ImtblSamplerFound   = StreqSuff(Sampler.Name, TexOrSamName, CombinedSamplerSuffix);
                 }
             }
 
-            if (!StaticSamplerFound)
+            if (!ImtblSamplerFound)
             {
-                LOG_WARNING_MESSAGE("Static sampler '", TexOrSamName, "' is not found in any of the designated shader stages: ",
+                LOG_WARNING_MESSAGE("Immutable sampler '", TexOrSamName, "' is not found in any of the designated shader stages: ",
                                     GetAllowedShadersString(StSamDesc.ShaderStages));
             }
         }

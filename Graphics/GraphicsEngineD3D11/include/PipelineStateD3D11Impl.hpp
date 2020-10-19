@@ -134,7 +134,7 @@ public:
     const ShaderD3D11Impl* GetShaderByType(SHADER_TYPE ShaderType) const;
     const ShaderD3D11Impl* GetShader(Uint32 Index) const;
 
-    void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const;
+    void SetImmutableSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const;
 
 private:
     template <typename PSOCreateInfoType>
@@ -166,20 +166,20 @@ private:
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1};
 
-    std::array<Uint16, MAX_SHADERS_IN_PIPELINE + 1> m_StaticSamplerOffsets = {};
-    struct StaticSamplerInfo
+    std::array<Uint16, MAX_SHADERS_IN_PIPELINE + 1> m_ImmutableSamplerOffsets = {};
+    struct ImmutableSamplerInfo
     {
         const D3DShaderResourceAttribs& Attribs;
         RefCntAutoPtr<ISampler>         pSampler;
-        StaticSamplerInfo(const D3DShaderResourceAttribs& _Attribs,
-                          RefCntAutoPtr<ISampler>         _pSampler) :
+        ImmutableSamplerInfo(const D3DShaderResourceAttribs& _Attribs,
+                             RefCntAutoPtr<ISampler>         _pSampler) :
             // clang-format off
             Attribs  {_Attribs},
             pSampler {std::move(_pSampler)}
         // clang-format on
         {}
     };
-    std::vector<StaticSamplerInfo, STDAllocatorRawMem<StaticSamplerInfo>> m_StaticSamplers;
+    std::vector<ImmutableSamplerInfo, STDAllocatorRawMem<ImmutableSamplerInfo>> m_ImmutableSamplers;
 };
 
 } // namespace Diligent

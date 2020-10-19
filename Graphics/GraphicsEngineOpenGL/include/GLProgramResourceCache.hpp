@@ -128,9 +128,9 @@ public:
         GetSampler(Binding).Set(std::move(pTexView), SetSampler);
     }
 
-    void SetStaticSampler(Uint32 Binding, ISampler* pStaticSampler)
+    void SetImmutableSampler(Uint32 Binding, ISampler* pImtblSampler)
     {
-        GetSampler(Binding).pSampler = ValidatedCast<SamplerGLImpl>(pStaticSampler);
+        GetSampler(Binding).pSampler = ValidatedCast<SamplerGLImpl>(pImtblSampler);
     }
 
     void CopySampler(Uint32 Binding, const CachedResourceView& SrcSam)

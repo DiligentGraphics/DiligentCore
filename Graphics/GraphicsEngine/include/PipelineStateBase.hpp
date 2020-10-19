@@ -460,13 +460,13 @@ private:
             }
         }
 
-        if (SrcLayout.StaticSamplers != nullptr)
+        if (SrcLayout.ImmutableSamplers != nullptr)
         {
-            MemPool.AddSpace<StaticSamplerDesc>(SrcLayout.NumStaticSamplers);
-            for (Uint32 i = 0; i < SrcLayout.NumStaticSamplers; ++i)
+            MemPool.AddSpace<ImmutableSamplerDesc>(SrcLayout.NumImmutableSamplers);
+            for (Uint32 i = 0; i < SrcLayout.NumImmutableSamplers; ++i)
             {
-                VERIFY(SrcLayout.StaticSamplers[i].SamplerOrTextureName != nullptr, "Static sampler or texture name can't be null");
-                MemPool.AddSpaceForString(SrcLayout.StaticSamplers[i].SamplerOrTextureName);
+                VERIFY(SrcLayout.ImmutableSamplers[i].SamplerOrTextureName != nullptr, "Immutable sampler or texture name can't be null");
+                MemPool.AddSpaceForString(SrcLayout.ImmutableSamplers[i].SamplerOrTextureName);
             }
         }
     }
@@ -485,13 +485,13 @@ private:
             }
         }
 
-        if (SrcLayout.StaticSamplers != nullptr)
+        if (SrcLayout.ImmutableSamplers != nullptr)
         {
-            auto* StaticSamplers     = MemPool.Allocate<StaticSamplerDesc>(SrcLayout.NumStaticSamplers);
-            DstLayout.StaticSamplers = StaticSamplers;
-            for (Uint32 i = 0; i < SrcLayout.NumStaticSamplers; ++i)
+            auto* ImmutableSamplers     = MemPool.Allocate<ImmutableSamplerDesc>(SrcLayout.NumImmutableSamplers);
+            DstLayout.ImmutableSamplers = ImmutableSamplers;
+            for (Uint32 i = 0; i < SrcLayout.NumImmutableSamplers; ++i)
             {
-                const auto& SrcSmplr = SrcLayout.StaticSamplers[i];
+                const auto& SrcSmplr = SrcLayout.ImmutableSamplers[i];
 #ifdef DILIGENT_DEVELOPMENT
                 {
                     const auto& BorderColor = SrcSmplr.Desc.BorderColor;
@@ -499,15 +499,15 @@ private:
                           (BorderColor[0] == 0 && BorderColor[1] == 0 && BorderColor[2] == 0 && BorderColor[3] == 1) ||
                           (BorderColor[0] == 1 && BorderColor[1] == 1 && BorderColor[2] == 1 && BorderColor[3] == 1)))
                     {
-                        LOG_WARNING_MESSAGE("Static sampler for variable \"", SrcSmplr.SamplerOrTextureName, "\" specifies border color (",
+                        LOG_WARNING_MESSAGE("Immutable sampler for variable \"", SrcSmplr.SamplerOrTextureName, "\" specifies border color (",
                                             BorderColor[0], ", ", BorderColor[1], ", ", BorderColor[2], ", ", BorderColor[3],
                                             "). D3D12 static samplers only allow transparent black (0,0,0,0), opaque black (0,0,0,1) or opaque white (1,1,1,1) as border colors");
                     }
                 }
 #endif
 
-                StaticSamplers[i]                      = SrcSmplr;
-                StaticSamplers[i].SamplerOrTextureName = MemPool.CopyString(SrcSmplr.SamplerOrTextureName);
+                ImmutableSamplers[i]                      = SrcSmplr;
+                ImmutableSamplers[i].SamplerOrTextureName = MemPool.CopyString(SrcSmplr.SamplerOrTextureName);
             }
         }
     }

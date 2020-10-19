@@ -177,7 +177,7 @@ void ShaderResourceBindingD3D11Impl::InitializeStaticResources(const IPipelineSt
         }
 #endif
         StaticResLayout.CopyResources(m_pBoundResourceCaches[shader]);
-        pPSOD3D11->SetStaticSamplers(m_pBoundResourceCaches[shader], shader);
+        pPSOD3D11->SetImmutableSamplers(m_pBoundResourceCaches[shader], shader);
     }
 
     m_bIsStaticResourcesBound = true;

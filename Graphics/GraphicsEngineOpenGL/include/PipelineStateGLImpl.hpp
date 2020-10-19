@@ -95,7 +95,7 @@ public:
 private:
     GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
 
-    void InitStaticSamplersInResourceCache(const GLPipelineResourceLayout& ResourceLayout, GLProgramResourceCache& Cache) const;
+    void InitImmutableSamplersInResourceCache(const GLPipelineResourceLayout& ResourceLayout, GLProgramResourceCache& Cache) const;
 
     struct GLPipelineShaderStageInfo
     {
@@ -143,8 +143,8 @@ private:
     Uint32 m_TotalImageBindings         = 0;
     Uint32 m_TotalStorageBufferBindings = 0;
 
-    using SamplerPtr             = RefCntAutoPtr<ISampler>;
-    SamplerPtr* m_StaticSamplers = nullptr; // [m_Desc.ResourceLayout.NumStaticSamplers]
+    using SamplerPtr                = RefCntAutoPtr<ISampler>;
+    SamplerPtr* m_ImmutableSamplers = nullptr; // [m_Desc.ResourceLayout.NumImmutableSamplers]
 };
 
 } // namespace Diligent

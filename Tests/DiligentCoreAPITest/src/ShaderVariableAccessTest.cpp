@@ -278,7 +278,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             {SHADER_TYPE_PIXEL, "g_rwBuff_Dyn", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
         };
 
-    StaticSamplerDesc StaticSamplers[] =
+    ImmutableSamplerDesc ImtblSamplers[] =
         {
             {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_tex2D_Static", SamplerDesc{}},
             {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_tex2D_StaticArr", SamplerDesc{}},
@@ -320,10 +320,10 @@ TEST(ShaderResourceLayout, VariableAccess)
     auto& ResourceLayout   = PSODesc.ResourceLayout;
     auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    ResourceLayout.Variables         = VarDesc.data();
-    ResourceLayout.NumVariables      = static_cast<Uint32>(VarDesc.size());
-    ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
-    ResourceLayout.StaticSamplers    = StaticSamplers;
+    ResourceLayout.Variables            = VarDesc.data();
+    ResourceLayout.NumVariables         = static_cast<Uint32>(VarDesc.size());
+    ResourceLayout.NumImmutableSamplers = _countof(ImtblSamplers);
+    ResourceLayout.ImmutableSamplers    = ImtblSamplers;
 
     PSODesc.Name                       = "Shader variable access test PSO";
     PSOCreateInfo.pVS                  = pVS;

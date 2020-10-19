@@ -1,5 +1,10 @@
 ## Current progress
 
+* Renamed static samplers into immutable samplers (API Version 240076)
+  * Renamed `StaticSamplerDesc` -> `ImmutableSamplerDesc`
+  * Renamed `PipelineResourceLayoutDesc::NumStaticSamplers` -> `PipelineResourceLayoutDesc::NumImmutableSamplers`
+  * Renamed `PipelineResourceLayoutDesc::StaticSamplers` -> `PipelineResourceLayoutDesc::ImmutableSamplers`
+
 * Refactored pipeline state creation (API Version 240075)
   * Replaced `PipelineStateCreateInfo` with `GraphicsPipelineStateCreateInfo` and `ComputePipelineStateCreateInfo`
   * Replaced `IRenderDevice::CreatePipelineState` with `IRenderDevice::CreateGraphicsPipelineState` and `IRenderDevice::CreateComputePipelineState`

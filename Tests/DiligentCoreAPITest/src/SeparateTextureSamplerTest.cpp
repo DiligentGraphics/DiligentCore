@@ -117,12 +117,12 @@ TEST(SeparateTextureSampler, CreateSampler)
     PSODesc.ResourceLayout.Variables    = Vars;
     PSODesc.ResourceLayout.NumVariables = _countof(Vars);
 
-    StaticSamplerDesc StaticSamplers[] =
+    ImmutableSamplerDesc ImtblSamplers[] =
         {
             {SHADER_TYPE_PIXEL, "g_Sam2", SamplerDesc{}} //
         };
-    PSODesc.ResourceLayout.StaticSamplers    = StaticSamplers;
-    PSODesc.ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
+    PSODesc.ResourceLayout.ImmutableSamplers    = ImtblSamplers;
+    PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImtblSamplers);
 
     RefCntAutoPtr<IPipelineState> pPSO;
     pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);

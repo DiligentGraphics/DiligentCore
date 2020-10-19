@@ -158,7 +158,7 @@ public:
                            const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                            class PipelineLayout&             PipelineLayout,
                            bool                              VerifyVariables,
-                           bool                              VerifyStaticSamplers);
+                           bool                              VerifyImmutableSamplers);
 
     // sizeof(VkResource) == 24 (x64)
     struct VkResource
@@ -293,7 +293,7 @@ public:
     static void dvpVerifyResourceLayoutDesc(const TShaderStages&              ShaderStages,
                                             const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                             bool                              VerifyVariables,
-                                            bool                              VerifyStaticSamplers);
+                                            bool                              VerifyImmutableSamplers);
 #endif
 
     Uint32 GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE VarType) const

@@ -86,9 +86,9 @@ size_t ShaderResourceLayoutD3D11::GetRequiredMemorySize(const ShaderResourcesD3D
                                                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                                         Uint32                               NumAllowedTypes)
 {
-    // Skip static samplers as they are initialized directly in the resource cache by the PSO
-    constexpr bool CountStaticSamplers = false;
-    auto           ResCounters         = SrcResources.CountResources(ResourceLayout, AllowedVarTypes, NumAllowedTypes, CountStaticSamplers);
+    // Skip immutable samplers as they are initialized directly in the resource cache by the PSO
+    constexpr bool CountImtblSamplers = false;
+    auto           ResCounters        = SrcResources.CountResources(ResourceLayout, AllowedVarTypes, NumAllowedTypes, CountImtblSamplers);
     // clang-format off
     auto MemSize = ResCounters.NumCBs      * sizeof(ConstBuffBindInfo) +
                    ResCounters.NumTexSRVs  * sizeof(TexSRVBindInfo)    +
@@ -120,9 +120,9 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
     const auto AllowedTypeBits = GetAllowedTypeBits(VarTypes, NumVarTypes);
 
     // Count total number of resources of allowed types
-    // Skip static samplers as they are initialized directly in the resource cache by the PSO
-    constexpr bool CountStaticSamplers = false;
-    auto           ResCounters         = m_pResources->CountResources(ResourceLayout, VarTypes, NumVarTypes, CountStaticSamplers);
+    // Skip immutable samplers as they are initialized directly in the resource cache by the PSO
+    constexpr bool CountImtblSamplers = false;
+    auto           ResCounters        = m_pResources->CountResources(ResourceLayout, VarTypes, NumVarTypes, CountImtblSamplers);
 
     // Initialize offsets
     size_t CurrentOffset = 0;
@@ -192,12 +192,12 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
             auto VarType = m_pResources->FindVariableType(Sampler, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                // Constructor of PipelineStateD3D11Impl initializes static samplers and will log the error, if any
-                constexpr bool LogStaticSamplerArrayError = false;
-                auto           StaticSamplerInd           = m_pResources->FindStaticSampler(Sampler, ResourceLayout, LogStaticSamplerArrayError);
-                if (StaticSamplerInd >= 0)
+                // Constructor of PipelineStateD3D11Impl initializes immutable samplers and will log the error, if any
+                constexpr bool LogImtblSamplerArrayError = false;
+                auto           ImtblSamplerInd           = m_pResources->FindImmutableSampler(Sampler, ResourceLayout, LogImtblSamplerArrayError);
+                if (ImtblSamplerInd >= 0)
                 {
-                    // Skip static samplers as they are initialized directly in the resource cache by the PSO
+                    // Skip immutble samplers as they are initialized directly in the resource cache by the PSO
                     return;
                 }
                 // Initialize current sampler in place, increment sampler counter
@@ -241,10 +241,10 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
                     AssignedSamplerIndex = TexSRVBindInfo::InvalidSamplerIndex;
 #ifdef DILIGENT_DEBUG
                     // Shader error will be logged by the PipelineStateD3D11Impl
-                    constexpr bool LogStaticSamplerArrayError = false;
-                    if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout, LogStaticSamplerArrayError) < 0)
+                    constexpr bool LogImtblSamplerArrayError = false;
+                    if (m_pResources->FindImmutableSampler(AssignedSamplerAttribs, ResourceLayout, LogImtblSamplerArrayError) < 0)
                     {
-                        UNEXPECTED("Unable to find non-static sampler assigned to texture SRV '", TexSRV.Name, "'.");
+                        UNEXPECTED("Unable to find non-immutable sampler assigned to texture SRV '", TexSRV.Name, "'.");
                     }
 #endif
                 }
@@ -252,10 +252,10 @@ ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                   
                 {
 #ifdef DILIGENT_DEBUG
                     // Shader error will be logged by the PipelineStateD3D11Impl
-                    constexpr bool LogStaticSamplerArrayError = false;
-                    if (m_pResources->FindStaticSampler(AssignedSamplerAttribs, ResourceLayout, LogStaticSamplerArrayError) >= 0)
+                    constexpr bool LogImtblSamplerArrayError = false;
+                    if (m_pResources->FindImmutableSampler(AssignedSamplerAttribs, ResourceLayout, LogImtblSamplerArrayError) >= 0)
                     {
-                        UNEXPECTED("Static sampler '", AssignedSamplerAttribs.Name, "' is assigned to texture SRV '", TexSRV.Name, "'.");
+                        UNEXPECTED("Immutable sampler '", AssignedSamplerAttribs.Name, "' is assigned to texture SRV '", TexSRV.Name, "'.");
                     }
 #endif
                 }
@@ -412,7 +412,7 @@ void ShaderResourceLayoutD3D11::CopyResources(ShaderResourceCacheD3D11& DstCache
 
         [&](const SamplerBindInfo& sam) //
         {
-            //VERIFY(!sam.IsStaticSampler, "Variables are not created for static samplers");
+            //VERIFY(!sam.IsImmutableSampler, "Variables are not created for immutable samplers");
             for (auto SamSlot = sam.m_Attribs.BindPoint; SamSlot < sam.m_Attribs.BindPoint + sam.m_Attribs.BindCount; ++SamSlot)
             {
                 VERIFY_EXPR(SamSlot < m_ResourceCache.GetSamplerCount() && SamSlot < DstCache.GetSamplerCount());
@@ -460,7 +460,7 @@ void ShaderResourceLayoutD3D11::TexSRVBindInfo::BindResource(IDeviceObject* pVie
     if (ValidSamplerAssigned())
     {
         auto& Sampler = m_ParentResLayout.GetResource<SamplerBindInfo>(SamplerIndex);
-        //VERIFY(!Sampler.IsStaticSampler, "Static samplers are not assigned to texture SRVs as they are initialized directly in the shader resource cache");
+        //VERIFY(!Sampler.IsImmutableSampler, "Immutable samplers are not assigned to texture SRVs as they are initialized directly in the shader resource cache");
         VERIFY_EXPR(Sampler.m_Attribs.BindCount == m_Attribs.BindCount || Sampler.m_Attribs.BindCount == 1);
         auto SamplerBindPoint = Sampler.m_Attribs.BindPoint + (Sampler.m_Attribs.BindCount != 1 ? ArrayIndex : 0);
 
@@ -502,7 +502,7 @@ void ShaderResourceLayoutD3D11::SamplerBindInfo::BindResource(IDeviceObject* pSa
                   "Array index (", ArrayIndex, ") is out of range for variable '", m_Attribs.Name,
                   "'. Max allowed index: ", m_Attribs.BindCount - 1);
     auto& ResourceCache = m_ParentResLayout.m_ResourceCache;
-    //VERIFY(!IsStaticSampler, "Cannot bind sampler to a static sampler");
+    //VERIFY(!IsImmutableSampler, "Cannot bind sampler to an immutable sampler");
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
@@ -737,7 +737,7 @@ IShaderResourceVariable* ShaderResourceLayoutD3D11::GetShaderVariable(const Char
 
     if (!m_pResources->IsUsingCombinedTextureSamplers())
     {
-        // Static samplers are never created in the resource layout
+        // Immutable samplers are never created in the resource layout
         if (auto* pSampler = GetResourceByName<SamplerBindInfo>(Name))
             return pSampler;
     }

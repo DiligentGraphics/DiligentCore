@@ -63,10 +63,10 @@ static Int32 FindImmutableSampler(SHADER_TYPE                       ShaderType,
         return -1;
     }
 
-    for (Uint32 s = 0; s < ResourceLayoutDesc.NumStaticSamplers; ++s)
+    for (Uint32 s = 0; s < ResourceLayoutDesc.NumImmutableSamplers; ++s)
     {
-        const auto& StSam = ResourceLayoutDesc.StaticSamplers[s];
-        if (((StSam.ShaderStages & ShaderType) != 0) && StreqSuff(Attribs.Name, StSam.SamplerOrTextureName, SamplerSuffix))
+        const auto& ImtblSam = ResourceLayoutDesc.ImmutableSamplers[s];
+        if (((ImtblSam.ShaderStages & ShaderType) != 0) && StreqSuff(Attribs.Name, ImtblSam.SamplerOrTextureName, SamplerSuffix))
             return s;
     }
 
@@ -154,10 +154,10 @@ void ShaderResourceLayoutVk::AllocateMemory(const ShaderVkImpl*                 
     m_NumImmutableSamplers = 0;
     if (AllocateImmutableSamplers)
     {
-        for (Uint32 s = 0; s < ResourceLayoutDesc.NumStaticSamplers; ++s)
+        for (Uint32 s = 0; s < ResourceLayoutDesc.NumImmutableSamplers; ++s)
         {
-            const auto& StSamDesc = ResourceLayoutDesc.StaticSamplers[s];
-            if ((StSamDesc.ShaderStages & ShaderType) != 0)
+            const auto& ImtblSamDesc = ResourceLayoutDesc.ImmutableSamplers[s];
+            if ((ImtblSamDesc.ShaderStages & ShaderType) != 0)
                 ++m_NumImmutableSamplers;
         }
     }
@@ -286,7 +286,7 @@ void ShaderResourceLayoutVk::InitializeStaticResourceLayout(const ShaderVkImpl* 
 void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const TShaderStages&              ShaderStages,
                                                          const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                                          bool                              VerifyVariables,
-                                                         bool                              VerifyStaticSamplers)
+                                                         bool                              VerifyImmutableSamplers)
 {
     auto GetAllowedShadersString = [&](SHADER_TYPE Stages) //
     {
@@ -359,14 +359,14 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const TShaderStages&   
         }
     }
 
-    if (VerifyStaticSamplers)
+    if (VerifyImmutableSamplers)
     {
-        for (Uint32 sam = 0; sam < ResourceLayoutDesc.NumStaticSamplers; ++sam)
+        for (Uint32 sam = 0; sam < ResourceLayoutDesc.NumImmutableSamplers; ++sam)
         {
-            const auto& StSamDesc = ResourceLayoutDesc.StaticSamplers[sam];
-            if (StSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
+            const auto& ImtblSamDesc = ResourceLayoutDesc.ImmutableSamplers[sam];
+            if (ImtblSamDesc.ShaderStages == SHADER_TYPE_UNKNOWN)
             {
-                LOG_WARNING_MESSAGE("No allowed shader stages are specified for static sampler '", StSamDesc.SamplerOrTextureName, "'.");
+                LOG_WARNING_MESSAGE("No allowed shader stages are specified for immutable sampler '", ImtblSamDesc.SamplerOrTextureName, "'.");
                 continue;
             }
 
@@ -374,36 +374,36 @@ void ShaderResourceLayoutVk::dvpVerifyResourceLayoutDesc(const TShaderStages&   
             for (size_t s = 0; s < ShaderStages.size() && !SamplerFound; ++s)
             {
                 const auto& Resources = *ShaderStages[s].pShader->GetShaderResources();
-                if ((StSamDesc.ShaderStages & Resources.GetShaderType()) == 0)
+                if ((ImtblSamDesc.ShaderStages & Resources.GetShaderType()) == 0)
                     continue;
 
                 // Irrespective of whether HLSL-style combined image samplers are used,
-                // a static sampler can be assigned to GLSL sampled image (i.e. sampler2D g_tex)
+                // an immutable sampler can be assigned to a GLSL sampled image (i.e. sampler2D g_tex)
                 for (Uint32 i = 0; i < Resources.GetNumSmpldImgs() && !SamplerFound; ++i)
                 {
                     const auto& SmplImg = Resources.GetSmpldImg(i);
-                    SamplerFound        = (strcmp(SmplImg.Name, StSamDesc.SamplerOrTextureName) == 0);
+                    SamplerFound        = (strcmp(SmplImg.Name, ImtblSamDesc.SamplerOrTextureName) == 0);
                 }
 
                 if (!SamplerFound)
                 {
-                    // Check if static sampler is assigned to a separate sampler.
+                    // Check if an immutable sampler is assigned to a separate sampler.
                     // In case HLSL-style combined image samplers are used, the condition is  SepSmpl.Name == "g_Texture" + "_sampler".
                     // Otherwise the condition is  SepSmpl.Name == "g_Texture_sampler" + "".
                     const auto* CombinedSamplerSuffix = Resources.GetCombinedSamplerSuffix();
                     for (Uint32 i = 0; i < Resources.GetNumSepSmplrs() && !SamplerFound; ++i)
                     {
                         const auto& SepSmpl = Resources.GetSepSmplr(i);
-                        SamplerFound        = StreqSuff(SepSmpl.Name, StSamDesc.SamplerOrTextureName, CombinedSamplerSuffix);
+                        SamplerFound        = StreqSuff(SepSmpl.Name, ImtblSamDesc.SamplerOrTextureName, CombinedSamplerSuffix);
                     }
                 }
             }
 
             if (!SamplerFound)
             {
-                LOG_WARNING_MESSAGE("Static sampler '", StSamDesc.SamplerOrTextureName,
+                LOG_WARNING_MESSAGE("Immutable sampler '", ImtblSamDesc.SamplerOrTextureName,
                                     "' is not found in any of the designated shader stages: ",
-                                    GetAllowedShadersString(StSamDesc.ShaderStages));
+                                    GetAllowedShadersString(ImtblSamDesc.ShaderStages));
             }
         }
     }
@@ -417,10 +417,10 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
                                         const PipelineResourceLayoutDesc& ResourceLayoutDesc,
                                         class PipelineLayout&             PipelineLayout,
                                         bool                              VerifyVariables,
-                                        bool                              VerifyStaticSamplers)
+                                        bool                              VerifyImmutableSamplers)
 {
 #ifdef DILIGENT_DEVELOPMENT
-    dvpVerifyResourceLayoutDesc(ShaderStages, ResourceLayoutDesc, VerifyVariables, VerifyStaticSamplers);
+    dvpVerifyResourceLayoutDesc(ShaderStages, ResourceLayoutDesc, VerifyVariables, VerifyImmutableSamplers);
 #endif
 
     const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes           = nullptr;
@@ -473,7 +473,7 @@ void ShaderResourceLayoutVk::Initialize(IRenderDevice*                    pRende
             {
                 auto& ImmutableSampler = ResLayout.GetImmutableSampler(CurrImmutableSamplerInd[ShaderInd]++);
                 VERIFY(!ImmutableSampler, "Immutable sampler has already been initialized!");
-                const auto& ImmutableSamplerDesc = ResourceLayoutDesc.StaticSamplers[SrcImmutableSamplerInd].Desc;
+                const auto& ImmutableSamplerDesc = ResourceLayoutDesc.ImmutableSamplers[SrcImmutableSamplerInd].Desc;
                 pRenderDevice->CreateSampler(ImmutableSamplerDesc, &ImmutableSampler);
                 vkImmutableSampler = ImmutableSampler.RawPtr<SamplerVkImpl>()->GetVkSampler();
             }

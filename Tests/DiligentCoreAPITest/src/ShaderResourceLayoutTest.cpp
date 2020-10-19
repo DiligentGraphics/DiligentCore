@@ -261,7 +261,7 @@ protected:
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
 
-    void TestTexturesAndStaticSamplers(bool TestStaticSamplers);
+    void TestTexturesAndImtblSamplers(bool TestImtblSamplers);
     void TestStructuredOrFormattedBuffer(bool IsFormatted);
     void TestRWStructuredOrFormattedBuffer(bool IsFormatted);
 
@@ -290,7 +290,7 @@ RefCntAutoPtr<ITextureView> ShaderResourceLayoutTest::pRTV;
     } while (false)
 
 
-void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamplers)
+void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSamplers)
 {
     TestingEnvironment::ScopedReset AutoResetEnvironment;
 
@@ -317,7 +317,7 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
     };
     if (!pDevice->GetDeviceCaps().IsGLDevice())
     {
-        if (TestStaticSamplers)
+        if (TestImtblSamplers)
         {
             Resources.emplace_back("g_Tex2D_Static_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, 1);
             Resources.emplace_back("g_Tex2D_Mut_sampler",       SHADER_RESOURCE_TYPE_SAMPLER, 1);
@@ -333,23 +333,23 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
     }
     // clang-format on
 
-    auto ModifyShaderCI = [TestStaticSamplers](ShaderCreateInfo& ShaderCI) {
-        if (TestStaticSamplers)
+    auto ModifyShaderCI = [TestImtblSamplers](ShaderCreateInfo& ShaderCI) {
+        if (TestImtblSamplers)
         {
             ShaderCI.UseCombinedTextureSamplers = true;
-            // Static sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
+            // Immutable sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
             ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
             ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
     };
-    auto pVS = CreateShader(TestStaticSamplers ? "ShaderResourceLayoutTest.StaticSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
-                            TestStaticSamplers ? "StaticSamplers.hlsl" : "Textures.hlsl",
+    auto pVS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
+                            TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "VSMain",
                             SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
-    auto pPS = CreateShader(TestStaticSamplers ? "ShaderResourceLayoutTest.StaticSamplers - PS" : "ShaderResourceLayoutTest.Textures - PS",
-                            TestStaticSamplers ? "StaticSamplers.hlsl" : "Textures.hlsl",
+    auto pPS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - PS" : "ShaderResourceLayoutTest.Textures - PS",
+                            TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "PSMain",
                             SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()),
@@ -369,27 +369,27 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
     };
-    std::vector<StaticSamplerDesc> StaticSamplers;
-    if (TestStaticSamplers)
+    std::vector<ImmutableSamplerDesc> ImtblSamplers;
+    if (TestImtblSamplers)
     {
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static",    SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",       SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",       SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static",    SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",       SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",       SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SamplerDesc{});
     }
     else
     {
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{});
     }
     // clang-format on
 
     PipelineResourceLayoutDesc ResourceLayout;
-    ResourceLayout.Variables         = Vars;
-    ResourceLayout.NumVariables      = _countof(Vars);
-    ResourceLayout.StaticSamplers    = StaticSamplers.data();
-    ResourceLayout.NumStaticSamplers = static_cast<Uint32>(StaticSamplers.size());
+    ResourceLayout.Variables            = Vars;
+    ResourceLayout.NumVariables         = _countof(Vars);
+    ResourceLayout.ImmutableSamplers    = ImtblSamplers.data();
+    ResourceLayout.NumImmutableSamplers = static_cast<Uint32>(ImtblSamplers.size());
 
     RefCntAutoPtr<IPipelineState>         pPSO;
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
@@ -448,12 +448,12 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
 
 TEST_F(ShaderResourceLayoutTest, Textures)
 {
-    TestTexturesAndStaticSamplers(false);
+    TestTexturesAndImtblSamplers(false);
 }
 
-TEST_F(ShaderResourceLayoutTest, StaticSamplers)
+TEST_F(ShaderResourceLayoutTest, ImmutableSamplers)
 {
-    TestTexturesAndStaticSamplers(true);
+    TestTexturesAndImtblSamplers(true);
 }
 
 

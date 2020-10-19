@@ -45,7 +45,7 @@ void PipelineStateGLImpl::Initialize(const PSOCreateInfoType& CreateInfo, const 
 
     MemPool.AddSpace<GLProgramObj>(GetNumShaderStages());
     MemPool.AddSpace<GLProgramResources>(GetNumShaderStages());
-    MemPool.AddSpace<SamplerPtr>(m_Desc.ResourceLayout.NumStaticSamplers);
+    MemPool.AddSpace<SamplerPtr>(m_Desc.ResourceLayout.NumImmutableSamplers);
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
 
@@ -129,9 +129,9 @@ PipelineStateGLImpl::~PipelineStateGLImpl()
         m_GLPrograms[i].~GLProgramObj();
         m_ProgramResources[i].~GLProgramResources();
     }
-    for (Uint32 i = 0; i < m_Desc.ResourceLayout.NumStaticSamplers; ++i)
+    for (Uint32 i = 0; i < m_Desc.ResourceLayout.NumImmutableSamplers; ++i)
     {
-        m_StaticSamplers[i].~SamplerPtr();
+        m_ImmutableSamplers[i].~SamplerPtr();
     }
 
     void* pRawMem = m_GLPrograms;
@@ -207,17 +207,17 @@ void PipelineStateGLImpl::InitResourceLayouts(const std::vector<GLPipelineShader
         m_ResourceLayout.Initialize(m_ProgramResources, static_cast<Uint32>(ShaderStages.size()), m_Desc.PipelineType, m_Desc.ResourceLayout, nullptr, 0, nullptr);
     }
 
-    m_StaticSamplers = MemPool.ConstructArray<SamplerPtr>(m_Desc.ResourceLayout.NumStaticSamplers);
-    for (Uint32 s = 0; s < m_Desc.ResourceLayout.NumStaticSamplers; ++s)
+    m_ImmutableSamplers = MemPool.ConstructArray<SamplerPtr>(m_Desc.ResourceLayout.NumImmutableSamplers);
+    for (Uint32 s = 0; s < m_Desc.ResourceLayout.NumImmutableSamplers; ++s)
     {
-        pDeviceGL->CreateSampler(m_Desc.ResourceLayout.StaticSamplers[s].Desc, &m_StaticSamplers[s]);
+        pDeviceGL->CreateSampler(m_Desc.ResourceLayout.ImmutableSamplers[s].Desc, &m_ImmutableSamplers[s]);
     }
 
     {
         // Clone only static variables into static resource layout, assign and initialize static resource cache
         const SHADER_RESOURCE_VARIABLE_TYPE StaticVars[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
         m_StaticResourceLayout.Initialize(m_ProgramResources, static_cast<Uint32>(ShaderStages.size()), m_Desc.PipelineType, m_Desc.ResourceLayout, StaticVars, _countof(StaticVars), &m_StaticResourceCache);
-        InitStaticSamplersInResourceCache(m_StaticResourceLayout, m_StaticResourceCache);
+        InitImmutableSamplersInResourceCache(m_StaticResourceLayout, m_StaticResourceCache);
     }
 }
 
@@ -303,19 +303,19 @@ GLObjectWrappers::GLPipelineObj& PipelineStateGLImpl::GetGLProgramPipeline(GLCon
 void PipelineStateGLImpl::InitializeSRBResourceCache(GLProgramResourceCache& ResourceCache) const
 {
     ResourceCache.Initialize(m_TotalUniformBufferBindings, m_TotalSamplerBindings, m_TotalImageBindings, m_TotalStorageBufferBindings, GetRawAllocator());
-    InitStaticSamplersInResourceCache(m_ResourceLayout, ResourceCache);
+    InitImmutableSamplersInResourceCache(m_ResourceLayout, ResourceCache);
 }
 
-void PipelineStateGLImpl::InitStaticSamplersInResourceCache(const GLPipelineResourceLayout& ResourceLayout, GLProgramResourceCache& Cache) const
+void PipelineStateGLImpl::InitImmutableSamplersInResourceCache(const GLPipelineResourceLayout& ResourceLayout, GLProgramResourceCache& Cache) const
 {
     for (Uint32 s = 0; s < ResourceLayout.GetNumResources<GLPipelineResourceLayout::SamplerBindInfo>(); ++s)
     {
         const auto& Sam = ResourceLayout.GetConstResource<GLPipelineResourceLayout::SamplerBindInfo>(s);
-        if (Sam.m_StaticSamplerIdx >= 0)
+        if (Sam.m_ImtblSamplerIdx >= 0)
         {
-            ISampler* pSampler = m_StaticSamplers[Sam.m_StaticSamplerIdx].RawPtr<ISampler>();
+            ISampler* pSampler = m_ImmutableSamplers[Sam.m_ImtblSamplerIdx].RawPtr<ISampler>();
             for (Uint32 binding = Sam.m_Attribs.Binding; binding < Sam.m_Attribs.Binding + Sam.m_Attribs.ArraySize; ++binding)
-                Cache.SetStaticSampler(binding, pSampler);
+                Cache.SetImmutableSampler(binding, pSampler);
         }
     }
 }
