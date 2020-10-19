@@ -103,7 +103,7 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// when it is created, since it cannot be changed after creation. \n
     /// D3D11 Counterpart: D3D11_USAGE_IMMUTABLE. OpenGL counterpart: GL_STATIC_DRAW
     /// \remarks Static buffers do not allow CPU access and must use CPU_ACCESS_NONE flag.
-    USAGE_STATIC = 0, 
+    USAGE_IMMUTABLE = 0, 
 
     /// A resource that requires read and write access by the GPU and can also be occasionally
     /// written by the CPU.  \n
@@ -1706,7 +1706,7 @@ struct GraphicsAdapterInfo
 
     /// The amount of local video memory that is inaccessible by CPU, in bytes.
 
-    /// \note Device-local memory is where USAGE_DEFAULT and USAGE_STATIC resources
+    /// \note Device-local memory is where USAGE_DEFAULT and USAGE_IMMUTABLE resources
     ///       are typically allocated.
     ///
     ///       On some devices it may not be possible to query the memory size,

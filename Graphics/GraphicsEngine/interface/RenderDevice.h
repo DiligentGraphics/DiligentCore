@@ -75,7 +75,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in] BuffDesc   - Buffer description, see Diligent::BufferDesc for details.
     /// \param [in] pBuffData  - Pointer to Diligent::BufferData structure that describes
     ///                          initial buffer data or nullptr if no data is provided.
-    ///                          Static buffers (USAGE_STATIC) must be initialized at creation time.
+    ///                          Immutable buffers (USAGE_IMMUTABLE) must be initialized at creation time.
     /// \param [out] ppBuffer  - Address of the memory location where the pointer to the
     ///                          buffer interface will be stored. The function calls AddRef(),
     ///                          so that the new buffer will contain one reference and must be
@@ -106,7 +106,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in] TexDesc - Texture description, see Diligent::TextureDesc for details.
     /// \param [in] pData   - Pointer to Diligent::TextureData structure that describes
     ///                       initial texture data or nullptr if no data is provided.
-    ///                       Static textures (USAGE_STATIC) must be initialized at creation time.
+    ///                       Immutable textures (USAGE_IMMUTABLE) must be initialized at creation time.
     ///
     /// \param [out] ppTexture - Address of the memory location where the pointer to the
     ///                          texture interface will be stored.

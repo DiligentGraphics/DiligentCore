@@ -63,8 +63,8 @@ TextureBaseGL::TextureBaseGL(IReferenceCounters*        pRefCounters,
 // clang-format on
 {
     VERIFY(m_GLTexFormat != 0, "Unsupported texture format");
-    if (TexDesc.Usage == USAGE_STATIC && pInitData == nullptr)
-        LOG_ERROR_AND_THROW("Static Texture must be initialized with data at creation time");
+    if (TexDesc.Usage == USAGE_IMMUTABLE && pInitData == nullptr)
+        LOG_ERROR_AND_THROW("Immutable textures must be initialized with data at creation time");
 
     if (TexDesc.Usage == USAGE_STAGING)
     {

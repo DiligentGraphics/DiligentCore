@@ -135,8 +135,8 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
                                    const TextureData*         pInitData /*= nullptr*/) :
     TTextureBase{pRefCounters, TexViewObjAllocator, pRenderDeviceD3D12, TexDesc}
 {
-    if (m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
-        LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time: pInitData can't be null");
+    if (m_Desc.Usage == USAGE_IMMUTABLE && (pInitData == nullptr || pInitData->pSubResources == nullptr))
+        LOG_ERROR_AND_THROW("Immutable textures must be initialized with data at creation time: pInitData can't be null");
 
     if ((m_Desc.MiscFlags & MISC_TEXTURE_FLAG_GENERATE_MIPS) != 0)
     {
@@ -149,7 +149,7 @@ TextureD3D12Impl::TextureD3D12Impl(IReferenceCounters*        pRefCounters,
     D3D12_RESOURCE_DESC Desc = GetD3D12TextureDesc();
 
     auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();
-    if (m_Desc.Usage == USAGE_STATIC || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
+    if (m_Desc.Usage == USAGE_IMMUTABLE || m_Desc.Usage == USAGE_DEFAULT || m_Desc.Usage == USAGE_DYNAMIC)
     {
         D3D12_CLEAR_VALUE  ClearValue  = {};
         D3D12_CLEAR_VALUE* pClearValue = nullptr;

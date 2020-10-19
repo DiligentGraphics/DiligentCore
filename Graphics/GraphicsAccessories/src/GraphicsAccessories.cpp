@@ -765,16 +765,16 @@ const Char* GetUsageString(USAGE Usage)
     {
         // clang-format off
 #define INIT_USGAGE_STR(Usage)UsageStrings[Usage] = #Usage
-        INIT_USGAGE_STR( USAGE_STATIC );
-        INIT_USGAGE_STR( USAGE_DEFAULT );
-        INIT_USGAGE_STR( USAGE_DYNAMIC );
-        INIT_USGAGE_STR( USAGE_STAGING );
-        INIT_USGAGE_STR( USAGE_UNIFIED );
+        INIT_USGAGE_STR(USAGE_IMMUTABLE);
+        INIT_USGAGE_STR(USAGE_DEFAULT);
+        INIT_USGAGE_STR(USAGE_DYNAMIC);
+        INIT_USGAGE_STR(USAGE_STAGING);
+        INIT_USGAGE_STR(USAGE_UNIFIED);
 #undef  INIT_USGAGE_STR
         // clang-format on
         bUsageStringsInit = true;
     }
-    if (Usage >= USAGE_STATIC && Usage < USAGE_NUM_USAGES)
+    if (Usage >= USAGE_IMMUTABLE && Usage < USAGE_NUM_USAGES)
         return UsageStrings[Usage];
     else
     {

@@ -82,7 +82,7 @@ inline GLenum UsageToGLUsage(const BufferDesc& Desc)
         // DYNAMIC: The data store contents will be modified repeatedly and used many times.
 
         // clang-format off
-        case USAGE_STATIC:      return GL_STATIC_DRAW;
+        case USAGE_IMMUTABLE:   return GL_STATIC_DRAW;
         case USAGE_DEFAULT:     return GL_STATIC_DRAW;
         case USAGE_UNIFIED:     return GL_STATIC_DRAW;
         case USAGE_DYNAMIC:     return GL_DYNAMIC_DRAW;

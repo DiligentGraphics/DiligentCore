@@ -259,7 +259,7 @@ void MeshShaderIndirectDrawReferenceD3D12(ISwapChain* pSwapChain)
 
     BufferDesc IndirectBufferDesc;
     IndirectBufferDesc.Name          = "Indirect buffer";
-    IndirectBufferDesc.Usage         = USAGE_STATIC;
+    IndirectBufferDesc.Usage         = USAGE_IMMUTABLE;
     IndirectBufferDesc.uiSizeInBytes = sizeof(IndirectBufferData);
     IndirectBufferDesc.BindFlags     = BIND_INDIRECT_DRAW_ARGS;
 

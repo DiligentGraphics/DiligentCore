@@ -1,5 +1,7 @@
 ## Current progress
 
+* Renamed `USAGE_STATIC` to `USAGE_IMMUTABLE` (API Version 240077)
+
 * Renamed static samplers into immutable samplers (API Version 240076)
   * Renamed `StaticSamplerDesc` -> `ImmutableSamplerDesc`
   * Renamed `PipelineResourceLayoutDesc::NumStaticSamplers` -> `PipelineResourceLayoutDesc::NumImmutableSamplers`

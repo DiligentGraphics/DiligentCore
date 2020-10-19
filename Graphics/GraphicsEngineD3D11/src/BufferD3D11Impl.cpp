@@ -62,8 +62,8 @@ BufferD3D11Impl::BufferD3D11Impl(IReferenceCounters*        pRefCounters,
         LOG_ERROR_AND_THROW("Unified resources are not supported in Direct3D11");
     }
 
-    if (m_Desc.Usage == USAGE_STATIC)
-        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for static buffers");
+    if (m_Desc.Usage == USAGE_IMMUTABLE)
+        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for immutable buffers");
 
     if (m_Desc.BindFlags & BIND_UNIFORM_BUFFER)
     {

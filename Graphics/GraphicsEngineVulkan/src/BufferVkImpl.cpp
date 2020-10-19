@@ -59,8 +59,8 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
 {
     ValidateBufferInitData(BuffDesc, pBuffData);
 
-    if (m_Desc.Usage == USAGE_STATIC)
-        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for static buffers");
+    if (m_Desc.Usage == USAGE_IMMUTABLE)
+        VERIFY(pBuffData != nullptr && pBuffData->pData != nullptr, "Initial data must not be null for immutable buffers");
     if (m_Desc.Usage == USAGE_DYNAMIC)
         VERIFY(pBuffData == nullptr || pBuffData->pData == nullptr, "Initial data must be null for dynamic buffers");
 
@@ -186,7 +186,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             VkMemoryPropertyFlags vkMemoryFlags = 0;
             switch (m_Desc.Usage)
             {
-                case USAGE_STATIC:
+                case USAGE_IMMUTABLE:
                 case USAGE_DEFAULT:
                 case USAGE_DYNAMIC: // Dynamic buffer with SRV or UAV bind flag
                     vkMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;

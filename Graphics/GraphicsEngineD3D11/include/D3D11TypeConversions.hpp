@@ -79,7 +79,7 @@ inline D3D11_USAGE UsageToD3D11Usage(USAGE Usage)
     switch (Usage)
     {
         // clang-format off
-        case USAGE_STATIC:      return D3D11_USAGE_IMMUTABLE;
+        case USAGE_IMMUTABLE:   return D3D11_USAGE_IMMUTABLE;
         case USAGE_DEFAULT:     return D3D11_USAGE_DEFAULT;
         case USAGE_DYNAMIC:     return D3D11_USAGE_DYNAMIC;
         case USAGE_STAGING:     return D3D11_USAGE_STAGING;
@@ -93,7 +93,7 @@ inline USAGE D3D11UsageToUsage(D3D11_USAGE D3D11Usage)
     switch (D3D11Usage)
     {
         // clang-format off
-        case D3D11_USAGE_IMMUTABLE: return USAGE_STATIC;
+        case D3D11_USAGE_IMMUTABLE: return USAGE_IMMUTABLE;
         case D3D11_USAGE_DEFAULT:   return USAGE_DEFAULT;
         case D3D11_USAGE_DYNAMIC:   return USAGE_DYNAMIC;
         case D3D11_USAGE_STAGING:   return USAGE_STAGING;

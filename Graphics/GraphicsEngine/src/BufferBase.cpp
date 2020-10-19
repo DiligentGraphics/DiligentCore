@@ -71,7 +71,7 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
 
     switch (Desc.Usage)
     {
-        case USAGE_STATIC:
+        case USAGE_IMMUTABLE:
         case USAGE_DEFAULT:
             VERIFY_BUFFER(Desc.CPUAccessFlags == CPU_ACCESS_NONE, "static and default buffers can't have any CPU access flags set.");
             break;
@@ -114,8 +114,8 @@ void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
 
 void ValidateBufferInitData(const BufferDesc& Desc, const BufferData* pBuffData)
 {
-    if (Desc.Usage == USAGE_STATIC && (pBuffData == nullptr || pBuffData->pData == nullptr))
-        LOG_BUFFER_ERROR_AND_THROW("initial data must not be null as static buffers must be initialized at creation time.");
+    if (Desc.Usage == USAGE_IMMUTABLE && (pBuffData == nullptr || pBuffData->pData == nullptr))
+        LOG_BUFFER_ERROR_AND_THROW("initial data must not be null as immutable buffers must be initialized at creation time.");
 
     if (Desc.Usage == USAGE_DYNAMIC && pBuffData != nullptr && pBuffData->pData != nullptr)
         LOG_BUFFER_ERROR_AND_THROW("initial data must be null for dynamic buffers.");

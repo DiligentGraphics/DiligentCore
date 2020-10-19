@@ -147,7 +147,7 @@ TEST(ShaderResourceLayout, ResourceArray)
         BufferDesc BuffDesc;
         BuffDesc.uiSizeInBytes = sizeof(Vertices);
         BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.Usage         = USAGE_STATIC;
+        BuffDesc.Usage         = USAGE_IMMUTABLE;
         BufferData BuffData;
         BuffData.pData    = Vertices;
         BuffData.DataSize = BuffDesc.uiSizeInBytes;
@@ -179,7 +179,7 @@ TEST(ShaderResourceLayout, ResourceArray)
         TexDesc.Width     = 256;
         TexDesc.Height    = 256;
         TexDesc.MipLevels = 8;
-        TexDesc.Usage     = USAGE_STATIC;
+        TexDesc.Usage     = USAGE_IMMUTABLE;
         TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
         TexDesc.BindFlags = BIND_SHADER_RESOURCE;
         TexDesc.Name      = "Test Texture";
