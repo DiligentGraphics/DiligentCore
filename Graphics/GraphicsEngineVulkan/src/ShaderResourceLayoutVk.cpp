@@ -762,7 +762,7 @@ void ShaderResourceLayoutVk::VkResource::CacheTexelBuffer(IDeviceObject*        
         {
             const auto& ViewDesc = pBufferViewVk->GetDesc();
             const auto& BuffDesc = pBufferViewVk->GetBuffer()->GetDesc();
-            if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_RAW))
+            if (!((BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED) || BuffDesc.Mode == BUFFER_MODE_RAW))
             {
                 LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
                                   SpirvAttribs.Name, "' in shader '", ParentResLayout.GetShaderName(), "': formatted buffer view is expected.");

@@ -311,7 +311,7 @@ void GLPipelineResourceLayout::SamplerBindInfo::BindResource(IDeviceObject* pVie
             {
                 const auto& ViewDesc = pViewGL->GetDesc();
                 const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
-                if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_RAW))
+                if (!((BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED) || BuffDesc.Mode == BUFFER_MODE_RAW))
                 {
                     LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
                                       m_Attribs.Name, ": formatted buffer view is expected.");
@@ -361,7 +361,7 @@ void GLPipelineResourceLayout::ImageBindInfo::BindResource(IDeviceObject* pView,
             {
                 const auto& ViewDesc = pViewGL->GetDesc();
                 const auto& BuffDesc = pViewGL->GetBuffer()->GetDesc();
-                if (!(BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED || BuffDesc.Mode == BUFFER_MODE_RAW))
+                if (!((BuffDesc.Mode == BUFFER_MODE_FORMATTED && ViewDesc.Format.ValueType != VT_UNDEFINED) || BuffDesc.Mode == BUFFER_MODE_RAW))
                 {
                     LOG_ERROR_MESSAGE("Error binding buffer view '", ViewDesc.Name, "' of buffer '", BuffDesc.Name, "' to shader variable '",
                                       m_Attribs.Name, ": formatted buffer view is expected.");
