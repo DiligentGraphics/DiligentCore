@@ -67,16 +67,13 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
         const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
         const auto&                         SrcLayout         = pPSO->GetShaderResLayout(s);
         // Create shader variable manager in place
-        new (m_pShaderVarMgrs + s)
-            ShaderVariableManagerD3D12 //
-            {
-                *this,
-                SrcLayout,
-                VarDataAllocator,
-                AllowedVarTypes,
-                _countof(AllowedVarTypes),
-                m_ShaderResourceCache //
-            };
+        new (m_pShaderVarMgrs + s) ShaderVariableManagerD3D12{*this, m_ShaderResourceCache};
+        m_pShaderVarMgrs[s].Initialize(
+            SrcLayout,
+            VarDataAllocator,
+            AllowedVarTypes,
+            _countof(AllowedVarTypes) //
+        );
 
         m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
     }

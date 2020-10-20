@@ -84,7 +84,7 @@ ShaderResourceLayoutD3D11::~ShaderResourceLayoutD3D11()
 size_t ShaderResourceLayoutD3D11::GetRequiredMemorySize(const ShaderResourcesD3D11&          SrcResources,
                                                         const PipelineResourceLayoutDesc&    ResourceLayout,
                                                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                                        Uint32                               NumAllowedTypes)
+                                                        Uint32                               NumAllowedTypes) noexcept
 {
     // Skip immutable samplers as they are initialized directly in the resource cache by the PSO
     constexpr bool CountImtblSamplers = false;
@@ -101,20 +101,15 @@ size_t ShaderResourceLayoutD3D11::GetRequiredMemorySize(const ShaderResourcesD3D
 }
 
 
-ShaderResourceLayoutD3D11::ShaderResourceLayoutD3D11(IObject&                                    Owner,
-                                                     std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
-                                                     const PipelineResourceLayoutDesc&           ResourceLayout,
-                                                     const SHADER_RESOURCE_VARIABLE_TYPE*        VarTypes,
-                                                     Uint32                                      NumVarTypes,
-                                                     ShaderResourceCacheD3D11&                   ResourceCache,
-                                                     IMemoryAllocator&                           ResCacheDataAllocator,
-                                                     IMemoryAllocator&                           ResLayoutDataAllocator) :
-    // clang-format off
-    m_Owner         {Owner},
-    m_pResources    {std::move(pSrcResources)},
-    m_ResourceCache {ResourceCache}
-// clang-format on
+void ShaderResourceLayoutD3D11::Initialize(std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
+                                           const PipelineResourceLayoutDesc&           ResourceLayout,
+                                           const SHADER_RESOURCE_VARIABLE_TYPE*        VarTypes,
+                                           Uint32                                      NumVarTypes,
+                                           IMemoryAllocator&                           ResCacheDataAllocator,
+                                           IMemoryAllocator&                           ResLayoutDataAllocator)
 {
+    m_pResources = std::move(pSrcResources);
+
     // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-layout#Shader-Resource-Layout-Initialization
 
     const auto AllowedTypeBits = GetAllowedTypeBits(VarTypes, NumVarTypes);

@@ -75,7 +75,8 @@ ShaderResourceBindingVkImpl::ShaderResourceBindingVkImpl(IReferenceCounters*  pR
         // Initialize vars manager to reference mutable and dynamic variables
         // Note that the cache has space for all variable types
         const SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-        new (m_pShaderVarMgrs + s) ShaderVariableManagerVk{*this, SrcLayout, VarDataAllocator, VarTypes, _countof(VarTypes), m_ShaderResourceCache};
+        new (m_pShaderVarMgrs + s) ShaderVariableManagerVk{*this, m_ShaderResourceCache};
+        m_pShaderVarMgrs[s].Initialize(SrcLayout, VarDataAllocator, VarTypes, _countof(VarTypes));
     }
 #ifdef DILIGENT_DEBUG
     m_ShaderResourceCache.DbgVerifyResourceInitialization();

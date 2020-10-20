@@ -385,7 +385,7 @@ public:
                                         const ShaderResources* const      pShaderResources[],
                                         Uint32                            NumShaders,
                                         bool                              VerifyVariables,
-                                        bool                              VerifyImmutableSamplers);
+                                        bool                              VerifyImmutableSamplers) noexcept;
 #endif
 
     void GetShaderModel(Uint32& Major, Uint32& Minor) const

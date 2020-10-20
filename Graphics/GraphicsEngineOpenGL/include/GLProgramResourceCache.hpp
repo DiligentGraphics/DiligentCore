@@ -45,7 +45,7 @@ namespace Diligent
 class GLProgramResourceCache
 {
 public:
-    GLProgramResourceCache()
+    GLProgramResourceCache() noexcept
     {}
 
     ~GLProgramResourceCache();

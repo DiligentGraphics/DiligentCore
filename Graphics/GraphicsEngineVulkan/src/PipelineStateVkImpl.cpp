@@ -413,15 +413,12 @@ void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
         const auto ShaderType    = StageInfo.Type;
         const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
 
-        new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk{LogicalDevice};
-
         m_ResourceLayoutIndex[ShaderTypeInd] = static_cast<Int8>(s);
 
-        auto* pStaticResLayout = new (m_ShaderResourceLayouts + ShaderStages.size() + s) ShaderResourceLayoutVk{LogicalDevice};
-        auto* pStaticResCache  = new (m_StaticResCaches + s) ShaderResourceCacheVk{ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources};
-        pStaticResLayout->InitializeStaticResourceLayout(StageInfo.pShader, GetRawAllocator(), m_Desc.ResourceLayout, m_StaticResCaches[s]);
+        auto& StaticResLayout = m_ShaderResourceLayouts[GetNumShaderStages() + s];
+        StaticResLayout.InitializeStaticResourceLayout(StageInfo.pShader, GetRawAllocator(), m_Desc.ResourceLayout, m_StaticResCaches[s]);
 
-        new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, *pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache};
+        m_StaticVarsMgrs[s].Initialize(StaticResLayout, GetRawAllocator(), nullptr, 0);
     }
     ShaderResourceLayoutVk::Initialize(pDeviceVk, ShaderStages, m_ShaderResourceLayouts, GetRawAllocator(),
                                        m_Desc.ResourceLayout, m_PipelineLayout,
@@ -464,37 +461,52 @@ void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
 }
 
 template <typename PSOCreateInfoType>
-LinearAllocator PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
-                                                         std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-                                                         std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules)
+void PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
+                                              std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
+                                              std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules)
 {
     m_ResourceLayoutIndex.fill(-1);
 
     TShaderStages ShaderStages;
     ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages);
 
-    // Memory must be released if an exception is thrown.
     LinearAllocator MemPool{GetRawAllocator()};
 
-    MemPool.AddSpace<ShaderResourceLayoutVk>(GetNumShaderStages() * 2);
-    MemPool.AddSpace<ShaderResourceCacheVk>(GetNumShaderStages());
-    MemPool.AddSpace<ShaderVariableManagerVk>(GetNumShaderStages());
+    const auto NumShaderStages = GetNumShaderStages();
+    VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
+
+    MemPool.AddSpace<ShaderResourceCacheVk>(NumShaderStages);
+    MemPool.AddSpace<ShaderResourceLayoutVk>(NumShaderStages * 2);
+    MemPool.AddSpace<ShaderVariableManagerVk>(NumShaderStages);
 
     ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
 
     MemPool.Reserve();
 
-    m_ShaderResourceLayouts = MemPool.Allocate<ShaderResourceLayoutVk>(GetNumShaderStages() * 2);
-    m_StaticResCaches       = MemPool.Allocate<ShaderResourceCacheVk>(GetNumShaderStages());
-    m_StaticVarsMgrs        = MemPool.Allocate<ShaderVariableManagerVk>(GetNumShaderStages());
+    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
+
+    m_StaticResCaches = MemPool.ConstructArray<ShaderResourceCacheVk>(NumShaderStages, ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources);
+
+    // The memory is now owned by PipelineStateVkImpl and will be freed by Destruct().
+    auto* Ptr = MemPool.ReleaseOwnership();
+    VERIFY_EXPR(Ptr == m_StaticResCaches);
+    (void)Ptr;
+
+    m_ShaderResourceLayouts = MemPool.ConstructArray<ShaderResourceLayoutVk>(NumShaderStages * 2, LogicalDevice);
+
+    m_StaticVarsMgrs = MemPool.Allocate<ShaderVariableManagerVk>(NumShaderStages);
+    for (Uint32 s = 0; s < NumShaderStages; ++s)
+        new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, m_StaticResCaches[s]};
 
     InitializePipelineDesc(CreateInfo, MemPool);
+
+    // It is important to construct all objects before initializing them because if an exception is thrown,
+    // destructors will be called for all objects
+
     InitResourceLayouts(CreateInfo, ShaderStages);
 
     // Create shader modules and initialize shader stages
     InitPipelineShaderStages(GetDevice()->GetLogicalDevice(), ShaderStages, ShaderModules, vkShaderStages);
-
-    return MemPool;
 }
 
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    pRefCounters,
@@ -503,15 +515,20 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
     TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
     m_SRBMemAllocator{GetRawAllocator()}
 {
-    std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
-    std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
+    try
+    {
+        std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
+        std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
-    auto MemPool = InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-    CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
-
-    void* Ptr = MemPool.Release();
-    VERIFY_EXPR(Ptr == m_ShaderResourceLayouts);
+        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
 }
 
 
@@ -521,39 +538,59 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   p
     TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
     m_SRBMemAllocator{GetRawAllocator()}
 {
-    std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
-    std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
+    try
+    {
+        std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
+        std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
-    auto MemPool = InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
 
-    CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline);
-
-    void* Ptr = MemPool.Release();
-    VERIFY_EXPR(Ptr == m_ShaderResourceLayouts);
+        CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline);
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
 }
 
 
 PipelineStateVkImpl::~PipelineStateVkImpl()
 {
+    Destruct();
+}
+
+void PipelineStateVkImpl::Destruct()
+{
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.CommandQueueMask);
     m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
 
     auto& RawAllocator = GetRawAllocator();
-    for (Uint32 s = 0; s < GetNumShaderStages() * 2; ++s)
-    {
-        m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
-    }
-
     for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
-        m_StaticResCaches[s].~ShaderResourceCacheVk();
-        m_StaticVarsMgrs[s].DestroyVariables(GetRawAllocator());
-        m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
+        if (m_StaticVarsMgrs != nullptr)
+        {
+            m_StaticVarsMgrs[s].DestroyVariables(GetRawAllocator());
+            m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
+        }
+
+        if (m_ShaderResourceLayouts != nullptr)
+        {
+            m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
+            m_ShaderResourceLayouts[GetNumShaderStages() + s].~ShaderResourceLayoutVk();
+        }
+
+        if (m_StaticResCaches != nullptr)
+        {
+            m_StaticResCaches[s].~ShaderResourceCacheVk();
+        }
     }
-    // m_ShaderResourceLayouts, m_StaticResCaches and m_StaticVarsMgrs are allocted in
-    // contiguous chunks of memory.
-    void* pRawMem = m_ShaderResourceLayouts;
-    RawAllocator.Free(pRawMem);
+
+    // All internal objects are allocted in contiguous chunks of memory.
+    if (void* pRawMem = m_StaticResCaches)
+    {
+        RawAllocator.Free(pRawMem);
+    }
 }
 
 IMPLEMENT_QUERY_INTERFACE(PipelineStateVkImpl, IID_PipelineStateVk, TPipelineStateBase)
@@ -746,7 +783,7 @@ IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByIndex(SHADER_TY
     if (LayoutInd < 0)
         return nullptr;
 
-    auto& StaticVarMgr = GetStaticVarMgr(LayoutInd);
+    const auto& StaticVarMgr = GetStaticVarMgr(LayoutInd);
     return StaticVarMgr.GetVariable(Index);
 }
 

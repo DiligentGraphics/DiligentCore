@@ -138,10 +138,12 @@ public:
 
 private:
     template <typename PSOCreateInfoType>
-    LinearAllocator InitInternalObjects(const PSOCreateInfoType& CreateInfo);
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo);
 
     void InitResourceLayouts(const PipelineStateCreateInfo&                               CreateInfo,
                              const std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>>& ShaderStages);
+
+    void Destruct();
 
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;

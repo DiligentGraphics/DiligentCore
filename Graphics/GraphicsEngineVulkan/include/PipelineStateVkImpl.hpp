@@ -129,12 +129,14 @@ private:
     using TShaderStages = ShaderResourceLayoutVk::TShaderStages;
 
     template <typename PSOCreateInfoType>
-    LinearAllocator InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
-                                        std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-                                        std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules);
+    void InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
+                             std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
+                             std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules);
 
     void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
                              TShaderStages&                 ShaderStages);
+
+    void Destruct();
 
     const ShaderResourceLayoutVk& GetStaticShaderResLayout(Uint32 ShaderInd) const
     {
@@ -148,7 +150,7 @@ private:
         return m_StaticResCaches[ShaderInd];
     }
 
-    ShaderVariableManagerVk& GetStaticVarMgr(Uint32 ShaderInd) const
+    const ShaderVariableManagerVk& GetStaticVarMgr(Uint32 ShaderInd) const
     {
         VERIFY_EXPR(ShaderInd < GetNumShaderStages());
         return m_StaticVarsMgrs[ShaderInd];

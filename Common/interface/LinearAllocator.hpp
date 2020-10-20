@@ -50,11 +50,11 @@ public:
     LinearAllocator& operator=(LinearAllocator&&)      = delete;
     // clang-format on
 
-    explicit LinearAllocator(IMemoryAllocator& Allocator) :
+    explicit LinearAllocator(IMemoryAllocator& Allocator) noexcept :
         m_pAllocator{&Allocator}
     {}
 
-    LinearAllocator(LinearAllocator&& Other) :
+    LinearAllocator(LinearAllocator&& Other) noexcept :
         // clang-format off
         m_pDataStart   {Other.m_pDataStart   },
         m_pCurrPtr     {Other.m_pCurrPtr     },
@@ -87,7 +87,18 @@ public:
         return Ptr;
     }
 
-    void AddSpace(size_t size, size_t alignment)
+    void* ReleaseOwnership() noexcept
+    {
+        m_pAllocator = nullptr;
+        return GetDataPtr();
+    }
+
+    void* GetDataPtr() const noexcept
+    {
+        return m_pDataStart;
+    }
+
+    void AddSpace(size_t size, size_t alignment) noexcept
     {
         VERIFY(m_pDataStart == nullptr, "Memory has already been allocated");
         VERIFY(IsPowerOfTwo(alignment), "Alignment is not a power of two!");
@@ -117,18 +128,18 @@ public:
     }
 
     template <typename T>
-    void AddSpace(size_t count = 1)
+    void AddSpace(size_t count = 1) noexcept
     {
         AddSpace(sizeof(T) * count, alignof(T));
     }
 
-    void AddSpaceForString(const Char* str)
+    void AddSpaceForString(const Char* str) noexcept
     {
         VERIFY_EXPR(str != nullptr);
         AddSpace(strlen(str) + 1, 1);
     }
 
-    void AddSpaceForString(const String& str)
+    void AddSpaceForString(const String& str) noexcept
     {
         AddSpaceForString(str.c_str());
     }

@@ -222,7 +222,7 @@ protected:
 
 
     void ReserveSpaceForPipelineDesc(const GraphicsPipelineStateCreateInfo& CreateInfo,
-                                     LinearAllocator&                       MemPool)
+                                     LinearAllocator&                       MemPool) noexcept
     {
         MemPool.AddSpace<GraphicsPipelineDesc>();
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
@@ -240,7 +240,7 @@ protected:
     }
 
     void ReserveSpaceForPipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,
-                                     LinearAllocator&                      MemPool) const
+                                     LinearAllocator&                      MemPool) const noexcept
     {
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
     }
@@ -448,7 +448,7 @@ protected:
     }
 
 private:
-    void ReserveResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, LinearAllocator& MemPool) const
+    static void ReserveResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, LinearAllocator& MemPool) noexcept
     {
         if (SrcLayout.Variables != nullptr)
         {
@@ -471,7 +471,7 @@ private:
         }
     }
 
-    void CopyResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, PipelineResourceLayoutDesc& DstLayout, LinearAllocator& MemPool) const
+    static void CopyResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, PipelineResourceLayoutDesc& DstLayout, LinearAllocator& MemPool)
     {
         if (SrcLayout.Variables != nullptr)
         {

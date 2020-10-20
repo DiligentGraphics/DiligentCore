@@ -133,10 +133,12 @@ private:
     };
 
     template <typename PSOCreateInfoType>
-    LinearAllocator InitInternalObjects(const PSOCreateInfoType& CreateInfo, std::vector<D3D12PipelineShaderStageInfo>& ShaderStages);
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, std::vector<D3D12PipelineShaderStageInfo>& ShaderStages);
 
     void InitResourceLayouts(const PipelineStateCreateInfo&             CreateInfo,
                              std::vector<D3D12PipelineShaderStageInfo>& ShaderStages);
+
+    void Destruct();
 
     CComPtr<ID3D12PipelineState> m_pd3d12PSO;
     RootSignature                m_RootSig;

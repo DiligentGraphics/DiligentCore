@@ -183,48 +183,66 @@ TEST_F(BlendStateBasicTest, CreatePSO)
         RT0.BlendEnable = True;
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].BlendEnable, RT0.BlendEnable);
+        EXPECT_NE(pPSO, nullptr);
+        if (pPSO != nullptr)
+        {
+            EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].BlendEnable, RT0.BlendEnable);
+        }
     }
 
     {
         BSDesc.AlphaToCoverageEnable = !BSDesc.AlphaToCoverageEnable;
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.AlphaToCoverageEnable, BSDesc.AlphaToCoverageEnable);
+        EXPECT_NE(pPSO, nullptr);
+        if (pPSO != nullptr)
+        {
+            EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.AlphaToCoverageEnable, BSDesc.AlphaToCoverageEnable);
+        }
     }
 
     {
         RT0.RenderTargetWriteMask = COLOR_MASK_BLUE;
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_BLUE);
+        EXPECT_NE(pPSO, nullptr);
+        if (pPSO != nullptr)
+        {
+            EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_BLUE);
+        }
     }
 
     {
         RT0.RenderTargetWriteMask = COLOR_MASK_RED;
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_RED);
+        EXPECT_NE(pPSO, nullptr);
+        if (pPSO != nullptr)
+        {
+            EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_RED);
+        }
     }
 
     {
         RT0.RenderTargetWriteMask = COLOR_MASK_GREEN;
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_GREEN);
+        EXPECT_NE(pPSO, nullptr);
+        if (pPSO != nullptr)
+        {
+            EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_GREEN);
+        }
     }
 
     {
         RT0.RenderTargetWriteMask = COLOR_MASK_ALPHA;
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
-        EXPECT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_ALPHA);
+        EXPECT_NE(pPSO, nullptr);
+        if (pPSO != nullptr)
+        {
+            EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().BlendDesc.RenderTargets[0].RenderTargetWriteMask, COLOR_MASK_ALPHA);
+        }
     }
 }
 

@@ -128,7 +128,7 @@ public:
     };
     using TShaderStages = std::vector<ShaderStageInfo>;
 
-    ShaderResourceLayoutVk(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) :
+    ShaderResourceLayoutVk(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) noexcept :
         m_LogicalDevice{LogicalDevice}
     {
     }

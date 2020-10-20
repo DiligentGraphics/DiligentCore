@@ -65,20 +65,15 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const ShaderResourceLayout
 }
 
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
-ShaderVariableManagerVk::ShaderVariableManagerVk(IObject&                             Owner,
-                                                 const ShaderResourceLayoutVk&        SrcLayout,
-                                                 IMemoryAllocator&                    Allocator,
-                                                 const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                                 Uint32                               NumAllowedTypes,
-                                                 ShaderResourceCacheVk&               ResourceCache) :
-    // clang-format off
-    m_Owner        {Owner        },
-    m_ResourceCache{ResourceCache}
-#ifdef DILIGENT_DEBUG
-  , m_DbgAllocator {Allocator}
-#endif
-// clang-format on
+void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk&        SrcLayout,
+                                         IMemoryAllocator&                    Allocator,
+                                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                                         Uint32                               NumAllowedTypes)
 {
+#ifdef DILIGENT_DEBUG
+    m_pDbgAllocator = &Allocator;
+#endif
+
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
     auto MemSize = GetRequiredMemorySize(SrcLayout, AllowedVarTypes, NumAllowedTypes, m_NumVariables);
@@ -119,10 +114,10 @@ ShaderVariableManagerVk::~ShaderVariableManagerVk()
 
 void ShaderVariableManagerVk::DestroyVariables(IMemoryAllocator& Allocator)
 {
-    VERIFY(&m_DbgAllocator == &Allocator, "Incosistent alloctor");
-
     if (m_pVariables != nullptr)
     {
+        VERIFY(m_pDbgAllocator == &Allocator, "Incosistent alloctor");
+
         for (Uint32 v = 0; v < m_NumVariables; ++v)
             m_pVariables[v].~ShaderVariableVkImpl();
         Allocator.Free(m_pVariables);
@@ -130,7 +125,7 @@ void ShaderVariableManagerVk::DestroyVariables(IMemoryAllocator& Allocator)
     }
 }
 
-ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name)
+ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name) const
 {
     ShaderVariableVkImpl* pVar = nullptr;
     for (Uint32 v = 0; v < m_NumVariables; ++v)
@@ -147,7 +142,7 @@ ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name)
 }
 
 
-ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(Uint32 Index)
+ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(Uint32 Index) const
 {
     if (Index >= m_NumVariables)
     {
@@ -178,7 +173,7 @@ Uint32 ShaderVariableManagerVk::GetVariableIndex(const ShaderVariableVkImpl& Var
     }
 }
 
-void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags)
+void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, Uint32 Flags) const
 {
     if (!pResourceMapping)
     {

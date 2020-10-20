@@ -114,6 +114,8 @@ private:
     void InitResourceLayouts(const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
                              LinearAllocator&                              MemPool);
 
+    void Destruct();
+
     // Linked GL programs for every shader stage. Every pipeline needs to have its own programs
     // because resource bindings assigned by GLProgramResources::LoadUniforms depend on other
     // shader stages.

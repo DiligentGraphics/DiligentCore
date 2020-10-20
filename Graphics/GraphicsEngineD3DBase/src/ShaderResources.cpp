@@ -219,7 +219,7 @@ void ShaderResources::DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& 
                                               const ShaderResources* const      pShaderResources[],
                                               Uint32                            NumShaders,
                                               bool                              VerifyVariables,
-                                              bool                              VerifyImmutableSamplers)
+                                              bool                              VerifyImmutableSamplers) noexcept
 {
     auto GetAllowedShadersString = [&](SHADER_TYPE ShaderStages) //
     {

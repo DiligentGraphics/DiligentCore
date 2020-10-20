@@ -51,7 +51,7 @@ namespace Diligent
 class ShaderResourceCacheD3D11
 {
 public:
-    ShaderResourceCacheD3D11()
+    ShaderResourceCacheD3D11() noexcept
     {}
 
     ~ShaderResourceCacheD3D11();

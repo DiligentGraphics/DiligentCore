@@ -113,22 +113,19 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                
 
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-Shader-Resource-Layouts-in-a-Pipeline-State
-ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                                    Owner,
-                                                     ID3D12Device*                               pd3d12Device,
-                                                     PIPELINE_TYPE                               PipelineType,
-                                                     const PipelineResourceLayoutDesc&           ResourceLayout,
-                                                     std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
-                                                     IMemoryAllocator&                           LayoutDataAllocator,
-                                                     const SHADER_RESOURCE_VARIABLE_TYPE* const  AllowedVarTypes,
-                                                     Uint32                                      NumAllowedTypes,
-                                                     ShaderResourceCacheD3D12*                   pResourceCache,
-                                                     RootSignature*                              pRootSig) :
-    // clang-format off
-    m_Owner        {Owner},
-    m_pd3d12Device {pd3d12Device},
-    m_pResources   {std::move(pSrcResources)}
-// clang-format on
+void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                               pd3d12Device,
+                                           PIPELINE_TYPE                               PipelineType,
+                                           const PipelineResourceLayoutDesc&           ResourceLayout,
+                                           std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
+                                           IMemoryAllocator&                           LayoutDataAllocator,
+                                           const SHADER_RESOURCE_VARIABLE_TYPE* const  AllowedVarTypes,
+                                           Uint32                                      NumAllowedTypes,
+                                           ShaderResourceCacheD3D12*                   pResourceCache,
+                                           RootSignature*                              pRootSig)
 {
+    m_pd3d12Device = pd3d12Device;
+    m_pResources   = std::move(pSrcResources);
+
     VERIFY_EXPR((pResourceCache != nullptr) ^ (pRootSig != nullptr));
 
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);

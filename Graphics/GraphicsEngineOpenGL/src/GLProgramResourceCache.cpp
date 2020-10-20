@@ -92,7 +92,9 @@ GLProgramResourceCache::~GLProgramResourceCache()
 
 void GLProgramResourceCache::Destroy(IMemoryAllocator& MemAllocator)
 {
-    VERIFY(IsInitialized(), "Resource cache is not initialized");
+    if (!IsInitialized())
+        return;
+
     VERIFY(m_pdbgMemoryAllocator == &MemAllocator, "The allocator does not match the one used to create resources");
 
     for (Uint32 cb = 0; cb < GetUBCount(); ++cb)
