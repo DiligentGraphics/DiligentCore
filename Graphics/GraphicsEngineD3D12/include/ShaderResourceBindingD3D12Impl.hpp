@@ -78,6 +78,8 @@ public:
     }
 
 private:
+    void Destruct();
+
     ShaderResourceCacheD3D12    m_ShaderResourceCache;
     ShaderVariableManagerD3D12* m_pShaderVarMgrs = nullptr;
 

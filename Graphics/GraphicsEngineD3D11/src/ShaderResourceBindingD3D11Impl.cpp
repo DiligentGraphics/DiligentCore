@@ -31,6 +31,7 @@
 #include "DeviceContextD3D11Impl.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
 #include "ShaderD3D11Impl.hpp"
+#include "LinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -49,69 +50,104 @@ ShaderResourceBindingD3D11Impl::ShaderResourceBindingD3D11Impl(IReferenceCounter
     m_bIsStaticResourcesBound{false}
 // clang-format on
 {
-    m_ResourceLayoutIndex.fill(-1);
-    m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaderStages());
-
-    // clang-format off
-    m_pResourceLayouts     = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceLayoutD3D11", ShaderResourceLayoutD3D11, m_NumActiveShaders);
-    m_pBoundResourceCaches = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheD3D11",  ShaderResourceCacheD3D11,  m_NumActiveShaders);
-    // clang-format on
-
-    const auto& PSODesc = pPSO->GetDesc();
-
-    // Reserve memory for resource layouts
-    for (Uint8 s = 0; s < m_NumActiveShaders; ++s)
+    try
     {
-        auto* pShaderD3D11 = pPSO->GetShader(s);
+        m_ResourceLayoutIndex.fill(-1);
+        m_NumActiveShaders = static_cast<Uint8>(pPSO->GetNumShaderStages());
 
-        auto& SRBMemAllocator        = pPSO->GetSRBMemoryAllocator();
-        auto& ResCacheDataAllocator  = SRBMemAllocator.GetResourceCacheDataAllocator(s);
-        auto& ResLayoutDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
+        LinearAllocator MemPool{GetRawAllocator()};
+        MemPool.AddSpace<ShaderResourceCacheD3D11>(m_NumActiveShaders);
+        MemPool.AddSpace<ShaderResourceLayoutD3D11>(m_NumActiveShaders);
 
-        // Initialize resource cache to have enough space to contain all shader resources, including static ones
-        // Static resources are copied before resources are committed
-        const auto& Resources = *pShaderD3D11->GetD3D11Resources();
-        new (m_pBoundResourceCaches + s) ShaderResourceCacheD3D11;
-        m_pBoundResourceCaches[s].Initialize(Resources, ResCacheDataAllocator);
+        MemPool.Reserve();
 
-        // Shader resource layout will only contain dynamic and mutable variables
-        // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache#Shader-Resource-Cache-Initialization
-        SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-        new (m_pResourceLayouts + s) ShaderResourceLayoutD3D11{*this, m_pBoundResourceCaches[s]};
-        m_pResourceLayouts[s].Initialize(
-            pShaderD3D11->GetD3D11Resources(),
-            PSODesc.ResourceLayout,
-            VarTypes,
-            _countof(VarTypes),
-            ResCacheDataAllocator,
-            ResLayoutDataAllocator //
-        );
+        m_pBoundResourceCaches = MemPool.ConstructArray<ShaderResourceCacheD3D11>(m_NumActiveShaders);
 
-        const auto ShaderType = pShaderD3D11->GetDesc().ShaderType;
-        const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, PSODesc.PipelineType);
-        VERIFY_EXPR(ShaderType == m_pResourceLayouts[s].GetShaderType());
-        m_ShaderTypes[s] = ShaderType;
+        // The memory is now owned by ShaderResourceBindingD3D11Impl and will be freed by Destruct().
+        auto* Ptr = MemPool.ReleaseOwnership();
+        VERIFY_EXPR(Ptr == m_pBoundResourceCaches);
+        (void)Ptr;
 
-        m_ResourceLayoutIndex[ShaderInd] = s;
+        m_pResourceLayouts = MemPool.Allocate<ShaderResourceLayoutD3D11>(m_NumActiveShaders);
+        for (Uint8 s = 0; s < m_NumActiveShaders; ++s)
+            new (m_pResourceLayouts + s) ShaderResourceLayoutD3D11{*this, m_pBoundResourceCaches[s]}; // noexcept
+
+        // It is important to construct all objects before initializing them because if an exception is thrown,
+        // destructors will be called for all objects
+
+        const auto& PSODesc = pPSO->GetDesc();
+
+        // Reserve memory for resource layouts
+        for (Uint8 s = 0; s < m_NumActiveShaders; ++s)
+        {
+            auto* pShaderD3D11 = pPSO->GetShader(s);
+
+            auto& SRBMemAllocator        = pPSO->GetSRBMemoryAllocator();
+            auto& ResCacheDataAllocator  = SRBMemAllocator.GetResourceCacheDataAllocator(s);
+            auto& ResLayoutDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
+
+            // Initialize resource cache to have enough space to contain all shader resources, including static ones
+            // Static resources are copied before resources are committed
+            const auto& Resources = *pShaderD3D11->GetD3D11Resources();
+            m_pBoundResourceCaches[s].Initialize(Resources, ResCacheDataAllocator);
+
+            // Shader resource layout will only contain dynamic and mutable variables
+            // http://diligentgraphics.com/diligent-engine/architecture/d3d11/shader-resource-cache#Shader-Resource-Cache-Initialization
+            SHADER_RESOURCE_VARIABLE_TYPE VarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+            m_pResourceLayouts[s].Initialize(
+                pShaderD3D11->GetD3D11Resources(),
+                PSODesc.ResourceLayout,
+                VarTypes,
+                _countof(VarTypes),
+                ResCacheDataAllocator,
+                ResLayoutDataAllocator //
+            );
+
+            const auto ShaderType = pShaderD3D11->GetDesc().ShaderType;
+            const auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, PSODesc.PipelineType);
+            VERIFY_EXPR(ShaderType == m_pResourceLayouts[s].GetShaderType());
+            m_ShaderTypes[s] = ShaderType;
+
+            m_ResourceLayoutIndex[ShaderInd] = s;
+        }
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
     }
 }
 
 ShaderResourceBindingD3D11Impl::~ShaderResourceBindingD3D11Impl()
 {
-    auto* pPSOD3D11Impl = ValidatedCast<PipelineStateD3D11Impl>(m_pPSO);
-    for (Uint32 s = 0; s < m_NumActiveShaders; ++s)
-    {
-        auto& Allocator = pPSOD3D11Impl->GetSRBMemoryAllocator().GetResourceCacheDataAllocator(s);
-        m_pBoundResourceCaches[s].Destroy(Allocator);
-        m_pBoundResourceCaches[s].~ShaderResourceCacheD3D11();
-    }
-    GetRawAllocator().Free(m_pBoundResourceCaches);
+    Destruct();
+}
 
-    for (Int32 l = 0; l < m_NumActiveShaders; ++l)
+void ShaderResourceBindingD3D11Impl::Destruct()
+{
+    if (m_pResourceLayouts != nullptr)
     {
-        m_pResourceLayouts[l].~ShaderResourceLayoutD3D11();
+        for (Int32 l = 0; l < m_NumActiveShaders; ++l)
+        {
+            m_pResourceLayouts[l].~ShaderResourceLayoutD3D11();
+        }
     }
-    GetRawAllocator().Free(m_pResourceLayouts);
+
+    if (m_pBoundResourceCaches != nullptr)
+    {
+        auto& SRBMemAllocator = m_pPSO->GetSRBMemoryAllocator();
+        for (Uint32 s = 0; s < m_NumActiveShaders; ++s)
+        {
+            auto& Allocator = SRBMemAllocator.GetResourceCacheDataAllocator(s);
+            m_pBoundResourceCaches[s].Destroy(Allocator);
+            m_pBoundResourceCaches[s].~ShaderResourceCacheD3D11();
+        }
+    }
+
+    if (void* pRawMem = m_pBoundResourceCaches)
+    {
+        GetRawAllocator().Free(pRawMem);
+    }
 }
 
 IMPLEMENT_QUERY_INTERFACE(ShaderResourceBindingD3D11Impl, IID_ShaderResourceBindingD3D11, TBase)

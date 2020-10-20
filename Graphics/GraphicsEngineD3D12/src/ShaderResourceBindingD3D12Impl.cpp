@@ -30,6 +30,7 @@
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderD3D12Impl.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
+#include "LinearAllocator.hpp"
 
 namespace Diligent
 {
@@ -48,48 +49,73 @@ ShaderResourceBindingD3D12Impl::ShaderResourceBindingD3D12Impl(IReferenceCounter
     m_NumShaders         {static_cast<decltype(m_NumShaders)>(pPSO->GetNumShaderStages())}
 // clang-format on
 {
-    m_ResourceLayoutIndex.fill(-1);
-
-    auto* pRenderDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(pPSO->GetDevice());
-    auto& ResCacheDataAllocator  = pPSO->GetSRBMemoryAllocator().GetResourceCacheDataAllocator(0);
-    pPSO->GetRootSignature().InitResourceCache(pRenderDeviceD3D12Impl, m_ShaderResourceCache, ResCacheDataAllocator);
-
-    m_pShaderVarMgrs = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerD3D12", ShaderVariableManagerD3D12, m_NumShaders);
-
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    try
     {
-        auto ShaderType = pPSO->GetShaderStageType(s);
-        auto ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPSO->GetDesc().PipelineType);
+        m_ResourceLayoutIndex.fill(-1);
 
-        auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
+        LinearAllocator MemPool{GetRawAllocator()};
+        MemPool.AddSpace<ShaderVariableManagerD3D12>(m_NumShaders);
+        MemPool.Reserve();
+        m_pShaderVarMgrs = MemPool.ConstructArray<ShaderVariableManagerD3D12>(m_NumShaders, std::ref(*this), std::ref(m_ShaderResourceCache));
 
-        // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
-        const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
-        const auto&                         SrcLayout         = pPSO->GetShaderResLayout(s);
-        // Create shader variable manager in place
-        new (m_pShaderVarMgrs + s) ShaderVariableManagerD3D12{*this, m_ShaderResourceCache};
-        m_pShaderVarMgrs[s].Initialize(
-            SrcLayout,
-            VarDataAllocator,
-            AllowedVarTypes,
-            _countof(AllowedVarTypes) //
-        );
+        // The memory is now owned by ShaderResourceBindingD3D12Impl and will be freed by Destruct().
+        auto* Ptr = MemPool.ReleaseOwnership();
+        VERIFY_EXPR(Ptr == m_pShaderVarMgrs);
+        (void)Ptr;
 
-        m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
+        // It is important to construct all objects before initializing them because if an exception is thrown,
+        // destructors will be called for all objects
+
+        auto* pRenderDeviceD3D12Impl = ValidatedCast<RenderDeviceD3D12Impl>(pPSO->GetDevice());
+        auto& ResCacheDataAllocator  = pPSO->GetSRBMemoryAllocator().GetResourceCacheDataAllocator(0);
+        pPSO->GetRootSignature().InitResourceCache(pRenderDeviceD3D12Impl, m_ShaderResourceCache, ResCacheDataAllocator);
+
+        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        {
+            const auto  ShaderType = pPSO->GetShaderStageType(s);
+            const auto& SrcLayout  = pPSO->GetShaderResLayout(s);
+            const auto  ShaderInd  = GetShaderTypePipelineIndex(ShaderType, pPSO->GetDesc().PipelineType);
+
+            auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
+
+            // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Resource-Layouts-in-a-Shader-Resource-Binding-Object
+            const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
+            m_pShaderVarMgrs[s].Initialize(
+                SrcLayout,
+                VarDataAllocator,
+                AllowedVarTypes,
+                _countof(AllowedVarTypes) //
+            );
+
+            m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
+        }
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
     }
 }
 
+
 ShaderResourceBindingD3D12Impl::~ShaderResourceBindingD3D12Impl()
 {
-    auto* pPSO = ValidatedCast<PipelineStateD3D12Impl>(m_pPSO);
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
-    {
-        auto& VarDataAllocator = pPSO->GetSRBMemoryAllocator().GetShaderVariableDataAllocator(s);
-        m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
-        m_pShaderVarMgrs[s].~ShaderVariableManagerD3D12();
-    }
+    Destruct();
+}
 
-    GetRawAllocator().Free(m_pShaderVarMgrs);
+void ShaderResourceBindingD3D12Impl::Destruct()
+{
+    if (m_pShaderVarMgrs != nullptr)
+    {
+        auto& SRBMemAllocator = m_pPSO->GetSRBMemoryAllocator();
+        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        {
+            auto& VarDataAllocator = SRBMemAllocator.GetShaderVariableDataAllocator(s);
+            m_pShaderVarMgrs[s].Destroy(VarDataAllocator);
+            m_pShaderVarMgrs[s].~ShaderVariableManagerD3D12();
+        }
+        GetRawAllocator().Free(m_pShaderVarMgrs);
+    }
 }
 
 IMPLEMENT_QUERY_INTERFACE(ShaderResourceBindingD3D12Impl, IID_ShaderResourceBindingD3D12, TBase)

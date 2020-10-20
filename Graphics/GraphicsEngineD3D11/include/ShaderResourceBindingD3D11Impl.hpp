@@ -100,6 +100,8 @@ public:
     }
 
 private:
+    void Destruct();
+
     // The caches are indexed by the shader order in the PSO, not shader index
     ShaderResourceCacheD3D11*  m_pBoundResourceCaches = nullptr;
     ShaderResourceLayoutD3D11* m_pResourceLayouts     = nullptr;
