@@ -160,6 +160,7 @@ public:
         auto& Features = this->m_DeviceCaps.Features;
 
         Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
+        Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
         Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
         Features.WireframeFill                 = DEVICE_FEATURE_STATE_ENABLED;
         Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;

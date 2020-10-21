@@ -49,10 +49,15 @@ namespace Testing
 class TestingEnvironment : public ::testing::Environment
 {
 public:
-    TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
-                       ADAPTER_TYPE         AdapterType,
-                       Uint32               AdapterId,
-                       const SwapChainDesc& SCDesc);
+    struct CreateInfo
+    {
+        RENDER_DEVICE_TYPE deviceType  = RENDER_DEVICE_TYPE_UNDEFINED;
+        ADAPTER_TYPE       AdapterType = ADAPTER_TYPE_UNKNOWN;
+        Uint32             AdapterId   = DEFAULT_ADAPTER_ID;
+
+        bool ForceNonSeparablePrograms = false;
+    };
+    TestingEnvironment(const CreateInfo& CI, const SwapChainDesc& SCDesc);
 
     ~TestingEnvironment() override;
 

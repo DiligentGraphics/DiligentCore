@@ -1515,6 +1515,17 @@ struct DeviceFeatures
     /// Indicates if device supports separable programs
     DEVICE_FEATURE_STATE SeparablePrograms             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports resource queries from shader objects.
+
+    /// \ note  This feature indicates if IShader::GetResourceCount() and IShader::GetResourceDesc() methods
+    ///         can be used to query the list of resources of individual shader objects.
+    ///         Shader variable queries from pipeline state and shader resource binding objects are always
+    ///         available.
+    ///
+    ///         The feature is always enabled in Direct3D11, Direct3D12 and Vulkan. It is enabled in
+    ///         OpenGL when separable programs are available, and it is always disabled in Metal.
+    DEVICE_FEATURE_STATE ShaderResourceQueries         DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
     /// Indicates if device supports indirect draw commands
     DEVICE_FEATURE_STATE IndirectRendering             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
@@ -1616,6 +1627,7 @@ struct DeviceFeatures
 
     explicit DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept :
         SeparablePrograms                 {State},
+        ShaderResourceQueries             {State},
         IndirectRendering                 {State},
         WireframeFill                     {State},
         MultithreadedResourceCreation     {State},
@@ -1647,7 +1659,7 @@ struct DeviceFeatures
         UniformBuffer8BitAccess           {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 30, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 31, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -1875,6 +1887,11 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// provide additional runtime checking, validation, and logging
     /// functionality while possibly incurring performance penalties
     bool CreateDebugContext     DEFAULT_INITIALIZER(false);
+
+    /// Force using non-separable programs.
+
+    /// Setting this to true is typically needed for testing purposes only.
+    bool ForceNonSeparablePrograms DEFAULT_INITIALIZER(false);
 };
 typedef struct EngineGLCreateInfo EngineGLCreateInfo;
 

@@ -70,11 +70,18 @@ namespace
 
 TEST(TessellationTest, DrawQuad)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.Tessellation)
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
+    if (!deviceCaps.Features.Tessellation)
     {
         GTEST_SKIP() << "Tessellation is not supported by this device";
+    }
+
+    if (!deviceCaps.Features.SeparablePrograms)
+    {
+        GTEST_SKIP() << "Tessellation test requires separable programs";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -86,8 +93,7 @@ TEST(TessellationTest, DrawQuad)
         pConext->Flush();
         pConext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
-        switch (deviceType)
+        switch (deviceCaps.DevType)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:

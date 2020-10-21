@@ -1,5 +1,7 @@
 ## Current progress
 
+* Added `ShaderResourceQueries` device feature and `EngineGLCreateInfo::ForceNonSeparablePrograms` parameter (API Version 240078)
+
 * Renamed `USAGE_STATIC` to `USAGE_IMMUTABLE` (API Version 240077)
 
 * Renamed static samplers into immutable samplers (API Version 240076)

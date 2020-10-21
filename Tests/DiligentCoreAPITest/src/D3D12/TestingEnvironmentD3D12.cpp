@@ -40,11 +40,9 @@ void CreateTestingSwapChainD3D12(IRenderDevice*       pDevice,
                                  const SwapChainDesc& SCDesc,
                                  ISwapChain**         ppSwapChain);
 
-TestingEnvironmentD3D12::TestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceType,
-                                                 ADAPTER_TYPE         AdapterType,
-                                                 Uint32               AdapterId,
+TestingEnvironmentD3D12::TestingEnvironmentD3D12(const CreateInfo&    CI,
                                                  const SwapChainDesc& SCDesc) :
-    TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc},
+    TestingEnvironment{CI, SCDesc},
     m_WaitForGPUEventHandle{CreateEvent(nullptr, false, false, nullptr)},
     m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Direct3D12, nullptr)}
 {
@@ -93,12 +91,10 @@ void TestingEnvironmentD3D12::IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue)
     }
 }
 
-TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceType,
-                                                  ADAPTER_TYPE         AdapterType,
-                                                  Uint32               AdapterId,
-                                                  const SwapChainDesc& SCDesc)
+TestingEnvironment* CreateTestingEnvironmentD3D12(const TestingEnvironment::CreateInfo& CI,
+                                                  const SwapChainDesc&                  SCDesc)
 {
-    return new TestingEnvironmentD3D12{deviceType, AdapterType, AdapterId, SCDesc};
+    return new TestingEnvironmentD3D12{CI, SCDesc};
 }
 
 HRESULT TestingEnvironmentD3D12::CompileDXILShader(const std::string& Source,

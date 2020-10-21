@@ -213,6 +213,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 
     // The following features are always enabled
     Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
+    Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
     Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
     Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
     Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
@@ -222,7 +223,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 30, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     const auto& vkDeviceLimits    = m_PhysicalDevice->GetProperties().limits;

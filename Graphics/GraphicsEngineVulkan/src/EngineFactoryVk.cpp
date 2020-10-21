@@ -389,7 +389,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
 
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 30, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();

@@ -70,11 +70,18 @@ namespace
 
 TEST(GeometryShaderTest, DrawTriangles)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.GeometryShaders)
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
+    if (!deviceCaps.Features.GeometryShaders)
     {
         GTEST_SKIP() << "Geometry shaders are not supported by this device";
+    }
+
+    if (!deviceCaps.Features.SeparablePrograms)
+    {
+        GTEST_SKIP() << "Geometry shader test requires separable programs";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -86,8 +93,7 @@ TEST(GeometryShaderTest, DrawTriangles)
         pConext->Flush();
         pConext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
-        switch (deviceType)
+        switch (deviceCaps.DevType)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:

@@ -336,7 +336,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         const bool IsGL42OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 2);
         const bool IsGL41OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 1);
 
-        Features.SeparablePrograms = DEVICE_FEATURE_STATE_ENABLED;
+        SET_FEATURE_STATE(SeparablePrograms, !InitAttribs.ForceNonSeparablePrograms, "Separable programs are");
+        SET_FEATURE_STATE(ShaderResourceQueries, Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED, "Shader resource queries are");
         Features.IndirectRendering = DEVICE_FEATURE_STATE_ENABLED;
         Features.WireframeFill     = DEVICE_FEATURE_STATE_ENABLED;
         // clang-format off
@@ -395,7 +396,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         bool IsGLES32OrAbove = (MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 2);
 
         // clang-format off
-        SET_FEATURE_STATE(SeparablePrograms,             IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects"), "Separable programs are");
+        SET_FEATURE_STATE(SeparablePrograms,             (IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects")) && !InitAttribs.ForceNonSeparablePrograms, "Separable programs are");
+        SET_FEATURE_STATE(ShaderResourceQueries,         Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED,      "Shader resource queries are");
         SET_FEATURE_STATE(IndirectRendering,             IsGLES31OrAbove || strstr(Extensions, "draw_indirect"),           "Indirect rendering is");
         SET_FEATURE_STATE(WireframeFill,                 false, "Wireframe fill is");
         SET_FEATURE_STATE(MultithreadedResourceCreation, false, "Multithreaded resource creation is");
@@ -456,7 +458,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #undef SET_FEATURE_STATE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 30, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 }
 

@@ -113,15 +113,16 @@ protected:
                                                Uint32                    NumExpectedResources,
                                                TModifyShaderCI           ModifyShaderCI)
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
-        auto* pDevice = pEnv->GetDevice();
+        auto* const pEnv       = TestingEnvironment::GetInstance();
+        auto* const pDevice    = pEnv->GetDevice();
+        const auto& deviceCaps = pDevice->GetDeviceCaps();
 
         RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
         pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/ShaderResourceLayout", &pShaderSourceFactory);
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.UseCombinedTextureSamplers = pDevice->GetDeviceCaps().IsGLDevice();
+        ShaderCI.UseCombinedTextureSamplers = deviceCaps.IsGLDevice();
 
         ShaderCI.FilePath        = FileName;
         ShaderCI.Desc.Name       = ShaderName;
@@ -135,8 +136,8 @@ protected:
 
         RefCntAutoPtr<IShader> pShader;
         pDevice->CreateShader(ShaderCI, &pShader);
-        // Shader resource queries are not supported in Metal
-        if (pShader && !pDevice->GetDeviceCaps().IsMetalDevice())
+
+        if (pShader && deviceCaps.Features.ShaderResourceQueries)
         {
             VerifyShaderResources(pShader, ExpectedResources, NumExpectedResources);
             Diligent::Test::PrintShaderResources(pShader);

@@ -89,6 +89,10 @@ TEST(ShaderResourceLayout, VariableAccess)
     auto* pContext = pEnv->GetDeviceContext();
 
     const auto& deviceCaps = pDevice->GetDeviceCaps();
+    if (!deviceCaps.Features.SeparablePrograms)
+    {
+        GTEST_SKIP() << "Shader variable access test requires separate programs";
+    }
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
