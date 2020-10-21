@@ -32,6 +32,7 @@
 
 #include <vector>
 
+#include "Atomics.hpp"
 #include "ShaderResourceVariable.h"
 #include "PipelineState.h"
 #include "StringTools.hpp"
@@ -114,15 +115,15 @@ inline Uint32 GetAllowedTypeBits(const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVar
     return AllowedTypeBits;
 }
 
-inline Int32 FindStaticSampler(const StaticSamplerDesc* StaticSamplers,
-                               Uint32                   NumStaticSamplers,
-                               SHADER_TYPE              ShaderType,
-                               const char*              ResourceName,
-                               const char*              SamplerSuffix)
+inline Int32 FindImmutableSampler(const ImmutableSamplerDesc* ImtblSamplers,
+                                  Uint32                      NumImtblSamplers,
+                                  SHADER_TYPE                 ShaderType,
+                                  const char*                 ResourceName,
+                                  const char*                 SamplerSuffix)
 {
-    for (Uint32 s = 0; s < NumStaticSamplers; ++s)
+    for (Uint32 s = 0; s < NumImtblSamplers; ++s)
     {
-        const auto& StSam = StaticSamplers[s];
+        const auto& StSam = ImtblSamplers[s];
         if (((StSam.ShaderStages & ShaderType) != 0) && StreqSuff(ResourceName, StSam.SamplerOrTextureName, SamplerSuffix))
             return s;
     }
@@ -214,6 +215,28 @@ inline const char* GetResourceTypeName<BUFFER_VIEW_TYPE>()
     return "buffer view";
 }
 
+inline RESOURCE_DIMENSION GetResourceViewDimension(const ITextureView* pTexView)
+{
+    VERIFY_EXPR(pTexView != nullptr);
+    return pTexView->GetDesc().TextureDim;
+}
+
+inline RESOURCE_DIMENSION GetResourceViewDimension(const IBufferView* /*pBuffView*/)
+{
+    return RESOURCE_DIM_BUFFER;
+}
+
+inline Uint32 GetResourceSampleCount(const ITextureView* pTexView)
+{
+    VERIFY_EXPR(pTexView != nullptr);
+    return const_cast<ITextureView*>(pTexView)->GetTexture()->GetDesc().SampleCount;
+}
+
+inline Uint32 GetResourceSampleCount(const IBufferView* /*pBuffView*/)
+{
+    return 0;
+}
+
 template <typename ResourceAttribsType,
           typename ResourceViewImplType,
           typename ViewTypeEnumType>
@@ -254,8 +277,6 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
 
         if (!IsExpectedViewType)
         {
-            std::string ExpectedViewTypeName;
-
             std::stringstream ss;
             ss << "Error binding " << ExpectedResourceType << " '" << pViewImpl->GetDesc().Name << "' to variable '"
                << Attribs.GetPrintName(ArrayIndex) << '\'';
@@ -279,11 +300,45 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
 
             BindingOK = false;
         }
+
+        const auto ExpectedResourceDim = Attribs.GetResourceDimension();
+        if (ExpectedResourceDim != RESOURCE_DIM_UNDEFINED)
+        {
+            auto ResourceDim = GetResourceViewDimension(pViewImpl);
+            if (ResourceDim != ExpectedResourceDim)
+            {
+                LOG_ERROR_MESSAGE("Error binding ", ExpectedResourceType, " '", pViewImpl->GetDesc().Name, "' to variable '",
+                                  Attribs.GetPrintName(ArrayIndex), "': incorrect resource dimension: ",
+                                  GetResourceDimString(ExpectedResourceDim), " is expected, but the actual dimension is ",
+                                  GetResourceDimString(ResourceDim));
+
+                BindingOK = false;
+            }
+
+            if (ResourceDim == RESOURCE_DIM_TEX_2D || ResourceDim == RESOURCE_DIM_TEX_2D_ARRAY)
+            {
+                auto SampleCount = GetResourceSampleCount(pViewImpl);
+                auto IsMS        = Attribs.IsMultisample();
+                if (IsMS && SampleCount == 1)
+                {
+                    LOG_ERROR_MESSAGE("Error binding ", ExpectedResourceType, " '", pViewImpl->GetDesc().Name, "' to variable '",
+                                      Attribs.GetPrintName(ArrayIndex), "': multisample texture is expected.");
+                    BindingOK = false;
+                }
+                else if (!IsMS && SampleCount > 1)
+                {
+                    LOG_ERROR_MESSAGE("Error binding ", ExpectedResourceType, " '", pViewImpl->GetDesc().Name, "' to variable '",
+                                      Attribs.GetPrintName(ArrayIndex), "': single-sample texture is expected.");
+                    BindingOK = false;
+                }
+            }
+        }
     }
 
     if (VarType != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && pCachedView != nullptr && pCachedView != pViewImpl)
     {
-        auto              VarTypeStr = GetShaderVariableTypeLiteralName(VarType);
+        const auto* VarTypeStr = GetShaderVariableTypeLiteralName(VarType);
+
         std::stringstream ss;
         ss << "Non-null resource '" << pCachedView->GetDesc().Name << "' is already bound to " << VarTypeStr
            << " shader variable '" << Attribs.GetPrintName(ArrayIndex) << '\'';
@@ -305,6 +360,7 @@ bool VerifyResourceViewBinding(const ResourceAttribsType&              Attribs,
 
         BindingOK = false;
     }
+
     return BindingOK;
 }
 
@@ -340,7 +396,7 @@ template <typename ResourceLayoutType,
 struct ShaderVariableBase : public ResourceVariableBaseInterface
 {
     ShaderVariableBase(ResourceLayoutType& ParentResLayout) :
-        m_ParentResLayout(ParentResLayout)
+        m_ParentResLayout{ParentResLayout}
     {
     }
 

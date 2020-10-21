@@ -154,23 +154,23 @@ std::array<RefCntAutoPtr<IPipelineState>, 4> GenerateMipsVkHelper::CreatePSOs(TE
 
         m_DeviceVkImpl.CreateShader(CSCreateInfo, &pCS);
 
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        ComputePipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&             PSODesc = PSOCreateInfo.PSODesc;
 
-        PSODesc.PipelineType        = PIPELINE_TYPE_COMPUTE;
-        PSODesc.Name                = name.c_str();
-        PSODesc.ComputePipeline.pCS = pCS;
+        PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+        PSODesc.Name         = name.c_str();
+        PSOCreateInfo.pCS    = pCS;
 
         PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
         ShaderResourceVariableDesc VarDesc{SHADER_TYPE_COMPUTE, "CB", SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
         PSODesc.ResourceLayout.Variables    = &VarDesc;
         PSODesc.ResourceLayout.NumVariables = 1;
 
-        const StaticSamplerDesc StaticSampler(SHADER_TYPE_COMPUTE, "SrcMip", Sam_LinearClamp);
-        PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
-        PSODesc.ResourceLayout.NumStaticSamplers = 1;
+        const ImmutableSamplerDesc ImtblSampler{SHADER_TYPE_COMPUTE, "SrcMip", Sam_LinearClamp};
+        PSODesc.ResourceLayout.ImmutableSamplers    = &ImtblSampler;
+        PSODesc.ResourceLayout.NumImmutableSamplers = 1;
 
-        m_DeviceVkImpl.CreatePipelineState(PSOCreateInfo, &PSOs[NonPowOfTwo]);
+        m_DeviceVkImpl.CreateComputePipelineState(PSOCreateInfo, &PSOs[NonPowOfTwo]);
         PSOs[NonPowOfTwo]->GetStaticVariableByName(SHADER_TYPE_COMPUTE, "CB")->Set(m_ConstantsCB);
     }
 #endif

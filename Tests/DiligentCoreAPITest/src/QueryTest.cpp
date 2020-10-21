@@ -109,17 +109,18 @@ protected:
         sm_pRTV = pRenderTarget->GetDefaultView(TEXTURE_VIEW_RENDER_TARGET);
         ASSERT_NE(sm_pRTV, nullptr);
 
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
+        PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
+        GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
         PSODesc.Name = "Query command test - procedural quad";
 
-        PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
-        PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-        PSODesc.GraphicsPipeline.RTVFormats[0]                = TexDesc.Format;
-        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-        PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-        PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+        GraphicsPipeline.NumRenderTargets             = 1;
+        GraphicsPipeline.RTVFormats[0]                = TexDesc.Format;
+        GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -146,9 +147,9 @@ protected:
             ASSERT_NE(pVS, nullptr);
         }
 
-        PSODesc.GraphicsPipeline.pVS = pVS;
-        PSODesc.GraphicsPipeline.pPS = pPS;
-        pDevice->CreatePipelineState(PSOCreateInfo, &sm_pPSO);
+        PSOCreateInfo.pVS = pVS;
+        PSOCreateInfo.pPS = pPS;
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &sm_pPSO);
         ASSERT_NE(sm_pPSO, nullptr);
     }
 

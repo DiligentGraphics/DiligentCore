@@ -96,32 +96,36 @@ struct ShaderResourceVariableDesc
 typedef struct ShaderResourceVariableDesc ShaderResourceVariableDesc;
 
 
-/// Static sampler description
-struct StaticSamplerDesc
+/// Immutable sampler description.
+
+/// An immutable sampler is compiled into the pipeline state and can't be changed.
+/// It is generally more efficient than a regular sampler and should be used
+/// whenever possible.
+struct ImmutableSamplerDesc
 {
-    /// Shader stages that this static sampler applies to. More than one shader stage can be specified.
+    /// Shader stages that this immutable sampler applies to. More than one shader stage can be specified.
     SHADER_TYPE ShaderStages         DEFAULT_INITIALIZER(SHADER_TYPE_UNKNOWN);
 
     /// The name of the sampler itself or the name of the texture variable that 
-    /// this static sampler is assigned to if combined texture samplers are used.
+    /// this immutable sampler is assigned to if combined texture samplers are used.
     const Char* SamplerOrTextureName DEFAULT_INITIALIZER(nullptr);
 
     /// Sampler description
     struct SamplerDesc Desc;
 
 #if DILIGENT_CPP_INTERFACE
-    StaticSamplerDesc()noexcept{}
+    ImmutableSamplerDesc()noexcept{}
 
-    StaticSamplerDesc(SHADER_TYPE        _ShaderStages,
-                      const Char*        _SamplerOrTextureName,
-                      const SamplerDesc& _Desc)noexcept : 
+    ImmutableSamplerDesc(SHADER_TYPE        _ShaderStages,
+                         const Char*        _SamplerOrTextureName,
+                         const SamplerDesc& _Desc)noexcept : 
         ShaderStages        {_ShaderStages        },
         SamplerOrTextureName{_SamplerOrTextureName},
         Desc                {_Desc                }
     {}
 #endif
 };
-typedef struct StaticSamplerDesc StaticSamplerDesc;
+typedef struct ImmutableSamplerDesc ImmutableSamplerDesc;
 
 /// Pipeline layout description
 struct PipelineResourceLayoutDesc
@@ -129,19 +133,19 @@ struct PipelineResourceLayoutDesc
     /// Default shader resource variable type. This type will be used if shader
     /// variable description is not found in the Variables array
     /// or if Variables == nullptr
-    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
+    SHADER_RESOURCE_VARIABLE_TYPE       DefaultVariableType  DEFAULT_INITIALIZER(SHADER_RESOURCE_VARIABLE_TYPE_STATIC);
 
     /// Number of elements in Variables array            
-    Uint32                              NumVariables        DEFAULT_INITIALIZER(0);
+    Uint32                              NumVariables         DEFAULT_INITIALIZER(0);
 
     /// Array of shader resource variable descriptions               
-    const ShaderResourceVariableDesc*   Variables           DEFAULT_INITIALIZER(nullptr);
+    const ShaderResourceVariableDesc*   Variables            DEFAULT_INITIALIZER(nullptr);
                                                             
-    /// Number of static samplers in StaticSamplers array   
-    Uint32                              NumStaticSamplers   DEFAULT_INITIALIZER(0);
+    /// Number of immutable samplers in ImmutableSamplers array   
+    Uint32                              NumImmutableSamplers DEFAULT_INITIALIZER(0);
                                                             
-    /// Array of static sampler descriptions                
-    const StaticSamplerDesc*            StaticSamplers      DEFAULT_INITIALIZER(nullptr);
+    /// Array of immutable sampler descriptions                
+    const ImmutableSamplerDesc*         ImmutableSamplers    DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
 
@@ -151,29 +155,6 @@ typedef struct PipelineResourceLayoutDesc PipelineResourceLayoutDesc;
 /// This structure describes the graphics pipeline state and is part of the PipelineStateDesc structure.
 struct GraphicsPipelineDesc
 {
-    /// Vertex shader to be used with the pipeline.
-    IShader* pVS DEFAULT_INITIALIZER(nullptr);
-
-    /// Pixel shader to be used with the pipeline.
-    IShader* pPS DEFAULT_INITIALIZER(nullptr);
-
-    /// Domain shader to be used with the pipeline.
-    IShader* pDS DEFAULT_INITIALIZER(nullptr);
-
-    /// Hull shader to be used with the pipeline.
-    IShader* pHS DEFAULT_INITIALIZER(nullptr);
-
-    /// Geometry shader to be used with the pipeline.
-    IShader* pGS DEFAULT_INITIALIZER(nullptr);
-    
-    /// Amplification shader to be used with the pipeline.
-    IShader* pAS DEFAULT_INITIALIZER(nullptr);
-    
-    /// Mesh shader to be used with the pipeline.
-    IShader* pMS DEFAULT_INITIALIZER(nullptr);
-    
-    //D3D12_STREAM_OUTPUT_DESC StreamOutput;
-    
     /// Blend state description.
     BlendStateDesc BlendDesc;
 
@@ -348,19 +329,9 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     /// Pipeline layout description
     PipelineResourceLayoutDesc ResourceLayout;
 
-    /// Graphics pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_GRAPHICS or PIPELINE_TYPE_MESH
-    GraphicsPipelineDesc GraphicsPipeline;
-
-    /// Compute pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_COMPUTE
-    ComputePipelineDesc ComputePipeline;
-    
-    // TODO (AZ): use pointer
-    /// Ray tracing pipeline state description. This memeber is ignored if PipelineType is not PIPELINE_TYPE_RAY_TRACING.
-    RayTracingPipelineDesc RayTracingPipeline;
-    
 #if DILIGENT_CPP_INTERFACE
     bool IsAnyGraphicsPipeline() const { return PipelineType == PIPELINE_TYPE_GRAPHICS || PipelineType == PIPELINE_TYPE_MESH; }
-    bool IsComputePipeline ()    const { return PipelineType == PIPELINE_TYPE_COMPUTE; }
+    bool IsComputePipeline()     const { return PipelineType == PIPELINE_TYPE_COMPUTE; }
 #endif
 };
 typedef struct PipelineStateDesc PipelineStateDesc;
@@ -370,7 +341,7 @@ typedef struct PipelineStateDesc PipelineStateDesc;
 DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
 {
     /// Null flag.
-    PSO_CREATE_FLAG_NONE                          = 0x00,
+    PSO_CREATE_FLAG_NONE                              = 0x00,
 
     /// Ignore missing variables.
 
@@ -378,15 +349,15 @@ DILIGENT_TYPED_ENUM(PSO_CREATE_FLAGS, Uint32)
     /// provided as part of the pipeline resource layout description
     /// that is not found in any of the designated shader stages.
     /// Use this flag to silence these warnings.
-    PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES      = 0x01,
+    PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES          = 0x01,
 
-    /// Ignore missing static samplers.
+    /// Ignore missing immutable samplers.
 
-    /// By default, the engine outputs a warning for every static sampler
+    /// By default, the engine outputs a warning for every immutable sampler
     /// provided as part of the pipeline resource layout description
     /// that is not found in any of the designated shader stages.
     /// Use this flag to silence these warnings.
-    PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS = 0x02,
+    PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS = 0x02,
 };
 DEFINE_FLAG_ENUM_OPERATORS(PSO_CREATE_FLAGS);
 
@@ -398,9 +369,56 @@ struct PipelineStateCreateInfo
     PipelineStateDesc PSODesc;
 
     /// Pipeline state creation flags, see Diligent::PSO_CREATE_FLAGS.
-    PSO_CREATE_FLAGS Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
+    PSO_CREATE_FLAGS  Flags      DEFAULT_INITIALIZER(PSO_CREATE_FLAG_NONE);
 };
 typedef struct PipelineStateCreateInfo PipelineStateCreateInfo;
+
+
+/// Graphics pipeline state creation attributes
+struct GraphicsPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
+    
+    /// Graphics pipeline state description.
+    GraphicsPipelineDesc GraphicsPipeline; 
+     
+    /// Vertex shader to be used with the pipeline.
+    IShader* pVS DEFAULT_INITIALIZER(nullptr);
+
+    /// Pixel shader to be used with the pipeline.
+    IShader* pPS DEFAULT_INITIALIZER(nullptr);
+
+    /// Domain shader to be used with the pipeline.
+    IShader* pDS DEFAULT_INITIALIZER(nullptr);
+
+    /// Hull shader to be used with the pipeline.
+    IShader* pHS DEFAULT_INITIALIZER(nullptr);
+
+    /// Geometry shader to be used with the pipeline.
+    IShader* pGS DEFAULT_INITIALIZER(nullptr);
+    
+    /// Amplification shader to be used with the pipeline.
+    IShader* pAS DEFAULT_INITIALIZER(nullptr);
+    
+    /// Mesh shader to be used with the pipeline.
+    IShader* pMS DEFAULT_INITIALIZER(nullptr);
+};
+typedef struct GraphicsPipelineStateCreateInfo GraphicsPipelineStateCreateInfo;
+
+
+/// Compute pipeline state description.
+struct ComputePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
+    
+    /// Compute shader to be used with the pipeline
+    IShader* pCS DEFAULT_INITIALIZER(nullptr);
+
+#if DILIGENT_CPP_INTERFACE
+    ComputePipelineStateCreateInfo() noexcept
+    {
+        PSODesc.PipelineType = PIPELINE_TYPE_COMPUTE;
+    }
+#endif
+};
+typedef struct ComputePipelineStateCreateInfo ComputePipelineStateCreateInfo;
+
 
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
 static const struct INTERFACE_ID IID_PipelineState =
@@ -419,10 +437,13 @@ static const struct INTERFACE_ID IID_PipelineState =
 DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
-    /// Returns the blend state description used to create the object
-    virtual const PipelineStateDesc& METHOD(GetDesc)()const override = 0;
+    /// Returns the pipeline description used to create the object
+    virtual const PipelineStateDesc& METHOD(GetDesc)() const override = 0;
 #endif
 
+    /// Returns the graphics pipeline description used to create the object.
+    /// This method must only be called for a graphics or mesh pipeline.
+    VIRTUAL const GraphicsPipelineDesc REF METHOD(GetGraphicsPipelineDesc)(THIS) CONST PURE;
 
     /// Binds resources for all shaders in the pipeline state
 
@@ -512,6 +533,7 @@ DILIGENT_END_INTERFACE
 
 #    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
 
+#    define IPipelineState_GetGraphicsPipelineDesc(This)          CALL_IFACE_METHOD(PipelineState, GetGraphicsPipelineDesc,     This)
 #    define IPipelineState_BindStaticResources(This, ...)         CALL_IFACE_METHOD(PipelineState, BindStaticResources,         This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableCount(This, ...)      CALL_IFACE_METHOD(PipelineState, GetStaticVariableCount,      This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableByName(This, ...)     CALL_IFACE_METHOD(PipelineState, GetStaticVariableByName,     This, __VA_ARGS__)

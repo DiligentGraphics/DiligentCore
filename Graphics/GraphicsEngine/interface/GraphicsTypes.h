@@ -105,7 +105,7 @@ DILIGENT_TYPED_ENUM(USAGE, Uint8)
     /// when it is created, since it cannot be changed after creation. \n
     /// D3D11 Counterpart: D3D11_USAGE_IMMUTABLE. OpenGL counterpart: GL_STATIC_DRAW
     /// \remarks Static buffers do not allow CPU access and must use CPU_ACCESS_NONE flag.
-    USAGE_STATIC = 0, 
+    USAGE_IMMUTABLE = 0, 
 
     /// A resource that requires read and write access by the GPU and can also be occasionally
     /// written by the CPU.  \n
@@ -213,16 +213,16 @@ DEFINE_FLAG_ENUM_OPERATORS(MAP_FLAGS)
 /// - TextureViewDesc to describe texture view type
 DILIGENT_TYPED_ENUM(RESOURCE_DIMENSION, Uint8)
 {
-    RESOURCE_DIM_UNDEFINED = 0, ///< Texture type undefined
-    RESOURCE_DIM_BUFFER,            ///< Buffer
-    RESOURCE_DIM_TEX_1D,            ///< One-dimensional texture
-    RESOURCE_DIM_TEX_1D_ARRAY,      ///< One-dimensional texture array
-    RESOURCE_DIM_TEX_2D,            ///< Two-dimensional texture
-    RESOURCE_DIM_TEX_2D_ARRAY,      ///< Two-dimensional texture array
-    RESOURCE_DIM_TEX_3D,            ///< Three-dimensional texture
-    RESOURCE_DIM_TEX_CUBE,          ///< Cube-map texture
-    RESOURCE_DIM_TEX_CUBE_ARRAY,    ///< Cube-map array texture
-    RESOURCE_DIM_NUM_DIMENSIONS     ///< Helper value that stores the total number of texture types in the enumeration
+    RESOURCE_DIM_UNDEFINED = 0,  ///< Texture type undefined
+    RESOURCE_DIM_BUFFER,         ///< Buffer
+    RESOURCE_DIM_TEX_1D,         ///< One-dimensional texture
+    RESOURCE_DIM_TEX_1D_ARRAY,   ///< One-dimensional texture array
+    RESOURCE_DIM_TEX_2D,         ///< Two-dimensional texture
+    RESOURCE_DIM_TEX_2D_ARRAY,   ///< Two-dimensional texture array
+    RESOURCE_DIM_TEX_3D,         ///< Three-dimensional texture
+    RESOURCE_DIM_TEX_CUBE,       ///< Cube-map texture
+    RESOURCE_DIM_TEX_CUBE_ARRAY, ///< Cube-map array texture
+    RESOURCE_DIM_NUM_DIMENSIONS  ///< Helper value that stores the total number of texture types in the enumeration
 };
 
 /// Texture view type
@@ -1517,6 +1517,17 @@ struct DeviceFeatures
     /// Indicates if device supports separable programs
     DEVICE_FEATURE_STATE SeparablePrograms             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
+    /// Indicates if device supports resource queries from shader objects.
+
+    /// \ note  This feature indicates if IShader::GetResourceCount() and IShader::GetResourceDesc() methods
+    ///         can be used to query the list of resources of individual shader objects.
+    ///         Shader variable queries from pipeline state and shader resource binding objects are always
+    ///         available.
+    ///
+    ///         The feature is always enabled in Direct3D11, Direct3D12 and Vulkan. It is enabled in
+    ///         OpenGL when separable programs are available, and it is always disabled in Metal.
+    DEVICE_FEATURE_STATE ShaderResourceQueries         DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
+
     /// Indicates if device supports indirect draw commands
     DEVICE_FEATURE_STATE IndirectRendering             DEFAULT_INITIALIZER(DEVICE_FEATURE_STATE_DISABLED);
 
@@ -1621,6 +1632,7 @@ struct DeviceFeatures
 
     explicit DeviceFeatures(DEVICE_FEATURE_STATE State) noexcept :
         SeparablePrograms                 {State},
+        ShaderResourceQueries             {State},
         IndirectRendering                 {State},
         WireframeFill                     {State},
         MultithreadedResourceCreation     {State},
@@ -1653,7 +1665,7 @@ struct DeviceFeatures
         UniformBuffer8BitAccess           {State}
     {
 #   if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(*this) == 31, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
+        static_assert(sizeof(*this) == 32, "Did you add a new feature to DeviceFeatures? Please handle its status above.");
 #   endif
     }
 #endif
@@ -1712,7 +1724,7 @@ struct GraphicsAdapterInfo
 
     /// The amount of local video memory that is inaccessible by CPU, in bytes.
 
-    /// \note Device-local memory is where USAGE_DEFAULT and USAGE_STATIC resources
+    /// \note Device-local memory is where USAGE_DEFAULT and USAGE_IMMUTABLE resources
     ///       are typically allocated.
     ///
     ///       On some devices it may not be possible to query the memory size,
@@ -1881,6 +1893,11 @@ struct EngineGLCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// provide additional runtime checking, validation, and logging
     /// functionality while possibly incurring performance penalties
     bool CreateDebugContext     DEFAULT_INITIALIZER(false);
+
+    /// Force using non-separable programs.
+
+    /// Setting this to true is typically needed for testing purposes only.
+    bool ForceNonSeparablePrograms DEFAULT_INITIALIZER(false);
 };
 typedef struct EngineGLCreateInfo EngineGLCreateInfo;
 

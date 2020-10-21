@@ -54,12 +54,9 @@ protected:
 
 TEST_F(RasterizerStateTest, CreatePSO)
 {
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo();
 
-    PSODesc = GetPSODesc();
-
-    RasterizerStateDesc& RSDesc = PSODesc.GraphicsPipeline.RasterizerDesc;
+    RasterizerStateDesc& RSDesc = PSOCreateInfo.GraphicsPipeline.RasterizerDesc;
 
     ASSERT_TRUE(CreateTestPSO(PSOCreateInfo, true));
 
@@ -68,7 +65,7 @@ TEST_F(RasterizerStateTest, CreatePSO)
         RSDesc.FillMode = static_cast<FILL_MODE>(FillMode);
         auto pPSO       = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO) << "Fill mode: " << GetFillModeLiteralName(RSDesc.FillMode);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.FillMode, RSDesc.FillMode);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().RasterizerDesc.FillMode, RSDesc.FillMode);
     }
 
     for (auto CullMode = CULL_MODE_UNDEFINED + 1; CullMode < CULL_MODE_NUM_MODES; ++CullMode)
@@ -76,56 +73,56 @@ TEST_F(RasterizerStateTest, CreatePSO)
         RSDesc.CullMode = static_cast<CULL_MODE>(CullMode);
         auto pPSO       = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO) << "Cull mode: " << GetCullModeLiteralName(RSDesc.CullMode);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.CullMode, RSDesc.CullMode);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().RasterizerDesc.CullMode, RSDesc.CullMode);
     }
 
     {
         RSDesc.FrontCounterClockwise = !RSDesc.FrontCounterClockwise;
         auto pPSO                    = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.FrontCounterClockwise, RSDesc.FrontCounterClockwise);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().RasterizerDesc.FrontCounterClockwise, RSDesc.FrontCounterClockwise);
     }
 
     {
         RSDesc.DepthBias = 100;
         auto pPSO        = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.DepthBias, RSDesc.DepthBias);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().RasterizerDesc.DepthBias, RSDesc.DepthBias);
     }
 
     {
         RSDesc.DepthBiasClamp = 1.f;
         auto pPSO             = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.DepthBiasClamp, RSDesc.DepthBiasClamp);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().RasterizerDesc.DepthBiasClamp, RSDesc.DepthBiasClamp);
     }
 
     {
         RSDesc.SlopeScaledDepthBias = 2.f;
         auto pPSO                   = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.SlopeScaledDepthBias, RSDesc.SlopeScaledDepthBias);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().RasterizerDesc.SlopeScaledDepthBias, RSDesc.SlopeScaledDepthBias);
     }
 
     {
         RSDesc.DepthClipEnable = !RSDesc.DepthClipEnable;
         auto pPSO              = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.DepthClipEnable, RSDesc.DepthClipEnable);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().RasterizerDesc.DepthClipEnable, RSDesc.DepthClipEnable);
     }
 
     {
         RSDesc.ScissorEnable = !RSDesc.ScissorEnable;
         auto pPSO            = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.ScissorEnable, RSDesc.ScissorEnable);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable, RSDesc.ScissorEnable);
     }
 
     {
         RSDesc.AntialiasedLineEnable = !RSDesc.AntialiasedLineEnable;
         auto pPSO                    = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        EXPECT_EQ(pPSO->GetDesc().GraphicsPipeline.RasterizerDesc.AntialiasedLineEnable, RSDesc.AntialiasedLineEnable);
+        EXPECT_EQ(pPSO->GetGraphicsPipelineDesc().RasterizerDesc.AntialiasedLineEnable, RSDesc.AntialiasedLineEnable);
     }
 }
 

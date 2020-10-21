@@ -118,15 +118,15 @@ public:
         GLVariableBase(const GLProgramResources::GLResourceAttribs& ResourceAttribs,
                        GLPipelineResourceLayout&                    ParentLayout,
                        SHADER_RESOURCE_VARIABLE_TYPE                VariableType,
-                       Int32                                        StaticSamplerIdx) :
+                       Int32                                        ImtblSamplerIdx) :
             // clang-format off
             TBase             {ParentLayout},
             m_Attribs         {ResourceAttribs },
             m_VariableType    {VariableType    },
-            m_StaticSamplerIdx{StaticSamplerIdx}
+            m_ImtblSamplerIdx {ImtblSamplerIdx}
         // clang-format on
         {
-            VERIFY_EXPR(StaticSamplerIdx < 0 || ResourceAttribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV);
+            VERIFY_EXPR(ImtblSamplerIdx < 0 || ResourceAttribs.ResourceType == SHADER_RESOURCE_TYPE_TEXTURE_SRV);
         }
 
         virtual SHADER_RESOURCE_VARIABLE_TYPE DILIGENT_CALL_TYPE GetType() const override final
@@ -146,7 +146,7 @@ public:
 
         const GLProgramResources::GLResourceAttribs& m_Attribs;
         const SHADER_RESOURCE_VARIABLE_TYPE          m_VariableType;
-        const Int32                                  m_StaticSamplerIdx;
+        const Int32                                  m_ImtblSamplerIdx;
     };
 
 
@@ -188,8 +188,8 @@ public:
         SamplerBindInfo(const GLProgramResources::GLResourceAttribs& ResourceAttribs,
                         GLPipelineResourceLayout&                    ParentResLayout,
                         SHADER_RESOURCE_VARIABLE_TYPE                VariableType,
-                        Int32                                        StaticSamplerIdx) :
-            GLVariableBase{ResourceAttribs, ParentResLayout, VariableType, StaticSamplerIdx}
+                        Int32                                        ImtblSamplerIdx) :
+            GLVariableBase{ResourceAttribs, ParentResLayout, VariableType, ImtblSamplerIdx}
         {}
 
         // Non-virtual function

@@ -38,11 +38,9 @@ void CreateTestingSwapChainGL(IRenderDevice*       pDevice,
                               const SwapChainDesc& SCDesc,
                               ISwapChain**         ppSwapChain);
 
-TestingEnvironmentGL::TestingEnvironmentGL(RENDER_DEVICE_TYPE   deviceType,
-                                           ADAPTER_TYPE         AdapterType,
-                                           Uint32               AdapterId,
+TestingEnvironmentGL::TestingEnvironmentGL(const CreateInfo&    CI,
                                            const SwapChainDesc& SCDesc) :
-    TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc}
+    TestingEnvironment{CI, SCDesc}
 {
     // Initialize GLEW
     auto err = glewInit();
@@ -186,11 +184,12 @@ void TestingEnvironmentGL::Reset()
     }
 }
 
-TestingEnvironment* CreateTestingEnvironmentGL(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc)
+TestingEnvironment* CreateTestingEnvironmentGL(const TestingEnvironment::CreateInfo& CI,
+                                               const SwapChainDesc&                  SCDesc)
 {
     try
     {
-        return new TestingEnvironmentGL{deviceType, AdapterType, AdapterId, SCDesc};
+        return new TestingEnvironmentGL{CI, SCDesc};
     }
     catch (...)
     {

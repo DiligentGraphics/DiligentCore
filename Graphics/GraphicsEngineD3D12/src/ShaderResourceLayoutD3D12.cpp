@@ -38,6 +38,7 @@
 #include "RootSignature.hpp"
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderResourceVariableBase.hpp"
+#include "ShaderVariableD3DBase.hpp"
 
 namespace Diligent
 {
@@ -112,22 +113,19 @@ void ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&                
 
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-layout#Initializing-Shader-Resource-Layouts-and-Root-Signature-in-a-Pipeline-State-Object
 // http://diligentgraphics.com/diligent-engine/architecture/d3d12/shader-resource-cache#Initializing-Shader-Resource-Layouts-in-a-Pipeline-State
-ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                                    Owner,
-                                                     ID3D12Device*                               pd3d12Device,
-                                                     PIPELINE_TYPE                               PipelineType,
-                                                     const PipelineResourceLayoutDesc&           ResourceLayout,
-                                                     std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
-                                                     IMemoryAllocator&                           LayoutDataAllocator,
-                                                     const SHADER_RESOURCE_VARIABLE_TYPE* const  AllowedVarTypes,
-                                                     Uint32                                      NumAllowedTypes,
-                                                     ShaderResourceCacheD3D12*                   pResourceCache,
-                                                     RootSignature*                              pRootSig) :
-    // clang-format off
-    m_Owner        {Owner},
-    m_pd3d12Device {pd3d12Device},
-    m_pResources   {std::move(pSrcResources)}
-// clang-format on
+void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                               pd3d12Device,
+                                           PIPELINE_TYPE                               PipelineType,
+                                           const PipelineResourceLayoutDesc&           ResourceLayout,
+                                           std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
+                                           IMemoryAllocator&                           LayoutDataAllocator,
+                                           const SHADER_RESOURCE_VARIABLE_TYPE* const  AllowedVarTypes,
+                                           Uint32                                      NumAllowedTypes,
+                                           ShaderResourceCacheD3D12*                   pResourceCache,
+                                           RootSignature*                              pRootSig)
 {
+    m_pd3d12Device = pd3d12Device;
+    m_pResources   = std::move(pSrcResources);
+
     VERIFY_EXPR((pResourceCache != nullptr) ^ (pRootSig != nullptr));
 
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
@@ -148,10 +146,11 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
             auto VarType = m_pResources->FindVariableType(Sam, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
-                constexpr bool LogStaticSamplerArrayError = true;
-                auto           StaticSamplerInd           = m_pResources->FindStaticSampler(Sam, ResourceLayout, LogStaticSamplerArrayError);
-                // Skip static samplers
-                if (StaticSamplerInd < 0)
+                constexpr bool LogImtblSamplerArrayError = true;
+
+                auto ImtblSamplerInd = m_pResources->FindImmutableSampler(Sam, ResourceLayout, LogImtblSamplerArrayError);
+                // Skip immutable samplers
+                if (ImtblSamplerInd < 0)
                     ++SamplerCount[VarType];
             }
         },
@@ -236,7 +235,7 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
         VERIFY(RootIndex != D3D12Resource::InvalidRootIndex, "Root index must be valid");
         VERIFY(Offset != D3D12Resource::InvalidOffset, "Offset must be valid");
 
-        // Static samplers are never copied, and SamplerId == InvalidSamplerId
+        // Immutable samplers are never copied, and SamplerId == InvalidSamplerId
         auto& NewResource = (ResType == CachedResourceType::Sampler) ?
             GetSampler(VarType, CurrSampler[VarType]++) :
             GetSrvCbvUav(VarType, CurrCbvSrvUav[VarType]++);
@@ -257,12 +256,13 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
             if (IsAllowedType(VarType, AllowedTypeBits))
             {
                 // The error (if any) have already been logged when counting the resources
-                constexpr bool LogStaticSamplerArrayError = false;
-                auto           StaticSamplerInd           = m_pResources->FindStaticSampler(Sam, ResourceLayout, LogStaticSamplerArrayError);
-                if (StaticSamplerInd >= 0)
+                constexpr bool LogImtblSamplerArrayError = false;
+
+                auto ImtblSamplerInd = m_pResources->FindImmutableSampler(Sam, ResourceLayout, LogImtblSamplerArrayError);
+                if (ImtblSamplerInd >= 0)
                 {
                     if (pRootSig != nullptr)
-                        pRootSig->InitStaticSampler(m_pResources->GetShaderType(), Sam.Name, m_pResources->GetCombinedSamplerSuffix(), Sam);
+                        pRootSig->InitImmutableSampler(m_pResources->GetShaderType(), Sam.Name, m_pResources->GetCombinedSamplerSuffix(), Sam);
                 }
                 else
                 {
@@ -289,18 +289,19 @@ ShaderResourceLayoutD3D12::ShaderResourceLayoutD3D12(IObject&                   
                                   ") of the sampler '", SamplerAttribs.Name, "' that is assigned to it");
 
                     // The error (if any) have already been logged when counting the resources
-                    constexpr bool LogStaticSamplerArrayError = false;
-                    auto           StaticSamplerInd           = m_pResources->FindStaticSampler(SamplerAttribs, ResourceLayout, LogStaticSamplerArrayError);
-                    if (StaticSamplerInd >= 0)
+                    constexpr bool LogImtblSamplerArrayError = false;
+
+                    auto ImtblSamplerInd = m_pResources->FindImmutableSampler(SamplerAttribs, ResourceLayout, LogImtblSamplerArrayError);
+                    if (ImtblSamplerInd >= 0)
                     {
-                    // Static samplers are never copied, and SamplerId == InvalidSamplerId
+                    // Immutable samplers are never copied, and SamplerId == InvalidSamplerId
 #ifdef DILIGENT_DEBUG
                         auto SamplerCount = GetTotalSamplerCount();
                         for (Uint32 s = 0; s < SamplerCount; ++s)
                         {
                             const auto& Sampler = GetSampler(s);
                             if (strcmp(Sampler.Attribs.Name, SamplerAttribs.Name) == 0)
-                                LOG_ERROR("Static sampler '", Sampler.Attribs.Name, "' was found among resources. This seems to be a bug");
+                                LOG_ERROR("Immutable sampler '", Sampler.Attribs.Name, "' was found among resources. This seems to be a bug");
                         }
 #endif
                     }
@@ -429,6 +430,11 @@ template <>
 struct ResourceViewTraits<ITextureViewD3D12>
 {
     static const INTERFACE_ID& IID;
+
+    static bool VerifyView(ITextureViewD3D12* pViewD3D12, const D3DShaderResourceAttribs& Attribs, const char* ShaderName)
+    {
+        return true;
+    }
 };
 const INTERFACE_ID& ResourceViewTraits<ITextureViewD3D12>::IID = IID_TextureViewD3D12;
 
@@ -436,6 +442,11 @@ template <>
 struct ResourceViewTraits<IBufferViewD3D12>
 {
     static const INTERFACE_ID& IID;
+
+    static bool VerifyView(IBufferViewD3D12* pViewD3D12, const D3DShaderResourceAttribs& Attribs, const char* ShaderName)
+    {
+        return VerifyBufferViewModeD3D(pViewD3D12, Attribs, ShaderName);
+    }
 };
 const INTERFACE_ID& ResourceViewTraits<IBufferViewD3D12>::IID = IID_BufferViewD3D12;
 
@@ -451,9 +462,10 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheResourceView(IDeviceObject* 
 {
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<TResourceViewType> pViewD3D12(pView, ResourceViewTraits<TResourceViewType>::IID);
+    RefCntAutoPtr<TResourceViewType> pViewD3D12{pView, ResourceViewTraits<TResourceViewType>::IID};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyResourceViewBinding(Attribs, GetVariableType(), ArrayIndex, pView, pViewD3D12.RawPtr(), {dbgExpectedViewType}, DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
+    ResourceViewTraits<TResourceViewType>::VerifyView(pViewD3D12, Attribs, ParentResLayout.GetShaderName());
 #endif
     if (pViewD3D12)
     {
@@ -607,7 +619,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::BindResource(IDeviceObject*      
                         if (ValidSamplerAssigned())
                         {
                             auto& Sam = ParentResLayout.GetAssignedSampler(*this);
-                            //VERIFY( !Sam.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache" );
+                            //VERIFY( !Sam.Attribs.IsImmutableSampler(), "Immutable samplers should never be assigned space in the cache" );
                             VERIFY_EXPR(Attribs.BindCount == Sam.Attribs.BindCount || Sam.Attribs.BindCount == 1);
                             auto SamplerArrInd = Sam.Attribs.BindCount > 1 ? ArrayIndex : 0;
 
@@ -781,7 +793,7 @@ void ShaderResourceLayoutD3D12::CopyStaticResourceDesriptorHandles(const ShaderR
         {
             const auto& SamInfo = DstLayout.GetAssignedSampler(res);
 
-            //VERIFY(!SamInfo.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache");
+            //VERIFY(!SamInfo.Attribs.IsImmutableSampler(), "Immutable samplers should never be assigned space in the cache");
 
             VERIFY(SamInfo.Attribs.IsValidBindPoint(), "Sampler bind point must be valid");
             VERIFY_EXPR(SamInfo.Attribs.BindCount == res.Attribs.BindCount || SamInfo.Attribs.BindCount == 1);
@@ -908,7 +920,7 @@ bool ShaderResourceLayoutD3D12::dvpVerifyBindings(const ShaderResourceCacheD3D12
             {
                 VERIFY(res.GetResType() == CachedResourceType::TexSRV, "Sampler can only be assigned to a texture SRV");
                 const auto& SamInfo = GetAssignedSampler(res);
-                //VERIFY(!SamInfo.Attribs.IsStaticSampler(), "Static samplers should never be assigned space in the cache" );
+                //VERIFY(!SamInfo.Attribs.IsImmutableSampler(), "Immutable samplers should never be assigned space in the cache" );
                 VERIFY(SamInfo.Attribs.IsValidBindPoint(), "Sampler bind point must be valid");
 
                 for (Uint32 ArrInd = 0; ArrInd < SamInfo.Attribs.BindCount; ++ArrInd)

@@ -40,34 +40,6 @@
 namespace Diligent
 {
 
-
-static VkShaderStageFlagBits ShaderTypeToVkShaderStageFlagBit(SHADER_TYPE ShaderType)
-{
-    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
-    switch (ShaderType)
-    {
-        // clang-format off
-        case SHADER_TYPE_VERTEX:           return VK_SHADER_STAGE_VERTEX_BIT;
-        case SHADER_TYPE_HULL:             return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
-        case SHADER_TYPE_DOMAIN:           return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
-        case SHADER_TYPE_GEOMETRY:         return VK_SHADER_STAGE_GEOMETRY_BIT;
-        case SHADER_TYPE_PIXEL:            return VK_SHADER_STAGE_FRAGMENT_BIT;
-        case SHADER_TYPE_COMPUTE:          return VK_SHADER_STAGE_COMPUTE_BIT;
-        case SHADER_TYPE_AMPLIFICATION:    return VK_SHADER_STAGE_TASK_BIT_NV;
-        case SHADER_TYPE_MESH:             return VK_SHADER_STAGE_MESH_BIT_NV;
-        case SHADER_TYPE_RAY_GEN:          return VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-        case SHADER_TYPE_RAY_MISS:         return VK_SHADER_STAGE_MISS_BIT_KHR;
-        case SHADER_TYPE_RAY_CLOSEST_HIT:  return VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-        case SHADER_TYPE_RAY_ANY_HIT:      return VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
-        case SHADER_TYPE_RAY_INTERSECTION: return VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
-        case SHADER_TYPE_CALLABLE:         return VK_SHADER_STAGE_CALLABLE_BIT_KHR;
-        // clang-format on
-        default:
-            UNEXPECTED("Unknown shader type");
-            return VK_SHADER_STAGE_VERTEX_BIT;
-    }
-}
-
 class ResourceTypeToVkDescriptorType
 {
 public:
@@ -241,7 +213,7 @@ bool PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayout::operator==
         if ((B0.pImmutableSamplers != nullptr && B1.pImmutableSamplers == nullptr) ||
             (B0.pImmutableSamplers == nullptr && B1.pImmutableSamplers != nullptr))
             return false;
-        // Static samplers themselves should not affect compatibility
+        // Immutable samplers themselves should not affect compatibility
         // clang-format on
     }
     return true;

@@ -87,8 +87,8 @@ TEST(BufferAccessTest, Initialization)
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
     BufferDesc BuffDesc;
-    BuffDesc.Name          = "Test static buffer";
-    BuffDesc.Usage         = USAGE_STATIC;
+    BuffDesc.Name          = "Test immutable buffer";
+    BuffDesc.Usage         = USAGE_IMMUTABLE;
     BuffDesc.uiSizeInBytes = sizeof(TestBufferData);
     BuffDesc.BindFlags     = BIND_UNIFORM_BUFFER;
 

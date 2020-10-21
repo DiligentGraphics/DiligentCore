@@ -87,10 +87,11 @@ static APIInfo InitAPIInfo()
     INIT_STRUCTURE_SIZE(InputLayoutDesc);
     INIT_STRUCTURE_SIZE(SampleDesc);
     INIT_STRUCTURE_SIZE(ShaderResourceVariableDesc);
-    INIT_STRUCTURE_SIZE(StaticSamplerDesc);
+    INIT_STRUCTURE_SIZE(ImmutableSamplerDesc);
     INIT_STRUCTURE_SIZE(PipelineResourceLayoutDesc);
     INIT_STRUCTURE_SIZE(GraphicsPipelineDesc);
-    INIT_STRUCTURE_SIZE(ComputePipelineDesc);
+    INIT_STRUCTURE_SIZE(GraphicsPipelineStateCreateInfo);
+    INIT_STRUCTURE_SIZE(ComputePipelineStateCreateInfo);
     INIT_STRUCTURE_SIZE(PipelineStateDesc);
     INIT_STRUCTURE_SIZE(RasterizerStateDesc);
     INIT_STRUCTURE_SIZE(ResourceMappingEntry);

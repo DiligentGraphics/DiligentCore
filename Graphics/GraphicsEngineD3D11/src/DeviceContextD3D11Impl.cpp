@@ -75,7 +75,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
 
     TDeviceContextBase::SetPipelineState(pPipelineStateD3D11, 0 /*Dummy*/);
     auto& Desc = pPipelineStateD3D11->GetDesc();
-    if (Desc.IsComputePipeline())
+    if (Desc.PipelineType == PIPELINE_TYPE_COMPUTE)
     {
         auto* pd3d11CS = pPipelineStateD3D11->GetD3D11ComputeShader();
         if (pd3d11CS == nullptr)
@@ -106,7 +106,9 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
         COMMIT_SHADER(DS, DomainShader);
 #undef COMMIT_SHADER
 
-        m_pd3d11DeviceContext->OMSetBlendState(pPipelineStateD3D11->GetD3D11BlendState(), m_BlendFactors, Desc.GraphicsPipeline.SampleMask);
+        const auto& GraphicsPipeline = pPipelineStateD3D11->GetGraphicsPipelineDesc();
+
+        m_pd3d11DeviceContext->OMSetBlendState(pPipelineStateD3D11->GetD3D11BlendState(), m_BlendFactors, GraphicsPipeline.SampleMask);
         m_pd3d11DeviceContext->RSSetState(pPipelineStateD3D11->GetD3D11RasterizerState());
         m_pd3d11DeviceContext->OMSetDepthStencilState(pPipelineStateD3D11->GetD3D11DepthStencilState(), m_StencilRef);
 
@@ -119,7 +121,7 @@ void DeviceContextD3D11Impl::SetPipelineState(IPipelineState* pPipelineState)
             m_CommittedD3D11InputLayout = pd3d11InputLayout;
         }
 
-        auto PrimTopology = Desc.GraphicsPipeline.PrimitiveTopology;
+        auto PrimTopology = GraphicsPipeline.PrimitiveTopology;
         if (m_CommittedPrimitiveTopology != PrimTopology)
         {
             m_CommittedPrimitiveTopology = PrimTopology;
@@ -179,9 +181,9 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
     {
 #ifdef DILIGENT_DEVELOPMENT
         bool ResourcesPresent = false;
-        for (Uint32 s = 0; s < pPipelineStateD3D11->GetNumShaders(); ++s)
+        for (Uint32 s = 0; s < pPipelineStateD3D11->GetNumShaderStages(); ++s)
         {
-            auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
+            auto* pShaderD3D11 = pPipelineStateD3D11->GetShader(s);
             if (pShaderD3D11->GetD3D11Resources()->GetTotalResources() > 0)
                 ResourcesPresent = true;
         }
@@ -206,7 +208,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
 #endif
 
     auto NumShaders = pShaderResBindingD3D11->GetNumActiveShaders();
-    VERIFY(NumShaders == pPipelineStateD3D11->GetNumShaders(), "Number of active shaders in shader resource binding is not consistent with the number of shaders in the pipeline state");
+    VERIFY(NumShaders == pPipelineStateD3D11->GetNumShaderStages(), "Number of active shaders in shader resource binding is not consistent with the number of shaders in the pipeline state");
 
 #ifdef DILIGENT_DEVELOPMENT
     {
@@ -233,7 +235,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
         const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
 
 #ifdef DILIGENT_DEVELOPMENT
-        auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
+        auto* pShaderD3D11 = pPipelineStateD3D11->GetShader(s);
         VERIFY_EXPR(ShaderType == pShaderD3D11->GetDesc().ShaderType);
 #endif
 
@@ -380,7 +382,7 @@ void DeviceContextD3D11Impl::TransitionAndCommitShaderResources(IPipelineState* 
         const auto ShaderTypeInd = GetShaderTypeIndex(ShaderType);
 
 #ifdef DILIGENT_DEVELOPMENT
-        auto* pShaderD3D11 = pPipelineStateD3D11->GetShader<ShaderD3D11Impl>(s);
+        auto* pShaderD3D11 = pPipelineStateD3D11->GetShader(s);
         VERIFY_EXPR(ShaderType == pShaderD3D11->GetDesc().ShaderType);
 #endif
 
@@ -671,9 +673,9 @@ void DeviceContextD3D11Impl::SetBlendFactors(const float* pBlendFactors)
     {
         Uint32            SampleMask = 0xFFFFFFFF;
         ID3D11BlendState* pd3d11BS   = nullptr;
-        if (m_pPipelineState)
+        if (m_pPipelineState && m_pPipelineState->GetDesc().IsAnyGraphicsPipeline())
         {
-            SampleMask = m_pPipelineState->GetDesc().GraphicsPipeline.SampleMask;
+            SampleMask = m_pPipelineState->GetGraphicsPipelineDesc().SampleMask;
             pd3d11BS   = m_pPipelineState->GetD3D11BlendState();
         }
         m_pd3d11DeviceContext->OMSetBlendState(pd3d11BS, m_BlendFactors, SampleMask);

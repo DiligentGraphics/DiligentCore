@@ -166,7 +166,7 @@ size_t RootSignature::RootParamsManager::GetHash() const
 RootSignature::RootSignature() :
     m_RootParams{GetRawAllocator()},
     m_MemAllocator{GetRawAllocator()},
-    m_StaticSamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerAttribs, GetRawAllocator(), "Allocator for vector<StaticSamplerAttribs>"))
+    m_ImmutableSamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerAttribs, GetRawAllocator(), "Allocator for vector<ImmutableSamplerAttribs>"))
 {
     m_SrvCbvUavRootTablesMap.fill(InvalidRootTableIndex);
     m_SamplerRootTablesMap.fill(InvalidRootTableIndex);
@@ -282,29 +282,30 @@ D3D12_DESCRIPTOR_HEAP_TYPE HeapTypeFromRangeType(D3D12_DESCRIPTOR_RANGE_TYPE Ran
 }
 
 
-void RootSignature::InitStaticSampler(SHADER_TYPE                     ShaderType,
-                                      const char*                     SamplerName,
-                                      const char*                     SamplerSuffix,
-                                      const D3DShaderResourceAttribs& SamplerAttribs)
+void RootSignature::InitImmutableSampler(SHADER_TYPE                     ShaderType,
+                                         const char*                     SamplerName,
+                                         const char*                     SamplerSuffix,
+                                         const D3DShaderResourceAttribs& SamplerAttribs)
 {
     auto ShaderVisibility = GetShaderVisibility(ShaderType);
     auto SamplerFound     = false;
-    for (auto& StSmplr : m_StaticSamplers)
+    for (auto& ImtblSmplr : m_ImmutableSamplers)
     {
-        if (StSmplr.ShaderVisibility == ShaderVisibility &&
-            StreqSuff(SamplerName, StSmplr.SamplerDesc.SamplerOrTextureName, SamplerSuffix))
+        if (ImtblSmplr.ShaderVisibility == ShaderVisibility &&
+            StreqSuff(SamplerName, ImtblSmplr.SamplerDesc.SamplerOrTextureName, SamplerSuffix))
         {
-            StSmplr.ShaderRegister = SamplerAttribs.BindPoint;
-            StSmplr.ArraySize      = SamplerAttribs.BindCount;
-            StSmplr.RegisterSpace  = 0;
-            SamplerFound           = true;
+            ImtblSmplr.ShaderRegister = SamplerAttribs.BindPoint;
+            ImtblSmplr.ArraySize      = SamplerAttribs.BindCount;
+            ImtblSmplr.RegisterSpace  = 0;
+
+            SamplerFound = true;
             break;
         }
     }
 
     if (!SamplerFound)
     {
-        LOG_ERROR("Unable to find static sampler \'", SamplerName, '\'');
+        LOG_ERROR("Unable to find immutable sampler \'", SamplerName, '\'');
     }
 }
 
@@ -446,19 +447,19 @@ void RootSignature::dbgVerifyRootParameters() const
 }
 #endif
 
-void RootSignature::AllocateStaticSamplers(const PipelineResourceLayoutDesc& ResourceLayout)
+void RootSignature::AllocateImmutableSamplers(const PipelineResourceLayoutDesc& ResourceLayout)
 {
-    if (ResourceLayout.NumStaticSamplers > 0)
+    if (ResourceLayout.NumImmutableSamplers > 0)
     {
-        m_StaticSamplers.reserve(ResourceLayout.NumStaticSamplers);
-        for (Uint32 sam = 0; sam < ResourceLayout.NumStaticSamplers; ++sam)
+        m_ImmutableSamplers.reserve(ResourceLayout.NumImmutableSamplers);
+        for (Uint32 sam = 0; sam < ResourceLayout.NumImmutableSamplers; ++sam)
         {
-            const auto& StSamDesc    = ResourceLayout.StaticSamplers[sam];
-            Uint32      ShaderStages = StSamDesc.ShaderStages;
+            const auto& ImtblSamDesc = ResourceLayout.ImmutableSamplers[sam];
+            Uint32      ShaderStages = ImtblSamDesc.ShaderStages;
             while (ShaderStages != 0)
             {
                 auto Stage = ShaderStages & ~(ShaderStages - 1);
-                m_StaticSamplers.emplace_back(StSamDesc, GetShaderVisibility(static_cast<SHADER_TYPE>(Stage)));
+                m_ImmutableSamplers.emplace_back(ImtblSamDesc, GetShaderVisibility(static_cast<SHADER_TYPE>(Stage)));
                 ShaderStages &= ~Stage;
             }
         }
@@ -516,19 +517,19 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
     rootSignatureDesc.pParameters   = D3D12Parameters.size() ? D3D12Parameters.data() : nullptr;
 
     UINT TotalD3D12StaticSamplers = 0;
-    for (const auto& StSam : m_StaticSamplers)
-        TotalD3D12StaticSamplers += StSam.ArraySize;
+    for (const auto& ImtblSam : m_ImmutableSamplers)
+        TotalD3D12StaticSamplers += ImtblSam.ArraySize;
     rootSignatureDesc.NumStaticSamplers = TotalD3D12StaticSamplers;
     rootSignatureDesc.pStaticSamplers   = nullptr;
     std::vector<D3D12_STATIC_SAMPLER_DESC, STDAllocatorRawMem<D3D12_STATIC_SAMPLER_DESC>> D3D12StaticSamplers(STD_ALLOCATOR_RAW_MEM(D3D12_STATIC_SAMPLER_DESC, GetRawAllocator(), "Allocator for vector<D3D12_STATIC_SAMPLER_DESC>"));
     D3D12StaticSamplers.reserve(TotalD3D12StaticSamplers);
-    if (!m_StaticSamplers.empty())
+    if (!m_ImmutableSamplers.empty())
     {
-        for (size_t s = 0; s < m_StaticSamplers.size(); ++s)
+        for (size_t s = 0; s < m_ImmutableSamplers.size(); ++s)
         {
-            const auto& StSmplrDesc = m_StaticSamplers[s];
-            const auto& SamDesc     = StSmplrDesc.SamplerDesc.Desc;
-            for (UINT ArrInd = 0; ArrInd < StSmplrDesc.ArraySize; ++ArrInd)
+            const auto& ImtblSmplrDesc = m_ImmutableSamplers[s];
+            const auto& SamDesc        = ImtblSmplrDesc.SamplerDesc.Desc;
+            for (UINT ArrInd = 0; ArrInd < ImtblSmplrDesc.ArraySize; ++ArrInd)
             {
                 D3D12StaticSamplers.emplace_back(
                     D3D12_STATIC_SAMPLER_DESC //
@@ -543,18 +544,18 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
                         BorderColorToD3D12StaticBorderColor(SamDesc.BorderColor),
                         SamDesc.MinLOD,
                         SamDesc.MaxLOD,
-                        StSmplrDesc.ShaderRegister + ArrInd,
-                        StSmplrDesc.RegisterSpace,
-                        StSmplrDesc.ShaderVisibility //
-                    }                                //
+                        ImtblSmplrDesc.ShaderRegister + ArrInd,
+                        ImtblSmplrDesc.RegisterSpace,
+                        ImtblSmplrDesc.ShaderVisibility //
+                    }                                   //
                 );
             }
         }
         rootSignatureDesc.pStaticSamplers = D3D12StaticSamplers.data();
 
-        // Release static samplers array, we no longer need it
-        std::vector<StaticSamplerAttribs, STDAllocatorRawMem<StaticSamplerAttribs>> EmptySamplers(STD_ALLOCATOR_RAW_MEM(StaticSamplerAttribs, GetRawAllocator(), "Allocator for vector<StaticSamplerAttribs>"));
-        m_StaticSamplers.swap(EmptySamplers);
+        // Release immutable samplers array, we no longer need it
+        std::vector<ImmutableSamplerAttribs, STDAllocatorRawMem<ImmutableSamplerAttribs>> EmptySamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerAttribs, GetRawAllocator(), "Allocator for vector<ImmutableSamplerAttribs>"));
+        m_ImmutableSamplers.swap(EmptySamplers);
 
         VERIFY_EXPR(D3D12StaticSamplers.size() == TotalD3D12StaticSamplers);
     }
@@ -640,7 +641,7 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
         DEV_CHECK_ERR(!SamplerHeapSpace.IsNull(),
                       "Failed to allocate ", TotalSamplerDescriptors, " GPU-visible Sampler descriptor",
                       (TotalSamplerDescriptors > 1 ? "s" : ""),
-                      ". Consider using static samplers in the Pipeline State Object or "
+                      ". Consider using immutable samplers in the Pipeline State Object or "
                       "increasing GPUDescriptorHeapSize[1] in EngineD3D12CreateInfo.");
     }
     VERIFY_EXPR(TotalSamplerDescriptors == 0 && SamplerHeapSpace.IsNull() || SamplerHeapSpace.GetNumHandles() == TotalSamplerDescriptors);
@@ -965,7 +966,7 @@ void RootSignature::CommitDescriptorHandlesInternal_SMD(RenderDeviceD3D12Impl*  
         DEV_CHECK_ERR(DynamicSamplerDescriptors.GetDescriptorHeap() != nullptr,
                       "Failed to allocate ", NumDynamicSamplerDescriptors, " dynamic GPU-visible Sampler descriptor",
                       (NumDynamicSamplerDescriptors > 1 ? "s" : ""),
-                      ". Consider using static samplers in the Pipeline State Object, increasing GPUDescriptorHeapDynamicSize[1] in "
+                      ". Consider using immutable samplers in the Pipeline State Object, increasing GPUDescriptorHeapDynamicSize[1] in "
                       "EngineD3D12CreateInfo, or optimizing dynamic resource utilization by using static or mutable shader resource variables instead.");
     }
 

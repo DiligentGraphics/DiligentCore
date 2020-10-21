@@ -112,21 +112,24 @@ namespace Diligent
 class ShaderResourceLayoutD3D12 final
 {
 public:
-    // There are two modes a layout can be constructed:
+    explicit ShaderResourceLayoutD3D12(IObject& Owner) noexcept :
+        m_Owner{Owner}
+    {}
+
+    // There are two modes a layout can be initialized:
     //  - initialize static resource layout and initialize shader resource cache to hold static resources
     //  - initialize reference layouts that address all types of resources (static, mutable, dynamic).
     //    Root indices and descriptor table offsets are assigned during the initialization;
     //    no shader resource cache is provided
-    ShaderResourceLayoutD3D12(IObject&                                    Owner,
-                              ID3D12Device*                               pd3d12Device,
-                              PIPELINE_TYPE                               PipelineType,
-                              const PipelineResourceLayoutDesc&           ResourceLayout,
-                              std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
-                              IMemoryAllocator&                           LayoutDataAllocator,
-                              const SHADER_RESOURCE_VARIABLE_TYPE* const  VarTypes,
-                              Uint32                                      NumAllowedTypes,
-                              ShaderResourceCacheD3D12*                   pResourceCache,
-                              class RootSignature*                        pRootSig);
+    void Initialize(ID3D12Device*                               pd3d12Device,
+                    PIPELINE_TYPE                               PipelineType,
+                    const PipelineResourceLayoutDesc&           ResourceLayout,
+                    std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
+                    IMemoryAllocator&                           LayoutDataAllocator,
+                    const SHADER_RESOURCE_VARIABLE_TYPE* const  VarTypes,
+                    Uint32                                      NumAllowedTypes,
+                    ShaderResourceCacheD3D12*                   pResourceCache,
+                    class RootSignature*                        pRootSig);
 
     // clang-format off
     ShaderResourceLayoutD3D12            (const ShaderResourceLayoutD3D12&) = delete;
@@ -272,6 +275,8 @@ public:
     const bool IsUsingSeparateSamplers() const { return !m_pResources->IsUsingCombinedTextureSamplers(); }
 
     SHADER_TYPE GetShaderType() const { return m_pResources->GetShaderType(); }
+
+    const ShaderResourcesD3D12& GetResources() const { return *m_pResources; }
 
 private:
     const D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv) const;

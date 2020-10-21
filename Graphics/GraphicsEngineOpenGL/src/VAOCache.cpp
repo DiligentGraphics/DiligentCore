@@ -93,7 +93,7 @@ const GLObjectWrappers::GLVertexArrayObj& VAOCache::GetVAO(IPipelineState*      
     // Get layout
     auto*                pPSOGL         = ValidatedCast<PipelineStateGLImpl>(pPSO);
     auto*                pIndexBufferGL = ValidatedCast<BufferGLImpl>(pIndexBuffer);
-    const auto&          InputLayout    = pPSOGL->GetDesc().GraphicsPipeline.InputLayout;
+    const auto&          InputLayout    = pPSOGL->GetGraphicsPipelineDesc().InputLayout;
     const LayoutElement* LayoutElems    = InputLayout.LayoutElements;
     Uint32               NumElems       = InputLayout.NumElements;
     // Construct the key

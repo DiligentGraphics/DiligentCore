@@ -49,9 +49,8 @@ namespace Testing
 class TestingEnvironmentGL final : public TestingEnvironment
 {
 public:
-    TestingEnvironmentGL(RENDER_DEVICE_TYPE   deviceType,
-                         ADAPTER_TYPE         AdapterType,
-                         Uint32               AdapterId,
+    using CreateInfo = TestingEnvironment::CreateInfo;
+    TestingEnvironmentGL(const CreateInfo&    CI,
                          const SwapChainDesc& SCDesc);
     ~TestingEnvironmentGL();
 

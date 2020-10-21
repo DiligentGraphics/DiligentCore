@@ -330,6 +330,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(WireframeFill, WireframeFillSupported, "Wireframe fill is");
     }
 
+    if (InitAttribs.ForceNonSeparablePrograms)
+        LOG_INFO_MESSAGE("Forcing non-separable shader programs");
+
     if (m_DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL)
     {
         const bool IsGL46OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 6);
@@ -337,7 +340,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         const bool IsGL42OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 2);
         const bool IsGL41OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 1);
 
-        Features.SeparablePrograms = DEVICE_FEATURE_STATE_ENABLED;
+        SET_FEATURE_STATE(SeparablePrograms, !InitAttribs.ForceNonSeparablePrograms, "Separable programs are");
+        SET_FEATURE_STATE(ShaderResourceQueries, Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED, "Shader resource queries are");
         Features.IndirectRendering = DEVICE_FEATURE_STATE_ENABLED;
         Features.WireframeFill     = DEVICE_FEATURE_STATE_ENABLED;
         // clang-format off
@@ -396,7 +400,8 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         bool IsGLES32OrAbove = (MajorVersion >= 4) || (MajorVersion == 3 && MinorVersion >= 2);
 
         // clang-format off
-        SET_FEATURE_STATE(SeparablePrograms,             IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects"), "Separable programs are");
+        SET_FEATURE_STATE(SeparablePrograms,             (IsGLES31OrAbove || strstr(Extensions, "separate_shader_objects")) && !InitAttribs.ForceNonSeparablePrograms, "Separable programs are");
+        SET_FEATURE_STATE(ShaderResourceQueries,         Features.SeparablePrograms != DEVICE_FEATURE_STATE_DISABLED,      "Shader resource queries are");
         SET_FEATURE_STATE(IndirectRendering,             IsGLES31OrAbove || strstr(Extensions, "draw_indirect"),           "Indirect rendering is");
         SET_FEATURE_STATE(WireframeFill,                 false, "Wireframe fill is");
         SET_FEATURE_STATE(MultithreadedResourceCreation, false, "Multithreaded resource creation is");
@@ -457,7 +462,7 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
 #undef SET_FEATURE_STATE
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+    static_assert(sizeof(DeviceFeatures) == 32, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 }
 
@@ -697,13 +702,8 @@ void RenderDeviceGLImpl::CreateSampler(const SamplerDesc& SamplerDesc, ISampler*
     CreateSampler(SamplerDesc, ppSampler, false);
 }
 
-
-void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
-{
-    CreatePipelineState(PSOCreateInfo, ppPipelineState, false);
-}
-
-void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
+template <typename PSOCreateInfoType>
+void RenderDeviceGLImpl::CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
 {
     CreateDeviceObject(
         "Pipeline state", PSOCreateInfo.PSODesc, ppPipelineState,
@@ -714,6 +714,26 @@ void RenderDeviceGLImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOC
             OnCreateDeviceObject(pPipelineStateOGL);
         } //
     );
+}
+
+void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
+{
+    CreatePipelineState(PSOCreateInfo, ppPipelineState, bIsDeviceInternal);
+}
+
+void RenderDeviceGLImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState, bool bIsDeviceInternal)
+{
+    CreatePipelineState(PSOCreateInfo, ppPipelineState, bIsDeviceInternal);
+}
+
+void RenderDeviceGLImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    return CreateGraphicsPipelineState(PSOCreateInfo, ppPipelineState, false);
+}
+
+void RenderDeviceGLImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    return CreateComputePipelineState(PSOCreateInfo, ppPipelineState, false);
 }
 
 void RenderDeviceGLImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)

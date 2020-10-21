@@ -238,7 +238,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
             };
 
-        const auto& DeiceExtFeatures = PhysicalDevice->GetExtFeatures();
+        const auto& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
 
 #define ENABLE_FEATURE(IsFeatureSupported, Feature, FeatureName)                         \
     do                                                                                   \
@@ -248,32 +248,32 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
     } while (false)
 
 
-        auto MeshShaderFeats = DeiceExtFeatures.MeshShader;
+        auto MeshShaderFeats = DeviceExtFeatures.MeshShader;
         ENABLE_FEATURE(MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE, MeshShaders, "Mesh shaders are");
 
-        auto ShaderFloat16Int8 = DeiceExtFeatures.ShaderFloat16Int8;
+        auto ShaderFloat16Int8 = DeviceExtFeatures.ShaderFloat16Int8;
         // clang-format off
         ENABLE_FEATURE(ShaderFloat16Int8.shaderFloat16 != VK_FALSE, ShaderFloat16, "16-bit float shader operations are");
         ENABLE_FEATURE(ShaderFloat16Int8.shaderInt8    != VK_FALSE, ShaderInt8,    "8-bit int shader operations are");
         // clang-format on
 
-        auto Storage16BitFeats = DeiceExtFeatures.Storage16Bit;
+        auto Storage16BitFeats = DeviceExtFeatures.Storage16Bit;
         // clang-format off
         ENABLE_FEATURE(Storage16BitFeats.storageBuffer16BitAccess           != VK_FALSE, ResourceBuffer16BitAccess, "16-bit resoure buffer access is");
         ENABLE_FEATURE(Storage16BitFeats.uniformAndStorageBuffer16BitAccess != VK_FALSE, UniformBuffer16BitAccess,  "16-bit uniform buffer access is");
         ENABLE_FEATURE(Storage16BitFeats.storageInputOutput16               != VK_FALSE, ShaderInputOutput16,       "16-bit shader inputs/outputs are");
         // clang-format on
 
-        auto Storage8BitFeats = DeiceExtFeatures.Storage8Bit;
+        auto Storage8BitFeats = DeviceExtFeatures.Storage8Bit;
         // clang-format off
         ENABLE_FEATURE(Storage8BitFeats.storageBuffer8BitAccess           != VK_FALSE, ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
         ENABLE_FEATURE(Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE, UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
         // clang-format on
 
-        auto RayTracingFeats          = DeiceExtFeatures.RayTracing;
-        auto BufferDeviceAddressFeats = DeiceExtFeatures.BufferDeviceAddress;
-        auto DescriptorIndexingFeats  = DeiceExtFeatures.DescriptorIndexing;
-        ENABLE_FEATURE(RayTracingFeats.rayTracing != VK_FALSE || DeiceExtFeatures.RayTracingNV, RayTracing, "Ray tracing is");
+        auto RayTracingFeats          = DeviceExtFeatures.RayTracing;
+        auto BufferDeviceAddressFeats = DeviceExtFeatures.BufferDeviceAddress;
+        auto DescriptorIndexingFeats  = DeviceExtFeatures.DescriptorIndexing;
+        ENABLE_FEATURE(RayTracingFeats.rayTracing != VK_FALSE || DeviceExtFeatures.RayTracingNV, RayTracing, "Ray tracing is");
 #undef FeatureSupport
 
 
@@ -396,7 +396,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // Ray tracing
             if (EngineCI.Features.RayTracing != DEVICE_FEATURE_STATE_DISABLED)
             {
-                if (DeiceExtFeatures.RayTracingNV)
+                if (DeviceExtFeatures.RayTracingNV)
                 {
                     DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
                     DeviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
@@ -429,7 +429,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         }
 
 #if defined(_MSC_VER) && defined(_WIN64)
-        static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
+        static_assert(sizeof(DeviceFeatures) == 32, "Did you add a new feature to DeviceFeatures? Please handle its satus here.");
 #endif
 
         DeviceCreateInfo.ppEnabledExtensionNames = DeviceExtensions.empty() ? nullptr : DeviceExtensions.data();

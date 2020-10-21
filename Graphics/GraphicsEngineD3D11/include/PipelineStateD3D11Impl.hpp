@@ -36,6 +36,7 @@
 #include "ShaderResourceLayoutD3D11.hpp"
 #include "SRBMemoryAllocator.hpp"
 #include "RenderDeviceD3D11Impl.hpp"
+#include "ShaderD3D11Impl.hpp"
 
 namespace Diligent
 {
@@ -48,9 +49,12 @@ class PipelineStateD3D11Impl final : public PipelineStateBase<IPipelineStateD3D1
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D11, RenderDeviceD3D11Impl>;
 
-    PipelineStateD3D11Impl(IReferenceCounters*            pRefCounters,
-                           class RenderDeviceD3D11Impl*   pDeviceD3D11,
-                           const PipelineStateCreateInfo& CreateInfo);
+    PipelineStateD3D11Impl(IReferenceCounters*                    pRefCounters,
+                           class RenderDeviceD3D11Impl*           pDeviceD3D11,
+                           const GraphicsPipelineStateCreateInfo& CreateInfo);
+    PipelineStateD3D11Impl(IReferenceCounters*                   pRefCounters,
+                           class RenderDeviceD3D11Impl*          pDeviceD3D11,
+                           const ComputePipelineStateCreateInfo& CreateInfo);
     ~PipelineStateD3D11Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
@@ -117,27 +121,45 @@ public:
 
     const ShaderResourceLayoutD3D11& GetStaticResourceLayout(Uint32 s) const
     {
-        VERIFY_EXPR(s < m_NumShaders);
+        VERIFY_EXPR(s < GetNumShaderStages());
         return m_pStaticResourceLayouts[s];
     }
 
     ShaderResourceCacheD3D11& GetStaticResourceCache(Uint32 s)
     {
-        VERIFY_EXPR(s < m_NumShaders);
+        VERIFY_EXPR(s < GetNumShaderStages());
         return m_pStaticResourceCaches[s];
     }
 
-    void SetStaticSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const;
+    const ShaderD3D11Impl* GetShaderByType(SHADER_TYPE ShaderType) const;
+    const ShaderD3D11Impl* GetShader(Uint32 Index) const;
+
+    void SetImmutableSamplers(ShaderResourceCacheD3D11& ResourceCache, Uint32 ShaderInd) const;
 
 private:
+    template <typename PSOCreateInfoType>
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo);
+
+    void InitResourceLayouts(const PipelineStateCreateInfo&                               CreateInfo,
+                             const std::vector<std::pair<SHADER_TYPE, ShaderD3D11Impl*>>& ShaderStages);
+
+    void Destruct();
+
     CComPtr<ID3D11BlendState>        m_pd3d11BlendState;
     CComPtr<ID3D11RasterizerState>   m_pd3d11RasterizerState;
     CComPtr<ID3D11DepthStencilState> m_pd3d11DepthStencilState;
     CComPtr<ID3D11InputLayout>       m_pd3d11InputLayout;
 
+    RefCntAutoPtr<ShaderD3D11Impl> m_pVS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pPS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pGS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pDS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pHS;
+    RefCntAutoPtr<ShaderD3D11Impl> m_pCS;
+
     // The caches are indexed by the shader order in the PSO, not shader index
-    ShaderResourceCacheD3D11*  m_pStaticResourceCaches  = nullptr;
-    ShaderResourceLayoutD3D11* m_pStaticResourceLayouts = nullptr;
+    ShaderResourceCacheD3D11*  m_pStaticResourceCaches  = nullptr; // [m_NumShaderStages]
+    ShaderResourceLayoutD3D11* m_pStaticResourceLayouts = nullptr; // [m_NumShaderStages]
 
     // SRB memory allocator must be defined before the default shader res binding
     SRBMemoryAllocator m_SRBMemAllocator;
@@ -146,20 +168,20 @@ private:
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1};
 
-    std::array<Uint16, MAX_SHADERS_IN_PIPELINE + 1> m_StaticSamplerOffsets = {};
-    struct StaticSamplerInfo
+    std::array<Uint16, MAX_SHADERS_IN_PIPELINE + 1> m_ImmutableSamplerOffsets = {};
+    struct ImmutableSamplerInfo
     {
         const D3DShaderResourceAttribs& Attribs;
         RefCntAutoPtr<ISampler>         pSampler;
-        StaticSamplerInfo(const D3DShaderResourceAttribs& _Attribs,
-                          RefCntAutoPtr<ISampler>         _pSampler) :
+        ImmutableSamplerInfo(const D3DShaderResourceAttribs& _Attribs,
+                             RefCntAutoPtr<ISampler>         _pSampler) :
             // clang-format off
             Attribs  {_Attribs},
             pSampler {std::move(_pSampler)}
         // clang-format on
         {}
     };
-    std::vector<StaticSamplerInfo, STDAllocatorRawMem<StaticSamplerInfo>> m_StaticSamplers;
+    std::vector<ImmutableSamplerInfo, STDAllocatorRawMem<ImmutableSamplerInfo>> m_ImmutableSamplers;
 };
 
 } // namespace Diligent

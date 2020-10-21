@@ -30,6 +30,8 @@
 /// \file
 /// Alignment utilities
 
+#include <cstdint>
+
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
 
 namespace Diligent
@@ -49,10 +51,22 @@ inline T Align(T val, T alignment)
 }
 
 template <typename T>
+inline T* Align(T* val, size_t alignment)
+{
+    return reinterpret_cast<T*>(Align(reinterpret_cast<uintptr_t>(val), static_cast<uintptr_t>(alignment)));
+}
+
+template <typename T>
 inline T AlignDown(T val, T alignment)
 {
     VERIFY(IsPowerOfTwo(alignment), "Alignment (", alignment, ") must be power of 2");
     return val & ~(alignment - 1);
+}
+
+template <typename T>
+inline T* AlignDown(T* val, size_t alignment)
+{
+    return reinterpret_cast<T*>(AlignDown(reinterpret_cast<uintptr_t>(val), static_cast<uintptr_t>(alignment)));
 }
 
 } // namespace Diligent

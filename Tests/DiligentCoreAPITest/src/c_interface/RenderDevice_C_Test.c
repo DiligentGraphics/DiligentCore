@@ -227,13 +227,13 @@ int TestRenderDeviceCInterface_CreateResourceMapping(struct IRenderDevice* pRend
     return num_errors;
 }
 
-int TestRenderDeviceCInterface_CreatePipelineState(struct IRenderDevice* pRenderDevice, struct PipelineStateCreateInfo* pPSOCreateInfo)
+int TestRenderDeviceCInterface_CreateGraphicsPipelineState(struct IRenderDevice* pRenderDevice, struct GraphicsPipelineStateCreateInfo* pPSOCreateInfo)
 {
     struct IPipelineState* pPSO = NULL;
 
     int num_errors = 0;
 
-    IRenderDevice_CreatePipelineState(pRenderDevice, pPSOCreateInfo, &pPSO);
+    IRenderDevice_CreateGraphicsPipelineState(pRenderDevice, pPSOCreateInfo, &pPSO);
     if (pPSO != NULL)
         IObject_Release(pPSO);
     else

@@ -1672,6 +1672,13 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
         return;
     }
 
+    const auto& PSODesc = m_pPipelineState->GetDesc();
+    if (!PSODesc.IsAnyGraphicsPipeline())
+    {
+        LOG_ERROR_MESSAGE("Pipeline state '", PSODesc.Name, "' is not a graphics pipeline");
+        return;
+    }
+
     TEXTURE_FORMAT BoundRTVFormats[8] = {TEX_FORMAT_UNKNOWN};
     TEXTURE_FORMAT BoundDSVFormat     = TEX_FORMAT_UNKNOWN;
 
@@ -1685,8 +1692,7 @@ inline void DeviceContextBase<BaseInterface, ImplementationTraits>::
 
     BoundDSVFormat = m_pBoundDepthStencil ? m_pBoundDepthStencil->GetDesc().Format : TEX_FORMAT_UNKNOWN;
 
-    const auto& PSODesc          = m_pPipelineState->GetDesc();
-    const auto& GraphicsPipeline = PSODesc.GraphicsPipeline;
+    const auto& GraphicsPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
     if (GraphicsPipeline.NumRenderTargets != m_NumBoundRenderTargets)
     {
         LOG_WARNING_MESSAGE("The number of currently bound render targets (", m_NumBoundRenderTargets,

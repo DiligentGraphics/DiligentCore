@@ -30,12 +30,14 @@
 /// \file
 /// Implementation of the Diligent::BufferBase template class
 
+#include <memory>
+
 #include "Buffer.h"
 #include "GraphicsTypes.h"
 #include "DeviceObjectBase.hpp"
 #include "GraphicsAccessories.hpp"
 #include "STDAllocator.hpp"
-#include <memory>
+#include "FormatString.hpp"
 
 namespace Diligent
 {
@@ -232,6 +234,9 @@ void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffVi
     {
         BufferViewDesc ViewDesc;
         ViewDesc.ViewType = BUFFER_VIEW_UNORDERED_ACCESS;
+        auto UAVName      = FormatString("Default UAV of buffer '", this->m_Desc.Name, '\'');
+        ViewDesc.Name     = UAVName.c_str();
+
         IBufferView* pUAV = nullptr;
         CreateViewInternal(ViewDesc, &pUAV, true);
         m_pDefaultUAV.reset(static_cast<BufferViewImplType*>(pUAV));
@@ -242,6 +247,9 @@ void BufferBase<BaseInterface, RenderDeviceImplType, BufferViewImplType, TBuffVi
     {
         BufferViewDesc ViewDesc;
         ViewDesc.ViewType = BUFFER_VIEW_SHADER_RESOURCE;
+        auto SRVName      = FormatString("Default SRV of buffer '", this->m_Desc.Name, '\'');
+        ViewDesc.Name     = SRVName.c_str();
+
         IBufferView* pSRV = nullptr;
         CreateViewInternal(ViewDesc, &pSRV, true);
         m_pDefaultSRV.reset(static_cast<BufferViewImplType*>(pSRV));

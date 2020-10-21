@@ -110,12 +110,25 @@
 namespace Diligent
 {
 
+class ShaderVkImpl;
+
 /// Diligent::ShaderResourceLayoutVk class
 // sizeof(ShaderResourceLayoutVk)==56 (MS compiler, x64)
 class ShaderResourceLayoutVk
 {
 public:
-    ShaderResourceLayoutVk(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) :
+    struct ShaderStageInfo
+    {
+        ShaderStageInfo(SHADER_TYPE         _Type,
+                        const ShaderVkImpl* _pShader);
+
+        const SHADER_TYPE         Type;
+        const ShaderVkImpl* const pShader;
+        std::vector<uint32_t>     SPIRV;
+    };
+    using TShaderStages = std::vector<ShaderStageInfo>;
+
+    ShaderResourceLayoutVk(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) noexcept :
         m_LogicalDevice{LogicalDevice}
     {
     }
@@ -131,23 +144,21 @@ public:
 
     // This method is called by PipelineStateVkImpl class instance to initialize static
     // shader resource layout and the cache
-    void InitializeStaticResourceLayout(std::shared_ptr<const SPIRVShaderResources> pSrcResources,
-                                        IMemoryAllocator&                           LayoutDataAllocator,
-                                        const PipelineResourceLayoutDesc&           ResourceLayoutDesc,
-                                        ShaderResourceCacheVk&                      StaticResourceCache);
+    void InitializeStaticResourceLayout(const ShaderVkImpl*               pShader,
+                                        IMemoryAllocator&                 LayoutDataAllocator,
+                                        const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                                        ShaderResourceCacheVk&            StaticResourceCache);
 
     // This method is called by PipelineStateVkImpl class instance to initialize resource
     // layouts for all shader stages in the pipeline.
-    static void Initialize(IRenderDevice*                              pRenderDevice,
-                           Uint32                                      NumShaders,
-                           ShaderResourceLayoutVk                      Layouts[],
-                           std::shared_ptr<const SPIRVShaderResources> pShaderResources[],
-                           IMemoryAllocator&                           LayoutDataAllocator,
-                           const PipelineResourceLayoutDesc&           ResourceLayoutDesc,
-                           std::vector<uint32_t>                       SPIRVs[],
-                           class PipelineLayout&                       PipelineLayout,
-                           bool                                        VerifyVariables,
-                           bool                                        VerifyStaticSamplers);
+    static void Initialize(IRenderDevice*                    pRenderDevice,
+                           TShaderStages&                    ShaderStages,
+                           ShaderResourceLayoutVk            Layouts[],
+                           IMemoryAllocator&                 LayoutDataAllocator,
+                           const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                           class PipelineLayout&             PipelineLayout,
+                           bool                              VerifyVariables,
+                           bool                              VerifyImmutableSamplers);
 
     // sizeof(VkResource) == 24 (x64)
     struct VkResource
@@ -279,11 +290,10 @@ public:
 
 #ifdef DILIGENT_DEVELOPMENT
     bool        dvpVerifyBindings(const ShaderResourceCacheVk& ResourceCache) const;
-    static void dvpVerifyResourceLayoutDesc(Uint32                                            NumShaders,
-                                            const std::shared_ptr<const SPIRVShaderResources> pShaderResources[],
-                                            const PipelineResourceLayoutDesc&                 ResourceLayoutDesc,
-                                            bool                                              VerifyVariables,
-                                            bool                                              VerifyStaticSamplers);
+    static void dvpVerifyResourceLayoutDesc(const TShaderStages&              ShaderStages,
+                                            const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                                            bool                              VerifyVariables,
+                                            bool                              VerifyImmutableSamplers);
 #endif
 
     Uint32 GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE VarType) const
@@ -307,6 +317,8 @@ public:
     {
         return m_pResources->GetShaderType();
     }
+
+    const SPIRVShaderResources& GetResources() const { return *m_pResources; }
 
     const VkResource& GetResource(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r) const
     {
@@ -346,16 +358,12 @@ private:
         return m_NumResources[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
     }
 
-    void AllocateMemory(std::shared_ptr<const SPIRVShaderResources> pSrcResources,
-                        IMemoryAllocator&                           Allocator,
-                        const PipelineResourceLayoutDesc&           ResourceLayoutDesc,
-                        const SHADER_RESOURCE_VARIABLE_TYPE*        AllowedVarTypes,
-                        Uint32                                      NumAllowedTypes,
-                        bool                                        AllocateImmutableSamplers);
-
-    Uint32 FindAssignedSampler(const SPIRVShaderResourceAttribs& SepImg,
-                               Uint32                            CurrResourceCount,
-                               SHADER_RESOURCE_VARIABLE_TYPE     ImgVarType) const;
+    void AllocateMemory(const ShaderVkImpl*                  pShader,
+                        IMemoryAllocator&                    Allocator,
+                        const PipelineResourceLayoutDesc&    ResourceLayoutDesc,
+                        const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                        Uint32                               NumAllowedTypes,
+                        bool                                 AllocateImmutableSamplers);
 
     using ImmutableSamplerPtrType = RefCntAutoPtr<ISampler>;
     ImmutableSamplerPtrType& GetImmutableSampler(Uint32 n) noexcept

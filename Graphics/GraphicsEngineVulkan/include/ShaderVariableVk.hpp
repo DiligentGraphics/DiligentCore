@@ -73,21 +73,25 @@ class ShaderVariableVkImpl;
 class ShaderVariableManagerVk
 {
 public:
-    ShaderVariableManagerVk(IObject&                             Owner,
-                            const ShaderResourceLayoutVk&        SrcLayout,
-                            IMemoryAllocator&                    Allocator,
-                            const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                            Uint32                               NumAllowedTypes,
-                            ShaderResourceCacheVk&               ResourceCache);
+    ShaderVariableManagerVk(IObject&               Owner,
+                            ShaderResourceCacheVk& ResourceCache) noexcept :
+        m_Owner{Owner},
+        m_ResourceCache{ResourceCache}
+    {}
+
+    void Initialize(const ShaderResourceLayoutVk&        SrcLayout,
+                    IMemoryAllocator&                    Allocator,
+                    const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                    Uint32                               NumAllowedTypes);
 
     ~ShaderVariableManagerVk();
 
     void DestroyVariables(IMemoryAllocator& Allocator);
 
-    ShaderVariableVkImpl* GetVariable(const Char* Name);
-    ShaderVariableVkImpl* GetVariable(Uint32 Index);
+    ShaderVariableVkImpl* GetVariable(const Char* Name) const;
+    ShaderVariableVkImpl* GetVariable(Uint32 Index) const;
 
-    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags);
+    void BindResources(IResourceMapping* pResourceMapping, Uint32 Flags) const;
 
     static size_t GetRequiredMemorySize(const ShaderResourceLayoutVk&        Layout,
                                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
@@ -115,7 +119,7 @@ private:
     Uint32                m_NumVariables = 0;
 
 #ifdef DILIGENT_DEBUG
-    IMemoryAllocator& m_DbgAllocator;
+    IMemoryAllocator* m_pDbgAllocator = nullptr;
 #endif
 };
 

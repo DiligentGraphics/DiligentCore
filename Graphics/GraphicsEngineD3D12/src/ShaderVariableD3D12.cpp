@@ -54,20 +54,15 @@ size_t ShaderVariableManagerD3D12::GetRequiredMemorySize(const ShaderResourceLay
 }
 
 // Creates shader variable for every resource from SrcLayout whose type is one AllowedVarTypes
-ShaderVariableManagerD3D12::ShaderVariableManagerD3D12(IObject&                             Owner,
-                                                       const ShaderResourceLayoutD3D12&     SrcLayout,
-                                                       IMemoryAllocator&                    Allocator,
-                                                       const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                                       Uint32                               NumAllowedTypes,
-                                                       ShaderResourceCacheD3D12&            ResourceCache) :
-    // clang-format off
-    m_Owner         {Owner},
-    m_ResourceCache {ResourceCache}
-#ifdef DILIGENT_DEBUG
-  , m_DbgAllocator  {Allocator}
-#endif
-// clang-format on
+void ShaderVariableManagerD3D12::Initialize(const ShaderResourceLayoutD3D12&     SrcLayout,
+                                            IMemoryAllocator&                    Allocator,
+                                            const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                                            Uint32                               NumAllowedTypes)
 {
+#ifdef DILIGENT_DEBUG
+    m_pDbgAllocator = &Allocator;
+#endif
+
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
     VERIFY_EXPR(m_NumVariables == 0);
     auto MemSize = GetRequiredMemorySize(SrcLayout, AllowedVarTypes, NumAllowedTypes, m_NumVariables);
@@ -113,10 +108,10 @@ ShaderVariableManagerD3D12::~ShaderVariableManagerD3D12()
 
 void ShaderVariableManagerD3D12::Destroy(IMemoryAllocator& Allocator)
 {
-    VERIFY(&m_DbgAllocator == &Allocator, "Incosistent alloctor");
-
     if (m_pVariables != nullptr)
     {
+        VERIFY(m_pDbgAllocator == &Allocator, "Incosistent alloctor");
+
         for (Uint32 v = 0; v < m_NumVariables; ++v)
             m_pVariables[v].~ShaderVariableD3D12Impl();
         Allocator.Free(m_pVariables);

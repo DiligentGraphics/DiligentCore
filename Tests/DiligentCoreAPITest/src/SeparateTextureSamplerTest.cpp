@@ -94,16 +94,17 @@ TEST(SeparateTextureSampler, CreateSampler)
     pDevice->CreateShader(Attrs, &pPS);
     ASSERT_TRUE(pPS);
 
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    PSODesc.GraphicsPipeline.pVS                          = pVS;
-    PSODesc.GraphicsPipeline.pPS                          = pPS;
-    PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-    PSODesc.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
-    PSODesc.GraphicsPipeline.DSVFormat                    = TEX_FORMAT_UNKNOWN;
-    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
+    PSOCreateInfo.pVS                             = pVS;
+    PSOCreateInfo.pPS                             = pPS;
+    GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.NumRenderTargets             = 1;
+    GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
+    GraphicsPipeline.DSVFormat                    = TEX_FORMAT_UNKNOWN;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
 
     ShaderResourceVariableDesc Vars[] =
         {
@@ -116,15 +117,15 @@ TEST(SeparateTextureSampler, CreateSampler)
     PSODesc.ResourceLayout.Variables    = Vars;
     PSODesc.ResourceLayout.NumVariables = _countof(Vars);
 
-    StaticSamplerDesc StaticSamplers[] =
+    ImmutableSamplerDesc ImtblSamplers[] =
         {
             {SHADER_TYPE_PIXEL, "g_Sam2", SamplerDesc{}} //
         };
-    PSODesc.ResourceLayout.StaticSamplers    = StaticSamplers;
-    PSODesc.ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
+    PSODesc.ResourceLayout.ImmutableSamplers    = ImtblSamplers;
+    PSODesc.ResourceLayout.NumImmutableSamplers = _countof(ImtblSamplers);
 
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_TRUE(pPSO);
 
     TextureDesc TexDesc;

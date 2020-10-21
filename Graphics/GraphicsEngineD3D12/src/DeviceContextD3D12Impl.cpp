@@ -211,49 +211,60 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         // This is necessary because if the command list had been flushed
         // and the first PSO set on the command list was a compute pipeline,
         // the states would otherwise never be committed (since m_pPipelineState != nullptr)
-        CommitStates = OldPSODesc.IsComputePipeline();
+        CommitStates = !OldPSODesc.IsAnyGraphicsPipeline();
         // We also need to update scissor rect if ScissorEnable state has changed
-        CommitScissor = OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable != PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
+        if (OldPSODesc.IsAnyGraphicsPipeline() && PSODesc.IsAnyGraphicsPipeline())
+            CommitScissor = m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable != pPipelineStateD3D12->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
     }
 
     TDeviceContextBase::SetPipelineState(pPipelineStateD3D12, 0 /*Dummy*/);
 
-    auto& CmdCtx = GetCmdContext();
-
+    auto& CmdCtx    = GetCmdContext();
     auto* pd3d12PSO = pPipelineStateD3D12->GetD3D12PipelineState();
-    if (PSODesc.IsComputePipeline())
+
+    switch (PSODesc.PipelineType)
     {
-        CmdCtx.AsComputeContext().SetPipelineState(pd3d12PSO);
-    }
-    else
-    {
-        VERIFY_EXPR(PSODesc.IsAnyGraphicsPipeline());
-
-        auto& GraphicsCtx = CmdCtx.AsGraphicsContext();
-        GraphicsCtx.SetPipelineState(pd3d12PSO);
-
-        if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
+        case PIPELINE_TYPE_GRAPHICS:
+        case PIPELINE_TYPE_MESH:
         {
-            auto D3D12Topology = TopologyToD3D12Topology(PSODesc.GraphicsPipeline.PrimitiveTopology);
-            GraphicsCtx.SetPrimitiveTopology(D3D12Topology);
-        }
+            auto& GraphicsPipeline = pPipelineStateD3D12->GetGraphicsPipelineDesc();
+            auto& GraphicsCtx      = CmdCtx.AsGraphicsContext();
+            GraphicsCtx.SetPipelineState(pd3d12PSO);
 
-        if (CommitStates)
-        {
-            GraphicsCtx.SetStencilRef(m_StencilRef);
-            GraphicsCtx.SetBlendFactor(m_BlendFactors);
-            if (PSODesc.GraphicsPipeline.pRenderPass == nullptr)
+            if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
             {
-                CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+                auto D3D12Topology = TopologyToD3D12Topology(GraphicsPipeline.PrimitiveTopology);
+                GraphicsCtx.SetPrimitiveTopology(D3D12Topology);
             }
-            CommitViewports();
+
+            if (CommitStates)
+            {
+                GraphicsCtx.SetStencilRef(m_StencilRef);
+                GraphicsCtx.SetBlendFactor(m_BlendFactors);
+                if (GraphicsPipeline.pRenderPass == nullptr)
+                {
+                    CommitRenderTargets(RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+                }
+                CommitViewports();
+            }
+
+            if (CommitStates || CommitScissor)
+            {
+                CommitScissorRects(GraphicsCtx, GraphicsPipeline.RasterizerDesc.ScissorEnable);
+            }
+            break;
         }
 
-        if (CommitStates || CommitScissor)
+        case PIPELINE_TYPE_COMPUTE:
         {
-            CommitScissorRects(GraphicsCtx, PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable);
+            CmdCtx.AsComputeContext().SetPipelineState(pd3d12PSO);
+            break;
         }
+
+        default:
+            UNEXPECTED("unknown pipeline type");
     }
+
     m_State.pCommittedResourceCache = nullptr;
     m_State.bRootViewsCommitted     = false;
 }
@@ -964,7 +975,7 @@ void DeviceContextD3D12Impl::SetScissorRects(Uint32 NumRects, const Rect* pRects
     if (m_pPipelineState)
     {
         const auto& PSODesc = m_pPipelineState->GetDesc();
-        if (PSODesc.IsAnyGraphicsPipeline() && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
+        if (PSODesc.IsAnyGraphicsPipeline() && m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable)
         {
             VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
             auto& Ctx = GetCmdContext().AsGraphicsContext();

@@ -105,16 +105,15 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
     CBDesc.CPUAccessFlags = CPU_ACCESS_WRITE;
     pDeviceGL->CreateBuffer(CBDesc, nullptr, &m_pConstantBuffer, IsInternalDeviceObject);
 
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    auto& GraphicsPipeline                   = PSODesc.GraphicsPipeline;
+    auto& GraphicsPipeline                   = PSOCreateInfo.GraphicsPipeline;
     GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_NONE;
     GraphicsPipeline.RasterizerDesc.FillMode = FILL_MODE_SOLID;
 
     GraphicsPipeline.DepthStencilDesc.DepthEnable      = False;
     GraphicsPipeline.DepthStencilDesc.DepthWriteEnable = False;
-    GraphicsPipeline.pVS                               = m_pVertexShader;
+    PSOCreateInfo.pVS                                  = m_pVertexShader;
     GraphicsPipeline.PrimitiveTopology                 = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 
     static const char* CmpTypePrefix[3] = {"", "i", "u"};
@@ -150,17 +149,19 @@ TexRegionRender::TexRegionRender(class RenderDeviceGLImpl* pDeviceGL)
             ShaderAttrs.Source  = Source.c_str();
             auto& FragmetShader = m_pFragmentShaders[Dim * 3 + Fmt];
             pDeviceGL->CreateShader(ShaderAttrs, &FragmetShader, IsInternalDeviceObject);
-            GraphicsPipeline.pPS = FragmetShader;
+            PSOCreateInfo.pPS = FragmetShader;
 
-            PSODesc.ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
+            auto& ResourceLayout = PSOCreateInfo.PSODesc.ResourceLayout;
+
+            ResourceLayout.DefaultVariableType = SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
             ShaderResourceVariableDesc Vars[] =
                 {
                     {SHADER_TYPE_PIXEL, "cbConstants", SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE} //
                 };
-            PSODesc.ResourceLayout.NumVariables = _countof(Vars);
-            PSODesc.ResourceLayout.Variables    = Vars;
+            ResourceLayout.NumVariables = _countof(Vars);
+            ResourceLayout.Variables    = Vars;
 
-            pDeviceGL->CreatePipelineState(PSOCreateInfo, &m_pPSO[Dim * 3 + Fmt], IsInternalDeviceObject);
+            pDeviceGL->CreateGraphicsPipelineState(PSOCreateInfo, &m_pPSO[Dim * 3 + Fmt], IsInternalDeviceObject);
         }
     }
     m_pPSO[RESOURCE_DIM_TEX_2D * 3]->CreateShaderResourceBinding(&m_pSRB);

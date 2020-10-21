@@ -51,8 +51,8 @@ TextureBaseD3D11::TextureBaseD3D11(IReferenceCounters*        pRefCounters,
     }
 // clang-format on
 {
-    if (m_Desc.Usage == USAGE_STATIC && (pInitData == nullptr || pInitData->pSubResources == nullptr))
-        LOG_ERROR_AND_THROW("Static textures must be initialized with data at creation time: pInitData can't be null");
+    if (m_Desc.Usage == USAGE_IMMUTABLE && (pInitData == nullptr || pInitData->pSubResources == nullptr))
+        LOG_ERROR_AND_THROW("Immutable textures must be initialized with data at creation time: pInitData can't be null");
 
     SetState(RESOURCE_STATE_UNDEFINED);
 }

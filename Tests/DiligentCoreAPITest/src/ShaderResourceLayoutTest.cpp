@@ -113,15 +113,16 @@ protected:
                                                Uint32                    NumExpectedResources,
                                                TModifyShaderCI           ModifyShaderCI)
     {
-        auto* pEnv    = TestingEnvironment::GetInstance();
-        auto* pDevice = pEnv->GetDevice();
+        auto* const pEnv       = TestingEnvironment::GetInstance();
+        auto* const pDevice    = pEnv->GetDevice();
+        const auto& deviceCaps = pDevice->GetDeviceCaps();
 
         RefCntAutoPtr<IShaderSourceInputStreamFactory> pShaderSourceFactory;
         pDevice->GetEngineFactory()->CreateDefaultShaderSourceStreamFactory("shaders/ShaderResourceLayout", &pShaderSourceFactory);
 
         ShaderCreateInfo ShaderCI;
         ShaderCI.pShaderSourceStreamFactory = pShaderSourceFactory;
-        ShaderCI.UseCombinedTextureSamplers = pDevice->GetDeviceCaps().IsGLDevice();
+        ShaderCI.UseCombinedTextureSamplers = deviceCaps.IsGLDevice();
 
         ShaderCI.FilePath        = FileName;
         ShaderCI.Desc.Name       = ShaderName;
@@ -135,7 +136,8 @@ protected:
 
         RefCntAutoPtr<IShader> pShader;
         pDevice->CreateShader(ShaderCI, &pShader);
-        if (pShader)
+
+        if (pShader && deviceCaps.Features.ShaderResourceQueries)
         {
             VerifyShaderResources(pShader, ExpectedResources, NumExpectedResources);
             Diligent::Test::PrintShaderResources(pShader);
@@ -171,25 +173,29 @@ protected:
                                   RefCntAutoPtr<IPipelineState>&         pPSO,
                                   RefCntAutoPtr<IShaderResourceBinding>& pSRB)
     {
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+        auto& PSODesc          = PSOCreateInfo.PSODesc;
+        auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        PSODesc.ResourceLayout = ResourceLayout;
+        PSODesc.Name                     = "Shader resource layout test";
+        PSODesc.ResourceLayout           = ResourceLayout;
+        PSODesc.SRBAllocationGranularity = 16;
 
-        PSODesc.Name                                          = "Shader resource layout test";
-        PSODesc.GraphicsPipeline.pVS                          = pVS;
-        PSODesc.GraphicsPipeline.pPS                          = pPS;
-        PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-        PSODesc.GraphicsPipeline.RTVFormats[0]                = TEX_FORMAT_RGBA8_UNORM;
-        PSODesc.GraphicsPipeline.DSVFormat                    = TEX_FORMAT_UNKNOWN;
-        PSODesc.SRBAllocationGranularity                      = 16;
-        PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+        PSOCreateInfo.pVS = pVS;
+        PSOCreateInfo.pPS = pPS;
 
-        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+        GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        GraphicsPipeline.NumRenderTargets  = 1;
+        GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
+        GraphicsPipeline.DSVFormat         = TEX_FORMAT_UNKNOWN;
+
+        GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+
+        pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
         if (pPSO)
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
@@ -240,23 +246,23 @@ protected:
                                  RefCntAutoPtr<IPipelineState>&         pPSO,
                                  RefCntAutoPtr<IShaderResourceBinding>& pSRB)
     {
-        PipelineStateCreateInfo PSOCreateInfo;
-        PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+        ComputePipelineStateCreateInfo PSOCreateInfo;
 
         auto* pEnv    = TestingEnvironment::GetInstance();
         auto* pDevice = pEnv->GetDevice();
 
-        PSODesc.Name                = "Shader resource layout test";
-        PSODesc.PipelineType        = PIPELINE_TYPE_COMPUTE;
-        PSODesc.ResourceLayout      = ResourceLayout;
-        PSODesc.ComputePipeline.pCS = pCS;
+        auto& PSODesc          = PSOCreateInfo.PSODesc;
+        PSODesc.Name           = "Shader resource layout test";
+        PSODesc.PipelineType   = PIPELINE_TYPE_COMPUTE;
+        PSODesc.ResourceLayout = ResourceLayout;
+        PSOCreateInfo.pCS      = pCS;
 
-        pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+        pDevice->CreateComputePipelineState(PSOCreateInfo, &pPSO);
         if (pPSO)
             pPSO->CreateShaderResourceBinding(&pSRB, false);
     }
 
-    void TestTexturesAndStaticSamplers(bool TestStaticSamplers);
+    void TestTexturesAndImtblSamplers(bool TestImtblSamplers);
     void TestStructuredOrFormattedBuffer(bool IsFormatted);
     void TestRWStructuredOrFormattedBuffer(bool IsFormatted);
 
@@ -285,7 +291,7 @@ RefCntAutoPtr<ITextureView> ShaderResourceLayoutTest::pRTV;
     } while (false)
 
 
-void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamplers)
+void ShaderResourceLayoutTest::TestTexturesAndImtblSamplers(bool TestImtblSamplers)
 {
     TestingEnvironment::ScopedReset AutoResetEnvironment;
 
@@ -312,7 +318,7 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
     };
     if (!pDevice->GetDeviceCaps().IsGLDevice())
     {
-        if (TestStaticSamplers)
+        if (TestImtblSamplers)
         {
             Resources.emplace_back("g_Tex2D_Static_sampler",    SHADER_RESOURCE_TYPE_SAMPLER, 1);
             Resources.emplace_back("g_Tex2D_Mut_sampler",       SHADER_RESOURCE_TYPE_SAMPLER, 1);
@@ -328,23 +334,23 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
     }
     // clang-format on
 
-    auto ModifyShaderCI = [TestStaticSamplers](ShaderCreateInfo& ShaderCI) {
-        if (TestStaticSamplers)
+    auto ModifyShaderCI = [TestImtblSamplers](ShaderCreateInfo& ShaderCI) {
+        if (TestImtblSamplers)
         {
             ShaderCI.UseCombinedTextureSamplers = true;
-            // Static sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
+            // Immutable sampler arrays are not allowed in 5.1, and DXC only supports 6.0+
             ShaderCI.ShaderCompiler = SHADER_COMPILER_DEFAULT;
             ShaderCI.HLSLVersion    = ShaderVersion{5, 0};
         }
     };
-    auto pVS = CreateShader(TestStaticSamplers ? "ShaderResourceLayoutTest.StaticSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
-                            TestStaticSamplers ? "StaticSamplers.hlsl" : "Textures.hlsl",
+    auto pVS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - VS" : "ShaderResourceLayoutTest.Textures - VS",
+                            TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "VSMain",
                             SHADER_TYPE_VERTEX, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()),
                             ModifyShaderCI);
-    auto pPS = CreateShader(TestStaticSamplers ? "ShaderResourceLayoutTest.StaticSamplers - PS" : "ShaderResourceLayoutTest.Textures - PS",
-                            TestStaticSamplers ? "StaticSamplers.hlsl" : "Textures.hlsl",
+    auto pPS = CreateShader(TestImtblSamplers ? "ShaderResourceLayoutTest.ImtblSamplers - PS" : "ShaderResourceLayoutTest.Textures - PS",
+                            TestImtblSamplers ? "ImmutableSamplers.hlsl" : "Textures.hlsl",
                             "PSMain",
                             SHADER_TYPE_PIXEL, SHADER_SOURCE_LANGUAGE_HLSL, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()),
@@ -364,27 +370,27 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE},
         {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
     };
-    std::vector<StaticSamplerDesc> StaticSamplers;
-    if (TestStaticSamplers)
+    std::vector<ImmutableSamplerDesc> ImtblSamplers;
+    if (TestImtblSamplers)
     {
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static",    SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",       SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",       SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SamplerDesc{});
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Static",    SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Mut",       SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2D_Dyn",       SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Static", SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Mut",    SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Tex2DArr_Dyn",    SamplerDesc{});
     }
     else
     {
-        StaticSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{});
+        ImtblSamplers.emplace_back(SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_Sampler", SamplerDesc{});
     }
     // clang-format on
 
     PipelineResourceLayoutDesc ResourceLayout;
-    ResourceLayout.Variables         = Vars;
-    ResourceLayout.NumVariables      = _countof(Vars);
-    ResourceLayout.StaticSamplers    = StaticSamplers.data();
-    ResourceLayout.NumStaticSamplers = static_cast<Uint32>(StaticSamplers.size());
+    ResourceLayout.Variables            = Vars;
+    ResourceLayout.NumVariables         = _countof(Vars);
+    ResourceLayout.ImmutableSamplers    = ImtblSamplers.data();
+    ResourceLayout.NumImmutableSamplers = static_cast<Uint32>(ImtblSamplers.size());
 
     RefCntAutoPtr<IPipelineState>         pPSO;
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
@@ -443,12 +449,12 @@ void ShaderResourceLayoutTest::TestTexturesAndStaticSamplers(bool TestStaticSamp
 
 TEST_F(ShaderResourceLayoutTest, Textures)
 {
-    TestTexturesAndStaticSamplers(false);
+    TestTexturesAndImtblSamplers(false);
 }
 
-TEST_F(ShaderResourceLayoutTest, StaticSamplers)
+TEST_F(ShaderResourceLayoutTest, ImmutableSamplers)
 {
-    TestTexturesAndStaticSamplers(true);
+    TestTexturesAndImtblSamplers(true);
 }
 
 
@@ -467,9 +473,11 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
     auto* pEnv    = TestingEnvironment::GetInstance();
     auto* pDevice = pEnv->GetDevice();
 
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
     // Vulkan only allows 16 dynamic storage buffer bindings among all stages, so
     // use arrays only in fragment shader for structured buffer test.
-    const auto UseArraysInPSOnly = !IsFormatted && pDevice->GetDeviceCaps().IsVulkanDevice();
+    const auto UseArraysInPSOnly = !IsFormatted && (deviceCaps.IsVulkanDevice() || deviceCaps.IsMetalDevice());
 
     // clang-format off
     std::vector<ShaderResourceDesc> Resources = 
@@ -478,7 +486,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         {"g_Buff_Mut",    SHADER_RESOURCE_TYPE_BUFFER_SRV, 1},
         {"g_Buff_Dyn",    SHADER_RESOURCE_TYPE_BUFFER_SRV, 1}
     };
-    
+
     auto AddArrayResources = [&Resources]()
     {
         Resources.emplace_back("g_BuffArr_Static", SHADER_RESOURCE_TYPE_BUFFER_SRV, StaticBuffArraySize);
@@ -498,7 +506,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
-    else if (pDevice->GetDeviceCaps().IsVulkanDevice() || pDevice->GetDeviceCaps().IsGLDevice())
+    else if (pDevice->GetDeviceCaps().IsVulkanDevice() || pDevice->GetDeviceCaps().IsGLDevice() || pDevice->GetDeviceCaps().IsMetalDevice())
     {
         ShaderFileName = IsFormatted ? "FormattedBuffers.hlsl" : "StructuredBuffers.glsl";
         SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
@@ -508,7 +516,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         GTEST_FAIL() << "Unexpected device type";
     }
     auto pVS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - VS" : "ShaderResourceLayoutTest.StructuredBuffers - VS",
-                            ShaderFileName, "VSMain",
+                            ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "VSMain" : "main",
                             SHADER_TYPE_VERTEX, SrcLang, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()));
     if (UseArraysInPSOnly)
@@ -516,7 +524,7 @@ void ShaderResourceLayoutTest::TestStructuredOrFormattedBuffer(bool IsFormatted)
         AddArrayResources();
     }
     auto pPS = CreateShader(IsFormatted ? "ShaderResourceLayoutTest.FormattedBuffers - PS" : "ShaderResourceLayoutTest.StructuredBuffers - PS",
-                            ShaderFileName, "PSMain",
+                            ShaderFileName, SrcLang == SHADER_SOURCE_LANGUAGE_HLSL ? "PSMain" : "main",
                             SHADER_TYPE_PIXEL, SrcLang, Macros,
                             Resources.data(), static_cast<Uint32>(Resources.size()));
     ASSERT_NE(pVS, nullptr);
@@ -672,7 +680,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
         ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.hlsl";
         SrcLang        = SHADER_SOURCE_LANGUAGE_HLSL;
     }
-    else if (pDevice->GetDeviceCaps().IsVulkanDevice() || pDevice->GetDeviceCaps().IsGLDevice())
+    else if (deviceCaps.IsVulkanDevice() || deviceCaps.IsGLDevice() || deviceCaps.IsMetalDevice())
     {
         ShaderFileName = IsFormatted ? "RWFormattedBuffers.hlsl" : "RWStructuredBuffers.glsl";
         SrcLang        = IsFormatted ? SHADER_SOURCE_LANGUAGE_HLSL : SHADER_SOURCE_LANGUAGE_GLSL;
@@ -686,7 +694,7 @@ void ShaderResourceLayoutTest::TestRWStructuredOrFormattedBuffer(bool IsFormatte
                             SHADER_TYPE_COMPUTE, SrcLang, Macros,
                             Resources, _countof(Resources));
     ASSERT_NE(pCS, nullptr);
-    
+
     // clang-format off
     ShaderResourceVariableDesc Vars[] =
     {
@@ -880,7 +888,10 @@ TEST_F(ShaderResourceLayoutTest, ConstantBuffers)
     Macros.AddShaderMacro("MUTABLE_CB_ARRAY_SIZE", static_cast<int>(MutableCBArraySize));
     Macros.AddShaderMacro("DYNAMIC_CB_ARRAY_SIZE", static_cast<int>(DynamicCBArraySize));
 
-    const auto CBArraysSupported = deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12 || deviceCaps.IsVulkanDevice();
+    const auto CBArraysSupported =
+        deviceCaps.DevType == RENDER_DEVICE_TYPE_D3D12 ||
+        deviceCaps.DevType == RENDER_DEVICE_TYPE_VULKAN ||
+        deviceCaps.DevType == RENDER_DEVICE_TYPE_METAL;
     Macros.AddShaderMacro("ARRAYS_SUPPORTED", CBArraysSupported);
 
     // clang-format off
@@ -1123,6 +1134,8 @@ TEST_F(ShaderResourceLayoutTest, Samplers)
 
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_Sam_Dyn", Set, pSamObjs[1]);
     SET_SRB_VAR(pSRB, SHADER_TYPE_PIXEL, "g_SamArr_Dyn", SetArray, pSamObjs.data(), 1, DynamicSamArraySize - 1);
+
+    pContext->CommitShaderResources(pSRB, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
     pContext->Draw(DrawAttrs);
 }

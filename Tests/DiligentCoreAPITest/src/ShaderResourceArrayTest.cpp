@@ -70,17 +70,18 @@ TEST(ShaderResourceLayout, ResourceArray)
     }
 
 
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+    PipelineStateDesc&              PSODesc          = PSOCreateInfo.PSODesc;
+    GraphicsPipelineDesc&           GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    StaticSamplerDesc StaticSampler;
-    StaticSampler.Desc.MinFilter             = FILTER_TYPE_LINEAR;
-    StaticSampler.Desc.MagFilter             = FILTER_TYPE_LINEAR;
-    StaticSampler.Desc.MipFilter             = FILTER_TYPE_LINEAR;
-    StaticSampler.ShaderStages               = SHADER_TYPE_PIXEL;
-    StaticSampler.SamplerOrTextureName       = "g_tex2DTest";
-    PSODesc.ResourceLayout.NumStaticSamplers = 1;
-    PSODesc.ResourceLayout.StaticSamplers    = &StaticSampler;
+    ImmutableSamplerDesc ImtblSampler;
+    ImtblSampler.Desc.MinFilter                 = FILTER_TYPE_LINEAR;
+    ImtblSampler.Desc.MagFilter                 = FILTER_TYPE_LINEAR;
+    ImtblSampler.Desc.MipFilter                 = FILTER_TYPE_LINEAR;
+    ImtblSampler.ShaderStages                   = SHADER_TYPE_PIXEL;
+    ImtblSampler.SamplerOrTextureName           = "g_tex2DTest";
+    PSODesc.ResourceLayout.NumImmutableSamplers = 1;
+    PSODesc.ResourceLayout.ImmutableSamplers    = &ImtblSampler;
     // clang-format off
     ShaderResourceVariableDesc Vars[] = 
     {
@@ -89,22 +90,22 @@ TEST(ShaderResourceLayout, ResourceArray)
         {SHADER_TYPE_PIXEL, "g_tex2D",      SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC}
     };
     // clang-format on
-    PSODesc.ResourceLayout.Variables                                = Vars;
-    PSODesc.ResourceLayout.NumVariables                             = _countof(Vars);
-    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable           = False;
-    PSODesc.GraphicsPipeline.RasterizerDesc.CullMode                = CULL_MODE_NONE;
-    PSODesc.GraphicsPipeline.BlendDesc.IndependentBlendEnable       = False;
-    PSODesc.GraphicsPipeline.BlendDesc.RenderTargets[0].BlendEnable = False;
-    PSODesc.GraphicsPipeline.NumRenderTargets                       = 1;
+    PSODesc.ResourceLayout.Variables                        = Vars;
+    PSODesc.ResourceLayout.NumVariables                     = _countof(Vars);
+    GraphicsPipeline.DepthStencilDesc.DepthEnable           = False;
+    GraphicsPipeline.RasterizerDesc.CullMode                = CULL_MODE_NONE;
+    GraphicsPipeline.BlendDesc.IndependentBlendEnable       = False;
+    GraphicsPipeline.BlendDesc.RenderTargets[0].BlendEnable = False;
+    GraphicsPipeline.NumRenderTargets                       = 1;
 
-    constexpr TEXTURE_FORMAT RTVFormat     = TEX_FORMAT_RGBA8_UNORM;
-    constexpr TEXTURE_FORMAT DSVFormat     = TEX_FORMAT_D32_FLOAT;
-    PSODesc.GraphicsPipeline.RTVFormats[0] = RTVFormat;
-    PSODesc.GraphicsPipeline.DSVFormat     = DSVFormat;
-    PSODesc.GraphicsPipeline.pVS           = pVS;
-    PSODesc.GraphicsPipeline.pPS           = pPS;
+    constexpr TEXTURE_FORMAT RTVFormat = TEX_FORMAT_RGBA8_UNORM;
+    constexpr TEXTURE_FORMAT DSVFormat = TEX_FORMAT_D32_FLOAT;
+    GraphicsPipeline.RTVFormats[0]     = RTVFormat;
+    GraphicsPipeline.DSVFormat         = DSVFormat;
+    PSOCreateInfo.pVS                  = pVS;
+    PSOCreateInfo.pPS                  = pPS;
 
-    PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
     // clang-format off
     LayoutElement Elems[] =
     {
@@ -112,10 +113,10 @@ TEST(ShaderResourceLayout, ResourceArray)
         LayoutElement{ 1, 0, 2, VT_FLOAT32, false, sizeof( float ) * 3 }
     };
     // clang-format on
-    PSODesc.GraphicsPipeline.InputLayout.LayoutElements = Elems;
-    PSODesc.GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
+    GraphicsPipeline.InputLayout.LayoutElements = Elems;
+    GraphicsPipeline.InputLayout.NumElements    = _countof(Elems);
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     RefCntAutoPtr<IShaderResourceBinding> pSRB;
@@ -146,7 +147,7 @@ TEST(ShaderResourceLayout, ResourceArray)
         BufferDesc BuffDesc;
         BuffDesc.uiSizeInBytes = sizeof(Vertices);
         BuffDesc.BindFlags     = BIND_VERTEX_BUFFER;
-        BuffDesc.Usage         = USAGE_STATIC;
+        BuffDesc.Usage         = USAGE_IMMUTABLE;
         BufferData BuffData;
         BuffData.pData    = Vertices;
         BuffData.DataSize = BuffDesc.uiSizeInBytes;
@@ -178,7 +179,7 @@ TEST(ShaderResourceLayout, ResourceArray)
         TexDesc.Width     = 256;
         TexDesc.Height    = 256;
         TexDesc.MipLevels = 8;
-        TexDesc.Usage     = USAGE_STATIC;
+        TexDesc.Usage     = USAGE_IMMUTABLE;
         TexDesc.Format    = TEX_FORMAT_RGBA8_UNORM;
         TexDesc.BindFlags = BIND_SHADER_RESOURCE;
         TexDesc.Name      = "Test Texture";

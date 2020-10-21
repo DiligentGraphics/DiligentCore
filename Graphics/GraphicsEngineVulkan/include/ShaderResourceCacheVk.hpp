@@ -75,7 +75,7 @@ public:
     };
 
     // clang-format off
-    ShaderResourceCacheVk(DbgCacheContentType dbgContentType)
+    ShaderResourceCacheVk(DbgCacheContentType dbgContentType) noexcept
 #ifdef DILIGENT_DEBUG
         : m_DbgContentType{dbgContentType}
 #endif

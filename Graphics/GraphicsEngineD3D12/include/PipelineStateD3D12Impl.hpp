@@ -38,6 +38,7 @@
 #include "SRBMemoryAllocator.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "ShaderVariableD3D12.hpp"
+#include "ShaderD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -50,7 +51,8 @@ class PipelineStateD3D12Impl final : public PipelineStateBase<IPipelineStateD3D1
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateD3D12, RenderDeviceD3D12Impl>;
 
-    PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const PipelineStateCreateInfo& CreateInfo);
+    PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const GraphicsPipelineStateCreateInfo& CreateInfo);
+    PipelineStateD3D12Impl(IReferenceCounters* pRefCounters, RenderDeviceD3D12Impl* pDeviceD3D12, const ComputePipelineStateCreateInfo& CreateInfo);
     ~PipelineStateD3D12Impl();
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
@@ -95,19 +97,19 @@ public:
 
     const ShaderResourceLayoutD3D12& GetShaderResLayout(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
         return m_pShaderResourceLayouts[ShaderInd];
     }
 
     const ShaderResourceLayoutD3D12& GetStaticShaderResLayout(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < m_NumShaders);
-        return m_pShaderResourceLayouts[m_NumShaders + ShaderInd];
+        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
+        return m_pShaderResourceLayouts[GetNumShaderStages() + ShaderInd];
     }
 
     ShaderResourceCacheD3D12& GetStaticShaderResCache(Uint32 ShaderInd) const
     {
-        VERIFY_EXPR(ShaderInd < m_NumShaders);
+        VERIFY_EXPR(ShaderInd < GetNumShaderStages());
         return m_pStaticResourceCaches[ShaderInd];
     }
 
@@ -119,15 +121,34 @@ public:
     }
 
 private:
+    struct D3D12PipelineShaderStageInfo
+    {
+        const SHADER_TYPE      Type;
+        ShaderD3D12Impl* const pShader;
+        D3D12PipelineShaderStageInfo(SHADER_TYPE      _Type,
+                                     ShaderD3D12Impl* _pShader) :
+            Type{_Type},
+            pShader{_pShader}
+        {}
+    };
+
+    template <typename PSOCreateInfoType>
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, std::vector<D3D12PipelineShaderStageInfo>& ShaderStages);
+
+    void InitResourceLayouts(const PipelineStateCreateInfo&             CreateInfo,
+                             std::vector<D3D12PipelineShaderStageInfo>& ShaderStages);
+
+    void Destruct();
+
     CComPtr<ID3D12PipelineState> m_pd3d12PSO;
     RootSignature                m_RootSig;
 
     // Must be defined before default SRB
     SRBMemoryAllocator m_SRBMemAllocator;
 
-    ShaderResourceLayoutD3D12*  m_pShaderResourceLayouts = nullptr;
-    ShaderResourceCacheD3D12*   m_pStaticResourceCaches  = nullptr;
-    ShaderVariableManagerD3D12* m_pStaticVarManagers     = nullptr;
+    ShaderResourceLayoutD3D12*  m_pShaderResourceLayouts = nullptr; // [m_NumShaderStages * 2]
+    ShaderResourceCacheD3D12*   m_pStaticResourceCaches  = nullptr; // [m_NumShaderStages]
+    ShaderVariableManagerD3D12* m_pStaticVarManagers     = nullptr; // [m_NumShaderStages]
 
     // Resource layout index in m_pShaderResourceLayouts array for every shader stage,
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)

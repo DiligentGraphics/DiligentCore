@@ -56,9 +56,8 @@ HRESULT CompileD3DShader(const std::string&      Source,
 class TestingEnvironmentD3D12 final : public TestingEnvironment
 {
 public:
-    TestingEnvironmentD3D12(RENDER_DEVICE_TYPE   deviceType,
-                            ADAPTER_TYPE         AdapterType,
-                            Uint32               AdapterId,
+    using CreateInfo = TestingEnvironment::CreateInfo;
+    TestingEnvironmentD3D12(const CreateInfo&    CI,
                             const SwapChainDesc& SCDesc);
     ~TestingEnvironmentD3D12();
 

@@ -47,14 +47,19 @@ namespace Diligent
 class ShaderResourceLayoutD3D11
 {
 public:
-    ShaderResourceLayoutD3D11(IObject&                                    Owner,
-                              std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
-                              const PipelineResourceLayoutDesc&           ResourceLayout,
-                              const SHADER_RESOURCE_VARIABLE_TYPE*        VarTypes,
-                              Uint32                                      NumVarTypes,
-                              ShaderResourceCacheD3D11&                   ResourceCache,
-                              IMemoryAllocator&                           ResCacheDataAllocator,
-                              IMemoryAllocator&                           ResLayoutDataAllocator);
+    ShaderResourceLayoutD3D11(IObject&                  Owner,
+                              ShaderResourceCacheD3D11& ResourceCache) noexcept :
+        m_Owner{Owner},
+        m_ResourceCache{ResourceCache}
+    {
+    }
+
+    void Initialize(std::shared_ptr<const ShaderResourcesD3D11> pSrcResources,
+                    const PipelineResourceLayoutDesc&           ResourceLayout,
+                    const SHADER_RESOURCE_VARIABLE_TYPE*        VarTypes,
+                    Uint32                                      NumVarTypes,
+                    IMemoryAllocator&                           ResCacheDataAllocator,
+                    IMemoryAllocator&                           ResLayoutDataAllocator);
     ~ShaderResourceLayoutD3D11();
 
     // clang-format off
@@ -68,7 +73,7 @@ public:
     static size_t GetRequiredMemorySize(const ShaderResourcesD3D11&          SrcResources,
                                         const PipelineResourceLayoutDesc&    ResourceLayout,
                                         const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                                        Uint32                               NumAllowedTypes);
+                                        Uint32                               NumAllowedTypes) noexcept;
 
     void CopyResources(ShaderResourceCacheD3D11& DstCache) const;
 

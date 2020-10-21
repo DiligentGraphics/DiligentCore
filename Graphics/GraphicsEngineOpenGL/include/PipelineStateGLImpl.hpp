@@ -37,6 +37,7 @@
 #include "GLProgramResources.hpp"
 #include "GLPipelineResourceLayout.hpp"
 #include "GLProgramResourceCache.hpp"
+#include "ShaderGLImpl.hpp"
 
 namespace Diligent
 {
@@ -49,10 +50,14 @@ class PipelineStateGLImpl final : public PipelineStateBase<IPipelineStateGL, Ren
 public:
     using TPipelineStateBase = PipelineStateBase<IPipelineStateGL, RenderDeviceGLImpl>;
 
-    PipelineStateGLImpl(IReferenceCounters*            pRefCounters,
-                        RenderDeviceGLImpl*            pDeviceGL,
-                        const PipelineStateCreateInfo& CreateInfo,
-                        bool                           IsDeviceInternal = false);
+    PipelineStateGLImpl(IReferenceCounters*                    pRefCounters,
+                        RenderDeviceGLImpl*                    pDeviceGL,
+                        const GraphicsPipelineStateCreateInfo& CreateInfo,
+                        bool                                   IsDeviceInternal = false);
+    PipelineStateGLImpl(IReferenceCounters*                   pRefCounters,
+                        RenderDeviceGLImpl*                   pDeviceGL,
+                        const ComputePipelineStateCreateInfo& CreateInfo,
+                        bool                                  IsDeviceInternal = false);
     ~PipelineStateGLImpl();
 
     /// Queries the specific interface, see IObject::QueryInterface() for details
@@ -90,12 +95,32 @@ public:
 private:
     GLObjectWrappers::GLPipelineObj& GetGLProgramPipeline(GLContext::NativeGLContextType Context);
 
-    void InitStaticSamplersInResourceCache(const GLPipelineResourceLayout& ResourceLayout, GLProgramResourceCache& Cache) const;
+    void InitImmutableSamplersInResourceCache(const GLPipelineResourceLayout& ResourceLayout, GLProgramResourceCache& Cache) const;
+
+    struct GLPipelineShaderStageInfo
+    {
+        const SHADER_TYPE   Type;
+        ShaderGLImpl* const pShader;
+        GLPipelineShaderStageInfo(SHADER_TYPE   _Type,
+                                  ShaderGLImpl* _pShader) :
+            Type{_Type},
+            pShader{_pShader}
+        {}
+    };
+
+    template <typename PSOCreateInfoType>
+    void Initialize(const PSOCreateInfoType& CreateInfo, const std::vector<GLPipelineShaderStageInfo>& ShaderStages);
+
+    void InitResourceLayouts(const std::vector<GLPipelineShaderStageInfo>& ShaderStages,
+                             LinearAllocator&                              MemPool);
+
+    void Destruct();
 
     // Linked GL programs for every shader stage. Every pipeline needs to have its own programs
     // because resource bindings assigned by GLProgramResources::LoadUniforms depend on other
     // shader stages.
-    std::vector<GLObjectWrappers::GLProgramObj> m_GLPrograms;
+    using GLProgramObj         = GLObjectWrappers::GLProgramObj;
+    GLProgramObj* m_GLPrograms = nullptr; // [m_NumShaderStages]
 
     ThreadingTools::LockFlag m_ProgPipelineLockFlag;
 
@@ -113,14 +138,15 @@ private:
     GLProgramResourceCache m_StaticResourceCache;
 
     // Program resources for all shader stages in the pipeline
-    std::vector<GLProgramResources> m_ProgramResources;
+    GLProgramResources* m_ProgramResources = nullptr; // [m_NumShaderStages]
 
     Uint32 m_TotalUniformBufferBindings = 0;
     Uint32 m_TotalSamplerBindings       = 0;
     Uint32 m_TotalImageBindings         = 0;
     Uint32 m_TotalStorageBufferBindings = 0;
 
-    std::vector<RefCntAutoPtr<ISampler>> m_StaticSamplers;
+    using SamplerPtr                = RefCntAutoPtr<ISampler>;
+    SamplerPtr* m_ImmutableSamplers = nullptr; // [m_Desc.ResourceLayout.NumImmutableSamplers]
 };
 
 } // namespace Diligent

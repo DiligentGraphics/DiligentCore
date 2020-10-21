@@ -88,8 +88,11 @@ TEST(ShaderResourceLayout, VariableAccess)
     auto* pDevice  = pEnv->GetDevice();
     auto* pContext = pEnv->GetDeviceContext();
 
-    if (pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_GLES)
-        return;
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+    if (!deviceCaps.Features.SeparablePrograms)
+    {
+        GTEST_SKIP() << "Shader variable access test requires separate programs";
+    }
 
     TestingEnvironment::ScopedReset EnvironmentAutoReset;
 
@@ -236,15 +239,27 @@ TEST(ShaderResourceLayout, VariableAccess)
     {
         ShaderCI.Desc.Name       = "Shader variable access test VS";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_VERTEX;
-        ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_DEFAULT;
-        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.FilePath        = pDevice->GetDeviceCaps().IsD3DDevice() ? "ShaderVariableAccessTestDX.vsh" : "ShaderVariableAccessTestGL.vsh";
+        if (deviceCaps.IsD3DDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestDX.vsh";
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestGL.vsh";
+        }
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
 
         pDevice->CreateShader(ShaderCI, &pVS);
         ASSERT_NE(pVS, nullptr);
         TestShaderCInterface(pVS);
 
-        Diligent::Test::PrintShaderResources(pVS);
+        if (!deviceCaps.IsMetalDevice())
+        {
+            // Resource queries from shader are not supported in Metal
+            Diligent::Test::PrintShaderResources(pVS);
+        }
     }
 
     std::vector<ShaderResourceVariableDesc> VarDesc =
@@ -267,7 +282,7 @@ TEST(ShaderResourceLayout, VariableAccess)
             {SHADER_TYPE_PIXEL, "g_rwBuff_Dyn", SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC},
         };
 
-    StaticSamplerDesc StaticSamplers[] =
+    ImmutableSamplerDesc ImtblSamplers[] =
         {
             {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_tex2D_Static", SamplerDesc{}},
             {SHADER_TYPE_VERTEX | SHADER_TYPE_PIXEL, "g_tex2D_StaticArr", SamplerDesc{}},
@@ -281,35 +296,50 @@ TEST(ShaderResourceLayout, VariableAccess)
     {
         ShaderCI.Desc.Name       = "Shader variable access test PS";
         ShaderCI.Desc.ShaderType = SHADER_TYPE_PIXEL;
-        ShaderCI.SourceLanguage  = SHADER_SOURCE_LANGUAGE_DEFAULT;
-        ShaderCI.ShaderCompiler  = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
-        ShaderCI.FilePath        = pDevice->GetDeviceCaps().IsD3DDevice() ? "ShaderVariableAccessTestDX.psh" : "ShaderVariableAccessTestGL.psh";
+        if (deviceCaps.IsD3DDevice())
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_HLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestDX.psh";
+        }
+        else
+        {
+            ShaderCI.SourceLanguage = SHADER_SOURCE_LANGUAGE_GLSL;
+            ShaderCI.FilePath       = "ShaderVariableAccessTestGL.psh";
+        }
+        ShaderCI.ShaderCompiler = pEnv->GetDefaultCompiler(ShaderCI.SourceLanguage);
         pDevice->CreateShader(ShaderCI, &pPS);
         ASSERT_NE(pPS, nullptr);
 
-        Diligent::Test::PrintShaderResources(pPS);
+        if (!deviceCaps.IsMetalDevice())
+        {
+            // Resource queries from shader are not supported in Metal
+            Diligent::Test::PrintShaderResources(pPS);
+        }
     }
 
 
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    PSODesc.ResourceLayout.Variables         = VarDesc.data();
-    PSODesc.ResourceLayout.NumVariables      = static_cast<Uint32>(VarDesc.size());
-    PSODesc.ResourceLayout.NumStaticSamplers = _countof(StaticSamplers);
-    PSODesc.ResourceLayout.StaticSamplers    = StaticSamplers;
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& ResourceLayout   = PSODesc.ResourceLayout;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-    PSODesc.Name                               = "Shader variable access test PSO";
-    PSODesc.GraphicsPipeline.pVS               = pVS;
-    PSODesc.GraphicsPipeline.pPS               = pPS;
-    PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    PSODesc.GraphicsPipeline.NumRenderTargets  = 1;
-    PSODesc.GraphicsPipeline.RTVFormats[0]     = RTVFormat;
-    PSODesc.GraphicsPipeline.DSVFormat         = DSVFormat;
-    PSODesc.SRBAllocationGranularity           = 16;
+    ResourceLayout.Variables            = VarDesc.data();
+    ResourceLayout.NumVariables         = static_cast<Uint32>(VarDesc.size());
+    ResourceLayout.NumImmutableSamplers = _countof(ImtblSamplers);
+    ResourceLayout.ImmutableSamplers    = ImtblSamplers;
+
+    PSODesc.Name                       = "Shader variable access test PSO";
+    PSOCreateInfo.pVS                  = pVS;
+    PSOCreateInfo.pPS                  = pPS;
+    GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    GraphicsPipeline.NumRenderTargets  = 1;
+    GraphicsPipeline.RTVFormats[0]     = RTVFormat;
+    GraphicsPipeline.DSVFormat         = DSVFormat;
+    PSODesc.SRBAllocationGranularity   = 16;
 
     RefCntAutoPtr<IPipelineState> pTestPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pTestPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pTestPSO);
     ASSERT_NE(pTestPSO, nullptr);
     EXPECT_EQ(TestPipelineStateCInterface(pTestPSO), 0);
 

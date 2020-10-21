@@ -76,12 +76,16 @@ class ShaderVariableD3D12Impl;
 class ShaderVariableManagerD3D12
 {
 public:
-    ShaderVariableManagerD3D12(IObject&                             Owner,
-                               const ShaderResourceLayoutD3D12&     Layout,
-                               IMemoryAllocator&                    Allocator,
-                               const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
-                               Uint32                               NumAllowedTypes,
-                               ShaderResourceCacheD3D12&            ResourceCache);
+    ShaderVariableManagerD3D12(IObject&                  Owner,
+                               ShaderResourceCacheD3D12& ResourceCache) noexcept :
+        m_Owner{Owner},
+        m_ResourceCache{ResourceCache}
+    {}
+
+    void Initialize(const ShaderResourceLayoutD3D12&     Layout,
+                    IMemoryAllocator&                    Allocator,
+                    const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
+                    Uint32                               NumAllowedTypes);
     ~ShaderVariableManagerD3D12();
 
     void Destroy(IMemoryAllocator& Allocator);
@@ -120,7 +124,7 @@ private:
     Uint32                           m_NumVariables = 0;
 
 #ifdef DILIGENT_DEBUG
-    IMemoryAllocator&                m_DbgAllocator;
+    IMemoryAllocator*                m_pDbgAllocator = nullptr;
 #endif
     // clang-format on
 };

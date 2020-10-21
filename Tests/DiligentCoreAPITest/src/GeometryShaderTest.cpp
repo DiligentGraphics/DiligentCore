@@ -70,11 +70,18 @@ namespace
 
 TEST(GeometryShaderTest, DrawTriangles)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.GeometryShaders)
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
+    if (!deviceCaps.Features.GeometryShaders)
     {
         GTEST_SKIP() << "Geometry shaders are not supported by this device";
+    }
+
+    if (!deviceCaps.Features.SeparablePrograms)
+    {
+        GTEST_SKIP() << "Geometry shader test requires separable programs";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -86,8 +93,7 @@ TEST(GeometryShaderTest, DrawTriangles)
         pConext->Flush();
         pConext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
-        switch (deviceType)
+        switch (deviceCaps.DevType)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
@@ -133,17 +139,19 @@ TEST(GeometryShaderTest, DrawTriangles)
     pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
 
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
+
+    auto& PSODesc          = PSOCreateInfo.PSODesc;
+    auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
     PSODesc.Name = "Geometry shader test";
 
-    PSODesc.PipelineType                                  = PIPELINE_TYPE_GRAPHICS;
-    PSODesc.GraphicsPipeline.NumRenderTargets             = 1;
-    PSODesc.GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
-    PSODesc.GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_POINT_LIST;
-    PSODesc.GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
-    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    PSODesc.PipelineType                          = PIPELINE_TYPE_GRAPHICS;
+    GraphicsPipeline.NumRenderTargets             = 1;
+    GraphicsPipeline.RTVFormats[0]                = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology            = PRIMITIVE_TOPOLOGY_POINT_LIST;
+    GraphicsPipeline.RasterizerDesc.CullMode      = CULL_MODE_NONE;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -182,11 +190,11 @@ TEST(GeometryShaderTest, DrawTriangles)
 
     PSODesc.Name = "Geometry shader test";
 
-    PSODesc.GraphicsPipeline.pVS = pVS;
-    PSODesc.GraphicsPipeline.pGS = pGS;
-    PSODesc.GraphicsPipeline.pPS = pPS;
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pGS = pGS;
+    PSOCreateInfo.pPS = pPS;
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     pContext->SetPipelineState(pPSO);

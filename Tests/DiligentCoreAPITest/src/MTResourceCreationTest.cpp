@@ -258,17 +258,20 @@ void MultithreadedResourceCreationTest::WorkerThreadFunc(MultithreadedResourceCr
                 }
 
 
-                PipelineStateCreateInfo PSOCreateInfo;
-                PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+                GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-                PSODesc.GraphicsPipeline.pVS               = pTrivialVS;
-                PSODesc.GraphicsPipeline.pPS               = pTrivialPS;
-                PSODesc.GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-                PSODesc.GraphicsPipeline.NumRenderTargets  = 1;
-                PSODesc.GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
-                PSODesc.GraphicsPipeline.DSVFormat         = TEX_FORMAT_D32_FLOAT;
+                auto& PSODesc          = PSOCreateInfo.PSODesc;
+                auto& GraphicsPipeline = PSOCreateInfo.GraphicsPipeline;
 
-                pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+                PSODesc.Name                       = "MT creation test PSO";
+                PSOCreateInfo.pVS                  = pTrivialVS;
+                PSOCreateInfo.pPS                  = pTrivialPS;
+                GraphicsPipeline.PrimitiveTopology = PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+                GraphicsPipeline.NumRenderTargets  = 1;
+                GraphicsPipeline.RTVFormats[0]     = TEX_FORMAT_RGBA8_UNORM;
+                GraphicsPipeline.DSVFormat         = TEX_FORMAT_D32_FLOAT;
+
+                pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
                 EXPECT_NE(pPSO, nullptr) << "Failed to create test PSO";
             }
         }

@@ -76,6 +76,8 @@ public:
     bool StaticResourcesInitialized() const { return m_bStaticResourcesInitialized; }
 
 private:
+    void Destruct();
+
     ShaderResourceCacheVk    m_ShaderResourceCache;
     ShaderVariableManagerVk* m_pShaderVarMgrs = nullptr;
 

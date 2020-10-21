@@ -70,11 +70,18 @@ namespace
 
 TEST(TessellationTest, DrawQuad)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
-    if (!pDevice->GetDeviceCaps().Features.Tessellation)
+    auto* const pEnv       = TestingEnvironment::GetInstance();
+    auto* const pDevice    = pEnv->GetDevice();
+    const auto& deviceCaps = pDevice->GetDeviceCaps();
+
+    if (!deviceCaps.Features.Tessellation)
     {
         GTEST_SKIP() << "Tessellation is not supported by this device";
+    }
+
+    if (!deviceCaps.Features.SeparablePrograms)
+    {
+        GTEST_SKIP() << "Tessellation test requires separable programs";
     }
 
     auto* pSwapChain = pEnv->GetSwapChain();
@@ -86,8 +93,7 @@ TEST(TessellationTest, DrawQuad)
         pConext->Flush();
         pConext->InvalidateState();
 
-        auto deviceType = pDevice->GetDeviceCaps().DevType;
-        switch (deviceType)
+        switch (deviceCaps.DevType)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
@@ -132,23 +138,23 @@ TEST(TessellationTest, DrawQuad)
     float ClearColor[] = {0.f, 0.f, 0.f, 0.0f};
     pContext->ClearRenderTarget(pRTVs[0], ClearColor, RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-    PipelineStateCreateInfo PSOCreateInfo;
-    PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+    GraphicsPipelineStateCreateInfo PSOCreateInfo;
 
-    PSODesc.Name = "Tessellation test";
+    PSOCreateInfo.PSODesc.Name         = "Tessellation test";
+    PSOCreateInfo.PSODesc.PipelineType = PIPELINE_TYPE_GRAPHICS;
 
-    PSODesc.PipelineType                             = PIPELINE_TYPE_GRAPHICS;
-    PSODesc.GraphicsPipeline.NumRenderTargets        = 1;
-    PSODesc.GraphicsPipeline.RTVFormats[0]           = pSwapChain->GetDesc().ColorBufferFormat;
-    PSODesc.GraphicsPipeline.PrimitiveTopology       = PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;
-    PSODesc.GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_BACK;
-    PSODesc.GraphicsPipeline.RasterizerDesc.FillMode =
+    auto& GraphicsPipeline                   = PSOCreateInfo.GraphicsPipeline;
+    GraphicsPipeline.NumRenderTargets        = 1;
+    GraphicsPipeline.RTVFormats[0]           = pSwapChain->GetDesc().ColorBufferFormat;
+    GraphicsPipeline.PrimitiveTopology       = PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST;
+    GraphicsPipeline.RasterizerDesc.CullMode = CULL_MODE_BACK;
+    GraphicsPipeline.RasterizerDesc.FillMode =
         pDevice->GetDeviceCaps().Features.WireframeFill ?
         FILL_MODE_WIREFRAME :
         FILL_MODE_SOLID;
-    PSODesc.GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
+    GraphicsPipeline.RasterizerDesc.FrontCounterClockwise = pDevice->GetDeviceCaps().IsGLDevice();
 
-    PSODesc.GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
+    GraphicsPipeline.DepthStencilDesc.DepthEnable = False;
 
     ShaderCreateInfo ShaderCI;
     ShaderCI.SourceLanguage             = SHADER_SOURCE_LANGUAGE_HLSL;
@@ -199,14 +205,14 @@ TEST(TessellationTest, DrawQuad)
         ASSERT_NE(pPS, nullptr);
     }
 
-    PSODesc.Name = "Tessellation test";
+    PSOCreateInfo.PSODesc.Name = "Tessellation test";
 
-    PSODesc.GraphicsPipeline.pVS = pVS;
-    PSODesc.GraphicsPipeline.pHS = pHS;
-    PSODesc.GraphicsPipeline.pDS = pDS;
-    PSODesc.GraphicsPipeline.pPS = pPS;
+    PSOCreateInfo.pVS = pVS;
+    PSOCreateInfo.pHS = pHS;
+    PSOCreateInfo.pDS = pDS;
+    PSOCreateInfo.pPS = pPS;
     RefCntAutoPtr<IPipelineState> pPSO;
-    pDevice->CreatePipelineState(PSOCreateInfo, &pPSO);
+    pDevice->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
     ASSERT_NE(pPSO, nullptr);
 
     pContext->SetPipelineState(pPSO);

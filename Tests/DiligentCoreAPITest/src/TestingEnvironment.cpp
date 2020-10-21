@@ -118,11 +118,8 @@ Uint32 TestingEnvironment::FindAdapater(const std::vector<GraphicsAdapterInfo>& 
     return AdapterId;
 }
 
-TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
-                                       ADAPTER_TYPE         AdapterType,
-                                       Uint32               AdapterId,
-                                       const SwapChainDesc& SCDesc) :
-    m_DeviceType{deviceType}
+TestingEnvironment::TestingEnvironment(const CreateInfo& CI, const SwapChainDesc& SCDesc) :
+    m_DeviceType{CI.deviceType}
 {
     VERIFY(m_pTheEnvironment == nullptr, "Testing environment object has already been initialized!");
     m_pTheEnvironment = this;
@@ -195,7 +192,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
                 PrintAdapterInfo(i, AdapterInfo, DisplayModes);
             }
 
-            CreateInfo.AdapterId = FindAdapater(Adapters, AdapterType, AdapterId);
+            CreateInfo.AdapterId = FindAdapater(Adapters, CI.AdapterType, CI.AdapterId);
 
             CreateInfo.NumDeferredContexts = NumDeferredCtx;
             ppContexts.resize(1 + NumDeferredCtx);
@@ -247,7 +244,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
                 PrintAdapterInfo(i, AdapterInfo, DisplayModes);
             }
 
-            CreateInfo.AdapterId = FindAdapater(Adapters, AdapterType, AdapterId);
+            CreateInfo.AdapterId = FindAdapater(Adapters, CI.AdapterType, CI.AdapterId);
 
             CreateInfo.EnableDebugLayer = true;
             //CreateInfo.EnableGPUBasedValidation                = true;
@@ -283,11 +280,11 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
             auto Window = CreateNativeWindow();
 
             EngineGLCreateInfo CreateInfo;
-            CreateInfo.DebugMessageCallback = MessageCallback;
-            CreateInfo.Window               = Window;
-            CreateInfo.CreateDebugContext   = true;
-            CreateInfo.Features             = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
-
+            CreateInfo.DebugMessageCallback      = MessageCallback;
+            CreateInfo.Window                    = Window;
+            CreateInfo.CreateDebugContext        = true;
+            CreateInfo.Features                  = DeviceFeatures{DEVICE_FEATURE_STATE_OPTIONAL};
+            CreateInfo.ForceNonSeparablePrograms = CI.ForceNonSeparablePrograms;
             if (NumDeferredCtx != 0)
             {
                 LOG_ERROR_MESSAGE("Deferred contexts are not supported in OpenGL mode");
@@ -314,7 +311,7 @@ TestingEnvironment::TestingEnvironment(RENDER_DEVICE_TYPE   deviceType,
 #    endif
 
             EngineVkCreateInfo CreateInfo;
-            CreateInfo.AdapterId                 = AdapterId;
+            CreateInfo.AdapterId                 = CI.AdapterId;
             CreateInfo.DebugMessageCallback      = MessageCallback;
             CreateInfo.EnableValidation          = true;
             CreateInfo.MainDescriptorPoolSize    = VulkanDescriptorPoolSize{64, 64, 256, 256, 64, 32, 32, 32, 32, 16};

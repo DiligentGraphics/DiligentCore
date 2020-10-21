@@ -106,6 +106,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
         },
         EngineCI.MainDescriptorPoolSize.MaxDescriptorSets,
         true
@@ -126,6 +127,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
             {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
         },
         EngineCI.DynamicDescriptorPoolSize.MaxDescriptorSets,
         false // Pools can only be reset
@@ -217,6 +219,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
 
     // The following features are always enabled
     Features.SeparablePrograms             = DEVICE_FEATURE_STATE_ENABLED;
+    Features.ShaderResourceQueries         = DEVICE_FEATURE_STATE_ENABLED;
     Features.IndirectRendering             = DEVICE_FEATURE_STATE_ENABLED;
     Features.MultithreadedResourceCreation = DEVICE_FEATURE_STATE_ENABLED;
     Features.ComputeShaders                = DEVICE_FEATURE_STATE_ENABLED;
@@ -226,7 +229,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     Features.DurationQueries               = DEVICE_FEATURE_STATE_ENABLED;
 
 #if defined(_MSC_VER) && defined(_WIN64)
-    static_assert(sizeof(DeviceFeatures) == 31, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
+    static_assert(sizeof(DeviceFeatures) == 32, "Did you add a new feature to DeviceFeatures? Please handle its satus here (if necessary).");
 #endif
 
     const auto& vkDeviceLimits    = m_PhysicalDevice->GetProperties().limits;
@@ -545,7 +548,8 @@ void RenderDeviceVkImpl::TestTextureFormat(TEXTURE_FORMAT TexFormat)
 
 IMPLEMENT_QUERY_INTERFACE(RenderDeviceVkImpl, IID_RenderDeviceVk, TRenderDeviceBase)
 
-void RenderDeviceVkImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+template <typename PSOCreateInfoType>
+void RenderDeviceVkImpl::CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
     CreateDeviceObject(
         "Pipeline State", PSOCreateInfo.PSODesc, ppPipelineState,
@@ -556,6 +560,17 @@ void RenderDeviceVkImpl::CreatePipelineState(const PipelineStateCreateInfo& PSOC
             OnCreateDeviceObject(pPipelineStateVk);
         } //
     );
+}
+
+void RenderDeviceVkImpl::CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+}
+
+
+void RenderDeviceVkImpl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    CreatePipelineState(PSOCreateInfo, ppPipelineState);
 }
 
 

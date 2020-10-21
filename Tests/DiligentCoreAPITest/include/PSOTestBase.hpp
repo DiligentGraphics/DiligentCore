@@ -42,11 +42,11 @@ protected:
     static void InitResources();
     static void ReleaseResources();
 
-    static RefCntAutoPtr<IPipelineState> CreateTestPSO(const PipelineStateCreateInfo& PSOCreateInfo, bool BindPSO);
+    static RefCntAutoPtr<IPipelineState> CreateTestPSO(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, bool BindPSO);
 
-    static PipelineStateDesc& GetPSODesc()
+    static GraphicsPipelineStateCreateInfo& GetPSOCreateInfo()
     {
-        return sm_Resources.PSODesc;
+        return sm_Resources.PSOCreateInfo;
     }
 
 private:
@@ -55,7 +55,7 @@ private:
         RefCntAutoPtr<IShader> pTrivialVS;
         RefCntAutoPtr<IShader> pTrivialPS;
 
-        PipelineStateDesc PSODesc;
+        GraphicsPipelineStateCreateInfo PSOCreateInfo;
     };
 
     static Resources sm_Resources;

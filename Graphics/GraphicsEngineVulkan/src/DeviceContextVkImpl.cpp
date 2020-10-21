@@ -260,39 +260,49 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
     else
     {
         const auto& OldPSODesc = m_pPipelineState->GetDesc();
-        // Commit all graphics states when switching from compute pipeline
+        // Commit all graphics states when switching from non-graphics pipeline
         // This is necessary because if the command list had been flushed
         // and the first PSO set on the command list was a compute pipeline,
         // the states would otherwise never be committed (since m_pPipelineState != nullptr)
-        CommitStates = OldPSODesc.IsComputePipeline();
+        CommitStates = !OldPSODesc.IsAnyGraphicsPipeline();
         // We also need to update scissor rect if ScissorEnable state was disabled in previous pipeline
-        CommitScissor = !OldPSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable;
+        if (OldPSODesc.IsAnyGraphicsPipeline())
+            CommitScissor = !m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable;
     }
 
     TDeviceContextBase::SetPipelineState(pPipelineStateVk, 0 /*Dummy*/);
     EnsureVkCmdBuffer();
 
-    if (PSODesc.IsComputePipeline())
-    {
-        auto vkPipeline = pPipelineStateVk->GetVkPipeline();
-        m_CommandBuffer.BindComputePipeline(vkPipeline);
-    }
-    else
-    {
-        auto vkPipeline = pPipelineStateVk->GetVkPipeline();
-        m_CommandBuffer.BindGraphicsPipeline(vkPipeline);
+    auto vkPipeline = pPipelineStateVk->GetVkPipeline();
 
-        if (CommitStates)
+    switch (PSODesc.PipelineType)
+    {
+        case PIPELINE_TYPE_GRAPHICS:
+        case PIPELINE_TYPE_MESH:
         {
-            m_CommandBuffer.SetStencilReference(m_StencilRef);
-            m_CommandBuffer.SetBlendConstants(m_BlendFactors);
-            CommitViewports();
-        }
+            auto& GraphicsPipeline = pPipelineStateVk->GetGraphicsPipelineDesc();
+            m_CommandBuffer.BindGraphicsPipeline(vkPipeline);
 
-        if (PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable && (CommitStates || CommitScissor))
-        {
-            CommitScissorRects();
+            if (CommitStates)
+            {
+                m_CommandBuffer.SetStencilReference(m_StencilRef);
+                m_CommandBuffer.SetBlendConstants(m_BlendFactors);
+                CommitViewports();
+            }
+
+            if (GraphicsPipeline.RasterizerDesc.ScissorEnable && (CommitStates || CommitScissor))
+            {
+                CommitScissorRects();
+            }
+            break;
         }
+        case PIPELINE_TYPE_COMPUTE:
+        {
+            m_CommandBuffer.BindComputePipeline(vkPipeline);
+            break;
+        }
+        default:
+            UNEXPECTED("unknown pipeline type");
     }
 
     m_DescrSetBindInfo.Reset();
@@ -384,8 +394,11 @@ void DeviceContextVkImpl::CommitVkVertexBuffers()
 
 void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
 {
+    const auto& Desc       = m_pPipelineState->GetDesc();
+    const auto& GrPipeline = m_pPipelineState->GetGraphicsPipelineDesc();
+
     std::stringstream ss;
-    ss << "Active render pass is incomaptible with PSO '" << m_pPipelineState->GetDesc().Name
+    ss << "Active render pass is incomaptible with PSO '" << Desc.Name
        << "'. This indicates the mismatch between the number and/or format of bound render "
           "targets and/or depth stencil buffer and the PSO. Vulkand requires exact match.\n"
           "    Bound render targets ("
@@ -414,7 +427,6 @@ void DeviceContextVkImpl::DvpLogRenderPass_PSOMismatch()
         ss << "<Not set>";
     ss << "; Sample count: " << SampleCount;
 
-    const auto& GrPipeline = m_pPipelineState->GetDesc().GraphicsPipeline;
     ss << "\n    PSO: render targets (" << Uint32{GrPipeline.NumRenderTargets} << "): ";
     for (Uint32 rt = 0; rt < GrPipeline.NumRenderTargets; ++rt)
         ss << ' ' << GetTextureFormatAttribs(GrPipeline.RTVFormats[rt]).Name;
@@ -475,7 +487,7 @@ void DeviceContextVkImpl::PrepareForDraw(DRAW_FLAGS Flags)
 #    endif
 #endif
 
-    if (m_pPipelineState->GetDesc().GraphicsPipeline.pRenderPass == nullptr)
+    if (m_pPipelineState->GetGraphicsPipelineDesc().pRenderPass == nullptr)
     {
 #ifdef DILIGENT_DEVELOPMENT
         if (m_pPipelineState->GetRenderPass()->GetVkRenderPass() != m_vkRenderPass)
@@ -1129,7 +1141,7 @@ void DeviceContextVkImpl::SetViewports(Uint32 NumViewports, const Viewport* pVie
 
 void DeviceContextVkImpl::CommitScissorRects()
 {
-    VERIFY(m_pPipelineState && m_pPipelineState->GetDesc().GraphicsPipeline.RasterizerDesc.ScissorEnable, "Scissor test must be enabled in the graphics pipeline");
+    VERIFY(m_pPipelineState && m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable, "Scissor test must be enabled in the graphics pipeline");
 
     if (m_NumScissorRects == 0)
         return; // Scissors have not been set in the context yet
@@ -1155,14 +1167,10 @@ void DeviceContextVkImpl::SetScissorRects(Uint32 NumRects, const Rect* pRects, U
     // Only commit scissor rects if scissor test is enabled in the rasterizer state.
     // If scissor is currently disabled, or no PSO is bound, scissor rects will be committed by
     // the SetPipelineState() when a PSO with enabled scissor test is set.
-    if (m_pPipelineState)
+    if (m_pPipelineState && m_pPipelineState->GetDesc().IsAnyGraphicsPipeline() && m_pPipelineState->GetGraphicsPipelineDesc().RasterizerDesc.ScissorEnable)
     {
-        const auto& PSODesc = m_pPipelineState->GetDesc();
-        if (PSODesc.IsAnyGraphicsPipeline() && PSODesc.GraphicsPipeline.RasterizerDesc.ScissorEnable)
-        {
-            VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
-            CommitScissorRects();
-        }
+        VERIFY(NumRects == m_NumScissorRects, "Unexpected number of scissor rects");
+        CommitScissorRects();
     }
 }
 

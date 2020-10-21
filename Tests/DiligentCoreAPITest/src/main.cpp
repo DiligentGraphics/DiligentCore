@@ -43,23 +43,23 @@ namespace Testing
 {
 
 #if D3D11_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentD3D11(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
+TestingEnvironment* CreateTestingEnvironmentD3D11(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
 #if D3D12_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentD3D12(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
+TestingEnvironment* CreateTestingEnvironmentD3D12(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
 #if GL_SUPPORTED || GLES_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentGL(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
+TestingEnvironment* CreateTestingEnvironmentGL(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
 #if VULKAN_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentVk(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
+TestingEnvironment* CreateTestingEnvironmentVk(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
 #if METAL_SUPPORTED
-TestingEnvironment* CreateTestingEnvironmentMtl(RENDER_DEVICE_TYPE deviceType, ADAPTER_TYPE AdapterType, Uint32 AdapterId, const SwapChainDesc& SCDesc);
+TestingEnvironment* CreateTestingEnvironmentMtl(const TestingEnvironment::CreateInfo& CI, const SwapChainDesc& SCDesc);
 #endif
 
 } // namespace Testing
@@ -78,10 +78,8 @@ int main(int argc, char** argv)
 
     ::testing::InitGoogleTest(&argc, argv);
 
-    RENDER_DEVICE_TYPE deviceType  = RENDER_DEVICE_TYPE_UNDEFINED;
-    ADAPTER_TYPE       AdapterType = ADAPTER_TYPE_UNKNOWN;
-    Uint32             AdapterId   = DEFAULT_ADAPTER_ID;
-    SHADER_COMPILER    ShCompiler  = SHADER_COMPILER_DEFAULT;
+    TestingEnvironment::CreateInfo TestEnvCI;
+    SHADER_COMPILER                ShCompiler = SHADER_COMPILER_DEFAULT;
     for (int i = 1; i < argc; ++i)
     {
         const std::string AdapterArgName = "--adapter=";
@@ -89,48 +87,57 @@ int main(int argc, char** argv)
         const auto* arg = argv[i];
         if (strcmp(arg, "--mode=d3d11") == 0)
         {
-            deviceType = RENDER_DEVICE_TYPE_D3D11;
+            TestEnvCI.deviceType = RENDER_DEVICE_TYPE_D3D11;
         }
         else if (strcmp(arg, "--mode=d3d11_sw") == 0)
         {
-            deviceType  = RENDER_DEVICE_TYPE_D3D11;
-            AdapterType = ADAPTER_TYPE_SOFTWARE;
+            TestEnvCI.deviceType  = RENDER_DEVICE_TYPE_D3D11;
+            TestEnvCI.AdapterType = ADAPTER_TYPE_SOFTWARE;
         }
         else if (strcmp(arg, "--mode=d3d12") == 0)
         {
-            deviceType = RENDER_DEVICE_TYPE_D3D12;
+            TestEnvCI.deviceType = RENDER_DEVICE_TYPE_D3D12;
         }
         else if (strcmp(arg, "--mode=d3d12_sw") == 0)
         {
-            deviceType  = RENDER_DEVICE_TYPE_D3D12;
-            AdapterType = ADAPTER_TYPE_SOFTWARE;
+            TestEnvCI.deviceType  = RENDER_DEVICE_TYPE_D3D12;
+            TestEnvCI.AdapterType = ADAPTER_TYPE_SOFTWARE;
         }
         else if (strcmp(arg, "--mode=vk") == 0)
         {
-            deviceType = RENDER_DEVICE_TYPE_VULKAN;
+            TestEnvCI.deviceType = RENDER_DEVICE_TYPE_VULKAN;
         }
         else if (strcmp(arg, "--mode=gl") == 0)
         {
-            deviceType = RENDER_DEVICE_TYPE_GL;
+            TestEnvCI.deviceType = RENDER_DEVICE_TYPE_GL;
         }
         else if (strcmp(arg, "--mode=mtl") == 0)
         {
-            deviceType = RENDER_DEVICE_TYPE_METAL;
+            TestEnvCI.deviceType = RENDER_DEVICE_TYPE_METAL;
         }
         else if (AdapterArgName.compare(0, AdapterArgName.length(), arg, AdapterArgName.length()) == 0)
         {
-            AdapterId = static_cast<Uint32>(atoi(arg + AdapterArgName.length()));
+            TestEnvCI.AdapterId = static_cast<Uint32>(atoi(arg + AdapterArgName.length()));
         }
         else if (strcmp(arg, "--shader_compiler=dxc") == 0)
         {
             ShCompiler = SHADER_COMPILER_DXC;
         }
+        else if (strcmp(arg, "--non_separable_progs") == 0)
+        {
+            TestEnvCI.ForceNonSeparablePrograms = true;
+        }
     }
 
-    if (deviceType == RENDER_DEVICE_TYPE_UNDEFINED)
+    if (TestEnvCI.deviceType == RENDER_DEVICE_TYPE_UNDEFINED)
     {
         LOG_ERROR_MESSAGE("Device type is not specified");
         return -1;
+    }
+
+    if (TestEnvCI.ForceNonSeparablePrograms && TestEnvCI.deviceType != RENDER_DEVICE_TYPE_GL)
+    {
+        LOG_ERROR_MESSAGE("Non-separable programs can only be forced for OpenGL device.");
     }
 
     SwapChainDesc SCDesc;
@@ -142,25 +149,25 @@ int main(int argc, char** argv)
     Diligent::Testing::TestingEnvironment* pEnv = nullptr;
     try
     {
-        switch (deviceType)
+        switch (TestEnvCI.deviceType)
         {
 #if D3D11_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D11:
-                if (AdapterType == ADAPTER_TYPE_SOFTWARE)
+                if (TestEnvCI.AdapterType == ADAPTER_TYPE_SOFTWARE)
                     std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D11-SW mode =================\n\n";
                 else
                     std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D11 mode ==================\n\n";
-                pEnv = CreateTestingEnvironmentD3D11(deviceType, AdapterType, AdapterId, SCDesc);
+                pEnv = CreateTestingEnvironmentD3D11(TestEnvCI, SCDesc);
                 break;
 #endif
 
 #if D3D12_SUPPORTED
             case RENDER_DEVICE_TYPE_D3D12:
-                if (AdapterType == ADAPTER_TYPE_SOFTWARE)
+                if (TestEnvCI.AdapterType == ADAPTER_TYPE_SOFTWARE)
                     std::cout << "\n\n\n================ Testing Diligent Core API in Direct3D12-SW mode =================\n\n";
                 else
                     std::cout << "\n\n\n================== Testing Diligent Core API in Direct3D12 mode ==================\n\n";
-                pEnv = CreateTestingEnvironmentD3D12(deviceType, AdapterType, AdapterId, SCDesc);
+                pEnv = CreateTestingEnvironmentD3D12(TestEnvCI, SCDesc);
                 break;
 #endif
 
@@ -168,7 +175,9 @@ int main(int argc, char** argv)
             case RENDER_DEVICE_TYPE_GL:
             case RENDER_DEVICE_TYPE_GLES:
                 std::cout << "\n\n\n==================== Testing Diligent Core API in OpenGL mode ====================\n\n";
-                pEnv = CreateTestingEnvironmentGL(deviceType, AdapterType, AdapterId, SCDesc);
+                if (TestEnvCI.ForceNonSeparablePrograms)
+                    std::cout << "Forcing non-separable shader programs\n";
+                pEnv = CreateTestingEnvironmentGL(TestEnvCI, SCDesc);
                 break;
 
 #endif
@@ -176,14 +185,14 @@ int main(int argc, char** argv)
 #if VULKAN_SUPPORTED
             case RENDER_DEVICE_TYPE_VULKAN:
                 std::cout << "\n\n\n==================== Testing Diligent Core API in Vulkan mode ====================\n\n";
-                pEnv = CreateTestingEnvironmentVk(deviceType, AdapterType, AdapterId, SCDesc);
+                pEnv = CreateTestingEnvironmentVk(TestEnvCI, SCDesc);
                 break;
 #endif
 
 #if METAL_SUPPORTED
             case RENDER_DEVICE_TYPE_METAL:
                 std::cout << "\n\n\n==================== Testing Diligent Core API in Metal mode ====================\n\n";
-                pEnv = CreateTestingEnvironmentMtl(deviceType, AdapterType, AdapterId, SCDesc);
+                pEnv = CreateTestingEnvironmentMtl(TestEnvCI, SCDesc);
                 break;
 #endif
 

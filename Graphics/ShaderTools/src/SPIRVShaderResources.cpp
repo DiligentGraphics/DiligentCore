@@ -53,6 +53,46 @@ Type GetResourceArraySize(const diligent_spirv_cross::Compiler& Compiler,
     return static_cast<Type>(arrSize);
 }
 
+static RESOURCE_DIMENSION GetResourceDimension(const diligent_spirv_cross::Compiler& Compiler,
+                                               const diligent_spirv_cross::Resource& Res)
+{
+    const auto& type = Compiler.get_type(Res.type_id);
+    if (type.basetype == diligent_spirv_cross::SPIRType::BaseType::Image ||
+        type.basetype == diligent_spirv_cross::SPIRType::BaseType::SampledImage)
+    {
+        switch (type.image.dim)
+        {
+            // clang-format off
+            case spv::Dim1D:     return type.image.arrayed ? RESOURCE_DIM_TEX_1D_ARRAY : RESOURCE_DIM_TEX_1D;
+            case spv::Dim2D:     return type.image.arrayed ? RESOURCE_DIM_TEX_2D_ARRAY : RESOURCE_DIM_TEX_2D;
+            case spv::Dim3D:     return RESOURCE_DIM_TEX_3D;
+            case spv::DimCube:   return type.image.arrayed ? RESOURCE_DIM_TEX_CUBE_ARRAY : RESOURCE_DIM_TEX_CUBE;
+            case spv::DimBuffer: return RESOURCE_DIM_BUFFER;
+            // clang-format on
+            default: return RESOURCE_DIM_UNDEFINED;
+        }
+    }
+    else
+    {
+        return RESOURCE_DIM_UNDEFINED;
+    }
+}
+
+static bool IsMultisample(const diligent_spirv_cross::Compiler& Compiler,
+                          const diligent_spirv_cross::Resource& Res)
+{
+    const auto& type = Compiler.get_type(Res.type_id);
+    if (type.basetype == diligent_spirv_cross::SPIRType::BaseType::Image ||
+        type.basetype == diligent_spirv_cross::SPIRType::BaseType::SampledImage)
+    {
+        return type.image.ms;
+    }
+    else
+    {
+        return RESOURCE_DIM_UNDEFINED;
+    }
+}
+
 static uint32_t GetDecorationOffset(const diligent_spirv_cross::Compiler& Compiler,
                                     const diligent_spirv_cross::Resource& Res,
                                     spv::Decoration                       Decoration)
@@ -74,6 +114,8 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const diligent_spirv_cros
     Name                          {_Name},
     ArraySize                     {GetResourceArraySize<decltype(ArraySize)>(Compiler, Res)},
     Type                          {_Type},
+    ResourceDim                   {Diligent::GetResourceDimension(Compiler, Res)},
+    IsMS                          {Diligent::IsMultisample(Compiler, Res) ? Uint8{1} : Uint8{0}},
     SepSmplrOrImgInd              {_SepSmplrOrImgInd},
     BindingDecorationOffset       {GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationBinding)},
     DescriptorSetDecorationOffset {GetDecorationOffset(Compiler, Res, spv::Decoration::DecorationDescriptorSet)}
@@ -588,6 +630,7 @@ void SPIRVShaderResources::Initialize(IMemoryAllocator&       Allocator,
     VERIFY_EXPR(GetNumACs()       == Counters.NumACs);
     VERIFY_EXPR(GetNumSepSmplrs() == Counters.NumSepSmplrs);
     VERIFY_EXPR(GetNumSepImgs()   == Counters.NumSepImgs);
+    VERIFY_EXPR(GetNumInptAtts()  == Counters.NumInptAtts);
     // clang-format on
 
     if (MemorySize)
@@ -623,6 +666,9 @@ SPIRVShaderResources::~SPIRVShaderResources()
 
     for (Uint32 n = 0; n < GetNumSepImgs(); ++n)
         GetSepImg(n).~SPIRVShaderResourceAttribs();
+
+    for (Uint32 n = 0; n < GetNumInptAtts(); ++n)
+        GetInptAtt(n).~SPIRVShaderResourceAttribs();
 
     for (Uint32 n = 0; n < GetNumShaderStageInputs(); ++n)
         GetShaderStageInputAttribs(n).~SPIRVShaderStageInputAttribs();
@@ -754,7 +800,8 @@ bool SPIRVShaderResources::IsCompatibleWith(const SPIRVShaderResources& Resource
         GetNumSmpldImgs()         != Resources.GetNumSmpldImgs()  ||
         GetNumACs()               != Resources.GetNumACs()        ||
         GetNumSepImgs()           != Resources.GetNumSepImgs()    ||
-        GetNumSepSmplrs()         != Resources.GetNumSepSmplrs())
+        GetNumSepSmplrs()         != Resources.GetNumSepSmplrs()  ||
+        GetNumInptAtts()          != Resources.GetNumInptAtts())
         return false;
     // clang-format on
     VERIFY_EXPR(GetTotalResources() == Resources.GetTotalResources());

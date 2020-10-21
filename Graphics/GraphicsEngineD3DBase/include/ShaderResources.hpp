@@ -192,6 +192,10 @@ public:
         return static_cast<D3D_SRV_DIMENSION>(SRVDimension);
     }
 
+    RESOURCE_DIMENSION GetResourceDimension() const;
+
+    bool IsMultisample() const;
+
     bool IsCombinedWithSampler() const
     {
         return GetCombinedSamplerId() != InvalidSamplerId;
@@ -368,20 +372,20 @@ public:
     SHADER_RESOURCE_VARIABLE_TYPE FindVariableType(const D3DShaderResourceAttribs&   ResourceAttribs,
                                                    const PipelineResourceLayoutDesc& ResourceLayout) const;
 
-    Int32 FindStaticSampler(const D3DShaderResourceAttribs&   ResourceAttribs,
-                            const PipelineResourceLayoutDesc& ResourceLayoutDesc,
-                            bool                              LogStaticSamplerArrayError) const;
+    Int32 FindImmutableSampler(const D3DShaderResourceAttribs&   ResourceAttribs,
+                               const PipelineResourceLayoutDesc& ResourceLayoutDesc,
+                               bool                              LogImmutableSamplerArrayError) const;
 
     D3DShaderResourceCounters CountResources(const PipelineResourceLayoutDesc&    ResourceLayout,
                                              const SHADER_RESOURCE_VARIABLE_TYPE* AllowedVarTypes,
                                              Uint32                               NumAllowedTypes,
-                                             bool                                 CountStaticSamplers) const noexcept;
+                                             bool                                 CountImmutableSamplers) const noexcept;
 #ifdef DILIGENT_DEVELOPMENT
     static void DvpVerifyResourceLayout(const PipelineResourceLayoutDesc& ResourceLayout,
                                         const ShaderResources* const      pShaderResources[],
                                         Uint32                            NumShaders,
                                         bool                              VerifyVariables,
-                                        bool                              VerifyStaticSamplers);
+                                        bool                              VerifyImmutableSamplers) noexcept;
 #endif
 
     void GetShaderModel(Uint32& Major, Uint32& Minor) const

@@ -129,73 +129,307 @@ RenderPassDesc PipelineStateVkImpl::GetImplicitRenderPassDesc(
     return RPDesc;
 }
 
-static std::vector<uint32_t> StripReflection(const std::vector<uint32_t>& OriginalSPIRV)
+static bool StripReflection(std::vector<uint32_t>& SPIRV)
 {
 #if DILIGENT_NO_HLSL
-    return OriginalSPIRV;
+    return false;
 #else
     std::vector<uint32_t> StrippedSPIRV;
     spvtools::Optimizer   SpirvOptimizer(SPV_ENV_VULKAN_1_0);
     // Decorations defined in SPV_GOOGLE_hlsl_functionality1 are the only instructions
     // removed by strip-reflect-info pass. SPIRV offsets become INVALID after this operation.
     SpirvOptimizer.RegisterPass(spvtools::CreateStripReflectInfoPass());
-    auto res = SpirvOptimizer.Run(OriginalSPIRV.data(), OriginalSPIRV.size(), &StrippedSPIRV);
-    if (!res)
+    if (SpirvOptimizer.Run(SPIRV.data(), SPIRV.size(), &StrippedSPIRV))
     {
-        // Optimized SPIRV may be invalid
-        StrippedSPIRV.clear();
+        SPIRV = std::move(StrippedSPIRV);
+        return true;
     }
-    return StrippedSPIRV;
+    else
+        return false;
 #endif
 }
 
-PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCounters,
-                                         RenderDeviceVkImpl*            pDeviceVk,
-                                         const PipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
-    m_SRBMemAllocator{GetRawAllocator()}
+static void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&        LogicalDevice,
+                                     ShaderResourceLayoutVk::TShaderStages&             ShaderStages,
+                                     std::vector<VulkanUtilities::ShaderModuleWrapper>& vkShaderModules,
+                                     std::vector<VkPipelineShaderStageCreateInfo>&      vkPipelineShaderStages)
 {
-    m_ResourceLayoutIndex.fill(-1);
+    for (size_t s = 0; s < ShaderStages.size(); ++s)
+    {
+        auto& StageInfo = ShaderStages[s];
 
+        VkPipelineShaderStageCreateInfo StageCI = {};
+
+        StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        StageCI.pNext = nullptr;
+        StageCI.flags = 0; //  reserved for future use
+        StageCI.stage = ShaderTypeToVkShaderStageFlagBit(StageInfo.Type);
+
+        VkShaderModuleCreateInfo ShaderModuleCI = {};
+
+        ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        ShaderModuleCI.pNext = nullptr;
+        ShaderModuleCI.flags = 0;
+
+        // We have to strip reflection instructions to fix the follownig validation error:
+        //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string
+        // Optimizer also performs validation and may catch problems with the byte code.
+        if (!StripReflection(StageInfo.SPIRV))
+            LOG_ERROR("Failed to strip reflection information from shader '", StageInfo.pShader->GetDesc().Name, "'. This may indicate a problem with the byte code.");
+
+        ShaderModuleCI.codeSize = StageInfo.SPIRV.size() * sizeof(uint32_t);
+        ShaderModuleCI.pCode    = StageInfo.SPIRV.data();
+
+        vkShaderModules.push_back(LogicalDevice.CreateShaderModule(ShaderModuleCI, StageInfo.pShader->GetDesc().Name));
+
+        StageCI.module              = vkShaderModules.back();
+        StageCI.pName               = StageInfo.pShader->GetEntryPoint();
+        StageCI.pSpecializationInfo = nullptr;
+
+        vkPipelineShaderStages.push_back(StageCI);
+    }
+
+    VERIFY_EXPR(vkShaderModules.size() == vkPipelineShaderStages.size());
+}
+
+
+static void CreateComputePipeline(RenderDeviceVkImpl*                           pDeviceVk,
+                                  std::vector<VkPipelineShaderStageCreateInfo>& Stages,
+                                  const PipelineLayout&                         Layout,
+                                  const PipelineStateDesc&                      PSODesc,
+                                  VulkanUtilities::PipelineWrapper&             Pipeline)
+{
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
-    // Initialize shader resource layouts
-    auto& ShaderResLayoutAllocator = GetRawAllocator();
+    VkComputePipelineCreateInfo PipelineCI = {};
 
-    std::array<std::shared_ptr<const SPIRVShaderResources>, MAX_SHADERS_IN_PIPELINE> ShaderResources;
-    std::array<std::vector<uint32_t>, MAX_SHADERS_IN_PIPELINE>                       ShaderSPIRVs;
+    PipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+    PipelineCI.pNext = nullptr;
+#ifdef DILIGENT_DEBUG
+    PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+#endif
+    PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
+    PipelineCI.basePipelineIndex  = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
 
-    m_ShaderResourceLayouts = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutVk", ShaderResourceLayoutVk, m_NumShaders * 2);
-    m_StaticResCaches       = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderResourceCacheVk", ShaderResourceCacheVk, m_NumShaders);
-    m_StaticVarsMgrs        = ALLOCATE(GetRawAllocator(), "Raw memory for ShaderVariableManagerVk", ShaderVariableManagerVk, m_NumShaders);
+    PipelineCI.stage  = Stages[0];
+    PipelineCI.layout = Layout.GetVkPipelineLayout();
 
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
+}
+
+
+static void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDeviceVk,
+                                   std::vector<VkPipelineShaderStageCreateInfo>& Stages,
+                                   const PipelineLayout&                         Layout,
+                                   const PipelineStateDesc&                      PSODesc,
+                                   const GraphicsPipelineDesc&                   GraphicsPipeline,
+                                   VulkanUtilities::PipelineWrapper&             Pipeline,
+                                   RefCntAutoPtr<IRenderPass>&                   pRenderPass)
+{
+    const auto& LogicalDevice  = pDeviceVk->GetLogicalDevice();
+    const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
+    auto&       RPCache        = pDeviceVk->GetImplicitRenderPassCache();
+
+    if (pRenderPass == nullptr)
     {
-        new (m_ShaderResourceLayouts + s) ShaderResourceLayoutVk{LogicalDevice};
-        auto* pShaderVk    = GetShader<const ShaderVkImpl>(s);
-        ShaderResources[s] = pShaderVk->GetShaderResources();
-        ShaderSPIRVs[s]    = pShaderVk->GetSPIRV();
+        RenderPassCache::RenderPassCacheKey Key{
+            GraphicsPipeline.NumRenderTargets,
+            GraphicsPipeline.SmplDesc.Count,
+            GraphicsPipeline.RTVFormats,
+            GraphicsPipeline.DSVFormat};
+        pRenderPass = RPCache.GetRenderPass(Key);
+    }
 
-        const auto ShaderType                = pShaderVk->GetDesc().ShaderType;
-        const auto ShaderTypeInd             = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
+    VkGraphicsPipelineCreateInfo PipelineCI = {};
+
+    PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    PipelineCI.pNext = nullptr;
+#ifdef DILIGENT_DEBUG
+    PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
+#endif
+
+    PipelineCI.stageCount = static_cast<Uint32>(Stages.size());
+    PipelineCI.pStages    = Stages.data();
+    PipelineCI.layout     = Layout.GetVkPipelineLayout();
+
+    VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
+
+    std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>   BindingDescriptions;
+    std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS> AttributeDescription;
+    InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, VertexInputStateCI, BindingDescriptions, AttributeDescription);
+    PipelineCI.pVertexInputState = &VertexInputStateCI;
+
+
+    VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
+
+    InputAssemblyCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    InputAssemblyCI.pNext                  = nullptr;
+    InputAssemblyCI.flags                  = 0; // reserved for future use
+    InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
+    PipelineCI.pInputAssemblyState         = &InputAssemblyCI;
+
+
+    VkPipelineTessellationStateCreateInfo TessStateCI = {};
+
+    TessStateCI.sType             = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+    TessStateCI.pNext             = nullptr;
+    TessStateCI.flags             = 0; // reserved for future use
+    PipelineCI.pTessellationState = &TessStateCI;
+
+    if (PSODesc.PipelineType == PIPELINE_TYPE_MESH)
+    {
+        // Input assembly is not used in the mesh pipeline, so topology may contain any value.
+        // Validation layers may generate a warning if point_list topology is used, so use MAX_ENUM value.
+        InputAssemblyCI.topology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+
+        // Vertex input state and tessellation state are ignored in a mesh pipeline and should be null.
+        PipelineCI.pVertexInputState  = nullptr;
+        PipelineCI.pTessellationState = nullptr;
+    }
+    else
+    {
+        PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(GraphicsPipeline.PrimitiveTopology, InputAssemblyCI.topology, TessStateCI.patchControlPoints);
+    }
+
+    VkPipelineViewportStateCreateInfo ViewPortStateCI = {};
+
+    ViewPortStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    ViewPortStateCI.pNext = nullptr;
+    ViewPortStateCI.flags = 0; // reserved for future use
+    ViewPortStateCI.viewportCount =
+        GraphicsPipeline.NumViewports;                            // Even though we use dynamic viewports, the number of viewports used
+                                                                  // by the pipeline is still specified by the viewportCount member (23.5)
+    ViewPortStateCI.pViewports   = nullptr;                       // We will be using dynamic viewport & scissor states
+    ViewPortStateCI.scissorCount = ViewPortStateCI.viewportCount; // the number of scissors must match the number of viewports (23.5)
+                                                                  // (why the hell it is in the struct then?)
+    VkRect2D ScissorRect = {};
+    if (GraphicsPipeline.RasterizerDesc.ScissorEnable)
+    {
+        ViewPortStateCI.pScissors = nullptr; // Ignored if the scissor state is dynamic
+    }
+    else
+    {
+        const auto& Props = PhysicalDevice.GetProperties();
+        // There are limitiations on the viewport width and height (23.5), but
+        // it is not clear if there are limitations on the scissor rect width and
+        // height
+        ScissorRect.extent.width  = Props.limits.maxViewportDimensions[0];
+        ScissorRect.extent.height = Props.limits.maxViewportDimensions[1];
+        ViewPortStateCI.pScissors = &ScissorRect;
+    }
+    PipelineCI.pViewportState = &ViewPortStateCI;
+
+    VkPipelineRasterizationStateCreateInfo RasterizerStateCI =
+        RasterizerStateDesc_To_VkRasterizationStateCI(GraphicsPipeline.RasterizerDesc);
+    PipelineCI.pRasterizationState = &RasterizerStateCI;
+
+    // Multisample state (24)
+    VkPipelineMultisampleStateCreateInfo MSStateCI = {};
+
+    MSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    MSStateCI.pNext = nullptr;
+    MSStateCI.flags = 0; // reserved for future use
+    // If subpass uses color and/or depth/stencil attachments, then the rasterizationSamples member of
+    // pMultisampleState must be the same as the sample count for those subpass attachments
+    MSStateCI.rasterizationSamples = static_cast<VkSampleCountFlagBits>(GraphicsPipeline.SmplDesc.Count);
+    MSStateCI.sampleShadingEnable  = VK_FALSE;
+    MSStateCI.minSampleShading     = 0;                                // a minimum fraction of sample shading if sampleShadingEnable is set to VK_TRUE.
+    uint32_t SampleMask[]          = {GraphicsPipeline.SampleMask, 0}; // Vulkan spec allows up to 64 samples
+    MSStateCI.pSampleMask          = SampleMask;                       // an array of static coverage information that is ANDed with
+                                                                       // the coverage information generated during rasterization (25.3)
+    MSStateCI.alphaToCoverageEnable = VK_FALSE;                        // whether a temporary coverage value is generated based on
+                                                                       // the alpha component of the fragment's first color output
+    MSStateCI.alphaToOneEnable   = VK_FALSE;                           // whether the alpha component of the fragment's first color output is replaced with one
+    PipelineCI.pMultisampleState = &MSStateCI;
+
+    VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI =
+        DepthStencilStateDesc_To_VkDepthStencilStateCI(GraphicsPipeline.DepthStencilDesc);
+    PipelineCI.pDepthStencilState = &DepthStencilStateCI;
+
+    const auto& RPDesc           = pRenderPass->GetDesc();
+    const auto  NumRTAttachments = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex].RenderTargetAttachmentCount;
+    VERIFY_EXPR(GraphicsPipeline.pRenderPass != nullptr || GraphicsPipeline.NumRenderTargets == NumRTAttachments);
+    std::vector<VkPipelineColorBlendAttachmentState> ColorBlendAttachmentStates(NumRTAttachments);
+
+    VkPipelineColorBlendStateCreateInfo BlendStateCI = {};
+
+    BlendStateCI.pAttachments    = !ColorBlendAttachmentStates.empty() ? ColorBlendAttachmentStates.data() : nullptr;
+    BlendStateCI.attachmentCount = NumRTAttachments; // must equal the colorAttachmentCount for the subpass
+                                                     // in which this pipeline is used.
+    BlendStateDesc_To_VkBlendStateCI(GraphicsPipeline.BlendDesc, BlendStateCI, ColorBlendAttachmentStates);
+    PipelineCI.pColorBlendState = &BlendStateCI;
+
+
+    VkPipelineDynamicStateCreateInfo DynamicStateCI = {};
+
+    DynamicStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    DynamicStateCI.pNext = nullptr;
+    DynamicStateCI.flags = 0; // reserved for future use
+    std::vector<VkDynamicState> DynamicStates =
+        {
+            VK_DYNAMIC_STATE_VIEWPORT, // pViewports state in VkPipelineViewportStateCreateInfo will be ignored and must be
+                                       // set dynamically with vkCmdSetViewport before any draw commands. The number of viewports
+                                       // used by a pipeline is still specified by the viewportCount member of
+                                       // VkPipelineViewportStateCreateInfo.
+
+            VK_DYNAMIC_STATE_BLEND_CONSTANTS, // blendConstants state in VkPipelineColorBlendStateCreateInfo will be ignored
+                                              // and must be set dynamically with vkCmdSetBlendConstants
+
+            VK_DYNAMIC_STATE_STENCIL_REFERENCE // pecifies that the reference state in VkPipelineDepthStencilStateCreateInfo
+                                               // for both front and back will be ignored and must be set dynamically
+                                               // with vkCmdSetStencilReference
+        };
+
+    if (GraphicsPipeline.RasterizerDesc.ScissorEnable)
+    {
+        // pScissors state in VkPipelineViewportStateCreateInfo will be ignored and must be set
+        // dynamically with vkCmdSetScissor before any draw commands. The number of scissor rectangles
+        // used by a pipeline is still specified by the scissorCount member of
+        // VkPipelineViewportStateCreateInfo.
+        DynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
+    }
+    DynamicStateCI.dynamicStateCount = static_cast<uint32_t>(DynamicStates.size());
+    DynamicStateCI.pDynamicStates    = DynamicStates.data();
+    PipelineCI.pDynamicState         = &DynamicStateCI;
+
+
+    PipelineCI.renderPass         = pRenderPass.RawPtr<IRenderPassVk>()->GetVkRenderPass();
+    PipelineCI.subpass            = GraphicsPipeline.SubpassIndex;
+    PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
+    PipelineCI.basePipelineIndex  = -1;             // an index into the pCreateInfos parameter to use as a pipeline to derive from
+
+    Pipeline = LogicalDevice.CreateGraphicsPipeline(PipelineCI, VK_NULL_HANDLE, PSODesc.Name);
+}
+
+void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
+                                              TShaderStages&                 ShaderStages)
+{
+    auto* const pDeviceVk     = GetDevice();
+    const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
+
+    for (size_t s = 0; s < ShaderStages.size(); ++s)
+    {
+        auto&      StageInfo     = ShaderStages[s];
+        const auto ShaderType    = StageInfo.Type;
+        const auto ShaderTypeInd = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
+
         m_ResourceLayoutIndex[ShaderTypeInd] = static_cast<Int8>(s);
 
-        auto* pStaticResLayout = new (m_ShaderResourceLayouts + m_NumShaders + s) ShaderResourceLayoutVk{LogicalDevice};
-        auto* pStaticResCache  = new (m_StaticResCaches + s) ShaderResourceCacheVk{ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources};
-        pStaticResLayout->InitializeStaticResourceLayout(ShaderResources[s], ShaderResLayoutAllocator, m_Desc.ResourceLayout, m_StaticResCaches[s]);
+        auto& StaticResLayout = m_ShaderResourceLayouts[GetNumShaderStages() + s];
+        StaticResLayout.InitializeStaticResourceLayout(StageInfo.pShader, GetRawAllocator(), m_Desc.ResourceLayout, m_StaticResCaches[s]);
 
-        new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, *pStaticResLayout, GetRawAllocator(), nullptr, 0, *pStaticResCache};
+        m_StaticVarsMgrs[s].Initialize(StaticResLayout, GetRawAllocator(), nullptr, 0);
     }
-    ShaderResourceLayoutVk::Initialize(pDeviceVk, m_NumShaders, m_ShaderResourceLayouts, ShaderResources.data(), GetRawAllocator(),
-                                       m_Desc.ResourceLayout, ShaderSPIRVs.data(), m_PipelineLayout,
+    ShaderResourceLayoutVk::Initialize(pDeviceVk, ShaderStages, m_ShaderResourceLayouts, GetRawAllocator(),
+                                       m_Desc.ResourceLayout, m_PipelineLayout,
                                        (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
-                                       (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
+                                       (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS) == 0);
     m_PipelineLayout.Finalize(LogicalDevice);
 
     if (m_Desc.SRBAllocationGranularity > 1)
     {
         std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVariableDataSizes = {};
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
         {
             const SHADER_RESOURCE_VARIABLE_TYPE AllowedVarTypes[] = {SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE, SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC};
 
@@ -207,268 +441,12 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
         auto   DescriptorSetSizes = m_PipelineLayout.GetDescriptorSetSizes(NumSets);
         auto   CacheMemorySize    = ShaderResourceCacheVk::GetRequiredMemorySize(NumSets, DescriptorSetSizes.data());
 
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, m_NumShaders, ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
-    }
-
-    // Create shader modules and initialize shader stages
-    std::array<VkPipelineShaderStageCreateInfo, MAX_SHADERS_IN_PIPELINE> ShaderStages = {};
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
-    {
-        auto* pShaderVk  = GetShader<const ShaderVkImpl>(s);
-        auto  ShaderType = pShaderVk->GetDesc().ShaderType;
-
-        auto& StageCI = ShaderStages[s];
-        StageCI.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        StageCI.pNext = nullptr;
-        StageCI.flags = 0; //  reserved for future use
-        switch (ShaderType)
-        {
-            // clang-format off
-            case SHADER_TYPE_VERTEX:        StageCI.stage = VK_SHADER_STAGE_VERTEX_BIT;                  break;
-            case SHADER_TYPE_HULL:          StageCI.stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;    break;
-            case SHADER_TYPE_DOMAIN:        StageCI.stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT; break;
-            case SHADER_TYPE_GEOMETRY:      StageCI.stage = VK_SHADER_STAGE_GEOMETRY_BIT;                break;
-            case SHADER_TYPE_PIXEL:         StageCI.stage = VK_SHADER_STAGE_FRAGMENT_BIT;                break;
-            case SHADER_TYPE_COMPUTE:       StageCI.stage = VK_SHADER_STAGE_COMPUTE_BIT;                 break;
-            case SHADER_TYPE_AMPLIFICATION: StageCI.stage = VK_SHADER_STAGE_TASK_BIT_NV;                 break;
-            case SHADER_TYPE_MESH:          StageCI.stage = VK_SHADER_STAGE_MESH_BIT_NV;                 break;
-            default: UNEXPECTED("Unknown shader type");
-                // clang-format on
-        }
-
-        VkShaderModuleCreateInfo ShaderModuleCI = {};
-
-        ShaderModuleCI.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        ShaderModuleCI.pNext = nullptr;
-        ShaderModuleCI.flags = 0;
-        const auto& SPIRV    = ShaderSPIRVs[s];
-
-        // We have to strip reflection instructions to fix the follownig validation error:
-        //     SPIR-V module not valid: DecorateStringGOOGLE requires one of the following extensions: SPV_GOOGLE_decorate_string
-        // Optimizer also performs validation and may catch problems with the byte code.
-        auto StrippedSPIRV = StripReflection(SPIRV);
-        if (!StrippedSPIRV.empty())
-        {
-            ShaderModuleCI.codeSize = StrippedSPIRV.size() * sizeof(uint32_t);
-            ShaderModuleCI.pCode    = StrippedSPIRV.data();
-        }
-        else
-        {
-            LOG_ERROR("Failed to strip reflection information from shader '", pShaderVk->GetDesc().Name, "'. This may indicate a problem with the byte code.");
-            ShaderModuleCI.codeSize = SPIRV.size() * sizeof(uint32_t);
-            ShaderModuleCI.pCode    = SPIRV.data();
-        }
-
-        m_ShaderModules[s] = LogicalDevice.CreateShaderModule(ShaderModuleCI, pShaderVk->GetDesc().Name);
-
-        StageCI.module              = m_ShaderModules[s];
-        StageCI.pName               = pShaderVk->GetEntryPoint();
-        StageCI.pSpecializationInfo = nullptr;
-    }
-
-    // Create pipeline
-    if (m_Desc.IsComputePipeline())
-    {
-        auto& ComputePipeline = m_Desc.ComputePipeline;
-
-        if (ComputePipeline.pCS == nullptr)
-            LOG_ERROR_AND_THROW("Compute shader is not set in the pipeline desc");
-
-        VkComputePipelineCreateInfo PipelineCI = {};
-
-        PipelineCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-        PipelineCI.pNext = nullptr;
-#ifdef DILIGENT_DEBUG
-        PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-#endif
-        PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
-        PipelineCI.basePipelineIndex  = 0;              // an index into the pCreateInfos parameter to use as a pipeline to derive from
-
-        PipelineCI.stage  = ShaderStages[0];
-        PipelineCI.layout = m_PipelineLayout.GetVkPipelineLayout();
-
-        m_Pipeline = LogicalDevice.CreateComputePipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
-    }
-    else
-    {
-        const auto& PhysicalDevice   = pDeviceVk->GetPhysicalDevice();
-        auto&       GraphicsPipeline = m_Desc.GraphicsPipeline;
-        auto&       RPCache          = pDeviceVk->GetImplicitRenderPassCache();
-
-        if (m_pRenderPass == nullptr)
-        {
-            RenderPassCache::RenderPassCacheKey Key{
-                GraphicsPipeline.NumRenderTargets,
-                GraphicsPipeline.SmplDesc.Count,
-                GraphicsPipeline.RTVFormats,
-                GraphicsPipeline.DSVFormat};
-            m_pRenderPass = RPCache.GetRenderPass(Key);
-        }
-
-        VkGraphicsPipelineCreateInfo PipelineCI = {};
-
-        PipelineCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        PipelineCI.pNext = nullptr;
-#ifdef DILIGENT_DEBUG
-        PipelineCI.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT;
-#endif
-
-        PipelineCI.stageCount = m_NumShaders;
-        PipelineCI.pStages    = ShaderStages.data();
-        PipelineCI.layout     = m_PipelineLayout.GetVkPipelineLayout();
-
-        VkPipelineVertexInputStateCreateInfo VertexInputStateCI = {};
-
-        std::array<VkVertexInputBindingDescription, MAX_LAYOUT_ELEMENTS>   BindingDescriptions;
-        std::array<VkVertexInputAttributeDescription, MAX_LAYOUT_ELEMENTS> AttributeDescription;
-        InputLayoutDesc_To_VkVertexInputStateCI(GraphicsPipeline.InputLayout, VertexInputStateCI, BindingDescriptions, AttributeDescription);
-        PipelineCI.pVertexInputState = &VertexInputStateCI;
-
-
-        VkPipelineInputAssemblyStateCreateInfo InputAssemblyCI = {};
-
-        InputAssemblyCI.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        InputAssemblyCI.pNext                  = nullptr;
-        InputAssemblyCI.flags                  = 0; // reserved for future use
-        InputAssemblyCI.primitiveRestartEnable = VK_FALSE;
-        PipelineCI.pInputAssemblyState         = &InputAssemblyCI;
-
-
-        VkPipelineTessellationStateCreateInfo TessStateCI = {};
-
-        TessStateCI.sType             = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-        TessStateCI.pNext             = nullptr;
-        TessStateCI.flags             = 0; // reserved for future use
-        PipelineCI.pTessellationState = &TessStateCI;
-
-        if (m_Desc.PipelineType == PIPELINE_TYPE_MESH)
-        {
-            // Input assembly is not used in the mesh pipeline, so topology may contain any value.
-            // Validation layers may generate a warning if point_list topology is used, so use MAX_ENUM value.
-            InputAssemblyCI.topology = VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
-
-            // Vertex input state and tessellation state are ignored in a mesh pipeline and should be null.
-            PipelineCI.pVertexInputState  = nullptr;
-            PipelineCI.pTessellationState = nullptr;
-        }
-        else
-        {
-            PrimitiveTopology_To_VkPrimitiveTopologyAndPatchCPCount(GraphicsPipeline.PrimitiveTopology, InputAssemblyCI.topology, TessStateCI.patchControlPoints);
-        }
-
-        VkPipelineViewportStateCreateInfo ViewPortStateCI = {};
-
-        ViewPortStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-        ViewPortStateCI.pNext = nullptr;
-        ViewPortStateCI.flags = 0; // reserved for future use
-        ViewPortStateCI.viewportCount =
-            GraphicsPipeline.NumViewports;                            // Even though we use dynamic viewports, the number of viewports used
-                                                                      // by the pipeline is still specified by the viewportCount member (23.5)
-        ViewPortStateCI.pViewports   = nullptr;                       // We will be using dynamic viewport & scissor states
-        ViewPortStateCI.scissorCount = ViewPortStateCI.viewportCount; // the number of scissors must match the number of viewports (23.5)
-                                                                      // (why the hell it is in the struct then?)
-        VkRect2D ScissorRect = {};
-        if (GraphicsPipeline.RasterizerDesc.ScissorEnable)
-        {
-            ViewPortStateCI.pScissors = nullptr; // Ignored if the scissor state is dynamic
-        }
-        else
-        {
-            const auto& Props = PhysicalDevice.GetProperties();
-            // There are limitiations on the viewport width and height (23.5), but
-            // it is not clear if there are limitations on the scissor rect width and
-            // height
-            ScissorRect.extent.width  = Props.limits.maxViewportDimensions[0];
-            ScissorRect.extent.height = Props.limits.maxViewportDimensions[1];
-            ViewPortStateCI.pScissors = &ScissorRect;
-        }
-        PipelineCI.pViewportState = &ViewPortStateCI;
-
-        VkPipelineRasterizationStateCreateInfo RasterizerStateCI =
-            RasterizerStateDesc_To_VkRasterizationStateCI(GraphicsPipeline.RasterizerDesc);
-        PipelineCI.pRasterizationState = &RasterizerStateCI;
-
-        // Multisample state (24)
-        VkPipelineMultisampleStateCreateInfo MSStateCI = {};
-
-        MSStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-        MSStateCI.pNext = nullptr;
-        MSStateCI.flags = 0; // reserved for future use
-        // If subpass uses color and/or depth/stencil attachments, then the rasterizationSamples member of
-        // pMultisampleState must be the same as the sample count for those subpass attachments
-        MSStateCI.rasterizationSamples = static_cast<VkSampleCountFlagBits>(GraphicsPipeline.SmplDesc.Count);
-        MSStateCI.sampleShadingEnable  = VK_FALSE;
-        MSStateCI.minSampleShading     = 0;                                // a minimum fraction of sample shading if sampleShadingEnable is set to VK_TRUE.
-        uint32_t SampleMask[]          = {GraphicsPipeline.SampleMask, 0}; // Vulkan spec allows up to 64 samples
-        MSStateCI.pSampleMask          = SampleMask;                       // an array of static coverage information that is ANDed with
-                                                                           // the coverage information generated during rasterization (25.3)
-        MSStateCI.alphaToCoverageEnable = VK_FALSE;                        // whether a temporary coverage value is generated based on
-                                                                           // the alpha component of the fragment's first color output
-        MSStateCI.alphaToOneEnable   = VK_FALSE;                           // whether the alpha component of the fragment's first color output is replaced with one
-        PipelineCI.pMultisampleState = &MSStateCI;
-
-        VkPipelineDepthStencilStateCreateInfo DepthStencilStateCI =
-            DepthStencilStateDesc_To_VkDepthStencilStateCI(GraphicsPipeline.DepthStencilDesc);
-        PipelineCI.pDepthStencilState = &DepthStencilStateCI;
-
-        const auto& RPDesc           = m_pRenderPass->GetDesc();
-        const auto  NumRTAttachments = RPDesc.pSubpasses[GraphicsPipeline.SubpassIndex].RenderTargetAttachmentCount;
-        VERIFY_EXPR(GraphicsPipeline.pRenderPass != nullptr || GraphicsPipeline.NumRenderTargets == NumRTAttachments);
-        std::vector<VkPipelineColorBlendAttachmentState> ColorBlendAttachmentStates(NumRTAttachments);
-
-        VkPipelineColorBlendStateCreateInfo BlendStateCI = {};
-
-        BlendStateCI.pAttachments    = !ColorBlendAttachmentStates.empty() ? ColorBlendAttachmentStates.data() : nullptr;
-        BlendStateCI.attachmentCount = NumRTAttachments; // must equal the colorAttachmentCount for the subpass
-                                                         // in which this pipeline is used.
-        BlendStateDesc_To_VkBlendStateCI(GraphicsPipeline.BlendDesc, BlendStateCI, ColorBlendAttachmentStates);
-        PipelineCI.pColorBlendState = &BlendStateCI;
-
-
-        VkPipelineDynamicStateCreateInfo DynamicStateCI = {};
-
-        DynamicStateCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        DynamicStateCI.pNext = nullptr;
-        DynamicStateCI.flags = 0; // reserved for future use
-        std::vector<VkDynamicState> DynamicStates =
-            {
-                VK_DYNAMIC_STATE_VIEWPORT, // pViewports state in VkPipelineViewportStateCreateInfo will be ignored and must be
-                                           // set dynamically with vkCmdSetViewport before any draw commands. The number of viewports
-                                           // used by a pipeline is still specified by the viewportCount member of
-                                           // VkPipelineViewportStateCreateInfo.
-
-                VK_DYNAMIC_STATE_BLEND_CONSTANTS, // blendConstants state in VkPipelineColorBlendStateCreateInfo will be ignored
-                                                  // and must be set dynamically with vkCmdSetBlendConstants
-
-                VK_DYNAMIC_STATE_STENCIL_REFERENCE // pecifies that the reference state in VkPipelineDepthStencilStateCreateInfo
-                                                   // for both front and back will be ignored and must be set dynamically
-                                                   // with vkCmdSetStencilReference
-            };
-
-        if (GraphicsPipeline.RasterizerDesc.ScissorEnable)
-        {
-            // pScissors state in VkPipelineViewportStateCreateInfo will be ignored and must be set
-            // dynamically with vkCmdSetScissor before any draw commands. The number of scissor rectangles
-            // used by a pipeline is still specified by the scissorCount member of
-            // VkPipelineViewportStateCreateInfo.
-            DynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
-        }
-        DynamicStateCI.dynamicStateCount = static_cast<uint32_t>(DynamicStates.size());
-        DynamicStateCI.pDynamicStates    = DynamicStates.data();
-        PipelineCI.pDynamicState         = &DynamicStateCI;
-
-
-        PipelineCI.renderPass         = GetRenderPass()->GetVkRenderPass();
-        PipelineCI.subpass            = m_Desc.GraphicsPipeline.SubpassIndex;
-        PipelineCI.basePipelineHandle = VK_NULL_HANDLE; // a pipeline to derive from
-        PipelineCI.basePipelineIndex  = 0;              // an index into the pCreateInfos parameter to use as a pipeline to derive from
-
-        m_Pipeline = LogicalDevice.CreateGraphicsPipeline(PipelineCI, VK_NULL_HANDLE, m_Desc.Name);
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderVariableDataSizes.data(), 1, &CacheMemorySize);
     }
 
     m_HasStaticResources    = false;
     m_HasNonStaticResources = false;
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         const auto& Layout = m_ShaderResourceLayouts[s];
         if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_STATIC) != 0)
@@ -482,34 +460,137 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*            pRefCoun
     m_ShaderResourceLayoutHash = m_PipelineLayout.GetHash();
 }
 
+template <typename PSOCreateInfoType>
+void PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
+                                              std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
+                                              std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules)
+{
+    m_ResourceLayoutIndex.fill(-1);
+
+    TShaderStages ShaderStages;
+    ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages);
+
+    LinearAllocator MemPool{GetRawAllocator()};
+
+    const auto NumShaderStages = GetNumShaderStages();
+    VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
+
+    MemPool.AddSpace<ShaderResourceCacheVk>(NumShaderStages);
+    MemPool.AddSpace<ShaderResourceLayoutVk>(NumShaderStages * 2);
+    MemPool.AddSpace<ShaderVariableManagerVk>(NumShaderStages);
+
+    ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
+
+    MemPool.Reserve();
+
+    const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
+
+    m_StaticResCaches = MemPool.ConstructArray<ShaderResourceCacheVk>(NumShaderStages, ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources);
+
+    // The memory is now owned by PipelineStateVkImpl and will be freed by Destruct().
+    auto* Ptr = MemPool.ReleaseOwnership();
+    VERIFY_EXPR(Ptr == m_StaticResCaches);
+    (void)Ptr;
+
+    m_ShaderResourceLayouts = MemPool.ConstructArray<ShaderResourceLayoutVk>(NumShaderStages * 2, LogicalDevice);
+
+    m_StaticVarsMgrs = MemPool.Allocate<ShaderVariableManagerVk>(NumShaderStages);
+    for (Uint32 s = 0; s < NumShaderStages; ++s)
+        new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, m_StaticResCaches[s]};
+
+    InitializePipelineDesc(CreateInfo, MemPool);
+
+    // It is important to construct all objects before initializing them because if an exception is thrown,
+    // destructors will be called for all objects
+
+    InitResourceLayouts(CreateInfo, ShaderStages);
+
+    // Create shader modules and initialize shader stages
+    InitPipelineShaderStages(GetDevice()->GetLogicalDevice(), ShaderStages, ShaderModules, vkShaderStages);
+}
+
+PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    pRefCounters,
+                                         RenderDeviceVkImpl*                    pDeviceVk,
+                                         const GraphicsPipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
+    m_SRBMemAllocator{GetRawAllocator()}
+{
+    try
+    {
+        std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
+        std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
+
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
+
+        CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
+
+
+PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   pRefCounters,
+                                         RenderDeviceVkImpl*                   pDeviceVk,
+                                         const ComputePipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
+    m_SRBMemAllocator{GetRawAllocator()}
+{
+    try
+    {
+        std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
+        std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
+
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
+
+        CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline);
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
+
+
 PipelineStateVkImpl::~PipelineStateVkImpl()
+{
+    Destruct();
+}
+
+void PipelineStateVkImpl::Destruct()
 {
     m_pDevice->SafeReleaseDeviceObject(std::move(m_Pipeline), m_Desc.CommandQueueMask);
     m_PipelineLayout.Release(m_pDevice, m_Desc.CommandQueueMask);
 
-    for (auto& ShaderModule : m_ShaderModules)
+    auto& RawAllocator = GetRawAllocator();
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
-        if (ShaderModule != VK_NULL_HANDLE)
+        if (m_StaticVarsMgrs != nullptr)
         {
-            m_pDevice->SafeReleaseDeviceObject(std::move(ShaderModule), m_Desc.CommandQueueMask);
+            m_StaticVarsMgrs[s].DestroyVariables(GetRawAllocator());
+            m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
+        }
+
+        if (m_ShaderResourceLayouts != nullptr)
+        {
+            m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
+            m_ShaderResourceLayouts[GetNumShaderStages() + s].~ShaderResourceLayoutVk();
+        }
+
+        if (m_StaticResCaches != nullptr)
+        {
+            m_StaticResCaches[s].~ShaderResourceCacheVk();
         }
     }
 
-    auto& RawAllocator = GetRawAllocator();
-    for (Uint32 s = 0; s < m_NumShaders * 2; ++s)
+    // All internal objects are allocted in contiguous chunks of memory.
+    if (void* pRawMem = m_StaticResCaches)
     {
-        m_ShaderResourceLayouts[s].~ShaderResourceLayoutVk();
+        RawAllocator.Free(pRawMem);
     }
-
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
-    {
-        m_StaticResCaches[s].~ShaderResourceCacheVk();
-        m_StaticVarsMgrs[s].DestroyVariables(GetRawAllocator());
-        m_StaticVarsMgrs[s].~ShaderVariableManagerVk();
-    }
-    RawAllocator.Free(m_ShaderResourceLayouts);
-    RawAllocator.Free(m_StaticResCaches);
-    RawAllocator.Free(m_StaticVarsMgrs);
 }
 
 IMPLEMENT_QUERY_INTERFACE(PipelineStateVkImpl, IID_PipelineStateVk, TPipelineStateBase)
@@ -540,23 +621,22 @@ bool PipelineStateVkImpl::IsCompatibleWith(const IPipelineState* pPSO) const
 #ifdef DILIGENT_DEBUG
     {
         bool IsCompatibleShaders = true;
-        if (m_NumShaders != pPSOVk->m_NumShaders)
+        if (GetNumShaderStages() != pPSOVk->GetNumShaderStages())
             IsCompatibleShaders = false;
 
         if (IsCompatibleShaders)
         {
-            for (Uint32 s = 0; s < m_NumShaders; ++s)
+            for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
             {
-                auto* pShader0 = GetShader<const ShaderVkImpl>(s);
-                auto* pShader1 = pPSOVk->GetShader<const ShaderVkImpl>(s);
-                if (pShader0->GetDesc().ShaderType != pShader1->GetDesc().ShaderType)
+                if (GetShaderStageType(s) != pPSOVk->GetShaderStageType(s))
                 {
                     IsCompatibleShaders = false;
                     break;
                 }
-                const auto* pRes0 = pShader0->GetShaderResources().get();
-                const auto* pRes1 = pShader1->GetShaderResources().get();
-                if (!pRes0->IsCompatibleWith(*pRes1))
+
+                const auto& Res0 = GetShaderResLayout(s).GetResources();
+                const auto& Res1 = pPSOVk->GetShaderResLayout(s).GetResources();
+                if (!Res0.IsCompatibleWith(Res1))
                 {
                     IsCompatibleShaders = false;
                     break;
@@ -614,7 +694,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
     auto& ResourceCache = pResBindingVkImpl->GetResourceCache();
 
 #ifdef DILIGENT_DEVELOPMENT
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         m_ShaderResourceLayouts[s].dvpVerifyBindings(ResourceCache);
     }
@@ -649,7 +729,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
             // Allocate vulkan descriptor set for dynamic resources
             DynamicDescrSet = pCtxVkImpl->AllocateDynamicDescriptorSet(DynamicDescriptorSetVkLayout, DynamicDescrSetName);
             // Commit all dynamic resource descriptors
-            for (Uint32 s = 0; s < m_NumShaders; ++s)
+            for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
             {
                 const auto& Layout = m_ShaderResourceLayouts[s];
                 if (Layout.GetResourceCount(SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC) != 0)
@@ -666,7 +746,7 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
 
 void PipelineStateVkImpl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
         if ((ShaderType & ShaderFlags) != 0)
@@ -703,24 +783,24 @@ IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByIndex(SHADER_TY
     if (LayoutInd < 0)
         return nullptr;
 
-    auto& StaticVarMgr = GetStaticVarMgr(LayoutInd);
+    const auto& StaticVarMgr = GetStaticVarMgr(LayoutInd);
     return StaticVarMgr.GetVariable(Index);
 }
 
 
 void PipelineStateVkImpl::InitializeStaticSRBResources(ShaderResourceCacheVk& ResourceCache) const
 {
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         const auto& StaticResLayout = GetStaticShaderResLayout(s);
         const auto& StaticResCache  = GetStaticResCache(s);
+
 #ifdef DILIGENT_DEVELOPMENT
         if (!StaticResLayout.dvpVerifyBindings(StaticResCache))
         {
-            const auto* pShaderVk = GetShader<const ShaderVkImpl>(s);
             LOG_ERROR_MESSAGE("Static resources in SRB of PSO '", GetDesc().Name,
                               "' will not be successfully initialized because not all static resource bindings in shader '",
-                              pShaderVk->GetDesc().Name,
+                              GetShaderTypeLiteralName(GetShaderStageType(s)),
                               "' are valid. Please make sure you bind all static resources to PSO before calling InitializeStaticResources() "
                               "directly or indirectly by passing InitStaticResources=true to CreateShaderResourceBinding() method.");
         }

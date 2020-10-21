@@ -62,8 +62,11 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    /// Implementation of IRenderDevice::CreatePipelineState() in Direct3D12 backend.
-    virtual void DILIGENT_CALL_TYPE CreatePipelineState(const PipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
+    /// Implementation of IRenderDevice::CreateGraphicsPipelineState() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
+
+    /// Implementation of IRenderDevice::CreateComputePipelineState() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
 
     /// Implementation of IRenderDevice::CreateBuffer() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
@@ -174,6 +177,9 @@ public:
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
 private:
+    template <typename PSOCreateInfoType>
+    void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState);
+
     virtual void TestTextureFormat(TEXTURE_FORMAT TexFormat) override final;
     void         FreeCommandContext(PooledCommandContext&& Ctx);
 

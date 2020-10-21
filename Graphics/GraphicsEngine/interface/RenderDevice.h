@@ -78,7 +78,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in] BuffDesc   - Buffer description, see Diligent::BufferDesc for details.
     /// \param [in] pBuffData  - Pointer to Diligent::BufferData structure that describes
     ///                          initial buffer data or nullptr if no data is provided.
-    ///                          Static buffers (USAGE_STATIC) must be initialized at creation time.
+    ///                          Immutable buffers (USAGE_IMMUTABLE) must be initialized at creation time.
     /// \param [out] ppBuffer  - Address of the memory location where the pointer to the
     ///                          buffer interface will be stored. The function calls AddRef(),
     ///                          so that the new buffer will contain one reference and must be
@@ -109,7 +109,7 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
     /// \param [in] TexDesc - Texture description, see Diligent::TextureDesc for details.
     /// \param [in] pData   - Pointer to Diligent::TextureData structure that describes
     ///                       initial texture data or nullptr if no data is provided.
-    ///                       Static textures (USAGE_STATIC) must be initialized at creation time.
+    ///                       Immutable textures (USAGE_IMMUTABLE) must be initialized at creation time.
     ///
     /// \param [out] ppTexture - Address of the memory location where the pointer to the
     ///                          texture interface will be stored.
@@ -156,17 +156,27 @@ DILIGENT_BEGIN_INTERFACE(IRenderDevice, IObject)
                                                const ResourceMappingDesc REF MappingDesc,
                                                IResourceMapping**            ppMapping) PURE;
 
-    /// Creates a new pipeline state object
+    /// Creates a new graphics pipeline state object
 
-    /// \param [in]  PSOCreateInfo   - Pipeline state create info, see Diligent::PipelineStateCreateInfo for details.
+    /// \param [in]  PSOCreateInfo   - Graphics pipeline state create info, see Diligent::GraphicsPipelineStateCreateInfo for details.
     /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
     ///                                pipeline state interface will be stored.
     ///                                The function calls AddRef(), so that the new object will contain
     ///                                one reference.
-    VIRTUAL void METHOD(CreatePipelineState)(THIS_
-                                             const PipelineStateCreateInfo REF PSOCreateInfo,
-                                             IPipelineState**                  ppPipelineState) PURE;
+    VIRTUAL void METHOD(CreateGraphicsPipelineState)(THIS_
+                                                     const GraphicsPipelineStateCreateInfo REF PSOCreateInfo,
+                                                     IPipelineState**                          ppPipelineState) PURE;
+    
+    /// Creates a new compute pipeline state object
 
+    /// \param [in]  PSOCreateInfo   - Compute pipeline state create info, see Diligent::ComputePipelineStateCreateInfo for details.
+    /// \param [out] ppPipelineState - Address of the memory location where the pointer to the
+    ///                                pipeline state interface will be stored.
+    ///                                The function calls AddRef(), so that the new object will contain
+    ///                                one reference.
+    VIRTUAL void METHOD(CreateComputePipelineState)(THIS_
+                                                    const ComputePipelineStateCreateInfo REF PSOCreateInfo,
+                                                    IPipelineState**                         ppPipelineState) PURE;
 
     /// Creates a new fence object
 
@@ -312,20 +322,21 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IRenderDevice_CreateBuffer(This, ...)            CALL_IFACE_METHOD(RenderDevice, CreateBuffer,           This, __VA_ARGS__)
-#    define IRenderDevice_CreateShader(This, ...)            CALL_IFACE_METHOD(RenderDevice, CreateShader,           This, __VA_ARGS__)
-#    define IRenderDevice_CreateTexture(This, ...)           CALL_IFACE_METHOD(RenderDevice, CreateTexture,          This, __VA_ARGS__)
-#    define IRenderDevice_CreateSampler(This, ...)           CALL_IFACE_METHOD(RenderDevice, CreateSampler,          This, __VA_ARGS__)
-#    define IRenderDevice_CreateResourceMapping(This, ...)   CALL_IFACE_METHOD(RenderDevice, CreateResourceMapping,  This, __VA_ARGS__)
-#    define IRenderDevice_CreatePipelineState(This, ...)     CALL_IFACE_METHOD(RenderDevice, CreatePipelineState,    This, __VA_ARGS__)
-#    define IRenderDevice_CreateFence(This, ...)             CALL_IFACE_METHOD(RenderDevice, CreateFence,            This, __VA_ARGS__)
-#    define IRenderDevice_CreateQuery(This, ...)             CALL_IFACE_METHOD(RenderDevice, CreateQuery,            This, __VA_ARGS__)
-#    define IRenderDevice_GetDeviceCaps(This)                CALL_IFACE_METHOD(RenderDevice, GetDeviceCaps,          This)
-#    define IRenderDevice_GetTextureFormatInfo(This, ...)    CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,   This, __VA_ARGS__)
-#    define IRenderDevice_GetTextureFormatInfoExt(This, ...) CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,This, __VA_ARGS__)
-#    define IRenderDevice_ReleaseStaleResources(This, ...)   CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,  This, __VA_ARGS__)
-#    define IRenderDevice_IdleGPU(This)                      CALL_IFACE_METHOD(RenderDevice, IdleGPU,                This)
-#    define IRenderDevice_GetEngineFactory(This)             CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,       This)
+#    define IRenderDevice_CreateBuffer(This, ...)                CALL_IFACE_METHOD(RenderDevice, CreateBuffer,                This, __VA_ARGS__)
+#    define IRenderDevice_CreateShader(This, ...)                CALL_IFACE_METHOD(RenderDevice, CreateShader,                This, __VA_ARGS__)
+#    define IRenderDevice_CreateTexture(This, ...)               CALL_IFACE_METHOD(RenderDevice, CreateTexture,               This, __VA_ARGS__)
+#    define IRenderDevice_CreateSampler(This, ...)               CALL_IFACE_METHOD(RenderDevice, CreateSampler,               This, __VA_ARGS__)
+#    define IRenderDevice_CreateResourceMapping(This, ...)       CALL_IFACE_METHOD(RenderDevice, CreateResourceMapping,       This, __VA_ARGS__)
+#    define IRenderDevice_CreateGraphicsPipelineState(This, ...) CALL_IFACE_METHOD(RenderDevice, CreateGraphicsPipelineState, This, __VA_ARGS__)
+#    define IRenderDevice_CreateComputePipelineState(This, ...)  CALL_IFACE_METHOD(RenderDevice, CreateComputePipelineState,  This, __VA_ARGS__)
+#    define IRenderDevice_CreateFence(This, ...)                 CALL_IFACE_METHOD(RenderDevice, CreateFence,                 This, __VA_ARGS__)
+#    define IRenderDevice_CreateQuery(This, ...)                 CALL_IFACE_METHOD(RenderDevice, CreateQuery,                 This, __VA_ARGS__)
+#    define IRenderDevice_GetDeviceCaps(This)                    CALL_IFACE_METHOD(RenderDevice, GetDeviceCaps,               This)
+#    define IRenderDevice_GetTextureFormatInfo(This, ...)        CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,        This, __VA_ARGS__)
+#    define IRenderDevice_GetTextureFormatInfoExt(This, ...)     CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,     This, __VA_ARGS__)
+#    define IRenderDevice_ReleaseStaleResources(This, ...)       CALL_IFACE_METHOD(RenderDevice, ReleaseStaleResources,       This, __VA_ARGS__)
+#    define IRenderDevice_IdleGPU(This)                          CALL_IFACE_METHOD(RenderDevice, IdleGPU,                     This)
+#    define IRenderDevice_GetEngineFactory(This)                 CALL_IFACE_METHOD(RenderDevice, GetEngineFactory,            This)
 
 // clang-format on
 

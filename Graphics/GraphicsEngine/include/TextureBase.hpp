@@ -30,13 +30,14 @@
 /// \file
 /// Implementation of the Diligent::TextureBase template class
 
+#include <memory>
+
 #include "Texture.h"
 #include "GraphicsTypes.h"
 #include "DeviceObjectBase.hpp"
 #include "GraphicsAccessories.hpp"
 #include "STDAllocator.hpp"
 #include "FormatString.hpp"
-#include <memory>
 
 namespace Diligent
 {

@@ -98,155 +98,85 @@ private:
     std::array<D3D12_PRIMITIVE_TOPOLOGY_TYPE, PRIMITIVE_TOPOLOGY_NUM_TOPOLOGIES> m_Map;
 };
 
-PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pRefCounters,
-                                               RenderDeviceD3D12Impl*         pDeviceD3D12,
-                                               const PipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo.PSODesc},
-    m_SRBMemAllocator{GetRawAllocator()}
+template <typename PSOCreateInfoType>
+void PipelineStateD3D12Impl::InitInternalObjects(const PSOCreateInfoType&                   CreateInfo,
+                                                 std::vector<D3D12PipelineShaderStageInfo>& ShaderStages)
 {
     m_ResourceLayoutIndex.fill(-1);
 
-    auto        pd3d12Device   = pDeviceD3D12->GetD3D12Device();
-    const auto& ResourceLayout = m_Desc.ResourceLayout;
-    m_RootSig.AllocateStaticSamplers(ResourceLayout);
+    ExtractShaders<ShaderD3D12Impl>(CreateInfo, ShaderStages);
 
-    {
-        auto& ShaderResLayoutAllocator = GetRawAllocator();
-        m_pShaderResourceLayouts       = ALLOCATE(ShaderResLayoutAllocator, "Raw memory for ShaderResourceLayoutD3D12", ShaderResourceLayoutD3D12, m_NumShaders * 2);
-    }
+    LinearAllocator MemPool{GetRawAllocator()};
 
-    {
-        auto& ShaderResCacheAllocator = GetRawAllocator();
-        m_pStaticResourceCaches       = ALLOCATE(ShaderResCacheAllocator, "Raw memory for ShaderResourceCacheD3D12", ShaderResourceCacheD3D12, m_NumShaders);
-    }
+    const auto NumShaderStages = GetNumShaderStages();
+    VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
 
-    {
-        auto& ShaderVarMgrAllocator = GetRawAllocator();
-        m_pStaticVarManagers        = ALLOCATE(ShaderVarMgrAllocator, "Raw memory for ShaderVariableManagerD3D12", ShaderVariableManagerD3D12, m_NumShaders);
-    }
+    MemPool.AddSpace<ShaderResourceCacheD3D12>(NumShaderStages);
+    MemPool.AddSpace<ShaderResourceLayoutD3D12>(NumShaderStages * 2);
+    MemPool.AddSpace<ShaderVariableManagerD3D12>(NumShaderStages);
 
-#ifdef DILIGENT_DEVELOPMENT
+    ReserveSpaceForPipelineDesc(CreateInfo, MemPool);
+
+    MemPool.Reserve();
+
+    m_pStaticResourceCaches = MemPool.ConstructArray<ShaderResourceCacheD3D12>(NumShaderStages, ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources);
+
+    // The memory is now owned by PipelineStateD3D12Impl and will be freed by Destruct().
+    auto* Ptr = MemPool.ReleaseOwnership();
+    VERIFY_EXPR(Ptr == m_pStaticResourceCaches);
+    (void)Ptr;
+
+    m_pShaderResourceLayouts = MemPool.ConstructArray<ShaderResourceLayoutD3D12>(NumShaderStages * 2, std::ref(*this));
+
+    m_pStaticVarManagers = MemPool.Allocate<ShaderVariableManagerD3D12>(NumShaderStages);
+    for (Uint32 s = 0; s < NumShaderStages; ++s)
+        new (m_pStaticVarManagers + s) ShaderVariableManagerD3D12{*this, GetStaticShaderResCache(s)};
+
+    InitializePipelineDesc(CreateInfo, MemPool);
+
+    m_RootSig.AllocateImmutableSamplers(CreateInfo.PSODesc.ResourceLayout);
+
+    // It is important to construct all objects before initializing them because if an exception is thrown,
+    // destructors will be called for all objects
+
+    InitResourceLayouts(CreateInfo, ShaderStages);
+}
+
+
+PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                    pRefCounters,
+                                               RenderDeviceD3D12Impl*                 pDeviceD3D12,
+                                               const GraphicsPipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo.PSODesc},
+    m_SRBMemAllocator{GetRawAllocator()}
+{
+    try
     {
-        const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        std::vector<D3D12PipelineShaderStageInfo> ShaderStages;
+
+        InitInternalObjects(CreateInfo, ShaderStages);
+
+        auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
+        if (m_Desc.PipelineType == PIPELINE_TYPE_GRAPHICS)
         {
-            const auto* pShader = GetShader<const ShaderD3D12Impl>(s);
-            pResources[s]       = &(*pShader->GetShaderResources());
-        }
-        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, m_NumShaders,
-                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
-                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_STATIC_SAMPLERS) == 0);
-    }
-#endif
-
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
-    {
-        auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
-        auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
-        auto  ShaderInd    = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
-
-        m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
-
-        new (m_pShaderResourceLayouts + s)
-            ShaderResourceLayoutD3D12 //
-            {
-                *this,
-                pDeviceD3D12->GetD3D12Device(),
-                m_Desc.PipelineType,
-                ResourceLayout,
-                pShaderD3D12->GetShaderResources(),
-                GetRawAllocator(),
-                nullptr,
-                0,
-                nullptr,
-                &m_RootSig //
-            };
-
-        new (m_pStaticResourceCaches + s) ShaderResourceCacheD3D12{ShaderResourceCacheD3D12::DbgCacheContentType::StaticShaderResources};
-
-        const SHADER_RESOURCE_VARIABLE_TYPE StaticVarType[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
-        new (m_pShaderResourceLayouts + m_NumShaders + s)
-            ShaderResourceLayoutD3D12 //
-            {
-                *this,
-                pDeviceD3D12->GetD3D12Device(),
-                m_Desc.PipelineType,
-                ResourceLayout,
-                pShaderD3D12->GetShaderResources(),
-                GetRawAllocator(),
-                StaticVarType,
-                _countof(StaticVarType),
-                m_pStaticResourceCaches + s,
-                nullptr //
-            };
-
-        new (m_pStaticVarManagers + s)
-            ShaderVariableManagerD3D12 //
-            {
-                *this,
-                GetStaticShaderResLayout(s),
-                GetRawAllocator(),
-                nullptr,
-                0,
-                GetStaticShaderResCache(s) //
-            };
-    }
-    m_RootSig.Finalize(pd3d12Device);
-
-    switch (m_Desc.PipelineType)
-    {
-        case PIPELINE_TYPE_COMPUTE:
-        {
-            auto& ComputePipeline = m_Desc.ComputePipeline;
-
-            if (ComputePipeline.pCS == nullptr)
-                LOG_ERROR_AND_THROW("Compute shader is not set in the pipeline desc");
-
-            D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
-
-            auto* pByteCode                 = ValidatedCast<ShaderD3D12Impl>(ComputePipeline.pCS)->GetShaderByteCode();
-            d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
-            d3d12PSODesc.CS.BytecodeLength  = pByteCode->GetBufferSize();
-
-            // For single GPU operation, set this to zero. If there are multiple GPU nodes,
-            // set bits to identify the nodes (the device's physical adapters) for which the
-            // graphics pipeline state is to apply. Each bit in the mask corresponds to a single node.
-            d3d12PSODesc.NodeMask = 0;
-
-            d3d12PSODesc.CachedPSO.pCachedBlob           = nullptr;
-            d3d12PSODesc.CachedPSO.CachedBlobSizeInBytes = 0;
-
-            // The only valid bit is D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
-            d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
-
-            d3d12PSODesc.pRootSignature = m_RootSig.GetD3D12RootSignature();
-
-            HRESULT hr = pd3d12Device->CreateComputePipelineState(&d3d12PSODesc, __uuidof(ID3D12PipelineState), reinterpret_cast<void**>(static_cast<ID3D12PipelineState**>(&m_pd3d12PSO)));
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to create pipeline state");
-            break;
-        }
-
-        case PIPELINE_TYPE_GRAPHICS:
-        {
-            const auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
+            const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
-            for (Uint32 s = 0; s < m_NumShaders; ++s)
+            for (const auto& Stage : ShaderStages)
             {
-                auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
+                auto* pShaderD3D12 = Stage.pShader;
                 auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
+                VERIFY_EXPR(ShaderType == Stage.Type);
 
                 D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
                 switch (ShaderType)
                 {
-                    // clang-format off
-                    case SHADER_TYPE_VERTEX:   pd3d12ShaderBytecode = &d3d12PSODesc.VS; break;
-                    case SHADER_TYPE_PIXEL:    pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
-                    case SHADER_TYPE_GEOMETRY: pd3d12ShaderBytecode = &d3d12PSODesc.GS; break;
-                    case SHADER_TYPE_HULL:     pd3d12ShaderBytecode = &d3d12PSODesc.HS; break;
-                    case SHADER_TYPE_DOMAIN:   pd3d12ShaderBytecode = &d3d12PSODesc.DS; break;
+                        // clang-format off
+                case SHADER_TYPE_VERTEX:   pd3d12ShaderBytecode = &d3d12PSODesc.VS; break;
+                case SHADER_TYPE_PIXEL:    pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
+                case SHADER_TYPE_GEOMETRY: pd3d12ShaderBytecode = &d3d12PSODesc.GS; break;
+                case SHADER_TYPE_HULL:     pd3d12ShaderBytecode = &d3d12PSODesc.HS; break;
+                case SHADER_TYPE_DOMAIN:   pd3d12ShaderBytecode = &d3d12PSODesc.DS; break;
                     // clang-format on
                     default: UNEXPECTED("Unexpected shader type");
                 }
@@ -269,7 +199,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
 
             std::vector<D3D12_INPUT_ELEMENT_DESC, STDAllocatorRawMem<D3D12_INPUT_ELEMENT_DESC>> d312InputElements(STD_ALLOCATOR_RAW_MEM(D3D12_INPUT_ELEMENT_DESC, GetRawAllocator(), "Allocator for vector<D3D12_INPUT_ELEMENT_DESC>"));
 
-            const auto& InputLayout = m_Desc.GraphicsPipeline.InputLayout;
+            const auto& InputLayout = GetGraphicsPipelineDesc().InputLayout;
             if (InputLayout.NumElements > 0)
             {
                 LayoutElements_To_D3D12_INPUT_ELEMENT_DESCs(InputLayout, d312InputElements);
@@ -310,13 +240,12 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             HRESULT hr = pd3d12Device->CreateGraphicsPipelineState(&d3d12PSODesc, __uuidof(ID3D12PipelineState), reinterpret_cast<void**>(static_cast<ID3D12PipelineState**>(&m_pd3d12PSO)));
             if (FAILED(hr))
                 LOG_ERROR_AND_THROW("Failed to create pipeline state");
-            break;
         }
 
 #ifdef D3D12_H_HAS_MESH_SHADER
-        case PIPELINE_TYPE_MESH:
+        else if (m_Desc.PipelineType == PIPELINE_TYPE_MESH)
         {
-            const auto& GraphicsPipeline = m_Desc.GraphicsPipeline;
+            const auto& GraphicsPipeline = GetGraphicsPipelineDesc();
 
             struct MESH_SHADER_PIPELINE_STATE_DESC
             {
@@ -337,18 +266,19 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             };
             MESH_SHADER_PIPELINE_STATE_DESC d3d12PSODesc = {};
 
-            for (Uint32 s = 0; s < m_NumShaders; ++s)
+            for (const auto& Stage : ShaderStages)
             {
-                auto* pShaderD3D12 = GetShader<ShaderD3D12Impl>(s);
+                auto* pShaderD3D12 = Stage.pShader;
                 auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
+                VERIFY_EXPR(ShaderType == Stage.Type);
 
                 D3D12_SHADER_BYTECODE* pd3d12ShaderBytecode = nullptr;
                 switch (ShaderType)
                 {
-                    // clang-format off
-                    case SHADER_TYPE_AMPLIFICATION: pd3d12ShaderBytecode = &d3d12PSODesc.AS; break;
-                    case SHADER_TYPE_MESH:          pd3d12ShaderBytecode = &d3d12PSODesc.MS; break;
-                    case SHADER_TYPE_PIXEL:         pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
+                        // clang-format off
+                case SHADER_TYPE_AMPLIFICATION: pd3d12ShaderBytecode = &d3d12PSODesc.AS; break;
+                case SHADER_TYPE_MESH:          pd3d12ShaderBytecode = &d3d12PSODesc.MS; break;
+                case SHADER_TYPE_PIXEL:         pd3d12ShaderBytecode = &d3d12PSODesc.PS; break;
                     // clang-format on
                     default: UNEXPECTED("Unexpected shader type");
                 }
@@ -394,27 +324,192 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
             auto* device2 = pDeviceD3D12->GetD3D12Device2();
 
             CHECK_D3D_RESULT_THROW(device2->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&m_pd3d12PSO)), "Failed to create pipeline state");
-            break;
         }
 #endif // D3D12_H_HAS_MESH_SHADER
-
-        default:
+        else
+        {
             LOG_ERROR_AND_THROW("Unsupported pipeline type");
+        }
+
+        if (*m_Desc.Name != 0)
+        {
+            m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
+            String RootSignatureDesc("Root signature for PSO '");
+            RootSignatureDesc.append(m_Desc.Name);
+            RootSignatureDesc.push_back('\'');
+            m_RootSig.GetD3D12RootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
+        }
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
+
+PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                   pRefCounters,
+                                               RenderDeviceD3D12Impl*                pDeviceD3D12,
+                                               const ComputePipelineStateCreateInfo& CreateInfo) :
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo.PSODesc},
+    m_SRBMemAllocator{GetRawAllocator()}
+{
+    try
+    {
+        std::vector<D3D12PipelineShaderStageInfo> ShaderStages;
+
+        InitInternalObjects(CreateInfo, ShaderStages);
+
+        auto pd3d12Device = pDeviceD3D12->GetD3D12Device();
+
+        D3D12_COMPUTE_PIPELINE_STATE_DESC d3d12PSODesc = {};
+
+        VERIFY_EXPR(ShaderStages[0].Type == SHADER_TYPE_COMPUTE);
+        auto* pByteCode                 = ShaderStages[0].pShader->GetShaderByteCode();
+        d3d12PSODesc.CS.pShaderBytecode = pByteCode->GetBufferPointer();
+        d3d12PSODesc.CS.BytecodeLength  = pByteCode->GetBufferSize();
+
+        // For single GPU operation, set this to zero. If there are multiple GPU nodes,
+        // set bits to identify the nodes (the device's physical adapters) for which the
+        // graphics pipeline state is to apply. Each bit in the mask corresponds to a single node.
+        d3d12PSODesc.NodeMask = 0;
+
+        d3d12PSODesc.CachedPSO.pCachedBlob           = nullptr;
+        d3d12PSODesc.CachedPSO.CachedBlobSizeInBytes = 0;
+
+        // The only valid bit is D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG, which can only be set on WARP devices.
+        d3d12PSODesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
+
+        d3d12PSODesc.pRootSignature = m_RootSig.GetD3D12RootSignature();
+
+        HRESULT hr = pd3d12Device->CreateComputePipelineState(&d3d12PSODesc, __uuidof(ID3D12PipelineState), reinterpret_cast<void**>(static_cast<ID3D12PipelineState**>(&m_pd3d12PSO)));
+        if (FAILED(hr))
+            LOG_ERROR_AND_THROW("Failed to create pipeline state");
+
+        if (*m_Desc.Name != 0)
+        {
+            m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
+            String RootSignatureDesc("Root signature for PSO '");
+            RootSignatureDesc.append(m_Desc.Name);
+            RootSignatureDesc.push_back('\'');
+            m_RootSig.GetD3D12RootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
+        }
+    }
+    catch (...)
+    {
+        Destruct();
+        throw;
+    }
+}
+
+PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
+{
+    Destruct();
+}
+
+void PipelineStateD3D12Impl::Destruct()
+{
+    auto& ShaderResLayoutAllocator = GetRawAllocator();
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
+    {
+        if (m_pStaticVarManagers != nullptr)
+        {
+            m_pStaticVarManagers[s].Destroy(GetRawAllocator());
+            m_pStaticVarManagers[s].~ShaderVariableManagerD3D12();
+        }
+
+        if (m_pShaderResourceLayouts != nullptr)
+        {
+            m_pShaderResourceLayouts[s].~ShaderResourceLayoutD3D12();
+            m_pShaderResourceLayouts[GetNumShaderStages() + s].~ShaderResourceLayoutD3D12();
+        }
+
+        if (m_pStaticResourceCaches != nullptr)
+        {
+            m_pStaticResourceCaches[s].~ShaderResourceCacheD3D12();
+        }
+    }
+    // All internal objects are allocated in contiguous chunks of memory.
+    if (auto* pRawMem = m_pStaticResourceCaches)
+    {
+        ShaderResLayoutAllocator.Free(pRawMem);
     }
 
-    if (*m_Desc.Name != 0)
+    if (m_pd3d12PSO)
     {
-        m_pd3d12PSO->SetName(WidenString(m_Desc.Name).c_str());
-        String RootSignatureDesc("Root signature for PSO '");
-        RootSignatureDesc.append(m_Desc.Name);
-        RootSignatureDesc.push_back('\'');
-        m_RootSig.GetD3D12RootSignature()->SetName(WidenString(RootSignatureDesc).c_str());
+        // D3D12 object can only be destroyed when it is no longer used by the GPU
+        m_pDevice->SafeReleaseDeviceObject(std::move(m_pd3d12PSO), m_Desc.CommandQueueMask);
     }
+}
+
+IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipelineStateBase)
+
+
+void PipelineStateD3D12Impl::InitResourceLayouts(const PipelineStateCreateInfo&             CreateInfo,
+                                                 std::vector<D3D12PipelineShaderStageInfo>& ShaderStages)
+{
+    auto        pd3d12Device   = GetDevice()->GetD3D12Device();
+    const auto& ResourceLayout = m_Desc.ResourceLayout;
+
+#ifdef DILIGENT_DEVELOPMENT
+    {
+        const ShaderResources* pResources[MAX_SHADERS_IN_PIPELINE] = {};
+        for (size_t s = 0; s < ShaderStages.size(); ++s)
+        {
+            const auto* pShader = ShaderStages[s].pShader;
+            pResources[s]       = &(*pShader->GetShaderResources());
+        }
+        ShaderResources::DvpVerifyResourceLayout(ResourceLayout, pResources, GetNumShaderStages(),
+                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_VARIABLES) == 0,
+                                                 (CreateInfo.Flags & PSO_CREATE_FLAG_IGNORE_MISSING_IMMUTABLE_SAMPLERS) == 0);
+    }
+#endif
+
+    for (size_t s = 0; s < ShaderStages.size(); ++s)
+    {
+        auto* pShaderD3D12 = ShaderStages[s].pShader;
+        auto  ShaderType   = pShaderD3D12->GetDesc().ShaderType;
+        auto  ShaderInd    = GetShaderTypePipelineIndex(ShaderType, m_Desc.PipelineType);
+
+        m_ResourceLayoutIndex[ShaderInd] = static_cast<Int8>(s);
+
+        m_pShaderResourceLayouts[s].Initialize(
+            pd3d12Device,
+            m_Desc.PipelineType,
+            ResourceLayout,
+            pShaderD3D12->GetShaderResources(),
+            GetRawAllocator(),
+            nullptr,
+            0,
+            nullptr,
+            &m_RootSig //
+        );
+
+        const SHADER_RESOURCE_VARIABLE_TYPE StaticVarType[] = {SHADER_RESOURCE_VARIABLE_TYPE_STATIC};
+        m_pShaderResourceLayouts[GetNumShaderStages() + s].Initialize(
+            pd3d12Device,
+            m_Desc.PipelineType,
+            ResourceLayout,
+            pShaderD3D12->GetShaderResources(),
+            GetRawAllocator(),
+            StaticVarType,
+            _countof(StaticVarType),
+            m_pStaticResourceCaches + s,
+            nullptr //
+        );
+
+        m_pStaticVarManagers[s].Initialize(
+            GetStaticShaderResLayout(static_cast<Uint32>(s)),
+            GetRawAllocator(),
+            nullptr,
+            0 //
+        );
+    }
+    m_RootSig.Finalize(pd3d12Device);
 
     if (m_Desc.SRBAllocationGranularity > 1)
     {
         std::array<size_t, MAX_SHADERS_IN_PIPELINE> ShaderVarMgrDataSizes = {};
-        for (Uint32 s = 0; s < m_NumShaders; ++s)
+        for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
         {
             std::array<SHADER_RESOURCE_VARIABLE_TYPE, 2> AllowedVarTypes =
                 {
@@ -427,33 +522,11 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*            pR
         }
 
         auto CacheMemorySize = m_RootSig.GetResourceCacheRequiredMemSize();
-        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, m_NumShaders, ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
+        m_SRBMemAllocator.Initialize(m_Desc.SRBAllocationGranularity, GetNumShaderStages(), ShaderVarMgrDataSizes.data(), 1, &CacheMemorySize);
     }
 
     m_ShaderResourceLayoutHash = m_RootSig.GetHash();
 }
-
-PipelineStateD3D12Impl::~PipelineStateD3D12Impl()
-{
-    auto& ShaderResLayoutAllocator = GetRawAllocator();
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
-    {
-        m_pStaticVarManagers[s].Destroy(GetRawAllocator());
-        m_pStaticVarManagers[s].~ShaderVariableManagerD3D12();
-        m_pStaticResourceCaches[s].~ShaderResourceCacheD3D12();
-        m_pShaderResourceLayouts[s].~ShaderResourceLayoutD3D12();
-        m_pShaderResourceLayouts[m_NumShaders + s].~ShaderResourceLayoutD3D12();
-    }
-    ShaderResLayoutAllocator.Free(m_pStaticVarManagers);
-    ShaderResLayoutAllocator.Free(m_pStaticResourceCaches);
-    ShaderResLayoutAllocator.Free(m_pShaderResourceLayouts);
-
-    // D3D12 object can only be destroyed when it is no longer used by the GPU
-    m_pDevice->SafeReleaseDeviceObject(std::move(m_pd3d12PSO), m_Desc.CommandQueueMask);
-}
-
-IMPLEMENT_QUERY_INTERFACE(PipelineStateD3D12Impl, IID_PipelineStateD3D12, TPipelineStateBase)
-
 
 void PipelineStateD3D12Impl::CreateShaderResourceBinding(IShaderResourceBinding** ppShaderResourceBinding, bool InitStaticResources)
 {
@@ -480,23 +553,22 @@ bool PipelineStateD3D12Impl::IsCompatibleWith(const IPipelineState* pPSO) const
 #ifdef DILIGENT_DEBUG
     {
         bool IsCompatibleShaders = true;
-        if (m_NumShaders != pPSOD3D12->m_NumShaders)
+        if (GetNumShaderStages() != pPSOD3D12->GetNumShaderStages())
             IsCompatibleShaders = false;
 
         if (IsCompatibleShaders)
         {
-            for (Uint32 s = 0; s < m_NumShaders; ++s)
+            for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
             {
-                auto* pShader0 = GetShader<const ShaderD3D12Impl>(s);
-                auto* pShader1 = pPSOD3D12->GetShader<const ShaderD3D12Impl>(s);
-                if (pShader0->GetDesc().ShaderType != pShader1->GetDesc().ShaderType)
+                if (GetShaderStageType(s) != pPSOD3D12->GetShaderStageType(s))
                 {
                     IsCompatibleShaders = false;
                     break;
                 }
-                const ShaderResourcesD3D12* pRes0 = pShader0->GetShaderResources().get();
-                const ShaderResourcesD3D12* pRes1 = pShader1->GetShaderResources().get();
-                if (!pRes0->IsCompatibleWith(*pRes1))
+
+                const auto& Res0 = GetShaderResLayout(s).GetResources();
+                const auto& Res1 = pPSOD3D12->GetShaderResLayout(s).GetResources();
+                if (!Res0.IsCompatibleWith(Res1))
                 {
                     IsCompatibleShaders = false;
                     break;
@@ -607,7 +679,7 @@ bool PipelineStateD3D12Impl::ContainsShaderResources() const
 
 void PipelineStateD3D12Impl::BindStaticResources(Uint32 ShaderFlags, IResourceMapping* pResourceMapping, Uint32 Flags)
 {
-    for (Uint32 s = 0; s < m_NumShaders; ++s)
+    for (Uint32 s = 0; s < GetNumShaderStages(); ++s)
     {
         auto ShaderType = GetStaticShaderResLayout(s).GetShaderType();
         if ((ShaderFlags & ShaderType) != 0)
@@ -621,7 +693,7 @@ Uint32 PipelineStateD3D12Impl::GetStaticVariableCount(SHADER_TYPE ShaderType) co
     if (LayoutInd < 0)
         return 0;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < m_NumShaders);
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < GetNumShaderStages());
     return m_pStaticVarManagers[LayoutInd].GetVariableCount();
 }
 
@@ -631,7 +703,7 @@ IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByName(SHADER_
     if (LayoutInd < 0)
         return nullptr;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < m_NumShaders);
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < GetNumShaderStages());
     return m_pStaticVarManagers[LayoutInd].GetVariable(Name);
 }
 
@@ -641,7 +713,7 @@ IShaderResourceVariable* PipelineStateD3D12Impl::GetStaticVariableByIndex(SHADER
     if (LayoutInd < 0)
         return nullptr;
 
-    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < m_NumShaders);
+    VERIFY_EXPR(static_cast<Uint32>(LayoutInd) < GetNumShaderStages());
     return m_pStaticVarManagers[LayoutInd].GetVariable(Index);
 }
 

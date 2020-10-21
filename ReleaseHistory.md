@@ -1,5 +1,61 @@
 ## Current progress
 
+* Added `ShaderResourceQueries` device feature and `EngineGLCreateInfo::ForceNonSeparablePrograms` parameter (API Version 240078)
+
+* Renamed `USAGE_STATIC` to `USAGE_IMMUTABLE` (API Version 240077)
+
+* Renamed static samplers into immutable samplers (API Version 240076)
+  * Renamed `StaticSamplerDesc` -> `ImmutableSamplerDesc`
+  * Renamed `PipelineResourceLayoutDesc::NumStaticSamplers` -> `PipelineResourceLayoutDesc::NumImmutableSamplers`
+  * Renamed `PipelineResourceLayoutDesc::StaticSamplers` -> `PipelineResourceLayoutDesc::ImmutableSamplers`
+
+* Refactored pipeline state creation (API Version 240075)
+  * Replaced `PipelineStateCreateInfo` with `GraphicsPipelineStateCreateInfo` and `ComputePipelineStateCreateInfo`
+  * Replaced `IRenderDevice::CreatePipelineState` with `IRenderDevice::CreateGraphicsPipelineState` and `IRenderDevice::CreateComputePipelineState`
+  * `pVS`, `pGS`, `pHS`, `pDS`, `pPS`, `pAS`, `pMS` were moved from `GraphicsPipelineDesc` to `GraphicsPipelineStateCreateInfo`
+  * `GraphicsPipelineDesc GraphicsPipeline`  was moved from `PipelineStateDesc` to `GraphicsPipelineStateCreateInfo`
+  * `pCS` is now a member of `ComputePipelineStateCreateInfo`, `ComputePipelineDesc` was removed
+  * Added `IPipelineState::GetGraphicsPipelineDesc` method
+  
+  Old API for graphics pipeline initialization:
+  ```cpp
+  PipelineStateCreateInfo PSOCreateInfo;
+  PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
+  PSODesc.GraphicsPipeline.pVS = pVS;
+  PSODesc.GraphicsPipeline.pPS = pVS;
+  // ...
+  Device->CreatePipelineState(PSOCreateInfo, &pPSO);
+  ```
+
+  New API for graphics pipeline initialization:
+  ```cpp
+  GraphicsPipelineStateCreateInfo PSOCreateInfo;
+  // ...
+  PSOCreateInfo.pVS = pVS;
+  PSOCreateInfo.pPS = pVS;
+  Device->CreateGraphicsPipelineState(PSOCreateInfo, &pPSO);
+  ```
+
+  Old API for compute pipeline initialization:
+  ```cpp
+  PipelineStateCreateInfo PSOCreateInfo;
+  PipelineStateDesc&      PSODesc = PSOCreateInfo.PSODesc;
+
+  PSODesc.ComputePipeline.pCS = pCS;
+  // ...
+  Device->CreatePipelineState(PSOCreateInfo, &pPSO);
+  ```
+
+    New API for compute pipeline initialization:
+  ```cpp
+  ComputePipelineStateCreateInfo PSOCreateInfo;
+
+  PSOCreateInfo.pCS = pCS;
+  Device->CreateComputePipelineState(PSOCreateInfo, &pPSO);
+  ```
+
+
 * Added `ShaderInt8`, `ResourceBuffer8BitAccess`, and `UniformBuffer8BitAccess` device features. (API Version 240074)
 * Added `ShaderFloat16`, `ResourceBuffer16BitAccess`, `UniformBuffer16BitAccess`, and `ShaderInputOutput16` device features. (API Version 240073)
 

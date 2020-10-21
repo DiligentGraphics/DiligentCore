@@ -27,6 +27,8 @@
 
 #pragma once
 
+#include <Metal/Metal.h>
+
 #include "TestingEnvironment.hpp"
 
 namespace Diligent
@@ -38,9 +40,8 @@ namespace Testing
 class TestingEnvironmentMtl final : public TestingEnvironment
 {
 public:
-    TestingEnvironmentMtl(RENDER_DEVICE_TYPE   deviceType,
-                          ADAPTER_TYPE         AdapterType,
-                          Uint32               AdapterId,
+    using CreateInfo = TestingEnvironment::CreateInfo;
+    TestingEnvironmentMtl(const CreateInfo&    CI,
                           const SwapChainDesc& SCDesc);
     ~TestingEnvironmentMtl();
 
@@ -48,7 +49,8 @@ public:
 
     virtual void Reset() override final;
 
-    void* GetMtlDevice() const;
+    id<MTLDevice>       GetMtlDevice() const;
+    id<MTLCommandQueue> GetMtlCommandQueue() const;
 
 private:
 };

@@ -36,7 +36,7 @@ using namespace Diligent::Testing;
 
 extern "C"
 {
-    int TestRenderDeviceCInterface_CreatePipelineState(void* pRenderDevice, void* pPSOCreateInfo);
+    int TestRenderDeviceCInterface_CreateGraphicsPipelineState(void* pRenderDevice, void* pPSOCreateInfo);
 }
 
 namespace
@@ -59,10 +59,9 @@ protected:
 
 TEST_F(DepthStencilStateTest, CreatePSO)
 {
-    PipelineStateCreateInfo PSOCreateInfo;
-    PSOCreateInfo.PSODesc = GetPSODesc();
+    GraphicsPipelineStateCreateInfo PSOCreateInfo = GetPSOCreateInfo();
 
-    DepthStencilStateDesc& DSSDesc = PSOCreateInfo.PSODesc.GraphicsPipeline.DepthStencilDesc;
+    DepthStencilStateDesc& DSSDesc = PSOCreateInfo.GraphicsPipeline.DepthStencilDesc;
 
     {
         DSSDesc.DepthEnable      = False;
@@ -70,20 +69,20 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+        const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
         EXPECT_EQ(TestDSSDesc.DepthEnable, DSSDesc.DepthEnable);
         EXPECT_EQ(TestDSSDesc.DepthWriteEnable, DSSDesc.DepthWriteEnable);
     }
 
     auto* pDevice = TestingEnvironment::GetInstance()->GetDevice();
-    EXPECT_EQ(TestRenderDeviceCInterface_CreatePipelineState(pDevice, &PSOCreateInfo), 0);
+    EXPECT_EQ(TestRenderDeviceCInterface_CreateGraphicsPipelineState(pDevice, &PSOCreateInfo), 0);
 
     {
         DSSDesc.DepthEnable = True;
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+        const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
         EXPECT_EQ(TestDSSDesc.DepthEnable, DSSDesc.DepthEnable);
     }
 
@@ -92,7 +91,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+        const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
         EXPECT_EQ(TestDSSDesc.DepthWriteEnable, DSSDesc.DepthWriteEnable);
     }
 
@@ -102,7 +101,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO) << "Comparison func: " << GetComparisonFunctionLiteralName(DSSDesc.DepthFunc, true);
-        const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+        const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
         EXPECT_EQ(TestDSSDesc.DepthFunc, DSSDesc.DepthFunc);
     }
 
@@ -111,7 +110,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+        const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
         EXPECT_EQ(TestDSSDesc.StencilEnable, DSSDesc.StencilEnable);
     }
 
@@ -120,7 +119,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+        const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
         EXPECT_EQ(TestDSSDesc.StencilReadMask, DSSDesc.StencilReadMask);
     }
 
@@ -129,7 +128,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
         auto pPSO = CreateTestPSO(PSOCreateInfo, true);
         ASSERT_TRUE(pPSO);
-        const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+        const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
         EXPECT_EQ(TestDSSDesc.StencilWriteMask, DSSDesc.StencilWriteMask);
     }
 
@@ -142,7 +141,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
             auto pPSO = CreateTestPSO(PSOCreateInfo, true);
             ASSERT_TRUE(pPSO) << "Face: " << Face << "; Stencil fail op: " << GetStencilOpLiteralName(FaceOp.StencilFailOp);
-            const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+            const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
             EXPECT_EQ((Face == 0 ? TestDSSDesc.FrontFace : TestDSSDesc.BackFace).StencilFailOp, static_cast<STENCIL_OP>(StOp));
         }
 
@@ -152,7 +151,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
             auto pPSO = CreateTestPSO(PSOCreateInfo, true);
             ASSERT_TRUE(pPSO) << "Face: " << Face << "; Stencil depth fail op: " << GetStencilOpLiteralName(FaceOp.StencilDepthFailOp);
-            const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+            const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
             EXPECT_EQ((Face == 0 ? TestDSSDesc.FrontFace : TestDSSDesc.BackFace).StencilDepthFailOp, static_cast<STENCIL_OP>(StOp));
         }
 
@@ -162,7 +161,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
             auto pPSO = CreateTestPSO(PSOCreateInfo, true);
             ASSERT_TRUE(pPSO) << "Face: " << Face << "; Stencil pass op: " << GetStencilOpLiteralName(FaceOp.StencilPassOp);
-            const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+            const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
             EXPECT_EQ((Face == 0 ? TestDSSDesc.FrontFace : TestDSSDesc.BackFace).StencilPassOp, static_cast<STENCIL_OP>(StOp));
         }
 
@@ -172,7 +171,7 @@ TEST_F(DepthStencilStateTest, CreatePSO)
 
             auto pPSO = CreateTestPSO(PSOCreateInfo, true);
             ASSERT_TRUE(pPSO) << "Face: " << Face << "; Comparison func: " << GetComparisonFunctionLiteralName(FaceOp.StencilFunc, true);
-            const auto& TestDSSDesc = pPSO->GetDesc().GraphicsPipeline.DepthStencilDesc;
+            const auto& TestDSSDesc = pPSO->GetGraphicsPipelineDesc().DepthStencilDesc;
             EXPECT_EQ((Face == 0 ? TestDSSDesc.FrontFace : TestDSSDesc.BackFace).StencilFunc, static_cast<COMPARISON_FUNCTION>(CmpFunc));
         }
     }

@@ -158,7 +158,7 @@ ShaderGLImpl::ShaderGLImpl(IReferenceCounters*     pRefCounters,
 
     if (deviceCaps.Features.SeparablePrograms)
     {
-        IShader*                       ThisShader[]         = {this};
+        ShaderGLImpl*                  ThisShader[]         = {this};
         GLObjectWrappers::GLProgramObj Program              = LinkProgram(ThisShader, 1, true);
         Uint32                         UniformBufferBinding = 0;
         Uint32                         SamplerBinding       = 0;
@@ -178,7 +178,7 @@ ShaderGLImpl::~ShaderGLImpl()
 IMPLEMENT_QUERY_INTERFACE(ShaderGLImpl, IID_ShaderGL, TShaderBase)
 
 
-GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(IShader** ppShaders, Uint32 NumShaders, bool IsSeparableProgram)
+GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(ShaderGLImpl** ppShaders, Uint32 NumShaders, bool IsSeparableProgram)
 {
     VERIFY(!IsSeparableProgram || NumShaders == 1, "Number of shaders must be 1 when separable program is created");
 
@@ -190,7 +190,7 @@ GLObjectWrappers::GLProgramObj ShaderGLImpl::LinkProgram(IShader** ppShaders, Ui
 
     for (Uint32 i = 0; i < NumShaders; ++i)
     {
-        auto* pCurrShader = ValidatedCast<ShaderGLImpl>(ppShaders[i]);
+        auto* pCurrShader = ppShaders[i];
         glAttachShader(GLProg, pCurrShader->m_GLShaderObj);
         CHECK_GL_ERROR("glAttachShader() failed");
     }
