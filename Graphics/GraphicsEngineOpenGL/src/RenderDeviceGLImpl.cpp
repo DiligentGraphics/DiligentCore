@@ -329,6 +329,9 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
         SET_FEATURE_STATE(WireframeFill, WireframeFillSupported, "Wireframe fill is");
     }
 
+    if (InitAttribs.ForceNonSeparablePrograms)
+        LOG_INFO_MESSAGE("Forcing non-separable shader programs");
+
     if (m_DeviceCaps.DevType == RENDER_DEVICE_TYPE_GL)
     {
         const bool IsGL46OrAbove = (MajorVersion >= 5) || (MajorVersion == 4 && MinorVersion >= 6);
