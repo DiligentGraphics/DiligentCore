@@ -40,11 +40,9 @@ void CreateTestingSwapChainMtl(TestingEnvironmentMtl* pEnv,
                                const SwapChainDesc&  SCDesc,
                                ISwapChain**          ppSwapChain);
 
-TestingEnvironmentMtl::TestingEnvironmentMtl(RENDER_DEVICE_TYPE   deviceType,
-                                             ADAPTER_TYPE         AdapterType,
-                                             Uint32               AdapterId,
+TestingEnvironmentMtl::TestingEnvironmentMtl(const CreateInfo&    CI,
                                              const SwapChainDesc& SCDesc) :
-    TestingEnvironment{deviceType, AdapterType, AdapterId, SCDesc}
+    TestingEnvironment{CI, SCDesc}
 {
     if (m_pSwapChain == nullptr)
     {
@@ -60,17 +58,20 @@ void TestingEnvironmentMtl::Reset()
 {
 }
 
-TestingEnvironment* CreateTestingEnvironmentMtl(RENDER_DEVICE_TYPE   deviceType,
-                                                ADAPTER_TYPE         AdapterType,
-                                                Uint32               AdapterId,
-                                                const SwapChainDesc& SCDesc)
+TestingEnvironment* CreateTestingEnvironmentMtl(const TestingEnvironment::CreateInfo& CI,
+                                                const SwapChainDesc&                  SCDesc)
 {
-    return new TestingEnvironmentMtl{deviceType, AdapterType, AdapterId, SCDesc};
+    return new TestingEnvironmentMtl{CI, SCDesc};
 }
 
-void* TestingEnvironmentMtl::GetMtlDevice() const
+id<MTLDevice> TestingEnvironmentMtl::GetMtlDevice() const
 {
     return m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlDevice();
+}
+
+id<MTLCommandQueue> TestingEnvironmentMtl::GetMtlCommandQueue() const
+{
+    return m_pDevice.Cast<IRenderDeviceMtl>(IID_RenderDeviceMtl)->GetMtlCommandQueue();
 }
 
 } // namespace Testing
