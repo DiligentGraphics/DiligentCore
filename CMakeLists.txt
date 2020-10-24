@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# Generate XCode schema files
+# Generate XCode schemes
 set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
 
 if(NOT CMAKE_BUILD_TYPE)
