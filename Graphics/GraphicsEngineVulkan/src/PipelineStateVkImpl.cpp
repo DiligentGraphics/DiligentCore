@@ -512,7 +512,7 @@ void PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&          
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    pRefCounters,
                                          RenderDeviceVkImpl*                    pDeviceVk,
                                          const GraphicsPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo},
     m_SRBMemAllocator{GetRawAllocator()}
 {
     try
@@ -535,7 +535,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   pRefCounters,
                                          RenderDeviceVkImpl*                   pDeviceVk,
                                          const ComputePipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo},
     m_SRBMemAllocator{GetRawAllocator()}
 {
     try
