@@ -96,17 +96,18 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         "Main descriptor pool",
         std::vector<VkDescriptorPoolSize>
         {
-            {VK_DESCRIPTOR_TYPE_SAMPLER,                EngineCI.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EngineCI.MainDescriptorPoolSize.NumCombinedSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          EngineCI.MainDescriptorPoolSize.NumSampledImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          EngineCI.MainDescriptorPoolSize.NumStorageImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   EngineCI.MainDescriptorPoolSize.NumUniformTexelBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   EngineCI.MainDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLER,                    EngineCI.MainDescriptorPoolSize.NumSeparateSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     EngineCI.MainDescriptorPoolSize.NumCombinedSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,              EngineCI.MainDescriptorPoolSize.NumSampledImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              EngineCI.MainDescriptorPoolSize.NumStorageImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,       EngineCI.MainDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,       EngineCI.MainDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,           EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,           EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,     EngineCI.MainDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,     EngineCI.MainDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,           EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
+            {VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, EngineCI.MainDescriptorPoolSize.NumAccelStructDescriptors}
         },
         EngineCI.MainDescriptorPoolSize.MaxDescriptorSets,
         true
@@ -117,17 +118,18 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
         "Dynamic descriptor pool",
         std::vector<VkDescriptorPoolSize>
         {
-            {VK_DESCRIPTOR_TYPE_SAMPLER,                EngineCI.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, EngineCI.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
-            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,          EngineCI.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          EngineCI.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,   EngineCI.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,   EngineCI.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,         EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
-            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,         EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
-            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,       EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLER,                    EngineCI.DynamicDescriptorPoolSize.NumSeparateSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,     EngineCI.DynamicDescriptorPoolSize.NumCombinedSamplerDescriptors},
+            {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,              EngineCI.DynamicDescriptorPoolSize.NumSampledImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,              EngineCI.DynamicDescriptorPoolSize.NumStorageImageDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,       EngineCI.DynamicDescriptorPoolSize.NumUniformTexelBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,       EngineCI.DynamicDescriptorPoolSize.NumStorageTexelBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,           EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+            //{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,           EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,     EngineCI.DynamicDescriptorPoolSize.NumUniformBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,     EngineCI.DynamicDescriptorPoolSize.NumStorageBufferDescriptors},
+            {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,           EngineCI.MainDescriptorPoolSize.NumInputAttachmentDescriptors},
+            {VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, EngineCI.MainDescriptorPoolSize.NumAccelStructDescriptors}
         },
         EngineCI.DynamicDescriptorPoolSize.MaxDescriptorSets,
         false // Pools can only be reset
@@ -160,6 +162,9 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
     m_pDxCompiler{CreateDXCompiler(DXCompilerTarget::Vulkan, EngineCI.pDxCompilerPath)}
 // clang-format on
 {
+    static_assert(sizeof(VulkanDescriptorPoolSize) == sizeof(Uint32) * 11, "Please add new descriptors to m_DescriptorSetAllocator and m_DynamicDescriptorPool constructors");
+    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+
     m_DeviceCaps.DevType      = RENDER_DEVICE_TYPE_VULKAN;
     m_DeviceCaps.MajorVersion = 1;
     m_DeviceCaps.MinorVersion = 0;
@@ -573,6 +578,10 @@ void RenderDeviceVkImpl::CreateComputePipelineState(const ComputePipelineStateCr
     CreatePipelineState(PSOCreateInfo, ppPipelineState);
 }
 
+void RenderDeviceVkImpl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+}
 
 void RenderDeviceVkImpl::CreateBufferFromVulkanResource(VkBuffer vkBuffer, const BufferDesc& BuffDesc, RESOURCE_STATE InitialState, IBuffer** ppBuffer)
 {

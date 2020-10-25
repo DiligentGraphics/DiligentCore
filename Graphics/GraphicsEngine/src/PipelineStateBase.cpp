@@ -248,6 +248,64 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
 
     VALIDATE_SHADER_TYPE(CreateInfo.pCS, SHADER_TYPE_COMPUTE, "compute");
 }
+
+void ValidateRayTracingPipelineCreateInfo(const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
+{
+#ifdef DILIGENT_DEVELOPMENT
+    const auto& PSODesc = CreateInfo.PSODesc;
+    if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
+        LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING");
+
+    for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
+    {
+        const auto& Group = CreateInfo.pGeneralShaders[i];
+        if (Group.pShader == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].pShader must not be null");
+        if (Group.Name == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must not be null");
+
+        switch (Group.pShader->GetDesc().ShaderType)
+        {
+            case SHADER_TYPE_RAY_GEN:
+            case SHADER_TYPE_RAY_MISS:
+            case SHADER_TYPE_RAY_CLOSEST_HIT: break;
+            default:
+                LOG_ERROR_AND_THROW(GetShaderTypeLiteralName(Group.pShader->GetDesc().ShaderType), " is not a valid type for ray tracing general shader");
+        }
+    }
+
+    for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
+    {
+        const auto& Group = CreateInfo.pTriangleHitShaders[i];
+        if (Group.pClosestHitShader == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].pClosestHitShader must not be null");
+        if (Group.Name == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must not be null");
+
+        VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing triangle closes hit");
+
+        if (Group.pAnyHitShader != nullptr)
+            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing triangle any hit");
+    }
+
+    for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
+    {
+        const auto& Group = CreateInfo.pProceduralHitShaders[i];
+        if (Group.pIntersectionShader == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].pIntersectionShader must not be null");
+        if (Group.Name == nullptr)
+            LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must not be null");
+
+        VALIDATE_SHADER_TYPE(Group.pIntersectionShader, SHADER_TYPE_RAY_INTERSECTION, "ray tracing procedural intersection");
+
+        if (Group.pClosestHitShader != nullptr)
+            VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing procedural closest hit");
+        if (Group.pAnyHitShader != nullptr)
+            VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing procedural any hit");
+    }
+#endif // DILIGENT_DEVELOPMENT
+}
+
 #undef VALIDATE_SHADER_TYPE
 #undef LOG_PSO_ERROR_AND_THROW
 

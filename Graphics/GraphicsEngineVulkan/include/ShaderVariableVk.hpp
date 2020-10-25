@@ -183,14 +183,14 @@ public:
                                              Uint32                FirstElement,
                                              Uint32                NumElements) override final
     {
-        VerifyAndCorrectSetArrayArguments(m_Resource.SpirvAttribs.Name, m_Resource.SpirvAttribs.ArraySize, FirstElement, NumElements);
+        VerifyAndCorrectSetArrayArguments(m_Resource.Name, m_Resource.ArraySize, FirstElement, NumElements);
         for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
 
     virtual void DILIGENT_CALL_TYPE GetResourceDesc(ShaderResourceDesc& ResourceDesc) const override final
     {
-        ResourceDesc = m_Resource.SpirvAttribs.GetResourceDesc();
+        ResourceDesc = m_Resource.GetResourceDesc();
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final

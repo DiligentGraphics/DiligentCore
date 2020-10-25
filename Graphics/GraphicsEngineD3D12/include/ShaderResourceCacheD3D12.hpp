@@ -97,6 +97,7 @@ enum class CachedResourceType : Int32
     TexUAV,
     BufUAV,
     Sampler,
+    AccelStruct,
     NumTypes
 };
 
@@ -166,7 +167,7 @@ public:
                                            const SHADER_TYPE                dbgRefShaderType) const
         {
             VERIFY(m_dbgHeapType == dbgDescriptorHeapType, "Incosistent descriptor heap type");
-            VERIFY(m_dbgShaderType == dbgRefShaderType, "Incosistent shader type");
+            VERIFY((m_dbgShaderType & dbgRefShaderType) == dbgRefShaderType, "Incosistent shader type");
 
             VERIFY(OffsetFromTableStart < m_NumResources, "Root table is not large enough to store descriptor at offset ", OffsetFromTableStart);
             return m_pResources[OffsetFromTableStart];

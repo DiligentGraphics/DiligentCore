@@ -101,13 +101,18 @@ RenderDeviceD3D11Impl::RenderDeviceD3D11Impl(IReferenceCounters*          pRefCo
             sizeof(FenceD3D11Impl),
             sizeof(QueryD3D11Impl),
             sizeof(RenderPassD3D11Impl),
-            sizeof(FramebufferD3D11Impl)
+            sizeof(FramebufferD3D11Impl),
+            0,
+            0,
+            0
         }
     },
     m_EngineAttribs{EngineAttribs},
     m_pd3d11Device {pd3d11Device }
 // clang-format on
 {
+    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+
     m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D11;
     auto FeatureLevel    = m_pd3d11Device->GetFeatureLevel();
     switch (FeatureLevel)
@@ -407,6 +412,12 @@ void RenderDeviceD3D11Impl::CreateGraphicsPipelineState(const GraphicsPipelineSt
 void RenderDeviceD3D11Impl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
     CreatePipelineState(PSOCreateInfo, ppPipelineState);
+}
+
+void RenderDeviceD3D11Impl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    UNSUPPORTED("CreateRayTracingPipelineState is not supported in DirectX 11");
+    *ppPipelineState = nullptr;
 }
 
 void RenderDeviceD3D11Impl::CreateFence(const FenceDesc& Desc, IFence** ppFence)

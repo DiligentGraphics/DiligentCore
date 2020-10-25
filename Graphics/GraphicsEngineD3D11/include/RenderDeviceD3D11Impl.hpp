@@ -77,6 +77,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
                                                                IPipelineState**                      ppPipelineState) override final;
 
+    /// Implementation of IRenderDevice::CreateRayTracingPipelineState() in Direct3D11 backend.
+    virtual void DILIGENT_CALL_TYPE CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
+                                                                  IPipelineState**                         ppPipelineState) override final;
+
     /// Implementation of IRenderDevice::CreateFence() in Direct3D11 backend.
     virtual void DILIGENT_CALL_TYPE CreateFence(const FenceDesc& Desc,
                                                 IFence**         ppFence) override final;

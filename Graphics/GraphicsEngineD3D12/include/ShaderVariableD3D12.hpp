@@ -186,7 +186,7 @@ public:
 
     virtual void DILIGENT_CALL_TYPE SetArray(IDeviceObject* const* ppObjects, Uint32 FirstElement, Uint32 NumElements) override final
     {
-        VerifyAndCorrectSetArrayArguments(m_Resource.Attribs.Name, m_Resource.Attribs.BindCount, FirstElement, NumElements);
+        VerifyAndCorrectSetArrayArguments(m_Resource.Name, m_Resource.BindCount, FirstElement, NumElements);
         for (Uint32 Elem = 0; Elem < NumElements; ++Elem)
             m_Resource.BindResource(ppObjects[Elem], FirstElement + Elem, m_ParentManager.m_ResourceCache);
     }
@@ -198,7 +198,7 @@ public:
 
     virtual HLSLShaderResourceDesc DILIGENT_CALL_TYPE GetHLSLResourceDesc() const override final
     {
-        return m_Resource.Attribs.GetHLSLResourceDesc();
+        return m_Resource.GetHLSLResourceDesc();
     }
 
     virtual Uint32 DILIGENT_CALL_TYPE GetIndex() const override final

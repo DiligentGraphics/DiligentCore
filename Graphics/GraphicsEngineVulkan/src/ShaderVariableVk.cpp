@@ -52,7 +52,7 @@ size_t ShaderVariableManagerVk::GetRequiredMemorySize(const ShaderResourceLayout
 
                 // When using HLSL-style combined image samplers, we need to skip separate samplers.
                 // Also always skip immutable separate samplers.
-                if (SrcRes.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler &&
+                if (SrcRes.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler &&
                     (!UsingSeparateSamplers || SrcRes.IsImmutableSamplerAssigned()))
                     continue;
 
@@ -96,7 +96,7 @@ void ShaderVariableManagerVk::Initialize(const ShaderResourceLayoutVk&        Sr
         {
             const auto& SrcRes = SrcLayout.GetResource(VarType, r);
             // Skip separate samplers when using combined HLSL-style image samplers. Also always skip immutable separate samplers.
-            if (SrcRes.SpirvAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler &&
+            if (SrcRes.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler &&
                 (!UsingSeparateSamplers || SrcRes.IsImmutableSamplerAssigned()))
                 continue;
 
@@ -132,7 +132,7 @@ ShaderVariableVkImpl* ShaderVariableManagerVk::GetVariable(const Char* Name) con
     {
         auto&       Var = m_pVariables[v];
         const auto& Res = Var.m_Resource;
-        if (strcmp(Res.SpirvAttribs.Name, Name) == 0)
+        if (strcmp(Res.Name, Name) == 0)
         {
             pVar = &Var;
             break;
@@ -190,18 +190,18 @@ void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, 
         const auto& Res = Var.m_Resource;
 
         // There should be no immutable separate samplers
-        VERIFY(Res.SpirvAttribs.Type != SPIRVShaderResourceAttribs::ResourceType::SeparateSampler || !Res.IsImmutableSamplerAssigned(),
+        VERIFY(Res.Type != SPIRVShaderResourceAttribs::ResourceType::SeparateSampler || !Res.IsImmutableSamplerAssigned(),
                "There must be no shader resource variables for immutable separate samplers");
 
         if ((Flags & (1 << Res.GetVariableType())) == 0)
             continue;
 
-        for (Uint32 ArrInd = 0; ArrInd < Res.SpirvAttribs.ArraySize; ++ArrInd)
+        for (Uint32 ArrInd = 0; ArrInd < Res.ArraySize; ++ArrInd)
         {
             if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, m_ResourceCache))
                 continue;
 
-            const auto*                  VarName = Res.SpirvAttribs.Name;
+            const auto*                  VarName = Res.Name;
             RefCntAutoPtr<IDeviceObject> pObj;
             pResourceMapping->GetResource(VarName, &pObj, ArrInd);
             if (pObj)
@@ -212,7 +212,7 @@ void ShaderVariableManagerVk::BindResources(IResourceMapping* pResourceMapping, 
             {
                 if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, m_ResourceCache))
                 {
-                    LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '", Res.SpirvAttribs.GetPrintName(ArrInd),
+                    LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '", Res.GetPrintName(ArrInd),
                                       "': resource is not found in the resource mapping. "
                                       "Do not use BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED flag to suppress the message if this is not an issue.");
                 }

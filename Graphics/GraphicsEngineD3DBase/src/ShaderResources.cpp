@@ -74,23 +74,25 @@ void ShaderResources::AllocateMemory(IMemoryAllocator&                Allocator,
     };
 
     // clang-format off
-    auto CBOffset    = AdvanceOffset(ResCounters.NumCBs);       (void)CBOffset; // To suppress warning
-    m_TexSRVOffset   = AdvanceOffset(ResCounters.NumTexSRVs);
-    m_TexUAVOffset   = AdvanceOffset(ResCounters.NumTexUAVs);
-    m_BufSRVOffset   = AdvanceOffset(ResCounters.NumBufSRVs);
-    m_BufUAVOffset   = AdvanceOffset(ResCounters.NumBufUAVs);
-    m_SamplersOffset = AdvanceOffset(ResCounters.NumSamplers);
-    m_TotalResources = AdvanceOffset(0);
+    auto CBOffset        = AdvanceOffset(ResCounters.NumCBs);       (void)CBOffset; // To suppress warning
+    m_TexSRVOffset       = AdvanceOffset(ResCounters.NumTexSRVs);
+    m_TexUAVOffset       = AdvanceOffset(ResCounters.NumTexUAVs);
+    m_BufSRVOffset       = AdvanceOffset(ResCounters.NumBufSRVs);
+    m_BufUAVOffset       = AdvanceOffset(ResCounters.NumBufUAVs);
+    m_SamplersOffset     = AdvanceOffset(ResCounters.NumSamplers);
+    m_AccelStructsOffset = AdvanceOffset(ResCounters.NumAccelStructs);
+    m_TotalResources     = AdvanceOffset(0);
 
     auto AlignedResourceNamesPoolSize = Align(ResourceNamesPoolSize, sizeof(void*));
     auto MemorySize = m_TotalResources * sizeof(D3DShaderResourceAttribs) + AlignedResourceNamesPoolSize * sizeof(char);
 
-    VERIFY_EXPR(GetNumCBs()     == ResCounters.NumCBs);
-    VERIFY_EXPR(GetNumTexSRV()  == ResCounters.NumTexSRVs);
-    VERIFY_EXPR(GetNumTexUAV()  == ResCounters.NumTexUAVs);
-    VERIFY_EXPR(GetNumBufSRV()  == ResCounters.NumBufSRVs);
-    VERIFY_EXPR(GetNumBufUAV()  == ResCounters.NumBufUAVs);
-    VERIFY_EXPR(GetNumSamplers()== ResCounters.NumSamplers);
+    VERIFY_EXPR(GetNumCBs()         == ResCounters.NumCBs);
+    VERIFY_EXPR(GetNumTexSRV()      == ResCounters.NumTexSRVs);
+    VERIFY_EXPR(GetNumTexUAV()      == ResCounters.NumTexUAVs);
+    VERIFY_EXPR(GetNumBufSRV()      == ResCounters.NumBufSRVs);
+    VERIFY_EXPR(GetNumBufUAV()      == ResCounters.NumBufUAVs);
+    VERIFY_EXPR(GetNumSamplers()    == ResCounters.NumSamplers);
+    VERIFY_EXPR(GetNumAccelStructs()== ResCounters.NumAccelStructs);
     // clang-format on
 
     if (MemorySize)
@@ -208,6 +210,12 @@ D3DShaderResourceCounters ShaderResources::CountResources(const PipelineResource
             auto VarType = FindVariableType(BufUAV, ResourceLayout);
             if (IsAllowedType(VarType, AllowedTypeBits))
                 ++Counters.NumBufUAVs;
+        },
+        [&](const D3DShaderResourceAttribs& AccelStruct, Uint32) //
+        {
+            auto VarType = FindVariableType(AccelStruct, ResourceLayout);
+            if (IsAllowedType(VarType, AllowedTypeBits))
+                ++Counters.NumAccelStructs;
         } //
     );
 
@@ -399,6 +407,11 @@ bool ShaderResources::IsCompatibleWith(const ShaderResources& Res) const
         [&](const D3DShaderResourceAttribs& BufUAV, Uint32 n) //
         {
             if (!BufUAV.IsCompatibleWith(Res.GetBufUAV(n)))
+                IsCompatible = false;
+        },
+        [&](const D3DShaderResourceAttribs& AccelStruct, Uint32 n) //
+        {
+            if (!AccelStruct.IsCompatibleWith(Res.GetAccelStruct(n)))
                 IsCompatible = false;
         } //
     );

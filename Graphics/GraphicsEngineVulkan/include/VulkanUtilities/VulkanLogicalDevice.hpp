@@ -88,8 +88,11 @@ using AccelStructWrapper         = DEFINE_VULKAN_OBJECT_WRAPPER(AccelerationStru
 class VulkanLogicalDevice : public std::enable_shared_from_this<VulkanLogicalDevice>
 {
 public:
+    using ExtensionFeatures = VulkanPhysicalDevice::ExtensionFeatures;
+
     static std::shared_ptr<VulkanLogicalDevice> Create(const VulkanPhysicalDevice&  PhysicalDevice,
                                                        const VkDeviceCreateInfo&    DeviceCI,
+                                                       const ExtensionFeatures&     EnabledExtFeatures,
                                                        const VkAllocationCallbacks* vkAllocator);
 
     // clang-format off
@@ -131,8 +134,9 @@ public:
     RenderPassWrapper   CreateRenderPass    (const VkRenderPassCreateInfo&  RenderPassCI,const char* DebugName = "") const;
     DeviceMemoryWrapper AllocateDeviceMemory(const VkMemoryAllocateInfo &   AllocInfo,   const char* DebugName = "") const;
 
-    PipelineWrapper     CreateComputePipeline (const VkComputePipelineCreateInfo&   PipelineCI, VkPipelineCache cache, const char* DebugName = "") const;
-    PipelineWrapper     CreateGraphicsPipeline(const VkGraphicsPipelineCreateInfo&  PipelineCI, VkPipelineCache cache, const char* DebugName = "") const;
+    PipelineWrapper     CreateComputePipeline   (const VkComputePipelineCreateInfo&       PipelineCI, VkPipelineCache cache, const char* DebugName = "") const;
+    PipelineWrapper     CreateGraphicsPipeline  (const VkGraphicsPipelineCreateInfo&      PipelineCI, VkPipelineCache cache, const char* DebugName = "") const;
+    PipelineWrapper     CreateRayTracingPipeline(const VkRayTracingPipelineCreateInfoKHR& PipelineCI, VkPipelineCache cache, const char* DebugName = "") const;
 
     ShaderModuleWrapper        CreateShaderModule       (const VkShaderModuleCreateInfo&        ShaderModuleCI, const char* DebugName = "") const;
     PipelineLayoutWrapper      CreatePipelineLayout     (const VkPipelineLayoutCreateInfo&      LayoutCI,       const char* DebugName = "") const;
@@ -216,12 +220,15 @@ public:
     }
 
     VkPipelineStageFlags GetEnabledGraphicsShaderStages() const { return m_EnabledGraphicsShaderStages; }
+    VkResult             GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const;
 
     const VkPhysicalDeviceFeatures& GetEnabledFeatures() const { return m_EnabledFeatures; }
+    const ExtensionFeatures&        GetEnabledExtFeatures() const { return m_EnabledExtFeatures; }
 
 private:
     VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDevice,
                         const VkDeviceCreateInfo&    DeviceCI,
+                        const ExtensionFeatures&     EnabledExtFeatures,
                         const VkAllocationCallbacks* vkAllocator);
 
     template <typename VkObjectType,
@@ -237,6 +244,7 @@ private:
     const VkAllocationCallbacks* const m_VkAllocator;
     VkPipelineStageFlags               m_EnabledGraphicsShaderStages = 0;
     const VkPhysicalDeviceFeatures     m_EnabledFeatures;
+    ExtensionFeatures                  m_EnabledExtFeatures = {};
 };
 
 void EnableRayTracingKHRviaNV();

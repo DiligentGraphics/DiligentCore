@@ -183,8 +183,17 @@ static constexpr D3D12_SHADER_VISIBILITY ShaderTypeInd2ShaderVisibilityMap[]
     D3D12_SHADER_VISIBILITY_ALL,           // 5
 #ifdef D3D12_H_HAS_MESH_SHADER
     D3D12_SHADER_VISIBILITY_AMPLIFICATION, // 6
-    D3D12_SHADER_VISIBILITY_MESH           // 7
+    D3D12_SHADER_VISIBILITY_MESH,          // 7
+#else
+    D3D12_SHADER_VISIBILITY(6),
+    D3D12_SHADER_VISIBILITY(7),
 #endif
+    D3D12_SHADER_VISIBILITY_ALL,           // 8
+    D3D12_SHADER_VISIBILITY_ALL,           // 9
+    D3D12_SHADER_VISIBILITY_ALL,           // 10
+    D3D12_SHADER_VISIBILITY_ALL,           // 11
+    D3D12_SHADER_VISIBILITY_ALL,           // 12
+    D3D12_SHADER_VISIBILITY_ALL,           // 13
 };
 // clang-format on
 D3D12_SHADER_VISIBILITY GetShaderVisibility(SHADER_TYPE ShaderType)
@@ -192,65 +201,32 @@ D3D12_SHADER_VISIBILITY GetShaderVisibility(SHADER_TYPE ShaderType)
     auto ShaderInd        = GetShaderTypeIndex(ShaderType);
     auto ShaderVisibility = ShaderTypeInd2ShaderVisibilityMap[ShaderInd];
 #ifdef DILIGENT_DEBUG
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
         // clang-format off
-        case SHADER_TYPE_VERTEX:        VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_VERTEX);        break;
-        case SHADER_TYPE_PIXEL:         VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_PIXEL);         break;
-        case SHADER_TYPE_GEOMETRY:      VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_GEOMETRY);      break;
-        case SHADER_TYPE_HULL:          VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_HULL);          break;
-        case SHADER_TYPE_DOMAIN:        VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_DOMAIN);        break;
-        case SHADER_TYPE_COMPUTE:       VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_ALL);           break;
+        case SHADER_TYPE_VERTEX:           VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_VERTEX);        break;
+        case SHADER_TYPE_PIXEL:            VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_PIXEL);         break;
+        case SHADER_TYPE_GEOMETRY:         VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_GEOMETRY);      break;
+        case SHADER_TYPE_HULL:             VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_HULL);          break;
+        case SHADER_TYPE_DOMAIN:           VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_DOMAIN);        break;
+        case SHADER_TYPE_COMPUTE:          VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_ALL);           break;
 #   ifdef D3D12_H_HAS_MESH_SHADER
-        case SHADER_TYPE_AMPLIFICATION: VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_AMPLIFICATION); break;
-        case SHADER_TYPE_MESH:          VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_MESH);          break;
+        case SHADER_TYPE_AMPLIFICATION:    VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_AMPLIFICATION); break;
+        case SHADER_TYPE_MESH:             VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_MESH);          break;
 #   endif
+        case SHADER_TYPE_RAY_GEN:
+        case SHADER_TYPE_RAY_MISS:
+        case SHADER_TYPE_RAY_CLOSEST_HIT:
+        case SHADER_TYPE_RAY_ANY_HIT:
+        case SHADER_TYPE_RAY_INTERSECTION:
+        case SHADER_TYPE_CALLABLE:         VERIFY_EXPR(ShaderVisibility == D3D12_SHADER_VISIBILITY_ALL);           break;
         // clang-format on
         default: LOG_ERROR("Unknown shader type (", ShaderType, ")"); break;
     }
 #endif
     return ShaderVisibility;
 }
-
-// clang-format off
-static SHADER_TYPE ShaderVisibility2ShaderTypeMap[] = 
-{
-    SHADER_TYPE_COMPUTE,       // D3D12_SHADER_VISIBILITY_ALL           = 0
-    SHADER_TYPE_VERTEX,        // D3D12_SHADER_VISIBILITY_VERTEX        = 1
-    SHADER_TYPE_HULL,          // D3D12_SHADER_VISIBILITY_HULL          = 2
-    SHADER_TYPE_DOMAIN,        // D3D12_SHADER_VISIBILITY_DOMAIN        = 3
-    SHADER_TYPE_GEOMETRY,      // D3D12_SHADER_VISIBILITY_GEOMETRY      = 4
-    SHADER_TYPE_PIXEL,         // D3D12_SHADER_VISIBILITY_PIXEL         = 5
-    SHADER_TYPE_AMPLIFICATION, // D3D12_SHADER_VISIBILITY_AMPLIFICATION = 6
-    SHADER_TYPE_MESH           // D3D12_SHADER_VISIBILITY_MESH          = 7
-};
-// clang-format on
-
-SHADER_TYPE ShaderTypeFromShaderVisibility(D3D12_SHADER_VISIBILITY ShaderVisibility)
-{
-    VERIFY_EXPR(uint32_t(ShaderVisibility) < _countof(ShaderVisibility2ShaderTypeMap));
-    auto ShaderType = ShaderVisibility2ShaderTypeMap[ShaderVisibility];
-#ifdef DILIGENT_DEBUG
-    switch (ShaderVisibility)
-    {
-        // clang-format off
-        case D3D12_SHADER_VISIBILITY_VERTEX:        VERIFY_EXPR(ShaderType == SHADER_TYPE_VERTEX);        break;
-        case D3D12_SHADER_VISIBILITY_PIXEL:         VERIFY_EXPR(ShaderType == SHADER_TYPE_PIXEL);         break;
-        case D3D12_SHADER_VISIBILITY_GEOMETRY:      VERIFY_EXPR(ShaderType == SHADER_TYPE_GEOMETRY);      break;
-        case D3D12_SHADER_VISIBILITY_HULL:          VERIFY_EXPR(ShaderType == SHADER_TYPE_HULL);          break;
-        case D3D12_SHADER_VISIBILITY_DOMAIN:        VERIFY_EXPR(ShaderType == SHADER_TYPE_DOMAIN);        break;
-        case D3D12_SHADER_VISIBILITY_ALL:           VERIFY_EXPR(ShaderType == SHADER_TYPE_COMPUTE);       break;
-#   ifdef D3D12_H_HAS_MESH_SHADER
-        case D3D12_SHADER_VISIBILITY_AMPLIFICATION: VERIFY_EXPR(ShaderType == SHADER_TYPE_AMPLIFICATION); break;
-        case D3D12_SHADER_VISIBILITY_MESH:          VERIFY_EXPR(ShaderType == SHADER_TYPE_MESH);          break;
-#   endif
-        // clang-format on
-        default: LOG_ERROR("Unknown shader visibility (", ShaderVisibility, ")"); break;
-    }
-#endif
-    return ShaderType;
-}
-
 
 // clang-format off
 static D3D12_DESCRIPTOR_HEAP_TYPE RangeType2HeapTypeMap[]
@@ -287,6 +263,10 @@ void RootSignature::InitImmutableSampler(SHADER_TYPE                     ShaderT
                                          const char*                     SamplerSuffix,
                                          const D3DShaderResourceAttribs& SamplerAttribs)
 {
+#ifdef DILIGENT_DEBUG
+    m_DbgShaderStages |= ShaderType;
+#endif
+
     auto ShaderVisibility = GetShaderVisibility(ShaderType);
     auto SamplerFound     = false;
     for (auto& ImtblSmplr : m_ImmutableSamplers)
@@ -319,6 +299,10 @@ void RootSignature::AllocateResourceSlot(SHADER_TYPE                     ShaderT
                                          Uint32&                         OffsetFromTableStart // Output parameter
 )
 {
+#ifdef DILIGENT_DEBUG
+    m_DbgShaderStages |= ShaderType;
+#endif
+
     const auto ShaderVisibility = GetShaderVisibility(ShaderType);
     if (RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV && ShaderResAttribs.BindCount == 1)
     {
@@ -564,7 +548,9 @@ void RootSignature::Finalize(ID3D12Device* pd3d12Device)
     CComPtr<ID3DBlob> signature;
     CComPtr<ID3DBlob> error;
     HRESULT           hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
-    hr                   = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
+    CHECK_D3D_RESULT_THROW(hr, "Failed to serialize root signature");
+
+    hr = pd3d12Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), __uuidof(m_pd3d12RootSignature), reinterpret_cast<void**>(static_cast<ID3D12RootSignature**>(&m_pd3d12RootSignature)));
     CHECK_D3D_RESULT_THROW(hr, "Failed to create root signature");
 
     bool bHasDynamicDescriptors = m_TotalSrvCbvUavSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] != 0 || m_TotalSamplerSlots[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC] != 0;
@@ -658,10 +644,6 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
         const auto& D3D12RootParam = static_cast<const D3D12_ROOT_PARAMETER&>(RootParam);
         auto&       RootTableCache = ResourceCache.GetRootTable(RootParam.GetRootIndex());
 
-        SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
-#ifdef DILIGENT_DEBUG
-        dbgShaderType = ShaderTypeFromShaderVisibility(D3D12RootParam.ShaderVisibility);
-#endif
         VERIFY_EXPR(D3D12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE);
 
         auto TableSize = RootParam.GetDescriptorTableSize();
@@ -670,7 +652,7 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
         auto HeapType = HeapTypeFromRangeType(D3D12RootParam.DescriptorTable.pDescriptorRanges[0].RangeType);
 
 #ifdef DILIGENT_DEBUG
-        RootTableCache.SetDebugAttribs(TableSize, HeapType, dbgShaderType);
+        RootTableCache.SetDebugAttribs(TableSize, HeapType, m_DbgShaderStages);
 #endif
 
         // Space for dynamic variables is allocated at every draw call
@@ -702,9 +684,8 @@ void RootSignature::InitResourceCache(RenderDeviceD3D12Impl*    pDeviceD3D12Impl
         // Root views are not assigned valid table start offset
         VERIFY_EXPR(RootTableCache.m_TableStartOffset == ShaderResourceCacheD3D12::InvalidDescriptorOffset);
 
-        SHADER_TYPE dbgShaderType = ShaderTypeFromShaderVisibility(D3D12RootParam.ShaderVisibility);
         VERIFY_EXPR(D3D12RootParam.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
-        RootTableCache.SetDebugAttribs(1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType);
+        RootTableCache.SetDebugAttribs(1, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, m_DbgShaderStages);
     }
 #endif
 
@@ -718,6 +699,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
                                       ShaderResourceCacheD3D12::Resource& Res,
                                       D3D12_DESCRIPTOR_RANGE_TYPE         RangeType)
 {
+    static_assert(static_cast<int>(CachedResourceType::NumTypes) == 7, "Please update this function to handle the new resource type");
     switch (Res.Type)
     {
         case CachedResourceType::CBV:
@@ -782,6 +764,11 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "Unexpected descriptor range type");
             break;
 
+        case CachedResourceType::AccelStruct:
+        {
+        }
+        break;
+
         default:
             // Resource not bound
             VERIFY(Res.Type == CachedResourceType::Unknown, "Unexpected resource type");
@@ -794,6 +781,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
 void RootSignature::DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resource& Res,
                                            D3D12_DESCRIPTOR_RANGE_TYPE               RangeType)
 {
+    static_assert(static_cast<int>(CachedResourceType::NumTypes) == 7, "Please update this function to handle the new resource type");
     switch (Res.Type)
     {
         case CachedResourceType::CBV:
@@ -880,6 +868,11 @@ void RootSignature::DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resou
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, "Unexpected descriptor range type");
             break;
 
+        case CachedResourceType::AccelStruct:
+        {
+        }
+        break;
+
         default:
             // Resource not bound
             VERIFY(Res.Type == CachedResourceType::Unknown, "Unexpected resource type");
@@ -922,13 +915,11 @@ __forceinline void ProcessCachedTableResources(Uint32                      RootI
         const auto& range = D3D12Param.DescriptorTable.pDescriptorRanges[r];
         for (UINT d = 0; d < range.NumDescriptors; ++d)
         {
-            SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
 #ifdef DILIGENT_DEBUG
-            dbgShaderType = ShaderTypeFromShaderVisibility(D3D12Param.ShaderVisibility);
             VERIFY(dbgHeapType == HeapTypeFromRangeType(range.RangeType), "Mistmatch between descriptor heap type and descriptor range type");
 #endif
             auto  OffsetFromTableStart = range.OffsetInDescriptorsFromTableStart + d;
-            auto& Res                  = ResourceCache.GetRootTable(RootInd).GetResource(OffsetFromTableStart, dbgHeapType, dbgShaderType);
+            auto& Res                  = ResourceCache.GetRootTable(RootInd).GetResource(OffsetFromTableStart, dbgHeapType, SHADER_TYPE_UNKNOWN);
 
             Operation(OffsetFromTableStart, range, Res);
         }

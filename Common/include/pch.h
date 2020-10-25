@@ -33,6 +33,7 @@
 #pragma once
 
 #include "PlatformDefinitions.h"
+#include "Definitions.hpp"
 #include "BasicTypes.h"
 #include "Errors.hpp"
 #include "FileWrapper.hpp"

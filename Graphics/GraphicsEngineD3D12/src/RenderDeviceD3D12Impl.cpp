@@ -89,7 +89,6 @@ D3D_FEATURE_LEVEL RenderDeviceD3D12Impl::GetD3DFeatureLevel() const
     return FeatureLevelsData.MaxSupportedFeatureLevel;
 }
 
-#ifdef D3D12_H_HAS_MESH_SHADER
 ID3D12Device2* RenderDeviceD3D12Impl::GetD3D12Device2()
 {
     if (!m_pd3d12Device2)
@@ -98,7 +97,15 @@ ID3D12Device2* RenderDeviceD3D12Impl::GetD3D12Device2()
     }
     return m_pd3d12Device2;
 }
-#endif
+
+ID3D12Device5* RenderDeviceD3D12Impl::GetD3D12Device5()
+{
+    if (!m_pd3d12Device5)
+    {
+        CHECK_D3D_RESULT_THROW(m_pd3d12Device->QueryInterface(IID_PPV_ARGS(&m_pd3d12Device5)), "Failed to get ID3D12Device5");
+    }
+    return m_pd3d12Device5;
+}
 
 RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCounters,
                                              IMemoryAllocator&            RawMemAllocator,
@@ -154,6 +161,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
     m_pDxCompiler         {CreateDXCompiler(DXCompilerTarget::Direct3D12, EngineCI.pDxCompilerPath)}
 // clang-format on
 {
+    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+
     try
     {
         m_DeviceCaps.DevType = RENDER_DEVICE_TYPE_D3D12;
@@ -203,9 +212,9 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             // Header may not have constants for D3D_SHADER_MODEL_6_1 and above.
             const D3D_SHADER_MODEL Models[] = //
                 {
-                    static_cast<D3D_SHADER_MODEL>(0x65), // minimum required for mesh shader
+                    static_cast<D3D_SHADER_MODEL>(0x65), // minimum required for mesh shader and DXR 1.1
                     static_cast<D3D_SHADER_MODEL>(0x64),
-                    static_cast<D3D_SHADER_MODEL>(0x63),
+                    static_cast<D3D_SHADER_MODEL>(0x63), // minimum required for DXR 1.0
                     static_cast<D3D_SHADER_MODEL>(0x62),
                     static_cast<D3D_SHADER_MODEL>(0x61),
                     D3D_SHADER_MODEL_6_0 //
@@ -251,7 +260,16 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
 
         m_DeviceCaps.Features.MeshShaders = MeshShadersSupported ? DEVICE_FEATURE_STATE_ENABLED : DEVICE_FEATURE_STATE_DISABLED;
 
-        // AZ TODO: ray tracing
+        {
+            D3D12_FEATURE_DATA_D3D12_OPTIONS5 d3d12Features = {};
+            if (SUCCEEDED(m_pd3d12Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &d3d12Features, sizeof(d3d12Features))))
+            {
+                if (d3d12Features.RaytracingTier >= D3D12_RAYTRACING_TIER_1_0)
+                {
+                    m_DeviceCaps.Features.RayTracing = DEVICE_FEATURE_STATE_ENABLED;
+                }
+            }
+        }
 
         {
             D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Features = {};
@@ -294,6 +312,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         CHECK_REQUIRED_FEATURE(ShaderInt8,               "8-bit shader operations are");
         CHECK_REQUIRED_FEATURE(ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
         CHECK_REQUIRED_FEATURE(UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
+        
+        CHECK_REQUIRED_FEATURE(RayTracing,  "ray tracing is");
         // clang-format on
 #undef CHECK_REQUIRED_FEATURE
 
@@ -554,6 +574,11 @@ void RenderDeviceD3D12Impl::CreateGraphicsPipelineState(const GraphicsPipelineSt
 }
 
 void RenderDeviceD3D12Impl::CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    CreatePipelineState(PSOCreateInfo, ppPipelineState);
+}
+
+void RenderDeviceD3D12Impl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
     CreatePipelineState(PSOCreateInfo, ppPipelineState);
 }

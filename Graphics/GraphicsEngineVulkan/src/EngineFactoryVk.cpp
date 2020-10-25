@@ -138,6 +138,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
     try
     {
         auto Instance = VulkanUtilities::VulkanInstance::Create(
+            VK_API_VERSION_1_2, // AZ TODO: use 1.2 only for ray tracing, wave ops extensions
             EngineCI.EnableValidation,
             EngineCI.GlobalExtensionCount,
             EngineCI.ppGlobalExtensionNames,
@@ -238,7 +239,11 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 VK_KHR_MAINTENANCE1_EXTENSION_NAME // To allow negative viewport height
             };
 
-        const auto& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
+        const VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures& DeviceExtFeatures = PhysicalDevice->GetExtFeatures();
+        VulkanUtilities::VulkanPhysicalDevice::ExtensionFeatures        EnabledExtFeats   = {};
+
+        // SPIRV 1.5 is in Vulkan 1.2 core
+        EnabledExtFeats.Spirv15 = DeviceExtFeatures.Spirv15;
 
 #define ENABLE_FEATURE(IsFeatureSupported, Feature, FeatureName)                         \
     do                                                                                   \
@@ -247,33 +252,25 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             GetFeatureState(EngineCI.Features.Feature, IsFeatureSupported, FeatureName); \
     } while (false)
 
+        ENABLE_FEATURE(DeviceExtFeatures.MeshShader.taskShader != VK_FALSE && DeviceExtFeatures.MeshShader.meshShader != VK_FALSE, MeshShaders, "Mesh shaders are");
 
-        auto MeshShaderFeats = DeviceExtFeatures.MeshShader;
-        ENABLE_FEATURE(MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE, MeshShaders, "Mesh shaders are");
-
-        auto ShaderFloat16Int8 = DeviceExtFeatures.ShaderFloat16Int8;
         // clang-format off
-        ENABLE_FEATURE(ShaderFloat16Int8.shaderFloat16 != VK_FALSE, ShaderFloat16, "16-bit float shader operations are");
-        ENABLE_FEATURE(ShaderFloat16Int8.shaderInt8    != VK_FALSE, ShaderInt8,    "8-bit int shader operations are");
+        ENABLE_FEATURE(DeviceExtFeatures.ShaderFloat16Int8.shaderFloat16 != VK_FALSE, ShaderFloat16, "16-bit float shader operations are");
+        ENABLE_FEATURE(DeviceExtFeatures.ShaderFloat16Int8.shaderInt8    != VK_FALSE, ShaderInt8,    "8-bit int shader operations are");
         // clang-format on
 
-        auto Storage16BitFeats = DeviceExtFeatures.Storage16Bit;
         // clang-format off
-        ENABLE_FEATURE(Storage16BitFeats.storageBuffer16BitAccess           != VK_FALSE, ResourceBuffer16BitAccess, "16-bit resoure buffer access is");
-        ENABLE_FEATURE(Storage16BitFeats.uniformAndStorageBuffer16BitAccess != VK_FALSE, UniformBuffer16BitAccess,  "16-bit uniform buffer access is");
-        ENABLE_FEATURE(Storage16BitFeats.storageInputOutput16               != VK_FALSE, ShaderInputOutput16,       "16-bit shader inputs/outputs are");
+        ENABLE_FEATURE(DeviceExtFeatures.Storage16Bit.storageBuffer16BitAccess           != VK_FALSE, ResourceBuffer16BitAccess, "16-bit resoure buffer access is");
+        ENABLE_FEATURE(DeviceExtFeatures.Storage16Bit.uniformAndStorageBuffer16BitAccess != VK_FALSE, UniformBuffer16BitAccess,  "16-bit uniform buffer access is");
+        ENABLE_FEATURE(DeviceExtFeatures.Storage16Bit.storageInputOutput16               != VK_FALSE, ShaderInputOutput16,       "16-bit shader inputs/outputs are");
         // clang-format on
 
-        auto Storage8BitFeats = DeviceExtFeatures.Storage8Bit;
         // clang-format off
-        ENABLE_FEATURE(Storage8BitFeats.storageBuffer8BitAccess           != VK_FALSE, ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
-        ENABLE_FEATURE(Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE, UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
+        ENABLE_FEATURE(DeviceExtFeatures.Storage8Bit.storageBuffer8BitAccess           != VK_FALSE, ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
+        ENABLE_FEATURE(DeviceExtFeatures.Storage8Bit.uniformAndStorageBuffer8BitAccess != VK_FALSE, UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
         // clang-format on
 
-        auto RayTracingFeats          = DeviceExtFeatures.RayTracing;
-        auto BufferDeviceAddressFeats = DeviceExtFeatures.BufferDeviceAddress;
-        auto DescriptorIndexingFeats  = DeviceExtFeatures.DescriptorIndexing;
-        ENABLE_FEATURE(RayTracingFeats.rayTracing != VK_FALSE || DeviceExtFeatures.RayTracingNV, RayTracing, "Ray tracing is");
+        ENABLE_FEATURE((DeviceExtFeatures.RayTracing.rayTracing != VK_FALSE && DeviceExtFeatures.Spirv14) || DeviceExtFeatures.RayTracingNV, RayTracing, "Ray tracing is");
 #undef FeatureSupport
 
 
@@ -289,31 +286,33 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // Mesh shader
             if (EngineCI.Features.MeshShaders != DEVICE_FEATURE_STATE_DISABLED)
             {
-                VERIFY_EXPR(MeshShaderFeats.taskShader != VK_FALSE && MeshShaderFeats.meshShader != VK_FALSE);
+                EnabledExtFeats.MeshShader = DeviceExtFeatures.MeshShader;
+                VERIFY_EXPR(EnabledExtFeats.MeshShader.taskShader != VK_FALSE && EnabledExtFeats.MeshShader.meshShader != VK_FALSE);
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_NV_MESH_SHADER_EXTENSION_NAME),
                        "VK_NV_mesh_shader extension must be supported as it has already been checked by VulkanPhysicalDevice and "
                        "both taskShader and meshShader features are TRUE");
                 DeviceExtensions.push_back(VK_NV_MESH_SHADER_EXTENSION_NAME);
-                *NextExt = &MeshShaderFeats;
-                NextExt  = &MeshShaderFeats.pNext;
+                *NextExt = &EnabledExtFeats.MeshShader;
+                NextExt  = &EnabledExtFeats.MeshShader.pNext;
             }
 
             if (EngineCI.Features.ShaderFloat16 != DEVICE_FEATURE_STATE_DISABLED ||
                 EngineCI.Features.ShaderInt8 != DEVICE_FEATURE_STATE_DISABLED)
             {
-                VERIFY_EXPR(ShaderFloat16Int8.shaderFloat16 != VK_FALSE || ShaderFloat16Int8.shaderInt8 != VK_FALSE);
+                EnabledExtFeats.ShaderFloat16Int8 = DeviceExtFeatures.ShaderFloat16Int8;
+                VERIFY_EXPR(EnabledExtFeats.ShaderFloat16Int8.shaderFloat16 != VK_FALSE || EnabledExtFeats.ShaderFloat16Int8.shaderInt8 != VK_FALSE);
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME),
                        "VK_KHR_shader_float16_int8 extension must be supported as it has already been checked by VulkanPhysicalDevice "
                        "and at least one of shaderFloat16 or shaderInt8 features is TRUE");
                 DeviceExtensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 
                 if (EngineCI.Features.ShaderFloat16 == DEVICE_FEATURE_STATE_DISABLED)
-                    ShaderFloat16Int8.shaderFloat16 = VK_FALSE;
+                    EnabledExtFeats.ShaderFloat16Int8.shaderFloat16 = VK_FALSE;
                 if (EngineCI.Features.ShaderInt8 == DEVICE_FEATURE_STATE_DISABLED)
-                    ShaderFloat16Int8.shaderInt8 = VK_FALSE;
+                    EnabledExtFeats.ShaderFloat16Int8.shaderInt8 = VK_FALSE;
 
-                *NextExt = &ShaderFloat16Int8;
-                NextExt  = &ShaderFloat16Int8.pNext;
+                *NextExt = &EnabledExtFeats.ShaderFloat16Int8;
+                NextExt  = &EnabledExtFeats.ShaderFloat16Int8.pNext;
             }
 
             bool StorageBufferStorageClassExtensionRequired = false;
@@ -325,9 +324,10 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // clang-format on
             {
                 // clang-format off
-                VERIFY_EXPR(EngineCI.Features.ResourceBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED || Storage16BitFeats.storageBuffer16BitAccess           != VK_FALSE);
-                VERIFY_EXPR(EngineCI.Features.UniformBuffer16BitAccess  == DEVICE_FEATURE_STATE_DISABLED || Storage16BitFeats.uniformAndStorageBuffer16BitAccess != VK_FALSE);
-                VERIFY_EXPR(EngineCI.Features.ShaderInputOutput16       == DEVICE_FEATURE_STATE_DISABLED || Storage16BitFeats.storageInputOutput16               != VK_FALSE);
+                EnabledExtFeats.Storage16Bit = DeviceExtFeatures.Storage16Bit;
+                VERIFY_EXPR(EngineCI.Features.ResourceBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage16Bit.storageBuffer16BitAccess           != VK_FALSE);
+                VERIFY_EXPR(EngineCI.Features.UniformBuffer16BitAccess  == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage16Bit.uniformAndStorageBuffer16BitAccess != VK_FALSE);
+                VERIFY_EXPR(EngineCI.Features.ShaderInputOutput16       == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage16Bit.storageInputOutput16               != VK_FALSE);
                 // clang-format on
 
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_16BIT_STORAGE_EXTENSION_NAME),
@@ -344,14 +344,14 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 StorageBufferStorageClassExtensionRequired = true;
 
                 if (EngineCI.Features.ResourceBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED)
-                    Storage16BitFeats.storageBuffer16BitAccess = VK_FALSE;
+                    EnabledExtFeats.Storage16Bit.storageBuffer16BitAccess = VK_FALSE;
                 if (EngineCI.Features.UniformBuffer16BitAccess == DEVICE_FEATURE_STATE_DISABLED)
-                    Storage16BitFeats.uniformAndStorageBuffer16BitAccess = VK_FALSE;
+                    EnabledExtFeats.Storage16Bit.uniformAndStorageBuffer16BitAccess = VK_FALSE;
                 if (EngineCI.Features.ShaderInputOutput16 == DEVICE_FEATURE_STATE_DISABLED)
-                    Storage16BitFeats.storageInputOutput16 = VK_FALSE;
+                    EnabledExtFeats.Storage16Bit.storageInputOutput16 = VK_FALSE;
 
-                *NextExt = &Storage16BitFeats;
-                NextExt  = &Storage16BitFeats.pNext;
+                *NextExt = &EnabledExtFeats.Storage16Bit;
+                NextExt  = &EnabledExtFeats.Storage16Bit.pNext;
             }
 
             // clang-format off
@@ -360,8 +360,9 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             // clang-format on
             {
                 // clang-format off
-                VERIFY_EXPR(EngineCI.Features.ResourceBuffer8BitAccess == DEVICE_FEATURE_STATE_DISABLED || Storage8BitFeats.storageBuffer8BitAccess           != VK_FALSE);
-                VERIFY_EXPR(EngineCI.Features.UniformBuffer8BitAccess  == DEVICE_FEATURE_STATE_DISABLED || Storage8BitFeats.uniformAndStorageBuffer8BitAccess != VK_FALSE);
+                EnabledExtFeats.Storage8Bit = DeviceExtFeatures.Storage8Bit;
+                VERIFY_EXPR(EngineCI.Features.ResourceBuffer8BitAccess == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage8Bit.storageBuffer8BitAccess           != VK_FALSE);
+                VERIFY_EXPR(EngineCI.Features.UniformBuffer8BitAccess  == DEVICE_FEATURE_STATE_DISABLED || EnabledExtFeats.Storage8Bit.uniformAndStorageBuffer8BitAccess != VK_FALSE);
                 // clang-format on
 
                 VERIFY(PhysicalDevice->IsExtensionSupported(VK_KHR_8BIT_STORAGE_EXTENSION_NAME),
@@ -378,12 +379,12 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
                 StorageBufferStorageClassExtensionRequired = true;
 
                 if (EngineCI.Features.ResourceBuffer8BitAccess == DEVICE_FEATURE_STATE_DISABLED)
-                    Storage8BitFeats.storageBuffer8BitAccess = VK_FALSE;
+                    EnabledExtFeats.Storage8Bit.storageBuffer8BitAccess = VK_FALSE;
                 if (EngineCI.Features.UniformBuffer8BitAccess == DEVICE_FEATURE_STATE_DISABLED)
-                    Storage8BitFeats.uniformAndStorageBuffer8BitAccess = VK_FALSE;
+                    EnabledExtFeats.Storage8Bit.uniformAndStorageBuffer8BitAccess = VK_FALSE;
 
-                *NextExt = &Storage8BitFeats;
-                NextExt  = &Storage8BitFeats.pNext;
+                *NextExt = &EnabledExtFeats.Storage8Bit;
+                NextExt  = &EnabledExtFeats.Storage8Bit.pNext;
             }
 
             if (StorageBufferStorageClassExtensionRequired)
@@ -398,29 +399,37 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
             {
                 if (DeviceExtFeatures.RayTracingNV)
                 {
+                    EnabledExtFeats.RayTracingNV = DeviceExtFeatures.RayTracingNV;
                     DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
                     DeviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
                 }
-                else if (RayTracingFeats.rayTracing != VK_FALSE)
+                else if (DeviceExtFeatures.RayTracing.rayTracing != VK_FALSE)
                 {
-                    // required extensions
-                    DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
-                    DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-                    DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-                    DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-                    DeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-                    DeviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
+                    DeviceExtensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);              // required for VK_EXT_descriptor_indexing
+                    DeviceExtensions.push_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME); // required for VK_KHR_ray_tracing
+                    DeviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);       // required for VK_KHR_ray_tracing
+                    DeviceExtensions.push_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);     // required for VK_KHR_ray_tracing
+                    DeviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);  // required for VK_KHR_ray_tracing
+                    DeviceExtensions.push_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);          // required for VK_KHR_ray_tracing
+                    DeviceExtensions.push_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);               // required for VK_KHR_ray_tracing
 
-                    *NextExt = &RayTracingFeats;
-                    NextExt  = &RayTracingFeats.pNext;
-                    *NextExt = &DescriptorIndexingFeats;
-                    NextExt  = &DescriptorIndexingFeats.pNext;
-                    *NextExt = &BufferDeviceAddressFeats;
-                    NextExt  = &BufferDeviceAddressFeats.pNext;
-                }
-                else
-                {
-                    UNEXPECTED("Either KHR or NV extension must be enabled");
+                    EnabledExtFeats.RayTracing          = DeviceExtFeatures.RayTracing;
+                    EnabledExtFeats.BufferDeviceAddress = DeviceExtFeatures.BufferDeviceAddress;
+                    EnabledExtFeats.DescriptorIndexing  = DeviceExtFeatures.DescriptorIndexing;
+
+                    if (!DeviceExtFeatures.Spirv15)
+                    {
+                        DeviceExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME); // required for VK_KHR_spirv_1_4
+                        DeviceExtensions.push_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);             // required for ray tracing shaders
+                        EnabledExtFeats.Spirv14 = DeviceExtFeatures.Spirv14;
+                    }
+
+                    *NextExt = &EnabledExtFeats.RayTracing;
+                    NextExt  = &EnabledExtFeats.RayTracing.pNext;
+                    *NextExt = &EnabledExtFeats.DescriptorIndexing;
+                    NextExt  = &EnabledExtFeats.DescriptorIndexing.pNext;
+                    *NextExt = &EnabledExtFeats.BufferDeviceAddress;
+                    NextExt  = &EnabledExtFeats.BufferDeviceAddress.pNext;
                 }
             }
 
@@ -436,7 +445,7 @@ void EngineFactoryVkImpl::CreateDeviceAndContextsVk(const EngineVkCreateInfo& _E
         DeviceCreateInfo.enabledExtensionCount   = static_cast<uint32_t>(DeviceExtensions.size());
 
         auto vkAllocator   = Instance->GetVkAllocator();
-        auto LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create(*PhysicalDevice, DeviceCreateInfo, vkAllocator);
+        auto LogicalDevice = VulkanUtilities::VulkanLogicalDevice::Create(*PhysicalDevice, DeviceCreateInfo, EnabledExtFeats, vkAllocator);
 
         auto& RawMemAllocator = GetRawAllocator();
 

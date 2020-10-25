@@ -27,22 +27,26 @@
 
 #pragma once
 
-#include "BasicTypes.h"
-#include "GraphicsTypes.h"
-#include "Shader.h"
+#ifdef _MSC_VER
+#    if _MSC_VER >= 1917
+#        define NDDISCARD [[nodiscard]]
+#    else
+#        define NDDISCARD
+#    endif
+#endif // _MSC_VER
 
-namespace Diligent
-{
+#ifdef __clang__
+#    if __has_feature(cxx_attributes)
+#        define NDDISCARD [[nodiscard]]
+#    else
+#        define NDDISCARD
+#    endif
+#endif // __clang__
 
-enum class TargetGLSLCompiler
-{
-    glslang,
-    driver
-};
-
-String BuildGLSLSourceString(const ShaderCreateInfo& ShaderCI,
-                             const DeviceCaps&       deviceCaps,
-                             TargetGLSLCompiler      TargetCompiler,
-                             const char*             ExtraDefinitions = nullptr);
-
-} // namespace Diligent
+#ifdef __GNUC__
+#    if __has_cpp_attribute(nodiscard)
+#        define NDDISCARD [[nodiscard]]
+#    else
+#        define NDDISCARD
+#    endif
+#endif // __GNUC__

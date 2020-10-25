@@ -78,6 +78,9 @@ public:
     /// Implementation of IRenderDevice::CreateComputePipelineState() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
 
+    /// Implementation of IRenderDevice::CreateRayTracingPipelineState() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
+
     /// Implementation of IRenderDevice::CreateBuffer() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
                                                  const BufferData* pBuffData,

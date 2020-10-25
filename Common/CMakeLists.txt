@@ -20,6 +20,7 @@ set(INTERFACE
     interface/HashUtils.hpp
     interface/LockHelper.hpp 
     interface/LinearAllocator.hpp 
+    interface/DynamicLinearAllocator.hpp 
     interface/MemoryFileStream.hpp 
     interface/ObjectBase.hpp
     interface/RefCntAutoPtr.hpp
@@ -32,6 +33,7 @@ set(INTERFACE
     interface/Timer.hpp
     interface/UniqueIdentifier.hpp
     interface/ValidatedCast.hpp
+    interface/Definitions.hpp
 )
 
 set(SOURCE 

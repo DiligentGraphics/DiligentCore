@@ -183,7 +183,8 @@ public:
     {
         if (pPSO != m_pCurPipelineState)
         {
-            m_pCommandList->SetPipelineState(m_pCurPipelineState = pPSO);
+            m_pCommandList->SetPipelineState(pPSO);
+            m_pCurPipelineState = pPSO;
         }
     }
 
@@ -218,7 +219,7 @@ protected:
     CComPtr<ID3D12GraphicsCommandList> m_pCommandList;
     CComPtr<ID3D12CommandAllocator>    m_pCurrentAllocator;
 
-    ID3D12PipelineState* m_pCurPipelineState         = nullptr;
+    void*                m_pCurPipelineState         = nullptr;
     ID3D12RootSignature* m_pCurGraphicsRootSignature = nullptr;
     ID3D12RootSignature* m_pCurComputeRootSignature  = nullptr;
 

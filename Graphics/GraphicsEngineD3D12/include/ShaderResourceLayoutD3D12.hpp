@@ -103,6 +103,7 @@
 #include "ShaderBase.hpp"
 #include "ShaderResourcesD3D12.hpp"
 #include "ShaderResourceCacheD3D12.hpp"
+#include "ShaderD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -121,15 +122,15 @@ public:
     //  - initialize reference layouts that address all types of resources (static, mutable, dynamic).
     //    Root indices and descriptor table offsets are assigned during the initialization;
     //    no shader resource cache is provided
-    void Initialize(ID3D12Device*                               pd3d12Device,
-                    PIPELINE_TYPE                               PipelineType,
-                    const PipelineResourceLayoutDesc&           ResourceLayout,
-                    std::shared_ptr<const ShaderResourcesD3D12> pSrcResources,
-                    IMemoryAllocator&                           LayoutDataAllocator,
-                    const SHADER_RESOURCE_VARIABLE_TYPE* const  VarTypes,
-                    Uint32                                      NumAllowedTypes,
-                    ShaderResourceCacheD3D12*                   pResourceCache,
-                    class RootSignature*                        pRootSig);
+    void Initialize(ID3D12Device*                              pd3d12Device,
+                    PIPELINE_TYPE                              PipelineType,
+                    const PipelineResourceLayoutDesc&          ResourceLayout,
+                    const std::vector<ShaderD3D12Impl*>&       Shaders,
+                    IMemoryAllocator&                          LayoutDataAllocator,
+                    const SHADER_RESOURCE_VARIABLE_TYPE* const VarTypes,
+                    Uint32                                     NumAllowedTypes,
+                    ShaderResourceCacheD3D12*                  pResourceCache,
+                    class RootSignature*                       pRootSig);
 
     // clang-format off
     ShaderResourceLayoutD3D12            (const ShaderResourceLayoutD3D12&) = delete;
@@ -165,31 +166,43 @@ public:
         static_assert( static_cast<int>(CachedResourceType::NumTypes) < (1 << ResourceTypeBits), "3 bits is not enough to store CachedResourceType");
     
 /* 0  */ const ShaderResourceLayoutD3D12& ParentResLayout;
-/* 8  */ const D3DShaderResourceAttribs&  Attribs;
 /*16  */ const Uint32                     OffsetFromTableStart;
 /*20.0*/ const Uint16                     ResourceType : ResourceTypeBits; // | 0 1 2 |
 /*20.3*/ const Uint16                     VariableType : VariableTypeBits; //         | 3 4 |
 /*20.5*/ const Uint16                     RootIndex    : RootIndexBits;    //               | 5 6 7 ... 15 |
 /*22  */ const Uint16                     SamplerId;
-/*24  */ // End of data
+/*    */ const char* const                Name;
+/*    */ const Uint16                     BindCount;
+/*    */ const Uint16                     BindPoint;
+/*    */ const Uint8                      InputType;
+/*    */ const Uint8                      SRVDimension;
+/*    */ // End of data
 
         // clang-format on
 
         D3D12Resource(const ShaderResourceLayoutD3D12& _ParentLayout,
-                      const D3DShaderResourceAttribs&  _Attribs,
                       SHADER_RESOURCE_VARIABLE_TYPE    _VariableType,
                       CachedResourceType               _ResType,
                       Uint32                           _RootIndex,
                       Uint32                           _OffsetFromTableStart,
-                      Uint32                           _SamplerId) noexcept :
+                      Uint32                           _SamplerId,
+                      const char*                      _Name,
+                      Uint32                           _BindCount,
+                      Uint32                           _BindPoint,
+                      D3D_SHADER_INPUT_TYPE            _InputType,
+                      D3D_SRV_DIMENSION                _SRVDimension) noexcept :
             // clang-format off
             ParentResLayout     {_ParentLayout                     },
-            Attribs             {_Attribs                          },
             ResourceType        {static_cast<Uint16>(_ResType)     },
             VariableType        {static_cast<Uint16>(_VariableType)},
             RootIndex           {static_cast<Uint16>(_RootIndex)   },
             SamplerId           {static_cast<Uint16>(_SamplerId)   },
-            OffsetFromTableStart{ _OffsetFromTableStart            }
+            OffsetFromTableStart{ _OffsetFromTableStart            },
+            Name                {_Name},
+            BindCount           {static_cast<Uint16>(_BindCount)   },
+            BindPoint           {static_cast<Uint16>(_BindPoint)   },
+            InputType           {static_cast<Uint8>(_InputType)    },
+            SRVDimension        {static_cast<Uint8>(_SRVDimension) }
         // clang-format on
         {
             VERIFY(IsValidOffset(), "Offset must be valid");
@@ -198,6 +211,10 @@ public:
             VERIFY(_VariableType < (1 << VariableTypeBits), "Variable type is out of representable range");
             VERIFY(_SamplerId == InvalidSamplerId || _SamplerId <= MaxSamplerId, "Sampler id (", _SamplerId, ") exceeds max allowed value (", MaxSamplerId, ")");
             VERIFY(_SamplerId == InvalidSamplerId || GetResType() == CachedResourceType::TexSRV, "A sampler can only be assigned to a Texture SRV");
+            VERIFY(_BindCount <= std::numeric_limits<decltype(BindCount)>::max(), "BindCount (", _BindCount, ") exceeds max representable value ", std::numeric_limits<decltype(BindCount)>::max());
+            VERIFY(_BindPoint <= std::numeric_limits<decltype(BindPoint)>::max(), "BindPoint (", _BindPoint, ") exceeds max representable value ", std::numeric_limits<decltype(BindPoint)>::max());
+            VERIFY(_InputType <= std::numeric_limits<decltype(InputType)>::max(), "InputType (", _InputType, ") exceeds max representable value ", std::numeric_limits<decltype(InputType)>::max());
+            VERIFY(_SRVDimension <= std::numeric_limits<decltype(SRVDimension)>::max(), "SRVDimension (", _SRVDimension, ") exceeds max representable value ", std::numeric_limits<decltype(SRVDimension)>::max());
         }
 
         bool IsBound(Uint32                          ArrayIndex,
@@ -215,6 +232,35 @@ public:
 
         CachedResourceType            GetResType() const { return static_cast<CachedResourceType>(ResourceType); }
         SHADER_RESOURCE_VARIABLE_TYPE GetVariableType() const { return static_cast<SHADER_RESOURCE_VARIABLE_TYPE>(VariableType); }
+        HLSLShaderResourceDesc        GetHLSLResourceDesc() const;
+
+        bool IsValidBindPoint() const
+        {
+            return BindPoint != D3DShaderResourceAttribs::InvalidBindPoint;
+        }
+
+        String GetPrintName(Uint32 ArrayInd) const
+        {
+            VERIFY_EXPR(ArrayInd < BindCount);
+            if (BindCount > 1)
+                return String(Name) + '[' + std::to_string(ArrayInd) + ']';
+            else
+                return Name;
+        }
+
+        D3D_SHADER_INPUT_TYPE GetInputType() const
+        {
+            return static_cast<D3D_SHADER_INPUT_TYPE>(InputType);
+        }
+
+        D3D_SRV_DIMENSION GetSRVDimension() const
+        {
+            return static_cast<D3D_SRV_DIMENSION>(SRVDimension);
+        }
+
+        RESOURCE_DIMENSION GetResourceDimension() const;
+
+        bool IsMultisample() const;
 
     private:
         void CacheCB(IDeviceObject*                      pBuffer,
@@ -237,6 +283,11 @@ public:
                           ShaderResourceCacheD3D12::Resource& DstSam,
                           Uint32                              ArrayIndex,
                           D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle) const;
+
+        void CacheAccelStruct(IDeviceObject*                      pTLAS,
+                              ShaderResourceCacheD3D12::Resource& DstRes,
+                              Uint32                              ArrayIndex,
+                              D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle) const;
     };
 
     void CopyStaticResourceDesriptorHandles(const ShaderResourceCacheD3D12&  SrcCache,
@@ -272,11 +323,9 @@ public:
         return GetResource(GetSamplerOffset(VarType, s));
     }
 
-    const bool IsUsingSeparateSamplers() const { return !m_pResources->IsUsingCombinedTextureSamplers(); }
+    const bool IsUsingSeparateSamplers() const { return m_IsUsingSeparateSamplers; }
 
-    SHADER_TYPE GetShaderType() const { return m_pResources->GetShaderType(); }
-
-    const ShaderResourcesD3D12& GetResources() const { return *m_pResources; }
+    SHADER_TYPE GetShaderType() const { return m_ShaderType; }
 
 private:
     const D3D12Resource& GetAssignedSampler(const D3D12Resource& TexSrv) const;
@@ -284,7 +333,7 @@ private:
 
     const Char* GetShaderName() const
     {
-        return m_pResources->GetShaderName();
+        return ""; // AZ TODO
     }
 
 
@@ -353,11 +402,11 @@ private:
 /* 16 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_CbvSrvUavOffsets = {};
 /* 24 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES + 1> m_SamplersOffsets  = {};
 
-/* 32 */ IObject&                                    m_Owner;
-/* 48 */ CComPtr<ID3D12Device>                       m_pd3d12Device;
-         // We must use shared_ptr to reference ShaderResources instance, because
-         // there may be multiple objects referencing the same set of resources
-/* 48 */ std::shared_ptr<const ShaderResourcesD3D12> m_pResources;
+/* 24 */ StringPool            m_StringPool;
+/* 32 */ IObject&              m_Owner;
+/* 48 */ CComPtr<ID3D12Device> m_pd3d12Device;
+/*    */ SHADER_TYPE           m_ShaderType              = SHADER_TYPE_UNKNOWN;
+/*    */ bool                  m_IsUsingSeparateSamplers = false;
 /* 64 */ // End of data
 
     // clang-format on

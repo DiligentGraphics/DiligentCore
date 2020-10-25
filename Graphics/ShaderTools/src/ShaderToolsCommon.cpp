@@ -35,30 +35,43 @@ namespace Diligent
 namespace
 {
 
-const ShaderMacro VSMacros[] = {{"VERTEX_SHADER", "1"}, {}};
-const ShaderMacro PSMacros[] = {{"FRAGMENT_SHADER", "1"}, {"PIXEL_SHADER", "1"}, {}};
-const ShaderMacro GSMacros[] = {{"GEOMETRY_SHADER", "1"}, {}};
-const ShaderMacro HSMacros[] = {{"TESS_CONTROL_SHADER", "1"}, {"HULL_SHADER", "1"}, {}};
-const ShaderMacro DSMacros[] = {{"TESS_EVALUATION_SHADER", "1"}, {"DOMAIN_SHADER", "1"}, {}};
-const ShaderMacro CSMacros[] = {{"COMPUTE_SHADER", "1"}, {}};
-const ShaderMacro ASMacros[] = {{"TASK_SHADER", "1"}, {"AMPLIFICATION_SHADER", "1"}, {}};
-const ShaderMacro MSMacros[] = {{"MESH_SHADER", "1"}, {}};
+const ShaderMacro VSMacros[]  = {{"VERTEX_SHADER", "1"}, {}};
+const ShaderMacro PSMacros[]  = {{"FRAGMENT_SHADER", "1"}, {"PIXEL_SHADER", "1"}, {}};
+const ShaderMacro GSMacros[]  = {{"GEOMETRY_SHADER", "1"}, {}};
+const ShaderMacro HSMacros[]  = {{"TESS_CONTROL_SHADER", "1"}, {"HULL_SHADER", "1"}, {}};
+const ShaderMacro DSMacros[]  = {{"TESS_EVALUATION_SHADER", "1"}, {"DOMAIN_SHADER", "1"}, {}};
+const ShaderMacro CSMacros[]  = {{"COMPUTE_SHADER", "1"}, {}};
+const ShaderMacro ASMacros[]  = {{"TASK_SHADER", "1"}, {"AMPLIFICATION_SHADER", "1"}, {}};
+const ShaderMacro MSMacros[]  = {{"MESH_SHADER", "1"}, {}};
+const ShaderMacro RGMacros[]  = {{"RAY_GEN_SHADER", "1"}, {}};
+const ShaderMacro RMMacros[]  = {{"RAY_MISS_SHADER", "1"}, {}};
+const ShaderMacro RCHMacros[] = {{"RAY_CLOSEST_HIT_SHADER", "1"}, {}};
+const ShaderMacro RAHMacros[] = {{"RAY_ANY_HIT_SHADER", "1"}, {}};
+const ShaderMacro RIMacros[]  = {{"RAY_INTERSECTION_SHADER", "1"}, {}};
+const ShaderMacro RCMacros[]  = {{"RAY_CALLABLE_SHADER", "1"}, {}};
 
 } // namespace
 
 const ShaderMacro* GetShaderTypeMacros(SHADER_TYPE Type)
 {
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
     switch (Type)
     {
         // clang-format off
-        case SHADER_TYPE_VERTEX:        return VSMacros;
-        case SHADER_TYPE_PIXEL:         return PSMacros;
-        case SHADER_TYPE_GEOMETRY:      return GSMacros;
-        case SHADER_TYPE_HULL:          return HSMacros;
-        case SHADER_TYPE_DOMAIN:        return DSMacros;
-        case SHADER_TYPE_COMPUTE:       return CSMacros;
-        case SHADER_TYPE_AMPLIFICATION: return ASMacros;
-        case SHADER_TYPE_MESH:          return MSMacros;
+        case SHADER_TYPE_VERTEX:           return VSMacros;
+        case SHADER_TYPE_PIXEL:            return PSMacros;
+        case SHADER_TYPE_GEOMETRY:         return GSMacros;
+        case SHADER_TYPE_HULL:             return HSMacros;
+        case SHADER_TYPE_DOMAIN:           return DSMacros;
+        case SHADER_TYPE_COMPUTE:          return CSMacros;
+        case SHADER_TYPE_AMPLIFICATION:    return ASMacros;
+        case SHADER_TYPE_MESH:             return MSMacros;
+        case SHADER_TYPE_RAY_GEN:          return RGMacros;
+        case SHADER_TYPE_RAY_MISS:         return RMMacros;
+        case SHADER_TYPE_RAY_CLOSEST_HIT:  return RCHMacros;
+        case SHADER_TYPE_RAY_ANY_HIT:      return RAHMacros;
+        case SHADER_TYPE_RAY_INTERSECTION: return RIMacros;
+        case SHADER_TYPE_CALLABLE:         return RCMacros;
         // clang-format on
         default:
             UNEXPECTED("Unexpected shader type");

@@ -106,12 +106,13 @@ ShaderResourcesD3D12::ShaderResourcesD3D12(ID3DBlob*         pShaderBytecode,
     {
     public:
         // clang-format off
-        void OnNewCB     (const D3DShaderResourceAttribs& CBAttribs)     {}
-        void OnNewTexUAV (const D3DShaderResourceAttribs& TexUAV)        {}
-        void OnNewBuffUAV(const D3DShaderResourceAttribs& BuffUAV)       {}
-        void OnNewBuffSRV(const D3DShaderResourceAttribs& BuffSRV)       {}
-        void OnNewSampler(const D3DShaderResourceAttribs& SamplerAttribs){}
-        void OnNewTexSRV (const D3DShaderResourceAttribs& TexAttribs)    {}
+        void OnNewCB         (const D3DShaderResourceAttribs& CBAttribs)     {}
+        void OnNewTexUAV     (const D3DShaderResourceAttribs& TexUAV)        {}
+        void OnNewBuffUAV    (const D3DShaderResourceAttribs& BuffUAV)       {}
+        void OnNewBuffSRV    (const D3DShaderResourceAttribs& BuffSRV)       {}
+        void OnNewSampler    (const D3DShaderResourceAttribs& SamplerAttribs){}
+        void OnNewTexSRV     (const D3DShaderResourceAttribs& TexAttribs)    {}
+        void OnNewAccelStruct(const D3DShaderResourceAttribs& ASAttribs)     {}
         // clang-format on
     };
 

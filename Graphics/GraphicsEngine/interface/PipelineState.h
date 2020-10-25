@@ -215,24 +215,14 @@ struct GraphicsPipelineDesc
 typedef struct GraphicsPipelineDesc GraphicsPipelineDesc;
 
 
-/// Compute pipeline state description
-
-/// This structure describes the compute pipeline state and is part of the PipelineStateDesc structure.
-struct ComputePipelineDesc
-{
-    /// Compute shader to be used with the pipeline
-    IShader* pCS DEFAULT_INITIALIZER(nullptr);
-};
-typedef struct ComputePipelineDesc ComputePipelineDesc;
-
 /// AZ TODO
 struct RayTracingGeneralShaderGroup
 {
     /// AZ TODO
-    const char* Name   DEFAULT_INITIALIZER(nullptr);
+    const char* Name    DEFAULT_INITIALIZER(nullptr);
 
     /// AZ TODO
-    IShader*    Shader DEFAULT_INITIALIZER(nullptr);
+    IShader*    pShader DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct RayTracingGeneralShaderGroup RayTracingGeneralShaderGroup;
 
@@ -240,13 +230,13 @@ typedef struct RayTracingGeneralShaderGroup RayTracingGeneralShaderGroup;
 struct RayTracingTriangleHitShaderGroup
 {
     /// AZ TODO
-    const char* Name             DEFAULT_INITIALIZER(nullptr);
+    const char* Name              DEFAULT_INITIALIZER(nullptr);
 
     /// AZ TODO
-    IShader*    ClosestHitShader DEFAULT_INITIALIZER(nullptr);
+    IShader*    pClosestHitShader DEFAULT_INITIALIZER(nullptr);
 
     /// AZ TODO
-    IShader*    AnyHitShader     DEFAULT_INITIALIZER(nullptr); // can be null
+    IShader*    pAnyHitShader     DEFAULT_INITIALIZER(nullptr); // can be null
 };
 typedef struct RayTracingTriangleHitShaderGroup RayTracingTriangleHitShaderGroup;
 
@@ -254,16 +244,16 @@ typedef struct RayTracingTriangleHitShaderGroup RayTracingTriangleHitShaderGroup
 struct RayTracingProceduralHitShaderGroup
 {
     /// AZ TODO
-    const char* Name               DEFAULT_INITIALIZER(nullptr);
+    const char* Name                DEFAULT_INITIALIZER(nullptr);
 
     /// AZ TODO
-    IShader*    IntersectionShader DEFAULT_INITIALIZER(nullptr);
+    IShader*    pIntersectionShader DEFAULT_INITIALIZER(nullptr);
 
     /// AZ TODO
-    IShader*    ClosestHitShader   DEFAULT_INITIALIZER(nullptr); // can be null
+    IShader*    pClosestHitShader   DEFAULT_INITIALIZER(nullptr); // can be null
 
     /// AZ TODO
-    IShader*    AnyHitShader       DEFAULT_INITIALIZER(nullptr);     // can be null
+    IShader*    pAnyHitShader       DEFAULT_INITIALIZER(nullptr); // can be null
 };
 typedef struct RayTracingProceduralHitShaderGroup RayTracingProceduralHitShaderGroup;
 
@@ -271,25 +261,7 @@ typedef struct RayTracingProceduralHitShaderGroup RayTracingProceduralHitShaderG
 struct RayTracingPipelineDesc
 {
     /// AZ TODO
-    const RayTracingGeneralShaderGroup*       pGeneralShaders          DEFAULT_INITIALIZER(nullptr);
-    
-    /// AZ TODO
-    const RayTracingTriangleHitShaderGroup*   pTriangleHitShaders      DEFAULT_INITIALIZER(nullptr);
-    
-    /// AZ TODO
-    const RayTracingProceduralHitShaderGroup* pProceduralHitShaders    DEFAULT_INITIALIZER(nullptr);
-    
-    /// AZ TODO
-    Uint16                                    GeneralShaderCount       DEFAULT_INITIALIZER(0);
-    
-    /// AZ TODO
-    Uint16                                    TriangleHitShaderCount   DEFAULT_INITIALIZER(0);
-    
-    /// AZ TODO
-    Uint16                                    ProceduralHitShaderCount DEFAULT_INITIALIZER(0);
-    
-    /// AZ TODO
-    Uint8                                     MaxRecursionDepth        DEFAULT_INITIALIZER(0); // must be 0..31 (check current device limits)
+    Uint8  MaxRecursionDepth  DEFAULT_INITIALIZER(0); // must be 0..31 (check current device limits)
 };
 typedef struct RayTracingPipelineDesc RayTracingPipelineDesc;
 
@@ -308,6 +280,8 @@ DILIGENT_TYPED_ENUM(PIPELINE_TYPE, Uint8)
 
     /// Ray tracing pipeline, which is used by IDeviceContext::TraceRays().
     PIPELINE_TYPE_RAY_TRACING,
+
+    PIPELINE_TYPE_LAST = PIPELINE_TYPE_RAY_TRACING
 };
 
 
@@ -332,6 +306,7 @@ struct PipelineStateDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 #if DILIGENT_CPP_INTERFACE
     bool IsAnyGraphicsPipeline() const { return PipelineType == PIPELINE_TYPE_GRAPHICS || PipelineType == PIPELINE_TYPE_MESH; }
     bool IsComputePipeline()     const { return PipelineType == PIPELINE_TYPE_COMPUTE; }
+    bool IsRayTracingPipeline()  const { return PipelineType == PIPELINE_TYPE_RAY_TRACING; }
 #endif
 };
 typedef struct PipelineStateDesc PipelineStateDesc;
@@ -420,6 +395,33 @@ struct ComputePipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
 typedef struct ComputePipelineStateCreateInfo ComputePipelineStateCreateInfo;
 
 
+/// Ray tracing pipeline state description.
+struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
+    
+    /// AZ TODO
+    RayTracingPipelineDesc RayTracingPipeline;
+
+    /// AZ TODO
+    const RayTracingGeneralShaderGroup*       pGeneralShaders          DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    const RayTracingTriangleHitShaderGroup*   pTriangleHitShaders      DEFAULT_INITIALIZER(nullptr); // can be null
+    
+    /// AZ TODO
+    const RayTracingProceduralHitShaderGroup* pProceduralHitShaders    DEFAULT_INITIALIZER(nullptr); // can be null
+    
+    /// AZ TODO
+    Uint16                                    GeneralShaderCount       DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint16                                    TriangleHitShaderCount   DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    Uint16                                    ProceduralHitShaderCount DEFAULT_INITIALIZER(0);
+};
+typedef struct RayTracingPipelineStateCreateInfo RayTracingPipelineStateCreateInfo;
+
+
 // {06084AE5-6A71-4FE8-84B9-395DD489A28C}
 static const struct INTERFACE_ID IID_PipelineState =
     {0x6084ae5, 0x6a71, 0x4fe8, {0x84, 0xb9, 0x39, 0x5d, 0xd4, 0x89, 0xa2, 0x8c}};
@@ -444,6 +446,10 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     /// Returns the graphics pipeline description used to create the object.
     /// This method must only be called for a graphics or mesh pipeline.
     VIRTUAL const GraphicsPipelineDesc REF METHOD(GetGraphicsPipelineDesc)(THIS) CONST PURE;
+    
+    /// Returns the ray tracing pipeline description used to create the object.
+    /// This method must only be called for a ray tracing pipeline.
+    VIRTUAL const RayTracingPipelineDesc REF METHOD(GetRayTracingPipelineDesc)(THIS) CONST PURE;
 
     /// Binds resources for all shaders in the pipeline state
 
@@ -522,6 +528,13 @@ DILIGENT_BEGIN_INTERFACE(IPipelineState, IDeviceObject)
     ///             into account vertex shader input layout, number of outputs, etc.
     VIRTUAL bool METHOD(IsCompatibleWith)(THIS_
                                           const struct IPipelineState* pPSO) CONST PURE;
+    
+    /// AZ TODO
+    VIRTUAL Uint32 METHOD(GetShaderGroupIndex)(THIS_
+                                               const char* Name) CONST PURE;
+    
+    /// AZ TODO
+    VIRTUAL Uint32 METHOD(GetShaderGroupCount)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -534,12 +547,15 @@ DILIGENT_END_INTERFACE
 #    define IPipelineState_GetDesc(This) (const struct PipelineStateDesc*)IDeviceObject_GetDesc(This)
 
 #    define IPipelineState_GetGraphicsPipelineDesc(This)          CALL_IFACE_METHOD(PipelineState, GetGraphicsPipelineDesc,     This)
+#    define IPipelineState_GetRayTracingPipelineDesc(This)        CALL_IFACE_METHOD(PipelineState, GetRayTracingPipelineDesc,   This)
 #    define IPipelineState_BindStaticResources(This, ...)         CALL_IFACE_METHOD(PipelineState, BindStaticResources,         This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableCount(This, ...)      CALL_IFACE_METHOD(PipelineState, GetStaticVariableCount,      This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableByName(This, ...)     CALL_IFACE_METHOD(PipelineState, GetStaticVariableByName,     This, __VA_ARGS__)
 #    define IPipelineState_GetStaticVariableByIndex(This, ...)    CALL_IFACE_METHOD(PipelineState, GetStaticVariableByIndex,    This, __VA_ARGS__)
 #    define IPipelineState_CreateShaderResourceBinding(This, ...) CALL_IFACE_METHOD(PipelineState, CreateShaderResourceBinding, This, __VA_ARGS__)
 #    define IPipelineState_IsCompatibleWith(This, ...)            CALL_IFACE_METHOD(PipelineState, IsCompatibleWith,            This, __VA_ARGS__)
+#    define IPipelineState_GetShaderGroupIndex(This, ...)         CALL_IFACE_METHOD(PipelineState, GetShaderGroupIndex,         This, __VA_ARGS__)
+#    define IPipelineState_GetShaderGroupCount(This)              CALL_IFACE_METHOD(PipelineState, GetShaderGroupCount,         This)
 
 // clang-format on
 

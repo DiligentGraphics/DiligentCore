@@ -301,6 +301,11 @@ void DeviceContextVkImpl::SetPipelineState(IPipelineState* pPipelineState)
             m_CommandBuffer.BindComputePipeline(vkPipeline);
             break;
         }
+        case PIPELINE_TYPE_RAY_TRACING:
+        {
+            //m_CommandBuffer.BindRayTracingPipeline(vkPipeline);
+            break;
+        }
         default:
             UNEXPECTED("unknown pipeline type");
     }
@@ -593,7 +598,8 @@ void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
 #ifdef DILIGENT_DEBUG
     {
         const auto& PhysicalDevice  = m_pDevice->GetPhysicalDevice();
-        const auto& MeshShaderFeats = PhysicalDevice.GetExtFeatures().MeshShader;
+        const auto& LogicalDevice   = m_pDevice->GetLogicalDevice();
+        const auto& MeshShaderFeats = LogicalDevice.GetEnabledExtFeatures().MeshShader;
         VERIFY_EXPR(MeshShaderFeats.meshShader != VK_FALSE && MeshShaderFeats.taskShader != VK_FALSE);
         VERIFY_EXPR(Attribs.ThreadGroupCount <= PhysicalDevice.GetExtProperties().MeshShader.maxDrawMeshTasksCount);
     }
@@ -612,7 +618,7 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
 
 #ifdef DILIGENT_DEBUG
     {
-        const auto& MeshShaderFeats = m_pDevice->GetPhysicalDevice().GetExtFeatures().MeshShader;
+        const auto& MeshShaderFeats = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures().MeshShader;
         VERIFY_EXPR(MeshShaderFeats.meshShader != VK_FALSE && MeshShaderFeats.taskShader != VK_FALSE);
     }
 #endif

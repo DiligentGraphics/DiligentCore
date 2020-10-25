@@ -87,8 +87,8 @@ protected:
 };
 
 
-template <typename BufferViewImplType>
-bool VerifyBufferViewModeD3D(BufferViewImplType* pViewD3D11, const D3DShaderResourceAttribs& Attribs, const char* ShaderName)
+template <typename BufferViewImplType, typename AttribsType>
+bool VerifyBufferViewModeD3D(BufferViewImplType* pViewD3D11, const AttribsType& Attribs, const char* ShaderName)
 {
     if (pViewD3D11 == nullptr)
         return true;

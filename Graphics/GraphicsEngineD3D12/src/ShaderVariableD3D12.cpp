@@ -125,7 +125,7 @@ ShaderVariableD3D12Impl* ShaderVariableManagerD3D12::GetVariable(const Char* Nam
     for (Uint32 v = 0; v < m_NumVariables; ++v)
     {
         auto& Var = m_pVariables[v];
-        if (strcmp(Var.m_Resource.Attribs.Name, Name) == 0)
+        if (strcmp(Var.m_Resource.Name, Name) == 0)
         {
             pVar = &Var;
             break;
@@ -181,14 +181,14 @@ void ShaderVariableManagerD3D12::BindResources(IResourceMapping* pResourceMappin
         if ((Flags & (1 << Res.GetVariableType())) == 0)
             continue;
 
-        for (Uint32 ArrInd = 0; ArrInd < Res.Attribs.BindCount; ++ArrInd)
+        for (Uint32 ArrInd = 0; ArrInd < Res.BindCount; ++ArrInd)
         {
             if ((Flags & BIND_SHADER_RESOURCES_KEEP_EXISTING) && Res.IsBound(ArrInd, m_ResourceCache))
                 continue;
 
             RefCntAutoPtr<IDeviceObject> pObj;
             VERIFY_EXPR(pResourceMapping != nullptr);
-            pResourceMapping->GetResource(Res.Attribs.Name, &pObj, ArrInd);
+            pResourceMapping->GetResource(Res.Name, &pObj, ArrInd);
             if (pObj)
             {
                 //  Call non-virtual function
@@ -197,7 +197,7 @@ void ShaderVariableManagerD3D12::BindResources(IResourceMapping* pResourceMappin
             else
             {
                 if ((Flags & BIND_SHADER_RESOURCES_VERIFY_ALL_RESOLVED) && !Res.IsBound(ArrInd, m_ResourceCache))
-                    LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '", Res.Attribs.GetPrintName(ArrInd), "': resource is not found in the resource mapping");
+                    LOG_ERROR_MESSAGE("Unable to bind resource to shader variable '", Res.GetPrintName(ArrInd), "': resource is not found in the resource mapping");
             }
         }
     }

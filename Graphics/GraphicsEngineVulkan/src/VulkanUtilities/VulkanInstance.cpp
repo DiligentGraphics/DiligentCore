@@ -73,16 +73,18 @@ bool VulkanInstance::IsExtensionEnabled(const char* ExtensionName) const
     return false;
 }
 
-std::shared_ptr<VulkanInstance> VulkanInstance::Create(bool                   EnableValidation,
+std::shared_ptr<VulkanInstance> VulkanInstance::Create(uint32_t               ApiVersion,
+                                                       bool                   EnableValidation,
                                                        uint32_t               GlobalExtensionCount,
                                                        const char* const*     ppGlobalExtensionNames,
                                                        VkAllocationCallbacks* pVkAllocator)
 {
-    auto Instance = new VulkanInstance{EnableValidation, GlobalExtensionCount, ppGlobalExtensionNames, pVkAllocator};
+    auto Instance = new VulkanInstance{ApiVersion, EnableValidation, GlobalExtensionCount, ppGlobalExtensionNames, pVkAllocator};
     return std::shared_ptr<VulkanInstance>{Instance};
 }
 
-VulkanInstance::VulkanInstance(bool                   EnableValidation,
+VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
+                               bool                   EnableValidation,
                                uint32_t               GlobalExtensionCount,
                                const char* const*     ppGlobalExtensionNames,
                                VkAllocationCallbacks* pVkAllocator) :
@@ -184,6 +186,16 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
         }
     }
 
+#if DILIGENT_USE_VOLK
+    if (vkEnumerateInstanceVersion != nullptr && ApiVersion > VK_API_VERSION_1_0)
+    {
+        uint32_t MaxApiVersion = 0;
+        vkEnumerateInstanceVersion(&MaxApiVersion);
+        ApiVersion = std::min(ApiVersion, MaxApiVersion);
+        LOG_INFO_MESSAGE("Used Vulkan API version ", VK_VERSION_MAJOR(ApiVersion), ".", VK_VERSION_MINOR(ApiVersion));
+    }
+#endif
+
     VkApplicationInfo appInfo = {};
 
     appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -192,7 +204,7 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
     appInfo.applicationVersion = 0; // Developer-supplied version number of the application
     appInfo.pEngineName        = "Diligent Engine";
     appInfo.engineVersion      = 0; // Developer-supplied version number of the engine used to create the application.
-    appInfo.apiVersion         = VK_API_VERSION_1_0;
+    appInfo.apiVersion         = ApiVersion;
 
     VkInstanceCreateInfo InstanceCreateInfo = {};
 
@@ -229,6 +241,7 @@ VulkanInstance::VulkanInstance(bool                   EnableValidation,
 #endif
 
     m_EnabledExtensions = std::move(GlobalExtensions);
+    m_VkVersion         = ApiVersion;
 
     // If requested, we enable the default validation layers for debugging
     if (m_DebugUtilsEnabled)

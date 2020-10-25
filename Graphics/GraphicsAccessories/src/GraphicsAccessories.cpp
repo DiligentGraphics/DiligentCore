@@ -824,20 +824,19 @@ const Char* GetBindFlagString(Uint32 BindFlag)
     static_assert(BIND_FLAGS_LAST == BIND_RAY_TRACING, "Please handle the new bind flag in the switch below");
     switch (BindFlag)
     {
-        // clang-format off
-#define BIND_FLAG_STR_CASE(Flag) case Flag: return #Flag;
+#define BIND_FLAG_STR_CASE(Flag) \
+    case Flag: return #Flag;
         BIND_FLAG_STR_CASE(BIND_VERTEX_BUFFER)
-	    BIND_FLAG_STR_CASE(BIND_INDEX_BUFFER)
-	    BIND_FLAG_STR_CASE(BIND_UNIFORM_BUFFER)
-	    BIND_FLAG_STR_CASE(BIND_SHADER_RESOURCE)
-	    BIND_FLAG_STR_CASE(BIND_STREAM_OUTPUT)
-	    BIND_FLAG_STR_CASE(BIND_RENDER_TARGET)
-	    BIND_FLAG_STR_CASE(BIND_DEPTH_STENCIL)
-	    BIND_FLAG_STR_CASE(BIND_UNORDERED_ACCESS)
+        BIND_FLAG_STR_CASE(BIND_INDEX_BUFFER)
+        BIND_FLAG_STR_CASE(BIND_UNIFORM_BUFFER)
+        BIND_FLAG_STR_CASE(BIND_SHADER_RESOURCE)
+        BIND_FLAG_STR_CASE(BIND_STREAM_OUTPUT)
+        BIND_FLAG_STR_CASE(BIND_RENDER_TARGET)
+        BIND_FLAG_STR_CASE(BIND_DEPTH_STENCIL)
+        BIND_FLAG_STR_CASE(BIND_UNORDERED_ACCESS)
         BIND_FLAG_STR_CASE(BIND_INDIRECT_DRAW_ARGS)
         BIND_FLAG_STR_CASE(BIND_RAY_TRACING)
-#undef  BIND_FLAG_STR_CASE
-        // clang-format on
+#undef BIND_FLAG_STR_CASE
         default: UNEXPECTED("Unexpected bind flag ", BindFlag); return "";
     }
 }
@@ -1087,6 +1086,7 @@ String GetResourceStateString(RESOURCE_STATE State)
 
 const char* GetQueryTypeString(QUERY_TYPE QueryType)
 {
+    static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled");
     // clang-format off
     switch(QueryType)
     {
@@ -1096,8 +1096,6 @@ const char* GetQueryTypeString(QUERY_TYPE QueryType)
         case QUERY_TYPE_TIMESTAMP:           return "QUERY_TYPE_TIMESTAMP";
         case QUERY_TYPE_PIPELINE_STATISTICS: return "QUERY_TYPE_PIPELINE_STATISTICS";
         case QUERY_TYPE_DURATION:            return "QUERY_TYPE_DURATION";
-
-        static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled");
 
         default:
             UNEXPECTED("Unepxected query type");
@@ -1134,12 +1132,14 @@ const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform)
 
 const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
 {
+    static_assert(PIPELINE_TYPE_LAST == PIPELINE_TYPE_RAY_TRACING, "Please update this function to handle the new pipeline type");
     // clang-format off
     switch (PipelineType)
     {
-        case PIPELINE_TYPE_COMPUTE:  return "compute";
-        case PIPELINE_TYPE_GRAPHICS: return "graphics";
-        case PIPELINE_TYPE_MESH:     return "mesh";
+        case PIPELINE_TYPE_COMPUTE:     return "compute";
+        case PIPELINE_TYPE_GRAPHICS:    return "graphics";
+        case PIPELINE_TYPE_MESH:        return "mesh";
+        case PIPELINE_TYPE_RAY_TRACING: return "ray tracing";
 
         default:
             UNEXPECTED("Unexpected pipeline type");
@@ -1150,17 +1150,20 @@ const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
 
 const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
 {
+    static_assert(SHADER_COMPILER_LAST == SHADER_COMPILER_FXC, "Please update this function to handle the new shader compiler");
+    // clang-format off
     switch (Compiler)
     {
         case SHADER_COMPILER_DEFAULT: return "Default";
         case SHADER_COMPILER_GLSLANG: return "glslang";
-        case SHADER_COMPILER_DXC: return "DXC";
-        case SHADER_COMPILER_FXC: return "FXC";
+        case SHADER_COMPILER_DXC:     return "DXC";
+        case SHADER_COMPILER_FXC:     return "FXC";
 
         default:
             UNEXPECTED("Unexpected shader compiler");
             return "UNKNOWN";
     };
+    // clang-format on
 }
 
 Uint32 ComputeMipLevelsCount(Uint32 Width)
@@ -1348,29 +1351,28 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
         case SHADER_TYPE_VERTEX:        // Graphics
         case SHADER_TYPE_AMPLIFICATION: // Mesh
         case SHADER_TYPE_COMPUTE:       // Compute
+        case SHADER_TYPE_RAY_GEN:       // RayTracing
             return 0;
 
-        case SHADER_TYPE_HULL: // Graphics
-        case SHADER_TYPE_MESH: // Mesh
+        case SHADER_TYPE_HULL:     // Graphics
+        case SHADER_TYPE_MESH:     // Mesh
+        case SHADER_TYPE_RAY_MISS: // RayTracing
             return 1;
 
-        case SHADER_TYPE_DOMAIN: // Graphics
+        case SHADER_TYPE_DOMAIN:          // Graphics
+        case SHADER_TYPE_RAY_CLOSEST_HIT: // RayTracing
             return 2;
 
-        case SHADER_TYPE_GEOMETRY: // Graphics
+        case SHADER_TYPE_GEOMETRY:    // Graphics
+        case SHADER_TYPE_RAY_ANY_HIT: // RayTracing
             return 3;
 
-        case SHADER_TYPE_PIXEL: // Graphics or Mesh
+        case SHADER_TYPE_PIXEL:            // Graphics or Mesh
+        case SHADER_TYPE_RAY_INTERSECTION: // RayTracing
             return 4;
 
-        case SHADER_TYPE_RAY_GEN:
-        case SHADER_TYPE_RAY_MISS:
-        case SHADER_TYPE_RAY_CLOSEST_HIT:
-        case SHADER_TYPE_RAY_ANY_HIT:
-        case SHADER_TYPE_RAY_INTERSECTION:
-        case SHADER_TYPE_CALLABLE:
-            UNEXPECTED("This function is not currently indended to handle ray-tracing shader types");
-            return -1;
+        case SHADER_TYPE_CALLABLE: // RayTracing
+            return 5;
 
         default:
             UNEXPECTED("Unexpected shader type (", ShaderType, ")");
@@ -1420,8 +1422,19 @@ SHADER_TYPE GetShaderTypeFromPipelineIndex(Int32 Index, PIPELINE_TYPE PipelineTy
             }
 
         case PIPELINE_TYPE_RAY_TRACING:
-            UNEXPECTED("Ray tracing pipeline is not supported by this function");
-            return SHADER_TYPE_UNKNOWN;
+            switch (Index)
+            {
+                case 0: return SHADER_TYPE_RAY_GEN;
+                case 1: return SHADER_TYPE_RAY_MISS;
+                case 2: return SHADER_TYPE_RAY_CLOSEST_HIT;
+                case 3: return SHADER_TYPE_RAY_ANY_HIT;
+                case 4: return SHADER_TYPE_RAY_INTERSECTION;
+                case 5: return SHADER_TYPE_CALLABLE;
+
+                default:
+                    UNEXPECTED("Index ", Index, " is not a valid ray tracing pipeline shader index");
+                    return SHADER_TYPE_UNKNOWN;
+            }
 
         default:
             UNEXPECTED("Unexpected pipeline type");

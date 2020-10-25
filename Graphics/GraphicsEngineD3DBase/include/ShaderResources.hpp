@@ -280,20 +280,22 @@ public:
     ~ShaderResources();
 
     // clang-format off
-    Uint32 GetNumCBs()        const noexcept { return (m_TexSRVOffset   - 0);                }
-    Uint32 GetNumTexSRV()     const noexcept { return (m_TexUAVOffset   - m_TexSRVOffset);   }
-    Uint32 GetNumTexUAV()     const noexcept { return (m_BufSRVOffset   - m_TexUAVOffset);   }
-    Uint32 GetNumBufSRV()     const noexcept { return (m_BufUAVOffset   - m_BufSRVOffset);   }
-    Uint32 GetNumBufUAV()     const noexcept { return (m_SamplersOffset - m_BufUAVOffset);   }
-    Uint32 GetNumSamplers()   const noexcept { return (m_TotalResources - m_SamplersOffset); }
-    Uint32 GetTotalResources()const noexcept { return  m_TotalResources;                     }
+    Uint32 GetNumCBs()         const noexcept { return (m_TexSRVOffset       - 0);                    }
+    Uint32 GetNumTexSRV()      const noexcept { return (m_TexUAVOffset       - m_TexSRVOffset);       }
+    Uint32 GetNumTexUAV()      const noexcept { return (m_BufSRVOffset       - m_TexUAVOffset);       }
+    Uint32 GetNumBufSRV()      const noexcept { return (m_BufUAVOffset       - m_BufSRVOffset);       }
+    Uint32 GetNumBufUAV()      const noexcept { return (m_SamplersOffset     - m_BufUAVOffset);       }
+    Uint32 GetNumSamplers()    const noexcept { return (m_AccelStructsOffset - m_SamplersOffset);     }
+    Uint32 GetNumAccelStructs()const noexcept { return (m_TotalResources     - m_AccelStructsOffset); }
+    Uint32 GetTotalResources() const noexcept { return  m_TotalResources;                             }
 
-    const D3DShaderResourceAttribs& GetCB     (Uint32 n)const noexcept { return GetResAttribs(n, GetNumCBs(),                   0);   }
-    const D3DShaderResourceAttribs& GetTexSRV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumTexSRV(),   m_TexSRVOffset);   }
-    const D3DShaderResourceAttribs& GetTexUAV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumTexUAV(),   m_TexUAVOffset);   }
-    const D3DShaderResourceAttribs& GetBufSRV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumBufSRV(),   m_BufSRVOffset);   }
-    const D3DShaderResourceAttribs& GetBufUAV (Uint32 n)const noexcept { return GetResAttribs(n, GetNumBufUAV(),   m_BufUAVOffset);   }
-    const D3DShaderResourceAttribs& GetSampler(Uint32 n)const noexcept { return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
+    const D3DShaderResourceAttribs& GetCB         (Uint32 n)const noexcept { return GetResAttribs(n, GetNumCBs(),                       0);       }
+    const D3DShaderResourceAttribs& GetTexSRV     (Uint32 n)const noexcept { return GetResAttribs(n, GetNumTexSRV(),       m_TexSRVOffset);       }
+    const D3DShaderResourceAttribs& GetTexUAV     (Uint32 n)const noexcept { return GetResAttribs(n, GetNumTexUAV(),       m_TexUAVOffset);       }
+    const D3DShaderResourceAttribs& GetBufSRV     (Uint32 n)const noexcept { return GetResAttribs(n, GetNumBufSRV(),       m_BufSRVOffset);       }
+    const D3DShaderResourceAttribs& GetBufUAV     (Uint32 n)const noexcept { return GetResAttribs(n, GetNumBufUAV(),       m_BufUAVOffset);       }
+    const D3DShaderResourceAttribs& GetSampler    (Uint32 n)const noexcept { return GetResAttribs(n, GetNumSamplers(),     m_SamplersOffset);     }
+    const D3DShaderResourceAttribs& GetAccelStruct(Uint32 n)const noexcept { return GetResAttribs(n, GetNumAccelStructs(), m_AccelStructsOffset); }
     // clang-format on
 
     const D3DShaderResourceAttribs& GetCombinedSampler(const D3DShaderResourceAttribs& TexSRV) const noexcept
@@ -317,13 +319,15 @@ public:
               typename THandleTexSRV,
               typename THandleTexUAV,
               typename THandleBufSRV,
-              typename THandleBufUAV>
-    void ProcessResources(THandleCB      HandleCB,
-                          THandleSampler HandleSampler,
-                          THandleTexSRV  HandleTexSRV,
-                          THandleTexUAV  HandleTexUAV,
-                          THandleBufSRV  HandleBufSRV,
-                          THandleBufUAV  HandleBufUAV) const
+              typename THandleBufUAV,
+              typename THandleAccelStruct>
+    void ProcessResources(THandleCB          HandleCB,
+                          THandleSampler     HandleSampler,
+                          THandleTexSRV      HandleTexSRV,
+                          THandleTexUAV      HandleTexUAV,
+                          THandleBufSRV      HandleBufSRV,
+                          THandleBufUAV      HandleBufUAV,
+                          THandleAccelStruct HandleAccelStruct) const
     {
         for (Uint32 n = 0; n < GetNumCBs(); ++n)
         {
@@ -359,6 +363,12 @@ public:
         {
             const auto& BufUAV = GetBufUAV(n);
             HandleBufUAV(BufUAV, n);
+        }
+
+        for (Uint32 n = 0; n < GetNumAccelStructs(); ++n)
+        {
+            const auto& AS = GetAccelStruct(n);
+            HandleAccelStruct(AS, n);
         }
     }
 
@@ -420,12 +430,13 @@ protected:
     }
 
     // clang-format off
-    D3DShaderResourceAttribs& GetCB(Uint32 n)      noexcept { return GetResAttribs(n, GetNumCBs(), 0); }
-    D3DShaderResourceAttribs& GetTexSRV(Uint32 n)  noexcept { return GetResAttribs(n, GetNumTexSRV(), m_TexSRVOffset); }
-    D3DShaderResourceAttribs& GetTexUAV(Uint32 n)  noexcept { return GetResAttribs(n, GetNumTexUAV(), m_TexUAVOffset); }
-    D3DShaderResourceAttribs& GetBufSRV(Uint32 n)  noexcept { return GetResAttribs(n, GetNumBufSRV(), m_BufSRVOffset); }
-    D3DShaderResourceAttribs& GetBufUAV(Uint32 n)  noexcept { return GetResAttribs(n, GetNumBufUAV(), m_BufUAVOffset); }
-    D3DShaderResourceAttribs& GetSampler(Uint32 n) noexcept { return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
+    D3DShaderResourceAttribs& GetCB(Uint32 n)         noexcept { return GetResAttribs(n, GetNumCBs(), 0); }
+    D3DShaderResourceAttribs& GetTexSRV(Uint32 n)     noexcept { return GetResAttribs(n, GetNumTexSRV(), m_TexSRVOffset); }
+    D3DShaderResourceAttribs& GetTexUAV(Uint32 n)     noexcept { return GetResAttribs(n, GetNumTexUAV(), m_TexUAVOffset); }
+    D3DShaderResourceAttribs& GetBufSRV(Uint32 n)     noexcept { return GetResAttribs(n, GetNumBufSRV(), m_BufSRVOffset); }
+    D3DShaderResourceAttribs& GetBufUAV(Uint32 n)     noexcept { return GetResAttribs(n, GetNumBufUAV(), m_BufUAVOffset); }
+    D3DShaderResourceAttribs& GetSampler(Uint32 n)    noexcept { return GetResAttribs(n, GetNumSamplers(), m_SamplersOffset); }
+    D3DShaderResourceAttribs& GetAccelStruct(Uint32 n)noexcept { return GetResAttribs(n, GetNumAccelStructs(), m_AccelStructsOffset); }
     // clang-format on
 
 private:
@@ -447,12 +458,13 @@ private:
 
     // Offsets in elements of D3DShaderResourceAttribs
     typedef Uint16 OffsetType;
-    OffsetType     m_TexSRVOffset   = 0;
-    OffsetType     m_TexUAVOffset   = 0;
-    OffsetType     m_BufSRVOffset   = 0;
-    OffsetType     m_BufUAVOffset   = 0;
-    OffsetType     m_SamplersOffset = 0;
-    OffsetType     m_TotalResources = 0;
+    OffsetType     m_TexSRVOffset       = 0;
+    OffsetType     m_TexUAVOffset       = 0;
+    OffsetType     m_BufSRVOffset       = 0;
+    OffsetType     m_BufUAVOffset       = 0;
+    OffsetType     m_SamplersOffset     = 0;
+    OffsetType     m_AccelStructsOffset = 0;
+    OffsetType     m_TotalResources     = 0;
 
     const SHADER_TYPE m_ShaderType;
 
@@ -469,7 +481,7 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
                                  const Char*         ShaderName,
                                  const Char*         CombinedSamplerSuffix)
 {
-    Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0;
+    Uint32 CurrCB = 0, CurrTexSRV = 0, CurrTexUAV = 0, CurrBufSRV = 0, CurrBufUAV = 0, CurrSampler = 0, CurrAS = 0;
 
     // Resource names pool is only needed to facilitate string allocation.
     StringPool ResourceNamesPool;
@@ -541,6 +553,13 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
             }
             ++CurrTexSRV;
             NewResHandler.OnNewTexSRV(*pNewTexSRV);
+        },
+
+        [&](const D3DShaderResourceAttribs& AccelStructAttribs) //
+        {
+            VERIFY_EXPR(AccelStructAttribs.GetInputType() == D3D_SIT_RTACCELERATIONSTRUCTURE);
+            auto* pNewAccelStruct = new (&GetAccelStruct(CurrAS++)) D3DShaderResourceAttribs{ResourceNamesPool, AccelStructAttribs};
+            NewResHandler.OnNewAccelStruct(*pNewAccelStruct);
         } //
     );
 
@@ -562,12 +581,13 @@ void ShaderResources::Initialize(TShaderReflection*  pShaderReflection,
 
     VERIFY_EXPR(ResourceNamesPool.GetRemainingSize() == 0);
     // clang-format off
-    VERIFY(CurrCB      == GetNumCBs(),      "Not all CBs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called");
-    VERIFY(CurrTexSRV  == GetNumTexSRV(),   "Not all Tex SRVs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrTexUAV  == GetNumTexUAV(),   "Not all Tex UAVs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrBufSRV  == GetNumBufSRV(),   "Not all Buf SRVs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrBufUAV  == GetNumBufUAV(),   "Not all Buf UAVs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
-    VERIFY(CurrSampler == GetNumSamplers(), "Not all Samplers are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
+    VERIFY(CurrCB      == GetNumCBs(),          "Not all CBs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called");
+    VERIFY(CurrTexSRV  == GetNumTexSRV(),       "Not all Tex SRVs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
+    VERIFY(CurrTexUAV  == GetNumTexUAV(),       "Not all Tex UAVs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
+    VERIFY(CurrBufSRV  == GetNumBufSRV(),       "Not all Buf SRVs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
+    VERIFY(CurrBufUAV  == GetNumBufUAV(),       "Not all Buf UAVs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
+    VERIFY(CurrSampler == GetNumSamplers(),     "Not all Samplers are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
+    VERIFY(CurrAS      == GetNumAccelStructs(), "Not all Accel Structs are initialized which will cause a crash when ~D3DShaderResourceAttribs() is called" );
     // clang-format on
 }
 

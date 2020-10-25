@@ -45,6 +45,8 @@ public:
         VkPhysicalDeviceShaderFloat16Int8FeaturesKHR   ShaderFloat16Int8   = {};
         VkPhysicalDeviceRayTracingFeaturesKHR          RayTracing          = {};
         bool                                           RayTracingNV        = false; // indicates that KHR extension is emulated by NV extension
+        bool                                           Spirv14             = false; // Ray tracing requires Vulkan 1.2 or SPIRV 1.4 extension
+        bool                                           Spirv15             = false; // DXC shaders with ray tracing requires Vulkan 1.2 with SPIRV 1.5
         VkPhysicalDeviceBufferDeviceAddressFeaturesKHR BufferDeviceAddress = {};
         VkPhysicalDeviceDescriptorIndexingFeaturesEXT  DescriptorIndexing  = {};
     };

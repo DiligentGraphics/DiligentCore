@@ -219,8 +219,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
 
     TDeviceContextBase::SetPipelineState(pPipelineStateD3D12, 0 /*Dummy*/);
 
-    auto& CmdCtx    = GetCmdContext();
-    auto* pd3d12PSO = pPipelineStateD3D12->GetD3D12PipelineState();
+    auto& CmdCtx = GetCmdContext();
 
     switch (PSODesc.PipelineType)
     {
@@ -229,6 +228,7 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
         {
             auto& GraphicsPipeline = pPipelineStateD3D12->GetGraphicsPipelineDesc();
             auto& GraphicsCtx      = CmdCtx.AsGraphicsContext();
+            auto* pd3d12PSO        = pPipelineStateD3D12->GetD3D12PipelineState();
             GraphicsCtx.SetPipelineState(pd3d12PSO);
 
             if (PSODesc.PipelineType == PIPELINE_TYPE_GRAPHICS)
@@ -254,13 +254,16 @@ void DeviceContextD3D12Impl::SetPipelineState(IPipelineState* pPipelineState)
             }
             break;
         }
-
         case PIPELINE_TYPE_COMPUTE:
         {
+            auto* pd3d12PSO = pPipelineStateD3D12->GetD3D12PipelineState();
             CmdCtx.AsComputeContext().SetPipelineState(pd3d12PSO);
             break;
         }
-
+        case PIPELINE_TYPE_RAY_TRACING:
+        {
+            break;
+        }
         default:
             UNEXPECTED("unknown pipeline type");
     }

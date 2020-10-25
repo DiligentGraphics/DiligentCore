@@ -68,17 +68,25 @@ String BuildHLSLSourceString(const ShaderCreateInfo& ShaderCI,
 String GetHLSLProfileString(SHADER_TYPE ShaderType, ShaderVersion ShaderModel)
 {
     String strShaderProfile;
+
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
     switch (ShaderType)
     {
         // clang-format off
-        case SHADER_TYPE_VERTEX:        strShaderProfile = "vs"; break;
-        case SHADER_TYPE_PIXEL:         strShaderProfile = "ps"; break;
-        case SHADER_TYPE_GEOMETRY:      strShaderProfile = "gs"; break;
-        case SHADER_TYPE_HULL:          strShaderProfile = "hs"; break;
-        case SHADER_TYPE_DOMAIN:        strShaderProfile = "ds"; break;
-        case SHADER_TYPE_COMPUTE:       strShaderProfile = "cs"; break;
-        case SHADER_TYPE_AMPLIFICATION: strShaderProfile = "as"; break;
-        case SHADER_TYPE_MESH:          strShaderProfile = "ms"; break;
+        case SHADER_TYPE_VERTEX:           strShaderProfile = "vs"; break;
+        case SHADER_TYPE_PIXEL:            strShaderProfile = "ps"; break;
+        case SHADER_TYPE_GEOMETRY:         strShaderProfile = "gs"; break;
+        case SHADER_TYPE_HULL:             strShaderProfile = "hs"; break;
+        case SHADER_TYPE_DOMAIN:           strShaderProfile = "ds"; break;
+        case SHADER_TYPE_COMPUTE:          strShaderProfile = "cs"; break;
+        case SHADER_TYPE_AMPLIFICATION:    strShaderProfile = "as"; break;
+        case SHADER_TYPE_MESH:             strShaderProfile = "ms"; break;
+        case SHADER_TYPE_RAY_GEN:
+        case SHADER_TYPE_RAY_MISS:
+        case SHADER_TYPE_RAY_CLOSEST_HIT:
+        case SHADER_TYPE_RAY_ANY_HIT:
+        case SHADER_TYPE_RAY_INTERSECTION:
+        case SHADER_TYPE_CALLABLE:         strShaderProfile = "lib"; break;
         // clang-format on
         default: UNEXPECTED("Unknown shader type");
     }

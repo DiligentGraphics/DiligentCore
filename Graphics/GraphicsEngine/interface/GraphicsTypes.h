@@ -2117,6 +2117,7 @@ struct VulkanDescriptorPoolSize
     Uint32 NumUniformTexelBufferDescriptors DEFAULT_INITIALIZER(0);
     Uint32 NumStorageTexelBufferDescriptors DEFAULT_INITIALIZER(0);
     Uint32 NumInputAttachmentDescriptors    DEFAULT_INITIALIZER(0);
+    Uint32 NumAccelStructDescriptors        DEFAULT_INITIALIZER(0);
 
 #if DILIGENT_CPP_INTERFACE
     VulkanDescriptorPoolSize()noexcept {}
@@ -2130,7 +2131,8 @@ struct VulkanDescriptorPoolSize
                              Uint32 _NumStorageBufferDescriptors,
                              Uint32 _NumUniformTexelBufferDescriptors,
                              Uint32 _NumStorageTexelBufferDescriptors,
-                             Uint32 _NumInputAttachmentDescriptors)noexcept :
+                             Uint32 _NumInputAttachmentDescriptors,
+                             Uint32 _NumAccelStructDescriptors)noexcept :
         MaxDescriptorSets               {_MaxDescriptorSets               },
         NumSeparateSamplerDescriptors   {_NumSeparateSamplerDescriptors   },
         NumCombinedSamplerDescriptors   {_NumCombinedSamplerDescriptors   },
@@ -2140,7 +2142,8 @@ struct VulkanDescriptorPoolSize
         NumStorageBufferDescriptors     {_NumStorageBufferDescriptors     },
         NumUniformTexelBufferDescriptors{_NumUniformTexelBufferDescriptors},
         NumStorageTexelBufferDescriptors{_NumStorageTexelBufferDescriptors},
-        NumInputAttachmentDescriptors   {_NumInputAttachmentDescriptors   }
+        NumInputAttachmentDescriptors   {_NumInputAttachmentDescriptors   },
+        NumAccelStructDescriptors       {_NumAccelStructDescriptors       }
     {
         // On clang aggregate initialization fails to compile if 
         // structure members have default initializers
@@ -2178,8 +2181,8 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     /// the engine creates another one.
     VulkanDescriptorPoolSize MainDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
-        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt
-        {8192,  1024,  8192,  8192,  1024,  4096,  4096,  1024,  1024,   256}
+        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt  AccelSt
+        {8192,  1024,  8192,  8192,  1024,  4096,  4096,  1024,  1024,   256,     256}
 #endif
     ;
 
@@ -2190,8 +2193,8 @@ struct EngineVkCreateInfo DILIGENT_DERIVE(EngineCreateInfo)
     
     VulkanDescriptorPoolSize DynamicDescriptorPoolSize
 #if DILIGENT_CPP_INTERFACE
-        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt
-        {2048,   256,  2048,  2048,   256,  1024,  1024,   256,   256,    64}
+        //Max  SepSm  CmbSm  SmpImg StrImg   UB     SB    UTxB   StTxB  InptAtt  AccelSt
+        {2048,   256,  2048,  2048,   256,  1024,  1024,   256,   256,    64,      64}
 #endif
     ;
 

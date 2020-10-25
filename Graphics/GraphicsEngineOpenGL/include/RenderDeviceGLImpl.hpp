@@ -94,6 +94,10 @@ public:
     virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo,
                                                                IPipelineState**                      ppPipelineState) override final;
 
+    /// Implementation of IRenderDevice::CreateRayTracingPipelineState() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo,
+                                                                  IPipelineState**                         ppPipelineState) override final;
+
     void CreateGraphicsPipelineState(const GraphicsPipelineStateCreateInfo& PSOCreateInfo,
                                      IPipelineState**                       ppPipelineState,
                                      bool                                   bIsDeviceInternal);

@@ -39,12 +39,14 @@
 #include "EngineMemory.h"
 #include "GraphicsAccessories.hpp"
 #include "LinearAllocator.hpp"
+#include "HashUtils.hpp"
 
 namespace Diligent
 {
 
 void ValidateGraphicsPipelineCreateInfo(const GraphicsPipelineStateCreateInfo& CreateInfo) noexcept(false);
 void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& CreateInfo) noexcept(false);
+void ValidateRayTracingPipelineCreateInfo(const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false);
 
 void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcept;
 
@@ -108,6 +110,20 @@ public:
         ValidateComputePipelineCreateInfo(ComputePipelineCI);
     }
 
+    /// \param pRefCounters         - Reference counters object that controls the lifetime of this PSO
+    /// \param pDevice              - Pointer to the device.
+    /// \param RayTracingPipelineCI - Ray tracing pipeline create information.
+    /// \param bIsDeviceInternal    - Flag indicating if the pipeline state is an internal device object and
+    ///							      must not keep a strong reference to the device.
+    PipelineStateBase(IReferenceCounters*                      pRefCounters,
+                      RenderDeviceImplType*                    pDevice,
+                      const RayTracingPipelineStateCreateInfo& RayTracingPipelineCI,
+                      bool                                     bIsDeviceInternal = false) :
+        PipelineStateBase{pRefCounters, pDevice, RayTracingPipelineCI.PSODesc, bIsDeviceInternal}
+    {
+        ValidateRayTracingPipelineCreateInfo(ComputePipelineCI);
+    }
+
 
     ~PipelineStateBase()
     {
@@ -128,6 +144,15 @@ public:
         RasterizerStateRegistry.ReportDeletedObject();
         DSSRegistry.ReportDeletedObject();
         */
+    }
+
+    void Destruct()
+    {
+        if (this->m_Desc.IsRayTracingPipeline() && m_pRayTracingPipelineData)
+        {
+            m_pRayTracingPipelineData->~RayTracingPipelineData();
+            m_pRayTracingPipelineData = nullptr;
+        }
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineState, TDeviceObjectBase)
@@ -159,7 +184,58 @@ public:
         return *m_pGraphicsPipelineDesc;
     }
 
+    virtual const RayTracingPipelineDesc& DILIGENT_CALL_TYPE GetRayTracingPipelineDesc() const override final
+    {
+        VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
+        VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
+        return m_pRayTracingPipelineData->Desc;
+    }
+
+    virtual Uint32 DILIGENT_CALL_TYPE GetShaderGroupCount() const override final
+    {
+        VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
+        VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
+        return static_cast<Uint32>(m_pRayTracingPipelineData->NameToGroupIndex.size());
+    }
+
+    static constexpr Uint32 InvalidShaderGroupIndex = ~0u;
+
+    virtual Uint32 DILIGENT_CALL_TYPE GetShaderGroupIndex(const char* Name) const override final
+    {
+        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+        VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
+        VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
+
+        auto iter = m_pRayTracingPipelineData->NameToGroupIndex.find(Name);
+        if (iter != m_pRayTracingPipelineData->NameToGroupIndex.end())
+            return iter->second;
+
+        UNEXPECTED("Can't find shader group with specified name");
+        return InvalidShaderGroupIndex;
+    }
+
+    inline void CopyShaderHandle(const char* Name, void* pData, Uint32 DataSize) const
+    {
+        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
+        VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
+        VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
+
+        const auto ShaderHandleSize = m_pRayTracingPipelineData->ShaderHandleSize;
+        VERIFY_EXPR(ShaderHandleSize <= DataSize);
+
+        auto iter = m_pRayTracingPipelineData->NameToGroupIndex.find(Name);
+        if (iter != m_pRayTracingPipelineData->NameToGroupIndex.end())
+        {
+            VERIFY_EXPR(ShaderHandleSize * (iter->second + 1) <= m_pRayTracingPipelineData->ShaderDataSize);
+            std::memcpy(pData, &m_pRayTracingPipelineData->Shaders[ShaderHandleSize * iter->second], ShaderHandleSize);
+            return;
+        }
+        UNEXPECTED("Can't find shader group with specified name");
+    }
+
 protected:
+    using TNameToGroupIndexMap = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
+
     Int8 GetStaticVariableCountHelper(SHADER_TYPE ShaderType, const std::array<Int8, MAX_SHADERS_IN_PIPELINE>& ResourceLayoutIndex) const
     {
         if (!IsConsistentShaderType(ShaderType, this->m_Desc.PipelineType))
@@ -237,6 +313,9 @@ protected:
         }
 
         MemPool.AddSpace<Uint32>(m_BufferSlotsUsed);
+
+        static_assert(std::is_trivially_destructible<decltype(*this->m_pGraphicsPipelineDesc)>::value, "add destructor for this object");
+        static_assert(std::is_trivially_destructible<decltype(*InputLayout.LayoutElements)>::value, "add destructor for this object");
     }
 
     void ReserveSpaceForPipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,
@@ -245,12 +324,40 @@ protected:
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
     }
 
+    void ReserveSpaceForPipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
+                                     Uint32                                   ShaderHandleSize,
+                                     LinearAllocator&                         MemPool) const noexcept
+    {
+        ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
+
+        for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
+        {
+            MemPool.AddSpaceForString(CreateInfo.pGeneralShaders[i].Name);
+        }
+        for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
+        {
+            MemPool.AddSpaceForString(CreateInfo.pTriangleHitShaders[i].Name);
+        }
+        for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
+        {
+            MemPool.AddSpaceForString(CreateInfo.pProceduralHitShaders[i].Name);
+        }
+
+        size_t RTDataSize = sizeof(RayTracingPipelineData);
+        // reserve size for shader handles
+        RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
+        // 1 byte reserved to avoid compiler errors on zero sized arrays
+        RTDataSize -= sizeof(RayTracingPipelineData::Shaders);
+        MemPool.AddSpace(RTDataSize, alignof(RayTracingPipelineData));
+    }
+
 
     template <typename ShaderImplType, typename TShaderStages>
     void ExtractShaders(const GraphicsPipelineStateCreateInfo& CreateInfo,
                         TShaderStages&                         ShaderStages)
     {
         VERIFY(m_NumShaderStages == 0, "The number of shader stages is not zero! ExtractShaders must only be called once.");
+        VERIFY_EXPR(this->m_Desc.IsAnyGraphicsPipeline());
 
         ShaderStages.clear();
         auto AddShaderStage = [&](IShader* pShader) {
@@ -297,6 +404,7 @@ protected:
                         TShaderStages&                        ShaderStages)
     {
         VERIFY(m_NumShaderStages == 0, "The number of shader stages is not zero! ExtractShaders must only be called once.");
+        VERIFY_EXPR(this->m_Desc.IsComputePipeline());
 
         ShaderStages.clear();
 
@@ -306,6 +414,70 @@ protected:
 
         ShaderStages.emplace_back(SHADER_TYPE_COMPUTE, ValidatedCast<ShaderImplType>(CreateInfo.pCS));
         m_ShaderStageTypes[m_NumShaderStages++] = SHADER_TYPE_COMPUTE;
+
+        VERIFY_EXPR(!ShaderStages.empty() && ShaderStages.size() == m_NumShaderStages);
+    }
+
+    template <typename ShaderImplType, typename TShaderStages>
+    void ExtractShaders(const RayTracingPipelineStateCreateInfo& CreateInfo,
+                        TShaderStages&                           ShaderStages)
+    {
+        VERIFY(m_NumShaderStages == 0, "The number of shader stages is not zero! ExtractShaders must only be called once.");
+        VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
+
+        std::unordered_set<IShader*> UniqueShaders;
+
+        auto AddShaderStage = [&ShaderStages, &UniqueShaders](IShader* pShader) {
+            if (pShader != nullptr && UniqueShaders.insert(pShader).second)
+            {
+                auto ShaderType = pShader->GetDesc().ShaderType;
+                ShaderStages[GetShaderTypePipelineIndex(ShaderType, PIPELINE_TYPE_RAY_TRACING)].Append(ValidatedCast<ShaderImplType>(pShader));
+            }
+        };
+
+        ShaderStages.clear();
+        ShaderStages.resize(6);
+        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_GEN, PIPELINE_TYPE_RAY_TRACING)].Type          = SHADER_TYPE_RAY_GEN;
+        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_MISS, PIPELINE_TYPE_RAY_TRACING)].Type         = SHADER_TYPE_RAY_MISS;
+        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_CLOSEST_HIT, PIPELINE_TYPE_RAY_TRACING)].Type  = SHADER_TYPE_RAY_CLOSEST_HIT;
+        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_ANY_HIT, PIPELINE_TYPE_RAY_TRACING)].Type      = SHADER_TYPE_RAY_ANY_HIT;
+        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_INTERSECTION, PIPELINE_TYPE_RAY_TRACING)].Type = SHADER_TYPE_RAY_INTERSECTION;
+        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_CALLABLE, PIPELINE_TYPE_RAY_TRACING)].Type         = SHADER_TYPE_CALLABLE;
+
+        for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
+        {
+            AddShaderStage(CreateInfo.pGeneralShaders[i].pShader);
+        }
+        for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
+        {
+            AddShaderStage(CreateInfo.pTriangleHitShaders[i].pClosestHitShader);
+            AddShaderStage(CreateInfo.pTriangleHitShaders[i].pAnyHitShader);
+        }
+        for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
+        {
+            AddShaderStage(CreateInfo.pProceduralHitShaders[i].pIntersectionShader);
+            AddShaderStage(CreateInfo.pProceduralHitShaders[i].pClosestHitShader);
+            AddShaderStage(CreateInfo.pProceduralHitShaders[i].pAnyHitShader);
+        }
+
+        if (ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_GEN, PIPELINE_TYPE_RAY_TRACING)].Count() == 0)
+            LOG_ERROR_AND_THROW("At least one shader with type SHADER_TYPE_RAY_GEN must be provided");
+
+        if (ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_MISS, PIPELINE_TYPE_RAY_TRACING)].Count() == 0)
+            LOG_ERROR_AND_THROW("At least one shader with type SHADER_TYPE_RAY_MISS must be provided");
+
+        // remove empty stages
+        for (auto iter = ShaderStages.begin(); iter != ShaderStages.end();)
+        {
+            if (iter->Count() == 0)
+            {
+                iter = ShaderStages.erase(iter);
+                continue;
+            }
+
+            m_ShaderStageTypes[m_NumShaderStages++] = iter->Type;
+            ++iter;
+        }
 
         VERIFY_EXPR(!ShaderStages.empty() && ShaderStages.size() == m_NumShaderStages);
     }
@@ -447,6 +619,28 @@ protected:
         CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
     }
 
+    void InitializePipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
+                                Uint32                                   ShaderHandleSize,
+                                TNameToGroupIndexMap&&                   NameToGroupIndex,
+                                LinearAllocator&                         MemPool) noexcept
+    {
+        CopyResourceLayout(CreateInfo.PSODesc.ResourceLayout, this->m_Desc.ResourceLayout, MemPool);
+
+        size_t RTDataSize = sizeof(RayTracingPipelineData);
+        // reserve size for shader handles
+        const Uint32 ShaderDataSize = ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
+        RTDataSize += ShaderDataSize;
+        // 1 byte reserved to avoid compiler errors on zero sized arrays
+        RTDataSize -= sizeof(RayTracingPipelineData::Shaders);
+
+        this->m_pRayTracingPipelineData = static_cast<RayTracingPipelineData*>(MemPool.Allocate(RTDataSize, alignof(RayTracingPipelineData)));
+        new (this->m_pRayTracingPipelineData) RayTracingPipelineData{};
+        this->m_pRayTracingPipelineData->ShaderHandleSize = ShaderHandleSize;
+        this->m_pRayTracingPipelineData->Desc             = CreateInfo.RayTracingPipeline;
+        this->m_pRayTracingPipelineData->ShaderDataSize   = ShaderDataSize;
+        this->m_pRayTracingPipelineData->NameToGroupIndex = std::move(NameToGroupIndex);
+    }
+
 private:
     static void ReserveResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, LinearAllocator& MemPool) noexcept
     {
@@ -469,6 +663,9 @@ private:
                 MemPool.AddSpaceForString(SrcLayout.ImmutableSamplers[i].SamplerOrTextureName);
             }
         }
+
+        static_assert(std::is_trivially_destructible<decltype(*SrcLayout.Variables)>::value, "add destructor for this object");
+        static_assert(std::is_trivially_destructible<decltype(*SrcLayout.ImmutableSamplers)>::value, "add destructor for this object");
     }
 
     static void CopyResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, PipelineResourceLayoutDesc& DstLayout, LinearAllocator& MemPool)
@@ -525,7 +722,20 @@ protected:
 
     RefCntAutoPtr<IRenderPass> m_pRenderPass; ///< Strong reference to the render pass object
 
-    GraphicsPipelineDesc* m_pGraphicsPipelineDesc = nullptr;
+    struct RayTracingPipelineData
+    {
+        RayTracingPipelineDesc Desc;
+        TNameToGroupIndexMap   NameToGroupIndex;
+        Uint32                 ShaderHandleSize;
+        Uint32                 ShaderDataSize;
+        Uint8                  Shaders[1];
+    };
+
+    union
+    {
+        GraphicsPipelineDesc*   m_pGraphicsPipelineDesc;
+        RayTracingPipelineData* m_pRayTracingPipelineData;
+    };
 };
 
 } // namespace Diligent

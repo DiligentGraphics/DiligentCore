@@ -736,6 +736,12 @@ void RenderDeviceGLImpl::CreateComputePipelineState(const ComputePipelineStateCr
     return CreateComputePipelineState(PSOCreateInfo, ppPipelineState, false);
 }
 
+void RenderDeviceGLImpl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
+{
+    UNSUPPORTED("CreateRayTracingPipelineState is not supported in OpenGL");
+    *ppPipelineState = nullptr;
+}
+
 void RenderDeviceGLImpl::CreateFence(const FenceDesc& Desc, IFence** ppFence)
 {
     CreateDeviceObject(

@@ -45,18 +45,19 @@ class ResourceTypeToVkDescriptorType
 public:
     ResourceTypeToVkDescriptorType()
     {
-        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 11, "Please add the corresponding decriptor type");
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]      = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer]    = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer]    = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer] = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer] = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]       = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SampledImage]       = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::AtomicCounter]      = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateImage]      = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateSampler]    = VK_DESCRIPTOR_TYPE_SAMPLER;
-        m_Map[SPIRVShaderResourceAttribs::ResourceType::InputAttachment]    = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+        static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please add the corresponding decriptor type");
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformBuffer]         = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer]       = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer]       = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer]    = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer]    = VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::StorageImage]          = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SampledImage]          = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::AtomicCounter]         = VK_DESCRIPTOR_TYPE_MAX_ENUM; // atomic counter doesn't exist in Vulkan
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateImage]         = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::SeparateSampler]       = VK_DESCRIPTOR_TYPE_SAMPLER;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::InputAttachment]       = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+        m_Map[SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure] = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
     }
 
     VkDescriptorType operator[](SPIRVShaderResourceAttribs::ResourceType ResType) const
@@ -68,10 +69,10 @@ private:
     std::array<VkDescriptorType, SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes> m_Map = {};
 };
 
-VkDescriptorType PipelineLayout::GetVkDescriptorType(const SPIRVShaderResourceAttribs& Res)
+VkDescriptorType PipelineLayout::GetVkDescriptorType(SPIRVShaderResourceAttribs::ResourceType Type)
 {
     static const ResourceTypeToVkDescriptorType ResTypeToVkDescrType;
-    return ResTypeToVkDescrType[Res.Type];
+    return ResTypeToVkDescrType[Type];
 }
 
 PipelineLayout::DescriptorSetLayoutManager::DescriptorSetLayoutManager(IMemoryAllocator& MemAllocator) :
@@ -331,7 +332,7 @@ void PipelineLayout::DescriptorSetLayoutManager::AllocateResourceSlot(const SPIR
     Binding = DescrSet.NumLayoutBindings;
 
     VkBinding.binding         = Binding;
-    VkBinding.descriptorType  = GetVkDescriptorType(ResAttribs);
+    VkBinding.descriptorType  = GetVkDescriptorType(ResAttribs.Type);
     VkBinding.descriptorCount = ResAttribs.ArraySize;
     // There are no limitations on what combinations of stages can use a descriptor binding (13.2.1)
     VkBinding.stageFlags = ShaderTypeToVkShaderStageFlagBit(ShaderType);
@@ -369,16 +370,13 @@ void PipelineLayout::AllocateResourceSlot(const SPIRVShaderResourceAttribs& ResA
                                           SHADER_TYPE                       ShaderType,
                                           Uint32&                           DescriptorSet, // Output parameter
                                           Uint32&                           Binding,       // Output parameter
-                                          Uint32&                           OffsetInCache,
-                                          std::vector<uint32_t>&            SPIRV)
+                                          Uint32&                           OffsetInCache)
 {
     VERIFY((ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage ||
             ResAttribs.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler) ||
                vkImmutableSampler == VK_NULL_HANDLE,
            "Immutable sampler should only be specified for combined image samplers or separate samplers");
     m_LayoutMgr.AllocateResourceSlot(ResAttribs, VariableType, vkImmutableSampler, ShaderType, DescriptorSet, Binding, OffsetInCache);
-    SPIRV[ResAttribs.BindingDecorationOffset]       = Binding;
-    SPIRV[ResAttribs.DescriptorSetDecorationOffset] = DescriptorSet;
 }
 
 void PipelineLayout::Finalize(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice)
@@ -435,7 +433,6 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl*    pDeviceVkImpl,
 }
 
 void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkImpl,
-                                           bool                         IsCompute,
                                            const ShaderResourceCacheVk& ResourceCache,
                                            DescriptorSetBindInfo&       BindInfo,
                                            VkDescriptorSet              VkDynamicDescrSet) const
@@ -481,7 +478,6 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkIm
     BindInfo.DynamicOffsetCount = TotalDynamicDescriptors;
     if (TotalDynamicDescriptors > BindInfo.DynamicOffsets.size())
         BindInfo.DynamicOffsets.resize(TotalDynamicDescriptors);
-    BindInfo.BindPoint      = IsCompute ? VK_PIPELINE_BIND_POINT_COMPUTE : VK_PIPELINE_BIND_POINT_GRAPHICS;
     BindInfo.pResourceCache = &ResourceCache;
 #ifdef DILIGENT_DEBUG
     BindInfo.pDbgPipelineLayout = this;

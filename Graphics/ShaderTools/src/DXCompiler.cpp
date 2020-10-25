@@ -376,6 +376,199 @@ bool DXCompilerImpl::Compile(const CompileAttribs& Attribs)
     return true;
 }
 
+
+#if D3D12_SUPPORTED
+class ShaderReflectionViaLibraryReflection final : public ID3D12ShaderReflection
+{
+public:
+    ShaderReflectionViaLibraryReflection(CComPtr<ID3D12LibraryReflection> pLib, ID3D12FunctionReflection* pFunc) :
+        m_pLib{std::move(pLib)},
+        m_pFunc{pFunc},
+        m_RefCount{0}
+    {}
+
+    HRESULT STDMETHODCALLTYPE QueryInterface(REFIID iid, LPVOID* ppv) override
+    {
+        return E_FAIL;
+    }
+
+    ULONG STDMETHODCALLTYPE AddRef() override
+    {
+        return Atomics::AtomicIncrement(m_RefCount);
+    }
+
+    ULONG STDMETHODCALLTYPE Release() override
+    {
+        auto RefCount = Atomics::AtomicDecrement(m_RefCount);
+        VERIFY(RefCount >= 0, "Inconsistent call to ReleaseStrongRef()");
+        if (RefCount == 0)
+        {
+            delete this;
+        }
+        return RefCount;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetDesc(D3D12_SHADER_DESC* pDesc) override
+    {
+        D3D12_FUNCTION_DESC FnDesc = {};
+        HRESULT             hr     = m_pFunc->GetDesc(&FnDesc);
+        if (FAILED(hr))
+            return hr;
+
+        pDesc->Version                     = FnDesc.Version;
+        pDesc->Creator                     = FnDesc.Creator;
+        pDesc->Flags                       = FnDesc.Flags;
+        pDesc->ConstantBuffers             = FnDesc.ConstantBuffers;
+        pDesc->BoundResources              = FnDesc.BoundResources;
+        pDesc->InputParameters             = 0;
+        pDesc->OutputParameters            = 0;
+        pDesc->InstructionCount            = FnDesc.InstructionCount;
+        pDesc->TempRegisterCount           = FnDesc.TempRegisterCount;
+        pDesc->TempArrayCount              = FnDesc.TempArrayCount;
+        pDesc->DefCount                    = FnDesc.DefCount;
+        pDesc->DclCount                    = FnDesc.DclCount;
+        pDesc->TextureNormalInstructions   = FnDesc.TextureNormalInstructions;
+        pDesc->TextureLoadInstructions     = FnDesc.TextureLoadInstructions;
+        pDesc->TextureCompInstructions     = FnDesc.TextureCompInstructions;
+        pDesc->TextureBiasInstructions     = FnDesc.TextureBiasInstructions;
+        pDesc->TextureGradientInstructions = FnDesc.TextureGradientInstructions;
+        pDesc->FloatInstructionCount       = FnDesc.FloatInstructionCount;
+        pDesc->IntInstructionCount         = FnDesc.IntInstructionCount;
+        pDesc->UintInstructionCount        = FnDesc.UintInstructionCount;
+        pDesc->StaticFlowControlCount      = FnDesc.StaticFlowControlCount;
+        pDesc->DynamicFlowControlCount     = FnDesc.DynamicFlowControlCount;
+        pDesc->MacroInstructionCount       = FnDesc.MacroInstructionCount;
+        pDesc->ArrayInstructionCount       = FnDesc.ArrayInstructionCount;
+        pDesc->CutInstructionCount         = 0;
+        pDesc->EmitInstructionCount        = 0;
+        pDesc->GSOutputTopology            = D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+        pDesc->GSMaxOutputVertexCount      = 0;
+        pDesc->InputPrimitive              = D3D_PRIMITIVE_UNDEFINED;
+        pDesc->PatchConstantParameters     = 0;
+        pDesc->cGSInstanceCount            = 0;
+        pDesc->cControlPoints              = 0;
+        pDesc->HSOutputPrimitive           = D3D_TESSELLATOR_OUTPUT_UNDEFINED;
+        pDesc->HSPartitioning              = D3D_TESSELLATOR_PARTITIONING_UNDEFINED;
+        pDesc->TessellatorDomain           = D3D_TESSELLATOR_DOMAIN_UNDEFINED;
+        pDesc->cBarrierInstructions        = 0;
+        pDesc->cInterlockedInstructions    = 0;
+        pDesc->cTextureStoreInstructions   = 0;
+
+        return S_OK;
+    }
+
+    ID3D12ShaderReflectionConstantBuffer* STDMETHODCALLTYPE GetConstantBufferByIndex(UINT Index) override
+    {
+        return m_pFunc->GetConstantBufferByIndex(Index);
+    }
+
+    ID3D12ShaderReflectionConstantBuffer* STDMETHODCALLTYPE GetConstantBufferByName(LPCSTR Name) override
+    {
+        return m_pFunc->GetConstantBufferByName(Name);
+    }
+
+    HRESULT STDMETHODCALLTYPE GetResourceBindingDesc(UINT ResourceIndex, D3D12_SHADER_INPUT_BIND_DESC* pDesc) override
+    {
+        return m_pFunc->GetResourceBindingDesc(ResourceIndex, pDesc);
+    }
+
+    HRESULT STDMETHODCALLTYPE GetInputParameterDesc(UINT ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC* pDesc) override
+    {
+        UNEXPECTED("not supported");
+        return E_FAIL;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetOutputParameterDesc(UINT ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC* pDesc) override
+    {
+        UNEXPECTED("not supported");
+        return E_FAIL;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetPatchConstantParameterDesc(UINT ParameterIndex, D3D12_SIGNATURE_PARAMETER_DESC* pDesc) override
+    {
+        UNEXPECTED("not supported");
+        return E_FAIL;
+    }
+
+    ID3D12ShaderReflectionVariable* STDMETHODCALLTYPE GetVariableByName(LPCSTR Name) override
+    {
+        return m_pFunc->GetVariableByName(Name);
+    }
+
+    HRESULT STDMETHODCALLTYPE GetResourceBindingDescByName(LPCSTR Name, D3D12_SHADER_INPUT_BIND_DESC* pDesc) override
+    {
+        return m_pFunc->GetResourceBindingDescByName(Name, pDesc);
+    }
+
+    UINT STDMETHODCALLTYPE GetMovInstructionCount() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    UINT STDMETHODCALLTYPE GetMovcInstructionCount() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    UINT STDMETHODCALLTYPE GetConversionInstructionCount() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    UINT STDMETHODCALLTYPE GetBitwiseInstructionCount() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    D3D_PRIMITIVE STDMETHODCALLTYPE GetGSInputPrimitive() override
+    {
+        UNEXPECTED("not supported");
+        return D3D_PRIMITIVE_UNDEFINED;
+    }
+
+    BOOL STDMETHODCALLTYPE IsSampleFrequencyShader() override
+    {
+        UNEXPECTED("not supported");
+        return FALSE;
+    }
+
+    UINT STDMETHODCALLTYPE GetNumInterfaceSlots() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+    HRESULT STDMETHODCALLTYPE GetMinFeatureLevel(D3D_FEATURE_LEVEL* pLevel) override
+    {
+        UNEXPECTED("not supported");
+        return E_FAIL;
+    }
+
+    UINT STDMETHODCALLTYPE GetThreadGroupSize(UINT* pSizeX, UINT* pSizeY, UINT* pSizeZ) override
+    {
+        UNEXPECTED("not supported");
+        *pSizeX = *pSizeY = *pSizeZ = 0;
+        return 0;
+    }
+
+    UINT64 STDMETHODCALLTYPE GetRequiresFlags() override
+    {
+        UNEXPECTED("not supported");
+        return 0;
+    }
+
+private:
+    CComPtr<ID3D12LibraryReflection> m_pLib;
+    ID3D12FunctionReflection*        m_pFunc = nullptr;
+    Atomics::AtomicLong              m_RefCount;
+};
+#endif // D3D12_SUPPORTED
+
+
 void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBytecode,
                                               ID3D12ShaderReflection** ppShaderReflection)
 {
@@ -385,9 +578,6 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
         auto CreateInstance = GetCreateInstaceProc();
         if (CreateInstance == nullptr)
             return;
-
-#    define FOURCC(a, b, c, d) (uint32_t{((d) << 24) | ((c) << 16) | ((b) << 8) | (a)})
-        const uint32_t DFCC_DXIL = FOURCC('D', 'X', 'I', 'L');
 
         CComPtr<IDxcContainerReflection> pReflection;
 
@@ -401,18 +591,39 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
 
         UINT32 shaderIdx;
 
-        hr = pReflection->FindFirstPartKind(DFCC_DXIL, &shaderIdx);
+        hr = pReflection->FindFirstPartKind(DXC_PART_DXIL, &shaderIdx);
         if (SUCCEEDED(hr))
         {
-            hr = pReflection->GetPartReflection(shaderIdx, __uuidof(*ppShaderReflection), reinterpret_cast<void**>(ppShaderReflection));
-            if (FAILED(hr))
-                LOG_ERROR_AND_THROW("Failed to get the shader reflection");
+            hr = pReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(ppShaderReflection));
+            if (SUCCEEDED(hr))
+                return;
+
+            // for ray tracing shaders
+            CComPtr<ID3D12LibraryReflection> pLib;
+
+            hr = pReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&pLib));
+            if (SUCCEEDED(hr))
+            {
+                D3D12_LIBRARY_DESC Desc = {};
+                pLib->GetDesc(&Desc);
+                VERIFY_EXPR(Desc.FunctionCount == 1);
+
+                ID3D12FunctionReflection* pFunc = pLib->GetFunctionByIndex(0);
+                if (pFunc != nullptr)
+                {
+                    *ppShaderReflection = new ShaderReflectionViaLibraryReflection{std::move(pLib), pFunc};
+                    (*ppShaderReflection)->AddRef();
+                    return;
+                }
+            }
         }
+
+        LOG_ERROR_AND_THROW("Failed to get the shader reflection");
     }
     catch (...)
     {
     }
-#endif
+#endif // D3D12_SUPPORTED
 }
 
 
@@ -470,19 +681,28 @@ void DXCompilerImpl::Compile(const ShaderCreateInfo& ShaderCI,
             DxilArgs.push_back(L"-Qembed_debug");
         }
 #else
-        DxilArgs.push_back(L"-Od"); // TODO: something goes wrong if optimization is enabled
+        if (m_MajorVer > 1 || m_MajorVer == 1 && m_MinorVer >= 5)
+            DxilArgs.push_back(L"-O3"); // Optimization level 3
+        else
+            DxilArgs.push_back(L"-Od"); // TODO: something goes wrong if optimization is enabled
 #endif
     }
     else if (m_Target == DXCompilerTarget::Vulkan)
     {
+        const Uint32 RayTracingStages =
+            SHADER_TYPE_RAY_GEN | SHADER_TYPE_RAY_MISS | SHADER_TYPE_RAY_CLOSEST_HIT |
+            SHADER_TYPE_RAY_ANY_HIT | SHADER_TYPE_RAY_INTERSECTION | SHADER_TYPE_CALLABLE;
+
         DxilArgs.assign(
             {
                 L"-spirv",
                 L"-fspv-reflect",
-                L"-fspv-target-env=vulkan1.0",
                 //L"-WX", // Warnings as errors
                 L"-O3", // Optimization level 3
             });
+
+        if (ShaderCI.Desc.ShaderType & RayTracingStages)
+            DxilArgs.push_back(L"-fspv-target-env=vulkan1.2");
     }
     else
     {

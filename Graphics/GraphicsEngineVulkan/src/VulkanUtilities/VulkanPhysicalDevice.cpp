@@ -166,6 +166,17 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtProperties.DescriptorIndexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
         }
 
+        // Additional extension that is required for ray tracing shader.
+        if (IsExtensionSupported(VK_KHR_SPIRV_1_4_EXTENSION_NAME))
+            m_ExtFeatures.Spirv14 = true;
+
+        // Some features requires SPIRV 1.4 or 1.5 that added to Vulkan 1.2 core.
+        if (Instance.GetVkVersion() >= VK_API_VERSION_1_2)
+        {
+            m_ExtFeatures.Spirv14 = true;
+            m_ExtFeatures.Spirv15 = true;
+        }
+
         // make sure that last pNext is null
         *NextFeat = nullptr;
         *NextProp = nullptr;
@@ -178,7 +189,6 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
         // Emulate KHR extension
         if (m_ExtFeatures.RayTracingNV)
         {
-            //m_ExtFeatures.RayTracing.sType
             //m_ExtFeatures.RayTracing.rayTracingPrimitiveCulling = true; // AZ TODO
             m_ExtFeatures.RayTracing.rayTracing = VK_TRUE;
 
@@ -188,7 +198,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtProperties.RayTracing.shaderGroupBaseAlignment               = RayTracingNV.shaderGroupBaseAlignment;
             m_ExtProperties.RayTracing.maxGeometryCount                       = RayTracingNV.maxGeometryCount;
             m_ExtProperties.RayTracing.maxInstanceCount                       = RayTracingNV.maxInstanceCount;
-            m_ExtProperties.RayTracing.maxPrimitiveCount                      = RayTracingNV.maxTriangleCount;
+            m_ExtProperties.RayTracing.maxPrimitiveCount                      = RayTracingNV.maxTriangleCount / 3;
             m_ExtProperties.RayTracing.maxDescriptorSetAccelerationStructures = RayTracingNV.maxDescriptorSetAccelerationStructures;
             m_ExtProperties.RayTracing.shaderGroupHandleCaptureReplaySize     = 0;
         }

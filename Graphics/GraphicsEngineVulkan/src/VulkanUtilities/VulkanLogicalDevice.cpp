@@ -36,9 +36,10 @@ namespace VulkanUtilities
 
 std::shared_ptr<VulkanLogicalDevice> VulkanLogicalDevice::Create(const VulkanPhysicalDevice&  PhysicalDevice,
                                                                  const VkDeviceCreateInfo&    DeviceCI,
+                                                                 const ExtensionFeatures&     EnabledExtFeatures,
                                                                  const VkAllocationCallbacks* vkAllocator)
 {
-    auto* LogicalDevice = new VulkanLogicalDevice{PhysicalDevice, DeviceCI, vkAllocator};
+    auto* LogicalDevice = new VulkanLogicalDevice{PhysicalDevice, DeviceCI, EnabledExtFeatures, vkAllocator};
     return std::shared_ptr<VulkanLogicalDevice>{LogicalDevice};
 }
 
@@ -49,9 +50,11 @@ VulkanLogicalDevice::~VulkanLogicalDevice()
 
 VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDevice,
                                          const VkDeviceCreateInfo&    DeviceCI,
+                                         const ExtensionFeatures&     EnabledExtFeatures,
                                          const VkAllocationCallbacks* vkAllocator) :
     m_VkAllocator{vkAllocator},
-    m_EnabledFeatures{*DeviceCI.pEnabledFeatures}
+    m_EnabledFeatures{*DeviceCI.pEnabledFeatures},
+    m_EnabledExtFeatures{EnabledExtFeatures}
 {
     auto res = vkCreateDevice(PhysicalDevice.GetVkDeviceHandle(), &DeviceCI, vkAllocator, &m_VkDevice);
     CHECK_VK_ERROR_AND_THROW(res, "Failed to create logical device");
@@ -223,6 +226,29 @@ PipelineWrapper VulkanLogicalDevice::CreateGraphicsPipeline(const VkGraphicsPipe
         SetPipelineName(m_VkDevice, vkPipeline, DebugName);
 
     return PipelineWrapper{GetSharedPtr(), std::move(vkPipeline)};
+}
+
+PipelineWrapper VulkanLogicalDevice::CreateRayTracingPipeline(const VkRayTracingPipelineCreateInfoKHR& PipelineCI, VkPipelineCache cache, const char* DebugName) const
+{
+#if DILIGENT_USE_VOLK
+    VERIFY_EXPR(PipelineCI.sType == VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR);
+
+    if (DebugName == nullptr)
+        DebugName = "";
+
+    VkPipeline vkPipeline = VK_NULL_HANDLE;
+
+    auto err = vkCreateRayTracingPipelinesKHR(m_VkDevice, cache, 1, &PipelineCI, m_VkAllocator, &vkPipeline);
+    CHECK_VK_ERROR_AND_THROW(err, "Failed to create ray tracing pipeline '", DebugName, '\'');
+
+    if (*DebugName != 0)
+        SetPipelineName(m_VkDevice, vkPipeline, DebugName);
+
+    return PipelineWrapper{GetSharedPtr(), std::move(vkPipeline)};
+#else
+    UNSUPPORTED("vkCreateRayTracingPipelinesKHR is only available through Volk");
+    return PipelineWrapper{};
+#endif
 }
 
 ShaderModuleWrapper VulkanLogicalDevice::CreateShaderModule(const VkShaderModuleCreateInfo& ShaderModuleCI, const char* DebugName) const
@@ -455,6 +481,7 @@ VkMemoryRequirements VulkanLogicalDevice::GetImageMemoryRequirements(VkImage vkI
 VkMemoryRequirements VulkanLogicalDevice::GetASMemoryRequirements(const VkAccelerationStructureMemoryRequirementsInfoKHR& Info) const
 {
     VkMemoryRequirements2 MemReqs = {};
+    MemReqs.sType                 = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
 #if DILIGENT_USE_VOLK
     vkGetAccelerationStructureMemoryRequirementsKHR(m_VkDevice, &Info, &MemReqs);
 #else
@@ -569,6 +596,16 @@ VkResult VulkanLogicalDevice::ResetDescriptorPool(VkDescriptorPool           vkD
     auto err = vkResetDescriptorPool(m_VkDevice, vkDescriptorPool, flags);
     DEV_CHECK_ERR(err == VK_SUCCESS, "Failed to reset descriptor pool");
     return err;
+}
+
+VkResult VulkanLogicalDevice::GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const
+{
+#if DILIGENT_USE_VOLK
+    return vkGetRayTracingShaderGroupHandlesKHR(m_VkDevice, pipeline, firstGroup, groupCount, dataSize, pData);
+#else
+    UNSUPPORTED("vkGetRayTracingShaderGroupHandlesKHR is only available through Volk");
+    return VK_ERROR_FEATURE_NOT_PRESENT;
+#endif
 }
 
 } // namespace VulkanUtilities

@@ -68,6 +68,9 @@ public:
     /// Implementation of IRenderDevice::CreateComputePipelineState() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CreateComputePipelineState(const ComputePipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
 
+    /// Implementation of IRenderDevice::CreateRayTracingPipelineState() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState) override final;
+
     /// Implementation of IRenderDevice::CreateBuffer() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CreateBuffer(const BufferDesc& BuffDesc,
                                                  const BufferData* pBuffData,
@@ -169,9 +172,8 @@ public:
 
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
-#ifdef D3D12_H_HAS_MESH_SHADER
     ID3D12Device2* GetD3D12Device2();
-#endif
+    ID3D12Device5* GetD3D12Device5();
 
     ShaderVersion     GetMaxShaderModel() const;
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
@@ -185,9 +187,8 @@ private:
 
     CComPtr<ID3D12Device> m_pd3d12Device;
 
-#ifdef D3D12_H_HAS_MESH_SHADER
     CComPtr<ID3D12Device2> m_pd3d12Device2;
-#endif
+    CComPtr<ID3D12Device5> m_pd3d12Device5;
 
     EngineD3D12CreateInfo m_EngineAttribs;
 

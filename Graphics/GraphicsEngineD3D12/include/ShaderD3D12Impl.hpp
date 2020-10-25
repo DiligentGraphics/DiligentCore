@@ -34,9 +34,8 @@
 #include "ShaderD3D12.h"
 #include "ShaderBase.hpp"
 #include "ShaderD3DBase.hpp"
-#include "ShaderResourceLayoutD3D12.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
-#include "ShaderVariableD3D12.hpp"
+#include "ShaderResourcesD3D12.hpp"
 
 namespace Diligent
 {
@@ -74,7 +73,8 @@ public:
         ResourceDesc = m_pShaderResources->GetHLSLShaderResourceDesc(Index);
     }
 
-    ID3DBlob* GetShaderByteCode() { return m_pShaderByteCode; }
+    ID3DBlob*   GetShaderByteCode() { return m_pShaderByteCode; }
+    const Char* GetEntryPoint() const { return m_EntryPoint.c_str(); }
 
     const std::shared_ptr<const ShaderResourcesD3D12>& GetShaderResources() const { return m_pShaderResources; }
 
@@ -82,6 +82,8 @@ private:
     // ShaderResources class instance must be referenced through the shared pointer, because
     // it is referenced by ShaderResourceLayoutD3D12 class instances
     std::shared_ptr<const ShaderResourcesD3D12> m_pShaderResources;
+
+    String m_EntryPoint;
 };
 
 } // namespace Diligent

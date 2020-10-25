@@ -44,7 +44,8 @@ public:
     VulkanInstance& operator = (      VulkanInstance&&) = delete;
     // clang-format on
 
-    static std::shared_ptr<VulkanInstance> Create(bool                   EnableValidation,
+    static std::shared_ptr<VulkanInstance> Create(uint32_t               ApiVersion,
+                                                  bool                   EnableValidation,
                                                   uint32_t               GlobalExtensionCount,
                                                   const char* const*     ppGlobalExtensionNames,
                                                   VkAllocationCallbacks* pVkAllocator);
@@ -69,10 +70,12 @@ public:
 
     VkAllocationCallbacks* GetVkAllocator()const{return m_pVkAllocator;}
     VkInstance             GetVkInstance() const{return m_VkInstance;  }
+    uint32_t               GetVkVersion()  const{return m_VkVersion;   }
     // clang-format on
 
 private:
-    VulkanInstance(bool                   EnableValidation,
+    VulkanInstance(uint32_t               ApiVersion,
+                   bool                   EnableValidation,
                    uint32_t               GlobalExtensionCount,
                    const char* const*     ppGlobalExtensionNames,
                    VkAllocationCallbacks* pVkAllocator);
@@ -80,6 +83,7 @@ private:
     bool                         m_DebugUtilsEnabled = false;
     VkAllocationCallbacks* const m_pVkAllocator;
     VkInstance                   m_VkInstance = VK_NULL_HANDLE;
+    uint32_t                     m_VkVersion  = VK_API_VERSION_1_0;
 
     std::vector<VkLayerProperties>     m_Layers;
     std::vector<VkExtensionProperties> m_Extensions;

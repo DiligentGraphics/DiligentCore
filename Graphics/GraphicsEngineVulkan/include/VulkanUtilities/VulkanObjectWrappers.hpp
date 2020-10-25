@@ -87,6 +87,11 @@ public:
         return m_VkObject;
     }
 
+    const VulkanObjectType* operator&() const
+    {
+        return &m_VkObject;
+    }
+
     void Release()
     {
         // For externally managed objects, m_pLogicalDevice is null
