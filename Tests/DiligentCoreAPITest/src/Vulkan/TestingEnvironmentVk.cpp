@@ -33,6 +33,7 @@
 #include "GLSLangUtils.hpp"
 
 #define VOLK_IMPLEMENTATION
+#define VK_ENABLE_BETA_EXTENSIONS // for ray tracing
 #include "volk/volk.h"
 
 namespace Diligent
@@ -58,7 +59,8 @@ TestingEnvironmentVk::TestingEnvironmentVk(const CreateInfo&    CI,
     volkInitialize();
 
     RefCntAutoPtr<IRenderDeviceVk> pRenderDeviceVk{m_pDevice, IID_RenderDeviceVk};
-    m_vkDevice = pRenderDeviceVk->GetVkDevice();
+    m_vkDevice         = pRenderDeviceVk->GetVkDevice();
+    m_vkPhysicalDevice = pRenderDeviceVk->GetVkPhysicalDevice();
 
     volkLoadInstance(pRenderDeviceVk->GetVkInstance());
 

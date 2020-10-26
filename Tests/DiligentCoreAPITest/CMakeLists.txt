@@ -127,7 +127,7 @@ if(GL_SUPPORTED OR GLES_SUPPORTED)
 endif()
 
 if(VULKAN_SUPPORTED)
-    target_include_directories(DiligentCoreAPITest PRIVATE ../../ThirdParty)
+    target_include_directories(DiligentCoreAPITest PRIVATE ../../ThirdParty ../../ThirdParty/Vulkan-Headers/include)
     if(PLATFORM_LINUX)
         target_link_libraries(DiligentCoreAPITest
         PRIVATE
