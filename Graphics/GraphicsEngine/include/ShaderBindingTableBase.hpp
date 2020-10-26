@@ -47,7 +47,7 @@ namespace Diligent
 ///                          (Diligent::IShaderBindingTableD3D12 or Diligent::IShaderBindingTableVk).
 /// \tparam RenderDeviceImplType - type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
+template <class BaseInterface, class PipelineStateImplType, class RenderDeviceImplType>
 class ShaderBindingTableBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, ShaderBindingTableDesc>
 {
 public:
@@ -71,6 +71,100 @@ public:
     {
     }
 
+    void BindRayGenShader(const char* ShaderGroupName, const void* Data, Uint32 DataSize) override final
+    {
+        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+
+        m_RayGenShaderRecord.resize(m_ShaderRecordStride);
+        ValidatedCast<PipelineStateImplType>(m_Desc.pPSO)->CopyShaderHandle(ShaderGroupName, m_RayGenShaderRecord.data(), m_ShaderRecordStride);
+        m_Changed = true;
+    }
+
+    void BindMissShader(const char* ShaderGroupName, Uint32 MissIndex, const void* Data, Uint32 DataSize) override final
+    {
+        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+
+        const Uint32 Offset = MissIndex * m_ShaderRecordStride;
+        m_MissShadersRecord.resize(std::max<size_t>(m_MissShadersRecord.size(), Offset + m_ShaderRecordStride));
+
+        ValidatedCast<PipelineStateImplType>(m_Desc.pPSO)->CopyShaderHandle(ShaderGroupName, m_MissShadersRecord.data() + Offset, m_ShaderRecordStride);
+        m_Changed = true;
+    }
+
+    void BindHitGroup(ITopLevelAS* pTLAS,
+                      const char*  InstanceName,
+                      const char*  GeometryName,
+                      Uint32       RayOffsetInHitGroupIndex,
+                      const char*  ShaderGroupName,
+                      const void*  Data,
+                      Uint32       DataSize) override final
+    {
+        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+        VERIFY_EXPR(pTLAS != nullptr);
+        VERIFY_EXPR(RayOffsetInHitGroupIndex < m_Desc.HitShadersPerInstance);
+        VERIFY_EXPR(pTLAS->GetDesc().BindingMode == SHADER_BINDING_MODE_PER_GEOMETRY);
+
+        const auto Desc = pTLAS->GetInstanceDesc(InstanceName);
+        VERIFY_EXPR(Desc.pBLAS != nullptr);
+
+        const Uint32 InstanceIndex = Desc.ContributionToHitGroupIndex;
+        const Uint32 GeometryIndex = Desc.pBLAS->GetGeometryIndex(GeometryName);
+        const Uint32 Index         = InstanceIndex + GeometryIndex * m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
+        const Uint32 Offset        = Index * m_ShaderRecordStride;
+
+        m_HitGroupsRecord.resize(std::max<size_t>(m_HitGroupsRecord.size(), Offset + m_ShaderRecordStride));
+
+        ValidatedCast<PipelineStateImplType>(m_Desc.pPSO)->CopyShaderHandle(ShaderGroupName, m_HitGroupsRecord.data() + Offset, m_ShaderRecordStride);
+        m_Changed = true;
+    }
+
+    void BindHitGroups(ITopLevelAS* pTLAS,
+                       const char*  InstanceName,
+                       Uint32       RayOffsetInHitGroupIndex,
+                       const char*  ShaderGroupName,
+                       const void*  Data,
+                       Uint32       DataSize) override final
+    {
+        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+        VERIFY_EXPR(pTLAS != nullptr);
+        VERIFY_EXPR(RayOffsetInHitGroupIndex < m_Desc.HitShadersPerInstance);
+        VERIFY_EXPR(pTLAS->GetDesc().BindingMode == SHADER_BINDING_MODE_PER_GEOMETRY ||
+                    pTLAS->GetDesc().BindingMode == SHADER_BINDING_MODE_PER_INSTANCE);
+
+        const auto Desc = pTLAS->GetInstanceDesc(InstanceName);
+        VERIFY_EXPR(Desc.pBLAS != nullptr);
+
+        const Uint32           InstanceIndex = Desc.ContributionToHitGroupIndex;
+        const auto&            GeometryDesc  = Desc.pBLAS->GetDesc();
+        const Uint32           GeometryCount = GeometryDesc.BoxCount + GeometryDesc.TriangleCount;
+        const Uint32           BeginIndex    = InstanceIndex + 0 * m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
+        const Uint32           EndIndex      = InstanceIndex + GeometryCount * m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
+        PipelineStateImplType* pPSO          = ValidatedCast<PipelineStateImplType>(m_Desc.pPSO);
+
+        m_HitGroupsRecord.resize(std::max<size_t>(m_HitGroupsRecord.size(), EndIndex * m_ShaderRecordStride));
+
+        for (Uint32 i = 0; i < GeometryCount; ++i)
+        {
+            Uint32 Offset = (BeginIndex + i) * m_ShaderRecordStride;
+            pPSO->CopyShaderHandle(ShaderGroupName, m_HitGroupsRecord.data() + Offset, m_ShaderRecordStride);
+        }
+        m_Changed = true;
+    }
+
+    void BindCallableShader(const char* ShaderGroupName,
+                            Uint32      CallableIndex,
+                            const void* Data,
+                            Uint32      DataSize) override final
+    {
+        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+
+        const Uint32 Offset = CallableIndex * m_ShaderRecordStride;
+        m_CallableShadersRecord.resize(std::max<size_t>(m_CallableShadersRecord.size(), Offset + m_ShaderRecordStride));
+
+        ValidatedCast<PipelineStateImplType>(m_Desc.pPSO)->CopyShaderHandle(ShaderGroupName, m_CallableShadersRecord.data() + Offset, m_ShaderRecordStride);
+        m_Changed = true;
+    }
+
 protected:
     static void ValidateShaderBindingTableDesc(const ShaderBindingTableDesc& Desc)
     {
@@ -92,10 +186,14 @@ protected:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTable, TDeviceObjectBase)
 
 protected:
-    StringPool m_StringPool;
+    RefCntAutoPtr<IBuffer> m_pBuffer;
+    std::vector<Uint8>     m_RayGenShaderRecord;
+    std::vector<Uint8>     m_MissShadersRecord;
+    std::vector<Uint8>     m_CallableShadersRecord;
+    std::vector<Uint8>     m_HitGroupsRecord;
 
-    std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>           m_NameToIndex;
-    std::unordered_map<HashMapStringKey, TLASInstanceDesc, HashMapStringKey::Hasher> m_Instances;
+    Uint32 m_ShaderRecordStride = 0;
+    bool   m_Changed            = true;
 };
 
 } // namespace Diligent

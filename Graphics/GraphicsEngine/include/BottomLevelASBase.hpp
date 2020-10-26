@@ -106,7 +106,7 @@ public:
         else if (Desc.pBoxes != nullptr)
         {
             size_t StringPoolSize = 0;
-            for (Uint32 i = 0; i < Desc.TriangleCount; ++i)
+            for (Uint32 i = 0; i < Desc.BoxCount; ++i)
             {
                 if (Desc.pBoxes[i].GeometryName == nullptr)
                     LOG_ERROR_AND_THROW("Geometry name can not be null!");
@@ -124,7 +124,7 @@ public:
             this->m_Desc.pTriangles = nullptr;
 
             // copy strings
-            for (Uint32 i = 0; i < Desc.TriangleCount; ++i)
+            for (Uint32 i = 0; i < Desc.BoxCount; ++i)
             {
                 pBoxes[i].GeometryName = m_StringPool.CopyString(pBoxes[i].GeometryName);
                 bool IsUniqueName      = m_NameToIndex.emplace(pBoxes[i].GeometryName, i).second;
@@ -147,7 +147,9 @@ public:
         }
     }
 
-    virtual Uint32 DILIGENT_CALL_TYPE GetGeometryIndex(const char* Name) const override
+    static constexpr Uint32 InvalidGeometryIndex = ~0u;
+
+    virtual Uint32 DILIGENT_CALL_TYPE GetGeometryIndex(const char* Name) const override final
     {
         VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
 
@@ -156,7 +158,29 @@ public:
             return iter->second;
 
         UNEXPECTED("Can't find geometry with specified name");
-        return ~0u; // AZ TODO
+        return InvalidGeometryIndex;
+    }
+
+    virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
+    {
+        this->m_State = State;
+    }
+
+    virtual RESOURCE_STATE DILIGENT_CALL_TYPE GetState() const override final
+    {
+        return this->m_State;
+    }
+
+    bool IsInKnownState() const
+    {
+        return this->m_State != RESOURCE_STATE_UNKNOWN;
+    }
+
+    bool CheckState(RESOURCE_STATE State) const
+    {
+        VERIFY((State & (State - 1)) == 0, "Single state is expected");
+        VERIFY(IsInKnownState(), "BLAS state is unknown");
+        return (this->m_State & State) == State;
     }
 
 protected:
@@ -185,6 +209,8 @@ protected:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
 
 protected:
+    RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
+
     std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher> m_NameToIndex;
 
     StringPool m_StringPool;

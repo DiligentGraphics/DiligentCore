@@ -219,8 +219,9 @@ public:
                                      dataSize, pData, stride, flags);
     }
 
-    VkPipelineStageFlags GetEnabledGraphicsShaderStages() const { return m_EnabledGraphicsShaderStages; }
-    VkResult             GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const;
+    VkResult GetRayTracingShaderGroupHandles(VkPipeline pipeline, uint32_t firstGroup, uint32_t groupCount, size_t dataSize, void* pData) const;
+
+    VkPipelineStageFlags GetEnabledShaderStages() const { return m_EnabledShaderStages; }
 
     const VkPhysicalDeviceFeatures& GetEnabledFeatures() const { return m_EnabledFeatures; }
     const ExtensionFeatures&        GetEnabledExtFeatures() const { return m_EnabledExtFeatures; }
@@ -242,7 +243,7 @@ private:
 
     VkDevice                           m_VkDevice = VK_NULL_HANDLE;
     const VkAllocationCallbacks* const m_VkAllocator;
-    VkPipelineStageFlags               m_EnabledGraphicsShaderStages = 0;
+    VkPipelineStageFlags               m_EnabledShaderStages = 0;
     const VkPhysicalDeviceFeatures     m_EnabledFeatures;
     ExtensionFeatures                  m_EnabledExtFeatures = {};
 };

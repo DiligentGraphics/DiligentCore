@@ -40,10 +40,11 @@ VulkanMemoryAllocation::~VulkanMemoryAllocation()
     }
 }
 
-VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
-                                   VkDeviceSize         PageSize,
-                                   uint32_t             MemoryTypeIndex,
-                                   bool                 IsHostVisible) noexcept :
+VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager&  ParentMemoryMgr,
+                                   VkDeviceSize          PageSize,
+                                   uint32_t              MemoryTypeIndex,
+                                   bool                  IsHostVisible,
+                                   VkMemoryAllocateFlags AllocateFlags) noexcept :
     // clang-format off
     m_ParentMemoryMgr{ParentMemoryMgr},
     m_AllocationMgr  {static_cast<AllocationsMgrOffsetType>(PageSize), ParentMemoryMgr.m_Allocator}
@@ -53,12 +54,21 @@ VulkanMemoryPage::VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
            "PageSize (", PageSize, ") exceeds maximum allowed value ",
            std::numeric_limits<AllocationsMgrOffsetType>::max());
 
-    VkMemoryAllocateInfo MemAlloc = {};
+    VkMemoryAllocateInfo      MemAlloc    = {};
+    VkMemoryAllocateFlagsInfo MemFlagInfo = {};
 
     MemAlloc.pNext           = nullptr;
     MemAlloc.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     MemAlloc.allocationSize  = PageSize;
     MemAlloc.memoryTypeIndex = MemoryTypeIndex;
+
+    if (AllocateFlags)
+    {
+        MemAlloc.pNext    = &MemFlagInfo;
+        MemFlagInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO;
+        MemFlagInfo.pNext = nullptr;
+        MemFlagInfo.flags = AllocateFlags;
+    }
 
     auto MemoryName = Diligent::FormatString("Device memory page. Size: ", Diligent::FormatMemorySize(PageSize, 2), ", type: ", MemoryTypeIndex);
     m_VkMemory      = ParentMemoryMgr.m_LogicalDevice.AllocateDeviceMemory(MemAlloc, MemoryName.c_str());
@@ -116,7 +126,7 @@ void VulkanMemoryPage::Free(VulkanMemoryAllocation&& Allocation)
     Allocation = VulkanMemoryAllocation{};
 }
 
-VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps)
+VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps, VkMemoryAllocateFlags AllocateFlags)
 {
     // memoryTypeBits is a bitmask and contains one bit set for every supported memory type for the resource.
     // Bit i is set if and only if the memory type i in the VkPhysicalDeviceMemoryProperties structure for the
@@ -145,10 +155,10 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(const VkMemoryRequirements&
     }
 
     bool HostVisible = (MemoryProps & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
-    return Allocate(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, HostVisible);
+    return Allocate(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, HostVisible, AllocateFlags);
 }
 
-VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible)
+VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags)
 {
     VulkanMemoryAllocation Allocation;
 
@@ -159,7 +169,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
     // even though on integrated GPUs same pages can be used for both GPU-only and staging
     // allocations. Staging allocations are short-living and will be released when upload is
     // complete, while GPU-only allocations are expected to be long-living.
-    MemoryPageIndex             PageIdx{MemoryTypeIndex, HostVisible};
+    MemoryPageIndex             PageIdx{MemoryTypeIndex, HostVisible, AllocateFlags};
     std::lock_guard<std::mutex> Lock{m_PagesMtx};
 
     auto range = m_Pages.equal_range(PageIdx);
@@ -180,7 +190,7 @@ VulkanMemoryAllocation VulkanMemoryManager::Allocate(VkDeviceSize Size, VkDevice
         m_CurrAllocatedSize[stat_ind] += PageSize;
         m_PeakAllocatedSize[stat_ind] = std::max(m_PeakAllocatedSize[stat_ind], m_CurrAllocatedSize[stat_ind]);
 
-        auto it = m_Pages.emplace(PageIdx, VulkanMemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible});
+        auto it = m_Pages.emplace(PageIdx, VulkanMemoryPage{*this, PageSize, MemoryTypeIndex, HostVisible, AllocateFlags});
         LOG_INFO_MESSAGE("VulkanMemoryManager '", m_MgrName, "': created new ", (HostVisible ? "host-visible" : "device-local"),
                          " page. (", Diligent::FormatMemorySize(PageSize, 2), ", type idx: ", MemoryTypeIndex,
                          "). Current allocated size: ", Diligent::FormatMemorySize(m_CurrAllocatedSize[stat_ind], 2));

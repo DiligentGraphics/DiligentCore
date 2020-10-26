@@ -149,13 +149,18 @@ RenderDeviceGLImpl::RenderDeviceGLImpl(IReferenceCounters*       pRefCounters,
             sizeof(FenceGLImpl),
             sizeof(QueryGLImpl),
             sizeof(RenderPassGLImpl),
-            sizeof(FramebufferGLImpl)
+            sizeof(FramebufferGLImpl),
+            0,
+            0,
+            0
         }
     },
     // Device caps must be filled in before the constructor of Pipeline Cache is called!
     m_GLContext{InitAttribs, m_DeviceCaps, pSCDesc}
 // clang-format on
 {
+    static_assert(sizeof(DeviceObjectSizes) == sizeof(size_t) * 15, "Please add new objects to DeviceObjectSizes constructor");
+
     GLint NumExtensions = 0;
     glGetIntegerv(GL_NUM_EXTENSIONS, &NumExtensions);
     CHECK_GL_ERROR("Failed to get the number of extensions");

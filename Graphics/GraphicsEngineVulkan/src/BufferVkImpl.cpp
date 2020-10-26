@@ -87,7 +87,7 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
         VK_BUFFER_USAGE_TRANSFER_SRC_BIT | // The buffer can be used as the source of a transfer command
         VK_BUFFER_USAGE_TRANSFER_DST_BIT;  // The buffer can be used as the destination of a transfer command
 
-    static_assert(BIND_FLAGS_LAST == 0x400, "AZ TODO");
+    static_assert(BIND_FLAGS_LAST == 0x400, "Please update this function to handle the new bind flags");
 
     for (Uint32 BindFlag = 1; BindFlag <= m_Desc.BindFlags; BindFlag <<= 1)
     {
@@ -245,11 +245,15 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
             MemoryTypeIndex = PhysicalDevice.GetMemoryTypeIndex(MemReqs.memoryTypeBits, vkMemoryFlags);
         }
 
+        VkMemoryAllocateFlags AllocateFlags = 0;
+        if (VkBuffCI.usage & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT)
+            AllocateFlags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT;
+
         if (MemoryTypeIndex == VulkanUtilities::VulkanPhysicalDevice::InvalidMemoryTypeIndex)
             LOG_ERROR_AND_THROW("Failed to find suitable memory type for buffer '", m_Desc.Name, '\'');
 
         VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
-        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex);
+        m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex, AllocateFlags);
 
         m_BufferMemoryAlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
         VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_BufferMemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
@@ -317,12 +321,12 @@ BufferVkImpl::BufferVkImpl(IReferenceCounters*        pRefCounters,
                 VkCommandBuffer                     vkCmdBuff;
                 pRenderDeviceVk->AllocateTransientCmdPool(CmdPool, vkCmdBuff, "Transient command pool to copy staging data to a device buffer");
 
-                auto EnabledGraphicsShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
-                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledGraphicsShaderStages);
+                auto EnabledShaderStages = LogicalDevice.GetEnabledShaderStages();
+                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledShaderStages);
                 InitialState              = RESOURCE_STATE_COPY_DEST;
                 VkAccessFlags AccessFlags = ResourceStateFlagsToVkAccessFlags(InitialState);
                 VERIFY_EXPR(AccessFlags == VK_ACCESS_TRANSFER_WRITE_BIT);
-                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags, EnabledGraphicsShaderStages);
+                VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, m_VulkanBuffer, 0, AccessFlags, EnabledShaderStages);
 
                 // Copy commands MUST be recorded outside of a render pass instance. This is OK here
                 // as copy will be the only command in the cmd buffer

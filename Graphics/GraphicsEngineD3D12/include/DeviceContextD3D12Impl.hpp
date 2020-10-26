@@ -42,6 +42,8 @@
 #include "RenderPassD3D12Impl.hpp"
 #include "PipelineStateD3D12Impl.hpp"
 #include "D3D12DynamicHeap.hpp"
+#include "BottomLevelASD3D12Impl.hpp"
+#include "TopLevelASD3D12Impl.hpp"
 
 namespace Diligent
 {
@@ -56,6 +58,8 @@ struct DeviceContextD3D12ImplTraits
     using QueryType         = QueryD3D12Impl;
     using FramebufferType   = FramebufferD3D12Impl;
     using RenderPassType    = RenderPassD3D12Impl;
+    using BottomLevelASType = BottomLevelASD3D12Impl;
+    using TopLevelASType    = TopLevelASD3D12Impl;
 };
 
 /// Device context implementation in Direct3D12 backend.
@@ -125,13 +129,13 @@ public:
                                                      ITextureView*                  pDepthStencil,
                                                      RESOURCE_STATE_TRANSITION_MODE StateTransitionMode) override final;
 
-    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::BeginRenderPass() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE BeginRenderPass(const BeginRenderPassAttribs& Attribs) override final;
 
-    /// Implementation of IDeviceContext::NextSubpass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::NextSubpass() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE NextSubpass() override final;
 
-    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D11 backend.
+    /// Implementation of IDeviceContext::EndRenderPass() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE EndRenderPass() override final;
 
     // clang-format off
@@ -351,12 +355,23 @@ private:
                                                       RESOURCE_STATE_TRANSITION_MODE TransitionMode,
                                                       RESOURCE_STATE                 RequiredState,
                                                       const char*                    OperationName);
+    __forceinline void TransitionOrVerifyBLASState(CommandContext&                CmdCtx,
+                                                   BottomLevelASD3D12Impl&        BLAS,
+                                                   RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                                   RESOURCE_STATE                 RequiredState,
+                                                   const char*                    OperationName);
+    __forceinline void TransitionOrVerifyTLASState(CommandContext&                CmdCtx,
+                                                   TopLevelASD3D12Impl&           TLAS,
+                                                   RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                                   RESOURCE_STATE                 RequiredState,
+                                                   const char*                    OperationName);
 
     __forceinline void PrepareForDraw(GraphicsContext& GraphCtx, DRAW_FLAGS Flags);
 
     __forceinline void PrepareForIndexedDraw(GraphicsContext& GraphCtx, DRAW_FLAGS Flags, VALUE_TYPE IndexType);
 
     __forceinline void PrepareForDispatchCompute(ComputeContext& GraphCtx);
+    __forceinline void PrepareForDispatchRays(GraphicsContext& GraphCtx);
 
     __forceinline void PrepareDrawIndirectBuffer(GraphicsContext&               GraphCtx,
                                                  IBuffer*                       pAttribsBuffer,

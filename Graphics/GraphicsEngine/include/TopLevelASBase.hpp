@@ -71,7 +71,7 @@ public:
     {
     }
 
-    void SetInstanceData(const TLASBuildInstanceData* pInstances, Uint32 InstanceCount)
+    void SetInstanceData(const TLASBuildInstanceData* pInstances, Uint32 InstanceCount, Uint32 HitShadersPerInstance)
     {
         m_Instances.clear();
         m_StringPool.Release();
@@ -84,14 +84,23 @@ public:
 
         m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
 
+        Uint32 InstanceOffset = 0;
+
         for (Uint32 i = 0; i < InstanceCount; ++i)
         {
             auto&        inst     = pInstances[i];
             const char*  NameCopy = m_StringPool.CopyString(inst.InstanceName);
             InstanceDesc Desc     = {};
 
-            Desc.contributionToHitGroupIndex = inst.contributionToHitGroupIndex;
+            Desc.ContributionToHitGroupIndex = inst.ContributionToHitGroupIndex;
             Desc.pBLAS                       = inst.pBLAS;
+
+            if (Desc.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
+            {
+                Desc.ContributionToHitGroupIndex = InstanceOffset;
+                auto& BLASDesc                   = Desc.pBLAS->GetDesc();
+                InstanceOffset += (BLASDesc.TriangleCount + BLASDesc.BoxCount) * HitShadersPerInstance;
+            }
 
             bool IsUniqueName = m_Instances.emplace(NameCopy, Desc).second;
             if (!IsUniqueName)
@@ -99,7 +108,7 @@ public:
         }
     }
 
-    virtual TLASInstanceDesc DILIGENT_CALL_TYPE GetInstanceDesc(const char* Name) const override
+    virtual TLASInstanceDesc DILIGENT_CALL_TYPE GetInstanceDesc(const char* Name) const override final
     {
         VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
 
@@ -108,7 +117,7 @@ public:
         auto iter = m_Instances.find(Name);
         if (iter != m_Instances.end())
         {
-            Result.ContributionToHitGroupIndex = iter->second.contributionToHitGroupIndex;
+            Result.ContributionToHitGroupIndex = iter->second.ContributionToHitGroupIndex;
             Result.pBLAS                       = iter->second.pBLAS;
         }
         else
@@ -117,6 +126,28 @@ public:
         }
 
         return Result;
+    }
+
+    virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
+    {
+        this->m_State = State;
+    }
+
+    virtual RESOURCE_STATE DILIGENT_CALL_TYPE GetState() const override final
+    {
+        return this->m_State;
+    }
+
+    bool IsInKnownState() const
+    {
+        return this->m_State != RESOURCE_STATE_UNKNOWN;
+    }
+
+    bool CheckState(RESOURCE_STATE State) const
+    {
+        VERIFY((State & (State - 1)) == 0, "Single state is expected");
+        VERIFY(IsInKnownState(), "TLAS state is unknown");
+        return (this->m_State & State) == State;
     }
 
 protected:
@@ -141,14 +172,15 @@ protected:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelAS, TDeviceObjectBase)
 
 protected:
-    struct InstanceDesc
-    {
-        Uint32                                contributionToHitGroupIndex = 0;
-        mutable RefCntAutoPtr<IBottomLevelAS> pBLAS;
-    };
+    RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
 
     StringPool m_StringPool;
 
+    struct InstanceDesc
+    {
+        Uint32                                ContributionToHitGroupIndex = 0;
+        mutable RefCntAutoPtr<IBottomLevelAS> pBLAS;
+    };
     std::unordered_map<HashMapStringKey, InstanceDesc, HashMapStringKey::Hasher> m_Instances;
 };
 

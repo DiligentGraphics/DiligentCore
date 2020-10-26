@@ -41,6 +41,8 @@
 #include "FramebufferD3D11Impl.hpp"
 #include "RenderPassD3D11Impl.hpp"
 #include "DisjointQueryPool.hpp"
+#include "BottomLevelASBase.hpp"
+#include "TopLevelASBase.hpp"
 
 #ifdef DILIGENT_DEBUG
 #    define VERIFY_CONTEXT_BINDINGS
@@ -58,6 +60,8 @@ struct DeviceContextD3D11ImplTraits
     using QueryType         = QueryD3D11Impl;
     using FramebufferType   = FramebufferD3D11Impl;
     using RenderPassType    = RenderPassD3D11Impl;
+    using BottomLevelASType = BottomLevelASBase<IBottomLevelAS, RenderDeviceD3D11Impl>;
+    using TopLevelASType    = TopLevelASBase<ITopLevelAS, RenderDeviceD3D11Impl>;
 };
 
 /// Device context implementation in Direct3D11 backend.

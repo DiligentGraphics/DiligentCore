@@ -907,9 +907,9 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
         if (Attrib.CommitResources)
         {
             if (m_Desc.IsAnyGraphicsPipeline())
-                CmdCtx.AsGraphicsContext().SetRootSignature(GetD3D12RootSignature());
+                CmdCtx.AsGraphicsContext().SetGraphicsRootSignature(GetD3D12RootSignature());
             else
-                CmdCtx.AsComputeContext().SetRootSignature(GetD3D12RootSignature());
+                CmdCtx.AsComputeContext().SetComputeRootSignature(GetD3D12RootSignature());
         }
         return nullptr;
     }
@@ -936,9 +936,9 @@ ShaderResourceCacheD3D12* PipelineStateD3D12Impl::CommitAndTransitionShaderResou
     if (Attrib.CommitResources)
     {
         if (m_Desc.IsAnyGraphicsPipeline())
-            CmdCtx.AsGraphicsContext().SetRootSignature(GetD3D12RootSignature());
+            CmdCtx.AsGraphicsContext().SetGraphicsRootSignature(GetD3D12RootSignature());
         else
-            CmdCtx.AsComputeContext().SetRootSignature(GetD3D12RootSignature());
+            CmdCtx.AsComputeContext().SetComputeRootSignature(GetD3D12RootSignature());
 
         if (Attrib.TransitionResources)
         {

@@ -118,9 +118,9 @@ BufferD3D12Impl::BufferD3D12Impl(IReferenceCounters*        pRefCounters,
         // understood by applications and row-major texture data is commonly marshaled through buffers.
         D3D12BuffDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         D3D12BuffDesc.Flags  = D3D12_RESOURCE_FLAG_NONE;
-        if (m_Desc.BindFlags & BIND_UNORDERED_ACCESS)
+        if ((m_Desc.BindFlags & BIND_UNORDERED_ACCESS) || (m_Desc.BindFlags & BIND_RAY_TRACING))
             D3D12BuffDesc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        if (!(m_Desc.BindFlags & BIND_SHADER_RESOURCE))
+        if (!(m_Desc.BindFlags & BIND_SHADER_RESOURCE) && !(m_Desc.BindFlags & BIND_RAY_TRACING))
             D3D12BuffDesc.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
 
         auto* pd3d12Device = pRenderDeviceD3D12->GetD3D12Device();

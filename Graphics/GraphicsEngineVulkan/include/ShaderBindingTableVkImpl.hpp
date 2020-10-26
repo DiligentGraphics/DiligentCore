@@ -30,20 +30,20 @@
 /// \file
 /// Definition of the Diligent::ShaderBindingTableVkImpl class
 
-#include "BufferVkImpl.hpp"
 #include "RenderDeviceVk.h"
 #include "RenderDeviceVkImpl.hpp"
 #include "ShaderBindingTableVk.h"
 #include "ShaderBindingTableBase.hpp"
+#include "PipelineStateVkImpl.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent
 {
 
-class ShaderBindingTableVkImpl final : public ShaderBindingTableBase<IShaderBindingTableVk, RenderDeviceVkImpl>
+class ShaderBindingTableVkImpl final : public ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, RenderDeviceVkImpl>
 {
 public:
-    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableVk, RenderDeviceVkImpl>;
+    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, RenderDeviceVkImpl>;
 
     ShaderBindingTableVkImpl(IReferenceCounters*           pRefCounters,
                              RenderDeviceVkImpl*           pRenderDeviceVk,
@@ -56,37 +56,14 @@ public:
     virtual void DILIGENT_CALL_TYPE Reset(const ShaderBindingTableDesc& Desc) override;
 
     virtual void DILIGENT_CALL_TYPE ResetHitGroups(Uint32 HitShadersPerInstance) override;
-
-    virtual void DILIGENT_CALL_TYPE BindRayGenShader(const char* ShaderGroupName, const void* Data, Uint32 DataSize) override;
-
-    virtual void DILIGENT_CALL_TYPE BindMissShader(const char* ShaderGroupName, Uint32 MissIndex, const void* Data, Uint32 DataSize) override;
-
-    virtual void DILIGENT_CALL_TYPE BindHitGroup(ITopLevelAS* pTLAS,
-                                                 const char*  InstanceName,
-                                                 const char*  GeometryName,
-                                                 Uint32       RayOffsetInHitGroupIndex,
-                                                 const char*  ShaderGroupName,
-                                                 const void*  Data,
-                                                 Uint32       DataSize) override;
-
-    virtual void DILIGENT_CALL_TYPE BindHitGroups(ITopLevelAS* pTLAS,
-                                                  const char*  InstanceName,
-                                                  Uint32       RayOffsetInHitGroupIndex,
-                                                  const char*  ShaderGroupName,
-                                                  const void*  Data,
-                                                  Uint32       DataSize) override;
-
-    virtual void DILIGENT_CALL_TYPE BindCallableShader(Uint32      Index,
-                                                       const char* ShaderName,
-                                                       const void* Data,
-                                                       Uint32      DataSize) override;
-
     virtual void DILIGENT_CALL_TYPE BindAll(const BindAllAttribs& Attribs) override;
 
-    virtual void DILIGENT_CALL_TYPE GetVkStridedBufferRegions(VkStridedBufferRegionKHR& RaygenShaderBindingTable,
-                                                              VkStridedBufferRegionKHR& MissShaderBindingTable,
-                                                              VkStridedBufferRegionKHR& HitShaderBindingTable,
-                                                              VkStridedBufferRegionKHR& CallableShaderBindingTable) override;
+    virtual void DILIGENT_CALL_TYPE GetVkStridedBufferRegions(IDeviceContextVk*              pContext,
+                                                              RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                                              VkStridedBufferRegionKHR&      RaygenShaderBindingTable,
+                                                              VkStridedBufferRegionKHR&      MissShaderBindingTable,
+                                                              VkStridedBufferRegionKHR&      HitShaderBindingTable,
+                                                              VkStridedBufferRegionKHR&      CallableShaderBindingTable) override;
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableVk, TShaderBindingTableBase);
 
@@ -94,17 +71,8 @@ private:
     void ValidateDesc(const ShaderBindingTableDesc& Desc) const;
 
 private:
-    RefCntAutoPtr<BufferVkImpl> m_pBuffer;
-    std::vector<Uint32>         m_ShaderRecords;
-
-    Uint32 m_MissShadersOffset        = 0;
-    Uint32 m_HitGroupsOffset          = 0;
-    Uint32 m_CallbaleShadersOffset    = 0;
-    Uint32 m_MissShaderCount          = 0;
-    Uint32 m_HitGroupCount            = 0;
-    Uint32 m_CallableShaderCount      = 0;
-    Uint32 m_ShaderGroupHandleSize    = 0;
-    Uint32 m_ShaderGroupBaseAlignment = 0;
+#ifdef DILIGENT_DEBUG
+#endif
 };
 
 } // namespace Diligent

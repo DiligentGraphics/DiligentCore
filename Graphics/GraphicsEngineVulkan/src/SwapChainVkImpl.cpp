@@ -423,12 +423,24 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     swapchain_ci.imageColorSpace    = ColorSpace;
 
     DEV_CHECK_ERR(m_SwapChainDesc.Usage != 0, "No swap chain usage flags defined");
-    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_RENDER_TARGET)
-        swapchain_ci.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_SHADER_INPUT)
-        swapchain_ci.imageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-    if (m_SwapChainDesc.Usage & SWAP_CHAIN_USAGE_COPY_SOURCE)
-        swapchain_ci.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    static_assert(SWAP_CHAIN_USAGE_LAST == SWAP_CHAIN_USAGE_UNORDERED_ACCESS, "Please update this function to handle the new swapchain usage");
+
+    for (Uint32 UsageBit = 1; UsageBit <= m_SwapChainDesc.Usage; UsageBit <<= 1)
+    {
+        if ((m_SwapChainDesc.Usage & UsageBit) == 0)
+            continue;
+
+        switch (static_cast<SWAP_CHAIN_USAGE_FLAGS>(UsageBit))
+        {
+            // clang-format off
+            case SWAP_CHAIN_USAGE_RENDER_TARGET:    swapchain_ci.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; break;
+            case SWAP_CHAIN_USAGE_SHADER_INPUT:     swapchain_ci.imageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;                                            break;
+            case SWAP_CHAIN_USAGE_COPY_SOURCE:      swapchain_ci.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;                                       break;
+            case SWAP_CHAIN_USAGE_UNORDERED_ACCESS: swapchain_ci.imageUsage |= VK_IMAGE_USAGE_STORAGE_BIT;                                            break;
+            default:                                UNEXPECTED("unknown swapchain usage flag");
+                // clang-format on
+        }
+    }
 
     // vkCmdClearColorImage() command requires the image to use VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL layout
     // that requires  VK_IMAGE_USAGE_TRANSFER_DST_BIT to be set
@@ -639,9 +651,10 @@ VkResult SwapChainVkImpl::AcquireNextImage(DeviceContextVkImpl* pDeviceCtxVk)
     m_ImageAcquiredFenceSubmitted[m_SemaphoreIndex] = (res == VK_SUCCESS);
     if (res == VK_SUCCESS)
     {
-        // Next command in the device context must wait for the next image to be acquired
-        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2)
-        pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+        // Next command in the device context must wait for the next image to be acquired.
+        // Unlike fences or events, the act of waiting for a semaphore also unsignals that semaphore (6.4.2).
+        // Swapchain may be used as UAV in compute or ray tracing shader, so we must wait on all stages.
+        pDeviceCtxVk->AddWaitSemaphore(m_ImageAcquiredSemaphores[m_SemaphoreIndex], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
         if (!m_SwapChainImagesInitialized[m_BackBufferIndex])
         {
             // Vulkan validation layers do not like uninitialized memory.

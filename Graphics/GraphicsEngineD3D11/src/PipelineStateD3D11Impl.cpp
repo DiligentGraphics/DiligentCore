@@ -78,9 +78,16 @@ void PipelineStateD3D11Impl::InitInternalObjects(const PSOCreateInfoType& Create
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                    pRefCounters,
                                                RenderDeviceD3D11Impl*                 pRenderDeviceD3D11,
                                                const GraphicsPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo},
+    // clang-format off
+    TPipelineStateBase
+    {
+        pRefCounters,
+        pRenderDeviceD3D11,
+        CreateInfo
+    },
     m_SRBMemAllocator{GetRawAllocator()},
-    m_ImmutableSamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerInfo, GetRawAllocator(), "Allocator for vector<ImmutableSamplerInfo>"))
+    m_ImmutableSamplers (STD_ALLOCATOR_RAW_MEM(ImmutableSamplerInfo, GetRawAllocator(), "Allocator for vector<ImmutableSamplerInfo>"))
+// clang-format on
 {
     try
     {
@@ -155,9 +162,16 @@ PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*              
 PipelineStateD3D11Impl::PipelineStateD3D11Impl(IReferenceCounters*                   pRefCounters,
                                                RenderDeviceD3D11Impl*                pRenderDeviceD3D11,
                                                const ComputePipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pRenderDeviceD3D11, CreateInfo},
+    // clang-format off
+    TPipelineStateBase
+    {
+        pRefCounters,
+        pRenderDeviceD3D11,
+        CreateInfo
+    },
     m_SRBMemAllocator{GetRawAllocator()},
     m_ImmutableSamplers(STD_ALLOCATOR_RAW_MEM(ImmutableSamplerInfo, GetRawAllocator(), "Allocator for vector<ImmutableSamplerInfo>"))
+// clang-format on
 {
     try
     {

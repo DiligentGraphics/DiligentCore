@@ -154,7 +154,9 @@ VKAPI_ATTR VkResult VKAPI_CALL Redirect_vkCreateAccelerationStructureKHR(VkDevic
 
     if (CreateInfo.info.type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR)
     {
-        CreateInfo.info.instanceCount = pCreateInfo->maxGeometryCount;
+        VERIFY_EXPR(pCreateInfo->maxGeometryCount == 1);
+
+        CreateInfo.info.instanceCount = pCreateInfo->pGeometryInfos->maxPrimitiveCount;
     }
     else if (CreateInfo.info.type == VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR)
     {
@@ -183,7 +185,6 @@ VKAPI_ATTR VkResult VKAPI_CALL Redirect_vkCreateAccelerationStructureKHR(VkDevic
             {
                 dst.geometry.triangles.vertexData      = VK_NULL_HANDLE;
                 dst.geometry.triangles.vertexOffset    = 0;
-                dst.geometry.triangles.vertexCount     = src.maxVertexCount;
                 dst.geometry.triangles.vertexStride    = 0;
                 dst.geometry.triangles.vertexFormat    = src.vertexFormat;
                 dst.geometry.triangles.indexData       = VK_NULL_HANDLE;
@@ -200,7 +201,8 @@ VKAPI_ATTR VkResult VKAPI_CALL Redirect_vkCreateAccelerationStructureKHR(VkDevic
                 }
                 else
                 {
-                    dst.geometry.triangles.indexCount = src.maxPrimitiveCount * 3;
+                    dst.geometry.triangles.indexCount  = src.maxPrimitiveCount * 3;
+                    dst.geometry.triangles.vertexCount = std::max(src.maxPrimitiveCount * 6, src.maxVertexCount);
                 }
             }
             else if (dst.geometryType == VK_GEOMETRY_TYPE_AABBS_KHR)
@@ -229,6 +231,7 @@ VKAPI_ATTR void VKAPI_CALL Redirect_vkGetAccelerationStructureMemoryRequirements
                                                                                     VkMemoryRequirements2*                                  pMemoryRequirements)
 {
     VERIFY_EXPR(pInfo->sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_KHR);
+    VERIFY_EXPR(pMemoryRequirements->sType == VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2);
     VERIFY_EXPR(pInfo->pNext == nullptr);
     VERIFY_EXPR(pInfo->buildType == VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR);
 
@@ -321,6 +324,12 @@ VKAPI_ATTR void VKAPI_CALL Redirect_vkCmdBuildAccelerationStructureKHR(VkCommand
                 dst.flags        = src.flags;
                 dst.geometryType = src.geometryType;
 
+                dst.geometry.triangles.sType = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV;
+                dst.geometry.triangles.pNext = nullptr;
+
+                dst.geometry.aabbs.sType = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV;
+                dst.geometry.aabbs.pNext = nullptr;
+
                 if (dst.geometryType == VK_GEOMETRY_TYPE_TRIANGLES_KHR)
                 {
                     VERIFY_EXPR(src.geometry.triangles.sType == VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR);
@@ -331,8 +340,6 @@ VKAPI_ATTR void VKAPI_CALL Redirect_vkCmdBuildAccelerationStructureKHR(VkCommand
                     BufferAndOffset IB = DeviceAddressToBuffer(src.geometry.triangles.indexData);
                     BufferAndOffset TB = DeviceAddressToBuffer(src.geometry.triangles.transformData);
 
-                    dst.geometry.triangles.sType           = VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV;
-                    dst.geometry.triangles.pNext           = nullptr;
                     dst.geometry.triangles.vertexData      = VB.Buffer;
                     dst.geometry.triangles.vertexOffset    = VB.Offset;
                     dst.geometry.triangles.vertexCount     = 0;
@@ -353,7 +360,8 @@ VKAPI_ATTR void VKAPI_CALL Redirect_vkCmdBuildAccelerationStructureKHR(VkCommand
                     else
                     {
                         dst.geometry.triangles.indexOffset += off.primitiveOffset;
-                        dst.geometry.triangles.indexCount = off.primitiveCount * 3;
+                        dst.geometry.triangles.indexCount  = off.primitiveCount * 3;
+                        dst.geometry.triangles.vertexCount = off.primitiveCount * 6;
                     }
                 }
                 else
@@ -364,8 +372,6 @@ VKAPI_ATTR void VKAPI_CALL Redirect_vkCmdBuildAccelerationStructureKHR(VkCommand
 
                     BufferAndOffset Data = DeviceAddressToBuffer(src.geometry.aabbs.data);
 
-                    dst.geometry.aabbs.sType    = VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV;
-                    dst.geometry.aabbs.pNext    = nullptr;
                     dst.geometry.aabbs.aabbData = Data.Buffer;
                     dst.geometry.aabbs.numAABBs = off.primitiveCount;
                     dst.geometry.aabbs.stride   = static_cast<uint32_t>(src.geometry.aabbs.stride);
@@ -424,6 +430,12 @@ VKAPI_ATTR VkResult VKAPI_CALL Redirect_vkGetRayTracingShaderGroupHandlesKHR(VkD
 {
     return vkGetRayTracingShaderGroupHandlesNV(device, pipeline, firstGroup, groupCount, dataSize, pData);
 }
+
+VKAPI_ATTR void VKAPI_CALL Redirect_vkDestroyAccelerationStructureKHR(VkDevice device, VkAccelerationStructureKHR accelerationStructure, const VkAllocationCallbacks* pAllocator)
+{
+    return vkDestroyAccelerationStructureNV(device, accelerationStructure, pAllocator);
+}
+
 
 VKAPI_ATTR VkResult VKAPI_CALL Redirect_vkCreateRayTracingPipelinesKHR(VkDevice                                 device,
                                                                        VkPipelineCache                          pipelineCache,
@@ -506,6 +518,7 @@ void EnableRayTracingKHRviaNV()
     vkGetRayTracingShaderGroupHandlesKHR            = &Redirect_vkGetRayTracingShaderGroupHandlesKHR;
     vkCreateRayTracingPipelinesKHR                  = &Redirect_vkCreateRayTracingPipelinesKHR;
     vkCmdTraceRaysKHR                               = &Redirect_vkCmdTraceRaysKHR;
+    vkDestroyAccelerationStructureKHR               = &Redirect_vkDestroyAccelerationStructureKHR;
 
     Origin_vkGetBufferDeviceAddressKHR = vkGetBufferDeviceAddressKHR;
     Origin_vkCreateBuffer              = vkCreateBuffer;

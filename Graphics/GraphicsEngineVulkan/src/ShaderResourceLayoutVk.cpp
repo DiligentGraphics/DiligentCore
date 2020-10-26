@@ -39,6 +39,7 @@
 #include "ShaderResourceVariableBase.hpp"
 #include "StringTools.hpp"
 #include "PipelineStateVkImpl.hpp"
+#include "TopLevelASVkImpl.hpp"
 
 namespace Diligent
 {
@@ -1048,22 +1049,22 @@ void ShaderResourceLayoutVk::VkResource::CacheAccelerationStructure(IDeviceObjec
                                                                     VkDescriptorSet                  vkDescrSet,
                                                                     Uint32                           ArrayInd) const
 {
-    //    VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure, "Acceleration Structure resource is expected");
-    //    RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{pTLAS, IID_TopLevelASVk};
-    //#ifdef DILIGENT_DEVELOPMENT
-    //    // AZ TODO
-    //#endif
-    //    if (UpdateCachedResource(DstRes, std::move(pTLASVk), [](const TopLevelASVkImpl*, const TopLevelASVkImpl*) {}))
-    //    {
-    //        // Do not update descriptor for a dynamic TLAS. All dynamic resource descriptors
-    //        // are updated at once by CommitDynamicResources() when SRB is committed.
-    //        if (vkDescrSet != VK_NULL_HANDLE && GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
-    //        {
-    //            VkWriteDescriptorSetAccelerationStructureKHR DescrASInfo = DstRes.GetAccelerationStructureWriteInfo();
-    //            UpdateDescriptorHandle(vkDescrSet, ArrayInd, nullptr, nullptr, nullptr, &DescrASInfo);
-    //        }
-    //        //
-    //    }
+    VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure, "Acceleration Structure resource is expected");
+    RefCntAutoPtr<TopLevelASVkImpl> pTLASVk{pTLAS, IID_TopLevelASVk};
+#ifdef DILIGENT_DEVELOPMENT
+    // AZ TODO
+#endif
+    if (UpdateCachedResource(DstRes, std::move(pTLASVk), [](const TopLevelASVkImpl*, const TopLevelASVkImpl*) {}))
+    {
+        // Do not update descriptor for a dynamic TLAS. All dynamic resource descriptors
+        // are updated at once by CommitDynamicResources() when SRB is committed.
+        if (vkDescrSet != VK_NULL_HANDLE && GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC)
+        {
+            VkWriteDescriptorSetAccelerationStructureKHR DescrASInfo = DstRes.GetAccelerationStructureWriteInfo();
+            UpdateDescriptorHandle(vkDescrSet, ArrayInd, nullptr, nullptr, nullptr, &DescrASInfo);
+        }
+        //
+    }
 }
 
 void ShaderResourceLayoutVk::VkResource::BindResource(IDeviceObject* pObj, Uint32 ArrayIndex, ShaderResourceCacheVk& ResourceCache) const

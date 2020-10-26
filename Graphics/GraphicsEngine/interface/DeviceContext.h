@@ -809,7 +809,7 @@ struct BLASBuildTriangleData
     Uint32      IndexOffset           DEFAULT_INITIALIZER(0);
     
     /// AZ TODO
-    Uint32      IndexCount            DEFAULT_INITIALIZER(0);
+    Uint32      IndexCount            DEFAULT_INITIALIZER(0); // AZ TODO: use PrimitveCount ?
     
     /// AZ TODO
     VALUE_TYPE  IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED); // optional, value may be taken from declaration
@@ -872,6 +872,9 @@ struct BLASBuildAttribs
     RESOURCE_STATE_TRANSITION_MODE  BLASTransitionMode          DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
     /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE  GeometryTransitionMode      DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// AZ TODO
     BLASBuildTriangleData const*    pTriangleData               DEFAULT_INITIALIZER(nullptr);
     
     /// AZ TODO
@@ -903,6 +906,9 @@ typedef struct BLASBuildAttribs BLASBuildAttribs;
 /// AZ TODO
 static const Uint32 TLAS_INSTANCE_OFFSET_AUTO = ~0u;
 
+/// AZ TODO
+static const Uint32 TLAS_INSTANCE_DATA_SIZE = 64;
+
 
 /// AZ TODO
 struct TLASBuildInstanceData
@@ -917,7 +923,7 @@ struct TLASBuildInstanceData
     float                     Transform[3][4] DEFAULT_INITIALIZER({});
     
     /// AZ TODO
-    Uint32                    customId        DEFAULT_INITIALIZER(0);        // 24 bits, in shader: gl_InstanceCustomIndexNV for GLSL, InstanceID() for HLSL
+    Uint32                    CustomId        DEFAULT_INITIALIZER(0);        // 24 bits, in shader: gl_InstanceCustomIndexNV for GLSL, InstanceID() for HLSL
     
     /// AZ TODO
     RAYTRACING_INSTANCE_FLAGS Flags           DEFAULT_INITIALIZER(RAYTRACING_INSTANCE_NONE);
@@ -926,7 +932,7 @@ struct TLASBuildInstanceData
     Uint8                     Mask            DEFAULT_INITIALIZER(0xFF);            // visibility mask for the geometry, the instance may only be hit if rayMask & instance.mask != 0
     
     /// AZ TODO
-    Uint32                    contributionToHitGroupIndex DEFAULT_INITIALIZER(TLAS_INSTANCE_OFFSET_AUTO); // used when TLAS created with SHADER_BINDING_USER_DEFINED, see IShaderBindingTangle::BindAll()
+    Uint32                    ContributionToHitGroupIndex DEFAULT_INITIALIZER(TLAS_INSTANCE_OFFSET_AUTO); // used when TLAS created with SHADER_BINDING_USER_DEFINED, see IShaderBindingTangle::BindAll()
     
 #if DILIGENT_CPP_INTERFACE
     /// AZ TODO
@@ -940,37 +946,40 @@ typedef struct TLASBuildInstanceData TLASBuildInstanceData;
 struct TLASBuildAttribs
 {
     /// AZ TODO
-    ITopLevelAS*                    pTLAS                        DEFAULT_INITIALIZER(nullptr);
+    ITopLevelAS*                    pTLAS                         DEFAULT_INITIALIZER(nullptr);
     
     /// AZ TODO
-    RESOURCE_STATE_TRANSITION_MODE  TLASTransitionMode           DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    RESOURCE_STATE_TRANSITION_MODE  TLASTransitionMode            DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
     /// AZ TODO
-    TLASBuildInstanceData const*    pInstances                   DEFAULT_INITIALIZER(nullptr);
-    
-    /// AZ TODO
-    Uint32                          InstanceCount                DEFAULT_INITIALIZER(0);
-    
-    /// AZ TODO
-    IBuffer*                        pInstancesBuffer             DEFAULT_INITIALIZER(nullptr);
+    RESOURCE_STATE_TRANSITION_MODE  BLASTransitionMode            DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
 
     /// AZ TODO
-    Uint32                          InstancesBufferOffset        DEFAULT_INITIALIZER(0);
-
-    /// AZ TODO
-    RESOURCE_STATE_TRANSITION_MODE  InstanceBufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
-
-    /// AZ TODO
-    Uint32                          HitShadersPerInstance        DEFAULT_INITIALIZER(1);
-
-    /// AZ TODO
-    IBuffer*                        pScratchBuffer               DEFAULT_INITIALIZER(nullptr);
+    TLASBuildInstanceData const*    pInstances                    DEFAULT_INITIALIZER(nullptr);
     
     /// AZ TODO
-    Uint32                          ScratchBufferOffset          DEFAULT_INITIALIZER(0);
+    Uint32                          InstanceCount                 DEFAULT_INITIALIZER(0);
     
     /// AZ TODO
-    RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode  DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+    IBuffer*                        pInstancesBuffer              DEFAULT_INITIALIZER(nullptr);
+
+    /// AZ TODO
+    Uint32                          InstancesBufferOffset         DEFAULT_INITIALIZER(0);
+
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE  InstancesBufferTransitionMode DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
+
+    /// AZ TODO
+    Uint32                          HitShadersPerInstance         DEFAULT_INITIALIZER(1);
+
+    /// AZ TODO
+    IBuffer*                        pScratchBuffer                DEFAULT_INITIALIZER(nullptr);
+    
+    /// AZ TODO
+    Uint32                          ScratchBufferOffset           DEFAULT_INITIALIZER(0);
+    
+    /// AZ TODO
+    RESOURCE_STATE_TRANSITION_MODE  ScratchBufferTransitionMode   DEFAULT_INITIALIZER(RESOURCE_STATE_TRANSITION_MODE_NONE);
     
 #if DILIGENT_CPP_INTERFACE
     /// AZ TODO
@@ -1046,6 +1055,124 @@ struct TraceRaysAttribs
 #endif
 };
 typedef struct TraceRaysAttribs TraceRaysAttribs;
+
+
+static const Uint32 REMAINING_MIP_LEVELS   = 0xFFFFFFFFU;
+static const Uint32 REMAINING_ARRAY_SLICES = 0xFFFFFFFFU;
+
+/// Resource state transition barrier description
+struct StateTransitionDesc
+{
+    /// Resource to transition.
+    /// Can be ITexture, IBuffer, IBottomLevelAS, ITopLevelAS.
+    struct IDeviceObject* pResource DEFAULT_INITIALIZER(nullptr);
+        
+    /// When transitioning a texture, first mip level of the subresource range to transition.
+    Uint32 FirstMipLevel     DEFAULT_INITIALIZER(0);
+
+    /// When transitioning a texture, number of mip levels of the subresource range to transition.
+    Uint32 MipLevelsCount    DEFAULT_INITIALIZER(REMAINING_MIP_LEVELS);
+
+    /// When transitioning a texture, first array slice of the subresource range to transition.
+    Uint32 FirstArraySlice   DEFAULT_INITIALIZER(0);
+
+    /// When transitioning a texture, number of array slices of the subresource range to transition.
+    Uint32 ArraySliceCount   DEFAULT_INITIALIZER(REMAINING_ARRAY_SLICES);
+
+    /// Resource state before transition. If this value is RESOURCE_STATE_UNKNOWN,
+    /// internal resource state will be used, which must be defined in this case.
+    RESOURCE_STATE OldState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
+
+    /// Resource state after transition.
+    RESOURCE_STATE NewState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
+
+    /// State transition type, see Diligent::STATE_TRANSITION_TYPE.
+
+    /// \note When issuing UAV barrier (i.e. OldState and NewState equal RESOURCE_STATE_UNORDERED_ACCESS),
+    ///       TransitionType must be STATE_TRANSITION_TYPE_IMMEDIATE.
+    STATE_TRANSITION_TYPE TransitionType DEFAULT_INITIALIZER(STATE_TRANSITION_TYPE_IMMEDIATE);
+
+    /// If set to true, the internal resource state will be set to NewState and the engine
+    /// will be able to take over the resource state management. In this case it is the 
+    /// responsibility of the application to make sure that all subresources are indeed in
+    /// designated state.
+    /// If set to false, internal resource state will be unchanged.
+    /// \note When TransitionType is STATE_TRANSITION_TYPE_BEGIN, this member must be false.
+    bool UpdateResourceState  DEFAULT_INITIALIZER(false);
+
+#if DILIGENT_CPP_INTERFACE
+    StateTransitionDesc()noexcept{}
+
+    StateTransitionDesc(ITexture*             _pTexture, 
+                        RESOURCE_STATE        _OldState,
+                        RESOURCE_STATE        _NewState, 
+                        Uint32                _FirstMipLevel   = 0,
+                        Uint32                _MipLevelsCount  = REMAINING_MIP_LEVELS,
+                        Uint32                _FirstArraySlice = 0,
+                        Uint32                _ArraySliceCount = REMAINING_ARRAY_SLICES,
+                        STATE_TRANSITION_TYPE _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
+                        bool                  _UpdateState     = false)noexcept : 
+        pResource           {static_cast<IDeviceObject*>(_pTexture)},
+        FirstMipLevel       {_FirstMipLevel  },
+        MipLevelsCount      {_MipLevelsCount },
+        FirstArraySlice     {_FirstArraySlice},
+        ArraySliceCount     {_ArraySliceCount},
+        OldState            {_OldState       },
+        NewState            {_NewState       },
+        TransitionType      {_TransitionType },
+        UpdateResourceState {_UpdateState    }
+    {}
+
+    StateTransitionDesc(ITexture*      _pTexture, 
+                        RESOURCE_STATE _OldState,
+                        RESOURCE_STATE _NewState, 
+                        bool           _UpdateState)noexcept :
+        StateTransitionDesc
+        {
+            _pTexture,
+            _OldState,
+            _NewState,
+            0,
+            REMAINING_MIP_LEVELS,
+            0,
+            REMAINING_ARRAY_SLICES,
+            STATE_TRANSITION_TYPE_IMMEDIATE,
+            _UpdateState
+        }
+    {}
+
+    StateTransitionDesc(IBuffer*       _pBuffer, 
+                        RESOURCE_STATE _OldState,
+                        RESOURCE_STATE _NewState,
+                        bool           _UpdateState)noexcept : 
+        pResource           {static_cast<IDeviceObject*>(_pBuffer)},
+        OldState            {_OldState   },
+        NewState            {_NewState   },
+        UpdateResourceState {_UpdateState}
+    {}
+    
+    StateTransitionDesc(IBottomLevelAS* _pBLAS, 
+                        RESOURCE_STATE  _OldState,
+                        RESOURCE_STATE  _NewState,
+                        bool            _UpdateState)noexcept : 
+        pResource           {static_cast<IDeviceObject*>(_pBLAS)},
+        OldState            {_OldState   },
+        NewState            {_NewState   },
+        UpdateResourceState {_UpdateState}
+    {}
+
+    StateTransitionDesc(ITopLevelAS*     _pTLAS, 
+                        RESOURCE_STATE  _OldState,
+                        RESOURCE_STATE  _NewState,
+                        bool            _UpdateState)noexcept : 
+        pResource           {static_cast<IDeviceObject*>(_pTLAS)},
+        OldState            {_OldState   },
+        NewState            {_NewState   },
+        UpdateResourceState {_UpdateState}
+    {}
+#endif
+};
+typedef struct StateTransitionDesc StateTransitionDesc;
 
 
 #define DILIGENT_INTERFACE_NAME IDeviceContext

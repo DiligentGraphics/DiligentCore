@@ -26,46 +26,50 @@
  */
 
 #include "pch.h"
-#include "ShaderBindingTableVkImpl.hpp"
-#include "BufferVkImpl.hpp"
-#include "VulkanTypeConversions.hpp"
+#include "ShaderBindingTableD3D12Impl.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "DeviceContextD3D12Impl.hpp"
+#include "D3D12TypeConversions.hpp"
+#include "GraphicsAccessories.hpp"
+#include "DXGITypeConversions.hpp"
+#include "EngineMemory.h"
+#include "StringTools.hpp"
 
 namespace Diligent
 {
 
-ShaderBindingTableVkImpl::ShaderBindingTableVkImpl(IReferenceCounters*           pRefCounters,
-                                                   RenderDeviceVkImpl*           pRenderDeviceVk,
-                                                   const ShaderBindingTableDesc& Desc,
-                                                   bool                          bIsDeviceInternal) :
-    TShaderBindingTableBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal}
+ShaderBindingTableD3D12Impl::ShaderBindingTableD3D12Impl(IReferenceCounters*           pRefCounters,
+                                                         class RenderDeviceD3D12Impl*  pDeviceD3D12,
+                                                         const ShaderBindingTableDesc& Desc,
+                                                         bool                          bIsDeviceInternal) :
+    TShaderBindingTableBase{pRefCounters, pDeviceD3D12, Desc, bIsDeviceInternal}
 {
     ValidateDesc(Desc);
 
-    const auto& RTLimits = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
-    m_ShaderRecordStride = m_Desc.ShaderRecordSize + RTLimits.shaderGroupHandleSize;
+    m_ShaderRecordStride = m_Desc.ShaderRecordSize + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 }
 
-ShaderBindingTableVkImpl::~ShaderBindingTableVkImpl()
+ShaderBindingTableD3D12Impl::~ShaderBindingTableD3D12Impl()
 {
 }
 
-void ShaderBindingTableVkImpl::ValidateDesc(const ShaderBindingTableDesc& Desc) const
-{
-    const auto& RTLimits = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
+IMPLEMENT_QUERY_INTERFACE(ShaderBindingTableD3D12Impl, IID_ShaderBindingTableD3D12, TShaderBindingTableBase)
 
-    if (Desc.ShaderRecordSize + RTLimits.shaderGroupHandleSize > RTLimits.maxShaderGroupStride)
+void ShaderBindingTableD3D12Impl::ValidateDesc(const ShaderBindingTableDesc& Desc) const
+{
+    if (Desc.ShaderRecordSize + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES > D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE)
     {
         LOG_ERROR_AND_THROW("Description of Shader binding table '", (Desc.Name ? Desc.Name : ""),
-                            "' is invalid: ShaderRecordSize is too big, max size is: ", RTLimits.maxShaderGroupStride - RTLimits.shaderGroupHandleSize);
+                            "' is invalid: ShaderRecordSize is too big, max size is: ", D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE - D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
     }
 }
 
-void ShaderBindingTableVkImpl::Verify() const
+void ShaderBindingTableD3D12Impl::Verify() const
 {
     // AZ TODO
 }
 
-void ShaderBindingTableVkImpl::Reset(const ShaderBindingTableDesc& Desc)
+void ShaderBindingTableD3D12Impl::Reset(const ShaderBindingTableDesc& Desc)
 {
     m_RayGenShaderRecord.clear();
     m_MissShadersRecord.clear();
@@ -84,35 +88,29 @@ void ShaderBindingTableVkImpl::Reset(const ShaderBindingTableDesc& Desc)
         return;
     }
 
-    m_Desc = Desc;
-
-    const auto& RTLimits = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
-    m_ShaderRecordStride = m_Desc.ShaderRecordSize + RTLimits.shaderGroupHandleSize;
+    m_Desc               = Desc;
+    m_ShaderRecordStride = m_Desc.ShaderRecordSize + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 }
 
-void ShaderBindingTableVkImpl::ResetHitGroups(Uint32 HitShadersPerInstance)
-{
-    // AZ TODO
-
-    m_Changed = true;
-}
-
-void ShaderBindingTableVkImpl::BindAll(const BindAllAttribs& Attribs)
+void ShaderBindingTableD3D12Impl::ResetHitGroups(Uint32 HitShadersPerInstance)
 {
     // AZ TODO
 }
 
-void ShaderBindingTableVkImpl::GetVkStridedBufferRegions(IDeviceContextVk*              pContext,
-                                                         RESOURCE_STATE_TRANSITION_MODE TransitionMode,
-                                                         VkStridedBufferRegionKHR&      RaygenShaderBindingTable,
-                                                         VkStridedBufferRegionKHR&      MissShaderBindingTable,
-                                                         VkStridedBufferRegionKHR&      HitShaderBindingTable,
-                                                         VkStridedBufferRegionKHR&      CallableShaderBindingTable)
+void ShaderBindingTableD3D12Impl::BindAll(const BindAllAttribs& Attribs)
 {
-    const auto ShaderGroupBaseAlignment = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing.shaderGroupBaseAlignment;
+    // AZ TODO
+}
 
-    const auto AlignToLarger = [ShaderGroupBaseAlignment](size_t offset) -> Uint32 {
-        return Align(static_cast<Uint32>(offset), ShaderGroupBaseAlignment);
+void ShaderBindingTableD3D12Impl::GetD3D12AddressRangeAndStride(IDeviceContextD3D12*                        pContext,
+                                                                RESOURCE_STATE_TRANSITION_MODE              TransitionMode,
+                                                                D3D12_GPU_VIRTUAL_ADDRESS_RANGE&            RaygenShaderBindingTable,
+                                                                D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& MissShaderBindingTable,
+                                                                D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& HitShaderBindingTable,
+                                                                D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& CallableShaderBindingTable)
+{
+    const auto AlignToLarger = [](size_t offset) -> Uint32 {
+        return Align(static_cast<Uint32>(offset), static_cast<Uint32>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
     };
 
     const Uint32 RayGenOffset          = 0;
@@ -140,38 +138,33 @@ void ShaderBindingTableVkImpl::GetVkStridedBufferRegions(IDeviceContextVk*      
     if (m_pBuffer == nullptr)
         return; // something goes wrong
 
-    VkBuffer BuffHandle = m_pBuffer.RawPtr<BufferVkImpl>()->GetVkBuffer();
+    const D3D12_GPU_VIRTUAL_ADDRESS BuffHandle = m_pBuffer.RawPtr<BufferD3D12Impl>()->GetGPUAddress(0, ValidatedCast<DeviceContextD3D12Impl>(pContext));
 
     if (m_RayGenShaderRecord.size())
     {
-        RaygenShaderBindingTable.buffer = BuffHandle;
-        RaygenShaderBindingTable.offset = RayGenOffset;
-        RaygenShaderBindingTable.size   = m_RayGenShaderRecord.size();
-        RaygenShaderBindingTable.stride = m_ShaderRecordStride;
+        RaygenShaderBindingTable.StartAddress = BuffHandle + RayGenOffset;
+        RaygenShaderBindingTable.SizeInBytes  = m_RayGenShaderRecord.size();
     }
 
     if (m_MissShadersRecord.size())
     {
-        MissShaderBindingTable.buffer = BuffHandle;
-        MissShaderBindingTable.offset = MissShaderOffset;
-        MissShaderBindingTable.size   = m_MissShadersRecord.size();
-        MissShaderBindingTable.stride = m_ShaderRecordStride;
+        MissShaderBindingTable.StartAddress  = BuffHandle + MissShaderOffset;
+        MissShaderBindingTable.SizeInBytes   = m_MissShadersRecord.size();
+        MissShaderBindingTable.StrideInBytes = m_ShaderRecordStride;
     }
 
     if (m_HitGroupsRecord.size())
     {
-        HitShaderBindingTable.buffer = BuffHandle;
-        HitShaderBindingTable.offset = HitGroupOffset;
-        HitShaderBindingTable.size   = m_HitGroupsRecord.size();
-        HitShaderBindingTable.stride = m_ShaderRecordStride;
+        HitShaderBindingTable.StartAddress  = BuffHandle + HitGroupOffset;
+        HitShaderBindingTable.SizeInBytes   = m_HitGroupsRecord.size();
+        HitShaderBindingTable.StrideInBytes = m_ShaderRecordStride;
     }
 
     if (m_CallableShadersRecord.size())
     {
-        CallableShaderBindingTable.buffer = BuffHandle;
-        CallableShaderBindingTable.offset = CallableShadersOffset;
-        CallableShaderBindingTable.size   = m_CallableShadersRecord.size();
-        CallableShaderBindingTable.stride = m_ShaderRecordStride;
+        CallableShaderBindingTable.StartAddress  = BuffHandle + CallableShadersOffset;
+        CallableShaderBindingTable.SizeInBytes   = m_CallableShadersRecord.size();
+        CallableShaderBindingTable.StrideInBytes = m_ShaderRecordStride;
     }
 
     if (!m_Changed)

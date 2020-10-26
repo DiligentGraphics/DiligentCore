@@ -97,7 +97,7 @@ QueryManagerVk::QueryManagerVk(RenderDeviceVkImpl* pRenderDeviceVk,
                     VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT |
                     VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
 
-                const auto EnabledShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
+                const auto EnabledShaderStages = LogicalDevice.GetEnabledShaderStages();
                 if (EnabledShaderStages & VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT)
                 {
                     QueryPoolCI.pipelineStatistics |=

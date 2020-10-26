@@ -28,28 +28,36 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::ITopLevelASVk interface
+/// Definition of the Diligent::IShaderBindingTableD3D12 interface
 
-#include "../../GraphicsEngine/interface/TopLevelAS.h"
+#include "../../GraphicsEngine/interface/ShaderBindingTable.h"
+#include "DeviceContextD3D12.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-// {356FFFFA-9E57-49F7-8FF4-7017B61BE6A8}
-static const INTERFACE_ID IID_TopLevelASVk =
-    {0x356ffffa, 0x9e57, 0x49f7, {0x8f, 0xf4, 0x70, 0x17, 0xb6, 0x1b, 0xe6, 0xa8}};
+// {DCA2FAD9-2C41-4419-9D16-79731C0ED9D8}
+static const INTERFACE_ID IID_ShaderBindingTableD3D12 =
+    {0xdca2fad9, 0x2c41, 0x4419, {0x9d, 0x16, 0x79, 0x73, 0x1c, 0xe, 0xd9, 0xd8}};
 
-#define DILIGENT_INTERFACE_NAME ITopLevelASVk
+#define DILIGENT_INTERFACE_NAME IShaderBindingTableD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-#define ITopLevelASVkInclusiveMethods \
-    ITopLevelASInclusiveMethods;      \
-    ITopLevelASVkMethods TopLevelASVk
+#define IShaderBindingTableD3D12InclusiveMethods \
+    IShaderBindingTableInclusiveMethods;         \
+    IShaderBindingTableD3D12Methods ShaderBindingTable
+// clang-format off
 
-/// Exposes Vulkan-specific functionality of a Top-level acceleration structure object.
-DILIGENT_BEGIN_INTERFACE(ITopLevelASVk, ITopLevelAS)
+/// Exposes Direct3D12-specific functionality of a shader binding table object.
+DILIGENT_BEGIN_INTERFACE(IShaderBindingTableD3D12, IShaderBindingTable)
 {
-    /// Returns a Vulkan TLAS object handle.
-    VIRTUAL VkAccelerationStructureKHR METHOD(GetVkTLAS)(THIS) CONST PURE;
+    /// AZ TODO
+    VIRTUAL void METHOD(GetD3D12AddressRangeAndStride)(THIS_
+                                                       IDeviceContextD3D12*                           pContext,
+                                                       RESOURCE_STATE_TRANSITION_MODE                 TransitionMode,
+                                                       D3D12_GPU_VIRTUAL_ADDRESS_RANGE            REF RaygenShaderBindingTable,
+                                                       D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE REF MissShaderBindingTable,
+                                                       D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE REF HitShaderBindingTable,
+                                                       D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE REF CallableShaderBindingTable) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -57,7 +65,6 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-#    define ITopLevelASVk_GetVkTLAS(This) CALL_IFACE_METHOD(TopLevelASVk, GetVkTLAS, This)
 
 #endif
 

@@ -157,10 +157,10 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
     
     /// AZ TODO
     VIRTUAL void METHOD(BindCallableShader)(THIS_
-                                            Uint32      Index,
-                                            const char* ShaderName,
-                                            const void* Data        DEFAULT_INITIALIZER(nullptr),
-                                            Uint32      DataSize    DEFAULT_INITIALIZER(0)) PURE;
+                                            const char* ShaderGroupName,
+                                            Uint32      CallableIndex,
+                                            const void* Data            DEFAULT_INITIALIZER(nullptr),
+                                            Uint32      DataSize        DEFAULT_INITIALIZER(0)) PURE;
     
     /// AZ TODO
     VIRTUAL void METHOD(BindAll)(THIS_

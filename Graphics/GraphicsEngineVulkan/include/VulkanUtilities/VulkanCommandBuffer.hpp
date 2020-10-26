@@ -36,8 +36,8 @@ namespace VulkanUtilities
 class VulkanCommandBuffer
 {
 public:
-    VulkanCommandBuffer(VkPipelineStageFlags EnabledGraphicsShaderStages) noexcept :
-        m_EnabledGraphicsShaderStages{EnabledGraphicsShaderStages}
+    VulkanCommandBuffer(VkPipelineStageFlags EnabledShaderStages) noexcept :
+        m_EnabledShaderStages{EnabledShaderStages}
     {}
 
     // clang-format off
@@ -280,6 +280,17 @@ public:
         }
     }
 
+    __forceinline void BindRayTracingPipeline(VkPipeline RayTracingPipeline)
+    {
+        // 9.8
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RayTracingPipeline != RayTracingPipeline)
+        {
+            vkCmdBindPipeline(m_VkCmdBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, RayTracingPipeline);
+            m_State.RayTracingPipeline = RayTracingPipeline;
+        }
+    }
+
     __forceinline void SetViewports(uint32_t FirstViewport, uint32_t ViewportCount, const VkViewport* pViewports)
     {
         VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
@@ -331,7 +342,7 @@ public:
                                       VkImageLayout                  OldLayout,
                                       VkImageLayout                  NewLayout,
                                       const VkImageSubresourceRange& SubresRange,
-                                      VkPipelineStageFlags           EnabledGraphicsShaderStages,
+                                      VkPipelineStageFlags           EnabledShaderStages,
                                       VkPipelineStageFlags           SrcStages  = 0,
                                       VkPipelineStageFlags           DestStages = 0);
 
@@ -349,7 +360,7 @@ public:
             // dependencies between attachments
             EndRenderPass();
         }
-        TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, m_EnabledGraphicsShaderStages, SrcStages, DestStages);
+        TransitionImageLayout(m_VkCmdBuffer, Image, OldLayout, NewLayout, SubresRange, m_EnabledShaderStages, SrcStages, DestStages);
     }
 
 
@@ -357,7 +368,7 @@ public:
                                     VkBuffer             Buffer,
                                     VkAccessFlags        srcAccessMask,
                                     VkAccessFlags        dstAccessMask,
-                                    VkPipelineStageFlags EnabledGraphicsShaderStages,
+                                    VkPipelineStageFlags EnabledShaderStages,
                                     VkPipelineStageFlags SrcStages  = 0,
                                     VkPipelineStageFlags DestStages = 0);
 
@@ -374,7 +385,31 @@ public:
             // dependencies between attachments
             EndRenderPass();
         }
-        BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, m_EnabledGraphicsShaderStages, SrcStages, DestStages);
+        BufferMemoryBarrier(m_VkCmdBuffer, Buffer, srcAccessMask, dstAccessMask, m_EnabledShaderStages, SrcStages, DestStages);
+    }
+
+
+    // for Acceleration structures
+    static void ASMemoryBarrier(VkCommandBuffer      CmdBuffer,
+                                VkAccessFlags        srcAccessMask,
+                                VkAccessFlags        dstAccessMask,
+                                VkPipelineStageFlags EnabledShaderStages,
+                                VkPipelineStageFlags SrcStages  = 0,
+                                VkPipelineStageFlags DestStages = 0);
+
+    __forceinline void ASMemoryBarrier(VkAccessFlags        srcAccessMask,
+                                       VkAccessFlags        dstAccessMask,
+                                       VkPipelineStageFlags SrcStages  = 0,
+                                       VkPipelineStageFlags DestStages = 0)
+    {
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Image layout transitions within a render pass execute
+            // dependencies between attachments
+            EndRenderPass();
+        }
+        ASMemoryBarrier(m_VkCmdBuffer, srcAccessMask, dstAccessMask, m_EnabledShaderStages, SrcStages, DestStages);
     }
 
     __forceinline void BindDescriptorSets(VkPipelineBindPoint    pipelineBindPoint,
@@ -575,6 +610,12 @@ public:
                                                   const VkAccelerationStructureBuildOffsetInfoKHR* const* ppOffsetInfos)
     {
 #if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Build AS operations must be performed outside of render pass.
+            EndRenderPass();
+        }
         vkCmdBuildAccelerationStructureKHR(m_VkCmdBuffer, infoCount, pInfos, ppOffsetInfos);
 #else
         UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
@@ -584,6 +625,12 @@ public:
     __forceinline void CopyAccelerationStructure(const VkCopyAccelerationStructureInfoKHR& Info)
     {
 #if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Copy AS operations must be performed outside of render pass.
+            EndRenderPass();
+        }
         vkCmdCopyAccelerationStructureKHR(m_VkCmdBuffer, &Info);
 #else
         UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
@@ -599,6 +646,9 @@ public:
                                  uint32_t                        depth)
     {
 #if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        VERIFY(m_State.RayTracingPipeline != VK_NULL_HANDLE, "No ray tracing pipeline bound");
+
         vkCmdTraceRaysKHR(m_VkCmdBuffer, &RaygenShaderBindingTable, &MissShaderBindingTable, &HitShaderBindingTable, &CallableShaderBindingTable, width, height, depth);
 #else
         UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
@@ -613,12 +663,15 @@ public:
     }
     VkCommandBuffer GetVkCmdBuffer() const { return m_VkCmdBuffer; }
 
+    VkPipelineStageFlags GetEnabledShaderStages() const { return m_EnabledShaderStages; }
+
     struct StateCache
     {
         VkRenderPass  RenderPass         = VK_NULL_HANDLE;
         VkFramebuffer Framebuffer        = VK_NULL_HANDLE;
         VkPipeline    GraphicsPipeline   = VK_NULL_HANDLE;
         VkPipeline    ComputePipeline    = VK_NULL_HANDLE;
+        VkPipeline    RayTracingPipeline = VK_NULL_HANDLE;
         VkBuffer      IndexBuffer        = VK_NULL_HANDLE;
         VkDeviceSize  IndexBufferOffset  = 0;
         VkIndexType   IndexType          = VK_INDEX_TYPE_MAX_ENUM;
@@ -633,7 +686,7 @@ public:
 private:
     StateCache                 m_State;
     VkCommandBuffer            m_VkCmdBuffer = VK_NULL_HANDLE;
-    const VkPipelineStageFlags m_EnabledGraphicsShaderStages;
+    const VkPipelineStageFlags m_EnabledShaderStages;
 };
 
 } // namespace VulkanUtilities

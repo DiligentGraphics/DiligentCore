@@ -39,6 +39,7 @@
 #include "PipelineStateD3D12Impl.hpp"
 #include "ShaderResourceVariableBase.hpp"
 #include "ShaderVariableD3DBase.hpp"
+#include "TopLevelASD3D12.h"
 
 namespace Diligent
 {
@@ -626,6 +627,35 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheAccelStruct(IDeviceObject*  
                                                                 Uint32                              ArrayIndex,
                                                                 D3D12_CPU_DESCRIPTOR_HANDLE         ShdrVisibleHeapCPUDescriptorHandle) const
 {
+    VERIFY(IsValidBindPoint(), "Invalid bind point");
+    VERIFY_EXPR(ArrayIndex < BindCount);
+
+    RefCntAutoPtr<ITopLevelASD3D12> pTLASD3D12(pTLAS, IID_TopLevelASD3D12);
+    if (pTLASD3D12)
+    {
+        if (GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)
+        {
+            // Do not update resource if one is already bound unless it is dynamic. This may be
+            // dangerous as CopyDescriptorsSimple() may interfere with GPU reading the same descriptor.
+            return;
+        }
+
+        DstRes.Type                = GetResType();
+        DstRes.CPUDescriptorHandle = pTLASD3D12->GetCPUDescriptorHandle();
+        VERIFY(DstRes.CPUDescriptorHandle.ptr != 0, "No relevant D3D12 resource");
+
+        if (ShdrVisibleHeapCPUDescriptorHandle.ptr != 0)
+        {
+            // Dynamic resources are assigned descriptor in the GPU-visible heap at every draw call, and
+            // the descriptor is copied by the RootSignature when resources are committed
+            VERIFY(DstRes.pObject == nullptr, "Static and mutable resource descriptors must be copied only once");
+
+            ID3D12Device* pd3d12Device = ParentResLayout.m_pd3d12Device;
+            pd3d12Device->CopyDescriptorsSimple(1, ShdrVisibleHeapCPUDescriptorHandle, DstRes.CPUDescriptorHandle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        }
+
+        DstRes.pObject = std::move(pTLASD3D12);
+    }
 }
 
 const ShaderResourceLayoutD3D12::D3D12Resource& ShaderResourceLayoutD3D12::GetAssignedSampler(const D3D12Resource& TexSrv) const

@@ -113,7 +113,7 @@ GenerateMipsHelper::GenerateMipsHelper(ID3D12Device* pd3d12Device)
 void GenerateMipsHelper::GenerateMips(ID3D12Device* pd3d12Device, TextureViewD3D12Impl* pTexView, CommandContext& Ctx) const
 {
     auto& ComputeCtx = Ctx.AsComputeContext();
-    ComputeCtx.SetRootSignature(m_pGenerateMipsRS);
+    ComputeCtx.SetComputeRootSignature(m_pGenerateMipsRS);
     auto*       pTexD3D12 = pTexView->GetTexture<TextureD3D12Impl>();
     const auto& TexDesc   = pTexD3D12->GetDesc();
     const auto& ViewDesc  = pTexView->GetDesc();

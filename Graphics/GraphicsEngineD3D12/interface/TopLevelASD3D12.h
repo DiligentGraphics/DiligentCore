@@ -28,28 +28,40 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::ITopLevelASVk interface
+/// Definition of the Diligent::ITopLevelASD3D12 interface
 
 #include "../../GraphicsEngine/interface/TopLevelAS.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-// {356FFFFA-9E57-49F7-8FF4-7017B61BE6A8}
-static const INTERFACE_ID IID_TopLevelASVk =
-    {0x356ffffa, 0x9e57, 0x49f7, {0x8f, 0xf4, 0x70, 0x17, 0xb6, 0x1b, 0xe6, 0xa8}};
+// {46334F12-64CB-4F7C-BB71-31515B6F386D}
+static const INTERFACE_ID IID_TopLevelASD3D12 =
+    {0x46334f12, 0x64cb, 0x4f7c, {0xbb, 0x71, 0x31, 0x51, 0x5b, 0x6f, 0x38, 0x6d}};
 
-#define DILIGENT_INTERFACE_NAME ITopLevelASVk
+#define DILIGENT_INTERFACE_NAME ITopLevelASD3D12
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
 
-#define ITopLevelASVkInclusiveMethods \
-    ITopLevelASInclusiveMethods;      \
-    ITopLevelASVkMethods TopLevelASVk
+#define ITopLevelASD3D12InclusiveMethods \
+    ITopLevelASInclusiveMethods;         \
+    ITopLevelASD3D12Methods TopLevelASD3D12
 
-/// Exposes Vulkan-specific functionality of a Top-level acceleration structure object.
-DILIGENT_BEGIN_INTERFACE(ITopLevelASVk, ITopLevelAS)
+// clang-format off
+
+/// Exposes Direct3D12-specific functionality of a top-level acceleration structure object.
+DILIGENT_BEGIN_INTERFACE(ITopLevelASD3D12, ITopLevelAS)
 {
-    /// Returns a Vulkan TLAS object handle.
-    VIRTUAL VkAccelerationStructureKHR METHOD(GetVkTLAS)(THIS) CONST PURE;
+    /// Returns ID3D12Resource interface of the internal D3D12 acceleration structure object.
+    
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    VIRTUAL ID3D12Resource* METHOD(GetD3D12TLAS)(THIS) PURE;
+    
+    /// Returns a CPU descriptor handle of the D3D12 acceleration structure
+
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    VIRTUAL D3D12_CPU_DESCRIPTOR_HANDLE METHOD(GetCPUDescriptorHandle)(THIS) PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -57,7 +69,8 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-#    define ITopLevelASVk_GetVkTLAS(This) CALL_IFACE_METHOD(TopLevelASVk, GetVkTLAS, This)
+#    define ITopLevelASD3D12_GetD3D12TLAS(This)            CALL_IFACE_METHOD(ITopLevelASD3D12, GetD3D12TLAS,           This)
+#    define ITopLevelASD3D12_GetCPUDescriptorHandle(This)  CALL_IFACE_METHOD(ITopLevelASD3D12, GetCPUDescriptorHandle, This)
 
 #endif
 

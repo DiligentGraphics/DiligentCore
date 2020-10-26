@@ -77,10 +77,17 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    
                                          RenderDeviceGLImpl*                    pDeviceGL,
                                          const GraphicsPipelineStateCreateInfo& CreateInfo,
                                          bool                                   bIsDeviceInternal) :
-
-    TPipelineStateBase{pRefCounters, pDeviceGL, CreateInfo, bIsDeviceInternal},
-    m_ResourceLayout{*this},
+    // clang-format off
+    TPipelineStateBase
+    {
+        pRefCounters,
+        pDeviceGL,
+        CreateInfo,
+        bIsDeviceInternal
+    },
+    m_ResourceLayout      {*this},
     m_StaticResourceLayout{*this}
+// clang-format on
 {
     try
     {
@@ -115,9 +122,17 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                   p
                                          RenderDeviceGLImpl*                   pDeviceGL,
                                          const ComputePipelineStateCreateInfo& CreateInfo,
                                          bool                                  bIsDeviceInternal) :
-    TPipelineStateBase{pRefCounters, pDeviceGL, CreateInfo, bIsDeviceInternal},
-    m_ResourceLayout{*this},
+    // clang-format off
+    TPipelineStateBase
+    {
+        pRefCounters,
+        pDeviceGL,
+        CreateInfo,
+        bIsDeviceInternal
+    },
+    m_ResourceLayout      {*this},
     m_StaticResourceLayout{*this}
+// clang-format on
 {
     try
     {

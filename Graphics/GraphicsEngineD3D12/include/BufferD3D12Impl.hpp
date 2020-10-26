@@ -103,6 +103,12 @@ public:
         }
     }
 
+    __forceinline D3D12_GPU_VIRTUAL_ADDRESS GetGPUAddress()
+    {
+        VERIFY_EXPR(m_Desc.Usage != USAGE_DYNAMIC);
+        return GetD3D12Resource()->GetGPUVirtualAddress();
+    }
+
     D3D12_CPU_DESCRIPTOR_HANDLE GetCBVHandle() { return m_CBVDescriptorAllocation.GetCpuHandle(); }
 
 private:
