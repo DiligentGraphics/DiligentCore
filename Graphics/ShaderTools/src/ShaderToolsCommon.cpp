@@ -96,7 +96,7 @@ const char* ReadShaderSourceFile(const char*                      SourceCode,
     SourceCodeLen = 0;
     if (SourceCode != nullptr)
     {
-        VERIFY(pShaderSourceStreamFactory == nullptr, "pShaderSourceStreamFactory must be null when SourceCode is not null");
+        VERIFY(FilePath == nullptr, "FilePath must be null when SourceCode is not null");
         SourceCodeLen = strlen(SourceCode);
     }
     else
