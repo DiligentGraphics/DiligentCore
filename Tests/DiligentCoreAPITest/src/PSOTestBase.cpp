@@ -39,12 +39,12 @@ PSOTestBase::Resources PSOTestBase::sm_Resources;
 static const char g_ShaderSource[] = R"(
 void VSMain(out float4 pos : SV_POSITION)
 {
-	pos = float4(0.0, 0.0, 0.0, 0.0);
+    pos = float4(0.0, 0.0, 0.0, 0.0);
 }
 
 void PSMain(out float4 col : SV_TARGET)
 {
-	col = float4(0.0, 0.0, 0.0, 0.0);
+    col = float4(0.0, 0.0, 0.0, 0.0);
 }
 )";
 

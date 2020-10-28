@@ -32,7 +32,8 @@
 #include "TestingEnvironment.hpp"
 
 #define VK_NO_PROTOTYPES
-#include "Vulkan-Headers/include/vulkan/vulkan.h"
+#include "vulkan/vulkan.h"
+#include "vulkan/vulkan_beta.h"
 
 namespace Diligent
 {
@@ -72,6 +73,11 @@ public:
         return m_vkDevice;
     }
 
+    VkPhysicalDevice GetVkPhysicalDevice()
+    {
+        return m_vkPhysicalDevice;
+    }
+
     VkShaderModule CreateShaderModule(const SHADER_TYPE ShaderType, const std::string& ShaderSource);
 
     static VkRenderPassCreateInfo GetRenderPassCreateInfo(
@@ -99,8 +105,9 @@ public:
                                       VkPipelineStageFlags           DestStages = 0);
 
 private:
-    VkDevice      m_vkDevice  = VK_NULL_HANDLE;
-    VkCommandPool m_vkCmdPool = VK_NULL_HANDLE;
+    VkDevice         m_vkDevice         = VK_NULL_HANDLE;
+    VkPhysicalDevice m_vkPhysicalDevice = VK_NULL_HANDLE;
+    VkCommandPool    m_vkCmdPool        = VK_NULL_HANDLE;
 
     VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
 };

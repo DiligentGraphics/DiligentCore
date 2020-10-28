@@ -38,7 +38,7 @@ namespace
 static const char g_VSShaderSource[] = R"(
 void VSMain(out float4 pos : SV_POSITION)
 {
-	pos = float4(0.0, 0.0, 0.0, 0.0);
+    pos = float4(0.0, 0.0, 0.0, 0.0);
 }
 )";
 
@@ -52,7 +52,7 @@ SamplerState g_Sam4[2];
 
 void PSMain(out float4 col : SV_TARGET)
 {
-	col = g_Tex.Sample(g_Sam, float2(0.5, 0.5)) + 
+    col = g_Tex.Sample(g_Sam, float2(0.5, 0.5)) + 
           g_Tex2.Sample(g_Sam2, float2(0.5, 0.5)) + 
           g_Tex2.Sample(g_Sam3[0], float2(0.5, 0.5)) + 
           g_Tex2.Sample(g_Sam3[1], float2(0.5, 0.5)) +
