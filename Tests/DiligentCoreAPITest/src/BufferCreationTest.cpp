@@ -41,6 +41,10 @@
 #    include "Vulkan/CreateObjFromNativeResVK.hpp"
 #endif
 
+#if METAL_SUPPORTED
+#    include "Metal/CreateObjFromNativeResMtl.hpp"
+#endif
+
 #include "GraphicsAccessories.hpp"
 
 #include "TestingEnvironment.hpp"
@@ -96,6 +100,11 @@ protected:
                 break;
 #endif
 
+#if METAL_SUPPORTED
+            case RENDER_DEVICE_TYPE_METAL:
+                pCreateObjFromNativeRes.reset(new TestCreateObjFromNativeResMtl(pDevice));
+                break;
+#endif
             default: UNEXPECTED("Unexpected device type");
         }
     }

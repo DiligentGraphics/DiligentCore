@@ -61,7 +61,7 @@ void CorrectGraphicsPipelineDesc(GraphicsPipelineDesc& GraphicsPipeline) noexcep
 template <class BaseInterface, class RenderDeviceImplType>
 class PipelineStateBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>
 {
-public:
+private:
     using TDeviceObjectBase = DeviceObjectBase<BaseInterface, RenderDeviceImplType, PipelineStateDesc>;
 
     /// \param pRefCounters      - Reference counters object that controls the lifetime of this PSO
@@ -82,6 +82,7 @@ public:
         this->m_Desc.CommandQueueMask &= DeviceQueuesMask;
     }
 
+public:
     /// \param pRefCounters       - Reference counters object that controls the lifetime of this PSO
     /// \param pDevice            - Pointer to the device.
     /// \param GraphicsPipelineCI - Graphics pipeline create information.

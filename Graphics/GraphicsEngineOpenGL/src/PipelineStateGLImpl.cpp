@@ -82,7 +82,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                    
     {
         pRefCounters,
         pDeviceGL,
-        CreateInfo.PSODesc,
+        CreateInfo,
         bIsDeviceInternal
     },
     m_ResourceLayout      {*this},
@@ -127,7 +127,7 @@ PipelineStateGLImpl::PipelineStateGLImpl(IReferenceCounters*                   p
     {
         pRefCounters,
         pDeviceGL,
-        CreateInfo.PSODesc,
+        CreateInfo,
         bIsDeviceInternal
     },
     m_ResourceLayout      {*this},
