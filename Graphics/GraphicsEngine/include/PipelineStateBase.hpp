@@ -121,7 +121,7 @@ public:
                       bool                                     bIsDeviceInternal = false) :
         PipelineStateBase{pRefCounters, pDevice, RayTracingPipelineCI.PSODesc, bIsDeviceInternal}
     {
-        ValidateRayTracingPipelineCreateInfo(ComputePipelineCI);
+        ValidateRayTracingPipelineCreateInfo(RayTracingPipelineCI);
     }
 
 
@@ -354,7 +354,7 @@ protected:
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // reserve size for shader handles
-        const auto ShaderHandleSize = m_pDevice->GetShaderGroupHandleSize();
+        const auto ShaderHandleSize = this->m_pDevice->GetShaderGroupHandleSize();
         RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         // Extra bytes are reserved to avoid compiler errors on zero-sized arrays
         RTDataSize -= sizeof(RayTracingPipelineData::Shaders);
@@ -635,7 +635,7 @@ protected:
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // reserve size for shader handles
-        const auto ShaderHandleSize = m_pDevice->GetShaderGroupHandleSize();
+        const auto ShaderHandleSize = this->m_pDevice->GetShaderGroupHandleSize();
         const auto ShaderDataSize   = ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         RTDataSize += ShaderDataSize;
         // Extra bytes are reserved to avoid compiler errors on zero-sized arrays
