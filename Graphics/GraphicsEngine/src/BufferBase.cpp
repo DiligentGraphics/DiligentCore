@@ -45,7 +45,7 @@ namespace Diligent
 
 void ValidateBufferDesc(const BufferDesc& Desc, const DeviceCaps& deviceCaps)
 {
-    static_assert(BIND_FLAGS_LAST == 0x400L, "AZ TODO");
+    static_assert(BIND_FLAGS_LAST == 0x400L, "Please update this function to handle the new bind flags");
 
     constexpr Uint32 AllowedBindFlags =
         BIND_VERTEX_BUFFER |

@@ -200,6 +200,25 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
 
     /// AZ TODO
     VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
+
+    /// Returns native acceleration structure handle specific to the underlying graphics API
+
+    /// \return pointer to ID3D12Resource interface, for D3D12 implementation\n
+    ///         VkAccelerationStructureKHR handle, for Vulkan implementation
+    VIRTUAL void* METHOD(GetNativeHandle)(THIS) PURE;
+
+    /// Sets the acceleration structure usage state.
+
+    /// \note This method does not perform state transition, but
+    ///       resets the internal acceleration structure state to the given value.
+    ///       This method should be used after the application finished
+    ///       manually managing the acceleration structure state and wants to hand over
+    ///       state management back to the engine.
+    VIRTUAL void METHOD(SetState)(THIS_
+                                  RESOURCE_STATE State) PURE;
+
+    /// Returns the internal acceleration structure state
+    VIRTUAL RESOURCE_STATE METHOD(GetState)(THIS) CONST PURE;
 };
 DILIGENT_END_INTERFACE
 
@@ -209,7 +228,11 @@ DILIGENT_END_INTERFACE
 
 // clang-format off
 
-#    define IBottomLevelAS_GetGeometryIndex(This, ...)        CALL_IFACE_METHOD(BottomLevelAS, GetGeometryIndex,          This, __VA_ARGS__)
+#    define IBottomLevelAS_GetGeometryIndex(This, ...) CALL_IFACE_METHOD(BottomLevelAS, GetGeometryIndex,      This, __VA_ARGS__)
+#    define IBottomLevelAS_GetScratchBufferSizes(This) CALL_IFACE_METHOD(BottomLevelAS, GetScratchBufferSizes, This)
+#    define IBottomLevelAS_GetNativeHandle(This)       CALL_IFACE_METHOD(BottomLevelAS, GetNativeHandle,       This)
+#    define IBottomLevelAS_SetState(This, ...)         CALL_IFACE_METHOD(BottomLevelAS, SetState,              This, __VA_ARGS__)
+#    define IBottomLevelAS_GetState(This)              CALL_IFACE_METHOD(BottomLevelAS, GetState,              This)
 
 // clang-format on
 

@@ -40,6 +40,8 @@
 #include "FramebufferGLImpl.hpp"
 #include "RenderPassGLImpl.hpp"
 #include "PipelineStateGLImpl.hpp"
+#include "BottomLevelASBase.hpp"
+#include "TopLevelASBase.hpp"
 
 namespace Diligent
 {
@@ -53,6 +55,8 @@ struct DeviceContextGLImplTraits
     using QueryType         = QueryGLImpl;
     using FramebufferType   = FramebufferGLImpl;
     using RenderPassType    = RenderPassGLImpl;
+    using BottomLevelASType = BottomLevelASBase<IBottomLevelAS, RenderDeviceGLImpl>;
+    using TopLevelASType    = TopLevelASBase<ITopLevelAS, RenderDeviceGLImpl>;
 };
 
 /// Device context implementation in OpenGL backend.

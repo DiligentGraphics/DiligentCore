@@ -59,6 +59,41 @@ VulkanUtilities::DescriptorPoolWrapper DescriptorPoolManager::CreateDescriptorPo
     return m_DeviceVkImpl.GetLogicalDevice().CreateDescriptorPool(PoolCI, DebugName);
 }
 
+DescriptorPoolManager::DescriptorPoolManager(RenderDeviceVkImpl&               DeviceVkImpl,
+                                             std::string                       PoolName,
+                                             std::vector<VkDescriptorPoolSize> PoolSizes,
+                                             uint32_t                          MaxSets,
+                                             bool                              AllowFreeing) noexcept :
+    // clang-format off
+    m_DeviceVkImpl{DeviceVkImpl        },
+    m_PoolName    {std::move(PoolName) },
+    m_PoolSizes   (std::move(PoolSizes)),
+    m_MaxSets     {MaxSets             },
+    m_AllowFreeing{AllowFreeing        }
+// clang-format on
+{
+    const auto& Feats = m_DeviceVkImpl.GetLogicalDevice().GetEnabledExtFeatures();
+
+    for (auto iter = m_PoolSizes.begin(); iter != m_PoolSizes.end();)
+    {
+        switch (iter->type)
+        {
+            case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+                if (Feats.RayTracing.rayTracing == VK_FALSE)
+                    iter = m_PoolSizes.erase(iter);
+                else
+                    ++iter;
+                break;
+            default:
+                ++iter;
+        }
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    m_AllocatedPoolCounter = 0;
+#endif
+}
+
 DescriptorPoolManager::~DescriptorPoolManager()
 {
     DEV_CHECK_ERR(m_AllocatedPoolCounter == 0, "Not all allocated descriptor pools are returned to the pool manager");

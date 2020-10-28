@@ -41,9 +41,6 @@
 /// Graphics engine namespace
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
-struct ITexture;
-struct IBuffer;
-
 /// Value type
 
 /// This enumeration describes value type. It is used by
@@ -86,7 +83,7 @@ DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
     BIND_UNORDERED_ACCESS	 = 0x80L,  ///< A buffer or a texture can be bound as an unordered access view
     BIND_INDIRECT_DRAW_ARGS	 = 0x100L, ///< A buffer can be bound as the source buffer for indirect draw commands
     BIND_INPUT_ATTACHMENT    = 0x200L, ///< A texture can be used as render pass input attachment
-    BIND_RAY_TRACING         = 0x400L, ///< AZ TODO
+    BIND_RAY_TRACING         = 0x400L, ///< A buffer can be used as scratch buffer for acceleration structure building.
     BIND_FLAGS_LAST          = 0x400L
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)
@@ -1253,16 +1250,22 @@ typedef struct DisplayModeAttribs DisplayModeAttribs;
 DILIGENT_TYPED_ENUM(SWAP_CHAIN_USAGE_FLAGS, Uint32)
 {
     /// No allowed usage
-    SWAP_CHAIN_USAGE_NONE           = 0x00L,
+    SWAP_CHAIN_USAGE_NONE             = 0x00L,
         
     /// Swap chain can be used as render target ouput
-    SWAP_CHAIN_USAGE_RENDER_TARGET  = 0x01L,
+    SWAP_CHAIN_USAGE_RENDER_TARGET    = 0x01L,
 
     /// Swap chain images can be used as shader inputs
-    SWAP_CHAIN_USAGE_SHADER_INPUT   = 0x02L,
+    SWAP_CHAIN_USAGE_SHADER_INPUT     = 0x02L,
 
     /// Swap chain images can be used as source of copy operation
-    SWAP_CHAIN_USAGE_COPY_SOURCE    = 0x04L
+    SWAP_CHAIN_USAGE_COPY_SOURCE      = 0x04L,
+        
+    /// Swap chain images will define an unordered access view that will be used
+    /// for unordered read/write operations from the shaders
+    SWAP_CHAIN_USAGE_UNORDERED_ACCESS = 0x08L,
+
+    SWAP_CHAIN_USAGE_LAST             = SWAP_CHAIN_USAGE_UNORDERED_ACCESS,
 };
 DEFINE_FLAG_ENUM_OPERATORS(SWAP_CHAIN_USAGE_FLAGS)
 
@@ -2720,10 +2723,12 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource is used for present
     RESOURCE_STATE_PRESENT              = 0x10000,
 
-    RESOURCE_STATE_BUILD_AS             = 0x20000,
-    RESOURCE_STATE_RAY_TRACING          = 0x40000,
+    /// AZ TODO
+    RESOURCE_STATE_BUILD_AS_READ        = 0x20000,
+    RESOURCE_STATE_BUILD_AS_WRITE       = 0x40000,
+    RESOURCE_STATE_RAY_TRACING          = 0x80000,
 
-    RESOURCE_STATE_MAX_BIT              = 0x40000,
+    RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_RAY_TRACING,
 
     RESOURCE_STATE_GENERIC_READ         = RESOURCE_STATE_VERTEX_BUFFER     |
                                           RESOURCE_STATE_CONSTANT_BUFFER   |
@@ -2752,106 +2757,5 @@ DILIGENT_TYPED_ENUM(STATE_TRANSITION_TYPE, Uint8)
     /// In other backends, this mode is similar to STATE_TRANSITION_TYPE_IMMEDIATE.
     STATE_TRANSITION_TYPE_END
 };
-
-static const Uint32 REMAINING_MIP_LEVELS   = 0xFFFFFFFFU;
-static const Uint32 REMAINING_ARRAY_SLICES = 0xFFFFFFFFU;
-
-/// Resource state transition barrier description
-struct StateTransitionDesc
-{
-    /// Texture to transition.
-    /// \note Exactly one of pTexture or pBuffer must be non-null.
-    struct ITexture* pTexture DEFAULT_INITIALIZER(nullptr);
-        
-    /// Buffer to transition.
-    /// \note Exactly one of pTexture or pBuffer must be non-null.
-    struct IBuffer* pBuffer   DEFAULT_INITIALIZER(nullptr);
-        
-    /// When transitioning a texture, first mip level of the subresource range to transition.
-    Uint32 FirstMipLevel     DEFAULT_INITIALIZER(0);
-
-    /// When transitioning a texture, number of mip levels of the subresource range to transition.
-    Uint32 MipLevelsCount    DEFAULT_INITIALIZER(REMAINING_MIP_LEVELS);
-
-    /// When transitioning a texture, first array slice of the subresource range to transition.
-    Uint32 FirstArraySlice   DEFAULT_INITIALIZER(0);
-
-    /// When transitioning a texture, number of array slices of the subresource range to transition.
-    Uint32 ArraySliceCount   DEFAULT_INITIALIZER(REMAINING_ARRAY_SLICES);
-
-    /// Resource state before transition. If this value is RESOURCE_STATE_UNKNOWN,
-    /// internal resource state will be used, which must be defined in this case.
-    RESOURCE_STATE OldState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
-
-    /// Resource state after transition.
-    RESOURCE_STATE NewState  DEFAULT_INITIALIZER(RESOURCE_STATE_UNKNOWN);
-
-    /// State transition type, see Diligent::STATE_TRANSITION_TYPE.
-
-    /// \note When issuing UAV barrier (i.e. OldState and NewState equal RESOURCE_STATE_UNORDERED_ACCESS),
-    ///       TransitionType must be STATE_TRANSITION_TYPE_IMMEDIATE.
-    STATE_TRANSITION_TYPE TransitionType DEFAULT_INITIALIZER(STATE_TRANSITION_TYPE_IMMEDIATE);
-
-    /// If set to true, the internal resource state will be set to NewState and the engine
-    /// will be able to take over the resource state management. In this case it is the 
-    /// responsibility of the application to make sure that all subresources are indeed in
-    /// designated state.
-    /// If set to false, internal resource state will be unchanged.
-    /// \note When TransitionType is STATE_TRANSITION_TYPE_BEGIN, this member must be false.
-    bool UpdateResourceState  DEFAULT_INITIALIZER(false);
-
-#if DILIGENT_CPP_INTERFACE
-    StateTransitionDesc()noexcept{}
-
-    StateTransitionDesc(ITexture*             _pTexture, 
-                        RESOURCE_STATE        _OldState,
-                        RESOURCE_STATE        _NewState, 
-                        Uint32                _FirstMipLevel   = 0,
-                        Uint32                _MipLevelsCount  = REMAINING_MIP_LEVELS,
-                        Uint32                _FirstArraySlice = 0,
-                        Uint32                _ArraySliceCount = REMAINING_ARRAY_SLICES,
-                        STATE_TRANSITION_TYPE _TransitionType  = STATE_TRANSITION_TYPE_IMMEDIATE,
-                        bool                  _UpdateState     = false)noexcept : 
-        pTexture            {_pTexture       },
-        FirstMipLevel       {_FirstMipLevel  },
-        MipLevelsCount      {_MipLevelsCount },
-        FirstArraySlice     {_FirstArraySlice},
-        ArraySliceCount     {_ArraySliceCount},
-        OldState            {_OldState       },
-        NewState            {_NewState       },
-        TransitionType      {_TransitionType },
-        UpdateResourceState {_UpdateState    }
-    {}
-
-    StateTransitionDesc(ITexture*      _pTexture, 
-                        RESOURCE_STATE _OldState,
-                        RESOURCE_STATE _NewState, 
-                        bool           _UpdateState)noexcept :
-        StateTransitionDesc
-        {
-            _pTexture,
-            _OldState,
-            _NewState,
-            0,
-            REMAINING_MIP_LEVELS,
-            0,
-            REMAINING_ARRAY_SLICES,
-            STATE_TRANSITION_TYPE_IMMEDIATE,
-            _UpdateState
-        }
-    {}
-
-    StateTransitionDesc(IBuffer*       _pBuffer, 
-                        RESOURCE_STATE _OldState,
-                        RESOURCE_STATE _NewState,
-                        bool           _UpdateState)noexcept : 
-        pBuffer             {_pBuffer    },
-        OldState            {_OldState   },
-        NewState            {_NewState   },
-        UpdateResourceState {_UpdateState}
-    {}
-#endif
-};
-typedef struct StateTransitionDesc StateTransitionDesc;
 
 DILIGENT_END_NAMESPACE // namespace Diligent

@@ -61,7 +61,8 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-#    define IBottomLevelASVk_GetVkBLAS(This) CALL_IFACE_METHOD(BottomLevelASVk, GetVkBLAS, This)
+#    define IBottomLevelASVk_GetVkBLAS(This)          CALL_IFACE_METHOD(BottomLevelASVk, GetVkBLAS, This)
+#    define IBottomLevelASVk_GetVkDeviceAddress(This) CALL_IFACE_METHOD(BottomLevelASVk, GetVkDeviceAddress, This)
 
 #endif
 

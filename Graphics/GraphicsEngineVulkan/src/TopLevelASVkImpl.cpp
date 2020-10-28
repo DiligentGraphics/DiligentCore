@@ -76,13 +76,13 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
         LOG_ERROR_AND_THROW("Failed to find suitable memory type for TLAS '", m_Desc.Name, '\'');
 
     VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
-    m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex);
+    m_MemoryAllocation    = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex);
+    m_MemoryAlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
+    VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_MemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
 
     auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-    auto err    = LogicalDevice.BindASMemory(m_VulkanTLAS, Memory, 0);
+    auto err    = LogicalDevice.BindASMemory(m_VulkanTLAS, Memory, m_MemoryAlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind AS memory");
-
-    m_DeviceAddress = LogicalDevice.GetAccelerationStructureDeviceAddress(m_VulkanTLAS);
 
     MemInfo.type        = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
     MemReqs             = LogicalDevice.GetASMemoryRequirements(MemInfo);

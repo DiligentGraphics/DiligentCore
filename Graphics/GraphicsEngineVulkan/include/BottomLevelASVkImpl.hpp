@@ -50,10 +50,20 @@ public:
                         bool                     bIsDeviceInternal = false);
     ~BottomLevelASVkImpl();
 
+    /// Implementation of IBottomLevelAS::GetScratchBufferSizes() in Vulkan backend.
     virtual ScratchBufferSizes DILIGENT_CALL_TYPE GetScratchBufferSizes() const override { return m_ScratchSize; }
 
+    /// Implementation of IBottomLevelAS::GetNativeHandle() in Vulkan backend.
+    virtual void* DILIGENT_CALL_TYPE GetNativeHandle() override final
+    {
+        auto Handle = GetVkBLAS();
+        return reinterpret_cast<void*>(Handle);
+    }
+
+    /// Implementation of IBottomLevelASVk::GetVkBLAS().
     virtual VkAccelerationStructureKHR DILIGENT_CALL_TYPE GetVkBLAS() const override { return m_VulkanBLAS; }
 
+    /// Implementation of IBottomLevelASVk::GetVkDeviceAddress().
     virtual VkDeviceAddress DILIGENT_CALL_TYPE GetVkDeviceAddress() const override { return m_DeviceAddress; }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelASVk, TBottomLevelASBase);
@@ -62,6 +72,7 @@ private:
     VkDeviceAddress                         m_DeviceAddress = 0;
     VulkanUtilities::AccelStructWrapper     m_VulkanBLAS;
     VulkanUtilities::VulkanMemoryAllocation m_MemoryAllocation;
+    VkDeviceSize                            m_MemoryAlignedOffset = 0;
     ScratchBufferSizes                      m_ScratchSize;
 };
 

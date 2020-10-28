@@ -28,27 +28,43 @@
 #pragma once
 
 /// \file
-/// Declaration of Diligent::RenderPassD3D12Impl class
+/// Definition of the Diligent::IBottomLevelASD3D12 interface
 
-#include "RenderDeviceD3D12.h"
-#include "RenderPassBase.hpp"
-#include "RenderDeviceD3D12Impl.hpp"
+#include "../../GraphicsEngine/interface/BottomLevelAS.h"
+#include "../../GraphicsEngine/interface/DeviceContext.h"
 
-namespace Diligent
+DILIGENT_BEGIN_NAMESPACE(Diligent)
+
+// {610228AF-F161-4B12-A00E-71E6E3BB97FE}
+static const INTERFACE_ID IID_BottomLevelASD3D12 =
+    {0x610228af, 0xf161, 0x4b12, {0xa0, 0xe, 0x71, 0xe6, 0xe3, 0xbb, 0x97, 0xfe}};
+
+#define DILIGENT_INTERFACE_NAME IBottomLevelASD3D12
+#include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
+
+#define IBottomLevelASD3D12InclusiveMethods \
+    IBottomLevelASInclusiveMethods;         \
+    IBottomLevelASD3D12Methods BottomLevelASD3D12
+
+// clang-format off
+
+/// Exposes Direct3D12-specific functionality of a bottom-level acceleration structure object.
+DILIGENT_BEGIN_INTERFACE(IBottomLevelASD3D12, IBottomLevelAS)
 {
-
-class FixedBlockMemoryAllocator;
-
-/// Render pass implementation in Direct3D12 backend.
-class RenderPassD3D12Impl final : public RenderPassBase<IRenderPass, RenderDeviceD3D12Impl>
-{
-public:
-    using TRenderPassBase = RenderPassBase<IRenderPass, RenderDeviceD3D12Impl>;
-
-    RenderPassD3D12Impl(IReferenceCounters*    pRefCounters,
-                        RenderDeviceD3D12Impl* pDevice,
-                        const RenderPassDesc&  Desc);
-    ~RenderPassD3D12Impl();
+    /// Returns ID3D12Resource interface of the internal D3D12 acceleration structure object.
+    
+    /// The method does *NOT* call AddRef() on the returned interface,
+    /// so Release() must not be called.
+    VIRTUAL ID3D12Resource* METHOD(GetD3D12BLAS)(THIS) PURE;
 };
+DILIGENT_END_INTERFACE
 
-} // namespace Diligent
+#include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
+
+#if DILIGENT_C_INTERFACE
+
+#    define IBottomLevelASD3D12_GetD3D12BLAS(This)  CALL_IFACE_METHOD(IBottomLevelASD3D12, GetD3D12BLAS, This)
+
+#endif
+
+DILIGENT_END_NAMESPACE // namespace Diligent

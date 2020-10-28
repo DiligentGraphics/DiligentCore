@@ -137,17 +137,7 @@ public:
                           std::string                       PoolName,
                           std::vector<VkDescriptorPoolSize> PoolSizes,
                           uint32_t                          MaxSets,
-                          bool                              AllowFreeing) noexcept:
-        m_DeviceVkImpl{DeviceVkImpl        },
-        m_PoolName    {std::move(PoolName) },
-        m_PoolSizes   (std::move(PoolSizes)),
-        m_MaxSets     {MaxSets             },
-        m_AllowFreeing{AllowFreeing        }
-    {
-#ifdef DILIGENT_DEVELOPMENT
-        m_AllocatedPoolCounter = 0;
-#endif
-    }
+                          bool                              AllowFreeing) noexcept;
     ~DescriptorPoolManager();
 
     DescriptorPoolManager             (const DescriptorPoolManager&) = delete;
@@ -175,9 +165,9 @@ protected:
     RenderDeviceVkImpl& m_DeviceVkImpl;
     const std::string   m_PoolName;
 
-    const std::vector<VkDescriptorPoolSize> m_PoolSizes;
-    const uint32_t                          m_MaxSets;
-    const bool                              m_AllowFreeing;
+    std::vector<VkDescriptorPoolSize> m_PoolSizes;
+    const uint32_t                    m_MaxSets;
+    const bool                        m_AllowFreeing;
 
     std::mutex                                         m_Mutex;
     std::deque<VulkanUtilities::DescriptorPoolWrapper> m_Pools;

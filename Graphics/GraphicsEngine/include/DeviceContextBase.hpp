@@ -78,6 +78,8 @@ public:
     using QueryImplType         = typename ImplementationTraits::QueryType;
     using FramebufferImplType   = typename ImplementationTraits::FramebufferType;
     using RenderPassImplType    = typename ImplementationTraits::RenderPassType;
+    using BottomLevelASType     = typename ImplementationTraits::BottomLevelASType;
+    using TopLevelASType        = typename ImplementationTraits::TopLevelASType;
 
     /// \param pRefCounters - reference counters object that controls the lifetime of this device context.
     /// \param pRenderDevice - render device.
@@ -253,8 +255,10 @@ protected:
 
     void DvpVerifyRenderTargets()const;
     void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const;
-    bool DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName)const;
-    bool DvpVerifyBufferState (const BufferImplType&  Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const;
+    bool DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName)const;
+    bool DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const;
+    bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const;
+    bool DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const;
 #else
     bool DvpVerifyDrawArguments               (const DrawAttribs&                Attribs)const {return true;}
     bool DvpVerifyDrawIndexedArguments        (const DrawIndexedAttribs&         Attribs)const {return true;}
@@ -268,8 +272,10 @@ protected:
 
     void DvpVerifyRenderTargets()const {}
     void DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier)const {}
-    bool DvpVerifyTextureState(const TextureImplType& Texture, RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
-    bool DvpVerifyBufferState (const BufferImplType&  Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
+    bool DvpVerifyTextureState(const TextureImplType&   Texture, RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
+    bool DvpVerifyBufferState (const BufferImplType&    Buffer,  RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
+    bool DvpVerifyBLASState   (const BottomLevelASType& BLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
+    bool DvpVerifyTLASState   (const TopLevelASType&    TLAS,    RESOURCE_STATE RequiredState, const char* OperationName)const {return true;}
     // clang-format on
 #endif
 
@@ -278,8 +284,6 @@ protected:
     bool CopyBLAS(const CopyBLASAttribs& Attribs, int);
     bool CopyTLAS(const CopyTLASAttribs& Attribs, int);
     bool TraceRays(const TraceRaysAttribs& Attribs, int);
-
-    static const Uint32 TLASInstanceDataSize = 64; // bytes
 
     /// Strong reference to the device.
     RefCntAutoPtr<DeviceImplType> m_pDevice;
@@ -1803,15 +1807,19 @@ template <typename BaseInterface, typename ImplementationTraits>
 void DeviceContextBase<BaseInterface, ImplementationTraits>::
     DvpVerifyStateTransitionDesc(const StateTransitionDesc& Barrier) const
 {
-    DEV_CHECK_ERR((Barrier.pTexture != nullptr) ^ (Barrier.pBuffer != nullptr), "Exactly one of pTexture or pBuffer members of StateTransitionDesc must not be null");
+    DEV_CHECK_ERR(Barrier.pResource != nullptr, "pResource must not be null");
     DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
     RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN;
-    if (Barrier.pTexture)
+
+    RefCntAutoPtr<ITexture> pTexture{Barrier.pResource, IID_Texture};
+    RefCntAutoPtr<IBuffer>  pBuffer{Barrier.pResource, IID_Buffer};
+
+    if (pTexture)
     {
-        const auto& TexDesc = Barrier.pTexture->GetDesc();
+        const auto& TexDesc = pTexture->GetDesc();
 
         DEV_CHECK_ERR(VerifyResourceStates(Barrier.NewState, true), "Invlaid new state specified for texture '", TexDesc.Name, "'");
-        OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : Barrier.pTexture->GetState();
+        OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTexture->GetState();
         DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN,
                       "The state of texture '", TexDesc.Name,
                       "' is unknown to the engine and is not explicitly specified in the barrier");
@@ -1842,17 +1850,17 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
                           "Failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device");
         }
     }
-    else if (Barrier.pBuffer)
+    else if (pBuffer)
     {
-        const auto& BuffDesc = Barrier.pBuffer->GetDesc();
+        const auto& BuffDesc = pBuffer->GetDesc();
         DEV_CHECK_ERR(VerifyResourceStates(Barrier.NewState, false), "Invlaid new state specified for buffer '", BuffDesc.Name, "'");
-        OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : Barrier.pBuffer->GetState();
+        OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBuffer->GetState();
         DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
         DEV_CHECK_ERR(VerifyResourceStates(OldState, false), "Invlaid old state specified for buffer '", BuffDesc.Name, "'");
     }
     else
     {
-        // AZ TODO: global barrier
+        UNEXPECTED("unsupported resource type");
     }
 
     if (OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS)
@@ -1896,6 +1904,35 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     return true;
 }
 
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::
+    DvpVerifyBLASState(const BottomLevelASType& BLAS, RESOURCE_STATE RequiredState, const char* OperationName) const
+{
+    if (BLAS.IsInKnownState() && !BLAS.CheckState(RequiredState))
+    {
+        LOG_ERROR_MESSAGE(OperationName, " requires BLAS '", BLAS.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
+                          " state. Actual BLAS state: ", GetResourceStateString(BLAS.GetState()),
+                          ". Use appropriate state transiton flags or explicitly transition the BLAS using IDeviceContext::TransitionResourceStates() method.");
+        return false;
+    }
+
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::
+    DvpVerifyTLASState(const TopLevelASType& TLAS, RESOURCE_STATE RequiredState, const char* OperationName) const
+{
+    if (TLAS.IsInKnownState() && !TLAS.CheckState(RequiredState))
+    {
+        LOG_ERROR_MESSAGE(OperationName, " requires TLAS '", TLAS.GetDesc().Name, "' to be transitioned to ", GetResourceStateString(RequiredState),
+                          " state. Actual TLAS state: ", GetResourceStateString(TLAS.GetState()),
+                          ". Use appropriate state transiton flags or explicitly transition the TLAS using IDeviceContext::TransitionResourceStates() method.");
+        return false;
+    }
+
+    return true;
+}
 #endif // DILIGENT_DEVELOPMENT
 
 template <typename BaseInterface, typename ImplementationTraits>
@@ -1913,7 +1950,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
         return false;
     }
 
-    if ((Attribs.pTriangleData != nullptr) ^ (Attribs.pBoxData != nullptr))
+    if (!((Attribs.pTriangleData != nullptr) ^ (Attribs.pBoxData != nullptr)))
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: exactly one of pTriangles and pBoxes must be defined");
         return false;
@@ -1931,39 +1968,93 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
         return false;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
     for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
     {
-        if (Attribs.pTriangleData[i].pVertexBuffer == nullptr)
+        const auto&  tri            = Attribs.pTriangleData[i];
+        const Uint32 VertexSize     = GetValueSize(tri.VertexValueType) * tri.VertexComponentCount;
+        const Uint32 VertexDataSize = tri.VertexStride * tri.VertexCount;
+
+        if (tri.VertexValueType >= VT_NUM_TYPES)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexValueType must be valid type");
+            return false;
+        }
+
+        if (tri.VertexComponentCount != 2 && tri.VertexComponentCount != 3)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexComponentCount must be 2 or 3");
+            return false;
+        }
+
+        if (tri.VertexStride < VertexSize)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexStride must be at least ", VertexSize, " bytes");
+            return false;
+        }
+
+        if (tri.pVertexBuffer == nullptr)
         {
             LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pVertexBuffer must not be null");
             return false;
         }
 
-        if ((Attribs.pTriangleData[i].pVertexBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
+        if ((tri.pVertexBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
         {
             LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pVertexBuffer must be created with BIND_RAY_TRACING flag");
             return false;
         }
 
-        if (Attribs.pTriangleData[i].IndexType != VT_UNDEFINED)
+        if (tri.VertexOffset + VertexDataSize > tri.pVertexBuffer->GetDesc().uiSizeInBytes)
         {
-            if (Attribs.pTriangleData[i].pIndexBuffer == nullptr)
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pVertexBuffer is too small for specified VertexStride and VertexCount");
+            return false;
+        }
+
+        if (tri.IndexType != VT_UNDEFINED)
+        {
+            if (tri.IndexType != VT_UINT16 && tri.IndexType != VT_UINT32)
+            {
+                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].IndexType must not be VT_UNDEFINED, VT_UINT16 or VT_UINT32");
+                return false;
+            }
+
+            if (tri.IndexCount == 0 || (tri.IndexCount % 3 != 0))
+            {
+                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].IndexCount must be valid");
+                return false;
+            }
+
+            if (tri.pIndexBuffer == nullptr)
             {
                 LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer must not be null");
                 return false;
             }
 
-            if ((Attribs.pTriangleData[i].pIndexBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
+            if ((tri.pIndexBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
             {
                 LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer must be created with BIND_RAY_TRACING flag");
                 return false;
             }
+
+            const Uint32 IndexDataSize = tri.IndexCount * GetValueSize(tri.IndexType);
+            if (tri.IndexOffset + IndexDataSize > tri.pIndexBuffer->GetDesc().uiSizeInBytes)
+            {
+                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer is too small for specified IndexType and IndexCount");
+                return false;
+            }
+        }
+        else
+        {
+            VERIFY(tri.pIndexBuffer == nullptr,
+                   "IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer must be null if IndexType is VT_UNDEFINED");
+            VERIFY(tri.IndexCount == 0,
+                   "IDeviceContext::BuildBLAS: pTriangleData[", i, "].IndexCount must be zero if IndexType is VT_UNDEFINED");
         }
 
-        // AZ TODO: check AllosTransforms flags in create info
-        if (Attribs.pTriangleData[i].pTransformBuffer != nullptr)
+        if (tri.pTransformBuffer != nullptr)
         {
-            if ((Attribs.pTriangleData[i].pTransformBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
+            if ((tri.pTransformBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
             {
                 LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pTransformBuffer must be created with BIND_RAY_TRACING flag");
                 return false;
@@ -1973,13 +2064,22 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
 
     for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
     {
-        if (Attribs.pBoxData[i].pBoxBuffer == nullptr)
+        const auto&  box     = Attribs.pBoxData[i];
+        const Uint32 BoxSize = sizeof(float) * 6;
+
+        if (box.BoxStride < BoxSize)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].BoxStride must be at least ", BoxSize, " bytes");
+            return false;
+        }
+
+        if (box.pBoxBuffer == nullptr)
         {
             LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].pBoxBuffer must not be null");
             return false;
         }
 
-        if ((Attribs.pBoxData[i].pBoxBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
+        if ((box.pBoxBuffer->GetDesc().BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
         {
             LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].pBoxBuffer must be created with BIND_RAY_TRACING flag");
             return false;
@@ -2019,6 +2119,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pScratchBuffer must be created with BIND_RAY_TRACING flag");
         return false;
     }
+#endif // DILIGENT_DEVELOPMENT
 
     return true;
 }
@@ -2044,18 +2145,19 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         return false;
     }
 
-    if (Attribs.pInstancesBuffer == nullptr)
+    if (Attribs.pInstanceBuffer == nullptr)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceaBuffer must not be null");
         return false;
     }
 
-    if (Attribs.HitShadersPerInstance > 0)
+    if (Attribs.HitShadersPerInstance == 0)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: HitShadersPerInstance must be greater than 0");
         return false;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
     const auto& TLASDesc = Attribs.pTLAS->GetDesc();
 
     if (Attribs.InstanceCount > TLASDesc.MaxInstanceCount)
@@ -2064,14 +2166,16 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         return false;
     }
 
-    const auto&  InstDesc     = Attribs.pInstancesBuffer->GetDesc();
-    const size_t InstDataSize = Attribs.InstanceCount * TLASInstanceDataSize;
+    const auto&  InstDesc          = Attribs.pInstanceBuffer->GetDesc();
+    const size_t InstDataSize      = Attribs.InstanceCount * TLAS_INSTANCE_DATA_SIZE;
+    Uint32       AutoOffsetCounter = 0;
 
     // calculate instance data size
     for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
     {
-        VERIFY_EXPR((Attribs.pInstances[i].customId & 0x00FFFFFF) == 0);
-        VERIFY_EXPR((Attribs.pInstances[i].contributionToHitGroupIndex & 0x00FFFFFF) == 0);
+        VERIFY_EXPR((Attribs.pInstances[i].CustomId & ~0x00FFFFFF) == 0);
+        VERIFY_EXPR(Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO ||
+                    (Attribs.pInstances[i].ContributionToHitGroupIndex & ~0x00FFFFFF) == 0);
 
         if (Attribs.pInstances[i].InstanceName == nullptr)
         {
@@ -2084,15 +2188,24 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
             LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].pBLAS must not be null");
             return false;
         }
+
+        if (Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
+            ++AutoOffsetCounter;
     }
 
-    if (Attribs.InstancesBufferOffset > InstDesc.uiSizeInBytes)
+    if (AutoOffsetCounter != 0 && AutoOffsetCounter != Attribs.InstanceCount)
     {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: InstancesBufferOffset is greater than buffer size");
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: exactly all pInstances[i].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO or not");
         return false;
     }
 
-    if (InstDesc.uiSizeInBytes - Attribs.InstancesBufferOffset > InstDataSize)
+    if (Attribs.InstanceBufferOffset > InstDesc.uiSizeInBytes)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: InstanceBufferOffset is greater than buffer size");
+        return false;
+    }
+
+    if (InstDesc.uiSizeInBytes - Attribs.InstanceBufferOffset > InstDataSize)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceaBuffer size is too small, ...");
         return false;
@@ -2123,6 +2236,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pScratchBuffer must be created with BIND_RAY_TRACING flag");
         return false;
     }
+#endif // DILIGENT_DEVELOPMENT
 
     return true;
 }
@@ -2142,6 +2256,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
         return false;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
     if (Attribs.Mode == COPY_AS_MODE_CLONE)
     {
         auto& SrcDesc = Attribs.pSrc->GetDesc();
@@ -2192,13 +2307,15 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
                 return false;
             }
         }
-        return true;
     }
     else
     {
         LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: unknown Mode");
         return false;
     }
+#endif // DILIGENT_DEVELOPMENT
+
+    return true;
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
@@ -2216,6 +2333,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const Copy
         return false;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
     if (Attribs.Mode == COPY_AS_MODE_CLONE)
     {
         auto& SrcDesc = Attribs.pSrc->GetDesc();
@@ -2227,13 +2345,15 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const Copy
             LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pDst must have been created with the same parameters as pSrc");
             return false;
         }
-        return true;
     }
     else
     {
         LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: unknown Mode");
         return false;
     }
+#endif // DILIGENT_DEVELOPMENT
+
+    return true;
 }
 
 template <typename BaseInterface, typename ImplementationTraits>

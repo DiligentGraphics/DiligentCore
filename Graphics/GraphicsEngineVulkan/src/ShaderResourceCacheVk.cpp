@@ -33,6 +33,7 @@
 #include "TextureViewVkImpl.hpp"
 #include "TextureVkImpl.hpp"
 #include "SamplerVkImpl.hpp"
+#include "TopLevelASVkImpl.hpp"
 #include "VulkanTypeConversions.hpp"
 
 namespace Diligent
@@ -323,31 +324,31 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
 
             case SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure:
             {
-                //auto* pTLASVk = Res.pObject.RawPtr<TopLevelASVkImpl>();
-                //if (pTLASVk != nullptr && pTLASVk->IsInKnownState())
-                //{
-                //    constexpr RESOURCE_STATE RequiredState     = RESOURCE_STATE_RAY_TRACING;
-                //    const bool               IsInRequiredState = pTLASVk->CheckState(RequiredState);
-                //    if (VerifyOnly)
-                //    {
-                //        if (!IsInRequiredState)
-                //        {
-                //            LOG_ERROR_MESSAGE("State of TLAS '", pTLASVk->GetDesc().Name, "' is incorrect. Required state: ",
-                //                              GetResourceStateString(RequiredState), ". Actual state: ",
-                //                              GetResourceStateString(pTLASVk->GetState()),
-                //                              ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
-                //                              "when calling IDeviceContext::CommitShaderResources() or explicitly transition the TLAS state "
-                //                              "with IDeviceContext::TransitionResourceStates().");
-                //        }
-                //    }
-                //    else
-                //    {
-                //        if (!IsInRequiredState)
-                //        {
-                //            pCtxVkImpl->TransitionTLASState(*pTLASVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
-                //        }
-                //    }
-                //}
+                auto* pTLASVk = Res.pObject.RawPtr<TopLevelASVkImpl>();
+                if (pTLASVk != nullptr && pTLASVk->IsInKnownState())
+                {
+                    constexpr RESOURCE_STATE RequiredState     = RESOURCE_STATE_RAY_TRACING;
+                    const bool               IsInRequiredState = pTLASVk->CheckState(RequiredState);
+                    if (VerifyOnly)
+                    {
+                        if (!IsInRequiredState)
+                        {
+                            LOG_ERROR_MESSAGE("State of TLAS '", pTLASVk->GetDesc().Name, "' is incorrect. Required state: ",
+                                              GetResourceStateString(RequiredState), ". Actual state: ",
+                                              GetResourceStateString(pTLASVk->GetState()),
+                                              ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                              "when calling IDeviceContext::CommitShaderResources() or explicitly transition the TLAS state "
+                                              "with IDeviceContext::TransitionResourceStates().");
+                        }
+                    }
+                    else
+                    {
+                        if (!IsInRequiredState)
+                        {
+                            pCtxVkImpl->TransitionTLASState(*pTLASVk, RESOURCE_STATE_UNKNOWN, RequiredState, true);
+                        }
+                    }
+                }
             }
             break;
 
@@ -532,13 +533,13 @@ VkWriteDescriptorSetAccelerationStructureKHR ShaderResourceCacheVk::Resource::Ge
     VERIFY(Type == SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure, "Acceleration structure resource is expected");
     DEV_CHECK_ERR(pObject != nullptr, "Unable to get acceleration structure write info: cached object is null");
 
-    //auto* pTLASVk = pObject.RawPtr<const TopLevelASVkImpl>();
+    auto* pTLASVk = pObject.RawPtr<const TopLevelASVkImpl>();
 
-    VkWriteDescriptorSetAccelerationStructureKHR DescrAS = {};
-    //DescrAS.sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
-    //DescrAS.pNext                      = nullptr;
-    //DescrAS.accelerationStructureCount = 1;
-    //DescrAS.pAccelerationStructures    = pTLASVk->GetVkTLASPtr();
+    VkWriteDescriptorSetAccelerationStructureKHR DescrAS;
+    DescrAS.sType                      = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+    DescrAS.pNext                      = nullptr;
+    DescrAS.accelerationStructureCount = 1;
+    DescrAS.pAccelerationStructures    = pTLASVk->GetVkTLASPtr();
 
     return DescrAS;
 }

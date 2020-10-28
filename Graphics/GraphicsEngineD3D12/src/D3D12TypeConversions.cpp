@@ -351,8 +351,9 @@ static D3D12_RESOURCE_STATES ResourceStateFlagToD3D12ResourceState(RESOURCE_STAT
         case RESOURCE_STATE_RESOLVE_SOURCE:    return D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
         case RESOURCE_STATE_INPUT_ATTACHMENT:  return D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         case RESOURCE_STATE_PRESENT:           return D3D12_RESOURCE_STATE_PRESENT;
-        case RESOURCE_STATE_BUILD_AS:          return D3D12_RESOURCE_STATES(0);
-        case RESOURCE_STATE_RAY_TRACING:       return D3D12_RESOURCE_STATES(0); // AZ TODO
+        case RESOURCE_STATE_BUILD_AS_READ:     return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        case RESOURCE_STATE_BUILD_AS_WRITE:    return D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+        case RESOURCE_STATE_RAY_TRACING:       return D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
         // clang-format on
         default:
             UNEXPECTED("Unexpected resource state flag");
@@ -379,7 +380,7 @@ public:
     }
 
 private:
-    static constexpr Uint32                              MaxFlagBitPos = 18;
+    static constexpr Uint32                              MaxFlagBitPos = 19;
     std::array<D3D12_RESOURCE_STATES, MaxFlagBitPos + 1> FlagBitPosToResStateMap;
 };
 
@@ -422,7 +423,6 @@ static RESOURCE_STATE D3D12ResourceStateToResourceStateFlags(D3D12_RESOURCE_STAT
         case D3D12_RESOURCE_STATE_COPY_SOURCE:                return RESOURCE_STATE_COPY_SOURCE;
         case D3D12_RESOURCE_STATE_RESOLVE_DEST:               return RESOURCE_STATE_RESOLVE_DEST;
         case D3D12_RESOURCE_STATE_RESOLVE_SOURCE:             return RESOURCE_STATE_RESOLVE_SOURCE;
-            // AZ TODO
         // clang-format on
         default:
             UNEXPECTED("Unexpected D3D12 resource state");
@@ -592,5 +592,67 @@ SHADER_TYPE D3D12ShaderVisibilityToShaderType(D3D12_SHADER_VISIBILITY ShaderVisi
     }
 }
 
+DXGI_FORMAT ValueTypeToIndexType(VALUE_TYPE IndexType)
+{
+    switch (IndexType)
+    {
+        // clang-format off
+        case VT_UNDEFINED: return DXGI_FORMAT_UNKNOWN; // only for ray tracing
+        case VT_UINT16:    return DXGI_FORMAT_R16_UINT;
+        case VT_UINT32:    return DXGI_FORMAT_R32_UINT;
+        // clang-format on
+        default:
+            UNEXPECTED("Unexpected index type");
+            return DXGI_FORMAT_R32_UINT;
+    }
+}
+
+D3D12_RAYTRACING_GEOMETRY_FLAGS GeometryFlagsToD3D12RTGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flags)
+{
+    static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION,
+                  "Please update the switch below to handle the new ray tracing geometry flag");
+
+    Uint32 Result = 0;
+    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    {
+        if ((Flags & Bit) != Bit)
+            continue;
+
+        switch (static_cast<RAYTRACING_GEOMETRY_FLAGS>(Bit))
+        {
+            // clang-format off
+            case RAYTRACING_GEOMETRY_OPAQUE:                          Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE; break;
+            case RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION; break;
+            // clang-format on
+            default: UNEXPECTED("unknown geometry flag");
+        }
+    }
+    return static_cast<D3D12_RAYTRACING_GEOMETRY_FLAGS>(Result);
+}
+
+D3D12_RAYTRACING_INSTANCE_FLAGS InstanceFlagsToD3D12RTInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags)
+{
+    static_assert(RAYTRACING_INSTANCE_FLAGS_LAST == RAYTRACING_INSTANCE_FORCE_NO_OPAQUE,
+                  "Please update the switch below to handle the new ray tracing instance flag");
+
+    Uint32 Result = 0;
+    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    {
+        if ((Flags & Bit) != Bit)
+            continue;
+
+        switch (static_cast<RAYTRACING_INSTANCE_FLAGS>(Bit))
+        {
+            // clang-format off
+            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    Result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE ; break;
+            case RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE: Result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE ; break;
+            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    Result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE ; break;
+            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 Result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE ; break;
+            // clang-format on
+            default: UNEXPECTED("unknown instance flag");
+        }
+    }
+    return static_cast<D3D12_RAYTRACING_INSTANCE_FLAGS>(Result);
+}
 
 } // namespace Diligent

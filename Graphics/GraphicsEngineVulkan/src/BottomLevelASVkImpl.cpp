@@ -60,7 +60,7 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
     if (m_Desc.pTriangles != nullptr)
     {
         Uint32 MaxPrimitiveCount = 0;
-        for (uint32_t i = 0; i < CreateInfo.maxGeometryCount; ++i)
+        for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
         {
             auto& src = m_Desc.pTriangles[i];
             auto& dst = Geometries[i];
@@ -81,7 +81,7 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
     else if (m_Desc.pBoxes != nullptr)
     {
         Uint32 MaxBoxCount = 0;
-        for (uint32_t i = 0; i < CreateInfo.maxGeometryCount; ++i)
+        for (uint32_t i = 0; i < m_Desc.BoxCount; ++i)
         {
             auto& src = m_Desc.pBoxes[i];
             auto& dst = Geometries[i];
@@ -122,10 +122,12 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
         LOG_ERROR_AND_THROW("Failed to find suitable memory type for BLAS '", m_Desc.Name, '\'');
 
     VERIFY(IsPowerOfTwo(MemReqs.alignment), "Alignment is not power of 2!");
-    m_MemoryAllocation = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex);
+    m_MemoryAllocation    = pRenderDeviceVk->AllocateMemory(MemReqs.size, MemReqs.alignment, MemoryTypeIndex);
+    m_MemoryAlignedOffset = Align(VkDeviceSize{m_MemoryAllocation.UnalignedOffset}, MemReqs.alignment);
+    VERIFY(m_MemoryAllocation.Size >= MemReqs.size + (m_MemoryAlignedOffset - m_MemoryAllocation.UnalignedOffset), "Size of memory allocation is too small");
 
     auto Memory = m_MemoryAllocation.Page->GetVkMemory();
-    auto err    = LogicalDevice.BindASMemory(m_VulkanBLAS, Memory, 0);
+    auto err    = LogicalDevice.BindASMemory(m_VulkanBLAS, Memory, m_MemoryAlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind AS memory");
 
     m_DeviceAddress = LogicalDevice.GetAccelerationStructureDeviceAddress(m_VulkanBLAS);

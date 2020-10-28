@@ -223,13 +223,13 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
 
         // For either clear or copy command, dst layout must be VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
         VkImageSubresourceRange SubresRange;
-        SubresRange.aspectMask           = aspectMask;
-        SubresRange.baseArrayLayer       = 0;
-        SubresRange.layerCount           = VK_REMAINING_ARRAY_LAYERS;
-        SubresRange.baseMipLevel         = 0;
-        SubresRange.levelCount           = VK_REMAINING_MIP_LEVELS;
-        auto EnabledGraphicsShaderStages = LogicalDevice.GetEnabledGraphicsShaderStages();
-        VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange, EnabledGraphicsShaderStages);
+        SubresRange.aspectMask     = aspectMask;
+        SubresRange.baseArrayLayer = 0;
+        SubresRange.layerCount     = VK_REMAINING_ARRAY_LAYERS;
+        SubresRange.baseMipLevel   = 0;
+        SubresRange.levelCount     = VK_REMAINING_MIP_LEVELS;
+        auto EnabledShaderStages   = LogicalDevice.GetEnabledShaderStages();
+        VulkanUtilities::VulkanCommandBuffer::TransitionImageLayout(vkCmdBuff, m_VulkanImage, ImageCI.initialLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, SubresRange, EnabledShaderStages);
         SetState(RESOURCE_STATE_COPY_DEST);
         const auto CurrentLayout = GetLayout();
         VERIFY_EXPR(CurrentLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -350,7 +350,7 @@ TextureVkImpl::TextureVkImpl(IReferenceCounters*        pRefCounters,
             err = LogicalDevice.BindBufferMemory(StagingBuffer, StagingBufferMemory, AlignedStagingMemOffset);
             CHECK_VK_ERROR_AND_THROW(err, "Failed to bind staging bufer memory");
 
-            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledGraphicsShaderStages);
+            VulkanUtilities::VulkanCommandBuffer::BufferMemoryBarrier(vkCmdBuff, StagingBuffer, 0, VK_ACCESS_TRANSFER_READ_BIT, EnabledShaderStages);
 
             // Copy commands MUST be recorded outside of a render pass instance. This is OK here
             // as copy will be the only command in the cmd buffer

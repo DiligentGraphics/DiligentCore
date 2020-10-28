@@ -178,16 +178,16 @@ public:
     FramebufferCache& GetFramebufferCache() { return m_FramebufferCache; }
     RenderPassCache&  GetImplicitRenderPassCache() { return m_ImplicitRenderPassCache; }
 
-    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties)
+    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProperties, VkMemoryAllocateFlags AllocateFlags = 0)
     {
-        return m_MemoryMgr.Allocate(MemReqs, MemoryProperties);
+        return m_MemoryMgr.Allocate(MemReqs, MemoryProperties, AllocateFlags);
     }
-    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex)
+    VulkanUtilities::VulkanMemoryAllocation AllocateMemory(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, VkMemoryAllocateFlags AllocateFlags = 0)
     {
         const auto& MemoryProps = m_PhysicalDevice->GetMemoryProperties();
         VERIFY_EXPR(MemoryTypeIndex < MemoryProps.memoryTypeCount);
         const auto MemoryFlags = MemoryProps.memoryTypes[MemoryTypeIndex].propertyFlags;
-        return m_MemoryMgr.Allocate(Size, Alignment, MemoryTypeIndex, (MemoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0);
+        return m_MemoryMgr.Allocate(Size, Alignment, MemoryTypeIndex, (MemoryFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0, AllocateFlags);
     }
     VulkanUtilities::VulkanMemoryManager& GetGlobalMemoryManager() { return m_MemoryMgr; }
 

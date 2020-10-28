@@ -33,6 +33,7 @@
 #include "CommandContext.hpp"
 #include "RenderDeviceD3D12Impl.hpp"
 #include "TextureD3D12Impl.hpp"
+#include "TopLevelASD3D12Impl.hpp"
 #include "D3D12TypeConversions.hpp"
 #include "HashUtils.hpp"
 
@@ -702,6 +703,10 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
 
         case CachedResourceType::AccelStruct:
         {
+            VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
+            auto* pTLASD3D12 = Res.pObject.RawPtr<TopLevelASD3D12Impl>();
+            if (pTLASD3D12->IsInKnownState() && !pTLASD3D12->CheckState(RESOURCE_STATE_RAY_TRACING))
+                Ctx.TransitionResource(pTLASD3D12, RESOURCE_STATE_RAY_TRACING);
         }
         break;
 
@@ -806,6 +811,16 @@ void RootSignature::DvpVerifyResourceState(const ShaderResourceCacheD3D12::Resou
 
         case CachedResourceType::AccelStruct:
         {
+            VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
+            const auto* pTLASD3D12 = Res.pObject.RawPtr<const TopLevelASD3D12Impl>();
+            if (pTLASD3D12->IsInKnownState() && !pTLASD3D12->CheckState(RESOURCE_STATE_RAY_TRACING))
+            {
+                LOG_ERROR_MESSAGE("TLAS '", pTLASD3D12->GetDesc().Name, "' must be in RESOURCE_STATE_RAY_TRACING state.  Actual state: ",
+                                  GetResourceStateString(pTLASD3D12->GetState()),
+                                  ". Call IDeviceContext::TransitionShaderResources(), use RESOURCE_STATE_TRANSITION_MODE_TRANSITION "
+                                  "when calling IDeviceContext::CommitShaderResources() or explicitly transition the TLAS state "
+                                  "with IDeviceContext::TransitionResourceStates().");
+            }
         }
         break;
 

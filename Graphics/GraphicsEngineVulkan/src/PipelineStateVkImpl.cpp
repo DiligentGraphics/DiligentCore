@@ -390,23 +390,31 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
 #define LOG_PSO_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of ray tracing PSO '", CreateInfo.PSODesc.Name, "' is invalid: ", ##__VA_ARGS__)
     ShaderGroups.reserve(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
 
-    Uint32 GroupIndex  = 0;
-    Uint32 ShaderIndex = 0;
+    Uint32 GroupIndex = 0;
 
+    std::array<Uint32, 6>                      ShaderIndices = {};
     std::unordered_map<const IShader*, Uint32> UniqueShaders;
 
-    const auto ShaderToIndex = [&ShaderIndex, &UniqueShaders](const IShader* pShader) -> Uint32 {
+    const auto ShaderToIndex = [&ShaderIndices, &UniqueShaders](const IShader* pShader) -> Uint32 {
         if (pShader != nullptr)
         {
-            auto Result = UniqueShaders.emplace(pShader, ShaderIndex);
+            Uint32& Index  = ShaderIndices[GetShaderTypePipelineIndex(pShader->GetDesc().ShaderType, PIPELINE_TYPE_RAY_TRACING)];
+            auto    Result = UniqueShaders.emplace(pShader, Index);
             if (Result.second)
             {
-                ++ShaderIndex;
+                ++Index;
             }
             return Result.first->second;
         }
         return VK_SHADER_UNUSED_KHR;
     };
+
+    Uint32 ShaderCount = 0;
+    for (auto& Stage : ShaderStages)
+    {
+        ShaderIndices[GetShaderTypePipelineIndex(Stage.Type, PIPELINE_TYPE_RAY_TRACING)] = ShaderCount;
+        ShaderCount += static_cast<Uint32>(Stage.Count());
+    }
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
@@ -485,7 +493,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
             ++ShaderIndex2;
         }
     }
-    VERIFY_EXPR(ShaderIndex == ShaderIndex2);
+    VERIFY_EXPR(UniqueShaders.size() == ShaderIndex2);
 #endif
 #undef LOG_PSO_ERROR_AND_THROW
 }

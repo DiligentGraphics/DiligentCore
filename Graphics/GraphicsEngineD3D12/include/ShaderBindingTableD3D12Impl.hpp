@@ -28,44 +28,46 @@
 #pragma once
 
 /// \file
-/// Definition of the Diligent::ShaderBindingTableVkImpl class
+/// Declaration of Diligent::ShaderBindingTableD3D12Impl class
 
-#include "RenderDeviceVk.h"
-#include "RenderDeviceVkImpl.hpp"
-#include "ShaderBindingTableVk.h"
+#include "ShaderBindingTableD3D12.h"
+#include "RenderDeviceD3D12.h"
 #include "ShaderBindingTableBase.hpp"
-#include "PipelineStateVkImpl.hpp"
-#include "VulkanUtilities/VulkanObjectWrappers.hpp"
+#include "D3D12ResourceBase.hpp"
+#include "RenderDeviceD3D12Impl.hpp"
+#include "PipelineStateD3D12Impl.hpp"
 
 namespace Diligent
 {
 
-class ShaderBindingTableVkImpl final : public ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, RenderDeviceVkImpl>
+/// Shader binding table object implementation in Direct3D12 backend.
+class ShaderBindingTableD3D12Impl final : public ShaderBindingTableBase<IShaderBindingTableD3D12, PipelineStateD3D12Impl, RenderDeviceD3D12Impl>, public D3D12ResourceBase
 {
 public:
-    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableVk, PipelineStateVkImpl, RenderDeviceVkImpl>;
+    using TShaderBindingTableBase = ShaderBindingTableBase<IShaderBindingTableD3D12, PipelineStateD3D12Impl, RenderDeviceD3D12Impl>;
 
-    ShaderBindingTableVkImpl(IReferenceCounters*           pRefCounters,
-                             RenderDeviceVkImpl*           pRenderDeviceVk,
-                             const ShaderBindingTableDesc& Desc,
-                             bool                          bIsDeviceInternal = false);
-    ~ShaderBindingTableVkImpl();
+    ShaderBindingTableD3D12Impl(IReferenceCounters*           pRefCounters,
+                                class RenderDeviceD3D12Impl*  pDeviceD3D12,
+                                const ShaderBindingTableDesc& Desc,
+                                bool                          bIsDeviceInternal = false);
+    ~ShaderBindingTableD3D12Impl();
+
+    virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
     virtual void DILIGENT_CALL_TYPE Verify() const override;
 
     virtual void DILIGENT_CALL_TYPE Reset(const ShaderBindingTableDesc& Desc) override;
 
     virtual void DILIGENT_CALL_TYPE ResetHitGroups(Uint32 HitShadersPerInstance) override;
+
     virtual void DILIGENT_CALL_TYPE BindAll(const BindAllAttribs& Attribs) override;
 
-    virtual void DILIGENT_CALL_TYPE GetVkStridedBufferRegions(IDeviceContextVk*              pContext,
-                                                              RESOURCE_STATE_TRANSITION_MODE TransitionMode,
-                                                              VkStridedBufferRegionKHR&      RaygenShaderBindingTable,
-                                                              VkStridedBufferRegionKHR&      MissShaderBindingTable,
-                                                              VkStridedBufferRegionKHR&      HitShaderBindingTable,
-                                                              VkStridedBufferRegionKHR&      CallableShaderBindingTable) override;
-
-    IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableVk, TShaderBindingTableBase);
+    virtual void DILIGENT_CALL_TYPE GetD3D12AddressRangeAndStride(IDeviceContextD3D12*                        pContext,
+                                                                  RESOURCE_STATE_TRANSITION_MODE              TransitionMode,
+                                                                  D3D12_GPU_VIRTUAL_ADDRESS_RANGE&            RaygenShaderBindingTable,
+                                                                  D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& MissShaderBindingTable,
+                                                                  D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& HitShaderBindingTable,
+                                                                  D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& CallableShaderBindingTable) override;
 
 private:
     void ValidateDesc(const ShaderBindingTableDesc& Desc) const;

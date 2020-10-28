@@ -31,6 +31,7 @@
 /// Definition of the Diligent::IShaderBindingTableVk interface
 
 #include "../../GraphicsEngine/interface/ShaderBindingTable.h"
+#include "DeviceContextVk.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 
@@ -51,10 +52,12 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTableVk, IShaderBindingTable)
 {
     /// AZ TODO
     VIRTUAL void METHOD(GetVkStridedBufferRegions)(THIS_
-                                                   VkStridedBufferRegionKHR REF RaygenShaderBindingTable,
-                                                   VkStridedBufferRegionKHR REF MissShaderBindingTable,
-                                                   VkStridedBufferRegionKHR REF HitShaderBindingTable,
-                                                   VkStridedBufferRegionKHR REF CallableShaderBindingTable) PURE;
+                                                   IDeviceContextVk*              pContext,
+                                                   RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                                   VkStridedBufferRegionKHR REF   RaygenShaderBindingTable,
+                                                   VkStridedBufferRegionKHR REF   MissShaderBindingTable,
+                                                   VkStridedBufferRegionKHR REF   HitShaderBindingTable,
+                                                   VkStridedBufferRegionKHR REF   CallableShaderBindingTable) PURE;
 };
 DILIGENT_END_INTERFACE
 // clang-format on

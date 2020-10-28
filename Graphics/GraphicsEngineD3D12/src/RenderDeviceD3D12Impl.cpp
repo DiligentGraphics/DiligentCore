@@ -40,6 +40,9 @@
 #include "QueryD3D12Impl.hpp"
 #include "RenderPassD3D12Impl.hpp"
 #include "FramebufferD3D12Impl.hpp"
+#include "BottomLevelASD3D12Impl.hpp"
+#include "TopLevelASD3D12Impl.hpp"
+#include "ShaderBindingTableD3D12Impl.hpp"
 #include "EngineMemory.h"
 
 namespace Diligent
@@ -137,9 +140,9 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             sizeof(QueryD3D12Impl),
             sizeof(RenderPassD3D12Impl),
             sizeof(FramebufferD3D12Impl),
-            0,
-            0,
-            0
+            sizeof(BottomLevelASD3D12Impl),
+            sizeof(TopLevelASD3D12Impl),
+            sizeof(ShaderBindingTableD3D12Impl)
         }
     },
     m_pd3d12Device  {pd3d12Device},
@@ -725,19 +728,37 @@ void RenderDeviceD3D12Impl::CreateFramebuffer(const FramebufferDesc& Desc, IFram
 void RenderDeviceD3D12Impl::CreateBLAS(const BottomLevelASDesc& Desc,
                                        IBottomLevelAS**         ppBLAS)
 {
-    // AZ TODO
+    CreateDeviceObject("BottomLevelAS", Desc, ppBLAS,
+                       [&]() //
+                       {
+                           BottomLevelASD3D12Impl* pBottomLevelASVk(NEW_RC_OBJ(m_BLASAllocator, "BottomLevelASD3D12Impl instance", BottomLevelASD3D12Impl)(this, Desc));
+                           pBottomLevelASVk->QueryInterface(IID_BottomLevelAS, reinterpret_cast<IObject**>(ppBLAS));
+                           OnCreateDeviceObject(pBottomLevelASVk);
+                       });
 }
 
 void RenderDeviceD3D12Impl::CreateTLAS(const TopLevelASDesc& Desc,
                                        ITopLevelAS**         ppTLAS)
 {
-    // AZ TODO
+    CreateDeviceObject("TopLevelAS", Desc, ppTLAS,
+                       [&]() //
+                       {
+                           TopLevelASD3D12Impl* pTopLevelASVk(NEW_RC_OBJ(m_TLASAllocator, "TopLevelASD3D12Impl instance", TopLevelASD3D12Impl)(this, Desc));
+                           pTopLevelASVk->QueryInterface(IID_TopLevelAS, reinterpret_cast<IObject**>(ppTLAS));
+                           OnCreateDeviceObject(pTopLevelASVk);
+                       });
 }
 
 void RenderDeviceD3D12Impl::CreateSBT(const ShaderBindingTableDesc& Desc,
                                       IShaderBindingTable**         ppSBT)
 {
-    // AZ TODO
+    CreateDeviceObject("ShaderBindingTable", Desc, ppSBT,
+                       [&]() //
+                       {
+                           ShaderBindingTableD3D12Impl* pSBTVk(NEW_RC_OBJ(m_SBTAllocator, "ShaderBindingTableD3D12Impl instance", ShaderBindingTableD3D12Impl)(this, Desc));
+                           pSBTVk->QueryInterface(IID_ShaderBindingTable, reinterpret_cast<IObject**>(ppSBT));
+                           OnCreateDeviceObject(pSBTVk);
+                       });
 }
 
 DescriptorHeapAllocation RenderDeviceD3D12Impl::AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE Type, UINT Count /*= 1*/)

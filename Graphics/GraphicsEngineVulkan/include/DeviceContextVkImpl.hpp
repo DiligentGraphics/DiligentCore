@@ -50,6 +50,9 @@
 #include "HashUtils.hpp"
 #include "ManagedVulkanObject.hpp"
 #include "QueryManagerVk.hpp"
+#include "BottomLevelASVkImpl.hpp"
+#include "TopLevelASVkImpl.hpp"
+#include "ShaderBindingTableVkImpl.hpp"
 
 
 namespace Diligent
@@ -65,6 +68,8 @@ struct DeviceContextVkImplTraits
     using QueryType         = QueryVkImpl;
     using FramebufferType   = FramebufferVkImpl;
     using RenderPassType    = RenderPassVkImpl;
+    using BottomLevelASType = BottomLevelASVkImpl;
+    using TopLevelASType    = TopLevelASVkImpl;
 };
 
 /// Device context implementation in Vulkan backend.
@@ -294,6 +299,20 @@ public:
     virtual void DILIGENT_CALL_TYPE BufferMemoryBarrier(IBuffer* pBuffer, VkAccessFlags NewAccessFlags) override final;
 
 
+    // Transitions BLAS state from OldState to NewState, and optionally updates internal state.
+    // If OldState == RESOURCE_STATE_UNKNOWN, internal BLAS state is used as old state.
+    void TransitionBLASState(BottomLevelASVkImpl& BLAS,
+                             RESOURCE_STATE       OldState,
+                             RESOURCE_STATE       NewState,
+                             bool                 UpdateInternalState);
+
+    // Transitions TLAS state from OldState to NewState, and optionally updates internal state.
+    // If OldState == RESOURCE_STATE_UNKNOWN, internal TLAS state is used as old state.
+    void TransitionTLASState(TopLevelASVkImpl& TLAS,
+                             RESOURCE_STATE    OldState,
+                             RESOURCE_STATE    NewState,
+                             bool              UpdateInternalState);
+
     void AddWaitSemaphore(ManagedSemaphore* pWaitSemaphore, VkPipelineStageFlags WaitDstStageMask)
     {
         VERIFY_EXPR(pWaitSemaphore != nullptr);
@@ -386,6 +405,15 @@ private:
                                                       VkImageLayout                  ExpectedLayout,
                                                       const char*                    OperationName);
 
+    __forceinline void TransitionOrVerifyBLASState(BottomLevelASVkImpl&           BLAS,
+                                                   RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                                   RESOURCE_STATE                 RequiredState,
+                                                   const char*                    OperationName);
+
+    __forceinline void TransitionOrVerifyTLASState(TopLevelASVkImpl&              TLAS,
+                                                   RESOURCE_STATE_TRANSITION_MODE TransitionMode,
+                                                   RESOURCE_STATE                 RequiredState,
+                                                   const char*                    OperationName);
 
     __forceinline void EnsureVkCmdBuffer()
     {
@@ -438,6 +466,7 @@ private:
     __forceinline void          PrepareForIndexedDraw(DRAW_FLAGS Flags, VALUE_TYPE IndexType);
     __forceinline BufferVkImpl* PrepareIndirectDrawAttribsBuffer(IBuffer* pAttribsBuffer, RESOURCE_STATE_TRANSITION_MODE TransitonMode);
     __forceinline void          PrepareForDispatchCompute();
+    __forceinline void          PrepareForRayTracing();
 
     void DvpLogRenderPass_PSOMismatch();
 

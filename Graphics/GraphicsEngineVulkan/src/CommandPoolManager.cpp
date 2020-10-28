@@ -53,14 +53,17 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
 {
     std::lock_guard<std::mutex> LockGuard{m_Mutex};
 
+    auto& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
+
     VulkanUtilities::CommandPoolWrapper CmdPool;
     if (!m_CmdPools.empty())
     {
         CmdPool = std::move(m_CmdPools.front());
         m_CmdPools.pop_front();
+
+        LogicalDevice.ResetCommandPool(CmdPool);
     }
 
-    auto& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
     if (CmdPool == VK_NULL_HANDLE)
     {
         VkCommandPoolCreateInfo CmdPoolCI = {};
@@ -73,8 +76,6 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
         CmdPool = LogicalDevice.CreateCommandPool(CmdPoolCI);
         DEV_CHECK_ERR(CmdPool != VK_NULL_HANDLE, "Failed to create Vulkan command pool");
     }
-
-    LogicalDevice.ResetCommandPool(CmdPool);
 
 #ifdef DILIGENT_DEVELOPMENT
     ++m_AllocatedPoolCounter;

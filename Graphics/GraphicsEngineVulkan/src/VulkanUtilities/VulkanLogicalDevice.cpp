@@ -64,15 +64,19 @@ VulkanLogicalDevice::VulkanLogicalDevice(const VulkanPhysicalDevice&  PhysicalDe
     // https://github.com/zeux/volk#optimizing-device-calls
     volkLoadDevice(m_VkDevice);
 
-    if (PhysicalDevice.GetExtFeatures().RayTracingNV)
+    if (m_EnabledExtFeatures.RayTracingNV)
         EnableRayTracingKHRviaNV();
 #endif
 
-    m_EnabledGraphicsShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    m_EnabledShaderStages = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     if (DeviceCI.pEnabledFeatures->geometryShader)
-        m_EnabledGraphicsShaderStages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
+        m_EnabledShaderStages |= VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT;
     if (DeviceCI.pEnabledFeatures->tessellationShader)
-        m_EnabledGraphicsShaderStages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+        m_EnabledShaderStages |= VK_PIPELINE_STAGE_TESSELLATION_CONTROL_SHADER_BIT | VK_PIPELINE_STAGE_TESSELLATION_EVALUATION_SHADER_BIT;
+    if (m_EnabledExtFeatures.MeshShader.meshShader != VK_FALSE && m_EnabledExtFeatures.MeshShader.taskShader != VK_FALSE)
+        m_EnabledShaderStages |= VK_PIPELINE_STAGE_TASK_SHADER_BIT_NV | VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV;
+    if (m_EnabledExtFeatures.RayTracing.rayTracing != VK_FALSE)
+        m_EnabledShaderStages |= VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
 }
 
 VkQueue VulkanLogicalDevice::GetQueue(uint32_t queueFamilyIndex, uint32_t queueIndex)

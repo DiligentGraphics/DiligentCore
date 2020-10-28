@@ -95,10 +95,11 @@ struct VulkanMemoryAllocation
 class VulkanMemoryPage
 {
 public:
-    VulkanMemoryPage(VulkanMemoryManager& ParentMemoryMgr,
-                     VkDeviceSize         PageSize,
-                     uint32_t             MemoryTypeIndex,
-                     bool                 IsHostVisible) noexcept;
+    VulkanMemoryPage(VulkanMemoryManager&  ParentMemoryMgr,
+                     VkDeviceSize          PageSize,
+                     uint32_t              MemoryTypeIndex,
+                     bool                  IsHostVisible,
+                     VkMemoryAllocateFlags AllocateFlags) noexcept;
     ~VulkanMemoryPage();
 
     // clang-format off
@@ -198,8 +199,8 @@ public:
     VulkanMemoryManager& operator= (VulkanMemoryManager&&)      = delete;
     // clang-format on
 
-    VulkanMemoryAllocation Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible);
-    VulkanMemoryAllocation Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps);
+    VulkanMemoryAllocation Allocate(VkDeviceSize Size, VkDeviceSize Alignment, uint32_t MemoryTypeIndex, bool HostVisible, VkMemoryAllocateFlags AllocateFlags);
+    VulkanMemoryAllocation Allocate(const VkMemoryRequirements& MemReqs, VkMemoryPropertyFlags MemoryProps, VkMemoryAllocateFlags AllocateFlags);
     void                   ShrinkMemory();
 
 protected:
@@ -218,19 +219,23 @@ protected:
     std::mutex m_PagesMtx;
     struct MemoryPageIndex
     {
-        const uint32_t MemoryTypeIndex;
-        const bool     IsHostVisible;
+        const uint32_t              MemoryTypeIndex;
+        const VkMemoryAllocateFlags AllocateFlags;
+        const bool                  IsHostVisible;
 
         // clang-format off
-        MemoryPageIndex(uint32_t _MemoryTypeIndex,
-                        bool     _IsHostVisible) : 
-            MemoryTypeIndex(_MemoryTypeIndex),
-            IsHostVisible  (_IsHostVisible)
+        MemoryPageIndex(uint32_t              _MemoryTypeIndex,
+                        bool                  _IsHostVisible,
+                        VkMemoryAllocateFlags _AllocateFlags) : 
+            MemoryTypeIndex{_MemoryTypeIndex},
+            AllocateFlags  {_AllocateFlags},
+            IsHostVisible  {_IsHostVisible}
         {}
 
         bool operator == (const MemoryPageIndex& rhs)const
         {
             return MemoryTypeIndex == rhs.MemoryTypeIndex &&
+                   AllocateFlags   == rhs.AllocateFlags   &&
                    IsHostVisible   == rhs.IsHostVisible;
         }
         // clang-format on
@@ -239,7 +244,7 @@ protected:
         {
             size_t operator()(const MemoryPageIndex& PageIndex) const
             {
-                return Diligent::ComputeHash(PageIndex.MemoryTypeIndex, PageIndex.IsHostVisible);
+                return Diligent::ComputeHash(PageIndex.MemoryTypeIndex, PageIndex.AllocateFlags, PageIndex.IsHostVisible);
             }
         };
     };
