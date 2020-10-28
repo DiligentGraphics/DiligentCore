@@ -221,7 +221,7 @@ public:
             ArraySize                {_ArraySize     },
             Type                     {_Type          },
             ResourceDim              {_ResourceDim   },
-            IsMS                     {_IsMS ? 1U : 0U},
+            IsMS                     {_IsMS ? Uint8{1} : Uint8{0}},
             Name                     {_Name          },
             ParentResLayout          {_ParentLayout  }
         // clang-format on
