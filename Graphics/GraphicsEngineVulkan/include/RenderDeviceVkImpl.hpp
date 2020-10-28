@@ -197,6 +197,11 @@ public:
 
     IDXCompiler* GetDxCompiler() const { return m_pDxCompiler.get(); }
 
+    Uint32 GetShaderGroupHandleSize() const
+    {
+        return GetPhysicalDevice().GetExtProperties().RayTracing.shaderGroupHandleSize;
+    }
+
 private:
     template <typename PSOCreateInfoType>
     void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState);

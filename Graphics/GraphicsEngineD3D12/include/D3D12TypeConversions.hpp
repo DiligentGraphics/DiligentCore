@@ -75,4 +75,8 @@ D3D12_QUERY_TYPE      QueryTypeToD3D12QueryType(QUERY_TYPE QueryType);
 D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE AttachmentLoadOpToD3D12BeginningAccessType(ATTACHMENT_LOAD_OP LoadOp);
 D3D12_RENDER_PASS_ENDING_ACCESS_TYPE    AttachmentStoreOpToD3D12EndingAccessType(ATTACHMENT_STORE_OP StoreOp);
 
+D3D12_SHADER_VISIBILITY ShaderTypeToD3D12ShaderVisibility(SHADER_TYPE ShaderType);
+SHADER_TYPE             D3D12ShaderVisibilityToShaderType(D3D12_SHADER_VISIBILITY ShaderVisibility);
+
+
 } // namespace Diligent

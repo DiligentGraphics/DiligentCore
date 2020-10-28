@@ -75,6 +75,8 @@ struct SPIRVShaderResourceAttribs
         NumResourceTypes
     };
 
+    static SHADER_RESOURCE_TYPE GetShaderResourceType(ResourceType Type);
+
     // clang-format off
 
     static constexpr const Uint32   InvalidSepSmplrOrImgInd = static_cast<Uint32>(-1);
@@ -147,7 +149,10 @@ public:
         // clang-format on
     }
 
-    ShaderResourceDesc GetResourceDesc() const;
+    ShaderResourceDesc GetResourceDesc() const
+    {
+        return ShaderResourceDesc{Name, GetShaderResourceType(Type), ArraySize};
+    }
 
     RESOURCE_DIMENSION GetResourceDimension() const
     {

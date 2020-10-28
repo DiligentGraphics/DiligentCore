@@ -133,13 +133,13 @@ private:
         void   Append(ShaderD3D12Impl* pShader);
         size_t Count() const;
 
-        SHADER_TYPE                   Type;
+        SHADER_TYPE                   Type = SHADER_TYPE_UNKNOWN;
         std::vector<ShaderD3D12Impl*> Shaders;
     };
     using TShaderStages = std::vector<ShaderStageInfo>;
 
-    template <typename PSOCreateInfoType>
-    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, TShaderStages& ShaderStages);
+    template <typename PSOCreateInfoType, typename InitPSODescType>
+    void InitInternalObjects(const PSOCreateInfoType& CreateInfo, TShaderStages& ShaderStages, InitPSODescType InitPSODesc);
     void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo, TShaderStages& ShaderStages);
 
     void Destruct();
@@ -157,6 +157,7 @@ private:
     // Resource layout index in m_pShaderResourceLayouts array for every shader stage,
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
+    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 };
 
 } // namespace Diligent

@@ -433,6 +433,7 @@ void PipelineLayout::InitResourceCache(RenderDeviceVkImpl*    pDeviceVkImpl,
 }
 
 void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkImpl,
+                                           VkPipelineBindPoint          BindPoint,
                                            const ShaderResourceCacheVk& ResourceCache,
                                            DescriptorSetBindInfo&       BindInfo,
                                            VkDescriptorSet              VkDynamicDescrSet) const
@@ -478,6 +479,7 @@ void PipelineLayout::PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkIm
     BindInfo.DynamicOffsetCount = TotalDynamicDescriptors;
     if (TotalDynamicDescriptors > BindInfo.DynamicOffsets.size())
         BindInfo.DynamicOffsets.resize(TotalDynamicDescriptors);
+    BindInfo.BindPoint      = BindPoint;
     BindInfo.pResourceCache = &ResourceCache;
 #ifdef DILIGENT_DEBUG
     BindInfo.pDbgPipelineLayout = this;

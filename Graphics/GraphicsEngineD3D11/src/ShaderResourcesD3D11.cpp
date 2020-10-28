@@ -448,7 +448,7 @@ void ShaderResourcesD3D11::dvpVerifyCommittedResources(ID3D11Buffer*            
 
         [&](const D3DShaderResourceAttribs&, Uint32) //
         {
-            UNEXPECTED("acceleration structure is not supported in DirectX 11");
+            UNEXPECTED("Acceleration structure is not supported in DirectX 11");
         } // clang-format off
     ); // clang-format on
 }

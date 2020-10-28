@@ -32,11 +32,11 @@
 #include <array>
 #include "ShaderResourceLayoutD3D12.hpp"
 #include "BufferD3D12Impl.hpp"
+#include "D3D12TypeConversions.hpp"
 
 namespace Diligent
 {
 
-D3D12_SHADER_VISIBILITY    GetShaderVisibility(SHADER_TYPE ShaderType);
 D3D12_DESCRIPTOR_HEAP_TYPE dbgHeapTypeFromRangeType(D3D12_DESCRIPTOR_RANGE_TYPE RangeType);
 
 class RootParameter
@@ -513,10 +513,6 @@ private:
                                              class CommandContext&        Ctx,
                                              bool                         IsCompute,
                                              bool                         ValidateStates) const;
-
-#ifdef DILIGENT_DEBUG
-    SHADER_TYPE m_DbgShaderStages = SHADER_TYPE_UNKNOWN;
-#endif
 };
 
 void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
@@ -537,7 +533,11 @@ void RootSignature::CommitRootViews(ShaderResourceCacheD3D12& ResourceCache,
 
         SHADER_TYPE dbgShaderType = SHADER_TYPE_UNKNOWN;
 #ifdef DILIGENT_DEBUG
-        dbgShaderType = m_DbgShaderStages;
+        {
+            auto& Param = static_cast<const D3D12_ROOT_PARAMETER&>(RootView);
+            VERIFY_EXPR(Param.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV);
+            dbgShaderType = D3D12ShaderVisibilityToShaderType(Param.ShaderVisibility);
+        }
 #endif
 
         auto& Res = ResourceCache.GetRootTable(RootInd).GetResource(0, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, dbgShaderType);

@@ -81,7 +81,7 @@ RenderDeviceVkImpl::RenderDeviceVkImpl(IReferenceCounters*                      
             sizeof(FramebufferVkImpl),
             sizeof(BottomLevelASVkImpl),
             sizeof(TopLevelASVkImpl),
-            sizeof(ShaderBindingTableVkImpl)
+            sizeof(ShaderBindingTableVkImpl),
         }
     },
     m_VulkanInstance         {Instance                 },

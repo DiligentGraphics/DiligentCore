@@ -192,7 +192,7 @@ VulkanInstance::VulkanInstance(uint32_t               ApiVersion,
         uint32_t MaxApiVersion = 0;
         vkEnumerateInstanceVersion(&MaxApiVersion);
         ApiVersion = std::min(ApiVersion, MaxApiVersion);
-        LOG_INFO_MESSAGE("Used Vulkan API version ", VK_VERSION_MAJOR(ApiVersion), ".", VK_VERSION_MINOR(ApiVersion));
+        LOG_INFO_MESSAGE("Using Vulkan API version ", VK_VERSION_MAJOR(ApiVersion), ".", VK_VERSION_MINOR(ApiVersion));
     }
 #endif
 

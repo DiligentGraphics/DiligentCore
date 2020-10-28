@@ -127,70 +127,54 @@ SPIRVShaderResourceAttribs::SPIRVShaderResourceAttribs(const diligent_spirv_cros
 }
 
 
-ShaderResourceDesc SPIRVShaderResourceAttribs::GetResourceDesc() const
+SHADER_RESOURCE_TYPE SPIRVShaderResourceAttribs::GetShaderResourceType(ResourceType Type)
 {
-    ShaderResourceDesc ResourceDesc;
-    ResourceDesc.Name      = Name;
-    ResourceDesc.ArraySize = ArraySize;
-
     static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please handle the new resource type below");
     switch (Type)
     {
         case SPIRVShaderResourceAttribs::ResourceType::UniformBuffer:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
-            break;
+            return SHADER_RESOURCE_TYPE_CONSTANT_BUFFER;
 
         case SPIRVShaderResourceAttribs::ResourceType::ROStorageBuffer:
             // Read-only storage buffers map to buffer SRV
             // https://github.com/KhronosGroup/SPIRV-Cross/wiki/Reflection-API-user-guide#read-write-vs-read-only-resources-for-hlsl
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-            break;
+            return SHADER_RESOURCE_TYPE_BUFFER_SRV;
 
         case SPIRVShaderResourceAttribs::ResourceType::RWStorageBuffer:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
+            return SHADER_RESOURCE_TYPE_BUFFER_UAV;
 
         case SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_SRV;
-            break;
+            return SHADER_RESOURCE_TYPE_BUFFER_SRV;
 
         case SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
+            return SHADER_RESOURCE_TYPE_BUFFER_UAV;
 
         case SPIRVShaderResourceAttribs::ResourceType::StorageImage:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_UAV;
-            break;
+            return SHADER_RESOURCE_TYPE_TEXTURE_UAV;
 
         case SPIRVShaderResourceAttribs::ResourceType::SampledImage:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            break;
+            return SHADER_RESOURCE_TYPE_TEXTURE_SRV;
 
         case SPIRVShaderResourceAttribs::ResourceType::AtomicCounter:
-            LOG_WARNING_MESSAGE("There is no appropriate shader resource type for atomic counter resource '", Name, "'");
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_BUFFER_UAV;
-            break;
+            LOG_WARNING_MESSAGE("There is no appropriate shader resource type for atomic counter");
+            return SHADER_RESOURCE_TYPE_BUFFER_UAV;
 
         case SPIRVShaderResourceAttribs::ResourceType::SeparateImage:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_TEXTURE_SRV;
-            break;
+            return SHADER_RESOURCE_TYPE_TEXTURE_SRV;
 
         case SPIRVShaderResourceAttribs::ResourceType::SeparateSampler:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_SAMPLER;
-            break;
+            return SHADER_RESOURCE_TYPE_SAMPLER;
 
         case SPIRVShaderResourceAttribs::ResourceType::InputAttachment:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT;
-            break;
+            return SHADER_RESOURCE_TYPE_INPUT_ATTACHMENT;
 
         case SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure:
-            ResourceDesc.Type = SHADER_RESOURCE_TYPE_ACCEL_STRUCT;
-            break;
+            return SHADER_RESOURCE_TYPE_ACCEL_STRUCT;
 
         default:
             UNEXPECTED("Unknown SPIRV resource type");
+            return SHADER_RESOURCE_TYPE_UNKNOWN;
     }
-    return ResourceDesc;
 }
 
 
@@ -692,11 +676,11 @@ SPIRVShaderResources::~SPIRVShaderResources()
     for (Uint32 n = 0; n < GetNumInptAtts(); ++n)
         GetInptAtt(n).~SPIRVShaderResourceAttribs();
 
-    for (Uint32 n = 0; n < GetNumAccelStructs(); ++n)
-        GetAccelStruct(n).~SPIRVShaderResourceAttribs();
-
     for (Uint32 n = 0; n < GetNumShaderStageInputs(); ++n)
         GetShaderStageInputAttribs(n).~SPIRVShaderStageInputAttribs();
+
+    for (Uint32 n = 0; n < GetNumAccelStructs(); ++n)
+        GetAccelStruct(n).~SPIRVShaderResourceAttribs();
 
     static_assert(SPIRVShaderResourceAttribs::ResourceType::NumResourceTypes == 12, "Please add destructor for the new resource");
 }
@@ -755,12 +739,12 @@ std::string SPIRVShaderResources::DumpResources()
             if (Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageImage)
             {
                 ss << std::endl
-                   << std::setw(3) << ResNum << " Storage Image      ";
+                   << std::setw(3) << ResNum << " Storage Image    ";
             }
             else if (Img.Type == SPIRVShaderResourceAttribs::ResourceType::StorageTexelBuffer)
             {
                 ss << std::endl
-                   << std::setw(3) << ResNum << " Storage Txl Buff   ";
+                   << std::setw(3) << ResNum << " Storage Txl Buff ";
             }
             else
                 UNEXPECTED("Unexpected resource type");
@@ -771,12 +755,12 @@ std::string SPIRVShaderResources::DumpResources()
             if (SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::SampledImage)
             {
                 ss << std::endl
-                   << std::setw(3) << ResNum << " Sampled Image      ";
+                   << std::setw(3) << ResNum << " Sampled Image    ";
             }
             else if (SmplImg.Type == SPIRVShaderResourceAttribs::ResourceType::UniformTexelBuffer)
             {
                 ss << std::endl
-                   << std::setw(3) << ResNum << " Uniform Txl Buff   ";
+                   << std::setw(3) << ResNum << " Uniform Txl Buff ";
             }
             else
                 UNEXPECTED("Unexpected resource type");
@@ -786,35 +770,35 @@ std::string SPIRVShaderResources::DumpResources()
         {
             VERIFY(AC.Type == SPIRVShaderResourceAttribs::ResourceType::AtomicCounter, "Unexpected resource type");
             ss << std::endl
-               << std::setw(3) << ResNum << " Atomic Cntr        ";
+               << std::setw(3) << ResNum << " Atomic Cntr      ";
             DumpResource(AC);
         },
         [&](const SPIRVShaderResourceAttribs& SepSmpl, Uint32) //
         {
             VERIFY(SepSmpl.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateSampler, "Unexpected resource type");
             ss << std::endl
-               << std::setw(3) << ResNum << " Separate Smpl      ";
+               << std::setw(3) << ResNum << " Separate Smpl    ";
             DumpResource(SepSmpl);
         },
         [&](const SPIRVShaderResourceAttribs& SepImg, Uint32) //
         {
             VERIFY(SepImg.Type == SPIRVShaderResourceAttribs::ResourceType::SeparateImage, "Unexpected resource type");
             ss << std::endl
-               << std::setw(3) << ResNum << " Separate Img       ";
+               << std::setw(3) << ResNum << " Separate Img     ";
             DumpResource(SepImg);
         },
         [&](const SPIRVShaderResourceAttribs& InptAtt, Uint32) //
         {
             VERIFY(InptAtt.Type == SPIRVShaderResourceAttribs::ResourceType::InputAttachment, "Unexpected resource type");
             ss << std::endl
-               << std::setw(3) << ResNum << " Input Attachment   ";
+               << std::setw(3) << ResNum << " Input Attachment ";
             DumpResource(InptAtt);
         },
         [&](const SPIRVShaderResourceAttribs& AccelStruct, Uint32) //
         {
             VERIFY(AccelStruct.Type == SPIRVShaderResourceAttribs::ResourceType::AccelerationStructure, "Unexpected resource type");
             ss << std::endl
-               << std::setw(3) << ResNum << " Acceleration Struct";
+               << std::setw(3) << ResNum << " Accel Struct     ";
             DumpResource(AccelStruct);
         } //
     );

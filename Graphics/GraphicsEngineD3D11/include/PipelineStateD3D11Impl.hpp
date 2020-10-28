@@ -167,6 +167,7 @@ private:
     // Resource layout index in m_pStaticResourceLayouts array for every shader stage,
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
+    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
     std::array<Uint16, MAX_SHADERS_IN_PIPELINE + 1> m_ImmutableSamplerOffsets = {};
     struct ImmutableSamplerInfo

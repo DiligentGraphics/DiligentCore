@@ -35,13 +35,13 @@
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
-#include "Definitions.hpp"
+#include "CompilerDefinitions.h"
 #include "Align.hpp"
 
 namespace Diligent
 {
 
-/// Implementation of a linear allocator on a fixed memory pages
+/// Implementation of a linear allocator on fixed memory pages
 class DynamicLinearAllocator
 {
 public:
@@ -55,7 +55,9 @@ public:
     explicit DynamicLinearAllocator(IMemoryAllocator& Allocator, Uint32 BlockSize = 4 << 10) :
         m_pAllocator{&Allocator},
         m_BlockSize{BlockSize}
-    {}
+    {
+        VERIFY(IsPowerOfTwo(BlockSize), "Block size (", BlockSize, ") is not power of two");
+    }
 
     ~DynamicLinearAllocator()
     {
@@ -66,7 +68,7 @@ public:
     {
         for (auto& block : m_Blocks)
         {
-            m_pAllocator->Free(block.Page);
+            m_pAllocator->Free(block.Data);
         }
         m_Blocks.clear();
 
@@ -77,45 +79,46 @@ public:
     {
         for (auto& block : m_Blocks)
         {
-            block.Size = 0;
+            block.CurrPtr = block.Data;
         }
     }
 
-    NDDISCARD void* Allocate(size_t size, size_t align)
+    NODISCARD void* Allocate(size_t size, size_t align)
     {
         if (size == 0)
             return nullptr;
 
         for (auto& block : m_Blocks)
         {
-            size_t offset = Align(reinterpret_cast<size_t>(block.Page) + block.Size, align) - reinterpret_cast<size_t>(block.Page);
-
-            if (size <= (block.Capacity - offset))
+            auto* Ptr = Align(block.CurrPtr, align);
+            if (Ptr + size <= block.Data + block.Size)
             {
-                block.Size = offset + size;
-                return block.Page + offset;
+                block.CurrPtr = Ptr + size;
+                return Ptr;
             }
         }
 
-        // create new block
+        // Create a new block
         size_t BlockSize = m_BlockSize;
-        BlockSize        = size * 2 < BlockSize ? BlockSize : size * 2;
-        m_Blocks.emplace_back(m_pAllocator->Allocate(BlockSize, "dynamic linear allocator page", __FILE__, __LINE__), 0, BlockSize);
+        while (BlockSize < size + align - 1)
+            BlockSize *= 2;
+        m_Blocks.emplace_back(m_pAllocator->Allocate(BlockSize, "dynamic linear allocator page", __FILE__, __LINE__), BlockSize);
 
-        auto&  block  = m_Blocks.back();
-        size_t offset = Align(reinterpret_cast<size_t>(block.Page), align) - reinterpret_cast<size_t>(block.Page);
-        block.Size    = offset + size;
-        return block.Page + offset;
+        auto& block = m_Blocks.back();
+        auto* Ptr   = Align(block.Data, align);
+        VERIFY(Ptr + size <= block.Data + block.Size, "Not enough space in the new block - this is a bug");
+        block.CurrPtr = Ptr + size;
+        return Ptr;
     }
 
     template <typename T>
-    NDDISCARD T* Allocate(size_t count = 1)
+    NODISCARD T* Allocate(size_t count = 1)
     {
         return reinterpret_cast<T*>(Allocate(sizeof(T) * count, alignof(T)));
     }
 
     template <typename T, typename... Args>
-    NDDISCARD T* Construct(Args&&... args)
+    NODISCARD T* Construct(Args&&... args)
     {
         T* Ptr = Allocate<T>(1);
         new (Ptr) T{std::forward<Args>(args)...};
@@ -123,7 +126,7 @@ public:
     }
 
     template <typename T, typename... Args>
-    NDDISCARD T* ConstructArray(size_t count, const Args&... args)
+    NODISCARD T* ConstructArray(size_t count, const Args&... args)
     {
         T* Ptr = Allocate<T>(count);
         for (size_t i = 0; i < count; ++i)
@@ -134,7 +137,7 @@ public:
     }
 
     template <typename T>
-    NDDISCARD T* CopyArray(const T* Src, size_t count)
+    NODISCARD T* CopyArray(const T* Src, size_t count)
     {
         T* Dst = Allocate<T>(count);
         for (size_t i = 0; i < count; ++i)
@@ -144,24 +147,28 @@ public:
         return Dst;
     }
 
-    NDDISCARD Char* CopyString(const Char* Str)
+    NODISCARD Char* CopyString(const Char* Str, size_t len = 0)
     {
         if (Str == nullptr)
             return nullptr;
 
-        size_t len = strlen(Str) + 1;
-        Char*  Dst = Allocate<Char>(len + 1);
+        if (len == 0)
+            len = strlen(Str);
+        else
+            VERIFY_EXPR(len <= strlen(Str));
+
+        Char* Dst = Allocate<Char>(len + 1);
         std::memcpy(Dst, Str, sizeof(Char) * len);
         Dst[len] = 0;
         return Dst;
     }
 
-    NDDISCARD wchar_t* CopyWString(const char* Str)
+    NODISCARD wchar_t* CopyWString(const char* Str)
     {
         if (Str == nullptr)
             return nullptr;
 
-        size_t len = strlen(Str) + 1;
+        size_t len = strlen(Str);
         auto*  Dst = Allocate<wchar_t>(len + 1);
         for (size_t i = 0; i < len; ++i)
         {
@@ -171,28 +178,24 @@ public:
         return Dst;
     }
 
-    NDDISCARD Char* CopyString(const String& Str)
+    NODISCARD Char* CopyString(const String& Str)
     {
-        size_t len = Str.length() + 1;
-        Char*  Dst = Allocate<Char>(len + 1);
-        std::memcpy(Dst, Str.c_str(), sizeof(Char) * len);
-        Dst[len] = 0;
-        return Dst;
+        return CopyString(Str.c_str(), Str.length());
     }
 
 private:
     struct Block
     {
-        uint8_t* Page     = nullptr;
-        size_t   Size     = 0;
-        size_t   Capacity = 0;
+        uint8_t* const Data    = nullptr;
+        size_t const   Size    = 0;
+        uint8_t*       CurrPtr = nullptr;
 
-        Block(void* _Page, size_t _Size, size_t _Capacity) :
-            Page{static_cast<uint8_t*>(_Page)}, Size{_Size}, Capacity{_Capacity} {}
+        Block(void* _Data, size_t _Size) :
+            Data{static_cast<uint8_t*>(_Data)}, Size{_Size}, CurrPtr{Data} {}
     };
 
     std::vector<Block> m_Blocks;
-    Uint32             m_BlockSize  = 4 << 10;
+    const Uint32       m_BlockSize  = 4 << 10;
     IMemoryAllocator*  m_pAllocator = nullptr;
 };
 

@@ -25,15 +25,28 @@
  *  of the possibility of such damages.
  */
 
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
-
 #pragma once
 
-#include "PlatformDefinitions.h"
-#include "BasicTypes.h"
-#include "Errors.hpp"
-#include "FileWrapper.hpp"
-#include "RefCntAutoPtr.hpp"
+#ifdef _MSC_VER
+#    if _MSC_VER >= 1917
+#        define NODISCARD [[nodiscard]]
+#    else
+#        define NODISCARD
+#    endif
+#endif // _MSC_VER
+
+#ifdef __clang__
+#    if __has_feature(cxx_attributes)
+#        define NODISCARD [[nodiscard]]
+#    else
+#        define NODISCARD
+#    endif
+#endif // __clang__
+
+#ifdef __GNUC__
+#    if __has_cpp_attribute(nodiscard)
+#        define NODISCARD [[nodiscard]]
+#    else
+#        define NODISCARD
+#    endif
+#endif // __GNUC__

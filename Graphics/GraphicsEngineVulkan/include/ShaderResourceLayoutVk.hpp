@@ -44,20 +44,9 @@
 //      d == m_NumResources[SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC]
 //
 //
+//   Every ShaderVariableVkImpl variable managed by ShaderVariableManagerVk keeps a reference to corresponding VkResource.
 //
-//   * Every VkResource structure holds a reference to SPIRVShaderResourceAttribs structure from SPIRVShaderResources.
-//   * ShaderResourceLayoutVk keeps a shared pointer to SPIRVShaderResources instance.
-//   * Every ShaderVariableVkImpl variable managed by ShaderVariableManagerVk keeps a reference to corresponding VkResource.
-//
-//
-//    ______________________                  ________________________________________________________________________
-//   |                      |  unique_ptr    |        |         |          |          |       |             |         |
-//   | SPIRVShaderResources |--------------->|   UBs  |   SBs   | StrgImgs | SmplImgs |  ACs  | SepSamplers | SepImgs |
-//   |______________________|                |________|_________|__________|__________|_______|_____________|_________|
-//            A                                           A                     A
-//            |                                           |                     |
-//            |shared_ptr                                Ref                   Ref
-//    ________|__________________                  ________\____________________|_____________________________________________
+//    ___________________________                  ___________________________________________________________________________
 //   |                           |   unique_ptr   |                   |                 |               |                     |
 //   | ShaderResourceLayoutVk    |--------------->|   VkResource[0]   |  VkResource[1]  |       ...     | VkResource[s+m+d-1] |
 //   |___________________________|                |___________________|_________________|_______________|_____________________|
@@ -99,13 +88,14 @@
 
 #include <array>
 #include <memory>
+#include <unordered_map>
 
 #include "PipelineState.h"
 #include "ShaderBase.hpp"
 #include "HashUtils.hpp"
 #include "ShaderResourceCacheVk.hpp"
-#include "SPIRVShaderResources.hpp"
 #include "VulkanUtilities/VulkanLogicalDevice.hpp"
+#include "StringPool.hpp"
 
 namespace Diligent
 {
@@ -113,7 +103,7 @@ namespace Diligent
 class ShaderVkImpl;
 
 /// Diligent::ShaderResourceLayoutVk class
-// sizeof(ShaderResourceLayoutVk)==72 (MS compiler, x64)
+// sizeof(ShaderResourceLayoutVk)==40 (MS compiler, x64)
 class ShaderResourceLayoutVk
 {
 public:
@@ -134,6 +124,9 @@ public:
     ShaderResourceLayoutVk(const VulkanUtilities::VulkanLogicalDevice& LogicalDevice) noexcept :
         m_LogicalDevice{LogicalDevice}
     {
+#if defined(_MSC_VER) && defined(_WIN64)
+        static_assert(sizeof(*this) == 40, "Unexpected sizeof(ShaderResourceLayoutVk).");
+#endif
     }
 
     // clang-format off
@@ -181,20 +174,27 @@ public:
 
         static constexpr const Uint32 InvalidSamplerInd  = (1 << SamplerIndBits)-1;
 
+        static constexpr const Uint32 ResourceDimBits = 7;
+        static constexpr const Uint32 IsMSFlagBits    = 8 - ResourceDimBits;
+        static_assert(RESOURCE_DIM_NUM_DIMENSIONS <= (1 << ResourceDimBits), "Not enough bits to represent RESOURCE_DIMENSION");
+
         using ResourceType = SPIRVShaderResourceAttribs::ResourceType;
 
 /* 0   */ const Uint16 Binding;
-/* 2   */ const Uint16 ArraySize;
+/* 2   */ const Uint16 DescriptorSet;
+
 /* 4.0 */ const Uint32 CacheOffset              : CacheOffsetBits; // Offset from the beginning of the cached descriptor set
 /* 6.5 */ const Uint32 SamplerInd               : SamplerIndBits;  // When using combined texture samplers, index of the separate sampler 
                                                                    // assigned to separate image
 /* 7.5 */ const Uint32 VariableType             : VariableTypeBits;  
 /* 7.7 */ const Uint32 ImmutableSamplerAssigned : ImmutableSamplerFlagBits;
-/* 8   */ const Uint8  DescriptorSet;
 
-/* 9   */ const ResourceType                Type;
-/* 10.0*/ const Uint8                       ResourceDim   : 7;
-/* 10.7*/ const Uint8                       IsMS          : 1;
+/* 8   */ const Uint16 ArraySize;
+
+/* 10  */ const ResourceType                Type;
+/* 11.0*/ const Uint8                       ResourceDim : ResourceDimBits;
+/* 11.7*/ const Uint8                       IsMS        : IsMSFlagBits;
+
 /* 16  */ const char* const                 Name;
 /* 24  */ const ShaderResourceLayoutVk&     ParentResLayout;
         // clang-format on
@@ -203,8 +203,8 @@ public:
                    const char*                   _Name,
                    Uint16                        _ArraySize,
                    ResourceType                  _Type,
-                   Uint8                         _ResourceDim,
-                   Uint8                         _IsMS,
+                   RESOURCE_DIMENSION            _ResourceDim,
+                   bool                          _IsMS,
                    SHADER_RESOURCE_VARIABLE_TYPE _VariableType,
                    uint32_t                      _Binding,
                    uint32_t                      _DescriptorSet,
@@ -218,19 +218,27 @@ public:
             SamplerInd               {_SamplerInd   },
             VariableType             {_VariableType },
             ImmutableSamplerAssigned {_ImmutableSamplerAssigned ? 1U : 0U},
-            Name                     {_Name         },
-            ArraySize                {_ArraySize    },
-            Type                     {_Type         },
-            ResourceDim              {_ResourceDim  },
-            IsMS                     {_IsMS         },
-            ParentResLayout          {_ParentLayout }
+            ArraySize                {_ArraySize     },
+            Type                     {_Type          },
+            ResourceDim              {_ResourceDim   },
+            IsMS                     {_IsMS ? 1U : 0U},
+            Name                     {_Name          },
+            ParentResLayout          {_ParentLayout  }
         // clang-format on
         {
-            VERIFY(_CacheOffset < (1 << CacheOffsetBits), "Cache offset (", _CacheOffset, ") exceeds max representable value ", (1 << CacheOffsetBits));
-            VERIFY(_SamplerInd < (1 << SamplerIndBits), "Sampler index  (", _SamplerInd, ") exceeds max representable value ", (1 << SamplerIndBits));
-            VERIFY(_Binding <= std::numeric_limits<decltype(Binding)>::max(), "Binding (", _Binding, ") exceeds max representable value ", std::numeric_limits<decltype(Binding)>::max());
+#if defined(_MSC_VER) && defined(_WIN64)
+            static_assert(sizeof(*this) == 32, "Unexpected sizeof(VkResource)");
+#endif
+            // clang-format off
+            VERIFY(_CacheOffset   < (1 << CacheOffsetBits),                               "Cache offset (", _CacheOffset, ") exceeds max representable value ", (1 << CacheOffsetBits) );
+            VERIFY(_SamplerInd    < (1 << SamplerIndBits),                                "Sampler index  (", _SamplerInd, ") exceeds max representable value ", (1 << SamplerIndBits) );
+            VERIFY(_Binding       <= std::numeric_limits<decltype(Binding)>::max(),       "Binding (", _Binding, ") exceeds max representable value ", std::numeric_limits<decltype(Binding)>::max() );
             VERIFY(_DescriptorSet <= std::numeric_limits<decltype(DescriptorSet)>::max(), "Descriptor set (", _DescriptorSet, ") exceeds max representable value ", std::numeric_limits<decltype(DescriptorSet)>::max());
+            VERIFY(_VariableType  < (1 << VariableTypeBits),                              "Variable type (", Uint32{_VariableType}, ") exceeds max representable value ", (1 << VariableTypeBits) );
+            VERIFY(_ResourceDim   < (1 << ResourceDimBits),                               "Resource dimension (", Uint32{_ResourceDim}, ") exceeds max representable value ", (1 << ResourceDimBits) );
+            // clang-format on
         }
+
 
         // Checks if a resource is bound in ResourceCache at the given ArrayIndex
         bool IsBound(Uint32 ArrayIndex, const ShaderResourceCacheVk& ResourceCache) const;
@@ -273,7 +281,10 @@ public:
                 return Name;
         }
 
-        ShaderResourceDesc GetResourceDesc() const;
+        ShaderResourceDesc GetResourceDesc() const
+        {
+            return ShaderResourceDesc{Name, SPIRVShaderResourceAttribs::GetShaderResourceType(Type), ArraySize};
+        }
 
         RESOURCE_DIMENSION GetResourceDimension() const
         {
@@ -403,14 +414,16 @@ private:
         return m_NumResources[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
     }
 
+    static constexpr Uint32 InvalidResourceIndex = ~0u;
+
     using ResourceNameToIndex_t = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
-    void AllocateMemory(const std::vector<const ShaderVkImpl*>& Shaders,
-                        IMemoryAllocator&                       Allocator,
-                        const PipelineResourceLayoutDesc&       ResourceLayoutDesc,
-                        const SHADER_RESOURCE_VARIABLE_TYPE*    AllowedVarTypes,
-                        Uint32                                  NumAllowedTypes,
-                        ResourceNameToIndex_t&                  UniqueNames,
-                        bool                                    AllocateImmutableSamplers);
+    StringPool AllocateMemory(const std::vector<const ShaderVkImpl*>& Shaders,
+                              IMemoryAllocator&                       Allocator,
+                              const PipelineResourceLayoutDesc&       ResourceLayoutDesc,
+                              const SHADER_RESOURCE_VARIABLE_TYPE*    AllowedVarTypes,
+                              Uint32                                  NumAllowedTypes,
+                              ResourceNameToIndex_t&                  UniqueNames,
+                              bool                                    AllocateImmutableSamplers);
 
     using ImmutableSamplerPtrType = RefCntAutoPtr<ISampler>;
     ImmutableSamplerPtrType& GetImmutableSampler(Uint32 n) noexcept
@@ -422,16 +435,15 @@ private:
 
     // clang-format off
 /* 0 */ const VulkanUtilities::VulkanLogicalDevice&     m_LogicalDevice;
-/* 8 */ std::unique_ptr<void, STDDeleterRawMem<void> >  m_ResourceBuffer; // AZ TODO: use linear allocator
-/*24 */ StringPool                                      m_StringPool;
+/* 8 */ std::unique_ptr<void, STDDeleterRawMem<void> >  m_ResourceBuffer;
 
-/*48 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES+1>  m_NumResources = {};
+/*24 */ std::array<Uint16, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES+1>  m_NumResources = {};
 
-/*56 */ Uint32      m_NumImmutableSamplers    = 0;
-/*60 */ SHADER_TYPE m_ShaderType              = SHADER_TYPE_UNKNOWN;
-/*64 */ bool        m_IsUsingSeparateSamplers = false;
+/*32 */ Uint16      m_NumImmutableSamplers    = 0;
+/*34 */ bool        m_IsUsingSeparateSamplers = false;
+/*36 */ SHADER_TYPE m_ShaderType              = SHADER_TYPE_UNKNOWN;
 
-/*72 */  // End of class
+/*40 */  // End of class
     // clang-format on
 };
 

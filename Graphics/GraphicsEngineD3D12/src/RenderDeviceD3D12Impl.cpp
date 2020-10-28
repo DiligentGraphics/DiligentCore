@@ -136,7 +136,10 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
             sizeof(FenceD3D12Impl),
             sizeof(QueryD3D12Impl),
             sizeof(RenderPassD3D12Impl),
-            sizeof(FramebufferD3D12Impl)
+            sizeof(FramebufferD3D12Impl),
+            0,
+            0,
+            0
         }
     },
     m_pd3d12Device  {pd3d12Device},
@@ -312,8 +315,8 @@ RenderDeviceD3D12Impl::RenderDeviceD3D12Impl(IReferenceCounters*          pRefCo
         CHECK_REQUIRED_FEATURE(ShaderInt8,               "8-bit shader operations are");
         CHECK_REQUIRED_FEATURE(ResourceBuffer8BitAccess, "8-bit resoure buffer access is");
         CHECK_REQUIRED_FEATURE(UniformBuffer8BitAccess,  "8-bit uniform buffer access is");
-        
-        CHECK_REQUIRED_FEATURE(RayTracing,  "ray tracing is");
+
+        CHECK_REQUIRED_FEATURE(RayTracing,               "ray tracing is");
         // clang-format on
 #undef CHECK_REQUIRED_FEATURE
 

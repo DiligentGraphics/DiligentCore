@@ -136,6 +136,7 @@ public:
     // set by the same Vulkan command. If there are no dynamic descriptors, this
     // function also binds descriptor sets rightaway.
     void PrepareDescriptorSets(DeviceContextVkImpl*         pCtxVkImpl,
+                               VkPipelineBindPoint          BindPoint,
                                const ShaderResourceCacheVk& ResourceCache,
                                DescriptorSetBindInfo&       BindInfo,
                                VkDescriptorSet              VkDynamicDescrSet) const;

@@ -33,7 +33,7 @@ set(INTERFACE
     interface/Timer.hpp
     interface/UniqueIdentifier.hpp
     interface/ValidatedCast.hpp
-    interface/Definitions.hpp
+    interface/CompilerDefinitions.h
 )
 
 set(SOURCE 

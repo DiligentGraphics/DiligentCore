@@ -198,7 +198,7 @@ VulkanPhysicalDevice::VulkanPhysicalDevice(VkPhysicalDevice      vkDevice,
             m_ExtProperties.RayTracing.shaderGroupBaseAlignment               = RayTracingNV.shaderGroupBaseAlignment;
             m_ExtProperties.RayTracing.maxGeometryCount                       = RayTracingNV.maxGeometryCount;
             m_ExtProperties.RayTracing.maxInstanceCount                       = RayTracingNV.maxInstanceCount;
-            m_ExtProperties.RayTracing.maxPrimitiveCount                      = RayTracingNV.maxTriangleCount / 3;
+            m_ExtProperties.RayTracing.maxPrimitiveCount                      = RayTracingNV.maxTriangleCount;
             m_ExtProperties.RayTracing.maxDescriptorSetAccelerationStructures = RayTracingNV.maxDescriptorSetAccelerationStructures;
             m_ExtProperties.RayTracing.shaderGroupHandleCaptureReplaySize     = 0;
         }

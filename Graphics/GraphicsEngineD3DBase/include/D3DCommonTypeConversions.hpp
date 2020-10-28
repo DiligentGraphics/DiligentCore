@@ -25,15 +25,16 @@
  *  of the possibility of such damages.
  */
 
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
-
 #pragma once
 
-#include "PlatformDefinitions.h"
-#include "BasicTypes.h"
-#include "Errors.hpp"
-#include "FileWrapper.hpp"
-#include "RefCntAutoPtr.hpp"
+/// \file
+/// Common D3D type conversions
+
+#include "GraphicsTypes.h"
+
+namespace Diligent
+{
+
+RESOURCE_DIMENSION D3DSrvDimensionToResourceDimension(D3D_SRV_DIMENSION SrvDim);
+
+} // namespace Diligent

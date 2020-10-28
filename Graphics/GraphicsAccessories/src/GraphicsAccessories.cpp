@@ -1087,21 +1087,20 @@ String GetResourceStateString(RESOURCE_STATE State)
 const char* GetQueryTypeString(QUERY_TYPE QueryType)
 {
     static_assert(QUERY_TYPE_NUM_TYPES == 6, "Not all QUERY_TYPE enum values are handled");
-    // clang-format off
-    switch(QueryType)
+    switch (QueryType)
     {
+        // clang-format off
         case QUERY_TYPE_UNDEFINED:           return "QUERY_TYPE_UNDEFINED";
         case QUERY_TYPE_OCCLUSION:           return "QUERY_TYPE_OCCLUSION";
         case QUERY_TYPE_BINARY_OCCLUSION:    return "QUERY_TYPE_BINARY_OCCLUSION";
         case QUERY_TYPE_TIMESTAMP:           return "QUERY_TYPE_TIMESTAMP";
         case QUERY_TYPE_PIPELINE_STATISTICS: return "QUERY_TYPE_PIPELINE_STATISTICS";
         case QUERY_TYPE_DURATION:            return "QUERY_TYPE_DURATION";
-
+        // clang-format on
         default:
             UNEXPECTED("Unepxected query type");
             return "Unknown";
     }
-    // clang-format on
 }
 
 const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform)
@@ -1133,37 +1132,35 @@ const char* GetSurfaceTransformString(SURFACE_TRANSFORM SrfTransform)
 const char* GetPipelineTypeString(PIPELINE_TYPE PipelineType)
 {
     static_assert(PIPELINE_TYPE_LAST == PIPELINE_TYPE_RAY_TRACING, "Please update this function to handle the new pipeline type");
-    // clang-format off
     switch (PipelineType)
     {
+        // clang-format off
         case PIPELINE_TYPE_COMPUTE:     return "compute";
         case PIPELINE_TYPE_GRAPHICS:    return "graphics";
         case PIPELINE_TYPE_MESH:        return "mesh";
         case PIPELINE_TYPE_RAY_TRACING: return "ray tracing";
-
+        // clang-format on
         default:
             UNEXPECTED("Unexpected pipeline type");
             return "unknown";
     }
-    // clang-format on
 }
 
 const char* GetShaderCompilerTypeString(SHADER_COMPILER Compiler)
 {
     static_assert(SHADER_COMPILER_LAST == SHADER_COMPILER_FXC, "Please update this function to handle the new shader compiler");
-    // clang-format off
     switch (Compiler)
     {
+        // clang-format off
         case SHADER_COMPILER_DEFAULT: return "Default";
         case SHADER_COMPILER_GLSLANG: return "glslang";
         case SHADER_COMPILER_DXC:     return "DXC";
         case SHADER_COMPILER_FXC:     return "FXC";
-
+        // clang-format on
         default:
             UNEXPECTED("Unexpected shader compiler");
             return "UNKNOWN";
-    };
-    // clang-format on
+    }
 }
 
 Uint32 ComputeMipLevelsCount(Uint32 Width)
@@ -1351,7 +1348,7 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
         case SHADER_TYPE_VERTEX:        // Graphics
         case SHADER_TYPE_AMPLIFICATION: // Mesh
         case SHADER_TYPE_COMPUTE:       // Compute
-        case SHADER_TYPE_RAY_GEN:       // RayTracing
+        case SHADER_TYPE_RAY_GEN:       // Ray tracing
             return 0;
 
         case SHADER_TYPE_HULL:     // Graphics
@@ -1360,15 +1357,15 @@ Int32 GetShaderTypePipelineIndex(SHADER_TYPE ShaderType, PIPELINE_TYPE PipelineT
             return 1;
 
         case SHADER_TYPE_DOMAIN:          // Graphics
-        case SHADER_TYPE_RAY_CLOSEST_HIT: // RayTracing
+        case SHADER_TYPE_RAY_CLOSEST_HIT: // Ray tracing
             return 2;
 
         case SHADER_TYPE_GEOMETRY:    // Graphics
-        case SHADER_TYPE_RAY_ANY_HIT: // RayTracing
+        case SHADER_TYPE_RAY_ANY_HIT: // Ray tracing
             return 3;
 
         case SHADER_TYPE_PIXEL:            // Graphics or Mesh
-        case SHADER_TYPE_RAY_INTERSECTION: // RayTracing
+        case SHADER_TYPE_RAY_INTERSECTION: // Ray tracing
             return 4;
 
         case SHADER_TYPE_CALLABLE: // RayTracing

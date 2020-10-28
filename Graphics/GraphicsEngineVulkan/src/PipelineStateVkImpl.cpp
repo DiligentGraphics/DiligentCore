@@ -129,11 +129,11 @@ void InitPipelineShaderStages(const VulkanUtilities::VulkanLogicalDevice&       
 }
 
 
-void CreateComputePipeline(RenderDeviceVkImpl*                           pDeviceVk,
-                           std::vector<VkPipelineShaderStageCreateInfo>& Stages,
-                           const PipelineLayout&                         Layout,
-                           const PipelineStateDesc&                      PSODesc,
-                           VulkanUtilities::PipelineWrapper&             Pipeline)
+static void CreateComputePipeline(RenderDeviceVkImpl*                           pDeviceVk,
+                                  std::vector<VkPipelineShaderStageCreateInfo>& Stages,
+                                  const PipelineLayout&                         Layout,
+                                  const PipelineStateDesc&                      PSODesc,
+                                  VulkanUtilities::PipelineWrapper&             Pipeline)
 {
     const auto& LogicalDevice = pDeviceVk->GetLogicalDevice();
 
@@ -154,13 +154,13 @@ void CreateComputePipeline(RenderDeviceVkImpl*                           pDevice
 }
 
 
-void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDeviceVk,
-                            std::vector<VkPipelineShaderStageCreateInfo>& Stages,
-                            const PipelineLayout&                         Layout,
-                            const PipelineStateDesc&                      PSODesc,
-                            const GraphicsPipelineDesc&                   GraphicsPipeline,
-                            VulkanUtilities::PipelineWrapper&             Pipeline,
-                            RefCntAutoPtr<IRenderPass>&                   pRenderPass)
+static void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDeviceVk,
+                                   std::vector<VkPipelineShaderStageCreateInfo>& Stages,
+                                   const PipelineLayout&                         Layout,
+                                   const PipelineStateDesc&                      PSODesc,
+                                   const GraphicsPipelineDesc&                   GraphicsPipeline,
+                                   VulkanUtilities::PipelineWrapper&             Pipeline,
+                                   RefCntAutoPtr<IRenderPass>&                   pRenderPass)
 {
     const auto& LogicalDevice  = pDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
@@ -338,13 +338,13 @@ void CreateGraphicsPipeline(RenderDeviceVkImpl*                           pDevic
 }
 
 
-void CreateRayTracingPipeline(RenderDeviceVkImpl*                                      pDeviceVk,
-                              std::vector<VkPipelineShaderStageCreateInfo>&            Stages,
-                              const std::vector<VkRayTracingShaderGroupCreateInfoKHR>& ShaderGroups,
-                              const PipelineLayout&                                    Layout,
-                              const PipelineStateDesc&                                 PSODesc,
-                              const RayTracingPipelineDesc&                            RayTracingPipeline,
-                              VulkanUtilities::PipelineWrapper&                        Pipeline)
+static void CreateRayTracingPipeline(RenderDeviceVkImpl*                                      pDeviceVk,
+                                     std::vector<VkPipelineShaderStageCreateInfo>&            Stages,
+                                     const std::vector<VkRayTracingShaderGroupCreateInfoKHR>& ShaderGroups,
+                                     const PipelineLayout&                                    Layout,
+                                     const PipelineStateDesc&                                 PSODesc,
+                                     const RayTracingPipelineDesc&                            RayTracingPipeline,
+                                     VulkanUtilities::PipelineWrapper&                        Pipeline)
 {
     const auto& LogicalDevice  = pDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pDeviceVk->GetPhysicalDevice();
@@ -410,16 +410,18 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
 
     for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
     {
+        const auto& GeneralShader = CreateInfo.pGeneralShaders[i];
+
         VkRayTracingShaderGroupCreateInfoKHR Group = {};
 
         Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
         Group.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-        Group.generalShader      = ShaderToIndex(CreateInfo.pGeneralShaders[i].pShader);
+        Group.generalShader      = ShaderToIndex(GeneralShader.pShader);
         Group.closestHitShader   = VK_SHADER_UNUSED_KHR;
         Group.anyHitShader       = VK_SHADER_UNUSED_KHR;
         Group.intersectionShader = VK_SHADER_UNUSED_KHR;
 
-        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pGeneralShaders[i].Name)}, GroupIndex++).second;
+        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(GeneralShader.Name)}, GroupIndex++).second;
         if (!IsUniqueName)
             LOG_PSO_ERROR_AND_THROW("pGeneralShaders[", i, "].Name must be unique");
 
@@ -428,16 +430,18 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
 
     for (Uint32 i = 0; i < CreateInfo.TriangleHitShaderCount; ++i)
     {
+        const auto& TriHitShader = CreateInfo.pTriangleHitShaders[i];
+
         VkRayTracingShaderGroupCreateInfoKHR Group = {};
 
         Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
         Group.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
         Group.generalShader      = VK_SHADER_UNUSED_KHR;
-        Group.closestHitShader   = ShaderToIndex(CreateInfo.pTriangleHitShaders[i].pClosestHitShader);
-        Group.anyHitShader       = ShaderToIndex(CreateInfo.pTriangleHitShaders[i].pAnyHitShader);
+        Group.closestHitShader   = ShaderToIndex(TriHitShader.pClosestHitShader);
+        Group.anyHitShader       = ShaderToIndex(TriHitShader.pAnyHitShader);
         Group.intersectionShader = VK_SHADER_UNUSED_KHR;
 
-        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pTriangleHitShaders[i].Name)}, GroupIndex++).second;
+        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(TriHitShader.Name)}, GroupIndex++).second;
         if (!IsUniqueName)
             LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must be unique");
 
@@ -446,23 +450,25 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
 
     for (Uint32 i = 0; i < CreateInfo.ProceduralHitShaderCount; ++i)
     {
+        const auto& ProcHitShader = CreateInfo.pProceduralHitShaders[i];
+
         VkRayTracingShaderGroupCreateInfoKHR Group = {};
 
         Group.sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
         Group.type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
         Group.generalShader      = VK_SHADER_UNUSED_KHR;
-        Group.intersectionShader = ShaderToIndex(CreateInfo.pProceduralHitShaders[i].pIntersectionShader);
-        Group.closestHitShader   = ShaderToIndex(CreateInfo.pProceduralHitShaders[i].pClosestHitShader);
-        Group.anyHitShader       = ShaderToIndex(CreateInfo.pProceduralHitShaders[i].pAnyHitShader);
+        Group.intersectionShader = ShaderToIndex(ProcHitShader.pIntersectionShader);
+        Group.closestHitShader   = ShaderToIndex(ProcHitShader.pClosestHitShader);
+        Group.anyHitShader       = ShaderToIndex(ProcHitShader.pAnyHitShader);
 
-        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(CreateInfo.pProceduralHitShaders[i].Name)}, GroupIndex++).second;
+        bool IsUniqueName = NameToGroupIndex.emplace(HashMapStringKey{MemPool.CopyString(ProcHitShader.Name)}, GroupIndex++).second;
         if (!IsUniqueName)
             LOG_PSO_ERROR_AND_THROW("pProceduralHitShaders[", i, "].Name must be unique");
 
         ShaderGroups.push_back(Group);
     }
 
-    VERIFY_EXPR(Uint32(CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount) == GroupIndex);
+    VERIFY_EXPR(Uint32{CreateInfo.GeneralShaderCount} + Uint32{CreateInfo.TriangleHitShaderCount} + Uint32{CreateInfo.ProceduralHitShaderCount} == GroupIndex);
 
 #ifdef DILIGENT_DEVELOPMENT
     Uint32 ShaderIndex2 = 0;
@@ -474,7 +480,7 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
             if (iter != UniqueShaders.end())
                 VERIFY_EXPR(iter->second == ShaderIndex2);
             else
-                UNEXPECTED("shader is not used in ray tracing shader groups");
+                UNEXPECTED("Shader '", pShader->GetDesc().Name, "' is not used in ray tracing shader groups");
 
             ++ShaderIndex2;
         }
@@ -630,10 +636,11 @@ void PipelineStateVkImpl::InitResourceLayouts(const PipelineStateCreateInfo& Cre
     m_ShaderResourceLayoutHash = m_PipelineLayout.GetHash();
 }
 
-template <typename PSOCreateInfoType>
+template <typename PSOCreateInfoType, typename InitPSODescType>
 void PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
                                               std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-                                              std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules)
+                                              std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
+                                              InitPSODescType                                    InitPSODesc)
 {
     m_ResourceLayoutIndex.fill(-1);
 
@@ -668,7 +675,7 @@ void PipelineStateVkImpl::InitInternalObjects(const PSOCreateInfoType&          
     for (Uint32 s = 0; s < NumShaderStages; ++s)
         new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, m_StaticResCaches[s]};
 
-    InitializePipelineDesc(CreateInfo, MemPool);
+    InitPSODesc(CreateInfo, MemPool, ShaderStages);
 
     // It is important to construct all objects before initializing them because if an exception is thrown,
     // destructors will be called for all objects
@@ -691,7 +698,12 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
         std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
-        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
+                            [this](const GraphicsPipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool, TShaderStages /*ShaderStages*/) //
+                            {
+                                InitializePipelineDesc(CreateInfo, MemPool);
+                            } //
+        );
 
         CreateGraphicsPipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, GetGraphicsPipelineDesc(), m_Pipeline, m_pRenderPass);
     }
@@ -714,7 +726,12 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   p
         std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
 
-        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules);
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
+                            [this](const ComputePipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool, TShaderStages /*ShaderStages*/) //
+                            {
+                                InitializePipelineDesc(CreateInfo, MemPool);
+                            } //
+        );
 
         CreateComputePipeline(pDeviceVk, vkShaderStages, m_PipelineLayout, m_Desc, m_Pipeline);
     }
@@ -733,56 +750,23 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 {
     try
     {
-        m_ResourceLayoutIndex.fill(-1);
-
-        TShaderStages ShaderStages;
-        ExtractShaders<ShaderVkImpl>(CreateInfo, ShaderStages);
-
-        const auto           ShaderGroupHandleSize = pDeviceVk->GetPhysicalDevice().GetExtProperties().RayTracing.shaderGroupHandleSize;
-        TNameToGroupIndexMap NameToGroupIndex;
-        LinearAllocator      MemPool{GetRawAllocator()};
-
-        const auto NumShaderStages = GetNumShaderStages();
-        VERIFY_EXPR(NumShaderStages > 0 && NumShaderStages == ShaderStages.size());
-
-        MemPool.AddSpace<ShaderResourceCacheVk>(NumShaderStages);
-        MemPool.AddSpace<ShaderResourceLayoutVk>(NumShaderStages * 2);
-        MemPool.AddSpace<ShaderVariableManagerVk>(NumShaderStages);
-
-        ReserveSpaceForPipelineDesc(CreateInfo, ShaderGroupHandleSize, MemPool);
-
-        MemPool.Reserve();
-
-        const auto& LogicalDevice = GetDevice()->GetLogicalDevice();
-
-        m_StaticResCaches = MemPool.ConstructArray<ShaderResourceCacheVk>(NumShaderStages, ShaderResourceCacheVk::DbgCacheContentType::StaticShaderResources);
-
-        // The memory is now owned by PipelineStateVkImpl and will be freed by Destruct().
-        auto* Ptr = MemPool.ReleaseOwnership();
-        VERIFY_EXPR(Ptr == m_StaticResCaches);
-        (void)Ptr;
-
-        m_ShaderResourceLayouts = MemPool.ConstructArray<ShaderResourceLayoutVk>(NumShaderStages * 2, LogicalDevice);
-
-        m_StaticVarsMgrs = MemPool.Allocate<ShaderVariableManagerVk>(NumShaderStages);
-        for (Uint32 s = 0; s < NumShaderStages; ++s)
-            new (m_StaticVarsMgrs + s) ShaderVariableManagerVk{*this, m_StaticResCaches[s]};
-
-        std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
-        BuildRTPipelineDescription(CreateInfo, NameToGroupIndex, ShaderGroups, ShaderStages, MemPool);
-        InitializePipelineDesc(CreateInfo, ShaderGroupHandleSize, std::move(NameToGroupIndex), MemPool);
-
-        // It is important to construct all objects before initializing them because if an exception is thrown,
-        // destructors will be called for all objects
-
-        InitResourceLayouts(CreateInfo, ShaderStages);
-
-        // Create shader modules and initialize shader stages
         std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
-        InitPipelineShaderStages(GetDevice()->GetLogicalDevice(), ShaderStages, ShaderModules, vkShaderStages);
+
+        std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
+        InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
+                            [&](const RayTracingPipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool, TShaderStages& ShaderStages) //
+                            {
+                                TNameToGroupIndexMap NameToGroupIndex;
+                                BuildRTPipelineDescription(CreateInfo, NameToGroupIndex, ShaderGroups, ShaderStages, MemPool);
+                                InitializePipelineDesc(CreateInfo, std::move(NameToGroupIndex), MemPool);
+                            } //
+        );
 
         CreateRayTracingPipeline(pDeviceVk, vkShaderStages, ShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
+
+        const auto& LogicalDevice         = GetDevice()->GetLogicalDevice();
+        const auto  ShaderGroupHandleSize = pDeviceVk->GetShaderGroupHandleSize();
 
         auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(ShaderGroups.size()), ShaderGroupHandleSize, &m_pRayTracingPipelineData->Shaders[0]);
         VERIFY(err == VK_SUCCESS, "Failed to get shader group handles");
@@ -978,20 +962,22 @@ void PipelineStateVkImpl::CommitAndTransitionShaderResources(IShaderResourceBind
             }
         }
 
-        VERIFY_EXPR(pDescrSetBindInfo != nullptr);
+
+        VkPipelineBindPoint BindPoint = VK_PIPELINE_BIND_POINT_MAX_ENUM;
         switch (m_Desc.PipelineType)
         {
             // clang-format off
             case PIPELINE_TYPE_GRAPHICS:
-            case PIPELINE_TYPE_MESH:        pDescrSetBindInfo->BindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;        break;
-            case PIPELINE_TYPE_COMPUTE:     pDescrSetBindInfo->BindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;         break;
-            case PIPELINE_TYPE_RAY_TRACING: pDescrSetBindInfo->BindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR; break;
-            default:                        UNEXPECTED("unknown pipeline type");
-                // clang-format on
+            case PIPELINE_TYPE_MESH:        BindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;        break;
+            case PIPELINE_TYPE_COMPUTE:     BindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;         break;
+            case PIPELINE_TYPE_RAY_TRACING: BindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR; break;
+            // clang-format on
+            default: UNEXPECTED("Unknown pipeline type");
         }
 
+        VERIFY_EXPR(pDescrSetBindInfo != nullptr);
         // Prepare descriptor sets, and also bind them if there are no dynamic descriptors
-        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
+        m_PipelineLayout.PrepareDescriptorSets(pCtxVkImpl, BindPoint, ResourceCache, *pDescrSetBindInfo, DynamicDescrSet);
         // Dynamic descriptor sets are not released individually. Instead, all dynamic descriptor pools
         // are released at the end of the frame by DeviceContextVkImpl::FinishFrame().
     }
@@ -1036,7 +1022,7 @@ IShaderResourceVariable* PipelineStateVkImpl::GetStaticVariableByIndex(SHADER_TY
     if (LayoutInd < 0)
         return nullptr;
 
-    auto& StaticVarMgr = GetStaticVarMgr(LayoutInd);
+    const auto& StaticVarMgr = GetStaticVarMgr(LayoutInd);
     return StaticVarMgr.GetVariable(Index);
 }
 

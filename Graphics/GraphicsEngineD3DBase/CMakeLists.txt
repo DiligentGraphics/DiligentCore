@@ -3,6 +3,7 @@ cmake_minimum_required (VERSION 3.10)
 project(Diligent-GraphicsEngineD3DBase CXX)
 
 set(INCLUDE 
+    include/D3DCommonTypeConversions.hpp
     include/D3DErrors.hpp
     include/D3DShaderResourceLoader.hpp
     include/D3DTypeConversionImpl.hpp
@@ -22,6 +23,7 @@ set(INTERFACE
 )
 
 set(SOURCE 
+    src/D3DCommonTypeConversions.cpp
     src/DXGITypeConversions.cpp
     src/ShaderD3DBase.cpp
     src/ShaderResources.cpp

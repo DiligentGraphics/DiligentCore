@@ -67,6 +67,7 @@
 #include "StringPool.hpp"
 #include "D3DShaderResourceLoader.hpp"
 #include "PipelineState.h"
+#include "D3DCommonTypeConversions.hpp"
 
 namespace Diligent
 {
@@ -81,7 +82,6 @@ struct D3DShaderResourceAttribs
 /* 8 */ const Uint16 BindPoint;
 /*10 */ const Uint16 BindCount;
 
-private:
     //            4               4                 24           
     // bit | 0  1  2  3   |  4  5  6  7  |  8   9  10   ...   31  |   
     //     |              |              |                        |
@@ -94,6 +94,7 @@ private:
     static_assert(D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER < (1 << ShaderInputTypeBits), "Not enough bits to represent D3D_SHADER_INPUT_TYPE");
     static_assert(D3D_SRV_DIMENSION_BUFFEREX            < (1 << SRVDimBits),          "Not enough bits to represent D3D_SRV_DIMENSION");
 
+private:
          // We need to use Uint32 instead of the actual type for reliability and correctness.
          // There originally was a problem when the type of InputType was D3D_SHADER_INPUT_TYPE:
          // the value of D3D_SIT_UAV_RWBYTEADDRESS (8) was interpreted as -8 (as the underlying enum type 
@@ -106,8 +107,9 @@ private:
     // clang-format on
 
 public:
-    static constexpr const Uint32 InvalidSamplerId = (1 << SamplerOrTexSRVIdBits) - 1;
-    static constexpr const Uint32 InvalidTexSRVId  = (1 << SamplerOrTexSRVIdBits) - 1;
+    static constexpr const Uint32 InvalidSamplerId = (1U << SamplerOrTexSRVIdBits) - 1U;
+    static constexpr const Uint32 MaxSamplerId     = InvalidSamplerId - 1;
+    static constexpr const Uint32 InvalidTexSRVId  = (1U << SamplerOrTexSRVIdBits) - 1U;
     static constexpr const Uint16 InvalidBindPoint = std::numeric_limits<Uint16>::max();
     static constexpr const Uint16 MaxBindPoint     = InvalidBindPoint - 1;
     static constexpr const Uint16 MaxBindCount     = std::numeric_limits<Uint16>::max();
@@ -157,7 +159,8 @@ public:
         }
     // clang-format on
     {
-        VERIFY(GetInputType() == D3D_SIT_TEXTURE && GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER, "Only texture SRV can be assigned a texture sampler");
+        VERIFY(SamplerId == InvalidSamplerId || (GetInputType() == D3D_SIT_TEXTURE && GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER),
+               "Only texture SRV can be assigned a valid texture sampler");
     }
 
     D3DShaderResourceAttribs(StringPool& NamesPool, const D3DShaderResourceAttribs& rhs) noexcept :
@@ -192,13 +195,16 @@ public:
         return static_cast<D3D_SRV_DIMENSION>(SRVDimension);
     }
 
-    RESOURCE_DIMENSION GetResourceDimension() const;
+    RESOURCE_DIMENSION GetResourceDimension() const
+    {
+        return D3DSrvDimensionToResourceDimension(GetSRVDimension());
+    }
 
     bool IsMultisample() const;
 
     bool IsCombinedWithSampler() const
     {
-        return GetCombinedSamplerId() != InvalidSamplerId;
+        return GetInputType() == D3D_SIT_TEXTURE && SamplerOrTexSRVId != InvalidSamplerId;
     }
 
     bool IsCombinedWithTexSRV() const
@@ -236,14 +242,14 @@ public:
 
     HLSLShaderResourceDesc GetHLSLResourceDesc() const;
 
-private:
-    friend class ShaderResources;
-
     Uint32 GetCombinedSamplerId() const
     {
         VERIFY(GetInputType() == D3D_SIT_TEXTURE && GetSRVDimension() != D3D_SRV_DIMENSION_BUFFER, "Invalid input type: D3D_SIT_TEXTURE is expected");
         return SamplerOrTexSRVId;
     }
+
+private:
+    friend class ShaderResources;
 
     void SetTexSRVId(Uint32 TexSRVId)
     {

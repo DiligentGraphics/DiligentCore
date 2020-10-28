@@ -25,28 +25,31 @@
  *  of the possibility of such damages.
  */
 
-#pragma once
+#include <d3dcommon.h>
+#include "D3DCommonTypeConversions.hpp"
 
-#ifdef _MSC_VER
-#    if _MSC_VER >= 1917
-#        define NDDISCARD [[nodiscard]]
-#    else
-#        define NDDISCARD
-#    endif
-#endif // _MSC_VER
+namespace Diligent
+{
 
-#ifdef __clang__
-#    if __has_feature(cxx_attributes)
-#        define NDDISCARD [[nodiscard]]
-#    else
-#        define NDDISCARD
-#    endif
-#endif // __clang__
+RESOURCE_DIMENSION D3DSrvDimensionToResourceDimension(D3D_SRV_DIMENSION SrvDim)
+{
+    switch (SrvDim)
+    {
+        // clang-format off
+        case D3D_SRV_DIMENSION_BUFFER:           return RESOURCE_DIM_BUFFER;
+        case D3D_SRV_DIMENSION_TEXTURE1D:        return RESOURCE_DIM_TEX_1D;
+        case D3D_SRV_DIMENSION_TEXTURE1DARRAY:   return RESOURCE_DIM_TEX_1D_ARRAY;
+        case D3D_SRV_DIMENSION_TEXTURE2D:        return RESOURCE_DIM_TEX_2D;
+        case D3D_SRV_DIMENSION_TEXTURE2DARRAY:   return RESOURCE_DIM_TEX_2D_ARRAY;
+        case D3D_SRV_DIMENSION_TEXTURE2DMS:      return RESOURCE_DIM_TEX_2D;
+        case D3D_SRV_DIMENSION_TEXTURE2DMSARRAY: return RESOURCE_DIM_TEX_2D_ARRAY;
+        case D3D_SRV_DIMENSION_TEXTURE3D:        return RESOURCE_DIM_TEX_3D;
+        case D3D_SRV_DIMENSION_TEXTURECUBE:      return RESOURCE_DIM_TEX_CUBE;
+        case D3D_SRV_DIMENSION_TEXTURECUBEARRAY: return RESOURCE_DIM_TEX_CUBE_ARRAY;
+        // clang-format on
+        default:
+            return RESOURCE_DIM_BUFFER;
+    }
+}
 
-#ifdef __GNUC__
-#    if __has_cpp_attribute(nodiscard)
-#        define NDDISCARD [[nodiscard]]
-#    else
-#        define NDDISCARD
-#    endif
-#endif // __GNUC__
+} // namespace Diligent

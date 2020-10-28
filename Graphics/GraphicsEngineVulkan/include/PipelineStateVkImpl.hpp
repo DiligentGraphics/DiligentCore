@@ -129,10 +129,11 @@ public:
 private:
     using TShaderStages = ShaderResourceLayoutVk::TShaderStages;
 
-    template <typename PSOCreateInfoType>
+    template <typename PSOCreateInfoType, typename InitPSODescType>
     void InitInternalObjects(const PSOCreateInfoType&                           CreateInfo,
                              std::vector<VkPipelineShaderStageCreateInfo>&      vkShaderStages,
-                             std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules);
+                             std::vector<VulkanUtilities::ShaderModuleWrapper>& ShaderModules,
+                             InitPSODescType                                    InitPSODesc);
 
     void InitResourceLayouts(const PipelineStateCreateInfo& CreateInfo,
                              TShaderStages&                 ShaderStages);
@@ -170,6 +171,7 @@ private:
     // Resource layout index in m_ShaderResourceLayouts array for every shader stage,
     // indexed by the shader type pipeline index (returned by GetShaderTypePipelineIndex)
     std::array<Int8, MAX_SHADERS_IN_PIPELINE> m_ResourceLayoutIndex = {-1, -1, -1, -1, -1, -1};
+    static_assert(MAX_SHADERS_IN_PIPELINE == 6, "Please update the initializer list above");
 
     bool m_HasStaticResources    = false;
     bool m_HasNonStaticResources = false;

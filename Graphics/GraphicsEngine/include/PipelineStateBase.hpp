@@ -144,15 +144,26 @@ public:
         RasterizerStateRegistry.ReportDeletedObject();
         DSSRegistry.ReportDeletedObject();
         */
+        VERIFY(m_IsDestructed, "This object must be explicitly destructed with Destruct()");
     }
 
     void Destruct()
     {
-        if (this->m_Desc.IsRayTracingPipeline() && m_pRayTracingPipelineData)
+        VERIFY(!m_IsDestructed, "This object has already been destructed");
+
+        if (this->m_Desc.IsAnyGraphicsPipeline() && m_pGraphicsPipelineDesc != nullptr)
+        {
+            m_pGraphicsPipelineDesc->~GraphicsPipelineDesc();
+            m_pGraphicsPipelineDesc = nullptr;
+        }
+        else if (this->m_Desc.IsRayTracingPipeline() && m_pRayTracingPipelineData != nullptr)
         {
             m_pRayTracingPipelineData->~RayTracingPipelineData();
             m_pRayTracingPipelineData = nullptr;
         }
+#if DILIGENT_DEBUG
+        m_IsDestructed = true;
+#endif
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_PipelineState, TDeviceObjectBase)
@@ -314,8 +325,7 @@ protected:
 
         MemPool.AddSpace<Uint32>(m_BufferSlotsUsed);
 
-        static_assert(std::is_trivially_destructible<decltype(*this->m_pGraphicsPipelineDesc)>::value, "add destructor for this object");
-        static_assert(std::is_trivially_destructible<decltype(*InputLayout.LayoutElements)>::value, "add destructor for this object");
+        static_assert(std::is_trivially_destructible<decltype(*InputLayout.LayoutElements)>::value, "Add destructor for this object to Destruct()");
     }
 
     void ReserveSpaceForPipelineDesc(const ComputePipelineStateCreateInfo& CreateInfo,
@@ -325,7 +335,6 @@ protected:
     }
 
     void ReserveSpaceForPipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
-                                     Uint32                                   ShaderHandleSize,
                                      LinearAllocator&                         MemPool) const noexcept
     {
         ReserveResourceLayout(CreateInfo.PSODesc.ResourceLayout, MemPool);
@@ -345,8 +354,9 @@ protected:
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // reserve size for shader handles
+        const auto ShaderHandleSize = m_pDevice->GetShaderGroupHandleSize();
         RTDataSize += ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
-        // 1 byte reserved to avoid compiler errors on zero sized arrays
+        // Extra bytes are reserved to avoid compiler errors on zero-sized arrays
         RTDataSize -= sizeof(RayTracingPipelineData::Shaders);
         MemPool.AddSpace(RTDataSize, alignof(RayTracingPipelineData));
     }
@@ -430,19 +440,17 @@ protected:
         auto AddShaderStage = [&ShaderStages, &UniqueShaders](IShader* pShader) {
             if (pShader != nullptr && UniqueShaders.insert(pShader).second)
             {
-                auto ShaderType = pShader->GetDesc().ShaderType;
-                ShaderStages[GetShaderTypePipelineIndex(ShaderType, PIPELINE_TYPE_RAY_TRACING)].Append(ValidatedCast<ShaderImplType>(pShader));
+                auto  ShaderType = pShader->GetDesc().ShaderType;
+                auto  StageInd   = GetShaderTypePipelineIndex(ShaderType, PIPELINE_TYPE_RAY_TRACING);
+                auto& Stage      = ShaderStages[StageInd];
+                Stage.Append(ValidatedCast<ShaderImplType>(pShader));
+                VERIFY_EXPR(Stage.Type == SHADER_TYPE_UNKNOWN || Stage.Type == ShaderType);
+                Stage.Type = ShaderType;
             }
         };
 
         ShaderStages.clear();
         ShaderStages.resize(6);
-        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_GEN, PIPELINE_TYPE_RAY_TRACING)].Type          = SHADER_TYPE_RAY_GEN;
-        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_MISS, PIPELINE_TYPE_RAY_TRACING)].Type         = SHADER_TYPE_RAY_MISS;
-        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_CLOSEST_HIT, PIPELINE_TYPE_RAY_TRACING)].Type  = SHADER_TYPE_RAY_CLOSEST_HIT;
-        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_ANY_HIT, PIPELINE_TYPE_RAY_TRACING)].Type      = SHADER_TYPE_RAY_ANY_HIT;
-        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_RAY_INTERSECTION, PIPELINE_TYPE_RAY_TRACING)].Type = SHADER_TYPE_RAY_INTERSECTION;
-        ShaderStages[GetShaderTypePipelineIndex(SHADER_TYPE_CALLABLE, PIPELINE_TYPE_RAY_TRACING)].Type         = SHADER_TYPE_CALLABLE;
 
         for (Uint32 i = 0; i < CreateInfo.GeneralShaderCount; ++i)
         {
@@ -523,7 +531,7 @@ protected:
         }
 
         const auto&    InputLayout     = GraphicsPipeline.InputLayout;
-        LayoutElement* pLayoutElements = MemPool.Allocate<LayoutElement>(InputLayout.NumElements);
+        LayoutElement* pLayoutElements = MemPool.ConstructArray<LayoutElement>(InputLayout.NumElements);
         for (size_t Elem = 0; Elem < InputLayout.NumElements; ++Elem)
         {
             const auto& SrcElem   = InputLayout.LayoutElements[Elem];
@@ -603,7 +611,7 @@ protected:
                 LayoutElem.Stride = Strides[BuffSlot];
         }
 
-        m_pStrides = MemPool.Allocate<Uint32>(m_BufferSlotsUsed);
+        m_pStrides = MemPool.ConstructArray<Uint32>(m_BufferSlotsUsed);
 
         // Set strides for all unused slots to 0
         for (Uint32 i = 0; i < m_BufferSlotsUsed; ++i)
@@ -620,7 +628,6 @@ protected:
     }
 
     void InitializePipelineDesc(const RayTracingPipelineStateCreateInfo& CreateInfo,
-                                Uint32                                   ShaderHandleSize,
                                 TNameToGroupIndexMap&&                   NameToGroupIndex,
                                 LinearAllocator&                         MemPool) noexcept
     {
@@ -628,9 +635,10 @@ protected:
 
         size_t RTDataSize = sizeof(RayTracingPipelineData);
         // reserve size for shader handles
-        const Uint32 ShaderDataSize = ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
+        const auto ShaderHandleSize = m_pDevice->GetShaderGroupHandleSize();
+        const auto ShaderDataSize   = ShaderHandleSize * (CreateInfo.GeneralShaderCount + CreateInfo.TriangleHitShaderCount + CreateInfo.ProceduralHitShaderCount);
         RTDataSize += ShaderDataSize;
-        // 1 byte reserved to avoid compiler errors on zero sized arrays
+        // Extra bytes are reserved to avoid compiler errors on zero-sized arrays
         RTDataSize -= sizeof(RayTracingPipelineData::Shaders);
 
         this->m_pRayTracingPipelineData = static_cast<RayTracingPipelineData*>(MemPool.Allocate(RTDataSize, alignof(RayTracingPipelineData)));
@@ -664,15 +672,15 @@ private:
             }
         }
 
-        static_assert(std::is_trivially_destructible<decltype(*SrcLayout.Variables)>::value, "add destructor for this object");
-        static_assert(std::is_trivially_destructible<decltype(*SrcLayout.ImmutableSamplers)>::value, "add destructor for this object");
+        static_assert(std::is_trivially_destructible<decltype(*SrcLayout.Variables)>::value, "Add destructor for this object to Destruct()");
+        static_assert(std::is_trivially_destructible<decltype(*SrcLayout.ImmutableSamplers)>::value, "Add destructor for this object to Destruct()");
     }
 
     static void CopyResourceLayout(const PipelineResourceLayoutDesc& SrcLayout, PipelineResourceLayoutDesc& DstLayout, LinearAllocator& MemPool)
     {
         if (SrcLayout.Variables != nullptr)
         {
-            auto* Variables     = MemPool.Allocate<ShaderResourceVariableDesc>(SrcLayout.NumVariables);
+            auto* Variables     = MemPool.ConstructArray<ShaderResourceVariableDesc>(SrcLayout.NumVariables);
             DstLayout.Variables = Variables;
             for (Uint32 i = 0; i < SrcLayout.NumVariables; ++i)
             {
@@ -684,7 +692,7 @@ private:
 
         if (SrcLayout.ImmutableSamplers != nullptr)
         {
-            auto* ImmutableSamplers     = MemPool.Allocate<ImmutableSamplerDesc>(SrcLayout.NumImmutableSamplers);
+            auto* ImmutableSamplers     = MemPool.ConstructArray<ImmutableSamplerDesc>(SrcLayout.NumImmutableSamplers);
             DstLayout.ImmutableSamplers = ImmutableSamplers;
             for (Uint32 i = 0; i < SrcLayout.NumImmutableSamplers; ++i)
             {
@@ -726,16 +734,23 @@ protected:
     {
         RayTracingPipelineDesc Desc;
         TNameToGroupIndexMap   NameToGroupIndex;
-        Uint32                 ShaderHandleSize;
-        Uint32                 ShaderDataSize;
-        Uint8                  Shaders[1];
+
+        Uint32 ShaderHandleSize = 0;
+        Uint32 ShaderDataSize   = 0;
+
+        Uint8 Shaders[sizeof(void*)] = {}; // The actual array size will be ShaderDataSize
     };
+    static_assert(offsetof(RayTracingPipelineData, Shaders) % sizeof(void*) == 0, "Shaders member is expected to be sizeof(void*)-aligned");
 
     union
     {
-        GraphicsPipelineDesc*   m_pGraphicsPipelineDesc;
+        GraphicsPipelineDesc*   m_pGraphicsPipelineDesc = nullptr;
         RayTracingPipelineData* m_pRayTracingPipelineData;
     };
+
+#ifdef DILIGENT_DEBUG
+    bool m_IsDestructed = false;
+#endif
 };
 
 } // namespace Diligent

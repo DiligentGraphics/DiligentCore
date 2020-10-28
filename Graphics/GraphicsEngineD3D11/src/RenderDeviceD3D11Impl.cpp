@@ -416,7 +416,7 @@ void RenderDeviceD3D11Impl::CreateComputePipelineState(const ComputePipelineStat
 
 void RenderDeviceD3D11Impl::CreateRayTracingPipelineState(const RayTracingPipelineStateCreateInfo& PSOCreateInfo, IPipelineState** ppPipelineState)
 {
-    UNSUPPORTED("CreateRayTracingPipelineState is not supported in DirectX 11");
+    UNSUPPORTED("Ray tracing is not supported in DirectX 11");
     *ppPipelineState = nullptr;
 }
 

@@ -178,6 +178,11 @@ public:
     ShaderVersion     GetMaxShaderModel() const;
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
+    static Uint32 GetShaderGroupHandleSize()
+    {
+        return D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+    }
+
 private:
     template <typename PSOCreateInfoType>
     void CreatePipelineState(const PSOCreateInfoType& PSOCreateInfo, IPipelineState** ppPipelineState);

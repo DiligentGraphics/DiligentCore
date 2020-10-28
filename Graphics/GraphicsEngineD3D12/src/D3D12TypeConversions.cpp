@@ -540,4 +540,57 @@ D3D12_RENDER_PASS_ENDING_ACCESS_TYPE AttachmentStoreOpToD3D12EndingAccessType(AT
     // clang-format on
 }
 
+D3D12_SHADER_VISIBILITY ShaderTypeToD3D12ShaderVisibility(SHADER_TYPE ShaderType)
+{
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    switch (ShaderType)
+    {
+        // clang-format off
+        case SHADER_TYPE_VERTEX:            return D3D12_SHADER_VISIBILITY_VERTEX;
+        case SHADER_TYPE_PIXEL:             return D3D12_SHADER_VISIBILITY_PIXEL;
+        case SHADER_TYPE_GEOMETRY:          return D3D12_SHADER_VISIBILITY_GEOMETRY;
+        case SHADER_TYPE_HULL:              return D3D12_SHADER_VISIBILITY_HULL;
+        case SHADER_TYPE_DOMAIN:            return D3D12_SHADER_VISIBILITY_DOMAIN;
+        case SHADER_TYPE_COMPUTE:           return D3D12_SHADER_VISIBILITY_ALL;
+#   ifdef D3D12_H_HAS_MESH_SHADER
+        case SHADER_TYPE_AMPLIFICATION:     return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
+        case SHADER_TYPE_MESH:              return D3D12_SHADER_VISIBILITY_MESH;
+#   endif
+        case SHADER_TYPE_RAY_GEN:
+        case SHADER_TYPE_RAY_MISS:
+        case SHADER_TYPE_RAY_CLOSEST_HIT:
+        case SHADER_TYPE_RAY_ANY_HIT:
+        case SHADER_TYPE_RAY_INTERSECTION:
+        case SHADER_TYPE_CALLABLE:          return D3D12_SHADER_VISIBILITY_ALL;
+        // clang-format on
+        default:
+            LOG_ERROR("Unknown shader type (", ShaderType, ")");
+            return D3D12_SHADER_VISIBILITY_ALL;
+    }
+}
+
+SHADER_TYPE D3D12ShaderVisibilityToShaderType(D3D12_SHADER_VISIBILITY ShaderVisibility)
+{
+    static_assert(SHADER_TYPE_LAST == SHADER_TYPE_CALLABLE, "Please update the switch below to handle the new shader type");
+    switch (ShaderVisibility)
+    {
+        // clang-format off
+        case D3D12_SHADER_VISIBILITY_ALL:           return SHADER_TYPE_UNKNOWN;
+        case D3D12_SHADER_VISIBILITY_VERTEX:        return SHADER_TYPE_VERTEX;
+        case D3D12_SHADER_VISIBILITY_PIXEL:         return SHADER_TYPE_PIXEL;
+        case D3D12_SHADER_VISIBILITY_GEOMETRY:      return SHADER_TYPE_GEOMETRY;
+        case D3D12_SHADER_VISIBILITY_HULL:          return SHADER_TYPE_HULL;
+        case D3D12_SHADER_VISIBILITY_DOMAIN:        return SHADER_TYPE_DOMAIN;
+#   ifdef D3D12_H_HAS_MESH_SHADER
+        case D3D12_SHADER_VISIBILITY_AMPLIFICATION: return SHADER_TYPE_AMPLIFICATION;
+        case D3D12_SHADER_VISIBILITY_MESH:          return SHADER_TYPE_MESH;
+#   endif
+        // clang-format on
+        default:
+            LOG_ERROR("Unknown shader visibility (", ShaderVisibility, ")");
+            return SHADER_TYPE_UNKNOWN;
+    }
+}
+
+
 } // namespace Diligent

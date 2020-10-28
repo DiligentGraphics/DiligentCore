@@ -167,7 +167,7 @@ public:
                                            const SHADER_TYPE                dbgRefShaderType) const
         {
             VERIFY(m_dbgHeapType == dbgDescriptorHeapType, "Incosistent descriptor heap type");
-            VERIFY((m_dbgShaderType & dbgRefShaderType) == dbgRefShaderType, "Incosistent shader type");
+            VERIFY(dbgRefShaderType == SHADER_TYPE_UNKNOWN || m_dbgShaderType == SHADER_TYPE_UNKNOWN || m_dbgShaderType == dbgRefShaderType, "Incosistent shader type");
 
             VERIFY(OffsetFromTableStart < m_NumResources, "Root table is not large enough to store descriptor at offset ", OffsetFromTableStart);
             return m_pResources[OffsetFromTableStart];

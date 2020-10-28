@@ -589,7 +589,7 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
         if (FAILED(hr))
             LOG_ERROR_AND_THROW("Failed to load shader reflection from bytecode");
 
-        UINT32 shaderIdx;
+        UINT32 shaderIdx = 0;
 
         hr = pReflection->FindFirstPartKind(DXC_PART_DXIL, &shaderIdx);
         if (SUCCEEDED(hr))
@@ -598,7 +598,7 @@ void DXCompilerImpl::GetD3D12ShaderReflection(IDxcBlob*                pShaderBy
             if (SUCCEEDED(hr))
                 return;
 
-            // for ray tracing shaders
+            // Try to get the reflection via library reflection
             CComPtr<ID3D12LibraryReflection> pLib;
 
             hr = pReflection->GetPartReflection(shaderIdx, IID_PPV_ARGS(&pLib));

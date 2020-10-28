@@ -251,7 +251,6 @@ void ValidateComputePipelineCreateInfo(const ComputePipelineStateCreateInfo& Cre
 
 void ValidateRayTracingPipelineCreateInfo(const RayTracingPipelineStateCreateInfo& CreateInfo) noexcept(false)
 {
-#ifdef DILIGENT_DEVELOPMENT
     const auto& PSODesc = CreateInfo.PSODesc;
     if (PSODesc.PipelineType != PIPELINE_TYPE_RAY_TRACING)
         LOG_PSO_ERROR_AND_THROW("Pipeline type must be RAY_TRACING");
@@ -282,7 +281,7 @@ void ValidateRayTracingPipelineCreateInfo(const RayTracingPipelineStateCreateInf
         if (Group.Name == nullptr)
             LOG_PSO_ERROR_AND_THROW("pTriangleHitShaders[", i, "].Name must not be null");
 
-        VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing triangle closes hit");
+        VALIDATE_SHADER_TYPE(Group.pClosestHitShader, SHADER_TYPE_RAY_CLOSEST_HIT, "ray tracing triangle closest hit");
 
         if (Group.pAnyHitShader != nullptr)
             VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing triangle any hit");
@@ -303,7 +302,6 @@ void ValidateRayTracingPipelineCreateInfo(const RayTracingPipelineStateCreateInf
         if (Group.pAnyHitShader != nullptr)
             VALIDATE_SHADER_TYPE(Group.pAnyHitShader, SHADER_TYPE_RAY_ANY_HIT, "ray tracing procedural any hit");
     }
-#endif // DILIGENT_DEVELOPMENT
 }
 
 #undef VALIDATE_SHADER_TYPE

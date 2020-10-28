@@ -35,7 +35,7 @@
 #include "../../Primitives/interface/BasicTypes.h"
 #include "../../Primitives/interface/MemoryAllocator.h"
 #include "../../Platforms/Basic/interface/DebugUtilities.hpp"
-#include "Definitions.hpp"
+#include "CompilerDefinitions.h"
 #include "Align.hpp"
 
 namespace Diligent
@@ -81,20 +81,20 @@ public:
         Reset();
     }
 
-    NDDISCARD void* Release()
+    NODISCARD void* Release()
     {
         void* Ptr = m_pDataStart;
         Reset();
         return Ptr;
     }
 
-    NDDISCARD void* ReleaseOwnership() noexcept
+    NODISCARD void* ReleaseOwnership() noexcept
     {
         m_pAllocator = nullptr;
         return GetDataPtr();
     }
 
-    NDDISCARD void* GetDataPtr() const noexcept
+    NODISCARD void* GetDataPtr() const noexcept
     {
         return m_pDataStart;
     }
@@ -169,7 +169,7 @@ public:
         m_CurrAlignment = sizeof(void*);
     }
 
-    NDDISCARD void* Allocate(size_t size, size_t alignment)
+    NODISCARD void* Allocate(size_t size, size_t alignment)
     {
         VERIFY(size == 0 || m_pDataStart != nullptr, "Memory has not been allocated");
         VERIFY(IsPowerOfTwo(alignment), "Alignment is not a power of two!");
@@ -202,13 +202,13 @@ public:
     }
 
     template <typename T>
-    NDDISCARD T* Allocate(size_t count = 1)
+    NODISCARD T* Allocate(size_t count = 1)
     {
         return reinterpret_cast<T*>(Allocate(sizeof(T) * count, alignof(T)));
     }
 
     template <typename T, typename... Args>
-    NDDISCARD T* Construct(Args&&... args)
+    NODISCARD T* Construct(Args&&... args)
     {
         T* Ptr = Allocate<T>();
         new (Ptr) T{std::forward<Args>(args)...};
@@ -216,7 +216,7 @@ public:
     }
 
     template <typename T, typename... Args>
-    NDDISCARD T* ConstructArray(size_t count, const Args&... args)
+    NODISCARD T* ConstructArray(size_t count, const Args&... args)
     {
         T* Ptr = Allocate<T>(count);
         for (size_t i = 0; i < count; ++i)
@@ -227,13 +227,13 @@ public:
     }
 
     template <typename T>
-    NDDISCARD T* Copy(const T& Src)
+    NODISCARD T* Copy(const T& Src)
     {
         return Construct<T>(Src);
     }
 
     template <typename T>
-    NDDISCARD T* CopyArray(const T* Src, size_t count)
+    NODISCARD T* CopyArray(const T* Src, size_t count)
     {
         T* Dst = Allocate<T>(count);
         for (size_t i = 0; i < count; ++i)
@@ -243,7 +243,7 @@ public:
         return Dst;
     }
 
-    NDDISCARD Char* CopyString(const char* Str)
+    NODISCARD Char* CopyString(const char* Str)
     {
         if (Str == nullptr)
             return nullptr;
@@ -265,17 +265,18 @@ public:
         return Ptr;
     }
 
-    NDDISCARD Char* CopyString(const std::string& Str)
+    NODISCARD Char* CopyString(const std::string& Str)
     {
         return CopyString(Str.c_str());
     }
 
-    NDDISCARD size_t GetCurrentSize() const
+    NODISCARD size_t GetCurrentSize() const
     {
+        VERIFY(m_pDataStart != nullptr, "Memory has not been allocated");
         return static_cast<size_t>(m_pCurrPtr - m_pDataStart);
     }
 
-    NDDISCARD size_t GetReservedSize() const
+    NODISCARD size_t GetReservedSize() const
     {
         return m_ReservedSize;
     }

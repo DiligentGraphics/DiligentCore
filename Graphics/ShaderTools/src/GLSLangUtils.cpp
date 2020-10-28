@@ -456,9 +456,9 @@ std::vector<unsigned int> HLSLtoSPIRV(const ShaderCreateInfo& ShaderCI,
     VERIFY_EXPR(ShaderCI.SourceLanguage == SHADER_SOURCE_LANGUAGE_HLSL);
 
     VERIFY(ShLang != EShLangRayGen && ShLang != EShLangIntersect && ShLang != EShLangAnyHit && ShLang != EShLangClosestHit && ShLang != EShLangMiss && ShLang != EShLangCallable,
-           "ray tracing shaders are not supported, use DXCompiler to build SPIRV from HLSL");
+           "Ray tracing shaders are not supported, use DXCompiler to build SPIRV from HLSL");
     VERIFY(ShLang != EShLangTaskNV && ShLang != EShLangMeshNV,
-           "mesh shaders are not supported, use DXCompiler to build SPIRV from HLSL");
+           "Mesh shaders are not supported, use DXCompiler to build SPIRV from HLSL");
 
     Shader.setEnvInput(::glslang::EShSourceHlsl, ShLang, ::glslang::EShClientVulkan, 100);
     Shader.setEnvClient(::glslang::EShClientVulkan, ::glslang::EShTargetVulkan_1_0);
