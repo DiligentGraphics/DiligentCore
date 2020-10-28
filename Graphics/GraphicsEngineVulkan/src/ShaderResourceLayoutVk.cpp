@@ -158,7 +158,7 @@ StringPool ShaderResourceLayoutVk::AllocateMemory(const std::vector<const Shader
                 auto VarType = FindShaderVariableType(m_ShaderType, ResAttribs, ResourceLayoutDesc, CombinedSamplerSuffix);
                 if (IsAllowedType(VarType, AllowedTypeBits))
                 {
-                    bool IsUniqueName = UniqueNames.emplace(HashMapStringKey{ResAttribs.Name}, InvalidResourceIndex).second;
+                    bool IsUniqueName = UniqueNames.emplace(HashMapStringKey{ResAttribs.Name}, Uint32{InvalidResourceIndex}).second;
                     if (IsUniqueName)
                     {
                         StringPoolSize += strlen(ResAttribs.Name) + 1;

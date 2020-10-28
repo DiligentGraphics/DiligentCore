@@ -421,7 +421,7 @@ private:
         return reinterpret_cast<const char*>(SamplerDataEnd);
     }
 
-    static constexpr Uint32 InvalidResourceIndex = ~0u;
+    static constexpr const Uint32 InvalidResourceIndex = ~0u;
 
     // Maps resource name to its index in m_ResourceBuffer
     using ResourceNameToIndex_t = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
