@@ -381,6 +381,28 @@ inline void VerifyAndCorrectSetArrayArguments(const char* Name, Uint32 ArraySize
     }
 }
 
+template <typename ShaderVectorType>
+std::string GetShaderGroupName(const ShaderVectorType& Shaders)
+{
+    std::string Name;
+    if (Shaders.size() == 1)
+    {
+        Name = Shaders[0]->GetDesc().Name;
+    }
+    else
+    {
+        Name = "{";
+        for (size_t s = 0; s < Shaders.size(); ++s)
+        {
+            if (s > 0)
+                Name += ", ";
+            Name += Shaders[s]->GetDesc().Name;
+        }
+        Name += "}";
+    }
+    return Name;
+}
+
 struct DefaultShaderVariableIDComparator
 {
     bool operator()(const INTERFACE_ID& IID) const

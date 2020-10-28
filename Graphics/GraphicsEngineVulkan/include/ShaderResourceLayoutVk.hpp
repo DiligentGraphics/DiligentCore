@@ -371,7 +371,7 @@ public:
 
     const Char* GetShaderName() const
     {
-        return ""; // AZ TODO
+        return GetStringPoolData();
     }
 
     SHADER_TYPE GetShaderType() const { return m_ShaderType; }
@@ -405,7 +405,7 @@ private:
     const VkResource& GetResource(Uint32 r) const
     {
         VERIFY_EXPR(r < GetTotalResourceCount());
-        auto* Resources = reinterpret_cast<const VkResource*>(m_ResourceBuffer.get());
+        const auto* Resources = reinterpret_cast<const VkResource*>(m_ResourceBuffer.get());
         return Resources[r];
     }
 
@@ -414,8 +414,16 @@ private:
         return m_NumResources[SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES];
     }
 
+    const char* GetStringPoolData() const
+    {
+        const auto* ResourceDataEnd = reinterpret_cast<const VkResource*>(m_ResourceBuffer.get()) + GetTotalResourceCount();
+        const auto* SamplerDataEnd  = reinterpret_cast<const ImmutableSamplerPtrType*>(ResourceDataEnd) + m_NumImmutableSamplers;
+        return reinterpret_cast<const char*>(SamplerDataEnd);
+    }
+
     static constexpr Uint32 InvalidResourceIndex = ~0u;
 
+    // Maps resource name to its index in m_ResourceBuffer
     using ResourceNameToIndex_t = std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>;
     StringPool AllocateMemory(const std::vector<const ShaderVkImpl*>& Shaders,
                               IMemoryAllocator&                       Allocator,

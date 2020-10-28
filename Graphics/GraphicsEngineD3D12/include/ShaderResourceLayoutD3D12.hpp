@@ -302,7 +302,7 @@ private:
 
     const Char* GetShaderName() const
     {
-        return ""; // AZ TODO
+        return GetStringPoolData();
     }
 
 
@@ -323,14 +323,14 @@ private:
     D3D12Resource& GetResource(Uint32 r)
     {
         VERIFY_EXPR(r < GetTotalResourceCount());
-        auto* Resource = reinterpret_cast<D3D12Resource*>(m_ResourceBuffer.get());
-        return Resource[r];
+        auto* Resources = reinterpret_cast<D3D12Resource*>(m_ResourceBuffer.get());
+        return Resources[r];
     }
     const D3D12Resource& GetResource(Uint32 r) const
     {
         VERIFY_EXPR(r < GetTotalResourceCount());
-        auto* Resource = reinterpret_cast<const D3D12Resource*>(m_ResourceBuffer.get());
-        return Resource[r];
+        const auto* Resources = reinterpret_cast<const D3D12Resource*>(m_ResourceBuffer.get());
+        return Resources[r];
     }
 
     Uint32 GetSrvCbvUavOffset(SHADER_RESOURCE_VARIABLE_TYPE VarType, Uint32 r) const
@@ -360,6 +360,12 @@ private:
     {
         VERIFY_EXPR(s < GetTotalSamplerCount());
         return GetResource(m_SamplersOffsets[0] + s);
+    }
+
+    const char* GetStringPoolData() const
+    {
+        const auto* Resources = reinterpret_cast<const D3D12Resource*>(m_ResourceBuffer.get());
+        return reinterpret_cast<const char*>(Resources + GetTotalResourceCount());
     }
 
     StringPool AllocateMemory(IMemoryAllocator&                                                  Allocator,

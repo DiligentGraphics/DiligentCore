@@ -135,10 +135,14 @@ StringPool ShaderResourceLayoutVk::AllocateMemory(const std::vector<const Shader
     VERIFY_EXPR(Shaders.size() > 0);
     VERIFY_EXPR(m_ShaderType == SHADER_TYPE_UNKNOWN);
 
-    size_t StringPoolSize        = 0;
     m_ShaderType                 = Shaders[0]->GetDesc().ShaderType;
     m_IsUsingSeparateSamplers    = !Shaders[0]->GetShaderResources()->IsUsingCombinedSamplers();
     const Uint32 AllowedTypeBits = GetAllowedTypeBits(AllowedVarTypes, NumAllowedTypes);
+
+    // Construct shader or shader group name
+    const auto ShaderName = GetShaderGroupName(Shaders);
+
+    size_t StringPoolSize = ShaderName.length() + 1;
 
     // Count the number of resources to allocate all needed memory
     for (size_t s = 0; s < Shaders.size(); ++s)
@@ -202,11 +206,13 @@ StringPool ShaderResourceLayoutVk::AllocateMemory(const std::vector<const Shader
 
     m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void>>(MemPool.Release(), Allocator);
 
-    VERIFY_EXPR(m_ResourceBuffer.get() == pResources);
-    VERIFY_EXPR(m_NumImmutableSamplers == 0 || pImtblSamplers == std::addressof(GetImmutableSampler(0)));
+    VERIFY_EXPR(pResources == nullptr || m_ResourceBuffer.get() == pResources);
+    VERIFY_EXPR(pImtblSamplers == nullptr || pImtblSamplers == std::addressof(GetImmutableSampler(0)));
+    VERIFY_EXPR(pStringData == GetStringPoolData());
 
     StringPool stringPool;
     stringPool.AssignMemory(pStringData, StringPoolSize);
+    stringPool.CopyString(ShaderName);
     return stringPool;
 }
 

@@ -115,7 +115,8 @@ StringPool ShaderResourceLayoutD3D12::AllocateMemory(IMemoryAllocator&          
     auto* pStringPoolData = MemPool.ConstructArray<char>(StringPoolSize);
 
     m_ResourceBuffer = std::unique_ptr<void, STDDeleterRawMem<void>>(MemPool.Release(), Allocator);
-    VERIFY_EXPR(m_ResourceBuffer.get() == pResources);
+    VERIFY_EXPR(pResources == nullptr || m_ResourceBuffer.get() == pResources);
+    VERIFY_EXPR(pStringPoolData == GetStringPoolData());
 
     StringPool stringPool;
     stringPool.AssignMemory(pStringPoolData, StringPoolSize);
@@ -145,12 +146,17 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
     std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> CbvSrvUavCount = {};
     std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> SamplerCount   = {};
 
+    // Maps resource name to its index in m_ResourceBuffer
     std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher> ResourceNameToIndex;
 
     // Count the number of resources to allocate all needed memory
     m_IsUsingSeparateSamplers = !Shaders[0]->GetShaderResources()->IsUsingCombinedTextureSamplers();
     m_ShaderType              = Shaders[0]->GetDesc().ShaderType;
-    size_t StringPoolSize     = 0;
+
+    // Construct shader or shader group name
+    const auto ShaderName = GetShaderGroupName(Shaders);
+
+    size_t StringPoolSize = ShaderName.length() + 1;
 
     static constexpr Uint32 InvalidResourceIndex = ~0u;
 
@@ -224,6 +230,8 @@ void ShaderResourceLayoutD3D12::Initialize(ID3D12Device*                        
     }
 
     auto stringPool = AllocateMemory(LayoutDataAllocator, CbvSrvUavCount, SamplerCount, StringPoolSize);
+
+    stringPool.CopyString(ShaderName);
 
     std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> CurrCbvSrvUav          = {};
     std::array<Uint32, SHADER_RESOURCE_VARIABLE_TYPE_NUM_TYPES> CurrSampler            = {};
