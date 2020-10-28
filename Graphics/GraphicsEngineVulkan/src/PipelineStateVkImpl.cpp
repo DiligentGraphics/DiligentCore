@@ -745,7 +745,7 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                   p
 PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                      pRefCounters,
                                          RenderDeviceVkImpl*                      pDeviceVk,
                                          const RayTracingPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo.PSODesc},
+    TPipelineStateBase{pRefCounters, pDeviceVk, CreateInfo},
     m_SRBMemAllocator{GetRawAllocator()}
 {
     try

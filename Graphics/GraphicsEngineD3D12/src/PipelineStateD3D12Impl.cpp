@@ -620,7 +620,7 @@ PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*              
 PipelineStateD3D12Impl::PipelineStateD3D12Impl(IReferenceCounters*                      pRefCounters,
                                                RenderDeviceD3D12Impl*                   pDeviceD3D12,
                                                const RayTracingPipelineStateCreateInfo& CreateInfo) :
-    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo.PSODesc},
+    TPipelineStateBase{pRefCounters, pDeviceD3D12, CreateInfo},
     m_SRBMemAllocator{GetRawAllocator()}
 {
     try
