@@ -286,7 +286,7 @@ void GetShaderIdentifiers(ID3D12StateObject*                       pSO,
 
 PipelineStateD3D12Impl::ShaderStageInfo::ShaderStageInfo(SHADER_TYPE _Type, ShaderD3D12Impl* _pShader) :
     Type{_Type},
-    Shaders{{_pShader}}
+    Shaders{_pShader}
 {
 }
 

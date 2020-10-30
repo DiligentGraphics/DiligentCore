@@ -97,8 +97,8 @@ static SHADER_RESOURCE_VARIABLE_TYPE FindShaderVariableType(SHADER_TYPE         
 
 ShaderResourceLayoutVk::ShaderStageInfo::ShaderStageInfo(SHADER_TYPE Stage, const ShaderVkImpl* pShader) :
     Type{Stage},
-    Shaders{{pShader}},
-    SPIRVs{{{pShader->GetSPIRV()}}}
+    Shaders{pShader},
+    SPIRVs{pShader->GetSPIRV()}
 {
 }
 
