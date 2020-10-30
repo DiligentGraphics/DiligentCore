@@ -69,8 +69,8 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
-#    define ITopLevelASD3D12_GetD3D12TLAS(This)            CALL_IFACE_METHOD(ITopLevelASD3D12, GetD3D12TLAS,           This)
-#    define ITopLevelASD3D12_GetCPUDescriptorHandle(This)  CALL_IFACE_METHOD(ITopLevelASD3D12, GetCPUDescriptorHandle, This)
+#    define ITopLevelASD3D12_GetD3D12TLAS(This)            CALL_IFACE_METHOD(TopLevelASD3D12, GetD3D12TLAS,           This)
+#    define ITopLevelASD3D12_GetCPUDescriptorHandle(This)  CALL_IFACE_METHOD(TopLevelASD3D12, GetCPUDescriptorHandle, This)
 
 #endif
 

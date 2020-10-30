@@ -36,6 +36,7 @@
 #include "Constants.h"
 #include "Buffer.h"
 #include "PipelineState.h"
+#include "TopLevelAS.h"
 
 DILIGENT_BEGIN_NAMESPACE(Diligent)
 

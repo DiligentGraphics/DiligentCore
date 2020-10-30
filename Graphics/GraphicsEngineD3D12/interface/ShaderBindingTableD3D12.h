@@ -44,7 +44,7 @@ static const INTERFACE_ID IID_ShaderBindingTableD3D12 =
 
 #define IShaderBindingTableD3D12InclusiveMethods \
     IShaderBindingTableInclusiveMethods;         \
-    IShaderBindingTableD3D12Methods ShaderBindingTable
+    IShaderBindingTableD3D12Methods ShaderBindingTableD3D12
 // clang-format off
 
 /// Exposes Direct3D12-specific functionality of a shader binding table object.

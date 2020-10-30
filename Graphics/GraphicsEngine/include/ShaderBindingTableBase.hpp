@@ -186,10 +186,10 @@ protected:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTable, TDeviceObjectBase)
 
 protected:
-    std::vector<Uint8>     m_RayGenShaderRecord;
-    std::vector<Uint8>     m_MissShadersRecord;
-    std::vector<Uint8>     m_CallableShadersRecord;
-    std::vector<Uint8>     m_HitGroupsRecord;
+    std::vector<Uint8> m_RayGenShaderRecord;
+    std::vector<Uint8> m_MissShadersRecord;
+    std::vector<Uint8> m_CallableShadersRecord;
+    std::vector<Uint8> m_HitGroupsRecord;
 
     Uint32 m_ShaderRecordStride = 0;
     bool   m_Changed            = true;

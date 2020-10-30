@@ -184,7 +184,7 @@ typedef struct ScratchBufferSizes ScratchBufferSizes;
 
 #define IBottomLevelASInclusiveMethods     \
     IDeviceObjectInclusiveMethods;         \
-    IBottomLevelASMethods IBottomLevelAS
+    IBottomLevelASMethods BottomLevelAS
 
 /// AZ TODO
 DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
