@@ -1349,7 +1349,13 @@ struct SwapChainDesc
     bool  IsPrimary                     DEFAULT_INITIALIZER(true);
 
 #if DILIGENT_CPP_INTERFACE
-    SwapChainDesc()noexcept{}
+    SwapChainDesc() noexcept
+    {
+#if PLATFORM_ANDROID || PLATFORM_IOS
+        // Use 3 buffers by default on mobile platforms
+        BufferCount = 3;
+#endif
+    }
 
     /// Constructor intializes the structure members with default values
     SwapChainDesc(Uint32         _Width,
@@ -1368,7 +1374,8 @@ struct SwapChainDesc
         DefaultDepthValue   {_DefaultDepthValue  },
         DefaultStencilValue {_DefaultStencilValue},
         IsPrimary           {_IsPrimary          }
-    {}
+    {
+    }
 #endif
 };
 typedef struct SwapChainDesc SwapChainDesc;
