@@ -743,6 +743,7 @@ DILIGENT_TYPED_ENUM(RAYTRACING_INSTANCE_FLAGS, Uint8)
 
     RAYTRACING_INSTANCE_FLAGS_LAST = 0x08
 };
+DEFINE_FLAG_ENUM_OPERATORS(RAYTRACING_INSTANCE_FLAGS)
 
 /// AZ TODO
 DILIGENT_TYPED_ENUM(COPY_AS_MODE, Uint8)
@@ -1145,7 +1146,7 @@ struct StateTransitionDesc
                         RESOURCE_STATE _OldState,
                         RESOURCE_STATE _NewState,
                         bool           _UpdateState)noexcept : 
-        pResource           {static_cast<IDeviceObject*>(_pBuffer)},
+        pResource           {_pBuffer    },
         OldState            {_OldState   },
         NewState            {_NewState   },
         UpdateResourceState {_UpdateState}
@@ -1155,7 +1156,7 @@ struct StateTransitionDesc
                         RESOURCE_STATE  _OldState,
                         RESOURCE_STATE  _NewState,
                         bool            _UpdateState)noexcept : 
-        pResource           {static_cast<IDeviceObject*>(_pBLAS)},
+        pResource           {_pBLAS      },
         OldState            {_OldState   },
         NewState            {_NewState   },
         UpdateResourceState {_UpdateState}
@@ -1165,7 +1166,7 @@ struct StateTransitionDesc
                         RESOURCE_STATE  _OldState,
                         RESOURCE_STATE  _NewState,
                         bool            _UpdateState)noexcept : 
-        pResource           {static_cast<IDeviceObject*>(_pTLAS)},
+        pResource           {_pTLAS      },
         OldState            {_OldState   },
         NewState            {_NewState   },
         UpdateResourceState {_UpdateState}

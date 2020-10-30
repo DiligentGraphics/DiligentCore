@@ -1811,10 +1811,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
     DEV_CHECK_ERR(Barrier.NewState != RESOURCE_STATE_UNKNOWN, "New resource state can't be unknown");
     RESOURCE_STATE OldState = RESOURCE_STATE_UNKNOWN;
 
-    RefCntAutoPtr<ITexture> pTexture{Barrier.pResource, IID_Texture};
-    RefCntAutoPtr<IBuffer>  pBuffer{Barrier.pResource, IID_Buffer};
-
-    if (pTexture)
+    if (RefCntAutoPtr<ITexture> pTexture{Barrier.pResource, IID_Texture})
     {
         const auto& TexDesc = pTexture->GetDesc();
 
@@ -1850,13 +1847,21 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
                           "Failed to transition texture '", TexDesc.Name, "': only whole resources can be transitioned on this device");
         }
     }
-    else if (pBuffer)
+    else if (RefCntAutoPtr<IBuffer> pBuffer{Barrier.pResource, IID_Buffer})
     {
         const auto& BuffDesc = pBuffer->GetDesc();
         DEV_CHECK_ERR(VerifyResourceStates(Barrier.NewState, false), "Invlaid new state specified for buffer '", BuffDesc.Name, "'");
         OldState = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBuffer->GetState();
         DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
         DEV_CHECK_ERR(VerifyResourceStates(OldState, false), "Invlaid old state specified for buffer '", BuffDesc.Name, "'");
+    }
+    else if (RefCntAutoPtr<IBottomLevelAS> pBLAS{Barrier.pResource, IID_BottomLevelAS})
+    {
+        // AZ TODO
+    }
+    else if (RefCntAutoPtr<ITopLevelAS> pTLAS{Barrier.pResource, IID_TopLevelAS})
+    {
+        // AZ TODO
     }
     else
     {
@@ -2147,7 +2152,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
 
     if (Attribs.pInstanceBuffer == nullptr)
     {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceaBuffer must not be null");
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceBuffer must not be null");
         return false;
     }
 

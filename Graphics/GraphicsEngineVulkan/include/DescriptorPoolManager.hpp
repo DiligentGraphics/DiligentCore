@@ -165,9 +165,9 @@ protected:
     RenderDeviceVkImpl& m_DeviceVkImpl;
     const std::string   m_PoolName;
 
-    std::vector<VkDescriptorPoolSize> m_PoolSizes;
-    const uint32_t                    m_MaxSets;
-    const bool                        m_AllowFreeing;
+    const std::vector<VkDescriptorPoolSize> m_PoolSizes;
+    const uint32_t                          m_MaxSets;
+    const bool                              m_AllowFreeing;
 
     std::mutex                                         m_Mutex;
     std::deque<VulkanUtilities::DescriptorPoolWrapper> m_Pools;

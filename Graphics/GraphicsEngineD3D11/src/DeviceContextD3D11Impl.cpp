@@ -2167,8 +2167,7 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, State
         }
         VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
 
-        RefCntAutoPtr<TextureBaseD3D11> pTexture{Barrier.pResource, IID_TextureD3D11};
-        if (pTexture)
+        if (RefCntAutoPtr<TextureBaseD3D11> pTexture{Barrier.pResource, IID_TextureD3D11})
         {
             auto OldState = Barrier.OldState;
             if (OldState == RESOURCE_STATE_UNKNOWN)
@@ -2218,11 +2217,8 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, State
             {
                 pTexture->SetState(Barrier.NewState);
             }
-            continue;
         }
-
-        RefCntAutoPtr<BufferD3D11Impl> pBuffer{Barrier.pResource, IID_BufferD3D11};
-        if (pBuffer)
+        else if (RefCntAutoPtr<BufferD3D11Impl> pBuffer{Barrier.pResource, IID_BufferD3D11})
         {
             auto OldState = Barrier.OldState;
             if (OldState == RESOURCE_STATE_UNKNOWN)
@@ -2262,10 +2258,11 @@ void DeviceContextD3D11Impl::TransitionResourceStates(Uint32 BarrierCount, State
             {
                 pBuffer->SetState(Barrier.NewState);
             }
-            continue;
         }
-
-        UNEXPECTED("unsupported resource type");
+        else
+        {
+            UNEXPECTED("The type of resource '", Barrier.pResource->GetDesc().Name, "' is not support in D3D11");
+        }
     }
 }
 

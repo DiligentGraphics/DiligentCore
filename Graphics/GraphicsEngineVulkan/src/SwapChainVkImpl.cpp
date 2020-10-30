@@ -425,20 +425,22 @@ void SwapChainVkImpl::CreateVulkanSwapChain()
     DEV_CHECK_ERR(m_SwapChainDesc.Usage != 0, "No swap chain usage flags defined");
     static_assert(SWAP_CHAIN_USAGE_LAST == SWAP_CHAIN_USAGE_UNORDERED_ACCESS, "Please update this function to handle the new swapchain usage");
 
-    for (Uint32 UsageBit = 1; UsageBit <= m_SwapChainDesc.Usage; UsageBit <<= 1)
     {
-        if ((m_SwapChainDesc.Usage & UsageBit) == 0)
-            continue;
-
-        switch (static_cast<SWAP_CHAIN_USAGE_FLAGS>(UsageBit))
+        auto SCUsage = m_SwapChainDesc.Usage;
+        while (SCUsage != SWAP_CHAIN_USAGE_NONE)
         {
-            // clang-format off
-            case SWAP_CHAIN_USAGE_RENDER_TARGET:    swapchain_ci.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; break;
-            case SWAP_CHAIN_USAGE_SHADER_INPUT:     swapchain_ci.imageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;                                            break;
-            case SWAP_CHAIN_USAGE_COPY_SOURCE:      swapchain_ci.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;                                       break;
-            case SWAP_CHAIN_USAGE_UNORDERED_ACCESS: swapchain_ci.imageUsage |= VK_IMAGE_USAGE_STORAGE_BIT;                                            break;
-            default:                                UNEXPECTED("unknown swapchain usage flag");
+            auto UsageBit = static_cast<SWAP_CHAIN_USAGE_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{SCUsage}));
+            switch (UsageBit)
+            {
+                // clang-format off
+                case SWAP_CHAIN_USAGE_RENDER_TARGET:    swapchain_ci.imageUsage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT; break;
+                case SWAP_CHAIN_USAGE_SHADER_INPUT:     swapchain_ci.imageUsage |= VK_IMAGE_USAGE_SAMPLED_BIT;                                            break;
+                case SWAP_CHAIN_USAGE_COPY_SOURCE:      swapchain_ci.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;                                       break;
+                case SWAP_CHAIN_USAGE_UNORDERED_ACCESS: swapchain_ci.imageUsage |= VK_IMAGE_USAGE_STORAGE_BIT;                                            break;
                 // clang-format on
+                default: UNEXPECTED("unknown swapchain usage flag");
+            }
+            SCUsage &= ~UsageBit;
         }
     }
 

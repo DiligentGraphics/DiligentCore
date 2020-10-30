@@ -53,7 +53,7 @@ VulkanUtilities::CommandPoolWrapper CommandPoolManager::AllocateCommandPool(cons
 {
     std::lock_guard<std::mutex> LockGuard{m_Mutex};
 
-    auto& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
+    const auto& LogicalDevice = m_DeviceVkImpl.GetLogicalDevice();
 
     VulkanUtilities::CommandPoolWrapper CmdPool;
     if (!m_CmdPools.empty())

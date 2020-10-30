@@ -133,6 +133,7 @@ public:
             }
             this->m_Desc.pBoxes = pBoxes.release();
         }
+        VERIFY_EXPR(m_StringPool.GetRemainingSize() == 0);
     }
 
     ~BottomLevelASBase()

@@ -110,7 +110,7 @@ void ShaderBindingTableD3D12Impl::GetD3D12AddressRangeAndStride(IDeviceContextD3
                                                                 D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& CallableShaderBindingTable)
 {
     const auto AlignToLarger = [](size_t offset) -> Uint32 {
-        return Align(static_cast<Uint32>(offset), static_cast<Uint32>(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+        return Align(static_cast<Uint32>(offset), Uint32{D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT});
     };
 
     const Uint32 RayGenOffset          = 0;

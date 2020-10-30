@@ -2279,9 +2279,9 @@ void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
     if (!TDeviceContextBase::BuildBLAS(Attribs, 0))
         return;
 
-    auto* pBLASD12    = ValidatedCast<BottomLevelASD3D12Impl>(Attribs.pBLAS);
-    auto* pScratchD12 = ValidatedCast<BufferD3D12Impl>(Attribs.pScratchBuffer);
-    auto& BLASDesc    = pBLASD12->GetDesc();
+    auto* const pBLASD12    = ValidatedCast<BottomLevelASD3D12Impl>(Attribs.pBLAS);
+    auto* const pScratchD12 = ValidatedCast<BufferD3D12Impl>(Attribs.pScratchBuffer);
+    const auto& BLASDesc    = pBLASD12->GetDesc();
 
     auto&       CmdCtx = GetCmdContext();
     const char* OpName = "Build BottomLevelAS (DeviceContextD3D12Impl::BuildBLAS)";
@@ -2298,54 +2298,54 @@ void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
         {
-            auto&  src = Attribs.pTriangleData[i];
-            Uint32 j   = pBLASD12->GetGeometryIndex(src.GeometryName);
-            auto&  dst = Geometries.data()[j];
-            auto&  tri = dst.Triangles;
+            const auto& SrcTris   = Attribs.pTriangleData[i];
+            Uint32      GeoIdx    = pBLASD12->GetGeometryIndex(SrcTris.GeometryName);
+            auto&       d3d12Geo  = Geometries[GeoIdx];
+            auto&       d3d12Tris = d3d12Geo.Triangles;
 
-            if (j >= Geometries.size())
+            if (GeoIdx >= Geometries.size())
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
 
-            dst.Type  = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-            dst.Flags = GeometryFlagsToD3D12RTGeometryFlags(src.Flags);
+            d3d12Geo.Type  = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+            d3d12Geo.Flags = GeometryFlagsToD3D12RTGeometryFlags(SrcTris.Flags);
 
-            auto* pVB                      = ValidatedCast<BufferD3D12Impl>(src.pVertexBuffer);
-            tri.VertexFormat               = TypeToDXGI_Format(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
-            tri.VertexCount                = src.VertexCount;
-            tri.VertexBuffer.StartAddress  = pVB->GetGPUAddress() + src.VertexOffset;
-            tri.VertexBuffer.StrideInBytes = src.VertexStride;
+            auto* const pVB                      = ValidatedCast<BufferD3D12Impl>(SrcTris.pVertexBuffer);
+            d3d12Tris.VertexFormat               = TypeToDXGI_Format(SrcTris.VertexValueType, SrcTris.VertexComponentCount, SrcTris.VertexValueType < VT_FLOAT16);
+            d3d12Tris.VertexCount                = SrcTris.VertexCount;
+            d3d12Tris.VertexBuffer.StartAddress  = pVB->GetGPUAddress() + SrcTris.VertexOffset;
+            d3d12Tris.VertexBuffer.StrideInBytes = SrcTris.VertexStride;
 
-            if (src.pIndexBuffer)
+            if (SrcTris.pIndexBuffer)
             {
-                auto* pIB       = ValidatedCast<BufferD3D12Impl>(src.pIndexBuffer);
-                tri.IndexBuffer = pIB->GetGPUAddress() + src.IndexOffset;
-                tri.IndexCount  = src.IndexCount;
-                tri.IndexFormat = ValueTypeToIndexType(src.IndexType);
+                auto* const pIB       = ValidatedCast<BufferD3D12Impl>(SrcTris.pIndexBuffer);
+                d3d12Tris.IndexBuffer = pIB->GetGPUAddress() + SrcTris.IndexOffset;
+                d3d12Tris.IndexCount  = SrcTris.IndexCount;
+                d3d12Tris.IndexFormat = ValueTypeToIndexType(SrcTris.IndexType);
 
                 TransitionOrVerifyBufferState(CmdCtx, *pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
             }
             else
             {
-                tri.IndexFormat = DXGI_FORMAT_UNKNOWN;
-                tri.IndexBuffer = 0;
+                d3d12Tris.IndexFormat = DXGI_FORMAT_UNKNOWN;
+                d3d12Tris.IndexBuffer = 0;
             }
 
-            if (src.pTransformBuffer)
+            if (SrcTris.pTransformBuffer)
             {
-                VERIFY_EXPR(BLASDesc.pTriangles[j].AllowsTransforms);
+                VERIFY_EXPR(BLASDesc.pTriangles[GeoIdx].AllowsTransforms);
 
-                auto* pTB        = ValidatedCast<BufferD3D12Impl>(src.pTransformBuffer);
-                tri.Transform3x4 = pTB->GetGPUAddress() + src.TransformBufferOffset;
+                auto* const pTB        = ValidatedCast<BufferD3D12Impl>(SrcTris.pTransformBuffer);
+                d3d12Tris.Transform3x4 = pTB->GetGPUAddress() + SrcTris.TransformBufferOffset;
 
                 TransitionOrVerifyBufferState(CmdCtx, *pTB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
             }
             else
             {
-                VERIFY_EXPR(!BLASDesc.pTriangles[j].AllowsTransforms);
-                tri.Transform3x4 = 0;
+                VERIFY_EXPR(!BLASDesc.pTriangles[GeoIdx].AllowsTransforms);
+                d3d12Tris.Transform3x4 = 0;
             }
         }
     }
@@ -2355,24 +2355,24 @@ void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
         {
-            auto&  src = Attribs.pBoxData[i];
-            Uint32 j   = pBLASD12->GetGeometryIndex(src.GeometryName);
-            auto&  dst = Geometries.data()[j];
-            auto&  box = dst.AABBs;
+            const auto& SrcBoxes  = Attribs.pBoxData[i];
+            Uint32      GeoIdx    = pBLASD12->GetGeometryIndex(SrcBoxes.GeometryName);
+            auto&       d3d12Geo  = Geometries[GeoIdx];
+            auto&       d3d12AABs = d3d12Geo.AABBs;
 
-            if (j >= Geometries.size())
+            if (GeoIdx >= Geometries.size())
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
 
-            dst.Type  = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
-            dst.Flags = GeometryFlagsToD3D12RTGeometryFlags(src.Flags);
+            d3d12Geo.Type  = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+            d3d12Geo.Flags = GeometryFlagsToD3D12RTGeometryFlags(SrcBoxes.Flags);
 
-            auto* pBB               = ValidatedCast<BufferD3D12Impl>(src.pBoxBuffer);
-            box.AABBCount           = src.BoxCount;
-            box.AABBs.StartAddress  = pBB->GetGPUAddress() + src.BoxOffset;
-            box.AABBs.StrideInBytes = src.BoxStride;
+            auto* pBB                     = ValidatedCast<BufferD3D12Impl>(SrcBoxes.pBoxBuffer);
+            d3d12AABs.AABBCount           = SrcBoxes.BoxCount;
+            d3d12AABs.AABBs.StartAddress  = pBB->GetGPUAddress() + SrcBoxes.BoxOffset;
+            d3d12AABs.AABBs.StrideInBytes = SrcBoxes.BoxStride;
 
             TransitionOrVerifyBufferState(CmdCtx, *pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
         }
@@ -2418,18 +2418,18 @@ void DeviceContextD3D12Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
-            auto& src      = Attribs.pInstances[i];
-            auto& dst      = static_cast<D3D12_RAYTRACING_INSTANCE_DESC*>(pMappedInstances)[i];
-            auto* pBLASD12 = ValidatedCast<BottomLevelASD3D12Impl>(src.pBLAS);
+            const auto& Inst      = Attribs.pInstances[i];
+            auto&       d3d12Inst = static_cast<D3D12_RAYTRACING_INSTANCE_DESC*>(pMappedInstances)[i];
+            auto* const pBLASD12  = ValidatedCast<BottomLevelASD3D12Impl>(Inst.pBLAS);
 
-            static_assert(sizeof(dst.Transform) == sizeof(src.Transform), "size mismatch");
-            std::memcpy(&dst.Transform, src.Transform, sizeof(dst.Transform));
+            static_assert(sizeof(d3d12Inst.Transform) == sizeof(Inst.Transform), "size mismatch");
+            std::memcpy(&d3d12Inst.Transform, Inst.Transform, sizeof(d3d12Inst.Transform));
 
-            dst.InstanceID                          = src.CustomId;
-            dst.InstanceContributionToHitGroupIndex = pTLASD12->GetInstanceDesc(src.InstanceName).ContributionToHitGroupIndex; // AZ TODO: optimize
-            dst.InstanceMask                        = src.Mask;
-            dst.Flags                               = InstanceFlagsToD3D12RTInstanceFlags(src.Flags);
-            dst.AccelerationStructure               = pBLASD12->GetGPUAddress();
+            d3d12Inst.InstanceID                          = Inst.CustomId;
+            d3d12Inst.InstanceContributionToHitGroupIndex = pTLASD12->GetInstanceDesc(Inst.InstanceName).ContributionToHitGroupIndex; // AZ TODO: optimize
+            d3d12Inst.InstanceMask                        = Inst.Mask;
+            d3d12Inst.Flags                               = InstanceFlagsToD3D12RTInstanceFlags(Inst.Flags);
+            d3d12Inst.AccelerationStructure               = pBLASD12->GetGPUAddress();
 
             TransitionOrVerifyBLASState(CmdCtx, *pBLASD12, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
         }
@@ -2437,19 +2437,19 @@ void DeviceContextD3D12Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
     }
     TransitionOrVerifyBufferState(CmdCtx, *pInstancesD12, Attribs.InstanceBufferTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
 
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC    Desc   = {};
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& Inputs = Desc.Inputs;
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC    d3d12BuildASDesc   = {};
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& d3d12BuildASInputs = d3d12BuildASDesc.Inputs;
 
-    Inputs.Type          = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-    Inputs.DescsLayout   = D3D12_ELEMENTS_LAYOUT_ARRAY;
-    Inputs.NumDescs      = Attribs.InstanceCount;
-    Inputs.InstanceDescs = pInstancesD12->GetGPUAddress();
+    d3d12BuildASInputs.Type          = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+    d3d12BuildASInputs.DescsLayout   = D3D12_ELEMENTS_LAYOUT_ARRAY;
+    d3d12BuildASInputs.NumDescs      = Attribs.InstanceCount;
+    d3d12BuildASInputs.InstanceDescs = pInstancesD12->GetGPUAddress();
 
-    Desc.DestAccelerationStructureData    = pTLASD12->GetGPUAddress();
-    Desc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress();
-    Desc.SourceAccelerationStructureData  = 0;
+    d3d12BuildASDesc.DestAccelerationStructureData    = pTLASD12->GetGPUAddress();
+    d3d12BuildASDesc.ScratchAccelerationStructureData = pScratchD12->GetGPUAddress();
+    d3d12BuildASDesc.SourceAccelerationStructureData  = 0;
 
-    CmdCtx.AsGraphicsContext4().BuildRaytracingAccelerationStructure(Desc, 0, nullptr);
+    CmdCtx.AsGraphicsContext4().BuildRaytracingAccelerationStructure(d3d12BuildASDesc, 0, nullptr);
     ++m_State.NumCommands;
 }
 
@@ -2474,19 +2474,23 @@ void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)
     if (!TDeviceContextBase::TraceRays(Attribs, 0))
         return;
 
-    D3D12_DISPATCH_RAYS_DESC Desc = {};
+    D3D12_DISPATCH_RAYS_DESC d3d12DispatchDesc = {};
 
-    Desc.Width  = Attribs.DimensionX;
-    Desc.Height = Attribs.DimensionY;
-    Desc.Depth  = Attribs.DimensionZ;
+    d3d12DispatchDesc.Width  = Attribs.DimensionX;
+    d3d12DispatchDesc.Height = Attribs.DimensionY;
+    d3d12DispatchDesc.Depth  = Attribs.DimensionZ;
 
     auto* pSBTD12 = ValidatedCast<ShaderBindingTableD3D12Impl>(Attribs.pSBT);
-    pSBTD12->GetD3D12AddressRangeAndStride(this, Attribs.TransitionMode, Desc.RayGenerationShaderRecord, Desc.MissShaderTable, Desc.HitGroupTable, Desc.CallableShaderTable);
+    pSBTD12->GetD3D12AddressRangeAndStride(this, Attribs.TransitionMode,
+                                           d3d12DispatchDesc.RayGenerationShaderRecord,
+                                           d3d12DispatchDesc.MissShaderTable,
+                                           d3d12DispatchDesc.HitGroupTable,
+                                           d3d12DispatchDesc.CallableShaderTable);
 
     auto& CmdCtx = GetCmdContext().AsGraphicsContext4();
     PrepareForDispatchRays(CmdCtx);
 
-    CmdCtx.DispatchRays(Desc);
+    CmdCtx.DispatchRays(d3d12DispatchDesc);
     ++m_State.NumCommands;
 }
 

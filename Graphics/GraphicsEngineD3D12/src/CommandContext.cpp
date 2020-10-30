@@ -171,9 +171,9 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
     RESOURCE_STATE                        OldState       = RESOURCE_STATE_UNKNOWN;
     ID3D12Resource*                       pd3d12Resource = nullptr;
     RefCntAutoPtr<TextureD3D12Impl>       pTextureD3D12Impl{Barrier.pResource, IID_TextureD3D12};
-    RefCntAutoPtr<BufferD3D12Impl>        pBufferD3D12Impl{Barrier.pResource, IID_BufferD3D12};
-    RefCntAutoPtr<BottomLevelASD3D12Impl> pBLASD3D12Impl{Barrier.pResource, IID_BottomLevelASD3D12};
-    RefCntAutoPtr<TopLevelASD3D12Impl>    pTLASD3D12Impl{Barrier.pResource, IID_TopLevelASD3D12};
+    RefCntAutoPtr<BufferD3D12Impl>        pBufferD3D12Impl{pTextureD3D12Impl ? nullptr : Barrier.pResource, IID_BufferD3D12};
+    RefCntAutoPtr<BottomLevelASD3D12Impl> pBLASD3D12Impl{pBufferD3D12Impl ? nullptr : Barrier.pResource, IID_BottomLevelASD3D12};
+    RefCntAutoPtr<TopLevelASD3D12Impl>    pTLASD3D12Impl{pBLASD3D12Impl ? nullptr : Barrier.pResource, IID_TopLevelASD3D12};
 
     if (pTextureD3D12Impl)
     {
@@ -324,9 +324,8 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
         }
     }
 
-    if ((OldState == RESOURCE_STATE_UNORDERED_ACCESS && Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS) ||
-        (OldState == RESOURCE_STATE_BUILD_AS_WRITE && Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE) ||
-        (OldState == RESOURCE_STATE_RAY_TRACING && Barrier.NewState == RESOURCE_STATE_RAY_TRACING))
+    if ((OldState == RESOURCE_STATE_UNORDERED_ACCESS || OldState == RESOURCE_STATE_BUILD_AS_WRITE) &&
+        (Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE))
     {
         DEV_CHECK_ERR(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "UAV barriers must not be split");
         InsertUAVBarrier(pd3d12Resource);

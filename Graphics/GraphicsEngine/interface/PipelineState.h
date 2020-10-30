@@ -223,11 +223,11 @@ struct RayTracingGeneralShaderGroup
 
     /// AZ TODO
     IShader*    pShader DEFAULT_INITIALIZER(nullptr);
-    
+
 #if DILIGENT_CPP_INTERFACE
     RayTracingGeneralShaderGroup() noexcept
     {}
-    
+
     RayTracingGeneralShaderGroup(const char* _Name,
                                  IShader*    _pShader) noexcept:
         Name   {_Name   },
@@ -248,11 +248,11 @@ struct RayTracingTriangleHitShaderGroup
 
     /// AZ TODO
     IShader*    pAnyHitShader     DEFAULT_INITIALIZER(nullptr); // can be null
-    
+
 #if DILIGENT_CPP_INTERFACE
     RayTracingTriangleHitShaderGroup() noexcept
     {}
-    
+
     RayTracingTriangleHitShaderGroup(const char* _Name,
                                      IShader*    _pClosestHitShader,
                                      IShader*    _pAnyHitShader    = nullptr) noexcept:
@@ -278,11 +278,11 @@ struct RayTracingProceduralHitShaderGroup
 
     /// AZ TODO
     IShader*    pAnyHitShader       DEFAULT_INITIALIZER(nullptr); // can be null
-    
+
 #if DILIGENT_CPP_INTERFACE
     RayTracingProceduralHitShaderGroup() noexcept
     {}
-    
+
     RayTracingProceduralHitShaderGroup(const char* _Name,
                                        IShader*    _pIntersectionShader,
                                        IShader*    _pClosestHitShader  = nullptr,

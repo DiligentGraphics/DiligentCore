@@ -1187,17 +1187,18 @@ static VkPipelineStageFlags ResourceStateFlagToVkPipelineStage(RESOURCE_STATE St
     }
 }
 
-VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, VkPipelineStageFlags ShaderStages)
+VkPipelineStageFlags ResourceStateFlagsToVkPipelineStageFlags(RESOURCE_STATE StateFlags, VkPipelineStageFlags vkShaderStages)
 {
     VERIFY(Uint32{StateFlags} < (RESOURCE_STATE_MAX_BIT << 1), "Resource state flags are out of range");
 
-    VkPipelineStageFlags Stages = 0;
-    for (Uint32 Bit = 1; Bit <= StateFlags; Bit <<= 1)
+    VkPipelineStageFlags vkPipelineStages = 0;
+    while (StateFlags != RESOURCE_STATE_UNKNOWN)
     {
-        if (StateFlags & Bit)
-            Stages |= ResourceStateFlagToVkPipelineStage(static_cast<RESOURCE_STATE>(Bit), ShaderStages);
+        auto StateBit = static_cast<RESOURCE_STATE>(1 << PlatformMisc::GetLSB(Uint32{StateFlags}));
+        vkPipelineStages |= ResourceStateFlagToVkPipelineStage(StateBit, vkShaderStages);
+        StateFlags &= ~StateBit;
     }
-    return Stages;
+    return vkPipelineStages;
 }
 
 

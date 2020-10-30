@@ -456,7 +456,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheCB(IDeviceObject*           
 
     // We cannot use ValidatedCast<> here as the resource retrieved from the
     // resource mapping can be of wrong type
-    RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12(pBuffer, IID_BufferD3D12);
+    RefCntAutoPtr<BufferD3D12Impl> pBuffD3D12{pBuffer, IID_BufferD3D12};
 #ifdef DILIGENT_DEVELOPMENT
     VerifyConstantBufferBinding(Attribs, GetVariableType(), ArrayInd, pBuffer, pBuffD3D12.RawPtr(), DstRes.pObject.RawPtr(), ParentResLayout.GetShaderName());
 #endif
@@ -576,7 +576,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheSampler(IDeviceObject*      
     VERIFY(Attribs.IsValidBindPoint(), "Invalid bind point");
     VERIFY_EXPR(ArrayIndex < Attribs.BindCount);
 
-    RefCntAutoPtr<ISamplerD3D12> pSamplerD3D12(pSampler, IID_SamplerD3D12);
+    RefCntAutoPtr<ISamplerD3D12> pSamplerD3D12{pSampler, IID_SamplerD3D12};
     if (pSamplerD3D12)
     {
         if (GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstSam.pObject != nullptr)
@@ -626,7 +626,7 @@ void ShaderResourceLayoutD3D12::D3D12Resource::CacheAccelStruct(IDeviceObject*  
     VERIFY(Attribs.IsValidBindPoint(), "Invalid bind point");
     VERIFY_EXPR(ArrayIndex < Attribs.BindCount);
 
-    RefCntAutoPtr<ITopLevelASD3D12> pTLASD3D12(pTLAS, IID_TopLevelASD3D12);
+    RefCntAutoPtr<ITopLevelASD3D12> pTLASD3D12{pTLAS, IID_TopLevelASD3D12};
     if (pTLASD3D12)
     {
         if (GetVariableType() != SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC && DstRes.pObject != nullptr)

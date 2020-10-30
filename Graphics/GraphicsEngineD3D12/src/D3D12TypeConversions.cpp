@@ -612,22 +612,21 @@ D3D12_RAYTRACING_GEOMETRY_FLAGS GeometryFlagsToD3D12RTGeometryFlags(RAYTRACING_G
     static_assert(RAYTRACING_GEOMETRY_FLAGS_LAST == RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION,
                   "Please update the switch below to handle the new ray tracing geometry flag");
 
-    Uint32 Result = 0;
-    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    D3D12_RAYTRACING_GEOMETRY_FLAGS Result = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+    while (Flags != RAYTRACING_GEOMETRY_NONE)
     {
-        if ((Flags & Bit) != Bit)
-            continue;
-
-        switch (static_cast<RAYTRACING_GEOMETRY_FLAGS>(Bit))
+        auto FlagBit = static_cast<RAYTRACING_GEOMETRY_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
         {
             // clang-format off
-            case RAYTRACING_GEOMETRY_OPAQUE:                          Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE; break;
+            case RAYTRACING_GEOMETRY_OPAQUE:                          Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;                         break;
             case RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION: Result |= D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION; break;
             // clang-format on
             default: UNEXPECTED("unknown geometry flag");
         }
+        Flags &= ~FlagBit;
     }
-    return static_cast<D3D12_RAYTRACING_GEOMETRY_FLAGS>(Result);
+    return Result;
 }
 
 D3D12_RAYTRACING_INSTANCE_FLAGS InstanceFlagsToD3D12RTInstanceFlags(RAYTRACING_INSTANCE_FLAGS Flags)
@@ -635,24 +634,23 @@ D3D12_RAYTRACING_INSTANCE_FLAGS InstanceFlagsToD3D12RTInstanceFlags(RAYTRACING_I
     static_assert(RAYTRACING_INSTANCE_FLAGS_LAST == RAYTRACING_INSTANCE_FORCE_NO_OPAQUE,
                   "Please update the switch below to handle the new ray tracing instance flag");
 
-    Uint32 Result = 0;
-    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    D3D12_RAYTRACING_INSTANCE_FLAGS Result = D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+    while (Flags != RAYTRACING_INSTANCE_NONE)
     {
-        if ((Flags & Bit) != Bit)
-            continue;
-
-        switch (static_cast<RAYTRACING_INSTANCE_FLAGS>(Bit))
+        auto FlagBit = static_cast<RAYTRACING_INSTANCE_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
         {
             // clang-format off
-            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    Result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE ; break;
-            case RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE: Result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE ; break;
-            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    Result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE ; break;
-            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 Result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE ; break;
+            case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    Result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE;           break;
+            case RAYTRACING_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE: Result |= D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE; break;
+            case RAYTRACING_INSTANCE_FORCE_OPAQUE:                    Result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;                    break;
+            case RAYTRACING_INSTANCE_FORCE_NO_OPAQUE:                 Result |= D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE;                break;
             // clang-format on
             default: UNEXPECTED("unknown instance flag");
         }
+        Flags &= ~FlagBit;
     }
-    return static_cast<D3D12_RAYTRACING_INSTANCE_FLAGS>(Result);
+    return Result;
 }
 
 } // namespace Diligent

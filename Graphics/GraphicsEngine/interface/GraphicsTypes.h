@@ -83,7 +83,8 @@ DILIGENT_TYPED_ENUM(BIND_FLAGS, Uint32)
     BIND_UNORDERED_ACCESS	 = 0x80L,  ///< A buffer or a texture can be bound as an unordered access view
     BIND_INDIRECT_DRAW_ARGS	 = 0x100L, ///< A buffer can be bound as the source buffer for indirect draw commands
     BIND_INPUT_ATTACHMENT    = 0x200L, ///< A texture can be used as render pass input attachment
-    BIND_RAY_TRACING         = 0x400L, ///< A buffer can be used as scratch buffer for acceleration structure building.
+    BIND_RAY_TRACING         = 0x400L, ///< A buffer can be used as a scratch buffer or as the source of primitive data 
+                                       ///  for acceleration structure building
     BIND_FLAGS_LAST          = 0x400L
 };
 DEFINE_FLAG_ENUM_OPERATORS(BIND_FLAGS)

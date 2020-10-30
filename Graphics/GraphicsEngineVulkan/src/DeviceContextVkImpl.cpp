@@ -2704,8 +2704,7 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTra
         }
         VERIFY(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END, "Unexpected barrier type");
 
-        RefCntAutoPtr<TextureVkImpl> pTexture{Barrier.pResource, IID_TextureVk};
-        if (pTexture)
+        if (RefCntAutoPtr<TextureVkImpl> pTexture{Barrier.pResource, IID_TextureVk})
         {
             VkImageSubresourceRange SubResRange;
             SubResRange.aspectMask     = 0;
@@ -2714,17 +2713,23 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTra
             SubResRange.baseArrayLayer = Barrier.FirstArraySlice;
             SubResRange.layerCount     = (Barrier.ArraySliceCount == REMAINING_ARRAY_SLICES) ? VK_REMAINING_ARRAY_LAYERS : Barrier.ArraySliceCount;
             TransitionTextureState(*pTexture, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState, &SubResRange);
-            continue;
         }
-
-        RefCntAutoPtr<BufferVkImpl> pBuffer{Barrier.pResource, IID_BufferVk};
-        if (pBuffer)
+        else if (RefCntAutoPtr<BufferVkImpl> pBuffer{Barrier.pResource, IID_BufferVk})
         {
             TransitionBufferState(*pBuffer, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
-            continue;
         }
-
-        UNEXPECTED("unsupported resource type");
+        else if (RefCntAutoPtr<BottomLevelASVkImpl> pBLAS{Barrier.pResource, IID_BottomLevelAS})
+        {
+            TransitionBLASState(*pBLAS, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
+        }
+        else if (RefCntAutoPtr<TopLevelASVkImpl> pTLAS{Barrier.pResource, IID_TopLevelAS})
+        {
+            TransitionTLASState(*pTLAS, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
+        }
+        else
+        {
+            UNEXPECTED("unsupported resource type");
+        }
     }
 }
 
@@ -2816,61 +2821,61 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
         {
-            auto&  src = Attribs.pTriangleData[i];
-            Uint32 j   = pBLASVk->GetGeometryIndex(src.GeometryName);
-            auto&  dst = Geometries.data()[j];
-            auto&  tri = dst.geometry.triangles;
-            auto&  off = Offsets.data()[j];
+            const auto& SrcTris = Attribs.pTriangleData[i];
+            Uint32      GeoIdx  = pBLASVk->GetGeometryIndex(SrcTris.GeometryName);
+            auto&       vkGeo   = Geometries[GeoIdx];
+            auto&       vkTris  = vkGeo.geometry.triangles;
+            auto&       off     = Offsets[GeoIdx];
 
-            if (j >= Geometries.size())
+            if (GeoIdx >= Geometries.size())
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
 
-            dst.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-            dst.pNext        = nullptr;
-            dst.flags        = GeometryFlagsToVkGeometryFlags(src.Flags);
-            dst.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-            tri.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
-            tri.pNext        = nullptr;
+            vkGeo.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+            vkGeo.pNext        = nullptr;
+            vkGeo.flags        = GeometryFlagsToVkGeometryFlags(SrcTris.Flags);
+            vkGeo.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+            vkTris.sType       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
+            vkTris.pNext       = nullptr;
 
-            auto* pVB                    = ValidatedCast<BufferVkImpl>(src.pVertexBuffer);
-            tri.vertexFormat             = TypeToVkFormat(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
-            tri.vertexStride             = src.VertexStride;
-            tri.vertexData.deviceAddress = pVB->GetVkDeviceAddress() + src.VertexOffset;
+            auto* const pVB                 = ValidatedCast<BufferVkImpl>(SrcTris.pVertexBuffer);
+            vkTris.vertexFormat             = TypeToVkFormat(SrcTris.VertexValueType, SrcTris.VertexComponentCount, SrcTris.VertexValueType < VT_FLOAT16);
+            vkTris.vertexStride             = SrcTris.VertexStride;
+            vkTris.vertexData.deviceAddress = pVB->GetVkDeviceAddress() + SrcTris.VertexOffset;
 
-            TransitionOrVerifyBufferState(*pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VkAccessFlagBits(0), OpName);
+            TransitionOrVerifyBufferState(*pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, static_cast<VkAccessFlagBits>(0), OpName);
 
-            if (src.pIndexBuffer)
+            if (SrcTris.pIndexBuffer)
             {
-                auto* pIB                   = ValidatedCast<BufferVkImpl>(src.pIndexBuffer);
-                tri.indexType               = TypeToVkIndexType(src.IndexType);
-                tri.indexData.deviceAddress = pIB->GetVkDeviceAddress() + src.IndexOffset;
-                off.primitiveCount          = src.IndexCount / 3;
+                auto* const pIB                = ValidatedCast<BufferVkImpl>(SrcTris.pIndexBuffer);
+                vkTris.indexType               = TypeToVkIndexType(SrcTris.IndexType);
+                vkTris.indexData.deviceAddress = pIB->GetVkDeviceAddress() + SrcTris.IndexOffset;
+                off.primitiveCount             = SrcTris.IndexCount / 3;
 
-                TransitionOrVerifyBufferState(*pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VkAccessFlagBits(0), OpName);
+                TransitionOrVerifyBufferState(*pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, static_cast<VkAccessFlagBits>(0), OpName);
             }
             else
             {
-                tri.indexType               = VK_INDEX_TYPE_NONE_KHR;
-                tri.indexData.deviceAddress = 0;
-                off.primitiveCount          = src.VertexCount / 3;
+                vkTris.indexType               = VK_INDEX_TYPE_NONE_KHR;
+                vkTris.indexData.deviceAddress = 0;
+                off.primitiveCount             = SrcTris.VertexCount / 3;
             }
 
-            if (src.pTransformBuffer)
+            if (SrcTris.pTransformBuffer)
             {
-                VERIFY_EXPR(BLASDesc.pTriangles[j].AllowsTransforms);
+                VERIFY_EXPR(BLASDesc.pTriangles[GeoIdx].AllowsTransforms);
 
-                auto* pTB                       = ValidatedCast<BufferVkImpl>(src.pTransformBuffer);
-                tri.transformData.deviceAddress = pTB->GetVkDeviceAddress() + src.TransformBufferOffset;
+                auto* const pTB                    = ValidatedCast<BufferVkImpl>(SrcTris.pTransformBuffer);
+                vkTris.transformData.deviceAddress = pTB->GetVkDeviceAddress() + SrcTris.TransformBufferOffset;
 
                 TransitionOrVerifyBufferState(*pTB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VkAccessFlagBits(0), OpName);
             }
             else
             {
-                VERIFY_EXPR(!BLASDesc.pTriangles[j].AllowsTransforms);
-                tri.transformData.deviceAddress = 0;
+                VERIFY_EXPR(!BLASDesc.pTriangles[GeoIdx].AllowsTransforms);
+                vkTris.transformData.deviceAddress = 0;
             }
 
             off.firstVertex     = 0;
@@ -2885,35 +2890,35 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
         {
-            auto&  src = Attribs.pBoxData[i];
-            Uint32 j   = pBLASVk->GetGeometryIndex(src.GeometryName);
-            auto&  dst = Geometries.data()[j];
-            auto&  box = dst.geometry.aabbs;
-            auto&  off = Offsets.data()[j];
+            const auto& SrcBoxes = Attribs.pBoxData[i];
+            Uint32      GeoIdx   = pBLASVk->GetGeometryIndex(SrcBoxes.GeometryName);
+            auto&       vkGeo    = Geometries[GeoIdx];
+            auto&       vkAABBs  = vkGeo.geometry.aabbs;
+            auto&       off      = Offsets[GeoIdx];
 
-            if (j >= Geometries.size())
+            if (GeoIdx >= Geometries.size())
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
 
-            dst.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-            dst.pNext        = nullptr;
-            dst.flags        = GeometryFlagsToVkGeometryFlags(src.Flags);
-            dst.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
+            vkGeo.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+            vkGeo.pNext        = nullptr;
+            vkGeo.flags        = GeometryFlagsToVkGeometryFlags(SrcBoxes.Flags);
+            vkGeo.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR;
 
-            auto* pBB              = ValidatedCast<BufferVkImpl>(src.pBoxBuffer);
-            box.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
-            box.pNext              = nullptr;
-            box.stride             = src.BoxStride;
-            box.data.deviceAddress = pBB->GetVkDeviceAddress() + src.BoxOffset;
+            auto* const pBB            = ValidatedCast<BufferVkImpl>(SrcBoxes.pBoxBuffer);
+            vkAABBs.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR;
+            vkAABBs.pNext              = nullptr;
+            vkAABBs.stride             = SrcBoxes.BoxStride;
+            vkAABBs.data.deviceAddress = pBB->GetVkDeviceAddress() + SrcBoxes.BoxOffset;
 
             TransitionOrVerifyBufferState(*pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VkAccessFlagBits(0), OpName);
 
             off.firstVertex     = 0;
             off.transformOffset = 0;
             off.primitiveOffset = 0;
-            off.primitiveCount  = src.BoxCount;
+            off.primitiveCount  = SrcBoxes.BoxCount;
         }
     }
 
@@ -2971,18 +2976,18 @@ void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
 
         for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
         {
-            auto& src     = Attribs.pInstances[i];
-            auto& dst     = static_cast<VkAccelerationStructureInstanceKHR*>(pMappedInstances)[i];
-            auto* pBLASVk = ValidatedCast<BottomLevelASVkImpl>(src.pBLAS);
+            const auto& Inst     = Attribs.pInstances[i];
+            auto&       vkASInst = static_cast<VkAccelerationStructureInstanceKHR*>(pMappedInstances)[i];
+            auto* const pBLASVk  = ValidatedCast<BottomLevelASVkImpl>(Inst.pBLAS);
 
-            static_assert(sizeof(dst.transform) == sizeof(src.Transform), "size mismatch");
-            std::memcpy(&dst.transform, src.Transform, sizeof(dst.transform));
+            static_assert(sizeof(vkASInst.transform) == sizeof(Inst.Transform), "size mismatch");
+            std::memcpy(&vkASInst.transform, Inst.Transform, sizeof(vkASInst.transform));
 
-            dst.instanceCustomIndex                    = src.CustomId;
-            dst.instanceShaderBindingTableRecordOffset = pTLASVk->GetInstanceDesc(src.InstanceName).ContributionToHitGroupIndex; // AZ TODO: optimize
-            dst.mask                                   = src.Mask;
-            dst.flags                                  = InstanceFlagsToVkGeometryInstanceFlags(src.Flags);
-            dst.accelerationStructureReference         = pBLASVk->GetVkDeviceAddress();
+            vkASInst.instanceCustomIndex                    = Inst.CustomId;
+            vkASInst.instanceShaderBindingTableRecordOffset = pTLASVk->GetInstanceDesc(Inst.InstanceName).ContributionToHitGroupIndex; // AZ TODO: optimize
+            vkASInst.mask                                   = Inst.Mask;
+            vkASInst.flags                                  = InstanceFlagsToVkGeometryInstanceFlags(Inst.Flags);
+            vkASInst.accelerationStructureReference         = pBLASVk->GetVkDeviceAddress();
 
             TransitionOrVerifyBLASState(*pBLASVk, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
         }
@@ -2991,37 +2996,37 @@ void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
     }
     TransitionOrVerifyBufferState(*pInstancesVk, Attribs.InstanceBufferTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VkAccessFlagBits(0), OpName);
 
-    VkAccelerationStructureBuildGeometryInfoKHR      Info          = {};
-    VkAccelerationStructureBuildOffsetInfoKHR        Offset        = {};
-    VkAccelerationStructureBuildOffsetInfoKHR const* OffsetsPtr    = &Offset;
-    VkAccelerationStructureGeometryKHR               Geometry      = {};
-    VkAccelerationStructureGeometryKHR const*        GeometriesPtr = &Geometry;
+    VkAccelerationStructureBuildGeometryInfoKHR      vkASBuildInfo      = {};
+    VkAccelerationStructureBuildOffsetInfoKHR        vkASBuildOffset    = {};
+    VkAccelerationStructureBuildOffsetInfoKHR const* vkASBuildOffsetPtr = &vkASBuildOffset;
+    VkAccelerationStructureGeometryKHR               vkASGeometry       = {};
+    VkAccelerationStructureGeometryKHR const*        vkASGeometriesPtr  = &vkASGeometry;
 
-    Offset.primitiveCount = Attribs.InstanceCount;
+    vkASBuildOffset.primitiveCount = Attribs.InstanceCount;
 
-    Geometry.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
-    Geometry.pNext        = nullptr;
-    Geometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-    Geometry.flags        = 0;
+    vkASGeometry.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
+    vkASGeometry.pNext        = nullptr;
+    vkASGeometry.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+    vkASGeometry.flags        = 0;
 
-    auto& inst              = Geometry.geometry.instances;
-    inst.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
-    inst.pNext              = nullptr;
-    inst.arrayOfPointers    = VK_FALSE;
-    inst.data.deviceAddress = pInstancesVk->GetVkDeviceAddress() + Attribs.InstanceBufferOffset;
+    auto& vkASInst              = vkASGeometry.geometry.instances;
+    vkASInst.sType              = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR;
+    vkASInst.pNext              = nullptr;
+    vkASInst.arrayOfPointers    = VK_FALSE;
+    vkASInst.data.deviceAddress = pInstancesVk->GetVkDeviceAddress() + Attribs.InstanceBufferOffset;
 
-    Info.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
-    Info.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;                    // type must be compatible with create info
-    Info.flags                     = BuildASFlagsToVkBuildAccelerationStructureFlags(TLASDesc.Flags); // flags must be compatible with create info
-    Info.update                    = VK_FALSE;
-    Info.srcAccelerationStructure  = VK_NULL_HANDLE;
-    Info.dstAccelerationStructure  = pTLASVk->GetVkTLAS();
-    Info.geometryArrayOfPointers   = VK_FALSE;
-    Info.geometryCount             = 1;
-    Info.ppGeometries              = &GeometriesPtr;
-    Info.scratchData.deviceAddress = pScratchVk->GetVkDeviceAddress() + Attribs.ScratchBufferOffset;
+    vkASBuildInfo.sType                     = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR;
+    vkASBuildInfo.type                      = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;                    // type must be compatible with create info
+    vkASBuildInfo.flags                     = BuildASFlagsToVkBuildAccelerationStructureFlags(TLASDesc.Flags); // flags must be compatible with create info
+    vkASBuildInfo.update                    = VK_FALSE;
+    vkASBuildInfo.srcAccelerationStructure  = VK_NULL_HANDLE;
+    vkASBuildInfo.dstAccelerationStructure  = pTLASVk->GetVkTLAS();
+    vkASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
+    vkASBuildInfo.geometryCount             = 1;
+    vkASBuildInfo.ppGeometries              = &vkASGeometriesPtr;
+    vkASBuildInfo.scratchData.deviceAddress = pScratchVk->GetVkDeviceAddress() + Attribs.ScratchBufferOffset;
 
-    m_CommandBuffer.BuildAccelerationStructure(1, &Info, &OffsetsPtr);
+    m_CommandBuffer.BuildAccelerationStructure(1, &vkASBuildInfo, &vkASBuildOffsetPtr);
     ++m_State.NumCommands;
 }
 

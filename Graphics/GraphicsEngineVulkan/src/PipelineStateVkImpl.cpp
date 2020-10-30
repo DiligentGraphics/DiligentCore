@@ -392,8 +392,8 @@ void BuildRTPipelineDescription(const RayTracingPipelineStateCreateInfo&        
 
     Uint32 GroupIndex = 0;
 
-    std::array<Uint32, 6>                      ShaderIndices = {};
-    std::unordered_map<const IShader*, Uint32> UniqueShaders;
+    std::array<Uint32, MAX_SHADERS_IN_PIPELINE> ShaderIndices = {};
+    std::unordered_map<const IShader*, Uint32>  UniqueShaders;
 
     const auto ShaderToIndex = [&ShaderIndices, &UniqueShaders](const IShader* pShader) -> Uint32 {
         if (pShader != nullptr)
