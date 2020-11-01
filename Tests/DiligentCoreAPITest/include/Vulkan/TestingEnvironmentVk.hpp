@@ -108,6 +108,7 @@ private:
     VkDevice         m_vkDevice         = VK_NULL_HANDLE;
     VkPhysicalDevice m_vkPhysicalDevice = VK_NULL_HANDLE;
     VkCommandPool    m_vkCmdPool        = VK_NULL_HANDLE;
+    VkFence          m_vkFence          = VK_NULL_HANDLE;
 
     VkPhysicalDeviceMemoryProperties m_MemoryProperties = {};
 };

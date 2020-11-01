@@ -33,8 +33,6 @@
 #include "Align.hpp"
 #include "BasicMath.hpp"
 
-#include "DeviceContextD3D12.h"
-
 #include "InlineShaders/RayTracingTestHLSL.h"
 
 namespace Diligent
@@ -79,6 +77,20 @@ struct RTContext
     {
         if (pUploadBuffer && MappedPtr)
             pUploadBuffer->Unmap(0, nullptr);
+    }
+
+    void ClearRenderTarget(TestingSwapChainD3D12* pTestingSwapChainD3D12)
+    {
+        pTestingSwapChainD3D12->TransitionRenderTarget(pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+        auto RTVDesriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
+
+        pCmdList->OMSetRenderTargets(1, &RTVDesriptorHandle, FALSE, nullptr);
+
+        float ClearColor[] = {0, 0, 0, 0};
+        pCmdList->ClearRenderTargetView(RTVDesriptorHandle, ClearColor, 0, nullptr);
+
+        pCmdList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
     }
 
     static constexpr UINT DescriptorHeapSize = 16;
@@ -577,19 +589,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&TLASDesc, 0, nullptr);
     }
 
-    // Clear render target
-    {
-        pTestingSwapChainD3D12->TransitionRenderTarget(Ctx.pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-        auto RTVDesriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
-
-        Ctx.pCmdList->OMSetRenderTargets(1, &RTVDesriptorHandle, FALSE, nullptr);
-
-        float ClearColor[] = {0, 0, 0, 0};
-        Ctx.pCmdList->ClearRenderTargetView(RTVDesriptorHandle, ClearColor, 0, nullptr);
-
-        Ctx.pCmdList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
-    }
+    Ctx.ClearRenderTarget(pTestingSwapChainD3D12);
 
     // Trace rays
     {
@@ -644,17 +644,8 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
     }
 
     Ctx.pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {Ctx.pCmdList};
 
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pEnv->GetDeviceContext(), IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(Ctx.pCmdList, true);
 }
 
 
@@ -849,19 +840,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&TLASDesc, 0, nullptr);
     }
 
-    // Clear render target
-    {
-        pTestingSwapChainD3D12->TransitionRenderTarget(Ctx.pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-        auto RTVDesriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
-
-        Ctx.pCmdList->OMSetRenderTargets(1, &RTVDesriptorHandle, FALSE, nullptr);
-
-        float ClearColor[] = {0, 0, 0, 0};
-        Ctx.pCmdList->ClearRenderTargetView(RTVDesriptorHandle, ClearColor, 0, nullptr);
-
-        Ctx.pCmdList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
-    }
+    Ctx.ClearRenderTarget(pTestingSwapChainD3D12);
 
     // Trace rays
     {
@@ -916,17 +895,8 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
     }
 
     Ctx.pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {Ctx.pCmdList};
 
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pEnv->GetDeviceContext(), IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(Ctx.pCmdList, true);
 }
 
 
@@ -1115,19 +1085,7 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&TLASDesc, 0, nullptr);
     }
 
-    // Clear render target
-    {
-        pTestingSwapChainD3D12->TransitionRenderTarget(Ctx.pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-        auto RTVDesriptorHandle = pTestingSwapChainD3D12->GetRTVDescriptorHandle();
-
-        Ctx.pCmdList->OMSetRenderTargets(1, &RTVDesriptorHandle, FALSE, nullptr);
-
-        float ClearColor[] = {0, 0, 0, 0};
-        Ctx.pCmdList->ClearRenderTargetView(RTVDesriptorHandle, ClearColor, 0, nullptr);
-
-        Ctx.pCmdList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
-    }
+    Ctx.ClearRenderTarget(pTestingSwapChainD3D12);
 
     // Trace rays
     {
@@ -1182,17 +1140,8 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
     }
 
     Ctx.pCmdList->Close();
-    ID3D12CommandList* pCmdLits[] = {Ctx.pCmdList};
 
-    RefCntAutoPtr<IDeviceContextD3D12> pContextD3D12{pEnv->GetDeviceContext(), IID_DeviceContextD3D12};
-
-    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
-    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
-
-    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
-    pEnv->IdleCommandQueue(pd3d12Queue);
-
-    pContextD3D12->UnlockCommandQueue();
+    pEnv->ExecuteCommandList(Ctx.pCmdList, true);
 }
 
 } // namespace Testing

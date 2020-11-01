@@ -111,6 +111,17 @@ struct RTContext
         if (vkInstanceBuffer)
             vkDestroyBuffer(vkDevice, vkInstanceBuffer, nullptr);
     }
+
+    void ClearRenderTarget(TestingSwapChainVk* pTestingSwapChainVk)
+    {
+        pTestingSwapChainVk->TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
+
+        VkImageSubresourceRange Range      = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        VkClearColorValue       ClearValue = {};
+        vkCmdClearColorImage(vkCmdBuffer, vkRenderTarget, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearValue, 1, &Range);
+
+        pTestingSwapChainVk->TransitionRenderTarget(vkCmdBuffer, VK_IMAGE_LAYOUT_GENERAL, 0);
+    }
 };
 
 template <typename PSOCtorType>
@@ -337,7 +348,6 @@ void CreateBLAS(RTContext& Ctx, const VkAccelerationStructureCreateGeometryTypeI
 void CreateTLAS(RTContext& Ctx, Uint32 InstanceCount)
 {
     VkResult res = VK_SUCCESS;
-    (void)res;
 
     VkAccelerationStructureCreateInfoKHR             TLASCI    = {};
     VkAccelerationStructureMemoryRequirementsInfoKHR MemInfo   = {};
@@ -643,12 +653,9 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
     };
 
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
-    auto* pContext            = pEnv->GetDeviceContext();
     auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
-
-    VkResult res = VK_SUCCESS;
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
@@ -814,16 +821,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
-    // Clear render target
-    {
-        pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
-
-        VkImageSubresourceRange Range      = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-        VkClearColorValue       ClearValue = {};
-        vkCmdClearColorImage(Ctx.vkCmdBuffer, Ctx.vkRenderTarget, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearValue, 1, &Range);
-
-        pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_GENERAL, 0);
-    }
+    Ctx.ClearRenderTarget(pTestingSwapChainVk);
 
     UpdateDescriptorSet(Ctx);
 
@@ -879,31 +877,10 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0);
     }
 
-    res = vkEndCommandBuffer(Ctx.vkCmdBuffer);
-    VERIFY(res >= 0, "Failed to end command buffer");
+    auto res = vkEndCommandBuffer(Ctx.vkCmdBuffer);
+    EXPECT_TRUE(res >= 0) << "Failed to end command buffer";
 
-    // Use fence instead of vkQueueWaitIdle because validation layers generate errors
-    VkFence           vkFence = VK_NULL_HANDLE;
-    VkFenceCreateInfo FenceCI = {};
-    FenceCI.sType             = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    FenceCI.flags             = 0;
-    vkCreateFence(Ctx.vkDevice, &FenceCI, nullptr, &vkFence);
-
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = pContextVk->LockCommandQueue();
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &Ctx.vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, vkFence);
-
-    pContextVk->UnlockCommandQueue();
-
-    vkWaitForFences(Ctx.vkDevice, 1, &vkFence, VK_TRUE, ~0ull);
-    vkDestroyFence(Ctx.vkDevice, vkFence, nullptr);
+    pEnv->SubmitCommandBuffer(Ctx.vkCmdBuffer, true);
 }
 
 
@@ -926,12 +903,9 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
     };
 
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
-    auto* pContext            = pEnv->GetDeviceContext();
     auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
-
-    VkResult res = VK_SUCCESS;
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
@@ -1103,16 +1077,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
-    // Clear render target
-    {
-        pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
-
-        VkImageSubresourceRange Range      = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-        VkClearColorValue       ClearValue = {};
-        vkCmdClearColorImage(Ctx.vkCmdBuffer, Ctx.vkRenderTarget, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearValue, 1, &Range);
-
-        pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_GENERAL, 0);
-    }
+    Ctx.ClearRenderTarget(pTestingSwapChainVk);
 
     UpdateDescriptorSet(Ctx);
 
@@ -1168,31 +1133,10 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0);
     }
 
-    res = vkEndCommandBuffer(Ctx.vkCmdBuffer);
-    VERIFY(res >= 0, "Failed to end command buffer");
+    auto res = vkEndCommandBuffer(Ctx.vkCmdBuffer);
+    EXPECT_TRUE(res >= 0) << "Failed to end command buffer";
 
-    // Use fence instead of vkQueueWaitIdle because validation layers generate errors
-    VkFence           Fence   = VK_NULL_HANDLE;
-    VkFenceCreateInfo FenceCI = {};
-    FenceCI.sType             = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    FenceCI.flags             = 0;
-    vkCreateFence(Ctx.vkDevice, &FenceCI, nullptr, &Fence);
-
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = pContextVk->LockCommandQueue();
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &Ctx.vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, Fence);
-
-    pContextVk->UnlockCommandQueue();
-
-    vkWaitForFences(Ctx.vkDevice, 1, &Fence, VK_TRUE, ~0ull);
-    vkDestroyFence(Ctx.vkDevice, Fence, nullptr);
+    pEnv->SubmitCommandBuffer(Ctx.vkCmdBuffer, true);
 }
 
 
@@ -1215,13 +1159,9 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
     };
 
     auto* pEnv                = TestingEnvironmentVk::GetInstance();
-    auto* pContext            = pEnv->GetDeviceContext();
     auto* pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
 
     const auto& SCDesc = pSwapChain->GetDesc();
-
-    VkResult res = VK_SUCCESS;
-    (void)res;
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
@@ -1386,16 +1326,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
-    // Clear render target
-    {
-        pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
-
-        VkImageSubresourceRange Range      = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-        VkClearColorValue       ClearValue = {};
-        vkCmdClearColorImage(Ctx.vkCmdBuffer, Ctx.vkRenderTarget, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearValue, 1, &Range);
-
-        pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_GENERAL, 0);
-    }
+    Ctx.ClearRenderTarget(pTestingSwapChainVk);
 
     UpdateDescriptorSet(Ctx);
 
@@ -1451,31 +1382,10 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 0);
     }
 
-    res = vkEndCommandBuffer(Ctx.vkCmdBuffer);
-    VERIFY(res >= 0, "Failed to end command buffer");
+    auto res = vkEndCommandBuffer(Ctx.vkCmdBuffer);
+    EXPECT_TRUE(res >= 0) << "Failed to end command buffer";
 
-    // Use fence instead of vkQueueWaitIdle because validation layers generate errors
-    VkFence           Fence   = VK_NULL_HANDLE;
-    VkFenceCreateInfo FenceCI = {};
-    FenceCI.sType             = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    FenceCI.flags             = 0;
-    vkCreateFence(Ctx.vkDevice, &FenceCI, nullptr, &Fence);
-
-    RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
-
-    auto* pQeueVk = pContextVk->LockCommandQueue();
-    auto  vkQueue = pQeueVk->GetVkQueue();
-
-    VkSubmitInfo SubmitInfo       = {};
-    SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    SubmitInfo.pCommandBuffers    = &Ctx.vkCmdBuffer;
-    SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, Fence);
-
-    pContextVk->UnlockCommandQueue();
-
-    vkWaitForFences(Ctx.vkDevice, 1, &Fence, VK_TRUE, ~0ull);
-    vkDestroyFence(Ctx.vkDevice, Fence, nullptr);
+    pEnv->SubmitCommandBuffer(Ctx.vkCmdBuffer, true);
 }
 
 } // namespace Testing

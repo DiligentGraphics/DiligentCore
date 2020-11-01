@@ -27,6 +27,7 @@
 
 #include "D3D12/TestingEnvironmentD3D12.hpp"
 #include "RenderDeviceD3D12.h"
+#include "DeviceContextD3D12.h"
 #include "dxc/dxcapi.h"
 
 namespace Diligent
@@ -89,6 +90,21 @@ void TestingEnvironmentD3D12::IdleCommandQueue(ID3D12CommandQueue* pd3d12Queue)
         WaitForSingleObject(m_WaitForGPUEventHandle, INFINITE);
         VERIFY(m_pd3d12Fence->GetCompletedValue() == LastSignaledFenceValue, "Unexpected signaled fence value");
     }
+}
+
+void TestingEnvironmentD3D12::ExecuteCommandList(ID3D12CommandList* pCmdList, bool WaitForIdle)
+{
+    auto pContextD3D12 = m_pDeviceContext.Cast<IDeviceContextD3D12>(IID_DeviceContextD3D12);
+
+    auto* pQeueD3D12  = pContextD3D12->LockCommandQueue();
+    auto* pd3d12Queue = pQeueD3D12->GetD3D12CommandQueue();
+
+    ID3D12CommandList* pCmdLits[] = {pCmdList};
+    pd3d12Queue->ExecuteCommandLists(_countof(pCmdLits), pCmdLits);
+    if (WaitForIdle)
+        IdleCommandQueue(pd3d12Queue);
+
+    pContextD3D12->UnlockCommandQueue();
 }
 
 TestingEnvironment* CreateTestingEnvironmentD3D12(const TestingEnvironment::CreateInfo& CI,
