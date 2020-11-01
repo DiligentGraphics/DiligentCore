@@ -105,7 +105,7 @@ DILIGENT_END_INTERFACE
 
 typedef struct IEngineFactoryOpenGL* (*GetEngineFactoryOpenGLType)();
 
-inline GetEngineFactoryOpenGLType LoadGraphicsEngineOpenGL()
+inline GetEngineFactoryOpenGLType DILIGENT_GLOBAL_FUNCTION(LoadGraphicsEngineOpenGL)()
 {
     return (GetEngineFactoryOpenGLType)LoadEngineDll("GraphicsEngineOpenGL", "GetEngineFactoryOpenGL");
 }

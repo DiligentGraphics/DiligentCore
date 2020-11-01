@@ -547,3 +547,11 @@ IEngineFactoryD3D12* GetEngineFactoryD3D12()
 }
 
 } // namespace Diligent
+
+extern "C"
+{
+    Diligent::IEngineFactoryD3D12* Diligent_GetEngineFactoryD3D12()
+    {
+        return Diligent::GetEngineFactoryD3D12();
+    }
+}

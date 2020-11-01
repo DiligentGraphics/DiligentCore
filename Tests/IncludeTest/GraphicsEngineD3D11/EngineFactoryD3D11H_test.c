@@ -39,7 +39,7 @@
 
 void TestEngineFactoryD3D11CInterface()
 {
-    GetEngineFactoryD3D11Type    GetEngineFactoryD3D11 = LoadGraphicsEngineD3D11();
+    GetEngineFactoryD3D11Type    GetEngineFactoryD3D11 = Diligent_LoadGraphicsEngineD3D11();
     struct IEngineFactoryD3D11*  pFactory              = GetEngineFactoryD3D11();
     struct EngineD3D11CreateInfo EngineCI              = {0};
     IRenderDevice*               pDevice               = NULL;

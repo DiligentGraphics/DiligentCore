@@ -39,7 +39,7 @@
 
 void TestEngineFactoryD3D12CInterface()
 {
-    GetEngineFactoryD3D12Type    GetEngineFactoryD3D12 = LoadGraphicsEngineD3D12();
+    GetEngineFactoryD3D12Type    GetEngineFactoryD3D12 = Diligent_LoadGraphicsEngineD3D12();
     struct IEngineFactoryD3D12*  pFactory              = GetEngineFactoryD3D12();
     struct EngineD3D12CreateInfo EngineCI              = {0};
     IRenderDevice*               pDevice               = NULL;
