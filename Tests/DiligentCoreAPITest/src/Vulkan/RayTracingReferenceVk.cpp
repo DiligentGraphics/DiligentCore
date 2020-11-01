@@ -119,7 +119,6 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
     auto*    pEnv                = TestingEnvironmentVk::GetInstance();
     auto*    pTestingSwapChainVk = ValidatedCast<TestingSwapChainVk>(pSwapChain);
     VkResult res                 = VK_SUCCESS;
-    (void)res;
 
     Ctx.vkDevice           = pEnv->GetVkDevice();
     Ctx.vkCmdBuffer        = pEnv->AllocateCommandBuffer();
@@ -135,7 +134,7 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
 
     Ctx.DeviceLimits = Props2.properties.limits;
 
-    // create ray tracing pipeline
+    // Create ray tracing pipeline
     {
         VkDescriptorSetLayoutCreateInfo                   DescriptorSetCI  = {};
         VkPipelineLayoutCreateInfo                        PipelineLayoutCI = {};
@@ -197,23 +196,26 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
         }
     }
 
-    // create descriptor set
+    // Create descriptor set
     {
         VkDescriptorPoolCreateInfo  DescriptorPoolCI = {};
         VkDescriptorPoolSize        PoolSizes[3]     = {};
         VkDescriptorSetAllocateInfo SetAllocInfo     = {};
 
+        static constexpr uint32_t MaxSetsInPool        = 16;
+        static constexpr uint32_t MaxDescriptorsInPool = 16;
+
         DescriptorPoolCI.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        DescriptorPoolCI.maxSets       = 10;
+        DescriptorPoolCI.maxSets       = MaxSetsInPool;
         DescriptorPoolCI.poolSizeCount = _countof(PoolSizes);
         DescriptorPoolCI.pPoolSizes    = PoolSizes;
 
         PoolSizes[0].type            = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-        PoolSizes[0].descriptorCount = 10;
+        PoolSizes[0].descriptorCount = MaxDescriptorsInPool;
         PoolSizes[1].type            = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        PoolSizes[1].descriptorCount = 10;
+        PoolSizes[1].descriptorCount = MaxDescriptorsInPool;
         PoolSizes[2].type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-        PoolSizes[2].descriptorCount = 10;
+        PoolSizes[2].descriptorCount = MaxDescriptorsInPool;
 
         res = vkCreateDescriptorPool(Ctx.vkDevice, &DescriptorPoolCI, nullptr, &Ctx.vkDescriptorPool);
         ASSERT_GE(res, 0);
@@ -265,7 +267,6 @@ void UpdateDescriptorSet(RTContext& Ctx)
 void CreateBLAS(RTContext& Ctx, const VkAccelerationStructureCreateGeometryTypeInfoKHR* pGeometries, Uint32 GeometryCount)
 {
     VkResult res = VK_SUCCESS;
-    (void)res;
 
     VkAccelerationStructureCreateInfoKHR             BLASCI  = {};
     VkAccelerationStructureMemoryRequirementsInfoKHR MemInfo = {};
@@ -413,7 +414,7 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     VkMemoryRequirements2 MemReqs = {};
     MemReqs.sType                 = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2;
 
-    // get scratch buffer size
+    // Get scratch buffer size
     {
         VkAccelerationStructureMemoryRequirementsInfoKHR MemInfo = {};
 
@@ -648,7 +649,6 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     VkResult res = VK_SUCCESS;
-    (void)res;
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
@@ -697,15 +697,17 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
                             Groups[MISS_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
                         });
 
-    // create acceleration structurea
+    // Create acceleration structures
     {
         VkMemoryBarrier Barrier = {};
         Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 
-        const float3 Vertices[] = {
-            float3{0.25f, 0.25f, 0.0f},
-            float3{0.75f, 0.25f, 0.0f},
-            float3{0.50f, 0.75f, 0.0f}};
+        const float3 Vertices[] = //
+            {
+                float3{0.25f, 0.25f, 0.0f},
+                float3{0.75f, 0.25f, 0.0f},
+                float3{0.50f, 0.75f, 0.0f} //
+            };
 
         VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI = {};
 
@@ -731,11 +733,11 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
                              VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
                              0, 1, &Barrier, 0, nullptr, 0, nullptr);
 
-        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo  = {};
-        VkAccelerationStructureBuildOffsetInfoKHR        Offset       = {};
-        VkAccelerationStructureGeometryKHR               Geometry     = {};
-        VkAccelerationStructureGeometryKHR const*        GeometriyPtr = &Geometry;
-        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr    = &Offset;
+        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo = {};
+        VkAccelerationStructureBuildOffsetInfoKHR        Offset      = {};
+        VkAccelerationStructureGeometryKHR               Geometry    = {};
+        VkAccelerationStructureGeometryKHR const*        GeometryPtr = &Geometry;
+        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr   = &Offset;
 
         Geometry.sType                                          = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
         Geometry.flags                                          = VK_GEOMETRY_OPAQUE_BIT_KHR;
@@ -761,7 +763,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         ASBuildInfo.dstAccelerationStructure  = Ctx.vkBLAS;
         ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometriyPtr;
+        ASBuildInfo.ppGeometries              = &GeometryPtr;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
@@ -806,13 +808,13 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         ASBuildInfo.dstAccelerationStructure  = Ctx.vkTLAS;
         ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometriyPtr;
+        ASBuildInfo.ppGeometries              = &GeometryPtr;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
-    // clear render target
+    // Clear render target
     {
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
 
@@ -825,7 +827,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
 
     UpdateDescriptorSet(Ctx);
 
-    // trace rays
+    // Trace rays
     {
         VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
         VkStridedBufferRegionKHR MissShaderBindingTable     = {};
@@ -859,7 +861,7 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, HIT_GROUP, 1, Ctx.RayTracingProps.shaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, HitShaderBindingTable.offset, Ctx.RayTracingProps.shaderGroupHandleSize, ShaderHandle);
 
-        // barrier for TLAS & SBT
+        // Barriers for TLAS & SBT
         VkMemoryBarrier Barrier = {};
         Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
         Barrier.srcAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -880,12 +882,12 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(Ctx.vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    // use fence instead of vkQueueWaitIdle because validation layers generates an errors
-    VkFence           Fence   = VK_NULL_HANDLE;
+    // Use fence instead of vkQueueWaitIdle because validation layers generate errors
+    VkFence           vkFence = VK_NULL_HANDLE;
     VkFenceCreateInfo FenceCI = {};
     FenceCI.sType             = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     FenceCI.flags             = 0;
-    vkCreateFence(Ctx.vkDevice, &FenceCI, nullptr, &Fence);
+    vkCreateFence(Ctx.vkDevice, &FenceCI, nullptr, &vkFence);
 
     RefCntAutoPtr<IDeviceContextVk> pContextVk{pContext, IID_DeviceContextVk};
 
@@ -896,12 +898,12 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
     SubmitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     SubmitInfo.pCommandBuffers    = &Ctx.vkCmdBuffer;
     SubmitInfo.commandBufferCount = 1;
-    vkQueueSubmit(vkQueue, 1, &SubmitInfo, Fence);
+    vkQueueSubmit(vkQueue, 1, &SubmitInfo, vkFence);
 
     pContextVk->UnlockCommandQueue();
 
-    vkWaitForFences(Ctx.vkDevice, 1, &Fence, VK_TRUE, ~0ull);
-    vkDestroyFence(Ctx.vkDevice, Fence, nullptr);
+    vkWaitForFences(Ctx.vkDevice, 1, &vkFence, VK_TRUE, ~0ull);
+    vkDestroyFence(Ctx.vkDevice, vkFence, nullptr);
 }
 
 
@@ -930,7 +932,6 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     VkResult res = VK_SUCCESS;
-    (void)res;
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
@@ -990,10 +991,12 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         VkMemoryBarrier Barrier = {};
         Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 
-        const float3 Vertices[] = {
-            float3{0.25f, 0.25f, 0.0f}, float3{0.75f, 0.25f, 0.0f}, float3{0.50f, 0.75f, 0.0f},
-            float3{0.50f, 0.10f, 0.1f}, float3{0.90f, 0.90f, 0.1f}, float3{0.10f, 0.90f, 0.1f},
-            float3{0.40f, 1.00f, 0.2f}, float3{0.20f, 0.40f, 0.2f}, float3{1.00f, 0.70f, 0.2f}};
+        const float3 Vertices[] = //
+            {
+                float3{0.25f, 0.25f, 0.0f}, float3{0.75f, 0.25f, 0.0f}, float3{0.50f, 0.75f, 0.0f},
+                float3{0.50f, 0.10f, 0.1f}, float3{0.90f, 0.90f, 0.1f}, float3{0.10f, 0.90f, 0.1f},
+                float3{0.40f, 1.00f, 0.2f}, float3{0.20f, 0.40f, 0.2f}, float3{1.00f, 0.70f, 0.2f} //
+            };
 
         VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI = {};
 
@@ -1019,11 +1022,11 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
                              VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
                              0, 1, &Barrier, 0, nullptr, 0, nullptr);
 
-        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo  = {};
-        VkAccelerationStructureBuildOffsetInfoKHR        Offset       = {};
-        VkAccelerationStructureGeometryKHR               Geometry     = {};
-        VkAccelerationStructureGeometryKHR const*        GeometriyPtr = &Geometry;
-        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr    = &Offset;
+        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo = {};
+        VkAccelerationStructureBuildOffsetInfoKHR        Offset      = {};
+        VkAccelerationStructureGeometryKHR               Geometry    = {};
+        VkAccelerationStructureGeometryKHR const*        GeometryPtr = &Geometry;
+        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr   = &Offset;
 
         Geometry.sType                                          = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
         Geometry.flags                                          = 0;
@@ -1049,7 +1052,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         ASBuildInfo.dstAccelerationStructure  = Ctx.vkBLAS;
         ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometriyPtr;
+        ASBuildInfo.ppGeometries              = &GeometryPtr;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
@@ -1094,13 +1097,13 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         ASBuildInfo.dstAccelerationStructure  = Ctx.vkTLAS;
         ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometriyPtr;
+        ASBuildInfo.ppGeometries              = &GeometryPtr;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
-    // clear render target
+    // Clear render target
     {
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
 
@@ -1113,7 +1116,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
 
     UpdateDescriptorSet(Ctx);
 
-    // trace rays
+    // Trace rays
     {
         VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
         VkStridedBufferRegionKHR MissShaderBindingTable     = {};
@@ -1147,7 +1150,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
         vkGetRayTracingShaderGroupHandlesKHR(Ctx.vkDevice, Ctx.vkPipeline, HIT_GROUP, 1, Ctx.RayTracingProps.shaderGroupHandleSize, ShaderHandle);
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkSBTBuffer, HitShaderBindingTable.offset, Ctx.RayTracingProps.shaderGroupHandleSize, ShaderHandle);
 
-        // barrier for TLAS & SBT
+        // Barriers for TLAS & SBT
         VkMemoryBarrier Barrier = {};
         Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
         Barrier.srcAccessMask   = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -1168,7 +1171,7 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(Ctx.vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    // use fence instead of vkQueueWaitIdle because validation layers generates an errors
+    // Use fence instead of vkQueueWaitIdle because validation layers generate errors
     VkFence           Fence   = VK_NULL_HANDLE;
     VkFenceCreateInfo FenceCI = {};
     FenceCI.sType             = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -1278,9 +1281,11 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         VkMemoryBarrier Barrier = {};
         Barrier.sType           = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
 
-        const float3 Boxes[] = {
-            float3{0.25f, 0.5f, 2.0f} - float3{1.0f, 1.0f, 1.0f},
-            float3{0.25f, 0.5f, 2.0f} + float3{1.0f, 1.0f, 1.0f}};
+        const float3 Boxes[] = //
+            {
+                float3{0.25f, 0.5f, 2.0f} - float3{1.0f, 1.0f, 1.0f},
+                float3{0.25f, 0.5f, 2.0f} + float3{1.0f, 1.0f, 1.0f} //
+            };
 
         VkAccelerationStructureCreateGeometryTypeInfoKHR GeometryCI = {};
 
@@ -1303,11 +1308,11 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
                              VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
                              0, 1, &Barrier, 0, nullptr, 0, nullptr);
 
-        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo  = {};
-        VkAccelerationStructureBuildOffsetInfoKHR        Offset       = {};
-        VkAccelerationStructureGeometryKHR               Geometry     = {};
-        VkAccelerationStructureGeometryKHR const*        GeometriyPtr = &Geometry;
-        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr    = &Offset;
+        VkAccelerationStructureBuildGeometryInfoKHR      ASBuildInfo = {};
+        VkAccelerationStructureBuildOffsetInfoKHR        Offset      = {};
+        VkAccelerationStructureGeometryKHR               Geometry    = {};
+        VkAccelerationStructureGeometryKHR const*        GeometryPtr = &Geometry;
+        VkAccelerationStructureBuildOffsetInfoKHR const* OffsetPtr   = &Offset;
 
         Geometry.sType                             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
         Geometry.flags                             = VK_GEOMETRY_OPAQUE_BIT_KHR;
@@ -1330,7 +1335,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         ASBuildInfo.dstAccelerationStructure  = Ctx.vkBLAS;
         ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometriyPtr;
+        ASBuildInfo.ppGeometries              = &GeometryPtr;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
@@ -1347,7 +1352,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
 
         vkCmdUpdateBuffer(Ctx.vkCmdBuffer, Ctx.vkInstanceBuffer, 0, sizeof(InstanceData), &InstanceData);
 
-        // barrier for BLAS, scratch buffer, instance buffer
+        // Barrier for BLAS, scratch buffer, instance buffer
         Barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR | VK_ACCESS_TRANSFER_WRITE_BIT;
         Barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
         vkCmdPipelineBarrier(Ctx.vkCmdBuffer,
@@ -1375,13 +1380,13 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
         ASBuildInfo.dstAccelerationStructure  = Ctx.vkTLAS;
         ASBuildInfo.geometryArrayOfPointers   = VK_FALSE;
         ASBuildInfo.geometryCount             = 1;
-        ASBuildInfo.ppGeometries              = &GeometriyPtr;
+        ASBuildInfo.ppGeometries              = &GeometryPtr;
         ASBuildInfo.scratchData.deviceAddress = Ctx.vkScratchBufferAddress;
 
         vkCmdBuildAccelerationStructureKHR(Ctx.vkCmdBuffer, 1, &ASBuildInfo, &OffsetPtr);
     }
 
-    // clear render target
+    // Clear render target
     {
         pTestingSwapChainVk->TransitionRenderTarget(Ctx.vkCmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0);
 
@@ -1394,7 +1399,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
 
     UpdateDescriptorSet(Ctx);
 
-    // trace rays
+    // Trace rays
     {
         VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
         VkStridedBufferRegionKHR MissShaderBindingTable     = {};
@@ -1449,7 +1454,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
     res = vkEndCommandBuffer(Ctx.vkCmdBuffer);
     VERIFY(res >= 0, "Failed to end command buffer");
 
-    // use fence instead of vkQueueWaitIdle because validation layers generates an errors
+    // Use fence instead of vkQueueWaitIdle because validation layers generate errors
     VkFence           Fence   = VK_NULL_HANDLE;
     VkFenceCreateInfo FenceCI = {};
     FenceCI.sType             = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;

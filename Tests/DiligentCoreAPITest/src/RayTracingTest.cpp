@@ -54,6 +54,7 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain);
 #endif
 
 } // namespace Testing
+
 } // namespace Diligent
 
 using namespace Diligent;
@@ -64,7 +65,7 @@ namespace
 
 void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuildTriangleData* pTriangles, Uint32 TriangleCount, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
 {
-    // create
+    // Create BLAS for triangles
     std::vector<BLASTriangleDesc> TriangleInfos;
     TriangleInfos.resize(TriangleCount);
     for (Uint32 i = 0; i < TriangleCount; ++i)
@@ -88,7 +89,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
     pDevice->CreateBLAS(ASDesc, &pBLAS);
     VERIFY_EXPR(pBLAS != nullptr);
 
-    // create scratch buffer
+    // Create scratch buffer
     RefCntAutoPtr<IBuffer> ScratchBuffer;
 
     BufferDesc BuffDesc;
@@ -100,7 +101,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
     pDevice->CreateBuffer(BuffDesc, nullptr, &ScratchBuffer);
     VERIFY_EXPR(ScratchBuffer != nullptr);
 
-    // build
+    // Build
     BLASBuildAttribs Attribs;
     Attribs.pBLAS                       = pBLAS;
     Attribs.BLASTransitionMode          = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
@@ -115,7 +116,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
 
 void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuildBoundingBoxData* pBoxes, Uint32 BoxCount, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
 {
-    // create
+    // Create BLAS for boxes
     std::vector<BLASBoundingBoxDesc> BoxInfos;
     BoxInfos.resize(BoxCount);
     for (Uint32 i = 0; i < BoxCount; ++i)
@@ -135,7 +136,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
     pDevice->CreateBLAS(ASDesc, &pBLAS);
     VERIFY_EXPR(pBLAS != nullptr);
 
-    // create scratch buffer
+    // Create scratch buffer
     RefCntAutoPtr<IBuffer> ScratchBuffer;
 
     BufferDesc BuffDesc;
@@ -147,7 +148,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
     pDevice->CreateBuffer(BuffDesc, nullptr, &ScratchBuffer);
     VERIFY_EXPR(ScratchBuffer != nullptr);
 
-    // build
+    // Build
     BLASBuildAttribs Attribs;
     Attribs.pBLAS                       = pBLAS;
     Attribs.BLASTransitionMode          = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
@@ -162,7 +163,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
 
 void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const TLASBuildInstanceData* Instances, Uint32 InstanceCount, RefCntAutoPtr<ITopLevelAS>& pTLAS)
 {
-    // create
+    // Create TLAS
     TopLevelASDesc TLASDesc;
     TLASDesc.Name             = "TLAS";
     TLASDesc.MaxInstanceCount = InstanceCount;
@@ -172,7 +173,7 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const TLASBuil
     pDevice->CreateTLAS(TLASDesc, &pTLAS);
     VERIFY_EXPR(pTLAS != nullptr);
 
-    // create scratch buffer
+    // Create scratch buffer
     RefCntAutoPtr<IBuffer> ScratchBuffer;
 
     BufferDesc BuffDesc;
@@ -195,7 +196,7 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const TLASBuil
     pDevice->CreateBuffer(BuffDesc, nullptr, &InstanceBuffer);
     VERIFY_EXPR(InstanceBuffer != nullptr);
 
-    // build
+    // Build
     TLASBuildAttribs Attribs;
     Attribs.pTLAS                        = pTLAS;
     Attribs.pInstances                   = Instances;
@@ -314,10 +315,12 @@ TEST(RayTracingTest, TriangleClosestHitShader)
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
     VERIFY_EXPR(pRayTracingSRB != nullptr);
 
-    const float3 Vertices[] = {
-        float3{0.25f, 0.25f, 0.0f},
-        float3{0.75f, 0.25f, 0.0f},
-        float3{0.50f, 0.75f, 0.0f}};
+    const float3 Vertices[] = //
+        {
+            float3{0.25f, 0.25f, 0.0f},
+            float3{0.75f, 0.25f, 0.0f},
+            float3{0.50f, 0.75f, 0.0f} //
+        };
 
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {
@@ -508,10 +511,12 @@ TEST(RayTracingTest, TriangleAnyHitShader)
     pRayTracingPSO->CreateShaderResourceBinding(&pRayTracingSRB, true);
     VERIFY_EXPR(pRayTracingSRB != nullptr);
 
-    const float3 Vertices[] = {
-        float3{0.25f, 0.25f, 0.0f}, float3{0.75f, 0.25f, 0.0f}, float3{0.50f, 0.75f, 0.0f},
-        float3{0.50f, 0.10f, 0.1f}, float3{0.90f, 0.90f, 0.1f}, float3{0.10f, 0.90f, 0.1f},
-        float3{0.40f, 1.00f, 0.2f}, float3{0.20f, 0.40f, 0.2f}, float3{1.00f, 0.70f, 0.2f}};
+    const float3 Vertices[] = //
+        {
+            float3{0.25f, 0.25f, 0.0f}, float3{0.75f, 0.25f, 0.0f}, float3{0.50f, 0.75f, 0.0f},
+            float3{0.50f, 0.10f, 0.1f}, float3{0.90f, 0.90f, 0.1f}, float3{0.10f, 0.90f, 0.1f},
+            float3{0.40f, 1.00f, 0.2f}, float3{0.20f, 0.40f, 0.2f}, float3{1.00f, 0.70f, 0.2f} //
+        };
 
     RefCntAutoPtr<IBuffer> pVertexBuffer;
     {

@@ -80,6 +80,8 @@ struct RTContext
         if (pUploadBuffer && MappedPtr)
             pUploadBuffer->Unmap(0, nullptr);
     }
+
+    static constexpr UINT DescriptorHeapSize = 16;
 };
 
 template <typename PSOCtorType>
@@ -171,7 +173,7 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
         D3D12_DESCRIPTOR_HEAP_DESC Desc = {};
 
         Desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        Desc.NumDescriptors = 10;
+        Desc.NumDescriptors = Ctx.DescriptorHeapSize;
         Desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         Desc.NodeMask       = 0;
 
@@ -187,6 +189,7 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
         UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
 
         D3D12_CPU_DESCRIPTOR_HANDLE UAVHandle = Ctx.pDescHeap->GetCPUDescriptorHandleForHeapStart();
+        ASSERT_LT(Ctx.DescHeapCount, Ctx.DescriptorHeapSize);
         UAVHandle.ptr += Ctx.DescHandleSize * Ctx.DescHeapCount++;
         Ctx.pDevice->CreateUnorderedAccessView(pTestingSwapChainD3D12->GetD3D12RenderTarget(), nullptr, &UAVDesc, UAVHandle);
     }
@@ -201,7 +204,7 @@ void CreateBLAS(RTContext& Ctx, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_IN
     BottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 
     Ctx.pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&BottomLevelInputs, &BottomLevelPrebuildInfo);
-    ASSERT_TRUE(BottomLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+    ASSERT_GT(BottomLevelPrebuildInfo.ResultDataMaxSizeInBytes, UINT64{0});
 
     D3D12_HEAP_PROPERTIES HeapProps;
     HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
@@ -241,7 +244,7 @@ void CreateTLAS(RTContext& Ctx, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_IN
     TopLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 
     Ctx.pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&TopLevelInputs, &TopLevelPrebuildInfo);
-    ASSERT_TRUE(TopLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
+    ASSERT_GT(TopLevelPrebuildInfo.ResultDataMaxSizeInBytes, UINT64{0});
 
     D3D12_HEAP_PROPERTIES HeapProps;
     HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
@@ -278,6 +281,7 @@ void CreateTLAS(RTContext& Ctx, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_IN
     SRVDesc.RaytracingAccelerationStructure.Location = Ctx.pTLAS->GetGPUVirtualAddress();
 
     D3D12_CPU_DESCRIPTOR_HANDLE DescHandle = Ctx.pDescHeap->GetCPUDescriptorHandleForHeapStart();
+    ASSERT_LT(Ctx.DescHeapCount, Ctx.DescriptorHeapSize);
     DescHandle.ptr += Ctx.DescHandleSize * Ctx.DescHeapCount++;
 
     Ctx.pDevice->CreateShaderResourceView(nullptr, &SRVDesc, DescHandle);
@@ -318,7 +322,8 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     if (VBSize > 0)
     {
         BuffDesc.Width = VBSize;
-        hr             = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+
+        hr = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
                                                   &BuffDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
                                                   IID_PPV_ARGS(&Ctx.pVertexBuffer));
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create buffer";
@@ -328,7 +333,8 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     if (IBSize > 0)
     {
         BuffDesc.Width = IBSize;
-        hr             = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+
+        hr = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
                                                   &BuffDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
                                                   IID_PPV_ARGS(&Ctx.pIndexBuffer));
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create buffer";
@@ -338,7 +344,8 @@ void CreateRTBuffers(RTContext& Ctx, Uint32 VBSize, Uint32 IBSize, Uint32 Instan
     if (InstanceCount > 0)
     {
         BuffDesc.Width = InstanceCount * sizeof(D3D12_RAYTRACING_INSTANCE_DESC);
-        hr             = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
+
+        hr = Ctx.pDevice->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE,
                                                   &BuffDesc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
                                                   IID_PPV_ARGS(&Ctx.pInstanceBuffer));
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create buffer";
@@ -459,7 +466,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
                             Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroupDesc});
                         });
 
-    // create acceleration structurea
+    // Create acceleration structures
     {
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC    BLASDesc          = {};
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BottomLevelInputs = BLASDesc.Inputs;
@@ -468,10 +475,12 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& TopLevelInputs    = TLASDesc.Inputs;
         D3D12_RAYTRACING_INSTANCE_DESC                        Instance          = {};
 
-        const float3 Vertices[] = {
-            float3{0.25f, 0.25f, 0.0f},
-            float3{0.75f, 0.25f, 0.0f},
-            float3{0.50f, 0.75f, 0.0f}};
+        const float3 Vertices[] = //
+            {
+                float3{0.25f, 0.25f, 0.0f},
+                float3{0.75f, 0.25f, 0.0f},
+                float3{0.50f, 0.75f, 0.0f} //
+            };
 
         Geometry.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
         Geometry.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
@@ -505,7 +514,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
         UpdateBuffer(Ctx, Ctx.pVertexBuffer, 0, Vertices, sizeof(Vertices));
         UpdateBuffer(Ctx, Ctx.pInstanceBuffer, 0, &Instance, sizeof(Instance));
 
-        // vertex & instance buffer barrier
+        // Vertex & instance buffer barriers
         {
             std::vector<D3D12_RESOURCE_BARRIER> Barriers;
             D3D12_RESOURCE_BARRIER              Barrier;
@@ -568,7 +577,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&TLASDesc, 0, nullptr);
     }
 
-    // clear render target
+    // Clear render target
     {
         pTestingSwapChainD3D12->TransitionRenderTarget(Ctx.pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -582,7 +591,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
         Ctx.pCmdList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
     }
 
-    // trace rays
+    // Trace rays
     {
         pTestingSwapChainD3D12->TransitionRenderTarget(Ctx.pCmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -729,7 +738,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
                             Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroupDesc});
                         });
 
-    // create acceleration structurea
+    // Create acceleration structures
     {
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC    BLASDesc          = {};
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BottomLevelInputs = BLASDesc.Inputs;
@@ -738,10 +747,12 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& TopLevelInputs    = TLASDesc.Inputs;
         D3D12_RAYTRACING_INSTANCE_DESC                        Instance          = {};
 
-        const float3 Vertices[] = {
-            float3{0.25f, 0.25f, 0.0f}, float3{0.75f, 0.25f, 0.0f}, float3{0.50f, 0.75f, 0.0f},
-            float3{0.50f, 0.10f, 0.1f}, float3{0.90f, 0.90f, 0.1f}, float3{0.10f, 0.90f, 0.1f},
-            float3{0.40f, 1.00f, 0.2f}, float3{0.20f, 0.40f, 0.2f}, float3{1.00f, 0.70f, 0.2f}};
+        const float3 Vertices[] = //
+            {
+                float3{0.25f, 0.25f, 0.0f}, float3{0.75f, 0.25f, 0.0f}, float3{0.50f, 0.75f, 0.0f},
+                float3{0.50f, 0.10f, 0.1f}, float3{0.90f, 0.90f, 0.1f}, float3{0.10f, 0.90f, 0.1f},
+                float3{0.40f, 1.00f, 0.2f}, float3{0.20f, 0.40f, 0.2f}, float3{1.00f, 0.70f, 0.2f} //
+            };
 
         Geometry.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
         Geometry.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
@@ -775,7 +786,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
         UpdateBuffer(Ctx, Ctx.pVertexBuffer, 0, Vertices, sizeof(Vertices));
         UpdateBuffer(Ctx, Ctx.pInstanceBuffer, 0, &Instance, sizeof(Instance));
 
-        // vertex & instance buffer barrier
+        // Vertex & instance buffer barriers
         {
             std::vector<D3D12_RESOURCE_BARRIER> Barriers;
             D3D12_RESOURCE_BARRIER              Barrier;
@@ -838,7 +849,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&TLASDesc, 0, nullptr);
     }
 
-    // clear render target
+    // Clear render target
     {
         pTestingSwapChainD3D12->TransitionRenderTarget(Ctx.pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -852,7 +863,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
         Ctx.pCmdList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
     }
 
-    // trace rays
+    // Trace rays
     {
         pTestingSwapChainD3D12->TransitionRenderTarget(Ctx.pCmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
@@ -999,7 +1010,7 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
                             Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroupDesc});
                         });
 
-    // create acceleration structurea
+    // Create acceleration structures
     {
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC    BLASDesc          = {};
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BottomLevelInputs = BLASDesc.Inputs;
@@ -1008,9 +1019,11 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
         D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& TopLevelInputs    = TLASDesc.Inputs;
         D3D12_RAYTRACING_INSTANCE_DESC                        Instance          = {};
 
-        const float3 Boxes[] = {
-            float3{0.25f, 0.5f, 2.0f} - float3{1.0f, 1.0f, 1.0f},
-            float3{0.25f, 0.5f, 2.0f} + float3{1.0f, 1.0f, 1.0f}};
+        const float3 Boxes[] = //
+            {
+                float3{0.25f, 0.5f, 2.0f} - float3{1.0f, 1.0f, 1.0f},
+                float3{0.25f, 0.5f, 2.0f} + float3{1.0f, 1.0f, 1.0f} //
+            };
 
         Geometry.Type                      = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
         Geometry.Flags                     = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
@@ -1102,7 +1115,7 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&TLASDesc, 0, nullptr);
     }
 
-    // clear render target
+    // Clear render target
     {
         pTestingSwapChainD3D12->TransitionRenderTarget(Ctx.pCmdList, D3D12_RESOURCE_STATE_RENDER_TARGET);
 
@@ -1116,7 +1129,7 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
         Ctx.pCmdList->OMSetRenderTargets(0, nullptr, FALSE, nullptr);
     }
 
-    // trace rays
+    // Trace rays
     {
         pTestingSwapChainD3D12->TransitionRenderTarget(Ctx.pCmdList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 
