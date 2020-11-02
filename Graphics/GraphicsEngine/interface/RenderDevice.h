@@ -292,6 +292,8 @@ DILIGENT_END_INTERFACE
 #    define IRenderDevice_CreateComputePipelineState(This, ...)  CALL_IFACE_METHOD(RenderDevice, CreateComputePipelineState,  This, __VA_ARGS__)
 #    define IRenderDevice_CreateFence(This, ...)                 CALL_IFACE_METHOD(RenderDevice, CreateFence,                 This, __VA_ARGS__)
 #    define IRenderDevice_CreateQuery(This, ...)                 CALL_IFACE_METHOD(RenderDevice, CreateQuery,                 This, __VA_ARGS__)
+#    define IRenderDevice_CreateRenderPass(This, ...)            CALL_IFACE_METHOD(RenderDevice, CreateRenderPass,            This, __VA_ARGS__)
+#    define IRenderDevice_CreateFramebuffer(This, ...)           CALL_IFACE_METHOD(RenderDevice, CreateFramebuffer,           This, __VA_ARGS__)
 #    define IRenderDevice_GetDeviceCaps(This)                    CALL_IFACE_METHOD(RenderDevice, GetDeviceCaps,               This)
 #    define IRenderDevice_GetTextureFormatInfo(This, ...)        CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfo,        This, __VA_ARGS__)
 #    define IRenderDevice_GetTextureFormatInfoExt(This, ...)     CALL_IFACE_METHOD(RenderDevice, GetTextureFormatInfoExt,     This, __VA_ARGS__)
