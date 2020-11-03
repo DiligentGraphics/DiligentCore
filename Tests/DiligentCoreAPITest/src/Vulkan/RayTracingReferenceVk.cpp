@@ -648,7 +648,11 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
-                        [pEnv](auto& Bindings, auto& Modules, auto& Stages, auto& Groups) {
+                        [pEnv](std::vector<VkDescriptorSetLayoutBinding>&         Bindings,
+                               std::vector<VkShaderModule>&                       Modules,
+                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages,
+                               std::vector<VkRayTracingShaderGroupCreateInfoKHR>& Groups) //
+                        {
                             Modules.resize(NUM_SHADERS);
                             Stages.resize(NUM_SHADERS);
                             Groups.resize(NUM_GROUPS);
@@ -892,7 +896,11 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
-                        [pEnv](auto& Bindings, auto& Modules, auto& Stages, auto& Groups) {
+                        [pEnv](std::vector<VkDescriptorSetLayoutBinding>&         Bindings,
+                               std::vector<VkShaderModule>&                       Modules,
+                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages,
+                               std::vector<VkRayTracingShaderGroupCreateInfoKHR>& Groups) //
+                        {
                             Modules.resize(NUM_SHADERS);
                             Stages.resize(NUM_SHADERS);
                             Groups.resize(NUM_GROUPS);
@@ -1142,7 +1150,11 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
-                        [pEnv](auto& Bindings, auto& Modules, auto& Stages, auto& Groups) {
+                        [pEnv](std::vector<VkDescriptorSetLayoutBinding>&         Bindings,
+                               std::vector<VkShaderModule>&                       Modules,
+                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages,
+                               std::vector<VkRayTracingShaderGroupCreateInfoKHR>& Groups) //
+                        {
                             Modules.resize(NUM_SHADERS);
                             Stages.resize(NUM_SHADERS);
                             Groups.resize(NUM_GROUPS);
@@ -1393,7 +1405,11 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
-                        [pEnv](auto& Bindings, auto& Modules, auto& Stages, auto& Groups) {
+                        [pEnv](std::vector<VkDescriptorSetLayoutBinding>&         Bindings,
+                               std::vector<VkShaderModule>&                       Modules,
+                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages,
+                               std::vector<VkRayTracingShaderGroupCreateInfoKHR>& Groups) //
+                        {
                             Bindings.resize(3);
                             Bindings[0] = {2u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, InstanceCount, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, nullptr};
                             Bindings[1] = {3u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, nullptr};

@@ -462,7 +462,12 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain, 0,
-                        [pEnv](auto& Subobjects, auto& ExportDescs, auto& LibDescs, auto& HitGroups, auto& ShadersByteCode) {
+                        [pEnv](std::vector<D3D12_STATE_SUBOBJECT>&   Subobjects,
+                               std::vector<D3D12_EXPORT_DESC>&       ExportDescs,
+                               std::vector<D3D12_DXIL_LIBRARY_DESC>& LibDescs,
+                               std::vector<D3D12_HIT_GROUP_DESC>&    HitGroups,
+                               std::vector<CComPtr<ID3DBlob>>&       ShadersByteCode) //
+                        {
                             ShadersByteCode.resize(3);
                             ExportDescs.resize(ShadersByteCode.size());
                             LibDescs.resize(ShadersByteCode.size());
@@ -694,7 +699,12 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain, 0,
-                        [pEnv](auto& Subobjects, auto& ExportDescs, auto& LibDescs, auto& HitGroups, auto& ShadersByteCode) {
+                        [pEnv](std::vector<D3D12_STATE_SUBOBJECT>&   Subobjects,
+                               std::vector<D3D12_EXPORT_DESC>&       ExportDescs,
+                               std::vector<D3D12_DXIL_LIBRARY_DESC>& LibDescs,
+                               std::vector<D3D12_HIT_GROUP_DESC>&    HitGroups,
+                               std::vector<CComPtr<ID3DBlob>>&       ShadersByteCode) //
+                        {
                             ShadersByteCode.resize(4);
                             ExportDescs.resize(ShadersByteCode.size());
                             LibDescs.resize(ShadersByteCode.size());
@@ -940,7 +950,12 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain, 0,
-                        [pEnv](auto& Subobjects, auto& ExportDescs, auto& LibDescs, auto& HitGroups, auto& ShadersByteCode) {
+                        [pEnv](std::vector<D3D12_STATE_SUBOBJECT>&   Subobjects,
+                               std::vector<D3D12_EXPORT_DESC>&       ExportDescs,
+                               std::vector<D3D12_DXIL_LIBRARY_DESC>& LibDescs,
+                               std::vector<D3D12_HIT_GROUP_DESC>&    HitGroups,
+                               std::vector<CComPtr<ID3DBlob>>&       ShadersByteCode) //
+                        {
                             ShadersByteCode.resize(4);
                             ExportDescs.resize(ShadersByteCode.size());
                             LibDescs.resize(ShadersByteCode.size());
@@ -1187,7 +1202,12 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
     InitializeRTContext(
         Ctx, pSwapChain,
         TestingConstants::MultiGeometry::ShaderRecordSize,
-        [pEnv](auto& Subobjects, auto& ExportDescs, auto& LibDescs, auto& HitGroups, auto& ShadersByteCode) {
+        [pEnv](std::vector<D3D12_STATE_SUBOBJECT>&   Subobjects,
+               std::vector<D3D12_EXPORT_DESC>&       ExportDescs,
+               std::vector<D3D12_DXIL_LIBRARY_DESC>& LibDescs,
+               std::vector<D3D12_HIT_GROUP_DESC>&    HitGroups,
+               std::vector<CComPtr<ID3DBlob>>&       ShadersByteCode) //
+        {
             ShadersByteCode.resize(4);
             ExportDescs.resize(ShadersByteCode.size());
             LibDescs.resize(ShadersByteCode.size());
