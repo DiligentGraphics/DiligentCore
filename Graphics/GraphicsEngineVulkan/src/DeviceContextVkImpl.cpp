@@ -2334,6 +2334,22 @@ void DeviceContextVkImpl::TransitionImageLayout(ITexture* pTexture, VkImageLayou
     }
 }
 
+namespace
+{
+NODISCARD inline bool ResourceStateHasWriteAccess(RESOURCE_STATE State)
+{
+    static_assert(RESOURCE_STATE_MAX_BIT == RESOURCE_STATE_RAY_TRACING, "This function must be updated to handle new resource state flag");
+    constexpr RESOURCE_STATE WriteAccessStates =
+        RESOURCE_STATE_RENDER_TARGET |
+        RESOURCE_STATE_UNORDERED_ACCESS |
+        RESOURCE_STATE_COPY_DEST |
+        RESOURCE_STATE_RESOLVE_DEST |
+        RESOURCE_STATE_BUILD_AS_WRITE;
+
+    return State & WriteAccessStates;
+}
+} // namespace
+
 void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           TextureVk,
                                                  RESOURCE_STATE           OldState,
                                                  RESOURCE_STATE           NewState,
@@ -2396,17 +2412,22 @@ void DeviceContextVkImpl::TransitionTextureState(TextureVkImpl&           Textur
             pSubresRange->aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
-    // Note that when both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, we need to execute UAV barrier
-    // to make sure that all UAV writes are complete and visible.
+    // Always add barrier after writes.
+    const bool AfterWrite = ResourceStateHasWriteAccess(OldState);
+
     auto OldLayout = ResourceStateToVkImageLayout(OldState);
     auto NewLayout = ResourceStateToVkImageLayout(NewState);
     auto OldStages = ResourceStateFlagsToVkPipelineStageFlags(OldState, m_CommandBuffer.GetEnabledShaderStages());
     auto NewStages = ResourceStateFlagsToVkPipelineStageFlags(NewState, m_CommandBuffer.GetEnabledShaderStages());
-    m_CommandBuffer.TransitionImageLayout(vkImg, OldLayout, NewLayout, *pSubresRange, OldStages, NewStages);
-    if (UpdateTextureState)
+
+    if (((OldState & NewState) != NewState) || OldLayout != NewLayout || AfterWrite)
     {
-        TextureVk.SetState(NewState);
-        VERIFY_EXPR(TextureVk.GetLayout() == NewLayout);
+        m_CommandBuffer.TransitionImageLayout(vkImg, OldLayout, NewLayout, *pSubresRange, OldStages, NewStages);
+        if (UpdateTextureState)
+        {
+            TextureVk.SetState(NewState);
+            VERIFY_EXPR(TextureVk.GetLayout() == NewLayout);
+        }
     }
 }
 
@@ -2421,10 +2442,7 @@ void DeviceContextVkImpl::TransitionOrVerifyTextureState(TextureVkImpl&         
         VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
         if (Texture.IsInKnownState())
         {
-            if (!Texture.CheckState(RequiredState))
-            {
-                TransitionTextureState(Texture, RESOURCE_STATE_UNKNOWN, RequiredState, true);
-            }
+            TransitionTextureState(Texture, RESOURCE_STATE_UNKNOWN, RequiredState, true);
             VERIFY_EXPR(Texture.GetLayout() == ExpectedLayout);
         }
     }
@@ -2489,9 +2507,10 @@ void DeviceContextVkImpl::TransitionBufferState(BufferVkImpl& BufferVk, RESOURCE
         }
     }
 
-    // When both old and new states are RESOURCE_STATE_UNORDERED_ACCESS, we need to execute UAV barrier
-    // to make sure that all UAV writes are complete and visible.
-    if (((OldState & NewState) != NewState) || NewState == RESOURCE_STATE_UNORDERED_ACCESS || NewState == RESOURCE_STATE_BUILD_AS_WRITE)
+    // Always add barrier after writes.
+    const bool AfterWrite = ResourceStateHasWriteAccess(OldState);
+
+    if (((OldState & NewState) != NewState) || AfterWrite)
     {
         DEV_CHECK_ERR(BufferVk.m_VulkanBuffer != VK_NULL_HANDLE, "Cannot transition suballocated buffer");
         VERIFY_EXPR(BufferVk.GetDynamicOffset(m_ContextId, this) == 0);
@@ -2521,10 +2540,7 @@ void DeviceContextVkImpl::TransitionOrVerifyBufferState(BufferVkImpl&           
         VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
         if (Buffer.IsInKnownState())
         {
-            if (!Buffer.CheckState(RequiredState))
-            {
-                TransitionBufferState(Buffer, RESOURCE_STATE_UNKNOWN, RequiredState, true);
-            }
+            TransitionBufferState(Buffer, RESOURCE_STATE_UNKNOWN, RequiredState, true);
             VERIFY_EXPR(Buffer.CheckAccessFlags(ExpectedAccessFlags));
         }
     }
@@ -2564,7 +2580,10 @@ void DeviceContextVkImpl::TransitionBLASState(BottomLevelASVkImpl& BLAS,
         }
     }
 
-    if ((OldState & NewState) != NewState)
+    // Always add barrier after writes.
+    const bool AfterWrite = ResourceStateHasWriteAccess(OldState);
+
+    if ((OldState & NewState) != NewState || AfterWrite)
     {
         EnsureVkCmdBuffer();
         auto OldAccessFlags = ResourceStateFlagsToVkAccessFlags(OldState);
@@ -2584,8 +2603,6 @@ void DeviceContextVkImpl::TransitionTLASState(TopLevelASVkImpl& TLAS,
                                               RESOURCE_STATE    NewState,
                                               bool              UpdateInternalState)
 {
-    // AZ TODO: transit BLAS state too?
-
     VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
     if (OldState == RESOURCE_STATE_UNKNOWN)
     {
@@ -2609,7 +2626,10 @@ void DeviceContextVkImpl::TransitionTLASState(TopLevelASVkImpl& TLAS,
         }
     }
 
-    if ((OldState & NewState) != NewState)
+    // Always add barrier after writes.
+    const bool AfterWrite = ResourceStateHasWriteAccess(OldState);
+
+    if ((OldState & NewState) != NewState || AfterWrite)
     {
         EnsureVkCmdBuffer();
         auto OldAccessFlags = ResourceStateFlagsToVkAccessFlags(OldState);
@@ -2634,10 +2654,7 @@ void DeviceContextVkImpl::TransitionOrVerifyBLASState(BottomLevelASVkImpl&      
         VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
         if (BLAS.IsInKnownState())
         {
-            if (!BLAS.CheckState(RequiredState))
-            {
-                TransitionBLASState(BLAS, RESOURCE_STATE_UNKNOWN, RequiredState, true);
-            }
+            TransitionBLASState(BLAS, RESOURCE_STATE_UNKNOWN, RequiredState, true);
         }
     }
 #ifdef DILIGENT_DEVELOPMENT
@@ -2658,16 +2675,18 @@ void DeviceContextVkImpl::TransitionOrVerifyTLASState(TopLevelASVkImpl&         
         VERIFY(m_pActiveRenderPass == nullptr, "State transitions are not allowed inside a render pass");
         if (TLAS.IsInKnownState())
         {
-            if (!TLAS.CheckState(RequiredState))
-            {
-                TransitionTLASState(TLAS, RESOURCE_STATE_UNKNOWN, RequiredState, true);
-            }
+            TransitionTLASState(TLAS, RESOURCE_STATE_UNKNOWN, RequiredState, true);
         }
     }
 #ifdef DILIGENT_DEVELOPMENT
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
         DvpVerifyTLASState(TLAS, RequiredState, OperationName);
+    }
+
+    if (RequiredState & RESOURCE_STATE_RAY_TRACING)
+    {
+        TLAS.CheckBLASVersion();
     }
 #endif
 }
@@ -2718,13 +2737,13 @@ void DeviceContextVkImpl::TransitionResourceStates(Uint32 BarrierCount, StateTra
         {
             TransitionBufferState(*pBuffer, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
         }
-        else if (RefCntAutoPtr<BottomLevelASVkImpl> pBLAS{Barrier.pResource, IID_BottomLevelAS})
+        else if (RefCntAutoPtr<BottomLevelASVkImpl> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
         {
-            TransitionBLASState(*pBLAS, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
+            TransitionBLASState(*pBottomLevelAS, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
         }
-        else if (RefCntAutoPtr<TopLevelASVkImpl> pTLAS{Barrier.pResource, IID_TopLevelAS})
+        else if (RefCntAutoPtr<TopLevelASVkImpl> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
         {
-            TransitionTLASState(*pTLAS, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
+            TransitionTLASState(*pTopLevelAS, Barrier.OldState, Barrier.NewState, Barrier.UpdateResourceState);
         }
         else
         {
@@ -2808,7 +2827,7 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
 
     const char* OpName = "Build BottomLevelAS (DeviceContextVkImpl::BuildBLAS)";
     TransitionOrVerifyBLASState(*pBLASVk, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
-    TransitionOrVerifyBufferState(*pScratchVk, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, VkAccessFlagBits(0), OpName);
+    TransitionOrVerifyBufferState(*pScratchVk, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, OpName);
 
     VkAccelerationStructureBuildGeometryInfoKHR            Info = {};
     std::vector<VkAccelerationStructureBuildOffsetInfoKHR> Offsets;
@@ -2845,7 +2864,7 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
             vkTris.vertexStride             = SrcTris.VertexStride;
             vkTris.vertexData.deviceAddress = pVB->GetVkDeviceAddress() + SrcTris.VertexOffset;
 
-            TransitionOrVerifyBufferState(*pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, static_cast<VkAccessFlagBits>(0), OpName);
+            TransitionOrVerifyBufferState(*pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
 
             if (SrcTris.pIndexBuffer)
             {
@@ -2854,7 +2873,7 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
                 vkTris.indexData.deviceAddress = pIB->GetVkDeviceAddress() + SrcTris.IndexOffset;
                 off.primitiveCount             = SrcTris.IndexCount / 3;
 
-                TransitionOrVerifyBufferState(*pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, static_cast<VkAccessFlagBits>(0), OpName);
+                TransitionOrVerifyBufferState(*pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
             }
             else
             {
@@ -2870,7 +2889,7 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
                 auto* const pTB                    = ValidatedCast<BufferVkImpl>(SrcTris.pTransformBuffer);
                 vkTris.transformData.deviceAddress = pTB->GetVkDeviceAddress() + SrcTris.TransformBufferOffset;
 
-                TransitionOrVerifyBufferState(*pTB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VkAccessFlagBits(0), OpName);
+                TransitionOrVerifyBufferState(*pTB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
             }
             else
             {
@@ -2913,7 +2932,7 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
             vkAABBs.stride             = SrcBoxes.BoxStride;
             vkAABBs.data.deviceAddress = pBB->GetVkDeviceAddress() + SrcBoxes.BoxOffset;
 
-            TransitionOrVerifyBufferState(*pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VkAccessFlagBits(0), OpName);
+            TransitionOrVerifyBufferState(*pBB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
 
             off.firstVertex     = 0;
             off.transformOffset = 0;
@@ -2939,6 +2958,10 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
     EnsureVkCmdBuffer();
     m_CommandBuffer.BuildAccelerationStructure(1, &Info, &OffsetsPtr);
     ++m_State.NumCommands;
+
+#ifdef DILIGENT_DEVELOPMENT
+    pBLASVk->UpdateVersion();
+#endif
 }
 
 void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
@@ -2964,7 +2987,7 @@ void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
 
     const char* OpName = "Build TopLevelAS (DeviceContextVkImpl::BuildTLAS)";
     TransitionOrVerifyTLASState(*pTLASVk, Attribs.TLASTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
-    TransitionOrVerifyBufferState(*pScratchVk, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, VkAccessFlagBits(0), OpName);
+    TransitionOrVerifyBufferState(*pScratchVk, Attribs.ScratchBufferTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, OpName);
 
     pTLASVk->SetInstanceData(Attribs.pInstances, Attribs.InstanceCount, Attribs.HitShadersPerInstance);
 
@@ -2981,7 +3004,7 @@ void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
             auto* const pBLASVk  = ValidatedCast<BottomLevelASVkImpl>(Inst.pBLAS);
 
             static_assert(sizeof(vkASInst.transform) == sizeof(Inst.Transform), "size mismatch");
-            std::memcpy(&vkASInst.transform, Inst.Transform, sizeof(vkASInst.transform));
+            std::memcpy(&vkASInst.transform, Inst.Transform.data, sizeof(vkASInst.transform));
 
             vkASInst.instanceCustomIndex                    = Inst.CustomId;
             vkASInst.instanceShaderBindingTableRecordOffset = pTLASVk->GetInstanceDesc(Inst.InstanceName).ContributionToHitGroupIndex; // AZ TODO: optimize
@@ -2994,7 +3017,7 @@ void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
 
         UpdateBufferRegion(pInstancesVk, Attribs.InstanceBufferOffset, Size, TmpSpace.vkBuffer, TmpSpace.AlignedOffset, Attribs.InstanceBufferTransitionMode);
     }
-    TransitionOrVerifyBufferState(*pInstancesVk, Attribs.InstanceBufferTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VkAccessFlagBits(0), OpName);
+    TransitionOrVerifyBufferState(*pInstancesVk, Attribs.InstanceBufferTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
 
     VkAccelerationStructureBuildGeometryInfoKHR      vkASBuildInfo      = {};
     VkAccelerationStructureBuildOffsetInfoKHR        vkASBuildOffset    = {};
@@ -3060,6 +3083,10 @@ void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
 
     m_CommandBuffer.CopyAccelerationStructure(Info);
     ++m_State.NumCommands;
+
+#ifdef DILIGENT_DEVELOPMENT
+    pDstVk->UpdateVersion();
+#endif
 }
 
 void DeviceContextVkImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
@@ -3076,6 +3103,8 @@ void DeviceContextVkImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
 
     auto* pSrcVk = ValidatedCast<TopLevelASVkImpl>(Attribs.pSrc);
     auto* pDstVk = ValidatedCast<TopLevelASVkImpl>(Attribs.pDst);
+
+    pDstVk->CopyInstancceData(*pSrcVk);
 
     VkCopyAccelerationStructureInfoKHR Info = {};
 

@@ -47,7 +47,7 @@ namespace Diligent
 ///                          (Diligent::ITopLevelASD3D12 or Diligent::ITopLevelASVk).
 /// \tparam RenderDeviceImplType - type of the render device implementation
 ///                                (Diligent::RenderDeviceD3D12Impl or Diligent::RenderDeviceVkImpl)
-template <class BaseInterface, class RenderDeviceImplType>
+template <class BaseInterface, class BottomLevelASType, class RenderDeviceImplType>
 class TopLevelASBase : public DeviceObjectBase<BaseInterface, RenderDeviceImplType, TopLevelASDesc>
 {
 public:
@@ -73,8 +73,9 @@ public:
 
     void SetInstanceData(const TLASBuildInstanceData* pInstances, Uint32 InstanceCount, Uint32 HitShadersPerInstance)
     {
-        m_Instances.clear();
-        m_StringPool.Release();
+        this->m_Instances.clear();
+        this->m_StringPool.Release();
+        this->m_HitShadersPerInstance = HitShadersPerInstance;
 
         size_t StringPoolSize = 0;
         for (Uint32 i = 0; i < InstanceCount; ++i)
@@ -82,30 +83,61 @@ public:
             StringPoolSize += strlen(pInstances[i].InstanceName) + 1;
         }
 
-        m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
+        this->m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
 
         Uint32 InstanceOffset = 0;
 
         for (Uint32 i = 0; i < InstanceCount; ++i)
         {
             auto&        inst     = pInstances[i];
-            const char*  NameCopy = m_StringPool.CopyString(inst.InstanceName);
+            const char*  NameCopy = this->m_StringPool.CopyString(inst.InstanceName);
             InstanceDesc Desc     = {};
 
             Desc.ContributionToHitGroupIndex = inst.ContributionToHitGroupIndex;
-            Desc.pBLAS                       = inst.pBLAS;
+            Desc.pBLAS                       = ValidatedCast<BottomLevelASType>(inst.pBLAS);
+
+#ifdef DILIGENT_DEVELOPMENT
+            Desc.Version = Desc.pBLAS->GetVersion();
+#endif
 
             if (Desc.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
             {
                 Desc.ContributionToHitGroupIndex = InstanceOffset;
                 auto& BLASDesc                   = Desc.pBLAS->GetDesc();
-                InstanceOffset += (BLASDesc.TriangleCount + BLASDesc.BoxCount) * HitShadersPerInstance;
+                switch (this->m_Desc.BindingMode)
+                {
+                    // clang-format off
+                    case SHADER_BINDING_MODE_PER_GEOMETRY: InstanceOffset += (BLASDesc.TriangleCount + BLASDesc.BoxCount) * HitShadersPerInstance;     break;
+                    case SHADER_BINDING_MODE_PER_INSTANCE: InstanceOffset += HitShadersPerInstance;                                                    break;
+                    case SHADER_BINDING_USER_DEFINED:      UNEXPECTED("TLAS_INSTANCE_OFFSET_AUTO is not compatible with SHADER_BINDING_USER_DEFINED"); break;
+                    default:                               UNEXPECTED("unknown ray tracing shader binding mode");
+                        // clang-format on
+                }
             }
 
-            bool IsUniqueName = m_Instances.emplace(NameCopy, Desc).second;
+            bool IsUniqueName = this->m_Instances.emplace(NameCopy, Desc).second;
             if (!IsUniqueName)
                 LOG_ERROR_AND_THROW("Instance name must be unique!");
         }
+
+        VERIFY_EXPR(this->m_StringPool.GetRemainingSize() == 0);
+    }
+
+    void CopyInstancceData(const TopLevelASBase& Src)
+    {
+        this->m_Instances.clear();
+        this->m_StringPool.Release();
+        this->m_StringPool.Reserve(Src.m_StringPool.GetReservedSize(), GetRawAllocator());
+        this->m_HitShadersPerInstance = Src.m_HitShadersPerInstance;
+        this->m_Desc.BindingMode      = Src.m_Desc.BindingMode;
+
+        for (auto& SrcInst : Src.m_Instances)
+        {
+            const char* NameCopy = this->m_StringPool.CopyString(SrcInst.first.GetStr());
+            this->m_Instances.emplace(NameCopy, SrcInst.second);
+        }
+
+        VERIFY_EXPR(this->m_StringPool.GetRemainingSize() == 0);
     }
 
     virtual TLASInstanceDesc DILIGENT_CALL_TYPE GetInstanceDesc(const char* Name) const override final
@@ -114,11 +146,11 @@ public:
 
         TLASInstanceDesc Result = {};
 
-        auto iter = m_Instances.find(Name);
-        if (iter != m_Instances.end())
+        auto iter = this->m_Instances.find(Name);
+        if (iter != this->m_Instances.end())
         {
             Result.ContributionToHitGroupIndex = iter->second.ContributionToHitGroupIndex;
-            Result.pBLAS                       = iter->second.pBLAS;
+            Result.pBLAS                       = iter->second.pBLAS.RawPtr<IBottomLevelAS>();
         }
         else
         {
@@ -150,6 +182,22 @@ public:
         return (this->m_State & State) == State;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
+    bool CheckBLASVersion() const
+    {
+        for (auto& NameAndInst : m_Instances)
+        {
+            auto& Inst = NameAndInst.second;
+            if (Inst.Version != Inst.pBLAS->GetVersion())
+            {
+                LOG_ERROR_MESSAGE("Instance with name ('", NameAndInst.first.GetStr(), "') has BLAS that was changed after TLAS build, you must rebuild TLAS.");
+                return false;
+            }
+        }
+        return true;
+    }
+#endif
+
 protected:
     static void ValidateTopLevelASDesc(const TopLevelASDesc& Desc)
     {
@@ -172,14 +220,19 @@ protected:
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_TopLevelAS, TDeviceObjectBase)
 
 protected:
-    RESOURCE_STATE m_State = RESOURCE_STATE_UNKNOWN;
+    RESOURCE_STATE m_State                 = RESOURCE_STATE_UNKNOWN;
+    Uint32         m_HitShadersPerInstance = 0;
 
     StringPool m_StringPool;
 
     struct InstanceDesc
     {
-        Uint32                                ContributionToHitGroupIndex = 0;
-        mutable RefCntAutoPtr<IBottomLevelAS> pBLAS;
+        Uint32                           ContributionToHitGroupIndex = 0;
+        RefCntAutoPtr<BottomLevelASType> pBLAS;
+
+#ifdef DILIGENT_DEVELOPMENT
+        Uint32 Version = 0;
+#endif
     };
     std::unordered_map<HashMapStringKey, InstanceDesc, HashMapStringKey::Hasher> m_Instances;
 };

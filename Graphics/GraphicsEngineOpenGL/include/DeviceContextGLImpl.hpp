@@ -56,7 +56,7 @@ struct DeviceContextGLImplTraits
     using FramebufferType   = FramebufferGLImpl;
     using RenderPassType    = RenderPassGLImpl;
     using BottomLevelASType = BottomLevelASBase<IBottomLevelAS, RenderDeviceGLImpl>;
-    using TopLevelASType    = TopLevelASBase<ITopLevelAS, RenderDeviceGLImpl>;
+    using TopLevelASType    = TopLevelASBase<ITopLevelAS, BottomLevelASType, RenderDeviceGLImpl>;
 };
 
 /// Device context implementation in OpenGL backend.

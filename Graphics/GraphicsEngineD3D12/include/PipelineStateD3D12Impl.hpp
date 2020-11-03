@@ -144,8 +144,11 @@ private:
 
     void Destruct();
 
-    CComPtr<ID3D12DeviceChild> m_pd3d12PSO;
-    RootSignature              m_RootSig;
+    void CreateLocalRootSignature(const RayTracingPipelineDesc& Desc);
+
+    CComPtr<ID3D12DeviceChild>   m_pd3d12PSO;
+    RootSignature                m_RootSig;
+    CComPtr<ID3D12RootSignature> m_LocalRootSignature;
 
     // Must be defined before default SRB
     SRBMemoryAllocator m_SRBMemAllocator;

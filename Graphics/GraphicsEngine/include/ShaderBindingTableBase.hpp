@@ -65,41 +65,78 @@ public:
         TDeviceObjectBase{pRefCounters, pDevice, Desc, bIsDeviceInternal}
     {
         ValidateShaderBindingTableDesc(Desc);
+
+        this->m_pPSO               = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);
+        this->m_ShaderRecordSize   = this->m_pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
+        this->m_ShaderRecordStride = this->m_ShaderRecordSize + this->m_pDevice->GetShaderGroupHandleSize();
     }
 
     ~ShaderBindingTableBase()
     {
     }
 
-    void BindRayGenShader(const char* ShaderGroupName, const void* Data, Uint32 DataSize) override final
+    void DILIGENT_CALL_TYPE Reset(const ShaderBindingTableDesc& Desc) override final
     {
-        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+        this->m_RayGenShaderRecord.clear();
+        this->m_MissShadersRecord.clear();
+        this->m_CallableShadersRecord.clear();
+        this->m_HitGroupsRecord.clear();
+        this->m_Changed = true;
+        this->m_pPSO    = nullptr;
+        this->m_Desc    = {};
 
-        this->m_RayGenShaderRecord.resize(this->m_ShaderRecordStride);
-        ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO)->CopyShaderHandle(ShaderGroupName, this->m_RayGenShaderRecord.data(), this->m_ShaderRecordStride);
+        try
+        {
+            ValidateShaderBindingTableDesc(Desc);
+        }
+        catch (const std::runtime_error&)
+        {
+            return;
+        }
+
+        this->m_Desc               = Desc;
+        this->m_pPSO               = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);
+        this->m_ShaderRecordSize   = this->m_pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
+        this->m_ShaderRecordStride = this->m_ShaderRecordSize + this->m_pDevice->GetShaderGroupHandleSize();
+    }
+
+    void DILIGENT_CALL_TYPE BindRayGenShader(const char* ShaderGroupName, const void* Data, Uint32 DataSize) override final
+    {
+        VERIFY_EXPR((Data == nullptr) == (DataSize == 0));
+        VERIFY_EXPR(Data == nullptr || (DataSize == this->m_ShaderRecordSize));
+
+        this->m_RayGenShaderRecord.resize(this->m_ShaderRecordStride, EmptyElem);
+        this->m_pPSO->CopyShaderHandle(ShaderGroupName, this->m_RayGenShaderRecord.data(), this->m_ShaderRecordStride);
+
+        const Uint32 GroupSize = this->m_pDevice->GetShaderGroupHandleSize();
+        std::memcpy(this->m_RayGenShaderRecord.data() + GroupSize, Data, DataSize);
         this->m_Changed = true;
     }
 
-    void BindMissShader(const char* ShaderGroupName, Uint32 MissIndex, const void* Data, Uint32 DataSize) override final
+    void DILIGENT_CALL_TYPE BindMissShader(const char* ShaderGroupName, Uint32 MissIndex, const void* Data, Uint32 DataSize) override final
     {
-        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+        VERIFY_EXPR((Data == nullptr) == (DataSize == 0));
+        VERIFY_EXPR(Data == nullptr || (DataSize == this->m_ShaderRecordSize));
 
-        const Uint32 Offset = MissIndex * this->m_ShaderRecordStride;
-        this->m_MissShadersRecord.resize(std::max<size_t>(this->m_MissShadersRecord.size(), Offset + this->m_ShaderRecordStride));
+        const Uint32 GroupSize = this->m_pDevice->GetShaderGroupHandleSize();
+        const Uint32 Offset    = MissIndex * this->m_ShaderRecordStride;
+        this->m_MissShadersRecord.resize(std::max<size_t>(this->m_MissShadersRecord.size(), Offset + this->m_ShaderRecordStride), EmptyElem);
 
-        ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO)->CopyShaderHandle(ShaderGroupName, this->m_MissShadersRecord.data() + Offset, this->m_ShaderRecordStride);
+        this->m_pPSO->CopyShaderHandle(ShaderGroupName, this->m_MissShadersRecord.data() + Offset, this->m_ShaderRecordStride);
+        std::memcpy(this->m_MissShadersRecord.data() + Offset + GroupSize, Data, DataSize);
         this->m_Changed = true;
     }
 
-    void BindHitGroup(ITopLevelAS* pTLAS,
-                      const char*  InstanceName,
-                      const char*  GeometryName,
-                      Uint32       RayOffsetInHitGroupIndex,
-                      const char*  ShaderGroupName,
-                      const void*  Data,
-                      Uint32       DataSize) override final
+    void DILIGENT_CALL_TYPE BindHitGroup(ITopLevelAS* pTLAS,
+                                         const char*  InstanceName,
+                                         const char*  GeometryName,
+                                         Uint32       RayOffsetInHitGroupIndex,
+                                         const char*  ShaderGroupName,
+                                         const void*  Data,
+                                         Uint32       DataSize) override final
     {
-        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+        VERIFY_EXPR((Data == nullptr) == (DataSize == 0));
+        VERIFY_EXPR(Data == nullptr || (DataSize == this->m_ShaderRecordSize));
         VERIFY_EXPR(pTLAS != nullptr);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < this->m_Desc.HitShadersPerInstance);
         VERIFY_EXPR(pTLAS->GetDesc().BindingMode == SHADER_BINDING_MODE_PER_GEOMETRY);
@@ -111,21 +148,23 @@ public:
         const Uint32 GeometryIndex = Desc.pBLAS->GetGeometryIndex(GeometryName);
         const Uint32 Index         = InstanceIndex + GeometryIndex * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
         const Uint32 Offset        = Index * this->m_ShaderRecordStride;
+        const Uint32 GroupSize     = this->m_pDevice->GetShaderGroupHandleSize();
 
-        this->m_HitGroupsRecord.resize(std::max<size_t>(this->m_HitGroupsRecord.size(), Offset + this->m_ShaderRecordStride));
+        this->m_HitGroupsRecord.resize(std::max<size_t>(this->m_HitGroupsRecord.size(), Offset + this->m_ShaderRecordStride), EmptyElem);
 
-        ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO)->CopyShaderHandle(ShaderGroupName, this->m_HitGroupsRecord.data() + Offset, this->m_ShaderRecordStride);
+        this->m_pPSO->CopyShaderHandle(ShaderGroupName, this->m_HitGroupsRecord.data() + Offset, this->m_ShaderRecordStride);
+        std::memcpy(this->m_HitGroupsRecord.data() + Offset + GroupSize, Data, DataSize);
         this->m_Changed = true;
     }
 
-    void BindHitGroups(ITopLevelAS* pTLAS,
-                       const char*  InstanceName,
-                       Uint32       RayOffsetInHitGroupIndex,
-                       const char*  ShaderGroupName,
-                       const void*  Data,
-                       Uint32       DataSize) override final
+    void DILIGENT_CALL_TYPE BindHitGroups(ITopLevelAS* pTLAS,
+                                          const char*  InstanceName,
+                                          Uint32       RayOffsetInHitGroupIndex,
+                                          const char*  ShaderGroupName,
+                                          const void*  Data,
+                                          Uint32       DataSize) override final
     {
-        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+        VERIFY_EXPR((Data == nullptr) == (DataSize == 0));
         VERIFY_EXPR(pTLAS != nullptr);
         VERIFY_EXPR(RayOffsetInHitGroupIndex < this->m_Desc.HitShadersPerInstance);
         VERIFY_EXPR(pTLAS->GetDesc().BindingMode == SHADER_BINDING_MODE_PER_GEOMETRY ||
@@ -134,39 +173,64 @@ public:
         const auto Desc = pTLAS->GetInstanceDesc(InstanceName);
         VERIFY_EXPR(Desc.pBLAS != nullptr);
 
-        const Uint32           InstanceIndex = Desc.ContributionToHitGroupIndex;
-        const auto&            GeometryDesc  = Desc.pBLAS->GetDesc();
-        const Uint32           GeometryCount = GeometryDesc.BoxCount + GeometryDesc.TriangleCount;
-        const Uint32           BeginIndex    = InstanceIndex + 0 * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
-        const Uint32           EndIndex      = InstanceIndex + GeometryCount * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
-        PipelineStateImplType* pPSO          = ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO);
+        const Uint32 InstanceIndex = Desc.ContributionToHitGroupIndex;
+        const auto&  GeometryDesc  = Desc.pBLAS->GetDesc();
+        Uint32       GeometryCount = 0;
 
-        this->m_HitGroupsRecord.resize(std::max<size_t>(this->m_HitGroupsRecord.size(), EndIndex * this->m_ShaderRecordStride));
+        switch (pTLAS->GetDesc().BindingMode)
+        {
+            // clang-format off
+            case SHADER_BINDING_MODE_PER_GEOMETRY: GeometryCount = GeometryDesc.BoxCount + GeometryDesc.TriangleCount; break;
+            case SHADER_BINDING_MODE_PER_INSTANCE: GeometryCount = 1;                                                  break;
+            default:                               UNEXPECTED("unknown binding mode");
+                // clang-format on
+        }
+
+        VERIFY_EXPR(Data == nullptr || (DataSize == this->m_ShaderRecordSize * GeometryCount));
+
+        const Uint32 BeginIndex = InstanceIndex + 0 * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
+        const Uint32 EndIndex   = InstanceIndex + GeometryCount * this->m_Desc.HitShadersPerInstance + RayOffsetInHitGroupIndex;
+        const Uint32 GroupSize  = this->m_pDevice->GetShaderGroupHandleSize();
+        const auto*  DataPtr    = static_cast<const Uint8*>(Data);
+
+        this->m_HitGroupsRecord.resize(std::max<size_t>(this->m_HitGroupsRecord.size(), EndIndex * this->m_ShaderRecordStride), EmptyElem);
 
         for (Uint32 i = 0; i < GeometryCount; ++i)
         {
             Uint32 Offset = (BeginIndex + i) * this->m_ShaderRecordStride;
-            pPSO->CopyShaderHandle(ShaderGroupName, this->m_HitGroupsRecord.data() + Offset, this->m_ShaderRecordStride);
+            this->m_pPSO->CopyShaderHandle(ShaderGroupName, this->m_HitGroupsRecord.data() + Offset, this->m_ShaderRecordStride);
+
+            std::memcpy(this->m_HitGroupsRecord.data() + Offset + GroupSize, DataPtr, this->m_ShaderRecordSize);
+            DataPtr += this->m_ShaderRecordSize;
         }
         this->m_Changed = true;
     }
 
-    void BindCallableShader(const char* ShaderGroupName,
-                            Uint32      CallableIndex,
-                            const void* Data,
-                            Uint32      DataSize) override final
+    void DILIGENT_CALL_TYPE BindCallableShader(const char* ShaderGroupName,
+                                               Uint32      CallableIndex,
+                                               const void* Data,
+                                               Uint32      DataSize) override final
     {
-        VERIFY(Data == nullptr && DataSize == 0, "not supported yet");
+        VERIFY_EXPR((Data == nullptr) == (DataSize == 0));
+        VERIFY_EXPR(Data == nullptr || (DataSize == this->m_ShaderRecordSize));
 
-        const Uint32 Offset = CallableIndex * this->m_ShaderRecordStride;
-        this->m_CallableShadersRecord.resize(std::max<size_t>(this->m_CallableShadersRecord.size(), Offset + this->m_ShaderRecordStride));
+        const Uint32 GroupSize = this->m_pDevice->GetShaderGroupHandleSize();
+        const Uint32 Offset    = CallableIndex * this->m_ShaderRecordStride;
+        this->m_CallableShadersRecord.resize(std::max<size_t>(this->m_CallableShadersRecord.size(), Offset + this->m_ShaderRecordStride), EmptyElem);
 
-        ValidatedCast<PipelineStateImplType>(this->m_Desc.pPSO)->CopyShaderHandle(ShaderGroupName, this->m_CallableShadersRecord.data() + Offset, this->m_ShaderRecordStride);
+        this->m_pPSO->CopyShaderHandle(ShaderGroupName, this->m_CallableShadersRecord.data() + Offset, this->m_ShaderRecordStride);
+        std::memcpy(this->m_CallableShadersRecord.data() + Offset + GroupSize, Data, DataSize);
         this->m_Changed = true;
     }
 
+    Bool DILIGENT_CALL_TYPE Verify() const override final
+    {
+        // AZ TODO
+        return true;
+    }
+
 protected:
-    static void ValidateShaderBindingTableDesc(const ShaderBindingTableDesc& Desc)
+    void ValidateShaderBindingTableDesc(const ShaderBindingTableDesc& Desc) const
     {
 #define LOG_SBT_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of Shader binding table '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
@@ -180,6 +244,20 @@ protected:
             LOG_SBT_ERROR_AND_THROW("pPSO must be ray tracing pipeline");
         }
 
+        const auto ShaderGroupHandleSize = this->m_pDevice->GetShaderGroupHandleSize();
+        const auto MaxShaderRecordStride = this->m_pDevice->GetMaxShaderRecordStride();
+        const auto ShaderRecordSize      = Desc.pPSO->GetRayTracingPipelineDesc().ShaderRecordSize;
+        const auto ShaderRecordStride    = ShaderRecordSize + ShaderGroupHandleSize;
+
+        if (ShaderRecordStride > MaxShaderRecordStride)
+        {
+            LOG_SBT_ERROR_AND_THROW("ShaderRecordSize(", ShaderRecordSize, ") is too big, max size is: ", MaxShaderRecordStride - ShaderGroupHandleSize);
+        }
+
+        if (ShaderRecordStride % ShaderGroupHandleSize != 0)
+        {
+            LOG_SBT_ERROR_AND_THROW("ShaderRecordSize(", ShaderRecordSize, ") plus ShaderGroupHandleSize(", ShaderGroupHandleSize, ") must be multiple of ", ShaderGroupHandleSize);
+        }
 #undef LOG_SBT_ERROR_AND_THROW
     }
 
@@ -191,8 +269,13 @@ protected:
     std::vector<Uint8> m_CallableShadersRecord;
     std::vector<Uint8> m_HitGroupsRecord;
 
+    RefCntAutoPtr<PipelineStateImplType> m_pPSO;
+
+    Uint32 m_ShaderRecordSize   = 0;
     Uint32 m_ShaderRecordStride = 0;
     bool   m_Changed            = true;
+
+    static const Uint8 EmptyElem = 0xA7;
 };
 
 } // namespace Diligent

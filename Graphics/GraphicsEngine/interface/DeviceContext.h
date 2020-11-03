@@ -741,7 +741,7 @@ DILIGENT_TYPED_ENUM(RAYTRACING_INSTANCE_FLAGS, Uint8)
     /// geometries referenced by this instance. This behavior can be overridden by the SPIR-V OpaqueKHR ray flag.
     RAYTRACING_INSTANCE_FORCE_NO_OPAQUE = 0x08,
 
-    RAYTRACING_INSTANCE_FLAGS_LAST = 0x08
+    RAYTRACING_INSTANCE_FLAGS_LAST = RAYTRACING_INSTANCE_FORCE_NO_OPAQUE
 };
 DEFINE_FLAG_ENUM_OPERATORS(RAYTRACING_INSTANCE_FLAGS)
 
@@ -757,7 +757,7 @@ DILIGENT_TYPED_ENUM(COPY_AS_MODE, Uint8)
     // after the build of the acceleration structure specified by src.
     //COPY_AS_MODE_COMPACT,
 
-    COPY_AS_MODE_LAST = 0,
+    COPY_AS_MODE_LAST = COPY_AS_MODE_CLONE,
 };
 
 /// Defines geometry flags for ray tracing.
@@ -775,7 +775,7 @@ DILIGENT_TYPED_ENUM(RAYTRACING_GEOMETRY_FLAGS, Uint8)
     /// If this bit is absent an implementation may invoke the any-hit shader more than once for this geometry.
     RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION = 0x02,
 
-    RAYTRACING_GEOMETRY_FLAGS_LAST = 0x02
+    RAYTRACING_GEOMETRY_FLAGS_LAST = RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION
 };
 DEFINE_FLAG_ENUM_OPERATORS(RAYTRACING_GEOMETRY_FLAGS)
 
@@ -910,6 +910,35 @@ static const Uint32 TLAS_INSTANCE_OFFSET_AUTO = ~0u;
 /// AZ TODO
 static const Uint32 TLAS_INSTANCE_DATA_SIZE = 64;
 
+/// AZ TODO
+struct InstanceMatrix
+{
+    ///  rotation    translation
+    /// (0  1  2)   [ 3]
+    /// (4  5  6)   [ 7]
+    /// (8  9 10)   [11]
+    float data [3][4];
+
+#if DILIGENT_CPP_INTERFACE
+    /// AZ TODO
+    InstanceMatrix() noexcept :
+        data{{1.0f, 0.0f, 0.0f, 0.0f},
+             {0.0f, 1.0f, 0.0f, 0.0f},
+             {0.0f, 0.0f, 1.0f, 0.0f}}
+    {}
+
+    InstanceMatrix(const InstanceMatrix&) noexcept = default;
+
+    InstanceMatrix& SetTranslation(float x, float y, float z) noexcept
+    {
+        data[0][3] = x;
+        data[1][3] = y;
+        data[2][3] = z;
+        return *this;
+    }
+#endif
+};
+typedef struct InstanceMatrix InstanceMatrix;
 
 /// AZ TODO
 struct TLASBuildInstanceData
@@ -921,7 +950,7 @@ struct TLASBuildInstanceData
     IBottomLevelAS*           pBLAS           DEFAULT_INITIALIZER(nullptr);           // can be null to deactive instance
     
     /// AZ TODO
-    float                     Transform[3][4] DEFAULT_INITIALIZER({});
+    InstanceMatrix            Transform;
     
     /// AZ TODO
     Uint32                    CustomId        DEFAULT_INITIALIZER(0);        // 24 bits, in shader: gl_InstanceCustomIndexNV for GLSL, InstanceID() for HLSL

@@ -758,10 +758,16 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
 {
     try
     {
+        const auto& LogicalDevice         = GetDevice()->GetLogicalDevice();
+        const auto  ShaderGroupHandleSize = pDeviceVk->GetShaderGroupHandleSize();
+
+        if (LogicalDevice.GetEnabledExtFeatures().RayTracing.rayTracing == VK_FALSE)
+            LOG_ERROR_AND_THROW("Ray tracing is not supported by this device");
+
         std::vector<VkPipelineShaderStageCreateInfo>      vkShaderStages;
         std::vector<VulkanUtilities::ShaderModuleWrapper> ShaderModules;
-
         std::vector<VkRayTracingShaderGroupCreateInfoKHR> ShaderGroups;
+
         InitInternalObjects(CreateInfo, vkShaderStages, ShaderModules,
                             [&](const RayTracingPipelineStateCreateInfo& CreateInfo, LinearAllocator& MemPool, TShaderStages& ShaderStages) //
                             {
@@ -772,9 +778,6 @@ PipelineStateVkImpl::PipelineStateVkImpl(IReferenceCounters*                    
         );
 
         CreateRayTracingPipeline(pDeviceVk, vkShaderStages, ShaderGroups, m_PipelineLayout, m_Desc, GetRayTracingPipelineDesc(), m_Pipeline);
-
-        const auto& LogicalDevice         = GetDevice()->GetLogicalDevice();
-        const auto  ShaderGroupHandleSize = pDeviceVk->GetShaderGroupHandleSize();
 
         auto err = LogicalDevice.GetRayTracingShaderGroupHandles(m_Pipeline, 0, static_cast<uint32_t>(ShaderGroups.size()), ShaderGroupHandleSize, &m_pRayTracingPipelineData->Shaders[0]);
         VERIFY(err == VK_SUCCESS, "Failed to get shader group handles");

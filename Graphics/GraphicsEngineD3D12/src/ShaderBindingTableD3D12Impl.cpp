@@ -44,9 +44,6 @@ ShaderBindingTableD3D12Impl::ShaderBindingTableD3D12Impl(IReferenceCounters*    
                                                          bool                          bIsDeviceInternal) :
     TShaderBindingTableBase{pRefCounters, pDeviceD3D12, Desc, bIsDeviceInternal}
 {
-    ValidateDesc(Desc);
-
-    m_ShaderRecordStride = m_Desc.ShaderRecordSize + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 }
 
 ShaderBindingTableD3D12Impl::~ShaderBindingTableD3D12Impl()
@@ -54,43 +51,6 @@ ShaderBindingTableD3D12Impl::~ShaderBindingTableD3D12Impl()
 }
 
 IMPLEMENT_QUERY_INTERFACE(ShaderBindingTableD3D12Impl, IID_ShaderBindingTableD3D12, TShaderBindingTableBase)
-
-void ShaderBindingTableD3D12Impl::ValidateDesc(const ShaderBindingTableDesc& Desc) const
-{
-    if (Desc.ShaderRecordSize + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES > D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE)
-    {
-        LOG_ERROR_AND_THROW("Description of Shader binding table '", (Desc.Name ? Desc.Name : ""),
-                            "' is invalid: ShaderRecordSize is too big, max size is: ", D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE - D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-    }
-}
-
-void ShaderBindingTableD3D12Impl::Verify() const
-{
-    // AZ TODO
-}
-
-void ShaderBindingTableD3D12Impl::Reset(const ShaderBindingTableDesc& Desc)
-{
-    m_RayGenShaderRecord.clear();
-    m_MissShadersRecord.clear();
-    m_CallableShadersRecord.clear();
-    m_HitGroupsRecord.clear();
-    m_Changed = true;
-
-    try
-    {
-        ValidateShaderBindingTableDesc(Desc);
-        ValidateDesc(Desc);
-    }
-    catch (const std::runtime_error&)
-    {
-        // AZ TODO
-        return;
-    }
-
-    m_Desc               = Desc;
-    m_ShaderRecordStride = m_Desc.ShaderRecordSize + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-}
 
 void ShaderBindingTableD3D12Impl::ResetHitGroups(Uint32 HitShadersPerInstance)
 {

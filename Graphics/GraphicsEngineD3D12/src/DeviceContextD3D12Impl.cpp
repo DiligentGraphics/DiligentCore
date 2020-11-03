@@ -2198,8 +2198,6 @@ void DeviceContextD3D12Impl::TransitionOrVerifyTLASState(CommandContext&        
                                                          RESOURCE_STATE                 RequiredState,
                                                          const char*                    OperationName)
 {
-    // AZ TODO: transit BLAS state too?
-
     if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_TRANSITION)
     {
         if (TLAS.IsInKnownState() && !TLAS.CheckState(RequiredState))
@@ -2209,6 +2207,11 @@ void DeviceContextD3D12Impl::TransitionOrVerifyTLASState(CommandContext&        
     else if (TransitionMode == RESOURCE_STATE_TRANSITION_MODE_VERIFY)
     {
         DvpVerifyTLASState(TLAS, RequiredState, OperationName);
+    }
+
+    if (RequiredState & RESOURCE_STATE_RAY_TRACING)
+    {
+        TLAS.CheckBLASVersion();
     }
 #endif
 }
@@ -2318,6 +2321,8 @@ void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
             d3d12Tris.VertexBuffer.StartAddress  = pVB->GetGPUAddress() + SrcTris.VertexOffset;
             d3d12Tris.VertexBuffer.StrideInBytes = SrcTris.VertexStride;
 
+            TransitionOrVerifyBufferState(CmdCtx, *pVB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+
             if (SrcTris.pIndexBuffer)
             {
                 auto* const pIB       = ValidatedCast<BufferD3D12Impl>(SrcTris.pIndexBuffer);
@@ -2389,6 +2394,10 @@ void DeviceContextD3D12Impl::BuildBLAS(const BLASBuildAttribs& Attribs)
 
     CmdCtx.AsGraphicsContext4().BuildRaytracingAccelerationStructure(Desc, 0, nullptr);
     ++m_State.NumCommands;
+
+#ifdef DILIGENT_DEVELOPMENT
+    pBLASD12->UpdateVersion();
+#endif
 }
 
 void DeviceContextD3D12Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
@@ -2401,7 +2410,6 @@ void DeviceContextD3D12Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
     auto* pTLASD12      = ValidatedCast<TopLevelASD3D12Impl>(Attribs.pTLAS);
     auto* pScratchD12   = ValidatedCast<BufferD3D12Impl>(Attribs.pScratchBuffer);
     auto* pInstancesD12 = ValidatedCast<BufferD3D12Impl>(Attribs.pInstanceBuffer);
-    //auto& TLASDesc      = pTLASD12->GetDesc();
 
     auto&       CmdCtx = GetCmdContext();
     const char* OpName = "Build TopLevelAS (DeviceContextD3D12Impl::BuildTLAS)";
@@ -2423,7 +2431,7 @@ void DeviceContextD3D12Impl::BuildTLAS(const TLASBuildAttribs& Attribs)
             auto* const pBLASD12  = ValidatedCast<BottomLevelASD3D12Impl>(Inst.pBLAS);
 
             static_assert(sizeof(d3d12Inst.Transform) == sizeof(Inst.Transform), "size mismatch");
-            std::memcpy(&d3d12Inst.Transform, Inst.Transform, sizeof(d3d12Inst.Transform));
+            std::memcpy(&d3d12Inst.Transform, Inst.Transform.data, sizeof(d3d12Inst.Transform));
 
             d3d12Inst.InstanceID                          = Inst.CustomId;
             d3d12Inst.InstanceContributionToHitGroupIndex = pTLASD12->GetInstanceDesc(Inst.InstanceName).ContributionToHitGroupIndex; // AZ TODO: optimize
@@ -2458,7 +2466,20 @@ void DeviceContextD3D12Impl::CopyBLAS(const CopyBLASAttribs& Attribs)
     if (!TDeviceContextBase::CopyBLAS(Attribs, 0))
         return;
 
-    // AZ TODO
+    auto* pSrcD3D12 = ValidatedCast<BottomLevelASD3D12Impl>(Attribs.pSrc);
+    auto* pDstD3D12 = ValidatedCast<BottomLevelASD3D12Impl>(Attribs.pDst);
+    auto& CmdCtx    = GetCmdContext();
+
+    const char* OpName = "Copy BottomLevelAS (DeviceContextD3D12Impl::CopyBLAS)";
+    TransitionOrVerifyBLASState(CmdCtx, *pSrcD3D12, Attribs.TransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+    TransitionOrVerifyBLASState(CmdCtx, *pDstD3D12, Attribs.TransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
+
+    CmdCtx.AsGraphicsContext4().CopyRaytracingAccelerationStructure(pSrcD3D12->GetGPUAddress(), pDstD3D12->GetGPUAddress(), D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_CLONE);
+    ++m_State.NumCommands;
+
+#ifdef DILIGENT_DEVELOPMENT
+    pDstD3D12->UpdateVersion();
+#endif
 }
 
 void DeviceContextD3D12Impl::CopyTLAS(const CopyTLASAttribs& Attribs)
@@ -2466,7 +2487,18 @@ void DeviceContextD3D12Impl::CopyTLAS(const CopyTLASAttribs& Attribs)
     if (!TDeviceContextBase::CopyTLAS(Attribs, 0))
         return;
 
-    // AZ TODO
+    auto* pSrcD3D12 = ValidatedCast<TopLevelASD3D12Impl>(Attribs.pSrc);
+    auto* pDstD3D12 = ValidatedCast<TopLevelASD3D12Impl>(Attribs.pDst);
+    auto& CmdCtx    = GetCmdContext();
+
+    pDstD3D12->CopyInstancceData(*pSrcD3D12);
+
+    const char* OpName = "Copy BottomLevelAS (DeviceContextD3D12Impl::CopyTLAS)";
+    TransitionOrVerifyTLASState(CmdCtx, *pSrcD3D12, Attribs.TransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+    TransitionOrVerifyTLASState(CmdCtx, *pDstD3D12, Attribs.TransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
+
+    CmdCtx.AsGraphicsContext4().CopyRaytracingAccelerationStructure(pSrcD3D12->GetGPUAddress(), pDstD3D12->GetGPUAddress(), D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_CLONE);
+    ++m_State.NumCommands;
 }
 
 void DeviceContextD3D12Impl::TraceRays(const TraceRaysAttribs& Attribs)

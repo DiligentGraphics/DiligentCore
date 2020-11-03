@@ -178,10 +178,8 @@ public:
     ShaderVersion     GetMaxShaderModel() const;
     D3D_FEATURE_LEVEL GetD3DFeatureLevel() const;
 
-    static Uint32 GetShaderGroupHandleSize()
-    {
-        return D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-    }
+    static Uint32 GetShaderGroupHandleSize() { return D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; }
+    static Uint32 GetMaxShaderRecordStride() { return D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE; }
 
 private:
     template <typename PSOCreateInfoType>

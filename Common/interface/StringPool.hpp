@@ -161,6 +161,10 @@ public:
         VERIFY(m_pCurrPtr <= m_pBuffer + m_ReservedSize, "Buffer overflow");
         return m_pCurrPtr - m_pBuffer;
     }
+    size_t GetReservedSize() const
+    {
+        return m_ReservedSize;
+    }
 
 private:
     Char*             m_pBuffer      = nullptr;

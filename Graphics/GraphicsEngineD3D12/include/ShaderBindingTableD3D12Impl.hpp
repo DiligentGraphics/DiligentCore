@@ -54,10 +54,6 @@ public:
 
     virtual void DILIGENT_CALL_TYPE QueryInterface(const INTERFACE_ID& IID, IObject** ppInterface) override final;
 
-    virtual void DILIGENT_CALL_TYPE Verify() const override;
-
-    virtual void DILIGENT_CALL_TYPE Reset(const ShaderBindingTableDesc& Desc) override;
-
     virtual void DILIGENT_CALL_TYPE ResetHitGroups(Uint32 HitShadersPerInstance) override;
 
     virtual void DILIGENT_CALL_TYPE BindAll(const BindAllAttribs& Attribs) override;
@@ -68,9 +64,6 @@ public:
                                                                   D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& MissShaderBindingTable,
                                                                   D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& HitShaderBindingTable,
                                                                   D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& CallableShaderBindingTable) override;
-
-private:
-    void ValidateDesc(const ShaderBindingTableDesc& Desc) const;
 
 private:
     RefCntAutoPtr<IBuffer> m_pBuffer;

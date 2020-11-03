@@ -705,7 +705,7 @@ __forceinline void TransitionResource(CommandContext&                     Ctx,
         {
             VERIFY(RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV, "Unexpected descriptor range type");
             auto* pTLASD3D12 = Res.pObject.RawPtr<TopLevelASD3D12Impl>();
-            if (pTLASD3D12->IsInKnownState() && !pTLASD3D12->CheckState(RESOURCE_STATE_RAY_TRACING))
+            if (pTLASD3D12->IsInKnownState())
                 Ctx.TransitionResource(pTLASD3D12, RESOURCE_STATE_RAY_TRACING);
         }
         break;

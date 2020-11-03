@@ -299,8 +299,11 @@ typedef struct RayTracingProceduralHitShaderGroup RayTracingProceduralHitShaderG
 /// AZ TODO
 struct RayTracingPipelineDesc
 {
+    // Size of the additional data passed to the shader.
+    Uint16  ShaderRecordSize       DEFAULT_INITIALIZER(0);
+
     /// AZ TODO
-    Uint8  MaxRecursionDepth  DEFAULT_INITIALIZER(0); // must be 0..31 (check current device limits)
+    Uint8   MaxRecursionDepth      DEFAULT_INITIALIZER(0); // must be 0..31 (check current device limits)
 };
 typedef struct RayTracingPipelineDesc RayTracingPipelineDesc;
 
@@ -438,7 +441,7 @@ typedef struct ComputePipelineStateCreateInfo ComputePipelineStateCreateInfo;
 struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo)
     
     /// AZ TODO
-    RayTracingPipelineDesc RayTracingPipeline;
+    RayTracingPipelineDesc                    RayTracingPipeline;
 
     /// AZ TODO
     const RayTracingGeneralShaderGroup*       pGeneralShaders          DEFAULT_INITIALIZER(nullptr);
@@ -457,6 +460,10 @@ struct RayTracingPipelineStateCreateInfo DILIGENT_DERIVE(PipelineStateCreateInfo
     
     /// AZ TODO
     Uint16                                    ProceduralHitShaderCount DEFAULT_INITIALIZER(0);
+    
+    /// Direct3D12 only: set name of constant buffer that will be used by local root signature.
+    /// Ignored if RayTracingPipelineDesc::ShaderRecordSize is zero.
+    const char*                               ShaderRecordName         DEFAULT_INITIALIZER(nullptr);
 };
 typedef struct RayTracingPipelineStateCreateInfo RayTracingPipelineStateCreateInfo;
 

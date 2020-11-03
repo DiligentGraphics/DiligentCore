@@ -1613,12 +1613,10 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
                   "Please update the switch below to handle the new ray tracing build flag");
 
     VkBuildAccelerationStructureFlagsKHR Result = 0;
-    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    while (Flags != RAYTRACING_BUILD_AS_NONE)
     {
-        if ((Flags & Bit) != Bit)
-            continue;
-
-        switch (static_cast<RAYTRACING_BUILD_AS_FLAGS>(Bit))
+        auto FlagBit = static_cast<RAYTRACING_BUILD_AS_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
         {
             // clang-format off
             case RAYTRACING_BUILD_AS_ALLOW_UPDATE:      Result |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;      break;
@@ -1629,6 +1627,7 @@ VkBuildAccelerationStructureFlagsKHR BuildASFlagsToVkBuildAccelerationStructureF
             // clang-format on
             default: UNEXPECTED("unknown build AS flag");
         }
+        Flags = Flags & ~FlagBit;
     }
     return Result;
 }
@@ -1639,12 +1638,10 @@ VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flag
                   "Please update the switch below to handle the new ray tracing geometry flag");
 
     VkGeometryFlagsKHR Result = 0;
-    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    while (Flags != RAYTRACING_GEOMETRY_NONE)
     {
-        if ((Flags & Bit) != Bit)
-            continue;
-
-        switch (static_cast<RAYTRACING_GEOMETRY_FLAGS>(Bit))
+        auto FlagBit = static_cast<RAYTRACING_GEOMETRY_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
         {
             // clang-format off
             case RAYTRACING_GEOMETRY_OPAQUE:                          Result |= VK_GEOMETRY_OPAQUE_BIT_KHR; break;
@@ -1652,6 +1649,7 @@ VkGeometryFlagsKHR GeometryFlagsToVkGeometryFlags(RAYTRACING_GEOMETRY_FLAGS Flag
             // clang-format on
             default: UNEXPECTED("unknown geometry flag");
         }
+        Flags = Flags & ~FlagBit;
     }
     return Result;
 }
@@ -1662,12 +1660,10 @@ VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INS
                   "Please update the switch below to handle the new ray tracing instance flag");
 
     VkGeometryInstanceFlagsKHR Result = 0;
-    for (Uint32 Bit = 1; Bit <= Flags; Bit <<= 1)
+    while (Flags != RAYTRACING_INSTANCE_NONE)
     {
-        if ((Flags & Bit) != Bit)
-            continue;
-
-        switch (static_cast<RAYTRACING_INSTANCE_FLAGS>(Bit))
+        auto FlagBit = static_cast<RAYTRACING_INSTANCE_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
         {
             // clang-format off
             case RAYTRACING_INSTANCE_TRIANGLE_FACING_CULL_DISABLE:    Result |= VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR; break;
@@ -1677,6 +1673,7 @@ VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INS
             // clang-format on
             default: UNEXPECTED("unknown instance flag");
         }
+        Flags = Flags & ~FlagBit;
     }
     return Result;
 }
@@ -1693,7 +1690,7 @@ VkCopyAccelerationStructureModeKHR CopyASModeToVkCopyAccelerationStructureMode(C
         // clang-format on
         default:
             UNEXPECTED("unknown AS copy mode");
-            return static_cast<VkCopyAccelerationStructureModeKHR>(0);
+            return VK_COPY_ACCELERATION_STRUCTURE_MODE_MAX_ENUM_KHR;
     }
 }
 

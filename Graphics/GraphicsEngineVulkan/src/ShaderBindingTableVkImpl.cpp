@@ -39,55 +39,10 @@ ShaderBindingTableVkImpl::ShaderBindingTableVkImpl(IReferenceCounters*          
                                                    bool                          bIsDeviceInternal) :
     TShaderBindingTableBase{pRefCounters, pRenderDeviceVk, Desc, bIsDeviceInternal}
 {
-    ValidateDesc(Desc);
-
-    const auto& RTLimits = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
-    m_ShaderRecordStride = m_Desc.ShaderRecordSize + RTLimits.shaderGroupHandleSize;
 }
 
 ShaderBindingTableVkImpl::~ShaderBindingTableVkImpl()
 {
-}
-
-void ShaderBindingTableVkImpl::ValidateDesc(const ShaderBindingTableDesc& Desc) const
-{
-    const auto& RTLimits = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
-
-    if (Desc.ShaderRecordSize + RTLimits.shaderGroupHandleSize > RTLimits.maxShaderGroupStride)
-    {
-        LOG_ERROR_AND_THROW("Description of Shader binding table '", (Desc.Name ? Desc.Name : ""),
-                            "' is invalid: ShaderRecordSize is too big, max size is: ", RTLimits.maxShaderGroupStride - RTLimits.shaderGroupHandleSize);
-    }
-}
-
-void ShaderBindingTableVkImpl::Verify() const
-{
-    // AZ TODO
-}
-
-void ShaderBindingTableVkImpl::Reset(const ShaderBindingTableDesc& Desc)
-{
-    m_RayGenShaderRecord.clear();
-    m_MissShadersRecord.clear();
-    m_CallableShadersRecord.clear();
-    m_HitGroupsRecord.clear();
-    m_Changed = true;
-
-    try
-    {
-        ValidateShaderBindingTableDesc(Desc);
-        ValidateDesc(Desc);
-    }
-    catch (const std::runtime_error&)
-    {
-        // AZ TODO
-        return;
-    }
-
-    m_Desc = Desc;
-
-    const auto& RTLimits = GetDevice()->GetPhysicalDevice().GetExtProperties().RayTracing;
-    m_ShaderRecordStride = m_Desc.ShaderRecordSize + RTLimits.shaderGroupHandleSize;
 }
 
 void ShaderBindingTableVkImpl::ResetHitGroups(Uint32 HitShadersPerInstance)

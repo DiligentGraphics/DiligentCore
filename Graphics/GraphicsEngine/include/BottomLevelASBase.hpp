@@ -184,6 +184,18 @@ public:
         return (this->m_State & State) == State;
     }
 
+#ifdef DILIGENT_DEVELOPMENT
+    void UpdateVersion()
+    {
+        m_Version.fetch_add(1);
+    }
+
+    Uint32 GetVersion() const
+    {
+        return m_Version.load();
+    }
+#endif
+
 protected:
     static void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc)
     {
@@ -215,6 +227,10 @@ protected:
     std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher> m_NameToIndex;
 
     StringPool m_StringPool;
+
+#ifdef DILIGENT_DEVELOPMENT
+    std::atomic<Uint32> m_Version{0};
+#endif
 };
 
 } // namespace Diligent

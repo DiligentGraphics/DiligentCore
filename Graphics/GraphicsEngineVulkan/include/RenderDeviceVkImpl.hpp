@@ -201,6 +201,10 @@ public:
     {
         return GetPhysicalDevice().GetExtProperties().RayTracing.shaderGroupHandleSize;
     }
+    Uint32 GetMaxShaderRecordStride() const
+    {
+        return GetPhysicalDevice().GetExtProperties().RayTracing.maxShaderGroupStride;
+    }
 
 private:
     template <typename PSOCreateInfoType>

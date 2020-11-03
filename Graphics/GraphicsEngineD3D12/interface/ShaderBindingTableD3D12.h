@@ -65,6 +65,7 @@ DILIGENT_END_INTERFACE
 
 #if DILIGENT_C_INTERFACE
 
+#    define IShaderBindingTableD3D12_GetD3D12AddressRangeAndStride(This, ...) CALL_IFACE_METHOD(ShaderBindingTableD3D12, GetD3D12AddressRangeAndStride, This, __VA_ARGS__)
 
 #endif
 

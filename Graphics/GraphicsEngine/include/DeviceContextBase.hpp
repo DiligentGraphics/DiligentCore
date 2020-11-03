@@ -1855,13 +1855,23 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
         DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of buffer '", BuffDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
         DEV_CHECK_ERR(VerifyResourceStates(OldState, false), "Invlaid old state specified for buffer '", BuffDesc.Name, "'");
     }
-    else if (RefCntAutoPtr<IBottomLevelAS> pBLAS{Barrier.pResource, IID_BottomLevelAS})
+    else if (RefCntAutoPtr<IBottomLevelAS> pBottomLevelAS{Barrier.pResource, IID_BottomLevelAS})
     {
-        // AZ TODO
+        const auto& BLASDesc = pBottomLevelAS->GetDesc();
+        OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBottomLevelAS->GetState();
+        DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of BLAS '", BLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
+        DEV_CHECK_ERR(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE || Barrier.NewState == RESOURCE_STATE_RAY_TRACING,
+                      "Invlaid new state specified for BLAS '", BLASDesc.Name, "'");
+        DEV_CHECK_ERR(Barrier.TransitionType != STATE_TRANSITION_TYPE_IMMEDIATE, "Split barriers are not supported for BLAS");
     }
-    else if (RefCntAutoPtr<ITopLevelAS> pTLAS{Barrier.pResource, IID_TopLevelAS})
+    else if (RefCntAutoPtr<ITopLevelAS> pTopLevelAS{Barrier.pResource, IID_TopLevelAS})
     {
-        // AZ TODO
+        const auto& TLASDesc = pTopLevelAS->GetDesc();
+        OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pTopLevelAS->GetState();
+        DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of TLAS '", TLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
+        DEV_CHECK_ERR(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE || Barrier.NewState == RESOURCE_STATE_RAY_TRACING,
+                      "Invlaid new state specified for TLAS '", TLASDesc.Name, "'");
+        DEV_CHECK_ERR(Barrier.TransitionType != STATE_TRANSITION_TYPE_IMMEDIATE, "Split barriers are not supported for TLAS");
     }
     else
     {
@@ -1943,6 +1953,12 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLASBuildAttribs& Attribs, int)
 {
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("BuildBLAS command must be performed outside of render pass");
+        return false;
+    }
+
     if (Attribs.pBLAS == nullptr)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBLAS must not be null");
@@ -2090,6 +2106,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
             return false;
         }
     }
+#endif // DILIGENT_DEVELOPMENT
 
     const auto& BLASDesc = Attribs.pBLAS->GetDesc();
 
@@ -2113,7 +2130,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
         return false;
     }
 
-    if (ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset > Attribs.pBLAS->GetScratchBufferSizes().Build)
+    if (ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset < Attribs.pBLAS->GetScratchBufferSizes().Build)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pScratchBuffer size is too small, use pBLAS->GetScratchBufferSizes().Build to get required size for scratch buffer");
         return false;
@@ -2124,7 +2141,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pScratchBuffer must be created with BIND_RAY_TRACING flag");
         return false;
     }
-#endif // DILIGENT_DEVELOPMENT
 
     return true;
 }
@@ -2132,6 +2148,12 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
 template <typename BaseInterface, typename ImplementationTraits>
 bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLASBuildAttribs& Attribs, int)
 {
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("BuildTLAS command must be performed outside of render pass");
+        return false;
+    }
+
     if (Attribs.pTLAS == nullptr)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pTLAS must not be null");
@@ -2162,7 +2184,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         return false;
     }
 
-#ifdef DILIGENT_DEVELOPMENT
     const auto& TLASDesc = Attribs.pTLAS->GetDesc();
 
     if (Attribs.InstanceCount > TLASDesc.MaxInstanceCount)
@@ -2171,9 +2192,11 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         return false;
     }
 
-    const auto&  InstDesc          = Attribs.pInstanceBuffer->GetDesc();
-    const size_t InstDataSize      = Attribs.InstanceCount * TLAS_INSTANCE_DATA_SIZE;
-    Uint32       AutoOffsetCounter = 0;
+    const auto&  InstDesc     = Attribs.pInstanceBuffer->GetDesc();
+    const size_t InstDataSize = Attribs.InstanceCount * TLAS_INSTANCE_DATA_SIZE;
+
+#ifdef DILIGENT_DEVELOPMENT
+    Uint32 AutoOffsetCounter = 0;
 
     // calculate instance data size
     for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
@@ -2203,6 +2226,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: exactly all pInstances[i].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO or not");
         return false;
     }
+#endif // DILIGENT_DEVELOPMENT
 
     if (Attribs.InstanceBufferOffset > InstDesc.uiSizeInBytes)
     {
@@ -2210,15 +2234,15 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         return false;
     }
 
-    if (InstDesc.uiSizeInBytes - Attribs.InstanceBufferOffset > InstDataSize)
+    if (InstDesc.uiSizeInBytes - Attribs.InstanceBufferOffset < InstDataSize)
     {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceaBuffer size is too small, ...");
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceBuffer size is too small, ...");
         return false;
     }
 
     if ((InstDesc.BindFlags & BIND_RAY_TRACING) != BIND_RAY_TRACING)
     {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceaBuffer must be created with BIND_RAY_TRACING flag");
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstanceBuffer must be created with BIND_RAY_TRACING flag");
         return false;
     }
 
@@ -2230,7 +2254,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         return false;
     }
 
-    if (ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset > Attribs.pTLAS->GetScratchBufferSizes().Build)
+    if (ScratchDesc.uiSizeInBytes - Attribs.ScratchBufferOffset < Attribs.pTLAS->GetScratchBufferSizes().Build)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pScratchBuffer size is too small, use pTLAS->GetScratchBufferSizes().Build to get required size for scratch buffer");
         return false;
@@ -2241,7 +2265,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
         LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pScratchBuffer must be created with BIND_RAY_TRACING flag");
         return false;
     }
-#endif // DILIGENT_DEVELOPMENT
 
     return true;
 }
@@ -2258,6 +2281,12 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
     if (Attribs.pDst == nullptr)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pDst must not be null");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("CopyBLAS command must be performed outside of render pass");
         return false;
     }
 
@@ -2338,7 +2367,19 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const Copy
         return false;
     }
 
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("CopyTLAS command must be performed outside of render pass");
+        return false;
+    }
+
 #ifdef DILIGENT_DEVELOPMENT
+    if (!ValidatedCast<TopLevelASType>(Attribs.pSrc)->CheckBLASVersion())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc must be rebuilded to apply BLAS changes before being copied to another TLAS");
+        return false;
+    }
+
     if (Attribs.Mode == COPY_AS_MODE_CLONE)
     {
         auto& SrcDesc = Attribs.pSrc->GetDesc();
@@ -2367,6 +2408,33 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const Tra
     if (Attribs.pSBT == nullptr)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: pSBT must not be null");
+        return false;
+    }
+
+#ifdef DILIGENT_DEVELOPMENT
+    if (!Attribs.pSBT->Verify())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: pSBT content is not valid");
+        return false;
+    }
+#endif // DILIGENT_DEVELOPMENT
+
+    if (!m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: no pipeline state is bound.");
+        return false;
+    }
+
+    if (!m_pPipelineState->GetDesc().IsRayTracingPipeline())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: pipeline state '", m_pPipelineState->GetDesc().Name, "' is not a ray tracing pipeline.");
+        return false;
+    }
+
+    if (Attribs.pSBT->GetDesc().pPSO != m_pPipelineState)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline ", m_pPipelineState->GetDesc().Name,
+                          "doesn't match the pipeline ", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, " that was used in ShaderBindingTable");
         return false;
     }
 

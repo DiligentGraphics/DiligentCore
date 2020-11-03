@@ -51,9 +51,6 @@ struct ShaderBindingTableDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     
     /// AZ TODO
     IPipelineState* pPSO                  DEFAULT_INITIALIZER(nullptr);
-
-    // Size of the additional data passed to the shader, maximum size is 4064 bytes.
-    Uint32          ShaderRecordSize      DEFAULT_INITIALIZER(0);
     
     /// AZ TODO
     Uint32          HitShadersPerInstance DEFAULT_INITIALIZER(1);
@@ -114,7 +111,7 @@ DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
 #endif
     
     /// AZ TODO
-    VIRTUAL void METHOD(Verify)(THIS) CONST PURE;
+    VIRTUAL Bool METHOD(Verify)(THIS) CONST PURE;
     
     /// AZ TODO
     VIRTUAL void METHOD(Reset)(THIS_

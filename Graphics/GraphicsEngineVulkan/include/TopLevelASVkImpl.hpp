@@ -34,15 +34,16 @@
 #include "RenderDeviceVkImpl.hpp"
 #include "TopLevelASVk.h"
 #include "TopLevelASBase.hpp"
+#include "BottomLevelASVkImpl.hpp"
 #include "VulkanUtilities/VulkanObjectWrappers.hpp"
 
 namespace Diligent
 {
 
-class TopLevelASVkImpl final : public TopLevelASBase<ITopLevelASVk, RenderDeviceVkImpl>
+class TopLevelASVkImpl final : public TopLevelASBase<ITopLevelASVk, BottomLevelASVkImpl, RenderDeviceVkImpl>
 {
 public:
-    using TTopLevelASBase = TopLevelASBase<ITopLevelASVk, RenderDeviceVkImpl>;
+    using TTopLevelASBase = TopLevelASBase<ITopLevelASVk, BottomLevelASVkImpl, RenderDeviceVkImpl>;
 
     TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
                      RenderDeviceVkImpl*   pRenderDeviceVk,

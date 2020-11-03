@@ -55,7 +55,7 @@ void main()
                 gl_RayFlagsNoneEXT,      // rayFlags
                 0xFF,                    // cullMask
                 0,                       // sbtRecordOffset
-                0,                       // sbtRecordStride
+                1,                       // sbtRecordStride
                 0,                       // missIndex
                 origin,                  // ray origin
                 0.01,                    // ray min range
@@ -122,7 +122,7 @@ void main()
                 gl_RayFlagsSkipClosestHitShaderEXT,
                 0xFF,                    // cullMask
                 0,                       // sbtRecordOffset
-                0,                       // sbtRecordStride
+                1,                       // sbtRecordStride
                 0,                       // missIndex
                 origin,                  // ray origin
                 0.01,                    // ray min range
@@ -207,7 +207,7 @@ void main()
                 gl_RayFlagsNoneEXT,      // rayFlags
                 0xFF,                    // cullMask
                 0,                       // sbtRecordOffset
-                0,                       // sbtRecordStride
+                1,                       // sbtRecordStride
                 0,                       // missIndex
                 origin,                  // ray origin
                 0.01,                    // ray min range
@@ -277,6 +277,120 @@ void main()
 }
 )glsl"
 };
+// clang-format on
+
+
+// clang-format off
+const std::string RayTracingTest4_RG{
+R"glsl(
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+layout(set=0, binding=0) uniform accelerationStructureEXT  g_TLAS;
+layout(set=0, binding=1, rgba8) uniform image2D  g_ColorBuffer;
+
+layout(location=0) rayPayloadEXT vec4  payload;
+
+void main()
+{
+    const vec2 uv        = vec2(gl_LaunchIDEXT.xy) / vec2(gl_LaunchSizeEXT.xy - 1);
+    const vec3 origin    = vec3(uv.x, 1.0 - uv.y, -1.0);
+    const vec3 direction = vec3(0.0, 0.0, 1.0);
+
+    payload = vec4(0.0);
+    traceRayEXT(g_TLAS,                  // acceleration structure
+                gl_RayFlagsNoneEXT,      // rayFlags
+                0xFF,                    // cullMask
+                0,                       // sbtRecordOffset
+                1,                       // sbtRecordStride
+                0,                       // missIndex
+                origin,                  // ray origin
+                0.01,                    // ray min range
+                direction,               // ray direction
+                10.0,                    // ray max range
+                0);                      // payload location
+
+    imageStore(g_ColorBuffer, ivec2(gl_LaunchIDEXT), payload);
+}
+)glsl"
+};
+
+const std::string RayTracingTest4_RM{
+R"glsl(
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+layout(location=0) rayPayloadInEXT vec4  payload;
+
+void main()
+{
+    payload = vec4(0.0, 0.0, 0.2, 1.0);
+}
+)glsl"
+};
+
+const std::string RayTracingTest4_Uniforms{
+R"glsl(
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+layout(shaderRecordEXT) buffer ShaderRecord
+{
+    vec4 Weights;
+};
+
+layout(location=0) rayPayloadInEXT vec4  payload;
+hitAttributeEXT vec2  hitAttribs;
+
+layout(set=0, binding=2, std430) readonly buffer PerInstanceData {
+    uint PrimitiveOffsets[3];
+} g_PerInstance[2];
+
+layout(set=0, binding=3, std430) readonly buffer PrimitiveData {
+    uvec4 g_Primitives[9];
+};
+
+struct Vertex
+{
+    vec4 Pos;
+    vec4 Color1;
+    vec4 Color2;
+};
+layout(set=0, binding=4, std430) readonly buffer VertexData {
+    Vertex g_Vertices[16];
+};
+)glsl"
+};
+
+const std::string RayTracingTest4_RCH1 = RayTracingTest4_Uniforms +
+R"glsl(
+void main()
+{
+    vec3   barycentrics = vec3(1.0f - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y);// * Weights.xyz;
+    uint   primOffset   = g_PerInstance[gl_InstanceID].PrimitiveOffsets[gl_GeometryIndexEXT];
+    uvec4  triFace      = g_Primitives[primOffset + gl_PrimitiveID];
+    Vertex v0           = g_Vertices[triFace.x];
+    Vertex v1           = g_Vertices[triFace.y];
+    Vertex v2           = g_Vertices[triFace.z];
+    vec4   col          = v0.Color2 * barycentrics.x + v1.Color2 * barycentrics.y + v2.Color2 * barycentrics.z;
+    payload = col;
+}
+)glsl";
+
+const std::string RayTracingTest4_RCH2 = RayTracingTest4_Uniforms +
+R"glsl(
+void main()
+{
+    vec3   barycentrics = vec3(1.0f - hitAttribs.x - hitAttribs.y, hitAttribs.x, hitAttribs.y);// * Weights.xyz;
+    uint   primOffset   = g_PerInstance[gl_InstanceID].PrimitiveOffsets[gl_GeometryIndexEXT];
+    uvec4  triFace      = g_Primitives[primOffset + gl_PrimitiveID];
+    Vertex v0           = g_Vertices[triFace.x];
+    Vertex v1           = g_Vertices[triFace.y];
+    Vertex v2           = g_Vertices[triFace.z];
+    vec4   col          = v0.Color1 * barycentrics.x + v1.Color1 * barycentrics.y + v2.Color1 * barycentrics.z;
+    payload = col;
+}
+)glsl";
 // clang-format on
 
 

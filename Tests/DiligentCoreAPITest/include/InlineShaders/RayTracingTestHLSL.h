@@ -86,7 +86,7 @@ R"hlsl(
 [shader("closesthit")]
 void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-    float3 barycentrics = float3(1 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
+    float3 barycentrics = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
     payload.Color = float4(barycentrics, 1.0);
 }
 )hlsl";
@@ -147,7 +147,7 @@ R"hlsl(
 [shader("anyhit")]
 void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
-    float3 barycentrics = float3(1 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
+    float3 barycentrics = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);
     if (barycentrics.y > barycentrics.x)
         IgnoreHit();
     else
@@ -237,6 +237,101 @@ void main()
         SphereIntersectionAttributes attr = {float3(0.5, 0.5, 0.5)};
         ReportHit(hitT, 3, attr);
     }
+}
+)hlsl";
+// clang-format on
+
+
+// clang-format off
+const std::string RayTracingTest4_RG = RayTracingTest_Payload +
+R"hlsl(
+RaytracingAccelerationStructure g_TLAS        : register(t0);
+RWTexture2D<float4>             g_ColorBuffer : register(u0);
+
+[shader("raygeneration")]
+void main()
+{
+    const float2 uv = float2(DispatchRaysIndex().xy) / float2(DispatchRaysDimensions().xy - 1);
+
+    RayDesc ray;
+    ray.Origin    = float3(uv.x, 1.0 - uv.y, -1.0);
+    ray.Direction = float3(0.0, 0.0, 1.0);
+    ray.TMin      = 0.01;
+    ray.TMax      = 10.0;
+
+    RTPayload payload = {float4(0, 0, 0, 0)};
+    TraceRay(g_TLAS,         // Acceleration Structure
+             RAY_FLAG_NONE,  // Ray Flags
+             ~0,             // Instance Inclusion Mask
+             0,              // Ray Contribution To Hit Group Index
+             1,              // Multiplier For Geometry Contribution To Hit Group Index
+             0,              // Miss Shader Index
+             ray,
+             payload);
+
+    g_ColorBuffer[DispatchRaysIndex().xy] = payload.Color;
+}
+)hlsl";
+
+const std::string RayTracingTest4_RM = RayTracingTest_Payload +
+R"hlsl(
+[shader("miss")]
+void main(inout RTPayload payload)
+{
+    payload.Color = float4(0.0, 0.0, 0.2, 1.0);
+}
+)hlsl";
+
+const std::string RayTracingTest4_Uniforms = RayTracingTest_Payload +
+R"hlsl(
+struct Vertex
+{
+    float4 Pos;
+    float4 Color1;
+    float4 Color2;
+};
+StructuredBuffer<Vertex> g_Vertices       : register(t1); // array size = 16
+StructuredBuffer<uint>   g_PerInstance[2] : register(t2); // array size = 3
+StructuredBuffer<uint4>  g_Primitives     : register(t4); // array size = 9
+
+// local root constants
+struct LocalRootConst
+{
+    float4 Weight;
+};
+//[[vk::shader_record_ext]]
+//ConstantBuffer<LocalRootConst> g_LocalRoot : register(b0);
+)hlsl";
+
+const std::string RayTracingTest4_RCH1 = RayTracingTest4_Uniforms + 
+R"hlsl(
+[shader("closesthit")]
+void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
+{
+    float3 barycentrics = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);// * g_LocalRoot.Weight.xyz;
+    uint   primOffset   = g_PerInstance[InstanceIndex()][GeometryIndex()];
+    uint4  triFace      = g_Primitives[primOffset + PrimitiveIndex()];
+    Vertex v0           = g_Vertices[triFace.x];
+    Vertex v1           = g_Vertices[triFace.y];
+    Vertex v2           = g_Vertices[triFace.z];
+    float4 col          = v0.Color2 * barycentrics.x + v1.Color2 * barycentrics.y + v2.Color2 * barycentrics.z;
+    payload.Color = col;
+}
+)hlsl";
+
+const std::string RayTracingTest4_RCH2 = RayTracingTest4_Uniforms + 
+R"hlsl(
+[shader("closesthit")]
+void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
+{
+    float3 barycentrics = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);// * g_LocalRoot.Weight.xyz;
+    uint   primOffset   = g_PerInstance[InstanceIndex()][GeometryIndex()];
+    uint4  triFace      = g_Primitives[primOffset + PrimitiveIndex()];
+    Vertex v0           = g_Vertices[triFace.x];
+    Vertex v1           = g_Vertices[triFace.y];
+    Vertex v2           = g_Vertices[triFace.z];
+    float4 col          = v0.Color1 * barycentrics.x + v1.Color1 * barycentrics.y + v2.Color1 * barycentrics.z;
+    payload.Color = col;
 }
 )hlsl";
 // clang-format on

@@ -51,10 +51,6 @@ public:
                              bool                          bIsDeviceInternal = false);
     ~ShaderBindingTableVkImpl();
 
-    virtual void DILIGENT_CALL_TYPE Verify() const override;
-
-    virtual void DILIGENT_CALL_TYPE Reset(const ShaderBindingTableDesc& Desc) override;
-
     virtual void DILIGENT_CALL_TYPE ResetHitGroups(Uint32 HitShadersPerInstance) override;
     virtual void DILIGENT_CALL_TYPE BindAll(const BindAllAttribs& Attribs) override;
 
@@ -66,9 +62,6 @@ public:
                                                               VkStridedBufferRegionKHR&      CallableShaderBindingTable) override;
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableVk, TShaderBindingTableBase);
-
-private:
-    void ValidateDesc(const ShaderBindingTableDesc& Desc) const;
 
 private:
     RefCntAutoPtr<IBuffer> m_pBuffer;
