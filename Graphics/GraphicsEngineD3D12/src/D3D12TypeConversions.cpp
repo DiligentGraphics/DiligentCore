@@ -367,7 +367,7 @@ public:
     StateFlagBitPosToD3D12ResourceState()
     {
         static_assert((1 << MaxFlagBitPos) == RESOURCE_STATE_MAX_BIT, "This function must be updated to handle new resource state flag");
-        for (Uint32 bit = 0; bit <= MaxFlagBitPos; ++bit)
+        for (Uint32 bit = 0; bit < FlagBitPosToResStateMap.size(); ++bit)
         {
             FlagBitPosToResStateMap[bit] = ResourceStateFlagToD3D12ResourceState(static_cast<RESOURCE_STATE>(1 << bit));
         }
@@ -436,7 +436,7 @@ class D3D12StateFlagBitPosToResourceState
 public:
     D3D12StateFlagBitPosToResourceState()
     {
-        for (Uint32 bit = 0; bit <= MaxFlagBitPos; ++bit)
+        for (Uint32 bit = 0; bit < FlagBitPosToResStateMap.size(); ++bit)
         {
             FlagBitPosToResStateMap[bit] = D3D12ResourceStateToResourceStateFlags(static_cast<D3D12_RESOURCE_STATES>(1 << bit));
         }
@@ -651,6 +651,48 @@ D3D12_RAYTRACING_INSTANCE_FLAGS InstanceFlagsToD3D12RTInstanceFlags(RAYTRACING_I
         Flags &= ~FlagBit;
     }
     return Result;
+}
+
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS BuildASFlagsToD3D12ASBuildFlags(RAYTRACING_BUILD_AS_FLAGS Flags)
+{
+    static_assert(RAYTRACING_BUILD_AS_FLAGS_LAST == RAYTRACING_BUILD_AS_LOW_MEMORY,
+                  "Please update the switch below to handle the new acceleration structure build flag");
+
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Result = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+    while (Flags != RAYTRACING_BUILD_AS_NONE)
+    {
+        auto FlagBit = static_cast<RAYTRACING_BUILD_AS_FLAGS>(1 << PlatformMisc::GetLSB(Uint32{Flags}));
+        switch (FlagBit)
+        {
+            // clang-format off
+            case RAYTRACING_BUILD_AS_ALLOW_UPDATE:      Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;      break;
+            case RAYTRACING_BUILD_AS_ALLOW_COMPACTION:  Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;  break;
+            case RAYTRACING_BUILD_AS_PREFER_FAST_TRACE: Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE; break;
+            case RAYTRACING_BUILD_AS_PREFER_FAST_BUILD: Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD; break;
+            case RAYTRACING_BUILD_AS_LOW_MEMORY:        Result |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;   break;
+            // clang-format on
+            default: UNEXPECTED("unknown build AS flag");
+        }
+        Flags &= ~FlagBit;
+    }
+    return Result;
+}
+
+D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE CopyASModeToD3D12ASCopyMode(COPY_AS_MODE Mode)
+{
+    static_assert(COPY_AS_MODE_LAST == COPY_AS_MODE_COMPACT,
+                  "Please update the switch below to handle the new copy AS mode");
+
+    switch (Mode)
+    {
+        // clang-format off
+        case COPY_AS_MODE_CLONE:   return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_CLONE;
+        case COPY_AS_MODE_COMPACT: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT;
+        // clang-format on
+        default:
+            UNEXPECTED("unknown AS copy mode");
+            return static_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE>(~0u);
+    }
 }
 
 } // namespace Diligent

@@ -57,16 +57,6 @@ public:
     virtual void DILIGENT_CALL_TYPE ResetHitGroups(Uint32 HitShadersPerInstance) override;
 
     virtual void DILIGENT_CALL_TYPE BindAll(const BindAllAttribs& Attribs) override;
-
-    virtual void DILIGENT_CALL_TYPE GetD3D12AddressRangeAndStride(IDeviceContextD3D12*                        pContext,
-                                                                  RESOURCE_STATE_TRANSITION_MODE              TransitionMode,
-                                                                  D3D12_GPU_VIRTUAL_ADDRESS_RANGE&            RaygenShaderBindingTable,
-                                                                  D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& MissShaderBindingTable,
-                                                                  D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& HitShaderBindingTable,
-                                                                  D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE& CallableShaderBindingTable) override;
-
-private:
-    RefCntAutoPtr<IBuffer> m_pBuffer;
 };
 
 } // namespace Diligent

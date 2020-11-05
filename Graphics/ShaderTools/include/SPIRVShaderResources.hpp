@@ -55,7 +55,7 @@ struct Resource;
 namespace Diligent
 {
 
-// sizeof(SPIRVShaderResourceAttribs) == 24, msvc x64
+// sizeof(SPIRVShaderResourceAttribs) == 32, msvc x64
 struct SPIRVShaderResourceAttribs
 {
     enum ResourceType : Uint8
@@ -94,7 +94,10 @@ public:
       // Offset in SPIRV words (uint32_t) of binding & descriptor set decorations in SPIRV binary
 /* 16 */const uint32_t              BindingDecorationOffset;
 /* 20 */const uint32_t              DescriptorSetDecorationOffset;
-/* 24 */ // End of structure
+
+/* 24 */const Uint32                BufferStaticSize;
+/* 28 */const Uint32                BufferStride;
+/* 32 */ // End of structure
 
     // clang-format on
 
@@ -102,7 +105,9 @@ public:
                                const diligent_spirv_cross::Resource& Res,
                                const char*                           _Name,
                                ResourceType                          _Type,
-                               Uint32                                _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd) noexcept;
+                               Uint32                                _SamplerOrSepImgInd = InvalidSepSmplrOrImgInd,
+                               Uint32                                _BufferStaticSize   = 0,
+                               Uint32                                _BufferStride       = 0) noexcept;
 
     bool IsValidSepSamplerAssigned() const
     {

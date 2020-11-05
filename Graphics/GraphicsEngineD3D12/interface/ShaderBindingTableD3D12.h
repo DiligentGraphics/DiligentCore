@@ -50,22 +50,12 @@ static const INTERFACE_ID IID_ShaderBindingTableD3D12 =
 /// Exposes Direct3D12-specific functionality of a shader binding table object.
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTableD3D12, IShaderBindingTable)
 {
-    /// AZ TODO
-    VIRTUAL void METHOD(GetD3D12AddressRangeAndStride)(THIS_
-                                                       IDeviceContextD3D12*                           pContext,
-                                                       RESOURCE_STATE_TRANSITION_MODE                 TransitionMode,
-                                                       D3D12_GPU_VIRTUAL_ADDRESS_RANGE            REF RaygenShaderBindingTable,
-                                                       D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE REF MissShaderBindingTable,
-                                                       D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE REF HitShaderBindingTable,
-                                                       D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE REF CallableShaderBindingTable) PURE;
 };
 DILIGENT_END_INTERFACE
 
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-#    define IShaderBindingTableD3D12_GetD3D12AddressRangeAndStride(This, ...) CALL_IFACE_METHOD(ShaderBindingTableD3D12, GetD3D12AddressRangeAndStride, This, __VA_ARGS__)
 
 #endif
 

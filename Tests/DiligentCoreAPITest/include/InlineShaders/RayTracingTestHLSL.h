@@ -325,7 +325,7 @@ R"hlsl(
 void main(inout RTPayload payload, in BuiltInTriangleIntersectionAttributes attr)
 {
     float3 barycentrics = float3(1.0 - attr.barycentrics.x - attr.barycentrics.y, attr.barycentrics.x, attr.barycentrics.y);// * g_LocalRoot.Weight.xyz;
-    uint   primOffset   = g_PerInstance[InstanceIndex()][GeometryIndex()];
+    uint   primOffset   = g_PerInstance[InstanceIndex()][GeometryIndex()]; // AZ TODO: GeometryIndex required DXR 1.1
     uint4  triFace      = g_Primitives[primOffset + PrimitiveIndex()];
     Vertex v0           = g_Vertices[triFace.x];
     Vertex v1           = g_Vertices[triFace.y];

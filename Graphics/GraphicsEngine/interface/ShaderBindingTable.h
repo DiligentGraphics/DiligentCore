@@ -46,17 +46,16 @@ static const INTERFACE_ID IID_ShaderBindingTable =
 
 // clang-format off
 
-/// AZ TODO
+/// Shader binding table description.
 struct ShaderBindingTableDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     
-    /// AZ TODO
+    /// Ray tracing pipeline state object from which shaders will be taken.
     IPipelineState* pPSO                  DEFAULT_INITIALIZER(nullptr);
     
     /// AZ TODO
     Uint32          HitShadersPerInstance DEFAULT_INITIALIZER(1);
     
 #if DILIGENT_CPP_INTERFACE
-    /// AZ TODO
     ShaderBindingTableDesc() noexcept {}
 #endif
 };
@@ -89,7 +88,6 @@ struct BindAllAttribs
     Uint32        HitSRDataSize       DEFAULT_INITIALIZER(0);        // stride will be calculated as (HitSRDataSize / HitGroupCount)
     
 #if DILIGENT_CPP_INTERFACE
-    /// AZ TODO
     BindAllAttribs() noexcept {}
 #endif
 };
@@ -102,7 +100,9 @@ typedef struct BindAllAttribs BindAllAttribs;
     IDeviceObjectInclusiveMethods;               \
     IShaderBindingTableMethods ShaderBindingTable
 
-/// AZ TODO
+/// Shader binding table interface
+
+/// Defines the methods to manipulate a SBT object
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTable, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE

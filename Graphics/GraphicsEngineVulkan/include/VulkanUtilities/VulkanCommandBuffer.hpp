@@ -637,6 +637,21 @@ public:
 #endif
     }
 
+    __forceinline void WriteAccelerationStructuresProperties(VkAccelerationStructureKHR accelerationStructure, VkQueryType queryType, VkQueryPool queryPool, uint32_t firstQuery)
+    {
+#if DILIGENT_USE_VOLK
+        VERIFY_EXPR(m_VkCmdBuffer != VK_NULL_HANDLE);
+        if (m_State.RenderPass != VK_NULL_HANDLE)
+        {
+            // Write AS properties operations must be performed outside of render pass.
+            EndRenderPass();
+        }
+        vkCmdWriteAccelerationStructuresPropertiesKHR(m_VkCmdBuffer, 1, &accelerationStructure, queryType, queryPool, firstQuery);
+#else
+        UNSUPPORTED("Ray tracing is not supported when vulkan library is linked statically");
+#endif
+    }
+
     __forceinline void TraceRays(const VkStridedBufferRegionKHR& RaygenShaderBindingTable,
                                  const VkStridedBufferRegionKHR& MissShaderBindingTable,
                                  const VkStridedBufferRegionKHR& HitShaderBindingTable,

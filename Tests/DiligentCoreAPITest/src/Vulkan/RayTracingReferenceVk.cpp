@@ -153,30 +153,19 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
 
     // Create ray tracing pipeline
     {
-        VkDescriptorSetLayoutCreateInfo                   DescriptorSetCI  = {};
-        VkPipelineLayoutCreateInfo                        PipelineLayoutCI = {};
-        std::vector<VkDescriptorSetLayoutBinding>         Bindings;
-        std::vector<VkShaderModule>                       ShaderModules;
-        std::vector<VkPipelineShaderStageCreateInfo>      RTStages;
-        std::vector<VkRayTracingShaderGroupCreateInfoKHR> RTShaderGroups;
-        VkRayTracingPipelineCreateInfoKHR                 PipelineCI = {};
+        VkDescriptorSetLayoutCreateInfo   DescriptorSetCI  = {};
+        VkPipelineLayoutCreateInfo        PipelineLayoutCI = {};
+        VkRayTracingPipelineCreateInfoKHR PipelineCI       = {};
+        RTGroupsHelper                    Helper;
 
-        PSOCtor(Bindings, ShaderModules, RTStages, RTShaderGroups);
+        PSOCtor(Helper);
 
-        VkDescriptorSetLayoutBinding Binding = {};
-        Binding.binding                      = 0;
-        Binding.descriptorCount              = 1;
-        Binding.descriptorType               = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-        Binding.stageFlags                   = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-        Bindings.push_back(Binding);
-
-        Binding.binding        = 1;
-        Binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        Bindings.push_back(Binding);
+        Helper.AddBinding(0, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+        Helper.AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_RAYGEN_BIT_KHR);
 
         DescriptorSetCI.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        DescriptorSetCI.bindingCount = static_cast<Uint32>(Bindings.size());
-        DescriptorSetCI.pBindings    = Bindings.data();
+        DescriptorSetCI.bindingCount = static_cast<Uint32>(Helper.Bindings.size());
+        DescriptorSetCI.pBindings    = Helper.Bindings.data();
 
         res = vkCreateDescriptorSetLayout(Ctx.vkDevice, &DescriptorSetCI, nullptr, &Ctx.vkSetLayout);
         ASSERT_GE(res, 0);
@@ -189,13 +178,12 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
         vkCreatePipelineLayout(Ctx.vkDevice, &PipelineLayoutCI, nullptr, &Ctx.vkLayout);
         ASSERT_TRUE(Ctx.vkLayout != VK_NULL_HANDLE);
 
-
         PipelineCI.sType                  = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR;
         PipelineCI.flags                  = 0;
-        PipelineCI.stageCount             = static_cast<Uint32>(RTStages.size());
-        PipelineCI.pStages                = RTStages.data();
-        PipelineCI.groupCount             = static_cast<Uint32>(RTShaderGroups.size());
-        PipelineCI.pGroups                = RTShaderGroups.data();
+        PipelineCI.stageCount             = static_cast<Uint32>(Helper.Stages.size());
+        PipelineCI.pStages                = Helper.Stages.data();
+        PipelineCI.groupCount             = static_cast<Uint32>(Helper.Groups.size());
+        PipelineCI.pGroups                = Helper.Groups.data();
         PipelineCI.maxRecursionDepth      = 0;
         PipelineCI.layout                 = Ctx.vkLayout;
         PipelineCI.libraries.sType        = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR;
@@ -207,7 +195,7 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, PSOCtorType&& P
         ASSERT_GE(res, 0);
         ASSERT_TRUE(Ctx.vkPipeline != VK_NULL_HANDLE);
 
-        for (auto& SM : ShaderModules)
+        for (auto& SM : Helper.Modules)
         {
             vkDestroyShaderModule(Ctx.vkDevice, SM, nullptr);
         }
@@ -624,6 +612,85 @@ void ClearRenderTarget(RTContext& Ctx, TestingSwapChainVk* pTestingSwapChainVk)
 } // namespace
 
 
+struct RTGroupsHelper
+{
+    std::vector<VkDescriptorSetLayoutBinding>         Bindings;
+    std::vector<VkShaderModule>                       Modules;
+    std::vector<VkPipelineShaderStageCreateInfo>      Stages;
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR> Groups;
+
+    void SetShaderCount(Uint32 NumShaders, Uint32 NumGroups)
+    {
+        Modules.resize(NumShaders);
+        Stages.resize(NumShaders);
+        Groups.resize(NumGroups);
+    }
+
+    void SetStage(Uint32 StageIndex, SHADER_TYPE ShaderType, const String& Source)
+    {
+        auto* pEnv                = TestingEnvironmentVk::GetInstance();
+        Modules[StageIndex]       = pEnv->CreateShaderModule(ShaderType, Source);
+        Stages[StageIndex].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        Stages[StageIndex].module = Modules[StageIndex];
+        Stages[StageIndex].pName  = "main";
+
+        switch (ShaderType)
+        {
+            // clang-format off
+            case SHADER_TYPE_RAY_GEN:          Stages[StageIndex].stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;       break;
+            case SHADER_TYPE_RAY_MISS:         Stages[StageIndex].stage = VK_SHADER_STAGE_MISS_BIT_KHR;         break;
+            case SHADER_TYPE_RAY_CLOSEST_HIT:  Stages[StageIndex].stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;  break;
+            case SHADER_TYPE_RAY_ANY_HIT:      Stages[StageIndex].stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;      break;
+            case SHADER_TYPE_RAY_INTERSECTION: Stages[StageIndex].stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR; break;
+            case SHADER_TYPE_CALLABLE:         Stages[StageIndex].stage = VK_SHADER_STAGE_CALLABLE_BIT_KHR;     break;
+                // clang-format on
+        }
+    }
+
+    void SetGeneralGroup(Uint32 GroupIndex, Uint32 StageIndex)
+    {
+        Groups[GroupIndex].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        Groups[GroupIndex].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
+        Groups[GroupIndex].generalShader      = StageIndex;
+        Groups[GroupIndex].closestHitShader   = VK_SHADER_UNUSED_KHR;
+        Groups[GroupIndex].anyHitShader       = VK_SHADER_UNUSED_KHR;
+        Groups[GroupIndex].intersectionShader = VK_SHADER_UNUSED_KHR;
+    }
+
+    void SetTriangleHitGroup(Uint32 GroupIndex, Uint32 ClosestHitShader, Uint32 AnyHitShader = VK_SHADER_UNUSED_KHR)
+    {
+        Groups[GroupIndex].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        Groups[GroupIndex].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
+        Groups[GroupIndex].generalShader      = VK_SHADER_UNUSED_KHR;
+        Groups[GroupIndex].closestHitShader   = ClosestHitShader;
+        Groups[GroupIndex].anyHitShader       = AnyHitShader;
+        Groups[GroupIndex].intersectionShader = VK_SHADER_UNUSED_KHR;
+    }
+
+    void SetProceduralHitGroup(Uint32 GroupIndex, Uint32 IntersectionShader, Uint32 ClosestHitShader, Uint32 AnyHitShader = VK_SHADER_UNUSED_KHR)
+    {
+        Groups[GroupIndex].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
+        Groups[GroupIndex].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
+        Groups[GroupIndex].generalShader      = VK_SHADER_UNUSED_KHR;
+        Groups[GroupIndex].closestHitShader   = ClosestHitShader;
+        Groups[GroupIndex].anyHitShader       = AnyHitShader;
+        Groups[GroupIndex].intersectionShader = IntersectionShader;
+    }
+
+    void AddBinding(uint32_t binding, VkDescriptorType descriptorType, uint32_t descriptorCount, VkShaderStageFlags stageFlags)
+    {
+        VkDescriptorSetLayoutBinding DSBinding = {};
+
+        DSBinding.binding            = binding;
+        DSBinding.descriptorType     = descriptorType;
+        DSBinding.descriptorCount    = descriptorCount;
+        DSBinding.stageFlags         = stageFlags;
+        DSBinding.pImmutableSamplers = nullptr;
+
+        Bindings.push_back(DSBinding);
+    }
+};
+
 void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
 {
     enum
@@ -648,53 +715,14 @@ void RayTracingTriangleClosestHitReferenceVk(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
-                        [pEnv](std::vector<VkDescriptorSetLayoutBinding>&         Bindings,
-                               std::vector<VkShaderModule>&                       Modules,
-                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages,
-                               std::vector<VkRayTracingShaderGroupCreateInfoKHR>& Groups) //
-                        {
-                            Modules.resize(NUM_SHADERS);
-                            Stages.resize(NUM_SHADERS);
-                            Groups.resize(NUM_GROUPS);
-
-                            Modules[RAYGEN_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_GEN, GLSL::RayTracingTest1_RG);
-                            Stages[RAYGEN_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[RAYGEN_SHADER].stage  = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-                            Stages[RAYGEN_SHADER].module = Modules[RAYGEN_SHADER];
-                            Stages[RAYGEN_SHADER].pName  = "main";
-
-                            Modules[MISS_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest1_RM);
-                            Stages[MISS_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[MISS_SHADER].stage  = VK_SHADER_STAGE_MISS_BIT_KHR;
-                            Stages[MISS_SHADER].module = Modules[MISS_SHADER];
-                            Stages[MISS_SHADER].pName  = "main";
-
-                            Modules[HIT_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest1_RCH);
-                            Stages[HIT_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[HIT_SHADER].stage  = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-                            Stages[HIT_SHADER].module = Modules[HIT_SHADER];
-                            Stages[HIT_SHADER].pName  = "main";
-
-                            Groups[RAYGEN_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[RAYGEN_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-                            Groups[RAYGEN_GROUP].generalShader      = RAYGEN_SHADER;
-                            Groups[RAYGEN_GROUP].closestHitShader   = VK_SHADER_UNUSED_KHR;
-                            Groups[RAYGEN_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[RAYGEN_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-                            Groups[HIT_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[HIT_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
-                            Groups[HIT_GROUP].generalShader      = VK_SHADER_UNUSED_KHR;
-                            Groups[HIT_GROUP].closestHitShader   = HIT_SHADER;
-                            Groups[HIT_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[HIT_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-                            Groups[MISS_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[MISS_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-                            Groups[MISS_GROUP].generalShader      = MISS_SHADER;
-                            Groups[MISS_GROUP].closestHitShader   = VK_SHADER_UNUSED_KHR;
-                            Groups[MISS_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[MISS_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
+                        [](RTGroupsHelper& rtGroups) {
+                            rtGroups.SetShaderCount(NUM_SHADERS, NUM_GROUPS);
+                            rtGroups.SetStage(RAYGEN_SHADER, SHADER_TYPE_RAY_GEN, GLSL::RayTracingTest1_RG);
+                            rtGroups.SetStage(MISS_SHADER, SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest1_RM);
+                            rtGroups.SetStage(HIT_SHADER, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest1_RCH);
+                            rtGroups.SetGeneralGroup(RAYGEN_GROUP, RAYGEN_SHADER);
+                            rtGroups.SetGeneralGroup(MISS_GROUP, MISS_SHADER);
+                            rtGroups.SetTriangleHitGroup(HIT_GROUP, HIT_SHADER);
                         });
 
     // Create acceleration structures
@@ -896,59 +924,15 @@ void RayTracingTriangleAnyHitReferenceVk(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
-                        [pEnv](std::vector<VkDescriptorSetLayoutBinding>&         Bindings,
-                               std::vector<VkShaderModule>&                       Modules,
-                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages,
-                               std::vector<VkRayTracingShaderGroupCreateInfoKHR>& Groups) //
-                        {
-                            Modules.resize(NUM_SHADERS);
-                            Stages.resize(NUM_SHADERS);
-                            Groups.resize(NUM_GROUPS);
-
-                            Modules[RAYGEN_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_GEN, GLSL::RayTracingTest2_RG);
-                            Stages[RAYGEN_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[RAYGEN_SHADER].stage  = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-                            Stages[RAYGEN_SHADER].module = Modules[RAYGEN_SHADER];
-                            Stages[RAYGEN_SHADER].pName  = "main";
-
-                            Modules[MISS_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest2_RM);
-                            Stages[MISS_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[MISS_SHADER].stage  = VK_SHADER_STAGE_MISS_BIT_KHR;
-                            Stages[MISS_SHADER].module = Modules[MISS_SHADER];
-                            Stages[MISS_SHADER].pName  = "main";
-
-                            Modules[HIT_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest2_RCH);
-                            Stages[HIT_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[HIT_SHADER].stage  = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-                            Stages[HIT_SHADER].module = Modules[HIT_SHADER];
-                            Stages[HIT_SHADER].pName  = "main";
-
-                            Modules[ANY_HIT_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_ANY_HIT, GLSL::RayTracingTest2_RAH);
-                            Stages[ANY_HIT_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[ANY_HIT_SHADER].stage  = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
-                            Stages[ANY_HIT_SHADER].module = Modules[ANY_HIT_SHADER];
-                            Stages[ANY_HIT_SHADER].pName  = "main";
-
-                            Groups[RAYGEN_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[RAYGEN_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-                            Groups[RAYGEN_GROUP].generalShader      = RAYGEN_SHADER;
-                            Groups[RAYGEN_GROUP].closestHitShader   = VK_SHADER_UNUSED_KHR;
-                            Groups[RAYGEN_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[RAYGEN_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-                            Groups[MISS_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[MISS_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-                            Groups[MISS_GROUP].generalShader      = MISS_SHADER;
-                            Groups[MISS_GROUP].closestHitShader   = VK_SHADER_UNUSED_KHR;
-                            Groups[MISS_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[MISS_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-                            Groups[HIT_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[HIT_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
-                            Groups[HIT_GROUP].generalShader      = VK_SHADER_UNUSED_KHR;
-                            Groups[HIT_GROUP].closestHitShader   = HIT_SHADER;
-                            Groups[HIT_GROUP].anyHitShader       = ANY_HIT_SHADER;
-                            Groups[HIT_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
+                        [](RTGroupsHelper& rtGroups) {
+                            rtGroups.SetShaderCount(NUM_SHADERS, NUM_GROUPS);
+                            rtGroups.SetStage(RAYGEN_SHADER, SHADER_TYPE_RAY_GEN, GLSL::RayTracingTest2_RG);
+                            rtGroups.SetStage(MISS_SHADER, SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest2_RM);
+                            rtGroups.SetStage(HIT_SHADER, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest2_RCH);
+                            rtGroups.SetStage(ANY_HIT_SHADER, SHADER_TYPE_RAY_ANY_HIT, GLSL::RayTracingTest2_RAH);
+                            rtGroups.SetGeneralGroup(RAYGEN_GROUP, RAYGEN_SHADER);
+                            rtGroups.SetGeneralGroup(MISS_GROUP, MISS_SHADER);
+                            rtGroups.SetTriangleHitGroup(HIT_GROUP, HIT_SHADER, ANY_HIT_SHADER);
                         });
 
     // create acceleration structurea
@@ -1150,59 +1134,15 @@ void RayTracingProceduralIntersectionReferenceVk(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
-                        [pEnv](std::vector<VkDescriptorSetLayoutBinding>&         Bindings,
-                               std::vector<VkShaderModule>&                       Modules,
-                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages,
-                               std::vector<VkRayTracingShaderGroupCreateInfoKHR>& Groups) //
-                        {
-                            Modules.resize(NUM_SHADERS);
-                            Stages.resize(NUM_SHADERS);
-                            Groups.resize(NUM_GROUPS);
-
-                            Modules[RAYGEN_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_GEN, GLSL::RayTracingTest3_RG);
-                            Stages[RAYGEN_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[RAYGEN_SHADER].stage  = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-                            Stages[RAYGEN_SHADER].module = Modules[RAYGEN_SHADER];
-                            Stages[RAYGEN_SHADER].pName  = "main";
-
-                            Modules[MISS_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest3_RM);
-                            Stages[MISS_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[MISS_SHADER].stage  = VK_SHADER_STAGE_MISS_BIT_KHR;
-                            Stages[MISS_SHADER].module = Modules[MISS_SHADER];
-                            Stages[MISS_SHADER].pName  = "main";
-
-                            Modules[HIT_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest3_RCH);
-                            Stages[HIT_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[HIT_SHADER].stage  = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-                            Stages[HIT_SHADER].module = Modules[HIT_SHADER];
-                            Stages[HIT_SHADER].pName  = "main";
-
-                            Modules[INTERSECTION_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_INTERSECTION, GLSL::RayTracingTest3_RI);
-                            Stages[INTERSECTION_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[INTERSECTION_SHADER].stage  = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
-                            Stages[INTERSECTION_SHADER].module = Modules[INTERSECTION_SHADER];
-                            Stages[INTERSECTION_SHADER].pName  = "main";
-
-                            Groups[RAYGEN_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[RAYGEN_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-                            Groups[RAYGEN_GROUP].generalShader      = RAYGEN_SHADER;
-                            Groups[RAYGEN_GROUP].closestHitShader   = VK_SHADER_UNUSED_KHR;
-                            Groups[RAYGEN_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[RAYGEN_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-                            Groups[HIT_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[HIT_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR;
-                            Groups[HIT_GROUP].generalShader      = VK_SHADER_UNUSED_KHR;
-                            Groups[HIT_GROUP].closestHitShader   = HIT_SHADER;
-                            Groups[HIT_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[HIT_GROUP].intersectionShader = INTERSECTION_SHADER;
-
-                            Groups[MISS_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[MISS_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-                            Groups[MISS_GROUP].generalShader      = MISS_SHADER;
-                            Groups[MISS_GROUP].closestHitShader   = VK_SHADER_UNUSED_KHR;
-                            Groups[MISS_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[MISS_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
+                        [](RTGroupsHelper& rtGroups) {
+                            rtGroups.SetShaderCount(NUM_SHADERS, NUM_GROUPS);
+                            rtGroups.SetStage(RAYGEN_SHADER, SHADER_TYPE_RAY_GEN, GLSL::RayTracingTest3_RG);
+                            rtGroups.SetStage(MISS_SHADER, SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest3_RM);
+                            rtGroups.SetStage(HIT_SHADER, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest3_RCH);
+                            rtGroups.SetStage(INTERSECTION_SHADER, SHADER_TYPE_RAY_INTERSECTION, GLSL::RayTracingTest3_RI);
+                            rtGroups.SetGeneralGroup(RAYGEN_GROUP, RAYGEN_SHADER);
+                            rtGroups.SetGeneralGroup(MISS_GROUP, MISS_SHADER);
+                            rtGroups.SetProceduralHitGroup(HIT_GROUP, INTERSECTION_SHADER, HIT_SHADER);
                         });
 
     // create acceleration structurea
@@ -1405,71 +1345,19 @@ void RayTracingMultiGeometryReferenceVk(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain,
-                        [pEnv](std::vector<VkDescriptorSetLayoutBinding>&         Bindings,
-                               std::vector<VkShaderModule>&                       Modules,
-                               std::vector<VkPipelineShaderStageCreateInfo>&      Stages,
-                               std::vector<VkRayTracingShaderGroupCreateInfoKHR>& Groups) //
-                        {
-                            Bindings.resize(3);
-                            Bindings[0] = {2u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, InstanceCount, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, nullptr};
-                            Bindings[1] = {3u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, nullptr};
-                            Bindings[2] = {4u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, nullptr};
-
-                            Modules.resize(NUM_SHADERS);
-                            Stages.resize(NUM_SHADERS);
-                            Groups.resize(NUM_GROUPS);
-
-                            Modules[RAYGEN_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_GEN, GLSL::RayTracingTest4_RG);
-                            Stages[RAYGEN_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[RAYGEN_SHADER].stage  = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
-                            Stages[RAYGEN_SHADER].module = Modules[RAYGEN_SHADER];
-                            Stages[RAYGEN_SHADER].pName  = "main";
-
-                            Modules[MISS_SHADER]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest4_RM);
-                            Stages[MISS_SHADER].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[MISS_SHADER].stage  = VK_SHADER_STAGE_MISS_BIT_KHR;
-                            Stages[MISS_SHADER].module = Modules[MISS_SHADER];
-                            Stages[MISS_SHADER].pName  = "main";
-
-                            Modules[HIT_SHADER_1]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest4_RCH1);
-                            Stages[HIT_SHADER_1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[HIT_SHADER_1].stage  = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-                            Stages[HIT_SHADER_1].module = Modules[HIT_SHADER_1];
-                            Stages[HIT_SHADER_1].pName  = "main";
-
-                            Modules[HIT_SHADER_2]       = pEnv->CreateShaderModule(SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest4_RCH2);
-                            Stages[HIT_SHADER_2].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-                            Stages[HIT_SHADER_2].stage  = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
-                            Stages[HIT_SHADER_2].module = Modules[HIT_SHADER_2];
-                            Stages[HIT_SHADER_2].pName  = "main";
-
-                            Groups[RAYGEN_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[RAYGEN_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-                            Groups[RAYGEN_GROUP].generalShader      = RAYGEN_SHADER;
-                            Groups[RAYGEN_GROUP].closestHitShader   = VK_SHADER_UNUSED_KHR;
-                            Groups[RAYGEN_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[RAYGEN_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-                            Groups[HIT_GROUP_1].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[HIT_GROUP_1].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
-                            Groups[HIT_GROUP_1].generalShader      = VK_SHADER_UNUSED_KHR;
-                            Groups[HIT_GROUP_1].closestHitShader   = HIT_SHADER_1;
-                            Groups[HIT_GROUP_1].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[HIT_GROUP_1].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-                            Groups[HIT_GROUP_2].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[HIT_GROUP_2].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
-                            Groups[HIT_GROUP_2].generalShader      = VK_SHADER_UNUSED_KHR;
-                            Groups[HIT_GROUP_2].closestHitShader   = HIT_SHADER_2;
-                            Groups[HIT_GROUP_2].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[HIT_GROUP_2].intersectionShader = VK_SHADER_UNUSED_KHR;
-
-                            Groups[MISS_GROUP].sType              = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR;
-                            Groups[MISS_GROUP].type               = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
-                            Groups[MISS_GROUP].generalShader      = MISS_SHADER;
-                            Groups[MISS_GROUP].closestHitShader   = VK_SHADER_UNUSED_KHR;
-                            Groups[MISS_GROUP].anyHitShader       = VK_SHADER_UNUSED_KHR;
-                            Groups[MISS_GROUP].intersectionShader = VK_SHADER_UNUSED_KHR;
+                        [](RTGroupsHelper& rtGroups) {
+                            rtGroups.SetShaderCount(NUM_SHADERS, NUM_GROUPS);
+                            rtGroups.SetStage(RAYGEN_SHADER, SHADER_TYPE_RAY_GEN, GLSL::RayTracingTest4_RG);
+                            rtGroups.SetStage(MISS_SHADER, SHADER_TYPE_RAY_MISS, GLSL::RayTracingTest4_RM);
+                            rtGroups.SetStage(HIT_SHADER_1, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest4_RCH1);
+                            rtGroups.SetStage(HIT_SHADER_2, SHADER_TYPE_RAY_CLOSEST_HIT, GLSL::RayTracingTest4_RCH2);
+                            rtGroups.SetGeneralGroup(RAYGEN_GROUP, RAYGEN_SHADER);
+                            rtGroups.SetGeneralGroup(MISS_GROUP, MISS_SHADER);
+                            rtGroups.SetTriangleHitGroup(HIT_GROUP_1, HIT_SHADER_1);
+                            rtGroups.SetTriangleHitGroup(HIT_GROUP_2, HIT_SHADER_2);
+                            rtGroups.AddBinding(2u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, InstanceCount, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+                            rtGroups.AddBinding(3u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
+                            rtGroups.AddBinding(4u, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1u, VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
                         });
 
     const auto& PrimitiveOffsets = TestingConstants::MultiGeometry::PrimitiveOffsets;

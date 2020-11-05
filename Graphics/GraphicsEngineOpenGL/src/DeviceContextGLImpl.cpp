@@ -1740,6 +1740,16 @@ void DeviceContextGLImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
     UNSUPPORTED("CopyTLAS is not supported in OpenGL");
 }
 
+void DeviceContextGLImpl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs)
+{
+    UNSUPPORTED("WriteBLASCompactedSize is not supported in OpenGL");
+}
+
+void DeviceContextGLImpl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs)
+{
+    UNSUPPORTED("WriteTLASCompactedSize is not supported in OpenGL");
+}
+
 void DeviceContextGLImpl::TraceRays(const TraceRaysAttribs& Attribs)
 {
     UNSUPPORTED("TraceRays is not supported in OpenGL");

@@ -134,12 +134,12 @@ static VkPipelineStageFlags PipelineStageFromAccessFlags(VkAccessFlags          
             case VK_ACCESS_MEMORY_WRITE_BIT:
                 break;
 
-            // AZ TODO: comment
+            // Read access to acceleration structure or vertex/index/instance buffer in a build AS or trace rays operations.
             case VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR:
                 Stages |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR;
                 break;
 
-            // AZ TODO: comment
+            // Write access to acceleration structure or scratch buffer in a build AS operations.
             case VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR:
                 Stages |= VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR;
                 break;

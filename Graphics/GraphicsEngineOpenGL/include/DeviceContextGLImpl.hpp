@@ -259,6 +259,12 @@ public:
     /// Implementation of IDeviceContext::CopyTLAS() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
 
+    /// Implementation of IDeviceContext::WriteBLASCompactedSize() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::WriteTLASCompactedSize() in OpenGL backend.
+    virtual void DILIGENT_CALL_TYPE WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs) override final;
+
     /// Implementation of IDeviceContext::TraceRays() in OpenGL backend.
     virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 

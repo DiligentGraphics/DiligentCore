@@ -45,63 +45,69 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
     VkAccelerationStructureCreateInfoKHR                          CreateInfo = {};
     std::vector<VkAccelerationStructureCreateGeometryTypeInfoKHR> Geometries;
 
-    CreateInfo.sType            = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-    CreateInfo.type             = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-    CreateInfo.flags            = BuildASFlagsToVkBuildAccelerationStructureFlags(m_Desc.Flags);
-    CreateInfo.maxGeometryCount = std::max(m_Desc.BoxCount, m_Desc.TriangleCount);
-    CreateInfo.compactedSize    = 0; // AZ TODO
+    CreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+    CreateInfo.type  = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+    CreateInfo.flags = BuildASFlagsToVkBuildAccelerationStructureFlags(m_Desc.Flags);
 
-    VERIFY_EXPR(CreateInfo.maxGeometryCount <= Limits.maxGeometryCount);
-
-    Geometries.resize(CreateInfo.maxGeometryCount);
-    CreateInfo.pGeometryInfos = Geometries.data();
-
-    // Specs says: the geometryType member of each geometry in pGeometries must be the same.
-    if (m_Desc.pTriangles != nullptr)
+    if (m_Desc.CompactedSize > 0)
     {
-        Uint32 MaxPrimitiveCount = 0;
-        for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
-        {
-            auto& src = m_Desc.pTriangles[i];
-            auto& dst = Geometries[i];
-
-            dst.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-            dst.pNext             = nullptr;
-            dst.geometryType      = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
-            dst.maxPrimitiveCount = (src.IndexType == VT_UNDEFINED ? src.MaxVertexCount : src.MaxIndexCount) / 3;
-            dst.indexType         = TypeToVkIndexType(src.IndexType);
-            dst.maxVertexCount    = src.MaxVertexCount;
-            dst.vertexFormat      = TypeToVkFormat(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
-            dst.allowsTransforms  = src.AllowsTransforms;
-
-            MaxPrimitiveCount += dst.maxPrimitiveCount;
-        }
-        VERIFY_EXPR(MaxPrimitiveCount <= Limits.maxPrimitiveCount);
-    }
-    else if (m_Desc.pBoxes != nullptr)
-    {
-        Uint32 MaxBoxCount = 0;
-        for (uint32_t i = 0; i < m_Desc.BoxCount; ++i)
-        {
-            auto& src = m_Desc.pBoxes[i];
-            auto& dst = Geometries[i];
-
-            dst.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-            dst.pNext             = nullptr;
-            dst.geometryType      = VK_GEOMETRY_TYPE_AABBS_KHR;
-            dst.maxPrimitiveCount = src.MaxBoxCount;
-            dst.indexType         = VK_INDEX_TYPE_NONE_KHR;
-            dst.maxVertexCount    = 0;
-            dst.vertexFormat      = VK_FORMAT_UNDEFINED;
-            dst.allowsTransforms  = VK_FALSE;
-
-            MaxBoxCount += dst.maxPrimitiveCount;
-        }
-        VERIFY_EXPR(MaxBoxCount <= Limits.maxPrimitiveCount);
+        CreateInfo.compactedSize = m_Desc.CompactedSize;
     }
     else
     {
-        UNEXPECTED("Either pTriangles or pBoxes must not be null");
+        CreateInfo.maxGeometryCount = m_Desc.TriangleCount + m_Desc.BoxCount;
+        Geometries.resize(CreateInfo.maxGeometryCount);
+        CreateInfo.pGeometryInfos = Geometries.data();
+
+        VERIFY_EXPR(CreateInfo.maxGeometryCount <= Limits.maxGeometryCount);
+
+        if (m_Desc.pTriangles != nullptr)
+        {
+
+            Uint32 MaxPrimitiveCount = 0;
+            for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
+            {
+                auto& src = m_Desc.pTriangles[i];
+                auto& dst = Geometries[i];
+
+                dst.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
+                dst.pNext             = nullptr;
+                dst.geometryType      = VK_GEOMETRY_TYPE_TRIANGLES_KHR;
+                dst.maxPrimitiveCount = src.MaxPrimitiveCount;
+                dst.indexType         = TypeToVkIndexType(src.IndexType);
+                dst.maxVertexCount    = src.MaxVertexCount;
+                dst.vertexFormat      = TypeToVkFormat(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
+                dst.allowsTransforms  = src.AllowsTransforms;
+
+                MaxPrimitiveCount += dst.maxPrimitiveCount;
+            }
+            VERIFY_EXPR(MaxPrimitiveCount <= Limits.maxPrimitiveCount);
+        }
+        else if (m_Desc.pBoxes != nullptr)
+        {
+            Uint32 MaxBoxCount = 0;
+            for (uint32_t i = 0; i < m_Desc.BoxCount; ++i)
+            {
+                auto& src = m_Desc.pBoxes[i];
+                auto& dst = Geometries[i];
+
+                dst.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
+                dst.pNext             = nullptr;
+                dst.geometryType      = VK_GEOMETRY_TYPE_AABBS_KHR;
+                dst.maxPrimitiveCount = src.MaxBoxCount;
+                dst.indexType         = VK_INDEX_TYPE_NONE_KHR;
+                dst.maxVertexCount    = 0;
+                dst.vertexFormat      = VK_FORMAT_UNDEFINED;
+                dst.allowsTransforms  = VK_FALSE;
+
+                MaxBoxCount += dst.maxPrimitiveCount;
+            }
+            VERIFY_EXPR(MaxBoxCount <= Limits.maxPrimitiveCount);
+        }
+        else
+        {
+            UNEXPECTED("Either pTriangles or pBoxes must not be null");
+        }
     }
 
     m_VulkanBLAS = LogicalDevice.CreateAccelStruct(CreateInfo, m_Desc.Name);
@@ -132,13 +138,18 @@ BottomLevelASVkImpl::BottomLevelASVkImpl(IReferenceCounters*      pRefCounters,
 
     m_DeviceAddress = LogicalDevice.GetAccelerationStructureDeviceAddress(m_VulkanBLAS);
 
-    MemInfo.type        = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
-    MemReqs             = LogicalDevice.GetASMemoryRequirements(MemInfo);
-    m_ScratchSize.Build = static_cast<Uint32>(MemReqs.size);
+    if (m_Desc.CompactedSize == 0)
+    {
+        MemInfo.type        = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
+        MemReqs             = LogicalDevice.GetASMemoryRequirements(MemInfo);
+        m_ScratchSize.Build = static_cast<Uint32>(MemReqs.size);
 
-    MemInfo.type         = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
-    MemReqs              = LogicalDevice.GetASMemoryRequirements(MemInfo);
-    m_ScratchSize.Update = static_cast<Uint32>(MemReqs.size);
+        MemInfo.type         = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
+        MemReqs              = LogicalDevice.GetASMemoryRequirements(MemInfo);
+        m_ScratchSize.Update = static_cast<Uint32>(MemReqs.size);
+    }
+
+    SetState(RESOURCE_STATE_BUILD_AS_READ);
 }
 
 BottomLevelASVkImpl::~BottomLevelASVkImpl()

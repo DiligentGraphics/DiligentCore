@@ -117,6 +117,8 @@ DeviceContextVkImpl::DeviceContextVkImpl(IReferenceCounters*                   p
     m_DummyVB = pDummyVB.RawPtr<BufferVkImpl>();
 
     m_vkClearValues.reserve(16);
+
+    CreateASCompactedSizeQueryPool();
 }
 
 DeviceContextVkImpl::~DeviceContextVkImpl()
@@ -592,16 +594,6 @@ void DeviceContextVkImpl::DrawMesh(const DrawMeshAttribs& Attribs)
     if (!DvpVerifyDrawMeshArguments(Attribs))
         return;
 
-#ifdef DILIGENT_DEBUG
-    {
-        const auto& PhysicalDevice  = m_pDevice->GetPhysicalDevice();
-        const auto& LogicalDevice   = m_pDevice->GetLogicalDevice();
-        const auto& MeshShaderFeats = LogicalDevice.GetEnabledExtFeatures().MeshShader;
-        VERIFY_EXPR(MeshShaderFeats.meshShader != VK_FALSE && MeshShaderFeats.taskShader != VK_FALSE);
-        VERIFY_EXPR(Attribs.ThreadGroupCount <= PhysicalDevice.GetExtProperties().MeshShader.maxDrawMeshTasksCount);
-    }
-#endif
-
     PrepareForDraw(Attribs.Flags);
 
     m_CommandBuffer.DrawMesh(Attribs.ThreadGroupCount, 0);
@@ -612,13 +604,6 @@ void DeviceContextVkImpl::DrawMeshIndirect(const DrawMeshIndirectAttribs& Attrib
 {
     if (!DvpVerifyDrawMeshIndirectArguments(Attribs, pAttribsBuffer))
         return;
-
-#ifdef DILIGENT_DEBUG
-    {
-        const auto& MeshShaderFeats = m_pDevice->GetLogicalDevice().GetEnabledExtFeatures().MeshShader;
-        VERIFY_EXPR(MeshShaderFeats.meshShader != VK_FALSE && MeshShaderFeats.taskShader != VK_FALSE);
-    }
-#endif
 
     // We must prepare indirect draw attribs buffer first because state transitions must
     // be performed outside of render pass, and PrepareForDraw commits render pass
@@ -2684,9 +2669,9 @@ void DeviceContextVkImpl::TransitionOrVerifyTLASState(TopLevelASVkImpl&         
         DvpVerifyTLASState(TLAS, RequiredState, OperationName);
     }
 
-    if (RequiredState & RESOURCE_STATE_RAY_TRACING)
+    if (RequiredState & (RESOURCE_STATE_RAY_TRACING | RESOURCE_STATE_BUILD_AS_READ))
     {
-        TLAS.CheckBLASVersion();
+        TLAS.ValidateContent();
     }
 #endif
 }
@@ -2812,13 +2797,6 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
     if (!TDeviceContextBase::BuildBLAS(Attribs, 0))
         return;
 
-#ifdef DILIGENT_DEBUG
-    {
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        VERIFY_EXPR(LogicalDevice.GetEnabledExtFeatures().RayTracing.rayTracing != VK_FALSE);
-    }
-#endif
-
     auto* pBLASVk    = ValidatedCast<BottomLevelASVkImpl>(Attribs.pBLAS);
     auto* pScratchVk = ValidatedCast<BufferVkImpl>(Attribs.pScratchBuffer);
     auto& BLASDesc   = pBLASVk->GetDesc();
@@ -2842,15 +2820,17 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
         {
             const auto& SrcTris = Attribs.pTriangleData[i];
             Uint32      GeoIdx  = pBLASVk->GetGeometryIndex(SrcTris.GeometryName);
-            auto&       vkGeo   = Geometries[GeoIdx];
-            auto&       vkTris  = vkGeo.geometry.triangles;
-            auto&       off     = Offsets[GeoIdx];
 
             if (GeoIdx >= Geometries.size())
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
+
+            auto&       vkGeo   = Geometries[GeoIdx];
+            auto&       vkTris  = vkGeo.geometry.triangles;
+            auto&       off     = Offsets[GeoIdx];
+            const auto& TriDesc = BLASDesc.pTriangles[GeoIdx];
 
             vkGeo.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
             vkGeo.pNext        = nullptr;
@@ -2859,8 +2839,10 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
             vkTris.sType       = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR;
             vkTris.pNext       = nullptr;
 
-            auto* const pVB                 = ValidatedCast<BufferVkImpl>(SrcTris.pVertexBuffer);
-            vkTris.vertexFormat             = TypeToVkFormat(SrcTris.VertexValueType, SrcTris.VertexComponentCount, SrcTris.VertexValueType < VT_FLOAT16);
+            auto* const pVB = ValidatedCast<BufferVkImpl>(SrcTris.pVertexBuffer);
+
+            // vertex format in SrcTris may be undefined, so use vertex format from description
+            vkTris.vertexFormat             = TypeToVkFormat(TriDesc.VertexValueType, TriDesc.VertexComponentCount, TriDesc.VertexValueType < VT_FLOAT16);
             vkTris.vertexStride             = SrcTris.VertexStride;
             vkTris.vertexData.deviceAddress = pVB->GetVkDeviceAddress() + SrcTris.VertexOffset;
 
@@ -2868,10 +2850,11 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
 
             if (SrcTris.pIndexBuffer)
             {
-                auto* const pIB                = ValidatedCast<BufferVkImpl>(SrcTris.pIndexBuffer);
-                vkTris.indexType               = TypeToVkIndexType(SrcTris.IndexType);
+                auto* const pIB = ValidatedCast<BufferVkImpl>(SrcTris.pIndexBuffer);
+
+                // index type in SrcTris may be undefined, so use index type from description
+                vkTris.indexType               = TypeToVkIndexType(TriDesc.IndexType);
                 vkTris.indexData.deviceAddress = pIB->GetVkDeviceAddress() + SrcTris.IndexOffset;
-                off.primitiveCount             = SrcTris.IndexCount / 3;
 
                 TransitionOrVerifyBufferState(*pIB, Attribs.GeometryTransitionMode, RESOURCE_STATE_BUILD_AS_READ, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, OpName);
             }
@@ -2879,13 +2862,10 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
             {
                 vkTris.indexType               = VK_INDEX_TYPE_NONE_KHR;
                 vkTris.indexData.deviceAddress = 0;
-                off.primitiveCount             = SrcTris.VertexCount / 3;
             }
 
             if (SrcTris.pTransformBuffer)
             {
-                VERIFY_EXPR(BLASDesc.pTriangles[GeoIdx].AllowsTransforms);
-
                 auto* const pTB                    = ValidatedCast<BufferVkImpl>(SrcTris.pTransformBuffer);
                 vkTris.transformData.deviceAddress = pTB->GetVkDeviceAddress() + SrcTris.TransformBufferOffset;
 
@@ -2893,10 +2873,10 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
             }
             else
             {
-                VERIFY_EXPR(!BLASDesc.pTriangles[GeoIdx].AllowsTransforms);
                 vkTris.transformData.deviceAddress = 0;
             }
 
+            off.primitiveCount  = SrcTris.PrimitiveCount;
             off.firstVertex     = 0;
             off.primitiveOffset = 0;
             off.transformOffset = 0;
@@ -2911,15 +2891,16 @@ void DeviceContextVkImpl::BuildBLAS(const BLASBuildAttribs& Attribs)
         {
             const auto& SrcBoxes = Attribs.pBoxData[i];
             Uint32      GeoIdx   = pBLASVk->GetGeometryIndex(SrcBoxes.GeometryName);
-            auto&       vkGeo    = Geometries[GeoIdx];
-            auto&       vkAABBs  = vkGeo.geometry.aabbs;
-            auto&       off      = Offsets[GeoIdx];
 
             if (GeoIdx >= Geometries.size())
             {
                 UNEXPECTED("Failed to find geometry by name");
                 continue;
             }
+
+            auto& vkGeo   = Geometries[GeoIdx];
+            auto& vkAABBs = vkGeo.geometry.aabbs;
+            auto& off     = Offsets[GeoIdx];
 
             vkGeo.sType        = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
             vkGeo.pNext        = nullptr;
@@ -2971,13 +2952,6 @@ void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
 
     static_assert(TLAS_INSTANCE_DATA_SIZE == sizeof(VkAccelerationStructureInstanceKHR), "Value in TLAS_INSTANCE_DATA_SIZE doesn't match the actual instance description size");
 
-#ifdef DILIGENT_DEBUG
-    {
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        VERIFY_EXPR(LogicalDevice.GetEnabledExtFeatures().RayTracing.rayTracing != VK_FALSE);
-    }
-#endif
-
     auto* pTLASVk      = ValidatedCast<TopLevelASVkImpl>(Attribs.pTLAS);
     auto* pScratchVk   = ValidatedCast<BufferVkImpl>(Attribs.pScratchBuffer);
     auto* pInstancesVk = ValidatedCast<BufferVkImpl>(Attribs.pInstanceBuffer);
@@ -3007,7 +2981,7 @@ void DeviceContextVkImpl::BuildTLAS(const TLASBuildAttribs& Attribs)
             std::memcpy(&vkASInst.transform, Inst.Transform.data, sizeof(vkASInst.transform));
 
             vkASInst.instanceCustomIndex                    = Inst.CustomId;
-            vkASInst.instanceShaderBindingTableRecordOffset = pTLASVk->GetInstanceDesc(Inst.InstanceName).ContributionToHitGroupIndex; // AZ TODO: optimize
+            vkASInst.instanceShaderBindingTableRecordOffset = pTLASVk->GetInstanceDesc(Inst.InstanceName).ContributionToHitGroupIndex;
             vkASInst.mask                                   = Inst.Mask;
             vkASInst.flags                                  = InstanceFlagsToVkGeometryInstanceFlags(Inst.Flags);
             vkASInst.accelerationStructureReference         = pBLASVk->GetVkDeviceAddress();
@@ -3058,15 +3032,12 @@ void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
     if (!TDeviceContextBase::CopyBLAS(Attribs, 0))
         return;
 
-#ifdef DILIGENT_DEBUG
-    {
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        VERIFY_EXPR(LogicalDevice.GetEnabledExtFeatures().RayTracing.rayTracing != VK_FALSE);
-    }
-#endif
-
     auto* pSrcVk = ValidatedCast<BottomLevelASVkImpl>(Attribs.pSrc);
     auto* pDstVk = ValidatedCast<BottomLevelASVkImpl>(Attribs.pDst);
+
+    // Dst BLAS description has specified CompactedSize, but doesn't have specified pTriangles and pBoxes.
+    // We should copy geometries because it required for SBT to map geometry name to hit group.
+    pDstVk->CopyDescription(*pSrcVk);
 
     VkCopyAccelerationStructureInfoKHR Info = {};
 
@@ -3078,8 +3049,8 @@ void DeviceContextVkImpl::CopyBLAS(const CopyBLASAttribs& Attribs)
     EnsureVkCmdBuffer();
 
     const char* OpName = "Copy BottomLevelAS (DeviceContextVkImpl::CopyBLAS)";
-    TransitionOrVerifyBLASState(*pSrcVk, Attribs.TransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
-    TransitionOrVerifyBLASState(*pDstVk, Attribs.TransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
+    TransitionOrVerifyBLASState(*pSrcVk, Attribs.SrcTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+    TransitionOrVerifyBLASState(*pDstVk, Attribs.DstTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
 
     m_CommandBuffer.CopyAccelerationStructure(Info);
     ++m_State.NumCommands;
@@ -3094,16 +3065,11 @@ void DeviceContextVkImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
     if (!TDeviceContextBase::CopyTLAS(Attribs, 0))
         return;
 
-#ifdef DILIGENT_DEBUG
-    {
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        VERIFY_EXPR(LogicalDevice.GetEnabledExtFeatures().RayTracing.rayTracing != VK_FALSE);
-    }
-#endif
-
     auto* pSrcVk = ValidatedCast<TopLevelASVkImpl>(Attribs.pSrc);
     auto* pDstVk = ValidatedCast<TopLevelASVkImpl>(Attribs.pDst);
 
+    // Instances specified in BuildTLAS command.
+    // We should copy instances because it required for SBT to map instance name to hit group.
     pDstVk->CopyInstancceData(*pSrcVk);
 
     VkCopyAccelerationStructureInfoKHR Info = {};
@@ -3116,11 +3082,68 @@ void DeviceContextVkImpl::CopyTLAS(const CopyTLASAttribs& Attribs)
     EnsureVkCmdBuffer();
 
     const char* OpName = "Copy TopLevelAS (DeviceContextVkImpl::CopyTLAS)";
-    TransitionOrVerifyTLASState(*pSrcVk, Attribs.TransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
-    TransitionOrVerifyTLASState(*pDstVk, Attribs.TransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
+    TransitionOrVerifyTLASState(*pSrcVk, Attribs.SrcTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+    TransitionOrVerifyTLASState(*pDstVk, Attribs.DstTransitionMode, RESOURCE_STATE_BUILD_AS_WRITE, OpName);
 
     m_CommandBuffer.CopyAccelerationStructure(Info);
     ++m_State.NumCommands;
+}
+
+void DeviceContextVkImpl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs)
+{
+    if (!TDeviceContextBase::WriteBLASCompactedSize(Attribs, 0))
+        return;
+
+    const Uint32 QueryIndex  = 0;
+    auto*        pBLASVk     = ValidatedCast<BottomLevelASVkImpl>(Attribs.pBLAS);
+    auto*        pDestBuffVk = ValidatedCast<BufferVkImpl>(Attribs.pDestBuffer);
+
+    EnsureVkCmdBuffer();
+
+    const char* OpName = "Write AS compacted size (DeviceContextVkImpl::WriteBLASCompactedSize)";
+    TransitionOrVerifyBLASState(*pBLASVk, Attribs.BLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+    TransitionOrVerifyBufferState(*pDestBuffVk, Attribs.BufferTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
+
+    m_CommandBuffer.WriteAccelerationStructuresProperties(pBLASVk->GetVkBLAS(), VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR, m_ASQueryPool, QueryIndex);
+    m_CommandBuffer.CopyQueryPoolResults(m_ASQueryPool, QueryIndex, 1, pDestBuffVk->GetVkBuffer(), Attribs.DestBufferOffset, sizeof(Uint64), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+    m_CommandBuffer.ResetQueryPool(m_ASQueryPool, QueryIndex, 1);
+    ++m_State.NumCommands;
+}
+
+void DeviceContextVkImpl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs)
+{
+    if (!TDeviceContextBase::WriteTLASCompactedSize(Attribs, 0))
+        return;
+
+    const Uint32 QueryIndex  = 0;
+    auto*        pTLASVk     = ValidatedCast<TopLevelASVkImpl>(Attribs.pTLAS);
+    auto*        pDestBuffVk = ValidatedCast<BufferVkImpl>(Attribs.pDestBuffer);
+
+    EnsureVkCmdBuffer();
+
+    const char* OpName = "Write AS compacted size (DeviceContextVkImpl::WriteTLASCompactedSize)";
+    TransitionOrVerifyTLASState(*pTLASVk, Attribs.TLASTransitionMode, RESOURCE_STATE_BUILD_AS_READ, OpName);
+    TransitionOrVerifyBufferState(*pDestBuffVk, Attribs.BufferTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
+
+    m_CommandBuffer.WriteAccelerationStructuresProperties(pTLASVk->GetVkTLAS(), VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR, m_ASQueryPool, QueryIndex);
+    m_CommandBuffer.CopyQueryPoolResults(m_ASQueryPool, QueryIndex, 1, pDestBuffVk->GetVkBuffer(), Attribs.DestBufferOffset, sizeof(Uint64), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT);
+    m_CommandBuffer.ResetQueryPool(m_ASQueryPool, QueryIndex, 1);
+    ++m_State.NumCommands;
+}
+
+void DeviceContextVkImpl::CreateASCompactedSizeQueryPool()
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing == DEVICE_FEATURE_STATE_ENABLED)
+    {
+        const auto&           LogicalDevice = m_pDevice->GetLogicalDevice();
+        VkQueryPoolCreateInfo Info          = {};
+
+        Info.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
+        Info.queryCount = 1;
+        Info.queryType  = VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR;
+
+        m_ASQueryPool = LogicalDevice.CreateQueryPool(Info);
+    }
 }
 
 void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
@@ -3128,20 +3151,42 @@ void DeviceContextVkImpl::TraceRays(const TraceRaysAttribs& Attribs)
     if (!TDeviceContextBase::TraceRays(Attribs, 0))
         return;
 
-#ifdef DILIGENT_DEBUG
-    {
-        const auto& LogicalDevice = m_pDevice->GetLogicalDevice();
-        VERIFY_EXPR(LogicalDevice.GetEnabledExtFeatures().RayTracing.rayTracing != VK_FALSE);
-    }
-#endif
+    auto*    pSBTVk  = ValidatedCast<ShaderBindingTableVkImpl>(Attribs.pSBT);
+    IBuffer* pBuffer = nullptr;
 
-    VkStridedBufferRegionKHR RaygenShaderBindingTable   = {};
-    VkStridedBufferRegionKHR MissShaderBindingTable     = {};
-    VkStridedBufferRegionKHR HitShaderBindingTable      = {};
-    VkStridedBufferRegionKHR CallableShaderBindingTable = {};
+    ShaderBindingTableVkImpl::BindingTable RayGenShaderRecord  = {};
+    ShaderBindingTableVkImpl::BindingTable MissShaderTable     = {};
+    ShaderBindingTableVkImpl::BindingTable HitGroupTable       = {};
+    ShaderBindingTableVkImpl::BindingTable CallableShaderTable = {};
 
-    auto* pSBTVk = ValidatedCast<ShaderBindingTableVkImpl>(Attribs.pSBT);
-    pSBTVk->GetVkStridedBufferRegions(this, Attribs.TransitionMode, RaygenShaderBindingTable, MissShaderBindingTable, HitShaderBindingTable, CallableShaderBindingTable);
+    pSBTVk->GetData(pBuffer, RayGenShaderRecord, MissShaderTable, HitGroupTable, CallableShaderTable);
+
+    auto* pBufferVk = ValidatedCast<BufferVkImpl>(pBuffer);
+
+    const char* OpName = "Trace rays (DeviceContextVkImpl::TraceRays)";
+    TransitionOrVerifyBufferState(*pBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_COPY_DEST, VK_ACCESS_TRANSFER_WRITE_BIT, OpName);
+
+    // buffer ranges are not intersected, so we don't need to add barriers between them
+    if (RayGenShaderRecord.pData)
+        UpdateBuffer(pBuffer, RayGenShaderRecord.Offset, RayGenShaderRecord.Size, RayGenShaderRecord.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+    if (MissShaderTable.pData)
+        UpdateBuffer(pBuffer, MissShaderTable.Offset, MissShaderTable.Size, MissShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+    if (HitGroupTable.pData)
+        UpdateBuffer(pBuffer, HitGroupTable.Offset, HitGroupTable.Size, HitGroupTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+    if (CallableShaderTable.pData)
+        UpdateBuffer(pBuffer, CallableShaderTable.Offset, CallableShaderTable.Size, CallableShaderTable.pData, RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+    TransitionOrVerifyBufferState(*pBufferVk, Attribs.SBTTransitionMode, RESOURCE_STATE_RAY_TRACING, VK_ACCESS_SHADER_READ_BIT, OpName);
+
+    // clang-format off
+    VkStridedBufferRegionKHR RaygenShaderBindingTable   = {pBufferVk->GetVkBuffer(), RayGenShaderRecord.Offset,  RayGenShaderRecord.Stride,  RayGenShaderRecord.Size };
+    VkStridedBufferRegionKHR MissShaderBindingTable     = {pBufferVk->GetVkBuffer(), MissShaderTable.Offset,     MissShaderTable.Stride,     MissShaderTable.Size    };
+    VkStridedBufferRegionKHR HitShaderBindingTable      = {pBufferVk->GetVkBuffer(), HitGroupTable.Offset,       HitGroupTable.Stride,       HitGroupTable.Size      };
+    VkStridedBufferRegionKHR CallableShaderBindingTable = {pBufferVk->GetVkBuffer(), CallableShaderTable.Offset, CallableShaderTable.Stride, CallableShaderTable.Size};
+    // clang-format on
 
     PrepareForRayTracing();
     m_CommandBuffer.TraceRays(RaygenShaderBindingTable, MissShaderBindingTable, HitShaderBindingTable, CallableShaderBindingTable,

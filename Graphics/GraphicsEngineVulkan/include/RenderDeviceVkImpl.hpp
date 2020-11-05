@@ -205,6 +205,15 @@ public:
     {
         return GetPhysicalDevice().GetExtProperties().RayTracing.maxShaderGroupStride;
     }
+    Uint32 GetShaderGroupBaseAlignment() const
+    {
+        return GetPhysicalDevice().GetExtProperties().RayTracing.shaderGroupBaseAlignment;
+    }
+
+    Uint32 GetMaxDrawMeshTasksCount() const
+    {
+        return GetPhysicalDevice().GetExtProperties().MeshShader.maxDrawMeshTasksCount;
+    }
 
 private:
     template <typename PSOCreateInfoType>

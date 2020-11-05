@@ -98,9 +98,19 @@ void CompareTestImages(const Uint8*   pReferencePixels,
         }
         const auto* const TestInfo = ::testing::UnitTest::GetInstance()->current_test_info();
 
-        std::string FileName = TestInfo->test_suite_name();
+        const auto ValidateName = [](const std::string& src) {
+            std::string dst = src;
+            for (char& c : dst)
+            {
+                if (c == '.' || c == '\\' || c == '/')
+                    c = '_';
+            }
+            return dst;
+        };
+
+        std::string FileName = ValidateName(TestInfo->test_suite_name());
         FileName += '.';
-        FileName += TestInfo->name();
+        FileName += ValidateName(TestInfo->name());
         FileName += "_FAIL_.png";
         if (stbi_write_png(FileName.c_str(), Width * 2, Height * 2, 3, ReportImage.data(), (Width * 2) * 3) == 0)
         {

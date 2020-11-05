@@ -1241,7 +1241,7 @@ static VkAccessFlags ResourceStateFlagToVkAccessFlags(RESOURCE_STATE StateFlag)
         case RESOURCE_STATE_PRESENT:           return 0;
         case RESOURCE_STATE_BUILD_AS_READ:     return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
         case RESOURCE_STATE_BUILD_AS_WRITE:    return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
-        case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+        case RESOURCE_STATE_RAY_TRACING:       return VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_SHADER_READ_BIT; // for TLAS & SBT
             // clang-format on
 
         default:
@@ -1256,7 +1256,7 @@ public:
     StateFlagBitPosToVkAccessFlags()
     {
         static_assert((1 << MaxFlagBitPos) == RESOURCE_STATE_MAX_BIT, "This function must be updated to handle new resource state flag");
-        for (Uint32 bit = 0; bit < MaxFlagBitPos; ++bit)
+        for (Uint32 bit = 0; bit < FlagBitPosToVkAccessFlagsMap.size(); ++bit)
         {
             FlagBitPosToVkAccessFlagsMap[bit] = ResourceStateFlagToVkAccessFlags(static_cast<RESOURCE_STATE>(1 << bit));
         }
@@ -1335,7 +1335,7 @@ class VkAccessFlagBitPosToResourceState
 public:
     VkAccessFlagBitPosToResourceState()
     {
-        for (Uint32 bit = 0; bit < MaxFlagBitPos; ++bit)
+        for (Uint32 bit = 0; bit < FlagBitPosToResourceState.size(); ++bit)
         {
             FlagBitPosToResourceState[bit] = VkAccessFlagToResourceStates(static_cast<VkAccessFlagBits>(1 << bit));
         }
@@ -1680,13 +1680,14 @@ VkGeometryInstanceFlagsKHR InstanceFlagsToVkGeometryInstanceFlags(RAYTRACING_INS
 
 VkCopyAccelerationStructureModeKHR CopyASModeToVkCopyAccelerationStructureMode(COPY_AS_MODE Mode)
 {
-    static_assert(COPY_AS_MODE_LAST == COPY_AS_MODE_CLONE,
+    static_assert(COPY_AS_MODE_LAST == COPY_AS_MODE_COMPACT,
                   "Please update the switch below to handle the new copy AS mode");
 
     switch (Mode)
     {
         // clang-format off
-        case COPY_AS_MODE_CLONE: return VK_COPY_ACCELERATION_STRUCTURE_MODE_CLONE_KHR;
+        case COPY_AS_MODE_CLONE:   return VK_COPY_ACCELERATION_STRUCTURE_MODE_CLONE_KHR;
+        case COPY_AS_MODE_COMPACT: return VK_COPY_ACCELERATION_STRUCTURE_MODE_COMPACT_KHR;
         // clang-format on
         default:
             UNEXPECTED("unknown AS copy mode");

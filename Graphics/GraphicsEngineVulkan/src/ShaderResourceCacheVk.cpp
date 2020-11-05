@@ -324,7 +324,9 @@ void ShaderResourceCacheVk::TransitionResources(DeviceContextVkImpl* pCtxVkImpl)
                                               "with IDeviceContext::TransitionResourceStates().");
                         }
 
-                        pTLASVk->CheckBLASVersion();
+#ifdef DILIGENT_DEVELOPMENT
+                        pTLASVk->ValidateContent();
+#endif
                     }
                     else
                     {

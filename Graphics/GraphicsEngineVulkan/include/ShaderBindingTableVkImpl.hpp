@@ -54,17 +54,7 @@ public:
     virtual void DILIGENT_CALL_TYPE ResetHitGroups(Uint32 HitShadersPerInstance) override;
     virtual void DILIGENT_CALL_TYPE BindAll(const BindAllAttribs& Attribs) override;
 
-    virtual void DILIGENT_CALL_TYPE GetVkStridedBufferRegions(IDeviceContextVk*              pContext,
-                                                              RESOURCE_STATE_TRANSITION_MODE TransitionMode,
-                                                              VkStridedBufferRegionKHR&      RaygenShaderBindingTable,
-                                                              VkStridedBufferRegionKHR&      MissShaderBindingTable,
-                                                              VkStridedBufferRegionKHR&      HitShaderBindingTable,
-                                                              VkStridedBufferRegionKHR&      CallableShaderBindingTable) override;
-
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_ShaderBindingTableVk, TShaderBindingTableBase);
-
-private:
-    RefCntAutoPtr<IBuffer> m_pBuffer;
 };
 
 } // namespace Diligent

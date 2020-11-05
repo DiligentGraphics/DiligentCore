@@ -224,6 +224,12 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
                                                                 "RESOURCE_STATE_UNKNOWN to make the engine use current resource state");
     }
 
+    // RESOURCE_STATE_UNORDERED_ACCESS and RESOURCE_STATE_BUILD_AS_WRITE converted to D3D12_RESOURCE_STATE_UNORDERED_ACCESS.
+    // UAV barrier must be inserted between D3D12_RESOURCE_STATE_UNORDERED_ACCESS resource usage.
+    bool RequireUAVBarrier =
+        (OldState == RESOURCE_STATE_UNORDERED_ACCESS || OldState == RESOURCE_STATE_BUILD_AS_WRITE) &&
+        (Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE);
+
     // Check if required state is already set
     if ((OldState & Barrier.NewState) != Barrier.NewState)
     {
@@ -306,26 +312,34 @@ void CommandContext::TransitionResource(const StateTransitionDesc& Barrier)
         }
         else if (pBLASD3D12Impl)
         {
-            VERIFY(!Barrier.UpdateResourceState || (Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END),
-                   "Bottom-level acceleration structure state can't be updated in begin-split barrier");
             if (Barrier.UpdateResourceState)
             {
                 pBLASD3D12Impl->SetState(NewState);
             }
+
+            // acceleration structure is always in D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE but requires UAV barrier instead of state transition.
+            RequireUAVBarrier |= (OldState == RESOURCE_STATE_BUILD_AS_WRITE);
         }
         else if (pTLASD3D12Impl)
         {
-            VERIFY(!Barrier.UpdateResourceState || (Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE || Barrier.TransitionType == STATE_TRANSITION_TYPE_END),
-                   "Top-level acceleration structure state can't be updated in begin-split barrier");
             if (Barrier.UpdateResourceState)
             {
                 pTLASD3D12Impl->SetState(NewState);
             }
+
+            // acceleration structure is always in D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE but requires UAV barrier instead of state transition.
+            RequireUAVBarrier |= (OldState == RESOURCE_STATE_BUILD_AS_WRITE);
+
+#ifdef DILIGENT_DEVELOPMENT
+            if (Barrier.NewState & RESOURCE_STATE_RAY_TRACING)
+            {
+                pTLASD3D12Impl->ValidateContent();
+            }
+#endif
         }
     }
 
-    if ((OldState == RESOURCE_STATE_UNORDERED_ACCESS || OldState == RESOURCE_STATE_BUILD_AS_WRITE) &&
-        (Barrier.NewState == RESOURCE_STATE_UNORDERED_ACCESS || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE))
+    if (RequireUAVBarrier)
     {
         DEV_CHECK_ERR(Barrier.TransitionType == STATE_TRANSITION_TYPE_IMMEDIATE, "UAV barriers must not be split");
         InsertUAVBarrier(pd3d12Resource);

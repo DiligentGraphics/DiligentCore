@@ -180,6 +180,9 @@ public:
 
     static Uint32 GetShaderGroupHandleSize() { return D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES; }
     static Uint32 GetMaxShaderRecordStride() { return D3D12_RAYTRACING_MAX_SHADER_RECORD_STRIDE; }
+    static Uint32 GetShaderGroupBaseAlignment() { return D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT; }
+
+    static Uint32 GetMaxDrawMeshTasksCount() { return 64000; }
 
 private:
     template <typename PSOCreateInfoType>

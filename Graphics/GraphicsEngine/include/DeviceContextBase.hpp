@@ -279,11 +279,13 @@ protected:
     // clang-format on
 #endif
 
-    bool BuildBLAS(const BLASBuildAttribs& Attribs, int);
-    bool BuildTLAS(const TLASBuildAttribs& Attribs, int);
-    bool CopyBLAS(const CopyBLASAttribs& Attribs, int);
-    bool CopyTLAS(const CopyTLASAttribs& Attribs, int);
-    bool TraceRays(const TraceRaysAttribs& Attribs, int);
+    bool BuildBLAS(const BLASBuildAttribs& Attribs, int) const;
+    bool BuildTLAS(const TLASBuildAttribs& Attribs, int) const;
+    bool CopyBLAS(const CopyBLASAttribs& Attribs, int) const;
+    bool CopyTLAS(const CopyTLASAttribs& Attribs, int) const;
+    bool WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const;
+    bool WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const;
+    bool TraceRays(const TraceRaysAttribs& Attribs, int) const;
 
     /// Strong reference to the device.
     RefCntAutoPtr<DeviceImplType> m_pDevice;
@@ -1503,6 +1505,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
 
+    if (m_pDevice->GetDeviceCaps().Features.MeshShaders != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("DrawMesh: mesh shaders are not supported by this device");
+        return false;
+    }
+
     if (!m_pPipelineState)
     {
         LOG_ERROR_MESSAGE("DrawMesh command arguments are invalid: no pipeline state is bound.");
@@ -1519,6 +1527,11 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
     if (Attribs.ThreadGroupCount == 0)
     {
         LOG_WARNING_MESSAGE("DrawMesh command arguments are invalid: number of groups to dispatch is zero.");
+    }
+
+    if (Attribs.ThreadGroupCount > m_pDevice->GetMaxDrawMeshTasksCount())
+    {
+        LOG_WARNING_MESSAGE("DrawMesh command arguments are invalid: number of groups to dispatch must be less then ", m_pDevice->GetMaxDrawMeshTasksCount());
     }
 
     return true;
@@ -1634,6 +1647,12 @@ inline bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 {
     if ((Attribs.Flags & DRAW_FLAG_VERIFY_DRAW_ATTRIBS) == 0)
         return true;
+
+    if (m_pDevice->GetDeviceCaps().Features.MeshShaders != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("DrawMeshIndirect: mesh shaders are not supported by this device");
+        return false;
+    }
 
     if (!m_pPipelineState)
     {
@@ -1860,7 +1879,7 @@ void DeviceContextBase<BaseInterface, ImplementationTraits>::
         const auto& BLASDesc = pBottomLevelAS->GetDesc();
         OldState             = Barrier.OldState != RESOURCE_STATE_UNKNOWN ? Barrier.OldState : pBottomLevelAS->GetState();
         DEV_CHECK_ERR(OldState != RESOURCE_STATE_UNKNOWN, "The state of BLAS '", BLASDesc.Name, "' is unknown to the engine and is not explicitly specified in the barrier");
-        DEV_CHECK_ERR(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE || Barrier.NewState == RESOURCE_STATE_RAY_TRACING,
+        DEV_CHECK_ERR(Barrier.NewState == RESOURCE_STATE_BUILD_AS_READ || Barrier.NewState == RESOURCE_STATE_BUILD_AS_WRITE,
                       "Invlaid new state specified for BLAS '", BLASDesc.Name, "'");
         DEV_CHECK_ERR(Barrier.TransitionType != STATE_TRANSITION_TYPE_IMMEDIATE, "Split barriers are not supported for BLAS");
     }
@@ -1951,11 +1970,17 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::
 #endif // DILIGENT_DEVELOPMENT
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLASBuildAttribs& Attribs, int)
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLASBuildAttribs& Attribs, int) const
 {
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: ray tracing is not supported by this device");
+        return false;
+    }
+
     if (m_pActiveRenderPass != nullptr)
     {
-        LOG_ERROR_MESSAGE("BuildBLAS command must be performed outside of render pass");
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS command must be performed outside of render pass");
         return false;
     }
 
@@ -1989,22 +2014,51 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
         return false;
     }
 
+    const auto& BLASDesc = Attribs.pBLAS->GetDesc();
+
+    if (Attribs.BoxDataCount > BLASDesc.BoxCount)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: BoxDataCount must be less than or equal to pBLAS->GetDesc().BoxCount");
+        return false;
+    }
+
+    if (Attribs.TriangleDataCount > BLASDesc.TriangleCount)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: TriangleDataCount must be less than or equal to pBLAS->GetDesc().TriangleCount");
+        return false;
+    }
+
 #ifdef DILIGENT_DEVELOPMENT
     for (Uint32 i = 0; i < Attribs.TriangleDataCount; ++i)
     {
         const auto&  tri            = Attribs.pTriangleData[i];
         const Uint32 VertexSize     = GetValueSize(tri.VertexValueType) * tri.VertexComponentCount;
         const Uint32 VertexDataSize = tri.VertexStride * tri.VertexCount;
+        const Uint32 GeomIndex      = Attribs.pBLAS->GetGeometryIndex(tri.GeometryName);
 
-        if (tri.VertexValueType >= VT_NUM_TYPES)
+        if (GeomIndex == BottomLevelASType::InvalidGeometryIndex)
         {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexValueType must be valid type");
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].GeometryName not found in BLAS description");
             return false;
         }
 
-        if (tri.VertexComponentCount != 2 && tri.VertexComponentCount != 3)
+        const auto& TriDesc = BLASDesc.pTriangles[GeomIndex];
+
+        if (tri.VertexValueType != VT_UNDEFINED && tri.VertexValueType != TriDesc.VertexValueType)
         {
-            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexComponentCount must be 2 or 3");
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexValueType must be undefined or match the VertexValueType in geometry description");
+            return false;
+        }
+
+        if (tri.VertexComponentCount != 0 && tri.VertexComponentCount != TriDesc.VertexComponentCount)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexComponentCount must be 0 or match the VertexComponentCount in geometry description");
+            return false;
+        }
+
+        if (tri.VertexCount > TriDesc.MaxVertexCount)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexCount must not be greater then MaxVertexCount(", TriDesc.MaxVertexCount, ")");
             return false;
         }
 
@@ -2032,20 +2086,20 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
             return false;
         }
 
-        if (tri.IndexType != VT_UNDEFINED)
+        if (tri.IndexType != VT_UNDEFINED && tri.IndexType != TriDesc.IndexType)
         {
-            if (tri.IndexType != VT_UINT16 && tri.IndexType != VT_UINT32)
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].IndexType must not be VT_UNDEFINED, VT_UINT16 or VT_UINT32");
-                return false;
-            }
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].IndexType must match the IndexType in geometry description");
+            return false;
+        }
 
-            if (tri.IndexCount == 0 || (tri.IndexCount % 3 != 0))
-            {
-                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].IndexCount must be valid");
-                return false;
-            }
+        if (tri.PrimitiveCount > TriDesc.MaxPrimitiveCount)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].PrimitiveCount must not be greater then MaxPrimitiveCount(", TriDesc.MaxPrimitiveCount, ")");
+            return false;
+        }
 
+        if (TriDesc.IndexType != VT_UNDEFINED)
+        {
             if (tri.pIndexBuffer == nullptr)
             {
                 LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer must not be null");
@@ -2058,7 +2112,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
                 return false;
             }
 
-            const Uint32 IndexDataSize = tri.IndexCount * GetValueSize(tri.IndexType);
+            const Uint32 IndexDataSize = tri.PrimitiveCount * 3 * GetValueSize(tri.IndexType);
             if (tri.IndexOffset + IndexDataSize > tri.pIndexBuffer->GetDesc().uiSizeInBytes)
             {
                 LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer is too small for specified IndexType and IndexCount");
@@ -2067,10 +2121,14 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
         }
         else
         {
+            if (tri.VertexCount != tri.PrimitiveCount * 3)
+            {
+                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].VertexCount must equal to (PrimitiveCount * 3)");
+                return false;
+            }
+
             VERIFY(tri.pIndexBuffer == nullptr,
                    "IDeviceContext::BuildBLAS: pTriangleData[", i, "].pIndexBuffer must be null if IndexType is VT_UNDEFINED");
-            VERIFY(tri.IndexCount == 0,
-                   "IDeviceContext::BuildBLAS: pTriangleData[", i, "].IndexCount must be zero if IndexType is VT_UNDEFINED");
         }
 
         if (tri.pTransformBuffer != nullptr)
@@ -2080,13 +2138,34 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
                 LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "].pTransformBuffer must be created with BIND_RAY_TRACING flag");
                 return false;
             }
+
+            if (!TriDesc.AllowsTransforms)
+            {
+                LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pTriangleData[", i, "] use transform buffer but AllowsTransforms is false");
+                return false;
+            }
         }
     }
 
     for (Uint32 i = 0; i < Attribs.BoxDataCount; ++i)
     {
-        const auto&  box     = Attribs.pBoxData[i];
-        const Uint32 BoxSize = sizeof(float) * 6;
+        const auto&  box       = Attribs.pBoxData[i];
+        const Uint32 BoxSize   = sizeof(float) * 6;
+        const Uint32 GeomIndex = Attribs.pBLAS->GetGeometryIndex(box.GeometryName);
+
+        if (GeomIndex == BottomLevelASType::InvalidGeometryIndex)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].GeometryName not found in BLAS description");
+            return false;
+        }
+
+        const auto& BoxDesc = BLASDesc.pBoxes[GeomIndex];
+
+        if (box.BoxCount > BoxDesc.MaxBoxCount)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: pBoxData[", i, "].BoxCount must not be greated then MaxBoxCount (", BoxDesc.MaxBoxCount, ")");
+            return false;
+        }
 
         if (box.BoxStride < BoxSize)
         {
@@ -2107,20 +2186,6 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
         }
     }
 #endif // DILIGENT_DEVELOPMENT
-
-    const auto& BLASDesc = Attribs.pBLAS->GetDesc();
-
-    if (Attribs.BoxDataCount > BLASDesc.BoxCount)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: BoxDataCount must be less than or equal to Attribs.pBLAS->GetDesc().BoxCount");
-        return false;
-    }
-
-    if (Attribs.TriangleDataCount > BLASDesc.TriangleCount)
-    {
-        LOG_ERROR_MESSAGE("IDeviceContext::BuildBLAS: TriangleDataCount must be less than or equal to Attribs.pBLAS->GetDesc().TriangleCount");
-        return false;
-    }
 
     const auto& ScratchDesc = Attribs.pScratchBuffer->GetDesc();
 
@@ -2146,11 +2211,17 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildBLAS(const BLA
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLASBuildAttribs& Attribs, int)
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLASBuildAttribs& Attribs, int) const
 {
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: ray tracing is not supported by this device");
+        return false;
+    }
+
     if (m_pActiveRenderPass != nullptr)
     {
-        LOG_ERROR_MESSAGE("BuildTLAS command must be performed outside of render pass");
+        LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS command must be performed outside of render pass");
         return false;
     }
 
@@ -2201,9 +2272,11 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
     // calculate instance data size
     for (Uint32 i = 0; i < Attribs.InstanceCount; ++i)
     {
-        VERIFY_EXPR((Attribs.pInstances[i].CustomId & ~0x00FFFFFF) == 0);
-        VERIFY_EXPR(Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO ||
-                    (Attribs.pInstances[i].ContributionToHitGroupIndex & ~0x00FFFFFF) == 0);
+        VERIFY((Attribs.pInstances[i].CustomId & ~0x00FFFFFF) == 0, "Only first 24 bits are used");
+
+        VERIFY(Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO ||
+                   (Attribs.pInstances[i].ContributionToHitGroupIndex & ~0x00FFFFFF) == 0,
+               "Only first 24 bits are used");
 
         if (Attribs.pInstances[i].InstanceName == nullptr)
         {
@@ -2219,6 +2292,14 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
 
         if (Attribs.pInstances[i].ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
             ++AutoOffsetCounter;
+
+
+        if (TLASDesc.BindingMode != SHADER_BINDING_USER_DEFINED && Attribs.pInstances[i].ContributionToHitGroupIndex != TLAS_INSTANCE_OFFSET_AUTO)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::BuildTLAS: pInstances[", i, "].ContributionToHitGroupIndex must be TLAS_INSTANCE_OFFSET_AUTO "
+                                                                           "if TLAS created with BindingMode that is not SHADER_BINDING_USER_DEFINED");
+            return false;
+        }
     }
 
     if (AutoOffsetCounter != 0 && AutoOffsetCounter != Attribs.InstanceCount)
@@ -2270,8 +2351,14 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::BuildTLAS(const TLA
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int)
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const CopyBLASAttribs& Attribs, int) const
 {
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: ray tracing is not supported by this device");
+        return false;
+    }
+
     if (Attribs.pSrc == nullptr)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pSrc must not be null");
@@ -2286,11 +2373,17 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
 
     if (m_pActiveRenderPass != nullptr)
     {
-        LOG_ERROR_MESSAGE("CopyBLAS command must be performed outside of render pass");
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS command must be performed outside of render pass");
         return false;
     }
 
 #ifdef DILIGENT_DEVELOPMENT
+    if (!ValidatedCast<BottomLevelASType>(Attribs.pSrc)->ValidateContent())
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pSrc acceleration structure is not valid");
+        return false;
+    }
+
     if (Attribs.Mode == COPY_AS_MODE_CLONE)
     {
         auto& SrcDesc = Attribs.pSrc->GetDesc();
@@ -2323,7 +2416,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
             if (SrcTri.MaxVertexCount       != DstTri.MaxVertexCount       ||
                 SrcTri.VertexValueType      != DstTri.VertexValueType      ||
                 SrcTri.VertexComponentCount != DstTri.VertexComponentCount ||
-                SrcTri.MaxIndexCount        != DstTri.MaxIndexCount        ||
+                SrcTri.MaxPrimitiveCount    != DstTri.MaxPrimitiveCount    ||
                 SrcTri.IndexType            != DstTri.IndexType            ||
                 SrcTri.AllowsTransforms     != DstTri.AllowsTransforms)
             // clang-format on
@@ -2342,6 +2435,23 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
             }
         }
     }
+    else if (Attribs.Mode == COPY_AS_MODE_COMPACT)
+    {
+        auto& SrcDesc = Attribs.pSrc->GetDesc();
+        auto& DstDesc = Attribs.pDst->GetDesc();
+
+        if (!(SrcDesc.Flags & RAYTRACING_BUILD_AS_ALLOW_COMPACTION))
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pSrc must be create with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
+            return false;
+        }
+
+        if (DstDesc.CompactedSize == 0)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: pDst must be create with defined CompactedSize");
+            return false;
+        }
+    }
     else
     {
         LOG_ERROR_MESSAGE("IDeviceContext::CopyBLAS: unknown Mode");
@@ -2353,8 +2463,14 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyBLAS(const Copy
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int)
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const CopyTLASAttribs& Attribs, int) const
 {
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: ray tracing is not supported by this device");
+        return false;
+    }
+
     if (Attribs.pSrc == nullptr)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc must not be null");
@@ -2369,14 +2485,14 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const Copy
 
     if (m_pActiveRenderPass != nullptr)
     {
-        LOG_ERROR_MESSAGE("CopyTLAS command must be performed outside of render pass");
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS command must be performed outside of render pass");
         return false;
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    if (!ValidatedCast<TopLevelASType>(Attribs.pSrc)->CheckBLASVersion())
+    if (!ValidatedCast<TopLevelASType>(Attribs.pSrc)->ValidateContent())
     {
-        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc must be rebuilded to apply BLAS changes before being copied to another TLAS");
+        LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc acceleration structure is not valid");
         return false;
     }
 
@@ -2392,6 +2508,23 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const Copy
             return false;
         }
     }
+    else if (Attribs.Mode == COPY_AS_MODE_COMPACT)
+    {
+        auto& SrcDesc = Attribs.pSrc->GetDesc();
+        auto& DstDesc = Attribs.pDst->GetDesc();
+
+        if (!(SrcDesc.Flags & RAYTRACING_BUILD_AS_ALLOW_COMPACTION))
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pSrc must be create with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
+            return false;
+        }
+
+        if (DstDesc.CompactedSize == 0)
+        {
+            LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: pDst must be create with defined CompactedSize");
+            return false;
+        }
+    }
     else
     {
         LOG_ERROR_MESSAGE("IDeviceContext::CopyTLAS: unknown Mode");
@@ -2403,8 +2536,104 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::CopyTLAS(const Copy
 }
 
 template <typename BaseInterface, typename ImplementationTraits>
-bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int)
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs, int) const
 {
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (Attribs.pBLAS == nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pBLAS must not be null");
+        return false;
+    }
+    if (!(Attribs.pBLAS->GetDesc().Flags & RAYTRACING_BUILD_AS_ALLOW_COMPACTION))
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pBLAS must be created with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
+        return false;
+    }
+
+    if (Attribs.pDestBuffer == nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pDestBuffer must not be null");
+        return false;
+    }
+    if (Attribs.DestBufferOffset + sizeof(Uint64) > Attribs.pDestBuffer->GetDesc().uiSizeInBytes)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pDestBuffer is too small");
+        return false;
+    }
+    if (m_pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12 &&
+        !(Attribs.pDestBuffer->GetDesc().BindFlags & BIND_UNORDERED_ACCESS))
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: pDestBuffer must be created with BIND_UNORDERED_ACCESS flag");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteBLASCompactedSize: command must be performed outside of render pass");
+        return false;
+    }
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs, int) const
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: ray tracing is not supported by this device");
+        return false;
+    }
+
+    if (Attribs.pTLAS == nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pTLAS must not be null");
+        return false;
+    }
+    if (!(Attribs.pTLAS->GetDesc().Flags & RAYTRACING_BUILD_AS_ALLOW_COMPACTION))
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pTLAS must be created with RAYTRACING_BUILD_AS_ALLOW_COMPACTION flag");
+        return false;
+    }
+
+    if (Attribs.pDestBuffer == nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pDestBuffer must not be null");
+        return false;
+    }
+    if (Attribs.DestBufferOffset + sizeof(Uint64) > Attribs.pDestBuffer->GetDesc().uiSizeInBytes)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pDestBuffer is too small");
+        return false;
+    }
+    if (m_pDevice->GetDeviceCaps().DevType == RENDER_DEVICE_TYPE_D3D12 &&
+        !(Attribs.pDestBuffer->GetDesc().BindFlags & BIND_UNORDERED_ACCESS))
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: pDestBuffer must be created with BIND_UNORDERED_ACCESS flag");
+        return false;
+    }
+
+    if (m_pActiveRenderPass != nullptr)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::WriteTLASCompactedSize: command must be performed outside of render pass");
+        return false;
+    }
+    return true;
+}
+
+template <typename BaseInterface, typename ImplementationTraits>
+bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const TraceRaysAttribs& Attribs, int) const
+{
+    if (m_pDevice->GetDeviceCaps().Features.RayTracing != DEVICE_FEATURE_STATE_ENABLED)
+    {
+        LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: ray tracing is not supported by this device");
+        return false;
+    }
+
     if (Attribs.pSBT == nullptr)
     {
         LOG_ERROR_MESSAGE("IDeviceContext::TraceRays: pSBT must not be null");
@@ -2431,7 +2660,7 @@ bool DeviceContextBase<BaseInterface, ImplementationTraits>::TraceRays(const Tra
         return false;
     }
 
-    if (Attribs.pSBT->GetDesc().pPSO != m_pPipelineState)
+    if (Attribs.pSBT->GetDesc().pPSO != m_pPipelineState.RawPtr())
     {
         LOG_ERROR_MESSAGE("IDeviceContext::TraceRays command arguments are invalid: currently bound pipeline ", m_pPipelineState->GetDesc().Name,
                           "doesn't match the pipeline ", Attribs.pSBT->GetDesc().pPSO->GetDesc().Name, " that was used in ShaderBindingTable");

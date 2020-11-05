@@ -45,7 +45,7 @@ static const INTERFACE_ID IID_TopLevelAS =
 
 // clang-format off
 
-/// AZ TODO
+/// Defines shader binding mode.
 DILIGENT_TYPED_ENUM(SHADER_BINDING_MODE, Uint8)
 {
     /// Each geometry in each instance can have a unique shader.
@@ -58,41 +58,44 @@ DILIGENT_TYPED_ENUM(SHADER_BINDING_MODE, Uint8)
     SHADER_BINDING_USER_DEFINED,
 };
 
-/// AZ TODO
+
+/// Top-level AS description.
 struct TopLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
-    /// Here we allocate space for instances.
-    /// Instances can be dynamicaly updated.
+    /// Allocate space for specified number of instances.
     Uint32                    MaxInstanceCount DEFAULT_INITIALIZER(0);
 
-    /// AZ TODO
+    /// Ray tracing build flags, see Diligent::RAYTRACING_BUILD_AS_FLAGS.
     RAYTRACING_BUILD_AS_FLAGS Flags            DEFAULT_INITIALIZER(RAYTRACING_BUILD_AS_NONE);
+    
+    /// Size from the result of IDeviceContext::WriteTLASCompactedSize() if this acceleration structure
+    /// is going to be the target of a compacting copy (IDeviceContext::CopyTLAS() with COPY_AS_MODE_COMPACT).
+    Uint32                    CompactedSize    DEFAULT_INITIALIZER(0);
 
-    // binding mode used for instanceOffset calculation.
+    /// Binding mode that used for TLASBuildInstanceData::ContributionToHitGroupIndex calculation,
+    /// see Diligent::SHADER_BINDING_MODE.
     SHADER_BINDING_MODE       BindingMode      DEFAULT_INITIALIZER(SHADER_BINDING_MODE_PER_GEOMETRY);
     
-    /// Defines which command queues this BLAS can be used with
+    /// Defines which command queues this BLAS can be used with.
     Uint64                    CommandQueueMask DEFAULT_INITIALIZER(1);
     
 #if DILIGENT_CPP_INTERFACE
-    /// AZ TODO
     TopLevelASDesc() noexcept {}
 #endif
 };
 typedef struct TopLevelASDesc TopLevelASDesc;
 
 
-/// AZ TODO
+/// Top-level AS instance description.
 struct TLASInstanceDesc
 {
-    /// AZ TODO
+    /// Index that specified in TLASBuildInstanceData::ContributionToHitGroupIndex.
     Uint32          ContributionToHitGroupIndex DEFAULT_INITIALIZER(0);
 
-    /// AZ TODO
+    /// Bottom-level AS that specified in TLASBuildInstanceData::pBLAS.
     IBottomLevelAS* pBLAS                       DEFAULT_INITIALIZER(nullptr);
     
 #if DILIGENT_CPP_INTERFACE
-    /// AZ TODO
     TLASInstanceDesc() noexcept {}
 #endif
 };
@@ -106,7 +109,9 @@ typedef struct TLASInstanceDesc TLASInstanceDesc;
     IDeviceObjectInclusiveMethods;         \
     ITopLevelASMethods TopLevelAS
 
-/// AZ TODO
+/// Top-level AS interface
+
+/// Defines the methods to manipulate a TLAS object
 DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
@@ -114,11 +119,16 @@ DILIGENT_BEGIN_INTERFACE(ITopLevelAS, IDeviceObject)
     virtual const TopLevelASDesc& DILIGENT_CALL_TYPE GetDesc() const override = 0;
 #endif
     
-    /// AZ TODO
+    /// Returns instance description that can be used in shader binding table.
+    
+    /// \param [in] Name - Instance name that specified in TLASBuildInstanceData::InstanceName.
+    /// \return structure object.
     VIRTUAL TLASInstanceDesc METHOD(GetInstanceDesc)(THIS_
                                                      const char* Name) CONST PURE;
     
-    /// AZ TODO
+    /// Returns scratch buffer info for current acceleration structure.
+    
+    /// \return structure object.
     VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
 
     /// Returns native acceleration structure handle specific to the underlying graphics API

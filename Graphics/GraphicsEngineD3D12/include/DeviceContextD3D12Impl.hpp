@@ -273,6 +273,12 @@ public:
     /// Implementation of IDeviceContext::CopyTLAS() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
 
+    /// Implementation of IDeviceContext::WriteBLASCompactedSize() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::WriteTLASCompactedSize() in Direct3D12 backend.
+    virtual void DILIGENT_CALL_TYPE WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs) override final;
+
     /// Implementation of IDeviceContext::TraceRays() in Direct3D12 backend.
     virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 

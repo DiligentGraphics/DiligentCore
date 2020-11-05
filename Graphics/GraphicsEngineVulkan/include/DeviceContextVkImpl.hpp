@@ -266,6 +266,12 @@ public:
     /// Implementation of IDeviceContext::CopyTLAS() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE CopyTLAS(const CopyTLASAttribs& Attribs) override final;
 
+    /// Implementation of IDeviceContext::WriteBLASCompactedSize() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs) override final;
+
+    /// Implementation of IDeviceContext::WriteTLASCompactedSize() in Vulkan backend.
+    virtual void DILIGENT_CALL_TYPE WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs) override final;
+
     /// Implementation of IDeviceContext::TraceRays() in Vulkan backend.
     virtual void DILIGENT_CALL_TYPE TraceRays(const TraceRaysAttribs& Attribs) override final;
 
@@ -470,6 +476,8 @@ private:
 
     void DvpLogRenderPass_PSOMismatch();
 
+    void CreateASCompactedSizeQueryPool();
+
     VulkanUtilities::VulkanCommandBuffer m_CommandBuffer;
 
     const Uint32 m_NumCommandsToFlush = 192;
@@ -551,6 +559,8 @@ private:
     Int32                           m_ActiveQueriesCounter = 0;
 
     std::vector<VkClearValue> m_vkClearValues;
+
+    VulkanUtilities::QueryPoolWrapper m_ASQueryPool;
 };
 
 } // namespace Diligent

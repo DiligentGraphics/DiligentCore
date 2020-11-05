@@ -383,11 +383,10 @@ public:
     }
 
     void EmitRaytracingAccelerationStructurePostbuildInfo(const D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC& Desc,
-                                                          UINT                                                               NumSourceAccelerationStructures,
-                                                          const D3D12_GPU_VIRTUAL_ADDRESS*                                   pSourceAccelerationStructureData)
+                                                          D3D12_GPU_VIRTUAL_ADDRESS                                          SourceAccelerationStructureAddress)
     {
         FlushResourceBarriers();
-        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->EmitRaytracingAccelerationStructurePostbuildInfo(&Desc, NumSourceAccelerationStructures, pSourceAccelerationStructureData);
+        static_cast<ID3D12GraphicsCommandList4*>(m_pCommandList.p)->EmitRaytracingAccelerationStructurePostbuildInfo(&Desc, 1, &SourceAccelerationStructureAddress);
     }
 
     void CopyRaytracingAccelerationStructure(D3D12_GPU_VIRTUAL_ADDRESS                         DestAccelerationStructureData,

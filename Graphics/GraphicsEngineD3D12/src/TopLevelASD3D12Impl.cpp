@@ -44,21 +44,34 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*          pRefCounte
                                          bool                         bIsDeviceInternal) :
     TTopLevelASBase{pRefCounters, pDeviceD3D12, Desc, bIsDeviceInternal}
 {
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO d3d12TopLevelPrebuildInfo = {};
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  d3d12TopLevelInputs       = {};
+    auto*  pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
+    UINT64 ResultDataMaxSizeInBytes = 0;
 
-    d3d12TopLevelInputs.Type        = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-    d3d12TopLevelInputs.Flags       = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
-    d3d12TopLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-    d3d12TopLevelInputs.NumDescs    = Desc.MaxInstanceCount;
+    if (m_Desc.CompactedSize > 0)
+    {
+        ResultDataMaxSizeInBytes = m_Desc.CompactedSize;
+    }
+    else
+    {
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO d3d12TopLevelPrebuildInfo = {};
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  d3d12TopLevelInputs       = {};
 
-    VERIFY_EXPR(Desc.MaxInstanceCount <= D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE);
+        d3d12TopLevelInputs.Type        = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+        d3d12TopLevelInputs.Flags       = BuildASFlagsToD3D12ASBuildFlags(m_Desc.Flags);
+        d3d12TopLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        d3d12TopLevelInputs.NumDescs    = m_Desc.MaxInstanceCount;
 
-    auto* pd3d12Device = pDeviceD3D12->GetD3D12Device5();
+        VERIFY_EXPR(m_Desc.MaxInstanceCount <= D3D12_RAYTRACING_MAX_INSTANCES_PER_TOP_LEVEL_ACCELERATION_STRUCTURE);
 
-    pd3d12Device->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12TopLevelInputs, &d3d12TopLevelPrebuildInfo);
-    if (d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes == 0)
-        LOG_ERROR_AND_THROW("Failed to get ray tracing acceleration structure prebuild info");
+        pd3d12Device->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12TopLevelInputs, &d3d12TopLevelPrebuildInfo);
+        if (d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes == 0)
+            LOG_ERROR_AND_THROW("Failed to get ray tracing acceleration structure prebuild info");
+
+        ResultDataMaxSizeInBytes = d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes;
+
+        m_ScratchSize.Build  = static_cast<Uint32>(d3d12TopLevelPrebuildInfo.ScratchDataSizeInBytes);
+        m_ScratchSize.Update = static_cast<Uint32>(d3d12TopLevelPrebuildInfo.UpdateScratchDataSizeInBytes);
+    }
 
     D3D12_HEAP_PROPERTIES HeapProps;
     HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
@@ -70,7 +83,7 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*          pRefCounte
     D3D12_RESOURCE_DESC d3d12ASDesc = {};
     d3d12ASDesc.Dimension           = D3D12_RESOURCE_DIMENSION_BUFFER;
     d3d12ASDesc.Alignment           = 0;
-    d3d12ASDesc.Width               = d3d12TopLevelPrebuildInfo.ResultDataMaxSizeInBytes;
+    d3d12ASDesc.Width               = ResultDataMaxSizeInBytes;
     d3d12ASDesc.Height              = 1;
     d3d12ASDesc.DepthOrArraySize    = 1;
     d3d12ASDesc.MipLevels           = 1;
@@ -90,9 +103,6 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*          pRefCounte
     if (*m_Desc.Name != 0)
         m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
 
-    m_ScratchSize.Build  = static_cast<Uint32>(d3d12TopLevelPrebuildInfo.ScratchDataSizeInBytes);
-    m_ScratchSize.Update = static_cast<Uint32>(d3d12TopLevelPrebuildInfo.UpdateScratchDataSizeInBytes);
-
     m_DescriptorHandle = pDeviceD3D12->AllocateDescriptor(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
     D3D12_SHADER_RESOURCE_VIEW_DESC d3d12SRVDesc;
@@ -101,6 +111,10 @@ TopLevelASD3D12Impl::TopLevelASD3D12Impl(IReferenceCounters*          pRefCounte
     d3d12SRVDesc.Format                                   = DXGI_FORMAT_UNKNOWN;
     d3d12SRVDesc.RaytracingAccelerationStructure.Location = GetGPUAddress();
     pd3d12Device->CreateShaderResourceView(nullptr, &d3d12SRVDesc, m_DescriptorHandle.GetCpuHandle());
+
+    VERIFY_EXPR(GetGPUAddress() % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0);
+
+    SetState(RESOURCE_STATE_BUILD_AS_READ);
 }
 
 TopLevelASD3D12Impl::~TopLevelASD3D12Impl()

@@ -2731,9 +2731,14 @@ DILIGENT_TYPED_ENUM(RESOURCE_STATE, Uint32)
     /// The resource is used for present
     RESOURCE_STATE_PRESENT              = 0x10000,
 
-    /// AZ TODO
+    /// The resource is used as vertex/index/instance buffer in a AS building operation
+    /// or as acceleration structure source in a AS copy operation.
     RESOURCE_STATE_BUILD_AS_READ        = 0x20000,
+
+    /// The resource is used as target in a AS building or AS copy operations.
     RESOURCE_STATE_BUILD_AS_WRITE       = 0x40000,
+
+    /// The resource is used as top-level AS shader resource in a trace rays operation.
     RESOURCE_STATE_RAY_TRACING          = 0x80000,
 
     RESOURCE_STATE_MAX_BIT              = RESOURCE_STATE_RAY_TRACING,

@@ -36,7 +36,7 @@
 #include "BottomLevelAS.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
-#include "StringPool.hpp"
+#include "LinearAllocator.hpp"
 #include "HashUtils.hpp"
 
 namespace Diligent
@@ -67,84 +67,21 @@ public:
     {
         ValidateBottomLevelASDesc(Desc);
 
-        // Memory must be released if an exception is thrown.
-        auto RawMemDeleter = [](void* ptr) {
-            if (ptr != nullptr)
-                GetRawAllocator().Free(ptr);
-        };
-
-        if (Desc.pTriangles != nullptr)
+        if (Desc.CompactedSize > 0)
+        {}
+        else
         {
-            size_t StringPoolSize = 0;
-            for (Uint32 i = 0; i < Desc.TriangleCount; ++i)
-            {
-                if (Desc.pTriangles[i].GeometryName == nullptr)
-                    LOG_ERROR_AND_THROW("Geometry name can not be null!");
-
-                StringPoolSize += strlen(Desc.pTriangles[i].GeometryName) + 1;
-            }
-
-            m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
-
-            std::unique_ptr<BLASTriangleDesc[], decltype(RawMemDeleter)> pTriangles{
-                ALLOCATE(GetRawAllocator(), "Memory for BLASTriangleDesc array", BLASTriangleDesc, Desc.TriangleCount),
-                RawMemDeleter};
-
-            std::memcpy(pTriangles.get(), Desc.pTriangles, sizeof(*Desc.pTriangles) * Desc.TriangleCount);
-            this->m_Desc.pBoxes = nullptr;
-
-            // copy strings
-            for (Uint32 i = 0; i < Desc.TriangleCount; ++i)
-            {
-                pTriangles[i].GeometryName = m_StringPool.CopyString(pTriangles[i].GeometryName);
-                bool IsUniqueName          = m_NameToIndex.emplace(pTriangles[i].GeometryName, i).second;
-                if (!IsUniqueName)
-                    LOG_ERROR_AND_THROW("Geometry name must be unique!");
-            }
-            this->m_Desc.pTriangles = pTriangles.release();
+            LinearAllocator MemPool{GetRawAllocator()};
+            CopyDescription(Desc, this->m_Desc, MemPool, m_NameToIndex);
+            this->m_pRawPtr = MemPool.ReleaseOwnership();
         }
-        else if (Desc.pBoxes != nullptr)
-        {
-            size_t StringPoolSize = 0;
-            for (Uint32 i = 0; i < Desc.BoxCount; ++i)
-            {
-                if (Desc.pBoxes[i].GeometryName == nullptr)
-                    LOG_ERROR_AND_THROW("Geometry name can not be null!");
-
-                StringPoolSize += strlen(Desc.pBoxes[i].GeometryName) + 1;
-            }
-
-            m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
-
-            std::unique_ptr<BLASBoundingBoxDesc[], decltype(RawMemDeleter)> pBoxes{
-                ALLOCATE(GetRawAllocator(), "Memory for BLASBoundingBoxDesc array", BLASBoundingBoxDesc, Desc.BoxCount),
-                RawMemDeleter};
-
-            std::memcpy(pBoxes.get(), Desc.pBoxes, sizeof(*Desc.pBoxes) * Desc.BoxCount);
-            this->m_Desc.pTriangles = nullptr;
-
-            // copy strings
-            for (Uint32 i = 0; i < Desc.BoxCount; ++i)
-            {
-                pBoxes[i].GeometryName = m_StringPool.CopyString(pBoxes[i].GeometryName);
-                bool IsUniqueName      = m_NameToIndex.emplace(pBoxes[i].GeometryName, i).second;
-                if (!IsUniqueName)
-                    LOG_ERROR_AND_THROW("Geometry name must be unique!");
-            }
-            this->m_Desc.pBoxes = pBoxes.release();
-        }
-        VERIFY_EXPR(m_StringPool.GetRemainingSize() == 0);
     }
 
     ~BottomLevelASBase()
     {
-        if (this->m_Desc.pTriangles != nullptr)
+        if (this->m_pRawPtr)
         {
-            GetRawAllocator().Free(const_cast<BLASTriangleDesc*>(this->m_Desc.pTriangles));
-        }
-        if (this->m_Desc.pBoxes != nullptr)
-        {
-            GetRawAllocator().Free(const_cast<BLASBoundingBoxDesc*>(this->m_Desc.pBoxes));
+            GetRawAllocator().Free(this->m_pRawPtr);
         }
     }
 
@@ -164,6 +101,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
     {
+        VERIFY(State == RESOURCE_STATE_BUILD_AS_READ || State == RESOURCE_STATE_BUILD_AS_WRITE,
+               "Unsupported state for bottom-level acceleration structure");
         this->m_State = State;
     }
 
@@ -184,6 +123,36 @@ public:
         return (this->m_State & State) == State;
     }
 
+    void CopyDescription(const BottomLevelASBase& Src)
+    {
+        const auto& SrcDesc = Src.GetDesc();
+        auto&       DstDesc = this->m_Desc;
+
+        try
+        {
+            if (this->m_pRawPtr)
+            {
+                GetRawAllocator().Free(this->m_pRawPtr);
+                this->m_pRawPtr = nullptr;
+            }
+            m_NameToIndex.clear();
+
+            DstDesc.TriangleCount = SrcDesc.TriangleCount;
+            DstDesc.BoxCount      = SrcDesc.BoxCount;
+
+            LinearAllocator MemPool{GetRawAllocator()};
+            CopyDescription(SrcDesc, DstDesc, MemPool, m_NameToIndex);
+            this->m_pRawPtr = MemPool.ReleaseOwnership();
+        }
+        catch (...)
+        {
+            // memory for arrays is not allocated or have been freed
+            DstDesc.pTriangles = nullptr;
+            DstDesc.pBoxes     = nullptr;
+            m_NameToIndex.clear();
+        }
+    }
+
 #ifdef DILIGENT_DEVELOPMENT
     void UpdateVersion()
     {
@@ -194,29 +163,143 @@ public:
     {
         return m_Version.load();
     }
-#endif
+
+    bool ValidateContent() const
+    {
+        return true;
+    }
+#endif // DILIGENT_DEVELOPMENT
 
 protected:
     static void ValidateBottomLevelASDesc(const BottomLevelASDesc& Desc)
     {
 #define LOG_BLAS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of Bottom-level AS '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
-        if (!((Desc.pBoxes != nullptr) ^ (Desc.pTriangles != nullptr)))
+        if (Desc.CompactedSize > 0)
         {
-            LOG_BLAS_ERROR_AND_THROW("Exactly one of pTriangles and pBoxes must be defined");
-        }
+            if (Desc.pTriangles != nullptr || Desc.pBoxes != nullptr)
+                LOG_BLAS_ERROR_AND_THROW("If CompactedSize is specified then pTriangles and pBoxes must be null");
 
-        if (Desc.pBoxes == nullptr && Desc.BoxCount > 0)
-        {
-            LOG_BLAS_ERROR_AND_THROW("pBoxes is null but BoxCount is not 0");
+            if (Desc.Flags != RAYTRACING_BUILD_AS_NONE)
+                LOG_BLAS_ERROR_AND_THROW("If CompactedSize is specified then Flags must be RAYTRACING_BUILD_AS_NONE");
         }
-
-        if (Desc.pTriangles == nullptr && Desc.TriangleCount > 0)
+        else
         {
-            LOG_BLAS_ERROR_AND_THROW("pTriangles is null but TriangleCount is not 0");
+            if (!((Desc.pBoxes != nullptr) ^ (Desc.pTriangles != nullptr)))
+                LOG_BLAS_ERROR_AND_THROW("Exactly one of pTriangles and pBoxes must be defined");
+
+            if (Desc.pBoxes == nullptr && Desc.BoxCount > 0)
+                LOG_BLAS_ERROR_AND_THROW("pBoxes is null but BoxCount is not 0");
+
+            if (Desc.pTriangles == nullptr && Desc.TriangleCount > 0)
+                LOG_BLAS_ERROR_AND_THROW("pTriangles is null but TriangleCount is not 0");
+
+            if ((Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) && (Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD))
+                LOG_BLAS_ERROR_AND_THROW("can not set both flags RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD");
+
+#ifdef DILIGENT_DEVELOPMENT
+            for (Uint32 i = 0; i < Desc.TriangleCount; ++i)
+            {
+                const auto& tri = Desc.pTriangles[i];
+
+                if (tri.GeometryName == nullptr)
+                    LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].GeometryName must not be null");
+
+                if (tri.VertexValueType >= VT_NUM_TYPES)
+                    LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].VertexValueType must be valid type");
+
+                if (tri.VertexComponentCount != 2 && tri.VertexComponentCount != 3)
+                    LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].VertexComponentCount must be 2 or 3");
+
+                if (tri.MaxVertexCount == 0)
+                    LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].MaxVertexCount must be greater then 0");
+
+                if (tri.MaxPrimitiveCount == 0)
+                    LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].MaxPrimitiveCount must be greater then 0");
+
+                if (tri.IndexType == VT_UNDEFINED)
+                {
+                    if (tri.MaxVertexCount != tri.MaxPrimitiveCount * 3)
+                        LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].MaxVertexCount must equal to (MaxPrimitiveCount * 3)");
+                }
+                else
+                {
+                    if (tri.IndexType != VT_UINT32 && tri.IndexType != VT_UINT16)
+                        LOG_BLAS_ERROR_AND_THROW("pTriangles[", i, "].IndexType must be VT_UINT16 or VT_UINT32");
+                }
+            }
+
+            for (Uint32 i = 0; i < Desc.BoxCount; ++i)
+            {
+                const auto& box = Desc.pBoxes[i];
+
+                if (box.GeometryName == nullptr)
+                    LOG_BLAS_ERROR_AND_THROW("pBoxes[", i, "].GeometryName must not be null");
+
+                if (box.MaxBoxCount == 0)
+                    LOG_BLAS_ERROR_AND_THROW("pBoxes[", i, "].MaxBoxCount must be greater then 0");
+            }
+#endif // DILIGENT_DEVELOPMENT
         }
 
 #undef LOG_BLAS_ERROR_AND_THROW
+    }
+
+    static void CopyDescription(const BottomLevelASDesc&                                                SrcDesc,
+                                BottomLevelASDesc&                                                      DstDesc,
+                                LinearAllocator&                                                        MemPool,
+                                std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher>& NameToIndex)
+    {
+        if (SrcDesc.pTriangles != nullptr)
+        {
+            MemPool.AddSpace<decltype(*SrcDesc.pTriangles)>(SrcDesc.TriangleCount);
+
+            for (Uint32 i = 0; i < SrcDesc.TriangleCount; ++i)
+                MemPool.AddSpaceForString(SrcDesc.pTriangles[i].GeometryName);
+
+            MemPool.Reserve();
+
+            auto* pTriangles = MemPool.CopyArray(SrcDesc.pTriangles, SrcDesc.TriangleCount);
+
+            // copy strings
+            for (Uint32 i = 0; i < SrcDesc.TriangleCount; ++i)
+            {
+                pTriangles[i].GeometryName = MemPool.CopyString(SrcDesc.pTriangles[i].GeometryName);
+                bool IsUniqueName          = NameToIndex.emplace(SrcDesc.pTriangles[i].GeometryName, i).second;
+                if (!IsUniqueName)
+                    LOG_ERROR_AND_THROW("Geometry name must be unique!");
+            }
+            DstDesc.pTriangles = pTriangles;
+            DstDesc.pBoxes     = nullptr;
+            DstDesc.BoxCount   = 0;
+        }
+        else if (SrcDesc.pBoxes != nullptr)
+        {
+            MemPool.AddSpace<decltype(*SrcDesc.pBoxes)>(SrcDesc.BoxCount);
+
+            for (Uint32 i = 0; i < SrcDesc.BoxCount; ++i)
+                MemPool.AddSpaceForString(SrcDesc.pBoxes[i].GeometryName);
+
+            MemPool.Reserve();
+
+            auto* pBoxes = MemPool.CopyArray(SrcDesc.pBoxes, SrcDesc.BoxCount);
+
+            // copy strings
+            for (Uint32 i = 0; i < SrcDesc.BoxCount; ++i)
+            {
+                pBoxes[i].GeometryName = MemPool.CopyString(SrcDesc.pBoxes[i].GeometryName);
+                bool IsUniqueName      = NameToIndex.emplace(SrcDesc.pBoxes[i].GeometryName, i).second;
+                if (!IsUniqueName)
+                    LOG_ERROR_AND_THROW("Geometry name must be unique!");
+            }
+            DstDesc.pBoxes        = pBoxes;
+            DstDesc.pTriangles    = nullptr;
+            DstDesc.TriangleCount = 0;
+        }
+        else
+        {
+            LOG_ERROR_AND_THROW("Either pTriangles or pBoxes must not be null");
+        }
     }
 
     IMPLEMENT_QUERY_INTERFACE_IN_PLACE(IID_BottomLevelAS, TDeviceObjectBase)
@@ -226,7 +309,7 @@ protected:
 
     std::unordered_map<HashMapStringKey, Uint32, HashMapStringKey::Hasher> m_NameToIndex;
 
-    StringPool m_StringPool;
+    void* m_pRawPtr = nullptr;
 
 #ifdef DILIGENT_DEVELOPMENT
     std::atomic<Uint32> m_Version{0};

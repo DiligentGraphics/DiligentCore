@@ -44,67 +44,84 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
                                                bool                         bIsDeviceInternal) :
     TBottomLevelASBase{pRefCounters, pDeviceD3D12, Desc, bIsDeviceInternal}
 {
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO BottomLevelPrebuildInfo = {};
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  BottomLevelInputs       = {};
-    std::vector<D3D12_RAYTRACING_GEOMETRY_DESC>           Geometries;
+    auto*  pd3d12Device             = pDeviceD3D12->GetD3D12Device5();
+    UINT64 ResultDataMaxSizeInBytes = 0;
 
-    if (m_Desc.pTriangles != nullptr)
+    if (m_Desc.CompactedSize)
     {
-        Geometries.resize(m_Desc.TriangleCount);
-        Uint32 MaxPrimitiveCount = 0;
-        for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
-        {
-            auto& src = m_Desc.pTriangles[i];
-            auto& dst = Geometries[i];
-
-            dst.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-            dst.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
-            dst.Triangles.VertexBuffer.StartAddress  = 0;
-            dst.Triangles.VertexBuffer.StrideInBytes = 0;
-            dst.Triangles.VertexFormat               = TypeToDXGI_Format(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
-            dst.Triangles.VertexCount                = src.MaxVertexCount;
-            dst.Triangles.IndexCount                 = src.MaxIndexCount;
-            dst.Triangles.IndexFormat                = ValueTypeToIndexType(src.IndexType);
-            dst.Triangles.IndexBuffer                = 0;
-            dst.Triangles.Transform3x4               = 0;
-
-            MaxPrimitiveCount += src.MaxIndexCount ? src.MaxIndexCount / 3 : src.MaxVertexCount / 3;
-        }
-        VERIFY_EXPR(MaxPrimitiveCount <= D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
+        ResultDataMaxSizeInBytes = m_Desc.CompactedSize;
     }
-    else if (m_Desc.pBoxes != nullptr)
+    else
     {
-        Geometries.resize(m_Desc.BoxCount);
-        Uint32 MaxBoxCount = 0;
-        for (uint32_t i = 0; i < m_Desc.BoxCount; ++i)
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO d3d12BottomLevelPrebuildInfo = {};
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS  d3d12BottomLevelInputs       = {};
+        std::vector<D3D12_RAYTRACING_GEOMETRY_DESC>           Geometries;
+
+        if (m_Desc.pTriangles != nullptr)
         {
-            auto& src = m_Desc.pBoxes[i];
-            auto& dst = Geometries[i];
+            Geometries.resize(m_Desc.TriangleCount);
+            Uint32 MaxPrimitiveCount = 0;
+            for (uint32_t i = 0; i < m_Desc.TriangleCount; ++i)
+            {
+                auto& src = m_Desc.pTriangles[i];
+                auto& dst = Geometries[i];
 
-            dst.Type                      = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
-            dst.Flags                     = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
-            dst.AABBs.AABBCount           = src.MaxBoxCount;
-            dst.AABBs.AABBs.StartAddress  = 0;
-            dst.AABBs.AABBs.StrideInBytes = 0;
+                dst.Type                                 = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+                dst.Flags                                = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+                dst.Triangles.VertexBuffer.StartAddress  = 0;
+                dst.Triangles.VertexBuffer.StrideInBytes = 0;
+                dst.Triangles.VertexFormat               = TypeToDXGI_Format(src.VertexValueType, src.VertexComponentCount, src.VertexValueType < VT_FLOAT16);
+                dst.Triangles.VertexCount                = src.MaxVertexCount;
+                dst.Triangles.IndexCount                 = src.IndexType == VT_UNDEFINED ? 0 : src.MaxPrimitiveCount * 3;
+                dst.Triangles.IndexFormat                = ValueTypeToIndexType(src.IndexType);
+                dst.Triangles.IndexBuffer                = 0;
+                dst.Triangles.Transform3x4               = 0;
 
-            MaxBoxCount += src.MaxBoxCount;
+                MaxPrimitiveCount += src.MaxPrimitiveCount;
+            }
+            VERIFY_EXPR(MaxPrimitiveCount <= D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
         }
-        VERIFY_EXPR(MaxBoxCount <= D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
+        else if (m_Desc.pBoxes != nullptr)
+        {
+            Geometries.resize(m_Desc.BoxCount);
+            Uint32 MaxBoxCount = 0;
+            for (uint32_t i = 0; i < m_Desc.BoxCount; ++i)
+            {
+                auto& src = m_Desc.pBoxes[i];
+                auto& dst = Geometries[i];
+
+                dst.Type                      = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+                dst.Flags                     = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+                dst.AABBs.AABBCount           = src.MaxBoxCount;
+                dst.AABBs.AABBs.StartAddress  = 0;
+                dst.AABBs.AABBs.StrideInBytes = 0;
+
+                MaxBoxCount += src.MaxBoxCount;
+            }
+            VERIFY_EXPR(MaxBoxCount <= D3D12_RAYTRACING_MAX_PRIMITIVES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
+        }
+        else
+        {
+            UNEXPECTED("Either pTriangles or pBoxes must not be null");
+        }
+
+        VERIFY_EXPR(Geometries.size() <= D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
+
+        d3d12BottomLevelInputs.Type           = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+        d3d12BottomLevelInputs.Flags          = BuildASFlagsToD3D12ASBuildFlags(m_Desc.Flags);
+        d3d12BottomLevelInputs.DescsLayout    = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        d3d12BottomLevelInputs.pGeometryDescs = Geometries.data();
+        d3d12BottomLevelInputs.NumDescs       = static_cast<UINT>(Geometries.size());
+
+        pd3d12Device->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12BottomLevelInputs, &d3d12BottomLevelPrebuildInfo);
+        if (d3d12BottomLevelPrebuildInfo.ResultDataMaxSizeInBytes == 0)
+            LOG_ERROR_AND_THROW("Failed to get ray tracing acceleration structure prebuild info");
+
+        ResultDataMaxSizeInBytes = d3d12BottomLevelPrebuildInfo.ResultDataMaxSizeInBytes;
+
+        m_ScratchSize.Build  = static_cast<Uint32>(d3d12BottomLevelPrebuildInfo.ScratchDataSizeInBytes);
+        m_ScratchSize.Update = static_cast<Uint32>(d3d12BottomLevelPrebuildInfo.UpdateScratchDataSizeInBytes);
     }
-
-    VERIFY_EXPR(Geometries.size() <= D3D12_RAYTRACING_MAX_GEOMETRIES_PER_BOTTOM_LEVEL_ACCELERATION_STRUCTURE);
-
-    BottomLevelInputs.Type           = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-    BottomLevelInputs.Flags          = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
-    BottomLevelInputs.DescsLayout    = D3D12_ELEMENTS_LAYOUT_ARRAY;
-    BottomLevelInputs.pGeometryDescs = Geometries.data();
-    BottomLevelInputs.NumDescs       = static_cast<UINT>(Geometries.size());
-
-    auto* pd3d12Device = pDeviceD3D12->GetD3D12Device5();
-
-    pd3d12Device->GetRaytracingAccelerationStructurePrebuildInfo(&BottomLevelInputs, &BottomLevelPrebuildInfo);
-    if (BottomLevelPrebuildInfo.ResultDataMaxSizeInBytes == 0)
-        LOG_ERROR_AND_THROW("Failed to get ray tracing acceleration structure prebuild info");
 
     D3D12_HEAP_PROPERTIES HeapProps;
     HeapProps.Type                 = D3D12_HEAP_TYPE_DEFAULT;
@@ -116,7 +133,7 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
     D3D12_RESOURCE_DESC ASDesc = {};
     ASDesc.Dimension           = D3D12_RESOURCE_DIMENSION_BUFFER;
     ASDesc.Alignment           = 0;
-    ASDesc.Width               = BottomLevelPrebuildInfo.ResultDataMaxSizeInBytes;
+    ASDesc.Width               = ResultDataMaxSizeInBytes;
     ASDesc.Height              = 1;
     ASDesc.DepthOrArraySize    = 1;
     ASDesc.MipLevels           = 1;
@@ -136,8 +153,9 @@ BottomLevelASD3D12Impl::BottomLevelASD3D12Impl(IReferenceCounters*          pRef
     if (*m_Desc.Name != 0)
         m_pd3d12Resource->SetName(WidenString(m_Desc.Name).c_str());
 
-    m_ScratchSize.Build  = static_cast<Uint32>(BottomLevelPrebuildInfo.ScratchDataSizeInBytes);
-    m_ScratchSize.Update = static_cast<Uint32>(BottomLevelPrebuildInfo.UpdateScratchDataSizeInBytes);
+    VERIFY_EXPR(GetGPUAddress() % D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT == 0);
+
+    SetState(RESOURCE_STATE_BUILD_AS_READ);
 }
 
 BottomLevelASD3D12Impl::~BottomLevelASD3D12Impl()

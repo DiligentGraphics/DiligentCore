@@ -50,14 +50,6 @@ static const INTERFACE_ID IID_ShaderBindingTableVk =
 /// Exposes Vulkan-specific functionality of a Shader binding table object.
 DILIGENT_BEGIN_INTERFACE(IShaderBindingTableVk, IShaderBindingTable)
 {
-    /// AZ TODO
-    VIRTUAL void METHOD(GetVkStridedBufferRegions)(THIS_
-                                                   IDeviceContextVk*              pContext,
-                                                   RESOURCE_STATE_TRANSITION_MODE TransitionMode,
-                                                   VkStridedBufferRegionKHR REF   RaygenShaderBindingTable,
-                                                   VkStridedBufferRegionKHR REF   MissShaderBindingTable,
-                                                   VkStridedBufferRegionKHR REF   HitShaderBindingTable,
-                                                   VkStridedBufferRegionKHR REF   CallableShaderBindingTable) PURE;
 };
 DILIGENT_END_INTERFACE
 // clang-format on
@@ -65,8 +57,6 @@ DILIGENT_END_INTERFACE
 #include "../../../Primitives/interface/UndefInterfaceHelperMacros.h"
 
 #if DILIGENT_C_INTERFACE
-
-#    define IShaderBindingTableVk_GetVkStridedBufferRegions(This, ...) CALL_IFACE_METHOD(ShaderBindingTableVk, GetVkStridedBufferRegions, This, __VA_ARGS__)
 
 #endif
 

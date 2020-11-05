@@ -101,6 +101,63 @@ struct RTContext
     static constexpr UINT DescriptorHeapSize = 16;
 };
 
+struct RTSubobjectsHelper
+{
+    std::vector<D3D12_STATE_SUBOBJECT>   Subobjects;
+    std::vector<D3D12_EXPORT_DESC>       ExportDescs;
+    std::vector<D3D12_DXIL_LIBRARY_DESC> LibDescs;
+    std::vector<D3D12_HIT_GROUP_DESC>    HitGroups;
+    std::vector<CComPtr<ID3DBlob>>       ShadersByteCode;
+
+    void SetShaderCount(Uint32 NumShaders, Uint32 NumHitGroups)
+    {
+        ShadersByteCode.resize(NumShaders);
+        ExportDescs.resize(NumShaders);
+        LibDescs.resize(NumShaders);
+        HitGroups.resize(NumHitGroups);
+    }
+
+    void SetDxilLibrary(Uint32 Index, const String& Source, const wchar_t* ExportName)
+    {
+        auto* pEnv = TestingEnvironmentD3D12::GetInstance();
+        auto  hr   = pEnv->CompileDXILShader(Source, L"main", nullptr, 0, L"lib_6_5", &ShadersByteCode[Index]);
+        ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray tracing shader";
+
+        D3D12_EXPORT_DESC&       RGExportDesc = ExportDescs[Index];
+        D3D12_DXIL_LIBRARY_DESC& RGLibDesc    = LibDescs[Index];
+        RGExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
+        RGExportDesc.ExportToRename           = L"main"; // shader entry name
+        RGExportDesc.Name                     = ExportName;
+        RGLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[Index]->GetBufferSize();
+        RGLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[Index]->GetBufferPointer();
+        RGLibDesc.NumExports                  = 1;
+        RGLibDesc.pExports                    = &RGExportDesc;
+        Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RGLibDesc});
+    }
+
+    void SetTriangleHitGroup(Uint32 Index, const wchar_t* GroupName, const wchar_t* ClosestHitShaderImport, const wchar_t* AnyHitShaderImport = nullptr)
+    {
+        D3D12_HIT_GROUP_DESC& HitGroupDesc    = HitGroups[Index];
+        HitGroupDesc.HitGroupExport           = GroupName;
+        HitGroupDesc.Type                     = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+        HitGroupDesc.ClosestHitShaderImport   = ClosestHitShaderImport;
+        HitGroupDesc.AnyHitShaderImport       = AnyHitShaderImport;
+        HitGroupDesc.IntersectionShaderImport = nullptr;
+        Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroupDesc});
+    }
+
+    void SetProceduralHitGroup(Uint32 Index, const wchar_t* GroupName, const wchar_t* IntersectionShaderImport, const wchar_t* ClosestHitShaderImport, const wchar_t* AnyHitShaderImport = nullptr)
+    {
+        D3D12_HIT_GROUP_DESC& HitGroupDesc    = HitGroups[Index];
+        HitGroupDesc.HitGroupExport           = GroupName;
+        HitGroupDesc.Type                     = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
+        HitGroupDesc.ClosestHitShaderImport   = ClosestHitShaderImport;
+        HitGroupDesc.AnyHitShaderImport       = AnyHitShaderImport;
+        HitGroupDesc.IntersectionShaderImport = IntersectionShaderImport;
+        Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroupDesc});
+    }
+};
+
 template <typename PSOCtorType, typename RootSigCtorType>
 void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, Uint32 ShaderRecordSize, PSOCtorType&& PSOCtor, RootSigCtorType&& RootSigCtor)
 {
@@ -154,12 +211,12 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, Uint32 ShaderRe
         Range.RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
         Range.NumDescriptors                    = 1;
         Range.OffsetInDescriptorsFromTableStart = 0;
-        DescriptorRanges.push_back(Range); // g_TLAS
+        DescriptorRanges.push_back(Range); // g_ColorBuffer
 
         Range.RangeType                         = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
         Range.NumDescriptors                    = 1;
         Range.OffsetInDescriptorsFromTableStart = 1;
-        DescriptorRanges.push_back(Range); // g_ColorBuffer
+        DescriptorRanges.push_back(Range); // g_TLAS
 
         Param.ParameterType                       = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
         Param.ShaderVisibility                    = D3D12_SHADER_VISIBILITY_ALL;
@@ -204,36 +261,31 @@ void InitializeRTContext(RTContext& Ctx, ISwapChain* pSwapChain, Uint32 ShaderRe
 
     // create ray tracing state object
     {
-        std::vector<D3D12_STATE_SUBOBJECT>   Subobjects;
-        std::vector<D3D12_EXPORT_DESC>       ExportDescs;
-        std::vector<D3D12_DXIL_LIBRARY_DESC> LibDescs;
-        std::vector<D3D12_HIT_GROUP_DESC>    HitGroups;
-        std::vector<CComPtr<ID3DBlob>>       ShadersByteCode;
-
-        PSOCtor(Subobjects, ExportDescs, LibDescs, HitGroups, ShadersByteCode);
+        RTSubobjectsHelper Helper;
+        PSOCtor(Helper);
 
         D3D12_RAYTRACING_PIPELINE_CONFIG PipelineConfig;
         PipelineConfig.MaxTraceRecursionDepth = 1;
-        Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &PipelineConfig});
+        Helper.Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &PipelineConfig});
 
         D3D12_RAYTRACING_SHADER_CONFIG ShaderConfig;
         ShaderConfig.MaxAttributeSizeInBytes = D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
         ShaderConfig.MaxPayloadSizeInBytes   = 4 * sizeof(float);
-        Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &ShaderConfig});
+        Helper.Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &ShaderConfig});
 
         D3D12_GLOBAL_ROOT_SIGNATURE GlobalRoot;
         GlobalRoot.pGlobalRootSignature = Ctx.pGlobalRootSignature;
-        Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &GlobalRoot});
+        Helper.Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &GlobalRoot});
 
         D3D12_LOCAL_ROOT_SIGNATURE LocalRoot;
         LocalRoot.pLocalRootSignature = Ctx.pLocalRootSignature;
         if (Ctx.pLocalRootSignature)
-            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, &LocalRoot});
+            Helper.Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, &LocalRoot});
 
         D3D12_STATE_OBJECT_DESC RTPipelineDesc;
         RTPipelineDesc.Type          = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
-        RTPipelineDesc.NumSubobjects = static_cast<UINT>(Subobjects.size());
-        RTPipelineDesc.pSubobjects   = Subobjects.data();
+        RTPipelineDesc.NumSubobjects = static_cast<UINT>(Helper.Subobjects.size());
+        RTPipelineDesc.pSubobjects   = Helper.Subobjects.data();
 
         hr = Ctx.pDevice->CreateStateObject(&RTPipelineDesc, IID_PPV_ARGS(&Ctx.pRayTracingSO));
         ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to create state object";
@@ -254,7 +306,7 @@ void CreateBLAS(RTContext& Ctx, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_IN
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO BottomLevelPrebuildInfo = {};
 
     BottomLevelInputs.Type        = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-    BottomLevelInputs.Flags       = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+    BottomLevelInputs.Flags       = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
     BottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 
     Ctx.pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&BottomLevelInputs, &BottomLevelPrebuildInfo);
@@ -294,7 +346,7 @@ void CreateTLAS(RTContext& Ctx, D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_IN
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO TopLevelPrebuildInfo = {};
 
     TopLevelInputs.Type        = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-    TopLevelInputs.Flags       = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+    TopLevelInputs.Flags       = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
     TopLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 
     Ctx.pDevice->GetRaytracingAccelerationStructurePrebuildInfo(&TopLevelInputs, &TopLevelPrebuildInfo);
@@ -450,6 +502,57 @@ void UpdateBuffer(RTContext& Ctx, ID3D12Resource* pBuffer, size_t Offset, const 
     Ctx.MappedOffset += DataSize;
 }
 
+void ASPrebuildBarriers(const RTContext& Ctx)
+{
+    std::vector<D3D12_RESOURCE_BARRIER> Barriers;
+    D3D12_RESOURCE_BARRIER              Barrier;
+
+    Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+    Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+
+    if (Ctx.pVertexBuffer)
+    {
+        Barrier.Transition.pResource = Ctx.pVertexBuffer;
+        Barriers.push_back(Barrier);
+    }
+    if (Ctx.pIndexBuffer)
+    {
+        Barrier.Transition.pResource = Ctx.pIndexBuffer;
+        Barriers.push_back(Barrier);
+    }
+    if (Ctx.pInstanceBuffer)
+    {
+        Barrier.Transition.pResource = Ctx.pInstanceBuffer;
+        Barriers.push_back(Barrier);
+    }
+    Ctx.pCmdList->ResourceBarrier(static_cast<UINT>(Barriers.size()), Barriers.data());
+}
+
+void SBTBufferBarrier(const RTContext& Ctx)
+{
+    D3D12_RESOURCE_BARRIER Barrier;
+    Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+    Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    Barrier.Transition.pResource   = Ctx.pSBTBuffer;
+    Ctx.pCmdList->ResourceBarrier(1, &Barrier);
+}
+
+void UAVBarrier(const RTContext& Ctx, ID3D12Resource* pResource)
+{
+    D3D12_RESOURCE_BARRIER Barrier;
+    Barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    Barrier.Flags         = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    Barrier.UAV.pResource = pResource;
+
+    Ctx.pCmdList->ResourceBarrier(1, &Barrier);
+}
+
 } // namespace
 
 
@@ -462,66 +565,12 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain, 0,
-                        [pEnv](std::vector<D3D12_STATE_SUBOBJECT>&   Subobjects,
-                               std::vector<D3D12_EXPORT_DESC>&       ExportDescs,
-                               std::vector<D3D12_DXIL_LIBRARY_DESC>& LibDescs,
-                               std::vector<D3D12_HIT_GROUP_DESC>&    HitGroups,
-                               std::vector<CComPtr<ID3DBlob>>&       ShadersByteCode) //
-                        {
-                            ShadersByteCode.resize(3);
-                            ExportDescs.resize(ShadersByteCode.size());
-                            LibDescs.resize(ShadersByteCode.size());
-                            HitGroups.resize(1);
-
-                            auto hr = pEnv->CompileDXILShader(HLSL::RayTracingTest1_RG, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[0]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray gen shader";
-
-                            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest1_RM, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[1]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray miss shader";
-
-                            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest1_RCH, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[2]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray closest hit shader";
-
-                            D3D12_EXPORT_DESC&       RGExportDesc = ExportDescs[0];
-                            D3D12_DXIL_LIBRARY_DESC& RGLibDesc    = LibDescs[0];
-                            RGExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RGExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RGExportDesc.Name                     = L"Main";
-                            RGLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[0]->GetBufferSize();
-                            RGLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[0]->GetBufferPointer();
-                            RGLibDesc.NumExports                  = 1;
-                            RGLibDesc.pExports                    = &RGExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RGLibDesc});
-
-                            D3D12_EXPORT_DESC&       RMExportDesc = ExportDescs[1];
-                            D3D12_DXIL_LIBRARY_DESC& RMLibDesc    = LibDescs[1];
-                            RMExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RMExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RMExportDesc.Name                     = L"Miss";
-                            RMLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[1]->GetBufferSize();
-                            RMLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[1]->GetBufferPointer();
-                            RMLibDesc.NumExports                  = 1;
-                            RMLibDesc.pExports                    = &RMExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RMLibDesc});
-
-                            D3D12_EXPORT_DESC&       RCHExportDesc = ExportDescs[2];
-                            D3D12_DXIL_LIBRARY_DESC& RCHLibDesc    = LibDescs[2];
-                            RCHExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RCHExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RCHExportDesc.Name                     = L"ClosestHitShader";
-                            RCHLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[2]->GetBufferSize();
-                            RCHLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[2]->GetBufferPointer();
-                            RCHLibDesc.NumExports                  = 1;
-                            RCHLibDesc.pExports                    = &RCHExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RCHLibDesc});
-
-                            D3D12_HIT_GROUP_DESC& HitGroupDesc    = HitGroups[0];
-                            HitGroupDesc.HitGroupExport           = L"HitGroup";
-                            HitGroupDesc.Type                     = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-                            HitGroupDesc.ClosestHitShaderImport   = L"ClosestHitShader";
-                            HitGroupDesc.AnyHitShaderImport       = nullptr;
-                            HitGroupDesc.IntersectionShaderImport = nullptr;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroupDesc});
+                        [](RTSubobjectsHelper& SubObj) {
+                            SubObj.SetShaderCount(3, 1);
+                            SubObj.SetDxilLibrary(0, HLSL::RayTracingTest1_RG, L"Main");
+                            SubObj.SetDxilLibrary(1, HLSL::RayTracingTest1_RM, L"Miss");
+                            SubObj.SetDxilLibrary(2, HLSL::RayTracingTest1_RCH, L"ClosestHitShader");
+                            SubObj.SetTriangleHitGroup(0, L"HitGroup", L"ClosestHitShader", nullptr);
                         });
 
     // Create acceleration structures
@@ -566,35 +615,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 
         UpdateBuffer(Ctx, Ctx.pVertexBuffer, 0, Vertices, sizeof(Vertices));
         UpdateBuffer(Ctx, Ctx.pInstanceBuffer, 0, &Instance, sizeof(Instance));
-
-        // Vertex & instance buffer barriers
-        {
-            std::vector<D3D12_RESOURCE_BARRIER> Barriers;
-            D3D12_RESOURCE_BARRIER              Barrier;
-
-            Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-
-            if (Ctx.pVertexBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pVertexBuffer;
-                Barriers.push_back(Barrier);
-            }
-            if (Ctx.pIndexBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pIndexBuffer;
-                Barriers.push_back(Barrier);
-            }
-            if (Ctx.pInstanceBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pInstanceBuffer;
-                Barriers.push_back(Barrier);
-            }
-            Ctx.pCmdList->ResourceBarrier(static_cast<UINT>(Barriers.size()), Barriers.data());
-        }
+        ASPrebuildBarriers(Ctx);
 
         Geometry.Triangles.VertexBuffer.StartAddress = Ctx.pVertexBuffer->GetGPUVirtualAddress();
 
@@ -608,15 +629,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&BLASDesc, 0, nullptr);
 
-        // UAV barrier for scratch buffer
-        {
-            D3D12_RESOURCE_BARRIER Barrier;
-            Barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-            Barrier.Flags         = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.UAV.pResource = Ctx.pScratchBuffer;
-
-            Ctx.pCmdList->ResourceBarrier(1, &Barrier);
-        }
+        UAVBarrier(Ctx, Ctx.pScratchBuffer);
 
         TopLevelInputs.InstanceDescs = Ctx.pInstanceBuffer->GetGPUVirtualAddress();
 
@@ -668,18 +681,7 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
         UpdateBuffer(Ctx, Ctx.pSBTBuffer, RayGenOffset, Ctx.pStateObjectProperties->GetShaderIdentifier(L"Main"), handleSize);
         UpdateBuffer(Ctx, Ctx.pSBTBuffer, RayMissOffset, Ctx.pStateObjectProperties->GetShaderIdentifier(L"Miss"), handleSize);
         UpdateBuffer(Ctx, Ctx.pSBTBuffer, HitGroupOffset, Ctx.pStateObjectProperties->GetShaderIdentifier(L"HitGroup"), handleSize);
-
-        // SBT buffer barrier
-        {
-            D3D12_RESOURCE_BARRIER Barrier;
-            Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-            Barrier.Transition.pResource   = Ctx.pSBTBuffer;
-            Ctx.pCmdList->ResourceBarrier(1, &Barrier);
-        }
+        SBTBufferBarrier(Ctx);
 
         Ctx.pCmdList->DispatchRays(&Desc);
     }
@@ -688,7 +690,6 @@ void RayTracingTriangleClosestHitReferenceD3D12(ISwapChain* pSwapChain)
 
     pEnv->ExecuteCommandList(Ctx.pCmdList, true);
 }
-
 
 void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 {
@@ -699,80 +700,13 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain, 0,
-                        [pEnv](std::vector<D3D12_STATE_SUBOBJECT>&   Subobjects,
-                               std::vector<D3D12_EXPORT_DESC>&       ExportDescs,
-                               std::vector<D3D12_DXIL_LIBRARY_DESC>& LibDescs,
-                               std::vector<D3D12_HIT_GROUP_DESC>&    HitGroups,
-                               std::vector<CComPtr<ID3DBlob>>&       ShadersByteCode) //
-                        {
-                            ShadersByteCode.resize(4);
-                            ExportDescs.resize(ShadersByteCode.size());
-                            LibDescs.resize(ShadersByteCode.size());
-                            HitGroups.resize(1);
-
-                            auto hr = pEnv->CompileDXILShader(HLSL::RayTracingTest2_RG, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[0]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray gen shader";
-
-                            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest2_RM, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[1]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray miss shader";
-
-                            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest2_RCH, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[2]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray closest hit shader";
-
-                            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest2_RAH, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[3]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray any hit shader";
-
-                            D3D12_EXPORT_DESC&       RGExportDesc = ExportDescs[0];
-                            D3D12_DXIL_LIBRARY_DESC& RGLibDesc    = LibDescs[0];
-                            RGExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RGExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RGExportDesc.Name                     = L"Main";
-                            RGLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[0]->GetBufferSize();
-                            RGLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[0]->GetBufferPointer();
-                            RGLibDesc.NumExports                  = 1;
-                            RGLibDesc.pExports                    = &RGExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RGLibDesc});
-
-                            D3D12_EXPORT_DESC&       RMExportDesc = ExportDescs[1];
-                            D3D12_DXIL_LIBRARY_DESC& RMLibDesc    = LibDescs[1];
-                            RMExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RMExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RMExportDesc.Name                     = L"Miss";
-                            RMLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[1]->GetBufferSize();
-                            RMLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[1]->GetBufferPointer();
-                            RMLibDesc.NumExports                  = 1;
-                            RMLibDesc.pExports                    = &RMExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RMLibDesc});
-
-                            D3D12_EXPORT_DESC&       RCHExportDesc = ExportDescs[2];
-                            D3D12_DXIL_LIBRARY_DESC& RCHLibDesc    = LibDescs[2];
-                            RCHExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RCHExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RCHExportDesc.Name                     = L"ClosestHitShader";
-                            RCHLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[2]->GetBufferSize();
-                            RCHLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[2]->GetBufferPointer();
-                            RCHLibDesc.NumExports                  = 1;
-                            RCHLibDesc.pExports                    = &RCHExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RCHLibDesc});
-
-                            D3D12_EXPORT_DESC&       RAHExportDesc = ExportDescs[3];
-                            D3D12_DXIL_LIBRARY_DESC& RAHLibDesc    = LibDescs[3];
-                            RAHExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RAHExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RAHExportDesc.Name                     = L"AnyHitShader";
-                            RAHLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[3]->GetBufferSize();
-                            RAHLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[3]->GetBufferPointer();
-                            RAHLibDesc.NumExports                  = 1;
-                            RAHLibDesc.pExports                    = &RAHExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RAHLibDesc});
-
-                            D3D12_HIT_GROUP_DESC& HitGroupDesc    = HitGroups[0];
-                            HitGroupDesc.HitGroupExport           = L"HitGroup";
-                            HitGroupDesc.Type                     = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-                            HitGroupDesc.ClosestHitShaderImport   = L"ClosestHitShader";
-                            HitGroupDesc.AnyHitShaderImport       = L"AnyHitShader";
-                            HitGroupDesc.IntersectionShaderImport = nullptr;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroupDesc});
+                        [](RTSubobjectsHelper& SubObj) {
+                            SubObj.SetShaderCount(4, 1);
+                            SubObj.SetDxilLibrary(0, HLSL::RayTracingTest2_RG, L"Main");
+                            SubObj.SetDxilLibrary(1, HLSL::RayTracingTest2_RM, L"Miss");
+                            SubObj.SetDxilLibrary(2, HLSL::RayTracingTest2_RCH, L"ClosestHitShader");
+                            SubObj.SetDxilLibrary(3, HLSL::RayTracingTest2_RAH, L"AnyHitShader");
+                            SubObj.SetTriangleHitGroup(0, L"HitGroup", L"ClosestHitShader", L"AnyHitShader");
                         });
 
     // Create acceleration structures
@@ -817,35 +751,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 
         UpdateBuffer(Ctx, Ctx.pVertexBuffer, 0, Vertices, sizeof(Vertices));
         UpdateBuffer(Ctx, Ctx.pInstanceBuffer, 0, &Instance, sizeof(Instance));
-
-        // Vertex & instance buffer barriers
-        {
-            std::vector<D3D12_RESOURCE_BARRIER> Barriers;
-            D3D12_RESOURCE_BARRIER              Barrier;
-
-            Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-
-            if (Ctx.pVertexBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pVertexBuffer;
-                Barriers.push_back(Barrier);
-            }
-            if (Ctx.pIndexBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pIndexBuffer;
-                Barriers.push_back(Barrier);
-            }
-            if (Ctx.pInstanceBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pInstanceBuffer;
-                Barriers.push_back(Barrier);
-            }
-            Ctx.pCmdList->ResourceBarrier(static_cast<UINT>(Barriers.size()), Barriers.data());
-        }
+        ASPrebuildBarriers(Ctx);
 
         Geometry.Triangles.VertexBuffer.StartAddress = Ctx.pVertexBuffer->GetGPUVirtualAddress();
 
@@ -859,15 +765,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
 
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&BLASDesc, 0, nullptr);
 
-        // UAV barrier for scratch buffer
-        {
-            D3D12_RESOURCE_BARRIER Barrier;
-            Barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-            Barrier.Flags         = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.UAV.pResource = Ctx.pScratchBuffer;
-
-            Ctx.pCmdList->ResourceBarrier(1, &Barrier);
-        }
+        UAVBarrier(Ctx, Ctx.pScratchBuffer);
 
         TopLevelInputs.InstanceDescs = Ctx.pInstanceBuffer->GetGPUVirtualAddress();
 
@@ -919,18 +817,7 @@ void RayTracingTriangleAnyHitReferenceD3D12(ISwapChain* pSwapChain)
         UpdateBuffer(Ctx, Ctx.pSBTBuffer, RayGenOffset, Ctx.pStateObjectProperties->GetShaderIdentifier(L"Main"), handleSize);
         UpdateBuffer(Ctx, Ctx.pSBTBuffer, RayMissOffset, Ctx.pStateObjectProperties->GetShaderIdentifier(L"Miss"), handleSize);
         UpdateBuffer(Ctx, Ctx.pSBTBuffer, HitGroupOffset, Ctx.pStateObjectProperties->GetShaderIdentifier(L"HitGroup"), handleSize);
-
-        // SBT buffer barrier
-        {
-            D3D12_RESOURCE_BARRIER Barrier;
-            Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-            Barrier.Transition.pResource   = Ctx.pSBTBuffer;
-            Ctx.pCmdList->ResourceBarrier(1, &Barrier);
-        }
+        SBTBufferBarrier(Ctx);
 
         Ctx.pCmdList->DispatchRays(&Desc);
     }
@@ -950,80 +837,13 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
 
     RTContext Ctx = {};
     InitializeRTContext(Ctx, pSwapChain, 0,
-                        [pEnv](std::vector<D3D12_STATE_SUBOBJECT>&   Subobjects,
-                               std::vector<D3D12_EXPORT_DESC>&       ExportDescs,
-                               std::vector<D3D12_DXIL_LIBRARY_DESC>& LibDescs,
-                               std::vector<D3D12_HIT_GROUP_DESC>&    HitGroups,
-                               std::vector<CComPtr<ID3DBlob>>&       ShadersByteCode) //
-                        {
-                            ShadersByteCode.resize(4);
-                            ExportDescs.resize(ShadersByteCode.size());
-                            LibDescs.resize(ShadersByteCode.size());
-                            HitGroups.resize(1);
-
-                            auto hr = pEnv->CompileDXILShader(HLSL::RayTracingTest3_RG, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[0]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray gen shader";
-
-                            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest3_RM, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[1]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray miss shader";
-
-                            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest3_RCH, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[2]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray closest hit shader";
-
-                            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest3_RI, L"main", nullptr, 0, L"lib_6_3", &ShadersByteCode[3]);
-                            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray intersection shader";
-
-                            D3D12_EXPORT_DESC&       RGExportDesc = ExportDescs[0];
-                            D3D12_DXIL_LIBRARY_DESC& RGLibDesc    = LibDescs[0];
-                            RGExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RGExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RGExportDesc.Name                     = L"Main";
-                            RGLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[0]->GetBufferSize();
-                            RGLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[0]->GetBufferPointer();
-                            RGLibDesc.NumExports                  = 1;
-                            RGLibDesc.pExports                    = &RGExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RGLibDesc});
-
-                            D3D12_EXPORT_DESC&       RMExportDesc = ExportDescs[1];
-                            D3D12_DXIL_LIBRARY_DESC& RMLibDesc    = LibDescs[1];
-                            RMExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RMExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RMExportDesc.Name                     = L"Miss";
-                            RMLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[1]->GetBufferSize();
-                            RMLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[1]->GetBufferPointer();
-                            RMLibDesc.NumExports                  = 1;
-                            RMLibDesc.pExports                    = &RMExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RMLibDesc});
-
-                            D3D12_EXPORT_DESC&       RCHExportDesc = ExportDescs[2];
-                            D3D12_DXIL_LIBRARY_DESC& RCHLibDesc    = LibDescs[2];
-                            RCHExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RCHExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RCHExportDesc.Name                     = L"ClosestHitShader";
-                            RCHLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[2]->GetBufferSize();
-                            RCHLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[2]->GetBufferPointer();
-                            RCHLibDesc.NumExports                  = 1;
-                            RCHLibDesc.pExports                    = &RCHExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RCHLibDesc});
-
-                            D3D12_EXPORT_DESC&       RIExportDesc = ExportDescs[3];
-                            D3D12_DXIL_LIBRARY_DESC& RILibDesc    = LibDescs[3];
-                            RIExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-                            RIExportDesc.ExportToRename           = L"main"; // shader entry name
-                            RIExportDesc.Name                     = L"IntersectionShader";
-                            RILibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[3]->GetBufferSize();
-                            RILibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[3]->GetBufferPointer();
-                            RILibDesc.NumExports                  = 1;
-                            RILibDesc.pExports                    = &RIExportDesc;
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RILibDesc});
-
-                            D3D12_HIT_GROUP_DESC& HitGroupDesc    = HitGroups[0];
-                            HitGroupDesc.HitGroupExport           = L"HitGroup";
-                            HitGroupDesc.Type                     = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE;
-                            HitGroupDesc.ClosestHitShaderImport   = L"ClosestHitShader";
-                            HitGroupDesc.AnyHitShaderImport       = nullptr;
-                            HitGroupDesc.IntersectionShaderImport = L"IntersectionShader";
-                            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroupDesc});
+                        [](RTSubobjectsHelper& SubObj) {
+                            SubObj.SetShaderCount(4, 1);
+                            SubObj.SetDxilLibrary(0, HLSL::RayTracingTest3_RG, L"Main");
+                            SubObj.SetDxilLibrary(1, HLSL::RayTracingTest3_RM, L"Miss");
+                            SubObj.SetDxilLibrary(2, HLSL::RayTracingTest3_RCH, L"ClosestHitShader");
+                            SubObj.SetDxilLibrary(3, HLSL::RayTracingTest3_RI, L"IntersectionShader");
+                            SubObj.SetProceduralHitGroup(0, L"HitGroup", L"IntersectionShader", L"ClosestHitShader");
                         });
 
     // Create acceleration structures
@@ -1063,35 +883,7 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
 
         UpdateBuffer(Ctx, Ctx.pVertexBuffer, 0, Boxes, sizeof(Boxes));
         UpdateBuffer(Ctx, Ctx.pInstanceBuffer, 0, &Instance, sizeof(Instance));
-
-        // vertex & instance buffer barrier
-        {
-            std::vector<D3D12_RESOURCE_BARRIER> Barriers;
-            D3D12_RESOURCE_BARRIER              Barrier;
-
-            Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-
-            if (Ctx.pVertexBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pVertexBuffer;
-                Barriers.push_back(Barrier);
-            }
-            if (Ctx.pIndexBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pIndexBuffer;
-                Barriers.push_back(Barrier);
-            }
-            if (Ctx.pInstanceBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pInstanceBuffer;
-                Barriers.push_back(Barrier);
-            }
-            Ctx.pCmdList->ResourceBarrier(static_cast<UINT>(Barriers.size()), Barriers.data());
-        }
+        ASPrebuildBarriers(Ctx);
 
         Geometry.AABBs.AABBs.StartAddress = Ctx.pVertexBuffer->GetGPUVirtualAddress();
 
@@ -1105,15 +897,7 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
 
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&BLASDesc, 0, nullptr);
 
-        // UAV barrier for scratch buffer
-        {
-            D3D12_RESOURCE_BARRIER Barrier;
-            Barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-            Barrier.Flags         = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.UAV.pResource = Ctx.pScratchBuffer;
-
-            Ctx.pCmdList->ResourceBarrier(1, &Barrier);
-        }
+        UAVBarrier(Ctx, Ctx.pScratchBuffer);
 
         TopLevelInputs.InstanceDescs = Ctx.pInstanceBuffer->GetGPUVirtualAddress();
 
@@ -1165,18 +949,7 @@ void RayTracingProceduralIntersectionReferenceD3D12(ISwapChain* pSwapChain)
         UpdateBuffer(Ctx, Ctx.pSBTBuffer, RayGenOffset, Ctx.pStateObjectProperties->GetShaderIdentifier(L"Main"), handleSize);
         UpdateBuffer(Ctx, Ctx.pSBTBuffer, RayMissOffset, Ctx.pStateObjectProperties->GetShaderIdentifier(L"Miss"), handleSize);
         UpdateBuffer(Ctx, Ctx.pSBTBuffer, HitGroupOffset, Ctx.pStateObjectProperties->GetShaderIdentifier(L"HitGroup"), handleSize);
-
-        // SBT buffer barrier
-        {
-            D3D12_RESOURCE_BARRIER Barrier;
-            Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-            Barrier.Transition.pResource   = Ctx.pSBTBuffer;
-            Ctx.pCmdList->ResourceBarrier(1, &Barrier);
-        }
+        SBTBufferBarrier(Ctx);
 
         Ctx.pCmdList->DispatchRays(&Desc);
     }
@@ -1202,88 +975,14 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
     InitializeRTContext(
         Ctx, pSwapChain,
         TestingConstants::MultiGeometry::ShaderRecordSize,
-        [pEnv](std::vector<D3D12_STATE_SUBOBJECT>&   Subobjects,
-               std::vector<D3D12_EXPORT_DESC>&       ExportDescs,
-               std::vector<D3D12_DXIL_LIBRARY_DESC>& LibDescs,
-               std::vector<D3D12_HIT_GROUP_DESC>&    HitGroups,
-               std::vector<CComPtr<ID3DBlob>>&       ShadersByteCode) //
-        {
-            ShadersByteCode.resize(4);
-            ExportDescs.resize(ShadersByteCode.size());
-            LibDescs.resize(ShadersByteCode.size());
-            HitGroups.resize(2);
-
-            auto hr = pEnv->CompileDXILShader(HLSL::RayTracingTest4_RG, L"main", nullptr, 0, L"lib_6_5", &ShadersByteCode[0]);
-            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray gen shader";
-
-            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest4_RM, L"main", nullptr, 0, L"lib_6_5", &ShadersByteCode[1]);
-            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray miss shader";
-
-            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest4_RCH1, L"main", nullptr, 0, L"lib_6_5", &ShadersByteCode[2]);
-            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray closest hit shader";
-
-            hr = pEnv->CompileDXILShader(HLSL::RayTracingTest4_RCH2, L"main", nullptr, 0, L"lib_6_5", &ShadersByteCode[3]);
-            ASSERT_HRESULT_SUCCEEDED(hr) << "Failed to compile ray closest hit shader";
-
-            D3D12_EXPORT_DESC&       RGExportDesc = ExportDescs[0];
-            D3D12_DXIL_LIBRARY_DESC& RGLibDesc    = LibDescs[0];
-            RGExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-            RGExportDesc.ExportToRename           = L"main"; // shader entry name
-            RGExportDesc.Name                     = L"Main";
-            RGLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[0]->GetBufferSize();
-            RGLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[0]->GetBufferPointer();
-            RGLibDesc.NumExports                  = 1;
-            RGLibDesc.pExports                    = &RGExportDesc;
-            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RGLibDesc});
-
-            D3D12_EXPORT_DESC&       RMExportDesc = ExportDescs[1];
-            D3D12_DXIL_LIBRARY_DESC& RMLibDesc    = LibDescs[1];
-            RMExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-            RMExportDesc.ExportToRename           = L"main"; // shader entry name
-            RMExportDesc.Name                     = L"Miss";
-            RMLibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[1]->GetBufferSize();
-            RMLibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[1]->GetBufferPointer();
-            RMLibDesc.NumExports                  = 1;
-            RMLibDesc.pExports                    = &RMExportDesc;
-            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RMLibDesc});
-
-            D3D12_EXPORT_DESC&       RCH1ExportDesc = ExportDescs[2];
-            D3D12_DXIL_LIBRARY_DESC& RCH1LibDesc    = LibDescs[2];
-            RCH1ExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-            RCH1ExportDesc.ExportToRename           = L"main"; // shader entry name
-            RCH1ExportDesc.Name                     = L"ClosestHitShader1";
-            RCH1LibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[2]->GetBufferSize();
-            RCH1LibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[2]->GetBufferPointer();
-            RCH1LibDesc.NumExports                  = 1;
-            RCH1LibDesc.pExports                    = &RCH1ExportDesc;
-            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RCH1LibDesc});
-
-            D3D12_EXPORT_DESC&       RCH2ExportDesc = ExportDescs[3];
-            D3D12_DXIL_LIBRARY_DESC& RCH2LibDesc    = LibDescs[3];
-            RCH2ExportDesc.Flags                    = D3D12_EXPORT_FLAG_NONE;
-            RCH2ExportDesc.ExportToRename           = L"main"; // shader entry name
-            RCH2ExportDesc.Name                     = L"ClosestHitShader2";
-            RCH2LibDesc.DXILLibrary.BytecodeLength  = ShadersByteCode[3]->GetBufferSize();
-            RCH2LibDesc.DXILLibrary.pShaderBytecode = ShadersByteCode[3]->GetBufferPointer();
-            RCH2LibDesc.NumExports                  = 1;
-            RCH2LibDesc.pExports                    = &RCH2ExportDesc;
-            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &RCH2LibDesc});
-
-            D3D12_HIT_GROUP_DESC& HitGroup1Desc    = HitGroups[0];
-            HitGroup1Desc.HitGroupExport           = L"HitGroup1";
-            HitGroup1Desc.Type                     = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-            HitGroup1Desc.ClosestHitShaderImport   = L"ClosestHitShader1";
-            HitGroup1Desc.AnyHitShaderImport       = nullptr;
-            HitGroup1Desc.IntersectionShaderImport = nullptr;
-            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroup1Desc});
-
-            D3D12_HIT_GROUP_DESC& HitGroup2Desc    = HitGroups[1];
-            HitGroup2Desc.HitGroupExport           = L"HitGroup2";
-            HitGroup2Desc.Type                     = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-            HitGroup2Desc.ClosestHitShaderImport   = L"ClosestHitShader2";
-            HitGroup2Desc.AnyHitShaderImport       = nullptr;
-            HitGroup2Desc.IntersectionShaderImport = nullptr;
-            Subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &HitGroup2Desc});
+        [](RTSubobjectsHelper& SubObj) {
+            SubObj.SetShaderCount(4, 2);
+            SubObj.SetDxilLibrary(0, HLSL::RayTracingTest4_RG, L"Main");
+            SubObj.SetDxilLibrary(1, HLSL::RayTracingTest4_RM, L"Miss");
+            SubObj.SetDxilLibrary(2, HLSL::RayTracingTest4_RCH1, L"ClosestHitShader1");
+            SubObj.SetDxilLibrary(3, HLSL::RayTracingTest4_RCH2, L"ClosestHitShader2");
+            SubObj.SetTriangleHitGroup(0, L"HitGroup1", L"ClosestHitShader1");
+            SubObj.SetTriangleHitGroup(1, L"HitGroup2", L"ClosestHitShader2");
         },
         [](std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) {
             D3D12_DESCRIPTOR_RANGE Range = {};
@@ -1390,35 +1089,7 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
         UpdateBuffer(Ctx, Ctx.pVertexBuffer, 0, Vertices, sizeof(Vertices));
         UpdateBuffer(Ctx, Ctx.pIndexBuffer, 0, Indices, sizeof(Indices));
         UpdateBuffer(Ctx, Ctx.pInstanceBuffer, 0, Instances, sizeof(Instances));
-
-        // vertex & instance buffer barrier
-        {
-            std::vector<D3D12_RESOURCE_BARRIER> Barriers;
-            D3D12_RESOURCE_BARRIER              Barrier;
-
-            Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-
-            if (Ctx.pVertexBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pVertexBuffer;
-                Barriers.push_back(Barrier);
-            }
-            if (Ctx.pIndexBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pIndexBuffer;
-                Barriers.push_back(Barrier);
-            }
-            if (Ctx.pInstanceBuffer)
-            {
-                Barrier.Transition.pResource = Ctx.pInstanceBuffer;
-                Barriers.push_back(Barrier);
-            }
-            Ctx.pCmdList->ResourceBarrier(static_cast<UINT>(Barriers.size()), Barriers.data());
-        }
+        ASPrebuildBarriers(Ctx);
 
         Geometries[0].Triangles.VertexBuffer.StartAddress = Ctx.pVertexBuffer->GetGPUVirtualAddress();
         Geometries[1].Triangles.VertexBuffer.StartAddress = Ctx.pVertexBuffer->GetGPUVirtualAddress();
@@ -1437,15 +1108,7 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
 
         Ctx.pCmdList->BuildRaytracingAccelerationStructure(&BLASDesc, 0, nullptr);
 
-        // UAV barrier for scratch buffer
-        {
-            D3D12_RESOURCE_BARRIER Barrier;
-            Barrier.Type          = D3D12_RESOURCE_BARRIER_TYPE_UAV;
-            Barrier.Flags         = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.UAV.pResource = Ctx.pScratchBuffer;
-
-            Ctx.pCmdList->ResourceBarrier(1, &Barrier);
-        }
+        UAVBarrier(Ctx, Ctx.pScratchBuffer);
 
         TopLevelInputs.InstanceDescs = Ctx.pInstanceBuffer->GetGPUVirtualAddress();
 
@@ -1605,17 +1268,7 @@ void RayTracingMultiGeometryReferenceD3D12(ISwapChain* pSwapChain)
         SetHitGroup(4, L"HitGroup2", &Weights[1]); // geometry 2
         SetHitGroup(5, L"HitGroup2", &Weights[0]); // geometry 3
 
-        // SBT buffer barrier
-        {
-            D3D12_RESOURCE_BARRIER Barrier;
-            Barrier.Type                   = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-            Barrier.Flags                  = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-            Barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-            Barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-            Barrier.Transition.StateAfter  = D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-            Barrier.Transition.pResource   = Ctx.pSBTBuffer;
-            Ctx.pCmdList->ResourceBarrier(1, &Barrier);
-        }
+        SBTBufferBarrier(Ctx);
 
         Ctx.pCmdList->DispatchRays(&Desc);
     }

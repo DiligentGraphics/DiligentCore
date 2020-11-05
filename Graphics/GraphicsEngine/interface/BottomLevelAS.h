@@ -46,39 +46,37 @@ static const INTERFACE_ID IID_BottomLevelAS =
 
 /// Defines bottom level acceleration structure triangles description.
 
-/// AZ TODO
+/// Triangle geometry description.
 struct BLASTriangleDesc
 {
     /// Geometry name.
-    /// The name is used to map BLASBuildTriangleData to this geometry.
+    /// The name is used to map triangles data (BLASBuildTriangleData) to this geometry.
     const char*               GeometryName          DEFAULT_INITIALIZER(nullptr);
 
     /// The maximum vertex count for this geometry.
     /// Current number of vertices is defined in BLASBuildTriangleData::VertexCount.
     Uint32                    MaxVertexCount        DEFAULT_INITIALIZER(0);
 
-    /// The type of vertices in this geometry.
-    /// Float, Int16 are supported.
+    /// The type of vertices in this geometry, see Diligent::VALUE_TYPE.
     VALUE_TYPE                VertexValueType       DEFAULT_INITIALIZER(VT_UNDEFINED);
 
     /// The number of components in vertex.
     /// 2 and 3 are supported.
     Uint8                     VertexComponentCount  DEFAULT_INITIALIZER(0);
 
-    /// The maximum index count for this geometry.
-    /// The current number of indices is defined in BLASBuildTriangleData::IndexCount.
-    /// It must be 0 if IndexType is VT_UNDEFINED and greater than zero otherwise.
-    Uint32                    MaxIndexCount         DEFAULT_INITIALIZER(0);
+    /// The maximum primitive count of this geometry.
+    /// The current number of primitives is defined in BLASBuildTriangleData::PrimitiveCount.
+    Uint32                    MaxPrimitiveCount         DEFAULT_INITIALIZER(0);
 
-    /// Index type of this geometry.
+    /// Index type of this geometry, see Diligent::VALUE_TYPE.
     /// Must be VT_UINT16, VT_UINT32 or VT_UNDEFINED.
+    /// If not defined then used vertex array instead of indexed vertices.
     VALUE_TYPE                IndexType             DEFAULT_INITIALIZER(VT_UNDEFINED);
 
-    /// AZ TODO
+    /// Vulkan only, allows to use transformations in BLASBuildTriangleData.
     Bool                      AllowsTransforms      DEFAULT_INITIALIZER(False);
     
 #if DILIGENT_CPP_INTERFACE
-    /// AZ TODO
     BLASTriangleDesc() noexcept {}
 #endif
 };
@@ -87,11 +85,11 @@ typedef struct BLASTriangleDesc BLASTriangleDesc;
 
 /// Defines bottom level acceleration structure axis aligned bounding boxes description.
 
-/// AZ TODO
+/// AABB geometry description.
 struct BLASBoundingBoxDesc
 {
     /// Geometry name.
-    /// The name is used to map BLASBuildBoundingBoxData to this geometry.
+    /// The name is used to map AABB data (BLASBuildBoundingBoxData) to this geometry.
     const char*               GeometryName  DEFAULT_INITIALIZER(nullptr);
     
     /// The maximum AABBs count.
@@ -99,25 +97,22 @@ struct BLASBoundingBoxDesc
     Uint32                    MaxBoxCount   DEFAULT_INITIALIZER(0);
     
 #if DILIGENT_CPP_INTERFACE
-    /// AZ TODO
     BLASBoundingBoxDesc() noexcept {}
 #endif
 };
 typedef struct BLASBoundingBoxDesc BLASBoundingBoxDesc;
 
 
-/// AZ TODO
-
-/// AZ TODO
+/// Defines acceleration structures build flags.
 DILIGENT_TYPED_ENUM(RAYTRACING_BUILD_AS_FLAGS, Uint8)
 {
-    /// AZ TODO
     RAYTRACING_BUILD_AS_NONE              = 0,
         
-    /// AZ TODO
+    /// AZ TODO: not supported yet
     RAYTRACING_BUILD_AS_ALLOW_UPDATE      = 0x01,
 
-    /// Indicates that the specified acceleration structure can act as the source for a copy acceleration structure command
+    /// Indicates that the specified acceleration structure can act as the source for
+    /// a copy acceleration structure command IDeviceContext::CopyBLAS() or IDeviceContext::CopyTLAS()
     /// with mode of COPY_AS_MODE_COMPACT to produce a compacted acceleration structure.
     RAYTRACING_BUILD_AS_ALLOW_COMPACTION  = 0x02,
 
@@ -131,15 +126,12 @@ DILIGENT_TYPED_ENUM(RAYTRACING_BUILD_AS_FLAGS, Uint8)
     /// result build, potentially at the expense of build time or trace performance.
     RAYTRACING_BUILD_AS_LOW_MEMORY        = 0x10,
 
-    RAYTRACING_BUILD_AS_FLAGS_LAST        = 0x10
+    RAYTRACING_BUILD_AS_FLAGS_LAST        = RAYTRACING_BUILD_AS_LOW_MEMORY
 };
 DEFINE_FLAG_ENUM_OPERATORS(RAYTRACING_BUILD_AS_FLAGS)
 
 
-/// AZ TODO
-
-// Here we allocate space for geometry data.
-// Geometry can be dynamically updated.
+/// Bottom-level AS description.
 struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
 
     /// Array of triangle geometry descriptions.
@@ -156,28 +148,36 @@ struct BottomLevelASDesc DILIGENT_DERIVE(DeviceObjectAttribs)
     
     /// Ray tracing build flags, see Diligent::RAYTRACING_BUILD_AS_FLAGS.
     RAYTRACING_BUILD_AS_FLAGS  Flags            DEFAULT_INITIALIZER(RAYTRACING_BUILD_AS_NONE);
+
+    /// Size from the result of IDeviceContext::WriteBLASCompactedSize() if this acceleration structure
+    /// is going to be the target of a compacting copy (IDeviceContext::CopyBLAS() with COPY_AS_MODE_COMPACT).
+    Uint32                     CompactedSize    DEFAULT_INITIALIZER(0);
     
     /// Defines which command queues this BLAS can be used with
     Uint64                     CommandQueueMask DEFAULT_INITIALIZER(1);
 
 #if DILIGENT_CPP_INTERFACE
-    /// AZ TODO
     BottomLevelASDesc() noexcept {}
 #endif
 };
 typedef struct BottomLevelASDesc BottomLevelASDesc;
 
+
+/// Defines scratch buffer info for acceleration structure.
 struct ScratchBufferSizes
 {
+    /// Scratch buffer size for acceleration structure building.
     Uint32 Build  DEFAULT_INITIALIZER(0);
+
+    /// AZ TODO: not supported yet
     Uint32 Update DEFAULT_INITIALIZER(0);
     
 #if DILIGENT_CPP_INTERFACE
-    /// AZ TODO
     ScratchBufferSizes() noexcept {}
 #endif
 };
 typedef struct ScratchBufferSizes ScratchBufferSizes;
+
 
 #define DILIGENT_INTERFACE_NAME IBottomLevelAS
 #include "../../../Primitives/interface/DefineInterfaceHelperMacros.h"
@@ -186,7 +186,9 @@ typedef struct ScratchBufferSizes ScratchBufferSizes;
     IDeviceObjectInclusiveMethods;         \
     IBottomLevelASMethods BottomLevelAS
 
-/// AZ TODO
+/// Bottom-level AS interface
+
+/// Defines the methods to manipulate a BLAS object
 DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
 {
 #if DILIGENT_CPP_INTERFACE
@@ -194,11 +196,16 @@ DILIGENT_BEGIN_INTERFACE(IBottomLevelAS, IDeviceObject)
     virtual const BottomLevelASDesc& DILIGENT_CALL_TYPE GetDesc() const override = 0;
 #endif
 
-    /// AZ TODO
+    /// Returns geometry index that can be used in shader binding table.
+    
+    /// \param [in] Name - Geometry name that specified in BLASTriangleDesc or BLASBoundingBoxDesc.
+    /// \return Geometry index.
     VIRTUAL Uint32 METHOD(GetGeometryIndex)(THIS_
                                             const char* Name) CONST PURE;
 
-    /// AZ TODO
+    /// Returns scratch buffer info for current acceleration structure.
+    
+    /// \return structure object.
     VIRTUAL ScratchBufferSizes METHOD(GetScratchBufferSizes)(THIS) CONST PURE;
 
     /// Returns native acceleration structure handle specific to the underlying graphics API

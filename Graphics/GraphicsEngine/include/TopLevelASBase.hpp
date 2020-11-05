@@ -33,6 +33,7 @@
 #include <unordered_map>
 
 #include "TopLevelAS.h"
+#include "BottomLevelAS.h"
 #include "DeviceObjectBase.hpp"
 #include "RenderDeviceBase.hpp"
 #include "StringPool.hpp"
@@ -71,59 +72,66 @@ public:
     {
     }
 
-    void SetInstanceData(const TLASBuildInstanceData* pInstances, Uint32 InstanceCount, Uint32 HitShadersPerInstance)
+    void SetInstanceData(const TLASBuildInstanceData* pInstances, Uint32 InstanceCount, Uint32 HitShadersPerInstance) noexcept
     {
-        this->m_Instances.clear();
-        this->m_StringPool.Release();
-        this->m_HitShadersPerInstance = HitShadersPerInstance;
-
-        size_t StringPoolSize = 0;
-        for (Uint32 i = 0; i < InstanceCount; ++i)
+        try
         {
-            StringPoolSize += strlen(pInstances[i].InstanceName) + 1;
-        }
+            this->m_Instances.clear();
+            this->m_StringPool.Release();
+            this->m_HitShadersPerInstance = HitShadersPerInstance;
 
-        this->m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
-
-        Uint32 InstanceOffset = 0;
-
-        for (Uint32 i = 0; i < InstanceCount; ++i)
-        {
-            auto&        inst     = pInstances[i];
-            const char*  NameCopy = this->m_StringPool.CopyString(inst.InstanceName);
-            InstanceDesc Desc     = {};
-
-            Desc.ContributionToHitGroupIndex = inst.ContributionToHitGroupIndex;
-            Desc.pBLAS                       = ValidatedCast<BottomLevelASType>(inst.pBLAS);
-
-#ifdef DILIGENT_DEVELOPMENT
-            Desc.Version = Desc.pBLAS->GetVersion();
-#endif
-
-            if (Desc.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
+            size_t StringPoolSize = 0;
+            for (Uint32 i = 0; i < InstanceCount; ++i)
             {
-                Desc.ContributionToHitGroupIndex = InstanceOffset;
-                auto& BLASDesc                   = Desc.pBLAS->GetDesc();
-                switch (this->m_Desc.BindingMode)
-                {
-                    // clang-format off
-                    case SHADER_BINDING_MODE_PER_GEOMETRY: InstanceOffset += (BLASDesc.TriangleCount + BLASDesc.BoxCount) * HitShadersPerInstance;     break;
-                    case SHADER_BINDING_MODE_PER_INSTANCE: InstanceOffset += HitShadersPerInstance;                                                    break;
-                    case SHADER_BINDING_USER_DEFINED:      UNEXPECTED("TLAS_INSTANCE_OFFSET_AUTO is not compatible with SHADER_BINDING_USER_DEFINED"); break;
-                    default:                               UNEXPECTED("unknown ray tracing shader binding mode");
-                        // clang-format on
-                }
+                StringPoolSize += strlen(pInstances[i].InstanceName) + 1;
             }
 
-            bool IsUniqueName = this->m_Instances.emplace(NameCopy, Desc).second;
-            if (!IsUniqueName)
-                LOG_ERROR_AND_THROW("Instance name must be unique!");
-        }
+            this->m_StringPool.Reserve(StringPoolSize, GetRawAllocator());
 
-        VERIFY_EXPR(this->m_StringPool.GetRemainingSize() == 0);
+            Uint32 InstanceOffset = 0;
+
+            for (Uint32 i = 0; i < InstanceCount; ++i)
+            {
+                auto&        inst     = pInstances[i];
+                const char*  NameCopy = this->m_StringPool.CopyString(inst.InstanceName);
+                InstanceDesc Desc     = {};
+
+                Desc.ContributionToHitGroupIndex = inst.ContributionToHitGroupIndex;
+                Desc.pBLAS                       = ValidatedCast<BottomLevelASType>(inst.pBLAS);
+
+#ifdef DILIGENT_DEVELOPMENT
+                Desc.Version = Desc.pBLAS->GetVersion();
+#endif
+
+                if (Desc.ContributionToHitGroupIndex == TLAS_INSTANCE_OFFSET_AUTO)
+                {
+                    Desc.ContributionToHitGroupIndex = InstanceOffset;
+                    auto& BLASDesc                   = Desc.pBLAS->GetDesc();
+                    switch (this->m_Desc.BindingMode)
+                    {
+                        // clang-format off
+                        case SHADER_BINDING_MODE_PER_GEOMETRY: InstanceOffset += (BLASDesc.TriangleCount + BLASDesc.BoxCount) * HitShadersPerInstance;     break;
+                        case SHADER_BINDING_MODE_PER_INSTANCE: InstanceOffset += HitShadersPerInstance;                                                    break;
+                        case SHADER_BINDING_USER_DEFINED:      UNEXPECTED("TLAS_INSTANCE_OFFSET_AUTO is not compatible with SHADER_BINDING_USER_DEFINED"); break;
+                        default:                               UNEXPECTED("unknown ray tracing shader binding mode");
+                            // clang-format on
+                    }
+                }
+
+                bool IsUniqueName = this->m_Instances.emplace(NameCopy, Desc).second;
+                if (!IsUniqueName)
+                    LOG_ERROR_AND_THROW("Instance name must be unique!");
+            }
+
+            VERIFY_EXPR(this->m_StringPool.GetRemainingSize() == 0);
+        }
+        catch (...)
+        {
+            this->m_Instances.clear();
+        }
     }
 
-    void CopyInstancceData(const TopLevelASBase& Src)
+    void CopyInstancceData(const TopLevelASBase& Src) noexcept
     {
         this->m_Instances.clear();
         this->m_StringPool.Release();
@@ -162,6 +170,8 @@ public:
 
     virtual void DILIGENT_CALL_TYPE SetState(RESOURCE_STATE State) override final
     {
+        VERIFY(State == RESOURCE_STATE_BUILD_AS_READ || State == RESOURCE_STATE_BUILD_AS_WRITE || State == RESOURCE_STATE_RAY_TRACING,
+               "Unsupported state for top-level acceleration structure");
         this->m_State = State;
     }
 
@@ -183,18 +193,42 @@ public:
     }
 
 #ifdef DILIGENT_DEVELOPMENT
-    bool CheckBLASVersion() const
+    bool ValidateContent() const
     {
+        bool result = true;
+
+        if (m_Instances.empty())
+        {
+            LOG_ERROR_MESSAGE("TLAS with name ('", GetDesc().Name, "') doesn't have instances, use IDeviceContext::BuildTLAS() or IDeviceContext::CopyTLAS() to initialize TLAS content");
+            result = false;
+        }
+
+        // validate instances
         for (auto& NameAndInst : m_Instances)
         {
-            auto& Inst = NameAndInst.second;
+            const InstanceDesc&      Inst = NameAndInst.second;
+            const BottomLevelASDesc& Desc = Inst.pBLAS->GetDesc();
+
             if (Inst.Version != Inst.pBLAS->GetVersion())
             {
-                LOG_ERROR_MESSAGE("Instance with name ('", NameAndInst.first.GetStr(), "') has BLAS that was changed after TLAS build, you must rebuild TLAS.");
-                return false;
+                LOG_ERROR_MESSAGE("Instance with name ('", NameAndInst.first.GetStr(), "') has BLAS with name ('", Desc.Name, "') that was changed after TLAS build, you must rebuild TLAS");
+                result = false;
+            }
+
+            if (Inst.pBLAS->GetState() != RESOURCE_STATE_BUILD_AS_READ)
+            {
+                LOG_ERROR_MESSAGE("Instance with name ('", NameAndInst.first.GetStr(), "') has BLAS with name ('", Desc.Name, "') that must be in BUILD_AS_READ state, but current state is ",
+                                  GetResourceStateFlagString(Inst.pBLAS->GetState()));
+                result = false;
+            }
+
+            if (!Inst.pBLAS->ValidateContent())
+            {
+                LOG_ERROR_MESSAGE("Instance with name ('", NameAndInst.first.GetStr(), "') has BLAS with name ('", Desc.Name, "') that is not valid");
+                result = false;
             }
         }
-        return true;
+        return result;
     }
 #endif
 
@@ -203,15 +237,29 @@ protected:
     {
 #define LOG_TLAS_ERROR_AND_THROW(...) LOG_ERROR_AND_THROW("Description of Top-level AS '", (Desc.Name ? Desc.Name : ""), "' is invalid: ", ##__VA_ARGS__)
 
-        if (Desc.MaxInstanceCount == 0)
+        if (Desc.CompactedSize > 0)
         {
-            LOG_TLAS_ERROR_AND_THROW("MaxInstanceCount must not be zero");
-        }
+            if (Desc.MaxInstanceCount != 0)
+            {
+                LOG_TLAS_ERROR_AND_THROW("If CompactedSize is specified then MaxInstanceCount must be zero");
+            }
 
-        if ((Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) != 0 ||
-            (Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD) != 0)
+            if (Desc.Flags != RAYTRACING_BUILD_AS_NONE)
+            {
+                LOG_TLAS_ERROR_AND_THROW("If CompactedSize is specified then Flags must be RAYTRACING_BUILD_AS_NONE");
+            }
+        }
+        else
         {
-            LOG_TLAS_ERROR_AND_THROW("RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD are invalid");
+            if (Desc.MaxInstanceCount == 0)
+            {
+                LOG_TLAS_ERROR_AND_THROW("MaxInstanceCount must not be zero");
+            }
+
+            if ((Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_TRACE) && (Desc.Flags & RAYTRACING_BUILD_AS_PREFER_FAST_BUILD))
+            {
+                LOG_TLAS_ERROR_AND_THROW("can not set both flags RAYTRACING_BUILD_AS_PREFER_FAST_TRACE and RAYTRACING_BUILD_AS_PREFER_FAST_BUILD");
+            }
         }
 
 #undef LOG_TLAS_ERROR_AND_THROW

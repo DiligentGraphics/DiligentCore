@@ -2319,6 +2319,16 @@ void DeviceContextD3D11Impl::CopyTLAS(const CopyTLASAttribs& Attribs)
     UNSUPPORTED("CopyTLAS is not supported in DirectX 11");
 }
 
+void DeviceContextD3D11Impl::WriteBLASCompactedSize(const WriteBLASCompactedSizeAttribs& Attribs)
+{
+    UNSUPPORTED("CopyTLAS is not supported in DirectX 11");
+}
+
+void DeviceContextD3D11Impl::WriteTLASCompactedSize(const WriteTLASCompactedSizeAttribs& Attribs)
+{
+    UNSUPPORTED("CopyTLAS is not supported in DirectX 11");
+}
+
 void DeviceContextD3D11Impl::TraceRays(const TraceRaysAttribs& Attribs)
 {
     UNSUPPORTED("TraceRays is not supported in DirectX 11");

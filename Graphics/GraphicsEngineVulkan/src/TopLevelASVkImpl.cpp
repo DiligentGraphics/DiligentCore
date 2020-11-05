@@ -40,23 +40,29 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
 {
     const auto& LogicalDevice  = pRenderDeviceVk->GetLogicalDevice();
     const auto& PhysicalDevice = pRenderDeviceVk->GetPhysicalDevice();
-    const auto& Limits         = PhysicalDevice.GetExtProperties().RayTracing;
-
-    VERIFY_EXPR(m_Desc.MaxInstanceCount <= Limits.maxInstanceCount);
+    const auto& RTLimits       = PhysicalDevice.GetExtProperties().RayTracing;
 
     VkAccelerationStructureCreateInfoKHR             CreateInfo   = {};
     VkAccelerationStructureCreateGeometryTypeInfoKHR InstanceInfo = {};
 
-    CreateInfo.sType            = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
-    CreateInfo.type             = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
-    CreateInfo.flags            = BuildASFlagsToVkBuildAccelerationStructureFlags(m_Desc.Flags);
-    CreateInfo.maxGeometryCount = 1;
-    CreateInfo.pGeometryInfos   = &InstanceInfo;
-    CreateInfo.compactedSize    = 0; // AZ TODO
+    CreateInfo.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR;
+    CreateInfo.type  = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR;
+    CreateInfo.flags = BuildASFlagsToVkBuildAccelerationStructureFlags(m_Desc.Flags);
 
-    InstanceInfo.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
-    InstanceInfo.geometryType      = VK_GEOMETRY_TYPE_INSTANCES_KHR;
-    InstanceInfo.maxPrimitiveCount = m_Desc.MaxInstanceCount;
+    if (m_Desc.CompactedSize > 0)
+    {
+        CreateInfo.compactedSize = m_Desc.CompactedSize;
+    }
+    else if (m_Desc.MaxInstanceCount > 0)
+    {
+        InstanceInfo.sType             = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_GEOMETRY_TYPE_INFO_KHR;
+        InstanceInfo.geometryType      = VK_GEOMETRY_TYPE_INSTANCES_KHR;
+        InstanceInfo.maxPrimitiveCount = m_Desc.MaxInstanceCount;
+
+        VERIFY_EXPR(m_Desc.MaxInstanceCount <= RTLimits.maxInstanceCount);
+        CreateInfo.pGeometryInfos   = &InstanceInfo;
+        CreateInfo.maxGeometryCount = 1;
+    }
 
     m_VulkanTLAS = LogicalDevice.CreateAccelStruct(CreateInfo, m_Desc.Name);
 
@@ -84,13 +90,18 @@ TopLevelASVkImpl::TopLevelASVkImpl(IReferenceCounters*   pRefCounters,
     auto err    = LogicalDevice.BindASMemory(m_VulkanTLAS, Memory, m_MemoryAlignedOffset);
     CHECK_VK_ERROR_AND_THROW(err, "Failed to bind AS memory");
 
-    MemInfo.type        = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
-    MemReqs             = LogicalDevice.GetASMemoryRequirements(MemInfo);
-    m_ScratchSize.Build = static_cast<Uint32>(MemReqs.size);
+    if (m_Desc.CompactedSize == 0)
+    {
+        MemInfo.type        = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_BUILD_SCRATCH_KHR;
+        MemReqs             = LogicalDevice.GetASMemoryRequirements(MemInfo);
+        m_ScratchSize.Build = static_cast<Uint32>(MemReqs.size);
 
-    MemInfo.type         = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
-    MemReqs              = LogicalDevice.GetASMemoryRequirements(MemInfo);
-    m_ScratchSize.Update = static_cast<Uint32>(MemReqs.size);
+        MemInfo.type         = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_KHR;
+        MemReqs              = LogicalDevice.GetASMemoryRequirements(MemInfo);
+        m_ScratchSize.Update = static_cast<Uint32>(MemReqs.size);
+    }
+
+    SetState(RESOURCE_STATE_BUILD_AS_READ);
 }
 
 TopLevelASVkImpl::~TopLevelASVkImpl()

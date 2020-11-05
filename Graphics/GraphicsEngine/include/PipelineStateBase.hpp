@@ -228,12 +228,18 @@ public:
 
     inline void CopyShaderHandle(const char* Name, void* pData, Uint32 DataSize) const
     {
-        VERIFY_EXPR(Name != nullptr && Name[0] != '\0');
         VERIFY_EXPR(this->m_Desc.IsRayTracingPipeline());
         VERIFY_EXPR(m_pRayTracingPipelineData != nullptr);
 
         const auto ShaderHandleSize = m_pRayTracingPipelineData->ShaderHandleSize;
         VERIFY_EXPR(ShaderHandleSize <= DataSize);
+
+        if (Name == nullptr || Name[0] == '\0')
+        {
+            // set shader binding to zero to skip shader execution
+            std::memset(pData, 0, ShaderHandleSize);
+            return;
+        }
 
         auto iter = m_pRayTracingPipelineData->NameToGroupIndex.find(Name);
         if (iter != m_pRayTracingPipelineData->NameToGroupIndex.end())

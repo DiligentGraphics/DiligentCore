@@ -197,6 +197,11 @@ public:
 
 /* 16  */ const char* const                 Name;
 /* 24  */ const ShaderResourceLayoutVk&     ParentResLayout;
+
+#ifdef DILIGENT_DEBUG
+/* 32  */ const Uint32                      BufferStaticSize;
+/* 36  */ const Uint32                      BufferStride;
+#endif
         // clang-format on
 
         VkResource(const ShaderResourceLayoutVk& _ParentLayout,
@@ -210,7 +215,9 @@ public:
                    uint32_t                      _DescriptorSet,
                    Uint32                        _CacheOffset,
                    Uint32                        _SamplerInd,
-                   bool                          _ImmutableSamplerAssigned = false) noexcept :
+                   bool                          _ImmutableSamplerAssigned,
+                   Uint32                        _BufferStaticSize,
+                   Uint32                        _BufferStride) noexcept :
             // clang-format off
             Binding                  {static_cast<decltype(Binding)>(_Binding)            },
             DescriptorSet            {static_cast<decltype(DescriptorSet)>(_DescriptorSet)},
@@ -222,11 +229,15 @@ public:
             Type                     {_Type          },
             ResourceDim              {_ResourceDim   },
             IsMS                     {_IsMS ? Uint8{1} : Uint8{0}},
-            Name                     {_Name          },
-            ParentResLayout          {_ParentLayout  }
+#ifdef DILIGENT_DEBUG
+            BufferStaticSize         {_BufferStaticSize},
+            BufferStride             {_BufferStride    },
+#endif
+            Name                     {_Name            },
+            ParentResLayout          {_ParentLayout    }
         // clang-format on
         {
-#if defined(_MSC_VER) && defined(_WIN64)
+#if defined(_MSC_VER) && defined(_WIN64) && !defined(DILIGENT_DEBUG)
             static_assert(sizeof(*this) == 32, "Unexpected sizeof(VkResource)");
 #endif
             // clang-format off

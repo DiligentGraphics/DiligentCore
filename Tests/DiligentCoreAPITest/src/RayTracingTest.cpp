@@ -66,7 +66,7 @@ using namespace Diligent::Testing;
 namespace
 {
 
-void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuildTriangleData* pTriangles, Uint32 TriangleCount, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
+void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, BLASBuildTriangleData* pTriangles, Uint32 TriangleCount, RefCntAutoPtr<IBottomLevelAS>& pBLAS)
 {
     // Create BLAS for triangles
     std::vector<BLASTriangleDesc> TriangleInfos;
@@ -76,17 +76,20 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
         auto& src = pTriangles[i];
         auto& dst = TriangleInfos[i];
 
+        if (src.PrimitiveCount == 0)
+            src.PrimitiveCount = src.VertexCount / 3;
+
         dst.GeometryName         = src.GeometryName;
         dst.MaxVertexCount       = src.VertexCount;
         dst.VertexValueType      = src.VertexValueType;
         dst.VertexComponentCount = src.VertexComponentCount;
-        dst.MaxIndexCount        = src.IndexCount;
+        dst.MaxPrimitiveCount    = src.PrimitiveCount;
         dst.IndexType            = src.IndexType;
     }
 
     BottomLevelASDesc ASDesc;
     ASDesc.Name          = "Triangle BLAS";
-    ASDesc.Flags         = RAYTRACING_BUILD_AS_NONE;
+    ASDesc.Flags         = RAYTRACING_BUILD_AS_ALLOW_COMPACTION;
     ASDesc.pTriangles    = TriangleInfos.data();
     ASDesc.TriangleCount = TriangleCount;
 
@@ -134,7 +137,7 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
 
     BottomLevelASDesc ASDesc;
     ASDesc.Name     = "Boxes BLAS";
-    ASDesc.Flags    = RAYTRACING_BUILD_AS_NONE;
+    ASDesc.Flags    = RAYTRACING_BUILD_AS_ALLOW_COMPACTION;
     ASDesc.pBoxes   = BoxInfos.data();
     ASDesc.BoxCount = BoxCount;
 
@@ -166,13 +169,13 @@ void CreateBLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const BLASBuil
     pContext->BuildBLAS(Attribs);
 }
 
-void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const TLASBuildInstanceData* Instances, Uint32 InstanceCount, RefCntAutoPtr<ITopLevelAS>& pTLAS)
+void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const TLASBuildInstanceData* Instances, Uint32 InstanceCount, Uint32 HitShadersPerInstance, RefCntAutoPtr<ITopLevelAS>& pTLAS)
 {
     // Create TLAS
     TopLevelASDesc TLASDesc;
     TLASDesc.Name             = "TLAS";
     TLASDesc.MaxInstanceCount = InstanceCount;
-    TLASDesc.Flags            = RAYTRACING_BUILD_AS_NONE;
+    TLASDesc.Flags            = RAYTRACING_BUILD_AS_ALLOW_COMPACTION;
     TLASDesc.BindingMode      = SHADER_BINDING_MODE_PER_GEOMETRY;
 
     pDevice->CreateTLAS(TLASDesc, &pTLAS);
@@ -206,7 +209,7 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const TLASBuil
     Attribs.pTLAS                        = pTLAS;
     Attribs.pInstances                   = Instances;
     Attribs.InstanceCount                = InstanceCount;
-    Attribs.HitShadersPerInstance        = 1;
+    Attribs.HitShadersPerInstance        = HitShadersPerInstance;
     Attribs.TLASTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     Attribs.BLASTransitionMode           = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
     Attribs.pInstanceBuffer              = InstanceBuffer;
@@ -217,11 +220,203 @@ void CreateTLAS(IRenderDevice* pDevice, IDeviceContext* pContext, const TLASBuil
     pContext->BuildTLAS(Attribs);
 }
 
-
-TEST(RayTracingTest, TriangleClosestHitShader)
+template <typename WriteASCompactedSizeAttribs,
+          typename ASDescType,
+          typename CopyASAttribsType,
+          typename ASType,
+          typename WriteASCompactedSizeFnType,
+          typename CreateASFnType,
+          typename CopyASFnType,
+          typename ASFieldType,
+          typename WriteASTransitionFieldType>
+void ASCompaction(IRenderDevice*             pDevice,
+                  IDeviceContext*            pContext,
+                  ASType*                    pSrcAS,
+                  RefCntAutoPtr<ASType>&     pDstAS,
+                  WriteASCompactedSizeFnType WriteASCompactedSizeFn,
+                  CreateASFnType             CreateASFn,
+                  CopyASFnType               CopyASFn,
+                  ASFieldType                ASField,
+                  WriteASTransitionFieldType WriteASTransitionField)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    RefCntAutoPtr<IBuffer> pCompactedSizeBuffer;
+    RefCntAutoPtr<IBuffer> pReadbackBuffer;
+
+    BufferDesc BuffDesc;
+    BuffDesc.Name          = "AS compacted size Buffer";
+    BuffDesc.Usage         = USAGE_DEFAULT;
+    BuffDesc.BindFlags     = BIND_UNORDERED_ACCESS;
+    BuffDesc.Mode          = BUFFER_MODE_RAW;
+    BuffDesc.uiSizeInBytes = sizeof(Uint64);
+
+    pDevice->CreateBuffer(BuffDesc, nullptr, &pCompactedSizeBuffer);
+    VERIFY_EXPR(pCompactedSizeBuffer != nullptr);
+
+    BuffDesc.Name           = "Compacted size readback Buffer";
+    BuffDesc.Usage          = USAGE_STAGING;
+    BuffDesc.BindFlags      = BIND_NONE;
+    BuffDesc.Mode           = BUFFER_MODE_UNDEFINED;
+    BuffDesc.CPUAccessFlags = CPU_ACCESS_READ;
+
+    pDevice->CreateBuffer(BuffDesc, nullptr, &pReadbackBuffer);
+    VERIFY_EXPR(pReadbackBuffer != nullptr);
+
+    WriteASCompactedSizeAttribs Attribs;
+    Attribs.*ASField                = pSrcAS;
+    Attribs.pDestBuffer             = pCompactedSizeBuffer;
+    Attribs.*WriteASTransitionField = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.BufferTransitionMode    = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    (pContext->*WriteASCompactedSizeFn)(Attribs);
+
+    pContext->CopyBuffer(pCompactedSizeBuffer, 0, RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+                         pReadbackBuffer, 0, sizeof(Uint64), RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+
+    pContext->Flush();
+    pContext->WaitForIdle();
+
+    void* pMapped = nullptr;
+    pContext->MapBuffer(pReadbackBuffer, MAP_READ, MAP_FLAG_DO_NOT_WAIT, pMapped);
+
+    ASDescType ASDesc;
+    ASDesc.CompactedSize = static_cast<Uint32>(*static_cast<Uint64*>(pMapped));
+
+    pContext->UnmapBuffer(pReadbackBuffer, MAP_READ);
+
+    if (ASDesc.CompactedSize == 0)
+    {
+        GTEST_FAIL() << "Failed to get compacted AS size";
+        return;
+    }
+
+    (pDevice->*CreateASFn)(ASDesc, &pDstAS);
+    VERIFY_EXPR(pDstAS != nullptr);
+
+    CopyASAttribsType CopyAttribs;
+    CopyAttribs.pSrc              = pSrcAS;
+    CopyAttribs.pDst              = pDstAS;
+    CopyAttribs.Mode              = COPY_AS_MODE_COMPACT;
+    CopyAttribs.SrcTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    CopyAttribs.DstTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    (pContext->*CopyASFn)(CopyAttribs);
+}
+
+template <typename ASDescType,
+          typename CopyASAttribsType,
+          typename ASType,
+          typename CreateASFnType,
+          typename CopyASFnType>
+void ASCopy(IRenderDevice*         pDevice,
+            IDeviceContext*        pContext,
+            ASType*                pSrcAS,
+            RefCntAutoPtr<ASType>& pDstAS,
+            CreateASFnType         CreateASFn,
+            CopyASFnType           CopyASFn)
+{
+    ASDescType ASDesc = pSrcAS->GetDesc();
+    (pDevice->*CreateASFn)(ASDesc, &pDstAS);
+    VERIFY_EXPR(pDstAS != nullptr);
+
+    CopyASAttribsType CopyAttribs;
+    CopyAttribs.pSrc              = pSrcAS;
+    CopyAttribs.pDst              = pDstAS;
+    CopyAttribs.Mode              = COPY_AS_MODE_CLONE;
+    CopyAttribs.SrcTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    CopyAttribs.DstTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    (pContext->*CopyASFn)(CopyAttribs);
+}
+
+void BLASCompaction(Uint32 TestId, IRenderDevice* pDevice, IDeviceContext* pContext, IBottomLevelAS* pSrcBLAS, RefCntAutoPtr<IBottomLevelAS>& pDstBLAS)
+{
+    switch (TestId)
+    {
+        case 0:
+        case 2:
+        case 5:
+            pDstBLAS = pSrcBLAS;
+            break;
+
+        case 1:
+        case 3:
+            ASCopy<BottomLevelASDesc, CopyBLASAttribs>(
+                pDevice, pContext, pSrcBLAS, pDstBLAS, &IRenderDevice::CreateBLAS, &IDeviceContext::CopyBLAS);
+            break;
+
+        case 4:
+        case 6:
+            ASCompaction<WriteBLASCompactedSizeAttribs, BottomLevelASDesc, CopyBLASAttribs>(
+                pDevice, pContext, pSrcBLAS, pDstBLAS,
+                &IDeviceContext::WriteBLASCompactedSize,
+                &IRenderDevice::CreateBLAS,
+                &IDeviceContext::CopyBLAS,
+                &WriteBLASCompactedSizeAttribs::pBLAS,
+                &WriteBLASCompactedSizeAttribs::BLASTransitionMode);
+            break;
+
+        default:
+            UNEXPECTED("unsupported TestId");
+    }
+}
+
+void TLASCompaction(Uint32 TestId, IRenderDevice* pDevice, IDeviceContext* pContext, ITopLevelAS* pSrcTLAS, RefCntAutoPtr<ITopLevelAS>& pDstTLAS)
+{
+    switch (TestId)
+    {
+        case 0:
+        case 1:
+        case 4:
+            pDstTLAS = pSrcTLAS;
+            break;
+
+        case 2:
+        case 3:
+            ASCopy<TopLevelASDesc, CopyTLASAttribs>(
+                pDevice, pContext, pSrcTLAS, pDstTLAS, &IRenderDevice::CreateTLAS, &IDeviceContext::CopyTLAS);
+            break;
+
+        case 5:
+        case 6:
+            ASCompaction<WriteTLASCompactedSizeAttribs, TopLevelASDesc, CopyTLASAttribs>(
+                pDevice, pContext, pSrcTLAS, pDstTLAS,
+                &IDeviceContext::WriteTLASCompactedSize,
+                &IRenderDevice::CreateTLAS,
+                &IDeviceContext::CopyTLAS,
+                &WriteTLASCompactedSizeAttribs::pTLAS,
+                &WriteTLASCompactedSizeAttribs::TLASTransitionMode);
+            break;
+
+        default:
+            UNEXPECTED("unsupported TestId");
+    }
+}
+
+std::string TestIdToString(const testing::TestParamInfo<int>& info)
+{
+    std::string name;
+    switch (info.param)
+    {
+        case 0: name = "default"; break;
+        case 1: name = "copiedBLAS"; break;
+        case 2: name = "copiedTLAS"; break;
+        case 3: name = "copiedBLAS_copiedTLAS"; break;
+        case 4: name = "compactedBLAS"; break;
+        case 5: name = "compactedTLAS"; break;
+        case 6: name = "compactedBLAS_compactedTLAS"; break;
+        default: name = std::to_string(info.param); UNEXPECTED("unsupported TestId");
+    }
+    return name;
+}
+
+const auto TestParamRange = testing::Range(0, 7);
+
+
+class RT1 : public testing::TestWithParam<int>
+{};
+
+TEST_P(RT1, TriangleClosestHitShader)
+{
+    Uint32 TestId  = GetParam();
+    auto*  pEnv    = TestingEnvironment::GetInstance();
+    auto*  pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
@@ -345,21 +540,28 @@ TEST(RayTracingTest, TriangleClosestHitShader)
     Triangle.VertexComponentCount = 3;
     Triangle.Flags                = RAYTRACING_GEOMETRY_OPAQUE;
 
+    RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
+    CreateBLAS(pDevice, pContext, &Triangle, 1, pTempBLAS);
+
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
-    CreateBLAS(pDevice, pContext, &Triangle, 1, pBLAS);
+    BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
 
     TLASBuildInstanceData Instance;
     Instance.InstanceName = "Instance";
     Instance.pBLAS        = pBLAS;
     Instance.Flags        = RAYTRACING_INSTANCE_NONE;
 
+    RefCntAutoPtr<ITopLevelAS> pTempTLAS;
+    const Uint32               HitShadersPerInstance = 1;
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitShadersPerInstance, pTempTLAS);
+
     RefCntAutoPtr<ITopLevelAS> pTLAS;
-    CreateTLAS(pDevice, pContext, &Instance, 1, pTLAS);
+    TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
 
     ShaderBindingTableDesc SBTDesc;
     SBTDesc.Name                  = "SBT";
     SBTDesc.pPSO                  = pRayTracingPSO;
-    SBTDesc.HitShadersPerInstance = 1;
+    SBTDesc.HitShadersPerInstance = HitShadersPerInstance;
 
     RefCntAutoPtr<IShaderBindingTable> pSBT;
     pDevice->CreateSBT(SBTDesc, &pSBT);
@@ -378,21 +580,26 @@ TEST(RayTracingTest, TriangleClosestHitShader)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     TraceRaysAttribs Attribs;
-    Attribs.DimensionX     = SCDesc.Width;
-    Attribs.DimensionY     = SCDesc.Height;
-    Attribs.pSBT           = pSBT;
-    Attribs.TransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.DimensionX        = SCDesc.Width;
+    Attribs.DimensionY        = SCDesc.Height;
+    Attribs.pSBT              = pSBT;
+    Attribs.SBTTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
     pContext->TraceRays(Attribs);
 
     pSwapChain->Present();
 }
+INSTANTIATE_TEST_SUITE_P(RayTracingTest, RT1, TestParamRange, TestIdToString);
 
 
-TEST(RayTracingTest, TriangleAnyHitShader)
+class RT2 : public testing::TestWithParam<int>
+{};
+
+TEST_P(RT2, TriangleAnyHitShader)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    Uint32 TestId  = GetParam();
+    auto*  pEnv    = TestingEnvironment::GetInstance();
+    auto*  pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
@@ -526,21 +733,28 @@ TEST(RayTracingTest, TriangleAnyHitShader)
     Triangle.VertexComponentCount = 3;
     Triangle.Flags                = RAYTRACING_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION;
 
+    RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
+    CreateBLAS(pDevice, pContext, &Triangle, 1, pTempBLAS);
+
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
-    CreateBLAS(pDevice, pContext, &Triangle, 1, pBLAS);
+    BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
 
     TLASBuildInstanceData Instance;
     Instance.InstanceName = "Instance";
     Instance.pBLAS        = pBLAS;
     Instance.Flags        = RAYTRACING_INSTANCE_NONE;
 
+    RefCntAutoPtr<ITopLevelAS> pTempTLAS;
+    const Uint32               HitShadersPerInstance = 1;
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitShadersPerInstance, pTempTLAS);
+
     RefCntAutoPtr<ITopLevelAS> pTLAS;
-    CreateTLAS(pDevice, pContext, &Instance, 1, pTLAS);
+    TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
 
     ShaderBindingTableDesc SBTDesc;
     SBTDesc.Name                  = "SBT";
     SBTDesc.pPSO                  = pRayTracingPSO;
-    SBTDesc.HitShadersPerInstance = 1;
+    SBTDesc.HitShadersPerInstance = HitShadersPerInstance;
 
     RefCntAutoPtr<IShaderBindingTable> pSBT;
     pDevice->CreateSBT(SBTDesc, &pSBT);
@@ -559,21 +773,26 @@ TEST(RayTracingTest, TriangleAnyHitShader)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     TraceRaysAttribs Attribs;
-    Attribs.DimensionX     = SCDesc.Width;
-    Attribs.DimensionY     = SCDesc.Height;
-    Attribs.pSBT           = pSBT;
-    Attribs.TransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.DimensionX        = SCDesc.Width;
+    Attribs.DimensionY        = SCDesc.Height;
+    Attribs.pSBT              = pSBT;
+    Attribs.SBTTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
     pContext->TraceRays(Attribs);
 
     pSwapChain->Present();
 }
+INSTANTIATE_TEST_SUITE_P(RayTracingTest, RT2, TestParamRange, TestIdToString);
 
 
-TEST(RayTracingTest, ProceduralIntersection)
+class RT3 : public testing::TestWithParam<int>
+{};
+
+TEST_P(RT3, ProceduralIntersection)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    Uint32 TestId  = GetParam();
+    auto*  pEnv    = TestingEnvironment::GetInstance();
+    auto*  pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
@@ -705,21 +924,28 @@ TEST(RayTracingTest, ProceduralIntersection)
     Box.BoxStride    = sizeof(float3) * 2;
     Box.Flags        = RAYTRACING_GEOMETRY_OPAQUE;
 
+    RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
+    CreateBLAS(pDevice, pContext, &Box, 1, pTempBLAS);
+
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
-    CreateBLAS(pDevice, pContext, &Box, 1, pBLAS);
+    BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
 
     TLASBuildInstanceData Instance;
     Instance.InstanceName = "Instance";
     Instance.pBLAS        = pBLAS;
     Instance.Flags        = RAYTRACING_INSTANCE_NONE;
 
+    RefCntAutoPtr<ITopLevelAS> pTempTLAS;
+    const Uint32               HitShadersPerInstance = 1;
+    CreateTLAS(pDevice, pContext, &Instance, 1, HitShadersPerInstance, pTempTLAS);
+
     RefCntAutoPtr<ITopLevelAS> pTLAS;
-    CreateTLAS(pDevice, pContext, &Instance, 1, pTLAS);
+    TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
 
     ShaderBindingTableDesc SBTDesc;
     SBTDesc.Name                  = "SBT";
     SBTDesc.pPSO                  = pRayTracingPSO;
-    SBTDesc.HitShadersPerInstance = 1;
+    SBTDesc.HitShadersPerInstance = HitShadersPerInstance;
 
     RefCntAutoPtr<IShaderBindingTable> pSBT;
     pDevice->CreateSBT(SBTDesc, &pSBT);
@@ -738,21 +964,26 @@ TEST(RayTracingTest, ProceduralIntersection)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     TraceRaysAttribs Attribs;
-    Attribs.DimensionX     = SCDesc.Width;
-    Attribs.DimensionY     = SCDesc.Height;
-    Attribs.pSBT           = pSBT;
-    Attribs.TransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.DimensionX        = SCDesc.Width;
+    Attribs.DimensionY        = SCDesc.Height;
+    Attribs.pSBT              = pSBT;
+    Attribs.SBTTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
     pContext->TraceRays(Attribs);
 
     pSwapChain->Present();
 }
+INSTANTIATE_TEST_SUITE_P(RayTracingTest, RT3, TestParamRange, TestIdToString);
 
 
-TEST(RayTracingTest, MultiGeometry)
+class RT4 : public testing::TestWithParam<int>
+{};
+
+TEST_P(RT4, MultiGeometry)
 {
-    auto* pEnv    = TestingEnvironment::GetInstance();
-    auto* pDevice = pEnv->GetDevice();
+    Uint32 TestId  = GetParam();
+    auto*  pEnv    = TestingEnvironment::GetInstance();
+    auto*  pDevice = pEnv->GetDevice();
     if (!pDevice->GetDeviceCaps().Features.RayTracing)
     {
         GTEST_SKIP() << "Ray tracing is not supported by this device";
@@ -916,7 +1147,7 @@ TEST(RayTracingTest, MultiGeometry)
     Triangles[0].VertexComponentCount  = 3;
     Triangles[0].pIndexBuffer          = pIndexBuffer;
     Triangles[0].IndexType             = VT_UINT32;
-    Triangles[0].IndexCount            = (PrimitiveOffsets[1] - PrimitiveOffsets[0]) * 3;
+    Triangles[0].PrimitiveCount        = (PrimitiveOffsets[1] - PrimitiveOffsets[0]);
     Triangles[0].IndexOffset           = PrimitiveOffsets[0] * sizeof(uint) * 3;
     Triangles[0].Flags                 = RAYTRACING_GEOMETRY_OPAQUE;
 
@@ -928,7 +1159,7 @@ TEST(RayTracingTest, MultiGeometry)
     Triangles[1].VertexComponentCount = 3;
     Triangles[1].pIndexBuffer         = pIndexBuffer;
     Triangles[1].IndexType            = VT_UINT32;
-    Triangles[1].IndexCount           = (PrimitiveOffsets[2] - PrimitiveOffsets[1]) * 3;
+    Triangles[1].PrimitiveCount       = (PrimitiveOffsets[2] - PrimitiveOffsets[1]);
     Triangles[1].IndexOffset          = PrimitiveOffsets[1] * sizeof(uint) * 3;
     Triangles[1].Flags                = RAYTRACING_GEOMETRY_OPAQUE;
 
@@ -940,12 +1171,15 @@ TEST(RayTracingTest, MultiGeometry)
     Triangles[2].VertexComponentCount = 3;
     Triangles[2].pIndexBuffer         = pIndexBuffer;
     Triangles[2].IndexType            = VT_UINT32;
-    Triangles[2].IndexCount           = (_countof(Primitives) - PrimitiveOffsets[2]) * 3;
+    Triangles[2].PrimitiveCount       = (_countof(Primitives) - PrimitiveOffsets[2]);
     Triangles[2].IndexOffset          = PrimitiveOffsets[2] * sizeof(uint) * 3;
     Triangles[2].Flags                = RAYTRACING_GEOMETRY_OPAQUE;
 
+    RefCntAutoPtr<IBottomLevelAS> pTempBLAS;
+    CreateBLAS(pDevice, pContext, Triangles, _countof(Triangles), pTempBLAS);
+
     RefCntAutoPtr<IBottomLevelAS> pBLAS;
-    CreateBLAS(pDevice, pContext, Triangles, _countof(Triangles), pBLAS);
+    BLASCompaction(TestId, pDevice, pContext, pTempBLAS, pBLAS);
 
     TLASBuildInstanceData Instances[2] = {};
 
@@ -958,13 +1192,17 @@ TEST(RayTracingTest, MultiGeometry)
     Instances[1].Flags        = RAYTRACING_INSTANCE_NONE;
     Instances[1].Transform.SetTranslation(0.1f, 0.5f, 0.0f);
 
+    RefCntAutoPtr<ITopLevelAS> pTempTLAS;
+    const Uint32               HitShadersPerInstance = 1;
+    CreateTLAS(pDevice, pContext, Instances, _countof(Instances), HitShadersPerInstance, pTempTLAS);
+
     RefCntAutoPtr<ITopLevelAS> pTLAS;
-    CreateTLAS(pDevice, pContext, Instances, _countof(Instances), pTLAS);
+    TLASCompaction(TestId, pDevice, pContext, pTempTLAS, pTLAS);
 
     ShaderBindingTableDesc SBTDesc;
     SBTDesc.Name                  = "SBT";
     SBTDesc.pPSO                  = pRayTracingPSO;
-    SBTDesc.HitShadersPerInstance = 1;
+    SBTDesc.HitShadersPerInstance = HitShadersPerInstance;
 
     RefCntAutoPtr<IShaderBindingTable> pSBT;
     pDevice->CreateSBT(SBTDesc, &pSBT);
@@ -995,14 +1233,15 @@ TEST(RayTracingTest, MultiGeometry)
     const auto& SCDesc = pSwapChain->GetDesc();
 
     TraceRaysAttribs Attribs;
-    Attribs.DimensionX     = SCDesc.Width;
-    Attribs.DimensionY     = SCDesc.Height;
-    Attribs.pSBT           = pSBT;
-    Attribs.TransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
+    Attribs.DimensionX        = SCDesc.Width;
+    Attribs.DimensionY        = SCDesc.Height;
+    Attribs.pSBT              = pSBT;
+    Attribs.SBTTransitionMode = RESOURCE_STATE_TRANSITION_MODE_TRANSITION;
 
     pContext->TraceRays(Attribs);
 
     pSwapChain->Present();
 }
+INSTANTIATE_TEST_SUITE_P(RayTracingTest, RT4, TestParamRange, TestIdToString);
 
 } // namespace
